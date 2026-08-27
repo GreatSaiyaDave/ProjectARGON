@@ -1,0 +1,50 @@
+═══ EFFECT COVERAGE — starter_and_lab (offline Phase 1) ═══
+Generated: 2026-08-11T16:16:02.019267+00:00Z
+Compiler v1 (python mirror of CardTextEffectCompiler)
+
+  FULL     4206964 «Trap Hole» clauses=1
+  NORMAL   5053103 «Battle Ox»
+  FULL     5318639 «Mystical Space Typhoon» clauses=1
+  NORMAL   6368038 «Gaia The Fierce Knight»
+  STRUCT   11901678 «Black Skull Dragon» (effectless Extra/Fusion)
+  FULL     12580477 «Raigeki» clauses=1
+  FULL     12607053 «Waboku» clauses=1
+  NORMAL   13039848 «Giant Soldier of Stone»
+  FULL     14315573 «Negate Attack» clauses=1
+  NORMAL   15025844 «Mystical Elf»
+  FULL     17985575 «Lord of D.» clauses=1
+  FULL     19613556 «Heavy Storm» clauses=1
+  FULL     24094653 «Polymerization» clauses=1
+  FULL     26202165 «Sangan» clauses=1
+  NORMAL   26378150 «Rude Kaiser»
+  NORMAL   28279543 «Curse of Dragon»
+  NORMAL   30113682 «Judge Man»
+  FULL     31560081 «Magician of Faith» clauses=1
+  NORMAL   32452818 «Beaver Warrior»
+  REGISTRY 34124316 «Cyber Jar» (hard-coded script)
+  FULL     40640057 «Kuriboh» clauses=1
+  NORMAL   41392891 «Feral Imp»
+  REGISTRY 43973174 «The Flute of Summoning Dragon» (hard-coded script)
+  FULL     44095762 «Mirror Force» clauses=1
+  NORMAL   46986414 «Dark Magician»
+  FULL     53129443 «Dark Hole» clauses=1
+  FULL     54652250 «Man-Eater Bug» clauses=1
+  FULL     55144522 «Pot of Greed» clauses=1
+  NORMAL   62397231 «Hyozanryu»
+  NORMAL   66602787 «Saggi the Dark Clown»
+  STRUCT   66889139 «Gaia the Dragon Champion» (effectless Extra/Fusion)
+  FULL     72302403 «Swords of Revealing Light» clauses=1
+  FULL     72892473 «Card Destruction» clauses=1
+  FULL     83555666 «Ring of Destruction» clauses=1
+  FULL     83764719 «Monster Reborn» clauses=1
+  NORMAL   89631139 «Blue-Eyes White Dragon»
+  NORMAL   90357090 «Silver Fang»
+  NORMAL   91152256 «Celtic Guardian»
+  NORMAL   97590747 «La Jinn the Mystical Genie of the Lamp»
+  REGISTRY 98045062 «Enemy Controller» (hard-coded script)
+
+Pool «starter_and_lab» unique=40
+  inDB=40 miss=0 normal/structural=18 fullText=19 partial=0 registry=3 gap=0
+  playableCovered=40/40 (100.0%)  fullCompile%=92.5%
+  playable = normal + effectless Fusion/Extra + FullyCompiled text + registry scripts
+MASTERY GATE: PASS playable=100.0% gap=0

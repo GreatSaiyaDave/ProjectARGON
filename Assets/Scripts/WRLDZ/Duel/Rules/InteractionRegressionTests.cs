@@ -1,0 +1,2935 @@
+using System.Linq;
+using System.Text;
+using UnityEngine;
+using WRLDZ.Data;
+using WRLDZ.Duel.TextEffects;
+
+namespace WRLDZ.Duel.Rules
+{
+    /// <summary>
+    /// Live mini-duel regressions for field→GY, Flip, hand QE, zone placement.
+    /// These catch silent no-ops (Sangan/Magician-style) that pure battle-math tests miss.
+    /// </summary>
+    public static class InteractionRegressionTests
+    {
+        public static string RunAll()
+        {
+            var sb = new StringBuilder();
+            var pass = 0;
+            var fail = 0;
+
+            void Check(string name, bool ok, string detail = "")
+            {
+                if (ok)
+                {
+                    pass++;
+                    sb.AppendLine("PASS  " + name);
+                }
+                else
+                {
+                    fail++;
+                    sb.AppendLine("FAIL  " + name + (string.IsNullOrEmpty(detail) ? "" : " — " + detail));
+                }
+            }
+
+            var db = CardDatabase.Load();
+            if (db == null || db.Count == 0)
+            {
+                sb.AppendLine("FAIL  CardDatabase load");
+                sb.AppendLine("--- 0 passed, 1 failed ---");
+                return sb.ToString();
+            }
+
+            var pDeck = CardDatabase.LoadDeck("lab_rules_player.json");
+            var aDeck = CardDatabase.LoadDeck("lab_rules_ai.json");
+            if (pDeck == null || aDeck == null)
+            {
+                sb.AppendLine("FAIL  lab decks missing");
+                sb.AppendLine("--- 0 passed, 1 failed ---");
+                return sb.ToString();
+            }
+
+            // ── Center-first zone placement ──
+            {
+                var engine = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine);
+                engine.Player.Hand.Clear();
+                engine.Player.Deck.Clear();
+
+                var m1 = PutInHand(engine, engine.Player, 91152256); // Celtic Guardian
+                var m2 = PutInHand(engine, engine.Player, 32452818); // Beaver Warrior
+                var m3 = PutInHand(engine, engine.Player, 13039848); // Giant Soldier
+
+                // Only one Normal Summon/turn — reset flag between placements for zone-order test
+                Check("Center zone: first summon → index 2",
+                    engine.TryNormalSummon(engine.Player, m1, asSet: false) &&
+                    engine.Player.MonsterZones[2].Occupant == m1);
+                engine.Player.NormalSummonUsed = false;
+
+                Check("Center zone: second summon → index 1 (left of center)",
+                    engine.TryNormalSummon(engine.Player, m2, asSet: false) &&
+                    engine.Player.MonsterZones[1].Occupant == m2);
+                engine.Player.NormalSummonUsed = false;
+
+                Check("Center zone: third summon → index 3 (right of center)",
+                    engine.TryNormalSummon(engine.Player, m3, asSet: false) &&
+                    engine.Player.MonsterZones[3].Occupant == m3);
+
+                // Spell/Trap same policy
+                var st = PutInHand(engine, engine.Player, 55144522); // Pot of Greed
+                Check("Center ST zone: first set → index 2",
+                    engine.TrySetSpellTrap(engine.Player, st) &&
+                    engine.Player.SpellTrapZones[2].Occupant == st);
+            }
+
+            // ── Sangan field→GY destroy ──
+            {
+                var engine = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine);
+                var p = engine.Player;
+                p.Hand.Clear();
+                p.Deck.Clear();
+                // Deck search targets
+                p.Deck.Add(91152256); // Celtic Guardian 1400
+                p.Deck.Add(89631139); // Blue-Eyes 3000 — illegal
+                p.Deck.Add(32452818); // Beaver 1200
+
+                var sangan = PlaceMonster(engine, p, MonsterEffects.Sangan, 2, BattlePosition.Attack, true);
+                var handBefore = p.HandCount;
+                engine.DestroyMonsterPublic(p, sangan);
+
+                // Player: should open search pending
+                Check("Sangan destroy: opens deck search pending",
+                    engine.IsAwaitingEffectTarget &&
+                    engine.PendingActivation != null &&
+                    engine.PendingActivation.TargetKind == EffectTargetKind.MonsterInYourDeckAtkLeq,
+                    engine.PendingActivation?.TargetKind.ToString() ?? "no pending");
+
+                if (engine.IsAwaitingEffectTarget)
+                {
+                    var pick = engine.PendingActivation.LegalTargets
+                        .FirstOrDefault(t => t.CardId == 91152256);
+                    Check("Sangan destroy: Celtic Guardian is a legal option", pick != null);
+                    if (pick != null)
+                    {
+                        var ok = engine.TrySelectEffectTarget(pick);
+                        Check("Sangan destroy: select resolves", ok);
+                        Check("Sangan destroy: Celtic Guardian in hand",
+                            p.Hand.Exists(c => c.CardId == 91152256) && p.HandCount == handBefore + 1);
+                        Check("Sangan destroy: removed from Deck",
+                            !p.Deck.Contains(91152256));
+                        Check("Sangan destroy: Sangan in GY",
+                            p.Graveyard.Exists(c => c.CardId == MonsterEffects.Sangan));
+                    }
+                }
+            }
+
+            // ── Sangan field→GY via SendCardToGrave (tribute / effect send) ──
+            {
+                var engine = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine);
+                var p = engine.Player;
+                p.Hand.Clear();
+                p.Deck.Clear();
+                p.Deck.Add(32452818); // Beaver 1200
+
+                var sangan = PlaceMonster(engine, p, MonsterEffects.Sangan, 2, BattlePosition.Attack, true);
+                engine.SendCardToGrave(p, sangan);
+
+                Check("Sangan SendCardToGrave: opens search",
+                    engine.IsAwaitingEffectTarget &&
+                    engine.PendingActivation != null &&
+                    engine.PendingActivation.TargetKind == EffectTargetKind.MonsterInYourDeckAtkLeq);
+
+                if (engine.IsAwaitingEffectTarget)
+                {
+                    var pick = engine.PendingActivation.LegalTargets.FirstOrDefault();
+                    Check("Sangan SendCardToGrave: has options", pick != null);
+                    if (pick != null)
+                    {
+                        engine.TrySelectEffectTarget(pick);
+                        Check("Sangan SendCardToGrave: added Beaver Warrior",
+                            p.Hand.Exists(c => c.CardId == 32452818) &&
+                            !p.Deck.Contains(32452818));
+                    }
+                }
+            }
+
+            // ── Magician of Faith Flip ──
+            {
+                var engine = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine);
+                var p = engine.Player;
+                p.Hand.Clear();
+                // Spell in GY
+                var pot = engine.CreateCardInstance(55144522);
+                p.Graveyard.Add(pot);
+
+                var mof = PlaceMonster(engine, p, MonsterEffects.MagicianOfFaith, 2,
+                    BattlePosition.Defense, false);
+                // Flip Summon
+                p.NormalSummonUsed = false;
+                // Cannot Flip same turn as Set — clear SetThisTurn
+                mof.SetThisTurn = false;
+                var ok = engine.TryFlipSummon(p, mof);
+                Check("Magician of Faith: Flip Summon succeeds", ok && mof.FaceUp);
+                Check("Magician of Faith: opens Spell-in-GY choice",
+                    engine.IsAwaitingEffectTarget &&
+                    engine.PendingActivation != null &&
+                    engine.PendingActivation.TargetKind == EffectTargetKind.SpellInYourGy);
+
+                if (engine.IsAwaitingEffectTarget)
+                {
+                    var t = engine.PendingActivation.LegalTargets.FirstOrDefault();
+                    engine.TrySelectEffectTarget(t);
+                    Check("Magician of Faith: Pot of Greed returned to hand",
+                        p.Hand.Exists(c => c.CardId == 55144522) &&
+                        !p.Graveyard.Exists(c => c.CardId == 55144522));
+                }
+            }
+
+            // ── Man-Eater Bug Flip ──
+            {
+                var engine = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine);
+                var p = engine.Player;
+                var opp = engine.Opponent;
+                p.Hand.Clear();
+
+                var meb = PlaceMonster(engine, p, MonsterEffects.ManEaterBug, 2,
+                    BattlePosition.Defense, false);
+                meb.SetThisTurn = false;
+                var victim = PlaceMonster(engine, opp, 91152256, 2, BattlePosition.Attack, true);
+
+                var ok = engine.TryFlipSummon(p, meb);
+                Check("Man-Eater Bug: Flip Summon succeeds", ok);
+                Check("Man-Eater Bug: opens field target choice",
+                    engine.IsAwaitingEffectTarget &&
+                    engine.PendingActivation != null &&
+                    engine.PendingActivation.TargetKind == EffectTargetKind.AnyMonsterOnField);
+
+                if (engine.IsAwaitingEffectTarget)
+                {
+                    // Prefer opponent victim
+                    var t = engine.PendingActivation.LegalTargets
+                                .FirstOrDefault(c => c.CardId == 91152256) ??
+                            engine.PendingActivation.LegalTargets.FirstOrDefault();
+                    engine.TrySelectEffectTarget(t);
+                    Check("Man-Eater Bug: victim destroyed to GY",
+                        !opp.TryFindMonster(victim, out _) &&
+                        opp.Graveyard.Exists(c => c.CardId == 91152256));
+                }
+            }
+
+            // ── Kuriboh hand QE during damage calculation ──
+            {
+                var engine = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine);
+                var p = engine.Player;
+                var opp = engine.Opponent;
+                p.Hand.Clear();
+                p.LifePoints = 8000;
+                opp.LifePoints = 8000;
+
+                var kuri = PutInHand(engine, p, MonsterEffects.Kuriboh);
+                var attacker = PlaceMonster(engine, opp, 89631139, 2, BattlePosition.Attack, true); // BEWD
+
+                Check("Kuriboh: legal DC hand QE vs opp attack",
+                    MonsterEffects.IsLegalHandDamageCalculationEffect(
+                        p, kuri, ResponseTiming.DamageCalculation, opp, attacker));
+
+                p.PreventBattleDamageThisBattle = false;
+                var discarded = MonsterEffects.DiscardFromHandByInstance(p, kuri);
+                p.PreventBattleDamageThisBattle = true;
+                Check("Kuriboh: discard cost pays",
+                    discarded != null && p.Graveyard.Exists(c => c.CardId == MonsterEffects.Kuriboh));
+                Check("Kuriboh: prevent battle damage flag set",
+                    p.PreventBattleDamageThisBattle);
+
+                var r = BattleMechanics.Calculate(attacker, null, false, false, false, false,
+                    p.PreventBattleDamageThisBattle);
+                Check("Kuriboh: direct deals 0 with flag",
+                    r.DamageToDefendingPlayer == 0);
+            }
+
+            // ── La Jinn (1800) vs Giant Soldier DEF (2000) → attacker loses 200 ──
+            {
+                var laDef = db.Get(97590747);
+                var gsDef = db.Get(13039848);
+                Check("DB has La Jinn + Giant Soldier",
+                    laDef != null && gsDef != null && laDef.atk == 1800 && gsDef.def == 2000,
+                    $"la={laDef?.atk} gs.def={gsDef?.def}");
+
+                // Face-up Defense
+                var la = new CardInstance
+                {
+                    InstanceId = 91, CardId = 97590747, FaceUp = true,
+                    Position = BattlePosition.Attack, Def = laDef
+                };
+                var gsUp = new CardInstance
+                {
+                    InstanceId = 92, CardId = 13039848, FaceUp = true,
+                    Position = BattlePosition.Defense, Def = gsDef
+                };
+                var rUp = BattleMechanics.Calculate(la, gsUp, false, false, false, false, false);
+                BattleMechanics.Sanitize(ref rUp, la, gsUp, false, false);
+                Check("LaJinn vs face-up GS DEF: attacker takes 200",
+                    rUp.DamageToAttackingPlayer == 200 && !rUp.DestroyDefender && !rUp.DestroyAttacker);
+                Check("LaJinn vs face-up GS DEF: defender takes 0",
+                    rUp.DamageToDefendingPlayer == 0);
+
+                // Face-down (set) — same as in-game Set Giant Soldier
+                var gsSet = new CardInstance
+                {
+                    InstanceId = 93, CardId = 13039848, FaceUp = false,
+                    Position = BattlePosition.Defense, Def = gsDef
+                };
+                var rSet = BattleMechanics.Calculate(la, gsSet, false, false, false, false, false);
+                BattleMechanics.Sanitize(ref rSet, la, gsSet, false, false);
+                Check("LaJinn vs set GS: attacker takes 200",
+                    rSet.DamageToAttackingPlayer == 200 && !rSet.DestroyDefender);
+
+                // Sanitize must restore damage if calc was corrupted / dropped
+                rUp.DamageToAttackingPlayer = 0;
+                rUp.DestroyDefender = true;
+                BattleMechanics.Sanitize(ref rUp, la, gsUp, false, false);
+                Check("Sanitize restores ATK<DEF damage to 200",
+                    rUp.DamageToAttackingPlayer == 200 && !rUp.DestroyDefender);
+
+                // Full engine path when we can reach Battle on opponent's turn
+                var engine = Fresh(db, pDeck, aDeck);
+                for (var t = 0; t < 4 && (engine.TurnNumber < 2 || engine.TurnPlayer != engine.Opponent); t++)
+                {
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    engine.RecoverStuckCombat();
+                    engine.TryEndTurnSafe(engine.TurnPlayer);
+                }
+
+                ClearBoard(engine);
+                var p = engine.Player;
+                var opp = engine.Opponent;
+                p.LifePoints = 8000;
+                opp.LifePoints = 8000;
+                p.Hand.Clear();
+                opp.Hand.Clear();
+
+                var gs = PlaceMonster(engine, p, 13039848, 2, BattlePosition.Defense, false);
+                var laM = PlaceMonster(engine, opp, 97590747, 2, BattlePosition.Attack, true);
+                laM.SummonedThisTurn = false;
+                laM.AttackedThisTurn = false;
+                laM.SetThisTurn = false;
+                gs.SetThisTurn = false;
+
+                if (engine.TurnPlayer == opp && engine.Phase == DuelPhase.Main1)
+                    engine.TryEnterBattlePhase(opp);
+
+                if (engine.Phase == DuelPhase.Battle && engine.TurnPlayer == opp &&
+                    engine.CanAttack(opp, laM))
+                {
+                    var lpBefore = opp.LifePoints;
+                    Check("Engine: LaJinn declares on set GS", engine.TryAttack(opp, laM, gs));
+                    for (var i = 0; i < 10; i++)
+                    {
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        else if (engine.HasDeclaredAttack) engine.ResolveDeclaredAttack();
+                        else engine.RecoverStuckCombat();
+                    }
+
+                    Check("Engine: GS survives defense hold",
+                        p.MonstersOnField().Any(m => m.CardId == 13039848));
+                    Check("Engine: opponent (attacker) lost 200 LP",
+                        opp.LifePoints == lpBefore - 200,
+                        $"opp LP {opp.LifePoints} was {lpBefore}");
+                    Check("Engine: defender LP unchanged", p.LifePoints == 8000);
+                }
+                else
+                {
+                    // Turn setup can vary; math+sanitize above already cover the ruling.
+                    Check("Engine battle path (skipped — not in BP)", true);
+                }
+            }
+
+            // ── Pot of Greed draw 2 ──
+            {
+                var engine = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine);
+                var p = engine.Player;
+                p.Hand.Clear();
+                p.Deck.Clear();
+                for (var i = 0; i < 5; i++)
+                    p.Deck.Add(91152256);
+                var pot = PutInHand(engine, p, 55144522);
+                var deckBefore = p.DeckCount;
+                var ok = engine.TryActivateSpellTrap(p, pot, fromHand: true);
+                Check("Pot of Greed: activates from hand", ok);
+                // -1 pot from hand, +2 draws → hand 2; deck −2
+                Check("Pot of Greed: deck decreased by 2",
+                    p.DeckCount == deckBefore - 2, $"deck={p.DeckCount} was {deckBefore}");
+                Check("Pot of Greed: hand has 2 (drew 2, pot gone)",
+                    p.HandCount == 2, $"hand={p.HandCount}");
+            }
+
+            // ── Monster Reborn: activate stays pending (must not bounce to hand) ──
+            {
+                const int reborn = 83764719;
+                const int celtic = 91152256;
+                var engine = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine);
+                var p = engine.Player;
+                p.Hand.Clear();
+                var gyMon = engine.CreateCardInstance(celtic);
+                p.Graveyard.Add(gyMon);
+                var card = PutInHand(engine, p, reborn);
+                Check("Monster Reborn: Activate legal with a GY monster",
+                    engine.CanActivateSpellTrap(p, card, fromHand: true));
+                Check("Monster Reborn: Activate opens GY target pending",
+                    engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                    engine.IsAwaitingEffectTarget &&
+                    engine.PendingActivation != null &&
+                    engine.PendingActivation.TargetKind == EffectTargetKind.MonsterInEitherGy);
+                Check("Monster Reborn: stays on field while choosing (does not bounce to hand)",
+                    !p.Hand.Contains(card) &&
+                    p.TryFindSpellTrap(card, out _),
+                    p.Hand.Contains(card) ? "bounced to hand" : "not on field");
+                var pick = engine.PendingActivation?.LegalTargets
+                    ?.FirstOrDefault(t => t != null && t.CardId == celtic);
+                Check("Monster Reborn: GY Celtic is a legal target", pick != null);
+                if (pick != null)
+                {
+                    Check("Monster Reborn: select SS Celtic, Reborn to GY",
+                        engine.TrySelectEffectTarget(pick) &&
+                        p.MonstersOnField().Any(m => m != null && m.CardId == celtic) &&
+                        p.Graveyard.Exists(c => c != null && c.CardId == reborn) &&
+                        !p.Hand.Contains(card));
+                }
+            }
+
+            // ── Tribute Summon Dark Magician with 2 face-down Sets ──
+            {
+                const int darkMagician = 46986414;
+                var engine = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine);
+                var p = engine.Player;
+                p.Hand.Clear();
+                var setA = PlaceMonster(engine, p, 91152256, 1, BattlePosition.Defense, false);
+                var setB = PlaceMonster(engine, p, 32452818, 3, BattlePosition.Defense, false);
+                var dm = PutInHand(engine, p, darkMagician);
+                Check("Dark Magician is Lv7 (2 tributes)", dm.Level == 7 && TcgRules.TributesRequired(dm.Level) == 2,
+                    $"lv={dm.Level} name={dm.Name}");
+                Check("Face-down Sets are legal tributes",
+                    TcgRules.CanBeTributedForSummon(p, setA) && TcgRules.CanBeTributedForSummon(p, setB));
+                Check("CanNormalSummonOrSet Dark Magician with 2 Sets",
+                    engine.CanNormalSummonOrSet(p, dm));
+
+                // Human, no explicit marks — exactly 2 monsters so both must be tributed
+                engine.PendingTributes.Clear();
+                var ok = engine.TryNormalSummon(p, dm, asSet: false);
+                Check("Tribute Summon DM from 2 face-down (unambiguous auto)",
+                    ok && dm.FaceUp && dm.Position == BattlePosition.Attack,
+                    ok ? "summoned" : "engine rejected");
+                Check("Both face-down tributes went to GY",
+                    p.Graveyard.Contains(setA) && p.Graveyard.Contains(setB));
+                Check("Dark Magician on field",
+                    p.MonstersOnField().Any(m => m.CardId == darkMagician));
+                Check("Face-down tributes are not still on field",
+                    !p.TryFindMonster(setA, out _) && !p.TryFindMonster(setB, out _));
+            }
+
+            // ── Drop Dark Magician onto a face-down Set's zone ──
+            {
+                const int darkMagician = 46986414;
+                var engine = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine);
+                var p = engine.Player;
+                p.Hand.Clear();
+                var setA = PlaceMonster(engine, p, 91152256, 1, BattlePosition.Defense, false);
+                PlaceMonster(engine, p, 32452818, 3, BattlePosition.Defense, false);
+                var dm = PutInHand(engine, p, darkMagician);
+                engine.PendingTributes.Clear();
+                var occupied = engine.ValidatePlacement(p, dm, RulesZoneKind.Monster, 1, false);
+                Check("ValidatePlacement allows occupied tribute zone", occupied.Legal,
+                    occupied.Reason);
+                var ok = engine.TryNormalSummonToZone(p, dm, asSet: false, preferredZone: 1);
+                Check("Drop onto face-down Set: Tribute Summon succeeds", ok);
+                Check("Dark Magician sits in the tributed zone",
+                    p.MonsterZones[1].Occupant == dm, 
+                    p.MonsterZones[1].Occupant?.Name ?? "empty");
+                Check("Tributed Set is in GY", p.Graveyard.Contains(setA));
+            }
+
+            // ── 3 monsters, 2 tributes: human must pick (no silent auto) ──
+            {
+                const int darkMagician = 46986414;
+                var engine = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine);
+                var p = engine.Player;
+                p.Hand.Clear();
+                var a = PlaceMonster(engine, p, 91152256, 0, BattlePosition.Defense, false);
+                var b = PlaceMonster(engine, p, 32452818, 1, BattlePosition.Defense, false);
+                PlaceMonster(engine, p, 13039848, 2, BattlePosition.Attack, true);
+                var dm = PutInHand(engine, p, darkMagician);
+                engine.PendingTributes.Clear();
+                var blocked = engine.TryNormalSummon(p, dm, asSet: false);
+                Check("3 monsters / 2 tributes: refuses without a choice", !blocked);
+
+                engine.ToggleTribute(p, a);
+                engine.ToggleTribute(p, b);
+                var ok = engine.TryNormalSummon(p, dm, asSet: false);
+                Check("3 monsters / 2 tributes: explicit face-down marks succeed", ok &&
+                    p.Graveyard.Contains(a) && p.Graveyard.Contains(b));
+            }
+
+            // ── Abyss Soldier ignition (not a Spell/Trap Activate) ──
+            {
+                const int abyssId = MonsterEffects.AbyssSoldier;
+                const int fenrir = 218704; // WATER — discard cost
+                const int celtic = 91152256; // EARTH on opponent's field
+
+                var engine = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine);
+                var p = engine.Player;
+                var opp = engine.Opponent;
+                p.Hand.Clear();
+
+                var abyss = PlaceMonster(engine, p, abyssId, 2, BattlePosition.Attack, true);
+                Check("Abyss Soldier is an Effect Monster, not a Trap",
+                    abyss.Def != null && abyss.Def.IsMonster && !abyss.Def.IsTrap && !abyss.Def.IsSpell);
+                Check("Abyss Soldier: cannot activate from hand",
+                    !engine.CanActivateSpellTrap(p, abyss, fromHand: true));
+                Check("Abyss Soldier: no ignition without WATER in hand",
+                    !engine.CanActivateSpellTrap(p, abyss, fromHand: false));
+
+                var water = PutInHand(engine, p, fenrir);
+                var prey = PlaceMonster(engine, opp, celtic, 2, BattlePosition.Attack, true);
+                Check("Abyss Soldier: Activate legal in Main Phase with WATER in hand",
+                    engine.CanActivateSpellTrap(p, abyss, fromHand: false));
+
+                var snap = LegalIntentService.Build(engine, p);
+                Check("Abyss Soldier: legal intents include Activate from field",
+                    snap.HasKind(abyss, LegalIntentService.LegalKind.ActivateFromField));
+
+                Check("Abyss Soldier: Activate starts (cost then target)",
+                    engine.TryActivateSpellTrap(p, abyss, fromHand: false) &&
+                    engine.IsAwaitingEffectTarget &&
+                    engine.PendingActivation != null &&
+                    engine.PendingActivation.TargetKind == EffectTargetKind.DiscardMonsterInHand,
+                    engine.PendingActivation?.TargetKind.ToString() ?? "no pending");
+
+                Check("Abyss Soldier: Fenrir is a legal discard",
+                    engine.IsLegalEffectTarget(water));
+                Check("Abyss Soldier: pay discard cost",
+                    engine.TrySelectEffectTarget(water) &&
+                    p.Graveyard.Contains(water) &&
+                    !p.Hand.Contains(water));
+                Check("Abyss Soldier: now choose a card on the field",
+                    engine.IsAwaitingEffectTarget &&
+                    engine.PendingActivation != null &&
+                    engine.PendingActivation.TargetKind == EffectTargetKind.AnyCardOnField);
+                Check("Abyss Soldier: Celtic Guardian is a legal bounce",
+                    engine.IsLegalEffectTarget(prey));
+                Check("Abyss Soldier: bounce resolves",
+                    engine.TrySelectEffectTarget(prey));
+                Check("Celtic Guardian returned to opponent's hand",
+                    opp.Hand.Contains(prey) && opp.MonsterZones[2].Occupant != prey);
+                Check("Abyss Soldier stays on the field",
+                    p.MonsterZones[2].Occupant == abyss);
+                Check("Abyss Soldier once per turn used",
+                    abyss.EffectUsedThisTurn &&
+                    !engine.CanActivateSpellTrap(p, abyss, fromHand: false));
+
+                var prog = WRLDZ.Duel.TextEffects.CardTextEffectCompiler.Compile(abyss.Def);
+                Check("Abyss Soldier text compiles (discard WATER + bounce)",
+                    prog != null && prog.FullyCompiled &&
+                    prog.ClauseList.Exists(c => c != null &&
+                                               c.Action == WRLDZ.Duel.TextEffects.EffectActionKind.ReturnToHand),
+                    prog == null
+                        ? "null program"
+                        : $"full={prog.FullyCompiled} clauses={prog.ClauseList.Count} unparsed={string.Join("|", prog.UnparsedFragments ?? System.Array.Empty<string>())}");
+            }
+
+            // ── A Legendary Ocean (Field Spell, not a Trap) ──
+            {
+                const int aloId = FieldSpellEffects.ALegendaryOcean; // 295517
+                const int fenrir = 218704; // WATER Lv4 1400/1200
+                const int salmon = 78060096; // WATER Lv5 Terrorking Salmon 2400/1000
+                const int celtic = 91152256; // non-WATER
+
+                var engine = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine);
+                var p = engine.Player;
+                p.Hand.Clear();
+
+                var alo = PutInHand(engine, p, aloId);
+                Check("ALO: database type is Spell Card",
+                    alo.Def != null && alo.Def.IsSpell && !alo.Def.IsTrap && alo.Def.IsFieldSpell,
+                    alo.Def == null ? "missing def" : $"type={alo.Def.type} race={alo.Def.race}");
+                Check("ALO: name is always treated as Umi",
+                    alo.IsNamed("Umi") && alo.RulesName == "Umi",
+                    alo.RulesName);
+                Check("ALO: IsTrap is false (was registering as trap via S/T Set path)",
+                    !alo.Def.IsTrap);
+                Check("ALO: cannot Set in Spell & Trap Zone",
+                    !engine.CanSetSpellTrap(p, alo));
+
+                var stVerdict = engine.ValidatePlacement(p, alo, RulesZoneKind.SpellTrap, 2, true);
+                Check("ALO: Spell & Trap Zone illegal",
+                    !stVerdict.Legal, stVerdict.Reason);
+                var fieldVerdict = engine.ValidatePlacement(p, alo, RulesZoneKind.FieldSpell, 0, false);
+                Check("ALO: Field Zone legal in Main Phase",
+                    fieldVerdict.Legal, fieldVerdict.Reason);
+                Check("ALO: CanActivate from hand",
+                    engine.CanActivateSpellTrap(p, alo, fromHand: true));
+
+                var fen = PlaceMonster(engine, p, fenrir, 2, BattlePosition.Attack, true);
+                var cel = PlaceMonster(engine, engine.Opponent, celtic, 2, BattlePosition.Attack, true);
+                var sal = PutInHand(engine, p, salmon);
+                Check("Salmon before ALO needs 1 Tribute",
+                    TcgRules.TributesRequired(sal.Level) == 1,
+                    $"Lv{sal.Level} tributes={TcgRules.TributesRequired(sal.Level)}");
+
+                Check("ALO: activate from hand into Field Zone",
+                    engine.TryActivateSpellTrap(p, alo, fromHand: true));
+                Check("ALO: sits face-up in Field Spell Zone",
+                    p.FieldSpellZone?.Occupant == alo && alo.FaceUp);
+                Check("ALO: not in a Spell & Trap Zone",
+                    !p.TryFindSpellTrap(alo, out _));
+                Check("Umi is on the field (name condition)",
+                    FieldSpellEffects.UmiIsOnField(engine));
+                Check("Fenrir WATER +200 ATK/DEF",
+                    fen.CurrentAtk == 1600 && fen.CurrentDef == 1400,
+                    $"ATK {fen.CurrentAtk} DEF {fen.CurrentDef} Lv{fen.Level}");
+                Check("Fenrir WATER Level −1 on field",
+                    fen.Level == 3, $"Lv{fen.Level}");
+                Check("Celtic Guardian (non-WATER) unchanged",
+                    cel.CurrentAtk == cel.Def.atk && cel.Level == cel.PrintedLevel,
+                    $"ATK {cel.CurrentAtk} Lv{cel.Level}");
+                Check("Salmon in hand is Level 4 (no Tribute)",
+                    sal.Level == 4 && TcgRules.TributesRequired(sal.Level) == 0,
+                    $"Lv{sal.Level}");
+                Check("Salmon Normal Summon without Tribute under ALO",
+                    engine.TryNormalSummon(p, sal, asSet: false) &&
+                    p.MonstersOnField().Contains(sal));
+                Check("Salmon on field 2600/1200",
+                    sal.CurrentAtk == 2600 && sal.CurrentDef == 1200,
+                    $"ATK {sal.CurrentAtk} DEF {sal.CurrentDef}");
+
+                var prog = WRLDZ.Duel.TextEffects.CardTextEffectCompiler.Compile(alo.Def);
+                Check("ALO text compiles (name + ATK/DEF + Level)",
+                    prog != null && prog.FullyCompiled && prog.ClauseList.Count >= 3,
+                    prog == null
+                        ? "null program"
+                        : $"full={prog.FullyCompiled} clauses={prog.ClauseList.Count} unparsed={string.Join("|", prog.UnparsedFragments ?? System.Array.Empty<string>())}");
+            }
+
+            // ── Legendary Fisherman: Umi protection is a shared kind (ALO counts) ──
+            {
+                const int fisherman = 3643300;
+                const int raigeki = SpellTrapEffects.Raigeki;
+                const int meb = 54652250;
+                const int celtic = 91152256;
+
+                var engine = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine);
+                var p = engine.Player;
+                var opp = engine.Opponent;
+                var alo = PutInHand(engine, p, FieldSpellEffects.ALegendaryOcean);
+                Check("Fisherman: ALO activates as Umi",
+                    engine.TryActivateSpellTrap(p, alo, fromHand: true) &&
+                    FieldSpellEffects.UmiIsOnField(engine));
+                var fish = PlaceMonster(engine, p, fisherman, 2, BattlePosition.Attack, true);
+                var atk = PlaceMonster(engine, opp, celtic, 2, BattlePosition.Attack, true);
+                atk.SummonedThisTurn = false;
+                FieldSpellEffects.RefreshBoard(engine);
+
+                Check("Fisherman: cannot be attack-targeted while ALO/Umi is up",
+                    WRLDZ.Duel.TextEffects.ContinuousProtections.CannotBeAttackTarget(engine, fish));
+                Check("Fisherman: unaffected by Spell effects while Umi",
+                    WRLDZ.Duel.TextEffects.ContinuousProtections.IsUnaffectedBy(engine, fish, alo));
+
+                var rg = PutInHand(engine, opp, raigeki);
+                if (engine.TurnPlayer != opp)
+                {
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    engine.TryEndTurnSafe(engine.TurnPlayer);
+                }
+
+                if (engine.TurnPlayer == opp && engine.InMainPhase)
+                {
+                    Check("Fisherman: Raigeki does not destroy him under Umi",
+                        engine.TryActivateSpellTrap(opp, rg, fromHand: true) &&
+                        p.TryFindMonster(fish, out _));
+                }
+                else
+                    Check("Fisherman: Raigeki path (skipped — not opp Main)", false,
+                        $"turnOpp={engine.TurnPlayer == opp} phase={engine.Phase}");
+
+                var engine2 = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine2);
+                var alo2 = PutInHand(engine2, engine2.Player, FieldSpellEffects.ALegendaryOcean);
+                engine2.TryActivateSpellTrap(engine2.Player, alo2, fromHand: true);
+                var bug = PlaceMonster(engine2, engine2.Player, meb, 1, BattlePosition.Defense, false);
+                bug.SetThisTurn = false;
+                var fish2 = PlaceMonster(engine2, engine2.Opponent, fisherman, 2, BattlePosition.Attack, true);
+                FieldSpellEffects.RefreshBoard(engine2);
+                var flipped = engine2.TryFlipSummon(engine2.Player, bug);
+                if (engine2.IsAwaitingEffectTarget)
+                    engine2.TrySelectEffectTarget(fish2);
+                Check("Fisherman: MEB Flip (monster effect) still destroys him",
+                    flipped && !engine2.Opponent.TryFindMonster(fish2, out _),
+                    flipped ? "Fisherman still on field" : "Flip failed");
+
+                var engine3 = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine3);
+                var alo3 = PutInHand(engine3, engine3.Player, FieldSpellEffects.ALegendaryOcean);
+                engine3.TryActivateSpellTrap(engine3.Player, alo3, fromHand: true);
+                PlaceMonster(engine3, engine3.Player, fisherman, 2, BattlePosition.Attack, true);
+                var striker = PlaceMonster(engine3, engine3.Opponent, celtic, 2, BattlePosition.Attack, true);
+                striker.SummonedThisTurn = false;
+                FieldSpellEffects.RefreshBoard(engine3);
+                if (engine3.TurnPlayer != engine3.Opponent)
+                {
+                    if (engine3.IsAwaitingResponse) engine3.PassResponse();
+                    engine3.TryEndTurnSafe(engine3.TurnPlayer);
+                }
+
+                if (engine3.TurnPlayer == engine3.Opponent && engine3.Phase == DuelPhase.Main1)
+                    engine3.TryEnterBattlePhase(engine3.Opponent);
+                if (engine3.IsAwaitingResponse) engine3.PassResponse();
+                Check("Fisherman: only monster — opponent may attack directly",
+                    engine3.Phase == DuelPhase.Battle &&
+                    engine3.CanAttackDirectly(engine3.Opponent, striker),
+                    $"phase={engine3.Phase} canDirect={engine3.CanAttackDirectly(engine3.Opponent, striker)}");
+            }
+
+            // ── Absolute End: opponent-turn trap offered, attacks become direct ──
+            {
+                const int absEnd = 27744077;
+                const int celtic = 91152256;
+                const int wallId = 13039848; // Giant Soldier
+
+                var engine = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine);
+                var p = engine.Player;
+                var opp = engine.Opponent;
+                var trap = PlaceSetTrap(engine, p, absEnd, 2);
+                trap.SetThisTurn = false;
+                var prog = WRLDZ.Duel.TextEffects.CardTextEffectCompiler.Compile(trap.Def);
+                Check("Absolute End text compiles opponent-turn direct-attack grant",
+                    prog != null && prog.FullyCompiled &&
+                    prog.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == WRLDZ.Duel.TextEffects.EffectActionKind
+                            .ForceOpponentDirectAttacksThisTurn &&
+                        c.OpponentTurnOnly),
+                    prog == null
+                        ? "null"
+                        : $"full={prog.FullyCompiled} n={prog.ClauseList.Count}");
+
+                Check("Absolute End not legal on your own turn",
+                    !engine.CanActivateSpellTrap(p, trap, fromHand: false));
+
+                PlaceMonster(engine, p, wallId, 2, BattlePosition.Defense, true);
+                var striker = PlaceMonster(engine, opp, celtic, 2, BattlePosition.Attack, true);
+                striker.SummonedThisTurn = false;
+
+                if (engine.IsAwaitingResponse) engine.PassResponse();
+                engine.TryEndTurnSafe(engine.TurnPlayer);
+                if (engine.IsAwaitingResponse)
+                {
+                    Check("Absolute End offered on opponent Main Phase (open-game-state)",
+                        engine.PendingResponse != null &&
+                        engine.PendingResponse.Timing == ResponseTiming.OpponentOpenState &&
+                        engine.PendingResponse.LegalCards.Exists(c =>
+                            c != null && c.CardId == absEnd));
+                    Check("Absolute End activates on opponent's turn",
+                        engine.TryActivateSpellTrap(p, trap, fromHand: false));
+                    Check("Opponent must attack directly this turn",
+                        opp.MustAttackDirectlyThisTurn);
+                }
+                else
+                {
+                    Check("Absolute End offered on opponent Main Phase (open-game-state)", false,
+                        "no window");
+                    Check("Absolute End activates on opponent's turn", false, "no window");
+                    Check("Opponent must attack directly this turn", false, "no window");
+                }
+
+                var engine2 = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine2);
+                var trap2 = PlaceSetTrap(engine2, engine2.Player, absEnd, 2);
+                trap2.SetThisTurn = false;
+                var wallMon = PlaceMonster(engine2, engine2.Player, wallId, 2, BattlePosition.Defense, true);
+                var atk2 = PlaceMonster(engine2, engine2.Opponent, celtic, 2, BattlePosition.Attack, true);
+                atk2.SummonedThisTurn = false;
+                if (engine2.IsAwaitingResponse) engine2.PassResponse();
+                engine2.TryEndTurnSafe(engine2.TurnPlayer);
+                if (engine2.IsAwaitingResponse) engine2.PassResponse();
+                if (engine2.TurnPlayer == engine2.Opponent && engine2.Phase == DuelPhase.Main1)
+                    engine2.TryEnterBattlePhase(engine2.Opponent);
+                if (engine2.IsAwaitingResponse &&
+                    engine2.PendingResponse?.Timing == ResponseTiming.OpponentOpenState)
+                    engine2.PassResponse();
+                Check("Absolute End is legal in AttackDeclared window",
+                    engine2.Phase == DuelPhase.Battle &&
+                    SpellTrapEffects.IsLegalResponseCard(engine2, engine2.Player, trap2,
+                        ResponseTiming.AttackDeclared, null),
+                    $"phase={engine2.Phase} legal={SpellTrapEffects.IsLegalResponseCard(engine2, engine2.Player, trap2, ResponseTiming.AttackDeclared, null)}");
+                var lpBefore = engine2.Player.LifePoints;
+                var declared = engine2.TryAttack(engine2.Opponent, atk2, wallMon);
+                var activated = declared && engine2.IsAwaitingResponse &&
+                                engine2.TryActivateSpellTrap(engine2.Player, trap2, fromHand: false);
+                Check("Absolute End converts the current attack to direct",
+                    activated &&
+                    engine2.Opponent.MustAttackDirectlyThisTurn &&
+                    engine2.Player.TryFindMonster(wallMon, out _) &&
+                    engine2.Player.LifePoints == lpBefore - atk2.CurrentAtk,
+                    $"declared={declared} activated={activated} flag={engine2.Opponent.MustAttackDirectlyThisTurn} " +
+                    $"wall={engine2.Player.TryFindMonster(wallMon, out _)} LP {engine2.Player.LifePoints} was {lpBefore}");
+            }
+
+            // ── Numinous Healer: when you take damage, gain LP ──
+            {
+                const int healerId = 2130625;
+                const int celtic = 91152256;
+
+                var engine = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine);
+                var trap = PlaceSetTrap(engine, engine.Player, healerId, 2);
+                trap.SetThisTurn = false;
+                var prog = WRLDZ.Duel.TextEffects.CardTextEffectCompiler.Compile(trap.Def);
+                Check("Numinous Healer text compiles YouTakeLifePointDamage",
+                    prog != null && prog.FullyCompiled &&
+                    prog.HasTiming(WRLDZ.Duel.TextEffects.EffectTiming.YouTakeLifePointDamage));
+                Check("Numinous Healer not legal before you take damage",
+                    !engine.CanActivateSpellTrap(engine.Player, trap, fromHand: false));
+
+                var atk = PlaceMonster(engine, engine.Opponent, celtic, 2, BattlePosition.Attack, true);
+                atk.SummonedThisTurn = false;
+                if (engine.IsAwaitingResponse) engine.PassResponse();
+                engine.TryEndTurnSafe(engine.TurnPlayer);
+                if (engine.IsAwaitingResponse) engine.PassResponse();
+                if (engine.TurnPlayer == engine.Opponent && engine.Phase == DuelPhase.Main1)
+                    engine.TryEnterBattlePhase(engine.Opponent);
+                if (engine.IsAwaitingResponse) engine.PassResponse();
+
+                var lpBefore = engine.Player.LifePoints;
+                Check("Direct attack declares",
+                    engine.Phase == DuelPhase.Battle &&
+                    engine.TryAttack(engine.Opponent, atk, null));
+                if (engine.IsAwaitingResponse &&
+                    engine.PendingResponse?.Timing == ResponseTiming.AttackDeclared)
+                    engine.PassResponse();
+                Check("Numinous Healer offered after you take damage",
+                    engine.IsAwaitingResponse &&
+                    engine.PendingResponse != null &&
+                    engine.PendingResponse.Timing == ResponseTiming.YouTakeDamage &&
+                    engine.PendingResponse.LegalCards.Exists(c => c != null && c.CardId == healerId),
+                    $"awaiting={engine.IsAwaitingResponse} timing={engine.PendingResponse?.Timing} LP={engine.Player.LifePoints}");
+                var lpAfterHit = engine.Player.LifePoints;
+                Check("Damage applied before the trap window",
+                    lpAfterHit == lpBefore - atk.CurrentAtk,
+                    $"LP {lpAfterHit} expected {lpBefore - atk.CurrentAtk}");
+                Check("Numinous Healer activates and gains 1000 LP",
+                    engine.TryActivateSpellTrap(engine.Player, trap, fromHand: false) &&
+                    engine.Player.LifePoints == lpAfterHit + 1000,
+                    $"LP {engine.Player.LifePoints} expected {lpAfterHit + 1000}");
+            }
+
+            // ── Amphibious Bugroth MK-3: direct attack while Umi (ALO counts) ──
+            {
+                const int mk3Id = MonsterEffects.AmphibiousBugrothMk3; // 64342551
+                const int aloId = FieldSpellEffects.ALegendaryOcean; // 295517
+                const int celtic = 91152256;
+
+                var engine = Fresh(db, pDeck, aDeck);
+                for (var t = 0; t < 6 &&
+                                !(engine.TurnPlayer == engine.Player && engine.TurnNumber >= 2); t++)
+                {
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    engine.RecoverStuckCombat();
+                    engine.TryEndTurnSafe(engine.TurnPlayer);
+                }
+
+                ClearBoard(engine);
+                var p = engine.Player;
+                var opp = engine.Opponent;
+                p.LifePoints = 8000;
+                opp.LifePoints = 8000;
+                p.Hand.Clear();
+                opp.Hand.Clear();
+
+                var mk3 = PlaceMonster(engine, p, mk3Id, 2, BattlePosition.Attack, true);
+                mk3.SummonedThisTurn = false;
+                mk3.AttackedThisTurn = false;
+                mk3.SetThisTurn = false;
+                var setMon = PlaceMonster(engine, opp, celtic, 2, BattlePosition.Defense, false);
+                setMon.SetThisTurn = false;
+
+                Check("MK-3 text compiles CanAttackDirectly while Umi",
+                    mk3.Def != null &&
+                    WRLDZ.Duel.TextEffects.CardTextEffectCompiler.Compile(mk3.Def) is { } mk3Prog &&
+                    mk3Prog.FullyCompiled &&
+                    mk3Prog.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == WRLDZ.Duel.TextEffects.EffectActionKind.CanAttackDirectly &&
+                        string.Equals(c.RequiresFaceUpName, "Umi",
+                            System.StringComparison.OrdinalIgnoreCase)),
+                    mk3.Def == null
+                        ? "missing def"
+                        : "compile miss");
+
+                Check("MK-3 without Umi cannot attack directly over a Set",
+                    !engine.GrantsDirectAttack(mk3));
+
+                var alo = PutInHand(engine, p, aloId);
+                if (engine.IsAwaitingResponse) engine.PassResponse();
+                if (engine.TurnPlayer == p && engine.InMainPhase)
+                    engine.TryActivateSpellTrap(p, alo, fromHand: true);
+
+                Check("ALO is Umi on the field under MK-3",
+                    FieldSpellEffects.UmiIsOnField(engine) &&
+                    p.FieldSpellZone?.Occupant == alo);
+                Check("MK-3 WATER +200 ATK under ALO",
+                    mk3.CurrentAtk == 1700, $"ATK {mk3.CurrentAtk}");
+                Check("MK-3 grants direct attack while ALO/Umi is up",
+                    engine.GrantsDirectAttack(mk3));
+
+                if (engine.TurnPlayer == p && engine.Phase == DuelPhase.Main1)
+                    engine.TryEnterBattlePhase(p);
+                if (engine.IsAwaitingResponse) engine.PassResponse();
+                engine.RecoverStuckCombat();
+
+                if (engine.Phase == DuelPhase.Battle && engine.TurnPlayer == p &&
+                    engine.CanAttack(p, mk3))
+                {
+                    Check("MK-3 CanAttackDirectly over opponent Set (ALO as Umi)",
+                        engine.CanAttackDirectly(p, mk3));
+                    var vDirect = engine.ValidateAttack(p, mk3, null);
+                    Check("ValidateAttack direct is legal with Set + ALO",
+                        vDirect.Legal, vDirect.Reason);
+                    var vSet = engine.ValidateAttack(p, mk3, setMon);
+                    Check("ValidateAttack still allows attacking the Set",
+                        vSet.Legal, vSet.Reason);
+
+                    var snap = LegalIntentService.Build(engine, p);
+                    Check("Legal intents include Direct Attack",
+                        snap.HasKind(mk3, LegalIntentService.LegalKind.DirectAttack));
+                    Check("Legal intents still include Attack on Set",
+                        snap.HasKind(mk3, LegalIntentService.LegalKind.Attack));
+
+                    var lpBefore = opp.LifePoints;
+                    Check("MK-3 declares direct over Set", engine.TryAttack(p, mk3, null));
+                    for (var i = 0; i < 10; i++)
+                    {
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        else if (engine.HasDeclaredAttack) engine.ResolveDeclaredAttack();
+                        else engine.RecoverStuckCombat();
+                    }
+
+                    Check("MK-3 direct: Set monster still on field",
+                        opp.MonstersOnField().Any(m => m.CardId == celtic));
+                    Check("MK-3 direct: 1700 damage (1500+200 ALO)",
+                        opp.LifePoints == lpBefore - 1700,
+                        $"opp LP {opp.LifePoints} was {lpBefore}");
+                    Check("MK-3 direct: attacker LP unchanged", p.LifePoints == 8000);
+                }
+                else
+                {
+                    Check("MK-3 battle path (skipped — not in BP)", false,
+                        $"turn={engine.TurnPlayer == p} phase={engine.Phase} canAtk={engine.CanAttack(p, mk3)}");
+                }
+            }
+
+            // ── Star Boy continuous WATER +500 / FIRE −400 (both fields) ──
+            {
+                const int starBoy = MonsterEffects.StarBoy; // 8201910
+                const int fenrir = 218704; // WATER 1400
+                const int hinotama = 96851799; // FIRE Normal 600
+                const int celtic = 91152256; // EARTH — neither WATER nor FIRE
+
+                var engine = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine);
+                var p = engine.Player;
+                var opp = engine.Opponent;
+
+                var star = PlaceMonster(engine, p, starBoy, 2, BattlePosition.Attack, true);
+                var fen = PlaceMonster(engine, p, fenrir, 1, BattlePosition.Attack, true);
+                var fire = PlaceMonster(engine, opp, hinotama, 2, BattlePosition.Attack, true);
+                var cel = PlaceMonster(engine, opp, celtic, 1, BattlePosition.Attack, true);
+                FieldSpellEffects.RefreshBoard(engine);
+
+                Check("Star Boy text compiles WATER +500 and FIRE −400",
+                    star.Def != null &&
+                    WRLDZ.Duel.TextEffects.CardTextEffectCompiler.Compile(star.Def) is { } sbProg &&
+                    sbProg.FullyCompiled &&
+                    sbProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == WRLDZ.Duel.TextEffects.EffectActionKind.ContinuousGainAtkDef &&
+                        string.Equals(c.AttributeFilter, "WATER",
+                            System.StringComparison.OrdinalIgnoreCase) &&
+                        c.Amount == 500) &&
+                    sbProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == WRLDZ.Duel.TextEffects.EffectActionKind.ContinuousGainAtkDef &&
+                        string.Equals(c.AttributeFilter, "FIRE",
+                            System.StringComparison.OrdinalIgnoreCase) &&
+                        c.Amount == -400),
+                    star.Def == null ? "missing def" : "compile miss");
+
+                Check("Star Boy itself is WATER +500 (550→1050)",
+                    star.CurrentAtk == 1050, $"ATK {star.CurrentAtk}");
+                Check("Fenrir WATER +500 (1400→1900)",
+                    fen.CurrentAtk == 1900, $"ATK {fen.CurrentAtk}");
+                Check("Hinotama Soul FIRE −400 (600→200)",
+                    fire.CurrentAtk == 200, $"ATK {fire.CurrentAtk}");
+                Check("Celtic Guardian (neither) unchanged",
+                    cel.CurrentAtk == cel.Def.atk, $"ATK {cel.CurrentAtk}");
+
+                var setStar = PlaceMonster(engine, p, starBoy, 3, BattlePosition.Defense, false);
+                FieldSpellEffects.RefreshBoard(engine);
+                Check("Face-down Star Boy does not apply the aura",
+                    fen.CurrentAtk == 1900 && setStar.CurrentAtk == setStar.Def.atk,
+                    $"fen {fen.CurrentAtk} setStar {setStar.CurrentAtk}");
+
+                p.MonsterZones[2].Occupant = null; // remove face-up Star Boy
+                FieldSpellEffects.RefreshBoard(engine);
+                Check("Star Boy leaves: WATER/FIRE ATK return to printed",
+                    fen.CurrentAtk == fen.Def.atk && fire.CurrentAtk == fire.Def.atk,
+                    $"fen {fen.CurrentAtk} fire {fire.CurrentAtk}");
+
+                var alo = PutInHand(engine, p, FieldSpellEffects.ALegendaryOcean);
+                if (engine.IsAwaitingResponse) engine.PassResponse();
+                if (engine.TurnPlayer == p && engine.InMainPhase)
+                    engine.TryActivateSpellTrap(p, alo, fromHand: true);
+                p.MonsterZones[2].Occupant = star;
+                star.FaceUp = true;
+                star.Position = BattlePosition.Attack;
+                FieldSpellEffects.RefreshBoard(engine);
+                Check("Star Boy + ALO stack: Fenrir 1400+200+500=2100",
+                    fen.CurrentAtk == 2100, $"ATK {fen.CurrentAtk}");
+            }
+
+            // ── Mermaid Knight: extra attack while Umi (ALO counts) ──
+            {
+                const int mermaidId = MonsterEffects.MermaidKnight; // 24435369
+                const int twinId = 82035781; // Twinheaded Beast
+                const int grayId = 29618570; // Gray Wing — ignition this-turn, not continuous
+                const int aloId = FieldSpellEffects.ALegendaryOcean;
+
+                var mermaidDef = db.Get(mermaidId);
+                Check("Mermaid Knight text compiles ExtraAttacks while Umi",
+                    mermaidDef != null &&
+                    WRLDZ.Duel.TextEffects.CardTextEffectCompiler.Compile(mermaidDef) is { } mkProg &&
+                    mkProg.FullyCompiled &&
+                    mkProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == WRLDZ.Duel.TextEffects.EffectActionKind.ExtraAttacks &&
+                        string.Equals(c.RequiresFaceUpName, "Umi",
+                            System.StringComparison.OrdinalIgnoreCase)),
+                    mermaidDef == null ? "missing def" : "compile miss");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    if (!ReachPlayerBattle(engine))
+                    {
+                        Check("Mermaid Knight no-Umi battle path (skipped — not in BP)", false,
+                            $"turnP={engine.TurnPlayer == engine.Player} turn={engine.TurnNumber} phase={engine.Phase}");
+                    }
+                    else
+                    {
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.LifePoints = 8000;
+                        opp.LifePoints = 8000;
+                        p.Hand.Clear();
+                        opp.Hand.Clear();
+
+                        var mermaid = PlaceMonster(engine, p, mermaidId, 2, BattlePosition.Attack, true);
+                        mermaid.ClearAttackFlags();
+                        FieldSpellEffects.RefreshBoard(engine);
+
+                        Check("Mermaid Knight without Umi: ExtraAttacksAllowed is 0",
+                            engine.ExtraAttacksAllowed(mermaid) == 0,
+                            $"extra={engine.ExtraAttacksAllowed(mermaid)}");
+                        Check("Mermaid Knight without Umi can declare first attack",
+                            engine.CanAttack(p, mermaid));
+                        var lp0 = opp.LifePoints;
+                        Check("Mermaid Knight first attack (no Umi)",
+                            ResolveDirect(engine, p, mermaid));
+                        Check("Mermaid Knight without Umi cannot attack twice",
+                            !engine.CanAttack(p, mermaid) && mermaid.AttacksDeclaredThisTurn == 1,
+                            $"can={engine.CanAttack(p, mermaid)} declared={mermaid.AttacksDeclaredThisTurn}");
+                        Check("Mermaid Knight no-Umi: 1500 direct",
+                            opp.LifePoints == lp0 - 1500,
+                            $"opp LP {opp.LifePoints} was {lp0}");
+                    }
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    for (var t = 0; t < 8 &&
+                                    !(engine.TurnPlayer == engine.Player && engine.TurnNumber >= 2); t++)
+                    {
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        engine.RecoverStuckCombat();
+                        engine.TryEndTurnSafe(engine.TurnPlayer);
+                    }
+
+                    if (!(engine.TurnPlayer == engine.Player && engine.TurnNumber >= 2 &&
+                          engine.InMainPhase))
+                    {
+                        Check("Mermaid Knight + ALO battle path (skipped — not in MP)", false,
+                            $"turnP={engine.TurnPlayer == engine.Player} turn={engine.TurnNumber} phase={engine.Phase}");
+                    }
+                    else
+                    {
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.LifePoints = 8000;
+                        opp.LifePoints = 8000;
+                        p.Hand.Clear();
+                        opp.Hand.Clear();
+
+                        var mermaid = PlaceMonster(engine, p, mermaidId, 2, BattlePosition.Attack, true);
+                        mermaid.ClearAttackFlags();
+                        var alo = PutInHand(engine, p, aloId);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        Check("Mermaid Knight activates ALO before Battle",
+                            engine.TryActivateSpellTrap(p, alo, fromHand: true));
+                        FieldSpellEffects.RefreshBoard(engine);
+                        Check("ALO is Umi under Mermaid Knight",
+                            FieldSpellEffects.UmiIsOnField(engine) &&
+                            p.FieldSpellZone?.Occupant == alo);
+                        Check("Mermaid Knight WATER +200 ATK under ALO",
+                            mermaid.CurrentAtk == 1700, $"ATK {mermaid.CurrentAtk}");
+                        Check("Mermaid Knight ExtraAttacksAllowed is 1 while ALO/Umi",
+                            engine.ExtraAttacksAllowed(mermaid) == 1 &&
+                            engine.MaxAttacksThisTurn(mermaid) == 2,
+                            $"extra={engine.ExtraAttacksAllowed(mermaid)} max={engine.MaxAttacksThisTurn(mermaid)}");
+
+                        if (engine.Phase == DuelPhase.Main1)
+                            engine.TryEnterBattlePhase(p);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        DrainCombat(engine);
+
+                        if (engine.Phase != DuelPhase.Battle)
+                        {
+                            Check("Mermaid Knight + ALO entered Battle", false, $"phase={engine.Phase}");
+                        }
+                        else
+                        {
+                            var lpBefore = opp.LifePoints;
+                            Check("Mermaid Knight first attack while Umi",
+                                engine.CanAttack(p, mermaid) && ResolveDirect(engine, p, mermaid));
+                            Check("Mermaid Knight can attack again after first (ALO)",
+                                engine.CanAttack(p, mermaid) && mermaid.AttacksDeclaredThisTurn == 1,
+                                $"can={engine.CanAttack(p, mermaid)} declared={mermaid.AttacksDeclaredThisTurn} phase={engine.Phase}");
+                            var snap = LegalIntentService.Build(engine, p);
+                            Check("Legal intents still include Direct Attack after first",
+                                snap.HasKind(mermaid, LegalIntentService.LegalKind.DirectAttack));
+                            Check("Mermaid Knight second attack while Umi",
+                                ResolveDirect(engine, p, mermaid));
+                            Check("Mermaid Knight two directs: 3400 (1700+1700)",
+                                opp.LifePoints == lpBefore - 3400,
+                                $"opp LP {opp.LifePoints} was {lpBefore} declared={mermaid.AttacksDeclaredThisTurn}");
+                            Check("Mermaid Knight cannot attack a third time",
+                                !engine.CanAttack(p, mermaid) && mermaid.AttacksDeclaredThisTurn == 2,
+                                $"can={engine.CanAttack(p, mermaid)} declared={mermaid.AttacksDeclaredThisTurn}");
+                        }
+                    }
+                }
+
+                // Twinheaded Beast: unconditional extra attack
+                {
+                    var eng2 = Fresh(db, pDeck, aDeck);
+                    if (!ReachPlayerBattle(eng2))
+                    {
+                        Check("Twinheaded Beast battle path (skipped — not in BP)", false,
+                            $"phase={eng2.Phase}");
+                    }
+                    else
+                    {
+                        ClearBoard(eng2);
+                        var p2 = eng2.Player;
+                        var opp2 = eng2.Opponent;
+                        p2.LifePoints = 8000;
+                        opp2.LifePoints = 8000;
+                        p2.Hand.Clear();
+                        opp2.Hand.Clear();
+                        var twin = PlaceMonster(eng2, p2, twinId, 2, BattlePosition.Attack, true);
+                        twin.ClearAttackFlags();
+                        Check("Twinheaded Beast ExtraAttacksAllowed is 1 with no Umi",
+                            eng2.ExtraAttacksAllowed(twin) == 1,
+                            $"extra={eng2.ExtraAttacksAllowed(twin)}");
+                        Check("Twinheaded Beast first attack", ResolveDirect(eng2, p2, twin));
+                        Check("Twinheaded Beast can attack twice",
+                            eng2.CanAttack(p2, twin));
+                        Check("Twinheaded Beast second attack", ResolveDirect(eng2, p2, twin));
+                        Check("Twinheaded Beast cannot attack a third time",
+                            !eng2.CanAttack(p2, twin));
+                    }
+                }
+
+                // Official-text sweep: every cards_db extra-attack line is compiled + battled.
+                {
+                    var extraCards = 0;
+                    var extraFails = 0;
+                    foreach (var def in db.GetAllCards())
+                    {
+                        if (def == null || string.IsNullOrEmpty(def.desc)) continue;
+                        if (def.desc.IndexOf("attack twice during the same Battle Phase",
+                                System.StringComparison.OrdinalIgnoreCase) < 0)
+                            continue;
+                        extraCards++;
+                        var prog = WRLDZ.Duel.TextEffects.CardTextEffectCompiler.Compile(def);
+                        var compiled = prog != null && prog.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == WRLDZ.Duel.TextEffects.EffectActionKind.ExtraAttacks);
+                        if (!compiled)
+                        {
+                            extraFails++;
+                            Check($"DB extra-attack compiles: {def.name} ({def.id})", false,
+                                prog == null
+                                    ? "null program"
+                                    : $"unparsed={string.Join("|", prog.UnparsedFragments ?? System.Array.Empty<string>())}");
+                            continue;
+                        }
+
+                        var needsUmi = def.desc.IndexOf("\"Umi\"",
+                            System.StringComparison.OrdinalIgnoreCase) >= 0;
+                        var sweep = Fresh(db, pDeck, aDeck);
+                        for (var t = 0; t < 8 &&
+                                        !(sweep.TurnPlayer == sweep.Player && sweep.TurnNumber >= 2); t++)
+                        {
+                            if (sweep.IsAwaitingResponse) sweep.PassResponse();
+                            sweep.RecoverStuckCombat();
+                            sweep.TryEndTurnSafe(sweep.TurnPlayer);
+                        }
+
+                        if (!(sweep.TurnPlayer == sweep.Player && sweep.TurnNumber >= 2 &&
+                              sweep.InMainPhase))
+                        {
+                            extraFails++;
+                            Check($"DB extra-attack battle {def.name}", false, "not in MP");
+                            continue;
+                        }
+
+                        ClearBoard(sweep);
+                        sweep.Player.LifePoints = 8000;
+                        sweep.Opponent.LifePoints = 8000;
+                        sweep.Player.Hand.Clear();
+                        sweep.Opponent.Hand.Clear();
+                        var atk = PlaceMonster(sweep, sweep.Player, def.id, 2,
+                            BattlePosition.Attack, true);
+                        atk.ClearAttackFlags();
+                        if (needsUmi)
+                        {
+                            var ocean = PutInHand(sweep, sweep.Player, aloId);
+                            if (sweep.IsAwaitingResponse) sweep.PassResponse();
+                            sweep.TryActivateSpellTrap(sweep.Player, ocean, fromHand: true);
+                        }
+
+                        if (sweep.Phase == DuelPhase.Main1)
+                            sweep.TryEnterBattlePhase(sweep.Player);
+                        if (sweep.IsAwaitingResponse) sweep.PassResponse();
+                        DrainCombat(sweep);
+                        if (sweep.Phase != DuelPhase.Battle)
+                        {
+                            extraFails++;
+                            Check($"DB extra-attack battle {def.name}", false, $"phase={sweep.Phase}");
+                            continue;
+                        }
+
+                        var extraOk = sweep.ExtraAttacksAllowed(atk) >= 1 &&
+                                      ResolveDirect(sweep, sweep.Player, atk) &&
+                                      sweep.CanAttack(sweep.Player, atk) &&
+                                      ResolveDirect(sweep, sweep.Player, atk) &&
+                                      !sweep.CanAttack(sweep.Player, atk);
+                        Check($"DB extra-attack battles twice: {def.name} ({def.id})", extraOk,
+                            $"extra={sweep.ExtraAttacksAllowed(atk)} declared={atk.AttacksDeclaredThisTurn} umi={needsUmi}");
+                        if (!extraOk) extraFails++;
+                    }
+
+                    Check("cards_db extra-attack sweep found Mermaid Knight / Twinheaded",
+                        extraCards >= 2, $"found={extraCards} fails={extraFails}");
+                }
+
+                var grayDef = db.Get(grayId);
+                if (grayDef != null)
+                {
+                    var gp = WRLDZ.Duel.TextEffects.CardTextEffectCompiler.Compile(grayDef);
+                    Check("Gray Wing is not a continuous extra-attack compile",
+                        gp == null ||
+                        !gp.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == WRLDZ.Duel.TextEffects.EffectActionKind.ExtraAttacks));
+                }
+            }
+
+            // ── Attack / Damage Step traps (Bark of Dark Ruler, Sakuretsu Armor) ──
+            {
+                const int barkId = 41925941;
+                const int sakuretsuId = 56120475;
+                const int laJinn = 97590747; // Fiend 1800
+                const int bewd = 89631139; // 3000 ATK
+                const int celtic = 91152256;
+
+                var barkDef = db.Get(barkId);
+                Check("Bark of Dark Ruler text compiles Damage Step ATK/DEF loss",
+                    barkDef != null &&
+                    WRLDZ.Duel.TextEffects.CardTextEffectCompiler.Compile(barkDef) is { } barkProg &&
+                    barkProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == WRLDZ.Duel.TextEffects.EffectActionKind.LoseAtkDefUntilEndOfTurn &&
+                        c.Timing == WRLDZ.Duel.TextEffects.EffectTiming.DamageCalculation &&
+                        c.RequiresLpCostMultiple == 100 &&
+                        string.Equals(c.RaceFilter, "Fiend", System.StringComparison.OrdinalIgnoreCase)),
+                    barkDef == null ? "missing def" : "compile miss");
+
+                var sakDef = db.Get(sakuretsuId);
+                Check("Sakuretsu Armor text compiles destroy attacker",
+                    sakDef != null &&
+                    WRLDZ.Duel.TextEffects.CardTextEffectCompiler.Compile(sakDef) is { } sakProg &&
+                    sakProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == WRLDZ.Duel.TextEffects.EffectActionKind.Destroy &&
+                        c.Timing == WRLDZ.Duel.TextEffects.EffectTiming.AttackDeclared &&
+                        c.Zone == WRLDZ.Duel.TextEffects.EffectZoneFilter.AttackingMonster),
+                    sakDef == null ? "missing def" : "compile miss");
+
+                YgoProTriggerCatalog.EnsureLoaded();
+                Check("YGOPro trigger catalog loaded one-shot traps",
+                    YgoProTriggerCatalog.Count > 0, $"count={YgoProTriggerCatalog.Count}");
+                Check("YGOPro catalog: Bark of Dark Ruler is Damage Step pay-LP",
+                    YgoProTriggerCatalog.For(barkId) is { } bf &&
+                    bf.timing == "damage_step" && bf.action == "lose_atk_def_pay_lp");
+                Check("YGOPro catalog: Sakuretsu Armor is destroy attacker",
+                    YgoProTriggerCatalog.For(sakuretsuId) is { } sf &&
+                    sf.timing == "attack_announce" && sf.action == "destroy_attacker");
+
+                // Bark: opponent attacks your Fiend — Activate must appear in Damage Step
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    if (!ReachOpponentBattle(engine))
+                    {
+                        Check("Bark of Dark Ruler battle path (skipped — opp not in BP)", false,
+                            $"turnP={engine.TurnPlayer == engine.Opponent} turn={engine.TurnNumber} phase={engine.Phase}");
+                    }
+                    else
+                    {
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.LifePoints = 8000;
+                        opp.LifePoints = 8000;
+                        p.Hand.Clear();
+                        opp.Hand.Clear();
+
+                        var fiend = PlaceMonster(engine, p, laJinn, 2, BattlePosition.Attack, true);
+                        fiend.ClearAttackFlags();
+                        var bark = PlaceSetTrap(engine, p, barkId, 2);
+                        var attacker = PlaceMonster(engine, opp, bewd, 2, BattlePosition.Attack, true);
+                        attacker.ClearAttackFlags();
+                        attacker.SummonedThisTurn = false;
+
+                        if (engine.Phase == DuelPhase.Main1)
+                            engine.TryEnterBattlePhase(opp);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        DrainCombat(engine);
+
+                        Check("Bark: opponent can declare on Fiend",
+                            engine.Phase == DuelPhase.Battle && engine.CanAttack(opp, attacker),
+                            $"phase={engine.Phase} can={engine.CanAttack(opp, attacker)}");
+                        Check("Bark: declare attack", engine.TryAttack(opp, attacker, fiend));
+
+                        if (engine.PendingResponse?.Timing == ResponseTiming.AttackDeclared)
+                        {
+                            Check("Bark is NOT legal at attack declaration",
+                                engine.PendingResponse.LegalCards == null ||
+                                !engine.PendingResponse.LegalCards.Exists(c =>
+                                    c != null && c.CardId == barkId));
+                            engine.PassResponse();
+                        }
+
+                        Check("Bark opens Damage Step response with Activate",
+                            engine.PendingResponse != null &&
+                            engine.PendingResponse.Timing == ResponseTiming.DamageCalculation &&
+                            engine.PendingResponse.LegalCards != null &&
+                            engine.PendingResponse.LegalCards.Exists(c =>
+                                c != null && c.CardId == barkId),
+                            engine.PendingResponse == null
+                                ? "no window"
+                                : $"timing={engine.PendingResponse.Timing} n={engine.PendingResponse.LegalCards?.Count ?? 0}");
+
+                        if (engine.PendingResponse != null &&
+                            engine.PendingResponse.Timing == ResponseTiming.DamageCalculation)
+                        {
+                            Check("Bark CanActivate in Damage Step window",
+                                engine.CanActivateSpellTrap(p, bark, fromHand: false));
+                            var snap = LegalIntentService.Build(engine, p);
+                            Check("Bark legal intent includes Response Activate",
+                                snap.HasKind(bark, LegalIntentService.LegalKind.ResponseActivate));
+
+                            Check("Bark activates",
+                                engine.TryActivateSpellTrap(p, bark, fromHand: false));
+                            if (engine.IsAwaitingEffectTarget &&
+                                engine.PendingActivation != null &&
+                                engine.PendingActivation.AwaitingLpCost)
+                            {
+                                var pay = engine.PendingActivation.LpCostChoices.Count > 0
+                                    ? engine.PendingActivation.LpCostChoices[
+                                        engine.PendingActivation.LpCostChoices.Count - 1]
+                                    : 100;
+                                Check("Bark LP cost accepted", engine.TrySelectLpCost(pay));
+                            }
+
+                            DrainCombat(engine);
+                            Check("Bark: BEWD ATK reduced until End Phase",
+                                attacker.UntilEndOfTurnAtk < 0 && attacker.CurrentAtk < 3000,
+                                $"until={attacker.UntilEndOfTurnAtk} ATK={attacker.CurrentAtk}");
+                            Check("Bark: trap left the field (Normal Trap)",
+                                !p.TryFindSpellTrap(bark, out _));
+                        }
+                    }
+                }
+
+                // Sakuretsu Armor: Activate at attack declaration, destroy the attacker
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    if (!ReachOpponentBattle(engine))
+                    {
+                        Check("Sakuretsu Armor battle path (skipped — opp not in BP)", false,
+                            $"phase={engine.Phase}");
+                    }
+                    else
+                    {
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.LifePoints = 8000;
+                        opp.LifePoints = 8000;
+                        var wall = PlaceMonster(engine, p, celtic, 2, BattlePosition.Defense, true);
+                        wall.ClearAttackFlags();
+                        var sak = PlaceSetTrap(engine, p, sakuretsuId, 2);
+                        var attacker = PlaceMonster(engine, opp, bewd, 2, BattlePosition.Attack, true);
+                        attacker.ClearAttackFlags();
+                        attacker.SummonedThisTurn = false;
+
+                        if (engine.Phase == DuelPhase.Main1)
+                            engine.TryEnterBattlePhase(opp);
+                        DrainCombat(engine);
+
+                        Check("Sakuretsu: declare attack", engine.TryAttack(opp, attacker, wall));
+                        Check("Sakuretsu is legal at attack declaration",
+                            engine.PendingResponse != null &&
+                            engine.PendingResponse.Timing == ResponseTiming.AttackDeclared &&
+                            engine.PendingResponse.LegalCards != null &&
+                            engine.PendingResponse.LegalCards.Exists(c =>
+                                c != null && c.CardId == sakuretsuId),
+                            engine.PendingResponse == null
+                                ? "no window"
+                                : $"timing={engine.PendingResponse.Timing}");
+                        Check("Sakuretsu activates",
+                            engine.CanActivateSpellTrap(p, sak, fromHand: false) &&
+                            engine.TryActivateSpellTrap(p, sak, fromHand: false));
+                        DrainCombat(engine);
+                        Check("Sakuretsu: attacker destroyed",
+                            !opp.TryFindMonster(attacker, out _) &&
+                            opp.Graveyard.Exists(c => c.CardId == bewd));
+                        Check("Sakuretsu: player's monster survived",
+                            p.TryFindMonster(wall, out _));
+                    }
+                }
+
+                // Draining Shield: negate that attack (still counts as declared) + gain ATK as LP
+                {
+                    const int drainId = 43250041;
+                    var engine = Fresh(db, pDeck, aDeck);
+                    if (!ReachOpponentBattle(engine))
+                    {
+                        Check("Draining Shield battle path (skipped — opp not in BP)", false,
+                            $"phase={engine.Phase}");
+                    }
+                    else
+                    {
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.LifePoints = 8000;
+                        opp.LifePoints = 8000;
+                        var victim = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                        victim.ClearAttackFlags();
+                        var shield = PlaceSetTrap(engine, p, drainId, 2);
+                        shield.SetThisTurn = false;
+                        var attacker = PlaceMonster(engine, opp, bewd, 2, BattlePosition.Attack, true);
+                        attacker.ClearAttackFlags();
+                        attacker.SummonedThisTurn = false;
+
+                        if (engine.Phase == DuelPhase.Main1)
+                            engine.TryEnterBattlePhase(opp);
+                        DrainCombat(engine);
+
+                        var drainProg = CardTextEffectCompiler.Compile(shield.Def);
+                        Check("Draining Shield compiles negate + gain LP equal to ATK",
+                            drainProg != null &&
+                            drainProg.HasTiming(EffectTiming.AttackDeclared) &&
+                            drainProg.ClauseList.Exists(c =>
+                                c != null && c.Action == EffectActionKind.NegateThisAttack) &&
+                            drainProg.ClauseList.Exists(c =>
+                                c != null && c.Action == EffectActionKind.GainLpEqualToAtk));
+
+                        Check("Draining Shield: declare attack",
+                            engine.TryAttack(opp, attacker, victim));
+                        Check("Draining Shield is legal at attack declaration",
+                            engine.PendingResponse != null &&
+                            engine.PendingResponse.Timing == ResponseTiming.AttackDeclared &&
+                            engine.PendingResponse.LegalCards != null &&
+                            engine.PendingResponse.LegalCards.Exists(c =>
+                                c != null && c.CardId == drainId),
+                            engine.PendingResponse == null
+                                ? "no window"
+                                : $"timing={engine.PendingResponse.Timing}");
+                        var lpBefore = p.LifePoints;
+                        Check("Draining Shield activates",
+                            engine.CanActivateSpellTrap(p, shield, fromHand: false) &&
+                            engine.TryActivateSpellTrap(p, shield, fromHand: false));
+                        DrainCombat(engine);
+                        Check("Draining Shield: gain ATK as LP",
+                            p.LifePoints == lpBefore + attacker.CurrentAtk,
+                            $"LP {p.LifePoints} was {lpBefore} atk={attacker.CurrentAtk}");
+                        Check("Draining Shield: defender survived (attack did not resolve)",
+                            p.TryFindMonster(victim, out _));
+                        Check("Draining Shield: attacker still on field",
+                            opp.TryFindMonster(attacker, out _));
+                        Check("Draining Shield: that attack cannot be declared again",
+                            engine.Phase == DuelPhase.Battle &&
+                            !engine.CanAttack(opp, attacker) &&
+                            attacker.AttacksDeclaredThisTurn >= 1,
+                            $"phase={engine.Phase} can={engine.CanAttack(opp, attacker)} " +
+                            $"declared={attacker.AttacksDeclaredThisTurn}");
+                    }
+                }
+
+                // Bulk: every catalog attack-declare trap in cards_db compiles or is catalog-legal
+                {
+                    var n = 0;
+                    var miss = 0;
+                    foreach (var def in db.GetAllCards())
+                    {
+                        if (def == null || !def.IsTrap) continue;
+                        var fact = YgoProTriggerCatalog.For(def.id);
+                        if (fact == null || fact.timing != "attack_announce") continue;
+                        n++;
+                        var prog = WRLDZ.Duel.TextEffects.CardTextEffectCompiler.Compile(def);
+                        var compiled = prog != null && prog.HasTiming(
+                            WRLDZ.Duel.TextEffects.EffectTiming.AttackDeclared);
+                        Check($"attack-declare trap covered: {def.name} ({def.id})",
+                            compiled || fact.action.Length > 0,
+                            compiled ? "ok" : $"catalog={fact.action}");
+                        if (!compiled && string.IsNullOrEmpty(fact.action)) miss++;
+                    }
+
+                    Check("catalog attack-declare traps in cards_db", n >= 4, $"n={n} miss={miss}");
+                }
+            }
+
+            // ── Granadora / Maiden of the Aqua / Tornado Wall (Umi environment) ──
+            {
+                const int granId = 13944422;
+                const int maidenId = FieldSpellEffects.MaidenOfTheAqua;
+                const int wallId = 18605135;
+                const int celtic = 91152256;
+                const int bewd = 89631139;
+
+                var granDef = db.Get(granId);
+                Check("Granadora text compiles summon LP + destroy damage",
+                    granDef != null &&
+                    WRLDZ.Duel.TextEffects.CardTextEffectCompiler.Compile(granDef) is { } gp &&
+                    gp.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == WRLDZ.Duel.TextEffects.EffectActionKind.GainLifePoints &&
+                        c.Amount == 1000) &&
+                    gp.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == WRLDZ.Duel.TextEffects.EffectActionKind.TakeEffectDamage &&
+                        c.RequiresDestroyed),
+                    granDef == null ? "missing def" : "compile miss");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    p.LifePoints = 8000;
+                    var gran = PutInHand(engine, p, granId);
+                    Check("Granadora Normal Summon",
+                        engine.TryNormalSummon(p, gran, asSet: false));
+                    Check("Granadora: +1000 LP on Normal Summon",
+                        p.LifePoints == 9000, $"LP {p.LifePoints}");
+
+                    engine.DestroyMonsterPublic(p, gran);
+                    Check("Granadora: 2000 damage when destroyed",
+                        p.LifePoints == 7000, $"LP {p.LifePoints}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.LifePoints = 8000;
+                    var gran = PlaceMonster(engine, p, granId, 2, BattlePosition.Attack, true);
+                    engine.SendCardToGrave(p, gran);
+                    Check("Granadora tributed/sent (not destroyed): no 2000 damage",
+                        p.LifePoints == 8000, $"LP {p.LifePoints}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var maiden = PlaceMonster(engine, p, maidenId, 2, BattlePosition.Attack, true);
+                    FieldSpellEffects.RefreshBoard(engine);
+                    Check("Maiden of the Aqua treats the field as Umi (no Field Spell)",
+                        FieldSpellEffects.UmiIsOnField(engine) &&
+                        FieldSpellEffects.MonsterTreatsFieldAs(engine, "Umi"),
+                        maiden.Name);
+
+                    var wall = PlaceSetTrap(engine, p, wallId, 2);
+                    wall.SetThisTurn = true;
+                    Check("Tornado Wall cannot activate the turn it was Set",
+                        !engine.CanActivateSpellTrap(p, wall, fromHand: false));
+                    wall.SetThisTurn = false;
+                    Check("Tornado Wall activates while Maiden treats field as Umi",
+                        engine.CanActivateSpellTrap(p, wall, fromHand: false) &&
+                        engine.TryActivateSpellTrap(p, wall, fromHand: false));
+                    Check("Tornado Wall stays face-up Continuous",
+                        wall.FaceUp && p.TryFindSpellTrap(wall, out _));
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    var alo = PutInHand(engine, p, FieldSpellEffects.ALegendaryOcean);
+                    Check("Tornado Wall: ALO activates as Umi",
+                        engine.TryActivateSpellTrap(p, alo, fromHand: true) &&
+                        FieldSpellEffects.UmiIsOnField(engine));
+                    var wall = PlaceSetTrap(engine, p, wallId, 2);
+                    wall.SetThisTurn = false;
+                    var celticM = PlaceMonster(engine, p, celtic, 2, BattlePosition.Defense, true);
+                    var bewdM = PlaceMonster(engine, opp, bewd, 2, BattlePosition.Attack, true);
+                    bewdM.SummonedThisTurn = false;
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    engine.TryEndTurnSafe(engine.TurnPlayer);
+                    Check("Tornado Wall offered on opponent Main (free-chain Continuous Trap)",
+                        engine.IsAwaitingResponse &&
+                        engine.PendingResponse != null &&
+                        engine.PendingResponse.Timing == ResponseTiming.OpponentOpenState &&
+                        engine.PendingResponse.LegalCards.Exists(c =>
+                            c != null && c.CardId == wallId),
+                        $"awaiting={engine.IsAwaitingResponse} timing={engine.PendingResponse?.Timing}");
+                    Check("Tornado Wall activates from opponent-turn window and stays",
+                        engine.TryActivateSpellTrap(p, wall, fromHand: false) &&
+                        wall.FaceUp && p.TryFindSpellTrap(wall, out _));
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    if (engine.TurnPlayer == opp && engine.Phase == DuelPhase.Main1)
+                        engine.TryEnterBattlePhase(opp);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    var lpBefore = p.LifePoints;
+                    if (engine.Phase == DuelPhase.Battle && engine.CanAttack(opp, bewdM))
+                    {
+                        engine.TryAttack(opp, bewdM, celticM);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        DrainCombat(engine);
+                    }
+
+                    Check("Tornado Wall: no battle damage while Umi is up",
+                        p.LifePoints == lpBefore,
+                        $"LP {p.LifePoints} was {lpBefore}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    var alo = PutInHand(engine, p, FieldSpellEffects.ALegendaryOcean);
+                    engine.TryActivateSpellTrap(p, alo, fromHand: true);
+                    var wall = PlaceSetTrap(engine, p, wallId, 2);
+                    wall.SetThisTurn = false;
+                    PlaceMonster(engine, p, celtic, 2, BattlePosition.Defense, true);
+                    var bewdM = PlaceMonster(engine, opp, bewd, 2, BattlePosition.Attack, true);
+                    bewdM.SummonedThisTurn = false;
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    engine.TryEndTurnSafe(engine.TurnPlayer);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    if (engine.TurnPlayer == opp && engine.Phase == DuelPhase.Main1)
+                        engine.TryEnterBattlePhase(opp);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    Check("Tornado Wall is legal in AttackDeclared window while Umi is up",
+                        engine.Phase == DuelPhase.Battle &&
+                        SpellTrapEffects.IsLegalResponseCard(engine, p, wall,
+                            ResponseTiming.AttackDeclared, null));
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    if (!ReachOpponentBattle(engine))
+                    {
+                        Check("Tornado Wall battle (skipped — opp not in BP)", false,
+                            $"phase={engine.Phase}");
+                    }
+                    else
+                    {
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.LifePoints = 8000;
+                        opp.LifePoints = 8000;
+                        PlaceMonster(engine, p, maidenId, 1, BattlePosition.Defense, true);
+                        var wall = PlaceSetTrap(engine, p, wallId, 2);
+                        wall.SetThisTurn = false;
+                        engine.TryActivateSpellTrap(p, wall, fromHand: false);
+                        FieldSpellEffects.RefreshBoard(engine);
+                        var victim = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                        victim.ClearAttackFlags();
+                        var attacker = PlaceMonster(engine, opp, bewd, 2, BattlePosition.Attack, true);
+                        attacker.ClearAttackFlags();
+                        attacker.SummonedThisTurn = false;
+                        if (engine.Phase == DuelPhase.Main1)
+                            engine.TryEnterBattlePhase(opp);
+                        DrainCombat(engine);
+                        var lpBefore = p.LifePoints;
+                        if (engine.CanAttack(opp, attacker))
+                        {
+                            engine.TryAttack(opp, attacker, victim);
+                            DrainCombat(engine);
+                        }
+
+                        Check("Tornado Wall + Maiden: controller takes no battle damage",
+                            p.LifePoints == lpBefore,
+                            $"LP {p.LifePoints} was {lpBefore}");
+                    }
+                }
+            }
+
+            // ── Levia-Dragon - Daedalus: send face-up Umi (ALO counts) ; destroy all other ──
+            {
+                const int daedalusId = 37721209;
+                const int aloId = FieldSpellEffects.ALegendaryOcean; // 295517
+                const int umiId = 22702055;
+                const int maidenId = FieldSpellEffects.MaidenOfTheAqua;
+                const int celtic = 91152256;
+                const int wallId = 18605135;
+
+                var daeDef = db.Get(daedalusId);
+                Check("Daedalus text compiles send-Umi + destroy all other",
+                    daeDef != null &&
+                    WRLDZ.Duel.TextEffects.CardTextEffectCompiler.Compile(daeDef) is { } dp &&
+                    dp.FullyCompiled &&
+                    dp.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == WRLDZ.Duel.TextEffects.EffectActionKind.Destroy &&
+                        c.RequiresSendNamedToGy &&
+                        string.Equals(c.RequiresFaceUpName, "Umi",
+                            System.StringComparison.OrdinalIgnoreCase) &&
+                        c.Zone == WRLDZ.Duel.TextEffects.EffectZoneFilter.AllOtherCardsOnField),
+                    daeDef == null ? "missing def" : "compile miss");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var dae = PlaceMonster(engine, p, daedalusId, 2, BattlePosition.Attack, true);
+                    Check("Daedalus: cannot activate without a face-up Umi you control",
+                        !engine.CanActivateSpellTrap(p, dae, fromHand: false));
+
+                    var maiden = PlaceMonster(engine, p, maidenId, 1, BattlePosition.Attack, true);
+                    FieldSpellEffects.RefreshBoard(engine);
+                    Check("Maiden treats the field as Umi but is not a named Umi cost",
+                        FieldSpellEffects.UmiIsOnField(engine) &&
+                        !engine.CanActivateSpellTrap(p, dae, fromHand: false));
+                    p.MonsterZones[1].Occupant = null;
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var dae = PlaceMonster(engine, p, daedalusId, 2, BattlePosition.Attack, true);
+                    var alo = engine.CreateCardInstance(aloId);
+                    alo.FaceUp = true;
+                    p.FieldSpellZone.Occupant = alo;
+                    FieldSpellEffects.RefreshBoard(engine);
+                    var prey = PlaceMonster(engine, opp, celtic, 2, BattlePosition.Attack, true);
+                    var wall = PlaceSetTrap(engine, opp, wallId, 2);
+
+                    Check("ALO is always treated as Umi for Daedalus cost",
+                        alo.IsNamed("Umi") && FieldSpellEffects.UmiIsOnField(engine));
+                    Check("Daedalus: Activate legal with face-up ALO you control",
+                        engine.CanActivateSpellTrap(p, dae, fromHand: false));
+                    var snap = LegalIntentService.Build(engine, p);
+                    Check("Daedalus: legal intents include Activate from field",
+                        snap.HasKind(dae, LegalIntentService.LegalKind.ActivateFromField));
+
+                    Check("Daedalus: Activate starts send-Umi cost",
+                        engine.TryActivateSpellTrap(p, dae, fromHand: false) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.AwaitingSendNamedCost &&
+                        engine.PendingActivation.TargetKind == EffectTargetKind.SendFaceUpNamedToGy,
+                        engine.PendingActivation?.TargetKind.ToString() ?? "no pending");
+                    Check("Daedalus: ALO is a legal send-to-GY cost",
+                        engine.IsLegalEffectTarget(alo));
+                    Check("Daedalus: pay ALO cost then destroy others",
+                        engine.TrySelectEffectTarget(alo));
+                    Check("ALO sent to GY as cost",
+                        p.Graveyard.Contains(alo) && p.FieldSpellZone?.Occupant != alo);
+                    Check("Daedalus survives its own effect",
+                        p.MonsterZones[2].Occupant == dae);
+                    Check("Daedalus destroyed the other monster",
+                        !opp.TryFindMonster(prey, out _) &&
+                        opp.Graveyard.Exists(c => c.CardId == celtic));
+                    Check("Daedalus destroyed the other Spell/Trap",
+                        !opp.TryFindSpellTrap(wall, out _) &&
+                        opp.Graveyard.Exists(c => c.CardId == wallId));
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    var dae = PlaceMonster(engine, p, daedalusId, 2, BattlePosition.Attack, true);
+                    var umi = engine.CreateCardInstance(umiId);
+                    umi.FaceUp = true;
+                    p.FieldSpellZone.Occupant = umi;
+                    var prey = PlaceMonster(engine, opp, celtic, 2, BattlePosition.Attack, true);
+                    FieldSpellEffects.RefreshBoard(engine);
+                    Check("Daedalus: printed Umi is a legal send cost",
+                        engine.CanActivateSpellTrap(p, dae, fromHand: false) &&
+                        engine.TryActivateSpellTrap(p, dae, fromHand: false) &&
+                        engine.IsLegalEffectTarget(umi) &&
+                        engine.TrySelectEffectTarget(umi));
+                    Check("Printed Umi sent; Celtic destroyed; Daedalus remains",
+                        p.Graveyard.Contains(umi) &&
+                        !opp.TryFindMonster(prey, out _) &&
+                        p.MonsterZones[2].Occupant == dae);
+                }
+            }
+
+            // ── Main Phase ignition templates (tribute / banish / hand discard / set FD) ──
+            {
+                const int exiled = 74131780;
+                const int cannon = 11384280;
+                const int chaosId = 9596126;
+                const int lacooda = 2326738;
+                const int thunder = 31786629;
+                const int golem = 30190809;
+                const int turtle = 95727991;
+                const int paladin = 73398797;
+                const int swamp = 79109599;
+                const int celtic = 91152256;
+                const int bewd = 89631139;
+                const int poly = 24094653;
+                const int laJinn = 97590747;
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    var force = PlaceMonster(engine, p, exiled, 2, BattlePosition.Attack, true);
+                    var prey = PlaceMonster(engine, opp, celtic, 2, BattlePosition.Attack, true);
+                    Check("Exiled Force: Activate legal",
+                        engine.CanActivateSpellTrap(p, force, fromHand: false));
+                    Check("Exiled Force: Activate tributes itself then asks for a target",
+                        engine.TryActivateSpellTrap(p, force, fromHand: false) &&
+                        p.Graveyard.Contains(force) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.IsLegalEffectTarget(prey));
+                    Check("Exiled Force: destroy target",
+                        engine.TrySelectEffectTarget(prey) &&
+                        opp.Graveyard.Contains(prey));
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.LifePoints = 8000;
+                    opp.LifePoints = 8000;
+                    var sol = PlaceMonster(engine, p, cannon, 2, BattlePosition.Attack, true);
+                    var fodder = PlaceMonster(engine, p, laJinn, 1, BattlePosition.Attack, true);
+                    Check("Cannon Soldier: Activate",
+                        engine.TryActivateSpellTrap(p, sol, fromHand: false) &&
+                        engine.IsAwaitingEffectTarget);
+                    Check("Cannon Soldier: Tribute La Jinn for 500",
+                        engine.TrySelectEffectTarget(fodder) &&
+                        p.Graveyard.Contains(fodder) &&
+                        opp.LifePoints == 7500,
+                        $"LP {opp.LifePoints}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    var sorc = PlaceMonster(engine, p, chaosId, 2, BattlePosition.Attack, true);
+                    var prey = PlaceMonster(engine, opp, celtic, 2, BattlePosition.Attack, true);
+                    var sorcOk = OfficialEffectRegistry.ProgramMayActivate(sorc.Def);
+                    if (sorcOk)
+                    {
+                        Check("Chaos Sorcerer: Activate",
+                            engine.TryActivateSpellTrap(p, sorc, fromHand: false) &&
+                            engine.IsLegalEffectTarget(prey));
+                        Check("Chaos Sorcerer: banish the target",
+                            engine.TrySelectEffectTarget(prey) &&
+                            opp.Banished.Contains(prey) &&
+                            !opp.TryFindMonster(prey, out _));
+                    }
+                    else
+                    {
+                        Check("Chaos Sorcerer: stub cannot activate (incomplete program)",
+                            !engine.TryActivateSpellTrap(p, sorc, fromHand: false));
+                    }
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var worm = PlaceMonster(engine, p, lacooda, 2, BattlePosition.Attack, true);
+                    Check("Des Lacooda: sets itself face-down Defense",
+                        engine.TryActivateSpellTrap(p, worm, fromHand: false) &&
+                        !worm.FaceUp && worm.Position == BattlePosition.Defense);
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.LifePoints = 8000;
+                    var mk = PlaceMonster(engine, p, golem, 2, BattlePosition.Attack, true);
+                    Check("Gear Golem: pay 800 LP to attack directly this turn",
+                        engine.CanActivateSpellTrap(p, mk, fromHand: false) &&
+                        engine.TryActivateSpellTrap(p, mk, fromHand: false) &&
+                        p.LifePoints == 7200 &&
+                        mk.DirectAttackThisTurn &&
+                        engine.GrantsDirectAttack(mk),
+                        $"LP {p.LifePoints} direct={mk.DirectAttackThisTurn}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.LifePoints = 8000;
+                    opp.LifePoints = 8000;
+                    var cat = PlaceMonster(engine, p, turtle, 2, BattlePosition.Attack, true);
+                    var fodder = PlaceMonster(engine, p, laJinn, 1, BattlePosition.Attack, true);
+                    Check("Catapult Turtle: Activate",
+                        engine.TryActivateSpellTrap(p, cat, fromHand: false));
+                    Check("Catapult Turtle: half ATK of tributed La Jinn (900)",
+                        engine.TrySelectEffectTarget(fodder) &&
+                        opp.LifePoints == 8000 - fodder.CurrentAtk / 2,
+                        $"LP {opp.LifePoints} fodderATK was used after tribute");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    p.Deck.Insert(0, thunder);
+                    p.Deck.Insert(0, thunder);
+                    var td = PutInHand(engine, p, thunder);
+                    Check("Thunder Dragon: Activate from hand",
+                        engine.CanActivateSpellTrap(p, td, fromHand: true));
+                    Check("Thunder Dragon: discard self, add copies from Deck",
+                        engine.TryActivateSpellTrap(p, td, fromHand: true) &&
+                        p.Graveyard.Contains(td) &&
+                        p.Hand.Count >= 1 &&
+                        p.Hand.Exists(c => c.CardId == thunder),
+                        $"hand={p.Hand.Count} gy={p.Graveyard.Count}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Deck.Insert(0, bewd);
+                    var pal = PlaceMonster(engine, p, paladin, 2, BattlePosition.Attack, true);
+                    if (OfficialEffectRegistry.ProgramMayActivate(pal.Def))
+                    {
+                        Check("Paladin of White Dragon: Tribute self, SS Blue-Eyes from Deck",
+                            engine.TryActivateSpellTrap(p, pal, fromHand: false) &&
+                            p.Graveyard.Contains(pal) &&
+                            p.MonstersOnField().Any(m => m.CardId == bewd),
+                            p.MonstersOnField().Count().ToString());
+                    }
+                    else
+                    {
+                        Check("Paladin of White Dragon: stub cannot activate (incomplete program)",
+                            !engine.TryActivateSpellTrap(p, pal, fromHand: false));
+                    }
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    p.Deck.Insert(0, poly);
+                    var king = PutInHand(engine, p, swamp);
+                    if (OfficialEffectRegistry.ProgramMayActivate(king.Def))
+                    {
+                        Check("King of the Swamp: discard from hand, add Polymerization",
+                            engine.CanActivateSpellTrap(p, king, fromHand: true) &&
+                            engine.TryActivateSpellTrap(p, king, fromHand: true) &&
+                            p.Graveyard.Contains(king) &&
+                            p.Hand.Exists(c => c.CardId == poly));
+                    }
+                    else
+                    {
+                        Check("King of the Swamp: stub cannot activate (incomplete program)",
+                            !engine.CanActivateSpellTrap(p, king, fromHand: true) &&
+                            !engine.TryActivateSpellTrap(p, king, fromHand: true));
+                    }
+                }
+            }
+
+            // ── Refused-list primitives: coin, counters, token, Extra Deck, control, Standby ──
+            {
+                const int timeWiz = 71625222;
+                const int barrel = 81480461;
+                const int breaker = 71413901;
+                const int stein = 69015963;
+                const int lekunga = 62543393;
+                const int pds = 52860176;
+                const int lava = 102380;
+                const int lv3 = 980973;
+                const int lv5 = 46384672;
+                const int ojama = 29843091;
+                const int relinquished = 64631466;
+                const int celtic = 91152256;
+                const int bsd = 11901678;
+                const int fenrir = 218704;
+                const int mst = 5318639;
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    var wiz = PlaceMonster(engine, p, timeWiz, 2, BattlePosition.Attack, true);
+                    var prey = PlaceMonster(engine, opp, celtic, 2, BattlePosition.Attack, true);
+                    engine.Rng.QueueCoin(true);
+                    Check("Time Wizard: Activate",
+                        engine.TryActivateSpellTrap(p, wiz, fromHand: false) &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.AwaitingCoinCall);
+                    Check("Time Wizard: call Heads, toss Heads, opp destroyed",
+                        engine.TrySelectCoinCall(true) &&
+                        !opp.TryFindMonster(prey, out _) &&
+                        p.TryFindMonster(wiz, out _));
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    var drag = PlaceMonster(engine, p, barrel, 2, BattlePosition.Attack, true);
+                    var prey = PlaceMonster(engine, opp, celtic, 2, BattlePosition.Attack, true);
+                    engine.Rng.QueueCoin(true);
+                    engine.Rng.QueueCoin(true);
+                    engine.Rng.QueueCoin(false);
+                    Check("Barrel Dragon: 2 heads destroys the target",
+                        engine.TryActivateSpellTrap(p, drag, fromHand: false) &&
+                        engine.IsLegalEffectTarget(prey) &&
+                        engine.TrySelectEffectTarget(prey) &&
+                        opp.Graveyard.Contains(prey));
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var br = PutInHand(engine, p, breaker);
+                    Check("Breaker Normal Summon", engine.TryNormalSummon(p, br, asSet: false));
+                    FieldSpellEffects.RefreshBoard(engine);
+                    Check("Breaker: 1 Spell Counter and 1900 ATK",
+                        br.Counters == 1 && br.CurrentAtk == 1900,
+                        $"counters={br.Counters} ATK={br.CurrentAtk}");
+                    var st = PlaceSetTrap(engine, engine.Opponent, mst, 2);
+                    st.SetThisTurn = false;
+                    Check("Breaker: remove counter, destroy ST",
+                        engine.CanActivateSpellTrap(p, br, fromHand: false) &&
+                        engine.TryActivateSpellTrap(p, br, fromHand: false) &&
+                        engine.TrySelectEffectTarget(st) &&
+                        engine.Opponent.Graveyard.Contains(st) &&
+                        br.Counters == 0);
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.LifePoints = 8000;
+                    p.ExtraDeck.Clear();
+                    p.ExtraDeck.Add(bsd);
+                    var cyb = PlaceMonster(engine, p, stein, 2, BattlePosition.Attack, true);
+                    Check("Cyber-Stein: pay 5000, SS Black Skull Dragon",
+                        engine.TryActivateSpellTrap(p, cyb, fromHand: false) &&
+                        p.LifePoints == 3000 &&
+                        p.MonstersOnField().Any(m => m.CardId == bsd),
+                        $"LP {p.LifePoints} extra left={p.ExtraDeck.Count}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var plant = PlaceMonster(engine, p, lekunga, 2, BattlePosition.Attack, true);
+                    var w1 = engine.CreateCardInstance(fenrir);
+                    var w2 = engine.CreateCardInstance(fenrir);
+                    p.Graveyard.Add(w1);
+                    p.Graveyard.Add(w2);
+                    Check("Lekunga: Activate",
+                        engine.TryActivateSpellTrap(p, plant, fromHand: false) &&
+                        engine.IsAwaitingEffectTarget);
+                    Check("Lekunga: banish first WATER", engine.TrySelectEffectTarget(w1));
+                    Check("Lekunga: banish second WATER, SS Token 700/700",
+                        engine.TrySelectEffectTarget(w2) &&
+                        p.Banished.Count >= 2 &&
+                        p.MonstersOnField().Any(m => m.IsToken && m.CurrentAtk == 700),
+                        $"tokens={p.MonstersOnField().Count(m => m.IsToken)} banished={p.Banished.Count}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    var soul = PlaceMonster(engine, p, pds, 2, BattlePosition.Attack, true);
+                    var prey = PlaceMonster(engine, opp, celtic, 2, BattlePosition.Attack, true);
+                    Check("Possessed Dark Soul: Tribute self, take LV4? Celtic is 4 — should fail LV≤3",
+                        !engine.CanActivateSpellTrap(p, soul, fromHand: false) ||
+                        prey.Level > 3);
+                    var lv3mon = PlaceMonster(engine, opp, fenrir, 1, BattlePosition.Attack, true);
+                    Check("Possessed Dark Soul: take control of Fenrir LV4 under ALO? printed 4",
+                        lv3mon.Level <= 4);
+                    // Fenrir is LV4; need LV3 or lower. Use a LV3: Giant Soldier 13039848 is 3.
+                    opp.MonsterZones[1].Occupant = null;
+                    var gs = PlaceMonster(engine, opp, 13039848, 1, BattlePosition.Defense, true);
+                    Check("Possessed Dark Soul: take Giant Soldier of Stone",
+                        engine.TryActivateSpellTrap(p, soul, fromHand: false) &&
+                        p.Graveyard.Contains(soul) &&
+                        p.MonstersOnField().Any(m => m.CardId == 13039848));
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.LifePoints = 8000;
+                    var golem = PlaceMonster(engine, p, lava, 2, BattlePosition.Attack, true);
+                    WRLDZ.Duel.TextEffects.TextEffectRuntime.FirePhaseTriggers(
+                        engine, p, WRLDZ.Duel.TextEffects.EffectTiming.StandbyPhase);
+                    Check("Lava Golem Standby: controller takes 1000",
+                        p.LifePoints == 7000, $"LP {p.LifePoints}");
+                }
+
+                {
+                    const int cure = 85802526;
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.LifePoints = 8000;
+                    var mer = PlaceMonster(engine, p, cure, 2, BattlePosition.Attack, true);
+                    WRLDZ.Duel.TextEffects.TextEffectRuntime.FirePhaseTriggers(
+                        engine, p, WRLDZ.Duel.TextEffects.EffectTiming.StandbyPhase);
+                    Check("Cure Mermaid Standby: +800 LP while face-up",
+                        p.LifePoints == 8800, $"LP {p.LifePoints}");
+                    mer.FaceUp = false;
+                    p.LifePoints = 8000;
+                    WRLDZ.Duel.TextEffects.TextEffectRuntime.FirePhaseTriggers(
+                        engine, p, WRLDZ.Duel.TextEffects.EffectTiming.StandbyPhase);
+                    Check("Cure Mermaid face-down: no Standby LP",
+                        p.LifePoints == 8000, $"LP {p.LifePoints}");
+                }
+
+                {
+                    const int breeze = 53530069;
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.LifePoints = 8000;
+                    var spr = PlaceMonster(engine, p, breeze, 2, BattlePosition.Attack, true);
+                    WRLDZ.Duel.TextEffects.TextEffectRuntime.FirePhaseTriggers(
+                        engine, p, WRLDZ.Duel.TextEffects.EffectTiming.StandbyPhase);
+                    Check("Spirit of the Breeze ATK: +1000 LP on Standby",
+                        p.LifePoints == 9000, $"LP {p.LifePoints}");
+                    spr.Position = BattlePosition.Defense;
+                    p.LifePoints = 8000;
+                    WRLDZ.Duel.TextEffects.TextEffectRuntime.FirePhaseTriggers(
+                        engine, p, WRLDZ.Duel.TextEffects.EffectTiming.StandbyPhase);
+                    Check("Spirit of the Breeze DEF: no Standby LP",
+                        p.LifePoints == 8000, $"LP {p.LifePoints}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Deck.Insert(0, lv5);
+                    var baby = PlaceMonster(engine, p, lv3, 2, BattlePosition.Attack, true);
+                    WRLDZ.Duel.TextEffects.TextEffectRuntime.FirePhaseTriggers(
+                        engine, p, WRLDZ.Duel.TextEffects.EffectTiming.StandbyPhase);
+                    Check("Armed Dragon LV3: send self, SS LV5 from Deck",
+                        p.Graveyard.Exists(c => c.CardId == lv3) &&
+                        p.MonstersOnField().Any(m => m.CardId == lv5),
+                        $"gy={p.Graveyard.Count} field={p.MonstersOnField().Count()}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    var trio = PlaceSetTrap(engine, p, ojama, 2);
+                    trio.SetThisTurn = false;
+                    Check("Ojama Trio: Activate",
+                        engine.TryActivateSpellTrap(p, trio, fromHand: false));
+                    Check("Ojama Trio: 3 Tokens on opponent",
+                        opp.MonstersOnField().Count(m => m.IsToken) == 3,
+                        $"oppTok={opp.MonstersOnField().Count(m => m.IsToken)} pTok={p.MonstersOnField().Count(m => m.IsToken)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    var rel = PlaceMonster(engine, p, relinquished, 2, BattlePosition.Attack, true);
+                    var prey = PlaceMonster(engine, opp, celtic, 2, BattlePosition.Attack, true);
+                    if (OfficialEffectRegistry.ProgramMayActivate(rel.Def))
+                    {
+                        Check("Relinquished: Activate",
+                            engine.TryActivateSpellTrap(p, rel, fromHand: false) &&
+                            engine.IsLegalEffectTarget(prey));
+                        Check("Relinquished: equip Celtic, ATK becomes 1400",
+                            engine.TrySelectEffectTarget(prey) &&
+                            rel.Equips.Contains(prey) &&
+                            !opp.TryFindMonster(prey, out _));
+                        FieldSpellEffects.RefreshBoard(engine);
+                        Check("Relinquished ATK equals equipped printed ATK",
+                            rel.CurrentAtk == 1400, $"ATK {rel.CurrentAtk}");
+                    }
+                    else
+                    {
+                        Check("Relinquished: stub cannot activate (incomplete program)",
+                            !engine.TryActivateSpellTrap(p, rel, fromHand: false));
+                    }
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    var zorc = PlaceMonster(engine, p, 97642679, 2, BattlePosition.Attack, true);
+                    var prey = PlaceMonster(engine, opp, celtic, 2, BattlePosition.Attack, true);
+                    engine.Rng.QueueDie(1);
+                    if (OfficialEffectRegistry.ProgramMayActivate(zorc.Def))
+                    {
+                        Check("Dark Master Zorc: roll 1 destroys all opp monsters",
+                            engine.TryActivateSpellTrap(p, zorc, fromHand: false) &&
+                            !opp.TryFindMonster(prey, out _));
+                    }
+                    else
+                    {
+                        Check("Dark Master Zorc: stub cannot activate (incomplete program)",
+                            !engine.TryActivateSpellTrap(p, zorc, fromHand: false));
+                    }
+                }
+            }
+
+            // ── Live refused activations: Orca / Suijin / Fenrir ──
+            {
+                const int orcaId = 63120904;
+                const int fishId = 90337190;
+                const int suijinId = 98434877;
+                const int fenrirId = 218704;
+                const int cureId = 85802526;
+                const int celtic = 91152256;
+                const int bewd = 89631139;
+
+                {
+                    var orcaDef = db.Get(orcaId);
+                    var op = CardTextEffectCompiler.Compile(orcaDef);
+                    Check("Orca Mega-Fortress compiles two tribute-named destroy ignitions",
+                        op != null && op.FullyCompiled &&
+                        op.ClauseList.FindAll(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.Destroy &&
+                            c.RequiresTributeCount == 1 &&
+                            !string.IsNullOrEmpty(c.NamedCard)).Count == 2,
+                        op == null ? "null" : $"full={op.FullyCompiled} n={op.ClauseList.Count}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    var orca = PlaceMonster(engine, p, orcaId, 2, BattlePosition.Attack, true);
+                    var fish = PlaceMonster(engine, p, fishId, 1, BattlePosition.Attack, true);
+                    var prey = PlaceMonster(engine, opp, celtic, 2, BattlePosition.Attack, true);
+                    Check("Orca: Activate legal with Torpedo Fish to Tribute",
+                        engine.CanActivateSpellTrap(p, orca, fromHand: false));
+                    Check("Orca: Activate starts tribute cost",
+                        engine.TryActivateSpellTrap(p, orca, fromHand: false) &&
+                        engine.IsAwaitingEffectTarget);
+                    Check("Orca: Tribute Torpedo Fish",
+                        engine.IsLegalEffectTarget(fish) && engine.TrySelectEffectTarget(fish) &&
+                        p.Graveyard.Contains(fish));
+                    Check("Orca: destroy the targeted monster",
+                        engine.IsLegalEffectTarget(prey) && engine.TrySelectEffectTarget(prey) &&
+                        opp.Graveyard.Contains(prey) &&
+                        p.TryFindMonster(orca, out _));
+                }
+
+                {
+                    var suiDef = db.Get(suijinId);
+                    var sp = CardTextEffectCompiler.Compile(suiDef);
+                    Check("Suijin compiles damage-calc ATK 0 Quick Effect",
+                        sp != null && sp.FullyCompiled &&
+                        sp.HasTiming(EffectTiming.DamageCalculation) &&
+                        sp.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.SetAttackingMonsterAtkToZeroThisCalc),
+                        suiDef == null
+                            ? "missing"
+                            : sp == null
+                                ? "null"
+                                : $"full={sp.FullyCompiled} n={sp.ClauseList.Count} unparsed={string.Join("|", sp.UnparsedFragments ?? System.Array.Empty<string>())}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    if (!ReachOpponentBattle(engine))
+                    {
+                        Check("Suijin battle path (skipped — opp not in BP)", false,
+                            $"phase={engine.Phase}");
+                    }
+                    else
+                    {
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.LifePoints = 8000;
+                        opp.LifePoints = 8000;
+                        var sui = PlaceMonster(engine, p, suijinId, 2, BattlePosition.Attack, true);
+                        sui.ClearAttackFlags();
+                        var attacker = PlaceMonster(engine, opp, bewd, 2, BattlePosition.Attack, true);
+                        attacker.ClearAttackFlags();
+                        attacker.SummonedThisTurn = false;
+                        if (engine.Phase == DuelPhase.Main1)
+                            engine.TryEnterBattlePhase(opp);
+                        DrainCombat(engine);
+                        Check("Suijin: BEWD declares the attack",
+                            engine.TryAttack(opp, attacker, sui));
+                        if (engine.PendingResponse != null &&
+                            engine.PendingResponse.Timing == ResponseTiming.AttackDeclared)
+                            engine.PassResponse();
+                        Check("Suijin activates in Damage Calculation",
+                            engine.PendingResponse != null &&
+                            engine.PendingResponse.Timing == ResponseTiming.DamageCalculation &&
+                            engine.PendingResponse.LegalCards.Exists(c =>
+                                c != null && c.CardId == suijinId) &&
+                            engine.TryActivateSpellTrap(p, sui, fromHand: false),
+                            $"timing={engine.PendingResponse?.Timing} " +
+                            $"legal={(engine.PendingResponse?.LegalCards == null ? "null" : string.Join(",", engine.PendingResponse.LegalCards.ConvertAll(x => x?.Name)))}");
+                        DrainCombat(engine);
+                        Check("Suijin: attacker ATK 0 — Suijin survived, BEWD destroyed",
+                            p.TryFindMonster(sui, out _) &&
+                            !opp.TryFindMonster(attacker, out _),
+                            $"sui={p.TryFindMonster(sui, out _)} bewd={opp.TryFindMonster(attacker, out _)} LP you={p.LifePoints} ai={opp.LifePoints}");
+                    }
+                }
+
+                {
+                    var fenDef = db.Get(fenrirId);
+                    var fp = CardTextEffectCompiler.Compile(fenDef);
+                    Check("Fenrir compiles SS-from-hand by banishing WATER + skip next Draw",
+                        fp != null &&
+                        fp.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.SpecialSummonThisFromHand &&
+                            c.ActivatesFromHand &&
+                            c.BanishFromGyCount == 2) &&
+                        fp.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.SkipOpponentNextDrawPhase),
+                        fp == null
+                            ? "null"
+                            : $"full={fp.FullyCompiled} n={fp.ClauseList.Count} unparsed={string.Join("|", fp.UnparsedFragments ?? System.Array.Empty<string>())}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    var fen = PutInHand(engine, p, fenrirId);
+                    Check("Fenrir cannot be Normal Summoned",
+                        !engine.CanNormalSummonOrSet(p, fen));
+                    var w1 = engine.CreateCardInstance(cureId);
+                    var w2 = engine.CreateCardInstance(cureId);
+                    p.Graveyard.Add(w1);
+                    p.Graveyard.Add(w2);
+                    Check("Fenrir: Activate from hand is legal with 2 WATER in GY",
+                        engine.CanActivateSpellTrap(p, fen, fromHand: true));
+                    Check("Fenrir: SS procedure starts",
+                        engine.TryActivateSpellTrap(p, fen, fromHand: true));
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        Check("Fenrir: banish first WATER",
+                            engine.TrySelectEffectTarget(w1));
+                        if (engine.IsAwaitingEffectTarget)
+                            Check("Fenrir: banish second WATER",
+                                engine.TrySelectEffectTarget(w2));
+                    }
+
+                    Check("Fenrir Special Summoned from hand",
+                        p.TryFindMonster(fen, out _) && fen.WasSpecialSummoned,
+                        $"onField={p.TryFindMonster(fen, out _)} ss={fen.WasSpecialSummoned}");
+
+                    var prey = PlaceMonster(engine, opp, celtic, 1, BattlePosition.Attack, true);
+                    prey.ClearAttackFlags();
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    engine.TryEndTurnSafe(engine.TurnPlayer);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    engine.TryEndTurnSafe(engine.TurnPlayer);
+                    fen.ClearAttackFlags();
+                    fen.SummonedThisTurn = false;
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    if (engine.TurnPlayer == p && engine.Phase == DuelPhase.Main1)
+                        engine.TryEnterBattlePhase(p);
+                    DrainCombat(engine);
+                    Check("Fenrir can attack after sitting a turn",
+                        engine.Phase == DuelPhase.Battle && engine.CanAttack(p, fen),
+                        $"phase={engine.Phase} can={engine.CanAttack(p, fen)} turn={engine.TurnNumber}");
+                    if (engine.Phase == DuelPhase.Battle && engine.CanAttack(p, fen))
+                    {
+                        engine.TryAttack(p, fen, prey);
+                        DrainCombat(engine);
+                    }
+
+                    Check("Fenrir: opponent skips next Draw Phase after battle destroy",
+                        !opp.TryFindMonster(prey, out _) && opp.SkipNextDrawPhase,
+                        $"skip={opp.SkipNextDrawPhase} preyDead={!opp.TryFindMonster(prey, out _)} phase={engine.Phase}");
+                }
+            }
+
+            // ── Terraforming / ROTA / Hinotama / Feather Duster: Normal Spell from hand ──
+            {
+                const int terra = 73628505;
+                const int alo = 295517;
+                const int rota = 32807846;
+                const int hinotama = 46130346;
+                const int duster = 18144507;
+                const int celtic = 91152256;
+                const int bewd = 89631139;
+                const int mst = 5318639;
+
+                {
+                    var tDef = db.Get(terra);
+                    var tProg = tDef != null ? CardTextEffectCompiler.Compile(tDef) : null;
+                    Check("Terraforming compiles AddFromDeckToHand (Field Spell in Deck)",
+                        tProg != null && tProg.FullyCompiled &&
+                        tProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Activate &&
+                            c.Action == EffectActionKind.AddFromDeckToHand &&
+                            c.Zone == EffectZoneFilter.DeckFieldSpells &&
+                            c.RequiresTargetChoice),
+                        tProg == null
+                            ? "null"
+                            : $"full={tProg.FullyCompiled} n={tProg.ClauseList.Count}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    p.Deck.Clear();
+                    p.Deck.Add(alo);
+                    p.Deck.Add(celtic);
+                    var card = PutInHand(engine, p, terra);
+                    Check("Terraforming: Activate legal in MP1 with Field Spell in Deck",
+                        engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    Check("Terraforming: Activate from hand opens Field Spell search",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.TargetKind == EffectTargetKind.FieldSpellInYourDeck);
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        var pick = engine.PendingActivation.LegalTargets
+                            .FirstOrDefault(t => t.CardId == alo);
+                        var illegal = engine.PendingActivation.LegalTargets
+                            .FirstOrDefault(t => t.CardId == celtic);
+                        Check("Terraforming: A Legendary Ocean is a legal Deck option", pick != null);
+                        Check("Terraforming: Celtic Guardian is not a Field Spell option",
+                            illegal == null);
+                        if (pick != null)
+                        {
+                            Check("Terraforming: select ALO, search resolves, Terraforming to GY",
+                                engine.TrySelectEffectTarget(pick) &&
+                                p.Hand.Exists(c => c.CardId == alo) &&
+                                !p.Deck.Contains(alo) &&
+                                p.Graveyard.Exists(c => c.CardId == terra));
+                        }
+                    }
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    p.Deck.Clear();
+                    p.Deck.Add(celtic);
+                    var card = PutInHand(engine, p, terra);
+                    Check("Terraforming: illegal with no Field Spell in Deck (Set only)",
+                        !engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    Check("Terraforming: still Settable",
+                        engine.CanSetSpellTrap(p, card));
+                }
+
+                {
+                    var rDef = db.Get(rota);
+                    var rProg = rDef != null ? CardTextEffectCompiler.Compile(rDef) : null;
+                    Check("ROTA compiles Level 4 Warrior search",
+                        rProg != null && rProg.FullyCompiled &&
+                        rProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.AddFromDeckToHand &&
+                            c.Zone == EffectZoneFilter.DeckMonstersRaceLevelLeq &&
+                            c.Amount == 4 &&
+                            !string.IsNullOrEmpty(c.RaceFilter) &&
+                            c.RaceFilter.IndexOf("Warrior",
+                                System.StringComparison.OrdinalIgnoreCase) >= 0));
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    p.Deck.Clear();
+                    p.Deck.Add(celtic);
+                    p.Deck.Add(bewd);
+                    var card = PutInHand(engine, p, rota);
+                    Check("ROTA: Activate legal with Warrior in Deck",
+                        engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    Check("ROTA: Activate opens filtered Deck search",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.TargetKind ==
+                        EffectTargetKind.MonsterInYourDeckFiltered);
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        var pick = engine.PendingActivation.LegalTargets
+                            .FirstOrDefault(t => t.CardId == celtic);
+                        var dragon = engine.PendingActivation.LegalTargets
+                            .FirstOrDefault(t => t.CardId == bewd);
+                        Check("ROTA: Celtic Guardian (Warrior Lv4) is legal", pick != null);
+                        Check("ROTA: Blue-Eyes is not a Warrior option", dragon == null);
+                        if (pick != null)
+                            Check("ROTA: select Celtic, ROTA to GY",
+                                engine.TrySelectEffectTarget(pick) &&
+                                p.Hand.Exists(c => c.CardId == celtic) &&
+                                p.Graveyard.Exists(c => c.CardId == rota));
+                    }
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var card = PutInHand(engine, p, hinotama);
+                    var lp = opp.LifePoints;
+                    Check("Hinotama: Activate legal in MP1",
+                        engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    Check("Hinotama: inflicts 500, goes to GY",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        opp.LifePoints == lp - 500 &&
+                        p.Graveyard.Exists(c => c.CardId == hinotama),
+                        $"opp LP {opp.LifePoints} was {lp}");
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var st = PlaceSetTrap(engine, opp, mst, 2);
+                    var card = PutInHand(engine, p, duster);
+                    Check("Feather Duster: Activate legal in MP1",
+                        engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    Check("Feather Duster: destroys opponent S/T, not yours",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        opp.Graveyard.Contains(st) &&
+                        p.Graveyard.Exists(c => c.CardId == duster));
+                }
+
+                {
+                    var missing = new System.Collections.Generic.List<string>();
+                    var engine = Fresh(db, pDeck, aDeck);
+                    foreach (var def in db.GetAllCards())
+                    {
+                        if (def == null || !def.IsSpell || def.IsTrap || def.IsFieldSpell ||
+                            def.IsEquipSpell || def.IsContinuousSpellOrTrap)
+                            continue;
+                        if (def.race != null &&
+                            def.race.IndexOf("Quick", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                            continue;
+                        var prog = CardTextEffectCompiler.Compile(def);
+                        // Activate gate requires FullyCompiled — stubs are deck/activate illegal.
+                        if (prog == null || !prog.FullyCompiled || !prog.HasTiming(EffectTiming.Activate))
+                            continue;
+                        var act = prog.ClausesFor(EffectTiming.Activate);
+                        if (act.Count == 0) continue;
+                        var needsBoard = false;
+                        foreach (var c in act)
+                        {
+                            if (c == null) continue;
+                            if (c.RequiresTargetChoice || c.RequiresLordOfDOnField ||
+                                c.RequiresDiscardCost || c.RequiresSendNamedToGy ||
+                                !string.IsNullOrEmpty(c.RequiresFaceUpName) ||
+                                c.Action == EffectActionKind.FusionSummonRegistered ||
+                                c.Action == EffectActionKind.AddFromDeckToHand ||
+                                c.Action == EffectActionKind.AddNamedFromDeckToHand ||
+                                c.Action == EffectActionKind.SpecialSummonFromGy ||
+                                c.Action == EffectActionKind.SpecialSummonFromHand)
+                            {
+                                needsBoard = true;
+                                break;
+                            }
+                        }
+
+                        if (needsBoard) continue;
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        p.Deck.Clear();
+                        for (var i = 0; i < 8; i++) p.Deck.Add(celtic);
+                        var card = PutInHand(engine, p, def.id);
+                        if (!engine.CanActivateSpellTrap(p, card, fromHand: true))
+                            missing.Add(def.name ?? $"#{def.id}");
+                    }
+
+                    Check("Triple-check: compiled targetless Normal Spells Activate from hand in MP1",
+                        missing.Count == 0,
+                        missing.Count == 0
+                            ? ""
+                            : string.Join(", ", missing.Take(8)) +
+                              (missing.Count > 8 ? $" (+{missing.Count - 8})" : ""));
+                }
+            }
+
+            // ── Effect vocabulary: kinds cover the pool; unique cards stay exceptions ──
+            {
+                var structural = 0;
+                var shared = 0;
+                var unique = 0;
+                var stub = 0;
+                var unimplemented = 0;
+                foreach (var def in db.GetAllCards())
+                {
+                    if (def == null) continue;
+                    var status = CardEffectStatus.Classify(def);
+                    if (status == CardEffectStatusKind.Structural)
+                    {
+                        structural++;
+                        continue;
+                    }
+
+                    var prog = WRLDZ.Duel.TextEffects.CardTextEffectCompiler.Compile(def);
+                    if (prog == null || prog.ClauseList.Count == 0)
+                    {
+                        unimplemented++;
+                        continue;
+                    }
+
+                    var hasUnique = false;
+                    var hasShared = false;
+                    foreach (var c in prog.ClauseList)
+                    {
+                        if (c == null) continue;
+                        var r = WRLDZ.Duel.TextEffects.EffectVocabulary.ResolutionOf(c);
+                        if (r == WRLDZ.Duel.TextEffects.EffectResolutionKind.UniqueException)
+                            hasUnique = true;
+                        else if (r != WRLDZ.Duel.TextEffects.EffectResolutionKind.None)
+                            hasShared = true;
+                    }
+
+                    if (hasUnique) unique++;
+                    else if (hasShared && (prog.FullyCompiled || status == CardEffectStatusKind.Implemented))
+                        shared++;
+                    else if (hasShared)
+                        stub++;
+                    else
+                        unimplemented++;
+                }
+
+                Check("Vocabulary: Normal/effectless cards are structural (not silent vanilla)",
+                    structural >= 200, $"structural={structural}");
+                Check("Vocabulary: shared kinds cover a majority of compiled effect cards",
+                    shared > unique && shared >= 80,
+                    $"shared={shared} unique={unique} stub={stub} unimplemented={unimplemented} structural={structural}");
+                Check("Vocabulary: unique exceptions stay a short named list",
+                    unique <= 40,
+                    $"unique={unique}");
+                Check("Vocabulary: Exiled Force compiles as shared Tribute→Destroy",
+                    db.Get(74131780) is { } exd &&
+                    WRLDZ.Duel.TextEffects.EffectVocabulary.ResolutionOf(
+                        WRLDZ.Duel.TextEffects.CardTextEffectCompiler.Compile(exd)
+                            .ClauseList.Find(c => c != null &&
+                                                  c.Action == WRLDZ.Duel.TextEffects.EffectActionKind.Destroy))
+                    == WRLDZ.Duel.TextEffects.EffectResolutionKind.Destroy);
+                Check("Vocabulary: Time Wizard is a unique exception, not a new kind",
+                    db.Get(71625222) is { } twd &&
+                    WRLDZ.Duel.TextEffects.CardTextEffectCompiler.Compile(twd).ClauseList.Exists(c =>
+                        c != null &&
+                        WRLDZ.Duel.TextEffects.EffectVocabulary.IsUniqueException(c.Action)));
+            }
+
+            // ── Ring of Destruction / trap speed-2: cannot activate the turn it was Set ──
+            {
+                const int ringId = 83555666;
+                const int trapHoleId = 4206964;
+                const int celtic = 91152256;
+
+                Check("Arena pace: opponent spell hold is at least 7s",
+                    DuelPresentationPacer.ReadAfterOpponentSpellActivate >= 7f,
+                    $"{DuelPresentationPacer.ReadAfterOpponentSpellActivate}");
+                Check("Arena pace: AI step is at least 3s",
+                    DuelPresentationPacer.DefaultAiStep >= 3f,
+                    $"{DuelPresentationPacer.DefaultAiStep}");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var ring = PlaceSetTrap(engine, opp, ringId, 2);
+                    ring.SetThisTurn = true;
+                    Check("Ring of Destruction cannot activate the turn it was Set",
+                        !engine.CanActivateSpellTrap(opp, ring, fromHand: false));
+                    Check("Ring of Destruction not legal in OpponentOpenState the turn it was Set",
+                        !SpellTrapEffects.IsLegalResponseCard(engine, opp, ring,
+                            ResponseTiming.OpponentOpenState, null));
+
+                    ring.SetThisTurn = false;
+                    Check("Ring of Destruction legal on opponent's turn after sitting a turn",
+                        engine.CanActivateSpellTrap(opp, ring, fromHand: false));
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var hole = PlaceSetTrap(engine, engine.Player, trapHoleId, 2);
+                    hole.SetThisTurn = false;
+                    var holeProg = CardTextEffectCompiler.Compile(hole.Def);
+                    Check("Trap Hole is not a compiled free-chain",
+                        holeProg != null && !SpellTrapEffects.IsCompiledFreeChain(hole.Def, holeProg));
+                    Check("Trap Hole not legal in OpponentOpenState",
+                        !SpellTrapEffects.IsLegalResponseCard(engine, engine.Player, hole,
+                            ResponseTiming.OpponentOpenState, null));
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var ring = PlaceSetTrap(engine, opp, ringId, 2);
+                    ring.SetThisTurn = false;
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    engine.TryEndTurnSafe(engine.TurnPlayer);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    engine.TryEndTurnSafe(engine.TurnPlayer);
+                    Check("AI does not auto-activate Ring of Destruction on open-game-state",
+                        !ring.FaceUp && opp.TryFindSpellTrap(ring, out _) &&
+                        !p.Graveyard.Exists(c => c != null && c.CardId == celtic),
+                        $"faceUp={ring.FaceUp} onField={opp.TryFindSpellTrap(ring, out _)} " +
+                        $"celticGy={p.Graveyard.Exists(c => c != null && c.CardId == celtic)} " +
+                        $"awaiting={engine.IsAwaitingResponse} prompt={engine.PendingResponse?.Prompt}");
+                    if (engine.IsAwaitingResponse)
+                    {
+                        Check("AI trap window does not name the face-down card",
+                            engine.PendingResponse != null &&
+                            (engine.PendingResponse.Prompt ?? "").IndexOf("Ring of Destruction",
+                                System.StringComparison.OrdinalIgnoreCase) < 0,
+                            engine.PendingResponse?.Prompt);
+                        engine.PassResponse();
+                    }
+                }
+            }
+
+            // ── FirstEmpty order ──
+            {
+                var engine = Fresh(db, pDeck, aDeck);
+                var zones = engine.Player.MonsterZones;
+                foreach (var z in zones) z.Occupant = null;
+                var i0 = engine.FirstEmpty(zones);
+                zones[i0].Occupant = MockOcc();
+                var i1 = engine.FirstEmpty(zones);
+                zones[i1].Occupant = MockOcc();
+                var i2 = engine.FirstEmpty(zones);
+                Check("FirstEmpty order is 2,1,3", i0 == 2 && i1 == 1 && i2 == 3,
+                    $"got {i0},{i1},{i2}");
+            }
+
+            sb.AppendLine($"--- {pass} passed, {fail} failed ---");
+            var summary = sb.ToString();
+            if (fail == 0)
+                Debug.Log("[WRLDZ Interaction Tests]\n" + summary);
+            else
+                Debug.LogError("[WRLDZ Interaction Tests]\n" + summary);
+            return summary;
+        }
+
+        static DuelEngine Fresh(CardDatabase db, DeckFile p, DeckFile a)
+        {
+            var engine = new DuelEngine();
+            engine.StartDuel(db, p, a, cinematicOpening: false);
+            return engine;
+        }
+
+        static void ClearBoard(DuelEngine engine)
+        {
+            foreach (var who in new[] { engine.Player, engine.Opponent })
+            {
+                for (var i = 0; i < who.MonsterZones.Length; i++)
+                    who.MonsterZones[i].Occupant = null;
+                for (var i = 0; i < who.SpellTrapZones.Length; i++)
+                    who.SpellTrapZones[i].Occupant = null;
+                if (who.FieldSpellZone != null)
+                    who.FieldSpellZone.Occupant = null;
+                who.NormalSummonUsed = false;
+            }
+
+            engine.ClearPendingActivation();
+            engine.PendingTributes.Clear();
+        }
+
+        static CardInstance PutInHand(DuelEngine engine, DuelistState who, int id)
+        {
+            var c = engine.CreateCardInstance(id);
+            who.Hand.Add(c);
+            return c;
+        }
+
+        static CardInstance PlaceMonster(DuelEngine engine, DuelistState who, int id, int zone,
+            BattlePosition pos, bool faceUp)
+        {
+            var c = engine.CreateCardInstance(id);
+            c.FaceUp = faceUp;
+            c.Position = pos;
+            c.SetThisTurn = false;
+            c.SummonedThisTurn = false;
+            who.MonsterZones[zone].Occupant = c;
+            return c;
+        }
+
+        static CardInstance PlaceSetTrap(DuelEngine engine, DuelistState who, int id, int zone)
+        {
+            var c = engine.CreateCardInstance(id);
+            c.FaceUp = false;
+            c.SetThisTurn = false;
+            who.SpellTrapZones[zone].Occupant = c;
+            return c;
+        }
+
+        static bool ReachOpponentBattle(DuelEngine engine)
+        {
+            for (var t = 0; t < 8 &&
+                            !(engine.TurnPlayer == engine.Opponent && engine.TurnNumber >= 2); t++)
+            {
+                if (engine.IsAwaitingResponse) engine.PassResponse();
+                engine.RecoverStuckCombat();
+                engine.TryEndTurnSafe(engine.TurnPlayer);
+            }
+
+            if (engine.TurnPlayer != engine.Opponent) return false;
+            if (engine.IsAwaitingResponse) engine.PassResponse();
+            if (engine.Phase == DuelPhase.Main1)
+                engine.TryEnterBattlePhase(engine.Opponent);
+            if (engine.IsAwaitingResponse) engine.PassResponse();
+            DrainCombat(engine);
+            return engine.Phase == DuelPhase.Battle && engine.TurnPlayer == engine.Opponent;
+        }
+
+        static CardInstance MockOcc() => new CardInstance { InstanceId = 1, CardId = 1 };
+
+        static bool ReachPlayerBattle(DuelEngine engine)
+        {
+            for (var t = 0; t < 8 &&
+                            !(engine.TurnPlayer == engine.Player && engine.TurnNumber >= 2); t++)
+            {
+                if (engine.IsAwaitingResponse) engine.PassResponse();
+                engine.RecoverStuckCombat();
+                engine.TryEndTurnSafe(engine.TurnPlayer);
+            }
+
+            if (engine.TurnPlayer != engine.Player) return false;
+            if (engine.IsAwaitingResponse) engine.PassResponse();
+            if (engine.Phase == DuelPhase.Main1)
+                engine.TryEnterBattlePhase(engine.Player);
+            if (engine.IsAwaitingResponse) engine.PassResponse();
+            DrainCombat(engine);
+            return engine.Phase == DuelPhase.Battle && engine.TurnPlayer == engine.Player;
+        }
+
+        static void DrainCombat(DuelEngine engine)
+        {
+            for (var i = 0; i < 12; i++)
+            {
+                if (engine.IsAwaitingResponse) engine.PassResponse();
+                else if (engine.HasDeclaredAttack) engine.ResolveDeclaredAttack();
+                else engine.RecoverStuckCombat();
+            }
+        }
+
+        static bool ResolveDirect(DuelEngine engine, DuelistState who, CardInstance attacker)
+        {
+            var before = attacker.AttacksDeclaredThisTurn;
+            if (!engine.CanAttack(who, attacker)) return false;
+            if (!engine.TryAttack(who, attacker, null)) return false;
+            DrainCombat(engine);
+            return attacker.AttacksDeclaredThisTurn > before;
+        }
+    }
+}

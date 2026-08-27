@@ -1,0 +1,149 @@
+{
+  "name": "Player S1 Starter",
+  "format": "wrldz_s1_slice",
+  "main": [
+    {
+      "id": 46986414,
+      "name": "Dark Magician",
+      "qty": 3
+    },
+    {
+      "id": 15025844,
+      "name": "Mystical Elf",
+      "qty": 3
+    },
+    {
+      "id": 91152256,
+      "name": "Celtic Guardian",
+      "qty": 3
+    },
+    {
+      "id": 13039848,
+      "name": "Giant Soldier of Stone",
+      "qty": 2
+    },
+    {
+      "id": 32452818,
+      "name": "Beaver Warrior",
+      "qty": 2
+    },
+    {
+      "id": 41392891,
+      "name": "Feral Imp",
+      "qty": 2
+    },
+    {
+      "id": 90357090,
+      "name": "Silver Fang",
+      "qty": 2
+    },
+    {
+      "id": 6368038,
+      "name": "Gaia The Fierce Knight",
+      "qty": 1
+    },
+    {
+      "id": 28279543,
+      "name": "Curse of Dragon",
+      "qty": 1
+    },
+    {
+      "id": 54652250,
+      "name": "Man-Eater Bug",
+      "qty": 2
+    },
+    {
+      "id": 31560081,
+      "name": "Magician of Faith",
+      "qty": 2
+    },
+    {
+      "id": 26202165,
+      "name": "Sangan",
+      "qty": 1
+    },
+    {
+      "id": 83764719,
+      "name": "Monster Reborn",
+      "qty": 1
+    },
+    {
+      "id": 53129443,
+      "name": "Dark Hole",
+      "qty": 1
+    },
+    {
+      "id": 12580477,
+      "name": "Raigeki",
+      "qty": 1
+    },
+    {
+      "id": 55144522,
+      "name": "Pot of Greed",
+      "qty": 1
+    },
+    {
+      "id": 72302403,
+      "name": "Swords of Revealing Light",
+      "qty": 1
+    },
+    {
+      "id": 5318639,
+      "name": "Mystical Space Typhoon",
+      "qty": 1
+    },
+    {
+      "id": 24094653,
+      "name": "Polymerization",
+      "qty": 2
+    },
+    {
+      "id": 44095762,
+      "name": "Mirror Force",
+      "qty": 1
+    },
+    {
+      "id": 4206964,
+      "name": "Trap Hole",
+      "qty": 2
+    },
+    {
+      "id": 12607053,
+      "name": "Waboku",
+      "qty": 2
+    },
+    {
+      "id": 72892473,
+      "name": "Card Destruction",
+      "qty": 1
+    },
+    {
+      "id": 19613556,
+      "name": "Heavy Storm",
+      "qty": 1
+    },
+    {
+      "id": 40640057,
+      "name": "Kuriboh",
+      "qty": 1
+    }
+  ],
+  "extra": [
+    {
+      "id": 11901678,
+      "name": "Black Skull Dragon",
+      "qty": 1
+    },
+    {
+      "id": 66889139,
+      "name": "Gaia the Dragon Champion",
+      "qty": 1
+    }
+  ],
+  "side": [],
+  "counts": {
+    "main": 40,
+    "extra": 2,
+    "side": 0
+  }
+}

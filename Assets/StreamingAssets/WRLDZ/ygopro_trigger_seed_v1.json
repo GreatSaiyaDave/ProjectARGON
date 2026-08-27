@@ -1,0 +1,117 @@
+{
+  "source": "ygopro-scripts (behavior facts only, not Lua) restricted to cards_db.json",
+  "scriptFilesScanned": 1210,
+  "triggerCount": 11,
+  "triggers": [
+    {
+      "timing": "attack_announce",
+      "action": "negate_attack_end_bp",
+      "amount": 0,
+      "lpMultiple": 0,
+      "alsoDef": false,
+      "requiresControllerRace": "",
+      "opponentTurn": true,
+      "cardId": 14315573
+    },
+    {
+      "timing": "summon_success",
+      "action": "destroy_summoned",
+      "amount": 1000,
+      "lpMultiple": 0,
+      "alsoDef": false,
+      "requiresControllerRace": "",
+      "opponentTurn": true,
+      "cardId": 15083728
+    },
+    {
+      "timing": "attack_announce",
+      "action": "banish_opp_def_pos",
+      "amount": 0,
+      "lpMultiple": 0,
+      "alsoDef": false,
+      "requiresControllerRace": "",
+      "opponentTurn": true,
+      "cardId": 20522190
+    },
+    {
+      "timing": "damage_step",
+      "action": "lose_atk_def_pay_lp",
+      "amount": 0,
+      "lpMultiple": 100,
+      "alsoDef": true,
+      "requiresControllerRace": "Fiend",
+      "opponentTurn": false,
+      "cardId": 41925941
+    },
+    {
+      "timing": "summon_success",
+      "action": "destroy_summoned",
+      "amount": 1000,
+      "lpMultiple": 0,
+      "alsoDef": false,
+      "requiresControllerRace": "",
+      "opponentTurn": true,
+      "cardId": 4206964
+    },
+    {
+      "timing": "summon_success",
+      "action": "destroy_summoned",
+      "amount": 1000,
+      "lpMultiple": 0,
+      "alsoDef": false,
+      "requiresControllerRace": "",
+      "opponentTurn": true,
+      "cardId": 42578427
+    },
+    {
+      "timing": "attack_announce",
+      "action": "negate_attack_gain_lp",
+      "amount": 0,
+      "lpMultiple": 0,
+      "alsoDef": false,
+      "requiresControllerRace": "",
+      "opponentTurn": true,
+      "cardId": 43250041
+    },
+    {
+      "timing": "attack_announce",
+      "action": "destroy_opp_atk_pos",
+      "amount": 0,
+      "lpMultiple": 0,
+      "alsoDef": false,
+      "requiresControllerRace": "",
+      "opponentTurn": true,
+      "cardId": 44095762
+    },
+    {
+      "timing": "attack_announce",
+      "action": "destroy_attacker",
+      "amount": 0,
+      "lpMultiple": 0,
+      "alsoDef": false,
+      "requiresControllerRace": "",
+      "opponentTurn": true,
+      "cardId": 56120475
+    },
+    {
+      "timing": "damage_step",
+      "action": "lose_atk_eot",
+      "amount": 700,
+      "lpMultiple": 0,
+      "alsoDef": false,
+      "requiresControllerRace": "",
+      "opponentTurn": false,
+      "cardId": 57882509
+    },
+    {
+      "timing": "attack_announce",
+      "action": "negate_attack_damage",
+      "amount": 0,
+      "lpMultiple": 0,
+      "alsoDef": false,
+      "requiresControllerRace": "",
+      "opponentTurn": true,
+      "cardId": 62279055
+    }
+  ]
+}

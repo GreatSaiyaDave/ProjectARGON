@@ -1,0 +1,133 @@
+═══ WRLDZ ENGINE STRESS ═══
+duels=2 maxTurns=80
+
+── Unit: TcgRegressionTests ──
+PASS  ATK 1800 vs DEF 2000: defender lives
+PASS  ATK 1800 vs DEF 2000: attacker takes 200
+PASS  ATK 1800 vs DEF 2000: no damage to defender
+PASS  ATK 1800 vs DEF 600: destroy defender
+PASS  ATK 1800 vs DEF 600: 0 battle damage
+PASS  ATK 1800 vs DEF 600: attacker lives
+PASS  Face-down uses defense stat
+PASS  Face-down DEF 1500 vs ATK 1200: lives
+PASS  Face-down DEF 1500 vs ATK 1200: dmg 300 to attacker
+PASS  Equal ATK: both destroyed
+PASS  Equal ATK: 0 damage
+PASS  ATK 1500 vs ATK 2000: destroy attacker
+PASS  ATK 1500 vs ATK 2000: 500 to attacker controller
+PASS  ATK 2500 vs ATK 2000: destroy defender
+PASS  ATK 2500 vs ATK 2000: 500 to defender controller
+PASS  ATK = DEF: nothing destroyed
+PASS  ATK = DEF: 0 damage
+PASS  Direct: 1600 damage
+PASS  Piercing: destroy DEF
+PASS  Piercing: 1200 damage
+PASS  Waboku defender: no destroy
+PASS  Waboku defender: no damage
+PASS  Sanitize clears illegal DEF destroy
+PASS  Lv4 needs 0 tributes
+PASS  Lv5 needs 1 tribute
+PASS  Lv6 needs 1 tribute
+PASS  Lv7 needs 2 tributes
+PASS  Lv8 needs 2 tributes
+PASS  Starting LP 8000
+PASS  Starting hand 5
+PASS  Hand limit End Phase 6
+PASS  Monster zones 5
+PASS  Spell/Trap zones 5
+PASS  Registry: Raigeki
+PASS  Registry: Pot of Greed
+PASS  Registry: Mirror Force
+PASS  Registry: Swords
+PASS  Registry: Trap Hole
+PASS  Registry: Ring of Destruction
+PASS  Registry: Waboku
+PASS  Unregistered ID refused
+PASS  Fusion: Gaia the Dragon Champion registered
+PASS  Fusion: Black Skull Dragon registered
+PASS  Normal Trap Speed 2
+PASS  Counter Trap Speed 3
+PASS  Quick-Play Speed 2
+PASS  Normal Spell Speed 1
+PASS  Normal Monster has no effect
+PASS  Normal Monster HasNoActivatableEffect
+PASS  Black Skull Dragon is effectless Extra
+PASS  Black Skull Dragon is not Normal Monster type
+PASS  Gaia the Dragon Champion is effectless Extra
+PASS  Effect Monster not structural-only flavor
+PASS  Replay: empty after empty direct = no new monsters
+PASS  Replay: monster appeared after direct declaration
+PASS  Man-Eater Bug is Flip-effect monster
+PASS  Magician of Faith is Flip-effect monster
+PASS  Lord of D. is Dragon-target protector ID
+PASS  Kuriboh-style noDmgDef: 0 damage on direct
+PASS  Without Kuriboh: direct deals ATK
+PASS  Kuriboh legal in DamageCalculation vs opponent attack
+PASS  Kuriboh illegal at AttackDeclared
+PASS  Kuriboh illegal if you are the attacker
+PASS  Kuriboh is registered monster effect
+PASS  Kuriboh discard removes from hand
+PASS  Kuriboh discard places in GY
+PASS  XP curve L1 < L20
+PASS  XP curve L40 < L50 (wall starts)
+PASS  XP curve L49 < L50 hard step
+PASS  XP curve L50 wall much higher than L20
+PASS  XP curve soft cap returns 0
+PASS  XP progress 0 when empty
+PASS  XP progress ~0.5 mid-bar
+PASS  Band at L50 is Master
+PASS  Trap Hole legal vs ATK 1800 summon
+PASS  Trap Hole illegal vs ATK 800 summon
+PASS  Trap Hole illegal same-turn Set
+--- 77 passed, 0 failed ---
+
+── Unit: InteractionRegressionTests ──
+PASS  Center zone: first summon → index 2
+PASS  Center zone: second summon → index 1 (left of center)
+PASS  Center zone: third summon → index 3 (right of center)
+PASS  Center ST zone: first set → index 2
+PASS  Sangan destroy: opens deck search pending
+PASS  Sangan destroy: Celtic Guardian is a legal option
+PASS  Sangan destroy: select resolves
+PASS  Sangan destroy: Celtic Guardian in hand
+PASS  Sangan destroy: removed from Deck
+PASS  Sangan destroy: Sangan in GY
+PASS  Sangan SendCardToGrave: opens search
+PASS  Sangan SendCardToGrave: has options
+PASS  Sangan SendCardToGrave: added Beaver Warrior
+PASS  Magician of Faith: Flip Summon succeeds
+PASS  Magician of Faith: opens Spell-in-GY choice
+PASS  Magician of Faith: Pot of Greed returned to hand
+PASS  Man-Eater Bug: Flip Summon succeeds
+PASS  Man-Eater Bug: opens field target choice
+PASS  Man-Eater Bug: victim destroyed to GY
+PASS  Kuriboh: legal DC hand QE vs opp attack
+PASS  Kuriboh: discard cost pays
+PASS  Kuriboh: prevent battle damage flag set
+PASS  Kuriboh: direct deals 0 with flag
+PASS  DB has La Jinn + Giant Soldier
+PASS  LaJinn vs face-up GS DEF: attacker takes 200
+PASS  LaJinn vs face-up GS DEF: defender takes 0
+PASS  LaJinn vs set GS: attacker takes 200
+PASS  Sanitize restores ATK<DEF damage to 200
+PASS  Engine: LaJinn declares on set GS
+PASS  Engine: GS survives defense hold
+PASS  Engine: opponent (attacker) lost 200 LP
+PASS  Engine: defender LP unchanged
+PASS  Pot of Greed: activates from hand
+PASS  Pot of Greed: deck decreased by 2
+PASS  Pot of Greed: hand has 2 (drew 2, pot gone)
+PASS  FirstEmpty order is 2,1,3
+--- 36 passed, 0 failed ---
+
+── Text: lab deck compile (regex, no AI) ──
+PASS  lab unique=36 full=34 partial=2 emptyEffect=0
+
+── Stress: lab AI vs AI ──
+duels played=2 completed=2 turnCap=0 softLocks=0 exceptions=0
+wins: player=1 opp=1 draw/cap=0
+
+── Fuzz: battle math ──
+PASS  200 battle fuzz cases
+
+── RESULT: unitPass=114 unitFail=0 exceptions=0 softLocks=0 ok=YES elapsedMs=229 ──

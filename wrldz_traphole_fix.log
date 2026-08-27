@@ -1,0 +1,38 @@
+Unity Editor version:    6000.4.8f1 (f8b72d3d7343)
+Branch:                  6000.4/staging
+Build type:              Release
+Batch mode:              YES
+System name:             Linux
+Distro version:          #29-Ubuntu SMP PREEMPT_DYNAMIC Fri Jul 17 20:52:35 UTC 2026
+Kernel version:          7.0.0-29-generic
+Architecture:            x86_64
+Window Protocol:         Wayland (XWayland)
+Available memory:        30652 MB
+Date:                    2026-08-10T01:43:05Z
+[Licensing::Module] Trying to connect to existing licensing client channel...
+Initialize udev device monitor.
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-greatsaiyadave" at "2026-08-10T01:43:05.051913Z"
+[SignatureVerifier] Application signature verification not supported on this platform.
+
+COMMAND LINE ARGUMENTS:
+/home/greatsaiyadave/Unity/Hub/Editor/6000.4.8f1/Editor/Unity
+-batchmode
+-nographics
+-quit
+-projectPath
+/home/greatsaiyadave/DMWRLDZUnityProject/ProjectARGON
+-executeMethod
+WRLDZ.EditorTools.DuelStressMenu.RunStressBatch
+-stressDuels
+8
+-logFile
+/home/greatsaiyadave/DMWRLDZUnityProject/ProjectARGON/wrldz_traphole_fix.log
+Successfully changed project path to: /home/greatsaiyadave/DMWRLDZUnityProject/ProjectARGON
+[Licensing::Client] Error: HandshakeResponse reported an error:
+	ResponseCode: 505
+	ResponseStatus: Unsupported protocol version '1.18.1'.
+[Licensing::Module] Error: Failed to handshake to channel: "LicenseClient-greatsaiyadave"
+[Licensing::IpcConnector] LicenseClient-greatsaiyadave channel disconnected successfully.
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-greatsaiyadave-6000.4.8" at "2026-08-10T01:43:05.0535Z"
+[SignatureVerifier] Application signature verification not supported on this platform.
+/home/greatsaiyadave/DMWRLDZUnityProject/ProjectARGON

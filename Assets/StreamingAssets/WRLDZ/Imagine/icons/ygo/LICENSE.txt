@@ -1,0 +1,12 @@
+Yugipedia icons used in the WRLDZ deck-filter tray.
+
+Attribute + Spell/Trap property SVGs:
+  Author: Falzar FZ
+  Source: https://yugipedia.com/wiki/File:DARK.svg (and siblings FIRE, LIGHT, … Equip, Quick-Play, …)
+  License: Creative Commons Attribution 3.0
+  Rendered to PNG at 128×128 for the Unity UI.
+
+Monster Type icons:
+  Source: https://yugipedia.com/wiki/Category:Yu-Gi-Oh!_Master_Duel_Type_icons
+  Files: Type-*-MADU.png (Master Duel Type glyphs)
+  Used as low-resolution Type visualization in the filter tray.

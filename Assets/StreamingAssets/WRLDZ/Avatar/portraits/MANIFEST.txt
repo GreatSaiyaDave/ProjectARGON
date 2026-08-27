@@ -1,0 +1,9 @@
+WRLDZ anime portrait presets (Imagine)
+portrait_0.png  Midnight Ace
+portrait_1.png  Academy Belle
+portrait_2.png  Street Runner
+portrait_3.png  Neon Spark
+portrait_4.png  Ivory Phantom
+portrait_5.png  Gold Braid
+portrait_6.png  Cap Focus
+portrait_7.png  Teal Spirit

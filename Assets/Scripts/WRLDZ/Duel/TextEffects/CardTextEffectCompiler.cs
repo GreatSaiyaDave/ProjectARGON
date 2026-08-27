@@ -1,0 +1,1269 @@
+using System;
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
+using WRLDZ.Data;
+using WRLDZ.Duel.Rules;
+
+namespace WRLDZ.Duel.TextEffects
+{
+    /// <summary>
+    /// Compiles official Konami/Yugipedia card text (<see cref="CardDef.desc"/>) into a
+    /// <see cref="CompiledCardProgram"/> the first time a card is played.
+    ///
+    /// Approach: PSCT template matching (not free-form LLM). Only clauses that fully match
+    /// a known template are stored — never invent partial effects.
+    /// Reference style: open-source YGOPro Lua scripts (timing + operation), Unity-native C#.
+    /// </summary>
+    public static class CardTextEffectCompiler
+    {
+        public const int Version = 21;
+
+        static readonly Regex RxDraw = new(
+            @"Draw (\d+) cards?\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxDestroyAllOppMonsters = new(
+            @"Destroy all monsters your opponent controls\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxDestroyAllMonsters = new(
+            @"Destroy all monsters on the field\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxDestroyAllST = new(
+            @"Destroy all Spell and Trap Cards on the field\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxDestroyAllOppST = new(
+            @"Destroy all Spell and Trap Cards your opponent controls\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxTargetStDestroy = new(
+            @"Target 1 Spell/?Trap on the field;\s*destroy that target\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxMonsterReborn = new(
+            @"Target 1 monster in either GY;\s*Special Summon it\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxFlipDestroyMonster = new(
+            @"FLIP:\s*Target 1 monster on the field;\s*destroy it\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxFlipSpellToHand = new(
+            @"FLIP:\s*Target 1 Spell in your GY;\s*add that target to your hand\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxTrapHole = new(
+            @"When your opponent Normal or Flip Summons 1 monster with (\d+) or more ATK:\s*Target that monster;\s*destroy that target\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxMirrorForce = new(
+            @"When an opponent's monster declares an attack:\s*Destroy all your opponent's Attack Position monsters\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxNegateAttack = new(
+            @"When an opponent's monster declares an attack:\s*Target the attacking monster;\s*negate the attack, then end the Battle Phase\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxWaboku = new(
+            @"You take no battle damage from your opponent's monsters this turn\.\s*Your monsters cannot be destroyed by battle this turn\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxCardDestruction = new(
+            @"Both players discard as many cards as possible from their hands, then each player draws the same number of cards they discarded\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxSangan = new(
+            @"If this card is sent from the field to the GY:\s*Add 1 monster with (\d+) or less ATK from your Deck to your hand",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxFlute = new(
+            @"Special Summon up to (\d+) Dragon monsters? from your hand\.\s*""Lord of D\.?"" must be on the field",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxPolymerization = new(
+            @"Fusion Summon 1 Fusion Monster from your Extra Deck, using monsters from your hand or field as Fusion Material\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxLordOfD = new(
+            @"Neither player can target Dragon monsters on the field with card effects\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxSwords = new(
+            @"After this card's activation, it remains on the field, but you must destroy it during the End Phase of your opponent's (\d+)(?:rd|nd|th|st)? turn\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxSwordsAttack = new(
+            @"While this card is face-up on the field, your opponent's monsters cannot declare an attack\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxSwordsFlip = new(
+            @"When this card is activated:\s*If your opponent controls a face-down monster, flip all monsters they control face-up\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxRing = new(
+            @"During your opponent's turn:\s*Target 1 face-up monster your opponent controls whose ATK is less than or equal to their LP;\s*destroy that face-up monster, and if you do, take damage equal to its original ATK, then inflict damage to your opponent, equal to the damage you took",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxEnemyControllerPos = new(
+            @"Target 1 face-up monster your opponent controls;\s*change that target's battle position",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxCyberJar = new(
+            @"FLIP:\s*Destroy all monsters on the field, then both players reveal the top (\d+) cards from their Decks",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Kuriboh-style hand QE at damage calculation:
+        /// "During damage calculation, if your opponent's monster attacks (Quick Effect):
+        ///  You can discard this card; you take no battle damage from that battle."
+        /// </summary>
+        /// <summary>
+        /// Name condition (A Legendary Ocean, latest PSCT + prior errata):
+        /// "(This card's name is always treated as "Umi".)" /
+        /// "(This card is always treated as "Umi".)"
+        /// </summary>
+        static readonly Regex RxAlwaysTreatedAsName = new(
+            @"\(This card(?:'s name)? is always treated as ""([^""]+)""\.?\)",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxNameTreatedAs = new(
+            @"This card's name is treated as ""([^""]+)""\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>All WATER monsters on the field gain 200 ATK/DEF (slash form — both stats).</summary>
+        static readonly Regex RxAllAttrGainAtkDef = new(
+            @"All (\w+) monsters(?: on the field)? gain (\d+) ATK/DEF\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Star Boy / Milus Radiant / Bladefly / Witch's Apprentice:
+        /// increase the ATK of all WATER monsters by 500 points and decrease the ATK of all FIRE monsters by 400 points.
+        /// </summary>
+        static readonly Regex RxIncDecAtk = new(
+            @"increase the ATK of all (\w+)(?:-Type)? monsters by (\d+) points and decrease the ATK of all (\w+)(?:-Type)? monsters by (\d+) points\.?\s*$",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Hoshiningen / Little Chimera / Harpie Lady 1:
+        /// All LIGHT monsters on the field gain 500 ATK, also all DARK monsters on the field lose 400 ATK.
+        /// </summary>
+        static readonly Regex RxAllGainAtkMaybeLose = new(
+            @"All (\w+)(?:-Type)? monsters(?: on the field)? gain (\d+) ATK(?:, also all (\w+)(?:-Type)? monsters(?: on the field)? lose (\d+) ATK)?\.?\s*$",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxAllLoseAtk = new(
+            @"All (\w+)(?:-Type)? monsters(?: on the field)? lose (\d+) ATK\.?\s*$",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>Command Knight: All Warrior monsters you control gain 400 ATK.</summary>
+        static readonly Regex RxAllYouControlGainAtk = new(
+            @"All (\w+)(?:-Type)? monsters you control gain (\d+) ATK(?:/?DEF| and DEF)?\.?\s*$",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxIncreasesAtkDefOfAll = new(
+            @"Increases? the ATK and DEF of all (\w+) monsters(?: on the field)? by (\d+) points\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Reduce the Level of all WATER monsters in both players' hands and on the field by 1.
+        /// </summary>
+        static readonly Regex RxReduceLevelHandsAndField = new(
+            @"Reduce the Level of all (\w+) monsters in both players?' hands and on the field by (\d+)\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxDowngradeLevelHandsAndField = new(
+            @"Downgrade all (\w+) monsters in both player'?s?'? hands and on the field by (\d+) Level\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Abyss Soldier (and same-shape ignition):
+        /// "Once per turn: You can discard 1 WATER monster to the Graveyard to target 1 card on the field; return it to the hand."
+        /// </summary>
+        static readonly Regex RxDiscardAttrBounceField = new(
+            @"Once per turn:\s*You can discard 1 (\w+) monster to the (?:GY|Graveyard) to target 1 card on the field;\s*return it to the hand\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxDiscardAttrBounceFieldPsct = new(
+            @"Once per turn:\s*You can discard 1 (\w+) monster(?: to the (?:GY|Graveyard))?;\s*target 1 card on the field;\s*return (?:it|that target) to the hand\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxKuribohStyle = new(
+            @"During damage calculation, if your opponent's monster attacks(?:\s*\(Quick Effect\))?:\s*" +
+            @"You can discard this card;\s*you take no battle damage from that battle\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Amphibious Bugroth MK-3 / Yugipedia: continuous, no Chain Link.
+        /// "While "Umi" is face-up on the field, this card can attack your opponent's Life Points directly."
+        /// Older: "As long as "Umi" remains face-up on the field, …"
+        /// </summary>
+        static readonly Regex RxDirectAttackWhileNamed = new(
+            @"(?:While|As long as) ""([^""]+)"" (?:is|remains)(?: face-up)? on the field, " +
+            @"this card can attack (?:your opponent(?:'s Life Points)? )?directly\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Unconditional direct attackers (Ooguchi, Jinzo #7, Nightmare Horse, …).
+        /// Requires "This card/monster can|may" so Toon "Can attack … unless" does not match.
+        /// Negative lookahead so "cannot attack directly" (Zombyra) is not a grant.
+        /// </summary>
+        static readonly Regex RxDirectAttackUnconditional = new(
+            @"This (?:card|monster) (?:may|can(?!not)) attack (?:your opponent(?:'s Life Points)? )?directly" +
+            @"(?: even if there is a monster on your opponent's side of the field)?(?! this turn)\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Mermaid Knight: While "Umi" is face-up on the field, this card can attack twice
+        /// during the same Battle Phase.
+        /// </summary>
+        static readonly Regex RxExtraAttackWhileNamed = new(
+            @"(?:While|As long as) ""([^""]+)"" (?:is|remains)(?: face-up)? on the field, " +
+            @"this card can attack twice during the same Battle Phase\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxExtraAttackUnconditional = new(
+            @"This card can attack twice during the same Battle Phase\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxSakuretsu = new(
+            @"When an opponent's monster declares an attack:\s*Target the attacking monster;\s*destroy that target\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxMagicCylinder = new(
+            @"When an opponent's monster declares an attack:\s*Target the attacking monster;\s*negate the attack, and if you do, inflict damage to your opponent equal to its ATK\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxDrainingShield = new(
+            @"When an opponent's monster declares an attack:\s*Target the attacking monster;\s*negate that attack, and if you do, gain LP equal to that target's ATK\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxDarkMirrorForce = new(
+            @"When an opponent's monster declares an attack:\s*Banish all Defense Position monsters your opponent controls\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxBarkOfDarkRuler = new(
+            @"If a (\w+)(?:-Type)? monster you control battles, during the Damage Step:\s*" +
+            @"Pay LP \(in multiples of (\d+) points\), then target the opponent's battling monster;\s*" +
+            @"that opponent's monster loses that much ATK and DEF, until the end of this turn\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxMaskOfWeakness = new(
+            @"Target 1 attacking monster;\s*that target loses (\d+) ATK until the end of this turn\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Maiden of the Aqua: the field is treated as "Umi" while face-up (no Umi ATK/DEF).
+        /// </summary>
+        static readonly Regex RxFieldTreatedAs = new(
+            @"(?:As long as this card remains face-up on the field|While this card is face-up on the field), " +
+            @"the field is treated as ""([^""]+)""" +
+            @"(?: \(however there is no increasing or decreasing of ATK/DEF due to ""[^""]+""'s effect\))?\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxNoFieldSpellBlocks = new(
+            @"If there is an active Field Spell Card on the field, this effect is not applied\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxActivateOnlyWhileNamed = new(
+            @"Activate only while ""([^""]+)"" is(?: face-up)? on the field\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxNoBattleDamageWhileNamed = new(
+            @"While ""([^""]+)"" is face-up on the field, you take no Battle Damage(?: from attacking monsters)?\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxDestroyWhenNamedLeaves = new(
+            @"Destroy this card when ""([^""]+)"" leaves the field\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxSummonGainLp = new(
+            @"When this (?:monster|card) is Normal Summoned, Flip Summoned or Special Summoned, " +
+            @"increase your Life Points by (\d+) points\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxDestroyedToGyDamage = new(
+            @"When this card is destroyed and sent to the Graveyard, you take (\d+) points of damage\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Levia-Dragon - Daedalus / same PSCT family:
+        /// You can send 1 face-up "Umi" you control to the GY; destroy all other cards on the field.
+        /// Cost is a named card you control (A Legendary Ocean is always treated as Umi).
+        /// Maiden of the Aqua is environment, not a named Umi, so she is not a legal cost.
+        /// </summary>
+        static readonly Regex RxSendNamedDestroyAllOther = new(
+            @"(?:You can )?send 1 face-up ""([^""]+)"" you control to the (?:GY|Graveyard);\s*" +
+            @"destroy all other cards on the field\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxSendNamedDestroyExceptThis = new(
+            @"(?:You can )?send 1 face-up ""([^""]+)"" you control to the (?:GY|Graveyard);\s*" +
+            @"destroy all cards on the field except this card\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>Compile official text into a program (does not touch cache).</summary>
+        public static CompiledCardProgram Compile(CardDef def)
+        {
+            var prog = new CompiledCardProgram
+            {
+                CardId = def?.id ?? 0,
+                CardName = def?.name ?? "",
+                TextHash = OfficialCardAuthority.TextHash(def),
+                SourceText = OfficialCardAuthority.OfficialText(def),
+                CompiledUtc = DateTime.UtcNow.ToString("o"),
+                CompilerVersion = Version,
+                CompileSource = "regex"
+            };
+
+            if (def == null || string.IsNullOrWhiteSpace(prog.SourceText))
+            {
+                prog.FullyCompiled = OfficialCardAuthority.HasNoActivatableEffect(def);
+                if (prog.FullyCompiled) prog.CompileSource = "structural";
+                return prog;
+            }
+
+            // Normal Monsters + effectless Extra Deck (classic Fusions: BSD, Gaia Champion, …)
+            if (OfficialCardAuthority.HasNoActivatableEffect(def))
+            {
+                prog.FullyCompiled = true;
+                prog.CompileSource = OfficialCardAuthority.IsNormalMonsterNoEffect(def)
+                    ? "normal"
+                    : "structural";
+                return prog;
+            }
+
+            var text = Normalize(prog.SourceText);
+            var matchedSpans = new List<(int start, int length)>();
+            var clauses = new List<EffectClause>();
+            var unparsed = new List<string>();
+
+            void Take(Match m, EffectClause clause)
+            {
+                if (m == null || !m.Success) return;
+                clause.SourceSnippet = m.Value.Trim();
+                clauses.Add(clause);
+                matchedSpans.Add((m.Index, m.Length));
+            }
+
+            // Order: multi-sentence templates first, then short ones
+            {
+                var m = RxCyberJar.Match(text);
+                if (m.Success)
+                    Take(m, new EffectClause
+                    {
+                        Timing = EffectTiming.Flip,
+                        Action = EffectActionKind.CyberJarStyle,
+                        Amount = ParseInt(m, 1, 5)
+                    });
+            }
+
+            Take(RxSwords.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.ApplySwordsOfRevealingLight,
+                Amount = ParseInt(RxSwords.Match(text), 1, 3),
+                StaysOnField = true
+            });
+            // Swords sub-clauses absorbed into ApplySwordsOfRevealingLight
+            MarkAbsorbed(text, RxSwordsAttack, matchedSpans);
+            MarkAbsorbed(text, RxSwordsFlip, matchedSpans);
+
+            Take(RxRing.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.EffectDamageBothFromOriginalAtk,
+                Zone = EffectZoneFilter.OppFaceUpMonsters,
+                RequiresTargetChoice = true,
+                OpponentTurnOnly = true
+            });
+
+            Take(RxWaboku.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.ApplyWabokuStyle
+            });
+
+            Take(RxKuribohStyle.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.DamageCalculation,
+                Action = EffectActionKind.DiscardSelfNoBattleDamageThisBattle,
+                Side = EffectSide.Controller
+            });
+
+            Take(RxCardDestruction.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.BothPlayersDiscardAndRedraw
+            });
+
+            Take(RxDestroyAllOppMonsters.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.Destroy,
+                Side = EffectSide.Opponent,
+                Zone = EffectZoneFilter.FieldMonsters
+            });
+
+            // Dark Hole: all monsters — only if not already matched "opponent controls"
+            var darkHole = RxDestroyAllMonsters.Match(text);
+            if (darkHole.Success && !ContainsSnippet(clauses, "your opponent controls"))
+            {
+                Take(darkHole, new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.Destroy,
+                    Side = EffectSide.Both,
+                    Zone = EffectZoneFilter.FieldMonsters
+                });
+            }
+
+            Take(RxDestroyAllST.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.Destroy,
+                Side = EffectSide.Both,
+                Zone = EffectZoneFilter.FieldSpellTraps
+            });
+
+            Take(RxDestroyAllOppST.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.Destroy,
+                Side = EffectSide.Opponent,
+                Zone = EffectZoneFilter.FieldSpellTraps
+            });
+
+            Take(RxTargetStDestroy.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.Destroy,
+                Zone = EffectZoneFilter.FieldSpellTraps,
+                RequiresTargetChoice = true
+            });
+
+            Take(RxMonsterReborn.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.SpecialSummonFromGy,
+                Zone = EffectZoneFilter.EitherGyMonsters,
+                RequiresTargetChoice = true
+            });
+
+            Take(RxDraw.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.Draw,
+                Side = EffectSide.Controller,
+                Amount = ParseInt(RxDraw.Match(text), 1, 2)
+            });
+
+            Take(RxFlipDestroyMonster.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Flip,
+                Action = EffectActionKind.Destroy,
+                Zone = EffectZoneFilter.FieldAnyMonster,
+                RequiresTargetChoice = true
+            });
+
+            Take(RxFlipSpellToHand.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Flip,
+                Action = EffectActionKind.AddFromGyToHand,
+                Zone = EffectZoneFilter.ControllerGySpells,
+                RequiresTargetChoice = true
+            });
+
+            Take(RxTrapHole.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.OpponentNormalOrFlipSummon,
+                Action = EffectActionKind.Destroy,
+                Zone = EffectZoneFilter.FieldAnyMonster,
+                Amount = ParseInt(RxTrapHole.Match(text), 1, 1000),
+                RequiresTargetChoice = true
+            });
+
+            Take(RxMirrorForce.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.AttackDeclared,
+                Action = EffectActionKind.Destroy,
+                Side = EffectSide.Opponent,
+                Zone = EffectZoneFilter.OppAttackPositionMonsters
+            });
+
+            Take(RxNegateAttack.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.AttackDeclared,
+                Action = EffectActionKind.NegateAttack,
+                Zone = EffectZoneFilter.AttackingMonster
+            });
+            // end battle phase folded into NegateAttack action
+
+            Take(RxSangan.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.SentFromFieldToGy,
+                Action = EffectActionKind.AddFromDeckToHand,
+                Zone = EffectZoneFilter.DeckMonstersAtkLeq,
+                Amount = ParseInt(RxSangan.Match(text), 1, 1500)
+            });
+
+            Take(RxFlute.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.SpecialSummonFromHand,
+                Zone = EffectZoneFilter.ControllerHandDragons,
+                Amount = ParseInt(RxFlute.Match(text), 1, 2),
+                RequiresLordOfDOnField = true
+            });
+
+            Take(RxPolymerization.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.FusionSummonRegistered
+            });
+
+            Take(RxLordOfD.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.ContinuousWhileFaceUp,
+                Action = EffectActionKind.ContinuousCannotTargetDragons
+            });
+
+            Take(RxEnemyControllerPos.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.ChangeBattlePosition,
+                Zone = EffectZoneFilter.OppFaceUpMonsters,
+                RequiresTargetChoice = true
+            });
+
+            Take(RxAlwaysTreatedAsName.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.ContinuousWhileFaceUp,
+                Action = EffectActionKind.AlwaysTreatedAsName,
+                TreatedAsName = Group1(RxAlwaysTreatedAsName.Match(text)),
+                StaysOnField = true
+            });
+            if (!ContainsAction(clauses, EffectActionKind.AlwaysTreatedAsName))
+            {
+                Take(RxNameTreatedAs.Match(text), new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.AlwaysTreatedAsName,
+                    TreatedAsName = Group1(RxNameTreatedAs.Match(text)),
+                    StaysOnField = true
+                });
+            }
+
+            Take(RxAllAttrGainAtkDef.Match(text), GainAtkDefClause(RxAllAttrGainAtkDef.Match(text)));
+            if (!ContainsAction(clauses, EffectActionKind.ContinuousGainAtkDef))
+                Take(RxIncreasesAtkDefOfAll.Match(text), GainAtkDefClause(RxIncreasesAtkDefOfAll.Match(text)));
+
+            Take(RxDiscardAttrBounceField.Match(text),
+                DiscardBounceClause(RxDiscardAttrBounceField.Match(text)));
+            if (!ContainsAction(clauses, EffectActionKind.ReturnToHand))
+            {
+                Take(RxDiscardAttrBounceFieldPsct.Match(text),
+                    DiscardBounceClause(RxDiscardAttrBounceFieldPsct.Match(text)));
+            }
+
+            Take(RxReduceLevelHandsAndField.Match(text),
+                ReduceLevelClause(RxReduceLevelHandsAndField.Match(text)));
+            if (!ContainsAction(clauses, EffectActionKind.ContinuousReduceLevel))
+            {
+                Take(RxDowngradeLevelHandsAndField.Match(text),
+                    ReduceLevelClause(RxDowngradeLevelHandsAndField.Match(text)));
+            }
+
+            Take(RxDirectAttackWhileNamed.Match(text),
+                DirectAttackClause(RxDirectAttackWhileNamed.Match(text), named: true));
+            if (!ContainsAction(clauses, EffectActionKind.CanAttackDirectly))
+            {
+                Take(RxDirectAttackUnconditional.Match(text),
+                    DirectAttackClause(RxDirectAttackUnconditional.Match(text), named: false));
+            }
+
+            Take(RxExtraAttackWhileNamed.Match(text),
+                ExtraAttackClause(RxExtraAttackWhileNamed.Match(text), named: true));
+            if (!ContainsAction(clauses, EffectActionKind.ExtraAttacks))
+            {
+                Take(RxExtraAttackUnconditional.Match(text),
+                    ExtraAttackClause(RxExtraAttackUnconditional.Match(text), named: false));
+            }
+
+            Take(RxSakuretsu.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.AttackDeclared,
+                Action = EffectActionKind.Destroy,
+                Zone = EffectZoneFilter.AttackingMonster,
+                CheckedAt = ConditionCheckedAt.Activation
+            });
+            Take(RxMagicCylinder.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.AttackDeclared,
+                Action = EffectActionKind.NegateThisAttack,
+                Zone = EffectZoneFilter.AttackingMonster
+            });
+            if (ContainsAction(clauses, EffectActionKind.NegateThisAttack) &&
+                RxMagicCylinder.IsMatch(text))
+            {
+                clauses.Add(new EffectClause
+                {
+                    Timing = EffectTiming.AttackDeclared,
+                    Action = EffectActionKind.InflictDamageEqualToAtk,
+                    Zone = EffectZoneFilter.AttackingMonster,
+                    SourceSnippet = "inflict damage equal to its ATK"
+                });
+            }
+
+            Take(RxDrainingShield.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.AttackDeclared,
+                Action = EffectActionKind.NegateThisAttack,
+                Zone = EffectZoneFilter.AttackingMonster
+            });
+            if (RxDrainingShield.IsMatch(text) &&
+                !ContainsAction(clauses, EffectActionKind.GainLpEqualToAtk))
+            {
+                clauses.Add(new EffectClause
+                {
+                    Timing = EffectTiming.AttackDeclared,
+                    Action = EffectActionKind.GainLpEqualToAtk,
+                    Zone = EffectZoneFilter.AttackingMonster,
+                    SourceSnippet = "gain LP equal to that target's ATK"
+                });
+            }
+
+            Take(RxDarkMirrorForce.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.AttackDeclared,
+                Action = EffectActionKind.Banish,
+                Side = EffectSide.Opponent,
+                Zone = EffectZoneFilter.OppDefensePositionMonsters
+            });
+
+            var bark = RxBarkOfDarkRuler.Match(text);
+            Take(bark, new EffectClause
+            {
+                Timing = EffectTiming.DamageCalculation,
+                Action = EffectActionKind.LoseAtkDefUntilEndOfTurn,
+                Zone = EffectZoneFilter.OpponentBattlingMonster,
+                RaceFilter = bark.Success ? bark.Groups[1].Value : "Fiend",
+                RequiresLpCostMultiple = bark.Success ? ParseInt(bark, 2, 100) : 100,
+                DefAmount = 1,
+                CheckedAt = ConditionCheckedAt.Both
+            });
+
+            var mask = RxMaskOfWeakness.Match(text);
+            Take(mask, new EffectClause
+            {
+                Timing = EffectTiming.DamageCalculation,
+                Action = EffectActionKind.LoseAtkDefUntilEndOfTurn,
+                Zone = EffectZoneFilter.AttackingMonster,
+                Amount = mask.Success ? ParseInt(mask, 1, 700) : 700,
+                DefAmount = 0
+            });
+
+            var fieldAs = RxFieldTreatedAs.Match(text);
+            Take(fieldAs, new EffectClause
+            {
+                Timing = EffectTiming.ContinuousWhileFaceUp,
+                Action = EffectActionKind.FieldTreatedAsName,
+                TreatedAsName = fieldAs.Success ? fieldAs.Groups[1].Value : null,
+                MakesChainLink = false
+            });
+            MarkAbsorbed(text, RxNoFieldSpellBlocks, matchedSpans);
+
+            var actNamed = RxActivateOnlyWhileNamed.Match(text);
+            Take(actNamed, new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.PreventControllerBattleDamage,
+                RequiresFaceUpName = actNamed.Success ? actNamed.Groups[1].Value : null,
+                StaysOnField = true,
+                MakesChainLink = true
+            });
+            var noBd = RxNoBattleDamageWhileNamed.Match(text);
+            Take(noBd, new EffectClause
+            {
+                Timing = EffectTiming.ContinuousWhileFaceUp,
+                Action = EffectActionKind.PreventControllerBattleDamage,
+                RequiresFaceUpName = noBd.Success ? noBd.Groups[1].Value : null,
+                StaysOnField = true,
+                MakesChainLink = false
+            });
+            var leave = RxDestroyWhenNamedLeaves.Match(text);
+            Take(leave, new EffectClause
+            {
+                Timing = EffectTiming.ContinuousWhileFaceUp,
+                Action = EffectActionKind.SelfDestroyUnlessNamedFaceUp,
+                RequiresFaceUpName = leave.Success ? leave.Groups[1].Value : null,
+                MakesChainLink = false
+            });
+
+            var rec = RxSummonGainLp.Match(text);
+            Take(rec, new EffectClause
+            {
+                Timing = EffectTiming.ThisCardSummoned,
+                Action = EffectActionKind.GainLifePoints,
+                Amount = rec.Success ? ParseInt(rec, 1, 1000) : 1000,
+                Side = EffectSide.Controller,
+                MakesChainLink = true
+            });
+            var gyDmg = RxDestroyedToGyDamage.Match(text);
+            Take(gyDmg, new EffectClause
+            {
+                Timing = EffectTiming.SentFromFieldToGy,
+                Action = EffectActionKind.TakeEffectDamage,
+                Amount = gyDmg.Success ? ParseInt(gyDmg, 1, 2000) : 2000,
+                Side = EffectSide.Controller,
+                RequiresDestroyed = true,
+                MakesChainLink = true
+            });
+
+            var sendOther = RxSendNamedDestroyAllOther.Match(text);
+            if (!sendOther.Success) sendOther = RxSendNamedDestroyExceptThis.Match(text);
+            Take(sendOther, SendNamedDestroyOthersClause(sendOther));
+
+            ProtectionTemplates.Collect(text, def, clauses, matchedSpans);
+            LegacyTextTemplates.Collect(text, def, clauses, matchedSpans);
+            AdvancedEffectTemplates.Collect(text, def, clauses, matchedSpans);
+            PhaseTriggerTemplates.Collect(text, def, clauses, matchedSpans);
+
+            // Official PSCT split (condition : cost/target ; resolution) for sentences
+            // the whole-card regex did not absorb. This is how new mechanics get in
+            // without a unique full-text template for every card.
+            foreach (var sent in PsctGrammar.Parse(text, def))
+            {
+                if (sent == null || sent.Length < 3) continue;
+                if (SpanCovered(matchedSpans, sent.IndexInText, sent.Length)) continue;
+                if (sent.IsSummonRestriction)
+                {
+                    matchedSpans.Add((sent.IndexInText, sent.Length));
+                    continue;
+                }
+                var auras = CompileAuraClauses(sent.Raw);
+                if (auras.Count > 0)
+                {
+                    foreach (var a in auras)
+                    {
+                        a.SourceSnippet = sent.Raw.Trim();
+                        clauses.Add(a);
+                    }
+
+                    matchedSpans.Add((sent.IndexInText, sent.Length));
+                    continue;
+                }
+
+                var clause = CompilePsctSentence(sent, def);
+                if (clause == null) continue;
+                clause.SourceSnippet = sent.Raw.Trim();
+                clauses.Add(clause);
+                matchedSpans.Add((sent.IndexInText, sent.Length));
+            }
+
+            // Unparsed remainder for audit
+            var remaining = MaskMatched(text, matchedSpans);
+            foreach (var frag in SplitSentences(remaining))
+            {
+                if (string.IsNullOrWhiteSpace(frag)) continue;
+                // Ignore hard-once-per-turn / you can only activate 1 boilerplate
+                if (IsBoilerplate(frag)) continue;
+                unparsed.Add(frag.Trim());
+            }
+
+            prog.SetClauses(clauses);
+            prog.SetUnparsed(unparsed);
+            prog.FullyCompiled = unparsed.Count == 0 && clauses.Count > 0
+                                 || (clauses.Count == 0 && OfficialCardAuthority.HasNoActivatableEffect(def));
+
+            return prog;
+        }
+
+        static string Normalize(string s)
+        {
+            s = s.Replace('\r', ' ').Replace('\n', ' ');
+            s = Regex.Replace(s, @"\s+", " ").Trim();
+            return s;
+        }
+
+        static int ParseInt(Match m, int group, int fallback)
+        {
+            if (m == null || !m.Success || m.Groups.Count <= group) return fallback;
+            return int.TryParse(m.Groups[group].Value, out var n) ? n : fallback;
+        }
+
+        static bool SpanCovered(List<(int start, int length)> spans, int start, int length)
+        {
+            if (spans == null || length <= 0) return false;
+            var end = start + length;
+            var covered = 0;
+            foreach (var (s, n) in spans)
+            {
+                var a = Math.Max(start, s);
+                var b = Math.Min(end, s + n);
+                if (b > a) covered += b - a;
+            }
+
+            return covered * 2 >= length; // majority of the sentence already matched
+        }
+
+        /// <summary>
+        /// Compile one PSCT sentence from its condition / activation / resolution parts
+        /// (Konami green / red / blue), using fragment templates — not a whole-card regex.
+        /// </summary>
+        static EffectClause CompilePsctSentence(PsctGrammar.Sentence sent, CardDef def)
+        {
+            if (sent == null) return null;
+            if (sent.IsParenthetical)
+            {
+                var name = RxAlwaysTreatedAsName.Match(sent.Raw);
+                if (!name.Success) name = RxNameTreatedAs.Match(sent.Raw);
+                if (name.Success)
+                    return Stamp(sent, new EffectClause
+                    {
+                        Timing = EffectTiming.ContinuousWhileFaceUp,
+                        Action = EffectActionKind.AlwaysTreatedAsName,
+                        TreatedAsName = name.Groups[1].Value,
+                        StaysOnField = true,
+                        MakesChainLink = false
+                    });
+                return null;
+            }
+
+            if (!sent.MakesChainLink)
+            {
+                var auras = CompileAuraClauses(sent.Raw);
+                if (auras.Count == 1)
+                    return Stamp(sent, auras[0]);
+                var gain = RxAllAttrGainAtkDef.Match(sent.Raw);
+                if (!gain.Success) gain = RxIncreasesAtkDefOfAll.Match(sent.Raw);
+                if (gain.Success)
+                    return Stamp(sent, GainAtkDefClause(gain));
+                var lv = RxReduceLevelHandsAndField.Match(sent.Raw);
+                if (!lv.Success) lv = RxDowngradeLevelHandsAndField.Match(sent.Raw);
+                if (lv.Success)
+                    return Stamp(sent, ReduceLevelClause(lv));
+                var dirNamed = RxDirectAttackWhileNamed.Match(sent.Raw);
+                if (dirNamed.Success)
+                    return Stamp(sent, DirectAttackClause(dirNamed, named: true));
+                var dirAny = RxDirectAttackUnconditional.Match(sent.Raw);
+                if (dirAny.Success)
+                    return Stamp(sent, DirectAttackClause(dirAny, named: false));
+                var extraNamed = RxExtraAttackWhileNamed.Match(sent.Raw);
+                if (extraNamed.Success)
+                    return Stamp(sent, ExtraAttackClause(extraNamed, named: true));
+                var extraAny = RxExtraAttackUnconditional.Match(sent.Raw);
+                if (extraAny.Success)
+                    return Stamp(sent, ExtraAttackClause(extraAny, named: false));
+                return null;
+            }
+
+            var ign = IgnitionTemplates.TryCompile(sent, def);
+            if (ign != null)
+                return Stamp(sent, ign);
+
+            var act = sent.Activation ?? "";
+            var res = sent.Resolution ?? "";
+            var combo = (act + " " + res).Trim();
+
+            var clause = new EffectClause
+            {
+                Timing = sent.SuggestedTiming,
+                MakesChainLink = true
+            };
+
+            // ── Costs (red text) ──
+            var discAttr = Regex.Match(act,
+                @"discard 1 (\w+) monster", RegexOptions.IgnoreCase);
+            var discCard = Regex.Match(act,
+                @"discard 1 cards?(?: from your hand)?", RegexOptions.IgnoreCase);
+            var sendNamed = Regex.Match(act,
+                @"send 1 face-up ""([^""]+)"" you control to the (?:GY|Graveyard)",
+                RegexOptions.IgnoreCase);
+            if (discAttr.Success)
+            {
+                clause.RequiresDiscardCost = true;
+                clause.DiscardCostAttribute = discAttr.Groups[1].Value;
+            }
+            else if (discCard.Success)
+            {
+                clause.RequiresDiscardCost = true;
+                clause.DiscardCostAttribute = "*";
+            }
+            else if (sendNamed.Success)
+            {
+                clause.RequiresSendNamedToGy = true;
+                clause.RequiresFaceUpName = sendNamed.Groups[1].Value;
+            }
+
+            // ── Targeting (red text, or "to target" glued onto the cost) ──
+            if (Regex.IsMatch(act, @"target 1 (?:spell/?trap|spell or trap)", RegexOptions.IgnoreCase))
+            {
+                clause.RequiresTargetChoice = true;
+                clause.Zone = EffectZoneFilter.FieldSpellTraps;
+            }
+            else if (Regex.IsMatch(act, @"target 1 card on the field", RegexOptions.IgnoreCase) ||
+                     Regex.IsMatch(act, @"to target 1 card on the field", RegexOptions.IgnoreCase))
+            {
+                clause.RequiresTargetChoice = true;
+                clause.Zone = EffectZoneFilter.AnyCardOnField;
+            }
+            else if (Regex.IsMatch(act, @"target the attacking monster", RegexOptions.IgnoreCase) ||
+                     Regex.IsMatch(act, @"target 1 attacking monster", RegexOptions.IgnoreCase))
+            {
+                clause.RequiresTargetChoice = false;
+                clause.Zone = EffectZoneFilter.AttackingMonster;
+            }
+            else if (Regex.IsMatch(act, @"target 1 (?:face-up )?monster (?:on the field|your opponent controls)",
+                         RegexOptions.IgnoreCase))
+            {
+                clause.RequiresTargetChoice = true;
+                clause.Zone = Regex.IsMatch(act, @"opponent", RegexOptions.IgnoreCase)
+                    ? EffectZoneFilter.OppFaceUpMonsters
+                    : EffectZoneFilter.FieldAnyMonster;
+            }
+
+            // ── Resolution (blue text) ──
+            if (Regex.IsMatch(res, @"return (?:it|that target) to the hand", RegexOptions.IgnoreCase))
+            {
+                clause.Action = EffectActionKind.ReturnToHand;
+                if (clause.Zone == EffectZoneFilter.None)
+                {
+                    clause.Zone = EffectZoneFilter.AnyCardOnField;
+                    clause.RequiresTargetChoice = true;
+                }
+            }
+            else if (Regex.IsMatch(res, @"negate (?:the|that) attack", RegexOptions.IgnoreCase))
+            {
+                clause.Action = EffectActionKind.NegateThisAttack;
+                clause.Zone = EffectZoneFilter.AttackingMonster;
+            }
+            else if (Regex.IsMatch(res, @"destroy all other cards on the field", RegexOptions.IgnoreCase) ||
+                     Regex.IsMatch(res, @"destroy all cards on the field except this card",
+                         RegexOptions.IgnoreCase))
+            {
+                clause.Action = EffectActionKind.Destroy;
+                clause.Zone = EffectZoneFilter.AllOtherCardsOnField;
+                clause.Side = EffectSide.Both;
+                clause.RequiresTargetChoice = false;
+            }
+            else if (Regex.IsMatch(res, @"destroy (?:that target|it)\.?", RegexOptions.IgnoreCase) ||
+                     Regex.IsMatch(combo, @"destroy (?:that target|it)\.?", RegexOptions.IgnoreCase))
+            {
+                clause.Action = EffectActionKind.Destroy;
+                if (clause.Zone == EffectZoneFilter.None)
+                {
+                    clause.Zone = EffectZoneFilter.FieldAnyMonster;
+                    clause.RequiresTargetChoice = true;
+                }
+            }
+            else if (Regex.IsMatch(res, @"draw (\d+) cards?", RegexOptions.IgnoreCase))
+            {
+                var m = Regex.Match(res, @"draw (\d+) cards?", RegexOptions.IgnoreCase);
+                clause.Action = EffectActionKind.Draw;
+                clause.Side = EffectSide.Controller;
+                clause.Amount = int.TryParse(m.Groups[1].Value, out var n) ? n : 1;
+            }
+            else if (Regex.IsMatch(res, @"special summon (?:it|that target)", RegexOptions.IgnoreCase))
+            {
+                clause.Action = EffectActionKind.SpecialSummonFromGy;
+                clause.RequiresTargetChoice = true;
+                if (clause.Zone == EffectZoneFilter.None)
+                    clause.Zone = EffectZoneFilter.EitherGyMonsters;
+            }
+            else if (Regex.IsMatch(res, @"add (?:that target|it) to your hand", RegexOptions.IgnoreCase))
+            {
+                clause.Action = EffectActionKind.AddFromGyToHand;
+                clause.RequiresTargetChoice = true;
+                if (clause.Zone == EffectZoneFilter.None)
+                    clause.Zone = EffectZoneFilter.ControllerGySpells;
+            }
+            else if (Regex.IsMatch(res, @"change (?:that target's|its) battle position",
+                         RegexOptions.IgnoreCase))
+            {
+                clause.Action = EffectActionKind.ChangeBattlePosition;
+                clause.RequiresTargetChoice = true;
+                if (clause.Zone == EffectZoneFilter.None)
+                    clause.Zone = EffectZoneFilter.OppFaceUpMonsters;
+            }
+            else if (Regex.IsMatch(res,
+                         @"change that target to face-down Defense Position",
+                         RegexOptions.IgnoreCase))
+            {
+                clause.Action = EffectActionKind.SetTargetFaceDownDefense;
+                clause.RequiresTargetChoice = true;
+                if (clause.Zone == EffectZoneFilter.None)
+                    clause.Zone = EffectZoneFilter.FieldAnyMonster;
+            }
+
+            if (clause.Action == EffectActionKind.None)
+                return null;
+
+            return Stamp(sent, clause);
+        }
+
+        static EffectClause Stamp(PsctGrammar.Sentence sent, EffectClause clause)
+        {
+            if (clause == null) return null;
+            clause.OncePerTurn = clause.OncePerTurn || sent.OncePerTurn;
+            if (clause.OncePerTurn && clause.OptScope == OncePerTurnScope.None)
+                clause.OptScope = OncePerTurnScope.PerInstance;
+            clause.CheckedAt = sent.CheckedAt;
+            clause.IsQuickEffect = clause.IsQuickEffect || sent.IsQuickEffect;
+            clause.IsOptional = clause.IsOptional || sent.IsOptional;
+            clause.MakesChainLink = sent.MakesChainLink;
+            if (sent.IsFlip)
+                clause.Timing = EffectTiming.Flip;
+            else if (clause.Timing == EffectTiming.None)
+                clause.Timing = sent.SuggestedTiming;
+            var hay = (sent.Condition ?? "") + " " + (sent.Raw ?? "");
+            if (hay.IndexOf("during your opponent's turn", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                hay.IndexOf("during the opponent's turn", StringComparison.OrdinalIgnoreCase) >= 0)
+                clause.OpponentTurnOnly = true;
+            return clause;
+        }
+
+        static EffectClause DiscardBounceClause(Match m)
+        {
+            if (m == null || !m.Success) return new EffectClause();
+            return new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.ReturnToHand,
+                Zone = EffectZoneFilter.AnyCardOnField,
+                RequiresTargetChoice = true,
+                OncePerTurn = true,
+                RequiresDiscardCost = true,
+                DiscardCostAttribute = m.Groups[1].Value
+            };
+        }
+
+        static EffectClause SendNamedDestroyOthersClause(Match m)
+        {
+            if (m == null || !m.Success) return new EffectClause();
+            return new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.Destroy,
+                Zone = EffectZoneFilter.AllOtherCardsOnField,
+                Side = EffectSide.Both,
+                RequiresTargetChoice = false,
+                RequiresSendNamedToGy = true,
+                RequiresFaceUpName = m.Groups[1].Value,
+                IsOptional = true,
+                MakesChainLink = true
+            };
+        }
+
+        static EffectClause ExtraAttackClause(Match m, bool named)
+        {
+            if (m == null || !m.Success) return new EffectClause();
+            return new EffectClause
+            {
+                Timing = EffectTiming.ContinuousWhileFaceUp,
+                Action = EffectActionKind.ExtraAttacks,
+                Amount = 1,
+                RequiresFaceUpName = named && m.Groups.Count > 1 ? m.Groups[1].Value : null,
+                MakesChainLink = false
+            };
+        }
+
+        static EffectClause DirectAttackClause(Match m, bool named)
+        {
+            if (m == null || !m.Success) return new EffectClause();
+            return new EffectClause
+            {
+                Timing = EffectTiming.ContinuousWhileFaceUp,
+                Action = EffectActionKind.CanAttackDirectly,
+                RequiresFaceUpName = named && m.Groups.Count > 1 ? m.Groups[1].Value : null,
+                MakesChainLink = false
+            };
+        }
+
+        static EffectClause GainAtkDefClause(Match m)
+        {
+            if (m == null || !m.Success) return new EffectClause();
+            var n = ParseInt(m, 2, 0);
+            var c = new EffectClause
+            {
+                Timing = EffectTiming.ContinuousWhileFaceUp,
+                Action = EffectActionKind.ContinuousGainAtkDef,
+                Amount = n,
+                DefAmount = n,
+                Side = EffectSide.Both,
+                StaysOnField = true,
+                MakesChainLink = false
+            };
+            FillTypeOrAttribute(c, m.Groups[1].Value);
+            return c;
+        }
+
+        static readonly HashSet<string> AttributeWords = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "DARK", "LIGHT", "EARTH", "WATER", "FIRE", "WIND", "DIVINE"
+        };
+
+        static string StripContinuousWhile(string s)
+        {
+            if (string.IsNullOrWhiteSpace(s)) return s;
+            s = Normalize(s);
+            s = Regex.Replace(s,
+                @"^(?:As long as this card remains face-up on the field,\s*|While this card is face-up on the field,\s*)",
+                "", RegexOptions.IgnoreCase);
+            return s.Trim();
+        }
+
+        /// <summary>
+        /// Continuous ATK/DEF auras that do not use a colon (not a Chain Link).
+        /// Star Boy family + modern "All X gain ATK, also all Y lose ATK" + "you control".
+        /// Requires the aura to be the whole remaining sentence so Defense-only / Flip prefixes do not match.
+        /// </summary>
+        static List<EffectClause> CompileAuraClauses(string raw)
+        {
+            var list = new List<EffectClause>();
+            var body = StripContinuousWhile(raw);
+            if (string.IsNullOrEmpty(body)) return list;
+
+            var inc = RxIncDecAtk.Match(body);
+            if (inc.Success && inc.Index == 0)
+            {
+                list.Add(StatAuraClause(inc.Groups[1].Value, ParseInt(inc, 2, 0), 0, EffectSide.Both));
+                list.Add(StatAuraClause(inc.Groups[3].Value, -ParseInt(inc, 4, 0), 0, EffectSide.Both));
+                return list;
+            }
+
+            var gain = RxAllGainAtkMaybeLose.Match(body);
+            if (gain.Success && gain.Index == 0)
+            {
+                list.Add(StatAuraClause(gain.Groups[1].Value, ParseInt(gain, 2, 0), 0, EffectSide.Both));
+                if (gain.Groups.Count > 3 && gain.Groups[3].Success &&
+                    !string.IsNullOrEmpty(gain.Groups[3].Value))
+                    list.Add(StatAuraClause(gain.Groups[3].Value, -ParseInt(gain, 4, 0), 0,
+                        EffectSide.Both));
+                return list;
+            }
+
+            var lose = RxAllLoseAtk.Match(body);
+            if (lose.Success && lose.Index == 0)
+            {
+                list.Add(StatAuraClause(lose.Groups[1].Value, -ParseInt(lose, 2, 0), 0, EffectSide.Both));
+                return list;
+            }
+
+            var you = RxAllYouControlGainAtk.Match(body);
+            if (you.Success && you.Index == 0)
+            {
+                var n = ParseInt(you, 2, 0);
+                var bothStats = you.Value.IndexOf("DEF", StringComparison.OrdinalIgnoreCase) >= 0;
+                list.Add(StatAuraClause(you.Groups[1].Value, n, bothStats ? n : 0, EffectSide.Controller));
+                return list;
+            }
+
+            return list;
+        }
+
+        static EffectClause StatAuraClause(string filter, int atk, int def, EffectSide side)
+        {
+            var c = new EffectClause
+            {
+                Timing = EffectTiming.ContinuousWhileFaceUp,
+                Action = EffectActionKind.ContinuousGainAtkDef,
+                Amount = atk,
+                DefAmount = def,
+                Side = side,
+                StaysOnField = true,
+                MakesChainLink = false
+            };
+            FillTypeOrAttribute(c, filter);
+            return c;
+        }
+
+        static void FillTypeOrAttribute(EffectClause c, string word)
+        {
+            if (c == null || string.IsNullOrEmpty(word)) return;
+            if (AttributeWords.Contains(word))
+                c.AttributeFilter = word;
+            else
+                c.RaceFilter = word;
+        }
+
+        static EffectClause ReduceLevelClause(Match m)
+        {
+            if (m == null || !m.Success) return new EffectClause();
+            return new EffectClause
+            {
+                Timing = EffectTiming.ContinuousWhileFaceUp,
+                Action = EffectActionKind.ContinuousReduceLevel,
+                AttributeFilter = m.Groups[1].Value,
+                Amount = ParseInt(m, 2, 1),
+                ApplyToHand = true,
+                ApplyToField = true,
+                StaysOnField = true
+            };
+        }
+
+        static string Group1(Match m) =>
+            m != null && m.Success && m.Groups.Count > 1 ? m.Groups[1].Value : "";
+
+        static bool ContainsAction(List<EffectClause> clauses, EffectActionKind action)
+        {
+            foreach (var c in clauses)
+                if (c != null && c.Action == action) return true;
+            return false;
+        }
+
+        static bool ContainsSnippet(List<EffectClause> clauses, string needle)
+        {
+            foreach (var c in clauses)
+                if (c.SourceSnippet != null &&
+                    c.SourceSnippet.IndexOf(needle, StringComparison.OrdinalIgnoreCase) >= 0)
+                    return true;
+            return false;
+        }
+
+        static void MarkAbsorbed(string text, Regex rx, List<(int, int)> spans)
+        {
+            var m = rx.Match(text);
+            if (m.Success) spans.Add((m.Index, m.Length));
+        }
+
+        static string MaskMatched(string text, List<(int start, int length)> spans)
+        {
+            if (spans.Count == 0) return text;
+            var chars = text.ToCharArray();
+            foreach (var (start, length) in spans)
+            {
+                for (var i = start; i < start + length && i < chars.Length; i++)
+                    chars[i] = ' ';
+            }
+
+            return new string(chars);
+        }
+
+        static IEnumerable<string> SplitSentences(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) yield break;
+            foreach (var part in Regex.Split(text, @"(?<=[\.\!\?])\s+"))
+            {
+                var t = part.Trim();
+                if (t.Length > 2) yield return t;
+            }
+        }
+
+        static bool IsBoilerplate(string frag)
+        {
+            // Collapse mask holes before length checks only — do not invent away real riders/costs.
+            var f = Regex.Replace(frag ?? "", @"\s+", " ").Trim().ToLowerInvariant();
+            if (f.Contains("you can only activate 1")) return true;
+            if (f.Contains("you can only use")) return true;
+            if (f.Contains("this card is always treated as")) return true;
+            if (f.StartsWith("●")) return true; // multi-choice bullets partially handled
+            if (f.Contains("tribute 1 monster, then target")) return true; // EC mode 2 deferred
+            if (f.Contains("cannot activate cards, or the effects")) return true; // Sangan restriction
+            if (f.Contains("once while this card is face-up")) return true;
+            if (f.Length < 8) return true;
+            return false;
+        }
+    }
+}

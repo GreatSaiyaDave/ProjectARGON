@@ -1,0 +1,8740 @@
+{
+  "source": "ygopro-scripts + ProjectIgnis official (behavior facts only, not Lua)",
+  "scriptFiles": 22497,
+  "auraCount": 701,
+  "directCount": 189,
+  "extraCount": 52,
+  "auras": [
+    {
+      "cardId": 10012614,
+      "atk": 200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 100295121,
+      "atk": 0,
+      "def": -1500,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 10080320,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "Dinosaur",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 10080320,
+      "atk": 300,
+      "def": 300,
+      "attribute": "",
+      "race": "Dinosaur",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 101402035,
+      "atk": 10000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 10375182,
+      "atk": 400,
+      "def": 0,
+      "attribute": "",
+      "race": "Warrior",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 10497636,
+      "atk": 200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 10642488,
+      "atk": 1200,
+      "def": 0,
+      "attribute": "LIGHT",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 10719350,
+      "atk": 100,
+      "def": 0,
+      "attribute": "",
+      "race": "Beast-Warrior",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 10774240,
+      "atk": 2050,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 11102908,
+      "atk": -500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 11460577,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 12215894,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 12215894,
+      "atk": 500,
+      "def": 500,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 12398280,
+      "atk": 400,
+      "def": 0,
+      "attribute": "",
+      "race": "Fairy",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 12398280,
+      "atk": 400,
+      "def": 400,
+      "attribute": "",
+      "race": "Fairy",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 1269512,
+      "atk": -500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 13035077,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 13035077,
+      "atk": 300,
+      "def": 300,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 13073850,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 13076804,
+      "atk": 2000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 13316346,
+      "atk": 2000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 13317419,
+      "atk": 800,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 13332685,
+      "atk": -800,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 13482075,
+      "atk": -500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 13522325,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 13955608,
+      "atk": 3000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 14001430,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 14001430,
+      "atk": 500,
+      "def": 500,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 1412158,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 14342283,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 14393464,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "Cyberse",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 14442329,
+      "atk": 3300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 151000001,
+      "atk": -500,
+      "def": 0,
+      "attribute": "EARTH",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 151000001,
+      "atk": 0,
+      "def": 400,
+      "attribute": "EARTH",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 151000003,
+      "atk": 200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 151000016,
+      "atk": 200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 151000016,
+      "atk": 200,
+      "def": 200,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 151000018,
+      "atk": 500,
+      "def": 0,
+      "attribute": "EARTH",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 151000018,
+      "atk": 0,
+      "def": -400,
+      "attribute": "EARTH",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 151000019,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "Fiend",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 151000019,
+      "atk": 300,
+      "def": 300,
+      "attribute": "",
+      "race": "Fiend",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 151000022,
+      "atk": 200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 151000022,
+      "atk": 200,
+      "def": 200,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 151000024,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "Dinosaur",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 151000024,
+      "atk": 300,
+      "def": 300,
+      "attribute": "",
+      "race": "Dinosaur",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 151000027,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 151000027,
+      "atk": 500,
+      "def": 500,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 151000030,
+      "atk": 200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 151000030,
+      "atk": 0,
+      "def": 200,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 151000031,
+      "atk": 500,
+      "def": 0,
+      "attribute": "DARK",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 151000031,
+      "atk": 0,
+      "def": -400,
+      "attribute": "DARK",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 151000040,
+      "atk": 500,
+      "def": 0,
+      "attribute": "WIND",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 151000040,
+      "atk": 0,
+      "def": -400,
+      "attribute": "WIND",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 151000044,
+      "atk": 200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 151000044,
+      "atk": 200,
+      "def": 200,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 151000050,
+      "atk": 500,
+      "def": 0,
+      "attribute": "WATER",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 151000050,
+      "atk": 0,
+      "def": -400,
+      "attribute": "WATER",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 151000051,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "Zombie",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 151000053,
+      "atk": 200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 151000053,
+      "atk": 200,
+      "def": 200,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 151000054,
+      "atk": 1200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 153000005,
+      "atk": 200,
+      "def": 0,
+      "attribute": "WATER",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 153000012,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 15419596,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 15449853,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "Fairy",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 15449853,
+      "atk": 300,
+      "def": 300,
+      "attribute": "",
+      "race": "Fairy",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 15845914,
+      "atk": 2500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 15862758,
+      "atk": 100000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160001045,
+      "atk": 200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160001045,
+      "atk": 0,
+      "def": 200,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160002024,
+      "atk": -500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160002039,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160002039,
+      "atk": -300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160003048,
+      "atk": 200,
+      "def": 0,
+      "attribute": "LIGHT",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160003050,
+      "atk": -300,
+      "def": 0,
+      "attribute": "WATER",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160003050,
+      "atk": -300,
+      "def": -300,
+      "attribute": "WATER",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160003053,
+      "atk": 200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160003053,
+      "atk": 200,
+      "def": 200,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160004042,
+      "atk": 400,
+      "def": 0,
+      "attribute": "",
+      "race": "Wyrm",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160004042,
+      "atk": 0,
+      "def": -400,
+      "attribute": "",
+      "race": "Wyrm",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160004050,
+      "atk": 200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160004050,
+      "atk": 200,
+      "def": 200,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160005054,
+      "atk": 200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160005054,
+      "atk": 200,
+      "def": 200,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160006045,
+      "atk": 500,
+      "def": 0,
+      "attribute": "WIND",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160006050,
+      "atk": 300,
+      "def": 0,
+      "attribute": "FIRE",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160006051,
+      "atk": -200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160006051,
+      "atk": 0,
+      "def": 400,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160006056,
+      "atk": 100,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160007042,
+      "atk": 400,
+      "def": 0,
+      "attribute": "",
+      "race": "Machine",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160007047,
+      "atk": 400,
+      "def": 0,
+      "attribute": "FIRE",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160007047,
+      "atk": 400,
+      "def": 0,
+      "attribute": "FIRE",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160007054,
+      "atk": 600,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160007054,
+      "atk": 600,
+      "def": 600,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160008054,
+      "atk": -1500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160008055,
+      "atk": -400,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160010048,
+      "atk": 200,
+      "def": 0,
+      "attribute": "",
+      "race": "Aqua",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160010048,
+      "atk": -200,
+      "def": 0,
+      "attribute": "",
+      "race": "Aqua",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160010049,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "Aqua",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160010053,
+      "atk": 600,
+      "def": 0,
+      "attribute": "",
+      "race": "Reptile",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160011010,
+      "atk": 700,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160011034,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160013013,
+      "atk": 200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160013056,
+      "atk": 400,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160014033,
+      "atk": 200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160014053,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160015053,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160016038,
+      "atk": 200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160016039,
+      "atk": 3000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160017030,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160018028,
+      "atk": -1500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160018028,
+      "atk": -1500,
+      "def": -1500,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160018050,
+      "atk": -600,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160018050,
+      "atk": -600,
+      "def": -600,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160018055,
+      "atk": 600,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160018057,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "Aqua",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160018057,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "Aqua",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160019019,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160019027,
+      "atk": 2200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160019032,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "Machine",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160019034,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160020024,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160020028,
+      "atk": 400,
+      "def": 0,
+      "attribute": "",
+      "race": "Beast",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160020028,
+      "atk": 400,
+      "def": 400,
+      "attribute": "",
+      "race": "Beast",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160020048,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160021033,
+      "atk": 200,
+      "def": 0,
+      "attribute": "",
+      "race": "Spellcaster",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160021040,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160021045,
+      "atk": 1200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160022016,
+      "atk": 400,
+      "def": 0,
+      "attribute": "WIND",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160022037,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "Aqua",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160022037,
+      "atk": 5,
+      "def": 0,
+      "attribute": "",
+      "race": "Aqua",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160022042,
+      "atk": 1500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160024010,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "Beast-Warrior",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160024037,
+      "atk": 3000,
+      "def": 0,
+      "attribute": "",
+      "race": "Beast-Warrior",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160024065,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160025023,
+      "atk": 200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160025036,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160026036,
+      "atk": 400,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160202046,
+      "atk": -300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160202046,
+      "atk": -300,
+      "def": -300,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160203015,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "Dinosaur",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160203015,
+      "atk": 300,
+      "def": 300,
+      "attribute": "",
+      "race": "Dinosaur",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160204012,
+      "atk": -300,
+      "def": 0,
+      "attribute": "LIGHT",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160205023,
+      "atk": 0,
+      "def": 2000,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160205032,
+      "atk": -300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160205032,
+      "atk": -300,
+      "def": -300,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160208004,
+      "atk": 300,
+      "def": 0,
+      "attribute": "WIND",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160209078,
+      "atk": 400,
+      "def": 0,
+      "attribute": "",
+      "race": "Beast-Warrior",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160209078,
+      "atk": 400,
+      "def": 400,
+      "attribute": "",
+      "race": "Beast-Warrior",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160211007,
+      "atk": -1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160212006,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160212014,
+      "atk": 200,
+      "def": 0,
+      "attribute": "EARTH",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160213054,
+      "atk": 800,
+      "def": 0,
+      "attribute": "",
+      "race": "Insect",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160214033,
+      "atk": -600,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160214033,
+      "atk": -600,
+      "def": -600,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160215032,
+      "atk": -1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160215032,
+      "atk": -1000,
+      "def": -1000,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160216014,
+      "atk": 700,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160216044,
+      "atk": -1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160216044,
+      "atk": -1000,
+      "def": -1000,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160216059,
+      "atk": -3000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160216071,
+      "atk": 200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160217001,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160217020,
+      "atk": 1300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160217030,
+      "atk": 400,
+      "def": 0,
+      "attribute": "",
+      "race": "Spellcaster",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160218021,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "Spellcaster",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160218023,
+      "atk": -2000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160218028,
+      "atk": -1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160218038,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160218068,
+      "atk": -600,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160218068,
+      "atk": -600,
+      "def": -600,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160309027,
+      "atk": -300,
+      "def": 0,
+      "attribute": "EARTH",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160309027,
+      "atk": -300,
+      "def": -300,
+      "attribute": "EARTH",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160319028,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "Dragon",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160320032,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160320032,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160402014,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160402034,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "Fiend",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160402065,
+      "atk": 400,
+      "def": 0,
+      "attribute": "",
+      "race": "Warrior",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160428020,
+      "atk": 400,
+      "def": 0,
+      "attribute": "",
+      "race": "Spellcaster",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160428020,
+      "atk": 0,
+      "def": -1500,
+      "attribute": "",
+      "race": "Spellcaster",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 160428029,
+      "atk": 200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 160451004,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 16172067,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 17201951,
+      "atk": 900,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 17228908,
+      "atk": -500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 17228908,
+      "atk": -500,
+      "def": -500,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 17286057,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 17475251,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 17475251,
+      "atk": 500,
+      "def": 500,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 17857780,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 18000338,
+      "atk": 800,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 18013090,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 18096222,
+      "atk": 700,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 18161786,
+      "atk": 500,
+      "def": 0,
+      "attribute": "DARK",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 18161786,
+      "atk": 0,
+      "def": -400,
+      "attribute": "DARK",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 19059929,
+      "atk": 100,
+      "def": 0,
+      "attribute": "",
+      "race": "Beast-Warrior",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 19384334,
+      "atk": 500,
+      "def": 0,
+      "attribute": "FIRE",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 19384334,
+      "atk": 0,
+      "def": -400,
+      "attribute": "FIRE",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 19877898,
+      "atk": -700,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 19877898,
+      "atk": -700,
+      "def": -700,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 2084239,
+      "atk": 1200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 21044178,
+      "atk": 500,
+      "def": 0,
+      "attribute": "WATER",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 21340051,
+      "atk": -1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 21364070,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 21970285,
+      "atk": 200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 22174866,
+      "atk": -500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 22174866,
+      "atk": -500,
+      "def": -500,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 22200403,
+      "atk": 800,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 22623509,
+      "atk": 2300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 22812963,
+      "atk": 2500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 22842214,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 23160024,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 23160024,
+      "atk": 300,
+      "def": 300,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 23424603,
+      "atk": 200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 23424603,
+      "atk": 200,
+      "def": 200,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 23530726,
+      "atk": -3000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 23545031,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 23545031,
+      "atk": 500,
+      "def": 500,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 24521754,
+      "atk": 3000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 2511717,
+      "atk": 1500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 25518020,
+      "atk": 200,
+      "def": 0,
+      "attribute": "",
+      "race": "Machine",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 25704359,
+      "atk": 800,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 25771826,
+      "atk": 200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 25807544,
+      "atk": 500,
+      "def": 0,
+      "attribute": "FIRE",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 259314,
+      "atk": 0,
+      "def": 1000,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 26270847,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 26345570,
+      "atk": 800,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 269510,
+      "atk": 0,
+      "def": 300,
+      "attribute": "",
+      "race": "Dragon",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 27012717,
+      "atk": -500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 27012990,
+      "atk": 0,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 27279764,
+      "atk": -500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 27279764,
+      "atk": -500,
+      "def": -500,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 27753563,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 28348939,
+      "atk": 100,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 28348939,
+      "atk": 100,
+      "def": 100,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 28388296,
+      "atk": 200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 28388296,
+      "atk": 200,
+      "def": 200,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 28470714,
+      "atk": 500,
+      "def": 0,
+      "attribute": "WIND",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 28470714,
+      "atk": -400,
+      "def": 0,
+      "attribute": "EARTH",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 28884172,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 29975188,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 29975188,
+      "atk": 500,
+      "def": 500,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 300101002,
+      "atk": 200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 300101002,
+      "atk": 200,
+      "def": 200,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 300101005,
+      "atk": 200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 300101005,
+      "atk": 200,
+      "def": 200,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 300202001,
+      "atk": 200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 300202001,
+      "atk": 0,
+      "def": 200,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 300203001,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "Dinosaur",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 300203001,
+      "atk": 300,
+      "def": 300,
+      "attribute": "",
+      "race": "Dinosaur",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 300304001,
+      "atk": 800,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 300304012,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 300304019,
+      "atk": 200,
+      "def": 0,
+      "attribute": "",
+      "race": "Dinosaur",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 30314994,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 30913809,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "Fairy",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 30913809,
+      "atk": 300,
+      "def": 300,
+      "attribute": "",
+      "race": "Fairy",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 31322640,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "Spellcaster",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 31322640,
+      "atk": 500,
+      "def": 500,
+      "attribute": "",
+      "race": "Spellcaster",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 3149401,
+      "atk": 4500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 31897444,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 31897444,
+      "atk": -500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 31944175,
+      "atk": -500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 32278723,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 32775808,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 33017655,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "Fiend",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 33017655,
+      "atk": 300,
+      "def": 300,
+      "attribute": "",
+      "race": "Fiend",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 3355732,
+      "atk": -1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 33665663,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "Beast-Warrior",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 33750856,
+      "atk": 1,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 3381441,
+      "atk": 200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 3381441,
+      "atk": 0,
+      "def": 200,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 33897356,
+      "atk": -400,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 34031284,
+      "atk": 3000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 34088136,
+      "atk": -300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 34103656,
+      "atk": 200,
+      "def": 0,
+      "attribute": "WATER",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 34103656,
+      "atk": 200,
+      "def": 200,
+      "attribute": "WATER",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 34225426,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 34830502,
+      "atk": -500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 3507053,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 35546670,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 35546670,
+      "atk": 300,
+      "def": 300,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 35614780,
+      "atk": -500,
+      "def": 0,
+      "attribute": "",
+      "race": "Dragon",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 35614780,
+      "atk": -500,
+      "def": -500,
+      "attribute": "",
+      "race": "Dragon",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 3576031,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 3576031,
+      "atk": 300,
+      "def": 300,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 35911108,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "Cyberse",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 35911108,
+      "atk": 300,
+      "def": 300,
+      "attribute": "",
+      "race": "Cyberse",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 35956022,
+      "atk": -500,
+      "def": 0,
+      "attribute": "EARTH",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 35956022,
+      "atk": 0,
+      "def": 400,
+      "attribute": "EARTH",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 36148308,
+      "atk": -1500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 36499284,
+      "atk": 100,
+      "def": 0,
+      "attribute": "",
+      "race": "Beast-Warrior",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 36560997,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 36668118,
+      "atk": 0,
+      "def": 300,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 36687247,
+      "atk": 400,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 3679218,
+      "atk": -1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 3679218,
+      "atk": -1000,
+      "def": -1000,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 37390589,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 37654623,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 37654623,
+      "atk": 500,
+      "def": 500,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 3775068,
+      "atk": 2400,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 37780349,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 3784434,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 3784444,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 37880706,
+      "atk": 500,
+      "def": 0,
+      "attribute": "FIRE",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 37880706,
+      "atk": 500,
+      "def": 500,
+      "attribute": "FIRE",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 37880706,
+      "atk": -400,
+      "def": 500,
+      "attribute": "WATER",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 37991342,
+      "atk": -300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 38148100,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "Plant",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 38148100,
+      "atk": 500,
+      "def": 500,
+      "attribute": "",
+      "race": "Plant",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 38643567,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 39507162,
+      "atk": 400,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 3987233,
+      "atk": 500,
+      "def": 0,
+      "attribute": "EARTH",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 3987233,
+      "atk": 500,
+      "def": 500,
+      "attribute": "EARTH",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 3987233,
+      "atk": -400,
+      "def": 500,
+      "attribute": "WIND",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 40155014,
+      "atk": -1500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 40669071,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 40669071,
+      "atk": 1,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 40945356,
+      "atk": 1,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 41128647,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 41128647,
+      "atk": 300,
+      "def": 300,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 41924516,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 42015635,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 42209438,
+      "atk": 600,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 42209438,
+      "atk": 600,
+      "def": 600,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 42461852,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 42461852,
+      "atk": 500,
+      "def": 500,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 42463414,
+      "atk": 400,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 43405287,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 43577607,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 43886072,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 43912676,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "Wyrm",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 43912676,
+      "atk": 300,
+      "def": 300,
+      "attribute": "",
+      "race": "Wyrm",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 44179224,
+      "atk": 1100,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 44920699,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "Beast-Warrior",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 45425051,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "Plant",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 45425051,
+      "atk": 0,
+      "def": 500,
+      "attribute": "",
+      "race": "Plant",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 4542651,
+      "atk": 0,
+      "def": 300,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 45778242,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "Cyberse",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 45778242,
+      "atk": 500,
+      "def": 500,
+      "attribute": "",
+      "race": "Cyberse",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 45778932,
+      "atk": 500,
+      "def": 0,
+      "attribute": "WIND",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 45778932,
+      "atk": 0,
+      "def": -400,
+      "attribute": "WIND",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 46500985,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 46500985,
+      "atk": 300,
+      "def": 300,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 46552140,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "Rock",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 46552140,
+      "atk": 500,
+      "def": 500,
+      "attribute": "",
+      "race": "Rock",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 46640168,
+      "atk": -600,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 46871387,
+      "atk": 0,
+      "def": 800,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 46947713,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 47077697,
+      "atk": -300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 47082621,
+      "atk": -2500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 47355498,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 47355498,
+      "atk": 500,
+      "def": 500,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 4754691,
+      "atk": 700,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 47736165,
+      "atk": -500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 47736165,
+      "atk": -500,
+      "def": -500,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 48144778,
+      "atk": -800,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 48179391,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 48183890,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 49082032,
+      "atk": 800,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 49105782,
+      "atk": 2400,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 4914353,
+      "atk": -800,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 4914353,
+      "atk": -800,
+      "def": -800,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 49565413,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 49721904,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 49847524,
+      "atk": 800,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 504700017,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 504700053,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 504700057,
+      "atk": -300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 504700058,
+      "atk": -500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 504700166,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 504700166,
+      "atk": 500,
+      "def": 500,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 50913601,
+      "atk": 200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 50913601,
+      "atk": 0,
+      "def": 200,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 511000073,
+      "atk": 400,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 511000140,
+      "atk": 200,
+      "def": 0,
+      "attribute": "",
+      "race": "Zombie",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 511000396,
+      "atk": -500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 511000444,
+      "atk": 400,
+      "def": 0,
+      "attribute": "",
+      "race": "Beast-Warrior",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 511000596,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "GRAVE"
+    },
+    {
+      "cardId": 511000625,
+      "atk": 800,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 511000626,
+      "atk": 0,
+      "def": 800,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 511000640,
+      "atk": 800,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 511000653,
+      "atk": 400,
+      "def": 0,
+      "attribute": "",
+      "race": "Fairy",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 511000852,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 511000888,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 511000966,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 511000966,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 511000967,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 511001094,
+      "atk": 300,
+      "def": 0,
+      "attribute": "FIRE",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 511001148,
+      "atk": 400,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 511001222,
+      "atk": -300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 511001239,
+      "atk": 800,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 511001259,
+      "atk": 300,
+      "def": 0,
+      "attribute": "DARK",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 511001410,
+      "atk": 0,
+      "def": -1000,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 511001415,
+      "atk": -1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 511001424,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "WATER",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 511001535,
+      "atk": -300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 511001885,
+      "atk": 300,
+      "def": 0,
+      "attribute": "WATER",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 511002119,
+      "atk": -500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 511002119,
+      "atk": -500,
+      "def": -500,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 511002231,
+      "atk": 400,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 511002315,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "Fairy",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 511002317,
+      "atk": 200,
+      "def": 0,
+      "attribute": "",
+      "race": "Fairy",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 511002318,
+      "atk": -500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 511002337,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "Machine",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 511002353,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 511002566,
+      "atk": -800,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 511002566,
+      "atk": 1,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 511002578,
+      "atk": 0,
+      "def": -700,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 511002581,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 511002705,
+      "atk": 1,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 511002874,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 511002874,
+      "atk": 300,
+      "def": 300,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 511002963,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 511002998,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 511002998,
+      "atk": 500,
+      "def": 500,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 511003005,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 511003054,
+      "atk": -500,
+      "def": 0,
+      "attribute": "",
+      "race": "Fairy",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 511003054,
+      "atk": -500,
+      "def": -500,
+      "attribute": "",
+      "race": "Fairy",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 511003086,
+      "atk": 200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 511003214,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 511005032,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 511009044,
+      "atk": -500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 511009159,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 511009392,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 511009724,
+      "atk": 400,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 511015110,
+      "atk": 2000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 511016007,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 511020004,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 511030018,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 511030061,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 511310001,
+      "atk": -500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 511310036,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 511310036,
+      "atk": 500,
+      "def": 500,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 511600022,
+      "atk": 0,
+      "def": 300,
+      "attribute": "",
+      "race": "Dragon",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 511600027,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 511600027,
+      "atk": 300,
+      "def": 300,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 511600080,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 511600121,
+      "atk": 300,
+      "def": 0,
+      "attribute": "LIGHT",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 511600192,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 511600232,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 511600268,
+      "atk": 200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 511600337,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 511600339,
+      "atk": -800,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 511600344,
+      "atk": 1,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 511600376,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "Warrior",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 513000183,
+      "atk": 400,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 51838385,
+      "atk": 1500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 52222372,
+      "atk": 400,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 52265835,
+      "atk": 700,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 52869807,
+      "atk": -300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 53008933,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 53388413,
+      "atk": 400,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 53623827,
+      "atk": 600,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 53639887,
+      "atk": 1100,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 5373478,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 54250060,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 54250060,
+      "atk": 300,
+      "def": 300,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 54289683,
+      "atk": 400,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 54451023,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "Plant",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 55063681,
+      "atk": 400,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 55119278,
+      "atk": 800,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 55119278,
+      "atk": 0,
+      "def": 1000,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 55226821,
+      "atk": -500,
+      "def": 0,
+      "attribute": "WATER",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 5577149,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 56410769,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 5645210,
+      "atk": -500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 5645210,
+      "atk": 0,
+      "def": -500,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 56594520,
+      "atk": 500,
+      "def": 0,
+      "attribute": "EARTH",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 56594520,
+      "atk": 0,
+      "def": -400,
+      "attribute": "EARTH",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 56773577,
+      "atk": -500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 56773577,
+      "atk": -500,
+      "def": -500,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 57103969,
+      "atk": 100,
+      "def": 0,
+      "attribute": "",
+      "race": "Beast-Warrior",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 57482479,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 58272005,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "Dinosaur",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 58363151,
+      "atk": -600,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 58811192,
+      "atk": 600,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 58811192,
+      "atk": 600,
+      "def": 600,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 58924378,
+      "atk": -1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 59368956,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "Machine",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 59368956,
+      "atk": 500,
+      "def": 500,
+      "attribute": "",
+      "race": "Machine",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 60237530,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 60237530,
+      "atk": 300,
+      "def": 300,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 60884672,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 60946968,
+      "atk": -300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 60946968,
+      "atk": -300,
+      "def": -300,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 61583217,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 61654098,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 61654098,
+      "atk": 300,
+      "def": 300,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 6180710,
+      "atk": 0,
+      "def": -1000,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 6195332,
+      "atk": 2700,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 62002838,
+      "atk": -500,
+      "def": 0,
+      "attribute": "",
+      "race": "Dragon",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 62002838,
+      "atk": -500,
+      "def": -500,
+      "attribute": "",
+      "race": "Dragon",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 62091148,
+      "atk": 700,
+      "def": 0,
+      "attribute": "FIRE",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 62098216,
+      "atk": 2200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 62171834,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 62171834,
+      "atk": 500,
+      "def": 500,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 62171834,
+      "atk": -500,
+      "def": 500,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 62188962,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "Zombie",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 63504681,
+      "atk": 1500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 63665606,
+      "atk": 400,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 63665606,
+      "atk": 400,
+      "def": 400,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 63883999,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "Fiend",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 63899465,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 63899465,
+      "atk": 500,
+      "def": 500,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 64496451,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 64751286,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 64804137,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 65155517,
+      "atk": 700,
+      "def": 0,
+      "attribute": "WIND",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 65170459,
+      "atk": 500,
+      "def": 0,
+      "attribute": "WATER",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 65170459,
+      "atk": 500,
+      "def": 500,
+      "attribute": "WATER",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 65170459,
+      "atk": -400,
+      "def": 500,
+      "attribute": "FIRE",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 65446452,
+      "atk": 300,
+      "def": 0,
+      "attribute": "WATER",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 65446452,
+      "atk": 300,
+      "def": 300,
+      "attribute": "WATER",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 65711558,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 65711558,
+      "atk": 500,
+      "def": 500,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 65889305,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "Warrior",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 65889305,
+      "atk": 500,
+      "def": 500,
+      "attribute": "",
+      "race": "Warrior",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 6589707,
+      "atk": 1500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 6589707,
+      "atk": 1500,
+      "def": 1500,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 66719533,
+      "atk": -500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 6691855,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 67359907,
+      "atk": 4600,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 675319,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 675319,
+      "atk": 300,
+      "def": 300,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 67629977,
+      "atk": 500,
+      "def": 0,
+      "attribute": "LIGHT",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 67629977,
+      "atk": -400,
+      "def": 0,
+      "attribute": "DARK",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 6766208,
+      "atk": 3000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 67831115,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 67831115,
+      "atk": 300,
+      "def": 300,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 68231287,
+      "atk": 3000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 68337209,
+      "atk": 3000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 68540058,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 68540058,
+      "atk": 300,
+      "def": 300,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 68658728,
+      "atk": 500,
+      "def": 0,
+      "attribute": "FIRE",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 68658728,
+      "atk": -400,
+      "def": 0,
+      "attribute": "WATER",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 68745629,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 69039982,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 7019529,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 70329348,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "Beast-Warrior",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 70634245,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "Warrior",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 70634245,
+      "atk": 500,
+      "def": 500,
+      "attribute": "",
+      "race": "Warrior",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 70703416,
+      "atk": -500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 70703416,
+      "atk": -500,
+      "def": -500,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 71068247,
+      "atk": -300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 71181155,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "GRAVE"
+    },
+    {
+      "cardId": 712559,
+      "atk": 200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 71384012,
+      "atk": 500,
+      "def": 0,
+      "attribute": "DARK",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 71384012,
+      "atk": 500,
+      "def": 500,
+      "attribute": "DARK",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 71384012,
+      "atk": -400,
+      "def": 500,
+      "attribute": "LIGHT",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 71612253,
+      "atk": -1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 71612253,
+      "atk": -1000,
+      "def": -1000,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 71817640,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 71817640,
+      "atk": 300,
+      "def": 300,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 7206349,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 72566043,
+      "atk": 3000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 72772445,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "Rock",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 72843899,
+      "atk": 400,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 72843899,
+      "atk": -400,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 72843899,
+      "atk": -400,
+      "def": -400,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 73040500,
+      "atk": 400,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 73240432,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 73405179,
+      "atk": -1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 73413514,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 73714736,
+      "atk": -1000,
+      "def": 0,
+      "attribute": "",
+      "race": "Warrior",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 73776643,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 74615388,
+      "atk": -1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 74615388,
+      "atk": -1000,
+      "def": -1000,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 74641045,
+      "atk": 800,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 7489323,
+      "atk": 500,
+      "def": 0,
+      "attribute": "EARTH",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 7489323,
+      "atk": -400,
+      "def": 0,
+      "attribute": "WIND",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 75116619,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 75119040,
+      "atk": 3000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 75147529,
+      "atk": 0,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 75361204,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 75782277,
+      "atk": 200,
+      "def": 0,
+      "attribute": "",
+      "race": "Winged Beast",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 75782277,
+      "atk": 200,
+      "def": 200,
+      "attribute": "",
+      "race": "Winged Beast",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 75923050,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 76305638,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 76473843,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 76473843,
+      "atk": 300,
+      "def": 300,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 76666602,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 76913983,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 76990617,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "Fairy",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 76990617,
+      "atk": 500,
+      "def": 500,
+      "attribute": "",
+      "race": "Fairy",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 77103950,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 77313225,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 77527210,
+      "atk": -300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 7778726,
+      "atk": 500,
+      "def": 0,
+      "attribute": "LIGHT",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 7778726,
+      "atk": 500,
+      "def": 500,
+      "attribute": "LIGHT",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 7778726,
+      "atk": -400,
+      "def": 500,
+      "attribute": "DARK",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 77894049,
+      "atk": -800,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 77894049,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 78663366,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 78835747,
+      "atk": 300,
+      "def": 0,
+      "attribute": "LIGHT",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 79514956,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "Fairy",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 79555535,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 79555535,
+      "atk": 300,
+      "def": 300,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 800000012,
+      "atk": -300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 80170678,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 80181649,
+      "atk": 900,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 80457744,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "Warrior",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 80495985,
+      "atk": -800,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 80741828,
+      "atk": 500,
+      "def": 0,
+      "attribute": "DARK",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 80741828,
+      "atk": -400,
+      "def": 0,
+      "attribute": "LIGHT",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 80773359,
+      "atk": 3000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 8078366,
+      "atk": 800,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 80796456,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 80889750,
+      "atk": 400,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 810000078,
+      "atk": 600,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 81231742,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 81231742,
+      "atk": 300,
+      "def": 300,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 81306586,
+      "atk": 200,
+      "def": 0,
+      "attribute": "WATER",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 81380218,
+      "atk": 0,
+      "def": 500,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 81519836,
+      "atk": -600,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 81777047,
+      "atk": 500,
+      "def": 0,
+      "attribute": "LIGHT",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 81777047,
+      "atk": 0,
+      "def": -400,
+      "attribute": "LIGHT",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 8201910,
+      "atk": 500,
+      "def": 0,
+      "attribute": "WATER",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 8201910,
+      "atk": -400,
+      "def": 0,
+      "attribute": "FIRE",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 82661630,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 82832464,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 8284390,
+      "atk": -600,
+      "def": 0,
+      "attribute": "WIND",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 82999629,
+      "atk": 500,
+      "def": 0,
+      "attribute": "WATER",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 82999629,
+      "atk": 0,
+      "def": -400,
+      "attribute": "WATER",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 83602069,
+      "atk": 400,
+      "def": 0,
+      "attribute": "",
+      "race": "Warrior",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 83705073,
+      "atk": -1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 84171830,
+      "atk": 800,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 84544192,
+      "atk": 7000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 85747929,
+      "atk": 500,
+      "def": 0,
+      "attribute": "LIGHT",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 86221741,
+      "atk": -1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 86318356,
+      "atk": 200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 86318356,
+      "atk": 200,
+      "def": 200,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 8662794,
+      "atk": -1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 86643777,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "Insect",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 86643777,
+      "atk": 300,
+      "def": 300,
+      "attribute": "",
+      "race": "Insect",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 86780027,
+      "atk": 800,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 87046457,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 87054946,
+      "atk": 1200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 87319876,
+      "atk": -400,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 87430998,
+      "atk": 200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 87430998,
+      "atk": 200,
+      "def": 200,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 87588741,
+      "atk": -300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 8778267,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 88170262,
+      "atk": 1500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 88923963,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 88996322,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 89238128,
+      "atk": 2000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 9000988,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "Dragon",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 9000988,
+      "atk": 1,
+      "def": 0,
+      "attribute": "",
+      "race": "Dragon",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 90173539,
+      "atk": 200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 9024367,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 90512490,
+      "atk": 500,
+      "def": 0,
+      "attribute": "WIND",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 90512490,
+      "atk": 500,
+      "def": 500,
+      "attribute": "WIND",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 90512490,
+      "atk": -400,
+      "def": 500,
+      "attribute": "EARTH",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 90764871,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "Fiend",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 90885155,
+      "atk": -300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": true,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 91237821,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 91468551,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 91907707,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 91932350,
+      "atk": 300,
+      "def": 0,
+      "attribute": "WIND",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 92001300,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 92223430,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "Winged Beast",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 92223430,
+      "atk": 300,
+      "def": 300,
+      "attribute": "",
+      "race": "Winged Beast",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 92595825,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "Plant",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 92755808,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 92781606,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 92781606,
+      "atk": 300,
+      "def": 300,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 93130021,
+      "atk": 400,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 93368494,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 94183877,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 94183877,
+      "atk": 1000,
+      "def": 1000,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 94253655,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 94423983,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 94538053,
+      "atk": 400,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 94622638,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 95132338,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 95132338,
+      "atk": 500,
+      "def": 500,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 95466842,
+      "atk": 300,
+      "def": 0,
+      "attribute": "WATER",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 9553721,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 9553721,
+      "atk": 500,
+      "def": 500,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 95561280,
+      "atk": -500,
+      "def": 0,
+      "attribute": "WIND",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 95600067,
+      "atk": 400,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 95621257,
+      "atk": 400,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 96163807,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 96235275,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 96428622,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 96823189,
+      "atk": 2500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 96945958,
+      "atk": 800,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 975299,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 975299,
+      "atk": 500,
+      "def": 500,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    },
+    {
+      "cardId": 97623219,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 9765723,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "Fiend",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 98167225,
+      "atk": 1200,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 98225108,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 98239899,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 98642179,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "Warrior",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 98881931,
+      "atk": 1000,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": true,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "MZONE"
+    },
+    {
+      "cardId": 99531088,
+      "atk": 300,
+      "def": 0,
+      "attribute": "",
+      "race": "Dinosaur",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 99659159,
+      "atk": 500,
+      "def": 0,
+      "attribute": "",
+      "race": "",
+      "selfOnly": false,
+      "controllerOnly": true,
+      "opponentOnly": false,
+      "sourceZone": "SZONE"
+    },
+    {
+      "cardId": 9989792,
+      "atk": 0,
+      "def": 500,
+      "attribute": "",
+      "race": "Rock",
+      "selfOnly": false,
+      "controllerOnly": false,
+      "opponentOnly": false,
+      "sourceZone": "FZONE"
+    }
+  ],
+  "directAttacks": [
+    {
+      "cardId": 100000045,
+      "requiresName": ""
+    },
+    {
+      "cardId": 100000179,
+      "requiresName": ""
+    },
+    {
+      "cardId": 100000363,
+      "requiresName": ""
+    },
+    {
+      "cardId": 100000526,
+      "requiresName": ""
+    },
+    {
+      "cardId": 100000651,
+      "requiresName": ""
+    },
+    {
+      "cardId": 100000652,
+      "requiresName": ""
+    },
+    {
+      "cardId": 100000653,
+      "requiresName": ""
+    },
+    {
+      "cardId": 100000654,
+      "requiresName": ""
+    },
+    {
+      "cardId": 100000655,
+      "requiresName": ""
+    },
+    {
+      "cardId": 100000656,
+      "requiresName": ""
+    },
+    {
+      "cardId": 100001008,
+      "requiresName": ""
+    },
+    {
+      "cardId": 100456004,
+      "requiresName": ""
+    },
+    {
+      "cardId": 10113611,
+      "requiresName": ""
+    },
+    {
+      "cardId": 101402002,
+      "requiresName": ""
+    },
+    {
+      "cardId": 10875327,
+      "requiresName": ""
+    },
+    {
+      "cardId": 12472242,
+      "requiresName": ""
+    },
+    {
+      "cardId": 12533811,
+      "requiresName": ""
+    },
+    {
+      "cardId": 15187079,
+      "requiresName": ""
+    },
+    {
+      "cardId": 15744417,
+      "requiresName": ""
+    },
+    {
+      "cardId": 160002032,
+      "requiresName": ""
+    },
+    {
+      "cardId": 160008033,
+      "requiresName": ""
+    },
+    {
+      "cardId": 160011037,
+      "requiresName": ""
+    },
+    {
+      "cardId": 160014046,
+      "requiresName": ""
+    },
+    {
+      "cardId": 160016026,
+      "requiresName": ""
+    },
+    {
+      "cardId": 160018037,
+      "requiresName": ""
+    },
+    {
+      "cardId": 160018049,
+      "requiresName": ""
+    },
+    {
+      "cardId": 160019047,
+      "requiresName": ""
+    },
+    {
+      "cardId": 160024035,
+      "requiresName": ""
+    },
+    {
+      "cardId": 160201001,
+      "requiresName": ""
+    },
+    {
+      "cardId": 160201030,
+      "requiresName": ""
+    },
+    {
+      "cardId": 160202028,
+      "requiresName": ""
+    },
+    {
+      "cardId": 160209040,
+      "requiresName": ""
+    },
+    {
+      "cardId": 160210082,
+      "requiresName": ""
+    },
+    {
+      "cardId": 160211048,
+      "requiresName": ""
+    },
+    {
+      "cardId": 160218036,
+      "requiresName": ""
+    },
+    {
+      "cardId": 160301009,
+      "requiresName": ""
+    },
+    {
+      "cardId": 160402015,
+      "requiresName": ""
+    },
+    {
+      "cardId": 160402056,
+      "requiresName": ""
+    },
+    {
+      "cardId": 160402063,
+      "requiresName": ""
+    },
+    {
+      "cardId": 160423001,
+      "requiresName": ""
+    },
+    {
+      "cardId": 160446004,
+      "requiresName": ""
+    },
+    {
+      "cardId": 16110708,
+      "requiresName": ""
+    },
+    {
+      "cardId": 16114248,
+      "requiresName": ""
+    },
+    {
+      "cardId": 17679043,
+      "requiresName": ""
+    },
+    {
+      "cardId": 18514525,
+      "requiresName": ""
+    },
+    {
+      "cardId": 18558867,
+      "requiresName": ""
+    },
+    {
+      "cardId": 18861006,
+      "requiresName": ""
+    },
+    {
+      "cardId": 191749,
+      "requiresName": ""
+    },
+    {
+      "cardId": 19636995,
+      "requiresName": ""
+    },
+    {
+      "cardId": 1992816,
+      "requiresName": ""
+    },
+    {
+      "cardId": 200000002,
+      "requiresName": ""
+    },
+    {
+      "cardId": 21347810,
+      "requiresName": ""
+    },
+    {
+      "cardId": 24137081,
+      "requiresName": ""
+    },
+    {
+      "cardId": 25533642,
+      "requiresName": ""
+    },
+    {
+      "cardId": 255998,
+      "requiresName": ""
+    },
+    {
+      "cardId": 2772236,
+      "requiresName": ""
+    },
+    {
+      "cardId": 2792265,
+      "requiresName": ""
+    },
+    {
+      "cardId": 29765339,
+      "requiresName": ""
+    },
+    {
+      "cardId": 30190809,
+      "requiresName": ""
+    },
+    {
+      "cardId": 30348744,
+      "requiresName": ""
+    },
+    {
+      "cardId": 31320433,
+      "requiresName": ""
+    },
+    {
+      "cardId": 31437713,
+      "requiresName": ""
+    },
+    {
+      "cardId": 32761286,
+      "requiresName": ""
+    },
+    {
+      "cardId": 32809211,
+      "requiresName": ""
+    },
+    {
+      "cardId": 32825095,
+      "requiresName": ""
+    },
+    {
+      "cardId": 32933942,
+      "requiresName": ""
+    },
+    {
+      "cardId": 33202303,
+      "requiresName": ""
+    },
+    {
+      "cardId": 33537328,
+      "requiresName": ""
+    },
+    {
+      "cardId": 3429238,
+      "requiresName": ""
+    },
+    {
+      "cardId": 38837163,
+      "requiresName": ""
+    },
+    {
+      "cardId": 39719977,
+      "requiresName": ""
+    },
+    {
+      "cardId": 40227329,
+      "requiresName": ""
+    },
+    {
+      "cardId": 402568,
+      "requiresName": ""
+    },
+    {
+      "cardId": 41077745,
+      "requiresName": ""
+    },
+    {
+      "cardId": 41181774,
+      "requiresName": ""
+    },
+    {
+      "cardId": 43940008,
+      "requiresName": ""
+    },
+    {
+      "cardId": 46263076,
+      "requiresName": ""
+    },
+    {
+      "cardId": 46961802,
+      "requiresName": ""
+    },
+    {
+      "cardId": 47349310,
+      "requiresName": ""
+    },
+    {
+      "cardId": 48608796,
+      "requiresName": ""
+    },
+    {
+      "cardId": 49121795,
+      "requiresName": ""
+    },
+    {
+      "cardId": 50065971,
+      "requiresName": ""
+    },
+    {
+      "cardId": 5067884,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511000066,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511000183,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511000304,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511000487,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511000642,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511000644,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511000690,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511000869,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511000941,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511000947,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511000957,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511001115,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511001146,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511001171,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511001398,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511001647,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511001913,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511001980,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511001982,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511002036,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511002305,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511002567,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511002666,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511002700,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511002858,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511002881,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511002958,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511005064,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511008005,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511008016,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511009026,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511009062,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511009098,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511009142,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511009206,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511009318,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511009662,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511009742,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511009744,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511010009,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511010047,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511020007,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511600236,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511600414,
+      "requiresName": ""
+    },
+    {
+      "cardId": 51303014,
+      "requiresName": ""
+    },
+    {
+      "cardId": 5257687,
+      "requiresName": ""
+    },
+    {
+      "cardId": 52601736,
+      "requiresName": ""
+    },
+    {
+      "cardId": 53193261,
+      "requiresName": ""
+    },
+    {
+      "cardId": 53246495,
+      "requiresName": ""
+    },
+    {
+      "cardId": 53956001,
+      "requiresName": ""
+    },
+    {
+      "cardId": 54126514,
+      "requiresName": ""
+    },
+    {
+      "cardId": 56052205,
+      "requiresName": ""
+    },
+    {
+      "cardId": 57827484,
+      "requiresName": ""
+    },
+    {
+      "cardId": 58092907,
+      "requiresName": ""
+    },
+    {
+      "cardId": 58861941,
+      "requiresName": ""
+    },
+    {
+      "cardId": 5901497,
+      "requiresName": ""
+    },
+    {
+      "cardId": 59290628,
+      "requiresName": ""
+    },
+    {
+      "cardId": 59642500,
+      "requiresName": ""
+    },
+    {
+      "cardId": 60577362,
+      "requiresName": ""
+    },
+    {
+      "cardId": 63144961,
+      "requiresName": ""
+    },
+    {
+      "cardId": 64342551,
+      "requiresName": "Umi"
+    },
+    {
+      "cardId": 66707058,
+      "requiresName": ""
+    },
+    {
+      "cardId": 6772168,
+      "requiresName": ""
+    },
+    {
+      "cardId": 67752972,
+      "requiresName": ""
+    },
+    {
+      "cardId": 68831625,
+      "requiresName": ""
+    },
+    {
+      "cardId": 69313735,
+      "requiresName": ""
+    },
+    {
+      "cardId": 69931927,
+      "requiresName": ""
+    },
+    {
+      "cardId": 70307656,
+      "requiresName": ""
+    },
+    {
+      "cardId": 71652522,
+      "requiresName": ""
+    },
+    {
+      "cardId": 72083436,
+      "requiresName": ""
+    },
+    {
+      "cardId": 74393852,
+      "requiresName": ""
+    },
+    {
+      "cardId": 77084837,
+      "requiresName": ""
+    },
+    {
+      "cardId": 77625948,
+      "requiresName": ""
+    },
+    {
+      "cardId": 77876207,
+      "requiresName": ""
+    },
+    {
+      "cardId": 79185500,
+      "requiresName": ""
+    },
+    {
+      "cardId": 79798060,
+      "requiresName": ""
+    },
+    {
+      "cardId": 79997591,
+      "requiresName": ""
+    },
+    {
+      "cardId": 810000030,
+      "requiresName": ""
+    },
+    {
+      "cardId": 81670445,
+      "requiresName": ""
+    },
+    {
+      "cardId": 81769387,
+      "requiresName": ""
+    },
+    {
+      "cardId": 81896771,
+      "requiresName": ""
+    },
+    {
+      "cardId": 82458280,
+      "requiresName": ""
+    },
+    {
+      "cardId": 83340560,
+      "requiresName": ""
+    },
+    {
+      "cardId": 84814897,
+      "requiresName": ""
+    },
+    {
+      "cardId": 8491308,
+      "requiresName": ""
+    },
+    {
+      "cardId": 85507811,
+      "requiresName": ""
+    },
+    {
+      "cardId": 85684223,
+      "requiresName": ""
+    },
+    {
+      "cardId": 88205593,
+      "requiresName": ""
+    },
+    {
+      "cardId": 89839552,
+      "requiresName": ""
+    },
+    {
+      "cardId": 90098780,
+      "requiresName": ""
+    },
+    {
+      "cardId": 90810762,
+      "requiresName": ""
+    },
+    {
+      "cardId": 9109991,
+      "requiresName": ""
+    },
+    {
+      "cardId": 92246806,
+      "requiresName": ""
+    },
+    {
+      "cardId": 92595545,
+      "requiresName": ""
+    },
+    {
+      "cardId": 93187568,
+      "requiresName": ""
+    },
+    {
+      "cardId": 93298460,
+      "requiresName": ""
+    },
+    {
+      "cardId": 93724592,
+      "requiresName": ""
+    },
+    {
+      "cardId": 93892436,
+      "requiresName": ""
+    },
+    {
+      "cardId": 94096616,
+      "requiresName": ""
+    },
+    {
+      "cardId": 9418534,
+      "requiresName": ""
+    },
+    {
+      "cardId": 94798725,
+      "requiresName": ""
+    },
+    {
+      "cardId": 96218085,
+      "requiresName": ""
+    },
+    {
+      "cardId": 98049915,
+      "requiresName": ""
+    },
+    {
+      "cardId": 98700941,
+      "requiresName": ""
+    },
+    {
+      "cardId": 99792080,
+      "requiresName": ""
+    },
+    {
+      "cardId": 99861526,
+      "requiresName": ""
+    }
+  ],
+  "extraAttacks": [
+    {
+      "cardId": 12296376,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 152000006,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 160205020,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 17643265,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 21015833,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 22609617,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 23274061,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 23965033,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 24435369,
+      "extra": 1,
+      "requiresName": "Umi"
+    },
+    {
+      "cardId": 24550676,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 24672164,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 28355718,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 32548609,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 37869028,
+      "extra": 2,
+      "requiresName": ""
+    },
+    {
+      "cardId": 3912064,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 40636712,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 42110604,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 44874522,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 49597193,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 49814180,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 4998619,
+      "extra": 2,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511001726,
+      "extra": 2,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511001945,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511001949,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511002031,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511002035,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511002343,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511002373,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511002641,
+      "extra": 9999,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511004438,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511004439,
+      "extra": 2,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511009165,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511016006,
+      "extra": 2,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511020002,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 511600097,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 54701958,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 54702678,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 54772065,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 59242457,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 700000029,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 72926163,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 74157028,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 75191028,
+      "extra": 2,
+      "requiresName": ""
+    },
+    {
+      "cardId": 75215744,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 7628844,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 78509901,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 82035781,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 86282581,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 90885155,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 93709215,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 95943058,
+      "extra": 1,
+      "requiresName": ""
+    },
+    {
+      "cardId": 96897184,
+      "extra": 1,
+      "requiresName": ""
+    }
+  ]
+}

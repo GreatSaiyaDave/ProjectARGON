@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "bands": [
+    {
+      "id": "original",
+      "name": "Original / Duel Monsters",
+      "order": 1,
+      "lastCoreCode": "FET",
+      "lastCoreDate": "2005-03-01",
+      "nextFirstSet": "TLM",
+      "banlistId": "tcg_april_2005",
+      "extraKinds": "fusion"
+    },
+    {
+      "id": "gx",
+      "name": "GX",
+      "order": 2,
+      "lastCoreCode": "LODT",
+      "lastCoreDate": "2008-05-13",
+      "nextFirstSet": "TDGS",
+      "banlistId": "tcg_may_2008",
+      "extraKinds": "fusion"
+    },
+    {
+      "id": "5ds",
+      "name": "5D's",
+      "order": 3,
+      "lastCoreCode": "EXVC",
+      "lastCoreDate": "2011-05-10",
+      "nextFirstSet": "GENF",
+      "banlistId": "tcg_march_2011",
+      "extraKinds": "fusion,synchro"
+    },
+    {
+      "id": "zexal",
+      "name": "ZEXAL",
+      "order": 4,
+      "lastCoreCode": "PRIO",
+      "lastCoreDate": "2014-05-16",
+      "nextFirstSet": "DUEA",
+      "banlistId": "tcg_july_2014",
+      "extraKinds": "fusion,synchro,xyz"
+    },
+    {
+      "id": "arcv",
+      "name": "ARC-V",
+      "order": 5,
+      "lastCoreCode": "MACR",
+      "lastCoreDate": "2017-05-05",
+      "nextFirstSet": "COTD",
+      "banlistId": "tcg_june_2017",
+      "extraKinds": "fusion,synchro,xyz,pendulum"
+    },
+    {
+      "id": "vrains",
+      "name": "VRAINS",
+      "order": 6,
+      "lastCoreCode": "ETCO",
+      "lastCoreDate": "2020-06-05",
+      "nextFirstSet": "ROTD",
+      "banlistId": "tcg_july_2020",
+      "extraKinds": "fusion,synchro,xyz,pendulum,link"
+    },
+    {
+      "id": "modern",
+      "name": "Modern / post-VRAINS",
+      "order": 7,
+      "lastCoreCode": "",
+      "lastCoreDate": "",
+      "nextFirstSet": "",
+      "banlistId": "tcg_current",
+      "extraKinds": "current"
+    }
+  ]
+}

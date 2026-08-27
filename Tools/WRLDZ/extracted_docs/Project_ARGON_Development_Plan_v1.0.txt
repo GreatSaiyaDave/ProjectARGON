@@ -1,0 +1,91 @@
+PROJECT ARGON
+DM:WRLDZ — Yu-Gi-Oh! AR GPS TCG Simulator
+Coherent Development Plan v1.0 — Solo Developer Edition
+Prepared for Great_SaiyaDave | April 2026
+1. Executive Summary
+Project ARGON is a location-based augmented reality mobile game that fuses the full depth of the Yu-Gi-Oh! Trading Card Game with Pokémon GO-style exploration and an original anime-parallel storyline centered on the ancient demigods Umbrax and Andrax. The core fantasy is simple and powerful: “The anime is real. The monsters are here. You are the duelist.” Every time the app launches, the player should feel like they have stepped into Battle City at night — neon lights, dramatic tension, holographic possibility in the air.
+This plan optimizes the ambitious Game Design Document (v0.5) and provided lore documents for a solo developer working alone until a playable demo exists. Priority order: GPS mechanics → Immersive UI → Duel AI → Placeholder 2D/particle visuals → Full 3D later. Story mode aesthetics are deliberately isolated from the main overworld to preserve the “Battle City every launch” feeling while allowing rich narrative delivery.
+Target MVP (usable demo): A polished, installable iOS/Android app where a player can walk their real neighborhood, discover “tears,” engage in full-rule Shadow Duels against AI-controlled NPCs, collect energy and cards, and experience the prologue of the Umbrax saga. The experience must feel epic and cinematic from the first launch.
+2. Core Vision & Player Fantasy
+2.1 The Battle City Promise
+On every app open the player is greeted with a 3–5 second cinematic “Duel Standby” sequence: dark city skyline silhouette, neon kanji signs flickering, distant duel holograms, a deep orchestral sting that resolves into the iconic Yu-Gi-Oh! theme remix. The overworld map itself uses a stylized 2.5D anime night aesthetic (purple-black palette, glowing card particles, subtle rain or fog effects). This is non-negotiable for immersion.
+2.2 Story Mode Isolation
+Story mode (Seasons 1–9) lives in a completely separate visual and audio layer — parchment scrolls, ancient Egyptian motifs, warm torchlight, slower pacing, illustrated panel storytelling with voice-over placeholders. The main overworld never breaks the Battle City spell. This separation also simplifies asset and UI work for a solo dev.
+3. Unified Lore Foundation (First Milestone)
+The provided documents contain minor inconsistencies (Kuriboh partners, exact Umbrax origin details, fracture entities). Task 0.1 (Week 1): Create a single canonical “Lore Bible” document (10–15 pages) that unifies:
+Cosmology: Holactie → Gods → Ptah’s twin demigods Umbrax (elder, shadow) & Andrax (younger, light)
+Lemuria fall: Azathot corruption → Umbrax’s curse & burning → Shadow Realm birth
+Modern era: 25 years after Zorc defeat → Crawford Pretoria raises the skull → Umbrax rift → three Kuriboh champions (Layla/Ishtar Rod + Magickuriboh/Kuribandit, Jake/Galactikuriboh, Jamal/Kaiba Puzzle + Junkuriboh + Pharaoh soul)
+Seasonal structure: 9 seasons mirroring anime arcs with Umbrax/Dibbyk interference (Season 1 = Duelist Kingdom nostalgia first)
+This Bible becomes the single source of truth for all future writing, card text, and dialogue.
+4. Technical Stack (Solo-Optimized)
+Engine: Unity 2022.3 LTS (or 6.x when stable) with AR Foundation 5.x for cross-platform AR (iOS ARKit + Android ARCore).
+Map/GPS: Mapbox SDK (free tier sufficient for MVP) or custom GPS + Unity Tilemap for stylized 2D/2.5D overworld. Background location services via Unity’s LocationService.
+Duel System: Fully custom C# engine using ScriptableObjects for cards (start with 150–200 core legal cards + 20–30 custom story cards). Implement standard TCG rules (summoning, chains, priority, damage calc). No third-party simulator to avoid legal/IP friction.
+AI Opponent: Phase 1 = rule-based priority AI (highest ATK summon, optimal spell/trap use via simple scoring). Phase 2 = collect anonymized duel logs → supervised learning or Unity ML-Agents self-play training.
+UI/UX: UI Toolkit + custom shaders for holographic glow, neon, particle systems. Anime-style fonts (free commercial-use Japanese fonts).
+Assets (MVP): 2D high-res card sprites (public domain or self-generated via consistent style), particle “holo” projections for monsters, low-poly placeholder avatars. Full 3D monster models postponed until team or abundant free assets appear.
+5. Phased Roadmap (Solo Timeline)
+Total to usable demo: 12–16 weeks of focused solo work (assuming 20–30 hrs/week).
+Phase 0 — Foundation & Lore (Weeks 1–2)
+Lore Bible v1.0 — unify all three source documents into one canonical reference (2–3 days).
+Unity project setup: AR Foundation, Mapbox, Input System, Addressables, Cinemachine, UI Toolkit. Git repo + GitHub Actions basic CI.
+Permission handling & onboarding flow (location, camera, notifications).
+Basic 2D stylized overmap prototype with GPS tracking and 3–5 static “tear” locations in test area.
+Placeholder “Duel Standby” launch cinematic (5-second video or Unity timeline with particle effects).
+Milestone 0 Deliverable: Runnable Unity build that tracks real GPS and shows a Battle City-themed map.
+Phase 1 — Core Gameplay Loop MVP (Weeks 3–10)
+Goal: Player can explore, encounter NPCs, complete a full Shadow Duel with real TCG rules, receive rewards, and feel the Battle City fantasy.
+Duel Engine v0.5 — 80% of core rules (Normal/Special Summon, Tribute, Spell/Trap activation, damage calculation, simple chains). 150 core cards + 10 story cards implemented as ScriptableObjects.
+AI Opponent v0.5 — priority-based AI (ATK/DEF scoring, basic combo awareness). Tuned to feel challenging but fair for new players.
+AR Duel Presentation — table-top mode on detected plane (life-size if device supports). Holographic card zones via particle + shader. Monster “summon” = particle burst + 2D sprite popup with glow.
+Tear Zone System — geofenced areas. 3 NPC archetypes (possessed civilian, rare hunter, mini-boss). After 3 quick duels → Tear Boss (full 8000 LP).
+Economy v0.5 — Ethereal Energy collection (tap nodes), Set Energy from wins, basic pack opening (10-card packs with pity).
+Kuriboh Companion — player chooses one at onboarding (Junkuriboh / Galactikuriboh / Kuribandit). Floats on map, gives flavor tips.
+UI/UX Polish — full-screen immersive mode, minimal HUD, dramatic duel transition animations, voice-over placeholders (text-to-speech or recorded lines).
+Milestone 1 Deliverable (usable demo): Installable build. Player walks outside, sees 2–3 tears on map, duels an NPC with real cards, wins a pack, sees story prologue text. Feels like Battle City.
+Phase 2 — Story & World Expansion (Weeks 11–16)
+Story Mode v0.5 — isolated scene with 5–7 illustrated prologue panels + simple choice nodes. Different art style (parchment + warm tones). Unlocks after first duel.
+Additional zones: Bazaar (pack buying), Training (vs Referobot), first Raid Zone prototype (3-player co-op placeholder with local networking).
+Progression: Level 1–20 cap, artifact card system (equip spells as power-ups), first 5 story-sealed monsters.
+More cards (300 total), better AI tuning, basic PvP (same-device hotseat or local Wi-Fi).
+Milestone 2 Deliverable: “Season 1 Demo” — full Duelist Kingdom nostalgia arc playable in story mode, 3 tear zones in a small city area, polished UI, first public testflight/internal build.
+Phase 3+ — Post-Demo (Team or Funding)
+Full 9-season story, 1000+ cards, life-size AR duels, wearable Duel Disc prototype, Konami partnership outreach, live ops, seasonal events, prestige tiers, etc. 3D monster models, full voice acting, global server.
+6. Feature Priority Matrix (Solo Reality Check)
+7. Asset & Art Strategy (3D Postponed)
+MVP Rule: No custom 3D modeling until a team member or public asset abundance exists.
+Cards: High-resolution 2D PNGs (use existing public Yu-Gi-Oh! card images under fair-use guidelines for prototype; replace with original art post-demo). Consistent holographic shader overlay.
+Monsters in AR: 2D sprite pop-ups with heavy particle glow, bloom, and simple rotation/scale animations. “Summon” = dramatic particle burst + screen shake.
+Player Avatar: Simple 2D silhouette or low-poly placeholder that can be swapped later.
+Environment: Stylized 2D/2.5D map tiles + real-world AR plane detection. Neon particle overlays for Battle City feel.
+Story Mode: Hand-drawn style illustrations (or AI-generated consistent style) + parchment UI. Completely different from overworld.
+8. Duel AI Training Roadmap
+Phase 1 (MVP): Hand-crafted rule-based AI with tunable difficulty tiers (Easy/Medium/Hard). Scores moves by ATK value, board presence, hand advantage.
+Phase 2 (Post-MVP): Log every player vs AI duel (anonymized). Train a neural net (Unity ML-Agents or custom PyTorch) via imitation learning + self-play. Goal: AI that feels like a skilled human duelist without cheating.
+Phase 3: Mr. Referobot commentary AI using simple NLP or pre-written lines triggered by game state.
+9. Key Risks & Mitigations (Solo)
+IP/Legal: Yu-Gi-Oh! is Konami IP. MVP uses limited public card data + original story cards. Plan outreach to Konami after demo for official partnership (as noted in GDD).
+Scope Creep: Strict MVP definition. Any new feature must justify delaying demo by >1 week.
+AR Performance: Test on mid-range devices early. Fallback to “tabletop only” mode if life-size tracking is unstable.
+Burnout: Weekly 1-day break. Celebrate every milestone with a short video of the new feature.
+Battery/GPS Drain: Aggressive optimization — background updates only when app is open, low-power map mode.
+10. Immediate Next Steps (This Week)
+Day 1–2: Create Lore Bible (Google Doc or Notion) unifying all sources.
+Day 3: New Unity project + install AR Foundation, Mapbox, UI Toolkit.
+Day 4–5: Implement GPS tracking + basic stylized 2D map with 3 test tears.
+Day 6–7: Design & implement first 20 cards + minimal duel UI (no AR yet). Playtest vs hardcoded AI.
+Success metric for Week 1: You can open the app on your phone, see your real location on a Battle City-style map, and tap a tear to start a (very simple) duel.
+11. Closing Note
+This plan keeps every ounce of the original vision while making it achievable for one person until the demo proves the concept. The “Battle City every time you open the app” feeling is the north star — everything else (including 3D assets and full multiplayer) can wait. Once you have a polished, shareable demo that makes people say “I want to play this right now,” the team and funding will come. You’ve already done the hardest part: the dream is clear and the documents exist. Now we build it, one holographic card at a time.
+— End of Development Plan v1.0 —
+
+--- TABLE 0 ---
+Feature | MVP Priority | Effort (Solo) | Notes
+GPS Overmap + Tears | P0 — Must | Medium | Core fantasy
+Full TCG Duel Engine | P0 — Must | High | Start minimal ruleset
+AR Holo Presentation | P0 — Must | Medium | Tabletop first, life-size later
+Duel AI (rule-based) | P0 — Must | Medium-High | Train later with ML
+Story Mode (Prologue) | P1 — High | Low | Isolated aesthetic
+3D Monster Models | P3 — Low | Very High | Post-demo / team
+Raid / Multiplayer | P2 — Medium | High | After core loop solid

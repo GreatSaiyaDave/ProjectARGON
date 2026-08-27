@@ -1,0 +1,128 @@
+{
+  "name": "Lab Rules Test (Kaiba AI)",
+  "format": "Advanced",
+  "main": [
+    {
+      "id": 89631139,
+      "name": "Blue-Eyes White Dragon",
+      "qty": 3
+    },
+    {
+      "id": 5053103,
+      "name": "Battle Ox",
+      "qty": 4
+    },
+    {
+      "id": 97590747,
+      "name": "La Jinn the Mystical Genie of the Lamp",
+      "qty": 3
+    },
+    {
+      "id": 26378150,
+      "name": "Rude Kaiser",
+      "qty": 2
+    },
+    {
+      "id": 62397231,
+      "name": "Hyozanryu",
+      "qty": 2
+    },
+    {
+      "id": 30113682,
+      "name": "Judge Man",
+      "qty": 2
+    },
+    {
+      "id": 66602787,
+      "name": "Saggi the Dark Clown",
+      "qty": 2
+    },
+    {
+      "id": 17985575,
+      "name": "Lord of D.",
+      "qty": 2
+    },
+    {
+      "id": 54652250,
+      "name": "Man-Eater Bug",
+      "qty": 2
+    },
+    {
+      "id": 26202165,
+      "name": "Sangan",
+      "qty": 1
+    },
+    {
+      "id": 55144522,
+      "name": "Pot of Greed",
+      "qty": 1
+    },
+    {
+      "id": 12580477,
+      "name": "Raigeki",
+      "qty": 1
+    },
+    {
+      "id": 53129443,
+      "name": "Dark Hole",
+      "qty": 1
+    },
+    {
+      "id": 83764719,
+      "name": "Monster Reborn",
+      "qty": 1
+    },
+    {
+      "id": 5318639,
+      "name": "Mystical Space Typhoon",
+      "qty": 1
+    },
+    {
+      "id": 19613556,
+      "name": "Heavy Storm",
+      "qty": 1
+    },
+    {
+      "id": 43973174,
+      "name": "The Flute of Summoning Dragon",
+      "qty": 2
+    },
+    {
+      "id": 98045062,
+      "name": "Enemy Controller",
+      "qty": 1
+    },
+    {
+      "id": 44095762,
+      "name": "Mirror Force",
+      "qty": 1
+    },
+    {
+      "id": 4206964,
+      "name": "Trap Hole",
+      "qty": 2
+    },
+    {
+      "id": 14315573,
+      "name": "Negate Attack",
+      "qty": 1
+    },
+    {
+      "id": 12607053,
+      "name": "Waboku",
+      "qty": 2
+    },
+    {
+      "id": 72892473,
+      "name": "Card Destruction",
+      "qty": 1
+    },
+    {
+      "id": 83555666,
+      "name": "Ring of Destruction",
+      "qty": 1
+    }
+  ],
+  "extra": [],
+  "side": []
+}

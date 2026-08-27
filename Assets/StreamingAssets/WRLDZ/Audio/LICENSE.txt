@@ -1,0 +1,35 @@
+WRLDZ / Project ARGON — third-party audio
+
+UI SFX (click / select / confirm):
+  Source: Kenney.nl Interface Sounds (via github.com/Calinou/kenney-ui-audio)
+  License: CC0 1.0 Universal — public domain dedication
+  https://kenney.nl/assets/interface-sounds
+  https://creativecommons.org/publicdomain/zero/1.0/
+
+Background loop (bgm_loop_ambient.ogg):
+  Source: OpenGameArt.org hosted OGG (loop_0.ogg)
+  License: Check OpenGameArt page for the specific track; typically CC0 or CC-BY.
+  If CC-BY, credit the listed author in your game credits.
+  URL seed: https://opengameart.org/sites/default/files/loop_0.ogg
+
+Replace bgm_loop_ambient.ogg anytime with another seamless loop (ogg preferred).
+Recommended free packs:
+  - https://kenney.nl/assets?q=audio (CC0)
+  - https://soundimage.org/looping-music/ (free with attribution — Eric Matyas)
+  - https://tallbeard.itch.io/music-loop-bundle (CC0)
+  - https://opengameart.org (filter CC0)
+
+---
+bgm_pharaohs_shadow.mp3 — "Pharaoh's Shadow" (user-provided title / splash theme)
+
+---
+Yu-Gi-Oh! Duel Monsters isolated SFX (user-provided pack):
+  sfx_card_draw.ogg     — draw (paper flutter)
+  sfx_card_play.ogg     — face-up play / summon
+  sfx_card_set.ogg      — face-down set
+  sfx_card_tap.ogg      — tap / select card
+  sfx_card_slide.ogg    — pick up / drag card
+  sfx_holo_project.ogg  — hologram projection / duel-disk activate (duel start)
+  Source file: Downloads/yugioh-duel-sound-effects-sfx.mp3
+  (101soundboards / isolated Japanese DM dub, video M7eAq1taVYs)
+  Use only with rights you hold for this product.

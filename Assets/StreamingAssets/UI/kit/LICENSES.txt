@@ -1,0 +1,38 @@
+WRLDZ free UI kit attribution
+=============================
+Kenney.nl — UI Pack, Game Icons, UI Audio
+  License: CC0 1.0 (public domain)
+  https://kenney.nl
+  https://creativecommons.org/publicdomain/zero/1.0/
+
+Typography (YGO-manga energy stack)
+-----------------------------------
+Bangers — Vernon Adams (Google Fonts)
+  License: SIL Open Font License 1.1
+  https://fonts.google.com/specimen/Bangers
+  Role: display / titles (comic SFX, duel shout)
+
+Rowdies — Zetafonts / Magic Type (Google Fonts)
+  License: SIL Open Font License 1.1
+  https://fonts.google.com/specimen/Rowdies
+  Role: display fallback
+
+Russo One — Jovanny Lemonad (Google Fonts)
+  License: SIL Open Font License 1.1
+  https://fonts.google.com/specimen/Russo+One
+  Role: UI punch (buttons, short labels)
+
+Exo 2 — Natanael Gama / Omnibus-Type (Google Fonts)
+  License: SIL Open Font License 1.1
+  https://fonts.google.com/specimen/Exo+2
+  Role: body / readable UI
+
+Orbitron — Matt McInerney / The League of Moveable Type
+  License: SIL Open Font License 1.1
+  https://fonts.google.com/specimen/Orbitron
+  Role: legacy fallback
+
+Kenney Future / Kenney Future Narrow — Kenney.nl (CC0 with UI Pack)
+  Role: legacy fallback
+
+Procedural textures in bg/ — generated for Project ARGON (original).

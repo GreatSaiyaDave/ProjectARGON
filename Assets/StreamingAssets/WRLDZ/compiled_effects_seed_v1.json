@@ -1,0 +1,790 @@
+{
+    "version": 1,
+    "programs": [
+        {
+            "CardId": 4206964,
+            "CardName": "Trap Hole",
+            "TextHash": "a5001d10074bce1a",
+            "SourceText": "When your opponent Normal or Flip Summons 1 monster with 1000 or more ATK: Target that monster; destroy that target.",
+            "Clauses": [
+                {
+                    "Timing": 5,
+                    "Action": 2,
+                    "Side": 1,
+                    "Zone": 9,
+                    "Amount": 1000,
+                    "RequiresTargetChoice": true,
+                    "RequiresLordOfDOnField": false,
+                    "OpponentTurnOnly": false,
+                    "StaysOnField": false,
+                    "SourceSnippet": "When your opponent Normal or Flip Summons 1 monster with 1000 or more ATK: Target that monster; destroy that target."
+                }
+            ],
+            "FullyCompiled": true,
+            "UnparsedFragments": [],
+            "CompiledUtc": "2026-08-11T16:16:02.019311Z",
+            "CompilerVersion": 1,
+            "CompileSource": "regex"
+        },
+        {
+            "CardId": 5053103,
+            "CardName": "Battle Ox",
+            "TextHash": "cb48864ea729a251",
+            "SourceText": "A monster with tremendous power, it destroys enemies with a swing of its axe.",
+            "Clauses": [],
+            "FullyCompiled": true,
+            "UnparsedFragments": [],
+            "CompiledUtc": "2026-08-11T16:16:02.019401Z",
+            "CompilerVersion": 1,
+            "CompileSource": "normal"
+        },
+        {
+            "CardId": 5318639,
+            "CardName": "Mystical Space Typhoon",
+            "TextHash": "a4a0864cd0093cd0",
+            "SourceText": "Target 1 Spell/Trap on the field; destroy that target.",
+            "Clauses": [
+                {
+                    "Timing": 1,
+                    "Action": 2,
+                    "Side": 1,
+                    "Zone": 2,
+                    "Amount": 0,
+                    "RequiresTargetChoice": true,
+                    "RequiresLordOfDOnField": false,
+                    "OpponentTurnOnly": false,
+                    "StaysOnField": false,
+                    "SourceSnippet": "Target 1 Spell/Trap on the field; destroy that target."
+                }
+            ],
+            "FullyCompiled": true,
+            "UnparsedFragments": [],
+            "CompiledUtc": "2026-08-11T16:16:02.019409Z",
+            "CompilerVersion": 1,
+            "CompileSource": "regex"
+        },
+        {
+            "CardId": 6368038,
+            "CardName": "Gaia The Fierce Knight",
+            "TextHash": "96a68965efb55e8e",
+            "SourceText": "''A knight whose horse travels faster than the wind. His battle-charge is a force to be reckoned with.''",
+            "Clauses": [],
+            "FullyCompiled": true,
+            "UnparsedFragments": [],
+            "CompiledUtc": "2026-08-11T16:16:02.019427Z",
+            "CompilerVersion": 1,
+            "CompileSource": "normal"
+        },
+        {
+            "CardId": 11901678,
+            "CardName": "Black Skull Dragon",
+            "TextHash": "fa5c612a79a4a486",
+            "SourceText": "\"Summoned Skull\" + \"Red-Eyes Black Dragon\"\r\n\r\n\r\n\r\n(This card is always treated as an \"Archfiend\" card.)",
+            "Clauses": [],
+            "FullyCompiled": true,
+            "UnparsedFragments": [],
+            "CompiledUtc": "2026-08-11T16:16:02.019432Z",
+            "CompilerVersion": 1,
+            "CompileSource": "structural"
+        },
+        {
+            "CardId": 12580477,
+            "CardName": "Raigeki",
+            "TextHash": "ae4a0c7b00af2c78",
+            "SourceText": "Destroy all monsters your opponent controls.",
+            "Clauses": [
+                {
+                    "Timing": 1,
+                    "Action": 2,
+                    "Side": 1,
+                    "Zone": 1,
+                    "Amount": 0,
+                    "RequiresTargetChoice": false,
+                    "RequiresLordOfDOnField": false,
+                    "OpponentTurnOnly": false,
+                    "StaysOnField": false,
+                    "SourceSnippet": "Destroy all monsters your opponent controls."
+                }
+            ],
+            "FullyCompiled": true,
+            "UnparsedFragments": [],
+            "CompiledUtc": "2026-08-11T16:16:02.019440Z",
+            "CompilerVersion": 1,
+            "CompileSource": "regex"
+        },
+        {
+            "CardId": 12607053,
+            "CardName": "Waboku",
+            "TextHash": "77648f739c90dce1",
+            "SourceText": "You take no battle damage from your opponent's monsters this turn. Your monsters cannot be destroyed by battle this turn.",
+            "Clauses": [
+                {
+                    "Timing": 1,
+                    "Action": 10,
+                    "Side": 1,
+                    "Zone": 0,
+                    "Amount": 0,
+                    "RequiresTargetChoice": false,
+                    "RequiresLordOfDOnField": false,
+                    "OpponentTurnOnly": false,
+                    "StaysOnField": false,
+                    "SourceSnippet": "You take no battle damage from your opponent's monsters this turn. Your monsters cannot be destroyed by battle this turn."
+                }
+            ],
+            "FullyCompiled": true,
+            "UnparsedFragments": [],
+            "CompiledUtc": "2026-08-11T16:16:02.019455Z",
+            "CompilerVersion": 1,
+            "CompileSource": "regex"
+        },
+        {
+            "CardId": 13039848,
+            "CardName": "Giant Soldier of Stone",
+            "TextHash": "32daa879e965d7a5",
+            "SourceText": "A giant warrior made of stone. A punch from this creature has earth-shaking results.",
+            "Clauses": [],
+            "FullyCompiled": true,
+            "UnparsedFragments": [],
+            "CompiledUtc": "2026-08-11T16:16:02.019471Z",
+            "CompilerVersion": 1,
+            "CompileSource": "normal"
+        },
+        {
+            "CardId": 14315573,
+            "CardName": "Negate Attack",
+            "TextHash": "e039a53e493428b5",
+            "SourceText": "When an opponent's monster declares an attack: Target the attacking monster; negate the attack, then end the Battle Phase.",
+            "Clauses": [
+                {
+                    "Timing": 4,
+                    "Action": 8,
+                    "Side": 1,
+                    "Zone": 10,
+                    "Amount": 0,
+                    "RequiresTargetChoice": false,
+                    "RequiresLordOfDOnField": false,
+                    "OpponentTurnOnly": false,
+                    "StaysOnField": false,
+                    "SourceSnippet": "When an opponent's monster declares an attack: Target the attacking monster; negate the attack, then end the Battle Phase."
+                }
+            ],
+            "FullyCompiled": true,
+            "UnparsedFragments": [],
+            "CompiledUtc": "2026-08-11T16:16:02.019475Z",
+            "CompilerVersion": 1,
+            "CompileSource": "regex"
+        },
+        {
+            "CardId": 15025844,
+            "CardName": "Mystical Elf",
+            "TextHash": "a6877e39234ae3ee",
+            "SourceText": "A delicate elf that lacks offense, but has a terrific defense backed by mystical power.",
+            "Clauses": [],
+            "FullyCompiled": true,
+            "UnparsedFragments": [],
+            "CompiledUtc": "2026-08-11T16:16:02.019492Z",
+            "CompilerVersion": 1,
+            "CompileSource": "normal"
+        },
+        {
+            "CardId": 17985575,
+            "CardName": "Lord of D.",
+            "TextHash": "bb0ac27d523ba9cc",
+            "SourceText": "Neither player can target Dragon monsters on the field with card effects.",
+            "Clauses": [
+                {
+                    "Timing": 6,
+                    "Action": 16,
+                    "Side": 1,
+                    "Zone": 0,
+                    "Amount": 0,
+                    "RequiresTargetChoice": false,
+                    "RequiresLordOfDOnField": false,
+                    "OpponentTurnOnly": false,
+                    "StaysOnField": false,
+                    "SourceSnippet": "Neither player can target Dragon monsters on the field with card effects."
+                }
+            ],
+            "FullyCompiled": true,
+            "UnparsedFragments": [],
+            "CompiledUtc": "2026-08-11T16:16:02.019496Z",
+            "CompilerVersion": 1,
+            "CompileSource": "regex"
+        },
+        {
+            "CardId": 19613556,
+            "CardName": "Heavy Storm",
+            "TextHash": "a04f3bc36fab82db",
+            "SourceText": "Destroy all Spell and Trap Cards on the field.",
+            "Clauses": [
+                {
+                    "Timing": 1,
+                    "Action": 2,
+                    "Side": 2,
+                    "Zone": 2,
+                    "Amount": 0,
+                    "RequiresTargetChoice": false,
+                    "RequiresLordOfDOnField": false,
+                    "OpponentTurnOnly": false,
+                    "StaysOnField": false,
+                    "SourceSnippet": "Destroy all Spell and Trap Cards on the field."
+                }
+            ],
+            "FullyCompiled": true,
+            "UnparsedFragments": [],
+            "CompiledUtc": "2026-08-11T16:16:02.019511Z",
+            "CompilerVersion": 1,
+            "CompileSource": "regex"
+        },
+        {
+            "CardId": 24094653,
+            "CardName": "Polymerization",
+            "TextHash": "f2b2f7e1cd55a901",
+            "SourceText": "Fusion Summon 1 Fusion Monster from your Extra Deck, using monsters from your hand or field as Fusion Material.",
+            "Clauses": [
+                {
+                    "Timing": 1,
+                    "Action": 13,
+                    "Side": 1,
+                    "Zone": 0,
+                    "Amount": 0,
+                    "RequiresTargetChoice": false,
+                    "RequiresLordOfDOnField": false,
+                    "OpponentTurnOnly": false,
+                    "StaysOnField": false,
+                    "SourceSnippet": "Fusion Summon 1 Fusion Monster from your Extra Deck, using monsters from your hand or field as Fusion Material."
+                }
+            ],
+            "FullyCompiled": true,
+            "UnparsedFragments": [],
+            "CompiledUtc": "2026-08-11T16:16:02.019520Z",
+            "CompilerVersion": 1,
+            "CompileSource": "regex"
+        },
+        {
+            "CardId": 26202165,
+            "CardName": "Sangan",
+            "TextHash": "164cb49bf9ebbeb2",
+            "SourceText": "If this card is sent from the field to the GY: Add 1 monster with 1500 or less ATK from your Deck to your hand, but you cannot activate cards, or the effects of cards, with that name for the rest of this turn. You can only use this effect of \"Sangan\" once per turn.",
+            "Clauses": [
+                {
+                    "Timing": 3,
+                    "Action": 6,
+                    "Side": 1,
+                    "Zone": 8,
+                    "Amount": 1500,
+                    "RequiresTargetChoice": false,
+                    "RequiresLordOfDOnField": false,
+                    "OpponentTurnOnly": false,
+                    "StaysOnField": false,
+                    "SourceSnippet": "If this card is sent from the field to the GY: Add 1 monster with 1500 or less ATK from your Deck to your hand"
+                }
+            ],
+            "FullyCompiled": true,
+            "UnparsedFragments": [],
+            "CompiledUtc": "2026-08-11T16:16:02.019535Z",
+            "CompilerVersion": 1,
+            "CompileSource": "regex"
+        },
+        {
+            "CardId": 26378150,
+            "CardName": "Rude Kaiser",
+            "TextHash": "09eb2b84dfe36f61",
+            "SourceText": "With an axe in each hand, this monster delivers heavy damage.",
+            "Clauses": [],
+            "FullyCompiled": true,
+            "UnparsedFragments": [],
+            "CompiledUtc": "2026-08-11T16:16:02.019569Z",
+            "CompilerVersion": 1,
+            "CompileSource": "normal"
+        },
+        {
+            "CardId": 28279543,
+            "CardName": "Curse of Dragon",
+            "TextHash": "9927be868073b38f",
+            "SourceText": "A wicked dragon that taps into dark forces to execute a powerful attack.",
+            "Clauses": [],
+            "FullyCompiled": true,
+            "UnparsedFragments": [],
+            "CompiledUtc": "2026-08-11T16:16:02.019572Z",
+            "CompilerVersion": 1,
+            "CompileSource": "normal"
+        },
+        {
+            "CardId": 30113682,
+            "CardName": "Judge Man",
+            "TextHash": "7bbe43fdac4ffd5f",
+            "SourceText": "This club-wielding warrior battles to the end and will never surrender.",
+            "Clauses": [],
+            "FullyCompiled": true,
+            "UnparsedFragments": [],
+            "CompiledUtc": "2026-08-11T16:16:02.019576Z",
+            "CompilerVersion": 1,
+            "CompileSource": "normal"
+        },
+        {
+            "CardId": 31560081,
+            "CardName": "Magician of Faith",
+            "TextHash": "1d4d752630a4ae95",
+            "SourceText": "FLIP: Target 1 Spell in your GY; add that target to your hand.",
+            "Clauses": [
+                {
+                    "Timing": 2,
+                    "Action": 5,
+                    "Side": 1,
+                    "Zone": 6,
+                    "Amount": 0,
+                    "RequiresTargetChoice": true,
+                    "RequiresLordOfDOnField": false,
+                    "OpponentTurnOnly": false,
+                    "StaysOnField": false,
+                    "SourceSnippet": "FLIP: Target 1 Spell in your GY; add that target to your hand."
+                }
+            ],
+            "FullyCompiled": true,
+            "UnparsedFragments": [],
+            "CompiledUtc": "2026-08-11T16:16:02.019579Z",
+            "CompilerVersion": 1,
+            "CompileSource": "regex"
+        },
+        {
+            "CardId": 32452818,
+            "CardName": "Beaver Warrior",
+            "TextHash": "eabaf20c20cf00b2",
+            "SourceText": "What this creature lacks in size it makes up for in defense when battling in the prairie.",
+            "Clauses": [],
+            "FullyCompiled": true,
+            "UnparsedFragments": [],
+            "CompiledUtc": "2026-08-11T16:16:02.019592Z",
+            "CompilerVersion": 1,
+            "CompileSource": "normal"
+        },
+        {
+            "CardId": 34124316,
+            "CardName": "Cyber Jar",
+            "TextHash": "0eb8111e5af6b913",
+            "SourceText": "FLIP: Destroy all monsters on the field, then both players reveal the top 5 cards from their Decks, then Special Summon all revealed Level 4 or lower monsters in face-up Attack Position or face-down Defense Position, also add any remaining cards to their hand. (If either player has less than 5 cards in their Deck, reveal as many as possible.)",
+            "Clauses": [
+                {
+                    "Timing": 2,
+                    "Action": 15,
+                    "Side": 1,
+                    "Zone": 0,
+                    "Amount": 5,
+                    "RequiresTargetChoice": false,
+                    "RequiresLordOfDOnField": false,
+                    "OpponentTurnOnly": false,
+                    "StaysOnField": false,
+                    "SourceSnippet": "FLIP: Destroy all monsters on the field, then both players reveal the top 5 cards from their Decks"
+                },
+                {
+                    "Timing": 1,
+                    "Action": 2,
+                    "Side": 2,
+                    "Zone": 1,
+                    "Amount": 0,
+                    "RequiresTargetChoice": false,
+                    "RequiresLordOfDOnField": false,
+                    "OpponentTurnOnly": false,
+                    "StaysOnField": false,
+                    "SourceSnippet": "Destroy all monsters on the field"
+                }
+            ],
+            "FullyCompiled": false,
+            "UnparsedFragments": [
+                ", then Special Summon all revealed Level 4 or lower monsters in face-up Attack Position or face-down Defense Position, also add any remaining cards to their hand.",
+                "(If either player has less than 5 cards in their Deck, reveal as many as possible.)"
+            ],
+            "CompiledUtc": "2026-08-11T16:16:02.019595Z",
+            "CompilerVersion": 1,
+            "CompileSource": "regex"
+        },
+        {
+            "CardId": 40640057,
+            "CardName": "Kuriboh",
+            "TextHash": "b099bf49ee553cc6",
+            "SourceText": "During damage calculation, if your opponent's monster attacks (Quick Effect): You can discard this card; you take no battle damage from that battle.",
+            "Clauses": [
+                {
+                    "Timing": 7,
+                    "Action": 17,
+                    "Side": 0,
+                    "Zone": 0,
+                    "Amount": 0,
+                    "RequiresTargetChoice": false,
+                    "RequiresLordOfDOnField": false,
+                    "OpponentTurnOnly": false,
+                    "StaysOnField": false,
+                    "SourceSnippet": "During damage calculation, if your opponent's monster attacks (Quick Effect): You can discard this card; you take no battle damage from that battle."
+                }
+            ],
+            "FullyCompiled": true,
+            "UnparsedFragments": [],
+            "CompiledUtc": "2026-08-11T16:16:02.019637Z",
+            "CompilerVersion": 1,
+            "CompileSource": "regex"
+        },
+        {
+            "CardId": 41392891,
+            "CardName": "Feral Imp",
+            "TextHash": "7339eba7d8cff6dd",
+            "SourceText": "A playful little fiend that lurks in the dark, waiting to attack an unwary enemy.",
+            "Clauses": [],
+            "FullyCompiled": true,
+            "UnparsedFragments": [],
+            "CompiledUtc": "2026-08-11T16:16:02.019656Z",
+            "CompilerVersion": 1,
+            "CompileSource": "normal"
+        },
+        {
+            "CardId": 43973174,
+            "CardName": "The Flute of Summoning Dragon",
+            "TextHash": "8c6dbcfad8630d43",
+            "SourceText": "Special Summon up to 2 Dragon monsters from your hand. \"Lord of D.\" must be on the field to activate and to resolve this effect.",
+            "Clauses": [
+                {
+                    "Timing": 1,
+                    "Action": 4,
+                    "Side": 1,
+                    "Zone": 7,
+                    "Amount": 2,
+                    "RequiresTargetChoice": false,
+                    "RequiresLordOfDOnField": true,
+                    "OpponentTurnOnly": false,
+                    "StaysOnField": false,
+                    "SourceSnippet": "Special Summon up to 2 Dragon monsters from your hand. \"Lord of D.\" must be on the field"
+                }
+            ],
+            "FullyCompiled": false,
+            "UnparsedFragments": [
+                "to activate and to resolve this effect."
+            ],
+            "CompiledUtc": "2026-08-11T16:16:02.019661Z",
+            "CompilerVersion": 1,
+            "CompileSource": "regex"
+        },
+        {
+            "CardId": 44095762,
+            "CardName": "Mirror Force",
+            "TextHash": "f7c34952d5586fff",
+            "SourceText": "When an opponent's monster declares an attack: Destroy all your opponent's Attack Position monsters.",
+            "Clauses": [
+                {
+                    "Timing": 4,
+                    "Action": 2,
+                    "Side": 1,
+                    "Zone": 3,
+                    "Amount": 0,
+                    "RequiresTargetChoice": false,
+                    "RequiresLordOfDOnField": false,
+                    "OpponentTurnOnly": false,
+                    "StaysOnField": false,
+                    "SourceSnippet": "When an opponent's monster declares an attack: Destroy all your opponent's Attack Position monsters."
+                }
+            ],
+            "FullyCompiled": true,
+            "UnparsedFragments": [],
+            "CompiledUtc": "2026-08-11T16:16:02.019677Z",
+            "CompilerVersion": 1,
+            "CompileSource": "regex"
+        },
+        {
+            "CardId": 46986414,
+            "CardName": "Dark Magician",
+            "TextHash": "109e1f558ea24ab0",
+            "SourceText": "''The ultimate wizard in terms of attack and defense.''",
+            "Clauses": [],
+            "FullyCompiled": true,
+            "UnparsedFragments": [],
+            "CompiledUtc": "2026-08-11T16:16:02.019690Z",
+            "CompilerVersion": 1,
+            "CompileSource": "normal"
+        },
+        {
+            "CardId": 53129443,
+            "CardName": "Dark Hole",
+            "TextHash": "8838ce2d97389cd4",
+            "SourceText": "Destroy all monsters on the field.",
+            "Clauses": [
+                {
+                    "Timing": 1,
+                    "Action": 2,
+                    "Side": 2,
+                    "Zone": 1,
+                    "Amount": 0,
+                    "RequiresTargetChoice": false,
+                    "RequiresLordOfDOnField": false,
+                    "OpponentTurnOnly": false,
+                    "StaysOnField": false,
+                    "SourceSnippet": "Destroy all monsters on the field."
+                }
+            ],
+            "FullyCompiled": true,
+            "UnparsedFragments": [],
+            "CompiledUtc": "2026-08-11T16:16:02.019694Z",
+            "CompilerVersion": 1,
+            "CompileSource": "regex"
+        },
+        {
+            "CardId": 54652250,
+            "CardName": "Man-Eater Bug",
+            "TextHash": "bdfc27220b8ce452",
+            "SourceText": "FLIP: Target 1 monster on the field; destroy it.",
+            "Clauses": [
+                {
+                    "Timing": 2,
+                    "Action": 2,
+                    "Side": 1,
+                    "Zone": 9,
+                    "Amount": 0,
+                    "RequiresTargetChoice": true,
+                    "RequiresLordOfDOnField": false,
+                    "OpponentTurnOnly": false,
+                    "StaysOnField": false,
+                    "SourceSnippet": "FLIP: Target 1 monster on the field; destroy it."
+                }
+            ],
+            "FullyCompiled": true,
+            "UnparsedFragments": [],
+            "CompiledUtc": "2026-08-11T16:16:02.019703Z",
+            "CompilerVersion": 1,
+            "CompileSource": "regex"
+        },
+        {
+            "CardId": 55144522,
+            "CardName": "Pot of Greed",
+            "TextHash": "d431f7496ea56cf6",
+            "SourceText": "Draw 2 cards.",
+            "Clauses": [
+                {
+                    "Timing": 1,
+                    "Action": 1,
+                    "Side": 0,
+                    "Zone": 0,
+                    "Amount": 2,
+                    "RequiresTargetChoice": false,
+                    "RequiresLordOfDOnField": false,
+                    "OpponentTurnOnly": false,
+                    "StaysOnField": false,
+                    "SourceSnippet": "Draw 2 cards."
+                }
+            ],
+            "FullyCompiled": true,
+            "UnparsedFragments": [],
+            "CompiledUtc": "2026-08-11T16:16:02.019713Z",
+            "CompilerVersion": 1,
+            "CompileSource": "regex"
+        },
+        {
+            "CardId": 62397231,
+            "CardName": "Hyozanryu",
+            "TextHash": "98771cf582b07525",
+            "SourceText": "A dragon created from a massive diamond that sparkles with blinding light.",
+            "Clauses": [],
+            "FullyCompiled": true,
+            "UnparsedFragments": [],
+            "CompiledUtc": "2026-08-11T16:16:02.019721Z",
+            "CompilerVersion": 1,
+            "CompileSource": "normal"
+        },
+        {
+            "CardId": 66602787,
+            "CardName": "Saggi the Dark Clown",
+            "TextHash": "0d84c7124ea2bf70",
+            "SourceText": "This clown appears from nowhere and executes very strange moves to avoid enemy attacks.",
+            "Clauses": [],
+            "FullyCompiled": true,
+            "UnparsedFragments": [],
+            "CompiledUtc": "2026-08-11T16:16:02.019724Z",
+            "CompilerVersion": 1,
+            "CompileSource": "normal"
+        },
+        {
+            "CardId": 66889139,
+            "CardName": "Gaia the Dragon Champion",
+            "TextHash": "2103fbec02fa4139",
+            "SourceText": "\"Gaia The Fierce Knight\" + \"Curse of Dragon\"",
+            "Clauses": [],
+            "FullyCompiled": true,
+            "UnparsedFragments": [],
+            "CompiledUtc": "2026-08-11T16:16:02.019727Z",
+            "CompilerVersion": 1,
+            "CompileSource": "structural"
+        },
+        {
+            "CardId": 72302403,
+            "CardName": "Swords of Revealing Light",
+            "TextHash": "21fa0db1c2623e48",
+            "SourceText": "After this card's activation, it remains on the field, but you must destroy it during the End Phase of your opponent's 3rd turn. When this card is activated: If your opponent controls a face-down monster, flip all monsters they control face-up. While this card is face-up on the field, your opponent's monsters cannot declare an attack.",
+            "Clauses": [
+                {
+                    "Timing": 1,
+                    "Action": 11,
+                    "Side": 1,
+                    "Zone": 0,
+                    "Amount": 3,
+                    "RequiresTargetChoice": false,
+                    "RequiresLordOfDOnField": false,
+                    "OpponentTurnOnly": false,
+                    "StaysOnField": true,
+                    "SourceSnippet": "After this card's activation, it remains on the field, but you must destroy it during the End Phase of your opponent's 3rd turn."
+                }
+            ],
+            "FullyCompiled": true,
+            "UnparsedFragments": [],
+            "CompiledUtc": "2026-08-11T16:16:02.019732Z",
+            "CompilerVersion": 1,
+            "CompileSource": "regex"
+        },
+        {
+            "CardId": 72892473,
+            "CardName": "Card Destruction",
+            "TextHash": "d18564f171c8207d",
+            "SourceText": "Both players discard as many cards as possible from their hands, then each player draws the same number of cards they discarded.",
+            "Clauses": [
+                {
+                    "Timing": 1,
+                    "Action": 12,
+                    "Side": 1,
+                    "Zone": 0,
+                    "Amount": 0,
+                    "RequiresTargetChoice": false,
+                    "RequiresLordOfDOnField": false,
+                    "OpponentTurnOnly": false,
+                    "StaysOnField": false,
+                    "SourceSnippet": "Both players discard as many cards as possible from their hands, then each player draws the same number of cards they discarded."
+                }
+            ],
+            "FullyCompiled": true,
+            "UnparsedFragments": [],
+            "CompiledUtc": "2026-08-11T16:16:02.019775Z",
+            "CompilerVersion": 1,
+            "CompileSource": "regex"
+        },
+        {
+            "CardId": 83555666,
+            "CardName": "Ring of Destruction",
+            "TextHash": "b16ba75ffeaa214c",
+            "SourceText": "During your opponent's turn: Target 1 face-up monster your opponent controls whose ATK is less than or equal to their LP; destroy that face-up monster, and if you do, take damage equal to its original ATK, then inflict damage to your opponent, equal to the damage you took. You can only activate 1 \"Ring of Destruction\" per turn.",
+            "Clauses": [
+                {
+                    "Timing": 1,
+                    "Action": 14,
+                    "Side": 1,
+                    "Zone": 4,
+                    "Amount": 0,
+                    "RequiresTargetChoice": true,
+                    "RequiresLordOfDOnField": false,
+                    "OpponentTurnOnly": true,
+                    "StaysOnField": false,
+                    "SourceSnippet": "During your opponent's turn: Target 1 face-up monster your opponent controls whose ATK is less than or equal to their LP; destroy that face-up monster, and if you do, take damage equal to its original ATK, then inflict damage to your opponent, equal to the damage you took"
+                }
+            ],
+            "FullyCompiled": true,
+            "UnparsedFragments": [],
+            "CompiledUtc": "2026-08-11T16:16:02.019790Z",
+            "CompilerVersion": 1,
+            "CompileSource": "regex"
+        },
+        {
+            "CardId": 83764719,
+            "CardName": "Monster Reborn",
+            "TextHash": "967f85e08079f426",
+            "SourceText": "Target 1 monster in either GY; Special Summon it.",
+            "Clauses": [
+                {
+                    "Timing": 1,
+                    "Action": 3,
+                    "Side": 1,
+                    "Zone": 5,
+                    "Amount": 0,
+                    "RequiresTargetChoice": true,
+                    "RequiresLordOfDOnField": false,
+                    "OpponentTurnOnly": false,
+                    "StaysOnField": false,
+                    "SourceSnippet": "Target 1 monster in either GY; Special Summon it."
+                }
+            ],
+            "FullyCompiled": true,
+            "UnparsedFragments": [],
+            "CompiledUtc": "2026-08-11T16:16:02.019828Z",
+            "CompilerVersion": 1,
+            "CompileSource": "regex"
+        },
+        {
+            "CardId": 89631139,
+            "CardName": "Blue-Eyes White Dragon",
+            "TextHash": "0a1f9e2a0bd78997",
+            "SourceText": "This legendary dragon is a powerful engine of destruction. Virtually invincible, very few have faced this awesome creature and lived to tell the tale.",
+            "Clauses": [],
+            "FullyCompiled": true,
+            "UnparsedFragments": [],
+            "CompiledUtc": "2026-08-11T16:16:02.019837Z",
+            "CompilerVersion": 1,
+            "CompileSource": "normal"
+        },
+        {
+            "CardId": 90357090,
+            "CardName": "Silver Fang",
+            "TextHash": "63ac96033ad68781",
+            "SourceText": "A snow wolf that's beautiful to the eye, but absolutely vicious in battle.",
+            "Clauses": [],
+            "FullyCompiled": true,
+            "UnparsedFragments": [],
+            "CompiledUtc": "2026-08-11T16:16:02.019840Z",
+            "CompilerVersion": 1,
+            "CompileSource": "normal"
+        },
+        {
+            "CardId": 91152256,
+            "CardName": "Celtic Guardian",
+            "TextHash": "80bbf91955426138",
+            "SourceText": "An elf who learned to wield a sword, he baffles enemies with lightning-swift attacks.",
+            "Clauses": [],
+            "FullyCompiled": true,
+            "UnparsedFragments": [],
+            "CompiledUtc": "2026-08-11T16:16:02.019844Z",
+            "CompilerVersion": 1,
+            "CompileSource": "normal"
+        },
+        {
+            "CardId": 97590747,
+            "CardName": "La Jinn the Mystical Genie of the Lamp",
+            "TextHash": "9faf7dab1f1e1b49",
+            "SourceText": "A genie of the lamp that is at the beck and call of its master.",
+            "Clauses": [],
+            "FullyCompiled": true,
+            "UnparsedFragments": [],
+            "CompiledUtc": "2026-08-11T16:16:02.019847Z",
+            "CompilerVersion": 1,
+            "CompileSource": "normal"
+        },
+        {
+            "CardId": 98045062,
+            "CardName": "Enemy Controller",
+            "TextHash": "4284e95b90a6d242",
+            "SourceText": "Activate 1 of these effects.\n\u25cf Target 1 face-up monster your opponent controls; change that target's battle position.\n\u25cf Tribute 1 monster, then target 1 face-up monster your opponent controls; take control of that target until the End Phase.",
+            "Clauses": [
+                {
+                    "Timing": 1,
+                    "Action": 7,
+                    "Side": 1,
+                    "Zone": 4,
+                    "Amount": 0,
+                    "RequiresTargetChoice": true,
+                    "RequiresLordOfDOnField": false,
+                    "OpponentTurnOnly": false,
+                    "StaysOnField": false,
+                    "SourceSnippet": "Target 1 face-up monster your opponent controls; change that target's battle position"
+                }
+            ],
+            "FullyCompiled": false,
+            "UnparsedFragments": [
+                "Activate 1 of these effects."
+            ],
+            "CompiledUtc": "2026-08-11T16:16:02.019851Z",
+            "CompilerVersion": 1,
+            "CompileSource": "regex"
+        }
+    ]
+}

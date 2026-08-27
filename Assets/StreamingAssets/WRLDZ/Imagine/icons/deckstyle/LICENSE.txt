@@ -1,0 +1,5 @@
+WRLDZ original strategy emblems (beatdown, burn, stall, aggro, combo, mill, otk, control).
+Drawn for the deck switcher — not Konami / Yugipedia art.
+
+Attribute and monster-type icons in ../ygo/ remain Falzar FZ CC-BY 3.0
+and Master Duel Type-*-MADU.png as documented in that LICENSE.

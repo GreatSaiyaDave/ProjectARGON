@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900">
+<rect width="100%" height="100%" fill="#0B1220"/>
+<rect x="24" y="24" width="1352" height="852" fill="none" stroke="#E8C547" stroke-width="2"/>
+
+<text x="48" y="64" fill="#E8C547" font-family="DejaVu Sans, sans-serif" font-size="22" font-weight="700">SCH-01  SYSTEM ARCHITECTURE</text>
+<text x="48" y="88" fill="#5C6F86" font-family="DejaVu Sans, sans-serif" font-size="13">WRLDZ Spirit Lenses  ·  binocular optical see-through  ·  S23 Ultra is the computer</text>
+<line x1="48" y1="100" x2="1352" y2="100" stroke="#E8C547" stroke-width="1" opacity="0.4"/>
+<rect x="60" y="160" width="220" height="90" rx="8" fill="#152033" stroke="#E8C547" stroke-width="2"/><text x="170.0" y="201.0" fill="#F4F0E6" font-family="DejaVu Sans, sans-serif" font-size="14" font-weight="700" text-anchor="middle">Galaxy S23 Ultra</text><text x="170.0" y="221.0" fill="#5C6F86" font-family="DejaVu Sans, sans-serif" font-size="11" text-anchor="middle">USB-C DP Alt Mode · 5V</text><rect x="360" y="160" width="240" height="90" rx="8" fill="#152033" stroke="#8AA0B8" stroke-width="2"/><text x="480.0" y="201.0" fill="#F4F0E6" font-family="DejaVu Sans, sans-serif" font-size="14" font-weight="700" text-anchor="middle">USB-C cable</text><text x="480.0" y="221.0" fill="#5C6F86" font-family="DejaVu Sans, sans-serif" font-size="11" text-anchor="middle">full-featured · DP + USB2 + 5V/1A</text><rect x="680" y="140" width="280" height="130" rx="8" fill="#152033" stroke="#3BE0F0" stroke-width="2"/><text x="820.0" y="201.0" fill="#F4F0E6" font-family="DejaVu Sans, sans-serif" font-size="14" font-weight="700" text-anchor="middle">DP bridge  LT7911UXC</text><text x="820.0" y="221.0" fill="#5C6F86" font-family="DejaVu Sans, sans-serif" font-size="11" text-anchor="middle">salvage from donor glasses board</text><rect x="1040" y="80" width="280" height="100" rx="8" fill="#152033" stroke="#FF5AA5" stroke-width="2"/><text x="1180.0" y="126.0" fill="#F4F0E6" font-family="DejaVu Sans, sans-serif" font-size="14" font-weight="700" text-anchor="middle">LEFT Sony micro-OLED</text><text x="1180.0" y="146.0" fill="#5C6F86" font-family="DejaVu Sans, sans-serif" font-size="11" text-anchor="middle">ECX343E / ECX334  MIPI</text><rect x="1040" y="230" width="280" height="100" rx="8" fill="#152033" stroke="#FF5AA5" stroke-width="2"/><text x="1180.0" y="276.0" fill="#F4F0E6" font-family="DejaVu Sans, sans-serif" font-size="14" font-weight="700" text-anchor="middle">RIGHT Sony micro-OLED</text><text x="1180.0" y="296.0" fill="#5C6F86" font-family="DejaVu Sans, sans-serif" font-size="11" text-anchor="middle">matched pair  MIPI</text><rect x="680" y="320" width="280" height="100" rx="8" fill="#152033" stroke="#E8C547" stroke-width="2"/><text x="820.0" y="366.0" fill="#F4F0E6" font-family="DejaVu Sans, sans-serif" font-size="14" font-weight="700" text-anchor="middle">MCU + IMU</text><text x="820.0" y="386.0" fill="#5C6F86" font-family="DejaVu Sans, sans-serif" font-size="11" text-anchor="middle">3DoF gyro/accel  USB2 HID</text><rect x="360" y="500" width="280" height="110" rx="8" fill="#152033" stroke="#3BE0F0" stroke-width="2"/><text x="500.0" y="551.0" fill="#F4F0E6" font-family="DejaVu Sans, sans-serif" font-size="14" font-weight="700" text-anchor="middle">LEFT birdbath engine</text><text x="500.0" y="571.0" fill="#5C6F86" font-family="DejaVu Sans, sans-serif" font-size="11" text-anchor="middle">PBS + curved combiner  ~25 mm</text><rect x="760" y="500" width="280" height="110" rx="8" fill="#152033" stroke="#3BE0F0" stroke-width="2"/><text x="900.0" y="551.0" fill="#F4F0E6" font-family="DejaVu Sans, sans-serif" font-size="14" font-weight="700" text-anchor="middle">RIGHT birdbath engine</text><text x="900.0" y="571.0" fill="#5C6F86" font-family="DejaVu Sans, sans-serif" font-size="11" text-anchor="middle">matched  IPD 58–68 mm</text><rect x="560" y="700" width="300" height="100" rx="8" fill="#152033" stroke="#E8C547" stroke-width="2"/><text x="710.0" y="746.0" fill="#F4F0E6" font-family="DejaVu Sans, sans-serif" font-size="14" font-weight="700" text-anchor="middle">Your eyes + real world</text><text x="710.0" y="766.0" fill="#5C6F86" font-family="DejaVu Sans, sans-serif" font-size="11" text-anchor="middle">optical see-through  ~45° FOV</text>
+<defs>
+  <marker id="ah-280-205" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+    <path d="M0,0 L0,6 L8,3 z" fill="#3BE0F0"/>
+  </marker>
+</defs>
+<line x1="280" y1="205" x2="360" y2="205" stroke="#3BE0F0" stroke-width="2" marker-end="url(#ah-280-205)"/>
+<text x="320.0" y="197.0" fill="#5C6F86" font-size="11" font-family="DejaVu Sans, sans-serif" text-anchor="middle">DP video</text>
+<defs>
+  <marker id="ah-600-205" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+    <path d="M0,0 L0,6 L8,3 z" fill="#3BE0F0"/>
+  </marker>
+</defs>
+<line x1="600" y1="205" x2="680" y2="205" stroke="#3BE0F0" stroke-width="2" marker-end="url(#ah-600-205)"/>
+
+<defs>
+  <marker id="ah-960-175" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+    <path d="M0,0 L0,6 L8,3 z" fill="#3BE0F0"/>
+  </marker>
+</defs>
+<line x1="960" y1="175" x2="1040" y2="130" stroke="#3BE0F0" stroke-width="2" marker-end="url(#ah-960-175)"/>
+<text x="1000.0" y="144.5" fill="#5C6F86" font-size="11" font-family="DejaVu Sans, sans-serif" text-anchor="middle">MIPI L</text>
+<defs>
+  <marker id="ah-960-235" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+    <path d="M0,0 L0,6 L8,3 z" fill="#3BE0F0"/>
+  </marker>
+</defs>
+<line x1="960" y1="235" x2="1040" y2="280" stroke="#3BE0F0" stroke-width="2" marker-end="url(#ah-960-235)"/>
+<text x="1000.0" y="249.5" fill="#5C6F86" font-size="11" font-family="DejaVu Sans, sans-serif" text-anchor="middle">MIPI R</text>
+<defs>
+  <marker id="ah-820-270" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+    <path d="M0,0 L0,6 L8,3 z" fill="#3BE0F0"/>
+  </marker>
+</defs>
+<line x1="820" y1="270" x2="820" y2="320" stroke="#3BE0F0" stroke-width="2" marker-end="url(#ah-820-270)"/>
+
+<defs>
+  <marker id="ah-1180-180" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+    <path d="M0,0 L0,6 L8,3 z" fill="#3BE0F0"/>
+  </marker>
+</defs>
+<line x1="1180" y1="180" x2="1180" y2="500" stroke="#3BE0F0" stroke-width="2" marker-end="url(#ah-1180-180)"/>
+
+<defs>
+  <marker id="ah-1180-330" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+    <path d="M0,0 L0,6 L8,3 z" fill="#3BE0F0"/>
+  </marker>
+</defs>
+<line x1="1180" y1="330" x2="900" y2="500" stroke="#3BE0F0" stroke-width="2" marker-end="url(#ah-1180-330)"/>
+<text x="1220" y="360" fill="#5C6F86" font-size="11" font-family="DejaVu Sans, sans-serif">light into engines</text>
+<defs>
+  <marker id="ah-500-610" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+    <path d="M0,0 L0,6 L8,3 z" fill="#3BE0F0"/>
+  </marker>
+</defs>
+<line x1="500" y1="610" x2="620" y2="700" stroke="#3BE0F0" stroke-width="2" marker-end="url(#ah-500-610)"/>
+
+<defs>
+  <marker id="ah-900-610" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+    <path d="M0,0 L0,6 L8,3 z" fill="#3BE0F0"/>
+  </marker>
+</defs>
+<line x1="900" y1="610" x2="780" y2="700" stroke="#3BE0F0" stroke-width="2" marker-end="url(#ah-900-610)"/>
+<text x="60" y="300" fill="#F4F0E6" font-family="DejaVu Sans, sans-serif" font-size="12">DO NOT gut the S23. It is compute, GPS, and battery.</text><text x="60" y="316" fill="#F4F0E6" font-family="DejaVu Sans, sans-serif" font-size="12">Glasses are a dumb stereo display + IMU.</text><text x="60" y="332" fill="#F4F0E6" font-family="DejaVu Sans, sans-serif" font-size="12">Harvest birdbath engines as sealed units.</text><text x="60" y="348" fill="#F4F0E6" font-family="DejaVu Sans, sans-serif" font-size="12">Waveguides cannot be made in a garage.</text><text x="60" y="800" fill="#F4F0E6" font-family="DejaVu Sans, sans-serif" font-size="12">WRLDZ / Project ARGON  ·  SCH-01  ·  not to scale  ·  keep engines sealed</text>
+</svg>

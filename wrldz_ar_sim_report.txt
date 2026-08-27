@@ -1,0 +1,48 @@
+═══ WRLDZ SIMULATED AR DUEL SMOKE ═══
+time=2026-08-10 16:35:12Z
+sep_target=4.0m · EditorSim (no camera)
+editor_playing=False
+scene=
+  OK  CardDatabase load · count=1556
+  OK  Player deck · Lab Rules Test (You)
+  OK  AI deck · Lab Rules Test (Kaiba AI)
+  OK  ArDuelSpace created
+  OK  ArDuelSpace Ready · status=editor sim (enable PreferEditorCamera for webcam)
+  OK  Interaction system mounted
+  OK  PlayerDisk
+  OK  OppDisk
+  OK  Disks start retracted · blade=0.00
+  OK  HandVolume
+  OK  CardField
+  OK  Arena holograms
+  OK  Drag system
+  OK  Anime director
+  OK  Sync bridge
+  OK  Tracker
+  OK  SimulatedArmTracker
+  OK  Separation applied · 4.0m (want 4.0m)
+  OK  Player forearm pose · (319.45, 240.52, -1.10)
+  OK  Opp forearm pose · (320.28, 240.72, 1.10)
+  OK  Disk world span > 0.5 · dist=2.36
+  OK  Disk span scales with separation · dist=2.36
+  OK  Stage camera · rt=1080x1920
+  OK  Engine started · hands P=5 O=5
+  OK  Opening hand drawn · hand=5
+  OK  Bind+Sync no throw
+  OK  Deploy started after bind · deployed=True evt=BladeDeploy
+  OK  Player blade open after deploy · blade=0.95
+  OK  Summon attempt · Man-Eater Bug
+  OK  Monster on engine field · count=1
+  OK  Player disk has zone visuals · children=39
+  OK  Arena has visuals after summon · children=10
+  OK  PlayFx SummonFlash
+  OK  Played stress turns · turns=8
+  OK  No hard soft-lock pileup · recoveries=0
+  OK  AR still Ready after turns
+  OK  Interaction still live
+  OK  PreferDigital summary · AR Practice Duel · vs AI · 4.0m · digital
+
+engine_end: turn=9 phase=Main1 gameOver=False LP=8000/8000
+
+checks=38 fails=0
+RESULT: PASS
