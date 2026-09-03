@@ -16,7 +16,7 @@ namespace WRLDZ.Duel.TextEffects
     /// </summary>
     public static class CardTextEffectCompiler
     {
-        public const int Version = 33;
+        public const int Version = 46;
 
         static readonly Regex RxDraw = new(
             @"(?:^|[.!?]\s+)Draw (\d+) cards?\.",
@@ -50,8 +50,18 @@ namespace WRLDZ.Duel.TextEffects
             @"FLIP:\s*Target 1 monster on the field;\s*destroy it\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        /// <summary>Old Vindictive Magician / Night Assailant Flip destroy (opp only).</summary>
+        static readonly Regex RxFlipDestroyOppMonster = new(
+            @"FLIP:\s*Target 1 monster your opponent controls;\s*destroy that target\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         static readonly Regex RxFlipSpellToHand = new(
             @"FLIP:\s*Target 1 Spell in your GY;\s*add that target to your hand\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>Mask of Darkness: Trap in GY to hand (Magician of Faith sibling).</summary>
+        static readonly Regex RxFlipTrapToHand = new(
+            @"FLIP:\s*Target 1 Trap in your GY;\s*add that target to your hand\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxTrapHole = new(
@@ -140,7 +150,7 @@ namespace WRLDZ.Duel.TextEffects
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxSangan = new(
-            @"If this card is sent from the field to the GY:\s*Add 1 monster with (\d+) or less ATK from your Deck to your hand",
+            @"If this card is sent from the field to the GY:\s*Add 1 monster with (\d+) or less (ATK|DEF) from your Deck to your hand",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxFlute = new(
@@ -539,11 +549,27 @@ namespace WRLDZ.Duel.TextEffects
                 RequiresTargetChoice = true
             });
 
+            Take(RxFlipDestroyOppMonster.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Flip,
+                Action = EffectActionKind.Destroy,
+                Zone = EffectZoneFilter.OppFaceUpMonsters,
+                RequiresTargetChoice = true
+            });
+
             Take(RxFlipSpellToHand.Match(text), new EffectClause
             {
                 Timing = EffectTiming.Flip,
                 Action = EffectActionKind.AddFromGyToHand,
                 Zone = EffectZoneFilter.ControllerGySpells,
+                RequiresTargetChoice = true
+            });
+
+            Take(RxFlipTrapToHand.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Flip,
+                Action = EffectActionKind.AddFromGyToHand,
+                Zone = EffectZoneFilter.ControllerGyTraps,
                 RequiresTargetChoice = true
             });
 
@@ -686,13 +712,21 @@ namespace WRLDZ.Duel.TextEffects
             });
             // end battle phase folded into NegateAttack action
 
-            Take(RxSangan.Match(text), new EffectClause
             {
-                Timing = EffectTiming.SentFromFieldToGy,
-                Action = EffectActionKind.AddFromDeckToHand,
-                Zone = EffectZoneFilter.DeckMonstersAtkLeq,
-                Amount = ParseInt(RxSangan.Match(text), 1, 1500)
-            });
+                var sang = RxSangan.Match(text);
+                var sangDef = sang.Success &&
+                    sang.Groups[2].Value.IndexOf("DEF", StringComparison.OrdinalIgnoreCase) >= 0;
+                Take(sang, new EffectClause
+                {
+                    Timing = EffectTiming.SentFromFieldToGy,
+                    Action = EffectActionKind.AddFromDeckToHand,
+                    Zone = EffectZoneFilter.DeckMonstersAtkLeq,
+                    Amount = ParseInt(sang, 1, 1500),
+                    AmountIsAtkMax = sang.Success && !sangDef,
+                    AmountIsDefMax = sangDef,
+                    RequiresTargetChoice = true
+                });
+            }
 
             Take(RxFlute.Match(text), new EffectClause
             {
@@ -1141,7 +1175,9 @@ namespace WRLDZ.Duel.TextEffects
                     clause.RequiresTargetChoice = true;
                 }
             }
-            else if (Regex.IsMatch(res, @"draw (\d+) cards?", RegexOptions.IgnoreCase))
+            else if (Regex.IsMatch(res, @"draw (\d+) cards?", RegexOptions.IgnoreCase) &&
+                     !Regex.IsMatch(res, @"instead|but if|then draw|additional card",
+                         RegexOptions.IgnoreCase))
             {
                 var m = Regex.Match(res, @"draw (\d+) cards?", RegexOptions.IgnoreCase);
                 clause.Action = EffectActionKind.Draw;
@@ -1190,6 +1226,61 @@ namespace WRLDZ.Duel.TextEffects
                 clause.RequiresTargetChoice = true;
                 if (clause.Zone == EffectZoneFilter.None)
                     clause.Zone = EffectZoneFilter.EitherGyMonsters;
+            }
+            else if (Regex.IsMatch(res, @"banish (?:it|that target|them)", RegexOptions.IgnoreCase) ||
+                     Regex.IsMatch(res, @"remove (?:it|that target) from play", RegexOptions.IgnoreCase))
+            {
+                clause.Action = EffectActionKind.Banish;
+                clause.RequiresTargetChoice = true;
+                if (clause.Zone == EffectZoneFilter.None)
+                    return null;
+            }
+            else if (Regex.IsMatch(res,
+                         @"return all monsters your opponent controls to (?:the |their owner's |its owner's )?hand",
+                         RegexOptions.IgnoreCase))
+            {
+                clause.Action = EffectActionKind.ReturnToHand;
+                clause.Side = EffectSide.Opponent;
+                clause.Zone = EffectZoneFilter.FieldMonsters;
+                clause.RequiresTargetChoice = false;
+            }
+            else if (Regex.IsMatch(res,
+                         @"special summon 1 ""([^""]+)"" from your (hand|deck|graveyard|gy)",
+                         RegexOptions.IgnoreCase))
+            {
+                var namedSs = Regex.Match(res,
+                    @"special summon 1 ""([^""]+)"" from your (hand|deck|graveyard|gy)" +
+                    @"(?: or (hand|deck|graveyard|gy))?(?: or (hand|deck|graveyard|gy))?",
+                    RegexOptions.IgnoreCase);
+                clause.Action = EffectActionKind.SpecialSummonNamed;
+                clause.NamedCard = namedSs.Groups[1].Value;
+                void Origin(string loc)
+                {
+                    if (string.IsNullOrEmpty(loc)) return;
+                    if (string.Equals(loc, "hand", StringComparison.OrdinalIgnoreCase))
+                        clause.FromHand = true;
+                    else if (string.Equals(loc, "deck", StringComparison.OrdinalIgnoreCase))
+                        clause.FromDeck = true;
+                    else
+                        clause.FromGrave = true;
+                }
+                Origin(namedSs.Groups[2].Value);
+                if (namedSs.Groups.Count > 3 && namedSs.Groups[3].Success)
+                    Origin(namedSs.Groups[3].Value);
+                if (namedSs.Groups.Count > 4 && namedSs.Groups[4].Success)
+                    Origin(namedSs.Groups[4].Value);
+            }
+            else if (Regex.IsMatch(res,
+                         @"special summon 1 (\w+)(?:-Type)? monster from your hand",
+                         RegexOptions.IgnoreCase))
+            {
+                var raceSs = Regex.Match(res,
+                    @"special summon 1 (\w+)(?:-Type)? monster from your hand",
+                    RegexOptions.IgnoreCase);
+                clause.Action = EffectActionKind.SpecialSummonFromHand;
+                clause.RaceFilter = raceSs.Groups[1].Value;
+                clause.FromHand = true;
+                clause.Amount = 1;
             }
             else if (Regex.IsMatch(res, @"add (?:that target|it) to your hand", RegexOptions.IgnoreCase))
             {
@@ -1284,6 +1375,17 @@ namespace WRLDZ.Duel.TextEffects
                 return;
             }
 
+            if (Regex.IsMatch(act, @"target 1 monster in either (?:GY|Graveyard)",
+                    RegexOptions.IgnoreCase) ||
+                Regex.IsMatch(act,
+                    @"select 1 monster card from you or your opponent's graveyard",
+                    RegexOptions.IgnoreCase))
+            {
+                clause.RequiresTargetChoice = true;
+                clause.Zone = EffectZoneFilter.EitherGyMonsters;
+                return;
+            }
+
             var gyMon = Regex.Match(act,
                 @"target 1 (?:(\w+)(?:-Type)? )?monster in (?:your|the) (?:GY|Graveyard)",
                 RegexOptions.IgnoreCase);
@@ -1293,6 +1395,9 @@ namespace WRLDZ.Duel.TextEffects
                 clause.Zone = EffectZoneFilter.ControllerGyMonsters;
                 if (gyMon.Groups[1].Success && gyMon.Groups[1].Length > 0)
                     clause.RaceFilter = gyMon.Groups[1].Value;
+                var exceptNamed = Regex.Match(act, @"except ""([^""]+)""", RegexOptions.IgnoreCase);
+                if (exceptNamed.Success)
+                    clause.ExceptNamedCard = exceptNamed.Groups[1].Value;
                 return;
             }
 
@@ -1343,6 +1448,8 @@ namespace WRLDZ.Duel.TextEffects
             if (Regex.IsMatch(act, @"banish \d+", RegexOptions.IgnoreCase) &&
                 clause.BanishFromGyCount <= 0)
                 return true;
+            if (Regex.IsMatch(act, @"banish the top", RegexOptions.IgnoreCase))
+                return true;
             return false;
         }
 
@@ -1363,8 +1470,16 @@ namespace WRLDZ.Duel.TextEffects
             var hay = (sent.Condition ?? "") + " " + (sent.Raw ?? "");
             if (hay.IndexOf("flip summoned", StringComparison.OrdinalIgnoreCase) >= 0)
                 clause.RequiresThisFlipSummoned = true;
+            if (hay.IndexOf("normal summoned", StringComparison.OrdinalIgnoreCase) >= 0 &&
+                hay.IndexOf("flip summoned", StringComparison.OrdinalIgnoreCase) < 0 &&
+                hay.IndexOf("special summoned", StringComparison.OrdinalIgnoreCase) < 0)
+                clause.RequiresThisNormalSummoned = true;
             if (hay.IndexOf("destroyed by battle", StringComparison.OrdinalIgnoreCase) >= 0)
                 clause.RequiresThisDestroyedByBattle = true;
+            else if (Regex.IsMatch(hay,
+                         @"destroyed and sent from the field to the (?:GY|Graveyard)|this card is destroyed and sent",
+                         RegexOptions.IgnoreCase))
+                clause.RequiresDestroyed = true;
             if (hay.IndexOf("during your opponent's turn", StringComparison.OrdinalIgnoreCase) >= 0 ||
                 hay.IndexOf("during the opponent's turn", StringComparison.OrdinalIgnoreCase) >= 0)
                 clause.OpponentTurnOnly = true;

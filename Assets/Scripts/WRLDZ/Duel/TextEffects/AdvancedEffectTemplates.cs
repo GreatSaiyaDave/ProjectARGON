@@ -34,12 +34,12 @@ namespace WRLDZ.Duel.TextEffects
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxTokenSs = new(
-            @"special summon (\d+) ""([^""]+) Token"" \(([^)/]+)/(\w+)/Level (\d+)/ATK (\d+)/DEF (\d+)\)" +
+            @"special summon (\d+) ""([^""]+) Token"" \(([^)/]+)/(\w+)/(?:Level (\d+)|(\d+) Stars)/ATK (\d+)/DEF (\d+)\)" +
             @"(?: to your opponent's field)?(?: in (Attack|Defense) Position)?\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxTokenSsAlt = new(
-            @"special summon (\d+) ""([^""]+)"" \(([^)/]+)/(\w+)/Level (\d+)/ATK (\d+)/DEF (\d+)\)" +
+            @"special summon (\d+) ""([^""]+)"" \(([^)/]+)/(\w+)/(?:Level (\d+)|(\d+) Stars)/ATK (\d+)/DEF (\d+)\)" +
             @"(?: to your opponent's field)?(?: in (Attack|Defense) Position)?\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
@@ -157,9 +157,9 @@ namespace WRLDZ.Duel.TextEffects
                                     : " Token"),
                     TokenRace = CleanType(tok.Groups[3].Value),
                     TokenAttribute = tok.Groups[4].Value,
-                    TokenLevel = Parse(tok, 5, 1),
-                    TokenAtk = Parse(tok, 6, 0),
-                    TokenDef = Parse(tok, 7, 0),
+                    TokenLevel = Parse(tok, 5, 0) > 0 ? Parse(tok, 5, 1) : Parse(tok, 6, 1),
+                    TokenAtk = Parse(tok, 7, 0),
+                    TokenDef = Parse(tok, 8, 0),
                     TokenToOpponent = toOpp,
                     TokenCannotTribute = Regex.IsMatch(text, @"cannot be tributed", RegexOptions.IgnoreCase),
                     TokenDestroyedDamage = Regex.IsMatch(text, @"takes (\d+) damage", RegexOptions.IgnoreCase)
@@ -349,6 +349,8 @@ namespace WRLDZ.Duel.TextEffects
 
         static EffectTiming SuggestTokenTiming(string text)
         {
+            if (Regex.IsMatch(text ?? "", @"\bFLIP:", RegexOptions.IgnoreCase))
+                return EffectTiming.Flip;
             if (Regex.IsMatch(text, @"standby phase", RegexOptions.IgnoreCase))
                 return EffectTiming.StandbyPhase;
             if (Regex.IsMatch(text, @"end phase", RegexOptions.IgnoreCase))

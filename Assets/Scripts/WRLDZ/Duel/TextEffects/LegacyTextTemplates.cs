@@ -150,8 +150,14 @@ namespace WRLDZ.Duel.TextEffects
             @"Add 1 Level (\d+) or lower (\w+)(?:-Type)? monster from your Deck to your hand\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        /// <summary>
+        /// Gather Your Mind family: add 1 quoted name from Deck. Optional
+        /// "Your Deck is then shuffled" is search procedure (Ignis has no shuffle
+        /// op; no ShuffleDeck action invented). Oath OPT is IsBoilerplate.
+        /// </summary>
         static readonly Regex RxAddNamedFromDeck = new(
-            @"Add 1 ""([^""]+)""(?: card)? from your Deck to your hand\.?",
+            @"Add 1 ""([^""]+)""(?: card)? from your Deck to your hand" +
+            @"(?:\. Your Deck is then shuffled)?\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         /// <summary>

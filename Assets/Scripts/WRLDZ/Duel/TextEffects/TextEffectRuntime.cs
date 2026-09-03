@@ -873,18 +873,78 @@ namespace WRLDZ.Duel.TextEffects
         }
 
         public static bool TryResolveThisCardSummoned(DuelEngine engine, DuelistState who,
-            CardInstance card, bool flipSummon = false)
+            CardInstance card, bool flipSummon = false, bool specialSummon = false)
         {
             if (engine == null || who == null || card?.Def == null) return false;
             var prog = CompiledEffectCache.GetOrCompile(card.Def);
             var clauses = prog?.ClausesFor(EffectTiming.ThisCardSummoned);
             if (clauses == null || clauses.Count == 0) return false;
-            var d = false;
+
+            var applicable = new List<EffectClause>();
             foreach (var c in clauses)
             {
-                if (c != null && c.RequiresThisFlipSummoned && !flipSummon) continue;
-                ApplyClause(engine, who, card, c, null, ref d, ref d);
+                if (c == null) continue;
+                if (c.RequiresThisFlipSummoned && !flipSummon) continue;
+                if (c.RequiresThisNormalSummoned && (flipSummon || specialSummon)) continue;
+                applicable.Add(c);
             }
+            if (applicable.Count == 0) return false;
+
+            foreach (var c in applicable)
+            {
+                if (!c.RequiresTargetChoice && NeedsTargetChoice(c))
+                    c.RequiresTargetChoice = true;
+            }
+
+            var targeted = applicable.FirstOrDefault(c =>
+                c != null && (c.RequiresTargetChoice || NeedsTargetChoice(c)));
+            if (targeted != null)
+            {
+                var targets = CollectTargets(engine, who, targeted, card);
+                if (targets.Count == 0)
+                {
+                    engine.Log($"{card.Name}: no legal targets.");
+                    var skip = false;
+                    foreach (var c in applicable)
+                    {
+                        if (c.RequiresTargetChoice || NeedsTargetChoice(c)) continue;
+                        ApplyClause(engine, who, card, c, null, ref skip, ref skip);
+                    }
+                    engine.NotifyPublic();
+                    return true;
+                }
+
+                if (!who.IsPlayer)
+                {
+                    var pick = AutoPick(targeted, targets, who, engine);
+                    var dAi = false;
+                    foreach (var c in applicable)
+                        ApplyClause(engine, who, card, c,
+                            c.RequiresTargetChoice ? pick : null, ref dAi, ref dAi);
+                    engine.NotifyPublic();
+                    return true;
+                }
+
+                var pending = new PendingActivation
+                {
+                    Controller = who,
+                    Card = card,
+                    FromHand = false,
+                    WasSetOnField = false,
+                    TargetKind = MapTargetKind(targeted),
+                    IsMonsterEffect = true,
+                    UsesTextProgram = true
+                };
+                pending.LegalTargets.AddRange(targets);
+                engine.SetPendingActivation(pending);
+                engine.Log(pending.Prompt);
+                engine.NotifyPublic();
+                return true;
+            }
+
+            var d = false;
+            foreach (var c in applicable)
+                ApplyClause(engine, who, card, c, null, ref d, ref d);
             engine.NotifyPublic();
             return true;
         }
@@ -972,12 +1032,6 @@ namespace WRLDZ.Duel.TextEffects
 
                 if (c.RequiresTargetChoice)
                 {
-                    // Field→GY mandatory searches without a target UI path: resolve auto for AI,
-                    // leave player to registered script (return false).
-                    if (who != null && who.IsPlayer &&
-                        c.Action == EffectActionKind.AddFromDeckToHand)
-                        return false;
-
                     var targets = CollectTargets(engine, who, c, card);
                     if (targets.Count == 0)
                     {
@@ -987,7 +1041,8 @@ namespace WRLDZ.Duel.TextEffects
 
                     if (who != null && who.IsPlayer &&
                         (c.Action == EffectActionKind.Destroy ||
-                         c.Action == EffectActionKind.ReturnToHand))
+                         c.Action == EffectActionKind.ReturnToHand ||
+                         c.Action == EffectActionKind.AddFromDeckToHand))
                     {
                         var pending = new PendingActivation
                         {
@@ -1054,7 +1109,11 @@ namespace WRLDZ.Duel.TextEffects
                     or EffectZoneFilter.OppFaceUpMonsters => true,
                 EffectActionKind.Destroy when c.Zone is EffectZoneFilter.FieldSpellTraps &&
                                               c.Side != EffectSide.Both => true,
+                EffectActionKind.ReturnToHand when c.Zone is EffectZoneFilter.FieldMonsters => false,
                 EffectActionKind.ReturnToHand => true,
+                EffectActionKind.Banish when c.Zone is EffectZoneFilter.EitherGyMonsters
+                    or EffectZoneFilter.FieldAnyMonster
+                    or EffectZoneFilter.OppFaceUpMonsters => true,
                 _ => false
             };
         }
@@ -1070,7 +1129,11 @@ namespace WRLDZ.Duel.TextEffects
             if (p.UsesTextProgram)
             {
                 var ignProg = CompiledEffectCache.GetOrCompile(p.Card);
-                if (ignProg != null && ignProg.HasTiming(EffectTiming.Activate))
+                // Only steal the window for ignition targeting. Swarm of Scarabs etc. also
+                // have a no-target OPT set-FD ignition plus a Flip-Summon target trigger.
+                if (ignProg != null &&
+                    ignProg.ClausesFor(EffectTiming.Activate).Exists(c =>
+                        c != null && c.RequiresTargetChoice))
                     return TryResolveTextTarget(engine, target);
             }
 
@@ -1087,7 +1150,16 @@ namespace WRLDZ.Duel.TextEffects
             var d = false;
             var flip = prog.ClausesFor(EffectTiming.Flip);
             var gy = prog.ClausesFor(EffectTiming.SentFromFieldToGy);
-            var clauses = flip.Count > 0 ? flip : gy;
+            var summoned = prog.ClausesFor(EffectTiming.ThisCardSummoned);
+            List<EffectClause> clauses;
+            if (flip.Exists(c => c != null && c.RequiresTargetChoice))
+                clauses = flip;
+            else if (summoned.Exists(c => c != null && c.RequiresTargetChoice))
+                clauses = summoned;
+            else if (gy.Exists(c => c != null && c.RequiresTargetChoice))
+                clauses = gy;
+            else
+                clauses = flip.Count > 0 ? flip : (summoned.Count > 0 ? summoned : gy);
             foreach (var c in clauses)
             {
                 if (c.RequiresTargetChoice)
@@ -2042,6 +2114,7 @@ namespace WRLDZ.Duel.TextEffects
                     }
 
                     if (clause.Zone == EffectZoneFilter.DeckFieldSpells ||
+                        clause.Zone == EffectZoneFilter.DeckEquipSpells ||
                         clause.Zone == EffectZoneFilter.DeckMonstersRaceLevelLeq)
                     {
                         engine.Log(
@@ -2049,7 +2122,7 @@ namespace WRLDZ.Duel.TextEffects
                         break;
                     }
 
-                    var maxAtk = clause.Amount > 0 ? clause.Amount : 1500;
+                    var cap = clause.Amount > 0 ? clause.Amount : 1500;
                     var added = false;
                     if (engine.Database == null)
                     {
@@ -2062,13 +2135,19 @@ namespace WRLDZ.Duel.TextEffects
                         var id = who.Deck[i];
                         if (!engine.Database.TryGet(id, out var def) || def == null || !def.IsMonster)
                             continue;
-                        if (def.atk < 0 || def.atk > maxAtk || def.IsExtraDeck) continue;
+                        if (def.IsExtraDeck) continue;
+                        if (clause.AmountIsDefMax)
+                        {
+                            if (def.def < 0 || def.def > cap) continue;
+                        }
+                        else if (def.atk < 0 || def.atk > cap) continue;
                         who.Deck.RemoveAt(i);
                         var inst = engine.CreateCardInstance(id);
                         who.Hand.Add(inst);
+                        var stat = clause.AmountIsDefMax ? $"DEF {def.def}" : $"ATK {def.atk}";
                         engine.Log(
-                            $"Added {inst.Name} (ATK {def.atk}) from Deck to hand " +
-                            $"(search ≤{maxAtk}). Hand={who.HandCount}.");
+                            $"Added {inst.Name} ({stat}) from Deck to hand " +
+                            $"(search ≤{cap}). Hand={who.HandCount}.");
                         added = true;
                         break;
                     }
@@ -2346,14 +2425,14 @@ namespace WRLDZ.Duel.TextEffects
                 case EffectActionKind.Banish:
                     if (chosenTarget != null)
                     {
-                        var owner = engine.ControllerOf(chosenTarget);
+                        var owner = OwnerOf(engine, who, chosenTarget);
                         if (owner != null) engine.BanishCard(owner, chosenTarget);
                     }
                     else
                     {
                         foreach (var m in CollectAllMatching(engine, who, clause).ToList())
                         {
-                            var owner = engine.ControllerOf(m);
+                            var owner = OwnerOf(engine, who, m);
                             if (owner != null) engine.BanishCard(owner, m);
                         }
                     }
@@ -2423,7 +2502,17 @@ namespace WRLDZ.Duel.TextEffects
                     break;
 
                 case EffectActionKind.ReturnToHand:
-                    if (chosenTarget == null) break;
+                    if (chosenTarget == null)
+                    {
+                        if (clause.RequiresTargetChoice) break;
+                        foreach (var m in CollectAllMatching(engine, who, clause).ToList())
+                        {
+                            if (m == null) continue;
+                            if (m.IsToken) Destroy(m);
+                            else engine.ReturnCardToHand(m);
+                        }
+                        break;
+                    }
                     if (chosenTarget.IsToken)
                     {
                         Destroy(chosenTarget);
@@ -2848,6 +2937,13 @@ namespace WRLDZ.Duel.TextEffects
                         continue;
                     if (c.RequiresDestroyedByBattleThisTurn && !card.DestroyedByBattleThisTurn)
                         continue;
+                    // Fox Fire: GY End Phase self-SS only if THIS copy was battle-destroyed this turn.
+                    // Distinct from DestroyedByBattleThisTurn (this card destroyed an opponent).
+                    if (c.RequiresThisDestroyedByBattle)
+                    {
+                        if (!card.WasDestroyedByBattle) continue;
+                        if (card.SentFromFieldTurnNumber != engine.TurnNumber) continue;
+                    }
                     if (c.RequiresSentByContinuousSpell && !card.SentByContinuousSpellEffect)
                         continue;
                     if (c.RequiresNextControllerStandby &&
@@ -3076,9 +3172,22 @@ namespace WRLDZ.Duel.TextEffects
         static bool DefMatchesSummonFilter(CardDef def, EffectClause clause)
         {
             if (def == null || clause == null || !def.IsMonster || def.IsExtraDeck) return false;
-            if (!string.IsNullOrEmpty(clause.NamedCard) &&
-                !string.Equals(def.name, clause.NamedCard, System.StringComparison.OrdinalIgnoreCase))
-                return false;
+            if (!string.IsNullOrEmpty(clause.NamedCard))
+            {
+                if (clause.NamedCardIsSeries)
+                {
+                    var n = clause.NamedCard;
+                    var inName = def.name != null &&
+                                 def.name.IndexOf(n, System.StringComparison.OrdinalIgnoreCase) >= 0;
+                    var inArch = def.archetype != null &&
+                                 def.archetype.IndexOf(n, System.StringComparison.OrdinalIgnoreCase) >= 0;
+                    if (!inName && !inArch) return false;
+                }
+                else if (!string.Equals(def.name, clause.NamedCard,
+                             System.StringComparison.OrdinalIgnoreCase))
+                    return false;
+            }
+
             if (!string.IsNullOrEmpty(clause.RaceFilter) &&
                 (def.race == null ||
                  def.race.IndexOf(clause.RaceFilter, System.StringComparison.OrdinalIgnoreCase) < 0))
@@ -3210,6 +3319,31 @@ namespace WRLDZ.Duel.TextEffects
                 engine.Log($"Search: no \"{clause.NamedCard}\" in Deck.");
         }
 
+        /// <summary>
+        /// Field controller, else GY/hand owner. ControllerOf is field-only;
+        /// Flip GY-banish (Witch Doctor of Chaos) targets cards not on the field.
+        /// </summary>
+        static DuelistState OwnerOf(DuelEngine engine, DuelistState who, CardInstance card)
+        {
+            if (engine == null || card == null) return null;
+            var field = engine.ControllerOf(card);
+            if (field != null) return field;
+            if (who != null)
+            {
+                if (who.Graveyard != null && who.Graveyard.Contains(card)) return who;
+                if (who.Hand != null && who.Hand.Contains(card)) return who;
+                if (who.Banished != null && who.Banished.Contains(card)) return who;
+            }
+            var opp = engine.OpponentOf(who);
+            if (opp != null)
+            {
+                if (opp.Graveyard != null && opp.Graveyard.Contains(card)) return opp;
+                if (opp.Hand != null && opp.Hand.Contains(card)) return opp;
+                if (opp.Banished != null && opp.Banished.Contains(card)) return opp;
+            }
+            return null;
+        }
+
         static List<CardInstance> CollectTargets(DuelEngine engine, DuelistState who, EffectClause c,
             CardInstance except, int costNumeric = 0)
         {
@@ -3267,7 +3401,10 @@ namespace WRLDZ.Duel.TextEffects
                              g.Def.type.IndexOf("Normal", System.StringComparison.OrdinalIgnoreCase) < 0 ||
                              g.Def.type.IndexOf("Effect", System.StringComparison.OrdinalIgnoreCase) >= 0))
                             continue;
+                        if (c.AmountIsLevel && c.Amount > 0 && g.Level > c.Amount)
+                            continue;
                         list.Add(g);
+
                     }
                     break;
                 case EffectZoneFilter.ControllerMonsters:
@@ -3337,6 +3474,9 @@ namespace WRLDZ.Duel.TextEffects
                 case EffectZoneFilter.DeckFieldSpells:
                     AddUniqueDeck(engine, who, list, def => def != null && def.IsFieldSpell);
                     break;
+                case EffectZoneFilter.DeckEquipSpells:
+                    AddUniqueDeck(engine, who, list, def => def != null && def.IsEquipSpell);
+                    break;
                 case EffectZoneFilter.DeckMonstersRaceLevelLeq:
                     AddUniqueDeck(engine, who, list, def =>
                     {
@@ -3354,6 +3494,8 @@ namespace WRLDZ.Duel.TextEffects
                     {
                         if (def == null || !def.IsMonster || def.IsExtraDeck) return false;
                         var cap = c.Amount > 0 ? c.Amount : 1500;
+                        if (c.AmountIsDefMax)
+                            return def.def >= 0 && def.def <= cap;
                         return def.atk >= 0 && def.atk <= cap;
                     });
                     break;
@@ -3368,6 +3510,8 @@ namespace WRLDZ.Duel.TextEffects
                 list.RemoveAll(t => t?.Def?.race == null ||
                                     t.Def.race.IndexOf(c.RaceFilter,
                                         System.StringComparison.OrdinalIgnoreCase) < 0);
+            if (!string.IsNullOrEmpty(c.ExceptNamedCard))
+                list.RemoveAll(t => t != null && t.IsNamed(c.ExceptNamedCard));
             if (!string.IsNullOrEmpty(c.AttributeFilter) &&
                 c.Action == EffectActionKind.EquipThisToTarget)
                 list.RemoveAll(t => t?.Def?.attribute == null ||
@@ -3483,6 +3627,7 @@ namespace WRLDZ.Duel.TextEffects
             EffectZoneFilter.ControllerMonsters => EffectTargetKind.TributeMonsterYouControl,
             EffectZoneFilter.OppAnyCardOnField => EffectTargetKind.AnyCardOnField,
             EffectZoneFilter.DeckFieldSpells => EffectTargetKind.FieldSpellInYourDeck,
+            EffectZoneFilter.DeckEquipSpells => EffectTargetKind.EquipSpellInYourDeck,
             EffectZoneFilter.DeckMonstersRaceLevelLeq => EffectTargetKind.MonsterInYourDeckFiltered,
             EffectZoneFilter.DeckMonstersAtkLeq => EffectTargetKind.MonsterInYourDeckAtkLeq,
             _ => EffectTargetKind.None

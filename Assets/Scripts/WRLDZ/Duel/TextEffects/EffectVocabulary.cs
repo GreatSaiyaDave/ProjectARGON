@@ -202,7 +202,8 @@ namespace WRLDZ.Duel.TextEffects
                     EffectActionKind.UnaffectedByCardEffects or
                     EffectActionKind.CannotBeTargetedByEffects or
                     EffectActionKind.ContinuousCannotTargetDragons or
-                    EffectActionKind.ContinuousCannotAttack =>
+                    EffectActionKind.ContinuousCannotAttack or
+                    EffectActionKind.CannotBeTributedForSummon =>
                     EffectResolutionKind.Protection,
                 EffectActionKind.PayLpOrDestroyThis =>
                     EffectResolutionKind.Destroy,

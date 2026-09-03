@@ -59,6 +59,17 @@ namespace WRLDZ.Duel.TextEffects
             @"cannot be normal summoned(?:/set)?|must (?:first )?be special summoned|cannot be special summoned except",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        /// <summary>
+        /// Printed Normal Summon/Set lock (nomi / semi-nomi). Inherent SS-from-hand
+        /// (Cyber Dragon) does not match and stays Normal Summonable.
+        /// </summary>
+        static readonly Regex RxBlocksNormalSummon = new(
+            @"cannot be normal summoned(?:/set)?|must (?:first )?be special summoned",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        public static bool BlocksNormalSummonOrSet(string officialText) =>
+            !string.IsNullOrWhiteSpace(officialText) && RxBlocksNormalSummon.IsMatch(officialText);
+
         public static List<Sentence> Parse(string officialText, CardDef def)
         {
             var list = new List<Sentence>();
@@ -181,6 +192,11 @@ namespace WRLDZ.Duel.TextEffects
                 return EffectTiming.OpponentNormalOrFlipSummon;
             if (Contains(cond, "flip summoned"))
                 return EffectTiming.ThisCardSummoned;
+            if (Contains(cond, "this card is summoned") ||
+                Contains(cond, "this card is normal summoned") ||
+                Contains(cond, "this monster is summoned") ||
+                Contains(cond, "this monster is normal summoned"))
+                return EffectTiming.ThisCardSummoned;
             if (Contains(cond, "destroyed by battle"))
                 return EffectTiming.SentFromFieldToGy;
             if (Contains(cond, "sent from the field to the gy") ||
@@ -266,13 +282,15 @@ namespace WRLDZ.Duel.TextEffects
                 }
 
                 var depth = 0;
+                var inQuote = false;
                 var endSent = -1;
                 for (var j = i; j < text.Length; j++)
                 {
                     var c = text[j];
-                    if (c == '(') depth++;
-                    else if (c == ')' && depth > 0) depth--;
-                    else if (depth == 0 && (c == '.' || c == '!' || c == '?'))
+                    if (c == '"') inQuote = !inQuote;
+                    else if (c == '(' && !inQuote) depth++;
+                    else if (c == ')' && depth > 0 && !inQuote) depth--;
+                    else if (!inQuote && depth == 0 && (c == '.' || c == '!' || c == '?'))
                     {
                         endSent = j + 1;
                         break;

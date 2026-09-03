@@ -42,6 +42,14 @@ namespace WRLDZ.Duel.TextEffects
             @"Your opponent cannot target face-up ""([^""]+)"" monsters with Spells, Traps, or card effects\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        /// <summary>
+        /// Fox Fire leftover: This face-up card cannot be Tributed for a Tribute Summon.
+        /// Ignis c88753985: EFFECT_UNRELEASABLE_SUM.
+        /// </summary>
+        static readonly Regex RxCannotTributeForSummon = new(
+            @"This face-up card cannot be Tributed for a Tribute Summon\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         public static void Collect(string text, CardDef def, List<EffectClause> into,
             List<(int start, int length)> spans)
         {
@@ -90,6 +98,13 @@ namespace WRLDZ.Duel.TextEffects
                     MakesChainLink = false
                 }
                 : null);
+
+            Add(RxCannotTributeForSummon.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.ContinuousWhileFaceUp,
+                Action = EffectActionKind.CannotBeTributedForSummon,
+                MakesChainLink = false
+            });
         }
 
         public static bool MatchesSharedKind(string text)
@@ -98,7 +113,8 @@ namespace WRLDZ.Duel.TextEffects
             return RxNamedUnaffectedAndNoAttack.IsMatch(text) ||
                    RxUnaffectedAndNoAttack.IsMatch(text) ||
                    RxNamedUnaffected.IsMatch(text) ||
-                   RxHorusServant.IsMatch(text);
+                   RxHorusServant.IsMatch(text) ||
+                   RxCannotTributeForSummon.IsMatch(text);
         }
 
         public static void ExpectedActions(string text, List<EffectActionKind> need)
@@ -113,6 +129,8 @@ namespace WRLDZ.Duel.TextEffects
                 need.Add(EffectActionKind.UnaffectedByCardEffects);
             if (RxHorusServant.IsMatch(text))
                 need.Add(EffectActionKind.CannotBeTargetedByEffects);
+            if (RxCannotTributeForSummon.IsMatch(text))
+                need.Add(EffectActionKind.CannotBeTributedForSummon);
         }
 
         static EffectClause UnaffectedFromNamed(Match m)

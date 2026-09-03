@@ -359,6 +359,7 @@ namespace WRLDZ.Duel
             // Sangan / deck search: prefer lowest ATK (sensible mandatory auto)
             if (p.TargetKind == EffectTargetKind.MonsterInYourDeckAtkLeq ||
                 p.TargetKind == EffectTargetKind.FieldSpellInYourDeck ||
+                p.TargetKind == EffectTargetKind.EquipSpellInYourDeck ||
                 p.TargetKind == EffectTargetKind.MonsterInYourDeckFiltered)
                 t = p.LegalTargets
                     .OrderBy(x => x.Def != null ? x.Def.atk : 9999)

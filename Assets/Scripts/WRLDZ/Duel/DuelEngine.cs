@@ -1364,7 +1364,8 @@ namespace WRLDZ.Duel
             card.SentFromFieldTurnNumber = 0;
             who.MonsterZones[idx].Occupant = card;
             if (faceUp)
-                TextEffects.TextEffectRuntime.TryResolveThisCardSummoned(this, who, card);
+                TextEffects.TextEffectRuntime.TryResolveThisCardSummoned(
+                    this, who, card, specialSummon: true);
             if (faceUp)
                 OpenSummonResponseOrContinue(who, card);
             return true;

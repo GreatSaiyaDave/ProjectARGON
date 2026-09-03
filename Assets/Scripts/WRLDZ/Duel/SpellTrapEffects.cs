@@ -43,7 +43,9 @@ namespace WRLDZ.Duel
         /// <summary>Terraforming — 1 Field Spell in your Deck.</summary>
         FieldSpellInYourDeck,
         /// <summary>ROTA — Level N or lower Race monster in your Deck.</summary>
-        MonsterInYourDeckFiltered
+        MonsterInYourDeckFiltered,
+        /// <summary>Iron Blacksmith Kotetsu — Equip Spell in your Deck.</summary>
+        EquipSpellInYourDeck
     }
 
     /// <summary>In-flight activation waiting for a target choice.</summary>
@@ -110,6 +112,8 @@ namespace WRLDZ.Duel
                         $"{n}: choose a Field Spell from your Deck to add to hand.",
                     EffectTargetKind.MonsterInYourDeckFiltered =>
                         $"{n}: choose a monster from your Deck to add to hand.",
+                    EffectTargetKind.EquipSpellInYourDeck =>
+                        $"{n}: choose an Equip Spell from your Deck to add to hand.",
                     EffectTargetKind.DiscardMonsterInHand =>
                         string.IsNullOrEmpty(DiscardCostAttribute) || DiscardCostAttribute == "*"
                             ? $"{n}: discard 1 card from your hand (cost)."

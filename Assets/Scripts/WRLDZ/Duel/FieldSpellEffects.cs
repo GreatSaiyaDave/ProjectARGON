@@ -32,6 +32,12 @@ namespace WRLDZ.Duel
             if (prog == null) return;
             foreach (var c in prog.ClauseList)
             {
+                if (c == null) continue;
+                if (c.Action == EffectActionKind.CannotBeTributedForSummon)
+                    card.CannotBeTributedForSummon = true;
+            }
+            foreach (var c in prog.ClauseList)
+            {
                 if (c == null || c.Action != EffectActionKind.AlwaysTreatedAsName) continue;
                 if (!string.IsNullOrEmpty(c.TreatedAsName))
                 {

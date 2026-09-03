@@ -205,6 +205,15 @@ namespace WRLDZ.Duel.TextEffects
                 clause.RequiresTargetChoice = true;
                 clause.Zone = EffectZoneFilter.AnyCardOnField;
             }
+            else if (Regex.IsMatch(act, @"target 1 monster in either (?:GY|Graveyard)",
+                         RegexOptions.IgnoreCase) ||
+                     Regex.IsMatch(act,
+                         @"select 1 monster card from you or your opponent's graveyard",
+                         RegexOptions.IgnoreCase))
+            {
+                clause.RequiresTargetChoice = true;
+                clause.Zone = EffectZoneFilter.EitherGyMonsters;
+            }
             else if (Regex.IsMatch(act, @"target 1 monster in (?:your|the) (?:GY|Graveyard)",
                          RegexOptions.IgnoreCase) ||
                      Regex.IsMatch(act,
@@ -254,6 +263,8 @@ namespace WRLDZ.Duel.TextEffects
             if (string.IsNullOrEmpty(res)) return false;
 
             if (Regex.IsMatch(res, @"change this card to face-down defense position",
+                    RegexOptions.IgnoreCase) ||
+                Regex.IsMatch(res, @"flip this card into face-down defense position",
                     RegexOptions.IgnoreCase))
             {
                 clause.Action = EffectActionKind.SetThisFaceDownDefense;

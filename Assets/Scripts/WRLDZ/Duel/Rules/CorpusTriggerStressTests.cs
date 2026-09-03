@@ -268,6 +268,12 @@ namespace WRLDZ.Duel.Rules
                 if (c.Zone == EffectZoneFilter.DeckFieldSpells)
                     p.Deck.Insert(0, Alo);
 
+                if (c.Action == EffectActionKind.AddNamedFromDeckToHand &&
+                    !string.IsNullOrEmpty(c.NamedCard) &&
+                    string.Equals(c.NamedCard, prog.CardName, StringComparison.OrdinalIgnoreCase) &&
+                    prog.CardId > 0)
+                    p.Deck.Insert(0, prog.CardId);
+
                 if (c.RequiresDiscardCost)
                 {
                     var fodder = Celtic;

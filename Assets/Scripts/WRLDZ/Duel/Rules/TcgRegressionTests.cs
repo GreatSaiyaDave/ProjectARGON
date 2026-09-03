@@ -241,6 +241,8 @@ namespace WRLDZ.Duel.Rules
                 var cd = PsctGrammar.Parse(cyber.desc, cyber);
                 Check("PSCT inherent SS: monster with no colon does NOT start a chain",
                     cd.Count == 1 && !cd[0].HasColon && !cd[0].MakesChainLink && cd[0].IsUnchainedMonsterText);
+                Check("PSCT inherent SS: Cyber Dragon text does not block Normal Summon",
+                    !PsctGrammar.BlocksNormalSummonOrSet(cyber.desc));
 
                 var alo = new CardDef
                 {
@@ -764,16 +766,19 @@ namespace WRLDZ.Duel.Rules
                         c != null && c.Action == EffectActionKind.TakeControlLevelLeq &&
                         c.RequiresTributeThis && c.Amount == 3),
                     "compile miss");
+                var lavaGolemDef = new CardDef
+                {
+                    id = 102380, name = "Lava Golem", type = "Effect Monster",
+                    desc =
+                        "Cannot be Normal Summoned/Set. Must first be Special Summoned (from your hand) to your opponent's field by Tributing 2 monsters they control. You cannot Normal Summon/Set the turn you Special Summon this card. Once per turn, during your Standby Phase: Take 1000 damage."
+                };
                 Check("PSCT Lava Golem: Standby 1000 damage",
-                    CardTextEffectCompiler.Compile(new CardDef
-                    {
-                        id = 102380, name = "Lava Golem", type = "Effect Monster",
-                        desc =
-                            "Cannot be Normal Summoned/Set. Must first be Special Summoned (from your hand) to your opponent's field by Tributing 2 monsters they control. You cannot Normal Summon/Set the turn you Special Summon this card. Once per turn, during your Standby Phase: Take 1000 damage."
-                    }) is { } lg && lg.ClauseList.Exists(c =>
+                    CardTextEffectCompiler.Compile(lavaGolemDef) is { } lg && lg.ClauseList.Exists(c =>
                         c != null && c.Timing == EffectTiming.StandbyPhase &&
                         c.Action == EffectActionKind.TakeEffectDamage && c.Amount == 1000),
                     "compile miss");
+                Check("PSCT Lava Golem: printed text blocks Normal Summon/Set",
+                    PsctGrammar.BlocksNormalSummonOrSet(lavaGolemDef.desc));
                 Check("PSCT Daedalus: send face-up named Umi to GY, destroy all other cards",
                     daep != null && daep.FullyCompiled &&
                     daep.ClauseList.Exists(c =>
@@ -1370,10 +1375,538 @@ namespace WRLDZ.Duel.Rules
                     Check("Corpus: Spell Reproduction leftover send-2 is not FullyCompiled",
                         srProg != null && !srProg.FullyCompiled);
 
+                    var giantRat = db.Get(97017120);
+                    var ratProg = giantRat != null ? CardTextEffectCompiler.Compile(giantRat) : null;
+                    Check("Corpus: Giant Rat battle-destroyed EARTH 1500 Deck SS is not a free ignition",
+                        ratProg != null && ratProg.FullyCompiled &&
+                        !ratProg.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.Activate) &&
+                        ratProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.SentFromFieldToGy &&
+                            c.RequiresThisDestroyedByBattle &&
+                            c.Action == EffectActionKind.SpecialSummonNamed &&
+                            c.FromDeck &&
+                            c.AmountIsAtkMax && c.Amount == 1500 &&
+                            string.Equals(c.AttributeFilter, "EARTH", StringComparison.OrdinalIgnoreCase)),
+                        ratProg == null
+                            ? "null"
+                            : $"full={ratProg.FullyCompiled} n={ratProg.ClauseList.Count} " +
+                              $"unparsed={string.Join("|", ratProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var fox = db.Get(88753985);
+                    var foxProg = fox != null ? CardTextEffectCompiler.Compile(fox) : null;
+                    Check("Corpus: Fox Fire End Phase battle-GY self-SS is not a free ignition",
+                        foxProg != null && foxProg.FullyCompiled &&
+                        !foxProg.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.Activate) &&
+                        foxProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.EndPhase &&
+                            c.Action == EffectActionKind.SpecialSummonFromGy &&
+                            c.ResolvesFromGy &&
+                            c.RequiresThisDestroyedByBattle) &&
+                        foxProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.CannotBeTributedForSummon),
+                        foxProg == null
+                            ? "null"
+                            : $"full={foxProg.FullyCompiled} n={foxProg.ClauseList.Count} " +
+                              $"unparsed={string.Join("|", foxProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var witch = db.Get(78010363);
+                    var witchProg = witch != null ? CardTextEffectCompiler.Compile(witch) : null;
+                    Check("Corpus: Witch of the Black Forest DEF 1500 search is not a free ignition",
+                        witchProg != null && witchProg.FullyCompiled &&
+                        !witchProg.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.Activate) &&
+                        witchProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.SentFromFieldToGy &&
+                            c.Action == EffectActionKind.AddFromDeckToHand &&
+                            c.AmountIsDefMax && c.Amount == 1500),
+                        witchProg == null
+                            ? "null"
+                            : $"full={witchProg.FullyCompiled} n={witchProg.ClauseList.Count} " +
+                              $"unparsed={string.Join("|", witchProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var germ = db.Get(95178994);
+                    var germProg = germ != null ? CardTextEffectCompiler.Compile(germ) : null;
+                    Check("Corpus: Giant Germ battle-GY 500 burn is not a free ignition",
+                        germProg != null &&
+                        !germProg.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.Activate) &&
+                        germProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.RequiresThisDestroyedByBattle &&
+                            c.Action == EffectActionKind.InflictDamageToOpponent &&
+                            c.Amount == 500),
+                        germProg == null
+                            ? "null"
+                            : $"full={germProg.FullyCompiled} n={germProg.ClauseList.Count} " +
+                              $"unparsed={string.Join("|", germProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var tomato = db.Get(83011277);
+                    var tomatoProg = tomato != null ? CardTextEffectCompiler.Compile(tomato) : null;
+                    Check("Corpus: Mystic Tomato battle-GY DARK 1500 Deck SS is not a free ignition",
+                        tomatoProg != null && tomatoProg.FullyCompiled &&
+                        tomatoProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.RequiresThisDestroyedByBattle &&
+                            c.Action == EffectActionKind.SpecialSummonNamed &&
+                            c.FromDeck && c.AmountIsAtkMax && c.Amount == 1500 &&
+                            string.Equals(c.AttributeFilter, "DARK", StringComparison.OrdinalIgnoreCase)),
+                        tomatoProg == null
+                            ? "null"
+                            : $"full={tomatoProg.FullyCompiled} unparsed={string.Join("|", tomatoProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var birdface = db.Get(45547649);
+                    var bfProg = birdface != null ? CardTextEffectCompiler.Compile(birdface) : null;
+                    Check("Corpus: Birdface battle-GY named Harpie Lady search is not a free ignition",
+                        bfProg != null && bfProg.FullyCompiled &&
+                        bfProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.RequiresThisDestroyedByBattle &&
+                            c.Action == EffectActionKind.AddNamedFromDeckToHand &&
+                            string.Equals(c.NamedCard, "Harpie Lady", StringComparison.OrdinalIgnoreCase)),
+                        bfProg == null
+                            ? "null"
+                            : $"full={bfProg.FullyCompiled} unparsed={string.Join("|", bfProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var orchis = db.Get(46571052);
+                    var orchisProg = orchis != null ? CardTextEffectCompiler.Compile(orchis) : null;
+                    Check("Corpus: Vampiric Orchis NS named hand SS is not a free ignition",
+                        orchisProg != null && orchisProg.FullyCompiled &&
+                        !orchisProg.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.Activate) &&
+                        orchisProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.ThisCardSummoned &&
+                            c.RequiresThisNormalSummoned &&
+                            c.Action == EffectActionKind.SpecialSummonNamed &&
+                            c.FromHand &&
+                            string.Equals(c.NamedCard, "Des Dendle", StringComparison.OrdinalIgnoreCase)),
+                        orchisProg == null
+                            ? "null"
+                            : $"full={orchisProg.FullyCompiled} unparsed={string.Join("|", orchisProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var scarabs = db.Get(15383415);
+                    var scarabsProg = scarabs != null ? CardTextEffectCompiler.Compile(scarabs) : null;
+                    Check("Corpus: Swarm of Scarabs Flip Summon destroy is not a free extra ignition",
+                        scarabsProg != null && scarabsProg.FullyCompiled &&
+                        scarabsProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.SetThisFaceDownDefense) &&
+                        scarabsProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.RequiresThisFlipSummoned &&
+                            c.Action == EffectActionKind.Destroy &&
+                            c.RequiresTargetChoice),
+                        scarabsProg == null
+                            ? "null"
+                            : $"full={scarabsProg.FullyCompiled} unparsed={string.Join("|", scarabsProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var locusts = db.Get(41872150);
+                    var locustsProg = locusts != null ? CardTextEffectCompiler.Compile(locusts) : null;
+                    Check("Corpus: Swarm of Locusts Flip Summon ST destroy is not a free extra ignition",
+                        locustsProg != null && locustsProg.FullyCompiled &&
+                        locustsProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.RequiresThisFlipSummoned &&
+                            c.Action == EffectActionKind.Destroy &&
+                            c.Zone == EffectZoneFilter.FieldSpellTraps),
+                        locustsProg == null
+                            ? "null"
+                            : $"full={locustsProg.FullyCompiled} unparsed={string.Join("|", locustsProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var crater = db.Get(78243409);
+                    var craterProg = crater != null ? CardTextEffectCompiler.Compile(crater) : null;
+                    Check("Corpus: The Thing in the Crater destroyed-field Pyro hand SS is not battle-only",
+                        craterProg != null && craterProg.FullyCompiled &&
+                        !craterProg.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.Activate) &&
+                        craterProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.RequiresDestroyed &&
+                            !c.RequiresThisDestroyedByBattle &&
+                            c.Action == EffectActionKind.SpecialSummonFromHand &&
+                            string.Equals(c.RaceFilter, "Pyro", StringComparison.OrdinalIgnoreCase)),
+                        craterProg == null
+                            ? "null"
+                            : $"full={craterProg.FullyCompiled} unparsed={string.Join("|", craterProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var witchDoc = db.Get(75946257);
+                    var wdProg = witchDoc != null ? CardTextEffectCompiler.Compile(witchDoc) : null;
+                    Check("Corpus: Witch Doctor of Chaos FullyCompiled Flip either-GY banish",
+                        wdProg != null && wdProg.FullyCompiled &&
+                        !wdProg.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.Activate) &&
+                        wdProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Flip &&
+                            c.Action == EffectActionKind.Banish &&
+                            c.Zone == EffectZoneFilter.EitherGyMonsters &&
+                            c.RequiresTargetChoice),
+                        wdProg == null
+                            ? "null"
+                            : $"full={wdProg.FullyCompiled} n={wdProg.ClauseList.Count} " +
+                              $"unparsed={string.Join("|", wdProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var statue = db.Get(75209824);
+                    var statueProg = statue != null ? CardTextEffectCompiler.Compile(statue) : null;
+                    Check("Corpus: Guardian Statue FullyCompiled Flip Summon bounce + set-FD",
+                        statueProg != null && statueProg.FullyCompiled &&
+                        statueProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.SetThisFaceDownDefense &&
+                            c.OncePerTurn) &&
+                        statueProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.RequiresThisFlipSummoned &&
+                            c.Action == EffectActionKind.ReturnToHand &&
+                            c.RequiresTargetChoice),
+                        statueProg == null
+                            ? "null"
+                            : $"full={statueProg.FullyCompiled} unparsed={string.Join("|", statueProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var medusa = db.Get(2694423);
+                    var medusaProg = medusa != null ? CardTextEffectCompiler.Compile(medusa) : null;
+                    Check("Corpus: Medusa Worm FullyCompiled Flip Summon destroy + set-FD",
+                        medusaProg != null && medusaProg.FullyCompiled &&
+                        medusaProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.SetThisFaceDownDefense &&
+                            c.OncePerTurn) &&
+                        medusaProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.RequiresThisFlipSummoned &&
+                            c.Action == EffectActionKind.Destroy &&
+                            c.RequiresTargetChoice),
+                        medusaProg == null
+                            ? "null"
+                            : $"full={medusaProg.FullyCompiled} unparsed={string.Join("|", medusaProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var moai = db.Get(45159319);
+                    var moaiProg = moai != null ? CardTextEffectCompiler.Compile(moai) : null;
+                    Check("Corpus: Moai Interceptor Cannons FullyCompiled OPT set-FD",
+                        moaiProg != null && moaiProg.FullyCompiled &&
+                        moaiProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.SetThisFaceDownDefense &&
+                            c.OncePerTurn),
+                        moaiProg == null
+                            ? "null"
+                            : $"full={moaiProg.FullyCompiled} unparsed={string.Join("|", moaiProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var immortal = db.Get(84926738);
+                    var immortalProg = immortal != null ? CardTextEffectCompiler.Compile(immortal) : null;
+                    Check("Corpus: Immortal of Thunder Flip gain 3000 LP compiles; GY lose leftover",
+                        immortalProg != null && !immortalProg.FullyCompiled &&
+                        immortalProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Flip &&
+                            c.Action == EffectActionKind.GainLifePoints &&
+                            c.Amount == 3000),
+                        immortalProg == null
+                            ? "null"
+                            : $"full={immortalProg.FullyCompiled} unparsed={string.Join("|", immortalProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var spirit = db.Get(48659020);
+                    var spiritProg = spirit != null ? CardTextEffectCompiler.Compile(spirit) : null;
+                    Check("Corpus: Spirit Caller FullyCompiled Flip Level-3-or-lower Normal GY SS",
+                        spiritProg != null && spiritProg.FullyCompiled &&
+                        spiritProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Flip &&
+                            c.Action == EffectActionKind.SpecialSummonFromGy &&
+                            c.Zone == EffectZoneFilter.ControllerGyMonsters &&
+                            c.RequiresNormalMonster &&
+                            c.AmountIsLevel && c.Amount == 3 &&
+                            c.RequiresTargetChoice && c.IsOptional),
+                        spiritProg == null
+                            ? "null"
+                            : $"full={spiritProg.FullyCompiled} unparsed={string.Join("|", spiritProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var synSpirit = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000041,
+                        name = "Flip GY Normal SS (new-card shape)",
+                        type = "Flip Effect Monster",
+                        desc =
+                            "FLIP: You can Special Summon 1 Level 3 or lower Normal Monster from your Graveyard to your side of the field."
+                    });
+                    Check("New-card rule: Spirit Caller-shaped text compiles without a cardId branch",
+                        synSpirit != null && synSpirit.FullyCompiled &&
+                        synSpirit.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Flip &&
+                            c.Action == EffectActionKind.SpecialSummonFromGy &&
+                            c.RequiresNormalMonster && c.AmountIsLevel && c.Amount == 3));
+
+                    var gkSpy = db.Get(24317029);
+                    var gkSpyProg = gkSpy != null ? CardTextEffectCompiler.Compile(gkSpy) : null;
+                    Check("Corpus: Gravekeeper's Spy FullyCompiled Flip series ATK<=1500 Deck SS",
+                        gkSpyProg != null && gkSpyProg.FullyCompiled &&
+                        gkSpyProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Flip &&
+                            c.Action == EffectActionKind.SpecialSummonNamed &&
+                            c.FromDeck && c.NamedCardIsSeries && c.AmountIsAtkMax &&
+                            c.Amount == 1500 &&
+                            string.Equals(c.NamedCard, "Gravekeeper's", StringComparison.OrdinalIgnoreCase)),
+                        gkSpyProg == null
+                            ? "null"
+                            : $"full={gkSpyProg.FullyCompiled} unparsed={string.Join("|", gkSpyProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var decayed = db.Get(10209545);
+                    var decayedProg = decayed != null ? CardTextEffectCompiler.Compile(decayed) : null;
+                    Check("Corpus: Decayed Commander NS named hand SS compiles; battle-damage leftover",
+                        decayedProg != null && !decayedProg.FullyCompiled &&
+                        decayedProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.RequiresThisNormalSummoned &&
+                            c.Action == EffectActionKind.SpecialSummonNamed &&
+                            c.FromHand &&
+                            string.Equals(c.NamedCard, "Zombie Tiger", StringComparison.OrdinalIgnoreCase)),
+                        decayedProg == null
+                            ? "null"
+                            : $"full={decayedProg.FullyCompiled} unparsed={string.Join("|", decayedProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var cobra = db.Get(86801871);
+                    var cobraProg = cobra != null ? CardTextEffectCompiler.Compile(cobra) : null;
+                    Check("Corpus: Cobra Jar Flip token SS compiles; battle-destroyed inflict leftover",
+                        cobraProg != null && !cobraProg.FullyCompiled &&
+                        cobraProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Flip &&
+                            c.Action == EffectActionKind.SpecialSummonToken &&
+                            c.TokenLevel == 3 && c.TokenAtk == 1200 && c.TokenDef == 1200 &&
+                            string.Equals(c.TokenName, "Poisonous Snake Token",
+                                StringComparison.OrdinalIgnoreCase)) &&
+                        !cobraProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.InflictDamageToOpponent),
+                        cobraProg == null
+                            ? "null"
+                            : $"full={cobraProg.FullyCompiled} n={cobraProg.ClauseList.Count} " +
+                              $"unparsed={string.Join("|", cobraProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var synCobra = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000042,
+                        name = "Flip token Stars (new-card shape)",
+                        type = "Flip Effect Monster",
+                        desc =
+                            "FLIP: Special Summon 1 \"Poisonous Snake Token\" (Reptile-Type/EARTH/3 Stars/ATK 1200/DEF 1200)."
+                    });
+                    Check("New-card rule: Flip token with Stars compiles without a cardId branch",
+                        synCobra != null && synCobra.FullyCompiled &&
+                        synCobra.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Flip &&
+                            c.Action == EffectActionKind.SpecialSummonToken &&
+                            c.TokenLevel == 3 && c.TokenAtk == 1200));
+
+                    var incarnate = db.Get(97093037);
+                    var incProg = incarnate != null ? CardTextEffectCompiler.Compile(incarnate) : null;
+                    Check("Corpus: The Creator Incarnate FullyCompiled tribute-this named hand SS",
+                        incProg != null && incProg.FullyCompiled &&
+                        incProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Activate &&
+                            c.RequiresTributeThis &&
+                            c.Action == EffectActionKind.SpecialSummonNamed &&
+                            c.FromHand &&
+                            string.Equals(c.NamedCard, "The Creator", StringComparison.OrdinalIgnoreCase)),
+                        incProg == null
+                            ? "null"
+                            : $"full={incProg.FullyCompiled} unparsed={string.Join("|", incProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var chick = db.Get(36262024);
+                    var chickProg = chick != null ? CardTextEffectCompiler.Compile(chick) : null;
+                    Check("Corpus: Black Dragon's Chick FullyCompiled send-this named hand SS",
+                        chickProg != null && chickProg.FullyCompiled &&
+                        chickProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Activate &&
+                            c.RequiresSendThisToGy &&
+                            c.Action == EffectActionKind.SpecialSummonNamed &&
+                            c.FromHand &&
+                            string.Equals(c.NamedCard, "Red-Eyes B. Dragon",
+                                StringComparison.OrdinalIgnoreCase)),
+                        chickProg == null
+                            ? "null"
+                            : $"full={chickProg.FullyCompiled} unparsed={string.Join("|", chickProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+
+                    var gym = db.Get(7512044);
+                    var gymProg = gym != null ? CardTextEffectCompiler.Compile(gym) : null;
+                    Check("Corpus: Gather Your Mind FullyCompiled named Deck add (shuffle absorbed; Oath OPT boilerplate)",
+                        gymProg != null && gymProg.FullyCompiled &&
+                        gymProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Activate &&
+                            c.Action == EffectActionKind.AddNamedFromDeckToHand &&
+                            c.FromDeck &&
+                            string.Equals(c.NamedCard, "Gather Your Mind", StringComparison.OrdinalIgnoreCase)),
+                        gymProg == null
+                            ? "null"
+                            : $"full={gymProg.FullyCompiled} unparsed={string.Join("|", gymProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var synGym = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000043,
+                        name = "Named Deck add (new-card shape)",
+                        type = "Spell Card",
+                        race = "Normal",
+                        desc = "Add 1 \"Named Deck add (new-card shape)\" card from your Deck to your hand."
+                    });
+                    Check("New-card rule: named Deck add compiles without a cardId branch",
+                        synGym != null && synGym.FullyCompiled &&
+                        synGym.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.AddNamedFromDeckToHand &&
+                            string.Equals(c.NamedCard, "Named Deck add (new-card shape)",
+                                StringComparison.OrdinalIgnoreCase)));
+
+                    var venus = db.Get(64734921);
+                    var venusProg = venus != null ? CardTextEffectCompiler.Compile(venus) : null;
+                    Check("Corpus: Venus FullyCompiled pay-500 named hand-or-Deck SS",
+                        venusProg != null && venusProg.FullyCompiled &&
+                        venusProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Activate &&
+                            c.PayLpAmount == 500 &&
+                            c.Action == EffectActionKind.SpecialSummonNamed &&
+                            c.FromHand && c.FromDeck &&
+                            string.Equals(c.NamedCard, "Mystical Shine Ball",
+                                StringComparison.OrdinalIgnoreCase)),
+                        venusProg == null
+                            ? "null"
+                            : $"full={venusProg.FullyCompiled} unparsed={string.Join("|", venusProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var ladybug = db.Get(83994646);
+                    var ladybugProg = ladybug != null ? CardTextEffectCompiler.Compile(ladybug) : null;
+                    Check("Corpus: 4-Starred Ladybug FullyCompiled Flip destroy opp Level 4",
+                        ladybugProg != null && ladybugProg.FullyCompiled &&
+                        ladybugProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Flip &&
+                            c.Action == EffectActionKind.Destroy &&
+                            c.AmountIsLevel && c.Amount == 4 &&
+                            c.Side == EffectSide.Opponent &&
+                            !c.RequiresTargetChoice),
+                        ladybugProg == null
+                            ? "null"
+                            : $"full={ladybugProg.FullyCompiled} unparsed={string.Join("|", ladybugProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var grizz = db.Get(57839750);
+                    var grizzProg = grizz != null ? CardTextEffectCompiler.Compile(grizz) : null;
+                    Check("Corpus: Mother Grizzly battle-GY WATER 1500 Deck SS is not a free ignition",
+                        grizzProg != null && grizzProg.FullyCompiled &&
+                        !grizzProg.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.Activate) &&
+                        grizzProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.RequiresThisDestroyedByBattle &&
+                            c.Action == EffectActionKind.SpecialSummonNamed &&
+                            c.FromDeck && c.AmountIsAtkMax && c.Amount == 1500 &&
+                            string.Equals(c.AttributeFilter, "WATER", StringComparison.OrdinalIgnoreCase)),
+                        grizzProg == null
+                            ? "null"
+                            : $"full={grizzProg.FullyCompiled} unparsed={string.Join("|", grizzProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var blRitual = db.Get(55761792);
+                    var blrProg = blRitual != null ? CardTextEffectCompiler.Compile(blRitual) : null;
+                    Check("Corpus: Black Luster Ritual leftover (no invented Ritual Summon)",
+                        blrProg != null && !blrProg.FullyCompiled &&
+                        !blrProg.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.SpecialSummonNamed ||
+                             c.Action == EffectActionKind.SpecialSummonFromHand ||
+                             c.Action == EffectActionKind.SpecialSummonThisFromHand)));
+
                     var poison = db.Get(40320754);
                     var poisonProg = poison != null ? CardTextEffectCompiler.Compile(poison) : null;
                     Check("Corpus: Lord Poison battle-destroyed GY SS is not a free ignition",
-                        poisonProg != null && !poisonProg.FullyCompiled);
+                        poisonProg != null && poisonProg.FullyCompiled &&
+                        !poisonProg.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.Activate) &&
+                        poisonProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.SentFromFieldToGy &&
+                            c.RequiresThisDestroyedByBattle &&
+                            c.Action == EffectActionKind.SpecialSummonFromGy &&
+                            c.Zone == EffectZoneFilter.ControllerGyMonsters &&
+                            string.Equals(c.RaceFilter, "Plant", StringComparison.OrdinalIgnoreCase) &&
+                            string.Equals(c.ExceptNamedCard, "Lord Poison",
+                                StringComparison.OrdinalIgnoreCase)),
+                        poisonProg == null
+                            ? "null"
+                            : $"full={poisonProg.FullyCompiled} n={poisonProg.ClauseList.Count} " +
+                              $"unparsed={string.Join("|", poisonProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var desert = db.Get(13409151);
+                    var desertProg = desert != null ? CardTextEffectCompiler.Compile(desert) : null;
+                    Check("Corpus: Desertapir FullyCompiled Flip set-FD except itself",
+                        desertProg != null && desertProg.FullyCompiled &&
+                        desertProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Flip &&
+                            c.Action == EffectActionKind.SetTargetFaceDownDefense &&
+                            string.Equals(c.ExceptNamedCard, "Desertapir",
+                                StringComparison.OrdinalIgnoreCase)),
+                        desertProg == null
+                            ? "null"
+                            : $"full={desertProg.FullyCompiled} unparsed={string.Join("|", desertProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var clown = db.Get(42647539);
+                    var clownProg = clown != null ? CardTextEffectCompiler.Compile(clown) : null;
+                    Check("Corpus: Ryu-Kishin Clown FullyCompiled Summoned change position",
+                        clownProg != null && clownProg.FullyCompiled &&
+                        clownProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.ThisCardSummoned &&
+                            c.Action == EffectActionKind.ChangeBattlePosition &&
+                            c.RequiresTargetChoice),
+                        clownProg == null
+                            ? "null"
+                            : $"full={clownProg.FullyCompiled} unparsed={string.Join("|", clownProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var bow = db.Get(52090844);
+                    var bowProg = bow != null ? CardTextEffectCompiler.Compile(bow) : null;
+                    Check("Corpus: Bowganian FullyCompiled Standby inflict 600",
+                        bowProg != null && bowProg.FullyCompiled &&
+                        bowProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.StandbyPhase &&
+                            c.Action == EffectActionKind.InflictDamageToOpponent &&
+                            c.Amount == 600),
+                        bowProg == null
+                            ? "null"
+                            : $"full={bowProg.FullyCompiled} unparsed={string.Join("|", bowProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var sage = db.Get(13604200);
+                    var sageProg = sage != null ? CardTextEffectCompiler.Compile(sage) : null;
+                    Check("Corpus: Sage's Stone leftover (no invented If-you-control spell lock)",
+                        sageProg != null && !sageProg.FullyCompiled &&
+                        !sageProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.SpecialSummonNamed));
+
+                    var release = db.Get(75417459);
+                    var relProg = release != null ? CardTextEffectCompiler.Compile(release) : null;
+                    Check("Corpus: Release Restraint leftover (no invented tribute-named spell)",
+                        relProg != null && !relProg.FullyCompiled);
+
+                    var ktitle = db.Get(87210505);
+                    var ktProg = ktitle != null ? CardTextEffectCompiler.Compile(ktitle) : null;
+                    Check("Corpus: Knight's Title leftover (no invented tribute-named spell)",
+                        ktProg != null && !ktProg.FullyCompiled);
+
+                    var dekoichi = db.Get(87621407);
+                    var dekProg = dekoichi != null ? CardTextEffectCompiler.Compile(dekoichi) : null;
+                    Check("Corpus: Dekoichi scaled extra-draw leftover (not invented)",
+                        dekProg != null && !dekProg.FullyCompiled);
+
+                    var lady = db.Get(90147755);
+                    var ladyProg = lady != null ? CardTextEffectCompiler.Compile(lady) : null;
+                    Check("Corpus: Lady Assailant banish-top-3 leftover (not invented)",
+                        ladyProg != null && !ladyProg.FullyCompiled);
 
                     var remedy = db.Get(11868825);
                     var rp = remedy != null ? CardTextEffectCompiler.Compile(remedy) : null;

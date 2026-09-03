@@ -44,7 +44,9 @@ namespace WRLDZ.Duel
         public static bool CanBeTributedForSummon(DuelistState who, CardInstance monster)
         {
             if (who == null || monster == null) return false;
-            if (monster.IsToken && monster.CannotBeTributedForSummon) return false;
+            // Face-up printed lock (Fox Fire) and token lock (Ojama) share this flag.
+            if (monster.CannotBeTributedForSummon && monster.FaceUp && !monster.IsNegated)
+                return false;
             return who.TryFindMonster(monster, out _);
         }
 

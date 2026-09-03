@@ -16,7 +16,7 @@ namespace WRLDZ.Duel.TextEffects
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxStandbyDmgOpp = new(
-            @"during your standby phase:\s*inflict (\d+) damage to your opponent",
+            @"(?:Once per turn,\s*)?during your standby phase:\s*inflict (\d+) damage to your opponent\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxStandbyGainLp = new(
@@ -47,7 +47,7 @@ namespace WRLDZ.Duel.TextEffects
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxLvSendSs = new(
-            @"during (?:your standby phase|the end phase)[^.]{0,80}?:\s*you can send this (?:face-up )?card to the (?:GY|Graveyard);\s*" +
+            @"(?:once per turn,\s*)?during (?:your standby phase|the end phase)[^.]{0,80}?:\s*you can send this (?:face-up )?card to the (?:GY|Graveyard);\s*" +
             @"special summon 1 ""([^""]+)"" from your hand or deck",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
@@ -83,6 +83,18 @@ namespace WRLDZ.Duel.TextEffects
 
         static readonly Regex RxStandbyTurnPlayerTakesDmg = new(
             @"During each player's Standby Phase:\s*The turn player takes (\d+) damage\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Fox Fire family. Official text: End Phase, if this card was destroyed by battle
+        /// and sent to the GY this turn (and was face-up at the start of the Damage Step):
+        /// Special Summon this card from the GY.
+        /// Ignis/OcgCore c88753985: EVENT_BATTLE_DESTROYED registers PHASE_END TRIGGER_F.
+        /// </summary>
+        static readonly Regex RxEndPhaseBattleGySelfSs = new(
+            @"During the End Phase, if this card was destroyed by battle and sent to the (?:GY|Graveyard) this turn" +
+            @"(?: and was face-up at the start of the Damage Step)?:\s*" +
+            @"Special Summon this card from the (?:GY|Graveyard)\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         public static void Collect(string text, CardDef def,
@@ -169,6 +181,7 @@ namespace WRLDZ.Duel.TextEffects
                     FromHand = true,
                     FromDeck = true,
                     IsOptional = true,
+                    OncePerTurn = Regex.IsMatch(lv.Value, @"once per turn", RegexOptions.IgnoreCase),
                     RequiresDestroyedByBattleThisTurn = end &&
                         Regex.IsMatch(lv.Value, @"destroyed a monster by battle", RegexOptions.IgnoreCase),
                     MakesChainLink = true
@@ -238,6 +251,15 @@ namespace WRLDZ.Duel.TextEffects
                     MakesChainLink = true
                 }
                 : null);
+
+            Add(RxEndPhaseBattleGySelfSs.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.EndPhase,
+                Action = EffectActionKind.SpecialSummonFromGy,
+                ResolvesFromGy = true,
+                RequiresThisDestroyedByBattle = true,
+                MakesChainLink = true
+            });
         }
 
         public static void ExpectedActions(CardDef def, System.Collections.Generic.List<EffectActionKind> need)
@@ -258,6 +280,8 @@ namespace WRLDZ.Duel.TextEffects
                 need.Add(EffectActionKind.Destroy);
             if (RxStandbyTurnPlayerTakesDmg.IsMatch(text))
                 need.Add(EffectActionKind.TakeEffectDamage);
+            if (RxEndPhaseBattleGySelfSs.IsMatch(text))
+                need.Add(EffectActionKind.SpecialSummonFromGy);
         }
 
         static int Parse(Match m, int g, int fb)

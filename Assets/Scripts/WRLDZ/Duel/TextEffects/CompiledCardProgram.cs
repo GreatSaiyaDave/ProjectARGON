@@ -188,7 +188,12 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         ApplyLingeringAtkDef,
         /// <summary>Send the top Amount cards of Side's Deck to the GY (Needle Worm).</summary>
-        SendFromTopOfDeckToGy
+        SendFromTopOfDeckToGy,
+        /// <summary>
+        /// This face-up card cannot be Tributed for a Tribute Summon (Fox Fire).
+        /// Honored via CardInstance.CannotBeTributedForSummon.
+        /// </summary>
+        CannotBeTributedForSummon
     }
 
     public enum EffectSide
@@ -238,7 +243,9 @@ namespace WRLDZ.Duel.TextEffects
         /// <summary>Traps in the controller's GY (Mask of Darkness).</summary>
         ControllerGyTraps,
         /// <summary>Face-up Field Spell Zones on either field (Burning Land).</summary>
-        FieldSpellsOnField
+        FieldSpellsOnField,
+        /// <summary>Equip Spells in the controller's Deck (Iron Blacksmith Kotetsu).</summary>
+        DeckEquipSpells
     }
 
     /// <summary>One parsed clause from official card text.</summary>
@@ -312,6 +319,11 @@ namespace WRLDZ.Duel.TextEffects
         public bool BanishFromGyUpTo;
         /// <summary>Quoted name for SpecialSummonNamed / AddNamedFromDeckToHand / tribute name filter.</summary>
         public string NamedCard;
+        /// <summary>
+        /// Target cannot have this printed / rules name
+        /// (Lord Poison: except "Lord Poison"). Distinct from TributeExceptThis.
+        /// </summary>
+        public string ExceptNamedCard;
         /// <summary>SpecialSummonNamed may use the hand.</summary>
         public bool FromHand;
         /// <summary>SpecialSummonNamed / add may use the Deck.</summary>
@@ -378,6 +390,8 @@ namespace WRLDZ.Duel.TextEffects
         public bool RequiresSummonedOrFlippedThisTurn;
         /// <summary>Des Lacooda: "When this card is Flip Summoned" — not NS/SS or battle flip.</summary>
         public bool RequiresThisFlipSummoned;
+        /// <summary>Vampiric Orchis family: "When this card is Normal Summoned" — not FS/SS.</summary>
+        public bool RequiresThisNormalSummoned;
         /// <summary>
         /// Ectoplasmer: the turn player tributes (not the card's controller).
         /// Damage goes to that player's opponent.

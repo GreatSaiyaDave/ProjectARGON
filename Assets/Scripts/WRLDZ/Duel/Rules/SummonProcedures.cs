@@ -77,18 +77,13 @@ namespace WRLDZ.Duel.Rules
                 return r;
             }
 
-            var nomi = CompiledEffectCache.GetOrCompile(card.Def);
-            if (nomi != null &&
-                nomi.ClauseList.Exists(c =>
-                    c != null && c.Action == EffectActionKind.SpecialSummonThisFromHand))
+            // Printed "Cannot be Normal Summoned/Set" / "Must first be Special Summoned".
+            // Do not treat inherent SS-from-hand (Cyber Dragon) as nomi — that stays NS-legal.
+            if (PsctGrammar.BlocksNormalSummonOrSet(OfficialCardAuthority.OfficialText(card)))
             {
-                r.Reason =
-                    "This card cannot be Normal Summoned/Set (Special Summon by its listed procedure).";
+                r.Reason = "This card cannot be Normal Summoned/Set.";
                 return r;
             }
-
-            // Official "Cannot be Normal Summoned/Set" only if scripted — structural allow otherwise
-            // for main-deck monsters without that condition registered.
 
             if (!who.Hand.Contains(card))
             {

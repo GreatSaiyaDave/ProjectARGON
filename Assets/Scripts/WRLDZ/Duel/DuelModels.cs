@@ -118,7 +118,10 @@ namespace WRLDZ.Duel
         /// <summary>Destroyed an opponent's monster by battle this turn (LV / Insect Queen).</summary>
         public bool DestroyedByBattleThisTurn;
 
-        /// <summary>Ojama Tokens, etc.: cannot be Tributed for a Tribute Summon.</summary>
+        /// <summary>
+        /// Cannot be Tributed for a Tribute Summon while face-up
+        /// (Ojama Tokens; Fox Fire leftover sentence).
+        /// </summary>
         public bool CannotBeTributedForSummon;
 
         /// <summary>Controller takes this much damage when this Token is destroyed.</summary>
