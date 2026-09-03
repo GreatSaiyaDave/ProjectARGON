@@ -15,11 +15,10 @@ using WRLDZ.UI;
 namespace WRLDZ.UI.Shell
 {
     /// <summary>
-    /// Deck builder: active deck switcher (tap = upward dropdown, hold = options) +
-    /// collection | deck grids with live search and filters. COLLECTION / DECK
-    /// headers choose which side the filters apply to. Home copies greyed.
+    /// Deck builder: construction board (Main/Extra/Side always visible) +
+    /// searchable card list. Home copies greyed. Phone edits; AR holo is read-only.
     /// </summary>
-    public static class DeckCollectionScreen
+    public static partial class DeckCollectionScreen
     {
         /// <summary>Actions = hold-menu; Editor = builder. Select is unused (switcher replaces list).</summary>
         enum Phase { Select = 0, Actions, Editor }
@@ -55,19 +54,24 @@ namespace WRLDZ.UI.Shell
         // HudChip borders (16+16) collapse the text rect to 0 and Unity draws no glyphs.
         const float ChromeNameY0 = 0.88f;
         const float ChromeNameY1 = 1f;
-        const float ChromeToolY0 = 0.800f;
-        const float ChromeToolY1 = 0.868f;
-        const float SearchY0 = 0.738f;
-        const float SearchY1 = 0.788f;
+        const float ChromeToolY0 = 0.848f;
+        const float ChromeToolY1 = 0.900f;
+        const float SearchY0 = 0.848f;
+        const float SearchY1 = 0.900f;
         const float ScopeY0 = 0.684f;
         const float ScopeY1 = 0.726f;
-        const float FilterIcoY0 = 0.632f;
-        const float FilterIcoY1 = 0.672f;
+        const float FilterIcoY0 = 0.848f;
+        const float FilterIcoY1 = 0.900f;
         const float ChipY0 = 0.584f;
         const float ChipY1 = 0.620f;
         const float GridTopChips = 0.578f;
         const float GridTopClear = 0.626f;
         const float NamePillX1 = 0.86f;
+        const float SwitcherX1 = 0.50f;
+        const float BoardY0 = 0.400f;
+        const float BoardY1 = 0.840f;
+        const float ListY0 = 0.000f;
+        const float ListY1 = 0.368f;
 
         static readonly string[] AttributeOptions =
             { "DARK", "LIGHT", "EARTH", "WATER", "FIRE", "WIND", "DIVINE" };
@@ -166,6 +170,21 @@ namespace WRLDZ.UI.Shell
             public Text PoolHeader;
             public Text DeckHeader;
             public Text MatchLine;
+            public RectTransform BoardHost;
+            public RectTransform MainTray;
+            public RectTransform ExtraTray;
+            public RectTransform SideTray;
+            public Transform MainSlots;
+            public Transform ExtraSlots;
+            public Transform SideSlots;
+            public ScrollRect MainScroll;
+            public ScrollRect ExtraScroll;
+            public ScrollRect SideScroll;
+            public Text MainCountLab;
+            public Text ExtraCountLab;
+            public Text SideCountLab;
+            public Image MainMeter;
+            public Section DragSection;
             public List<PoolRow> PoolRows;
             public int PoolVisible;
             public bool PoolAppending;
@@ -197,7 +216,7 @@ namespace WRLDZ.UI.Shell
             FloatingPanel.Stretch(root);
             var dim = root.GetComponent<Image>();
             dim.sprite = UiFoundation.WhiteSprite();
-            dim.color = new Color(0.01f, 0.02f, 0.05f, 0.10f);
+            dim.color = new Color(0.02f, 0.03f, 0.07f, 0.78f);
             dim.raycastTarget = true;
 
             var win = new GameObject("DeckMenuWindow", typeof(RectTransform), typeof(Image))
@@ -205,8 +224,18 @@ namespace WRLDZ.UI.Shell
             win.SetParent(root, false);
             FloatingPanel.Place(win, 0.0f, 0.0f, 1f, 1f);
             var wImg = win.GetComponent<Image>();
-            wImg.sprite = UiFoundation.WhiteSprite();
-            wImg.color = new Color(0.04f, 0.06f, 0.10f, 0.06f);
+            var deckBg = ImagineAssets.BgDeckBuilder();
+            if (deckBg != null)
+            {
+                wImg.sprite = deckBg;
+                wImg.color = new Color(1f, 1f, 1f, 0.62f);
+                wImg.preserveAspect = false;
+            }
+            else
+            {
+                wImg.sprite = UiFoundation.WhiteSprite();
+                wImg.color = new Color(0.04f, 0.06f, 0.10f, 0.06f);
+            }
             wImg.raycastTarget = true;
             var winBtn = win.gameObject.AddComponent<Button>();
             winBtn.targetGraphic = wImg;
@@ -543,9 +572,10 @@ namespace WRLDZ.UI.Shell
             t.alignment = TextAnchor.MiddleCenter;
 
             var le = go.GetComponent<LayoutElement>();
-            le.minHeight = compact ? 34f : 48f;
+            le.minHeight = compact ? 34f : 44f;
             le.preferredHeight = le.minHeight;
             le.flexibleWidth = 1f;
+            le.flexibleHeight = 0f;
 
             var btn = go.GetComponent<Button>();
             btn.targetGraphic = img;
@@ -590,9 +620,11 @@ namespace WRLDZ.UI.Shell
             return t;
         }
 
-        static readonly Color GlassQuiet = new(0.05f, 0.09f, 0.14f, 0.72f);
-        static readonly Color GlassCyan = new(0.08f, 0.38f, 0.50f, 0.48f);
-        static readonly Color GlassRose = new(0.48f, 0.10f, 0.16f, 0.42f);
+        static readonly Color GlassQuiet = new(0.08f, 0.12f, 0.18f, 0.94f);
+        static readonly Color GlassCyan = new(0.10f, 0.42f, 0.52f, 0.94f);
+        static readonly Color GlassGold = new(0.32f, 0.24f, 0.06f, 0.94f);
+        static readonly Color GlassRose = new(0.48f, 0.10f, 0.16f, 0.94f);
+        static readonly Color EdgeGold = new(0.95f, 0.82f, 0.32f, 1f);
         static readonly Color GlassOn = new(0.16f, 0.55f, 0.70f, 0.28f);
         static readonly Color EdgeCyan = new(0.35f, 0.82f, 0.98f, 0.42f);
         static readonly Color EdgeRose = new(1f, 0.38f, 0.44f, 0.40f);
@@ -600,8 +632,9 @@ namespace WRLDZ.UI.Shell
         static void StyleGlass(Image img, Color fill, Color edge)
         {
             if (img == null) return;
-            img.sprite = UiFoundation.WhiteSprite();
-            img.type = Image.Type.Simple;
+            img.sprite = UiTheme.RoundedRectSprite() ?? UiFoundation.WhiteSprite();
+            img.type = img.sprite != null && img.sprite.border.sqrMagnitude > 0
+                ? Image.Type.Sliced : Image.Type.Simple;
             img.color = fill;
             var ol = img.GetComponent<Outline>() ?? img.gameObject.AddComponent<Outline>();
             ol.effectColor = edge;
@@ -626,9 +659,53 @@ namespace WRLDZ.UI.Shell
 
         static Button GlassAction(Transform parent, string label, Color fill, Color edge, Action onClick)
         {
-            var b = DeckChromeButton(parent, label, onClick, fill, compact: true);
+            var b = DeckChromeButton(parent, label, onClick, fill, compact: false);
             StyleGlass(b.GetComponent<Image>(), fill, edge);
-            StyleChromeType(b.GetComponentInChildren<Text>(), 14, TextAnchor.MiddleCenter,
+            var t = b.GetComponentInChildren<Text>();
+            WrldzType.StyleButtonLabel(t, 18, display: false);
+            t.alignment = TextAnchor.MiddleCenter;
+            t.horizontalOverflow = HorizontalWrapMode.Overflow;
+            t.verticalOverflow = VerticalWrapMode.Overflow;
+            return b;
+        }
+
+        /// <summary>Pin a toolbar control to the top of the sheet at a fixed pixel height.</summary>
+        static void PinTop(RectTransform rt, float x0, float x1, float fromTop, float height)
+        {
+            if (rt == null) return;
+            rt.anchorMin = new Vector2(x0, 1f);
+            rt.anchorMax = new Vector2(x1, 1f);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+            rt.sizeDelta = new Vector2(0f, height);
+            rt.anchoredPosition = new Vector2(0f, -fromTop);
+        }
+
+        /// <summary>Stretch a panel from a pixel offset below the top down to a normalized bottom.</summary>
+        static void PinBelow(RectTransform rt, float x0, float x1, float fromTop, float y0)
+        {
+            if (rt == null) return;
+            rt.anchorMin = new Vector2(x0, y0);
+            rt.anchorMax = new Vector2(x1, 1f);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = new Vector2(0f, -fromTop);
+        }
+
+        static Button PlateAction(Transform parent, string label, Sprite plate, Action onClick)
+        {
+            var b = DeckChromeButton(parent, label, onClick, Color.white, compact: false);
+            var img = b.GetComponent<Image>();
+            if (plate != null)
+            {
+                img.sprite = plate;
+                img.type = plate.border.sqrMagnitude > 0.1f ? Image.Type.Sliced : Image.Type.Simple;
+                img.color = Color.white;
+                var ol = img.GetComponent<Outline>();
+                if (ol != null) ol.enabled = false;
+            }
+            StyleChromeType(b.GetComponentInChildren<Text>(), 16, TextAnchor.MiddleCenter,
                 DuelystUi.TextCream);
             return b;
         }
@@ -767,26 +844,17 @@ namespace WRLDZ.UI.Shell
 
         static Text DeckNameLabel(Transform parent, string text, Color color)
         {
-            var go = new GameObject("Name", typeof(RectTransform), typeof(Text), typeof(Outline));
+            var go = new GameObject("Name", typeof(RectTransform), typeof(Text));
             go.transform.SetParent(parent, false);
             var t = go.GetComponent<Text>();
-            t.font = UiFoundation.BuiltinFont();
-            t.fontSize = 16;
-            t.fontStyle = FontStyle.Bold;
+            WrldzType.StyleButtonLabel(t, 20, display: false);
             t.text = text ?? "Deck";
-            t.color = color;
+            t.color = color.a > 0.01f ? color : Color.white;
             t.alignment = TextAnchor.MiddleLeft;
             t.horizontalOverflow = HorizontalWrapMode.Overflow;
             t.verticalOverflow = VerticalWrapMode.Overflow;
-            t.resizeTextForBestFit = true;
-            t.resizeTextMinSize = 11;
-            t.resizeTextMaxSize = 18;
+            t.resizeTextForBestFit = false;
             t.raycastTarget = false;
-            t.supportRichText = false;
-            t.alignByGeometry = false;
-            var o = go.GetComponent<Outline>();
-            o.effectColor = Color.black;
-            o.effectDistance = new Vector2(1.6f, -1.6f);
             return t;
         }
 
@@ -822,7 +890,7 @@ namespace WRLDZ.UI.Shell
             // Simple, not 9-sliced: sliced HudChip borders eat the whole short row.
             bg.sprite = UiFoundation.WhiteSprite();
             bg.type = Image.Type.Simple;
-            bg.color = new Color(0.07f, 0.12f, 0.20f, 1f);
+            bg.color = new Color(0.12f, 0.18f, 0.28f, 1f);
             bg.raycastTarget = true;
             var edge = host.AddComponent<Outline>();
             edge.effectColor = new Color(0.40f, 0.85f, 1f, 0.85f);
@@ -840,7 +908,7 @@ namespace WRLDZ.UI.Shell
             icoRt.anchorMax = new Vector2(0f, 0.5f);
             icoRt.pivot = new Vector2(0f, 0.5f);
             icoRt.anchoredPosition = new Vector2(6f, 0f);
-            icoRt.sizeDelta = new Vector2(48f, 48f);
+            icoRt.sizeDelta = new Vector2(40f, 40f);
             var icoBg = icoHit.GetComponent<Image>();
             icoBg.sprite = UiFoundation.WhiteSprite();
             icoBg.color = new Color(1f, 1f, 1f, 0.06f);
@@ -855,17 +923,13 @@ namespace WRLDZ.UI.Shell
             var nameRt = nameHit.GetComponent<RectTransform>();
             nameRt.anchorMin = new Vector2(0f, 0.12f);
             nameRt.anchorMax = new Vector2(1f, 0.88f);
-            nameRt.offsetMin = new Vector2(56f, 0f);
+            nameRt.offsetMin = new Vector2(48f, 0f);
             nameRt.offsetMax = new Vector2(-40f, 0f);
             var nBg = nameHit.GetComponent<Image>();
             nBg.sprite = UiFoundation.WhiteSprite();
-            nBg.color = new Color(0.02f, 0.04f, 0.08f, 0.55f);
+            nBg.color = new Color(1f, 1f, 1f, 0f);
             nBg.raycastTarget = true;
             var nameT = DeckNameLabel(nameHit.transform, caption, Color.white);
-            nameT.resizeTextForBestFit = false;
-            nameT.fontSize = 18;
-            nameT.horizontalOverflow = HorizontalWrapMode.Overflow;
-            nameT.verticalOverflow = VerticalWrapMode.Overflow;
             FloatingPanel.Stretch(nameT.rectTransform, 4f);
             BindHold(nameHit, () => OpenRenameSheet(phase, st, idx),
                 () => OpenDeckContextMenu(phase, st, idx));
@@ -1488,97 +1552,113 @@ namespace WRLDZ.UI.Shell
 
         static void BuildEditor(RectTransform phase, State st)
         {
-            BuildDeckSwitcher(phase, st, 0f, ChromeNameY0, NamePillX1, ChromeNameY1);
+            var ar = IsAr(st);
+            var wide = !ar && IsWideLayout(phase);
+            const float barH = 72f;
+            const float barTop = 8f;
+            const float row2 = 88f;
+            const float row2H = 64f;
+            const float searchH = 52f;
+            var searchTop = wide ? 88f : 160f;
+            var chromeBottom = searchTop + searchH + 8f;
+            BuildDeckSwitcher(phase, st, 0f, ChromeNameY0, ar ? NamePillX1 : SwitcherX1, ChromeNameY1);
+            var switcher = phase.Find("DeckSwitcher") as RectTransform;
 
             var close = GlassAction(phase, "X", GlassQuiet, EdgeCyan, () =>
             {
                 FreeUiKit.PlayClick();
                 RequestLeaveEditor(st);
             });
-            FloatingPanel.Place(close.GetComponent<RectTransform>(), 0.88f, ChromeNameY0, 1f, ChromeNameY1);
 
-            var cluster = new GameObject("Sections", typeof(RectTransform), typeof(Image));
-            cluster.transform.SetParent(phase, false);
-            FloatingPanel.Place(cluster.GetComponent<RectTransform>(), 0f, ChromeToolY0, 0.44f, ChromeToolY1);
-            StyleGlass(cluster.GetComponent<Image>(), GlassQuiet, EdgeCyan);
-            cluster.GetComponent<Image>().raycastTarget = false;
-
-            void Rule(float x)
+            if (ar)
             {
-                var rule = new GameObject("Rule", typeof(RectTransform), typeof(Image));
-                rule.transform.SetParent(cluster.transform, false);
-                FloatingPanel.Place(rule.GetComponent<RectTransform>(), x - 0.003f, 0.16f, x + 0.003f, 0.84f);
-                var rImg = rule.GetComponent<Image>();
-                rImg.sprite = UiFoundation.WhiteSprite();
-                rImg.color = new Color(0.35f, 0.80f, 0.95f, 0.22f);
-                rImg.raycastTarget = false;
+                if (switcher != null) PinTop(switcher, 0f, 0.86f, barTop, barH);
+                PinTop(close.GetComponent<RectTransform>(), 0.88f, 1f, barTop, barH);
+            }
+            else if (wide)
+            {
+                if (switcher != null) PinTop(switcher, 0f, 0.48f, barTop, barH);
+                PinTop(close.GetComponent<RectTransform>(), 0.88f, 1f, barTop, barH);
+            }
+            else
+            {
+                if (switcher != null) PinTop(switcher, 0f, 0.82f, barTop, barH);
+                PinTop(close.GetComponent<RectTransform>(), 0.84f, 1f, barTop, barH);
             }
 
-            Rule(0.333f);
-            Rule(0.666f);
-
-            void Sec(Section s, int have, Sprite spr, float x0, float x1)
+            if (!ar)
             {
-                var on = st.Section == s;
-                var countCol = s == Section.Main
-                    ? (have >= TcgRules.MainDeckMin && have <= TcgRules.MainDeckMax
-                        ? DuelystUi.Cyan
-                        : DuelystUi.Danger)
-                    : (have > 0 ? DuelystUi.TextCream : DuelystUi.TextMuted);
-                var b = SectionDeckIcon(cluster.transform, spr, have, on, countCol, () =>
+                var save = GlassAction(phase, "SAVE", GlassGold, EdgeGold, () =>
                 {
-                    st.Section = s;
-                    st.Rebuild();
+                    if (!DeckIsComplete(st))
+                    {
+                        FreeUiKit.PlayClick();
+                        Status(st, IncompleteDeckLabel(st), false);
+                        return;
+                    }
+
+                    PersistDeck(st);
+                    FreeUiKit.PlayConfirm();
+                    Status(st, "Saved · ready for VS AI", true);
                 });
-                FloatingPanel.Place(b.GetComponent<RectTransform>(), x0, 0.04f, x1, 0.96f);
-            }
-
-            Sec(Section.Main, st.Main.Count, ImagineAssets.IconDeckMain(), 0.02f, 0.32f);
-            Sec(Section.Extra, st.Extra.Count, ImagineAssets.IconDeckExtra(), 0.345f, 0.655f);
-            Sec(Section.Side, st.Side.Count, ImagineAssets.IconDeckSide(), 0.68f, 0.98f);
-
-            var clear = GlassAction(phase, "CLEAR", GlassRose, EdgeRose, () =>
-            {
-                st.Main.Clear();
-                st.Extra.Clear();
-                st.Side.Clear();
-                st.Inv.ClearDeckBox(st.DeckIndex);
-                PersistDeck(st);
-                FreeUiKit.PlayClick();
-                st.Rebuild();
-                Status(st, "Deck cleared", true);
-            });
-            FloatingPanel.Place(clear.GetComponent<RectTransform>(), 0.56f, ChromeToolY0, 0.76f, ChromeToolY1);
-
-            var save = GlassAction(phase, "SAVE", GlassCyan, EdgeCyan, () =>
-            {
-                if (!DeckIsComplete(st))
+                var clear = GlassAction(phase, "CLEAR", GlassRose, EdgeRose, () =>
                 {
+                    st.Main.Clear();
+                    st.Extra.Clear();
+                    st.Side.Clear();
+                    st.Inv.ClearDeckBox(st.DeckIndex);
+                    PersistDeck(st);
                     FreeUiKit.PlayClick();
-                    Status(st, IncompleteDeckLabel(st), false);
-                    return;
+                    st.Rebuild();
+                    Status(st, "Deck cleared", true);
+                });
+                if (wide)
+                {
+                    PinTop(save.GetComponent<RectTransform>(), 0.50f, 0.68f, barTop, barH);
+                    PinTop(clear.GetComponent<RectTransform>(), 0.70f, 0.86f, barTop, barH);
+                }
+                else
+                {
+                    PinTop(save.GetComponent<RectTransform>(), 0.00f, 0.48f, row2, row2H);
+                    PinTop(clear.GetComponent<RectTransform>(), 0.52f, 1.00f, row2, row2H);
                 }
 
-                PersistDeck(st);
-                FreeUiKit.PlayConfirm();
-                Status(st, "Saved · ready for VS AI", true);
-            });
-            FloatingPanel.Place(save.GetComponent<RectTransform>(), 0.78f, ChromeToolY0, 1f, ChromeToolY1);
-
-            BuildFilterBar(phase, st);
-
-            var chips = HasChipRow(st);
-            var gridTop = chips ? GridTopChips : GridTopClear;
-
-            var mid = 0.5f;
-            var halfGap = SplitGutter * 0.5f;
-            var leftX1 = mid - halfGap;
-            var rightX0 = mid + halfGap;
-
-            st.PoolGrid = ChipGrid(phase, st, 0.0f, 0.0f, leftX1, gridTop, "PoolGrid", out st.PoolScroll);
-            st.DeckGrid = ChipGrid(phase, st, rightX0, 0.0f, 1f, gridTop, "DeckGrid", out st.DeckScroll);
-            MarkFilterTarget(st.PoolGrid, FilterAppliesToPool(st));
-            MarkFilterTarget(st.DeckGrid, FilterAppliesToDeck(st));
+                BuildFilterBar(phase, st, wide, searchTop, searchH);
+                if (wide)
+                {
+                    BuildConstructionBoard(phase, st, 0.00f, 0.00f, 0.615f, 0.840f);
+                    PinBelow(phase.Find("ConstructionBoard") as RectTransform,
+                        0f, 0.615f, chromeBottom, 0f);
+                    var listPanel = ChipGrid(phase, st, 0.630f, 0.00f, 1f, 0.800f, "PoolGrid",
+                        out st.PoolScroll);
+                    st.PoolGrid = listPanel;
+                    PinBelow(listPanel as RectTransform, 0.630f, 1f, chromeBottom + 28f, 0f);
+                    var listHead = Label(phase, "CARD LIST", 12, DuelystUi.GoldHot, TextAnchor.MiddleLeft);
+                    PinTop(listHead.rectTransform, 0.630f, 0.82f, chromeBottom, 26f);
+                    st.MatchLine = L(phase, "", 11, DuelystUi.TextMuted, TextAnchor.MiddleRight);
+                    PinTop(st.MatchLine.rectTransform, 0.82f, 1f, chromeBottom, 26f);
+                }
+                else
+                {
+                    BuildConstructionBoard(phase, st, 0.00f, 0.360f, 1f, 0.840f);
+                    PinBelow(phase.Find("ConstructionBoard") as RectTransform,
+                        0f, 1f, chromeBottom, 0.360f);
+                    var listPanel = ChipGrid(phase, st, 0f, 0.00f, 1f, 0.320f, "PoolGrid",
+                        out st.PoolScroll);
+                    st.PoolGrid = listPanel;
+                    var listHead = Label(phase, "CARD LIST", 12, DuelystUi.GoldHot, TextAnchor.MiddleLeft);
+                    FloatingPanel.Place(listHead.rectTransform, 0.02f, 0.320f, 0.40f, 0.358f);
+                    st.MatchLine = L(phase, "", 11, DuelystUi.TextMuted, TextAnchor.MiddleRight);
+                    FloatingPanel.Place(st.MatchLine.rectTransform, 0.40f, 0.320f, 0.98f, 0.358f);
+                }
+            }
+            else
+            {
+                var hint = Label(phase, "full builder on PHONE", 11, DuelystUi.TextMuted,
+                    TextAnchor.MiddleLeft);
+                FloatingPanel.Place(hint.rectTransform, 0.02f, 0.848f, 0.70f, 0.900f);
+                BuildConstructionBoard(phase, st, 0.00f, 0.00f, 1f, 0.840f);
+            }
 
             st.RefreshCards = () => FillCardGrids(st, resetScroll: false);
             FillCardGrids(st);
@@ -1608,8 +1688,8 @@ namespace WRLDZ.UI.Shell
             FloatingPanel.Place(b.GetComponent<RectTransform>(), x0, y0, x1, y1);
         }
 
-        static bool FilterAppliesToPool(State st) => st.Scope != FilterScope.Deck;
-        static bool FilterAppliesToDeck(State st) => st.Scope != FilterScope.Collection;
+        static bool FilterAppliesToPool(State st) => true;
+        static bool FilterAppliesToDeck(State st) => false;
         static bool FilterAppliesTo(State st, FilterScope target) =>
             target == FilterScope.Collection ? FilterAppliesToPool(st) : FilterAppliesToDeck(st);
 
@@ -1633,83 +1713,50 @@ namespace WRLDZ.UI.Shell
 
         static void FillCardGrids(State st, bool resetScroll = true)
         {
-            if (st.PoolGrid == null || st.DeckGrid == null) return;
+            if (st.BoardHost == null && st.PoolGrid == null) return;
             var keepPool = resetScroll ? 0 : st.PoolVisible;
             var poolY = 0f;
-            var deckY = 0f;
-            if (!resetScroll)
-            {
-                if (st.PoolScroll != null && st.PoolScroll.content != null)
-                    poolY = st.PoolScroll.content.anchoredPosition.y;
-                if (st.DeckScroll != null && st.DeckScroll.content != null)
-                    deckY = st.DeckScroll.content.anchoredPosition.y;
-            }
+            if (!resetScroll && st.PoolScroll != null && st.PoolScroll.content != null)
+                poolY = st.PoolScroll.content.anchoredPosition.y;
 
-            FloatingPanel.DestroyChildrenNow(st.PoolGrid);
-            FloatingPanel.DestroyChildrenNow(st.DeckGrid);
-            ClearEmptyHint(st.PoolGrid);
-            ClearEmptyHint(st.DeckGrid);
-
-            st.PoolRows = BuildPool(st);
-            st.PoolVisible = 0;
-            AppendPoolPage(st);
-            if (!resetScroll)
+            if (st.PoolGrid != null)
             {
-                var guard = 0;
-                while (st.PoolRows != null && st.PoolVisible < keepPool
-                       && st.PoolVisible < st.PoolRows.Count && guard++ < 64)
-                    AppendPoolPage(st);
-            }
+                FloatingPanel.DestroyChildrenNow(st.PoolGrid);
+                ClearEmptyHint(st.PoolGrid);
 
-            EnsurePoolFillsViewport(st);
-            if (st.PoolRows.Count == 0)
-            {
-                var idlePool = !FilterAppliesToPool(st) ||
-                    (string.IsNullOrWhiteSpace(st.Search) && st.Filter == Filter.All && !HasAdvancedFilters(st));
-                ShowEmptyHint(st.PoolGrid,
-                    idlePool
-                        ? "No cards in this collection."
-                        : "No matches.\nClear filters or try another search.");
-            }
-
-            var sec = SecList(st);
-            var q = (st.Search ?? "").Trim();
-            var filterDeck = FilterAppliesToDeck(st);
-            var deckShown = 0;
-            foreach (var g in sec.GroupBy(id => id).OrderBy(g => DeckSortKey(st, g.Key)))
-            {
-                var def = st.Db?.Get(g.Key);
-                if (filterDeck)
+                st.PoolRows = BuildPool(st);
+                st.PoolVisible = 0;
+                AppendPoolPage(st);
+                if (!resetScroll)
                 {
-                    if (!PassFilter(st, def)) continue;
-                    if (!PassSearch(q, g.Key, def)) continue;
-                    if (!PassArchetype(st, def)) continue;
+                    var guard = 0;
+                    while (st.PoolRows != null && st.PoolVisible < keepPool
+                           && st.PoolVisible < st.PoolRows.Count && guard++ < 64)
+                        AppendPoolPage(st);
                 }
 
-                DeckChip(st, st.DeckGrid, g.Key, g.Count());
-                deckShown++;
+                EnsurePoolFillsViewport(st);
+                if (st.PoolRows.Count == 0)
+                {
+                    var idlePool = string.IsNullOrWhiteSpace(st.Search)
+                                   && st.Filter == Filter.All && !HasAdvancedFilters(st);
+                    ShowEmptyHint(st.PoolGrid,
+                        idlePool
+                            ? "No cards in this collection."
+                            : "No matches.\nClear filters or try another search.");
+                }
+
+                WriteMatchLine(st, -1);
+                if (st.PoolGrid is RectTransform poolRt)
+                    LayoutRebuilder.ForceRebuildLayoutImmediate(poolRt);
+                if (resetScroll)
+                {
+                    if (st.PoolScroll != null) st.PoolScroll.verticalNormalizedPosition = 1f;
+                }
+                else RestoreScrollY(st.PoolScroll, poolY);
             }
 
-            if (sec.Count == 0)
-                ShowEmptyHint(st.DeckGrid, "Drag cards here\nor tap a card → ADD");
-            else if (deckShown == 0)
-                ShowEmptyHint(st.DeckGrid, "No matches in this deck.\nClear filters or tap DECK again.");
-
-            WriteMatchLine(st, deckShown);
-            if (st.PoolGrid is RectTransform poolRt)
-                LayoutRebuilder.ForceRebuildLayoutImmediate(poolRt);
-            if (st.DeckGrid is RectTransform deckRt)
-                LayoutRebuilder.ForceRebuildLayoutImmediate(deckRt);
-            if (resetScroll)
-            {
-                if (st.PoolScroll != null) st.PoolScroll.verticalNormalizedPosition = 1f;
-                if (st.DeckScroll != null) st.DeckScroll.verticalNormalizedPosition = 1f;
-            }
-            else
-            {
-                RestoreScrollY(st.PoolScroll, poolY);
-                RestoreScrollY(st.DeckScroll, deckY);
-            }
+            FillConstructionBoard(st);
         }
 
         static void RestoreScrollY(ScrollRect scroll, float contentY)
@@ -2189,14 +2236,27 @@ namespace WRLDZ.UI.Shell
 
         // ── Filter bar + tray (faceted, mobile-friendly) ─────────────────────
 
-        static void BuildFilterBar(RectTransform phase, State st)
+        static void BuildFilterBar(RectTransform phase, State st, bool wide, float fromTop, float height)
         {
-            // Search + FILTER + sort — one slim row
+            // Search + FILTER + sort — stay over the board, never the card list.
+            var searchX1 = wide ? 0.38f : 0.56f;
+            var icoX0 = wide ? 0.39f : 0.575f;
+            var icoX1 = wide ? 0.615f : 1f;
             var searchGo = new GameObject("Search", typeof(RectTransform), typeof(Image), typeof(InputField));
             searchGo.transform.SetParent(phase, false);
-            FloatingPanel.Place(searchGo.GetComponent<RectTransform>(), 0f, SearchY0, 1f, SearchY1);
+            PinTop(searchGo.GetComponent<RectTransform>(), 0f, searchX1, fromTop, height);
             var sBg = searchGo.GetComponent<Image>();
-            StyleGlass(sBg, new Color(0.04f, 0.07f, 0.12f, 0.82f), new Color(0.30f, 0.70f, 0.88f, 0.28f));
+            var searchPlate = ImagineAssets.PanelHolo() ?? ImagineAssets.InputField();
+            if (searchPlate != null)
+            {
+                sBg.sprite = searchPlate;
+                sBg.type = searchPlate.border.sqrMagnitude > 0.1f ? Image.Type.Sliced : Image.Type.Simple;
+                sBg.color = Color.white;
+            }
+            else
+            {
+                StyleGlass(sBg, new Color(0.04f, 0.07f, 0.12f, 0.82f), new Color(0.30f, 0.70f, 0.88f, 0.28f));
+            }
 
             var sText = Label(searchGo.transform, st.Search ?? "", 13, Color.white, TextAnchor.MiddleLeft);
             FloatingPanel.Place(sText.rectTransform, 0.03f, 0.08f, 0.84f, 0.92f);
@@ -2231,17 +2291,9 @@ namespace WRLDZ.UI.Shell
             }, new Color(0.14f, 0.12f, 0.14f, 0.90f), compact: true);
             FloatingPanel.Place(clear.GetComponent<RectTransform>(), 0.86f, 0.10f, 0.98f, 0.90f);
 
-            var mid = 0.5f;
-            var halfGap = SplitGutter * 0.5f;
-            var leftX1 = mid - halfGap;
-            var rightX0 = mid + halfGap;
-            BuildScopeHeader(phase, st, 0.0f, ScopeY0, leftX1, ScopeY1,
-                FilterScope.Collection, "COLLECTION");
-            BuildScopeHeader(phase, st, rightX0, ScopeY0, 1f, ScopeY1,
-                FilterScope.Deck, "DECK");
-
-            float sx = 0f;
-            const float sw = 0.072f;
+            var icoSpan = Mathf.Max(0.12f, icoX1 - icoX0);
+            float sx = icoX0;
+            var sw = icoSpan / 8.2f;
             void Ico(Filter f, Sprite spr)
             {
                 var on = st.Filter == f;
@@ -2251,8 +2303,8 @@ namespace WRLDZ.UI.Shell
                     FreeUiKit.PlaySelect();
                     st.Rebuild();
                 });
-                FloatingPanel.Place(b.GetComponent<RectTransform>(), sx, FilterIcoY0, sx + sw, FilterIcoY1);
-                sx += sw + 0.008f;
+                PinTop(b.GetComponent<RectTransform>(), sx, sx + sw, fromTop, height);
+                sx += sw;
             }
 
             Ico(Filter.All, ImagineAssets.IconFilterAll());
@@ -2263,8 +2315,8 @@ namespace WRLDZ.UI.Shell
 
             var facetOn = HasAdvancedFilters(st);
             var facet = IconButton(phase, ImagineAssets.IconFilterFacets(), facetOn, () => OpenFilterTray(phase, st));
-            FloatingPanel.Place(facet.GetComponent<RectTransform>(), sx, FilterIcoY0, sx + sw, FilterIcoY1);
-            sx += sw + 0.008f;
+            PinTop(facet.GetComponent<RectTransform>(), sx, sx + sw, fromTop, height);
+            sx += sw;
 
             var sortI = IconButton(phase, ImagineAssets.IconFilterSort(), false, () =>
             {
@@ -2279,12 +2331,7 @@ namespace WRLDZ.UI.Shell
                 FreeUiKit.PlaySelect();
                 st.Rebuild();
             });
-            FloatingPanel.Place(sortI.GetComponent<RectTransform>(), sx, FilterIcoY0, sx + sw, FilterIcoY1);
-
-            st.MatchLine = L(phase, "", 11, DuelystUi.TextMuted, TextAnchor.MiddleRight);
-            FloatingPanel.Place(st.MatchLine.rectTransform, 0.62f, FilterIcoY0, 1f, FilterIcoY1);
-
-            BuildActiveFilterChips(phase, st);
+            PinTop(sortI.GetComponent<RectTransform>(), sx, sx + sw, fromTop, height);
         }
 
         static Button SectionDeckIcon(Transform parent, Sprite spr, int count, bool on,
@@ -2599,15 +2646,6 @@ namespace WRLDZ.UI.Shell
                 st.TrapKind = "";
             }
 
-            FacetHeader(content.transform, "APPLY TO");
-            FacetChips(content.transform, new[] { "BOTH", "COLLECTION", "DECK" },
-                i => (int)st.Scope == i,
-                i =>
-                {
-                    st.Scope = (FilterScope)i;
-                    RefreshTray();
-                });
-
             FacetHeader(content.transform, "KIND");
             var kindLabs = new string[KindOptions.Length];
             for (var k = 0; k < KindOptions.Length; k++)
@@ -2880,7 +2918,8 @@ namespace WRLDZ.UI.Shell
                 veil.GetComponent<Image>().raycastTarget = false;
             }
 
-            BindChipInteract(go, st, row.Id, fromPool: !(row.HomeOnly || row.OnHand <= 0));
+            BindChipInteract(go, st, row.Id, fromPool: !(row.HomeOnly || row.OnHand <= 0),
+                Section.Main, st.PoolScroll);
         }
 
         static void FacetIconChips(Transform parent, string[] labels, Sprite[] icons,
@@ -2960,16 +2999,18 @@ namespace WRLDZ.UI.Shell
         static void DeckChip(State st, Transform host, int id, int qty)
         {
             var go = ArtChip(st, host, id, qty, id == st.SelectedId);
-            BindChipInteract(go, st, id, fromPool: false);
+            BindChipInteract(go, st, id, fromPool: false, st.Section, st.DeckScroll);
         }
 
-        static void BindChipInteract(GameObject go, State st, int id, bool fromPool)
+        static void BindChipInteract(GameObject go, State st, int id, bool fromPool,
+            Section section, ScrollRect scroll)
         {
             var btn = go.GetComponent<Button>();
             btn.onClick.RemoveAllListeners();
             btn.onClick.AddListener(() =>
             {
                 FreeUiKit.PlayClick();
+                if (!fromPool) st.Section = section;
                 if (st.Inspect != null && st.Inspect.activeSelf && st.SelectedId == id)
                 {
                     HideInspect(st);
@@ -2980,8 +3021,7 @@ namespace WRLDZ.UI.Shell
             });
 
             var pass = go.GetComponent<DeckChipInteract>() ?? go.AddComponent<DeckChipInteract>();
-            pass.Bind(st, id, fromPool,
-                fromPool ? st.PoolScroll : st.DeckScroll);
+            pass.Bind(st, id, fromPool, section, scroll);
         }
 
         static GameObject ArtChip(State st, Transform host, int id, int qty, bool selected)
@@ -3018,8 +3058,31 @@ namespace WRLDZ.UI.Shell
 
             if (qty > 1)
                 CopiesStamp(go.transform, qty);
+            BanlistPip(go.transform, id);
 
             return go;
+        }
+
+        static void BanlistPip(Transform card, int id)
+        {
+            var status = OfficialDataSources.StatusOf(id);
+            Sprite spr = status switch
+            {
+                BanlistStatus.Forbidden => ImagineAssets.IconLimitForbidden(),
+                BanlistStatus.Limited => ImagineAssets.IconLimitLimited(),
+                BanlistStatus.SemiLimited => ImagineAssets.IconLimitSemi(),
+                _ => null
+            };
+            if (spr == null) return;
+            var badge = new GameObject("Ban", typeof(RectTransform), typeof(Image));
+            badge.transform.SetParent(card, false);
+            badge.transform.SetAsLastSibling();
+            FloatingPanel.Place(badge.GetComponent<RectTransform>(), 0.02f, 0.72f, 0.34f, 0.98f);
+            var img = badge.GetComponent<Image>();
+            img.sprite = spr;
+            img.preserveAspect = true;
+            img.raycastTarget = false;
+            img.color = Color.white;
         }
 
         /// <summary>Corner stamp on the card face: X2 / X3 so duplicate copies read at a glance.</summary>
@@ -3138,22 +3201,25 @@ namespace WRLDZ.UI.Shell
             });
         }
 
-        static bool TryAdd(State st, int id, out string msg)
+        static bool TryAdd(State st, int id, out string msg, Section? dest = null)
         {
             msg = "";
+            if (IsAr(st)) { msg = "full builder on PHONE"; return false; }
             if (id <= 0) { msg = "No card."; return false; }
             if (st.Inv.CountOnHand(id) <= 0) { msg = "Home only."; return false; }
             var def = st.Db?.Get(id);
             var free = st.Inv.FreeCopiesForDeck(id, st.DeckIndex);
             var inDeck = Cnt(st.Main, id) + Cnt(st.Extra, id) + Cnt(st.Side, id);
-            if (!ErazDeckRules.CanAddToDeck(def, inDeck, ErazFormat.Original, out msg))
+            var labOpen = LabAdminService.IsAdmin(AppSession.Ensure()?.Account);
+            if (!ErazDeckRules.CanAddToDeck(def, inDeck, ErazFormat.Original, out msg, labOpen))
                 return false;
             if (inDeck >= free) { msg = "No free copies."; return false; }
-            var list = SecList(st);
-            switch (st.Section)
+            var section = dest ?? RouteAdd(st, def);
+            var list = ListOf(st, section);
+            switch (section)
             {
                 case Section.Main:
-                    if (def != null && def.IsExtraDeck) { msg = "EXTRA tab."; return false; }
+                    if (def != null && def.IsExtraDeck) { msg = "Goes in Extra."; return false; }
                     if (list.Count >= TcgRules.MainDeckMax) { msg = "Main full."; return false; }
                     st.Main.Add(id);
                     break;
@@ -3168,29 +3234,51 @@ namespace WRLDZ.UI.Shell
                     break;
             }
 
+            st.Section = section;
             PersistDeck(st);
             msg = "+ " + (def?.name ?? "#" + id);
             return true;
         }
 
-        static bool TryRem(State st, int id, out string msg)
+        static Section RouteAdd(State st, CardDef def)
+        {
+            if (st.Section == Section.Side) return Section.Side;
+            if (def != null && def.IsExtraDeck) return Section.Extra;
+            return Section.Main;
+        }
+
+        static bool TryRem(State st, int id, out string msg, Section? from = null)
         {
             msg = "";
-            var list = SecList(st);
+            if (IsAr(st)) { msg = "full builder on PHONE"; return false; }
+            var list = from.HasValue ? ListOf(st, from.Value) : FindListWith(st, id);
+            if (list == null) { msg = "Not in deck."; return false; }
             var i = list.FindLastIndex(x => x == id);
-            if (i < 0) { msg = "Not in section."; return false; }
+            if (i < 0) { msg = "Not in deck."; return false; }
             list.RemoveAt(i);
             PersistDeck(st);
             msg = "− removed";
             return true;
         }
 
-        static List<int> SecList(State st) => st.Section switch
+        static List<int> ListOf(State st, Section section) => section switch
         {
             Section.Extra => st.Extra,
             Section.Side => st.Side,
             _ => st.Main
         };
+
+        static List<int> FindListWith(State st, int id)
+        {
+            if (st.Section != Section.Main && Cnt(ListOf(st, st.Section), id) > 0)
+                return ListOf(st, st.Section);
+            if (Cnt(st.Main, id) > 0) return st.Main;
+            if (Cnt(st.Extra, id) > 0) return st.Extra;
+            if (Cnt(st.Side, id) > 0) return st.Side;
+            return null;
+        }
+
+        static List<int> SecList(State st) => ListOf(st, st.Section);
 
         static int Cnt(List<int> list, int id)
         {
@@ -3403,126 +3491,6 @@ namespace WRLDZ.UI.Shell
             if (st.Acc != null) ProgressionService.Persist(st.Acc);
         }
 
-        // ── Inspect (transparent) ────────────────────────────────────────────
-
-        static void HideInspect(State st)
-        {
-            if (st?.Inspect != null)
-                st.Inspect.SetActive(false);
-        }
-
-        static void BuildInspect(Transform body, State st)
-        {
-            // Compact drawer — top of the grids stays visible so other cards stay tappable.
-            var root = new GameObject("InspectPopup", typeof(RectTransform), typeof(Image));
-            root.transform.SetParent(body, false);
-            FloatingPanel.Place(root.GetComponent<RectTransform>(), 0.04f, 0.055f, 0.96f, 0.40f);
-            var bg = root.GetComponent<Image>();
-            bg.sprite = UiFoundation.WhiteSprite();
-            bg.color = new Color(0.04f, 0.06f, 0.10f, 0.88f);
-            bg.raycastTarget = true;
-
-            var art = new GameObject("Art", typeof(RectTransform), typeof(Image));
-            art.transform.SetParent(root.transform, false);
-            FloatingPanel.Place(art.GetComponent<RectTransform>(), 0.02f, 0.08f, 0.28f, 0.96f);
-            st.InspectArt = art.GetComponent<Image>();
-            st.InspectArt.preserveAspect = true;
-            st.InspectArt.raycastTarget = false;
-
-            st.InspectName = L(root.transform, "", 15, DuelystUi.GoldHot, TextAnchor.MiddleLeft);
-            FloatingPanel.Place(st.InspectName.rectTransform, 0.30f, 0.78f, 0.88f, 0.96f);
-            st.InspectName.horizontalOverflow = HorizontalWrapMode.Wrap;
-
-            st.InspectStats = L(root.transform, "", 12, DuelystUi.Cyan, TextAnchor.UpperLeft);
-            FloatingPanel.Place(st.InspectStats.rectTransform, 0.30f, 0.58f, 0.98f, 0.78f);
-            st.InspectStats.horizontalOverflow = HorizontalWrapMode.Wrap;
-
-            st.InspectDesc = L(root.transform, "", 12, new Color(0.94f, 0.95f, 0.97f, 0.95f),
-                TextAnchor.UpperLeft);
-            FloatingPanel.Place(st.InspectDesc.rectTransform, 0.30f, 0.22f, 0.98f, 0.58f);
-            st.InspectDesc.horizontalOverflow = HorizontalWrapMode.Wrap;
-            st.InspectDesc.verticalOverflow = VerticalWrapMode.Truncate;
-
-            st.InspectAdd = Btn(root.transform, "ADD", () =>
-            {
-                if (TryAdd(st, st.SelectedId, out var msg))
-                {
-                    FreeUiKit.PlayConfirm();
-                    Status(st, msg, true);
-                    st.RefreshCards?.Invoke();
-                    ShowInspect(st, st.SelectedId);
-                }
-                else Status(st, msg, false);
-            }, gold: true, compact: true);
-            FloatingPanel.Place(st.InspectAdd.GetComponent<RectTransform>(), 0.30f, 0.04f, 0.52f, 0.18f);
-
-            st.InspectRem = Btn(root.transform, "REMOVE", () =>
-            {
-                if (TryRem(st, st.SelectedId, out var msg))
-                {
-                    FreeUiKit.PlayClick();
-                    Status(st, msg, true);
-                    st.RefreshCards?.Invoke();
-                    ShowInspect(st, st.SelectedId);
-                }
-                else Status(st, msg, false);
-            }, compact: true);
-            FloatingPanel.Place(st.InspectRem.GetComponent<RectTransform>(), 0.54f, 0.04f, 0.76f, 0.18f);
-
-            var x = Btn(root.transform, "×", () =>
-            {
-                FreeUiKit.PlayClick();
-                HideInspect(st);
-            }, compact: true);
-            FloatingPanel.Place(x.GetComponent<RectTransform>(), 0.88f, 0.78f, 0.98f, 0.96f);
-
-            root.SetActive(false);
-            st.Inspect = root;
-        }
-
-        static void ShowInspect(State st, int id)
-        {
-            if (st.Inspect == null) return;
-            st.SelectedId = id;
-            st.Inspect.SetActive(true);
-            st.Inspect.transform.SetAsLastSibling();
-            var def = st.Db?.Get(id);
-            if (st.InspectArt != null)
-            {
-                var a = st.Db?.GetArt(id);
-                st.InspectArt.sprite = a ?? YgoCardFrames.CardBack() ?? UiFoundation.WhiteSprite();
-                st.InspectArt.color = Color.white;
-            }
-
-            if (st.InspectName != null) st.InspectName.text = def?.name ?? "#" + id;
-            if (st.InspectStats != null)
-            {
-                if (def == null) st.InspectStats.text = "";
-                else if (def.IsMonster)
-                    st.InspectStats.text =
-                        $"Lv{def.level}  ·  {def.attribute} {def.race}\n" +
-                        $"ATK {Mathf.Max(0, def.atk)}  /  DEF {Mathf.Max(0, def.def)}" +
-                        (string.IsNullOrEmpty(def.archetype) ? "" : "\n" + def.archetype);
-                else
-                    st.InspectStats.text = (def.type ?? "") +
-                        (string.IsNullOrEmpty(def.race) ? "" : "  ·  " + def.race) +
-                        (string.IsNullOrEmpty(def.archetype) ? "" : "\n" + def.archetype);
-            }
-
-            if (st.InspectDesc != null)
-            {
-                var d = def?.desc ?? "";
-                if (d.Length > 420) d = d.Substring(0, 417) + "…";
-                st.InspectDesc.text = d;
-            }
-
-            var inDeck = Cnt(st.Main, id) + Cnt(st.Extra, id) + Cnt(st.Side, id);
-            if (st.InspectAdd != null)
-                st.InspectAdd.gameObject.SetActive(st.Inv != null && st.Inv.CountOnHand(id) > 0);
-            if (st.InspectRem != null)
-                st.InspectRem.gameObject.SetActive(inDeck > 0);
-        }
-
         static void Status(State st, string msg, bool ok)
         {
             if (st.Status == null) return;
@@ -3662,8 +3630,18 @@ namespace WRLDZ.UI.Shell
             panel.transform.SetParent(parent, false);
             FloatingPanel.Place(panel.GetComponent<RectTransform>(), x0, y0, x1, y1);
             var pImg = panel.GetComponent<Image>();
-            pImg.sprite = UiFoundation.WhiteSprite();
-            pImg.color = new Color(0.02f, 0.03f, 0.06f, 0.12f);
+            var listPlate = ImagineAssets.PanelHolo() ?? ImagineAssets.PanelMenuGlass();
+            if (listPlate != null)
+            {
+                pImg.sprite = listPlate;
+                pImg.type = listPlate.border.sqrMagnitude > 0.1f ? Image.Type.Sliced : Image.Type.Simple;
+                pImg.color = Color.white;
+            }
+            else
+            {
+                pImg.sprite = UiFoundation.WhiteSprite();
+                pImg.color = new Color(0.02f, 0.03f, 0.06f, 0.12f);
+            }
             pImg.raycastTarget = true;
             var empty = panel.GetComponent<Button>();
             empty.targetGraphic = pImg;
@@ -3740,8 +3718,8 @@ namespace WRLDZ.UI.Shell
                 if (Mathf.Abs(w - _lastW) < 0.75f && _lastCols > 0) return;
                 var pad = Grid.padding.horizontal;
                 var gap = Grid.spacing.x;
-                var cols = Mathf.Clamp(Mathf.FloorToInt((w - pad + gap) / (88f + gap)), 3, 6);
-                var cellW = (w - pad - gap * (cols - 1)) / cols;
+                var cols = Mathf.Clamp(Mathf.FloorToInt((w - pad + gap) / (100f + gap)), 4, 16);
+                var cellW = Mathf.Min(112f, (w - pad - gap * (cols - 1)) / cols);
                 var cellH = cellW * (ChipH / ChipW);
                 if (cols == _lastCols && Mathf.Abs(cellW - _lastCell.x) < 0.35f) return;
                 _fitting = true;
@@ -3807,15 +3785,17 @@ namespace WRLDZ.UI.Shell
             State _st;
             int _id;
             bool _fromPool;
+            Section _section;
             ScrollRect _scroll;
             bool _passScroll;
             bool _cardDrag;
 
-            public void Bind(State st, int id, bool fromPool, ScrollRect scroll)
+            public void Bind(State st, int id, bool fromPool, Section section, ScrollRect scroll)
             {
                 _st = st;
                 _id = id;
                 _fromPool = fromPool;
+                _section = section;
                 _scroll = scroll;
             }
 
@@ -3861,6 +3841,7 @@ namespace WRLDZ.UI.Shell
                 if (_st == null) return;
                 _st.DragId = _id;
                 _st.DragFromPool = _fromPool;
+                _st.DragSection = _section;
                 _st.SelectedId = _id;
                 if (_st.Ghost != null) UnityEngine.Object.Destroy(_st.Ghost);
                 var g = new GameObject("G", typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
@@ -3897,10 +3878,15 @@ namespace WRLDZ.UI.Shell
                     _st.Ghost = null;
                 }
 
-                var dropOnDeck = ped.position.x > Screen.width * 0.5f;
-                if (_st.DragFromPool && dropOnDeck)
+                var cam = ped.pressEventCamera;
+                var onto = HitPile(_st, ped.position, cam);
+                var ontoPool = ContainsScreen(_st.PoolScroll != null
+                    ? _st.PoolScroll.transform as RectTransform
+                    : null, ped.position, cam);
+
+                if (_st.DragFromPool && onto.HasValue)
                 {
-                    if (TryAdd(_st, _st.DragId, out var msg))
+                    if (TryAdd(_st, _st.DragId, out var msg, onto))
                     {
                         FreeUiKit.PlayConfirm();
                         Status(_st, msg, true);
@@ -3909,9 +3895,9 @@ namespace WRLDZ.UI.Shell
                     }
                     else Status(_st, msg, false);
                 }
-                else if (!_st.DragFromPool && !dropOnDeck)
+                else if (!_st.DragFromPool && ontoPool)
                 {
-                    if (TryRem(_st, _st.DragId, out var msg))
+                    if (TryRem(_st, _st.DragId, out var msg, _st.DragSection))
                     {
                         FreeUiKit.PlayClick();
                         Status(_st, msg, true);
@@ -3919,9 +3905,35 @@ namespace WRLDZ.UI.Shell
                         else _st.Rebuild();
                     }
                 }
+                else if (!_st.DragFromPool && onto.HasValue && onto.Value != _st.DragSection)
+                {
+                    if (TryRem(_st, _st.DragId, out _, _st.DragSection)
+                        && TryAdd(_st, _st.DragId, out var msg, onto))
+                    {
+                        FreeUiKit.PlayConfirm();
+                        Status(_st, msg, true);
+                        if (_st.RefreshCards != null) _st.RefreshCards();
+                        else _st.Rebuild();
+                    }
+                    else if (_st.RefreshCards != null) _st.RefreshCards();
+                }
 
                 _st.DragId = 0;
             }
+        }
+
+        static Section? HitPile(State st, Vector2 screen, Camera cam)
+        {
+            if (ContainsScreen(st.MainTray, screen, cam)) return Section.Main;
+            if (ContainsScreen(st.ExtraTray, screen, cam)) return Section.Extra;
+            if (ContainsScreen(st.SideTray, screen, cam)) return Section.Side;
+            return null;
+        }
+
+        static bool ContainsScreen(RectTransform rt, Vector2 screen, Camera cam)
+        {
+            if (rt == null) return false;
+            return RectTransformUtility.RectangleContainsScreenPoint(rt, screen, cam);
         }
 
         static Text L(Transform parent, string text, int size, Color color, TextAnchor align) =>

@@ -1,0 +1,50 @@
+{
+  "agpl": "AGPL-3.0-or-later",
+  "labOnly": true,
+  "notADistributionDecision": true,
+  "binRepo": "https://github.com/ProjectIgnis/bin",
+  "binCommit": "a2d0ff9f28a184a572d4c5ae60f57e2e8343c820",
+  "coreSourceRepo": "https://github.com/edo9300/ygopro-core",
+  "coreSourceCommit": "fd2a557167f9e0fe19b867c325e67a3b3f9dca11",
+  "linuxSo": {
+    "importPath": "Assets/Plugins/x86_64/libocgcore.so",
+    "sha256": "23e8ff586f3269a07d97a2d71fb3e499f3ae2487d4587da893b056b1a0857276",
+    "note": "ELF x86-64, statically linked"
+  },
+  "windowsDll": {
+    "importPath": "Assets/Plugins/x86_64/ocgcore.dll",
+    "sha256": "cc066dfe50d0ad1fd47645634d058771b02292fec83b7ab1eb4f755e5f7f303b",
+    "note": "ProjectIgnis/bin ships PE32 i386 at this commit, not x86_64"
+  },
+  "cardScripts": {
+    "repo": "https://github.com/ProjectIgnis/CardScripts",
+    "git": "e02497b61bd45048230cdfb4cc4a075ecb09b4d3",
+    "acquiredFrom": "ProjectIgnis/CardScripts official/ + root shared libraries. Not the mixed flat ygopro-scripts clone.",
+    "layout": "StreamingAssets/OcgCore/scripts/{constant,utility,procedure,chain,proc_*.lua,...}.lua and scripts/official/**/c*.lua",
+    "note": "procedure.lua is a CreateDuel load shim; Fusion/Synchro/Xyz/Link live in proc_*.lua loaded by utility.lua. Fingerprint hashes this git commit, not every lua file."
+  },
+  "cdb": {
+    "sourceKind": "BabelCDB-style full datas+texts",
+    "acquiredFrom": "local Ignis-format cards.cdb (ygo-agent locale/en); Battle Ox 5053192 inserted as alias of 5053103",
+    "shipped": "StreamingAssets/OcgCore/cards.cdb",
+    "sha256": "621e79e81f1b29150f914fcf2112808b5c449e8a5a54c531e199eed9c55602fd",
+    "datasCount": 14615
+  },
+  "extraIndex": {
+    "file": "StreamingAssets/OcgCore/extra_index.csv",
+    "source": "YGOPRODeck API v7 cardinfo.php Extra types; rows dropped if not in CDB",
+    "rows": 2131,
+    "note": "Deck-builder listing only. Not OCG_CardData. cardReader never reads this file."
+  },
+  "sqlite": {
+    "managed": "Microsoft.Data.Sqlite.Core 8.0.11 netstandard2.0",
+    "native": "SQLitePCLRaw.bundle_e_sqlite3 2.1.6 (version pulled by Microsoft.Data.Sqlite 8.0.11)",
+    "closure": [
+      "Microsoft.Data.Sqlite.Core 8.0.11",
+      "SQLitePCLRaw.core 2.1.6",
+      "SQLitePCLRaw.provider.e_sqlite3 2.1.6",
+      "SQLitePCLRaw.batteries_v2 2.1.6",
+      "SQLitePCLRaw.lib.e_sqlite3 2.1.6 linux-x64 + win-x64"
+    ]
+  }
+}

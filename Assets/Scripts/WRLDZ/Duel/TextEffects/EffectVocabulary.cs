@@ -28,6 +28,8 @@ namespace WRLDZ.Duel.TextEffects
         Destroy,
         Banish,
         ReturnToHand,
+        /// <summary>Place a card on top of the Deck (Axe of Despair GY family).</summary>
+        ReturnToDeck,
         Draw,
         Search,
         SpecialSummon,
@@ -60,6 +62,7 @@ namespace WRLDZ.Duel.TextEffects
             EffectResolutionKind.Destroy,
             EffectResolutionKind.Banish,
             EffectResolutionKind.ReturnToHand,
+            EffectResolutionKind.ReturnToDeck,
             EffectResolutionKind.Draw,
             EffectResolutionKind.Search,
             EffectResolutionKind.SpecialSummon,
@@ -126,10 +129,21 @@ namespace WRLDZ.Duel.TextEffects
                 EffectActionKind.Destroy or
                     EffectActionKind.DestroySpecialSummonedMonsters or
                     EffectActionKind.DestroyOppMonstersAtkLeq or
-                    EffectActionKind.SelfDestroyUnlessNamedFaceUp =>
+                    EffectActionKind.SelfDestroyUnlessNamedFaceUp or
+                    EffectActionKind.DestroyTokensInflictPer or
+                    EffectActionKind.DestroySameNameInControllerHandAndDeck or
+                    EffectActionKind.DestroyOppAttackThenDamage or
+                    EffectActionKind.DestroyAllEquips or
+                    EffectActionKind.DestroyAllEquippedMonsters =>
                     EffectResolutionKind.Destroy,
-                EffectActionKind.Banish => EffectResolutionKind.Banish,
-                EffectActionKind.ReturnToHand => EffectResolutionKind.ReturnToHand,
+                EffectActionKind.Banish or
+                    EffectActionKind.BanishThenSameNameFromOppHandDeck =>
+                    EffectResolutionKind.Banish,
+                EffectActionKind.ReturnToHand or
+                    EffectActionKind.ReturnAllFaceUpFusionsToExtra =>
+                    EffectResolutionKind.ReturnToHand,
+                EffectActionKind.PlaceThisOnTopOfDeck => EffectResolutionKind.ReturnToDeck,
+                EffectActionKind.SendFromTopOfDeckToGy => EffectResolutionKind.ReturnToDeck,
                 EffectActionKind.Draw => EffectResolutionKind.Draw,
                 EffectActionKind.AddFromGyToHand or
                     EffectActionKind.AddFromDeckToHand or
@@ -159,7 +173,9 @@ namespace WRLDZ.Duel.TextEffects
                     EffectActionKind.LoseAtkDefUntilEndOfTurn or
                     EffectActionKind.GainThisAtkUntilEnd or
                     EffectActionKind.GainAtkPerSpellCounter or
-                    EffectActionKind.SetAttackingMonsterAtkToZeroThisCalc =>
+                    EffectActionKind.SetAttackingMonsterAtkToZeroThisCalc or
+                    EffectActionKind.HalveOriginalAtk or
+                    EffectActionKind.ApplyLingeringAtkDef =>
                     EffectResolutionKind.ModifyStats,
                 EffectActionKind.CanAttackDirectly or
                     EffectActionKind.GrantDirectAttackThisTurn or
@@ -185,8 +201,11 @@ namespace WRLDZ.Duel.TextEffects
                 EffectActionKind.CannotBeAttackTarget or
                     EffectActionKind.UnaffectedByCardEffects or
                     EffectActionKind.CannotBeTargetedByEffects or
-                    EffectActionKind.ContinuousCannotTargetDragons =>
+                    EffectActionKind.ContinuousCannotTargetDragons or
+                    EffectActionKind.ContinuousCannotAttack =>
                     EffectResolutionKind.Protection,
+                EffectActionKind.PayLpOrDestroyThis =>
+                    EffectResolutionKind.Destroy,
                 EffectActionKind.SetTargetFaceDownDefense =>
                     EffectResolutionKind.ChangePosition,
                 EffectActionKind.None => EffectResolutionKind.None,

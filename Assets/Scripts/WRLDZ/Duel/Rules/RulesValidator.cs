@@ -50,6 +50,50 @@ namespace WRLDZ.Duel.Rules
             {
                 case RulesZoneKind.Monster:
                 {
+                    if (card.Def.IsEquipSpell)
+                    {
+                        if (preferSet)
+                        {
+                            v.Reason = "Equip Spells are activated, not Set on a monster.";
+                            return v;
+                        }
+
+                        if (!OfficialEffectRegistry.CanActivateOfficial(engine, who, card, fromHand: true,
+                                out var eqWhy))
+                        {
+                            v.Reason = string.IsNullOrEmpty(eqWhy)
+                                ? "Cannot activate this Equip Spell now."
+                                : eqWhy;
+                            return v;
+                        }
+
+                        if (WRLDZ.Duel.TextEffects.LegacyTextTemplates.EquipTargetsOpponent(card.Def))
+                        {
+                            v.Legal = true;
+                            v.Reason = "OK — Equip (target an opponent's monster)";
+                            v.Speed = SpellSpeed.Speed1;
+                            return v;
+                        }
+
+                        if (zoneIndex < 0 || zoneIndex >= who.MonsterZones.Length)
+                        {
+                            v.Reason = "Invalid Monster Zone.";
+                            return v;
+                        }
+
+                        var host = who.MonsterZones[zoneIndex].Occupant;
+                        if (host == null || !host.FaceUp || host.Def == null || !host.Def.IsMonster)
+                        {
+                            v.Reason = "Equip Spells target a face-up monster you control.";
+                            return v;
+                        }
+
+                        v.Legal = true;
+                        v.Reason = "OK — Equip";
+                        v.Speed = SpellSpeed.Speed1;
+                        return v;
+                    }
+
                     var check = SummonProcedures.CheckNormalOrTribute(engine, who, card, preferSet);
                     v.Legal = check.Legal;
                     v.Reason = check.Reason;
@@ -215,6 +259,12 @@ namespace WRLDZ.Duel.Rules
             if (engine != null && engine.OpponentHasSwordsOfRevealingLight(who))
             {
                 v.Reason = "Cannot declare an attack — opponent controls Swords of Revealing Light.";
+                return v;
+            }
+
+            if (engine != null && engine.ContinuousCannotAttackBlocks(who, attacker))
+            {
+                v.Reason = "Cannot declare an attack — a face-up card forbids it.";
                 return v;
             }
 

@@ -21,8 +21,13 @@ namespace WRLDZ.Presentation
             var key = relativePath + "|tex|" + wrap;
             if (TexCache.TryGetValue(key, out var cached) && cached != null) return cached;
             var full = Path.Combine(Application.streamingAssetsPath, relativePath);
-            if (!File.Exists(full)) return null;
+            if (!File.Exists(full))
+            {
+                PinEditorCwd();
+                return null;
+            }
             var bytes = File.ReadAllBytes(full);
+            PinEditorCwd();
             var tex = new Texture2D(2, 2, TextureFormat.RGBA32, true);
             if (!tex.LoadImage(bytes))
             {
@@ -83,9 +88,14 @@ namespace WRLDZ.Presentation
             if (Cache.TryGetValue(cacheKey, out var s) && s != null) return s;
 
             var full = Path.Combine(Application.streamingAssetsPath, relativePath);
-            if (!File.Exists(full)) return null;
+            if (!File.Exists(full))
+            {
+                PinEditorCwd();
+                return null;
+            }
 
             var bytes = File.ReadAllBytes(full);
+            PinEditorCwd();
             var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
             if (!tex.LoadImage(bytes))
             {
@@ -93,10 +103,12 @@ namespace WRLDZ.Presentation
                 return null;
             }
 
-            // Safety net: Imagine-style isolation still on chroma green → key out.
+            // Safety net: Imagine isolation on chroma green or void-black → key out.
             // Skips full-bleed scene backgrounds (path contains /bg/).
             if (autoChromaKey && ShouldAutoChroma(relativePath, tex))
                 ApplyChromaKeyInPlace(tex);
+            else if (autoChromaKey && ShouldAutoBlackKey(relativePath, tex))
+                ApplyBlackKeyInPlace(tex);
 
             tex.name = Path.GetFileNameWithoutExtension(relativePath);
             tex.filterMode = FilterMode.Bilinear;
@@ -143,6 +155,53 @@ namespace WRLDZ.Presentation
 
         static bool IsChromaGreen(Color c) =>
             c.g > 0.38f && c.g > c.r + 0.12f && c.g > c.b + 0.12f && c.r < 0.48f && c.b < 0.48f && c.a > 0.85f;
+
+        static bool IsVoidBlack(Color c) =>
+            c.r < 0.07f && c.g < 0.07f && c.b < 0.07f && c.a > 0.85f;
+
+        static bool ShouldAutoBlackKey(string relativePath, Texture2D tex)
+        {
+            if (tex == null || tex.width < 8 || tex.height < 8) return false;
+            var p = relativePath.Replace('\\', '/');
+            if (p.Contains("/bg/") || p.Contains("/Bg/")) return false;
+            var underWrldz = p.StartsWith("WRLDZ/") || p.StartsWith("WRLDZ\\");
+            if (!underWrldz) return false;
+            if (p.IndexOf("/icons/ygo/", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                return false;
+            var w = tex.width;
+            var h = tex.height;
+            var c0 = tex.GetPixel(2, 2);
+            var c1 = tex.GetPixel(w - 3, 2);
+            var c2 = tex.GetPixel(2, h - 3);
+            var c3 = tex.GetPixel(w - 3, h - 3);
+            return IsVoidBlack(c0) && IsVoidBlack(c1) && IsVoidBlack(c2) && IsVoidBlack(c3);
+        }
+
+        /// <summary>Knock out JPEG/PNG void around glowing plates so toolbar buttons don't paint black boxes.</summary>
+        public static void ApplyBlackKeyInPlace(Texture2D tex)
+        {
+            if (tex == null) return;
+            var pixels = tex.GetPixels32();
+            if (pixels == null || pixels.Length == 0) return;
+            for (var i = 0; i < pixels.Length; i++)
+            {
+                var p = pixels[i];
+                var peak = p.r > p.g ? p.r : p.g;
+                if (p.b > peak) peak = p.b;
+                if (peak >= 28) continue;
+                if (peak < 12)
+                {
+                    pixels[i] = new Color32(0, 0, 0, 0);
+                    continue;
+                }
+
+                var a = (byte)Mathf.Clamp(Mathf.RoundToInt((peak - 12) / 16f * p.a), 0, 255);
+                pixels[i] = new Color32(p.r, p.g, p.b, a);
+            }
+
+            tex.SetPixels32(pixels);
+            tex.Apply(false, false);
+        }
 
         /// <summary>
         /// Remove isolation green screen + mild despill. Operates in-place on readable texture.
@@ -239,6 +298,26 @@ namespace WRLDZ.Presentation
             var spr = CardBack();
             return spr != null && spr.texture != null ? spr.texture : Texture2D.grayTexture;
         }
+        /// <summary>
+        /// Linux File.Exists can native-chdir into the file's folder. Bee then
+        /// compiles against that folder and Unity reports a compile failure with
+        /// no CS errors. Re-pin immediately after StreamingAssets IO.
+        /// </summary>
+        static void PinEditorCwd()
+        {
+#if UNITY_EDITOR
+            try
+            {
+                var root = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+                Directory.SetCurrentDirectory(root);
+            }
+            catch
+            {
+                // Editor guard also pins on compile.
+            }
+#endif
+        }
+
         public static Sprite ReferobotPortrait() => Load("WRLDZ/Referobot/referobot_portrait.png");
 
         // GO chrome pack

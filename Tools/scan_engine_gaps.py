@@ -19,6 +19,8 @@ ROOT = Path(__file__).resolve().parents[1]
 CARDS = ROOT / "Assets/StreamingAssets/Cards/cards_db.json"
 SEED = ROOT / "Assets/StreamingAssets/WRLDZ/ygopro_continuous_seed_v1.json"
 TRIGGERS = ROOT / "Assets/StreamingAssets/WRLDZ/ygopro_trigger_seed_v1.json"
+ST_FACTS = ROOT / "Assets/StreamingAssets/WRLDZ/ygopro_st_facts_v1.json"
+PUZZLE_FACTS = ROOT / "Assets/StreamingAssets/WRLDZ/puzzle_facts_v1.json"
 PRE_LINK_SETS = ROOT / "Assets/StreamingAssets/WRLDZ/eras/pre_link_sets.json"
 
 # Must stay in lockstep with CardTextEffectCompiler extra/direct regexes.
@@ -135,6 +137,20 @@ RX_EQUIP_ATK = re.compile(
     r"A \w+(?:-Type)? monster equipped with this card increases?",
     re.I,
 )
+RX_EQUIP_ONLY = re.compile(
+    r"Equip only to (?:an? )?[A-Za-z]+(?:-(?!Type)[A-Za-z]+)*(?:-Type)? monster\.?\s*"
+    r"It gains \d+ ATK",
+    re.I,
+)
+RX_EQUIP_GAINS = re.compile(
+    r"The equipped monster gains \d+ ATK",
+    re.I,
+)
+RX_FALLING_DOWN = re.compile(
+    r"Activate this card by targeting an opponent's monster;\s*"
+    r"equip this card to it\.\s*Take control of it",
+    re.I,
+)
 RX_SECOND_ATTACK = re.compile(
     r"This card can make a second attack during each Battle Phase",
     re.I,
@@ -169,6 +185,61 @@ RX_DESTROY_OPP_ST = re.compile(
     r"Destroy all Spell and Trap Cards your opponent controls",
     re.I,
 )
+RX_ECTO = re.compile(
+    r"Once per turn, during each player's End Phase:\s*"
+    r"The turn player must Tribute 1 face-up monster",
+    re.I,
+)
+RX_TOON_PAY = re.compile(
+    r"Activate this card by paying \d+ (?:LP|Life Points)",
+    re.I,
+)
+RX_LABYRINTH = re.compile(
+    r"during each player's End Phase:\s*"
+    r"Change the battle positions of all face-up monsters the turn player controls",
+    re.I,
+)
+RX_BURNING_LAND = re.compile(
+    r"When this card is activated:\s*If there are any Field Spell Cards on the field, destroy them",
+    re.I,
+)
+RX_GRAVITY_BIND = re.compile(
+    r"Level \d+ or higher monsters cannot attack",
+    re.I,
+)
+RX_INSECT_BARRIER = re.compile(
+    r"\w+(?:-Type)? monsters your opponent controls cannot declare an attack",
+    re.I,
+)
+RX_CANNOT_ATTACK_ATK = re.compile(
+    r"Monsters with \d+ or more ATK cannot declare an attack",
+    re.I,
+)
+RX_PAY_OR_DESTROY = re.compile(
+    r"during your Standby Phase,? pay \d+ (?:LP|Life Points) or destroy this card",
+    re.I,
+)
+RX_CALL_HAUNTED = re.compile(
+    r"Activate this card by targeting 1 monster in your (?:GY|Graveyard);\s*"
+    r"Special Summon",
+    re.I,
+)
+RX_SOUL_RES = re.compile(
+    r"Activate this card by targeting 1 Normal Monster in your (?:GY|Graveyard);\s*"
+    r"Special Summon",
+    re.I,
+)
+
+UNIQUE_ST_LEFTOVER = {
+    3136426,  # Level Limit - Area B
+    21770260,  # Jam Breeding Machine
+    82732705,  # Skill Drain
+    82003859,  # Toll
+    94212438,  # Destiny Board
+    74701381,  # DNA Surgery
+    93016201,  # Royal Oppression
+    17078030,  # Wall of Revealing Light
+}
 
 
 def load_cards() -> list[dict]:
@@ -221,6 +292,29 @@ def load_seed() -> dict:
     if not SEED.is_file():
         return {}
     return json.loads(SEED.read_text(encoding="utf-8"))
+
+
+def load_st_facts() -> dict[int, dict]:
+    if not ST_FACTS.is_file():
+        return {}
+    raw = json.loads(ST_FACTS.read_text(encoding="utf-8"))
+    out: dict[int, dict] = {}
+    for t in raw.get("facts") or []:
+        if t and t.get("cardId"):
+            out[int(t["cardId"])] = t
+    return out
+
+
+def load_puzzle_activate_ids() -> set[int]:
+    if not PUZZLE_FACTS.is_file():
+        return set()
+    raw = json.loads(PUZZLE_FACTS.read_text(encoding="utf-8"))
+    ids: set[int] = set()
+    for p in raw.get("puzzles") or []:
+        for a in p.get("activate") or []:
+            if a and a.get("cardId"):
+                ids.add(int(a["cardId"]))
+    return ids
 
 
 def load_triggers() -> dict[int, dict]:
@@ -307,6 +401,8 @@ def main() -> int:
     seed = load_seed()
     _, seed_dir, seed_x = index_seed(seed)
     trig = load_triggers()
+    st_facts = load_st_facts()
+    puzzle_act = load_puzzle_activate_ids()
     print(f"cards_db: {len(cards)}")
     print(
         f"seed: auras={seed.get('auraCount', 0)} "
@@ -315,6 +411,8 @@ def main() -> int:
         f"scripts={seed.get('scriptFiles', 0)}"
     )
     print(f"trigger seed: {len(trig)}")
+    print(f"st facts: {len(st_facts)}")
+    print(f"puzzle activate ids: {len(puzzle_act)}")
 
     gaps: list[str] = []
     covered_extra = 0
@@ -423,6 +521,65 @@ def main() -> int:
             print(f"COVERED inflict-opp          {cid} {name}  compiler")
         if RX_DESTROY_OPP_ST.search(desc):
             print(f"COVERED destroy-opp-st       {cid} {name}  compiler")
+        if RX_ECTO.search(desc):
+            print(f"COVERED ectoplasmer-phase    {cid} {name}  compiler")
+        if RX_TOON_PAY.search(desc):
+            print(f"COVERED activate-pay-lp      {cid} {name}  compiler")
+        if RX_LABYRINTH.search(desc):
+            print(f"COVERED labyrinth-positions  {cid} {name}  compiler")
+        if RX_BURNING_LAND.search(desc):
+            print(f"COVERED burning-land         {cid} {name}  compiler")
+        if RX_GRAVITY_BIND.search(desc):
+            print(f"COVERED gravity-bind         {cid} {name}  compiler")
+        if RX_INSECT_BARRIER.search(desc):
+            print(f"COVERED insect-barrier       {cid} {name}  compiler")
+        if RX_CANNOT_ATTACK_ATK.search(desc):
+            print(f"COVERED cannot-attack-atk    {cid} {name}  compiler")
+        if RX_PAY_OR_DESTROY.search(desc):
+            print(f"COVERED standby-pay-or-destroy {cid} {name}  compiler")
+        if RX_CALL_HAUNTED.search(desc) or RX_SOUL_RES.search(desc):
+            print(f"COVERED gy-revive-leave      {cid} {name}  compiler")
+
+        fact = st_facts.get(cid)
+        if fact and cid not in UNIQUE_ST_LEFTOVER:
+            ca = fact.get("cannotAttack") or {}
+            if ca.get("levelMin") and not RX_GRAVITY_BIND.search(desc):
+                if re.search(r"Level \d+ or higher monsters cannot attack", desc, re.I):
+                    gaps.append(
+                        f"{cid} {name}: Lua cannot-attack-by-level but compiler regex missed it"
+                    )
+            if ca.get("race") and "opponent" in str(ca.get("side")) and not RX_INSECT_BARRIER.search(desc):
+                if re.search(r"cannot declare an attack", desc, re.I):
+                    gaps.append(
+                        f"{cid} {name}: Lua opponent-race cannot-attack but compiler regex missed it"
+                    )
+            if ca.get("atkMin") and not RX_CANNOT_ATTACK_ATK.search(desc):
+                if re.search(r"or more ATK cannot declare an attack", desc, re.I):
+                    gaps.append(
+                        f"{cid} {name}: Lua ATK cannot-attack but compiler regex missed it"
+                    )
+            if fact.get("activatePayLp") and not RX_TOON_PAY.search(desc):
+                if re.search(r"Activate this card by paying", desc, re.I):
+                    gaps.append(
+                        f"{cid} {name}: Lua PayLP activate but compiler regex missed it"
+                    )
+            if (fact.get("gyReviveLeaveField") and not RX_CALL_HAUNTED.search(desc)
+                    and not RX_SOUL_RES.search(desc)):
+                if re.search(r"When this card leaves the field, destroy that monster", desc, re.I):
+                    gaps.append(
+                        f"{cid} {name}: Lua GY-revive-leave-field but compiler regex missed it"
+                    )
+            ph = fact.get("phaseTrigger") or {}
+            if ph.get("actionHint") == "tribute" and not RX_ECTO.search(desc):
+                if re.search(r"turn player must Tribute", desc, re.I):
+                    gaps.append(
+                        f"{cid} {name}: Lua End Phase turn-player tribute but compiler regex missed it"
+                    )
+            if ph.get("actionHint") == "change_position" and not RX_LABYRINTH.search(desc):
+                if re.search(r"turn player controls", desc, re.I):
+                    gaps.append(
+                        f"{cid} {name}: Lua End Phase turn-player positions but compiler regex missed it"
+                    )
 
         if RX_UMI_WHILE.search(desc) and not extra_ok and not direct_ok:
             umi_info.append(f"INFO  Umi-family not extra/direct  {cid} {name}")
@@ -467,6 +624,10 @@ def main() -> int:
         14087893: "Book of Moon face-down DEF",
         21015833: "Hayabusa Knight second attack",
         1435851: "Dragon Treasure Equip ATK/DEF",
+        32268901: "Salamandra Equip only FIRE",
+        61854111: "Legendary Sword Equip only Warrior",
+        40619825: "Axe of Despair equipped-gains ATK",
+        32919136: "Falling Down opponent-equip take-control",
         27744077: "Absolute End opponent-turn direct attacks",
         2130625: "Numinous Healer when you take damage",
         73628505: "Terraforming Field Spell search",
@@ -477,6 +638,15 @@ def main() -> int:
         63120904: "Orca Mega-Fortress tribute-named destroy",
         98434877: "Suijin damage-calc ATK 0",
         218704: "Fenrir SS by banishing WATER from GY",
+        97342942: "Ectoplasmer End Phase tribute",
+        15259703: "Toon World pay-LP Activate",
+        66526672: "Labyrinth of Nightmare End Phase positions",
+        24294108: "Burning Land destroy Field Spells + Standby damage",
+        85742772: "Gravity Bind Level 4+ cannot attack",
+        23615409: "Insect Barrier opponent Insect cannot attack",
+        44656491: "Messenger of Peace ATK lock + pay or destroy",
+        97077563: "Call of the Haunted GY SS leave-field",
+        92924317: "Soul Resurrection Normal GY SS Defense",
     }
     by_id = {
         int(c["id"]): c
@@ -510,6 +680,14 @@ def main() -> int:
         gaps.append("21015833 Hayabusa Knight second-attack regex missed official text")
     if 1435851 in by_id and not RX_EQUIP_ATK.search(by_id[1435851].get("desc") or ""):
         gaps.append("1435851 Dragon Treasure equip-atk regex missed official text")
+    if 32268901 in by_id and not RX_EQUIP_ONLY.search(by_id[32268901].get("desc") or ""):
+        gaps.append("32268901 Salamandra equip-only regex missed official text")
+    if 61854111 in by_id and not RX_EQUIP_ONLY.search(by_id[61854111].get("desc") or ""):
+        gaps.append("61854111 Legendary Sword equip-only regex missed official text")
+    if 40619825 in by_id and not RX_EQUIP_GAINS.search(by_id[40619825].get("desc") or ""):
+        gaps.append("40619825 Axe of Despair equipped-gains regex missed official text")
+    if 32919136 in by_id and not RX_FALLING_DOWN.search(by_id[32919136].get("desc") or ""):
+        gaps.append("32919136 Falling Down opponent-equip regex missed official text")
     if 27744077 in by_id and not RX_ABSOLUTE_END.search(by_id[27744077].get("desc") or ""):
         gaps.append("27744077 Absolute End opponent-turn direct-attack regex missed official text")
     if 2130625 in by_id and not RX_WHEN_TAKE_DAMAGE.search(by_id[2130625].get("desc") or ""):
@@ -530,6 +708,42 @@ def main() -> int:
         gaps.append("98434877 Suijin damage-calc ATK 0 regex missed official text")
     if 218704 in by_id and not RX_SS_BANISH_ATTR_GY.search(by_id[218704].get("desc") or ""):
         gaps.append("218704 Fenrir SS-by-banish regex missed official text")
+    if 97342942 in by_id and not RX_ECTO.search(by_id[97342942].get("desc") or ""):
+        gaps.append("97342942 Ectoplasmer End Phase tribute regex missed official text")
+    if 15259703 in by_id and not RX_TOON_PAY.search(by_id[15259703].get("desc") or ""):
+        gaps.append("15259703 Toon World pay-LP regex missed official text")
+    if 66526672 in by_id and not RX_LABYRINTH.search(by_id[66526672].get("desc") or ""):
+        gaps.append("66526672 Labyrinth of Nightmare regex missed official text")
+    if 24294108 in by_id and not RX_BURNING_LAND.search(by_id[24294108].get("desc") or ""):
+        gaps.append("24294108 Burning Land regex missed official text")
+    if 85742772 in by_id and not RX_GRAVITY_BIND.search(by_id[85742772].get("desc") or ""):
+        gaps.append("85742772 Gravity Bind regex missed official text")
+    if 23615409 in by_id and not RX_INSECT_BARRIER.search(by_id[23615409].get("desc") or ""):
+        gaps.append("23615409 Insect Barrier regex missed official text")
+    if 44656491 in by_id and not RX_CANNOT_ATTACK_ATK.search(by_id[44656491].get("desc") or ""):
+        gaps.append("44656491 Messenger of Peace ATK-lock regex missed official text")
+    if 44656491 in by_id and not RX_PAY_OR_DESTROY.search(by_id[44656491].get("desc") or ""):
+        gaps.append("44656491 Messenger of Peace pay-or-destroy regex missed official text")
+    if 97077563 in by_id and not RX_CALL_HAUNTED.search(by_id[97077563].get("desc") or ""):
+        gaps.append("97077563 Call of the Haunted regex missed official text")
+    if 92924317 in by_id and not RX_SOUL_RES.search(by_id[92924317].get("desc") or ""):
+        gaps.append("92924317 Soul Resurrection regex missed official text")
+    if st_facts:
+        for cid, label in (
+            (97342942, "Ectoplasmer"),
+            (15259703, "Toon World"),
+            (85742772, "Gravity Bind"),
+            (23615409, "Insect Barrier"),
+            (44656491, "Messenger of Peace"),
+            (97077563, "Call of the Haunted"),
+        ):
+            if cid in by_id and cid not in st_facts:
+                gaps.append(f"{cid} {label} missing from ST Lua facts")
+    if puzzle_act:
+        if 97342942 in by_id and 97342942 not in puzzle_act:
+            umi_info.append("INFO  Ectoplasmer not in puzzle Activate comments")
+        elif 97342942 in puzzle_act:
+            print("COVERED puzzle-activate     97342942 Ectoplasmer")
 
     print(f"covered extra-attack in cards_db: {covered_extra}")
     print(f"covered direct-attack in cards_db: {covered_direct}")

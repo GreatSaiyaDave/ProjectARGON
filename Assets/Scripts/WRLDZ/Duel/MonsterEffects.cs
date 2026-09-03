@@ -361,7 +361,7 @@ namespace WRLDZ.Duel
 
         /// <summary>When a monster leaves the field for the GY (destroy, tribute, fusion material, etc.).</summary>
         public static void OnSentFromFieldToGy(DuelEngine engine, DuelistState owner, CardInstance card,
-            bool destroyed = false)
+            bool destroyed = false, bool destroyedByBattle = false, CardInstance battleDestroyer = null)
         {
             if (engine == null || owner == null || card == null) return;
 
@@ -376,7 +376,7 @@ namespace WRLDZ.Duel
             if (prog != null && prog.HasTiming(TextEffects.EffectTiming.SentFromFieldToGy))
             {
                 if (TextEffects.TextEffectRuntime.TryResolveSentToGy(engine, owner, card, prog,
-                        destroyed))
+                        destroyed, destroyedByBattle, battleDestroyer))
                     return;
             }
         }

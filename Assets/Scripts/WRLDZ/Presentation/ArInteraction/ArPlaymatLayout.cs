@@ -586,6 +586,19 @@ namespace WRLDZ.Presentation.ArInteraction
                         Mathf.Abs(mx - sx) < 0.001f,
                         $"M={mx:0.00} ST={sx:0.00}");
                 }
+
+                Check("Hand fan: 2-card rest bodies do not overlap",
+                    !ArHandVolume.RestBodiesOverlap(0, 1, 2, 0.22f));
+                Check("Hand fan: 6-card rest bodies do not overlap",
+                    !ArHandVolume.RestBodiesOverlap(0, 1, 6, 0.22f) &&
+                    !ArHandVolume.RestBodiesOverlap(2, 3, 6, 0.22f) &&
+                    !ArHandVolume.RestBodiesOverlap(4, 5, 6, 0.22f));
+                Check("Hand fan: 8-card rest bodies do not overlap",
+                    !ArHandVolume.RestBodiesOverlap(0, 1, 8, 0.22f) &&
+                    !ArHandVolume.RestBodiesOverlap(3, 4, 8, 0.22f));
+                Check("Hand fan: spacing exceeds projected body width",
+                    ArHandVolume.RestCenterSpacing(6, 0.22f) >
+                    ArHandVolume.ProjectedWidth(0.22f, 16f) + 0.001f);
             }
             finally
             {

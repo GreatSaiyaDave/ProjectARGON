@@ -316,6 +316,8 @@ def extract_file(path: Path) -> tuple[list[dict], list[dict], list[dict]]:
 
 def main() -> int:
     roots = [
+        Path(__file__).resolve().parents[1] / "Assets/StreamingAssets/OcgCore/scripts/official",
+        Path.home() / "Games/ProjectIgnis/script/official",
         Path.home() / "ygopro-scripts",
         Path.home() / "ygo-agent/tmp_full_catalog/CardScripts/official",
     ]

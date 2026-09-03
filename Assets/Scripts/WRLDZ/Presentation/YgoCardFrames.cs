@@ -41,6 +41,12 @@ namespace WRLDZ.Presentation
                 : $"[WRLDZ] YgoCardFrames missing {dir}");
         }
 
+        public static Sprite FrameForArtifact()
+        {
+            EnsureReady();
+            return Frame("Card-artifact.png") ?? Frame("Card-spell.png") ?? Frame("Card-effect.png");
+        }
+
         public static Sprite FrameFor(CardDef def)
         {
             EnsureReady();

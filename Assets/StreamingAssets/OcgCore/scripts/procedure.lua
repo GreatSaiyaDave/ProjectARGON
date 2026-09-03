@@ -1,0 +1,2 @@
+-- Compatibility load target for CreateDuel.
+-- ProjectIgnis CardScripts (this pin) loads proc_*.lua from utility.lua instead of a monolithic procedure.lua.

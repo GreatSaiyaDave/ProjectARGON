@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using WRLDZ.Core;
 using WRLDZ.Data;
 
 namespace WRLDZ.Duel.Rules
@@ -37,6 +38,20 @@ namespace WRLDZ.Duel.Rules
         public static void GrantTutorialBadge(PlayerProgress p)
         {
             GrantBadge(p, ErazFormat.Original);
+        }
+
+        public static void GrantBadge(LocalAccountStore.Account acc, string eraId)
+        {
+            if (acc == null) return;
+            acc.EnsureProgress();
+            GrantBadge(acc.progress, eraId);
+            acc.EnsureInventory();
+            ArtifactService.Grant(acc.progress, acc.inventory, ArtifactService.ErazId(eraId), 1);
+        }
+
+        public static void GrantTutorialBadge(LocalAccountStore.Account acc)
+        {
+            GrantBadge(acc, ErazFormat.Original);
         }
 
         /// <summary>

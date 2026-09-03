@@ -123,6 +123,34 @@ namespace WRLDZ.UI
             }
         }
 
+        /// <summary>
+        /// Tall but narrow digits for LP / ATK / DEF plates — body face, no Bangers,
+        /// hairline outline so the swirl art stays the weight of the graphic.
+        /// </summary>
+        public static void StyleGaugeDigits(Text t, int fontSize)
+        {
+            if (t == null) return;
+            FreeUiKit.EnsureLoaded();
+            t.font = FreeUiKit.UiFont() ?? Body() ?? UiFoundation.BuiltinFont();
+            t.fontStyle = FontStyle.Normal;
+            t.fontSize = Mathf.Max(24, fontSize);
+            t.alignment = TextAnchor.MiddleCenter;
+            t.horizontalOverflow = HorizontalWrapMode.Overflow;
+            t.verticalOverflow = VerticalWrapMode.Overflow;
+            t.resizeTextForBestFit = false;
+            t.raycastTarget = false;
+            t.alignByGeometry = true;
+            var o = t.GetComponent<Outline>() ?? t.gameObject.AddComponent<Outline>();
+            o.effectColor = new Color(0f, 0f, 0f, 0.88f);
+            o.effectDistance = new Vector2(1.1f, -1.1f);
+            o.useGraphicAlpha = true;
+            foreach (var s in t.GetComponents<Shadow>())
+            {
+                if (s is Outline) continue;
+                s.enabled = false;
+            }
+        }
+
         /// <summary>Gold title treatment (phase / win banners).</summary>
         public static void StyleGoldTitle(Text t, int designSize = 18)
         {

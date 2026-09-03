@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using WRLDZ.Data;
@@ -214,6 +215,7 @@ namespace WRLDZ.Core
 
             Debug.Log($"[WRLDZ] Entering AR duel from {DuelEntrySource} testMode={TestDuelMode} " +
                       $"sep={PendingArMatch?.SeparationMeters:0.0}m");
+            PauseSoulTimers();
             LoadScene(SceneDuel);
         }
 
@@ -270,6 +272,7 @@ namespace WRLDZ.Core
             // Deck overrides live on config; DuelBootstrap reads PendingArMatch
 
             Debug.Log($"[WRLDZ] StartArDuel · {config.SummaryLine()} · launch={config.Launch}");
+            PauseSoulTimers();
             if (config.PossessionCinematic && !config.SkipPreDuelCinematic)
             {
                 LoadScene(ScenePossession);
@@ -390,7 +393,7 @@ namespace WRLDZ.Core
             acc.progress.onboardingKuribohChosen = true;
             acc.progress.onboardingTutorialDuelDone = true;
             acc.progress.onboardingComplete = true;
-            ErazProgress.GrantTutorialBadge(acc.progress);
+            ErazProgress.GrantTutorialBadge(acc);
             if (acc.progress.kuribohTeam == 0)
                 acc.progress.kuribohTeam = (int)KuribohTeam.Kuribandit;
             StarterKitService.GrantIfNeeded(acc);
@@ -423,6 +426,7 @@ namespace WRLDZ.Core
         /// <summary>Leave duel → Overworld (home), or Boot when lab test mode.</summary>
         public void LeaveDuel()
         {
+            ResumeSoulTimers();
             ClearPendingArMatch();
             if (Account != null && Account.deactivated)
             {
@@ -446,6 +450,22 @@ namespace WRLDZ.Core
         {
             // Keep TestDuelMode false when intentionally booting unless about to re-enter
             LoadScene(SceneBoot);
+        }
+
+        void PauseSoulTimers()
+        {
+            if (Account == null) return;
+            Account.EnsureInventory();
+            SoulCardService.PauseBegin(Account.inventory, DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+            LocalAccountStore.UpdateAccount(Account);
+        }
+
+        void ResumeSoulTimers()
+        {
+            if (Account == null) return;
+            Account.EnsureInventory();
+            SoulCardService.PauseEnd(Account.inventory, DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+            LocalAccountStore.UpdateAccount(Account);
         }
 
         bool RequireLogin(string target)

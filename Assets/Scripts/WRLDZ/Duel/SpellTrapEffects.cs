@@ -22,6 +22,8 @@ namespace WRLDZ.Duel
         AnyMonsterOnField,
         /// <summary>Magician of Faith — Spell in your GY.</summary>
         SpellInYourGy,
+        /// <summary>Mask of Darkness — Trap in your GY.</summary>
+        TrapInYourGy,
         /// <summary>Sangan — monster ≤1500 ATK in your Deck (search proxy instances).</summary>
         MonsterInYourDeckAtkLeq,
         /// <summary>Abyss Soldier cost — discard 1 WATER (or filtered) monster from hand.</summary>
@@ -100,6 +102,8 @@ namespace WRLDZ.Duel
                         $"{n}: choose a monster on the field to destroy.",
                     EffectTargetKind.SpellInYourGy =>
                         $"{n}: choose a Spell in your GY to add to hand.",
+                    EffectTargetKind.TrapInYourGy =>
+                        $"{n}: choose a Trap in your GY to add to hand.",
                     EffectTargetKind.MonsterInYourDeckAtkLeq =>
                         $"{n}: choose a monster (≤1500 ATK) from your Deck to add to hand.",
                     EffectTargetKind.FieldSpellInYourDeck =>
@@ -107,7 +111,9 @@ namespace WRLDZ.Duel
                     EffectTargetKind.MonsterInYourDeckFiltered =>
                         $"{n}: choose a monster from your Deck to add to hand.",
                     EffectTargetKind.DiscardMonsterInHand =>
-                        $"{n}: discard 1 matching monster from your hand (cost).",
+                        string.IsNullOrEmpty(DiscardCostAttribute) || DiscardCostAttribute == "*"
+                            ? $"{n}: discard 1 card from your hand (cost)."
+                            : $"{n}: discard 1 matching monster from your hand (cost).",
                     EffectTargetKind.AnyCardOnField =>
                         $"{n}: choose 1 card on the field; return it to the hand.",
                     EffectTargetKind.SendFaceUpNamedToGy =>
@@ -450,6 +456,63 @@ namespace WRLDZ.Duel
             return list;
         }
 
+        /// <summary>
+        /// Trap Hole vs Bottomless vs Torrential: ATK/DEF floors and ceilings, SS, own summon.
+        /// </summary>
+        public static bool SummonWindowClauseLegal(
+            TextEffects.EffectClause clause,
+            CardInstance summoned,
+            DuelistState summoner,
+            DuelistState responder)
+        {
+            if (clause == null || summoned == null) return false;
+            if (summoned.WasSpecialSummoned && !clause.AnswersSpecialSummon) return false;
+            if (summoner != null && summoner == responder && !clause.AnswersControllerSummon)
+                return false;
+            if (clause.RequiresSummonedIsToken && !summoned.IsToken) return false;
+            if (clause.RequiresSummonedIsFusion &&
+                (summoned.Def == null || summoned.Def.type == null ||
+                 summoned.Def.type.IndexOf("Fusion", System.StringComparison.OrdinalIgnoreCase) < 0))
+                return false;
+            if (clause.AmountIsAtkMax)
+            {
+                if (!summoned.FaceUp) return false;
+                return summoned.CurrentAtk <= clause.Amount;
+            }
+
+            if (clause.AmountIsDefMax)
+            {
+                if (!summoned.FaceUp) return false;
+                return summoned.CurrentDef <= clause.Amount;
+            }
+
+            // Amount as ATK floor is Trap Hole / Bottomless. Token Feastevil stores damage in Amount.
+            if (clause.Amount > 0 &&
+                (clause.Action == TextEffects.EffectActionKind.Destroy ||
+                 clause.Action == TextEffects.EffectActionKind.Banish ||
+                 clause.BanishIfDestroyed))
+            {
+                if (!summoned.FaceUp) return false;
+                return summoned.CurrentAtk >= clause.Amount;
+            }
+
+            return true;
+        }
+
+        public static bool AttackWindowClauseLegal(TextEffects.CompiledCardProgram prog, DuelEngine engine)
+        {
+            if (prog == null) return false;
+            var atk = engine?.PendingResponse?.Attacker;
+            foreach (var c in prog.ClauseList)
+            {
+                if (c == null || c.Timing != TextEffects.EffectTiming.AttackDeclared) continue;
+                if (c.RequiresAttackerTributeSummoned && atk != null && !atk.WasTributeSummoned)
+                    return false;
+            }
+
+            return true;
+        }
+
         public static bool IsLegalResponseCard(
             DuelEngine engine,
             DuelistState who,
@@ -476,9 +539,6 @@ namespace WRLDZ.Duel
             if (card.FaceUp) return false; // already face-up continuous etc. not for this window
             if (card.SetThisTurn) return false; // cannot activate Set card same turn
 
-            if (YgoProTriggerCatalog.IsLegal(engine, who, card, timing))
-                return true;
-
             // Learned text programs first (FullyCompiled required — see ProgramMayActivate above)
             var prog = TextEffects.CompiledEffectCache.GetOrCompile(card);
             if (prog != null && prog.FullyCompiled && prog.CanResolveAny)
@@ -488,7 +548,11 @@ namespace WRLDZ.Duel
                      (IsCompiledFreeChain(card.Def, prog) &&
                       TextEffects.TextEffectRuntime.CanActivate(engine, who, card, fromHand: false, prog,
                           out _))))
+                {
+                    if (!AttackWindowClauseLegal(prog, engine))
+                        return false;
                     return true;
+                }
                 if (timing == ResponseTiming.OpponentOpenState &&
                     engine.TurnPlayer != who &&
                     IsCompiledFreeChain(card.Def, prog) &&
@@ -498,10 +562,10 @@ namespace WRLDZ.Duel
                 if (timing == ResponseTiming.MonsterSummoned &&
                     prog.HasTiming(TextEffects.EffectTiming.OpponentNormalOrFlipSummon))
                 {
-                    var need = 1000;
                     var cl = prog.ClausesFor(TextEffects.EffectTiming.OpponentNormalOrFlipSummon);
-                    if (cl.Count > 0 && cl[0].Amount > 0) need = cl[0].Amount;
-                    if (summoned != null && summoned.CurrentAtk >= need) return true;
+                    if (cl.Count == 0) return false;
+                    return SummonWindowClauseLegal(cl[0], summoned, engine.PendingResponse?.Summoner,
+                        who);
                 }
 
                 if (timing == ResponseTiming.DamageCalculation &&
@@ -513,6 +577,11 @@ namespace WRLDZ.Duel
                     prog.HasTiming(TextEffects.EffectTiming.YouTakeLifePointDamage))
                     return true;
             }
+
+            // Lua catalog is a linter for uncompiled stubs. FullyCompiled summon
+            // clauses already returned above (Trap Hole must not inherit SS from catalog).
+            if (YgoProTriggerCatalog.IsLegal(engine, who, card, timing))
+                return true;
 
             var id = card.CardId;
             switch (timing)
@@ -534,7 +603,9 @@ namespace WRLDZ.Duel
                     if (id == TrapHole)
                     {
                         // Trap Hole: when opponent Normal/Flip Summons a monster with ATK ≥ 1000
-                        if (summoned == null || summoned.CurrentAtk < 1000) return false;
+                        if (summoned == null || summoned.WasSpecialSummoned || !summoned.FaceUp ||
+                            summoned.CurrentAtk < 1000)
+                            return false;
                         return true;
                     }
 

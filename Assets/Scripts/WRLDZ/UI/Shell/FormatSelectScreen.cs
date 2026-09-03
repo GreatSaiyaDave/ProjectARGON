@@ -23,38 +23,34 @@ namespace WRLDZ.UI.Shell
 
         public static RectTransform Build(Transform parent, System.Action onClose)
         {
-            var panel = FloatingPanel.Create(parent, "FormatSelect", goldEdge: true);
-            FloatingPanel.Place(panel, 0.04f, 0.12f, 0.96f, 0.88f);
+            var hostGo = new GameObject("FormatSelect", typeof(RectTransform));
+            hostGo.transform.SetParent(parent, false);
+            FloatingPanel.Place(hostGo.GetComponent<RectTransform>(), 0f, 0f, 1f, 1f);
 
-            var title = FloatingPanel.Title(panel, "PLAYER VS AI", 24);
-            FloatingPanel.Place(title.rectTransform, 0.05f, 0.90f, 0.70f, 0.98f);
-
-            var close = FloatingPanel.PrimaryButton(panel, "✕", () => onClose?.Invoke());
-            FloatingPanel.Place(close.GetComponent<RectTransform>(), 0.82f, 0.90f, 0.96f, 0.98f);
-
-            var hint = FloatingPanel.Body(panel,
+            var frame = DualMenuPresenter.BuildFrame(
+                hostGo.transform, "PLAYER VS AI",
                 "You vs the computer. Field distance sets how far the AR disks sit apart.",
-                13);
-            FloatingPanel.Place(hint.rectTransform, 0.05f, 0.84f, 0.95f, 0.89f);
-            hint.color = DuelystUi.TextMuted;
+                onClose);
+            var body = frame.BodyHost;
 
-            var listTop = 0.82f;
+            var listTop = 0.98f;
             if (ErazFormat.ShowsBadgeTray("pvai"))
             {
                 var hasOriginal = HasOriginalBadgeSafe();
                 var erazText = hasOriginal
                     ? "ERAZ · Original"
                     : "ERAZ · LOCKED — finish tutorial";
-                var erazLine = FloatingPanel.Body(panel, erazText, 13);
-                FloatingPanel.Place(erazLine.rectTransform, 0.05f, 0.78f, 0.95f, 0.83f);
+                var erazLine = FloatingPanel.Body(body, erazText, 13);
+                FloatingPanel.Grid.Full(erazLine.rectTransform, 0.90f, 0.98f);
+                erazLine.alignment = TextAnchor.MiddleCenter;
                 erazLine.color = hasOriginal ? DuelystUi.TextMuted : DuelystUi.Danger;
-                listTop = 0.76f;
+                listTop = 0.88f;
             }
 
             var scroll = new GameObject("List", typeof(RectTransform), typeof(VerticalLayoutGroup),
                 typeof(ContentSizeFitter));
-            scroll.transform.SetParent(panel, false);
-            FloatingPanel.Place(scroll.GetComponent<RectTransform>(), 0.04f, 0.06f, 0.96f, listTop);
+            scroll.transform.SetParent(body, false);
+            FloatingPanel.Place(scroll.GetComponent<RectTransform>(), 0.02f, 0.02f, 0.98f, listTop);
             var v = scroll.GetComponent<VerticalLayoutGroup>();
             v.spacing = 12;
             v.childForceExpandHeight = false;
@@ -79,7 +75,7 @@ namespace WRLDZ.UI.Shell
             foreach (var c in cards)
                 AddCard(scroll.transform, c);
 
-            return panel;
+            return hostGo.GetComponent<RectTransform>();
         }
 
         static FormatCard PvAiCard(string title, string rules, float meters, string formatTitle,
@@ -148,14 +144,18 @@ namespace WRLDZ.UI.Shell
         {
             var row = FloatingPanel.Create(parent, c.Title, goldEdge: true);
             var le = row.gameObject.AddComponent<LayoutElement>();
-            le.minHeight = 110f;
-            le.preferredHeight = 120f;
+            le.minHeight = 152f;
+            le.preferredHeight = 160f;
 
-            var t = FloatingPanel.Title(row, c.Title, 18);
-            FloatingPanel.Place(t.rectTransform, 0.04f, 0.58f, 0.70f, 0.92f);
+            var t = FloatingPanel.Title(row, c.Title, 16);
+            FloatingPanel.Place(t.rectTransform, 0.04f, 0.58f, 0.66f, 0.94f);
+            t.horizontalOverflow = HorizontalWrapMode.Overflow;
+            t.verticalOverflow = VerticalWrapMode.Overflow;
+            t.resizeTextForBestFit = false;
 
-            var rules = FloatingPanel.Body(row, c.Rules + "\n" + c.Lp, 14);
-            FloatingPanel.Place(rules.rectTransform, 0.04f, 0.10f, 0.68f, 0.55f);
+            var rules = FloatingPanel.Body(row, c.Rules + "\n" + c.Lp, 13);
+            FloatingPanel.Place(rules.rectTransform, 0.04f, 0.08f, 0.66f, 0.56f);
+            rules.verticalOverflow = VerticalWrapMode.Overflow;
             rules.color = DuelystUi.TextMuted;
 
             if (c.Unlocked && c.Play != null)
@@ -165,14 +165,14 @@ namespace WRLDZ.UI.Shell
                     FreeUiKit.PlayConfirm();
                     c.Play();
                 }, gold: true);
-                FloatingPanel.Place(play.GetComponent<RectTransform>(), 0.72f, 0.22f, 0.96f, 0.78f);
+                FloatingPanel.Place(play.GetComponent<RectTransform>(), 0.70f, 0.18f, 0.96f, 0.82f);
             }
             else
             {
                 var lockL = FloatingPanel.Body(row, "LOCKED", 16);
                 lockL.color = DuelystUi.Danger;
                 lockL.alignment = TextAnchor.MiddleCenter;
-                FloatingPanel.Place(lockL.rectTransform, 0.72f, 0.22f, 0.96f, 0.78f);
+                FloatingPanel.Place(lockL.rectTransform, 0.70f, 0.18f, 0.96f, 0.82f);
             }
         }
     }

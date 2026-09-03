@@ -26,9 +26,11 @@ namespace WRLDZ.UI
         AvatarAppearance _draft;
         Text _status;
         Text _profileName, _profileTitle, _profileHandle, _profileLevel, _profileXp;
+        Text _profileWallet;
         Image _profileTeamIcon;
         Text _statDuels, _statCards, _statPath, _statSe;
         Image _profileXpFill;
+        SoulBadgeView _soulBadge;
         Text _optionLabel;
         InputField _nameField;
         Action _onSaved;
@@ -64,11 +66,12 @@ namespace WRLDZ.UI
             _canvasRoot = canvasGo.transform;
             BuildProfileSheet();
             BuildCustomizerSheet();
-            HideAll();
+            HideAllNow();
         }
 
         public void OpenProfile(Action onSaved = null)
         {
+            StopAllCoroutines();
             _onSaved = onSaved;
             LoadDraftFromSession();
             RefreshProfile();
@@ -79,6 +82,7 @@ namespace WRLDZ.UI
 
         public void OpenCustomizer(Action onSaved = null)
         {
+            StopAllCoroutines();
             _onSaved = onSaved;
             StreamingSprite.ClearCache("WRLDZ/Avatar/clothes/");
             LoadDraftFromSession();
@@ -148,55 +152,32 @@ namespace WRLDZ.UI
             _profileSheet.transform.SetParent(_canvasRoot, false);
             GoTheme.Stretch(_profileSheet.GetComponent<RectTransform>());
 
-            var dim = new GameObject("Dim", typeof(RectTransform), typeof(Image), typeof(Button));
-            dim.transform.SetParent(_profileSheet.transform, false);
-            GoTheme.Stretch(dim.GetComponent<RectTransform>());
-            var dImg = dim.GetComponent<Image>();
-            dImg.sprite = UiFoundation.WhiteSprite();
-            dImg.color = new Color(0.01f, 0.02f, 0.05f, 0.48f);
-            dim.GetComponent<Button>().onClick.AddListener(HideAll);
-
-            GoTheme.EnsureAssets();
-            var sheetGo = new GameObject("Sheet", typeof(RectTransform), typeof(Image));
-            sheetGo.transform.SetParent(_profileSheet.transform, false);
-            GoTheme.Place(sheetGo.GetComponent<RectTransform>(), 0.06f, 0.10f, 0.94f, 0.88f);
-            var sheetImg = sheetGo.GetComponent<Image>();
-            var plate = ImagineAssets.MenuHoloSheet() ?? ImagineAssets.PanelMenuGlass() ?? ImagineAssets.PanelHolo() ?? DuelystUi.Panel();
-            sheetImg.sprite = plate ?? UiFoundation.WhiteSprite();
-            sheetImg.type = plate != null && plate.border.sqrMagnitude > 0
-                ? Image.Type.Sliced : Image.Type.Simple;
-            sheetImg.color = Color.white;
-            sheetImg.raycastTarget = true;
-            var sheet = sheetGo.transform;
-
-            const float inset = 0.08f;
-            const float gap = 0.018f;
-            const int tiles = 5;
-            var rowW = 1f - inset * 2f;
-            var cellW = (rowW - gap * (tiles - 1)) / tiles;
-            float CellX0(int i) => inset + i * (cellW + gap);
-            float CellX1(int i) => CellX0(i) + cellW;
-
-            var close = new GameObject("Close", typeof(RectTransform), typeof(Image), typeof(Button));
-            close.transform.SetParent(sheet, false);
-            GoTheme.Place(close.GetComponent<RectTransform>(), CellX1(tiles - 1) - cellW * 0.55f, 0.91f,
-                CellX1(tiles - 1), 0.985f);
-            var cImg = close.GetComponent<Image>();
-            cImg.sprite = DuelystUi.BtnCircle() ?? UiFoundation.WhiteSprite();
-            cImg.preserveAspect = true;
-            cImg.color = new Color(1f, 1f, 1f, 0.9f);
-            var cMark = GoTheme.Label(close.transform, "X", "×", 22, DuelystUi.TextCream, TextAnchor.MiddleCenter);
-            GoTheme.Place(cMark.rectTransform, 0.1f, 0.1f, 0.9f, 0.9f);
-            close.GetComponent<Button>().targetGraphic = cImg;
-            close.GetComponent<Button>().onClick.AddListener(() =>
+            var frame = DualMenuPresenter.BuildFrame(
+                _profileSheet.transform, "PROFILE", "Spirit Dueler", HideAll);
+            _profileName = frame.Title;
+            _profileHandle = frame.Subtitle;
+            if (_profileName != null)
             {
-                FreeUiKit.PlayClick();
-                HideAll();
-            });
+                _profileName.resizeTextForBestFit = false;
+                _profileName.horizontalOverflow = HorizontalWrapMode.Overflow;
+                _profileName.verticalOverflow = VerticalWrapMode.Overflow;
+            }
+
+            if (_profileHandle != null)
+            {
+                WrldzType.StyleButtonLabel(_profileHandle, 14);
+                _profileHandle.color = new Color(0.90f, 0.94f, 1f, 0.96f);
+                _profileHandle.alignment = TextAnchor.MiddleLeft;
+                _profileHandle.resizeTextForBestFit = false;
+                _profileHandle.horizontalOverflow = HorizontalWrapMode.Overflow;
+                _profileHandle.verticalOverflow = VerticalWrapMode.Overflow;
+            }
+
+            var body = frame.BodyHost;
 
             var host = new GameObject("PortraitHost", typeof(RectTransform), typeof(Image), typeof(Button));
-            host.transform.SetParent(sheet, false);
-            GoTheme.Place(host.GetComponent<RectTransform>(), 0.24f, 0.48f, 0.76f, 0.90f);
+            host.transform.SetParent(body, false);
+            FloatingPanel.Place(host.GetComponent<RectTransform>(), 0.22f, 0.50f, 0.78f, 0.98f);
             var hostHit = host.GetComponent<Image>();
             hostHit.sprite = UiFoundation.WhiteSprite();
             hostHit.color = Color.clear;
@@ -211,39 +192,35 @@ namespace WRLDZ.UI
 
             var pip = new GameObject("LevelPip", typeof(RectTransform));
             pip.transform.SetParent(host.transform, false);
-            GoTheme.Place(pip.GetComponent<RectTransform>(), 0.70f, 0.02f, 0.98f, 0.18f);
+            FloatingPanel.Place(pip.GetComponent<RectTransform>(), 0.70f, 0.02f, 0.98f, 0.22f);
             _profileLevel = StyleLevelPip(pip.transform);
 
-            _profileName = GoTheme.Label(sheet, "Name", "Duelist", 22, DuelystUi.GoldHot,
-                TextAnchor.MiddleCenter, bold: true);
-            _profileName.resizeTextForBestFit = true;
-            _profileName.resizeTextMinSize = 14;
-            _profileName.resizeTextMaxSize = 24;
-            GoTheme.Place(_profileName.rectTransform, inset, 0.425f, 1f - inset, 0.475f);
+            _soulBadge = SoulBadgeView.Create(body);
+            FloatingPanel.Place(_soulBadge.GetComponent<RectTransform>(), 0.84f, 0.82f, 0.98f, 0.98f);
 
             var teamIconGo = new GameObject("TeamIcon", typeof(RectTransform), typeof(Image));
-            teamIconGo.transform.SetParent(sheet, false);
-            GoTheme.Place(teamIconGo.GetComponent<RectTransform>(), 0.32f, 0.378f, 0.40f, 0.430f);
+            teamIconGo.transform.SetParent(body, false);
+            FloatingPanel.Place(teamIconGo.GetComponent<RectTransform>(), 0.04f, 0.40f, 0.14f, 0.48f);
             _profileTeamIcon = teamIconGo.GetComponent<Image>();
             _profileTeamIcon.sprite = ImagineAssets.IconSlotLook();
             _profileTeamIcon.preserveAspect = true;
             _profileTeamIcon.raycastTarget = false;
             _profileTeamIcon.color = Color.white;
 
-            _profileTitle = GoTheme.Label(sheet, "Title", "", 13, DuelystUi.TextCream,
-                TextAnchor.MiddleLeft, bold: true);
-            GoTheme.Place(_profileTitle.rectTransform, 0.41f, 0.378f, 0.88f, 0.430f);
+            _profileTitle = FloatingPanel.Body(body, "", 15);
+            FloatingPanel.Place(_profileTitle.rectTransform, 0.16f, 0.40f, 0.96f, 0.48f);
+            StyleReadable(_profileTitle, 16, DuelystUi.TextCream, TextAnchor.MiddleLeft);
 
-            _profileHandle = GoTheme.Label(sheet, "Handle", "", 12, DuelystUi.TextMuted,
-                TextAnchor.MiddleCenter, bold: false);
-            GoTheme.Place(_profileHandle.rectTransform, inset, 0.358f, 1f - inset, 0.388f);
+            _profileWallet = FloatingPanel.Body(body, "", 14);
+            FloatingPanel.Place(_profileWallet.rectTransform, 0.04f, 0.34f, 0.96f, 0.40f);
+            StyleReadable(_profileWallet, 15, DuelystUi.Cyan, TextAnchor.MiddleCenter);
 
             var xpHost = new GameObject("XpBar", typeof(RectTransform), typeof(Image));
-            xpHost.transform.SetParent(sheet, false);
-            GoTheme.Place(xpHost.GetComponent<RectTransform>(), 0.18f, 0.328f, 0.82f, 0.352f);
+            xpHost.transform.SetParent(body, false);
+            FloatingPanel.Grid.Full(xpHost.GetComponent<RectTransform>(), 0.28f, 0.34f);
             var xpBg = xpHost.GetComponent<Image>();
             xpBg.sprite = UiFoundation.WhiteSprite();
-            xpBg.color = new Color(0.04f, 0.05f, 0.08f, 0.88f);
+            xpBg.color = new Color(0.04f, 0.06f, 0.10f, 0.88f);
             xpBg.raycastTarget = false;
             var fillGo = new GameObject("Fill", typeof(RectTransform), typeof(Image));
             fillGo.transform.SetParent(xpHost.transform, false);
@@ -256,74 +233,82 @@ namespace WRLDZ.UI
             _profileXpFill.sprite = UiFoundation.WhiteSprite();
             _profileXpFill.color = GoTheme.LevelGold;
             _profileXpFill.raycastTarget = false;
-            _profileXp = GoTheme.Label(xpHost.transform, "XpLbl", "", 10, Color.white,
-                TextAnchor.MiddleCenter, bold: false);
-            GoTheme.Place(_profileXp.rectTransform, 0.02f, 0f, 0.98f, 1f);
-            _profileXp.color = new Color(1f, 1f, 1f, 0.9f);
+            _profileXp = FloatingPanel.Body(xpHost.transform, "", 13);
+            FloatingPanel.Stretch(_profileXp.rectTransform, 4f);
+            StyleReadable(_profileXp, 14, Color.white, TextAnchor.MiddleCenter);
 
-            const float tileY0 = 0.05f, tileY1 = 0.30f;
-            _statDuels = IconTile(sheet, "Duels", ImagineAssets.IconDuel(), CellX0(0), tileY0, CellX1(0), tileY1);
-            _statCards = IconTile(sheet, "Cards", ImagineAssets.IconDeck(), CellX0(1), tileY0, CellX1(1), tileY1);
-            _statPath = IconTile(sheet, "Path", ImagineAssets.IconCompass(), CellX0(2), tileY0, CellX1(2), tileY1);
-            _statSe = IconTile(sheet, "Se", ImagineAssets.IconSetEnergy(), CellX0(3), tileY0, CellX1(3), tileY1);
-            IconAction(sheet, "Customize", ImagineAssets.IconSlotLook() ?? ImagineAssets.IconMenu(),
-                CellX0(4), tileY0, CellX1(4), tileY1, () =>
-                {
-                    FreeUiKit.PlaySelect();
-                    OpenCustomizer(_onSaved);
-                });
+            _statDuels = StatChip(body, "DUELS", ImagineAssets.IconDuel());
+            _statCards = StatChip(body, "CARDS", ImagineAssets.IconDeck());
+            _statPath = StatChip(body, "KM", ImagineAssets.IconCompass());
+            _statSe = StatChip(body, "SE", ImagineAssets.IconSetEnergy());
+            FloatingPanel.Grid.Quad(
+                _statDuels.transform.parent.GetComponent<RectTransform>(),
+                _statCards.transform.parent.GetComponent<RectTransform>(),
+                _statPath.transform.parent.GetComponent<RectTransform>(),
+                _statSe.transform.parent.GetComponent<RectTransform>(),
+                0.12f, 0.26f);
+
+            var customize = FloatingPanel.PrimaryButton(body, "CUSTOMIZE LOOK", () =>
+            {
+                FreeUiKit.PlaySelect();
+                OpenCustomizer(_onSaved);
+            }, gold: true);
+            FloatingPanel.Grid.Full(customize.GetComponent<RectTransform>(), 0.02f, 0.10f);
         }
 
-        static Text IconTile(Transform sheet, string name, Sprite icon,
-            float x0, float y0, float x1, float y1)
+        static Text StatChip(Transform parent, string caption, Sprite icon)
         {
-            var cell = new GameObject(name, typeof(RectTransform), typeof(Image));
-            cell.transform.SetParent(sheet, false);
-            GoTheme.Place(cell.GetComponent<RectTransform>(), x0, y0, x1, y1);
-            var bg = cell.GetComponent<Image>();
-            bg.sprite = UiFoundation.WhiteSprite();
-            bg.color = new Color(0.04f, 0.06f, 0.10f, 0.42f);
-            bg.raycastTarget = false;
+            var btn = MenuCommandButton.Create(parent, "0", null,
+                MenuCommandButton.Kind.Secondary, blurb: caption, centerTitle: false);
+            btn.name = "Stat_" + caption;
+            MenuCommandButton.ApplyHubType(btn, 16, DuelystUi.GoldHot, displayTitle: false,
+                blurbSize: 13, blurbColor: DuelystUi.TextCream);
+            var title = btn.transform.Find("Title")?.GetComponent<Text>();
+            if (title != null)
+            {
+                title.resizeTextForBestFit = false;
+                title.horizontalOverflow = HorizontalWrapMode.Overflow;
+                title.verticalOverflow = VerticalWrapMode.Overflow;
+            }
 
-            var ic = new GameObject("I", typeof(RectTransform), typeof(Image));
-            ic.transform.SetParent(cell.transform, false);
-            GoTheme.Place(ic.GetComponent<RectTransform>(), 0.12f, 0.38f, 0.88f, 0.94f);
-            var iImg = ic.GetComponent<Image>();
-            iImg.sprite = icon ?? UiFoundation.WhiteSprite();
-            iImg.preserveAspect = true;
-            iImg.raycastTarget = false;
-            iImg.color = Color.white;
+            var blurbT = btn.transform.Find("Blurb")?.GetComponent<Text>();
+            if (blurbT != null)
+            {
+                blurbT.resizeTextForBestFit = false;
+                blurbT.horizontalOverflow = HorizontalWrapMode.Overflow;
+                blurbT.verticalOverflow = VerticalWrapMode.Overflow;
+            }
 
-            var val = GoTheme.Label(cell.transform, "V", "—", 14, DuelystUi.GoldHot,
-                TextAnchor.MiddleCenter, bold: true);
-            val.resizeTextForBestFit = true;
-            val.resizeTextMinSize = 9;
-            val.resizeTextMaxSize = 16;
-            GoTheme.Place(val.rectTransform, 0.06f, 0.04f, 0.94f, 0.36f);
-            return val;
+            if (icon != null)
+            {
+                var ico = new GameObject("Ico", typeof(RectTransform), typeof(Image));
+                ico.transform.SetParent(btn.transform, false);
+                var ir = ico.GetComponent<RectTransform>();
+                ir.anchorMin = new Vector2(0.06f, 0.38f);
+                ir.anchorMax = new Vector2(0.28f, 0.90f);
+                ir.offsetMin = Vector2.zero;
+                ir.offsetMax = Vector2.zero;
+                var ii = ico.GetComponent<Image>();
+                ii.sprite = icon;
+                ii.preserveAspect = true;
+                ii.raycastTarget = false;
+                if (title != null)
+                    FloatingPanel.Place(title.rectTransform, 0.30f, 0.42f, 0.96f, 0.94f);
+            }
+
+            return title;
         }
 
-        static void IconAction(Transform sheet, string name, Sprite icon,
-            float x0, float y0, float x1, float y1, Action onClick)
+        static void StyleReadable(Text t, int size, Color color, TextAnchor align, bool display = false)
         {
-            var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
-            go.transform.SetParent(sheet, false);
-            GoTheme.Place(go.GetComponent<RectTransform>(), x0, y0, x1, y1);
-            var img = go.GetComponent<Image>();
-            img.sprite = UiFoundation.WhiteSprite();
-            img.color = new Color(0.04f, 0.06f, 0.10f, 0.42f);
-            var ic = new GameObject("I", typeof(RectTransform), typeof(Image));
-            ic.transform.SetParent(go.transform, false);
-            GoTheme.Place(ic.GetComponent<RectTransform>(), 0.12f, 0.38f, 0.88f, 0.94f);
-            var iImg = ic.GetComponent<Image>();
-            iImg.sprite = icon ?? UiFoundation.WhiteSprite();
-            iImg.preserveAspect = true;
-            iImg.raycastTarget = false;
-            iImg.color = Color.white;
-            var btn = go.GetComponent<Button>();
-            btn.targetGraphic = img;
-            btn.transition = Selectable.Transition.None;
-            btn.onClick.AddListener(() => onClick?.Invoke());
+            if (t == null) return;
+            if (display) WrldzType.StyleGoldTitle(t, size);
+            else WrldzType.StyleButtonLabel(t, size);
+            t.color = color;
+            t.alignment = align;
+            t.resizeTextForBestFit = false;
+            t.horizontalOverflow = HorizontalWrapMode.Overflow;
+            t.verticalOverflow = VerticalWrapMode.Overflow;
         }
 
         static Text StyleLevelPip(Transform pip)
@@ -347,41 +332,53 @@ namespace WRLDZ.UI
             fillImg.color = new Color(0.08f, 0.14f, 0.24f, 1f);
             fillImg.raycastTarget = false;
 
-            var t = GoTheme.Label(pip, "Lv", "1", 14, Color.white, TextAnchor.MiddleCenter, bold: true);
-            t.resizeTextForBestFit = true;
-            t.resizeTextMinSize = 9;
-            t.resizeTextMaxSize = 16;
+            var t = GoTheme.Label(pip, "Lv", "1", 16, Color.white, TextAnchor.MiddleCenter, bold: true);
+            StyleReadable(t, 16, Color.white, TextAnchor.MiddleCenter);
             GoTheme.Place(t.rectTransform, 0.12f, 0.12f, 0.88f, 0.88f);
             return t;
         }
 
         void BuildCustomizerSheet()
         {
-            _customizerSheet = MakeSheet("CustomizerSheet");
-            var sheet = _customizerSheet.transform.Find("Sheet");
+            _customizerSheet = new GameObject("CustomizerSheet", typeof(RectTransform));
+            _customizerSheet.transform.SetParent(_canvasRoot, false);
+            GoTheme.Stretch(_customizerSheet.GetComponent<RectTransform>());
 
-            _nameField = MakeInput(sheet, "NameField", 0.08f, 0.925f, 0.92f, 0.985f);
+            var frame = DualMenuPresenter.BuildFrame(
+                _customizerSheet.transform, "CUSTOMIZE", "Look · wardrobe · title", () =>
+                {
+                    FreeUiKit.PlayClick();
+                    OpenProfile(_onSaved);
+                });
+            var body = frame.BodyHost;
 
-            _preview = AvatarPortraitView.CreateFullBody(sheet, 0.22f, 0.44f, 0.78f, 0.92f,
+            _nameField = MakeInput(body, "NameField", 0.02f, 0.90f, 0.98f, 0.99f);
+
+            _preview = AvatarPortraitView.CreateFullBody(body, 0.22f, 0.48f, 0.78f, 0.88f,
                 hideBackground: true, badgeCrop: false);
 
-            BuildPartChips(sheet);
+            BuildPartChips(body);
 
-            _optionLabel = GoTheme.Label(sheet, "Opt", "", 12, GoTheme.Ink, TextAnchor.MiddleCenter);
-            GoTheme.Place(_optionLabel.rectTransform, 0.08f, 0.27f, 0.92f, 0.31f);
+            _optionLabel = FloatingPanel.Body(body, "", 14);
+            FloatingPanel.Grid.Full(_optionLabel.rectTransform, 0.28f, 0.34f);
+            StyleReadable(_optionLabel, 15, DuelystUi.GoldHot, TextAnchor.MiddleCenter);
 
-            BuildOptionStrip(sheet);
+            BuildOptionStrip(body);
 
-            _status = GoTheme.Label(sheet, "St", "", 11, GoTheme.InkSoft,
-                TextAnchor.MiddleCenter, bold: false);
-            GoTheme.Place(_status.rectTransform, 0.08f, 0.115f, 0.92f, 0.155f);
+            _status = FloatingPanel.Body(body, "", 13);
+            FloatingPanel.Grid.Full(_status.rectTransform, 0.12f, 0.16f);
+            StyleReadable(_status, 14, DuelystUi.TextMuted, TextAnchor.MiddleCenter);
 
-            RowButton(sheet, "Save", "Save look", 0.08f, 0.035f, 0.48f, 0.105f, Save);
-            RowButton(sheet, "Back", "Back", 0.52f, 0.035f, 0.92f, 0.105f, () =>
+            var save = FloatingPanel.PrimaryButton(body, "SAVE LOOK", Save, gold: true);
+            var back = FloatingPanel.PrimaryButton(body, "BACK", () =>
             {
                 FreeUiKit.PlayClick();
                 OpenProfile(_onSaved);
             });
+            FloatingPanel.Grid.Pair(
+                save.GetComponent<RectTransform>(),
+                back.GetComponent<RectTransform>(),
+                0.02f, 0.11f);
         }
 
         void BuildPartChips(Transform sheet)
@@ -395,8 +392,8 @@ namespace WRLDZ.UI
                 Part.Shirt, Part.Hands, Part.Bottoms,
                 Part.Shoes, Part.Accent, Part.Title
             };
-            const int cols = 9;
-            const float x0 = 0.08f, x1 = 0.92f, yTop = 0.425f, rowH = 0.055f, gap = 0.008f;
+            const int cols = 5;
+            const float x0 = 0.02f, x1 = 0.98f, yTop = 0.51f, rowH = 0.09f, gap = 0.012f;
             var cellW = ((x1 - x0) - gap * (cols - 1)) / cols;
             for (var i = 0; i < parts.Length; i++)
             {
@@ -440,7 +437,7 @@ namespace WRLDZ.UI
             var strip = new GameObject("OptionStrip", typeof(RectTransform), typeof(Image), typeof(ScrollRect),
                 typeof(RectMask2D));
             strip.transform.SetParent(sheet, false);
-            GoTheme.Place(strip.GetComponent<RectTransform>(), 0.08f, 0.16f, 0.92f, 0.25f);
+            FloatingPanel.Grid.Full(strip.GetComponent<RectTransform>(), 0.17f, 0.27f);
             var bg = strip.GetComponent<Image>();
             bg.sprite = UiFoundation.WhiteSprite();
             bg.color = new Color(0.04f, 0.06f, 0.10f, 0.42f);
@@ -623,8 +620,8 @@ namespace WRLDZ.UI
                 typeof(Outline));
             go.transform.SetParent(_optionHost, false);
             var le = go.GetComponent<LayoutElement>();
-            le.preferredWidth = 68f;
-            le.minWidth = 68f;
+            le.preferredWidth = 84f;
+            le.minWidth = 84f;
             le.flexibleWidth = 0f;
             var img = go.GetComponent<Image>();
             img.sprite = spr ?? UiFoundation.WhiteSprite();
@@ -789,6 +786,7 @@ namespace WRLDZ.UI
                 if (_profileName != null) _profileName.text = "Not signed in";
                 if (_profileTitle != null) _profileTitle.text = "";
                 if (_profileHandle != null) _profileHandle.text = "";
+                if (_profileWallet != null) _profileWallet.text = "";
                 if (_profileTeamIcon != null) _profileTeamIcon.enabled = false;
                 return;
             }
@@ -799,11 +797,24 @@ namespace WRLDZ.UI
             var lv = p != null ? Mathf.Max(1, p.level) : Mathf.Max(1, acc.spiritRank);
             if (_profileName != null)
                 _profileName.text = string.IsNullOrEmpty(acc.displayName) ? acc.username : acc.displayName;
+            if (_profileHandle != null)
+            {
+                var title = string.IsNullOrEmpty(_draft?.title) ? "Spirit Dueler" : _draft.title;
+                var handle = string.IsNullOrEmpty(acc.username) ? "" : "@" + acc.username;
+                _profileHandle.text = string.IsNullOrEmpty(handle) ? title : handle + "  ·  " + title;
+            }
+
             if (_profileTitle != null)
             {
                 var team = p != null ? p.Team : KuribohTeam.None;
                 _profileTitle.text = KuribohTeamInfo.DisplayName(team);
             }
+
+            if (_profileWallet != null)
+                _profileWallet.text =
+                    $"Đ {(p?.digizeni ?? 0):N0}   ·   DC {(p?.duelCoin ?? 0):N0}   ·   SE {(p?.setEnergy ?? 0):N0}";
+
+            _soulBadge?.Bind(p);
 
             if (_profileTeamIcon != null)
             {
@@ -814,8 +825,6 @@ namespace WRLDZ.UI
                     _profileTeamIcon.sprite = spr;
             }
 
-            if (_profileHandle != null)
-                _profileHandle.text = string.IsNullOrEmpty(acc.username) ? "" : "@" + acc.username;
             if (_profileLevel != null)
                 _profileLevel.text = lv.ToString();
 
@@ -834,16 +843,16 @@ namespace WRLDZ.UI
                 var need = p.XpToNextLevel();
                 _profileXp.text = need <= 0
                     ? $"Lv{lv}  MAX"
-                    : $"Lv{lv}  {p.xp}/{need}";
+                    : $"Lv{lv}  {p.xp:N0}/{need:N0}";
             }
 
-            if (_statDuels != null) _statDuels.text = acc.duelsCompleted.ToString();
-            if (_statCards != null) _statCards.text = acc.cardsCollected.ToString();
+            if (_statDuels != null) _statDuels.text = acc.duelsCompleted.ToString("N0");
+            if (_statCards != null) _statCards.text = acc.cardsCollected.ToString("N0");
             if (_statPath != null)
                 _statPath.text = acc.pathKm < 10f
                     ? acc.pathKm.ToString("0.0")
-                    : acc.pathKm.ToString("0");
-            if (_statSe != null) _statSe.text = (p != null ? p.setEnergy : 0).ToString();
+                    : acc.pathKm.ToString("N0");
+            if (_statSe != null) _statSe.text = (p != null ? p.setEnergy : 0).ToString("N0");
         }
 
         void Save()

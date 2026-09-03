@@ -17,8 +17,9 @@
 ## Open-source reference
 
 Local clone: `~/ygopro-scripts` (YGOPro / EDOPro-style Lua).  
-We port **behavior**, not the Lua runtime — keep Unity-native C# scripts aligned with those texts.  
-ocgcore is AGPLv3: **oracle only**, never a shipped backend (`MASTER_ENGINE_SPEC.md` §0).
+**Lab:** `OcgLabDuelHost` may link edo9300 ocgcore (AGPLv3, isolated folder).  
+**Product path:** C# `DuelEngine` still owns legality when the lab host is off.  
+See `MASTER_ENGINE_SPEC.md` §0 and `OCGCORE_LAB.md`.
 
 ## Lab TEST DUEL
 

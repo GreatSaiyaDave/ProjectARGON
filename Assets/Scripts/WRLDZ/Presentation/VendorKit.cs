@@ -20,7 +20,9 @@ namespace WRLDZ.Presentation
             if (_logged) return;
             _logged = true;
             var dir = Path.Combine(Application.streamingAssetsPath, Root);
-            Debug.Log(Directory.Exists(dir)
+            var exists = Directory.Exists(dir);
+            PinEditorCwd();
+            Debug.Log(exists
                 ? $"[WRLDZ] VendorKit ready at {dir}"
                 : $"[WRLDZ] VendorKit missing folder {dir}");
         }
@@ -113,9 +115,14 @@ namespace WRLDZ.Presentation
             var key = relativeUnderVendor;
             if (Cache.TryGetValue(key, out var s) && s != null) return s;
             var full = Path.Combine(Application.streamingAssetsPath, Root, relativeUnderVendor);
-            if (!File.Exists(full)) return null;
+            if (!File.Exists(full))
+            {
+                PinEditorCwd();
+                return null;
+            }
 
             var bytes = File.ReadAllBytes(full);
+            PinEditorCwd();
             var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
             if (!tex.LoadImage(bytes))
             {
@@ -143,9 +150,14 @@ namespace WRLDZ.Presentation
             var key = relativeUnderVendor + $"#slice{l}_{b}_{r}_{t}";
             if (Cache.TryGetValue(key, out var s) && s != null) return s;
             var full = Path.Combine(Application.streamingAssetsPath, Root, relativeUnderVendor);
-            if (!File.Exists(full)) return null;
+            if (!File.Exists(full))
+            {
+                PinEditorCwd();
+                return null;
+            }
 
             var bytes = File.ReadAllBytes(full);
+            PinEditorCwd();
             var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
             if (!tex.LoadImage(bytes))
             {
@@ -167,6 +179,21 @@ namespace WRLDZ.Presentation
             spr.name = tex.name + "_sliced";
             Cache[key] = spr;
             return spr;
+        }
+
+        static void PinEditorCwd()
+        {
+#if UNITY_EDITOR
+            try
+            {
+                var root = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+                Directory.SetCurrentDirectory(root);
+            }
+            catch
+            {
+                // Editor guard also pins on compile / update.
+            }
+#endif
         }
     }
 }

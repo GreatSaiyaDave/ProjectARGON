@@ -1,0 +1,980 @@
+{
+  "source": "OcgCore/scripts/official then ProjectIgnis official (facts only, not Lua)",
+  "scriptFilesScanned": 251,
+  "skippedUnique": 35,
+  "factCount": 146,
+  "facts": [
+    {
+      "cardId": 10012614,
+      "name": "Banner of Courage",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 10035717,
+      "name": "Weapon Change",
+      "playAsActivation": true,
+      "activatePayLp": 700,
+      "phaseTrigger": {
+        "phase": "standby",
+        "turnPlayer": true,
+        "actionHint": ""
+      }
+    },
+    {
+      "cardId": 12183332,
+      "name": "Card Shuffle",
+      "playAsActivation": true,
+      "activatePayLp": 300
+    },
+    {
+      "cardId": 14318794,
+      "name": "Life Absorbing Machine",
+      "playAsActivation": true,
+      "phaseTrigger": {
+        "phase": "standby",
+        "turnPlayer": true,
+        "actionHint": ""
+      }
+    },
+    {
+      "cardId": 15259703,
+      "name": "Toon World",
+      "playAsActivation": true,
+      "activatePayLp": 1000
+    },
+    {
+      "cardId": 16227556,
+      "name": "Inspection",
+      "playAsActivation": true,
+      "activatePayLp": 500,
+      "phaseTrigger": {
+        "phase": "standby",
+        "turnPlayer": true,
+        "actionHint": ""
+      }
+    },
+    {
+      "cardId": 16762927,
+      "name": "Gravekeeper's Servant",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 17078030,
+      "name": "Wall of Revealing Light",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 1801154,
+      "name": "Centrifugal Field",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 18161786,
+      "name": "Mystic Plasma Zone",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 18605135,
+      "name": "Tornado Wall",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 1918087,
+      "name": "Minor Goblin Official",
+      "playAsActivation": true,
+      "phaseTrigger": {
+        "phase": "standby",
+        "turnPlayer": true,
+        "actionHint": "damage"
+      }
+    },
+    {
+      "cardId": 19384334,
+      "name": "Molten Destruction",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 1965724,
+      "name": "Mokey Mokey Smackdown",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 20065549,
+      "name": "Non-Spellcasting Area",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 20374520,
+      "name": "Begone, Knave!",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 20765952,
+      "name": "Mask of Dispel",
+      "playAsActivation": true,
+      "phaseTrigger": {
+        "phase": "standby",
+        "turnPlayer": true,
+        "actionHint": "damage"
+      }
+    },
+    {
+      "cardId": 21237481,
+      "name": "Type Zero Magic Crusher",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 21558682,
+      "name": "Jam Defender",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 21598948,
+      "name": "Fairy Box",
+      "playAsActivation": true,
+      "phaseTrigger": {
+        "phase": "standby",
+        "turnPlayer": true,
+        "actionHint": "pay_or_destroy"
+      },
+      "standbyPayOrDestroy": 500
+    },
+    {
+      "cardId": 22359980,
+      "name": "Mirror Wall",
+      "playAsActivation": true,
+      "phaseTrigger": {
+        "phase": "standby",
+        "turnPlayer": true,
+        "actionHint": "pay_or_destroy"
+      },
+      "standbyPayOrDestroy": 2000
+    },
+    {
+      "cardId": 22702055,
+      "name": "Umi",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 22796548,
+      "name": "Archfiend's Oath",
+      "playAsActivation": true,
+      "activatePayLp": 500
+    },
+    {
+      "cardId": 23424603,
+      "name": "Wasteland",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 23615409,
+      "name": "Insect Barrier",
+      "playAsActivation": true,
+      "cannotAttack": {
+        "atkMin": 0,
+        "levelMin": 0,
+        "race": "Insect",
+        "side": "opponent"
+      }
+    },
+    {
+      "cardId": 24294108,
+      "name": "Burning Land",
+      "playAsActivation": true,
+      "phaseTrigger": {
+        "phase": "standby",
+        "turnPlayer": true,
+        "actionHint": "damage"
+      }
+    },
+    {
+      "cardId": 24668830,
+      "name": "Germ Infection",
+      "phaseTrigger": {
+        "phase": "standby",
+        "turnPlayer": true,
+        "actionHint": ""
+      }
+    },
+    {
+      "cardId": 25578802,
+      "name": "Two-Man Cell Battle",
+      "playAsActivation": true,
+      "phaseTrigger": {
+        "phase": "end",
+        "turnPlayer": true,
+        "actionHint": ""
+      }
+    },
+    {
+      "cardId": 26022485,
+      "name": "Enervating Mist",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 29549364,
+      "name": "Mask of Restrict",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 295517,
+      "name": "A Legendary Ocean",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 296499,
+      "name": "The Regulation of Tribe",
+      "playAsActivation": true,
+      "phaseTrigger": {
+        "phase": "standby",
+        "turnPlayer": true,
+        "actionHint": "tribute"
+      }
+    },
+    {
+      "cardId": 30353551,
+      "name": "Human-Wave Tactics",
+      "playAsActivation": true,
+      "phaseTrigger": {
+        "phase": "end",
+        "turnPlayer": false,
+        "actionHint": ""
+      }
+    },
+    {
+      "cardId": 30606547,
+      "name": "The Dark Door",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 30653113,
+      "name": "Blessings of the Nile",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 31076103,
+      "name": "The First Sarcophagus",
+      "playAsActivation": true,
+      "phaseTrigger": {
+        "phase": "end",
+        "turnPlayer": true,
+        "actionHint": ""
+      }
+    },
+    {
+      "cardId": 31476755,
+      "name": "Dust Barrier",
+      "playAsActivation": true,
+      "phaseTrigger": {
+        "phase": "standby",
+        "turnPlayer": true,
+        "actionHint": ""
+      }
+    },
+    {
+      "cardId": 32015116,
+      "name": "Blind Destruction",
+      "playAsActivation": true,
+      "phaseTrigger": {
+        "phase": "standby",
+        "turnPlayer": true,
+        "actionHint": ""
+      }
+    },
+    {
+      "cardId": 32919136,
+      "name": "Falling Down",
+      "phaseTrigger": {
+        "phase": "standby",
+        "turnPlayer": true,
+        "actionHint": "damage"
+      }
+    },
+    {
+      "cardId": 33550694,
+      "name": "Fusion Gate",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 33737664,
+      "name": "Graverobber's Retribution",
+      "playAsActivation": true,
+      "phaseTrigger": {
+        "phase": "standby",
+        "turnPlayer": true,
+        "actionHint": "damage"
+      }
+    },
+    {
+      "cardId": 33950246,
+      "name": "Royal Command",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 34029630,
+      "name": "Pitch-Black Power Stone",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 34646691,
+      "name": "Stumbling",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 34694160,
+      "name": "The Eye of Truth",
+      "playAsActivation": true,
+      "phaseTrigger": {
+        "phase": "standby",
+        "turnPlayer": true,
+        "actionHint": ""
+      }
+    },
+    {
+      "cardId": 34906152,
+      "name": "Mass Driver",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 35059553,
+      "name": "Kaiser Colosseum",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 35346968,
+      "name": "Solemn Wishes",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 35762283,
+      "name": "Heart of the Underdog",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 37053871,
+      "name": "Astral Barrier",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 37231841,
+      "name": "Lighten the Load",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 38299233,
+      "name": "Needle Wall",
+      "playAsActivation": true,
+      "phaseTrigger": {
+        "phase": "standby",
+        "turnPlayer": true,
+        "actionHint": ""
+      }
+    },
+    {
+      "cardId": 38992735,
+      "name": "Wave-Motion Cannon",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 39131963,
+      "name": "Des Counterblow",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 39537362,
+      "name": "Ordeal of a Traveler",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 403847,
+      "name": "The A. Forces",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 40633297,
+      "name": "Bad Reaction to Simochi",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 41482598,
+      "name": "Mirage of Nightmare",
+      "playAsActivation": true,
+      "phaseTrigger": {
+        "phase": "standby",
+        "turnPlayer": true,
+        "actionHint": ""
+      }
+    },
+    {
+      "cardId": 4259068,
+      "name": "Spell Economics",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 43711255,
+      "name": "Prohibition",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 44656491,
+      "name": "Messenger of Peace",
+      "playAsActivation": true,
+      "cannotAttack": {
+        "atkMin": 1500,
+        "levelMin": 0,
+        "race": "",
+        "side": "both"
+      },
+      "phaseTrigger": {
+        "phase": "standby",
+        "turnPlayer": true,
+        "actionHint": "pay_or_destroy"
+      },
+      "standbyPayOrDestroy": 100
+    },
+    {
+      "cardId": 4542651,
+      "name": "Yellow Luster Shield",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 45778932,
+      "name": "Rising Air Current",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 45986603,
+      "name": "Snatch Steal",
+      "phaseTrigger": {
+        "phase": "standby",
+        "turnPlayer": true,
+        "actionHint": ""
+      }
+    },
+    {
+      "cardId": 46181000,
+      "name": "Frontline Base",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 47233801,
+      "name": "Dark Snake Syndrome",
+      "playAsActivation": true,
+      "phaseTrigger": {
+        "phase": "standby",
+        "turnPlayer": true,
+        "actionHint": "damage"
+      }
+    },
+    {
+      "cardId": 48206762,
+      "name": "Fulfillment of the Contract",
+      "playAsActivation": true,
+      "gyReviveLeaveField": {
+        "defense": false,
+        "normalOnly": false
+      }
+    },
+    {
+      "cardId": 48276469,
+      "name": "Chain Burst",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 4861205,
+      "name": "Call of the Mummy",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 49328340,
+      "name": "Spiral Spear Strike",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 50152549,
+      "name": "Paralyzing Potion",
+      "cannotAttack": {
+        "atkMin": 0,
+        "levelMin": 0,
+        "race": "Machine",
+        "side": "both"
+      }
+    },
+    {
+      "cardId": 50913601,
+      "name": "Mountain",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 51481927,
+      "name": "Spell Absorption",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 53119267,
+      "name": "Magical Thorn",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 53239672,
+      "name": "Spirit Barrier",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 53569894,
+      "name": "Pyramid of Light",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 54109233,
+      "name": "Infinite Dismissal",
+      "playAsActivation": true,
+      "phaseTrigger": {
+        "phase": "end",
+        "turnPlayer": false,
+        "actionHint": ""
+      }
+    },
+    {
+      "cardId": 54178050,
+      "name": "Dragon's Rage",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 56433456,
+      "name": "The Sanctuary in the Sky",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 56460688,
+      "name": "Different Dimension Gate",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 56594520,
+      "name": "Gaia Power",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 56769674,
+      "name": "DNA Transplant",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 56948373,
+      "name": "Mask of the Accursed",
+      "phaseTrigger": {
+        "phase": "standby",
+        "turnPlayer": true,
+        "actionHint": "damage"
+      }
+    },
+    {
+      "cardId": 56995655,
+      "name": "Ominous Fortunetelling",
+      "playAsActivation": true,
+      "phaseTrigger": {
+        "phase": "standby",
+        "turnPlayer": true,
+        "actionHint": "damage"
+      }
+    },
+    {
+      "cardId": 57953380,
+      "name": "Card of Safe Return",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 59197169,
+      "name": "Yami",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 59237154,
+      "name": "Shifting Shadows",
+      "playAsActivation": true,
+      "activatePayLp": 300
+    },
+    {
+      "cardId": 60391791,
+      "name": "Senri Eye",
+      "playAsActivation": true,
+      "activatePayLp": 100,
+      "phaseTrigger": {
+        "phase": "standby",
+        "turnPlayer": true,
+        "actionHint": ""
+      }
+    },
+    {
+      "cardId": 60519422,
+      "name": "Kishido Spirit",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 60912752,
+      "name": "D.D. Borderline",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 62867251,
+      "name": "Light of Intervention",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 62966332,
+      "name": "Convulsion of Nature",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 65830223,
+      "name": "Coffin Seller",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 66526672,
+      "name": "Labyrinth of Nightmare",
+      "playAsActivation": true,
+      "phaseTrigger": {
+        "phase": "end",
+        "turnPlayer": true,
+        "actionHint": "change_position"
+      }
+    },
+    {
+      "cardId": 67048711,
+      "name": "7",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 6733059,
+      "name": "Skull Lair",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 68057622,
+      "name": "Continuous Destruction Punch",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 68304813,
+      "name": "Precious Cards from Beyond",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 69296555,
+      "name": "Array of Revealing Light",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 69954399,
+      "name": "Ekibyo Drakmord",
+      "phaseTrigger": {
+        "phase": "end",
+        "turnPlayer": true,
+        "actionHint": ""
+      }
+    },
+    {
+      "cardId": 70828912,
+      "name": "Premature Burial",
+      "playAsActivation": true,
+      "activatePayLp": 800,
+      "gyReviveLeaveField": {
+        "defense": false,
+        "normalOnly": false
+      }
+    },
+    {
+      "cardId": 70861343,
+      "name": "Ninjitsu Art of Transformation",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 71453557,
+      "name": "Autonomous Action Unit",
+      "playAsActivation": true,
+      "activatePayLp": 1500,
+      "gyReviveLeaveField": {
+        "defense": false,
+        "normalOnly": false
+      }
+    },
+    {
+      "cardId": 73578229,
+      "name": "Pole Position",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 74694807,
+      "name": "Re-Fusion",
+      "playAsActivation": true,
+      "gyReviveLeaveField": {
+        "defense": false,
+        "normalOnly": false
+      }
+    },
+    {
+      "cardId": 75782277,
+      "name": "Harpies' Hunting Ground",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 76297408,
+      "name": "Soul Demolition",
+      "playAsActivation": true,
+      "activatePayLp": 500
+    },
+    {
+      "cardId": 76532077,
+      "name": "Bottomless Shifting Sand",
+      "playAsActivation": true,
+      "phaseTrigger": {
+        "phase": "end",
+        "turnPlayer": true,
+        "actionHint": ""
+      }
+    },
+    {
+      "cardId": 76539047,
+      "name": "Poison Fangs",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 77910045,
+      "name": "Fatal Abacus",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 79323590,
+      "name": "Chain Energy",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 81380218,
+      "name": "Chorus of Sanctuary",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 81777047,
+      "name": "Luminous Spark",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 82003859,
+      "name": "Toll",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 82432018,
+      "name": "Mask of Brutality",
+      "phaseTrigger": {
+        "phase": "standby",
+        "turnPlayer": true,
+        "actionHint": "pay_or_destroy"
+      },
+      "standbyPayOrDestroy": 1000
+    },
+    {
+      "cardId": 82452993,
+      "name": "Lone Wolf",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 82705573,
+      "name": "Backfire",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 82999629,
+      "name": "Umiiruka",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 83225447,
+      "name": "Stim-Pack",
+      "phaseTrigger": {
+        "phase": "standby",
+        "turnPlayer": true,
+        "actionHint": ""
+      }
+    },
+    {
+      "cardId": 83258273,
+      "name": "Robbin' Zombie",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 84970821,
+      "name": "Curse of Darkness",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 85562745,
+      "name": "Dark Room of Nightmare",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 85742772,
+      "name": "Gravity Bind",
+      "playAsActivation": true,
+      "cannotAttack": {
+        "atkMin": 0,
+        "levelMin": 4,
+        "race": "",
+        "side": "both"
+      }
+    },
+    {
+      "cardId": 86318356,
+      "name": "Sogen",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 87430998,
+      "name": "Forest",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 88279736,
+      "name": "Robbin' Goblin",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 89405199,
+      "name": "Greed",
+      "playAsActivation": true,
+      "phaseTrigger": {
+        "phase": "end",
+        "turnPlayer": false,
+        "actionHint": "damage"
+      }
+    },
+    {
+      "cardId": 8951260,
+      "name": "Respect Play",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 92394653,
+      "name": "Spirit's Invitation",
+      "playAsActivation": true,
+      "phaseTrigger": {
+        "phase": "standby",
+        "turnPlayer": true,
+        "actionHint": "pay_or_destroy"
+      },
+      "standbyPayOrDestroy": 500
+    },
+    {
+      "cardId": 92408984,
+      "name": "The Dragon's Bead",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 92924317,
+      "name": "Soul Resurrection",
+      "playAsActivation": true,
+      "gyReviveLeaveField": {
+        "defense": true,
+        "normalOnly": true
+      }
+    },
+    {
+      "cardId": 93016201,
+      "name": "Royal Oppression",
+      "playAsActivation": true,
+      "activatePayLp": 800
+    },
+    {
+      "cardId": 93671934,
+      "name": "Morale Boost",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 94163677,
+      "name": "Infinite Cards",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 94256039,
+      "name": "Tower of Babel",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 94425169,
+      "name": "Spring of Rebirth",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 94585852,
+      "name": "Pandemonium",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 94739788,
+      "name": "Remove Brainwashing",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 95132338,
+      "name": "Aqua Chorus",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 95220856,
+      "name": "Vengeful Bog Spirit",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 96316857,
+      "name": "Recycle",
+      "playAsActivation": true,
+      "activatePayLp": 300,
+      "phaseTrigger": {
+        "phase": "standby",
+        "turnPlayer": true,
+        "actionHint": ""
+      }
+    },
+    {
+      "cardId": 96631852,
+      "name": "Impenetrable Formation",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 97077563,
+      "name": "Call of the Haunted",
+      "playAsActivation": true,
+      "gyReviveLeaveField": {
+        "defense": false,
+        "normalOnly": false
+      }
+    },
+    {
+      "cardId": 97342942,
+      "name": "Ectoplasmer",
+      "playAsActivation": true,
+      "phaseTrigger": {
+        "phase": "end",
+        "turnPlayer": true,
+        "actionHint": "tribute"
+      }
+    },
+    {
+      "cardId": 98139712,
+      "name": "Skull Invitation",
+      "playAsActivation": true
+    },
+    {
+      "cardId": 99173029,
+      "name": "Spiritual Energy Settle Machine",
+      "playAsActivation": true,
+      "phaseTrigger": {
+        "phase": "end",
+        "turnPlayer": true,
+        "actionHint": ""
+      }
+    }
+  ]
+}

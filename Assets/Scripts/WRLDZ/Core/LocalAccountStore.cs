@@ -106,6 +106,8 @@ namespace WRLDZ.Core
                 if (inventory == null)
                     inventory = PlayerInventory.Empty();
                 inventory.EnsureValid();
+                EnsureProgress();
+                ArtifactService.MigrateFromLegacy(progress, inventory);
                 if (avatar == null) avatar = AvatarAppearance.Default();
                 ClothingService.EnsureOutfit(avatar, inventory);
             }
@@ -159,11 +161,30 @@ namespace WRLDZ.Core
             if (!PlayerAccountDatabase.TryLogin(username, password, out var dbAcc, out error))
                 return false;
             account = Account.FromDb(dbAcc);
+            TickSoulCards(account);
             return true;
         }
 
-        public static Account GetSessionAccount() =>
-            Account.FromDb(PlayerAccountDatabase.GetSessionAccount());
+        public static Account GetSessionAccount()
+        {
+            var acc = Account.FromDb(PlayerAccountDatabase.GetSessionAccount());
+            TickSoulCards(acc);
+            return acc;
+        }
+
+        static void TickSoulCards(Account acc)
+        {
+            if (acc == null) return;
+            acc.EnsureInventory();
+            var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            var paused = acc.inventory != null && acc.inventory.soulPauseStartedUnix > 0;
+            var gone = SoulCardService.Tick(acc.inventory, now, paused);
+            if (gone > 0)
+            {
+                Debug.Log($"[WRLDZ] {gone} soul card(s) returned to the aether.");
+                PlayerAccountDatabase.UpdateAccount(acc.ToDb());
+            }
+        }
 
         public static void SetSession(string username)
         {

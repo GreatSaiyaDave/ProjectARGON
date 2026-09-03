@@ -75,6 +75,8 @@ namespace WRLDZ.Core
                 if (inventory == null)
                     inventory = WRLDZ.Data.PlayerInventory.Empty();
                 inventory.EnsureValid();
+                EnsureProgress();
+                ArtifactService.MigrateFromLegacy(progress, inventory);
                 if (avatar == null) avatar = WRLDZ.Data.AvatarAppearance.Default();
                 ClothingService.EnsureOutfit(avatar, inventory);
             }

@@ -41,15 +41,15 @@ Returning users with `progress.onboardingComplete` skip to WorldLoad after auth/
 | **Binder** | Organized display / sort | **18/page** (9 front + 9 back), **5 free pages**, max **20 pages = 360**. Can pack (2×2). |
 | **Play deck box** | Constructed decks for duels | Main / Extra / Side **only**. **Never** bulk storage. **Never** backpack grid. |
 | **Avatar pockets** | Carry play decks while traveling | Default **2** carry slots; story unlock **3rd**; purchase more (max 6). Outfits ≥1 pocket. |
-| **Backpack** | Travel pack (RE4-style grid) | Story unlock + tier growth. Currency holders **1 cell each**. |
-| **Artifact deck box** | Artifact cards (card form) | Magical box; can sit home or pack (2×2). |
+| **Backpack** | Travel pack (RE4-style grid) | Story unlock + tier growth. No currency pouches. Soul cards occupy 1×1 when boxes are full. |
+| **Artifact deck box** | Key-item artifact cards | Endless, always equipped, 0 cells. Currencies, ERAZ badges, Tome, Trade Transport, Millennium, story keys. |
 | **Trade transport** | Remote trade move | View inventory anywhere (GO-style); **cannot** teleport home cards into trades without this item. |
 
 ### Travel vs home (life-like)
 
 - Like life: only take what fits in pack / pockets when you leave home.
-- **Pack UI** (`InventoryScreen` · Pack tab): place storage boxes / binders / artifact box on the grid.
-- **View UI** (View tab): browse collection counts/stacks anywhere — no free remote transfer.
+- **CASE** tab (`InventoryScreen`): tetris backpack. Storage boxes / binders pack onto the grid. Artifact Deck Box is never a backpack tile.
+- **HOME** tab: glance home boxes / binders / trade transport. Artifact Deck Box sits under **ON YOU** (always equipped).
 - **Pockets** tab: assign deck boxes to outfit pockets (default deck in pocket 0).
 - Decorative storage box skins: unlock **1 of each** per account (collectible; later).
 - Home-base 3D placement: deferred.
@@ -59,7 +59,7 @@ Returning users with `progress.onboardingComplete` skip to WorldLoad after auth/
 - Model: `PlayerInventory` · `BackpackState` · `AvatarPocketState` · `ArtifactDeckBoxState`
 - Pack/carry/view: `InventoryService`
 - Shop (boxes/binders/pages): `InventoryShopService`
-- UI: `InventoryScreen` (MenuId.Inventory) · hub Backpack opens it
+- UI: `InventoryScreen` (MenuId.Inventory) · hub / Eye **BAG** opens it · `ArtifactBoxScreen` (`MenuId.Artifacts`) from wallet
 
 ## Tome (`TomeService`)
 

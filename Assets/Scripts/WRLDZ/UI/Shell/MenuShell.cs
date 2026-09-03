@@ -177,8 +177,8 @@ namespace WRLDZ.UI.Shell
                 var t = b.GetComponentInChildren<Text>();
                 if (t != null)
                 {
-                    var trt = t.rectTransform;
-                    trt.offsetMin = new Vector2(28f, 4f);
+                    t.alignment = TextAnchor.MiddleLeft;
+                    FloatingPanel.Place(t.rectTransform, 0.34f, 0.10f, 0.96f, 0.90f);
                 }
             }
         }
@@ -305,6 +305,17 @@ namespace WRLDZ.UI.Shell
                 return;
             }
 
+            if (id == MenuId.Artifacts)
+            {
+                var router = ScreenRouter.Ensure(this);
+                var focus = router.PendingArtifactFocus;
+                router.PendingArtifactFocus = null;
+                var art = ArtifactBoxScreen.Build(ModalHost, CloseCurrent, null, focus);
+                _overlays[id] = art.gameObject;
+                PresentMounted();
+                return;
+            }
+
             if (id == MenuId.TomeRaid)
             {
                 var tome = SystemsSheets.BuildTome(ModalHost, CloseCurrent);
@@ -361,27 +372,16 @@ namespace WRLDZ.UI.Shell
                 return;
             }
 
-            // Last-resort unknown destination — single close, no leftover VS AI chrome
-            var panel = FloatingPanel.Create(ModalHost, "Overlay_" + id, goldEdge: false);
-            FloatingPanel.Place(panel, 0.10f, 0.20f, 0.90f, 0.80f);
-            var pImg = panel.GetComponent<Image>();
-            if (pImg != null) pImg.color = MenuChromePrefs.PanelColor;
-
-            var title = FloatingPanel.Title(panel, TitleFor(id), 20);
-            FloatingPanel.Place(title.rectTransform, 0.06f, 0.88f, 0.72f, 0.96f);
-
-            var how = FloatingPanel.Body(panel, NavCopy.HowToLeave, 12);
-            FloatingPanel.Place(how.rectTransform, 0.06f, 0.80f, 0.94f, 0.87f);
-            how.color = DuelystUi.Cyan;
-
-            var body = FloatingPanel.Body(panel, BodyFor(id), 15);
-            FloatingPanel.Place(body.rectTransform, 0.06f, 0.40f, 0.94f, 0.79f);
+            // Last-resort unknown destination — same DualMenuPresenter chrome as scan sheets.
+            var frame = DualMenuPresenter.BuildFrame(
+                ModalHost, TitleFor(id), NavCopy.HowToLeave, CloseCurrent);
+            var body = FloatingPanel.Body(frame.BodyHost, BodyFor(id), 15);
+            FloatingPanel.Grid.Full(body.rectTransform, 0.20f, 0.98f);
             body.alignment = TextAnchor.UpperLeft;
+            var close = FloatingPanel.PrimaryButton(frame.BodyHost, "CLOSE", CloseCurrent);
+            FloatingPanel.Grid.Full(close.GetComponent<RectTransform>(), 0.04f, 0.16f);
 
-            var close = FloatingPanel.PrimaryButton(panel, "× CLOSE", CloseCurrent);
-            FloatingPanel.Place(close.GetComponent<RectTransform>(), 0.74f, 0.88f, 0.94f, 0.96f);
-
-            _overlays[id] = panel.gameObject;
+            _overlays[id] = frame.Root.gameObject;
             PresentMounted();
         }
 
@@ -434,7 +434,8 @@ namespace WRLDZ.UI.Shell
             MenuId.FormatSelect => "PLAYER VS AI · FORMATS",
             MenuId.DuelLive => "AR DUEL",
             MenuId.DeckCollection => "DECK & COLLECTION",
-            MenuId.Inventory => "BACKPACK",
+            MenuId.Inventory => "BAG",
+            MenuId.Artifacts => "ARTIFACTS",
             MenuId.StorySeason => "STORY & SEASON",
             MenuId.Bazaar => "BAZAAR",
             MenuId.AvatarProfile => "AVATAR",
@@ -457,6 +458,9 @@ namespace WRLDZ.UI.Shell
                 "POCKETS — clothing holsters, one deck box each\n" +
                 "DECKS — create / delete boxes; editor stays the 40-card builder\n" +
                 "HOME — pack from base · collection glance · trade transport",
+            MenuId.Artifacts =>
+                "Endless Artifact Deck Box. Currencies, badges, keys. Always with you.\n" +
+                "Open from wallet chips or BAG · HOME / ON YOU.",
             MenuId.StorySeason =>
                 "Story Zone missions on the map.\nStarter sets LOB / MRD / SRL. Set orbs through L50.",
             MenuId.ArDuelCreate =>

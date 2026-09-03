@@ -68,6 +68,15 @@ namespace WRLDZ.Duel.Rules
             report.UnitPass += ixPass;
             report.UnitFail += ixFail;
 
+            // ── 1c) Corpus trigger sweep (every cards_db FullyCompiled card) ──
+            sb.AppendLine();
+            sb.AppendLine("── Unit: CorpusTriggerStressTests ──");
+            var corpus = CorpusTriggerStressTests.Run();
+            sb.AppendLine(corpus.TrimEnd());
+            ParseUnitCounts(corpus, out var cPass, out var cFail);
+            report.UnitPass += cPass;
+            report.UnitFail += cFail;
+
             // ── 2) Text effect compile (lab unique cards) ──
             sb.AppendLine();
             sb.AppendLine("── Text: lab deck compile (regex, no AI) ──");

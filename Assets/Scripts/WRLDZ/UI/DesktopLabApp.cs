@@ -157,6 +157,10 @@ namespace WRLDZ.UI
                 "Headless AI-vs-AI · no AR · console report",
                 false, RunStress);
 
+            Row(root, ref y, h, gap, "OCG LAB DUEL (STUB CORE)",
+                "Viewer over ocgcore tape · ocg_lab decks · see OCGCORE_LAB.md",
+                true, LaunchOcgLab);
+
             // Options
             var optPanel = FloatingPanel.Create(root, "Opts", goldEdge: false);
             FloatingPanel.Place(optPanel, 0.08f, 0.14f, 0.92f, 0.28f);
@@ -291,6 +295,14 @@ namespace WRLDZ.UI
             SetStatus("Loading Systems Hub…");
             CloseHubVisual();
             AppSession.Ensure().GoMainMenu();
+        }
+
+        void LaunchOcgLab()
+        {
+            SetStatus("OCG lab duel (stub core)…");
+            CloseHubVisual();
+            if (!AppSession.Ensure().StartLabTestDuel("ocg_lab_player.json", "ocg_lab_ai.json"))
+                SetStatus("OCG lab start failed — see Console.");
         }
 
         void RunStress()

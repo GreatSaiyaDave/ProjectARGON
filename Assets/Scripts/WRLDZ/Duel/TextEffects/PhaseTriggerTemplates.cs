@@ -10,6 +10,11 @@ namespace WRLDZ.Duel.TextEffects
             @"during your standby phase:\s*take (\d+) damage",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        /// <summary>Falling Down: During each of your opponent's Standby Phases: You take 800 damage.</summary>
+        static readonly Regex RxOppStandbyYouTakeDmg = new(
+            @"During each of your opponent's Standby Phases:\s*You take (\d+) damage\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         static readonly Regex RxStandbyDmgOpp = new(
             @"during your standby phase:\s*inflict (\d+) damage to your opponent",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -55,6 +60,31 @@ namespace WRLDZ.Duel.TextEffects
             @"return (?:it|this card) to (?:the owner's|its owner's|the) hand",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        /// <summary>
+        /// Ectoplasmer: Once per turn, during each player's End Phase: The turn player
+        /// must Tribute 1 face-up monster, and if they do, inflict damage equal to half
+        /// the original ATK of the Tributed monster.
+        /// </summary>
+        static readonly Regex RxEndPhaseTurnPlayerTributeHalfAtk = new(
+            @"Once per turn, during each player's End Phase:\s*" +
+            @"The turn player must Tribute 1 face-up monster, and if they do, " +
+            @"inflict damage to their opponent equal to half the original ATK of the Tributed monster\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxEndPhaseTurnPlayerChangePos = new(
+            @"Once per turn, during each player's End Phase:\s*" +
+            @"Change the battle positions of all face-up monsters the turn player controls\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxActivateDestroyFieldSpells = new(
+            @"When this card is activated:\s*" +
+            @"If there are any Field Spell Cards on the field, destroy them\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxStandbyTurnPlayerTakesDmg = new(
+            @"During each player's Standby Phase:\s*The turn player takes (\d+) damage\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         public static void Collect(string text, CardDef def,
             System.Collections.Generic.List<EffectClause> into,
             System.Collections.Generic.List<(int start, int length)> spans)
@@ -74,6 +104,15 @@ namespace WRLDZ.Duel.TextEffects
                 Timing = EffectTiming.StandbyPhase,
                 Action = EffectActionKind.TakeEffectDamage,
                 Amount = Parse(RxStandbyDmgSelf.Match(text), 1, 1000),
+                MakesChainLink = true
+            });
+            var oppDmg = RxOppStandbyYouTakeDmg.Match(text);
+            Add(oppDmg, new EffectClause
+            {
+                Timing = EffectTiming.StandbyPhase,
+                Action = EffectActionKind.TakeEffectDamage,
+                Amount = oppDmg.Success ? Parse(oppDmg, 1, 800) : 800,
+                OpponentTurnOnly = true,
                 MakesChainLink = true
             });
             Add(RxStandbyDmgOpp.Match(text), new EffectClause
@@ -147,6 +186,58 @@ namespace WRLDZ.Duel.TextEffects
                     MakesChainLink = true
                 });
             }
+
+            var ecto = RxEndPhaseTurnPlayerTributeHalfAtk.Match(text);
+            Add(ecto, ecto.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.EndPhase,
+                    Action = EffectActionKind.InflictDamageHalfTributedAtk,
+                    RequiresTributeCount = 1,
+                    TributeFaceUpOnly = true,
+                    TurnPlayerTributes = true,
+                    StaysOnField = true,
+                    MakesChainLink = true
+                }
+                : null);
+
+            var laby = RxEndPhaseTurnPlayerChangePos.Match(text);
+            Add(laby, laby.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.EndPhase,
+                    Action = EffectActionKind.ChangeBattlePosition,
+                    TurnPlayerIsSubject = true,
+                    StaysOnField = true,
+                    MakesChainLink = true
+                }
+                : null);
+
+            var burnAct = RxActivateDestroyFieldSpells.Match(text);
+            Add(burnAct, burnAct.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.Destroy,
+                    Zone = EffectZoneFilter.FieldSpellsOnField,
+                    Side = EffectSide.Both,
+                    StaysOnField = true,
+                    MakesChainLink = true
+                }
+                : null);
+
+            var burnSt = RxStandbyTurnPlayerTakesDmg.Match(text);
+            Add(burnSt, burnSt.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.StandbyPhase,
+                    Action = EffectActionKind.TakeEffectDamage,
+                    Amount = Parse(burnSt, 1, 500),
+                    TurnPlayerIsSubject = true,
+                    StaysOnField = true,
+                    MakesChainLink = true
+                }
+                : null);
         }
 
         public static void ExpectedActions(CardDef def, System.Collections.Generic.List<EffectActionKind> need)
@@ -157,6 +248,16 @@ namespace WRLDZ.Duel.TextEffects
             if (RxStandbyGainLp.IsMatch(text) || RxStandbyGainLpEach.IsMatch(text) ||
                 RxPikeru.IsMatch(text))
                 need.Add(EffectActionKind.GainLifePoints);
+            if (RxStandbyDmgSelf.IsMatch(text) || RxOppStandbyYouTakeDmg.IsMatch(text))
+                need.Add(EffectActionKind.TakeEffectDamage);
+            if (RxEndPhaseTurnPlayerTributeHalfAtk.IsMatch(text))
+                need.Add(EffectActionKind.InflictDamageHalfTributedAtk);
+            if (RxEndPhaseTurnPlayerChangePos.IsMatch(text))
+                need.Add(EffectActionKind.ChangeBattlePosition);
+            if (RxActivateDestroyFieldSpells.IsMatch(text))
+                need.Add(EffectActionKind.Destroy);
+            if (RxStandbyTurnPlayerTakesDmg.IsMatch(text))
+                need.Add(EffectActionKind.TakeEffectDamage);
         }
 
         static int Parse(Match m, int g, int fb)

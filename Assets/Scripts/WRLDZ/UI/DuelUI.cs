@@ -91,8 +91,7 @@ namespace WRLDZ.UI
         Button _targetCancelBtn;
 
         /// <summary>
-        /// Mid-screen combat response tray — ACTIVATE legal traps (Waboku etc.) + Pass.
-        /// Required in AR companion (no 2D field taps) and clarifies digital windows.
+        /// Response tray: PASS + hand QEs (Kuriboh). Field Set traps use zone blink, not buttons.
         /// </summary>
         GameObject _responseTray;
         Transform _responseBtnRow;
@@ -358,11 +357,11 @@ namespace WRLDZ.UI
                         : $"{toImpact:0.0}s — last chance!";
                 else if (timing == ResponseTiming.MonsterSummoned)
                     _status.text = progress < 0.85f
-                        ? $"Summon {toImpact:0.0}s — Trap Hole / Pass"
+                        ? $"Summon {toImpact:0.0}s — tap a blinking zone or PASS"
                         : $"{toImpact:0.0}s — last chance!";
                 else
                     _status.text = progress < 0.85f
-                        ? $"Attack {toImpact:0.0}s — trap now"
+                        ? $"Attack {toImpact:0.0}s — tap a blinking zone or PASS"
                         : $"{toImpact:0.0}s — last chance!";
                 _status.color = progress < 0.65f
                     ? new Color(1f, 0.85f, 0.4f, 1f)
@@ -484,6 +483,9 @@ namespace WRLDZ.UI
                     _status.text = $"Not a legal target: {card.Name}";
                 return;
             }
+
+            if (TryActivateResponseCard(card))
+                return;
 
             WrldzAudio.PlayCardTap();
 
@@ -1523,7 +1525,9 @@ namespace WRLDZ.UI
                     return;
 
                 // Legal plays for the human currently holding the device
-                _legalSnap = LegalIntentService.Build(_engine, CommandWho() ?? _engine.Player);
+                _legalSnap = WRLDZ.Duel.Ocg.OcgLabDuelHost.IsActive
+                    ? WRLDZ.Duel.Ocg.OcgLegalActions.Build(WRLDZ.Duel.Ocg.OcgLabDuelHost.Current)
+                    : LegalIntentService.Build(_engine, CommandWho() ?? _engine.Player);
 
                 if (_engine.GameOver)
                 {
@@ -1567,6 +1571,8 @@ namespace WRLDZ.UI
                     ShowLegalZoneHighlights(_selectedHand);
                     RefreshZonePicker();
                 }
+                else if (IsLocalResponseWindow())
+                    ShowResponseZoneHighlights();
                 else
                     ClearLegalZoneHighlights();
 
@@ -1585,9 +1591,7 @@ namespace WRLDZ.UI
         }
 
         /// <summary>
-        /// Large mid-screen tray: each legal response card (Waboku, Mirror Force, …) + Pass.
-        /// Engine already opens AttackDeclared windows; this makes activation actually reachable
-        /// when the 2D board is compact or AR companion hides field taps.
+        /// Slim tray: hand Quick Effects (Kuriboh) + Pass. Field Sets blink on the zone.
         /// </summary>
         void BuildResponseTray(Transform root)
         {
@@ -1649,29 +1653,27 @@ namespace WRLDZ.UI
                 : pr.ReactionSeconds;
             _responsePrompt.text =
                 $"{pr.Prompt}\n" +
-                $"⏱ {secs:0.0}s — ACTIVATE a trap or PASS";
+                $"⏱ {secs:0.0}s — tap a blinking zone or PASS";
 
             // Clear old buttons
             for (var i = _responseBtnRow.childCount - 1; i >= 0; i--)
                 Destroy(_responseBtnRow.GetChild(i).gameObject);
 
-            // One button per legal response card
+            // Hand QEs only (Kuriboh). Field Sets are zone-blink + click.
             if (pr.LegalCards != null)
             {
+                var who = CommandWho() ?? _engine.Player;
                 foreach (var c in pr.LegalCards)
                 {
-                    if (c == null) continue;
+                    if (c == null || who == null) continue;
+                    if (who.TryFindSpellTrap(c, out _) || who.TryFindMonster(c, out _))
+                        continue;
                     var card = c;
                     var label = "ACTIVATE\n" + ShortName(card.Name);
                     var b = CreateButton(_responseBtnRow, label, () =>
                     {
                         FreeUiKit.PlaySelect();
-                        // Field set traps vs hand QE (Kuriboh)
-                        var who = CommandWho() ?? _engine.Player;
-                        if (who != null && who.TryFindSpellTrap(card, out _))
-                            _selectedSpellTrap = card;
-                        else
-                            _selectedHand = card;
+                        _selectedHand = card;
                         DoActivate();
                     }, GbaTheme.CmdSafe);
                     var brt = b.GetComponent<RectTransform>();
@@ -1948,7 +1950,8 @@ namespace WRLDZ.UI
                          pending.TargetKind == EffectTargetKind.FieldSpellInYourDeck ||
                          pending.TargetKind == EffectTargetKind.MonsterInYourDeckFiltered)
                     tag = "DECK\n";
-                else if (pending.TargetKind == EffectTargetKind.SpellInYourGy)
+                else if (pending.TargetKind == EffectTargetKind.SpellInYourGy ||
+                         pending.TargetKind == EffectTargetKind.TrapInYourGy)
                     tag = "GY\n";
                 else if (pending.TargetKind == EffectTargetKind.SpellTrapOnField)
                 {
@@ -2089,7 +2092,7 @@ namespace WRLDZ.UI
                 {
                     _responsePrompt.text =
                         $"{_engine.PendingResponse.Prompt}\n" +
-                        $"⏱ {_responseClock.SecondsRemaining:0.0}s — ACTIVATE or PASS";
+                        $"⏱ {_responseClock.SecondsRemaining:0.0}s — tap a blinking zone or PASS";
                 }
 
                 return;
@@ -2103,13 +2106,26 @@ namespace WRLDZ.UI
 
             // Official advances (Rulebook):
             // Battle from Main1 only (not first turn); Main2 from Main1 or Battle; End from MP1/Battle/MP2
-            var canBattle = canAdvance && _engine.CanConductBattlePhase;
-            var canMain2 = canAdvance &&
+            bool canBattle;
+            bool canMain2;
+            bool canEnd;
+            if (WRLDZ.Duel.Ocg.OcgLabDuelHost.IsActive)
+            {
+                var chips = WRLDZ.Duel.Ocg.OcgLegalActions.PhaseChips(WRLDZ.Duel.Ocg.OcgLabDuelHost.Current);
+                canBattle = chips.Battle;
+                canMain2 = chips.Main2;
+                canEnd = chips.End;
+            }
+            else
+            {
+                canBattle = canAdvance && _engine.CanConductBattlePhase;
+                canMain2 = canAdvance &&
                            (_engine.Phase == DuelPhase.Main1 || _engine.Phase == DuelPhase.Battle);
-            var canEnd = canAdvance &&
+                canEnd = canAdvance &&
                          (_engine.Phase == DuelPhase.Main1 ||
                           _engine.Phase == DuelPhase.Battle ||
                           _engine.Phase == DuelPhase.Main2);
+            }
 
             SetPhaseButtons(canBattle, canMain2, canEnd);
             if (main && _engine.PendingTributes.Count > 0)
@@ -2936,13 +2952,28 @@ namespace WRLDZ.UI
                 }
 
                 // Legal / response glow from LegalIntentService
-                var canRespond = mine && _legalSnap != null &&
-                                 (_legalSnap.HasKind(card, LegalIntentService.LegalKind.ResponseActivate) ||
-                                  _legalSnap.HasKind(card, LegalIntentService.LegalKind.ActivateFromField));
-                if (canRespond)
+                var isResponse = mine && _legalSnap != null &&
+                                 _legalSnap.HasKind(card, LegalIntentService.LegalKind.ResponseActivate);
+                var canActivateField = mine && _legalSnap != null &&
+                                       _legalSnap.HasKind(card, LegalIntentService.LegalKind.ActivateFromField);
+                if (isResponse)
+                {
+                    AttachResponseBlink(go);
+                    var btn = go.GetComponent<Button>();
+                    var respondCard = card;
+                    if (btn != null)
+                    {
+                        btn.onClick.RemoveAllListeners();
+                        btn.onClick.AddListener(() =>
+                        {
+                            FreeUiKit.PlaySelect();
+                            TryActivateResponseCard(respondCard);
+                        });
+                    }
+                }
+                else if (canActivateField)
                 {
                     Tint(go, LegalIntentService.ColorFor(_legalSnap, card));
-                    // Override click: open inspect with Activate as first action
                     var btn = go.GetComponent<Button>();
                     var respondCard = card;
                     if (btn != null)
@@ -3073,6 +3104,22 @@ namespace WRLDZ.UI
                     Tint(go, new Color(1f, 0.55f, 0.2f, 1f)); // orange = marked for tribute
                 else if (needsTributePick)
                     Tint(go, new Color(0.35f, 0.75f, 1f, 1f)); // cyan = can mark
+                else if (mine && _legalSnap != null &&
+                         _legalSnap.HasKind(card, LegalIntentService.LegalKind.ResponseActivate))
+                {
+                    AttachResponseBlink(go);
+                    var btn = go.GetComponent<Button>();
+                    var respondCard = card;
+                    if (btn != null)
+                    {
+                        btn.onClick.RemoveAllListeners();
+                        btn.onClick.AddListener(() =>
+                        {
+                            FreeUiKit.PlaySelect();
+                            TryActivateResponseCard(respondCard);
+                        });
+                    }
+                }
                 else if (mine && (_selectedField == card || _selectedAttacker == card))
                     Tint(go, GbaTheme.GoldBright);
                 else if (mine && _legalSnap != null && _legalSnap.CanGlow(card))
@@ -3900,6 +3947,105 @@ namespace WRLDZ.UI
             }
         }
 
+        static List<LegalIntentService.LegalSlot> OcgZoneSlots(CardInstance card, bool asSet)
+        {
+            var list = new List<LegalIntentService.LegalSlot>();
+            var host = WRLDZ.Duel.Ocg.OcgLabDuelHost.Current;
+            if (host == null || card == null) return list;
+            for (var i = 0; i < 5; i++)
+            {
+                var mon = WRLDZ.Duel.Ocg.OcgLegalActions.SlotLegal(
+                    host, card, ArDuelZoneKind.Monster, i, asSet);
+                var st = WRLDZ.Duel.Ocg.OcgLegalActions.SlotLegal(
+                    host, card, ArDuelZoneKind.SpellTrap, i, asSet);
+                if (!mon && !st) continue;
+                list.Add(new LegalIntentService.LegalSlot
+                {
+                    Kind = mon ? RulesZoneKind.Monster : RulesZoneKind.SpellTrap,
+                    Index = i,
+                    CanSummonAtk = mon && !asSet,
+                    CanSet = asSet,
+                    CanActivate = st && !asSet
+                });
+            }
+            return list;
+        }
+
+        bool IsLocalResponseWindow()
+        {
+            if (_engine == null || !_engine.IsAwaitingPlayerResponse) return false;
+            var pr = _engine.PendingResponse;
+            if (pr?.Responder == null) return false;
+            return IsAiOpponent
+                ? pr.Responder == _engine.Player
+                : pr.Responder == CommandWho();
+        }
+
+        void ShowResponseZoneHighlights()
+        {
+            var ix = _arSpace?.Interaction;
+            if (!IsLocalResponseWindow())
+            {
+                ix?.ClearLegalPlacements();
+                return;
+            }
+
+            var who = CommandWho() ?? _engine.Player;
+            var slots = LegalIntentService.ResponseActivationSlots(_engine, who);
+            ix?.ShowResponseActivations(slots);
+        }
+
+        bool TryActivateResponseAtZone(RulesZoneKind kind, int index)
+        {
+            if (!IsLocalResponseWindow()) return false;
+            var who = CommandWho() ?? _engine.Player;
+            var slots = LegalIntentService.ResponseActivationSlots(_engine, who);
+            for (var i = 0; i < slots.Count; i++)
+            {
+                var s = slots[i];
+                if (s.Kind != kind || s.Index != index) continue;
+                CardInstance occupant = null;
+                if (kind == RulesZoneKind.SpellTrap && index >= 0 &&
+                    index < who.SpellTrapZones.Length)
+                    occupant = who.SpellTrapZones[index].Occupant;
+                else if (kind == RulesZoneKind.Monster && index >= 0 &&
+                         index < who.MonsterZones.Length)
+                    occupant = who.MonsterZones[index].Occupant;
+                return occupant != null && TryActivateResponseCard(occupant);
+            }
+
+            return false;
+        }
+
+        bool TryActivateResponseCard(CardInstance card)
+        {
+            if (!IsLocalResponseWindow() || card == null) return false;
+            var pr = _engine.PendingResponse;
+            if (pr.LegalCards == null ||
+                !pr.LegalCards.Exists(c => c != null &&
+                                           (c == card || c.InstanceId == card.InstanceId)))
+                return false;
+
+            var who = CommandWho() ?? _engine.Player;
+            if (who != null && who.TryFindSpellTrap(card, out _))
+                _selectedSpellTrap = card;
+            else if (who != null && who.Hand != null && who.Hand.Contains(card))
+                _selectedHand = card;
+            else
+                _selectedField = card;
+            DoActivate();
+            return true;
+        }
+
+        static void AttachResponseBlink(GameObject go)
+        {
+            if (go == null) return;
+            var img = go.GetComponent<Image>();
+            if (img == null) return;
+            var blink = go.GetComponent<ResponseZoneBlink>() ?? go.AddComponent<ResponseZoneBlink>();
+            blink.Bind(img, LegalIntentService.ResponseGlowColor);
+        }
+
         void ShowLegalZoneHighlights(CardInstance card)
         {
             var ix = _arSpace?.Interaction;
@@ -3910,7 +4056,9 @@ namespace WRLDZ.UI
             }
 
             var who = CommandWho() ?? _engine.Player;
-            var slots = LegalIntentService.LegalSlotsForAction(_engine, who, card, _zonePickAsSet);
+            var slots = WRLDZ.Duel.Ocg.OcgLabDuelHost.IsActive
+                ? OcgZoneSlots(card, _zonePickAsSet)
+                : LegalIntentService.LegalSlotsForAction(_engine, who, card, _zonePickAsSet);
             ix?.ShowLegalPlacements(slots);
             RefreshZonePicker();
         }
@@ -4054,6 +4202,8 @@ namespace WRLDZ.UI
         void OnArEmptyZoneTapped(RulesZoneKind kind, int index)
         {
             if (_engine == null || _engine.GameOver) return;
+            if (TryActivateResponseAtZone(kind, index))
+                return;
             if (!_awaitingZonePick)
             {
                 if (_status != null)
@@ -4506,6 +4656,26 @@ namespace WRLDZ.UI
             // Safety net: opponent turn but AI not running (PvAI only)
             if (IsAiOpponent && !_aiRunning && _engine.TurnPlayer == _engine.Opponent)
                 StartOpponentTurnIfNeeded();
+        }
+    }
+
+    /// <summary>Pulse a 2D field card so only the local responder sees a live Set.</summary>
+    sealed class ResponseZoneBlink : MonoBehaviour
+    {
+        Image _img;
+        Color _base;
+
+        public void Bind(Image img, Color baseCol)
+        {
+            _img = img;
+            _base = baseCol;
+        }
+
+        void LateUpdate()
+        {
+            if (_img == null) return;
+            var pulse = 0.28f + 0.42f * Mathf.Abs(Mathf.Sin(Time.unscaledTime * 4.2f));
+            _img.color = Color.Lerp(Color.white, _base, pulse);
         }
     }
 }

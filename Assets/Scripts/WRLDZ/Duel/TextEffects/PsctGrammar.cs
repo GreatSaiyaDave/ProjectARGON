@@ -179,6 +179,10 @@ namespace WRLDZ.Duel.TextEffects
             if (Contains(cond, "normal or flip summon") || Contains(cond, "normal summons") ||
                 Contains(cond, "flip summons"))
                 return EffectTiming.OpponentNormalOrFlipSummon;
+            if (Contains(cond, "flip summoned"))
+                return EffectTiming.ThisCardSummoned;
+            if (Contains(cond, "destroyed by battle"))
+                return EffectTiming.SentFromFieldToGy;
             if (Contains(cond, "sent from the field to the gy") ||
                 Contains(cond, "sent from the field to the graveyard"))
                 return EffectTiming.SentFromFieldToGy;

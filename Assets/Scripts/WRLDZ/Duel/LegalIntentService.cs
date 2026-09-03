@@ -243,6 +243,44 @@ namespace WRLDZ.Duel
             return list;
         }
 
+        /// <summary>
+        /// Occupied zones of the responder's legal response cards (Set S/T, Damage Calc field).
+        /// Empty when <paramref name="who"/> is not the current responder — opponent must not
+        /// see which face-down is live.
+        /// </summary>
+        public static List<LegalSlot> ResponseActivationSlots(DuelEngine engine, DuelistState who)
+        {
+            var list = new List<LegalSlot>();
+            if (engine?.PendingResponse == null || who == null) return list;
+            if (engine.PendingResponse.Responder != who) return list;
+            var legal = engine.PendingResponse.LegalCards;
+            if (legal == null) return list;
+            foreach (var c in legal)
+            {
+                if (c == null) continue;
+                if (who.TryFindSpellTrap(c, out var si))
+                {
+                    list.Add(new LegalSlot
+                    {
+                        Kind = RulesZoneKind.SpellTrap,
+                        Index = si,
+                        CanActivate = true
+                    });
+                }
+                else if (who.TryFindMonster(c, out var mi))
+                {
+                    list.Add(new LegalSlot
+                    {
+                        Kind = RulesZoneKind.Monster,
+                        Index = mi,
+                        CanActivate = true
+                    });
+                }
+            }
+
+            return list;
+        }
+
         /// <summary>Zones legal for Summon ATK / Activate (<paramref name="asSet"/> false) or Set.</summary>
         public static List<LegalSlot> LegalSlotsForAction(
             DuelEngine engine, DuelistState who, CardInstance card, bool asSet)

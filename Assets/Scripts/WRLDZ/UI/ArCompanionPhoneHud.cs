@@ -39,51 +39,7 @@ namespace WRLDZ.UI
             Text oppLp = null;
             Text status = null;
 
-            // ── Profile / systems sheet — starts HIDDEN (toggle with Systems) ──
-            var sheet = FloatingPanel.Create(root, "ProfileSheet", goldEdge: true);
-            FloatingPanel.Place(sheet, 0.06f, 0.12f, 0.94f, 0.86f);
-            sheet.gameObject.SetActive(false);
-            var sheetImg = sheet.GetComponent<Image>();
-            if (sheetImg != null) sheetImg.color = new Color(0.05f, 0.07f, 0.11f, 0.72f);
-
-            // Avatar ring
-            var faceHost = new GameObject("Avatar", typeof(RectTransform), typeof(Image), typeof(Button));
-            faceHost.transform.SetParent(sheet, false);
-            FloatingPanel.Place(faceHost.GetComponent<RectTransform>(), 0.06f, 0.72f, 0.28f, 0.96f);
-            var faceImg = faceHost.GetComponent<Image>();
-            faceImg.sprite = DuelystUi.OrbRing() ?? DuelystUi.BtnCircle();
-            faceImg.color = Color.white;
-            faceImg.preserveAspect = true;
-            var portrait = AvatarPortraitView.CreateFullBodyFill(faceHost.transform, hideBackground: true, badgeCrop: true);
-
-            var nameT = FloatingPanel.Body(sheet, "Duelist", 22);
-            FloatingPanel.Place(nameT.rectTransform, 0.32f, 0.86f, 0.94f, 0.96f);
-            nameT.color = DuelystUi.GoldHot;
-            nameT.alignment = TextAnchor.MiddleLeft;
-            WrldzType.StyleButtonLabel(nameT, 20, display: true);
-
-            var subT = FloatingPanel.Body(sheet, "Lv1 · Team", 15);
-            FloatingPanel.Place(subT.rectTransform, 0.32f, 0.76f, 0.94f, 0.86f);
-            subT.color = Color.white;
-            subT.alignment = TextAnchor.MiddleLeft;
-
-            var currT = FloatingPanel.Body(sheet, "Đ0 · DC0 · SE0", 14);
-            FloatingPanel.Place(currT.rectTransform, 0.32f, 0.68f, 0.88f, 0.76f);
-            currT.color = DuelystUi.Cyan;
-            currT.alignment = TextAnchor.MiddleLeft;
-
-            var soul = SoulBadgeView.Create(sheet);
-            FloatingPanel.Place(soul.GetComponent<RectTransform>(), 0.86f, 0.78f, 0.98f, 0.96f);
-
-            var note = FloatingPanel.Body(sheet,
-                "AR MODE · Card play is on the Spirit Dueler / midfield holos.\n" +
-                "This screen is profile + systems — not the duel board.",
-                12);
-            FloatingPanel.Place(note.rectTransform, 0.06f, 0.56f, 0.94f, 0.67f);
-            note.color = DuelystUi.TextMuted;
-            note.alignment = TextAnchor.UpperLeft;
-
-            // Modal host for nested menus (decks, bag, settings)
+            // Modal host first so close/toggle can clear nested menus.
             var modal = new GameObject("ModalHost", typeof(RectTransform)).GetComponent<RectTransform>();
             modal.SetParent(root, false);
             FloatingPanel.Stretch(modal);
@@ -93,8 +49,72 @@ namespace WRLDZ.UI
                 FloatingPanel.DestroyChildrenNow(modal);
             }
 
-            // Menu grid
-            float y = 0.50f;
+            DualMenuPresenter.Frame frame = default;
+            Transform dim = null;
+            void ShowSheet(bool open)
+            {
+                if (frame.Root != null) frame.Root.gameObject.SetActive(open);
+                if (dim != null) dim.gameObject.SetActive(open);
+                if (!open) ClearModal();
+            }
+
+            // ── Profile / systems sheet — starts HIDDEN (toggle with Systems) ──
+            frame = DualMenuPresenter.BuildFrame(
+                root, "PROFILE", "AR companion · systems", () => ShowSheet(false));
+            var sheet = frame.BodyHost;
+            dim = root.Find("Dim");
+            ShowSheet(false);
+
+            var faceHost = new GameObject("Avatar", typeof(RectTransform), typeof(Image), typeof(Button));
+            faceHost.transform.SetParent(sheet, false);
+            FloatingPanel.Place(faceHost.GetComponent<RectTransform>(), 0.02f, 0.78f, 0.28f, 0.98f);
+            var faceImg = faceHost.GetComponent<Image>();
+            faceImg.sprite = DuelystUi.OrbRing() ?? DuelystUi.BtnCircle();
+            faceImg.color = Color.white;
+            faceImg.preserveAspect = true;
+            var portrait = AvatarPortraitView.CreateFullBodyFill(faceHost.transform, hideBackground: true, badgeCrop: true);
+
+            var nameT = frame.Title;
+            if (nameT != null)
+            {
+                nameT.resizeTextForBestFit = false;
+                nameT.horizontalOverflow = HorizontalWrapMode.Overflow;
+            }
+
+            var subT = frame.Subtitle;
+            if (subT != null)
+            {
+                WrldzType.StyleButtonLabel(subT, 14);
+                subT.color = new Color(0.90f, 0.94f, 1f, 0.96f);
+                subT.alignment = TextAnchor.MiddleLeft;
+                subT.resizeTextForBestFit = false;
+                subT.horizontalOverflow = HorizontalWrapMode.Overflow;
+            }
+
+            var currT = FloatingPanel.Body(sheet, "Đ0 · DC0 · SE0", 14);
+            FloatingPanel.Place(currT.rectTransform, 0.30f, 0.78f, 0.82f, 0.88f);
+            WrldzType.StyleButtonLabel(currT, 15);
+            currT.color = DuelystUi.Cyan;
+            currT.alignment = TextAnchor.MiddleLeft;
+            currT.resizeTextForBestFit = false;
+            currT.horizontalOverflow = HorizontalWrapMode.Overflow;
+
+            var soul = SoulBadgeView.Create(sheet);
+            FloatingPanel.Place(soul.GetComponent<RectTransform>(), 0.84f, 0.78f, 0.98f, 0.98f);
+
+            var note = FloatingPanel.Body(sheet,
+                "AR MODE · play on the Spirit Dueler. This sheet is profile + systems.",
+                13);
+            FloatingPanel.Grid.Full(note.rectTransform, 0.68f, 0.76f);
+            WrldzType.StyleButtonLabel(note, 14);
+            note.color = DuelystUi.TextMuted;
+            note.alignment = TextAnchor.MiddleLeft;
+            note.horizontalOverflow = HorizontalWrapMode.Wrap;
+            note.resizeTextForBestFit = false;
+
+            // Two-column systems grid
+            var tileY = new[] { 0.54f, 0.40f, 0.26f };
+            var tileI = 0;
             void Tile(string label, string blurb, Action open, bool gold = false)
             {
                 var b = FloatingPanel.PrimaryButton(sheet, label, () =>
@@ -103,9 +123,15 @@ namespace WRLDZ.UI
                     ClearModal();
                     open?.Invoke();
                 }, gold: gold);
-                FloatingPanel.Place(b.GetComponent<RectTransform>(), 0.06f, y - 0.09f, 0.94f, y);
-                // Blurb as button sub-label is tight — put blurb in toast/status
-                y -= 0.10f;
+                var col = tileI % 2;
+                var row = tileI / 2;
+                var y1 = tileY[Mathf.Min(row, tileY.Length - 1)];
+                var y0 = y1 - 0.12f;
+                if (col == 0)
+                    FloatingPanel.Place(b.GetComponent<RectTransform>(), 0.02f, y0, 0.48f, y1);
+                else
+                    FloatingPanel.Place(b.GetComponent<RectTransform>(), 0.52f, y0, 0.98f, y1);
+                tileI++;
             }
 
             Tile("DECK", NavCopy.BlurbFor(MenuId.DeckCollection), () =>
@@ -115,11 +141,11 @@ namespace WRLDZ.UI
                 DeckCollectionScreen.Build(modal, ClearModal, UiPresentation.ArDiskHolo);
             }, gold: true);
 
-            Tile("BACKPACK", NavCopy.BlurbFor(MenuId.Inventory), () =>
+            Tile("BAG", NavCopy.BlurbFor(MenuId.Inventory), () =>
             {
                 if (status != null)
                     status.text = NavCopy.ToastFor(MenuId.Inventory);
-                InventoryScreen.Build(modal, ClearModal);
+                InventoryScreen.Build(modal, ClearModal, UiPresentation.ArDiskHolo);
             });
 
             Tile("TOME", NavCopy.BlurbFor(MenuId.TomeRaid), () =>
@@ -129,27 +155,11 @@ namespace WRLDZ.UI
                 SystemsSheets.BuildTome(modal, ClearModal, UiPresentation.ArDiskHolo);
             });
 
-            Tile("ARTIFACTS", "Key items · artifact deck box", () =>
+            Tile("ARTIFACTS", NavCopy.BlurbFor(MenuId.Artifacts), () =>
             {
-                ClearModal();
-                var acc = AppSession.Ensure().Account;
-                acc?.EnsureInventory();
-                var inv = acc?.inventory;
-                inv?.EnsureValid();
-                var art = inv?.artifactDeckBox;
-                var owned = art != null && art.owned;
-                var n = art?.artifactCardIds?.Length ?? 0;
-                var where = art == null || art.atHome ? "at home" : "in pack";
                 if (status != null)
-                    status.text = owned
-                        ? $"Artifacts · {n} cards · box {where}"
-                        : "Artifact deck box locked";
-                ShowInfoSheet(modal, "ARTIFACTS",
-                    owned
-                        ? $"Artifact Deck Box: owned\nLocation: {where}\nArtifact cards: {n}\n\n" +
-                          "× closes · key-item equip UI later."
-                        : "No Artifact Deck Box yet.\nGranted with starter kit / story.\n× closes.",
-                    ClearModal);
+                    status.text = NavCopy.ToastFor(MenuId.Artifacts);
+                ArtifactBoxScreen.Build(modal, ClearModal, UiPresentation.ArDiskHolo);
             });
 
             Tile("SETTINGS", NavCopy.BlurbFor(MenuId.Settings), () =>
@@ -179,9 +189,8 @@ namespace WRLDZ.UI
             var systems = FloatingPanel.PrimaryButton(root, "SYS", () =>
             {
                 FreeUiKit.PlaySelect();
-                var open = !sheet.gameObject.activeSelf;
-                sheet.gameObject.SetActive(open);
-                if (!open) ClearModal();
+                var open = frame.Root == null || !frame.Root.gameObject.activeSelf;
+                ShowSheet(open);
                 if (status != null)
                     status.text = open ? "Systems open · AR field behind" : "AR field · disks + holos";
             }, centerLabel: true);
@@ -223,7 +232,7 @@ namespace WRLDZ.UI
                 nameT.text = who;
                 subT.text = $"Lv{lvl}  ·  {team}  ·  {title}";
                 currT.text =
-                    $"Đ{p?.digizeni ?? 0}  ·  DC{p?.duelCoin ?? 0}  ·  SE{p?.setEnergy ?? 0}";
+                    $"Đ{(p?.digizeni ?? 0):N0}  ·  DC{(p?.duelCoin ?? 0):N0}  ·  SE{(p?.setEnergy ?? 0):N0}";
                 soul.Bind(p);
 
                 if (portrait != null)

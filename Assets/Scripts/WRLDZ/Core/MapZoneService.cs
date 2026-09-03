@@ -23,6 +23,7 @@ namespace WRLDZ.Core
             }
 
             acc.EnsureProgress();
+            acc.EnsureInventory();
             var key = PrefLootPrefix + (zoneId ?? kind.ToString()) + "." +
                       System.DateTime.UtcNow.ToString("yyyy-MM-dd");
             if (PlayerPrefs.GetInt(key, 0) > 0)
@@ -39,7 +40,7 @@ namespace WRLDZ.Core
                 _ => 1
             };
 
-            acc.progress.setEnergy += seGained;
+            ArtifactService.GrantUntaggedSetEnergy(acc.progress, acc.inventory, seGained);
             ProgressionService.Persist(acc);
             PlayerPrefs.SetInt(key, 1);
             PlayerPrefs.Save();

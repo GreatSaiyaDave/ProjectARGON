@@ -20,9 +20,22 @@ namespace WRLDZ.UI.Shell
         {
             public RectTransform Root;
             public RectTransform BodyHost;
+            public RectTransform Dim;
             public Text Title;
             public Text Subtitle;
             public UiPresentation Presentation;
+        }
+
+        /// <summary>
+        /// Hide and destroy a frame. Must not DestroyImmediate from a Close onClick —
+        /// the chip lives on the panel.
+        /// </summary>
+        public static void Dismiss(Frame frame)
+        {
+            if (frame.Dim != null)
+                FloatingPanel.DestroyDeferred(frame.Dim.gameObject);
+            if (frame.Root != null)
+                FloatingPanel.DestroyDeferred(frame.Root.gameObject);
         }
 
         /// <summary>
@@ -96,6 +109,7 @@ namespace WRLDZ.UI.Shell
             {
                 Root = panel,
                 BodyHost = body,
+                Dim = dim.GetComponent<RectTransform>(),
                 Title = titleT,
                 Subtitle = subT,
                 Presentation = UiPresentation.NonArPortrait
@@ -133,6 +147,7 @@ namespace WRLDZ.UI.Shell
             {
                 Root = panel,
                 BodyHost = body,
+                Dim = null,
                 Title = titleT,
                 Subtitle = subT,
                 Presentation = UiPresentation.ArDiskHolo
@@ -173,20 +188,15 @@ namespace WRLDZ.UI.Shell
                 subT.color = new Color(0.90f, 0.94f, 1f, 0.96f);
             }
 
-            var close = new GameObject("Close", typeof(RectTransform), typeof(Image), typeof(Button));
-            close.transform.SetParent(well, false);
-            FloatingPanel.Place(close.GetComponent<RectTransform>(), 0.88f, hasSub ? 0.88f : 0.86f, 0.99f, 0.99f);
-            var closeImg = close.GetComponent<Image>();
-            closeImg.sprite = ImagineAssets.BtnClose() ?? DuelystUi.BtnClose() ?? UiFoundation.WhiteSprite();
-            closeImg.preserveAspect = true;
-            closeImg.type = Image.Type.Simple;
-            closeImg.color = Color.white;
-            closeImg.raycastTarget = true;
-            var closeBtn = close.GetComponent<Button>();
-            closeBtn.targetGraphic = closeImg;
-            closeBtn.transition = Selectable.Transition.None;
-            if (onClose != null)
-                closeBtn.onClick.AddListener(() => onClose());
+            var close = MenuCommandButton.Create(well, "X", onClose,
+                MenuCommandButton.Kind.Secondary, centerTitle: true);
+            close.name = "Close";
+            var closeRt = close.GetComponent<RectTransform>();
+            closeRt.anchorMin = new Vector2(1f, 1f);
+            closeRt.anchorMax = new Vector2(1f, 1f);
+            closeRt.pivot = new Vector2(1f, 1f);
+            closeRt.sizeDelta = new Vector2(64f, 64f);
+            closeRt.anchoredPosition = new Vector2(-6f, -6f);
 
             var body = new GameObject("BodyHost", typeof(RectTransform)).GetComponent<RectTransform>();
             body.SetParent(well, false);

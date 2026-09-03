@@ -1,0 +1,109 @@
+{
+  "batches": [
+    {
+      "wait": "idle",
+      "waitingPlayer": 0,
+      "messages": [
+        { "kind": "new_turn", "player": 0 },
+        { "kind": "new_phase", "phase": 4 },
+        { "kind": "draw", "player": 0, "codes": [5053192, 32452818, 32452818, 32452818, 32452818] },
+        { "kind": "draw", "player": 1, "codes": [32452818, 53129443, 32452818, 32452818, 32452818] },
+        {
+          "kind": "idle",
+          "player": 0,
+          "summonable": [ { "code": 5053192, "controller": 0, "location": 2, "sequence": 0 } ],
+          "toBp": 0,
+          "toEp": 1
+        }
+      ]
+    },
+    {
+      "wait": "idle",
+      "waitingPlayer": 0,
+      "messages": [
+        { "kind": "summoning", "code": 5053192, "player": 0, "loc": 4, "seq": 2, "pos": 1 },
+        {
+          "kind": "move",
+          "code": 5053192,
+          "from": { "controller": 0, "location": 2, "sequence": 0, "position": 1 },
+          "to": { "controller": 0, "location": 4, "sequence": 2, "position": 1 }
+        },
+        { "kind": "summoned" },
+        { "kind": "idle", "player": 0, "toBp": 0, "toEp": 1 }
+      ]
+    },
+    {
+      "wait": "idle",
+      "waitingPlayer": 1,
+      "autoOpponent": true,
+      "autoType": 0,
+      "autoIndex": 0,
+      "messages": [
+        { "kind": "new_phase", "phase": 512 },
+        { "kind": "new_turn", "player": 1 },
+        { "kind": "new_phase", "phase": 4 },
+        { "kind": "draw", "player": 1, "codes": [32452818] },
+        {
+          "kind": "idle",
+          "player": 1,
+          "summonable": [ { "code": 32452818, "controller": 1, "location": 2, "sequence": 0 } ],
+          "toBp": 1,
+          "toEp": 1
+        }
+      ]
+    },
+    {
+      "wait": "idle",
+      "waitingPlayer": 1,
+      "autoOpponent": true,
+      "autoType": 5,
+      "autoIndex": 0,
+      "messages": [
+        { "kind": "summoning", "code": 32452818, "player": 1, "loc": 4, "seq": 2, "pos": 1 },
+        {
+          "kind": "move",
+          "code": 32452818,
+          "from": { "controller": 1, "location": 2, "sequence": 0, "position": 1 },
+          "to": { "controller": 1, "location": 4, "sequence": 2, "position": 1 }
+        },
+        { "kind": "summoned" },
+        {
+          "kind": "idle",
+          "player": 1,
+          "activate": [ { "code": 53129443, "controller": 1, "location": 2, "sequence": 1 } ],
+          "toBp": 1,
+          "toEp": 1
+        }
+      ]
+    },
+    {
+      "wait": "chain",
+      "waitingPlayer": 0,
+      "messages": [
+        { "kind": "chaining", "code": 53129443 },
+        { "kind": "select_chain", "player": 0 }
+      ]
+    },
+    {
+      "wait": "",
+      "messages": [
+        { "kind": "chain_solving" },
+        {
+          "kind": "move",
+          "code": 5053192,
+          "from": { "controller": 0, "location": 4, "sequence": 2, "position": 1 },
+          "to": { "controller": 0, "location": 16, "sequence": 0, "position": 1 }
+        },
+        {
+          "kind": "move",
+          "code": 32452818,
+          "from": { "controller": 1, "location": 4, "sequence": 2, "position": 1 },
+          "to": { "controller": 1, "location": 16, "sequence": 0, "position": 1 }
+        },
+        { "kind": "chain_solved" },
+        { "kind": "chain_end" },
+        { "kind": "new_phase", "phase": 512 }
+      ]
+    }
+  ]
+}

@@ -144,14 +144,17 @@ namespace WRLDZ.EditorTools
             Check("DeckCollection phone", () =>
             {
                 DeckCollectionScreen.Build(host, () => { }, UiPresentation.NonArPortrait);
-                RequireLabel(host, "COLLECTION");
-                RequireLabel(host, "DECK");
+                RequireLabel(host, "MAIN  ");
+                RequireLabel(host, "EXTRA  ");
+                RequireLabel(host, "SIDE  ");
+                RequireLabel(host, "CARD LIST");
             });
             Check("DeckCollection AR holo", () =>
             {
                 DeckCollectionScreen.Build(host, () => { }, UiPresentation.ArDiskHolo);
-                RequireLabel(host, "COLLECTION");
-                RequireLabel(host, "DECK");
+                RequireLabel(host, "MAIN  ");
+                RequireLabel(host, "EXTRA  ");
+                RequireLabel(host, "SIDE  ");
             });
             Check("Inventory phone", () =>
             {
@@ -168,6 +171,64 @@ namespace WRLDZ.EditorTools
                 RequireLabel(host, "POCKETS");
                 RequireLabel(host, "DECKS");
                 RequireLabel(host, "HOME");
+            });
+            Check("ArtifactBox phone", () =>
+            {
+                ArtifactBoxScreen.Build(host, () => { }, UiPresentation.NonArPortrait);
+                RequireLabel(host, "ARTIFACTS");
+            });
+            Check("ArtifactBox AR holo", () =>
+            {
+                ArtifactBoxScreen.Build(host, () => { }, UiPresentation.ArDiskHolo);
+                RequireLabel(host, "ARTIFACTS");
+            });
+            Check("ArtifactBox filter chips", () =>
+            {
+                FloatingPanel.DestroyChildrenNow(host);
+                ArtifactBoxScreen.Build(host, () => { }, UiPresentation.NonArPortrait);
+                RequireLabel(host, "ALL");
+                RequireLabel(host, "CURRENCY");
+                RequireLabel(host, "TABLET");
+                RequireLabel(host, "KEY");
+            });
+            Check("BAG wallet opens ArtifactBox and X returns", () =>
+            {
+                FloatingPanel.DestroyChildrenNow(host);
+                InventoryScreen.Build(host, () => { }, UiPresentation.NonArPortrait);
+                RequireLabel(host, "CASE");
+                var chip = FindNamed(host, "Chip_Đ");
+                if (chip == null) throw new Exception("wallet Đ chip missing");
+                var chipBtn = chip.GetComponent<Button>();
+                if (chipBtn == null) throw new Exception("wallet Đ chip not clickable");
+                chipBtn.onClick.Invoke();
+                var art = FindNamed(host, "PhoneMenu_ARTIFACTS");
+                if (art == null) throw new Exception("artifact sheet did not open");
+                var bag = FindNamed(host, "PhoneMenu_BAG");
+                if (bag != null && bag.gameObject.activeSelf)
+                    throw new Exception("BAG stayed visible under artifacts");
+                RequireLabel(host, "ARTIFACTS");
+                var close = FindNamed(art, "Close");
+                var closeBtn = close != null ? close.GetComponent<Button>() : null;
+                if (closeBtn == null) throw new Exception("artifact Close missing");
+                closeBtn.onClick.Invoke();
+                art = FindNamed(host, "PhoneMenu_ARTIFACTS");
+                if (art != null && art.gameObject.activeSelf)
+                    throw new Exception("artifact sheet still open after X");
+                bag = FindNamed(host, "PhoneMenu_BAG");
+                if (bag == null || !bag.gameObject.activeSelf)
+                    throw new Exception("BAG did not return after artifact X");
+                RequireLabel(host, "CASE");
+            });
+            Check("ArtifactBox X hides its own frame", () =>
+            {
+                FloatingPanel.DestroyChildrenNow(host);
+                var root = ArtifactBoxScreen.Build(host, () => { }, UiPresentation.NonArPortrait);
+                var close = FindNamed(root, "Close");
+                var closeBtn = close != null ? close.GetComponent<Button>() : null;
+                if (closeBtn == null) throw new Exception("artifact Close missing");
+                closeBtn.onClick.Invoke();
+                if (root != null && root.gameObject.activeSelf)
+                    throw new Exception("artifact frame still visible after X");
             });
             Check("Settings", () => SettingsScreen.Build(host, overlay, () => { }));
             Check("FormatSelect", () => FormatSelectScreen.Build(host, () => { }));

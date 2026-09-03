@@ -120,8 +120,8 @@ namespace WRLDZ.Core
             vm.PocketLine = string.Join(" · ", vm.PocketLabels);
 
             vm.ArtifactOwned = inv.artifactDeckBox != null && inv.artifactDeckBox.owned;
-            vm.ArtifactAtHome = inv.artifactDeckBox == null || inv.artifactDeckBox.atHome;
-            vm.ArtifactCount = inv.artifactDeckBox?.artifactCardIds?.Length ?? 0;
+            vm.ArtifactAtHome = false;
+            vm.ArtifactCount = inv.artifactDeckBox?.instances?.Length ?? 0;
             vm.TradeTransportCharges = inv.tradeTransportCharges;
 
             vm.PackSummary =
@@ -353,53 +353,14 @@ namespace WRLDZ.Core
 
         public static bool TryPackArtifactBox(LocalAccountStore.Account acc, out string error)
         {
-            error = null;
-            if (!Ready(acc, out var inv, out error)) return false;
-            if (inv.artifactDeckBox == null || !inv.artifactDeckBox.owned)
-            {
-                error = "No artifact deck box.";
-                return false;
-            }
-
-            if (!inv.artifactDeckBox.atHome)
-            {
-                error = "Artifact box already packed.";
-                return false;
-            }
-
-            inv.SyncBackpackOccupancy();
-            if (!PlayerInventory.TryFindFreeCell(inv.backpack, 2, 2, out _, out _))
-            {
-                error = "No pack space for artifact box (2×2).";
-                return false;
-            }
-
-            inv.artifactDeckBox.atHome = false;
-            inv.SyncBackpackOccupancy();
-            if (inv.artifactDeckBox.atHome)
-            {
-                error = "Could not place artifact box.";
-                return false;
-            }
-
-            Persist(acc);
-            return true;
+            error = "Artifact Deck Box is always with you.";
+            return false;
         }
 
         public static bool TryUnpackArtifactBox(LocalAccountStore.Account acc, out string error)
         {
-            error = null;
-            if (!Ready(acc, out var inv, out error)) return false;
-            if (inv.artifactDeckBox == null)
-            {
-                error = "No artifact deck box.";
-                return false;
-            }
-
-            inv.artifactDeckBox.atHome = true;
-            inv.SyncBackpackOccupancy();
-            Persist(acc);
-            return true;
+            error = "Artifact Deck Box is always with you.";
+            return false;
         }
 
         // ── Pockets (play deck boxes only) ─────────────────────────────────
@@ -544,14 +505,9 @@ namespace WRLDZ.Core
             if (!Ready(acc, out var inv, out error)) return false;
             qty = Mathf.Max(1, qty);
             var price = PlayerInventory.PriceTradeTransportDigi * qty;
-            if (acc.progress.digizeni < price)
-            {
-                error = $"Need {price} Digizeni.";
+            if (!ArtifactService.TrySpend(acc, ArtifactService.Digizeni, price, out error))
                 return false;
-            }
-
-            acc.progress.digizeni -= price;
-            inv.tradeTransportCharges += qty;
+            ArtifactService.Grant(acc, ArtifactService.TradeTransport, qty);
             Persist(acc);
             return true;
         }
@@ -564,13 +520,12 @@ namespace WRLDZ.Core
         {
             error = null;
             if (!Ready(acc, out var inv, out error)) return false;
-            if (inv.tradeTransportCharges <= 0)
+            if (!ArtifactService.TrySpend(acc, ArtifactService.TradeTransport, 1, out error))
             {
                 error = "Need a Trade Transport item to move a home card remotely.";
                 return false;
             }
 
-            inv.tradeTransportCharges--;
             Persist(acc);
             return true;
         }

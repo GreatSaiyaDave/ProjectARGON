@@ -85,6 +85,22 @@ namespace WRLDZ.Duel.TextEffects
         GainLpEqualToAtk,
         /// <summary>Banish matching monsters (Dark Mirror Force).</summary>
         Banish,
+        /// <summary>Halve the summoned monster's original ATK (Adhesion Trap Hole). Lingering.</summary>
+        HalveOriginalAtk,
+        /// <summary>Destroy all Tokens, then inflict Amount damage per destroyed Token.</summary>
+        DestroyTokensInflictPer,
+        /// <summary>Return all face-up Fusion Monsters to the Extra Deck.</summary>
+        ReturnAllFaceUpFusionsToExtra,
+        /// <summary>Banish the summoned monster, then opponent same-name from hand and Deck.</summary>
+        BanishThenSameNameFromOppHandDeck,
+        /// <summary>Destroy same-name copies in the summoned monster's controller's hand and Deck.</summary>
+        DestroySameNameInControllerHandAndDeck,
+        /// <summary>Destroy opponent's face-up Attack Position monsters, then inflict Amount if any died.</summary>
+        DestroyOppAttackThenDamage,
+        /// <summary>Destroy all Equip Cards on the field (Disarmament).</summary>
+        DestroyAllEquips,
+        /// <summary>Destroy all monsters that have an Equip Card (Eternal Rest).</summary>
+        DestroyAllEquippedMonsters,
         /// <summary>While face-up (and no Field Spell): the field is treated as TreatedAsName (Maiden of the Aqua / Umi).</summary>
         FieldTreatedAsName,
         /// <summary>Controller takes no battle damage while this card is face-up (Tornado Wall).</summary>
@@ -156,7 +172,23 @@ namespace WRLDZ.Duel.TextEffects
         /// <summary>Nomi spirit: Special Summon this card from the hand after paying the GY-banish cost.</summary>
         SpecialSummonThisFromHand,
         /// <summary>Fenrir: opponent skips their next Draw Phase.</summary>
-        SkipOpponentNextDrawPhase
+        SkipOpponentNextDrawPhase,
+        /// <summary>Place this card on top of the controller's Deck (Axe / Horn of the Unicorn GY).</summary>
+        PlaceThisOnTopOfDeck,
+        /// <summary>
+        /// While face-up: matching monsters cannot declare an attack
+        /// (Gravity Bind / Insect Barrier / Messenger of Peace).
+        /// </summary>
+        ContinuousCannotAttack,
+        /// <summary>Standby: pay PayLpAmount or destroy this card (Messenger of Peace).</summary>
+        PayLpOrDestroyThis,
+        /// <summary>
+        /// This card or the chosen target gains Amount ATK and DefAmount DEF lingering
+        /// while it remains on the field (Slate Warrior Flip / destroyer loss).
+        /// </summary>
+        ApplyLingeringAtkDef,
+        /// <summary>Send the top Amount cards of Side's Deck to the GY (Needle Worm).</summary>
+        SendFromTopOfDeckToGy
     }
 
     public enum EffectSide
@@ -195,14 +227,18 @@ namespace WRLDZ.Duel.TextEffects
         AllOtherCardsOnField,
         /// <summary>Monsters the controller currently controls (tribute cost).</summary>
         ControllerMonsters,
-        /// <summary>Monsters in the controller's GY (banish cost / SS).</summary>
+        /// <summary>Monsters in the controller's GY (banish cost / SS / add to hand).</summary>
         ControllerGyMonsters,
         /// <summary>Any card the opponent controls.</summary>
         OppAnyCardOnField,
         /// <summary>Field Spells in the controller's Deck (Terraforming).</summary>
         DeckFieldSpells,
         /// <summary>Main-deck monsters matching RaceFilter with Level ≤ Amount (ROTA).</summary>
-        DeckMonstersRaceLevelLeq
+        DeckMonstersRaceLevelLeq,
+        /// <summary>Traps in the controller's GY (Mask of Darkness).</summary>
+        ControllerGyTraps,
+        /// <summary>Face-up Field Spell Zones on either field (Burning Land).</summary>
+        FieldSpellsOnField
     }
 
     /// <summary>One parsed clause from official card text.</summary>
@@ -312,6 +348,8 @@ namespace WRLDZ.Duel.TextEffects
         public int TokenDestroyedDamage;
         /// <summary>Union: equip only to a monster named NamedCard / EquipHostName.</summary>
         public string EquipHostName;
+        /// <summary>Falling Down / Snatch Steal: take control of the equipped target.</summary>
+        public bool TakeControlOfTarget;
         public int EquipAtkBonus;
         /// <summary>DEF change while equipped (Steel Shell −200). Independent of EquipAtkBonus.</summary>
         public int EquipDefBonus;
@@ -332,10 +370,34 @@ namespace WRLDZ.Duel.TextEffects
         public bool RequiresThisAttackPosition;
         /// <summary>Dancing Fairy family: this copy must be face-up Defense Position.</summary>
         public bool RequiresThisDefensePosition;
-        /// <summary>Pikeru: Amount is per monster you control.</summary>
+        /// <summary>Pikeru / United We Stand: Amount is per face-up monster you control.</summary>
         public bool ScaleAmountByControllerMonsters;
+        /// <summary>Mage Power: Equip ATK/DEF is per Spell/Trap you control (including this card).</summary>
+        public bool ScaleAmountByControllerSpellTraps;
         /// <summary>Spirit: return to hand if Normal Summoned or flipped this turn.</summary>
         public bool RequiresSummonedOrFlippedThisTurn;
+        /// <summary>Des Lacooda: "When this card is Flip Summoned" — not NS/SS or battle flip.</summary>
+        public bool RequiresThisFlipSummoned;
+        /// <summary>
+        /// Ectoplasmer: the turn player tributes (not the card's controller).
+        /// Damage goes to that player's opponent.
+        /// </summary>
+        public bool TurnPlayerTributes;
+        /// <summary>Tribute cost/effect only counts face-up monsters.</summary>
+        public bool TributeFaceUpOnly;
+        /// <summary>
+        /// Phase trigger subject is the turn player (Labyrinth positions, Burning Land damage),
+        /// not the card's controller.
+        /// </summary>
+        public bool TurnPlayerIsSubject;
+        /// <summary>Call of the Haunted: when this card leaves the field, destroy the summoned monster.</summary>
+        public bool DestroyHostWhenThisLeaves;
+        /// <summary>Special Summon in Defense Position (Soul Resurrection).</summary>
+        public bool SummonInDefense;
+        /// <summary>GY target must be a Normal Monster.</summary>
+        public bool RequiresNormalMonster;
+        /// <summary>ContinuousCannotAttack: Amount is a printed Level (Gravity Bind), not ATK.</summary>
+        public bool AmountIsLevel;
         /// <summary>Suijin: this card must be the current attack target.</summary>
         public bool RequiresThisIsAttackTarget;
         /// <summary>Suijin: once while this copy remains face-up.</summary>
@@ -351,10 +413,48 @@ namespace WRLDZ.Duel.TextEffects
         /// (Amphibious Bugroth MK-3: "Umi"). Empty = unconditional direct attack.
         /// </summary>
         public string RequiresFaceUpName;
+        /// <summary>Falling Down: YOU must control the named card, not either field.</summary>
+        public bool RequiresControllerNamedCard;
+        /// <summary>"an Archfiend card": name / treated-as / archetype contains the quoted string.</summary>
+        public bool NamedCardIsSeries;
         /// <summary>Pay LP in this multiple as cost (Bark of Dark Ruler = 100). 0 = none.</summary>
         public int RequiresLpCostMultiple;
         /// <summary>GY trigger only if the card was destroyed (not tributed / discarded).</summary>
         public bool RequiresDestroyed;
+        /// <summary>
+        /// Field→GY trigger only if this copy was destroyed by battle
+        /// (Yomi Ship / Newdoria / Slate Warrior destroyer-loss). Distinct from
+        /// <see cref="RequiresDestroyedByBattleThisTurn"/> (this card destroyed a monster).
+        /// </summary>
+        public bool RequiresThisDestroyedByBattle;
+        /// <summary>Resolution subject is the monster that destroyed this card (no targeting).</summary>
+        public bool ImplicitTargetIsBattleDestroyer;
+        /// <summary>Standby GY SS only if this copy was sent by a Continuous Spell effect.</summary>
+        public bool RequiresSentByContinuousSpell;
+        /// <summary>
+        /// Standby trigger is the controller's next Standby after SentFromFieldTurnNumber
+        /// (Malice Doll of Demise).
+        /// </summary>
+        public bool RequiresNextControllerStandby;
+        /// <summary>
+        /// Destroy sends the card to the Banished pile (skip GY). Bottomless Trap Hole:
+        /// "Destroy … and if you do, banish it."
+        /// </summary>
+        public bool BanishIfDestroyed;
+        /// <summary>Also answers Special Summon (Bottomless / Adhesion / Torrential). Trap Hole does not.</summary>
+        public bool AnswersSpecialSummon;
+        /// <summary>Also answers the controller's own summon (Torrential). Default is opponent only.</summary>
+        public bool AnswersControllerSummon;
+        /// <summary>Amount is an ATK ceiling (Eatgaboon), not a floor.</summary>
+        public bool AmountIsAtkMax;
+        /// <summary>Amount is a DEF ceiling (House of Adhesive Tape).</summary>
+        public bool AmountIsDefMax;
+        /// <summary>Token Feastevil: the summoned card must be a Token.</summary>
+        public bool RequiresSummonedIsToken;
+        /// <summary>Mispolymerization: the summoned card must be a Fusion Monster.</summary>
+        public bool RequiresSummonedIsFusion;
+        /// <summary>Blast Held by a Tribute: the attacker was Tribute Summoned.</summary>
+        public bool RequiresAttackerTributeSummoned;
         /// <summary>Master spec §8: condition re-check (when vs if).</summary>
         public ConditionCheckedAt CheckedAt = ConditionCheckedAt.Both;
         /// <summary>Master spec §7. None unless OncePerTurn is set.</summary>

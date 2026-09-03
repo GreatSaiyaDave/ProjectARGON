@@ -58,7 +58,7 @@ namespace WRLDZ.Core
                 levelsGained++;
                 var pay = DuelistXpCurve.DigizeniOnLevelUp(p.level);
                 digiBonus += pay;
-                p.digizeni += pay;
+                ArtifactService.Grant(acc, ArtifactService.Digizeni, pay);
                 Debug.Log(
                     $"[WRLDZ] Level up → {p.level} ({DuelistXpCurve.BandName(p.level)}) · " +
                     $"+Đ{pay} · Tome cap {p.TomeCapacity()} · next needs {p.XpToNextLevel()} XP");
@@ -136,7 +136,7 @@ namespace WRLDZ.Core
             // Duel Coins — small always (even on loss)
             var coins = playerWon ? 8 + Mathf.Min(12, turnNumber) : 3;
             if (match != null && match.IsHumanOpponent) coins += 5;
-            p.duelCoin += coins;
+            ArtifactService.Grant(acc, ArtifactService.DuelCoin, coins);
             result.DuelCoinGained = coins;
             RecordStreetAndTearStreak(p, match, playerWon);
             SetOrbService.TryDropFromDuel(acc, match, playerWon, out var orbToast);

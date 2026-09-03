@@ -381,6 +381,8 @@ namespace WRLDZ.Duel.TextEffects
                 ProtectionTemplates.ExpectedActions(def.desc, need);
                 LegacyTextTemplates.ExpectedActions(def, need);
                 PhaseTriggerTemplates.ExpectedActions(def, need);
+                ContinuousRestrictionTemplates.ExpectedActions(def, need);
+                MonsterTriggerTemplates.ExpectedActions(def, need);
 
                 if (need.Count == 0) continue;
                 var prog = CardTextEffectCompiler.Compile(def);

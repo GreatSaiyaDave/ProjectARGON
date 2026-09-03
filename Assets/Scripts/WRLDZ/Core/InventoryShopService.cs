@@ -24,13 +24,8 @@ namespace WRLDZ.Core
             }
 
             var price = PlayerInventory.DigiPriceForBox(size);
-            if (acc.progress.digizeni < price)
-            {
-                error = $"Need {price} Digizeni (have {acc.progress.digizeni}).";
+            if (!ArtifactService.TrySpend(acc, ArtifactService.Digizeni, price, out error))
                 return false;
-            }
-
-            acc.progress.digizeni -= price;
             var list = new System.Collections.Generic.List<StorageBoxState>(inv.storageBoxes ?? System.Array.Empty<StorageBoxState>());
             list.Add(new StorageBoxState
             {
@@ -61,13 +56,8 @@ namespace WRLDZ.Core
             }
 
             var price = PlayerInventory.PriceBinderDigi;
-            if (acc.progress.digizeni < price)
-            {
-                error = $"Need {price} Digizeni (have {acc.progress.digizeni}).";
+            if (!ArtifactService.TrySpend(acc, ArtifactService.Digizeni, price, out error))
                 return false;
-            }
-
-            acc.progress.digizeni -= price;
             var list = new System.Collections.Generic.List<BinderState>(inv.binders ?? System.Array.Empty<BinderState>());
             list.Add(new BinderState
             {
@@ -102,24 +92,14 @@ namespace WRLDZ.Core
             if (payWithDuelCoins)
             {
                 var price = PlayerInventory.PriceBinderPageDc;
-                if (acc.progress.duelCoin < price)
-                {
-                    error = $"Need {price} Duel Coins.";
+                if (!ArtifactService.TrySpend(acc, ArtifactService.DuelCoin, price, out error))
                     return false;
-                }
-
-                acc.progress.duelCoin -= price;
             }
             else
             {
                 var price = PlayerInventory.PriceBinderPageDigi;
-                if (acc.progress.digizeni < price)
-                {
-                    error = $"Need {price} Digizeni.";
+                if (!ArtifactService.TrySpend(acc, ArtifactService.Digizeni, price, out error))
                     return false;
-                }
-
-                acc.progress.digizeni -= price;
             }
 
             var b = inv.binders[binderIndex];

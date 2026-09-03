@@ -40,6 +40,7 @@ Or set PlayerPrefs `WRLDZ_DesktopLab = 1`.
 | **OVERWORLD (WASD MAP)** | Battle City map · walk with **WASD** · Tears · Zone Mode |
 | **SYSTEMS HUB** | Menu / profile / settings shell |
 | **ENGINE STRESS (10)** | Headless rules AI-vs-AI (Console report) |
+| **OCG lab duel** | `AppSession.EnterTestDuel("ocg_lab_player.json", "ocg_lab_ai.json")` — viewer over **native ocgcore** when preflight fingerprint matches; **stub tape fallback** if preflight failed or is stale. Tape is not the rules oracle. See `Duel/OCGCORE_LAB.md`. |
 
 ### Options
 

@@ -14,7 +14,7 @@ namespace WRLDZ.UI
     public class OverworldUI : MonoBehaviour
     {
         RectTransform _mapContent, _avatar, _weatherFxRoot;
-        Text _status, _rankLabel, _xpLabel, _envLabel, _currencyLine;
+        Text _status, _rankLabel, _xpLabel, _envLabel, _currencyLine, _curDigi, _curCoins, _curEnergy;
         Image _xpFill, _nearbyPlateImg;
         WrldzTheme.MapAtmosphereRefs _atmos;
         MapEnvironment _env;
@@ -710,72 +710,126 @@ namespace WRLDZ.UI
             BuildCompassNearby(root);
         }
 
-        /// <summary>Digizeni · Duel Coins · Set Energy. Lives at the top of the Eye menu.</summary>
-        void BuildCurrencyStrip(Transform root, LocalAccountStore.Account account,
-            float x0, float y0, float x1, float y1)
+        /// <summary>
+        /// Wallet as three stacked full-width rows (icon + amount). Three columns
+        /// clip 7–8 digit comma values on a phone-width Eye sheet.
+        /// </summary>
+        void BuildCurrencyStrip(Transform root, LocalAccountStore.Account account)
         {
-            var strip = GoTheme.WhiteChip(root, "Currency", x0, y0, x1, y1);
-            var stripImg = strip.GetComponent<Image>();
-            var chipSpr = ImagineAssets.HudChip() ?? ImagineAssets.PanelMenuGlass();
-            if (chipSpr != null)
-            {
-                stripImg.sprite = chipSpr;
-                stripImg.type = chipSpr.border.sqrMagnitude > 0 ? Image.Type.Sliced : Image.Type.Simple;
-            }
+            var strip = new GameObject("Currency", typeof(RectTransform), typeof(Image),
+                typeof(VerticalLayoutGroup), typeof(CanvasGroup), typeof(Button));
+            strip.transform.SetParent(root, false);
+            var rt = strip.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0.08f, 1f);
+            rt.anchorMax = new Vector2(0.92f, 1f);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.sizeDelta = new Vector2(0f, 156f);
+            rt.anchoredPosition = new Vector2(0f, -10f);
 
-            stripImg.color = new Color(1f, 1f, 1f, 0.92f);
-            stripImg.raycastTarget = true;
-            _currencyCg = MenuMotion.EnsureGroup(strip.gameObject);
+            var plate = strip.GetComponent<Image>();
+            plate.sprite = UiTheme.RoundedRectSprite() ?? UiFoundation.WhiteSprite();
+            plate.type = plate.sprite != null && plate.sprite.border.sqrMagnitude > 0
+                ? Image.Type.Sliced : Image.Type.Simple;
+            plate.color = new Color(0.04f, 0.07f, 0.12f, 0.72f);
+            plate.raycastTarget = true;
+
+            var v = strip.GetComponent<VerticalLayoutGroup>();
+            v.spacing = 6f;
+            v.padding = new RectOffset(8, 8, 8, 8);
+            v.childAlignment = TextAnchor.UpperCenter;
+            v.childForceExpandWidth = true;
+            v.childForceExpandHeight = false;
+            v.childControlWidth = true;
+            v.childControlHeight = true;
+            _currencyCg = MenuMotion.EnsureGroup(strip);
             _currencyCg.alpha = 0f;
-            var btn = strip.gameObject.GetComponent<Button>() ?? strip.gameObject.AddComponent<Button>();
-            btn.targetGraphic = stripImg;
-            btn.onClick.RemoveAllListeners();
+            var btn = strip.GetComponent<Button>();
+            btn.targetGraphic = plate;
+            btn.transition = Selectable.Transition.None;
             btn.onClick.AddListener(() =>
             {
                 FreeUiKit.PlaySelect();
-                OpenSystemsMenu(MenuId.Bazaar);
+                OpenArtifactsOverlay(null);
             });
 
             var p = account?.progress;
-            var digi = p?.digizeni ?? 0;
-            var coins = p?.duelCoin ?? 0;
-            var energy = p?.setEnergy ?? 0;
-            _currencyLine = GoTheme.Label(strip, "Cur",
-                $"Đ {digi}     ◎ {coins}     ⚡ {energy}",
-                14, DuelystUi.GoldHot, TextAnchor.MiddleCenter);
-            _currencyLine.resizeTextForBestFit = true;
-            _currencyLine.resizeTextMinSize = 11;
-            _currencyLine.resizeTextMaxSize = 16;
-            WrldzType.ApplyOutline(_currencyLine, heavy: true, buttonContrast: true);
-            GoTheme.Place(_currencyLine.rectTransform, 0.04f, 0.08f, 0.96f, 0.92f);
+            _curDigi = CurrencyChip(strip.transform, "Digi", ImagineAssets.IconDigizeni(),
+                DuelystUi.Cyan, p?.digizeni ?? 0, () => OpenArtifactsOverlay(ArtifactService.Digizeni));
+            _curCoins = CurrencyChip(strip.transform, "Coin", ImagineAssets.IconDuelCoin(),
+                DuelystUi.GoldHot, p?.duelCoin ?? 0, () => OpenArtifactsOverlay(ArtifactService.DuelCoin));
+            _curEnergy = CurrencyChip(strip.transform, "SE", ImagineAssets.IconSetEnergy(),
+                DuelystUi.Green, p?.setEnergy ?? 0, () =>
+                {
+                    var inv = AppSession.Ensure().Account?.inventory;
+                    OpenArtifactsOverlay(ArtifactService.FirstSetEnergyId(inv) ?? ArtifactService.SetEnergyFocus);
+                });
+            _currencyLine = _curDigi;
+        }
 
-            void Glyph(string name, Sprite spr, float gx0, float gx1)
+        static Text CurrencyChip(Transform parent, string name, Sprite icon, Color accent, int value,
+            System.Action onClick)
+        {
+            var go = new GameObject("Chip_" + name, typeof(RectTransform), typeof(Image), typeof(LayoutElement),
+                typeof(Button));
+            go.transform.SetParent(parent, false);
+            var img = go.GetComponent<Image>();
+            img.sprite = UiTheme.RoundedRectSprite() ?? UiFoundation.WhiteSprite();
+            img.type = img.sprite != null && img.sprite.border.sqrMagnitude > 0
+                ? Image.Type.Sliced : Image.Type.Simple;
+            img.color = new Color(0.08f, 0.12f, 0.20f, 0.94f);
+            img.raycastTarget = true;
+            var chipBtn = go.GetComponent<Button>();
+            chipBtn.targetGraphic = img;
+            chipBtn.transition = Selectable.Transition.None;
+            if (onClick != null)
+                chipBtn.onClick.AddListener(() => onClick());
+            var ol = go.AddComponent<Outline>();
+            ol.effectColor = new Color(accent.r, accent.g, accent.b, 0.75f);
+            ol.effectDistance = new Vector2(1.6f, -1.6f);
+            ol.useGraphicAlpha = false;
+            var le = go.GetComponent<LayoutElement>();
+            le.flexibleWidth = 1f;
+            le.flexibleHeight = 0f;
+            le.minHeight = 42f;
+            le.preferredHeight = 44f;
+
+            if (icon != null)
             {
-                if (spr == null) return;
-                var ico = new GameObject(name, typeof(RectTransform), typeof(Image));
-                ico.transform.SetParent(strip, false);
-                GoTheme.Place(ico.GetComponent<RectTransform>(), gx0, 0.18f, gx1, 0.82f);
-                var img = ico.GetComponent<Image>();
-                img.sprite = spr;
-                img.preserveAspect = true;
-                img.raycastTarget = false;
+                var ico = new GameObject("Ico", typeof(RectTransform), typeof(Image));
+                ico.transform.SetParent(go.transform, false);
+                var ir = ico.GetComponent<RectTransform>();
+                ir.anchorMin = new Vector2(0.02f, 0.10f);
+                ir.anchorMax = new Vector2(0.16f, 0.90f);
+                ir.offsetMin = Vector2.zero;
+                ir.offsetMax = Vector2.zero;
+                var iimg = ico.GetComponent<Image>();
+                iimg.sprite = icon;
+                iimg.preserveAspect = true;
+                iimg.raycastTarget = false;
             }
 
-            Glyph("IcoDigi", ImagineAssets.IconDigizeni(), 0.03f, 0.11f);
-            Glyph("IcoCoin", ImagineAssets.IconDuelCoin(), 0.36f, 0.44f);
-            Glyph("IcoSe", ImagineAssets.IconSetEnergy(), 0.68f, 0.76f);
+            var t = GoTheme.Label(go.transform, "V", FormatWallet(value), 16, Color.white,
+                TextAnchor.MiddleLeft, bold: true);
+            WrldzType.StyleButtonLabel(t, 16, display: false);
+            t.color = Color.white;
+            t.alignment = TextAnchor.MiddleLeft;
+            t.resizeTextForBestFit = false;
+            t.horizontalOverflow = HorizontalWrapMode.Overflow;
+            t.verticalOverflow = VerticalWrapMode.Overflow;
+            GoTheme.Place(t.rectTransform, 0.18f, 0.04f, 0.98f, 0.96f);
+            return t;
         }
+
+        static string FormatWallet(int n) => n.ToString("N0");
 
         void RefreshCurrencyStrip()
         {
-            if (_currencyLine == null) return;
             var acc = AppSession.Ensure()?.Account;
             acc?.EnsureProgress();
             var p = acc?.progress;
-            var digi = p?.digizeni ?? 0;
-            var coins = p?.duelCoin ?? 0;
-            var energy = p?.setEnergy ?? 0;
-            _currencyLine.text = $"Đ {digi}   ·   DC {coins}   ·   ⚡ {energy}";
+            if (_curDigi != null) _curDigi.text = FormatWallet(p?.digizeni ?? 0);
+            if (_curCoins != null) _curCoins.text = FormatWallet(p?.duelCoin ?? 0);
+            if (_curEnergy != null) _curEnergy.text = FormatWallet(p?.setEnergy ?? 0);
         }
 
         /// <summary>
@@ -1718,7 +1772,7 @@ namespace WRLDZ.UI
             _menuExpandCg.blocksRaycasts = false;
             _menuExpandCg.interactable = false;
 
-            BuildCurrencyStrip(panel.transform, account, 0.06f, 0.705f, 0.94f, 0.768f);
+            BuildCurrencyStrip(panel.transform, account);
 
             var boardGo = new GameObject("MenuBoard", typeof(RectTransform));
             boardGo.transform.SetParent(panel.transform, false);
@@ -1734,8 +1788,8 @@ namespace WRLDZ.UI
                 rt.anchorMin = new Vector2(0.5f, 0.5f);
                 rt.anchorMax = new Vector2(0.5f, 0.5f);
                 rt.pivot = new Vector2(0.5f, 0.5f);
-                rt.sizeDelta = new Vector2(180f, 260f);
-                rt.localScale = new Vector3(0.35f, 0.35f, 1f);
+                rt.sizeDelta = new Vector2(220f, 300f);
+                rt.localScale = Vector3.one;
 
                 var face = go.GetComponent<Image>();
                 var spr = gold
@@ -1752,7 +1806,7 @@ namespace WRLDZ.UI
                 {
                     var ico = new GameObject("Ico", typeof(RectTransform), typeof(Image));
                     ico.transform.SetParent(go.transform, false);
-                    GoTheme.Place(ico.GetComponent<RectTransform>(), 0.18f, 0.30f, 0.82f, 0.86f);
+                    GoTheme.Place(ico.GetComponent<RectTransform>(), 0.10f, 0.28f, 0.90f, 0.90f);
                     var iimg = ico.GetComponent<Image>();
                     iimg.sprite = icon;
                     iimg.preserveAspect = true;
@@ -1760,14 +1814,16 @@ namespace WRLDZ.UI
                     iimg.color = Color.white;
                 }
 
-                var t = GoTheme.Label(go.transform, "Title", caption, 15,
-                    gold ? DuelystUi.GoldHot : DuelystUi.TextCream,
+                var t = GoTheme.Label(go.transform, "Title", caption, 20,
+                    gold ? DuelystUi.GoldHot : Color.white,
                     TextAnchor.MiddleCenter, bold: true);
-                t.resizeTextForBestFit = true;
-                t.resizeTextMinSize = 10;
-                t.resizeTextMaxSize = 16;
-                WrldzType.ApplyOutline(t, heavy: true, buttonContrast: true);
-                GoTheme.Place(t.rectTransform, 0.08f, 0.06f, 0.92f, 0.24f);
+                WrldzType.StyleButtonLabel(t, 18, display: false);
+                t.color = gold ? DuelystUi.GoldHot : Color.white;
+                t.alignment = TextAnchor.MiddleCenter;
+                t.resizeTextForBestFit = false;
+                t.horizontalOverflow = HorizontalWrapMode.Overflow;
+                t.verticalOverflow = VerticalWrapMode.Overflow;
+                GoTheme.Place(t.rectTransform, 0.04f, 0.02f, 0.96f, 0.28f);
 
                 var cg = go.GetComponent<CanvasGroup>();
                 cg.alpha = 0f;
@@ -1850,13 +1906,13 @@ namespace WRLDZ.UI
 
             const int cols = 3;
             var rows = Mathf.Max(3, Mathf.CeilToInt(_fanCards.Count / (float)cols));
-            const float gap = 14f;
-            const float aspect = 0.70f; // portrait holo card
-            // Keep cards above the dock and below the currency strip.
-            var areaTop = r.height * 0.16f;
-            var areaBot = r.height * -0.32f;
+            const float gap = 18f;
+            const float aspect = 0.78f;
+            // Sit below the stacked wallet (~156px from the top of the sheet).
+            var areaTop = r.height * 0.08f;
+            var areaBot = r.height * -0.40f;
             var areaH = areaTop - areaBot;
-            var areaW = r.width * 0.88f;
+            var areaW = r.width * 0.94f;
 
             var cellW = (areaW - gap * (cols - 1)) / cols;
             var cellH = (areaH - gap * (rows - 1)) / rows;
@@ -1864,8 +1920,8 @@ namespace WRLDZ.UI
                 cellW = cellH * aspect;
             else
                 cellH = cellW / aspect;
-            cellW = Mathf.Max(70f, cellW);
-            cellH = Mathf.Max(100f, cellH);
+            cellW = Mathf.Max(cellW, Mathf.Min(168f, areaW / cols));
+            cellH = Mathf.Max(cellH, Mathf.Min(220f, areaH / rows));
 
             var totalW = cols * cellW + (cols - 1) * gap;
             var totalH = rows * cellH + (rows - 1) * gap;
@@ -2305,6 +2361,12 @@ namespace WRLDZ.UI
             if (_systemsSheet != null && _systemsSheet.activeSelf)
                 MenuMotion.Play(this, MenuMotion.SheetOut(_systemsSheet));
             SetMenuOpen(false);
+        }
+
+        void OpenArtifactsOverlay(string focusDefId)
+        {
+            ScreenRouter.Ensure().PendingArtifactFocus = focusDefId;
+            OpenSystemsMenu(MenuId.Artifacts);
         }
 
         /// <summary>Open collection / deck / economy screens via MenuShell overlay (stay on overworld).</summary>

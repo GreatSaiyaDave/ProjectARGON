@@ -204,7 +204,8 @@ namespace WRLDZ.UI
             }
 
             if (gained <= 0) { SavePrefs(); return; }
-            acc.progress.setEnergy += gained;
+            acc.EnsureInventory();
+            ArtifactService.GrantUntaggedSetEnergy(acc.progress, acc.inventory, gained);
             _seToday += gained;
             ProgressionService.Persist(acc);
             SavePrefs();
@@ -244,7 +245,8 @@ namespace WRLDZ.UI
             var acc = AppSession.Ensure()?.Account;
             if (m.gold && acc?.progress != null && _seToday < DailySeCap)
             {
-                acc.progress.setEnergy++;
+                acc.EnsureInventory();
+                ArtifactService.GrantUntaggedSetEnergy(acc.progress, acc.inventory, 1);
                 _seToday++;
                 ProgressionService.Persist(acc);
                 SavePrefs();

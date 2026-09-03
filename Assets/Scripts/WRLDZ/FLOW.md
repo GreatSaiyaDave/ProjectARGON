@@ -32,7 +32,9 @@ Boot  (scene 0 — entry only)
 Overworld  (scene 1 — HOME / default)
   VS AI        → Player vs AI create → START → DuelSlice (AR, vs AI)
   VS PVP       → distance scan (mark P1 + P2) → START → DuelSlice (AR hotseat)
-  MENU         → MainMenu (hub)
+  MENU (Eye)   → fan overlays on the map (DECK / BAG / STORY / BAZAAR / TOME / SET / duels).
+                 Wallet chips (Đ / ◎ / ⚡) open the Artifact Deck Box. Not a scene change.
+                 Optional full hub: Desktop Lab SYSTEMS HUB → MainMenu scene.
   Tear pin     → Zone Mode prompt (in-range only)
                  ├─ ENTER AR  → DuelSlice (camera passthrough when available)
                  ├─ DIGITAL   → DuelSlice (same stage, no camera)
@@ -42,10 +44,11 @@ Overworld  (scene 1 — HOME / default)
   QUIT         → Logout → Boot
 
 MainMenu  (scene 2 — hub / systems)
-  Enter only from Overworld MENU
+  Optional deep hub (Desktop Lab SYSTEMS HUB). Live overworld systems stay as overlays.
   Player vs AI     → create / formats → DuelSlice (AR vs AI, separation meters)
   Player vs Player → auto distance scan → DuelSlice (AR hotseat, no AI)
-  Deck / Backpack / Tome / Story / Profile / Settings
+  DECK / BAG / STORY / BAZAAR / VIEW / SET. Tome is Eye + AR SYS, not a hub tile.
+  Artifact Deck Box is nested under BAG (wallet / ON YOU), not a hub tile.
   ← MAP → Overworld
 
 DuelSlice  (scene 3 — always AR stage)

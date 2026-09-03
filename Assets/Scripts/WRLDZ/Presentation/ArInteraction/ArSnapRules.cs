@@ -49,14 +49,24 @@ namespace WRLDZ.Presentation.ArInteraction
                 return r;
             }
 
-            // Occupied monster zones can still be legal: Tribute Summon tributes
-            // the occupant (face-up or face-down) and sits in that zone.
-            // Engine is sole legality authority (IDuelEngine.ValidatePlacement).
-            var verdict = engine.ValidatePlacement(who, card, ToRulesZone(zone.Kind), zone.Index, preferSet);
-            r.OfficialText = verdict.OfficialText;
-            r.Ok = verdict.Legal;
-            r.Reason = verdict.Reason;
-            if (!r.Ok) return r;
+            if (WRLDZ.Duel.Ocg.OcgLabDuelHost.IsActive)
+            {
+                var ok = WRLDZ.Duel.Ocg.OcgLegalActions.SlotLegal(
+                    WRLDZ.Duel.Ocg.OcgLabDuelHost.Current, card, zone.Kind, zone.Index, preferSet);
+                r.Ok = ok;
+                r.Reason = ok ? null : "That zone is not on the core legal list.";
+                if (!ok) return r;
+            }
+            else
+            {
+                // Occupied monster zones can still be legal: Tribute Summon tributes
+                // the occupant (face-up or face-down) and sits in that zone.
+                var verdict = engine.ValidatePlacement(who, card, ToRulesZone(zone.Kind), zone.Index, preferSet);
+                r.OfficialText = verdict.OfficialText;
+                r.Ok = verdict.Legal;
+                r.Reason = verdict.Reason;
+                if (!r.Ok) return r;
+            }
 
             // Orientation from intent + card type (official: NS face-up ATK, Set face-down DEF)
             switch (zone.Kind)
@@ -129,6 +139,27 @@ namespace WRLDZ.Presentation.ArInteraction
             switch (zone.Kind)
             {
                 case ArDuelZoneKind.Monster:
+                    if (card.Def.IsEquipSpell)
+                    {
+                        d.CanActivateSpell = Validate(engine, who, card, zone, preferSet: false).Ok;
+                        var hostName = zone.Occupant != null && zone.Occupant.FaceUp
+                            ? zone.Occupant.Name
+                            : "that monster";
+                        if (d.CanActivateSpell)
+                        {
+                            d.Hint = WRLDZ.Duel.TextEffects.LegacyTextTemplates.EquipTargetsOpponent(card.Def)
+                                ? $"{name} → Activate (target an opponent's monster)"
+                                : $"{name} → Equip {hostName}";
+                        }
+                        else
+                        {
+                            d.BlockedReason = Validate(engine, who, card, zone, false).Reason
+                                              ?? "Cannot Equip here.";
+                            d.Hint = $"{name} · {d.BlockedReason}";
+                        }
+                        return d;
+                    }
+
                     d.CanSummonAtk = Validate(engine, who, card, zone, preferSet: false).Ok;
                     d.CanSetMonster = Validate(engine, who, card, zone, preferSet: true).Ok;
                     var tribNeed = TcgRules.TributesRequired(card.Level);
@@ -207,10 +238,26 @@ namespace WRLDZ.Presentation.ArInteraction
             {
                 case ArDuelZoneKind.Monster:
                 {
+                    if (card.Def != null && card.Def.IsEquipSpell)
+                    {
+                        var host = zone.Occupant;
+                        var ok = engine.TryActivateSpellTrap(who, card, fromHand: true);
+                        if (ok && engine.IsAwaitingEffectTarget && host != null &&
+                            engine.IsLegalEffectTarget(host))
+                            ok = engine.TrySelectEffectTarget(host);
+                        v.CommittedToEngine = ok;
+                        if (!ok)
+                        {
+                            v.Ok = false;
+                            v.Reason = "Engine rejected Equip.";
+                        }
+                        return v;
+                    }
+
                     var asSet = preferSet || v.Orientation == ArZoneOrientation.FaceDownSet;
-                    var ok = engine.TryNormalSummonToZone(who, card, asSet, zone.Index);
-                    v.CommittedToEngine = ok;
-                    if (!ok) { v.Ok = false; v.Reason = "Engine rejected summon/set."; }
+                    var okSummon = engine.TryNormalSummonToZone(who, card, asSet, zone.Index);
+                    v.CommittedToEngine = okSummon;
+                    if (!okSummon) { v.Ok = false; v.Reason = "Engine rejected summon/set."; }
                     return v;
                 }
                 case ArDuelZoneKind.SpellTrap:

@@ -17,6 +17,9 @@ namespace WRLDZ.UI.Shell
         public MenuId Current { get; private set; } = MenuId.None;
         public UiPresentation Presentation { get; set; } = UiPresentation.NonArPortrait;
 
+        /// <summary>Optional artifact def id consumed by the next Artifacts overlay (wallet chips).</summary>
+        public string PendingArtifactFocus { get; set; }
+
         public event Action<MenuId, MenuId> OnNavigated;
 
         readonly Stack<MenuId> _stack = new();
@@ -91,6 +94,13 @@ namespace WRLDZ.UI.Shell
 
         public void OpenDeck() => Go(MenuId.DeckCollection);
         public void OpenInventory() => Go(MenuId.Inventory);
+
+        public void OpenArtifacts(string focusDefId = null)
+        {
+            PendingArtifactFocus = focusDefId;
+            Go(MenuId.Artifacts);
+        }
+
         public void OpenStory() => Go(MenuId.StorySeason);
         public void OpenSettings() => Go(MenuId.Settings);
         public void OpenHub() => AppSession.Ensure().GoMainMenu();

@@ -1,4 +1,6 @@
+using System;
 using System.IO;
+using Unity.Pipeline.Commands;
 using UnityEditor;
 using UnityEngine;
 using WRLDZ.Duel.Rules;
@@ -47,6 +49,17 @@ namespace WRLDZ.EditorTools
                 report.Ok ? "Quick stress PASS" : "Quick stress FAIL",
                 Truncate(report.Summary, 1500),
                 "OK");
+        }
+
+        [CliCommand("wrldz_stress",
+            "Run corpus trigger sweep + TCG/interaction units + N AI lab duels. Returns the report.",
+            MainThreadRequired = true)]
+        public static string RunStressCli()
+        {
+            var report = DuelEngineStressTests.Run(20);
+            if (!report.Ok)
+                throw new InvalidOperationException("WRLDZ stress failed.\n" + report.Summary);
+            return report.Summary;
         }
 
         /// <summary>Batchmode entry point — always exits with code 0/1.</summary>

@@ -7,17 +7,21 @@ except for a mechanic no other card has.
 This file is authority for *how* the engine must grow. Live legality still lives in
 `DuelEngine` + `OfficialEffectRegistry` + `TextEffects`.
 
-## 0. ocgcore / YGOPro — oracle, never shipped
+## 0. ocgcore / YGOPro — lab path may link; product ship later
 
-ocgcore + Project Ignis scripts are AGPLv3 (network copyleft). They must **not**
-be linked into WRLDZ or run as a production backend.
+ocgcore + Project Ignis scripts are **AGPLv3** (network copyleft). Keep them in
+`ThirdParty/OcgCore/` and `StreamingAssets/OcgCore/` (separable from Konami art
+in `StreamingAssets/Cards/`).
 
-**Chosen model: reference oracle only.**
+**Lab (`OcgLabDuelHost.IsActive`):** Unity is a viewer. Rules + card effects
+run in **edo9300/ygopro-core** (`OCG_CreateDuel` + script/card readers). Do not
+rewrite official effects in C# under `Duel/Ocg/`.
 
-- Local Lua at `~/ygopro-scripts` is mined into facts
-  (`extract_ygopro_continuous.py`, `extract_ygopro_triggers.py`).
-- We port **behavior**, we do not run Lua in Unity.
-- Divergence vs those facts in `scan_engine_gaps.py` is a bug, not a guess.
+**Product path (flag off):** existing `DuelEngine` + registry + text compiler.
+Lua at `~/ygopro-scripts` may still be mined as a linter (`scan_engine_gaps.py`).
+
+Store-shipping a linked ocgcore binary is a later license decision. See
+`OCGCORE_LAB.md`.
 
 ## 1. Principles (must keep)
 

@@ -37,6 +37,7 @@ Imagine/
 | `bg_splash.png` | Boot / title atmosphere |
 | `bg_hub.png` | Onboarding + hub lounge |
 | `bg_menu_void.png` | Systems hub void |
+| `bg_deck_builder.png` | Deck construction table atmosphere |
 | `bg_overworld_map.png` | GPS map texture |
 | `bg_duel_stage.png` | Duel stage wash |
 
@@ -53,8 +54,13 @@ Imagine/
 | `icon_story.png` | Story |
 | `icon_settings.png` | Settings |
 | `icon_menu.png` | Hub menu |
-| `icon_duel.png` | VS AI / VS Player / Free View |
+| `icon_duel.png` | VS AI |
+| `icon_vs_pvp.png` | VS PLAYER |
+| `icon_view.png` | Free View (spirit eye) |
 | `icon_bazaar.png` | Bazaar |
+| `icon_limit_forbidden.png` | Banlist forbidden pip |
+| `icon_limit_limited.png` | Banlist limited pip |
+| `icon_limit_semi.png` | Banlist semi-limited pip |
 | `emblem_spirit_eye.png` | Brand / spirit eye |
 
 ### pins/
@@ -69,6 +75,10 @@ Imagine/
 | File | Use |
 |------|-----|
 | `panel_holo_glass.png` | 9-slice glass panel |
+| `panel_deck_main.png` | Main construction tray |
+| `panel_deck_extra.png` | Extra construction tray |
+| `panel_deck_side.png` | Side construction tray |
+| `panel_inspect_sheet.png` | Card inspect overlay |
 | `panel_modal.png` | Modal / floating sheets |
 | `button_primary_plate.png` | Primary CTA |
 | `button_primary_hover.png` | Primary hover |

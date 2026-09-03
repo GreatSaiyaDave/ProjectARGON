@@ -55,21 +55,15 @@ namespace WRLDZ.UI
             var tGo = new GameObject("Value", typeof(RectTransform), typeof(Text));
             tGo.transform.SetParent(go.transform, false);
             var trt = tGo.GetComponent<RectTransform>();
-            trt.anchorMin = new Vector2(0.06f, 0.18f);
-            trt.anchorMax = new Vector2(0.94f, 0.86f);
+            trt.anchorMin = new Vector2(0.08f, 0.22f);
+            trt.anchorMax = new Vector2(0.92f, 0.82f);
             trt.offsetMin = Vector2.zero;
             trt.offsetMax = Vector2.zero;
 
             var text = tGo.GetComponent<Text>();
-            WrldzType.Style(text, 28, display: true, heavyOutline: true);
-            text.alignment = TextAnchor.MiddleCenter;
+            WrldzType.StyleGaugeDigits(text, 118);
+
             text.color = Gold;
-            text.horizontalOverflow = HorizontalWrapMode.Overflow;
-            text.verticalOverflow = VerticalWrapMode.Overflow;
-            text.resizeTextForBestFit = true;
-            text.resizeTextMinSize = 14;
-            text.resizeTextMaxSize = 42;
-            text.raycastTarget = false;
             text.text = "8000";
 
             var c = go.AddComponent<AnimeLpCounter>();

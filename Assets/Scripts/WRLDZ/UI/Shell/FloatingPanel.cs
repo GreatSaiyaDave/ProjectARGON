@@ -44,6 +44,29 @@ namespace WRLDZ.UI.Shell
             Object.DestroyImmediate(go);
         }
 
+        /// <summary>
+        /// Hide now, destroy after the current UI callback. DestroyImmediate from a
+        /// Button onClick (the close chip sits on the panel) fatals the Editor / player.
+        /// </summary>
+        public static void DestroyDeferred(GameObject go)
+        {
+            if (go == null) return;
+            go.SetActive(false);
+            if (Application.isPlaying)
+            {
+                Object.Destroy(go);
+                return;
+            }
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.delayCall += () =>
+            {
+                if (go != null) Object.DestroyImmediate(go);
+            };
+#else
+            Object.Destroy(go);
+#endif
+        }
+
         public static RectTransform Create(Transform parent, string name, bool goldEdge = false)
         {
             FreeUiKit.EnsureLoaded();
@@ -76,7 +99,7 @@ namespace WRLDZ.UI.Shell
             var kind = danger ? MenuCommandButton.Kind.Danger
                 : gold ? MenuCommandButton.Kind.Gold
                 : MenuCommandButton.Kind.Primary;
-            return MenuCommandButton.Create(parent, label, onClick, kind, centerTitle: centerLabel);
+            return MenuCommandButton.Create(parent, label, onClick, kind, centerTitle: true);
         }
 
         /// <summary>Tint a floating chip. Always Simple + WhiteSprite — never a 9-slice plate.</summary>
@@ -141,6 +164,46 @@ namespace WRLDZ.UI.Shell
             rt.anchorMax = Vector2.one;
             rt.offsetMin = new Vector2(pad, pad);
             rt.offsetMax = new Vector2(-pad, -pad);
+        }
+
+        /// <summary>
+        /// Shared action-sheet geometry: equal columns, equal gutters.
+        /// Coordinates are normalized inside the DualMenuPresenter body well.
+        /// </summary>
+        public static class Grid
+        {
+            public const float X0 = 0.02f;
+            public const float X1 = 0.98f;
+            public const float Gap = 0.04f;
+            public const float ColL1 = 0.48f;
+            public const float ColR0 = 0.52f;
+            public const float Row = 0.12f;
+
+            public static void Full(RectTransform rt, float y0, float y1) =>
+                Place(rt, X0, y0, X1, y1);
+
+            public static void Pair(RectTransform left, RectTransform right, float y0, float y1)
+            {
+                Place(left, X0, y0, ColL1, y1);
+                Place(right, ColR0, y0, X1, y1);
+            }
+
+            public static void Triple(RectTransform a, RectTransform b, RectTransform c,
+                float y0, float y1)
+            {
+                Place(a, X0, y0, 0.32f, y1);
+                Place(b, 0.34f, y0, 0.66f, y1);
+                Place(c, 0.68f, y0, X1, y1);
+            }
+
+            public static void Quad(RectTransform a, RectTransform b, RectTransform c, RectTransform d,
+                float y0, float y1)
+            {
+                Place(a, X0, y0, 0.24f, y1);
+                Place(b, 0.26f, y0, 0.49f, y1);
+                Place(c, 0.51f, y0, 0.74f, y1);
+                Place(d, 0.76f, y0, X1, y1);
+            }
         }
     }
 }

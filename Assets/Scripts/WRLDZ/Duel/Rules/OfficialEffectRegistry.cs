@@ -248,8 +248,13 @@ namespace WRLDZ.Duel.Rules
             // Learn / recall official text program — FullyCompiled required on text path
             var prog = CompiledEffectCache.GetOrCompile(def);
             var hasRegistry = HasActivatableScript(card.CardId);
+            // Continuous S/T: playing the card (hand Spell / Set Trap) is the activation
+            // even when the only compiled clauses are End Phase / Standby / while-face-up.
+            var continuousPlay = def.IsContinuousSpellOrTrap && prog != null &&
+                                 prog.FullyCompiled && prog.CanResolveAny;
             if (prog != null && prog.FullyCompiled && prog.CanResolveAny &&
-                (prog.HasTiming(EffectTiming.Activate) ||
+                (continuousPlay ||
+                 prog.HasTiming(EffectTiming.Activate) ||
                  prog.HasTiming(EffectTiming.AttackDeclared) ||
                  prog.HasTiming(EffectTiming.OpponentNormalOrFlipSummon) ||
                  prog.HasTiming(EffectTiming.DamageCalculation) ||

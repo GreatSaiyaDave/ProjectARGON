@@ -45,6 +45,13 @@ namespace WRLDZ.Presentation.ArInteraction
         const float IdleSpring = 7.5f;
         /// <summary>Max free offset kept after a failed drop (stage units).</summary>
         const float FreeLeash = 0.08f;
+        /// <summary>Local mesh box (PhysicalCard edge) — collider and fan spacing use this.</summary>
+        public static readonly Vector3 BodyLocalSize = new(
+            1.02f,
+            ArAnimePresentation.CardAspectY * 1.02f,
+            ArAnimePresentation.CardThickness);
+        /// <summary>World-space push from card-card depenetration (consumed by the idle spring).</summary>
+        Vector3 _physSepLocal;
 
         public static ArFloatingCard Spawn(Transform parent, CardInstance card, CardDatabase db,
             int layer, Color tint)
@@ -57,11 +64,11 @@ namespace WRLDZ.Presentation.ArInteraction
             fc.Db = db;
             fc.Layer = layer;
             fc.BuildVisual(tint);
-            // Local-space size × CardScale → world pick volume
+            // Solid body matching the PhysicalCard edge so cards cannot occupy the same volume.
             var col = go.AddComponent<BoxCollider>();
-            // Tight pick volume — a fat Z box made overlapping fan cards steal taps.
-            col.size = new Vector3(0.80f, 1.18f, 0.08f);
+            col.size = BodyLocalSize;
             col.center = Vector3.zero;
+            col.isTrigger = false;
             return fc;
         }
 
@@ -360,7 +367,8 @@ namespace WRLDZ.Presentation.ArInteraction
             // Soft spring toward rest + free offset (not glued)
             _freeOffsetLocal = Vector3.Lerp(_freeOffsetLocal, Vector3.zero, Time.deltaTime * 1.8f);
             var bob = Mathf.Sin(Time.time * 2.0f + _bobPhase) * 0.006f;
-            var target = _handRestLocal + _freeOffsetLocal + new Vector3(0f, bob, 0f);
+            _physSepLocal = Vector3.Lerp(_physSepLocal, Vector3.zero, Time.deltaTime * 6f);
+            var target = _handRestLocal + _freeOffsetLocal + _physSepLocal + new Vector3(0f, bob, 0f);
             var k = 1f - Mathf.Exp(-IdleSpring * Time.deltaTime);
             transform.localPosition = Vector3.Lerp(transform.localPosition, target, k);
             transform.localRotation = Quaternion.Slerp(transform.localRotation, _handRestRot, k);
@@ -389,6 +397,17 @@ namespace WRLDZ.Presentation.ArInteraction
             var col = ArAnimePresentation.Expose(Color.white);
             if (_mat.HasProperty("_BaseColor")) _mat.SetColor("_BaseColor", col);
             if (_mat.HasProperty("_Color")) _mat.SetColor("_Color", col);
+        }
+
+        /// <summary>Apply a world-space depenetration step (other cards treated as solids).</summary>
+        public void AddWorldSeparation(Vector3 worldDelta)
+        {
+            if (worldDelta.sqrMagnitude < 1e-12f) return;
+            transform.position += worldDelta;
+            if (transform.parent != null)
+                _physSepLocal += transform.parent.InverseTransformVector(worldDelta);
+            else
+                _physSepLocal += worldDelta;
         }
     }
 }

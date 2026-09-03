@@ -1,0 +1,24 @@
+{
+  "mode": "full_official_pool",
+  "playPool": "tcg_only",
+  "tcgPool": "OcgCore/tcg_pool.json",
+  "scriptsCommit": "e02497b61bd45048230cdfb4cc4a075ecb09b4d3",
+  "cdbKind": "BabelCDB-style full datas+texts",
+  "extraIndex": "OcgCore/extra_index.csv",
+  "sourceDecks": [
+    "ocg_lab_player.json",
+    "ocg_lab_ai.json"
+  ],
+  "rules": {
+    "extraMax": 15,
+    "mainMin": 40
+  },
+  "notes": [
+    "CDB stays the full official datas+texts tree for ocgcore (mode=full_official_pool).",
+    "Constructed play pool is TCG-only: datas.ot bit 2 in tcg_pool.json. OCG-only / Rush / unofficial / Skills are out.",
+    "Loadable is not playable: Unity only answers implemented MSG types; unknown waits pause.",
+    "Battle Ox official passcode is 5053192 (CDB alias of 5053103). 5053103 is forbidden in lab decks.",
+    "Extra this slice is only Reaper on the Nightmare (85684223); Main already has Polymerization + Spirit Reaper + Nightmare Horse. Do not pad Extra to 15.",
+    "Advanced constructed uses Cards/banlist_advanced.json (EDOPro !2026.05 TCG / Konami 2026-05-18). Era TEST DUEL does not apply that list."
+  ]
+}

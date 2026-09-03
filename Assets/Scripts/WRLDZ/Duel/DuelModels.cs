@@ -91,12 +91,29 @@ namespace WRLDZ.Duel
         /// <summary>Until End Phase (Bark of Dark Ruler, Mask of Weakness). Not cleared by aura refresh.</summary>
         public int UntilEndOfTurnAtk;
         public int UntilEndOfTurnDef;
+        /// <summary>
+        /// Lingering ATK change that aura refresh must not wipe (Adhesion Trap Hole
+        /// halves original ATK; Slate Warrior Flip). Reset when the card leaves the field.
+        /// </summary>
+        public int LingeringAtkModifier;
+        /// <summary>Lingering DEF change (Slate Warrior Flip / destroyer loss). Not wiped by auras.</summary>
+        public int LingeringDefModifier;
+        /// <summary>This copy's last trip to the GY was destruction by battle.</summary>
+        public bool WasDestroyedByBattle;
+        /// <summary>The other battler when <see cref="WasDestroyedByBattle"/> (Yomi / Slate).</summary>
+        public CardInstance BattleDestroyer;
+        /// <summary>Last field→GY was by the effect of a Continuous Spell (Malice Doll).</summary>
+        public bool SentByContinuousSpellEffect;
+        /// <summary>Turn number when this copy last left the field for the GY (0 = never).</summary>
+        public int SentFromFieldTurnNumber;
 
         /// <summary>Gear Golem-style: this copy may attack directly this turn only.</summary>
         public bool DirectAttackThisTurn;
 
         /// <summary>True if this copy was Special Summoned (Jowgen, etc.).</summary>
         public bool WasSpecialSummoned;
+        /// <summary>True if this copy was Tribute Summoned (Blast Held by a Tribute).</summary>
+        public bool WasTributeSummoned;
 
         /// <summary>Destroyed an opponent's monster by battle this turn (LV / Insect Queen).</summary>
         public bool DestroyedByBattleThisTurn;
@@ -112,6 +129,9 @@ namespace WRLDZ.Duel
 
         /// <summary>Union / Relinquished: this card is equipped to EquippedTo.</summary>
         public CardInstance EquippedTo;
+
+        /// <summary>This monster's current controller is from an Equip take-control (Falling Down).</summary>
+        public bool TakenByEquipControl;
 
         /// <summary>Monsters/Unions currently equipped to this card.</summary>
         public readonly List<CardInstance> Equips = new();
@@ -135,11 +155,11 @@ namespace WRLDZ.Duel
             AtkBecomesZeroThisCalculation
                 ? 0
                 : Def != null && Def.atk >= 0
-                    ? System.Math.Max(0, Def.atk + AtkModifier + UntilEndOfTurnAtk)
+                    ? System.Math.Max(0, Def.atk + AtkModifier + UntilEndOfTurnAtk + LingeringAtkModifier)
                     : 0;
         public int CurrentDef =>
             Def != null && Def.def >= 0
-                ? System.Math.Max(0, Def.def + DefModifier + UntilEndOfTurnDef)
+                ? System.Math.Max(0, Def.def + DefModifier + UntilEndOfTurnDef + LingeringDefModifier)
                 : 0;
         public string Name => Def?.name ?? $"#{CardId}";
 

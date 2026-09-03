@@ -25,6 +25,81 @@ namespace WRLDZ.Duel.TextEffects
             @"Increase the ATK and DEF of a (\w+)(?:-Type)? monster equipped with this card by (\d+) points\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        // "an Insect", "Beast-Warrior-Type", "FIRE" — do not swallow "-Type" into the race.
+        const string EquipOnlyPrefix =
+            @"Equip only to (?:an? )?([A-Za-z]+(?:-(?!Type)[A-Za-z]+)*)(?:-Type)? monster\.?\s*";
+
+        static readonly Regex RxEquipOnlyKind = new(
+            EquipOnlyPrefix + @"It gains (\d+) ATK(?:/DEF| and DEF)?\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxEquipOnlyKindLoseDef = new(
+            EquipOnlyPrefix + @"It gains (\d+) ATK and loses (\d+) DEF\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxEquippedGainsPerMonster = new(
+            @"The equipped monster gains (\d+) ATK(?:/DEF| and DEF) for each face-up monster you control\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxEquippedGainsPerSpellTrap = new(
+            @"The equipped monster gains (\d+) ATK(?:/DEF| and DEF) for each Spell/?Trap(?: Card)?s? you control\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxEquippedGainsAtkDef = new(
+            @"The equipped monster gains (\d+) ATK(?:/DEF| and DEF)\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxEquipIncreaseDef = new(
+            @"Increase the DEF of a monster equipped with this card by (\d+) points\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxGyTributeTopDeck = new(
+            @"When this card is sent from the field to the Graveyard:\s*" +
+            @"You can Tribute 1 monster;\s*place this card on the top of your Deck\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxGyPayLpTopDeck = new(
+            @"When this card is sent from the field to the Graveyard:\s*" +
+            @"You can pay (\d+) LP;\s*place this card on the top of your Deck\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxGyPayLpTopDeckLegacy = new(
+            @"When this card is sent from the field to the Graveyard,?\s*" +
+            @"if you pay (\d+) Life Points, this card returns to the top of the Deck\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxGyReturnTopDeck = new(
+            @"When this card is sent from the field to the Graveyard:\s*" +
+            @"Return it to the top of the Deck\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxGyPlaceTopDeck = new(
+            @"If this card is sent to your GY:\s*Place it on top of your Deck\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxGyInflictOpp = new(
+            @"When this card is sent from the field to the Graveyard:\s*" +
+            @"Inflict (\d+) damage to your opponent\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxEquippedGainsAtkLoseDef = new(
+            @"The equipped monster gains (\d+) ATK and loses (\d+) DEF\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxEquippedGainsAtk = new(
+            @"The equipped monster gains (\d+) ATK(?: and (\d+) DEF)?\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>Falling Down: target an opponent's monster; equip; take control.</summary>
+        static readonly Regex RxEquipOppTakeControlActivate = new(
+            @"Activate this card by targeting an opponent's monster;\s*equip this card to it\.\s*Take control of it\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>Snatch Steal family: Equip only to a monster your opponent controls. Take control.</summary>
+        static readonly Regex RxEquipOppTakeControlOnly = new(
+            @"Equip only to a monster your opponent controls\.\s*Take control of the equipped monster\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         static readonly Regex RxIncreaseLp = new(
             @"Increase your Life Points by (\d+) points\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -130,6 +205,20 @@ namespace WRLDZ.Duel.TextEffects
 
             if (def != null && def.IsEquipSpell)
             {
+                var oppCtrl = RxEquipOppTakeControlActivate.Match(text);
+                if (!oppCtrl.Success) oppCtrl = RxEquipOppTakeControlOnly.Match(text);
+                if (oppCtrl.Success)
+                    Add(oppCtrl, new EffectClause
+                    {
+                        Timing = EffectTiming.Activate,
+                        Action = EffectActionKind.EquipThisToTarget,
+                        RequiresTargetChoice = true,
+                        Zone = EffectZoneFilter.OppFaceUpMonsters,
+                        TakeControlOfTarget = true,
+                        StaysOnField = true,
+                        MakesChainLink = true
+                    });
+
                 var both = RxEquipBoth.Match(text);
                 if (!both.Success) both = RxEquipIncreaseTyped.Match(text);
                 if (both.Success)
@@ -142,6 +231,114 @@ namespace WRLDZ.Duel.TextEffects
                 if (split.Success)
                     Add(split, EquipClause(split.Groups[1].Value,
                         Parse(split, 2, 400), -Parse(split, 3, 200)));
+
+                var onlyLose = RxEquipOnlyKindLoseDef.Match(text);
+                if (onlyLose.Success)
+                    Add(onlyLose, EquipClause(onlyLose.Groups[1].Value,
+                        Parse(onlyLose, 2, 400), -Parse(onlyLose, 3, 200)));
+                else
+                {
+                    var only = RxEquipOnlyKind.Match(text);
+                    if (only.Success)
+                    {
+                        var n = Parse(only, 2, 300);
+                        var slash = only.Value.IndexOf("ATK/DEF", StringComparison.OrdinalIgnoreCase) >= 0
+                                    || only.Value.IndexOf("and DEF", StringComparison.OrdinalIgnoreCase) >= 0;
+                        Add(only, EquipClause(only.Groups[1].Value, n, slash ? n : 0));
+                    }
+                }
+
+                var perMon = RxEquippedGainsPerMonster.Match(text);
+                if (perMon.Success)
+                {
+                    var n = Parse(perMon, 1, 800);
+                    var eq = EquipClause("", n, n);
+                    eq.ScaleAmountByControllerMonsters = true;
+                    Add(perMon, eq);
+                }
+
+                var perSt = RxEquippedGainsPerSpellTrap.Match(text);
+                if (perSt.Success)
+                {
+                    var n = Parse(perSt, 1, 500);
+                    var eq = EquipClause("", n, n);
+                    eq.ScaleAmountByControllerSpellTraps = true;
+                    Add(perSt, eq);
+                }
+
+                var defOnly = RxEquipIncreaseDef.Match(text);
+                if (defOnly.Success)
+                    Add(defOnly, EquipClause("", 0, Parse(defOnly, 1, 800)));
+
+                var gainsBoth = RxEquippedGainsAtkDef.Match(text);
+                if (gainsBoth.Success && !perMon.Success && !perSt.Success)
+                {
+                    var n = Parse(gainsBoth, 1, 500);
+                    Add(gainsBoth, EquipClause("", n, n));
+                }
+                else if (!perMon.Success && !perSt.Success)
+                {
+                    var gainsLose = RxEquippedGainsAtkLoseDef.Match(text);
+                    if (gainsLose.Success)
+                        Add(gainsLose, EquipClause("", Parse(gainsLose, 1, 1000),
+                            -Parse(gainsLose, 2, 1000)));
+                    else
+                    {
+                        var gains = RxEquippedGainsAtk.Match(text);
+                        if (gains.Success)
+                        {
+                            var atk = Parse(gains, 1, 500);
+                            var defB = 0;
+                            if (gains.Groups.Count > 2 && gains.Groups[2].Success)
+                                defB = Parse(gains, 2, 0);
+                            Add(gains, EquipClause("", atk, defB));
+                        }
+                    }
+                }
+
+                var gyTrib = RxGyTributeTopDeck.Match(text);
+                Add(gyTrib, gyTrib.Success
+                    ? new EffectClause
+                    {
+                        Timing = EffectTiming.SentFromFieldToGy,
+                        Action = EffectActionKind.PlaceThisOnTopOfDeck,
+                        RequiresTributeCount = 1,
+                        IsOptional = true,
+                        MakesChainLink = true
+                    }
+                    : null);
+                var gyPay = RxGyPayLpTopDeck.Match(text);
+                if (!gyPay.Success) gyPay = RxGyPayLpTopDeckLegacy.Match(text);
+                Add(gyPay, gyPay.Success
+                    ? new EffectClause
+                    {
+                        Timing = EffectTiming.SentFromFieldToGy,
+                        Action = EffectActionKind.PlaceThisOnTopOfDeck,
+                        PayLpAmount = Parse(gyPay, 1, 500),
+                        IsOptional = true,
+                        MakesChainLink = true
+                    }
+                    : null);
+                var gyRet = RxGyReturnTopDeck.Match(text);
+                if (!gyRet.Success) gyRet = RxGyPlaceTopDeck.Match(text);
+                Add(gyRet, gyRet.Success
+                    ? new EffectClause
+                    {
+                        Timing = EffectTiming.SentFromFieldToGy,
+                        Action = EffectActionKind.PlaceThisOnTopOfDeck,
+                        MakesChainLink = true
+                    }
+                    : null);
+                var gyDmg = RxGyInflictOpp.Match(text);
+                Add(gyDmg, gyDmg.Success
+                    ? new EffectClause
+                    {
+                        Timing = EffectTiming.SentFromFieldToGy,
+                        Action = EffectActionKind.InflictDamageToOpponent,
+                        Amount = Parse(gyDmg, 1, 500),
+                        MakesChainLink = true
+                    }
+                    : null);
             }
 
             if (IsHandSpell(def))
@@ -367,6 +564,8 @@ namespace WRLDZ.Duel.TextEffects
             return RxEquipBoth.IsMatch(text) ||
                    RxEquipSplit.IsMatch(text) ||
                    RxEquipIncreaseTyped.IsMatch(text) ||
+                   RxEquipOppTakeControlActivate.IsMatch(text) ||
+                   RxEquipOppTakeControlOnly.IsMatch(text) ||
                    RxIncreaseLp.IsMatch(text) ||
                    RxSecondAttack.IsMatch(text) ||
                    RxBookMoon.IsMatch(text) ||
@@ -392,7 +591,14 @@ namespace WRLDZ.Duel.TextEffects
             if (string.IsNullOrEmpty(text)) return;
             if (def.IsEquipSpell &&
                 (RxEquipBoth.IsMatch(text) || RxEquipSplit.IsMatch(text) ||
-                 RxEquipIncreaseTyped.IsMatch(text)))
+                 RxEquipIncreaseTyped.IsMatch(text) || RxEquipOnlyKind.IsMatch(text) ||
+                 RxEquipOnlyKindLoseDef.IsMatch(text) || RxEquippedGainsAtkDef.IsMatch(text) ||
+                 RxEquippedGainsAtkLoseDef.IsMatch(text) || RxEquippedGainsAtk.IsMatch(text) ||
+                 RxEquippedGainsPerMonster.IsMatch(text) ||
+                 RxEquippedGainsPerSpellTrap.IsMatch(text) ||
+                 RxEquipIncreaseDef.IsMatch(text) ||
+                 RxEquipOppTakeControlActivate.IsMatch(text) ||
+                 RxEquipOppTakeControlOnly.IsMatch(text)))
                 need.Add(EffectActionKind.EquipThisToTarget);
             if (IsHandSpell(def))
             {
@@ -419,6 +625,14 @@ namespace WRLDZ.Duel.TextEffects
                 need.Add(EffectActionKind.InflictDamageToOpponent);
         }
 
+        public static bool EquipTargetsOpponent(CardDef def)
+        {
+            if (def == null || !def.IsEquipSpell) return false;
+            var text = def.desc ?? "";
+            return RxEquipOppTakeControlActivate.IsMatch(text) ||
+                   RxEquipOppTakeControlOnly.IsMatch(text);
+        }
+
         static bool IsHandSpell(CardDef def) =>
             def != null && def.IsSpell && !def.IsTrap && !def.IsEquipSpell &&
             !def.IsContinuousSpellOrTrap && !def.IsFieldSpell;
@@ -436,8 +650,11 @@ namespace WRLDZ.Duel.TextEffects
                 StaysOnField = true,
                 MakesChainLink = true
             };
-            if (IsAttribute(key)) c.AttributeFilter = key;
-            else c.RaceFilter = key;
+            if (!string.IsNullOrEmpty(key))
+            {
+                if (IsAttribute(key)) c.AttributeFilter = key;
+                else c.RaceFilter = key;
+            }
             return c;
         }
 

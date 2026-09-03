@@ -1,0 +1,526 @@
+{
+  "source": "ProjectIgnis/puzzles (Debug.AddCard + solution comments; not executed)",
+  "puzzlesScanned": 459,
+  "kept": 23,
+  "puzzles": [
+    {
+      "file": "Canon collection/GX Spirit Caller/3_Advanced/[GX_Spirit_Caller]A11_Final_Challenge.lua",
+      "cards": [
+        4178474,
+        21900719,
+        55226821,
+        77622396,
+        79759861
+      ],
+      "setupCount": 9,
+      "activate": [
+        {
+          "name": "Raigeki Break",
+          "cardId": 4178474
+        },
+        {
+          "name": "Reverse Trap",
+          "cardId": 77622396
+        },
+        {
+          "name": "Twin Swords of Flashing Light - Tryce",
+          "cardId": 21900719
+        }
+      ],
+      "tribute": [
+        {
+          "name": "Makyura the Destructor",
+          "cardId": 21593977
+        },
+        {
+          "name": "Catapult Turtle",
+          "cardId": 95727991
+        }
+      ]
+    },
+    {
+      "file": "Canon collection/Miscellaneous/AlphaKretin_09_Unsustainable.lua",
+      "cards": [
+        4035199,
+        23171610,
+        34016756,
+        48202661,
+        58538870,
+        70368879
+      ],
+      "setupCount": 69,
+      "activate": [
+        {
+          "name": "Riryoku",
+          "cardId": 34016756
+        },
+        {
+          "name": "Limiter Removal",
+          "cardId": 23171610
+        }
+      ],
+      "tribute": []
+    },
+    {
+      "file": "Canon collection/Miscellaneous/AlphaKretin_10_Ultimate_Mace.lua",
+      "cards": [
+        31036355
+      ],
+      "setupCount": 34,
+      "activate": [
+        {
+          "name": "Creature Swap",
+          "cardId": 31036355
+        }
+      ],
+      "tribute": []
+    },
+    {
+      "file": "Canon collection/Miscellaneous/Banyspy_03_Absolute_Defense.lua",
+      "cards": [
+        21593977,
+        34906152,
+        70828912
+      ],
+      "setupCount": 78,
+      "activate": [
+        {
+          "name": "Mass Driver",
+          "cardId": 34906152
+        }
+      ],
+      "tribute": []
+    },
+    {
+      "file": "Canon collection/Miscellaneous/Dragonmaids vs Dragons.lua",
+      "cards": [
+        44095762,
+        50913601,
+        77910045,
+        97342942
+      ],
+      "setupCount": 26,
+      "activate": [
+        {
+          "name": "Ectoplasmer",
+          "cardId": 97342942
+        }
+      ],
+      "tribute": []
+    },
+    {
+      "file": "Canon collection/Miscellaneous/Eroldin_04_The_Magician_Family.lua",
+      "cards": [
+        15259703,
+        46986414,
+        55144522,
+        78986941,
+        79571449,
+        94585852,
+        97077563
+      ],
+      "setupCount": 40,
+      "activate": [
+        {
+          "name": "Call of the Haunted",
+          "cardId": 97077563
+        }
+      ],
+      "tribute": []
+    },
+    {
+      "file": "Canon collection/Miscellaneous/Puzzle_16_Synchro_Dino.lua",
+      "cards": [
+        1248895,
+        6733059
+      ],
+      "setupCount": 31,
+      "activate": [
+        {
+          "name": "Skull Lair",
+          "cardId": 6733059
+        },
+        {
+          "name": "Skull Lair",
+          "cardId": 6733059
+        }
+      ],
+      "tribute": []
+    },
+    {
+      "file": "Canon collection/World Championship/[WCS2008] Download Puzzle 08.lua",
+      "cards": [
+        3136426,
+        12181376,
+        12206212,
+        21900719,
+        27927359,
+        30914564,
+        34100324,
+        53119267,
+        54415063,
+        65240384,
+        75782277,
+        76812113,
+        79323590,
+        83764718,
+        85742772,
+        90219263,
+        91932350
+      ],
+      "setupCount": 27,
+      "activate": [
+        {
+          "name": "Monster Reborn",
+          "cardId": 83764719
+        },
+        {
+          "name": "Elegant Egotist",
+          "cardId": 90219263
+        },
+        {
+          "name": "Triangle Ecstasy Spark",
+          "cardId": 12181376
+        },
+        {
+          "name": "Monster Reborn",
+          "cardId": 83764719
+        }
+      ],
+      "tribute": [
+        {
+          "name": "Harpie Lady",
+          "cardId": 76812113
+        }
+      ]
+    },
+    {
+      "file": "Canon collection/World Championship/[WCS2008] Download Puzzle 10.lua",
+      "cards": [
+        295517,
+        7089711,
+        18318842,
+        43793530,
+        70828912,
+        79759861,
+        87621407,
+        89631139,
+        96677818
+      ],
+      "setupCount": 20,
+      "activate": [
+        {
+          "name": "Lightning Vortex",
+          "cardId": 69162969
+        },
+        {
+          "name": "Tribute to the doomed",
+          "cardId": 79759861
+        },
+        {
+          "name": "A Legendary Ocean",
+          "cardId": 295517
+        },
+        {
+          "name": "Premature Burial",
+          "cardId": 70828912
+        }
+      ],
+      "tribute": []
+    },
+    {
+      "file": "Canon collection/World Championship/[WCS2010] Download Puzzle 02.lua",
+      "cards": [
+        12607053,
+        31036355,
+        40633297,
+        64752646,
+        83968380
+      ],
+      "setupCount": 36,
+      "activate": [
+        {
+          "name": "Different Dimension Gate",
+          "cardId": 56460688
+        },
+        {
+          "name": "Return from the Different Dimension",
+          "cardId": 27174286
+        }
+      ],
+      "tribute": []
+    },
+    {
+      "file": "Canon collection/World Championship/[WCS2010] Download Puzzle 05.lua",
+      "cards": [
+        3510565,
+        5318639,
+        29401950,
+        44095762,
+        70231910,
+        71413901,
+        84970821
+      ],
+      "setupCount": 22,
+      "activate": [
+        {
+          "name": "Dark Core",
+          "cardId": 70231910
+        }
+      ],
+      "tribute": []
+    },
+    {
+      "file": "Canon collection/World Championship/[WCS2011] Download Puzzle 01.lua",
+      "cards": [
+        7902349,
+        8124921,
+        12600382,
+        27770341,
+        33396948,
+        44519536,
+        53129443,
+        70903634,
+        84970821
+      ],
+      "setupCount": 24,
+      "activate": [
+        {
+          "name": "Dark Hole",
+          "cardId": 53129443
+        },
+        {
+          "name": "Super Rejuvenation",
+          "cardId": 27770341
+        }
+      ],
+      "tribute": []
+    },
+    {
+      "file": "Canon collection/World Championship/[WCS2011] Download Puzzle 02.lua",
+      "cards": [
+        51452091,
+        56433456,
+        56830749,
+        77527210
+      ],
+      "setupCount": 15,
+      "activate": [
+        {
+          "name": "Share the Pain",
+          "cardId": 56830749
+        }
+      ],
+      "tribute": []
+    },
+    {
+      "file": "Canon collection/World Championship/[WCS2011] Download Puzzle 03.lua",
+      "cards": [
+        5758500,
+        27174286,
+        85562745
+      ],
+      "setupCount": 24,
+      "activate": [
+        {
+          "name": "Return from the Different Dimension",
+          "cardId": 27174286
+        }
+      ],
+      "tribute": []
+    },
+    {
+      "file": "Canon collection/World Championship/[WCS2011] Download Puzzle 04.lua",
+      "cards": [
+        7165085,
+        9373534,
+        14618326,
+        21887179,
+        44095762,
+        57281778,
+        69122763,
+        74701381,
+        77910045,
+        87880531,
+        98239899,
+        98792570
+      ],
+      "setupCount": 22,
+      "activate": [
+        {
+          "name": "Deal of Phantom",
+          "cardId": 69122763
+        },
+        {
+          "name": "Bait Doll",
+          "cardId": 7165085
+        },
+        {
+          "name": "DNA Surgery",
+          "cardId": 74701381
+        },
+        {
+          "name": "Fuhma Shuriken",
+          "cardId": 9373534
+        },
+        {
+          "name": "Blast with Chain",
+          "cardId": 98239899
+        }
+      ],
+      "tribute": []
+    },
+    {
+      "file": "Canon collection/World Championship/[WCS2011] Download Puzzle 05.lua",
+      "cards": [
+        44095762,
+        63789924
+      ],
+      "setupCount": 20,
+      "activate": [
+        {
+          "name": "Smoke Grenade of the Thief",
+          "cardId": 63789924
+        }
+      ],
+      "tribute": []
+    },
+    {
+      "file": "Canon collection/World Championship/[WCS2011] Download Puzzle 07.lua",
+      "cards": [
+        5318639,
+        40619825,
+        47942531,
+        61831093,
+        84970821,
+        85742772
+      ],
+      "setupCount": 26,
+      "activate": [
+        {
+          "name": "Mystical Space Typhoon",
+          "cardId": 5318639
+        },
+        {
+          "name": "Axe of Despair",
+          "cardId": 40619825
+        }
+      ],
+      "tribute": []
+    },
+    {
+      "file": "Canon collection/World Championship/[WCS2011] Download Puzzle 08.lua",
+      "cards": [
+        19252988,
+        36261276,
+        75285069
+      ],
+      "setupCount": 22,
+      "activate": [
+        {
+          "name": "Interdimensional Matter Transporter",
+          "cardId": 36261276
+        }
+      ],
+      "tribute": []
+    },
+    {
+      "file": "Canon collection/World Championship/[WCS2011] Download Puzzle 09.lua",
+      "cards": [
+        44095762,
+        96947648
+      ],
+      "setupCount": 21,
+      "activate": [
+        {
+          "name": "Salvage",
+          "cardId": 96947648
+        }
+      ],
+      "tribute": []
+    },
+    {
+      "file": "Canon collection/World Championship/[WCS2011] Download Puzzle 11.lua",
+      "cards": [
+        34016756,
+        41398771,
+        52768103,
+        83011277,
+        98045062
+      ],
+      "setupCount": 14,
+      "activate": [
+        {
+          "name": "Curse of Aging",
+          "cardId": 41398771
+        },
+        {
+          "name": "Riryoku",
+          "cardId": 34016756
+        }
+      ],
+      "tribute": []
+    },
+    {
+      "file": "Canon collection/World Championship/[WCS2011] Download Puzzle 12.lua",
+      "cards": [
+        5318639,
+        21070956,
+        77910045,
+        82732705
+      ],
+      "setupCount": 14,
+      "activate": [
+        {
+          "name": "Altar for Tribute",
+          "cardId": 21070956
+        },
+        {
+          "name": "Skill Drain",
+          "cardId": 82732705
+        }
+      ],
+      "tribute": []
+    },
+    {
+      "file": "Canon collection/World Championship/[WCS2011] Duel Puzzle 04.lua",
+      "cards": [
+        23557835
+      ],
+      "setupCount": 16,
+      "activate": [
+        {
+          "name": "Brain Control",
+          "cardId": 87910978
+        },
+        {
+          "name": "Dimension Fusion",
+          "cardId": 23557835
+        }
+      ],
+      "tribute": []
+    },
+    {
+      "file": "Canon collection/World Championship/[WCS2011] Duel Puzzle 05.lua",
+      "cards": [
+        102380,
+        10012614,
+        10352095,
+        64751286,
+        98045062
+      ],
+      "setupCount": 14,
+      "activate": [
+        {
+          "name": "Enemy Controller",
+          "cardId": 98045062
+        },
+        {
+          "name": "Scroll of Bewitchment",
+          "cardId": 10352095
+        }
+      ],
+      "tribute": []
+    }
+  ]
+}

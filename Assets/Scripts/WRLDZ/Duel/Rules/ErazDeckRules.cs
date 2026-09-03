@@ -23,10 +23,33 @@ namespace WRLDZ.Duel.Rules
             return _labIds;
         }
 
-        public static bool CanAddToDeck(CardDef def, int alreadyInDeck, string eraId, out string msg)
+        public static bool CanAddToDeck(CardDef def, int alreadyInDeck, string eraId, out string msg,
+            bool labOpen = false)
         {
             msg = "";
             if (def == null) { msg = "No card."; return false; }
+
+            if (TcgLegalPool.IsOcgOnly(def.id))
+            {
+                msg = "OCG-only — TCG-legal cards only.";
+                return false;
+            }
+
+            // Desktop Lab / lab_tester: full catalog is on-hand. Skip compile + era walls
+            // so the test user can actually build decks. Live Activate still refuses
+            // unimplemented text. Copy cap stays (3; forbidden treated as 3 in lab).
+            if (labOpen)
+            {
+                var labCap = OfficialDataSources.MaxCopies(def.id, eraId);
+                if (labCap <= 0) labCap = TcgRules.MaxCopiesPerCard;
+                if (alreadyInDeck >= labCap)
+                {
+                    msg = "Copy limit.";
+                    return false;
+                }
+                return true;
+            }
+
             if (!CardEffectStatus.MayIncludeInDeck(def))
             {
                 msg = "Effect not implemented for this era.";

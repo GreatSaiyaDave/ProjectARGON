@@ -1,0 +1,9 @@
+{
+  "defaultWindowScale": 1.0,
+  "cards": [
+    { "id": 53129443, "name": "Dark Hole", "animScale": 1.15, "windowScale": 1.15 },
+    { "id": 295517, "name": "A Legendary Ocean", "animScale": 1.0, "windowScale": 1.0 },
+    { "id": 32452818, "name": "Beaver Warrior", "animScale": 1.0, "windowScale": 1.0 },
+    { "id": 5053192, "name": "Battle Ox", "animScale": 1.05, "windowScale": 1.05 }
+  ]
+}

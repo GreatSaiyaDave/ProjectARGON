@@ -21,12 +21,14 @@ namespace WRLDZ.Data
             var path = Path.Combine(Application.streamingAssetsPath, "Cards", "cards_db.json");
             if (!File.Exists(path))
             {
+                PinEditorCwd();
                 Debug.LogError($"[WRLDZ] Missing card DB at {path}");
                 Instance = db;
                 return db;
             }
 
             var json = File.ReadAllText(path);
+            PinEditorCwd();
             var file = JsonUtility.FromJson<CardDatabaseFile>(json);
             if (file?.cards == null)
             {
@@ -143,8 +145,13 @@ namespace WRLDZ.Data
 
         static Sprite LoadSpriteFromFile(string path, string spriteName)
         {
-            if (string.IsNullOrEmpty(path) || !File.Exists(path)) return null;
+            if (string.IsNullOrEmpty(path) || !File.Exists(path))
+            {
+                PinEditorCwd();
+                return null;
+            }
             var bytes = File.ReadAllBytes(path);
+            PinEditorCwd();
             var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
             if (!tex.LoadImage(bytes))
             {
@@ -186,10 +193,14 @@ namespace WRLDZ.Data
                     {
                         var candidate = Path.Combine(dir, stem + ext);
                         if (File.Exists(candidate))
+                        {
+                            PinEditorCwd();
                             return candidate;
+                        }
                     }
                 }
 
+                PinEditorCwd();
                 return null;
             }
 
@@ -243,11 +254,13 @@ namespace WRLDZ.Data
             var path = Path.Combine(Application.streamingAssetsPath, "Decks", fileName);
             if (!File.Exists(path))
             {
+                PinEditorCwd();
                 Debug.LogError($"[WRLDZ] Missing deck {path}");
                 return null;
             }
 
             var json = File.ReadAllText(path);
+            PinEditorCwd();
             var deck = JsonUtility.FromJson<DeckFile>(json);
             if (deck == null)
                 Debug.LogError($"[WRLDZ] Failed to parse deck {fileName}");
@@ -278,6 +291,21 @@ namespace WRLDZ.Data
                 var j = Random.Range(0, i + 1);
                 (list[i], list[j]) = (list[j], list[i]);
             }
+        }
+
+        static void PinEditorCwd()
+        {
+#if UNITY_EDITOR
+            try
+            {
+                var root = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+                Directory.SetCurrentDirectory(root);
+            }
+            catch
+            {
+                // Editor guard also pins on compile.
+            }
+#endif
         }
     }
 }

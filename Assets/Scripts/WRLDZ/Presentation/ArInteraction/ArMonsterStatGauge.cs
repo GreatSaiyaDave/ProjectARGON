@@ -94,8 +94,8 @@ namespace WRLDZ.Presentation.ArInteraction
             raw.preserveAspect = true;
             raw.raycastTarget = false;
 
-            _atk = MakeNum(plateGo.transform, "ATK", 0.08f, 0.52f, 0.92f, 0.92f);
-            _def = MakeNum(plateGo.transform, "DEF", 0.08f, 0.08f, 0.92f, 0.48f);
+            _atk = MakeNum(plateGo.transform, "ATK", 0.10f, 0.50f, 0.90f, 0.94f);
+            _def = MakeNum(plateGo.transform, "DEF", 0.10f, 0.06f, 0.90f, 0.48f);
         }
 
         static Text MakeNum(Transform parent, string name, float x0, float y0, float x1, float y1)
@@ -109,15 +109,8 @@ namespace WRLDZ.Presentation.ArInteraction
             rt.offsetMin = Vector2.zero;
             rt.offsetMax = Vector2.zero;
             var t = go.GetComponent<Text>();
-            WrldzType.Style(t, 22, display: true, heavyOutline: true);
-            t.alignment = TextAnchor.MiddleCenter;
+            WrldzType.StyleGaugeDigits(t, 86);
             t.color = Gold;
-            t.horizontalOverflow = HorizontalWrapMode.Overflow;
-            t.verticalOverflow = VerticalWrapMode.Overflow;
-            t.resizeTextForBestFit = true;
-            t.resizeTextMinSize = 16;
-            t.resizeTextMaxSize = 48;
-            t.raycastTarget = false;
             t.text = "0";
             return t;
         }
@@ -241,10 +234,9 @@ namespace WRLDZ.Presentation.ArInteraction
 
             var cam = ArStageView.FindCamera(transform);
             var hostPos = _host.transform.position;
-            var scale = Mathf.Abs(_host.transform.lossyScale.x);
-            var artHalf = CardArtFocus.MonsterArtworkScale.x * 0.5f * Mathf.Max(0.15f, scale);
-            var gaugeHalf = CanvasWorldWidth * 0.5f;
-            const float gap = 0.22f;
+            var scale = Mathf.Max(0.15f, Mathf.Abs(_host.transform.lossyScale.x));
+            var artW = CardArtFocus.MonsterArtworkScale.x * scale;
+            var artH = CardArtFocus.MonsterArtworkScale.y * scale;
 
             Vector3 towardCam, right;
             if (cam != null)
@@ -255,7 +247,8 @@ namespace WRLDZ.Presentation.ArInteraction
                 towardCam.y = 0f;
                 if (towardCam.sqrMagnitude < 1e-6f) towardCam = Vector3.back;
                 towardCam.Normalize();
-                right = Vector3.Cross(Vector3.up, towardCam);
+                // Screen-right of the artwork as the viewer looks at it.
+                right = Vector3.Cross(towardCam, Vector3.up);
                 if (right.sqrMagnitude < 1e-6f) right = Vector3.right;
                 else right.Normalize();
             }
@@ -265,12 +258,12 @@ namespace WRLDZ.Presentation.ArInteraction
                 right = Vector3.right;
             }
 
-            // Keep both sides' gauges outside the standing art, not on the illustration.
-            if (!_host.PlayerSide) right = -right;
-            var chest = hostPos + Vector3.up * (CardArtFocus.MonsterArtLift * Mathf.Max(0.15f, scale));
-            var pos = chest
-                      + right * (artHalf + gaugeHalf + gap)
-                      + towardCam * 0.28f;
+            // Bottom-right of the standing artwork (camera-right), slightly in front
+            // so the holo does not occlude the plate.
+            var pos = hostPos
+                      + Vector3.up * (artH * 0.16f)
+                      + right * (artW * 0.48f)
+                      + towardCam * 0.20f;
 
             var parentScale = transform.parent != null ? transform.parent.lossyScale.x : 1f;
             transform.localScale = Vector3.one * (CanvasWorldWidth / CanvasW / Mathf.Max(1e-4f, parentScale));

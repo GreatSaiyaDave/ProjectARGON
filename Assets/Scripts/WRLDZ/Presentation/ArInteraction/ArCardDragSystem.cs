@@ -13,7 +13,7 @@ namespace WRLDZ.Presentation.ArInteraction
     /// Short tap on a floating hand card → <see cref="OnHandCardTapped"/> (play / inspect).
     /// Short tap on disk pad cards → <see cref="OnFieldCardTapped"/> (Attack menu).
     /// Arena artwork holograms are not tappable until real 3D models ship.
-    /// Combat trap activations use the phone Response tray (Waboku / Mirror Force), not drag.
+    /// Combat trap activations: blinking legal S/T zones on the local disk; click to activate.
     /// </summary>
     public class ArCardDragSystem : MonoBehaviour
     {

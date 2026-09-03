@@ -1,7 +1,7 @@
 # Inventory specification — Duel Monsters WRLDZ
 
-**Status:** design target for GDD + UI.  
-**Scope:** home-base collection vs on-hand adventure kit. Artifact *card types* and unique key items are named only; their effects are specified elsewhere.  
+**Status:** design target for GDD + UI. Artifact card types + soul-card overflow: `docs/superpowers/specs/2026-09-01-artifact-cards-design.md`.  
+**Scope:** home-base collection vs on-hand adventure kit. Every key item is an artifact card in the endless Artifact Deck Box.  
 **Presentation:** every screen has phone (`NonArPortrait`) and AR-holo (`ArDiskHolo`) layouts.
 
 The fantasy is physical: cardboard at home, a real backpack on your back, deck boxes in coat pockets. Storage pressure is intentional. Silent loss is not.
@@ -12,7 +12,7 @@ The fantasy is physical: cardboard at home, a real backpack on your back, deck b
 
 You keep your collection at **Home Base**. When you walk out, you take a **backpack**, an **Artifact Deck Box**, a **Primary Deck Box**, and whatever extra decks fit in **clothing pockets**.
 
-Cards you earn on the street go into a **carried card box**. If those boxes are full, the card sits **loose in the backpack** with a timer. Sleeve it before the timer ends, or it is gone.
+Cards you earn on the street go into a **carried card box**. If those boxes are full, the copy becomes a **soul card** in the backpack (ghost TCG face, Destiny Board ghost, timer where the letter would be). Sleeve it before the timer ends, or it **returns to the aether** (gone from the account). The timer is wall-clock and **keeps running while logged out**.
 
 ---
 
@@ -34,7 +34,7 @@ Account
         ├── Card boxes
         ├── Binders
         ├── Spare deck boxes
-        ├── Unsecured Cards (1×1, timed)
+        ├── Soul cards (1×1, timed ghost copies)
         ├── Packs, consumables, materials, loot, tools
         └── Loose binder pages
 ```
@@ -187,11 +187,14 @@ The player stars one **on-hand** card box as **Preferred**. New street cards try
 
 ### 7.3 Timer
 
-Real-time, paused in these states so a match never eats a card:
+Wall-clock `expiresUnix`. **Keeps running while logged out**, backgrounded, or offline. Login ticks immediately.
+
+Paused (push `expiresUnix` by elapsed) only so a match never eats a card:
 
 - Duel in progress
 - Make Room modal open
-- Application backgrounded > 2 minutes (resume with a “cards still loose” reminder)
+
+Home boxes full: `expiresUnix = 0` (frozen) until the player leaves home.
 
 | Card | Duration |
 |---|---|
@@ -209,7 +212,7 @@ Real-time, paused in these states so a match never eats a card:
 | < 10% | Red pulse |
 | 60 seconds on a Favorite / Secret | Modal: **Secure this card** (Snooze 5 min once, or Open bag) |
 
-On expiry: the card is **destroyed**. Toast: “Unsecured [name] was lost.” One undo is **not** granted. Favorites and Secret rares fire the 60-second modal; if ignored, they still expire (storage pressure stays real).
+On expiry: the copy **returns to the aether** (gone from the account). Toast: “[name] returned to the aether.” One undo is **not** granted. Favorites and Secret rares fire the 60-second modal; if ignored, they still expire (storage pressure stays real). The clock does not stop because the player logged out.
 
 ### 7.4 Make Room modal (backpack full on reward)
 

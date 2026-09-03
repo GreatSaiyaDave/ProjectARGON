@@ -333,7 +333,9 @@ Each card shows: title, 2-line rules, LP, **LOCKED** or **PLAY**.
 
 #### Inventory (Backpack)
 
-Tabs: **Items** · **Binders** · **Deck Boxes** · **Cosmetics** · **Placeables**  
+Shipped tabs: **CASE · POCKETS · DECKS · HOME** (`INVENTORY_SPEC.md` §11.1). Wallet chips open the Artifact Deck Box.
+
+Older draft tabs (not built): **Items** · **Binders** · **Deck Boxes** · **Cosmetics** · **Placeables**  
 
 - Row: icon · name · qty · [Use]  
 - AR base of operations: list of placeables → **Place in AR** (drag gizmo, confirm)  

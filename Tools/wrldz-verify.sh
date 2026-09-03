@@ -11,8 +11,8 @@ usage() {
   cat <<EOF
 Usage: $(basename "$0") [--extract-lua] [--timeout SECONDS]
 
-  --extract-lua   Rebuild StreamingAssets/WRLDZ/ygopro_continuous_seed_v1.json
-                  from ~/ygopro-scripts before tests.
+  --extract-lua   Rebuild Lua fact seeds (continuous, triggers, ST facts, puzzles)
+                  from vendored OcgCore official scripts / Ignis puzzles.
   --timeout N     Seconds to wait for Unity (default ${TIMEOUT}).
 EOF
 }
@@ -29,15 +29,22 @@ done
 cd "$PROJECT"
 
 if [[ "$EXTRACT_LUA" == 1 ]]; then
-  echo "== extract YGOPro continuous catalog =="
+  echo "== extract YGOPro catalogs (official scripts, facts only) =="
   python3 "$PROJECT/Tools/extract_ygopro_continuous.py" \
     "$PROJECT/Assets/StreamingAssets/WRLDZ/ygopro_continuous_seed_v1.json"
   python3 "$PROJECT/Tools/extract_ygopro_triggers.py" \
     "$PROJECT/Assets/StreamingAssets/WRLDZ/ygopro_trigger_seed_v1.json"
+  python3 "$PROJECT/Tools/extract_ygopro_st_facts.py" \
+    "$PROJECT/Assets/StreamingAssets/WRLDZ/ygopro_st_facts_v1.json"
+  python3 "$PROJECT/Tools/extract_puzzle_facts.py" \
+    "$PROJECT/Assets/StreamingAssets/WRLDZ/puzzle_facts_v1.json"
 fi
 
 echo "== engine gap scan (cards_db vs compiler regex vs Lua seed) =="
 python3 "$PROJECT/Tools/scan_engine_gaps.py"
+
+echo "== Equip / unplayable stress (template vs leftover) =="
+python3 "$PROJECT/Tools/stress_unplayable_cards.py"
 
 echo "== Unity Pipeline =="
 PIPE_JSON="$(unity pipeline list --format json --no-banner --non-interactive 2>/dev/null || true)"

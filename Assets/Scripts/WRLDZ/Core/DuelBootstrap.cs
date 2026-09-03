@@ -205,33 +205,52 @@ namespace WRLDZ.Core
             if (canvas != null)
                 Destroy(canvas);
 
-            _engine = new DuelEngine();
-            // PvP / hotseat: both sides human — no SimpleAi, response windows for both
             var match = AppSession.Ensure().PendingArMatch;
-            _engine.HumanVsHuman = match != null && match.IsHumanOpponent;
-            // Only match.SkipPreDuelCinematic skips deploy/shuffle/draw.
-            // (Desktop Lab Instant / Quick-with-skip set that flag on the match.)
-            // Do NOT read PlayerPrefs here — a sticky lab toggle was killing ALL
-            // CreateMenu / Overworld / Tear duels and made shuffle/draw "not work".
-            var cinematic = match == null || !match.SkipPreDuelCinematic;
-
-            _engine.StartDuel(_db, _playerDeck, _aiDeck, cinematicOpening: cinematic);
-            if (match != null && match.StartingLp >= 1000)
+            if (IsOcgLabDeckFile())
             {
-                _engine.Player.LifePoints = match.StartingLp;
-                _engine.Opponent.LifePoints = match.StartingLp;
-                Debug.Log($"[WRLDZ] Encounter LP set to {match.StartingLp}");
+                WRLDZ.Duel.Ocg.OcgLabDuelHost.Current?.Dispose();
+                WRLDZ.Duel.Ocg.OcgLabDuelHost host = null;
+                if (WRLDZ.Duel.Ocg.OcgPreflightState.TryUseNative(out var nativeWhy))
+                {
+                    try
+                    {
+                        host = WRLDZ.Duel.Ocg.OcgLabDuelHost.StartNative(_db);
+                        Debug.Log("[WRLDZ] OCG lab host active (native ocgcore).");
+                    }
+                    catch (System.Exception ex)
+                    {
+                        Debug.LogWarning("[WRLDZ] native ocgcore failed, stub fallback: " + ex.Message);
+                    }
+                }
+                else
+                    Debug.Log("[WRLDZ] OCG lab host using stub (" + nativeWhy + ").");
+                if (host == null)
+                    host = WRLDZ.Duel.Ocg.OcgLabDuelHost.StartStub(_db);
+                _engine = host.ViewEngine;
             }
+            else
+            {
+                _engine = new DuelEngine();
+                _engine.HumanVsHuman = match != null && match.IsHumanOpponent;
+                var cinematic = match == null || !match.SkipPreDuelCinematic;
+                _engine.StartDuel(_db, _playerDeck, _aiDeck, cinematicOpening: cinematic);
+                if (match != null && match.StartingLp >= 1000)
+                {
+                    _engine.Player.LifePoints = match.StartingLp;
+                    _engine.Opponent.LifePoints = match.StartingLp;
+                    Debug.Log($"[WRLDZ] Encounter LP set to {match.StartingLp}");
+                }
 
-            if (!cinematic)
-                Debug.Log(
-                    $"[WRLDZ] Pre-duel cinematic skipped · match={match?.FormatTitle ?? "null"} · " +
-                    $"launch={match?.Launch}");
+                if (!cinematic)
+                    Debug.Log(
+                        $"[WRLDZ] Pre-duel cinematic skipped · match={match?.FormatTitle ?? "null"} · " +
+                        $"launch={match?.Launch}");
+            }
 
             WrldzAudio.Ensure();
             WrldzAudio.SetBgmEnabled(true);
-            WrldzAudio.SetBgmVolume(0.16f); // quieter under duel SFX
-            WrldzAudio.PlayDuelBgm(); // leave Scarab / Alternate for boot and map
+            WrldzAudio.SetBgmVolume(0.16f);
+            WrldzAudio.PlayDuelBgm();
             WrldzAudio.PlayDuelBegin();
 
             _uiHost = new GameObject("DuelUIHost");
@@ -243,10 +262,34 @@ namespace WRLDZ.Core
                 Debug.Log("[WRLDZ] Pre-duel cinematic armed — deploy · shuffle · draw from DECK zone");
         }
 
+        bool IsOcgLabDeckFile()
+        {
+            var session = AppSession.Ensure();
+            return NameHasOcgLab(playerDeckFile)
+                   || NameHasOcgLab(session.TestPlayerDeckFile)
+                   || NameHasOcgLab(matchDeckFile())
+                   || NameHasOcgLab(_playerDeck != null ? _playerDeck.name : null);
+        }
+
+        string matchDeckFile()
+        {
+            var m = AppSession.Ensure().PendingArMatch;
+            return m != null ? m.PlayerDeckFile : null;
+        }
+
+        static bool NameHasOcgLab(string name) =>
+            !string.IsNullOrEmpty(name) &&
+            name.IndexOf("ocg_lab", System.StringComparison.OrdinalIgnoreCase) >= 0;
+
         public void RestartDuel()
         {
             Debug.Log("[WRLDZ] Restarting duel…");
             StartFreshDuel();
+        }
+
+        void OnDestroy()
+        {
+            WRLDZ.Duel.Ocg.OcgLabDuelHost.Current?.Dispose();
         }
     }
 }

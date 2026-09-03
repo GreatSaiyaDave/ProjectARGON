@@ -54,13 +54,36 @@ namespace WRLDZ.Duel
 
         void SyncFromEngine()
         {
+            bool awaitingNow;
+            if (Ocg.OcgLabDuelHost.IsActive)
+            {
+                var host = Ocg.OcgLabDuelHost.Current;
+                awaitingNow = host != null && host.IsAwaitingChain;
+                if (awaitingNow && !_wasAwaiting)
+                    StartOcgChainClock(host);
+                else if (!awaitingNow && _wasAwaiting)
+                    StopClock();
+                _wasAwaiting = awaitingNow;
+                return;
+            }
+
             if (Engine == null) return;
-            var awaiting = Engine.IsAwaitingPlayerResponse;
-            if (awaiting && !_wasAwaiting)
+            awaitingNow = Engine.IsAwaitingPlayerResponse;
+            if (awaitingNow && !_wasAwaiting)
                 StartClock();
-            else if (!awaiting && _wasAwaiting)
+            else if (!awaitingNow && _wasAwaiting)
                 StopClock();
-            _wasAwaiting = awaiting;
+            _wasAwaiting = awaitingNow;
+        }
+
+        void StartOcgChainClock(Ocg.OcgLabDuelHost host)
+        {
+            IsRunning = true;
+            SecondsRemaining = host != null ? host.ChainWindowSeconds : CombatAnimTimings.DefaultAttackImpact;
+            FractionToImpact = 0f;
+            _motionLine = "Chain — activate or Pass.";
+            OnStarted?.Invoke();
+            OnTick?.Invoke(SecondsRemaining);
         }
 
         void StartClock()
@@ -90,8 +113,33 @@ namespace WRLDZ.Duel
 
         void Update()
         {
-            if (Engine == null) return;
             if (!IsRunning) return;
+
+            if (Ocg.OcgLabDuelHost.IsActive)
+            {
+                var host = Ocg.OcgLabDuelHost.Current;
+                if (host == null || !host.IsAwaitingChain)
+                {
+                    StopClock();
+                    _wasAwaiting = false;
+                    return;
+                }
+                var dur = Mathf.Max(0.5f, host.ChainWindowSeconds);
+                var elapsed = Time.unscaledTime - host.ChainOpenedUnscaled;
+                SecondsRemaining = Mathf.Max(0f, dur - elapsed);
+                FractionToImpact = Mathf.Clamp01(elapsed / dur);
+                OnTick?.Invoke(SecondsRemaining);
+                if (SecondsRemaining <= 0.001f)
+                {
+                    IsRunning = false;
+                    host.PassChainIfExpired();
+                    OnExpired?.Invoke();
+                    _wasAwaiting = false;
+                }
+                return;
+            }
+
+            if (Engine == null) return;
 
             if (!Engine.IsAwaitingPlayerResponse)
             {

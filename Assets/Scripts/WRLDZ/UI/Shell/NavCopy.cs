@@ -22,6 +22,7 @@ namespace WRLDZ.UI.Shell
         {
             MenuId.DeckCollection => "DECK",
             MenuId.Inventory => "BAG",
+            MenuId.Artifacts => "ARTIFACTS",
             MenuId.Settings => "SETTINGS",
             MenuId.TomeRaid => "TOME",
             MenuId.Bazaar => "BAZAAR",
@@ -39,6 +40,7 @@ namespace WRLDZ.UI.Shell
         {
             MenuId.DeckCollection => "Decks & collection",
             MenuId.Inventory => "What you carry",
+            MenuId.Artifacts => "Key items · deck box",
             MenuId.Settings => "Chrome & device",
             MenuId.TomeRaid => "Raid pages",
             MenuId.Bazaar => "Tablets & packs",

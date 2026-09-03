@@ -135,8 +135,30 @@ namespace WRLDZ.Duel
                 {
                     if (c != null && (c.EquipAtkBonus != 0 || c.EquipDefBonus != 0))
                     {
-                        host.AtkModifier += c.EquipAtkBonus;
-                        host.DefModifier += c.EquipDefBonus;
+                        var atk = c.EquipAtkBonus;
+                        var def = c.EquipDefBonus;
+                        if (c.ScaleAmountByControllerMonsters || c.ScaleAmountByControllerSpellTraps)
+                        {
+                            var ctrl = engine.ControllerOf(host) ?? engine.ControllerOf(eq);
+                            var n = 0;
+                            if (c.ScaleAmountByControllerMonsters)
+                            {
+                                if (ctrl != null)
+                                    foreach (var m in ctrl.MonstersOnField())
+                                        if (m != null && m.FaceUp) n++;
+                            }
+                            else if (ctrl != null)
+                            {
+                                foreach (var st in ctrl.SpellTrapsOnField())
+                                    if (st != null && st.FaceUp) n++;
+                            }
+
+                            atk *= n;
+                            def *= n;
+                        }
+
+                        host.AtkModifier += atk;
+                        host.DefModifier += def;
                     }
                 }
             }
@@ -382,6 +404,35 @@ namespace WRLDZ.Duel
             return false;
         }
 
+        /// <summary>
+        /// Falling Down: "unless you control an Archfiend card" — monsters, S/T, Field.
+        /// Series match: printed name, treated-as, or archetype contains the quoted string.
+        /// </summary>
+        public static bool ControllerHasNamedCard(DuelistState who, string name, bool series)
+        {
+            if (who == null || string.IsNullOrEmpty(name)) return false;
+            foreach (var m in who.MonstersOnField())
+                if (m != null && m.FaceUp && CardMatchesNamed(m, name, series)) return true;
+            foreach (var st in who.SpellTrapsOnField())
+                if (st != null && st.FaceUp && CardMatchesNamed(st, name, series)) return true;
+            var field = who.FieldSpellZone?.Occupant;
+            if (field != null && field.FaceUp && CardMatchesNamed(field, name, series)) return true;
+            return false;
+        }
+
+        static bool CardMatchesNamed(CardInstance c, string name, bool series)
+        {
+            if (c == null || string.IsNullOrEmpty(name)) return false;
+            ApplyRuleConditions(c);
+            if (c.IsNamed(name)) return true;
+            if (!series) return false;
+            if (c.Name != null &&
+                c.Name.IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0) return true;
+            if (c.RulesName != null &&
+                c.RulesName.IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0) return true;
+            return false;
+        }
+
         public static bool NamedCardIsFaceUpOnField(DuelEngine engine, string name)
         {
             if (engine == null || string.IsNullOrEmpty(name)) return false;
@@ -481,7 +532,10 @@ namespace WRLDZ.Duel
                     if (c == null || c.Action != EffectActionKind.SelfDestroyUnlessNamedFaceUp)
                         continue;
                     if (string.IsNullOrEmpty(c.RequiresFaceUpName)) continue;
-                    if (NamedCardIsFaceUpOnField(engine, c.RequiresFaceUpName)) continue;
+                    var ok = c.RequiresControllerNamedCard
+                        ? ControllerHasNamedCard(who, c.RequiresFaceUpName, c.NamedCardIsSeries)
+                        : NamedCardIsFaceUpOnField(engine, c.RequiresFaceUpName);
+                    if (ok) continue;
                     doomed.Add(st);
                     break;
                 }

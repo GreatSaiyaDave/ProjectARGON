@@ -105,6 +105,12 @@ namespace WRLDZ.Duel
         /// <summary>Spell/Trap waiting for a target choice (e.g. Monster Reborn).</summary>
         public PendingActivation PendingActivation { get; private set; }
 
+        /// <summary>
+        /// End Phase trigger (Ectoplasmer tribute) paused the turn switch until the
+        /// turn player picks. Null when End Phase is not waiting on a trigger pick.
+        /// </summary>
+        DuelistState _endTurnPausedFor;
+
         /// <summary>Open response window (attack declared / summon) for Speed 2 activations.</summary>
         public PendingResponse PendingResponse { get; private set; }
 
@@ -124,6 +130,10 @@ namespace WRLDZ.Duel
         public bool IsAwaitingResponse => PendingResponse != null;
 
         DuelistState _queuedDamageTaken;
+        readonly List<(DuelistState summoner, CardInstance summoned)> _queuedSummons = new();
+        DuelistState _queuedOwnSummonResponder;
+        DuelistState _queuedOwnSummoner;
+        CardInstance _queuedOwnSummoned;
         /// <summary>Human must choose Pass / Activate (P1, or either side in hotseat PvP).</summary>
         public bool IsAwaitingPlayerResponse =>
             PendingResponse != null && IsHumanControlled(PendingResponse.Responder);
@@ -212,6 +222,7 @@ namespace WRLDZ.Duel
             _nextInstanceId = 1;
             PendingTributes.Clear();
             PendingActivation = null;
+            _endTurnPausedFor = null;
             PendingResponse = null;
             _deferredBattle = null;
             _deferredDamage = null;
@@ -281,6 +292,29 @@ namespace WRLDZ.Duel
             Draw(Opponent, TcgRules.StartingHandSize, silent: true);
             BeginTurn(Player);
             Notify();
+        }
+
+        /// <summary>Lab ocg path: occupancy lives in <see cref="Ocg.OcgBoardView"/>; this engine is a view only.</summary>
+        public void AdoptExternalView(DuelistState player, DuelistState opponent)
+        {
+            Player = player;
+            Opponent = opponent;
+            TurnPlayer = player;
+            Phase = DuelPhase.Draw;
+            TurnNumber = 1;
+            GameOver = false;
+            Winner = null;
+            OpeningSequenceActive = false;
+            AwaitingOpeningDrawGesture = false;
+        }
+
+        public void SyncViewMeta(DuelPhase phase, int turn, DuelistState turnPlayer, bool gameOver, DuelistState winner)
+        {
+            Phase = phase;
+            TurnNumber = turn;
+            if (turnPlayer != null) TurnPlayer = turnPlayer;
+            GameOver = gameOver;
+            Winner = winner;
         }
 
         /// <summary>Call after disk shuffle VFX — enables deck-zone draw gesture.</summary>
@@ -644,6 +678,7 @@ namespace WRLDZ.Duel
 
             who.MonsterZones[idx].Occupant = card;
             card.WasSpecialSummoned = false;
+            card.WasTributeSummoned = need > 0 && !asSet;
             who.NormalSummonUsed = true;
             PendingTributes.Clear();
             if (!who.IsPlayer)
@@ -653,9 +688,8 @@ namespace WRLDZ.Duel
             if (!asSet)
                 TextEffects.TextEffectRuntime.TryResolveThisCardSummoned(this, who, card);
 
-            // Summon response window (Trap Hole, set Quick-Play) — defender may choose
-            if (!asSet)
-                OpenSummonResponseOrContinue(who, card);
+            // Face-up NS/FS/SS and Normal Set: Torrential-family can answer a Set.
+            OpenSummonResponseOrContinue(who, card);
 
             return true;
         }
@@ -684,7 +718,7 @@ namespace WRLDZ.Duel
                 : $"Opponent Flip Summons {monster.Name}.");
             // Official Flip effects (Man-Eater Bug, Magician of Faith, Cyber Jar, …)
             MonsterEffects.OnFlipSummoned(this, who, monster);
-            TextEffects.TextEffectRuntime.TryResolveThisCardSummoned(this, who, monster);
+            TextEffects.TextEffectRuntime.TryResolveThisCardSummoned(this, who, monster, flipSummon: true);
             // If Flip opened a target window, do not open summon-response yet
             if (PendingActivation == null)
             {
@@ -996,6 +1030,75 @@ namespace WRLDZ.Duel
             Log($"{card.Name} is banished.");
         }
 
+        public int BanishCopiesFromHandAndDeck(DuelistState who, int cardId)
+        {
+            if (who == null || cardId <= 0) return 0;
+            var n = 0;
+            if (who.Hand != null)
+            {
+                for (var i = who.Hand.Count - 1; i >= 0; i--)
+                {
+                    var c = who.Hand[i];
+                    if (c == null || c.CardId != cardId) continue;
+                    BanishCard(who, c);
+                    n++;
+                }
+            }
+
+            if (who.Deck != null)
+            {
+                for (var i = who.Deck.Count - 1; i >= 0; i--)
+                {
+                    if (who.Deck[i] != cardId) continue;
+                    who.Deck.RemoveAt(i);
+                    var inst = CreateCardInstance(cardId);
+                    inst.FaceUp = true;
+                    if (!who.Banished.Contains(inst))
+                        who.Banished.Add(inst);
+                    n++;
+                }
+            }
+
+            if (n > 0)
+                Log($"Banished {n} copy(ies) of #{cardId} from {who.Name}'s hand/Deck.");
+            return n;
+        }
+
+        public int DestroyCopiesFromHandAndDeck(DuelistState who, int cardId)
+        {
+            if (who == null || cardId <= 0) return 0;
+            var n = 0;
+            if (who.Hand != null)
+            {
+                for (var i = who.Hand.Count - 1; i >= 0; i--)
+                {
+                    var c = who.Hand[i];
+                    if (c == null || c.CardId != cardId) continue;
+                    who.Hand.RemoveAt(i);
+                    if (!who.Graveyard.Contains(c))
+                        who.Graveyard.Add(c);
+                    n++;
+                }
+            }
+
+            if (who.Deck != null)
+            {
+                for (var i = who.Deck.Count - 1; i >= 0; i--)
+                {
+                    if (who.Deck[i] != cardId) continue;
+                    who.Deck.RemoveAt(i);
+                    var inst = CreateCardInstance(cardId);
+                    if (!who.Graveyard.Contains(inst))
+                        who.Graveyard.Add(inst);
+                    n++;
+                }
+            }
+
+            if (n > 0)
+                Log($"Destroyed {n} copy(ies) of #{cardId} from {who.Name}'s hand/Deck.");
+            return n;
+        }
+
         public bool TrySelectCoinCall(bool heads)
         {
             if (PendingActivation == null || !PendingActivation.AwaitingCoinCall)
@@ -1055,7 +1158,7 @@ namespace WRLDZ.Duel
             }
         }
 
-        public void SendCardToGrave(DuelistState owner, CardInstance card)
+        public void SendCardToGrave(DuelistState owner, CardInstance card, CardInstance sentBy = null)
         {
             if (owner == null || card == null) return;
             var fromFieldMonster = owner.TryFindMonster(card, out var mi);
@@ -1089,8 +1192,69 @@ namespace WRLDZ.Duel
             if (!owner.Graveyard.Contains(card))
                 owner.Graveyard.Add(card);
             PendingTributes.Remove(card);
-            if (fromFieldMonster)
-                MonsterEffects.OnSentFromFieldToGy(this, owner, card, destroyed: false);
+
+            if (card.EquippedTo != null)
+            {
+                var host = card.EquippedTo;
+                host.Equips.Remove(card);
+                card.EquippedTo = null;
+                RevertEquipTakeControl(owner, card, host);
+                if (fromFieldSt)
+                {
+                    var linkProg = TextEffects.CompiledEffectCache.GetOrCompile(card.Def);
+                    if (linkProg != null &&
+                        linkProg.ClauseList.Exists(c => c != null && c.DestroyHostWhenThisLeaves))
+                    {
+                        var hostOwner = ControllerOf(host) ?? owner;
+                        SendCardToGrave(hostOwner, host);
+                    }
+                }
+            }
+
+            if (fromFieldMonster && card.Equips.Count > 0)
+            {
+                var eqs = card.Equips.ToList();
+                card.Equips.Clear();
+                foreach (var eq in eqs)
+                {
+                    if (eq == null) continue;
+                    eq.EquippedTo = null;
+                    var eqOwner = ControllerOf(eq) ?? owner;
+                    SendCardToGrave(eqOwner, eq);
+                }
+            }
+
+            if (fromFieldMonster || fromFieldSt)
+            {
+                MarkSentFromFieldToGy(card, sentBy, destroyedByBattle: false, battleDestroyer: null);
+                MonsterEffects.OnSentFromFieldToGy(this, owner, card, destroyed: false,
+                    destroyedByBattle: false, battleDestroyer: null);
+            }
+        }
+
+        void MarkSentFromFieldToGy(CardInstance card, CardInstance sentBy, bool destroyedByBattle,
+            CardInstance battleDestroyer)
+        {
+            if (card == null) return;
+            card.SentFromFieldTurnNumber = TurnNumber;
+            card.WasDestroyedByBattle = destroyedByBattle;
+            card.BattleDestroyer = battleDestroyer;
+            card.SentByContinuousSpellEffect =
+                sentBy?.Def != null && sentBy.Def.IsSpell && sentBy.Def.IsContinuousSpellOrTrap;
+        }
+
+        void RevertEquipTakeControl(DuelistState equipOwner, CardInstance equip, CardInstance host)
+        {
+            if (host == null || !host.TakenByEquipControl || equip?.Def == null) return;
+            var prog = TextEffects.CompiledEffectCache.GetOrCompile(equip.Def);
+            if (prog == null ||
+                !prog.ClauseList.Exists(c => c != null && c.TakeControlOfTarget))
+                return;
+            host.TakenByEquipControl = false;
+            var other = OpponentOf(equipOwner);
+            if (other == null || ControllerOf(host) != equipOwner) return;
+            if (!TryTakeControl(other, host))
+                SendCardToGrave(equipOwner, host);
         }
 
         /// <summary>
@@ -1114,6 +1278,12 @@ namespace WRLDZ.Duel
             card.AtkModifier = 0;
             card.DefModifier = 0;
             card.LevelModifier = 0;
+            card.LingeringAtkModifier = 0;
+            card.LingeringDefModifier = 0;
+            card.WasDestroyedByBattle = false;
+            card.BattleDestroyer = null;
+            card.SentByContinuousSpellEffect = false;
+            card.SentFromFieldTurnNumber = 0;
 
             if (card.Def != null && card.Def.IsExtraDeck)
             {
@@ -1173,6 +1343,10 @@ namespace WRLDZ.Duel
         public void DestroyMonsterPublic(DuelistState owner, CardInstance card, CardInstance byEffect) =>
             DestroyMonster(owner, card, byEffect);
 
+        public void DestroyMonsterPublic(DuelistState owner, CardInstance card, CardInstance byEffect,
+            bool banishIfDestroyed) =>
+            DestroyMonster(owner, card, byEffect, banishIfDestroyed);
+
         public bool SpecialSummonToField(DuelistState who, CardInstance card, BattlePosition pos, bool faceUp)
         {
             var idx = FirstEmpty(who.MonsterZones);
@@ -1182,9 +1356,17 @@ namespace WRLDZ.Duel
             card.SummonedThisTurn = true;
             card.WasSpecialSummoned = true;
             card.ClearAttackFlags();
+            card.LingeringAtkModifier = 0;
+            card.LingeringDefModifier = 0;
+            card.WasDestroyedByBattle = false;
+            card.BattleDestroyer = null;
+            card.SentByContinuousSpellEffect = false;
+            card.SentFromFieldTurnNumber = 0;
             who.MonsterZones[idx].Occupant = card;
             if (faceUp)
                 TextEffects.TextEffectRuntime.TryResolveThisCardSummoned(this, who, card);
+            if (faceUp)
+                OpenSummonResponseOrContinue(who, card);
             return true;
         }
 
@@ -1266,7 +1448,54 @@ namespace WRLDZ.Duel
             // Official continuous: Swords of Revealing Light — opponent cannot declare an attack
             if (OpponentHasSwordsOfRevealingLight(who))
                 return false;
+            if (ContinuousCannotAttackBlocks(who, attacker))
+                return false;
             return true;
+        }
+
+        /// <summary>
+        /// Gravity Bind / Insect Barrier / Messenger of Peace: a face-up Continuous
+        /// program forbids this monster from declaring an attack.
+        /// </summary>
+        public bool ContinuousCannotAttackBlocks(DuelistState attackerController, CardInstance attacker)
+        {
+            if (attacker?.Def == null) return false;
+            foreach (var side in new[] { Player, Opponent })
+            {
+                if (side == null) continue;
+                foreach (var st in side.SpellTrapsOnField())
+                {
+                    if (st == null || !st.FaceUp || st.Def == null) continue;
+                    var prog = TextEffects.CompiledEffectCache.GetOrCompile(st.Def);
+                    if (prog == null) continue;
+                    foreach (var c in prog.ClausesFor(TextEffects.EffectTiming.ContinuousWhileFaceUp))
+                    {
+                        if (c == null ||
+                            c.Action != TextEffects.EffectActionKind.ContinuousCannotAttack)
+                            continue;
+                        if (c.Side == TextEffects.EffectSide.Opponent && side == attackerController)
+                            continue;
+                        if (c.Side == TextEffects.EffectSide.Controller && side != attackerController)
+                            continue;
+                        if (!string.IsNullOrEmpty(c.RaceFilter) &&
+                            (attacker.Def.race == null ||
+                             attacker.Def.race.IndexOf(c.RaceFilter,
+                                 System.StringComparison.OrdinalIgnoreCase) < 0))
+                            continue;
+                        if (c.AmountIsLevel)
+                        {
+                            if (attacker.Level < c.Amount) continue;
+                            return true;
+                        }
+
+                        if (c.Amount > 0 && attacker.CurrentAtk < c.Amount) continue;
+                        if (c.Amount > 0 || !string.IsNullOrEmpty(c.RaceFilter))
+                            return true;
+                    }
+                }
+            }
+
+            return false;
         }
 
         /// <summary>Rulebook 1 attack, plus continuous extra attacks (Mermaid Knight while Umi, …).</summary>
@@ -1513,6 +1742,12 @@ namespace WRLDZ.Duel
                 return true;
             }
 
+            if (timing == ResponseTiming.MonsterSummoned)
+            {
+                FinishSummonResponseWindow();
+                return true;
+            }
+
             // Summon appear finished
             ClearPresentation();
             Notify();
@@ -1524,6 +1759,12 @@ namespace WRLDZ.Duel
         {
             var timing = PendingResponse?.Timing ?? ResponseTiming.None;
             ClearPendingResponse();
+
+            if (timing == ResponseTiming.MonsterSummoned)
+            {
+                FinishSummonResponseWindow();
+                return;
+            }
 
             if (timing == ResponseTiming.YouTakeDamage)
             {
@@ -1902,7 +2143,8 @@ namespace WRLDZ.Duel
                 var overwhelm = CardShatterPresentation.ComputeBattleOverwhelm(
                     attacker, targetOrNull, true, false, dmgDef, dmgAtk);
                 CardShatterPresentation.QueueBattle(targetOrNull.InstanceId, overwhelm, targetOrNull.Name);
-                DestroyMonster(opp, targetOrNull);
+                DestroyMonster(opp, targetOrNull, byEffect: null, banishIfDestroyed: false,
+                    destroyedByBattle: true, battleDestroyer: attacker);
                 if (attacker != null)
                 {
                     attacker.DestroyedByBattleThisTurn = true;
@@ -1920,7 +2162,8 @@ namespace WRLDZ.Duel
                 var overwhelm = CardShatterPresentation.ComputeBattleOverwhelm(
                     attacker, targetOrNull, false, true, dmgDef, dmgAtk);
                 CardShatterPresentation.QueueBattle(attacker.InstanceId, overwhelm, attacker.Name);
-                DestroyMonster(who, attacker);
+                DestroyMonster(who, attacker, byEffect: null, banishIfDestroyed: false,
+                    destroyedByBattle: true, battleDestroyer: targetOrNull);
                 Log($"{attacker.Name} destroyed by battle.");
             }
             else if (destroyAttacker)
@@ -1972,7 +2215,13 @@ namespace WRLDZ.Duel
 
         void OpenSummonResponseOrContinue(DuelistState summoner, CardInstance summoned)
         {
-            var defender = OpponentOf(summoner);
+            if (summoner == null || summoned == null || GameOver) return;
+            if (IsAwaitingResponse || IsAwaitingEffectTarget)
+            {
+                _queuedSummons.Add((summoner, summoned));
+                return;
+            }
+
             var profile = CombatAnimTimings.ForSummon(summoned);
             ActivePresentation = new ActiveCombatPresentation
             {
@@ -1983,18 +2232,82 @@ namespace WRLDZ.Duel
                 StartedUnscaledTime = Time.unscaledTime,
                 ImpactResolved = false
             };
-            // MotionLine is for presentation/UI only — not duel log spam.
+
+            var defender = OpponentOf(summoner);
             if (OpenResponseWindow(defender, ResponseTiming.MonsterSummoned, null, null, null, summoned, summoner,
                     profile))
             {
+                QueueOwnSummonWindowIfLegal(summoner, summoned);
                 if (!IsHumanControlled(defender))
                     SpellTrapEffects.AiAutoRespond(this);
                 Notify();
+                return;
             }
-            else
+
+            if (OpenResponseWindow(summoner, ResponseTiming.MonsterSummoned, null, null, null, summoned, summoner,
+                    profile))
             {
-                ClearPresentation();
+                if (!IsHumanControlled(summoner))
+                    SpellTrapEffects.AiAutoRespond(this);
+                Notify();
+                return;
             }
+
+            ClearPresentation();
+        }
+
+        void QueueOwnSummonWindowIfLegal(DuelistState summoner, CardInstance summoned)
+        {
+            if (summoner == null || summoned == null) return;
+            var own = SpellTrapEffects.CollectLegalResponseCards(
+                this, summoner, ResponseTiming.MonsterSummoned, summoned);
+            if (own.Count == 0) return;
+            _queuedOwnSummonResponder = summoner;
+            _queuedOwnSummoner = summoner;
+            _queuedOwnSummoned = summoned;
+        }
+
+        /// <summary>After a resolving SS (Reborn, etc.) the summon window may have been queued.</summary>
+        public void FlushQueuedSummonResponses()
+        {
+            if (GameOver || IsAwaitingResponse || IsAwaitingEffectTarget) return;
+            if (TryOpenQueuedOwnSummonWindow()) return;
+            if (_queuedSummons.Count == 0) return;
+            var next = _queuedSummons[0];
+            _queuedSummons.RemoveAt(0);
+            OpenSummonResponseOrContinue(next.summoner, next.summoned);
+        }
+
+        bool TryOpenQueuedOwnSummonWindow()
+        {
+            var who = _queuedOwnSummonResponder;
+            var summoned = _queuedOwnSummoned;
+            var summoner = _queuedOwnSummoner;
+            _queuedOwnSummonResponder = null;
+            _queuedOwnSummoned = null;
+            _queuedOwnSummoner = null;
+            if (who == null || summoned == null || GameOver) return false;
+            var profile = CombatAnimTimings.ForSummon(summoned);
+            if (!OpenResponseWindow(who, ResponseTiming.MonsterSummoned, null, null, null, summoned, summoner,
+                    profile))
+                return false;
+            if (!IsHumanControlled(who))
+                SpellTrapEffects.AiAutoRespond(this);
+            Notify();
+            return true;
+        }
+
+        void FinishSummonResponseWindow()
+        {
+            if (TryOpenQueuedOwnSummonWindow()) return;
+            if (_queuedSummons.Count > 0)
+            {
+                FlushQueuedSummonResponses();
+                return;
+            }
+
+            ClearPresentation();
+            Notify();
         }
 
         /// <summary>
@@ -2188,6 +2501,33 @@ namespace WRLDZ.Duel
             Log($"[{who.Name}] End Phase");
             TextEffects.TextEffectRuntime.FirePhaseTriggers(this, who, TextEffects.EffectTiming.EndPhase);
             if (GameOver) return;
+            if (IsAwaitingEffectTarget)
+            {
+                _endTurnPausedFor = who;
+                Notify();
+                return;
+            }
+
+            FinishEndTurnAfterTriggers(who);
+        }
+
+        /// <summary>
+        /// Continue End Phase after a mandatory trigger pick (turn-player tribute).
+        /// No-op if End Phase is not paused.
+        /// </summary>
+        public void ResumeEndTurnAfterTrigger()
+        {
+            var who = _endTurnPausedFor;
+            if (who == null) return;
+            if (IsAwaitingEffectTarget) return;
+            _endTurnPausedFor = null;
+            if (GameOver) return;
+            FinishEndTurnAfterTriggers(who);
+        }
+
+        void FinishEndTurnAfterTriggers(DuelistState who)
+        {
+            if (who == null) return;
             while (who.Hand.Count > TcgRules.HandSizeLimitEndPhase)
             {
                 var discard = who.Hand[who.Hand.Count - 1];
@@ -2249,7 +2589,9 @@ namespace WRLDZ.Duel
             Notify();
         }
 
-        void DestroyMonster(DuelistState owner, CardInstance card, CardInstance byEffect = null)
+        void DestroyMonster(DuelistState owner, CardInstance card, CardInstance byEffect = null,
+            bool banishIfDestroyed = false, bool destroyedByBattle = false,
+            CardInstance battleDestroyer = null)
         {
             if (owner == null || card == null) return;
             if (byEffect != null &&
@@ -2271,12 +2613,21 @@ namespace WRLDZ.Duel
                         ApplyEffectDamage(owner, card.TokenDestroyedDamage, card.Name);
                     Log($"Token destroyed: {card.Name}");
                 }
+                else if (banishIfDestroyed)
+                {
+                    card.FaceUp = true;
+                    if (!owner.Banished.Contains(card))
+                        owner.Banished.Add(card);
+                    Log($"Destroyed: {card.Name} (banished).");
+                }
                 else
                 {
                     if (!owner.Graveyard.Contains(card))
                         owner.Graveyard.Add(card);
                     Log($"Destroyed: {card.Name}");
-                    MonsterEffects.OnSentFromFieldToGy(this, owner, card, destroyed: true);
+                    MarkSentFromFieldToGy(card, byEffect, destroyedByBattle, battleDestroyer);
+                    MonsterEffects.OnSentFromFieldToGy(this, owner, card, destroyed: true,
+                        destroyedByBattle, battleDestroyer);
                 }
 
                 DuelPresentationPacer.HoldCombatResult();
@@ -2406,7 +2757,8 @@ namespace WRLDZ.Duel
 
         void Notify()
         {
-            FieldSpellEffects.RefreshBoard(this);
+            if (!Ocg.OcgLabDuelHost.IsActive)
+                FieldSpellEffects.RefreshBoard(this);
             LastRulesSnapshot = GameStateSnapshotBuilder.Capture(this);
             OnStateChanged?.Invoke();
         }
@@ -2455,8 +2807,8 @@ namespace WRLDZ.Duel
                     var left = ActivePresentation?.SecondsToImpact ?? PendingResponse.ReactionSeconds;
                     var summon = PendingResponse.Timing == ResponseTiming.MonsterSummoned;
                     return summon
-                        ? $"Summon response {left:0.0}s — Trap Hole / Pass"
-                        : $"Attack response {left:0.0}s — trap / Pass";
+                        ? $"Summon response {left:0.0}s — tap a blinking zone to activate, or Pass"
+                        : $"Attack response {left:0.0}s — tap a blinking zone to activate, or Pass";
                 }
 
                 return "Opponent may respond…";

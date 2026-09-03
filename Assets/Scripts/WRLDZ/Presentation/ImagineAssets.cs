@@ -25,6 +25,8 @@ namespace WRLDZ.Presentation
         public static Sprite BgAuth() => L("bg/bg_auth.png") ?? BgTitle();
         public static Sprite BgHub() => L("bg/bg_hub.png") ?? BgTitle();
         public static Sprite BgMenuVoid() => L("bg/bg_menu_void.png");
+        public static Sprite BgDeckBuilder() =>
+            L("bg/bg_deck_builder.png") ?? BgMenuVoid();
         public static Sprite BgOverworldMap() => L("bg/bg_overworld_map.png");
         /// <summary>Secondary district tile for map corners (Battle City / Ingress).</summary>
         public static Sprite BgOverworldDistrict() => L("bg/bg_overworld_district.png");
@@ -65,6 +67,8 @@ namespace WRLDZ.Presentation
         public static Sprite IconDigizeni() => L("icons/icon_digizeni.png");
         public static Sprite IconDuelCoin() => L("icons/icon_duel_coin.png");
         public static Sprite IconSetEnergy() => L("icons/icon_set_energy.png");
+        public static Sprite IconArtifactOrb() => L("icons/icon_artifact_orb.png");
+        public static Sprite FxSoulDestinyGhost() => L("fx/soul_destiny_ghost.png");
         public static Sprite NaviSpirit() => L("icons/navi_spirit.png");
         public static Sprite IconCompass() => L("icons/icon_compass.png");
         public static Sprite IconDeck() => L("icons/icon_deck.png");
@@ -94,6 +98,12 @@ namespace WRLDZ.Presentation
         public static Sprite IconDuel() => L("icons/icon_duel.png") ?? IconMenu();
         public static Sprite IconVsPvp() => L("icons/icon_vs_pvp.png") ?? IconDuel();
         public static Sprite IconPractice() => L("icons/icon_practice.png") ?? IconDuel();
+        /// <summary>Free View — spirit-eye projector, never the VS AI disk.</summary>
+        public static Sprite IconView() =>
+            L("icons/icon_view.png")
+            ?? IconMillenniumEyeOpen()
+            ?? EmblemSpiritEye()
+            ?? IconPractice();
         public static Sprite IconTome() => L("icons/icon_tome.png") ?? IconStory();
         public static Sprite IconBazaar() => L("icons/icon_bazaar.png") ?? IconGoldSafe();
         public static Sprite IconFilterAll() => L("icons/icon_filter_all.png") ?? IconDeck();
@@ -103,6 +113,9 @@ namespace WRLDZ.Presentation
         public static Sprite IconFilterExtra() => L("icons/icon_filter_extra.png") ?? IconDeck();
         public static Sprite IconFilterFacets() => L("icons/icon_filter_facets.png") ?? IconSettings();
         public static Sprite IconFilterSort() => L("icons/icon_filter_sort.png") ?? IconMenu();
+        public static Sprite IconLimitForbidden() => L("icons/icon_limit_forbidden.png");
+        public static Sprite IconLimitLimited() => L("icons/icon_limit_limited.png");
+        public static Sprite IconLimitSemi() => L("icons/icon_limit_semi.png");
 
         /// <summary>Yugipedia CC-BY attribute medallion (DARK, LIGHT, …).</summary>
         public static Sprite YgoAttribute(string attr)
@@ -207,6 +220,21 @@ namespace WRLDZ.Presentation
             Sliced("ui/panel_modal.png", new Vector4(72, 64, 72, 64))
             ?? PanelHolo();
 
+        public static Sprite PanelDeckMain() =>
+            Sliced("ui/panel_deck_main.png", new Vector4(160, 110, 160, 110))
+            ?? L("ui/panel_deck_main.png")
+            ?? PanelHolo();
+        public static Sprite PanelDeckExtra() =>
+            Sliced("ui/panel_deck_extra.png", new Vector4(160, 110, 160, 110))
+            ?? PanelDeckMain();
+        public static Sprite PanelDeckSide() =>
+            Sliced("ui/panel_deck_side.png", new Vector4(160, 110, 160, 110))
+            ?? PanelDeckMain();
+        public static Sprite PanelInspectSheet() =>
+            Sliced("ui/panel_inspect_sheet.png", new Vector4(80, 80, 80, 80))
+            ?? L("ui/panel_inspect_sheet.png")
+            ?? PanelModal();
+
         public static Sprite BarBottom() =>
             Sliced("ui/bar_bottom.png", new Vector4(24, 12, 24, 12))
             ?? L("ui/bar_bottom.png");
@@ -243,7 +271,7 @@ namespace WRLDZ.Presentation
             ?? L("ui/lp_counter_template.jpg")
             ?? LpBarFrame();
 
-        /// <summary>ATK over DEF point-gauge plate beside monster holos.</summary>
+        /// <summary>ATK over DEF point-gauge plate at the bottom-right of monster holos.</summary>
         public static Sprite StatGaugeTemplate() =>
             L("ui/stat_gauge_swirl.jpg")
             ?? L("ui/stat_gauge_template.jpg")

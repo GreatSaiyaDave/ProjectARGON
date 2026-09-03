@@ -130,8 +130,10 @@ namespace WRLDZ.Data
         StorageBox = 10,
         /// <summary>Reference to <see cref="PlayerInventory.binders"/>[refIndex].</summary>
         Binder = 11,
-        /// <summary>Magical deck box for artifact cards only.</summary>
-        ArtifactDeckBox = 20
+        /// <summary>Magical deck box for artifact cards only (legacy grid occupancy — no longer placed).</summary>
+        ArtifactDeckBox = 20,
+        /// <summary>Timed TCG copy with no on-hand box space. Ghost face + Destiny Board timer.</summary>
+        SoulCard = 30
     }
 
     /// <summary>One item occupying a rectangle in the backpack (RE4-style).</summary>
@@ -145,6 +147,12 @@ namespace WRLDZ.Data
         public int gridW = 1;
         public int gridH = 1;
         public string label = "";
+        /// <summary>Soul card TCG passcode.</summary>
+        public int cardId;
+        /// <summary>Wall-clock expiry. 0 = frozen (home boxes full).</summary>
+        public long expiresUnix;
+        /// <summary>0 common/rare, 1 super/ultra, 2 secret/favorite.</summary>
+        public int rarityBand;
 
         public BackpackItemKind Kind
         {
@@ -253,22 +261,27 @@ namespace WRLDZ.Data
         }
     }
 
-    /// <summary>Magical deck box — artifact cards only (not TCG main deck).</summary>
+    /// <summary>Endless always-on box for artifact (key-item) cards. Never a backpack tile.</summary>
     [Serializable]
     public class ArtifactDeckBoxState
     {
         public bool owned = true;
         public string name = "Artifact Deck Box";
+        public ArtifactInstance[] instances = Array.Empty<ArtifactInstance>();
+        /// <summary>Obsolete: old int ids. Migrated into <see cref="instances"/>.</summary>
         public int[] artifactCardIds = Array.Empty<int>();
-        public int capacity = 40;
-        /// <summary>When true, sits in backpack (2×2); else at home.</summary>
-        public bool atHome = true;
+        /// <summary>Obsolete. Box is endless.</summary>
+        public int capacity = 0;
+        /// <summary>Obsolete. Box is always equipped (0 cells).</summary>
+        public bool atHome;
 
         public void EnsureValid()
         {
+            instances ??= Array.Empty<ArtifactInstance>();
             artifactCardIds ??= Array.Empty<int>();
-            capacity = Mathf.Max(10, capacity);
             if (string.IsNullOrEmpty(name)) name = "Artifact Deck Box";
+            atHome = false;
+            capacity = 0;
         }
     }
 
@@ -446,8 +459,18 @@ namespace WRLDZ.Data
             return b.name;
         }
 
-        /// <summary>Magical box for artifact cards (card form).</summary>
+        /// <summary>Endless always-on box for artifact cards (card form).</summary>
         public ArtifactDeckBoxState artifactDeckBox = new();
+
+        /// <summary>Carried card box used first when receiving street copies. -1 = none.</summary>
+        public int preferredStorageBoxIndex;
+
+        /// <summary>Make Room hold — not a grid cell.</summary>
+        public int pendingReceiveCardId;
+        public int pendingReceiveQty;
+
+        /// <summary>Soul-card pause (duel / Make Room). 0 = running (including while logged out).</summary>
+        public long soulPauseStartedUnix;
 
         /// <summary>
         /// Currency holder pouches always occupy 1 backpack square each when travel pack is active.
@@ -505,7 +528,11 @@ namespace WRLDZ.Data
                 backpack = new BackpackState { capacityTier = 0, unlocked = false },
                 pockets = new AvatarPocketState(),
                 wardrobe = new ClothingWardrobe(),
-                artifactDeckBox = new ArtifactDeckBoxState { owned = false },
+                artifactDeckBox = new ArtifactDeckBoxState { owned = false, instances = Array.Empty<ArtifactInstance>() },
+                preferredStorageBoxIndex = 0,
+                pendingReceiveCardId = 0,
+                pendingReceiveQty = 0,
+                soulPauseStartedUnix = 0,
                 hasDigizeniHolder = true,
                 hasDuelCoinHolder = true,
                 hasSetEnergyHolder = true,
@@ -614,6 +641,10 @@ namespace WRLDZ.Data
             artifactDeckBox.EnsureValid();
             if (hasBackpack && !artifactDeckBox.owned)
                 artifactDeckBox.owned = true;
+            pendingReceiveCardId = Mathf.Max(0, pendingReceiveCardId);
+            pendingReceiveQty = Mathf.Max(0, pendingReceiveQty);
+            if (soulPauseStartedUnix < 0) soulPauseStartedUnix = 0;
+            if (preferredStorageBoxIndex < -1) preferredStorageBoxIndex = -1;
 
             binderCount = binders.Length;
         }
@@ -628,45 +659,16 @@ namespace WRLDZ.Data
             backpack.EnsureValid();
             var list = new List<BackpackItem>();
 
-            void TryAddFixed(BackpackItemKind kind, string label)
+            // Soul cards are payload tiles — keep them. Currencies and the artifact
+            // box are never backpack cargo (they live in the endless Artifact Deck Box).
+            if (backpack.items != null)
             {
-                // Keep existing position if already placed
-                BackpackItem existing = null;
-                if (backpack.items != null)
+                foreach (var it in backpack.items)
                 {
-                    foreach (var it in backpack.items)
-                    {
-                        if (it != null && it.Kind == kind)
-                        {
-                            existing = it;
-                            break;
-                        }
-                    }
+                    if (it != null && it.Kind == BackpackItemKind.SoulCard)
+                        list.Add(it);
                 }
-
-                if (existing != null)
-                {
-                    list.Add(existing);
-                    return;
-                }
-
-                if (!TryFindFreeCell(backpack, 1, 1, out var x, out var y, exclude: list))
-                    return; // no room — leave unplaced until player expands pack
-                list.Add(new BackpackItem
-                {
-                    Kind = kind,
-                    refIndex = -1,
-                    gridX = x,
-                    gridY = y,
-                    gridW = 1,
-                    gridH = 1,
-                    label = label
-                });
             }
-
-            if (hasDigizeniHolder) TryAddFixed(BackpackItemKind.CurrencyDigizeni, "Digizeni Pouch");
-            if (hasDuelCoinHolder) TryAddFixed(BackpackItemKind.CurrencyDuelCoin, "Duel Coin Pouch");
-            if (hasSetEnergyHolder) TryAddFixed(BackpackItemKind.CurrencySetEnergy, "Set Energy Cell");
 
             // Storage boxes marked not-at-home
             for (var i = 0; i < storageBoxes.Length; i++)
@@ -760,45 +762,6 @@ namespace WRLDZ.Data
                     gridH = fp.y,
                     label = b.name
                 });
-            }
-
-            if (artifactDeckBox != null && artifactDeckBox.owned && !artifactDeckBox.atHome)
-            {
-                const int aw = 2, ah = 2;
-                BackpackItem existing = null;
-                if (backpack.items != null)
-                {
-                    foreach (var it in backpack.items)
-                    {
-                        if (it != null && it.Kind == BackpackItemKind.ArtifactDeckBox)
-                        {
-                            existing = it;
-                            break;
-                        }
-                    }
-                }
-
-                if (existing != null)
-                {
-                    list.Add(existing);
-                }
-                else if (TryFindFreeCell(backpack, aw, ah, out var x, out var y, exclude: list))
-                {
-                    list.Add(new BackpackItem
-                    {
-                        Kind = BackpackItemKind.ArtifactDeckBox,
-                        refIndex = 0,
-                        gridX = x,
-                        gridY = y,
-                        gridW = aw,
-                        gridH = ah,
-                        label = artifactDeckBox.name
-                    });
-                }
-                else
-                {
-                    artifactDeckBox.atHome = true;
-                }
             }
 
             backpack.items = list.ToArray();

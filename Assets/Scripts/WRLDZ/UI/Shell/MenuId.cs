@@ -10,6 +10,8 @@ namespace WRLDZ.UI.Shell
         SystemsHub,
         DeckCollection,
         Inventory,
+        /// <summary>Endless Artifact Deck Box (currencies, badges, keys). Nested under BAG except AR SYS.</summary>
+        Artifacts,
         StorySeason,
         FormatSelect,
         /// <summary>Player vs AI create sheet (distance / field size → AR duel).</summary>

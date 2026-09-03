@@ -71,3 +71,10 @@ wrldz_stress*.log
 
 # Crash dumps
 *.blob
+
+# Local-only (kept off GitHub)
+.grok/
+Assets/Screenshots/
+Assets/_Recovery/
+Tools/WRLDZ/edopro-ref/
+Tools/WRLDZ/kaibapro-ref/

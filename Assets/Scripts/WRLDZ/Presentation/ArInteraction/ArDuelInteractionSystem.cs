@@ -442,12 +442,26 @@ namespace WRLDZ.Presentation.ArInteraction
             PlayerDisk?.ApplyLegalHighlights(slots, hover);
             // Arena is cinematic Solid Vision — never a drop / tap target.
             Arena?.ClearLegalHighlights();
+            OppDisk?.ClearLegalHighlights();
+        }
+
+        /// <summary>
+        /// Occupied-zone blink for the local responder's legal Set cards.
+        /// Opponent disk and arena never show which face-down is live.
+        /// </summary>
+        public void ShowResponseActivations(List<LegalIntentService.LegalSlot> slots)
+        {
+            if (Drag != null) Drag.HighlightsActive = slots != null && slots.Count > 0;
+            PlayerDisk?.ApplyLegalHighlights(slots);
+            OppDisk?.ClearLegalHighlights();
+            Arena?.ClearLegalHighlights();
         }
 
         public void ClearLegalPlacements()
         {
             if (Drag != null) Drag.HighlightsActive = false;
             PlayerDisk?.ClearLegalHighlights();
+            OppDisk?.ClearLegalHighlights();
             Arena?.ClearLegalHighlights();
         }
 

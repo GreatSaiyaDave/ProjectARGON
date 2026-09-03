@@ -159,9 +159,11 @@ namespace WRLDZ.UI.Shell
             hg.childForceExpandWidth = true;
             hg.childForceExpandHeight = true;
 
-            WalletChip(strip.transform, ImagineAssets.IconDigizeni(), "Đ");
-            WalletChip(strip.transform, ImagineAssets.IconDuelCoin(), "◎");
-            WalletChip(strip.transform, ImagineAssets.IconSetEnergy(), "⚡");
+            WalletChip(strip.transform, ImagineAssets.IconDigizeni(), "Đ", st, () => ArtifactService.Digizeni);
+            WalletChip(strip.transform, ImagineAssets.IconDuelCoin(), "◎", st, () => ArtifactService.DuelCoin);
+            WalletChip(strip.transform, ImagineAssets.IconSetEnergy(), "⚡", st, () =>
+                ArtifactService.FirstSetEnergyId(AppSession.Ensure().Account?.inventory)
+                ?? ArtifactService.SetEnergyFocus);
 
             var fillHost = FlatPane(body, "Fill", new Color(0.04f, 0.06f, 0.09f, 0.55f));
             FloatingPanel.Place(fillHost, 0.74f, ar ? 0.78f : 0.82f, 1f, ar ? 0.86f : 0.88f);
@@ -187,9 +189,10 @@ namespace WRLDZ.UI.Shell
             st.FillLabel.color = DuelystUi.GoldHot;
         }
 
-        static void WalletChip(Transform parent, Sprite icon, string prefix)
+        static void WalletChip(Transform parent, Sprite icon, string prefix, State st, Func<string> focusDefId)
         {
-            var go = new GameObject("Chip_" + prefix, typeof(RectTransform), typeof(Image), typeof(LayoutElement));
+            var go = new GameObject("Chip_" + prefix, typeof(RectTransform), typeof(Image), typeof(LayoutElement),
+                typeof(Button));
             go.transform.SetParent(parent, false);
             var img = go.GetComponent<Image>();
             var spr = ImagineAssets.HudChip() ?? UiFoundation.WhiteSprite();
@@ -197,6 +200,14 @@ namespace WRLDZ.UI.Shell
             img.type = spr != null && spr.border.sqrMagnitude > 0 ? Image.Type.Sliced : Image.Type.Simple;
             img.color = Color.white;
             go.GetComponent<LayoutElement>().flexibleWidth = 1f;
+            var btn = go.GetComponent<Button>();
+            btn.targetGraphic = img;
+            btn.transition = Selectable.Transition.None;
+            btn.onClick.AddListener(() =>
+            {
+                FreeUiKit.PlaySelect();
+                OpenArtifactBox(st, focusDefId != null ? focusDefId() : null);
+            });
             if (icon != null)
             {
                 var ico = new GameObject("I", typeof(RectTransform), typeof(Image));
@@ -443,6 +454,20 @@ namespace WRLDZ.UI.Shell
             var ar = st.Presentation == UiPresentation.ArDiskHolo;
             var vm = st.Vm;
 
+            AddHeader(st.ListHost, "ON YOU");
+            if (inv?.artifactDeckBox != null && inv.artifactDeckBox.owned)
+            {
+                ItemRow(st.ListHost, ImagineAssets.IconStory(), "Artifact Deck Box",
+                    $"{st.Vm.ArtifactCount} key-item cards  ·  always with you",
+                    false,
+                    () => OpenArtifactBox(st), ar);
+            }
+            else
+            {
+                ItemRow(st.ListHost, ImagineAssets.IconStory(), "Artifact Deck Box",
+                    "Always with you once granted.", false, null, ar);
+            }
+
             AddHeader(st.ListHost, "AT HOME");
             var anyHome = false;
             if (inv?.storageBoxes != null)
@@ -473,15 +498,6 @@ namespace WRLDZ.UI.Shell
                         st.Pick == PickKind.Binder && st.PickIndex == idx,
                         () => Select(st, PickKind.Binder, idx), ar);
                 }
-            }
-
-            if (inv?.artifactDeckBox != null && inv.artifactDeckBox.owned && inv.artifactDeckBox.atHome)
-            {
-                anyHome = true;
-                ItemRow(st.ListHost, ImagineAssets.IconStory(), "Artifact box",
-                    $"{st.Vm.ArtifactCount} artifacts  ·  2×2",
-                    st.Pick == PickKind.Artifact,
-                    () => Select(st, PickKind.Artifact, 0), ar);
             }
 
             if (!anyHome)
@@ -709,10 +725,9 @@ namespace WRLDZ.UI.Shell
             }
             else if (st.Pick == PickKind.Artifact && inv.artifactDeckBox != null)
             {
-                var a = inv.artifactDeckBox;
                 ShowInspect(st, ImagineAssets.IconStory(), "Artifact box",
-                    $"{st.Vm.ArtifactCount} artifacts · {(a.atHome ? "at home" : "in the case")}",
-                    showPack: a.atHome, showUnpack: !a.atHome);
+                    $"{st.Vm.ArtifactCount} artifact cards · always with you",
+                    showPack: false, showUnpack: false);
             }
             else if (st.Pick == PickKind.Deck && inv.deckBoxes != null &&
                      st.PickIndex >= 0 && st.PickIndex < inv.deckBoxes.Length)
@@ -851,6 +866,16 @@ namespace WRLDZ.UI.Shell
             }
         }
 
+        static void OpenArtifactBox(State st, string focusDefId = null)
+        {
+            if (st.Root != null) st.Root.gameObject.SetActive(false);
+            ArtifactBoxScreen.Build(st.ModalHost, () =>
+            {
+                if (st.Root != null) st.Root.gameObject.SetActive(true);
+                st.Refresh?.Invoke();
+            }, st.Presentation, focusDefId);
+        }
+
         static void OpenDeckEditor(State st)
         {
             var acc = AppSession.Ensure().Account;
@@ -933,6 +958,7 @@ namespace WRLDZ.UI.Shell
                     BackpackItemKind.StorageBox => new Color(0.42f, 0.32f, 0.10f, selected ? 0.95f : 0.82f),
                     BackpackItemKind.Binder => new Color(0.12f, 0.32f, 0.42f, selected ? 0.95f : 0.82f),
                     BackpackItemKind.ArtifactDeckBox => new Color(0.38f, 0.16f, 0.40f, selected ? 0.95f : 0.82f),
+                    BackpackItemKind.SoulCard => new Color(0.55f, 0.62f, 0.72f, selected ? 0.95f : 0.80f),
                     BackpackItemKind.CurrencyDigizeni => new Color(0.36f, 0.30f, 0.08f, 0.88f),
                     BackpackItemKind.CurrencyDuelCoin => new Color(0.28f, 0.26f, 0.10f, 0.88f),
                     BackpackItemKind.CurrencySetEnergy => new Color(0.10f, 0.28f, 0.36f, 0.88f),
@@ -941,7 +967,9 @@ namespace WRLDZ.UI.Shell
                 Action tap = pick == PickKind.None
                     ? null
                     : () => Select(st, pick, idx);
-                var label = it.gridW >= 2 ? it.label : null;
+                var label = it.Kind == BackpackItemKind.SoulCard
+                    ? SoulCaption(it)
+                    : (it.gridW >= 2 ? it.label : null);
                 PlaceCell(host, it.gridX, it.gridY, it.gridW, it.gridH, maxW, maxH, tint,
                     it.label, tap, SpriteForPackItem(it), label);
             }
@@ -1007,8 +1035,19 @@ namespace WRLDZ.UI.Shell
             BackpackItemKind.StorageBox => ImagineAssets.IconBag(),
             BackpackItemKind.Binder => ImagineAssets.IconTome(),
             BackpackItemKind.ArtifactDeckBox => ImagineAssets.IconStory(),
+            BackpackItemKind.SoulCard => ImagineAssets.FxSoulDestinyGhost() ?? ImagineAssets.IconSoul(),
             _ => ImagineAssets.IconMenu()
         };
+
+        static string SoulCaption(BackpackItem it)
+        {
+            if (it.expiresUnix <= 0) return "FROZEN";
+            var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            var left = Math.Max(0, it.expiresUnix - now);
+            var h = left / 3600;
+            var m = (left % 3600) / 60;
+            return h > 0 ? $"{h}h {m}m" : $"{m}m";
+        }
 
         static void AddHeader(Transform host, string text)
         {

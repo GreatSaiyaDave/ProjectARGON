@@ -1042,10 +1042,338 @@ namespace WRLDZ.Duel.Rules
                     var treasure = db.Get(1435851);
                     var tp = treasure != null ? CardTextEffectCompiler.Compile(treasure) : null;
                     Check("Corpus: Dragon Treasure compiles Equip +300/+300",
-                        tp != null && tp.ClauseList.Exists(c =>
+                        tp != null && tp.FullyCompiled && tp.ClauseList.Exists(c =>
                             c != null && c.Action == EffectActionKind.EquipThisToTarget &&
                             c.EquipAtkBonus == 300 && c.EquipDefBonus == 300 &&
                             string.Equals(c.RaceFilter, "Dragon", StringComparison.OrdinalIgnoreCase)));
+
+                    var sala = db.Get(32268901);
+                    var sp = sala != null ? CardTextEffectCompiler.Compile(sala) : null;
+                    Check("Corpus: Salamandra FullyCompiled Equip only FIRE +700",
+                        sp != null && sp.FullyCompiled &&
+                        sp.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.EquipThisToTarget &&
+                            c.EquipAtkBonus == 700 &&
+                            string.Equals(c.AttributeFilter, "FIRE", StringComparison.OrdinalIgnoreCase)),
+                        sp == null
+                            ? "null"
+                            : $"full={sp.FullyCompiled} unparsed={string.Join("|", sp.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var sword = db.Get(61854111);
+                    var swp = sword != null ? CardTextEffectCompiler.Compile(sword) : null;
+                    Check("Corpus: Legendary Sword FullyCompiled Equip only Warrior +300/+300",
+                        swp != null && swp.FullyCompiled &&
+                        swp.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.EquipThisToTarget &&
+                            c.EquipAtkBonus == 300 && c.EquipDefBonus == 300 &&
+                            string.Equals(c.RaceFilter, "Warrior", StringComparison.OrdinalIgnoreCase)),
+                        swp == null
+                            ? "null"
+                            : $"full={swp.FullyCompiled} unparsed={string.Join("|", swp.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var axeDef = db.Get(40619825);
+                    var axeProg = axeDef != null ? CardTextEffectCompiler.Compile(axeDef) : null;
+                    Check("Corpus: Axe of Despair FullyCompiled Equip +1000 and GY to top of Deck",
+                        axeProg != null && axeProg.FullyCompiled &&
+                        axeProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.EquipThisToTarget &&
+                            c.EquipAtkBonus == 1000) &&
+                        axeProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.SentFromFieldToGy &&
+                            c.Action == EffectActionKind.PlaceThisOnTopOfDeck &&
+                            c.RequiresTributeCount == 1),
+                        axeProg == null
+                            ? "null"
+                            : $"full={axeProg.FullyCompiled} unparsed={string.Join("|", axeProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var stand = db.Get(56747793);
+                    var standProg = stand != null ? CardTextEffectCompiler.Compile(stand) : null;
+                    Check("Corpus: United We Stand FullyCompiled +800 ATK/DEF per face-up monster",
+                        standProg != null && standProg.FullyCompiled &&
+                        standProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.EquipThisToTarget &&
+                            c.EquipAtkBonus == 800 && c.EquipDefBonus == 800 &&
+                            c.ScaleAmountByControllerMonsters),
+                        standProg == null
+                            ? "null"
+                            : $"full={standProg.FullyCompiled} unparsed={string.Join("|", standProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var mage = db.Get(83746708);
+                    var mageProg = mage != null ? CardTextEffectCompiler.Compile(mage) : null;
+                    Check("Corpus: Mage Power FullyCompiled +500 ATK/DEF per Spell/Trap",
+                        mageProg != null && mageProg.FullyCompiled &&
+                        mageProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.EquipThisToTarget &&
+                            c.EquipAtkBonus == 500 && c.ScaleAmountByControllerSpellTraps));
+
+                    var synStand = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000009,
+                        name = "New Equip (United We Stand shape)",
+                        type = "Spell Card",
+                        race = "Equip",
+                        frameType = "equip",
+                        desc = "The equipped monster gains 800 ATK/DEF for each face-up monster you control."
+                    });
+                    Check("New-card rule: per-monster Equip ATK/DEF compiles without a cardId branch",
+                        synStand != null && synStand.FullyCompiled &&
+                        synStand.ClauseList.Exists(c =>
+                            c != null && c.ScaleAmountByControllerMonsters &&
+                            c.EquipAtkBonus == 800));
+
+                    var synEq = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000006,
+                        name = "New Equip (Salamandra shape)",
+                        type = "Spell Card",
+                        race = "Equip",
+                        frameType = "equip",
+                        desc = "Equip only to a FIRE monster. It gains 700 ATK."
+                    });
+                    Check("New-card rule: Equip-only FIRE +ATK compiles without a cardId branch",
+                        synEq != null && synEq.FullyCompiled &&
+                        synEq.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.EquipThisToTarget &&
+                            c.EquipAtkBonus == 700 &&
+                            string.Equals(c.AttributeFilter, "FIRE", StringComparison.OrdinalIgnoreCase)));
+
+                    var fall = db.Get(32919136);
+                    var fallProg = fall != null ? CardTextEffectCompiler.Compile(fall) : null;
+                    Check("Corpus: Falling Down FullyCompiled opponent-equip take-control",
+                        fallProg != null && fallProg.FullyCompiled &&
+                        fallProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.EquipThisToTarget &&
+                            c.TakeControlOfTarget &&
+                            c.Zone == EffectZoneFilter.OppFaceUpMonsters) &&
+                        fallProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.SelfDestroyUnlessNamedFaceUp &&
+                            c.RequiresControllerNamedCard &&
+                            string.Equals(c.RequiresFaceUpName, "Archfiend",
+                                StringComparison.OrdinalIgnoreCase)) &&
+                        fallProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.StandbyPhase &&
+                            c.OpponentTurnOnly &&
+                            c.Action == EffectActionKind.TakeEffectDamage &&
+                            c.Amount == 800),
+                        fallProg == null
+                            ? "null"
+                            : $"full={fallProg.FullyCompiled} n={fallProg.ClauseList.Count} unparsed={string.Join("|", fallProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var synFall = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000007,
+                        name = "New Equip (Falling Down shape)",
+                        type = "Spell Card",
+                        race = "Equip",
+                        frameType = "equip",
+                        desc =
+                            "Activate this card by targeting an opponent's monster; equip this card to it. Take control of it. Destroy this card unless you control an \"Archfiend\" card. During each of your opponent's Standby Phases: You take 800 damage."
+                    });
+                    Check("New-card rule: Falling Down-shaped text compiles without a cardId branch",
+                        synFall != null && synFall.FullyCompiled &&
+                        synFall.ClauseList.Exists(c =>
+                            c != null && c.TakeControlOfTarget &&
+                            c.Zone == EffectZoneFilter.OppFaceUpMonsters));
+
+                    var rec = db.Get(74848038);
+                    var recProg = rec != null ? CardTextEffectCompiler.Compile(rec) : null;
+                    Check("Corpus: Monster Reincarnation FullyCompiled discard + GY monster add",
+                        recProg != null && recProg.FullyCompiled &&
+                        recProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.AddFromGyToHand &&
+                            c.RequiresDiscardCost &&
+                            c.Zone == EffectZoneFilter.ControllerGyMonsters),
+                        recProg == null
+                            ? "null"
+                            : $"full={recProg.FullyCompiled} n={recProg.ClauseList.Count} unparsed={string.Join("|", recProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var ecto = db.Get(97342942);
+                    var ectoProg = ecto != null ? CardTextEffectCompiler.Compile(ecto) : null;
+                    Check("Corpus: Ectoplasmer FullyCompiled End Phase turn-player tribute + half original ATK",
+                        ectoProg != null && ectoProg.FullyCompiled &&
+                        ectoProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.EndPhase &&
+                            c.Action == EffectActionKind.InflictDamageHalfTributedAtk &&
+                            c.RequiresTributeCount == 1 &&
+                            c.TributeFaceUpOnly &&
+                            c.TurnPlayerTributes &&
+                            c.StaysOnField),
+                        ectoProg == null
+                            ? "null"
+                            : $"full={ectoProg.FullyCompiled} n={ectoProg.ClauseList.Count} unparsed={string.Join("|", ectoProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var synEcto = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000010,
+                        name = "New Continuous (Ectoplasmer shape)",
+                        type = "Spell Card",
+                        race = "Continuous",
+                        frameType = "spell",
+                        desc =
+                            "Once per turn, during each player's End Phase: The turn player must Tribute 1 face-up monster, and if they do, inflict damage to their opponent equal to half the original ATK of the Tributed monster."
+                    });
+                    Check("New-card rule: End Phase turn-player tribute + half original ATK compiles without a cardId branch",
+                        synEcto != null && synEcto.FullyCompiled &&
+                        synEcto.ClauseList.Exists(c =>
+                            c != null &&
+                            c.TurnPlayerTributes &&
+                            c.TributeFaceUpOnly &&
+                            c.Action == EffectActionKind.InflictDamageHalfTributedAtk));
+
+                    var levelLimit = db.Get(3136426);
+                    var llProg = levelLimit != null ? CardTextEffectCompiler.Compile(levelLimit) : null;
+                    Check("Corpus: Level Limit - Area B leftover unique is not FullyCompiled",
+                        llProg == null || !llProg.FullyCompiled);
+
+                    var jam = db.Get(21770260);
+                    var jamProg = jam != null ? CardTextEffectCompiler.Compile(jam) : null;
+                    Check("Corpus: Jam Breeding Machine leftover unique is not FullyCompiled",
+                        jamProg == null || !jamProg.FullyCompiled);
+
+                    var toon = db.Get(15259703);
+                    var toonProg = toon != null ? CardTextEffectCompiler.Compile(toon) : null;
+                    Check("Corpus: Toon World FullyCompiled pay-1000 Activate",
+                        toonProg != null && toonProg.FullyCompiled &&
+                        toonProg.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.Activate && c.PayLpAmount == 1000),
+                        toonProg == null
+                            ? "null"
+                            : $"full={toonProg.FullyCompiled} unparsed={string.Join("|", toonProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var synToon = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000011,
+                        name = "New Continuous (Toon World shape)",
+                        type = "Spell Card",
+                        race = "Continuous",
+                        desc = "Activate this card by paying 1000 LP."
+                    });
+                    Check("New-card rule: pay-LP Continuous Activate compiles without a cardId branch",
+                        synToon != null && synToon.FullyCompiled &&
+                        synToon.ClauseList.Exists(c => c != null && c.PayLpAmount == 1000));
+
+                    var laby = db.Get(66526672);
+                    var labyProg = laby != null ? CardTextEffectCompiler.Compile(laby) : null;
+                    Check("Corpus: Labyrinth of Nightmare FullyCompiled End Phase turn-player positions",
+                        labyProg != null && labyProg.FullyCompiled &&
+                        labyProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.EndPhase &&
+                            c.TurnPlayerIsSubject &&
+                            c.Action == EffectActionKind.ChangeBattlePosition));
+
+                    var burn = db.Get(24294108);
+                    var burnProg = burn != null ? CardTextEffectCompiler.Compile(burn) : null;
+                    Check("Corpus: Burning Land FullyCompiled destroy Field Spells + turn-player Standby damage",
+                        burnProg != null && burnProg.FullyCompiled &&
+                        burnProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Activate &&
+                            c.Action == EffectActionKind.Destroy &&
+                            c.Zone == EffectZoneFilter.FieldSpellsOnField) &&
+                        burnProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.StandbyPhase &&
+                            c.TurnPlayerIsSubject &&
+                            c.Action == EffectActionKind.TakeEffectDamage &&
+                            c.Amount == 500),
+                        burnProg == null
+                            ? "null"
+                            : $"full={burnProg.FullyCompiled} unparsed={string.Join("|", burnProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var grav = db.Get(85742772);
+                    var gravProg = grav != null ? CardTextEffectCompiler.Compile(grav) : null;
+                    Check("Corpus: Gravity Bind FullyCompiled Level 4+ cannot attack",
+                        gravProg != null && gravProg.FullyCompiled &&
+                        gravProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ContinuousCannotAttack &&
+                            c.AmountIsLevel && c.Amount == 4));
+
+                    var ibar = db.Get(23615409);
+                    var ibProg = ibar != null ? CardTextEffectCompiler.Compile(ibar) : null;
+                    Check("Corpus: Insect Barrier FullyCompiled opponent Insect cannot attack",
+                        ibProg != null && ibProg.FullyCompiled &&
+                        ibProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ContinuousCannotAttack &&
+                            string.Equals(c.RaceFilter, "Insect", StringComparison.OrdinalIgnoreCase) &&
+                            c.Side == EffectSide.Opponent));
+
+                    var mop = db.Get(44656491);
+                    var mopProg = mop != null ? CardTextEffectCompiler.Compile(mop) : null;
+                    Check("Corpus: Messenger of Peace FullyCompiled ATK≥1500 lock + pay 100 or destroy",
+                        mopProg != null && mopProg.FullyCompiled &&
+                        mopProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ContinuousCannotAttack &&
+                            c.Amount == 1500) &&
+                        mopProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.PayLpOrDestroyThis &&
+                            c.PayLpAmount == 100),
+                        mopProg == null
+                            ? "null"
+                            : $"full={mopProg.FullyCompiled} unparsed={string.Join("|", mopProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var call = db.Get(97077563);
+                    var callProg = call != null ? CardTextEffectCompiler.Compile(call) : null;
+                    Check("Corpus: Call of the Haunted FullyCompiled GY SS + leave-field destroy",
+                        callProg != null && callProg.FullyCompiled &&
+                        callProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.SpecialSummonFromGy &&
+                            c.DestroyHostWhenThisLeaves &&
+                            !c.SummonInDefense));
+
+                    var soul = db.Get(92924317);
+                    var soulProg = soul != null ? CardTextEffectCompiler.Compile(soul) : null;
+                    Check("Corpus: Soul Resurrection FullyCompiled Normal Monster GY SS in Defense",
+                        soulProg != null && soulProg.FullyCompiled &&
+                        soulProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.SpecialSummonFromGy &&
+                            c.SummonInDefense &&
+                            c.RequiresNormalMonster));
+
+                    var skill = db.Get(82732705);
+                    var skillProg = skill != null ? CardTextEffectCompiler.Compile(skill) : null;
+                    Check("Corpus: Skill Drain leftover unique is not FullyCompiled",
+                        skillProg == null || !skillProg.FullyCompiled);
+
+                    var warrior = db.Get(95281259);
+                    var wProg = warrior != null ? CardTextEffectCompiler.Compile(warrior) : null;
+                    Check("Corpus: The Warrior Returning Alive FullyCompiled Warrior GY add",
+                        wProg != null && wProg.FullyCompiled &&
+                        wProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.AddFromGyToHand &&
+                            c.Zone == EffectZoneFilter.ControllerGyMonsters));
+
+                    var mask = db.Get(28933734);
+                    var maskProg = mask != null ? CardTextEffectCompiler.Compile(mask) : null;
+                    Check("Corpus: Mask of Darkness FullyCompiled Flip Trap GY add",
+                        maskProg != null && maskProg.FullyCompiled &&
+                        maskProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Flip &&
+                            c.Action == EffectActionKind.AddFromGyToHand &&
+                            c.Zone == EffectZoneFilter.ControllerGyTraps));
+
+                    var spellRepro = db.Get(29228529);
+                    var srProg = spellRepro != null ? CardTextEffectCompiler.Compile(spellRepro) : null;
+                    Check("Corpus: Spell Reproduction leftover send-2 is not FullyCompiled",
+                        srProg != null && !srProg.FullyCompiled);
+
+                    var poison = db.Get(40320754);
+                    var poisonProg = poison != null ? CardTextEffectCompiler.Compile(poison) : null;
+                    Check("Corpus: Lord Poison battle-destroyed GY SS is not a free ignition",
+                        poisonProg != null && !poisonProg.FullyCompiled);
 
                     var remedy = db.Get(11868825);
                     var rp = remedy != null ? CardTextEffectCompiler.Compile(remedy) : null;
@@ -1277,6 +1605,186 @@ namespace WRLDZ.Duel.Rules
                 trap.SetThisTurn = false;
             }
 
+            // ── Bottomless Trap Hole (summon destroy + banish, not a target) ──
+            {
+                var engine = new DuelEngine();
+                var player = new DuelistState("You", true) { LifePoints = 8000 };
+                var trapDef = new CardDef
+                {
+                    id = 29401950,
+                    name = "Bottomless Trap Hole",
+                    type = "Trap Card",
+                    race = "Normal",
+                    desc =
+                        "When your opponent Summons a monster(s) with 1500 or more ATK: Destroy that monster(s) with 1500 or more ATK, and if you do, banish it."
+                };
+                var prog = CardTextEffectCompiler.Compile(trapDef);
+                Check("Bottomless Trap Hole FullyCompiled",
+                    prog != null && prog.FullyCompiled,
+                    prog == null
+                        ? "null"
+                        : $"full={prog.FullyCompiled} unparsed={string.Join("|", prog.UnparsedFragments ?? Array.Empty<string>())}");
+                Check("Bottomless compiles as summon destroy+banish ATK 1500, not a target",
+                    prog != null && prog.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Timing == EffectTiming.OpponentNormalOrFlipSummon &&
+                        c.Action == EffectActionKind.Destroy &&
+                        c.Amount == 1500 &&
+                        c.BanishIfDestroyed &&
+                        !c.RequiresTargetChoice));
+                var trap = new CardInstance
+                {
+                    InstanceId = 9002,
+                    CardId = 29401950,
+                    FaceUp = false,
+                    SetThisTurn = false,
+                    Def = trapDef
+                };
+                player.SpellTrapZones[0].Occupant = trap;
+                var summonedHi = MockMonster(1800, 1000, BattlePosition.Attack, true);
+                var summonedLo = MockMonster(1400, 1200, BattlePosition.Attack, true);
+                Check("Bottomless legal vs ATK 1800 summon",
+                    SpellTrapEffects.IsLegalResponseCard(engine, player, trap,
+                        ResponseTiming.MonsterSummoned, summonedHi));
+                Check("Bottomless illegal vs ATK 1400 summon",
+                    !SpellTrapEffects.IsLegalResponseCard(engine, player, trap,
+                        ResponseTiming.MonsterSummoned, summonedLo));
+                trap.SetThisTurn = true;
+                Check("Bottomless illegal same-turn Set",
+                    !SpellTrapEffects.IsLegalResponseCard(engine, player, trap,
+                        ResponseTiming.MonsterSummoned, summonedHi));
+                trap.SetThisTurn = false;
+            }
+
+            {
+                var adhesionDef = new CardDef
+                {
+                    id = 62325062,
+                    name = "Adhesion Trap Hole",
+                    type = "Trap Card",
+                    race = "Normal",
+                    desc = "When your opponent Summons a monster(s): Halve that monster(s)'s original ATK."
+                };
+                var ap = CardTextEffectCompiler.Compile(adhesionDef);
+                Check("Adhesion Trap Hole FullyCompiled halve original ATK, answers SS",
+                    ap != null && ap.FullyCompiled &&
+                    ap.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.HalveOriginalAtk &&
+                        c.AnswersSpecialSummon && !c.RequiresTargetChoice));
+                var torrDef = new CardDef
+                {
+                    id = 53582587,
+                    name = "Torrential Tribute",
+                    type = "Trap Card",
+                    race = "Normal",
+                    desc = "When a monster(s) is Summoned: Destroy all monsters on the field."
+                };
+                var tp = CardTextEffectCompiler.Compile(torrDef);
+                Check("Torrential Tribute FullyCompiled destroy-all, answers SS and own summon",
+                    tp != null && tp.FullyCompiled &&
+                    tp.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.Destroy &&
+                        c.Zone == EffectZoneFilter.FieldMonsters &&
+                        c.AnswersSpecialSummon && c.AnswersControllerSummon));
+                var eatDef = new CardDef
+                {
+                    id = 42578427,
+                    name = "Eatgaboon",
+                    type = "Trap Card",
+                    race = "Normal",
+                    desc =
+                        "If the ATK of a monster summoned by your opponent (excluding Special Summon) is 500 points or less, the monster is destroyed."
+                };
+                var ep = CardTextEffectCompiler.Compile(eatDef);
+                Check("Eatgaboon FullyCompiled opponent NS/FS ATK ≤ 500, not SS",
+                    ep != null && ep.FullyCompiled &&
+                    ep.ClauseList.Exists(c =>
+                        c != null && c.AmountIsAtkMax && c.Amount == 500 &&
+                        !c.AnswersSpecialSummon));
+                var tokDef = new CardDef
+                {
+                    id = 83675475,
+                    name = "Token Feastevil",
+                    type = "Trap Card",
+                    race = "Normal",
+                    desc =
+                        "When a Token(s) is Special Summoned: Destroy as many Tokens on the field as possible, and if you do, inflict 300 damage to your opponent for each Token destroyed."
+                };
+                var tokp = CardTextEffectCompiler.Compile(tokDef);
+                Check("Token Feastevil FullyCompiled destroy tokens + 300 each",
+                    tokp != null && tokp.FullyCompiled &&
+                    tokp.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.DestroyTokensInflictPer &&
+                        c.RequiresSummonedIsToken && c.Amount == 300));
+                var misDef = new CardDef
+                {
+                    id = 58392024,
+                    name = "Mispolymerization",
+                    type = "Trap Card",
+                    race = "Normal",
+                    desc =
+                        "Activate only when a Fusion Monster is Special Summoned. Return all face-up Fusion Monsters to their respective Extra Decks."
+                };
+                var mp = CardTextEffectCompiler.Compile(misDef);
+                Check("Mispolymerization FullyCompiled bounce face-up Fusions",
+                    mp != null && mp.FullyCompiled &&
+                    mp.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.ReturnAllFaceUpFusionsToExtra &&
+                        c.RequiresSummonedIsFusion));
+
+                var slateDef = new CardDef
+                {
+                    id = 78636495,
+                    name = "Slate Warrior",
+                    type = "Flip Effect Monster",
+                    desc =
+                        "FLIP: This card gains 500 ATK and DEF.\nIf this card is destroyed by battle: The monster that destroyed it loses 500 ATK and DEF."
+                };
+                var slp = CardTextEffectCompiler.Compile(slateDef);
+                Check("Slate Warrior FullyCompiled Flip lingering + battle destroyer lingering",
+                    slp != null && slp.FullyCompiled &&
+                    slp.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.Flip &&
+                        c.Action == EffectActionKind.ApplyLingeringAtkDef && c.Amount == 500) &&
+                    slp.ClauseList.Exists(c =>
+                        c != null && c.RequiresThisDestroyedByBattle &&
+                        c.ImplicitTargetIsBattleDestroyer && c.Amount == -500),
+                    slp == null
+                        ? "null"
+                        : $"full={slp.FullyCompiled} unparsed={string.Join("|", slp.UnparsedFragments ?? Array.Empty<string>())}");
+
+                var maliceDef = new CardDef
+                {
+                    id = 72657739,
+                    name = "Malice Doll of Demise",
+                    type = "Effect Monster",
+                    desc =
+                        "During your next Standby Phase after this card was sent from the field to the Graveyard by the effect of a Continuous Spell Card: Special Summon this card from the Graveyard."
+                };
+                var mlp = CardTextEffectCompiler.Compile(maliceDef);
+                Check("Malice Doll FullyCompiled next Standby SS after Continuous Spell send",
+                    mlp != null && mlp.FullyCompiled &&
+                    mlp.ClauseList.Exists(c =>
+                        c != null && c.ResolvesFromGy && c.RequiresSentByContinuousSpell &&
+                        c.RequiresNextControllerStandby &&
+                        c.Action == EffectActionKind.SpecialSummonFromGy));
+
+                var yomiDef = new CardDef
+                {
+                    id = 51534754,
+                    name = "Yomi Ship",
+                    type = "Effect Monster",
+                    desc =
+                        "If this card is destroyed by battle and sent to the GY: Destroy the monster that destroyed this card."
+                };
+                var yp = CardTextEffectCompiler.Compile(yomiDef);
+                Check("Yomi Ship FullyCompiled destroy the battle destroyer",
+                    yp != null && yp.FullyCompiled &&
+                    yp.ClauseList.Exists(c =>
+                        c != null && c.ImplicitTargetIsBattleDestroyer &&
+                        c.Action == EffectActionKind.Destroy));
+            }
+
             // ── ERAZ band table / format tray ──
             {
                 Check("ERAZ: original exists", ErazFormat.Band(ErazFormat.Original) != null);
@@ -1348,6 +1856,11 @@ namespace WRLDZ.Duel.Rules
                     Check("DeckRules: Ha Des rejected",
                         !ErazDeckRules.CanAddToDeck(haDes, 0, ErazFormat.Original, out var haMsg)
                         && haMsg.IndexOf("not implemented", StringComparison.OrdinalIgnoreCase) >= 0);
+                    Check("DeckRules: labOpen allows unimplemented Ha Des",
+                        ErazDeckRules.CanAddToDeck(haDes, 0, ErazFormat.Original, out _, labOpen: true));
+                    Check("DeckRules: labOpen still copy-caps at 3",
+                        !ErazDeckRules.CanAddToDeck(haDes, 3, ErazFormat.Original, out var labCapMsg, labOpen: true)
+                        && labCapMsg.IndexOf("Copy", StringComparison.OrdinalIgnoreCase) >= 0);
                 }
                 finally
                 {
@@ -1417,6 +1930,32 @@ namespace WRLDZ.Duel.Rules
                 {
                     CardEffectStatus.ExcludeUnimplementedFromDecks = prev;
                 }
+            }
+
+            // ── TCG pool + Advanced banlist (era decks keep 3-of) ──
+            {
+                Check("TCG pool file is loaded", TcgLegalPool.IsLoaded, $"count={TcgLegalPool.Count}");
+                Check("TCG pool includes Blue-Eyes 89631139", TcgLegalPool.IsTcgPrint(89631139));
+                Check("TCG pool flags Ankuriboh 595626 as OCG-only", TcgLegalPool.IsOcgOnly(595626));
+                var ocgFake = new CardDef
+                {
+                    id = 595626,
+                    name = "Ankuriboh",
+                    type = "Effect Monster",
+                    desc = "OCG-only fixture."
+                };
+                Check("DeckRules: OCG-only refused even in lab",
+                    !ErazDeckRules.CanAddToDeck(ocgFake, 0, ErazFormat.Original, out var ocgMsg, labOpen: true)
+                    && ocgMsg.IndexOf("OCG", StringComparison.OrdinalIgnoreCase) >= 0,
+                    ocgMsg);
+                Check("Advanced: Pot of Greed is Forbidden (0 copies)",
+                    OfficialDataSources.MaxCopies(55144522, ErazFormat.Modern) == 0);
+                Check("Original era: Pot of Greed still 3-of",
+                    OfficialDataSources.MaxCopies(55144522, ErazFormat.Original) == 3);
+                Check("Banlist file effectiveDate is 2026.05 TCG",
+                    (OfficialDataSources.LoadBanlist().effectiveDate ?? "")
+                    .IndexOf("2026.05", StringComparison.Ordinal) >= 0,
+                    OfficialDataSources.LoadBanlist().effectiveDate);
             }
 
             sb.AppendLine($"--- {pass} passed, {fail} failed ---");

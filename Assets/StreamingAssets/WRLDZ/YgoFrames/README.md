@@ -8,7 +8,7 @@ These files were downloaded via the Fandom MediaWiki API for use as **blank card
 
 | Folder | Contents |
 |--------|----------|
-| `Templates/` | `Card-normal/effect/spell/trap/fusion/synchro/xyz/link/ritual/token.png` + gods |
+| `Templates/` | `Card-normal/effect/spell/trap/fusion/synchro/xyz/link/ritual/token.png` + gods + `Card-artifact.png` (grey spell anatomy, Artifact orb) |
 | `Backs/` | Card back artworks |
 | `Textures/` | Foil / paper textures |
 | `Rarities/` | Foil overlays |

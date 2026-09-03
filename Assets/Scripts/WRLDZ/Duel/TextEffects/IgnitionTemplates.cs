@@ -206,15 +206,28 @@ namespace WRLDZ.Duel.TextEffects
                 clause.Zone = EffectZoneFilter.AnyCardOnField;
             }
             else if (Regex.IsMatch(act, @"target 1 monster in (?:your|the) (?:GY|Graveyard)",
+                         RegexOptions.IgnoreCase) ||
+                     Regex.IsMatch(act,
+                         @"target 1 (\w+)(?:-Type)? monster in (?:your|the) (?:GY|Graveyard)",
                          RegexOptions.IgnoreCase))
             {
                 clause.RequiresTargetChoice = true;
                 clause.Zone = EffectZoneFilter.ControllerGyMonsters;
+                var raced = Regex.Match(act,
+                    @"target 1 (\w+)(?:-Type)? monster in (?:your|the) (?:GY|Graveyard)",
+                    RegexOptions.IgnoreCase);
+                if (raced.Success)
+                    clause.RaceFilter = raced.Groups[1].Value;
             }
             else if (Regex.IsMatch(act, @"target 1 Spell in your GY", RegexOptions.IgnoreCase))
             {
                 clause.RequiresTargetChoice = true;
                 clause.Zone = EffectZoneFilter.ControllerGySpells;
+            }
+            else if (Regex.IsMatch(act, @"target 1 Trap in your GY", RegexOptions.IgnoreCase))
+            {
+                clause.RequiresTargetChoice = true;
+                clause.Zone = EffectZoneFilter.ControllerGyTraps;
             }
             else if (Regex.IsMatch(act,
                          @"target 1 (?:face-up )?monster your opponent controls",
@@ -397,7 +410,7 @@ namespace WRLDZ.Duel.TextEffects
                 clause.Action = EffectActionKind.AddFromGyToHand;
                 clause.RequiresTargetChoice = true;
                 if (clause.Zone == EffectZoneFilter.None)
-                    clause.Zone = EffectZoneFilter.ControllerGySpells;
+                    return false;
                 return true;
             }
 

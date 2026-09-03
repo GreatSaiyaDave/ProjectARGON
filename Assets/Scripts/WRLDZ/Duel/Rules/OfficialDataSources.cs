@@ -114,8 +114,26 @@ namespace WRLDZ.Duel.Rules
             _ => TcgRules.MaxCopiesPerCard
         };
 
-        /// <summary>Era-aware copy cap; currently delegates to global Advanced stub.</summary>
-        public static int MaxCopies(int passcode, string eraId) => MaxCopies(passcode);
+        /// <summary>
+        /// Advanced / Modern constructed uses the current TCG banlist.
+        /// Historical ERAZ bands keep 3-of until that era's end-of-format list is loaded.
+        /// </summary>
+        public static int MaxCopies(int passcode, string eraId)
+        {
+            if (UsesAdvancedBanlist(eraId))
+                return MaxCopies(passcode);
+            return TcgRules.MaxCopiesPerCard;
+        }
+
+        public static bool UsesAdvancedBanlist(string eraId)
+        {
+            if (string.IsNullOrEmpty(eraId)) return true;
+            if (string.Equals(eraId, ErazFormat.Modern, StringComparison.OrdinalIgnoreCase))
+                return true;
+            if (string.Equals(eraId, "advanced", StringComparison.OrdinalIgnoreCase))
+                return true;
+            return false;
+        }
 
         public static OfficialCardRecord FromCardDef(CardDef def)
         {

@@ -92,13 +92,8 @@ namespace WRLDZ.Core
             }
 
             acc.EnsureProgress();
-            if (acc.progress.digizeni < item.PriceDigi)
-            {
-                error = $"Need Đ{item.PriceDigi} (have {acc.progress.digizeni}).";
+            if (!ArtifactService.TrySpend(acc, ArtifactService.Digizeni, item.PriceDigi, out error))
                 return false;
-            }
-
-            acc.progress.digizeni -= item.PriceDigi;
             acc.inventory.wardrobe.Grant(item.Id);
             Persist(acc);
             return true;
@@ -189,13 +184,8 @@ namespace WRLDZ.Core
 
             var price = SewPrice(extra);
             acc.EnsureProgress();
-            if (acc.progress.digizeni < price)
-            {
-                error = $"Need Đ{price} (have {acc.progress.digizeni}).";
+            if (!ArtifactService.TrySpend(acc, ArtifactService.Digizeni, price, out error))
                 return false;
-            }
-
-            acc.progress.digizeni -= price;
             acc.inventory.wardrobe.SetSewnExtra(item.Id, extra + 1);
             SyncPockets(acc);
             Persist(acc);

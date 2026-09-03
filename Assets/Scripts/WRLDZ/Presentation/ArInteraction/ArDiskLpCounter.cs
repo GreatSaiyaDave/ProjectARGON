@@ -117,12 +117,10 @@ namespace WRLDZ.Presentation.ArInteraction
             t.alignment = align;
             t.raycastTarget = false;
             t.text = text ?? "";
-            t.fontSize = size;
-            t.resizeTextForBestFit = true;
-            t.resizeTextMinSize = Mathf.Max(12, size / 2);
-            t.resizeTextMaxSize = size;
-            t.horizontalOverflow = HorizontalWrapMode.Wrap;
-            t.verticalOverflow = VerticalWrapMode.Truncate;
+            t.fontSize = Mathf.Max(size, 96);
+            t.resizeTextForBestFit = false;
+            t.horizontalOverflow = HorizontalWrapMode.Overflow;
+            t.verticalOverflow = VerticalWrapMode.Overflow;
             t.alignByGeometry = true;
             var o = t.GetComponent<Outline>();
             if (o != null)

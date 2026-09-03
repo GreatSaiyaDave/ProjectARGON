@@ -48,14 +48,9 @@ namespace WRLDZ.Core
             // Set before EnsureValid — SyncBackpackOccupancy otherwise force-homes 4×3 boxes.
             inv.labCarryAllStorage = true;
             inv.EnsureValid();
-            var travelDirty = KeepCatalogOnHand(inv);
-            if (IsGranted(acc) && inv.TotalStorageUsed() >= db.Count)
-            {
-                travelDirty |= KeepCatalogOnHand(inv);
-                if (travelDirty)
-                    LocalAccountStore.UpdateAccount(acc);
-                return 0;
-            }
+            KeepCatalogOnHand(inv);
+            // Always top up to CopiesPerCard. The granted flag + "owned ≥ unique cards"
+            // used to skip this and leave the test user 1-of-each.
 
             // Multiple open deck boxes for select-deck UI testing
             if (inv.deckBoxSlotCount < 3)

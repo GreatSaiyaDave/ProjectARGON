@@ -17,6 +17,9 @@ namespace WRLDZ.Duel
     {
         public static DuelCommandResult Execute(DuelEngine engine, DuelistState who, DuelIntent intent)
         {
+            if (Ocg.OcgLabDuelHost.IsActive && Ocg.OcgLabDuelHost.Current != null)
+                return Ocg.OcgLabDuelHost.Current.TryExecute(who, intent);
+
             if (engine == null || who == null || intent == null || intent.Kind == DuelIntentKind.None)
                 return DuelCommandResult.Fail(intent, "No move declared.");
 

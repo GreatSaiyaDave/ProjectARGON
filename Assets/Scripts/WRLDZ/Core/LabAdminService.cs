@@ -73,15 +73,18 @@ namespace WRLDZ.Core
             p.storyModeComplete = true;
             p.level = PlayerProgress.SoftLevelCap;
             p.xp = 0;
-            p.digizeni = Mathf.Max(p.digizeni, AdminCurrency);
-            p.duelCoin = Mathf.Max(p.duelCoin, AdminCurrency);
-            p.setEnergy = Mathf.Max(p.setEnergy, AdminCurrency);
+            var digi = Mathf.Max(p.digizeni, AdminCurrency);
+            var coins = Mathf.Max(p.duelCoin, AdminCurrency);
+            var se = Mathf.Max(p.setEnergy, AdminCurrency);
+            ArtifactService.SetQty(p, acc.inventory, ArtifactService.Digizeni, digi);
+            ArtifactService.SetQty(p, acc.inventory, ArtifactService.DuelCoin, coins);
+            ArtifactService.SetQty(p, acc.inventory, ArtifactService.SetEnergyId("LOB"), se);
             p.onboardingPrologueDone = true;
             p.onboardingKuribohChosen = true;
             p.onboardingStarterGranted = true;
             p.onboardingTutorialDuelDone = true;
             p.onboardingComplete = true;
-            ErazProgress.GrantTutorialBadge(p);
+            ErazProgress.GrantTutorialBadge(acc);
             if (p.kuribohTeam == 0)
                 p.kuribohTeam = (int)KuribohTeam.Kuribandit;
 

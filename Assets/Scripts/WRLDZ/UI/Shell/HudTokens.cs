@@ -121,6 +121,7 @@ namespace WRLDZ.UI.Shell
             }
 
             acc.EnsureProgress();
+            acc.EnsureInventory();
             var p = acc.progress;
             p.EnsureValid();
             var team = p.Team != KuribohTeam.None

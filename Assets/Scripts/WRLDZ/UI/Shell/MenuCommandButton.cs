@@ -20,11 +20,11 @@ namespace WRLDZ.UI.Shell
             Danger = 3
         }
 
-        // Glass fills — dark enough for cream type, open enough to read the world.
-        public static readonly Color FillPrimary = new(0.10f, 0.32f, 0.44f, 0.48f);
-        public static readonly Color FillSecondary = new(0.10f, 0.14f, 0.20f, 0.42f);
-        public static readonly Color FillGold = new(0.32f, 0.24f, 0.06f, 0.50f);
-        public static readonly Color FillDanger = new(0.42f, 0.10f, 0.14f, 0.50f);
+        // Glass fills — dense enough to read as a chip, under the 0.72 smoke-test cap.
+        public static readonly Color FillPrimary = new(0.10f, 0.36f, 0.50f, 0.68f);
+        public static readonly Color FillSecondary = new(0.08f, 0.12f, 0.18f, 0.68f);
+        public static readonly Color FillGold = new(0.42f, 0.32f, 0.08f, 0.68f);
+        public static readonly Color FillDanger = new(0.50f, 0.12f, 0.16f, 0.68f);
         public static readonly Color TitleInk = new(0.96f, 0.96f, 0.94f, 1f);
         public static readonly Color BlurbInk = new(0.78f, 0.86f, 0.94f, 1f);
         public static readonly Color EdgePrimary = new(0.35f, 0.78f, 0.90f, 1f);
@@ -33,7 +33,8 @@ namespace WRLDZ.UI.Shell
         public static readonly Color EdgeDanger = new(0.92f, 0.36f, 0.40f, 1f);
 
         public static Button Create(Transform parent, string title, Action onClick,
-            Kind kind = Kind.Primary, string blurb = null, bool centerTitle = false)
+            Kind kind = Kind.Primary, string blurb = null, bool centerTitle = false,
+            bool plated = false)
         {
             FreeUiKit.EnsureLoaded();
             var edge = EdgeFor(kind);
@@ -44,22 +45,32 @@ namespace WRLDZ.UI.Shell
             go.transform.SetParent(parent, false);
 
             var face = go.GetComponent<Image>();
-            face.sprite = UiFoundation.WhiteSprite();
-            face.type = Image.Type.Simple;
-            face.color = fill;
+            var plate = plated ? PlateFor(kind, wide: !string.IsNullOrEmpty(blurb) || !centerTitle) : null;
+            if (plate != null)
+            {
+                face.sprite = plate;
+                face.type = plate.border.sqrMagnitude > 0.1f ? Image.Type.Sliced : Image.Type.Simple;
+                face.color = Color.white;
+            }
+            else
+            {
+                face.sprite = UiFoundation.WhiteSprite();
+                face.type = Image.Type.Simple;
+                face.color = fill;
+                var ol = go.AddComponent<Outline>();
+                ol.effectColor = new Color(edge.r, edge.g, edge.b, 0.70f);
+                ol.effectDistance = new Vector2(1.4f, -1.4f);
+                ol.useGraphicAlpha = false;
+            }
             face.raycastTarget = true;
 
-            var ol = go.AddComponent<Outline>();
-            ol.effectColor = new Color(edge.r, edge.g, edge.b, 0.70f);
-            ol.effectDistance = new Vector2(1.4f, -1.4f);
-            ol.useGraphicAlpha = false;
-
             var le = go.GetComponent<LayoutElement>();
-            le.minHeight = string.IsNullOrEmpty(blurb) ? 50f : 64f;
+            le.minHeight = string.IsNullOrEmpty(blurb) ? 56f : 68f;
             le.preferredHeight = le.minHeight;
             le.flexibleWidth = 1f;
+            le.flexibleHeight = 0f;
 
-            if (!centerTitle)
+            if (!centerTitle && plate == null)
             {
                 var rail = Solid(go.transform, "Rail", edge);
                 var rrt = rail.rectTransform;
@@ -129,6 +140,28 @@ namespace WRLDZ.UI.Shell
             _ => FillPrimary
         };
 
+        static Sprite PlateFor(Kind kind, bool wide)
+        {
+            if (wide)
+            {
+                return kind switch
+                {
+                    Kind.Gold => ImagineAssets.BtnGold() ?? ImagineAssets.PanelHolo(),
+                    Kind.Danger => ImagineAssets.BtnDanger(),
+                    Kind.Secondary => ImagineAssets.BtnSecondary(),
+                    _ => ImagineAssets.BtnPrimary() ?? ImagineAssets.PanelHolo()
+                };
+            }
+
+            return kind switch
+            {
+                Kind.Gold => ImagineAssets.TileHubGold() ?? ImagineAssets.BtnGold(),
+                Kind.Danger => ImagineAssets.BtnDanger(),
+                Kind.Secondary => ImagineAssets.TileHub(),
+                _ => ImagineAssets.TileHub() ?? ImagineAssets.BtnPrimary()
+            };
+        }
+
         static Image Solid(Transform parent, string name, Color color)
         {
             var go = new GameObject(name, typeof(RectTransform), typeof(Image));
@@ -141,28 +174,51 @@ namespace WRLDZ.UI.Shell
             return img;
         }
 
+        /// <summary>
+        /// Hub tiles: lock type so best-fit cannot shrink labels into the plate.
+        /// Compact toolbar chips keep MakeText best-fit.
+        /// </summary>
+        public static void ApplyHubType(Button btn, int titleSize, Color titleColor, bool displayTitle,
+            int blurbSize = 16, Color? blurbColor = null)
+        {
+            if (btn == null) return;
+            var title = btn.transform.Find("Title")?.GetComponent<Text>();
+            if (title != null)
+            {
+                title.resizeTextForBestFit = false;
+                WrldzType.Style(title, titleSize, display: displayTitle, heavyOutline: true);
+                title.color = titleColor;
+                WrldzType.ApplyOutline(title, heavy: true, buttonContrast: true);
+                title.horizontalOverflow = HorizontalWrapMode.Overflow;
+                title.verticalOverflow = VerticalWrapMode.Overflow;
+            }
+
+            var blurb = btn.transform.Find("Blurb")?.GetComponent<Text>();
+            if (blurb != null)
+            {
+                blurb.resizeTextForBestFit = false;
+                WrldzType.Style(blurb, blurbSize, display: false, heavyOutline: true);
+                blurb.color = blurbColor ?? BlurbInk;
+                WrldzType.ApplyOutline(blurb, heavy: true, buttonContrast: true);
+                blurb.fontStyle = FontStyle.Bold;
+            }
+        }
+
         static Text MakeText(Transform parent, string name, string value,
             Color color, TextAnchor align, int maxSize)
         {
             var go = new GameObject(name, typeof(RectTransform), typeof(Text));
             go.transform.SetParent(parent, false);
             var t = go.GetComponent<Text>();
-            t.font = UiFoundation.BuiltinFont() ?? WrldzType.Body();
-            t.fontSize = maxSize;
-            t.fontStyle = FontStyle.Bold;
+            WrldzType.StyleButtonLabel(t, Mathf.Clamp(maxSize, 14, 20));
             t.alignment = align;
             t.color = color;
             t.text = value ?? "";
-            t.horizontalOverflow = HorizontalWrapMode.Wrap;
+            t.horizontalOverflow = HorizontalWrapMode.Overflow;
             t.verticalOverflow = VerticalWrapMode.Overflow;
-            t.resizeTextForBestFit = true;
-            t.resizeTextMinSize = 10;
-            t.resizeTextMaxSize = Mathf.Clamp(maxSize, 12, 22);
+            t.resizeTextForBestFit = false;
             t.raycastTarget = false;
             t.supportRichText = false;
-            var o = go.AddComponent<Outline>();
-            o.effectColor = new Color(0f, 0f, 0f, 0.65f);
-            o.effectDistance = new Vector2(0.8f, -0.8f);
             return t;
         }
 

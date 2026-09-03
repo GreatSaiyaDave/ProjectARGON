@@ -40,8 +40,9 @@ namespace WRLDZ.Core
             inv.artifactDeckBox = new ArtifactDeckBoxState
             {
                 owned = true,
-                atHome = true,
-                name = "Artifact Deck Box"
+                atHome = false,
+                name = "Artifact Deck Box",
+                instances = System.Array.Empty<ArtifactInstance>()
             };
 
             // Home bulk storage: one 1000-card cardboard box
@@ -106,6 +107,8 @@ namespace WRLDZ.Core
             inv.EnsureValid();
             acc.progress.onboardingStarterGranted = true;
             acc.progress.digizeni = Mathf.Max(acc.progress.digizeni, 500);
+            ArtifactService.MigrateFromLegacy(acc.progress, inv);
+            ArtifactService.Grant(acc.progress, inv, ArtifactService.Tome, 1);
             acc.cardsCollected = inv.TotalStorageUsed();
             TomeService.SyncCapacityUnlocks(acc);
             ProgressionService.Persist(acc);

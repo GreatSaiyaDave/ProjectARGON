@@ -13,6 +13,8 @@ namespace WRLDZ.EditorTools
         public static string RunTestsReport()
         {
             var report = TcgRegressionTests.RunAll() + "\n" + InteractionRegressionTests.RunAll() +
+                         "\n" + CorpusTriggerStressTests.Run() +
+                         "\n" + WRLDZ.Core.InventoryRegressionTests.RunAll() +
                          "\n" + ArPlaymatLayout.RunSanityChecks() +
                          "\n" + WRLDZ.Presentation.ArPhysicalCardBuilder.RunFaceSwapSanity();
             Debug.Log("[WRLDZ TCG Tests]\n" + report);

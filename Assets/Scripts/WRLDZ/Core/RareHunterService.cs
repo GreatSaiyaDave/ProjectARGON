@@ -45,8 +45,9 @@ namespace WRLDZ.Core
 
             // Fallback: flat currency
             var fee = FlatFeeDigizeni;
-            var pay = Mathf.Min(fee, acc.progress.digizeni);
-            acc.progress.digizeni -= pay;
+            var pay = Mathf.Min(fee, ArtifactService.Qty(acc.inventory, ArtifactService.Digizeni));
+            if (pay > 0)
+                ArtifactService.TrySpend(acc, ArtifactService.Digizeni, pay, out _);
             result.tookCurrency = pay > 0;
             result.digizeniTaken = pay;
             result.message = pay > 0

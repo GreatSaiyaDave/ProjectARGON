@@ -16,10 +16,10 @@ namespace WRLDZ.Duel.TextEffects
     /// </summary>
     public static class CardTextEffectCompiler
     {
-        public const int Version = 21;
+        public const int Version = 33;
 
         static readonly Regex RxDraw = new(
-            @"Draw (\d+) cards?\.",
+            @"(?:^|[.!?]\s+)Draw (\d+) cards?\.",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxDestroyAllOppMonsters = new(
@@ -56,6 +56,71 @@ namespace WRLDZ.Duel.TextEffects
 
         static readonly Regex RxTrapHole = new(
             @"When your opponent Normal or Flip Summons 1 monster with (\d+) or more ATK:\s*Target that monster;\s*destroy that target\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Bottomless Trap Hole family: opponent Summons (NS/FS/SS) ATK ≥ N,
+        /// destroy that monster and banish it (skip GY). Not a target.
+        /// </summary>
+        static readonly Regex RxSummonDestroyBanish = new(
+            @"When your opponent Summons a monster\(s\) with (\d+) or more ATK:\s*" +
+            @"Destroy that monster\(s\) with \1 or more ATK, and if you do, banish it\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>Adhesion Trap Hole: opponent Summons (any) → halve original ATK.</summary>
+        static readonly Regex RxAdhesionTrapHole = new(
+            @"When your opponent Summons a monster\(s\):\s*Halve that monster\(s\)['’]s original ATK\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>Torrential Tribute: a monster is Summoned (either player, including Set/SS) → destroy all.</summary>
+        static readonly Regex RxTorrentialTribute = new(
+            @"When a monster\(s\) is Summoned:\s*Destroy all monsters on the field\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>Eatgaboon: opponent NS/FS ATK ≤ N destroy (excludes SS).</summary>
+        static readonly Regex RxOppNsFsAtkLeqDestroy = new(
+            @"If the ATK of a monster summoned by your opponent \(excluding Special Summon\) is (\d+) points or less, the monster is destroyed\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>House of Adhesive Tape: opponent NS/FS DEF ≤ N destroy (excludes SS).</summary>
+        static readonly Regex RxOppNsFsDefLeqDestroy = new(
+            @"If the DEF of a monster summoned by your opponent \(excluding Special Summon\) is (\d+) points or less, the monster is destroyed\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>Token Feastevil: Token SS → destroy tokens, 300 damage each.</summary>
+        static readonly Regex RxTokenFeastevil = new(
+            @"When a Token\(s\) is Special Summoned:\s*Destroy as many Tokens on the field as possible, and if you do, inflict (\d+) damage to your opponent for each Token destroyed\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>Mispolymerization: Fusion SS → bounce all face-up Fusions to Extra.</summary>
+        static readonly Regex RxMispolymerization = new(
+            @"Activate only when a Fusion Monster is Special Summoned\.\s*Return all face-up Fusion Monsters to their respective Extra Decks\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>Chain Disappearance: summoned ATK ≤ N is banished, then opponent same-name from hand/Deck.</summary>
+        static readonly Regex RxChainDisappearance = new(
+            @"When a monster\(s\) with (\d+) or less ATK is Summoned:\s*" +
+            @"Banish that monster\(s\) with \1 or less ATK, then your opponent banishes all cards with the same name as that card\(s\) from their hand and Deck\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>Chain Destruction: summoned ATK ≤ N, target 1, destroy same name in that controller's hand/Deck.</summary>
+        static readonly Regex RxChainDestruction = new(
+            @"When a monster\(s\) with (\d+) or less ATK is Summoned:\s*" +
+            @"Target 1 of them;\s*destroy all cards with that name in its controller's hand and Main Deck\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>Blast Held by a Tribute: Tribute Summoned attacker → wipe opp ATK, 1000 damage.</summary>
+        static readonly Regex RxBlastHeldByTribute = new(
+            @"When an opponent's monster that was Tribute Summoned declares an attack:\s*" +
+            @"Destroy as many face-up Attack Position monsters they control as possible, and if you do, inflict (\d+) damage to your opponent\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxDisarmament = new(
+            @"Destroy all Equip Cards on the field\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxEternalRest = new(
+            @"Destroy all monsters equipped with Equip Cards\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxMirrorForce = new(
@@ -125,7 +190,7 @@ namespace WRLDZ.Duel.TextEffects
         /// "(This card is always treated as "Umi".)"
         /// </summary>
         static readonly Regex RxAlwaysTreatedAsName = new(
-            @"\(This card(?:'s name)? is always treated as ""([^""]+)""\.?\)",
+            @"\(This card(?:'s name)? is always treated as (?:an? )?""([^""]+)""(?: card)?\.?\)",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxNameTreatedAs = new(
@@ -278,6 +343,11 @@ namespace WRLDZ.Duel.TextEffects
             @"Destroy this card when ""([^""]+)"" leaves the field\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        /// <summary>Falling Down: Destroy this card unless you control an "Archfiend" card.</summary>
+        static readonly Regex RxDestroyUnlessYouControlNamed = new(
+            @"Destroy this card unless you control an? ""([^""]+)"" card\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         static readonly Regex RxSummonGainLp = new(
             @"When this (?:monster|card) is Normal Summoned, Flip Summoned or Special Summoned, " +
             @"increase your Life Points by (\d+) points\.?",
@@ -407,8 +477,10 @@ namespace WRLDZ.Duel.TextEffects
             });
 
             // Dark Hole: all monsters — only if not already matched "opponent controls"
+            // or a summon-window Torrential sentence that contains the same fragment.
             var darkHole = RxDestroyAllMonsters.Match(text);
-            if (darkHole.Success && !ContainsSnippet(clauses, "your opponent controls"))
+            if (darkHole.Success && !ContainsSnippet(clauses, "your opponent controls") &&
+                !RxTorrentialTribute.IsMatch(text))
             {
                 Take(darkHole, new EffectClause
                 {
@@ -482,6 +554,120 @@ namespace WRLDZ.Duel.TextEffects
                 Zone = EffectZoneFilter.FieldAnyMonster,
                 Amount = ParseInt(RxTrapHole.Match(text), 1, 1000),
                 RequiresTargetChoice = true
+            });
+
+            Take(RxSummonDestroyBanish.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.OpponentNormalOrFlipSummon,
+                Action = EffectActionKind.Destroy,
+                Zone = EffectZoneFilter.FieldAnyMonster,
+                Amount = ParseInt(RxSummonDestroyBanish.Match(text), 1, 1500),
+                RequiresTargetChoice = false,
+                BanishIfDestroyed = true,
+                AnswersSpecialSummon = true
+            });
+
+            Take(RxAdhesionTrapHole.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.OpponentNormalOrFlipSummon,
+                Action = EffectActionKind.HalveOriginalAtk,
+                Zone = EffectZoneFilter.FieldAnyMonster,
+                RequiresTargetChoice = false,
+                AnswersSpecialSummon = true
+            });
+
+            Take(RxTorrentialTribute.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.OpponentNormalOrFlipSummon,
+                Action = EffectActionKind.Destroy,
+                Side = EffectSide.Both,
+                Zone = EffectZoneFilter.FieldMonsters,
+                RequiresTargetChoice = false,
+                AnswersSpecialSummon = true,
+                AnswersControllerSummon = true
+            });
+
+            Take(RxOppNsFsAtkLeqDestroy.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.OpponentNormalOrFlipSummon,
+                Action = EffectActionKind.Destroy,
+                Zone = EffectZoneFilter.FieldAnyMonster,
+                Amount = ParseInt(RxOppNsFsAtkLeqDestroy.Match(text), 1, 500),
+                AmountIsAtkMax = true,
+                RequiresTargetChoice = false
+            });
+
+            Take(RxOppNsFsDefLeqDestroy.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.OpponentNormalOrFlipSummon,
+                Action = EffectActionKind.Destroy,
+                Zone = EffectZoneFilter.FieldAnyMonster,
+                Amount = ParseInt(RxOppNsFsDefLeqDestroy.Match(text), 1, 500),
+                AmountIsDefMax = true,
+                RequiresTargetChoice = false
+            });
+
+            Take(RxTokenFeastevil.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.OpponentNormalOrFlipSummon,
+                Action = EffectActionKind.DestroyTokensInflictPer,
+                Amount = ParseInt(RxTokenFeastevil.Match(text), 1, 300),
+                RequiresSummonedIsToken = true,
+                AnswersSpecialSummon = true,
+                AnswersControllerSummon = true
+            });
+
+            Take(RxMispolymerization.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.OpponentNormalOrFlipSummon,
+                Action = EffectActionKind.ReturnAllFaceUpFusionsToExtra,
+                RequiresSummonedIsFusion = true,
+                AnswersSpecialSummon = true,
+                AnswersControllerSummon = true
+            });
+
+            Take(RxChainDisappearance.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.OpponentNormalOrFlipSummon,
+                Action = EffectActionKind.BanishThenSameNameFromOppHandDeck,
+                Zone = EffectZoneFilter.FieldAnyMonster,
+                Amount = ParseInt(RxChainDisappearance.Match(text), 1, 1000),
+                AmountIsAtkMax = true,
+                AnswersSpecialSummon = true,
+                AnswersControllerSummon = true
+            });
+
+            Take(RxChainDestruction.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.OpponentNormalOrFlipSummon,
+                Action = EffectActionKind.DestroySameNameInControllerHandAndDeck,
+                Zone = EffectZoneFilter.FieldAnyMonster,
+                Amount = ParseInt(RxChainDestruction.Match(text), 1, 2000),
+                AmountIsAtkMax = true,
+                RequiresTargetChoice = true,
+                AnswersSpecialSummon = true,
+                AnswersControllerSummon = true
+            });
+
+            Take(RxBlastHeldByTribute.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.AttackDeclared,
+                Action = EffectActionKind.DestroyOppAttackThenDamage,
+                Zone = EffectZoneFilter.OppAttackPositionMonsters,
+                Amount = ParseInt(RxBlastHeldByTribute.Match(text), 1, 1000),
+                RequiresAttackerTributeSummoned = true
+            });
+
+            Take(RxDisarmament.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.DestroyAllEquips
+            });
+
+            Take(RxEternalRest.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.DestroyAllEquippedMonsters
             });
 
             Take(RxMirrorForce.Match(text), new EffectClause
@@ -700,6 +886,16 @@ namespace WRLDZ.Duel.TextEffects
                 RequiresFaceUpName = leave.Success ? leave.Groups[1].Value : null,
                 MakesChainLink = false
             });
+            var unlessYou = RxDestroyUnlessYouControlNamed.Match(text);
+            Take(unlessYou, new EffectClause
+            {
+                Timing = EffectTiming.ContinuousWhileFaceUp,
+                Action = EffectActionKind.SelfDestroyUnlessNamedFaceUp,
+                RequiresFaceUpName = unlessYou.Success ? unlessYou.Groups[1].Value : null,
+                RequiresControllerNamedCard = true,
+                NamedCardIsSeries = true,
+                MakesChainLink = false
+            });
 
             var rec = RxSummonGainLp.Match(text);
             Take(rec, new EffectClause
@@ -729,6 +925,8 @@ namespace WRLDZ.Duel.TextEffects
             LegacyTextTemplates.Collect(text, def, clauses, matchedSpans);
             AdvancedEffectTemplates.Collect(text, def, clauses, matchedSpans);
             PhaseTriggerTemplates.Collect(text, def, clauses, matchedSpans);
+            ContinuousRestrictionTemplates.Collect(text, def, clauses, matchedSpans);
+            MonsterTriggerTemplates.Collect(text, def, clauses, matchedSpans);
 
             // Official PSCT split (condition : cost/target ; resolution) for sentences
             // the whole-card regex did not absorb. This is how new mechanics get in
@@ -897,35 +1095,20 @@ namespace WRLDZ.Duel.TextEffects
                 clause.RequiresFaceUpName = sendNamed.Groups[1].Value;
             }
 
+            var paySrc = string.IsNullOrEmpty(act) ? (sent.Raw ?? res) : act;
+            var pay = Regex.Match(paySrc,
+                @"Activate (?:this card )?by paying (\d+) (?:LP|Life Points)",
+                RegexOptions.IgnoreCase);
+            if (pay.Success)
+                clause.PayLpAmount = int.TryParse(pay.Groups[1].Value, out var lp) ? lp : 0;
+
             // ── Targeting (red text, or "to target" glued onto the cost) ──
-            if (Regex.IsMatch(act, @"target 1 (?:spell/?trap|spell or trap)", RegexOptions.IgnoreCase))
-            {
-                clause.RequiresTargetChoice = true;
-                clause.Zone = EffectZoneFilter.FieldSpellTraps;
-            }
-            else if (Regex.IsMatch(act, @"target 1 card on the field", RegexOptions.IgnoreCase) ||
-                     Regex.IsMatch(act, @"to target 1 card on the field", RegexOptions.IgnoreCase))
-            {
-                clause.RequiresTargetChoice = true;
-                clause.Zone = EffectZoneFilter.AnyCardOnField;
-            }
-            else if (Regex.IsMatch(act, @"target the attacking monster", RegexOptions.IgnoreCase) ||
-                     Regex.IsMatch(act, @"target 1 attacking monster", RegexOptions.IgnoreCase))
-            {
-                clause.RequiresTargetChoice = false;
-                clause.Zone = EffectZoneFilter.AttackingMonster;
-            }
-            else if (Regex.IsMatch(act, @"target 1 (?:face-up )?monster (?:on the field|your opponent controls)",
-                         RegexOptions.IgnoreCase))
-            {
-                clause.RequiresTargetChoice = true;
-                clause.Zone = Regex.IsMatch(act, @"opponent", RegexOptions.IgnoreCase)
-                    ? EffectZoneFilter.OppFaceUpMonsters
-                    : EffectZoneFilter.FieldAnyMonster;
-            }
+            ParseActivationTarget(act, clause);
 
             // ── Resolution (blue text) ──
-            if (Regex.IsMatch(res, @"return (?:it|that target) to the hand", RegexOptions.IgnoreCase))
+            if (Regex.IsMatch(res,
+                    @"return (?:it|that target) to (?:its owner's hand|the owner's hand|the hand)",
+                    RegexOptions.IgnoreCase))
             {
                 clause.Action = EffectActionKind.ReturnToHand;
                 if (clause.Zone == EffectZoneFilter.None)
@@ -965,6 +1148,42 @@ namespace WRLDZ.Duel.TextEffects
                 clause.Side = EffectSide.Controller;
                 clause.Amount = int.TryParse(m.Groups[1].Value, out var n) ? n : 1;
             }
+            else if (Regex.IsMatch(res, @"inflict (\d+) (?:points of )?damage to your opponent",
+                         RegexOptions.IgnoreCase))
+            {
+                var m = Regex.Match(res, @"inflict (\d+) (?:points of )?damage to your opponent",
+                    RegexOptions.IgnoreCase);
+                clause.Action = EffectActionKind.InflictDamageToOpponent;
+                clause.Amount = int.TryParse(m.Groups[1].Value, out var n) ? n : 0;
+            }
+            else if (Regex.IsMatch(res,
+                         @"this card gains (\d+) ATK and DEF(?! until)", RegexOptions.IgnoreCase))
+            {
+                var m = Regex.Match(res, @"this card gains (\d+) ATK and DEF", RegexOptions.IgnoreCase);
+                clause.Action = EffectActionKind.ApplyLingeringAtkDef;
+                clause.Amount = int.TryParse(m.Groups[1].Value, out var n) ? n : 0;
+                clause.DefAmount = clause.Amount;
+            }
+            else if (Regex.IsMatch(res,
+                         @"the monster that destroyed it loses (\d+) ATK and DEF",
+                         RegexOptions.IgnoreCase))
+            {
+                var m = Regex.Match(res,
+                    @"the monster that destroyed it loses (\d+) ATK and DEF",
+                    RegexOptions.IgnoreCase);
+                clause.Action = EffectActionKind.ApplyLingeringAtkDef;
+                clause.Amount = -(int.TryParse(m.Groups[1].Value, out var n) ? n : 0);
+                clause.DefAmount = clause.Amount;
+                clause.ImplicitTargetIsBattleDestroyer = true;
+                clause.RequiresTargetChoice = false;
+            }
+            else if (Regex.IsMatch(res, @"destroy the monster that destroyed this card",
+                         RegexOptions.IgnoreCase))
+            {
+                clause.Action = EffectActionKind.Destroy;
+                clause.ImplicitTargetIsBattleDestroyer = true;
+                clause.RequiresTargetChoice = false;
+            }
             else if (Regex.IsMatch(res, @"special summon (?:it|that target)", RegexOptions.IgnoreCase))
             {
                 clause.Action = EffectActionKind.SpecialSummonFromGy;
@@ -977,7 +1196,7 @@ namespace WRLDZ.Duel.TextEffects
                 clause.Action = EffectActionKind.AddFromGyToHand;
                 clause.RequiresTargetChoice = true;
                 if (clause.Zone == EffectZoneFilter.None)
-                    clause.Zone = EffectZoneFilter.ControllerGySpells;
+                    return null;
             }
             else if (Regex.IsMatch(res, @"change (?:that target's|its) battle position",
                          RegexOptions.IgnoreCase))
@@ -998,9 +1217,133 @@ namespace WRLDZ.Duel.TextEffects
             }
 
             if (clause.Action == EffectActionKind.None)
+            {
+                // Continuous/Field/Equip: paying LP to play the card can be the whole activation.
+                if (clause.PayLpAmount <= 0 || def == null ||
+                    !(def.IsContinuousSpellOrTrap || def.IsFieldSpell || def.IsEquipSpell))
+                    return null;
+                clause.StaysOnField = true;
+            }
+            if (HasUnparsedActivationCost(act, clause))
                 return null;
 
-            return Stamp(sent, clause);
+            Stamp(sent, clause);
+            if (IsUnrecognizedTriggerAsActivate(sent, clause))
+                return null;
+            return clause;
+        }
+
+        /// <summary>
+        /// "If/When … :" that we did not map to a real trigger window must not become
+        /// a free Main Phase ignition (Lord Poison is destroyed-by-battle, not OPT).
+        /// </summary>
+        static bool IsUnrecognizedTriggerAsActivate(PsctGrammar.Sentence sent, EffectClause clause)
+        {
+            if (sent == null || clause == null) return false;
+            if (clause.Timing != EffectTiming.Activate) return false;
+            if (sent.OncePerTurn) return false;
+            var cond = (sent.Condition ?? "").Trim();
+            if (cond.Length == 0) return false;
+            if (cond.IndexOf("this card is activated", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                cond.IndexOf("this card resolves", StringComparison.OrdinalIgnoreCase) >= 0)
+                return false;
+            return cond.StartsWith("When ", StringComparison.OrdinalIgnoreCase) ||
+                   cond.StartsWith("If ", StringComparison.OrdinalIgnoreCase) ||
+                   cond.StartsWith("During ", StringComparison.OrdinalIgnoreCase) ||
+                   cond.StartsWith("At ", StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// PSCT red-text targeting. GY monster/Spell/Trap must be parsed here —
+        /// "add it to your hand" must not guess a zone (Magician of Faith is Spell;
+        /// Monster Reincarnation is a monster).
+        /// </summary>
+        static void ParseActivationTarget(string act, EffectClause clause)
+        {
+            if (string.IsNullOrEmpty(act) || clause == null) return;
+            if (Regex.IsMatch(act, @"target 1 (?:spell/?trap|spell or trap)", RegexOptions.IgnoreCase))
+            {
+                clause.RequiresTargetChoice = true;
+                clause.Zone = EffectZoneFilter.FieldSpellTraps;
+                return;
+            }
+
+            if (Regex.IsMatch(act, @"target 1 card on the field", RegexOptions.IgnoreCase) ||
+                Regex.IsMatch(act, @"to target 1 card on the field", RegexOptions.IgnoreCase))
+            {
+                clause.RequiresTargetChoice = true;
+                clause.Zone = EffectZoneFilter.AnyCardOnField;
+                return;
+            }
+
+            if (Regex.IsMatch(act, @"target the attacking monster", RegexOptions.IgnoreCase) ||
+                Regex.IsMatch(act, @"target 1 attacking monster", RegexOptions.IgnoreCase))
+            {
+                clause.RequiresTargetChoice = false;
+                clause.Zone = EffectZoneFilter.AttackingMonster;
+                return;
+            }
+
+            var gyMon = Regex.Match(act,
+                @"target 1 (?:(\w+)(?:-Type)? )?monster in (?:your|the) (?:GY|Graveyard)",
+                RegexOptions.IgnoreCase);
+            if (gyMon.Success)
+            {
+                clause.RequiresTargetChoice = true;
+                clause.Zone = EffectZoneFilter.ControllerGyMonsters;
+                if (gyMon.Groups[1].Success && gyMon.Groups[1].Length > 0)
+                    clause.RaceFilter = gyMon.Groups[1].Value;
+                return;
+            }
+
+            if (Regex.IsMatch(act, @"target 1 Spell in your (?:GY|Graveyard)", RegexOptions.IgnoreCase))
+            {
+                clause.RequiresTargetChoice = true;
+                clause.Zone = EffectZoneFilter.ControllerGySpells;
+                return;
+            }
+
+            if (Regex.IsMatch(act, @"target 1 Trap in your (?:GY|Graveyard)", RegexOptions.IgnoreCase))
+            {
+                clause.RequiresTargetChoice = true;
+                clause.Zone = EffectZoneFilter.ControllerGyTraps;
+                return;
+            }
+
+            if (Regex.IsMatch(act, @"target 1 (?:face-up )?monster (?:on the field|your opponent controls)",
+                    RegexOptions.IgnoreCase))
+            {
+                clause.RequiresTargetChoice = true;
+                clause.Zone = Regex.IsMatch(act, @"opponent", RegexOptions.IgnoreCase)
+                    ? EffectZoneFilter.OppFaceUpMonsters
+                    : EffectZoneFilter.FieldAnyMonster;
+            }
+        }
+
+        /// <summary>
+        /// Activation text names a cost this compiler did not parse — refuse the
+        /// sentence instead of shipping a partial program (Spell Reproduction).
+        /// </summary>
+        static bool HasUnparsedActivationCost(string act, EffectClause clause)
+        {
+            if (string.IsNullOrEmpty(act) || clause == null) return false;
+            if (Regex.IsMatch(act, @"discard \d+", RegexOptions.IgnoreCase) &&
+                !clause.RequiresDiscardCost && !clause.RequiresDiscardSelf)
+                return true;
+            if (Regex.IsMatch(act, @"send \d+", RegexOptions.IgnoreCase) &&
+                !clause.RequiresSendNamedToGy && !clause.RequiresSendThisToGy &&
+                !clause.RequiresSendHandToGy && !clause.RequiresSendOtherYouControl)
+                return true;
+            if (Regex.IsMatch(act, @"pay \d+", RegexOptions.IgnoreCase) &&
+                clause.PayLpAmount <= 0 && clause.RequiresLpCostMultiple <= 0)
+                return true;
+            if (Regex.IsMatch(act, @"tribute (?:this|\d+)", RegexOptions.IgnoreCase) &&
+                !clause.RequiresTributeThis && clause.RequiresTributeCount <= 0)
+                return true;
+            if (Regex.IsMatch(act, @"banish \d+", RegexOptions.IgnoreCase) &&
+                clause.BanishFromGyCount <= 0)
+                return true;
+            return false;
         }
 
         static EffectClause Stamp(PsctGrammar.Sentence sent, EffectClause clause)
@@ -1018,6 +1361,10 @@ namespace WRLDZ.Duel.TextEffects
             else if (clause.Timing == EffectTiming.None)
                 clause.Timing = sent.SuggestedTiming;
             var hay = (sent.Condition ?? "") + " " + (sent.Raw ?? "");
+            if (hay.IndexOf("flip summoned", StringComparison.OrdinalIgnoreCase) >= 0)
+                clause.RequiresThisFlipSummoned = true;
+            if (hay.IndexOf("destroyed by battle", StringComparison.OrdinalIgnoreCase) >= 0)
+                clause.RequiresThisDestroyedByBattle = true;
             if (hay.IndexOf("during your opponent's turn", StringComparison.OrdinalIgnoreCase) >= 0 ||
                 hay.IndexOf("during the opponent's turn", StringComparison.OrdinalIgnoreCase) >= 0)
                 clause.OpponentTurnOnly = true;
@@ -1257,7 +1604,16 @@ namespace WRLDZ.Duel.TextEffects
             var f = Regex.Replace(frag ?? "", @"\s+", " ").Trim().ToLowerInvariant();
             if (f.Contains("you can only activate 1")) return true;
             if (f.Contains("you can only use")) return true;
-            if (f.Contains("this card is always treated as")) return true;
+            // Strip the name-condition parenthetical only. Do not eat a glued GY/trigger rider
+            // (Axe of Despair: always-treated + "When this card is sent to the GY…").
+            if (f.Contains("this card is always treated as"))
+            {
+                f = Regex.Replace(f,
+                    @"\(this card(?:'s name)? is always treated as [^)]+\)\.?",
+                    " ").Trim();
+                f = Regex.Replace(f, @"\s+", " ").Trim();
+                if (f.Length < 8) return true;
+            }
             if (f.StartsWith("●")) return true; // multi-choice bullets partially handled
             if (f.Contains("tribute 1 monster, then target")) return true; // EC mode 2 deferred
             if (f.Contains("cannot activate cards, or the effects")) return true; // Sangan restriction
