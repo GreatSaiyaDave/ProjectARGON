@@ -49,6 +49,13 @@ namespace WRLDZ.Duel.Ocg
             _indexError = null;
         }
 
+        /// <summary>True when the basename c{passcode}.lua is present in the indexed OCG corpus.</summary>
+        public static bool HasCardScript(int cardId)
+        {
+            if (cardId <= 0) return false;
+            return TryRead("c" + cardId + ".lua", out _, out _);
+        }
+
         public static bool TryRead(string name, out byte[] bytes, out string error)
         {
             bytes = null;

@@ -52,6 +52,26 @@ namespace WRLDZ.Duel.Rules
         };
         static readonly HashSet<string> SpecialSummonKeys = new();
 
+        static readonly HashSet<int> LuaOwnershipWarnings = new();
+
+        static void WarnIfLuaOwnsResolve(CardDef def)
+        {
+            if (def == null || Ocg.OcgLabDuelHost.IsActive ||
+                !Ocg.OcgScriptStore.HasCardScript(def.id) ||
+                !LuaOwnershipWarnings.Add(def.id))
+                return;
+
+            // Docs/RESOLVE_OWNERSHIP.md: Lua owns resolve whenever this basename exists.
+            // DuelCommandService routes an active OcgLabDuelHost before this gate. The
+            // non-lab AR compatibility path remains only so current demos keep working;
+            // do not add new C# card recipes while the native handoff is pending.
+            UnityEngine.Debug.LogWarning(
+                $"[WRLDZ][OCG] c{def.id}.lua owns resolve, but OcgLabDuelHost is inactive " +
+                $"for this duel; current C# activation is compatibility-only. " +
+                "Complete the native handoff before removing this warning.");
+        }
+
+
         static bool ContainsIgnoreCase(string hay, string needle) =>
             !string.IsNullOrEmpty(hay) &&
             hay.IndexOf(needle, StringComparison.OrdinalIgnoreCase) >= 0;
@@ -145,6 +165,7 @@ namespace WRLDZ.Duel.Rules
             }
 
             var def = card.Def;
+            WarnIfLuaOwnsResolve(def);
             var text = OfficialCardAuthority.OfficialText(def);
             if (string.IsNullOrEmpty(text) && !OfficialCardAuthority.HasNoActivatableEffect(def))
             {

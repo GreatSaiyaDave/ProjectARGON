@@ -1780,12 +1780,35 @@ namespace WRLDZ.Duel
             return ResolveDeclaredAttack(hadMonstersAtDeclaration);
         }
 
-        /// <summary>
-        /// Impact / player chose not to trap — resolve the declared attack damage.
-        /// Called when reaction window expires (animation hit) or Pass.
-        /// </summary>
+        // chip3 BeginDeferredChainActivation seats the activation card before pass/pass
+        // resolves the chain; this fallback is the last zone-state repair, not effect logic.
+
+        static bool IsOneShotChainSpellTrap(CardInstance card)
+        {
+            var def = card?.Def;
+            if (def == null || def.IsFieldSpell || def.IsContinuousSpellOrTrap) return false;
+            return SpellTrapEffects.IsNormalSpell(def) ||
+                   SpellTrapEffects.IsQuickPlay(def) ||
+                   SpellTrapEffects.IsTrap(def);
+        }
+
+        void EnsureDeferredSpellTrapGrave(ChainLink link)
+        {
+            var card = link?.Card;
+            if (!IsOneShotChainSpellTrap(card)) return;
+            var owner = link.Controller ?? ControllerOf(card);
+            if (owner == null) return;
+            var stillActive = owner.TryFindSpellTrap(card, out _) || owner.Hand.Contains(card);
+            if (!stillActive) return;
+            Log($"[RULE] Chain resolve left {card.Name} active; sending one-shot Spell/Trap to the GY.");
+            Presentation.ArInteraction.SpellActivationPresentation.QueueFadeToGy(card.InstanceId);
+            Presentation.ArInteraction.SpellActivationPresentation.EnqueueGhostIfNeeded(card.InstanceId);
+            SendCardToGrave(owner, card);
+        }
+
+
         public void ResolveChainStackForActivation() => ResolveChainStack();
-        void ResolveChainStack() { IsResolvingChain = true; while (Chain.Count > 0) { var link = Chain.PopNextToResolve(); if (link == null) break; if (link.NegatesActivation) { if (link.FlipSelfFaceUpDefense && link.Card != null) { link.Card.FaceUp = true; link.Card.Position = BattlePosition.Defense; } if (link.TargetLink != null) { link.TargetLink.Negated = true; if (link.DestroyNegatedCard && link.TargetLink.Card != null) SendCardToGrave(link.TargetLink.Controller, link.TargetLink.Card); } continue; } if (link.Negated) { if (link.Card != null && (link.Card.Def?.IsSpell == true || link.Card.Def?.IsTrap == true)) SendCardToGrave(link.Controller, link.Card); continue; } var prog = TextEffects.CompiledEffectCache.GetOrCompile(link.Card?.Def); if (prog != null && prog.FullyCompiled) TextEffects.TextEffectRuntime.TryResolveActivation(this, link.Controller, link.Card, link.FromHand, prog, true); else SpellTrapEffects.BeginOrResolveManual(this, link.Controller, link.Card, false, true); } IsResolvingChain = false; Chain.Clear(); Notify(); }
+        void ResolveChainStack() { IsResolvingChain = true; while (Chain.Count > 0) { var link = Chain.PopNextToResolve(); if (link == null) break; if (link.NegatesActivation) { if (link.FlipSelfFaceUpDefense && link.Card != null) { link.Card.FaceUp = true; link.Card.Position = BattlePosition.Defense; } if (link.TargetLink != null) { link.TargetLink.Negated = true; if (link.DestroyNegatedCard && link.TargetLink.Card != null) SendCardToGrave(link.TargetLink.Controller, link.TargetLink.Card); EnsureDeferredSpellTrapGrave(link.TargetLink); } continue; } if (link.Negated) { if (link.Card != null && (link.Card.Def?.IsSpell == true || link.Card.Def?.IsTrap == true)) SendCardToGrave(link.Controller, link.Card); continue; } var prog = TextEffects.CompiledEffectCache.GetOrCompile(link.Card?.Def); if (prog != null && prog.FullyCompiled) TextEffects.TextEffectRuntime.TryResolveActivation(this, link.Controller, link.Card, link.FromHand, prog, true); else SpellTrapEffects.BeginOrResolveManual(this, link.Controller, link.Card, false, true); EnsureDeferredSpellTrapGrave(link); } IsResolvingChain = false; Chain.Clear(); Notify(); }
         bool PassChainResponse(DuelistState responder) { var closed = FastEffects.Pass(responder); ClearPendingResponse(); if (closed) { Chain.StartResolution(); ResolveChainStack(); return true; } var offered = OpenChainResponseWindow(FastEffects.PriorityPlayer, false); if (!offered) return PassChainResponse(FastEffects.PriorityPlayer); return true; }
         public bool PassResponse()
         {
