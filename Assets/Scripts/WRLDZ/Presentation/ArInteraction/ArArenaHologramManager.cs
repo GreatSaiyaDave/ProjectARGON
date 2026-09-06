@@ -75,6 +75,7 @@ namespace WRLDZ.Presentation.ArInteraction
         ArFloatingLpCallout _youLpBox;
         ArFloatingLpCallout _oppLpBox;
         ArOppFieldGlance _oppGlance;
+        ArBanishedFloater _banishedFloater; // Backup-bot stub; Dilbot final wire
         ArFieldSpellFloor _fieldFloor;
         int _billboardFrame;
         bool _anchoredOnce;
@@ -118,6 +119,8 @@ namespace WRLDZ.Presentation.ArInteraction
             _oppLpBox = ArFloatingLpCallout.Create(ArenaRoot, Layer, playerSide: false);
             // Public opponent field readout (face-up art, set backs) — not a second duel board.
             _oppGlance = ArOppFieldGlance.Create(ArenaRoot, Layer);
+            // Banished/RFG button by M1 — visible only when count > 0 (Backup-bot stub).
+            _banishedFloater = ArBanishedFloater.Create(ArenaRoot, Layer, playerSide: true);
             _fieldFloor = ArFieldSpellFloor.Create(ArenaRoot, Layer);
             ArArenaStartFlash.Ensure(ArenaRoot, Layer);
 #if UNITY_EDITOR
@@ -444,10 +447,34 @@ namespace WRLDZ.Presentation.ArInteraction
                 _oppGlance.ArenaRoot = ArenaRoot;
                 _oppGlance.Sync(engine.Opponent, db);
             }
+
+            // Presentation stub: Sync player Banished count only — Dilbot may dual-side later.
+            if (_banishedFloater != null && engine?.Player != null)
+            {
+                _banishedFloater.PlayerDisk = PlayerDisk;
+                _banishedFloater.ArenaRoot = ArenaRoot;
+                _banishedFloater.IsPlayerSide = true;
+                var n = engine.Player.Banished != null ? engine.Player.Banished.Count : 0;
+                _banishedFloater.Sync(n);
+            }
+        }
+
+        /// <summary>Apply the current legal target set to the opponent mini-playmat.</summary>
+        public void SetOpponentTargeting(IReadOnlyCollection<CardInstance> legalTargets)
+        {
+            _oppGlance?.SetTargeting(legalTargets);
+        }
+
+        public void ClearOpponentTargeting()
+        {
+            _oppGlance?.ClearTargeting();
         }
 
         /// <summary>Mini-playmat of the opponent's public field (human and AI).</summary>
         public ArOppFieldGlance OppGlance => _oppGlance;
+
+        /// <summary>M1-adjacent Banished/RFG floater (Backup-bot stub).</summary>
+        public ArBanishedFloater BanishedFloater => _banishedFloater;
 
         void SyncMonsters(DuelistState who, CardDatabase db,
             Dictionary<int, ArArenaCardVisual> map, bool playerSide)
@@ -717,10 +744,28 @@ namespace WRLDZ.Presentation.ArInteraction
                     if (vis.IsFadingOut)
                     {
                         // Already fading — leave GO alive until coroutine finishes
+                        map.Remove(k);
+                        continue;
                     }
-                    else if (SpellActivationPresentation.WantsFadeToGy(vis.InstanceId))
+
+                    if (SpellActivationPresentation.WantsFadeToGy(vis.InstanceId))
+                    {
                         vis.RequestFadeToGy();
-                    else if (vis.IsMonster && !vis.FaceUp)
+                        // Keep mapped so a same-frame ghost does not spawn on top
+                        // of the readable arena hologram.
+                        continue;
+                    }
+
+                    if (vis.SpellActivateSequenceActive)
+                    {
+                        // Zone empty and not a GY resolve — bounced to hand / cancelled.
+                        SpellActivationPresentation.CancelActivationPresentation(vis.InstanceId);
+                        ArObjectUtil.Destroy(vis.gameObject);
+                        map.Remove(k);
+                        continue;
+                    }
+
+                    if (vis.IsMonster && !vis.FaceUp)
                         vis.PlayBattleFlipThenDestroy();
                     else
                         ArCardShatterFx.ConsumeQueuedOrQuietDestroy(vis.gameObject, vis.InstanceId, Layer);

@@ -33,8 +33,21 @@ namespace WRLDZ.Duel.TextEffects
             EquipOnlyPrefix + @"It gains (\d+) ATK(?:/DEF| and DEF)?\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        /// <summary>Cyber Shield: Equip only to "Harpie Lady" or "Harpie Lady Sisters". It gains 500 ATK.</summary>
+        static readonly Regex RxEquipOnlyNamedOr = new(
+            @"Equip only to ""([^""]+)"" or ""([^""]+)""\.\s*It gains (\d+) ATK(?:/DEF| and DEF)?\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         static readonly Regex RxEquipOnlyKindLoseDef = new(
             EquipOnlyPrefix + @"It gains (\d+) ATK and loses (\d+) DEF\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxPiercingEquip = new(
+            @"(?:If|When) the equipped monster attacks a Defense Position monster, inflict piercing battle damage(?: to your opponent)?\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxPiercingLegacyDiff = new(
+            @"When it attacks with an ATK that is higher than the DEF of a Defense Position monster, inflict the difference as Battle Damage(?: to your opponent(?:'s Life Points)?)?\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxEquippedGainsPerMonster = new(
@@ -104,6 +117,13 @@ namespace WRLDZ.Duel.TextEffects
             @"Increase your Life Points by (\d+) points\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        /// <summary>Rain of Mercy / PSCT siblings: both players gain the same LP amount.</summary>
+        static readonly Regex RxBothPlayersGainLp = new(
+            @"(?:(?:increase|increases) the Life Points of both players by (\d+) points?|" +
+            @"both players gain (\d+) (?:LP|Life Points))\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+
         static readonly Regex RxSecondAttack = new(
             @"This card can make a second attack during each Battle Phase\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -146,17 +166,22 @@ namespace WRLDZ.Duel.TextEffects
             @"Add 1 Field Spell(?: Card)? from your Deck to your hand\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        /// <summary>
+        /// ROTA family. Anchored to sentence start so battle-GY searchers
+        /// (Birdface) do not also compile a free Main Phase AddNamed ignition.
+        /// </summary>
         static readonly Regex RxAddLevelRaceFromDeck = new(
-            @"Add 1 Level (\d+) or lower (\w+)(?:-Type)? monster from your Deck to your hand\.?",
+            @"(?:^|(?<=\.\s))Add 1 Level (\d+) or lower (\w+)(?:-Type)? monster from your Deck to your hand\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         /// <summary>
-        /// Gather Your Mind family: add 1 quoted name from Deck. Optional
-        /// "Your Deck is then shuffled" is search procedure (Ignis has no shuffle
-        /// op; no ShuffleDeck action invented). Oath OPT is IsBoilerplate.
+        /// Gather Your Mind / Toon Table family: add 1 quoted name from Deck.
+        /// Anchored to sentence start (Birdface battle-GY add uses MonsterTrigger).
+        /// Optional "Your Deck is then shuffled" is search procedure (Ignis has no
+        /// shuffle op; no ShuffleDeck action invented). Oath OPT is IsBoilerplate.
         /// </summary>
         static readonly Regex RxAddNamedFromDeck = new(
-            @"Add 1 ""([^""]+)""(?: card)? from your Deck to your hand" +
+            @"(?:^|(?<=\.\s))Add 1 ""([^""]+)""(?<series> card)? from your Deck to your hand" +
             @"(?:\. Your Deck is then shuffled)?\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
@@ -238,11 +263,24 @@ namespace WRLDZ.Duel.TextEffects
                     Add(split, EquipClause(split.Groups[1].Value,
                         Parse(split, 2, 400), -Parse(split, 3, 200)));
 
+                var namedOr = RxEquipOnlyNamedOr.Match(text);
+                if (namedOr.Success)
+                {
+                    var n = Parse(namedOr, 3, 500);
+                    var slash = namedOr.Value.IndexOf("ATK/DEF", StringComparison.OrdinalIgnoreCase) >= 0
+                                || namedOr.Value.IndexOf("and DEF", StringComparison.OrdinalIgnoreCase) >= 0;
+                    var eq = EquipClause("", n, slash ? n : 0);
+                    eq.EquipHostName = namedOr.Groups[1].Value;
+                    eq.AltNamedCard = namedOr.Groups[2].Value;
+                    eq.NamedCardIsSeries = true;
+                    Add(namedOr, eq);
+                }
+
                 var onlyLose = RxEquipOnlyKindLoseDef.Match(text);
                 if (onlyLose.Success)
                     Add(onlyLose, EquipClause(onlyLose.Groups[1].Value,
                         Parse(onlyLose, 2, 400), -Parse(onlyLose, 3, 200)));
-                else
+                else if (!namedOr.Success)
                 {
                     var only = RxEquipOnlyKind.Match(text);
                     if (only.Success)
@@ -361,6 +399,19 @@ namespace WRLDZ.Duel.TextEffects
                     }
                     : null);
 
+                var bothGain = RxBothPlayersGainLp.Match(text);
+                Add(bothGain, bothGain.Success
+                    ? new EffectClause
+                    {
+                        Timing = EffectTiming.Activate,
+                        Action = EffectActionKind.GainLifePoints,
+                        Amount = Parse(bothGain, 1, Parse(bothGain, 2, 1000)),
+                        Side = EffectSide.Both,
+                        MakesChainLink = true
+                    }
+                    : null);
+
+
                 var burn = RxInflictOpp.Match(text);
                 if (!burn.Success) burn = RxDecreaseOppLp.Match(text);
                 Add(burn, burn.Success
@@ -406,6 +457,7 @@ namespace WRLDZ.Duel.TextEffects
                         Timing = EffectTiming.Activate,
                         Action = EffectActionKind.AddNamedFromDeckToHand,
                         NamedCard = named.Groups[1].Value,
+                        NamedCardIsSeries = named.Groups["series"].Success,
                         Amount = 1,
                         FromDeck = true,
                         MakesChainLink = true
@@ -562,6 +614,20 @@ namespace WRLDZ.Duel.TextEffects
                 Action = EffectActionKind.SkipOpponentNextDrawPhase,
                 MakesChainLink = true
             });
+            Add(RxPiercingEquip.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.ContinuousWhileFaceUp,
+                Action = EffectActionKind.PiercingBattleDamage,
+                MakesChainLink = false,
+                StaysOnField = true
+            });
+            Add(RxPiercingLegacyDiff.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.ContinuousWhileFaceUp,
+                Action = EffectActionKind.PiercingBattleDamage,
+                MakesChainLink = false,
+                StaysOnField = true
+            });
         }
 
         public static bool MatchesSharedKind(string text)
@@ -573,6 +639,7 @@ namespace WRLDZ.Duel.TextEffects
                    RxEquipOppTakeControlActivate.IsMatch(text) ||
                    RxEquipOppTakeControlOnly.IsMatch(text) ||
                    RxIncreaseLp.IsMatch(text) ||
+                   RxBothPlayersGainLp.IsMatch(text) ||
                    RxSecondAttack.IsMatch(text) ||
                    RxBookMoon.IsMatch(text) ||
                    RxDefYouControl.IsMatch(text) ||
@@ -587,7 +654,9 @@ namespace WRLDZ.Duel.TextEffects
                    RxTributeNamedDestroy.IsMatch(text) ||
                    RxSuijinAtkZero.IsMatch(text) ||
                    RxSsByBanishAttrGy.IsMatch(text) ||
-                   RxSkipOppNextDraw.IsMatch(text);
+                   RxSkipOppNextDraw.IsMatch(text) ||
+                   RxPiercingEquip.IsMatch(text) ||
+                   RxPiercingLegacyDiff.IsMatch(text);
         }
 
         public static void ExpectedActions(CardDef def, List<EffectActionKind> need)
@@ -598,6 +667,7 @@ namespace WRLDZ.Duel.TextEffects
             if (def.IsEquipSpell &&
                 (RxEquipBoth.IsMatch(text) || RxEquipSplit.IsMatch(text) ||
                  RxEquipIncreaseTyped.IsMatch(text) || RxEquipOnlyKind.IsMatch(text) ||
+                 RxEquipOnlyNamedOr.IsMatch(text) ||
                  RxEquipOnlyKindLoseDef.IsMatch(text) || RxEquippedGainsAtkDef.IsMatch(text) ||
                  RxEquippedGainsAtkLoseDef.IsMatch(text) || RxEquippedGainsAtk.IsMatch(text) ||
                  RxEquippedGainsPerMonster.IsMatch(text) ||
@@ -608,7 +678,7 @@ namespace WRLDZ.Duel.TextEffects
                 need.Add(EffectActionKind.EquipThisToTarget);
             if (IsHandSpell(def))
             {
-                if (RxIncreaseLp.IsMatch(text))
+                if (RxIncreaseLp.IsMatch(text) || RxBothPlayersGainLp.IsMatch(text))
                     need.Add(EffectActionKind.GainLifePoints);
                 if (RxInflictOpp.IsMatch(text) || RxDecreaseOppLp.IsMatch(text))
                     need.Add(EffectActionKind.InflictDamageToOpponent);
@@ -629,6 +699,8 @@ namespace WRLDZ.Duel.TextEffects
                 need.Add(EffectActionKind.GainLifePoints);
             if (RxWhenYouTakeDamage.IsMatch(text) && RxInflictPerCopyInGy.IsMatch(text))
                 need.Add(EffectActionKind.InflictDamageToOpponent);
+            if (RxPiercingEquip.IsMatch(text) || RxPiercingLegacyDiff.IsMatch(text))
+                need.Add(EffectActionKind.PiercingBattleDamage);
         }
 
         public static bool EquipTargetsOpponent(CardDef def)

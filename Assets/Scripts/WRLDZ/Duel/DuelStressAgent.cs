@@ -360,7 +360,8 @@ namespace WRLDZ.Duel
             if (p.TargetKind == EffectTargetKind.MonsterInYourDeckAtkLeq ||
                 p.TargetKind == EffectTargetKind.FieldSpellInYourDeck ||
                 p.TargetKind == EffectTargetKind.EquipSpellInYourDeck ||
-                p.TargetKind == EffectTargetKind.MonsterInYourDeckFiltered)
+                p.TargetKind == EffectTargetKind.MonsterInYourDeckFiltered ||
+                p.TargetKind == EffectTargetKind.MonsterInYourDeckToSummon)
                 t = p.LegalTargets
                     .OrderBy(x => x.Def != null ? x.Def.atk : 9999)
                     .ThenBy(x => x.Name)

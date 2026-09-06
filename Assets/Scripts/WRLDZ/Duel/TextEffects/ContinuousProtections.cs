@@ -15,8 +15,32 @@ namespace WRLDZ.Duel.TextEffects
         {
             if (monster == null || !monster.FaceUp || monster.IsNegated) return false;
             foreach (var c in ClausesOn(monster, EffectActionKind.CannotBeAttackTarget))
+            {
+                if (c.ExceptThisCard) continue;
                 if (ConditionMet(engine, c))
                     return true;
+            }
+
+            foreach (var src in FaceUpMonsters(engine))
+            {
+                if (src == null || src.IsNegated || src == monster) continue;
+                foreach (var c in ClausesOn(src, EffectActionKind.CannotBeAttackTarget))
+                {
+                    if (!c.ExceptThisCard) continue;
+                    // "Except this one" protects the controller's matching
+                    // monsters (Marauding Captain), never the other side.
+                    if (!SameMonsterController(engine, src, monster)) continue;
+                    if (!ConditionMet(engine, c)) continue;
+                    if (!string.IsNullOrEmpty(c.RaceFilter))
+                    {
+                        if (monster.Def?.race == null ||
+                            !string.Equals(monster.Def.race, c.RaceFilter,
+                                StringComparison.OrdinalIgnoreCase))
+                            continue;
+                    }
+                    return true;
+                }
+            }
             return false;
         }
 
@@ -65,6 +89,17 @@ namespace WRLDZ.Duel.TextEffects
             return false;
         }
 
+        /// <summary>
+        /// Resolution-time guard for an effect that selected a field monster.
+        /// </summary>
+        public static bool TargetedEffectBlocked(DuelEngine engine, CardInstance target,
+            CardInstance source)
+        {
+            if (target == null) return true;
+            return CannotBeTargetedByEffects(engine, target) ||
+                   IsUnaffectedBy(engine, target, source);
+        }
+
         public static bool CannotBeTargetedByEffects(DuelEngine engine, CardInstance monster)
         {
             if (engine == null || monster?.Def == null || !monster.FaceUp) return false;
@@ -101,6 +136,20 @@ namespace WRLDZ.Duel.TextEffects
             return false;
         }
 
+        static bool SameMonsterController(DuelEngine engine, CardInstance first,
+            CardInstance second)
+        {
+            if (engine?.Player == null || engine.Opponent == null ||
+                first == null || second == null)
+                return false;
+
+            return (engine.Player.TryFindMonster(first, out _) &&
+                    engine.Player.TryFindMonster(second, out _)) ||
+                   (engine.Opponent.TryFindMonster(first, out _) &&
+                    engine.Opponent.TryFindMonster(second, out _));
+        }
+
+
         static bool ConditionMet(DuelEngine engine, EffectClause c)
         {
             if (c == null) return false;
@@ -131,7 +180,7 @@ namespace WRLDZ.Duel.TextEffects
         {
             if (card?.Def == null) yield break;
             var prog = CompiledEffectCache.GetOrCompile(card.Def);
-            if (prog == null) yield break;
+            if (prog == null || !prog.FullyCompiled) yield break;
             foreach (var c in prog.ClauseList)
             {
                 if (c != null && c.Action == action &&
@@ -165,5 +214,81 @@ namespace WRLDZ.Duel.TextEffects
             m?.Def?.race != null &&
             !string.IsNullOrEmpty(race) &&
             m.Def.race.IndexOf(race, StringComparison.OrdinalIgnoreCase) >= 0;
+
+        /// <summary>Necrovalley: neither player can banish cards currently in a GY.</summary>
+        public static bool CannotBanishFromGraveyard(DuelEngine engine)
+        {
+            foreach (var src in FaceUpSpellTraps(engine))
+            {
+                if (src == null || src.IsNegated) continue;
+                foreach (var c in ClausesOn(src, EffectActionKind.CannotBanishFromGraveyard))
+                    if (ConditionMet(engine, c))
+                        return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Necrovalley: cards in the GY cannot be targeted, except by ExceptNamedCard
+        /// (the effect of "Necrovalley") or a source whose program is unaffected by that name
+        /// (Rite of Spirit).
+        /// </summary>
+        public static bool CannotTargetCardInGy(DuelEngine engine, CardInstance source,
+            CardInstance gyCard)
+        {
+            if (engine == null || gyCard == null) return false;
+            foreach (var lockCard in FaceUpSpellTraps(engine))
+            {
+                if (lockCard == null || lockCard.IsNegated) continue;
+                foreach (var c in ClausesOn(lockCard, EffectActionKind.CannotTargetCardsInGraveyard))
+                {
+                    if (!ConditionMet(engine, c)) continue;
+                    if (source != null && source == lockCard) continue;
+                    if (source != null && !string.IsNullOrEmpty(c.ExceptNamedCard) &&
+                        source.IsNamed(c.ExceptNamedCard))
+                        continue;
+                    if (SourceIgnoresNamedLock(source, lockCard))
+                        continue;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Shared Necrovalley leave-GY guard. The current runtime models the official
+        /// GY lock through CannotTargetCardInGy, including named exceptions such as Rite
+        /// of Spirit; callers use this name for every GY-origin movement resolution.
+        /// </summary>
+        public static bool GyMovementLocked(DuelEngine engine, CardInstance source,
+            CardInstance gyCard) => CannotTargetCardInGy(engine, source, gyCard);
+
+
+        static bool SourceIgnoresNamedLock(CardInstance source, CardInstance lockCard)
+        {
+            if (source?.Def == null || lockCard == null) return false;
+            var prog = CompiledEffectCache.GetOrCompile(source.Def);
+            if (prog == null || !prog.FullyCompiled) return false;
+            foreach (var c in prog.ClauseList)
+            {
+                if (c == null || string.IsNullOrEmpty(c.UnaffectedByNamedCard)) continue;
+                if (lockCard.IsNamed(c.UnaffectedByNamedCard))
+                    return true;
+            }
+            return false;
+        }
+
+        static System.Collections.Generic.IEnumerable<CardInstance> FaceUpSpellTraps(DuelEngine engine)
+        {
+            var player = engine?.Player;
+            if (player != null)
+                foreach (var st in player.SpellTrapsOnField())
+                    if (st != null && st.FaceUp) yield return st;
+
+            var opponent = engine?.Opponent;
+            if (opponent != null)
+                foreach (var st in opponent.SpellTrapsOnField())
+                    if (st != null && st.FaceUp) yield return st;
+        }
     }
 }

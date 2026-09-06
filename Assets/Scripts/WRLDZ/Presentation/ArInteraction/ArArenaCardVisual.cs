@@ -164,7 +164,7 @@ namespace WRLDZ.Presentation.ArInteraction
                     EnsureDefendShield(instant: true);
             }
 
-            if (spawnFromWorld.HasValue && transform.parent != null)
+            if (spawnFromWorld.HasValue && transform.parent != null && !spellActivate)
             {
                 transform.position = spawnFromWorld.Value;
                 transform.localRotation = _targetLocalRot;
@@ -509,18 +509,23 @@ namespace WRLDZ.Presentation.ArInteraction
             }
         }
 
-        /// <summary>Called when zone empties but activation fade is still needed.</summary>
+        /// <summary>
+        /// Zone emptied after resolve. Do not cut the arena rise/read hover short —
+        /// the activate sequence fades itself after <see cref="SpellActivationPresentation.MinHoverSeconds"/>.
+        /// </summary>
         public void RequestFadeToGy()
         {
             if (_fadeRequested || _spellSeq == SpellSeqPhase.Fading) return;
             _fadeRequested = true;
-            if (_spellSeq == SpellSeqPhase.None || _spellSeq == SpellSeqPhase.ActiveHover ||
-                _spellSeq == SpellSeqPhase.RisingReveal)
+            // Rise + hover still running: keep the hologram readable, fade at sequence end.
+            if (_spellSeq == SpellSeqPhase.RisingReveal ||
+                _spellSeq == SpellSeqPhase.ActiveHover)
+                return;
+            if (_spellSeq == SpellSeqPhase.None)
             {
                 if (_spellCo != null) StopCoroutine(_spellCo);
                 _spellCo = StartCoroutine(FadeToGyCo());
             }
-            // If still in FaceDownSpawn/early rise, sequence will fade at end when flag set
         }
 
         /// <summary>Ghost path: play full activate then fade (card already in GY).</summary>
@@ -998,8 +1003,11 @@ namespace WRLDZ.Presentation.ArInteraction
             RefreshSpellCountersFromBus();
             ArArenaCombatFx.PlaySpellCast(transform.position, PlayerSide, _layer);
 
+            var hoverNeed = PlayerSide
+                ? SpellActivationPresentation.MinHoverSeconds
+                : SpellActivationPresentation.OpponentReadHoverSeconds;
             var hover = 0f;
-            while (hover < SpellActivationPresentation.MinHoverSeconds)
+            while (hover < hoverNeed)
             {
                 hover += Time.deltaTime;
                 var bob = Mathf.Sin(Time.time * 2.4f) * 0.012f;
@@ -1260,7 +1268,6 @@ namespace WRLDZ.Presentation.ArInteraction
             for (var i = transform.childCount - 1; i >= 0; i--)
             {
                 var child = transform.GetChild(i).gameObject;
-                if (child.GetComponent<ArEffectCallout>() != null) continue;
                 if (child.GetComponent<ArMonsterStatGauge>() != null) continue;
                 ArObjectUtil.Destroy(child);
             }

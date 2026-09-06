@@ -36,8 +36,15 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary>How long the full activate rise+reveal should take (presentation).</summary>
         public const float ActivateSequenceSeconds = 1.65f;
 
-        /// <summary>Hover hold after reveal before fade is allowed (if GY already resolved).</summary>
-        public const float MinHoverSeconds = 0.85f;
+        /// <summary>
+        /// Arena hologram hover after reveal, before fade (player's own S/T).
+        /// Disk toaster does not use this — arena Solid Vision only.
+        /// Long enough to read the face and the effect callout.
+        /// </summary>
+        public const float MinHoverSeconds = 4.5f;
+
+        /// <summary>Opponent S/T on the arena: extra read time before fade.</summary>
+        public const float OpponentReadHoverSeconds = 6.5f;
 
         /// <summary>Fade duration when leaving to GY after activation.</summary>
         public const float FadeToGySeconds = 0.75f;

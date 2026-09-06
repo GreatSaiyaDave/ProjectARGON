@@ -1,0 +1,131 @@
+{
+  "name": "Late-Walker Zombies",
+  "format": "wrldz_street_4000",
+  "main": [
+    {
+      "id": 77044671,
+      "name": "Pyramid Turtle",
+      "qty": 3
+    },
+    {
+      "id": 20277860,
+      "name": "Armored Zombie",
+      "qty": 3
+    },
+    {
+      "id": 32864,
+      "name": "The 13th Grave",
+      "qty": 3
+    },
+    {
+      "id": 32274490,
+      "name": "Skull Servant",
+      "qty": 3
+    },
+    {
+      "id": 53839837,
+      "name": "Vampire Lord",
+      "qty": 2
+    },
+    {
+      "id": 19153634,
+      "name": "Patrician of Darkness",
+      "qty": 2
+    },
+    {
+      "id": 23205979,
+      "name": "Spirit Reaper",
+      "qty": 2
+    },
+    {
+      "id": 44436472,
+      "name": "Double Coston",
+      "qty": 2
+    },
+    {
+      "id": 66672569,
+      "name": "Dragon Zombie",
+      "qty": 2
+    },
+    {
+      "id": 57281778,
+      "name": "Ryu Kokki",
+      "qty": 1
+    },
+    {
+      "id": 71200730,
+      "name": "Despair from the Dark",
+      "qty": 1
+    },
+    {
+      "id": 4861205,
+      "name": "Call of the Mummy",
+      "qty": 2
+    },
+    {
+      "id": 2204140,
+      "name": "Book of Life",
+      "qty": 2
+    },
+    {
+      "id": 24094653,
+      "name": "Polymerization",
+      "qty": 2
+    },
+    {
+      "id": 66788016,
+      "name": "Fissure",
+      "qty": 2
+    },
+    {
+      "id": 72302403,
+      "name": "Swords of Revealing Light",
+      "qty": 1
+    },
+    {
+      "id": 79759861,
+      "name": "Tribute to the Doomed",
+      "qty": 1
+    },
+    {
+      "id": 4206964,
+      "name": "Trap Hole",
+      "qty": 2
+    },
+    {
+      "id": 17814387,
+      "name": "Reinforcements",
+      "qty": 2
+    },
+    {
+      "id": 14315573,
+      "name": "Negate Attack",
+      "qty": 1
+    },
+    {
+      "id": 3819470,
+      "name": "Seven Tools of the Bandit",
+      "qty": 1
+    }
+  ],
+  "extra": [
+    {
+      "id": 58528964,
+      "name": "Flame Ghost",
+      "qty": 1
+    },
+    {
+      "id": 85684223,
+      "name": "Reaper on the Nightmare",
+      "qty": 1
+    }
+  ],
+  "side": [],
+  "counts": {
+    "main": 40,
+    "extra": 2,
+    "side": 0
+  },
+  "lpBand": 4000,
+  "role": "street_npc"
+}

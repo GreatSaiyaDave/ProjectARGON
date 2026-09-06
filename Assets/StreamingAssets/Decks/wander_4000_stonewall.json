@@ -1,0 +1,115 @@
+{
+  "name": "Plaza Stone Wall",
+  "format": "wrldz_street_4000",
+  "main": [
+    {
+      "id": 13039848,
+      "name": "Giant Soldier of Stone",
+      "qty": 3
+    },
+    {
+      "id": 15025844,
+      "name": "Mystical Elf",
+      "qty": 3
+    },
+    {
+      "id": 549481,
+      "name": "Prevent Rat",
+      "qty": 3
+    },
+    {
+      "id": 85639257,
+      "name": "Aqua Madoor",
+      "qty": 3
+    },
+    {
+      "id": 65240384,
+      "name": "Big Shield Gardna",
+      "qty": 3
+    },
+    {
+      "id": 13945283,
+      "name": "Wall of Illusion",
+      "qty": 2
+    },
+    {
+      "id": 67284908,
+      "name": "Labyrinth Wall",
+      "qty": 2
+    },
+    {
+      "id": 32012841,
+      "name": "Millennium Shield",
+      "qty": 2
+    },
+    {
+      "id": 35322812,
+      "name": "Woodborg Inpachi",
+      "qty": 2
+    },
+    {
+      "id": 54652250,
+      "name": "Man-Eater Bug",
+      "qty": 2
+    },
+    {
+      "id": 7089711,
+      "name": "Hane-Hane",
+      "qty": 1
+    },
+    {
+      "id": 72302403,
+      "name": "Swords of Revealing Light",
+      "qty": 1
+    },
+    {
+      "id": 44656491,
+      "name": "Messenger of Peace",
+      "qty": 2
+    },
+    {
+      "id": 16430187,
+      "name": "The Reliable Guardian",
+      "qty": 2
+    },
+    {
+      "id": 66788016,
+      "name": "Fissure",
+      "qty": 1
+    },
+    {
+      "id": 12923641,
+      "name": "Swords of Concealing Light",
+      "qty": 1
+    },
+    {
+      "id": 44209392,
+      "name": "Castle Walls",
+      "qty": 3
+    },
+    {
+      "id": 12607053,
+      "name": "Waboku",
+      "qty": 2
+    },
+    {
+      "id": 14315573,
+      "name": "Negate Attack",
+      "qty": 1
+    },
+    {
+      "id": 96355986,
+      "name": "Enchanted Javelin",
+      "qty": 1
+    }
+  ],
+  "extra": [],
+  "side": [],
+  "counts": {
+    "main": 40,
+    "extra": 0,
+    "side": 0
+  },
+  "lpBand": 4000,
+  "role": "street_npc_defender"
+}

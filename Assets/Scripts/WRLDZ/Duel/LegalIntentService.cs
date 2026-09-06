@@ -91,7 +91,11 @@ namespace WRLDZ.Duel
             if (engine.IsAwaitingEffectTarget && engine.PendingActivation != null &&
                 engine.PendingActivation.Controller == who)
             {
-                foreach (var t in engine.PendingActivation.LegalTargets)
+                var offered = engine.PendingActivation.LegalTargets;
+                if (engine.PendingActivation.TargetKind == EffectTargetKind.SpellTrapOnField)
+                    offered = SpellTrapEffects.FilterActivatingCardFromOffer(
+                        offered, engine.PendingActivation.Card);
+                foreach (var t in offered)
                 {
                     if (t == null) continue;
                     Add(snap, LegalKind.EffectTarget, t, DuelIntentKind.None, false, "Target", null);
@@ -181,7 +185,7 @@ namespace WRLDZ.Duel
                             .Where(t => t != null &&
                                         !ContinuousProtections.CannotBeAttackTarget(engine, t))
                             .ToList();
-                    if (targets.Count == 0 || engine.CanAttackDirectly(who, m))
+                    if (engine.CanAttackDirectly(who, m))
                     {
                         Add(snap, LegalKind.DirectAttack, m, DuelIntentKind.DirectAttack, false,
                             "Direct", null);

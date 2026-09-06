@@ -32,7 +32,8 @@ namespace WRLDZ.UI
         {
             "Corner kid", "Night-shift clerk", "Rooftop runner", "Bus-stop duelist",
             "Alley veteran", "Park regular", "Rift-touched local", "Quiet commuter",
-            "Street magician", "Late walker"
+            "Street magician", "Late walker", "Plaza sentry", "Gate guard",
+            "Schoolyard kid", "Weekend duelist", "Cafeteria kid", "Library lurker"
         };
 
         readonly List<Agent> _agents = new();

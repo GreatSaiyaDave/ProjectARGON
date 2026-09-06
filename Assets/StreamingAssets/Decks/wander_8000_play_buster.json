@@ -1,0 +1,162 @@
+{
+  "name": "Buster + a Magician",
+  "format": "wrldz_street_playground_8000",
+  "flaw": "Two Buster Blader, one Dark Magician (the foil). Skilled Dark Magician is a 2-of. Dark Paladin is in Extra. No 3rd Buster, no Sage's Stone.",
+  "main": [
+    {
+      "id": 78193831,
+      "name": "Buster Blader",
+      "qty": 2
+    },
+    {
+      "id": 46986414,
+      "name": "Dark Magician",
+      "qty": 1
+    },
+    {
+      "id": 73752131,
+      "name": "Skilled Dark Magician",
+      "qty": 2
+    },
+    {
+      "id": 38033121,
+      "name": "Dark Magician Girl",
+      "qty": 1
+    },
+    {
+      "id": 69140098,
+      "name": "Gemini Elf",
+      "qty": 2
+    },
+    {
+      "id": 31560081,
+      "name": "Magician of Faith",
+      "qty": 2
+    },
+    {
+      "id": 26202165,
+      "name": "Sangan",
+      "qty": 1
+    },
+    {
+      "id": 54652250,
+      "name": "Man-Eater Bug",
+      "qty": 2
+    },
+    {
+      "id": 24094653,
+      "name": "Polymerization",
+      "qty": 2
+    },
+    {
+      "id": 55144522,
+      "name": "Pot of Greed",
+      "qty": 1
+    },
+    {
+      "id": 19613556,
+      "name": "Heavy Storm",
+      "qty": 1
+    },
+    {
+      "id": 5318639,
+      "name": "Mystical Space Typhoon",
+      "qty": 1
+    },
+    {
+      "id": 72302403,
+      "name": "Swords of Revealing Light",
+      "qty": 1
+    },
+    {
+      "id": 66788016,
+      "name": "Fissure",
+      "qty": 2
+    },
+    {
+      "id": 97169186,
+      "name": "Smashing Ground",
+      "qty": 1
+    },
+    {
+      "id": 79759861,
+      "name": "Tribute to the Doomed",
+      "qty": 2
+    },
+    {
+      "id": 26412047,
+      "name": "Hammer Shot",
+      "qty": 1
+    },
+    {
+      "id": 70046172,
+      "name": "Rush Recklessly",
+      "qty": 2
+    },
+    {
+      "id": 65169794,
+      "name": "Black Pendant",
+      "qty": 1
+    },
+    {
+      "id": 4206964,
+      "name": "Trap Hole",
+      "qty": 2
+    },
+    {
+      "id": 17814387,
+      "name": "Reinforcements",
+      "qty": 2
+    },
+    {
+      "id": 44209392,
+      "name": "Castle Walls",
+      "qty": 2
+    },
+    {
+      "id": 3819470,
+      "name": "Seven Tools of the Bandit",
+      "qty": 1
+    },
+    {
+      "id": 14315573,
+      "name": "Negate Attack",
+      "qty": 1
+    },
+    {
+      "id": 12607053,
+      "name": "Waboku",
+      "qty": 2
+    },
+    {
+      "id": 77414722,
+      "name": "Magic Jammer",
+      "qty": 1
+    },
+    {
+      "id": 56120475,
+      "name": "Sakuretsu Armor",
+      "qty": 1
+    }
+  ],
+  "extra": [
+    {
+      "id": 98502113,
+      "name": "Dark Paladin",
+      "qty": 1
+    },
+    {
+      "id": 17881964,
+      "name": "Darkfire Dragon",
+      "qty": 1
+    }
+  ],
+  "side": [],
+  "counts": {
+    "main": 40,
+    "extra": 2,
+    "side": 0
+  },
+  "lpBand": 8000,
+  "role": "street_npc_playground"
+}

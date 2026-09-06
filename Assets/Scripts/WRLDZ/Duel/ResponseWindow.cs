@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using WRLDZ.Duel.Rules;
 
 namespace WRLDZ.Duel
 {
@@ -39,7 +40,10 @@ namespace WRLDZ.Duel
         /// After LP damage is applied (battle or effect).
         /// Legal: "when you take damage to your Life Points" traps (Numinous Healer).
         /// </summary>
-        YouTakeDamage
+        YouTakeDamage,
+
+        /// <summary>Response to the most recently activated Chain Link.</summary>
+        ChainResponse
     }
 
     /// <summary>
@@ -55,10 +59,10 @@ namespace WRLDZ.Duel
         public float OpenedUnscaledTime;
 
         /// <summary>
-        /// Seconds until impact (tied to combat anim of the card that acted).
-        /// Typical attack charge ≈ 5s for heavy monsters.
+        /// Seconds the responder has to activate. Default is the player-facing
+        /// 5s heads-up; expiry auto-passes. Cinematic impact length is separate.
         /// </summary>
-        public float ReactionSeconds = CombatAnimTimings.DefaultAttackImpact;
+        public float ReactionSeconds = CombatAnimTimings.DefaultResponseSeconds;
 
         /// <summary>Anime motion line while the animation plays.</summary>
         public string MotionLine;
@@ -67,6 +71,9 @@ namespace WRLDZ.Duel
         public CardInstance Attacker;
         public CardInstance AttackTarget; // null = direct attack
         public DuelistState AttackingPlayer;
+
+        /// <summary>Chain Link being answered when Timing is ChainResponse.</summary>
+        public ChainLink ChainTarget;
 
         // MonsterSummoned
         public CardInstance Summoned;

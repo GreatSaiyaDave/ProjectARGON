@@ -56,7 +56,7 @@ namespace WRLDZ.EditorTools
             Debug.Log(r.Detail);
             EditorUtility.DisplayDialog(
                 "Coverage report",
-                Truncate(r.Summary + "\n" + (r.ReportPath ?? ""), 1400),
+                Truncate(r.Summary + "\n" + (r.ReportPath ?? "") + "\n" + (r.DiagnosticsPath ?? ""), 1400),
                 "OK");
         }
 
@@ -71,8 +71,17 @@ namespace WRLDZ.EditorTools
             Debug.Log(r.Detail + "\n" + extra);
             EditorUtility.DisplayDialog(
                 "cards_db coverage",
-                Truncate(r.Summary + "\n" + extra + "\n" + (r.ReportPath ?? ""), 1400),
+                Truncate(r.Summary + "\n" + extra + "\n" + (r.ReportPath ?? "") + "\n" + (r.DiagnosticsPath ?? ""), 1400),
                 "OK");
+        }
+
+        [MenuItem("WRLDZ/Text Effects/Why-not-FullyCompiled Diagnostics (cards_db)")]
+        public static void DiagnosticsAllCardsDb()
+        {
+            var r = EffectCoverageService.MeasureAllCardsDb();
+            var path = r.DiagnosticsPath ?? "(JSON write failed)";
+            Debug.Log("[WRLDZ TextFX] Why-not-FullyCompiled diagnostics → " + path);
+            EditorUtility.DisplayDialog("Why-not-FullyCompiled diagnostics", path, "OK");
         }
 
         /// <summary>

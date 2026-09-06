@@ -10,6 +10,8 @@ namespace WRLDZ.Duel.TextEffects
         None = 0,
         /// <summary>Normal Spell/Trap activation (free chain or open game state).</summary>
         Activate,
+        /// Response to an already activated Chain Link.
+        ChainLinkActivated,
         /// <summary>FLIP: …</summary>
         Flip,
         /// <summary>If this card is sent from the field to the GY: …</summary>
@@ -33,7 +35,22 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         YouTakeLifePointDamage,
         /// <summary>This card destroyed an opponent's monster by battle (Fenrir skip-draw).</summary>
-        ThisCardDestroysByBattle
+        ThisCardDestroysByBattle,
+        /// <summary>
+        /// This card inflicted battle damage to the opponent (Spirit Reaper / White Magical Hat).
+        /// Fires after LP actually went down. RequiresDirectAttack skips non-direct battles.
+        /// </summary>
+        ThisCardInflictsBattleDamage,
+        /// <summary>
+        /// After damage calculation (Wall of Illusion bounce / D.D. Warrior Lady banish-both).
+        /// Fires after LP damage is applied, before battle destruction.
+        /// </summary>
+        AfterDamageCalculation,
+        /// <summary>
+        /// End of the Damage Step (Hyper Hammerhead: bounce if battled monster survived).
+        /// Fires after battle destructions have been applied.
+        /// </summary>
+        EndOfDamageStep
     }
 
     public enum EffectActionKind
@@ -43,10 +60,14 @@ namespace WRLDZ.Duel.TextEffects
         Destroy,
         SpecialSummonFromGy,
         SpecialSummonFromHand,
+        /// <summary>Special Summon a filtered monster from the controller's Deck.</summary>
+        SpecialSummonFromDeck,
         AddFromGyToHand,
         AddFromDeckToHand,
         ChangeBattlePosition,
         NegateAttack,
+        /// Negate the activation of the current Chain Link.
+        NegateActivation,
         EndBattlePhase,
         ApplyWabokuStyle,
         ApplySwordsOfRevealingLight,
@@ -57,6 +78,8 @@ namespace WRLDZ.Duel.TextEffects
         ContinuousCannotTargetDragons,
         /// <summary>Discard this card from hand; take no battle damage from that battle (Kuriboh).</summary>
         DiscardSelfNoBattleDamageThisBattle,
+        /// <summary>Discard Amount random cards from the opponent's hand (empty hand = no-op).</summary>
+        DiscardRandomFromOpponentHand,
         /// <summary>While face-up: matching monsters gain Amount ATK and DefAmount DEF.</summary>
         ContinuousGainAtkDef,
         /// <summary>While face-up: matching monsters lose Amount Levels (hand and/or field).</summary>
@@ -77,6 +100,8 @@ namespace WRLDZ.Duel.TextEffects
         ExtraAttacks,
         /// <summary>Until End Phase: target loses Amount ATK (and DefAmount DEF if DefAmount != 0, or paid LP if RequiresLpCostMultiple).</summary>
         LoseAtkDefUntilEndOfTurn,
+        /// <summary>Target (or this) gains Amount ATK / DefAmount DEF until the End Phase.</summary>
+        GainAtkDefUntilEndOfTurn,
         /// <summary>Negate the current attack only (do not end the Battle Phase).</summary>
         NegateThisAttack,
         /// <summary>Inflict effect damage equal to the target's current ATK.</summary>
@@ -109,6 +134,10 @@ namespace WRLDZ.Duel.TextEffects
         SelfDestroyUnlessNamedFaceUp,
         /// <summary>Controller gains Amount LP.</summary>
         GainLifePoints,
+        /// <summary>While face-up: opponent LP gains become equal effect damage.</summary>
+        ConvertOpponentLpGainToDamage,
+        /// <summary>Mandatory upkeep: the controller pays Amount LP.</summary>
+        PayLifePoints,
         /// <summary>Controller takes Amount effect damage.</summary>
         TakeEffectDamage,
         /// <summary>Inflict Amount effect damage to the opponent.</summary>
@@ -193,7 +222,36 @@ namespace WRLDZ.Duel.TextEffects
         /// This face-up card cannot be Tributed for a Tribute Summon (Fox Fire).
         /// Honored via CardInstance.CannotBeTributedForSummon.
         /// </summary>
-        CannotBeTributedForSummon
+        CannotBeTributedForSummon,
+        /// <summary>
+        /// Ritual Spell: Tribute hand/field monsters (Greater or Equal Level) and
+        /// Special Summon the named / attribute Ritual Monster from the hand.
+        /// </summary>
+        RitualSummon,
+        /// <summary>
+        /// After a targeting card effect resolves, if this face-up field card was a
+        /// target of that effect, destroy it (Spirit Reaper / Reaper on the Nightmare).
+        /// </summary>
+        DestroyThisAfterResolvingTargetingEffect,
+        /// <summary>
+        /// Continuous: this card cannot be destroyed by battle (Spirit Reaper).
+        /// Honored via CardInstance.CannotBeDestroyedByBattle + OfficialEffectRegistry.
+        /// </summary>
+        CannotBeDestroyedByBattle,
+        /// <summary>
+        /// Continuous: this card (or the equipped monster) inflicts piercing battle damage.
+        /// Airknight Parshath / Fairy Meteor Crush family. Honored via CardInstance.HasPiercing.
+        /// </summary>
+        PiercingBattleDamage,
+        /// <summary>
+        /// Neither player can banish cards from the GYs (Necrovalley). Shared GY lock.
+        /// </summary>
+        CannotBanishFromGraveyard,
+        /// <summary>
+        /// Cards in the GY cannot be targeted. ExceptNamedCard may allow that card's
+        /// effects (Necrovalley except by the effect of "Necrovalley").
+        /// </summary>
+        CannotTargetCardsInGraveyard
     }
 
     public enum EffectSide
@@ -225,6 +283,8 @@ namespace WRLDZ.Duel.TextEffects
         AnyCardOnField,
         /// <summary>Monsters in the controller's hand (discard cost).</summary>
         ControllerHandMonsters,
+        /// <summary>Filtered monsters in the controller's Deck (Special Summon).</summary>
+        ControllerDeckMonsters,
         /// <summary>
         /// Every other card on either field except the effect source
         /// (Daedalus: destroy all other cards on the field).
@@ -245,7 +305,11 @@ namespace WRLDZ.Duel.TextEffects
         /// <summary>Face-up Field Spell Zones on either field (Burning Land).</summary>
         FieldSpellsOnField,
         /// <summary>Equip Spells in the controller's Deck (Iron Blacksmith Kotetsu).</summary>
-        DeckEquipSpells
+        DeckEquipSpells,
+        /// <summary>Monsters in the opponent's GY (Book of Life second target).</summary>
+        OppGyMonsters,
+        /// <summary>Monsters the opponent controls, face-up or face-down (Spellbinding Circle).</summary>
+        OppMonsters
     }
 
     /// <summary>One parsed clause from official card text.</summary>
@@ -260,6 +324,8 @@ namespace WRLDZ.Duel.TextEffects
         public int Amount;
         /// <summary>True if the player must choose a target.</summary>
         public bool RequiresTargetChoice;
+        /// <summary>True only when the PSCT effect actually targets the selected card; distinct from UI choice.</summary>
+        public bool IsPsctTarget;
         /// <summary>Lord of D. on field required to activate/resolve.</summary>
         public bool RequiresLordOfDOnField;
         /// <summary>Activation only during opponent's turn.</summary>
@@ -286,6 +352,8 @@ namespace WRLDZ.Duel.TextEffects
         public bool RequiresDiscardCost;
         /// <summary>Discard-cost attribute filter (WATER, etc.). Empty = any monster. "*" = any card.</summary>
         public string DiscardCostAttribute;
+        /// <summary>How many cards the discard cost requires (0/1 = one). Final Destiny = 5.</summary>
+        public int DiscardCostCount;
         /// <summary>
         /// Cost: send 1 face-up card you control whose rules name is RequiresFaceUpName
         /// to the GY (Daedalus / A Legendary Ocean as "Umi"). Not Maiden environment.
@@ -324,12 +392,22 @@ namespace WRLDZ.Duel.TextEffects
         /// (Lord Poison: except "Lord Poison"). Distinct from TributeExceptThis.
         /// </summary>
         public string ExceptNamedCard;
+        /// <summary>
+        /// Rite of Spirit: this card's activation and effect ignore GY locks from
+        /// a face-up card named UnaffectedByNamedCard (Necrovalley).
+        /// </summary>
+        public string UnaffectedByNamedCard;
         /// <summary>SpecialSummonNamed may use the hand.</summary>
         public bool FromHand;
         /// <summary>SpecialSummonNamed / add may use the Deck.</summary>
         public bool FromDeck;
         /// <summary>SpecialSummonNamed may use the GY.</summary>
         public bool FromGrave;
+        /// <summary>
+        /// RitualSummon: tributes must equal the Level exactly (AddProcEqual).
+        /// False = Greater (sum &gt;= Level / Amount).
+        /// </summary>
+        public bool RitualExactLevel;
         /// <summary>Targets must have ATK ≤ the numeric cost just paid (Armed Dragon).</summary>
         public bool RequiresAtkLeqCost;
         /// <summary>GainThisAtkUntilEnd: Amount is per paid cost card (Bazoo, Gaia Soul).</summary>
@@ -360,6 +438,22 @@ namespace WRLDZ.Duel.TextEffects
         public int TokenDestroyedDamage;
         /// <summary>Union: equip only to a monster named NamedCard / EquipHostName.</summary>
         public string EquipHostName;
+        /// <summary>Second printed name for SpecialSummonNamed (Elegant Egotist "X" or "Y").</summary>
+        public string AltNamedCard;
+        /// <summary>Destroy: choose among face-up monsters with the lowest ATK (Fissure; ties offered).</summary>
+        public bool PickLowestAtk;
+        /// <summary>Destroy: choose among face-up monsters with the highest DEF (Smashing Ground; ties offered).</summary>
+        public bool PickHighestDef;
+        /// <summary>Destroy: choose among face-up monsters with the highest ATK (Hammer Shot; ties offered).</summary>
+        public bool PickHighestAtk;
+        /// <summary>Target must be in Attack Position (Hammer Shot).</summary>
+        public bool RequiresAttackPosition;
+        /// <summary>ChangeBattlePosition: set to face-up Attack (Stop Defense), do not toggle.</summary>
+        public bool ForceAttackPosition;
+        /// <summary>Destroy only face-up Continuous Spells (Spell Purification).</summary>
+        public bool FaceUpContinuousSpellsOnly;
+        /// <summary>Destroy only face-up Continuous Traps.</summary>
+        public bool FaceUpContinuousTrapsOnly;
         /// <summary>Falling Down / Snatch Steal: take control of the equipped target.</summary>
         public bool TakeControlOfTarget;
         public int EquipAtkBonus;
@@ -392,6 +486,8 @@ namespace WRLDZ.Duel.TextEffects
         public bool RequiresThisFlipSummoned;
         /// <summary>Vampiric Orchis family: "When this card is Normal Summoned" — not FS/SS.</summary>
         public bool RequiresThisNormalSummoned;
+        /// <summary>Monarch family: "If this card is Tribute Summoned" — not a tribute-less NS/FS/SS.</summary>
+        public bool RequiresThisTributeSummoned;
         /// <summary>
         /// Ectoplasmer: the turn player tributes (not the card's controller).
         /// Damage goes to that player's opponent.
@@ -406,14 +502,49 @@ namespace WRLDZ.Duel.TextEffects
         public bool TurnPlayerIsSubject;
         /// <summary>Call of the Haunted: when this card leaves the field, destroy the summoned monster.</summary>
         public bool DestroyHostWhenThisLeaves;
+        /// <summary>Spellbinding Circle family: destroy this card only when its bound host is destroyed.</summary>
+        public bool DestroyThisWhenBoundHostDestroyed;
+        /// <summary>
+        /// Spellbinding Circle family: also lock battle position on the bound host
+        /// (Cannot attack or change battle position).
+        /// </summary>
+        public bool AlsoCannotChangeBattlePosition;
+        /// <summary>
+        /// Two-target activation (Book of Life): after the first pick, collect SecondZone.
+        /// </summary>
+        public bool RequiresSecondTarget;
+        public EffectZoneFilter SecondZone;
+        public EffectActionKind SecondAction;
+        /// <summary>
+        /// CannotBeAttackTarget on OTHER matching monsters, not this card
+        /// (Marauding Captain: Warriors except this one).
+        /// </summary>
+        public bool ExceptThisCard;
         /// <summary>Special Summon in Defense Position (Soul Resurrection).</summary>
         public bool SummonInDefense;
+        /// <summary>Special Summon selection may use fewer than Amount cards ("up to"/any number).</summary>
+        public bool SpecialSummonUpTo;
         /// <summary>GY target must be a Normal Monster.</summary>
         public bool RequiresNormalMonster;
         /// <summary>ContinuousCannotAttack: Amount is a printed Level (Gravity Bind), not ATK.</summary>
         public bool AmountIsLevel;
+        /// <summary>
+        /// ThisCardInflictsBattleDamage: only if the battle had no monster target
+        /// ("by a direct attack"). White Magical Hat leaves this false.
+        /// </summary>
+        public bool RequiresDirectAttack;
         /// <summary>Suijin: this card must be the current attack target.</summary>
         public bool RequiresThisIsAttackTarget;
+        /// <summary>
+        /// EndOfDamageStep: opponent's monster that battled this card must still be on the field
+        /// (Hyper Hammerhead).
+        /// </summary>
+        public bool RequiresBattledMonsterNotDestroyed;
+        /// <summary>
+        /// Resolution also banishes this card (D.D. Warrior Lady / D.D. Assailant
+        /// "banish that monster, also banish this card").
+        /// </summary>
+        public bool AlsoBanishThis;
         /// <summary>Suijin: once while this copy remains face-up.</summary>
         public bool OnceWhileFaceUp;
         /// <summary>Konami PSCT: this sentence uses ":" or ";" and therefore makes a Chain Link.</summary>
@@ -473,6 +604,12 @@ namespace WRLDZ.Duel.TextEffects
         public ConditionCheckedAt CheckedAt = ConditionCheckedAt.Both;
         /// <summary>Master spec §7. None unless OncePerTurn is set.</summary>
         public OncePerTurnScope OptScope = OncePerTurnScope.None;
+        /// True when this clause negates the current activation link.
+        public bool ChainResponseOnly;
+        /// Response effect destroys the activated card if negation succeeds.
+        public bool DestroyNegatedCard;
+        /// Big Shield Gardna: flip this monster face-up Defense on resolution.
+        public bool FlipSelfFaceUpDefense;
         public bool ActivationNegatable = true;
         public bool EffectNegatable = true;
     }
@@ -566,6 +703,9 @@ namespace WRLDZ.Duel.TextEffects
              HasTiming(EffectTiming.EndPhase) ||
              HasTiming(EffectTiming.ContinuousWhileFaceUp) ||
              HasTiming(EffectTiming.YouTakeLifePointDamage) ||
-             HasTiming(EffectTiming.ThisCardDestroysByBattle));
+             HasTiming(EffectTiming.ThisCardDestroysByBattle) ||
+             HasTiming(EffectTiming.ThisCardInflictsBattleDamage) ||
+             HasTiming(EffectTiming.AfterDamageCalculation) ||
+             HasTiming(EffectTiming.EndOfDamageStep));
     }
 }

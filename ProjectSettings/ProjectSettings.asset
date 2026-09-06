@@ -833,7 +833,7 @@ PlayerSettings:
   webEnableSubmoduleStrippingCompatibility: 0
   scriptingDefineSymbols:
     Android: WRLDZ_HAS_ARFOUNDATION
-    Standalone: WRLDZ_HAS_ARFOUNDATION;LEVELPLAY_DEPENDENCIES_INSTALLED;SENTIS_ANALYTICS_ENABLED;APP_UI_EDITOR_ONLY
+    Standalone: WRLDZ_HAS_ARFOUNDATION;LEVELPLAY_DEPENDENCIES_INSTALLED;APP_UI_EDITOR_ONLY;SENTIS_ANALYTICS_ENABLED
     iPhone: WRLDZ_HAS_ARFOUNDATION
   additionalCompilerArguments: {}
   platformArchitecture: {}

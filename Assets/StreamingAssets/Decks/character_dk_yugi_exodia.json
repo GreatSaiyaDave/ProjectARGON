@@ -1,0 +1,138 @@
+{
+  "name": "Yugi Mutou \u00b7 Forbidden One",
+  "format": "wrldz_dk_character",
+  "character": "Yugi Mutou",
+  "era": "duelist_kingdom",
+  "erazBandId": "original",
+  "notes": "Kaiba-match Exodia. Five pieces at 1. Heart of the Underdog + stall. Witch of the Black Forest omitted (forbidden).",
+  "main": [
+    {
+      "id": 33396948,
+      "name": "Exodia the Forbidden One",
+      "qty": 1
+    },
+    {
+      "id": 70903634,
+      "name": "Right Arm of the Forbidden One",
+      "qty": 1
+    },
+    {
+      "id": 7902349,
+      "name": "Left Arm of the Forbidden One",
+      "qty": 1
+    },
+    {
+      "id": 8124921,
+      "name": "Right Leg of the Forbidden One",
+      "qty": 1
+    },
+    {
+      "id": 44519536,
+      "name": "Left Leg of the Forbidden One",
+      "qty": 1
+    },
+    {
+      "id": 26202165,
+      "name": "Sangan",
+      "qty": 1
+    },
+    {
+      "id": 35762283,
+      "name": "Heart of the Underdog",
+      "qty": 3
+    },
+    {
+      "id": 13039848,
+      "name": "Giant Soldier of Stone",
+      "qty": 3
+    },
+    {
+      "id": 15025844,
+      "name": "Mystical Elf",
+      "qty": 3
+    },
+    {
+      "id": 67284908,
+      "name": "Labyrinth Wall",
+      "qty": 2
+    },
+    {
+      "id": 32012841,
+      "name": "Millennium Shield",
+      "qty": 2
+    },
+    {
+      "id": 549481,
+      "name": "Prevent Rat",
+      "qty": 2
+    },
+    {
+      "id": 85639257,
+      "name": "Aqua Madoor",
+      "qty": 2
+    },
+    {
+      "id": 55144522,
+      "name": "Pot of Greed",
+      "qty": 1
+    },
+    {
+      "id": 72302403,
+      "name": "Swords of Revealing Light",
+      "qty": 1
+    },
+    {
+      "id": 70368879,
+      "name": "Upstart Goblin",
+      "qty": 2
+    },
+    {
+      "id": 72892473,
+      "name": "Card Destruction",
+      "qty": 1
+    },
+    {
+      "id": 44656491,
+      "name": "Messenger of Peace",
+      "qty": 2
+    },
+    {
+      "id": 66788016,
+      "name": "Fissure",
+      "qty": 1
+    },
+    {
+      "id": 12607053,
+      "name": "Waboku",
+      "qty": 3
+    },
+    {
+      "id": 85742772,
+      "name": "Gravity Bind",
+      "qty": 2
+    },
+    {
+      "id": 3136426,
+      "name": "Level Limit - Area B",
+      "qty": 2
+    },
+    {
+      "id": 14315573,
+      "name": "Negate Attack",
+      "qty": 1
+    },
+    {
+      "id": 4206964,
+      "name": "Trap Hole",
+      "qty": 1
+    }
+  ],
+  "extra": [],
+  "side": [],
+  "counts": {
+    "main": 40,
+    "extra": 0,
+    "side": 0
+  },
+  "role": "character_dk"
+}

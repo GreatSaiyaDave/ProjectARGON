@@ -35,6 +35,10 @@ namespace WRLDZ.Duel
                 if (c == null) continue;
                 if (c.Action == EffectActionKind.CannotBeTributedForSummon)
                     card.CannotBeTributedForSummon = true;
+                if (c.Action == EffectActionKind.CannotBeDestroyedByBattle)
+                    card.CannotBeDestroyedByBattle = true;
+                if (c.Action == EffectActionKind.PiercingBattleDamage)
+                    card.HasPiercing = true;
             }
             foreach (var c in prog.ClauseList)
             {
@@ -89,7 +93,7 @@ namespace WRLDZ.Duel
 
         static void ApplyFaceUpField(DuelEngine engine, CardInstance field)
         {
-            if (engine == null || field?.Def == null || !field.FaceUp) return;
+            if (engine == null || field?.Def == null || !field.FaceUp || field.IsNegated) return;
 
             // Hardcoded ALO first so compiler + script never double-apply +200 / −1.
             if (field.CardId == ALegendaryOcean)
@@ -173,7 +177,7 @@ namespace WRLDZ.Duel
         static bool ApplyCompiledContinuous(DuelEngine engine, CardInstance field)
         {
             var prog = CompiledEffectCache.GetOrCompile(field.Def);
-            if (prog == null) return false;
+            if (prog == null || !prog.FullyCompiled) return false;
             var any = false;
             foreach (var clause in prog.ClausesFor(EffectTiming.ContinuousWhileFaceUp))
             {
@@ -329,6 +333,9 @@ namespace WRLDZ.Duel
                     if (!IsFaceUpMonster(m)) continue;
                     if (!MatchesAttribute(m, clause.AttributeFilter)) continue;
                     if (!MatchesRace(m, clause.RaceFilter)) continue;
+                    if (!string.IsNullOrEmpty(clause.NamedCard) &&
+                        !CardMatchesNamed(m, clause.NamedCard, clause.NamedCardIsSeries))
+                        continue;
                     m.AtkModifier += clause.Amount;
                     m.DefModifier += clause.DefAmount;
                 }
@@ -402,10 +409,18 @@ namespace WRLDZ.Duel
         public static bool ControlsFaceUpNamed(DuelistState who, string name)
         {
             if (who == null || string.IsNullOrEmpty(name)) return false;
-            foreach (var st in who.SpellTrapsOnField())
+            foreach (var monster in who.MonstersOnField())
             {
-                if (st != null && st.FaceUp && st.IsNamed(name)) return true;
+                if (monster != null && monster.FaceUp && CardMatchesNamed(monster, name, series: false))
+                    return true;
             }
+
+            foreach (var st in who.SpellTrapsOnField())
+                if (st != null && st.FaceUp && CardMatchesNamed(st, name, series: false)) return true;
+
+            var field = who.FieldSpellZone?.Occupant;
+            if (field != null && field.FaceUp && CardMatchesNamed(field, name, series: false))
+                return true;
 
             return false;
         }
@@ -489,7 +504,7 @@ namespace WRLDZ.Duel
                     string.Equals(name, UmiName, StringComparison.OrdinalIgnoreCase))
                     return true;
                 var prog = CompiledEffectCache.GetOrCompile(m.Def);
-                if (prog == null) continue;
+                if (prog == null || !prog.FullyCompiled) continue;
                 foreach (var c in prog.ClausesFor(EffectTiming.ContinuousWhileFaceUp))
                 {
                     if (c == null || c.Action != EffectActionKind.FieldTreatedAsName) continue;
@@ -509,7 +524,7 @@ namespace WRLDZ.Duel
             {
                 if (st == null || !st.FaceUp || st.Def == null) continue;
                 var prog = CompiledEffectCache.GetOrCompile(st.Def);
-                if (prog == null) continue;
+                if (prog == null || !prog.FullyCompiled) continue;
                 foreach (var c in prog.ClausesFor(EffectTiming.ContinuousWhileFaceUp))
                 {
                     if (c == null || c.Action != EffectActionKind.PreventControllerBattleDamage)
@@ -532,7 +547,7 @@ namespace WRLDZ.Duel
             {
                 if (st == null || !st.FaceUp || st.Def == null) continue;
                 var prog = CompiledEffectCache.GetOrCompile(st.Def);
-                if (prog == null) continue;
+                if (prog == null || !prog.FullyCompiled) continue;
                 foreach (var c in prog.ClausesFor(EffectTiming.ContinuousWhileFaceUp))
                 {
                     if (c == null || c.Action != EffectActionKind.SelfDestroyUnlessNamedFaceUp)

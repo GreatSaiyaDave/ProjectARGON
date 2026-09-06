@@ -219,6 +219,21 @@ RX_PAY_OR_DESTROY = re.compile(
     r"during your Standby Phase,? pay \d+ (?:LP|Life Points) or destroy this card",
     re.I,
 )
+RX_CDBB = re.compile(
+    r"(?:^|(?<=[.!?]\s)|\"[^\"]+\"(?:\s*\+\s*\"[^\"]+\")+\s+)"
+    r"(?:Cannot be destroyed by battle(?! with| or)|"
+    r"This card (?:cannot be destroyed by battle(?! with| or)|is not destroyed as a result of battle))\.",
+    re.I,
+)
+RX_PREMATURE = re.compile(
+    r"Activate this card by paying \d+ (?:LP|Life Points), then target 1 monster in your (?:GY|Graveyard);"
+    r"\s*Special Summon that target in Attack Position and equip it with this card",
+    re.I,
+)
+RX_TRIBUTE_SUMMON_DESTROY_MONSTER = re.compile(
+    r"this card is Tribute Summoned:\s*Target 1 monster on the field;\s*destroy that target",
+    re.I,
+)
 RX_CALL_HAUNTED = re.compile(
     r"Activate this card by targeting 1 monster in your (?:GY|Graveyard);\s*"
     r"Special Summon",
@@ -539,6 +554,12 @@ def main() -> int:
             print(f"COVERED standby-pay-or-destroy {cid} {name}  compiler")
         if RX_CALL_HAUNTED.search(desc) or RX_SOUL_RES.search(desc):
             print(f"COVERED gy-revive-leave      {cid} {name}  compiler")
+        if RX_PREMATURE.search(desc):
+            print(f"COVERED premature-gy-equip   {cid} {name}  compiler")
+        if RX_CDBB.search(desc):
+            print(f"COVERED cannot-destroy-battle {cid} {name}  compiler")
+        if RX_TRIBUTE_SUMMON_DESTROY_MONSTER.search(desc):
+            print(f"COVERED tribute-summon-destroy {cid} {name}  compiler")
 
         fact = st_facts.get(cid)
         if fact and cid not in UNIQUE_ST_LEFTOVER:
@@ -726,6 +747,12 @@ def main() -> int:
         gaps.append("44656491 Messenger of Peace pay-or-destroy regex missed official text")
     if 97077563 in by_id and not RX_CALL_HAUNTED.search(by_id[97077563].get("desc") or ""):
         gaps.append("97077563 Call of the Haunted regex missed official text")
+    if 70828912 in by_id and not RX_PREMATURE.search(by_id[70828912].get("desc") or ""):
+        gaps.append("70828912 Premature Burial pay-LP GY-SS equip regex missed official text")
+    if 23205979 in by_id and not RX_CDBB.search(by_id[23205979].get("desc") or ""):
+        gaps.append("23205979 Spirit Reaper cannot-be-destroyed-by-battle regex missed official text")
+    if 51945556 in by_id and not RX_TRIBUTE_SUMMON_DESTROY_MONSTER.search(by_id[51945556].get("desc") or ""):
+        gaps.append("51945556 Zaborg Tribute Summoned destroy regex missed official text")
     if 92924317 in by_id and not RX_SOUL_RES.search(by_id[92924317].get("desc") or ""):
         gaps.append("92924317 Soul Resurrection regex missed official text")
     if st_facts:

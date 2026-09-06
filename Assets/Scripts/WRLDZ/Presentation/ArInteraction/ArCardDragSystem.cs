@@ -40,6 +40,12 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary>Short tap on a disk GY tray → graveyard browser.</summary>
         public Action<bool /*playerSide*/> OnGraveyardTapped;
 
+        /// <summary>
+        /// Short tap on Banished/RFG floater (M1-adjacent). Dilbot: wire to BanishedBrowser.Show.
+        /// Stub — Backup-bot presentation assist; connect in DuelUI alongside OnGraveyardTapped.
+        /// </summary>
+        public Action<bool /*playerSide*/> OnBanishedTapped;
+
         /// <summary>Short tap on a floating disk phase chip (BATTLE / MAIN 2 / END).</summary>
         public Action<ArDiskPhaseKind> OnPhaseButtonTapped;
 
@@ -371,6 +377,16 @@ namespace WRLDZ.Presentation.ArInteraction
                     var yours = gy.Disk != null ? gy.Disk.IsPlayerSide : gy.IsPlayerSide;
                     OnGraveyardTapped?.Invoke(yours);
                     Debug.Log("[WRLDZ AR] GY tap · you=" + yours);
+                    return;
+                }
+
+                // Banished / RFG floater (M1-adjacent) — Dilbot owns DuelUI open/browser wire-up.
+                var ban = h.collider.GetComponentInParent<ArBanishedHit>();
+                if (ban != null && ban.gameObject.activeInHierarchy)
+                {
+                    var yours = ban.Floater != null ? ban.Floater.IsPlayerSide : ban.IsPlayerSide;
+                    OnBanishedTapped?.Invoke(yours);
+                    Debug.Log("[WRLDZ AR] Banished tap · you=" + yours);
                     return;
                 }
 

@@ -56,7 +56,21 @@ namespace WRLDZ.Duel.TextEffects
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
         static readonly Regex RxYouCan = new(@"\byou can\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
         static readonly Regex RxSummonRestrict = new(
-            @"cannot be normal summoned(?:/set)?|must (?:first )?be special summoned|cannot be special summoned except",
+            @"cannot be normal summoned(?:/set)?|must (?:first )?be special summoned|cannot be special summoned(?: except| from the (?:GY|Graveyard))?|cannot be summoned unless you control a face-up ""[^""]+""",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        static readonly Regex RxSummonGateNamed = new(
+            @"cannot be summoned unless you control a face-up ""([^""]+)""",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxCannotBeSpecialSummoned = new(
+            @"cannot be special summoned(?=\s*(?:\.|$))",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        static readonly Regex RxCannotBeSpecialSummonedFromGy = new(
+            @"cannot be special summoned from (?:the )?(?:GY|Graveyard)\b",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxCannotBeSpecialSummonedByOtherWays = new(
+            @"cannot be special summoned by other ways\b",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         /// <summary>
@@ -69,6 +83,40 @@ namespace WRLDZ.Duel.TextEffects
 
         public static bool BlocksNormalSummonOrSet(string officialText) =>
             !string.IsNullOrWhiteSpace(officialText) && RxBlocksNormalSummon.IsMatch(officialText);
+
+        /// <summary>Returns the exact face-up card required by Guardian-style summon text.</summary>
+        public static string SummonGateNamed(string officialText)
+        {
+            if (string.IsNullOrWhiteSpace(officialText)) return null;
+            var m = RxSummonGateNamed.Match(officialText);
+            return m.Success ? m.Groups[1].Value : null;
+        }
+
+        /// <summary>True for a hard Nomi sentence with no printed exception.</summary>
+        public static bool BlocksSpecialSummon(string officialText) =>
+            !string.IsNullOrWhiteSpace(officialText) &&
+            (RxCannotBeSpecialSummoned.IsMatch(officialText) ||
+             RxCannotBeSpecialSummonedByOtherWays.IsMatch(officialText));
+
+        /// <summary>
+        /// True when printed text explicitly forbids Special Summoning from the GY.
+        /// Conditional text with an "unless" exception remains open for its
+        /// procedure-specific implementation. Full Semi-Nomi provenance (properly
+        /// summoned once before a later GY revive) is parked until a
+        /// WasProperlySpecialSummoned flag exists; do not infer it from WasSpecialSummoned.
+        /// </summary>
+        public static bool CannotBeSpecialSummonedFromGraveyard(string officialText)
+        {
+            if (string.IsNullOrWhiteSpace(officialText) ||
+                !RxCannotBeSpecialSummonedFromGy.IsMatch(officialText))
+                return false;
+
+            var sentence = Regex.Match(officialText,
+                @"[^.]*cannot be special summoned from (?:the )?(?:GY|Graveyard)[^.]*\.?",
+                RegexOptions.IgnoreCase);
+            return !sentence.Success ||
+                   !Regex.IsMatch(sentence.Value, @"\bunless\b", RegexOptions.IgnoreCase);
+        }
 
         public static List<Sentence> Parse(string officialText, CardDef def)
         {
@@ -183,6 +231,10 @@ namespace WRLDZ.Duel.TextEffects
         {
             var cond = ((s.Condition ?? "") + " " + (s.Raw ?? "")).Trim();
             if (s.IsFlip) return EffectTiming.Flip;
+            if (Contains(cond, "end of the damage step"))
+                return EffectTiming.EndOfDamageStep;
+            if (Contains(cond, "after damage calculation"))
+                return EffectTiming.AfterDamageCalculation;
             if (Contains(cond, "damage calculation") || Contains(cond, "damage step"))
                 return EffectTiming.DamageCalculation;
             if (Contains(cond, "declares an attack") || Contains(cond, "declare an attack"))
@@ -192,11 +244,16 @@ namespace WRLDZ.Duel.TextEffects
                 return EffectTiming.OpponentNormalOrFlipSummon;
             if (Contains(cond, "flip summoned"))
                 return EffectTiming.ThisCardSummoned;
+            if (Contains(cond, "this card is tribute summoned") ||
+                Contains(cond, "this monster is tribute summoned"))
+                return EffectTiming.ThisCardSummoned;
             if (Contains(cond, "this card is summoned") ||
                 Contains(cond, "this card is normal summoned") ||
                 Contains(cond, "this monster is summoned") ||
                 Contains(cond, "this monster is normal summoned"))
                 return EffectTiming.ThisCardSummoned;
+            if (Contains(cond, "inflicts battle damage"))
+                return EffectTiming.ThisCardInflictsBattleDamage;
             if (Contains(cond, "destroyed by battle"))
                 return EffectTiming.SentFromFieldToGy;
             if (Contains(cond, "sent from the field to the gy") ||

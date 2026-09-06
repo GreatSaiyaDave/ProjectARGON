@@ -1,0 +1,136 @@
+{
+  "name": "Alley Red-Eyes",
+  "format": "wrldz_street_8000",
+  "main": [
+    {
+      "id": 74677422,
+      "name": "Red-Eyes Black Dragon",
+      "qty": 3
+    },
+    {
+      "id": 36262024,
+      "name": "Black Dragon's Chick",
+      "qty": 3
+    },
+    {
+      "id": 70781052,
+      "name": "Summoned Skull",
+      "qty": 3
+    },
+    {
+      "id": 39191307,
+      "name": "Masked Dragon",
+      "qty": 3
+    },
+    {
+      "id": 5053103,
+      "name": "Battle Ox",
+      "qty": 3
+    },
+    {
+      "id": 97590747,
+      "name": "La Jinn the Mystical Genie of the Lamp",
+      "qty": 2
+    },
+    {
+      "id": 26202165,
+      "name": "Sangan",
+      "qty": 1
+    },
+    {
+      "id": 54652250,
+      "name": "Man-Eater Bug",
+      "qty": 2
+    },
+    {
+      "id": 52684508,
+      "name": "Inferno Fire Blast",
+      "qty": 3
+    },
+    {
+      "id": 24094653,
+      "name": "Polymerization",
+      "qty": 3
+    },
+    {
+      "id": 55144522,
+      "name": "Pot of Greed",
+      "qty": 1
+    },
+    {
+      "id": 19613556,
+      "name": "Heavy Storm",
+      "qty": 1
+    },
+    {
+      "id": 5318639,
+      "name": "Mystical Space Typhoon",
+      "qty": 1
+    },
+    {
+      "id": 12580477,
+      "name": "Raigeki",
+      "qty": 1
+    },
+    {
+      "id": 53129443,
+      "name": "Dark Hole",
+      "qty": 1
+    },
+    {
+      "id": 83764718,
+      "name": "Monster Reborn",
+      "qty": 1
+    },
+    {
+      "id": 72302403,
+      "name": "Swords of Revealing Light",
+      "qty": 1
+    },
+    {
+      "id": 44095762,
+      "name": "Mirror Force",
+      "qty": 1
+    },
+    {
+      "id": 97077563,
+      "name": "Call of the Haunted",
+      "qty": 1
+    },
+    {
+      "id": 4206964,
+      "name": "Trap Hole",
+      "qty": 2
+    },
+    {
+      "id": 83555666,
+      "name": "Ring of Destruction",
+      "qty": 1
+    },
+    {
+      "id": 56120475,
+      "name": "Sakuretsu Armor",
+      "qty": 2
+    }
+  ],
+  "extra": [
+    {
+      "id": 11901678,
+      "name": "Black Skull Dragon",
+      "qty": 2
+    },
+    {
+      "id": 17881964,
+      "name": "Darkfire Dragon",
+      "qty": 1
+    }
+  ],
+  "side": [],
+  "counts": {
+    "main": 40,
+    "extra": 3,
+    "side": 0
+  },
+  "lpBand": 8000,
+  "role": "street_npc"
+}

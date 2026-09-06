@@ -87,6 +87,15 @@ namespace WRLDZ.Duel.TextEffects
             @"tribute this card with (\d+) Spell Counters on it;\s*special summon 1 ""([^""]+)"" from your (hand|deck|graveyard|gy)",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        /// <summary>
+        /// Book of Life: target A (Race in your GY) then B (monster in opp GY);
+        /// SS the first, banish the second. Shared two-target resolve.
+        /// </summary>
+        static readonly Regex RxBookOfLife = new(
+            @"Target 1 (\w+) monster in your (?:GY|Graveyard) and 1 monster in your opponent's (?:GY|Graveyard);\s*" +
+            @"Special Summon the first target, also banish the second target\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         public static void Collect(string text, CardDef def, System.Collections.Generic.List<EffectClause> into,
             System.Collections.Generic.List<(int start, int length)> spans)
         {
@@ -99,6 +108,22 @@ namespace WRLDZ.Duel.TextEffects
                 into.Add(c);
                 spans?.Add((m.Index, m.Length));
             }
+
+            var book = RxBookOfLife.Match(text);
+            Add(book, book.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.SpecialSummonFromGy,
+                    Zone = EffectZoneFilter.ControllerGyMonsters,
+                    RaceFilter = book.Groups[1].Value,
+                    RequiresTargetChoice = true,
+                    RequiresSecondTarget = true,
+                    SecondZone = EffectZoneFilter.OppGyMonsters,
+                    SecondAction = EffectActionKind.Banish,
+                    MakesChainLink = true
+                }
+                : null);
 
             Add(RxTimeWizard.Match(text), new EffectClause
             {

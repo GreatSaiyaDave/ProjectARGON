@@ -1,0 +1,138 @@
+{
+  "name": "Yami Bakura \u00b7 Duelist Kingdom",
+  "format": "wrldz_dk_character",
+  "character": "Yami Bakura",
+  "era": "duelist_kingdom",
+  "erazBandId": "original",
+  "notes": "White Magical Hat, Man-Eater Bug, fiends. Change of Heart omitted (forbidden). Dark Energy + Goblin Fan keep the dirty-spell flavor.",
+  "main": [
+    {
+      "id": 15150365,
+      "name": "White Magical Hat",
+      "qty": 3
+    },
+    {
+      "id": 54652250,
+      "name": "Man-Eater Bug",
+      "qty": 3
+    },
+    {
+      "id": 5434080,
+      "name": "Headless Knight",
+      "qty": 2
+    },
+    {
+      "id": 66989694,
+      "name": "The Earl of Demise",
+      "qty": 2
+    },
+    {
+      "id": 31829185,
+      "name": "Dark Necrofear",
+      "qty": 1
+    },
+    {
+      "id": 66602787,
+      "name": "Saggi the Dark Clown",
+      "qty": 2
+    },
+    {
+      "id": 47060154,
+      "name": "Mystic Clown",
+      "qty": 2
+    },
+    {
+      "id": 15303296,
+      "name": "Ryu-Kishin",
+      "qty": 2
+    },
+    {
+      "id": 24611934,
+      "name": "Ryu-Kishin Powered",
+      "qty": 1
+    },
+    {
+      "id": 93599951,
+      "name": "Dark Spirit of the Silent",
+      "qty": 1
+    },
+    {
+      "id": 13039848,
+      "name": "Giant Soldier of Stone",
+      "qty": 2
+    },
+    {
+      "id": 15025844,
+      "name": "Mystical Elf",
+      "qty": 2
+    },
+    {
+      "id": 4614116,
+      "name": "Dark Energy",
+      "qty": 2
+    },
+    {
+      "id": 72302403,
+      "name": "Swords of Revealing Light",
+      "qty": 1
+    },
+    {
+      "id": 55144522,
+      "name": "Pot of Greed",
+      "qty": 1
+    },
+    {
+      "id": 24094653,
+      "name": "Polymerization",
+      "qty": 1
+    },
+    {
+      "id": 66788016,
+      "name": "Fissure",
+      "qty": 1
+    },
+    {
+      "id": 63102017,
+      "name": "Stop Defense",
+      "qty": 1
+    },
+    {
+      "id": 97342942,
+      "name": "Ectoplasmer",
+      "qty": 1
+    },
+    {
+      "id": 4149689,
+      "name": "Goblin Fan",
+      "qty": 2
+    },
+    {
+      "id": 18807108,
+      "name": "Spellbinding Circle",
+      "qty": 2
+    },
+    {
+      "id": 4206964,
+      "name": "Trap Hole",
+      "qty": 2
+    },
+    {
+      "id": 44095762,
+      "name": "Mirror Force",
+      "qty": 1
+    },
+    {
+      "id": 14315573,
+      "name": "Negate Attack",
+      "qty": 2
+    }
+  ],
+  "extra": [],
+  "side": [],
+  "counts": {
+    "main": 40,
+    "extra": 0,
+    "side": 0
+  },
+  "role": "character_dk"
+}

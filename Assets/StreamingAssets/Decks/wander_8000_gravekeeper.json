@@ -1,0 +1,130 @@
+{
+  "name": "Rift-Touched Gravekeepers",
+  "format": "wrldz_street_8000",
+  "main": [
+    {
+      "id": 24317029,
+      "name": "Gravekeeper's Spy",
+      "qty": 3
+    },
+    {
+      "id": 37101832,
+      "name": "Gravekeeper's Guard",
+      "qty": 3
+    },
+    {
+      "id": 63695531,
+      "name": "Gravekeeper's Spear Soldier",
+      "qty": 3
+    },
+    {
+      "id": 25262697,
+      "name": "Gravekeeper's Assailant",
+      "qty": 3
+    },
+    {
+      "id": 62473983,
+      "name": "Gravekeeper's Chief",
+      "qty": 2
+    },
+    {
+      "id": 99877698,
+      "name": "Gravekeeper's Cannonholder",
+      "qty": 2
+    },
+    {
+      "id": 50712728,
+      "name": "Gravekeeper's Curse",
+      "qty": 1
+    },
+    {
+      "id": 99690140,
+      "name": "Gravekeeper's Vassal",
+      "qty": 1
+    },
+    {
+      "id": 50412166,
+      "name": "Charm of Shabti",
+      "qty": 2
+    },
+    {
+      "id": 26202165,
+      "name": "Sangan",
+      "qty": 1
+    },
+    {
+      "id": 47355498,
+      "name": "Necrovalley",
+      "qty": 3
+    },
+    {
+      "id": 16762927,
+      "name": "Gravekeeper's Servant",
+      "qty": 2
+    },
+    {
+      "id": 72405967,
+      "name": "Royal Tribute",
+      "qty": 1
+    },
+    {
+      "id": 55144522,
+      "name": "Pot of Greed",
+      "qty": 1
+    },
+    {
+      "id": 71044499,
+      "name": "Nobleman of Crossout",
+      "qty": 2
+    },
+    {
+      "id": 5318639,
+      "name": "Mystical Space Typhoon",
+      "qty": 1
+    },
+    {
+      "id": 19613556,
+      "name": "Heavy Storm",
+      "qty": 1
+    },
+    {
+      "id": 14087893,
+      "name": "Book of Moon",
+      "qty": 1
+    },
+    {
+      "id": 30450531,
+      "name": "Rite of Spirit",
+      "qty": 3
+    },
+    {
+      "id": 44095762,
+      "name": "Mirror Force",
+      "qty": 1
+    },
+    {
+      "id": 97077563,
+      "name": "Call of the Haunted",
+      "qty": 1
+    },
+    {
+      "id": 53582587,
+      "name": "Torrential Tribute",
+      "qty": 1
+    },
+    {
+      "id": 4206964,
+      "name": "Trap Hole",
+      "qty": 1
+    }
+  ],
+  "extra": [],
+  "side": [],
+  "counts": {
+    "main": 40,
+    "extra": 0,
+    "side": 0
+  },
+  "lpBand": 8000,
+  "role": "street_npc"
+}

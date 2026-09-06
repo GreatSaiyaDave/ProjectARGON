@@ -47,7 +47,8 @@ namespace WRLDZ.Duel.Rules
         static readonly HashSet<int> SummonProcedureScripts = new()
         {
             11901678, // Black Skull Dragon
-            66889139  // Gaia the Dragon Champion
+            66889139, // Gaia the Dragon Champion
+            63519819  // Thousand-Eyes Restrict
         };
         static readonly HashSet<string> SpecialSummonKeys = new();
 
@@ -64,13 +65,19 @@ namespace WRLDZ.Duel.Rules
         public static bool ProgramMayActivate(CardDef def)
         {
             if (def == null) return false;
-            if (HasActivatableScript(def.id)) return true;
             var prog = CompiledEffectCache.GetOrCompile(def);
-            return prog != null && prog.FullyCompiled && prog.CanResolveAny;
+            if (prog != null && prog.FullyCompiled) return prog.CanResolveAny;
+            return HasActivatableScript(def.id);
         }
 
-        public static bool HasSummonProcedure(int cardId, SummonKind kind) =>
-            kind == SummonKind.FusionSummon && SummonProcedureScripts.Contains(cardId);
+        public static bool HasSummonProcedure(int cardId, SummonKind kind)
+        {
+            if (kind == SummonKind.FusionSummon)
+                return SummonProcedureScripts.Contains(cardId);
+            if (kind == SummonKind.RitualSummon)
+                return RitualProcedures.MonsterHasOfficialSpell(cardId);
+            return false;
+        }
 
         public static bool HasSpecialSummonProcedure(string key) =>
             !string.IsNullOrEmpty(key) && SpecialSummonKeys.Contains(key);
@@ -156,14 +163,25 @@ namespace WRLDZ.Duel.Rules
 
             // Field Spell: Speed 1 placement in the Field Zone is the activation (Rulebook).
             // Continuous clauses apply while face-up; they are not Trap Cards and are not Set in S/T Zones.
+            // A FullyCompiled program owns the decision; only null/incomplete text may use
+            // the structural placement gate below.
             if (def.IsFieldSpell)
+            {
+                var fieldProg = CompiledEffectCache.GetOrCompile(def);
+                if (fieldProg != null && fieldProg.FullyCompiled && !fieldProg.CanResolveAny)
+                {
+                    reason = reason ?? "[" + card.Name + "] learned text is not legal now.";
+                    return false;
+                }
                 return CanActivateFieldSpell(engine, who, card, fromHand, out reason);
+            }
 
             // Response window: LegalCards is authoritative (field traps + hand QEs like Kuriboh).
             // Stubs / uncompiled programs must not activate even if timing-legal or catalog-listed.
             if (engine.PendingResponse != null && engine.PendingResponse.Responder == who)
             {
                 var pr = engine.PendingResponse;
+                var responseProg = CompiledEffectCache.GetOrCompile(def);
                 if (!ProgramMayActivate(def))
                 {
                     var tag = CardEffectStatus.RefusalTag(def);
@@ -174,6 +192,8 @@ namespace WRLDZ.Duel.Rules
                 }
 
                 if (pr.LegalCards != null &&
+                    !(fromHand && pr.Timing == ResponseTiming.DamageCalculation &&
+                      responseProg != null && responseProg.FullyCompiled) &&
                     pr.LegalCards.Exists(c => c != null &&
                                               (c == card || c.InstanceId == card.InstanceId)))
                 {
@@ -188,7 +208,16 @@ namespace WRLDZ.Duel.Rules
                     return true;
                 }
 
-                // Hand Damage Calculation (Kuriboh) even if LegalCards not yet rebuilt
+                // Hand Damage Calculation (Kuriboh) even if LegalCards not yet rebuilt.
+                // A FullyCompiled hand program is authoritative; never route it into
+                // the legacy Kuriboh registry after the compiled path rejects.
+                if (fromHand && pr.Timing == ResponseTiming.DamageCalculation &&
+                    responseProg != null && responseProg.FullyCompiled)
+                {
+                    reason = reason ?? "[" + card.Name + "] learned text is not legal now.";
+                    return false;
+                }
+
                 if (fromHand &&
                     MonsterEffects.IsLegalHandDamageCalculationEffect(
                         who, card, pr.Timing, pr.AttackingPlayer, pr.Attacker))
@@ -221,6 +250,11 @@ namespace WRLDZ.Duel.Rules
                     mProg.HasTiming(EffectTiming.Activate) &&
                     TextEffectRuntime.CanActivate(engine, who, card, fromHand, mProg, out reason))
                     return true;
+                if (mProg != null && mProg.FullyCompiled)
+                {
+                    reason = reason ?? "[" + card.Name + "] learned text is not legal now.";
+                    return false;
+                }
                 if (MonsterEffects.CanActivateIgnition(engine, who, card))
                 {
                     reason = "OK";
@@ -247,6 +281,7 @@ namespace WRLDZ.Duel.Rules
 
             // Learn / recall official text program — FullyCompiled required on text path
             var prog = CompiledEffectCache.GetOrCompile(def);
+            var hasFullyCompiled = prog != null && prog.FullyCompiled;
             var hasRegistry = HasActivatableScript(card.CardId);
             // Continuous S/T: playing the card (hand Spell / Set Trap) is the activation
             // even when the only compiled clauses are End Phase / Standby / while-face-up.
@@ -262,7 +297,12 @@ namespace WRLDZ.Duel.Rules
             {
                 if (TextEffectRuntime.CanActivate(engine, who, card, fromHand, prog, out reason))
                     return true;
-                // Fall through to legacy if text path rejects but legacy might allow
+            }
+
+            if (hasFullyCompiled)
+            {
+                reason = reason ?? "[" + card.Name + "] learned text is not legal now.";
+                return false;
             }
 
             if (!hasRegistry)
@@ -310,17 +350,56 @@ namespace WRLDZ.Duel.Rules
         public static bool ValidateFusionMaterials(DuelEngine engine, DuelistState who, CardInstance fusion,
             List<CardInstance> materials, CardInstance fusionSpell, out string reason)
         {
-            // Full material validation is performed by SpellTrapEffects.TryResolveFusion
-            // against official printed material lists only.
-            if (fusion == null || !HasSummonProcedure(fusion.CardId, SummonKind.FusionSummon))
+            if (engine == null || who == null || fusion == null ||
+                !HasSummonProcedure(fusion.CardId, SummonKind.FusionSummon))
             {
-                reason = "Fusion recipes not yet registered for this printing.";
+                reason = "Fusion recipe is not registered for this printing.";
                 return false;
             }
 
-            if (!SpellTrapEffects.CanResolveAnyFusion(engine, who))
+            // This slice has Polymerization only; no registered contact-Fusion procedure exists.
+            if (fusionSpell == null || fusionSpell.CardId != Polymerization)
             {
-                reason = "Required Fusion Materials are not available on hand/field.";
+                reason = "No registered Contact Fusion procedure; Polymerization is required.";
+                return false;
+            }
+
+            if (!who.Hand.Contains(fusionSpell) && !who.TryFindSpellTrap(fusionSpell, out _))
+            {
+                reason = "Polymerization is not in hand or on the field.";
+                return false;
+            }
+
+            var required = fusion.CardId switch
+            {
+                SpellTrapEffects.GaiaTheDragonChampion => new[] { SpellTrapEffects.GaiaTheFierceKnight, SpellTrapEffects.CurseOfDragon },
+                SpellTrapEffects.BlackSkullDragon => new[] { SpellTrapEffects.SummonedSkull, SpellTrapEffects.RedEyesBlackDragon },
+                SpellTrapEffects.ThousandEyesRestrict => new[] { SpellTrapEffects.Relinquished, SpellTrapEffects.ThousandEyesIdol },
+                _ => null
+            };
+            if (required == null || materials == null || materials.Count != required.Length)
+            {
+                reason = "Material count does not match the registered Fusion recipe.";
+                return false;
+            }
+
+            var used = new List<CardInstance>();
+            foreach (var id in required)
+            {
+                var material = materials.FirstOrDefault(m => m != null && !used.Contains(m) && m.CardId == id &&
+                    (who.Hand.Contains(m) || who.TryFindMonster(m, out _)));
+                if (material == null)
+                {
+                    reason = "Materials must match the official recipe and be in your hand/field.";
+                    return false;
+                }
+                used.Add(material);
+            }
+
+            var fieldMaterials = used.Count(m => who.TryFindMonster(m, out _));
+            if (engine.FirstEmpty(who.MonsterZones) < 0 && fieldMaterials == 0)
+            {
+                reason = "No Monster Zone will be free after sending field materials.";
                 return false;
             }
 
@@ -352,8 +431,7 @@ namespace WRLDZ.Duel.Rules
         public static bool ValidateRitual(DuelEngine engine, DuelistState who, CardInstance ritual,
             CardInstance spell, List<CardInstance> tributes, out string reason)
         {
-            reason = "Ritual procedure not registered.";
-            return false;
+            return RitualProcedures.Validate(engine, who, ritual, spell, tributes, out reason);
         }
 
         public static bool ValidatePendulumSummon(DuelEngine engine, DuelistState who,
@@ -374,11 +452,46 @@ namespace WRLDZ.Duel.Rules
         /// Continuous properties derived only from registered continuous scripts / flags.
         /// Never invent piercing etc. from free text parse.
         /// </summary>
-        public static bool HasPiercing(CardInstance card) =>
-            card != null && card.HasPiercing; // set only by registered continuous effects
+        public static bool HasPiercing(CardInstance card)
+        {
+            if (card == null || !card.FaceUp || card.IsNegated) return false;
+            if (CardOrProgramHasPiercing(card)) return true;
+            if (card.Equips == null) return false;
+            foreach (var eq in card.Equips)
+            {
+                if (eq == null || eq.IsNegated) continue;
+                if (CardOrProgramHasPiercing(eq)) return true;
+            }
+            return false;
+        }
 
-        public static bool CannotBeDestroyedByBattle(CardInstance card) =>
-            card != null && card.CannotBeDestroyedByBattle;
+        static bool CardOrProgramHasPiercing(CardInstance card)
+        {
+            if (card == null) return false;
+            if (card.HasPiercing) return true;
+            var prog = card.Def != null ? CompiledEffectCache.GetOrCompile(card.Def) : null;
+            if (prog == null) return false;
+            foreach (var c in prog.ClausesFor(EffectTiming.ContinuousWhileFaceUp))
+            {
+                if (c != null && c.Action == EffectActionKind.PiercingBattleDamage)
+                    return true;
+            }
+            return false;
+        }
+
+        public static bool CannotBeDestroyedByBattle(CardInstance card)
+        {
+            if (card == null || !card.FaceUp || card.IsNegated) return false;
+            if (card.CannotBeDestroyedByBattle) return true;
+            var prog = card.Def != null ? CompiledEffectCache.GetOrCompile(card.Def) : null;
+            if (prog == null) return false;
+            foreach (var c in prog.ClausesFor(EffectTiming.ContinuousWhileFaceUp))
+            {
+                if (c != null && c.Action == EffectActionKind.CannotBeDestroyedByBattle)
+                    return true;
+            }
+            return false;
+        }
 
         static string Truncate(string s, int n)
         {

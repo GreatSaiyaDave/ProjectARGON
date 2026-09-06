@@ -11,7 +11,7 @@ namespace WRLDZ.Duel.TextEffects
     /// <summary>
     /// Remembers compiled effect programs after first play / bulk compile.
     /// Load order: StreamingAssets seed → persistent disk → memory.
-    /// Compile path: regex templates → optional schema-validated SpaceXAI (first-play only).
+    /// Compile path: regex templates → optional schema-validated SpaceXAI (explicit tooling opt-in only).
     /// Live duel resolution never calls the LLM — only cached programs are executed.
     /// Memory key is (cardId, eraId); default era is <see cref="ErazFormat.Original"/>.
     /// </summary>
@@ -31,14 +31,15 @@ namespace WRLDZ.Duel.TextEffects
 
         /// <summary>
         /// Get cached program or compile from official text (first play / first query).
-        /// Order: memory/disk/seed → regex → optional AI if incomplete and allowed.
+        /// Order: memory/disk/seed → regex → optional AI only when explicitly enabled by tooling.
         /// </summary>
-        public static CompiledCardProgram GetOrCompile(CardDef def) =>
-            GetOrCompileInternal(def, force: false, allowAi: true);
+        public static CompiledCardProgram GetOrCompile(CardDef def, bool allowAi = false) =>
+            GetOrCompileInternal(def, force: false, allowAi: allowAi);
 
-        public static CompiledCardProgram GetOrCompile(CardInstance card) =>
-            GetOrCompile(card?.Def);
+        public static CompiledCardProgram GetOrCompile(CardInstance card, bool allowAi = false) =>
+            GetOrCompile(card?.Def, allowAi);
 
+        /// <summary>Cache-only lookup; never compiles or invokes AI.</summary>
         public static bool TryGetCached(int cardId, out CompiledCardProgram prog) =>
             TryGetCached(cardId, ResolveEraId(), out prog);
 
@@ -58,8 +59,8 @@ namespace WRLDZ.Duel.TextEffects
             if (save) SaveDiskNow();
         }
 
-        /// <summary>Force recompile (regex + optional AI), ignoring cache for this id.</summary>
-        public static CompiledCardProgram ForceRecompile(CardDef def, bool allowAi = true) =>
+        /// <summary>Force recompile (regex + optional explicitly enabled AI), ignoring cache for this id.</summary>
+        public static CompiledCardProgram ForceRecompile(CardDef def, bool allowAi = false) =>
             GetOrCompileInternal(def, force: true, allowAi: allowAi);
 
         static CompiledCardProgram GetOrCompileInternal(CardDef def, bool force, bool allowAi)

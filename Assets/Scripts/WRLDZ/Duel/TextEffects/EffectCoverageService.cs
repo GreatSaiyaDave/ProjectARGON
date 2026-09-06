@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using UnityEngine;
 using WRLDZ.Data;
 using WRLDZ.Duel.Rules;
@@ -33,9 +34,14 @@ namespace WRLDZ.Duel.TextEffects
             "ai_kaiba.json"
         };
 
+        [Serializable]
+        public struct UnparsedFragmentSpan { public int Start; public int Length; public int End; public string Text; public bool Exact; public string CoordinateSystem; }
+
+        [Serializable]
         public struct CardStatus
         {
             public int Id;
+            public int Passcode;
             public string Name;
             public string Kind; // normal | full | partial | registry | gap | missing
             public int Clauses;
@@ -43,6 +49,24 @@ namespace WRLDZ.Duel.TextEffects
             public bool RegistryScripted;
             public string Source;
             public string[] Unparsed;
+            public string[] UnparsedFragments;
+            public UnparsedFragmentSpan[] UnparsedSpans;
+            public string[] ReasonCodes;
+            public string LeftoverImpact;
+            public bool LeftoverLikelyActivationBlocking;
+            public bool LeftoverLikelyOptionalOrBoilerplate;
+            public string[] CandidateSharedAtoms;
+        }
+
+        [Serializable]
+        public class DiagnosticsReport
+        {
+            public string SchemaVersion = "argon.effect-coverage-diagnostics.v1";
+            public string GeneratedUtc;
+            public string PoolName;
+            public int CompilerVersion;
+            public string HeuristicNotes;
+            public CardStatus[] NonFullyCompiled;
         }
 
         public struct PoolReport
@@ -64,6 +88,7 @@ namespace WRLDZ.Duel.TextEffects
             public string Detail;
             public List<CardStatus> Cards;
             public string ReportPath;
+            public string DiagnosticsPath;
             public string SeedPath;
             public bool SeedExported;
         }
@@ -334,14 +359,18 @@ namespace WRLDZ.Duel.TextEffects
                 {
                     var dir = Path.Combine(Application.persistentDataPath, "WRLDZ", "reports");
                     if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
-                    var safe = string.Join("_", (poolName ?? "pool").Split(Path.GetInvalidFileNameChars()));
-                    var path = Path.Combine(dir, $"effect_coverage_{safe}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.txt");
+                    var safe = SafeFilePart(poolName);
+                    var stamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
+                    var path = Path.Combine(dir, $"effect_coverage_{safe}_{stamp}.txt");
                     File.WriteAllText(path, report.Detail);
                     report.ReportPath = path;
                     // Also write a stable latest path for tooling
                     var latest = Path.Combine(dir, $"effect_coverage_{safe}_latest.txt");
                     File.WriteAllText(latest, report.Detail);
-                    Debug.Log($"[WRLDZ TextFX] Coverage report → {path}");
+                    report.DiagnosticsPath = WriteDiagnosticsJson(report, dir, safe, stamp);
+                    Debug.Log("[WRLDZ TextFX] Coverage report → " + path);
+                    if (!string.IsNullOrEmpty(report.DiagnosticsPath))
+                        Debug.Log("[WRLDZ TextFX] Diagnostics JSON → " + report.DiagnosticsPath);
                 }
                 catch (Exception ex)
                 {
@@ -350,6 +379,177 @@ namespace WRLDZ.Duel.TextEffects
             }
 
             return report;
+        }
+
+        public static bool DiagnosticsSmoke(CardDatabase db, out string error)
+        {
+            error = string.Empty;
+            try
+            {
+                db ??= CardDatabase.Instance ?? CardDatabase.Load();
+                if (db == null) { error = "cards_db failed to load"; return false; }
+                var ids = db.GetAllCards()
+                    .Where(c => c != null && c.id > 0 && !OfficialCardAuthority.HasNoActivatableEffect(c))
+                    .Select(c => c.id).Take(8).ToList();
+                var report = MeasurePool("diagnostics_smoke", ids, db, writeReportFile: false);
+                foreach (var card in report.Cards)
+                {
+                    if (card.FullyCompiled) continue;
+                    if (card.ReasonCodes == null || card.UnparsedSpans == null ||
+                        string.IsNullOrEmpty(card.LeftoverImpact))
+                    {
+                        error = $"missing diagnostics fields for {card.Id} «{card.Name}»";
+                        return false;
+                    }
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                error = ex.GetType().Name + ": " + ex.Message;
+                return false;
+            }
+        }
+
+        static void PopulateDiagnostics(ref CardStatus st, CardDef def, CompiledCardProgram prog)
+        {
+            var source = prog?.SourceText ?? OfficialCardAuthority.OfficialText(def) ?? string.Empty;
+            var fragments = prog?.UnparsedFragments ?? Array.Empty<string>();
+            st.UnparsedSpans = FindFragmentSpans(source, fragments);
+            var reasons = new List<string>();
+            var hints = new List<string>();
+            var hasBlocking = false;
+            var allOptionalOrBoilerplate = fragments.Length > 0;
+            foreach (var fragment in fragments)
+            {
+                if (string.IsNullOrWhiteSpace(fragment)) continue;
+                var optional = IsOptionalOrBoilerplate(fragment);
+                allOptionalOrBoilerplate &= optional;
+                if (optional) AddReason(reasons, "BoilerplateCandidate");
+                var hasCost = Regex.IsMatch(fragment, @"\b(discard|tribute|send|pay|banish|reveal|detach|return)\b.*(?:cost|;|to the GY|from the)", RegexOptions.IgnoreCase);
+                var hasTarget = Regex.IsMatch(fragment, @"\b(target(?:s|ed|ing)?|select|choose)\b", RegexOptions.IgnoreCase);
+                var hasTrigger = Regex.IsMatch(fragment, @"\b(when|if|during|after|before|at the start|at the end)\b", RegexOptions.IgnoreCase);
+                var hasZone = Regex.IsMatch(fragment, @"\b(from|in|on)\s+(?:your |your opponent's |the )?(hand|Deck|Graveyard|GY|field|banished zone)\b", RegexOptions.IgnoreCase);
+                var hasAction = Regex.IsMatch(fragment, @"\b(destroy|special summon|summon|negate|gain|lose|inflict|banish|draw|add|return|send|change|discard|equip|target)\b", RegexOptions.IgnoreCase);
+                if (hasCost) { AddReason(reasons, "UnparsedCost"); hasBlocking = true; }
+                if (hasTarget) { AddReason(reasons, "UnparsedTarget"); hasBlocking = true; }
+                if (hasTrigger) { AddReason(reasons, "UnknownTrigger"); hasBlocking = true; }
+                if (hasZone) { AddReason(reasons, "UnknownSourceZone"); hasBlocking = true; }
+                if (hasAction)
+                {
+                    AddReason(reasons, "UnparsedResolution");
+                    if (!st.RegistryScripted) AddReason(reasons, "RuntimeActionMissing");
+                    hasBlocking = true;
+                }
+                AddCandidateHints(hints, fragment);
+            }
+            var official = OfficialCardAuthority.OfficialText(def) ?? string.Empty;
+            if (!string.Equals(source, official, StringComparison.Ordinal)) AddReason(reasons, "DataTextMismatch");
+            var hasBoilerplate = HasBoilerplateCandidate(source);
+            if (hasBoilerplate) AddReason(reasons, "BoilerplateCandidate");
+            AddCandidateHints(hints, source);
+            if (reasons.Count == 0) AddReason(reasons, "Other");
+            st.ReasonCodes = reasons.ToArray();
+            st.CandidateSharedAtoms = hints.ToArray();
+            st.LeftoverLikelyActivationBlocking = hasBlocking;
+            st.LeftoverLikelyOptionalOrBoilerplate = !hasBlocking && (allOptionalOrBoilerplate || hasBoilerplate);
+            st.LeftoverImpact = fragments.Length == 0 ? (hasBoilerplate ? "OptionalOrBoilerplate" : "None") : hasBlocking ? "ActivationBlocking" :
+                st.LeftoverLikelyOptionalOrBoilerplate ? "OptionalOrBoilerplate" : "Uncertain";
+        }
+
+        static UnparsedFragmentSpan[] FindFragmentSpans(string source, string[] fragments)
+        {
+            if (fragments == null || fragments.Length == 0) return Array.Empty<UnparsedFragmentSpan>();
+            var normalized = NormalizeForDiagnostics(source);
+            var spans = new UnparsedFragmentSpan[fragments.Length];
+            var cursor = 0;
+            for (var i = 0; i < fragments.Length; i++)
+            {
+                var text = fragments[i] ?? string.Empty;
+                var start = string.IsNullOrEmpty(text) ? -1 : normalized.IndexOf(text, cursor, StringComparison.OrdinalIgnoreCase);
+                if (start < 0 && !string.IsNullOrEmpty(text)) start = normalized.IndexOf(text, StringComparison.OrdinalIgnoreCase);
+                var exact = start >= 0;
+                spans[i] = new UnparsedFragmentSpan
+                {
+                    Start = exact ? start : -1, Length = exact ? text.Length : 0,
+                    End = exact ? start + text.Length : -1, Text = text, Exact = exact,
+                    CoordinateSystem = "normalizedOfficialText"
+                };
+                if (exact) cursor = start + text.Length;
+            }
+            return spans;
+        }
+
+        static string NormalizeForDiagnostics(string text)
+        {
+            return Regex.Replace((text ?? string.Empty).Replace('\r', ' ').Replace('\n', ' '), @"\s+", " ").Trim();
+        }
+
+        static bool IsOptionalOrBoilerplate(string text)
+        {
+            return Regex.IsMatch(text ?? string.Empty,
+                @"(?:once per turn|you can only activate 1|you can only use 1|you can use this effect only once|if you do|you can|may)",
+                RegexOptions.IgnoreCase);
+        }
+
+        static bool HasBoilerplateCandidate(string text)
+        {
+            return Regex.IsMatch(text ?? string.Empty, @"(?:once per turn|you can only activate 1|you can only use 1|you can use this effect only once)", RegexOptions.IgnoreCase);
+        }
+
+        static void AddReason(List<string> reasons, string reason)
+        {
+            if (!reasons.Contains(reason)) reasons.Add(reason);
+        }
+
+        static void AddCandidateHints(List<string> hints, string text)
+        {
+            if (string.IsNullOrEmpty(text)) return;
+            void Hint(string value) { if (!hints.Contains(value)) hints.Add(value); }
+            if (Regex.IsMatch(text, @"(?:destroy|banish).{0,80}(?:highest|lowest|strongest|weakest).{0,40}(?:ATK|DEF)", RegexOptions.IgnoreCase) ||
+                Regex.IsMatch(text, @"(?:highest|lowest).{0,40}(?:ATK|DEF).{0,80}(?:destroy|banish)", RegexOptions.IgnoreCase)) Hint("DestroyExtremum");
+            if (Regex.IsMatch(text, @"(?:gain|increase|lose|decrease).{0,30}(?:ATK|DEF).{0,50}(?:until|end phase|end of this turn)", RegexOptions.IgnoreCase)) Hint("GainAtkDefUntilEnd");
+            if (Regex.IsMatch(text, @"special summon", RegexOptions.IgnoreCase))
+            {
+                if (Regex.IsMatch(text, @"from (?:the )?GY|from your Graveyard|from the Graveyard", RegexOptions.IgnoreCase)) Hint("SpecialSummonFromGy");
+                if (Regex.IsMatch(text, @"from (?:your )?hand", RegexOptions.IgnoreCase)) Hint("SpecialSummonFromHand");
+                if (Regex.IsMatch(text, @"from (?:your )?Deck", RegexOptions.IgnoreCase)) Hint("SpecialSummonFromDeck");
+                if (Regex.IsMatch(text, @"from the Extra Deck", RegexOptions.IgnoreCase)) Hint("SpecialSummonFromExtra");
+                Hint("SpecialSummonFrom*");
+            }
+            if (Regex.IsMatch(text, @"negate (?:the )?activation|negate (?:that )?effect", RegexOptions.IgnoreCase)) Hint("NegateActivation");
+            if (Regex.IsMatch(text, @"\b(?:when|if)\b.*\b(?:you can|may)\b", RegexOptions.IgnoreCase)) Hint("WhenIfOptional");
+            if (Regex.IsMatch(text, @"\b(?:select|choose)\b", RegexOptions.IgnoreCase) && Regex.IsMatch(text, @"\btarget\b", RegexOptions.IgnoreCase)) Hint("SelectVsTarget");
+            if (Regex.IsMatch(text, @"change (?:its |the )?(?:battle )?position|face-down Defense Position|face-up Attack Position", RegexOptions.IgnoreCase)) Hint("ChangePosition");
+        }
+
+        static string SafeFilePart(string value)
+        {
+            return string.Join("_", (value ?? "pool").Split(Path.GetInvalidFileNameChars()));
+        }
+
+        static string WriteDiagnosticsJson(PoolReport report, string dir, string safe, string stamp)
+        {
+            try
+            {
+                var payload = new DiagnosticsReport
+                {
+                    GeneratedUtc = DateTime.UtcNow.ToString("o"), PoolName = report.PoolName,
+                    CompilerVersion = CardTextEffectCompiler.Version,
+                    HeuristicNotes = "Best-effort heuristics; spans use normalizedOfficialText offsets. Exact=false means no direct match. FullyCompiled semantics unchanged.",
+                    NonFullyCompiled = (report.Cards ?? new List<CardStatus>()).Where(c => !c.FullyCompiled).ToArray()
+                };
+                var json = JsonUtility.ToJson(payload, true);
+                var path = Path.Combine(dir, $"effect_diagnostics_{safe}_{stamp}.json");
+                File.WriteAllText(path, json);
+                File.WriteAllText(Path.Combine(dir, $"effect_diagnostics_{safe}_latest.json"), json);
+                return path;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning("[WRLDZ TextFX] Diagnostics JSON write failed: " + ex.Message);
+                return string.Empty;
+            }
         }
 
         public static PoolReport MeasureStarterAndLab(CardDatabase db = null, bool writeReportFile = true) =>
@@ -404,6 +604,7 @@ namespace WRLDZ.Duel.TextEffects
             if (def == null) return st;
 
             st.Name = def.name ?? $"#{id}";
+            st.Passcode = id;
             var reg = OfficialEffectRegistry.HasActivatableScript(id) ||
                       MonsterEffects.IsRegisteredMonsterEffect(id);
             st.RegistryScripted = reg;
@@ -437,7 +638,9 @@ namespace WRLDZ.Duel.TextEffects
             st.Clauses = prog?.ClauseList?.Count ?? 0;
             st.FullyCompiled = prog != null && prog.FullyCompiled;
             st.Source = prog?.CompileSource ?? "";
-            st.Unparsed = prog?.UnparsedFragments;
+            st.Unparsed = prog?.UnparsedFragments ?? Array.Empty<string>();
+            st.UnparsedFragments = st.Unparsed;
+            if (!st.FullyCompiled) PopulateDiagnostics(ref st, def, prog);
 
             if (st.FullyCompiled)
                 st.Kind = "full";
@@ -463,6 +666,8 @@ namespace WRLDZ.Duel.TextEffects
             all.AppendLine();
             if (!string.IsNullOrEmpty(bulk.Coverage.ReportPath))
                 all.AppendLine("Report file: " + bulk.Coverage.ReportPath);
+            if (!string.IsNullOrEmpty(bulk.Coverage.DiagnosticsPath))
+                all.AppendLine("Diagnostics JSON: " + bulk.Coverage.DiagnosticsPath);
             if (bulk.Coverage.SeedExported)
                 all.AppendLine("Seed: " + CompiledEffectCache.SeedPath);
             all.AppendLine(MasteryGateLine(bulk.Coverage));

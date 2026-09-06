@@ -1,0 +1,142 @@
+{
+  "name": "Schoolyard Gaia",
+  "format": "wrldz_street_playground_4000",
+  "flaw": "One Gaia and one Curse of Dragon \u2014 the fusion is the dream, not the ratio. Celtic Guardian and Beaver Warrior are the rest of the knight pile.",
+  "main": [
+    {
+      "id": 6368038,
+      "name": "Gaia The Fierce Knight",
+      "qty": 1
+    },
+    {
+      "id": 28279543,
+      "name": "Curse of Dragon",
+      "qty": 1
+    },
+    {
+      "id": 91152256,
+      "name": "Celtic Guardian",
+      "qty": 3
+    },
+    {
+      "id": 32452818,
+      "name": "Beaver Warrior",
+      "qty": 2
+    },
+    {
+      "id": 13039848,
+      "name": "Giant Soldier of Stone",
+      "qty": 2
+    },
+    {
+      "id": 41392891,
+      "name": "Feral Imp",
+      "qty": 2
+    },
+    {
+      "id": 54652250,
+      "name": "Man-Eater Bug",
+      "qty": 3
+    },
+    {
+      "id": 24094653,
+      "name": "Polymerization",
+      "qty": 2
+    },
+    {
+      "id": 72302403,
+      "name": "Swords of Revealing Light",
+      "qty": 1
+    },
+    {
+      "id": 66788016,
+      "name": "Fissure",
+      "qty": 2
+    },
+    {
+      "id": 97169186,
+      "name": "Smashing Ground",
+      "qty": 1
+    },
+    {
+      "id": 79759861,
+      "name": "Tribute to the Doomed",
+      "qty": 2
+    },
+    {
+      "id": 26412047,
+      "name": "Hammer Shot",
+      "qty": 1
+    },
+    {
+      "id": 70046172,
+      "name": "Rush Recklessly",
+      "qty": 2
+    },
+    {
+      "id": 65169794,
+      "name": "Black Pendant",
+      "qty": 1
+    },
+    {
+      "id": 4206964,
+      "name": "Trap Hole",
+      "qty": 2
+    },
+    {
+      "id": 17814387,
+      "name": "Reinforcements",
+      "qty": 2
+    },
+    {
+      "id": 44209392,
+      "name": "Castle Walls",
+      "qty": 2
+    },
+    {
+      "id": 3819470,
+      "name": "Seven Tools of the Bandit",
+      "qty": 1
+    },
+    {
+      "id": 14315573,
+      "name": "Negate Attack",
+      "qty": 1
+    },
+    {
+      "id": 12607053,
+      "name": "Waboku",
+      "qty": 2
+    },
+    {
+      "id": 77414722,
+      "name": "Magic Jammer",
+      "qty": 1
+    },
+    {
+      "id": 56120475,
+      "name": "Sakuretsu Armor",
+      "qty": 2
+    },
+    {
+      "id": 96355986,
+      "name": "Enchanted Javelin",
+      "qty": 1
+    }
+  ],
+  "extra": [
+    {
+      "id": 66889139,
+      "name": "Gaia the Dragon Champion",
+      "qty": 1
+    }
+  ],
+  "side": [],
+  "counts": {
+    "main": 40,
+    "extra": 1,
+    "side": 0
+  },
+  "lpBand": 4000,
+  "role": "street_npc_playground"
+}

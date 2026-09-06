@@ -43,11 +43,49 @@ namespace WRLDZ.Duel.TextEffects
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         /// <summary>
+        /// Marauding Captain: Your opponent cannot target Race monsters for attacks, except this one.
+        /// Extends CannotBeAttackTarget with RaceFilter + ExceptThisCard (scan other monsters).
+        /// </summary>
+        static readonly Regex RxCannotAttackTargetRaceExceptThis = new(
+            @"Your opponent cannot target (\w+)(?:-Type)? monsters for attacks, except this one\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
         /// Fox Fire leftover: This face-up card cannot be Tributed for a Tribute Summon.
         /// Ignis c88753985: EFFECT_UNRELEASABLE_SUM.
         /// </summary>
         static readonly Regex RxCannotTributeForSummon = new(
             @"This face-up card cannot be Tributed for a Tribute Summon\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Spirit Reaper PSCT: After resolving a card effect that targets this face-up card, destroy this card.
+        /// </summary>
+        static readonly Regex RxDestroyAfterResolvingTarget = new(
+            @"After resolving a card effect that targets this(?: face-up)? card,\s*destroy this card\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Older / close variants (Reaper on the Nightmare, Arcana Force 0 shape):
+        /// Destroy this card when it is targeted by a card effect /
+        /// If this card is targeted by an effect, destroy it.
+        /// </summary>
+        static readonly Regex RxDestroyWhenTargeted = new(
+            @"(?:Destroy this card when it is targeted by (?:the effect of )?(?:a Spell, Trap, or Effect Monster|a card effect|an? effect)|If this card is targeted by an? (?:card )?effect,\s*destroy it)\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Unconditional this-card battle destruction protection.
+        /// Sentence-start only so "While ATK position…" / "with a monster that has 1900 ATK" stay refuse.
+        /// </summary>
+        static readonly Regex RxCannotBeDestroyedByBattle = new(
+            @"(?:^|(?<=[.!?]\s))" +
+            @"(?:Cannot be destroyed by battle(?! with| or)|" +
+            @"This card (?:cannot be destroyed by battle(?! with| or)|is not destroyed as a result of battle))\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxPiercingThis = new(
+            @"(?:If|When) this card attacks a Defense Position monster, inflict piercing battle damage(?: to your opponent)?\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         public static void Collect(string text, CardDef def, List<EffectClause> into,
@@ -99,10 +137,37 @@ namespace WRLDZ.Duel.TextEffects
                 }
                 : null);
 
+            var raceAtk = RxCannotAttackTargetRaceExceptThis.Match(text);
+            Add(raceAtk, raceAtk.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.CannotBeAttackTarget,
+                    RaceFilter = raceAtk.Groups[1].Value,
+                    ExceptThisCard = true,
+                    MakesChainLink = false
+                }
+                : null);
+
             Add(RxCannotTributeForSummon.Match(text), new EffectClause
             {
                 Timing = EffectTiming.ContinuousWhileFaceUp,
                 Action = EffectActionKind.CannotBeTributedForSummon,
+                MakesChainLink = false
+            });
+
+            Add(RxDestroyAfterResolvingTarget.Match(text), DestroyAfterTargetingClause());
+            Add(RxDestroyWhenTargeted.Match(text), DestroyAfterTargetingClause());
+            Add(RxCannotBeDestroyedByBattle.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.ContinuousWhileFaceUp,
+                Action = EffectActionKind.CannotBeDestroyedByBattle,
+                MakesChainLink = false
+            });
+            Add(RxPiercingThis.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.ContinuousWhileFaceUp,
+                Action = EffectActionKind.PiercingBattleDamage,
                 MakesChainLink = false
             });
         }
@@ -114,7 +179,12 @@ namespace WRLDZ.Duel.TextEffects
                    RxUnaffectedAndNoAttack.IsMatch(text) ||
                    RxNamedUnaffected.IsMatch(text) ||
                    RxHorusServant.IsMatch(text) ||
-                   RxCannotTributeForSummon.IsMatch(text);
+                   RxCannotAttackTargetRaceExceptThis.IsMatch(text) ||
+                   RxCannotTributeForSummon.IsMatch(text) ||
+                   RxDestroyAfterResolvingTarget.IsMatch(text) ||
+                   RxDestroyWhenTargeted.IsMatch(text) ||
+                   RxCannotBeDestroyedByBattle.IsMatch(text) ||
+                   RxPiercingThis.IsMatch(text);
         }
 
         public static void ExpectedActions(string text, List<EffectActionKind> need)
@@ -129,8 +199,26 @@ namespace WRLDZ.Duel.TextEffects
                 need.Add(EffectActionKind.UnaffectedByCardEffects);
             if (RxHorusServant.IsMatch(text))
                 need.Add(EffectActionKind.CannotBeTargetedByEffects);
+            if (RxCannotAttackTargetRaceExceptThis.IsMatch(text))
+                need.Add(EffectActionKind.CannotBeAttackTarget);
             if (RxCannotTributeForSummon.IsMatch(text))
                 need.Add(EffectActionKind.CannotBeTributedForSummon);
+            if (RxDestroyAfterResolvingTarget.IsMatch(text) || RxDestroyWhenTargeted.IsMatch(text))
+                need.Add(EffectActionKind.DestroyThisAfterResolvingTargetingEffect);
+            if (RxCannotBeDestroyedByBattle.IsMatch(text))
+                need.Add(EffectActionKind.CannotBeDestroyedByBattle);
+            if (RxPiercingThis.IsMatch(text))
+                need.Add(EffectActionKind.PiercingBattleDamage);
+        }
+
+        static EffectClause DestroyAfterTargetingClause()
+        {
+            return new EffectClause
+            {
+                Timing = EffectTiming.ContinuousWhileFaceUp,
+                Action = EffectActionKind.DestroyThisAfterResolvingTargetingEffect,
+                MakesChainLink = false
+            };
         }
 
         static EffectClause UnaffectedFromNamed(Match m)

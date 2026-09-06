@@ -40,6 +40,18 @@ namespace WRLDZ.Duel.Rules
                 return sb.ToString();
             }
 
+            {
+                var ssDeckDef = new CardDef { id = 990000101, name = "ARGON SS Deck Fixture", type = "Spell Card", desc = "Special Summon 1 Level 4 or lower Beast-Type monster from your Deck." };
+                var ssDeckProg = CardTextEffectCompiler.Compile(ssDeckDef);
+                var ssClause = ssDeckProg?.ClauseList?.FirstOrDefault();
+                Check("Shared SS-from-Deck atom", ssDeckProg != null && ssDeckProg.FullyCompiled && ssClause != null && ssClause.Action == EffectActionKind.SpecialSummonFromDeck && ssClause.Zone == EffectZoneFilter.ControllerDeckMonsters && ssClause.RequiresTargetChoice && !ssClause.IsPsctTarget);
+
+                var whenIfDef = new CardDef { id = 990000102, name = "ARGON When If Fixture", type = "Monster", desc = "If this card is destroyed by battle: You can Special Summon 1 Warrior-Type monster from your Deck." };
+                var whenIfProg = CardTextEffectCompiler.Compile(whenIfDef);
+                var whenIfClause = whenIfProg?.ClauseList?.FirstOrDefault();
+                Check("When/If optional trigger metadata", whenIfProg != null && whenIfClause != null && whenIfClause.IsOptional && whenIfClause.CheckedAt == ConditionCheckedAt.Both);
+            }
+
             var pDeck = CardDatabase.LoadDeck("lab_rules_player.json");
             var aDeck = CardDatabase.LoadDeck("lab_rules_ai.json");
             if (pDeck == null || aDeck == null)
@@ -47,6 +59,37 @@ namespace WRLDZ.Duel.Rules
                 sb.AppendLine("FAIL  lab decks missing");
                 sb.AppendLine("--- 0 passed, 1 failed ---");
                 return sb.ToString();
+            }
+
+            // ── Compiled rejection must not fall through a registry allowlist ──
+            {
+                var syntheticDef = new CardDef
+                {
+                    id = OfficialEffectRegistry.PotOfGreed,
+                    name = "Synthetic Pot of Greed cost test",
+                    type = "Spell Card",
+                    race = "Normal",
+                    desc = "Activate this card by paying 8000 LP; draw 2 cards."
+                };
+                var syntheticProg = CardTextEffectCompiler.Compile(syntheticDef);
+                var engine = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine);
+                engine.Player.Hand.Clear();
+                engine.Player.LifePoints = 100;
+                var syntheticCard = new CardInstance
+                {
+                    CardId = syntheticDef.id,
+                    Def = syntheticDef,
+                    InstanceId = 90000001
+                };
+                engine.Player.Hand.Add(syntheticCard);
+                Check("FullyCompiled synthetic legacy-ID card rejects activation without fallback",
+                    syntheticProg != null && syntheticProg.FullyCompiled &&
+                    OfficialEffectRegistry.ProgramMayActivate(syntheticDef) &&
+                    !engine.CanActivateSpellTrap(engine.Player, syntheticCard, fromHand: true),
+                    syntheticProg == null
+                        ? "null"
+                        : $"full={syntheticProg.FullyCompiled} canResolve={syntheticProg.CanResolveAny}");
             }
 
             // ── Center-first zone placement ──
@@ -513,6 +556,188 @@ namespace WRLDZ.Duel.Rules
                         p.MonstersOnField().Any(m => m != null && m.CardId == celtic) &&
                         p.Graveyard.Exists(c => c != null && c.CardId == reborn) &&
                         !p.Hand.Contains(card));
+                }
+            }
+
+            // ── Official Monster Reborn 83764718: compiled text, not the 83764719 allowlist pin ──
+            {
+                const int officialReborn = 83764718;
+                const int celtic = 91152256;
+                var officialDef = db.Get(officialReborn);
+                var officialProg = officialDef != null
+                    ? CardTextEffectCompiler.Compile(officialDef)
+                    : null;
+                Check("Official Monster Reborn (83764718) FullyCompiles Target GY; Special Summon it",
+                    officialDef != null && officialProg != null && officialProg.FullyCompiled &&
+                    officialProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Timing == EffectTiming.Activate &&
+                        c.Action == EffectActionKind.SpecialSummonFromGy &&
+                        c.RequiresTargetChoice &&
+                        c.Zone == EffectZoneFilter.EitherGyMonsters),
+                    officialProg == null
+                        ? "null"
+                        : $"full={officialProg.FullyCompiled} n={officialProg.ClauseList.Count} unparsed={string.Join("|", officialProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                Check("Official Monster Reborn is not on ActivatableScripts allowlist",
+                    !OfficialEffectRegistry.HasActivatableScript(officialReborn));
+                Check("Official Monster Reborn ProgramMayActivate via FullyCompiled text",
+                    officialDef != null && OfficialEffectRegistry.ProgramMayActivate(officialDef));
+
+                var synReborn = CardTextEffectCompiler.Compile(new CardDef
+                {
+                    id = 90000018,
+                    name = "New Spell (Monster Reborn shape)",
+                    type = "Spell Card",
+                    desc = "Target 1 monster in either GY; Special Summon it."
+                });
+                Check("New-card rule: Reborn-shaped text compiles without a cardId branch",
+                    synReborn != null && synReborn.FullyCompiled &&
+                    synReborn.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.SpecialSummonFromGy &&
+                        c.RequiresTargetChoice &&
+                        c.Zone == EffectZoneFilter.EitherGyMonsters));
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    p.Graveyard.Clear();
+                    engine.Opponent.Graveyard.Clear();
+                    var card = PutInHand(engine, p, officialReborn);
+                    Check("Official Monster Reborn: refuse with empty GYs",
+                        !engine.CanActivateSpellTrap(p, card, fromHand: true));
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var gyMon = engine.CreateCardInstance(celtic);
+                    p.Graveyard.Add(gyMon);
+                    for (var i = 0; i < p.MonsterZones.Length; i++)
+                        PlaceMonster(engine, p, celtic, i, BattlePosition.Attack, true);
+                    var card = PutInHand(engine, p, officialReborn);
+                    Check("Official Monster Reborn: refuse with no free Monster Zone",
+                        !engine.CanActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.FirstEmpty(p.MonsterZones) < 0);
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var gyMon = engine.CreateCardInstance(celtic);
+                    p.Graveyard.Add(gyMon);
+                    var card = PutInHand(engine, p, officialReborn);
+                    Check("Official Monster Reborn: Activate legal from hand in MP1 with GY + free MZ",
+                        engine.InMainPhase &&
+                        engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    Check("Official Monster Reborn: Activate opens GY target pending",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.TargetKind == EffectTargetKind.MonsterInEitherGy);
+                    var pick = engine.PendingActivation?.LegalTargets
+                        ?.FirstOrDefault(t => t != null && t.CardId == celtic);
+                    Check("Official Monster Reborn: GY Celtic is a legal target", pick != null);
+                    if (pick != null)
+                    {
+                        Check("Official Monster Reborn: resolve SS Celtic, spell to GY",
+                            engine.TrySelectEffectTarget(pick) &&
+                            p.MonstersOnField().Any(m => m != null && m.CardId == celtic) &&
+                            p.Graveyard.Exists(c => c != null && c.CardId == officialReborn) &&
+                            !p.Hand.Contains(card));
+                    }
+                }
+
+                // Premature Burial: pay LP + SS own GY + equip/destroy host (Call of the Haunted sibling).
+                // The Shallow Grave (each player, face-down Defense) stays parked — dual targeting.
+                {
+                    const int prematureId = 70828912;
+                    const int prematureCelticId = 91152256;
+                    var pbDef = db.Get(prematureId);
+                    var pbProg = pbDef != null ? CardTextEffectCompiler.Compile(pbDef) : null;
+                    Check("Premature Burial FullyCompiled pay-LP GY-SS equip (Call of the Haunted sibling)",
+                        pbProg != null && pbProg.FullyCompiled &&
+                        pbProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Activate &&
+                            c.Action == EffectActionKind.SpecialSummonFromGy &&
+                            c.PayLpAmount == 800 &&
+                            c.DestroyHostWhenThisLeaves &&
+                            c.StaysOnField &&
+                            c.Zone == EffectZoneFilter.ControllerGyMonsters),
+                        pbProg == null
+                            ? "null"
+                            : $"full={pbProg.FullyCompiled} n={pbProg.ClauseList.Count} unparsed={string.Join("|", pbProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                    var synPb = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000051,
+                        name = "New Equip (Premature Burial shape)",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        desc =
+                            "Activate this card by paying 800 LP, then target 1 monster in your Graveyard; " +
+                            "Special Summon that target in Attack Position and equip it with this card. " +
+                            "When this card is destroyed, destroy the equipped monster."
+                    });
+                    Check("New-card rule: Premature Burial-shaped text compiles without a cardId branch",
+                        synPb != null && synPb.FullyCompiled &&
+                        synPb.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.SpecialSummonFromGy &&
+                            c.PayLpAmount == 800 &&
+                            c.DestroyHostWhenThisLeaves));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var who = engine.Player;
+                        who.Hand.Clear();
+                        who.LifePoints = 8000;
+                        var gyMon = engine.CreateCardInstance(prematureCelticId);
+                        who.Graveyard.Add(gyMon);
+                        var card = PutInHand(engine, who, prematureId);
+                        Check("Premature Burial: Activate from hand in MP1 with GY + LP",
+                            engine.InMainPhase &&
+                            engine.CanActivateSpellTrap(who, card, fromHand: true) &&
+                            engine.TryActivateSpellTrap(who, card, fromHand: true) &&
+                            engine.IsAwaitingEffectTarget);
+                        Check("Premature Burial: SS Celtic, Equip stays linked, paid 800",
+                            engine.TrySelectEffectTarget(gyMon) &&
+                            who.TryFindMonster(gyMon, out _) &&
+                            gyMon.Position == BattlePosition.Attack &&
+                            card.EquippedTo == gyMon &&
+                            who.TryFindSpellTrap(card, out _) &&
+                            who.LifePoints == 7200,
+                            $"mz={who.TryFindMonster(gyMon, out _)} st={who.TryFindSpellTrap(card, out _)} lp={who.LifePoints} link={card.EquippedTo != null}");
+                        engine.SendCardToGrave(who, card);
+                        Check("Premature Burial: Equip to GY also destroys the summoned monster",
+                            who.Graveyard.Contains(card) && who.Graveyard.Contains(gyMon) &&
+                            !who.TryFindMonster(gyMon, out _),
+                            $"eqGy={who.Graveyard.Contains(card)} monGy={who.Graveyard.Contains(gyMon)}");
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var who = engine.Player;
+                        who.Hand.Clear();
+                        who.LifePoints = 700;
+                        who.Graveyard.Add(engine.CreateCardInstance(prematureCelticId));
+                        var card = PutInHand(engine, who, prematureId);
+                        Check("Premature Burial: refuse with less than 800 LP",
+                            !engine.CanActivateSpellTrap(who, card, fromHand: true));
+                    }
+
+                    var sg = TryActivateCompiledGySsIfReady(db, pDeck, aDeck, 43434803);
+                    if (sg.HasValue)
+                        Check("The Shallow Grave: compiled GY-SS activates from hand in MP1", sg.Value);
                 }
             }
 
@@ -1787,6 +2012,13 @@ namespace WRLDZ.Duel.Rules
                             engine.PendingResponse == null
                                 ? "no window"
                                 : $"timing={engine.PendingResponse.Timing}");
+                        Check("Attack response window is 5s (timer expiry passes; no PASS button)",
+                            engine.PendingResponse != null &&
+                            engine.PendingResponse.ReactionSeconds == CombatAnimTimings.DefaultResponseSeconds &&
+                            CombatAnimTimings.DefaultResponseSeconds == 5f,
+                            engine.PendingResponse == null
+                                ? "no window"
+                                : $"secs={engine.PendingResponse.ReactionSeconds}");
                         Check("Sakuretsu activates",
                             engine.CanActivateSpellTrap(p, sak, fromHand: false) &&
                             engine.TryActivateSpellTrap(p, sak, fromHand: false));
@@ -2580,24 +2812,89 @@ namespace WRLDZ.Duel.Rules
                     var opp = engine.Opponent;
                     var rel = PlaceMonster(engine, p, relinquished, 2, BattlePosition.Attack, true);
                     var prey = PlaceMonster(engine, opp, celtic, 2, BattlePosition.Attack, true);
-                    if (OfficialEffectRegistry.ProgramMayActivate(rel.Def))
+                    var prey2 = PlaceMonster(engine, opp, fenrir, 0, BattlePosition.Attack, true);
+                    const int bewdId = 89631139;
+                    var bewd = PlaceMonster(engine, opp, bewdId, 1, BattlePosition.Attack, true);
+                    bewd.SummonedThisTurn = false;
+
+                    var relProg = CardTextEffectCompiler.Compile(rel.Def);
+                    Check("Relinquished: FullyCompiled so ProgramMayActivate",
+                        OfficialEffectRegistry.ProgramMayActivate(rel.Def) &&
+                        relProg != null && relProg.FullyCompiled &&
+                        relProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.EquipTargetToThis),
+                        relProg == null
+                            ? "null"
+                            : $"full={relProg.FullyCompiled} unparsed={string.Join("|", relProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                    Check("Relinquished: Activate absorb Celtic",
+                        engine.TryActivateSpellTrap(p, rel, fromHand: false) &&
+                        engine.IsLegalEffectTarget(prey));
+                    Check("Relinquished: equip Celtic, prey off opp field",
+                        engine.TrySelectEffectTarget(prey) &&
+                        rel.Equips.Contains(prey) &&
+                        !opp.TryFindMonster(prey, out _));
+                    FieldSpellEffects.RefreshBoard(engine);
+                    Check("Relinquished ATK equals equipped printed ATK",
+                        rel.CurrentAtk == 1400, $"ATK {rel.CurrentAtk}");
+                    Check("Relinquished: second absorb same turn refused (OPT)",
+                        opp.TryFindMonster(prey2, out _) &&
+                        !engine.CanActivateSpellTrap(p, rel, fromHand: false));
+
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    engine.TryEndTurnSafe(engine.TurnPlayer);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    if (engine.TurnPlayer == opp && engine.Phase == DuelPhase.Main1)
+                        engine.TryEnterBattlePhase(opp);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    DrainCombat(engine);
+                    if (engine.Phase == DuelPhase.Battle && engine.CanAttack(opp, bewd))
                     {
-                        Check("Relinquished: Activate",
-                            engine.TryActivateSpellTrap(p, rel, fromHand: false) &&
-                            engine.IsLegalEffectTarget(prey));
-                        Check("Relinquished: equip Celtic, ATK becomes 1400",
-                            engine.TrySelectEffectTarget(prey) &&
-                            rel.Equips.Contains(prey) &&
-                            !opp.TryFindMonster(prey, out _));
-                        FieldSpellEffects.RefreshBoard(engine);
-                        Check("Relinquished ATK equals equipped printed ATK",
-                            rel.CurrentAtk == 1400, $"ATK {rel.CurrentAtk}");
+                        engine.TryAttack(opp, bewd, rel);
+                        DrainCombat(engine);
                     }
-                    else
+
+                    Check("Relinquished: battle would destroy it — equipped destroyed instead, Relinquished stays",
+                        p.TryFindMonster(rel, out _) &&
+                        !rel.Equips.Contains(prey) &&
+                        (opp.Graveyard.Contains(prey) || p.Graveyard.Contains(prey)),
+                        $"relOnField={p.TryFindMonster(rel, out _)} equips={rel.Equips.Count} " +
+                        $"preyGyOpp={opp.Graveyard.Contains(prey)} preyGyP={p.Graveyard.Contains(prey)} " +
+                        $"phase={engine.Phase} turnOpp={engine.TurnPlayer == opp}");
+                    Check("Relinquished battle: BEWD attacker still on field",
+                        opp.TryFindMonster(bewd, out _));
+                }
+
+                {
+                    const int bewdId = 89631139;
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    var rel = PlaceMonster(engine, p, 64631466, 2, BattlePosition.Attack, true);
+                    var prey = PlaceMonster(engine, opp, celtic, 2, BattlePosition.Attack, true);
+                    var attacker = PlaceMonster(engine, opp, bewdId, 1, BattlePosition.Attack, true);
+                    var absorbed = engine.TryActivateSpellTrap(p, rel, fromHand: false) &&
+                                   engine.TrySelectEffectTarget(prey);
+                    rel.IsNegated = true;
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    engine.TryEndTurnSafe(engine.TurnPlayer);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    if (engine.TurnPlayer == opp && engine.Phase == DuelPhase.Main1)
+                        engine.TryEnterBattlePhase(opp);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    DrainCombat(engine);
+                    if (engine.Phase == DuelPhase.Battle && engine.CanAttack(opp, attacker))
                     {
-                        Check("Relinquished: stub cannot activate (incomplete program)",
-                            !engine.TryActivateSpellTrap(p, rel, fromHand: false));
+                        engine.TryAttack(opp, attacker, rel);
+                        DrainCombat(engine);
                     }
+
+                    Check("Relinquished: negated absorb host is destroyed by battle",
+                        absorbed && !p.TryFindMonster(rel, out _) && p.Graveyard.Contains(rel) &&
+                        !rel.Equips.Contains(prey) &&
+                        (opp.Graveyard.Contains(prey) || p.Graveyard.Contains(prey)),
+                        $"absorbed={absorbed} relOn={p.TryFindMonster(rel, out _)} relGy={p.Graveyard.Contains(rel)} " +
+                        $"eq={rel.Equips.Count} preyGyOpp={opp.Graveyard.Contains(prey)} preyGyP={p.Graveyard.Contains(prey)}");
                 }
 
                 {
@@ -3890,7 +4187,7 @@ namespace WRLDZ.Duel.Rules
                     foreach (var def in db.GetAllCards())
                     {
                         if (def == null || !def.IsSpell || def.IsTrap || def.IsFieldSpell ||
-                            def.IsEquipSpell || def.IsContinuousSpellOrTrap)
+                            def.IsEquipSpell || def.IsContinuousSpellOrTrap || def.IsRitualSpell)
                             continue;
                         if (def.race != null &&
                             def.race.IndexOf("Quick", System.StringComparison.OrdinalIgnoreCase) >= 0)
@@ -3909,6 +4206,7 @@ namespace WRLDZ.Duel.Rules
                                 c.RequiresDiscardCost || c.RequiresSendNamedToGy ||
                                 !string.IsNullOrEmpty(c.RequiresFaceUpName) ||
                                 c.Action == EffectActionKind.FusionSummonRegistered ||
+                                c.Action == EffectActionKind.RitualSummon ||
                                 c.Action == EffectActionKind.AddFromDeckToHand ||
                                 c.Action == EffectActionKind.AddNamedFromDeckToHand ||
                                 c.Action == EffectActionKind.SpecialSummonFromGy ||
@@ -4019,6 +4317,12 @@ namespace WRLDZ.Duel.Rules
                 Check("Arena pace: AI step is at least 3s",
                     DuelPresentationPacer.DefaultAiStep >= 3f,
                     $"{DuelPresentationPacer.DefaultAiStep}");
+                Check("Arena S/T hologram hover is at least 4s (not the disk toaster)",
+                    WRLDZ.Presentation.ArInteraction.SpellActivationPresentation.MinHoverSeconds >= 4f,
+                    $"{WRLDZ.Presentation.ArInteraction.SpellActivationPresentation.MinHoverSeconds}");
+                Check("Arena opponent S/T hologram hover is at least 6s",
+                    WRLDZ.Presentation.ArInteraction.SpellActivationPresentation.OpponentReadHoverSeconds >= 6f,
+                    $"{WRLDZ.Presentation.ArInteraction.SpellActivationPresentation.OpponentReadHoverSeconds}");
 
                 {
                     var engine = Fresh(db, pDeck, aDeck);
@@ -4810,8 +5114,16 @@ namespace WRLDZ.Duel.Rules
                 var penguinDef = db.Get(penguinId);
                 var penguinProg = penguinDef != null ? CardTextEffectCompiler.Compile(penguinDef) : null;
 
-                Check("Penguin Soldier up-to-2 bounce stays leftover (not invented)",
-                    penguinProg != null && !penguinProg.FullyCompiled);
+                Check("Penguin Soldier official text FullyCompiled Flip bounce Amount=2",
+                    penguinProg != null && penguinProg.FullyCompiled &&
+                    penguinProg.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.Flip &&
+                        c.Action == EffectActionKind.ReturnToHand &&
+                        c.Amount == 2 && c.RequiresTargetChoice),
+                    penguinProg == null
+                        ? "null"
+                        : $"full={penguinProg.FullyCompiled} n={penguinProg.ClauseList.Count} " +
+                          $"unparsed={string.Join("|", penguinProg.UnparsedFragments ?? System.Array.Empty<string>())}");
 
                 var dekoichiDef = db.Get(87621407);
                 var dekoichiProg = dekoichiDef != null ? CardTextEffectCompiler.Compile(dekoichiDef) : null;
@@ -4850,6 +5162,8 @@ namespace WRLDZ.Duel.Rules
                               $"unparsed={string.Join("|", pr.UnparsedFragments ?? System.Array.Empty<string>())}");
                 }
 
+                CheckFilterSs(83011278, "Mystic Tomato", "DARK", 1500, true);
+                CheckFilterSs(97017120, "Giant Rat", "EARTH", 1500, true);
                 CheckFilterSs(57839750, "Mother Grizzly", "WATER", 1500, true);
                 CheckFilterSs(60806437, "UFO Turtle", "FIRE", 1500, true);
                 CheckFilterSs(39191307, "Masked Dragon", "Dragon", 1500, true);
@@ -4879,15 +5193,21 @@ namespace WRLDZ.Duel.Rules
                 const int decayedId = 10209545;
                 var decayedDef = db.Get(decayedId);
                 var decayedProg = decayedDef != null ? CardTextEffectCompiler.Compile(decayedDef) : null;
-                Check("Decayed Commander NS named hand SS compiles; battle-damage discard leftover",
-                    decayedProg != null && !decayedProg.FullyCompiled &&
+                Check("Decayed Commander NS named hand SS + direct-attack random discard compile",
+                    decayedProg != null && decayedProg.FullyCompiled &&
                     decayedProg.ClauseList.Exists(c =>
                         c != null &&
                         c.RequiresThisNormalSummoned &&
                         c.Action == EffectActionKind.SpecialSummonNamed &&
                         c.FromHand &&
                         string.Equals(c.NamedCard, "Zombie Tiger",
-                            System.StringComparison.OrdinalIgnoreCase)),
+                            System.StringComparison.OrdinalIgnoreCase)) &&
+                    decayedProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Timing == EffectTiming.ThisCardInflictsBattleDamage &&
+                        c.Action == EffectActionKind.DiscardRandomFromOpponentHand &&
+                        c.RequiresDirectAttack &&
+                        c.Amount == 1),
                     decayedProg == null
                         ? "null"
                         : $"full={decayedProg.FullyCompiled} n={decayedProg.ClauseList.Count} " +
@@ -5421,6 +5741,44 @@ namespace WRLDZ.Duel.Rules
                         slate.LingeringAtkModifier == 500 && slate.LingeringDefModifier == 500,
                         $"atk={slate.CurrentAtk} def={slate.CurrentDef} " +
                         $"la={slate.LingeringAtkModifier} ld={slate.LingeringDefModifier}");
+                    Check("Slate Warrior Flip: battle math uses lingering 2400/900",
+                        BattleMechanics.AttackValue(slate) == 2400 &&
+                        BattleMechanics.DefenseValue(slate) == 900,
+                        $"bvATK={BattleMechanics.AttackValue(slate)} " +
+                        $"bvDEF={BattleMechanics.DefenseValue(slate)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var slate = PlaceMonster(engine, p, slateId, 2, BattlePosition.Defense, false);
+                    slate.SetThisTurn = false;
+                    Check("Slate Warrior Flip then later battle: Flip Summon",
+                        engine.TryFlipSummon(p, slate));
+                    if (ReachPlayerBattle(engine) && p.TryFindMonster(slate, out _))
+                    {
+                        opp.LifePoints = 8000;
+                        opp.Hand.Clear();
+                        var victim = PlaceMonster(engine, opp, celtic, 2, BattlePosition.Attack, true);
+                        slate.SummonedThisTurn = false;
+                        slate.ClearAttackFlags();
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        Check("Slate Warrior Flip: 2400 can attack Celtic",
+                            engine.Phase == DuelPhase.Battle && engine.CanAttack(p, slate));
+                        if (engine.Phase == DuelPhase.Battle && engine.CanAttack(p, slate))
+                        {
+                            engine.TryAttack(p, slate, victim);
+                            DrainCombat(engine);
+                        }
+
+                        Check("Slate Warrior Flip: battles as 2400 (Celtic 1400 dies, 1000 dmg)",
+                            !opp.TryFindMonster(victim, out _) &&
+                            opp.LifePoints == 7000,
+                            $"victimOnField={opp.TryFindMonster(victim, out _)} LP={opp.LifePoints}");
+                    }
                 }
 
                 {
@@ -5458,6 +5816,34 @@ namespace WRLDZ.Duel.Rules
                         Check("Hane-Hane Flip: victim returned to hand",
                             !opp.TryFindMonster(victim, out _) &&
                             opp.Hand.Exists(c => c.CardId == celtic));
+                    }
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var penguin = PlaceMonster(engine, p, penguinId, 2, BattlePosition.Defense, false);
+                    penguin.SetThisTurn = false;
+                    var v1 = PlaceMonster(engine, opp, celtic, 2, BattlePosition.Attack, true);
+                    var v2 = PlaceMonster(engine, opp, laJinn, 1, BattlePosition.Attack, true);
+                    Check("Penguin Soldier Flip Summon", engine.TryFlipSummon(p, penguin));
+                    Check("Penguin Soldier Flip: opens bounce (up to 2)",
+                        engine.IsAwaitingEffectTarget && engine.PendingActivation != null &&
+                        engine.PendingActivation.TargetPicksAreUpTo &&
+                        engine.PendingActivation.TargetPicksRemaining == 2);
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        Check("Penguin Soldier: first bounce still pending",
+                            engine.TrySelectEffectTarget(v1) && engine.IsAwaitingEffectTarget);
+                        Check("Penguin Soldier: second bounce returns both",
+                            engine.TrySelectEffectTarget(v2) &&
+                            !opp.TryFindMonster(v1, out _) &&
+                            !opp.TryFindMonster(v2, out _) &&
+                            opp.Hand.Exists(c => c.CardId == celtic) &&
+                            opp.Hand.Exists(c => c.CardId == laJinn));
                     }
                 }
 
@@ -5521,6 +5907,42 @@ namespace WRLDZ.Duel.Rules
                             atk.LingeringAtkModifier == -500 && atk.LingeringDefModifier == -500,
                             $"atk={atk.CurrentAtk} def={atk.CurrentDef} " +
                             $"la={atk.LingeringAtkModifier} ld={atk.LingeringDefModifier}");
+                        Check("Slate Warrior battle: destroyer math is 1300/500",
+                            BattleMechanics.AttackValue(atk) == 1300 &&
+                            BattleMechanics.DefenseValue(atk) == 500,
+                            $"bvATK={BattleMechanics.AttackValue(atk)} " +
+                            $"bvDEF={BattleMechanics.DefenseValue(atk)}");
+                    }
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    if (ReachOpponentBattle(engine))
+                    {
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        const int kuriboh = 40640057;
+                        var slate = PlaceMonster(engine, p, slateId, 2, BattlePosition.Defense, false);
+                        slate.SetThisTurn = false;
+                        var atk = PlaceMonster(engine, opp, kuriboh, 2, BattlePosition.Attack, true);
+                        atk.SummonedThisTurn = false;
+                        atk.ClearAttackFlags();
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        if (engine.Phase == DuelPhase.Battle && engine.CanAttack(opp, atk))
+                        {
+                            engine.TryAttack(opp, atk, slate);
+                            DrainCombat(engine);
+                        }
+
+                        Check("Slate Warrior Flip-by-battle: survives 300 ATK, Flip +500 sticks",
+                            p.TryFindMonster(slate, out _) &&
+                            slate.LingeringAtkModifier == 500 &&
+                            BattleMechanics.AttackValue(slate) == 2400 &&
+                            BattleMechanics.DefenseValue(slate) == 900,
+                            $"onField={p.TryFindMonster(slate, out _)} " +
+                            $"atk={slate.CurrentAtk} bv={BattleMechanics.AttackValue(slate)} " +
+                            $"la={slate.LingeringAtkModifier}");
                     }
                 }
 
@@ -5683,6 +6105,26 @@ namespace WRLDZ.Duel.Rules
                             $"on={p.TryFindMonster(fox, out _)} gy={p.Graveyard.Contains(fox)} " +
                             $"ss={fox.WasSpecialSummoned}");
                     }
+                }
+
+                {
+                    const int necrovalley = 47355498;
+                    const int necrovalleyFoxFireId = 88753985;
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var nv = PutInHand(engine, p, necrovalley);
+                    var nvActive = engine.TryActivateSpellTrap(p, nv, fromHand: true);
+                    FieldSpellEffects.RefreshBoard(engine);
+                    var fox = engine.CreateCardInstance(necrovalleyFoxFireId);
+                    fox.WasDestroyedByBattle = true;
+                    fox.SentFromFieldTurnNumber = engine.TurnNumber;
+                    p.Graveyard.Add(fox);
+                    TextEffectRuntime.FirePhaseTriggers(engine, p, EffectTiming.EndPhase);
+                    Check("Necrovalley: Fox Fire End Phase SS is blocked",
+                        nvActive && p.Graveyard.Contains(fox) && !p.TryFindMonster(fox, out _),
+                        $"nv={nvActive} gy={p.Graveyard.Contains(fox)} on={p.TryFindMonster(fox, out _)}");
                 }
 
                 {
@@ -6602,7 +7044,2114 @@ namespace WRLDZ.Duel.Rules
                 }
             }
 
+            // ── Registered Polymerization Fusion stress ──
+            {
+                const int bsd = SpellTrapEffects.BlackSkullDragon;
+                const int gaia = SpellTrapEffects.GaiaTheDragonChampion;
+                const int teR = SpellTrapEffects.ThousandEyesRestrict;
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    engine.Opponent.Hand.Clear();
+                    p.ExtraDeck.Clear();
+                    p.ExtraDeck.Add(bsd);
+                    var poly = PutInHand(engine, p, SpellTrapEffects.Polymerization);
+                    var skull = PutInHand(engine, p, SpellTrapEffects.SummonedSkull);
+                    var redEyes = PutInHand(engine, p, SpellTrapEffects.RedEyesBlackDragon);
+                    var materials = new System.Collections.Generic.List<CardInstance> { skull, redEyes };
+                    var check = SummonProcedures.CheckFusion(engine, p, engine.CreateCardInstance(bsd),
+                        materials, poly);
+                    Check("Polymerization: Black Skull exact recipe is legal", check.Legal, check.Reason);
+                    Check("Polymerization: Black Skull sends hand materials and summons from Extra",
+                        engine.TryActivateSpellTrap(p, poly, fromHand: true) &&
+                        p.Graveyard.Contains(skull) && p.Graveyard.Contains(redEyes) &&
+                        p.Graveyard.Contains(poly) &&
+                        p.MonstersOnField().Any(m => m != null && m.CardId == bsd),
+                         $"gy={p.Graveyard.Count} field={p.MonsterCount} extra={p.ExtraDeck.Count}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    engine.Opponent.Hand.Clear();
+                    p.ExtraDeck.Clear();
+                    p.ExtraDeck.Add(gaia);
+                    var poly = PutInHand(engine, p, SpellTrapEffects.Polymerization);
+                    var fieldGaia = PlaceMonster(engine, p, SpellTrapEffects.GaiaTheFierceKnight, 2,
+                        BattlePosition.Attack, true);
+                    var handCurse = PutInHand(engine, p, SpellTrapEffects.CurseOfDragon);
+                    Check("Polymerization: Gaia accepts field + hand materials",
+                        engine.TryActivateSpellTrap(p, poly, fromHand: true) &&
+                        p.Graveyard.Contains(fieldGaia) && p.Graveyard.Contains(handCurse) &&
+                        p.Graveyard.Contains(poly) && p.MonstersOnField().Any(m => m != null && m.CardId == gaia));
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    engine.Opponent.Hand.Clear();
+                    p.Hand.Clear();
+                    p.ExtraDeck.Clear();
+                    p.ExtraDeck.Add(teR);
+                    var poly = PutInHand(engine, p, SpellTrapEffects.Polymerization);
+                    var relinquished = PutInHand(engine, p, SpellTrapEffects.Relinquished);
+                    var idol = PutInHand(engine, p, SpellTrapEffects.ThousandEyesIdol);
+                    Check("Polymerization: Thousand-Eyes Restrict effect Fusion is registered",
+                        OfficialEffectRegistry.HasSummonProcedure(teR, SummonKind.FusionSummon));
+                    Check("Polymerization: Thousand-Eyes Restrict summons with official materials",
+                        engine.TryActivateSpellTrap(p, poly, fromHand: true) &&
+                        p.Graveyard.Contains(relinquished) && p.Graveyard.Contains(idol) &&
+                        p.MonstersOnField().Any(m => m != null && m.CardId == teR));
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    engine.Opponent.Hand.Clear();
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    p.ExtraDeck.Clear();
+                    p.ExtraDeck.Add(bsd);
+                    var poly = PutInHand(engine, p, SpellTrapEffects.Polymerization);
+                    var skull = PutInHand(engine, p, SpellTrapEffects.SummonedSkull);
+                    var wrong = PutInHand(engine, p, SpellTrapEffects.CurseOfDragon);
+                    Check("Polymerization: illegal Black Skull materials refuse without moving cards",
+                        !engine.CanActivateSpellTrap(p, poly, fromHand: true) &&
+                        !engine.TryActivateSpellTrap(p, poly, fromHand: true) &&
+                        p.Hand.Contains(poly) && p.Hand.Contains(skull) && p.Hand.Contains(wrong) &&
+                        p.Graveyard.Count == 0);
+                    var contact = SummonProcedures.CheckFusion(engine, p, engine.CreateCardInstance(bsd),
+                        new System.Collections.Generic.List<CardInstance> { skull, wrong }, null);
+                    Check("Fusion: unregistered contact procedure refuses",
+                        !contact.Legal && contact.Reason.IndexOf("Contact", System.StringComparison.OrdinalIgnoreCase) >= 0,
+                        contact.Reason);
+                    var parkedFusion = SummonProcedures.CheckFusion(engine, p, engine.CreateCardInstance(85684223),
+                        new System.Collections.Generic.List<CardInstance>(), poly);
+                    Check("Fusion: unregistered Reaper on the Nightmare refuses",
+                        !parkedFusion.Legal && parkedFusion.Reason.IndexOf("No official", System.StringComparison.OrdinalIgnoreCase) >= 0,
+                        parkedFusion.Reason);
+                }
+            }
+
+            // ── Phase trigger location guard: sent-to-GY source must not fire as field trigger ──
+            {
+                var engine = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine);
+                var p = engine.Player;
+                var sourceDef = new CardDef
+                {
+                    id = 90000101,
+                    name = "End Phase Send-Then-Summon Probe",
+                    type = "Effect Monster",
+                    desc = "During the End Phase: You can send this face-up card to the GY; Special Summon 1 \"Celtic Guardian\" from your hand or Deck."
+                };
+                var source = new CardInstance
+                {
+                    InstanceId = 90000101,
+                    CardId = sourceDef.id,
+                    Def = sourceDef,
+                    FaceUp = true
+                };
+                p.Graveyard.Add(source);
+                p.Deck.Insert(0, 91152256);
+                TextEffectRuntime.FirePhaseTriggers(engine, p, EffectTiming.EndPhase);
+                Check("End Phase trigger: field-only send-then-summon does not fire from GY",
+                    p.Graveyard.Contains(source) && p.MonsterCount == 0 && p.Deck.Contains(91152256),
+                     $"gy={p.Graveyard.Contains(source)} monsters={p.MonsterCount} deckHasTarget={p.Deck.Contains(91152256)}");
+            }
+
+            // ── Ritual Summon (Greater named / Equal attribute) ──
+            {
+                const int blRitual = RitualProcedures.BlackLusterRitual;
+                const int bls = RitualProcedures.BlackLusterSoldier;
+                const int biRitual = RitualProcedures.BlackIllusionRitual;
+                const int relId = RitualProcedures.Relinquished;
+                const int earthChant = RitualProcedures.EarthChant;
+                const int abyssContract = RitualProcedures.ContractWithTheAbyss;
+                const int celtic = 91152256; // Lv4
+                const int beaver = 32452818; // Lv4
+                const int giant = 13039848; // Lv3
+                const int queen = 5901497; // Lv1
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var monster = PutInHand(engine, p, bls);
+                    var ns = SummonProcedures.CheckNormalOrTribute(engine, p, monster, asSet: false);
+                    Check("Ritual: Black Luster Soldier cannot Normal Summon",
+                        !engine.CanNormalSummonOrSet(p, monster) && !ns.Legal,
+                        ns.Reason);
+                    Check("Ritual: BLS refusal is the Ritual NS lock",
+                        ns.Reason != null &&
+                        ns.Reason.IndexOf("Ritual", System.StringComparison.OrdinalIgnoreCase) >= 0,
+                        ns.Reason);
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var spell = PutInHand(engine, p, blRitual);
+                    var monster = PutInHand(engine, p, bls);
+                    var t1 = PutInHand(engine, p, celtic);
+                    var t2 = PutInHand(engine, p, beaver);
+                    Check("Ritual: Black Luster Ritual Greater 8 activates",
+                        engine.CanActivateSpellTrap(p, spell, fromHand: true) &&
+                        engine.TryActivateSpellTrap(p, spell, fromHand: true));
+                    Check("Ritual: BLS is on the field after Greater 8",
+                        p.TryFindMonster(monster, out _) && monster.WasSpecialSummoned);
+                    Check("Ritual: Greater 8 tributes in GY, spell in GY",
+                        p.Graveyard.Contains(t1) && p.Graveyard.Contains(t2) &&
+                        p.Graveyard.Contains(spell) && !p.Hand.Contains(monster),
+                        $"gy={p.Graveyard.Count} hand={p.Hand.Count} field={p.MonsterCount}");
+                }
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var spell = PutInHand(engine, p, blRitual);
+                    var monster = PutInHand(engine, p, bls);
+                    var baseDef = monster.Def;
+                    monster.Def = new CardDef
+                    {
+                        id = baseDef.id, name = baseDef.name, type = baseDef.type, frameType = baseDef.frameType,
+                        desc = "Cannot be Special Summoned except by its registered Ritual Summon procedure.",
+                        atk = baseDef.atk, def = baseDef.def, level = baseDef.level, race = baseDef.race,
+                        attribute = baseDef.attribute, archetype = baseDef.archetype
+                    };
+                    PutInHand(engine, p, celtic);
+                    PutInHand(engine, p, beaver);
+                    Check("Ritual: registered hard Nomi still summons by Ritual procedure",
+                        engine.TryActivateSpellTrap(p, spell, fromHand: true) &&
+                        p.TryFindMonster(monster, out _) && monster.WasSpecialSummoned);
+                }
+
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var spell = PutInHand(engine, p, blRitual);
+                    var monster = PutInHand(engine, p, bls);
+                    var t1 = PutInHand(engine, p, giant);
+                    Check("Ritual: Greater 8 refuses when tribute sum < 8",
+                        !engine.CanActivateSpellTrap(p, spell, fromHand: true) &&
+                        !engine.TryActivateSpellTrap(p, spell, fromHand: true));
+                    Check("Ritual: insufficient Greater tributes move no cards",
+                        p.Hand.Contains(spell) && p.Hand.Contains(monster) &&
+                        p.Hand.Contains(t1) && p.Graveyard.Count == 0 &&
+                        p.MonsterCount == 0);
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var spell = PutInHand(engine, p, biRitual);
+                    var monster = PutInHand(engine, p, relId);
+                    var t1 = PutInHand(engine, p, celtic);
+                    Check("Ritual: Black Illusion Ritual Greater 1 SS Relinquished",
+                        engine.TryActivateSpellTrap(p, spell, fromHand: true) &&
+                        p.TryFindMonster(monster, out _) && monster.WasSpecialSummoned &&
+                        p.Graveyard.Contains(t1) && p.Graveyard.Contains(spell));
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var spell = PutInHand(engine, p, abyssContract);
+                    var monster = PutInHand(engine, p, relId);
+                    var t1 = PutInHand(engine, p, queen);
+                    Check("Ritual: Contract with the Abyss Equal 1 DARK SS Relinquished",
+                        engine.TryActivateSpellTrap(p, spell, fromHand: true) &&
+                        p.TryFindMonster(monster, out _) && monster.WasSpecialSummoned &&
+                        p.Graveyard.Contains(t1) && p.Graveyard.Contains(spell));
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var spell = PutInHand(engine, p, earthChant);
+                    var monster = PutInHand(engine, p, bls);
+                    var t1 = PutInHand(engine, p, celtic);
+                    var t2 = PutInHand(engine, p, beaver);
+                    Check("Ritual: Earth Chant Equal 8 EARTH SS Black Luster Soldier",
+                        engine.TryActivateSpellTrap(p, spell, fromHand: true) &&
+                        p.TryFindMonster(monster, out _) && monster.WasSpecialSummoned &&
+                        p.Graveyard.Contains(t1) && p.Graveyard.Contains(t2) &&
+                        p.Graveyard.Contains(spell));
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var spell = PutInHand(engine, p, blRitual);
+                    var wrong = PutInHand(engine, p, relId);
+                    var t1 = PutInHand(engine, p, celtic);
+                    var t2 = PutInHand(engine, p, beaver);
+                    Check("Ritual: wrong monster in hand is refused",
+                        !engine.CanActivateSpellTrap(p, spell, fromHand: true) &&
+                        !engine.TryActivateSpellTrap(p, spell, fromHand: true));
+                    Check("Ritual: wrong monster leaves all cards unmoved",
+                        p.Hand.Contains(spell) && p.Hand.Contains(wrong) &&
+                        p.Hand.Contains(t1) && p.Hand.Contains(t2) &&
+                        p.Graveyard.Count == 0 && p.MonsterCount == 0);
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var spell = PutInHand(engine, p, earthChant);
+                    var dark = PutInHand(engine, p, relId);
+                    var t1 = PutInHand(engine, p, queen);
+                    Check("Ritual: Earth Chant refuses DARK Relinquished",
+                        !engine.TryActivateSpellTrap(p, spell, fromHand: true) &&
+                        p.Hand.Contains(dark) && p.Hand.Contains(spell) &&
+                        p.Graveyard.Count == 0);
+                }
+
+                {
+                    const int curse = 28279543; // Lv5
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var spell = PutInHand(engine, p, blRitual);
+                    var monster = PutInHand(engine, p, bls);
+                    var t1 = PutInHand(engine, p, curse);
+                    var t2 = PutInHand(engine, p, celtic);
+                    Check("Ritual: Greater 8 accepts 5+4 overshoot",
+                        engine.TryActivateSpellTrap(p, spell, fromHand: true) &&
+                        p.TryFindMonster(monster, out _) && monster.WasSpecialSummoned &&
+                        p.Graveyard.Contains(t1) && p.Graveyard.Contains(t2) &&
+                        p.Graveyard.Contains(spell));
+                }
+
+                {
+                    const int curse = 28279543; // Lv5
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var spell = PutInHand(engine, p, earthChant);
+                    var monster = PutInHand(engine, p, bls);
+                    var t1 = PutInHand(engine, p, curse);
+                    var t2 = PutInHand(engine, p, celtic);
+                    Check("Ritual: Equal 8 refuses 5+4 overshoot",
+                        !engine.CanActivateSpellTrap(p, spell, fromHand: true) &&
+                        !engine.TryActivateSpellTrap(p, spell, fromHand: true));
+                    Check("Ritual: Equal overshoot moves no cards",
+                        p.Hand.Contains(spell) && p.Hand.Contains(monster) &&
+                        p.Hand.Contains(t1) && p.Hand.Contains(t2) &&
+                        p.Graveyard.Count == 0 && p.MonsterCount == 0);
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var spell = PutInHand(engine, p, blRitual);
+                    var monster = PutInHand(engine, p, bls);
+                    var fieldT = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var handT = PutInHand(engine, p, beaver);
+                    Check("Ritual: Greater 8 tributes from field + hand",
+                        engine.TryActivateSpellTrap(p, spell, fromHand: true) &&
+                        p.TryFindMonster(monster, out _) && monster.WasSpecialSummoned &&
+                        p.Graveyard.Contains(fieldT) && p.Graveyard.Contains(handT) &&
+                        !p.TryFindMonster(fieldT, out _));
+                }
+            }
+
+            // ── Spirit Reaper family: destroy after a targeting effect resolves ──
+            {
+                const int reaperId = 23205979;
+                const int rotnId = 85684223;
+                const int axeId = 40619825;
+                const int mstId = SpellTrapEffects.Mst;
+                const int bookMoonId = 14087893;
+                const int wabokuId = SpellTrapEffects.Waboku;
+
+                var reaperDef = db.Get(reaperId);
+                var reaperProg = reaperDef != null ? CardTextEffectCompiler.Compile(reaperDef) : null;
+                Check("Spirit Reaper compiles DestroyThisAfterResolvingTargetingEffect from official PSCT",
+                    reaperProg != null &&
+                    reaperProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.DestroyThisAfterResolvingTargetingEffect &&
+                        c.Timing == EffectTiming.ContinuousWhileFaceUp),
+                    reaperProg == null
+                        ? "null"
+                        : $"full={reaperProg.FullyCompiled} n={reaperProg.ClauseList.Count} " +
+                          $"unparsed={string.Join("|", reaperProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                Check("Spirit Reaper compiles CannotBeDestroyedByBattle from official first sentence",
+                    reaperProg != null &&
+                    reaperProg.FullyCompiled &&
+                    reaperProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.CannotBeDestroyedByBattle &&
+                        c.Timing == EffectTiming.ContinuousWhileFaceUp),
+                    reaperProg == null
+                        ? "null"
+                        : $"full={reaperProg.FullyCompiled} n={reaperProg.ClauseList.Count} " +
+                          $"unparsed={string.Join("|", reaperProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var rotnDef = db.Get(rotnId);
+                var rotnProg = rotnDef != null ? CardTextEffectCompiler.Compile(rotnDef) : null;
+                Check("Reaper on the Nightmare compiles the same shared targeting-destroy kind",
+                    rotnProg != null &&
+                    rotnProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.DestroyThisAfterResolvingTargetingEffect),
+                    rotnProg == null
+                        ? "null"
+                        : $"full={rotnProg.FullyCompiled} n={rotnProg.ClauseList.Count} " +
+                          $"unparsed={string.Join("|", rotnProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                Check("Reaper on the Nightmare compiles CannotBeDestroyedByBattle (not-destroyed-as-result)",
+                    rotnProg != null &&
+                    rotnProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.CannotBeDestroyedByBattle),
+                    rotnProg == null
+                        ? "null"
+                        : $"full={rotnProg.FullyCompiled} n={rotnProg.ClauseList.Count} " +
+                          $"unparsed={string.Join("|", rotnProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                Check("Reaper on the Nightmare compiles direct-attack random discard as the shared kind",
+                    rotnProg != null &&
+                    rotnProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Timing == EffectTiming.ThisCardInflictsBattleDamage &&
+                        c.Action == EffectActionKind.DiscardRandomFromOpponentHand &&
+                        c.RequiresDirectAttack),
+                    rotnProg == null
+                        ? "null"
+                        : $"full={rotnProg.FullyCompiled} n={rotnProg.ClauseList.Count} " +
+                          $"unparsed={string.Join("|", rotnProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var synCdbb = CardTextEffectCompiler.Compile(new CardDef
+                {
+                    id = 90000034,
+                    name = "Battle-Protect Reaper (new-card shape)",
+                    type = "Effect Monster",
+                    desc = "Cannot be destroyed by battle."
+                });
+                Check("New-card rule: Cannot-be-destroyed-by-battle compiles without a cardId branch",
+                    synCdbb != null && synCdbb.FullyCompiled &&
+                    synCdbb.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.CannotBeDestroyedByBattle));
+
+                var synAfter = CardTextEffectCompiler.Compile(new CardDef
+                {
+                    id = 90000031,
+                    name = "After-Target Reaper (new-card shape)",
+                    type = "Effect Monster",
+                    desc =
+                        "After resolving a card effect that targets this face-up card, destroy this card."
+                });
+                Check("New-card rule: After-resolving-target destroy compiles without a cardId branch",
+                    synAfter != null && synAfter.FullyCompiled &&
+                    synAfter.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.DestroyThisAfterResolvingTargetingEffect));
+
+                var synWhen = CardTextEffectCompiler.Compile(new CardDef
+                {
+                    id = 90000032,
+                    name = "When-Targeted Reaper (new-card shape)",
+                    type = "Effect Monster",
+                    desc = "Destroy this card when it is targeted by a card effect."
+                });
+                Check("New-card rule: Destroy-when-targeted compiles as the same shared kind",
+                    synWhen != null && synWhen.FullyCompiled &&
+                    synWhen.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.DestroyThisAfterResolvingTargetingEffect));
+
+                var synIf = CardTextEffectCompiler.Compile(new CardDef
+                {
+                    id = 90000033,
+                    name = "If-Targeted Reaper (new-card shape)",
+                    type = "Effect Monster",
+                    desc = "If this card is targeted by an effect, destroy it."
+                });
+                Check("New-card rule: If-targeted-destroy compiles as the same shared kind",
+                    synIf != null && synIf.FullyCompiled &&
+                    synIf.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.DestroyThisAfterResolvingTargetingEffect));
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var host = PlaceMonster(engine, p, reaperId, 2, BattlePosition.Attack, true);
+                    var axe = PutInHand(engine, p, axeId);
+                    Check("Spirit Reaper: Equip Axe activate opens host target",
+                        engine.CanActivateSpellTrap(p, axe, fromHand: true) &&
+                        engine.TryActivateSpellTrap(p, axe, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.LegalTargets.Contains(host));
+                    Check("Spirit Reaper: after Equip resolves, Reaper and Axe are in GY (no host)",
+                        engine.IsAwaitingEffectTarget &&
+                        engine.TrySelectEffectTarget(host) &&
+                        p.Graveyard.Contains(host) &&
+                        p.Graveyard.Contains(axe) &&
+                        !p.TryFindMonster(host, out _) &&
+                        axe.EquippedTo == null,
+                        $"reaperGy={p.Graveyard.Contains(host)} axeGy={p.Graveyard.Contains(axe)} " +
+                        $"eqHost={axe.EquippedTo != null} field={p.TryFindMonster(host, out _)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var host = PlaceMonster(engine, p, reaperId, 2, BattlePosition.Attack, true);
+                    var st = PlaceSetTrap(engine, opp, wabokuId, 2);
+                    var mst = PutInHand(engine, p, mstId);
+                    Check("Spirit Reaper: MST targeting a S/T does not self-destroy Reaper",
+                        engine.TryActivateSpellTrap(p, mst, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation.LegalTargets.Contains(st) &&
+                        !engine.PendingActivation.LegalTargets.Contains(host) &&
+                        engine.TrySelectEffectTarget(st) &&
+                        p.TryFindMonster(host, out _) &&
+                        host.FaceUp &&
+                        opp.Graveyard.Contains(st),
+                        $"field={p.TryFindMonster(host, out _)} gy={p.Graveyard.Contains(host)} stGy={opp.Graveyard.Contains(st)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var host = PlaceMonster(engine, p, reaperId, 2, BattlePosition.Attack, true);
+                    var moon = PutInHand(engine, p, bookMoonId);
+                    Check("Spirit Reaper: Book of Moon targeting Reaper leaves it face-down (PSCT face-up)",
+                        engine.CanActivateSpellTrap(p, moon, fromHand: true) &&
+                        engine.TryActivateSpellTrap(p, moon, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.TrySelectEffectTarget(host) &&
+                        p.TryFindMonster(host, out _) &&
+                        !host.FaceUp &&
+                        !p.Graveyard.Contains(host),
+                        $"field={p.TryFindMonster(host, out _)} faceUp={host.FaceUp} gy={p.Graveyard.Contains(host)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var host = PlaceMonster(engine, p, reaperId, 2, BattlePosition.Defense, false);
+                    TextEffectRuntime.NotifyTargetingEffectResolved(engine, host, true);
+                    Check("Spirit Reaper: face-down notify does not self-destroy (PSCT face-up)",
+                        p.TryFindMonster(host, out _) &&
+                        !host.FaceUp &&
+                        !p.Graveyard.Contains(host));
+                }
+            }
+
+                {
+                    const int reaperId = 23205979;
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var other = PlaceMonster(engine, p, 91152256, 1, BattlePosition.Attack, true);
+                    var reaper = PlaceMonster(engine, p, reaperId, 2, BattlePosition.Attack, true);
+                    TextEffectRuntime.NotifyTargetingEffectsResolved(engine,
+                        new[] { other, reaper }, true);
+                    Check("Spirit Reaper: multi-target notify reaches every selected card",
+                        p.Graveyard.Contains(other) && p.Graveyard.Contains(reaper));
+                }
+
+
+            // ── This card inflicts battle damage: discard N random from opponent hand ──
+            {
+                const int reaperId = 23205979;
+                const int decayedId = 10209545;
+                const int hatId = 15150365;
+                const int idolId = 27125110; // Thousand-Eyes Idol 0/0
+                const int celtic = 91152256;
+
+                var reaperDef = db.Get(reaperId);
+                var reaperBd = reaperDef != null ? CardTextEffectCompiler.Compile(reaperDef) : null;
+                Check("Spirit Reaper compiles DiscardRandomFromOpponentHand (direct-attack filter)",
+                    reaperBd != null &&
+                    reaperBd.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Timing == EffectTiming.ThisCardInflictsBattleDamage &&
+                        c.Action == EffectActionKind.DiscardRandomFromOpponentHand &&
+                        c.RequiresDirectAttack &&
+                        c.Amount == 1),
+                    reaperBd == null
+                        ? "null"
+                        : $"full={reaperBd.FullyCompiled} n={reaperBd.ClauseList.Count} " +
+                          $"unparsed={string.Join("|", reaperBd.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var hatDef = db.Get(hatId);
+                var hatBd = hatDef != null ? CardTextEffectCompiler.Compile(hatDef) : null;
+                Check("White Magical Hat compiles random discard on any battle damage (not direct-only)",
+                    hatBd != null &&
+                    hatBd.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Timing == EffectTiming.ThisCardInflictsBattleDamage &&
+                        c.Action == EffectActionKind.DiscardRandomFromOpponentHand &&
+                        !c.RequiresDirectAttack &&
+                        c.Amount == 1),
+                    hatBd == null
+                        ? "null"
+                        : $"full={hatBd.FullyCompiled} n={hatBd.ClauseList.Count} " +
+                          $"unparsed={string.Join("|", hatBd.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var synDirect = CardTextEffectCompiler.Compile(new CardDef
+                {
+                    id = 90000041,
+                    name = "Direct-Damage Discard (new-card shape)",
+                    type = "Effect Monster",
+                    desc =
+                        "When this card inflicts battle damage to your opponent by a direct attack: " +
+                        "Discard 1 random card from their hand."
+                });
+                Check("New-card rule: direct-attack random discard compiles without a cardId branch",
+                    synDirect != null && synDirect.FullyCompiled &&
+                    synDirect.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Timing == EffectTiming.ThisCardInflictsBattleDamage &&
+                        c.Action == EffectActionKind.DiscardRandomFromOpponentHand &&
+                        c.RequiresDirectAttack));
+
+                var synAny = CardTextEffectCompiler.Compile(new CardDef
+                {
+                    id = 90000042,
+                    name = "Any-Damage Discard (new-card shape)",
+                    type = "Effect Monster",
+                    desc =
+                        "If this card inflicts Battle Damage to your opponent's Life Points, " +
+                        "your opponent discards 1 card randomly from his/her hand."
+                });
+                Check("New-card rule: any-battle-damage random discard compiles as the same kind",
+                    synAny != null && synAny.FullyCompiled &&
+                    synAny.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Timing == EffectTiming.ThisCardInflictsBattleDamage &&
+                        c.Action == EffectActionKind.DiscardRandomFromOpponentHand &&
+                        !c.RequiresDirectAttack));
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    var reachedBattle = ReachPlayerBattle(engine);
+                    Check("battle-damage discard: reach player Battle",
+                        reachedBattle,
+                        $"phase={engine.Phase} turnP={engine.TurnPlayer == engine.Player} tn={engine.TurnNumber}");
+                    if (reachedBattle)
+                    {
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        opp.Hand.Clear();
+                        p.LifePoints = 8000;
+                        opp.LifePoints = 8000;
+                        var reaper = PlaceMonster(engine, p, reaperId, 2, BattlePosition.Attack, true);
+                        reaper.SummonedThisTurn = false;
+                        reaper.ClearAttackFlags();
+                        var held = PutInHand(engine, opp, celtic);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        var lpBefore = opp.LifePoints;
+                        Check("Reaper direct: can attack",
+                            engine.Phase == DuelPhase.Battle && engine.CanAttack(p, reaper));
+                        if (engine.Phase == DuelPhase.Battle && engine.CanAttack(p, reaper))
+                        {
+                            engine.TryAttack(p, reaper, null);
+                            DrainCombat(engine);
+                        }
+
+                        Check("Reaper direct: inflicts damage and discards 1 random from opponent hand",
+                            opp.LifePoints < lpBefore &&
+                            opp.Hand.Count == 0 &&
+                            opp.Graveyard.Contains(held) &&
+                            !opp.Hand.Contains(held),
+                            $"LP {lpBefore}->{opp.LifePoints} hand={opp.Hand.Count} " +
+                            $"gyHas={opp.Graveyard.Contains(held)} phase={engine.Phase}");
+                    }
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    var reachedBattle = ReachPlayerBattle(engine);
+                    Check("battle-damage discard: reach player Battle",
+                        reachedBattle,
+                        $"phase={engine.Phase} turnP={engine.TurnPlayer == engine.Player} tn={engine.TurnNumber}");
+                    if (reachedBattle)
+                    {
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        opp.Hand.Clear();
+                        p.LifePoints = 8000;
+                        opp.LifePoints = 8000;
+                        var reaper = PlaceMonster(engine, p, reaperId, 2, BattlePosition.Attack, true);
+                        reaper.SummonedThisTurn = false;
+                        reaper.ClearAttackFlags();
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        var lpBefore = opp.LifePoints;
+                        if (engine.Phase == DuelPhase.Battle && engine.CanAttack(p, reaper))
+                        {
+                            engine.TryAttack(p, reaper, null);
+                            DrainCombat(engine);
+                        }
+
+                        Check("Reaper direct vs empty hand: still deals damage, no crash",
+                            opp.LifePoints < lpBefore &&
+                            opp.Hand.Count == 0 &&
+                            p.TryFindMonster(reaper, out _),
+                            $"LP {lpBefore}->{opp.LifePoints} hand={opp.Hand.Count} " +
+                            $"field={p.TryFindMonster(reaper, out _)}");
+                    }
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    var reachedBattle = ReachPlayerBattle(engine);
+                    Check("battle-damage discard: reach player Battle",
+                        reachedBattle,
+                        $"phase={engine.Phase} turnP={engine.TurnPlayer == engine.Player} tn={engine.TurnNumber}");
+                    if (reachedBattle)
+                    {
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        opp.Hand.Clear();
+                        p.LifePoints = 8000;
+                        opp.LifePoints = 8000;
+                        var reaper = PlaceMonster(engine, p, reaperId, 2, BattlePosition.Attack, true);
+                        reaper.SummonedThisTurn = false;
+                        reaper.ClearAttackFlags();
+                        var prey = PlaceMonster(engine, opp, idolId, 2, BattlePosition.Attack, true);
+                        var held = PutInHand(engine, opp, celtic);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        var lpBefore = opp.LifePoints;
+                        Check("Reaper vs 0-ATK: can attack",
+                            engine.Phase == DuelPhase.Battle && engine.CanAttack(p, reaper));
+                        if (engine.Phase == DuelPhase.Battle && engine.CanAttack(p, reaper))
+                        {
+                            engine.TryAttack(p, reaper, prey);
+                            DrainCombat(engine);
+                        }
+
+                        Check("Reaper vs monster: inflicts battle damage but does not discard (direct-attack filter)",
+                            opp.LifePoints < lpBefore &&
+                            opp.Hand.Contains(held) &&
+                            !opp.Graveyard.Contains(held),
+                            $"LP {lpBefore}->{opp.LifePoints} handHas={opp.Hand.Contains(held)} " +
+                            $"gyHas={opp.Graveyard.Contains(held)} preyDead={!opp.TryFindMonster(prey, out _)}");
+                    }
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    var reachedBattle = ReachPlayerBattle(engine);
+                    Check("battle-damage discard: reach player Battle",
+                        reachedBattle,
+                        $"phase={engine.Phase} turnP={engine.TurnPlayer == engine.Player} tn={engine.TurnNumber}");
+                    if (reachedBattle)
+                    {
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        opp.Hand.Clear();
+                        p.LifePoints = 8000;
+                        opp.LifePoints = 8000;
+                        var cmd = PlaceMonster(engine, p, decayedId, 2, BattlePosition.Attack, true);
+                        cmd.SummonedThisTurn = false;
+                        cmd.ClearAttackFlags();
+                        var held = PutInHand(engine, opp, celtic);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        var lpBefore = opp.LifePoints;
+                        if (engine.Phase == DuelPhase.Battle && engine.CanAttack(p, cmd))
+                        {
+                            engine.TryAttack(p, cmd, null);
+                            DrainCombat(engine);
+                        }
+
+                        Check("Decayed Commander direct: discards 1 random from opponent hand",
+                            opp.LifePoints < lpBefore &&
+                            opp.Hand.Count == 0 &&
+                            opp.Graveyard.Contains(held),
+                            $"LP {lpBefore}->{opp.LifePoints} hand={opp.Hand.Count} " +
+                            $"gyHas={opp.Graveyard.Contains(held)}");
+                    }
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    var reachedBattle = ReachPlayerBattle(engine);
+                    Check("battle-damage discard: reach player Battle",
+                        reachedBattle,
+                        $"phase={engine.Phase} turnP={engine.TurnPlayer == engine.Player} tn={engine.TurnNumber}");
+                    if (reachedBattle)
+                    {
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        opp.Hand.Clear();
+                        p.LifePoints = 8000;
+                        opp.LifePoints = 8000;
+                        var hat = PlaceMonster(engine, p, hatId, 2, BattlePosition.Attack, true);
+                        hat.SummonedThisTurn = false;
+                        hat.ClearAttackFlags();
+                        var prey = PlaceMonster(engine, opp, idolId, 2, BattlePosition.Attack, true);
+                        var held = PutInHand(engine, opp, celtic);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        var lpBefore = opp.LifePoints;
+                        if (engine.Phase == DuelPhase.Battle && engine.CanAttack(p, hat))
+                        {
+                            engine.TryAttack(p, hat, prey);
+                            DrainCombat(engine);
+                        }
+
+                        Check("White Magical Hat vs monster: battle damage (not direct) discards 1 random",
+                            opp.LifePoints < lpBefore &&
+                            opp.Hand.Count == 0 &&
+                            opp.Graveyard.Contains(held),
+                            $"LP {lpBefore}->{opp.LifePoints} hand={opp.Hand.Count} " +
+                            $"gyHas={opp.Graveyard.Contains(held)} preyDead={!opp.TryFindMonster(prey, out _)}");
+                    }
+                }
+            }
+
+            // ── Cannot be destroyed by battle (Spirit Reaper flag from text) ──
+            {
+                const int reaperId = 23205979;
+                const int bewd = 89631139;
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    var reachedBattle = ReachOpponentBattle(engine);
+                    Check("CDBB: reach opponent Battle",
+                        reachedBattle,
+                        $"phase={engine.Phase} turnP={engine.TurnPlayer == engine.Opponent} tn={engine.TurnNumber}");
+                    if (reachedBattle)
+                    {
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.LifePoints = 8000;
+                        opp.LifePoints = 8000;
+                        var reaper = PlaceMonster(engine, p, reaperId, 2, BattlePosition.Attack, true);
+                        reaper.SummonedThisTurn = false;
+                        reaper.ClearAttackFlags();
+                        FieldSpellEffects.ApplyRuleConditions(reaper);
+                        var dragon = PlaceMonster(engine, opp, bewd, 2, BattlePosition.Attack, true);
+                        dragon.SummonedThisTurn = false;
+                        dragon.ClearAttackFlags();
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        Check("Spirit Reaper: OfficialEffectRegistry CannotBeDestroyedByBattle from compiled text",
+                            OfficialEffectRegistry.CannotBeDestroyedByBattle(reaper));
+                        var lpBefore = p.LifePoints;
+                        if (engine.Phase == DuelPhase.Battle && engine.CanAttack(opp, dragon))
+                        {
+                            engine.TryAttack(opp, dragon, reaper);
+                            DrainCombat(engine);
+                        }
+                        Check("Spirit Reaper: survives 3000 ATK battle (cannot be destroyed by battle)",
+                            p.TryFindMonster(reaper, out _) &&
+                            !p.Graveyard.Contains(reaper) &&
+                            p.LifePoints < lpBefore,
+                            $"field={p.TryFindMonster(reaper, out _)} gy={p.Graveyard.Contains(reaper)} lp={p.LifePoints}");
+                    }
+                }
+            }
+
+            // ── Tribute Summoned: target 1 monster; destroy (Zaborg / Monarch shape) ──
+            {
+                const int zaborgId = 51945556;
+                const int celtic = 91152256;
+                const int bewd = 89631139;
+                var zDef = db.Get(zaborgId);
+                var zProg = zDef != null ? CardTextEffectCompiler.Compile(zDef) : null;
+                Check("Zaborg the Thunder Monarch FullyCompiled Tribute Summoned destroy",
+                    zProg != null && zProg.FullyCompiled &&
+                    zProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Timing == EffectTiming.ThisCardSummoned &&
+                        c.RequiresThisTributeSummoned &&
+                        c.Action == EffectActionKind.Destroy &&
+                        c.RequiresTargetChoice &&
+                        c.Zone == EffectZoneFilter.FieldAnyMonster),
+                    zProg == null
+                        ? "null"
+                        : $"full={zProg.FullyCompiled} n={zProg.ClauseList.Count} unparsed={string.Join("|", zProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var synZ = CardTextEffectCompiler.Compile(new CardDef
+                {
+                    id = 90000052,
+                    name = "New Monarch (Zaborg shape)",
+                    type = "Effect Monster",
+                    desc =
+                        "If this card is Tribute Summoned: Target 1 monster on the field; destroy that target."
+                });
+                Check("New-card rule: Tribute-Summoned destroy compiles without a cardId branch",
+                    synZ != null && synZ.FullyCompiled &&
+                    synZ.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Timing == EffectTiming.ThisCardSummoned &&
+                        c.RequiresThisTributeSummoned &&
+                        c.Action == EffectActionKind.Destroy));
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var who = engine.Player;
+                    var opp = engine.Opponent;
+                    who.Hand.Clear();
+                    var fodder = PlaceMonster(engine, who, celtic, 0, BattlePosition.Attack, true);
+                    var prey = PlaceMonster(engine, opp, bewd, 2, BattlePosition.Attack, true);
+                    var zaborg = PutInHand(engine, who, zaborgId);
+                    Check("Zaborg: Tribute Summon with one fodder",
+                        engine.TryNormalSummon(who, zaborg, asSet: false) &&
+                        who.TryFindMonster(zaborg, out _) &&
+                        who.Graveyard.Contains(fodder),
+                        $"mz={who.TryFindMonster(zaborg, out _)} fodderGy={who.Graveyard.Contains(fodder)} pending={engine.IsAwaitingEffectTarget}");
+                    Check("Zaborg: Tribute Summon opens monster-destroy target",
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.LegalTargets.Contains(prey),
+                        engine.PendingActivation == null
+                            ? "no pending"
+                            : $"n={engine.PendingActivation.LegalTargets.Count}");
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        Check("Zaborg: destroy opponent BEWD",
+                            engine.TrySelectEffectTarget(prey) &&
+                            opp.Graveyard.Contains(prey) &&
+                            !opp.TryFindMonster(prey, out _),
+                            $"gy={opp.Graveyard.Contains(prey)} field={opp.TryFindMonster(prey, out _)}");
+                    }
+                }
+            }
+
+            // ── Deck-Grok P0 street staples (shared kinds / PSCT fragments) ──
+            {
+                const int fissure = 66788016;
+                const int reinforcements = 17814387;
+                const int castleWalls = 44209392;
+                const int rush = 70046172;
+                const int smashing = 97169186;
+                const int hammer = 26412047;
+                const int stopDefense = 63102017;
+                const int blackPendant = 65169794;
+                const int axe = 40619825;
+                const int kamakiri = 84834865;
+                const int elegant = 90219263;
+                const int umi = 22702055;
+                const int callHaunted = 97077563;
+                const int enchantedJavelin = 96355986;
+                const int sevenTools = 3819470;
+                const int magicJammer = 77414722;
+                const int spellbinding = 18807108;
+                const int celtic = 91152256; // 1400 ATK
+                const int bewd = 89631139; // 3000 ATK / 2500 DEF
+                const int harpie = 76812113;
+                const int harpieSisters = 12206212;
+                const int giantSoldier = 13039848; // 1300 ATK / 2000 DEF
+
+                var fProg = CardTextEffectCompiler.Compile(db.Get(fissure));
+                Check("Fissure FullyCompiled destroy lowest ATK opp",
+                    fProg != null && fProg.FullyCompiled &&
+                    fProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.Destroy && c.PickLowestAtk &&
+                        c.Zone == EffectZoneFilter.OppFaceUpMonsters),
+                    fProg == null ? "null" : $"full={fProg.FullyCompiled} unparsed={string.Join("|", fProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                Check("Fissure choice is not PSCT targeting",
+                    fProg != null && fProg.ClauseList.Exists(c => c != null && c.PickLowestAtk &&
+                        c.RequiresTargetChoice && !c.IsPsctTarget));
+                var rProg = CardTextEffectCompiler.Compile(db.Get(reinforcements));
+                Check("Reinforcements FullyCompiled +500 ATK until EOT",
+                    rProg != null && rProg.FullyCompiled &&
+                    rProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.GainAtkDefUntilEndOfTurn &&
+                        c.Amount == 500 && c.RequiresTargetChoice),
+                    rProg == null ? "null" : $"full={rProg.FullyCompiled} unparsed={string.Join("|", rProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var cProg = CardTextEffectCompiler.Compile(db.Get(castleWalls));
+                Check("Castle Walls FullyCompiled +500 DEF until EOT",
+                    cProg != null && cProg.FullyCompiled &&
+                    cProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.GainAtkDefUntilEndOfTurn &&
+                        c.DefAmount == 500),
+                    cProg == null ? "null" : $"full={cProg.FullyCompiled} unparsed={string.Join("|", cProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var rushProg = CardTextEffectCompiler.Compile(db.Get(rush));
+                Check("Rush Recklessly FullyCompiled +700 ATK until EOT",
+                    rushProg != null && rushProg.FullyCompiled &&
+                    rushProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.GainAtkDefUntilEndOfTurn &&
+                        c.Amount == 700 && c.IsPsctTarget),
+                    rushProg == null ? "null" : $"full={rushProg.FullyCompiled} unparsed={string.Join("|", rushProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var sProg = CardTextEffectCompiler.Compile(db.Get(smashing));
+                Check("Smashing Ground FullyCompiled destroy highest DEF opp",
+                    sProg != null && sProg.FullyCompiled &&
+                    sProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.Destroy && c.PickHighestDef),
+                    sProg == null ? "null" : $"full={sProg.FullyCompiled} unparsed={string.Join("|", sProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                Check("Smashing Ground choice is not PSCT targeting",
+                    sProg != null && sProg.ClauseList.Exists(c => c != null && c.PickHighestDef &&
+                        c.RequiresTargetChoice && !c.IsPsctTarget));
+                var hProg = CardTextEffectCompiler.Compile(db.Get(hammer));
+                Check("Hammer Shot FullyCompiled destroy highest ATK face-up ATK pos",
+                    hProg != null && hProg.FullyCompiled &&
+                    hProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.Destroy && c.PickHighestAtk &&
+                        c.RequiresAttackPosition),
+                    hProg == null ? "null" : $"full={hProg.FullyCompiled} unparsed={string.Join("|", hProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                Check("Hammer Shot choice is not PSCT targeting",
+                    hProg != null && hProg.ClauseList.Exists(c => c != null && c.PickHighestAtk &&
+                        c.RequiresTargetChoice && !c.IsPsctTarget));
+                var sdProg = CardTextEffectCompiler.Compile(db.Get(stopDefense));
+                Check("Stop Defense FullyCompiled ForceAttackPosition",
+                    sdProg != null && sdProg.FullyCompiled &&
+                    sdProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.ChangeBattlePosition &&
+                        c.ForceAttackPosition),
+                    sdProg == null ? "null" : $"full={sdProg.FullyCompiled} unparsed={string.Join("|", sdProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var bpProg = CardTextEffectCompiler.Compile(db.Get(blackPendant));
+                Check("Black Pendant FullyCompiled equip +500 + GY damage",
+                    bpProg != null && bpProg.FullyCompiled &&
+                    bpProg.ClauseList.Exists(c => c != null && c.EquipAtkBonus == 500) &&
+                    bpProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.InflictDamageToOpponent && c.Amount == 500),
+                    bpProg == null ? "null" : $"full={bpProg.FullyCompiled} n={bpProg.ClauseList.Count} unparsed={string.Join("|", bpProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var axeProg = CardTextEffectCompiler.Compile(db.Get(axe));
+                Check("Axe of Despair FullyCompiled Archfiend +1000 + GY top-deck",
+                    axeProg != null && axeProg.FullyCompiled &&
+                    axeProg.ClauseList.Exists(c => c != null && c.Action == EffectActionKind.AlwaysTreatedAsName) &&
+                    axeProg.ClauseList.Exists(c => c != null && c.Action == EffectActionKind.PlaceThisOnTopOfDeck),
+                    axeProg == null ? "null" : $"full={axeProg.FullyCompiled} unparsed={string.Join("|", axeProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var kProg = CardTextEffectCompiler.Compile(db.Get(kamakiri));
+                Check("Flying Kamakiri #1 FullyCompiled battle-GY WIND ≤1500 SS deck",
+                    kProg != null && kProg.FullyCompiled &&
+                    kProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.SpecialSummonNamed &&
+                        c.FromDeck && c.RequiresThisDestroyedByBattle &&
+                        !string.IsNullOrEmpty(c.AttributeFilter) &&
+                        c.AttributeFilter.IndexOf("WIND", System.StringComparison.OrdinalIgnoreCase) >= 0 &&
+                        c.AmountIsAtkMax && c.Amount == 1500),
+                    kProg == null ? "null" : $"full={kProg.FullyCompiled} unparsed={string.Join("|", kProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var eProg = CardTextEffectCompiler.Compile(db.Get(elegant));
+                Check("Elegant Egotist FullyCompiled Harpie gate + AltNamed SS",
+                    eProg != null && eProg.FullyCompiled &&
+                    eProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.SpecialSummonNamed &&
+                        !string.IsNullOrEmpty(c.RequiresFaceUpName) &&
+                        !string.IsNullOrEmpty(c.AltNamedCard) && c.FromHand && c.FromDeck),
+                    eProg == null ? "null" : $"full={eProg.FullyCompiled} unparsed={string.Join("|", eProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var uProg = CardTextEffectCompiler.Compile(db.Get(umi));
+                Check("Umi FullyCompiled multi-race ATK/DEF auras",
+                    uProg != null && uProg.FullyCompiled &&
+                    uProg.ClauseList.Count(c =>
+                        c != null && c.Action == EffectActionKind.ContinuousGainAtkDef) >= 6,
+                    uProg == null ? "null" : $"full={uProg.FullyCompiled} n={uProg.ClauseList.Count} unparsed={string.Join("|", uProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var callProg = CardTextEffectCompiler.Compile(db.Get(callHaunted));
+                Check("Call of the Haunted FullyCompiled GY-SS stay-on-field (Premature sibling)",
+                    callProg != null && callProg.FullyCompiled &&
+                    callProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.SpecialSummonFromGy &&
+                        c.DestroyHostWhenThisLeaves && c.StaysOnField),
+                    callProg == null ? "null" : $"full={callProg.FullyCompiled} unparsed={string.Join("|", callProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var ejProg = CardTextEffectCompiler.Compile(db.Get(enchantedJavelin));
+                Check("Enchanted Javelin FullyCompiled GainLpEqualToAtk on attacker",
+                    ejProg != null && ejProg.FullyCompiled &&
+                    ejProg.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.AttackDeclared &&
+                        c.Action == EffectActionKind.GainLpEqualToAtk &&
+                        c.Zone == EffectZoneFilter.AttackingMonster),
+                    ejProg == null ? "null" : $"full={ejProg.FullyCompiled} unparsed={string.Join("|", ejProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                // Parked: counter-negate needs Spell/Trap activation response timing.
+                var stProg = CardTextEffectCompiler.Compile(db.Get(sevenTools));
+                Check("Seven Tools of the Bandit PARKED (no Spell/Trap activation response timing)",
+                    stProg == null || !stProg.FullyCompiled ||
+                    !stProg.ClauseList.Exists(c =>
+                        c != null && c.Action != EffectActionKind.None &&
+                        (c.SourceSnippet ?? "").IndexOf("negate", System.StringComparison.OrdinalIgnoreCase) >= 0));
+
+                var mjProg = CardTextEffectCompiler.Compile(db.Get(magicJammer));
+                Check("Seven Tools remains not FullyCompiled", stProg != null && !stProg.FullyCompiled);
+                Check("Magic Jammer remains not FullyCompiled", mjProg != null && !mjProg.FullyCompiled);
+                Check("Magic Jammer PARKED (no Spell/Trap activation response timing)",
+                    mjProg == null || !mjProg.FullyCompiled ||
+                    !mjProg.ClauseList.Exists(c =>
+                        c != null && (c.SourceSnippet ?? "").IndexOf("negate", System.StringComparison.OrdinalIgnoreCase) >= 0));
+
+                var sbProg = CardTextEffectCompiler.Compile(db.Get(spellbinding));
+                Check("Spellbinding Circle FullyCompiled bound cannot-attack/position",
+                    sbProg != null && sbProg.FullyCompiled &&
+                    sbProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.ContinuousCannotAttack &&
+                        c.RequiresTargetChoice && c.StaysOnField &&
+                        c.DestroyThisWhenBoundHostDestroyed &&
+                        !c.DestroyHostWhenThisLeaves &&
+                        c.AlsoCannotChangeBattlePosition) &&
+                    sbProg.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.ContinuousWhileFaceUp &&
+                        c.Action == EffectActionKind.ContinuousCannotAttack),
+                    sbProg == null ? "null" : $"full={sbProg.FullyCompiled} unparsed={string.Join("|", sbProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                // ── Deck-Grok P1 wander searchers (shared kinds / PSCT fragments) ──
+                {
+                    void CheckSearcher(int id, string label, System.Func<CompiledCardProgram, bool> ok)
+                    {
+                        var d = db.Get(id);
+                        var pr = d != null ? CardTextEffectCompiler.Compile(d) : null;
+                        Check(label,
+                            pr != null && pr.FullyCompiled && ok(pr),
+                            pr == null
+                                ? "null"
+                                : $"full={pr.FullyCompiled} n={pr.ClauseList.Count} " +
+                                  $"unparsed={string.Join("|", pr.UnparsedFragments ?? System.Array.Empty<string>())}");
+                    }
+
+                    void CheckRecruiter(int id, string name, string kind, int cap, bool atk)
+                    {
+                        var isAttr = kind == "DARK" || kind == "LIGHT" || kind == "EARTH" ||
+                                     kind == "WATER" || kind == "FIRE" || kind == "WIND";
+                        CheckSearcher(id, name + " FullyCompiled battle-GY Deck SS",
+                            pr => pr.ClauseList.Exists(c =>
+                                c != null &&
+                                c.Action == EffectActionKind.SpecialSummonNamed &&
+                                c.FromDeck && c.RequiresThisDestroyedByBattle &&
+                                c.Amount == cap &&
+                                (atk ? c.AmountIsAtkMax : c.AmountIsDefMax) &&
+                                (isAttr
+                                    ? string.Equals(c.AttributeFilter, kind,
+                                        System.StringComparison.OrdinalIgnoreCase)
+                                    : string.Equals(c.RaceFilter, kind,
+                                        System.StringComparison.OrdinalIgnoreCase))));
+                    }
+
+                    CheckRecruiter(83011278, "Mystic Tomato", "DARK", 1500, true);
+                    CheckRecruiter(97017120, "Giant Rat", "EARTH", 1500, true);
+                    CheckRecruiter(95956346, "Shining Angel", "LIGHT", 1500, true);
+                    CheckRecruiter(60806437, "UFO Turtle", "FIRE", 1500, true);
+                    CheckRecruiter(57839750, "Mother Grizzly", "WATER", 1500, true);
+                    CheckRecruiter(77044671, "Pyramid Turtle", "Zombie", 2000, false);
+                    CheckRecruiter(93107608, "Howling Insect", "Insect", 1500, true);
+                    CheckRecruiter(39191307, "Masked Dragon", "Dragon", 1500, true);
+                    // Flying Kamakiri #1 is the P0 recruiter fixture (84834865).
+
+                    CheckSearcher(32807846, "ROTA FullyCompiled Level≤4 Warrior Deck add",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.AddFromDeckToHand &&
+                            c.Zone == EffectZoneFilter.DeckMonstersRaceLevelLeq &&
+                            c.Amount == 4 &&
+                            !string.IsNullOrEmpty(c.RaceFilter) &&
+                            c.RaceFilter.IndexOf("Warrior", System.StringComparison.OrdinalIgnoreCase) >= 0));
+
+                    CheckSearcher(31786629, "Thunder Dragon FullyCompiled discard-self named Deck add×2",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.RequiresDiscardSelf && c.ActivatesFromHand &&
+                            c.Action == EffectActionKind.AddNamedFromDeckToHand &&
+                            c.FromDeck && c.Amount == 2 &&
+                            string.Equals(c.NamedCard, "Thunder Dragon",
+                                System.StringComparison.OrdinalIgnoreCase)));
+
+                    CheckSearcher(24317029, "Gravekeeper's Spy FullyCompiled Flip series ATK≤1500 Deck SS",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.Flip &&
+                            c.Action == EffectActionKind.SpecialSummonNamed &&
+                            c.FromDeck && c.AmountIsAtkMax && c.Amount == 1500 &&
+                            string.Equals(c.NamedCard, "Gravekeeper's",
+                                System.StringComparison.OrdinalIgnoreCase)));
+
+                    CheckSearcher(45547649, "Birdface FullyCompiled battle-GY named Deck add (not free ignition)",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.RequiresThisDestroyedByBattle &&
+                            c.Action == EffectActionKind.AddNamedFromDeckToHand &&
+                            c.FromDeck &&
+                            string.Equals(c.NamedCard, "Harpie Lady",
+                                System.StringComparison.OrdinalIgnoreCase)) &&
+                        !pr.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Activate &&
+                            c.Action == EffectActionKind.AddNamedFromDeckToHand &&
+                            !c.RequiresThisDestroyedByBattle));
+
+                    CheckSearcher(89997728, "Toon Table of Contents FullyCompiled named Toon series Deck add",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.AddNamedFromDeckToHand &&
+                            c.FromDeck && c.NamedCardIsSeries &&
+                            string.Equals(c.NamedCard, "Toon",
+                                System.StringComparison.OrdinalIgnoreCase)));
+
+                    CheckSearcher(36262024, "Black Dragon's Chick FullyCompiled send-this named hand SS",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.RequiresSendThisToGy &&
+                            c.Action == EffectActionKind.SpecialSummonNamed &&
+                            c.FromHand &&
+                            string.Equals(c.NamedCard, "Red-Eyes B. Dragon",
+                                System.StringComparison.OrdinalIgnoreCase)));
+
+                    CheckSearcher(14087893, "Book of Moon FullyCompiled SetTargetFaceDownDefense",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.SetTargetFaceDownDefense &&
+                            c.RequiresTargetChoice));
+
+                    CheckSearcher(53582587, "Torrential Tribute FullyCompiled summon-window destroy all",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.Destroy &&
+                            c.AnswersSpecialSummon && c.AnswersControllerSummon &&
+                            c.Side == EffectSide.Both));
+
+                    CheckSearcher(30450531, "Rite of Spirit FullyCompiled named GY-SS (unaffected by Necrovalley)",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.SpecialSummonFromGy &&
+                            c.NamedCardIsSeries &&
+                            string.Equals(c.NamedCard, "Gravekeeper's",
+                                System.StringComparison.OrdinalIgnoreCase) &&
+                            string.Equals(c.UnaffectedByNamedCard, "Necrovalley",
+                                System.StringComparison.OrdinalIgnoreCase)));
+
+                    CheckSearcher(15259703, "Toon World FullyCompiled pay-1000 activate",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.PayLpAmount == 1000 && c.StaysOnField));
+
+                    CheckSearcher(45986603, "Snatch Steal FullyCompiled take-control + opp Standby they-gain-LP",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.TakeControlOfTarget) &&
+                        pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.GainLifePoints &&
+                            c.Side == EffectSide.Opponent && c.OpponentTurnOnly &&
+                            c.Amount == 1000));
+
+                    void CheckParked(int id, string label)
+                    {
+                        var d = db.Get(id);
+                        var pr = d != null ? CardTextEffectCompiler.Compile(d) : null;
+                        // UniqueException FullyCompiled (Time Wizard coin-call) is still "parked"
+                        // as a named unique — not a shared kind.
+                        var uniqueOnly = pr != null && pr.FullyCompiled && pr.ClauseList.Count > 0 &&
+                            pr.ClauseList.TrueForAll(c =>
+                                c == null ||
+                                WRLDZ.Duel.TextEffects.EffectVocabulary.IsUniqueException(c.Action));
+                        Check(label + " PARKED",
+                            pr == null || !pr.FullyCompiled || uniqueOnly,
+                            pr == null ? "null" :
+                            $"full={pr.FullyCompiled} uniqueOnly={uniqueOnly} unparsed={string.Join("|", pr.UnparsedFragments ?? System.Array.Empty<string>())}");
+                    }
+
+                    CheckSearcher(47355498, "Necrovalley FullyCompiled GK aura + GY cannot banish/target",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                            c.NamedCardIsSeries &&
+                            string.Equals(c.NamedCard, "Gravekeeper's",
+                                System.StringComparison.OrdinalIgnoreCase) &&
+                            c.Amount == 500 && c.DefAmount == 500) &&
+                        pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.CannotBanishFromGraveyard) &&
+                        pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.CannotTargetCardsInGraveyard &&
+                            string.Equals(c.ExceptNamedCard, "Necrovalley",
+                                System.StringComparison.OrdinalIgnoreCase)));
+
+                    CheckSearcher(75782277, "Harpies' Hunting Ground FullyCompiled Winged Beast aura + Harpie NS/SS destroy S/T",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                            string.Equals(c.RaceFilter, "Winged Beast",
+                                System.StringComparison.OrdinalIgnoreCase) &&
+                            c.Amount == 200 && c.DefAmount == 200) &&
+                        pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.Destroy &&
+                            c.AnswersSpecialSummon && c.RequiresTargetChoice &&
+                            c.Zone == EffectZoneFilter.FieldSpellTraps &&
+                            c.NamedCardIsSeries &&
+                            string.Equals(c.NamedCard, "Harpie Lady",
+                                System.StringComparison.OrdinalIgnoreCase)));
+
+                    CheckSearcher(77007920, "Laser Cannon Armor FullyCompiled Equip Insect +300/+300",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.EquipThisToTarget &&
+                            c.EquipAtkBonus == 300 && c.EquipDefBonus == 300 &&
+                            string.Equals(c.RaceFilter, "Insect",
+                                System.StringComparison.OrdinalIgnoreCase)));
+
+                    CheckSearcher(25769732, "Machine Conversion Factory FullyCompiled Equip Machine +300/+300",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.EquipThisToTarget &&
+                            c.EquipAtkBonus == 300 && c.EquipDefBonus == 300 &&
+                            string.Equals(c.RaceFilter, "Machine",
+                                System.StringComparison.OrdinalIgnoreCase)));
+
+                    CheckSearcher(51267887, "Raise Body Heat FullyCompiled Equip Dinosaur +300/+300",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.EquipThisToTarget &&
+                            c.EquipAtkBonus == 300 && c.EquipDefBonus == 300 &&
+                            string.Equals(c.RaceFilter, "Dinosaur",
+                                System.StringComparison.OrdinalIgnoreCase)));
+
+                    CheckSearcher(63224564, "Cyber Shield FullyCompiled Equip Harpie Lady or Sisters +500",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.EquipThisToTarget &&
+                            c.EquipAtkBonus == 500 &&
+                            string.Equals(c.EquipHostName, "Harpie Lady",
+                                System.StringComparison.OrdinalIgnoreCase) &&
+                            string.Equals(c.AltNamedCard, "Harpie Lady Sisters",
+                                System.StringComparison.OrdinalIgnoreCase)));
+
+                    CheckSearcher(18605135, "Tornado Wall FullyCompiled Umi activate + no battle damage + self-destroy",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.Activate &&
+                            string.Equals(c.RequiresFaceUpName, "Umi",
+                                System.StringComparison.OrdinalIgnoreCase) &&
+                            c.StaysOnField) &&
+                        pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.PreventControllerBattleDamage) &&
+                        pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.SelfDestroyUnlessNamedFaceUp));
+
+                    CheckSearcher(26185991, "Pinch Hopper FullyCompiled sent-to-GY Insect SS",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.SentFromFieldToGy &&
+                            c.Action == EffectActionKind.SpecialSummonFromHand &&
+                            c.FromHand &&
+                            string.Equals(c.RaceFilter, "Insect",
+                                System.StringComparison.OrdinalIgnoreCase)));
+                    CheckParked(68191243, "Mustering of the Dark Scorpions");
+                    CheckSearcher(2204140, "Book of Life FullyCompiled dual GY SS+banish",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.SpecialSummonFromGy &&
+                            c.RequiresSecondTarget &&
+                            c.SecondAction == EffectActionKind.Banish &&
+                            c.SecondZone == EffectZoneFilter.OppGyMonsters &&
+                            string.Equals(c.RaceFilter, "Zombie",
+                                System.StringComparison.OrdinalIgnoreCase)));
+                    CheckParked(3819470, "Seven Tools of the Bandit");
+                    CheckParked(77414722, "Magic Jammer");
+                    CheckSearcher(18807108, "Spellbinding Circle FullyCompiled bound cannot-attack",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ContinuousCannotAttack &&
+                            c.RequiresTargetChoice && c.AlsoCannotChangeBattlePosition &&
+                            c.StaysOnField));
+                    CheckParked(57728570, "Crush Card Virus");
+                    CheckParked(71625222, "Time Wizard");
+                    CheckParked(81210420, "Magical Hats");
+                    CheckParked(40703222, "Multiply");
+
+                    // ── P1 battle leftovers (shared kinds) ──
+                    CheckSearcher(13945283, "Wall of Illusion FullyCompiled after-dmg bounce attacker",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.AfterDamageCalculation &&
+                            c.Action == EffectActionKind.ReturnToHand &&
+                            c.RequiresThisIsAttackTarget &&
+                            c.Zone == EffectZoneFilter.AttackingMonster));
+
+                    CheckSearcher(2671330, "Hyper Hammerhead FullyCompiled end-DS bounce if survived",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.EndOfDamageStep &&
+                            c.Action == EffectActionKind.ReturnToHand &&
+                            c.RequiresBattledMonsterNotDestroyed &&
+                            c.Zone == EffectZoneFilter.OpponentBattlingMonster));
+
+                    CheckSearcher(7572887, "D.D. Warrior Lady FullyCompiled after-dmg optional banish-both",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.AfterDamageCalculation &&
+                            c.Action == EffectActionKind.Banish &&
+                            c.AlsoBanishThis && c.IsOptional &&
+                            c.Zone == EffectZoneFilter.OpponentBattlingMonster));
+
+                    CheckSearcher(70074904, "D.D. Assailant FullyCompiled after-dmg destroyed banish-both",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.AfterDamageCalculation &&
+                            c.Action == EffectActionKind.Banish &&
+                            c.AlsoBanishThis && c.RequiresThisDestroyedByBattle &&
+                            c.Zone == EffectZoneFilter.OpponentBattlingMonster));
+
+                    CheckSearcher(74131780, "Exiled Force FullyCompiled Tribute this → Destroy target",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.RequiresTributeThis &&
+                            c.Action == EffectActionKind.Destroy && c.RequiresTargetChoice));
+
+                    CheckSearcher(11384280, "Cannon Soldier FullyCompiled Tribute 1 → 500 damage",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.RequiresTributeCount == 1 &&
+                            c.Action == EffectActionKind.InflictDamageToOpponent &&
+                            c.Amount == 500));
+
+                    CheckSearcher(91869203, "Amazoness Archer FullyCompiled Tribute 2 → 1200 damage (shared)",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.RequiresTributeCount == 2 &&
+                            c.Action == EffectActionKind.InflictDamageToOpponent &&
+                            c.Amount == 1200));
+
+                    CheckSearcher(12206212, "Harpie Lady Sisters FullyCompiled summon-restriction-only",
+                        pr => pr.FullyCompiled && pr.ClauseList.Count == 0);
+
+                    CheckSearcher(63162310, "Wall Shadow FullyCompiled summon-restriction-only (shared)",
+                        pr => pr.FullyCompiled && pr.ClauseList.Count == 0);
+
+                    CheckSearcher(93920745, "Penguin Soldier FullyCompiled Flip bounce up-to-2",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.Flip &&
+                            c.Action == EffectActionKind.ReturnToHand &&
+                            c.Amount == 2 && c.RequiresTargetChoice));
+                    CheckSearcher(28357177, "Hade-Hane FullyCompiled Flip bounce up-to-3 (shared)",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.Flip &&
+                            c.Action == EffectActionKind.ReturnToHand &&
+                            c.Amount == 3 && c.RequiresTargetChoice));
+                    CheckSearcher(65240384, "Big Shield Gardna FullyCompiled Gardna-only negate",
+                        pr => pr.ClauseList.Exists(c => c != null && c.Timing == EffectTiming.ChainLinkActivated && c.Action == EffectActionKind.NegateActivation && c.ChainResponseOnly && c.FlipSelfFaceUpDefense && !c.DestroyNegatedCard && !c.RequiresDiscardCost));
+                    CheckSearcher(98502113, "Dark Paladin FullyCompiled discard negate+destroy",
+                        pr => pr.ClauseList.Exists(c => c != null && c.Timing == EffectTiming.ChainLinkActivated && c.Action == EffectActionKind.NegateActivation && c.ChainResponseOnly && c.RequiresDiscardCost && c.DiscardCostCount == 1 && c.DestroyNegatedCard && !c.FlipSelfFaceUpDefense));
+                    CheckSearcher(48229808, "Horus LV8 FullyCompiled face-up negate+destroy",
+                        pr => pr.ClauseList.Exists(c => c != null && c.Timing == EffectTiming.ChainLinkActivated && c.Action == EffectActionKind.NegateActivation && c.ChainResponseOnly && !c.RequiresDiscardCost && c.DestroyNegatedCard && !c.FlipSelfFaceUpDefense));
+                    CheckParked(94004268, "Amazoness Swords Woman");
+                    CheckParked(37390589, "Kunai with Chain");
+                    CheckParked(96008713, "Magical Arm Shield");
+                    CheckParked(26302522, "Blast Sphere");
+                    CheckParked(68540059, "Metalmorph");
+                    CheckSearcher(2460565, "Marauding Captain FullyCompiled NS SS Lv≤4 + Warrior attack-lock",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.ThisCardSummoned &&
+                            c.Action == EffectActionKind.SpecialSummonFromHand &&
+                            c.FromHand && c.AmountIsLevel && c.Amount == 4 &&
+                            c.RequiresThisNormalSummoned) &&
+                        pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.CannotBeAttackTarget &&
+                            c.ExceptThisCard &&
+                            string.Equals(c.RaceFilter, "Warrior",
+                                System.StringComparison.OrdinalIgnoreCase)));
+                    CheckSearcher(25262697, "Gravekeeper's Assailant FullyCompiled named attack position",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.AttackDeclared &&
+                            c.Action == EffectActionKind.ChangeBattlePosition &&
+                            c.RequiresTargetChoice &&
+                            string.Equals(c.RequiresFaceUpName, "Necrovalley",
+                                System.StringComparison.OrdinalIgnoreCase) &&
+                            c.Zone == EffectZoneFilter.OppFaceUpMonsters));
+                }
+
+                // ── Shared-kind live: Penguin already covered in Flip block; Captain / Book / Circle ──
+                {
+                    const int captainId = 2460565;
+                    const int captainGiantSoldier = 13039848; // Level 3 Rock
+                    const int celticW = 91152256; // Warrior
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var cap = PutInHand(engine, p, captainId);
+                    var lv3 = PutInHand(engine, p, captainGiantSoldier);
+                    Check("Marauding Captain: Normal Summon",
+                        engine.TryNormalSummon(p, cap, asSet: false));
+                    Check("Marauding Captain: opens Level≤4 hand SS",
+                        engine.IsAwaitingEffectTarget && engine.PendingActivation != null &&
+                        engine.PendingActivation.LegalTargets.Contains(lv3));
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        Check("Marauding Captain: SS Level 3 from hand",
+                            engine.TrySelectEffectTarget(lv3) &&
+                            p.TryFindMonster(lv3, out _) &&
+                            !p.Hand.Contains(lv3));
+                    }
+
+                    var warrior = PlaceMonster(engine, p, celticW, 0, BattlePosition.Attack, true);
+                    Check("Marauding Captain: other Warrior cannot be attack-targeted",
+                        WRLDZ.Duel.TextEffects.ContinuousProtections.CannotBeAttackTarget(engine, warrior));
+                    Check("Marauding Captain: itself can still be attacked",
+                        !WRLDZ.Duel.TextEffects.ContinuousProtections.CannotBeAttackTarget(engine, cap));
+                    Check("Marauding Captain: non-Warrior not attack-locked",
+                        !WRLDZ.Duel.TextEffects.ContinuousProtections.CannotBeAttackTarget(engine, lv3));
+                }
+
+                {
+                    const int bookId = 2204140;
+                    const int turtle = 77044671; // Zombie
+                    const int celticW = 91152256;
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var z = engine.CreateCardInstance(turtle);
+                    p.Graveyard.Add(z);
+                    var og = engine.CreateCardInstance(celticW);
+                    opp.Graveyard.Add(og);
+                    var book = PutInHand(engine, p, bookId);
+                    Check("Book of Life: Activate legal with both GY monsters",
+                        engine.CanActivateSpellTrap(p, book, fromHand: true) &&
+                        engine.TryActivateSpellTrap(p, book, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.LegalTargets.Contains(z));
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        Check("Book of Life: first pick waits for opp GY",
+                            engine.TrySelectEffectTarget(z) && engine.IsAwaitingEffectTarget &&
+                            engine.PendingActivation.AwaitingSecondTarget &&
+                            engine.PendingActivation.LegalTargets.Contains(og));
+                        Check("Book of Life: SS Zombie, banish opp GY",
+                            engine.TrySelectEffectTarget(og) &&
+                            p.TryFindMonster(z, out _) &&
+                            opp.Banished.Contains(og) &&
+                            !opp.Graveyard.Contains(og));
+                    }
+                }
+
+                {
+                    const int circleId = 18807108;
+                    const int celticW = 91152256;
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var prey = PlaceMonster(engine, opp, celticW, 2, BattlePosition.Attack, true);
+                    prey.SummonedThisTurn = false;
+                    var st = PlaceSetTrap(engine, p, circleId, 2);
+                    st.SetThisTurn = false;
+                    Check("Spellbinding Circle: Activate from Set",
+                        engine.CanActivateSpellTrap(p, st, fromHand: false) &&
+                        engine.TryActivateSpellTrap(p, st, fromHand: false) &&
+                        engine.IsAwaitingEffectTarget);
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        Check("Spellbinding Circle: binds prey, stays, locks attack/position",
+                            engine.TrySelectEffectTarget(prey) &&
+                            st.EquippedTo == prey &&
+                            p.TryFindSpellTrap(st, out _) &&
+                            engine.ContinuousCannotAttackBlocks(opp, prey) &&
+                            engine.BoundTrapLocksBattlePosition(prey));
+                    }
+
+                    engine.DestroyMonsterPublic(opp, prey);
+                    Check("Spellbinding Circle: destroyed host also destroys the trap",
+                        p.Graveyard.Contains(st) && opp.Graveyard.Contains(prey) &&
+                        !p.TryFindSpellTrap(st, out _),
+                        $"stGy={p.Graveyard.Contains(st)} preyGy={opp.Graveyard.Contains(prey)}");
+                }
+
+                {
+                    const int circleId = 18807108;
+                    const int celticW = 91152256;
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var prey = PlaceMonster(engine, opp, celticW, 2, BattlePosition.Attack, true);
+                    prey.SummonedThisTurn = false;
+                    var st = PlaceSetTrap(engine, p, circleId, 2);
+                    st.SetThisTurn = false;
+                    engine.TryActivateSpellTrap(p, st, fromHand: false);
+                    if (engine.IsAwaitingEffectTarget)
+                        engine.TrySelectEffectTarget(prey);
+                    Check("Spellbinding Circle: bounce host leaves Circle face-up and unlinks",
+                        engine.ReturnCardToHand(prey) &&
+                        opp.Hand.Contains(prey) &&
+                        p.TryFindSpellTrap(st, out _) &&
+                        st.EquippedTo == null &&
+                        !engine.BoundTrapLocksBattlePosition(prey) &&
+                        !engine.ContinuousCannotAttackBlocks(opp, prey),
+                        $"hand={opp.Hand.Contains(prey)} stField={p.TryFindSpellTrap(st, out _)} " +
+                        $"link={st.EquippedTo != null}");
+                }
+
+                {
+                    const int circleId = 18807108;
+                    const int celticW = 91152256;
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var prey = PlaceMonster(engine, opp, celticW, 2, BattlePosition.Attack, true);
+                    var st = PlaceSetTrap(engine, p, circleId, 2);
+                    st.SetThisTurn = false;
+                    engine.TryActivateSpellTrap(p, st, fromHand: false);
+                    if (engine.IsAwaitingEffectTarget)
+                        engine.TrySelectEffectTarget(prey);
+                    engine.SendCardToGrave(p, st);
+                    Check("Spellbinding Circle: trap to GY does not destroy bound monster",
+                        p.Graveyard.Contains(st) &&
+                        opp.TryFindMonster(prey, out _) &&
+                        !opp.Graveyard.Contains(prey));
+                }
+
+                // ── P1 remaining field/GY engines: Necrovalley, HHG, Tornado Umi-leave ──
+                {
+                    const int necrovalley = 47355498;
+                    const int spyId = 24317029;
+                    const int reborn = 83764719;
+                    const int riteId = 30450531;
+                    const int hhgId = 75782277;
+                    const int harpieLady = 76812113;
+                    const int waboku = 12607053;
+                    const int umiId = 22702055;
+                    const int tornadoId = 18605135;
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var spy = PlaceMonster(engine, p, spyId, 2, BattlePosition.Attack, true);
+                        var nv = PutInHand(engine, p, necrovalley);
+                        Check("Necrovalley: Field Spell activate legal",
+                            engine.CanActivateSpellTrap(p, nv, fromHand: true));
+                        Check("Necrovalley: activates to Field Zone",
+                            engine.TryActivateSpellTrap(p, nv, fromHand: true) &&
+                            p.FieldSpellZone?.Occupant == nv && nv.FaceUp);
+                        FieldSpellEffects.RefreshBoard(engine);
+                        Check("Necrovalley: Gravekeeper's Spy +500/+500",
+                            spy.CurrentAtk == 1700 && spy.CurrentDef == 2500,
+                            $"atk={spy.CurrentAtk} def={spy.CurrentDef}");
+
+                        var gyMon = engine.CreateCardInstance(celtic);
+                        p.Graveyard.Add(gyMon);
+                        engine.BanishCard(p, gyMon);
+                        Check("Necrovalley: GY banish blocked",
+                            p.Graveyard.Contains(gyMon) &&
+                            (p.Banished == null || !p.Banished.Contains(gyMon)));
+
+                        var rb = PutInHand(engine, p, reborn);
+                        Check("Necrovalley: Monster Reborn cannot target GY",
+                            !engine.CanActivateSpellTrap(p, rb, fromHand: true));
+                    }
+
+                    {
+                        const int haDes = 53982768;
+                        const int exodiaNecross = 12600382;
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        p.Graveyard.Add(engine.CreateCardInstance(haDes));
+                        var exodia = engine.CreateCardInstance(exodiaNecross);
+                        p.Graveyard.Add(exodia);
+                        var rb = PutInHand(engine, p, reborn);
+                        Check("GY summon restrictions: Monster Reborn refuses Ha Des and hard Nomi",
+                            !engine.CanActivateSpellTrap(p, rb, fromHand: true));
+                        Check("GY summon restrictions: direct generic SpecialSummonToField refuses hard Nomi",
+                            !engine.SpecialSummonToField(p, exodia, BattlePosition.Attack, true) &&
+                            p.Graveyard.Contains(exodia));
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var nv = PutInHand(engine, p, necrovalley);
+                        engine.TryActivateSpellTrap(p, nv, fromHand: true);
+                        var gk = engine.CreateCardInstance(spyId);
+                        p.Graveyard.Add(gk);
+                        var rite = PlaceSetTrap(engine, p, riteId, 2);
+                        rite.SetThisTurn = false;
+                        Check("Rite of Spirit still legal under Necrovalley",
+                            engine.CanActivateSpellTrap(p, rite, fromHand: false));
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        var hhg = PutInHand(engine, p, hhgId);
+                        Check("HHG: Field Spell activate legal",
+                            engine.CanActivateSpellTrap(p, hhg, fromHand: true));
+                        Check("HHG: activates to Field Zone",
+                            engine.TryActivateSpellTrap(p, hhg, fromHand: true) &&
+                            p.FieldSpellZone?.Occupant == hhg && hhg.FaceUp);
+                        var lady = PlaceMonster(engine, p, harpieLady, 1, BattlePosition.Attack, true);
+                        FieldSpellEffects.RefreshBoard(engine);
+                        Check("HHG: Harpie Lady Winged Beast +200/+200",
+                            lady.CurrentAtk == 1500 && lady.CurrentDef == 1600,
+                            $"atk={lady.CurrentAtk} def={lady.CurrentDef}");
+
+                        var st = PlaceSetTrap(engine, opp, waboku, 2);
+                        st.SetThisTurn = false;
+                        p.Hand.Clear();
+                        var nsLady = PutInHand(engine, p, harpieLady);
+                        var ns = engine.TurnPlayer == p && engine.InMainPhase &&
+                                 engine.TryNormalSummon(p, nsLady, asSet: false);
+                        if (engine.IsAwaitingResponse &&
+                            engine.PendingResponse.Responder != p)
+                            engine.PassResponse();
+                        Check("HHG: NS Harpie Lady", ns, $"ns={ns}");
+                        Check("HHG: summon trigger opens S/T target",
+                            engine.IsAwaitingEffectTarget,
+                            $"awaiting={engine.IsAwaitingEffectTarget} pending={engine.PendingActivation?.Card?.Name}");
+                        if (engine.IsAwaitingEffectTarget)
+                            Check("HHG: destroy targeted S/T",
+                                engine.TrySelectEffectTarget(st) &&
+                                opp.Graveyard.Contains(st) &&
+                                p.FieldSpellZone?.Occupant == hhg);
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var tornadoUmi = PutInHand(engine, p, umiId);
+                        Check("Tornado setup: Umi activates",
+                            engine.TryActivateSpellTrap(p, tornadoUmi, fromHand: true) &&
+                            FieldSpellEffects.UmiIsOnField(engine));
+                        var wall = PlaceSetTrap(engine, p, tornadoId, 2);
+                        wall.SetThisTurn = false;
+                        Check("Tornado Wall activates while Umi is up",
+                            engine.CanActivateSpellTrap(p, wall, fromHand: false) &&
+                            engine.TryActivateSpellTrap(p, wall, fromHand: false) &&
+                            wall.FaceUp);
+                        engine.SendCardToGrave(p, tornadoUmi);
+                        FieldSpellEffects.RefreshBoard(engine);
+                        Check("Tornado Wall destroyed when Umi leaves",
+                            p.Graveyard.Contains(wall) && !p.TryFindSpellTrap(wall, out _),
+                            $"gy={p.Graveyard.Contains(wall)} onField={p.TryFindSpellTrap(wall, out _)}");
+                    }
+                }
+
+                {
+                    const int toonTable = 89997728;
+                    const int toonWorld = 15259703;
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    p.Deck.Clear();
+                    p.Deck.Add(toonWorld);
+                    p.Deck.Add(celtic);
+                    var card = PutInHand(engine, p, toonTable);
+                    Check("Toon Table: Activate legal with Toon card in Deck",
+                        engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    Check("Toon Table: add Toon World (series, not exact name Toon)",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        p.Hand.Exists(c => c != null && c.CardId == toonWorld) &&
+                        p.Graveyard.Exists(c => c != null && c.CardId == toonTable) &&
+                        !p.Deck.Contains(toonWorld) &&
+                        p.Deck.Contains(celtic),
+                        $"hand={string.Join(",", p.Hand.Select(c => c.Name))} gy={p.Graveyard.Count}");
+                }
+
+                var akProg = CardTextEffectCompiler.Compile(db.Get(18036057));
+                Check("Airknight Parshath compiles PiercingBattleDamage",
+                    akProg != null &&
+                    akProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.PiercingBattleDamage),
+                    akProg == null ? "null" : $"full={akProg.FullyCompiled} unparsed={string.Join("|", akProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                var ddProg = CardTextEffectCompiler.Compile(db.Get(65287621));
+                Check("Dark Driceratops FullyCompiled piercing",
+                    ddProg != null && ddProg.FullyCompiled &&
+                    ddProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.PiercingBattleDamage));
+                var yataProg = CardTextEffectCompiler.Compile(db.Get(3078576));
+                Check("Yata-Garasu summon-restriction absorbed",
+                    yataProg != null &&
+                    !System.Array.Exists(yataProg.UnparsedFragments ?? System.Array.Empty<string>(), f =>
+                        f != null && f.IndexOf("cannot be Special Summoned", System.StringComparison.OrdinalIgnoreCase) >= 0));
+                var fdProg = CardTextEffectCompiler.Compile(db.Get(18591904));
+                Check("Final Destiny compiles discard-5 + destroy all",
+                    fdProg != null &&
+                    fdProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.Destroy &&
+                        c.RequiresDiscardCost && c.DiscardCostCount == 5));
+                var synRush = CardTextEffectCompiler.Compile(new CardDef
+                {
+                    id = 90000401,
+                    name = "New Spell (Rush Recklessly shape)",
+                    type = "Spell Card",
+                    desc = "Target 1 face-up monster on the field; it gains 700 ATK until the end of this turn."
+                });
+                Check("New card without cardId: until-EOT ATK fragment",
+                    synRush != null && synRush.FullyCompiled &&
+                    synRush.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.GainAtkDefUntilEndOfTurn && c.Amount == 700 && c.IsPsctTarget));
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var kn = PlaceMonster(engine, engine.Player, 18036057, 2, BattlePosition.Attack, true);
+                    Check("Airknight HasPiercing from compiled piercing",
+                        OfficialEffectRegistry.HasPiercing(kn));
+                }
+
+                // Live: Fissure destroys the lowest ATK face-up opp monster (ties offered).
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var low = PlaceMonster(engine, opp, celtic, 1, BattlePosition.Attack, true);
+                    var high = PlaceMonster(engine, opp, bewd, 2, BattlePosition.Attack, true);
+                    var card = PutInHand(engine, p, fissure);
+                    Check("Fissure: Activate opens lowest-ATK targets only",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.LegalTargets.Contains(low) &&
+                        !engine.PendingActivation.LegalTargets.Contains(high));
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        Check("Fissure: destroy Celtic (lowest ATK)",
+                            engine.TrySelectEffectTarget(low) &&
+                            opp.Graveyard.Contains(low) &&
+                            opp.TryFindMonster(high, out _));
+                    }
+                }
+
+                // Fissure is an extremum choice, not PSCT targeting: Reaper must survive a
+                // resolution that destroys a different lowest-ATK monster.
+                {
+                    const int reaper = 23205979;
+                    const int zeroAtk = 27125110;
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var reaperCard = PlaceMonster(engine, opp, reaper, 1, BattlePosition.Attack, true);
+                    var zeroCard = PlaceMonster(engine, opp, zeroAtk, 2, BattlePosition.Attack, true);
+                    var card = PutInHand(engine, p, fissure);
+                    Check("Fissure vs Reaper: non-targeted resolution does not notify Reaper",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation.LegalTargets.Contains(zeroCard) &&
+                        !engine.PendingActivation.LegalTargets.Contains(reaperCard) &&
+                        engine.TrySelectEffectTarget(zeroCard) &&
+                        opp.TryFindMonster(reaperCard, out _) &&
+                        opp.Graveyard.Contains(zeroCard));
+                }
+
+
+                // Live: Rush Recklessly +700 until EOT
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var mon = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var before = mon.CurrentAtk;
+                    var card = PutInHand(engine, p, rush);
+                    Check("Rush Recklessly: Activate targets your monster",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.IsLegalEffectTarget(mon));
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        Check("Rush Recklessly: +700 ATK until EOT",
+                            engine.TrySelectEffectTarget(mon) &&
+                            mon.CurrentAtk == before + 700,
+                            $"atk {mon.CurrentAtk} expected {before + 700}");
+                    }
+                }
+
+                // Live: Stop Defense flips opp DEF → ATK
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var wall = PlaceMonster(engine, opp, giantSoldier, 2, BattlePosition.Defense, true);
+                    var card = PutInHand(engine, p, stopDefense);
+                    Check("Stop Defense: Activate legal vs DEF monster",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.IsLegalEffectTarget(wall));
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        Check("Stop Defense: switch to Attack Position",
+                            engine.TrySelectEffectTarget(wall) &&
+                            wall.Position == BattlePosition.Attack && wall.FaceUp);
+                    }
+                }
+
+                // Live: Umi Aqua +200 / Machine −200
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    const int penguinSoldier = 93920745; // Aqua
+                    const int roboticKnight = 44203504; // Machine
+                    var aqua = PlaceMonster(engine, p, penguinSoldier, 2, BattlePosition.Attack, true);
+                    var machine = PlaceMonster(engine, engine.Opponent, roboticKnight, 1, BattlePosition.Attack, true);
+                    var beforeA = aqua.Def.atk;
+                    var beforeM = machine.Def.atk;
+                    var card = PutInHand(engine, p, umi);
+                    Check("Umi: activate into Field Zone",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        p.FieldSpellZone?.Occupant == card && card.FaceUp);
+                    FieldSpellEffects.RefreshBoard(engine);
+                    Check("Umi: Aqua +200 ATK/DEF",
+                        aqua.CurrentAtk == beforeA + 200,
+                        $"aqua {aqua.CurrentAtk} expected {beforeA + 200} name={aqua.Name}");
+                    Check("Umi: Machine −200 ATK/DEF",
+                        machine.CurrentAtk == beforeM - 200,
+                        $"machine {machine.CurrentAtk} expected {beforeM - 200} name={machine.Name}");
+                }
+
+                // Live: Elegant Egotist with Harpie Lady on field + Sisters in deck
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    PlaceMonster(engine, p, harpie, 2, BattlePosition.Attack, true);
+                    // Ensure Sisters is searchable from Deck
+                    if (!p.Deck.Contains(harpieSisters))
+                        p.Deck.Insert(0, harpieSisters);
+                    var card = PutInHand(engine, p, elegant);
+                    var beforeZones = p.MonsterCount;
+                    Check("Elegant Egotist: Activate legal with Harpie Lady on field",
+                        engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    Check("Elegant Egotist: resolve SS from Deck",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        p.MonsterCount == beforeZones + 1,
+                        $"monsters {p.MonsterCount} was {beforeZones}");
+                }
+
+                // Live: Call of the Haunted GY SS + leave-field destroy
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var gyMon = engine.CreateCardInstance(celtic);
+                    p.Graveyard.Add(gyMon);
+                    var card = PlaceSetTrap(engine, p, callHaunted, 2);
+                    Check("Call of the Haunted: Activate from set",
+                        engine.CanActivateSpellTrap(p, card, fromHand: false));
+                    Check("Call of the Haunted: opens GY target",
+                        engine.TryActivateSpellTrap(p, card, fromHand: false) &&
+                        engine.IsAwaitingEffectTarget);
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        Check("Call of the Haunted: SS Celtic, trap stays linked",
+                            engine.TrySelectEffectTarget(gyMon) &&
+                            p.TryFindMonster(gyMon, out _) &&
+                            p.TryFindSpellTrap(card, out _) &&
+                            card.EquippedTo == gyMon);
+                        // MST the Call → host dies
+                        var mst = PutInHand(engine, p, SpellTrapEffects.Mst);
+                        Check("Call of the Haunted: destroy Call also destroys SS'd monster",
+                            engine.TryActivateSpellTrap(p, mst, fromHand: true) &&
+                            engine.IsAwaitingEffectTarget &&
+                            engine.TrySelectEffectTarget(card) &&
+                            p.Graveyard.Contains(gyMon) &&
+                            p.Graveyard.Contains(card),
+                            $"gyMon={p.Graveyard.Contains(gyMon)} callGy={p.Graveyard.Contains(card)}");
+                    }
+                }
+            }
+
+            // ── MST self-target UX (legal; default offer skips activating card) ──
+            {
+                const int mstId = SpellTrapEffects.Mst;
+                const int waboku = SpellTrapEffects.Waboku;
+                PlayerPrefs.DeleteKey(SpellTrapEffects.AllowSelfTargetPrefKey);
+                PlayerPrefs.Save();
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var oppSt = PlaceSetTrap(engine, opp, waboku, 2);
+                    var mst = PutInHand(engine, p, mstId);
+                    Check("MST: vs opponent S/T does not pick itself",
+                        engine.CanActivateSpellTrap(p, mst, fromHand: true) &&
+                        engine.TryActivateSpellTrap(p, mst, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.LegalTargets.Contains(oppSt) &&
+                        !engine.PendingActivation.LegalTargets.Contains(mst) &&
+                        !LegalIntentService.Build(engine, p)
+                            .HasKind(mst, LegalIntentService.LegalKind.EffectTarget),
+                        engine.PendingActivation == null
+                            ? "no pending"
+                            : $"n={engine.PendingActivation.LegalTargets.Count} hasSelf={engine.PendingActivation.LegalTargets.Contains(mst)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var ownSt = PlaceSetTrap(engine, p, waboku, 1);
+                    var mst = PutInHand(engine, p, mstId);
+                    Check("MST: own other backrow stays legal (self hidden)",
+                        engine.CanActivateSpellTrap(p, mst, fromHand: true) &&
+                        engine.TryActivateSpellTrap(p, mst, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.LegalTargets.Contains(ownSt) &&
+                        !engine.PendingActivation.LegalTargets.Contains(mst),
+                        engine.PendingActivation == null
+                            ? "no pending"
+                            : $"n={engine.PendingActivation.LegalTargets.Count} hasSelf={engine.PendingActivation.LegalTargets.Contains(mst)} hasOwn={engine.PendingActivation.LegalTargets.Contains(ownSt)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var mst = PutInHand(engine, p, mstId);
+                    Check("MST: sole S/T still offers self (legal)",
+                        engine.CanActivateSpellTrap(p, mst, fromHand: true) &&
+                        engine.TryActivateSpellTrap(p, mst, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.LegalTargets.Contains(mst) &&
+                        engine.PendingActivation.LegalTargets.Count == 1,
+                        engine.PendingActivation == null
+                            ? "no pending"
+                            : $"n={engine.PendingActivation.LegalTargets.Count}");
+                }
+
+                {
+                    SpellTrapEffects.AllowSpellTrapSelfTarget = true;
+                    try
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        var oppSt = PlaceSetTrap(engine, opp, waboku, 2);
+                        var ownSt = PlaceSetTrap(engine, p, SpellTrapEffects.SwordsOfRevealingLight, 1);
+                        var mst = PutInHand(engine, p, mstId);
+                        Check("MST: pref on, self is legal",
+                            engine.TryActivateSpellTrap(p, mst, fromHand: true) &&
+                            engine.IsAwaitingEffectTarget &&
+                            engine.PendingActivation != null &&
+                            engine.PendingActivation.LegalTargets.Contains(mst) &&
+                            engine.PendingActivation.LegalTargets.Contains(oppSt) &&
+                            engine.PendingActivation.LegalTargets.Contains(ownSt),
+                            engine.PendingActivation == null
+                                ? "no pending"
+                                : $"n={engine.PendingActivation.LegalTargets.Count} hasSelf={engine.PendingActivation.LegalTargets.Contains(mst)}");
+                    }
+                    finally
+                    {
+                        PlayerPrefs.DeleteKey(SpellTrapEffects.AllowSelfTargetPrefKey);
+                        PlayerPrefs.Save();
+                    }
+                }
+            }
+
+            // ── Player-facing activate/response window is 5s (expiry = PassResponse) ──
+            {
+                Check("DefaultResponseSeconds is 5s",
+                    CombatAnimTimings.DefaultResponseSeconds == 5f);
+            }
+
+            // ── Bad Reaction to Simochi: opponent LP gain becomes effect damage ──
+            {
+                const int simochi = 40633297;
+                const int remedy = 11868825;
+                var engine = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine);
+                var p = engine.Player;
+                var opp = engine.Opponent;
+                p.Hand.Clear();
+                opp.Hand.Clear();
+                var simochiCard = PlaceSetTrap(engine, p, simochi, 2);
+                var simochiProg = CardTextEffectCompiler.Compile(db.Get(simochi));
+                Check("Simochi: compiles shared continuous LP replacement",
+                    simochiProg.FullyCompiled &&
+                    simochiProg.ClauseList.Exists(c => c != null &&
+                        c.Action == EffectActionKind.ConvertOpponentLpGainToDamage &&
+                        c.Timing == EffectTiming.ContinuousWhileFaceUp && c.StaysOnField));
+                Check("Simochi: activates and stays face-up",
+                    engine.CanActivateSpellTrap(p, simochiCard, fromHand: false) &&
+                    engine.TryActivateSpellTrap(p, simochiCard, fromHand: false) &&
+                    simochiCard.FaceUp && p.TryFindSpellTrap(simochiCard, out _));
+                for (var i = 0; i < 8 && engine.IsAwaitingResponse; i++) engine.PassResponse();
+
+                const int rainOfMercy = 66719324;
+                var rainProg = CardTextEffectCompiler.Compile(db.Get(rainOfMercy));
+                Check("Simochi: Rain of Mercy compiles both-player LP gain",
+                    rainProg.FullyCompiled &&
+                    rainProg.ClauseList.Exists(c => c != null &&
+                        c.Action == EffectActionKind.GainLifePoints && c.Amount == 1000 &&
+                        c.Side == EffectSide.Both));
+                var rainOk = engine.TryActivateSpellTrap(p, PutInHand(engine, p, rainOfMercy), fromHand: true);
+                for (var i = 0; i < 8 && engine.IsAwaitingResponse; i++) engine.PassResponse();
+                Check("Simochi: Rain of Mercy controller gains, opponent takes damage",
+                    rainOk && p.LifePoints == 9000 && opp.LifePoints == 7000,
+                    $"got {p.LifePoints}/{opp.LifePoints}");
+
+                var ownRemedy = PutInHand(engine, p, remedy);
+                var ownBefore = p.LifePoints;
+                var ownOk = engine.TryActivateSpellTrap(p, ownRemedy, fromHand: true);
+                for (var i = 0; i < 8 && engine.IsAwaitingResponse; i++) engine.PassResponse();
+                Check("Simochi: controller own LP gain is unchanged",
+                    ownOk && p.LifePoints == ownBefore + 600);
+
+                Check("Simochi: reach opponent Main Phase", ReachOpponentMain(engine));
+                var oppRemedy = PutInHand(engine, opp, remedy);
+                var oppBefore = opp.LifePoints;
+                var oppOk = engine.TryActivateSpellTrap(opp, oppRemedy, fromHand: true);
+                for (var i = 0; i < 8 && engine.IsAwaitingResponse; i++) engine.PassResponse();
+                Check("Simochi: opponent +600 LP becomes 600 effect damage",
+                    oppOk && opp.LifePoints == oppBefore - 600);
+            }
+
             // ── FirstEmpty order ──
+
             {
                 var engine = Fresh(db, pDeck, aDeck);
                 var zones = engine.Player.MonsterZones;
@@ -6647,6 +9196,29 @@ namespace WRLDZ.Duel.Rules
 
             engine.ClearPendingActivation();
             engine.PendingTributes.Clear();
+        }
+
+        /// <summary>null = does not FullyCompile as GY-SS (leave unimplemented; no new primitives).</summary>
+        static bool? TryActivateCompiledGySsIfReady(CardDatabase db, DeckFile pDeck, DeckFile aDeck, int id)
+        {
+            var def = db.Get(id);
+            var prog = def != null ? CardTextEffectCompiler.Compile(def) : null;
+            var gySs = prog != null && prog.FullyCompiled &&
+                       prog.ClauseList.Exists(c =>
+                           c != null &&
+                           c.Timing == EffectTiming.Activate &&
+                           c.Action == EffectActionKind.SpecialSummonFromGy);
+            if (!gySs)
+                return null;
+
+            const int celtic = 91152256;
+            var engine = Fresh(db, pDeck, aDeck);
+            ClearBoard(engine);
+            var who = engine.Player;
+            who.Hand.Clear();
+            who.Graveyard.Add(engine.CreateCardInstance(celtic));
+            var card = PutInHand(engine, who, id);
+            return engine.CanActivateSpellTrap(who, card, fromHand: true);
         }
 
         static CardInstance PutInHand(DuelEngine engine, DuelistState who, int id)

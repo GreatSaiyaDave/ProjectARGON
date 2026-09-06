@@ -89,9 +89,17 @@ Never commit real keys. Prefer offline bulk + ship seed for S23 lab builds.
 
 **Whole-card regex (staples):** Draw N · Raigeki · Dark Hole · Heavy Storm · MST · Monster Reborn ·  
 Mirror Force · Negate Attack · Trap Hole · Waboku · Card Destruction · Swords · Ring ·  
-Flute · Polymerization (registered recipes) · Enemy Controller (position mode) ·  
+Flute · Polymerization (registered recipes) · Ritual Summon (named Greater/Equal, attribute Equal) · Relinquished absorb (OPT equip + ATK copy + battle substitute; damage-reflect leftover absorbed, not resolved) · Enemy Controller (position mode) ·  
 FLIP destroy · FLIP Spell from GY · Sangan search · Cyber Jar · Lord of D. ·  
-A Legendary Ocean continuous · Abyss Soldier ignition.
+A Legendary Ocean continuous · Abyss Soldier ignition ·  
+Cannot be destroyed by battle (this-card continuous) · Premature Burial pay-LP GY-SS equip ·  
+Tribute Summoned: destroy target monster (Zaborg / Monarch shape) ·  
+After damage calc: return attacker to hand (Wall of Illusion) · End of Damage Step bounce if survived (Hyper Hammerhead) ·  
+After damage calc: banish battling monster + this (D.D. Warrior Lady / Assailant) ·  
+Tribute this → destroy target (Exiled Force) · Tribute N → inflict damage (Cannon Soldier / Amazoness Archer) ·  
+Summon-restriction-only Effect Monsters FullyCompiled structural (Harpie Lady Sisters / Wall Shadow).
+
+**PARK (UniqueException / optional ● / unique):** Penguin Soldier up-to-N · Big Shield Gardna · Amazoness Swords Woman · Kunai with Chain · Magical Arm Shield · Blast Sphere · Time Wizard · Metalmorph · Marauding Captain · Seven Tools · Magic Jammer · Spellbinding Circle · Crush Card · Magical Hats · Multiply · Book of Life.
 
 AI may map additional cards **only** onto the same `EffectActionKind` / `EffectTiming` enums (no free-form invent).
 

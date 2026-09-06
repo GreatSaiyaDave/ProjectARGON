@@ -1,0 +1,130 @@
+{
+  "name": "Bus-Stop Toons",
+  "format": "wrldz_street_8000",
+  "main": [
+    {
+      "id": 65458948,
+      "name": "Toon Mermaid",
+      "qty": 3
+    },
+    {
+      "id": 91842653,
+      "name": "Toon Summoned Skull",
+      "qty": 3
+    },
+    {
+      "id": 53183600,
+      "name": "Blue-Eyes Toon Dragon",
+      "qty": 2
+    },
+    {
+      "id": 38369349,
+      "name": "Manga Ryu-Ran",
+      "qty": 2
+    },
+    {
+      "id": 42386471,
+      "name": "Toon Gemini Elf",
+      "qty": 3
+    },
+    {
+      "id": 31560081,
+      "name": "Magician of Faith",
+      "qty": 2
+    },
+    {
+      "id": 26202165,
+      "name": "Sangan",
+      "qty": 1
+    },
+    {
+      "id": 54652250,
+      "name": "Man-Eater Bug",
+      "qty": 2
+    },
+    {
+      "id": 69140098,
+      "name": "Gemini Elf",
+      "qty": 2
+    },
+    {
+      "id": 15259703,
+      "name": "Toon World",
+      "qty": 3
+    },
+    {
+      "id": 55144522,
+      "name": "Pot of Greed",
+      "qty": 1
+    },
+    {
+      "id": 19613556,
+      "name": "Heavy Storm",
+      "qty": 1
+    },
+    {
+      "id": 5318639,
+      "name": "Mystical Space Typhoon",
+      "qty": 1
+    },
+    {
+      "id": 72302403,
+      "name": "Swords of Revealing Light",
+      "qty": 1
+    },
+    {
+      "id": 79759861,
+      "name": "Tribute to the Doomed",
+      "qty": 2
+    },
+    {
+      "id": 70828912,
+      "name": "Premature Burial",
+      "qty": 1
+    },
+    {
+      "id": 98045062,
+      "name": "Enemy Controller",
+      "qty": 1
+    },
+    {
+      "id": 44095762,
+      "name": "Mirror Force",
+      "qty": 1
+    },
+    {
+      "id": 97077563,
+      "name": "Call of the Haunted",
+      "qty": 1
+    },
+    {
+      "id": 4206964,
+      "name": "Trap Hole",
+      "qty": 2
+    },
+    {
+      "id": 56120475,
+      "name": "Sakuretsu Armor",
+      "qty": 2
+    },
+    {
+      "id": 85742772,
+      "name": "Gravity Bind",
+      "qty": 2
+    },
+    {
+      "id": 3136426,
+      "name": "Level Limit - Area B",
+      "qty": 1
+    }
+  ],
+  "extra": [],
+  "side": [],
+  "counts": {
+    "main": 40,
+    "extra": 0,
+    "side": 0
+  },
+  "lpBand": 8000,
+  "role": "street_npc"
+}

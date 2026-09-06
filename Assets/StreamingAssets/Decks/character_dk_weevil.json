@@ -1,0 +1,124 @@
+{
+  "name": "Weevil Underwood · Duelist Kingdom",
+  "format": "wrldz_dk_character",
+  "character": "Weevil Underwood",
+  "era": "duelist_kingdom",
+  "erazBandId": "original",
+  "notes": "Petit Moth + Cocoon into Great Moth / Perfectly Ultimate Great Moth. Eradicating Aerosol in (needs a spell script to wipe insects).",
+  "main": [
+    {
+      "id": 58192742,
+      "name": "Petit Moth",
+      "qty": 3
+    },
+    {
+      "id": 40240595,
+      "name": "Cocoon of Evolution",
+      "qty": 3
+    },
+    {
+      "id": 87756343,
+      "name": "Larvae Moth",
+      "qty": 2
+    },
+    {
+      "id": 14141448,
+      "name": "Great Moth",
+      "qty": 1
+    },
+    {
+      "id": 48579379,
+      "name": "Perfectly Ultimate Great Moth",
+      "qty": 1
+    },
+    {
+      "id": 89091579,
+      "name": "Basic Insect",
+      "qty": 3
+    },
+    {
+      "id": 88979991,
+      "name": "Killer Needle",
+      "qty": 3
+    },
+    {
+      "id": 41762634,
+      "name": "Giant Flea",
+      "qty": 3
+    },
+    {
+      "id": 27911549,
+      "name": "Parasite Paracide",
+      "qty": 2
+    },
+    {
+      "id": 26185991,
+      "name": "Pinch Hopper",
+      "qty": 2
+    },
+    {
+      "id": 84834865,
+      "name": "Flying Kamakiri #1",
+      "qty": 2
+    },
+    {
+      "id": 77007920,
+      "name": "Laser Cannon Armor",
+      "qty": 2
+    },
+    {
+      "id": 24094653,
+      "name": "Polymerization",
+      "qty": 2
+    },
+    {
+      "id": 72302403,
+      "name": "Swords of Revealing Light",
+      "qty": 1
+    },
+    {
+      "id": 66788016,
+      "name": "Fissure",
+      "qty": 1
+    },
+    {
+      "id": 4206964,
+      "name": "Trap Hole",
+      "qty": 2
+    },
+    {
+      "id": 14315573,
+      "name": "Negate Attack",
+      "qty": 2
+    },
+    {
+      "id": 12607053,
+      "name": "Waboku",
+      "qty": 2
+    },
+    {
+      "id": 44095762,
+      "name": "Mirror Force",
+      "qty": 1
+    },
+    {
+      "id": 94716515,
+      "name": "Eradicating Aerosol",
+      "qty": 2
+    }
+  ],
+  "extra": [
+    {
+      "id": 95144193,
+      "name": "Kwagar Hercules",
+      "qty": 1
+    }
+  ],
+  "side": [],
+  "counts": {
+    "main": 40,
+    "extra": 1,
+    "side": 0
+  },
+  "role": "character_dk"
+}

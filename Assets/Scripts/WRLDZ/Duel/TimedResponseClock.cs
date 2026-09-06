@@ -79,9 +79,9 @@ namespace WRLDZ.Duel
         void StartOcgChainClock(Ocg.OcgLabDuelHost host)
         {
             IsRunning = true;
-            SecondsRemaining = host != null ? host.ChainWindowSeconds : CombatAnimTimings.DefaultAttackImpact;
+            SecondsRemaining = host != null ? host.ChainWindowSeconds : CombatAnimTimings.DefaultResponseSeconds;
             FractionToImpact = 0f;
-            _motionLine = "Chain — activate or Pass.";
+            _motionLine = "Chain — tap a blinking zone to activate.";
             OnStarted?.Invoke();
             OnTick?.Invoke(SecondsRemaining);
         }
@@ -91,8 +91,7 @@ namespace WRLDZ.Duel
             IsRunning = true;
             var pres = Engine?.ActivePresentation;
             var impact = Engine?.PendingResponse?.ReactionSeconds
-                         ?? pres?.Profile.ImpactAtSeconds
-                         ?? CombatAnimTimings.DefaultAttackImpact;
+                         ?? CombatAnimTimings.DefaultResponseSeconds;
             SecondsRemaining = impact;
             FractionToImpact = 0f;
             _motionLine = Engine?.PendingResponse?.MotionLine
@@ -148,13 +147,8 @@ namespace WRLDZ.Duel
                 return;
             }
 
-            var pres = Engine.ActivePresentation;
-            if (pres != null && Engine.PendingResponse != null)
-            {
-                SecondsRemaining = pres.SecondsToImpact;
-                FractionToImpact = pres.ImpactFraction;
-            }
-            else if (Engine.PendingResponse != null)
+            // Decision window is ReactionSeconds (5s default), not hologram impact.
+            if (Engine.PendingResponse != null)
             {
                 var open = Engine.PendingResponse.OpenedUnscaledTime;
                 var dur = Mathf.Max(0.5f, Engine.PendingResponse.ReactionSeconds);
@@ -168,7 +162,7 @@ namespace WRLDZ.Duel
             if (Engine.IsAwaitingEffectTarget)
                 return;
 
-            if (SecondsRemaining <= 0.001f || (pres != null && pres.PastImpact))
+            if (SecondsRemaining <= 0.001f)
             {
                 IsRunning = false;
                 // PassResponse logs a single clear line for attack vs summon.

@@ -1,0 +1,116 @@
+{
+  "name": "Park Insect Swarm",
+  "format": "wrldz_street_4000",
+  "main": [
+    {
+      "id": 35052053,
+      "name": "Insect Knight",
+      "qty": 3
+    },
+    {
+      "id": 16587243,
+      "name": "Neo Bug",
+      "qty": 3
+    },
+    {
+      "id": 41762634,
+      "name": "Giant Flea",
+      "qty": 3
+    },
+    {
+      "id": 84834865,
+      "name": "Flying Kamakiri #1",
+      "qty": 3
+    },
+    {
+      "id": 93107608,
+      "name": "Howling Insect",
+      "qty": 3
+    },
+    {
+      "id": 26185991,
+      "name": "Pinch Hopper",
+      "qty": 2
+    },
+    {
+      "id": 54652250,
+      "name": "Man-Eater Bug",
+      "qty": 3
+    },
+    {
+      "id": 64306248,
+      "name": "Skull-Mark Ladybug",
+      "qty": 2
+    },
+    {
+      "id": 83994646,
+      "name": "4-Starred Ladybug of Doom",
+      "qty": 2
+    },
+    {
+      "id": 88979991,
+      "name": "Killer Needle",
+      "qty": 2
+    },
+    {
+      "id": 89091579,
+      "name": "Basic Insect",
+      "qty": 2
+    },
+    {
+      "id": 24094653,
+      "name": "Polymerization",
+      "qty": 2
+    },
+    {
+      "id": 66788016,
+      "name": "Fissure",
+      "qty": 2
+    },
+    {
+      "id": 79759861,
+      "name": "Tribute to the Doomed",
+      "qty": 1
+    },
+    {
+      "id": 72302403,
+      "name": "Swords of Revealing Light",
+      "qty": 1
+    },
+    {
+      "id": 4206964,
+      "name": "Trap Hole",
+      "qty": 2
+    },
+    {
+      "id": 17814387,
+      "name": "Reinforcements",
+      "qty": 2
+    },
+    {
+      "id": 14315573,
+      "name": "Negate Attack",
+      "qty": 1
+    },
+    {
+      "id": 3819470,
+      "name": "Seven Tools of the Bandit",
+      "qty": 1
+    }
+  ],
+  "extra": [
+    {
+      "id": 95144193,
+      "name": "Kwagar Hercules",
+      "qty": 2
+    }
+  ],
+  "side": [],
+  "counts": {
+    "main": 40,
+    "extra": 2,
+    "side": 0
+  },
+  "lpBand": 4000,
+  "role": "street_npc"
+}

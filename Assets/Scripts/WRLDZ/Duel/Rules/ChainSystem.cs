@@ -19,6 +19,12 @@ namespace WRLDZ.Duel.Rules
         public CardInstance Target;
         public readonly List<CardInstance> Targets = new();
         public string EffectKey;
+        /// Link this effect answers (response links only).
+        public ChainLink TargetLink;
+        /// Response effect metadata, stamped when the link is activated.
+        public bool NegatesActivation;
+        public bool DestroyNegatedCard;
+        public bool FlipSelfFaceUpDefense;
         public bool Negated;
         public bool Resolved;
         /// <summary>Official text at activation time (immutable snapshot).</summary>

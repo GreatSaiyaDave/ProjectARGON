@@ -1,0 +1,124 @@
+{
+  "name": "Rex Raptor · Duelist Kingdom",
+  "format": "wrldz_dk_character",
+  "character": "Rex Raptor",
+  "era": "duelist_kingdom",
+  "erazBandId": "original",
+  "notes": "Sword Arm of Dragon, Megazowler, Trakodon, Little D, King Rex / Uraby / Raise Body Heat.",
+  "main": [
+    {
+      "id": 94119974,
+      "name": "Two-Headed King Rex",
+      "qty": 3
+    },
+    {
+      "id": 38289717,
+      "name": "Crawling Dragon #2",
+      "qty": 3
+    },
+    {
+      "id": 1784619,
+      "name": "Uraby",
+      "qty": 3
+    },
+    {
+      "id": 2671330,
+      "name": "Hyper Hammerhead",
+      "qty": 3
+    },
+    {
+      "id": 51934376,
+      "name": "Kabazauls",
+      "qty": 3
+    },
+    {
+      "id": 40374923,
+      "name": "Mammoth Graveyard",
+      "qty": 2
+    },
+    {
+      "id": 57305373,
+      "name": "Two-Mouth Darkruler",
+      "qty": 2
+    },
+    {
+      "id": 51267887,
+      "name": "Raise Body Heat",
+      "qty": 3
+    },
+    {
+      "id": 24094653,
+      "name": "Polymerization",
+      "qty": 2
+    },
+    {
+      "id": 72302403,
+      "name": "Swords of Revealing Light",
+      "qty": 1
+    },
+    {
+      "id": 66788016,
+      "name": "Fissure",
+      "qty": 1
+    },
+    {
+      "id": 78986941,
+      "name": "Order to Charge",
+      "qty": 1
+    },
+    {
+      "id": 4206964,
+      "name": "Trap Hole",
+      "qty": 2
+    },
+    {
+      "id": 14315573,
+      "name": "Negate Attack",
+      "qty": 2
+    },
+    {
+      "id": 44095762,
+      "name": "Mirror Force",
+      "qty": 1
+    },
+    {
+      "id": 12607053,
+      "name": "Waboku",
+      "qty": 2
+    },
+    {
+      "id": 13069066,
+      "name": "Sword Arm of Dragon",
+      "qty": 1
+    },
+    {
+      "id": 75390004,
+      "name": "Megazowler",
+      "qty": 1
+    },
+    {
+      "id": 42348802,
+      "name": "Trakodon",
+      "qty": 2
+    },
+    {
+      "id": 42625254,
+      "name": "Little D",
+      "qty": 2
+    }
+  ],
+  "extra": [
+    {
+      "id": 89112729,
+      "name": "Cyber Saurus",
+      "qty": 1
+    }
+  ],
+  "side": [],
+  "counts": {
+    "main": 40,
+    "extra": 1,
+    "side": 0
+  },
+  "role": "character_dk"
+}

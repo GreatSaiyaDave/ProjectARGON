@@ -37,6 +37,7 @@ namespace WRLDZ.UI
         MrReferobot _referobot;
         CardInspectPopup _inspect;
         GraveyardBrowser _gyBrowser;
+        BanishedBrowser _banishedBrowser; // Backup-bot stub — Dilbot wire OpenBanished
         CardInstance _inspectCard;
         bool _inspectFromHand;
         float _inspectSuppressedUntil;
@@ -81,7 +82,6 @@ namespace WRLDZ.UI
         Button _btnMenu;
         Button _btnClearTrib;
         Button _btnCancelTarget;
-        Button _btnPassResponse;
 
         Transform _targetRow;
         Text _targetPrompt;
@@ -89,9 +89,12 @@ namespace WRLDZ.UI
         GameObject _targetPanel;
         GameObject _targetDim;
         Button _targetCancelBtn;
+        readonly List<CardInstance> _attackTargets = new();
+        CardInstance _attackPickerAttacker;
 
         /// <summary>
-        /// Response tray: PASS + hand QEs (Kuriboh). Field Set traps use zone blink, not buttons.
+        /// Response tray: heads-up countdown + hand QEs (Kuriboh). Field Sets use zone blink.
+        /// Letting the timer expire is the pass — no PASS button.
         /// </summary>
         GameObject _responseTray;
         Transform _responseBtnRow;
@@ -353,15 +356,15 @@ namespace WRLDZ.UI
             {
                 if (timing == ResponseTiming.DamageCalculation)
                     _status.text = progress < 0.85f
-                        ? $"Damage Calc {toImpact:0.0}s — Kuriboh / Pass"
+                        ? $"Damage Calc {toImpact:0.0}s — activate Kuriboh now"
                         : $"{toImpact:0.0}s — last chance!";
                 else if (timing == ResponseTiming.MonsterSummoned)
                     _status.text = progress < 0.85f
-                        ? $"Summon {toImpact:0.0}s — tap a blinking zone or PASS"
+                        ? $"Summon {toImpact:0.0}s — tap a blinking zone to activate"
                         : $"{toImpact:0.0}s — last chance!";
                 else
                     _status.text = progress < 0.85f
-                        ? $"Attack {toImpact:0.0}s — tap a blinking zone or PASS"
+                        ? $"Attack {toImpact:0.0}s — tap a blinking zone to activate"
                         : $"{toImpact:0.0}s — last chance!";
                 _status.color = progress < 0.65f
                     ? new Color(1f, 0.85f, 0.4f, 1f)
@@ -419,6 +422,9 @@ namespace WRLDZ.UI
             drag.OnHandCardTapped += OnArHandCardTapped;
             drag.OnGraveyardTapped -= OnArGraveyardTapped;
             drag.OnGraveyardTapped += OnArGraveyardTapped;
+            // Banished/RFG floater — Backup-bot stub; Dilbot owns full pick/target routing.
+            drag.OnBanishedTapped -= OnArBanishedTapped;
+            drag.OnBanishedTapped += OnArBanishedTapped;
             drag.OnPhaseButtonTapped -= OnArPhaseButtonTapped;
             drag.OnPhaseButtonTapped += OnArPhaseButtonTapped;
             drag.OnOppGlanceCardTapped -= OnArOppGlanceCardTapped;
@@ -428,6 +434,33 @@ namespace WRLDZ.UI
         void OnArOppGlanceCardTapped(CardInstance card, bool publicFace)
         {
             if (card == null || _engine == null) return;
+
+            // The glance is the opponent-field view used during target windows too:
+            // only a legal card is painted/pickable, but keep this guard for stale
+            // colliders after a same-frame engine update.
+            if (_engine.IsAwaitingEffectTarget)
+            {
+                if (_engine.TrySelectEffectTarget(card))
+                {
+                    ClearCardSelection();
+                    Refresh();
+                    return;
+                }
+                if (_status != null) _status.text = $"Not a legal target: {card.Name}";
+                return;
+            }
+
+            if (_attackPickerAttacker != null && _engine.Phase == DuelPhase.Battle)
+            {
+                if (_attackTargets.Exists(c => c != null && c.InstanceId == card.InstanceId))
+                {
+                    DeclareAttackOn(_attackPickerAttacker, card);
+                    return;
+                }
+                if (_status != null) _status.text = "That opponent monster is not an attack target.";
+                return;
+            }
+
             OpenInspect(card, showFace: publicFace, null);
         }
 
@@ -450,6 +483,59 @@ namespace WRLDZ.UI
         void OnArGraveyardTapped(bool playerSide)
         {
             OpenGraveyard(playerSide);
+        }
+
+        /// <summary>
+        /// Banished floater tap (Backup-bot presentation stub).
+        /// Dilbot: extend for targeting / opp side / effect FD rules as needed.
+        /// </summary>
+        void OnArBanishedTapped(bool playerSide)
+        {
+            OpenBanished(playerSide);
+        }
+
+        void OpenBanished(bool playerSide)
+        {
+            if (_engine == null) return;
+            var who = playerSide
+                ? (CommandWho() ?? _engine.Player)
+                : _engine.Opponent;
+            if (who == null) return;
+            var pile = who.Banished;
+            if (pile == null || pile.Count == 0) return;
+            if (_banishedBrowser == null)
+            {
+                var attach = transform.childCount > 0 ? transform.GetChild(0) : transform;
+                try { _banishedBrowser = BanishedBrowser.Create(attach); }
+                catch (System.Exception ex)
+                {
+                    Debug.LogWarning("[WRLDZ] BanishedBrowser: " + ex.Message);
+                    return;
+                }
+            }
+
+            DismissInspectQuiet();
+            HideTargetPicker();
+            WrldzAudio.PlayCardTap();
+            // onPick: inspect for now — Dilbot routes effect targets like OnGraveyardCardPicked.
+            _banishedBrowser.Show(pile, _db, playerSide, card =>
+            {
+                if (card == null) return;
+                if (_engine.IsAwaitingEffectTarget)
+                {
+                    if (_engine.TrySelectEffectTarget(card))
+                    {
+                        _banishedBrowser?.Hide();
+                        ClearCardSelection();
+                        Refresh();
+                        return;
+                    }
+                    if (_status != null)
+                        _status.text = $"Not a legal target: {card.Name}";
+                    return;
+                }
+                OpenInspect(card, showFace: card.FaceUp, null);
+            });
         }
 
         /// <summary>Tap a floating hand holo — select it; drag-to-disk is the other play path.</summary>
@@ -768,7 +854,7 @@ namespace WRLDZ.UI
         }
 
         /// <summary>
-        /// Glanceable glass islands: YOU/OPP LP, phase, status, phase CTAs, Pass/Cancel.
+        /// Glanceable glass islands: YOU/OPP LP, phase, status, phase CTAs, Cancel.
         /// Replaces the old full-width combat bar + disk phase hub.
         /// </summary>
         void BindFloatingHud(Transform root)
@@ -796,7 +882,6 @@ namespace WRLDZ.UI
             ShrinkPhaseChip(_btnMain2);
             ShrinkPhaseChip(_btnEnd);
 
-            _btnPassResponse = CreateButton(_floatHud.ContextRow, "PASS", DoPassResponse, GbaTheme.CmdSafe);
             _btnCancelTarget = CreateButton(_floatHud.ContextRow, "CANCEL", DoCancelTarget, GbaTheme.CmdDanger);
             _btnClearTrib = CreateButton(_floatHud.ContextRow, "TRIBUTES", () =>
             {
@@ -1559,6 +1644,18 @@ namespace WRLDZ.UI
                 // AR holograms always (digital uses stage strip; AR uses full-bleed)
                 try
                 {
+                    // Set the filter before SyncFromEngine so the same paint pass
+                    // hides non-legal opponent cards in the AR mini-playmat.
+                    var glance = _arSpace?.Interaction?.Arena;
+                    if (glance != null)
+                    {
+                        if (_engine.IsAwaitingEffectTarget)
+                            glance.SetOpponentTargeting(_engine.PendingActivation?.LegalTargets);
+                        else if (_attackPickerAttacker != null && _engine.Phase == DuelPhase.Battle)
+                            glance.SetOpponentTargeting(_attackTargets);
+                        else
+                            glance.ClearOpponentTargeting();
+                    }
                     _arSpace?.SyncFromEngine(_engine, _db);
                 }
                 catch (Exception syncEx)
@@ -1653,7 +1750,7 @@ namespace WRLDZ.UI
                 : pr.ReactionSeconds;
             _responsePrompt.text =
                 $"{pr.Prompt}\n" +
-                $"⏱ {secs:0.0}s — tap a blinking zone or PASS";
+                $"⏱ {secs:0.0}s — tap a blinking zone to activate";
 
             // Clear old buttons
             for (var i = _responseBtnRow.childCount - 1; i >= 0; i--)
@@ -1694,16 +1791,7 @@ namespace WRLDZ.UI
                 }
             }
 
-            // Pass always available
-            var pass = CreateButton(_responseBtnRow, "PASS", () =>
-            {
-                FreeUiKit.PlayClick();
-                DoPassResponse();
-            }, GbaTheme.CmdMuted);
-            var ple = pass.gameObject.AddComponent<LayoutElement>();
-            ple.minWidth = 80f;
-            ple.flexibleWidth = 0.6f;
-            ple.minHeight = 72f;
+            // No PASS button — timer expiry is the pass (TimedResponseClock → Engine.PassResponse).
         }
 
         /// <summary>Drop selection if that card left hand/field (prevents ghost actions).</summary>
@@ -1846,10 +1934,24 @@ namespace WRLDZ.UI
             _targetPanel.SetActive(false);
         }
 
+        static bool IsGraveyardTargetKind(EffectTargetKind kind)
+        {
+            return kind == EffectTargetKind.MonsterInEitherGy ||
+                   kind == EffectTargetKind.SpellInYourGy ||
+                   kind == EffectTargetKind.TrapInYourGy ||
+                   kind == EffectTargetKind.BanishFromYourGy;
+        }
+
         void RebuildEffectTargets()
         {
             if (_targetPanel == null || _targetRow == null) return;
             ClearChildren(_targetRow);
+
+            if (_attackPickerAttacker != null && _attackTargets.Count > 0)
+            {
+                RebuildAttackTargetPicker();
+                return;
+            }
 
             var pending = _engine.PendingActivation;
             if (pending == null)
@@ -1897,6 +1999,15 @@ namespace WRLDZ.UI
                     le.flexibleWidth = 1f;
                 }
 
+                return;
+            }
+
+            if (IsGraveyardTargetKind(pending.TargetKind) && _gyBrowser != null)
+            {
+                // The GY is public information, so use the existing detailed
+                // browser and pass only the engine's legal targets. This avoids
+                // the old flat name/card strip and keeps invalid cards out.
+                _gyBrowser.Show(pending.LegalTargets, _db, true, OnGraveyardCardPicked, "GY TARGETS");
                 return;
             }
 
@@ -1948,7 +2059,8 @@ namespace WRLDZ.UI
                 }
                 else if (pending.TargetKind == EffectTargetKind.MonsterInYourDeckAtkLeq ||
                          pending.TargetKind == EffectTargetKind.FieldSpellInYourDeck ||
-                         pending.TargetKind == EffectTargetKind.MonsterInYourDeckFiltered)
+                         pending.TargetKind == EffectTargetKind.MonsterInYourDeckFiltered ||
+                         pending.TargetKind == EffectTargetKind.MonsterInYourDeckToSummon)
                     tag = "DECK\n";
                 else if (pending.TargetKind == EffectTargetKind.SpellInYourGy ||
                          pending.TargetKind == EffectTargetKind.TrapInYourGy)
@@ -2083,7 +2195,7 @@ namespace WRLDZ.UI
             if (responding)
             {
                 SetPhaseButtons(false, false, false);
-                ShowContextualAction(_btnPassResponse);
+                HideContextualActions();
                 SetBtn(_btnRestartBar, true);
                 SetBtn(_btnMenu, true);
                 _arSpace?.PlayFx(playerSide: true, DiskFxEvent.LegalZonePulse);
@@ -2092,7 +2204,7 @@ namespace WRLDZ.UI
                 {
                     _responsePrompt.text =
                         $"{_engine.PendingResponse.Prompt}\n" +
-                        $"⏱ {_responseClock.SecondsRemaining:0.0}s — tap a blinking zone or PASS";
+                        $"⏱ {_responseClock.SecondsRemaining:0.0}s — tap a blinking zone to activate";
                 }
 
                 return;
@@ -2136,7 +2248,7 @@ namespace WRLDZ.UI
             SetBtn(_btnMenu, true);
         }
 
-        /// <summary>Pass / Cancel / Tributes share the thumb island — only one visible at a time.</summary>
+        /// <summary>Cancel / Tributes share the thumb island — only one visible at a time.</summary>
         void ShowContextualAction(Button which)
         {
             HideContextualActions();
@@ -2148,12 +2260,6 @@ namespace WRLDZ.UI
 
         void HideContextualActions()
         {
-            if (_btnPassResponse != null)
-            {
-                _btnPassResponse.gameObject.SetActive(false);
-                SetBtn(_btnPassResponse, false);
-            }
-
             if (_btnCancelTarget != null)
             {
                 _btnCancelTarget.gameObject.SetActive(false);
@@ -2337,7 +2443,7 @@ namespace WRLDZ.UI
                 var n = 0;
                 if (enemy != null)
                     foreach (var _ in enemy.MonstersOnField()) n++;
-                var canDirect = n == 0 || _engine.CanAttackDirectly(who, c);
+                var canDirect = _engine.CanAttackDirectly(who, c);
                 _engine.Log(canDirect && n == 0
                     ? $"{c.Name} ready — choose Direct Attack."
                     : canDirect
@@ -2637,16 +2743,33 @@ namespace WRLDZ.UI
             if (card == null || _engine == null) return;
             if (_engine.IsAwaitingEffectTarget)
             {
-                if (_engine.TrySelectEffectTarget(card))
+                // Target GY cards use the same full inspect component as field
+                // cards, so art, name, ATK/DEF and official text are visible
+                // before committing the selection.
+                var chosen = card;
+                OpenInspect(chosen, showFace: true, new List<CardAction>
                 {
-                    _gyBrowser?.Hide();
-                    ClearCardSelection();
-                    Refresh();
-                    return;
-                }
-
-                if (_status != null)
-                    _status.text = $"Not a legal target: {card.Name}";
+                    new()
+                    {
+                        Label = "SELECT TARGET",
+                        Color = GbaTheme.CmdSafe,
+                        Invoke = () =>
+                        {
+                            if (_engine.TrySelectEffectTarget(chosen))
+                            {
+                                ClearCardSelection();
+                                Refresh();
+                            }
+                            else if (_status != null)
+                                _status.text = $"Not a legal target: {chosen.Name}";
+                        }
+                    }
+                }, closeLabel: "BACK TO GY", extraOnClose: () =>
+                {
+                    var pending = _engine.PendingActivation;
+                    if (pending != null && IsGraveyardTargetKind(pending.TargetKind) && _gyBrowser != null)
+                        _gyBrowser.Show(pending.LegalTargets, _db, true, OnGraveyardCardPicked, "GY TARGETS");
+                }, force: true);
                 return;
             }
 
@@ -2828,6 +2951,8 @@ namespace WRLDZ.UI
 
         void HideTargetPicker()
         {
+            _attackPickerAttacker = null;
+            _attackTargets.Clear();
             if (_targetPanel != null) _targetPanel.SetActive(false);
             if (_targetDim != null) _targetDim.SetActive(false);
         }
@@ -3357,6 +3482,28 @@ namespace WRLDZ.UI
             return list;
         }
 
+        List<CardInstance> LegalAttackTargets(DuelistState who, CardInstance attacker,
+            IEnumerable<CardInstance> candidates)
+        {
+            var legal = new List<CardInstance>();
+            if (_engine == null || who == null || attacker == null ||
+                !_engine.CanAttack(who, attacker) || who.MustAttackDirectlyThisTurn)
+                return legal;
+
+            var enemy = EnemyOf(who);
+            if (enemy == null || candidates == null) return legal;
+            foreach (var target in candidates)
+            {
+                if (target == null || !enemy.TryFindMonster(target, out _)) continue;
+                if (WRLDZ.Duel.TextEffects.ContinuousProtections.CannotBeAttackTarget(
+                        _engine, target))
+                    continue;
+                if (!legal.Exists(c => c.InstanceId == target.InstanceId))
+                    legal.Add(target);
+            }
+            return legal;
+        }
+
         List<CardAction> CollectFieldMonsterActions(CardInstance card)
         {
             var list = new List<CardAction>();
@@ -3425,14 +3572,10 @@ namespace WRLDZ.UI
             if (_engine.Phase == DuelPhase.Battle && _engine.CanAttack(who, card))
             {
                 var enemy = EnemyOf(who);
-                var targets = new List<CardInstance>();
-                if (enemy != null)
-                {
-                    foreach (var m in enemy.MonstersOnField())
-                        if (m != null) targets.Add(m);
-                }
+                var targets = LegalAttackTargets(who, card,
+                    enemy != null ? enemy.MonstersOnField() : null);
 
-                if (targets.Count == 0 || _engine.CanAttackDirectly(who, card))
+                if (_engine.CanAttackDirectly(who, card))
                 {
                     list.Add(new CardAction
                     {
@@ -3461,45 +3604,76 @@ namespace WRLDZ.UI
             return list;
         }
 
-        /// <summary>Battle: pick which enemy monster to attack (text list).</summary>
+        /// <summary>Battle: pick an opponent monster from the same mini-playmat-style card view used by effects.</summary>
         void OpenAttackTargetChooser(CardInstance attacker, List<CardInstance> targets)
         {
             if (attacker == null || targets == null || targets.Count == 0) return;
+            var who = CommandWho() ?? _engine?.Player;
+            var legalTargets = LegalAttackTargets(who, attacker, targets);
+            if (legalTargets.Count == 0) return;
+
             _selectedAttacker = attacker;
             _selectedField = attacker;
-            var acts = new List<CardAction>();
-            foreach (var t in targets)
-            {
-                var target = t;
-                var label = target.FaceUp
-                    ? $"Attack {target.Name ?? "Monster"}"
-                    : "Attack Set Monster";
-                if (target.FaceUp)
-                {
-                    var pos = target.Position == BattlePosition.Defense ? "DEF" : "ATK";
-                    var stat = target.Position == BattlePosition.Defense
-                        ? target.CurrentDef
-                        : target.CurrentAtk;
-                    label = $"Attack {target.Name} ({pos} {stat})";
-                }
+            _attackPickerAttacker = attacker;
+            _attackTargets.Clear();
+            _attackTargets.AddRange(legalTargets);
 
-                acts.Add(new CardAction
+            // Keep the opponent's field floater visible in AR and replace the old
+            // attacker inspect/text list with the legal target card tray.
+            DismissInspectQuiet();
+            Refresh();
+        }
+
+        void RebuildAttackTargetPicker()
+        {
+            if (_targetPanel == null || _targetRow == null || _attackPickerAttacker == null) return;
+            _targetPanel.SetActive(true);
+            if (_targetDim != null) _targetDim.SetActive(true);
+            _targetPanel.transform.SetAsLastSibling();
+            if (_targetDim != null) _targetDim.transform.SetSiblingIndex(_targetPanel.transform.GetSiblingIndex() - 1);
+            if (_targetPrompt != null)
+                _targetPrompt.text = $"Choose an attack target for {_attackPickerAttacker.Name}";
+            if (_targetHint != null)
+                _targetHint.text = _attackTargets.Count == 1
+                    ? "OPP FIELD · 1 legal target"
+                    : $"OPP FIELD · {_attackTargets.Count} legal targets";
+
+            foreach (var target in _attackTargets)
+            {
+                var pick = target;
+                var go = CreateCardButton(_targetRow, pick, showFace: true, tributeMark: false,
+                    () => DeclareAttackOn(_attackPickerAttacker, pick), small: false, forceCardBack: false,
+                    handSize: false, wireButtonClick: true, targetPickerSize: true);
+                var rim = new GameObject("AttackLegalRim", typeof(RectTransform), typeof(Image));
+                rim.transform.SetParent(go.transform, false);
+                rim.transform.SetAsFirstSibling();
+                var rimImg = rim.GetComponent<Image>();
+                rimImg.sprite = UiFoundation.WhiteSprite();
+                rimImg.color = new Color(1f, 0.65f, 0.16f, 0.95f);
+                rimImg.raycastTarget = false;
+                var rrt = rim.GetComponent<RectTransform>();
+                rrt.anchorMin = Vector2.zero; rrt.anchorMax = Vector2.one;
+                rrt.offsetMin = new Vector2(-5f, -5f); rrt.offsetMax = new Vector2(5f, 5f);
+                var label = go.GetComponentInChildren<Text>();
+                if (label != null)
                 {
-                    Label = label,
-                    Color = GbaTheme.CmdBattle,
-                    Invoke = () => DeclareAttackOn(attacker, target)
-                });
+                    var pos = pick.FaceUp ? (pick.Position == BattlePosition.Defense ? "DEF" : "ATK") : "SET DEF";
+                    var stat = pick.FaceUp ? (pick.Position == BattlePosition.Defense ? pick.CurrentDef : pick.CurrentAtk).ToString() : "?";
+                    label.text = $"OPP FIELD\n{ShortName(pick.Name)}\n{pos} {stat}";
+                    WrldzType.StyleButtonLabel(label, 15);
+                }
             }
 
-            OpenInspect(attacker, showFace: true, acts, closeLabel: "CANCEL", extraOnClose: () =>
-            {
-                ClearCardSelection();
-            }, force: true);
+            var cancel = CreateButton(_targetRow, "CANCEL", DoCancelTarget, GbaTheme.CmdDanger);
+            var le = cancel.gameObject.AddComponent<LayoutElement>();
+            le.minWidth = 92f; le.minHeight = 56f; le.preferredWidth = 100f;
         }
 
         void DeclareAttackOn(CardInstance attacker, CardInstance target)
         {
             if (_engine == null || attacker == null) return;
+            _attackPickerAttacker = null;
+            _attackTargets.Clear();
             var who = CommandWho() ?? _engine.Player;
             FreeUiKit.PlayConfirm();
             if (!_engine.TryAttack(who, attacker, target))
@@ -4411,7 +4585,23 @@ namespace WRLDZ.UI
 
         void DoCancelTarget()
         {
-            if (_engine == null || !_engine.IsAwaitingEffectTarget) return;
+            if (_engine == null) return;
+
+            // Attack target picking is a UI-only chooser; it does not create a
+            // PendingActivation, so the normal effect-target cancel guard must
+            // not swallow this button.
+            if (_attackPickerAttacker != null)
+            {
+                _attackPickerAttacker = null;
+                _attackTargets.Clear();
+                _selectedAttacker = null;
+                _selectedField = null;
+                DismissInspectQuiet();
+                Refresh();
+                return;
+            }
+            if (!_engine.IsAwaitingEffectTarget) return;
+
             Cmd(DuelIntent.Of(DuelIntentKind.CancelTarget));
             ClearCardSelection();
             Refresh();

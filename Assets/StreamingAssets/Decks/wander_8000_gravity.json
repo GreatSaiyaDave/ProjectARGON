@@ -1,0 +1,130 @@
+{
+  "name": "Plaza Gravity Lock",
+  "format": "wrldz_street_8000",
+  "main": [
+    {
+      "id": 23205979,
+      "name": "Spirit Reaper",
+      "qty": 3
+    },
+    {
+      "id": 3510565,
+      "name": "Stealth Bird",
+      "qty": 3
+    },
+    {
+      "id": 15383415,
+      "name": "Swarm of Scarabs",
+      "qty": 3
+    },
+    {
+      "id": 41872150,
+      "name": "Swarm of Locusts",
+      "qty": 3
+    },
+    {
+      "id": 52077741,
+      "name": "Obnoxious Celtic Guard",
+      "qty": 3
+    },
+    {
+      "id": 2326738,
+      "name": "Des Lacooda",
+      "qty": 2
+    },
+    {
+      "id": 26202165,
+      "name": "Sangan",
+      "qty": 1
+    },
+    {
+      "id": 40640057,
+      "name": "Kuriboh",
+      "qty": 1
+    },
+    {
+      "id": 93920745,
+      "name": "Penguin Soldier",
+      "qty": 1
+    },
+    {
+      "id": 3136426,
+      "name": "Level Limit - Area B",
+      "qty": 3
+    },
+    {
+      "id": 44656491,
+      "name": "Messenger of Peace",
+      "qty": 2
+    },
+    {
+      "id": 72302403,
+      "name": "Swords of Revealing Light",
+      "qty": 1
+    },
+    {
+      "id": 55144522,
+      "name": "Pot of Greed",
+      "qty": 1
+    },
+    {
+      "id": 19613556,
+      "name": "Heavy Storm",
+      "qty": 1
+    },
+    {
+      "id": 5318639,
+      "name": "Mystical Space Typhoon",
+      "qty": 1
+    },
+    {
+      "id": 73915051,
+      "name": "Scapegoat",
+      "qty": 1
+    },
+    {
+      "id": 85742772,
+      "name": "Gravity Bind",
+      "qty": 3
+    },
+    {
+      "id": 12607053,
+      "name": "Waboku",
+      "qty": 2
+    },
+    {
+      "id": 14315573,
+      "name": "Negate Attack",
+      "qty": 1
+    },
+    {
+      "id": 43250041,
+      "name": "Draining Shield",
+      "qty": 1
+    },
+    {
+      "id": 44095762,
+      "name": "Mirror Force",
+      "qty": 1
+    },
+    {
+      "id": 97077563,
+      "name": "Call of the Haunted",
+      "qty": 1
+    },
+    {
+      "id": 36361633,
+      "name": "Threatening Roar",
+      "qty": 1
+    }
+  ],
+  "extra": [],
+  "side": [],
+  "counts": {
+    "main": 40,
+    "extra": 0,
+    "side": 0
+  },
+  "lpBand": 8000,
+  "role": "street_npc_defender"
+}

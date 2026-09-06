@@ -163,7 +163,7 @@ namespace WRLDZ.Duel
             {
                 case AbyssSoldier:
                     if (!HandHasAttributeMonster(who, "WATER")) return false;
-                    return CollectBounceTargets(engine, who).Count > 0;
+                    return CollectBounceTargets(engine, who, card).Count > 0;
                 default:
                     return false;
             }
@@ -176,7 +176,7 @@ namespace WRLDZ.Duel
             if (card.CardId != AbyssSoldier) return false;
 
             var costs = CollectHandAttributeMonsters(who, "WATER");
-            var targets = CollectBounceTargets(engine, who);
+            var targets = CollectBounceTargets(engine, who, card);
             if (costs.Count == 0 || targets.Count == 0) return false;
 
             engine.Log($"Activate: {card.Name} (Ignition).");
@@ -186,7 +186,7 @@ namespace WRLDZ.Duel
                 var discarded = DiscardFromHandByInstance(who, cost);
                 if (discarded == null) return false;
                 engine.Log($"Cost: discard {discarded.Name}.");
-                targets = CollectBounceTargets(engine, who);
+                targets = CollectBounceTargets(engine, who, card);
                 if (targets.Count == 0)
                 {
                     card.EffectUsedThisTurn = true;
@@ -198,6 +198,13 @@ namespace WRLDZ.Duel
                 var pick = targets.FirstOrDefault(t => opp.TryFindMonster(t, out _))
                            ?? targets.FirstOrDefault(t => opp.TryFindSpellTrap(t, out _))
                            ?? targets[0];
+                if (TextEffects.ContinuousProtections.TargetedEffectBlocked(engine, pick, card))
+                {
+                    engine.Log("Abyss Soldier: target is protected at resolution.");
+                    card.EffectUsedThisTurn = true;
+                    engine.NotifyPublic();
+                    return true;
+                }
                 engine.ReturnCardToHand(pick);
                 card.EffectUsedThisTurn = true;
                 engine.NotifyPublic();
@@ -239,7 +246,7 @@ namespace WRLDZ.Duel
                 var discarded = DiscardFromHandByInstance(who, resolved);
                 if (discarded == null) return false;
                 engine.Log($"Cost: discard {discarded.Name}.");
-                var bounce = CollectBounceTargets(engine, who);
+                var bounce = CollectBounceTargets(engine, who, card);
                 if (bounce.Count == 0)
                 {
                     engine.ClearPendingActivation();
@@ -258,6 +265,13 @@ namespace WRLDZ.Duel
             }
 
             engine.ClearPendingActivation();
+            if (TextEffects.ContinuousProtections.TargetedEffectBlocked(engine, resolved, card))
+            {
+                engine.Log("Abyss Soldier: target is protected at resolution.");
+                card.EffectUsedThisTurn = true;
+                engine.NotifyPublic();
+                return true;
+            }
             engine.ReturnCardToHand(resolved);
             card.EffectUsedThisTurn = true;
             engine.NotifyPublic();
@@ -283,7 +297,7 @@ namespace WRLDZ.Duel
             return list;
         }
 
-        static List<CardInstance> CollectBounceTargets(DuelEngine engine, DuelistState who)
+        static List<CardInstance> CollectBounceTargets(DuelEngine engine, DuelistState who, CardInstance source = null)
         {
             var list = new List<CardInstance>();
             if (engine == null || who == null) return list;
@@ -293,6 +307,9 @@ namespace WRLDZ.Duel
                 foreach (var m in side.MonstersOnField())
                 {
                     if (engine.IsDragonTargetProtected(m)) continue;
+                    if (source != null &&
+                        TextEffects.ContinuousProtections.TargetedEffectBlocked(engine, m, source))
+                        continue;
                     list.Add(m);
                 }
             }
@@ -300,9 +317,13 @@ namespace WRLDZ.Duel
             AddMonsters(who);
             AddMonsters(opp);
             foreach (var st in who.SpellTrapsOnField())
-                list.Add(st);
+                if (source == null ||
+                    !TextEffects.ContinuousProtections.TargetedEffectBlocked(engine, st, source))
+                    list.Add(st);
             foreach (var st in opp.SpellTrapsOnField())
-                list.Add(st);
+                if (source == null ||
+                    !TextEffects.ContinuousProtections.TargetedEffectBlocked(engine, st, source))
+                    list.Add(st);
             return list;
         }
 
@@ -404,7 +425,7 @@ namespace WRLDZ.Duel
                                .FirstOrDefault()
                            ?? targets.OrderByDescending(t => t.CurrentAtk).First();
                 engine.Log($"Man-Eater Bug destroys {pick.Name}!");
-                DestroyFieldMonster(engine, pick);
+                DestroyFieldMonster(engine, pick, source);
                 return;
             }
 
@@ -438,6 +459,8 @@ namespace WRLDZ.Duel
                     skippedDragons++;
                     return;
                 }
+                if (TextEffects.ContinuousProtections.TargetedEffectBlocked(engine, m, source))
+                    return;
 
                 targets.Add(m);
             }
@@ -456,7 +479,8 @@ namespace WRLDZ.Duel
         static void BeginMagicianOfFaith(DuelEngine engine, DuelistState who, CardInstance source)
         {
             // FLIP: Target 1 Spell in your GY; add that target to your hand.
-            var spells = who.Graveyard.Where(c => c?.Def != null && c.Def.IsSpell).ToList();
+            var spells = who.Graveyard.Where(c => c?.Def != null && c.Def.IsSpell &&
+                !TextEffects.ContinuousProtections.GyMovementLocked(engine, source, c)).ToList();
             if (spells.Count == 0)
             {
                 engine.Log("Magician of Faith Flip: no Spells in your GY.");
@@ -505,12 +529,17 @@ namespace WRLDZ.Duel
             {
                 case EffectTargetKind.AnyMonsterOnField:
                     engine.Log($"Man-Eater Bug destroys {target.Name}!");
-                    DestroyFieldMonster(engine, target);
+                    DestroyFieldMonster(engine, target, p.Card);
                     break;
                 case EffectTargetKind.SpellInYourGy:
                     if (!who.Graveyard.Contains(target) || target.Def == null || !target.Def.IsSpell)
                     {
                         engine.Log("Magician of Faith: illegal target.");
+                        break;
+                    }
+                    if (TextEffects.ContinuousProtections.GyMovementLocked(engine, p.Card, target))
+                    {
+                        engine.Log("Necrovalley prevents the target from leaving the GY.");
                         break;
                     }
 
@@ -679,12 +708,17 @@ namespace WRLDZ.Duel
             return true;
         }
 
-        static void DestroyFieldMonster(DuelEngine engine, CardInstance m)
+        static void DestroyFieldMonster(DuelEngine engine, CardInstance m, CardInstance source = null)
         {
+            if (TextEffects.ContinuousProtections.TargetedEffectBlocked(engine, m, source))
+            {
+                engine.Log("Target is protected at resolution.");
+                return;
+            }
             if (engine.Player.TryFindMonster(m, out _))
-                engine.DestroyMonsterPublic(engine.Player, m);
+                engine.DestroyMonsterPublic(engine.Player, m, source);
             else if (engine.Opponent.TryFindMonster(m, out _))
-                engine.DestroyMonsterPublic(engine.Opponent, m);
+                engine.DestroyMonsterPublic(engine.Opponent, m, source);
         }
     }
 }

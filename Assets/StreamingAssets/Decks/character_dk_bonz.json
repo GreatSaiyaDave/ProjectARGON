@@ -1,0 +1,129 @@
+{
+  "name": "Bonz · Duelist Kingdom",
+  "format": "wrldz_dk_character",
+  "character": "Bonz",
+  "era": "duelist_kingdom",
+  "erazBandId": "original",
+  "notes": "Pumpking and the graveyard zombies, including Clown Zombie.",
+  "main": [
+    {
+      "id": 29155212,
+      "name": "Pumpking the King of Ghosts",
+      "qty": 3
+    },
+    {
+      "id": 20277860,
+      "name": "Armored Zombie",
+      "qty": 3
+    },
+    {
+      "id": 66672569,
+      "name": "Dragon Zombie",
+      "qty": 3
+    },
+    {
+      "id": 32864,
+      "name": "The 13th Grave",
+      "qty": 3
+    },
+    {
+      "id": 32274490,
+      "name": "Skull Servant",
+      "qty": 3
+    },
+    {
+      "id": 46474915,
+      "name": "Magical Ghost",
+      "qty": 2
+    },
+    {
+      "id": 77044671,
+      "name": "Pyramid Turtle",
+      "qty": 2
+    },
+    {
+      "id": 53839837,
+      "name": "Vampire Lord",
+      "qty": 1
+    },
+    {
+      "id": 23205979,
+      "name": "Spirit Reaper",
+      "qty": 1
+    },
+    {
+      "id": 4861205,
+      "name": "Call of the Mummy",
+      "qty": 2
+    },
+    {
+      "id": 2204140,
+      "name": "Book of Life",
+      "qty": 1
+    },
+    {
+      "id": 72302403,
+      "name": "Swords of Revealing Light",
+      "qty": 1
+    },
+    {
+      "id": 24094653,
+      "name": "Polymerization",
+      "qty": 2
+    },
+    {
+      "id": 66788016,
+      "name": "Fissure",
+      "qty": 1
+    },
+    {
+      "id": 63102017,
+      "name": "Stop Defense",
+      "qty": 1
+    },
+    {
+      "id": 16970158,
+      "name": "Call of the Grave",
+      "qty": 2
+    },
+    {
+      "id": 4206964,
+      "name": "Trap Hole",
+      "qty": 2
+    },
+    {
+      "id": 12607053,
+      "name": "Waboku",
+      "qty": 2
+    },
+    {
+      "id": 44095762,
+      "name": "Mirror Force",
+      "qty": 1
+    },
+    {
+      "id": 14315573,
+      "name": "Negate Attack",
+      "qty": 2
+    },
+    {
+      "id": 92667214,
+      "name": "Clown Zombie",
+      "qty": 2
+    }
+  ],
+  "extra": [
+    {
+      "id": 58528964,
+      "name": "Flame Ghost",
+      "qty": 1
+    }
+  ],
+  "side": [],
+  "counts": {
+    "main": 40,
+    "extra": 1,
+    "side": 0
+  },
+  "role": "character_dk"
+}

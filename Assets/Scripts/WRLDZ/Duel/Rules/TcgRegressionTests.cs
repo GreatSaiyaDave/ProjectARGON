@@ -157,6 +157,7 @@ namespace WRLDZ.Duel.Rules
                 Check("Hand limit End Phase 6", TcgRules.HandSizeLimitEndPhase == 6);
                 Check("Monster zones 5", TcgRules.MonsterZones == 5);
                 Check("Spell/Trap zones 5", TcgRules.SpellTrapZones == 5);
+                Check("Default response window 5s", CombatAnimTimings.DefaultResponseSeconds == 5f);
             }
 
             // ── Registry: staples present ──
@@ -177,6 +178,166 @@ namespace WRLDZ.Duel.Rules
                     OfficialEffectRegistry.HasSummonProcedure(66889139, SummonKind.FusionSummon));
                 Check("Fusion: Black Skull Dragon registered",
                     OfficialEffectRegistry.HasSummonProcedure(11901678, SummonKind.FusionSummon));
+            }
+
+            // ── Ritual procedure (Greater named / Equal attribute) ──
+            {
+                var db = CardDatabase.Instance ?? CardDatabase.Load();
+                var bls = db != null ? db.Get(RitualProcedures.BlackLusterSoldier) : null;
+                var rel = db != null ? db.Get(RitualProcedures.Relinquished) : null;
+                var blRitual = db != null ? db.Get(RitualProcedures.BlackLusterRitual) : null;
+                var biRitual = db != null ? db.Get(RitualProcedures.BlackIllusionRitual) : null;
+                var earth = db != null ? db.Get(RitualProcedures.EarthChant) : null;
+                var abyss = db != null ? db.Get(RitualProcedures.ContractWithTheAbyss) : null;
+
+                Check("Ritual: Black Luster Soldier is a Ritual Monster (NS lock)",
+                    bls != null && bls.IsRitualMonster && !bls.CanBeNormalSummonedOrSet);
+                Check("Ritual: Relinquished is a Ritual Monster (NS lock)",
+                    rel != null && rel.IsRitualMonster && !rel.CanBeNormalSummonedOrSet);
+                Check("Ritual: BLS has summon procedure gate",
+                    OfficialEffectRegistry.HasSummonProcedure(RitualProcedures.BlackLusterSoldier,
+                        SummonKind.RitualSummon));
+                Check("Ritual: Relinquished has summon procedure gate",
+                    OfficialEffectRegistry.HasSummonProcedure(RitualProcedures.Relinquished,
+                        SummonKind.RitualSummon));
+                var relFx = rel != null ? CardTextEffectCompiler.Compile(rel) : null;
+                Check("Ritual: Relinquished absorb is FullyCompiled (ProgramMayActivate)",
+                    relFx != null && relFx.FullyCompiled &&
+                    OfficialEffectRegistry.ProgramMayActivate(rel) &&
+                    relFx.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.EquipTargetToThis),
+                    relFx == null
+                        ? "null"
+                        : $"full={relFx.FullyCompiled} unparsed={string.Join("|", relFx.UnparsedFragments ?? Array.Empty<string>())}");
+
+                var blrProg = blRitual != null ? CardTextEffectCompiler.Compile(blRitual) : null;
+                Check("Ritual: Black Luster Ritual compiles named Greater 8",
+                    blrProg != null && blrProg.FullyCompiled &&
+                    blrProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.RitualSummon &&
+                        !c.RitualExactLevel &&
+                        c.Amount == 8 &&
+                        string.Equals(c.NamedCard, "Black Luster Soldier",
+                            StringComparison.OrdinalIgnoreCase)),
+                    blrProg == null
+                        ? "null"
+                        : $"full={blrProg.FullyCompiled} unparsed={string.Join("|", blrProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                var birProg = biRitual != null ? CardTextEffectCompiler.Compile(biRitual) : null;
+                Check("Ritual: Black Illusion Ritual compiles named Greater 1",
+                    birProg != null && birProg.FullyCompiled &&
+                    birProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.RitualSummon &&
+                        !c.RitualExactLevel &&
+                        c.Amount == 1 &&
+                        string.Equals(c.NamedCard, "Relinquished",
+                            StringComparison.OrdinalIgnoreCase)),
+                    birProg == null
+                        ? "null"
+                        : $"full={birProg.FullyCompiled} unparsed={string.Join("|", birProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                var earthProg = earth != null ? CardTextEffectCompiler.Compile(earth) : null;
+                Check("Ritual: Earth Chant compiles EARTH Equal",
+                    earthProg != null && earthProg.FullyCompiled &&
+                    earthProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.RitualSummon &&
+                        c.RitualExactLevel &&
+                        string.Equals(c.AttributeFilter, "EARTH",
+                            StringComparison.OrdinalIgnoreCase)),
+                    earthProg == null
+                        ? "null"
+                        : $"full={earthProg.FullyCompiled} unparsed={string.Join("|", earthProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                var abyssProg = abyss != null ? CardTextEffectCompiler.Compile(abyss) : null;
+                Check("Ritual: Contract with the Abyss compiles DARK Equal",
+                    abyssProg != null && abyssProg.FullyCompiled &&
+                    abyssProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.RitualSummon &&
+                        c.RitualExactLevel &&
+                        string.Equals(c.AttributeFilter, "DARK",
+                            StringComparison.OrdinalIgnoreCase)),
+                    abyssProg == null
+                        ? "null"
+                        : $"full={abyssProg.FullyCompiled} unparsed={string.Join("|", abyssProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                Check("Ritual: Black Luster Ritual spec Greater named",
+                    RitualProcedures.TryGetSpec(blRitual, out var blSpec) &&
+                    !blSpec.ExactLevel && blSpec.FixedLevel == 8 &&
+                    string.Equals(blSpec.NamedMonster, "Black Luster Soldier",
+                        StringComparison.OrdinalIgnoreCase));
+                Check("Ritual: Earth Chant spec Equal EARTH",
+                    RitualProcedures.TryGetSpec(earth, out var eSpec) &&
+                    eSpec.ExactLevel &&
+                    string.Equals(eSpec.AttributeFilter, "EARTH",
+                        StringComparison.OrdinalIgnoreCase));
+
+                var namedEqDef = new CardDef
+                {
+                    id = 1,
+                    name = "Named Equal Ritual",
+                    type = "Spell Card",
+                    race = "Ritual",
+                    desc =
+                        "This card is used to Ritual Summon \"Black Luster Soldier\". You must also Tribute monsters from your hand or field whose total Levels exactly equal 8."
+                };
+                var namedEqProg = CardTextEffectCompiler.Compile(namedEqDef);
+                Check("Ritual: named Equal 8 compiles (AddProcEqual)",
+                    namedEqProg != null && namedEqProg.FullyCompiled &&
+                    namedEqProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.RitualSummon &&
+                        c.RitualExactLevel &&
+                        c.Amount == 8 &&
+                        string.Equals(c.NamedCard, "Black Luster Soldier",
+                            StringComparison.OrdinalIgnoreCase)));
+
+                CardInstance Lv(int level, int iid)
+                {
+                    return new CardInstance
+                    {
+                        InstanceId = iid,
+                        CardId = iid,
+                        Def = new CardDef
+                        {
+                            id = iid,
+                            name = "Lv" + level,
+                            type = "Normal Monster",
+                            level = level
+                        }
+                    };
+                }
+
+                var t4a = Lv(4, 11);
+                var t4b = Lv(4, 12);
+                var t3 = Lv(3, 13);
+                var t1 = Lv(1, 14);
+                var t8 = Lv(8, 15);
+                var g8 = RitualProcedures.AutoPickTributes(new[] { t3, t4a, t4b }, 8, exact: false);
+                Check("Ritual math: Greater 8 auto-picks two Lv4 (sum 8)",
+                    g8 != null && g8.Count == 2 && g8.Sum(c => c.Level) == 8);
+                var gFail = RitualProcedures.AutoPickTributes(new[] { t4a, t3 }, 8, exact: false);
+                Check("Ritual math: Greater 8 fails when sum is 7",
+                    gFail == null);
+                var g1 = RitualProcedures.AutoPickTributes(new[] { t4a, t1 }, 1, exact: false);
+                Check("Ritual math: Greater 1 picks the Lv1",
+                    g1 != null && g1.Count == 1 && g1[0].Level == 1);
+                var eq8 = RitualProcedures.AutoPickTributes(new[] { t4a, t4b, t3, t8 }, 8, exact: true);
+                Check("Ritual math: Equal 8 prefers one Lv8 over 4+4+3",
+                    eq8 != null && eq8.Count == 1 && eq8[0].Level == 8);
+                var eqFail = RitualProcedures.AutoPickTributes(new[] { t4a, t3 }, 8, exact: true);
+                Check("Ritual math: Equal 8 fails when no exact set",
+                    eqFail == null);
+                var t5 = Lv(5, 16);
+                var gOver = RitualProcedures.AutoPickTributes(new[] { t5, t4a }, 8, exact: false);
+                Check("Ritual math: Greater 8 accepts 5+4 overshoot (sum 9)",
+                    gOver != null && gOver.Count == 2 && gOver.Sum(c => c.Level) == 9);
+                var eqOver = RitualProcedures.AutoPickTributes(new[] { t5, t4a }, 8, exact: true);
+                Check("Ritual math: Equal 8 refuses 5+4 overshoot",
+                    eqOver == null);
             }
 
             // ── Official PSCT grammar (Konami Part 3) ──
@@ -652,6 +813,75 @@ namespace WRLDZ.Duel.Rules
                         ? "null"
                         : $"full={twp.FullyCompiled} n={twp.ClauseList.Count} unparsed={string.Join("|", twp.UnparsedFragments ?? Array.Empty<string>())}");
 
+                var nv = new CardDef
+                {
+                    id = 47355498,
+                    name = "Necrovalley",
+                    type = "Spell Card",
+                    race = "Field",
+                    desc =
+                        "All \"Gravekeeper's\" monsters on the field gain 500 ATK/DEF. Neither player can banish cards from the GYs. Cards in the GY cannot be targeted, except by the effect of \"Necrovalley\"."
+                };
+                var nvp = CardTextEffectCompiler.Compile(nv);
+                Check("PSCT Necrovalley: GK aura + GY cannot banish/target",
+                    nvp != null && nvp.FullyCompiled &&
+                    nvp.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                        c.NamedCardIsSeries &&
+                        string.Equals(c.NamedCard, "Gravekeeper's", StringComparison.OrdinalIgnoreCase) &&
+                        c.Amount == 500) &&
+                    nvp.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.CannotBanishFromGraveyard) &&
+                    nvp.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.CannotTargetCardsInGraveyard &&
+                        string.Equals(c.ExceptNamedCard, "Necrovalley", StringComparison.OrdinalIgnoreCase)),
+                    nvp == null
+                        ? "null"
+                        : $"full={nvp.FullyCompiled} n={nvp.ClauseList.Count} unparsed={string.Join("|", nvp.UnparsedFragments ?? Array.Empty<string>())}");
+
+                var nvOld = new CardDef
+                {
+                    id = 47355498,
+                    name = "Necrovalley",
+                    type = "Spell Card",
+                    race = "Field",
+                    desc =
+                        "All \"Gravekeeper's\" monsters gain 500 ATK and DEF. Cards in the Graveyard cannot be banished. Negate any card effect that would move a card in the Graveyard to a different place. Negate any card effect that changes Types or Attributes in the Graveyard."
+                };
+                var nvOldp = CardTextEffectCompiler.Compile(nvOld);
+                Check("Older Necrovalley leftover GY-move/type negate compiles as GY cannot-target",
+                    nvOldp != null && nvOldp.FullyCompiled &&
+                    nvOldp.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.CannotBanishFromGraveyard) &&
+                    nvOldp.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.CannotTargetCardsInGraveyard &&
+                        string.Equals(c.ExceptNamedCard, "Necrovalley", StringComparison.OrdinalIgnoreCase)),
+                    nvOldp == null
+                        ? "null"
+                        : $"full={nvOldp.FullyCompiled} n={nvOldp.ClauseList.Count} unparsed={string.Join("|", nvOldp.UnparsedFragments ?? Array.Empty<string>())}");
+
+                var hhg = new CardDef
+                {
+                    id = 75782277,
+                    name = "Harpies' Hunting Ground",
+                    type = "Spell Card",
+                    race = "Field",
+                    desc =
+                        "All Winged Beast monsters gain 200 ATK/DEF. If any \"Harpie Lady\" or \"Harpie Lady Sisters\" is Normal or Special Summoned: The player who conducted the Summon targets 1 Spell/Trap on the field; that player destroys that target."
+                };
+                var hhgp = CardTextEffectCompiler.Compile(hhg);
+                Check("PSCT Harpies' Hunting Ground: Winged Beast aura + named NS/SS destroy S/T",
+                    hhgp != null && hhgp.FullyCompiled &&
+                    hhgp.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                        string.Equals(c.RaceFilter, "Winged Beast", StringComparison.OrdinalIgnoreCase)) &&
+                    hhgp.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.Destroy &&
+                        c.AnswersSpecialSummon && c.RequiresTargetChoice),
+                    hhgp == null
+                        ? "null"
+                        : $"full={hhgp.FullyCompiled} n={hhgp.ClauseList.Count} unparsed={string.Join("|", hhgp.UnparsedFragments ?? Array.Empty<string>())}");
+
                 var daedalus = new CardDef
                 {
                     id = 37721209,
@@ -669,7 +899,7 @@ namespace WRLDZ.Duel.Rules
                         id = 74131780, name = "Exiled Force", type = "Effect Monster",
                         desc =
                             "You can Tribute this card to target 1 monster on the field; destroy that target."
-                    }) is { } exf && exf.ClauseList.Exists(c =>
+                    }) is { } exf && exf.FullyCompiled && exf.ClauseList.Exists(c =>
                         c != null && c.RequiresTributeThis &&
                         c.Action == EffectActionKind.Destroy && c.RequiresTargetChoice),
                     "compile miss");
@@ -678,9 +908,39 @@ namespace WRLDZ.Duel.Rules
                     {
                         id = 11384280, name = "Cannon Soldier", type = "Effect Monster",
                         desc = "You can Tribute 1 monster; inflict 500 damage to your opponent."
-                    }) is { } csol && csol.ClauseList.Exists(c =>
+                    }) is { } csol && csol.FullyCompiled && csol.ClauseList.Exists(c =>
                         c != null && c.RequiresTributeCount == 1 &&
                         c.Action == EffectActionKind.InflictDamageToOpponent && c.Amount == 500),
+                    "compile miss");
+                Check("PSCT after-dmg: Wall of Illusion returns attacker to hand",
+                    CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 13945283, name = "Wall of Illusion", type = "Effect Monster",
+                        desc =
+                            "If this card is attacked by a monster, after damage calculation: Return that monster to the hand."
+                    }) is { } woi && woi.FullyCompiled && woi.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.AfterDamageCalculation &&
+                        c.Action == EffectActionKind.ReturnToHand && c.RequiresThisIsAttackTarget),
+                    "compile miss");
+                Check("PSCT after-dmg: D.D. Warrior Lady banishes both (shared with Assailant)",
+                    CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 7572887, name = "D.D. Warrior Lady", type = "Effect Monster",
+                        desc =
+                            "After damage calculation, when this card battles an opponent's monster: You can banish that monster, also banish this card."
+                    }) is { } ddwl && ddwl.FullyCompiled && ddwl.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.Banish && c.AlsoBanishThis &&
+                        c.IsOptional),
+                    "compile miss");
+                Check("PSCT summon-restrict-only: Harpie Lady Sisters FullyCompiled structural",
+                    CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 12206212, name = "Harpie Lady Sisters", type = "Effect Monster",
+                        desc =
+                            "Cannot be Normal Summoned/Set. Must first be Special Summoned with \"Elegant Egotist\"."
+                    }) is { } hls && hls.FullyCompiled && hls.ClauseList.Count == 0 &&
+                    PsctGrammar.BlocksNormalSummonOrSet(
+                        "Cannot be Normal Summoned/Set. Must first be Special Summoned with \"Elegant Egotist\"."),
                     "compile miss");
                 Check("PSCT ignition: Chaos Sorcerer banishes a face-up monster",
                     CardTextEffectCompiler.Compile(new CardDef
@@ -992,6 +1252,9 @@ namespace WRLDZ.Duel.Rules
                     var all = EffectCoverageService.MeasureAllCardsDb(db, writeReportFile: false);
                     Check("Corpus: entire cards_db is classified (not just lab decks)",
                         all.InDatabase >= 1400, $"inDB={all.InDatabase}");
+
+                    var diagnosticsSmoke = EffectCoverageService.DiagnosticsSmoke(db, out var diagnosticsError);
+                    Check("Corpus: why-not-FullyCompiled diagnostics do not throw", diagnosticsSmoke, diagnosticsError);
 
                     var gaps = EffectCoverageService.SharedKindCompileGaps(db);
                     Check("Corpus: shared-kind texts in cards_db compile (new cards with these shapes work)",
@@ -1446,7 +1709,7 @@ namespace WRLDZ.Duel.Rules
                             : $"full={germProg.FullyCompiled} n={germProg.ClauseList.Count} " +
                               $"unparsed={string.Join("|", germProg.UnparsedFragments ?? Array.Empty<string>())}");
 
-                    var tomato = db.Get(83011277);
+                    var tomato = db.Get(83011278);
                     var tomatoProg = tomato != null ? CardTextEffectCompiler.Compile(tomato) : null;
                     Check("Corpus: Mystic Tomato battle-GY DARK 1500 Deck SS is not a free ignition",
                         tomatoProg != null && tomatoProg.FullyCompiled &&
@@ -1813,8 +2076,14 @@ namespace WRLDZ.Duel.Rules
 
                     var blRitual = db.Get(55761792);
                     var blrProg = blRitual != null ? CardTextEffectCompiler.Compile(blRitual) : null;
-                    Check("Corpus: Black Luster Ritual leftover (no invented Ritual Summon)",
-                        blrProg != null && !blrProg.FullyCompiled &&
+                    Check("Corpus: Black Luster Ritual FullyCompiled named Greater (not leftover SS)",
+                        blrProg != null && blrProg.FullyCompiled &&
+                        blrProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.RitualSummon &&
+                            !c.RitualExactLevel &&
+                            string.Equals(c.NamedCard, "Black Luster Soldier",
+                                StringComparison.OrdinalIgnoreCase)) &&
                         !blrProg.ClauseList.Exists(c =>
                             c != null &&
                             (c.Action == EffectActionKind.SpecialSummonNamed ||
@@ -2491,6 +2760,55 @@ namespace WRLDZ.Duel.Rules
                     OfficialDataSources.LoadBanlist().effectiveDate);
             }
 
+            var archUpkeep = CardTextEffectCompiler.Compile(new CardDef
+            {
+                id = 8581705, name = "Infernalqueen Archfiend", type = "Effect Monster",
+                desc = "The controller of this card pays 500 Life Points during each of his/her Standby Phases (this is not optional). When this card is targeted by the effect of a card controlled by your opponent, when resolving the effect, roll a six-sided die."
+            });
+            var archClause = archUpkeep?.ClauseList.Find(c => c != null && c.Action == EffectActionKind.PayLifePoints);
+            Check("Archfiend upkeep: shared Standby LP payment",
+                archClause != null && archClause.Timing == EffectTiming.StandbyPhase && archClause.Amount == 500 &&
+                EffectVocabulary.ResolutionOf(archClause) == EffectResolutionKind.PayLp);
+            Check("Archfiend upkeep: unique die rider fails loud",
+                archUpkeep != null && !archUpkeep.FullyCompiled && archUpkeep.UnparsedFragments != null && archUpkeep.UnparsedFragments.Length > 0);
+            var skullUpkeep = CardTextEffectCompiler.Compile(new CardDef
+            {
+                id = 61370518, name = "Skull Archfiend of Lightning", type = "Effect Monster",
+                desc = "During each of your Standby Phases, you must pay 500 Life Points (this is not optional), or this card is destroyed."
+            });
+            Check("Archfiend upkeep: pay-or-destroy stays fail-loud",
+                skullUpkeep != null && !skullUpkeep.FullyCompiled && skullUpkeep.UnparsedFragments != null && skullUpkeep.UnparsedFragments.Length > 0);
+            var payOrDestroy = CardTextEffectCompiler.Compile(new CardDef
+            {
+                id = 90000001, name = "Shared Pay-Or-Destroy", type = "Continuous Spell",
+                desc = "Once per turn, during your Standby Phase, pay 100 LP or destroy this card."
+            });
+            Check("Shared pay-or-destroy compiles and exposes runtime action",
+                payOrDestroy != null && payOrDestroy.FullyCompiled && payOrDestroy.ClauseList.Exists(c =>
+                    c != null && c.Action == EffectActionKind.PayLpOrDestroyThis &&
+                    c.PayLpAmount == 100 && c.Timing == EffectTiming.StandbyPhase));
+
+            var yataSpirit = CardTextEffectCompiler.Compile(new CardDef
+            {
+                id = 90000002, name = "Shared Spirit", type = "Spirit Monster",
+                desc = "This card cannot be Special Summoned. This card returns to the owner's hand during the End Phase of the turn that this card is Normal Summoned or flipped face-up."
+            });
+            Check("Shared Spirit return-to-hand compiles",
+                yataSpirit != null && yataSpirit.ClauseList.Exists(c =>
+                    c != null && c.Timing == EffectTiming.EndPhase &&
+                    c.Action == EffectActionKind.ReturnToHand &&
+                    c.RequiresSummonedOrFlippedThisTurn) &&
+                PsctGrammar.BlocksSpecialSummon(yataSpirit.SourceText));
+
+            const string guardianGateText = @"Cannot be Summoned unless you control a face-up ""Shooting Star Bow - Ceal"".";
+            var guardian = CardTextEffectCompiler.Compile(new CardDef
+            {
+                id = 90000003, name = "Guardian Gate", type = "Effect Monster", desc = guardianGateText
+            });
+            Check("Guardian named summon gate is structural and extracted",
+                guardian != null && guardian.FullyCompiled && guardian.ClauseList.Count == 0 &&
+                string.Equals(PsctGrammar.SummonGateNamed(guardianGateText), "Shooting Star Bow - Ceal",
+                    StringComparison.OrdinalIgnoreCase));
             sb.AppendLine($"--- {pass} passed, {fail} failed ---");
             var summary = sb.ToString();
             if (fail == 0)

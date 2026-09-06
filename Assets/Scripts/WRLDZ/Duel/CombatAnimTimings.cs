@@ -66,7 +66,7 @@ namespace WRLDZ.Duel
         {
             TotalSeconds = 7.2f,
             ImpactAtSeconds = 6.0f,
-            MotionLine = "Damage calculation — activate Kuriboh or Pass."
+            MotionLine = "Damage calculation — activate Kuriboh now."
         };
 
         /// <summary>After LP damage — Numinous Healer / Attack and Receive family.</summary>
@@ -74,8 +74,14 @@ namespace WRLDZ.Duel
         {
             TotalSeconds = 8.8f,
             ImpactAtSeconds = 8f,
-            MotionLine = "You took damage — activate a trap or Pass."
+            MotionLine = "You took damage — tap a blinking zone to activate."
         };
+
+        /// <summary>
+        /// Player-facing activate / response decision window. Letting this elapse is Pass.
+        /// Independent of hologram / attack-impact cinematic length.
+        /// </summary>
+        public const float DefaultResponseSeconds = 5f;
 
         /// <summary>Baseline anime attack windup before impact (~5s for big monsters).</summary>
         public const float DefaultAttackImpact = 6.5f;
@@ -121,7 +127,7 @@ namespace WRLDZ.Duel
         {
             TotalSeconds = 8.8f,
             ImpactAtSeconds = 8f,
-            MotionLine = "Open game state — a trap may be activated, or Pass."
+            MotionLine = "Open game state — tap a blinking zone to activate."
         };
 
         public static CombatAnimProfile ForSummon(CardInstance summoned)

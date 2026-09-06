@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections.Generic;
 using WRLDZ.Data;
 using WRLDZ.Duel;
 using WRLDZ.Presentation;
@@ -24,6 +25,7 @@ namespace WRLDZ.Presentation.ArInteraction
 
         public Transform Root { get; private set; }
         public int SlotCount => _slots != null ? _slots.Length : 0;
+        public bool IsTargeting => _targeting;
 
         public ArDuelDiskRig PlayerDisk;
         public Transform ArenaRoot;
@@ -33,6 +35,8 @@ namespace WRLDZ.Presentation.ArInteraction
         Image[] _slots;
         CardInstance[] _cards;
         BoxCollider _hit;
+        readonly HashSet<int> _legalTargetIds = new();
+        bool _targeting;
 
         public static ArOppFieldGlance Create(Transform parent, int layer)
         {
@@ -126,6 +130,26 @@ namespace WRLDZ.Presentation.ArInteraction
             _slots[index] = img;
         }
 
+        /// <summary>
+        /// Restrict the mini-playmat to the cards that can currently be chosen.
+        /// Empty / non-legal slots remain visible as a dim field silhouette, while
+        /// legal cards retain their art and become the only pickable targets.
+        /// </summary>
+        public void SetTargeting(IReadOnlyCollection<CardInstance> legalTargets)
+        {
+            _legalTargetIds.Clear();
+            if (legalTargets != null)
+                foreach (var card in legalTargets)
+                    if (card != null) _legalTargetIds.Add(card.InstanceId);
+            _targeting = legalTargets != null;
+        }
+
+        public void ClearTargeting()
+        {
+            _legalTargetIds.Clear();
+            _targeting = false;
+        }
+
         public void Sync(DuelistState opp, CardDatabase db)
         {
             if (_slots == null) return;
@@ -171,6 +195,15 @@ namespace WRLDZ.Presentation.ArInteraction
                 img.color = new Color(0.12f, 0.18f, 0.24f, 0.35f);
                 return false;
             }
+
+            // During a target window, keep the playmat silhouette but hide cards
+            // that are not legal so the available targets read at a glance.
+            if (_targeting && !_legalTargetIds.Contains(card.InstanceId))
+            {
+                img.sprite = UiFoundation.WhiteSprite();
+                img.color = new Color(0.06f, 0.08f, 0.12f, 0.22f);
+                return false;
+            }
             if (card.FaceUp && db != null)
             {
                 var art = db.GetArt(card.CardId);
@@ -214,6 +247,11 @@ namespace WRLDZ.Presentation.ArInteraction
 
             if (bestI < 0 || _cards == null || _cards[bestI] == null) return false;
             card = _cards[bestI];
+            if (_targeting && !_legalTargetIds.Contains(card.InstanceId))
+            {
+                card = null;
+                return false;
+            }
             publicFace = card.FaceUp;
             return true;
         }

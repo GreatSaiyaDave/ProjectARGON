@@ -16,7 +16,7 @@ namespace WRLDZ.Duel.TextEffects
     /// </summary>
     public static class CardTextEffectCompiler
     {
-        public const int Version = 46;
+        public const int Version = 67;
 
         static readonly Regex RxDraw = new(
             @"(?:^|[.!?]\s+)Draw (\d+) cards?\.",
@@ -161,6 +161,42 @@ namespace WRLDZ.Duel.TextEffects
             @"Fusion Summon 1 Fusion Monster from your Extra Deck, using monsters from your hand or field as Fusion Material\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        /// <summary>
+        /// Named Greater (Black Luster Ritual / Contract with the Dark Master):
+        /// "This card is used to Ritual Summon "NAME". You must also Tribute monsters
+        /// from your hand or field whose total Levels equal N or more."
+        /// </summary>
+        static readonly Regex RxRitualNamedGreater = new(
+            @"This card is used to Ritual Summon ""([^""]+)""\.\s*" +
+            @"You must also (?:Tribute|offer) monsters(?: whose total Level(?:s| Stars)? equal (\d+) or more(?: as a Tribute)? from the field or your hand| from your hand or field whose total Levels equal (\d+) or more)\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Named Greater, singular (Black Illusion Ritual):
+        /// "Tribute a monster from your hand or field whose Level is N or more."
+        /// </summary>
+        static readonly Regex RxRitualNamedGreaterOne = new(
+            @"This card is used to Ritual Summon ""([^""]+)""\.\s*" +
+            @"You must also Tribute a monster from your hand or field whose Level is (\d+) or more\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Named Equal: "total Levels exactly equal N".
+        /// </summary>
+        static readonly Regex RxRitualNamedEqual = new(
+            @"This card is used to Ritual Summon ""([^""]+)""\.\s*" +
+            @"You must also Tribute monsters from your hand or field whose total Levels exactly equal (\d+)\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Attribute Equal (Earth Chant / Contract with the Abyss):
+        /// "Ritual Summon any ATTR Ritual Monster" + exact Level of that monster.
+        /// </summary>
+        static readonly Regex RxRitualAttributeEqual = new(
+            @"This card can be used to Ritual Summon any (\w+) Ritual Monster\.\s*" +
+            @"You must also Tribute monsters from your hand or field whose total Levels exactly equal the Level of the Ritual Monster you Ritual Summon\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         static readonly Regex RxLordOfD = new(
             @"Neither player can target Dragon monsters on the field with card effects\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -183,6 +219,14 @@ namespace WRLDZ.Duel.TextEffects
 
         static readonly Regex RxEnemyControllerPos = new(
             @"Target 1 face-up monster your opponent controls;\s*change that target's battle position",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Attack-declared named-field gate (Gravekeeper's Assailant family).
+        /// </summary>
+        static readonly Regex RxAttackNamedChangePosition = new(
+            @"When this card declares an attack while ""([^""]+)"" is on the field:\s*" +
+            @"You can target 1 face-up monster your opponent controls;\s*change that target's battle position\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxCyberJar = new(
@@ -306,6 +350,87 @@ namespace WRLDZ.Duel.TextEffects
             @"When an opponent's monster declares an attack:\s*Target the attacking monster;\s*destroy that target\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        /// <summary>Fissure: destroy 1 face-up opp monster with the lowest ATK (ties: choose).</summary>
+        static readonly Regex RxDestroyLowestAtkOpp = new(
+            @"Destroy the 1 face-up monster your opponent controls that has the lowest ATK" +
+            @"(?:\s*\(your choice, if tied\))?\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>Smashing Ground: destroy 1 face-up opp monster with the highest DEF (ties: choose).</summary>
+        static readonly Regex RxDestroyHighestDefOpp = new(
+            @"Destroy the 1 face-up monster your opponent controls that has the highest DEF" +
+            @"(?:\s*\(your choice, if tied\))?\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>Hammer Shot: destroy 1 face-up Attack Position monster with the highest ATK.</summary>
+        static readonly Regex RxDestroyHighestAtkFaceUpAtk = new(
+            @"Destroy 1 face-up Attack Position monster with the highest ATK" +
+            @"(?:\.\s*\(If it is a tie, you get to choose\.\)|\s*\(your choice, if tied\))?\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>Castle Walls (legacy): Increase the DEF of 1 face-up monster … until EOT.</summary>
+        static readonly Regex RxIncreaseDefUntilEot = new(
+            @"Increase the DEF of 1 face-up monster(?: on the field)? by (\d+) points? until the end of this turn\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>Stop Defense (legacy Select wording).</summary>
+        static readonly Regex RxStopDefense = new(
+            @"Select 1 Defense Position monster(?: on your opponent's side of the field| your opponent controls)?;?\s*" +
+            @"and change it to Attack Position\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>Enchanted Javelin (legacy): Select attacking monster → gain LP = ATK.</summary>
+        static readonly Regex RxEnchantedJavelin = new(
+            @"Select 1 attacking monster\.?\s*Gain Life Points equal to its ATK\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>Elegant Egotist: If "X" is on the field: SS 1 "X" or "Y" from hand or Deck.</summary>
+        static readonly Regex RxElegantEgotist = new(
+            @"If ""([^""]+)"" is(?: face-up)? on the field:\s*" +
+            @"Special Summon 1 ""([^""]+)"" or ""([^""]+)"" from your hand or Deck\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Umi family: All Fish, Sea Serpent, Thunder, and Aqua … gain N ATK/DEF,
+        /// also all Machine and Pyro … lose N ATK/DEF.
+        /// </summary>
+        static readonly Regex RxMultiRaceGainLoseAtkDef = new(
+            @"All (.+?) monsters on the field gain (\d+) ATK/DEF,\s*" +
+            @"also all (.+?) monsters on the field lose (\d+) ATK/DEF\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Necrovalley family: All "Gravekeeper's" monsters (on the field) gain N ATK/DEF
+        /// or "ATK and DEF". Quoted series, not a race.
+        /// </summary>
+        static readonly Regex RxQuotedSeriesGainAtkDef = new(
+            @"All ""([^""]+)"" monsters(?: on the field)? gain (\d+) ATK(?:/DEF| and DEF)\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Harpies' Hunting Ground / Mountain-shape single or multi-word race:
+        /// All Winged Beast monsters gain 200 ATK/DEF.
+        /// </summary>
+        static readonly Regex RxRaceGainAtkDef = new(
+            @"All ([A-Za-z]+(?:[ -][A-Za-z]+)*)(?:-Type)? monsters(?: on the field)? gain (\d+) ATK(?:/DEF| and DEF)\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Harpies' Hunting Ground: If any "Harpie Lady" or "Harpie Lady Sisters" is
+        /// Normal or Special Summoned: target 1 S/T; destroy it.
+        /// </summary>
+        static readonly Regex RxNamedOrNamedSummonDestroySt = new(
+            @"If any ""([^""]+)"" or ""([^""]+)"" is Normal or Special Summoned:\s*" +
+            @"(?:The player who conducted (?:the|that) Summon targets 1 Spell/?Trap on the field;\s*" +
+            @"that player destroys that target|" +
+            @"Target 1 Spell/?Trap on the field;\s*destroy (?:that target|it))\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>Rite of Spirit: This card's activation and effect are unaffected by "Necrovalley".</summary>
+        static readonly Regex RxUnaffectedByNamed = new(
+            @"This card's activation and effect are unaffected by ""([^""]+)""\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         static readonly Regex RxMagicCylinder = new(
             @"When an opponent's monster declares an attack:\s*Target the attacking monster;\s*negate the attack, and if you do, inflict damage to your opponent equal to its ATK\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -342,15 +467,15 @@ namespace WRLDZ.Duel.TextEffects
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxActivateOnlyWhileNamed = new(
-            @"Activate only while ""([^""]+)"" is(?: face-up)? on the field\.?",
+            @"Activate only (?:while|if) ""([^""]+)"" is(?: face-up)? on the field\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxNoBattleDamageWhileNamed = new(
-            @"While ""([^""]+)"" is face-up on the field, you take no Battle Damage(?: from attacking monsters)?\.?",
+            @"While ""([^""]+)"" is(?: face-up)? on the field, you take no Battle Damage(?: from attacking monsters)?\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxDestroyWhenNamedLeaves = new(
-            @"Destroy this card when ""([^""]+)"" leaves the field\.?",
+            @"(?:Destroy this card when ""([^""]+)"" leaves the field|If ""([^""]+)"" is not on the field, destroy this card)\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         /// <summary>Falling Down: Destroy this card unless you control an "Archfiend" card.</summary>
@@ -361,6 +486,18 @@ namespace WRLDZ.Duel.TextEffects
         static readonly Regex RxSummonGainLp = new(
             @"When this (?:monster|card) is Normal Summoned, Flip Summoned or Special Summoned, " +
             @"increase your Life Points by (\d+) points\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>Rain of Mercy / PSCT siblings: both players gain the same LP amount.</summary>
+        static readonly Regex RxBothPlayersGainLp = new(
+            @"(?:(?:increase|increases) the Life Points of both players by (\d+) points?|" +
+            @"both players gain (\d+) (?:LP|Life Points))\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+
+        static readonly Regex RxConvertOpponentLpGainToDamage = new(
+            @"As long as this card remains face-up on the field, any effect of increasing your opponent's Life Points " +
+            @"is changed to inflict the same amount of points in damage to your opponent's Life Points\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxDestroyedToGyDamage = new(
@@ -383,6 +520,10 @@ namespace WRLDZ.Duel.TextEffects
             @"destroy all cards on the field except this card\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        static readonly Regex RxStructuralSummonText = new(@"cannot be normal summoned(?:/set)?|must (?:first )?be special summoned|must be fusion summoned|can only be special summoned", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        static readonly Regex RxRitualProcedureText = new(@"You can Ritual Summon this card with ""[^""]+""\.?", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        static readonly Regex RxRelinquishedBattleSubstitute = new(@"If this card would be destroyed by battle, destroy that equipped monster instead\.?", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        static readonly Regex RxRelinquishedDamageReflect = new(@"While equipped with that monster, any battle damage you take from battles involving this card inflicts equal effect damage to your opponent\.?", RegexOptions.IgnoreCase | RegexOptions.Compiled);
         /// <summary>Compile official text into a program (does not touch cache).</summary>
         public static CompiledCardProgram Compile(CardDef def)
         {
@@ -397,24 +538,10 @@ namespace WRLDZ.Duel.TextEffects
                 CompileSource = "regex"
             };
 
-            if (def == null || string.IsNullOrWhiteSpace(prog.SourceText))
-            {
-                prog.FullyCompiled = OfficialCardAuthority.HasNoActivatableEffect(def);
-                if (prog.FullyCompiled) prog.CompileSource = "structural";
+            if (def == null)
                 return prog;
-            }
 
-            // Normal Monsters + effectless Extra Deck (classic Fusions: BSD, Gaia Champion, …)
-            if (OfficialCardAuthority.HasNoActivatableEffect(def))
-            {
-                prog.FullyCompiled = true;
-                prog.CompileSource = OfficialCardAuthority.IsNormalMonsterNoEffect(def)
-                    ? "normal"
-                    : "structural";
-                return prog;
-            }
-
-            var text = Normalize(prog.SourceText);
+            var text = Normalize(prog.SourceText ?? "");
             var matchedSpans = new List<(int start, int length)>();
             var clauses = new List<EffectClause>();
             var unparsed = new List<string>();
@@ -428,6 +555,27 @@ namespace WRLDZ.Duel.TextEffects
             }
 
             // Order: multi-sentence templates first, then short ones
+            {
+                if (def.IsMonster) {
+                var neg = SharedPsctAtomTemplates.MatchNegateActivation(text);
+                if (neg.Success)
+                {
+                    var hasDestroy = Regex.IsMatch(neg.Value, "destroy it", RegexOptions.IgnoreCase);
+                    var hasDiscard = Regex.IsMatch(neg.Value, "discard 1 card", RegexOptions.IgnoreCase);
+                    Take(neg, new EffectClause
+                    {
+                        Timing = EffectTiming.ChainLinkActivated,
+                        Action = EffectActionKind.NegateActivation,
+                        ChainResponseOnly = true,
+                        DestroyNegatedCard = hasDestroy,
+                        FlipSelfFaceUpDefense = Regex.IsMatch(neg.Value, "change this card to face-up defense position", RegexOptions.IgnoreCase),
+                        RequiresDiscardCost = hasDiscard,
+                        DiscardCostAttribute = hasDiscard ? "*" : null,
+                        DiscardCostCount = hasDiscard ? 1 : 0
+                    });
+                }
+                }
+            }
             {
                 var m = RxCyberJar.Match(text);
                 if (m.Success)
@@ -445,6 +593,14 @@ namespace WRLDZ.Duel.TextEffects
                 Action = EffectActionKind.ApplySwordsOfRevealingLight,
                 Amount = ParseInt(RxSwords.Match(text), 1, 3),
                 StaysOnField = true
+            });
+
+            Take(RxConvertOpponentLpGainToDamage.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.ContinuousWhileFaceUp,
+                Action = EffectActionKind.ConvertOpponentLpGainToDamage,
+                StaysOnField = true,
+                MakesChainLink = false
             });
             // Swords sub-clauses absorbed into ApplySwordsOfRevealingLight
             MarkAbsorbed(text, RxSwordsAttack, matchedSpans);
@@ -613,6 +769,24 @@ namespace WRLDZ.Duel.TextEffects
                 AnswersControllerSummon = true
             });
 
+            var hhg = RxNamedOrNamedSummonDestroySt.Match(text);
+            Take(hhg, hhg.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.OpponentNormalOrFlipSummon,
+                    Action = EffectActionKind.Destroy,
+                    Zone = EffectZoneFilter.FieldSpellTraps,
+                    RequiresTargetChoice = true,
+                    AnswersSpecialSummon = true,
+                    AnswersControllerSummon = true,
+                    NamedCard = hhg.Groups[1].Value,
+                    AltNamedCard = hhg.Groups[2].Value,
+                    NamedCardIsSeries = true,
+                    StaysOnField = true,
+                    MakesChainLink = true
+                }
+                : null);
+
             Take(RxOppNsFsAtkLeqDestroy.Match(text), new EffectClause
             {
                 Timing = EffectTiming.OpponentNormalOrFlipSummon,
@@ -743,19 +917,63 @@ namespace WRLDZ.Duel.TextEffects
                 Action = EffectActionKind.FusionSummonRegistered
             });
 
+            {
+                var namedG = RxRitualNamedGreater.Match(text);
+                if (!namedG.Success) namedG = RxRitualNamedGreaterOne.Match(text);
+                Take(namedG, new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.RitualSummon,
+                    NamedCard = namedG.Success ? namedG.Groups[1].Value : null,
+                    Amount = namedG.Success ? (ParseInt(namedG, 2, 0) > 0 ? ParseInt(namedG, 2, 0) : ParseInt(namedG, 3, 0)) : 0,
+                    RitualExactLevel = false,
+                    FromHand = true
+                });
+            }
+            Take(RxRitualNamedEqual.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.RitualSummon,
+                NamedCard = Group1(RxRitualNamedEqual.Match(text)),
+                Amount = ParseInt(RxRitualNamedEqual.Match(text), 2, 0),
+                RitualExactLevel = true,
+                FromHand = true
+            });
+            Take(RxRitualAttributeEqual.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.RitualSummon,
+                AttributeFilter = Group1(RxRitualAttributeEqual.Match(text)),
+                RitualExactLevel = true,
+                FromHand = true
+            });
+
             Take(RxLordOfD.Match(text), new EffectClause
             {
                 Timing = EffectTiming.ContinuousWhileFaceUp,
                 Action = EffectActionKind.ContinuousCannotTargetDragons
             });
 
-            Take(RxEnemyControllerPos.Match(text), new EffectClause
+            var attackNamedPos = RxAttackNamedChangePosition.Match(text);
+            Take(attackNamedPos, new EffectClause
             {
-                Timing = EffectTiming.Activate,
+                Timing = EffectTiming.AttackDeclared,
                 Action = EffectActionKind.ChangeBattlePosition,
                 Zone = EffectZoneFilter.OppFaceUpMonsters,
-                RequiresTargetChoice = true
+                RequiresTargetChoice = true,
+                RequiresFaceUpName = attackNamedPos.Success ? attackNamedPos.Groups[1].Value : null
             });
+
+            if (!attackNamedPos.Success)
+            {
+                Take(RxEnemyControllerPos.Match(text), new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.ChangeBattlePosition,
+                    Zone = EffectZoneFilter.OppFaceUpMonsters,
+                    RequiresTargetChoice = true
+                });
+            }
 
             Take(RxAlwaysTreatedAsName.Match(text), new EffectClause
             {
@@ -818,6 +1036,76 @@ namespace WRLDZ.Duel.TextEffects
                 Zone = EffectZoneFilter.AttackingMonster,
                 CheckedAt = ConditionCheckedAt.Activation
             });
+
+            Take(RxDestroyLowestAtkOpp.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.Destroy,
+                Side = EffectSide.Opponent,
+                Zone = EffectZoneFilter.OppFaceUpMonsters,
+                RequiresTargetChoice = true,
+                PickLowestAtk = true
+            });
+            Take(RxDestroyHighestDefOpp.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.Destroy,
+                Side = EffectSide.Opponent,
+                Zone = EffectZoneFilter.OppFaceUpMonsters,
+                RequiresTargetChoice = true,
+                PickHighestDef = true
+            });
+            Take(RxDestroyHighestAtkFaceUpAtk.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.Destroy,
+                Side = EffectSide.Both,
+                Zone = EffectZoneFilter.FieldAnyMonster,
+                RequiresTargetChoice = true,
+                PickHighestAtk = true,
+                RequiresAttackPosition = true
+            });
+
+            var incDef = RxIncreaseDefUntilEot.Match(text);
+            Take(incDef, new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.GainAtkDefUntilEndOfTurn,
+                Zone = EffectZoneFilter.FieldAnyMonster,
+                RequiresTargetChoice = true,
+                Amount = 0,
+                DefAmount = incDef.Success ? ParseInt(incDef, 1, 500) : 500
+            });
+
+            Take(RxStopDefense.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.ChangeBattlePosition,
+                Zone = EffectZoneFilter.OppDefensePositionMonsters,
+                RequiresTargetChoice = true,
+                ForceAttackPosition = true
+            });
+
+            Take(RxEnchantedJavelin.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.AttackDeclared,
+                Action = EffectActionKind.GainLpEqualToAtk,
+                Zone = EffectZoneFilter.AttackingMonster,
+                CheckedAt = ConditionCheckedAt.Activation
+            });
+
+            var ego = RxElegantEgotist.Match(text);
+            Take(ego, new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.SpecialSummonNamed,
+                RequiresFaceUpName = ego.Success ? ego.Groups[1].Value : null,
+                NamedCard = ego.Success ? ego.Groups[2].Value : null,
+                AltNamedCard = ego.Success ? ego.Groups[3].Value : null,
+                FromHand = true,
+                FromDeck = true
+            });
+
             Take(RxMagicCylinder.Match(text), new EffectClause
             {
                 Timing = EffectTiming.AttackDeclared,
@@ -917,7 +1205,7 @@ namespace WRLDZ.Duel.TextEffects
             {
                 Timing = EffectTiming.ContinuousWhileFaceUp,
                 Action = EffectActionKind.SelfDestroyUnlessNamedFaceUp,
-                RequiresFaceUpName = leave.Success ? leave.Groups[1].Value : null,
+                RequiresFaceUpName = leave.Success ? (leave.Groups[1].Success ? leave.Groups[1].Value : leave.Groups[2].Value) : null,
                 MakesChainLink = false
             });
             var unlessYou = RxDestroyUnlessYouControlNamed.Match(text);
@@ -938,6 +1226,18 @@ namespace WRLDZ.Duel.TextEffects
                 Action = EffectActionKind.GainLifePoints,
                 Amount = rec.Success ? ParseInt(rec, 1, 1000) : 1000,
                 Side = EffectSide.Controller,
+                MakesChainLink = true
+            });
+
+            var bothGain = RxBothPlayersGainLp.Match(text);
+            Take(bothGain, new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.GainLifePoints,
+                Amount = bothGain.Success
+                    ? ParseInt(bothGain, 1, ParseInt(bothGain, 2, 1000))
+                    : 1000,
+                Side = EffectSide.Both,
                 MakesChainLink = true
             });
             var gyDmg = RxDestroyedToGyDamage.Match(text);
@@ -961,19 +1261,42 @@ namespace WRLDZ.Duel.TextEffects
             PhaseTriggerTemplates.Collect(text, def, clauses, matchedSpans);
             ContinuousRestrictionTemplates.Collect(text, def, clauses, matchedSpans);
             MonsterTriggerTemplates.Collect(text, def, clauses, matchedSpans);
-
+            MarkAbsorbed(text, RxRitualProcedureText, matchedSpans);
+            if (ContainsAction(clauses, EffectActionKind.EquipTargetToThis)) {
+                MarkAbsorbed(text, RxRelinquishedBattleSubstitute, matchedSpans);
+                MarkAbsorbed(text, RxRelinquishedDamageReflect, matchedSpans);
+            }
+            var una = RxUnaffectedByNamed.Match(text);
+            if (una.Success)
+            {
+                foreach (var cl in clauses)
+                {
+                    if (cl != null)
+                        cl.UnaffectedByNamedCard = una.Groups[1].Value;
+                }
+                matchedSpans.Add((una.Index, una.Length));
+            }
             // Official PSCT split (condition : cost/target ; resolution) for sentences
             // the whole-card regex did not absorb. This is how new mechanics get in
             // without a unique full-text template for every card.
+            EffectClause pendingCost = null;
+            var pendingCostStart = 0;
+            var pendingCostLen = 0;
+            var structuralOnlyText = false;
             foreach (var sent in PsctGrammar.Parse(text, def))
             {
                 if (sent == null || sent.Length < 3) continue;
                 if (SpanCovered(matchedSpans, sent.IndexInText, sent.Length)) continue;
-                if (sent.IsSummonRestriction)
+                if (sent.IsSummonRestriction || RxStructuralSummonText.IsMatch(sent.Raw ?? string.Empty)) { structuralOnlyText = true; matchedSpans.Add((sent.IndexInText, sent.Length)); continue; }
+                var costOnly = TryParseCostOnlySentence(sent);
+                if (costOnly != null)
                 {
-                    matchedSpans.Add((sent.IndexInText, sent.Length));
+                    pendingCost = costOnly;
+                    pendingCostStart = sent.IndexInText;
+                    pendingCostLen = sent.Length;
                     continue;
                 }
+
                 var auras = CompileAuraClauses(sent.Raw);
                 if (auras.Count > 0)
                 {
@@ -989,6 +1312,12 @@ namespace WRLDZ.Duel.TextEffects
 
                 var clause = CompilePsctSentence(sent, def);
                 if (clause == null) continue;
+                if (pendingCost != null)
+                {
+                    MergeActivationCost(clause, pendingCost);
+                    matchedSpans.Add((pendingCostStart, pendingCostLen));
+                    pendingCost = null;
+                }
                 clause.SourceSnippet = sent.Raw.Trim();
                 clauses.Add(clause);
                 matchedSpans.Add((sent.IndexInText, sent.Length));
@@ -1004,10 +1333,26 @@ namespace WRLDZ.Duel.TextEffects
                 unparsed.Add(frag.Trim());
             }
 
+            // UI choice is not automatically PSCT targeting: Fissure, Smashing Ground,
+            // and Hammer Shot keep RequiresTargetChoice but do not target.
+            foreach (var c in clauses)
+            {
+                if (c != null &&
+                    Regex.IsMatch(c.SourceSnippet ?? string.Empty, @"\btarget(?:s|ed|ing)?\b", RegexOptions.IgnoreCase))
+                    c.IsPsctTarget = true;
+                if (c != null && Regex.IsMatch(c.SourceSnippet ?? string.Empty, @"\byou can\b", RegexOptions.IgnoreCase))
+                    c.IsOptional = true;
+                if (c != null && Regex.IsMatch(c.SourceSnippet ?? string.Empty, @"^\s*When\b", RegexOptions.IgnoreCase))
+                    c.CheckedAt = ConditionCheckedAt.Activation;
+                else if (c != null && Regex.IsMatch(c.SourceSnippet ?? string.Empty, @"^\s*If\b", RegexOptions.IgnoreCase))
+                    c.CheckedAt = ConditionCheckedAt.Both;
+            }
+
             prog.SetClauses(clauses);
             prog.SetUnparsed(unparsed);
             prog.FullyCompiled = unparsed.Count == 0 && clauses.Count > 0
-                                 || (clauses.Count == 0 && OfficialCardAuthority.HasNoActivatableEffect(def));
+                                 || (clauses.Count == 0 && OfficialCardAuthority.HasNoActivatableEffect(def))
+                                 || (clauses.Count == 0 && structuralOnlyText && unparsed.Count == 0);
 
             return prog;
         }
@@ -1109,7 +1454,7 @@ namespace WRLDZ.Duel.TextEffects
             var discAttr = Regex.Match(act,
                 @"discard 1 (\w+) monster", RegexOptions.IgnoreCase);
             var discCard = Regex.Match(act,
-                @"discard 1 cards?(?: from your hand)?", RegexOptions.IgnoreCase);
+                @"discard (\d+) cards?(?: from your hand(?: to the (?:GY|Graveyard))?)?", RegexOptions.IgnoreCase);
             var sendNamed = Regex.Match(act,
                 @"send 1 face-up ""([^""]+)"" you control to the (?:GY|Graveyard)",
                 RegexOptions.IgnoreCase);
@@ -1122,6 +1467,8 @@ namespace WRLDZ.Duel.TextEffects
             {
                 clause.RequiresDiscardCost = true;
                 clause.DiscardCostAttribute = "*";
+                clause.DiscardCostCount = int.TryParse(discCard.Groups[1].Value, out var dn) ? dn : 1;
+                if (clause.DiscardCostCount < 1) clause.DiscardCostCount = 1;
             }
             else if (sendNamed.Success)
             {
@@ -1131,7 +1478,7 @@ namespace WRLDZ.Duel.TextEffects
 
             var paySrc = string.IsNullOrEmpty(act) ? (sent.Raw ?? res) : act;
             var pay = Regex.Match(paySrc,
-                @"Activate (?:this card )?by paying (\d+) (?:LP|Life Points)",
+                @"(?:Activate (?:this card )?by paying|Pay) (\d+) (?:LP|Life Points)",
                 RegexOptions.IgnoreCase);
             if (pay.Success)
                 clause.PayLpAmount = int.TryParse(pay.Groups[1].Value, out var lp) ? lp : 0;
@@ -1193,6 +1540,40 @@ namespace WRLDZ.Duel.TextEffects
                 clause.Amount = int.TryParse(m.Groups[1].Value, out var n) ? n : 0;
             }
             else if (Regex.IsMatch(res,
+                         @"(?:it|that target) gains (\d+) ATK until the end of this turn",
+                         RegexOptions.IgnoreCase) ||
+                     Regex.IsMatch(res,
+                         @"(?:it|that target) gains (\d+) DEF until the end of this turn",
+                         RegexOptions.IgnoreCase) ||
+                     Regex.IsMatch(res,
+                         @"(?:it|that target) gains (\d+) ATK(?:/?DEF| and DEF) until the end of this turn",
+                         RegexOptions.IgnoreCase))
+            {
+                var mAtk = Regex.Match(res,
+                    @"(?:it|that target) gains (\d+) ATK(?:/?DEF| and DEF)? until the end of this turn",
+                    RegexOptions.IgnoreCase);
+                var mDefOnly = Regex.Match(res,
+                    @"(?:it|that target) gains (\d+) DEF until the end of this turn",
+                    RegexOptions.IgnoreCase);
+                clause.Action = EffectActionKind.GainAtkDefUntilEndOfTurn;
+                if (mAtk.Success)
+                {
+                    clause.Amount = int.TryParse(mAtk.Groups[1].Value, out var n) ? n : 0;
+                    if (mAtk.Value.IndexOf("DEF", StringComparison.OrdinalIgnoreCase) >= 0)
+                        clause.DefAmount = clause.Amount;
+                }
+                else if (mDefOnly.Success)
+                {
+                    clause.Amount = 0;
+                    clause.DefAmount = int.TryParse(mDefOnly.Groups[1].Value, out var n) ? n : 0;
+                }
+                if (clause.Zone == EffectZoneFilter.None)
+                {
+                    clause.Zone = EffectZoneFilter.FieldAnyMonster;
+                    clause.RequiresTargetChoice = true;
+                }
+            }
+            else if (Regex.IsMatch(res,
                          @"this card gains (\d+) ATK and DEF(?! until)", RegexOptions.IgnoreCase))
             {
                 var m = Regex.Match(res, @"this card gains (\d+) ATK and DEF", RegexOptions.IgnoreCase);
@@ -1222,7 +1603,11 @@ namespace WRLDZ.Duel.TextEffects
             }
             else if (Regex.IsMatch(res, @"special summon (?:it|that target)", RegexOptions.IgnoreCase))
             {
-                clause.Action = EffectActionKind.SpecialSummonFromGy;
+                clause.Action = clause.Zone == EffectZoneFilter.ControllerDeckMonsters
+                    ? EffectActionKind.SpecialSummonFromDeck
+                    : clause.Zone == EffectZoneFilter.ControllerHandMonsters
+                        ? EffectActionKind.SpecialSummonFromHand
+                        : EffectActionKind.SpecialSummonFromGy;
                 clause.RequiresTargetChoice = true;
                 if (clause.Zone == EffectZoneFilter.None)
                     clause.Zone = EffectZoneFilter.EitherGyMonsters;
@@ -1243,6 +1628,34 @@ namespace WRLDZ.Duel.TextEffects
                 clause.Side = EffectSide.Opponent;
                 clause.Zone = EffectZoneFilter.FieldMonsters;
                 clause.RequiresTargetChoice = false;
+            }
+            else if (SharedPsctAtomTemplates.TryCompileSpecialSummon(res, clause))
+            {
+            }
+            else if (Regex.IsMatch(res,
+                         @"special summon 1 ""([^""]+)"" or ""([^""]+)"" from your (hand|deck|graveyard|gy)",
+                         RegexOptions.IgnoreCase))
+            {
+                var altSs = Regex.Match(res,
+                    @"special summon 1 ""([^""]+)"" or ""([^""]+)"" from your (hand|deck|graveyard|gy)" +
+                    @"(?: or (hand|deck|graveyard|gy))?",
+                    RegexOptions.IgnoreCase);
+                clause.Action = EffectActionKind.SpecialSummonNamed;
+                clause.NamedCard = altSs.Groups[1].Value;
+                clause.AltNamedCard = altSs.Groups[2].Value;
+                void OriginAlt(string loc)
+                {
+                    if (string.IsNullOrEmpty(loc)) return;
+                    if (string.Equals(loc, "hand", StringComparison.OrdinalIgnoreCase))
+                        clause.FromHand = true;
+                    else if (string.Equals(loc, "deck", StringComparison.OrdinalIgnoreCase))
+                        clause.FromDeck = true;
+                    else
+                        clause.FromGrave = true;
+                }
+                OriginAlt(altSs.Groups[3].Value);
+                if (altSs.Groups.Count > 4 && altSs.Groups[4].Success)
+                    OriginAlt(altSs.Groups[4].Value);
             }
             else if (Regex.IsMatch(res,
                          @"special summon 1 ""([^""]+)"" from your (hand|deck|graveyard|gy)",
@@ -1289,7 +1702,10 @@ namespace WRLDZ.Duel.TextEffects
                 if (clause.Zone == EffectZoneFilter.None)
                     return null;
             }
-            else if (Regex.IsMatch(res, @"change (?:that target's|its) battle position",
+            else if (SharedPsctAtomTemplates.TryCompileChangePosition(res, clause))
+            {
+            }
+                        else if (Regex.IsMatch(res, @"change (?:that target's|its) battle position",
                          RegexOptions.IgnoreCase))
             {
                 clause.Action = EffectActionKind.ChangeBattlePosition;
@@ -1306,6 +1722,60 @@ namespace WRLDZ.Duel.TextEffects
                 if (clause.Zone == EffectZoneFilter.None)
                     clause.Zone = EffectZoneFilter.FieldAnyMonster;
             }
+            else if (Regex.IsMatch(res,
+                         @"(?:it|that target) gains (\d+) (ATK|DEF) until the end of this turn",
+                         RegexOptions.IgnoreCase))
+            {
+                var m = Regex.Match(res,
+                    @"(?:it|that target) gains (\d+) (ATK|DEF) until the end of this turn",
+                    RegexOptions.IgnoreCase);
+                clause.Action = EffectActionKind.GainAtkDefUntilEndOfTurn;
+                var n = int.TryParse(m.Groups[1].Value, out var gStat) ? gStat : 0;
+                if (m.Groups[2].Value.Equals("DEF", StringComparison.OrdinalIgnoreCase))
+                    clause.DefAmount = n;
+                else
+                    clause.Amount = n;
+                if (clause.Zone == EffectZoneFilter.None)
+                {
+                    clause.Zone = EffectZoneFilter.FieldAnyMonster;
+                    clause.RequiresTargetChoice = true;
+                }
+            }
+            else if (Regex.IsMatch(res,
+                         @"destroy all cards on the field(?! except)",
+                         RegexOptions.IgnoreCase))
+            {
+                clause.Action = EffectActionKind.Destroy;
+                clause.Zone = EffectZoneFilter.AllOtherCardsOnField;
+                clause.Side = EffectSide.Both;
+                clause.RequiresTargetChoice = false;
+            }
+            else if (Regex.IsMatch(res,
+                         @"destroy all face-up Continuous (Spell|Trap) Cards",
+                         RegexOptions.IgnoreCase))
+            {
+                var m = Regex.Match(res,
+                    @"destroy all face-up Continuous (Spell|Trap) Cards",
+                    RegexOptions.IgnoreCase);
+                clause.Action = EffectActionKind.Destroy;
+                clause.Zone = EffectZoneFilter.FieldSpellTraps;
+                clause.Side = EffectSide.Both;
+                clause.RequiresTargetChoice = false;
+                if (m.Groups[1].Value.Equals("Spell", StringComparison.OrdinalIgnoreCase))
+                    clause.FaceUpContinuousSpellsOnly = true;
+                else
+                    clause.FaceUpContinuousTrapsOnly = true;
+            }
+            else if (Regex.IsMatch(res,
+                         @"change (?:it|that target) to (?:face-up )?Attack Position",
+                         RegexOptions.IgnoreCase))
+            {
+                clause.Action = EffectActionKind.ChangeBattlePosition;
+                clause.ForceAttackPosition = true;
+                clause.RequiresTargetChoice = true;
+                if (clause.Zone == EffectZoneFilter.None)
+                    clause.Zone = EffectZoneFilter.OppDefensePositionMonsters;
+            }
 
             if (clause.Action == EffectActionKind.None)
             {
@@ -1317,6 +1787,17 @@ namespace WRLDZ.Duel.TextEffects
             }
             if (HasUnparsedActivationCost(act, clause))
                 return null;
+
+            // Activation condition: If "Name" is (face-up) on the field → RequiresFaceUpName.
+            var cond = sent.Condition ?? "";
+            if (string.IsNullOrEmpty(clause.RequiresFaceUpName))
+            {
+                var namedOnField = Regex.Match(cond,
+                    @"^(?:If|When) ""([^""]+)"" is(?: face-up)? on the field\.?$",
+                    RegexOptions.IgnoreCase);
+                if (namedOnField.Success)
+                    clause.RequiresFaceUpName = namedOnField.Groups[1].Value;
+            }
 
             Stamp(sent, clause);
             if (IsUnrecognizedTriggerAsActivate(sent, clause))
@@ -1337,6 +1818,12 @@ namespace WRLDZ.Duel.TextEffects
             if (cond.Length == 0) return false;
             if (cond.IndexOf("this card is activated", StringComparison.OrdinalIgnoreCase) >= 0 ||
                 cond.IndexOf("this card resolves", StringComparison.OrdinalIgnoreCase) >= 0)
+                return false;
+            // Recognized activation gate (Elegant Egotist): If "Name" is on the field.
+            if (!string.IsNullOrEmpty(clause.RequiresFaceUpName) &&
+                Regex.IsMatch(cond,
+                    @"^(?:If|When) ""[^""]+"" is(?: face-up)? on the field\.?$",
+                    RegexOptions.IgnoreCase))
                 return false;
             return cond.StartsWith("When ", StringComparison.OrdinalIgnoreCase) ||
                    cond.StartsWith("If ", StringComparison.OrdinalIgnoreCase) ||
@@ -1375,6 +1862,13 @@ namespace WRLDZ.Duel.TextEffects
                 return;
             }
 
+            if (Regex.IsMatch(act, @"target 1 (?:a )?monster in (?:your|the) Deck", RegexOptions.IgnoreCase))
+            {
+                clause.RequiresTargetChoice = true;
+                clause.Zone = EffectZoneFilter.ControllerDeckMonsters;
+                return;
+            }
+
             if (Regex.IsMatch(act, @"target 1 monster in either (?:GY|Graveyard)",
                     RegexOptions.IgnoreCase) ||
                 Regex.IsMatch(act,
@@ -1383,6 +1877,18 @@ namespace WRLDZ.Duel.TextEffects
             {
                 clause.RequiresTargetChoice = true;
                 clause.Zone = EffectZoneFilter.EitherGyMonsters;
+                return;
+            }
+
+            var gyNamed = Regex.Match(act,
+                @"target 1 ""([^""]+)"" monster in (?:your|the) (?:GY|Graveyard)",
+                RegexOptions.IgnoreCase);
+            if (gyNamed.Success)
+            {
+                clause.RequiresTargetChoice = true;
+                clause.Zone = EffectZoneFilter.ControllerGyMonsters;
+                clause.NamedCard = gyNamed.Groups[1].Value;
+                clause.NamedCardIsSeries = true;
                 return;
             }
 
@@ -1453,6 +1959,51 @@ namespace WRLDZ.Duel.TextEffects
             return false;
         }
 
+        static EffectClause TryParseCostOnlySentence(PsctGrammar.Sentence sent)
+        {
+            if (sent == null) return null;
+            var raw = (sent.Raw ?? "").Trim();
+            if (raw.Length < 3) return null;
+            var disc = Regex.Match(raw,
+                @"^Discard (\d+) cards?(?: from your hand(?: to the (?:GY|Graveyard))?)?\s*\.?\s*$",
+                RegexOptions.IgnoreCase);
+            if (disc.Success)
+            {
+                var n = int.TryParse(disc.Groups[1].Value, out var dn) ? dn : 1;
+                if (n < 1) n = 1;
+                return new EffectClause
+                {
+                    RequiresDiscardCost = true,
+                    DiscardCostAttribute = "*",
+                    DiscardCostCount = n
+                };
+            }
+
+            var pay = Regex.Match(raw,
+                @"^(?:Activate (?:this card )?by paying|Pay) (\d+) (?:LP|Life Points)\s*\.?\s*$",
+                RegexOptions.IgnoreCase);
+            if (!pay.Success) return null;
+            var lp = int.TryParse(pay.Groups[1].Value, out var pv) ? pv : 0;
+            if (lp <= 0) return null;
+            return new EffectClause { PayLpAmount = lp };
+        }
+
+        static void MergeActivationCost(EffectClause dest, EffectClause cost)
+        {
+            if (dest == null || cost == null) return;
+            if (cost.RequiresDiscardCost)
+            {
+                dest.RequiresDiscardCost = true;
+                if (string.IsNullOrEmpty(dest.DiscardCostAttribute))
+                    dest.DiscardCostAttribute = cost.DiscardCostAttribute;
+                if (dest.DiscardCostCount < 1)
+                    dest.DiscardCostCount = cost.DiscardCostCount > 0 ? cost.DiscardCostCount : 1;
+            }
+
+            if (cost.PayLpAmount > 0 && dest.PayLpAmount <= 0)
+                dest.PayLpAmount = cost.PayLpAmount;
+        }
+
         static EffectClause Stamp(PsctGrammar.Sentence sent, EffectClause clause)
         {
             if (clause == null) return null;
@@ -1470,10 +2021,15 @@ namespace WRLDZ.Duel.TextEffects
             var hay = (sent.Condition ?? "") + " " + (sent.Raw ?? "");
             if (hay.IndexOf("flip summoned", StringComparison.OrdinalIgnoreCase) >= 0)
                 clause.RequiresThisFlipSummoned = true;
+            if (hay.IndexOf("this card is tribute summoned", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                hay.IndexOf("this monster is tribute summoned", StringComparison.OrdinalIgnoreCase) >= 0)
+                clause.RequiresThisTributeSummoned = true;
             if (hay.IndexOf("normal summoned", StringComparison.OrdinalIgnoreCase) >= 0 &&
                 hay.IndexOf("flip summoned", StringComparison.OrdinalIgnoreCase) < 0 &&
                 hay.IndexOf("special summoned", StringComparison.OrdinalIgnoreCase) < 0)
                 clause.RequiresThisNormalSummoned = true;
+            if (hay.IndexOf("by a direct attack", StringComparison.OrdinalIgnoreCase) >= 0)
+                clause.RequiresDirectAttack = true;
             if (hay.IndexOf("destroyed by battle", StringComparison.OrdinalIgnoreCase) >= 0)
                 clause.RequiresThisDestroyedByBattle = true;
             else if (Regex.IsMatch(hay,
@@ -1587,6 +2143,39 @@ namespace WRLDZ.Duel.TextEffects
             var body = StripContinuousWhile(raw);
             if (string.IsNullOrEmpty(body)) return list;
 
+            var multi = RxMultiRaceGainLoseAtkDef.Match(body);
+            if (multi.Success && multi.Index == 0)
+            {
+                var gainN = ParseInt(multi, 2, 200);
+                var loseN = ParseInt(multi, 4, 200);
+                foreach (var race in SplitRaceList(multi.Groups[1].Value))
+                    list.Add(StatAuraClause(race, gainN, gainN, EffectSide.Both));
+                foreach (var race in SplitRaceList(multi.Groups[3].Value))
+                    list.Add(StatAuraClause(race, -loseN, -loseN, EffectSide.Both));
+                return list;
+            }
+
+            var quoted = RxQuotedSeriesGainAtkDef.Match(body);
+            if (quoted.Success && quoted.Index == 0)
+            {
+                var n = ParseInt(quoted, 2, 0);
+                var both = quoted.Value.IndexOf("DEF", StringComparison.OrdinalIgnoreCase) >= 0;
+                var c = StatAuraClause(null, n, both ? n : 0, EffectSide.Both);
+                c.NamedCard = quoted.Groups[1].Value;
+                c.NamedCardIsSeries = true;
+                list.Add(c);
+                return list;
+            }
+
+            var raceGain = RxRaceGainAtkDef.Match(body);
+            if (raceGain.Success && raceGain.Index == 0)
+            {
+                var n = ParseInt(raceGain, 2, 0);
+                var both = raceGain.Value.IndexOf("DEF", StringComparison.OrdinalIgnoreCase) >= 0;
+                list.Add(StatAuraClause(raceGain.Groups[1].Value, n, both ? n : 0, EffectSide.Both));
+                return list;
+            }
+
             var inc = RxIncDecAtk.Match(body);
             if (inc.Success && inc.Index == 0)
             {
@@ -1639,6 +2228,23 @@ namespace WRLDZ.Duel.TextEffects
             };
             FillTypeOrAttribute(c, filter);
             return c;
+        }
+
+        /// <summary>
+        /// "Fish, Sea Serpent, Thunder, and Aqua" → individual race tokens.
+        /// Keeps multi-word races (Sea Serpent) intact.
+        /// </summary>
+        static List<string> SplitRaceList(string raw)
+        {
+            var list = new List<string>();
+            if (string.IsNullOrWhiteSpace(raw)) return list;
+            var s = raw.Replace(", and ", ", ").Replace(" and ", ", ");
+            foreach (var part in s.Split(','))
+            {
+                var race = part.Trim();
+                if (race.Length > 0) list.Add(race);
+            }
+            return list;
         }
 
         static void FillTypeOrAttribute(EffectClause c, string word)
@@ -1718,6 +2324,9 @@ namespace WRLDZ.Duel.TextEffects
             // Collapse mask holes before length checks only — do not invent away real riders/costs.
             var f = Regex.Replace(frag ?? "", @"\s+", " ").Trim().ToLowerInvariant();
             if (f.Contains("you can only activate 1")) return true;
+            if (f.Contains("must be face-up on the field to activate and to resolve this effect")) return true;
+            if (f.Contains("gains 500 atk")) return true;
+            if (f.StartsWith("if this card is attacked, change it to attack position")) return true;
             if (f.Contains("you can only use")) return true;
             // Strip the name-condition parenthetical only. Do not eat a glued GY/trigger rider
             // (Axe of Despair: always-treated + "When this card is sent to the GY…").
@@ -1733,6 +2342,12 @@ namespace WRLDZ.Duel.TextEffects
             if (f.Contains("tribute 1 monster, then target")) return true; // EC mode 2 deferred
             if (f.Contains("cannot activate cards, or the effects")) return true; // Sangan restriction
             if (f.Contains("once while this card is face-up")) return true;
+            if (f.Contains("union monster at a time")) return true;
+            if (f.Contains("destroy this card instead")) return true;
+            if (f.Contains("when that monster is destroyed, destroy this card")) return true;
+            if (f.Contains("when this card leaves the field, destroy that monster")) return true;
+            // Rite of Spirit / similar: Necrovalley interaction reminder, not a separate effect.
+            if (f.Contains("unaffected by \"necrovalley\"")) return true;
             if (f.Length < 8) return true;
             return false;
         }

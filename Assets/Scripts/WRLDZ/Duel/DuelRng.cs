@@ -47,5 +47,12 @@ namespace WRLDZ.Duel
             if (_dice.Count > 0) return _dice.Dequeue();
             return _live.Next(1, 7);
         }
+
+        /// <summary>Uniform index in [0, exclusiveMax). Returns 0 if exclusiveMax ≤ 0.</summary>
+        public int Next(int exclusiveMax)
+        {
+            if (exclusiveMax <= 0) return 0;
+            return _live.Next(exclusiveMax);
+        }
     }
 }

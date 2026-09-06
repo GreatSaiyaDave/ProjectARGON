@@ -10,9 +10,23 @@ namespace WRLDZ.Duel.TextEffects
             @"during your standby phase:\s*take (\d+) damage",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        /// <summary>
+        /// Archfiend upkeep family: mandatory controller LP payment during each
+        /// Standby Phase. Any unrelated die/target text remains unparsed.
+        /// </summary>
+        static readonly Regex RxStandbyPayLp = new(
+            @"The controller of this card pays (\d+) (?:Life Points|LP) during each of " +
+            @"(?:his/her|their|your) Standby Phases(?:\s*\(this is not optional\))?\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         /// <summary>Falling Down: During each of your opponent's Standby Phases: You take 800 damage.</summary>
         static readonly Regex RxOppStandbyYouTakeDmg = new(
             @"During each of your opponent's Standby Phases:\s*You take (\d+) damage\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>Snatch Steal family: During each of your opponent's Standby Phases: They gain N LP.</summary>
+        static readonly Regex RxOppStandbyTheyGainLp = new(
+            @"During each of your opponent's Standby Phases:\s*They gain (\d+) Life Points\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxStandbyDmgOpp = new(
@@ -57,7 +71,7 @@ namespace WRLDZ.Duel.TextEffects
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxReturnHand = new(
-            @"return (?:it|this card) to (?:the owner's|its owner's|the) hand",
+            @"(?:(?:return|returns) (?:it|this card )?to (?:the owner's|its owner's|the) hand|(?:this card|it) returns to (?:the owner's|its owner's|the) hand)",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         /// <summary>
@@ -118,6 +132,17 @@ namespace WRLDZ.Duel.TextEffects
                 Amount = Parse(RxStandbyDmgSelf.Match(text), 1, 1000),
                 MakesChainLink = true
             });
+            var upkeep = RxStandbyPayLp.Match(text);
+            Add(upkeep, upkeep.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.StandbyPhase,
+                    Action = EffectActionKind.PayLifePoints,
+                    Amount = Parse(upkeep, 1, 500),
+                    Side = EffectSide.Controller,
+                    MakesChainLink = true
+                }
+                : null);
             var oppDmg = RxOppStandbyYouTakeDmg.Match(text);
             Add(oppDmg, new EffectClause
             {
@@ -127,6 +152,18 @@ namespace WRLDZ.Duel.TextEffects
                 OpponentTurnOnly = true,
                 MakesChainLink = true
             });
+            var oppGain = RxOppStandbyTheyGainLp.Match(text);
+            Add(oppGain, oppGain.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.StandbyPhase,
+                    Action = EffectActionKind.GainLifePoints,
+                    Amount = Parse(oppGain, 1, 1000),
+                    Side = EffectSide.Opponent,
+                    OpponentTurnOnly = true,
+                    MakesChainLink = true
+                }
+                : null);
             Add(RxStandbyDmgOpp.Match(text), new EffectClause
             {
                 Timing = EffectTiming.StandbyPhase,
@@ -198,6 +235,8 @@ namespace WRLDZ.Duel.TextEffects
                     RequiresSummonedOrFlippedThisTurn = true,
                     MakesChainLink = true
                 });
+                var hand = RxReturnHand.Match(text);
+                if (hand.Success) spans?.Add((hand.Index, hand.Length));
             }
 
             var ecto = RxEndPhaseTurnPlayerTributeHalfAtk.Match(text);
@@ -267,11 +306,15 @@ namespace WRLDZ.Duel.TextEffects
             if (def == null || need == null) return;
             var text = def.desc ?? "";
             if (string.IsNullOrEmpty(text)) return;
+            if (RxSpiritBounce.IsMatch(text) && RxReturnHand.IsMatch(text))
+                need.Add(EffectActionKind.ReturnToHand);
             if (RxStandbyGainLp.IsMatch(text) || RxStandbyGainLpEach.IsMatch(text) ||
-                RxPikeru.IsMatch(text))
+                RxPikeru.IsMatch(text) || RxOppStandbyTheyGainLp.IsMatch(text))
                 need.Add(EffectActionKind.GainLifePoints);
             if (RxStandbyDmgSelf.IsMatch(text) || RxOppStandbyYouTakeDmg.IsMatch(text))
                 need.Add(EffectActionKind.TakeEffectDamage);
+            if (RxStandbyPayLp.IsMatch(text))
+                need.Add(EffectActionKind.PayLifePoints);
             if (RxEndPhaseTurnPlayerTributeHalfAtk.IsMatch(text))
                 need.Add(EffectActionKind.InflictDamageHalfTributedAtk);
             if (RxEndPhaseTurnPlayerChangePos.IsMatch(text))

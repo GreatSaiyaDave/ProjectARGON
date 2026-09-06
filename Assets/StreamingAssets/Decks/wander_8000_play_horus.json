@@ -1,0 +1,141 @@
+{
+  "name": "Weekend Horus",
+  "format": "wrldz_street_playground_8000",
+  "flaw": "Three LV4, only two LV6, one LV8. Luster Dragon is the vanilla they liked more than a 3rd LV6.",
+  "main": [
+    {
+      "id": 75830094,
+      "name": "Horus the Black Flame Dragon LV4",
+      "qty": 3
+    },
+    {
+      "id": 11224103,
+      "name": "Horus the Black Flame Dragon LV6",
+      "qty": 2
+    },
+    {
+      "id": 48229808,
+      "name": "Horus the Black Flame Dragon LV8",
+      "qty": 1
+    },
+    {
+      "id": 11091375,
+      "name": "Luster Dragon",
+      "qty": 3
+    },
+    {
+      "id": 39191307,
+      "name": "Masked Dragon",
+      "qty": 2
+    },
+    {
+      "id": 26202165,
+      "name": "Sangan",
+      "qty": 1
+    },
+    {
+      "id": 54652250,
+      "name": "Man-Eater Bug",
+      "qty": 2
+    },
+    {
+      "id": 55144522,
+      "name": "Pot of Greed",
+      "qty": 1
+    },
+    {
+      "id": 19613556,
+      "name": "Heavy Storm",
+      "qty": 1
+    },
+    {
+      "id": 5318639,
+      "name": "Mystical Space Typhoon",
+      "qty": 1
+    },
+    {
+      "id": 72302403,
+      "name": "Swords of Revealing Light",
+      "qty": 1
+    },
+    {
+      "id": 66788016,
+      "name": "Fissure",
+      "qty": 2
+    },
+    {
+      "id": 97169186,
+      "name": "Smashing Ground",
+      "qty": 1
+    },
+    {
+      "id": 79759861,
+      "name": "Tribute to the Doomed",
+      "qty": 2
+    },
+    {
+      "id": 26412047,
+      "name": "Hammer Shot",
+      "qty": 1
+    },
+    {
+      "id": 70046172,
+      "name": "Rush Recklessly",
+      "qty": 2
+    },
+    {
+      "id": 65169794,
+      "name": "Black Pendant",
+      "qty": 1
+    },
+    {
+      "id": 4206964,
+      "name": "Trap Hole",
+      "qty": 2
+    },
+    {
+      "id": 17814387,
+      "name": "Reinforcements",
+      "qty": 2
+    },
+    {
+      "id": 44209392,
+      "name": "Castle Walls",
+      "qty": 2
+    },
+    {
+      "id": 3819470,
+      "name": "Seven Tools of the Bandit",
+      "qty": 1
+    },
+    {
+      "id": 14315573,
+      "name": "Negate Attack",
+      "qty": 1
+    },
+    {
+      "id": 12607053,
+      "name": "Waboku",
+      "qty": 2
+    },
+    {
+      "id": 77414722,
+      "name": "Magic Jammer",
+      "qty": 1
+    },
+    {
+      "id": 56120475,
+      "name": "Sakuretsu Armor",
+      "qty": 2
+    }
+  ],
+  "extra": [],
+  "side": [],
+  "counts": {
+    "main": 40,
+    "extra": 0,
+    "side": 0
+  },
+  "lpBand": 8000,
+  "role": "street_npc_playground"
+}

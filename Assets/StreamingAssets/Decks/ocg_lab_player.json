@@ -2,25 +2,93 @@
   "name": "ocg_lab_player",
   "format": "ocg_lab",
   "main": [
-    { "id": 32452818, "name": "Beaver Warrior", "qty": 3 },
-    { "id": 53129443, "name": "Dark Hole", "qty": 2 },
-    { "id": 295517, "name": "A Legendary Ocean", "qty": 1 },
-    { "id": 89631139, "name": "Blue-Eyes White Dragon", "qty": 3 },
-    { "id": 46986414, "name": "Dark Magician", "qty": 3 },
-    { "id": 15025844, "name": "Mystical Elf", "qty": 3 },
-    { "id": 91152256, "name": "Celtic Guardian", "qty": 3 },
-    { "id": 13039848, "name": "Giant Soldier of Stone", "qty": 3 },
-    { "id": 23205979, "name": "Spirit Reaper", "qty": 1 },
-    { "id": 59290628, "name": "Nightmare Horse", "qty": 1 },
-    { "id": 24094653, "name": "Polymerization", "qty": 1 },
-    { "id": 5053192, "name": "Battle Ox", "qty": 3 },
-    { "id": 26378150, "name": "Rude Kaiser", "qty": 3 },
-    { "id": 30113682, "name": "Judge Man", "qty": 3 },
-    { "id": 62397231, "name": "Hyozanryu", "qty": 3 },
-    { "id": 17985575, "name": "Lord of D.", "qty": 4 }
+    {
+      "id": 32452818,
+      "name": "Beaver Warrior",
+      "qty": 3
+    },
+    {
+      "id": 53129443,
+      "name": "Dark Hole",
+      "qty": 2
+    },
+    {
+      "id": 295517,
+      "name": "A Legendary Ocean",
+      "qty": 1
+    },
+    {
+      "id": 89631139,
+      "name": "Blue-Eyes White Dragon",
+      "qty": 3
+    },
+    {
+      "id": 46986414,
+      "name": "Dark Magician",
+      "qty": 3
+    },
+    {
+      "id": 15025844,
+      "name": "Mystical Elf",
+      "qty": 3
+    },
+    {
+      "id": 91152256,
+      "name": "Celtic Guardian",
+      "qty": 3
+    },
+    {
+      "id": 13039848,
+      "name": "Giant Soldier of Stone",
+      "qty": 3
+    },
+    {
+      "id": 23205979,
+      "name": "Spirit Reaper",
+      "qty": 1
+    },
+    {
+      "id": 59290628,
+      "name": "Nightmare Horse",
+      "qty": 1
+    },
+    {
+      "id": 24094653,
+      "name": "Polymerization",
+      "qty": 1
+    },
+    {
+      "id": 5053103,
+      "name": "Battle Ox",
+      "qty": 3
+    },
+    {
+      "id": 26378150,
+      "name": "Rude Kaiser",
+      "qty": 3
+    },
+    {
+      "id": 30113682,
+      "name": "Judge Man",
+      "qty": 3
+    },
+    {
+      "id": 62397231,
+      "name": "Hyozanryu",
+      "qty": 3
+    },
+    {
+      "id": 17985575,
+      "name": "Lord of D.",
+      "qty": 4
+    }
   ],
   "extra": [
-    { "id": 85684223, "name": "Reaper on the Nightmare", "qty": 1 }
+    {
+      "id": 85684223,
+      "name": "Reaper on the Nightmare",
+      "qty": 1
+    }
   ],
   "side": []
 }

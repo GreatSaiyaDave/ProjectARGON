@@ -35,6 +35,8 @@ namespace WRLDZ.Duel.TextEffects
         SpecialSummon,
         Damage,
         GainLp,
+        GainLpReplacement,
+        PayLp,
         ChangePosition,
         ModifyStats,
         DirectAttack,
@@ -44,8 +46,11 @@ namespace WRLDZ.Duel.TextEffects
         TakeControl,
         PlaceCounters,
         NegateAttack,
+        NegateActivation,
         PreventDamage,
         TreatAsName,
+        /// <summary>Send cards from hand to GY as the resolution (not a cost).</summary>
+        Discard,
         /// <summary>Coin or die then a vocabulary resolution (Barrel: toss then Destroy).</summary>
         Randomize,
         /// <summary>Unaffected / cannot-be-attacked / cannot-be-targeted (Fisherman family).</summary>
@@ -68,6 +73,8 @@ namespace WRLDZ.Duel.TextEffects
             EffectResolutionKind.SpecialSummon,
             EffectResolutionKind.Damage,
             EffectResolutionKind.GainLp,
+            EffectResolutionKind.GainLpReplacement,
+            EffectResolutionKind.PayLp,
             EffectResolutionKind.ChangePosition,
             EffectResolutionKind.ModifyStats,
             EffectResolutionKind.DirectAttack,
@@ -79,6 +86,7 @@ namespace WRLDZ.Duel.TextEffects
             EffectResolutionKind.NegateAttack,
             EffectResolutionKind.PreventDamage,
             EffectResolutionKind.TreatAsName,
+            EffectResolutionKind.Discard,
             EffectResolutionKind.Randomize,
             EffectResolutionKind.Protection
         };
@@ -130,6 +138,7 @@ namespace WRLDZ.Duel.TextEffects
                     EffectActionKind.DestroySpecialSummonedMonsters or
                     EffectActionKind.DestroyOppMonstersAtkLeq or
                     EffectActionKind.SelfDestroyUnlessNamedFaceUp or
+                    EffectActionKind.DestroyThisAfterResolvingTargetingEffect or
                     EffectActionKind.DestroyTokensInflictPer or
                     EffectActionKind.DestroySameNameInControllerHandAndDeck or
                     EffectActionKind.DestroyOppAttackThenDamage or
@@ -145,15 +154,18 @@ namespace WRLDZ.Duel.TextEffects
                 EffectActionKind.PlaceThisOnTopOfDeck => EffectResolutionKind.ReturnToDeck,
                 EffectActionKind.SendFromTopOfDeckToGy => EffectResolutionKind.ReturnToDeck,
                 EffectActionKind.Draw => EffectResolutionKind.Draw,
+                EffectActionKind.DiscardRandomFromOpponentHand => EffectResolutionKind.Discard,
                 EffectActionKind.AddFromGyToHand or
                     EffectActionKind.AddFromDeckToHand or
                     EffectActionKind.AddNamedFromDeckToHand =>
                     EffectResolutionKind.Search,
                 EffectActionKind.SpecialSummonFromGy or
                     EffectActionKind.SpecialSummonFromHand or
+                    EffectActionKind.SpecialSummonFromDeck or
                     EffectActionKind.SpecialSummonNamed or
                     EffectActionKind.SpecialSummonThisFromHand or
-                    EffectActionKind.SpecialSummonFusionFromExtra =>
+                    EffectActionKind.SpecialSummonFusionFromExtra or
+                    EffectActionKind.RitualSummon =>
                     EffectResolutionKind.SpecialSummon,
                 EffectActionKind.SpecialSummonToken => EffectResolutionKind.Token,
                 EffectActionKind.TakeEffectDamage or
@@ -164,6 +176,9 @@ namespace WRLDZ.Duel.TextEffects
                 EffectActionKind.GainLifePoints or
                     EffectActionKind.GainLpEqualToAtk =>
                     EffectResolutionKind.GainLp,
+                EffectActionKind.ConvertOpponentLpGainToDamage =>
+                    EffectResolutionKind.GainLpReplacement,
+                EffectActionKind.PayLifePoints => EffectResolutionKind.PayLp,
                 EffectActionKind.ChangeBattlePosition or
                     EffectActionKind.SetThisFaceDownDefense or
                     EffectActionKind.ChangeThisBattlePosition =>
@@ -171,6 +186,7 @@ namespace WRLDZ.Duel.TextEffects
                 EffectActionKind.ContinuousGainAtkDef or
                     EffectActionKind.ContinuousReduceLevel or
                     EffectActionKind.LoseAtkDefUntilEndOfTurn or
+                    EffectActionKind.GainAtkDefUntilEndOfTurn or
                     EffectActionKind.GainThisAtkUntilEnd or
                     EffectActionKind.GainAtkPerSpellCounter or
                     EffectActionKind.SetAttackingMonsterAtkToZeroThisCalc or
@@ -191,6 +207,8 @@ namespace WRLDZ.Duel.TextEffects
                 EffectActionKind.NegateAttack or
                     EffectActionKind.NegateThisAttack =>
                     EffectResolutionKind.NegateAttack,
+                EffectActionKind.NegateActivation =>
+                    EffectResolutionKind.NegateActivation,
                 EffectActionKind.PreventControllerBattleDamage =>
                     EffectResolutionKind.PreventDamage,
                 EffectActionKind.AlwaysTreatedAsName or
@@ -203,7 +221,11 @@ namespace WRLDZ.Duel.TextEffects
                     EffectActionKind.CannotBeTargetedByEffects or
                     EffectActionKind.ContinuousCannotTargetDragons or
                     EffectActionKind.ContinuousCannotAttack or
-                    EffectActionKind.CannotBeTributedForSummon =>
+                    EffectActionKind.CannotBeTributedForSummon or
+                    EffectActionKind.CannotBeDestroyedByBattle or
+                    EffectActionKind.PiercingBattleDamage or
+                    EffectActionKind.CannotBanishFromGraveyard or
+                    EffectActionKind.CannotTargetCardsInGraveyard =>
                     EffectResolutionKind.Protection,
                 EffectActionKind.PayLpOrDestroyThis =>
                     EffectResolutionKind.Destroy,

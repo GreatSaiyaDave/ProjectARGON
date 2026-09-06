@@ -148,6 +148,7 @@ namespace WRLDZ.Duel.TextEffects
                         Zone = zone,
                         Amount = d.amount,
                         RequiresTargetChoice = d.requiresTargetChoice,
+                        IsPsctTarget = d.isPsctTarget,
                         RequiresLordOfDOnField = d.requiresLordOfDOnField,
                         OpponentTurnOnly = d.opponentTurnOnly,
                         StaysOnField = d.staysOnField,
@@ -230,6 +231,7 @@ namespace WRLDZ.Duel.TextEffects
             public string zone;
             public int amount;
             public bool requiresTargetChoice;
+            public bool isPsctTarget;
             public bool requiresLordOfDOnField;
             public bool opponentTurnOnly;
             public bool staysOnField;
@@ -247,12 +249,13 @@ namespace WRLDZ.Duel.TextEffects
   ""fullyCompiled"": <bool>,
   ""clauses"": [
     {
-      ""timing"": ""Activate|Flip|SentFromFieldToGy|AttackDeclared|OpponentNormalOrFlipSummon|ContinuousWhileFaceUp|DamageCalculation|ThisCardSummoned"",
-      ""action"": ""Draw|Destroy|SpecialSummonFromGy|SpecialSummonFromHand|AddFromGyToHand|AddFromDeckToHand|ChangeBattlePosition|NegateAttack|EndBattlePhase|ApplyWabokuStyle|ApplySwordsOfRevealingLight|BothPlayersDiscardAndRedraw|FusionSummonRegistered|EffectDamageBothFromOriginalAtk|CyberJarStyle|ContinuousCannotTargetDragons|DiscardSelfNoBattleDamageThisBattle|ContinuousGainAtkDef|ContinuousReduceLevel|AlwaysTreatedAsName|ReturnToHand|CanAttackDirectly|ExtraAttacks|LoseAtkDefUntilEndOfTurn|NegateThisAttack|InflictDamageEqualToAtk|GainLpEqualToAtk|Banish|HalveOriginalAtk|DestroyTokensInflictPer|ReturnAllFaceUpFusionsToExtra|BanishThenSameNameFromOppHandDeck|DestroySameNameInControllerHandAndDeck|DestroyOppAttackThenDamage|DestroyAllEquips|DestroyAllEquippedMonsters|FieldTreatedAsName|PreventControllerBattleDamage|SelfDestroyUnlessNamedFaceUp|GainLifePoints|TakeEffectDamage|InflictDamageToOpponent|InflictDamageHalfTributedAtk|SetThisFaceDownDefense|ChangeThisBattlePosition|GrantDirectAttackThisTurn|GainThisAtkUntilEnd|SpecialSummonNamed|AddNamedFromDeckToHand|DestroySpecialSummonedMonsters|DestroyOppMonstersAtkLeq"",
+      ""timing"": ""Activate|Flip|SentFromFieldToGy|AttackDeclared|OpponentNormalOrFlipSummon|ContinuousWhileFaceUp|DamageCalculation|ThisCardSummoned|ThisCardDestroysByBattle|ThisCardInflictsBattleDamage|AfterDamageCalculation|EndOfDamageStep"",
+      ""action"": ""Draw|Destroy|SpecialSummonFromGy|SpecialSummonFromHand|SpecialSummonFromDeck|AddFromGyToHand|AddFromDeckToHand|ChangeBattlePosition|NegateAttack|NegateActivation|EndBattlePhase|ApplyWabokuStyle|ApplySwordsOfRevealingLight|BothPlayersDiscardAndRedraw|FusionSummonRegistered|RitualSummon|EffectDamageBothFromOriginalAtk|CyberJarStyle|ContinuousCannotTargetDragons|DiscardSelfNoBattleDamageThisBattle|DiscardRandomFromOpponentHand|ContinuousGainAtkDef|ContinuousReduceLevel|AlwaysTreatedAsName|ReturnToHand|CanAttackDirectly|ExtraAttacks|LoseAtkDefUntilEndOfTurn|GainAtkDefUntilEndOfTurn|NegateThisAttack|InflictDamageEqualToAtk|GainLpEqualToAtk|Banish|HalveOriginalAtk|DestroyTokensInflictPer|ReturnAllFaceUpFusionsToExtra|BanishThenSameNameFromOppHandDeck|DestroySameNameInControllerHandAndDeck|DestroyOppAttackThenDamage|DestroyAllEquips|DestroyAllEquippedMonsters|FieldTreatedAsName|PreventControllerBattleDamage|SelfDestroyUnlessNamedFaceUp|DestroyThisAfterResolvingTargetingEffect|CannotBeDestroyedByBattle|PiercingBattleDamage|ConvertOpponentLpGainToDamage|CannotBanishFromGraveyard|CannotTargetCardsInGraveyard|GainLifePoints|PayLifePoints|TakeEffectDamage|InflictDamageToOpponent|InflictDamageHalfTributedAtk|SetThisFaceDownDefense|ChangeThisBattlePosition|GrantDirectAttackThisTurn|GainThisAtkUntilEnd|SpecialSummonNamed|AddNamedFromDeckToHand|DestroySpecialSummonedMonsters|DestroyOppMonstersAtkLeq"",
       ""side"": ""Controller|Opponent|Both|Either"",
-      ""zone"": ""None|FieldMonsters|FieldSpellTraps|OppAttackPositionMonsters|OppFaceUpMonsters|EitherGyMonsters|ControllerGySpells|ControllerHandDragons|DeckMonstersAtkLeq|FieldAnyMonster|AttackingMonster|AnyCardOnField|ControllerHandMonsters|AllOtherCardsOnField"",
+      ""zone"": ""None|FieldMonsters|FieldSpellTraps|OppAttackPositionMonsters|OppFaceUpMonsters|EitherGyMonsters|ControllerGySpells|ControllerHandDragons|DeckMonstersAtkLeq|FieldAnyMonster|AttackingMonster|AnyCardOnField|ControllerHandMonsters|ControllerDeckMonsters|AllOtherCardsOnField"",
       ""amount"": <int>,
       ""requiresTargetChoice"": <bool>,
+      ""isPsctTarget"": <bool>,
       ""requiresLordOfDOnField"": <bool>,
       ""opponentTurnOnly"": <bool>,
       ""staysOnField"": <bool>,

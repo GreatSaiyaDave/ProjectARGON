@@ -29,6 +29,7 @@ namespace WRLDZ.Presentation
         readonly List<CardInstance> _cards = new();
         int _indexAt;
         bool _playerSide;
+        string _titleOverride;
         Action<CardInstance> _onPick;
 
         public bool IsOpen => _root != null && _root.activeSelf;
@@ -155,10 +156,11 @@ namespace WRLDZ.Presentation
         }
 
         public void Show(IReadOnlyList<CardInstance> gy, CardDatabase db, bool playerSide,
-            Action<CardInstance> onPick)
+            Action<CardInstance> onPick, string titleOverride = null)
         {
             _db = db;
             _playerSide = playerSide;
+            _titleOverride = titleOverride;
             _onPick = onPick;
             _cards.Clear();
             if (gy != null)
@@ -204,6 +206,7 @@ namespace WRLDZ.Presentation
         {
             if (_root != null) _root.SetActive(false);
             _cards.Clear();
+            _titleOverride = null;
             _onPick = null;
         }
 
@@ -227,7 +230,9 @@ namespace WRLDZ.Presentation
         void Paint()
         {
             var n = _cards.Count;
-            var who = _playerSide ? "YOUR GY" : "OPP GY";
+            var who = string.IsNullOrEmpty(_titleOverride)
+                ? (_playerSide ? "YOUR GY" : "OPP GY")
+                : _titleOverride;
             _title.text = n == 0 ? who : $"{who}  ·  {n}";
             var empty = n == 0;
             if (_empty != null) _empty.gameObject.SetActive(empty);

@@ -1,0 +1,92 @@
+{
+  "format": "wrldz_dk_character_roster",
+  "era": "duelist_kingdom",
+  "erazBandId": "original",
+  "notes": "Duelist Kingdom character lists. Anime-faithful 40-card TCG approximations using cards_db. Missing anime cards are noted per deck.",
+  "characters": [
+    {
+      "file": "character_dk_yugi.json",
+      "name": "Yugi Mutou \u00b7 Duelist Kingdom",
+      "character": "Yugi Mutou",
+      "notes": "Grandpa's deck: Dark Magician, Gaia fusion, Kuriboh, Magical Hats. Closest TCG 40 to the island list."
+    },
+    {
+      "file": "character_dk_yugi_exodia.json",
+      "name": "Yugi Mutou \u00b7 Forbidden One",
+      "character": "Yugi Mutou",
+      "notes": "Kaiba-match Exodia. Five pieces at 1. Heart of the Underdog + stall. Witch of the Black Forest omitted (forbidden)."
+    },
+    {
+      "file": "character_dk_kaiba.json",
+      "name": "Seto Kaiba \u00b7 Duelist Kingdom",
+      "character": "Seto Kaiba",
+      "notes": "Three Blue-Eyes, Battle Ox, La Jinn, Lord of D. / Flute. Crush Card Virus is not in the DB."
+    },
+    {
+      "file": "character_dk_joey.json",
+      "name": "Joey Wheeler \u00b7 Duelist Kingdom",
+      "character": "Joey Wheeler",
+      "notes": "Red-Eyes, Time Wizard, Baby Dragon, Flame Swordsman / Thousand Dragon. Alligator's Sword and Kunai with Chain are not in the DB."
+    },
+    {
+      "file": "character_dk_mai.json",
+      "name": "Mai Valentine \u00b7 Duelist Kingdom",
+      "character": "Mai Valentine",
+      "notes": "Harpie Ladies, Elegant Egotist, Pet Dragon, Sisters. Cyber Shield is not in the DB."
+    },
+    {
+      "file": "character_dk_weevil.json",
+      "name": "Weevil Underwood \u00b7 Duelist Kingdom",
+      "character": "Weevil Underwood",
+      "notes": "Petit Moth + Cocoon into Great Moth / Perfectly Ultimate Great Moth. Eradicating Aerosol is not in the DB."
+    },
+    {
+      "file": "character_dk_rex.json",
+      "name": "Rex Raptor \u00b7 Duelist Kingdom",
+      "character": "Rex Raptor",
+      "notes": "Sword Arm of Dragon, Megazowler, Trakodon, Little D are not in the DB. King Rex / Uraby / Raise Body Heat carry it."
+    },
+    {
+      "file": "character_dk_mako.json",
+      "name": "Mako Tsunami \u00b7 Duelist Kingdom",
+      "character": "Mako Tsunami",
+      "notes": "Fortress Whale and Fiend Kraken are not in the DB. Umi + Legendary Fisherman; Orca Mega-Fortress stands in for the whale."
+    },
+    {
+      "file": "character_dk_pegasus.json",
+      "name": "Maximillion Pegasus \u00b7 Duelist Kingdom",
+      "character": "Maximillion Pegasus",
+      "notes": "Toon World + Toon bosses, Relinquished. Toon Table of Contents and Shadow Toon are not in the DB."
+    },
+    {
+      "file": "character_dk_bakura.json",
+      "name": "Yami Bakura \u00b7 Duelist Kingdom",
+      "character": "Yami Bakura",
+      "notes": "White Magical Hat, Man-Eater Bug, fiends. Change of Heart omitted (forbidden). Dark Energy + Goblin Fan keep the dirty-spell flavor."
+    },
+    {
+      "file": "character_dk_bonz.json",
+      "name": "Bonz \u00b7 Duelist Kingdom",
+      "character": "Bonz",
+      "notes": "Pumpking and the graveyard zombies. Clown Zombie is not in the DB; Yaranzo and Magical Ghost fill that slot."
+    },
+    {
+      "file": "character_dk_panik.json",
+      "name": "PaniK \u00b7 Duelist Kingdom",
+      "character": "PaniK",
+      "notes": "Castle of Dark Illusions. Barox, Dark Chimera, and Metal Guardian are not in the DB; King of Yamimakai / Reaper of the Cards stand in."
+    },
+    {
+      "file": "character_dk_paradox.json",
+      "name": "Paradox Brothers \u00b7 Duelist Kingdom",
+      "character": "Paradox Brothers",
+      "notes": "Sanga, Kazejin, Suijin into Gate Guardian. Dungeon Worm is not in the DB."
+    },
+    {
+      "file": "character_dk_keith.json",
+      "name": "Bandit Keith \u00b7 Duelist Kingdom",
+      "character": "Bandit Keith",
+      "notes": "Barrel Dragon, Slot Machine, Zoa / Metalzoa. Blast Sphere and Pendulum Machine are not in the DB."
+    }
+  ]
+}

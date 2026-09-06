@@ -84,6 +84,13 @@ namespace WRLDZ.Duel.Rules
                 r.Reason = "This card cannot be Normal Summoned/Set.";
                 return r;
             }
+            var summonGate = PsctGrammar.SummonGateNamed(OfficialCardAuthority.OfficialText(card));
+            if (!string.IsNullOrEmpty(summonGate) && !FieldSpellEffects.ControlsFaceUpNamed(who, summonGate))
+            {
+                r.Reason = $"Requires face-up \"{summonGate}\" you control.";
+                return r;
+            }
+
 
             if (!who.Hand.Contains(card))
             {

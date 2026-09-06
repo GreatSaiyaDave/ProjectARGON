@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using WRLDZ.Duel.TextEffects;
 
 namespace WRLDZ.Duel
 {
@@ -177,6 +178,12 @@ namespace WRLDZ.Duel
             engine.Log($"Cost: pay {amount} LP → {who.Name} at {who.LifePoints} LP.");
             if (target != null)
             {
+                if (ContinuousProtections.TargetedEffectBlocked(engine, target, card)) {
+                    engine.Log("Target is protected at resolution.");
+                    SpellTrapEffects.FinishCardPublic(engine, who, card, staysOnField: false);
+                    engine.ContinueAfterResponseActivation(false, false);
+                    return;
+                }
                 target.UntilEndOfTurnAtk -= amount;
                 if (alsoDef) target.UntilEndOfTurnDef -= amount;
                 engine.Log(
@@ -199,6 +206,10 @@ namespace WRLDZ.Duel
                 case "destroy_attacker":
                     if (attacker != null)
                     {
+                        if (ContinuousProtections.TargetedEffectBlocked(engine, attacker, card)) {
+                            engine.Log("Target is protected at resolution.");
+                            break;
+                        }
                         engine.DestroyMonsterPublic(engine.ControllerOf(attacker) ?? opp, attacker);
                         attackNegated = true;
                     }
@@ -227,14 +238,19 @@ namespace WRLDZ.Duel
                 case "negate_this_attack":
                 case "negate_attack_damage":
                 case "negate_attack_gain_lp":
+                    if (fact.action != "negate_this_attack" &&
+                        ContinuousProtections.TargetedEffectBlocked(engine, attacker, card)) {
+                        engine.Log("Target is protected at resolution.");
+                        break;
+                    }
+
                     engine.Log("Attack negated.");
                     attackNegated = true;
                     if (fact.action == "negate_attack_damage" && attacker != null)
                         engine.ApplyEffectDamage(opp, attacker.CurrentAtk, card.Name);
                     if (fact.action == "negate_attack_gain_lp" && attacker != null)
                     {
-                        who.LifePoints += attacker.CurrentAtk;
-                        engine.Log($"{who.Name} gains {attacker.CurrentAtk} LP ({who.LifePoints}).");
+                        TextEffectRuntime.ApplyLifePointGain(engine, who, attacker.CurrentAtk, card?.Name);
                     }
 
                     break;
@@ -250,6 +266,10 @@ namespace WRLDZ.Duel
                 case "lose_atk_eot":
                     if (attacker != null)
                     {
+                        if (ContinuousProtections.TargetedEffectBlocked(engine, attacker, card)) {
+                            engine.Log("Target is protected at resolution.");
+                            break;
+                        }
                         attacker.UntilEndOfTurnAtk -= Math.Max(0, fact.amount);
                         engine.Log(
                             $"{attacker.Name} loses {fact.amount} ATK until the End Phase " +
@@ -263,7 +283,13 @@ namespace WRLDZ.Duel
                     var summoner = engine.PendingResponse?.Summoner;
                     if (summoned != null && summoner != null &&
                         summoned.CurrentAtk >= Math.Max(1, fact.amount))
+                    {
+                        if (ContinuousProtections.TargetedEffectBlocked(engine, summoned, card)) {
+                            engine.Log("Target is protected at resolution.");
+                            break;
+                        }
                         engine.DestroyMonsterPublic(summoner, summoned);
+                    }
                     break;
                 }
             }
