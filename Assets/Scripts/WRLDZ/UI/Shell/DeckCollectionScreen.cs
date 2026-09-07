@@ -223,6 +223,8 @@ namespace WRLDZ.UI.Shell
                 CloseAll,
                 presentation);
 
+            Debug.Log("[WRLDZ] DECK HubChrome overlay — Hierarchy should show PhoneMenu_DECK, not DeckMenuRoot.");
+
             var root = frame.Root;
             var body = frame.BodyHost;
 
