@@ -1,41 +1,41 @@
-HOW TO SEE THE LATEST WRLDZ ON YOUR PC
-======================================
+WHY UNITY HUB LOOKS "SYNCED" BUT GITHUB IS NOT
+==============================================
 
-Unity Hub does NOT download GitHub. Typing git commands into the Unity
-Console does nothing. The Console is not a Terminal.
+This project's Editor used to be set to "Unity Version Control"
+(Plastic / UVCS). Hub's green / synced mark is that Unity cloud
+(or a GitHub *link* in Hub 3.17). It is NOT an automatic download
+of every commit Cloud Agents push to:
 
-You should see BUILD  PLATES-0907  on the title screen and Desktop Lab.
-If you do not, Hub is opening an old folder.
+  https://github.com/GreatSaiyaDave/ProjectARGON
 
-1. Close the Unity Editor and Unity Hub.
+"Connected to source control" means Hub knows which repo the
+folder is tied to. It does not pull when someone pushes main.
 
-2. On this computer, open a web browser:
-   https://github.com/GreatSaiyaDave/ProjectARGON/archive/refs/heads/main.zip
+Hover the Hub source-control icon. The URL must be
+GreatSaiyaDave/ProjectARGON. If it is Unity Version Control, or
+a different GitHub repo, you are synced to the wrong place.
 
-3. Extract the zip. Inside you want the folder that contains BOTH
-   "Assets" and "ProjectSettings".
+ONE-TIME FIX (Unity Hub 3.17+)
+------------------------------
+1. Close the Unity Editor.
+2. Hub → Projects → Add → Add from repository.
+3. Pick GitHub (sign in / PAT if asked).
+4. Choose GreatSaiyaDave / ProjectARGON, branch main.
+5. Wait for the clone. Open THAT project with 6000.5.10f1.
+   Do not keep opening the old folder.
 
-4. Open Unity Hub → Add → choose THAT folder.
-   Editor version: 6000.5.10f1
-   (If Hub still lists the old project, Add the new folder anyway and
-   open the new one.)
+AFTER THAT, EACH UPDATE
+-----------------------
+In the Editor:  WRLDZ → Get Latest from GitHub
+Then:           WRLDZ → Lab → Open Desktop Lab App
 
-5. In Unity, Project window search box:  WRLDZ_BUILD
-   You must see that file. If you do not, you are still in the old copy.
+Title / Desktop Lab must show BUILD PLATES-0907.
 
-6. Top menu:  WRLDZ → Lab → Open Desktop Lab App
-   Click  Play Boot + Lab
-   The first screen should say DESKTOP LAB and PLATES-0907.
+Project search WRLDZ_BUILD — if that file is missing, Hub is
+still on the old copy.
 
-7. Click  OVERWORLD (WASD MAP)
-   Tap the Eye (MENU), then DECK.
-   Console (the Unity log, bottom of the Editor) should mention
-   BUILD PLATES-0907  and  HubChrome overlay.
-
-Optional, only if you already use git in Linux Terminal (the black
-window in your apps, never Unity Console):
-
-  cd ~
-  git clone https://github.com/GreatSaiyaDave/ProjectARGON.git ProjectARGON-main
-
-Then Hub → Add → /home/YOU/ProjectARGON-main
+ZIP FALLBACK (no git / Hub clone failed)
+----------------------------------------
+https://github.com/GreatSaiyaDave/ProjectARGON/archive/refs/heads/main.zip
+Extract the folder that contains Assets + ProjectSettings.
+Hub → Add that folder.

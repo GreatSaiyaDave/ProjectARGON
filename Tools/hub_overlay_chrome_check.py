@@ -133,13 +133,24 @@ def main() -> int:
 
     build = ROOT / "Assets/Scripts/WRLDZ/Core/WrldzBuild.cs"
     must_contain(build, "PLATES-0907", "lost owner-visible BUILD stamp")
-    must_contain(ROOT / "GET_THE_GAME.txt", "main.zip", "lost owner zip instructions")
+    must_contain(ROOT / "GET_THE_GAME.txt", "Add from repository", "lost Hub Add-from-repository steps")
+    must_contain(ROOT / "GET_THE_GAME.txt", "main.zip", "lost owner zip fallback")
     must_contain(ROOT / "Assets/WRLDZ_BUILD.txt", "PLATES-0907", "lost Unity Project BUILD file")
     must_contain(
         ROOT / ".cursor/skills/owner-linux-unity/SKILL.md",
         "Never give `git pull origin main` as the only step",
         "lost owner-linux-unity skill",
     )
+    must_contain(
+        ROOT / "Assets/Editor/WRLDZ/GitHubPullMenu.cs",
+        "Get Latest from GitHub",
+        "lost in-Editor GitHub pull menu",
+    )
+    vc = (ROOT / "ProjectSettings/VersionControlSettings.asset").read_text(encoding="utf-8")
+    if "Unity Version Control" in vc:
+        fail("project Version Control is still Plastic/UVCS (Hub 'synced' != GitHub)")
+    if "Visible Meta Files" not in vc:
+        fail("project Version Control is not Visible Meta Files (git)")
     menu = ROOT / "Assets/Editor/WRLDZ/DesktopLabMenu.cs"
     must_contain(menu, "PrefSkipBootCascade", "Lab menu no longer skips splash into Desktop Lab")
     title = ROOT / "Assets/Scripts/WRLDZ/UI/BootFlowUI.cs"

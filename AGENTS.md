@@ -6,24 +6,17 @@
 
 The owner is **not a programmer** and plays on **Linux Unity Hub**. Read `.cursor/skills/owner-linux-unity/SKILL.md` before telling them how to see updates.
 
-## How the owner sees updates (never git-pull-only)
+## How the owner sees updates (Hub "synced" is not GitHub pull)
 
-Unity Hub does **not** fetch GitHub. This Cloud VM is **not** their PC. The Unity Console is **not** a terminal.
+Unity Hub's green / connected mark is **Unity Version Control (Plastic)** or a GitHub *link*. Cloud Agents push `github.com/GreatSaiyaDave/ProjectARGON`. Hub does not pull those commits by itself.
 
-Reliable path (also in `GET_THE_GAME.txt`):
+**One-time:** Hub → Add → **Add from repository** → GitHub → `GreatSaiyaDave/ProjectARGON` → main → open **that** project (`6000.5.10f1`).
 
-1. Close Unity.
-2. Browser zip: https://github.com/GreatSaiyaDave/ProjectARGON/archive/refs/heads/main.zip — extract the folder that contains `Assets` + `ProjectSettings`.
-3. Hub → **Add** that folder → open **6000.5.10f1**.
-4. Project search `WRLDZ_BUILD`. Must exist. Stamp inside / on title: **PLATES-0907**.
-5. **WRLDZ → Lab → Open Desktop Lab App** → Play Boot + Lab. Console: `[WRLDZ] BUILD PLATES-0907`.
-6. **OVERWORLD (WASD MAP)** → Eye → DECK. Hierarchy `PhoneMenu_DECK`.
+**Each update:** Editor **WRLDZ → Get Latest from GitHub**, then **WRLDZ → Lab → Open Desktop Lab App**. Proof: Project search `WRLDZ_BUILD`, title **PLATES-0907**.
 
-If they say a command is not working or they see no changes: Hub is on an **old folder**. Give the zip/Add path again. Do not repeat `git pull origin main` as the only step.
+Do not tell them to `git pull` as the only step. Do not tell them Hub will auto-download agent pushes. Details: `.cursor/skills/owner-linux-unity/SKILL.md` and `GET_THE_GAME.txt`.
 
-Editor Play on Boot = splash / TOUCH TO BEGIN unless the Lab menu set skip-splash. Overlay chrome is **runtime**. Edit-mode scenes look unchanged.
-
-This Cloud VM has **no Unity Editor**. Verify engine with `Tools/HeadlessEngine/run.sh`. Verify UI with the Python guards below.
+Editor Play on Boot = splash unless the Lab menu. Overlay chrome is **runtime**. This Cloud VM has **no Unity Editor**. Python: `python3 Tools/hub_overlay_chrome_check.py && python3 Tools/ygo_ui_lore_check.py && python3 Tools/deck_editor_layout_check.py`.
 
 ## What is already on `main` (do not re-implement)
 
