@@ -8,7 +8,7 @@ The owner is **not a programmer** and plays on **Linux Unity Hub**. Read `.curso
 
 ## How the owner sees updates
 
-If they do not see **WRLDZ → Get Latest from GitHub**, the folder is old. Tell them to close Unity, download `https://github.com/GreatSaiyaDave/ProjectARGON/archive/refs/heads/main.zip`, Hub **Add** the folder that contains `Assets`. Details: `.cursor/skills/owner-linux-unity/` and `GET_THE_GAME.txt`.
+Agents write **GitHub only** — never the owner's Linux Unity folder. Keep `DMWRDLZUnityProject/ProjectARGON` (in-place pull). Do not zip-replace or Hub-Add a second copy. Details: `.cursor/skills/owner-linux-unity/` and `GET_THE_GAME.txt`.
 
 ## What is already on `main` (do not re-implement)
 
@@ -26,7 +26,7 @@ Merged from other agent branches (2026-09-07):
 
 ## Skills (read before touching those areas)
 
-- **Owner cannot see updates / git pull failed:** `.cursor/skills/owner-linux-unity/`
+- **Owner cannot see updates / thought agents edited local files:** `.cursor/skills/owner-linux-unity/` — agents write GitHub only; never zip-replace `DMWRDLZUnityProject/ProjectARGON`
 - Rules / effects / PSCT: `.cursor/skills/ygo-gamedev/`
 - Menus, HUD, lore tone: `.cursor/skills/ygo-ui-lore/` — no Konami chrome dumps, no scraping DuelingBook/MD
 - Unity Editor automation: `.cursor/skills/unity-skills/`

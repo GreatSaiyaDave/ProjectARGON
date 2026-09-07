@@ -38,16 +38,13 @@ namespace WRLDZ.EditorTools
             if (!Directory.Exists(Path.Combine(root, ".git")))
             {
                 EditorUtility.DisplayDialog(
-                    "This folder is not the GitHub repo",
-                    "Unity Hub is opening a local copy. The green / synced mark is " +
-                    "Unity Version Control (Plastic) or a GitHub *link*. It does not " +
-                    "download commits Cloud Agents push to GitHub.\n\n" +
-                    "One-time fix in Unity Hub:\n" +
-                    "1. Close this Editor.\n" +
-                    "2. Projects → Add → Add from repository.\n" +
-                    "3. GitHub → " + ExpectedRepo + " → branch main.\n" +
-                    "4. Open THAT new project (6000.5.10f1).\n" +
-                    "5. WRLDZ → Get Latest from GitHub whenever you want updates.",
+                    "This folder is not a git copy yet",
+                    "Hub linked GitHub as a bookmark. It did not download commits.\n\n" +
+                    "Keep THIS folder. Close Unity. Open Linux Terminal " +
+                    "(not this Console). Type cd, space, drag this ProjectARGON " +
+                    "folder onto the Terminal, Enter, then paste:\n\n" +
+                    "curl -fsSL https://raw.githubusercontent.com/GreatSaiyaDave/ProjectARGON/main/Tools/get_latest_into_this_folder.sh | bash\n\n" +
+                    "That updates this folder in place and keeps local work.",
                     "OK");
                 return;
             }
@@ -58,8 +55,7 @@ namespace WRLDZ.EditorTools
                     "Git is not installed",
                     "This PC needs git for in-Editor pulls.\n\n" +
                     "Linux: open Terminal (not the Unity Console) and run:\n" +
-                    "sudo apt install git\n\n" +
-                    "Or in Hub: Add from repository → GitHub → " + ExpectedRepo,
+                    "sudo apt install git"
                     "OK");
                 return;
             }
@@ -74,7 +70,9 @@ namespace WRLDZ.EditorTools
                     (string.IsNullOrWhiteSpace(remote.Text) ? "(none)" : remote.Text.Trim()) +
                     "\n\nCloud Agents push " + ExpectedRepo + " on GitHub. " +
                     "Hub can look synced to a different repo or to Unity Version Control.\n\n" +
-                    "Hub → Add from repository → GitHub → " + ExpectedRepo + " → main.",
+                    "Do not Add a second Hub project. Close Unity and run " +
+                    "Tools/get_latest_into_this_folder.sh from Linux Terminal " +
+                    "in this folder (see GET_THE_GAME.txt).",
                     "OK");
                 return;
             }
@@ -88,8 +86,9 @@ namespace WRLDZ.EditorTools
             {
                 Fail(
                     "GitHub pull failed.\n\n" + fetch.Text + "\n" + pull.Text +
-                    "\nIf this folder has local edits, Hub → Add from repository " +
-                    "and open a fresh clone of " + ExpectedRepo + ".");
+                    "\nIf this folder has local edits, the pull stopped on purpose. " +
+                    "Do not zip-replace. Close Unity and run " +
+                    "Tools/get_latest_into_this_folder.sh (see GET_THE_GAME.txt).");
                 return;
             }
 
