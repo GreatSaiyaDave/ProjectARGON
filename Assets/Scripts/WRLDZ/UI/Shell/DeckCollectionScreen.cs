@@ -1629,15 +1629,8 @@ namespace WRLDZ.UI.Shell
                     BuildConstructionBoard(phase, st, 0.00f, 0.00f, 0.615f, 0.840f);
                     PinBelow(phase.Find("ConstructionBoard") as RectTransform,
                         0f, 0.615f, chromeBottom, 0f);
-                    var listContent = ChipGrid(phase, st, 0.630f, 0.00f, 1f, 0.800f, "PoolGrid",
-                        out st.PoolScroll);
-                    st.PoolGrid = listContent;
-                    // ChipGrid returns the scroll *content*. Pinning that with
-                    // phase-normalized x0=0.630 packed chips into the right 37%
-                    // of the already-right CARD LIST well (empty holo, clipped
-                    // column). Pin the panel instead.
-                    PinBelow(st.PoolScroll.GetComponent<RectTransform>(),
-                        0.630f, 1f, chromeBottom + 28f, 0f);
+                    st.PoolGrid = ChipGrid(phase, st, 0.630f, 0.00f, 1f, 0.800f, "PoolGrid",
+                        out st.PoolScroll, pinFromTop: chromeBottom + 28f);
                     RefitPool(st);
                     var listHead = Label(phase, "CARD LIST", 12, DuelystUi.GoldHot, TextAnchor.MiddleLeft);
                     PinTop(listHead.rectTransform, 0.630f, 0.82f, chromeBottom, 26f);
@@ -1649,9 +1642,8 @@ namespace WRLDZ.UI.Shell
                     BuildConstructionBoard(phase, st, 0.00f, 0.360f, 1f, 0.840f);
                     PinBelow(phase.Find("ConstructionBoard") as RectTransform,
                         0f, 1f, chromeBottom, 0.360f);
-                    var listPanel = ChipGrid(phase, st, 0f, 0.00f, 1f, 0.320f, "PoolGrid",
+                    st.PoolGrid = ChipGrid(phase, st, 0f, 0.00f, 1f, 0.320f, "PoolGrid",
                         out st.PoolScroll);
-                    st.PoolGrid = listPanel;
                     RefitPool(st);
                     var listHead = Label(phase, "CARD LIST", 12, DuelystUi.GoldHot, TextAnchor.MiddleLeft);
                     FloatingPanel.Place(listHead.rectTransform, 0.02f, 0.320f, 0.40f, 0.358f);
@@ -3627,17 +3619,20 @@ namespace WRLDZ.UI.Shell
         }
 
         /// <summary>
-        /// CARD LIST well. Returns the scroll content (chip host). The panel
-        /// itself is scroll's transform — pin that, never the content, or
-        /// phase-normalized anchors squeeze the chips into the right edge.
+        /// CARD LIST well. Returns the scroll content (chip host). Pins the
+        /// outer panel, never the content — phase-normalized anchors on the
+        /// chip host packed the collection into the right edge of the well.
         /// </summary>
         static Transform ChipGrid(Transform parent, State st, float x0, float y0, float x1, float y1,
-            string name, out ScrollRect scroll)
+            string name, out ScrollRect scroll, float pinFromTop = -1f)
         {
             var panel = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(ScrollRect),
                 typeof(Button));
             panel.transform.SetParent(parent, false);
-            FloatingPanel.Place(panel.GetComponent<RectTransform>(), x0, y0, x1, y1);
+            var panelRt = panel.GetComponent<RectTransform>();
+            FloatingPanel.Place(panelRt, x0, y0, x1, y1);
+            if (pinFromTop >= 0f)
+                PinBelow(panelRt, x0, x1, pinFromTop, y0);
             var pImg = panel.GetComponent<Image>();
             var listPlate = ImagineAssets.PanelHolo() ?? ImagineAssets.PanelMenuGlass();
             if (listPlate != null)
@@ -3669,12 +3664,11 @@ namespace WRLDZ.UI.Shell
             var content = new GameObject("C", typeof(RectTransform));
             content.transform.SetParent(vp.transform, false);
             var crt = content.GetComponent<RectTransform>();
-            // Top-left origin so chips tile from the panel's left edge. Pivot 0.5
-            // plus GridLayoutGroup was packing the collection into a thin strip
-            // on the far right of the holo well.
+            // Stretch the full viewport width. Pivot Y=1 so vertical scroll
+            // grows downward; X=0.5 is what ScrollRect expects.
             crt.anchorMin = new Vector2(0f, 1f);
             crt.anchorMax = new Vector2(1f, 1f);
-            crt.pivot = new Vector2(0f, 1f);
+            crt.pivot = new Vector2(0.5f, 1f);
             crt.offsetMin = Vector2.zero;
             crt.offsetMax = Vector2.zero;
 
@@ -3702,6 +3696,37 @@ namespace WRLDZ.UI.Shell
         {
             if (st?.PoolGrid is RectTransform rt)
                 rt.GetComponent<DeckPoolFit>()?.Fit(force: true);
+        }
+
+        /// <summary>
+        /// Pure CARD LIST tile math. Keep in lockstep with
+        /// Tools/deck_editor_layout_check.py.
+        /// </summary>
+        internal static class DeckPoolLayout
+        {
+            public const float Pad = 6f;
+            public const float TargetW = 96f;
+            public const int MinCols = 3;
+            public const int MaxCols = 12;
+
+            public static int Columns(float viewportW, float gap)
+            {
+                return Mathf.Clamp(
+                    Mathf.FloorToInt((viewportW - Pad * 2f + gap) / (TargetW + gap)),
+                    MinCols, MaxCols);
+            }
+
+            public static float CardWidth(float viewportW, int cols, float gap)
+            {
+                return (viewportW - Pad * 2f - gap * (cols - 1)) / cols;
+            }
+
+            public static Vector2 ChipPos(int col, int row, float cardW, float cardH, float gap)
+            {
+                return new Vector2(
+                    Pad + col * (cardW + gap),
+                    -(Pad + row * (cardH + gap)));
+            }
         }
 
         /// <summary>
@@ -3740,22 +3765,29 @@ namespace WRLDZ.UI.Shell
                 _lastN = n;
                 _lastW = w;
                 _lastH = h;
-                const float pad = 6f;
+                const float pad = DeckPoolLayout.Pad;
                 const float gap = ChipGap;
-                const float target = 96f;
-                var cols = Mathf.Clamp(
-                    Mathf.FloorToInt((w - pad * 2f + gap) / (target + gap)), 3, 12);
-                var cardW = (w - pad * 2f - gap * (cols - 1)) / cols;
+                var cols = DeckPoolLayout.Columns(w, gap);
+                var cardW = DeckPoolLayout.CardWidth(w, cols, gap);
                 var cardH = cardW * (ChipH / ChipW);
                 var rows = Mathf.Max(1, Mathf.CeilToInt(Mathf.Max(1, n) / (float)cols));
                 var totalH = pad * 2f + rows * cardH + Mathf.Max(0, rows - 1) * gap;
-                rt.anchorMin = new Vector2(0f, 1f);
-                rt.anchorMax = new Vector2(1f, 1f);
-                rt.pivot = new Vector2(0f, 1f);
-                rt.anchoredPosition = Vector2.zero;
-                rt.offsetMin = Vector2.zero;
-                rt.offsetMax = Vector2.zero;
+                // Preserve vertical scroll. Zeroing anchoredPosition every
+                // LateUpdate jumped CARD LIST back to the top while scrolling.
+                var scrollY = rt.anchoredPosition.y;
+                if (rt.anchorMin.x > 0.01f || rt.anchorMax.x < 0.99f)
+                {
+                    rt.anchorMin = new Vector2(0f, 1f);
+                    rt.anchorMax = new Vector2(1f, 1f);
+                    rt.pivot = new Vector2(0.5f, 1f);
+                }
+                // Full viewport width. Do not touch offsetMin.y / offsetMax.y
+                // or a stale PinBelow on content would fight the scroll offset.
+                rt.offsetMin = new Vector2(0f, rt.offsetMin.y);
+                rt.offsetMax = new Vector2(0f, rt.offsetMax.y);
+
                 rt.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, Mathf.Max(h, totalH));
+                rt.anchoredPosition = new Vector2(0f, scrollY);
                 for (var i = 0; i < n; i++)
                 {
                     var child = rt.GetChild(i) as RectTransform;
@@ -3766,8 +3798,8 @@ namespace WRLDZ.UI.Shell
                     child.anchorMax = new Vector2(0f, 1f);
                     child.pivot = new Vector2(0f, 1f);
                     child.sizeDelta = new Vector2(cardW, cardH);
-                    child.anchoredPosition = new Vector2(
-                        pad + col * (cardW + gap), -(pad + row * (cardH + gap)));
+                    child.anchoredPosition = DeckPoolLayout.ChipPos(
+                        col, row, cardW, cardH, gap);
                 }
 
                 _fitting = false;
