@@ -157,7 +157,9 @@ namespace WRLDZ.UI.Shell
 
         static void NavBtn(Transform parent, string label, Sprite icon, System.Action onClick, bool gold = false)
         {
-            var b = FloatingPanel.PrimaryButton(parent, label, onClick, gold: gold);
+            var b = HubChrome.Capsule(parent, label, onClick,
+                gold ? MenuCommandButton.Kind.Gold : MenuCommandButton.Kind.Primary,
+                centerTitle: true, titleSize: 14);
             b.GetComponent<LayoutElement>().minHeight = FloatingPanel.MinButtonHeight;
             if (icon != null)
             {
@@ -378,7 +380,8 @@ namespace WRLDZ.UI.Shell
             var body = FloatingPanel.Body(frame.BodyHost, BodyFor(id), 15);
             FloatingPanel.Grid.Full(body.rectTransform, 0.20f, 0.98f);
             body.alignment = TextAnchor.UpperLeft;
-            var close = FloatingPanel.PrimaryButton(frame.BodyHost, "CLOSE", CloseCurrent);
+            var close = HubChrome.Capsule(frame.BodyHost, "CLOSE", CloseCurrent,
+                MenuCommandButton.Kind.Gold, centerTitle: true, titleSize: 16);
             FloatingPanel.Grid.Full(close.GetComponent<RectTransform>(), 0.04f, 0.16f);
 
             _overlays[id] = frame.Root.gameObject;

@@ -336,38 +336,10 @@ namespace WRLDZ.UI.Shell
             if (t != null && !open) t.color = DuelystUi.TextMuted;
         }
 
-        static void Head(Transform host, string text)
-        {
-            var go = new GameObject("H", typeof(RectTransform), typeof(LayoutElement));
-            go.transform.SetParent(host, false);
-            go.GetComponent<LayoutElement>().minHeight = 28;
-            var t = FloatingPanel.Body(go.transform, text, 13);
-            FloatingPanel.Place(t.rectTransform, 0.02f, 0.1f, 0.98f, 0.9f);
-            t.color = DuelystUi.GoldHot;
-            t.alignment = TextAnchor.MiddleLeft;
-        }
+        static void Head(Transform host, string text) => HubChrome.ListHead(host, text);
 
-        static void Row(Transform host, string text, Action onClick)
-        {
-            var go = new GameObject("Row", typeof(RectTransform), typeof(Image), typeof(Button),
-                typeof(LayoutElement));
-            go.transform.SetParent(host, false);
-            go.GetComponent<LayoutElement>().minHeight = text != null && text.IndexOf('\n') >= 0 ? 68 : 48;
-            var img = go.GetComponent<Image>();
-            img.sprite = UiFoundation.WhiteSprite();
-            img.color = new Color(0.05f, 0.08f, 0.14f, 0.9f);
-            var t = FloatingPanel.Body(go.transform, text, 13);
-            FloatingPanel.Place(t.rectTransform, 0.04f, 0.08f, 0.96f, 0.92f);
-            t.alignment = TextAnchor.MiddleLeft;
-            t.color = DuelystUi.TextCream;
-            t.horizontalOverflow = HorizontalWrapMode.Wrap;
-            t.verticalOverflow = VerticalWrapMode.Truncate;
-            var btn = go.GetComponent<Button>();
-            if (onClick != null)
-                btn.onClick.AddListener(() => onClick());
-            else
-                btn.interactable = false;
-        }
+        static void Row(Transform host, string text, Action onClick) =>
+            HubChrome.ListRow(host, text, onClick);
 
         static (Transform list, Text status) ListHost(Transform body)
         {
@@ -381,7 +353,7 @@ namespace WRLDZ.UI.Shell
             FloatingPanel.Place(scroll.GetComponent<RectTransform>(), 0.01f, 0.12f, 0.99f, 0.99f);
             var bg = scroll.GetComponent<Image>();
             bg.sprite = UiFoundation.WhiteSprite();
-            bg.color = new Color(0.03f, 0.05f, 0.09f, 0.55f);
+            bg.color = HubChrome.WellFill;
 
             var viewport = new GameObject("Viewport", typeof(RectTransform), typeof(RectMask2D), typeof(Image));
             viewport.transform.SetParent(scroll.transform, false);

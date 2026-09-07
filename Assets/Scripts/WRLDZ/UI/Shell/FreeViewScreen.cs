@@ -51,7 +51,7 @@ namespace WRLDZ.UI.Shell
             FloatingPanel.Stretch(rt);
             var bg = go.GetComponent<Image>();
             bg.sprite = UiFoundation.WhiteSprite();
-            bg.color = new Color(0.02f, 0.03f, 0.05f, 0.96f);
+            bg.color = HubChrome.Dusk;
             bg.raycastTarget = true;
 
             var view = go.AddComponent<FreeViewScreen>();
@@ -62,26 +62,18 @@ namespace WRLDZ.UI.Shell
 
         void BuildChrome(RectTransform root)
         {
-            var title = FloatingPanel.Title(root, "FREE VIEW", 20);
-            FloatingPanel.Place(title.rectTransform, 0.16f, 0.945f, 0.62f, 0.995f);
+            HubChrome.HeaderBar(root, "FREE VIEW",
+                "Seat cards on your disk · models project in the arena",
+                () => _onClose?.Invoke(), out _, out _);
 
-            var sub = FloatingPanel.Body(root, "Seat cards on your disk · models project in the arena", 12);
-            FloatingPanel.Place(sub.rectTransform, 0.16f, 0.905f, 0.70f, 0.945f);
-            sub.color = DuelystUi.Cyan;
-
-            var back = FloatingPanel.PrimaryButton(root, "×", () =>
-            {
-                _onClose?.Invoke();
-            });
-            FloatingPanel.Place(back.GetComponent<RectTransform>(), 0.02f, 0.935f, 0.14f, 0.99f);
-
-            var clear = FloatingPanel.PrimaryButton(root, "CLEAR", ClearField);
-            FloatingPanel.Place(clear.GetComponent<RectTransform>(), 0.72f, 0.935f, 0.98f, 0.99f);
+            var clear = HubChrome.Capsule(root, "CLEAR", ClearField, MenuCommandButton.Kind.Danger,
+                centerTitle: true, titleSize: 16);
+            FloatingPanel.Place(clear.GetComponent<RectTransform>(), 0.72f, 0.790f, 0.96f, 0.848f);
 
             // AR viewport — disk + arena
             var stageHost = new GameObject("StageHost", typeof(RectTransform)).GetComponent<RectTransform>();
             stageHost.SetParent(root, false);
-            FloatingPanel.Place(stageHost, 0.02f, 0.42f, 0.98f, 0.90f);
+            FloatingPanel.Place(stageHost, 0.02f, 0.42f, 0.98f, 0.78f);
 
             try
             {
@@ -141,7 +133,7 @@ namespace WRLDZ.UI.Shell
             FloatingPanel.Place(catalog.GetComponent<RectTransform>(), 0.02f, 0.02f, 0.98f, 0.262f);
             var cimg = catalog.GetComponent<Image>();
             cimg.sprite = UiFoundation.WhiteSprite();
-            cimg.color = new Color(0.04f, 0.05f, 0.08f, 0.92f);
+            cimg.color = HubChrome.WellFill;
 
             var viewport = new GameObject("Viewport", typeof(RectTransform), typeof(RectMask2D));
             viewport.transform.SetParent(catalog.transform, false);
@@ -179,19 +171,20 @@ namespace WRLDZ.UI.Shell
 
         void ZoneChip(Transform parent, string label, RulesZoneKind kind, int index)
         {
-            var b = FloatingPanel.PrimaryButton(parent, label, () => PlaceOn(kind, index));
+            var b = HubChrome.Capsule(parent, label, () => PlaceOn(kind, index),
+                MenuCommandButton.Kind.Primary, centerTitle: true, titleSize: 14);
             var le = b.GetComponent<LayoutElement>() ?? b.gameObject.AddComponent<LayoutElement>();
-            le.minHeight = 28;
-            le.preferredHeight = 32;
+            le.minHeight = 36;
+            le.preferredHeight = 40;
         }
 
         void FilterChip(Transform parent, string label, CatalogFilter filter)
         {
-            FloatingPanel.PrimaryButton(parent, label, () =>
+            HubChrome.Capsule(parent, label, () =>
             {
                 _filter = filter;
                 RebuildCatalog();
-            });
+            }, MenuCommandButton.Kind.Primary, centerTitle: true, titleSize: 14);
         }
 
         void BootSandbox()

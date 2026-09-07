@@ -224,11 +224,12 @@ namespace WRLDZ.UI
         static void Row(Transform root, ref float y, float h, float gap,
             string title, string blurb, bool gold, Action onClick)
         {
-            var b = FloatingPanel.PrimaryButton(root, title, () =>
+            var b = HubChrome.Capsule(root, title, () =>
             {
                 FreeUiKit.PlayConfirm();
                 onClick?.Invoke();
-            }, gold: gold);
+            }, gold ? MenuCommandButton.Kind.Gold : MenuCommandButton.Kind.Primary,
+                blurb, centerTitle: false, titleSize: 20);
             FloatingPanel.Place(b.GetComponent<RectTransform>(), 0.08f, y - h, 0.92f, y);
             // Subtitle under button via status only for compact layout
             y -= h + gap;

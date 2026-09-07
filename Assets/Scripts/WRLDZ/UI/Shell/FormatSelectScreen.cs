@@ -73,7 +73,16 @@ namespace WRLDZ.UI.Shell
             };
 
             foreach (var c in cards)
-                AddCard(scroll.transform, c);
+                HubChrome.FeaturedCard(scroll.transform, c.Title, c.Rules + "\n" + c.Lp,
+                    c.Unlocked && c.Play != null
+                        ? () =>
+                        {
+                            FreeUiKit.PlayConfirm();
+                            c.Play();
+                        }
+                        : null,
+                    gold: true);
+
 
             return hostGo.GetComponent<RectTransform>();
         }
@@ -137,42 +146,6 @@ namespace WRLDZ.UI.Shell
             catch (System.InvalidOperationException)
             {
                 return false;
-            }
-        }
-
-        static void AddCard(Transform parent, FormatCard c)
-        {
-            var row = FloatingPanel.Create(parent, c.Title, goldEdge: true);
-            var le = row.gameObject.AddComponent<LayoutElement>();
-            le.minHeight = 152f;
-            le.preferredHeight = 160f;
-
-            var t = FloatingPanel.Title(row, c.Title, 16);
-            FloatingPanel.Place(t.rectTransform, 0.04f, 0.58f, 0.66f, 0.94f);
-            t.horizontalOverflow = HorizontalWrapMode.Overflow;
-            t.verticalOverflow = VerticalWrapMode.Overflow;
-            t.resizeTextForBestFit = false;
-
-            var rules = FloatingPanel.Body(row, c.Rules + "\n" + c.Lp, 13);
-            FloatingPanel.Place(rules.rectTransform, 0.04f, 0.08f, 0.66f, 0.56f);
-            rules.verticalOverflow = VerticalWrapMode.Overflow;
-            rules.color = DuelystUi.TextMuted;
-
-            if (c.Unlocked && c.Play != null)
-            {
-                var play = FloatingPanel.PrimaryButton(row, "START", () =>
-                {
-                    FreeUiKit.PlayConfirm();
-                    c.Play();
-                }, gold: true);
-                FloatingPanel.Place(play.GetComponent<RectTransform>(), 0.70f, 0.18f, 0.96f, 0.82f);
-            }
-            else
-            {
-                var lockL = FloatingPanel.Body(row, "LOCKED", 16);
-                lockL.color = DuelystUi.Danger;
-                lockL.alignment = TextAnchor.MiddleCenter;
-                FloatingPanel.Place(lockL.rectTransform, 0.70f, 0.18f, 0.96f, 0.82f);
             }
         }
     }

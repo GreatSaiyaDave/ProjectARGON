@@ -6,9 +6,9 @@ using WRLDZ.UI.Shell;
 namespace WRLDZ.UI
 {
     /// <summary>
-    /// Live-duel HUD as small glass islands — phase, status, phase CTAs.
-    /// LP is on the disk hub (primary) and as street callouts on change.
-    /// Windows are glanceable (cream type + heavy outline) and mostly non-blocking.
+    /// Live-duel HUD as small glass islands. TCG-client grammar:
+    /// YOU LP (cyan, left) · gold phase + pips (center) · OPP LP (magenta, right).
+    /// Deck / GY / Extra stay on the YOU island. Glanceable, mostly non-blocking.
     /// </summary>
     public class DuelFloatingHud : MonoBehaviour
     {
@@ -61,33 +61,34 @@ namespace WRLDZ.UI
 
         void Build()
         {
-            // Deck chip — large enough to read, still a top-left glance.
-            var youIsland = Island(Root, "YouScore", 0.012f, 0.905f, 0.30f, 0.988f,
-                new Color(DuelystUi.Cyan.r, DuelystUi.Cyan.g, DuelystUi.Cyan.b, 0.38f), blockRaycasts: false);
-            YouName = Label(youIsland.transform, "Who", "YOU", 13, TextAnchor.MiddleLeft, DuelystUi.TextMuted);
-            Place(YouName.rectTransform, 0.08f, 0.52f, 0.50f, 0.94f);
-            DeckCount = Label(youIsland.transform, "Deck", "D—", 14, TextAnchor.MiddleLeft, DuelystUi.TextCream);
-            Place(DeckCount.rectTransform, 0.08f, 0.08f, 0.38f, 0.50f);
-            GyCount = Label(youIsland.transform, "GY", "GY 0", 14, TextAnchor.MiddleCenter, new Color(0.85f, 0.72f, 0.95f, 1f));
-            Place(GyCount.rectTransform, 0.38f, 0.08f, 0.68f, 0.50f);
+            // YOU LP orb — cyan, left. Master Duel / Duel Links always show LP.
+            var youIsland = Island(Root, "YouScore", 0.012f, 0.900f, 0.278f, 0.988f,
+                new Color(DuelystUi.Cyan.r, DuelystUi.Cyan.g, DuelystUi.Cyan.b, 0.50f), blockRaycasts: false);
+            YouName = Label(youIsland.transform, "Who", "YOU", 11, TextAnchor.MiddleLeft, DuelystUi.TextMuted);
+            Place(YouName.rectTransform, 0.07f, 0.58f, 0.42f, 0.94f);
+            YouLp = Label(youIsland.transform, "LP", "8000", 22, TextAnchor.MiddleRight, DuelystUi.Cyan,
+                display: true);
+            Place(YouLp.rectTransform, 0.38f, 0.42f, 0.95f, 0.96f);
+            DeckCount = Label(youIsland.transform, "Deck", "D—", 12, TextAnchor.MiddleLeft, DuelystUi.TextCream);
+            Place(DeckCount.rectTransform, 0.07f, 0.06f, 0.36f, 0.44f);
+            GyCount = Label(youIsland.transform, "GY", "GY 0", 12, TextAnchor.MiddleCenter,
+                new Color(0.85f, 0.72f, 0.95f, 1f));
+            Place(GyCount.rectTransform, 0.36f, 0.06f, 0.66f, 0.44f);
             var gyHit = new GameObject("GyHit", typeof(RectTransform), typeof(Image), typeof(Button));
             gyHit.transform.SetParent(youIsland.transform, false);
-            Place(gyHit.GetComponent<RectTransform>(), 0.38f, 0.08f, 0.68f, 0.50f);
+            Place(gyHit.GetComponent<RectTransform>(), 0.36f, 0.06f, 0.66f, 0.44f);
             var gyImg = gyHit.GetComponent<Image>();
             gyImg.sprite = UiFoundation.WhiteSprite();
             gyImg.color = new Color(1f, 1f, 1f, 0.01f);
             gyImg.raycastTarget = true;
             gyHit.GetComponent<Button>().onClick.AddListener(() => OnGyClicked?.Invoke());
-            ExtraCount = Label(youIsland.transform, "EX", "EX 0", 14, TextAnchor.MiddleRight, DuelystUi.Gold);
-            Place(ExtraCount.rectTransform, 0.68f, 0.08f, 0.94f, 0.50f);
-            YouLp = null;
-            OppLp = null;
-            OppName = null;
+            ExtraCount = Label(youIsland.transform, "EX", "EX 0", 12, TextAnchor.MiddleRight, DuelystUi.Gold);
+            Place(ExtraCount.rectTransform, 0.66f, 0.06f, 0.95f, 0.44f);
 
-            // Phase island — whose turn, phase name, turn #, four pips.
-            var phase = Island(Root, "Phase", 0.34f, 0.905f, 0.66f, 0.988f,
-                new Color(DuelystUi.Gold.r, DuelystUi.Gold.g, DuelystUi.Gold.b, 0.40f), blockRaycasts: false);
-            PhaseLabel = Label(phase.transform, "PhaseTxt", "MAIN PHASE 1", 16, TextAnchor.MiddleCenter,
+            // Phase island — gold banner + rulebook pips (M1 / BP / M2 / EP).
+            var phase = Island(Root, "Phase", 0.330f, 0.900f, 0.670f, 0.988f,
+                new Color(DuelystUi.Gold.r, DuelystUi.Gold.g, DuelystUi.Gold.b, 0.48f), blockRaycasts: false);
+            PhaseLabel = Label(phase.transform, "PhaseTxt", "MAIN PHASE 1", 17, TextAnchor.MiddleCenter,
                 DuelystUi.GoldHot, display: true);
             Place(PhaseLabel.rectTransform, 0.04f, 0.46f, 0.96f, 0.94f);
             TurnChip = Label(phase.transform, "Turn", "T1", 12, TextAnchor.MiddleLeft, DuelystUi.TextMuted);
@@ -99,6 +100,16 @@ namespace WRLDZ.UI
             PillBattle = Pip(pips.transform, "BP", "BP", 0.26f, 0.50f);
             PillMp2 = Pip(pips.transform, "MP2", "M2", 0.52f, 0.76f);
             PillEnd = Pip(pips.transform, "EP", "EP", 0.78f, 1.00f);
+
+            // OPP LP orb — magenta, right. Always on; cinematic AR does not hide LP.
+            var oppIsland = Island(Root, "OppScore", 0.722f, 0.900f, 0.988f, 0.988f,
+                new Color(DuelystUi.Magenta.r, DuelystUi.Magenta.g, DuelystUi.Magenta.b, 0.50f),
+                blockRaycasts: false);
+            OppName = Label(oppIsland.transform, "Who", "OPP", 11, TextAnchor.MiddleRight, DuelystUi.TextMuted);
+            Place(OppName.rectTransform, 0.52f, 0.58f, 0.93f, 0.94f);
+            OppLp = Label(oppIsland.transform, "LP", "8000", 22, TextAnchor.MiddleLeft, DuelystUi.Magenta,
+                display: true);
+            Place(OppLp.rectTransform, 0.06f, 0.12f, 0.70f, 0.78f);
 
             // One-sentence status — toast, not a permanent bar. Hidden until a line lands.
             var status = Island(Root, "Status", 0.34f, 0.848f, 0.66f, 0.898f,
@@ -141,7 +152,6 @@ namespace WRLDZ.UI
 
         public void SetLifePoints(int you, int opp)
         {
-            // Persistent LP is the hub LCD. These fields stay for compatibility.
             if (YouLp != null) YouLp.text = you.ToString();
             if (_lastYouLp != int.MinValue && you != _lastYouLp)
                 _youPulse = 1f;
