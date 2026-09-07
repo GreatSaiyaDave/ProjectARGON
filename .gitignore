@@ -72,6 +72,10 @@ wrldz_stress*.log
 # Crash dumps
 *.blob
 
+# Python bytecode (from Tools/ scripts)
+__pycache__/
+*.pyc
+
 # Local-only (kept off GitHub)
 .grok/
 Assets/Screenshots/
