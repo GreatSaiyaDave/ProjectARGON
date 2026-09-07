@@ -67,6 +67,23 @@ namespace WRLDZ.Presentation.ArInteraction
             bool flatOnBoard = false)
         {
             if (instanceId <= 0) return;
+
+            // Idempotent: one activation is often registered twice in the same tick
+            // (PlaceFaceUp, then FinishSpellTrap once it knows the card stays). Update the
+            // existing entry in place instead of replacing it with a fresh event — replacing
+            // it (new QueuedUnscaledTime) makes the arena/disk replay the rise + slot-insert,
+            // which is the "2 copies slotted into the disk" duplicate.
+            if (_byInstance.TryGetValue(instanceId, out var existing))
+            {
+                existing.CardId = cardId;
+                if (!string.IsNullOrEmpty(cardName)) existing.CardName = cardName;
+                existing.PlayerSide = playerSide;
+                if (zoneIndex != -2) existing.ZoneIndex = zoneIndex;
+                existing.StaysOnField = staysOnField || flatOnBoard || existing.StaysOnField;
+                _byInstance[instanceId] = existing;
+                return;
+            }
+
             var e = new Event
             {
                 InstanceId = instanceId,
