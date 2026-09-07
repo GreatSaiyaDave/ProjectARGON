@@ -2748,6 +2748,22 @@ namespace WRLDZ.Duel
                 CheckLpWin(Player, Opponent);
         }
 
+        /// <summary>
+        /// Deduct a mandatory Life Point cost (floored at 0) and check for a loss.
+        /// Used for non-optional upkeep such as the Archfiend Standby maintenance cost;
+        /// unlike <see cref="ApplyEffectDamage"/> this is a cost, not battle/effect damage.
+        /// </summary>
+        public void PayLifePointCost(DuelistState who, int amount, string reason = null)
+        {
+            if (who == null || amount <= 0) return;
+            var paid = Mathf.Min(amount, who.LifePoints);
+            who.LifePoints -= paid;
+            var tag = string.IsNullOrEmpty(reason) ? "cost" : reason;
+            Log($"{who.Name} pays {paid} LP ({tag}) → {who.LifePoints} LP.");
+            if (!IsAwaitingResponse)
+                CheckLpWin(Player, Opponent);
+        }
+
         /// <summary>Create a card instance from the DB (Extra Deck Fusion, etc.).</summary>
         public CardInstance CreateCardInstance(int cardId) => CreateInstance(cardId);
 

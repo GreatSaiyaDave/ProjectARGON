@@ -3044,6 +3044,21 @@ namespace WRLDZ.Duel.TextEffects
             }
         }
 
+        static void ResolveStandbyMaintenancePayLp(DuelEngine engine, DuelistState who,
+            CardInstance card, EffectClause c)
+        {
+            if (engine == null || who == null || card == null) return;
+            var n = c != null && c.PayLpAmount > 0 ? c.PayLpAmount : 500;
+            // Pandemonium: neither player pays LP for their Archfiend monsters.
+            if (FieldSpellEffects.ArchfiendMaintenanceWaived(engine))
+            {
+                engine.Log($"{card.Name}: Standby maintenance ({n} LP) waived (Pandemonium).");
+                return;
+            }
+            // Mandatory, not optional — pay as much as possible (LP cannot go negative).
+            engine.PayLifePointCost(who, n, $"Standby maintenance: {card.Name}");
+        }
+
         static void ResolvePayLpOrDestroyThis(DuelEngine engine, DuelistState who,
             CardInstance card, EffectClause c)
         {
@@ -3104,11 +3119,27 @@ namespace WRLDZ.Duel.TextEffects
                         continue;
                     }
 
+                    if (c.Action == EffectActionKind.StandbyMaintenancePayLp)
+                    {
+                        if (!card.FaceUp) continue;
+                        if (!who.TryFindMonster(card, out _)) continue;
+                        ResolveStandbyMaintenancePayLp(engine, who, card, c);
+                        continue;
+                    }
+
                     if (c.Action == EffectActionKind.PayLpOrDestroyThis)
                     {
                         if (!card.FaceUp) continue;
                         if (!who.TryFindSpellTrap(card, out _) && !who.TryFindMonster(card, out _))
                             continue;
+                        // Pandemonium waives the Archfiend Standby maintenance cost
+                        // (but not non-Archfiend upkeep like Messenger of Peace).
+                        if (FieldSpellEffects.IsArchfiendMonster(card.Def) &&
+                            FieldSpellEffects.ArchfiendMaintenanceWaived(engine))
+                        {
+                            engine.Log($"{card.Name}: Standby cost waived (Pandemonium).");
+                            continue;
+                        }
                         ResolvePayLpOrDestroyThis(engine, who, card, c);
                         continue;
                     }

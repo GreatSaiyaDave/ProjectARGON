@@ -190,6 +190,13 @@ namespace WRLDZ.Duel.TextEffects
         /// <summary>Standby: pay PayLpAmount or destroy this card (Messenger of Peace).</summary>
         PayLpOrDestroyThis,
         /// <summary>
+        /// Mandatory Standby-Phase upkeep: the controller pays PayLpAmount each of
+        /// their Standby Phases (not optional, no destruction) — the classic Archfiend
+        /// maintenance cost (Vilepawn / Desrook / Darkbishop / Infernalqueen /
+        /// Shadowknight / Terrorking). Waived while "Pandemonium" is face-up.
+        /// </summary>
+        StandbyMaintenancePayLp,
+        /// <summary>
         /// This card or the chosen target gains Amount ATK and DefAmount DEF lingering
         /// while it remains on the field (Slate Warrior Flip / destroyer loss).
         /// </summary>

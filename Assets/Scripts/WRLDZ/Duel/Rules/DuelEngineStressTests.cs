@@ -122,6 +122,15 @@ namespace WRLDZ.Duel.Rules
             report.UnitPass += fuPass;
             report.UnitFail += fuFail;
 
+            // ── 1i) Archfiend Standby maintenance cost + Pandemonium waiver ──
+            sb.AppendLine();
+            sb.AppendLine("── Unit: ArchfiendRegressionTests ──");
+            var archfiend = ArchfiendRegressionTests.RunAll();
+            sb.AppendLine(archfiend.TrimEnd());
+            ParseUnitCounts(archfiend, out var afPass, out var afFail);
+            report.UnitPass += afPass;
+            report.UnitFail += afFail;
+
             // ── 2) Text effect compile (lab unique cards) ──
             sb.AppendLine();
             sb.AppendLine("── Text: lab deck compile (regex, no AI) ──");

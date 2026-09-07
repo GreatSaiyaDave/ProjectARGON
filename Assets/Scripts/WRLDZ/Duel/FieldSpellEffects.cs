@@ -455,6 +455,41 @@ namespace WRLDZ.Duel
         public static bool UmiIsOnField(DuelEngine engine) =>
             NamedCardIsFaceUpOnField(engine, UmiName);
 
+        const string PandemoniumName = "Pandemonium";
+
+        /// <summary>
+        /// Pandemonium: "Neither player has to pay Life Points during the Standby Phase
+        /// for 'Archfiend' monsters." While a face-up Pandemonium is in either Field
+        /// Zone, the Archfiend Standby-Phase maintenance cost is waived for both players.
+        /// </summary>
+        public static bool ArchfiendMaintenanceWaived(DuelEngine engine)
+        {
+            if (engine == null) return false;
+            return NamedFieldSpellFaceUp(engine.Player, PandemoniumName) ||
+                   NamedFieldSpellFaceUp(engine.Opponent, PandemoniumName);
+        }
+
+        static bool NamedFieldSpellFaceUp(DuelistState who, string name)
+        {
+            var f = who?.FieldSpellZone?.Occupant;
+            return f != null && f.FaceUp && f.IsNamed(name);
+        }
+
+        /// <summary>
+        /// A monster that "Pandemonium" protects from the maintenance cost: an
+        /// "Archfiend" monster (archetype match or always-treated-as-Archfiend text).
+        /// </summary>
+        public static bool IsArchfiendMonster(CardDef def)
+        {
+            if (def == null || !def.IsMonster) return false;
+            if (!string.IsNullOrEmpty(def.archetype) &&
+                def.archetype.IndexOf("Archfiend", StringComparison.OrdinalIgnoreCase) >= 0)
+                return true;
+            return def.desc != null &&
+                   def.desc.IndexOf("treated as an \"Archfiend\"",
+                       StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
         /// <summary>
         /// Face-up Field Spell in either Field Zone (blocks Maiden of the Aqua).
         /// </summary>

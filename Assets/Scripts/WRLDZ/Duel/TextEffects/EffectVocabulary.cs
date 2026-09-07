@@ -208,6 +208,9 @@ namespace WRLDZ.Duel.TextEffects
                     EffectResolutionKind.Protection,
                 EffectActionKind.PayLpOrDestroyThis =>
                     EffectResolutionKind.Destroy,
+                // Mandatory upkeep: a life-point decrease with no other resolution.
+                EffectActionKind.StandbyMaintenancePayLp =>
+                    EffectResolutionKind.Damage,
                 EffectActionKind.SetTargetFaceDownDefense =>
                     EffectResolutionKind.ChangePosition,
                 EffectActionKind.None => EffectResolutionKind.None,
