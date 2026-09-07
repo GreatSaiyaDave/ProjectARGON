@@ -98,8 +98,8 @@ namespace WRLDZ.EditorTools
             var msg =
                 "Pulled origin/main.\n\n" +
                 log.Text.Trim() + "\n\n" +
-                "Wait for scripts to compile. Title / Desktop Lab should say BUILD " +
-                WrldzBuild.Stamp + ".\n" +
+                "Wait for scripts to compile. Project search WRLDZ_BUILD should say " +
+                WrldzBuild.Stamp + ". Console: [WRLDZ] BUILD " + WrldzBuild.Stamp + ".\n" +
                 "Then: WRLDZ → Lab → Open Desktop Lab App.";
             UnityEngine.Debug.Log("[WRLDZ] " + msg.Replace('\n', ' '));
             EditorUtility.DisplayDialog("GitHub updated", msg, "OK");

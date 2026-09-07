@@ -74,11 +74,12 @@ namespace WRLDZ.UI.Shell
 
             var panel = new GameObject("PhoneMenu_" + title, typeof(RectTransform), typeof(Image));
             panel.transform.SetParent(modalHost, false);
-            FloatingPanel.Stretch(panel.GetComponent<RectTransform>());
+            MenuChromePrefs.GetWindowAnchors(UiPresentation.NonArPortrait,
+                out var x0, out var y0, out var x1, out var y1);
+            HubChrome.Place(panel.GetComponent<RectTransform>(), x0, y0, x1, y1);
             var pImg = panel.GetComponent<Image>();
-            pImg.sprite = UiFoundation.WhiteSprite();
-            pImg.color = new Color(0.02f, 0.04f, 0.08f, 0.08f);
-            pImg.raycastTarget = false;
+            pImg.raycastTarget = true;
+            HubChrome.PaintWell(pImg);
 
             var (titleT, subT) = (default(Text), default(Text));
             HubChrome.HeaderBar(panel.transform, title, subtitle, onClose, out titleT, out subT);
@@ -111,10 +112,7 @@ namespace WRLDZ.UI.Shell
 
             var rim = panel.GetComponent<Image>();
             if (rim != null)
-            {
-                HubChrome.PaintPlate(rim, DuelystUi.Cyan);
-                HubChrome.CornerTicks(panel, DuelystUi.Cyan);
-            }
+                HubChrome.PaintWell(rim);
 
             MenuHoloPulse.Attach(panel.gameObject, scan: true, breathe: false);
 

@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Guards Battle City hub overlay chrome.
 
-Hub tiles are the template. Phone overlays must share HubChrome
-(header capsule, dusk dim, body well, gold BACK) instead of a
-one-off rectangular holo sheet.
+Hub tiles are dest buttons only. Phone overlays are compact quiet sheets
+(header / well / BACK) so the map stays visible around them.
 """
 from __future__ import annotations
 
@@ -44,8 +43,19 @@ def main() -> int:
     must_contain(HUB, "PaintPlate", "lost opaque hub plate painter")
     must_contain(HUB, "CornerTicks", "lost hub L-corner ticks")
     must_contain(HUB, "FlattenPlate", "lost short-row plate flatten")
+    must_contain(HUB, "QuietFill", "lost quiet overlay fill")
     must_contain(HUB, "PaintWell", "lost list/meter well painter")
     must_contain(HUB, "PaintChip", "lost short-row chip painter")
+
+    header = HUB.read_text(encoding="utf-8").split("public static RectTransform HeaderBar", 1)[-1].split("public static RectTransform BodyWell", 1)[0]
+    if "CornerTicks" in header:
+        fail("overlay HeaderBar still paints L-corner ticks")
+    if "TileHub" in header or "PaintPlate" in header:
+        fail("overlay HeaderBar still uses dest-tile art")
+
+    well = HUB.read_text(encoding="utf-8").split("public static RectTransform BodyWell", 1)[-1].split("public static RectTransform ListHead", 1)[0]
+    if "CornerTicks" in well or "PaintPlate" in well:
+        fail("overlay BodyWell still uses dest-tile art / ticks")
 
     must_contain(PRESENTER, "HubChrome.HeaderBar", "phone overlay is not hub chrome")
     must_contain(PRESENTER, "HubChrome.FooterBack", "phone overlay missing BACK")
@@ -54,7 +64,9 @@ def main() -> int:
     presenter = PRESENTER.read_text(encoding="utf-8")
     if "MenuHoloSheet" in presenter or "PanelMenuGlass" in presenter:
         fail("DualMenuPresenter still falls back to smoked MenuHoloSheet / PanelMenuGlass")
-    must_contain(PRESENTER, "HubChrome.PaintPlate", "AR overlay rim is not a hub plate")
+    must_contain(PRESENTER, "GetWindowAnchors", "phone overlay is full-screen binder chrome")
+    if "HubChrome.PaintPlate" in presenter:
+        fail("phone/AR overlay rim still uses dest-tile PaintPlate")
 
     must_contain(MENU_UI, "HubChrome.SectionCap", "hub no longer shares SectionCap")
     must_contain(MENU_UI, "HubChrome.LiftPlate", "hub no longer shares LiftPlate")
@@ -81,7 +93,7 @@ def main() -> int:
     board_src = board.read_text(encoding="utf-8")
     if "PanelMenuGlass()" in board_src:
         fail("construction board still uses smoked PanelMenuGlass")
-    must_contain(board, "HubChrome.PaintPlate", "construction board is not hub plates")
+    must_contain(board, "HubChrome.PaintWell", "construction board is not a quiet well")
 
     ow_src = ow.read_text(encoding="utf-8")
     if "PanelMenuGlass()" in ow_src and "Eye" in ow_src:
@@ -90,8 +102,8 @@ def main() -> int:
             fail("Eye open sheet still uses PanelMenuGlass")
     if "RoundedRectSprite" in ow_src:
         fail("overworld currency / chips still use rounded-rect glass")
-    must_contain(ow, "HubChrome.PaintWell", "overworld currency strip is not a hub plate")
-    must_contain(ow, "HubChrome.PaintChip", "overworld wallet chips are not hub chips")
+    must_contain(ow, "HubChrome.PaintWell", "overworld currency strip is not a quiet well")
+    must_contain(ow, "HubChrome.PaintChip", "overworld wallet chips are not quiet chips")
 
     inv = ROOT / "Assets/Scripts/WRLDZ/UI/Shell/InventoryScreen.cs"
     inv_src = inv.read_text(encoding="utf-8")
@@ -99,7 +111,7 @@ def main() -> int:
         fail("BAG inspect / CREATE DECK still unplated")
     if "HubChrome.WellFill" in inv_src:
         fail("BAG wells still use translucent WellFill")
-    must_contain(inv, "HubChrome.PaintWell", "BAG panes are not hub plates")
+    must_contain(inv, "HubChrome.PaintWell", "BAG panes are not quiet wells")
 
     art = ROOT / "Assets/Scripts/WRLDZ/UI/Shell/ArtifactBoxScreen.cs"
     art_src = art.read_text(encoding="utf-8")
@@ -119,23 +131,23 @@ def main() -> int:
         if "HubChrome.WellFill" in src:
             fail(f"{path.relative_to(ROOT)} {why} still uses translucent WellFill")
         if "HubChrome.PaintWell" not in src:
-            fail(f"{path.relative_to(ROOT)} {why} is not a hub plate")
+            fail(f"{path.relative_to(ROOT)} {why} is not a quiet well")
 
     avatar = ROOT / "Assets/Scripts/WRLDZ/UI/AvatarCustomizerUI.cs"
     av_src = avatar.read_text(encoding="utf-8")
     if "MenuHoloSheet" in av_src or "PanelMenuGlass" in av_src:
         fail("avatar customizer still paints smoked MenuHoloSheet / PanelMenuGlass")
-    must_contain(avatar, "HubChrome.PaintPlate", "avatar sheet is not a hub plate")
+    must_contain(avatar, "HubChrome.PaintWell", "avatar sheet is not a quiet well")
 
     lab = ROOT / "Assets/Scripts/WRLDZ/UI/DesktopLabApp.cs"
-    must_contain(lab, "HubChrome.Sheet", "desktop lab options are not a hub sheet")
-    must_contain(lab, "WrldzBuild.Stamp", "desktop lab is missing the owner BUILD stamp")
+    must_contain(lab, "HubChrome.Sheet", "desktop lab options are not a quiet sheet")
+    must_contain(lab, "WrldzBuild.Log", "desktop lab is missing the owner BUILD log")
 
     build = ROOT / "Assets/Scripts/WRLDZ/Core/WrldzBuild.cs"
-    must_contain(build, "PLATES-0907", "lost owner-visible BUILD stamp")
+    must_contain(build, "CLEAN-0907", "lost owner-visible BUILD stamp")
     must_contain(ROOT / "GET_THE_GAME.txt", "Add from repository", "lost Hub Add-from-repository steps")
     must_contain(ROOT / "GET_THE_GAME.txt", "main.zip", "lost owner zip fallback")
-    must_contain(ROOT / "Assets/WRLDZ_BUILD.txt", "PLATES-0907", "lost Unity Project BUILD file")
+    must_contain(ROOT / "Assets/WRLDZ_BUILD.txt", "CLEAN-0907", "lost Unity Project BUILD file")
     must_contain(
         ROOT / ".cursor/skills/owner-linux-unity/SKILL.md",
         "Never give `git pull origin main` as the only step",
@@ -154,12 +166,12 @@ def main() -> int:
     menu = ROOT / "Assets/Editor/WRLDZ/DesktopLabMenu.cs"
     must_contain(menu, "PrefSkipBootCascade", "Lab menu no longer skips splash into Desktop Lab")
     title = ROOT / "Assets/Scripts/WRLDZ/UI/BootFlowUI.cs"
-    must_contain(title, "WrldzBuild.Stamp", "title screen is missing BUILD stamp")
+    must_contain(title, "WrldzBuild.Log", "title screen is missing BUILD log")
 
     print("hub overlay chrome")
     print("  HubChrome header / well / BACK present")
-    print("  DualMenuPresenter phone + AR frames use hub plates")
-    print("  BAG / ARTIFACTS / scan / lab / avatar share plates")
+    print("  DualMenuPresenter compact quiet sheets (map visible)")
+    print("  BAG / ARTIFACTS / scan / lab / avatar use quiet wells")
     print("PASS")
     return 0
 

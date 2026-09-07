@@ -600,7 +600,8 @@ namespace WRLDZ.UI.Shell
         static void StyleGlass(Image img, Color fill, Color edge)
         {
             var gold = edge.g > 0.55f && edge.r > 0.7f && edge.b < 0.55f;
-            HubChrome.PaintPlate(img, gold ? DuelystUi.Gold : DuelystUi.Cyan, gold);
+            HubChrome.QuietFill(img, MenuChromePrefs.RowColor,
+                gold ? DuelystUi.Gold : DuelystUi.Cyan);
         }
 
         static Button GlassAction(Transform parent, string label, Color fill, Color edge, Action onClick)
@@ -848,8 +849,7 @@ namespace WRLDZ.UI.Shell
             host.transform.SetParent(phase, false);
             FloatingPanel.Place(host.GetComponent<RectTransform>(), x0, y0, x1, y1);
             var bg = host.GetComponent<Image>();
-            HubChrome.PaintPlate(bg, DuelystUi.Cyan, sliced: false);
-            HubChrome.CornerTicks(host.transform, DuelystUi.Cyan);
+            HubChrome.PaintWell(bg);
             var canvas = host.GetComponent<Canvas>();
             canvas.overrideSorting = true;
             canvas.sortingOrder = 120;
@@ -1023,7 +1023,6 @@ namespace WRLDZ.UI.Shell
             sheet.transform.SetParent(host.transform, false);
             FloatingPanel.Place(sheet.GetComponent<RectTransform>(), 0.02f, y0, NamePillX1, y1);
             StyleGlass(sheet.GetComponent<Image>(), new Color(0.05f, 0.09f, 0.14f, 0.94f), EdgeCyan);
-            HubChrome.CornerTicks(sheet.transform, DuelystUi.Cyan);
             sheet.GetComponent<Image>().raycastTarget = true;
 
             void Item(int i, string title, Action act, Color fill, Color edge)
@@ -1079,7 +1078,6 @@ namespace WRLDZ.UI.Shell
             sheet.transform.SetParent(host.transform, false);
             FloatingPanel.Place(sheet.GetComponent<RectTransform>(), 0.08f, 0.36f, 0.92f, 0.72f);
             StyleGlass(sheet.GetComponent<Image>(), new Color(0.05f, 0.09f, 0.14f, 0.96f), EdgeCyan);
-            HubChrome.CornerTicks(sheet.transform, DuelystUi.Cyan);
             sheet.GetComponent<Image>().raycastTarget = true;
 
             var title = Label(sheet.transform, "RENAME DECK", 16, DuelystUi.Cyan, TextAnchor.MiddleCenter);
@@ -1183,7 +1181,6 @@ namespace WRLDZ.UI.Shell
             sheet.transform.SetParent(host.transform, false);
             FloatingPanel.Place(sheet.GetComponent<RectTransform>(), 0.04f, 0.10f, 0.96f, 0.88f);
             StyleGlass(sheet.GetComponent<Image>(), new Color(0.05f, 0.09f, 0.14f, 0.96f), EdgeCyan);
-            HubChrome.CornerTicks(sheet.transform, DuelystUi.Cyan);
             sheet.GetComponent<Image>().raycastTarget = true;
 
             var title = DeckNameLabel(sheet.transform, "CHOOSE DECK ICON", DuelystUi.Cyan);
@@ -2511,7 +2508,6 @@ namespace WRLDZ.UI.Shell
             FloatingPanel.Place(sheet.GetComponent<RectTransform>(), 0.03f, 0.06f, 0.97f, ChromeToolY0 - 0.010f);
             var sImg = sheet.GetComponent<Image>();
             HubChrome.PaintPlate(sImg, DuelystUi.Cyan);
-            HubChrome.CornerTicks(sheet.transform, DuelystUi.Cyan);
             sImg.raycastTarget = true;
 
             var title = Label(sheet.transform, "FILTERS", 16, DuelystUi.GoldHot, TextAnchor.MiddleLeft);
@@ -3360,7 +3356,6 @@ namespace WRLDZ.UI.Shell
             FloatingPanel.Place(sheet.GetComponent<RectTransform>(), 0.10f, 0.32f, 0.90f, 0.70f);
             var sImg = sheet.GetComponent<Image>();
             HubChrome.PaintPlate(sImg, DuelystUi.Gold, gold: true);
-            HubChrome.CornerTicks(sheet.transform, DuelystUi.GoldHot);
             sImg.raycastTarget = true;
 
             var title = Label(sheet.transform, "DECK INCOMPLETE", 16, DuelystUi.GoldHot, TextAnchor.MiddleCenter);
@@ -3575,7 +3570,6 @@ namespace WRLDZ.UI.Shell
                 PinBelow(panelRt, x0, x1, pinFromTop, y0);
             var pImg = panel.GetComponent<Image>();
             HubChrome.PaintPlate(pImg, DuelystUi.Cyan);
-            HubChrome.CornerTicks(panel.transform, DuelystUi.Cyan);
             pImg.raycastTarget = true;
             var empty = panel.GetComponent<Button>();
             empty.targetGraphic = pImg;

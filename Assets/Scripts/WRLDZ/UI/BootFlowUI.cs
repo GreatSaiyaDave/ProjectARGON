@@ -351,10 +351,7 @@ namespace WRLDZ.UI
             FlowChrome.Place(sub.rectTransform, 0.06f, 0.22f, 0.94f, 0.44f);
             var tag = FlowChrome.Label(plate, "Tag", "TOUCH TO BEGIN", 16, FlowChrome.Soft,
                 TextAnchor.MiddleCenter, false);
-            FlowChrome.Place(tag.rectTransform, 0.1f, 0.10f, 0.9f, 0.20f);
-            var build = FlowChrome.Label(plate, "BuildStamp", "BUILD " + WrldzBuild.Stamp, 14,
-                FlowChrome.Gold, TextAnchor.MiddleCenter, false);
-            FlowChrome.Place(build.rectTransform, 0.1f, 0.02f, 0.9f, 0.10f);
+            FlowChrome.Place(tag.rectTransform, 0.1f, 0.06f, 0.9f, 0.18f);
             WrldzBuild.Log();
 
             FullScreenTap(() =>

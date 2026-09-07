@@ -26,7 +26,7 @@ Hub GitHub integration (3.17): create repo, **Add from repository**, show branch
 3. **This Cloud VM is not their PC.**
 4. **Menus are built at runtime.** Edit-mode scenes look the same.
 5. **Editor Play starts at Boot splash** unless **WRLDZ → Lab → Open Desktop Lab App**. Eye plates: Desktop Lab → **OVERWORLD (WASD MAP)** → Eye → DECK / BAG.
-6. If they say **no changes**, Hub is on an **old folder** until Project search finds `WRLDZ_BUILD` with stamp `PLATES-0907`.
+6. If they say **no changes**, Hub is on an **old folder** until Project search finds `WRLDZ_BUILD` with stamp `CLEAN-0907`.
 
 ## Reliable path
 
@@ -36,7 +36,7 @@ Hub GitHub integration (3.17): create repo, **Add from repository**, show branch
 2. Hub → Projects → **Add** → **Add from repository** → GitHub → `GreatSaiyaDave/ProjectARGON` → **main**.
 3. Open **that** project with **6000.5.10f1**. Do not keep opening the old row.
 
-**Each later update:** Editor **WRLDZ → Get Latest from GitHub**, then Lab menu. Console `[WRLDZ] BUILD PLATES-0907`.
+**Each later update:** Editor **WRLDZ → Get Latest from GitHub**, then Lab menu. Console `[WRLDZ] BUILD CLEAN-0907`. Project `WRLDZ_BUILD` = CLEAN-0907.
 
 **Fallback zip:** https://github.com/GreatSaiyaDave/ProjectARGON/archive/refs/heads/main.zip — folder with Assets + ProjectSettings → Hub Add.
 

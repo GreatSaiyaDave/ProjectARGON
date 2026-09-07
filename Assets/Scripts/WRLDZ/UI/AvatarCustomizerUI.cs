@@ -907,8 +907,7 @@ namespace WRLDZ.UI
             GoTheme.Place(sheetGo.GetComponent<RectTransform>(), 0.06f, 0.10f, 0.94f, 0.88f);
             var sheetImg = sheetGo.GetComponent<Image>();
             sheetImg.raycastTarget = true;
-            HubChrome.PaintPlate(sheetImg, DuelystUi.Cyan);
-            HubChrome.CornerTicks(sheetGo.transform, DuelystUi.Cyan);
+            HubChrome.PaintWell(sheetImg);
             return root;
         }
 

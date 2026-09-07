@@ -50,8 +50,7 @@ namespace WRLDZ.UI.Shell
             board.SetParent(phase, false);
             FloatingPanel.Place(board, x0, y0, x1, y1);
             var bg = board.GetComponent<Image>();
-            HubChrome.PaintPlate(bg, DuelystUi.Cyan);
-            HubChrome.CornerTicks(board.transform, DuelystUi.Cyan);
+            HubChrome.PaintWell(bg);
             bg.raycastTarget = false;
             var vlg = board.GetComponent<VerticalLayoutGroup>();
             vlg.padding = new RectOffset(6, 6, 4, 4);

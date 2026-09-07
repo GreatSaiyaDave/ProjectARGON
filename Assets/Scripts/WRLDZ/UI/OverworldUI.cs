@@ -845,8 +845,7 @@ namespace WRLDZ.UI
             GoTheme.Place(header.GetComponent<RectTransform>(), 0f, 0.80f, 1f, 1f);
             var headerImg = header.GetComponent<Image>();
             headerImg.raycastTarget = false;
-            HubChrome.PaintPlate(headerImg, DuelystUi.Gold, gold: true);
-            HubChrome.FlattenPlate(headerImg);
+            HubChrome.QuietFill(headerImg, new Color(0.06f, 0.09f, 0.14f, 0.92f));
 
             var cap = GoTheme.Label(header.transform, "Cap", "NEARBY", 16, Color.white,
                 TextAnchor.MiddleLeft, bold: true);

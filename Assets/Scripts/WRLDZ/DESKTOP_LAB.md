@@ -11,7 +11,7 @@ The **Desktop Lab** is a full-screen hub for PC / Unity Editor Play Mode.
 ### Unity Editor (recommended)
 
 1. Top menu **`WRLDZ → Lab → Open Desktop Lab App`** → **Play Boot + Lab**
-2. That sets skip-splash and opens Desktop Lab. Proof line: **BUILD PLATES-0907**
+2. That sets skip-splash and opens Desktop Lab. Console: **BUILD CLEAN-0907**
 3. **OVERWORLD (WASD MAP)** → tap the Eye → DECK / BAG (runtime HubChrome plates)
 
 Playing the Boot scene with the Play button alone shows splash / **TOUCH TO BEGIN**, then auth. Use **DESKTOP LAB (NO EQUIPMENT)** there if you did not use the Lab menu.

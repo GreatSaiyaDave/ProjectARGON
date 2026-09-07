@@ -7,9 +7,8 @@ using WRLDZ.UI;
 namespace WRLDZ.UI.Shell
 {
     /// <summary>
-    /// Battle City hub grammar shared by the home tiles and every related overlay.
-    /// Capsule plates, cyan/gold neon rims, gold italic titles, cream blurbs,
-    /// dusk dim so the hub / map still peeks through.
+    /// Battle City dest tiles for the Eye / hub. Overlays and HUD stay quiet:
+    /// floating navy sheets, thin rims, map still visible around them.
     /// </summary>
     public static class HubChrome
     {
@@ -104,8 +103,6 @@ namespace WRLDZ.UI.Shell
             var btn = MenuCommandButton.Create(parent, title, onClick, kind, blurb,
                 centerTitle, plated);
             Dress(btn, kind, titleSize, displayTitle: true);
-            // Compact CTAs are often ~72–96px. TileHub 9-slice borders are 80px
-            // and collapse to a smoked slab — stretch the plate art instead.
             if (plated && centerTitle && string.IsNullOrEmpty(blurb))
                 FlattenPlate(btn.GetComponent<Image>());
             return btn;
@@ -147,22 +144,27 @@ namespace WRLDZ.UI.Shell
                 PaintPlate(img, DuelystUi.Cyan, sliced: false);
         }
 
-        /// <summary>Opaque hub plate on an existing list / meter / inspect well.</summary>
-        public static void PaintWell(Image img, bool flatten = false)
+        /// <summary>Quiet navy fill — HUD / list wells, not dest-tile art.</summary>
+        public static void QuietFill(Image img, Color fill, Color? edge = null)
         {
             if (img == null) return;
-            PaintPlate(img, DuelystUi.Cyan, sliced: !flatten);
-            if (flatten) FlattenPlate(img);
-            CornerTicks(img.transform, DuelystUi.Cyan);
+            img.sprite = UiFoundation.WhiteSprite();
+            img.type = Image.Type.Simple;
+            img.color = fill;
+            if (edge.HasValue)
+                LiftPlate(img, edge.Value);
         }
 
-        /// <summary>Short wallet / filter chip — Simple stretch, never 9-slice.</summary>
+        /// <summary>List / meter / inspect well. No tile_hub, no L-ticks.</summary>
+        public static void PaintWell(Image img, bool flatten = false)
+        {
+            QuietFill(img, MenuChromePrefs.PanelColor, DuelystUi.Cyan);
+        }
+
+        /// <summary>Map / wallet chip — GO-soft navy, thin accent rim.</summary>
         public static void PaintChip(Image img, Color edge)
         {
-            if (img == null) return;
-            PaintPlate(img, edge, sliced: false);
-            FlattenPlate(img);
-            CornerTicks(img.transform, edge);
+            QuietFill(img, new Color(0.06f, 0.09f, 0.14f, 0.88f), edge);
         }
 
         /// <summary>Gold / cyan L-corner ticks from the hub featured/dest tiles.</summary>
@@ -198,7 +200,7 @@ namespace WRLDZ.UI.Shell
             Arm("TickBR_V", new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(2.4f, 18f), new Vector2(-6f, 6f));
         }
 
-        /// <summary>Large overlay sheet — hub tile face + L-ticks.</summary>
+        /// <summary>Floating overlay sheet — quiet navy, thin rim.</summary>
         public static RectTransform Sheet(Transform parent, string name,
             float x0, float y0, float x1, float y1, bool gold = false)
         {
@@ -207,9 +209,7 @@ namespace WRLDZ.UI.Shell
             Place(go.GetComponent<RectTransform>(), x0, y0, x1, y1);
             var img = go.GetComponent<Image>();
             img.raycastTarget = true;
-            PaintPlate(img, gold ? DuelystUi.Gold : DuelystUi.Cyan, gold);
-            CornerTicks(go.transform, gold ? DuelystUi.GoldHot : DuelystUi.Cyan);
-            MenuHoloPulse.Attach(go, scan: true, breathe: false);
+            QuietFill(img, MenuChromePrefs.PanelColor, gold ? DuelystUi.Gold : DuelystUi.Cyan);
             return go.GetComponent<RectTransform>();
         }
 
@@ -233,7 +233,6 @@ namespace WRLDZ.UI.Shell
                 _ => DuelystUi.Cyan
             };
             LiftPlate(btn.GetComponent<Image>(), edge);
-            MenuHoloPulse.Attach(btn.gameObject, scan: true, breathe: false);
         }
 
         /// <summary>Header X — gold hub nugget (Simple stretch, never 9-slice).</summary>
@@ -256,8 +255,8 @@ namespace WRLDZ.UI.Shell
             rt.anchorMin = new Vector2(1f, 1f);
             rt.anchorMax = new Vector2(1f, 1f);
             rt.pivot = new Vector2(1f, 1f);
-            rt.sizeDelta = new Vector2(64f, 64f);
-            rt.anchoredPosition = new Vector2(-8f, -8f);
+            rt.sizeDelta = new Vector2(48f, 48f);
+            rt.anchoredPosition = new Vector2(-6f, -6f);
             return btn;
         }
 
@@ -266,7 +265,7 @@ namespace WRLDZ.UI.Shell
             var btn = Capsule(parent, label, onClose, MenuCommandButton.Kind.Gold,
                 centerTitle: true, titleSize: 20);
             btn.name = "Back";
-            Place(btn.GetComponent<RectTransform>(), 0.18f, 0.012f, 0.82f, 0.125f);
+            Place(btn.GetComponent<RectTransform>(), 0.22f, 0.018f, 0.78f, 0.105f);
             var titleRt = btn.transform.Find("Title") as RectTransform;
             if (titleRt != null)
                 Place(titleRt, 0.08f, 0.12f, 0.92f, 0.88f);
@@ -278,24 +277,10 @@ namespace WRLDZ.UI.Shell
         {
             var go = new GameObject("Header", typeof(RectTransform), typeof(Image), typeof(RectMask2D));
             go.transform.SetParent(parent, false);
-            Place(go.GetComponent<RectTransform>(), 0.04f, 0.855f, 0.96f, 0.978f);
+            Place(go.GetComponent<RectTransform>(), 0.03f, 0.90f, 0.97f, 0.995f);
             var img = go.GetComponent<Image>();
-            var plate = ImagineAssets.BtnPrimary() ?? ImagineAssets.TileHub() ?? ImagineAssets.PanelHolo();
-            if (plate != null)
-            {
-                img.sprite = plate;
-                img.type = plate.border.sqrMagnitude > 0.1f ? Image.Type.Sliced : Image.Type.Simple;
-                img.color = Color.white;
-            }
-            else
-            {
-                img.sprite = UiFoundation.WhiteSprite();
-                img.color = MenuCommandButton.FillPrimary;
-            }
-
-            LiftPlate(img, DuelystUi.Cyan);
-            CornerTicks(go.transform, DuelystUi.Cyan);
-            MenuHoloPulse.Attach(go, scan: true, breathe: false, phase: 0.15f);
+            img.raycastTarget = false;
+            QuietFill(img, new Color(0.04f, 0.06f, 0.10f, 0.20f));
 
             var hasSub = !string.IsNullOrEmpty(subtitle);
             titleT = FloatingPanel.Title(go.transform, title ?? "", 24);
@@ -320,16 +305,15 @@ namespace WRLDZ.UI.Shell
             return go.GetComponent<RectTransform>();
         }
 
-        public static RectTransform BodyWell(Transform parent, float x0 = 0.04f, float y0 = 0.145f,
-            float x1 = 0.96f, float y1 = 0.840f)
+        public static RectTransform BodyWell(Transform parent, float x0 = 0.04f, float y0 = 0.12f,
+            float x1 = 0.96f, float y1 = 0.88f)
         {
             var go = new GameObject("BodyWell", typeof(RectTransform), typeof(Image), typeof(RectMask2D));
             go.transform.SetParent(parent, false);
             Place(go.GetComponent<RectTransform>(), x0, y0, x1, y1);
             var img = go.GetComponent<Image>();
             img.raycastTarget = true;
-            PaintPlate(img, DuelystUi.Cyan);
-            CornerTicks(go.transform, DuelystUi.Cyan);
+            QuietFill(img, MenuChromePrefs.InsetColor, DuelystUi.Cyan);
             return go.GetComponent<RectTransform>();
         }
 
@@ -405,14 +389,11 @@ namespace WRLDZ.UI.Shell
             }
 
             LiftPlate(img, gold ? DuelystUi.Gold : DuelystUi.Cyan);
-            CornerTicks(go.transform, gold ? DuelystUi.GoldHot : DuelystUi.Cyan);
-            MenuHoloPulse.Attach(go, scan: true, breathe: true, phase: gold ? 0f : 0.5f);
             var le = go.GetComponent<LayoutElement>();
             le.minHeight = 152f;
             le.preferredHeight = 160f;
             le.flexibleWidth = 1f;
 
-            TextScrim(go.transform, 0.04f, 0.10f, 0.62f, 0.90f);
             var titleT = FloatingPanel.Title(go.transform, title ?? "", 22);
             titleT.fontStyle = FontStyle.Bold | FontStyle.Italic;
             Place(titleT.rectTransform, 0.06f, 0.46f, 0.62f, 0.92f);
@@ -448,8 +429,6 @@ namespace WRLDZ.UI.Shell
                 gold ? DuelystUi.GoldHot : DuelystUi.Cyan, displayTitle: true,
                 blurbSize: 16, blurbColor: DuelystUi.TextCream);
             LiftPlate(btn.GetComponent<Image>(), gold ? DuelystUi.Gold : DuelystUi.Cyan);
-            CornerTicks(btn.transform, gold ? DuelystUi.GoldHot : DuelystUi.Cyan);
-            TextScrim(btn.transform, 0.04f, 0.10f, 0.62f, 0.90f);
 
             var titleRt = btn.transform.Find("Title") as RectTransform;
             if (titleRt != null)
@@ -477,7 +456,6 @@ namespace WRLDZ.UI.Shell
                 img.raycastTarget = false;
             }
 
-            MenuHoloPulse.Attach(btn.gameObject, scan: true, breathe: true, phase: gold ? 0f : 0.5f);
             return btn;
         }
 
@@ -497,7 +475,6 @@ namespace WRLDZ.UI.Shell
             }
 
             LiftPlate(face, DuelystUi.Cyan);
-            CornerTicks(btn.transform, DuelystUi.Cyan);
             MenuCommandButton.ApplyHubType(btn, 20, Color.white, displayTitle: true);
 
             var well = HubPropView.CreateInUi(btn.transform, propStem,
@@ -513,7 +490,6 @@ namespace WRLDZ.UI.Shell
                 iimg.raycastTarget = false;
             }
 
-            TextScrim(btn.transform, 0.36f, 0.18f, 0.96f, 0.82f);
             var titleRt = btn.transform.Find("Title") as RectTransform;
             if (titleRt != null)
                 Place(titleRt, 0.38f, 0.14f, 0.96f, 0.86f);
@@ -521,7 +497,6 @@ namespace WRLDZ.UI.Shell
             if (titleTxt != null)
                 titleTxt.alignment = TextAnchor.MiddleLeft;
 
-            MenuHoloPulse.Attach(btn.gameObject, scan: true, breathe: true);
             return btn;
         }
     }

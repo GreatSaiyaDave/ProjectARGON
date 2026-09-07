@@ -12,7 +12,7 @@ Unity Hub's green / connected mark is **Unity Version Control (Plastic)** or a G
 
 **One-time:** Hub → Add → **Add from repository** → GitHub → `GreatSaiyaDave/ProjectARGON` → main → open **that** project (`6000.5.10f1`).
 
-**Each update:** Editor **WRLDZ → Get Latest from GitHub**, then **WRLDZ → Lab → Open Desktop Lab App**. Proof: Project search `WRLDZ_BUILD`, title **PLATES-0907**.
+**Each update:** Editor **WRLDZ → Get Latest from GitHub**, then **WRLDZ → Lab → Open Desktop Lab App**. Proof: Project search `WRLDZ_BUILD` = **CLEAN-0907**. Console `[WRLDZ] BUILD CLEAN-0907`.
 
 Do not tell them to `git pull` as the only step. Do not tell them Hub will auto-download agent pushes. Details: `.cursor/skills/owner-linux-unity/SKILL.md` and `GET_THE_GAME.txt`.
 
@@ -47,11 +47,10 @@ Merged from other agent branches (2026-09-07):
 
 ## UI chrome
 
-- Hub screenshot is the template: opaque Imagine `tile_hub` / gold plates, cyan/gold rims, L-corner ticks. Use `HubChrome.PaintPlate` / `PaintWell` / `PaintChip` / `MountFeatured` / `MountDest`. Not `PanelMenuGlass`, not `UiTheme.RoundedRectSprite` glass chips, not `HubChrome.WellFill` as a well face.
+- Dest tiles (Eye VS AI / DECK / BAG): `HubChrome.MountFeatured` / `MountDest`. Overlays: `QuietFill` + compact window. Not `PanelMenuGlass`, not dest-tile wells covering the map.
 - Home is **Overworld** Eye, not the Hub scene. DECK must use `DualMenuPresenter.BuildFrame`.
-- Player overlays already plated: Eye, DECK, BAG, ARTIFACTS, scan, FREE VIEW, TOURNEY, avatar, Desktop Lab options, currency strip. Keep them plated.
-- Tiny default `MenuCommandButton.Create` / `FloatingPanel.PrimaryButton` stay **unplated** (~56px 9-slice collapses). AR editor X on DECK stays `plated: false`. Smoke: `Assets/Editor/WRLDZ/MenuSmokeTest.cs` `AssertFloatingChip`.
-- Visible stamp: `WrldzBuild.Stamp` (`PLATES-0907`) on title + Desktop Lab. Bump it when they must re-Add the folder.
+- Eye dest/featured keep hub plates. Overlays/HUD are quiet navy sheets (`QuietFill` / compact `GetWindowAnchors`) — map stays visible. No L-ticks or tile_hub wells on lists.
+- Visible stamp: `WrldzBuild.Stamp` (`CLEAN-0907`) in `Assets/WRLDZ_BUILD.txt` + Console, **not** on the title plate.
 - Python: `python3 Tools/hub_overlay_chrome_check.py && python3 Tools/ygo_ui_lore_check.py && python3 Tools/deck_editor_layout_check.py`
 
 ## Cursor Cloud

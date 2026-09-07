@@ -8,7 +8,7 @@ namespace WRLDZ.Core
     /// </summary>
     public static class WrldzBuild
     {
-        public const string Stamp = "PLATES-0907";
+        public const string Stamp = "CLEAN-0907";
         public const string Line =
             "[WRLDZ] BUILD " + Stamp + " · plated overlays · if missing, Hub opened an old folder";
 

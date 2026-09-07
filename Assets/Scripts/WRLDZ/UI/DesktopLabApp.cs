@@ -119,11 +119,11 @@ namespace WRLDZ.UI
             WrldzType.ApplyOutline(title, heavy: true, buttonContrast: true);
 
             var sub = FloatingPanel.Body(root,
-                "BUILD " + WrldzBuild.Stamp + "  ·  plated hub tiles  ·  WASD map  ·  AR sim",
+                "Test without equipment · WASD map · AR stage sim · AI duels",
                 16);
             FloatingPanel.Place(sub.rectTransform, 0.06f, 0.85f, 0.94f, 0.90f);
             sub.alignment = TextAnchor.MiddleCenter;
-            sub.color = DuelystUi.GoldHot;
+            sub.color = DuelystUi.TextMuted;
             WrldzBuild.Log();
 
             _modeLine = FloatingPanel.Body(root, ModeBanner(), 15);
@@ -164,7 +164,6 @@ namespace WRLDZ.UI
 
             // Options
             var optPanel = HubChrome.Sheet(root, "Opts", 0.08f, 0.14f, 0.92f, 0.28f);
-            HubChrome.FlattenPlate(optPanel.GetComponent<Image>());
 
             var optTitle = FloatingPanel.Body(optPanel, "OPTIONS", 12);
             FloatingPanel.Place(optTitle.rectTransform, 0.04f, 0.72f, 0.96f, 0.95f);

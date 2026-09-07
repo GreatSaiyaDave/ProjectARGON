@@ -29,7 +29,9 @@ AFTER THAT, EACH UPDATE
 In the Editor:  WRLDZ → Get Latest from GitHub
 Then:           WRLDZ → Lab → Open Desktop Lab App
 
-Title / Desktop Lab must show BUILD PLATES-0907.
+Title / Desktop Lab should not show a BUILD watermark.
+Project search WRLDZ_BUILD must say CLEAN-0907.
+Console (Unity log): [WRLDZ] BUILD CLEAN-0907
 
 Project search WRLDZ_BUILD — if that file is missing, Hub is
 still on the old copy.
