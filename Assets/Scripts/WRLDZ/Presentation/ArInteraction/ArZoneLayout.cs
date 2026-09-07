@@ -129,14 +129,19 @@ namespace WRLDZ.Presentation.ArInteraction
         public static Quaternion FaceDownSetMonsterRot => Quaternion.Euler(-90f, 0f, 90f);
 
         /// <summary>
-        /// Seated S/T — past flat (Rx &lt; −90) so the outer lip lifts into the
-        /// slit and the inner/top end angles down, not up into the monster pad.
-        /// Rx −80 was the wrong way and shoved card tops onto M1–M5.
+        /// Seated face-up S/T — past flat (Rx &lt; −90) so the outer lip lifts into the
+        /// slit. The extra 180° yaw puts the card's TITLE (top) edge at the slot mouth
+        /// instead of the bottom edge, so the controller can read the name of a face-up
+        /// Continuous/Field/Equip card sticking out of the slot for easy self-ID.
+        /// (Rx −80 was the wrong tip; it shoved card tops onto M1–M5.)
         /// </summary>
-        public static Quaternion SpellTrapInSlotRot => Quaternion.Euler(-100f, 0f, 0f);
+        public static Quaternion SpellTrapInSlotRot => Quaternion.Euler(-100f, 180f, 0f);
 
-        /// <summary>Face-down set S/T — same indent seat.</summary>
-        public static Quaternion FaceDownSetSpellTrapRot => SpellTrapInSlotRot;
+        /// <summary>
+        /// Face-down set S/T — bottom-edge peek (unchanged): a Set card shows its back, so
+        /// there is no title to reveal; keep the original indent seat.
+        /// </summary>
+        public static Quaternion FaceDownSetSpellTrapRot => Quaternion.Euler(-100f, 0f, 0f);
 
         /// <summary>Legacy alias (monster set).</summary>
         public static Quaternion FaceDownSetRot => FaceDownSetMonsterRot;
