@@ -1747,8 +1747,7 @@ namespace WRLDZ.UI.Shell
                 }
 
                 WriteMatchLine(st, -1);
-                if (st.PoolGrid is RectTransform poolRt)
-                    LayoutRebuilder.ForceRebuildLayoutImmediate(poolRt);
+                RefitPool(st);
                 if (resetScroll)
                 {
                     if (st.PoolScroll != null) st.PoolScroll.verticalNormalizedPosition = 1f;
@@ -1802,8 +1801,7 @@ namespace WRLDZ.UI.Shell
                 PoolChip(st, st.PoolGrid, st.PoolRows[i]);
             st.PoolVisible = end;
             st.PoolAppending = false;
-            if (st.PoolGrid is RectTransform rt)
-                LayoutRebuilder.ForceRebuildLayoutImmediate(rt);
+            RefitPool(st);
         }
 
         static void EnsurePoolFillsViewport(State st)
@@ -1813,8 +1811,7 @@ namespace WRLDZ.UI.Shell
             var guard = 0;
             while (st.PoolRows != null && st.PoolVisible < st.PoolRows.Count && guard++ < 24)
             {
-                if (st.PoolGrid is RectTransform rt)
-                    LayoutRebuilder.ForceRebuildLayoutImmediate(rt);
+                RefitPool(st);
                 var viewH = st.PoolScroll.viewport.rect.height;
                 var contentH = st.PoolScroll.content.rect.height;
                 if (viewH < 8f || contentH > viewH + 24f) break;
@@ -3657,8 +3654,12 @@ namespace WRLDZ.UI.Shell
             vpImg.raycastTarget = true;
             vp.GetComponent<RectMask2D>().padding = Vector4.zero;
 
-            var content = new GameObject("C", typeof(RectTransform), typeof(GridLayoutGroup),
-                typeof(ContentSizeFitter));
+            // Explicit tiling (same technique as the construction board's DeckPileFit):
+            // deterministically fills the panel left→right, top→bottom with a responsive
+            // column count. Avoids the GridLayoutGroup + ContentSizeFitter combo on a
+            // stretched RectTransform, which could leave the collection crammed to one
+            // side with a large empty gap.
+            var content = new GameObject("C", typeof(RectTransform));
             content.transform.SetParent(vp.transform, false);
             var crt = content.GetComponent<RectTransform>();
             crt.anchorMin = new Vector2(0, 1);
@@ -3666,15 +3667,6 @@ namespace WRLDZ.UI.Shell
             crt.pivot = new Vector2(0.5f, 1);
             crt.offsetMin = Vector2.zero;
             crt.offsetMax = Vector2.zero;
-            var g = content.GetComponent<GridLayoutGroup>();
-            g.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            g.constraintCount = 4;
-            g.cellSize = new Vector2(ChipW, ChipH);
-            g.spacing = new Vector2(ChipGap, ChipGap);
-            g.padding = new RectOffset(6, 6, 6, 6);
-            g.childAlignment = TextAnchor.UpperLeft;
-            content.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-            content.GetComponent<ContentSizeFitter>().horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
 
             scroll = panel.GetComponent<ScrollRect>();
             scroll.viewport = vp.GetComponent<RectTransform>();
@@ -3686,8 +3678,7 @@ namespace WRLDZ.UI.Shell
             scroll.inertia = true;
             scroll.decelerationRate = 0.18f;
 
-            var fit = vp.AddComponent<DeckGridFit>();
-            fit.Grid = g;
+            var fit = content.AddComponent<DeckPoolFit>();
             fit.Viewport = vp.GetComponent<RectTransform>();
             if (name == "PoolGrid")
             {
@@ -3697,14 +3688,21 @@ namespace WRLDZ.UI.Shell
             return content.transform;
         }
 
-        sealed class DeckGridFit : MonoBehaviour
+        /// <summary>Refit a collection/pool grid built by <see cref="ChipGrid"/>.</summary>
+        static void RefitPool(State st)
         {
-            public GridLayoutGroup Grid;
+            if (st?.PoolGrid is RectTransform rt)
+                rt.GetComponent<DeckPoolFit>()?.Fit();
+        }
+
+        /// <summary>
+        /// Tiles collection chips left→right, top→bottom, filling the viewport width with
+        /// a responsive column count and growing the content downward so the pool scrolls.
+        /// </summary>
+        sealed class DeckPoolFit : MonoBehaviour
+        {
             public RectTransform Viewport;
             bool _fitting;
-            float _lastW = -1f;
-            int _lastCols = -1;
-            Vector2 _lastCell;
 
             void OnEnable() => Fit();
             void Start() => Fit();
@@ -3712,26 +3710,42 @@ namespace WRLDZ.UI.Shell
 
             public void Fit()
             {
-                if (_fitting || Grid == null || Viewport == null) return;
-                var w = Viewport.rect.width;
-                if (w < 16f) return;
-                if (Mathf.Abs(w - _lastW) < 0.75f && _lastCols > 0) return;
-                var pad = Grid.padding.horizontal;
-                var gap = Grid.spacing.x;
-                var cols = Mathf.Clamp(Mathf.FloorToInt((w - pad + gap) / (100f + gap)), 4, 16);
-                var cellW = Mathf.Min(112f, (w - pad - gap * (cols - 1)) / cols);
-                var cellH = cellW * (ChipH / ChipW);
-                if (cols == _lastCols && Mathf.Abs(cellW - _lastCell.x) < 0.35f) return;
+                if (_fitting) return;
+                var rt = transform as RectTransform;
+                if (rt == null) return;
+                var vp = Viewport != null ? Viewport : rt.parent as RectTransform;
+                if (vp == null) return;
+                var w = vp.rect.width;
+                var h = vp.rect.height;
+                if (w < 16f || h < 8f) return;
+
+                var n = rt.childCount;
                 _fitting = true;
-                _lastW = w;
-                _lastCols = cols;
-                _lastCell = new Vector2(cellW, cellH);
-                Grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-                Grid.constraintCount = cols;
-                Grid.cellSize = _lastCell;
-                var gridRt = Grid.transform as RectTransform;
-                if (gridRt != null)
-                    LayoutRebuilder.ForceRebuildLayoutImmediate(gridRt);
+                const float pad = 6f;
+                const float gap = ChipGap;
+                const float target = 96f; // desired chip width before responsive sizing
+                var cols = Mathf.Clamp(
+                    Mathf.FloorToInt((w - pad * 2f + gap) / (target + gap)), 3, 12);
+                var cardW = (w - pad * 2f - gap * (cols - 1)) / cols;
+                var cardH = cardW * (ChipH / ChipW);
+                var rows = Mathf.Max(1, Mathf.CeilToInt(n / (float)cols));
+                var totalH = pad * 2f + rows * cardH + Mathf.Max(0, rows - 1) * gap;
+                rt.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, w);
+                rt.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, Mathf.Max(h, totalH));
+                for (var i = 0; i < n; i++)
+                {
+                    var child = rt.GetChild(i) as RectTransform;
+                    if (child == null) continue;
+                    var col = i % cols;
+                    var row = i / cols;
+                    child.anchorMin = new Vector2(0f, 1f);
+                    child.anchorMax = new Vector2(0f, 1f);
+                    child.pivot = new Vector2(0f, 1f);
+                    child.sizeDelta = new Vector2(cardW, cardH);
+                    child.anchoredPosition = new Vector2(
+                        pad + col * (cardW + gap), -(pad + row * (cardH + gap)));
+                }
+
                 _fitting = false;
             }
         }
