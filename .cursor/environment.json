@@ -1,0 +1,4 @@
+{
+  "name": "Project ARGON (WRLDZ)",
+  "install": "bash Tools/cloud-agent-install.sh"
+}
