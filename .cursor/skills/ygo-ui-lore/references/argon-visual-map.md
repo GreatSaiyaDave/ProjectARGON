@@ -23,11 +23,12 @@ Chrome kit: `StreamingAssets/WRLDZ/Imagine/` via `ImagineAssets` → `DuelystUi`
 | Field | Disk blade, not a 2D mat on the map | `ArDuelSpace` disks + holos; digital uses the same stage |
 | GY / Deck / Extra | Edge piles | Counts on the YOU island; GY tap opens `GraveyardBrowser` |
 | Inspect | On select | `CardInspectPopup` |
-| Overworld | GO chips + YGO pins | `GoTheme` / `OverworldUI` |
-| Hub | Destination grid | `DuelDiskMenuUI`, Battle City rain, piano-glass tiles |
+| Overworld map | GO chips + YGO pins | `GoTheme` / `OverworldUI` HUD |
+| Overworld Eye (home menu) | Same as Hub | `OverworldUI.BuildEyeMenu` → `HubChrome.MountFeatured` / `MountDest` |
+| Hub scene | Destination grid (template, not daily home) | `DuelDiskMenuUI`, Battle City rain, piano-glass tiles |
 | Hub overlays | Same capsules as hub | `HubChrome` + `DualMenuPresenter` phone frame (header / well / BACK) |
 | Story / Tome | Parchment | `MenuAge.ScrollAges`, not NightPurple wash |
-| Deck editor | Left-fill collection | `DeckCollectionScreen` — pin the **panel**, never scroll content |
+| Deck editor | Hub overlay + left-fill collection | `DeckCollectionScreen` via `DualMenuPresenter.BuildFrame`; pin the **panel**, never scroll content |
 
 ## Dual presentation
 

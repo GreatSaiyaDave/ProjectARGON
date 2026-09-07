@@ -20,7 +20,7 @@
 1. **Map is the hero** — no heavy navy GBA panels over half the screen.  
 2. **Chrome is circular + white frosted chips** — soft shadows, light ink text.  
 3. **YGO flavor on content** (Tear pins, disk in main orb, duel row) — not on every panel.  
-4. **Bottom menu bar** — DECK · BAG · Millennium Eye · STORY · SET. Eye opens VS AI / VS PVP / PRACTICE.  
+4. **Millennium Eye** — home menu. Opens the Battle City hub tile grammar (DUEL featured capsules + COMMAND dest grid), not a separate tray of tall holo cards.  
 5. **Nearby** = one compass popout (name, kind, meters). No second radar strip.
 
 ## Assets
@@ -67,4 +67,4 @@
 
 ## Hub (main orb)
 
-Hub scene is optional (full systems). Map chrome is the bottom bar + Eye duel tray.
+Hub scene is optional (full systems). Map chrome is the Eye dock; the Eye menu is the hub template cloned onto the map.

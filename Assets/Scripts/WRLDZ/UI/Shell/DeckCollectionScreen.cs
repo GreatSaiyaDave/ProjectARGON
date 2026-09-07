@@ -209,47 +209,31 @@ namespace WRLDZ.UI.Shell
                                ?? ScreenRouter.Instance?.Presentation
                                ?? DualMenuPresenter.ResolveDefaultPresentation();
 
-            // Open menu: world/map shows through. Dim only catches “click outside card”.
-            var root = new GameObject("DeckMenuRoot", typeof(RectTransform), typeof(Image))
-                .GetComponent<RectTransform>();
-            root.SetParent(modalHost, false);
-            FloatingPanel.Stretch(root);
-            var dim = root.GetComponent<Image>();
-            dim.sprite = UiFoundation.WhiteSprite();
-            dim.color = HubChrome.Dusk;
-            dim.raycastTarget = true;
-
-            var win = new GameObject("DeckMenuWindow", typeof(RectTransform), typeof(Image))
-                .GetComponent<RectTransform>();
-            win.SetParent(root, false);
-            FloatingPanel.Place(win, 0.0f, 0.0f, 1f, 1f);
-            var wImg = win.GetComponent<Image>();
-            var deckBg = ImagineAssets.BgDeckBuilder();
-            if (deckBg != null)
+            DualMenuPresenter.Frame frame = default;
+            void CloseAll()
             {
-                wImg.sprite = deckBg;
-                wImg.color = new Color(1f, 1f, 1f, 0.62f);
-                wImg.preserveAspect = false;
+                DualMenuPresenter.Dismiss(frame);
+                onClose?.Invoke();
             }
-            else
-            {
-                wImg.sprite = UiFoundation.WhiteSprite();
-                wImg.color = new Color(0.04f, 0.06f, 0.10f, 0.06f);
-            }
-            wImg.raycastTarget = true;
-            var winBtn = win.gameObject.AddComponent<Button>();
-            winBtn.targetGraphic = wImg;
-            winBtn.transition = Selectable.Transition.None;
 
-            var body = win;
+            frame = DualMenuPresenter.BuildFrame(
+                modalHost,
+                "DECK",
+                "Tap name to rename · caret to switch",
+                CloseAll,
+                presentation);
+
+            var root = frame.Root;
+            var body = frame.BodyHost;
 
             var st = new State
             {
                 Db = CardDatabase.Load(),
                 Acc = AppSession.Ensure().Account,
                 Presentation = presentation,
-                Window = win,
+                Window = body,
                 Body = body,
+                Title = frame.Title,
                 // Jump straight into builder — deck switcher replaces the old list screen
                 Phase = Phase.Editor
             };
@@ -289,25 +273,7 @@ namespace WRLDZ.UI.Shell
                 }
             }
 
-            st.OnClose = () =>
-            {
-                onClose?.Invoke();
-                if (root != null) UnityEngine.Object.Destroy(root.gameObject);
-            };
-
-            var dimBtn = root.gameObject.GetComponent<Button>() ?? root.gameObject.AddComponent<Button>();
-            dimBtn.targetGraphic = dim;
-            dimBtn.transition = Selectable.Transition.None;
-            dimBtn.onClick.AddListener(() =>
-            {
-                if (st.Inspect != null && st.Inspect.activeSelf)
-                    HideInspect(st);
-            });
-            winBtn.onClick.AddListener(() =>
-            {
-                if (st.Inspect != null && st.Inspect.activeSelf)
-                    HideInspect(st);
-            });
+            st.OnClose = CloseAll;
 
             st.Status = L(body, "", 11, new Color(0.85f, 0.9f, 0.95f, 0.9f), TextAnchor.MiddleLeft);
             FloatingPanel.Place(st.Status.rectTransform, 0.03f, 0.006f, 0.97f, 0.046f);
@@ -1565,31 +1531,30 @@ namespace WRLDZ.UI.Shell
             BuildDeckSwitcher(phase, st, 0f, ChromeNameY0, ar ? NamePillX1 : SwitcherX1, ChromeNameY1);
             var switcher = phase.Find("DeckSwitcher") as RectTransform;
 
-            var close = GlassAction(phase, "X", GlassQuiet, EdgeCyan, () =>
+            var close = HubChrome.Capsule(phase, "X", () =>
             {
                 FreeUiKit.PlayClick();
                 RequestLeaveEditor(st);
-            });
+            }, MenuCommandButton.Kind.Secondary, centerTitle: true, titleSize: 18, plated: false);
 
             if (ar)
             {
                 if (switcher != null) PinTop(switcher, 0f, 0.86f, barTop, barH);
                 PinTop(close.GetComponent<RectTransform>(), 0.88f, 1f, barTop, barH);
             }
-            else if (wide)
-            {
-                if (switcher != null) PinTop(switcher, 0f, 0.48f, barTop, barH);
-                PinTop(close.GetComponent<RectTransform>(), 0.88f, 1f, barTop, barH);
-            }
             else
             {
-                if (switcher != null) PinTop(switcher, 0f, 0.82f, barTop, barH);
-                PinTop(close.GetComponent<RectTransform>(), 0.84f, 1f, barTop, barH);
+                close.gameObject.SetActive(false);
+                if (wide)
+                {
+                    if (switcher != null) PinTop(switcher, 0f, 0.48f, barTop, barH);
+                }
+                else if (switcher != null) PinTop(switcher, 0f, 0.82f, barTop, barH);
             }
 
             if (!ar)
             {
-                var save = GlassAction(phase, "SAVE", GlassGold, EdgeGold, () =>
+                var save = HubChrome.Capsule(phase, "SAVE", () =>
                 {
                     if (!DeckIsComplete(st))
                     {
@@ -1601,8 +1566,8 @@ namespace WRLDZ.UI.Shell
                     PersistDeck(st);
                     FreeUiKit.PlayConfirm();
                     Status(st, "Saved · ready for VS AI", true);
-                });
-                var clear = GlassAction(phase, "CLEAR", GlassRose, EdgeRose, () =>
+                }, MenuCommandButton.Kind.Gold, centerTitle: true, titleSize: 18);
+                var clear = HubChrome.Capsule(phase, "CLEAR", () =>
                 {
                     st.Main.Clear();
                     st.Extra.Clear();
@@ -1612,11 +1577,11 @@ namespace WRLDZ.UI.Shell
                     FreeUiKit.PlayClick();
                     st.Rebuild();
                     Status(st, "Deck cleared", true);
-                });
+                }, MenuCommandButton.Kind.Danger, centerTitle: true, titleSize: 18);
                 if (wide)
                 {
-                    PinTop(save.GetComponent<RectTransform>(), 0.50f, 0.68f, barTop, barH);
-                    PinTop(clear.GetComponent<RectTransform>(), 0.70f, 0.86f, barTop, barH);
+                    PinTop(save.GetComponent<RectTransform>(), 0.50f, 0.74f, barTop, barH);
+                    PinTop(clear.GetComponent<RectTransform>(), 0.76f, 1.00f, barTop, barH);
                 }
                 else
                 {

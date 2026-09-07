@@ -59,6 +59,14 @@ def main() -> int:
     must_contain(SCAN, "HubChrome.Capsule", "scan CTAs are not hub capsules")
     must_contain(SYSTEMS, "HubChrome.ListRow", "story/bazaar/tome rows are not hub dest rows")
 
+    ow = ROOT / "Assets/Scripts/WRLDZ/UI/OverworldUI.cs"
+    must_contain(ow, "HubChrome.MountFeatured", "overworld Eye menu is not hub featured tiles")
+    must_contain(ow, "HubChrome.MountDest", "overworld Eye menu is not hub dest tiles")
+    must_contain(ow, "HubChrome.SectionCap", "overworld Eye menu missing DUEL/COMMAND caps")
+
+    deck = ROOT / "Assets/Scripts/WRLDZ/UI/Shell/DeckCollectionScreen.cs"
+    must_contain(deck, "DualMenuPresenter.BuildFrame", "DECK still bypasses hub overlay chrome")
+
     print("hub overlay chrome")
     print("  HubChrome header / well / BACK present")
     print("  DualMenuPresenter phone frame uses hub grammar")

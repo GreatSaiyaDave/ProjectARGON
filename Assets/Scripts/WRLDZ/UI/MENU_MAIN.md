@@ -6,10 +6,9 @@
 
 ## Role in the graph
 
-- **Not home.** Home is Overworld.
-- Entered from Desktop Lab **SYSTEMS HUB** (optional). Live Overworld Eye opens overlays in place.
-- Exit: **← BATTLE CITY MAP** → Overworld.
-- Shadow Duel exit returns to **Overworld**, not this hub.
+Home is **Overworld**. Daily play never lands on this scene. Tap the **Millennium Eye** — that menu is this same Battle City grammar (DUEL featured capsules + COMMAND dest grid), not tall holo cards. Code: `OverworldUI.BuildEyeMenu` → `HubChrome.MountFeatured` / `MountDest`.
+
+This `MainMenu` scene (`DuelDiskMenuUI`) is the **template**, not daily home. Optional entry: Desktop Lab **SYSTEMS HUB**. Exit: **BATTLE CITY MAP** → Overworld. Shadow Duel exit returns to Overworld.
 
 ## Structure
 
