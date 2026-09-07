@@ -50,18 +50,8 @@ namespace WRLDZ.UI.Shell
             board.SetParent(phase, false);
             FloatingPanel.Place(board, x0, y0, x1, y1);
             var bg = board.GetComponent<Image>();
-            var boardPlate = ImagineAssets.PanelMenuGlass() ?? ImagineAssets.PanelHolo();
-            if (boardPlate != null)
-            {
-                bg.sprite = boardPlate;
-                bg.type = boardPlate.border.sqrMagnitude > 0.1f ? Image.Type.Sliced : Image.Type.Simple;
-                bg.color = new Color(1f, 1f, 1f, 0.92f);
-            }
-            else
-            {
-                bg.sprite = UiFoundation.WhiteSprite();
-                bg.color = new Color(0.02f, 0.04f, 0.08f, 0.22f);
-            }
+            HubChrome.PaintPlate(bg, DuelystUi.Cyan);
+            HubChrome.CornerTicks(board.transform, DuelystUi.Cyan);
             bg.raycastTarget = false;
             var vlg = board.GetComponent<VerticalLayoutGroup>();
             vlg.padding = new RectOffset(6, 6, 4, 4);
@@ -93,21 +83,8 @@ namespace WRLDZ.UI.Shell
                 .GetComponent<RectTransform>();
             tray.SetParent(board, false);
             var img = tray.GetComponent<Image>();
-            var plate = ImagineAssets.PanelHolo() ?? ImagineAssets.PanelMenuGlass();
-            if (plate != null)
-            {
-                img.sprite = plate;
-                img.type = plate.border.sqrMagnitude > 0.1f ? Image.Type.Sliced : Image.Type.Simple;
-                img.color = section == Section.Extra
-                    ? new Color(1f, 0.96f, 0.88f, 1f)
-                    : Color.white;
-            }
-            else
-            {
-                img.sprite = UiFoundation.WhiteSprite();
-                img.type = Image.Type.Simple;
-                img.color = new Color(0.05f, 0.09f, 0.14f, 0.82f);
-            }
+            HubChrome.PaintPlate(img, section == Section.Extra ? DuelystUi.Gold : DuelystUi.Cyan,
+                gold: section == Section.Extra, sliced: flex);
             img.raycastTarget = true;
             var le = tray.GetComponent<LayoutElement>();
             le.minHeight = minH;

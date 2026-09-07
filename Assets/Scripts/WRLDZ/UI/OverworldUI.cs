@@ -1345,8 +1345,8 @@ namespace WRLDZ.UI
         }
 
         /// <summary>
-        /// Closed HUD uses <c>bar_bottom</c> (12px vertical borders). Tall Eye sheet
-        /// uses <c>panel_menu_glass</c>. Never 9-slice the tall plate onto the short bar.
+        /// Closed HUD uses <c>bar_bottom</c>. Open Eye uses hub LowerDusk so
+        /// plated dest/featured tiles sit on Battle City night, not smoked glass.
         /// </summary>
         void ApplyMenuGlassSprite(bool eyeOpen)
         {
@@ -1354,15 +1354,13 @@ namespace WRLDZ.UI
             var ol = _menuGlass.GetComponent<Outline>();
             if (eyeOpen)
             {
-                var sheet = ImagineAssets.PanelMenuGlass() ?? ImagineAssets.PanelHolo();
-                if (sheet != null && sheet.border.sqrMagnitude > 0)
-                {
-                    _menuGlass.sprite = sheet;
-                    _menuGlass.type = Image.Type.Sliced;
-                    _menuGlass.color = Color.white;
-                    if (ol != null) ol.enabled = false;
-                    return;
-                }
+                _menuGlass.sprite = UiFoundation.WhiteSprite();
+                _menuGlass.type = Image.Type.Simple;
+                _menuGlass.color = HubChrome.LowerDusk;
+                _menuGlass.raycastTarget = true;
+                HubChrome.LiftPlate(_menuGlass, DuelystUi.Cyan);
+                if (ol != null) ol.enabled = true;
+                return;
             }
 
             var bar = ImagineAssets.BarBottom() ?? ImagineAssets.BarTopHud() ?? ImagineAssets.HudChip();

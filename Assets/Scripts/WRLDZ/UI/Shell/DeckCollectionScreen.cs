@@ -599,15 +599,20 @@ namespace WRLDZ.UI.Shell
 
         static void StyleGlass(Image img, Color fill, Color edge)
         {
-            if (img == null) return;
-            img.sprite = UiTheme.RoundedRectSprite() ?? UiFoundation.WhiteSprite();
-            img.type = img.sprite != null && img.sprite.border.sqrMagnitude > 0
-                ? Image.Type.Sliced : Image.Type.Simple;
-            img.color = fill;
-            var ol = img.GetComponent<Outline>() ?? img.gameObject.AddComponent<Outline>();
-            ol.effectColor = edge;
-            ol.effectDistance = new Vector2(1.5f, -1.5f);
-            ol.useGraphicAlpha = false;
+            var gold = edge.g > 0.55f && edge.r > 0.7f && edge.b < 0.55f;
+            HubChrome.PaintPlate(img, gold ? DuelystUi.Gold : DuelystUi.Cyan, gold);
+        }
+
+        static Button GlassAction(Transform parent, string label, Color fill, Color edge, Action onClick)
+        {
+            var kind = fill == GlassRose || edge == EdgeRose
+                ? MenuCommandButton.Kind.Danger
+                : fill == GlassGold || edge == EdgeGold
+                    ? MenuCommandButton.Kind.Gold
+                    : fill == GlassQuiet
+                        ? MenuCommandButton.Kind.Secondary
+                        : MenuCommandButton.Kind.Primary;
+            return HubChrome.Capsule(parent, label, onClick, kind, centerTitle: true, titleSize: 18);
         }
 
         static void StyleChromeType(Text t, int designSize, TextAnchor align, Color color)
@@ -623,19 +628,6 @@ namespace WRLDZ.UI.Shell
             t.alignByGeometry = true;
             t.color = color;
             t.raycastTarget = false;
-        }
-
-        static Button GlassAction(Transform parent, string label, Color fill, Color edge, Action onClick)
-        {
-            var b = DeckChromeButton(parent, label, onClick, fill, compact: false);
-            StyleGlass(b.GetComponent<Image>(), fill, edge);
-            HubChrome.LiftPlate(b.GetComponent<Image>(), edge);
-            var t = b.GetComponentInChildren<Text>();
-            WrldzType.StyleButtonLabel(t, 18, display: false);
-            t.alignment = TextAnchor.MiddleCenter;
-            t.horizontalOverflow = HorizontalWrapMode.Overflow;
-            t.verticalOverflow = VerticalWrapMode.Overflow;
-            return b;
         }
 
         /// <summary>Pin a toolbar control to the top of the sheet at a fixed pixel height.</summary>
@@ -856,15 +848,8 @@ namespace WRLDZ.UI.Shell
             host.transform.SetParent(phase, false);
             FloatingPanel.Place(host.GetComponent<RectTransform>(), x0, y0, x1, y1);
             var bg = host.GetComponent<Image>();
-            // Simple, not 9-sliced: sliced HudChip borders eat the whole short row.
-            bg.sprite = UiFoundation.WhiteSprite();
-            bg.type = Image.Type.Simple;
-            bg.color = new Color(0.12f, 0.18f, 0.28f, 1f);
-            bg.raycastTarget = true;
-            var edge = host.AddComponent<Outline>();
-            edge.effectColor = new Color(0.40f, 0.85f, 1f, 0.85f);
-            edge.effectDistance = new Vector2(2f, -2f);
-            edge.useGraphicAlpha = false;
+            HubChrome.PaintPlate(bg, DuelystUi.Cyan, sliced: false);
+            HubChrome.CornerTicks(host.transform, DuelystUi.Cyan);
             var canvas = host.GetComponent<Canvas>();
             canvas.overrideSorting = true;
             canvas.sortingOrder = 120;
@@ -1038,6 +1023,7 @@ namespace WRLDZ.UI.Shell
             sheet.transform.SetParent(host.transform, false);
             FloatingPanel.Place(sheet.GetComponent<RectTransform>(), 0.02f, y0, NamePillX1, y1);
             StyleGlass(sheet.GetComponent<Image>(), new Color(0.05f, 0.09f, 0.14f, 0.94f), EdgeCyan);
+            HubChrome.CornerTicks(sheet.transform, DuelystUi.Cyan);
             sheet.GetComponent<Image>().raycastTarget = true;
 
             void Item(int i, string title, Action act, Color fill, Color edge)
@@ -1093,6 +1079,7 @@ namespace WRLDZ.UI.Shell
             sheet.transform.SetParent(host.transform, false);
             FloatingPanel.Place(sheet.GetComponent<RectTransform>(), 0.08f, 0.36f, 0.92f, 0.72f);
             StyleGlass(sheet.GetComponent<Image>(), new Color(0.05f, 0.09f, 0.14f, 0.96f), EdgeCyan);
+            HubChrome.CornerTicks(sheet.transform, DuelystUi.Cyan);
             sheet.GetComponent<Image>().raycastTarget = true;
 
             var title = Label(sheet.transform, "RENAME DECK", 16, DuelystUi.Cyan, TextAnchor.MiddleCenter);
@@ -1196,6 +1183,7 @@ namespace WRLDZ.UI.Shell
             sheet.transform.SetParent(host.transform, false);
             FloatingPanel.Place(sheet.GetComponent<RectTransform>(), 0.04f, 0.10f, 0.96f, 0.88f);
             StyleGlass(sheet.GetComponent<Image>(), new Color(0.05f, 0.09f, 0.14f, 0.96f), EdgeCyan);
+            HubChrome.CornerTicks(sheet.transform, DuelystUi.Cyan);
             sheet.GetComponent<Image>().raycastTarget = true;
 
             var title = DeckNameLabel(sheet.transform, "CHOOSE DECK ICON", DuelystUi.Cyan);
@@ -1523,12 +1511,12 @@ namespace WRLDZ.UI.Shell
         {
             var ar = IsAr(st);
             var wide = !ar && IsWideLayout(phase);
-            const float barH = 72f;
+            const float barH = 96f;
             const float barTop = 8f;
-            const float row2 = 88f;
-            const float row2H = 64f;
-            const float searchH = 52f;
-            var searchTop = wide ? 88f : 160f;
+            const float row2 = 112f;
+            const float row2H = 72f;
+            const float searchH = 56f;
+            var searchTop = wide ? 112f : 192f;
             var chromeBottom = searchTop + searchH + 8f;
             BuildDeckSwitcher(phase, st, 0f, ChromeNameY0, ar ? NamePillX1 : SwitcherX1, ChromeNameY1);
             var switcher = phase.Find("DeckSwitcher") as RectTransform;
@@ -2210,17 +2198,7 @@ namespace WRLDZ.UI.Shell
             searchGo.transform.SetParent(phase, false);
             PinTop(searchGo.GetComponent<RectTransform>(), 0f, searchX1, fromTop, height);
             var sBg = searchGo.GetComponent<Image>();
-            var searchPlate = ImagineAssets.PanelHolo() ?? ImagineAssets.InputField();
-            if (searchPlate != null)
-            {
-                sBg.sprite = searchPlate;
-                sBg.type = searchPlate.border.sqrMagnitude > 0.1f ? Image.Type.Sliced : Image.Type.Simple;
-                sBg.color = Color.white;
-            }
-            else
-            {
-                StyleGlass(sBg, new Color(0.04f, 0.07f, 0.12f, 0.82f), new Color(0.30f, 0.70f, 0.88f, 0.28f));
-            }
+            HubChrome.PaintPlate(sBg, DuelystUi.Cyan, sliced: false);
 
             var sText = Label(searchGo.transform, st.Search ?? "", 13, Color.white, TextAnchor.MiddleLeft);
             FloatingPanel.Place(sText.rectTransform, 0.03f, 0.08f, 0.84f, 0.92f);
@@ -2252,7 +2230,8 @@ namespace WRLDZ.UI.Shell
             {
                 field.text = "";
                 ApplySearch("");
-            }, new Color(0.14f, 0.12f, 0.14f, 0.90f), compact: true);
+            }, Color.white, compact: true);
+            HubChrome.PaintPlate(clear.GetComponent<Image>(), DuelystUi.Cyan, sliced: false);
             FloatingPanel.Place(clear.GetComponent<RectTransform>(), 0.86f, 0.10f, 0.98f, 0.90f);
 
             var icoSpan = Mathf.Max(0.12f, icoX1 - icoX0);
@@ -2531,8 +2510,8 @@ namespace WRLDZ.UI.Shell
             sheet.transform.SetParent(phase, false);
             FloatingPanel.Place(sheet.GetComponent<RectTransform>(), 0.03f, 0.06f, 0.97f, ChromeToolY0 - 0.010f);
             var sImg = sheet.GetComponent<Image>();
-            sImg.sprite = UiFoundation.WhiteSprite();
-            sImg.color = new Color(0.06f, 0.08f, 0.12f, 0.96f);
+            HubChrome.PaintPlate(sImg, DuelystUi.Cyan);
+            HubChrome.CornerTicks(sheet.transform, DuelystUi.Cyan);
             sImg.raycastTarget = true;
 
             var title = Label(sheet.transform, "FILTERS", 16, DuelystUi.GoldHot, TextAnchor.MiddleLeft);
@@ -2549,11 +2528,11 @@ namespace WRLDZ.UI.Shell
                 st.Rebuild();
             });
 
-            var close = DeckChromeButton(sheet.transform, "DONE", () =>
+            var close = HubChrome.Capsule(sheet.transform, "DONE", () =>
             {
                 CloseTray();
                 st.Rebuild();
-            }, new Color(0.12f, 0.42f, 0.52f, 0.50f), compact: true);
+            }, MenuCommandButton.Kind.Gold, centerTitle: true, titleSize: 16);
             FloatingPanel.Place(close.GetComponent<RectTransform>(), 0.72f, 0.91f, 0.96f, 0.985f);
 
             var scroll = new GameObject("FilterScroll", typeof(RectTransform), typeof(Image), typeof(ScrollRect));
@@ -2824,11 +2803,9 @@ namespace WRLDZ.UI.Shell
             le.preferredHeight = 26f;
             le.flexibleWidth = 1f;
             var t = go.GetComponent<Text>();
-            t.font = WrldzType.Body() ?? UiFoundation.BuiltinFont();
-            t.fontSize = 15;
-            t.fontStyle = FontStyle.Bold;
+            WrldzType.Style(t, 15, display: true, heavyOutline: true);
             t.text = text;
-            t.color = DuelystUi.Cyan;
+            t.color = DuelystUi.GoldHot;
             t.alignment = TextAnchor.MiddleLeft;
             t.raycastTarget = false;
         }
@@ -2860,9 +2837,9 @@ namespace WRLDZ.UI.Shell
                 {
                     FreeUiKit.PlaySelect();
                     pick(idx);
-                }, on
-                    ? new Color(0.12f, 0.42f, 0.52f, 0.70f)
-                    : new Color(0.10f, 0.12f, 0.18f, 0.42f), compact: true);
+                }, Color.white, compact: true);
+                HubChrome.PaintPlate(btn.GetComponent<Image>(),
+                    on ? DuelystUi.Gold : DuelystUi.Cyan, gold: on, sliced: false);
                 btn.GetComponent<LayoutElement>().minHeight = 32f;
                 btn.GetComponent<LayoutElement>().preferredHeight = 32f;
                 btn.GetComponent<LayoutElement>().flexibleWidth = 0f;
@@ -2917,10 +2894,7 @@ namespace WRLDZ.UI.Shell
                     typeof(Button), typeof(LayoutElement));
                 cell.transform.SetParent(go.transform, false);
                 var bg = cell.GetComponent<Image>();
-                bg.sprite = UiFoundation.WhiteSprite();
-                bg.color = on
-                    ? new Color(0.18f, 0.55f, 0.68f, 0.55f)
-                    : new Color(0.08f, 0.10f, 0.14f, 0.35f);
+                HubChrome.PaintPlate(bg, on ? DuelystUi.Gold : DuelystUi.Cyan, gold: on, sliced: false);
                 bg.raycastTarget = true;
                 var b = cell.GetComponent<Button>();
                 b.targetGraphic = bg;
@@ -3385,8 +3359,8 @@ namespace WRLDZ.UI.Shell
             sheet.transform.SetParent(dim.transform, false);
             FloatingPanel.Place(sheet.GetComponent<RectTransform>(), 0.10f, 0.32f, 0.90f, 0.70f);
             var sImg = sheet.GetComponent<Image>();
-            sImg.sprite = UiFoundation.WhiteSprite();
-            sImg.color = new Color(0.07f, 0.09f, 0.13f, 0.97f);
+            HubChrome.PaintPlate(sImg, DuelystUi.Gold, gold: true);
+            HubChrome.CornerTicks(sheet.transform, DuelystUi.GoldHot);
             sImg.raycastTarget = true;
 
             var title = Label(sheet.transform, "DECK INCOMPLETE", 16, DuelystUi.GoldHot, TextAnchor.MiddleCenter);
@@ -3412,19 +3386,17 @@ namespace WRLDZ.UI.Shell
                 CloseGuard();
             });
 
-            var stay = DeckChromeButton(sheet.transform, "STAY", () =>
+            var stay = HubChrome.Capsule(sheet.transform, "STAY", () =>
             {
-                FreeUiKit.PlayClick();
                 CloseGuard();
-            }, new Color(0.10f, 0.38f, 0.48f, 1f), compact: true);
+            }, MenuCommandButton.Kind.Gold, centerTitle: true, titleSize: 18);
             FloatingPanel.Place(stay.GetComponent<RectTransform>(), 0.06f, 0.08f, 0.46f, 0.32f);
 
-            var revert = DeckChromeButton(sheet.transform, confirmLabel, () =>
+            var revert = HubChrome.Capsule(sheet.transform, confirmLabel, () =>
             {
-                FreeUiKit.PlayConfirm();
                 CloseGuard();
                 onRevert?.Invoke();
-            }, new Color(0.42f, 0.12f, 0.16f, 1f), compact: true);
+            }, MenuCommandButton.Kind.Danger, centerTitle: true, titleSize: 18);
             FloatingPanel.Place(revert.GetComponent<RectTransform>(), 0.52f, 0.08f, 0.94f, 0.32f);
         }
 
@@ -3602,18 +3574,8 @@ namespace WRLDZ.UI.Shell
             if (pinFromTop >= 0f)
                 PinBelow(panelRt, x0, x1, pinFromTop, y0);
             var pImg = panel.GetComponent<Image>();
-            var listPlate = ImagineAssets.PanelHolo() ?? ImagineAssets.PanelMenuGlass();
-            if (listPlate != null)
-            {
-                pImg.sprite = listPlate;
-                pImg.type = listPlate.border.sqrMagnitude > 0.1f ? Image.Type.Sliced : Image.Type.Simple;
-                pImg.color = Color.white;
-            }
-            else
-            {
-                pImg.sprite = UiFoundation.WhiteSprite();
-                pImg.color = new Color(0.02f, 0.03f, 0.06f, 0.12f);
-            }
+            HubChrome.PaintPlate(pImg, DuelystUi.Cyan);
+            HubChrome.CornerTicks(panel.transform, DuelystUi.Cyan);
             pImg.raycastTarget = true;
             var empty = panel.GetComponent<Button>();
             empty.targetGraphic = pImg;

@@ -2,9 +2,10 @@
 
 ## Rule
 
-**Primary chrome:** Grok Imagine piano-glass pack at `StreamingAssets/WRLDZ/Imagine/`  
+**Primary chrome:** Grok Imagine **hub tiles** at `StreamingAssets/WRLDZ/Imagine/`  
 (`ImagineAssets` → preferred by `DuelystUi`, `WrldzPresentation`, `FlowChrome`, `GoTheme`).  
-Navy glass, thin cyan/gold rims, gold L-ticks. Hub overlays use the same piano-glass **capsules** as the home tiles (`HubChrome`) — not Kenney beige, not a second rectangular holo binder.
+Opaque navy/gold plates (`tile_hub`, `button_*_plate`), cyan/gold rims, gold L-corner ticks.  
+Overlays reuse `HubChrome.PaintPlate` / `MountFeatured` / `MountDest` — not smoked `PanelMenuGlass`, not translucent rounded-rect chips, not Kenney beige.
 
 **Menu atmosphere:** animated Egyptian / night / ages backdrop via  
 `EgyptianAgesAtmosphere` — each host picks a `MenuAge` (Primordial, Old Kingdom,  

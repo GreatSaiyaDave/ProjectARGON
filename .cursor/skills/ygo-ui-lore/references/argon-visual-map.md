@@ -5,7 +5,7 @@
 | Token | Hex / role | Lives in |
 |-------|------------|----------|
 | Void | `#05070F` / `DuelystUi.BgDeep` | Stage, sheets |
-| Panel | navy glass 92–96% | `FloatingPanel`, Imagine holo |
+| Panel | Opaque hub tile (`TileHub` / `BtnPrimary`) | `HubChrome.PaintPlate` |
 | Cream | `#FAF8F4` | Titles, LP, names |
 | Gold | `#FFD647` / `GoldHot` | Phase, currency, millennia |
 | Cyan | `#33EBFF` | You, holos, primary CTA |
