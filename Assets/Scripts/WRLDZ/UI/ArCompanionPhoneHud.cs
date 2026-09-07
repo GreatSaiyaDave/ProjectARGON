@@ -117,12 +117,13 @@ namespace WRLDZ.UI
             var tileI = 0;
             void Tile(string label, string blurb, Action open, bool gold = false)
             {
-                var b = FloatingPanel.PrimaryButton(sheet, label, () =>
+                var b = HubChrome.Capsule(sheet, label, () =>
                 {
                     FreeUiKit.PlaySelect();
                     ClearModal();
                     open?.Invoke();
-                }, gold: gold);
+                }, gold ? MenuCommandButton.Kind.Gold : MenuCommandButton.Kind.Primary,
+                    blurb, centerTitle: false, titleSize: 16);
                 var col = tileI % 2;
                 var row = tileI / 2;
                 var y1 = tileY[Mathf.Min(row, tileY.Length - 1)];
@@ -178,11 +179,11 @@ namespace WRLDZ.UI
                 });
             }
 
-            var leaveOnSheet = FloatingPanel.PrimaryButton(sheet, "← MAP / LEAVE DUEL", () =>
+            var leaveOnSheet = HubChrome.Capsule(sheet, "← MAP / LEAVE DUEL", () =>
             {
                 FreeUiKit.PlayConfirm();
                 onLeaveDuel?.Invoke();
-            }, danger: true);
+            }, MenuCommandButton.Kind.Danger, centerTitle: true, titleSize: 16);
             FloatingPanel.Place(leaveOnSheet.GetComponent<RectTransform>(), 0.12f, 0.02f, 0.88f, 0.10f);
 
             // Tiny chips beside the floating action island — never over disk / holos.
@@ -290,7 +291,9 @@ namespace WRLDZ.UI
             FloatingPanel.Place(b.rectTransform, 0.08f, 0.22f, 0.92f, 0.80f);
             b.alignment = TextAnchor.UpperLeft;
             b.color = DuelystUi.TextCream;
-            var close = FloatingPanel.PrimaryButton(panel, "CLOSE", onClose);
+            var close = HubChrome.Capsule(panel, "CLOSE", onClose, MenuCommandButton.Kind.Gold,
+                centerTitle: true, titleSize: 16);
+            HubChrome.LiftPlate(panel.GetComponent<Image>(), DuelystUi.Cyan);
             FloatingPanel.Place(close.GetComponent<RectTransform>(), 0.25f, 0.06f, 0.75f, 0.16f);
         }
     }

@@ -44,6 +44,14 @@ def main() -> int:
     if "8000" not in hud:
         fail("LP default 8000 missing")
 
+    chrome = ROOT / "Assets/Scripts/WRLDZ/UI/Shell/HubChrome.cs"
+    presenter = ROOT / "Assets/Scripts/WRLDZ/UI/Shell/DualMenuPresenter.cs"
+    if not chrome.is_file():
+        fail("missing HubChrome.cs (hub overlay template)")
+    pres = presenter.read_text(encoding="utf-8") if presenter.is_file() else ""
+    if "HubChrome.HeaderBar" not in pres:
+        fail("DualMenuPresenter phone overlays no longer use HubChrome")
+
     def island(name: str, max_w: float = 0.32, max_h: float = 0.10) -> tuple[float, float]:
         m = re.search(
             rf'Island\(Root, "{name}", ([0-9.]+)f, ([0-9.]+)f, ([0-9.]+)f, ([0-9.]+)f',

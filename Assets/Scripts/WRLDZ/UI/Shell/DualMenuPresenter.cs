@@ -9,7 +9,7 @@ namespace WRLDZ.UI.Shell
     /// <summary>
     /// Dual-menu rule used by almost every systems screen:
     /// <list type="bullet">
-    /// <item><see cref="UiPresentation.NonArPortrait"/> — full phone / Editor portrait sheet</item>
+    /// <item><see cref="UiPresentation.NonArPortrait"/> — hub-matching phone overlay (capsules over dusk)</item>
     /// <item><see cref="UiPresentation.ArDiskHolo"/> — compact holographic panel (left-arm disk glanceable)</item>
     /// </list>
     /// Content screens call <see cref="BuildFrame"/> then fill <paramref name="bodyHost"/>.
@@ -69,47 +69,30 @@ namespace WRLDZ.UI.Shell
         {
             // Overlay shells keep the map / hub visible. Full hub already has canvas atmosphere.
             // Attaching another night sky here painted dunes over the previous screen (glitch).
+            var dimImg = HubChrome.OverlayDim(modalHost, onClose);
 
-            var dim = new GameObject("Dim", typeof(RectTransform), typeof(Image), typeof(Button));
-            dim.transform.SetParent(modalHost, false);
-            FloatingPanel.Stretch(dim.GetComponent<RectTransform>());
-            dim.transform.SetAsFirstSibling();
-            var dimImg = dim.GetComponent<Image>();
-            dimImg.sprite = UiFoundation.WhiteSprite();
-            dimImg.color = MenuChromePrefs.DimColor;
-            dim.GetComponent<Button>().targetGraphic = dimImg;
-            dim.GetComponent<Button>().transition = Selectable.Transition.None;
-            if (onClose != null)
-                dim.GetComponent<Button>().onClick.AddListener(() => onClose());
-
-            var panel = FloatingPanel.Create(modalHost, "PhoneMenu_" + title, goldEdge: false);
-            // Near full-bleed portrait sheet — keep opaque enough for button contrast
-            FloatingPanel.Place(panel, 0.02f, 0.06f, 0.98f, 0.94f);
+            var panel = new GameObject("PhoneMenu_" + title, typeof(RectTransform), typeof(Image));
+            panel.transform.SetParent(modalHost, false);
+            FloatingPanel.Stretch(panel.GetComponent<RectTransform>());
             var pImg = panel.GetComponent<Image>();
-            if (pImg != null)
-            {
-                var holo = ImagineAssets.MenuHoloSheet() ?? ImagineAssets.PanelMenuGlass() ?? pImg.sprite;
-                if (holo != null)
-                {
-                    pImg.sprite = holo;
-                    pImg.type = holo.border.sqrMagnitude > 0 ? Image.Type.Sliced : Image.Type.Simple;
-                }
-                pImg.color = Color.white;
-            }
-            MenuHoloPulse.Attach(panel.gameObject, scan: true, breathe: false);
+            pImg.sprite = UiFoundation.WhiteSprite();
+            pImg.color = new Color(0.02f, 0.04f, 0.08f, 0.08f);
+            pImg.raycastTarget = false;
 
-            // Sit inside the gold L-corners of menu_holo_sheet (not the glow pad).
-            var well = InnerWell(panel, 0.055f, 0.080f, 0.945f, 0.920f);
-            var hasSub = !string.IsNullOrEmpty(subtitle);
-            var (titleT, subT, body) = MountChrome(well, title, subtitle, onClose, titleSize: 26, subSize: 14);
+            var (titleT, subT) = (default(Text), default(Text));
+            HubChrome.HeaderBar(panel.transform, title, subtitle, onClose, out titleT, out subT);
+            var well = HubChrome.BodyWell(panel.transform);
+            HubChrome.FooterBack(panel.transform, onClose);
 
-            FloatingPanel.Place(body, 0.012f, 0.012f, 0.988f, hasSub ? 0.78f : 0.86f);
+            var body = new GameObject("BodyHost", typeof(RectTransform)).GetComponent<RectTransform>();
+            body.SetParent(well, false);
+            FloatingPanel.Stretch(body);
 
             return new Frame
             {
-                Root = panel,
+                Root = panel.GetComponent<RectTransform>(),
                 BodyHost = body,
-                Dim = dim.GetComponent<RectTransform>(),
+                Dim = dimImg.rectTransform,
                 Title = titleT,
                 Subtitle = subT,
                 Presentation = UiPresentation.NonArPortrait
@@ -126,21 +109,23 @@ namespace WRLDZ.UI.Shell
             var rim = panel.GetComponent<Image>();
             if (rim != null)
             {
-                var holo = ImagineAssets.MenuHoloSheet() ?? ImagineAssets.PanelHolo() ?? rim.sprite;
+                var holo = ImagineAssets.TileHub() ?? ImagineAssets.MenuHoloSheet()
+                           ?? ImagineAssets.PanelHolo() ?? rim.sprite;
                 if (holo != null)
                 {
                     rim.sprite = holo;
                     rim.type = holo.border.sqrMagnitude > 0 ? Image.Type.Sliced : Image.Type.Simple;
                 }
+
                 rim.color = Color.white;
+                HubChrome.LiftPlate(rim, DuelystUi.Cyan);
             }
+
             MenuHoloPulse.Attach(panel.gameObject, scan: true, breathe: false);
 
-            var well = InnerWell(panel, 0.070f, 0.100f, 0.930f, 0.900f);
+            var well = HubChrome.BodyWell(panel, 0.070f, 0.080f, 0.930f, 0.900f);
             var hasSub = !string.IsNullOrEmpty(subtitle);
-            var (titleT, subT, body) = MountChrome(well, title, subtitle, onClose, titleSize: 18, subSize: 12);
-            if (titleT != null) titleT.color = DuelystUi.Cyan;
-
+            var (titleT, subT, body) = MountArChrome(well, title, subtitle, onClose);
             FloatingPanel.Place(body, 0.016f, 0.020f, 0.984f, hasSub ? 0.74f : 0.84f);
 
             return new Frame
@@ -154,28 +139,13 @@ namespace WRLDZ.UI.Shell
             };
         }
 
-        /// <summary>
-        /// Content well inset past the hologram 9-slice so title / close / body
-        /// sit on the glass, not in the transparent frame.
-        /// </summary>
-        static RectTransform InnerWell(RectTransform panel, float x0, float y0, float x1, float y1)
-        {
-            var go = new GameObject("InnerWell", typeof(RectTransform), typeof(Image), typeof(RectMask2D));
-            go.transform.SetParent(panel, false);
-            FloatingPanel.Place(go.GetComponent<RectTransform>(), x0, y0, x1, y1);
-            var img = go.GetComponent<Image>();
-            img.sprite = UiFoundation.WhiteSprite();
-            img.color = new Color(0.03f, 0.05f, 0.08f, 0.22f);
-            img.raycastTarget = true;
-            return go.GetComponent<RectTransform>();
-        }
-
-        static (Text title, Text subtitle, RectTransform body) MountChrome(
-            RectTransform well, string title, string subtitle, Action onClose,
-            int titleSize, int subSize)
+        static (Text title, Text subtitle, RectTransform body) MountArChrome(
+            RectTransform well, string title, string subtitle, Action onClose)
         {
             var hasSub = !string.IsNullOrEmpty(subtitle);
-            var titleT = FloatingPanel.Title(well, title ?? "", titleSize);
+            var titleT = FloatingPanel.Title(well, title ?? "", 18);
+            titleT.color = DuelystUi.Cyan;
+            titleT.fontStyle = FontStyle.Bold | FontStyle.Italic;
             FloatingPanel.Place(titleT.rectTransform, 0.02f, hasSub ? 0.90f : 0.88f, 0.80f, 0.99f);
             titleT.horizontalOverflow = HorizontalWrapMode.Overflow;
             titleT.verticalOverflow = VerticalWrapMode.Truncate;
@@ -183,20 +153,13 @@ namespace WRLDZ.UI.Shell
             Text subT = null;
             if (hasSub)
             {
-                subT = FloatingPanel.Body(well, subtitle, subSize);
+                subT = FloatingPanel.Body(well, subtitle, 12);
                 FloatingPanel.Place(subT.rectTransform, 0.02f, 0.82f, 0.80f, 0.90f);
-                subT.color = new Color(0.90f, 0.94f, 1f, 0.96f);
+                subT.color = DuelystUi.TextCream;
             }
 
-            var close = MenuCommandButton.Create(well, "X", onClose,
-                MenuCommandButton.Kind.Secondary, centerTitle: true);
-            close.name = "Close";
-            var closeRt = close.GetComponent<RectTransform>();
-            closeRt.anchorMin = new Vector2(1f, 1f);
-            closeRt.anchorMax = new Vector2(1f, 1f);
-            closeRt.pivot = new Vector2(1f, 1f);
-            closeRt.sizeDelta = new Vector2(64f, 64f);
-            closeRt.anchoredPosition = new Vector2(-6f, -6f);
+            if (onClose != null)
+                HubChrome.CloseChip(well, onClose);
 
             var body = new GameObject("BodyHost", typeof(RectTransform)).GetComponent<RectTransform>();
             body.SetParent(well, false);

@@ -248,11 +248,11 @@ namespace WRLDZ.UI
                 _statSe.transform.parent.GetComponent<RectTransform>(),
                 0.12f, 0.26f);
 
-            var customize = FloatingPanel.PrimaryButton(body, "CUSTOMIZE LOOK", () =>
+            var customize = HubChrome.Capsule(body, "CUSTOMIZE LOOK", () =>
             {
                 FreeUiKit.PlaySelect();
                 OpenCustomizer(_onSaved);
-            }, gold: true);
+            }, MenuCommandButton.Kind.Gold, centerTitle: true, titleSize: 18);
             FloatingPanel.Grid.Full(customize.GetComponent<RectTransform>(), 0.02f, 0.10f);
         }
 
@@ -369,12 +369,13 @@ namespace WRLDZ.UI
             FloatingPanel.Grid.Full(_status.rectTransform, 0.12f, 0.16f);
             StyleReadable(_status, 14, DuelystUi.TextMuted, TextAnchor.MiddleCenter);
 
-            var save = FloatingPanel.PrimaryButton(body, "SAVE LOOK", Save, gold: true);
-            var back = FloatingPanel.PrimaryButton(body, "BACK", () =>
+            var save = HubChrome.Capsule(body, "SAVE LOOK", Save, MenuCommandButton.Kind.Gold,
+                centerTitle: true, titleSize: 16);
+            var back = HubChrome.Capsule(body, "BACK", () =>
             {
                 FreeUiKit.PlayClick();
                 OpenProfile(_onSaved);
-            });
+            }, MenuCommandButton.Kind.Secondary, centerTitle: true, titleSize: 16);
             FloatingPanel.Grid.Pair(
                 save.GetComponent<RectTransform>(),
                 back.GetComponent<RectTransform>(),

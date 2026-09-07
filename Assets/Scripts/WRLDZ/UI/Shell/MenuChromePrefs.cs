@@ -114,7 +114,7 @@ namespace WRLDZ.UI.Shell
 
         public static Color PanelColor => new(0.05f, 0.07f, 0.11f, PanelAlpha);
         public static Color InsetColor => new(0.04f, 0.06f, 0.10f, InsetAlpha);
-        public static Color DimColor => new(0.01f, 0.02f, 0.04f, DimAlpha);
+        public static Color DimColor => new(0.02f, 0.05f, 0.10f, DimAlpha);
         public static Color EdgeColor => new(DuelystUi.Gold.r, DuelystUi.Gold.g, DuelystUi.Gold.b, EdgeAlpha);
         public static Color RowColor => new(0.08f, 0.10f, 0.14f, RowAlpha);
         public static Color RowGoldColor => new(0.28f, 0.22f, 0.08f, RowAlpha + 0.08f);

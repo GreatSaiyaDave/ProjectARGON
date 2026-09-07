@@ -32,6 +32,7 @@ Battle City rooftop at night: life-size holos, KaibaCorp cyan on the player's di
 
 ## When you are stuck
 
+- If a submenu looks like a leftover rectangular binder, rebuild it with `HubChrome` so it matches the hub tiles.
 - If a screen feels like a tournament client, strip chrome until the stage / map is the hero.
 - If a screen feels like a generic sci-fi menu, restore gold phase, cyan/magenta LP, and filament glass.
 - If story type appears on the overworld, move it to `MenuAge.ScrollAges` / parchment — keep the map Battle City.

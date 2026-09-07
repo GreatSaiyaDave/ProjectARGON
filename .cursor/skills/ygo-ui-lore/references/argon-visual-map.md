@@ -25,6 +25,7 @@ Chrome kit: `StreamingAssets/WRLDZ/Imagine/` via `ImagineAssets` → `DuelystUi`
 | Inspect | On select | `CardInspectPopup` |
 | Overworld | GO chips + YGO pins | `GoTheme` / `OverworldUI` |
 | Hub | Destination grid | `DuelDiskMenuUI`, Battle City rain, piano-glass tiles |
+| Hub overlays | Same capsules as hub | `HubChrome` + `DualMenuPresenter` phone frame (header / well / BACK) |
 | Story / Tome | Parchment | `MenuAge.ScrollAges`, not NightPurple wash |
 | Deck editor | Left-fill collection | `DeckCollectionScreen` — pin the **panel**, never scroll content |
 
@@ -68,5 +69,6 @@ Overworld uses `WrldzTheme.BuildMapAtmosphere` (Battle City night/day + weather)
 - Pinning `ChipGrid` content with phase-normalized `x0=0.630`.
 - Hiding LP because “AR is cinematic.”
 - Egyptian parchment on the Battle City overworld.
+- A rectangular phone overlay that does not share hub capsules (`HubChrome`).
 - Gray icons without an accent (outdoor fail).
 - Shipping Konami screenshots as `bg_hub` / splash.

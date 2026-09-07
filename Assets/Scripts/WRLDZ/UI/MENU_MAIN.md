@@ -32,6 +32,7 @@ Tome is **not** a Deck tab and **not** a hub tile — Overworld Eye **TOME** and
 - Dest rows: 3D prop well on the left (Imagine icon fallback) + bold title
 - VS AI uses the Battle City disk showcase; VS PLAYER uses twin-disk prop
 - MAP is a labeled **BATTLE CITY MAP** plate, not a naked orb
+- Related overlays (VS AI, VS PLAYER, DECK, BAG, STORY, BAZAAR, VIEW, SET, formats, scan, tournament, zone prompt) reuse that same capsule grammar via `HubChrome` / `DualMenuPresenter`
 - **Bangers** titles · **Exo 2** body · heavy outline (`WrldzType` / `MenuCommandButton.ApplyHubType`)
 
 ## Code

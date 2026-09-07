@@ -216,7 +216,7 @@ namespace WRLDZ.UI.Shell
             FloatingPanel.Stretch(root);
             var dim = root.GetComponent<Image>();
             dim.sprite = UiFoundation.WhiteSprite();
-            dim.color = new Color(0.02f, 0.03f, 0.07f, 0.78f);
+            dim.color = HubChrome.Dusk;
             dim.raycastTarget = true;
 
             var win = new GameObject("DeckMenuWindow", typeof(RectTransform), typeof(Image))
@@ -661,6 +661,7 @@ namespace WRLDZ.UI.Shell
         {
             var b = DeckChromeButton(parent, label, onClick, fill, compact: false);
             StyleGlass(b.GetComponent<Image>(), fill, edge);
+            HubChrome.LiftPlate(b.GetComponent<Image>(), edge);
             var t = b.GetComponentInChildren<Text>();
             WrldzType.StyleButtonLabel(t, 18, display: false);
             t.alignment = TextAnchor.MiddleCenter;

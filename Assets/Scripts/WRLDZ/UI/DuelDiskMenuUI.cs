@@ -90,7 +90,7 @@ namespace WRLDZ.UI
             WrldzType.ApplyOutline(sub, heavy: true, buttonContrast: true);
             GoTheme.Place(sub.rectTransform, 0.25f, 0.08f, 0.97f, 0.48f);
 
-            SectionCap(root, "DuelCap", "DUEL", DuelystUi.GoldHot, 0.06f, 0.795f, 0.40f, 0.838f);
+            HubChrome.SectionCap(root, "DuelCap", "DUEL", DuelystUi.GoldHot, 0.06f, 0.795f, 0.40f, 0.838f);
 
             FeaturedTile(root, 0.04f, 0.555f, 0.49f, 0.790f,
                 "VS AI", "Practice · table · street", ImagineAssets.IconDuel(),
@@ -99,7 +99,7 @@ namespace WRLDZ.UI
                 "VS PLAYER", "Scan · shared arena", ImagineAssets.IconVsPvp(),
                 OpenPlayerVsPlayer, gold: false, propStem: "hub_prop_pvp", useDisk: false);
 
-            SectionCap(root, "SysCap", "COMMAND", DuelystUi.Cyan, 0.06f, 0.508f, 0.46f, 0.548f);
+            HubChrome.SectionCap(root, "SysCap", "COMMAND", DuelystUi.Cyan, 0.06f, 0.508f, 0.46f, 0.548f);
 
             DestTile(root, 0.04f, 0.330f, 0.34f, 0.492f, "DECK", ImagineAssets.IconDeck(),
                 OpenDeckHub, "hub_prop_deckbox");
@@ -129,7 +129,7 @@ namespace WRLDZ.UI
             var mapTitle = mapBtn.transform.Find("Title") as RectTransform;
             if (mapTitle != null)
                 GoTheme.Place(mapTitle, 0.28f, 0.12f, 0.94f, 0.88f);
-            LiftPlate(mapBtn.GetComponent<Image>(), DuelystUi.Gold);
+            HubChrome.LiftPlate(mapBtn.GetComponent<Image>(), DuelystUi.Gold);
             MenuHoloPulse.Attach(mapBtn.gameObject, scan: true, breathe: false, phase: 0.4f);
 
             var compass = HubPropView.CreateInUi(mapBtn.transform, "hub_prop_compass",
@@ -146,55 +146,6 @@ namespace WRLDZ.UI
             }
         }
 
-        void SectionCap(Transform parent, string name, string text, Color color,
-            float x0, float y0, float x1, float y1)
-        {
-            var cap = GoTheme.Label(parent, name, text, 20, color, TextAnchor.MiddleLeft);
-            WrldzType.Style(cap, 20, display: true, heavyOutline: true);
-            cap.color = color;
-            WrldzType.ApplyOutline(cap, heavy: true, buttonContrast: true);
-            GoTheme.Place(cap.rectTransform, x0, y0, x1, y1);
-
-            var tick = new GameObject(name + "Tick", typeof(RectTransform), typeof(Image));
-            tick.transform.SetParent(parent, false);
-            GoTheme.Place(tick.GetComponent<RectTransform>(), x0, y0 - 0.006f, x0 + 0.10f, y0);
-            var timg = tick.GetComponent<Image>();
-            timg.sprite = UiFoundation.WhiteSprite();
-            timg.color = new Color(color.r, color.g, color.b, 0.85f);
-            timg.raycastTarget = false;
-        }
-
-        static void LiftPlate(Image face, Color edge)
-        {
-            if (face == null) return;
-            var ol = face.GetComponent<Outline>() ?? face.gameObject.AddComponent<Outline>();
-            ol.effectColor = new Color(edge.r, edge.g, edge.b, 0.70f);
-            ol.effectDistance = new Vector2(2.4f, -2.4f);
-            ol.useGraphicAlpha = false;
-            Shadow sh = null;
-            foreach (var s in face.GetComponents<Shadow>())
-            {
-                if (s is Outline) continue;
-                sh = s;
-                break;
-            }
-            if (sh == null) sh = face.gameObject.AddComponent<Shadow>();
-            sh.effectColor = new Color(0f, 0f, 0f, 0.55f);
-            sh.effectDistance = new Vector2(0f, -3f);
-        }
-
-        static void TextScrim(Transform parent, float x0, float y0, float x1, float y1)
-        {
-            var go = new GameObject("Scrim", typeof(RectTransform), typeof(Image));
-            go.transform.SetParent(parent, false);
-            go.transform.SetAsFirstSibling();
-            GoTheme.Place(go.GetComponent<RectTransform>(), x0, y0, x1, y1);
-            var img = go.GetComponent<Image>();
-            img.sprite = UiFoundation.WhiteSprite();
-            img.color = new Color(0.02f, 0.04f, 0.08f, 0.55f);
-            img.raycastTarget = false;
-        }
-
         void FeaturedTile(Transform parent, float x0, float y0, float x1, float y1,
             string title, string blurb, Sprite icon, Action onClick, bool gold,
             string propStem, bool useDisk)
@@ -205,8 +156,8 @@ namespace WRLDZ.UI
             MenuCommandButton.ApplyHubType(btn, 24,
                 gold ? DuelystUi.GoldHot : DuelystUi.Cyan, displayTitle: true,
                 blurbSize: 16, blurbColor: DuelystUi.TextCream);
-            LiftPlate(btn.GetComponent<Image>(), gold ? DuelystUi.Gold : DuelystUi.Cyan);
-            TextScrim(btn.transform, 0.04f, 0.10f, 0.62f, 0.90f);
+            HubChrome.LiftPlate(btn.GetComponent<Image>(), gold ? DuelystUi.Gold : DuelystUi.Cyan);
+            HubChrome.TextScrim(btn.transform, 0.04f, 0.10f, 0.62f, 0.90f);
 
             var titleRt = btn.transform.Find("Title") as RectTransform;
             if (titleRt != null)
@@ -259,7 +210,7 @@ namespace WRLDZ.UI
                 face.type = plate.border.sqrMagnitude > 0.1f ? Image.Type.Sliced : Image.Type.Simple;
                 face.color = Color.white;
             }
-            LiftPlate(face, DuelystUi.Cyan);
+            HubChrome.LiftPlate(face, DuelystUi.Cyan);
             MenuCommandButton.ApplyHubType(btn, 20, Color.white, displayTitle: true);
 
             var well = HubPropView.CreateInUi(btn.transform, propStem,
@@ -275,7 +226,7 @@ namespace WRLDZ.UI
                 iimg.raycastTarget = false;
             }
 
-            TextScrim(btn.transform, 0.36f, 0.18f, 0.96f, 0.82f);
+            HubChrome.TextScrim(btn.transform, 0.36f, 0.18f, 0.96f, 0.82f);
             var titleRt = btn.transform.Find("Title") as RectTransform;
             if (titleRt != null)
                 GoTheme.Place(titleRt, 0.38f, 0.14f, 0.96f, 0.86f);
