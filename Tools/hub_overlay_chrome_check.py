@@ -150,7 +150,7 @@ def main() -> int:
     must_contain(ROOT / "Assets/WRLDZ_BUILD.txt", "CLEAN-0907", "lost Unity Project BUILD file")
     must_contain(
         ROOT / ".cursor/skills/owner-linux-unity/SKILL.md",
-        "Never give `git pull origin main` as the only step",
+        "Do not give `git pull` as the only step",
         "lost owner-linux-unity skill",
     )
     must_contain(

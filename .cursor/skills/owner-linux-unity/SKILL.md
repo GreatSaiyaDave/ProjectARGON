@@ -1,51 +1,20 @@
 ---
 name: owner-linux-unity
-description: How this owner gets Unity changes onto Linux Unity Hub. Use whenever they say git pull failed, Hub shows no changes, Hub says it is synced but GitHub is not, a command is not working, or they cannot see UI/engine updates. The owner is not a programmer.
+description: How this owner gets Unity changes onto Linux Unity Hub. Use when Hub looks synced, git pull failed, or they cannot see updates. The owner is not a programmer.
 ---
 
-# Owner gets updates (Linux Unity Hub)
+# Owner updates
 
-Read this before telling the owner to run git. Cloud Agents push **GitHub** (`GreatSaiyaDave/ProjectARGON`). Unity Hub's synced / connected mark is **not** an automatic pull of those commits.
+Cloud Agents push GitHub. Hub does not pull.
 
-## Why Hub looks synced
+The Hub **cloud** icon is Unity Cloud (ads). The **GitHub cat** is only a link. Tell them one path:
 
-Hub shows **two different marks** on the project row:
+1. Open `ProjectARGON` in the Editor.
+2. **WRLDZ → Get Latest from GitHub**
+3. Project search `WRLDZ_BUILD` = `CLEAN-0907`
 
-| Icon | Tooltip | What it actually does |
-|------|---------|------------------------|
-| **Cloud** | "Project connected to Unity Cloud" · Analytics, Ads, Dashboard | Unity services. **Never** downloads GitHub commits. |
-| **GitHub cat** | Repo link / branch | This *folder* is tied to a GitHub remote. Hub still does **not** pull when Cloud Agents push `main`. |
+If the menu fails: Hub **Add → Add from repository → GitHub → GreatSaiyaDave/ProjectARGON**.
 
-Hover the **cat**, not the cloud. The URL must be `GreatSaiyaDave/ProjectARGON`. A different repo, or only the Unity Cloud mark, is the wrong connection.
+Do not give `git pull` as the only step. Do not say Hub auto-downloads GitHub. Home is Overworld Eye. Play Boot is splash unless **WRLDZ → Lab → Open Desktop Lab App**.
 
-Hub GitHub integration (3.17): create repo, **Add from repository**, show branch. It does not pull on every agent push. Connecting an *existing local folder* to GitHub often links **that stale copy**, it does not replace it with GitHub `main`.
-
-## Hard rules
-
-1. **Never give `git pull origin main` as the only step.** Prefer Hub **Add from repository**, then in-Editor **WRLDZ → Get Latest from GitHub**.
-2. **Unity Console is not a terminal.**
-3. **This Cloud VM is not their PC.**
-4. **Menus are built at runtime.** Edit-mode scenes look the same.
-5. **Editor Play starts at Boot splash** unless **WRLDZ → Lab → Open Desktop Lab App**. Eye plates: Desktop Lab → **OVERWORLD (WASD MAP)** → Eye → DECK / BAG.
-6. If they say **no changes**, Hub is on an **old folder** until Project search finds `WRLDZ_BUILD` with stamp `CLEAN-0907`.
-
-## Reliable path
-
-**One-time (correct GitHub clone in Hub 3.17+):**
-
-1. Close the Editor.
-2. Hub → Projects → **Add** → **Add from repository** → GitHub → `GreatSaiyaDave/ProjectARGON` → **main**.
-3. Open **that** project with **6000.5.10f1**. Do not keep opening the old row.
-
-**Each later update:** Editor **WRLDZ → Get Latest from GitHub**, then Lab menu. Console `[WRLDZ] BUILD CLEAN-0907`. Project `WRLDZ_BUILD` = CLEAN-0907.
-
-**Fallback zip:** https://github.com/GreatSaiyaDave/ProjectARGON/archive/refs/heads/main.zip — folder with Assets + ProjectSettings → Hub Add.
-
-`GET_THE_GAME.txt` is owner language. Keep it in sync with `WrldzBuild.Stamp`.
-
-## Do not
-
-- Tell them Hub will auto-sync GitHub because the icon is green.
-- Ask them to merge `cursor/*` branches. Canon is `main`.
-- Point them at the Hub scene as home. Home is Overworld Eye.
-- Treat a Cloud `git push` as something their Editor already has.
+`GET_THE_GAME.txt` is the owner copy. Keep it in sync with `WrldzBuild.Stamp`.

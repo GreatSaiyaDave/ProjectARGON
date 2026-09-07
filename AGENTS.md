@@ -6,17 +6,9 @@
 
 The owner is **not a programmer** and plays on **Linux Unity Hub**. Read `.cursor/skills/owner-linux-unity/SKILL.md` before telling them how to see updates.
 
-## How the owner sees updates (Hub "synced" is not GitHub pull)
+## How the owner sees updates
 
-Unity Hub's **cloud** icon is Unity Cloud (Analytics / Ads). The **GitHub cat** is a repo *link*. Neither auto-pulls Cloud Agent commits from `github.com/GreatSaiyaDave/ProjectARGON`.
-
-**One-time:** Hub → Add → **Add from repository** → GitHub → `GreatSaiyaDave/ProjectARGON` → main → open **that** project (`6000.5.10f1`).
-
-**Each update:** Editor **WRLDZ → Get Latest from GitHub**, then **WRLDZ → Lab → Open Desktop Lab App**. Proof: Project search `WRLDZ_BUILD` = **CLEAN-0907**. Console `[WRLDZ] BUILD CLEAN-0907`.
-
-Do not tell them to `git pull` as the only step. Do not tell them Hub will auto-download agent pushes. Details: `.cursor/skills/owner-linux-unity/SKILL.md` and `GET_THE_GAME.txt`.
-
-Editor Play on Boot = splash unless the Lab menu. Overlay chrome is **runtime**. This Cloud VM has **no Unity Editor**. Python: `python3 Tools/hub_overlay_chrome_check.py && python3 Tools/ygo_ui_lore_check.py && python3 Tools/deck_editor_layout_check.py`.
+Hub **cloud** = Unity Cloud (ads), not GitHub. Tell them: open the project → **WRLDZ → Get Latest from GitHub** → Project search `WRLDZ_BUILD` = **CLEAN-0907**. Details: `.cursor/skills/owner-linux-unity/` and `GET_THE_GAME.txt`.
 
 ## What is already on `main` (do not re-implement)
 

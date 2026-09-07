@@ -1,38 +1,10 @@
-WHY UNITY HUB LOOKS "SYNCED" BUT GITHUB IS NOT
-==============================================
+Ignore the Hub cloud icon. That is Unity Cloud (ads), not GitHub.
 
-The Hub **cloud** icon tooltip says "Project connected to Unity Cloud"
-(Analytics, Ads, Dashboard). That is NOT GitHub.
+1. Open ProjectARGON in Unity.
+2. Menu: WRLDZ → Get Latest from GitHub
+3. Project search: WRLDZ_BUILD  →  must say CLEAN-0907
 
-The **GitHub cat** means this local folder is linked to a repo.
-Hover the cat. The URL must be:
+If that menu fails:
+Hub → Add → Add from repository → GitHub → GreatSaiyaDave/ProjectARGON
 
-  https://github.com/GreatSaiyaDave/ProjectARGON
-
-Hub still does not pull when Cloud Agents push main. A link is
-not a download.
-
-THIS FOLDER (example: DMWRDLZUnityProject/ProjectARGON)
--------------------------------------------------------
-Open it in the Editor (6000.5.10f1).
-Menu:  WRLDZ → Get Latest from GitHub
-Then:  WRLDZ → Lab → Open Desktop Lab App
-
-Project search WRLDZ_BUILD must say CLEAN-0907.
-Console: [WRLDZ] BUILD CLEAN-0907
-
-If Get Latest says this folder is not the GitHub repo, use
-Add from repository below and open the NEW row.
-
-ONE-TIME: ADD FROM REPOSITORY (Hub 3.17+)
------------------------------------------
-1. Close the Unity Editor.
-2. Hub → Projects → Add → Add from repository.
-3. GitHub → GreatSaiyaDave / ProjectARGON → branch main.
-4. Open THAT project with 6000.5.10f1.
-
-ZIP FALLBACK
-------------
-https://github.com/GreatSaiyaDave/ProjectARGON/archive/refs/heads/main.zip
-Extract the folder that contains Assets + ProjectSettings.
-Hub → Add that folder.
+Zip: https://github.com/GreatSaiyaDave/ProjectARGON/archive/refs/heads/main.zip
