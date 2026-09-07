@@ -1875,6 +1875,8 @@ namespace WRLDZ.UI
                 () => OpenSystemsMenu(MenuId.DeckCollection), false, i++);
             Card("Nav_Bag", NavCopy.BagShort, ImagineAssets.IconBag() ?? DuelystUi.IconBag(),
                 () => OpenSystemsMenu(MenuId.Inventory), false, i++);
+            Card("Nav_Trade", NavCopy.TitleFor(MenuId.Trade), ImagineAssets.IconBag() ?? DuelystUi.IconBag(),
+                () => OpenSystemsMenu(MenuId.Trade), false, i++);
             Card("Nav_Story", NavCopy.TitleFor(MenuId.StorySeason), ImagineAssets.IconStory() ?? DuelystUi.IconStory(),
                 () => OpenSystemsMenu(MenuId.StorySeason), false, i++);
             Card("Nav_Bazaar", NavCopy.TitleFor(MenuId.Bazaar), ImagineAssets.IconBazaar(),
