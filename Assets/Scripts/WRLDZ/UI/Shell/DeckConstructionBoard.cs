@@ -18,7 +18,9 @@ namespace WRLDZ.UI.Shell
         const float MaxCardW = 156f;
         const float MinCardW = 72f;
         const int MainColsCap = 10;
-        const float ExtraRowMin = 176f;
+        // Extra/Side are a single card row + header. 176px starved MAIN on
+        // landscape Game views and clipped the collection-sized main grid.
+        const float ExtraRowMin = 128f;
         const float HeadBarH = 26f;
 
         static bool IsAr(State st) =>
@@ -64,10 +66,13 @@ namespace WRLDZ.UI.Shell
             vlg.childControlWidth = true;
             vlg.childControlHeight = true;
             vlg.childForceExpandWidth = true;
+            // Keep false so Extra/Side stay at ExtraRowMin. MAIN already has
+            // LayoutElement.flexibleHeight = 1 and takes leftover height.
+            // Force-expand would inflate Extra/Side equally with MAIN.
             vlg.childForceExpandHeight = false;
             st.BoardHost = board;
 
-            st.MainTray = MakePileTray(board, st, Section.Main, flex: true, minH: 200f);
+            st.MainTray = MakePileTray(board, st, Section.Main, flex: true, minH: 160f);
             st.ExtraTray = MakePileTray(board, st, Section.Extra, flex: false, minH: ExtraRowMin);
             st.SideTray = MakePileTray(board, st, Section.Side, flex: false, minH: ExtraRowMin);
         }
@@ -109,6 +114,8 @@ namespace WRLDZ.UI.Shell
             inner.childControlWidth = true;
             inner.childControlHeight = true;
             inner.childForceExpandWidth = true;
+            // Only the well is flexible. Force-expand would grow the 26px
+            // header and leave a gap between MAIN's title and the card faces.
             inner.childForceExpandHeight = false;
             var btn = tray.GetComponent<Button>();
             btn.targetGraphic = img;
@@ -255,7 +262,7 @@ namespace WRLDZ.UI.Shell
             }
 
             var fit = host.GetComponent<DeckPileFit>();
-            fit?.Fit();
+            fit?.Fit(force: true);
         }
 
         static void GhostFace(Transform host)
@@ -335,11 +342,16 @@ namespace WRLDZ.UI.Shell
             public RectTransform Viewport;
             bool _fitting;
 
+            int _lastN = -1;
+            float _lastW = -1f;
+            float _lastH = -1f;
+
             void OnEnable() => Fit();
             void Start() => Fit();
             void OnRectTransformDimensionsChange() => Fit();
+            void LateUpdate() => Fit();
 
-            public void Fit()
+            public void Fit(bool force = false)
             {
                 if (_fitting) return;
                 var rt = transform as RectTransform;
@@ -349,8 +361,13 @@ namespace WRLDZ.UI.Shell
                 var w = vp.rect.width;
                 var h = vp.rect.height;
                 if (w < 8f || h < 8f) return;
-                _fitting = true;
                 var n = rt.childCount;
+                if (!force && n == _lastN && Mathf.Abs(w - _lastW) < 0.5f && Mathf.Abs(h - _lastH) < 0.5f)
+                    return;
+                _fitting = true;
+                _lastN = n;
+                _lastW = w;
+                _lastH = h;
                 const float pad = 4f;
                 if (n == 0)
                 {
@@ -392,8 +409,8 @@ namespace WRLDZ.UI.Shell
                         cols = Mathf.Max(5, Mathf.FloorToInt(inner / MinCardW));
                     var cardW = Mathf.Min(MaxCardW, inner / cols);
                     var cardH = cardW * Aspect;
-                    var used = cols * cardW;
-                    var x0 = pad + Mathf.Max(0f, (inner - used) * 0.5f);
+                    // Left-align with the search/filter chrome above the board.
+                    var x0 = pad;
                     var rows = Mathf.CeilToInt(n / (float)cols);
                     var stepY = cardH + 3f;
                     var totalH = pad * 2f + rows * stepY;
