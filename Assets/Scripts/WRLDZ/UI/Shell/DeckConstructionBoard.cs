@@ -18,9 +18,13 @@ namespace WRLDZ.UI.Shell
         const float MaxCardW = 156f;
         const float MinCardW = 72f;
         const int MainColsCap = 10;
-        // Extra/Side are a single card row + header. 176px starved MAIN on
-        // landscape Game views and clipped the collection-sized main grid.
-        const float ExtraRowMin = 128f;
+        // Extra/Side are a single overlapping card row + header. Keep
+        // preferred height compact so MAIN can take leftover space on short
+        // landscape Game views (Free Aspect 1x often ~500px tall).
+        const float ExtraRowMin = 100f;
+        const float ExtraRowHardMin = 72f;
+        const float MainTrayMin = 96f;
+        const float MainTrayPreferred = 120f;
         const float HeadBarH = 26f;
 
         static bool IsAr(State st) =>
@@ -62,7 +66,7 @@ namespace WRLDZ.UI.Shell
             var vlg = board.GetComponent<VerticalLayoutGroup>();
             vlg.padding = new RectOffset(6, 6, 4, 4);
             vlg.spacing = 6f;
-            vlg.childAlignment = TextAnchor.UpperCenter;
+            vlg.childAlignment = TextAnchor.UpperLeft;
             vlg.childControlWidth = true;
             vlg.childControlHeight = true;
             vlg.childForceExpandWidth = true;
@@ -72,13 +76,16 @@ namespace WRLDZ.UI.Shell
             vlg.childForceExpandHeight = false;
             st.BoardHost = board;
 
-            st.MainTray = MakePileTray(board, st, Section.Main, flex: true, minH: 160f);
-            st.ExtraTray = MakePileTray(board, st, Section.Extra, flex: false, minH: ExtraRowMin);
-            st.SideTray = MakePileTray(board, st, Section.Side, flex: false, minH: ExtraRowMin);
+            st.MainTray = MakePileTray(board, st, Section.Main, flex: true,
+                minH: MainTrayMin, preferredH: MainTrayPreferred);
+            st.ExtraTray = MakePileTray(board, st, Section.Extra, flex: false,
+                minH: ExtraRowHardMin, preferredH: ExtraRowMin);
+            st.SideTray = MakePileTray(board, st, Section.Side, flex: false,
+                minH: ExtraRowHardMin, preferredH: ExtraRowMin);
         }
 
         static RectTransform MakePileTray(RectTransform board, State st, Section section,
-            bool flex, float minH)
+            bool flex, float minH, float preferredH)
         {
             var name = section.ToString();
             var tray = new GameObject(name + "Tray", typeof(RectTransform), typeof(Image), typeof(Button),
@@ -104,7 +111,7 @@ namespace WRLDZ.UI.Shell
             img.raycastTarget = true;
             var le = tray.GetComponent<LayoutElement>();
             le.minHeight = minH;
-            le.preferredHeight = minH;
+            le.preferredHeight = preferredH;
             le.flexibleHeight = flex ? 1f : 0f;
             le.flexibleWidth = 1f;
             var inner = tray.GetComponent<VerticalLayoutGroup>();
@@ -165,7 +172,9 @@ namespace WRLDZ.UI.Shell
                 typeof(Image), typeof(ScrollRect), typeof(LayoutElement));
             well.transform.SetParent(tray, false);
             well.GetComponent<LayoutElement>().flexibleHeight = 1f;
-            well.GetComponent<LayoutElement>().minHeight = flex ? 80f : (ExtraRowMin - HeadBarH - 16f);
+            // Keep well mins below tray mins so Extra/Side can shrink on a
+            // short Game view instead of clipping MAIN's last row.
+            well.GetComponent<LayoutElement>().minHeight = flex ? 56f : 32f;
             well.GetComponent<LayoutElement>().flexibleWidth = 1f;
             var wImg = well.GetComponent<Image>();
             wImg.sprite = UiFoundation.WhiteSprite();
