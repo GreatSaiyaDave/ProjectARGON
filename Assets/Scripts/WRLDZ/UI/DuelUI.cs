@@ -768,8 +768,7 @@ namespace WRLDZ.UI
         }
 
         /// <summary>
-        /// Glanceable glass islands: YOU/OPP LP, phase, status, phase CTAs, Pass/Cancel.
-        /// Replaces the old full-width combat bar + disk phase hub.
+        /// Glanceable glass islands: YOU/OPP LP, gold phase, status, phase CTAs.
         /// </summary>
         void BindFloatingHud(Transform root)
         {

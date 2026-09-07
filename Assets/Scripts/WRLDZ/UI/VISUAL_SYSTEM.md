@@ -40,10 +40,14 @@ Do **not** mix Kenney beige panels, random AI panels, or photo backgrounds into 
 
 ## Palette
 
-- Background `#0A0F14`
-- Panel dark slate
+- Background Battle City night `#05070F` / `DuelystUi.BgDeep`
+- Panel navy glass
 - Text cream / muted blue-grey
-- Accent cyan (primary), gold, green (ok), red (danger)
+- Accent cyan (you / holos), magenta (opponent / Tears), gold (phase / LP / millennia)
+
+Story / tome uses parchment + `MenuAge.ScrollAges`. Do not wash the overworld in temple brown.
+
+See `.cursor/skills/ygo-ui-lore/` for TCG-client HUD grammar and lore tone.
 
 ## Content art (separate from chrome)
 

@@ -315,9 +315,13 @@ namespace WRLDZ.EditorTools
                 var hud = DuelFloatingHud.Create(canvas);
                 if (hud.DeckCount == null || hud.PhaseLabel == null || hud.StatusLine == null)
                     throw new Exception("floating hud missing score/phase/status");
+                if (hud.YouLp == null || hud.OppLp == null)
+                    throw new Exception("floating hud missing YOU/OPP LP orbs");
                 if (hud.ActionWindow == null || hud.ContextWindow == null)
                     throw new Exception("floating hud missing action/context islands");
                 hud.SetLifePoints(8000, 7500);
+                if (hud.YouLp.text != "8000" || hud.OppLp.text != "7500")
+                    throw new Exception("LP orbs did not take SetLifePoints");
                 hud.SetStatus("Your Main Phase 1 — you may Normal Summon");
                 hud.SetActionsVisible(true);
                 hud.SetContextVisible(false);
@@ -331,6 +335,7 @@ namespace WRLDZ.EditorTools
                 var hud = DuelFloatingHud.Create(canvas);
                 AssertGlanceIsland(hud.Root.Find("YouScore"), "YouScore", maxW: 0.32f, maxH: 0.10f);
                 AssertGlanceIsland(hud.Root.Find("Phase"), "Phase", maxW: 0.36f, maxH: 0.10f);
+                AssertGlanceIsland(hud.Root.Find("OppScore"), "OppScore", maxW: 0.32f, maxH: 0.10f);
                 AssertGlanceIsland(hud.Root.Find("Status"), "Status", maxW: 0.36f, maxH: 0.06f);
                 if (hud.PillMp1 != null && hud.PillMp1.color.a > 0.45f)
                     throw new Exception("phase pip too opaque a=" + hud.PillMp1.color.a.ToString("0.00"));
@@ -383,6 +388,9 @@ namespace WRLDZ.EditorTools
                 var youFrame = hud.Root.Find("YouScore")?.Find("Frame")?.GetComponent<Image>();
                 if (youFrame == null || !IsFilamentSprite(youFrame.sprite))
                     throw new Exception("YouScore is not the filament island sprite");
+                var oppFrame = hud.Root.Find("OppScore")?.Find("Frame")?.GetComponent<Image>();
+                if (oppFrame == null || !IsFilamentSprite(oppFrame.sprite))
+                    throw new Exception("OppScore is not the filament island sprite");
             });
             Check("ArFieldSpellFloor is left/right wrap walls, not a street carpet", () =>
             {

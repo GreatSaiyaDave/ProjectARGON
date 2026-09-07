@@ -479,12 +479,13 @@ Implement via `AppSession` + `ScreenRouter` (do not hard-wire random `SceneManag
 ## 9. Visual reference (in-engine)
 
 ```
-Background:  void charcoal
+Background:  Battle City night void
 Panel:       glass navy + 2px cyan/gold edge
 Title:       soft gold display face
 Body:        cream Exo 2
-Accent CTA:  cyan primary / gold secondary / danger red
+Accent CTA:  cyan you / magenta opponent / gold phase
 Icons:       monochrome line + single accent fill
+Duel HUD:    YOU LP left · PHASE center · OPP LP right
 ```
 
 **Not this product:** dense Master Duel deck grids on the map, GBA brick spam, low-contrast gray icons, simultaneous multi-modal stacks.

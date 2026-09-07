@@ -2,9 +2,9 @@
 
 ## Clean layout (top → bottom)
 
-1. **LP orbs** + **phase banner** (`YOU · MAIN PHASE 1`)  
-2. Status / hint  
-3. Compact Referobot  
+1. **LP orbs** — YOU cyan left, OPP magenta right (always on)  
+2. **Phase banner** (`MAIN PHASE 1`) + M1 · BP · M2 · EP pips  
+3. Status toast (one sentence)   
 4. AR stage (disks + holograms)  
 5. **Phase pills** — MAIN 1 · BATTLE · MAIN 2 · END (highlight current)  
 6. Opp field / You field (framed cards, drag targets)  
