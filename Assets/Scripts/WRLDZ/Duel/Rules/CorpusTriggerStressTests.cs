@@ -79,6 +79,14 @@ namespace WRLDZ.Duel.Rules
             foreach (var def in db.GetAllCards())
             {
                 if (def == null) continue;
+
+                // Isolate each card: a prior card's resolution can end the duel
+                // (GameOver) or leave a non-Main phase, which would make every
+                // later activation illegal. Re-seat a clean Main-Phase duel when
+                // the shared engine is no longer in a usable state.
+                if (engine.GameOver || !engine.InMainPhase || engine.TurnPlayer != engine.Player)
+                    engine = Fresh(db, pDeck, aDeck);
+
                 var kind = CardEffectStatus.Classify(def);
                 switch (kind)
                 {
