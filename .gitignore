@@ -76,6 +76,10 @@ wrldz_stress*.log
 __pycache__/
 *.pyc
 
+# Headless engine harness build outputs (.NET)
+Tools/HeadlessEngine/bin/
+Tools/HeadlessEngine/obj/
+
 # Local-only (kept off GitHub)
 .grok/
 Assets/Screenshots/
