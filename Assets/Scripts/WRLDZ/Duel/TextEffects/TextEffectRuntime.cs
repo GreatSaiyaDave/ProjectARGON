@@ -1480,11 +1480,13 @@ namespace WRLDZ.Duel.TextEffects
                     return false;
                 }
 
-                var need = Mathf.Max(1, c.Amount);
-                var tributes = SelectRitualTributes(who, target, need);
-                if (TotalLevel(tributes) < need)
+                var need = RitualNeed(target, c);
+                var tributes = SelectRitualTributes(who, target, need, c.RitualExactLevel);
+                var have = TotalLevel(tributes);
+                if (c.RitualExactLevel ? have != need : have < need)
                 {
-                    reason = $"Not enough Tribute Levels for the Ritual Summon (need {need}).";
+                    reason = $"Tribute Levels for the Ritual Summon must " +
+                             $"{(c.RitualExactLevel ? "exactly equal" : "total ≥")} {need}.";
                     return false;
                 }
 
@@ -1585,12 +1587,15 @@ namespace WRLDZ.Duel.TextEffects
             return null;
         }
 
-        /// <summary>
-        /// Auto-select Tribute material (monsters on field + in hand, excluding the Ritual
-        /// Monster) whose total Level ≥ <paramref name="need"/>. Highest-Level first to use
-        /// the fewest monsters.
-        /// </summary>
-        static List<CardInstance> SelectRitualTributes(DuelistState who, CardInstance target, int need)
+        /// <summary>The Ritual Summon Tribute requirement — the summoned monster's Level.</summary>
+        static int RitualNeed(CardInstance target, EffectClause clause)
+        {
+            var lvl = target != null ? Mathf.Max(0, target.Level) : 0;
+            if (lvl > 0) return lvl;
+            return Mathf.Max(1, clause?.Amount ?? 1); // fallback to printed number
+        }
+
+        static List<CardInstance> RitualTributeCandidates(DuelistState who, CardInstance target)
         {
             var cand = new List<CardInstance>();
             if (who != null)
@@ -1601,6 +1606,22 @@ namespace WRLDZ.Duel.TextEffects
                     foreach (var c in who.Hand)
                         if (c != null && c != target && c.Def != null && c.Def.IsMonster) cand.Add(c);
             }
+
+            return cand;
+        }
+
+        /// <summary>
+        /// Auto-select Tribute material (monsters on field + in hand, excluding the Ritual
+        /// Monster). For the usual "Level N or more" the total must be ≥ <paramref name="need"/>
+        /// (highest-Level first, fewest monsters). For "exactly equal" (Chant cards) the total
+        /// must be EXACTLY <paramref name="need"/> — an exact subset is found or none is returned.
+        /// </summary>
+        static List<CardInstance> SelectRitualTributes(DuelistState who, CardInstance target, int need,
+            bool exact)
+        {
+            var cand = RitualTributeCandidates(who, target);
+            if (exact)
+                return SelectExactLevelSubset(cand, need);
 
             cand.Sort((a, b) => Mathf.Max(0, b.Level).CompareTo(Mathf.Max(0, a.Level)));
             var chosen = new List<CardInstance>();
@@ -1613,6 +1634,33 @@ namespace WRLDZ.Duel.TextEffects
             }
 
             return chosen;
+        }
+
+        /// <summary>Find a subset of monsters whose Levels sum EXACTLY to need (or empty).</summary>
+        static List<CardInstance> SelectExactLevelSubset(List<CardInstance> cand, int need)
+        {
+            var chosen = new List<CardInstance>();
+            if (need <= 0) return chosen;
+            // Highest-first with pruning; counts are small (hand + field).
+            cand.Sort((a, b) => Mathf.Max(0, b.Level).CompareTo(Mathf.Max(0, a.Level)));
+
+            bool Dfs(int i, int remaining, List<CardInstance> acc)
+            {
+                if (remaining == 0) return true;
+                if (i >= cand.Count || remaining < 0) return false;
+                for (var k = i; k < cand.Count; k++)
+                {
+                    var lvl = Mathf.Max(0, cand[k].Level);
+                    if (lvl <= 0 || lvl > remaining) continue;
+                    acc.Add(cand[k]);
+                    if (Dfs(k + 1, remaining - lvl, acc)) return true;
+                    acc.RemoveAt(acc.Count - 1);
+                }
+
+                return false;
+            }
+
+            return Dfs(0, need, chosen) ? chosen : new List<CardInstance>();
         }
 
         static int TotalLevel(List<CardInstance> cards)
@@ -1635,12 +1683,14 @@ namespace WRLDZ.Duel.TextEffects
                 return false;
             }
 
-            var need = Mathf.Max(1, clause.Amount);
-            var tributes = SelectRitualTributes(who, target, need);
+            var need = RitualNeed(target, clause);
+            var tributes = SelectRitualTributes(who, target, need, clause.RitualExactLevel);
             var have = TotalLevel(tributes);
-            if (have < need)
+            var meets = clause.RitualExactLevel ? have == need : have >= need;
+            if (!meets)
             {
-                engine.Log($"{source?.Name}: not enough Tribute Levels ({have}/{need}).");
+                engine.Log($"{source?.Name}: Tribute Levels {have} do not " +
+                           $"{(clause.RitualExactLevel ? "exactly equal" : "meet")} {need}.");
                 return false;
             }
 

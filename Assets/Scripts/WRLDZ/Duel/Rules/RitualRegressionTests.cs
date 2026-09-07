@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using WRLDZ.Data;
@@ -107,9 +109,95 @@ namespace WRLDZ.Duel.Rules
                 p4.MonstersOnField().Any(m => m != null && m.CardId == BlackLusterSoldier) &&
                 p4.Graveyard.Any(c => c != null && c.CardId == Bewd));
 
+            // ── "Exactly equal" (Contract with the Abyss → any DARK Ritual Monster) ──
+            // Target Hungry Burger (DARK, Level 6): Tributes must total EXACTLY 6.
+            const int Contract = 69035382, GiantSoldier = 13039848; // GiantSoldier = Level 3
+            if (db.Get(Contract) != null)
+            {
+                // Exact subset {3,3}=6 exists (even though a Lv8 is also in hand) → legal,
+                // and the exact selection must Tribute the two Lv3s, NOT the Lv8.
+                var eOk = Fresh(db);
+                var pO = eOk.Player;
+                ClearSide(pO);
+                InHand(eOk, pO, HungryBurger);           // DARK Level 6 target
+                var contractO = InHand(eOk, pO, Contract);
+                var keep = InHand(eOk, pO, Bewd);        // Level 8 — must NOT be Tributed
+                InHand(eOk, pO, GiantSoldier);           // Level 3
+                InHand(eOk, pO, GiantSoldier);           // Level 3  → {3,3} == 6
+                Check("Ritual(exact): Contract legal when Tributes can total exactly 6",
+                    eOk.CanActivateSpellTrap(pO, contractO, fromHand: true));
+                Check("Ritual(exact): resolves and summons Hungry Burger",
+                    eOk.TryActivateSpellTrap(pO, contractO, fromHand: true) &&
+                    pO.MonstersOnField().Any(m => m != null && m.CardId == HungryBurger));
+                Check("Ritual(exact): chose the exact {3,3} Tribute, kept the Lv8",
+                    pO.Hand.Contains(keep) &&
+                    pO.Graveyard.Count(c => c != null && c.CardId == GiantSoldier) == 2);
+
+                // Overpay must be illegal: only {4,4}=8 available, no subset equals 6
+                // (a "Level 6 or more" spell WOULD allow this — proves exact ≠ ≥).
+                var eBad = Fresh(db);
+                var pB = eBad.Player;
+                ClearSide(pB);
+                InHand(eBad, pB, HungryBurger);          // DARK Level 6 target
+                var contractB = InHand(eBad, pB, Contract);
+                InHand(eBad, pB, Celtic);                // Level 4
+                InHand(eBad, pB, Beaver);                // Level 4  → no subset == 6
+                Check("Ritual(exact): illegal when no Tribute subset equals 6 (overpay rejected)",
+                    !eBad.CanActivateSpellTrap(pB, contractB, fromHand: true));
+            }
+
+            // ── Sweep EVERY Ritual Spell end-to-end (not just the anchors) ──
+            var summonFail = new System.Collections.Generic.List<string>();
+            var ritualSpells = db.GetAllCards().Where(c =>
+                c != null && string.Equals(c.race, "Ritual", StringComparison.OrdinalIgnoreCase) &&
+                (c.type?.IndexOf("Spell", StringComparison.OrdinalIgnoreCase) >= 0)).ToList();
+            var tested = 0;
+            foreach (var spell in ritualSpells)
+            {
+                var sp = CardTextEffectCompiler.Compile(spell);
+                var clause = sp?.ClauseList.FirstOrDefault(c => c != null && c.Action == EffectActionKind.RitualSummon);
+                if (clause == null)
+                {
+                    summonFail.Add($"{spell.name}(no RitualSummon clause)");
+                    continue;
+                }
+
+                // Resolve which monster this spell summons.
+                var target = !string.IsNullOrEmpty(clause.NamedCard)
+                    ? db.GetAllCards().FirstOrDefault(c => c != null && c.IsRitualMonster &&
+                        string.Equals(c.name, clause.NamedCard, StringComparison.OrdinalIgnoreCase))
+                    : db.GetAllCards().FirstOrDefault(c => c != null && c.IsRitualMonster &&
+                        string.Equals(c.attribute, clause.AttributeFilter, StringComparison.OrdinalIgnoreCase));
+                if (target == null) continue; // target not in this pool — compile-only
+                var need = target.level > 0 ? target.level : Math.Max(1, clause.Amount);
+
+                var e = Fresh(db);
+                var pl = e.Player;
+                ClearSide(pl);
+                InHand(e, pl, target.id);
+                var spellCard = InHand(e, pl, spell.id);
+                for (var i = 0; i < need; i++) InHand(e, pl, Kuriboh); // need × Level 1 = exactly `need`
+
+                if (!e.CanActivateSpellTrap(pl, spellCard, fromHand: true) ||
+                    !e.TryActivateSpellTrap(pl, spellCard, fromHand: true) ||
+                    !pl.MonstersOnField().Any(m => m != null && m.CardId == target.id) ||
+                    !pl.Graveyard.Contains(spellCard))
+                {
+                    summonFail.Add($"{spell.name}->{target.name}(Lv{need})");
+                    continue;
+                }
+
+                tested++;
+            }
+
+            Check($"Ritual: every Ritual Spell summons its monster (tested {tested}/{ritualSpells.Count})",
+                summonFail.Count == 0, string.Join(", ", summonFail));
+
             sb.AppendLine($"--- {pass} passed, {fail} failed ---");
             return sb.ToString();
         }
+
+        const int Kuriboh = 40640057; // Level 1 fodder
 
         static DuelEngine Fresh(CardDatabase db)
         {

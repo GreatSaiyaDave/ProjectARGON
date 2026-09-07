@@ -16,7 +16,7 @@ namespace WRLDZ.Duel.TextEffects
     /// </summary>
     public static class CardTextEffectCompiler
     {
-        public const int Version = 47;
+        public const int Version = 48;
 
         static readonly Regex RxDraw = new(
             @"(?:^|[.!?]\s+)Draw (\d+) cards?\.",
@@ -457,7 +457,11 @@ namespace WRLDZ.Duel.TextEffects
                     {
                         Timing = EffectTiming.Activate,
                         Action = EffectActionKind.RitualSummon,
-                        Amount = lvlM.Success ? ParseInt(lvlM, 1, 1) : 1,
+                        // The real requirement is the summoned monster's Level (resolved at
+                        // runtime); the printed number, when present, equals it. 0 = derive.
+                        Amount = lvlM.Success ? ParseInt(lvlM, 1, 0) : 0,
+                        // "...exactly equal the Level of the Ritual Monster..." (Chant cards).
+                        RitualExactLevel = Regex.IsMatch(text, @"exactly equal", RegexOptions.IgnoreCase),
                         SourceSnippet = text.Trim(),
                     };
                     if (named.Success)

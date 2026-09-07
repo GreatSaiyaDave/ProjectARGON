@@ -417,6 +417,12 @@ namespace WRLDZ.Duel.TextEffects
         public bool SummonInDefense;
         /// <summary>GY target must be a Normal Monster.</summary>
         public bool RequiresNormalMonster;
+        /// <summary>
+        /// RitualSummon: Tribute Levels must EXACTLY equal the summoned monster's Level
+        /// ("...exactly equal the Level of the Ritual Monster..." — Earth Chant / Contract
+        /// with the Abyss) instead of the usual "equal N or more" (≥).
+        /// </summary>
+        public bool RitualExactLevel;
         /// <summary>ContinuousCannotAttack: Amount is a printed Level (Gravity Bind), not ATK.</summary>
         public bool AmountIsLevel;
         /// <summary>Suijin: this card must be the current attack target.</summary>
