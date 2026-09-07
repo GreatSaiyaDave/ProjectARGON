@@ -20,6 +20,7 @@ namespace WRLDZ.EditorTools
                          "\n" + HandTrapRegressionTests.RunAll() +
                          "\n" + FusionRegressionTests.RunAll() +
                          "\n" + ArchfiendRegressionTests.RunAll() +
+                         "\n" + ArchfiendAdvancedRegressionTests.RunAll() +
                          "\n" + WRLDZ.Core.InventoryRegressionTests.RunAll() +
                          "\n" + ArPlaymatLayout.RunSanityChecks() +
                          "\n" + WRLDZ.Presentation.ArPhysicalCardBuilder.RunFaceSwapSanity();

@@ -2178,8 +2178,20 @@ namespace WRLDZ.Duel.TextEffects
             var opp = engine.OpponentOf(who);
             void Destroy(CardInstance c) => DestroyCard(engine, c, source, clause.BanishIfDestroyed);
 
+            // Archfiend die-roll protection: as an opponent's targeting effect would
+            // resolve against a monster, its controller's die-roll Archfiend may negate
+            // it and destroy the opponent's card. Skip the effect when negated.
+            if (chosenTarget != null && clause.RequiresTargetChoice &&
+                clause.Action != EffectActionKind.DieRollNegateWhenTargeted &&
+                ArchfiendTargetNegation.TryNegate(engine, who, source, chosenTarget))
+                return;
+
             switch (clause.Action)
             {
+                case EffectActionKind.DieRollNegateWhenTargeted:
+                    // Continuous protection — resolved reactively by ArchfiendTargetNegation.
+                    break;
+
                 case EffectActionKind.RitualSummon:
                     RitualSummonResolve(engine, who, source, clause);
                     break;
@@ -2241,6 +2253,14 @@ namespace WRLDZ.Duel.TextEffects
                             source.EquippedTo = chosenTarget;
                             if (!chosenTarget.Equips.Contains(source))
                                 chosenTarget.Equips.Add(source);
+                        }
+                        if (clause.SummonCannotBeTributed)
+                            chosenTarget.CannotBeTributedForSummon = true;
+                        if (clause.SummonDestroyAtEndPhase)
+                        {
+                            chosenTarget.TempDestroyOnEndOfTurn = engine.TurnNumber;
+                            engine.Log(
+                                $"{chosenTarget.Name} will be destroyed during the End Phase this turn.");
                         }
                     }
                     break;
@@ -3057,6 +3077,7 @@ namespace WRLDZ.Duel.TextEffects
             }
             // Mandatory, not optional — pay as much as possible (LP cannot go negative).
             engine.PayLifePointCost(who, n, $"Standby maintenance: {card.Name}");
+            MirrorStandbyPayment(engine, who, card, n);
         }
 
         static void ResolvePayLpOrDestroyThis(DuelEngine engine, DuelistState who,
@@ -3067,11 +3088,34 @@ namespace WRLDZ.Duel.TextEffects
             {
                 who.LifePoints -= n;
                 engine.Log($"Cost: pay {n} LP or destroy {card?.Name} → {who.Name} at {who.LifePoints} LP.");
+                MirrorStandbyPayment(engine, who, card, n);
                 return;
             }
 
             engine.Log($"{card?.Name}: not enough LP — destroy this card.");
             engine.SendCardToGrave(who, card);
+        }
+
+        /// <summary>
+        /// Battle-Scarred: when the controller pays the linked Archfiend's Standby
+        /// maintenance, the opponent pays the same amount.
+        /// </summary>
+        static void MirrorStandbyPayment(DuelEngine engine, DuelistState who,
+            CardInstance monster, int amount)
+        {
+            if (engine == null || who == null || monster?.Equips == null || amount <= 0) return;
+            foreach (var eq in monster.Equips)
+            {
+                if (eq?.Def == null) continue;
+                var prog = CompiledEffectCache.GetOrCompile(eq.Def);
+                if (prog == null) continue;
+                if (!prog.ClauseList.Exists(x => x != null && x.MirrorStandbyPaymentToOpponent))
+                    continue;
+                var opp = engine.OpponentOf(who);
+                if (opp == null) continue;
+                engine.PayLifePointCost(opp, amount, $"Battle-Scarred mirror ({monster.Name})");
+                return;
+            }
         }
 
         static void FirePhaseTriggersFor(DuelEngine engine, DuelistState who, EffectTiming timing,
@@ -3564,6 +3608,18 @@ namespace WRLDZ.Duel.TextEffects
             return null;
         }
 
+        /// <summary>Card belongs to a named "series" (archetype / printed name / treated-as).</summary>
+        static bool CardMatchesSeries(WRLDZ.Data.CardDef def, string series)
+        {
+            if (def == null || string.IsNullOrEmpty(series)) return false;
+            var cmp = System.StringComparison.OrdinalIgnoreCase;
+            if (!string.IsNullOrEmpty(def.archetype) && def.archetype.IndexOf(series, cmp) >= 0)
+                return true;
+            if (!string.IsNullOrEmpty(def.name) && def.name.IndexOf(series, cmp) >= 0)
+                return true;
+            return def.desc != null && def.desc.IndexOf($"treated as an \"{series}\"", cmp) >= 0;
+        }
+
         static List<CardInstance> CollectTargets(DuelEngine engine, DuelistState who, EffectClause c,
             CardInstance except, int costNumeric = 0)
         {
@@ -3732,6 +3788,8 @@ namespace WRLDZ.Duel.TextEffects
                                         System.StringComparison.OrdinalIgnoreCase) < 0);
             if (!string.IsNullOrEmpty(c.ExceptNamedCard))
                 list.RemoveAll(t => t != null && t.IsNamed(c.ExceptNamedCard));
+            if (!string.IsNullOrEmpty(c.TargetSeriesName))
+                list.RemoveAll(t => !CardMatchesSeries(t?.Def, c.TargetSeriesName));
             if (!string.IsNullOrEmpty(c.AttributeFilter) &&
                 c.Action == EffectActionKind.EquipThisToTarget)
                 list.RemoveAll(t => t?.Def?.attribute == null ||

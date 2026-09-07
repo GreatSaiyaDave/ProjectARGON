@@ -204,6 +204,7 @@ namespace WRLDZ.Duel.TextEffects
                     EffectActionKind.CannotBeTargetedByEffects or
                     EffectActionKind.ContinuousCannotTargetDragons or
                     EffectActionKind.ContinuousCannotAttack or
+                    EffectActionKind.DieRollNegateWhenTargeted or
                     EffectActionKind.CannotBeTributedForSummon =>
                     EffectResolutionKind.Protection,
                 EffectActionKind.PayLpOrDestroyThis =>

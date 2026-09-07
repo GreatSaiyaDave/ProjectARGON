@@ -16,7 +16,7 @@ namespace WRLDZ.Duel.TextEffects
     /// </summary>
     public static class CardTextEffectCompiler
     {
-        public const int Version = 49;
+        public const int Version = 50;
 
         static readonly Regex RxDraw = new(
             @"(?:^|[.!?]\s+)Draw (\d+) cards?\.",
@@ -1001,6 +1001,7 @@ namespace WRLDZ.Duel.TextEffects
             if (!sendOther.Success) sendOther = RxSendNamedDestroyExceptThis.Match(text);
             Take(sendOther, SendNamedDestroyOthersClause(sendOther));
 
+            ArchfiendTemplates.Collect(text, def, clauses, matchedSpans);
             ProtectionTemplates.Collect(text, def, clauses, matchedSpans);
             LegacyTextTemplates.Collect(text, def, clauses, matchedSpans);
             AdvancedEffectTemplates.Collect(text, def, clauses, matchedSpans);

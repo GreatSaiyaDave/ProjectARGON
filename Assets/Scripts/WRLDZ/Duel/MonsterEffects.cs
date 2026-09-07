@@ -375,6 +375,10 @@ namespace WRLDZ.Duel
         {
             if (engine == null || owner == null || card == null) return;
 
+            // Pandemonium: an Archfiend destroyed (not by battle) lets its owner search a
+            // lower-Level Archfiend from the Deck. Runs alongside any other GY trigger.
+            FieldSpellEffects.TryPandemoniumSearchOnDestroy(engine, owner, card, destroyed, destroyedByBattle);
+
             // Registered field→GY scripts first (never silent-skip via empty text apply)
             if (card.CardId == Sangan)
             {

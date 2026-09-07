@@ -462,11 +462,48 @@ namespace WRLDZ.Duel
         /// for 'Archfiend' monsters." While a face-up Pandemonium is in either Field
         /// Zone, the Archfiend Standby-Phase maintenance cost is waived for both players.
         /// </summary>
-        public static bool ArchfiendMaintenanceWaived(DuelEngine engine)
+        public static bool ArchfiendMaintenanceWaived(DuelEngine engine) => PandemoniumActive(engine);
+
+        /// <summary>A face-up "Pandemonium" is in either Field Zone.</summary>
+        public static bool PandemoniumActive(DuelEngine engine)
         {
             if (engine == null) return false;
             return NamedFieldSpellFaceUp(engine.Player, PandemoniumName) ||
                    NamedFieldSpellFaceUp(engine.Opponent, PandemoniumName);
+        }
+
+        /// <summary>
+        /// Pandemonium: each time a player's "Archfiend" monster is destroyed and sent to
+        /// the GY, except by battle, that player may add 1 "Archfiend" monster from their
+        /// Deck to their hand that is a lower Level than the destroyed card. Auto-takes the
+        /// highest eligible Level (deterministic) when available.
+        /// </summary>
+        public static void TryPandemoniumSearchOnDestroy(DuelEngine engine, DuelistState owner,
+            CardInstance destroyed, bool byDestruction, bool destroyedByBattle)
+        {
+            if (engine?.Database == null || owner?.Deck == null || destroyed?.Def == null) return;
+            if (!byDestruction || destroyedByBattle) return;
+            if (!IsArchfiendMonster(destroyed.Def)) return;
+            if (!PandemoniumActive(engine)) return;
+
+            var maxLevel = destroyed.Def.level;
+            var bestId = 0;
+            var bestLevel = 0;
+            foreach (var id in owner.Deck)
+            {
+                if (!engine.Database.TryGet(id, out var def) || def == null) continue;
+                if (!IsArchfiendMonster(def) || def.level <= 0 || def.level >= maxLevel) continue;
+                if (def.level > bestLevel) { bestLevel = def.level; bestId = id; }
+            }
+            if (bestId == 0) return;
+
+            var idx = owner.Deck.IndexOf(bestId);
+            if (idx < 0) return;
+            owner.Deck.RemoveAt(idx);
+            var inst = engine.CreateCardInstance(bestId);
+            owner.Hand.Add(inst);
+            engine.Log($"Pandemonium: {owner.Name} adds {inst.Name} (Lv{bestLevel}) " +
+                       $"from the Deck to the hand ({destroyed.Name} was destroyed).");
         }
 
         static bool NamedFieldSpellFaceUp(DuelistState who, string name)

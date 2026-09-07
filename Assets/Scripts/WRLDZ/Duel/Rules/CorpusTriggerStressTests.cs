@@ -274,6 +274,12 @@ namespace WRLDZ.Duel.Rules
                     c.RequiresFaceUpName.IndexOf("Archfiend", StringComparison.OrdinalIgnoreCase) >= 0)
                     PlaceMonster(engine, p, ArchfiendSoldier, 1, BattlePosition.Attack, true);
 
+                // Battle-Scarred targets an "Archfiend" monster you control.
+                if (!string.IsNullOrEmpty(c.TargetSeriesName) &&
+                    c.TargetSeriesName.IndexOf("Archfiend", StringComparison.OrdinalIgnoreCase) >= 0 &&
+                    c.Zone == EffectZoneFilter.ControllerMonsters)
+                    PlaceMonster(engine, p, ArchfiendSoldier, 1, BattlePosition.Attack, true);
+
                 if (c.Zone == EffectZoneFilter.DeckFieldSpells)
                     p.Deck.Insert(0, Alo);
 

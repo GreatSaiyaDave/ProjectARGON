@@ -207,7 +207,15 @@ namespace WRLDZ.Duel.TextEffects
         /// This face-up card cannot be Tributed for a Tribute Summon (Fox Fire).
         /// Honored via CardInstance.CannotBeTributedForSummon.
         /// </summary>
-        CannotBeTributedForSummon
+        CannotBeTributedForSummon,
+        /// <summary>
+        /// When this card (or, if <see cref="EffectClause.ProtectsAllArchfiendsOnField"/>,
+        /// any Archfiend the controller controls) is targeted by an opponent's card
+        /// effect, roll a six-sided die as it resolves; on a face in
+        /// <see cref="EffectClause.DieNegateFacesMask"/> negate the effect and destroy the
+        /// opponent's card. The classic Archfiend die-roll protection.
+        /// </summary>
+        DieRollNegateWhenTargeted
     }
 
     public enum EffectSide
@@ -362,6 +370,31 @@ namespace WRLDZ.Duel.TextEffects
         public int DieLowMax;
         /// <summary>Zorc: destroy 1 opp if roll ≤ DieMidMax (and &gt; DieLowMax).</summary>
         public int DieMidMax;
+        /// <summary>
+        /// DieRollNegateWhenTargeted: bitmask of six-sided faces that negate — bit
+        /// (face-1) set means that face triggers the negate+destroy (e.g. faces {1,3,6}
+        /// → 0b100101 = 37; {2,5} → 0b010010 = 18; {3} → 0b000100 = 4).
+        /// </summary>
+        public int DieNegateFacesMask;
+        /// <summary>
+        /// DieRollNegateWhenTargeted: protection covers any "Archfiend" monster the
+        /// controller controls (Darkbishop), not just this card.
+        /// </summary>
+        public bool ProtectsAllArchfiendsOnField;
+        /// <summary>
+        /// Battle-Scarred: while this card is linked to the chosen monster, the opponent
+        /// pays the same Standby-Phase maintenance LP the controller pays for it.
+        /// </summary>
+        public bool MirrorStandbyPaymentToOpponent;
+        /// <summary>Archfiend's Roar: the Special Summoned monster cannot be Tributed.</summary>
+        public bool SummonCannotBeTributed;
+        /// <summary>Archfiend's Roar: destroy the Special Summoned monster in the End Phase.</summary>
+        public bool SummonDestroyAtEndPhase;
+        /// <summary>
+        /// Restrict targets to a card "series" (archetype / treated-as name), e.g. the
+        /// "Archfiend" GY target of Archfiend's Roar. Applied as a post-filter.
+        /// </summary>
+        public string TargetSeriesName;
         public string TokenName;
         public string TokenRace;
         public string TokenAttribute;

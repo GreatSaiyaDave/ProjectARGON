@@ -131,6 +131,14 @@ namespace WRLDZ.Duel.Rules
             report.UnitPass += afPass;
             report.UnitFail += afFail;
 
+            sb.AppendLine();
+            sb.AppendLine("── Unit: ArchfiendAdvancedRegressionTests ──");
+            var archfiendAdv = ArchfiendAdvancedRegressionTests.RunAll();
+            sb.AppendLine(archfiendAdv.TrimEnd());
+            ParseUnitCounts(archfiendAdv, out var afaPass, out var afaFail);
+            report.UnitPass += afaPass;
+            report.UnitFail += afaFail;
+
             // ── 2) Text effect compile (lab unique cards) ──
             sb.AppendLine();
             sb.AppendLine("── Text: lab deck compile (regex, no AI) ──");

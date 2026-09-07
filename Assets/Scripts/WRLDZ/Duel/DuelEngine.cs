@@ -2596,6 +2596,20 @@ namespace WRLDZ.Duel
                 }
             }
 
+            // Temporary Special Summons (Archfiend's Roar) are destroyed during the End
+            // Phase of the turn they were summoned.
+            foreach (var side in new[] { Player, Opponent })
+            {
+                if (side == null) continue;
+                foreach (var m in side.MonstersOnField().ToList())
+                {
+                    if (m == null || m.TempDestroyOnEndOfTurn != TurnNumber) continue;
+                    Log($"{m.Name} is destroyed during the End Phase (temporary Special Summon).");
+                    DestroyMonsterPublic(side, m);
+                }
+            }
+            if (GameOver) return;
+
             // After End Phase, Set cards may be activated on following turns
             // (also clear leftover flags on both sides so a Set trap is legal next turn).
             foreach (var side in new[] { Player, Opponent })
@@ -2645,6 +2659,21 @@ namespace WRLDZ.Duel
                 CardShatterPresentation.QueueEffect(card.InstanceId, card.Name);
                 owner.MonsterZones[i].Occupant = null;
                 PendingTributes.Remove(card);
+
+                // A destroyed monster's Equip cards (and destroy-linked Continuous
+                // Traps like Call of the Haunted / Battle-Scarred) are sent to the GY.
+                if (card.Equips.Count > 0)
+                {
+                    var eqs = card.Equips.ToList();
+                    card.Equips.Clear();
+                    foreach (var eq in eqs)
+                    {
+                        if (eq == null) continue;
+                        eq.EquippedTo = null;
+                        var eqOwner = ControllerOf(eq) ?? owner;
+                        SendCardToGrave(eqOwner, eq);
+                    }
+                }
                 if (card.IsToken)
                 {
                     if (card.TokenDestroyedDamage > 0)
