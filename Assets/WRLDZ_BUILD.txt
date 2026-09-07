@@ -1,0 +1,4 @@
+PLATES-0907
+
+If this file is missing in the Unity Project window, Hub opened an old folder.
+See GET_THE_GAME.txt at the repo root.

@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using UnityEngine.UI;
+using WRLDZ.Core;
 using WRLDZ.Presentation;
 using WRLDZ.UI;
 
@@ -87,6 +88,8 @@ namespace WRLDZ.UI.Shell
             var body = new GameObject("BodyHost", typeof(RectTransform)).GetComponent<RectTransform>();
             body.SetParent(well, false);
             FloatingPanel.Stretch(body);
+
+            Debug.Log("[WRLDZ] HubChrome overlay · PhoneMenu_" + title + " · " + WrldzBuild.Stamp);
 
             return new Frame
             {

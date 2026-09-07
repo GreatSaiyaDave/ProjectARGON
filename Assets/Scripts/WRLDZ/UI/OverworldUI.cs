@@ -250,7 +250,8 @@ namespace WRLDZ.UI
             // Quiet boot — bottom badge already shows level / XP
             SetStatus("");
             RefreshXpBar(account);
-            Debug.Log("[WRLDZ] Overworld ready · " + account.displayName);
+            Debug.Log("[WRLDZ] Overworld ready · " + account.displayName + " · " + WrldzBuild.Stamp);
+            WrldzBuild.Log();
         }
 
         /// <summary>Thin XP track. Compact = fill only (level lives on the badge pip).</summary>
