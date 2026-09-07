@@ -5,6 +5,11 @@ not a download. That is why fixes you asked for never appeared.
 Keep using:  …/DMWRDLZUnityProject/ProjectARGON
 Do not Add a second folder. Do not unzip over this one.
 
+The Hub cloud icon is Unity Cloud (ads), not GitHub.
+
+Zip is last resort on a new machine only:
+https://github.com/GreatSaiyaDave/ProjectARGON/archive/refs/heads/main.zip
+
 1. Close Unity (File → Exit).
 2. Open Linux Terminal — not the Unity Console. The Console cannot run git.
 3. Type:  cd

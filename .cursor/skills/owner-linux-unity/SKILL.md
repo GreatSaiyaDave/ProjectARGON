@@ -9,7 +9,7 @@ description: How this owner gets Unity changes onto Linux Unity Hub. Use when th
 
 They play `…/DMWRDLZUnityProject/ProjectARGON`. Keep that folder. Do not tell them to zip-replace it or Hub → Add a second copy. They have local work.
 
-`git pull` in the **Unity Console** does nothing useful. They need **Linux Terminal**, `cd` into that folder.
+Do not give `git pull` as the only step. `git pull` in the **Unity Console** does nothing useful. They need **Linux Terminal**, `cd` into that folder.
 
 If they do **not** see `WRLDZ → Get Latest from GitHub`, they still have the old copy. Do not tell them to use that menu yet.
 
