@@ -919,6 +919,42 @@ namespace WRLDZ.Duel
             return ok;
         }
 
+        /// <summary>
+        /// Resolve the current Chain in official Last-In-First-Out order (CLn → … → CL1).
+        /// Links flagged <see cref="ChainLink.Negated"/> are skipped (their effect does not
+        /// apply, but they still occupied a link). <paramref name="resolveLink"/> applies one
+        /// link's effect and returns whether it resolved. Returns the number of links resolved.
+        ///
+        /// This is the multi-link resolution driver: it drives <see cref="ChainStack.StartResolution"/>
+        /// and <see cref="ChainStack.PopNextToResolve"/> so a built chain resolves reverse-order,
+        /// which is the foundation for correct Quick-Effect / Counter-Trap interaction.
+        /// </summary>
+        public int ResolveChainLifo(Func<ChainLink, bool> resolveLink)
+        {
+            if (resolveLink == null) throw new ArgumentNullException(nameof(resolveLink));
+            if (!Chain.HasLinks) return 0;
+
+            Chain.StartResolution();
+            var resolved = 0;
+            while (true)
+            {
+                var link = Chain.PopNextToResolve();
+                if (link == null) break;
+                if (link.Negated)
+                {
+                    Log($"CL{link.LinkNumber} {link.Card?.Name ?? "?"} was negated — skipped.");
+                    link.Resolved = true;
+                    continue;
+                }
+
+                if (resolveLink(link))
+                    resolved++;
+                link.Resolved = true;
+            }
+
+            return resolved;
+        }
+
         /// <summary>While awaiting a target, select a legal card (GY monster, S/T, etc.).</summary>
         public bool TrySelectEffectTarget(CardInstance target)
         {

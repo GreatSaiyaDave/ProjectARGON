@@ -77,6 +77,15 @@ namespace WRLDZ.Duel.Rules
             report.UnitPass += cPass;
             report.UnitFail += cFail;
 
+            // ── 1d) Multi-link chain rules (spell speed, LIFO, negation) ──
+            sb.AppendLine();
+            sb.AppendLine("── Unit: ChainRegressionTests ──");
+            var chain = ChainRegressionTests.RunAll();
+            sb.AppendLine(chain.TrimEnd());
+            ParseUnitCounts(chain, out var chPass, out var chFail);
+            report.UnitPass += chPass;
+            report.UnitFail += chFail;
+
             // ── 2) Text effect compile (lab unique cards) ──
             sb.AppendLine();
             sb.AppendLine("── Text: lab deck compile (regex, no AI) ──");
