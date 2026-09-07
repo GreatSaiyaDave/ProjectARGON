@@ -79,6 +79,26 @@ internal static class Diag
         return 0;
     }
 
+    // Dumps every card the engine classifies as Unimplemented (no compiled clauses,
+    // no registry script), tab-separated "id<TAB>type<TAB>race<TAB>desc", so the gap
+    // corpus can be clustered by text shape to prioritize compiler templates.
+    public static int Gaps()
+    {
+        var db = CardDatabase.Load();
+        var n = 0;
+        foreach (var def in db.GetAllCards())
+        {
+            if (def == null) continue;
+            if (WRLDZ.Duel.CardEffectStatus.Classify(def) != WRLDZ.Duel.CardEffectStatusKind.Unimplemented)
+                continue;
+            n++;
+            var desc = (def.desc ?? "").Replace('\n', ' ').Replace('\t', ' ');
+            Console.WriteLine($"{def.id}\t{def.type}\t{def.race}\t{desc}");
+        }
+        Console.Error.WriteLine($"# unimplemented gap cards: {n}");
+        return 0;
+    }
+
     static void PrintPool(EffectCoverageService.PoolReport r)
     {
         Console.WriteLine($"  pool={r.PoolName} ids={r.UniqueIds} inDb={r.InDatabase} missing={r.MissingFromDb}");

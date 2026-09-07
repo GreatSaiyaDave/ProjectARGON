@@ -32,6 +32,12 @@ internal static class Program
             return Diag.Coverage();
         }
 
+        if (Array.IndexOf(args, "--gaps") >= 0)
+        {
+            UnityEngine.Debug.Silence = true;
+            return Diag.Gaps();
+        }
+
         int duels = ReadIntArg(args, "--duels", WRLDZ.Duel.Rules.DuelEngineStressTests.DefaultDuelCount);
 
         Console.WriteLine("== WRLDZ headless engine test harness ==");
