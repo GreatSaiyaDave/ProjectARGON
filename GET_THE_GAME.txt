@@ -1,0 +1,41 @@
+HOW TO SEE THE LATEST WRLDZ ON YOUR PC
+======================================
+
+Unity Hub does NOT download GitHub. Typing git commands into the Unity
+Console does nothing. The Console is not a Terminal.
+
+You should see BUILD  PLATES-0907  on the title screen and Desktop Lab.
+If you do not, Hub is opening an old folder.
+
+1. Close the Unity Editor and Unity Hub.
+
+2. On this computer, open a web browser:
+   https://github.com/GreatSaiyaDave/ProjectARGON/archive/refs/heads/main.zip
+
+3. Extract the zip. Inside you want the folder that contains BOTH
+   "Assets" and "ProjectSettings".
+
+4. Open Unity Hub → Add → choose THAT folder.
+   Editor version: 6000.5.10f1
+   (If Hub still lists the old project, Add the new folder anyway and
+   open the new one.)
+
+5. In Unity, Project window search box:  WRLDZ_BUILD
+   You must see that file. If you do not, you are still in the old copy.
+
+6. Top menu:  WRLDZ → Lab → Open Desktop Lab App
+   Click  Play Boot + Lab
+   The first screen should say DESKTOP LAB and PLATES-0907.
+
+7. Click  OVERWORLD (WASD MAP)
+   Tap the Eye (MENU), then DECK.
+   Console (the Unity log, bottom of the Editor) should mention
+   BUILD PLATES-0907  and  HubChrome overlay.
+
+Optional, only if you already use git in Linux Terminal (the black
+window in your apps, never Unity Console):
+
+  cd ~
+  git clone https://github.com/GreatSaiyaDave/ProjectARGON.git ProjectARGON-main
+
+Then Hub → Add → /home/YOU/ProjectARGON-main

@@ -129,6 +129,21 @@ def main() -> int:
 
     lab = ROOT / "Assets/Scripts/WRLDZ/UI/DesktopLabApp.cs"
     must_contain(lab, "HubChrome.Sheet", "desktop lab options are not a hub sheet")
+    must_contain(lab, "WrldzBuild.Stamp", "desktop lab is missing the owner BUILD stamp")
+
+    build = ROOT / "Assets/Scripts/WRLDZ/Core/WrldzBuild.cs"
+    must_contain(build, "PLATES-0907", "lost owner-visible BUILD stamp")
+    must_contain(ROOT / "GET_THE_GAME.txt", "main.zip", "lost owner zip instructions")
+    must_contain(ROOT / "Assets/WRLDZ_BUILD.txt", "PLATES-0907", "lost Unity Project BUILD file")
+    must_contain(
+        ROOT / ".cursor/skills/owner-linux-unity/SKILL.md",
+        "Never give `git pull origin main` as the only step",
+        "lost owner-linux-unity skill",
+    )
+    menu = ROOT / "Assets/Editor/WRLDZ/DesktopLabMenu.cs"
+    must_contain(menu, "PrefSkipBootCascade", "Lab menu no longer skips splash into Desktop Lab")
+    title = ROOT / "Assets/Scripts/WRLDZ/UI/BootFlowUI.cs"
+    must_contain(title, "WrldzBuild.Stamp", "title screen is missing BUILD stamp")
 
     print("hub overlay chrome")
     print("  HubChrome header / well / BACK present")

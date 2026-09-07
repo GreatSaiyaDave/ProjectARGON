@@ -6,7 +6,8 @@ Single navigation graph. Implemented in `AppSession` + scene UIs.
 ```
 Boot  (scene 0 — entry only)
   **Editor / Desktop Lab** (no phone, Quest, or GPS):
-    → Desktop Lab hub auto-opens (see DESKTOP_LAB.md)
+    → WRLDZ → Lab → Open Desktop Lab App  (or Auth DESKTOP LAB button)
+    → Desktop Lab hub (see DESKTOP_LAB.md)  — Play on Boot alone is splash/title
          ├─ QUICK AR DUEL (SIM) → DuelSlice EditorSim
          ├─ INSTANT DUEL        → DuelSlice hands drawn
          ├─ OVERWORLD (WASD)    → map without GPS
