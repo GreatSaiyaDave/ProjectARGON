@@ -40,3 +40,4 @@ Activated effects (colon or semicolon on the print) are the only effects that st
 - Check printed PSCT, then Fast Effect Timing, then this repo's engine spec — not a wiki anecdote.
 - For lab disagreements, treat Ignis Lua as a **linter oracle**, not something to paste into C#.
 - For presentation, keep simulation on the authority path and animation on the client (see data-apis-ui).
+- AR sessions / disks: `.cursor/skills/wrldz-ar-lenses/`. Overworld / SE: `.cursor/skills/wrldz-overworld/`. Headless checks: `.cursor/skills/wrldz-cloud-verify/`.

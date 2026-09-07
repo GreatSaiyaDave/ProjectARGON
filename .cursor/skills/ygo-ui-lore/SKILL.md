@@ -37,3 +37,4 @@ Battle City rooftop at night: life-size holos, KaibaCorp cyan on the player's di
 - If a screen feels like a generic sci-fi menu, restore gold phase, cyan/magenta LP, and filament glass.
 - If story type appears on the overworld, move it to `MenuAge.ScrollAges` / parchment — keep the map Battle City.
 - For rules, stop and open `ygo-gamedev`. This skill does not resolve chains.
+- AR spatial graph: `wrldz-ar-lenses`. Map pins / SE / inventory: `wrldz-overworld`. Overlay dest-tile vs quiet sheet: keep `MountFeatured` / `MountDest` on the Eye only.

@@ -23,6 +23,8 @@ Training for this skill used ARGON's own design bible plus public layout/lore no
 - Battle City, Duel Disk, Millennium Items, Solid Vision summaries on public wikis
 - Takahashi era contrast: KaibaCorp industrial vs millennia gold; Shadow Games as tone, not a UI theme for the street
 
-## Sister skill
+## Sister skills
 
-Rules, PSCT, ocgcore, YGOPRODeck data: `.cursor/skills/ygo-gamedev/` (separate PR). This skill does not replace it.
+- Rules, PSCT, ocgcore: `.cursor/skills/ygo-gamedev/`
+- AR / lenses: `.cursor/skills/wrldz-ar-lenses/`
+- Overworld / SE / inventory: `.cursor/skills/wrldz-overworld/`

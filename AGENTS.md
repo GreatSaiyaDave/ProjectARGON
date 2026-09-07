@@ -29,12 +29,17 @@ Merged from other agent branches (2026-09-07):
 - **Owner cannot see updates / thought agents edited local files:** `.cursor/skills/owner-linux-unity/` — agents write GitHub only; never zip-replace `DMWRDLZUnityProject/ProjectARGON`
 - Rules / effects / PSCT: `.cursor/skills/ygo-gamedev/`
 - Menus, HUD, lore tone: `.cursor/skills/ygo-ui-lore/` — no Konami chrome dumps, no scraping DuelingBook/MD
-- Unity Editor automation: `.cursor/skills/unity-skills/`
+- AR / lenses / AR Foundation: `.cursor/skills/wrldz-ar-lenses/`
+- Overworld / Tears / SE / inventory: `.cursor/skills/wrldz-overworld/`
+- Cloud VM / HeadlessEngine / Python guards: `.cursor/skills/wrldz-cloud-verify/`
+- Unity C# lifecycle: `.cursor/skills/unity-csharp-scripting/`
+- Input System: `.cursor/skills/unity-input-system/` — always `WrldzInput`, never `Input.GetKey`
+- Unity Editor REST (owner machine): `.cursor/skills/unity-skills/`
 
 ## Engine
 
 - Product path: `DuelEngine` + `OfficialEffectRegistry` + `TextEffects`. Do not `if (cardId == …)` except named unique exceptions.
-- After compiler `Version` bump: `Tools/HeadlessEngine/run.sh --export-seed`
+- After compiler `Version` bump: `Tools/HeadlessEngine/run.sh --export-seed` (`CardTextEffectCompiler.Version` is **50** as of this handoff; older notes may say v48)
 - Default check: `Tools/HeadlessEngine/run.sh --quiet` (needs .NET 8)
 
 ## UI chrome
