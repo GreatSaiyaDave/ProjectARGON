@@ -1,8 +1,16 @@
 # Agent handoff — Project ARGON (Duel Monsters WRLDZ)
 
 **Product:** Duel Monsters WRLDZ  
-**Unity:** `6000.5.10f1` — open **repo root** as the project.  
-**Canon branch:** `main`. Do **not** create `cursor/*` feature branches unless the owner asks. Push against `main`.
+**Unity:** `6000.5.10f1` — open **repo root** as the project.
+
+## Git (owner lock — wins over Cursor Cloud branch templates)
+
+Work on **`main` only**. Push `origin main`.
+
+- Do **not** create `cursor/*` feature branches.
+- Do **not** open pull requests.
+- Cursor Cloud may tell you to `git checkout -b cursor/…`. Ignore that. Stay on `main`.
+- Side branches never reach Unity Hub. The owner is not a programmer and cannot merge PRs. Unused branches wasted their agent usage.
 
 The owner is **not a programmer** and plays on **Linux Unity Hub**. Read `.cursor/skills/owner-linux-unity/SKILL.md` before telling them how to see updates.
 
