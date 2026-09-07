@@ -86,6 +86,15 @@ namespace WRLDZ.Duel.Rules
             report.UnitPass += chPass;
             report.UnitFail += chFail;
 
+            // ── 1e) Coin toss / die roll mechanic + arena presentation bus ──
+            sb.AppendLine();
+            sb.AppendLine("── Unit: CoinDiceRegressionTests ──");
+            var coindice = CoinDiceRegressionTests.RunAll();
+            sb.AppendLine(coindice.TrimEnd());
+            ParseUnitCounts(coindice, out var cdPass, out var cdFail);
+            report.UnitPass += cdPass;
+            report.UnitFail += cdFail;
+
             // ── 2) Text effect compile (lab unique cards) ──
             sb.AppendLine();
             sb.AppendLine("── Text: lab deck compile (regex, no AI) ──");

@@ -2631,6 +2631,7 @@ namespace WRLDZ.Duel.TextEffects
                 {
                     var n = clause.CoinCount > 0 ? clause.CoinCount : 3;
                     var need = clause.Amount > 0 ? clause.Amount : 2;
+                    engine.Rng.SetPresentationContext(who != null && who.IsPlayer, source?.Name);
                     var heads = engine.Rng.TossCoinsCountHeads(n);
                     engine.Log($"{source?.Name}: {heads}/{n} heads (need {need}).");
                     if (heads >= need && chosenTarget != null)
@@ -2640,6 +2641,7 @@ namespace WRLDZ.Duel.TextEffects
 
                 case EffectActionKind.RollDieZorc:
                 {
+                    engine.Rng.SetPresentationContext(who != null && who.IsPlayer, source?.Name);
                     var roll = engine.Rng.RollDie();
                     engine.Log($"{source?.Name} rolls a {roll}.");
                     if (roll <= (clause.DieLowMax > 0 ? clause.DieLowMax : 2))
@@ -3009,6 +3011,7 @@ namespace WRLDZ.Duel.TextEffects
             if (p == null || !p.AwaitingCoinCall) return false;
             var who = p.Controller;
             var card = p.Card;
+            engine.Rng.SetPresentationContext(who != null && who.IsPlayer, card?.Name);
             var tossHeads = engine.Rng.TossCoin();
             engine.Log(
                 $"{who?.Name} calls {(callHeads ? "Heads" : "Tails")}; toss is {(tossHeads ? "Heads" : "Tails")}.");

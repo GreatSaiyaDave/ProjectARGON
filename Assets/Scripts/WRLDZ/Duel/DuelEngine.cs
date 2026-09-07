@@ -278,6 +278,7 @@ namespace WRLDZ.Duel
 
             DuelPresentationPacer.Clear();
             CardShatterPresentation.Clear();
+            CoinDicePresentation.Clear();
 
             if (cinematicOpening)
             {

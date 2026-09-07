@@ -14,6 +14,20 @@ namespace WRLDZ.Duel
         readonly Queue<int> _dice = new();
         readonly Random _live = new();
 
+        /// <summary>
+        /// One-shot presentation context for the next toss/roll (which side, source name).
+        /// Set by the effect resolver just before tossing so the arena hologram appears
+        /// on the correct side; reported results always flow to <see cref="CoinDicePresentation"/>.
+        /// </summary>
+        public bool PresentationPlayerSide = true;
+        public string PresentationLabel;
+
+        public void SetPresentationContext(bool playerSide, string label)
+        {
+            PresentationPlayerSide = playerSide;
+            PresentationLabel = label;
+        }
+
         public void QueueCoin(bool heads) => _coins.Enqueue(heads);
 
         public void QueueDie(int face)
@@ -30,8 +44,9 @@ namespace WRLDZ.Duel
 
         public bool TossCoin()
         {
-            if (_coins.Count > 0) return _coins.Dequeue();
-            return _live.Next(0, 2) == 1;
+            var heads = _coins.Count > 0 ? _coins.Dequeue() : _live.Next(0, 2) == 1;
+            CoinDicePresentation.ReportCoin(heads, PresentationPlayerSide, PresentationLabel);
+            return heads;
         }
 
         public int TossCoinsCountHeads(int n)
@@ -44,8 +59,9 @@ namespace WRLDZ.Duel
 
         public int RollDie()
         {
-            if (_dice.Count > 0) return _dice.Dequeue();
-            return _live.Next(1, 7);
+            var face = _dice.Count > 0 ? _dice.Dequeue() : _live.Next(1, 7);
+            CoinDicePresentation.ReportDie(face, PresentationPlayerSide, PresentationLabel);
+            return face;
         }
     }
 }
