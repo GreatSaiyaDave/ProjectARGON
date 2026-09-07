@@ -14,6 +14,7 @@ and see the full `TcgRegressionTests` / `InteractionRegressionTests` /
 Tools/HeadlessEngine/run.sh --quiet            # full stress suite (default 40 duels)
 Tools/HeadlessEngine/run.sh --quiet --duels 250 # more complete AI-vs-AI games
 Tools/HeadlessEngine/run.sh --card "Call of the Haunted"  # inspect one card's compiled effect
+Tools/HeadlessEngine/run.sh --coverage                    # pre-Link + whole-DB effect-compile coverage
 ```
 
 This runs `DuelEngineStressTests.Run(...)`, which covers:
