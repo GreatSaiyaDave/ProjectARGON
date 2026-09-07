@@ -79,6 +79,8 @@ __pycache__/
 # Headless engine harness build outputs (.NET)
 Tools/HeadlessEngine/bin/
 Tools/HeadlessEngine/obj/
+# ...but keep the harness project file (Unity's *.csproj ignore above would drop it)
+!Tools/HeadlessEngine/HeadlessEngine.csproj
 
 # Local-only (kept off GitHub)
 .grok/

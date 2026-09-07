@@ -19,6 +19,13 @@ internal static class Program
         bool quiet = Array.IndexOf(args, "--quiet") >= 0;
         if (quiet) UnityEngine.Debug.Silence = true;
 
+        int cardArg = Array.IndexOf(args, "--card");
+        if (cardArg >= 0 && cardArg + 1 < args.Length)
+        {
+            UnityEngine.Debug.Silence = true;
+            return Diag.InspectCard(args[cardArg + 1]);
+        }
+
         Console.WriteLine("== WRLDZ headless engine test harness ==");
         Console.WriteLine("streamingAssetsPath = " + streaming);
         Console.WriteLine();

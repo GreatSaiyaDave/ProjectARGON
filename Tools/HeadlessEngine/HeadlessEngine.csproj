@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>HeadlessEngine</AssemblyName>
+    <RootNamespace>WRLDZ.Headless</RootNamespace>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <!-- Unity-style code triggers many benign warnings; keep build output readable. -->
+    <NoWarn>CS0168;CS0169;CS0219;CS0414;CS0649;CS0660;CS0661;CS0162;CS0164;CS1998;CS0472;CS0618;CS4014;CS8321;CS0067</NoWarn>
+    <DefineConstants>WRLDZ_HEADLESS</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Harness sources (shim + entrypoint) -->
+    <Compile Include="Shim/**/*.cs" />
+    <Compile Include="Program.cs" />
+    <Compile Include="Diag.cs" />
+
+    <!-- Engine sources compiled straight from the Unity project tree. -->
+    <Compile Include="../../Assets/Scripts/WRLDZ/Data/**/*.cs" />
+    <Compile Include="../../Assets/Scripts/WRLDZ/Duel/**/*.cs" />
+    <!-- Native OCG oracle path (P/Invoke, AGPL, lab-only) is excluded. -->
+    <Compile Remove="../../Assets/Scripts/WRLDZ/Duel/Ocg/**/*.cs" />
+    <!-- Only references the excluded Ocg host; nothing else in the set uses it. -->
+    <Compile Remove="../../Assets/Scripts/WRLDZ/Duel/TimedResponseClock.cs" />
+  </ItemGroup>
+
+</Project>
