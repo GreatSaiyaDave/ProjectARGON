@@ -9,13 +9,14 @@ Read this before telling the owner to run git. Cloud Agents push **GitHub** (`Gr
 
 ## Why Hub looks synced
 
-This repo used `ProjectSettings/VersionControlSettings.asset` **Unity Version Control** (Plastic / UVCS). Hub 3.17 can also show a GitHub icon after you *link* a folder. Both mean "this project is tied to a provider." They do **not** mean:
+Hub shows **two different marks** on the project row:
 
-- Hub watched github.com and downloaded the latest `main`
-- The folder Hub opens is the Cloud Agent repo
-- Play Mode will show plated Eye/DECK chrome
+| Icon | Tooltip | What it actually does |
+|------|---------|------------------------|
+| **Cloud** | "Project connected to Unity Cloud" · Analytics, Ads, Dashboard | Unity services. **Never** downloads GitHub commits. |
+| **GitHub cat** | Repo link / branch | This *folder* is tied to a GitHub remote. Hub still does **not** pull when Cloud Agents push `main`. |
 
-Hover the Hub source-control icon. URL must be `GreatSaiyaDave/ProjectARGON`. UVCS / a different GitHub repo = wrong cloud.
+Hover the **cat**, not the cloud. The URL must be `GreatSaiyaDave/ProjectARGON`. A different repo, or only the Unity Cloud mark, is the wrong connection.
 
 Hub GitHub integration (3.17): create repo, **Add from repository**, show branch. It does not pull on every agent push. Connecting an *existing local folder* to GitHub often links **that stale copy**, it does not replace it with GitHub `main`.
 

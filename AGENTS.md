@@ -8,7 +8,7 @@ The owner is **not a programmer** and plays on **Linux Unity Hub**. Read `.curso
 
 ## How the owner sees updates (Hub "synced" is not GitHub pull)
 
-Unity Hub's green / connected mark is **Unity Version Control (Plastic)** or a GitHub *link*. Cloud Agents push `github.com/GreatSaiyaDave/ProjectARGON`. Hub does not pull those commits by itself.
+Unity Hub's **cloud** icon is Unity Cloud (Analytics / Ads). The **GitHub cat** is a repo *link*. Neither auto-pulls Cloud Agent commits from `github.com/GreatSaiyaDave/ProjectARGON`.
 
 **One-time:** Hub → Add → **Add from repository** → GitHub → `GreatSaiyaDave/ProjectARGON` → main → open **that** project (`6000.5.10f1`).
 

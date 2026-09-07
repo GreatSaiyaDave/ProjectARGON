@@ -145,7 +145,7 @@ def main() -> int:
 
     build = ROOT / "Assets/Scripts/WRLDZ/Core/WrldzBuild.cs"
     must_contain(build, "CLEAN-0907", "lost owner-visible BUILD stamp")
-    must_contain(ROOT / "GET_THE_GAME.txt", "Add from repository", "lost Hub Add-from-repository steps")
+    must_contain(ROOT / "GET_THE_GAME.txt", "Unity Cloud", "lost Unity Cloud vs GitHub icon note")
     must_contain(ROOT / "GET_THE_GAME.txt", "main.zip", "lost owner zip fallback")
     must_contain(ROOT / "Assets/WRLDZ_BUILD.txt", "CLEAN-0907", "lost Unity Project BUILD file")
     must_contain(
