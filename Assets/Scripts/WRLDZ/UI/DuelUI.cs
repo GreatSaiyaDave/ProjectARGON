@@ -93,8 +93,8 @@ namespace WRLDZ.UI
         CardInstance _attackPickerAttacker;
 
         /// <summary>
-        /// Response tray: heads-up countdown + hand QEs (Kuriboh). Field Sets use zone blink.
-        /// Letting the timer expire is the pass — no PASS button.
+        /// Response tray: countdown + ACTIVATE for every LegalCards entry + PASS.
+        /// Field Sets also blink on-zone; timer expiry still passes.
         /// </summary>
         GameObject _responseTray;
         Transform _responseBtnRow;
@@ -1688,7 +1688,8 @@ namespace WRLDZ.UI
         }
 
         /// <summary>
-        /// Slim tray: hand Quick Effects (Kuriboh) + Pass. Field Sets blink on the zone.
+        /// Slim tray: ACTIVATE for every legal response card + Pass.
+        /// Field Sets also blink on-zone; tray bg must not steal those taps.
         /// </summary>
         void BuildResponseTray(Transform root)
         {
@@ -1698,12 +1699,14 @@ namespace WRLDZ.UI
             if (img != null)
             {
                 img.color = new Color(0.04f, 0.06f, 0.10f, 0.36f);
-                img.raycastTarget = true;
+                // Prompt/buttons catch clicks; empty tray chrome must not block field taps.
+                img.raycastTarget = false;
             }
             _responseTray = panel.gameObject;
 
             _responsePrompt = CreateText(panel, "Prompt", 15, TextAnchor.MiddleCenter, FontStyle.Bold, title: true);
             _responsePrompt.color = DuelystUi.GoldHot;
+            _responsePrompt.raycastTarget = false;
             Place(_responsePrompt.rectTransform, 0.04f, 0.72f, 0.96f, 0.96f);
             _responsePrompt.text = "RESPONSE";
 
@@ -1721,6 +1724,29 @@ namespace WRLDZ.UI
             _responseBtnRow = row;
 
             _responseTray.SetActive(false);
+        }
+
+
+        static void StyleResponseTrayButton(Button b, float minWidth, float flexibleWidth)
+        {
+            if (b == null) return;
+            var brt = b.GetComponent<RectTransform>();
+            if (brt != null)
+                brt.sizeDelta = new Vector2(0f, 0f);
+            var le = b.GetComponent<LayoutElement>() ?? b.gameObject.AddComponent<LayoutElement>();
+            le.minWidth = minWidth;
+            le.flexibleWidth = flexibleWidth;
+            le.minHeight = 72f;
+            le.preferredHeight = 72f;
+            var t = b.GetComponentInChildren<Text>();
+            if (t != null)
+            {
+                WrldzType.StyleButtonLabel(t, 15, display: true);
+                t.alignment = TextAnchor.MiddleCenter;
+                t.resizeTextForBestFit = true;
+                t.resizeTextMinSize = 14;
+                t.resizeTextMaxSize = 24;
+            }
         }
 
         void RebuildResponseTray()
@@ -1750,48 +1776,47 @@ namespace WRLDZ.UI
                 : pr.ReactionSeconds;
             _responsePrompt.text =
                 $"{pr.Prompt}\n" +
-                $"⏱ {secs:0.0}s — tap a blinking zone to activate";
+                $"⏱ {secs:0.0}s — ACTIVATE / PASS, or tap a blinking zone";
 
             // Clear old buttons
             for (var i = _responseBtnRow.childCount - 1; i >= 0; i--)
                 Destroy(_responseBtnRow.GetChild(i).gameObject);
 
-            // Hand QEs only (Kuriboh). Field Sets are zone-blink + click.
+            // Every legal response card gets an ACTIVATE chip (hand QE + field Sets/monsters).
+            // Zone blink remains a second path for AR / digital pads.
             if (pr.LegalCards != null)
             {
                 var who = CommandWho() ?? _engine.Player;
                 foreach (var c in pr.LegalCards)
                 {
                     if (c == null || who == null) continue;
-                    if (who.TryFindSpellTrap(c, out _) || who.TryFindMonster(c, out _))
-                        continue;
                     var card = c;
+                    var onField = who.TryFindSpellTrap(card, out _) ||
+                                  who.TryFindMonster(card, out _);
                     var label = "ACTIVATE\n" + ShortName(card.Name);
                     var b = CreateButton(_responseBtnRow, label, () =>
                     {
                         FreeUiKit.PlaySelect();
-                        _selectedHand = card;
+                        if (onField)
+                        {
+                            if (who.TryFindSpellTrap(card, out _))
+                                _selectedSpellTrap = card;
+                            else
+                                _selectedField = card;
+                        }
+                        else
+                            _selectedHand = card;
                         DoActivate();
                     }, GbaTheme.CmdSafe);
-                    var brt = b.GetComponent<RectTransform>();
-                    brt.sizeDelta = new Vector2(0f, 0f);
-                    var le = b.gameObject.AddComponent<LayoutElement>();
-                    le.minWidth = 100f;
-                    le.flexibleWidth = 1f;
-                    le.minHeight = 72f;
-                    var t = b.GetComponentInChildren<Text>();
-                    if (t != null)
-                    {
-                        WrldzType.StyleButtonLabel(t, 15, display: true);
-                        t.alignment = TextAnchor.MiddleCenter;
-                        t.resizeTextForBestFit = true;
-                        t.resizeTextMinSize = 14;
-                        t.resizeTextMaxSize = 24;
-                    }
+                    StyleResponseTrayButton(b, minWidth: 100f, flexibleWidth: 1f);
                 }
             }
 
-            // No PASS button — timer expiry is the pass (TimedResponseClock → Engine.PassResponse).
+            // Explicit PASS (timer expiry still passes via TimedResponseClock).
+            {
+                var pass = CreateButton(_responseBtnRow, "PASS", DoPassResponse, GbaTheme.CmdDanger);
+                StyleResponseTrayButton(pass, minWidth: 88f, flexibleWidth: 0.6f);
+            }
         }
 
         /// <summary>Drop selection if that card left hand/field (prevents ghost actions).</summary>
@@ -2204,7 +2229,7 @@ namespace WRLDZ.UI
                 {
                     _responsePrompt.text =
                         $"{_engine.PendingResponse.Prompt}\n" +
-                        $"⏱ {_responseClock.SecondsRemaining:0.0}s — tap a blinking zone to activate";
+                        $"⏱ {_responseClock.SecondsRemaining:0.0}s — ACTIVATE / PASS, or tap a blinking zone";
                 }
 
                 return;
