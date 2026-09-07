@@ -113,6 +113,15 @@ namespace WRLDZ.Duel.Rules
             report.UnitPass += htPass;
             report.UnitFail += htFail;
 
+            // ── 1h) Fusion Summon (data-driven recipes via Polymerization) ──
+            sb.AppendLine();
+            sb.AppendLine("── Unit: FusionRegressionTests ──");
+            var fusion = FusionRegressionTests.RunAll();
+            sb.AppendLine(fusion.TrimEnd());
+            ParseUnitCounts(fusion, out var fuPass, out var fuFail);
+            report.UnitPass += fuPass;
+            report.UnitFail += fuFail;
+
             // ── 2) Text effect compile (lab unique cards) ──
             sb.AppendLine();
             sb.AppendLine("── Text: lab deck compile (regex, no AI) ──");
