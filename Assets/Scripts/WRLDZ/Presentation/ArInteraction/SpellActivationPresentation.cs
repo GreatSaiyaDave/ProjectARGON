@@ -36,8 +36,13 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary>How long the full activate rise+reveal should take (presentation).</summary>
         public const float ActivateSequenceSeconds = 1.65f;
 
-        /// <summary>Hover hold after reveal before fade is allowed (if GY already resolved).</summary>
-        public const float MinHoverSeconds = 0.85f;
+        /// <summary>
+        /// Hover hold after a one-shot resolves, before its hologram leaves to GY
+        /// (fade / shatter). The rise already reveals the art ~0.9s in, so this only
+        /// needs to be a short read beat — a longer hold reads as the hologram
+        /// lingering "a second too long" after the card has already resolved.
+        /// </summary>
+        public const float MinHoverSeconds = 0.2f;
 
         /// <summary>Fade duration when leaving to GY after activation.</summary>
         public const float FadeToGySeconds = 0.75f;
