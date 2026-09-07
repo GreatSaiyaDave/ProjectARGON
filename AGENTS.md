@@ -8,7 +8,7 @@ The owner is **not a programmer** and plays on **Linux Unity Hub**. Read `.curso
 
 ## How the owner sees updates
 
-Hub **cloud** = Unity Cloud (ads), not GitHub. Tell them: open the project → **WRLDZ → Get Latest from GitHub** → Project search `WRLDZ_BUILD` = **CLEAN-0907**. Details: `.cursor/skills/owner-linux-unity/` and `GET_THE_GAME.txt`.
+If they do not see **WRLDZ → Get Latest from GitHub**, the folder is old. Tell them to close Unity, download `https://github.com/GreatSaiyaDave/ProjectARGON/archive/refs/heads/main.zip`, Hub **Add** the folder that contains `Assets`. Details: `.cursor/skills/owner-linux-unity/` and `GET_THE_GAME.txt`.
 
 ## What is already on `main` (do not re-implement)
 

@@ -1,10 +1,11 @@
-Ignore the Hub cloud icon. That is Unity Cloud (ads), not GitHub.
+You will not see WRLDZ → Get Latest from GitHub until this
+folder is replaced with a fresh GitHub copy. Missing menu = old copy.
 
-1. Open ProjectARGON in Unity.
-2. Menu: WRLDZ → Get Latest from GitHub
-3. Project search: WRLDZ_BUILD  →  must say CLEAN-0907
+1. Close Unity.
+2. Download:
+   https://github.com/GreatSaiyaDave/ProjectARGON/archive/refs/heads/main.zip
+3. Extract it. Open the folder that contains Assets.
+4. Unity Hub → Add → that folder. Open it (6000.5.10f1).
+5. Top menu bar (File, Edit, Assets…): WRLDZ → Lab → Open Desktop Lab App
 
-If that menu fails:
-Hub → Add → Add from repository → GitHub → GreatSaiyaDave/ProjectARGON
-
-Zip: https://github.com/GreatSaiyaDave/ProjectARGON/archive/refs/heads/main.zip
+The Hub cloud icon is Unity Cloud (ads), not GitHub.
