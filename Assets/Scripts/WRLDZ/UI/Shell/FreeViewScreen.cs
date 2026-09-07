@@ -132,8 +132,8 @@ namespace WRLDZ.UI.Shell
             catalog.transform.SetParent(root, false);
             FloatingPanel.Place(catalog.GetComponent<RectTransform>(), 0.02f, 0.02f, 0.98f, 0.262f);
             var cimg = catalog.GetComponent<Image>();
-            cimg.sprite = UiFoundation.WhiteSprite();
-            cimg.color = HubChrome.WellFill;
+            cimg.raycastTarget = true;
+            HubChrome.PaintWell(cimg);
 
             var viewport = new GameObject("Viewport", typeof(RectTransform), typeof(RectMask2D));
             viewport.transform.SetParent(catalog.transform, false);

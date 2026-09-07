@@ -67,8 +67,8 @@ namespace WRLDZ.UI.Shell
             scroll.transform.SetParent(body, false);
             FloatingPanel.Place(scroll.GetComponent<RectTransform>(), 0f, 0f, 1f, ar ? 0.86f : 0.88f);
             var sImg = scroll.GetComponent<Image>();
-            sImg.sprite = UiFoundation.WhiteSprite();
-            sImg.color = HubChrome.WellFill;
+            sImg.raycastTarget = true;
+            HubChrome.PaintWell(sImg);
 
             var viewport = new GameObject("Viewport", typeof(RectTransform), typeof(RectMask2D), typeof(Image));
             viewport.transform.SetParent(scroll.transform, false);
@@ -112,7 +112,7 @@ namespace WRLDZ.UI.Shell
                     filter = f;
                     rebuild?.Invoke();
                 }, f == filter ? MenuCommandButton.Kind.Gold : MenuCommandButton.Kind.Primary,
-                    centerTitle: true, titleSize: 13, plated: false);
+                    centerTitle: true, titleSize: 13);
                 b.GetComponent<LayoutElement>().minHeight = ar ? 32 : 40;
                 chipFaces.Add((f, b.GetComponent<Image>(), b.GetComponent<Outline>()));
             }
@@ -131,10 +131,8 @@ namespace WRLDZ.UI.Shell
                     var on = chipFaces[i].f == filter;
                     if (chipFaces[i].face != null)
                     {
-                        chipFaces[i].face.color = on
-                            ? MenuCommandButton.FillGold
-                            : MenuCommandButton.FillPrimary;
-                        HubChrome.LiftPlate(chipFaces[i].face, on ? DuelystUi.Gold : DuelystUi.Cyan);
+                        HubChrome.PaintPlate(chipFaces[i].face, on ? DuelystUi.Gold : DuelystUi.Cyan, gold: on);
+                        HubChrome.FlattenPlate(chipFaces[i].face);
                     }
                     if (chipFaces[i].edge != null)
                         chipFaces[i].edge.effectColor = on
@@ -296,10 +294,8 @@ namespace WRLDZ.UI.Shell
             dimBtn.transition = Selectable.Transition.None;
             dimBtn.onClick.AddListener(() => hide?.Invoke());
 
-            var plate = FloatingPanel.Create(go.transform, "InspectPlate", goldEdge: false);
-            HubChrome.LiftPlate(plate.GetComponent<Image>(), DuelystUi.Cyan);
-            if (ar) FloatingPanel.Place(plate, 0.08f, 0.18f, 0.92f, 0.82f);
-            else FloatingPanel.Place(plate, 0.08f, 0.16f, 0.92f, 0.84f);
+            var plate = HubChrome.Sheet(go.transform, "InspectPlate",
+                0.08f, ar ? 0.18f : 0.16f, 0.92f, ar ? 0.82f : 0.84f);
 
             var title = FloatingPanel.Title(plate, def?.name ?? "Artifact", ar ? 16 : 20);
             FloatingPanel.Place(title.rectTransform, 0.06f, 0.82f, 0.78f, 0.96f);

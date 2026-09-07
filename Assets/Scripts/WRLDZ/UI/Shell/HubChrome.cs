@@ -147,6 +147,24 @@ namespace WRLDZ.UI.Shell
                 PaintPlate(img, DuelystUi.Cyan, sliced: false);
         }
 
+        /// <summary>Opaque hub plate on an existing list / meter / inspect well.</summary>
+        public static void PaintWell(Image img, bool flatten = false)
+        {
+            if (img == null) return;
+            PaintPlate(img, DuelystUi.Cyan, sliced: !flatten);
+            if (flatten) FlattenPlate(img);
+            CornerTicks(img.transform, DuelystUi.Cyan);
+        }
+
+        /// <summary>Short wallet / filter chip — Simple stretch, never 9-slice.</summary>
+        public static void PaintChip(Image img, Color edge)
+        {
+            if (img == null) return;
+            PaintPlate(img, edge, sliced: false);
+            FlattenPlate(img);
+            CornerTicks(img.transform, edge);
+        }
+
         /// <summary>Gold / cyan L-corner ticks from the hub featured/dest tiles.</summary>
         public static void CornerTicks(Transform parent, Color color)
         {

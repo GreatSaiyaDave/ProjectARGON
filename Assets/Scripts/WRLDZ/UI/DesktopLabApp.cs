@@ -162,8 +162,8 @@ namespace WRLDZ.UI
                 true, LaunchOcgLab);
 
             // Options
-            var optPanel = FloatingPanel.Create(root, "Opts", goldEdge: false);
-            FloatingPanel.Place(optPanel, 0.08f, 0.14f, 0.92f, 0.28f);
+            var optPanel = HubChrome.Sheet(root, "Opts", 0.08f, 0.14f, 0.92f, 0.28f);
+            HubChrome.FlattenPlate(optPanel.GetComponent<Image>());
 
             var optTitle = FloatingPanel.Body(optPanel, "OPTIONS", 12);
             FloatingPanel.Place(optTitle.rectTransform, 0.04f, 0.72f, 0.96f, 0.95f);

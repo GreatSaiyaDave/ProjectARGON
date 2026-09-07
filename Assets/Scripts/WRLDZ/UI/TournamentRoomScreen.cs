@@ -52,8 +52,8 @@ namespace WRLDZ.UI
             scroll.transform.SetParent(body, false);
             FloatingPanel.Place(scroll.GetComponent<RectTransform>(), 0.01f, 0.11f, 0.99f, 0.88f);
             var bg = scroll.GetComponent<Image>();
-            bg.sprite = UiFoundation.WhiteSprite();
-            bg.color = HubChrome.WellFill;
+            bg.raycastTarget = true;
+            HubChrome.PaintWell(bg);
 
             var viewport = new GameObject("Viewport", typeof(RectTransform), typeof(RectMask2D), typeof(Image));
             viewport.transform.SetParent(scroll.transform, false);

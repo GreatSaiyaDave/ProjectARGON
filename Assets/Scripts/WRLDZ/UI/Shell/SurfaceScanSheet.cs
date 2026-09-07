@@ -33,11 +33,8 @@ namespace WRLDZ.UI.Shell
             wellGo.transform.SetParent(body, false);
             FloatingPanel.Grid.Full(wellGo.GetComponent<RectTransform>(), 0.38f, 0.96f);
             b.Well = wellGo.GetComponent<Image>();
-            b.Well.sprite = UiFoundation.WhiteSprite();
-            b.Well.type = Image.Type.Simple;
-            b.Well.color = HubChrome.WellFill;
             b.Well.raycastTarget = false;
-            HubChrome.LiftPlate(b.Well, DuelystUi.Cyan);
+            HubChrome.PaintWell(b.Well);
 
             var stepSeed = mode == ArenaSurfaceScanner.ScanMode.Pvp
                 ? "WALK TO PLAYER 2 · AUTO LOCK WHEN STILL"

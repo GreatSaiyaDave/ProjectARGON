@@ -87,9 +87,8 @@ namespace WRLDZ.UI.Shell
             grid.transform.SetParent(stage, false);
             FloatingPanel.Stretch(grid.GetComponent<RectTransform>(), 6f);
             var gImg = grid.GetComponent<Image>();
-            gImg.sprite = UiFoundation.WhiteSprite();
-            gImg.color = new Color(0.03f, 0.05f, 0.07f, 0.92f);
             gImg.raycastTarget = true;
+            HubChrome.PaintWell(gImg);
             st.GridHost = grid.transform;
 
             BuildInspect(body, st, ar);
@@ -196,10 +195,8 @@ namespace WRLDZ.UI.Shell
                 typeof(Button));
             go.transform.SetParent(parent, false);
             var img = go.GetComponent<Image>();
-            var spr = ImagineAssets.HudChip() ?? UiFoundation.WhiteSprite();
-            img.sprite = spr;
-            img.type = spr != null && spr.border.sqrMagnitude > 0 ? Image.Type.Sliced : Image.Type.Simple;
-            HubChrome.LiftPlate(img, DuelystUi.Gold);
+            img.raycastTarget = true;
+            HubChrome.PaintChip(img, DuelystUi.Gold);
             var btn = go.GetComponent<Button>();
             btn.targetGraphic = img;
             btn.transition = Selectable.Transition.None;
@@ -266,27 +263,27 @@ namespace WRLDZ.UI.Shell
             {
                 ActPackSelected(st);
                 st.Refresh?.Invoke();
-            }, MenuCommandButton.Kind.Gold, centerTitle: true, titleSize: 13, plated: false);
+            }, MenuCommandButton.Kind.Gold, centerTitle: true, titleSize: 13);
             FloatingPanel.Place(st.PackBtn.GetComponent<RectTransform>(), 0.00f, 0.52f, 0.48f, 1f);
 
             st.UnpackBtn = HubChrome.Capsule(st.ActionRow.transform, "SEND HOME", () =>
             {
                 ActUnpackSelected(st);
                 st.Refresh?.Invoke();
-            }, MenuCommandButton.Kind.Secondary, centerTitle: true, titleSize: 13, plated: false);
+            }, MenuCommandButton.Kind.Secondary, centerTitle: true, titleSize: 13);
             FloatingPanel.Place(st.UnpackBtn.GetComponent<RectTransform>(), 0.52f, 0.52f, 1f, 1f);
 
             st.EditBtn = HubChrome.Capsule(st.ActionRow.transform, "EDIT DECK", () =>
             {
                 OpenDeckEditor(st);
-            }, MenuCommandButton.Kind.Gold, centerTitle: true, titleSize: 13, plated: false);
+            }, MenuCommandButton.Kind.Gold, centerTitle: true, titleSize: 13);
             FloatingPanel.Place(st.EditBtn.GetComponent<RectTransform>(), 0.00f, 0.00f, 0.48f, 0.46f);
 
             st.DeleteBtn = HubChrome.Capsule(st.ActionRow.transform, "DELETE", () =>
             {
                 ActDeleteDeck(st);
                 st.Refresh?.Invoke();
-            }, MenuCommandButton.Kind.Danger, centerTitle: true, titleSize: 13, plated: false);
+            }, MenuCommandButton.Kind.Danger, centerTitle: true, titleSize: 13);
             FloatingPanel.Place(st.DeleteBtn.GetComponent<RectTransform>(), 0.52f, 0.00f, 1f, 0.46f);
         }
 
@@ -295,10 +292,8 @@ namespace WRLDZ.UI.Shell
             var go = new GameObject(name, typeof(RectTransform), typeof(Image));
             go.transform.SetParent(parent, false);
             var img = go.GetComponent<Image>();
-            img.sprite = UiFoundation.WhiteSprite();
-            img.type = Image.Type.Simple;
-            img.color = fill.a > 0.5f ? HubChrome.WellFill : fill;
             img.raycastTarget = true;
+            HubChrome.PaintWell(img, flatten: name != "Stage");
             return go.GetComponent<RectTransform>();
         }
 
@@ -366,9 +361,10 @@ namespace WRLDZ.UI.Shell
                 if (plate != null)
                 {
                     face.sprite = plate;
-                    face.type = plate.border.sqrMagnitude > 0.1f ? Image.Type.Sliced : Image.Type.Simple;
+                    face.type = Image.Type.Simple;
                 }
 
+                HubChrome.FlattenPlate(face);
                 HubChrome.LiftPlate(face, on ? DuelystUi.Gold : DuelystUi.Cyan);
             }
 
@@ -658,7 +654,7 @@ namespace WRLDZ.UI.Shell
                     FreeUiKit.PlayClick();
                     Note(st, err ?? "Could not create deck.");
                 }
-            }, MenuCommandButton.Kind.Gold, centerTitle: true, titleSize: 16, plated: false);
+            }, MenuCommandButton.Kind.Gold, centerTitle: true, titleSize: 16);
             create.GetComponent<LayoutElement>().minHeight = ar ? 40 : 48;
 
             AddHeader(st.ListHost, "DECK BOXES");

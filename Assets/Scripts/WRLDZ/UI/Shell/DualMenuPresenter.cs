@@ -109,16 +109,8 @@ namespace WRLDZ.UI.Shell
             var rim = panel.GetComponent<Image>();
             if (rim != null)
             {
-                var holo = ImagineAssets.TileHub() ?? ImagineAssets.MenuHoloSheet()
-                           ?? ImagineAssets.PanelHolo() ?? rim.sprite;
-                if (holo != null)
-                {
-                    rim.sprite = holo;
-                    rim.type = holo.border.sqrMagnitude > 0 ? Image.Type.Sliced : Image.Type.Simple;
-                }
-
-                rim.color = Color.white;
-                HubChrome.LiftPlate(rim, DuelystUi.Cyan);
+                HubChrome.PaintPlate(rim, DuelystUi.Cyan);
+                HubChrome.CornerTicks(panel, DuelystUi.Cyan);
             }
 
             MenuHoloPulse.Attach(panel.gameObject, scan: true, breathe: false);

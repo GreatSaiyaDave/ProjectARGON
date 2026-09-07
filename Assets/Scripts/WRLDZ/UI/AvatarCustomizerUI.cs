@@ -906,13 +906,9 @@ namespace WRLDZ.UI
             sheetGo.transform.SetParent(root.transform, false);
             GoTheme.Place(sheetGo.GetComponent<RectTransform>(), 0.06f, 0.10f, 0.94f, 0.88f);
             var sheetImg = sheetGo.GetComponent<Image>();
-            var plate = ImagineAssets.MenuHoloSheet() ?? ImagineAssets.PanelMenuGlass()
-                        ?? ImagineAssets.PanelHolo() ?? DuelystUi.Panel();
-            sheetImg.sprite = plate ?? UiFoundation.WhiteSprite();
-            sheetImg.type = plate != null && plate.border.sqrMagnitude > 0
-                ? Image.Type.Sliced : Image.Type.Simple;
-            sheetImg.color = Color.white;
             sheetImg.raycastTarget = true;
+            HubChrome.PaintPlate(sheetImg, DuelystUi.Cyan);
+            HubChrome.CornerTicks(sheetGo.transform, DuelystUi.Cyan);
             return root;
         }
 

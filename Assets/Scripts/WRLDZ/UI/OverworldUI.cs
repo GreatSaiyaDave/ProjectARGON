@@ -727,11 +727,8 @@ namespace WRLDZ.UI
             rt.anchoredPosition = new Vector2(0f, -10f);
 
             var plate = strip.GetComponent<Image>();
-            plate.sprite = UiTheme.RoundedRectSprite() ?? UiFoundation.WhiteSprite();
-            plate.type = plate.sprite != null && plate.sprite.border.sqrMagnitude > 0
-                ? Image.Type.Sliced : Image.Type.Simple;
-            plate.color = new Color(0.04f, 0.07f, 0.12f, 0.72f);
             plate.raycastTarget = true;
+            HubChrome.PaintWell(plate);
 
             var v = strip.GetComponent<VerticalLayoutGroup>();
             v.spacing = 6f;
@@ -773,20 +770,13 @@ namespace WRLDZ.UI
                 typeof(Button));
             go.transform.SetParent(parent, false);
             var img = go.GetComponent<Image>();
-            img.sprite = UiTheme.RoundedRectSprite() ?? UiFoundation.WhiteSprite();
-            img.type = img.sprite != null && img.sprite.border.sqrMagnitude > 0
-                ? Image.Type.Sliced : Image.Type.Simple;
-            img.color = new Color(0.08f, 0.12f, 0.20f, 0.94f);
             img.raycastTarget = true;
+            HubChrome.PaintChip(img, accent);
             var chipBtn = go.GetComponent<Button>();
             chipBtn.targetGraphic = img;
             chipBtn.transition = Selectable.Transition.None;
             if (onClick != null)
                 chipBtn.onClick.AddListener(() => onClick());
-            var ol = go.AddComponent<Outline>();
-            ol.effectColor = new Color(accent.r, accent.g, accent.b, 0.75f);
-            ol.effectDistance = new Vector2(1.6f, -1.6f);
-            ol.useGraphicAlpha = false;
             var le = go.GetComponent<LayoutElement>();
             le.flexibleWidth = 1f;
             le.flexibleHeight = 0f;
@@ -844,10 +834,8 @@ namespace WRLDZ.UI
             // Sit under the compass orb (0.90–0.98 y) so the header never collides with it.
             GoTheme.Place(plate.GetComponent<RectTransform>(), 0.42f, 0.34f, 0.985f, 0.885f);
             _nearbyPlateImg = plate.GetComponent<Image>();
-            _nearbyPlateImg.sprite = UiFoundation.WhiteSprite();
-            _nearbyPlateImg.type = Image.Type.Simple;
-            _nearbyPlateImg.color = new Color(0.05f, 0.08f, 0.14f, 0.96f);
             _nearbyPlateImg.raycastTarget = true;
+            HubChrome.PaintWell(_nearbyPlateImg);
             plate.SetActive(false);
             _compassCg = MenuMotion.EnsureGroup(plate);
 
@@ -855,9 +843,9 @@ namespace WRLDZ.UI
             header.transform.SetParent(plate.transform, false);
             GoTheme.Place(header.GetComponent<RectTransform>(), 0f, 0.80f, 1f, 1f);
             var headerImg = header.GetComponent<Image>();
-            headerImg.sprite = UiFoundation.WhiteSprite();
-            headerImg.color = new Color(0.08f, 0.12f, 0.20f, 1f);
             headerImg.raycastTarget = false;
+            HubChrome.PaintPlate(headerImg, DuelystUi.Gold, gold: true);
+            HubChrome.FlattenPlate(headerImg);
 
             var cap = GoTheme.Label(header.transform, "Cap", "NEARBY", 16, Color.white,
                 TextAnchor.MiddleLeft, bold: true);
