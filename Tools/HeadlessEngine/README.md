@@ -11,8 +11,17 @@ and see the full `TcgRegressionTests` / `InteractionRegressionTests` /
 ## Run
 
 ```bash
-Tools/HeadlessEngine/run.sh --quiet
+Tools/HeadlessEngine/run.sh --quiet            # full stress suite (default 40 duels)
+Tools/HeadlessEngine/run.sh --quiet --duels 250 # more complete AI-vs-AI games
+Tools/HeadlessEngine/run.sh --card "Call of the Haunted"  # inspect one card's compiled effect
 ```
+
+This runs `DuelEngineStressTests.Run(...)`, which covers:
+
+- the unit regressions (`TcgRegressionTests`, `InteractionRegressionTests`, `CorpusTriggerStressTests`),
+- the lab-deck text-compile check,
+- `--duels N` **complete** AI-vs-AI games (played to a winner), tracking soft-locks / turn-caps / exceptions,
+- a battle-math fuzz.
 
 Requires the .NET 8 SDK. If `dotnet` isn't installed:
 
@@ -20,7 +29,11 @@ Requires the .NET 8 SDK. If `dotnet` isn't installed:
 curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 8.0 --install-dir "$HOME/.dotnet"
 ```
 
-Exit code is non-zero if any suite prints a `FAIL  ` line.
+Exit code is non-zero if any suite fails (`report.Ok == false`: any unit fail, exception, or soft-lock).
+
+The `--card <id|name>` inspector prints how a card's official text compiles into an
+effect program (classification, timings, and each clause's action/zone/requirements) —
+useful when authoring new cards or diagnosing why one is unimplemented.
 
 ## How it works
 

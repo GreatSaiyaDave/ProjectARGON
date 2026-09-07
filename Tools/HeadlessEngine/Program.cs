@@ -26,42 +26,43 @@ internal static class Program
             return Diag.InspectCard(args[cardArg + 1]);
         }
 
+        int duels = ReadIntArg(args, "--duels", WRLDZ.Duel.Rules.DuelEngineStressTests.DefaultDuelCount);
+
         Console.WriteLine("== WRLDZ headless engine test harness ==");
         Console.WriteLine("streamingAssetsPath = " + streaming);
+        Console.WriteLine($"stress duels = {duels}");
         Console.WriteLine();
 
-        var sb = new StringBuilder();
-        int suites = 0, failedSuites = 0;
-
-        suites += RunSuite(sb, "TcgRegressionTests", () => WRLDZ.Duel.Rules.TcgRegressionTests.RunAll(), ref failedSuites);
-        suites += RunSuite(sb, "InteractionRegressionTests", () => WRLDZ.Duel.Rules.InteractionRegressionTests.RunAll(), ref failedSuites);
-        suites += RunSuite(sb, "CorpusTriggerStressTests", () => WRLDZ.Duel.Rules.CorpusTriggerStressTests.Run(), ref failedSuites);
-
-        var report = sb.ToString();
-        Console.WriteLine(report);
-
-        // A failing line in any suite report ("FAIL  ") fails the run.
-        bool anyFail = report.IndexOf("FAIL  ", StringComparison.Ordinal) >= 0 || failedSuites > 0;
-        Console.WriteLine();
-        Console.WriteLine($"== SUMMARY: {suites} suite(s) run, {failedSuites} threw, result={(anyFail ? "FAIL" : "PASS")} ==");
-        return anyFail ? 1 : 0;
-    }
-
-    static int RunSuite(StringBuilder sb, string name, Func<string> run, ref int failedSuites)
-    {
-        sb.AppendLine("######## " + name + " ########");
+        // The comprehensive stress suite runs the unit regressions
+        // (TcgRegressionTests + InteractionRegressionTests + CorpusTriggerStressTests),
+        // the lab-deck text-compile check, `duels` complete AI-vs-AI games, and a
+        // battle-math fuzz. `Ok` is false on any unit fail, exception, or soft-lock.
+        WRLDZ.Duel.Rules.DuelEngineStressTests.StressReport report;
         try
         {
-            var r = run();
-            sb.AppendLine(r);
+            report = WRLDZ.Duel.Rules.DuelEngineStressTests.Run(duels);
         }
         catch (Exception e)
         {
-            failedSuites++;
-            sb.AppendLine("FAIL  " + name + " threw: " + e);
+            Console.Error.WriteLine("FAIL  DuelEngineStressTests threw: " + e);
+            return 1;
         }
-        sb.AppendLine();
-        return 1;
+
+        Console.WriteLine(report.Summary);
+        Console.WriteLine();
+        Console.WriteLine($"== SUMMARY: unitPass={report.UnitPass} unitFail={report.UnitFail} " +
+                          $"duelsPlayed={report.DuelsPlayed} completed={report.DuelsCompleted} " +
+                          $"turnCap={report.DuelsTurnCapped} softLocks={report.SoftLocksRecovered} " +
+                          $"exceptions={report.Exceptions} wins(P/O/D)={report.PlayerWins}/{report.OppWins}/{report.DrawsOrCap} " +
+                          $"result={(report.Ok ? "PASS" : "FAIL")} ==");
+        return report.Ok ? 0 : 1;
+    }
+
+    static int ReadIntArg(string[] args, string name, int fallback)
+    {
+        int i = Array.IndexOf(args, name);
+        if (i >= 0 && i + 1 < args.Length && int.TryParse(args[i + 1], out var v) && v > 0) return v;
+        return fallback;
     }
 
     static string FindRepoRoot()
