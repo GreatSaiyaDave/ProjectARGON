@@ -1813,13 +1813,15 @@ namespace WRLDZ.Duel.Rules
 
                     var blRitual = db.Get(55761792);
                     var blrProg = blRitual != null ? CardTextEffectCompiler.Compile(blRitual) : null;
-                    Check("Corpus: Black Luster Ritual leftover (no invented Ritual Summon)",
-                        blrProg != null && !blrProg.FullyCompiled &&
-                        !blrProg.ClauseList.Exists(c =>
+                    // Generalized Ritual Summon: the Ritual Spell compiles to a rules-driven
+                    // RitualSummon clause (named monster + required Tribute Level) — not an
+                    // invented per-card hack.
+                    Check("Corpus: Black Luster Ritual compiles to a generalized Ritual Summon",
+                        blrProg != null && blrProg.FullyCompiled &&
+                        blrProg.ClauseList.Exists(c =>
                             c != null &&
-                            (c.Action == EffectActionKind.SpecialSummonNamed ||
-                             c.Action == EffectActionKind.SpecialSummonFromHand ||
-                             c.Action == EffectActionKind.SpecialSummonThisFromHand)));
+                            c.Action == EffectActionKind.RitualSummon &&
+                            c.NamedCard == "Black Luster Soldier" && c.Amount == 8));
 
                     var poison = db.Get(40320754);
                     var poisonProg = poison != null ? CardTextEffectCompiler.Compile(poison) : null;

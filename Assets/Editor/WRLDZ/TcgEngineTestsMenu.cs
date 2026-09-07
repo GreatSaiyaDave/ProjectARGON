@@ -16,6 +16,7 @@ namespace WRLDZ.EditorTools
                          "\n" + CorpusTriggerStressTests.Run() +
                          "\n" + ChainRegressionTests.RunAll() +
                          "\n" + CoinDiceRegressionTests.RunAll() +
+                         "\n" + RitualRegressionTests.RunAll() +
                          "\n" + WRLDZ.Core.InventoryRegressionTests.RunAll() +
                          "\n" + ArPlaymatLayout.RunSanityChecks() +
                          "\n" + WRLDZ.Presentation.ArPhysicalCardBuilder.RunFaceSwapSanity();

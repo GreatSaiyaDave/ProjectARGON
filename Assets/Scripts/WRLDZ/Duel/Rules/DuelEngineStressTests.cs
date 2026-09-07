@@ -95,6 +95,15 @@ namespace WRLDZ.Duel.Rules
             report.UnitPass += cdPass;
             report.UnitFail += cdFail;
 
+            // ── 1f) Ritual Summon (Ritual Spell → Special Summon by Tribute) ──
+            sb.AppendLine();
+            sb.AppendLine("── Unit: RitualRegressionTests ──");
+            var ritual = RitualRegressionTests.RunAll();
+            sb.AppendLine(ritual.TrimEnd());
+            ParseUnitCounts(ritual, out var rtPass, out var rtFail);
+            report.UnitPass += rtPass;
+            report.UnitFail += rtFail;
+
             // ── 2) Text effect compile (lab unique cards) ──
             sb.AppendLine();
             sb.AppendLine("── Text: lab deck compile (regex, no AI) ──");

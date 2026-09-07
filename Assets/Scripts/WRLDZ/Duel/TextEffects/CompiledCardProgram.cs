@@ -143,6 +143,13 @@ namespace WRLDZ.Duel.TextEffects
         SpecialSummonToken,
         /// <summary>Special Summon 1 Fusion Monster from the Extra Deck.</summary>
         SpecialSummonFusionFromExtra,
+        /// <summary>
+        /// Ritual Summon: activated by a Ritual Spell. Special Summon the named Ritual
+        /// Monster (<see cref="EffectClause.NamedCard"/>, or any Ritual Monster of
+        /// <see cref="EffectClause.AttributeFilter"/>) from the hand by Tributing monsters
+        /// from hand/field whose total Level ≥ <see cref="EffectClause.Amount"/>.
+        /// </summary>
+        RitualSummon,
         /// <summary>Take control of all face-up opponent monsters with Level ≤ Amount.</summary>
         TakeControlLevelLeq,
         /// <summary>Equip this card to the targeted monster (Union).</summary>

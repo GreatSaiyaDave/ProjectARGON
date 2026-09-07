@@ -153,7 +153,8 @@ namespace WRLDZ.Duel.TextEffects
                     EffectActionKind.SpecialSummonFromHand or
                     EffectActionKind.SpecialSummonNamed or
                     EffectActionKind.SpecialSummonThisFromHand or
-                    EffectActionKind.SpecialSummonFusionFromExtra =>
+                    EffectActionKind.SpecialSummonFusionFromExtra or
+                    EffectActionKind.RitualSummon =>
                     EffectResolutionKind.SpecialSummon,
                 EffectActionKind.SpecialSummonToken => EffectResolutionKind.Token,
                 EffectActionKind.TakeEffectDamage or

@@ -231,7 +231,8 @@ namespace WRLDZ.Duel.Rules
         static bool NeedsHardBoard(EffectClause c)
         {
             if (c == null) return false;
-            return c.RequiresLordOfDOnField ||
+            return c.Action == EffectActionKind.RitualSummon || // needs named monster in hand + Tributes
+                   c.RequiresLordOfDOnField ||
                    c.RequiresSendNamedToGy ||
                    c.RequiresTributeThis ||
                    c.RequiresTributeCount > 0 ||

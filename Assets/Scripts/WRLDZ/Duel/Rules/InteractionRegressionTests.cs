@@ -3912,8 +3912,11 @@ namespace WRLDZ.Duel.Rules
                                 c.Action == EffectActionKind.AddFromDeckToHand ||
                                 c.Action == EffectActionKind.AddNamedFromDeckToHand ||
                                 c.Action == EffectActionKind.SpecialSummonFromGy ||
-                                c.Action == EffectActionKind.SpecialSummonFromHand)
+                                c.Action == EffectActionKind.SpecialSummonFromHand ||
+                                c.Action == EffectActionKind.RitualSummon)
                             {
+                                // Ritual Spells need the named Ritual Monster in hand +
+                                // Tribute material — not activatable on a bare board.
                                 needsBoard = true;
                                 break;
                             }

@@ -1471,6 +1471,31 @@ namespace WRLDZ.Duel.TextEffects
                 }
             }
 
+            if (c.Action == EffectActionKind.RitualSummon)
+            {
+                var target = FindRitualMonsterInHand(who, c);
+                if (target == null)
+                {
+                    reason = "No matching Ritual Monster in your hand.";
+                    return false;
+                }
+
+                var need = Mathf.Max(1, c.Amount);
+                var tributes = SelectRitualTributes(who, target, need);
+                if (TotalLevel(tributes) < need)
+                {
+                    reason = $"Not enough Tribute Levels for the Ritual Summon (need {need}).";
+                    return false;
+                }
+
+                var fieldTribute = tributes.Exists(t => who.TryFindMonster(t, out _));
+                if (engine.FirstEmpty(who.MonsterZones) < 0 && !fieldTribute)
+                {
+                    reason = "No free Monster Zone for the Ritual Summon.";
+                    return false;
+                }
+            }
+
             if (c.Action == EffectActionKind.AddNamedFromDeckToHand &&
                 !DeckHasNamed(engine, who, c.NamedCard))
             {
@@ -1528,6 +1553,113 @@ namespace WRLDZ.Duel.TextEffects
             }
 
             return list;
+        }
+
+        // —— Ritual Summon (activated by a Ritual Spell) ——
+
+        /// <summary>The Ritual Monster this spell can summon that is currently in hand.</summary>
+        static CardInstance FindRitualMonsterInHand(DuelistState who, EffectClause clause)
+        {
+            if (who?.Hand == null || clause == null) return null;
+            foreach (var c in who.Hand)
+            {
+                if (c?.Def == null || !c.Def.IsRitualMonster) continue;
+                if (!string.IsNullOrEmpty(clause.NamedCard))
+                {
+                    if (c.IsNamed(clause.NamedCard) ||
+                        string.Equals(c.Name, clause.NamedCard, System.StringComparison.OrdinalIgnoreCase))
+                        return c;
+                }
+                else if (!string.IsNullOrEmpty(clause.AttributeFilter))
+                {
+                    if (string.Equals(c.Def.attribute, clause.AttributeFilter,
+                            System.StringComparison.OrdinalIgnoreCase))
+                        return c;
+                }
+                else
+                {
+                    return c; // no name/attribute restriction
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Auto-select Tribute material (monsters on field + in hand, excluding the Ritual
+        /// Monster) whose total Level ≥ <paramref name="need"/>. Highest-Level first to use
+        /// the fewest monsters.
+        /// </summary>
+        static List<CardInstance> SelectRitualTributes(DuelistState who, CardInstance target, int need)
+        {
+            var cand = new List<CardInstance>();
+            if (who != null)
+            {
+                foreach (var m in who.MonstersOnField())
+                    if (m != null && m != target) cand.Add(m);
+                if (who.Hand != null)
+                    foreach (var c in who.Hand)
+                        if (c != null && c != target && c.Def != null && c.Def.IsMonster) cand.Add(c);
+            }
+
+            cand.Sort((a, b) => Mathf.Max(0, b.Level).CompareTo(Mathf.Max(0, a.Level)));
+            var chosen = new List<CardInstance>();
+            var sum = 0;
+            foreach (var c in cand)
+            {
+                if (sum >= need) break;
+                chosen.Add(c);
+                sum += Mathf.Max(0, c.Level);
+            }
+
+            return chosen;
+        }
+
+        static int TotalLevel(List<CardInstance> cards)
+        {
+            var sum = 0;
+            if (cards != null)
+                foreach (var c in cards)
+                    sum += Mathf.Max(0, c?.Level ?? 0);
+            return sum;
+        }
+
+        static bool RitualSummonResolve(DuelEngine engine, DuelistState who, CardInstance source,
+            EffectClause clause)
+        {
+            if (engine == null || who == null || clause == null) return false;
+            var target = FindRitualMonsterInHand(who, clause);
+            if (target == null)
+            {
+                engine.Log($"{source?.Name}: no matching Ritual Monster in hand for the Ritual Summon.");
+                return false;
+            }
+
+            var need = Mathf.Max(1, clause.Amount);
+            var tributes = SelectRitualTributes(who, target, need);
+            var have = TotalLevel(tributes);
+            if (have < need)
+            {
+                engine.Log($"{source?.Name}: not enough Tribute Levels ({have}/{need}).");
+                return false;
+            }
+
+            // Tribute first (field Tributes free a zone), then Special Summon from hand.
+            foreach (var t in tributes)
+                engine.SendCardToGrave(who, t);
+
+            who.Hand.Remove(target);
+            if (!engine.SpecialSummonToField(who, target, BattlePosition.Attack, faceUp: true))
+            {
+                who.Hand.Add(target); // no zone — undo the summon (Tributes stay paid, as in official rules on a full board this can't be declared)
+                engine.Log($"{source?.Name}: no Monster Zone for the Ritual Summon.");
+                return false;
+            }
+
+            engine.Log(
+                $"{source?.Name}: Ritual Summon {target.Name} " +
+                $"(Tributed {tributes.Count}, total Level {have} ≥ {need}).");
+            return true;
         }
 
         static List<CardInstance> CollectOtherYouControl(DuelistState who, CardInstance source,
@@ -1998,6 +2130,10 @@ namespace WRLDZ.Duel.TextEffects
 
             switch (clause.Action)
             {
+                case EffectActionKind.RitualSummon:
+                    RitualSummonResolve(engine, who, source, clause);
+                    break;
+
                 case EffectActionKind.Draw:
                     engine.Draw(who, Mathf.Max(1, clause.Amount), silent: false);
                     break;

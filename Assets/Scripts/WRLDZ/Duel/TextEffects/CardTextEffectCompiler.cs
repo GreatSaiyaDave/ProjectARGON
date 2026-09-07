@@ -16,7 +16,7 @@ namespace WRLDZ.Duel.TextEffects
     /// </summary>
     public static class CardTextEffectCompiler
     {
-        public const int Version = 46;
+        public const int Version = 47;
 
         static readonly Regex RxDraw = new(
             @"(?:^|[.!?]\s+)Draw (\d+) cards?\.",
@@ -44,6 +44,22 @@ namespace WRLDZ.Duel.TextEffects
 
         static readonly Regex RxMonsterReborn = new(
             @"Target 1 monster in either GY;\s*Special Summon it\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        // —— Ritual Spells ——
+        /// <summary>'...used to Ritual Summon "X"...' → target Ritual Monster name.</summary>
+        static readonly Regex RxRitualNamed = new(
+            @"used to Ritual Summon (?:1 )?""([^""]+)""",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>'...used to Ritual Summon any DARK/EARTH/... Ritual Monster' → attribute.</summary>
+        static readonly Regex RxRitualAnyAttr = new(
+            @"used to Ritual Summon any (\w+) Ritual Monster",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>Required total Tribute Level ('total Levels equal N or more' / 'Level is N or more').</summary>
+        static readonly Regex RxRitualLevel = new(
+            @"(?:total Level(?:s| Stars)? equal|whose Level is|whose total Level(?:s| Stars)? equal) (\d+) or more",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxFlipDestroyMonster = new(
@@ -425,6 +441,32 @@ namespace WRLDZ.Duel.TextEffects
                 clause.SourceSnippet = m.Value.Trim();
                 clauses.Add(clause);
                 matchedSpans.Add((m.Index, m.Length));
+            }
+
+            // —— Ritual Spells (race "Ritual"): the whole text is the Ritual Summon
+            // instruction, so consume it all and emit one RitualSummon clause. ——
+            if (def.IsSpell &&
+                string.Equals(def.race, "Ritual", StringComparison.OrdinalIgnoreCase))
+            {
+                var named = RxRitualNamed.Match(text);
+                var anyAttr = RxRitualAnyAttr.Match(text);
+                if (named.Success || anyAttr.Success)
+                {
+                    var lvlM = RxRitualLevel.Match(text);
+                    var clause = new EffectClause
+                    {
+                        Timing = EffectTiming.Activate,
+                        Action = EffectActionKind.RitualSummon,
+                        Amount = lvlM.Success ? ParseInt(lvlM, 1, 1) : 1,
+                        SourceSnippet = text.Trim(),
+                    };
+                    if (named.Success)
+                        clause.NamedCard = named.Groups[1].Value;
+                    else
+                        clause.AttributeFilter = anyAttr.Groups[1].Value.ToUpperInvariant();
+                    clauses.Add(clause);
+                    matchedSpans.Add((0, text.Length));
+                }
             }
 
             // Order: multi-sentence templates first, then short ones
