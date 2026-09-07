@@ -104,6 +104,15 @@ namespace WRLDZ.Duel.Rules
             report.UnitPass += rtPass;
             report.UnitFail += rtFail;
 
+            // ── 1g) Hand traps (hand monster effects that act like Trap Cards) ──
+            sb.AppendLine();
+            sb.AppendLine("── Unit: HandTrapRegressionTests ──");
+            var handtrap = HandTrapRegressionTests.RunAll();
+            sb.AppendLine(handtrap.TrimEnd());
+            ParseUnitCounts(handtrap, out var htPass, out var htFail);
+            report.UnitPass += htPass;
+            report.UnitFail += htFail;
+
             // ── 2) Text effect compile (lab unique cards) ──
             sb.AppendLine();
             sb.AppendLine("── Text: lab deck compile (regex, no AI) ──");
