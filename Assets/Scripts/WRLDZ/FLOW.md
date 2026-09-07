@@ -32,9 +32,11 @@ Boot  (scene 0 — entry only)
 Overworld  (scene 1 — HOME / default)
   VS AI        → Player vs AI create → START → DuelSlice (AR, vs AI)
   VS PVP       → distance scan (mark P1 + P2) → START → DuelSlice (AR hotseat)
-  MENU (Eye)   → fan overlays on the map (DECK / BAG / STORY / BAZAAR / TOME / SET / duels).
-                 Wallet chips (Đ / ◎ / ⚡) open the Artifact Deck Box. Not a scene change.
-                 Optional full hub: Desktop Lab SYSTEMS HUB → MainMenu scene.
+  MENU (Eye)   → Battle City hub grammar on the map (same capsules as MainMenu):
+                 DUEL: VS AI / VS PLAYER; COMMAND: DECK / BAG / STORY / BAZAAR / TOME / SET;
+                 extra row PRACTICE / TOURNEY. Destination sheets then open as HubChrome overlays
+                 (DECK uses DualMenuPresenter). Wallet chips (Đ / ◎ / ⚡) open Artifact Deck Box.
+                 Optional full hub scene: Desktop Lab SYSTEMS HUB → MainMenu.
   Tear pin     → Zone Mode prompt (in-range only)
                  ├─ ENTER AR  → DuelSlice (camera passthrough when available)
                  ├─ DIGITAL   → DuelSlice (same stage, no camera)

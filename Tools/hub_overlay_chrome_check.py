@@ -41,6 +41,10 @@ def main() -> int:
     must_contain(HUB, "ListRow", "lost dest-style list rows")
     must_contain(HUB, "OverlayDim", "lost dusk dim")
 
+    must_contain(HUB, "PaintPlate", "lost opaque hub plate painter")
+    must_contain(HUB, "CornerTicks", "lost hub L-corner ticks")
+    must_contain(HUB, "FlattenPlate", "lost short-row plate flatten")
+
     must_contain(PRESENTER, "HubChrome.HeaderBar", "phone overlay is not hub chrome")
     must_contain(PRESENTER, "HubChrome.FooterBack", "phone overlay missing BACK")
     must_contain(PRESENTER, "HubChrome.BodyWell", "phone overlay missing body well")
@@ -58,6 +62,32 @@ def main() -> int:
     must_contain(FORMATS, "HubChrome.FeaturedCard", "format cards are not hub featured plates")
     must_contain(SCAN, "HubChrome.Capsule", "scan CTAs are not hub capsules")
     must_contain(SYSTEMS, "HubChrome.ListRow", "story/bazaar/tome rows are not hub dest rows")
+
+    ow = ROOT / "Assets/Scripts/WRLDZ/UI/OverworldUI.cs"
+    must_contain(ow, "HubChrome.MountFeatured", "overworld Eye menu is not hub featured tiles")
+    must_contain(ow, "HubChrome.MountDest", "overworld Eye menu is not hub dest tiles")
+    must_contain(ow, "HubChrome.SectionCap", "overworld Eye menu missing DUEL/COMMAND caps")
+
+    deck = ROOT / "Assets/Scripts/WRLDZ/UI/Shell/DeckCollectionScreen.cs"
+    must_contain(deck, "DualMenuPresenter.BuildFrame", "DECK still bypasses hub overlay chrome")
+    must_contain(deck, "HubChrome.PaintPlate", "DECK chrome is not hub plates")
+    deck_src = deck.read_text(encoding="utf-8")
+    if "PanelMenuGlass()" in deck_src:
+        fail("DECK still uses smoked PanelMenuGlass")
+    if "RoundedRectSprite" in deck_src:
+        fail("DECK still uses rounded-rect glass chips")
+
+    board = ROOT / "Assets/Scripts/WRLDZ/UI/Shell/DeckConstructionBoard.cs"
+    board_src = board.read_text(encoding="utf-8")
+    if "PanelMenuGlass()" in board_src:
+        fail("construction board still uses smoked PanelMenuGlass")
+    must_contain(board, "HubChrome.PaintPlate", "construction board is not hub plates")
+
+    if "PanelMenuGlass()" in ow.read_text(encoding="utf-8") and "Eye" in ow.read_text(encoding="utf-8"):
+        # Open Eye must not paint smoked menu glass.
+        eye = ow.read_text(encoding="utf-8")
+        if "ApplyMenuGlassSprite" in eye and "PanelMenuGlass()" in eye.split("ApplyMenuGlassSprite", 1)[1][:800]:
+            fail("Eye open sheet still uses PanelMenuGlass")
 
     print("hub overlay chrome")
     print("  HubChrome header / well / BACK present")

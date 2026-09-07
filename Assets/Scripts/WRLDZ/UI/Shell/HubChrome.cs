@@ -15,6 +15,7 @@ namespace WRLDZ.UI.Shell
     {
         public static readonly Color Dusk = new(0.02f, 0.05f, 0.10f, 0.42f);
         public static readonly Color WellFill = new(0.03f, 0.05f, 0.09f, 0.42f);
+        public static readonly Color LowerDusk = new(0.02f, 0.03f, 0.08f, 0.62f);
 
         public static void Place(RectTransform rt, float x0, float y0, float x1, float y1)
         {
@@ -103,7 +104,95 @@ namespace WRLDZ.UI.Shell
             var btn = MenuCommandButton.Create(parent, title, onClick, kind, blurb,
                 centerTitle, plated);
             Dress(btn, kind, titleSize, displayTitle: true);
+            // Compact CTAs are often ~72–96px. TileHub 9-slice borders are 80px
+            // and collapse to a smoked slab — stretch the plate art instead.
+            if (plated && centerTitle && string.IsNullOrEmpty(blurb))
+                FlattenPlate(btn.GetComponent<Image>());
             return btn;
+        }
+
+        /// <summary>Imagine Battle City plate — opaque painted tile, not smoked glass.</summary>
+        public static void PaintPlate(Image img, Color edge, bool gold = false, bool sliced = true)
+        {
+            if (img == null) return;
+            var plate = gold
+                ? ImagineAssets.TileHubGold() ?? ImagineAssets.BtnGold() ?? ImagineAssets.PanelModal()
+                : ImagineAssets.TileHub() ?? ImagineAssets.BtnPrimary() ?? ImagineAssets.PanelModal();
+            if (plate != null)
+            {
+                img.sprite = plate;
+                img.type = sliced && plate.border.sqrMagnitude > 0.1f
+                    ? Image.Type.Sliced
+                    : Image.Type.Simple;
+                img.color = Color.white;
+            }
+            else
+            {
+                img.sprite = UiFoundation.WhiteSprite();
+                img.type = Image.Type.Simple;
+                img.color = gold
+                    ? new Color(0.28f, 0.20f, 0.06f, 0.96f)
+                    : new Color(0.06f, 0.10f, 0.16f, 0.96f);
+            }
+
+            LiftPlate(img, edge);
+        }
+
+        /// <summary>Avoid 9-slice collapse on short toolbar rows.</summary>
+        public static void FlattenPlate(Image img)
+        {
+            if (img == null) return;
+            img.type = Image.Type.Simple;
+            if (img.sprite == null)
+                PaintPlate(img, DuelystUi.Cyan, sliced: false);
+        }
+
+        /// <summary>Gold / cyan L-corner ticks from the hub featured/dest tiles.</summary>
+        public static void CornerTicks(Transform parent, Color color)
+        {
+            if (parent == null) return;
+            void Arm(string name, Vector2 anchor, Vector2 pivot, Vector2 size, Vector2 pos)
+            {
+                if (parent.Find(name) != null) return;
+                var go = new GameObject(name, typeof(RectTransform), typeof(Image));
+                go.transform.SetParent(parent, false);
+                var rt = go.GetComponent<RectTransform>();
+                rt.anchorMin = anchor;
+                rt.anchorMax = anchor;
+                rt.pivot = pivot;
+                rt.anchoredPosition = pos;
+                rt.sizeDelta = size;
+                var img = go.GetComponent<Image>();
+                img.sprite = UiFoundation.WhiteSprite();
+                img.color = new Color(color.r, color.g, color.b, 0.92f);
+                img.raycastTarget = false;
+                var le = go.AddComponent<LayoutElement>();
+                le.ignoreLayout = true;
+            }
+
+            Arm("TickTL_H", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, 2.4f), new Vector2(6f, -6f));
+            Arm("TickTL_V", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(2.4f, 18f), new Vector2(6f, -6f));
+            Arm("TickTR_H", new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(18f, 2.4f), new Vector2(-6f, -6f));
+            Arm("TickTR_V", new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(2.4f, 18f), new Vector2(-6f, -6f));
+            Arm("TickBL_H", new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(18f, 2.4f), new Vector2(6f, 6f));
+            Arm("TickBL_V", new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(2.4f, 18f), new Vector2(6f, 6f));
+            Arm("TickBR_H", new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(18f, 2.4f), new Vector2(-6f, 6f));
+            Arm("TickBR_V", new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(2.4f, 18f), new Vector2(-6f, 6f));
+        }
+
+        /// <summary>Large overlay sheet — hub tile face + L-ticks.</summary>
+        public static RectTransform Sheet(Transform parent, string name,
+            float x0, float y0, float x1, float y1, bool gold = false)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(parent, false);
+            Place(go.GetComponent<RectTransform>(), x0, y0, x1, y1);
+            var img = go.GetComponent<Image>();
+            img.raycastTarget = true;
+            PaintPlate(img, gold ? DuelystUi.Gold : DuelystUi.Cyan, gold);
+            CornerTicks(go.transform, gold ? DuelystUi.GoldHot : DuelystUi.Cyan);
+            MenuHoloPulse.Attach(go, scan: true, breathe: false);
+            return go.GetComponent<RectTransform>();
         }
 
         public static void Dress(Button btn, MenuCommandButton.Kind kind, int titleSize = 20,
@@ -129,13 +218,22 @@ namespace WRLDZ.UI.Shell
             MenuHoloPulse.Attach(btn.gameObject, scan: true, breathe: false);
         }
 
-        /// <summary>Compact X / toolbar chip — glass fill, never a 9-slice plate.</summary>
+        /// <summary>Header X — gold hub nugget (Simple stretch, never 9-slice).</summary>
         public static Button CloseChip(Transform parent, Action onClose, string label = "X")
         {
             var btn = MenuCommandButton.Create(parent, label, onClose,
                 MenuCommandButton.Kind.Secondary, centerTitle: true);
             btn.name = "Close";
             Dress(btn, MenuCommandButton.Kind.Secondary, 18, displayTitle: true);
+            var face = btn.GetComponent<Image>();
+            var nugget = ImagineAssets.BtnGold() ?? ImagineAssets.TileHubGold();
+            if (face != null && nugget != null)
+            {
+                face.sprite = nugget;
+                face.type = Image.Type.Simple;
+                face.color = Color.white;
+                LiftPlate(face, DuelystUi.Gold);
+            }
             var rt = btn.GetComponent<RectTransform>();
             rt.anchorMin = new Vector2(1f, 1f);
             rt.anchorMax = new Vector2(1f, 1f);
@@ -178,10 +276,12 @@ namespace WRLDZ.UI.Shell
             }
 
             LiftPlate(img, DuelystUi.Cyan);
+            CornerTicks(go.transform, DuelystUi.Cyan);
             MenuHoloPulse.Attach(go, scan: true, breathe: false, phase: 0.15f);
 
             var hasSub = !string.IsNullOrEmpty(subtitle);
             titleT = FloatingPanel.Title(go.transform, title ?? "", 24);
+            WrldzType.StyleGoldTitle(titleT, 24);
             titleT.fontStyle = FontStyle.Bold | FontStyle.Italic;
             titleT.horizontalOverflow = HorizontalWrapMode.Overflow;
             titleT.verticalOverflow = VerticalWrapMode.Truncate;
@@ -209,10 +309,9 @@ namespace WRLDZ.UI.Shell
             go.transform.SetParent(parent, false);
             Place(go.GetComponent<RectTransform>(), x0, y0, x1, y1);
             var img = go.GetComponent<Image>();
-            img.sprite = UiFoundation.WhiteSprite();
-            img.color = WellFill;
             img.raycastTarget = true;
-            LiftPlate(img, DuelystUi.Cyan);
+            PaintPlate(img, DuelystUi.Cyan);
+            CornerTicks(go.transform, DuelystUi.Cyan);
             return go.GetComponent<RectTransform>();
         }
 
@@ -288,6 +387,7 @@ namespace WRLDZ.UI.Shell
             }
 
             LiftPlate(img, gold ? DuelystUi.Gold : DuelystUi.Cyan);
+            CornerTicks(go.transform, gold ? DuelystUi.GoldHot : DuelystUi.Cyan);
             MenuHoloPulse.Attach(go, scan: true, breathe: true, phase: gold ? 0f : 0.5f);
             var le = go.GetComponent<LayoutElement>();
             le.minHeight = 152f;
@@ -318,6 +418,93 @@ namespace WRLDZ.UI.Shell
             }
 
             return go.GetComponent<RectTransform>();
+        }
+
+        /// <summary>Hub / Eye featured plate (VS AI, VS PLAYER).</summary>
+        public static Button MountFeatured(Transform parent, string title, string blurb,
+            Sprite icon, Action onClick, bool gold, string propStem = null)
+        {
+            var kind = gold ? MenuCommandButton.Kind.Gold : MenuCommandButton.Kind.Primary;
+            var btn = MenuCommandButton.Create(parent, title, onClick, kind, blurb, plated: true);
+            MenuCommandButton.ApplyHubType(btn, 24,
+                gold ? DuelystUi.GoldHot : DuelystUi.Cyan, displayTitle: true,
+                blurbSize: 16, blurbColor: DuelystUi.TextCream);
+            LiftPlate(btn.GetComponent<Image>(), gold ? DuelystUi.Gold : DuelystUi.Cyan);
+            CornerTicks(btn.transform, gold ? DuelystUi.GoldHot : DuelystUi.Cyan);
+            TextScrim(btn.transform, 0.04f, 0.10f, 0.62f, 0.90f);
+
+            var titleRt = btn.transform.Find("Title") as RectTransform;
+            if (titleRt != null)
+                Place(titleRt, 0.06f, 0.46f, 0.62f, 0.92f);
+            var blurbRt = btn.transform.Find("Blurb") as RectTransform;
+            if (blurbRt != null)
+                Place(blurbRt, 0.06f, 0.10f, 0.62f, 0.46f);
+
+            var well = false;
+            if (!string.IsNullOrEmpty(propStem))
+            {
+                well = HubPropView.CreateInUi(btn.transform, propStem,
+                    0.62f, 0.08f, 0.97f, 0.92f,
+                    gold ? DuelystUi.GoldHot : DuelystUi.Cyan, HubPropView.FeaturedRt) != null;
+            }
+
+            if (!well && icon != null)
+            {
+                var ico = new GameObject("Ico", typeof(RectTransform), typeof(Image));
+                ico.transform.SetParent(btn.transform, false);
+                Place(ico.GetComponent<RectTransform>(), 0.64f, 0.12f, 0.96f, 0.88f);
+                var img = ico.GetComponent<Image>();
+                img.sprite = icon;
+                img.preserveAspect = true;
+                img.raycastTarget = false;
+            }
+
+            MenuHoloPulse.Attach(btn.gameObject, scan: true, breathe: true, phase: gold ? 0f : 0.5f);
+            return btn;
+        }
+
+        /// <summary>Hub / Eye COMMAND dest plate (DECK, BAG, …).</summary>
+        public static Button MountDest(Transform parent, string title, Sprite icon,
+            Action onClick, string propStem = null)
+        {
+            var btn = MenuCommandButton.Create(parent, title, onClick,
+                MenuCommandButton.Kind.Primary, centerTitle: true, plated: true);
+            var face = btn.GetComponent<Image>();
+            var plate = ImagineAssets.BtnPrimary() ?? ImagineAssets.TileHub() ?? ImagineAssets.PanelHolo();
+            if (face != null && plate != null)
+            {
+                face.sprite = plate;
+                face.type = plate.border.sqrMagnitude > 0.1f ? Image.Type.Sliced : Image.Type.Simple;
+                face.color = Color.white;
+            }
+
+            LiftPlate(face, DuelystUi.Cyan);
+            CornerTicks(btn.transform, DuelystUi.Cyan);
+            MenuCommandButton.ApplyHubType(btn, 20, Color.white, displayTitle: true);
+
+            var well = HubPropView.CreateInUi(btn.transform, propStem,
+                0.03f, 0.10f, 0.36f, 0.90f, DuelystUi.Cyan, HubPropView.DestRt) != null;
+            if (!well && icon != null)
+            {
+                var ico = new GameObject("Ico", typeof(RectTransform), typeof(Image));
+                ico.transform.SetParent(btn.transform, false);
+                Place(ico.GetComponent<RectTransform>(), 0.03f, 0.12f, 0.36f, 0.88f);
+                var iimg = ico.GetComponent<Image>();
+                iimg.sprite = icon;
+                iimg.preserveAspect = true;
+                iimg.raycastTarget = false;
+            }
+
+            TextScrim(btn.transform, 0.36f, 0.18f, 0.96f, 0.82f);
+            var titleRt = btn.transform.Find("Title") as RectTransform;
+            if (titleRt != null)
+                Place(titleRt, 0.38f, 0.14f, 0.96f, 0.86f);
+            var titleTxt = titleRt != null ? titleRt.GetComponent<Text>() : null;
+            if (titleTxt != null)
+                titleTxt.alignment = TextAnchor.MiddleLeft;
+
+            MenuHoloPulse.Attach(btn.gameObject, scan: true, breathe: true);
+            return btn;
         }
     }
 }

@@ -150,91 +150,21 @@ namespace WRLDZ.UI
             string title, string blurb, Sprite icon, Action onClick, bool gold,
             string propStem, bool useDisk)
         {
-            var kind = gold ? MenuCommandButton.Kind.Gold : MenuCommandButton.Kind.Primary;
-            var btn = MenuCommandButton.Create(parent, title, onClick, kind, blurb, plated: true);
+            var btn = HubChrome.MountFeatured(parent, title, blurb, useDisk ? null : icon, onClick, gold,
+                useDisk ? null : propStem);
             GoTheme.Place(btn.GetComponent<RectTransform>(), x0, y0, x1, y1);
-            MenuCommandButton.ApplyHubType(btn, 24,
-                gold ? DuelystUi.GoldHot : DuelystUi.Cyan, displayTitle: true,
-                blurbSize: 16, blurbColor: DuelystUi.TextCream);
-            HubChrome.LiftPlate(btn.GetComponent<Image>(), gold ? DuelystUi.Gold : DuelystUi.Cyan);
-            HubChrome.TextScrim(btn.transform, 0.04f, 0.10f, 0.62f, 0.90f);
-
-            var titleRt = btn.transform.Find("Title") as RectTransform;
-            if (titleRt != null)
-                GoTheme.Place(titleRt, 0.06f, 0.46f, 0.62f, 0.92f);
-            var blurbRt = btn.transform.Find("Blurb") as RectTransform;
-            if (blurbRt != null)
-                GoTheme.Place(blurbRt, 0.06f, 0.10f, 0.62f, 0.46f);
-
-            var well = false;
-            if (useDisk)
-            {
-                _hubDisk = SpiritDuelerDiskView.CreateInUi(btn.transform,
-                    SpiritDuelerDiskView.PoseMode.HubShowcase,
-                    0.62f, 0.08f, 0.97f, 0.92f, DuelystUi.GoldHot,
-                    HubPropView.EnsureWorldRoot(), false);
-                well = _hubDisk != null;
-            }
-            else if (!string.IsNullOrEmpty(propStem))
-            {
-                well = HubPropView.CreateInUi(btn.transform, propStem,
-                    0.62f, 0.08f, 0.97f, 0.92f,
-                    gold ? DuelystUi.GoldHot : DuelystUi.Cyan, HubPropView.FeaturedRt) != null;
-            }
-
-            if (!well && icon != null)
-            {
-                var ico = new GameObject("Ico", typeof(RectTransform), typeof(Image));
-                ico.transform.SetParent(btn.transform, false);
-                GoTheme.Place(ico.GetComponent<RectTransform>(), 0.64f, 0.12f, 0.96f, 0.88f);
-                var img = ico.GetComponent<Image>();
-                img.sprite = icon;
-                img.preserveAspect = true;
-                img.raycastTarget = false;
-            }
-
-            MenuHoloPulse.Attach(btn.gameObject, scan: true, breathe: true, phase: gold ? 0f : 0.5f);
+            if (!useDisk) return;
+            _hubDisk = SpiritDuelerDiskView.CreateInUi(btn.transform,
+                SpiritDuelerDiskView.PoseMode.HubShowcase,
+                0.62f, 0.08f, 0.97f, 0.92f, DuelystUi.GoldHot,
+                HubPropView.EnsureWorldRoot(), false);
         }
 
         void DestTile(Transform parent, float x0, float y0, float x1, float y1,
             string title, Sprite icon, Action onClick, string propStem)
         {
-            var btn = MenuCommandButton.Create(parent, title, onClick,
-                MenuCommandButton.Kind.Primary, centerTitle: true, plated: true);
+            var btn = HubChrome.MountDest(parent, title, icon, onClick, propStem);
             GoTheme.Place(btn.GetComponent<RectTransform>(), x0, y0, x1, y1);
-            var face = btn.GetComponent<Image>();
-            var plate = ImagineAssets.BtnPrimary() ?? ImagineAssets.TileHub() ?? ImagineAssets.PanelHolo();
-            if (face != null && plate != null)
-            {
-                face.sprite = plate;
-                face.type = plate.border.sqrMagnitude > 0.1f ? Image.Type.Sliced : Image.Type.Simple;
-                face.color = Color.white;
-            }
-            HubChrome.LiftPlate(face, DuelystUi.Cyan);
-            MenuCommandButton.ApplyHubType(btn, 20, Color.white, displayTitle: true);
-
-            var well = HubPropView.CreateInUi(btn.transform, propStem,
-                0.03f, 0.10f, 0.36f, 0.90f, DuelystUi.Cyan, HubPropView.DestRt) != null;
-            if (!well && icon != null)
-            {
-                var ico = new GameObject("Ico", typeof(RectTransform), typeof(Image));
-                ico.transform.SetParent(btn.transform, false);
-                GoTheme.Place(ico.GetComponent<RectTransform>(), 0.03f, 0.12f, 0.36f, 0.88f);
-                var iimg = ico.GetComponent<Image>();
-                iimg.sprite = icon;
-                iimg.preserveAspect = true;
-                iimg.raycastTarget = false;
-            }
-
-            HubChrome.TextScrim(btn.transform, 0.36f, 0.18f, 0.96f, 0.82f);
-            var titleRt = btn.transform.Find("Title") as RectTransform;
-            if (titleRt != null)
-                GoTheme.Place(titleRt, 0.38f, 0.14f, 0.96f, 0.86f);
-            var titleTxt = titleRt != null ? titleRt.GetComponent<Text>() : null;
-            if (titleTxt != null)
-                titleTxt.alignment = TextAnchor.MiddleLeft;
-
-            MenuHoloPulse.Attach(btn.gameObject, scan: true, breathe: true, phase: (x0 + y0) * 1.7f);
         }
 
         /// <summary>Hub primary: Player vs AI create → START → AR DuelSlice.</summary>
