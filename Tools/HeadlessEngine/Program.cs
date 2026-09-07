@@ -38,6 +38,9 @@ internal static class Program
             return Diag.Gaps();
         }
 
+        if (Array.IndexOf(args, "--export-seed") >= 0)
+            return Diag.ExportSeed();
+
         int duels = ReadIntArg(args, "--duels", WRLDZ.Duel.Rules.DuelEngineStressTests.DefaultDuelCount);
 
         Console.WriteLine("== WRLDZ headless engine test harness ==");

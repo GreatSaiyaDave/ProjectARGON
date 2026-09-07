@@ -15,7 +15,14 @@ Tools/HeadlessEngine/run.sh --quiet            # full stress suite (default 40 d
 Tools/HeadlessEngine/run.sh --quiet --duels 250 # more complete AI-vs-AI games
 Tools/HeadlessEngine/run.sh --card "Call of the Haunted"  # inspect one card's compiled effect
 Tools/HeadlessEngine/run.sh --coverage                    # pre-Link + whole-DB effect-compile coverage
+Tools/HeadlessEngine/run.sh --gaps                        # dump unimplemented-card corpus
+Tools/HeadlessEngine/run.sh --export-seed                 # re-export the compiled-effects seed (after a compiler Version bump)
 ```
+
+`--export-seed` regenerates `Assets/StreamingAssets/WRLDZ/compiled_effects_seed_v1.json`
+so the engine *remembers* current card-text compilation instead of recompiling at
+runtime. The seed is skipped unless its `version` matches `CardTextEffectCompiler.Version`,
+so re-run this whenever that version changes.
 
 This runs `DuelEngineStressTests.Run(...)`, which covers:
 

@@ -65,6 +65,9 @@ namespace UnityEngine
 
     public static class JsonUtility
     {
+        // Unity's JsonUtility serializes FIELDS only (not properties) and does not
+        // aggressively escape text. Mirror that so generated files (e.g. the compiled
+        // effects seed) match the Editor-produced format and stay clean.
         static readonly JsonSerializerOptions Opts = new JsonSerializerOptions
         {
             IncludeFields = true,
@@ -73,7 +76,24 @@ namespace UnityEngine
             AllowTrailingCommas = true,
             IgnoreReadOnlyProperties = true,
             NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString,
+            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+            TypeInfoResolver = new System.Text.Json.Serialization.Metadata.DefaultJsonTypeInfoResolver
+            {
+                Modifiers = { FieldsOnly },
+            },
         };
+
+        // Drop property-backed members so only public fields are (de)serialized, matching
+        // UnityEngine.JsonUtility semantics.
+        static void FieldsOnly(System.Text.Json.Serialization.Metadata.JsonTypeInfo ti)
+        {
+            if (ti.Kind != System.Text.Json.Serialization.Metadata.JsonTypeInfoKind.Object) return;
+            for (var i = ti.Properties.Count - 1; i >= 0; i--)
+            {
+                if (ti.Properties[i].AttributeProvider is System.Reflection.PropertyInfo)
+                    ti.Properties.RemoveAt(i);
+            }
+        }
 
         public static T FromJson<T>(string json)
         {

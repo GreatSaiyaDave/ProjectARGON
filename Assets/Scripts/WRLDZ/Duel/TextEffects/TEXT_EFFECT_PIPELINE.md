@@ -109,3 +109,22 @@ AI may map additional cards **only** onto the same `EffectActionKind` / `EffectT
 |------|------|
 | Runtime learn | `Application.persistentDataPath/WRLDZ/wrldz_compiled_effects_v1.json` |
 | Shipped seed | `StreamingAssets/WRLDZ/compiled_effects_seed_v1.json` |
+
+## Remembering card text (the seed)
+
+The shipped seed is how the engine **remembers** compiled card text instead of
+recompiling every card at boot. `CompiledEffectCache` skips any seed whose
+`version` ≠ `CardTextEffectCompiler.Version`, so **whenever you bump the compiler
+`Version` (add/adjust a template), you must re-export the seed** or it is silently
+ignored and the game recompiles at runtime.
+
+Re-export (headless, no Editor needed):
+
+```bash
+Tools/HeadlessEngine/run.sh --export-seed
+```
+
+This compiles every card and writes the programs that carry clauses (the actual
+learned knowledge; 0-clause vanilla/gap cards recompile trivially and are skipped)
+to the seed, stamped with the current compiler `Version`. In the Editor the same
+export is available via **WRLDZ → Text Effects → Export Seed**.

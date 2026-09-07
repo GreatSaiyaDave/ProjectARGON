@@ -99,6 +99,27 @@ internal static class Diag
         return 0;
     }
 
+    // Regenerate the compiled-effects seed (StreamingAssets/WRLDZ/compiled_effects_seed_v1.json)
+    // so the engine *remembers* current card-text compilation (compiler version-stamped)
+    // instead of recompiling every card at runtime. Compiles all cards, then exports.
+    public static int ExportSeed()
+    {
+        var db = CardDatabase.Load();
+        var n = 0;
+        foreach (var def in db.GetAllCards())
+        {
+            if (def == null) continue;
+            CompiledEffectCache.GetOrCompile(def);
+            n++;
+        }
+
+        // Persist only programs that carry compiled clauses — the actual card-text
+        // knowledge worth remembering (0-clause vanilla / gap cards recompile trivially).
+        var ok = CompiledEffectCache.ExportSeed(filter: p => p != null && p.ClauseList.Count > 0);
+        Console.Error.WriteLine($"# compiled {n} cards; ExportSeed ok={ok} → {CompiledEffectCache.SeedPath}");
+        return ok ? 0 : 1;
+    }
+
     static void PrintPool(EffectCoverageService.PoolReport r)
     {
         Console.WriteLine($"  pool={r.PoolName} ids={r.UniqueIds} inDb={r.InDatabase} missing={r.MissingFromDb}");
