@@ -26,6 +26,12 @@ internal static class Program
             return Diag.InspectCard(args[cardArg + 1]);
         }
 
+        if (Array.IndexOf(args, "--coverage") >= 0)
+        {
+            UnityEngine.Debug.Silence = true;
+            return Diag.Coverage();
+        }
+
         int duels = ReadIntArg(args, "--duels", WRLDZ.Duel.Rules.DuelEngineStressTests.DefaultDuelCount);
 
         Console.WriteLine("== WRLDZ headless engine test harness ==");

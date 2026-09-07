@@ -56,6 +56,36 @@ internal static class Diag
         return 0;
     }
 
+    // Reports effect-compile coverage of the pre-Link (Original ERAZ) pool and
+    // the whole card DB, so progress toward "all pre-Link cards playable" is a
+    // tracked number rather than a guess.
+    public static int Coverage()
+    {
+        CardDatabase.Load();
+
+        Console.WriteLine("== Pre-Link set coverage (CardEraCurriculum) ==");
+        Console.WriteLine(CardEraCurriculum.MeasureAllReport().TrimEnd());
+        Console.WriteLine();
+
+        Console.WriteLine("== Whole cards_db coverage (EffectCoverageService) ==");
+        var all = EffectCoverageService.MeasureAllCardsDb(writeReportFile: false);
+        PrintPool(all);
+        Console.WriteLine();
+
+        Console.WriteLine("== Starter + lab mastery pool ==");
+        var pool = EffectCoverageService.MeasureStarterAndLab(writeReportFile: false);
+        PrintPool(pool);
+        Console.WriteLine("  " + EffectCoverageService.MasteryGateLine(pool));
+        return 0;
+    }
+
+    static void PrintPool(EffectCoverageService.PoolReport r)
+    {
+        Console.WriteLine($"  pool={r.PoolName} ids={r.UniqueIds} inDb={r.InDatabase} missing={r.MissingFromDb}");
+        Console.WriteLine($"  normal={r.NormalNoEffect} fullyCompiled={r.FullyCompiled} partial={r.PartialCompiled} registry={r.RegistryOnly} gap={r.Gap}");
+        Console.WriteLine($"  playable={r.PlayableCovered} ({r.PlayablePct:0.0}%)  fullCompile={r.FullCompilePct:0.0}%");
+    }
+
     static bool IsInteresting(FieldInfo f, EffectClause c)
     {
         if (f.Name is "Timing" or "Action" or "Side" or "Zone" or "SourceSnippet") return false;
