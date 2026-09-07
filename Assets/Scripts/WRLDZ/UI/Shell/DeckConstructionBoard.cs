@@ -18,7 +18,13 @@ namespace WRLDZ.UI.Shell
         const float MaxCardW = 156f;
         const float MinCardW = 72f;
         const int MainColsCap = 10;
-        const float ExtraRowMin = 176f;
+        // Extra/Side are a single overlapping card row + header. Keep
+        // preferred height compact so MAIN can take leftover space on short
+        // landscape Game views (Free Aspect 1x often ~500px tall).
+        const float ExtraRowMin = 100f;
+        const float ExtraRowHardMin = 72f;
+        const float MainTrayMin = 96f;
+        const float MainTrayPreferred = 120f;
         const float HeadBarH = 26f;
 
         static bool IsAr(State st) =>
@@ -60,20 +66,26 @@ namespace WRLDZ.UI.Shell
             var vlg = board.GetComponent<VerticalLayoutGroup>();
             vlg.padding = new RectOffset(6, 6, 4, 4);
             vlg.spacing = 6f;
-            vlg.childAlignment = TextAnchor.UpperCenter;
+            vlg.childAlignment = TextAnchor.UpperLeft;
             vlg.childControlWidth = true;
             vlg.childControlHeight = true;
             vlg.childForceExpandWidth = true;
+            // Keep false so Extra/Side stay at ExtraRowMin. MAIN already has
+            // LayoutElement.flexibleHeight = 1 and takes leftover height.
+            // Force-expand would inflate Extra/Side equally with MAIN.
             vlg.childForceExpandHeight = false;
             st.BoardHost = board;
 
-            st.MainTray = MakePileTray(board, st, Section.Main, flex: true, minH: 200f);
-            st.ExtraTray = MakePileTray(board, st, Section.Extra, flex: false, minH: ExtraRowMin);
-            st.SideTray = MakePileTray(board, st, Section.Side, flex: false, minH: ExtraRowMin);
+            st.MainTray = MakePileTray(board, st, Section.Main, flex: true,
+                minH: MainTrayMin, preferredH: MainTrayPreferred);
+            st.ExtraTray = MakePileTray(board, st, Section.Extra, flex: false,
+                minH: ExtraRowHardMin, preferredH: ExtraRowMin);
+            st.SideTray = MakePileTray(board, st, Section.Side, flex: false,
+                minH: ExtraRowHardMin, preferredH: ExtraRowMin);
         }
 
         static RectTransform MakePileTray(RectTransform board, State st, Section section,
-            bool flex, float minH)
+            bool flex, float minH, float preferredH)
         {
             var name = section.ToString();
             var tray = new GameObject(name + "Tray", typeof(RectTransform), typeof(Image), typeof(Button),
@@ -99,7 +111,7 @@ namespace WRLDZ.UI.Shell
             img.raycastTarget = true;
             var le = tray.GetComponent<LayoutElement>();
             le.minHeight = minH;
-            le.preferredHeight = minH;
+            le.preferredHeight = preferredH;
             le.flexibleHeight = flex ? 1f : 0f;
             le.flexibleWidth = 1f;
             var inner = tray.GetComponent<VerticalLayoutGroup>();
@@ -109,6 +121,8 @@ namespace WRLDZ.UI.Shell
             inner.childControlWidth = true;
             inner.childControlHeight = true;
             inner.childForceExpandWidth = true;
+            // Only the well is flexible. Force-expand would grow the 26px
+            // header and leave a gap between MAIN's title and the card faces.
             inner.childForceExpandHeight = false;
             var btn = tray.GetComponent<Button>();
             btn.targetGraphic = img;
@@ -158,7 +172,9 @@ namespace WRLDZ.UI.Shell
                 typeof(Image), typeof(ScrollRect), typeof(LayoutElement));
             well.transform.SetParent(tray, false);
             well.GetComponent<LayoutElement>().flexibleHeight = 1f;
-            well.GetComponent<LayoutElement>().minHeight = flex ? 80f : (ExtraRowMin - HeadBarH - 16f);
+            // Keep well mins below tray mins so Extra/Side can shrink on a
+            // short Game view instead of clipping MAIN's last row.
+            well.GetComponent<LayoutElement>().minHeight = flex ? 56f : 32f;
             well.GetComponent<LayoutElement>().flexibleWidth = 1f;
             var wImg = well.GetComponent<Image>();
             wImg.sprite = UiFoundation.WhiteSprite();
@@ -255,7 +271,7 @@ namespace WRLDZ.UI.Shell
             }
 
             var fit = host.GetComponent<DeckPileFit>();
-            fit?.Fit();
+            fit?.Fit(force: true);
         }
 
         static void GhostFace(Transform host)
@@ -335,11 +351,16 @@ namespace WRLDZ.UI.Shell
             public RectTransform Viewport;
             bool _fitting;
 
+            int _lastN = -1;
+            float _lastW = -1f;
+            float _lastH = -1f;
+
             void OnEnable() => Fit();
             void Start() => Fit();
             void OnRectTransformDimensionsChange() => Fit();
+            void LateUpdate() => Fit();
 
-            public void Fit()
+            public void Fit(bool force = false)
             {
                 if (_fitting) return;
                 var rt = transform as RectTransform;
@@ -349,8 +370,13 @@ namespace WRLDZ.UI.Shell
                 var w = vp.rect.width;
                 var h = vp.rect.height;
                 if (w < 8f || h < 8f) return;
-                _fitting = true;
                 var n = rt.childCount;
+                if (!force && n == _lastN && Mathf.Abs(w - _lastW) < 0.5f && Mathf.Abs(h - _lastH) < 0.5f)
+                    return;
+                _fitting = true;
+                _lastN = n;
+                _lastW = w;
+                _lastH = h;
                 const float pad = 4f;
                 if (n == 0)
                 {
@@ -392,8 +418,8 @@ namespace WRLDZ.UI.Shell
                         cols = Mathf.Max(5, Mathf.FloorToInt(inner / MinCardW));
                     var cardW = Mathf.Min(MaxCardW, inner / cols);
                     var cardH = cardW * Aspect;
-                    var used = cols * cardW;
-                    var x0 = pad + Mathf.Max(0f, (inner - used) * 0.5f);
+                    // Left-align with the search/filter chrome above the board.
+                    var x0 = pad;
                     var rows = Mathf.CeilToInt(n / (float)cols);
                     var stepY = cardH + 3f;
                     var totalH = pad * 2f + rows * stepY;
