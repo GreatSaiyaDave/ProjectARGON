@@ -44,17 +44,17 @@ def main() -> int:
     must_contain(HUB, "PaintPlate", "lost opaque hub plate painter")
     must_contain(HUB, "CornerTicks", "lost hub L-corner ticks")
     must_contain(HUB, "FlattenPlate", "lost short-row plate flatten")
+    must_contain(HUB, "PaintWell", "lost list/meter well painter")
+    must_contain(HUB, "PaintChip", "lost short-row chip painter")
 
     must_contain(PRESENTER, "HubChrome.HeaderBar", "phone overlay is not hub chrome")
     must_contain(PRESENTER, "HubChrome.FooterBack", "phone overlay missing BACK")
     must_contain(PRESENTER, "HubChrome.BodyWell", "phone overlay missing body well")
     must_contain(PRESENTER, "HubChrome.OverlayDim", "phone overlay missing dusk dim")
     presenter = PRESENTER.read_text(encoding="utf-8")
-    if "ImagineAssets.MenuHoloSheet()" in presenter and "BuildPhoneFrame" in presenter:
-        # AR may still fall back to MenuHoloSheet; phone must not.
-        phone = presenter.split("BuildPhoneFrame", 1)[1].split("BuildArFrame", 1)[0]
-        if "MenuHoloSheet" in phone:
-            fail("phone overlay still paints a rectangular MenuHoloSheet")
+    if "MenuHoloSheet" in presenter or "PanelMenuGlass" in presenter:
+        fail("DualMenuPresenter still falls back to smoked MenuHoloSheet / PanelMenuGlass")
+    must_contain(PRESENTER, "HubChrome.PaintPlate", "AR overlay rim is not a hub plate")
 
     must_contain(MENU_UI, "HubChrome.SectionCap", "hub no longer shares SectionCap")
     must_contain(MENU_UI, "HubChrome.LiftPlate", "hub no longer shares LiftPlate")
@@ -83,16 +83,57 @@ def main() -> int:
         fail("construction board still uses smoked PanelMenuGlass")
     must_contain(board, "HubChrome.PaintPlate", "construction board is not hub plates")
 
-    if "PanelMenuGlass()" in ow.read_text(encoding="utf-8") and "Eye" in ow.read_text(encoding="utf-8"):
+    ow_src = ow.read_text(encoding="utf-8")
+    if "PanelMenuGlass()" in ow_src and "Eye" in ow_src:
         # Open Eye must not paint smoked menu glass.
-        eye = ow.read_text(encoding="utf-8")
-        if "ApplyMenuGlassSprite" in eye and "PanelMenuGlass()" in eye.split("ApplyMenuGlassSprite", 1)[1][:800]:
+        if "ApplyMenuGlassSprite" in ow_src and "PanelMenuGlass()" in ow_src.split("ApplyMenuGlassSprite", 1)[1][:800]:
             fail("Eye open sheet still uses PanelMenuGlass")
+    if "RoundedRectSprite" in ow_src:
+        fail("overworld currency / chips still use rounded-rect glass")
+    must_contain(ow, "HubChrome.PaintWell", "overworld currency strip is not a hub plate")
+    must_contain(ow, "HubChrome.PaintChip", "overworld wallet chips are not hub chips")
+
+    inv = ROOT / "Assets/Scripts/WRLDZ/UI/Shell/InventoryScreen.cs"
+    inv_src = inv.read_text(encoding="utf-8")
+    if "plated: false" in inv_src:
+        fail("BAG inspect / CREATE DECK still unplated")
+    if "HubChrome.WellFill" in inv_src:
+        fail("BAG wells still use translucent WellFill")
+    must_contain(inv, "HubChrome.PaintWell", "BAG panes are not hub plates")
+
+    art = ROOT / "Assets/Scripts/WRLDZ/UI/Shell/ArtifactBoxScreen.cs"
+    art_src = art.read_text(encoding="utf-8")
+    if "plated: false" in art_src:
+        fail("ARTIFACTS filters still unplated")
+    if "HubChrome.WellFill" in art_src:
+        fail("ARTIFACTS scroll still uses translucent WellFill")
+    must_contain(art, "HubChrome.Sheet", "ARTIFACTS inspect is not a hub sheet")
+
+    for path, why in (
+        (SCAN, "scan meter well"),
+        (SYSTEMS, "story/bazaar list well"),
+        (ROOT / "Assets/Scripts/WRLDZ/UI/Shell/FreeViewScreen.cs", "FREE VIEW catalog well"),
+        (ROOT / "Assets/Scripts/WRLDZ/UI/TournamentRoomScreen.cs", "TOURNEY list well"),
+    ):
+        src = path.read_text(encoding="utf-8")
+        if "HubChrome.WellFill" in src:
+            fail(f"{path.relative_to(ROOT)} {why} still uses translucent WellFill")
+        if "HubChrome.PaintWell" not in src:
+            fail(f"{path.relative_to(ROOT)} {why} is not a hub plate")
+
+    avatar = ROOT / "Assets/Scripts/WRLDZ/UI/AvatarCustomizerUI.cs"
+    av_src = avatar.read_text(encoding="utf-8")
+    if "MenuHoloSheet" in av_src or "PanelMenuGlass" in av_src:
+        fail("avatar customizer still paints smoked MenuHoloSheet / PanelMenuGlass")
+    must_contain(avatar, "HubChrome.PaintPlate", "avatar sheet is not a hub plate")
+
+    lab = ROOT / "Assets/Scripts/WRLDZ/UI/DesktopLabApp.cs"
+    must_contain(lab, "HubChrome.Sheet", "desktop lab options are not a hub sheet")
 
     print("hub overlay chrome")
     print("  HubChrome header / well / BACK present")
-    print("  DualMenuPresenter phone frame uses hub grammar")
-    print("  Settings, formats, scan, systems sheets share capsules")
+    print("  DualMenuPresenter phone + AR frames use hub plates")
+    print("  BAG / ARTIFACTS / scan / lab / avatar share plates")
     print("PASS")
     return 0
 

@@ -5,7 +5,7 @@
 **Primary chrome:** Grok Imagine **hub tiles** at `StreamingAssets/WRLDZ/Imagine/`  
 (`ImagineAssets` → preferred by `DuelystUi`, `WrldzPresentation`, `FlowChrome`, `GoTheme`).  
 Opaque navy/gold plates (`tile_hub`, `button_*_plate`), cyan/gold rims, gold L-corner ticks.  
-Overlays reuse `HubChrome.PaintPlate` / `MountFeatured` / `MountDest` — not smoked `PanelMenuGlass`, not translucent rounded-rect chips, not Kenney beige.
+Overlays reuse `HubChrome.PaintPlate` / `PaintWell` / `PaintChip` / `MountFeatured` / `MountDest` — not smoked `PanelMenuGlass`, not translucent rounded-rect chips, not Kenney beige.
 
 **Menu atmosphere:** animated Egyptian / night / ages backdrop via  
 `EgyptianAgesAtmosphere` — each host picks a `MenuAge` (Primordial, Old Kingdom,  

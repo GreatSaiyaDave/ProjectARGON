@@ -36,9 +36,10 @@ Merged from other agent branches (2026-09-07):
 
 ## UI chrome
 
-- Hub screenshot is the template: opaque Imagine `tile_hub` / gold plates, cyan/gold rims, L-corner ticks. Use `HubChrome.PaintPlate` / `MountFeatured` / `MountDest`. Not `PanelMenuGlass`, not `UiTheme.RoundedRectSprite` glass chips.
+- Hub screenshot is the template: opaque Imagine `tile_hub` / gold plates, cyan/gold rims, L-corner ticks. Use `HubChrome.PaintPlate` / `PaintWell` / `PaintChip` / `MountFeatured` / `MountDest`. Not `PanelMenuGlass`, not `UiTheme.RoundedRectSprite` glass chips, not `HubChrome.WellFill` as a well face.
 - Home is **Overworld** Eye, not the Hub scene. DECK must use `DualMenuPresenter.BuildFrame`.
-- Tiny default `MenuCommandButton.Create` / `FloatingPanel.PrimaryButton` stay **unplated** (~56px 9-slice collapses). Smoke: `Assets/Editor/WRLDZ/MenuSmokeTest.cs` `AssertFloatingChip`.
+- Player overlays already plated: Eye, DECK, BAG, ARTIFACTS, scan, FREE VIEW, TOURNEY, avatar, Desktop Lab options, currency strip. Keep them plated.
+- Tiny default `MenuCommandButton.Create` / `FloatingPanel.PrimaryButton` stay **unplated** (~56px 9-slice collapses). AR editor X on DECK stays `plated: false`. Smoke: `Assets/Editor/WRLDZ/MenuSmokeTest.cs` `AssertFloatingChip`.
 - Python: `python3 Tools/hub_overlay_chrome_check.py && python3 Tools/ygo_ui_lore_check.py && python3 Tools/deck_editor_layout_check.py`
 
 ## Cursor Cloud
