@@ -438,6 +438,10 @@ namespace WRLDZ.Presentation.ArInteraction
             // Instant Normal Spells leave the zone same frame — ghost plays rise+fade
             ProcessSpellGhosts(db);
 
+            // Coin tosses / die rolls (Time Wizard, Barrel Dragon, d6 effects): raise a
+            // hologram above the field on the acting side and land on the actual result.
+            ProcessCoinDice();
+
             if (_oppGlance != null)
             {
                 _oppGlance.PlayerDisk = PlayerDisk;
@@ -728,6 +732,40 @@ namespace WRLDZ.Presentation.ArInteraction
 
                 map.Remove(k);
             }
+        }
+
+        /// <summary>
+        /// Drain queued coin/die results and raise a hologram over the arena. Placed
+        /// above centre, nudged toward the side that tossed/rolled, and slightly
+        /// staggered in height so multiple coins (Barrel Dragon = 3) don't overlap.
+        /// </summary>
+        void ProcessCoinDice()
+        {
+            var i = 0;
+            while (CoinDicePresentation.TryDequeue(out var e))
+            {
+                var pos = CoinDiceSpawnWorld(e.PlayerSide, i);
+                ArCoinDiceFx.Play(e, pos, Layer);
+                i++;
+            }
+        }
+
+        Vector3 CoinDiceSpawnWorld(bool playerSide, int index)
+        {
+            var up = Vector3.up * (0.55f + index * 0.16f);
+            if (ArenaRoot != null)
+            {
+                // Toward the controller's half of the arena.
+                var toward = ArenaRoot.forward * (playerSide ? -0.45f : 0.45f);
+                var lateral = ArenaRoot.right * (index * 0.14f);
+                return ArenaRoot.position + up + toward + lateral;
+            }
+
+            var disk = playerSide ? PlayerDisk : OppDisk;
+            if (disk != null)
+                return disk.transform.position + up + Vector3.right * (index * 0.14f);
+
+            return up + Vector3.right * (index * 0.14f);
         }
 
         /// <summary>
