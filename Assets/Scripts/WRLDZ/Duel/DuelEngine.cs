@@ -278,6 +278,7 @@ namespace WRLDZ.Duel
 
             DuelPresentationPacer.Clear();
             CardShatterPresentation.Clear();
+            CoinDicePresentation.Clear();
 
             if (cinematicOpening)
             {
@@ -917,6 +918,42 @@ namespace WRLDZ.Duel
                 Chain.Clear();
 
             return ok;
+        }
+
+        /// <summary>
+        /// Resolve the current Chain in official Last-In-First-Out order (CLn → … → CL1).
+        /// Links flagged <see cref="ChainLink.Negated"/> are skipped (their effect does not
+        /// apply, but they still occupied a link). <paramref name="resolveLink"/> applies one
+        /// link's effect and returns whether it resolved. Returns the number of links resolved.
+        ///
+        /// This is the multi-link resolution driver: it drives <see cref="ChainStack.StartResolution"/>
+        /// and <see cref="ChainStack.PopNextToResolve"/> so a built chain resolves reverse-order,
+        /// which is the foundation for correct Quick-Effect / Counter-Trap interaction.
+        /// </summary>
+        public int ResolveChainLifo(Func<ChainLink, bool> resolveLink)
+        {
+            if (resolveLink == null) throw new ArgumentNullException(nameof(resolveLink));
+            if (!Chain.HasLinks) return 0;
+
+            Chain.StartResolution();
+            var resolved = 0;
+            while (true)
+            {
+                var link = Chain.PopNextToResolve();
+                if (link == null) break;
+                if (link.Negated)
+                {
+                    Log($"CL{link.LinkNumber} {link.Card?.Name ?? "?"} was negated — skipped.");
+                    link.Resolved = true;
+                    continue;
+                }
+
+                if (resolveLink(link))
+                    resolved++;
+                link.Resolved = true;
+            }
+
+            return resolved;
         }
 
         /// <summary>While awaiting a target, select a legal card (GY monster, S/T, etc.).</summary>
@@ -2559,6 +2596,20 @@ namespace WRLDZ.Duel
                 }
             }
 
+            // Temporary Special Summons (Archfiend's Roar) are destroyed during the End
+            // Phase of the turn they were summoned.
+            foreach (var side in new[] { Player, Opponent })
+            {
+                if (side == null) continue;
+                foreach (var m in side.MonstersOnField().ToList())
+                {
+                    if (m == null || m.TempDestroyOnEndOfTurn != TurnNumber) continue;
+                    Log($"{m.Name} is destroyed during the End Phase (temporary Special Summon).");
+                    DestroyMonsterPublic(side, m);
+                }
+            }
+            if (GameOver) return;
+
             // After End Phase, Set cards may be activated on following turns
             // (also clear leftover flags on both sides so a Set trap is legal next turn).
             foreach (var side in new[] { Player, Opponent })
@@ -2608,6 +2659,21 @@ namespace WRLDZ.Duel
                 CardShatterPresentation.QueueEffect(card.InstanceId, card.Name);
                 owner.MonsterZones[i].Occupant = null;
                 PendingTributes.Remove(card);
+
+                // A destroyed monster's Equip cards (and destroy-linked Continuous
+                // Traps like Call of the Haunted / Battle-Scarred) are sent to the GY.
+                if (card.Equips.Count > 0)
+                {
+                    var eqs = card.Equips.ToList();
+                    card.Equips.Clear();
+                    foreach (var eq in eqs)
+                    {
+                        if (eq == null) continue;
+                        eq.EquippedTo = null;
+                        var eqOwner = ControllerOf(eq) ?? owner;
+                        SendCardToGrave(eqOwner, eq);
+                    }
+                }
                 if (card.IsToken)
                 {
                     if (card.TokenDestroyedDamage > 0)
@@ -2707,6 +2773,22 @@ namespace WRLDZ.Duel
             Log($"💥 {you} {dmg} effect damage from {src} ({target.LifePoints} LP remaining).");
             DuelPresentationPacer.HoldCombatResult();
             OfferYouTakeDamageWindow(target);
+            if (!IsAwaitingResponse)
+                CheckLpWin(Player, Opponent);
+        }
+
+        /// <summary>
+        /// Deduct a mandatory Life Point cost (floored at 0) and check for a loss.
+        /// Used for non-optional upkeep such as the Archfiend Standby maintenance cost;
+        /// unlike <see cref="ApplyEffectDamage"/> this is a cost, not battle/effect damage.
+        /// </summary>
+        public void PayLifePointCost(DuelistState who, int amount, string reason = null)
+        {
+            if (who == null || amount <= 0) return;
+            var paid = Mathf.Min(amount, who.LifePoints);
+            who.LifePoints -= paid;
+            var tag = string.IsNullOrEmpty(reason) ? "cost" : reason;
+            Log($"{who.Name} pays {paid} LP ({tag}) → {who.LifePoints} LP.");
             if (!IsAwaitingResponse)
                 CheckLpWin(Player, Opponent);
         }

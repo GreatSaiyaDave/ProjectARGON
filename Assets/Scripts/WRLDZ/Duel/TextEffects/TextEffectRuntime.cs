@@ -1471,6 +1471,33 @@ namespace WRLDZ.Duel.TextEffects
                 }
             }
 
+            if (c.Action == EffectActionKind.RitualSummon)
+            {
+                var target = FindRitualMonsterInHand(who, c);
+                if (target == null)
+                {
+                    reason = "No matching Ritual Monster in your hand.";
+                    return false;
+                }
+
+                var need = RitualNeed(target, c);
+                var tributes = SelectRitualTributes(who, target, need, c.RitualExactLevel);
+                var have = TotalLevel(tributes);
+                if (c.RitualExactLevel ? have != need : have < need)
+                {
+                    reason = $"Tribute Levels for the Ritual Summon must " +
+                             $"{(c.RitualExactLevel ? "exactly equal" : "total ≥")} {need}.";
+                    return false;
+                }
+
+                var fieldTribute = tributes.Exists(t => who.TryFindMonster(t, out _));
+                if (engine.FirstEmpty(who.MonsterZones) < 0 && !fieldTribute)
+                {
+                    reason = "No free Monster Zone for the Ritual Summon.";
+                    return false;
+                }
+            }
+
             if (c.Action == EffectActionKind.AddNamedFromDeckToHand &&
                 !DeckHasNamed(engine, who, c.NamedCard))
             {
@@ -1528,6 +1555,161 @@ namespace WRLDZ.Duel.TextEffects
             }
 
             return list;
+        }
+
+        // —— Ritual Summon (activated by a Ritual Spell) ——
+
+        /// <summary>The Ritual Monster this spell can summon that is currently in hand.</summary>
+        static CardInstance FindRitualMonsterInHand(DuelistState who, EffectClause clause)
+        {
+            if (who?.Hand == null || clause == null) return null;
+            foreach (var c in who.Hand)
+            {
+                if (c?.Def == null || !c.Def.IsRitualMonster) continue;
+                if (!string.IsNullOrEmpty(clause.NamedCard))
+                {
+                    if (c.IsNamed(clause.NamedCard) ||
+                        string.Equals(c.Name, clause.NamedCard, System.StringComparison.OrdinalIgnoreCase))
+                        return c;
+                }
+                else if (!string.IsNullOrEmpty(clause.AttributeFilter))
+                {
+                    if (string.Equals(c.Def.attribute, clause.AttributeFilter,
+                            System.StringComparison.OrdinalIgnoreCase))
+                        return c;
+                }
+                else
+                {
+                    return c; // no name/attribute restriction
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>The Ritual Summon Tribute requirement — the summoned monster's Level.</summary>
+        static int RitualNeed(CardInstance target, EffectClause clause)
+        {
+            var lvl = target != null ? Mathf.Max(0, target.Level) : 0;
+            if (lvl > 0) return lvl;
+            return Mathf.Max(1, clause?.Amount ?? 1); // fallback to printed number
+        }
+
+        static List<CardInstance> RitualTributeCandidates(DuelistState who, CardInstance target)
+        {
+            var cand = new List<CardInstance>();
+            if (who != null)
+            {
+                foreach (var m in who.MonstersOnField())
+                    if (m != null && m != target) cand.Add(m);
+                if (who.Hand != null)
+                    foreach (var c in who.Hand)
+                        if (c != null && c != target && c.Def != null && c.Def.IsMonster) cand.Add(c);
+            }
+
+            return cand;
+        }
+
+        /// <summary>
+        /// Auto-select Tribute material (monsters on field + in hand, excluding the Ritual
+        /// Monster). For the usual "Level N or more" the total must be ≥ <paramref name="need"/>
+        /// (highest-Level first, fewest monsters). For "exactly equal" (Chant cards) the total
+        /// must be EXACTLY <paramref name="need"/> — an exact subset is found or none is returned.
+        /// </summary>
+        static List<CardInstance> SelectRitualTributes(DuelistState who, CardInstance target, int need,
+            bool exact)
+        {
+            var cand = RitualTributeCandidates(who, target);
+            if (exact)
+                return SelectExactLevelSubset(cand, need);
+
+            cand.Sort((a, b) => Mathf.Max(0, b.Level).CompareTo(Mathf.Max(0, a.Level)));
+            var chosen = new List<CardInstance>();
+            var sum = 0;
+            foreach (var c in cand)
+            {
+                if (sum >= need) break;
+                chosen.Add(c);
+                sum += Mathf.Max(0, c.Level);
+            }
+
+            return chosen;
+        }
+
+        /// <summary>Find a subset of monsters whose Levels sum EXACTLY to need (or empty).</summary>
+        static List<CardInstance> SelectExactLevelSubset(List<CardInstance> cand, int need)
+        {
+            var chosen = new List<CardInstance>();
+            if (need <= 0) return chosen;
+            // Highest-first with pruning; counts are small (hand + field).
+            cand.Sort((a, b) => Mathf.Max(0, b.Level).CompareTo(Mathf.Max(0, a.Level)));
+
+            bool Dfs(int i, int remaining, List<CardInstance> acc)
+            {
+                if (remaining == 0) return true;
+                if (i >= cand.Count || remaining < 0) return false;
+                for (var k = i; k < cand.Count; k++)
+                {
+                    var lvl = Mathf.Max(0, cand[k].Level);
+                    if (lvl <= 0 || lvl > remaining) continue;
+                    acc.Add(cand[k]);
+                    if (Dfs(k + 1, remaining - lvl, acc)) return true;
+                    acc.RemoveAt(acc.Count - 1);
+                }
+
+                return false;
+            }
+
+            return Dfs(0, need, chosen) ? chosen : new List<CardInstance>();
+        }
+
+        static int TotalLevel(List<CardInstance> cards)
+        {
+            var sum = 0;
+            if (cards != null)
+                foreach (var c in cards)
+                    sum += Mathf.Max(0, c?.Level ?? 0);
+            return sum;
+        }
+
+        static bool RitualSummonResolve(DuelEngine engine, DuelistState who, CardInstance source,
+            EffectClause clause)
+        {
+            if (engine == null || who == null || clause == null) return false;
+            var target = FindRitualMonsterInHand(who, clause);
+            if (target == null)
+            {
+                engine.Log($"{source?.Name}: no matching Ritual Monster in hand for the Ritual Summon.");
+                return false;
+            }
+
+            var need = RitualNeed(target, clause);
+            var tributes = SelectRitualTributes(who, target, need, clause.RitualExactLevel);
+            var have = TotalLevel(tributes);
+            var meets = clause.RitualExactLevel ? have == need : have >= need;
+            if (!meets)
+            {
+                engine.Log($"{source?.Name}: Tribute Levels {have} do not " +
+                           $"{(clause.RitualExactLevel ? "exactly equal" : "meet")} {need}.");
+                return false;
+            }
+
+            // Tribute first (field Tributes free a zone), then Special Summon from hand.
+            foreach (var t in tributes)
+                engine.SendCardToGrave(who, t);
+
+            who.Hand.Remove(target);
+            if (!engine.SpecialSummonToField(who, target, BattlePosition.Attack, faceUp: true))
+            {
+                who.Hand.Add(target); // no zone — undo the summon (Tributes stay paid, as in official rules on a full board this can't be declared)
+                engine.Log($"{source?.Name}: no Monster Zone for the Ritual Summon.");
+                return false;
+            }
+
+            engine.Log(
+                $"{source?.Name}: Ritual Summon {target.Name} " +
+                $"(Tributed {tributes.Count}, total Level {have} ≥ {need}).");
+            return true;
         }
 
         static List<CardInstance> CollectOtherYouControl(DuelistState who, CardInstance source,
@@ -1996,8 +2178,24 @@ namespace WRLDZ.Duel.TextEffects
             var opp = engine.OpponentOf(who);
             void Destroy(CardInstance c) => DestroyCard(engine, c, source, clause.BanishIfDestroyed);
 
+            // Archfiend die-roll protection: as an opponent's targeting effect would
+            // resolve against a monster, its controller's die-roll Archfiend may negate
+            // it and destroy the opponent's card. Skip the effect when negated.
+            if (chosenTarget != null && clause.RequiresTargetChoice &&
+                clause.Action != EffectActionKind.DieRollNegateWhenTargeted &&
+                ArchfiendTargetNegation.TryNegate(engine, who, source, chosenTarget))
+                return;
+
             switch (clause.Action)
             {
+                case EffectActionKind.DieRollNegateWhenTargeted:
+                    // Continuous protection — resolved reactively by ArchfiendTargetNegation.
+                    break;
+
+                case EffectActionKind.RitualSummon:
+                    RitualSummonResolve(engine, who, source, clause);
+                    break;
+
                 case EffectActionKind.Draw:
                     engine.Draw(who, Mathf.Max(1, clause.Amount), silent: false);
                     break;
@@ -2055,6 +2253,14 @@ namespace WRLDZ.Duel.TextEffects
                             source.EquippedTo = chosenTarget;
                             if (!chosenTarget.Equips.Contains(source))
                                 chosenTarget.Equips.Add(source);
+                        }
+                        if (clause.SummonCannotBeTributed)
+                            chosenTarget.CannotBeTributedForSummon = true;
+                        if (clause.SummonDestroyAtEndPhase)
+                        {
+                            chosenTarget.TempDestroyOnEndOfTurn = engine.TurnNumber;
+                            engine.Log(
+                                $"{chosenTarget.Name} will be destroyed during the End Phase this turn.");
                         }
                     }
                     break;
@@ -2631,6 +2837,7 @@ namespace WRLDZ.Duel.TextEffects
                 {
                     var n = clause.CoinCount > 0 ? clause.CoinCount : 3;
                     var need = clause.Amount > 0 ? clause.Amount : 2;
+                    engine.Rng.SetPresentationContext(who != null && who.IsPlayer, source?.Name);
                     var heads = engine.Rng.TossCoinsCountHeads(n);
                     engine.Log($"{source?.Name}: {heads}/{n} heads (need {need}).");
                     if (heads >= need && chosenTarget != null)
@@ -2640,6 +2847,7 @@ namespace WRLDZ.Duel.TextEffects
 
                 case EffectActionKind.RollDieZorc:
                 {
+                    engine.Rng.SetPresentationContext(who != null && who.IsPlayer, source?.Name);
                     var roll = engine.Rng.RollDie();
                     engine.Log($"{source?.Name} rolls a {roll}.");
                     if (roll <= (clause.DieLowMax > 0 ? clause.DieLowMax : 2))
@@ -2856,6 +3064,22 @@ namespace WRLDZ.Duel.TextEffects
             }
         }
 
+        static void ResolveStandbyMaintenancePayLp(DuelEngine engine, DuelistState who,
+            CardInstance card, EffectClause c)
+        {
+            if (engine == null || who == null || card == null) return;
+            var n = c != null && c.PayLpAmount > 0 ? c.PayLpAmount : 500;
+            // Pandemonium: neither player pays LP for their Archfiend monsters.
+            if (FieldSpellEffects.ArchfiendMaintenanceWaived(engine))
+            {
+                engine.Log($"{card.Name}: Standby maintenance ({n} LP) waived (Pandemonium).");
+                return;
+            }
+            // Mandatory, not optional — pay as much as possible (LP cannot go negative).
+            engine.PayLifePointCost(who, n, $"Standby maintenance: {card.Name}");
+            MirrorStandbyPayment(engine, who, card, n);
+        }
+
         static void ResolvePayLpOrDestroyThis(DuelEngine engine, DuelistState who,
             CardInstance card, EffectClause c)
         {
@@ -2864,11 +3088,34 @@ namespace WRLDZ.Duel.TextEffects
             {
                 who.LifePoints -= n;
                 engine.Log($"Cost: pay {n} LP or destroy {card?.Name} → {who.Name} at {who.LifePoints} LP.");
+                MirrorStandbyPayment(engine, who, card, n);
                 return;
             }
 
             engine.Log($"{card?.Name}: not enough LP — destroy this card.");
             engine.SendCardToGrave(who, card);
+        }
+
+        /// <summary>
+        /// Battle-Scarred: when the controller pays the linked Archfiend's Standby
+        /// maintenance, the opponent pays the same amount.
+        /// </summary>
+        static void MirrorStandbyPayment(DuelEngine engine, DuelistState who,
+            CardInstance monster, int amount)
+        {
+            if (engine == null || who == null || monster?.Equips == null || amount <= 0) return;
+            foreach (var eq in monster.Equips)
+            {
+                if (eq?.Def == null) continue;
+                var prog = CompiledEffectCache.GetOrCompile(eq.Def);
+                if (prog == null) continue;
+                if (!prog.ClauseList.Exists(x => x != null && x.MirrorStandbyPaymentToOpponent))
+                    continue;
+                var opp = engine.OpponentOf(who);
+                if (opp == null) continue;
+                engine.PayLifePointCost(opp, amount, $"Battle-Scarred mirror ({monster.Name})");
+                return;
+            }
         }
 
         static void FirePhaseTriggersFor(DuelEngine engine, DuelistState who, EffectTiming timing,
@@ -2916,11 +3163,27 @@ namespace WRLDZ.Duel.TextEffects
                         continue;
                     }
 
+                    if (c.Action == EffectActionKind.StandbyMaintenancePayLp)
+                    {
+                        if (!card.FaceUp) continue;
+                        if (!who.TryFindMonster(card, out _)) continue;
+                        ResolveStandbyMaintenancePayLp(engine, who, card, c);
+                        continue;
+                    }
+
                     if (c.Action == EffectActionKind.PayLpOrDestroyThis)
                     {
                         if (!card.FaceUp) continue;
                         if (!who.TryFindSpellTrap(card, out _) && !who.TryFindMonster(card, out _))
                             continue;
+                        // Pandemonium waives the Archfiend Standby maintenance cost
+                        // (but not non-Archfiend upkeep like Messenger of Peace).
+                        if (FieldSpellEffects.IsArchfiendMonster(card.Def) &&
+                            FieldSpellEffects.ArchfiendMaintenanceWaived(engine))
+                        {
+                            engine.Log($"{card.Name}: Standby cost waived (Pandemonium).");
+                            continue;
+                        }
                         ResolvePayLpOrDestroyThis(engine, who, card, c);
                         continue;
                     }
@@ -3009,6 +3272,7 @@ namespace WRLDZ.Duel.TextEffects
             if (p == null || !p.AwaitingCoinCall) return false;
             var who = p.Controller;
             var card = p.Card;
+            engine.Rng.SetPresentationContext(who != null && who.IsPlayer, card?.Name);
             var tossHeads = engine.Rng.TossCoin();
             engine.Log(
                 $"{who?.Name} calls {(callHeads ? "Heads" : "Tails")}; toss is {(tossHeads ? "Heads" : "Tails")}.");
@@ -3344,6 +3608,18 @@ namespace WRLDZ.Duel.TextEffects
             return null;
         }
 
+        /// <summary>Card belongs to a named "series" (archetype / printed name / treated-as).</summary>
+        static bool CardMatchesSeries(WRLDZ.Data.CardDef def, string series)
+        {
+            if (def == null || string.IsNullOrEmpty(series)) return false;
+            var cmp = System.StringComparison.OrdinalIgnoreCase;
+            if (!string.IsNullOrEmpty(def.archetype) && def.archetype.IndexOf(series, cmp) >= 0)
+                return true;
+            if (!string.IsNullOrEmpty(def.name) && def.name.IndexOf(series, cmp) >= 0)
+                return true;
+            return def.desc != null && def.desc.IndexOf($"treated as an \"{series}\"", cmp) >= 0;
+        }
+
         static List<CardInstance> CollectTargets(DuelEngine engine, DuelistState who, EffectClause c,
             CardInstance except, int costNumeric = 0)
         {
@@ -3512,6 +3788,8 @@ namespace WRLDZ.Duel.TextEffects
                                         System.StringComparison.OrdinalIgnoreCase) < 0);
             if (!string.IsNullOrEmpty(c.ExceptNamedCard))
                 list.RemoveAll(t => t != null && t.IsNamed(c.ExceptNamedCard));
+            if (!string.IsNullOrEmpty(c.TargetSeriesName))
+                list.RemoveAll(t => !CardMatchesSeries(t?.Def, c.TargetSeriesName));
             if (!string.IsNullOrEmpty(c.AttributeFilter) &&
                 c.Action == EffectActionKind.EquipThisToTarget)
                 list.RemoveAll(t => t?.Def?.attribute == null ||

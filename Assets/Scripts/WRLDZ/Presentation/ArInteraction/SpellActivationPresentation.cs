@@ -36,8 +36,13 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary>How long the full activate rise+reveal should take (presentation).</summary>
         public const float ActivateSequenceSeconds = 1.65f;
 
-        /// <summary>Hover hold after reveal before fade is allowed (if GY already resolved).</summary>
-        public const float MinHoverSeconds = 0.85f;
+        /// <summary>
+        /// Hover hold after a one-shot resolves, before its hologram leaves to GY
+        /// (fade / shatter). The rise already reveals the art ~0.9s in, so this only
+        /// needs to be a short read beat — a longer hold reads as the hologram
+        /// lingering "a second too long" after the card has already resolved.
+        /// </summary>
+        public const float MinHoverSeconds = 0.2f;
 
         /// <summary>Fade duration when leaving to GY after activation.</summary>
         public const float FadeToGySeconds = 0.75f;
@@ -62,6 +67,23 @@ namespace WRLDZ.Presentation.ArInteraction
             bool flatOnBoard = false)
         {
             if (instanceId <= 0) return;
+
+            // Idempotent: one activation is often registered twice in the same tick
+            // (PlaceFaceUp, then FinishSpellTrap once it knows the card stays). Update the
+            // existing entry in place instead of replacing it with a fresh event — replacing
+            // it (new QueuedUnscaledTime) makes the arena/disk replay the rise + slot-insert,
+            // which is the "2 copies slotted into the disk" duplicate.
+            if (_byInstance.TryGetValue(instanceId, out var existing))
+            {
+                existing.CardId = cardId;
+                if (!string.IsNullOrEmpty(cardName)) existing.CardName = cardName;
+                existing.PlayerSide = playerSide;
+                if (zoneIndex != -2) existing.ZoneIndex = zoneIndex;
+                existing.StaysOnField = staysOnField || flatOnBoard || existing.StaysOnField;
+                _byInstance[instanceId] = existing;
+                return;
+            }
+
             var e = new Event
             {
                 InstanceId = instanceId,

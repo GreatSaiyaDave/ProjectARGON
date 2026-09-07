@@ -378,6 +378,7 @@ namespace WRLDZ.Duel.TextEffects
             {
                 if (def == null || OfficialCardAuthority.HasNoActivatableEffect(def)) continue;
                 var need = new List<EffectActionKind>();
+                ArchfiendTemplates.ExpectedActions(def, need);
                 ProtectionTemplates.ExpectedActions(def.desc, need);
                 LegacyTextTemplates.ExpectedActions(def, need);
                 PhaseTriggerTemplates.ExpectedActions(def, need);

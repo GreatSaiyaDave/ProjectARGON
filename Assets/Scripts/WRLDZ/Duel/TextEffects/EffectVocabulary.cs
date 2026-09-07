@@ -153,7 +153,8 @@ namespace WRLDZ.Duel.TextEffects
                     EffectActionKind.SpecialSummonFromHand or
                     EffectActionKind.SpecialSummonNamed or
                     EffectActionKind.SpecialSummonThisFromHand or
-                    EffectActionKind.SpecialSummonFusionFromExtra =>
+                    EffectActionKind.SpecialSummonFusionFromExtra or
+                    EffectActionKind.RitualSummon =>
                     EffectResolutionKind.SpecialSummon,
                 EffectActionKind.SpecialSummonToken => EffectResolutionKind.Token,
                 EffectActionKind.TakeEffectDamage or
@@ -203,10 +204,14 @@ namespace WRLDZ.Duel.TextEffects
                     EffectActionKind.CannotBeTargetedByEffects or
                     EffectActionKind.ContinuousCannotTargetDragons or
                     EffectActionKind.ContinuousCannotAttack or
+                    EffectActionKind.DieRollNegateWhenTargeted or
                     EffectActionKind.CannotBeTributedForSummon =>
                     EffectResolutionKind.Protection,
                 EffectActionKind.PayLpOrDestroyThis =>
                     EffectResolutionKind.Destroy,
+                // Mandatory upkeep: a life-point decrease with no other resolution.
+                EffectActionKind.StandbyMaintenancePayLp =>
+                    EffectResolutionKind.Damage,
                 EffectActionKind.SetTargetFaceDownDefense =>
                     EffectResolutionKind.ChangePosition,
                 EffectActionKind.None => EffectResolutionKind.None,

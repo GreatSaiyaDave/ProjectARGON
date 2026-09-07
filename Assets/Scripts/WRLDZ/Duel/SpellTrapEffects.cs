@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using UnityEngine;
 using WRLDZ.Data;
 using WRLDZ.Duel.TextEffects;
@@ -1156,17 +1157,13 @@ namespace WRLDZ.Duel
                 // May still fuse if materials include field monsters that free zones
             }
 
-            // Registered recipes from official fusion text
-            var recipes = new (int fusion, int[] mats)[]
+            // Recipes are parsed from each Extra Deck Fusion monster's own official text
+            // ("A" + "B" [+ "C"]) — data-driven, so every Fusion whose named materials are
+            // present can be summoned (no per-recipe registration).
+            foreach (var fusion in who.ExtraDeck)
             {
-                (GaiaTheDragonChampion, new[] { GaiaTheFierceKnight, CurseOfDragon }),
-                (BlackSkullDragon, new[] { SummonedSkull, RedEyesBlackDragon })
-            };
-
-            foreach (var (fusion, mats) in recipes)
-            {
-                if (!who.ExtraDeck.Contains(fusion)) continue;
-                if (!TryCollectMaterials(who, mats, out var found)) continue;
+                if (!TryGetFusionRecipe(fusion, out var matNames)) continue;
+                if (!TryCollectMaterials(who, matNames, out var found)) continue;
                 // After sending materials, need a free Monster Zone (tributes free zones if from field)
                 var fieldMats = found.Count(m => who.TryFindMonster(m, out _));
                 var freeAfter = engine.FirstEmpty(who.MonsterZones) >= 0 || fieldMats > 0;
@@ -1179,6 +1176,43 @@ namespace WRLDZ.Duel
             return false;
         }
 
+        // "A" + "B" [+ "C"] at the start of a Fusion monster's text.
+        static readonly Regex RxFusionRecipe = new(
+            "^\\s*\"([^\"]+)\"\\s*\\+\\s*\"([^\"]+)\"(?:\\s*\\+\\s*\"([^\"]+)\")?",
+            RegexOptions.Compiled);
+        static Dictionary<int, string[]> _fusionRecipeCache;
+
+        /// <summary>
+        /// Parse a Fusion monster's named materials from its official text. Cached.
+        /// Materials are matched by NAME (official rule) so any passcode/alias of that name
+        /// qualifies. Returns false unless it names 2–3 materials.
+        /// </summary>
+        static bool TryGetFusionRecipe(int fusionId, out string[] materialNames)
+        {
+            _fusionRecipeCache ??= new Dictionary<int, string[]>();
+            if (_fusionRecipeCache.TryGetValue(fusionId, out materialNames))
+                return materialNames != null;
+
+            string[] names = null;
+            var def = CardDatabase.Instance?.Get(fusionId);
+            if (def?.desc != null)
+            {
+                var m = RxFusionRecipe.Match(def.desc.Trim());
+                if (m.Success)
+                {
+                    var list = new List<string>();
+                    for (var g = 1; g <= 3; g++)
+                        if (m.Groups[g].Success && !string.IsNullOrEmpty(m.Groups[g].Value))
+                            list.Add(m.Groups[g].Value);
+                    if (list.Count >= 2) names = list.ToArray();
+                }
+            }
+
+            _fusionRecipeCache[fusionId] = names;
+            materialNames = names;
+            return names != null;
+        }
+
         static int CountMaterialsOnBoard(DuelistState who)
         {
             var n = 0;
@@ -1186,19 +1220,22 @@ namespace WRLDZ.Duel
             return n;
         }
 
-        static bool TryCollectMaterials(DuelistState who, int[] requiredIds, out List<CardInstance> found)
+        static bool TryCollectMaterials(DuelistState who, string[] requiredNames, out List<CardInstance> found)
         {
-            // Local list: out params cannot be captured by lambdas (CS1628)
+            // Materials match by NAME (official rule) — any passcode/alias of that name works.
             var collected = new List<CardInstance>();
             var pool = new List<CardInstance>();
             pool.AddRange(who.Hand);
             pool.AddRange(who.MonstersOnField());
-            foreach (var need in requiredIds)
+            foreach (var need in requiredNames)
             {
                 CardInstance pick = null;
                 foreach (var c in pool)
                 {
-                    if (c.CardId != need || collected.Contains(c)) continue;
+                    if (c?.Def == null || collected.Contains(c)) continue;
+                    if (!string.Equals(c.Name, need, System.StringComparison.OrdinalIgnoreCase) &&
+                        !c.IsNamed(need))
+                        continue;
                     pick = c;
                     break;
                 }

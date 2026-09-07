@@ -77,6 +77,68 @@ namespace WRLDZ.Duel.Rules
             report.UnitPass += cPass;
             report.UnitFail += cFail;
 
+            // ── 1d) Multi-link chain rules (spell speed, LIFO, negation) ──
+            sb.AppendLine();
+            sb.AppendLine("── Unit: ChainRegressionTests ──");
+            var chain = ChainRegressionTests.RunAll();
+            sb.AppendLine(chain.TrimEnd());
+            ParseUnitCounts(chain, out var chPass, out var chFail);
+            report.UnitPass += chPass;
+            report.UnitFail += chFail;
+
+            // ── 1e) Coin toss / die roll mechanic + arena presentation bus ──
+            sb.AppendLine();
+            sb.AppendLine("── Unit: CoinDiceRegressionTests ──");
+            var coindice = CoinDiceRegressionTests.RunAll();
+            sb.AppendLine(coindice.TrimEnd());
+            ParseUnitCounts(coindice, out var cdPass, out var cdFail);
+            report.UnitPass += cdPass;
+            report.UnitFail += cdFail;
+
+            // ── 1f) Ritual Summon (Ritual Spell → Special Summon by Tribute) ──
+            sb.AppendLine();
+            sb.AppendLine("── Unit: RitualRegressionTests ──");
+            var ritual = RitualRegressionTests.RunAll();
+            sb.AppendLine(ritual.TrimEnd());
+            ParseUnitCounts(ritual, out var rtPass, out var rtFail);
+            report.UnitPass += rtPass;
+            report.UnitFail += rtFail;
+
+            // ── 1g) Hand traps (hand monster effects that act like Trap Cards) ──
+            sb.AppendLine();
+            sb.AppendLine("── Unit: HandTrapRegressionTests ──");
+            var handtrap = HandTrapRegressionTests.RunAll();
+            sb.AppendLine(handtrap.TrimEnd());
+            ParseUnitCounts(handtrap, out var htPass, out var htFail);
+            report.UnitPass += htPass;
+            report.UnitFail += htFail;
+
+            // ── 1h) Fusion Summon (data-driven recipes via Polymerization) ──
+            sb.AppendLine();
+            sb.AppendLine("── Unit: FusionRegressionTests ──");
+            var fusion = FusionRegressionTests.RunAll();
+            sb.AppendLine(fusion.TrimEnd());
+            ParseUnitCounts(fusion, out var fuPass, out var fuFail);
+            report.UnitPass += fuPass;
+            report.UnitFail += fuFail;
+
+            // ── 1i) Archfiend Standby maintenance cost + Pandemonium waiver ──
+            sb.AppendLine();
+            sb.AppendLine("── Unit: ArchfiendRegressionTests ──");
+            var archfiend = ArchfiendRegressionTests.RunAll();
+            sb.AppendLine(archfiend.TrimEnd());
+            ParseUnitCounts(archfiend, out var afPass, out var afFail);
+            report.UnitPass += afPass;
+            report.UnitFail += afFail;
+
+            sb.AppendLine();
+            sb.AppendLine("── Unit: ArchfiendAdvancedRegressionTests ──");
+            var archfiendAdv = ArchfiendAdvancedRegressionTests.RunAll();
+            sb.AppendLine(archfiendAdv.TrimEnd());
+            ParseUnitCounts(archfiendAdv, out var afaPass, out var afaFail);
+            report.UnitPass += afaPass;
+            report.UnitFail += afaFail;
+
             // ── 2) Text effect compile (lab unique cards) ──
             sb.AppendLine();
             sb.AppendLine("── Text: lab deck compile (regex, no AI) ──");

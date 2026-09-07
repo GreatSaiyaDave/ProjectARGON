@@ -143,6 +143,13 @@ namespace WRLDZ.Duel.TextEffects
         SpecialSummonToken,
         /// <summary>Special Summon 1 Fusion Monster from the Extra Deck.</summary>
         SpecialSummonFusionFromExtra,
+        /// <summary>
+        /// Ritual Summon: activated by a Ritual Spell. Special Summon the named Ritual
+        /// Monster (<see cref="EffectClause.NamedCard"/>, or any Ritual Monster of
+        /// <see cref="EffectClause.AttributeFilter"/>) from the hand by Tributing monsters
+        /// from hand/field whose total Level ≥ <see cref="EffectClause.Amount"/>.
+        /// </summary>
+        RitualSummon,
         /// <summary>Take control of all face-up opponent monsters with Level ≤ Amount.</summary>
         TakeControlLevelLeq,
         /// <summary>Equip this card to the targeted monster (Union).</summary>
@@ -183,6 +190,13 @@ namespace WRLDZ.Duel.TextEffects
         /// <summary>Standby: pay PayLpAmount or destroy this card (Messenger of Peace).</summary>
         PayLpOrDestroyThis,
         /// <summary>
+        /// Mandatory Standby-Phase upkeep: the controller pays PayLpAmount each of
+        /// their Standby Phases (not optional, no destruction) — the classic Archfiend
+        /// maintenance cost (Vilepawn / Desrook / Darkbishop / Infernalqueen /
+        /// Shadowknight / Terrorking). Waived while "Pandemonium" is face-up.
+        /// </summary>
+        StandbyMaintenancePayLp,
+        /// <summary>
         /// This card or the chosen target gains Amount ATK and DefAmount DEF lingering
         /// while it remains on the field (Slate Warrior Flip / destroyer loss).
         /// </summary>
@@ -193,7 +207,15 @@ namespace WRLDZ.Duel.TextEffects
         /// This face-up card cannot be Tributed for a Tribute Summon (Fox Fire).
         /// Honored via CardInstance.CannotBeTributedForSummon.
         /// </summary>
-        CannotBeTributedForSummon
+        CannotBeTributedForSummon,
+        /// <summary>
+        /// When this card (or, if <see cref="EffectClause.ProtectsAllArchfiendsOnField"/>,
+        /// any Archfiend the controller controls) is targeted by an opponent's card
+        /// effect, roll a six-sided die as it resolves; on a face in
+        /// <see cref="EffectClause.DieNegateFacesMask"/> negate the effect and destroy the
+        /// opponent's card. The classic Archfiend die-roll protection.
+        /// </summary>
+        DieRollNegateWhenTargeted
     }
 
     public enum EffectSide
@@ -348,6 +370,31 @@ namespace WRLDZ.Duel.TextEffects
         public int DieLowMax;
         /// <summary>Zorc: destroy 1 opp if roll ≤ DieMidMax (and &gt; DieLowMax).</summary>
         public int DieMidMax;
+        /// <summary>
+        /// DieRollNegateWhenTargeted: bitmask of six-sided faces that negate — bit
+        /// (face-1) set means that face triggers the negate+destroy (e.g. faces {1,3,6}
+        /// → 0b100101 = 37; {2,5} → 0b010010 = 18; {3} → 0b000100 = 4).
+        /// </summary>
+        public int DieNegateFacesMask;
+        /// <summary>
+        /// DieRollNegateWhenTargeted: protection covers any "Archfiend" monster the
+        /// controller controls (Darkbishop), not just this card.
+        /// </summary>
+        public bool ProtectsAllArchfiendsOnField;
+        /// <summary>
+        /// Battle-Scarred: while this card is linked to the chosen monster, the opponent
+        /// pays the same Standby-Phase maintenance LP the controller pays for it.
+        /// </summary>
+        public bool MirrorStandbyPaymentToOpponent;
+        /// <summary>Archfiend's Roar: the Special Summoned monster cannot be Tributed.</summary>
+        public bool SummonCannotBeTributed;
+        /// <summary>Archfiend's Roar: destroy the Special Summoned monster in the End Phase.</summary>
+        public bool SummonDestroyAtEndPhase;
+        /// <summary>
+        /// Restrict targets to a card "series" (archetype / treated-as name), e.g. the
+        /// "Archfiend" GY target of Archfiend's Roar. Applied as a post-filter.
+        /// </summary>
+        public string TargetSeriesName;
         public string TokenName;
         public string TokenRace;
         public string TokenAttribute;
@@ -410,6 +457,12 @@ namespace WRLDZ.Duel.TextEffects
         public bool SummonInDefense;
         /// <summary>GY target must be a Normal Monster.</summary>
         public bool RequiresNormalMonster;
+        /// <summary>
+        /// RitualSummon: Tribute Levels must EXACTLY equal the summoned monster's Level
+        /// ("...exactly equal the Level of the Ritual Monster..." — Earth Chant / Contract
+        /// with the Abyss) instead of the usual "equal N or more" (≥).
+        /// </summary>
+        public bool RitualExactLevel;
         /// <summary>ContinuousCannotAttack: Amount is a printed Level (Gravity Bind), not ATK.</summary>
         public bool AmountIsLevel;
         /// <summary>Suijin: this card must be the current attack target.</summary>

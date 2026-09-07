@@ -232,7 +232,8 @@ namespace WRLDZ.UI.Shell
             {
                 Section.Extra => "EXTRA  " + have + "/" + TcgRules.ExtraDeckMax,
                 Section.Side => "SIDE  " + have + "/" + TcgRules.SideDeckMax,
-                _ => "MAIN  " + have + "/" + TcgRules.MainDeckMax
+                // Legal Main is a range (40–60); show it so an underbuilt deck reads clearly.
+                _ => "MAIN  " + have + "  (" + TcgRules.MainDeckMin + "–" + TcgRules.MainDeckMax + ")"
             };
         }
 

@@ -72,6 +72,16 @@ wrldz_stress*.log
 # Crash dumps
 *.blob
 
+# Python bytecode (from Tools/ scripts)
+__pycache__/
+*.pyc
+
+# Headless engine harness build outputs (.NET)
+Tools/HeadlessEngine/bin/
+Tools/HeadlessEngine/obj/
+# ...but keep the harness project file (Unity's *.csproj ignore above would drop it)
+!Tools/HeadlessEngine/HeadlessEngine.csproj
+
 # Local-only (kept off GitHub)
 .grok/
 Assets/Screenshots/

@@ -14,6 +14,13 @@ namespace WRLDZ.EditorTools
         {
             var report = TcgRegressionTests.RunAll() + "\n" + InteractionRegressionTests.RunAll() +
                          "\n" + CorpusTriggerStressTests.Run() +
+                         "\n" + ChainRegressionTests.RunAll() +
+                         "\n" + CoinDiceRegressionTests.RunAll() +
+                         "\n" + RitualRegressionTests.RunAll() +
+                         "\n" + HandTrapRegressionTests.RunAll() +
+                         "\n" + FusionRegressionTests.RunAll() +
+                         "\n" + ArchfiendRegressionTests.RunAll() +
+                         "\n" + ArchfiendAdvancedRegressionTests.RunAll() +
                          "\n" + WRLDZ.Core.InventoryRegressionTests.RunAll() +
                          "\n" + ArPlaymatLayout.RunSanityChecks() +
                          "\n" + WRLDZ.Presentation.ArPhysicalCardBuilder.RunFaceSwapSanity();

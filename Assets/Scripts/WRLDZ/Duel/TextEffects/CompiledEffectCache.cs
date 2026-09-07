@@ -252,8 +252,13 @@ namespace WRLDZ.Duel.TextEffects
             }
         }
 
-        /// <summary>Export current memory to StreamingAssets seed (Editor / tooling).</summary>
-        public static bool ExportSeed(string path = null)
+        /// <summary>
+        /// Export current memory to StreamingAssets seed (Editor / tooling). An optional
+        /// <paramref name="filter"/> limits what is written — e.g. only programs that carry
+        /// compiled clauses, so the persisted "memory" excludes 0-clause vanilla / gap cards
+        /// that recompile trivially anyway.
+        /// </summary>
+        public static bool ExportSeed(string path = null, Func<CompiledCardProgram, bool> filter = null)
         {
             try
             {
@@ -262,8 +267,8 @@ namespace WRLDZ.Duel.TextEffects
                 if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
                     Directory.CreateDirectory(dir);
                 EnsureDiskLoaded();
-                WriteWrapper(path);
-                Debug.Log($"[WRLDZ TextFX] Exported seed ({Memory.Count} programs) → {path}");
+                var written = WriteWrapper(path, filter);
+                Debug.Log($"[WRLDZ TextFX] Exported seed ({written} programs) → {path}");
                 return true;
             }
             catch (Exception ex)
@@ -273,15 +278,19 @@ namespace WRLDZ.Duel.TextEffects
             }
         }
 
-        static void WriteWrapper(string path)
+        static int WriteWrapper(string path, Func<CompiledCardProgram, bool> filter = null)
         {
-            var list = new List<CompiledCardProgram>(Memory.Values);
+            var list = new List<CompiledCardProgram>();
+            foreach (var p in Memory.Values)
+                if (p != null && (filter == null || filter(p)))
+                    list.Add(p);
             var wrapper = new CacheWrapper
             {
                 version = CardTextEffectCompiler.Version,
                 programs = list.ToArray()
             };
             File.WriteAllText(path, JsonUtility.ToJson(wrapper, true));
+            return list.Count;
         }
 
         [Serializable]

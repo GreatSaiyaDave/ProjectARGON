@@ -79,6 +79,14 @@ namespace WRLDZ.Duel.Rules
             foreach (var def in db.GetAllCards())
             {
                 if (def == null) continue;
+
+                // Isolate each card: a prior card's resolution can end the duel
+                // (GameOver) or leave a non-Main phase, which would make every
+                // later activation illegal. Re-seat a clean Main-Phase duel when
+                // the shared engine is no longer in a usable state.
+                if (engine.GameOver || !engine.InMainPhase || engine.TurnPlayer != engine.Player)
+                    engine = Fresh(db, pDeck, aDeck);
+
                 var kind = CardEffectStatus.Classify(def);
                 switch (kind)
                 {
@@ -223,7 +231,8 @@ namespace WRLDZ.Duel.Rules
         static bool NeedsHardBoard(EffectClause c)
         {
             if (c == null) return false;
-            return c.RequiresLordOfDOnField ||
+            return c.Action == EffectActionKind.RitualSummon || // needs named monster in hand + Tributes
+                   c.RequiresLordOfDOnField ||
                    c.RequiresSendNamedToGy ||
                    c.RequiresTributeThis ||
                    c.RequiresTributeCount > 0 ||
@@ -263,6 +272,12 @@ namespace WRLDZ.Duel.Rules
                 if (c.RequiresControllerNamedCard &&
                     !string.IsNullOrEmpty(c.RequiresFaceUpName) &&
                     c.RequiresFaceUpName.IndexOf("Archfiend", StringComparison.OrdinalIgnoreCase) >= 0)
+                    PlaceMonster(engine, p, ArchfiendSoldier, 1, BattlePosition.Attack, true);
+
+                // Battle-Scarred targets an "Archfiend" monster you control.
+                if (!string.IsNullOrEmpty(c.TargetSeriesName) &&
+                    c.TargetSeriesName.IndexOf("Archfiend", StringComparison.OrdinalIgnoreCase) >= 0 &&
+                    c.Zone == EffectZoneFilter.ControllerMonsters)
                     PlaceMonster(engine, p, ArchfiendSoldier, 1, BattlePosition.Attack, true);
 
                 if (c.Zone == EffectZoneFilter.DeckFieldSpells)

@@ -26,8 +26,27 @@ namespace WRLDZ.Duel.TextEffects
             @"Activate this card by paying (\d+) (?:LP|Life Points)\.?\s*$",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        /// <summary>
+        /// Standby-Phase "pay N or destroy this card" upkeep across its phrasing variants:
+        /// "During your Standby Phase, pay 500 LP or destroy this card" (Messenger of Peace),
+        /// "During each of your Standby Phases, pay 2000 LP or destroy this card"
+        /// (Fairy Box / Mirror Wall / Mask of Brutality), and the "you must pay N
+        /// (this is not optional), or this card is destroyed" form (Skull Archfiend of
+        /// Lightning / Imperial Order).
+        /// </summary>
         static readonly Regex RxPayOrDestroyStandby = new(
-            @"(?:Once per turn, )?during your Standby Phase,? pay (\d+) (?:LP|Life Points) or destroy this card\.?",
+            @"(?:Once per turn,?\s*)?during (?:each of your |the |your )Standby Phases?,?\s*" +
+            @"(?:you must )?pay (\d+) (?:LP|Life Points)(?: \(this is not optional\))?,?\s*" +
+            @"(?:or destroy this card|or this card is destroyed)\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Spirit's Invitation phrasing: "Pay N Life Points during each of your Standby
+        /// Phases. If you do not, destroy this card." Same pay-or-destroy upkeep.
+        /// </summary>
+        static readonly Regex RxPayThenDestroyStandby = new(
+            @"Pay (\d+) (?:LP|Life Points) during each of your Standby Phases\.\s*" +
+            @"If you do not, destroy this card\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxCallOfTheHaunted = new(
@@ -109,6 +128,7 @@ namespace WRLDZ.Duel.TextEffects
                 : null);
 
             var pay = RxPayOrDestroyStandby.Match(text);
+            if (!pay.Success) pay = RxPayThenDestroyStandby.Match(text);
             Add(pay, pay.Success
                 ? new EffectClause
                 {
@@ -139,7 +159,7 @@ namespace WRLDZ.Duel.TextEffects
             if (RxGravityBind.IsMatch(text) || RxInsectBarrier.IsMatch(text) ||
                 RxCannotAttackAtk.IsMatch(text))
                 need.Add(EffectActionKind.ContinuousCannotAttack);
-            if (RxPayOrDestroyStandby.IsMatch(text))
+            if (RxPayOrDestroyStandby.IsMatch(text) || RxPayThenDestroyStandby.IsMatch(text))
                 need.Add(EffectActionKind.PayLpOrDestroyThis);
             if (RxCallOfTheHaunted.IsMatch(text) || RxSoulResurrection.IsMatch(text))
                 need.Add(EffectActionKind.SpecialSummonFromGy);

@@ -51,6 +51,25 @@ namespace WRLDZ.Duel
         /// "During damage calculation, if your opponent's monster attacks (Quick Effect):
         ///  You can discard this card; you take no battle damage from that battle."
         /// </summary>
+        /// <summary>
+        /// "Hand trap" (Damage Calculation window): a monster whose official text compiles
+        /// to a discard-from-hand Quick Effect that prevents battle damage. Kuriboh is the
+        /// archetype, but membership is driven by the compiled program — any card with that
+        /// clause qualifies, with no per-card list (no <c>if (cardId == …)</c>).
+        /// </summary>
+        public static bool HasDamageCalcHandTrap(CardInstance card)
+        {
+            if (card?.Def == null || !card.Def.IsMonster) return false;
+            var prog = TextEffects.CompiledEffectCache.GetOrCompile(card);
+            if (prog == null) return false;
+            foreach (var c in prog.ClauseList)
+                if (c != null &&
+                    c.Timing == TextEffects.EffectTiming.DamageCalculation &&
+                    c.Action == TextEffects.EffectActionKind.DiscardSelfNoBattleDamageThisBattle)
+                    return true;
+            return false;
+        }
+
         public static bool IsLegalHandDamageCalculationEffect(
             DuelistState who,
             CardInstance card,
@@ -61,17 +80,12 @@ namespace WRLDZ.Duel
             if (who == null || card?.Def == null) return false;
             if (!who.Hand.Contains(card)) return false;
             if (timing != ResponseTiming.DamageCalculation) return false;
+            if (!HasDamageCalcHandTrap(card)) return false;
 
-            switch (card.CardId)
-            {
-                case Kuriboh:
-                    // "if your opponent's monster attacks" — attacker controller ≠ who
-                    if (attackingPlayer == null || attackingPlayer == who) return false;
-                    if (attacker == null) return false;
-                    return true;
-                default:
-                    return false;
-            }
+            // "if your opponent's monster attacks" — attacker controller ≠ who
+            if (attackingPlayer == null || attackingPlayer == who) return false;
+            if (attacker == null) return false;
+            return true;
         }
 
         public static void CollectLegalHandDamageCalculation(
@@ -111,34 +125,30 @@ namespace WRLDZ.Duel
                 return false;
             }
 
-            switch (card.CardId)
-            {
-                case Kuriboh:
-                {
-                    // Cost before semicolon: discard this card (to GY).
-                    // Resolve by InstanceId so UI/intent clones still hit the real hand card.
-                    var discarded = DiscardFromHandByInstance(who, card);
-                    if (discarded == null)
-                    {
-                        engine.Log("Kuriboh: discard cost failed (not in hand).");
-                        return false;
-                    }
+            // Category-driven (not a Kuriboh special-case): any hand monster whose compiled
+            // program is a discard-from-hand "no battle damage" Quick Effect.
+            if (!HasDamageCalcHandTrap(card))
+                return false;
 
-                    // Operation: no battle damage from that battle
-                    who.PreventBattleDamageThisBattle = true;
-                    engine.Log(
-                        $"{who.Name} activates Kuriboh (Quick Effect)! " +
-                        $"Discard {discarded.Name} → GY; take no battle damage from that battle. " +
-                        $"[Hand={who.Hand.Count} GY={who.Graveyard.Count}] " +
-                        "[Konami: During damage calculation, if your opponent's monster attacks.]");
-                    // Non-negating: continue Damage Step resolution
-                    engine.ContinueAfterResponseActivation(attackNegated: false, battlePhaseEnded: false);
-                    engine.NotifyPublic();
-                    return true;
-                }
-                default:
-                    return false;
+            // Cost before semicolon: discard this card (to GY).
+            // Resolve by InstanceId so UI/intent clones still hit the real hand card.
+            var discarded = DiscardFromHandByInstance(who, card);
+            if (discarded == null)
+            {
+                engine.Log($"{card.Name}: discard cost failed (not in hand).");
+                return false;
             }
+
+            // Operation: no battle damage from that battle.
+            who.PreventBattleDamageThisBattle = true;
+            engine.Log(
+                $"{who.Name} activates {card.Name} (hand Quick Effect)! " +
+                $"Discard {discarded.Name} → GY; take no battle damage from that battle. " +
+                $"[Hand={who.Hand.Count} GY={who.Graveyard.Count}]");
+            // Non-negating: continue Damage Step resolution.
+            engine.ContinueAfterResponseActivation(attackNegated: false, battlePhaseEnded: false);
+            engine.NotifyPublic();
+            return true;
         }
 
         /// <summary>
@@ -364,6 +374,10 @@ namespace WRLDZ.Duel
             bool destroyed = false, bool destroyedByBattle = false, CardInstance battleDestroyer = null)
         {
             if (engine == null || owner == null || card == null) return;
+
+            // Pandemonium: an Archfiend destroyed (not by battle) lets its owner search a
+            // lower-Level Archfiend from the Deck. Runs alongside any other GY trigger.
+            FieldSpellEffects.TryPandemoniumSearchOnDestroy(engine, owner, card, destroyed, destroyedByBattle);
 
             // Registered field→GY scripts first (never silent-skip via empty text apply)
             if (card.CardId == Sangan)

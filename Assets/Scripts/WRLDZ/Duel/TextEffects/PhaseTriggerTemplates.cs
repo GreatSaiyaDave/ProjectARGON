@@ -10,6 +10,17 @@ namespace WRLDZ.Duel.TextEffects
             @"during your standby phase:\s*take (\d+) damage",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        /// <summary>
+        /// Archfiend maintenance cost: "The controller of this card pays N Life Points
+        /// during each of his/her Standby Phases (this is not optional)." Mandatory,
+        /// no destruction. (Vilepawn / Desrook / Darkbishop / Infernalqueen /
+        /// Shadowknight / Terrorking Archfiend.) Waived while "Pandemonium" is face-up.
+        /// </summary>
+        static readonly Regex RxArchfiendUpkeep = new(
+            @"The controller of this card pays (\d+) Life Points during each of " +
+            @"(?:his/her|their) Standby Phases \(this is not optional\)\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         /// <summary>Falling Down: During each of your opponent's Standby Phases: You take 800 damage.</summary>
         static readonly Regex RxOppStandbyYouTakeDmg = new(
             @"During each of your opponent's Standby Phases:\s*You take (\d+) damage\.?",
@@ -110,6 +121,18 @@ namespace WRLDZ.Duel.TextEffects
                 into.Add(c);
                 spans?.Add((m.Index, m.Length));
             }
+
+            var upkeep = RxArchfiendUpkeep.Match(text);
+            Add(upkeep, upkeep.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.StandbyPhase,
+                    Action = EffectActionKind.StandbyMaintenancePayLp,
+                    PayLpAmount = Parse(upkeep, 1, 500),
+                    StaysOnField = true,
+                    MakesChainLink = false
+                }
+                : null);
 
             Add(RxStandbyDmgSelf.Match(text), new EffectClause
             {
@@ -267,6 +290,8 @@ namespace WRLDZ.Duel.TextEffects
             if (def == null || need == null) return;
             var text = def.desc ?? "";
             if (string.IsNullOrEmpty(text)) return;
+            if (RxArchfiendUpkeep.IsMatch(text))
+                need.Add(EffectActionKind.StandbyMaintenancePayLp);
             if (RxStandbyGainLp.IsMatch(text) || RxStandbyGainLpEach.IsMatch(text) ||
                 RxPikeru.IsMatch(text))
                 need.Add(EffectActionKind.GainLifePoints);

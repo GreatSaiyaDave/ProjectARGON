@@ -127,6 +127,12 @@ namespace WRLDZ.Duel
         /// <summary>Controller takes this much damage when this Token is destroyed.</summary>
         public int TokenDestroyedDamage;
 
+        /// <summary>
+        /// Temporary Special Summon: destroy this monster during the End Phase of the
+        /// turn whose number this equals (Archfiend's Roar). -1 = permanent.
+        /// </summary>
+        public int TempDestroyOnEndOfTurn = -1;
+
         /// <summary>Max Spell Counters (Breaker = 1, Library = 3). 0 = no cap.</summary>
         public int SpellCounterMax;
 
