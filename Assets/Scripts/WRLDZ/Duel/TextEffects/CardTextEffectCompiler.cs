@@ -16,14 +16,14 @@ namespace WRLDZ.Duel.TextEffects
     /// </summary>
     public static class CardTextEffectCompiler
     {
-        public const int Version = 67;
+        public const int Version = 72;
 
         static readonly Regex RxDraw = new(
             @"(?:^|[.!?]\s+)Draw (\d+) cards?\.",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxDestroyAllOppMonsters = new(
-            @"Destroy all monsters your opponent controls\.?",
+            @"(?<!If you call it right, )Destroy all monsters your opponent controls\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxDestroyAllMonsters = new(
@@ -428,7 +428,7 @@ namespace WRLDZ.Duel.TextEffects
 
         /// <summary>Rite of Spirit: This card's activation and effect are unaffected by "Necrovalley".</summary>
         static readonly Regex RxUnaffectedByNamed = new(
-            @"This card's activation and effect are unaffected by ""([^""]+)""\.?",
+            @"(?:This card'?s )?activation and effect are unaffected by ""([^""]+)""\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxMagicCylinder = new(
@@ -1266,16 +1266,6 @@ namespace WRLDZ.Duel.TextEffects
                 MarkAbsorbed(text, RxRelinquishedBattleSubstitute, matchedSpans);
                 MarkAbsorbed(text, RxRelinquishedDamageReflect, matchedSpans);
             }
-            var una = RxUnaffectedByNamed.Match(text);
-            if (una.Success)
-            {
-                foreach (var cl in clauses)
-                {
-                    if (cl != null)
-                        cl.UnaffectedByNamedCard = una.Groups[1].Value;
-                }
-                matchedSpans.Add((una.Index, una.Length));
-            }
             // Official PSCT split (condition : cost/target ; resolution) for sentences
             // the whole-card regex did not absorb. This is how new mechanics get in
             // without a unique full-text template for every card.
@@ -1323,6 +1313,36 @@ namespace WRLDZ.Duel.TextEffects
                 matchedSpans.Add((sent.IndexInText, sent.Length));
             }
 
+            // Fairy Meteor Crush family: Equip Spell whose text only describes the
+            // equipped monster. Stamp after all Collect so GY-SS Equips (Premature Burial)
+            // are not given a field-host Activate.
+            if (def != null && def.IsEquipSpell &&
+                !ContainsAction(clauses, EffectActionKind.EquipThisToTarget) &&
+                !ContainsAction(clauses, EffectActionKind.SpecialSummonFromGy))
+            {
+                clauses.Add(new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.EquipThisToTarget,
+                    RequiresTargetChoice = true,
+                    Zone = EffectZoneFilter.ControllerMonsters,
+                    StaysOnField = true,
+                    MakesChainLink = true,
+                    SourceSnippet = "(implicit Equip Spell activate)"
+                });
+            }
+
+            var una = RxUnaffectedByNamed.Match(text);
+            if (una.Success)
+            {
+                foreach (var cl in clauses)
+                {
+                    if (cl != null)
+                        cl.UnaffectedByNamedCard = una.Groups[1].Value;
+                }
+                matchedSpans.Add((una.Index, una.Length));
+            }
+
             // Unparsed remainder for audit
             var remaining = MaskMatched(text, matchedSpans);
             foreach (var frag in SplitSentences(remaining))
@@ -1335,8 +1355,11 @@ namespace WRLDZ.Duel.TextEffects
 
             // UI choice is not automatically PSCT targeting: Fissure, Smashing Ground,
             // and Hammer Shot keep RequiresTargetChoice but do not target.
+            // Equip Spells always target the equipped monster (even pre-PSCT "gains ATK" text).
             foreach (var c in clauses)
             {
+                if (c != null && c.Action == EffectActionKind.EquipThisToTarget)
+                    c.IsPsctTarget = true;
                 if (c != null &&
                     Regex.IsMatch(c.SourceSnippet ?? string.Empty, @"\btarget(?:s|ed|ing)?\b", RegexOptions.IgnoreCase))
                     c.IsPsctTarget = true;
@@ -2325,6 +2348,9 @@ namespace WRLDZ.Duel.TextEffects
             var f = Regex.Replace(frag ?? "", @"\s+", " ").Trim().ToLowerInvariant();
             if (f.Contains("you can only activate 1")) return true;
             if (f.Contains("must be face-up on the field to activate and to resolve this effect")) return true;
+            if (f.Contains("must control this face-up card to activate and to resolve this effect")) return true;
+            if (f.Contains("cannot normal summon/set the turn you special summon this card")) return true;
+            if (f.StartsWith("once per turn") && f.Length < 24) return true;
             if (f.Contains("gains 500 atk")) return true;
             if (f.StartsWith("if this card is attacked, change it to attack position")) return true;
             if (f.Contains("you can only use")) return true;
@@ -2348,6 +2374,7 @@ namespace WRLDZ.Duel.TextEffects
             if (f.Contains("when this card leaves the field, destroy that monster")) return true;
             // Rite of Spirit / similar: Necrovalley interaction reminder, not a separate effect.
             if (f.Contains("unaffected by \"necrovalley\"")) return true;
+            if (Regex.IsMatch(f, @"^""[^""]+""\s*\+\s*""[^""]+""")) return true;
             if (f.Length < 8) return true;
             return false;
         }

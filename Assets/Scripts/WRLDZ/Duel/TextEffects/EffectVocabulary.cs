@@ -205,7 +205,8 @@ namespace WRLDZ.Duel.TextEffects
                 EffectActionKind.TakeControlLevelLeq => EffectResolutionKind.TakeControl,
                 EffectActionKind.PlaceSpellCounters => EffectResolutionKind.PlaceCounters,
                 EffectActionKind.NegateAttack or
-                    EffectActionKind.NegateThisAttack =>
+                    EffectActionKind.NegateThisAttack or
+                    EffectActionKind.PreventOpponentAttacksThisTurn =>
                     EffectResolutionKind.NegateAttack,
                 EffectActionKind.NegateActivation =>
                     EffectResolutionKind.NegateActivation,

@@ -224,6 +224,9 @@ namespace WRLDZ.Duel
         /// <summary>Waboku: no battle damage; cannot be destroyed by battle this turn (registered trap).</summary>
         public bool WabokuActive;
 
+        /// <summary>Threatening Roar family: this player cannot declare an attack this turn.</summary>
+        public bool CannotDeclareAttackThisTurn;
+
         /// <summary>
         /// Absolute End family: this player's monsters must attack directly this turn
         /// (attacks become direct attacks).

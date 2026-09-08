@@ -43,6 +43,15 @@ namespace WRLDZ.Duel
             var text = Normalize(utterance);
             if (text.Length == 0) return null;
 
+            if (engine.PendingActivation != null && engine.PendingActivation.AwaitingLpZeroConfirm)
+            {
+                if (text is "yes" or "sure" or "confirm" or "ok" or "okay" or "do it" or
+                    "i'm sure" or "im sure" or "pay" or "pay lp")
+                    return Intent(DuelIntentKind.ConfirmLpZero, text);
+                if (IsPass(text) || text is "cancel" or "cancel target" or "never mind" or "nevermind")
+                    return Intent(DuelIntentKind.CancelTarget, text);
+            }
+
             // —— Global phrases (no card) ——
             if (IsPass(text))
                 return Intent(DuelIntentKind.PassResponse, text);

@@ -12,17 +12,21 @@ namespace WRLDZ.Duel.TextEffects
     /// </summary>
     public static class LegacyTextTemplates
     {
+        // "Warrior", "Winged Beast-Type", "Beast-Warrior-Type"
+        const string TypedMonster = @"([A-Za-z]+(?:[ -](?!Type)[A-Za-z]+)*)(?:-Type)?";
+
         static readonly Regex RxEquipBoth = new(
-            @"A (\w+)(?:-Type)? monster equipped with this card increases? (?:its )?ATK and DEF by (\d+) points\.?",
+            @"A " + TypedMonster + @" monster equipped with this card increases? (?:its )?ATK and DEF by (\d+) points\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxEquipSplit = new(
-            @"A (\w+)(?:-Type)? monster equipped with this card increases? (?:its )?ATK by (\d+) points " +
+            @"A " + TypedMonster + @" monster equipped with this card increases? (?:its )?ATK by (\d+) points " +
             @"and decreases? (?:its )?DEF by (\d+) points\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxEquipIncreaseTyped = new(
-            @"Increase the ATK and DEF of a (\w+)(?:-Type)? monster equipped with this card by (\d+) points\.?",
+            @"Increase the ATK and DEF of a " + TypedMonster +
+            @" monster equipped with this card by (\d+) points\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         // "an Insect", "Beast-Warrior-Type", "FIRE" — do not swallow "-Type" into the race.
@@ -117,6 +121,11 @@ namespace WRLDZ.Duel.TextEffects
             @"Increase your Life Points by (\d+) points\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        /// <summary>Gift of The Mystical Elf family: gain N LP for each monster on the field.</summary>
+        static readonly Regex RxIncreaseLpPerMonster = new(
+            @"Increase your Life Points by (\d+) points? for each monster on the field\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         /// <summary>Rain of Mercy / PSCT siblings: both players gain the same LP amount.</summary>
         static readonly Regex RxBothPlayersGainLp = new(
             @"(?:(?:increase|increases) the Life Points of both players by (\d+) points?|" +
@@ -207,6 +216,31 @@ namespace WRLDZ.Duel.TextEffects
 
         static readonly Regex RxSkipOppNextDraw = new(
             @"When this card destroys an opponent's monster as a result of battle, your opponent skips their next Draw Phase",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxGainsAtkEachNamedYouControl = new(
+            @"(?:This card )?gains (\d+) ATK(?:/DEF)? for each (?:face-up )?""([^""]+)"" monster you control\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxGainsAtkEachNamedOnField = new(
+            @"Gains (\d+) ATK(?:/DEF)? for each ""([^""]+)"" on the field\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxGainsAtkEachRaceOnField = new(
+            @"(?:This card )?gains (\d+) ATK(?:/DEF)? for each (?:face-up )?" + TypedMonster +
+            @" monster(?:s)? on the field(?: and in the (?:GY|Graveyard))?\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxDestroyAllRace = new(
+            @"Destroy all " + TypedMonster + @" monsters on the field\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxSentGyGainLp = new(
+            @"When this card is sent to the Graveyard, increase your Life Points by (\d+) points\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxOppCannotAttackThisTurn = new(
+            @"Your opponent cannot declare an attack this turn\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxInflictOpp = new(
@@ -385,19 +419,30 @@ namespace WRLDZ.Duel.TextEffects
                     : null);
             }
 
+            Add(RxIncreaseLpPerMonster.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.GainLifePoints,
+                Amount = Parse(RxIncreaseLpPerMonster.Match(text), 1, 300),
+                Side = EffectSide.Controller,
+                ScaleAmountByFieldMonsters = true,
+                MakesChainLink = true
+            });
+
             if (IsHandSpell(def))
             {
                 var lp = RxIncreaseLp.Match(text);
-                Add(lp, lp.Success
-                    ? new EffectClause
-                    {
-                        Timing = EffectTiming.Activate,
-                        Action = EffectActionKind.GainLifePoints,
-                        Amount = Parse(lp, 1, 400),
-                        Side = EffectSide.Controller,
-                        MakesChainLink = true
-                    }
-                    : null);
+                if (!RxIncreaseLpPerMonster.IsMatch(text))
+                    Add(lp, lp.Success
+                        ? new EffectClause
+                        {
+                            Timing = EffectTiming.Activate,
+                            Action = EffectActionKind.GainLifePoints,
+                            Amount = Parse(lp, 1, 400),
+                            Side = EffectSide.Controller,
+                            MakesChainLink = true
+                        }
+                        : null);
 
                 var bothGain = RxBothPlayersGainLp.Match(text);
                 Add(bothGain, bothGain.Success
@@ -628,6 +673,96 @@ namespace WRLDZ.Duel.TextEffects
                 MakesChainLink = false,
                 StaysOnField = true
             });
+
+            var namedYou = RxGainsAtkEachNamedYouControl.Match(text);
+            if (namedYou.Success)
+            {
+                var slash = namedYou.Value.IndexOf("ATK/DEF", StringComparison.OrdinalIgnoreCase) >= 0;
+                var n = Parse(namedYou, 1, 100);
+                Add(namedYou, new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.ContinuousGainAtkDef,
+                    Amount = n,
+                    DefAmount = slash ? n : 0,
+                    NamedCard = namedYou.Groups[2].Value,
+                    NamedCardIsSeries = true,
+                    Side = EffectSide.Controller,
+                    ScaleThisAtkByMatchingCount = true,
+                    MakesChainLink = false
+                });
+            }
+
+            var namedField = RxGainsAtkEachNamedOnField.Match(text);
+            if (namedField.Success && !namedYou.Success)
+            {
+                var slash = namedField.Value.IndexOf("ATK/DEF", StringComparison.OrdinalIgnoreCase) >= 0;
+                var n = Parse(namedField, 1, 300);
+                Add(namedField, new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.ContinuousGainAtkDef,
+                    Amount = n,
+                    DefAmount = slash ? n : 0,
+                    NamedCard = namedField.Groups[2].Value,
+                    NamedCardIsSeries = true,
+                    Side = EffectSide.Both,
+                    ScaleThisAtkByMatchingCount = true,
+                    MakesChainLink = false
+                });
+            }
+
+            var raceField = RxGainsAtkEachRaceOnField.Match(text);
+            if (raceField.Success && !namedYou.Success && !namedField.Success)
+            {
+                var slash = raceField.Value.IndexOf("ATK/DEF", StringComparison.OrdinalIgnoreCase) >= 0;
+                var n = Parse(raceField, 1, 100);
+                Add(raceField, new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.ContinuousGainAtkDef,
+                    Amount = n,
+                    DefAmount = slash ? n : 0,
+                    RaceFilter = raceField.Groups[2].Value,
+                    Side = EffectSide.Both,
+                    ScaleThisAtkByMatchingCount = true,
+                    ScaleCountIncludesGraveyard = Regex.IsMatch(raceField.Value,
+                        @"and in the (?:GY|Graveyard)", RegexOptions.IgnoreCase),
+                    MakesChainLink = false
+                });
+            }
+
+            var wipe = RxDestroyAllRace.Match(text);
+            Add(wipe, wipe.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.Destroy,
+                    Zone = EffectZoneFilter.FieldMonsters,
+                    Side = EffectSide.Both,
+                    RaceFilter = wipe.Groups[1].Value,
+                    MakesChainLink = true
+                }
+                : null);
+
+            var gyLp = RxSentGyGainLp.Match(text);
+            Add(gyLp, gyLp.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.SentFromFieldToGy,
+                    Action = EffectActionKind.GainLifePoints,
+                    Amount = Parse(gyLp, 1, 1000),
+                    Side = EffectSide.Controller,
+                    MakesChainLink = true
+                }
+                : null);
+
+            Add(RxOppCannotAttackThisTurn.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.PreventOpponentAttacksThisTurn,
+                MakesChainLink = true
+            });
         }
 
         public static bool MatchesSharedKind(string text)
@@ -639,6 +774,7 @@ namespace WRLDZ.Duel.TextEffects
                    RxEquipOppTakeControlActivate.IsMatch(text) ||
                    RxEquipOppTakeControlOnly.IsMatch(text) ||
                    RxIncreaseLp.IsMatch(text) ||
+                   RxIncreaseLpPerMonster.IsMatch(text) ||
                    RxBothPlayersGainLp.IsMatch(text) ||
                    RxSecondAttack.IsMatch(text) ||
                    RxBookMoon.IsMatch(text) ||
@@ -656,7 +792,13 @@ namespace WRLDZ.Duel.TextEffects
                    RxSsByBanishAttrGy.IsMatch(text) ||
                    RxSkipOppNextDraw.IsMatch(text) ||
                    RxPiercingEquip.IsMatch(text) ||
-                   RxPiercingLegacyDiff.IsMatch(text);
+                   RxPiercingLegacyDiff.IsMatch(text) ||
+                   RxGainsAtkEachNamedYouControl.IsMatch(text) ||
+                   RxGainsAtkEachNamedOnField.IsMatch(text) ||
+                   RxGainsAtkEachRaceOnField.IsMatch(text) ||
+                   RxDestroyAllRace.IsMatch(text) ||
+                   RxSentGyGainLp.IsMatch(text) ||
+                   RxOppCannotAttackThisTurn.IsMatch(text);
         }
 
         public static void ExpectedActions(CardDef def, List<EffectActionKind> need)
@@ -676,6 +818,8 @@ namespace WRLDZ.Duel.TextEffects
                  RxEquipOppTakeControlActivate.IsMatch(text) ||
                  RxEquipOppTakeControlOnly.IsMatch(text)))
                 need.Add(EffectActionKind.EquipThisToTarget);
+            if (RxIncreaseLpPerMonster.IsMatch(text))
+                need.Add(EffectActionKind.GainLifePoints);
             if (IsHandSpell(def))
             {
                 if (RxIncreaseLp.IsMatch(text) || RxBothPlayersGainLp.IsMatch(text))
@@ -701,6 +845,16 @@ namespace WRLDZ.Duel.TextEffects
                 need.Add(EffectActionKind.InflictDamageToOpponent);
             if (RxPiercingEquip.IsMatch(text) || RxPiercingLegacyDiff.IsMatch(text))
                 need.Add(EffectActionKind.PiercingBattleDamage);
+            if (RxGainsAtkEachNamedYouControl.IsMatch(text) ||
+                RxGainsAtkEachNamedOnField.IsMatch(text) ||
+                RxGainsAtkEachRaceOnField.IsMatch(text))
+                need.Add(EffectActionKind.ContinuousGainAtkDef);
+            if (RxDestroyAllRace.IsMatch(text))
+                need.Add(EffectActionKind.Destroy);
+            if (RxSentGyGainLp.IsMatch(text))
+                need.Add(EffectActionKind.GainLifePoints);
+            if (RxOppCannotAttackThisTurn.IsMatch(text))
+                need.Add(EffectActionKind.PreventOpponentAttacksThisTurn);
         }
 
         public static bool EquipTargetsOpponent(CardDef def)

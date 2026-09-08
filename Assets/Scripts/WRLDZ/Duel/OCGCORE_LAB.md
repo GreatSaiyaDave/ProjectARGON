@@ -46,7 +46,7 @@ StreamingAssets/OcgCore/scripts/utility.lua
 StreamingAssets/OcgCore/scripts/procedure.lua   # CreateDuel shim; proc_*.lua hold Extra procedures
 StreamingAssets/OcgCore/scripts/chain.lua
 StreamingAssets/OcgCore/scripts/proc_fusion.lua
-StreamingAssets/OcgCore/scripts/official/c########.lua
+StreamingAssets/OcgCore/scripts/official~/c########.lua   # ~ hides 13k lua from FileHasher; OcgScriptStore still indexes by basename
 StreamingAssets/OcgCore/cards.cdb                 # full official datas+texts
 StreamingAssets/OcgCore/cards_datas.json          # tiny stub/old-test fallback; native never uses it
 StreamingAssets/OcgCore/lab_card_manifest.json

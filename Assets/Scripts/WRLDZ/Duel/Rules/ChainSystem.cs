@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using WRLDZ.Data;
+using WRLDZ.Duel;
 
 namespace WRLDZ.Duel.Rules
 {
@@ -29,6 +30,12 @@ namespace WRLDZ.Duel.Rules
         public bool Resolved;
         /// <summary>Official text at activation time (immutable snapshot).</summary>
         public string OfficialTextSnapshot;
+        /// <summary>
+        /// Combat/summon window this link answered. None = open-game Activate clauses.
+        /// Resolution must apply the matching trigger timing, not re-enter the window.
+        /// </summary>
+        public ResponseTiming SeatedFrom;
+        public CardInstance SeatedSummoned;
     }
 
     /// <summary>

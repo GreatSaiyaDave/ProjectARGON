@@ -177,6 +177,7 @@ namespace WRLDZ.Duel.TextEffects
                 Timing = EffectTiming.StandbyPhase,
                 Action = EffectActionKind.GainLifePoints,
                 Amount = lp.Success ? Parse(lp, 1, 200) : 200,
+                Side = EffectSide.Controller,
                 ResolvesFromGy = Regex.IsMatch(text, @"must be in the graveyard", RegexOptions.IgnoreCase),
                 MakesChainLink = true
             });
@@ -189,6 +190,7 @@ namespace WRLDZ.Duel.TextEffects
                     Timing = EffectTiming.StandbyPhase,
                     Action = EffectActionKind.GainLifePoints,
                     Amount = Parse(each, 1, 800),
+                    Side = EffectSide.Controller,
                     RequiresThisAttackPosition = RxAsLongAsAtk.IsMatch(text),
                     RequiresThisDefensePosition = RxAsLongAsDef.IsMatch(text),
                     MakesChainLink = true
@@ -201,6 +203,7 @@ namespace WRLDZ.Duel.TextEffects
                 Timing = EffectTiming.StandbyPhase,
                 Action = EffectActionKind.GainLifePoints,
                 Amount = pik.Success ? Parse(pik, 1, 400) : 400,
+                Side = EffectSide.Controller,
                 ScaleAmountByControllerMonsters = true,
                 MakesChainLink = true
             });

@@ -116,6 +116,17 @@ namespace WRLDZ.Duel
         public bool DeferSpellTrapResolution { get; set; }
         public bool IsResolvingChain { get; private set; }
 
+        /// <summary>Append-only history for when/if and lingering legality.</summary>
+        public DuelGameEventLog GameEvents { get; } = new();
+
+        /// <summary>
+        /// Combat window a seated chain must resume after pass/pass resolve.
+        /// Activation seats the link; resolution is not the same operation.
+        /// </summary>
+        public ResponseTiming ResumeAfterChain { get; set; }
+        public bool ChainNegatedAttack { get; set; }
+        public bool ChainEndedBattle { get; set; }
+
         /// <summary>Attack declared but not yet resolved (animation + reaction window).</summary>
         public CardInstance DeclaredAttacker { get; private set; }
         public CardInstance DeclaredAttackTarget { get; private set; }
@@ -147,6 +158,12 @@ namespace WRLDZ.Duel
         /// Prevents re-entrant / double-tap actions (Yugioh Shorts server action lock pattern).
         /// </summary>
         public bool IsProcessingAction { get; internal set; }
+
+        /// <summary>
+        /// Set while resuming an activation after the human confirmed an LP cost
+        /// that would leave 0. Prevents a second are-you-sure prompt.
+        /// </summary>
+        public bool LpZeroCostConfirmed { get; set; }
 
         /// <summary>Any modal engine state that blocks free actions.</summary>
         public bool IsBusy =>
@@ -229,6 +246,10 @@ namespace WRLDZ.Duel
             PendingResponse = null;
             _deferredBattle = null;
             _deferredDamage = null;
+            ResumeAfterChain = ResponseTiming.None;
+            ChainNegatedAttack = false;
+            ChainEndedBattle = false;
+            GameEvents.Clear();
             IsProcessingAction = false;
             OpeningSequenceActive = false;
             AwaitingOpeningDrawGesture = false;
@@ -412,6 +433,7 @@ namespace WRLDZ.Duel
             TurnNumber++;
             who.NormalSummonUsed = false;
             who.WabokuActive = false;
+            who.CannotDeclareAttackThisTurn = false;
             PendingTributes.Clear();
             foreach (var m in who.MonstersOnField())
             {
@@ -945,15 +967,25 @@ namespace WRLDZ.Duel
             DeferSpellTrapResolution = false;
             if (ok)
             {
-                // After Speed 1 Normal Spell resolves immediately if no chain response in slice:
-                // full chain multi-pass is progressive; for CL1 Speed1 with no chain, clear chain
-                if (!Chain.IsResolving && Chain.Count <= 1)
-                    Chain.Clear();
+                // Keep a seated link while a chain window or target pick is open.
+                // Clearing Count<=1 here was bookkeeping theater and dropped CL1 before pass/pass.
+                ClearIdleChain();
             }
             else
                 Chain.Clear();
 
             return ok;
+        }
+
+        /// <summary>
+        /// Drop a leftover CL1 after a fully resolved activation (no window, no target pick).
+        /// Fenrir SS / Relinquished absorb used to leave Chain.HasLinks, which blocks CanAttack.
+        /// </summary>
+        public void ClearIdleChain()
+        {
+            if (PendingResponse == null && PendingActivation == null &&
+                !Chain.IsResolving && Chain.Count <= 1 && ResumeAfterChain == ResponseTiming.None)
+                Chain.Clear();
         }
 
         /// <summary>While awaiting a target, select a legal card (GY monster, S/T, etc.).</summary>
@@ -964,7 +996,10 @@ namespace WRLDZ.Duel
             if (legal == null) return false;
             var ok = SpellTrapEffects.TryResolveWithTarget(this, legal);
             if (ok)
+            {
                 TryCompleteDeferredBattleDestruction();
+                ClearIdleChain();
+            }
             return ok;
         }
 
@@ -1048,11 +1083,33 @@ namespace WRLDZ.Duel
 
         public bool TrySelectLpCost(int amount)
         {
-            if (PendingActivation == null || !PendingActivation.AwaitingLpCost)
+            if (PendingActivation == null) return false;
+            if (PendingActivation.AwaitingLpZeroConfirm &&
+                PendingActivation.LpCostChoices != null &&
+                PendingActivation.LpCostChoices.Contains(amount))
+                return TryConfirmLpZeroPay();
+            if (!PendingActivation.AwaitingLpCost)
                 return false;
             if (TextEffects.TextEffectRuntime.TryFinishLpCost(this, amount))
                 return true;
             return YgoProTriggerCatalog.FinishPayLp(this, amount);
+        }
+
+        /// <summary>
+        /// Human confirmed paying an LP cost that leaves 0. Continues the activation.
+        /// </summary>
+        public bool TryConfirmLpZeroPay()
+        {
+            var p = PendingActivation;
+            if (p == null || !p.AwaitingLpZeroConfirm) return false;
+            var who = p.Controller;
+            var card = p.Card;
+            var fromHand = p.FromHand;
+            ClearPendingActivation();
+            var ok = SpellTrapEffects.ResumeAfterLpZeroConfirm(this, who, card, fromHand);
+            if (!ok)
+                Chain.Clear();
+            return ok;
         }
 
         public void BanishCard(DuelistState owner, CardInstance card)
@@ -1287,6 +1344,8 @@ namespace WRLDZ.Duel
             UnlinkCardFromHostOnLeave(owner, card, fromFieldSt);
             if (fromFieldMonster)
                 UnlinkEquips(card, hostDestroyed: false, fallbackOwner: owner);
+
+            GameEvents.Add(DuelGameEventKind.SentToGy, TurnNumber, owner, card, sentBy);
 
             if (fromFieldMonster || fromFieldSt)
             {
@@ -1541,6 +1600,7 @@ namespace WRLDZ.Duel
             if (attacker.AttacksDeclaredThisTurn >= MaxAttacksThisTurn(attacker)) return false;
             if (!attacker.FaceUp || attacker.Position != BattlePosition.Attack) return false;
             if (!who.TryFindMonster(attacker, out _)) return false;
+            if (who.CannotDeclareAttackThisTurn) return false;
             // Official continuous: Swords of Revealing Light — opponent cannot declare an attack
             if (OpponentHasSwordsOfRevealingLight(who))
                 return false;
@@ -1734,6 +1794,12 @@ namespace WRLDZ.Duel
                 return false;
             }
 
+            if (who.CannotDeclareAttackThisTurn)
+            {
+                Log("Cannot declare an attack this turn.");
+                return false;
+            }
+
             if (OpponentHasSwordsOfRevealingLight(who))
             {
                 Log("Cannot declare an attack — opponent controls Swords of Revealing Light.");
@@ -1744,6 +1810,7 @@ namespace WRLDZ.Duel
             DeclaredAttacker = attacker;
             DeclaredAttackTarget = targetOrNull;
             DeclaredAttackingPlayer = who;
+            GameEvents.Add(DuelGameEventKind.DeclaredAttack, TurnNumber, who, attacker, targetOrNull);
             var hadMonstersAtDeclaration = HasMonsters(opp);
 
             var direct = targetOrNull == null;
@@ -1808,7 +1875,69 @@ namespace WRLDZ.Duel
 
 
         public void ResolveChainStackForActivation() => ResolveChainStack();
-        void ResolveChainStack() { IsResolvingChain = true; while (Chain.Count > 0) { var link = Chain.PopNextToResolve(); if (link == null) break; if (link.NegatesActivation) { if (link.FlipSelfFaceUpDefense && link.Card != null) { link.Card.FaceUp = true; link.Card.Position = BattlePosition.Defense; } if (link.TargetLink != null) { link.TargetLink.Negated = true; if (link.DestroyNegatedCard && link.TargetLink.Card != null) SendCardToGrave(link.TargetLink.Controller, link.TargetLink.Card); EnsureDeferredSpellTrapGrave(link.TargetLink); } continue; } if (link.Negated) { if (link.Card != null && (link.Card.Def?.IsSpell == true || link.Card.Def?.IsTrap == true)) SendCardToGrave(link.Controller, link.Card); continue; } var prog = TextEffects.CompiledEffectCache.GetOrCompile(link.Card?.Def); if (prog != null && prog.FullyCompiled) TextEffects.TextEffectRuntime.TryResolveActivation(this, link.Controller, link.Card, link.FromHand, prog, true); else SpellTrapEffects.BeginOrResolveManual(this, link.Controller, link.Card, false, true); EnsureDeferredSpellTrapGrave(link); } IsResolvingChain = false; Chain.Clear(); Notify(); }
+        void ResolveChainStack()
+        {
+            IsResolvingChain = true;
+            while (Chain.Count > 0)
+            {
+                var link = Chain.PopNextToResolve();
+                if (link == null) break;
+                if (link.NegatesActivation)
+                {
+                    if (link.FlipSelfFaceUpDefense && link.Card != null)
+                    {
+                        link.Card.FaceUp = true;
+                        link.Card.Position = BattlePosition.Defense;
+                    }
+
+                    if (link.TargetLink != null)
+                    {
+                        link.TargetLink.Negated = true;
+                        if (link.DestroyNegatedCard && link.TargetLink.Card != null)
+                            SendCardToGrave(link.TargetLink.Controller, link.TargetLink.Card);
+                        EnsureDeferredSpellTrapGrave(link.TargetLink);
+                    }
+
+                    continue;
+                }
+
+                if (link.Negated)
+                {
+                    if (link.Card != null &&
+                        (link.Card.Def?.IsSpell == true || link.Card.Def?.IsTrap == true))
+                        SendCardToGrave(link.Controller, link.Card);
+                    continue;
+                }
+
+                // Prefer the target chosen during deferred activation (Monster Reborn GY pick).
+                var chosen = link.Target;
+                if (chosen == null && link.Targets != null && link.Targets.Count > 0)
+                    chosen = link.Targets[0];
+
+                var prog = TextEffects.CompiledEffectCache.GetOrCompile(link.Card?.Def);
+                if (link.SeatedFrom != ResponseTiming.None && prog != null && prog.FullyCompiled)
+                    TextEffects.TextEffectRuntime.TryResolveSeatedResponse(this, link, prog);
+                else if (prog != null && prog.FullyCompiled)
+                    TextEffects.TextEffectRuntime.TryResolveActivation(
+                        this, link.Controller, link.Card, link.FromHand, prog, true, chosen);
+                else
+                    SpellTrapEffects.BeginOrResolveManual(
+                        this, link.Controller, link.Card, false, true);
+                EnsureDeferredSpellTrapGrave(link);
+            }
+
+            IsResolvingChain = false;
+            Chain.Clear();
+            if (ResumeAfterChain != ResponseTiming.None)
+            {
+                var neg = ChainNegatedAttack;
+                var ended = ChainEndedBattle;
+                ChainNegatedAttack = false;
+                ChainEndedBattle = false;
+                ContinueAfterResponseActivation(neg, ended);
+            }
+            Notify();
+        }
         bool PassChainResponse(DuelistState responder) { var closed = FastEffects.Pass(responder); ClearPendingResponse(); if (closed) { Chain.StartResolution(); ResolveChainStack(); return true; } var offered = OpenChainResponseWindow(FastEffects.PriorityPlayer, false); if (!offered) return PassChainResponse(FastEffects.PriorityPlayer); return true; }
         public bool PassResponse()
         {
@@ -1889,7 +2018,8 @@ namespace WRLDZ.Duel
         /// <summary>Trap / hand QE activated mid-window — cancel or modify, then continue.</summary>
         public void ContinueAfterResponseActivation(bool attackNegated, bool battlePhaseEnded)
         {
-            var timing = PendingResponse?.Timing ?? ResponseTiming.None;
+            var timing = PendingResponse?.Timing ?? ResumeAfterChain;
+            ResumeAfterChain = ResponseTiming.None;
             ClearPendingResponse();
 
             if (timing == ResponseTiming.MonsterSummoned)
@@ -2549,7 +2679,47 @@ namespace WRLDZ.Duel
         }
 
         public bool OpenChainResponseWindow(DuelistState priority, bool resetFast = true) { if (priority == null || Chain.Last == null) return false; var other = OpponentOf(priority); if (other == null) return false; if (resetFast) FastEffects.Open(FastEffectTiming.WindowKind.ChainResponse, priority, other, ChainEvent.Activation); var probe = new PendingResponse { Timing = ResponseTiming.ChainResponse, Responder = priority, ChainTarget = Chain.Last }; PendingResponse = probe; var legal = SpellTrapEffects.CollectLegalResponseCards(this, priority, ResponseTiming.ChainResponse, null); if (legal.Count == 0) { PendingResponse = null; return false; } probe.LegalCards.AddRange(legal); probe.OpenedUnscaledTime = Time.unscaledTime; probe.ReactionSeconds = CombatAnimTimings.DefaultResponseSeconds; probe.Prompt = IsHumanControlled(priority) ? $"Chain Link {probe.ChainTarget.LinkNumber}: activate a response or pass." : "Opponent is considering a Chain Link response…"; Log(probe.Prompt); if (!IsHumanControlled(priority)) SpellTrapEffects.AiAutoRespond(this); return true; }
-        public bool TryActivateChainResponse(DuelistState who, CardInstance card) { if (PendingResponse == null || PendingResponse.Timing != ResponseTiming.ChainResponse || PendingResponse.Responder != who || card == null) return false; var prog = TextEffects.CompiledEffectCache.GetOrCompile(card.Def); if (prog == null || !prog.FullyCompiled) return false; var clauses = prog.ClausesFor(TextEffects.EffectTiming.ChainLinkActivated); if (clauses == null || clauses.Count == 0) return false; if (clauses[0].RequiresDiscardCost) { var cost = who.Hand.FirstOrDefault(x => x != null); if (cost == null) return false; who.Hand.Remove(cost); who.Graveyard.Add(cost); } var target = PendingResponse.ChainTarget; var link = Chain.AddLink(who, card, OfficialEffectRegistry.SpeedOf(card.Def), OfficialEffectRegistry.ClassOfActivation(card.Def, false), CardLocation.MonsterZone, false, false, "chain-response"); if (link == null) return false; link.TargetLink = target; link.NegatesActivation = true; link.DestroyNegatedCard = clauses[0].DestroyNegatedCard; link.FlipSelfFaceUpDefense = clauses[0].FlipSelfFaceUpDefense; ClearPendingResponse(); return OpenChainResponseWindow(OpponentOf(who), true); }
+        public bool TryActivateChainResponse(DuelistState who, CardInstance card)
+        {
+            if (PendingResponse == null || PendingResponse.Timing != ResponseTiming.ChainResponse ||
+                PendingResponse.Responder != who || card == null)
+                return false;
+            var prog = TextEffects.CompiledEffectCache.GetOrCompile(card.Def);
+            if (prog == null || !prog.FullyCompiled) return false;
+            var clauses = prog.ClausesFor(TextEffects.EffectTiming.ChainLinkActivated);
+            if (clauses == null || clauses.Count == 0) return false;
+            if (clauses[0].RequiresDiscardCost)
+            {
+                CardInstance cost = null;
+                if (who.Hand != null)
+                {
+                    for (var i = who.Hand.Count - 1; i >= 0; i--)
+                    {
+                        var c = who.Hand[i];
+                        if (c == null || c == card) continue;
+                        cost = c;
+                        break;
+                    }
+                }
+                if (cost == null) return false;
+                who.Hand.Remove(cost);
+                who.Graveyard.Add(cost);
+                Log($"Cost: discard {cost.Name}.");
+                GameEvents.Add(DuelGameEventKind.SentToGy, TurnNumber, who, cost, card);
+            }
+            var target = PendingResponse.ChainTarget;
+            var link = Chain.AddLink(who, card, OfficialEffectRegistry.SpeedOf(card.Def),
+                OfficialEffectRegistry.ClassOfActivation(card.Def, false),
+                CardLocation.MonsterZone, false, false, "chain-response");
+            if (link == null) return false;
+            link.TargetLink = target;
+            link.NegatesActivation = true;
+            link.DestroyNegatedCard = clauses[0].DestroyNegatedCard;
+            link.FlipSelfFaceUpDefense = clauses[0].FlipSelfFaceUpDefense;
+            GameEvents.Add(DuelGameEventKind.Activated, TurnNumber, who, card, target?.Card);
+            ClearPendingResponse();
+            return OpenChainResponseWindow(OpponentOf(who), true);
+        }
         public bool OpenResponseWindow(
             DuelistState responder,
             ResponseTiming timing,
@@ -2744,6 +2914,8 @@ namespace WRLDZ.Duel
             // Waboku / until-end-of-turn ATK: "this turn" ends at End Phase
             Player.WabokuActive = false;
             Opponent.WabokuActive = false;
+            Player.CannotDeclareAttackThisTurn = false;
+            Opponent.CannotDeclareAttackThisTurn = false;
             Player.MustAttackDirectlyThisTurn = false;
             Opponent.MustAttackDirectlyThisTurn = false;
             ClearUntilEndOfTurnStatMods();

@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace WRLDZ.Duel.Ocg
 {
-    /// <summary>Allow-listed filename → file. Nested official/ trees are indexed by basename.</summary>
+    /// <summary>Allow-listed filename → file. Nested official~/ trees are indexed by basename (folder is ~ so Unity does not import 13k lua files).</summary>
     public static class OcgScriptStore
     {
         public const string EditorPrefsRootKey = "WRLDZ.OcgScriptsRoot";

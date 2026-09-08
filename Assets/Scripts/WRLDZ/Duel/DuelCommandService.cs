@@ -85,6 +85,7 @@ namespace WRLDZ.Duel
             {
                 DuelIntentKind.PassResponse => DoPass(engine, who, intent),
                 DuelIntentKind.CancelTarget => DoCancelTarget(engine, who, intent),
+                DuelIntentKind.ConfirmLpZero => DoConfirmLpZero(engine, who, intent),
                 DuelIntentKind.ClearTributes => ClearTributes(engine, intent),
                 DuelIntentKind.EndTurn => DoEndTurn(engine, who, intent),
                 DuelIntentKind.EnterBattlePhase => DoBattle(engine, who, intent),
@@ -140,6 +141,17 @@ namespace WRLDZ.Duel
                 return DuelCommandResult.Fail(intent, "Nothing to cancel.");
             engine.CancelEffectTargeting();
             return DuelCommandResult.Success(intent, "Target cancelled.");
+        }
+
+        static DuelCommandResult DoConfirmLpZero(DuelEngine engine, DuelistState who, DuelIntent intent)
+        {
+            if (engine.PendingActivation == null || !engine.PendingActivation.AwaitingLpZeroConfirm)
+                return DuelCommandResult.Fail(intent, "Nothing to confirm.");
+            if (engine.PendingActivation.Controller != who)
+                return DuelCommandResult.Fail(intent, "It is not your cost.");
+            if (!engine.TryConfirmLpZeroPay())
+                return DuelCommandResult.Fail(intent, "Could not confirm that LP cost.");
+            return DuelCommandResult.Success(intent, $"{who.Name} pays the last of their LP.");
         }
 
         static DuelCommandResult DoEndTurn(DuelEngine engine, DuelistState who, DuelIntent intent)

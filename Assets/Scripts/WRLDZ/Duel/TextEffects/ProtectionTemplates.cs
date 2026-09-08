@@ -79,7 +79,7 @@ namespace WRLDZ.Duel.TextEffects
         /// Sentence-start only so "While ATK position…" / "with a monster that has 1900 ATK" stay refuse.
         /// </summary>
         static readonly Regex RxCannotBeDestroyedByBattle = new(
-            @"(?:^|(?<=[.!?]\s))" +
+            @"(?:^|(?<=[.!?\""]\s))" +
             @"(?:Cannot be destroyed by battle(?! with| or)|" +
             @"This card (?:cannot be destroyed by battle(?! with| or)|is not destroyed as a result of battle))\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);

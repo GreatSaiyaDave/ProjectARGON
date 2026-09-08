@@ -177,7 +177,7 @@ namespace WRLDZ.Duel
         static bool ApplyCompiledContinuous(DuelEngine engine, CardInstance field)
         {
             var prog = CompiledEffectCache.GetOrCompile(field.Def);
-            if (prog == null || !prog.FullyCompiled) return false;
+            if (prog == null) return false;
             var any = false;
             foreach (var clause in prog.ClausesFor(EffectTiming.ContinuousWhileFaceUp))
             {
@@ -323,6 +323,49 @@ namespace WRLDZ.Duel
         {
             if (engine == null || clause == null) return;
             var controller = engine.ControllerOf(source);
+            if (clause.ScaleThisAtkByMatchingCount)
+            {
+                var n = 0;
+                foreach (var who in new[] { engine.Player, engine.Opponent })
+                {
+                    if (who == null) continue;
+                    if (clause.Side == EffectSide.Controller && who != controller) continue;
+                    if (clause.Side == EffectSide.Opponent && who == controller) continue;
+                    foreach (var m in who.MonstersOnField())
+                    {
+                        if (!IsFaceUpMonster(m)) continue;
+                        if (!MatchesAttribute(m, clause.AttributeFilter)) continue;
+                        if (!MatchesRace(m, clause.RaceFilter)) continue;
+                        if (!string.IsNullOrEmpty(clause.NamedCard) &&
+                            !CardMatchesNamed(m, clause.NamedCard, clause.NamedCardIsSeries))
+                            continue;
+                        n++;
+                    }
+
+                    if (clause.ScaleCountIncludesGraveyard && who.Graveyard != null)
+                    {
+                        foreach (var m in who.Graveyard)
+                        {
+                            if (m?.Def == null || !m.Def.IsMonster) continue;
+                            if (!MatchesAttribute(m, clause.AttributeFilter)) continue;
+                            if (!MatchesRace(m, clause.RaceFilter)) continue;
+                            if (!string.IsNullOrEmpty(clause.NamedCard) &&
+                                !CardMatchesNamed(m, clause.NamedCard, clause.NamedCardIsSeries))
+                                continue;
+                            n++;
+                        }
+                    }
+                }
+
+                if (source != null && IsFaceUpMonster(source))
+                {
+                    source.AtkModifier += clause.Amount * n;
+                    source.DefModifier += clause.DefAmount * n;
+                }
+
+                return;
+            }
+
             var controllerOnly = clause.Side == EffectSide.Controller;
             foreach (var who in new[] { engine.Player, engine.Opponent })
             {

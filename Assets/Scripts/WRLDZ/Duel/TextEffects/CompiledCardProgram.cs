@@ -202,6 +202,8 @@ namespace WRLDZ.Duel.TextEffects
         SpecialSummonThisFromHand,
         /// <summary>Fenrir: opponent skips their next Draw Phase.</summary>
         SkipOpponentNextDrawPhase,
+        /// <summary>Threatening Roar family: opponent cannot declare an attack this turn.</summary>
+        PreventOpponentAttacksThisTurn,
         /// <summary>Place this card on top of the controller's Deck (Axe / Horn of the Unicorn GY).</summary>
         PlaceThisOnTopOfDeck,
         /// <summary>
@@ -440,6 +442,13 @@ namespace WRLDZ.Duel.TextEffects
         public string EquipHostName;
         /// <summary>Second printed name for SpecialSummonNamed (Elegant Egotist "X" or "Y").</summary>
         public string AltNamedCard;
+        /// <summary>
+        /// Continuous: this card gains Amount ATK / DefAmount DEF for each matching
+        /// face-up monster counted on the field (Machine King / Amazoness Paladin).
+        /// </summary>
+        public bool ScaleThisAtkByMatchingCount;
+        /// <summary>Dark Paladin: matching count includes GY copies as well as the field.</summary>
+        public bool ScaleCountIncludesGraveyard;
         /// <summary>Destroy: choose among face-up monsters with the lowest ATK (Fissure; ties offered).</summary>
         public bool PickLowestAtk;
         /// <summary>Destroy: choose among face-up monsters with the highest DEF (Smashing Ground; ties offered).</summary>
@@ -478,6 +487,8 @@ namespace WRLDZ.Duel.TextEffects
         public bool RequiresThisDefensePosition;
         /// <summary>Pikeru / United We Stand: Amount is per face-up monster you control.</summary>
         public bool ScaleAmountByControllerMonsters;
+        /// <summary>Gift of The Mystical Elf: Amount is per monster on the field.</summary>
+        public bool ScaleAmountByFieldMonsters;
         /// <summary>Mage Power: Equip ATK/DEF is per Spell/Trap you control (including this card).</summary>
         public bool ScaleAmountByControllerSpellTraps;
         /// <summary>Spirit: return to hand if Normal Summoned or flipped this turn.</summary>

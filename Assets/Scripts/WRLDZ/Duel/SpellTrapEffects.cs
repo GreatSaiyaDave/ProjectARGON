@@ -83,6 +83,10 @@ namespace WRLDZ.Duel
         public readonly List<CardInstance> LegalTargets = new();
         /// <summary>Bark of Dark Ruler: choose LP cost in multiples of 100.</summary>
         public bool AwaitingLpCost;
+        /// <summary>
+        /// Human confirm before an LP cost that would leave 0 (intentional loss is legal).
+        /// </summary>
+        public bool AwaitingLpZeroConfirm;
         public readonly List<int> LpCostChoices = new();
         /// <summary>Time Wizard / Goddess: player calls Heads or Tails.</summary>
         public bool AwaitingCoinCall;
@@ -150,6 +154,10 @@ namespace WRLDZ.Duel
                         $"{n}: banish a monster from your GY (cost).",
                     EffectTargetKind.SendMonsterYouControlToGy =>
                         $"{n}: send a monster you control to the GY (cost).",
+                    _ when AwaitingLpZeroConfirm =>
+                        LpCostChoices.Count > 0
+                            ? $"{n}: paying {LpCostChoices[0]} LP leaves you at 0. Are you sure?"
+                            : $"{n}: paying this LP cost leaves you at 0. Are you sure?",
                     _ when AwaitingLpCost =>
                         $"{n}: pay LP (multiples of 100) as the cost.",
                     _ when AwaitingCoinCall =>
@@ -256,13 +264,31 @@ namespace WRLDZ.Duel
             if (c == null) return EffectTargetKind.None;
             // Only kinds CollectLegalTargets understands — GY / S-T / Ring / EC.
             // Other compiled zones stay None so the int switch / text path is not blocked.
+            if (c.Action == TextEffects.EffectActionKind.EquipThisToTarget)
+                return EffectTargetKind.EquipMonsterYouControl;
+            if (c.Action == TextEffects.EffectActionKind.SetTargetFaceDownDefense)
+                return EffectTargetKind.AnyMonsterOnField;
+            if (c.Action == TextEffects.EffectActionKind.AddFromDeckToHand ||
+                c.Action == TextEffects.EffectActionKind.AddNamedFromDeckToHand)
+            {
+                if (c.Zone == TextEffects.EffectZoneFilter.DeckFieldSpells)
+                    return EffectTargetKind.FieldSpellInYourDeck;
+                if (c.Zone == TextEffects.EffectZoneFilter.DeckEquipSpells)
+                    return EffectTargetKind.EquipSpellInYourDeck;
+                return EffectTargetKind.MonsterInYourDeckFiltered;
+            }
+
             return c.Zone switch
             {
                 TextEffects.EffectZoneFilter.EitherGyMonsters => EffectTargetKind.MonsterInEitherGy,
                 TextEffects.EffectZoneFilter.ControllerGyMonsters => EffectTargetKind.MonsterInEitherGy,
                 TextEffects.EffectZoneFilter.ControllerDeckMonsters => EffectTargetKind.MonsterInYourDeckToSummon,
+                TextEffects.EffectZoneFilter.DeckMonstersRaceLevelLeq =>
+                    EffectTargetKind.MonsterInYourDeckFiltered,
+                TextEffects.EffectZoneFilter.DeckFieldSpells => EffectTargetKind.FieldSpellInYourDeck,
                 TextEffects.EffectZoneFilter.ControllerHandMonsters => EffectTargetKind.MonsterInYourHand,
                 TextEffects.EffectZoneFilter.FieldSpellTraps => EffectTargetKind.SpellTrapOnField,
+                TextEffects.EffectZoneFilter.OppMonsters => EffectTargetKind.OppFaceUpMonster,
                 TextEffects.EffectZoneFilter.FieldAnyMonster => EffectTargetKind.AnyMonsterOnField,
                 TextEffects.EffectZoneFilter.OppFaceUpMonsters when
                     c.Action == TextEffects.EffectActionKind.EffectDamageBothFromOriginalAtk
@@ -427,6 +453,28 @@ namespace WRLDZ.Duel
                         list.Add(m);
                     }
                     break;
+
+                case EffectTargetKind.EquipMonsterYouControl:
+                    foreach (var m in who.MonstersOnField())
+                    {
+                        if (m == null || !m.FaceUp) continue;
+                        list.Add(m);
+                    }
+                    break;
+
+                case EffectTargetKind.FieldSpellInYourDeck:
+                    AddDeckProxies(engine, who, list, d => d != null && d.IsFieldSpell);
+                    break;
+
+                case EffectTargetKind.MonsterInYourDeckFiltered:
+                case EffectTargetKind.MonsterInYourDeckToSummon:
+                    AddDeckProxies(engine, who, list, d =>
+                        d != null && d.IsMonster && !d.IsExtraDeck);
+                    break;
+
+                case EffectTargetKind.EquipSpellInYourDeck:
+                    AddDeckProxies(engine, who, list, d => d != null && d.IsEquipSpell);
+                    break;
             }
 
             if (specialSummonFromGy && kind == EffectTargetKind.MonsterInEitherGy)
@@ -435,6 +483,21 @@ namespace WRLDZ.Duel
             if (kind == EffectTargetKind.SpellTrapOnField)
                 return FilterActivatingCardFromOffer(list, exceptCard);
             return list;
+        }
+
+        static void AddDeckProxies(DuelEngine engine, DuelistState who, List<CardInstance> list,
+            System.Func<CardDef, bool> ok)
+        {
+            if (engine?.Database == null || who?.Deck == null || list == null || ok == null)
+                return;
+            var seen = new HashSet<int>();
+            for (var i = 0; i < who.Deck.Count; i++)
+            {
+                var id = who.Deck[i];
+                if (!seen.Add(id)) continue;
+                if (!engine.Database.TryGet(id, out var def) || !ok(def)) continue;
+                list.Add(engine.CreateCardInstance(id));
+            }
         }
 
         /// <summary>
@@ -884,7 +947,118 @@ namespace WRLDZ.Duel
         /// If activated during a response window, continues the declared event afterward.
         /// </summary>
         /// <returns>True if activation started or fully resolved.</returns>
-        static bool BeginDeferredChainActivation(DuelEngine engine, DuelistState who, CardInstance card, bool fromHand, bool autoPickTarget) { if (engine.Chain.Last == null) return false; PlaceFaceUpForActivation(engine, who, card, fromHand); var kind = GetTargetKind(card); if (kind == EffectTargetKind.None) { var opened = engine.OpenChainResponseWindow(engine.OpponentOf(who)); if (!opened) { engine.Chain.StartResolution(); engine.ResolveChainStackForActivation(); } return true; } var targets = CollectLegalTargets(engine, who, kind, card); if (targets.Count == 0) return false; var pending = new PendingActivation { Controller = who, Card = card, FromHand = fromHand, TargetKind = kind, ChainActivation = true }; pending.LegalTargets.AddRange(targets); engine.SetPendingActivation(pending); if (autoPickTarget || !who.IsPlayer) return TryResolveWithTarget(engine, AutoPickTarget(kind, targets, who, engine)); engine.Log(pending.Prompt); engine.NotifyPublic(); return true; }
+        static bool BeginDeferredChainActivation(DuelEngine engine, DuelistState who, CardInstance card, bool fromHand, bool autoPickTarget)
+        {
+            if (engine.Chain.Last == null) return false;
+
+            // Compiled cost / filter / dual-target / Equip must not use GetTargetKind —
+            // that path skipped discard (Reincarnation), lowest-ATK (Fissure), DEF-only
+            // (Stop Defense), second GY (Book of Life), and Equip host filters.
+            var prog = TextEffects.CompiledEffectCache.GetOrCompile(card?.Def);
+            if (prog != null && UsesCompiledActivationPending(prog) &&
+                TextEffects.TextEffectRuntime.CanActivate(engine, who, card, fromHand, prog, out _) &&
+                TextEffects.TextEffectRuntime.TryResolveActivation(
+                    engine, who, card, fromHand, prog, autoPickTarget))
+                return true;
+
+            if (TryBeginLpZeroConfirm(engine, who, card, fromHand, autoPickTarget, prog))
+                return true;
+
+            PlaceFaceUpForActivation(engine, who, card, fromHand);
+            var kind = GetTargetKind(card);
+            if (kind == EffectTargetKind.None)
+            {
+                var opened = engine.OpenChainResponseWindow(engine.OpponentOf(who));
+                if (!opened)
+                {
+                    engine.Chain.StartResolution();
+                    engine.ResolveChainStackForActivation();
+                }
+                return true;
+            }
+
+            var targets = CollectLegalTargets(engine, who, kind, card);
+            if (targets.Count == 0) return false;
+            var pending = new PendingActivation
+            {
+                Controller = who,
+                Card = card,
+                FromHand = fromHand,
+                TargetKind = kind,
+                ChainActivation = true
+            };
+            pending.LegalTargets.AddRange(targets);
+            engine.SetPendingActivation(pending);
+            if (autoPickTarget || !who.IsPlayer)
+                return TryResolveWithTarget(engine, AutoPickTarget(kind, targets, who, engine));
+            engine.Log(pending.Prompt);
+            engine.NotifyPublic();
+            return true;
+        }
+
+        static bool UsesCompiledActivationPending(CompiledCardProgram prog)
+        {
+            if (prog == null) return false;
+            foreach (var c in prog.ClausesFor(EffectTiming.Activate))
+            {
+                if (c == null) continue;
+                if (c.RequiresDiscardCost || c.RequiresSecondTarget ||
+                    c.PickLowestAtk || c.PickHighestAtk || c.PickHighestDef ||
+                    c.ForceAttackPosition || c.TakeControlOfTarget ||
+                    c.Action == EffectActionKind.EquipThisToTarget ||
+                    !string.IsNullOrEmpty(c.RaceFilter))
+                    return true;
+            }
+            return false;
+        }
+
+        static int CompiledActivatePayLp(CompiledCardProgram prog)
+        {
+            if (prog == null) return 0;
+            foreach (var c in prog.ClausesFor(EffectTiming.Activate))
+                if (c != null && c.PayLpAmount > 0)
+                    return c.PayLpAmount;
+            return 0;
+        }
+
+        /// <summary>
+        /// Human-only: paying an activation LP cost that would leave 0 is legal
+        /// (intentional loss) but must be confirmed first.
+        /// </summary>
+        static bool TryBeginLpZeroConfirm(DuelEngine engine, DuelistState who, CardInstance card,
+            bool fromHand, bool autoPickTarget, CompiledCardProgram prog)
+        {
+            if (engine == null || engine.LpZeroCostConfirmed) return false;
+            if (autoPickTarget || who == null || !who.IsPlayer) return false;
+            var lp = CompiledActivatePayLp(prog);
+            if (lp <= 0 || who.LifePoints != lp) return false;
+            var pending = new PendingActivation
+            {
+                Controller = who,
+                Card = card,
+                FromHand = fromHand,
+                UsesTextProgram = true,
+                AwaitingLpZeroConfirm = true
+            };
+            pending.LpCostChoices.Add(lp);
+            engine.SetPendingActivation(pending);
+            engine.Log($"{card?.Name}: paying {lp} LP leaves you at 0. Are you sure?");
+            engine.NotifyPublic();
+            return true;
+        }
+
+        public static bool ResumeAfterLpZeroConfirm(DuelEngine engine, DuelistState who,
+            CardInstance card, bool fromHand)
+        {
+            if (engine == null || who == null || card == null) return false;
+            engine.LpZeroCostConfirmed = true;
+            engine.DeferSpellTrapResolution = !engine.IsResolvingChain;
+            var ok = BeginOrResolveManual(engine, who, card, fromHand, autoPickTarget: false);
+            engine.DeferSpellTrapResolution = false;
+            engine.LpZeroCostConfirmed = false;
+            return ok;
+        }
+
         public static bool BeginOrResolveManual(
             DuelEngine engine,
             DuelistState who,
@@ -1009,8 +1183,16 @@ namespace WRLDZ.Duel
             if (!CanManualActivate(engine, who, card, fromHand)) return false;
 
             var wasSetOnField = !fromHand && who.TryFindSpellTrap(card, out _);
-            PlaceFaceUpForActivation(engine, who, card, fromHand);
+            var kind = GetTargetKind(card);
+            if (kind != EffectTargetKind.None &&
+                CollectLegalTargets(engine, who, kind, exceptCard: card).Count == 0)
+            {
+                engine.Log($"{card.Name}: no legal target — cannot activate.");
+                engine.NotifyPublic();
+                return false;
+            }
 
+            PlaceFaceUpForActivation(engine, who, card, fromHand);
             engine.Log($"Activate: {card.Name}.");
 
             // —— Response-window traps with dedicated resolutions (safety net) ——
@@ -1026,7 +1208,6 @@ namespace WRLDZ.Duel
                 }
             }
 
-            var kind = GetTargetKind(card);
             if (kind == EffectTargetKind.None)
             {
                 ResolveUntargeted(engine, who, card);
@@ -1041,13 +1222,9 @@ namespace WRLDZ.Duel
             var targets = CollectLegalTargets(engine, who, kind, exceptCard: card);
             if (targets.Count == 0)
             {
-                engine.Log($"{card.Name}: no legal target — activation fails.");
-                engine.SendCardToGrave(who, card);
-                if (inResponse)
-                    engine.ContinueAfterResponseActivation(false, false);
-                else
-                    engine.NotifyPublic();
-                return true;
+                engine.Log($"{card.Name}: no legal target — cannot activate.");
+                engine.NotifyPublic();
+                return false;
             }
 
             if (autoPickTarget || !who.IsPlayer)
@@ -1171,7 +1348,25 @@ namespace WRLDZ.Duel
                     pick.CardId == Waboku)
                     pick = null; // ignore tiny attacks with Waboku
             }
-            else if (engine.PendingResponse.Timing == ResponseTiming.ChainResponse) pick = legal.FirstOrDefault(c => c != null && c.Def != null && c.Def.IsMonster);
+            else if (engine.PendingResponse.Timing == ResponseTiming.ChainResponse)
+            {
+                // Prefer pass on CL1 Speed-1 unless a chain-negate is clearly payable.
+                // Picking a monster that then fails BeginOrResolve left PendingResponse open
+                // (Monster Reborn soft-lock after GY target).
+                pick = null;
+                foreach (var c in legal)
+                {
+                    if (c?.Def == null || !c.Def.IsMonster) continue;
+                    var prog = TextEffects.CompiledEffectCache.GetOrCompile(c.Def);
+                    var clauses = prog?.ClausesFor(TextEffects.EffectTiming.ChainLinkActivated);
+                    if (clauses == null || clauses.Count == 0) continue;
+                    if (clauses[0].RequiresDiscardCost &&
+                        (who.Hand == null || !who.Hand.Any(x => x != null)))
+                        continue;
+                    pick = c;
+                    break;
+                }
+            }
             else if (engine.PendingResponse.Timing == ResponseTiming.MonsterSummoned)
             {
                 var summoned = engine.PendingResponse.Summoned;
@@ -1201,7 +1396,13 @@ namespace WRLDZ.Duel
 
             engine.Log($"{who.Name} responds with {pick.Name}!");
             var fromHand = who.Hand.Contains(pick);
-            BeginOrResolveManual(engine, who, pick, fromHand, autoPickTarget: true);
+            // Failed activate must not leave PendingResponse open (Reborn soft-lock).
+            if (!BeginOrResolveManual(engine, who, pick, fromHand, autoPickTarget: true))
+            {
+                engine.Log($"{who.Name} cannot resolve {pick.Name} — passing response.");
+                if (engine.PendingResponse != null)
+                    engine.PassResponse();
+            }
         }
 
         public static bool TryResolveWithTarget(DuelEngine engine, CardInstance target)
@@ -1270,7 +1471,10 @@ namespace WRLDZ.Duel
             var wasInResponse = engine.PendingResponse != null;
             var monsterFx = p.IsMonsterEffect;
             var resumeDc = p.AwaitingLpCost && p.ResumeDamageCalculation;
+            var lpZero = p.AwaitingLpZeroConfirm;
             engine.ClearPendingActivation();
+            if (lpZero)
+                engine.Chain.Clear();
 
             if (resumeDc)
             {
@@ -1548,7 +1752,18 @@ namespace WRLDZ.Duel
             bool fromHand)
         {
             var zoneIndex = -2;
-            if (fromHand)
+            if (who != null && card != null &&
+                (who.TryFindSpellTrap(card, out var already) ||
+                 (who.FieldSpellZone != null && who.FieldSpellZone.Occupant == card)))
+            {
+                card.FaceUp = true;
+                card.SetThisTurn = false;
+                who.Hand?.Remove(card);
+                zoneIndex = who.FieldSpellZone != null && who.FieldSpellZone.Occupant == card
+                    ? -1
+                    : already;
+            }
+            else if (fromHand)
             {
                 var zi = engine.FirstEmptySpellTrap(who);
                 if (zi >= 0)

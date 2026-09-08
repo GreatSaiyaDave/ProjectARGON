@@ -123,7 +123,7 @@ namespace WRLDZ.Duel.TextEffects
         /// OPT set this card face-down Defense. Colon or pre-PSCT comma; change/flip.
         /// </summary>
         static readonly Regex RxOptSetFaceDown = new(
-            @"Once per turn(?::|,)\s*You can (?:change this card to|flip this card into) face-down Defense Position\.?",
+            @"Once per turn(?::|,)\s*You can (?:change this card to|flip this card (?:to|into)) face-down Defense Position\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         /// <summary>Medusa Worm family: Flip Summoned, destroy 1 opp monster (pre-PSCT comma).</summary>
@@ -159,7 +159,7 @@ namespace WRLDZ.Duel.TextEffects
 
         static readonly Regex RxBattleGyGainLp = new(
             @"(?:If|When) this card is destroyed by battle and sent to the (?:GY|Graveyard)[:,]\s*" +
-            @"Gain (\d+) Life Points\.?",
+            @"Gain (\d+) (?:Life Points|LP)\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxBattleGyDraw = new(
@@ -477,6 +477,7 @@ namespace WRLDZ.Duel.TextEffects
                     Timing = EffectTiming.Flip,
                     Action = EffectActionKind.GainLifePoints,
                     Amount = Parse(flipLp, 1, 3000),
+                    Side = EffectSide.Controller,
                     MakesChainLink = true
                 }
                 : null);
@@ -607,6 +608,7 @@ namespace WRLDZ.Duel.TextEffects
                     Timing = EffectTiming.SentFromFieldToGy,
                     Action = EffectActionKind.GainLifePoints,
                     Amount = Parse(gyLp, 1, 1000),
+                    Side = EffectSide.Controller,
                     RequiresThisDestroyedByBattle = true,
                     MakesChainLink = true
                 }

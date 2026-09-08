@@ -524,6 +524,19 @@ namespace WRLDZ.Duel.Rules
                     p.HandCount == 2, $"hand={p.HandCount}");
             }
 
+            {
+                var engine = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine);
+                var p = engine.Player;
+                var c = engine.CreateCardInstance(91152256);
+                p.Hand.Add(c);
+                engine.SendCardToGrave(p, c);
+                Check("GameEvent log records SentToGy",
+                    engine.GameEvents.HappenedThisTurn(DuelGameEventKind.SentToGy, engine.TurnNumber, c));
+                Check("GameEvent log does not invent Destroyed",
+                    !engine.GameEvents.HappenedThisTurn(DuelGameEventKind.Destroyed, engine.TurnNumber, c));
+            }
+
             // ── Monster Reborn: activate stays pending (must not bounce to hand) ──
             {
                 const int reborn = 83764719;
@@ -555,7 +568,9 @@ namespace WRLDZ.Duel.Rules
                         engine.TrySelectEffectTarget(pick) &&
                         p.MonstersOnField().Any(m => m != null && m.CardId == celtic) &&
                         p.Graveyard.Exists(c => c != null && c.CardId == reborn) &&
-                        !p.Hand.Contains(card));
+                        !p.Hand.Contains(card) &&
+                        !engine.IsAwaitingEffectTarget &&
+                        !engine.IsBusy);
                 }
             }
 
@@ -650,7 +665,9 @@ namespace WRLDZ.Duel.Rules
                             engine.TrySelectEffectTarget(pick) &&
                             p.MonstersOnField().Any(m => m != null && m.CardId == celtic) &&
                             p.Graveyard.Exists(c => c != null && c.CardId == officialReborn) &&
-                            !p.Hand.Contains(card));
+                            !p.Hand.Contains(card) &&
+                            !engine.IsAwaitingEffectTarget &&
+                            !engine.IsBusy);
                     }
                 }
 
@@ -733,6 +750,40 @@ namespace WRLDZ.Duel.Rules
                         var card = PutInHand(engine, who, prematureId);
                         Check("Premature Burial: refuse with less than 800 LP",
                             !engine.CanActivateSpellTrap(who, card, fromHand: true));
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var who = engine.Player;
+                        who.Hand.Clear();
+                        who.LifePoints = 800;
+                        who.Graveyard.Add(engine.CreateCardInstance(prematureCelticId));
+                        var card = PutInHand(engine, who, prematureId);
+                        Check("Premature Burial: 800 LP is a legal cost (may lose on purpose)",
+                            engine.CanActivateSpellTrap(who, card, fromHand: true));
+                        Check("Premature Burial: paying last 800 LP asks are-you-sure",
+                            engine.TryActivateSpellTrap(who, card, fromHand: true) &&
+                            engine.PendingActivation != null &&
+                            engine.PendingActivation.AwaitingLpZeroConfirm &&
+                            who.LifePoints == 800 &&
+                            who.Hand.Contains(card),
+                            $"pending={engine.PendingActivation != null} " +
+                            $"zero={engine.PendingActivation?.AwaitingLpZeroConfirm} " +
+                            $"lp={who.LifePoints} inHand={who.Hand.Contains(card)}");
+                        Check("Premature Burial: cancel LP-to-0 keeps the card and LP",
+                            engine.CancelEffectTargeting() &&
+                            who.LifePoints == 800 &&
+                            who.Hand.Contains(card) &&
+                            engine.PendingActivation == null);
+                        Check("Premature Burial: confirm LP-to-0 continues activation",
+                            engine.TryActivateSpellTrap(who, card, fromHand: true) &&
+                            engine.TryConfirmLpZeroPay() &&
+                            engine.IsAwaitingEffectTarget &&
+                            !engine.PendingActivation.AwaitingLpZeroConfirm,
+                            $"await={engine.IsAwaitingEffectTarget} " +
+                            $"zero={engine.PendingActivation?.AwaitingLpZeroConfirm} " +
+                            $"lp={who.LifePoints}");
                     }
 
                     var sg = TryActivateCompiledGySsIfReady(db, pDeck, aDeck, 43434803);
@@ -3672,6 +3723,10 @@ namespace WRLDZ.Duel.Rules
                             ClearBoard(engine);
                             var p = engine.Player;
                             p.Hand.Clear();
+                            var gySs = prog.ClauseList.Exists(c =>
+                                c != null &&
+                                c.Action == EffectActionKind.SpecialSummonFromGy);
+                            if (gySs) continue;
                             var clause = prog.ClauseList.Find(c =>
                                 c != null && c.Action == EffectActionKind.EquipThisToTarget);
                             var hostId = celtic;
@@ -3691,6 +3746,16 @@ namespace WRLDZ.Duel.Rules
                                          cand.race.IndexOf(clause.RaceFilter,
                                              System.StringComparison.OrdinalIgnoreCase) < 0))
                                         continue;
+                                    var want = clause.EquipHostName ?? clause.NamedCard;
+                                    if (!string.IsNullOrEmpty(want))
+                                    {
+                                        var n = cand.name ?? "";
+                                        var hit = n.Equals(want, System.StringComparison.OrdinalIgnoreCase) ||
+                                                  (!string.IsNullOrEmpty(clause.AltNamedCard) &&
+                                                   n.Equals(clause.AltNamedCard,
+                                                       System.StringComparison.OrdinalIgnoreCase));
+                                        if (!hit) continue;
+                                    }
                                     hostId = cand.id;
                                     break;
                                 }
@@ -3915,6 +3980,23 @@ namespace WRLDZ.Duel.Rules
                         var card = PutInHand(engine, p, toonWorld);
                         Check("Toon World: refuse with less than 1000 LP",
                             !engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        p.LifePoints = 1000;
+                        var card = PutInHand(engine, p, toonWorld);
+                        Check("Toon World: 1000 LP is a legal cost (may lose on purpose)",
+                            engine.CanActivateSpellTrap(p, card, fromHand: true));
+                        Check("Toon World: paying last 1000 LP asks are-you-sure",
+                            engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                            engine.PendingActivation != null &&
+                            engine.PendingActivation.AwaitingLpZeroConfirm &&
+                            p.LifePoints == 1000,
+                            $"zero={engine.PendingActivation?.AwaitingLpZeroConfirm} lp={p.LifePoints}");
                     }
 
                     {
@@ -7587,7 +7669,9 @@ namespace WRLDZ.Duel.Rules
                     TextEffectRuntime.NotifyTargetingEffectsResolved(engine,
                         new[] { other, reaper }, true);
                     Check("Spirit Reaper: multi-target notify reaches every selected card",
-                        p.Graveyard.Contains(other) && p.Graveyard.Contains(reaper));
+                        p.TryFindMonster(other, out _) &&
+                        p.Graveyard.Contains(reaper) &&
+                        !p.Graveyard.Contains(other));
                 }
 
 
@@ -8319,6 +8403,56 @@ namespace WRLDZ.Duel.Rules
                         pr => pr.ClauseList.Exists(c =>
                             c != null && c.Action == EffectActionKind.EquipThisToTarget &&
                             c.EquipAtkBonus == 300 && c.EquipDefBonus == 300 &&
+                            string.Equals(c.RaceFilter, "Machine",
+                                System.StringComparison.OrdinalIgnoreCase)));
+
+                    CheckSearcher(98299011, "Gift of The Mystical Elf FullyCompiled LP per monster on field",
+                        pr => pr.FullyCompiled &&
+                        pr.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Activate &&
+                            c.Action == EffectActionKind.GainLifePoints &&
+                            c.Amount == 300 &&
+                            c.Side == EffectSide.Controller &&
+                            c.ScaleAmountByFieldMonsters));
+
+                    CheckSearcher(98252586, "Follow Wind FullyCompiled Equip Winged Beast +300/+300",
+                        pr => pr.FullyCompiled &&
+                        pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.EquipThisToTarget &&
+                            c.EquipAtkBonus == 300 && c.EquipDefBonus == 300 &&
+                            string.Equals(c.RaceFilter, "Winged Beast",
+                                System.StringComparison.OrdinalIgnoreCase)));
+
+                    CheckSearcher(36361633, "Threatening Roar FullyCompiled cannot-attack this turn",
+                        pr => pr.FullyCompiled &&
+                        pr.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.PreventOpponentAttacksThisTurn));
+
+                    CheckSearcher(94716515, "Eradicating Aerosol FullyCompiled destroy all Insect",
+                        pr => pr.FullyCompiled &&
+                        pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.Destroy &&
+                            string.Equals(c.RaceFilter, "Insect",
+                                System.StringComparison.OrdinalIgnoreCase)));
+
+                    CheckSearcher(64306248, "Skull-Mark Ladybug FullyCompiled GY +1000 LP",
+                        pr => pr.FullyCompiled &&
+                        pr.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.SentFromFieldToGy &&
+                            c.Action == EffectActionKind.GainLifePoints &&
+                            c.Amount == 1000 &&
+                            c.Side == EffectSide.Controller));
+
+                    CheckSearcher(46700124, "Machine King FullyCompiled ATK per Machine on field",
+                        pr => pr.FullyCompiled &&
+                        pr.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                            c.ScaleThisAtkByMatchingCount &&
+                            c.Amount == 100 &&
                             string.Equals(c.RaceFilter, "Machine",
                                 System.StringComparison.OrdinalIgnoreCase)));
 

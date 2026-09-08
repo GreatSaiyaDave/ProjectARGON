@@ -238,7 +238,14 @@ namespace WRLDZ.Duel.Rules
                    (c.RequiresDiscardCost &&
                     c.Action != EffectActionKind.AddFromGyToHand) ||
                    c.Action == EffectActionKind.FusionSummonRegistered ||
-                   c.Action == EffectActionKind.SpecialSummonFusionFromExtra;
+                   c.Action == EffectActionKind.SpecialSummonFusionFromExtra ||
+                   c.Action == EffectActionKind.RitualSummon ||
+                   c.Action == EffectActionKind.SpecialSummonFromHand ||
+                   c.RequiresSecondTarget ||
+                   (!string.IsNullOrEmpty(c.RaceFilter) &&
+                    (c.Zone == EffectZoneFilter.ControllerGyMonsters ||
+                     c.Zone == EffectZoneFilter.EitherGyMonsters ||
+                     c.Zone == EffectZoneFilter.OppGyMonsters));
         }
 
         static void Provision(DuelEngine engine, CompiledCardProgram prog)
@@ -260,19 +267,68 @@ namespace WRLDZ.Duel.Rules
                         p.FieldSpellZone.Occupant = umi;
                 }
 
-                if (c.RequiresControllerNamedCard &&
-                    !string.IsNullOrEmpty(c.RequiresFaceUpName) &&
-                    c.RequiresFaceUpName.IndexOf("Archfiend", StringComparison.OrdinalIgnoreCase) >= 0)
-                    PlaceMonster(engine, p, ArchfiendSoldier, 1, BattlePosition.Attack, true);
+                if (!string.IsNullOrEmpty(c.RequiresFaceUpName) && engine.Database != null)
+                {
+                    var want = c.RequiresFaceUpName;
+                    if (want.IndexOf("Umi", StringComparison.OrdinalIgnoreCase) < 0)
+                    {
+                        CardDef exact = null;
+                        CardDef fuzzy = null;
+                        foreach (var cand in engine.Database.GetAllCards())
+                        {
+                            if (cand == null || !cand.IsMonster || cand.IsExtraDeck) continue;
+                            if (cand.name == null) continue;
+                            if (cand.name.Equals(want, StringComparison.OrdinalIgnoreCase))
+                            {
+                                exact = cand;
+                                break;
+                            }
+                            if (fuzzy == null &&
+                                cand.name.IndexOf(want, StringComparison.OrdinalIgnoreCase) >= 0)
+                                fuzzy = cand;
+                        }
+
+                        var pick = exact ?? fuzzy;
+                        if (pick != null)
+                            PlaceMonster(engine, p, pick.id, 1, BattlePosition.Attack, true);
+                    }
+                }
 
                 if (c.Zone == EffectZoneFilter.DeckFieldSpells)
                     p.Deck.Insert(0, Alo);
 
-                if (c.Action == EffectActionKind.AddNamedFromDeckToHand &&
-                    !string.IsNullOrEmpty(c.NamedCard) &&
-                    string.Equals(c.NamedCard, prog.CardName, StringComparison.OrdinalIgnoreCase) &&
-                    prog.CardId > 0)
-                    p.Deck.Insert(0, prog.CardId);
+                if ((c.Action == EffectActionKind.AddNamedFromDeckToHand ||
+                     c.Action == EffectActionKind.SpecialSummonNamed) &&
+                    !string.IsNullOrEmpty(c.NamedCard) && engine.Database != null)
+                {
+                    var want = c.NamedCard;
+                    var placed = false;
+                    CardDef exact = null;
+                    CardDef fuzzy = null;
+                    foreach (var cand in engine.Database.GetAllCards())
+                    {
+                        if (cand == null) continue;
+                        var n = cand.name ?? "";
+                        if (n.Equals(want, StringComparison.OrdinalIgnoreCase))
+                        {
+                            exact = cand;
+                            break;
+                        }
+                        if (fuzzy == null && c.NamedCardIsSeries &&
+                            n.IndexOf(want, StringComparison.OrdinalIgnoreCase) >= 0)
+                            fuzzy = cand;
+                    }
+
+                    var pick = exact ?? fuzzy;
+                    if (pick != null)
+                    {
+                        p.Deck.Insert(0, pick.id);
+                        placed = true;
+                    }
+
+                    if (!placed && prog.CardId > 0)
+                        p.Deck.Insert(0, prog.CardId);
+                }
 
                 if (c.RequiresDiscardCost)
                 {
@@ -300,6 +356,25 @@ namespace WRLDZ.Duel.Rules
                     p.Graveyard.Add(engine.CreateCardInstance(PotOfGreed));
                 if (c.Zone == EffectZoneFilter.ControllerGyTraps)
                     p.Graveyard.Add(engine.CreateCardInstance(MirrorForce));
+
+                var hostName = c.EquipHostName ??
+                               (c.Action == EffectActionKind.EquipThisToTarget ? c.NamedCard : null);
+                if (!string.IsNullOrEmpty(hostName) && engine.Database != null)
+                {
+                    foreach (var cand in engine.Database.GetAllCards())
+                    {
+                        if (cand == null || !cand.IsMonster || cand.IsExtraDeck) continue;
+                        if (cand.name != null &&
+                            cand.name.Equals(hostName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            PlaceMonster(engine, p, cand.id, 1, BattlePosition.Attack, true);
+                            break;
+                        }
+                    }
+                }
+
+                if (c.Action == EffectActionKind.ChangeBattlePosition && c.ForceAttackPosition)
+                    PlaceMonster(engine, opp, Celtic, 0, BattlePosition.Defense, false);
             }
         }
 

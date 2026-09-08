@@ -1919,14 +1919,17 @@ namespace WRLDZ.Duel.Rules
 
                     var decayed = db.Get(10209545);
                     var decayedProg = decayed != null ? CardTextEffectCompiler.Compile(decayed) : null;
-                    Check("Corpus: Decayed Commander NS named hand SS compiles; battle-damage leftover",
-                        decayedProg != null && !decayedProg.FullyCompiled &&
+                    Check("Corpus: Decayed Commander NS named hand SS + direct discard FullyCompiled",
+                        decayedProg != null && decayedProg.FullyCompiled &&
                         decayedProg.ClauseList.Exists(c =>
                             c != null &&
                             c.RequiresThisNormalSummoned &&
                             c.Action == EffectActionKind.SpecialSummonNamed &&
                             c.FromHand &&
-                            string.Equals(c.NamedCard, "Zombie Tiger", StringComparison.OrdinalIgnoreCase)),
+                            string.Equals(c.NamedCard, "Zombie Tiger", StringComparison.OrdinalIgnoreCase)) &&
+                        decayedProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.DiscardRandomFromOpponentHand),
                         decayedProg == null
                             ? "null"
                             : $"full={decayedProg.FullyCompiled} unparsed={string.Join("|", decayedProg.UnparsedFragments ?? Array.Empty<string>())}");
