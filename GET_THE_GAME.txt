@@ -31,9 +31,16 @@ That saves this folder, keeps GitHub's files too, then uploads.
 It will not wipe this folder. If GitHub asks you to sign in,
 the script will say so.
 
-If send stopped on a merge conflict (Terminal said
-merge conflict in ProjectARGON), close Unity first. Same folder.
-Paste:
+If unstick already ran and this folder now has GitHub's files
+instead of yours, close Unity first. Same folder. Paste:
+
+curl -fsSL https://raw.githubusercontent.com/GreatSaiyaDave/ProjectARGON/main/Tools/restore_pc_folder_from_before_unstick.sh | bash
+
+That puts THIS folder back to your saved local copy.
+It does not change GitHub.
+
+Unstick is the other direction (GitHub onto this PC). Only use it
+if you want GitHub's files here. Same Terminal steps, then:
 
 curl -fsSL https://raw.githubusercontent.com/GreatSaiyaDave/ProjectARGON/main/Tools/unstick_merge_keep_github.sh | bash
 

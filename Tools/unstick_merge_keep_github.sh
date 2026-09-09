@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# Recover a ProjectARGON folder stuck after send-to-GitHub merge conflict.
-# Keeps GitHub's current main for shared files. Copies a few unique local
-# files back if they are still on disk. Does not force-push. Does not delete
-# the Unity folder.
+# Make THIS folder match GitHub main. This is NOT an upload.
+# If the owner wanted the PC copy kept / sent to GitHub, use
+# Tools/restore_pc_folder_from_before_unstick.sh instead.
+# Copies a few unique local files back if they are still on disk.
+# Does not force-push. Does not delete the Unity folder.
 set -euo pipefail
 
 say() { printf '%s\n' "$*"; }
@@ -11,6 +12,8 @@ die() { say ""; say "Stopped. $*"; say "Nothing was force-pushed. The Unity fold
 if [[ ! -d Assets || ! -d ProjectSettings ]]; then
   die "Open Terminal in the Unity project folder (the one that has Assets and ProjectSettings)."
 fi
+say "Copying GitHub onto THIS folder. This is not an upload."
+say ""
 if [[ -f Temp/UnityLockfile ]]; then
   die "Close Unity Hub / Unity Editor first. Then run this again in the same folder."
 fi

@@ -15,8 +15,8 @@ namespace WRLDZ.EditorTools
     public static class GitHubPullMenu
     {
         const string ExpectedRepo = "GreatSaiyaDave/ProjectARGON";
-        const string UnstickCurl =
-            "curl -fsSL https://raw.githubusercontent.com/GreatSaiyaDave/ProjectARGON/main/Tools/unstick_merge_keep_github.sh | bash";
+        const string RestoreCurl =
+            "curl -fsSL https://raw.githubusercontent.com/GreatSaiyaDave/ProjectARGON/main/Tools/restore_pc_folder_from_before_unstick.sh | bash";
 
         [MenuItem("WRLDZ/Get Latest from GitHub", false, 0)]
         public static void Pull()
@@ -155,8 +155,8 @@ namespace WRLDZ.EditorTools
             {
                 Fail(
                     "This folder is stuck from the last send. Nothing was deleted. GitHub was not overwritten.\n\n" +
-                    "Close Unity, then paste this in Terminal inside ProjectARGON:\n\n" +
-                    UnstickCurl,
+                    "Close Unity, then paste this in Terminal inside ProjectARGON to keep THIS folder's files:\n\n" +
+                    RestoreCurl,
                     "Could not send to GitHub");
                 return;
             }
@@ -205,8 +205,9 @@ namespace WRLDZ.EditorTools
                 EditorUtility.ClearProgressBar();
                 Fail(
                     "Stopped so nothing is wiped. GitHub and this folder both changed the same files.\n\n" +
-                    "Close Unity, then paste this in Terminal inside ProjectARGON:\n\n" +
-                    UnstickCurl + "\n\n" +
+                    "This folder still has your files. Do not run unstick if you wanted to keep them.\n" +
+                    "If unstick already ran, close Unity and paste:\n\n" +
+                    RestoreCurl + "\n\n" +
                     fetch.Text + "\n" + merge.Text,
                     "Could not send to GitHub");
                 return;

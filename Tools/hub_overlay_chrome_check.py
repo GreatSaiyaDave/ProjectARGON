@@ -174,6 +174,19 @@ def main() -> int:
         "unstick_merge_keep_github.sh",
         "lost owner unstick-merge one-liner",
     )
+    must_contain(
+        ROOT / "GET_THE_GAME.txt",
+        "restore_pc_folder_from_before_unstick.sh",
+        "lost owner restore-local-folder one-liner",
+    )
+    restore = ROOT / "Tools/restore_pc_folder_from_before_unstick.sh"
+    if not restore.is_file():
+        fail("missing Tools/restore_pc_folder_from_before_unstick.sh")
+    restore_text = restore.read_text(encoding="utf-8")
+    if "git merge --abort" not in restore_text:
+        fail("restore script lost merge-abort")
+    if "git push" in restore_text:
+        fail("restore script must not push to GitHub")
 
     vc = (ROOT / "ProjectSettings/VersionControlSettings.asset").read_text(encoding="utf-8")
     if "Unity Version Control" in vc:
