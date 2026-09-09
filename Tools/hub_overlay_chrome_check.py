@@ -159,6 +159,16 @@ def main() -> int:
         "Get Latest from GitHub",
         "lost in-Editor GitHub pull menu",
     )
+    must_contain(
+        ROOT / "Assets/Editor/WRLDZ/GitHubPullMenu.cs",
+        "Send this folder to GitHub",
+        "lost in-Editor GitHub send menu",
+    )
+    must_contain(
+        ROOT / "GET_THE_GAME.txt",
+        "send_this_folder_to_github.sh",
+        "lost owner send-to-GitHub one-liner",
+    )
     vc = (ROOT / "ProjectSettings/VersionControlSettings.asset").read_text(encoding="utf-8")
     if "Unity Version Control" in vc:
         fail("project Version Control is still Plastic/UVCS (Hub 'synced' != GitHub)")

@@ -22,8 +22,18 @@ curl -fsSL https://raw.githubusercontent.com/GreatSaiyaDave/ProjectARGON/main/To
 That updates THIS folder. It refuses if Unity is open or if it
 would overwrite your local edits.
 
+To send YOUR folder TO GitHub (your work, kept, then uploaded):
+Same Terminal steps 1–3, then paste:
+
+curl -fsSL https://raw.githubusercontent.com/GreatSaiyaDave/ProjectARGON/main/Tools/send_this_folder_to_github.sh | bash
+
+That saves this folder, keeps GitHub's files too, then uploads.
+It will not wipe this folder. If GitHub asks you to sign in,
+the script will say so.
+
 Proof it worked: search the Project window for WRLDZ_BUILD
 = CLEAN-0909. Then WRLDZ → Lab → Open Desktop Lab App.
 
 Later updates (after that stamp is here):
 WRLDZ → Get Latest from GitHub
+WRLDZ → Send this folder to GitHub

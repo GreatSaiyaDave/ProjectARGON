@@ -21,10 +21,16 @@ Tell them (close Unity first):
 
 `curl -fsSL https://raw.githubusercontent.com/GreatSaiyaDave/ProjectARGON/main/Tools/get_latest_into_this_folder.sh | bash`
 
-That script updates **in place**. It stops if Unity is open, if the remote is not `ProjectARGON`, or if they have uncommitted local edits (prints `git status` instead of wiping). If there is no `.git`, Hub only linked GitHub — the script commits their files first, then merges `origin/main`. Conflicts: stop, keep files, ask them to paste the terminal output.
+That script updates **in place**. It stops if Unity is open, if the remote is not `ProjectARGON`, or if they have uncommitted local edits (prints `git status` and the send one-liner instead of wiping). If there is no `.git`, Hub only linked GitHub — the script commits their files first, then merges `origin/main`. Conflicts: stop, keep files, ask them to paste the terminal output.
+
+**If they ask to commit / sync FROM their Linux folder TO GitHub:** you cannot see that folder. Do not imply you committed their PC. Give the send one-liner (close Unity first):
+
+`curl -fsSL https://raw.githubusercontent.com/GreatSaiyaDave/ProjectARGON/main/Tools/send_this_folder_to_github.sh | bash`
+
+That commits in place, merges `origin/main` (no force-push), then `git push origin main`. Auth failure: tell them `sudo apt install gh` then `gh auth login` (GitHub.com, HTTPS, browser) and run send again. Do not zip-replace.
 
 Proof: `WRLDZ_BUILD` = `CLEAN-0909`. Then **WRLDZ → Lab → Open Desktop Lab App**.
 
-After they have that stamp, later updates: **WRLDZ → Get Latest from GitHub** (same in-place pull).
+After they have that stamp, later updates: **WRLDZ → Get Latest from GitHub** (in-place pull). Send local work: **WRLDZ → Send this folder to GitHub**.
 
 `GET_THE_GAME.txt` is the owner copy. Zip/Add-from-GitHub is last resort on a new machine only, never as the default for this owner.

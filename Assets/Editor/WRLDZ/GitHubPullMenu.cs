@@ -55,7 +55,7 @@ namespace WRLDZ.EditorTools
                     "Git is not installed",
                     "This PC needs git for in-Editor pulls.\n\n" +
                     "Linux: open Terminal (not the Unity Console) and run:\n" +
-                    "sudo apt install git"
+                    "sudo apt install git",
                     "OK");
                 return;
             }
@@ -104,6 +104,150 @@ namespace WRLDZ.EditorTools
             EditorUtility.DisplayDialog("GitHub updated", msg, "OK");
         }
 
+        [MenuItem("WRLDZ/Send this folder to GitHub", false, 1)]
+        public static void Send()
+        {
+            if (EditorApplication.isPlaying)
+            {
+                EditorUtility.DisplayDialog(
+                    "Stop Play Mode",
+                    "Exit Play Mode first (the Play button), then run this again.",
+                    "OK");
+                return;
+            }
+
+            var root = Directory.GetParent(Application.dataPath)?.FullName;
+            if (string.IsNullOrEmpty(root))
+            {
+                Fail("Could not find the project folder.");
+                return;
+            }
+
+            if (!Directory.Exists(Path.Combine(root, ".git")))
+            {
+                EditorUtility.DisplayDialog(
+                    "This folder is not a git copy yet",
+                    "Hub linked GitHub as a bookmark. It did not download commits.\n\n" +
+                    "Keep THIS folder. Close Unity. Open Linux Terminal " +
+                    "(not this Console). Type cd, space, drag this ProjectARGON " +
+                    "folder onto the Terminal, Enter, then paste:\n\n" +
+                    "curl -fsSL https://raw.githubusercontent.com/GreatSaiyaDave/ProjectARGON/main/Tools/send_this_folder_to_github.sh | bash\n\n" +
+                    "That saves this folder, keeps GitHub's files, then uploads.",
+                    "OK");
+                return;
+            }
+
+            if (!GitOnPath())
+            {
+                EditorUtility.DisplayDialog(
+                    "Git is not installed",
+                    "This PC needs git to send this folder.\n\n" +
+                    "Linux: open Terminal (not the Unity Console) and run:\n" +
+                    "sudo apt install git",
+                    "OK");
+                return;
+            }
+
+            var remote = RunGit(root, "remote get-url origin");
+            if (remote.Code != 0 ||
+                remote.Text.IndexOf("ProjectARGON", StringComparison.OrdinalIgnoreCase) < 0)
+            {
+                EditorUtility.DisplayDialog(
+                    "Wrong GitHub remote",
+                    "This folder's git origin is:\n" +
+                    (string.IsNullOrWhiteSpace(remote.Text) ? "(none)" : remote.Text.Trim()) +
+                    "\n\nStopped so we do not upload the wrong project.",
+                    "OK");
+                return;
+            }
+
+            EnsureGitIdentity(root);
+
+            EditorUtility.DisplayProgressBar("WRLDZ", "Saving this folder…", 0.2f);
+            RunGit(root, "add -A");
+            var staged = RunGit(root, "diff --cached --quiet");
+            if (staged.Code != 0)
+            {
+                var commit = RunGit(
+                    root,
+                    "commit -m \"Local Unity Hub folder " + DateTime.UtcNow.ToString("yyyy-MM-dd") + "\"");
+                if (commit.Code != 0)
+                {
+                    EditorUtility.ClearProgressBar();
+                    Fail("Could not save local files.\n\n" + commit.Text, "Could not send to GitHub");
+                    return;
+                }
+            }
+
+            EditorUtility.DisplayProgressBar("WRLDZ", "Combining with GitHub…", 0.55f);
+            var fetch = RunGit(root, "fetch origin");
+            var mergeBase = RunGit(root, "merge-base HEAD origin/main");
+            var mergeArgs = mergeBase.Code == 0
+                ? "merge origin/main --no-edit"
+                : "merge origin/main --allow-unrelated-histories --no-edit";
+            var merge = RunGit(root, mergeArgs);
+            if (fetch.Code != 0 || merge.Code != 0)
+            {
+                EditorUtility.ClearProgressBar();
+                Fail(
+                    "Stopped so nothing is wiped.\n\n" + fetch.Text + "\n" + merge.Text +
+                    "\nIf files clash, tell the agent: merge conflict in ProjectARGON.",
+                    "Could not send to GitHub");
+                return;
+            }
+
+            var local = RunGit(root, "rev-parse HEAD");
+            var remoteHead = RunGit(root, "rev-parse origin/main");
+            if (local.Code == 0 &&
+                remoteHead.Code == 0 &&
+                string.Equals(local.Text.Trim(), remoteHead.Text.Trim(), StringComparison.Ordinal))
+            {
+                EditorUtility.ClearProgressBar();
+                AssetDatabase.Refresh();
+                EditorUtility.DisplayDialog(
+                    "Already synced",
+                    "This folder already matches GitHub. Nothing new to upload.",
+                    "OK");
+                return;
+            }
+
+            EditorUtility.DisplayProgressBar("WRLDZ", "Uploading to GitHub…", 0.85f);
+            var push = RunGit(root, "push origin main");
+            EditorUtility.ClearProgressBar();
+            if (push.Code != 0)
+            {
+                Fail(
+                    "Your files are saved in this folder. GitHub did not accept the upload " +
+                    "(sign-in needed).\n\nClose Unity. Open Linux Terminal in this folder and run:\n\n" +
+                    "sudo apt install gh\n" +
+                    "gh auth login\n\n" +
+                    "Choose GitHub.com, HTTPS, Login with a web browser.\n" +
+                    "Then: WRLDZ → Send this folder to GitHub again.\n\n" +
+                    push.Text,
+                    "Could not send to GitHub");
+                return;
+            }
+
+            AssetDatabase.Refresh();
+            var log = RunGit(root, "log -1 --oneline");
+            var msg =
+                "Uploaded to GitHub main.\n\n" +
+                log.Text.Trim() + "\n\n" +
+                "Keep using this same folder. Do not Add a second Hub copy.";
+            UnityEngine.Debug.Log("[WRLDZ] " + msg.Replace('\n', ' '));
+            EditorUtility.DisplayDialog("Sent to GitHub", msg, "OK");
+        }
+
+        static void EnsureGitIdentity(string root)
+        {
+            var email = RunGit(root, "config user.email");
+            if (email.Code != 0 || string.IsNullOrWhiteSpace(email.Text))
+            {
+                RunGit(root, "config user.email owner@localhost");
+                RunGit(root, "config user.name \"WRLDZ owner\"");
+            }
+        }
+
         static bool GitOnPath()
         {
             var r = Run("git", "--version", Directory.GetCurrentDirectory());
@@ -146,10 +290,10 @@ namespace WRLDZ.EditorTools
             }
         }
 
-        static void Fail(string msg)
+        static void Fail(string msg, string title = "Could not update from GitHub")
         {
             UnityEngine.Debug.LogError("[WRLDZ] " + msg);
-            EditorUtility.DisplayDialog("Could not update from GitHub", msg, "OK");
+            EditorUtility.DisplayDialog(title, msg, "OK");
         }
     }
 }

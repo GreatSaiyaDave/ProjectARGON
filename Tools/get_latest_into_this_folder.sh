@@ -65,7 +65,10 @@ else
     echo "You have unsaved local edits. Stopped so they are not overwritten."
     git status -sb | head -40
     echo
-    echo "Tell the agent you have local changes; do not zip-replace."
+    echo "To SAVE those edits onto GitHub, close Unity and paste:"
+    echo "curl -fsSL https://raw.githubusercontent.com/GreatSaiyaDave/ProjectARGON/main/Tools/send_this_folder_to_github.sh | bash"
+    echo
+    echo "Do not zip-replace this folder."
     exit 1
   fi
   git fetch origin
