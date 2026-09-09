@@ -39,15 +39,17 @@ curl -fL --show-error -o /tmp/wrldz-restore.sh https://raw.githubusercontent.com
 That puts THIS folder back to your saved local copy, then
 removes leftover GitHub files and the Unity Library mix.
 It does not change GitHub. First Play after that can be slow.
+Do NOT use WRLDZ → Get Latest from GitHub after this.
+That copies GitHub back onto this folder.
 
 Unstick is the other direction (GitHub onto this PC). Only use it
 if you want GitHub's files here. Same Terminal steps, then:
 
 curl -fsSL https://raw.githubusercontent.com/GreatSaiyaDave/ProjectARGON/main/Tools/unstick_merge_keep_github.sh | bash
 
-Proof it worked: search the Project window for WRLDZ_BUILD
-= CLEAN-0909. Then WRLDZ → Lab → Open Desktop Lab App.
+The CLEAN-0909 stamp is GitHub's copy. After restore, ignore that
+stamp. Same Hub project → Play.
 
-Later updates (after that stamp is here):
+Later updates (only when you WANT GitHub's files on this PC):
 WRLDZ → Get Latest from GitHub
 WRLDZ → Send this folder to GitHub

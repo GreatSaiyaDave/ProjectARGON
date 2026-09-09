@@ -191,6 +191,10 @@ def main() -> int:
         fail("restore script lost GitHub leftover cleanup")
     if "Library_mix_" not in restore_text:
         fail("restore script lost Library mix move")
+    if "wrldz-restore-report.txt" not in restore_text:
+        fail("restore script lost report path")
+    if "Get Latest from GitHub" not in restore_text:
+        fail("restore script lost Get Latest warning")
     if "git push" in restore_text:
         fail("restore script must not push to GitHub")
     must_contain(

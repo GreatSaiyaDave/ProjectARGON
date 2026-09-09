@@ -29,11 +29,11 @@ That script updates **in place**. It stops if Unity is open, if the remote is no
 
 That commits in place, merges `origin/main` (no force-push), then `git push origin main`. Auth failure: tell them `sudo apt install gh` then `gh auth login` (GitHub.com, HTTPS, browser) and run send again. Do not zip-replace.
 
-If they wanted **this PC's files** and unstick already replaced the folder with GitHub: Close Unity. Same folder. Give this curl:
+If they wanted **this PC's files** and unstick already replaced the folder with GitHub: Close Unity. Same folder. Give the restore curl. After it runs they must **not** use **WRLDZ → Get Latest from GitHub** (that copies GitHub back). Do not treat `CLEAN-0909` as proof of restore — that stamp is GitHub's copy.
 
 `curl -fL --show-error -o /tmp/wrldz-restore.sh https://raw.githubusercontent.com/GreatSaiyaDave/ProjectARGON/main/Tools/restore_pc_folder_from_before_unstick.sh && bash /tmp/wrldz-restore.sh`
 
-That resets the folder to the send snapshot, removes leftover GitHub files, and moves `Library` aside so Hub is not a mix. Does **not** push. Does not force-push. Do not zip-replace.
+That resets to the send snapshot that differs most from GitHub, removes leftover GitHub files, and moves `Library` aside. Writes `/tmp/wrldz-restore-report.txt`. Does **not** fetch/pull/push. Do not zip-replace.
 
 `unstick_merge_keep_github.sh` is GitHub → PC only. Do not give it when they asked to upload this folder to GitHub.
 
