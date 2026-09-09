@@ -293,19 +293,6 @@ namespace WRLDZ.Data
             }
         }
 
-        static void PinEditorCwd()
-        {
-#if UNITY_EDITOR
-            try
-            {
-                var root = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
-                Directory.SetCurrentDirectory(root);
-            }
-            catch
-            {
-                // Editor guard also pins on compile.
-            }
-#endif
-        }
+        static void PinEditorCwd() => WRLDZ.Core.EditorWorkingDirectory.Pin();
     }
 }

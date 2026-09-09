@@ -1,6 +1,7 @@
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using WRLDZ.Core;
 using WRLDZ.UI;
 
 namespace WRLDZ.EditorTools
@@ -16,7 +17,8 @@ namespace WRLDZ.EditorTools
                 if (!EditorUtility.DisplayDialog(
                         "Desktop Lab",
                         "Enter Play Mode on the Boot scene and open the Desktop Lab?\n\n" +
-                        "No phone, Quest, or GPS required.",
+                        "No phone, Quest, or GPS required.\n" +
+                        "New chrome: BUILD " + WrldzBuild.Stamp,
                         "Play Boot + Lab", "Cancel"))
                     return;
 
@@ -28,8 +30,11 @@ namespace WRLDZ.EditorTools
                     EditorSceneManager.OpenScene(boot);
                 }
 
+                // BootFlowBootstrap only auto-opens lab when this pref (or CLI) is set.
+                PlayerPrefs.SetInt(DesktopLabApp.PrefSkipBootCascade, 1);
+                PlayerPrefs.Save();
                 EditorApplication.isPlaying = true;
-                // BootFlowBootstrap auto-launches DesktopLab in Editor
+                Debug.Log(WrldzBuild.Line);
                 return;
             }
 

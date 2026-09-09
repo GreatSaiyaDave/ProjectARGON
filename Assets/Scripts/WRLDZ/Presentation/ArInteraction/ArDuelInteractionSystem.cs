@@ -151,12 +151,12 @@ namespace WRLDZ.Presentation.ArInteraction
             // Layer: lenses use Default (0) so HMD camera sees disks; phone keeps 28 + RT cam
             var layer = LifeSize ? 0 : DefaultLayer;
 
-            // Your Spirit Dueler (left arm)
+            // Your Spirit Dueler (left arm) — magic color from avatar accent
             PlayerDisk = ArDuelDiskRig.Create(stageRoot, playerSide: true, layer,
-                new Color(0.25f, 0.9f, 1f));
+                PlayerMagicAccent());
             PlayerDisk.Tracker = Tracker;
 
-            // Opponent's physical Spirit Dueler on their left arm (shared stage)
+            // Opponent's Spirit Dueler — rose until PvP avatars exist
             OppDisk = ArDuelDiskRig.Create(stageRoot, playerSide: false, layer,
                 new Color(1f, 0.35f, 0.55f));
             OppDisk.Tracker = Tracker;
@@ -309,7 +309,14 @@ namespace WRLDZ.Presentation.ArInteraction
                 if (engine != null && engine.OpeningSequenceActive)
                 {
                     SetHandVolumeVisible(false);
-                    // Keep retracted until PreDuelCinematic runs
+                    PlayerDisk?.FadeInRetracted(0f);
+                    OppDisk?.FadeInRetracted(0.12f);
+                }
+                else if (AppSession.Ensure()?.PendingArMatch?.SkipPreDuelCinematic == true)
+                {
+                    PlayerDisk?.SnapVisibleDeployed();
+                    OppDisk?.SnapVisibleDeployed();
+                    SetHandVolumeVisible(true);
                 }
                 else
                     DeployDisksForDuel();
@@ -349,10 +356,21 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary>Fold both disks (leave duel / AR inactive arm).</summary>
         public void RetractDisks()
         {
-            PlayerDisk?.Retract(0f);
-            OppDisk?.Retract(0.12f);
+            PlayerDisk?.RetractThenFadeOut(0f);
+            OppDisk?.RetractThenFadeOut(0.12f);
             SetHandVolumeVisible(false);
-            Debug.Log("[WRLDZ AR] Disks retracting");
+            Debug.Log("[WRLDZ AR] Disks retracting + fade out");
+        }
+
+        static Color PlayerMagicAccent()
+        {
+            var hex = AppSession.Ensure()?.Account?.avatar?.accentHex;
+            if (string.IsNullOrEmpty(hex)) hex = AppSession.Ensure()?.Account?.avatarColor;
+            if (string.IsNullOrEmpty(hex)) return new Color(0.25f, 0.9f, 1f);
+            if (hex[0] != '#') hex = "#" + hex;
+            return ColorUtility.TryParseHtmlString(hex, out var c)
+                ? c
+                : new Color(0.25f, 0.9f, 1f);
         }
 
         IEnumerator RevealHandAfterDeploy(float delay)

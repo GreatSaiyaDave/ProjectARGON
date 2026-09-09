@@ -253,7 +253,18 @@ namespace WRLDZ.Duel.TextEffects
         /// Cards in the GY cannot be targeted. ExceptNamedCard may allow that card's
         /// effects (Necrovalley except by the effect of "Necrovalley").
         /// </summary>
-        CannotTargetCardsInGraveyard
+        CannotTargetCardsInGraveyard,
+        /// <summary>Magical Hats: SS 2 Deck S/T as 0/0 face-down monsters and shuffle with a Set MMZ monster.</summary>
+        MagicalHatsStyle,
+        /// <summary>
+        /// Virus family (Crush Card / Deck Devastation): tribute DARK ATK gate,
+        /// look at opp field+hand (+draws if lingering), destroy by ATK threshold.
+        /// </summary>
+        CrushCardVirusStyle,
+        /// <summary>Dark Sage: tribute Dark Magician immediately after Time Wizard right-call.</summary>
+        DarkSageStyle,
+        /// <summary>Exodia: win if this card plus the printed named pieces are all in the hand.</summary>
+        ExodiaWinStyle
     }
 
     public enum EffectSide
@@ -308,6 +319,8 @@ namespace WRLDZ.Duel.TextEffects
         FieldSpellsOnField,
         /// <summary>Equip Spells in the controller's Deck (Iron Blacksmith Kotetsu).</summary>
         DeckEquipSpells,
+        /// <summary>Spell Cards in the controller's Deck (Dark Sage).</summary>
+        ControllerDeckSpells,
         /// <summary>Monsters in the opponent's GY (Book of Life second target).</summary>
         OppGyMonsters,
         /// <summary>Monsters the opponent controls, face-up or face-down (Spellbinding Circle).</summary>
@@ -412,6 +425,8 @@ namespace WRLDZ.Duel.TextEffects
         public bool RitualExactLevel;
         /// <summary>Targets must have ATK ≤ the numeric cost just paid (Armed Dragon).</summary>
         public bool RequiresAtkLeqCost;
+        /// <summary>Tribute/cost monster must have ATK ≥ Amount (Deck Devastation Virus).</summary>
+        public bool RequiresAtkGeqCost;
         /// <summary>GainThisAtkUntilEnd: Amount is per paid cost card (Bazoo, Gaia Soul).</summary>
         public bool ScaleAmountByCostCount;
         /// <summary>Remove this many Spell Counters from this card as cost.</summary>
@@ -437,7 +452,27 @@ namespace WRLDZ.Duel.TextEffects
         public int TokenCount = 1;
         public bool TokenToOpponent;
         public bool TokenCannotTribute;
+        /// <summary>Fill every empty Main Monster Zone (Multiply "as many as possible").</summary>
+        public bool TokenFillRemainingZones;
         public int TokenDestroyedDamage;
+        /// <summary>Cocoon of Evolution: host original ATK/DEF become this card's printed stats.</summary>
+        public bool ReplaceHostOriginalAtkDef;
+        /// <summary>Only legal in the Battle Phase (Magical Hats).</summary>
+        public bool RequiresBattlePhase;
+        /// <summary>Magical Hats anime: spawn Token hats instead of Deck Spell/Traps.</summary>
+        public bool HatsAreTokens;
+        /// <summary>Magical Hats anime: spawn this many hat tokens (4).</summary>
+        public int HatTokenCount;
+        /// <summary>Modern Crush Card: opponent may destroy up to 3 matching monsters in Deck.</summary>
+        public bool CrushCardDeckDestroyUpTo;
+        /// <summary>Lingering draw-check for this many of the opponent's End Phases (DDV / pre-errata Crush).</summary>
+        public int CrushCardLingerOpponentEnds;
+        /// <summary>Modern Crush Card: no damage until end of next turn.</summary>
+        public bool CrushCardNoDamageUntilNextTurn;
+        /// <summary>Destroy monsters at this ATK threshold (default 1500).</summary>
+        public int VirusDestroyAtk = 1500;
+        /// <summary>True: destroy ATK ≤ threshold (Deck Devastation). False: ATK ≥ (Crush Card).</summary>
+        public bool VirusDestroyAtkLeq;
         /// <summary>Union: equip only to a monster named NamedCard / EquipHostName.</summary>
         public string EquipHostName;
         /// <summary>Second printed name for SpecialSummonNamed (Elegant Egotist "X" or "Y").</summary>
@@ -459,6 +494,8 @@ namespace WRLDZ.Duel.TextEffects
         public bool RequiresAttackPosition;
         /// <summary>ChangeBattlePosition: set to face-up Attack (Stop Defense), do not toggle.</summary>
         public bool ForceAttackPosition;
+        /// <summary>ChangeBattlePosition: set to face-up Defense (Block Attack), do not toggle.</summary>
+        public bool ForceDefensePosition;
         /// <summary>Destroy only face-up Continuous Spells (Spell Purification).</summary>
         public bool FaceUpContinuousSpellsOnly;
         /// <summary>Destroy only face-up Continuous Traps.</summary>
@@ -526,6 +563,12 @@ namespace WRLDZ.Duel.TextEffects
         public bool RequiresSecondTarget;
         public EffectZoneFilter SecondZone;
         public EffectActionKind SecondAction;
+        /// <summary>Two-Pronged Attack: this many of your monsters (then OpponentTargetCount of theirs).</summary>
+        public int ControllerTargetCount;
+        /// <summary>Two-Pronged Attack: this many of the opponent's monsters after yours.</summary>
+        public int OpponentTargetCount;
+        /// <summary>Armed Ninja / Reaper: after revealing a Set card, destroy only if Spell or Trap.</summary>
+        public string DestroyIfType;
         /// <summary>
         /// CannotBeAttackTarget on OTHER matching monsters, not this card
         /// (Marauding Captain: Warriors except this one).
@@ -533,6 +576,13 @@ namespace WRLDZ.Duel.TextEffects
         public bool ExceptThisCard;
         /// <summary>Special Summon in Defense Position (Soul Resurrection).</summary>
         public bool SummonInDefense;
+        /// <summary>Special Summon in Attack Position (Call of the Haunted / Premature Burial).</summary>
+        public bool SummonInAttack;
+        /// <summary>
+        /// First chosen target is Tributed (sent to GY), not destroyed
+        /// (Order to Charge: Tribute that Normal Monster, then destroy 1 opp monster).
+        /// </summary>
+        public bool TributeChosenTarget;
         /// <summary>Special Summon selection may use fewer than Amount cards ("up to"/any number).</summary>
         public bool SpecialSummonUpTo;
         /// <summary>GY target must be a Normal Monster.</summary>
@@ -619,6 +669,10 @@ namespace WRLDZ.Duel.TextEffects
         public bool ChainResponseOnly;
         /// Response effect destroys the activated card if negation succeeds.
         public bool DestroyNegatedCard;
+        /// Answers a Spell Card activation (Magic Jammer, Dark Paladin, Horus LV8, Gardna).
+        public bool NegateRespondsToSpell;
+        /// Answers a Trap Card activation (Seven Tools of the Bandit).
+        public bool NegateRespondsToTrap;
         /// Big Shield Gardna: flip this monster face-up Defense on resolution.
         public bool FlipSelfFaceUpDefense;
         public bool ActivationNegatable = true;
@@ -717,6 +771,7 @@ namespace WRLDZ.Duel.TextEffects
              HasTiming(EffectTiming.ThisCardDestroysByBattle) ||
              HasTiming(EffectTiming.ThisCardInflictsBattleDamage) ||
              HasTiming(EffectTiming.AfterDamageCalculation) ||
-             HasTiming(EffectTiming.EndOfDamageStep));
+             HasTiming(EffectTiming.EndOfDamageStep) ||
+             HasTiming(EffectTiming.ChainLinkActivated));
     }
 }

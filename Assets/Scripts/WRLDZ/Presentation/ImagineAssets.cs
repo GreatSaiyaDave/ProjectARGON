@@ -35,7 +35,7 @@ namespace WRLDZ.Presentation
         public static Sprite DuelStagePortrait() =>
             L("ui/bg_duel_stage_portrait.png") ?? BgDuelStage();
 
-        /// <summary>Translucent glass plate for splash/title cards.</summary>
+        /// <summary>Translucent boot plate (obsidian filament, not smoked glass).</summary>
         public static Sprite PanelBootGlass() =>
             Sliced("ui/panel_boot_glass.png", new Vector4(64, 64, 64, 64))
             ?? L("ui/panel_boot_glass.png")
@@ -57,6 +57,9 @@ namespace WRLDZ.Presentation
         public static Sprite FxEyeRedHalo() => L("fx/fx_eye_red_halo.png") ?? FxEyePupilRed();
         public static Sprite FxEyePupilCore() => L("fx/fx_eye_pupil_core.png") ?? FxEyeWhiteGlow();
         public static Sprite FxHoloScan() => L("fx/fx_holo_scan.png") ?? FxEyeWhiteGlow();
+        /// <summary>Local 5s response warning — player-only, not a menu.</summary>
+        public static Sprite FxWarningRespond() =>
+            L("fx/warning_respond.png") ?? L("fx/fx_eye_burst_ring.png");
         public static Sprite FxEyeBurstRing() =>
             L("fx/fx_eye_burst_ring.png") ?? LevelRing() ?? FxEyeWhiteGlow();
 
@@ -210,7 +213,7 @@ namespace WRLDZ.Presentation
             Sliced("ui/panel_holo_glass.png", new Vector4(72, 64, 72, 64))
             ?? L("ui/panel_holo_glass.png");
 
-        /// <summary>Smoked-glass overworld menu plate (map shows through).</summary>
+        /// <summary>Legacy name. Art is now an obsidian filament sheet, not smoked glass.</summary>
         public static Sprite PanelMenuGlass() =>
             Sliced("ui/panel_menu_glass.png", new Vector4(48, 32, 48, 32))
             ?? L("ui/panel_menu_glass.png")

@@ -674,6 +674,23 @@ namespace WRLDZ.Duel.Rules
                     {
                         Action = EffectActionKind.CoinCallDestroyOppOrSelf
                     }) == EffectResolutionKind.UniqueException);
+                Check("Vocabulary: Magical Hats is UniqueException",
+                    EffectVocabulary.IsUniqueException(EffectActionKind.MagicalHatsStyle));
+                Check("Vocabulary: Crush Card Virus family is Destroy (shared kind, not UniqueException)",
+                    !EffectVocabulary.IsUniqueException(EffectActionKind.CrushCardVirusStyle) &&
+                    EffectVocabulary.ResolutionOf(new EffectClause
+                    {
+                        Action = EffectActionKind.CrushCardVirusStyle
+                    }) == EffectResolutionKind.Destroy);
+                Check("Vocabulary: Dark Sage procedure is UniqueException",
+                    EffectVocabulary.IsUniqueException(EffectActionKind.DarkSageStyle));
+                Check("Vocabulary: NegateActivation is a shared kind (Counter Traps + monster QEs)",
+                    System.Array.IndexOf(EffectVocabulary.SharedResolutions,
+                        EffectResolutionKind.NegateActivation) >= 0 &&
+                    EffectVocabulary.ResolutionOf(new EffectClause
+                    {
+                        Action = EffectActionKind.NegateActivation
+                    }) == EffectResolutionKind.NegateActivation);
                 Check("Vocabulary: Thunder Dragon is Discard → Search",
                     CardTextEffectCompiler.Compile(new CardDef
                     {
@@ -969,6 +986,47 @@ namespace WRLDZ.Duel.Rules
                         c != null && c.RequiresDiscardSelf && c.ActivatesFromHand &&
                         c.Action == EffectActionKind.AddNamedFromDeckToHand &&
                         c.Amount == 2),
+                    "compile miss");
+                Check("PSCT Seven Tools: Counter Trap negate Trap + Pay 1000",
+                    CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 3819470, name = "Seven Tools of the Bandit", type = "Trap Card",
+                        race = "Counter",
+                        desc =
+                            "When a Trap Card is activated: Pay 1000 LP; negate the activation, and if you do, destroy it."
+                    }) is { } seven && seven.FullyCompiled &&
+                    seven.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Timing == EffectTiming.ChainLinkActivated &&
+                        c.Action == EffectActionKind.NegateActivation &&
+                        c.ChainResponseOnly &&
+                        c.DestroyNegatedCard &&
+                        c.PayLpAmount == 1000 &&
+                        c.NegateRespondsToTrap &&
+                        !c.NegateRespondsToSpell) &&
+                    seven.ClauseList.TrueForAll(c =>
+                        c == null ||
+                        (c.Action != EffectActionKind.SpecialSummonFromHand &&
+                         c.Action != EffectActionKind.SpecialSummonFromDeck &&
+                         c.Action != EffectActionKind.ChangeBattlePosition)),
+                    "compile miss");
+                Check("PSCT Magic Jammer: Counter Trap negate Spell + discard",
+                    CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 77414722, name = "Magic Jammer", type = "Trap Card",
+                        race = "Counter",
+                        desc =
+                            "When a Spell Card is activated: Discard 1 card; negate the activation, and if you do, destroy it."
+                    }) is { } jammer && jammer.FullyCompiled &&
+                    jammer.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Timing == EffectTiming.ChainLinkActivated &&
+                        c.Action == EffectActionKind.NegateActivation &&
+                        c.RequiresDiscardCost &&
+                        c.DiscardCostCount == 1 &&
+                        c.DestroyNegatedCard &&
+                        c.NegateRespondsToSpell &&
+                        !c.NegateRespondsToTrap),
                     "compile miss");
                 Check("PSCT Time Wizard: call coin, destroy opp or self",
                     CardTextEffectCompiler.Compile(new CardDef
@@ -1597,6 +1655,7 @@ namespace WRLDZ.Duel.Rules
                             c != null &&
                             c.Action == EffectActionKind.SpecialSummonFromGy &&
                             c.DestroyHostWhenThisLeaves &&
+                            c.SummonInAttack &&
                             !c.SummonInDefense));
 
                     var soul = db.Get(92924317);
@@ -2616,9 +2675,10 @@ namespace WRLDZ.Duel.Rules
                     ErazProgress.HasBadge(fresh, ErazFormat.Original));
                 Check("Badge: tutorial does not grant gx",
                     !ErazProgress.HasBadge(fresh, ErazFormat.Gx));
-                ErazProgress.GrantNextOnSeasonComplete(fresh);
-                Check("Badge: season complete grants gx",
-                    ErazProgress.HasBadge(fresh, ErazFormat.Gx));
+                Check("Badge: season complete does not grant whole GX",
+                    !ErazProgress.HasBadge(fresh, ErazFormat.Gx));
+                Check("Badge: next piece after original is gx",
+                    ErazProgress.NextPieceBand(fresh) == ErazFormat.Gx);
                 Check("Badge: cannot select 5ds yet",
                     !ErazProgress.CanSelectBand(fresh, ErazFormat.FiveDs));
 

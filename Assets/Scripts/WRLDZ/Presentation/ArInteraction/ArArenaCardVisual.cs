@@ -190,7 +190,7 @@ namespace WRLDZ.Presentation.ArInteraction
             {
                 _spellCo = StartCoroutine(SpellActivateSequenceCo(localPos));
                 if (Application.isPlaying)
-                    ArArenaCombatFx.PlaySpellCast(LandingWorld(), PlayerSide, _layer);
+                    ArArenaCombatFx.PlaySpellCast(LandingWorld(), PlayerSide, _layer, CardId);
             }
             else if (Application.isPlaying)
             {
@@ -1001,7 +1001,7 @@ namespace WRLDZ.Presentation.ArInteraction
 
             _spellSeq = SpellSeqPhase.ActiveHover;
             RefreshSpellCountersFromBus();
-            ArArenaCombatFx.PlaySpellCast(transform.position, PlayerSide, _layer);
+            ArArenaCombatFx.PlaySpellCast(transform.position, PlayerSide, _layer, CardId);
 
             var hoverNeed = PlayerSide
                 ? SpellActivationPresentation.MinHoverSeconds

@@ -124,16 +124,17 @@ namespace WRLDZ.UI
             FloatingPanel.Place(sub.rectTransform, 0.06f, 0.85f, 0.94f, 0.90f);
             sub.alignment = TextAnchor.MiddleCenter;
             sub.color = DuelystUi.TextMuted;
+            WrldzBuild.Log();
 
             _modeLine = FloatingPanel.Body(root, ModeBanner(), 15);
-            FloatingPanel.Place(_modeLine.rectTransform, 0.06f, 0.80f, 0.94f, 0.85f);
+            FloatingPanel.Place(_modeLine.rectTransform, 0.06f, 0.79f, 0.94f, 0.83f);
             _modeLine.alignment = TextAnchor.MiddleCenter;
             _modeLine.color = DuelystUi.Cyan;
 
             // Primary actions
-            float y = 0.68f;
-            float h = 0.075f;
-            float gap = 0.012f;
+            float y = 0.78f;
+            float h = 0.055f;
+            float gap = 0.008f;
 
             // Quick AR always runs deploy → shuffle → draw (toggle no longer kills this path).
             // Use INSTANT DUEL when you want hands already drawn.
@@ -144,6 +145,10 @@ namespace WRLDZ.UI
             Row(root, ref y, h, gap, "INSTANT DUEL (SKIP CINEMATIC)",
                 "Hands already drawn · fastest rules/UI check",
                 false, () => LaunchQuickDuel(cinematic: false));
+
+            Row(root, ref y, h, gap, "VS OPPONENT",
+                "Pick Yugi, Kaiba, Joey, street lists · 8000 LP TCG",
+                true, LaunchOpponents);
 
             Row(root, ref y, h, gap, "OVERWORLD (WASD MAP)",
                 "Battle City map · Tears · Zone Mode · no GPS needed",
@@ -162,8 +167,7 @@ namespace WRLDZ.UI
                 true, LaunchOcgLab);
 
             // Options
-            var optPanel = FloatingPanel.Create(root, "Opts", goldEdge: false);
-            FloatingPanel.Place(optPanel, 0.08f, 0.14f, 0.92f, 0.28f);
+            var optPanel = HubChrome.Sheet(root, "Opts", 0.08f, 0.14f, 0.92f, 0.28f);
 
             var optTitle = FloatingPanel.Body(optPanel, "OPTIONS", 12);
             FloatingPanel.Place(optTitle.rectTransform, 0.04f, 0.72f, 0.96f, 0.95f);
@@ -224,11 +228,12 @@ namespace WRLDZ.UI
         static void Row(Transform root, ref float y, float h, float gap,
             string title, string blurb, bool gold, Action onClick)
         {
-            var b = FloatingPanel.PrimaryButton(root, title, () =>
+            var b = HubChrome.Capsule(root, title, () =>
             {
                 FreeUiKit.PlayConfirm();
                 onClick?.Invoke();
-            }, gold: gold);
+            }, gold ? MenuCommandButton.Kind.Gold : MenuCommandButton.Kind.Primary,
+                blurb, centerTitle: false, titleSize: 20);
             FloatingPanel.Place(b.GetComponent<RectTransform>(), 0.08f, y - h, 0.92f, y);
             // Subtitle under button via status only for compact layout
             y -= h + gap;
@@ -268,6 +273,20 @@ namespace WRLDZ.UI
                 $"[WRLDZ DesktopLab] LaunchQuickDuel cinematic={!skipCinematic} · skipFlag={c.SkipPreDuelCinematic}");
             CloseHubVisual();
             AppSession.Ensure().StartArDuel(c);
+        }
+
+        void LaunchOpponents()
+        {
+            if (!AppSession.Ensure().EnsureLabTestAccount(out var err))
+            {
+                SetStatus("Login failed: " + err);
+                return;
+            }
+
+            AppSession.Ensure().ClearTestDuelMode();
+            var canvas = GameObject.Find("DesktopLabCanvas");
+            var host = canvas != null ? canvas.transform : transform;
+            OpponentSelectScreen.Build(host, () => { }, labTest: true);
         }
 
         void LaunchOverworld()

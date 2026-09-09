@@ -4,8 +4,8 @@ Almost every systems menu ships **two layouts** of the same feature.
 
 | Presentation | Enum | When | Layout |
 |--------------|------|------|--------|
-| **Phone screen** | `UiPresentation.NonArPortrait` | Overworld, Hub, Desktop Lab, Editor portrait | Full-bleed sheet, large type, full controls |
-| **AR disk holo** | `UiPresentation.ArDiskHolo` | During DuelSlice / left-arm disk menus | Compact cyan glass panel, glanceable, limited edit |
+| **Phone overlay** | `UiPresentation.NonArPortrait` | Overworld, Hub, Desktop Lab, Editor portrait | Hub grammar: dusk dim, cyan header capsule, body well, gold **BACK** footer |
+| **AR disk holo** | `UiPresentation.ArDiskHolo` | During DuelSlice / left-arm disk menus | Compact cyan capsule panel, glanceable, limited edit |
 
 ## Code pattern
 
@@ -24,6 +24,7 @@ var frame = DualMenuPresenter.BuildFrame(modalHost, "TITLE", "subtitle", onClose
 |-------|------|
 | Presentation enum | `Shell/MenuId.cs` → `UiPresentation` |
 | Frame builder | `Shell/DualMenuPresenter.cs` |
+| Shared hub plates | `Shell/HubChrome.cs` |
 | Router default | `ScreenRouter.Presentation` |
 | Deck example | `Shell/DeckCollectionScreen.cs` |
 
@@ -44,7 +45,8 @@ var frame = DualMenuPresenter.BuildFrame(modalHost, "TITLE", "subtitle", onClose
 2. Call `DualMenuPresenter.BuildFrame`.  
 3. Branch layout with `frame.Presentation == UiPresentation.ArDiskHolo`.  
 4. Wire `MenuShell.ShowOverlay(MenuId.…)` like Deck.  
-5. Do **not** invent a third full UI — only phone + AR (world panel only for zone prompts).
+5. Phone overlays must reuse `HubChrome` (header capsule, dusk dim, dest/featured plates, gold BACK). Do not invent a rectangular holo sheet that looks unlike the hub.
+6. Do **not** invent a third full UI — only phone + AR (world panel only for zone prompts).
 
 ## Forbidden in AR holo
 

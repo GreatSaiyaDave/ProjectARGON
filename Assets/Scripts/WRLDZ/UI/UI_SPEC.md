@@ -12,7 +12,7 @@
 | Principle | Rule |
 |-----------|------|
 | **Readable first** | Pure white / soft gold on near-black. Never gray-on-gray. |
-| **Minimal chrome** | Floating translucent panels, soft glow, thin luminous borders only. |
+| **Minimal chrome** | Solid Vision slates, 1 px filament, millennia gold stakes only. |
 | **One job per screen** | No overlapping modals unless confirmation. |
 | **One-handed** | Primary actions in lower 40% or right-thumb zone; left arm may hold disk. |
 | **Outdoor legible** | Min body **16** design px (`WrldzType.MinBody`); heavy outline + cyan soft shadow. |
@@ -24,7 +24,7 @@
 | Token | Hex / role | Use |
 |-------|------------|-----|
 | `Void` | `#05070F` | Full-screen base |
-| `Panel` | `#0C1220` @ 92–96% | Floating sheets |
+| `Panel` | `#0E101C` @ 90–94% | Solid Vision slate (not smoked glass) |
 | `TextPrimary` | `#FAF8F4` | Titles, values |
 | `TextGold` | `#FFD647` | LP, currency, phase |
 | `TextMuted` | `#B8CEE8` | Secondary labels only (still high contrast) |
@@ -479,12 +479,13 @@ Implement via `AppSession` + `ScreenRouter` (do not hard-wire random `SceneManag
 ## 9. Visual reference (in-engine)
 
 ```
-Background:  void charcoal
-Panel:       glass navy + 2px cyan/gold edge
+Background:  Battle City night void
+Panel:       obsidian slate + 1px cyan/gold filament
 Title:       soft gold display face
 Body:        cream Exo 2
-Accent CTA:  cyan primary / gold secondary / danger red
+Accent CTA:  cyan you / magenta opponent / gold phase
 Icons:       monochrome line + single accent fill
+Duel HUD:    YOU LP left · PHASE center · OPP LP right
 ```
 
 **Not this product:** dense Master Duel deck grids on the map, GBA brick spam, low-contrast gray icons, simultaneous multi-modal stacks.

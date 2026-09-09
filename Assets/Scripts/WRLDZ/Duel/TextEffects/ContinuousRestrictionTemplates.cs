@@ -289,6 +289,7 @@ namespace WRLDZ.Duel.TextEffects
                 StaysOnField = true,
                 DestroyHostWhenThisLeaves = true,
                 SummonInDefense = defense,
+                SummonInAttack = !defense,
                 RequiresNormalMonster = normalOnly,
                 PayLpAmount = payLp,
                 MakesChainLink = true

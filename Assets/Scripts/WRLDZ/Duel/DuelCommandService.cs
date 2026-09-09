@@ -98,6 +98,7 @@ namespace WRLDZ.Duel
                 DuelIntentKind.ChangePosition => DoPos(engine, who, intent),
                 DuelIntentKind.Attack => DoAttack(engine, who, intent, forceDirect: false),
                 DuelIntentKind.DirectAttack => DoAttack(engine, who, intent, forceDirect: true),
+                DuelIntentKind.SpecialSummon => DoSpecialSummon(engine, who, intent),
                 _ => DuelCommandResult.Fail(intent, "Unknown declaration.")
             };
         }
@@ -207,6 +208,20 @@ namespace WRLDZ.Duel
                 return DuelCommandResult.Fail(intent, $"Summon failed for {intent.Card.Name}.");
             return DuelCommandResult.Success(intent,
                 asSet ? $"Set {intent.Card.Name}!" : $"Normal Summon {intent.Card.Name}!");
+        }
+
+        static DuelCommandResult DoSpecialSummon(DuelEngine engine, DuelistState who, DuelIntent intent)
+        {
+            if (engine.TurnPlayer != who)
+                return DuelCommandResult.Fail(intent, "Not your turn.");
+            if (intent.Card == null)
+                return DuelCommandResult.Fail(intent, "Name a monster to Special Summon.");
+            if (!engine.CanSpecialSummonProcedure(who, intent.Card))
+                return DuelCommandResult.Fail(intent,
+                    $"Cannot Special Summon {intent.Card.Name} right now.");
+            if (!engine.TrySpecialSummonProcedure(who, intent.Card))
+                return DuelCommandResult.Fail(intent, $"Special Summon failed for {intent.Card.Name}.");
+            return DuelCommandResult.Success(intent, $"Special Summon {intent.Card.Name}!");
         }
 
         static DuelCommandResult DoSetSt(DuelEngine engine, DuelistState who, DuelIntent intent)

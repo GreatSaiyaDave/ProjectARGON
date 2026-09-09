@@ -9,17 +9,17 @@ namespace WRLDZ.UI.Shell
     /// </summary>
     public static class MenuChromePrefs
     {
-        const string KeyOpacity = "WRLDZ_MenuOpacity";
+        const string KeyOpacity = "WRLDZ_MenuOpacity_v2";
         const string KeySize = "WRLDZ_MenuSize";
 
-        /// <summary>How transparent the glass plate is.</summary>
+        /// <summary>How dense the Solid Vision slate is.</summary>
         public enum OpacityLevel
         {
-            /// <summary>~28% fill — strongest see-through (AR-friendly).</summary>
+            /// <summary>~58% fill — AR glance, still a slate not smoked glass.</summary>
             Clear = 0,
-            /// <summary>~42% fill — default balanced glass.</summary>
+            /// <summary>~82% fill — filament sheet (mid).</summary>
             Glass = 1,
-            /// <summary>~72% fill — more solid for outdoor contrast.</summary>
+            /// <summary>~94% fill — default outdoor / Shadow Game window.</summary>
             Solid = 2
         }
 
@@ -33,7 +33,7 @@ namespace WRLDZ.UI.Shell
 
         public static OpacityLevel Opacity
         {
-            get => (OpacityLevel)Mathf.Clamp(PlayerPrefs.GetInt(KeyOpacity, (int)OpacityLevel.Glass), 0, 2);
+            get => (OpacityLevel)Mathf.Clamp(PlayerPrefs.GetInt(KeyOpacity, (int)OpacityLevel.Solid), 0, 2);
             set
             {
                 PlayerPrefs.SetInt(KeyOpacity, (int)value);
@@ -54,8 +54,8 @@ namespace WRLDZ.UI.Shell
         public static string OpacityLabel => Opacity switch
         {
             OpacityLevel.Clear => "Clear",
-            OpacityLevel.Solid => "Solid",
-            _ => "Glass"
+            OpacityLevel.Glass => "Filament",
+            _ => "Solid"
         };
 
         public static string SizeLabel => Size switch
@@ -77,20 +77,20 @@ namespace WRLDZ.UI.Shell
             return Size;
         }
 
-        /// <summary>Main plate fill alpha (window glass).</summary>
+        /// <summary>Main plate fill alpha (obsidian slate).</summary>
         public static float PanelAlpha => Opacity switch
         {
-            OpacityLevel.Clear => 0.28f,
-            OpacityLevel.Solid => 0.78f,
-            _ => 0.42f
+            OpacityLevel.Clear => 0.58f,
+            OpacityLevel.Glass => 0.82f,
+            _ => 0.94f
         };
 
-        /// <summary>Full-screen dim behind the sheet (low so world/AR stays visible).</summary>
+        /// <summary>Full-screen dim behind the sheet (low so world/AR stays visible around it).</summary>
         public static float DimAlpha => Opacity switch
         {
-            OpacityLevel.Clear => 0.18f,
-            OpacityLevel.Solid => 0.48f,
-            _ => 0.28f
+            OpacityLevel.Clear => 0.22f,
+            OpacityLevel.Glass => 0.34f,
+            _ => 0.42f
         };
 
         /// <summary>Inner content plate (slightly denser than outer edge).</summary>
@@ -99,27 +99,27 @@ namespace WRLDZ.UI.Shell
         /// <summary>Gold/hairline edge alpha.</summary>
         public static float EdgeAlpha => Opacity switch
         {
-            OpacityLevel.Clear => 0.22f,
-            OpacityLevel.Solid => 0.45f,
-            _ => 0.32f
+            OpacityLevel.Clear => 0.40f,
+            OpacityLevel.Glass => 0.55f,
+            _ => 0.70f
         };
 
         /// <summary>List row / button face alpha on deck menus.</summary>
         public static float RowAlpha => Opacity switch
         {
-            OpacityLevel.Clear => 0.32f,
-            OpacityLevel.Solid => 0.72f,
-            _ => 0.48f
+            OpacityLevel.Clear => 0.50f,
+            OpacityLevel.Glass => 0.64f,
+            _ => 0.70f
         };
 
-        public static Color PanelColor => new(0.05f, 0.07f, 0.11f, PanelAlpha);
-        public static Color InsetColor => new(0.04f, 0.06f, 0.10f, InsetAlpha);
-        public static Color DimColor => new(0.01f, 0.02f, 0.04f, DimAlpha);
-        public static Color EdgeColor => new(DuelystUi.Gold.r, DuelystUi.Gold.g, DuelystUi.Gold.b, EdgeAlpha);
-        public static Color RowColor => new(0.08f, 0.10f, 0.14f, RowAlpha);
-        public static Color RowGoldColor => new(0.28f, 0.22f, 0.08f, RowAlpha + 0.08f);
-        public static Color FieldColor => new(0.06f, 0.08f, 0.12f, Mathf.Clamp01(RowAlpha + 0.06f));
-        public static Color InspectColor => new(0.03f, 0.05f, 0.09f, Mathf.Clamp01(PanelAlpha + 0.12f));
+        public static Color PanelColor => new(0.055f, 0.048f, 0.110f, PanelAlpha);
+        public static Color InsetColor => new(0.040f, 0.035f, 0.090f, InsetAlpha);
+        public static Color DimColor => new(0.04f, 0.03f, 0.09f, DimAlpha);
+        public static Color EdgeColor => new(DuelystUi.Cyan.r, DuelystUi.Cyan.g, DuelystUi.Cyan.b, EdgeAlpha);
+        public static Color RowColor => new(0.08f, 0.09f, 0.15f, RowAlpha);
+        public static Color RowGoldColor => new(0.22f, 0.18f, 0.06f, RowAlpha + 0.08f);
+        public static Color FieldColor => new(0.06f, 0.07f, 0.13f, Mathf.Clamp01(RowAlpha + 0.06f));
+        public static Color InspectColor => new(0.04f, 0.035f, 0.09f, Mathf.Clamp01(PanelAlpha + 0.04f));
 
         /// <summary>
         /// Window anchors for deck / systems sheets. AR is always a step more compact

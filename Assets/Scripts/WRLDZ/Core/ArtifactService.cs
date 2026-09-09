@@ -20,8 +20,52 @@ namespace WRLDZ.Core
         public static string ErazId(string bandId) =>
             string.IsNullOrEmpty(bandId) ? "" : "eraz." + bandId.Trim();
 
+        public static string ErazPieceId(string bandId) =>
+            string.IsNullOrEmpty(bandId) ? "" : "eraz." + bandId.Trim() + ".piece";
+
+        public const string SoulFragment = "soul.fracture_piece";
+
+        public static bool IsErazPieceId(string defId) =>
+            !string.IsNullOrEmpty(defId)
+            && defId.StartsWith("eraz.", StringComparison.OrdinalIgnoreCase)
+            && defId.EndsWith(".piece", StringComparison.OrdinalIgnoreCase);
+
+        public static string FormatId(string formatId) =>
+            string.IsNullOrEmpty(formatId) ? "" : "format." + formatId.Trim();
+
+        public static string FormatPieceId(string formatId) =>
+            string.IsNullOrEmpty(formatId) ? "" : "format." + formatId.Trim() + ".piece";
+
+        public static bool IsFormatPieceId(string defId) =>
+            !string.IsNullOrEmpty(defId)
+            && defId.StartsWith("format.", StringComparison.OrdinalIgnoreCase)
+            && defId.EndsWith(".piece", StringComparison.OrdinalIgnoreCase);
+
         public static string SetEnergyId(string setCode) =>
             string.IsNullOrEmpty(setCode) ? "" : "se." + setCode.Trim().ToUpperInvariant();
+
+        /// <summary>
+        /// Set Energy only of sets in an ERAZ band the player has a whole badge for.
+        /// Original is the fortune-teller grant; later bands require a merge.
+        /// </summary>
+        public static bool CanEarnSetEnergy(PlayerProgress p, string setCode)
+        {
+            if (p == null || string.IsNullOrEmpty(setCode)) return false;
+            setCode = setCode.Trim().ToUpperInvariant();
+            if (ErazFormat.InOriginalSetList(setCode))
+                return ErazProgress.HasBadge(p, ErazFormat.Original);
+            var bands = ErazFormat.BandIdsInOrder();
+            for (var i = 0; i < bands.Count; i++)
+            {
+                var band = bands[i];
+                if (string.Equals(band, ErazFormat.Original, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (ErazFormat.InPoolBySetCode(setCode, band) && ErazProgress.HasBadge(p, band))
+                    return true;
+            }
+
+            return false;
+        }
 
         public static void Grant(LocalAccountStore.Account acc, string defId, int qty)
         {
@@ -58,6 +102,7 @@ namespace WRLDZ.Core
 
                 if (qty <= 0) return;
                 AddNew(inv, defId, stackable ? qty : 1, DefaultCharges(def));
+                TryFuseSoulFragments(p, inv);
                 SyncCaches(p, inv);
                 return;
             }
@@ -70,6 +115,7 @@ namespace WRLDZ.Core
             }
 
             inst.qty = Mathf.Max(0, inst.qty + qty);
+            TryFuseSoulFragments(p, inv);
             SyncCaches(p, inv);
         }
 
@@ -165,7 +211,8 @@ namespace WRLDZ.Core
         public static void GrantUntaggedSetEnergy(PlayerProgress p, PlayerInventory inv, int qty)
         {
             if (qty <= 0) return;
-            var set = FirstUnlockedSet(p);
+            var set = FirstEarnableSet(p);
+            if (string.IsNullOrEmpty(set)) return;
             Grant(p, inv, SetEnergyId(set), qty);
         }
 
@@ -210,7 +257,7 @@ namespace WRLDZ.Core
                 Find(inv, DuelCoin).qty = p.duelCoin;
 
             if (SetEnergyTotal(inv) == 0 && p.setEnergy > 0)
-                Grant(p, inv, SetEnergyId(FirstUnlockedSet(p)), p.setEnergy);
+                Grant(p, inv, SetEnergyId(FirstEarnableSet(p)), p.setEnergy);
 
             var badges = ErazProgress.Owned(p);
             for (var i = 0; i < badges.Length; i++)
@@ -248,11 +295,26 @@ namespace WRLDZ.Core
                 {
                     if (inst == null || string.IsNullOrEmpty(inst.defId)) continue;
                     if (!inst.defId.StartsWith("eraz.", StringComparison.OrdinalIgnoreCase)) continue;
+                    if (IsErazPieceId(inst.defId)) continue;
                     badges.Add(inst.defId.Substring("eraz.".Length));
                 }
             }
 
             p.erazBadgesCsv = string.Join(",", badges);
+
+            var formats = new List<string>();
+            if (inv.artifactDeckBox.instances != null)
+            {
+                foreach (var inst in inv.artifactDeckBox.instances)
+                {
+                    if (inst == null || string.IsNullOrEmpty(inst.defId)) continue;
+                    if (!inst.defId.StartsWith("format.", StringComparison.OrdinalIgnoreCase)) continue;
+                    if (IsFormatPieceId(inst.defId)) continue;
+                    formats.Add(inst.defId.Substring("format.".Length));
+                }
+            }
+
+            p.formatBadgesCsv = string.Join(",", formats);
 
             var transport = Find(inv, TradeTransport);
             inv.tradeTransportCharges = transport == null ? 0 : Mathf.Max(0, transport.qty);
@@ -265,17 +327,37 @@ namespace WRLDZ.Core
         static int DefaultCharges(ArtifactDef def) =>
             def != null && def.Kind == ArtifactKind.Millennium ? 3 : 0;
 
-        static string FirstUnlockedSet(PlayerProgress p)
+        static string FirstEarnableSet(PlayerProgress p)
         {
-            if (p == null || string.IsNullOrEmpty(p.unlockedSetsCsv)) return "LOB";
+            if (CanEarnSetEnergy(p, "LOB")) return "LOB";
+            if (p == null || string.IsNullOrEmpty(p.unlockedSetsCsv))
+                return CanEarnSetEnergy(p, "LOB") ? "LOB" : "";
             var parts = p.unlockedSetsCsv.Split(',');
             for (var i = 0; i < parts.Length; i++)
             {
-                var s = parts[i].Trim();
-                if (s.Length > 0) return s.ToUpperInvariant();
+                var s = parts[i].Trim().ToUpperInvariant();
+                if (s.Length > 0 && CanEarnSetEnergy(p, s)) return s;
             }
 
-            return "LOB";
+            return "";
+        }
+
+        /// <summary>Five soul shards → +1 fracture capacity (max 8).</summary>
+        static void TryFuseSoulFragments(PlayerProgress p, PlayerInventory inv)
+        {
+            if (p == null || inv == null) return;
+            const int need = 5;
+            while (Qty(inv, SoulFragment) >= need
+                   && p.soulFractureCapacity < PlayerProgress.MaxSoulFractureCapacity)
+            {
+                var inst = Find(inv, SoulFragment);
+                if (inst == null) break;
+                inst.qty -= need;
+                if (inst.qty <= 0)
+                    Remove(inv, SoulFragment);
+                p.soulFractureCapacity++;
+                Debug.Log("[WRLDZ] Soul shards fused → capacity " + p.soulFractureCapacity);
+            }
         }
 
         static void EnsureBox(PlayerInventory inv)

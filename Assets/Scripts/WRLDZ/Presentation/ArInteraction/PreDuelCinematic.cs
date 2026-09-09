@@ -125,16 +125,16 @@ namespace WRLDZ.Presentation.ArInteraction
             else
                 Debug.LogWarning("[WRLDZ PreDuel] No interaction system — deploy/shuffle will be skipped");
 
-            yield return new WaitForSecondsRealtime(0.55f);
+            yield return new WaitForSecondsRealtime(1.05f);
 
-            // Always snap blades open so Editor / slow ticks never leave disks folded
-            if (_ix?.PlayerDisk != null)
+            // Safety: Editor sparse ticks only. Do not skip the anime swing in play.
+            if (_ix?.PlayerDisk != null && _ix.PlayerDisk.Fx.BladeOpen < 0.85f)
             {
                 _ix.PlayerDisk.Fx.SnapDeployed();
                 _ix.PlayerDisk.EnsureDeckStackVisual();
             }
 
-            if (_ix?.OppDisk != null)
+            if (_ix?.OppDisk != null && _ix.OppDisk.Fx.BladeOpen < 0.85f)
                 _ix.OppDisk.Fx.SnapDeployed();
 
             yield return new WaitForSecondsRealtime(0.25f);

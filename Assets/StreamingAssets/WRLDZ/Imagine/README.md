@@ -2,7 +2,7 @@
 
 Original art generated with **Grok Imagine** for Project ARGON / Duel Monsters:WRLDZ.
 
-**Style contract:** piano-glass navy × Master Duel gold/cyan. Thin luminous rims, gold L-corner ticks, no candy gloss, no circuitry clutter. Icons are line glyphs (cyan stroke, gold accent) with no circular frames. No Konami screenshots; card faces stay in `CardArt/`.
+**Style contract:** ink-line anime HUD × Solid Vision cyan/gold. Thin luminous rims, gold L-corner ticks, no frosted glass panes, no candy gloss. Icons are line glyphs (cyan stroke, gold accent) with no circular frames. No Konami screenshots; card faces stay in `CardArt/`.
 
 ## How it loads
 
@@ -26,6 +26,7 @@ Imagine/
   pins/     Map markers
   ui/       Panels, buttons, bars, duel chrome
   fx/       Summon / impact overlays
+  spirit/   Duel-disk ghost glass (albedo + emission + wrist smoke)
   manifest.json
 ```
 
@@ -71,6 +72,11 @@ Imagine/
 | `pin_arena.png` | Arena site |
 | `pin_treasure.png` | Loot node |
 
+### fx/
+| File | Use |
+|------|-----|
+| `warning_respond.png` | Local 5s response warning (player-only) |
+
 ### ui/
 | File | Use |
 |------|-----|
@@ -103,6 +109,13 @@ Imagine/
 | `badge_atk.png` / `badge_def.png` | Field position |
 | `card_back_wrldz.png` | Original card back |
 | `bg_duel_stage_portrait.png` | Portrait stage alt |
+
+### spirit/
+| File | Use |
+|------|-----|
+| `disk_skin_albedo.png` | Bright tileable ghost-glass (body) |
+| `disk_skin_emission.png` | Bright tileable aether overlay (additive) |
+| `wrist_aether_smoke.png` | Isolated wisp on black (additive) |
 
 ### fx/
 | File | Use |

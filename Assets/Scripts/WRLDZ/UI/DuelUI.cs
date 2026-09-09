@@ -9,6 +9,7 @@ using WRLDZ.Core;
 using WRLDZ.Data;
 using WRLDZ.Duel;
 using WRLDZ.Duel.Rules;
+using WRLDZ.Duel.TextEffects;
 using WRLDZ.Presentation;
 using WRLDZ.Presentation.ArInteraction;
 using WRLDZ.UI.Shell;
@@ -93,12 +94,14 @@ namespace WRLDZ.UI
         CardInstance _attackPickerAttacker;
 
         /// <summary>
-        /// Response tray: countdown + ACTIVATE for every LegalCards entry + PASS.
-        /// Field Sets also blink on-zone; timer expiry still passes.
+        /// Local 5s response warning. ACTIVATE/PASS chips are gone — tap a blinking
+        /// legal zone, or let the clock pass. Opponent never sees this.
         /// </summary>
         GameObject _responseTray;
         Transform _responseBtnRow;
         Text _responsePrompt;
+        Image _responseWarn;
+        Text _responseCount;
 
         // Anime announce (typed stand-in for voice STT)
         InputField _announceField;
@@ -118,11 +121,17 @@ namespace WRLDZ.UI
         CardInstance _selectedAttacker;
         /// <summary>True after Summon/Set — waiting for a highlighted zone tap.</summary>
         bool _awaitingZonePick;
+        /// <summary>Hand inspect "Mark tributes" — field taps tribute. Default field tap is inspect.</summary>
+        bool _markingTributes;
         bool _zonePickAsSet;
         int _pendingZoneIndex = -1;
         RulesZoneKind _pendingZoneKind = RulesZoneKind.Monster;
-        RectTransform _zonePicker;
-        Text _zonePickerHint;
+        /// <summary>Monster Reborn-family: waiting for a Monster Zone, then ATK/DEF if unlocked.</summary>
+        bool _awaitingSsZonePick;
+        bool _ssPositionLocked;
+        int _pendingSsZone = -1;
+        CardInstance _pendingSsTarget;
+        BattlePosition _pendingSsPos;
         static Font _font;
 
         bool _aiRunning;
@@ -383,6 +392,7 @@ namespace WRLDZ.UI
             // Pulse only on attack-declared windows (not summon / damage calc)
             if (progress > 0.85f && timing == ResponseTiming.AttackDeclared)
                 _arSpace?.PulseAttack();
+            RebuildResponseTray();
         }
 
         void UpdatePresentationHoldUi()
@@ -542,7 +552,8 @@ namespace WRLDZ.UI
         void OnArHandCardTapped(CardInstance card)
         {
             if (card == null || _engine == null) return;
-            if (_engine.IsAwaitingEffectTarget) return;
+            if (TrySelectPendingTarget(card))
+                return;
             if (TryToggleInspectClosed(card))
             {
                 Refresh();
@@ -570,6 +581,8 @@ namespace WRLDZ.UI
                 return;
             }
 
+            if (TryActivateUniqueSummonResponse(card))
+                return;
             if (TryActivateResponseCard(card))
                 return;
 
@@ -591,26 +604,29 @@ namespace WRLDZ.UI
                 {
                     commander.TryFindMonster(card, out var zi);
 
-                    // Summon/Set zone pick: tapping a monster (incl. face-down Set)
-                    // tributes it and uses that pad.
-                    if (_awaitingZonePick && zi >= 0)
+                    // After Summon/Set on inspect: tapping an occupied pad plays into
+                    // that slot (tribute the occupant when the engine allows).
+                    if (zi >= 0 && _selectedHand != null &&
+                        commander.Hand != null && commander.Hand.Contains(_selectedHand) &&
+                        !_markingTributes &&
+                        (_awaitingSsZonePick || _awaitingZonePick) &&
+                        IsLegalPickSlot(RulesZoneKind.Monster, zi))
                     {
                         OnArEmptyZoneTapped(RulesZoneKind.Monster, zi);
                         return;
                     }
 
-                    // High-level hand card selected — tap field monsters to mark tributes.
-                    if (_engine.InMainPhase && _selectedHand != null &&
-                        _selectedHand.Def != null && _selectedHand.Def.IsMonster &&
-                        TcgRules.TributesRequired(_selectedHand.Level) > 0)
+                    // Explicit Mark tributes — tap field monsters to mark, then a disk slot.
+                    if (FieldTapMarksTribute())
                     {
                         _engine.ToggleTribute(commander, card);
                         var need = TcgRules.TributesRequired(_selectedHand.Level);
                         var have = _engine.PendingTributes.Count;
                         if (_status != null)
                             _status.text = have >= need
-                                ? $"Tributes ready ({have}/{need}) — Summon or Set {_selectedHand.Name}"
-                                : $"Tribute select {have}/{need} — tap face-up or face-down monsters";
+                                ? $"Tributes ready ({have}/{need}) — tap a Monster Zone on your disk"
+                                : $"Tribute select {have}/{need} — tap field monsters, then a disk slot";
+                        RefreshInspectForSelectedHand();
                         Refresh();
                         return;
                     }
@@ -671,10 +687,10 @@ namespace WRLDZ.UI
 
             if (isMonster)
             {
-                if (_engine.InMainPhase && _selectedHand != null &&
-                    TcgRules.TributesRequired(_selectedHand.Level) > 0)
+                if (FieldTapMarksTribute())
                 {
                     _engine.ToggleTribute(CommandWho() ?? _engine.Player, card);
+                    RefreshInspectForSelectedHand();
                     Refresh();
                     return;
                 }
@@ -804,6 +820,8 @@ namespace WRLDZ.UI
             }
 
             BindFloatingHud(root);
+            if (_arSpace != null && _floatHud != null)
+                _floatHud.SetScreenScoreVisible(false);
 
             if (ArPresentationTarget.IsSalvageOst)
             {
@@ -832,7 +850,6 @@ namespace WRLDZ.UI
             var handImgAr = _handRow.GetComponent<Image>();
             if (handImgAr != null) handImgAr.raycastTarget = true;
             BuildHandShuffleButton(root, 0.012f, 0.016f, 0.068f, 0.118f);
-            BuildZonePicker(root, 0.22f, 0.210f, 0.78f, 0.252f);
             if (ArPresentationTarget.IsSalvageOst)
             {
                 if (_companion?.Root != null) _companion.Root.gameObject.SetActive(false);
@@ -948,7 +965,6 @@ namespace WRLDZ.UI
             var handImgDig = _handRow.GetComponent<Image>();
             if (handImgDig != null) handImgDig.raycastTarget = true;
             BuildHandShuffleButton(root, 0.012f, 0.016f, 0.068f, 0.118f);
-            BuildZonePicker(root, 0.22f, 0.210f, 0.78f, 0.252f);
 
             BuildBottomDock(root);
 
@@ -1663,11 +1679,11 @@ namespace WRLDZ.UI
                     Debug.LogWarning("[WRLDZ] AR space sync: " + syncEx.Message);
                 }
 
-                if (_awaitingZonePick && _selectedHand != null)
-                {
+                if (_awaitingSsZonePick && _pendingSsTarget != null)
+                    ShowLegalZoneHighlights(_pendingSsTarget);
+                else if (_selectedHand != null && !_engine.IsAwaitingEffectTarget &&
+                         !_engine.IsAwaitingPlayerResponse)
                     ShowLegalZoneHighlights(_selectedHand);
-                    RefreshZonePicker();
-                }
                 else if (IsLocalResponseWindow())
                     ShowResponseZoneHighlights();
                 else
@@ -1688,41 +1704,38 @@ namespace WRLDZ.UI
         }
 
         /// <summary>
-        /// Slim tray: ACTIVATE for every legal response card + Pass.
-        /// Field Sets also blink on-zone; tray bg must not steal those taps.
+        /// Compact player-only warning + countdown. Does not cover the board.
+        /// Tap blinking legal cards/zones to activate; expiry still PassResponse.
         /// </summary>
         void BuildResponseTray(Transform root)
         {
-            var panel = FloatingPanel.Create(root, "ResponseTray", goldEdge: true);
-            FloatingPanel.Place(panel, 0.16f, 0.42f, 0.84f, 0.56f);
+            var panel = new GameObject("ResponseWarn", typeof(RectTransform), typeof(Image));
+            panel.transform.SetParent(root, false);
+            FloatingPanel.Place(panel.GetComponent<RectTransform>(), 0.42f, 0.78f, 0.58f, 0.90f);
             var img = panel.GetComponent<Image>();
-            if (img != null)
-            {
-                img.color = new Color(0.04f, 0.06f, 0.10f, 0.36f);
-                // Prompt/buttons catch clicks; empty tray chrome must not block field taps.
-                img.raycastTarget = false;
-            }
-            _responseTray = panel.gameObject;
+            img.sprite = UiFoundation.WhiteSprite();
+            img.color = new Color(0f, 0f, 0f, 0f);
+            img.raycastTarget = false;
+            _responseTray = panel;
 
-            _responsePrompt = CreateText(panel, "Prompt", 15, TextAnchor.MiddleCenter, FontStyle.Bold, title: true);
-            _responsePrompt.color = DuelystUi.GoldHot;
-            _responsePrompt.raycastTarget = false;
-            Place(_responsePrompt.rectTransform, 0.04f, 0.72f, 0.96f, 0.96f);
-            _responsePrompt.text = "RESPONSE";
+            var warnGo = new GameObject("Glyph", typeof(RectTransform), typeof(Image));
+            warnGo.transform.SetParent(panel.transform, false);
+            Place(warnGo.GetComponent<RectTransform>(), 0.18f, 0.28f, 0.82f, 1f);
+            _responseWarn = warnGo.GetComponent<Image>();
+            _responseWarn.sprite = ImagineAssets.FxWarningRespond() ?? UiFoundation.WhiteSprite();
+            _responseWarn.preserveAspect = true;
+            _responseWarn.raycastTarget = false;
+            _responseWarn.color = Color.white;
 
-            var row = CreatePanel(panel, "Btns", new Color(0, 0, 0, 0));
-            Place(row, 0.03f, 0.08f, 0.97f, 0.68f);
-            row.GetComponent<Image>().raycastTarget = false;
-            var h = row.gameObject.AddComponent<HorizontalLayoutGroup>();
-            h.spacing = 8;
-            h.childAlignment = TextAnchor.MiddleCenter;
-            h.childControlWidth = true;
-            h.childControlHeight = true;
-            h.childForceExpandWidth = true;
-            h.childForceExpandHeight = true;
-            h.padding = new RectOffset(4, 4, 4, 4);
-            _responseBtnRow = row;
+            _responseCount = CreateText(panel.transform, "Count", 22, TextAnchor.MiddleCenter,
+                FontStyle.Bold, title: true);
+            _responseCount.color = new Color(1f, 0.92f, 0.55f, 1f);
+            _responseCount.raycastTarget = false;
+            Place(_responseCount.rectTransform, 0.10f, 0.00f, 0.90f, 0.32f);
+            _responseCount.text = "5";
 
+            _responsePrompt = _responseCount;
+            _responseBtnRow = panel.transform;
             _responseTray.SetActive(false);
         }
 
@@ -1774,48 +1787,15 @@ namespace WRLDZ.UI
             var secs = _responseClock != null
                 ? _responseClock.SecondsRemaining
                 : pr.ReactionSeconds;
-            _responsePrompt.text =
-                $"{pr.Prompt}\n" +
-                $"⏱ {secs:0.0}s — ACTIVATE / PASS, or tap a blinking zone";
-
-            // Clear old buttons
-            for (var i = _responseBtnRow.childCount - 1; i >= 0; i--)
-                Destroy(_responseBtnRow.GetChild(i).gameObject);
-
-            // Every legal response card gets an ACTIVATE chip (hand QE + field Sets/monsters).
-            // Zone blink remains a second path for AR / digital pads.
-            if (pr.LegalCards != null)
+            var shown = Mathf.CeilToInt(Mathf.Max(0f, secs));
+            if (_responseCount != null)
+                _responseCount.text = shown.ToString();
+            if (_responseWarn != null)
             {
-                var who = CommandWho() ?? _engine.Player;
-                foreach (var c in pr.LegalCards)
-                {
-                    if (c == null || who == null) continue;
-                    var card = c;
-                    var onField = who.TryFindSpellTrap(card, out _) ||
-                                  who.TryFindMonster(card, out _);
-                    var label = "ACTIVATE\n" + ShortName(card.Name);
-                    var b = CreateButton(_responseBtnRow, label, () =>
-                    {
-                        FreeUiKit.PlaySelect();
-                        if (onField)
-                        {
-                            if (who.TryFindSpellTrap(card, out _))
-                                _selectedSpellTrap = card;
-                            else
-                                _selectedField = card;
-                        }
-                        else
-                            _selectedHand = card;
-                        DoActivate();
-                    }, GbaTheme.CmdSafe);
-                    StyleResponseTrayButton(b, minWidth: 100f, flexibleWidth: 1f);
-                }
-            }
-
-            // Explicit PASS (timer expiry still passes via TimedResponseClock).
-            {
-                var pass = CreateButton(_responseBtnRow, "PASS", DoPassResponse, GbaTheme.CmdDanger);
-                StyleResponseTrayButton(pass, minWidth: 88f, flexibleWidth: 0.6f);
+                var pulse = 0.55f + 0.45f * (0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 8f));
+                var c = _responseWarn.color;
+                c.a = pulse;
+                _responseWarn.color = c;
             }
         }
 
@@ -2006,6 +1986,26 @@ namespace WRLDZ.UI
                 _targetPrompt.text = prompt;
             }
 
+            if (pending.AwaitingLpZeroConfirm)
+            {
+                if (_targetHint != null)
+                    _targetHint.text = "Paying this LP cost leaves you at 0";
+                var yes = CreateButton(_targetRow, "YES", () =>
+                {
+                    if (_engine.TryConfirmLpZeroPay())
+                        Refresh();
+                }, GbaTheme.CmdSafe);
+                var yesLe = yes.gameObject.AddComponent<LayoutElement>();
+                yesLe.minWidth = 88f;
+                yesLe.minHeight = 56f;
+                yesLe.flexibleWidth = 1f;
+                var no = CreateButton(_targetRow, "CANCEL", DoCancelTarget, GbaTheme.CmdDanger);
+                var noLe = no.gameObject.AddComponent<LayoutElement>();
+                noLe.minWidth = 92f;
+                noLe.minHeight = 56f;
+                return;
+            }
+
             if (pending.AwaitingCoinCall)
             {
                 if (_targetHint != null)
@@ -2032,7 +2032,22 @@ namespace WRLDZ.UI
                 // The GY is public information, so use the existing detailed
                 // browser and pass only the engine's legal targets. This avoids
                 // the old flat name/card strip and keeps invalid cards out.
-                _gyBrowser.Show(pending.LegalTargets, _db, true, OnGraveyardCardPicked, "GY TARGETS");
+                _gyBrowser.Show(pending.LegalTargets, _db, true, OnGraveyardCardPicked, "GY TARGETS",
+                    _engine);
+                return;
+            }
+
+            if (pending.TargetKind == EffectTargetKind.SpellTrapOnField ||
+                pending.TargetKind == EffectTargetKind.OppFaceUpMonster ||
+                pending.TargetKind == EffectTargetKind.OppFaceUpMonsterAtkLeqLp)
+            {
+                if (_targetHint != null)
+                    _targetHint.text = "OPP FIELD · legal targets only";
+                FillOppGlanceTargets(pending);
+                var cancelSt = CreateButton(_targetRow, "CANCEL", DoCancelTarget, GbaTheme.CmdDanger);
+                var cleSt = cancelSt.gameObject.AddComponent<LayoutElement>();
+                cleSt.minWidth = 92f;
+                cleSt.minHeight = 56f;
                 return;
             }
 
@@ -2132,6 +2147,12 @@ namespace WRLDZ.UI
                 var pick = card;
                 var go = CreateCardButton(_targetRow, pick, showFace: true, tributeMark: false, () =>
                 {
+                    if (TryBeginSsPlacement(pick))
+                    {
+                        Refresh();
+                        return;
+                    }
+
                     if (_engine.TrySelectEffectTarget(pick))
                     {
                         _selectedHand = null;
@@ -2224,13 +2245,7 @@ namespace WRLDZ.UI
                 SetBtn(_btnRestartBar, true);
                 SetBtn(_btnMenu, true);
                 _arSpace?.PlayFx(playerSide: true, DiskFxEvent.LegalZonePulse);
-                if (_responsePrompt != null && _engine.PendingResponse != null &&
-                    _responseClock != null)
-                {
-                    _responsePrompt.text =
-                        $"{_engine.PendingResponse.Prompt}\n" +
-                        $"⏱ {_responseClock.SecondsRemaining:0.0}s — ACTIVATE / PASS, or tap a blinking zone";
-                }
+                RebuildResponseTray();
 
                 return;
             }
@@ -2423,9 +2438,23 @@ namespace WRLDZ.UI
             _selectedSpellTrap = null;
             _selectedAttacker = null;
             _awaitingZonePick = false;
+            _markingTributes = false;
             _pendingZoneIndex = -1;
+            ClearSsPlacement();
             ClearLegalZoneHighlights();
-            RefreshZonePicker();
+        }
+
+        /// <summary>
+        /// Explicit Mark tributes — field taps mark bodies. Default occupied-pad
+        /// tap with a hand monster selected plays into that slot instead.
+        /// </summary>
+        bool FieldTapMarksTribute()
+        {
+            if (_engine == null || !_engine.InMainPhase) return false;
+            var hand = _selectedHand;
+            if (hand == null || hand.Def == null || !hand.Def.IsMonster) return false;
+            if (TcgRules.TributesRequired(hand.Level) <= 0) return false;
+            return _markingTributes;
         }
 
         void SelectHand(CardInstance c)
@@ -2446,13 +2475,7 @@ namespace WRLDZ.UI
             _selectedField = null;
             _selectedSpellTrap = null;
             _selectedAttacker = null;
-            if (_awaitingZonePick)
-            {
-                ShowLegalZoneHighlights(c);
-                RefreshZonePicker();
-            }
-            else
-                ClearLegalZoneHighlights();
+            ShowLegalZoneHighlights(c);
         }
 
         void SelectFieldMonster(CardInstance c)
@@ -2720,8 +2743,7 @@ namespace WRLDZ.UI
                 if (handImg != null) handImg.raycastTarget = true;
                 drag.OnDragBegin = () =>
                 {
-                    SelectHand(c);
-                    // Highlights wait until Summon / Set is chosen (BeginZonePick)
+                    HoldHand(c);
                     _playerMonsters?.GetComponent<DiskDropZone>()?.SetHot(true);
                     _playerSpells?.GetComponent<DiskDropZone>()?.SetHot(true);
                 };
@@ -2768,33 +2790,28 @@ namespace WRLDZ.UI
             if (card == null || _engine == null) return;
             if (_engine.IsAwaitingEffectTarget)
             {
-                // Target GY cards use the same full inspect component as field
-                // cards, so art, name, ATK/DEF and official text are visible
-                // before committing the selection.
-                var chosen = card;
-                OpenInspect(chosen, showFace: true, new List<CardAction>
+                // Monster Reborn-family: pick ATK/DEF and a Monster Zone before resolve.
+                if (TryBeginSsPlacement(card))
                 {
-                    new()
-                    {
-                        Label = "SELECT TARGET",
-                        Color = GbaTheme.CmdSafe,
-                        Invoke = () =>
-                        {
-                            if (_engine.TrySelectEffectTarget(chosen))
-                            {
-                                ClearCardSelection();
-                                Refresh();
-                            }
-                            else if (_status != null)
-                                _status.text = $"Not a legal target: {chosen.Name}";
-                        }
-                    }
-                }, closeLabel: "BACK TO GY", extraOnClose: () =>
+                    _gyBrowser?.Hide();
+                    HideTargetPicker();
+                    Refresh();
+                    return;
+                }
+
+                // Target menu: tap art to commit. Inspect-then-SELECT left Reborn
+                // pending after the player thought they had chosen.
+                if (_engine.TrySelectEffectTarget(card))
                 {
-                    var pending = _engine.PendingActivation;
-                    if (pending != null && IsGraveyardTargetKind(pending.TargetKind) && _gyBrowser != null)
-                        _gyBrowser.Show(pending.LegalTargets, _db, true, OnGraveyardCardPicked, "GY TARGETS");
-                }, force: true);
+                    _gyBrowser?.Hide();
+                    HideTargetPicker();
+                    CloseInspectAfterPlay();
+                    ClearCardSelection();
+                    Refresh();
+                    MaybeRunAi();
+                }
+                else if (_status != null)
+                    _status.text = $"Not a legal target: {card.Name}";
                 return;
             }
 
@@ -2805,10 +2822,10 @@ namespace WRLDZ.UI
         void OpenCardMenu(CardInstance c)
         {
             if (c == null || _engine == null) return;
-            if (_engine.IsAwaitingEffectTarget) return;
+            if (TrySelectPendingTarget(c))
+                return;
             WrldzAudio.PlayCardTap();
             HoldHand(c);
-            // Field cards may also open via other paths — hand always hand actions
             var commander = CommandWho() ?? _engine.Player;
             var inHand = commander != null && commander.Hand.Contains(c);
             List<CardAction> acts;
@@ -2820,13 +2837,12 @@ namespace WRLDZ.UI
                 acts = CollectFieldSpellTrapActions(c);
 
             OpenInspect(c, showFace: true, acts);
+            Refresh();
         }
 
         /// <summary>
-        /// Drag hand card onto monster row or S/T row of your duel disk.
-        /// Monster → monster zones: chooser (Summon ATK / Set Face-Down).
-        /// Monster → S/T strip: Set Face-Down.
-        /// Spell/Trap → S/T strip: chooser (Set Face-Down / Activate when legal).
+        /// Drag hand card onto the monster or S/T row of your disk. Highlights
+        /// legal slots — the player then taps the pad (ATK/DEF or Set after).
         /// </summary>
         void OnHandDroppedOnDisk(CardInstance card, bool monsterZone)
         {
@@ -2839,117 +2855,9 @@ namespace WRLDZ.UI
                 return;
             }
 
-            SelectHand(card);
             FreeUiKit.PlayConfirm();
             _arSpace?.PlayFx(true, DiskFxEvent.BladeDeploy, 0.45f);
-
-            if (card.Def != null && card.Def.IsMonster)
-            {
-                if (!_engine.CanNormalSummonOrSet(who, card))
-                {
-                    // Tribute needed or other restriction — full menu
-                    OpenCardMenu(card);
-                    return;
-                }
-
-                if (monsterZone)
-                {
-                    // Offer both face-up summon and face-down set
-                    OpenPlayChooser(card, CollectMonsterPlayActions(card));
-                    return;
-                }
-
-                // Dropped on S/T strip → still a monster; pick a Monster Zone to Set
-                BeginZonePick(card, asSet: true);
-                return;
-            }
-
-            // Spell / Trap
-            var stActs = CollectSpellTrapPlayActions(card);
-            if (stActs.Count == 0)
-            {
-                OpenCardMenu(card);
-                return;
-            }
-
-            if (stActs.Count == 1 && stActs[0].Label.Contains("Face-Down"))
-            {
-                // Only set legal — do it
-                stActs[0].Invoke?.Invoke();
-                return;
-            }
-
-            // Set Face-Down and/or Activate
-            OpenPlayChooser(card, stActs);
-        }
-
-        /// <summary>Monster play options from hand (select + drag chooser).</summary>
-        List<CardAction> CollectMonsterPlayActions(CardInstance card)
-        {
-            var list = new List<CardAction>();
-            if (card == null || _engine == null) return list;
-            var who = CommandWho() ?? _engine.Player;
-            if (!_engine.CanNormalSummonOrSet(who, card)) return list;
-
-            list.Add(new CardAction
-            {
-                Label = "Summon ATK",
-                Color = GbaTheme.CmdSummon,
-                Invoke = () =>
-                {
-                    SelectHand(card);
-                    BeginZonePick(card, asSet: false);
-                }
-            });
-            list.Add(new CardAction
-            {
-                Label = "Set Face-Down",
-                Color = GbaTheme.CmdNeutral,
-                Invoke = () =>
-                {
-                    SelectHand(card);
-                    BeginZonePick(card, asSet: true);
-                }
-            });
-            return list;
-        }
-
-        /// <summary>Spell/Trap play options from hand.</summary>
-        List<CardAction> CollectSpellTrapPlayActions(CardInstance card)
-        {
-            var list = new List<CardAction>();
-            if (card == null || _engine == null) return list;
-            var who = CommandWho() ?? _engine.Player;
-
-            if (_engine.CanSetSpellTrap(who, card))
-            {
-                list.Add(new CardAction
-                {
-                    Label = "Set Face-Down",
-                    Color = GbaTheme.CmdNeutral,
-                    Invoke = () =>
-                    {
-                        SelectHand(card);
-                        BeginZonePick(card, asSet: true);
-                    }
-                });
-            }
-
-            if (_engine.CanActivateSpellTrap(who, card, fromHand: true))
-            {
-                list.Add(new CardAction
-                {
-                    Label = "Activate",
-                    Color = GbaTheme.CmdSafe,
-                    Invoke = () =>
-                    {
-                        SelectHand(card);
-                        DoActivate();
-                    }
-                });
-            }
-
-            return list;
+            OpenCardMenu(card);
         }
 
         /// <summary>Open inspect popup as a play chooser (summon vs set face-down, etc.).</summary>
@@ -2962,8 +2870,8 @@ namespace WRLDZ.UI
                 return;
             }
 
-            SelectHand(card);
-            OpenInspect(card, showFace: true, acts);
+            HoldHand(card);
+            OpenInspect(card, showFace: true, acts, closeLabel: "CANCEL", force: true);
             Refresh();
         }
 
@@ -3177,9 +3085,7 @@ namespace WRLDZ.UI
 
                 var card = m;
                 var isTribute = mine && _engine.PendingTributes.Contains(card);
-                var needsTributePick = mine && _engine.InMainPhase && _selectedHand != null &&
-                                       _selectedHand.Def != null && _selectedHand.Def.IsMonster &&
-                                       TcgRules.TributesRequired(_selectedHand.Level) > 0;
+                var needsTributePick = mine && FieldTapMarksTribute();
                 var go = CreateCardButton(row, card, card.FaceUp || mine, isTribute, () =>
                 {
                     if (_engine.IsAwaitingEffectTarget)
@@ -3192,20 +3098,21 @@ namespace WRLDZ.UI
                         return;
                     }
 
+                    if (TryActivateUniqueSummonResponse(card))
+                        return;
+
                     if (mine)
                     {
-                        // Tribute mode: tap monsters to mark which will be tributed
-                        if (needsTributePick ||
-                            (_engine.InMainPhase && _selectedHand != null &&
-                             TcgRules.TributesRequired(_selectedHand.Level) > 0))
+                        if (FieldTapMarksTribute())
                         {
                             _engine.ToggleTribute(commander, card);
                             var need = TcgRules.TributesRequired(_selectedHand.Level);
                             var have = _engine.PendingTributes.Count;
                             if (_status != null)
                                 _status.text = have >= need
-                                    ? $"Tributes ready ({have}/{need}) — Summon or Set the hand card"
-                                    : $"Tribute select {have}/{need} — tap field monsters";
+                                    ? $"Tributes ready ({have}/{need}) — tap a Monster Zone on your disk"
+                                    : $"Tribute select {have}/{need} — tap field monsters, then a disk slot";
+                            RefreshInspectForSelectedHand();
                             Refresh();
                             return;
                         }
@@ -3421,7 +3328,7 @@ namespace WRLDZ.UI
             var main = _engine.InMainPhase;
             if (!main) return list;
 
-            // Monster: Normal Summon/Set — tributes must be chosen by the player (no auto-pick)
+            // Monster: inspect play options, then tap a disk slot (no zone-button menu).
             if (card.Def != null && card.Def.IsMonster)
             {
                 var needTrib = TcgRules.TributesRequired(card.Level);
@@ -3429,45 +3336,38 @@ namespace WRLDZ.UI
                 var fieldMons = who.MonsterCount;
                 if (_engine.CanNormalSummonOrSet(who, card))
                 {
-                    if (needTrib <= 0)
+                    var tribTag = needTrib > 0 ? $" ({haveTrib}/{needTrib})" : "";
+                    list.Add(new CardAction
                     {
-                        list.Add(new CardAction
-                        {
-                            Label = "Summon ATK",
-                            Color = GbaTheme.CmdSummon,
-                            Invoke = () => BeginZonePick(card, false)
-                        });
-                        list.Add(new CardAction
-                        {
-                            Label = "Set Face-Down",
-                            Color = GbaTheme.CmdNeutral,
-                            Invoke = () => BeginZonePick(card, true)
-                        });
-                    }
-                    else if (haveTrib >= needTrib || fieldMons == needTrib)
+                        Label = "Summon ATK" + tribTag,
+                        Color = GbaTheme.CmdSummon,
+                        Invoke = () => BeginDiskPlacement(card, asSet: false)
+                    });
+                    list.Add(new CardAction
                     {
-                        list.Add(new CardAction
-                        {
-                            Label = $"Summon ATK ({Mathf.Max(haveTrib, needTrib)}/{needTrib})",
-                            Color = GbaTheme.CmdSummon,
-                            Invoke = () => BeginZonePick(card, false)
-                        });
-                        list.Add(new CardAction
-                        {
-                            Label = $"Set Face-Down ({Mathf.Max(haveTrib, needTrib)}/{needTrib})",
-                            Color = GbaTheme.CmdNeutral,
-                            Invoke = () => BeginZonePick(card, true)
-                        });
-                    }
-                    else
+                        Label = "Set Face-Down" + tribTag,
+                        Color = GbaTheme.CmdNeutral,
+                        Invoke = () => BeginDiskPlacement(card, asSet: true)
+                    });
+                    if (needTrib > 0 && haveTrib < needTrib && fieldMons != needTrib)
                     {
                         list.Add(new CardAction
                         {
                             Label = $"Mark tributes {haveTrib}/{needTrib}",
                             Color = GbaTheme.CmdMuted,
-                            Invoke = () => _engine.Log(
-                                $"Lv{card.Level}: tap your field monsters to Tribute " +
-                                $"(face-down Sets count). {haveTrib}/{needTrib} marked — then Summon/Set.")
+                            Invoke = () =>
+                            {
+                                _markingTributes = true;
+                                HoldHand(card);
+                                _engine.Log(
+                                    $"Lv{card.Level}: tap your field monsters to Tribute " +
+                                    $"(face-down Sets count). {haveTrib}/{needTrib} marked — then Summon/Set.");
+                                if (_status != null)
+                                    _status.text =
+                                        $"Tribute select {haveTrib}/{needTrib} — tap field monsters, then Summon or Set";
+                                RefreshInspectForSelectedHand();
+                                Refresh();
+                            }
                         });
                     }
                 }
@@ -3483,14 +3383,13 @@ namespace WRLDZ.UI
                 }
             }
 
-            // Spell/Trap: set face-down and/or activate from hand when legal
             if (_engine.CanSetSpellTrap(who, card))
             {
                 list.Add(new CardAction
                 {
                     Label = "Set Face-Down",
                     Color = GbaTheme.CmdNeutral,
-                    Invoke = () => BeginZonePick(card, true)
+                    Invoke = () => BeginDiskPlacement(card, asSet: true)
                 });
             }
 
@@ -3553,6 +3452,7 @@ namespace WRLDZ.UI
                         Invoke = () =>
                         {
                             _engine.ToggleTribute(who, card);
+                            RefreshInspectForSelectedHand();
                             Refresh();
                         }
                     });
@@ -3572,7 +3472,9 @@ namespace WRLDZ.UI
                 {
                     list.Add(new CardAction
                     {
-                        Label = "Change Pos",
+                        Label = card.Position == BattlePosition.Attack
+                            ? "To Defense"
+                            : "To Attack",
                         Color = GbaTheme.CmdNeutral,
                         Invoke = DoChangePos
                     });
@@ -3663,35 +3565,102 @@ namespace WRLDZ.UI
                     ? "OPP FIELD · 1 legal target"
                     : $"OPP FIELD · {_attackTargets.Count} legal targets";
 
-            foreach (var target in _attackTargets)
+            var opp = _engine.Opponent;
+            if (opp?.MonsterZones != null)
             {
-                var pick = target;
-                var go = CreateCardButton(_targetRow, pick, showFace: true, tributeMark: false,
-                    () => DeclareAttackOn(_attackPickerAttacker, pick), small: false, forceCardBack: false,
-                    handSize: false, wireButtonClick: true, targetPickerSize: true);
-                var rim = new GameObject("AttackLegalRim", typeof(RectTransform), typeof(Image));
-                rim.transform.SetParent(go.transform, false);
-                rim.transform.SetAsFirstSibling();
-                var rimImg = rim.GetComponent<Image>();
-                rimImg.sprite = UiFoundation.WhiteSprite();
-                rimImg.color = new Color(1f, 0.65f, 0.16f, 0.95f);
-                rimImg.raycastTarget = false;
-                var rrt = rim.GetComponent<RectTransform>();
-                rrt.anchorMin = Vector2.zero; rrt.anchorMax = Vector2.one;
-                rrt.offsetMin = new Vector2(-5f, -5f); rrt.offsetMax = new Vector2(5f, 5f);
-                var label = go.GetComponentInChildren<Text>();
-                if (label != null)
+                for (var i = 0; i < 5; i++)
                 {
-                    var pos = pick.FaceUp ? (pick.Position == BattlePosition.Defense ? "DEF" : "ATK") : "SET DEF";
-                    var stat = pick.FaceUp ? (pick.Position == BattlePosition.Defense ? pick.CurrentDef : pick.CurrentAtk).ToString() : "?";
-                    label.text = $"OPP FIELD\n{ShortName(pick.Name)}\n{pos} {stat}";
-                    WrldzType.StyleButtonLabel(label, 15);
+                    var occ = i < opp.MonsterZones.Length ? opp.MonsterZones[i].Occupant : null;
+                    var legal = occ != null && _attackTargets.Exists(t =>
+                        t != null && t.InstanceId == occ.InstanceId);
+                    PaintGlanceSlot(_targetRow, occ, legal, legal
+                        ? () => DeclareAttackOn(_attackPickerAttacker, occ)
+                        : (System.Action)null);
                 }
             }
 
             var cancel = CreateButton(_targetRow, "CANCEL", DoCancelTarget, GbaTheme.CmdDanger);
             var le = cancel.gameObject.AddComponent<LayoutElement>();
             le.minWidth = 92f; le.minHeight = 56f; le.preferredWidth = 100f;
+        }
+
+        void FillOppGlanceTargets(PendingActivation pending)
+        {
+            var opp = _engine?.Opponent;
+            if (opp == null || pending?.LegalTargets == null) return;
+            bool Legal(CardInstance c) =>
+                c != null && pending.LegalTargets.Exists(t => t != null && t.InstanceId == c.InstanceId);
+
+            if (pending.TargetKind == EffectTargetKind.SpellTrapOnField)
+            {
+                if (opp.SpellTrapZones != null)
+                    for (var i = 0; i < 5; i++)
+                    {
+                        var occ = i < opp.SpellTrapZones.Length ? opp.SpellTrapZones[i].Occupant : null;
+                        var ok = Legal(occ);
+                        PaintGlanceSlot(_targetRow, occ, ok, ok
+                            ? () => { _engine.TrySelectEffectTarget(occ); Refresh(); }
+                            : null);
+                    }
+
+                var field = opp.FieldSpellZone?.Occupant;
+                var fieldOk = Legal(field);
+                PaintGlanceSlot(_targetRow, field, fieldOk, fieldOk
+                    ? () => { _engine.TrySelectEffectTarget(field); Refresh(); }
+                    : null);
+                return;
+            }
+
+            if (opp.MonsterZones != null)
+                for (var i = 0; i < 5; i++)
+                {
+                    var occ = i < opp.MonsterZones.Length ? opp.MonsterZones[i].Occupant : null;
+                    var ok = Legal(occ);
+                    PaintGlanceSlot(_targetRow, occ, ok, ok
+                        ? () => { _engine.TrySelectEffectTarget(occ); Refresh(); }
+                        : null);
+                }
+        }
+
+        void PaintGlanceSlot(Transform row, CardInstance card, bool legal, System.Action onPick)
+        {
+            var go = new GameObject(card?.Name ?? "empty", typeof(RectTransform), typeof(Image),
+                typeof(Button), typeof(LayoutElement));
+            go.transform.SetParent(row, false);
+            var le = go.GetComponent<LayoutElement>();
+            le.minWidth = 88f;
+            le.minHeight = 120f;
+            le.preferredWidth = 100f;
+            le.preferredHeight = 140f;
+            var img = go.GetComponent<Image>();
+            img.preserveAspect = true;
+            img.raycastTarget = legal && onPick != null;
+            if (card == null)
+            {
+                img.sprite = UiFoundation.WhiteSprite();
+                img.color = new Color(0.12f, 0.18f, 0.24f, 0.35f);
+            }
+            else if (!legal)
+            {
+                img.sprite = UiFoundation.WhiteSprite();
+                img.color = new Color(0.06f, 0.08f, 0.12f, 0.22f);
+            }
+            else
+            {
+                var art = card.FaceUp && _db != null ? _db.GetArt(card.CardId) : null;
+                img.sprite = art ?? YgoCardFrames.CardBack() ?? UiFoundation.WhiteSprite();
+                img.color = Color.white;
+                var rim = go.AddComponent<Outline>();
+                rim.effectColor = new Color(1f, 0.65f, 0.16f, 0.95f);
+                rim.effectDistance = new Vector2(3f, -3f);
+                rim.useGraphicAlpha = false;
+            }
+
+            var btn = go.GetComponent<Button>();
+            btn.targetGraphic = img;
+            btn.transition = Selectable.Transition.None;
+            if (legal && onPick != null)
+                btn.onClick.AddListener(() => onPick());
         }
 
         void DeclareAttackOn(CardInstance attacker, CardInstance target)
@@ -4216,6 +4185,35 @@ namespace WRLDZ.UI
             return false;
         }
 
+        /// <summary>
+        /// Summon window: tapping the summoned monster activates the unique legal Set trap
+        /// (Trap Hole on Lord of D.). Two legal traps still require tapping the trap.
+        /// </summary>
+        bool TryActivateUniqueSummonResponse(CardInstance summoned)
+        {
+            if (!IsLocalResponseWindow() || summoned == null) return false;
+            var pr = _engine.PendingResponse;
+            if (pr.Timing != ResponseTiming.MonsterSummoned || pr.LegalCards == null)
+                return false;
+            if (pr.Summoned == null ||
+                (pr.Summoned != summoned && pr.Summoned.InstanceId != summoned.InstanceId))
+                return false;
+
+            var who = CommandWho() ?? _engine.Player;
+            CardInstance pick = null;
+            for (var i = 0; i < pr.LegalCards.Count; i++)
+            {
+                var c = pr.LegalCards[i];
+                if (c == null || who == null || !who.TryFindSpellTrap(c, out _))
+                    continue;
+                if (pick != null)
+                    return false;
+                pick = c;
+            }
+
+            return pick != null && TryActivateResponseCard(pick);
+        }
+
         bool TryActivateResponseCard(CardInstance card)
         {
             if (!IsLocalResponseWindow() || card == null) return false;
@@ -4248,59 +4246,65 @@ namespace WRLDZ.UI
         void ShowLegalZoneHighlights(CardInstance card)
         {
             var ix = _arSpace?.Interaction;
-            if (card == null || !_awaitingZonePick || _engine == null)
+            if (card == null || _engine == null)
             {
                 ix?.ClearLegalPlacements();
                 return;
             }
 
             var who = CommandWho() ?? _engine.Player;
-            var slots = WRLDZ.Duel.Ocg.OcgLabDuelHost.IsActive
-                ? OcgZoneSlots(card, _zonePickAsSet)
-                : LegalIntentService.LegalSlotsForAction(_engine, who, card, _zonePickAsSet);
+            List<LegalIntentService.LegalSlot> slots;
+            if (_awaitingSsZonePick)
+                slots = EmptyMonsterSlots(who);
+            else if (WRLDZ.Duel.Ocg.OcgLabDuelHost.IsActive)
+                slots = OcgZoneSlots(card, _zonePickAsSet);
+            else if (_awaitingZonePick)
+                slots = LegalIntentService.LegalSlotsForAction(_engine, who, card, _zonePickAsSet);
+            else
+                slots = LegalIntentService.LegalSlots(_engine, who, card);
+
             ix?.ShowLegalPlacements(slots);
-            RefreshZonePicker();
+        }
+
+        static List<LegalIntentService.LegalSlot> EmptyMonsterSlots(DuelistState who)
+        {
+            var slots = new List<LegalIntentService.LegalSlot>();
+            if (who?.MonsterZones == null) return slots;
+            for (var i = 0; i < who.MonsterZones.Length; i++)
+            {
+                if (who.MonsterZones[i] == null || !who.MonsterZones[i].IsEmpty) continue;
+                slots.Add(new LegalIntentService.LegalSlot
+                {
+                    Kind = RulesZoneKind.Monster,
+                    Index = i,
+                    CanSummonAtk = true,
+                    CanSet = true
+                });
+            }
+
+            return slots;
         }
 
         void ClearLegalZoneHighlights()
         {
             _arSpace?.Interaction?.ClearLegalPlacements();
-            RefreshZonePicker();
-        }
-
-        void BuildZonePicker(Transform root, float x0, float y0, float x1, float y1)
-        {
-            _zonePicker = CreateGlassBar(root, "ZonePicker", x0, y0, x1, y1);
-            _zonePicker.GetComponent<Image>().color = new Color(0.03f, 0.05f, 0.07f, 0.28f);
-            _zonePickerHint = CreateText(_zonePicker, "Hint", 14, TextAnchor.MiddleCenter, FontStyle.Bold);
-            _zonePickerHint.color = DuelystUi.Cyan;
-            Place(_zonePickerHint.rectTransform, 0.04f, 0.08f, 0.96f, 0.92f);
-            _zonePickerHint.text = "Tap a highlighted zone";
-            _zonePicker.gameObject.SetActive(false);
-        }
-
-        void RefreshZonePicker()
-        {
-            if (_zonePicker == null) return;
-            var card = _selectedHand;
-            if (!_awaitingZonePick || card == null || _engine == null)
-            {
-                _zonePicker.gameObject.SetActive(false);
-                return;
-            }
-
-            _zonePicker.gameObject.SetActive(true);
-            _zonePicker.SetAsLastSibling();
-            var act = _zonePickAsSet ? "Set" : "Summon";
-            if (_zonePickerHint != null)
-                _zonePickerHint.text = $"{card.Name} — {act}: tap a highlighted zone";
         }
 
         bool IsLegalPickSlot(RulesZoneKind kind, int index)
         {
-            if (!_awaitingZonePick || _selectedHand == null || _engine == null) return false;
+            if (_engine == null) return false;
             var who = CommandWho() ?? _engine.Player;
-            var slots = LegalIntentService.LegalSlotsForAction(_engine, who, _selectedHand, _zonePickAsSet);
+            if (_awaitingSsZonePick)
+                return kind == RulesZoneKind.Monster &&
+                       who?.MonsterZones != null &&
+                       index >= 0 && index < who.MonsterZones.Length &&
+                       who.MonsterZones[index] != null &&
+                       who.MonsterZones[index].IsEmpty;
+
+            if (_selectedHand == null) return false;
+            var slots = _awaitingZonePick
+                ? LegalIntentService.LegalSlotsForAction(_engine, who, _selectedHand, _zonePickAsSet)
+                : LegalIntentService.LegalSlots(_engine, who, _selectedHand);
             for (var i = 0; i < slots.Count; i++)
             {
                 var s = slots[i];
@@ -4369,33 +4373,50 @@ namespace WRLDZ.UI
             _ => "?"
         };
 
-        void BeginZonePick(CardInstance card, bool asSet)
+        /// <summary>
+        /// Play option chosen on inspect: hide the sheet and wait for a disk pad.
+        /// No M1–M5 / ST1–ST5 button list.
+        /// </summary>
+        void BeginDiskPlacement(CardInstance card, bool asSet)
         {
             if (card == null || _engine == null) return;
-            var who = CommandWho() ?? _engine.Player;
-            var filtered = LegalIntentService.LegalSlotsForAction(_engine, who, card, asSet);
-            var wantMon = card.Def != null && card.Def.IsMonster &&
-                          !(card.Def.IsSpell || card.Def.IsTrap);
-
-            if (filtered.Count == 0)
-            {
-                if (wantMon) DoSummon(asSet);
-                else DoSetST();
-                return;
-            }
-
             _awaitingZonePick = true;
             _zonePickAsSet = asSet;
             HoldHand(card);
-            CloseInspectAfterPlay();
+            RevealDiskForPlacement();
             ShowLegalZoneHighlights(card);
-            RefreshZonePicker();
-            Refresh();
-            var kindName = wantMon ? "Monster Zone" : "Spell/Trap Zone";
-            var act = asSet ? "Set" : "Summon";
+            var act = asSet ? "Set" : "Summon ATK";
+            var kindName = card.Def != null && card.Def.IsMonster &&
+                           !(card.Def.IsSpell || card.Def.IsTrap)
+                ? "Monster Zone"
+                : card.Def != null && card.Def.IsFieldSpell
+                    ? "Field Spell slot"
+                    : "Spell/Trap slot";
             if (_status != null)
-                _status.text = $"{card.Name} — {act}: tap a highlighted {kindName} on your Duel Disk";
-            _engine.Log($"{card.Name}: {act} — choose a highlighted {kindName} on your Duel Disk.");
+                _status.text = $"{card.Name} — {act}: tap a highlighted {kindName} on your disk";
+            _engine.Log($"{card.Name}: {act} — tap a {kindName} on your disk.");
+            Refresh();
+        }
+
+        void RevealDiskForPlacement()
+        {
+            _inspectCard = null;
+            _inspectFromHand = false;
+            _inspect?.HideQuiet();
+        }
+
+        void CancelZonePick()
+        {
+            _awaitingZonePick = false;
+            if (!_awaitingSsZonePick)
+                ClearLegalZoneHighlights();
+        }
+
+        void RefreshInspectForSelectedHand()
+        {
+            var card = _selectedHand;
+            if (card == null) return;
+            OpenInspect(card, showFace: true, CollectHandActions(card), force: true);
         }
 
         void OnArEmptyZoneTapped(RulesZoneKind kind, int index)
@@ -4403,10 +4424,9 @@ namespace WRLDZ.UI
             if (_engine == null || _engine.GameOver) return;
             if (TryActivateResponseAtZone(kind, index))
                 return;
-            if (!_awaitingZonePick)
+            if (_awaitingSsZonePick)
             {
-                if (_status != null)
-                    _status.text = "Choose Summon or Set on the card first.";
+                CommitSsPlacement(index, _pendingSsPos);
                 return;
             }
 
@@ -4418,16 +4438,244 @@ namespace WRLDZ.UI
                 return;
             }
 
-            var who = CommandWho() ?? _engine.Player;
-            var verdict = _engine.ValidatePlacement(who, card, kind, index, _zonePickAsSet);
-            if (!verdict.Legal)
+            if (_awaitingZonePick)
             {
-                _engine.Log(verdict.Reason ?? "Not a legal zone for this play.");
+                var who = CommandWho() ?? _engine.Player;
+                var verdict = _engine.ValidatePlacement(who, card, kind, index, _zonePickAsSet);
+                if (!verdict.Legal)
+                {
+                    _engine.Log(verdict.Reason ?? "Not a legal zone for this play.");
+                    return;
+                }
+
+                PlaceInSlot(card, new LegalIntentService.LegalSlot { Kind = kind, Index = index },
+                    _zonePickAsSet);
                 return;
             }
 
-            PlaceInSlot(card, new LegalIntentService.LegalSlot { Kind = kind, Index = index },
-                _zonePickAsSet);
+            OfferPositionForZone(card, kind, index);
+        }
+
+        /// <summary>
+        /// Disk slot chosen: ATK / Set (or Activate) for that pad, then place.
+        /// One legal play commits immediately.
+        /// </summary>
+        void OfferPositionForZone(CardInstance card, RulesZoneKind kind, int index)
+        {
+            if (card == null || _engine == null) return;
+            HoldHand(card);
+            List<CardAction> acts;
+            if (kind == RulesZoneKind.Monster)
+                acts = CollectMonsterPlayActionsForZone(card, index);
+            else if (kind == RulesZoneKind.SpellTrap)
+                acts = CollectSpellTrapPlayActionsForZone(card, index);
+            else
+            {
+                PlaceInSlot(card, new LegalIntentService.LegalSlot { Kind = kind, Index = index },
+                    asSet: false);
+                return;
+            }
+
+            if (acts.Count == 0)
+            {
+                _engine.Log("Not a legal zone for this card.");
+                if (_status != null)
+                    _status.text = "That zone is not legal for this card.";
+                return;
+            }
+
+            if (acts.Count == 1)
+            {
+                acts[0].Invoke?.Invoke();
+                return;
+            }
+
+            if (_status != null)
+                _status.text = kind == RulesZoneKind.Monster
+                    ? $"{card.Name} — choose Attack or Set"
+                    : $"{card.Name} — Activate or Set";
+            OpenPlayChooser(card, acts);
+        }
+
+        /// <summary>
+        /// Hand / deck / GY tap during an effect-target window. SS-from-GY/hand/deck
+        /// opens zone (and ATK/DEF when the printed text does not lock position).
+        /// </summary>
+        bool TrySelectPendingTarget(CardInstance card)
+        {
+            if (card == null || _engine == null || !_engine.IsAwaitingEffectTarget)
+                return false;
+            if (TryBeginSsPlacement(card))
+            {
+                Refresh();
+                return true;
+            }
+
+            if (!_engine.TrySelectEffectTarget(card))
+            {
+                if (_status != null)
+                    _status.text = $"Not a legal target: {card.Name}";
+                return true;
+            }
+
+            ClearCardSelection();
+            CloseInspectAfterPlay();
+            Refresh();
+            MaybeRunAi();
+            return true;
+        }
+
+        bool TryBeginSsPlacement(CardInstance target)
+        {
+            if (_engine == null || target == null) return false;
+            var pending = _engine.PendingActivation;
+            if (pending == null) return false;
+            if (pending.TargetKind != EffectTargetKind.MonsterInEitherGy &&
+                pending.TargetKind != EffectTargetKind.MonsterInYourHand &&
+                pending.TargetKind != EffectTargetKind.MonsterInYourDeckToSummon)
+                return false;
+            if (_engine.ResolveLegalEffectTarget(target) == null) return false;
+            var who = pending.Controller ?? CommandWho() ?? _engine.Player;
+            var empties = EmptyMonsterSlots(who);
+            if (empties.Count == 0) return false;
+
+            _pendingSsTarget = target;
+            _pendingSsZone = -1;
+            _awaitingSsZonePick = false;
+            if (TryLockSsPosition(pending, out var locked))
+            {
+                BeginSsZonePick(target, locked);
+                return true;
+            }
+
+            OpenInspect(target, showFace: true, new List<CardAction>
+            {
+                new()
+                {
+                    Label = "Summon ATK",
+                    Color = GbaTheme.CmdSummon,
+                    Invoke = () => BeginSsZonePick(target, BattlePosition.Attack)
+                },
+                new()
+                {
+                    Label = "Summon DEF",
+                    Color = GbaTheme.CmdNeutral,
+                    Invoke = () => BeginSsZonePick(target, BattlePosition.Defense)
+                }
+            }, closeLabel: "CANCEL", extraOnClose: CancelSsPlacement, force: true);
+            if (_status != null)
+                _status.text = $"{target.Name} — choose Attack or Defense, then a Monster Zone";
+            _engine.Log($"{target.Name}: Special Summon — choose Attack or Defense, then tap a Monster Zone.");
+            Refresh();
+            return true;
+        }
+
+        static bool TryLockSsPosition(PendingActivation pending, out BattlePosition locked)
+        {
+            locked = BattlePosition.Attack;
+            if (pending?.Card?.Def == null) return false;
+            var prog = WRLDZ.Duel.TextEffects.CompiledEffectCache.GetOrCompile(pending.Card.Def);
+            if (prog?.ClauseList != null)
+            {
+                foreach (var c in prog.ClauseList)
+                {
+                    if (c == null) continue;
+                    var ss = c.Action == EffectActionKind.SpecialSummonFromGy ||
+                             c.Action == EffectActionKind.SpecialSummonFromHand ||
+                             c.Action == EffectActionKind.SpecialSummonFromDeck ||
+                             c.Action == EffectActionKind.SpecialSummonNamed ||
+                             c.Action == EffectActionKind.SpecialSummonThisFromHand;
+                    if (!ss) continue;
+                    if (c.SummonInDefense)
+                    {
+                        locked = BattlePosition.Defense;
+                        return true;
+                    }
+
+                    if (c.SummonInAttack)
+                    {
+                        locked = BattlePosition.Attack;
+                        return true;
+                    }
+                }
+            }
+
+            var text = pending.Card.OfficialText ?? pending.Card.Def.desc ?? "";
+            if (string.IsNullOrEmpty(text)) return false;
+            if (System.Text.RegularExpressions.Regex.IsMatch(text,
+                    @"Special Summon.{0,140}in Defense Position",
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+            {
+                locked = BattlePosition.Defense;
+                return true;
+            }
+
+            if (System.Text.RegularExpressions.Regex.IsMatch(text,
+                    @"Special Summon.{0,140}in Attack Position",
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+            {
+                locked = BattlePosition.Attack;
+                return true;
+            }
+
+            return false;
+        }
+
+        void BeginSsZonePick(CardInstance target, BattlePosition pos)
+        {
+            _pendingSsTarget = target;
+            _pendingSsPos = pos;
+            _awaitingSsZonePick = true;
+            _ssPositionLocked = true;
+            RevealDiskForPlacement();
+            ShowLegalZoneHighlights(target);
+            var posName = pos == BattlePosition.Defense ? "Defense" : "Attack";
+            if (_status != null)
+                _status.text = $"{target.Name} — Special Summon {posName}: tap a Monster Zone on your disk";
+            _engine.Log($"{target.Name}: Special Summon {posName} — tap a Monster Zone on your disk.");
+            Refresh();
+        }
+
+        void CommitSsPlacement(int zoneIndex, BattlePosition pos)
+        {
+            var target = _pendingSsTarget;
+            if (target == null || _engine == null) return;
+            _pendingSsPos = pos;
+            _engine.SetPendingSpecialSummonPlacement(zoneIndex, pos);
+            var ok = _engine.TrySelectEffectTarget(target);
+            ClearSsPlacement();
+            _gyBrowser?.Hide();
+            HideTargetPicker();
+            CloseInspectAfterPlay();
+            if (ok)
+            {
+                ClearCardSelection();
+                MaybeRunAi();
+            }
+            else
+                _engine.Log("Special Summon failed.");
+            Refresh();
+        }
+
+        void CancelSsPlacement()
+        {
+            _awaitingSsZonePick = false;
+            _ssPositionLocked = false;
+            _pendingSsZone = -1;
+            _pendingSsTarget = null;
+            _engine?.ClearPendingSpecialSummonPlacement();
+            ClearLegalZoneHighlights();
+            if (_engine != null && _engine.IsAwaitingEffectTarget)
+                Refresh();
+        }
+
+        void ClearSsPlacement()
+        {
+            _awaitingSsZonePick = false;
+            _ssPositionLocked = false;
+            _pendingSsZone = -1;
+            _pendingSsTarget = null;
+            _engine?.ClearPendingSpecialSummonPlacement();
         }
 
         List<CardAction> CollectMonsterPlayActionsForZone(CardInstance card, int zone)
@@ -4467,7 +4715,7 @@ namespace WRLDZ.UI
                     Color = GbaTheme.CmdSafe,
                     Invoke = () =>
                     {
-                        SelectHand(card);
+                        HoldHand(card);
                         _pendingZoneIndex = zone;
                         DoActivate();
                     }

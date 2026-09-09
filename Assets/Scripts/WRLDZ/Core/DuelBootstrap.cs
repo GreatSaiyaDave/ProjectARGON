@@ -1,6 +1,7 @@
 using UnityEngine;
 using WRLDZ.Data;
 using WRLDZ.Duel;
+using WRLDZ.Duel.Rules;
 using WRLDZ.Presentation;
 using WRLDZ.UI;
 // KuribohTeamInfo · LocalAccountStore · DeckBoxState
@@ -15,7 +16,7 @@ namespace WRLDZ.Core
     {
         [Header("StreamingAssets/Decks/")]
         public string playerDeckFile = "player_starter.json";
-        public string aiDeckFile = "ai_kaiba.json";
+        public string aiDeckFile = "character_dk_kaiba.json";
 
         CardDatabase _db;
         DeckFile _playerDeck;
@@ -232,13 +233,27 @@ namespace WRLDZ.Core
             {
                 _engine = new DuelEngine();
                 _engine.HumanVsHuman = match != null && match.IsHumanOpponent;
+                if (match != null && match.DkOverlay)
+                    _engine.Overlay = DuelRulesOverlay.DuelistKingdomTable();
                 var cinematic = match == null || !match.SkipPreDuelCinematic;
-                _engine.StartDuel(_db, _playerDeck, _aiDeck, cinematicOpening: cinematic);
-                if (match != null && match.StartingLp >= 1000)
+                if (match != null && (match.Launch == ArDuelLaunchKind.StoryEra
+                                      || match.Launch == ArDuelLaunchKind.NpcStreet))
                 {
-                    _engine.Player.LifePoints = match.StartingLp;
-                    _engine.Opponent.LifePoints = match.StartingLp;
-                    Debug.Log($"[WRLDZ] Encounter LP set to {match.StartingLp}");
+                    _playerDeck = ErazDeckRules.FilterDeckToEra(_playerDeck, match.ErazBandId);
+                    _aiDeck = ErazDeckRules.FilterDeckToEra(_aiDeck, match.ErazBandId);
+                }
+
+                _engine.StartDuel(_db, _playerDeck, _aiDeck, cinematicOpening: cinematic);
+                var lp = match != null && match.StartingLp >= 1000
+                    ? match.StartingLp
+                    : (_engine.Overlay != null && _engine.Overlay.OverrideStartingLp >= 1000
+                        ? _engine.Overlay.OverrideStartingLp
+                        : 0);
+                if (lp >= 1000)
+                {
+                    _engine.Player.LifePoints = lp;
+                    _engine.Opponent.LifePoints = lp;
+                    Debug.Log($"[WRLDZ] Encounter LP set to {lp}");
                 }
 
                 if (!cinematic)

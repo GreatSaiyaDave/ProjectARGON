@@ -17,11 +17,13 @@ namespace WRLDZ.Duel.TextEffects
             @"(?:(?:a|an|1)\s+)?" +
             @"(?:(?:Level\s+(?<level>\d+)\s+or lower)\s+)?" +
             @"(?:(?<race>[A-Za-z][A-Za-z -]*?)(?:-Type)?\s+)?" +
-            @"monsters?\s+from\s+(?:your|the)\s+(?<origin>hand|deck|graveyard|gy)\b",
+            @"monsters?\s+from\s+(?:your|the)\s+(?<origin>hand|deck|graveyard|gy)" +
+            @"(?:\s+in\s+(?<pos>Attack|Defense)\s+Position)?\b",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxNegateActivation = new(
-            @"(?:During either player's turn,\s*)?When a Spell Card is activated\b.*?negate the activation(?:,\s*and if you do,\s*destroy it)?\.",
+            @"(?:During either player's turn,\s*)?When a (?<kind>Spell/?Trap|Spell|Trap) Card is activated\b" +
+            @"(?<mid>.*?)negate the activation(?:,\s*and if you do,\s*destroy it)?\.",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxPosition = new(
@@ -79,6 +81,14 @@ namespace WRLDZ.Duel.TextEffects
                 if (!race.Equals("Level", StringComparison.OrdinalIgnoreCase))
                     clause.RaceFilter = race;
             }
+            if (m.Groups["pos"].Success)
+            {
+                var pos = m.Groups["pos"].Value;
+                if (pos.Equals("Defense", StringComparison.OrdinalIgnoreCase))
+                    clause.SummonInDefense = true;
+                else
+                    clause.SummonInAttack = true;
+            }
             return true;
         }
 
@@ -98,9 +108,13 @@ namespace WRLDZ.Duel.TextEffects
                 clause.Zone = clause.Zone == EffectZoneFilter.OppFaceUpMonsters
                     ? EffectZoneFilter.OppFaceUpMonsters
                     : EffectZoneFilter.FieldAnyMonster;
-            if (m.Groups["position"].Success &&
-                m.Groups["position"].Value.Equals("Attack", StringComparison.OrdinalIgnoreCase))
-                clause.ForceAttackPosition = true;
+            if (m.Groups["position"].Success)
+            {
+                if (m.Groups["position"].Value.Equals("Attack", StringComparison.OrdinalIgnoreCase))
+                    clause.ForceAttackPosition = true;
+                else if (m.Groups["position"].Value.Equals("Defense", StringComparison.OrdinalIgnoreCase))
+                    clause.ForceDefensePosition = true;
+            }
             return true;
         }
     }

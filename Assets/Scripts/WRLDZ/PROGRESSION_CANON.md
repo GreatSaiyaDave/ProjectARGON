@@ -74,9 +74,9 @@ Pokémon GO–paced **Duelist Level**:
 
 | Band | Levels | Feel |
 |------|--------|------|
-| Rookie → Elite | 1–49 | Fast early, steady mid (GO 1–40 energy) |
-| **Master wall** | **50+** | **Hard slowdown** — many duels per level |
-| Soft cap | 100 | Until story complete |
+| Rookie → Elite | 1–50 | Same energy as Pokémon GO **1–20** |
+| **Master plateau** | **51–100** | Curve jumps hard. Semi-hidden: **PVE XP −90%**, **PvP XP +100%** (mastery of their magic) |
+| Soft cap | 100 | Until full story complete |
 
 - Soft cap **100** until story complete (`PlayerProgress.SoftLevelCap`)
 - XP primarily from duels; **practice = 0 XP**
@@ -118,7 +118,21 @@ Full deep dive: **`SET_ENERGY_AND_BAZAAR.md`** (Blueprint v1.1 reconciled).
 | NPCs | Dynamic shopkeepers + **Witty Phantom** auctions |
 | S1–4 / S5+ | Era lock → Extra Monster mayhem |
 
-UI stub: hub **Bazaar**. Spatial pins = partner geofences.
+Bazaar tablets spend per-set SE. ERAZ badges after Original are **5 shards** fused with 2,500 SE of an unlocked era.
+
+## Story campaign (Season 1)
+
+`StoryCampaignService` + `StreamingAssets/WRLDZ/Story/season1_dk.json`. STORY sheet is a Solo-style gate list. Indoor DUEL needs no GPS. Story pin uses the current stage. **Story duels are standard TCG (8000 LP)** until the Duelist Kingdom format is finalized. NPC street decks use the player's highest whole ERAZ. Players only earn SE of unlocked ERAZ bands.
+
+Fortune teller (gift summary) grants **Original** whole and explains soul / relic / badge artifact cards. Five soul shards fuse into +1 fracture capacity.
+
+## Opponents (lab / PvAI)
+
+`OpponentCatalog` + `Decks/opponent_roster.json`. Desktop Lab **VS OPPONENT** and Format Select **CHOOSE OPPONENT**. Standard TCG, 8000 LP. **Lab Kaiba (`ai_kaiba.json`) is not on the list** and is not the default AI deck (Seto Kaiba's DK list is).
+
+## Format badges
+
+Same 5-shard + 2500 SE fuse as ERAZ (`format.dk`, `format.raid`, …). Unlocks the Format Select row. Does **not** turn on table laws until that format is finalized.
 
 ## Still later
 
@@ -128,6 +142,6 @@ UI stub: hub **Bazaar**. Spatial pins = partner geofences.
 - Raid duel mode wiring Tome equipped pages into engine  
 - Trivia quizzes every 10 levels  
 - Physical deck scan  
-- Zone Mode / possession AR  
-- Per-set SE balances + altar convert service + story SE grant table  
+- Walk-mile SE, 3-win pack streak, altar convert  
+- Season 2+ worlds, Umbrax-Pegasus 50k raid  
 

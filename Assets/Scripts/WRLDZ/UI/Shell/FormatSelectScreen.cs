@@ -59,6 +59,22 @@ namespace WRLDZ.UI.Shell
             v.padding = new RectOffset(4, 4, 4, 4);
             scroll.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
+            HubChrome.FeaturedCard(scroll.transform, "CHOOSE OPPONENT",
+                "Yugi · Kaiba · Joey · street lists. Standard TCG, 8000 LP.\nYour deck vs theirs",
+                () =>
+                {
+                    if (!CanStartHubNonPractice())
+                        return;
+                    FreeUiKit.PlayConfirm();
+                    RectTransform sheet = null;
+                    sheet = OpponentSelectScreen.Build(parent, () =>
+                    {
+                        if (sheet != null)
+                            FloatingPanel.DestroyDeferred(sheet.gameObject);
+                    }, labTest: false);
+                },
+                gold: true);
+
             var cards = new[]
             {
                 PvAiCard("STANDING", "Default AR field · face-to-face",
@@ -73,7 +89,32 @@ namespace WRLDZ.UI.Shell
             };
 
             foreach (var c in cards)
-                AddCard(scroll.transform, c);
+                HubChrome.FeaturedCard(scroll.transform, c.Title, c.Rules + "\n" + c.Lp,
+                    c.Unlocked && c.Play != null
+                        ? () =>
+                        {
+                            FreeUiKit.PlayConfirm();
+                            c.Play();
+                        }
+                        : null,
+                    gold: true);
+
+
+            var acc = AppSession.Instance != null ? AppSession.Instance.Account : null;
+            acc?.EnsureProgress();
+            for (var i = 0; i < FormatProgress.Ids.Length; i++)
+            {
+                var id = FormatProgress.Ids[i];
+                var owned = FormatProgress.HasBadge(acc?.progress, id);
+                HubChrome.FeaturedCard(
+                    scroll.transform,
+                    FormatProgress.Titles[i].ToUpperInvariant(),
+                    owned
+                        ? "Badge owned. Table laws are not live yet.\nOWNED · rules not final"
+                        : "Format badge. Fuse 5 shards + 2500 SE at the Bazaar.\nLOCKED",
+                    null,
+                    gold: owned);
+            }
 
             return hostGo.GetComponent<RectTransform>();
         }
@@ -137,42 +178,6 @@ namespace WRLDZ.UI.Shell
             catch (System.InvalidOperationException)
             {
                 return false;
-            }
-        }
-
-        static void AddCard(Transform parent, FormatCard c)
-        {
-            var row = FloatingPanel.Create(parent, c.Title, goldEdge: true);
-            var le = row.gameObject.AddComponent<LayoutElement>();
-            le.minHeight = 152f;
-            le.preferredHeight = 160f;
-
-            var t = FloatingPanel.Title(row, c.Title, 16);
-            FloatingPanel.Place(t.rectTransform, 0.04f, 0.58f, 0.66f, 0.94f);
-            t.horizontalOverflow = HorizontalWrapMode.Overflow;
-            t.verticalOverflow = VerticalWrapMode.Overflow;
-            t.resizeTextForBestFit = false;
-
-            var rules = FloatingPanel.Body(row, c.Rules + "\n" + c.Lp, 13);
-            FloatingPanel.Place(rules.rectTransform, 0.04f, 0.08f, 0.66f, 0.56f);
-            rules.verticalOverflow = VerticalWrapMode.Overflow;
-            rules.color = DuelystUi.TextMuted;
-
-            if (c.Unlocked && c.Play != null)
-            {
-                var play = FloatingPanel.PrimaryButton(row, "START", () =>
-                {
-                    FreeUiKit.PlayConfirm();
-                    c.Play();
-                }, gold: true);
-                FloatingPanel.Place(play.GetComponent<RectTransform>(), 0.70f, 0.18f, 0.96f, 0.82f);
-            }
-            else
-            {
-                var lockL = FloatingPanel.Body(row, "LOCKED", 16);
-                lockL.color = DuelystUi.Danger;
-                lockL.alignment = TextAnchor.MiddleCenter;
-                FloatingPanel.Place(lockL.rectTransform, 0.70f, 0.18f, 0.96f, 0.82f);
             }
         }
     }

@@ -111,7 +111,7 @@ namespace WRLDZ.UI
             _scanRt.offsetMin = Vector2.zero;
             _scanRt.offsetMax = Vector2.zero;
             var peak = 1f - Mathf.Abs(u * 2f - 1f);
-            _scan.color = new Color(0.55f, 0.95f, 1f, 0.08f + 0.28f * peak);
+            _scan.color = new Color(0.62f, 0.78f, 1f, 0.05f + 0.16f * peak);
         }
 
         public void CaptureBaseScale()

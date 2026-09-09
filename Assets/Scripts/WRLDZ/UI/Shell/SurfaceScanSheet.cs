@@ -33,14 +33,8 @@ namespace WRLDZ.UI.Shell
             wellGo.transform.SetParent(body, false);
             FloatingPanel.Grid.Full(wellGo.GetComponent<RectTransform>(), 0.38f, 0.96f);
             b.Well = wellGo.GetComponent<Image>();
-            b.Well.sprite = UiFoundation.WhiteSprite();
-            b.Well.type = Image.Type.Simple;
-            b.Well.color = new Color(0.03f, 0.06f, 0.10f, 0.88f);
             b.Well.raycastTarget = false;
-            var wellOl = wellGo.AddComponent<Outline>();
-            wellOl.effectColor = new Color(0.35f, 0.82f, 0.98f, 0.70f);
-            wellOl.effectDistance = new Vector2(1.6f, -1.6f);
-            wellOl.useGraphicAlpha = false;
+            HubChrome.PaintWell(b.Well);
 
             var stepSeed = mode == ArenaSurfaceScanner.ScanMode.Pvp
                 ? "WALK TO PLAYER 2 · AUTO LOCK WHEN STILL"
@@ -88,14 +82,17 @@ namespace WRLDZ.UI.Shell
             b.Status.color = DuelystUi.TextMuted;
             b.Status.horizontalOverflow = HorizontalWrapMode.Wrap;
 
-            b.Lock = FloatingPanel.PrimaryButton(body, "LOCK HERE", onLock, gold: true);
-            b.Rescan = FloatingPanel.PrimaryButton(body, "RESCAN", onRescan);
+            b.Lock = HubChrome.Capsule(body, "LOCK HERE", onLock, MenuCommandButton.Kind.Gold,
+                centerTitle: true, titleSize: 16);
+            b.Rescan = HubChrome.Capsule(body, "RESCAN", onRescan, MenuCommandButton.Kind.Primary,
+                centerTitle: true, titleSize: 16);
             FloatingPanel.Grid.Pair(
                 b.Lock.GetComponent<RectTransform>(),
                 b.Rescan.GetComponent<RectTransform>(),
                 0.14f, 0.24f);
 
-            b.Start = FloatingPanel.PrimaryButton(body, "START DUEL", onStart, gold: true);
+            b.Start = HubChrome.Capsule(body, "START DUEL", onStart, MenuCommandButton.Kind.Gold,
+                centerTitle: true, titleSize: 20);
             FloatingPanel.Grid.Full(b.Start.GetComponent<RectTransform>(), 0.02f, 0.12f);
 
             return b;

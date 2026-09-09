@@ -26,6 +26,7 @@ namespace WRLDZ.Presentation
         Button _prev;
         Button _next;
         CardDatabase _db;
+        DuelEngine _engine;
         readonly List<CardInstance> _cards = new();
         int _indexAt;
         bool _playerSide;
@@ -156,9 +157,10 @@ namespace WRLDZ.Presentation
         }
 
         public void Show(IReadOnlyList<CardInstance> gy, CardDatabase db, bool playerSide,
-            Action<CardInstance> onPick, string titleOverride = null)
+            Action<CardInstance> onPick, string titleOverride = null, DuelEngine engine = null)
         {
             _db = db;
+            _engine = engine;
             _playerSide = playerSide;
             _titleOverride = titleOverride;
             _onPick = onPick;
@@ -286,6 +288,13 @@ namespace WRLDZ.Presentation
                 img.preserveAspect = true;
                 img.raycastTarget = true;
                 ApplyFace(img, card);
+                var yours = IsPlayerGyCard(card);
+                var rim = go.AddComponent<Outline>();
+                rim.effectColor = yours
+                    ? new Color(0.55f, 0.82f, 1f, 0.95f)
+                    : new Color(0.95f, 0.22f, 0.28f, 0.95f);
+                rim.effectDistance = new Vector2(2.2f, -2.2f);
+                rim.useGraphicAlpha = false;
                 go.GetComponent<Button>().onClick.AddListener(() =>
                 {
                     _indexAt = idx;
@@ -308,6 +317,20 @@ namespace WRLDZ.Presentation
                     ? Color.white
                     : new Color(0.75f, 0.78f, 0.82f, 0.85f);
             }
+        }
+
+        bool IsPlayerGyCard(CardInstance card)
+        {
+            if (card == null) return _playerSide;
+            if (_engine?.Player?.Graveyard != null)
+            {
+                foreach (var c in _engine.Player.Graveyard)
+                    if (c != null && c.InstanceId == card.InstanceId) return true;
+                if (_engine.Opponent?.Graveyard != null)
+                    foreach (var c in _engine.Opponent.Graveyard)
+                        if (c != null && c.InstanceId == card.InstanceId) return false;
+            }
+            return _playerSide;
         }
 
         void ApplyFace(Image img, CardInstance card)

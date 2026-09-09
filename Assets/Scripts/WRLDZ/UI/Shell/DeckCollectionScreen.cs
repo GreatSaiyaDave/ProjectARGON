@@ -209,47 +209,33 @@ namespace WRLDZ.UI.Shell
                                ?? ScreenRouter.Instance?.Presentation
                                ?? DualMenuPresenter.ResolveDefaultPresentation();
 
-            // Open menu: world/map shows through. Dim only catches “click outside card”.
-            var root = new GameObject("DeckMenuRoot", typeof(RectTransform), typeof(Image))
-                .GetComponent<RectTransform>();
-            root.SetParent(modalHost, false);
-            FloatingPanel.Stretch(root);
-            var dim = root.GetComponent<Image>();
-            dim.sprite = UiFoundation.WhiteSprite();
-            dim.color = new Color(0.02f, 0.03f, 0.07f, 0.78f);
-            dim.raycastTarget = true;
-
-            var win = new GameObject("DeckMenuWindow", typeof(RectTransform), typeof(Image))
-                .GetComponent<RectTransform>();
-            win.SetParent(root, false);
-            FloatingPanel.Place(win, 0.0f, 0.0f, 1f, 1f);
-            var wImg = win.GetComponent<Image>();
-            var deckBg = ImagineAssets.BgDeckBuilder();
-            if (deckBg != null)
+            DualMenuPresenter.Frame frame = default;
+            void CloseAll()
             {
-                wImg.sprite = deckBg;
-                wImg.color = new Color(1f, 1f, 1f, 0.62f);
-                wImg.preserveAspect = false;
+                DualMenuPresenter.Dismiss(frame);
+                onClose?.Invoke();
             }
-            else
-            {
-                wImg.sprite = UiFoundation.WhiteSprite();
-                wImg.color = new Color(0.04f, 0.06f, 0.10f, 0.06f);
-            }
-            wImg.raycastTarget = true;
-            var winBtn = win.gameObject.AddComponent<Button>();
-            winBtn.targetGraphic = wImg;
-            winBtn.transition = Selectable.Transition.None;
 
-            var body = win;
+            frame = DualMenuPresenter.BuildFrame(
+                modalHost,
+                "DECK",
+                "Tap name to rename · caret to switch",
+                CloseAll,
+                presentation);
+
+            Debug.Log("[WRLDZ] DECK HubChrome overlay — Hierarchy should show PhoneMenu_DECK, not DeckMenuRoot.");
+
+            var root = frame.Root;
+            var body = frame.BodyHost;
 
             var st = new State
             {
                 Db = CardDatabase.Load(),
                 Acc = AppSession.Ensure().Account,
                 Presentation = presentation,
-                Window = win,
+                Window = body,
                 Body = body,
+                Title = frame.Title,
                 // Jump straight into builder — deck switcher replaces the old list screen
                 Phase = Phase.Editor
             };
@@ -289,25 +275,7 @@ namespace WRLDZ.UI.Shell
                 }
             }
 
-            st.OnClose = () =>
-            {
-                onClose?.Invoke();
-                if (root != null) UnityEngine.Object.Destroy(root.gameObject);
-            };
-
-            var dimBtn = root.gameObject.GetComponent<Button>() ?? root.gameObject.AddComponent<Button>();
-            dimBtn.targetGraphic = dim;
-            dimBtn.transition = Selectable.Transition.None;
-            dimBtn.onClick.AddListener(() =>
-            {
-                if (st.Inspect != null && st.Inspect.activeSelf)
-                    HideInspect(st);
-            });
-            winBtn.onClick.AddListener(() =>
-            {
-                if (st.Inspect != null && st.Inspect.activeSelf)
-                    HideInspect(st);
-            });
+            st.OnClose = CloseAll;
 
             st.Status = L(body, "", 11, new Color(0.85f, 0.9f, 0.95f, 0.9f), TextAnchor.MiddleLeft);
             FloatingPanel.Place(st.Status.rectTransform, 0.03f, 0.006f, 0.97f, 0.046f);
@@ -631,15 +599,21 @@ namespace WRLDZ.UI.Shell
 
         static void StyleGlass(Image img, Color fill, Color edge)
         {
-            if (img == null) return;
-            img.sprite = UiTheme.RoundedRectSprite() ?? UiFoundation.WhiteSprite();
-            img.type = img.sprite != null && img.sprite.border.sqrMagnitude > 0
-                ? Image.Type.Sliced : Image.Type.Simple;
-            img.color = fill;
-            var ol = img.GetComponent<Outline>() ?? img.gameObject.AddComponent<Outline>();
-            ol.effectColor = edge;
-            ol.effectDistance = new Vector2(1.5f, -1.5f);
-            ol.useGraphicAlpha = false;
+            var gold = edge.g > 0.55f && edge.r > 0.7f && edge.b < 0.55f;
+            HubChrome.QuietFill(img, MenuChromePrefs.RowColor,
+                gold ? DuelystUi.Gold : DuelystUi.Cyan);
+        }
+
+        static Button GlassAction(Transform parent, string label, Color fill, Color edge, Action onClick)
+        {
+            var kind = fill == GlassRose || edge == EdgeRose
+                ? MenuCommandButton.Kind.Danger
+                : fill == GlassGold || edge == EdgeGold
+                    ? MenuCommandButton.Kind.Gold
+                    : fill == GlassQuiet
+                        ? MenuCommandButton.Kind.Secondary
+                        : MenuCommandButton.Kind.Primary;
+            return HubChrome.Capsule(parent, label, onClick, kind, centerTitle: true, titleSize: 18);
         }
 
         static void StyleChromeType(Text t, int designSize, TextAnchor align, Color color)
@@ -655,18 +629,6 @@ namespace WRLDZ.UI.Shell
             t.alignByGeometry = true;
             t.color = color;
             t.raycastTarget = false;
-        }
-
-        static Button GlassAction(Transform parent, string label, Color fill, Color edge, Action onClick)
-        {
-            var b = DeckChromeButton(parent, label, onClick, fill, compact: false);
-            StyleGlass(b.GetComponent<Image>(), fill, edge);
-            var t = b.GetComponentInChildren<Text>();
-            WrldzType.StyleButtonLabel(t, 18, display: false);
-            t.alignment = TextAnchor.MiddleCenter;
-            t.horizontalOverflow = HorizontalWrapMode.Overflow;
-            t.verticalOverflow = VerticalWrapMode.Overflow;
-            return b;
         }
 
         /// <summary>Pin a toolbar control to the top of the sheet at a fixed pixel height.</summary>
@@ -887,15 +849,7 @@ namespace WRLDZ.UI.Shell
             host.transform.SetParent(phase, false);
             FloatingPanel.Place(host.GetComponent<RectTransform>(), x0, y0, x1, y1);
             var bg = host.GetComponent<Image>();
-            // Simple, not 9-sliced: sliced HudChip borders eat the whole short row.
-            bg.sprite = UiFoundation.WhiteSprite();
-            bg.type = Image.Type.Simple;
-            bg.color = new Color(0.12f, 0.18f, 0.28f, 1f);
-            bg.raycastTarget = true;
-            var edge = host.AddComponent<Outline>();
-            edge.effectColor = new Color(0.40f, 0.85f, 1f, 0.85f);
-            edge.effectDistance = new Vector2(2f, -2f);
-            edge.useGraphicAlpha = false;
+            HubChrome.PaintWell(bg);
             var canvas = host.GetComponent<Canvas>();
             canvas.overrideSorting = true;
             canvas.sortingOrder = 120;
@@ -1554,41 +1508,40 @@ namespace WRLDZ.UI.Shell
         {
             var ar = IsAr(st);
             var wide = !ar && IsWideLayout(phase);
-            const float barH = 72f;
+            const float barH = 96f;
             const float barTop = 8f;
-            const float row2 = 88f;
-            const float row2H = 64f;
-            const float searchH = 52f;
-            var searchTop = wide ? 88f : 160f;
+            const float row2 = 112f;
+            const float row2H = 72f;
+            const float searchH = 56f;
+            var searchTop = wide ? 112f : 192f;
             var chromeBottom = searchTop + searchH + 8f;
             BuildDeckSwitcher(phase, st, 0f, ChromeNameY0, ar ? NamePillX1 : SwitcherX1, ChromeNameY1);
             var switcher = phase.Find("DeckSwitcher") as RectTransform;
 
-            var close = GlassAction(phase, "X", GlassQuiet, EdgeCyan, () =>
+            var close = HubChrome.Capsule(phase, "X", () =>
             {
                 FreeUiKit.PlayClick();
                 RequestLeaveEditor(st);
-            });
+            }, MenuCommandButton.Kind.Secondary, centerTitle: true, titleSize: 18, plated: false);
 
             if (ar)
             {
                 if (switcher != null) PinTop(switcher, 0f, 0.86f, barTop, barH);
                 PinTop(close.GetComponent<RectTransform>(), 0.88f, 1f, barTop, barH);
             }
-            else if (wide)
-            {
-                if (switcher != null) PinTop(switcher, 0f, 0.48f, barTop, barH);
-                PinTop(close.GetComponent<RectTransform>(), 0.88f, 1f, barTop, barH);
-            }
             else
             {
-                if (switcher != null) PinTop(switcher, 0f, 0.82f, barTop, barH);
-                PinTop(close.GetComponent<RectTransform>(), 0.84f, 1f, barTop, barH);
+                close.gameObject.SetActive(false);
+                if (wide)
+                {
+                    if (switcher != null) PinTop(switcher, 0f, 0.48f, barTop, barH);
+                }
+                else if (switcher != null) PinTop(switcher, 0f, 0.82f, barTop, barH);
             }
 
             if (!ar)
             {
-                var save = GlassAction(phase, "SAVE", GlassGold, EdgeGold, () =>
+                var save = HubChrome.Capsule(phase, "SAVE", () =>
                 {
                     if (!DeckIsComplete(st))
                     {
@@ -1600,8 +1553,8 @@ namespace WRLDZ.UI.Shell
                     PersistDeck(st);
                     FreeUiKit.PlayConfirm();
                     Status(st, "Saved · ready for VS AI", true);
-                });
-                var clear = GlassAction(phase, "CLEAR", GlassRose, EdgeRose, () =>
+                }, MenuCommandButton.Kind.Gold, centerTitle: true, titleSize: 18);
+                var clear = HubChrome.Capsule(phase, "CLEAR", () =>
                 {
                     st.Main.Clear();
                     st.Extra.Clear();
@@ -1611,11 +1564,11 @@ namespace WRLDZ.UI.Shell
                     FreeUiKit.PlayClick();
                     st.Rebuild();
                     Status(st, "Deck cleared", true);
-                });
+                }, MenuCommandButton.Kind.Danger, centerTitle: true, titleSize: 18);
                 if (wide)
                 {
-                    PinTop(save.GetComponent<RectTransform>(), 0.50f, 0.68f, barTop, barH);
-                    PinTop(clear.GetComponent<RectTransform>(), 0.70f, 0.86f, barTop, barH);
+                    PinTop(save.GetComponent<RectTransform>(), 0.50f, 0.74f, barTop, barH);
+                    PinTop(clear.GetComponent<RectTransform>(), 0.76f, 1.00f, barTop, barH);
                 }
                 else
                 {
@@ -1626,13 +1579,13 @@ namespace WRLDZ.UI.Shell
                 BuildFilterBar(phase, st, wide, searchTop, searchH);
                 if (wide)
                 {
+                    // Construction LEFT (Main + Extra + Side) · card list RIGHT.
                     BuildConstructionBoard(phase, st, 0.00f, 0.00f, 0.615f, 0.840f);
                     PinBelow(phase.Find("ConstructionBoard") as RectTransform,
                         0f, 0.615f, chromeBottom, 0f);
-                    var listPanel = ChipGrid(phase, st, 0.630f, 0.00f, 1f, 0.800f, "PoolGrid",
-                        out st.PoolScroll);
-                    st.PoolGrid = listPanel;
-                    PinBelow(listPanel as RectTransform, 0.630f, 1f, chromeBottom + 28f, 0f);
+                    st.PoolGrid = ChipGrid(phase, st, 0.630f, 0.00f, 1f, 0.800f, "PoolGrid",
+                        out st.PoolScroll, pinFromTop: chromeBottom + 28f);
+                    RefitPool(st);
                     var listHead = Label(phase, "CARD LIST", 12, DuelystUi.GoldHot, TextAnchor.MiddleLeft);
                     PinTop(listHead.rectTransform, 0.630f, 0.82f, chromeBottom, 26f);
                     st.MatchLine = L(phase, "", 11, DuelystUi.TextMuted, TextAnchor.MiddleRight);
@@ -1643,9 +1596,9 @@ namespace WRLDZ.UI.Shell
                     BuildConstructionBoard(phase, st, 0.00f, 0.360f, 1f, 0.840f);
                     PinBelow(phase.Find("ConstructionBoard") as RectTransform,
                         0f, 1f, chromeBottom, 0.360f);
-                    var listPanel = ChipGrid(phase, st, 0f, 0.00f, 1f, 0.320f, "PoolGrid",
+                    st.PoolGrid = ChipGrid(phase, st, 0f, 0.00f, 1f, 0.320f, "PoolGrid",
                         out st.PoolScroll);
-                    st.PoolGrid = listPanel;
+                    RefitPool(st);
                     var listHead = Label(phase, "CARD LIST", 12, DuelystUi.GoldHot, TextAnchor.MiddleLeft);
                     FloatingPanel.Place(listHead.rectTransform, 0.02f, 0.320f, 0.40f, 0.358f);
                     st.MatchLine = L(phase, "", 11, DuelystUi.TextMuted, TextAnchor.MiddleRight);
@@ -1747,8 +1700,7 @@ namespace WRLDZ.UI.Shell
                 }
 
                 WriteMatchLine(st, -1);
-                if (st.PoolGrid is RectTransform poolRt)
-                    LayoutRebuilder.ForceRebuildLayoutImmediate(poolRt);
+                RefitPool(st);
                 if (resetScroll)
                 {
                     if (st.PoolScroll != null) st.PoolScroll.verticalNormalizedPosition = 1f;
@@ -1762,7 +1714,7 @@ namespace WRLDZ.UI.Shell
         static void RestoreScrollY(ScrollRect scroll, float contentY)
         {
             if (scroll == null || scroll.content == null || scroll.viewport == null) return;
-            LayoutRebuilder.ForceRebuildLayoutImmediate(scroll.content);
+            scroll.content.GetComponent<DeckPoolFit>()?.Fit(force: true);
             var max = Mathf.Max(0f, scroll.content.rect.height - scroll.viewport.rect.height);
             var y = Mathf.Clamp(contentY, 0f, max);
             var pos = scroll.content.anchoredPosition;
@@ -1802,8 +1754,7 @@ namespace WRLDZ.UI.Shell
                 PoolChip(st, st.PoolGrid, st.PoolRows[i]);
             st.PoolVisible = end;
             st.PoolAppending = false;
-            if (st.PoolGrid is RectTransform rt)
-                LayoutRebuilder.ForceRebuildLayoutImmediate(rt);
+            RefitPool(st);
         }
 
         static void EnsurePoolFillsViewport(State st)
@@ -1813,8 +1764,7 @@ namespace WRLDZ.UI.Shell
             var guard = 0;
             while (st.PoolRows != null && st.PoolVisible < st.PoolRows.Count && guard++ < 24)
             {
-                if (st.PoolGrid is RectTransform rt)
-                    LayoutRebuilder.ForceRebuildLayoutImmediate(rt);
+                RefitPool(st);
                 var viewH = st.PoolScroll.viewport.rect.height;
                 var contentH = st.PoolScroll.content.rect.height;
                 if (viewH < 8f || contentH > viewH + 24f) break;
@@ -2246,17 +2196,7 @@ namespace WRLDZ.UI.Shell
             searchGo.transform.SetParent(phase, false);
             PinTop(searchGo.GetComponent<RectTransform>(), 0f, searchX1, fromTop, height);
             var sBg = searchGo.GetComponent<Image>();
-            var searchPlate = ImagineAssets.PanelHolo() ?? ImagineAssets.InputField();
-            if (searchPlate != null)
-            {
-                sBg.sprite = searchPlate;
-                sBg.type = searchPlate.border.sqrMagnitude > 0.1f ? Image.Type.Sliced : Image.Type.Simple;
-                sBg.color = Color.white;
-            }
-            else
-            {
-                StyleGlass(sBg, new Color(0.04f, 0.07f, 0.12f, 0.82f), new Color(0.30f, 0.70f, 0.88f, 0.28f));
-            }
+            HubChrome.PaintPlate(sBg, DuelystUi.Cyan, sliced: false);
 
             var sText = Label(searchGo.transform, st.Search ?? "", 13, Color.white, TextAnchor.MiddleLeft);
             FloatingPanel.Place(sText.rectTransform, 0.03f, 0.08f, 0.84f, 0.92f);
@@ -2288,7 +2228,8 @@ namespace WRLDZ.UI.Shell
             {
                 field.text = "";
                 ApplySearch("");
-            }, new Color(0.14f, 0.12f, 0.14f, 0.90f), compact: true);
+            }, Color.white, compact: true);
+            HubChrome.PaintPlate(clear.GetComponent<Image>(), DuelystUi.Cyan, sliced: false);
             FloatingPanel.Place(clear.GetComponent<RectTransform>(), 0.86f, 0.10f, 0.98f, 0.90f);
 
             var icoSpan = Mathf.Max(0.12f, icoX1 - icoX0);
@@ -2567,8 +2508,7 @@ namespace WRLDZ.UI.Shell
             sheet.transform.SetParent(phase, false);
             FloatingPanel.Place(sheet.GetComponent<RectTransform>(), 0.03f, 0.06f, 0.97f, ChromeToolY0 - 0.010f);
             var sImg = sheet.GetComponent<Image>();
-            sImg.sprite = UiFoundation.WhiteSprite();
-            sImg.color = new Color(0.06f, 0.08f, 0.12f, 0.96f);
+            HubChrome.PaintPlate(sImg, DuelystUi.Cyan);
             sImg.raycastTarget = true;
 
             var title = Label(sheet.transform, "FILTERS", 16, DuelystUi.GoldHot, TextAnchor.MiddleLeft);
@@ -2585,11 +2525,11 @@ namespace WRLDZ.UI.Shell
                 st.Rebuild();
             });
 
-            var close = DeckChromeButton(sheet.transform, "DONE", () =>
+            var close = HubChrome.Capsule(sheet.transform, "DONE", () =>
             {
                 CloseTray();
                 st.Rebuild();
-            }, new Color(0.12f, 0.42f, 0.52f, 0.50f), compact: true);
+            }, MenuCommandButton.Kind.Gold, centerTitle: true, titleSize: 16);
             FloatingPanel.Place(close.GetComponent<RectTransform>(), 0.72f, 0.91f, 0.96f, 0.985f);
 
             var scroll = new GameObject("FilterScroll", typeof(RectTransform), typeof(Image), typeof(ScrollRect));
@@ -2860,11 +2800,9 @@ namespace WRLDZ.UI.Shell
             le.preferredHeight = 26f;
             le.flexibleWidth = 1f;
             var t = go.GetComponent<Text>();
-            t.font = WrldzType.Body() ?? UiFoundation.BuiltinFont();
-            t.fontSize = 15;
-            t.fontStyle = FontStyle.Bold;
+            WrldzType.Style(t, 15, display: true, heavyOutline: true);
             t.text = text;
-            t.color = DuelystUi.Cyan;
+            t.color = DuelystUi.GoldHot;
             t.alignment = TextAnchor.MiddleLeft;
             t.raycastTarget = false;
         }
@@ -2896,9 +2834,9 @@ namespace WRLDZ.UI.Shell
                 {
                     FreeUiKit.PlaySelect();
                     pick(idx);
-                }, on
-                    ? new Color(0.12f, 0.42f, 0.52f, 0.70f)
-                    : new Color(0.10f, 0.12f, 0.18f, 0.42f), compact: true);
+                }, Color.white, compact: true);
+                HubChrome.PaintPlate(btn.GetComponent<Image>(),
+                    on ? DuelystUi.Gold : DuelystUi.Cyan, gold: on, sliced: false);
                 btn.GetComponent<LayoutElement>().minHeight = 32f;
                 btn.GetComponent<LayoutElement>().preferredHeight = 32f;
                 btn.GetComponent<LayoutElement>().flexibleWidth = 0f;
@@ -2953,10 +2891,7 @@ namespace WRLDZ.UI.Shell
                     typeof(Button), typeof(LayoutElement));
                 cell.transform.SetParent(go.transform, false);
                 var bg = cell.GetComponent<Image>();
-                bg.sprite = UiFoundation.WhiteSprite();
-                bg.color = on
-                    ? new Color(0.18f, 0.55f, 0.68f, 0.55f)
-                    : new Color(0.08f, 0.10f, 0.14f, 0.35f);
+                HubChrome.PaintPlate(bg, on ? DuelystUi.Gold : DuelystUi.Cyan, gold: on, sliced: false);
                 bg.raycastTarget = true;
                 var b = cell.GetComponent<Button>();
                 b.targetGraphic = bg;
@@ -3173,8 +3108,10 @@ namespace WRLDZ.UI.Shell
                     st.Ghost = null;
                 }
 
-                // Vertical split: collection LEFT · deck RIGHT (drop across the gutter)
-                var dropOnDeck = ped.position.x > Screen.width * 0.5f;
+                // Drop onto any construction tray, not a screen-half guess.
+                var dropOnDeck = PointHitsTray(st.MainTray, ped.position) ||
+                                 PointHitsTray(st.ExtraTray, ped.position) ||
+                                 PointHitsTray(st.SideTray, ped.position);
                 if (st.DragFromPool && dropOnDeck)
                 {
                     if (TryAdd(st, st.DragId, out var msg))
@@ -3199,6 +3136,12 @@ namespace WRLDZ.UI.Shell
 
                 st.DragId = 0;
             });
+        }
+
+        static bool PointHitsTray(RectTransform tray, Vector2 screen)
+        {
+            if (tray == null) return false;
+            return RectTransformUtility.RectangleContainsScreenPoint(tray, screen, null);
         }
 
         static bool TryAdd(State st, int id, out string msg, Section? dest = null)
@@ -3421,8 +3364,7 @@ namespace WRLDZ.UI.Shell
             sheet.transform.SetParent(dim.transform, false);
             FloatingPanel.Place(sheet.GetComponent<RectTransform>(), 0.10f, 0.32f, 0.90f, 0.70f);
             var sImg = sheet.GetComponent<Image>();
-            sImg.sprite = UiFoundation.WhiteSprite();
-            sImg.color = new Color(0.07f, 0.09f, 0.13f, 0.97f);
+            HubChrome.PaintPlate(sImg, DuelystUi.Gold, gold: true);
             sImg.raycastTarget = true;
 
             var title = Label(sheet.transform, "DECK INCOMPLETE", 16, DuelystUi.GoldHot, TextAnchor.MiddleCenter);
@@ -3448,19 +3390,17 @@ namespace WRLDZ.UI.Shell
                 CloseGuard();
             });
 
-            var stay = DeckChromeButton(sheet.transform, "STAY", () =>
+            var stay = HubChrome.Capsule(sheet.transform, "STAY", () =>
             {
-                FreeUiKit.PlayClick();
                 CloseGuard();
-            }, new Color(0.10f, 0.38f, 0.48f, 1f), compact: true);
+            }, MenuCommandButton.Kind.Gold, centerTitle: true, titleSize: 18);
             FloatingPanel.Place(stay.GetComponent<RectTransform>(), 0.06f, 0.08f, 0.46f, 0.32f);
 
-            var revert = DeckChromeButton(sheet.transform, confirmLabel, () =>
+            var revert = HubChrome.Capsule(sheet.transform, confirmLabel, () =>
             {
-                FreeUiKit.PlayConfirm();
                 CloseGuard();
                 onRevert?.Invoke();
-            }, new Color(0.42f, 0.12f, 0.16f, 1f), compact: true);
+            }, MenuCommandButton.Kind.Danger, centerTitle: true, titleSize: 18);
             FloatingPanel.Place(revert.GetComponent<RectTransform>(), 0.52f, 0.08f, 0.94f, 0.32f);
         }
 
@@ -3622,26 +3562,23 @@ namespace WRLDZ.UI.Shell
             return content.transform;
         }
 
+        /// <summary>
+        /// CARD LIST well. Returns the scroll content (chip host). Pins the
+        /// outer panel, never the content — phase-normalized anchors on the
+        /// chip host packed the collection into the right edge of the well.
+        /// </summary>
         static Transform ChipGrid(Transform parent, State st, float x0, float y0, float x1, float y1,
-            string name, out ScrollRect scroll)
+            string name, out ScrollRect scroll, float pinFromTop = -1f)
         {
             var panel = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(ScrollRect),
                 typeof(Button));
             panel.transform.SetParent(parent, false);
-            FloatingPanel.Place(panel.GetComponent<RectTransform>(), x0, y0, x1, y1);
+            var panelRt = panel.GetComponent<RectTransform>();
+            FloatingPanel.Place(panelRt, x0, y0, x1, y1);
+            if (pinFromTop >= 0f)
+                PinBelow(panelRt, x0, x1, pinFromTop, y0);
             var pImg = panel.GetComponent<Image>();
-            var listPlate = ImagineAssets.PanelHolo() ?? ImagineAssets.PanelMenuGlass();
-            if (listPlate != null)
-            {
-                pImg.sprite = listPlate;
-                pImg.type = listPlate.border.sqrMagnitude > 0.1f ? Image.Type.Sliced : Image.Type.Simple;
-                pImg.color = Color.white;
-            }
-            else
-            {
-                pImg.sprite = UiFoundation.WhiteSprite();
-                pImg.color = new Color(0.02f, 0.03f, 0.06f, 0.12f);
-            }
+            HubChrome.PaintPlate(pImg, DuelystUi.Cyan);
             pImg.raycastTarget = true;
             var empty = panel.GetComponent<Button>();
             empty.targetGraphic = pImg;
@@ -3657,24 +3594,16 @@ namespace WRLDZ.UI.Shell
             vpImg.raycastTarget = true;
             vp.GetComponent<RectMask2D>().padding = Vector4.zero;
 
-            var content = new GameObject("C", typeof(RectTransform), typeof(GridLayoutGroup),
-                typeof(ContentSizeFitter));
+            var content = new GameObject("C", typeof(RectTransform));
             content.transform.SetParent(vp.transform, false);
             var crt = content.GetComponent<RectTransform>();
-            crt.anchorMin = new Vector2(0, 1);
-            crt.anchorMax = new Vector2(1, 1);
-            crt.pivot = new Vector2(0.5f, 1);
+            // Stretch the full viewport width. Pivot Y=1 so vertical scroll
+            // grows downward; X=0.5 is what ScrollRect expects.
+            crt.anchorMin = new Vector2(0f, 1f);
+            crt.anchorMax = new Vector2(1f, 1f);
+            crt.pivot = new Vector2(0.5f, 1f);
             crt.offsetMin = Vector2.zero;
             crt.offsetMax = Vector2.zero;
-            var g = content.GetComponent<GridLayoutGroup>();
-            g.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            g.constraintCount = 4;
-            g.cellSize = new Vector2(ChipW, ChipH);
-            g.spacing = new Vector2(ChipGap, ChipGap);
-            g.padding = new RectOffset(6, 6, 6, 6);
-            g.childAlignment = TextAnchor.UpperLeft;
-            content.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-            content.GetComponent<ContentSizeFitter>().horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
 
             scroll = panel.GetComponent<ScrollRect>();
             scroll.viewport = vp.GetComponent<RectTransform>();
@@ -3686,8 +3615,7 @@ namespace WRLDZ.UI.Shell
             scroll.inertia = true;
             scroll.decelerationRate = 0.18f;
 
-            var fit = vp.AddComponent<DeckGridFit>();
-            fit.Grid = g;
+            var fit = content.AddComponent<DeckPoolFit>();
             fit.Viewport = vp.GetComponent<RectTransform>();
             if (name == "PoolGrid")
             {
@@ -3697,41 +3625,116 @@ namespace WRLDZ.UI.Shell
             return content.transform;
         }
 
-        sealed class DeckGridFit : MonoBehaviour
+        static void RefitPool(State st)
         {
-            public GridLayoutGroup Grid;
+            if (st?.PoolGrid is RectTransform rt)
+                rt.GetComponent<DeckPoolFit>()?.Fit(force: true);
+        }
+
+        /// <summary>
+        /// Pure CARD LIST tile math. Keep in lockstep with
+        /// Tools/deck_editor_layout_check.py.
+        /// </summary>
+        internal static class DeckPoolLayout
+        {
+            public const float Pad = 6f;
+            public const float TargetW = 96f;
+            public const int MinCols = 3;
+            public const int MaxCols = 12;
+
+            public static int Columns(float viewportW, float gap)
+            {
+                return Mathf.Clamp(
+                    Mathf.FloorToInt((viewportW - Pad * 2f + gap) / (TargetW + gap)),
+                    MinCols, MaxCols);
+            }
+
+            public static float CardWidth(float viewportW, int cols, float gap)
+            {
+                return (viewportW - Pad * 2f - gap * (cols - 1)) / cols;
+            }
+
+            public static Vector2 ChipPos(int col, int row, float cardW, float cardH, float gap)
+            {
+                return new Vector2(
+                    Pad + col * (cardW + gap),
+                    -(Pad + row * (cardH + gap)));
+            }
+        }
+
+        /// <summary>
+        /// Tiles collection chips left→right, top→bottom, filling the viewport
+        /// width. Replaces GridLayoutGroup + ContentSizeFitter, which did not
+        /// reliably fill the wide-layout CARD LIST well.
+        /// </summary>
+        sealed class DeckPoolFit : MonoBehaviour
+        {
             public RectTransform Viewport;
             bool _fitting;
+            int _lastN = -1;
             float _lastW = -1f;
-            int _lastCols = -1;
-            Vector2 _lastCell;
+            float _lastH = -1f;
 
             void OnEnable() => Fit();
             void Start() => Fit();
             void OnRectTransformDimensionsChange() => Fit();
+            void LateUpdate() => Fit();
 
-            public void Fit()
+            public void Fit(bool force = false)
             {
-                if (_fitting || Grid == null || Viewport == null) return;
-                var w = Viewport.rect.width;
-                if (w < 16f) return;
-                if (Mathf.Abs(w - _lastW) < 0.75f && _lastCols > 0) return;
-                var pad = Grid.padding.horizontal;
-                var gap = Grid.spacing.x;
-                var cols = Mathf.Clamp(Mathf.FloorToInt((w - pad + gap) / (100f + gap)), 4, 16);
-                var cellW = Mathf.Min(112f, (w - pad - gap * (cols - 1)) / cols);
-                var cellH = cellW * (ChipH / ChipW);
-                if (cols == _lastCols && Mathf.Abs(cellW - _lastCell.x) < 0.35f) return;
+                if (_fitting) return;
+                var rt = transform as RectTransform;
+                if (rt == null) return;
+                var vp = Viewport != null ? Viewport : rt.parent as RectTransform;
+                if (vp == null) return;
+                var w = vp.rect.width;
+                var h = vp.rect.height;
+                if (w < 16f || h < 8f) return;
+                var n = rt.childCount;
+                if (!force && n == _lastN && Mathf.Abs(w - _lastW) < 0.5f && Mathf.Abs(h - _lastH) < 0.5f)
+                    return;
+
                 _fitting = true;
+                _lastN = n;
                 _lastW = w;
-                _lastCols = cols;
-                _lastCell = new Vector2(cellW, cellH);
-                Grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-                Grid.constraintCount = cols;
-                Grid.cellSize = _lastCell;
-                var gridRt = Grid.transform as RectTransform;
-                if (gridRt != null)
-                    LayoutRebuilder.ForceRebuildLayoutImmediate(gridRt);
+                _lastH = h;
+                const float pad = DeckPoolLayout.Pad;
+                const float gap = ChipGap;
+                var cols = DeckPoolLayout.Columns(w, gap);
+                var cardW = DeckPoolLayout.CardWidth(w, cols, gap);
+                var cardH = cardW * (ChipH / ChipW);
+                var rows = Mathf.Max(1, Mathf.CeilToInt(Mathf.Max(1, n) / (float)cols));
+                var totalH = pad * 2f + rows * cardH + Mathf.Max(0, rows - 1) * gap;
+                // Preserve vertical scroll. Zeroing anchoredPosition every
+                // LateUpdate jumped CARD LIST back to the top while scrolling.
+                var scrollY = rt.anchoredPosition.y;
+                if (rt.anchorMin.x > 0.01f || rt.anchorMax.x < 0.99f)
+                {
+                    rt.anchorMin = new Vector2(0f, 1f);
+                    rt.anchorMax = new Vector2(1f, 1f);
+                    rt.pivot = new Vector2(0.5f, 1f);
+                }
+                // Full viewport width. Do not touch offsetMin.y / offsetMax.y
+                // or a stale PinBelow on content would fight the scroll offset.
+                rt.offsetMin = new Vector2(0f, rt.offsetMin.y);
+                rt.offsetMax = new Vector2(0f, rt.offsetMax.y);
+
+                rt.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, Mathf.Max(h, totalH));
+                rt.anchoredPosition = new Vector2(0f, scrollY);
+                for (var i = 0; i < n; i++)
+                {
+                    var child = rt.GetChild(i) as RectTransform;
+                    if (child == null) continue;
+                    var col = i % cols;
+                    var row = i / cols;
+                    child.anchorMin = new Vector2(0f, 1f);
+                    child.anchorMax = new Vector2(0f, 1f);
+                    child.pivot = new Vector2(0f, 1f);
+                    child.sizeDelta = new Vector2(cardW, cardH);
+                    child.anchoredPosition = DeckPoolLayout.ChipPos(
+                        col, row, cardW, cardH, gap);
+                }
+
                 _fitting = false;
             }
         }

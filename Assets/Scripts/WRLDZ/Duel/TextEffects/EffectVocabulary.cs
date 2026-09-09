@@ -84,6 +84,7 @@ namespace WRLDZ.Duel.TextEffects
             EffectResolutionKind.TakeControl,
             EffectResolutionKind.PlaceCounters,
             EffectResolutionKind.NegateAttack,
+            EffectResolutionKind.NegateActivation,
             EffectResolutionKind.PreventDamage,
             EffectResolutionKind.TreatAsName,
             EffectResolutionKind.Discard,
@@ -106,7 +107,10 @@ namespace WRLDZ.Duel.TextEffects
             action == EffectActionKind.CoinCallDoubleOrHalveAtk ||
             action == EffectActionKind.RollDieZorc ||
             action == EffectActionKind.ApplyWabokuStyle ||
-            action == EffectActionKind.SkipOpponentNextDrawPhase;
+            action == EffectActionKind.SkipOpponentNextDrawPhase ||
+            action == EffectActionKind.MagicalHatsStyle ||
+            action == EffectActionKind.DarkSageStyle ||
+            action == EffectActionKind.ExodiaWinStyle;
 
         public static EffectCostKind CostOf(EffectClause c)
         {
@@ -143,7 +147,8 @@ namespace WRLDZ.Duel.TextEffects
                     EffectActionKind.DestroySameNameInControllerHandAndDeck or
                     EffectActionKind.DestroyOppAttackThenDamage or
                     EffectActionKind.DestroyAllEquips or
-                    EffectActionKind.DestroyAllEquippedMonsters =>
+                    EffectActionKind.DestroyAllEquippedMonsters or
+                    EffectActionKind.CrushCardVirusStyle =>
                     EffectResolutionKind.Destroy,
                 EffectActionKind.Banish or
                     EffectActionKind.BanishThenSameNameFromOppHandDeck =>

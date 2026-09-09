@@ -16,5 +16,8 @@ namespace WRLDZ.Core
         public bool PracticeNoReward;
         public string SoulLine;
         public bool AccountDeactivated;
+        public int SetEnergyGained;
+        public string StoryStageCleared;
+        public string StoryLootLine;
     }
 }

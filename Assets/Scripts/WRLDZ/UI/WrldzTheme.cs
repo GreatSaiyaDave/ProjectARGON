@@ -10,13 +10,13 @@ namespace WRLDZ.UI
     /// </summary>
     public static class WrldzTheme
     {
-        // Base — Master Duel void + cyber glass
-        public static readonly Color VoidBlack = new(0.02f, 0.03f, 0.06f, 1f);
-        public static readonly Color NightPurple = new(0.05f, 0.04f, 0.12f, 1f);
-        public static readonly Color PanelDeep = new(0.05f, 0.07f, 0.12f, 1f);
-        public static readonly Color PanelHolo = new(0.06f, 0.09f, 0.15f, 0.94f);
+        // Base — Battle City night void + Solid Vision slate
+        public static readonly Color VoidBlack = new(0.02f, 0.025f, 0.07f, 1f);
+        public static readonly Color NightPurple = new(0.06f, 0.04f, 0.14f, 1f);
+        public static readonly Color PanelDeep = new(0.05f, 0.045f, 0.11f, 1f);
+        public static readonly Color PanelHolo = new(0.055f, 0.062f, 0.125f, 0.94f);
 
-        // Accents — neon cyber × MD gold
+        // Accents — KaibaCorp cyan × millennia gold × opponent magenta
         public static readonly Color Cyan = new(0.20f, 0.92f, 1f, 1f);
         public static readonly Color CyanDim = new(0.08f, 0.48f, 0.65f, 1f);
         public static readonly Color Magenta = new(1f, 0.28f, 0.72f, 1f);
@@ -29,16 +29,16 @@ namespace WRLDZ.UI
         public static readonly Color Ok = Hex(0x3CFF8C);
 
         // Map / tears
-        public static readonly Color MapNight = Hex(0x0A0618);
+        public static readonly Color MapNight = Hex(0x0B071C);
         public static readonly Color MapFog = new(0.35f, 0.15f, 0.55f, 0.22f);
         public static readonly Color TearGlow = Hex(0xC44BFF);
         public static readonly Color TearCore = Hex(0xFF66EE);
         public static readonly Color AnchorGlow = Hex(0x4AD4FF);
         public static readonly Color ShopGlow = Hex(0x5CFF9A);
 
-        // Duel
-        public static readonly Color OppField = Hex(0x3A0A18);
-        public static readonly Color YouField = Hex(0x0A1A3A);
+        // Duel — your disk cool, opponent warm (TCG opposite-sides grammar)
+        public static readonly Color OppField = Hex(0x3E0C1C);
+        public static readonly Color YouField = Hex(0x071C3C);
         public static readonly Color LpGold = GoldHot;
 
         public static Color Hex(int rgb)

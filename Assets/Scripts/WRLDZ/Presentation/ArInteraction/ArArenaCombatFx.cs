@@ -1,12 +1,12 @@
 using System.Collections;
 using UnityEngine;
+using WRLDZ.Duel;
 
 namespace WRLDZ.Presentation.ArInteraction
 {
     /// <summary>
-    /// Procedural Solid Vision VFX for the midfield arena:
-    /// Ka hologram materialize, attack beams, impact bursts, defend shields.
-    /// No external assets — particle systems + simple primitives.
+    /// Solid Vision arena VFX (Yugipedia: holographic projections from the Duel Disk).
+    /// Card-named looks first (Trap Hole pitfall, Raigeki bolt, …); generic ring is last resort.
     /// </summary>
     public class ArArenaCombatFx : MonoBehaviour
     {
@@ -62,12 +62,40 @@ namespace WRLDZ.Presentation.ArInteraction
             fx.StartCoroutine(fx.DefendRoutine(worldPos, playerSide));
         }
 
-        /// <summary>Spell/Trap Solid Vision cast — soft cyan/gold ring + rising motes.</summary>
-        public static void PlaySpellCast(Vector3 worldPos, bool playerSide, int layer = 28)
+        /// <summary>
+        /// Spell/Trap Solid Vision. Pass <paramref name="cardId"/> so Trap Hole is a pit,
+        /// Raigeki is lightning, etc. — not a generic ring.
+        /// </summary>
+        public static void PlaySpellCast(Vector3 worldPos, bool playerSide, int layer = 28,
+            int cardId = 0)
         {
             if (!Application.isPlaying) return;
             var fx = Ensure(null, layer);
-            fx.StartCoroutine(fx.SpellCastRoutine(worldPos, playerSide));
+            switch (cardId)
+            {
+                case SpellTrapEffects.TrapHole:
+                case 29401950: // Bottomless Trap Hole — same pit, darker void
+                    fx.StartCoroutine(fx.PitfallRoutine(worldPos, cardId == 29401950));
+                    return;
+                case SpellTrapEffects.Raigeki:
+                    fx.StartCoroutine(fx.RaigekiRoutine(worldPos));
+                    return;
+                case SpellTrapEffects.DarkHole:
+                    fx.StartCoroutine(fx.DarkHoleRoutine(worldPos));
+                    return;
+                case SpellTrapEffects.MirrorForce:
+                    fx.StartCoroutine(fx.MirrorForceRoutine(worldPos, playerSide));
+                    return;
+                case SpellTrapEffects.SwordsOfRevealingLight:
+                    fx.StartCoroutine(fx.SwordsRoutine(worldPos));
+                    return;
+                case SpellTrapEffects.MonsterReborn:
+                    fx.StartCoroutine(fx.RebornRoutine(worldPos, playerSide));
+                    return;
+                default:
+                    fx.StartCoroutine(fx.SpellCastRoutine(worldPos, playerSide));
+                    return;
+            }
         }
 
         IEnumerator HoloMaterializeRoutine(Vector3 pos, bool playerSide, bool isMonster)
@@ -346,6 +374,212 @@ namespace WRLDZ.Presentation.ArInteraction
             ArObjectUtil.Destroy(ring);
             ArObjectUtil.Destroy(orb);
             if (ps != null) ArObjectUtil.Destroy(ps.gameObject, 1f);
+        }
+
+        /// <summary>
+        /// Trap Hole / 落とし穴 (Otoshiana, pitfall). Ground splits, dark well, monster drops in.
+        /// Bottomless: same pit with a violet void.
+        /// </summary>
+        IEnumerator PitfallRoutine(Vector3 pos, bool bottomless)
+        {
+            var s = Mathf.Max(0.45f, ArPlaymatLayout.LiveHoloScale);
+            var rimCol = bottomless
+                ? new Color(0.45f, 0.12f, 0.72f, 1f)
+                : new Color(0.55f, 0.32f, 0.12f, 1f);
+            var voidCol = bottomless
+                ? new Color(0.08f, 0.02f, 0.14f, 1f)
+                : new Color(0.04f, 0.03f, 0.02f, 1f);
+
+            var well = Prim(PrimitiveType.Cylinder, "PitWell", pos + Vector3.up * 0.01f);
+            ArFieldMaterials.Apply(well.GetComponent<MeshRenderer>(), voidCol);
+            well.transform.localScale = new Vector3(0.08f * s, 0.02f * s, 0.08f * s);
+
+            var rim = Prim(PrimitiveType.Cylinder, "PitRim", pos + Vector3.up * 0.03f);
+            ArFieldMaterials.ApplyAdditive(rim.GetComponent<MeshRenderer>(),
+                new Color(rimCol.r, rimCol.g, rimCol.b, 0.9f));
+
+            var dust = MakeBurst(pos + Vector3.up * 0.12f * s, rimCol, 36, 0.7f, 0.08f * s);
+            var vel = dust.velocityOverLifetime;
+            vel.enabled = true;
+            vel.y = new ParticleSystem.MinMaxCurve(-1.8f * s);
+            dust.Play(true);
+
+            var t = 0f;
+            while (t < 1f)
+            {
+                t += Time.deltaTime / 0.85f;
+                var u = Mathf.Clamp01(t);
+                var open = 1f - Mathf.Pow(1f - u, 2.1f);
+                var r = Mathf.Lerp(0.12f, 1.15f, open) * s;
+                well.transform.localScale = new Vector3(r * 0.92f, Mathf.Lerp(0.02f, 0.55f, open) * s, r * 0.92f);
+                well.transform.position = pos + Vector3.down * (0.18f * open * s);
+                rim.transform.localScale = new Vector3(r, 0.018f * s, r);
+                yield return null;
+            }
+
+            t = 0f;
+            while (t < 1f)
+            {
+                t += Time.deltaTime / 0.35f;
+                var fade = 1f - Mathf.Clamp01(t);
+                rim.transform.localScale *= fade;
+                yield return null;
+            }
+
+            ArObjectUtil.Destroy(well);
+            ArObjectUtil.Destroy(rim);
+            if (dust != null) ArObjectUtil.Destroy(dust.gameObject, 1.2f);
+        }
+
+        /// <summary>Raigeki — bolt from the sky into the field, then a white flash.</summary>
+        IEnumerator RaigekiRoutine(Vector3 pos)
+        {
+            var s = Mathf.Max(0.45f, ArPlaymatLayout.LiveHoloScale);
+            var bolt = Prim(PrimitiveType.Cylinder, "RaigekiBolt", pos + Vector3.up * (2.2f * s));
+            ArFieldMaterials.ApplyAdditive(bolt.GetComponent<MeshRenderer>(),
+                new Color(0.75f, 0.9f, 1f, 0.95f));
+            bolt.transform.localScale = new Vector3(0.08f * s, 2.2f * s, 0.08f * s);
+
+            var flash = Prim(PrimitiveType.Sphere, "RaigekiFlash", pos + Vector3.up * 0.4f * s);
+            ArFieldMaterials.ApplyAdditive(flash.GetComponent<MeshRenderer>(),
+                new Color(1f, 1f, 0.95f, 1f));
+
+            var t = 0f;
+            while (t < 1f)
+            {
+                t += Time.deltaTime / 0.55f;
+                var u = Mathf.Clamp01(t);
+                var a = u < 0.25f ? u * 4f : 1f - (u - 0.25f) / 0.75f;
+                a = Mathf.Clamp01(a);
+                bolt.transform.localScale = new Vector3(0.08f * s * a, 2.2f * s, 0.08f * s * a);
+                flash.transform.localScale = Vector3.one * (Mathf.Lerp(0.2f, 1.6f, u) * s * a);
+                yield return null;
+            }
+
+            ArObjectUtil.Destroy(bolt);
+            ArObjectUtil.Destroy(flash);
+        }
+
+        /// <summary>Dark Hole — collapsing black vortex on the street.</summary>
+        IEnumerator DarkHoleRoutine(Vector3 pos)
+        {
+            var s = Mathf.Max(0.45f, ArPlaymatLayout.LiveHoloScale);
+            var core = Prim(PrimitiveType.Sphere, "DarkHoleCore", pos + Vector3.up * 0.35f * s);
+            ArFieldMaterials.Apply(core.GetComponent<MeshRenderer>(),
+                new Color(0.04f, 0.02f, 0.08f, 1f));
+            var ring = Prim(PrimitiveType.Cylinder, "DarkHoleRing", pos + Vector3.up * 0.04f);
+            ArFieldMaterials.ApplyAdditive(ring.GetComponent<MeshRenderer>(),
+                new Color(0.55f, 0.2f, 0.85f, 0.85f));
+
+            var t = 0f;
+            while (t < 1f)
+            {
+                t += Time.deltaTime / 0.8f;
+                var u = Mathf.Clamp01(t);
+                var spin = u * 540f;
+                core.transform.localScale = Vector3.one * (Mathf.Lerp(0.15f, 1.4f, u) * s * (1f - u * 0.35f));
+                core.transform.rotation = Quaternion.Euler(90f, spin, 0f);
+                var rr = Mathf.Lerp(0.2f, 1.8f, u) * s;
+                ring.transform.localScale = new Vector3(rr, 0.02f * s, rr);
+                yield return null;
+            }
+
+            ArObjectUtil.Destroy(core);
+            ArObjectUtil.Destroy(ring);
+        }
+
+        /// <summary>Mirror Force — a wall of light-mirrors facing the attacker.</summary>
+        IEnumerator MirrorForceRoutine(Vector3 pos, bool playerSide)
+        {
+            var s = Mathf.Max(0.45f, ArPlaymatLayout.LiveHoloScale);
+            var yaw = playerSide ? 0f : 180f;
+            var panes = new GameObject[5];
+            for (var i = 0; i < panes.Length; i++)
+            {
+                var u = (i - 2) / 2f;
+                var p = pos + Quaternion.Euler(0f, yaw, 0f) * new Vector3(u * 0.55f * s, 0.55f * s, 0.12f * s);
+                panes[i] = Prim(PrimitiveType.Quad, "MirrorPane", p);
+                panes[i].transform.rotation = Quaternion.Euler(0f, yaw, u * -12f);
+                panes[i].transform.localScale = new Vector3(0.42f * s, 0.95f * s, 1f);
+                ArFieldMaterials.ApplyAdditive(panes[i].GetComponent<MeshRenderer>(),
+                    new Color(0.85f, 0.95f, 1f, 0.55f));
+            }
+
+            var t = 0f;
+            while (t < 1f)
+            {
+                t += Time.deltaTime / 0.7f;
+                var a = Mathf.Clamp01(t < 0.3f ? t / 0.3f : 1f - (t - 0.3f) / 0.7f);
+                for (var i = 0; i < panes.Length; i++)
+                {
+                    if (panes[i] == null) continue;
+                    panes[i].transform.localScale = new Vector3(0.42f * s, 0.95f * s * a, 1f);
+                }
+
+                yield return null;
+            }
+
+            for (var i = 0; i < panes.Length; i++)
+                ArObjectUtil.Destroy(panes[i]);
+        }
+
+        /// <summary>Swords of Revealing Light — blades of light pinning the field.</summary>
+        IEnumerator SwordsRoutine(Vector3 pos)
+        {
+            var s = Mathf.Max(0.45f, ArPlaymatLayout.LiveHoloScale);
+            var swords = new GameObject[4];
+            for (var i = 0; i < swords.Length; i++)
+            {
+                var ang = i * 90f + 20f;
+                var off = Quaternion.Euler(0f, ang, 0f) * (Vector3.forward * 0.45f * s);
+                swords[i] = Prim(PrimitiveType.Cube, "LightSword", pos + off + Vector3.up * 0.7f * s);
+                swords[i].transform.rotation = Quaternion.Euler(18f, ang, 0f);
+                swords[i].transform.localScale = new Vector3(0.06f * s, 1.4f * s, 0.06f * s);
+                ArFieldMaterials.ApplyAdditive(swords[i].GetComponent<MeshRenderer>(),
+                    new Color(1f, 0.95f, 0.55f, 0.8f));
+            }
+
+            var t = 0f;
+            while (t < 1f)
+            {
+                t += Time.deltaTime / 0.9f;
+                var u = Mathf.Clamp01(t);
+                var a = u < 0.2f ? u / 0.2f : 1f - (u - 0.2f) / 0.8f * 0.4f;
+                for (var i = 0; i < swords.Length; i++)
+                {
+                    if (swords[i] == null) continue;
+                    swords[i].transform.localScale = new Vector3(0.06f * s, 1.4f * s * Mathf.Clamp01(a), 0.06f * s);
+                }
+
+                yield return null;
+            }
+
+            for (var i = 0; i < swords.Length; i++)
+                ArObjectUtil.Destroy(swords[i]);
+        }
+
+        /// <summary>Monster Reborn — grave-light column lifting a hologram.</summary>
+        IEnumerator RebornRoutine(Vector3 pos, bool playerSide)
+        {
+            var s = Mathf.Max(0.45f, ArPlaymatLayout.LiveHoloScale);
+            var accent = playerSide
+                ? new Color(0.45f, 1f, 0.62f, 1f)
+                : new Color(0.7f, 1f, 0.45f, 1f);
+            var col = Prim(PrimitiveType.Cylinder, "RebornColumn", pos + Vector3.up * 0.05f);
+            ArFieldMaterials.ApplyAdditive(col.GetComponent<MeshRenderer>(),
+                new Color(accent.r, accent.g, accent.b, 0.7f));
+            var t = 0f;
+            while (t < 1f)
+            {
+                t += Time.deltaTime / 0.85f;
+                var u = Mathf.Clamp01(t);
+                var h = Mathf.Lerp(0.2f, 1.8f, u) * s;
+                col.transform.position = pos + Vector3.up * (h * 0.5f);
+                col.transform.localScale = new Vector3(0.22f * s * (1f - u * 0.4f), h * 0.5f, 0.22f * s * (1f - u * 0.4f));
+                yield return null;
+            }
+
+            ArObjectUtil.Destroy(col);
         }
 
         ParticleSystem MakeBurst(Vector3 pos, Color c, int count, float life, float size)

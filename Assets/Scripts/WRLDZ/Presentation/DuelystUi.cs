@@ -3,39 +3,39 @@ using UnityEngine;
 namespace WRLDZ.Presentation
 {
     /// <summary>
-    /// Coordinated UI kit: Grok Imagine overhaul first, then Open Duelyst vendor,
-    /// Master Duel × cyberpunk palette throughout.
+    /// Coordinated UI kit: Shadow Game obsidian + KaibaCorp filament.
+    /// Battle City night × cyan you / magenta opponent / gold phase.
     /// Paths: StreamingAssets/WRLDZ/Imagine/ · Vendor/OpenDuelyst/ui/
     /// </summary>
     public static class DuelystUi
     {
         const string Root = "WRLDZ/Vendor/OpenDuelyst/ui/";
 
-        // ── Master Duel × cyberpunk palette ─────────────────────────
-        /// <summary>Near-black void (Master Duel stage).</summary>
-        public static readonly Color BgDeep = new(0.02f, 0.03f, 0.06f, 1f);
-        /// <summary>Raised panel — matte slate, not neon glass.</summary>
-        public static readonly Color BgPanel = new(0.06f, 0.08f, 0.12f, 0.94f);
+        // ── Battle City night × Shadow Game void × KaibaCorp cyan ──
+        /// <summary>Near-black void (night arena, not a beige table).</summary>
+        public static readonly Color BgDeep = new(0.02f, 0.025f, 0.07f, 1f);
+        /// <summary>Raised panel — obsidian slate, faint Umbrax violet.</summary>
+        public static readonly Color BgPanel = new(0.055f, 0.062f, 0.125f, 0.94f);
         /// <summary>HUD strip behind text.</summary>
-        public static readonly Color BgHud = new(0.03f, 0.05f, 0.10f, 0.88f);
-        /// <summary>Primary readable text (warm white like MD).</summary>
+        public static readonly Color BgHud = new(0.04f, 0.04f, 0.10f, 0.90f);
+        /// <summary>Primary readable text (warm cream, outdoor-safe).</summary>
         public static readonly Color TextCream = new(0.98f, 0.97f, 0.94f, 1f);
         /// <summary>Secondary labels — still high contrast.</summary>
         public static readonly Color TextMuted = new(0.72f, 0.82f, 0.92f, 1f);
-        /// <summary>Neon cyan — player / holos.</summary>
+        /// <summary>KaibaCorp cyan — player / holos / disk.</summary>
         public static readonly Color Cyan = new(0.20f, 0.92f, 1.00f, 1f);
         public static readonly Color CyanDim = new(0.08f, 0.45f, 0.62f, 1f);
-        /// <summary>Master Duel gold — phases, LP, rewards.</summary>
+        /// <summary>Phase, LP ticks, millennia gold.</summary>
         public static readonly Color Gold = new(1.00f, 0.84f, 0.28f, 1f);
         public static readonly Color GoldHot = new(1.00f, 0.92f, 0.45f, 1f);
-        /// <summary>Cyber magenta — opponent / danger accent.</summary>
+        /// <summary>Opponent / Tear / alert magenta.</summary>
         public static readonly Color Magenta = new(1.00f, 0.28f, 0.72f, 1f);
         public static readonly Color Green = new(0.30f, 0.98f, 0.55f, 1f);
         public static readonly Color Danger = new(1.00f, 0.32f, 0.38f, 1f);
         public static readonly Color BattleOrange = new(1.00f, 0.48f, 0.18f, 1f);
-        /// <summary>Quiet panel edge.</summary>
-        public static readonly Color NeonEdge = new(0.50f, 0.68f, 0.78f, 0.42f);
-        public static readonly Color GoldEdge = new(0.90f, 0.76f, 0.32f, 0.50f);
+        /// <summary>Quiet panel edge — filament, not a glow blob.</summary>
+        public static readonly Color NeonEdge = new(0.20f, 0.92f, 1.00f, 0.70f);
+        public static readonly Color GoldEdge = new(1.00f, 0.84f, 0.28f, 0.70f);
 
         static Sprite P(string file) => StreamingSprite.Load(Root + file);
         static Sprite S(string file, float l, float b, float r, float t) =>

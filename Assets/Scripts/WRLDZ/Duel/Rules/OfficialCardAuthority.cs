@@ -102,7 +102,10 @@ namespace WRLDZ.Duel.Rules
             var path = Path.Combine(
                 Application.streamingAssetsPath, "WRLDZ", "eras", "text", eraId + ".json");
             if (!File.Exists(path))
+            {
+                WRLDZ.Core.EditorWorkingDirectory.Pin();
                 return null;
+            }
 
             try
             {
@@ -123,6 +126,10 @@ namespace WRLDZ.Duel.Rules
             {
                 Debug.LogWarning($"[WRLDZ ERAZ] text snapshot load failed ({eraId}): " + ex.Message);
                 return null;
+            }
+            finally
+            {
+                WRLDZ.Core.EditorWorkingDirectory.Pin();
             }
         }
 

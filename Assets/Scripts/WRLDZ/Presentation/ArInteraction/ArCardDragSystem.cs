@@ -638,8 +638,8 @@ namespace WRLDZ.Presentation.ArInteraction
             {
                 ApplyLegalGlow(card.Card, zone);
                 AskChoice(card, zone, title,
-                    "Normal Summon (face-up Attack)", false,
-                    "Set (face-down Defense)", true);
+                    "Summon ATK", false,
+                    "Set Face-Down", true);
                 return;
             }
 
@@ -655,7 +655,7 @@ namespace WRLDZ.Presentation.ArInteraction
             if (legal.CanSummonAtk)
             {
                 ApplyLegalGlow(card.Card, zone);
-                AskChoice(card, zone, title, "Normal Summon (face-up Attack)", false, null, false);
+                AskChoice(card, zone, title, "Summon ATK", false, null, false);
                 return;
             }
 
@@ -669,9 +669,7 @@ namespace WRLDZ.Presentation.ArInteraction
             if (legal.CanSetMonster || legal.CanSetSpellTrap)
             {
                 ApplyLegalGlow(card.Card, zone);
-                AskChoice(card, zone, title,
-                    legal.CanSetMonster ? "Set (face-down Defense)" : "Set (face-down)",
-                    true, null, false);
+                AskChoice(card, zone, title, "Set Face-Down", true, null, false);
                 return;
             }
 

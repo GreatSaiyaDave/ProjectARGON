@@ -84,18 +84,18 @@ namespace WRLDZ.UI
             var raidFillAi = false;
             if (kind == MapZoneKind.Raid)
             {
-                var solo = FloatingPanel.PrimaryButton(host, "SOLO", () =>
+                var solo = HubChrome.Capsule(host, "SOLO", () =>
                 {
                     raidSeats = 1;
                     raidFillAi = false;
                     FreeUiKit.PlayClick();
-                }, gold: true);
-                var trio = FloatingPanel.PrimaryButton(host, "3-ON-1  AI", () =>
+                }, MenuCommandButton.Kind.Gold, centerTitle: true, titleSize: 16);
+                var trio = HubChrome.Capsule(host, "3-ON-1  AI", () =>
                 {
                     raidSeats = 3;
                     raidFillAi = true;
                     FreeUiKit.PlayConfirm();
-                });
+                }, MenuCommandButton.Kind.Primary, centerTitle: true, titleSize: 16);
                 FloatingPanel.Grid.Pair(
                     solo.GetComponent<RectTransform>(),
                     trio.GetComponent<RectTransform>(),
@@ -105,7 +105,7 @@ namespace WRLDZ.UI
             var enterY0 = kind == MapZoneKind.Raid ? 0.46f : 0.52f;
             var enterY1 = enterY0 + 0.12f;
             var enterLabel = kind == MapZoneKind.Npc ? "ENCOUNTER" : "ENTER AR";
-            var enterAr = FloatingPanel.PrimaryButton(host, locked ? "LOCKED" : enterLabel, () =>
+            var enterAr = HubChrome.Capsule(host, locked ? "LOCKED" : enterLabel, () =>
             {
                 if (locked)
                 {
@@ -116,9 +116,10 @@ namespace WRLDZ.UI
                 FreeUiKit.PlayConfirm();
                 Launch(zoneId, zoneTitle, digital: false, onClose, kind, startingLp, boss: false,
                     raidSeats, raidFillAi);
-            }, gold: !locked);
+            }, locked ? MenuCommandButton.Kind.Secondary : MenuCommandButton.Kind.Gold,
+                centerTitle: true, titleSize: 18);
 
-            var digital = FloatingPanel.PrimaryButton(host, locked ? "—" : "DIGITAL", () =>
+            var digital = HubChrome.Capsule(host, locked ? "—" : "DIGITAL", () =>
             {
                 if (locked)
                 {
@@ -129,7 +130,7 @@ namespace WRLDZ.UI
                 FreeUiKit.PlayConfirm();
                 Launch(zoneId, zoneTitle, digital: true, onClose, kind, startingLp, boss: false,
                     raidSeats, raidFillAi);
-            });
+            }, MenuCommandButton.Kind.Primary, centerTitle: true, titleSize: 18);
             FloatingPanel.Grid.Pair(
                 enterAr.GetComponent<RectTransform>(),
                 digital.GetComponent<RectTransform>(),
@@ -142,7 +143,7 @@ namespace WRLDZ.UI
                 var harvestLbl = harvestReady
                     ? "HARVEST"
                     : $"COOL {SetOrbService.TearHarvestRemainSec(zoneId, now)}s";
-                var harvest = FloatingPanel.PrimaryButton(host, harvestLbl, () =>
+                var harvest = HubChrome.Capsule(host, harvestLbl, () =>
                 {
                     if (!SetOrbService.TryHarvestTear(zoneId, out _, out var toast))
                     {
@@ -153,12 +154,13 @@ namespace WRLDZ.UI
 
                     FreeUiKit.PlayConfirm();
                     body.text = toast;
-                }, gold: harvestReady);
+                }, harvestReady ? MenuCommandButton.Kind.Gold : MenuCommandButton.Kind.Secondary,
+                    centerTitle: true, titleSize: 16);
 
                 var bossLbl = bossReady
                     ? $"TEAR BOSS · {bossLp} LP"
                     : $"BOSS  {streak}/{MapZoneCatalog.TearBossNeedStreak}";
-                var boss = FloatingPanel.PrimaryButton(host, bossLbl, () =>
+                var boss = HubChrome.Capsule(host, bossLbl, () =>
                 {
                     if (!bossReady)
                     {
@@ -168,18 +170,19 @@ namespace WRLDZ.UI
 
                     FreeUiKit.PlayConfirm();
                     Launch(zoneId, zoneTitle, digital: false, onClose, kind, bossLp, boss: true);
-                }, gold: bossReady);
+                }, bossReady ? MenuCommandButton.Kind.Gold : MenuCommandButton.Kind.Secondary,
+                    centerTitle: true, titleSize: 16);
                 FloatingPanel.Grid.Pair(
                     harvest.GetComponent<RectTransform>(),
                     boss.GetComponent<RectTransform>(),
                     0.36f, 0.48f);
             }
 
-            var cancel = FloatingPanel.PrimaryButton(host, "CANCEL", () =>
+            var cancel = HubChrome.Capsule(host, "CANCEL", () =>
             {
                 FreeUiKit.PlayClick();
                 onClose?.Invoke();
-            });
+            }, MenuCommandButton.Kind.Secondary, centerTitle: true, titleSize: 16);
             FloatingPanel.Grid.Full(cancel.GetComponent<RectTransform>(), 0.06f, 0.18f);
 
             return panel;
@@ -201,7 +204,12 @@ namespace WRLDZ.UI
             else if (kind == MapZoneKind.Raid)
                 cfg = MapZoneService.MakeRaidBoss(zoneId, zoneTitle, digital, raidSeats, raidFillAi);
             else if (kind == MapZoneKind.Story)
-                cfg = MapZoneService.MakeStoryEra(zoneId, zoneTitle, digital);
+            {
+                var acc = AppSession.Ensure()?.Account;
+                acc?.EnsureProgress();
+                var stage = StoryCampaignService.Current(acc?.progress);
+                cfg = MapZoneService.MakeStoryEra(stage, zoneId, digital);
+            }
             else if (kind == MapZoneKind.Pvp)
                 cfg = MapZoneService.MakePvpZone(zoneTitle);
             else if (kind == MapZoneKind.Tear && boss)

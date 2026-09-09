@@ -51,6 +51,7 @@ namespace WRLDZ.Presentation.ArInteraction
         Light _diskLight;
         Coroutine _deployRoutine;
         bool _deployed;
+        SpiritDuelerSkin _skin;
 
         public DiskFxDriver Fx => _fx;
         public bool IsDeployed => _deployed;
@@ -206,7 +207,8 @@ namespace WRLDZ.Presentation.ArInteraction
             _deployed = false;
             DiskRoot.localPosition = SpiritDuelerSkin.WristCalibratedDiskRoot();
             _fx.CaptureBase(DiskRoot);
-            SpiritDuelerSkin.Attach(this);
+            _skin = SpiritDuelerSkin.Attach(this);
+            _skin?.SnapPresence(0f);
             ApplyImmediatePose();
             Debug.Log(
                 $"[WRLDZ AR] Spirit Dueler ready ({(IsPlayerSide ? "player" : "opp")}) · " +
@@ -1025,14 +1027,15 @@ namespace WRLDZ.Presentation.ArInteraction
                 transform.SetPositionAndRotation(opose.position, opose.rotation);
             }
 
-            _fx.Tick(Time.deltaTime, DiskRoot, _diskMat, BladePivot, ZonesRoot, EnergyRing);
-
+            // Pass null disk mat — body color is SpiritDuelerSkin only (do not fight zone cards).
+            _fx.Tick(Time.deltaTime, DiskRoot, null, BladePivot, ZonesRoot, EnergyRing);
             if (_diskLight != null)
             {
-                // Light ramps with blade open + energy pulse
+                var presence = _skin != null ? _skin.Presence : 1f;
                 var open = _fx.BladeOpen;
-                _diskLight.intensity = open * (0.55f + _fx.EnergyPulse * 1.8f);
-                _diskLight.range = 0.6f + open * 1.4f;
+                _diskLight.intensity = presence * (0.22f + open * (0.55f + _fx.EnergyPulse * 1.4f));
+                _diskLight.range = 0.7f + open * 1.5f;
+                _diskLight.color = Accent;
             }
         }
 
@@ -1045,10 +1048,41 @@ namespace WRLDZ.Presentation.ArInteraction
             _fx.Play(evt, duration);
         }
 
+        public void SetAccent(Color accent)
+        {
+            Accent = accent;
+            _fx.Accent = accent;
+            if (_diskLight != null) _diskLight.color = accent;
+            _skin?.SetAccent(accent);
+        }
+
+        /// <summary>Instant Duel / skip cinematic — no swing.</summary>
+        public void SnapVisibleDeployed()
+        {
+            _skin?.SnapPresence(1f);
+            _fx.SnapDeployed();
+            _deployed = true;
+            PhaseButtons?.SetDeployed(true);
+            RelayoutOfficialZones();
+        }
+
+        /// <summary>Ghost cuff appears folded (Zone Mode / pre-duel). Does not open the blade.</summary>
+        public void FadeInRetracted(float delay = 0f)
+        {
+            if (_deployRoutine != null) StopCoroutine(_deployRoutine);
+            if (!Application.isPlaying || !isActiveAndEnabled)
+            {
+                _fx.SnapRetracted();
+                _skin?.SnapPresence(1f);
+                _deployed = false;
+                return;
+            }
+
+            _deployRoutine = StartCoroutine(FadeInRetractedRoutine(delay));
+        }
+
         /// <summary>
-        /// Anime duel start: blade snaps open from retracted wrist form.
-        /// <paramref name="delay"/> staggers opponent disk slightly (Play Mode only).
-        /// Outside Play Mode, deploys immediately (editor smoke / batch).
+        /// Retracted → Deployed: fade in if needed, then Battle City blade swing.
         /// </summary>
         public void DeployForDuel(float delay = 0f)
         {
@@ -1056,6 +1090,7 @@ namespace WRLDZ.Presentation.ArInteraction
             {
                 _deployed = true;
                 PhaseButtons?.SetDeployed(true);
+                _skin?.SnapPresence(1f);
                 _fx.Play(DiskFxEvent.BladeDeploy);
                 return;
             }
@@ -1066,7 +1101,12 @@ namespace WRLDZ.Presentation.ArInteraction
         }
 
         /// <summary>Fold disk shut (leave duel / inactive AR arm).</summary>
-        public void Retract(float delay = 0f)
+        public void Retract(float delay = 0f) => Retract(delay, fadeOut: false);
+
+        /// <summary>Fold then dissipate (Map / leave AR).</summary>
+        public void RetractThenFadeOut(float delay = 0f) => Retract(delay, fadeOut: true);
+
+        void Retract(float delay, bool fadeOut)
         {
             if (!Application.isPlaying || !isActiveAndEnabled)
             {
@@ -1074,12 +1114,25 @@ namespace WRLDZ.Presentation.ArInteraction
                 LpCounter?.PowerOff();
                 PhaseButtons?.SetDeployed(false);
                 _fx.Play(DiskFxEvent.BladeRetract);
+                _skin?.SnapPresence(fadeOut ? 0f : 1f);
                 return;
             }
 
             if (_deployRoutine != null)
                 StopCoroutine(_deployRoutine);
-            _deployRoutine = StartCoroutine(RetractRoutine(delay));
+            _deployRoutine = StartCoroutine(RetractRoutine(delay, fadeOut));
+        }
+
+        IEnumerator FadeInRetractedRoutine(float delay)
+        {
+            if (delay > 0f)
+                yield return new WaitForSecondsRealtime(delay);
+            _fx.SnapRetracted();
+            _deployed = false;
+            PhaseButtons?.SetDeployed(false);
+            _skin?.FadePresence(1f, SpiritDuelerSkin.FadeInSeconds);
+            yield return new WaitForSecondsRealtime(SpiritDuelerSkin.FadeInSeconds);
+            _deployRoutine = null;
         }
 
         IEnumerator DeployRoutine(float delay)
@@ -1087,22 +1140,24 @@ namespace WRLDZ.Presentation.ArInteraction
             if (delay > 0f)
                 yield return new WaitForSecondsRealtime(delay);
             RelayoutOfficialZones();
+            if (_skin != null && _skin.Presence < 0.85f)
+            {
+                _skin.FadePresence(1f, SpiritDuelerSkin.FadeInSeconds);
+                yield return new WaitForSecondsRealtime(0.28f);
+            }
+
             _deployed = true;
             PhaseButtons?.SetDeployed(true);
             _fx.Play(DiskFxEvent.BladeDeploy);
-            // Editor: snap open if coroutine ticks are sparse so zones/deck never stay collapsed
-            if (Application.isEditor)
-            {
-                yield return new WaitForSecondsRealtime(0.9f);
-                if (_fx.BladeOpen < 0.85f)
-                    _fx.SnapDeployed();
-            }
+            yield return new WaitForSecondsRealtime(0.9f);
+            if (_fx.BladeOpen < 0.85f)
+                _fx.SnapDeployed();
 
             Debug.Log($"[WRLDZ AR] {(IsPlayerSide ? "Player" : "Opp")} disk DEPLOY open={_fx.BladeOpen:0.00}");
             _deployRoutine = null;
         }
 
-        IEnumerator RetractRoutine(float delay)
+        IEnumerator RetractRoutine(float delay, bool fadeOut)
         {
             if (delay > 0f)
                 yield return new WaitForSecondsRealtime(delay);
@@ -1110,7 +1165,14 @@ namespace WRLDZ.Presentation.ArInteraction
             LpCounter?.PowerOff();
             PhaseButtons?.SetDeployed(false);
             _fx.Play(DiskFxEvent.BladeRetract);
-            Debug.Log($"[WRLDZ AR] {(IsPlayerSide ? "Player" : "Opp")} disk RETRACT");
+            yield return new WaitForSecondsRealtime(0.72f);
+            if (fadeOut)
+            {
+                _skin?.FadePresence(0f, SpiritDuelerSkin.FadeOutSeconds);
+                yield return new WaitForSecondsRealtime(SpiritDuelerSkin.FadeOutSeconds);
+            }
+
+            Debug.Log($"[WRLDZ AR] {(IsPlayerSide ? "Player" : "Opp")} disk RETRACT fadeOut={fadeOut}");
             _deployRoutine = null;
         }
 
@@ -1232,11 +1294,16 @@ namespace WRLDZ.Presentation.ArInteraction
 
         static void EnsureDiskMesh()
         {
-            if (_diskMesh != null) return;
-            var stream = System.IO.Path.Combine(Application.streamingAssetsPath,
-                SpiritDuelerDiskView.StreamingRelativePath);
-            if (System.IO.File.Exists(stream))
-                _diskMesh = ObjMeshLoader.LoadFromFile(stream, "BattleCityDuelDisk");
+            if (_diskMesh == null)
+            {
+                var stream = System.IO.Path.Combine(Application.streamingAssetsPath,
+                    SpiritDuelerDiskView.StreamingRelativePath);
+                if (System.IO.File.Exists(stream))
+                    _diskMesh = ObjMeshLoader.LoadFromFile(stream, "BattleCityDuelDisk");
+            }
+
+            if (_diskMesh != null)
+                _diskMesh.RecalculateNormals();
         }
 
         static Material MakeDiskMat(Color accent)

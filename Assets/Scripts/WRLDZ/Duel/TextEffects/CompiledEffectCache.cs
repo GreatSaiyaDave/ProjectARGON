@@ -69,15 +69,17 @@ namespace WRLDZ.Duel.TextEffects
             EnsureDiskLoaded();
 
             var eraId = ResolveEraId();
-            var hash = OfficialCardAuthority.TextHash(def, eraId);
-            var key = (def.id, eraId);
+            var hash = string.IsNullOrEmpty(eraId)
+                ? OfficialCardAuthority.TextHash(def)
+                : OfficialCardAuthority.TextHash(def, eraId);
+            var key = (def.id, eraId ?? "");
             if (!force &&
                 Memory.TryGetValue(key, out var cached) && cached != null &&
                 cached.TextHash == hash &&
                 cached.CompilerVersion == CardTextEffectCompiler.Version)
                 return cached;
 
-            var prog = CardTextEffectCompiler.Compile(def);
+            var prog = CardTextEffectCompiler.Compile(def, eraId);
             if (prog != null)
             {
                 if (string.IsNullOrEmpty(prog.CompileSource))
@@ -123,22 +125,27 @@ namespace WRLDZ.Duel.TextEffects
             return prog;
         }
 
+        /// <summary>Tests set this to force an ERAZ snapshot (e.g. original). Null = cards_db.</summary>
+        public static string ForcedEraId;
+
         /// <summary>
-        /// Active match era from pending duel config; <see cref="ErazFormat.Original"/> when null.
+        /// Active match era from pending duel config. Null when no match band is set
+        /// (editor tests compile <c>cards_db.json</c>). DK live play sets Original.
         /// Does not call <c>AppSession.Ensure</c> (edit-mode / batch safe).
         /// </summary>
         public static string ResolveEraId()
         {
+            if (!string.IsNullOrEmpty(ForcedEraId)) return ForcedEraId;
             try
             {
                 var band = AppSession.Instance != null
                     ? AppSession.Instance.PendingArMatch?.ErazBandId
                     : null;
-                return NormalizeEra(band);
+                return string.IsNullOrEmpty(band) ? null : band;
             }
             catch
             {
-                return ErazFormat.Original;
+                return null;
             }
         }
 
@@ -235,6 +242,10 @@ namespace WRLDZ.Duel.TextEffects
             {
                 Debug.LogWarning($"[WRLDZ TextFX] {label} load failed: " + ex.Message);
             }
+            finally
+            {
+                WRLDZ.Core.EditorWorkingDirectory.Pin();
+            }
         }
 
         public static void SaveDiskNow()
@@ -250,6 +261,10 @@ namespace WRLDZ.Duel.TextEffects
             catch (Exception ex)
             {
                 Debug.LogWarning("[WRLDZ TextFX] Cache save failed: " + ex.Message);
+            }
+            finally
+            {
+                WRLDZ.Core.EditorWorkingDirectory.Pin();
             }
         }
 

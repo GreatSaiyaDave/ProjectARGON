@@ -388,8 +388,7 @@ namespace WRLDZ.Presentation
 
             if (_root == null || !_root.activeSelf)
             {
-                if (gen < 0 || _showGen == gen)
-                    Hide();
+                // Action already closed the sheet (disk placement). Do not fire onClose.
                 return;
             }
 

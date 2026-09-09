@@ -193,6 +193,21 @@ namespace WRLDZ.Duel
                         applyToHand: clause.ApplyToHand, applyToField: clause.ApplyToField || !clause.ApplyToHand);
                     any = true;
                 }
+                else if (clause.Action == EffectActionKind.ChangeBattlePosition &&
+                         clause.ForceDefensePosition)
+                {
+                    foreach (var who in new[] { engine.Player, engine.Opponent })
+                    {
+                        if (who == null) continue;
+                        foreach (var m in who.MonstersOnField())
+                        {
+                            if (!IsFaceUpMonster(m)) continue;
+                            if (!MatchesRace(m, clause.RaceFilter)) continue;
+                            m.Position = BattlePosition.Defense;
+                        }
+                    }
+                    any = true;
+                }
             }
 
             return any;

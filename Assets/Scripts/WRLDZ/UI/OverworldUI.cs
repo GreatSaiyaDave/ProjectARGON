@@ -250,7 +250,8 @@ namespace WRLDZ.UI
             // Quiet boot — bottom badge already shows level / XP
             SetStatus("");
             RefreshXpBar(account);
-            Debug.Log("[WRLDZ] Overworld ready · " + account.displayName);
+            Debug.Log("[WRLDZ] Overworld ready · " + account.displayName + " · " + WrldzBuild.Stamp);
+            WrldzBuild.Log();
         }
 
         /// <summary>Thin XP track. Compact = fill only (level lives on the badge pip).</summary>
@@ -717,40 +718,24 @@ namespace WRLDZ.UI
         void BuildCurrencyStrip(Transform root, LocalAccountStore.Account account)
         {
             var strip = new GameObject("Currency", typeof(RectTransform), typeof(Image),
-                typeof(VerticalLayoutGroup), typeof(CanvasGroup), typeof(Button));
+                typeof(HorizontalLayoutGroup), typeof(CanvasGroup));
             strip.transform.SetParent(root, false);
-            var rt = strip.GetComponent<RectTransform>();
-            rt.anchorMin = new Vector2(0.08f, 1f);
-            rt.anchorMax = new Vector2(0.92f, 1f);
-            rt.pivot = new Vector2(0.5f, 1f);
-            rt.sizeDelta = new Vector2(0f, 156f);
-            rt.anchoredPosition = new Vector2(0f, -10f);
+            HubChrome.Place(strip.GetComponent<RectTransform>(), 0.04f, 0.90f, 0.96f, 0.99f);
 
             var plate = strip.GetComponent<Image>();
-            plate.sprite = UiTheme.RoundedRectSprite() ?? UiFoundation.WhiteSprite();
-            plate.type = plate.sprite != null && plate.sprite.border.sqrMagnitude > 0
-                ? Image.Type.Sliced : Image.Type.Simple;
-            plate.color = new Color(0.04f, 0.07f, 0.12f, 0.72f);
-            plate.raycastTarget = true;
+            plate.raycastTarget = false;
+            HubChrome.PaintWell(plate);
 
-            var v = strip.GetComponent<VerticalLayoutGroup>();
-            v.spacing = 6f;
-            v.padding = new RectOffset(8, 8, 8, 8);
-            v.childAlignment = TextAnchor.UpperCenter;
+            var v = strip.GetComponent<HorizontalLayoutGroup>();
+            v.spacing = 10f;
+            v.padding = new RectOffset(10, 10, 6, 6);
+            v.childAlignment = TextAnchor.MiddleCenter;
             v.childForceExpandWidth = true;
-            v.childForceExpandHeight = false;
+            v.childForceExpandHeight = true;
             v.childControlWidth = true;
             v.childControlHeight = true;
             _currencyCg = MenuMotion.EnsureGroup(strip);
             _currencyCg.alpha = 0f;
-            var btn = strip.GetComponent<Button>();
-            btn.targetGraphic = plate;
-            btn.transition = Selectable.Transition.None;
-            btn.onClick.AddListener(() =>
-            {
-                FreeUiKit.PlaySelect();
-                OpenArtifactsOverlay(null);
-            });
 
             var p = account?.progress;
             _curDigi = CurrencyChip(strip.transform, "Digi", ImagineAssets.IconDigizeni(),
@@ -773,20 +758,13 @@ namespace WRLDZ.UI
                 typeof(Button));
             go.transform.SetParent(parent, false);
             var img = go.GetComponent<Image>();
-            img.sprite = UiTheme.RoundedRectSprite() ?? UiFoundation.WhiteSprite();
-            img.type = img.sprite != null && img.sprite.border.sqrMagnitude > 0
-                ? Image.Type.Sliced : Image.Type.Simple;
-            img.color = new Color(0.08f, 0.12f, 0.20f, 0.94f);
             img.raycastTarget = true;
+            HubChrome.PaintChip(img, accent);
             var chipBtn = go.GetComponent<Button>();
             chipBtn.targetGraphic = img;
             chipBtn.transition = Selectable.Transition.None;
             if (onClick != null)
                 chipBtn.onClick.AddListener(() => onClick());
-            var ol = go.AddComponent<Outline>();
-            ol.effectColor = new Color(accent.r, accent.g, accent.b, 0.75f);
-            ol.effectDistance = new Vector2(1.6f, -1.6f);
-            ol.useGraphicAlpha = false;
             var le = go.GetComponent<LayoutElement>();
             le.flexibleWidth = 1f;
             le.flexibleHeight = 0f;
@@ -844,10 +822,8 @@ namespace WRLDZ.UI
             // Sit under the compass orb (0.90–0.98 y) so the header never collides with it.
             GoTheme.Place(plate.GetComponent<RectTransform>(), 0.42f, 0.34f, 0.985f, 0.885f);
             _nearbyPlateImg = plate.GetComponent<Image>();
-            _nearbyPlateImg.sprite = UiFoundation.WhiteSprite();
-            _nearbyPlateImg.type = Image.Type.Simple;
-            _nearbyPlateImg.color = new Color(0.05f, 0.08f, 0.14f, 0.96f);
             _nearbyPlateImg.raycastTarget = true;
+            HubChrome.PaintWell(_nearbyPlateImg);
             plate.SetActive(false);
             _compassCg = MenuMotion.EnsureGroup(plate);
 
@@ -855,9 +831,8 @@ namespace WRLDZ.UI
             header.transform.SetParent(plate.transform, false);
             GoTheme.Place(header.GetComponent<RectTransform>(), 0f, 0.80f, 1f, 1f);
             var headerImg = header.GetComponent<Image>();
-            headerImg.sprite = UiFoundation.WhiteSprite();
-            headerImg.color = new Color(0.08f, 0.12f, 0.20f, 1f);
             headerImg.raycastTarget = false;
+            HubChrome.QuietFill(headerImg, new Color(0.06f, 0.09f, 0.14f, 0.92f));
 
             var cap = GoTheme.Label(header.transform, "Cap", "NEARBY", 16, Color.white,
                 TextAnchor.MiddleLeft, bold: true);
@@ -1151,6 +1126,11 @@ namespace WRLDZ.UI
             StreamingSprite.ClearCache("WRLDZ/Imagine/ui/panel_menu_glass.png");
             StreamingSprite.ClearCache("WRLDZ/Imagine/ui/bar_bottom.png");
             StreamingSprite.ClearCache("WRLDZ/Imagine/ui/hud_chip_plate.png");
+            StreamingSprite.ClearCache("WRLDZ/Imagine/ui/tile_hub.png");
+            StreamingSprite.ClearCache("WRLDZ/Imagine/ui/tile_hub_gold.png");
+            StreamingSprite.ClearCache("WRLDZ/Imagine/ui/button_gold_plate.png");
+            StreamingSprite.ClearCache("WRLDZ/Imagine/ui/button_primary_plate.png");
+            StreamingSprite.ClearCache("WRLDZ/Imagine/ui/hud_island_glass.png");
             var glassGo = new GameObject("MenuGlass", typeof(RectTransform), typeof(Image));
             glassGo.transform.SetParent(root, false);
             _menuGlass = glassGo.GetComponent<Image>();
@@ -1211,7 +1191,9 @@ namespace WRLDZ.UI
             _eyeRt.anchorMax = Vector2.zero;
             _eyeRt.pivot = new Vector2(0.5f, 0.5f);
             _eyeRt.sizeDelta = new Vector2(154f, 154f);
-            _eyeRt.anchoredPosition = Vector2.zero;
+            var hostRt = root as RectTransform;
+            var hostW = hostRt != null && hostRt.rect.width > 32f ? hostRt.rect.width : Screen.width;
+            _eyeRt.anchoredPosition = new Vector2(Mathf.Max(180f, hostW - 90f), 90f);
 
             // Square disc so circular glows never stretch into the slot's rectangle.
             var discGo = new GameObject("EyeDisc", typeof(RectTransform), typeof(AspectRatioFitter));
@@ -1329,9 +1311,14 @@ namespace WRLDZ.UI
 
         System.Collections.IEnumerator RelayoutDeckChipAndEyeNextFrame()
         {
-            yield return null;
-            Canvas.ForceUpdateCanvases();
-            RelayoutDeckChipAndEye();
+            for (var i = 0; i < 8; i++)
+            {
+                yield return null;
+                Canvas.ForceUpdateCanvases();
+                RelayoutDeckChipAndEye();
+                if (_eyeRt != null && _eyeRt.anchoredPosition.x > 32f)
+                    yield break;
+            }
         }
 
         void PlaceMenuGlass(bool menuOpen)
@@ -1345,8 +1332,8 @@ namespace WRLDZ.UI
         }
 
         /// <summary>
-        /// Closed HUD uses <c>bar_bottom</c> (12px vertical borders). Tall Eye sheet
-        /// uses <c>panel_menu_glass</c>. Never 9-slice the tall plate onto the short bar.
+        /// Closed HUD is a KaibaCorp lip. Open Eye is a translucent void slate
+        /// so dest tiles sit on Battle City night — never smoked glass.
         /// </summary>
         void ApplyMenuGlassSprite(bool eyeOpen)
         {
@@ -1354,36 +1341,25 @@ namespace WRLDZ.UI
             var ol = _menuGlass.GetComponent<Outline>();
             if (eyeOpen)
             {
-                var sheet = ImagineAssets.PanelMenuGlass() ?? ImagineAssets.PanelHolo();
-                if (sheet != null && sheet.border.sqrMagnitude > 0)
-                {
-                    _menuGlass.sprite = sheet;
-                    _menuGlass.type = Image.Type.Sliced;
-                    _menuGlass.color = Color.white;
-                    if (ol != null) ol.enabled = false;
-                    return;
-                }
+                HubChrome.QuietFill(_menuGlass, HubChrome.LowerDusk, DuelystUi.Cyan);
+                HubChrome.RiftWash(_menuGlass.transform);
+                _menuGlass.raycastTarget = true;
+                return;
             }
 
-            var bar = ImagineAssets.BarBottom() ?? ImagineAssets.BarTopHud() ?? ImagineAssets.HudChip();
-            if (bar != null && bar.border.sqrMagnitude > 0)
+            var bar = ImagineAssets.BarBottom();
+            if (bar != null)
             {
+                HubChrome.HideFilament(_menuGlass.transform);
                 _menuGlass.sprite = bar;
-                _menuGlass.type = Image.Type.Sliced;
-                // Translucent — orbs float over the map instead of sitting in a black well.
-                _menuGlass.color = new Color(1f, 1f, 1f, 0.55f);
+                _menuGlass.type = bar.border.sqrMagnitude > 0.1f ? Image.Type.Sliced : Image.Type.Simple;
+                _menuGlass.color = Color.white;
                 if (ol != null) ol.enabled = false;
                 return;
             }
 
-            _menuGlass.sprite = UiFoundation.WhiteSprite();
-            _menuGlass.type = Image.Type.Simple;
-            _menuGlass.color = new Color(0.05f, 0.08f, 0.14f, 0.50f);
-            ol = ol ?? _menuGlass.gameObject.AddComponent<Outline>();
-            ol.effectColor = new Color(0.40f, 0.85f, 1f, 0.70f);
-            ol.effectDistance = new Vector2(2f, -2f);
-            ol.useGraphicAlpha = false;
-            ol.enabled = true;
+            HubChrome.QuietFill(_menuGlass, new Color(0.03f, 0.04f, 0.08f, 0.62f), DuelystUi.Cyan);
+            if (ol != null) ol.enabled = false;
         }
 
         static Material MakeEyeLightMaterial()
@@ -1584,17 +1560,13 @@ namespace WRLDZ.UI
             var hud = glass.parent as RectTransform;
             var hudW = hud != null ? hud.rect.width : glass.rect.width;
             var glassW = glass.rect.width;
-            if (hudW < 32f || glassW < 32f) return;
+            var hudH = hud != null ? hud.rect.height : 0f;
+            if (hudW < 32f) hudW = Mathf.Max(32f, Screen.width);
+            if (hudH < 32f) hudH = Mathf.Max(32f, Screen.height);
+            if (glassW < 32f)
+                glassW = Mathf.Max(32f, hudW * (MenuGlassX1 - MenuGlassX0));
 
-            var hudH = hud != null ? hud.rect.height : 1920f;
-
-            float insetX = 22f, insetY = 14f;
-            if (_menuGlass != null && _menuGlass.sprite != null)
-            {
-                var b = _menuGlass.sprite.border;
-                insetX = Mathf.Max(18f, b.x * 0.55f);
-                insetY = Mathf.Max(12f, Mathf.Min(b.y, b.w) * 0.55f);
-            }
+            float insetX = 18f, insetY = 12f;
 
             const float orbPx = 154f;
             var deckPx = orbPx * 0.8f;
@@ -1760,13 +1732,17 @@ namespace WRLDZ.UI
             RelayoutDeckChipAndEye();
         }
 
-        /// <summary>Holo command cards that unfold from the Millennium Eye.</summary>
+        /// <summary>Battle City hub grammar unfolding from the Millennium Eye (home menu).</summary>
         void BuildEyeMenu(Transform root, LocalAccountStore.Account account)
         {
             _fanCards.Clear();
             var panel = new GameObject("EyeMenu", typeof(RectTransform), typeof(CanvasGroup));
             panel.transform.SetParent(root, false);
-            GoTheme.Stretch(panel.GetComponent<RectTransform>());
+            // Sit ABOVE the dock. Do not parent to MenuGlass — dest tiles then
+            // layout at HUD-bar height and the Eye gets covered.
+            HubChrome.Place(panel.GetComponent<RectTransform>(),
+                MenuGlassX0, 0.18f, MenuGlassX1, 0.94f);
+            _menuExpand = panel;
             _menuExpandCg = panel.GetComponent<CanvasGroup>();
             _menuExpandCg.alpha = 0f;
             _menuExpandCg.blocksRaycasts = false;
@@ -1780,113 +1756,101 @@ namespace WRLDZ.UI
             GoTheme.Stretch(_menuBoard);
             _menuBoard.pivot = new Vector2(0.5f, 0.5f);
 
-            void Card(string name, string caption, Sprite icon, System.Action action, bool gold, int index)
-            {
-                var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button), typeof(CanvasGroup));
-                go.transform.SetParent(_menuBoard, false);
-                var rt = go.GetComponent<RectTransform>();
-                rt.anchorMin = new Vector2(0.5f, 0.5f);
-                rt.anchorMax = new Vector2(0.5f, 0.5f);
-                rt.pivot = new Vector2(0.5f, 0.5f);
-                rt.sizeDelta = new Vector2(220f, 300f);
-                rt.localScale = Vector3.one;
+            HubChrome.SectionCap(_menuBoard, "DuelCap", "DUEL", DuelystUi.GoldHot, 0.04f, 0.84f, 0.40f, 0.89f);
+            KcTile(_menuBoard, "Nav_VsAi", 0.04f, 0.62f, 0.49f, 0.83f,
+                NavCopy.VsAi, "Practice · table · street", ImagineAssets.IconDuel(), true, OpenCreateArDuelMenu);
+            KcTile(_menuBoard, "Nav_VsPvp", 0.51f, 0.62f, 0.96f, 0.83f,
+                "VS PLAYER", "Scan · shared arena", ImagineAssets.IconVsPvp(), false, OpenPlayerVsPlayerMenu);
 
-                var face = go.GetComponent<Image>();
-                var spr = gold
-                    ? (ImagineAssets.MenuHoloCardGold() ?? ImagineAssets.MenuHoloCard())
-                    : (ImagineAssets.MenuHoloCard() ?? ImagineAssets.TileHub());
-                face.sprite = spr ?? UiFoundation.WhiteSprite();
-                face.color = Color.white;
-                face.raycastTarget = true;
-                face.preserveAspect = false;
-                if (face.sprite != null && face.sprite.border.sqrMagnitude > 0)
-                    face.type = Image.Type.Sliced;
-
-                if (icon != null)
+            HubChrome.SectionCap(_menuBoard, "SysCap", "COMMAND", DuelystUi.Cyan, 0.04f, 0.54f, 0.50f, 0.60f);
+            KcTile(_menuBoard, "Nav_Deck", 0.04f, 0.36f, 0.34f, 0.52f,
+                NavCopy.DeckShort, null, ImagineAssets.IconDeck() ?? DuelystUi.IconDeck(), false,
+                () => OpenSystemsMenu(MenuId.DeckCollection));
+            KcTile(_menuBoard, "Nav_Bag", 0.35f, 0.36f, 0.65f, 0.52f,
+                NavCopy.BagShort, null, ImagineAssets.IconBag() ?? DuelystUi.IconBag(), false,
+                () => OpenSystemsMenu(MenuId.Inventory));
+            KcTile(_menuBoard, "Nav_Story", 0.66f, 0.36f, 0.96f, 0.52f,
+                NavCopy.TitleFor(MenuId.StorySeason), null, ImagineAssets.IconStory() ?? DuelystUi.IconStory(), false,
+                () => OpenSystemsMenu(MenuId.StorySeason));
+            KcTile(_menuBoard, "Nav_Bazaar", 0.04f, 0.18f, 0.34f, 0.34f,
+                NavCopy.TitleFor(MenuId.Bazaar), null, ImagineAssets.IconBazaar(), false,
+                () => OpenSystemsMenu(MenuId.Bazaar));
+            KcTile(_menuBoard, "Nav_Tome", 0.35f, 0.18f, 0.65f, 0.34f,
+                NavCopy.TitleFor(MenuId.TomeRaid), null, ImagineAssets.IconTome(), false,
+                () => OpenSystemsMenu(MenuId.TomeRaid));
+            KcTile(_menuBoard, "Nav_Set", 0.66f, 0.18f, 0.96f, 0.34f,
+                "SET", null, ImagineAssets.IconSettings() ?? DuelystUi.IconSettings(), false, OpenSettingsOverlay);
+            KcTile(_menuBoard, "Nav_Practice", 0.04f, 0.02f, 0.34f, 0.16f,
+                "PRACTICE", null, ImagineAssets.IconPractice(), false, () =>
                 {
-                    var ico = new GameObject("Ico", typeof(RectTransform), typeof(Image));
-                    ico.transform.SetParent(go.transform, false);
-                    GoTheme.Place(ico.GetComponent<RectTransform>(), 0.10f, 0.28f, 0.90f, 0.90f);
-                    var iimg = ico.GetComponent<Image>();
-                    iimg.sprite = icon;
-                    iimg.preserveAspect = true;
-                    iimg.raycastTarget = false;
-                    iimg.color = Color.white;
-                }
-
-                var t = GoTheme.Label(go.transform, "Title", caption, 20,
-                    gold ? DuelystUi.GoldHot : Color.white,
-                    TextAnchor.MiddleCenter, bold: true);
-                WrldzType.StyleButtonLabel(t, 18, display: false);
-                t.color = gold ? DuelystUi.GoldHot : Color.white;
-                t.alignment = TextAnchor.MiddleCenter;
-                t.resizeTextForBestFit = false;
-                t.horizontalOverflow = HorizontalWrapMode.Overflow;
-                t.verticalOverflow = VerticalWrapMode.Overflow;
-                GoTheme.Place(t.rectTransform, 0.04f, 0.02f, 0.96f, 0.28f);
-
-                var cg = go.GetComponent<CanvasGroup>();
-                cg.alpha = 0f;
-                cg.blocksRaycasts = false;
-                cg.interactable = false;
-
-                var btn = go.GetComponent<Button>();
-                btn.targetGraphic = face;
-                var block = ColorBlock.defaultColorBlock;
-                block.highlightedColor = new Color(1.14f, 1.12f, 0.94f, 1f);
-                block.pressedColor = new Color(0.70f, 0.74f, 0.80f, 1f);
-                block.fadeDuration = 0.08f;
-                btn.colors = block;
-                btn.onClick.AddListener(() =>
-                {
-                    FreeUiKit.PlaySelect();
-                    SetMenuOpen(false);
-                    action?.Invoke();
+                    var c = ArDuelMatchConfig.Practice();
+                    c.Opponent = ArDuelOpponentKind.AiLocal;
+                    c.FormatTitle = "Practice";
+                    AppSession.Ensure().StartArDuel(c);
                 });
-
-                var pulse = MenuHoloPulse.Attach(go, scan: true, breathe: true, phase: index * 0.33f);
-                pulse.enabled = false;
-
-                _fanCards.Add(new FanCard
-                {
-                    rt = rt,
-                    cg = cg,
-                    restPos = Vector2.zero,
-                    restSize = rt.sizeDelta,
-                    restRot = 0f,
-                    pulse = pulse
-                });
-            }
-
-            var i = 0;
-            Card("Nav_VsAi", NavCopy.VsAi, ImagineAssets.IconDuel(), OpenCreateArDuelMenu, true, i++);
-            Card("Nav_VsPvp", NavCopy.VsPvp, ImagineAssets.IconVsPvp(), OpenPlayerVsPlayerMenu, false, i++);
-            Card("Nav_Tourney", NavCopy.TitleFor(MenuId.Tournament),
-                ImagineAssets.IconTournament() ?? ImagineAssets.PinTournament() ?? ImagineAssets.IconDuel(),
-                () => OpenSystemsMenu(MenuId.Tournament), false, i++);
-            Card("Nav_Practice", "PRACTICE", ImagineAssets.IconPractice(), () =>
-            {
-                var c = ArDuelMatchConfig.Practice();
-                c.Opponent = ArDuelOpponentKind.AiLocal;
-                c.FormatTitle = "Practice";
-                AppSession.Ensure().StartArDuel(c);
-            }, false, i++);
-            Card("Nav_Deck", NavCopy.DeckShort, ImagineAssets.IconDeck() ?? DuelystUi.IconDeck(),
-                () => OpenSystemsMenu(MenuId.DeckCollection), false, i++);
-            Card("Nav_Bag", NavCopy.BagShort, ImagineAssets.IconBag() ?? DuelystUi.IconBag(),
-                () => OpenSystemsMenu(MenuId.Inventory), false, i++);
-            Card("Nav_Story", NavCopy.TitleFor(MenuId.StorySeason), ImagineAssets.IconStory() ?? DuelystUi.IconStory(),
-                () => OpenSystemsMenu(MenuId.StorySeason), false, i++);
-            Card("Nav_Bazaar", NavCopy.TitleFor(MenuId.Bazaar), ImagineAssets.IconBazaar(),
-                () => OpenSystemsMenu(MenuId.Bazaar), false, i++);
-            Card("Nav_Tome", NavCopy.TitleFor(MenuId.TomeRaid), ImagineAssets.IconTome(),
-                () => OpenSystemsMenu(MenuId.TomeRaid), false, i++);
-            Card("Nav_Set", "SET", ImagineAssets.IconSettings() ?? DuelystUi.IconSettings(),
-                OpenSettingsOverlay, false, i++);
+            KcTile(_menuBoard, "Nav_Trade", 0.35f, 0.02f, 0.65f, 0.16f,
+                NavCopy.TitleFor(MenuId.Trade), null, ImagineAssets.IconBag() ?? DuelystUi.IconBag(), false,
+                () => OpenSystemsMenu(MenuId.Trade));
+            KcTile(_menuBoard, "Nav_Tourney", 0.66f, 0.02f, 0.96f, 0.16f,
+                NavCopy.TitleFor(MenuId.Tournament), null,
+                ImagineAssets.IconTournament() ?? ImagineAssets.PinTournament() ?? ImagineAssets.IconDuel(), false,
+                () => OpenSystemsMenu(MenuId.Tournament));
 
             panel.SetActive(false);
-            _menuExpand = panel;
             _menuOpen = false;
+        }
+
+        Button KcTile(Transform parent, string name, float x0, float y0, float x1, float y1,
+            string title, string blurb, Sprite icon, bool gold, System.Action action)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
+            go.transform.SetParent(parent, false);
+            var rt = go.GetComponent<RectTransform>();
+            HubChrome.Place(rt, x0, y0, x1, y1);
+            var img = go.GetComponent<Image>();
+            img.raycastTarget = true;
+            HubChrome.PaintPlate(img, gold ? DuelystUi.GoldHot : DuelystUi.Cyan, gold: gold);
+
+            var featured = !string.IsNullOrEmpty(blurb);
+            if (icon != null)
+            {
+                var ico = new GameObject("Ico", typeof(RectTransform), typeof(Image));
+                ico.transform.SetParent(go.transform, false);
+                HubChrome.Place(ico.GetComponent<RectTransform>(),
+                    featured ? 0.68f : 0.06f, featured ? 0.14f : 0.28f,
+                    featured ? 0.96f : 0.32f, featured ? 0.86f : 0.88f);
+                var ii = ico.GetComponent<Image>();
+                ii.sprite = icon;
+                ii.preserveAspect = true;
+                ii.raycastTarget = false;
+                ii.color = Color.white;
+            }
+
+            var titleT = GoTheme.Label(go.transform, "Title", title ?? "", featured ? 26 : 18,
+                gold ? DuelystUi.GoldHot : DuelystUi.TextCream, TextAnchor.MiddleLeft, bold: true);
+            HubChrome.Place(titleT.rectTransform,
+                featured || icon == null ? 0.06f : 0.36f,
+                featured ? 0.48f : 0.08f,
+                featured ? 0.66f : 0.96f,
+                featured ? 0.90f : 0.30f);
+
+            if (featured)
+            {
+                var b = GoTheme.Label(go.transform, "Blurb", blurb, 14, DuelystUi.TextMuted,
+                    TextAnchor.UpperLeft, bold: false);
+                HubChrome.Place(b.rectTransform, 0.06f, 0.10f, 0.66f, 0.46f);
+            }
+
+            var btn = go.GetComponent<Button>();
+            btn.targetGraphic = img;
+            btn.transition = Selectable.Transition.None;
+            btn.onClick.AddListener(() =>
+            {
+                FreeUiKit.PlaySelect();
+                SetMenuOpen(false);
+                action?.Invoke();
+            });
+            return btn;
         }
 
         System.Collections.IEnumerator RelayoutMenuBoardDelayed()
@@ -1897,60 +1861,33 @@ namespace WRLDZ.UI
             RelayoutMenuBoard();
         }
 
+        static readonly float[,] DestSlots =
+        {
+            { 0.04f, 0.580f, 0.49f, 0.800f },
+            { 0.51f, 0.580f, 0.96f, 0.800f },
+            { 0.04f, 0.370f, 0.34f, 0.520f },
+            { 0.355f, 0.370f, 0.645f, 0.520f },
+            { 0.66f, 0.370f, 0.96f, 0.520f },
+            { 0.04f, 0.210f, 0.34f, 0.350f },
+            { 0.355f, 0.210f, 0.645f, 0.350f },
+            { 0.66f, 0.210f, 0.96f, 0.350f },
+            { 0.04f, 0.125f, 0.34f, 0.195f },
+            { 0.355f, 0.125f, 0.645f, 0.195f },
+            { 0.66f, 0.125f, 0.96f, 0.195f }
+        };
+
+        static void PlaceDestSlot(RectTransform rt, int i)
+        {
+            if (rt == null || i < 0 || i >= DestSlots.GetLength(0)) return;
+            HubChrome.Place(rt, DestSlots[i, 0], DestSlots[i, 1], DestSlots[i, 2], DestSlots[i, 3]);
+            rt.localScale = Vector3.one;
+            rt.localRotation = Quaternion.identity;
+        }
+
         void RelayoutMenuBoard()
         {
-            if (_menuBoard == null || _fanCards.Count == 0) return;
-            Canvas.ForceUpdateCanvases();
-            var r = _menuBoard.rect;
-            if (r.width < 32f || r.height < 32f) return;
-
-            const int cols = 3;
-            var rows = Mathf.Max(3, Mathf.CeilToInt(_fanCards.Count / (float)cols));
-            const float gap = 18f;
-            const float aspect = 0.78f;
-            // Sit below the stacked wallet (~156px from the top of the sheet).
-            var areaTop = r.height * 0.08f;
-            var areaBot = r.height * -0.40f;
-            var areaH = areaTop - areaBot;
-            var areaW = r.width * 0.94f;
-
-            var cellW = (areaW - gap * (cols - 1)) / cols;
-            var cellH = (areaH - gap * (rows - 1)) / rows;
-            if (cellW / cellH > aspect)
-                cellW = cellH * aspect;
-            else
-                cellH = cellW / aspect;
-            cellW = Mathf.Max(cellW, Mathf.Min(168f, areaW / cols));
-            cellH = Mathf.Max(cellH, Mathf.Min(220f, areaH / rows));
-
-            var totalW = cols * cellW + (cols - 1) * gap;
-            var totalH = rows * cellH + (rows - 1) * gap;
-            var originX = -totalW * 0.5f + cellW * 0.5f;
-            var originY = areaTop - cellH * 0.5f;
-
             for (var i = 0; i < _fanCards.Count; i++)
-            {
-                var col = i % cols;
-                var row = i / cols;
-                var card = _fanCards[i];
-                card.restSize = new Vector2(cellW, cellH);
-                card.restPos = new Vector2(
-                    originX + col * (cellW + gap),
-                    originY - row * (cellH + gap));
-                card.restRot = (col - 1) * 3.5f;
-                _fanCards[i] = card;
-                if (card.rt == null) continue;
-                card.rt.anchorMin = new Vector2(0.5f, 0.5f);
-                card.rt.anchorMax = new Vector2(0.5f, 0.5f);
-                card.rt.pivot = new Vector2(0.5f, 0.5f);
-                if (_menuOpen)
-                {
-                    card.rt.sizeDelta = card.restSize;
-                    card.rt.anchoredPosition = card.restPos;
-                    card.rt.localRotation = Quaternion.Euler(0f, 0f, card.restRot);
-                    card.rt.localScale = Vector3.one;
-                }
-            }
+                PlaceDestSlot(_fanCards[i].rt, i);
         }
 
         void ToggleMainMenu(Transform root)
@@ -1994,7 +1931,7 @@ namespace WRLDZ.UI
 
         IEnumerator OpenEyeMenuCo()
         {
-            ApplyMenuGlassSprite(true);
+            PlaceMenuGlass(false);
             if (_menuVeil != null)
                 _menuVeil.SetActive(true);
 
@@ -2009,7 +1946,18 @@ namespace WRLDZ.UI
                 _menuExpandCg.interactable = true;
             }
 
+            RelayoutMenuBoard();
+            for (var i = 0; i < _fanCards.Count; i++)
+            {
+                var card = _fanCards[i];
+                if (card.cg == null) continue;
+                card.cg.alpha = 1f;
+                card.cg.blocksRaycasts = true;
+                card.cg.interactable = true;
+            }
+
             SetEyeOpened(true);
+            RelayoutDeckChipAndEye();
             if (_eyeRt != null)
             {
                 _eyeRt.SetAsLastSibling();
@@ -2019,32 +1967,14 @@ namespace WRLDZ.UI
             if (_profileRt != null)
                 _profileRt.SetAsLastSibling();
 
-            yield return null;
-            Canvas.ForceUpdateCanvases();
-            RelayoutMenuBoard();
-
             if (_menuVeilCg != null)
-                StartCoroutine(MenuMotion.Fade(_menuVeilCg, _menuVeilCg.alpha, 0.46f, MenuMotion.Snap));
+                StartCoroutine(MenuMotion.Fade(_menuVeilCg, _menuVeilCg.alpha, 0.28f, MenuMotion.Snap));
             if (_currencyCg != null)
                 StartCoroutine(MenuMotion.Fade(_currencyCg, 0f, 1f, MenuMotion.Sheet));
 
-            var glassFrom = _menuGlassClosedY1;
-            if (_menuGlass != null)
-                StartCoroutine(MenuMotion.LerpAnchorY1(_menuGlass.rectTransform,
-                    MenuGlassX0, MenuGlassY0, MenuGlassX1, glassFrom, MenuGlassOpenY1, MenuMotion.Glass));
-
             _eyeFlashCo = StartCoroutine(EyeOpenFlashCo());
-            yield return FanCardsCo(opening: true);
-
-            for (var i = 0; i < _fanCards.Count; i++)
-            {
-                var p = _fanCards[i].pulse;
-                if (p == null) continue;
-                p.CaptureBaseScale();
-                p.enabled = true;
-            }
-
             _menuMotion = null;
+            yield break;
         }
 
         IEnumerator CloseEyeMenuCo()
@@ -2057,12 +1987,6 @@ namespace WRLDZ.UI
 
             if (_currencyCg != null)
                 StartCoroutine(MenuMotion.Fade(_currencyCg, _currencyCg.alpha, 0f, MenuMotion.Snap));
-
-            yield return FanCardsCo(opening: false);
-
-            if (_menuGlass != null)
-                StartCoroutine(MenuMotion.LerpAnchorY1(_menuGlass.rectTransform,
-                    MenuGlassX0, MenuGlassY0, MenuGlassX1, MenuGlassOpenY1, _menuGlassClosedY1, MenuMotion.Snap));
 
             SetEyeOpened(false);
 
@@ -2268,45 +2192,33 @@ namespace WRLDZ.UI
             if (_systemsSheet != null) return;
             var sheet = new GameObject("SystemsSheet", typeof(RectTransform), typeof(Image));
             sheet.transform.SetParent(root, false);
-            // Glass compact panel — map stays visible (MenuChromePrefs)
-            GoTheme.Place(sheet.GetComponent<RectTransform>(), 0.10f, 0.20f, 0.90f, 0.78f);
+            GoTheme.Place(sheet.GetComponent<RectTransform>(), 0.04f, 0.14f, 0.96f, 0.88f);
             var bg = sheet.GetComponent<Image>();
-            var sysSpr = ImagineAssets.MenuHoloSheet() ?? ImagineAssets.PanelMenuGlass() ?? ImagineAssets.PanelHolo();
-            bg.sprite = sysSpr ?? UiFoundation.WhiteSprite();
-            bg.type = sysSpr != null && sysSpr.border.sqrMagnitude > 0
-                ? Image.Type.Sliced : Image.Type.Simple;
-            bg.color = Color.white;
+            bg.sprite = UiFoundation.WhiteSprite();
+            bg.color = HubChrome.Dusk;
             bg.raycastTarget = true;
+            HubChrome.LiftPlate(bg, DuelystUi.Cyan);
 
-            var title = GoTheme.Label(sheet.transform, "T", "MENU", 16, DuelystUi.GoldHot);
-            GoTheme.Place(title.rectTransform, 0.05f, 0.91f, 0.70f, 0.98f);
+            HubChrome.SectionCap(sheet.transform, "MenuCap", "COMMAND", DuelystUi.Cyan, 0.06f, 0.92f, 0.50f, 0.98f);
 
-            var sub = GoTheme.Label(sheet.transform, "S",
-                "Map stays open · pick a row · CLOSE returns here",
-                11, DuelystUi.Cyan, TextAnchor.MiddleLeft, bold: false);
-            GoTheme.Place(sub.rectTransform, 0.05f, 0.84f, 0.95f, 0.90f);
-
-            float y = 0.76f;
+            float y = 0.90f;
             void Row(MenuId id, bool gold = false)
             {
-                var go = new GameObject("Row_" + id, typeof(RectTransform), typeof(Image), typeof(Button));
-                go.transform.SetParent(sheet.transform, false);
-                GoTheme.Place(go.GetComponent<RectTransform>(), 0.06f, y - 0.075f, 0.94f, y);
-                var img = go.GetComponent<Image>();
-                img.sprite = UiFoundation.WhiteSprite();
-                img.color = gold ? MenuChromePrefs.RowGoldColor : MenuChromePrefs.RowColor;
-                img.raycastTarget = true;
-                var label = NavCopy.TitleFor(id) + "  ·  " + NavCopy.BlurbFor(id) + "  ›";
-                var t = GoTheme.Label(go.transform, "L", label, 12, DuelystUi.TextCream,
-                    TextAnchor.MiddleLeft);
-                GoTheme.Place(t.rectTransform, 0.04f, 0.1f, 0.96f, 0.9f);
-                go.GetComponent<Button>().onClick.AddListener(() =>
-                {
-                    FreeUiKit.PlaySelect();
-                    HideSystemsSheet();
-                    OpenSystemsMenu(id);
-                });
-                y -= 0.082f;
+                y -= 0.092f;
+                var btn = gold
+                    ? HubChrome.MountFeatured(sheet.transform, NavCopy.TitleFor(id), NavCopy.BlurbFor(id),
+                        null, () =>
+                        {
+                            HideSystemsSheet();
+                            OpenSystemsMenu(id);
+                        }, true)
+                    : HubChrome.MountDest(sheet.transform, NavCopy.TitleFor(id), null, () =>
+                    {
+                        HideSystemsSheet();
+                        OpenSystemsMenu(id);
+                    });
+                btn.name = "Row_" + id;
+                GoTheme.Place(btn.GetComponent<RectTransform>(), 0.05f, y, 0.95f, y + 0.082f);
             }
 
             Row(MenuId.DeckCollection, gold: true);
@@ -2317,25 +2229,22 @@ namespace WRLDZ.UI
             Row(MenuId.AvatarProfile);
             Row(MenuId.Settings);
 
-            // Full hub scene (optional deep hub)
-            var hub = new GameObject("Hub", typeof(RectTransform), typeof(Image), typeof(Button));
-            hub.transform.SetParent(sheet.transform, false);
-            GoTheme.Place(hub.GetComponent<RectTransform>(), 0.10f, 0.04f, 0.48f, 0.11f);
-            StyleBarButton(hub, "FULL HUB", DuelystUi.BtnSecondary(), () =>
+            var hub = HubChrome.Capsule(sheet.transform, "FULL HUB", () =>
             {
                 FreeUiKit.PlayConfirm();
                 HideSystemsSheet();
                 AppSession.Ensure().GoMainMenu();
-            });
+            }, MenuCommandButton.Kind.Gold, centerTitle: true, titleSize: 16);
+            hub.name = "Hub";
+            GoTheme.Place(hub.GetComponent<RectTransform>(), 0.08f, 0.02f, 0.48f, 0.11f);
 
-            var close = new GameObject("Close", typeof(RectTransform), typeof(Image), typeof(Button));
-            close.transform.SetParent(sheet.transform, false);
-            GoTheme.Place(close.GetComponent<RectTransform>(), 0.52f, 0.04f, 0.90f, 0.11f);
-            StyleBarButton(close, "× CLOSE", DuelystUi.BtnPrimary(), () =>
+            var close = HubChrome.Capsule(sheet.transform, "BACK", () =>
             {
                 FreeUiKit.PlayClick();
                 HideSystemsSheet();
-            });
+            }, MenuCommandButton.Kind.Gold, centerTitle: true, titleSize: 16);
+            close.name = "Close";
+            GoTheme.Place(close.GetComponent<RectTransform>(), 0.52f, 0.02f, 0.92f, 0.11f);
 
             sheet.SetActive(false);
             _systemsSheet = sheet;
@@ -2502,7 +2411,9 @@ namespace WRLDZ.UI
             sImg.raycastTarget = false;
 
             _mapPortrait = AvatarPortraitView.CreateFullBodyFill(go.transform, hideBackground: true, badgeCrop: false);
-            _mapPortrait.Apply(account != null ? account.GetAvatarOrDefault() : AvatarAppearance.Default());
+            var look = account != null ? account.GetAvatarOrDefault() : AvatarAppearance.Default();
+            _mapPortrait.Apply(look);
+            OverworldAvatarToken.Attach(go.GetComponent<RectTransform>(), look);
 
             return go.GetComponent<RectTransform>();
         }
@@ -2532,6 +2443,8 @@ namespace WRLDZ.UI
             var look = acc.GetAvatarOrDefault();
             _mapPortrait?.Apply(look);
             _hudPortrait?.Apply(look);
+            if (_avatar != null)
+                OverworldAvatarToken.Attach(_avatar, look);
             SetStatus(look.title);
         }
 
@@ -2684,7 +2597,7 @@ namespace WRLDZ.UI
                 street8000Locked: locked);
         }
 
-        /// <summary>Primary overworld entry: Player vs AI → distance → AR duel.</summary>
+        /// <summary>Primary overworld entry: Player vs AI → opponent → field scan → AR duel.</summary>
         static void DestroyNamed(string name)
         {
             var go = GameObject.Find(name);

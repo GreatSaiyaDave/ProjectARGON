@@ -48,6 +48,9 @@ namespace WRLDZ.Core
                 }
 
                 Check("Catalog: SE LOB tablet", ArtifactCatalog.Get(ArtifactService.SetEnergyId("LOB")) != null);
+                Check("Catalog: soul shard", ArtifactCatalog.Get(ArtifactService.SoulFragment) != null);
+                Check("Catalog: GX shard", ArtifactCatalog.Get(ArtifactService.ErazPieceId(ErazFormat.Gx)) != null);
+                Check("Catalog: format DK", ArtifactCatalog.Get(ArtifactService.FormatId("dk")) != null);
             }
 
             // ── Migrate + spend ──

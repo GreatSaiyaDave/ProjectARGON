@@ -99,6 +99,9 @@ namespace WRLDZ.Core
             result.XpIntoLevel = p.xp;
 
             var xp = ComputeDuelXp(match, playerWon, turnNumber, out var practice);
+            if (xp > 0)
+                xp = ApplyMasteryPlateau(xp, p.level, IsPvpXp(match));
+
             result.PracticeNoReward = practice;
             result.XpAwarded = xp;
 
@@ -140,6 +143,9 @@ namespace WRLDZ.Core
             result.DuelCoinGained = coins;
             RecordStreetAndTearStreak(p, match, playerWon);
             SetOrbService.TryDropFromDuel(acc, match, playerWon, out var orbToast);
+            if (playerWon)
+                ApplyStoryAndEconomy(acc, match, result);
+            QuestService.CreditDuel(p, match, playerWon);
             result.SoulLine = ApplySoulStakes(acc, match, playerWon);
             result.AccountDeactivated = acc.deactivated;
             Persist(acc);
@@ -162,6 +168,10 @@ namespace WRLDZ.Core
 
             if (!string.IsNullOrEmpty(orbToast))
                 result.SummaryLine += " · " + orbToast;
+            if (result.SetEnergyGained > 0)
+                result.SummaryLine += " · +" + result.SetEnergyGained + " SE";
+            if (!string.IsNullOrEmpty(result.StoryLootLine))
+                result.SummaryLine += " · " + result.StoryLootLine;
             if (!string.IsNullOrEmpty(result.SoulLine))
                 result.SummaryLine += " · " + result.SoulLine;
 
@@ -275,13 +285,69 @@ namespace WRLDZ.Core
             }
         }
 
+        /// <summary>
+        /// After Duelist 50: PVE XP −90%, PvP XP +100%. Magic plateaus; ranked is the climb.
+        /// </summary>
+        public static int ApplyMasteryPlateau(int xp, int level, bool pvp)
+        {
+            if (xp <= 0 || level < PlayerProgress.MvpSoftCap) return xp;
+            return pvp ? xp * 2 : Mathf.Max(1, xp / 10);
+        }
+
+        static bool IsPvpXp(ArDuelMatchConfig match)
+        {
+            if (match == null) return false;
+            if (match.IsHumanOpponent) return true;
+            return match.Launch == ArDuelLaunchKind.PvpZone
+                   || match.Launch == ArDuelLaunchKind.NearbyChallenge
+                   || match.Launch == ArDuelLaunchKind.Tournament;
+        }
+
+        static void ApplyStoryAndEconomy(
+            LocalAccountStore.Account acc, ArDuelMatchConfig match, DuelRewardResult result)
+        {
+            if (acc == null || match == null) return;
+            acc.EnsureInventory();
+            var p = acc.progress;
+            var inv = acc.inventory;
+
+            if (match.Launch == ArDuelLaunchKind.PvpZone
+                || match.Launch == ArDuelLaunchKind.NearbyChallenge
+                || match.Launch == ArDuelLaunchKind.Tournament
+                || match.IsHumanOpponent)
+                return;
+
+            if (match.Launch == ArDuelLaunchKind.StoryEra)
+            {
+                var stageId = match.StoryStageId;
+                if (string.IsNullOrEmpty(stageId))
+                    stageId = StoryCampaignService.Current(p)?.id;
+                var stage = StoryCampaignService.Stage(stageId);
+                if (stage != null && StoryCampaignService.TryComplete(p, stage.id))
+                {
+                    result.StoryStageCleared = stage.id;
+                    result.StoryLootLine = StoryCampaignService.GrantFirstClearRewards(
+                        p, inv, stage, out var se);
+                    result.SetEnergyGained += se;
+                }
+
+                return;
+            }
+
+            if (match.Launch == ArDuelLaunchKind.Practice || match.Launch == ArDuelLaunchKind.LabTest)
+                return;
+
+            ArtifactService.GrantUntaggedSetEnergy(p, inv, match.Launch == ArDuelLaunchKind.TearBoss ? 12 : 4);
+            result.SetEnergyGained += match.Launch == ArDuelLaunchKind.TearBoss ? 12 : 4;
+        }
+
         static string ApplySoulStakes(LocalAccountStore.Account acc, ArDuelMatchConfig match, bool playerWon)
         {
             if (acc == null || match == null) return "";
             var p = acc.progress;
             if (p == null) return "";
             if (playerWon && match.Launch == ArDuelLaunchKind.StoryEra)
-                return SoulFractureService.TryUnlockFromStory(p, match.ZoneId);
+                return "";
             if (!playerWon && SoulFractureService.IsShadowGame(match))
                 return SoulFractureService.ApplyLoss(acc);
             return "";

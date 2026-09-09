@@ -90,5 +90,47 @@ namespace WRLDZ.Duel.Rules
             }
             return true;
         }
+
+        /// <summary>
+        /// Story / street era lock: drop cards not in the match ERAZ pool.
+        /// Does not invent replacements. Starter/lab structural cards may remain.
+        /// </summary>
+        public static DeckFile FilterDeckToEra(DeckFile deck, string eraId)
+        {
+            if (deck == null || string.IsNullOrEmpty(eraId)) return deck;
+            var db = CardDatabase.Instance ?? CardDatabase.Load();
+            return new DeckFile
+            {
+                name = deck.name,
+                format = deck.format,
+                main = FilterEntries(deck.main, eraId, db),
+                extra = FilterEntries(deck.extra, eraId, db),
+                side = FilterEntries(deck.side, eraId, db)
+            };
+        }
+
+        static DeckCardEntry[] FilterEntries(DeckCardEntry[] src, string eraId, CardDatabase db)
+        {
+            if (src == null || src.Length == 0) return src;
+            var list = new List<DeckCardEntry>();
+            for (var i = 0; i < src.Length; i++)
+            {
+                var e = src[i];
+                if (e == null || e.id <= 0) continue;
+                var def = db != null ? db.Get(e.id) : null;
+                if (def == null)
+                {
+                    list.Add(e);
+                    continue;
+                }
+
+                if (string.Equals(eraId, ErazFormat.Original, StringComparison.OrdinalIgnoreCase)
+                    && ErazFormat.IsLaterThanOriginal(e.id))
+                    continue;
+                list.Add(e);
+            }
+
+            return list.ToArray();
+        }
     }
 }

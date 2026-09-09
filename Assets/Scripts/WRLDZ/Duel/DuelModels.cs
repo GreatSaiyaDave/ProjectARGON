@@ -144,6 +144,14 @@ namespace WRLDZ.Duel
         public bool CannotBeDestroyedByBattle;
         public bool IsToken;
         public bool IsNegated; // effect negated while face-up
+        /// <summary>Magical Hats dummy: Spell/Trap treated as a 0/0 Normal Monster this Battle Phase.</summary>
+        public bool MagicalHatDummy;
+        /// <summary>int.MinValue = none. Cocoon of Evolution original ATK replace.</summary>
+        public int OriginalAtkOverride = int.MinValue;
+        /// <summary>int.MinValue = none. Cocoon of Evolution original DEF replace.</summary>
+        public int OriginalDefOverride = int.MinValue;
+        /// <summary>Cocoon of Evolution: controller End Phases while equipped to Petit Moth.</summary>
+        public int EquipTurnCounter;
 
         /// <summary>Level change from face-up Field Spells / registered continuous (e.g. A Legendary Ocean −1).</summary>
         public int LevelModifier;
@@ -154,15 +162,18 @@ namespace WRLDZ.Duel
         /// </summary>
         public string TreatedAsName;
 
+        int PrintedAtk => OriginalAtkOverride != int.MinValue ? OriginalAtkOverride : (Def != null ? Def.atk : 0);
+        int PrintedDef => OriginalDefOverride != int.MinValue ? OriginalDefOverride : (Def != null ? Def.def : 0);
+
         public int CurrentAtk =>
             AtkBecomesZeroThisCalculation
                 ? 0
-                : Def != null && Def.atk >= 0
-                    ? System.Math.Max(0, Def.atk + AtkModifier + UntilEndOfTurnAtk + LingeringAtkModifier)
+                : PrintedAtk >= 0
+                    ? System.Math.Max(0, PrintedAtk + AtkModifier + UntilEndOfTurnAtk + LingeringAtkModifier)
                     : 0;
         public int CurrentDef =>
-            Def != null && Def.def >= 0
-                ? System.Math.Max(0, Def.def + DefModifier + UntilEndOfTurnDef + LingeringDefModifier)
+            PrintedDef >= 0
+                ? System.Math.Max(0, PrintedDef + DefModifier + UntilEndOfTurnDef + LingeringDefModifier)
                 : 0;
         public string Name => Def?.name ?? $"#{CardId}";
 
@@ -232,6 +243,16 @@ namespace WRLDZ.Duel
         /// (attacks become direct attacks).
         /// </summary>
         public bool MustAttackDirectlyThisTurn;
+
+        /// <summary>Crush Card Virus: no battle or effect damage while TurnNumber ≤ this (0 = off).</summary>
+        public int NoDamageThroughTurnNumber;
+
+        /// <summary>Virus linger: remaining opponent End Phases to check draws (0 = off).</summary>
+        public int CrushCardLingerEndsRemaining;
+        /// <summary>Virus linger destroy ATK threshold (1500 for Crush / DDV).</summary>
+        public int VirusLingerDestroyAtk;
+        /// <summary>True: linger destroys drawn ATK ≤ threshold (DDV). False: ≥ (Crush).</summary>
+        public bool VirusLingerDestroyAtkLeq;
 
         /// <summary>
         /// Kuriboh / similar: take no battle damage from the current battle only

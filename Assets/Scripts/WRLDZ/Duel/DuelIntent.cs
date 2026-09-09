@@ -17,6 +17,7 @@ namespace WRLDZ.Duel
         EnterMainPhase2,
         Attack,
         DirectAttack,
+        SpecialSummon,
         PassResponse,
         EndTurn,
         ClearTributes,

@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using WRLDZ.Core;
 using WRLDZ.Presentation;
 using WRLDZ.UI;
 
@@ -157,7 +158,9 @@ namespace WRLDZ.UI.Shell
 
         static void NavBtn(Transform parent, string label, Sprite icon, System.Action onClick, bool gold = false)
         {
-            var b = FloatingPanel.PrimaryButton(parent, label, onClick, gold: gold);
+            var b = HubChrome.Capsule(parent, label, onClick,
+                gold ? MenuCommandButton.Kind.Gold : MenuCommandButton.Kind.Primary,
+                centerTitle: true, titleSize: 14);
             b.GetComponent<LayoutElement>().minHeight = FloatingPanel.MinButtonHeight;
             if (icon != null)
             {
@@ -218,15 +221,25 @@ namespace WRLDZ.UI.Shell
             if (ToastHost != null)
                 ToastHost.gameObject.SetActive(false);
 
-            // ── Player vs AI create (logical endpoint path) ──
+            // ── Player vs AI: opponent sheet, then surface-scan create ──
             if (id == MenuId.ArDuelCreate)
             {
-                var createPanel = ArDuelCreateScreen.Build(ModalHost, () =>
+                void CloseCreate()
                 {
+                    OpponentCatalog.ClearPending();
                     ClearOverlays();
                     ScreenRouter.Ensure(this).Back();
-                });
-                _overlays[id] = createPanel.gameObject;
+                }
+
+                var oppPanel = OpponentSelectScreen.Build(ModalHost, CloseCreate, labTest: false,
+                    onPicked: _ =>
+                    {
+                        ClearOverlays(keepCanvasVisible: true);
+                        var createPanel = ArDuelCreateScreen.Build(ModalHost, CloseCreate);
+                        _overlays[id] = createPanel.gameObject;
+                        PresentMounted();
+                    });
+                _overlays[id] = oppPanel.gameObject;
                 PresentMounted();
                 return;
             }
@@ -378,7 +391,8 @@ namespace WRLDZ.UI.Shell
             var body = FloatingPanel.Body(frame.BodyHost, BodyFor(id), 15);
             FloatingPanel.Grid.Full(body.rectTransform, 0.20f, 0.98f);
             body.alignment = TextAnchor.UpperLeft;
-            var close = FloatingPanel.PrimaryButton(frame.BodyHost, "CLOSE", CloseCurrent);
+            var close = HubChrome.Capsule(frame.BodyHost, "CLOSE", CloseCurrent,
+                MenuCommandButton.Kind.Gold, centerTitle: true, titleSize: 16);
             FloatingPanel.Grid.Full(close.GetComponent<RectTransform>(), 0.04f, 0.16f);
 
             _overlays[id] = frame.Root.gameObject;
@@ -462,10 +476,10 @@ namespace WRLDZ.UI.Shell
                 "Endless Artifact Deck Box. Currencies, badges, keys. Always with you.\n" +
                 "Open from wallet chips or BAG · HOME / ON YOU.",
             MenuId.StorySeason =>
-                "Story Zone missions on the map.\nStarter sets LOB / MRD / SRL. Set orbs through L50.",
+                "Season 1 Duelist Kingdom · parchment gates.\nDailies under Referobot. Indoor DUEL needs no GPS.",
             MenuId.ArDuelCreate =>
-                "Player vs AI · choose field distance · AR stage\n" +
-                "Standing / Table / Street / Practice → START.",
+                "Player vs AI · pick opponent · size the AR field\n" +
+                "Yugi / Kaiba / Joey / street lists → walk the space → START.",
             MenuId.ArDuelPvpCreate =>
                 "Player vs Player · auto-scan distance between duelists\n" +
                 "Mark P1 + P2 · AR arena sized to measured meters · hotseat.",
@@ -473,9 +487,9 @@ namespace WRLDZ.UI.Shell
                 "Player vs AI AR formats · field distance presets\n" +
                 "START loads DuelSlice with AI opponent.",
             MenuId.Bazaar =>
-                "Stone tablets · packs · challenges\n" +
-                "Altars: offer cards → Set Energy of that card's set\n" +
-                "SE from story / CPU decks only — never PvP (see SET_ENERGY_AND_BAZAAR).",
+                "Stone tablets: 1,000 SE of set X → 10 cards of X.\n" +
+                "Fuse 5 ERAZ shards + 2,500 SE into the next badge.\n" +
+                "SE from story / CPU / Tears — never PvP.",
             MenuId.Settings =>
                 "AR quality · Battery saver · Eye-tracking · Right-arm disk\nHigh contrast · Volume\n\nEssentials only.",
             MenuId.TomeRaid =>

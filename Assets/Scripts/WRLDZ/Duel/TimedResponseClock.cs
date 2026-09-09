@@ -159,12 +159,11 @@ namespace WRLDZ.Duel
 
             OnTick?.Invoke(SecondsRemaining);
 
-            if (Engine.IsAwaitingEffectTarget)
-                return;
-
             if (SecondsRemaining <= 0.001f)
             {
                 IsRunning = false;
+                if (Engine.IsAwaitingEffectTarget)
+                    Engine.CancelEffectTargeting();
                 // PassResponse logs a single clear line for attack vs summon.
                 Engine.PassResponse();
                 OnExpired?.Invoke();

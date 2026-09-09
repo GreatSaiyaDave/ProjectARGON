@@ -5,32 +5,31 @@ using WRLDZ.Presentation;
 
 namespace WRLDZ.UI.Shell
 {
-    /// <summary>
-    /// Floating command chip: translucent fill, thin accent edge, cream type.
-    /// Never 9-slice Imagine plates here — those collapse to opaque black at
-    /// toolbar height (~56px) and paint a slab over the map / stage.
-    /// </summary>
-    public static class MenuCommandButton
-    {
-        public enum Kind
+        /// <summary>
+        /// Floating command chip: obsidian slate, left accent rail, cream type.
+        /// Never 9-slice Imagine plates here — those collapse at toolbar height.
+        /// </summary>
+        public static class MenuCommandButton
         {
-            Primary = 0,
-            Secondary = 1,
-            Gold = 2,
-            Danger = 3
-        }
+            public enum Kind
+            {
+                Primary = 0,
+                Secondary = 1,
+                Gold = 2,
+                Danger = 3
+            }
 
-        // Glass fills — dense enough to read as a chip, under the 0.72 smoke-test cap.
-        public static readonly Color FillPrimary = new(0.10f, 0.36f, 0.50f, 0.68f);
-        public static readonly Color FillSecondary = new(0.08f, 0.12f, 0.18f, 0.68f);
-        public static readonly Color FillGold = new(0.42f, 0.32f, 0.08f, 0.68f);
-        public static readonly Color FillDanger = new(0.50f, 0.12f, 0.16f, 0.68f);
-        public static readonly Color TitleInk = new(0.96f, 0.96f, 0.94f, 1f);
-        public static readonly Color BlurbInk = new(0.78f, 0.86f, 0.94f, 1f);
-        public static readonly Color EdgePrimary = new(0.35f, 0.78f, 0.90f, 1f);
-        public static readonly Color EdgeSecondary = new(0.38f, 0.44f, 0.52f, 1f);
-        public static readonly Color EdgeGold = new(0.92f, 0.78f, 0.32f, 1f);
-        public static readonly Color EdgeDanger = new(0.92f, 0.36f, 0.40f, 1f);
+        // Slate fills — dense enough to read as a disk chip, under the 0.72 smoke-test cap.
+        public static readonly Color FillPrimary = new(0.08f, 0.20f, 0.26f, 0.70f);
+        public static readonly Color FillSecondary = new(0.10f, 0.09f, 0.16f, 0.70f);
+        public static readonly Color FillGold = new(0.24f, 0.19f, 0.07f, 0.70f);
+        public static readonly Color FillDanger = new(0.28f, 0.09f, 0.12f, 0.70f);
+        public static readonly Color TitleInk = new(0.98f, 0.97f, 0.94f, 1f);
+        public static readonly Color BlurbInk = new(0.86f, 0.90f, 0.96f, 1f);
+        public static readonly Color EdgePrimary = new(0.20f, 0.92f, 1.00f, 1f);
+        public static readonly Color EdgeSecondary = new(0.42f, 0.48f, 0.62f, 1f);
+        public static readonly Color EdgeGold = new(1.00f, 0.84f, 0.28f, 1f);
+        public static readonly Color EdgeDanger = new(1.00f, 0.32f, 0.38f, 1f);
 
         public static Button Create(Transform parent, string title, Action onClick,
             Kind kind = Kind.Primary, string blurb = null, bool centerTitle = false,
@@ -45,21 +44,20 @@ namespace WRLDZ.UI.Shell
             go.transform.SetParent(parent, false);
 
             var face = go.GetComponent<Image>();
-            var plate = plated ? PlateFor(kind, wide: !string.IsNullOrEmpty(blurb) || !centerTitle) : null;
-            if (plate != null)
+            face.sprite = UiFoundation.WhiteSprite();
+            face.type = Image.Type.Simple;
+            face.color = fill;
+            if (plated)
             {
-                face.sprite = plate;
-                face.type = plate.border.sqrMagnitude > 0.1f ? Image.Type.Sliced : Image.Type.Simple;
-                face.color = Color.white;
+                HubChrome.PaintPlate(face,
+                    kind == Kind.Gold ? DuelystUi.GoldHot : edge,
+                    gold: kind == Kind.Gold);
             }
             else
             {
-                face.sprite = UiFoundation.WhiteSprite();
-                face.type = Image.Type.Simple;
-                face.color = fill;
                 var ol = go.AddComponent<Outline>();
-                ol.effectColor = new Color(edge.r, edge.g, edge.b, 0.70f);
-                ol.effectDistance = new Vector2(1.4f, -1.4f);
+                ol.effectColor = new Color(edge.r, edge.g, edge.b, 0.55f);
+                ol.effectDistance = new Vector2(1.0f, -1.0f);
                 ol.useGraphicAlpha = false;
             }
             face.raycastTarget = true;
@@ -70,7 +68,7 @@ namespace WRLDZ.UI.Shell
             le.flexibleWidth = 1f;
             le.flexibleHeight = 0f;
 
-            if (!centerTitle && plate == null)
+            if (!centerTitle && !plated)
             {
                 var rail = Solid(go.transform, "Rail", edge);
                 var rrt = rail.rectTransform;

@@ -204,6 +204,7 @@ namespace WRLDZ.Core
             seGained = TearHarvestSe;
             acc.EnsureInventory();
             ArtifactService.GrantUntaggedSetEnergy(acc.progress, acc.inventory, seGained);
+            QuestService.CreditHarvest(acc.progress);
             PlayerPrefs.SetInt(HarvestKey(zoneId), (int)now);
             PlayerPrefs.Save();
 

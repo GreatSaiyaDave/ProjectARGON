@@ -60,8 +60,17 @@ namespace WRLDZ.Data
         /// <summary>Set-orb progress toward locked sets, e.g. PSV:3,LON:1.</summary>
         public string setOrbCsv = "";
 
-        /// <summary>Owned ERAZ band badges (CSV). Empty until tutorial grants original.</summary>
+        /// <summary>Owned ERAZ band badges (CSV). Empty until fortune teller grants original.</summary>
         public string erazBadgesCsv = "";
+        /// <summary>Owned format badges (CSV): dk, raid, ddm, genesys, speed, deckmaster.</summary>
+        public string formatBadgesCsv = "";
+
+        /// <summary>Cleared Story stage ids (CSV).</summary>
+        public string storyClearedCsv = "";
+        /// <summary>Next playable Story stage id. Empty when Season 1 is fully cleared.</summary>
+        public string storyCurrentId = "";
+        /// <summary>Referobot daily JSON (day + three slots).</summary>
+        public string questStateJson = "";
 
         /// <summary>Lab account owns full catalog (3× each card) for deck editor testing.</summary>
         public bool labFullCatalogGranted;
@@ -88,6 +97,10 @@ namespace WRLDZ.Data
                 unlockedSetsCsv = "LOB,MRD,SRL",
                 setOrbCsv = "",
                 erazBadgesCsv = "",
+                formatBadgesCsv = "",
+                storyClearedCsv = "",
+                storyCurrentId = "",
+                questStateJson = "",
                 soulFractureCapacity = DefaultSoulFractureCapacity,
                 soulFractures = 0,
                 soulRegenUnix = 0,
@@ -120,6 +133,10 @@ namespace WRLDZ.Data
             if (soulRegenUnix < 0) soulRegenUnix = 0;
             if (soulStoryUnlockCsv == null) soulStoryUnlockCsv = "";
             if (erazBadgesCsv == null) erazBadgesCsv = "";
+            if (formatBadgesCsv == null) formatBadgesCsv = "";
+            if (storyClearedCsv == null) storyClearedCsv = "";
+            if (storyCurrentId == null) storyCurrentId = "";
+            if (questStateJson == null) questStateJson = "";
         }
 
         public int SoulRemaining =>

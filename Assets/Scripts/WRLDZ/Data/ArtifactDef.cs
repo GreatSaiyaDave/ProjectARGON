@@ -10,7 +10,13 @@ namespace WRLDZ.Data
         StoryKey = 4,
         Tome = 5,
         TradeTransport = 6,
-        Millennium = 7
+        Millennium = 7,
+        /// <summary>Soul-fracture shards. Five fuse into +1 capacity.</summary>
+        SoulFragment = 8,
+        /// <summary>ERAZ or format badge shard. Five + Set Energy fuse the whole badge.</summary>
+        BadgePiece = 9,
+        /// <summary>Alternate table-law format (DK, Raid, DDM…). Collection only until rules lock.</summary>
+        FormatBadge = 10
     }
 
     /// <summary>Catalog row from <c>StreamingAssets/WRLDZ/Artifacts/artifacts.json</c>. Not a Konami card.</summary>

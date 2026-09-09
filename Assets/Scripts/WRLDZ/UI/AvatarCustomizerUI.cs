@@ -248,11 +248,11 @@ namespace WRLDZ.UI
                 _statSe.transform.parent.GetComponent<RectTransform>(),
                 0.12f, 0.26f);
 
-            var customize = FloatingPanel.PrimaryButton(body, "CUSTOMIZE LOOK", () =>
+            var customize = HubChrome.Capsule(body, "CUSTOMIZE LOOK", () =>
             {
                 FreeUiKit.PlaySelect();
                 OpenCustomizer(_onSaved);
-            }, gold: true);
+            }, MenuCommandButton.Kind.Gold, centerTitle: true, titleSize: 18);
             FloatingPanel.Grid.Full(customize.GetComponent<RectTransform>(), 0.02f, 0.10f);
         }
 
@@ -369,12 +369,13 @@ namespace WRLDZ.UI
             FloatingPanel.Grid.Full(_status.rectTransform, 0.12f, 0.16f);
             StyleReadable(_status, 14, DuelystUi.TextMuted, TextAnchor.MiddleCenter);
 
-            var save = FloatingPanel.PrimaryButton(body, "SAVE LOOK", Save, gold: true);
-            var back = FloatingPanel.PrimaryButton(body, "BACK", () =>
+            var save = HubChrome.Capsule(body, "SAVE LOOK", Save, MenuCommandButton.Kind.Gold,
+                centerTitle: true, titleSize: 16);
+            var back = HubChrome.Capsule(body, "BACK", () =>
             {
                 FreeUiKit.PlayClick();
                 OpenProfile(_onSaved);
-            });
+            }, MenuCommandButton.Kind.Secondary, centerTitle: true, titleSize: 16);
             FloatingPanel.Grid.Pair(
                 save.GetComponent<RectTransform>(),
                 back.GetComponent<RectTransform>(),
@@ -749,7 +750,7 @@ namespace WRLDZ.UI
                 Part.Skin => $"Skin: {_draft.skinHex}",
                 Part.HairColor => $"Hair color: {_draft.hairHex}",
                 Part.OutfitTint => $"Outfit tint: {_draft.outfitTintHex}",
-                Part.Accent => $"Accent: {_draft.accentHex}",
+                Part.Accent => $"Spirit magic: {_draft.accentHex}",
                 Part.Title => $"Title: {_draft.title}",
                 _ => ""
             };
@@ -905,13 +906,8 @@ namespace WRLDZ.UI
             sheetGo.transform.SetParent(root.transform, false);
             GoTheme.Place(sheetGo.GetComponent<RectTransform>(), 0.06f, 0.10f, 0.94f, 0.88f);
             var sheetImg = sheetGo.GetComponent<Image>();
-            var plate = ImagineAssets.MenuHoloSheet() ?? ImagineAssets.PanelMenuGlass()
-                        ?? ImagineAssets.PanelHolo() ?? DuelystUi.Panel();
-            sheetImg.sprite = plate ?? UiFoundation.WhiteSprite();
-            sheetImg.type = plate != null && plate.border.sqrMagnitude > 0
-                ? Image.Type.Sliced : Image.Type.Simple;
-            sheetImg.color = Color.white;
             sheetImg.raycastTarget = true;
+            HubChrome.PaintWell(sheetImg);
             return root;
         }
 

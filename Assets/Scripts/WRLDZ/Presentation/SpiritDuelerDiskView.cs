@@ -244,17 +244,7 @@ namespace WRLDZ.Presentation
 
         static Material CreateMaterial(Color tint) => SpiritDuelerSkin.BuildGhostMaterial(tint);
 
-        static Material CreateGlowMaterial(Color tint)
-        {
-            var shader = Shader.Find("Universal Render Pipeline/Unlit")
-                         ?? Shader.Find("Unlit/Color")
-                         ?? Shader.Find("UI/Default");
-            var mat = new Material(shader) { name = "DiskGlowPlate" };
-            var c = new Color(tint.r, tint.g, tint.b, 0.25f);
-            if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", c);
-            if (mat.HasProperty("_Color")) mat.SetColor("_Color", c);
-            return mat;
-        }
+        static Material CreateGlowMaterial(Color tint) => SpiritDuelerSkin.BuildGlowLayer(tint);
 
         static void SetLayerRecurse(GameObject go, int layer)
         {

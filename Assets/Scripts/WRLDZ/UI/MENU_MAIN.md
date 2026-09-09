@@ -6,10 +6,9 @@
 
 ## Role in the graph
 
-- **Not home.** Home is Overworld.
-- Entered from Desktop Lab **SYSTEMS HUB** (optional). Live Overworld Eye opens overlays in place.
-- Exit: **← BATTLE CITY MAP** → Overworld.
-- Shadow Duel exit returns to **Overworld**, not this hub.
+Home is **Overworld**. Daily play never lands on this scene. Tap the **Millennium Eye** — that menu is this same Battle City grammar (DUEL featured capsules + COMMAND dest grid), not tall holo cards. Code: `OverworldUI.BuildEyeMenu` → `HubChrome.MountFeatured` / `MountDest`.
+
+This `MainMenu` scene (`DuelDiskMenuUI`) is the **template**, not daily home. Optional entry: Desktop Lab **SYSTEMS HUB**. Exit: **BATTLE CITY MAP** → Overworld. Shadow Duel exit returns to Overworld.
 
 ## Structure
 
@@ -27,11 +26,12 @@ Tome is **not** a Deck tab and **not** a hub tile — Overworld Eye **TOME** and
 ## Aesthetic
 
 - Battle City rain rooftop backdrop (darker lower third so tiles lift)
-- Piano-glass navy tiles with cyan / gold rims, gold L-corner ticks, interior wash
+- Piano-glass **painted tiles** (Imagine `tile_hub` / gold), cyan / gold rims, gold L-corner ticks — not smoked translucent chips
 - Duel actions first (featured plates), then a 2×3 destination grid
 - Dest rows: 3D prop well on the left (Imagine icon fallback) + bold title
 - VS AI uses the Battle City disk showcase; VS PLAYER uses twin-disk prop
 - MAP is a labeled **BATTLE CITY MAP** plate, not a naked orb
+- Related overlays (VS AI, VS PLAYER, DECK, BAG, STORY, BAZAAR, VIEW, SET, formats, scan, tournament, zone prompt) reuse that same **opaque plate** grammar via `HubChrome.PaintPlate` / `DualMenuPresenter`
 - **Bangers** titles · **Exo 2** body · heavy outline (`WrldzType` / `MenuCommandButton.ApplyHubType`)
 
 ## Code

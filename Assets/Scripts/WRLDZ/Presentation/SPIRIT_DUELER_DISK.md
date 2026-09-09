@@ -86,15 +86,21 @@ Lore: **cards on the disk**, **larger card projections in the arena** (full 3D m
 - **Stage**: decorative + combat pulse (impact window charges the disks).
 - **AR later**: re-parent disk mesh to left arm; spirit stage to world ground.
 
+## Look (shadow-magic hologram)
+
+The **DiskMesh body** is translucent ghost glass (`WRLDZ/SpiritGhostUnlit`: fill + fresnel rim) tinted by **Spirit magic** (`AvatarAppearance.accentHex`). Imagine albedo is mid-tone detail only — never a dark emission map, never a second additive copy. Wrist wisps are shadow-aether. Cards stay physical cardboard.
+
+**Do not** move OfficialZones / `ArZoneLayout` when changing the body. Markers stay mesh-local so they can still be nudged independently.
+
 ## Retract / deploy (anime Battle City)
 
-Disks **start retracted** (compact wrist cuff + folded blade) whenever a duel is not active.
+Two modes. Transition is a visible hologram swing (~0.85s), not a skip (except Instant Duel).
 
-| State | When | Visual |
+| Mode | When | Visual |
 |-------|------|--------|
-| **Retracted** | Stage mount, leave duel, game over | Cuff only · blade folded · zones hidden · dim light |
-| **Deploy** | `BindEngine` / duel start | `BladeDeploy` snap · energy ring · zones expand · hand volume appears |
-| **Combat FX** | Summon / set / activate / attack | Emission punch · shake · ring pulse via `DiskFxDriver` |
+| **Retracted** | Zone Mode, pre-duel, after Map | Cuff only · blade folded · ghost dim · fade in/out of **body** |
+| **Deployed** | Live duel | Blade open · `BladeDeploy` swing · magic flare · zones visible |
+| **Combat FX** | Summon / set / activate / attack | Emission punch · shake · `DiskFxDriver` |
 
 ```
 WristCuff (always)
@@ -104,7 +110,7 @@ WristCuff (always)
      └─ OfficialZones (scale in after ~35% open)
 ```
 
-Code: `DiskFxDriver` · `ArDuelDiskRig.DeployForDuel` / `Retract` · `ArDuelInteractionSystem.DeployDisksForDuel`.
+Code: `DiskFxDriver` · `ArDuelDiskRig.FadeInRetracted` / `DeployForDuel` / `RetractThenFadeOut` · `ArDuelInteractionSystem.DeployDisksForDuel`.
 
 ## Pre-duel cinematic
 

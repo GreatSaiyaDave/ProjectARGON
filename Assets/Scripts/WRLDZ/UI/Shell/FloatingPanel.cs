@@ -71,8 +71,8 @@ namespace WRLDZ.UI.Shell
         {
             FreeUiKit.EnsureLoaded();
             var edge = goldEdge
-                ? new Color(DuelystUi.Gold.r, DuelystUi.Gold.g, DuelystUi.Gold.b, 0.55f)
-                : new Color(0.55f, 0.72f, 0.82f, 0.40f);
+                ? new Color(DuelystUi.Gold.r, DuelystUi.Gold.g, DuelystUi.Gold.b, 0.70f)
+                : new Color(DuelystUi.Cyan.r, DuelystUi.Cyan.g, DuelystUi.Cyan.b, 0.70f);
 
             var shell = new GameObject(name, typeof(RectTransform), typeof(Image));
             shell.transform.SetParent(parent, false);
@@ -82,12 +82,12 @@ namespace WRLDZ.UI.Shell
             img.type = img.sprite != null && img.sprite.border.sqrMagnitude > 0
                 ? Image.Type.Sliced
                 : Image.Type.Simple;
-            img.color = plate != null ? Color.white : new Color(0.06f, 0.08f, 0.12f, 0.94f);
+            img.color = plate != null ? Color.white : HubChrome.Slate;
             img.raycastTarget = true;
 
             var ol = shell.AddComponent<Outline>();
             ol.effectColor = edge;
-            ol.effectDistance = new Vector2(1.2f, -1.2f);
+            ol.effectDistance = new Vector2(1.0f, -1.0f);
             ol.useGraphicAlpha = false;
 
             return shell.GetComponent<RectTransform>();

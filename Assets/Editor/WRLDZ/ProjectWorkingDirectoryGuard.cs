@@ -107,6 +107,7 @@ namespace WRLDZ.EditorTools
 
                 // Mono no-ops SetCurrentDirectory when it already thinks cwd is
                 // ProjectRoot, which leaves a native git/objects chdir in place.
+                WRLDZ.Core.EditorWorkingDirectory.Pin();
                 NativeChdir(ProjectRoot);
                 Directory.SetCurrentDirectory(ProjectRoot);
 

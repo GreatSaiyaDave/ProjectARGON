@@ -50,7 +50,18 @@ namespace WRLDZ.Duel.Rules
             66889139, // Gaia the Dragon Champion
             63519819  // Thousand-Eyes Restrict
         };
-        static readonly HashSet<string> SpecialSummonKeys = new();
+        public const string CocoonMothProc = "cocoon-moth";
+        static readonly HashSet<string> SpecialSummonKeys = new() { CocoonMothProc };
+        static readonly Dictionary<int, int> CocoonMothTurnNeed = new()
+        {
+            { 87756343, 2 },  // Larvae Moth
+            { 14141448, 4 },  // Great Moth
+            { 48579379, 6 }   // Perfectly Ultimate Great Moth
+        };
+        public const int PetitMothId = 58192742;
+        public const int CocoonOfEvolutionId = 40240595;
+        public const int DarkSageId = 92377303;
+        public const int DarkMagicianId = 46986414;
 
         static readonly HashSet<int> LuaOwnershipWarnings = new();
 
@@ -466,8 +477,51 @@ namespace WRLDZ.Duel.Rules
             string key, out string reason)
         {
             reason = "Special Summon key not registered.";
-            return false;
+            if (engine == null || who == null || card?.Def == null) return false;
+            if (key != CocoonMothProc || !CocoonMothTurnNeed.TryGetValue(card.CardId, out var need))
+                return false;
+            if (!who.Hand.Contains(card))
+            {
+                reason = "Not in hand.";
+                return false;
+            }
+
+            if (engine.TurnPlayer != who || !engine.InMainPhase)
+            {
+                reason = "Inherent Special Summon only in your Main Phase.";
+                return false;
+            }
+
+            if (FindCocoonMothTribute(who, need) == null)
+            {
+                reason = $"Need Petit Moth equipped with Cocoon of Evolution for {need} of your turns.";
+                return false;
+            }
+
+            reason = "OK";
+            return true;
         }
+
+        public static CardInstance FindCocoonMothTribute(DuelistState who, int needTurns)
+        {
+            if (who == null) return null;
+            foreach (var m in who.MonstersOnField())
+            {
+                if (m == null || m.CardId != PetitMothId) continue;
+                if (m.Equips == null) continue;
+                foreach (var eq in m.Equips)
+                {
+                    if (eq != null && eq.CardId == CocoonOfEvolutionId &&
+                        eq.EquipTurnCounter >= needTurns)
+                        return m;
+                }
+            }
+
+            return null;
+        }
+
+        public static int CocoonTurnsNeeded(int cardId) =>
+            CocoonMothTurnNeed.TryGetValue(cardId, out var n) ? n : 0;
 
         /// <summary>
         /// Continuous properties derived only from registered continuous scripts / flags.

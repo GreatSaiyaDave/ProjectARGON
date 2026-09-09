@@ -67,8 +67,8 @@ namespace WRLDZ.UI.Shell
             scroll.transform.SetParent(body, false);
             FloatingPanel.Place(scroll.GetComponent<RectTransform>(), 0f, 0f, 1f, ar ? 0.86f : 0.88f);
             var sImg = scroll.GetComponent<Image>();
-            sImg.sprite = UiFoundation.WhiteSprite();
-            sImg.color = new Color(0.03f, 0.05f, 0.09f, 0.35f);
+            sImg.raycastTarget = true;
+            HubChrome.PaintWell(sImg);
 
             var viewport = new GameObject("Viewport", typeof(RectTransform), typeof(RectMask2D), typeof(Image));
             viewport.transform.SetParent(scroll.transform, false);
@@ -107,11 +107,12 @@ namespace WRLDZ.UI.Shell
             var chipFaces = new List<(Filter f, Image face, Outline edge)>();
             void Chip(Filter f, string label)
             {
-                var b = MenuCommandButton.Create(filterBar.transform, label, () =>
+                var b = HubChrome.Capsule(filterBar.transform, label, () =>
                 {
                     filter = f;
                     rebuild?.Invoke();
-                }, f == filter ? MenuCommandButton.Kind.Gold : MenuCommandButton.Kind.Secondary);
+                }, f == filter ? MenuCommandButton.Kind.Gold : MenuCommandButton.Kind.Primary,
+                    centerTitle: true, titleSize: 13);
                 b.GetComponent<LayoutElement>().minHeight = ar ? 32 : 40;
                 chipFaces.Add((f, b.GetComponent<Image>(), b.GetComponent<Outline>()));
             }
@@ -129,9 +130,10 @@ namespace WRLDZ.UI.Shell
                 {
                     var on = chipFaces[i].f == filter;
                     if (chipFaces[i].face != null)
-                        chipFaces[i].face.color = on
-                            ? MenuCommandButton.FillGold
-                            : MenuCommandButton.FillSecondary;
+                    {
+                        HubChrome.PaintPlate(chipFaces[i].face, on ? DuelystUi.Gold : DuelystUi.Cyan, gold: on);
+                        HubChrome.FlattenPlate(chipFaces[i].face);
+                    }
                     if (chipFaces[i].edge != null)
                         chipFaces[i].edge.effectColor = on
                             ? MenuCommandButton.EdgeGold
@@ -155,7 +157,9 @@ namespace WRLDZ.UI.Shell
                 return Filter.Tablet;
             if (focusDefId.StartsWith("currency.", StringComparison.OrdinalIgnoreCase))
                 return Filter.Currency;
-            if (focusDefId.StartsWith("eraz.", StringComparison.OrdinalIgnoreCase)) return Filter.Badge;
+            if (focusDefId.StartsWith("eraz.", StringComparison.OrdinalIgnoreCase)
+                || focusDefId.StartsWith("format.", StringComparison.OrdinalIgnoreCase))
+                return Filter.Badge;
             return Filter.Key;
         }
 
@@ -166,10 +170,12 @@ namespace WRLDZ.UI.Shell
             return filter switch
             {
                 Filter.Currency => def.Kind == ArtifactKind.Currency,
-                Filter.Badge => def.Kind == ArtifactKind.ErazBadge,
+                Filter.Badge => def.Kind is ArtifactKind.ErazBadge or ArtifactKind.BadgePiece
+                    or ArtifactKind.FormatBadge,
                 Filter.Tablet => def.Kind == ArtifactKind.SetEnergy,
                 Filter.Key => def.Kind is ArtifactKind.StoryKey or ArtifactKind.Tome
-                    or ArtifactKind.TradeTransport or ArtifactKind.Millennium,
+                    or ArtifactKind.TradeTransport or ArtifactKind.Millennium
+                    or ArtifactKind.SoulFragment,
                 _ => true
             };
         }
@@ -286,21 +292,19 @@ namespace WRLDZ.UI.Shell
             FloatingPanel.Stretch(go.GetComponent<RectTransform>());
             var dim = go.GetComponent<Image>();
             dim.sprite = UiFoundation.WhiteSprite();
-            dim.color = new Color(0f, 0f, 0f, ar ? 0.45f : 0.55f);
+            dim.color = HubChrome.Dusk;
             var dimBtn = go.GetComponent<Button>();
             dimBtn.targetGraphic = dim;
             dimBtn.transition = Selectable.Transition.None;
             dimBtn.onClick.AddListener(() => hide?.Invoke());
 
-            var plate = FloatingPanel.Create(go.transform, "InspectPlate", goldEdge: false);
-            if (ar) FloatingPanel.Place(plate, 0.08f, 0.18f, 0.92f, 0.82f);
-            else FloatingPanel.Place(plate, 0.08f, 0.16f, 0.92f, 0.84f);
+            var plate = HubChrome.Sheet(go.transform, "InspectPlate",
+                0.08f, ar ? 0.18f : 0.16f, 0.92f, ar ? 0.82f : 0.84f);
 
             var title = FloatingPanel.Title(plate, def?.name ?? "Artifact", ar ? 16 : 20);
             FloatingPanel.Place(title.rectTransform, 0.06f, 0.82f, 0.78f, 0.96f);
 
-            var close = MenuCommandButton.Create(plate, "X", hide, MenuCommandButton.Kind.Secondary,
-                centerTitle: true);
+            var close = HubChrome.CloseChip(plate, hide);
             close.name = "InspectClose";
             var closeRt = close.GetComponent<RectTransform>();
             closeRt.anchorMin = new Vector2(1f, 1f);

@@ -62,6 +62,7 @@ namespace WRLDZ.Presentation
             if (string.IsNullOrEmpty(relativePath))
             {
                 Cache.Clear();
+                TexCache.Clear();
                 return;
             }
 
@@ -77,6 +78,18 @@ namespace WRLDZ.Presentation
 
             foreach (var k in doomed)
                 Cache.Remove(k);
+
+            var texDoomed = new List<string>();
+            foreach (var k in TexCache.Keys)
+            {
+                if (k == relativePath || k.StartsWith(relativePath + "|"))
+                    texDoomed.Add(k);
+                else if (folder && k.StartsWith(relativePath))
+                    texDoomed.Add(k);
+            }
+
+            foreach (var k in texDoomed)
+                TexCache.Remove(k);
         }
 
         static Sprite LoadInternal(string relativePath, Vector4 border, bool autoChromaKey)
@@ -303,20 +316,7 @@ namespace WRLDZ.Presentation
         /// compiles against that folder and Unity reports a compile failure with
         /// no CS errors. Re-pin immediately after StreamingAssets IO.
         /// </summary>
-        static void PinEditorCwd()
-        {
-#if UNITY_EDITOR
-            try
-            {
-                var root = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
-                Directory.SetCurrentDirectory(root);
-            }
-            catch
-            {
-                // Editor guard also pins on compile.
-            }
-#endif
-        }
+        static void PinEditorCwd() => WRLDZ.Core.EditorWorkingDirectory.Pin();
 
         public static Sprite ReferobotPortrait() => Load("WRLDZ/Referobot/referobot_portrait.png");
 

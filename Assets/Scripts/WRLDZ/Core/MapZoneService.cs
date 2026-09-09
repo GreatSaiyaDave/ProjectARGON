@@ -1,4 +1,5 @@
 using UnityEngine;
+using WRLDZ.Duel.Rules;
 
 namespace WRLDZ.Core
 {
@@ -171,6 +172,9 @@ namespace WRLDZ.Core
             cfg.PossessionCinematic = true;
             cfg.PreferDigital = digital;
             cfg.AiDeckFile = PickStreetDeck(npcName, tearId, band);
+            var acc = AppSession.Ensure()?.Account;
+            acc?.EnsureProgress();
+            cfg.ErazBandId = ErazProgress.HighestOwned(acc?.progress);
             cfg.FormatTitle = $"{npcName} · {lp} LP street duel";
             ApplyLastSurfaceScanIfAny(cfg);
             return cfg;
@@ -204,10 +208,33 @@ namespace WRLDZ.Core
 
         public static ArDuelMatchConfig MakeStoryEra(string zoneId, string zoneTitle, bool digital)
         {
-            var cfg = MakeTearConfig(zoneId, zoneTitle, digital);
+            var acc = AppSession.Ensure()?.Account;
+            acc?.EnsureProgress();
+            var stage = StoryCampaignService.Current(acc?.progress);
+            if (stage == null && !string.IsNullOrEmpty(zoneTitle))
+                stage = StoryCampaignService.Stage(zoneTitle);
+            return MakeStoryEra(stage, zoneId, digital);
+        }
+
+        public static ArDuelMatchConfig MakeStoryEra(StoryStageDef stage, string zoneId, bool digital)
+        {
+            var title = stage != null ? stage.opponentName : "Mission";
+            var cfg = MakeTearConfig(zoneId, title, digital);
             cfg.Launch = ArDuelLaunchKind.StoryEra;
-            cfg.StartingLp = 8000;
-            cfg.FormatTitle = "Story · Umbrax fracture · " + (zoneTitle ?? "Mission");
+            cfg.FormatId = "story";
+            cfg.StoryStageId = stage?.id ?? "";
+            cfg.AiDeckFile = stage != null ? stage.aiDeckFile : "";
+            cfg.ErazBandId = !string.IsNullOrEmpty(stage?.erazBandId)
+                ? stage.erazBandId
+                : ErazFormat.Original;
+            cfg.DkOverlay = false;
+            cfg.StartingLp = stage != null && stage.startingLp >= 1000
+                ? stage.startingLp
+                : 8000;
+            cfg.FormatTitle = stage != null
+                ? "Story · " + stage.opponentName
+                : "Story · Umbrax fracture";
+            cfg.ZoneTitle = title;
             return cfg;
         }
 

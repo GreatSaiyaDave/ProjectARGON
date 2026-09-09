@@ -1,0 +1,29 @@
+Agents write to GitHub only. They cannot see or change the Unity
+folder on your Linux machine. Hub linking GitHub is a bookmark,
+not a download. That is why fixes you asked for never appeared.
+
+Keep using:  …/DMWRDLZUnityProject/ProjectARGON
+Do not Add a second folder. Do not unzip over this one.
+
+The Hub cloud icon is Unity Cloud (ads), not GitHub.
+
+Zip is last resort on a new machine only:
+https://github.com/GreatSaiyaDave/ProjectARGON/archive/refs/heads/main.zip
+
+1. Close Unity (File → Exit).
+2. Open Linux Terminal — not the Unity Console. The Console cannot run git.
+3. Type:  cd
+   then a space, then drag your ProjectARGON folder onto the Terminal
+   window, then press Enter.
+4. Paste this one line, Enter:
+
+curl -fsSL https://raw.githubusercontent.com/GreatSaiyaDave/ProjectARGON/main/Tools/get_latest_into_this_folder.sh | bash
+
+That updates THIS folder. It refuses if Unity is open or if it
+would overwrite your local edits.
+
+Proof it worked: search the Project window for WRLDZ_BUILD
+= CLEAN-0909. Then WRLDZ → Lab → Open Desktop Lab App.
+
+Later updates (after that stamp is here):
+WRLDZ → Get Latest from GitHub

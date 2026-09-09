@@ -102,8 +102,14 @@ namespace WRLDZ.UI
             FreeUiKit.PlayConfirm();
             cfg.FormatTitle = "Player vs AI · Surface Scan";
             cfg.FormatId = "pvai";
+            OpponentCatalog.ApplyPending(cfg);
+            if (string.IsNullOrEmpty(cfg.AiDeckFile) || OpponentCatalog.IsBanned(cfg.AiDeckFile))
+                cfg.AiDeckFile = OpponentCatalog.DefaultFile;
+            cfg.DkOverlay = false;
+            cfg.StartingLp = cfg.StartingLp >= 1000 ? cfg.StartingLp : 8000;
             cfg.EntrySource = AppSession.SceneOverworld;
             StopTick();
+            OpponentCatalog.ClearPending();
             _onClose?.Invoke();
             session.StartArDuel(cfg);
         }

@@ -87,9 +87,8 @@ namespace WRLDZ.UI.Shell
             grid.transform.SetParent(stage, false);
             FloatingPanel.Stretch(grid.GetComponent<RectTransform>(), 6f);
             var gImg = grid.GetComponent<Image>();
-            gImg.sprite = UiFoundation.WhiteSprite();
-            gImg.color = new Color(0.03f, 0.05f, 0.07f, 0.92f);
             gImg.raycastTarget = true;
+            HubChrome.PaintWell(gImg);
             st.GridHost = grid.transform;
 
             BuildInspect(body, st, ar);
@@ -112,7 +111,7 @@ namespace WRLDZ.UI.Shell
 
             void TabChip(Tab tab, string label, Sprite icon)
             {
-                var b = MenuCommandButton.Create(tabBar.transform, label, () =>
+                var b = HubChrome.Capsule(tabBar.transform, label, () =>
                 {
                     st.Tab = tab;
                     st.Pick = PickKind.None;
@@ -120,7 +119,8 @@ namespace WRLDZ.UI.Shell
                     st.Toast = null;
                     FreeUiKit.PlaySelect();
                     st.Refresh?.Invoke();
-                }, tab == Tab.Case ? MenuCommandButton.Kind.Gold : MenuCommandButton.Kind.Secondary);
+                }, tab == Tab.Case ? MenuCommandButton.Kind.Gold : MenuCommandButton.Kind.Primary,
+                    centerTitle: true, titleSize: 14);
                 b.GetComponent<LayoutElement>().minHeight = ar ? 36 : 44;
                 st.TabFaces.Add(b.GetComponent<Image>());
                 st.TabIds.Add(tab);
@@ -195,11 +195,8 @@ namespace WRLDZ.UI.Shell
                 typeof(Button));
             go.transform.SetParent(parent, false);
             var img = go.GetComponent<Image>();
-            var spr = ImagineAssets.HudChip() ?? UiFoundation.WhiteSprite();
-            img.sprite = spr;
-            img.type = spr != null && spr.border.sqrMagnitude > 0 ? Image.Type.Sliced : Image.Type.Simple;
-            img.color = Color.white;
-            go.GetComponent<LayoutElement>().flexibleWidth = 1f;
+            img.raycastTarget = true;
+            HubChrome.PaintChip(img, DuelystUi.Gold);
             var btn = go.GetComponent<Button>();
             btn.targetGraphic = img;
             btn.transition = Selectable.Transition.None;
@@ -262,31 +259,31 @@ namespace WRLDZ.UI.Shell
             st.ActionRow.transform.SetParent(pane, false);
             FloatingPanel.Place(st.ActionRow.GetComponent<RectTransform>(), 0.64f, 0.08f, 0.98f, 0.92f);
 
-            st.PackBtn = MenuCommandButton.Create(st.ActionRow.transform, "PACK", () =>
+            st.PackBtn = HubChrome.Capsule(st.ActionRow.transform, "PACK", () =>
             {
                 ActPackSelected(st);
                 st.Refresh?.Invoke();
-            }, MenuCommandButton.Kind.Gold);
+            }, MenuCommandButton.Kind.Gold, centerTitle: true, titleSize: 13);
             FloatingPanel.Place(st.PackBtn.GetComponent<RectTransform>(), 0.00f, 0.52f, 0.48f, 1f);
 
-            st.UnpackBtn = MenuCommandButton.Create(st.ActionRow.transform, "SEND HOME", () =>
+            st.UnpackBtn = HubChrome.Capsule(st.ActionRow.transform, "SEND HOME", () =>
             {
                 ActUnpackSelected(st);
                 st.Refresh?.Invoke();
-            }, MenuCommandButton.Kind.Secondary);
+            }, MenuCommandButton.Kind.Secondary, centerTitle: true, titleSize: 13);
             FloatingPanel.Place(st.UnpackBtn.GetComponent<RectTransform>(), 0.52f, 0.52f, 1f, 1f);
 
-            st.EditBtn = MenuCommandButton.Create(st.ActionRow.transform, "EDIT DECK", () =>
+            st.EditBtn = HubChrome.Capsule(st.ActionRow.transform, "EDIT DECK", () =>
             {
                 OpenDeckEditor(st);
-            }, MenuCommandButton.Kind.Gold);
+            }, MenuCommandButton.Kind.Gold, centerTitle: true, titleSize: 13);
             FloatingPanel.Place(st.EditBtn.GetComponent<RectTransform>(), 0.00f, 0.00f, 0.48f, 0.46f);
 
-            st.DeleteBtn = MenuCommandButton.Create(st.ActionRow.transform, "DELETE", () =>
+            st.DeleteBtn = HubChrome.Capsule(st.ActionRow.transform, "DELETE", () =>
             {
                 ActDeleteDeck(st);
                 st.Refresh?.Invoke();
-            }, MenuCommandButton.Kind.Danger);
+            }, MenuCommandButton.Kind.Danger, centerTitle: true, titleSize: 13);
             FloatingPanel.Place(st.DeleteBtn.GetComponent<RectTransform>(), 0.52f, 0.00f, 1f, 0.46f);
         }
 
@@ -295,10 +292,8 @@ namespace WRLDZ.UI.Shell
             var go = new GameObject(name, typeof(RectTransform), typeof(Image));
             go.transform.SetParent(parent, false);
             var img = go.GetComponent<Image>();
-            img.sprite = UiFoundation.WhiteSprite();
-            img.type = Image.Type.Simple;
-            img.color = fill;
             img.raycastTarget = true;
+            HubChrome.PaintWell(img, flatten: name != "Stage");
             return go.GetComponent<RectTransform>();
         }
 
@@ -353,24 +348,14 @@ namespace WRLDZ.UI.Shell
                 var on = st.TabIds[i] == st.Tab;
                 var face = st.TabFaces[i];
                 if (face == null) continue;
-                face.color = on
-                    ? new Color(0.42f, 0.32f, 0.08f, 0.88f)
-                    : MenuCommandButton.FillSecondary;
+                face.color = Color.white;
                 var btn = face.GetComponent<Button>();
                 if (btn != null)
                 {
                     btn.transition = Selectable.Transition.None;
                     btn.targetGraphic = face;
                 }
-                var ol = face.GetComponent<Outline>();
-                if (ol != null)
-                    ol.effectColor = on
-                        ? MenuCommandButton.EdgeGold
-                        : MenuCommandButton.EdgeSecondary;
-                var rail = face.transform.Find("Rail");
-                var rimg = rail != null ? rail.GetComponent<Image>() : null;
-                if (rimg != null)
-                    rimg.color = on ? MenuCommandButton.EdgeGold : MenuCommandButton.EdgeSecondary;
+                HubChrome.PaintPlate(face, on ? DuelystUi.GoldHot : DuelystUi.Cyan, gold: on);
             }
 
             RefreshWallet(st);
@@ -644,7 +629,7 @@ namespace WRLDZ.UI.Shell
             inv?.EnsureDeckBoxSlots();
             var ar = st.Presentation == UiPresentation.ArDiskHolo;
 
-            var create = MenuCommandButton.Create(st.ListHost, "CREATE DECK", () =>
+            var create = HubChrome.Capsule(st.ListHost, "CREATE DECK", () =>
             {
                 if (InventoryService.TryCreateDeckBox(acc, out var idx, out var err))
                 {
@@ -659,7 +644,7 @@ namespace WRLDZ.UI.Shell
                     FreeUiKit.PlayClick();
                     Note(st, err ?? "Could not create deck.");
                 }
-            }, MenuCommandButton.Kind.Gold);
+            }, MenuCommandButton.Kind.Gold, centerTitle: true, titleSize: 16);
             create.GetComponent<LayoutElement>().minHeight = ar ? 40 : 48;
 
             AddHeader(st.ListHost, "DECK BOXES");
@@ -1049,57 +1034,27 @@ namespace WRLDZ.UI.Shell
             return h > 0 ? $"{h}h {m}m" : $"{m}m";
         }
 
-        static void AddHeader(Transform host, string text)
-        {
-            var go = new GameObject("H", typeof(RectTransform), typeof(LayoutElement));
-            go.transform.SetParent(host, false);
-            var le = go.GetComponent<LayoutElement>();
-            le.minHeight = 28;
-            le.preferredHeight = 28;
-            var t = FloatingPanel.Body(go.transform, text, 12);
-            FloatingPanel.Place(t.rectTransform, 0.02f, 0.05f, 0.98f, 0.95f);
-            t.color = DuelystUi.GoldHot;
-            t.alignment = TextAnchor.MiddleLeft;
-        }
+        static void AddHeader(Transform host, string text) => HubChrome.ListHead(host, text);
 
         static void ItemRow(Transform host, Sprite icon, string title, string blurb, bool selected,
             Action onClick, bool ar)
         {
-            var go = new GameObject("Row", typeof(RectTransform), typeof(Image), typeof(Button),
-                typeof(LayoutElement));
-            go.transform.SetParent(host, false);
-            var le = go.GetComponent<LayoutElement>();
-            le.minHeight = ar ? 48 : 64;
-            le.preferredHeight = le.minHeight;
-            var img = go.GetComponent<Image>();
-            img.sprite = UiFoundation.WhiteSprite();
-            img.color = selected
-                ? MenuCommandButton.FillGold
-                : new Color(0.10f, 0.14f, 0.18f, 0.72f);
-
+            var line = string.IsNullOrEmpty(blurb) ? title : title + "\n" + blurb;
+            var btn = HubChrome.ListRow(host, line, onClick, gold: selected);
+            btn.GetComponent<LayoutElement>().minHeight = ar ? 52 : 64;
             if (icon != null)
             {
                 var ico = new GameObject("I", typeof(RectTransform), typeof(Image));
-                ico.transform.SetParent(go.transform, false);
+                ico.transform.SetParent(btn.transform, false);
                 FloatingPanel.Place(ico.GetComponent<RectTransform>(), 0.03f, 0.16f, 0.20f, 0.84f);
                 var iimg = ico.GetComponent<Image>();
                 iimg.sprite = icon;
                 iimg.preserveAspect = true;
                 iimg.raycastTarget = false;
+                var titleRt = btn.transform.Find("Title") as RectTransform;
+                if (titleRt != null)
+                    HubChrome.Place(titleRt, 0.22f, 0.10f, 0.96f, 0.90f);
             }
-
-            var line = string.IsNullOrEmpty(blurb) ? title : title + "\n" + blurb;
-            var t = FloatingPanel.Body(go.transform, line, ar ? 12 : 14);
-            FloatingPanel.Place(t.rectTransform, icon != null ? 0.22f : 0.06f, 0.08f, 0.96f, 0.92f);
-            t.alignment = TextAnchor.MiddleLeft;
-            t.color = selected ? DuelystUi.GoldHot : DuelystUi.TextCream;
-            t.horizontalOverflow = HorizontalWrapMode.Wrap;
-            t.verticalOverflow = VerticalWrapMode.Overflow;
-
-            var btn = go.GetComponent<Button>();
-            btn.targetGraphic = img;
-            if (onClick != null) btn.onClick.AddListener(() => onClick());
-            else btn.interactable = false;
         }
     }
 }

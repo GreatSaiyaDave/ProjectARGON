@@ -23,6 +23,8 @@ namespace WRLDZ.Duel
         AnyMonsterOnField,
         /// <summary>Magician of Faith — Spell in your GY.</summary>
         SpellInYourGy,
+        /// <summary>Dark Sage — Spell in your Deck.</summary>
+        SpellInYourDeck,
         /// <summary>Mask of Darkness — Trap in your GY.</summary>
         TrapInYourGy,
         /// <summary>Sangan — monster ≤1500 ATK in your Deck (search proxy instances).</summary>
@@ -76,6 +78,11 @@ namespace WRLDZ.Duel
         public string SendNamedCost;
         /// <summary>Generic ignition cost picker (tribute / banish GY / send).</summary>
         public bool AwaitingIgnitionCost;
+        /// <summary>
+        /// Resolution tribute (Ectoplasmer): send is by the resolving card's effect,
+        /// not a cost. Mass Driver-style cost tributes stay on AwaitingIgnitionCost.
+        /// </summary>
+        public bool AwaitingEffectTribute;
         /// <summary>Numeric remembered from the paid cost (tributed ATK, banished count).</summary>
         public int CostNumeric;
         /// <summary>How many more cost cards to pick.</summary>
@@ -90,6 +97,14 @@ namespace WRLDZ.Duel
         public readonly List<int> LpCostChoices = new();
         /// <summary>Time Wizard / Goddess: player calls Heads or Tails.</summary>
         public bool AwaitingCoinCall;
+        /// <summary>Magical Hats: pick the MMZ monster to hide.</summary>
+        public bool AwaitingHatsMonster;
+        /// <summary>Magical Hats: pick remaining Deck Spell/Traps.</summary>
+        public bool AwaitingHatsDeck;
+        /// <summary>Crush Card Virus: opponent picks up to 3 ATK≥1500 in Deck.</summary>
+        public bool AwaitingVirusDeck;
+        /// <summary>Dark Sage: pick the Sage in hand or Deck after Time Wizard right-call.</summary>
+        public bool AwaitingDarkSage;
         public CardInstance LockedTarget;
         /// <summary>Book of Life: first target already chosen; waiting for second.</summary>
         public bool AwaitingSecondTarget;
@@ -836,7 +851,16 @@ namespace WRLDZ.Duel
             if (!Rules.OfficialEffectRegistry.ProgramMayActivate(card.Def))
                 return false;
 
-            if (timing == ResponseTiming.ChainResponse && who.TryFindMonster(card, out _)) { var chainProg = TextEffects.CompiledEffectCache.GetOrCompile(card.Def); return chainProg != null && chainProg.FullyCompiled && chainProg.HasTiming(TextEffects.EffectTiming.ChainLinkActivated) && TextEffects.TextEffectRuntime.CanActivate(engine, who, card, false, chainProg, out _); }
+            if (timing == ResponseTiming.ChainResponse)
+            {
+                if (card.SetThisTurn && (card.Def.IsTrap || IsQuickPlay(card.Def)))
+                    return false;
+                var chainProg = TextEffects.CompiledEffectCache.GetOrCompile(card.Def);
+                return chainProg != null && chainProg.FullyCompiled &&
+                       chainProg.HasTiming(TextEffects.EffectTiming.ChainLinkActivated) &&
+                       TextEffects.TextEffectRuntime.CanActivate(engine, who, card, false, chainProg,
+                           out _);
+            }
             if (who.TryFindMonster(card, out _))
             {
                 if (!card.FaceUp || timing != ResponseTiming.DamageCalculation) return false;
@@ -1003,9 +1027,12 @@ namespace WRLDZ.Duel
             {
                 if (c == null) continue;
                 if (c.RequiresDiscardCost || c.RequiresSecondTarget ||
+                    c.RequiresTributeCount > 0 ||
                     c.PickLowestAtk || c.PickHighestAtk || c.PickHighestDef ||
                     c.ForceAttackPosition || c.TakeControlOfTarget ||
                     c.Action == EffectActionKind.EquipThisToTarget ||
+                    c.Action == EffectActionKind.MagicalHatsStyle ||
+                    c.Action == EffectActionKind.CrushCardVirusStyle ||
                     !string.IsNullOrEmpty(c.RaceFilter))
                     return true;
             }
@@ -1356,12 +1383,15 @@ namespace WRLDZ.Duel
                 pick = null;
                 foreach (var c in legal)
                 {
-                    if (c?.Def == null || !c.Def.IsMonster) continue;
+                    if (c?.Def == null) continue;
                     var prog = TextEffects.CompiledEffectCache.GetOrCompile(c.Def);
                     var clauses = prog?.ClausesFor(TextEffects.EffectTiming.ChainLinkActivated);
                     if (clauses == null || clauses.Count == 0) continue;
-                    if (clauses[0].RequiresDiscardCost &&
-                        (who.Hand == null || !who.Hand.Any(x => x != null)))
+                    var cl = clauses[0];
+                    if (cl.RequiresDiscardCost &&
+                        (who.Hand == null || !who.Hand.Any(x => x != null && x != c)))
+                        continue;
+                    if (cl.PayLpAmount > 0 && who.LifePoints < cl.PayLpAmount)
                         continue;
                     pick = c;
                     break;
@@ -1461,6 +1491,13 @@ namespace WRLDZ.Duel
         {
             var p = engine.PendingActivation;
             if (p == null) return false;
+
+            if (p.AwaitingVirusDeck || p.AwaitingDarkSage)
+            {
+                engine.ClearPendingActivation();
+                engine.NotifyPublic();
+                return true;
+            }
 
             if (p.UsesTextProgram && p.TargetPicksAreUpTo &&
                 p.ChosenTargets != null && p.ChosenTargets.Count > 0)

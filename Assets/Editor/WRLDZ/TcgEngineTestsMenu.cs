@@ -12,11 +12,22 @@ namespace WRLDZ.EditorTools
         /// <summary>Shared report (menu, batch, and Pipeline CLI). Never quits the Editor.</summary>
         public static string RunTestsReport()
         {
-            var report = TcgRegressionTests.RunAll() + "\n" + InteractionRegressionTests.RunAll() +
+            WRLDZ.Core.EditorWorkingDirectory.Pin();
+            string report;
+            try
+            {
+                report = TcgRegressionTests.RunAll() + "\n" + InteractionRegressionTests.RunAll() +
                          "\n" + CorpusTriggerStressTests.Run() +
                          "\n" + WRLDZ.Core.InventoryRegressionTests.RunAll() +
+                         "\n" + WRLDZ.Core.StoryCampaignTests.RunAll() +
                          "\n" + ArPlaymatLayout.RunSanityChecks() +
                          "\n" + WRLDZ.Presentation.ArPhysicalCardBuilder.RunFaceSwapSanity();
+            }
+            finally
+            {
+                WRLDZ.Core.EditorWorkingDirectory.Pin();
+            }
+
             Debug.Log("[WRLDZ TCG Tests]\n" + report);
             return report;
         }

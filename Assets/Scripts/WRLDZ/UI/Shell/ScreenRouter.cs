@@ -113,7 +113,7 @@ namespace WRLDZ.UI.Shell
 
         // ── Player vs AI (logical endpoint: StartArDuel → DuelSlice) ──
 
-        /// <summary>Open the Player vs AI create sheet (distance presets → START).</summary>
+        /// <summary>Open Player vs AI: opponent select, then surface-scan create.</summary>
         public void OpenPlayerVsAi()
         {
             Go(MenuId.ArDuelCreate);
@@ -194,6 +194,17 @@ namespace WRLDZ.UI.Shell
                         entrySource: AppSession.SceneMainMenu);
                     break;
                 case MenuId.ArDuelCreate:
+                    if (_shell != null)
+                        _shell.ShowOverlay(id);
+                    else
+                        OpponentSelectScreen.OpenOverlay(null, null, onPicked: _ =>
+                        {
+                            var go = GameObject.Find("OpponentSelectCanvas");
+                            if (go != null)
+                                UnityEngine.Object.Destroy(go);
+                            ArDuelCreateScreen.OpenOverlay(null, null);
+                        });
+                    break;
                 case MenuId.FormatSelect:
                     if (_shell != null)
                         _shell.ShowOverlay(id);

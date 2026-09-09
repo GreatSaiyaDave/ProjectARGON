@@ -33,6 +33,7 @@ namespace WRLDZ.UI.Shell
             MenuId.FormatSelect => "FORMATS",
             MenuId.FreeView => "FREE VIEW",
             MenuId.Tournament => "TOURNEY",
+            MenuId.Trade => "TRADE",
             _ => id.ToString().ToUpperInvariant()
         };
 
@@ -46,10 +47,11 @@ namespace WRLDZ.UI.Shell
             MenuId.Bazaar => "Tablets & packs",
             MenuId.StorySeason => "Story Zone",
             MenuId.AvatarProfile => "Avatar look",
-            MenuId.ArDuelCreate => "Field distance",
+            MenuId.ArDuelCreate => "Choose opponent",
             MenuId.ArDuelPvpCreate => "Scan distance",
             MenuId.FreeView => "Place cards · view models",
             MenuId.Tournament => "Host a room · start when enough join",
+            MenuId.Trade => "Move cards · transport",
             _ => ""
         };
 

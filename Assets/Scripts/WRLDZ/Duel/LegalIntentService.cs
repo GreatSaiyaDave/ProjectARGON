@@ -25,7 +25,8 @@ namespace WRLDZ.Duel
             Attack,
             DirectAttack,
             ResponseActivate,
-            EffectTarget
+            EffectTarget,
+            SpecialSummon
         }
 
         public sealed class Entry
@@ -160,6 +161,9 @@ namespace WRLDZ.Duel
                     if (engine.CanActivateSpellTrap(who, c, fromHand: true))
                         Add(snap, LegalKind.ActivateFromHand, c, DuelIntentKind.Activate, true,
                             "Activate", null);
+                    if (c.Def.IsMonster && engine.CanSpecialSummonProcedure(who, c))
+                        Add(snap, LegalKind.SpecialSummon, c, DuelIntentKind.SpecialSummon, true,
+                            "Special Summon", null);
                 }
             }
 

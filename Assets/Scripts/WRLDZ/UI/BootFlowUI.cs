@@ -35,6 +35,7 @@ namespace WRLDZ.UI
             Prologue,
             PickKuriboh,
             GiftSummary,
+            SpiritMagic,
             TutorialAsk,
             WorldLoad,
             Done
@@ -91,6 +92,7 @@ namespace WRLDZ.UI
                 case Step.Prologue: BuildPrologue(); break;
                 case Step.PickKuriboh: BuildPickKuriboh(); break;
                 case Step.GiftSummary: BuildGiftSummary(); break;
+                case Step.SpiritMagic: BuildSpiritMagic(); break;
                 case Step.TutorialAsk: BuildTutorialAsk(); break;
                 case Step.WorldLoad: _routine = StartCoroutine(WorldLoadRoutine()); break;
             }
@@ -182,6 +184,7 @@ namespace WRLDZ.UI
                 Step.Prologue => MenuAge.ScrollAges,
                 Step.PickKuriboh => MenuAge.NewKingdom,
                 Step.GiftSummary => MenuAge.NewKingdom,
+                Step.SpiritMagic => MenuAge.UmbraxRift,
                 Step.TutorialAsk => MenuAge.UmbraxRift,
                 Step.WorldLoad => MenuAge.IntermediateKingdom,
                 _ => MenuAge.PrimordialNight
@@ -352,6 +355,7 @@ namespace WRLDZ.UI
             var tag = FlowChrome.Label(plate, "Tag", "TOUCH TO BEGIN", 16, FlowChrome.Soft,
                 TextAnchor.MiddleCenter, false);
             FlowChrome.Place(tag.rectTransform, 0.1f, 0.06f, 0.9f, 0.18f);
+            WrldzBuild.Log();
 
             FullScreenTap(() =>
             {
@@ -899,18 +903,72 @@ namespace WRLDZ.UI
             FlowChrome.Place(navi, 0.32f, 0.72f, 0.68f, 0.98f);
             navi.GetComponent<Image>().preserveAspect = true;
             var body = FlowChrome.Label(box, "B",
-                "• Backpack (travel kit)\n" +
-                "• Home Card Box (1000 bulk storage)\n" +
-                "• Starter Binder (5 pages · 18 cards/page · max 20p/360)\n" +
-                "• Play Deck Box + Starter Deck\n" +
-                "• Spirit Dueler Disk\n" +
-                "• Mysterious Chest → your TOME\n" +
-                $"• {cards}/{cap} cards in your home box\n" +
-                $"• {digi} Digizeni\n\n" +
-                "Buy more boxes (100/500/1000) & binder pages later.\n" +
+                "The fortune teller (three Kuribohs fused) presses a grey card into your Artifact Deck Box — Original ERAZ, whole.\n\n" +
+                "• Backpack, Home Card Box (1000), Binder, Play Deck, Spirit Dueler, Tome\n" +
+                $"• {cards}/{cap} cards · {digi} Digizeni\n\n" +
+                "Every item is an Artifact card: SOUL shards (5 = +1 fracture), RELICS (Millennium energies), BADGES (ERAZ and profile). Set Energy only of eras you have a whole badge for. Five later-era shards + 2,500 SE fuse the next badge at the Bazaar.\n\n" +
                 "Tome pages unlock as you level (RAID only).",
-                14, FlowChrome.Soft, TextAnchor.UpperLeft, false);
+                13, FlowChrome.Soft, TextAnchor.UpperLeft, false);
             FlowChrome.Place(body.rectTransform, 0.06f, 0.14f, 0.94f, 0.70f);
+
+            var next = FlowChrome.Btn(box, "Next", "CONTINUE", new Color(0.15f, 0.45f, 0.35f, 1f), () =>
+            {
+                if (acc != null)
+                {
+                    ErazProgress.GrantTutorialBadge(acc);
+                    ProgressionService.Persist(acc);
+                }
+
+                FreeUiKit.PlayConfirm();
+                Go(Step.SpiritMagic);
+            });
+            FlowChrome.Place(next.GetComponent<RectTransform>(), 0.15f, 0.04f, 0.85f, 0.14f);
+        }
+
+        void BuildSpiritMagic()
+        {
+            Header("SPIRIT DUELER", "The color of your shadow magic");
+            FlowChrome.StepIndicator(_panelHost.transform, 5, 6);
+            var box = FlowChrome.PanelBox(_panelHost.transform, "Magic");
+            FlowChrome.Place(box, 0.06f, 0.22f, 0.94f, 0.78f);
+            var body = FlowChrome.Label(box, "B",
+                "The Spirit Dueler is aether — a hologram of shadow magic on your arm.\nPick the color it burns.",
+                15, FlowChrome.Soft, TextAnchor.UpperCenter, false);
+            FlowChrome.Place(body.rectTransform, 0.06f, 0.72f, 0.94f, 0.96f);
+
+            var acc = AppSession.Ensure().Account;
+            if (acc != null && acc.avatar == null)
+                acc.avatar = AvatarAppearance.Default();
+            var current = acc?.avatar?.accentHex ?? "#3ECFFF";
+
+            var presets = AvatarCatalog.AccentPresets;
+            for (var i = 0; i < presets.Length; i++)
+            {
+                var hex = presets[i];
+                var col = i % 3;
+                var row = i / 3;
+                var x0 = 0.08f + col * 0.30f;
+                var x1 = x0 + 0.26f;
+                var y1 = 0.66f - row * 0.22f;
+                var y0 = y1 - 0.18f;
+                var on = string.Equals(current, hex, StringComparison.OrdinalIgnoreCase);
+                var btn = FlowChrome.Btn(box, "C" + i, on ? "●" : "○",
+                    AvatarPortraitView.Parse(hex, Color.gray), () =>
+                    {
+                        var a = AppSession.Ensure().Account;
+                        if (a != null)
+                        {
+                            a.avatar ??= AvatarAppearance.Default();
+                            a.avatar.accentHex = hex;
+                            a.avatarColor = hex;
+                            ProgressionService.Persist(a);
+                        }
+
+                        FreeUiKit.PlaySelect();
+                        Go(Step.SpiritMagic);
+                    });
+                FlowChrome.Place(btn.GetComponent<RectTransform>(), x0, y0, x1, y1);
+            }
 
             var next = FlowChrome.Btn(box, "Next", "CONTINUE", new Color(0.15f, 0.45f, 0.35f, 1f), () =>
             {

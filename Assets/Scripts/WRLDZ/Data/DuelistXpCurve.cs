@@ -4,7 +4,7 @@ namespace WRLDZ.Data
 {
     /// <summary>
     /// Pokémon GO–paced duelist XP curve.
-    /// Early levels fly; mid game steadies; <b>level 50+ hard slowdown</b> (GO post-40/50 feel).
+    /// Levels 1–50 match GO 1–20 energy; <b>50+ is the mastery plateau</b> (curve + PVE −90% / PvP +100%).
     /// Values are XP needed to advance from <paramref name="level"/> → level+1
     /// (not cumulative totals). Tuned so early wins level you; late game takes many duels.
     /// </summary>
@@ -26,28 +26,24 @@ namespace WRLDZ.Data
             if (!storyModeComplete && level >= MaxLevel) return 0;
             if (storyModeComplete && level >= 200) return 0; // absolute ceiling for now
 
-            // Piecewise GO-inspired (scaled for duel rewards ~200–1500 XP per match early)
-            // ── 1–9: tutorial sprint (a few wins) ──
+            // Duelist 1–50 matches Pokémon GO 1–20 energy (~200k total).
+            // ── 1–10: tutorial sprint (a few wins) ──
             if (level < 10)
-                return 400 + level * 100; // 500 … 1300
+                return 400 + level * 80; // 480 … 1120
 
-            // ── 10–19: still fast ──
+            // ── 10–20: still GO-early ──
             if (level < 20)
-                return 1500 + (level - 10) * 250; // 1500 … 3750
+                return 1400 + (level - 10) * 120; // 1400 … 2480
 
-            // ── 20–29: casual mid ──
-            if (level < 30)
-                return 4000 + (level - 20) * 450; // 4000 … 8050
+            // ── 20–35: casual mid ──
+            if (level < 35)
+                return 2600 + (level - 20) * 180; // 2600 … 5120
 
-            // ── 30–39: committed ──
-            if (level < 40)
-                return 9000 + (level - 30) * 900; // 9000 … 17100
-
-            // ── 40–49: approaching the wall ──
+            // ── 35–50: approaching mastery ──
             if (level < SlowdownLevel)
-                return 18000 + (level - 40) * 1800; // 18000 … 34200
+                return 5500 + (level - 35) * 250; // 5500 … 9000
 
-            // ── 50–59: HARD SLOWDOWN (user request / GO L40–50 energy) ──
+            // ── 50–59: plateau wall (PVE XP also −90% in ProgressionService) ──
             if (level < 60)
                 return 50000 + (level - 50) * 8000; // 50k … 122k
 

@@ -43,6 +43,9 @@ namespace WRLDZ.Duel
         /// <summary>Coin toss / die rolls. Tests queue faces for determinism.</summary>
         public DuelRng Rng { get; } = new();
 
+        /// <summary>Optional table overlay (Duelist Kingdom: no directs, 2000 LP).</summary>
+        public DuelRulesOverlay Overlay { get; set; }
+
         /// <summary>Last rules snapshot for multiplayer sync.</summary>
         public RulesGameStateSnapshot LastRulesSnapshot { get; private set; }
 
@@ -104,6 +107,18 @@ namespace WRLDZ.Duel
 
         /// <summary>Spell/Trap waiting for a target choice (e.g. Monster Reborn).</summary>
         public PendingActivation PendingActivation { get; private set; }
+
+        /// <summary>
+        /// UI-chosen Monster Zone for the next Special Summon (−1 = first empty).
+        /// Cleared after the summon commits or the target window cancels.
+        /// </summary>
+        int _pendingSpecialSummonZone = -1;
+
+        /// <summary>
+        /// UI-chosen battle position for the next Special Summon. Null keeps the
+        /// caller’s position (Attack unless the card text locks Defense).
+        /// </summary>
+        BattlePosition? _pendingSpecialSummonPosition;
 
         /// <summary>
         /// End Phase trigger (Ectoplasmer tribute) paused the turn switch until the
@@ -242,6 +257,7 @@ namespace WRLDZ.Duel
             _nextInstanceId = 1;
             PendingTributes.Clear();
             PendingActivation = null;
+            ClearPendingSpecialSummonPlacement();
             _endTurnPausedFor = null;
             PendingResponse = null;
             _deferredBattle = null;
@@ -497,6 +513,9 @@ namespace WRLDZ.Duel
                 who.Deck.RemoveAt(0);
                 var inst = CreateInstance(id);
                 who.Hand.Add(inst);
+                TextEffects.TextEffectRuntime.ApplyCrushCardOnDraw(this, who, inst);
+                TextEffects.TextEffectRuntime.CheckHandWinConditions(this);
+                if (GameOver) return;
                 if (!silent)
                 {
                     if (who.IsPlayer)
@@ -769,6 +788,7 @@ namespace WRLDZ.Duel
             if (monster.AttackedThisTurn) return false;
             if (monster.ChangedPositionThisTurn) return false;
             if (BoundTrapLocksBattlePosition(monster)) return false;
+            if (FieldLocksBattlePosition(monster)) return false;
             return true;
         }
 
@@ -787,6 +807,36 @@ namespace WRLDZ.Duel
                 foreach (var c in prog.ClauseList)
                     if (c != null && c.AlsoCannotChangeBattlePosition)
                         return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Dragon Capture Jar family: a face-up S/T locks matching face-up monsters
+        /// from changing battle position.
+        /// </summary>
+        public bool FieldLocksBattlePosition(CardInstance monster)
+        {
+            if (monster == null || !monster.FaceUp) return false;
+            foreach (var who in new[] { Player, Opponent })
+            {
+                if (who == null) continue;
+                foreach (var st in who.SpellTrapsOnField())
+                {
+                    if (st == null || !st.FaceUp || st.IsNegated || st.Def == null) continue;
+                    var prog = TextEffects.CompiledEffectCache.GetOrCompile(st.Def);
+                    if (prog == null) continue;
+                    foreach (var c in prog.ClauseList)
+                    {
+                        if (c == null || !c.AlsoCannotChangeBattlePosition) continue;
+                        if (!string.IsNullOrEmpty(c.RaceFilter) &&
+                            (monster.Def?.race == null ||
+                             monster.Def.race.IndexOf(c.RaceFilter,
+                                 System.StringComparison.OrdinalIgnoreCase) < 0))
+                            continue;
+                        return true;
+                    }
+                }
             }
             return false;
         }
@@ -1005,11 +1055,28 @@ namespace WRLDZ.Duel
 
         public bool CancelEffectTargeting()
         {
+            ClearPendingSpecialSummonPlacement();
             var ok = SpellTrapEffects.CancelPending(this);
             // Flip target cancelled mid-Damage-Step — still finish battle destructions
             if (ok || PendingActivation == null)
                 TryCompleteDeferredBattleDestruction();
             return ok;
+        }
+
+        /// <summary>
+        /// Remember the column and ATK/DEF the player chose for a pending Special Summon.
+        /// Tests and AI leave these unset and keep first-empty Attack.
+        /// </summary>
+        public void SetPendingSpecialSummonPlacement(int zoneIndex, BattlePosition? position)
+        {
+            _pendingSpecialSummonZone = zoneIndex;
+            _pendingSpecialSummonPosition = position;
+        }
+
+        public void ClearPendingSpecialSummonPlacement()
+        {
+            _pendingSpecialSummonZone = -1;
+            _pendingSpecialSummonPosition = null;
         }
 
         public bool IsLegalEffectTarget(CardInstance card) =>
@@ -1485,13 +1552,41 @@ namespace WRLDZ.Duel
         public bool SpecialSummonToField(DuelistState who, CardInstance card, BattlePosition pos, bool faceUp) =>
             SpecialSummonToField(who, card, pos, faceUp, SummonKind.SpecialSummon);
 
+        public bool CanSpecialSummonProcedure(DuelistState who, CardInstance card)
+        {
+            var check = SummonProcedures.CheckSpecial(this, who, card, OfficialEffectRegistry.CocoonMothProc);
+            return check.Legal;
+        }
+
+        public bool TrySpecialSummonProcedure(DuelistState who, CardInstance card)
+        {
+            if (!CanSpecialSummonProcedure(who, card)) return false;
+            var need = OfficialEffectRegistry.CocoonTurnsNeeded(card.CardId);
+            var trib = OfficialEffectRegistry.FindCocoonMothTribute(who, need);
+            if (trib == null) return false;
+            SendCardToGrave(who, trib);
+            who.Hand.Remove(card);
+            var ok = SpecialSummonToField(who, card, BattlePosition.Attack, true);
+            if (ok)
+                Log($"{who.Name} Special Summons {card.Name} by Tributing Petit Moth (Cocoon turn {need}+).");
+            return ok;
+        }
+
         /// <summary>
         /// Special Summon with an explicit procedure kind. A printed hard-Nomi gate
         /// can only be opened by a procedure registered for this card and kind;
         /// compiled effect text never self-authorizes that exception.
         /// </summary>
         public bool SpecialSummonToField(DuelistState who, CardInstance card, BattlePosition pos,
-            bool faceUp, SummonKind summonKind)
+            bool faceUp, SummonKind summonKind) =>
+            SpecialSummonToField(who, card, pos, faceUp, summonKind, preferredZone: -1);
+
+        /// <summary>
+        /// Special Summon into a preferred Monster Zone. <paramref name="preferredZone"/>
+        /// &lt; 0 uses a UI-pending column, then first empty.
+        /// </summary>
+        public bool SpecialSummonToField(DuelistState who, CardInstance card, BattlePosition pos,
+            bool faceUp, SummonKind summonKind, int preferredZone)
         {
             if (who == null || card?.Def == null) return false;
             var officialText = OfficialCardAuthority.OfficialText(card);
@@ -1502,10 +1597,14 @@ namespace WRLDZ.Duel
                 !FieldSpellEffects.ControlsFaceUpNamed(who, summonGate))
                 return false;
 
-            var idx = FirstEmpty(who.MonsterZones);
+            var posToUse = _pendingSpecialSummonPosition ?? pos;
+            var idx = preferredZone >= 0 ? preferredZone : _pendingSpecialSummonZone;
+            ClearPendingSpecialSummonPlacement();
+            if (idx < 0 || idx >= who.MonsterZones.Length || !who.MonsterZones[idx].IsEmpty)
+                idx = FirstEmpty(who.MonsterZones);
             if (idx < 0) return false;
             card.FaceUp = faceUp;
-            card.Position = pos;
+            card.Position = posToUse;
             card.SummonedThisTurn = true;
             card.WasSpecialSummoned = true;
             card.WasTributeSummoned = false;
@@ -1528,6 +1627,7 @@ namespace WRLDZ.Duel
         public void ForceEndBattlePhase(DuelistState turnPlayer)
         {
             if (Phase != DuelPhase.Battle || TurnPlayer != turnPlayer) return;
+            TextEffects.TextEffectRuntime.DestroyMagicalHatDummies(this);
             Phase = DuelPhase.Main2;
             Log("[Main Phase 2] (Battle ended by card effect)");
         }
@@ -1574,6 +1674,7 @@ namespace WRLDZ.Duel
             if (Phase == DuelPhase.Battle)
             {
                 BattleStep = BattleStep.EndStep;
+                TextEffects.TextEffectRuntime.DestroyMagicalHatDummies(this);
                 BattleStep = BattleStep.None;
                 DamageSubStep = DamageSubStep.None;
             }
@@ -1701,6 +1802,7 @@ namespace WRLDZ.Duel
         /// </summary>
         public bool CanAttackDirectly(DuelistState who, CardInstance attacker)
         {
+            if (Overlay != null && Overlay.ForbidDirectAttacks) return false;
             if (!CanAttack(who, attacker)) return false;
             var opp = OpponentOf(who);
             if (opp == null) return false;
@@ -1771,6 +1873,12 @@ namespace WRLDZ.Duel
 
             if (targetOrNull == null)
             {
+                if (Overlay != null && Overlay.ForbidDirectAttacks)
+                {
+                    Log("Duelist Kingdom — no direct attacks.");
+                    return false;
+                }
+
                 if (HasMonsters(opp) && !GrantsDirectAttack(attacker) &&
                     !ContinuousProtections.AllOpponentMonstersAllowDirect(this, opp))
                 {
@@ -1898,6 +2006,7 @@ namespace WRLDZ.Duel
                         EnsureDeferredSpellTrapGrave(link.TargetLink);
                     }
 
+                    EnsureDeferredSpellTrapGrave(link);
                     continue;
                 }
 
@@ -2119,6 +2228,16 @@ namespace WRLDZ.Duel
                 !attacker.FaceUp || attacker.Position != BattlePosition.Attack)
             {
                 Log("Attack fizzled (attacker no longer legal).");
+                Notify();
+                return true;
+            }
+
+            if (targetOrNull != null && targetOrNull.MagicalHatDummy &&
+                opp.TryFindMonster(targetOrNull, out _))
+            {
+                Log($"{attacker.Name} attacks a Magical Hat — the hat is destroyed.");
+                SendCardToGrave(opp, targetOrNull);
+                attacker.NoteAttackResolved();
                 Notify();
                 return true;
             }
@@ -2688,7 +2807,18 @@ namespace WRLDZ.Duel
             if (prog == null || !prog.FullyCompiled) return false;
             var clauses = prog.ClausesFor(TextEffects.EffectTiming.ChainLinkActivated);
             if (clauses == null || clauses.Count == 0) return false;
-            if (clauses[0].RequiresDiscardCost)
+            var clause = clauses[0];
+            var speed = OfficialEffectRegistry.SpeedOf(card.Def);
+            var cls = OfficialEffectRegistry.ClassOfActivation(card.Def, false);
+            if (!Chain.CanAddLink(speed, cls)) return false;
+            if (clause.PayLpAmount > 0)
+            {
+                if (who.LifePoints < clause.PayLpAmount) return false;
+                who.LifePoints -= clause.PayLpAmount;
+                Log($"Cost: pay {clause.PayLpAmount} LP.");
+            }
+
+            if (clause.RequiresDiscardCost)
             {
                 CardInstance cost = null;
                 if (who.Hand != null)
@@ -2707,18 +2837,30 @@ namespace WRLDZ.Duel
                 Log($"Cost: discard {cost.Name}.");
                 GameEvents.Add(DuelGameEventKind.SentToGy, TurnNumber, who, cost, card);
             }
+
+            if (card.Def != null && (card.Def.IsTrap || card.Def.IsSpell))
+                SpellTrapEffects.PlaceFaceUpForActivation(this, who, card, fromHand: false);
+
             var target = PendingResponse.ChainTarget;
-            var link = Chain.AddLink(who, card, OfficialEffectRegistry.SpeedOf(card.Def),
-                OfficialEffectRegistry.ClassOfActivation(card.Def, false),
-                CardLocation.MonsterZone, false, false, "chain-response");
+            var from = card.Def != null && card.Def.IsMonster
+                ? CardLocation.MonsterZone
+                : CardLocation.SpellTrapZone;
+            var link = Chain.AddLink(who, card, speed, cls, from, false,
+                wasSet: from == CardLocation.SpellTrapZone, "chain-response");
             if (link == null) return false;
             link.TargetLink = target;
-            link.NegatesActivation = true;
-            link.DestroyNegatedCard = clauses[0].DestroyNegatedCard;
-            link.FlipSelfFaceUpDefense = clauses[0].FlipSelfFaceUpDefense;
+            link.NegatesActivation = clause.Action == TextEffects.EffectActionKind.NegateActivation;
+            link.DestroyNegatedCard = clause.DestroyNegatedCard;
+            link.FlipSelfFaceUpDefense = clause.FlipSelfFaceUpDefense;
             GameEvents.Add(DuelGameEventKind.Activated, TurnNumber, who, card, target?.Card);
             ClearPendingResponse();
-            return OpenChainResponseWindow(OpponentOf(who), true);
+            if (!OpenChainResponseWindow(OpponentOf(who), true))
+            {
+                Chain.StartResolution();
+                ResolveChainStack();
+            }
+
+            return true;
         }
         public bool OpenResponseWindow(
             DuelistState responder,
@@ -2808,6 +2950,11 @@ namespace WRLDZ.Duel
         void ApplyDamage(DuelistState target, int dmg)
         {
             if (dmg <= 0 || target == null) return;
+            if (target.NoDamageThroughTurnNumber > 0 && TurnNumber <= target.NoDamageThroughTurnNumber)
+            {
+                Log($"{target.Name} takes no damage (Crush Card Virus).");
+                return;
+            }
             target.LifePoints = Mathf.Max(0, target.LifePoints - dmg);
             var you = target.IsPlayer ? "You took" : $"{target.Name} took";
             Log($"{you} {dmg} damage ({target.LifePoints} LP remaining).");
@@ -2833,6 +2980,9 @@ namespace WRLDZ.Duel
             // May end from MP1, Battle, or MP2
             Phase = DuelPhase.End;
             Log($"[{who.Name}] End Phase");
+            if (who.CrushCardLingerEndsRemaining > 0)
+                who.CrushCardLingerEndsRemaining--;
+            TextEffects.TextEffectRuntime.TickCocoonCounters(this, who);
             TextEffects.TextEffectRuntime.FirePhaseTriggers(this, who, TextEffects.EffectTiming.EndPhase);
             if (GameOver) return;
             if (IsAwaitingEffectTarget)
@@ -3069,6 +3219,11 @@ namespace WRLDZ.Duel
         public void ApplyEffectDamage(DuelistState target, int dmg, string sourceName = null)
         {
             if (dmg <= 0 || target == null) return;
+            if (target.NoDamageThroughTurnNumber > 0 && TurnNumber <= target.NoDamageThroughTurnNumber)
+            {
+                Log($"{target.Name} takes no effect damage (Crush Card Virus).");
+                return;
+            }
             target.LifePoints = Mathf.Max(0, target.LifePoints - dmg);
             var src = string.IsNullOrEmpty(sourceName) ? "effect" : sourceName;
             var you = target.IsPlayer ? "You took" : $"{target.Name} took";
@@ -3091,6 +3246,9 @@ namespace WRLDZ.Duel
             ContinuousProtections.CannotBeTargetedByEffects(this, monster);
 
         static bool HasMonsters(DuelistState who) => who.MonsterCount > 0;
+
+        /// <summary>Exodia / named hand-win: public so text runtime can declare a winner.</summary>
+        public void EndGamePublic(DuelistState winner) => EndGame(winner);
 
         void EndGame(DuelistState winner)
         {

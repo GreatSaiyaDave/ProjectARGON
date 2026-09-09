@@ -99,7 +99,9 @@ After damage calc: banish battling monster + this (D.D. Warrior Lady / Assailant
 Tribute this → destroy target (Exiled Force) · Tribute N → inflict damage (Cannon Soldier / Amazoness Archer) ·  
 Summon-restriction-only Effect Monsters FullyCompiled structural (Harpie Lady Sisters / Wall Shadow).
 
-**PARK (UniqueException / optional ● / unique):** Penguin Soldier up-to-N · Big Shield Gardna · Amazoness Swords Woman · Kunai with Chain · Magical Arm Shield · Blast Sphere · Time Wizard · Metalmorph · Marauding Captain · Seven Tools · Magic Jammer · Spellbinding Circle · Crush Card · Magical Hats · Multiply · Book of Life.
+**PARK (UniqueException / optional ● / unique):** Amazoness Swords Woman · Kunai with Chain · Magical Arm Shield · Blast Sphere · Time Wizard (compiled UniqueException) · Metalmorph.
+
+**Implemented unique / chain-negate (this pass):** Seven Tools · Magic Jammer · Magical Hats · Multiply · Crush Card Virus · Cocoon of Evolution / Larvae / Great / Perfectly Ultimate Great Moth.
 
 AI may map additional cards **only** onto the same `EffectActionKind` / `EffectTiming` enums (no free-form invent).
 

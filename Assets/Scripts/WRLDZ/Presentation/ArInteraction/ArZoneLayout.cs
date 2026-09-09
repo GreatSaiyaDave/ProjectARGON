@@ -135,6 +135,12 @@ namespace WRLDZ.Presentation.ArInteraction
         /// </summary>
         public static Quaternion SpellTrapInSlotRot => Quaternion.Euler(-100f, 0f, 0f);
 
+        /// <summary>
+        /// Face-up S/T in the slot — 180° yaw so the name lip faces the controller,
+        /// not the card bottom / text box.
+        /// </summary>
+        public static Quaternion FaceUpSpellTrapInSlotRot => Quaternion.Euler(-100f, 180f, 0f);
+
         /// <summary>Face-down set S/T — same indent seat.</summary>
         public static Quaternion FaceDownSetSpellTrapRot => SpellTrapInSlotRot;
 
@@ -153,7 +159,7 @@ namespace WRLDZ.Presentation.ArInteraction
             {
                 return orient == ArZoneOrientation.FaceDownSet
                     ? FaceDownSetSpellTrapRot
-                    : SpellTrapInSlotRot;
+                    : FaceUpSpellTrapInSlotRot;
             }
 
             if (kind == ArDuelZoneKind.FieldSpell)

@@ -446,6 +446,17 @@ namespace WRLDZ.Presentation.ArInteraction
                 _oppGlance.PlayerDisk = PlayerDisk;
                 _oppGlance.ArenaRoot = ArenaRoot;
                 _oppGlance.Sync(engine.Opponent, db);
+                var you = engine.Player;
+                var opp = engine.Opponent;
+                _oppGlance.SyncChrome(
+                    you?.Name, you != null ? you.LifePoints : 0,
+                    opp?.Name, opp != null ? opp.LifePoints : 0,
+                    engine.Phase,
+                    engine.TurnPlayer != null && engine.TurnPlayer.IsPlayer,
+                    engine.TurnNumber,
+                    you != null ? you.DeckCount : 0,
+                    you?.Graveyard != null ? you.Graveyard.Count : 0,
+                    you?.ExtraDeck != null ? you.ExtraDeck.Count : 0);
             }
 
             // Presentation stub: Sync player Banished count only — Dilbot may dual-side later.
@@ -523,6 +534,8 @@ namespace WRLDZ.Presentation.ArInteraction
                 var c = who.SpellTrapZones[i].Occupant;
                 // Always show face-down sets AND face-up S/T (never skip FaceUp=false)
                 if (c == null) continue;
+                // Equips attach to the host monster — do not leave a second ST holo.
+                if (c.EquippedTo != null) continue;
                 _liveScratch.Add(i);
                 var localPos = SpellTrapLocal(i, playerSide);
 

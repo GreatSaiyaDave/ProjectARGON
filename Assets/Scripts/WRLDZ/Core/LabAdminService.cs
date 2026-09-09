@@ -85,6 +85,9 @@ namespace WRLDZ.Core
             p.onboardingTutorialDuelDone = true;
             p.onboardingComplete = true;
             ErazProgress.GrantTutorialBadge(acc);
+            var bands = ErazFormat.BandIdsInOrder();
+            for (var i = 0; i < bands.Count; i++)
+                ErazProgress.GrantBadge(acc, bands[i]);
             if (p.kuribohTeam == 0)
                 p.kuribohTeam = (int)KuribohTeam.Kuribandit;
 

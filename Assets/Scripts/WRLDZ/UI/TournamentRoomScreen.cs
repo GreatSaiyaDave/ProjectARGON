@@ -38,19 +38,22 @@ namespace WRLDZ.UI
             _status.alignment = TextAnchor.MiddleLeft;
             _status.color = DuelystUi.Cyan;
 
-            var hostBtn = FloatingPanel.PrimaryButton(body, "HOST 4", () => Host(4), gold: true);
+            var hostBtn = HubChrome.Capsule(body, "HOST 4", () => Host(4), MenuCommandButton.Kind.Gold,
+                centerTitle: true, titleSize: 16);
             FloatingPanel.Place(hostBtn.GetComponent<RectTransform>(), 0.02f, 0.90f, 0.32f, 0.99f);
-            var host8 = FloatingPanel.PrimaryButton(body, "HOST 8", () => Host(8));
+            var host8 = HubChrome.Capsule(body, "HOST 8", () => Host(8), MenuCommandButton.Kind.Primary,
+                centerTitle: true, titleSize: 16);
             FloatingPanel.Place(host8.GetComponent<RectTransform>(), 0.34f, 0.90f, 0.64f, 0.99f);
-            var fill = FloatingPanel.PrimaryButton(body, "FILL AI", FillAi);
+            var fill = HubChrome.Capsule(body, "FILL AI", FillAi, MenuCommandButton.Kind.Primary,
+                centerTitle: true, titleSize: 16);
             FloatingPanel.Place(fill.GetComponent<RectTransform>(), 0.66f, 0.90f, 0.98f, 0.99f);
 
             var scroll = new GameObject("List", typeof(RectTransform), typeof(Image), typeof(ScrollRect));
             scroll.transform.SetParent(body, false);
             FloatingPanel.Place(scroll.GetComponent<RectTransform>(), 0.01f, 0.11f, 0.99f, 0.88f);
             var bg = scroll.GetComponent<Image>();
-            bg.sprite = UiFoundation.WhiteSprite();
-            bg.color = new Color(0.03f, 0.05f, 0.09f, 0.55f);
+            bg.raycastTarget = true;
+            HubChrome.PaintWell(bg);
 
             var viewport = new GameObject("Viewport", typeof(RectTransform), typeof(RectMask2D), typeof(Image));
             viewport.transform.SetParent(scroll.transform, false);
@@ -190,33 +193,16 @@ namespace WRLDZ.UI
             return string.Join("  ·  ", parts);
         }
 
-        void Row(string text, Action onClick)
-        {
-            var go = new GameObject("Row", typeof(RectTransform), typeof(Image), typeof(Button),
-                typeof(LayoutElement));
-            go.transform.SetParent(_list, false);
-            go.GetComponent<LayoutElement>().minHeight = 72;
-            var img = go.GetComponent<Image>();
-            img.sprite = UiFoundation.WhiteSprite();
-            img.color = new Color(0.05f, 0.08f, 0.14f, 0.9f);
-            var t = FloatingPanel.Body(go.transform, text, 13);
-            FloatingPanel.Place(t.rectTransform, 0.04f, 0.08f, 0.96f, 0.92f);
-            t.alignment = TextAnchor.MiddleLeft;
-            t.color = DuelystUi.TextCream;
-            t.horizontalOverflow = HorizontalWrapMode.Wrap;
-            var btn = go.GetComponent<Button>();
-            if (onClick != null)
-                btn.onClick.AddListener(() => onClick());
-            else
-                btn.interactable = false;
-        }
+        void Row(string text, Action onClick) => HubChrome.ListRow(_list, text, onClick);
 
         void ActionRow(string label, Action onClick, bool gold = false)
         {
-            var btn = FloatingPanel.PrimaryButton(_list, label, onClick, gold: gold);
+            var btn = HubChrome.Capsule(_list, label, onClick,
+                gold ? MenuCommandButton.Kind.Gold : MenuCommandButton.Kind.Primary,
+                centerTitle: true, titleSize: 16);
             var le = btn.GetComponent<LayoutElement>() ?? btn.gameObject.AddComponent<LayoutElement>();
-            le.minHeight = 52;
-            le.preferredHeight = 52;
+            le.minHeight = 56f;
+            le.preferredHeight = 56f;
         }
     }
 }

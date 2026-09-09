@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using WRLDZ.Core;
 using WRLDZ.Data;
+using WRLDZ.Duel.Rules;
 using WRLDZ.Presentation;
 
 namespace WRLDZ.UI.Shell
@@ -89,31 +90,102 @@ namespace WRLDZ.UI.Shell
         public static RectTransform BuildStory(Transform modalHost, Action onClose, UiPresentation? force = null)
         {
             var frame = DualMenuPresenter.BuildFrame(
-                modalHost, "STORY ZONE", "Era missions on the map", onClose, force);
+                modalHost, "STORY", "Season 1 · Duelist Kingdom", onClose, force);
             var (list, status) = ListHost(frame.BodyHost);
-            var acc = AppSession.Ensure().Account;
-            acc?.EnsureProgress();
-            var p = acc?.progress;
-            var lvl = p?.level ?? 1;
-            SetOrbService.Ensure(p);
-            var next = SetOrbService.NextLockedSet(p);
-            var orbLine = string.IsNullOrEmpty(next)
-                ? "all L50 sets unlocked"
-                : $"{next} {SetOrbService.OrbCount(p, next)}/{SetOrbService.OrbsPerUnlock}";
-            status.text = $"Lv{lvl} · sets {p?.unlockedSetsCsv} · {orbLine}";
 
-            Head(list, "SET ORBS");
-            Row(list, "Starter unlocked: LOB · MRD · SRL", null);
-            Row(list,
-                "Orbs drop from Tear harvests, street NPC wins, and PvP wins through L50. " +
-                $"{SetOrbService.OrbsPerUnlock} orbs unlock the next set.", null);
-            if (!string.IsNullOrEmpty(next))
-                Row(list, $"Next set  {next}  ·  {SetOrbService.OrbCount(p, next)}/{SetOrbService.OrbsPerUnlock}", null);
-            else
-                Row(list, "Later sets follow story / era cadence after L50.", null);
+            void Refresh()
+            {
+                FloatingPanel.DestroyChildrenNow(list);
+                var acc = AppSession.Ensure().Account;
+                acc?.EnsureProgress();
+                acc?.EnsureInventory();
+                var p = acc?.progress;
+                StoryCampaignService.Ensure(p);
+                var catalog = StoryCampaignService.Load();
+                var current = StoryCampaignService.Current(p);
+                status.text = current != null
+                    ? $"Lv{p?.level ?? 1} · next {current.opponentName}"
+                    : $"Lv{p?.level ?? 1} · Season 1 complete";
 
-            Head(list, "STORY ZONE");
-            Chapter(list, "Story Zone", "Open", true, "Walk a Story Zone pin for the era mission.");
+                Head(list, "REFEROBOT DAILIES");
+                var quests = QuestService.Ensure(p);
+                if (quests?.slots != null)
+                {
+                    for (var i = 0; i < quests.slots.Length; i++)
+                    {
+                        var slot = quests.slots[i];
+                        if (slot == null) continue;
+                        var done = slot.progress >= slot.goal;
+                        var label = slot.title + "  ·  " + slot.progress + "/" + slot.goal
+                                    + (slot.claimed ? "  ·  claimed" : done ? "  ·  tap to claim" : "");
+                        var id = slot.id;
+                        Row(list, label, slot.claimed || !done
+                            ? null
+                            : () =>
+                            {
+                                if (QuestService.TryClaim(p, acc?.inventory, id, out var err))
+                                {
+                                    FreeUiKit.PlayConfirm();
+                                    ProgressionService.Persist(acc);
+                                    Refresh();
+                                }
+                                else
+                                {
+                                    FreeUiKit.PlayClick();
+                                    status.text = err ?? "Claim failed";
+                                }
+                            });
+                    }
+                }
+
+                var gates = StoryCampaignService.Gates();
+                for (var g = 0; g < gates.Count; g++)
+                {
+                    var gate = gates[g];
+                    if (gate == null) continue;
+                    Head(list, gate.title.ToUpperInvariant());
+                    var ids = StoryCampaignService.StageIdsForGate(gate);
+                    for (var s = 0; s < ids.Length; s++)
+                    {
+                        var stage = StoryCampaignService.Stage(ids[s]);
+                        if (stage == null) continue;
+                        var cleared = StoryCampaignService.IsCleared(p, stage.id);
+                        var locked = StoryCampaignService.IsLocked(p, stage.id);
+                        var pip = string.IsNullOrEmpty(stage.erazBandId)
+                            ? catalog.erazBandId
+                            : stage.erazBandId;
+                        string mark;
+                        if (cleared) mark = "CLEARED";
+                        else if (locked) mark = "LOCKED";
+                        else mark = "OPEN";
+                        var line = stage.opponentName + "  ·  " + stage.startingLp + " LP  ·  " + pip
+                                   + "  ·  " + mark;
+                        if (!cleared && !locked)
+                            line += "\n" + stage.blurb;
+                        var playable = !locked;
+                        var stageId = stage.id;
+                        Row(list, line, playable
+                            ? () =>
+                            {
+                                var st = StoryCampaignService.Stage(stageId);
+                                if (st == null || !StoryCampaignService.CanPlay(p, st.id))
+                                {
+                                    FreeUiKit.PlayClick();
+                                    return;
+                                }
+
+                                FreeUiKit.PlayConfirm();
+                                var cfg = MapZoneService.MakeStoryEra(st, st.id, digital: true);
+                                cfg.PreferDigital = true;
+                                onClose?.Invoke();
+                                AppSession.Ensure().StartArDuel(cfg);
+                            }
+                            : null);
+                    }
+                }
+            }
+
+            Refresh();
             return frame.Root;
         }
 
@@ -163,7 +235,16 @@ namespace WRLDZ.UI.Shell
                     a => InventoryShopService.TryBuyBinder(a, out var e) ? null : e, Refresh, status);
 
                 Head(list, "TABLETS");
-                Row(list, "Walk a bazaar pin on the map to offer Set Energy.", null);
+                Row(list, "1,000 SE of a set → 10 cards of that set. Unlocked ERAZ only.", null);
+                FillTablets(list, acc, Refresh, status);
+
+                Head(list, "ERAZ BADGE FUSION");
+                Row(list, "5 shards + 2,500 SE of an unlocked era fuse the next badge.", null);
+                FillErazMerge(list, acc, Refresh, status);
+
+                Head(list, "FORMAT BADGE FUSION");
+                Row(list, "Same fuse. Unlocks the format row. Table laws stay off until that format is finalized.", null);
+                FillFormatMerge(list, acc, Refresh, status);
             }
 
             Refresh();
@@ -301,6 +382,114 @@ namespace WRLDZ.UI.Shell
             return frame.Root;
         }
 
+        static void FillTablets(Transform list, LocalAccountStore.Account acc, Action refresh, Text status)
+        {
+            var p = acc?.progress;
+            var inv = acc?.inventory;
+            var codes = new[] { "LOB", "MRD", "SRL" };
+            for (var i = 0; i < codes.Length; i++)
+            {
+                var set = codes[i];
+                var have = ArtifactService.SetEnergyOf(inv, set);
+                var legal = ArtifactService.CanEarnSetEnergy(p, set);
+                var label = legal
+                    ? $"{set}  ·  {have} SE  ·  tap to offer {StoneTabletService.PackCost}"
+                    : $"{set}  ·  locked (need ERAZ badge)";
+                var setId = set;
+                Row(list, label, !legal
+                    ? null
+                    : () =>
+                    {
+                        var a = AppSession.Ensure().Account;
+                        a?.EnsureProgress();
+                        a?.EnsureInventory();
+                        if (StoneTabletService.TryOpen(a?.progress, a?.inventory, setId, out _, out var err))
+                        {
+                            FreeUiKit.PlayConfirm();
+                            ProgressionService.Persist(a);
+                            refresh?.Invoke();
+                        }
+                        else
+                        {
+                            FreeUiKit.PlayClick();
+                            status.text = err ?? "Tablet refused";
+                        }
+                    });
+            }
+        }
+
+        static void FillErazMerge(Transform list, LocalAccountStore.Account acc, Action refresh, Text status)
+        {
+            var p = acc?.progress;
+            var inv = acc?.inventory;
+            var next = ErazProgress.NextPieceBand(p);
+            if (string.IsNullOrEmpty(next) || string.Equals(next, ErazFormat.Original, StringComparison.OrdinalIgnoreCase))
+            {
+                Row(list, "Original badge is whole. Clear Season 1 for GX shards.", null);
+                return;
+            }
+
+            var have = ErazMergeService.PieceCount(inv, next);
+            var se = ArtifactService.SetEnergyTotal(inv);
+            var label = $"{next.ToUpperInvariant()}  ·  shards {have}/{ErazMergeService.PiecesRequired}  ·  SE {se}/{ErazMergeService.SetEnergyCost}  ·  tap to fuse";
+            Row(list, label, () =>
+            {
+                var a = AppSession.Ensure().Account;
+                a?.EnsureProgress();
+                a?.EnsureInventory();
+                if (ErazMergeService.TryMerge(a?.progress, a?.inventory, next, out var err))
+                {
+                    FreeUiKit.PlayConfirm();
+                    ProgressionService.Persist(a);
+                    refresh?.Invoke();
+                }
+                else
+                {
+                    FreeUiKit.PlayClick();
+                    status.text = err ?? "Fuse failed";
+                }
+            });
+        }
+
+        static void FillFormatMerge(Transform list, LocalAccountStore.Account acc, Action refresh, Text status)
+        {
+            var p = acc?.progress;
+            var inv = acc?.inventory;
+            for (var i = 0; i < FormatProgress.Ids.Length; i++)
+            {
+                var id = FormatProgress.Ids[i];
+                var title = FormatProgress.Titles[i];
+                if (FormatProgress.HasBadge(p, id))
+                {
+                    Row(list, title + "  ·  whole", null);
+                    continue;
+                }
+
+                var have = FormatMergeService.PieceCount(inv, id);
+                var se = ArtifactService.SetEnergyTotal(inv);
+                var fid = id;
+                Row(list,
+                    $"{title}  ·  shards {have}/{FormatMergeService.PiecesRequired}  ·  SE {se}/{FormatMergeService.SetEnergyCost}  ·  tap to fuse",
+                    () =>
+                    {
+                        var a = AppSession.Ensure().Account;
+                        a?.EnsureProgress();
+                        a?.EnsureInventory();
+                        if (FormatMergeService.TryMerge(a?.progress, a?.inventory, fid, out var err))
+                        {
+                            FreeUiKit.PlayConfirm();
+                            ProgressionService.Persist(a);
+                            refresh?.Invoke();
+                        }
+                        else
+                        {
+                            FreeUiKit.PlayClick();
+                            status.text = err ?? "Fuse failed";
+                        }
+                    });
+            }
+        }
+
         static string PageLabel(CardDatabase db, int id)
         {
             var def = db?.Get(id);
@@ -336,38 +525,10 @@ namespace WRLDZ.UI.Shell
             if (t != null && !open) t.color = DuelystUi.TextMuted;
         }
 
-        static void Head(Transform host, string text)
-        {
-            var go = new GameObject("H", typeof(RectTransform), typeof(LayoutElement));
-            go.transform.SetParent(host, false);
-            go.GetComponent<LayoutElement>().minHeight = 28;
-            var t = FloatingPanel.Body(go.transform, text, 13);
-            FloatingPanel.Place(t.rectTransform, 0.02f, 0.1f, 0.98f, 0.9f);
-            t.color = DuelystUi.GoldHot;
-            t.alignment = TextAnchor.MiddleLeft;
-        }
+        static void Head(Transform host, string text) => HubChrome.ListHead(host, text);
 
-        static void Row(Transform host, string text, Action onClick)
-        {
-            var go = new GameObject("Row", typeof(RectTransform), typeof(Image), typeof(Button),
-                typeof(LayoutElement));
-            go.transform.SetParent(host, false);
-            go.GetComponent<LayoutElement>().minHeight = text != null && text.IndexOf('\n') >= 0 ? 68 : 48;
-            var img = go.GetComponent<Image>();
-            img.sprite = UiFoundation.WhiteSprite();
-            img.color = new Color(0.05f, 0.08f, 0.14f, 0.9f);
-            var t = FloatingPanel.Body(go.transform, text, 13);
-            FloatingPanel.Place(t.rectTransform, 0.04f, 0.08f, 0.96f, 0.92f);
-            t.alignment = TextAnchor.MiddleLeft;
-            t.color = DuelystUi.TextCream;
-            t.horizontalOverflow = HorizontalWrapMode.Wrap;
-            t.verticalOverflow = VerticalWrapMode.Truncate;
-            var btn = go.GetComponent<Button>();
-            if (onClick != null)
-                btn.onClick.AddListener(() => onClick());
-            else
-                btn.interactable = false;
-        }
+        static void Row(Transform host, string text, Action onClick) =>
+            HubChrome.ListRow(host, text, onClick);
 
         static (Transform list, Text status) ListHost(Transform body)
         {
@@ -380,8 +541,8 @@ namespace WRLDZ.UI.Shell
             scroll.transform.SetParent(body, false);
             FloatingPanel.Place(scroll.GetComponent<RectTransform>(), 0.01f, 0.12f, 0.99f, 0.99f);
             var bg = scroll.GetComponent<Image>();
-            bg.sprite = UiFoundation.WhiteSprite();
-            bg.color = new Color(0.03f, 0.05f, 0.09f, 0.55f);
+            bg.raycastTarget = true;
+            HubChrome.PaintWell(bg);
 
             var viewport = new GameObject("Viewport", typeof(RectTransform), typeof(RectMask2D), typeof(Image));
             viewport.transform.SetParent(scroll.transform, false);

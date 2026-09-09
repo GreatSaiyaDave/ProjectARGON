@@ -6,6 +6,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using WRLDZ.Core;
 using WRLDZ.Data;
+using WRLDZ.Duel;
 using WRLDZ.Presentation;
 using WRLDZ.Presentation.ArInteraction;
 using WRLDZ.UI;
@@ -231,11 +232,36 @@ namespace WRLDZ.EditorTools
                     throw new Exception("artifact frame still visible after X");
             });
             Check("Settings", () => SettingsScreen.Build(host, overlay, () => { }));
-            Check("FormatSelect", () => FormatSelectScreen.Build(host, () => { }));
+            Check("FormatSelect", () =>
+            {
+                FormatSelectScreen.Build(host, () => { });
+                RequireLabel(host, "CHOOSE OPPONENT");
+                RequireLabel(host, "DUELIST KINGDOM");
+            });
+            Check("Opponent sheet", () =>
+            {
+                OpponentSelectScreen.Build(host, () => { }, labTest: true);
+                RequireLabel(host, "SETO KAIBA");
+                RequireLabel(host, "YUGI MUTOU");
+                RequireLabel(host, "OPPONENTS");
+            });
+            Check("VS AI overlay opens opponent select", () =>
+            {
+                if (overlay == null)
+                    throw new Exception("overlay host unavailable");
+                overlay.ShowOverlay(MenuId.ArDuelCreate);
+                RequireLabel(overlay.ModalHost, "OPPONENTS");
+                RequireLabel(overlay.ModalHost, "SETO KAIBA");
+            });
             Check("ArDuelCreate", () => ArDuelCreateScreen.Build(host, () => { }));
             Check("PvPCreate", () => PlayerVsPlayerCreateScreen.Build(host, () => { }));
             Check("Tome sheet", () => SystemsSheets.BuildTome(host, () => { }));
-            Check("Story sheet", () => SystemsSheets.BuildStory(host, () => { }));
+            Check("Story sheet", () =>
+            {
+                SystemsSheets.BuildStory(host, () => { });
+                RequireLabel(host, "DUELIST KINGDOM");
+                RequireLabel(host, "WEEVIL");
+            });
             Check("Bazaar sheet", () => SystemsSheets.BuildBazaar(host, () => { }));
             Check("Trade sheet", () => SystemsSheets.BuildTrade(host, () => { }));
             Check("Tournament rooms", () => TournamentRoomScreen.Build(host, () => { }));
@@ -315,9 +341,13 @@ namespace WRLDZ.EditorTools
                 var hud = DuelFloatingHud.Create(canvas);
                 if (hud.DeckCount == null || hud.PhaseLabel == null || hud.StatusLine == null)
                     throw new Exception("floating hud missing score/phase/status");
+                if (hud.YouLp == null || hud.OppLp == null)
+                    throw new Exception("floating hud missing YOU/OPP LP orbs");
                 if (hud.ActionWindow == null || hud.ContextWindow == null)
                     throw new Exception("floating hud missing action/context islands");
                 hud.SetLifePoints(8000, 7500);
+                if (hud.YouLp.text != "8000" || hud.OppLp.text != "7500")
+                    throw new Exception("LP orbs did not take SetLifePoints");
                 hud.SetStatus("Your Main Phase 1 — you may Normal Summon");
                 hud.SetActionsVisible(true);
                 hud.SetContextVisible(false);
@@ -331,6 +361,7 @@ namespace WRLDZ.EditorTools
                 var hud = DuelFloatingHud.Create(canvas);
                 AssertGlanceIsland(hud.Root.Find("YouScore"), "YouScore", maxW: 0.32f, maxH: 0.10f);
                 AssertGlanceIsland(hud.Root.Find("Phase"), "Phase", maxW: 0.36f, maxH: 0.10f);
+                AssertGlanceIsland(hud.Root.Find("OppScore"), "OppScore", maxW: 0.32f, maxH: 0.10f);
                 AssertGlanceIsland(hud.Root.Find("Status"), "Status", maxW: 0.36f, maxH: 0.06f);
                 if (hud.PillMp1 != null && hud.PillMp1.color.a > 0.45f)
                     throw new Exception("phase pip too opaque a=" + hud.PillMp1.color.a.ToString("0.00"));
@@ -383,6 +414,9 @@ namespace WRLDZ.EditorTools
                 var youFrame = hud.Root.Find("YouScore")?.Find("Frame")?.GetComponent<Image>();
                 if (youFrame == null || !IsFilamentSprite(youFrame.sprite))
                     throw new Exception("YouScore is not the filament island sprite");
+                var oppFrame = hud.Root.Find("OppScore")?.Find("Frame")?.GetComponent<Image>();
+                if (oppFrame == null || !IsFilamentSprite(oppFrame.sprite))
+                    throw new Exception("OppScore is not the filament island sprite");
             });
             Check("ArFieldSpellFloor is left/right wrap walls, not a street carpet", () =>
             {
@@ -430,10 +464,15 @@ namespace WRLDZ.EditorTools
                 if (g == null || g.Root == null)
                     throw new Exception("opp field glance missing root");
                 g.Sync(null, null);
+                g.SyncChrome("YOU", 8000, "OPP", 8000, DuelPhase.Main1, true, 1, 35, 0, 0);
                 if (g.SlotCount < 11)
                     throw new Exception("opp field glance needs M5+ST5+Field slots");
                 if (ArOppFieldGlance.WorldWidth < 0.45f)
                     throw new Exception("opp mini-playmat too small " + ArOppFieldGlance.WorldWidth);
+                var plate = g.transform.Find("Plate");
+                if (plate == null || plate.Find("YouScore") == null || plate.Find("Phase") == null
+                    || plate.Find("OppScore") == null)
+                    throw new Exception("opp glance missing YOU/phase/OPP LCD islands");
                 UnityEngine.Object.DestroyImmediate(host.gameObject);
             });
             Check("opponent disk mirrors player kit (LP, deck, GY; no phase CTAs)", () =>

@@ -43,6 +43,41 @@ namespace WRLDZ.Duel.TextEffects
             @"(?: to your opponent's field)?(?: in (Attack|Defense) Position)?\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        static readonly Regex RxMagicalHats = new(
+            @"During your opponent's Battle Phase:\s*Choose 2 Spell/?Trap Cards from your Deck and 1 monster in your Main Monster Zone\.\s*" +
+            @"Special Summon them as Normal Monsters \(ATK 0/DEF 0\) in face-down Defense Position.*",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.Singleline);
+
+        static readonly Regex RxMagicalHatsAnime = new(
+            @"During your opponent's Battle Phase:\s*Hide 1 monster you control among (\d+) Magical Hat Tokens.*",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.Singleline);
+
+        static readonly Regex RxCrushCardVirus = new(
+            @"Tribute 1 DARK monster with (\d+) or less ATK;\s*your opponent takes no damage until the end of the next turn.*destroy the monsters among them with (\d+) or more ATK.*",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.Singleline);
+
+        static readonly Regex RxCrushCardVirusLinger = new(
+            @"Tribute 1 DARK monster with (\d+) or less ATK\.\s*Check all monsters your opponent controls, your opponent's hand, and all cards they draw \(until the end of your opponent's (\d+)(?:st|nd|rd|th) turn after this card's activation\), and destroy all monsters with (\d+) or more ATK\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.Singleline);
+
+        static readonly Regex RxDeckDevastationVirus = new(
+            @"Tribute 1 DARK monster with (\d+) or more ATK;\s*look at your opponent's hand, all monsters they control, and all cards they draw until the end of their (\d+)(?:st|nd|rd|th) turn after this card's activation, and destroy all those monsters with (\d+) or less ATK\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.Singleline);
+
+        static readonly Regex RxDarkSage = new(
+            @"Must first be Special Summoned \(from your hand or Deck\) by Tributing 1 ""Dark Magician"" immediately after applying the effect of ""Time Wizard"" in which you called the coin toss right\.\s*" +
+            @"When Special Summoned this way:\s*Add 1 Spell Card from your Deck to your hand\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxCocoonHandEquip = new(
+            @"You can target 1 ""([^""]+)"" you control;\s*equip this card from your hand to that target\.\s*" +
+            @"While equipped by this effect, the original ATK/DEF of that ""[^""]+"" becomes the ATK/DEF of ""([^""]+)""",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxTokenSsAsMany = new(
+            @"special summon as many ""([^""]+?) Tokens?"" \(([^)/]+)/(\w+)/Level (\d+)/ATK (\d+)/DEF (\d+)\) as possible(?:, in (Attack|Defense) Position)?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         static readonly Regex RxCyberStein = new(
             @"(?:You can )?pay (\d+) LP;\s*special summon 1 fusion monster from your extra deck" +
             @"(?: in Attack Position)?\.?",
@@ -125,6 +160,98 @@ namespace WRLDZ.Duel.TextEffects
                 }
                 : null);
 
+            Add(RxMagicalHats.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.MagicalHatsStyle,
+                OpponentTurnOnly = true,
+                RequiresBattlePhase = true,
+                MakesChainLink = true
+            });
+            var hatsAnime = RxMagicalHatsAnime.Match(text);
+            Add(hatsAnime, hatsAnime.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.MagicalHatsStyle,
+                    OpponentTurnOnly = true,
+                    RequiresBattlePhase = true,
+                    HatsAreTokens = true,
+                    HatTokenCount = Parse(hatsAnime, 1, 4),
+                    MakesChainLink = true
+                }
+                : null);
+            var crushModern = RxCrushCardVirus.Match(text);
+            Add(crushModern, crushModern.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.CrushCardVirusStyle,
+                    RequiresTributeCount = 1,
+                    TributeFaceUpOnly = true,
+                    AttributeFilter = "DARK",
+                    RequiresAtkLeqCost = true,
+                    Amount = Parse(crushModern, 1, 1000),
+                    VirusDestroyAtk = Parse(crushModern, 2, 1500),
+                    CrushCardNoDamageUntilNextTurn = true,
+                    CrushCardDeckDestroyUpTo = true,
+                    MakesChainLink = true
+                }
+                : null);
+            var virusLinger = RxCrushCardVirusLinger.Match(text);
+            Add(virusLinger, virusLinger.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.CrushCardVirusStyle,
+                    RequiresTributeCount = 1,
+                    TributeFaceUpOnly = true,
+                    AttributeFilter = "DARK",
+                    RequiresAtkLeqCost = true,
+                    Amount = Parse(virusLinger, 1, 1000),
+                    CrushCardLingerOpponentEnds = Parse(virusLinger, 2, 3),
+                    VirusDestroyAtk = Parse(virusLinger, 3, 1500),
+                    MakesChainLink = true
+                }
+                : null);
+            var ddv = RxDeckDevastationVirus.Match(text);
+            Add(ddv, ddv.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.CrushCardVirusStyle,
+                    RequiresTributeCount = 1,
+                    TributeFaceUpOnly = true,
+                    AttributeFilter = "DARK",
+                    RequiresAtkGeqCost = true,
+                    Amount = Parse(ddv, 1, 2000),
+                    CrushCardLingerOpponentEnds = Parse(ddv, 2, 3),
+                    VirusDestroyAtk = Parse(ddv, 3, 1500),
+                    VirusDestroyAtkLeq = true,
+                    MakesChainLink = true
+                }
+                : null);
+            Add(RxDarkSage.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.ThisCardSummoned,
+                Action = EffectActionKind.AddFromDeckToHand,
+                Zone = EffectZoneFilter.ControllerDeckSpells,
+                RequiresTargetChoice = true,
+                MakesChainLink = true
+            });
+            var cocoon = RxCocoonHandEquip.Match(text);
+            Add(cocoon, new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.EquipThisToTarget,
+                ActivatesFromHand = true,
+                RequiresTargetChoice = true,
+                Zone = EffectZoneFilter.ControllerMonsters,
+                NamedCard = cocoon.Success ? cocoon.Groups[1].Value : "Petit Moth",
+                ReplaceHostOriginalAtkDef = true,
+                MakesChainLink = true,
+                IsOptional = true
+            });
             Add(RxTimeWizard.Match(text), new EffectClause
             {
                 Timing = EffectTiming.Activate,
@@ -168,24 +295,37 @@ namespace WRLDZ.Duel.TextEffects
 
             var tok = RxTokenSs.Match(text);
             if (!tok.Success) tok = RxTokenSsAlt.Match(text);
-            if (tok.Success)
+            var tokAsMany = !tok.Success ? RxTokenSsAsMany.Match(text) : null;
+            if (tok.Success || (tokAsMany != null && tokAsMany.Success))
             {
+                var asMany = tokAsMany != null && tokAsMany.Success;
+                var used = asMany ? tokAsMany : tok;
                 var toOpp = Regex.IsMatch(text ?? "", @"opponent.?s field", RegexOptions.IgnoreCase);
-                Add(tok, new EffectClause
+                var nameIdx = asMany ? 1 : 2;
+                var raceIdx = asMany ? 2 : 3;
+                var attrIdx = asMany ? 3 : 4;
+                Add(used, new EffectClause
                 {
                     Timing = SuggestTokenTiming(text),
                     Action = EffectActionKind.SpecialSummonToken,
-                    TokenCount = Parse(tok, 1, 1),
-                    TokenName = tok.Groups[2].Value.Trim() +
-                                (tok.Groups[2].Value.IndexOf("Token", System.StringComparison.OrdinalIgnoreCase) >= 0
+                    TokenCount = asMany ? 99 : Parse(used, 1, 1),
+                    TokenFillRemainingZones = asMany,
+                    TokenName = used.Groups[nameIdx].Value.Trim() +
+                                (used.Groups[nameIdx].Value.IndexOf("Token", System.StringComparison.OrdinalIgnoreCase) >= 0
                                     ? ""
                                     : " Token"),
-                    TokenRace = CleanType(tok.Groups[3].Value),
-                    TokenAttribute = tok.Groups[4].Value,
-                    TokenLevel = Parse(tok, 5, 0) > 0 ? Parse(tok, 5, 1) : Parse(tok, 6, 1),
-                    TokenAtk = Parse(tok, 7, 0),
-                    TokenDef = Parse(tok, 8, 0),
+                    TokenRace = CleanType(used.Groups[raceIdx].Value),
+                    TokenAttribute = used.Groups[attrIdx].Value,
+                    TokenLevel = asMany
+                        ? Parse(used, 4, 1)
+                        : (Parse(used, 5, 0) > 0 ? Parse(used, 5, 1) : Parse(used, 6, 1)),
+                    TokenAtk = asMany ? Parse(used, 5, 0) : Parse(used, 7, 0),
+                    TokenDef = asMany ? Parse(used, 6, 0) : Parse(used, 8, 0),
                     TokenToOpponent = toOpp,
+                    SummonInDefense = asMany
+                        ? used.Groups[7].Success &&
+                          used.Groups[7].Value.Equals("Defense", System.StringComparison.OrdinalIgnoreCase)
+                        : false,
                     TokenCannotTribute = Regex.IsMatch(text, @"cannot be tributed", RegexOptions.IgnoreCase),
                     TokenDestroyedDamage = Regex.IsMatch(text, @"takes (\d+) damage", RegexOptions.IgnoreCase)
                         ? ExtractInt(text, @"takes (\d+) damage", 300)
@@ -218,6 +358,17 @@ namespace WRLDZ.Duel.TextEffects
                     RegexOptions.IgnoreCase);
                 if (tokRestrictAlt.Success)
                     spans?.Add((tokRestrictAlt.Index, tokRestrictAlt.Length));
+                var tribNamed = Regex.Match(text,
+                    @"tribute 1 face-up ""([^""]+)""",
+                    RegexOptions.IgnoreCase);
+                if (tribNamed.Success && into.Count > 0)
+                {
+                    var last = into[into.Count - 1];
+                    last.RequiresTributeCount = 1;
+                    last.NamedCard = tribNamed.Groups[1].Value;
+                    last.TributeFaceUpOnly = true;
+                    spans?.Add((tribNamed.Index, tribNamed.Length));
+                }
             }
 
             var stein = RxCyberStein.Match(text);

@@ -68,6 +68,9 @@ namespace WRLDZ.UI
 
                 Fill(transform, "NightBase", 0f, 0f, 1f, 1f, new Color(0.06f, 0.08f, 0.14f, 1f));
 
+                var osm = OverworldOsmTiles.Ensure(transform);
+                osm.BuildUnderMap(transform);
+
                 var art = ImagineAssets.BgOverworldMap();
                 var mapGo = new GameObject("ImagineMap", typeof(RectTransform), typeof(Image));
                 mapGo.transform.SetParent(transform, false);

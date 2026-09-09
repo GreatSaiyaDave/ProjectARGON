@@ -110,6 +110,12 @@ namespace WRLDZ.Core
         /// <summary>0 = use TCG default 8000. Street 4000 / 8000, Tear boss 10–15k, Raid 20k+.</summary>
         public int StartingLp;
 
+        /// <summary>Story catalog stage id when <see cref="Launch"/> is StoryEra.</summary>
+        public string StoryStageId = "";
+
+        /// <summary>Duelist Kingdom table overlay (2000 LP, no direct attacks).</summary>
+        public bool DkOverlay;
+
         /// <summary>Tome pages legal (Tear boss + Raid only).</summary>
         public bool TomeLegal;
 

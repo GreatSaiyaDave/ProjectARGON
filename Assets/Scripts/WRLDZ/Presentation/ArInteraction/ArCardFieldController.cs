@@ -425,6 +425,8 @@ namespace WRLDZ.Presentation.ArInteraction
                     vis.MotionBusy = false;
                     vis.Sync(occ, db);
                     ApplySlotVisibility(vis, exposeSlot: true);
+                    if (occ.EquippedTo != null)
+                        vis.transform.localPosition += new Vector3(0.018f, 0.028f, 0.012f);
                 }
 
                 _seatedZones.Add(z);
