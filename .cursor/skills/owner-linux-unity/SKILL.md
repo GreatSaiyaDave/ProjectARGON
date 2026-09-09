@@ -23,7 +23,7 @@ Tell them (close Unity first):
 
 That script updates **in place**. It stops if Unity is open, if the remote is not `ProjectARGON`, or if they have uncommitted local edits (prints `git status` instead of wiping). If there is no `.git`, Hub only linked GitHub — the script commits their files first, then merges `origin/main`. Conflicts: stop, keep files, ask them to paste the terminal output.
 
-Proof: `WRLDZ_BUILD` = `CLEAN-0907`. Then **WRLDZ → Lab → Open Desktop Lab App**.
+Proof: `WRLDZ_BUILD` = `CLEAN-0909`. Then **WRLDZ → Lab → Open Desktop Lab App**.
 
 After they have that stamp, later updates: **WRLDZ → Get Latest from GitHub** (same in-place pull).
 

@@ -4,8 +4,8 @@
 
 **Primary chrome:** Grok Imagine **hub tiles** at `StreamingAssets/WRLDZ/Imagine/`  
 (`ImagineAssets` → preferred by `DuelystUi`, `WrldzPresentation`, `FlowChrome`, `GoTheme`).  
-Opaque navy/gold plates (`tile_hub`) on **Eye dest/featured tiles only**.  
-Overlays and HUD use quiet navy fills (`HubChrome.QuietFill`) in a compact window — map stays the hero. Not smoked `PanelMenuGlass`, not L-ticks on every well, not Kenney beige.
+Opaque obsidian/gold filament plates (`tile_hub`) on **Eye dest/featured tiles only**.  
+Overlays and HUD use Solid Vision slates (`HubChrome.QuietFill` + `FilamentRim`) in a compact window — map stays the hero. Not smoked `PanelMenuGlass`, not L-ticks on every well, not Kenney beige.
 
 **Menu atmosphere:** animated Egyptian / night / ages backdrop via  
 `EgyptianAgesAtmosphere` — each host picks a `MenuAge` (Primordial, Old Kingdom,  
@@ -43,7 +43,7 @@ Do **not** mix Kenney beige panels, random AI panels, or photo backgrounds into 
 ## Palette
 
 - Background Battle City night `#05070F` / `DuelystUi.BgDeep`
-- Panel navy glass
+- Panel obsidian slate + cyan/gold filament (Shadow Game void, not smoked glass)
 - Text cream / muted blue-grey
 - Accent cyan (you / holos), magenta (opponent / Tears), gold (phase / LP / millennia)
 

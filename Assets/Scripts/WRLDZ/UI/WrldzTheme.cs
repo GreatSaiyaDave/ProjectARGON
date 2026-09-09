@@ -10,11 +10,11 @@ namespace WRLDZ.UI
     /// </summary>
     public static class WrldzTheme
     {
-        // Base — Battle City night void + holo glass
+        // Base — Battle City night void + Solid Vision slate
         public static readonly Color VoidBlack = new(0.02f, 0.025f, 0.07f, 1f);
         public static readonly Color NightPurple = new(0.06f, 0.04f, 0.14f, 1f);
-        public static readonly Color PanelDeep = new(0.05f, 0.07f, 0.13f, 1f);
-        public static readonly Color PanelHolo = new(0.06f, 0.09f, 0.16f, 0.94f);
+        public static readonly Color PanelDeep = new(0.05f, 0.045f, 0.11f, 1f);
+        public static readonly Color PanelHolo = new(0.055f, 0.062f, 0.125f, 0.94f);
 
         // Accents — KaibaCorp cyan × millennia gold × opponent magenta
         public static readonly Color Cyan = new(0.20f, 0.92f, 1f, 1f);

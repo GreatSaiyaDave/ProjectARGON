@@ -3,21 +3,21 @@ using UnityEngine;
 namespace WRLDZ.Presentation
 {
     /// <summary>
-    /// Coordinated UI kit: Grok Imagine piano-glass first, then Open Duelyst.
-    /// Battle City night × KaibaCorp cyan / magenta opponent / gold phase.
+    /// Coordinated UI kit: Shadow Game obsidian + KaibaCorp filament.
+    /// Battle City night × cyan you / magenta opponent / gold phase.
     /// Paths: StreamingAssets/WRLDZ/Imagine/ · Vendor/OpenDuelyst/ui/
     /// </summary>
     public static class DuelystUi
     {
         const string Root = "WRLDZ/Vendor/OpenDuelyst/ui/";
 
-        // ── Battle City night × KaibaCorp cyan ──────────────────────
+        // ── Battle City night × Shadow Game void × KaibaCorp cyan ──
         /// <summary>Near-black void (night arena, not a beige table).</summary>
         public static readonly Color BgDeep = new(0.02f, 0.025f, 0.07f, 1f);
-        /// <summary>Raised panel — matte navy slate.</summary>
-        public static readonly Color BgPanel = new(0.06f, 0.08f, 0.13f, 0.94f);
+        /// <summary>Raised panel — obsidian slate, faint Umbrax violet.</summary>
+        public static readonly Color BgPanel = new(0.055f, 0.062f, 0.125f, 0.94f);
         /// <summary>HUD strip behind text.</summary>
-        public static readonly Color BgHud = new(0.03f, 0.05f, 0.11f, 0.88f);
+        public static readonly Color BgHud = new(0.04f, 0.04f, 0.10f, 0.90f);
         /// <summary>Primary readable text (warm cream, outdoor-safe).</summary>
         public static readonly Color TextCream = new(0.98f, 0.97f, 0.94f, 1f);
         /// <summary>Secondary labels — still high contrast.</summary>
@@ -33,9 +33,9 @@ namespace WRLDZ.Presentation
         public static readonly Color Green = new(0.30f, 0.98f, 0.55f, 1f);
         public static readonly Color Danger = new(1.00f, 0.32f, 0.38f, 1f);
         public static readonly Color BattleOrange = new(1.00f, 0.48f, 0.18f, 1f);
-        /// <summary>Quiet panel edge.</summary>
-        public static readonly Color NeonEdge = new(0.50f, 0.68f, 0.78f, 0.42f);
-        public static readonly Color GoldEdge = new(0.90f, 0.76f, 0.32f, 0.50f);
+        /// <summary>Quiet panel edge — filament, not a glow blob.</summary>
+        public static readonly Color NeonEdge = new(0.20f, 0.92f, 1.00f, 0.70f);
+        public static readonly Color GoldEdge = new(1.00f, 0.84f, 0.28f, 0.70f);
 
         static Sprite P(string file) => StreamingSprite.Load(Root + file);
         static Sprite S(string file, float l, float b, float r, float t) =>

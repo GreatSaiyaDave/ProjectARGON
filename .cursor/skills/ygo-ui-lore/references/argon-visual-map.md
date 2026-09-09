@@ -5,7 +5,7 @@
 | Token | Hex / role | Lives in |
 |-------|------------|----------|
 | Void | `#05070F` / `DuelystUi.BgDeep` | Stage, sheets |
-| Panel | Opaque hub tile (`TileHub` / `BtnPrimary`) | `HubChrome.PaintPlate` |
+| Panel | Opaque hub tile (`TileHub` / `BtnPrimary`) | `HubChrome.PaintPlate` — obsidian filament, not smoked glass |
 | Cream | `#FAF8F4` | Titles, LP, names |
 | Gold | `#FFD647` / `GoldHot` | Phase, currency, millennia |
 | Cyan | `#33EBFF` | You, holos, primary CTA |

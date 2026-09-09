@@ -23,7 +23,7 @@ That updates THIS folder. It refuses if Unity is open or if it
 would overwrite your local edits.
 
 Proof it worked: search the Project window for WRLDZ_BUILD
-= CLEAN-0907. Then WRLDZ → Lab → Open Desktop Lab App.
+= CLEAN-0909. Then WRLDZ → Lab → Open Desktop Lab App.
 
 Later updates (after that stamp is here):
 WRLDZ → Get Latest from GitHub

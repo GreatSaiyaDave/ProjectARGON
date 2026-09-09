@@ -1,5 +1,5 @@
-CLEAN-0907
+CLEAN-0909
 
-Quiet overlays. Map is the hero. Dest tiles only on the Eye.
+Shadow filament menus. Obsidian slate + KaibaCorp cyan + millennia gold.
 If this file is missing, Hub opened an old folder.
 See GET_THE_GAME.txt at the repo root.

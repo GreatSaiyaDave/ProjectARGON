@@ -35,7 +35,7 @@ namespace WRLDZ.Presentation
         public static Sprite DuelStagePortrait() =>
             L("ui/bg_duel_stage_portrait.png") ?? BgDuelStage();
 
-        /// <summary>Translucent glass plate for splash/title cards.</summary>
+        /// <summary>Translucent boot plate (obsidian filament, not smoked glass).</summary>
         public static Sprite PanelBootGlass() =>
             Sliced("ui/panel_boot_glass.png", new Vector4(64, 64, 64, 64))
             ?? L("ui/panel_boot_glass.png")
@@ -210,7 +210,7 @@ namespace WRLDZ.Presentation
             Sliced("ui/panel_holo_glass.png", new Vector4(72, 64, 72, 64))
             ?? L("ui/panel_holo_glass.png");
 
-        /// <summary>Smoked-glass overworld menu plate (map shows through).</summary>
+        /// <summary>Legacy name. Art is now an obsidian filament sheet, not smoked glass.</summary>
         public static Sprite PanelMenuGlass() =>
             Sliced("ui/panel_menu_glass.png", new Vector4(48, 32, 48, 32))
             ?? L("ui/panel_menu_glass.png")

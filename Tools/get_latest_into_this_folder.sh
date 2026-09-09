@@ -83,7 +83,7 @@ fi
 echo
 if [[ -f "$ROOT/Assets/WRLDZ_BUILD.txt" ]]; then
   echo "BUILD stamp: $(tr -d '\r' < "$ROOT/Assets/WRLDZ_BUILD.txt")"
-  echo "Wanted: CLEAN-0907"
+  echo "Wanted: CLEAN-0909"
 else
   echo "No WRLDZ_BUILD.txt — still an old copy."
 fi

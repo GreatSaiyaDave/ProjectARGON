@@ -44,6 +44,7 @@ def main() -> int:
     must_contain(HUB, "CornerTicks", "lost hub L-corner ticks")
     must_contain(HUB, "FlattenPlate", "lost short-row plate flatten")
     must_contain(HUB, "QuietFill", "lost quiet overlay fill")
+    must_contain(HUB, "FilamentRim", "lost KaibaCorp filament rim")
     must_contain(HUB, "PaintWell", "lost list/meter well painter")
     must_contain(HUB, "PaintChip", "lost short-row chip painter")
 
@@ -144,10 +145,10 @@ def main() -> int:
     must_contain(lab, "WrldzBuild.Log", "desktop lab is missing the owner BUILD log")
 
     build = ROOT / "Assets/Scripts/WRLDZ/Core/WrldzBuild.cs"
-    must_contain(build, "CLEAN-0907", "lost owner-visible BUILD stamp")
+    must_contain(build, "CLEAN-0909", "lost owner-visible BUILD stamp")
     must_contain(ROOT / "GET_THE_GAME.txt", "Unity Cloud", "lost Unity Cloud vs GitHub icon note")
     must_contain(ROOT / "GET_THE_GAME.txt", "main.zip", "lost owner zip fallback")
-    must_contain(ROOT / "Assets/WRLDZ_BUILD.txt", "CLEAN-0907", "lost Unity Project BUILD file")
+    must_contain(ROOT / "Assets/WRLDZ_BUILD.txt", "CLEAN-0909", "lost Unity Project BUILD file")
     must_contain(
         ROOT / ".cursor/skills/owner-linux-unity/SKILL.md",
         "Do not give `git pull` as the only step",
@@ -170,7 +171,7 @@ def main() -> int:
 
     print("hub overlay chrome")
     print("  HubChrome header / well / BACK present")
-    print("  DualMenuPresenter compact quiet sheets (map visible)")
+    print("  DualMenuPresenter compact Solid Vision slates (map visible)")
     print("  BAG / ARTIFACTS / scan / lab / avatar use quiet wells")
     print("PASS")
     return 0

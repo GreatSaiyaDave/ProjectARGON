@@ -7,14 +7,17 @@ using WRLDZ.UI;
 namespace WRLDZ.UI.Shell
 {
     /// <summary>
-    /// Battle City dest tiles for the Eye / hub. Overlays and HUD stay quiet:
-    /// floating navy sheets, thin rims, map still visible around them.
+    /// Battle City dest tiles for the Eye / hub. Overlays are Solid Vision slates:
+    /// obsidian fill, 1 px KaibaCorp filament, millennia gold stakes. Map stays
+    /// visible around compact windows — never smoked glass covering the street.
     /// </summary>
     public static class HubChrome
     {
-        public static readonly Color Dusk = new(0.02f, 0.05f, 0.10f, 0.42f);
-        public static readonly Color WellFill = new(0.03f, 0.05f, 0.09f, 0.42f);
-        public static readonly Color LowerDusk = new(0.02f, 0.03f, 0.08f, 0.62f);
+        public static readonly Color Dusk = new(0.04f, 0.03f, 0.09f, 0.48f);
+        public static readonly Color WellFill = new(0.05f, 0.04f, 0.10f, 0.55f);
+        public static readonly Color LowerDusk = new(0.05f, 0.04f, 0.10f, 0.82f);
+        public static readonly Color Slate = new(0.055f, 0.062f, 0.125f, 0.94f);
+        public static readonly Color ShadowWash = new(0.18f, 0.07f, 0.30f, 0.22f);
 
         public static void Place(RectTransform rt, float x0, float y0, float x1, float y1)
         {
@@ -28,10 +31,12 @@ namespace WRLDZ.UI.Shell
         public static void LiftPlate(Image face, Color edge)
         {
             if (face == null) return;
+            // Hairline only — Outline blobs were the smoked-glass halo.
             var ol = face.GetComponent<Outline>() ?? face.gameObject.AddComponent<Outline>();
-            ol.effectColor = new Color(edge.r, edge.g, edge.b, 0.70f);
-            ol.effectDistance = new Vector2(2.4f, -2.4f);
+            ol.effectColor = new Color(edge.r, edge.g, edge.b, 0.38f);
+            ol.effectDistance = new Vector2(1.0f, -1.0f);
             ol.useGraphicAlpha = false;
+            ol.enabled = true;
             Shadow sh = null;
             foreach (var s in face.GetComponents<Shadow>())
             {
@@ -41,8 +46,99 @@ namespace WRLDZ.UI.Shell
             }
 
             if (sh == null) sh = face.gameObject.AddComponent<Shadow>();
-            sh.effectColor = new Color(0f, 0f, 0f, 0.55f);
-            sh.effectDistance = new Vector2(0f, -3f);
+            sh.effectColor = new Color(0f, 0f, 0f, 0.40f);
+            sh.effectDistance = new Vector2(0f, -2f);
+        }
+
+        /// <summary>
+        /// Sharp KaibaCorp filament on overlay wells. Not dest-tile L-ticks.
+        /// </summary>
+        public static void FilamentRim(Transform parent, Color color, float px = 1.5f)
+        {
+            if (parent == null) return;
+            void Edge(string name, Vector2 aMin, Vector2 aMax, Vector2 pivot, Vector2 size, Vector2 pos)
+            {
+                var t = parent.Find(name);
+                RectTransform rt;
+                Image img;
+                if (t == null)
+                {
+                    var go = new GameObject(name, typeof(RectTransform), typeof(Image));
+                    go.transform.SetParent(parent, false);
+                    rt = go.GetComponent<RectTransform>();
+                    img = go.GetComponent<Image>();
+                    var le = go.AddComponent<LayoutElement>();
+                    le.ignoreLayout = true;
+                    img.sprite = UiFoundation.WhiteSprite();
+                    img.raycastTarget = false;
+                }
+                else
+                {
+                    rt = t as RectTransform;
+                    img = t.GetComponent<Image>();
+                    t.gameObject.SetActive(true);
+                }
+
+                rt.anchorMin = aMin;
+                rt.anchorMax = aMax;
+                rt.pivot = pivot;
+                rt.sizeDelta = size;
+                rt.anchoredPosition = pos;
+                img.color = new Color(color.r, color.g, color.b, 0.92f);
+                img.enabled = true;
+            }
+
+            Edge("FilamentT", new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(0f, px), Vector2.zero);
+            Edge("FilamentB", new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0.5f, 0f),
+                new Vector2(0f, px), Vector2.zero);
+            Edge("FilamentL", new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(0f, 0.5f),
+                new Vector2(px, 0f), Vector2.zero);
+            Edge("FilamentR", new Vector2(1f, 0f), new Vector2(1f, 1f), new Vector2(1f, 0.5f),
+                new Vector2(px, 0f), Vector2.zero);
+        }
+
+        /// <summary>Hide overlay filament when a host returns to a HUD bar sprite.</summary>
+        public static void HideFilament(Transform parent)
+        {
+            if (parent == null) return;
+            foreach (var n in new[] { "FilamentT", "FilamentB", "FilamentL", "FilamentR", "RiftWash" })
+            {
+                var t = parent.Find(n);
+                if (t != null)
+                    t.gameObject.SetActive(false);
+            }
+        }
+
+        /// <summary>Umbrax top wash — Shadow Game, not a glass streak.</summary>
+        public static void RiftWash(Transform parent)
+        {
+            if (parent == null) return;
+            var t = parent.Find("RiftWash");
+            Image img;
+            if (t == null)
+            {
+                var go = new GameObject("RiftWash", typeof(RectTransform), typeof(Image));
+                go.transform.SetParent(parent, false);
+                go.transform.SetAsFirstSibling();
+                var rt = go.GetComponent<RectTransform>();
+                rt.anchorMin = new Vector2(0f, 0.58f);
+                rt.anchorMax = new Vector2(1f, 1f);
+                rt.offsetMin = Vector2.zero;
+                rt.offsetMax = Vector2.zero;
+                img = go.GetComponent<Image>();
+                img.sprite = UiFoundation.WhiteSprite();
+                img.raycastTarget = false;
+                var le = go.AddComponent<LayoutElement>();
+                le.ignoreLayout = true;
+            }
+            else
+            {
+                t.gameObject.SetActive(true);
+                img = t.GetComponent<Image>();
+            }
+
+            img.color = ShadowWash;
         }
 
         public static void TextScrim(Transform parent, float x0, float y0, float x1, float y1)
@@ -85,7 +181,7 @@ namespace WRLDZ.UI.Shell
             dim.transform.SetAsFirstSibling();
             var img = dim.GetComponent<Image>();
             img.sprite = UiFoundation.WhiteSprite();
-            img.color = new Color(0.02f, 0.05f, 0.10f, MenuChromePrefs.DimAlpha);
+            img.color = new Color(0.04f, 0.03f, 0.09f, MenuChromePrefs.DimAlpha);
             img.raycastTarget = true;
             var btn = dim.GetComponent<Button>();
             btn.targetGraphic = img;
@@ -108,7 +204,7 @@ namespace WRLDZ.UI.Shell
             return btn;
         }
 
-        /// <summary>Imagine Battle City plate — opaque painted tile, not smoked glass.</summary>
+        /// <summary>Dest / featured plate — obsidian filament tile, not smoked glass.</summary>
         public static void PaintPlate(Image img, Color edge, bool gold = false, bool sliced = true)
         {
             if (img == null) return;
@@ -128,8 +224,9 @@ namespace WRLDZ.UI.Shell
                 img.sprite = UiFoundation.WhiteSprite();
                 img.type = Image.Type.Simple;
                 img.color = gold
-                    ? new Color(0.28f, 0.20f, 0.06f, 0.96f)
-                    : new Color(0.06f, 0.10f, 0.16f, 0.96f);
+                    ? new Color(0.16f, 0.12f, 0.05f, 0.96f)
+                    : Slate;
+                FilamentRim(img.transform, edge);
             }
 
             LiftPlate(img, edge);
@@ -144,15 +241,17 @@ namespace WRLDZ.UI.Shell
                 PaintPlate(img, DuelystUi.Cyan, sliced: false);
         }
 
-        /// <summary>Quiet navy fill — HUD / list wells, not dest-tile art.</summary>
+        /// <summary>Quiet obsidian fill — HUD / list wells, not dest-tile art.</summary>
         public static void QuietFill(Image img, Color fill, Color? edge = null)
         {
             if (img == null) return;
             img.sprite = UiFoundation.WhiteSprite();
             img.type = Image.Type.Simple;
             img.color = fill;
+            var ol = img.GetComponent<Outline>();
+            if (ol != null) ol.enabled = false;
             if (edge.HasValue)
-                LiftPlate(img, edge.Value);
+                FilamentRim(img.transform, edge.Value);
         }
 
         /// <summary>List / meter / inspect well. No tile_hub, no L-ticks.</summary>
@@ -164,7 +263,7 @@ namespace WRLDZ.UI.Shell
         /// <summary>Map / wallet chip — GO-soft navy, thin accent rim.</summary>
         public static void PaintChip(Image img, Color edge)
         {
-            QuietFill(img, new Color(0.06f, 0.09f, 0.14f, 0.88f), edge);
+            QuietFill(img, new Color(0.07f, 0.08f, 0.14f, 0.90f), edge);
         }
 
         /// <summary>Gold / cyan L-corner ticks from the hub featured/dest tiles.</summary>
@@ -210,6 +309,7 @@ namespace WRLDZ.UI.Shell
             var img = go.GetComponent<Image>();
             img.raycastTarget = true;
             QuietFill(img, MenuChromePrefs.PanelColor, gold ? DuelystUi.Gold : DuelystUi.Cyan);
+            RiftWash(go.transform);
             return go.GetComponent<RectTransform>();
         }
 
@@ -280,7 +380,15 @@ namespace WRLDZ.UI.Shell
             Place(go.GetComponent<RectTransform>(), 0.03f, 0.90f, 0.97f, 0.995f);
             var img = go.GetComponent<Image>();
             img.raycastTarget = false;
-            QuietFill(img, new Color(0.04f, 0.06f, 0.10f, 0.20f));
+            QuietFill(img, new Color(0.05f, 0.04f, 0.10f, 0.22f));
+
+            var rule = new GameObject("GoldRule", typeof(RectTransform), typeof(Image));
+            rule.transform.SetParent(go.transform, false);
+            Place(rule.GetComponent<RectTransform>(), 0.04f, 0.00f, 0.50f, 0.06f);
+            var rimg = rule.GetComponent<Image>();
+            rimg.sprite = UiFoundation.WhiteSprite();
+            rimg.color = new Color(DuelystUi.GoldHot.r, DuelystUi.GoldHot.g, DuelystUi.GoldHot.b, 0.85f);
+            rimg.raycastTarget = false;
 
             var hasSub = !string.IsNullOrEmpty(subtitle);
             titleT = FloatingPanel.Title(go.transform, title ?? "", 24);
@@ -313,7 +421,7 @@ namespace WRLDZ.UI.Shell
             Place(go.GetComponent<RectTransform>(), x0, y0, x1, y1);
             var img = go.GetComponent<Image>();
             img.raycastTarget = true;
-            QuietFill(img, MenuChromePrefs.InsetColor, DuelystUi.Cyan);
+            QuietFill(img, MenuChromePrefs.InsetColor);
             return go.GetComponent<RectTransform>();
         }
 

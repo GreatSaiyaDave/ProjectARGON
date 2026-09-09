@@ -1342,25 +1342,25 @@ namespace WRLDZ.UI
             var ol = _menuGlass.GetComponent<Outline>();
             if (eyeOpen)
             {
-                _menuGlass.sprite = UiFoundation.WhiteSprite();
-                _menuGlass.type = Image.Type.Simple;
-                _menuGlass.color = HubChrome.LowerDusk;
+                HubChrome.QuietFill(_menuGlass, HubChrome.LowerDusk, DuelystUi.Cyan);
+                HubChrome.RiftWash(_menuGlass.transform);
                 _menuGlass.raycastTarget = true;
-                HubChrome.LiftPlate(_menuGlass, DuelystUi.Cyan);
-                if (ol != null) ol.enabled = true;
                 return;
             }
 
             var bar = ImagineAssets.BarBottom() ?? ImagineAssets.BarTopHud() ?? ImagineAssets.HudChip();
             if (bar != null && bar.border.sqrMagnitude > 0)
             {
+                HubChrome.HideFilament(_menuGlass.transform);
                 _menuGlass.sprite = bar;
                 _menuGlass.type = Image.Type.Sliced;
                 // Translucent — orbs float over the map instead of sitting in a black well.
-                _menuGlass.color = new Color(1f, 1f, 1f, 0.55f);
+                _menuGlass.color = new Color(1f, 1f, 1f, 0.72f);
                 if (ol != null) ol.enabled = false;
                 return;
             }
+
+            HubChrome.HideFilament(_menuGlass.transform);
 
             _menuGlass.sprite = UiFoundation.WhiteSprite();
             _menuGlass.type = Image.Type.Simple;

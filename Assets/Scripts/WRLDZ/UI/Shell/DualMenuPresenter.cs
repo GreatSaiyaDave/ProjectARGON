@@ -8,12 +8,8 @@ using WRLDZ.UI;
 namespace WRLDZ.UI.Shell
 {
     /// <summary>
-    /// Dual-menu rule used by almost every systems screen:
-    /// <list type="bullet">
-    /// <item><see cref="UiPresentation.NonArPortrait"/> — hub-matching phone overlay (capsules over dusk)</item>
-    /// <item><see cref="UiPresentation.ArDiskHolo"/> — compact holographic panel (left-arm disk glanceable)</item>
-    /// </list>
-    /// Content screens call <see cref="BuildFrame"/> then fill <paramref name="bodyHost"/>.
+    /// Phone overlays: compact Solid Vision slate over dusk so the map stays visible.
+    /// AR: compact holographic panel (left-arm disk glanceable).
     /// </summary>
     public static class DualMenuPresenter
     {
@@ -80,6 +76,7 @@ namespace WRLDZ.UI.Shell
             var pImg = panel.GetComponent<Image>();
             pImg.raycastTarget = true;
             HubChrome.PaintWell(pImg);
+            HubChrome.RiftWash(panel.transform);
 
             var (titleT, subT) = (default(Text), default(Text));
             HubChrome.HeaderBar(panel.transform, title, subtitle, onClose, out titleT, out subT);

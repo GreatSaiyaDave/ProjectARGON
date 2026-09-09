@@ -48,7 +48,7 @@ namespace WRLDZ.UI.Shell
             {
                 MenuChromePrefs.CycleOpacity();
                 if (well != null)
-                    well.color = new Color(0.03f, 0.05f, 0.09f, 0.28f + MenuChromePrefs.PanelAlpha * 0.40f);
+                    well.color = MenuChromePrefs.InsetColor;
             });
 
             HubChrome.ListHead(list, "DEVICE");
