@@ -33,7 +33,7 @@ If they wanted **this PC's files** and unstick already replaced the folder with 
 
 `curl -fL --show-error -o /tmp/wrldz-restore.sh https://raw.githubusercontent.com/GreatSaiyaDave/ProjectARGON/main/Tools/restore_pc_folder_from_before_unstick.sh && bash /tmp/wrldz-restore.sh`
 
-That resets the folder to the send snapshot in reflog/`ORIG_HEAD`. Does **not** push. Does not force-push. Do not zip-replace.
+That resets the folder to the send snapshot, removes leftover GitHub files, and moves `Library` aside so Hub is not a mix. Does **not** push. Does not force-push. Do not zip-replace.
 
 `unstick_merge_keep_github.sh` is GitHub → PC only. Do not give it when they asked to upload this folder to GitHub.
 

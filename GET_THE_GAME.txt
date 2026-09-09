@@ -36,8 +36,9 @@ instead of yours, close Unity first. Same folder. Paste:
 
 curl -fL --show-error -o /tmp/wrldz-restore.sh https://raw.githubusercontent.com/GreatSaiyaDave/ProjectARGON/main/Tools/restore_pc_folder_from_before_unstick.sh && bash /tmp/wrldz-restore.sh
 
-That puts THIS folder back to your saved local copy.
-It does not change GitHub.
+That puts THIS folder back to your saved local copy, then
+removes leftover GitHub files and the Unity Library mix.
+It does not change GitHub. First Play after that can be slow.
 
 Unstick is the other direction (GitHub onto this PC). Only use it
 if you want GitHub's files here. Same Terminal steps, then:

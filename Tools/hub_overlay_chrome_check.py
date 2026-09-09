@@ -187,6 +187,10 @@ def main() -> int:
         fail("restore script lost merge-abort")
     if "Restore starting" not in restore_text:
         fail("restore script lost startup print (silent-exit guard)")
+    if "Removing GitHub leftover" not in restore_text:
+        fail("restore script lost GitHub leftover cleanup")
+    if "Library_mix_" not in restore_text:
+        fail("restore script lost Library mix move")
     if "git push" in restore_text:
         fail("restore script must not push to GitHub")
     must_contain(
