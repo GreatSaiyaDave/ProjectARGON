@@ -1,0 +1,16 @@
+{
+  "eraId": "original",
+  "notes": "ERAZ Original historic procedures. Crush Card Virus: Yugipedia Card Errata English second erratum (lingering 3 opponent turns). Magical Hats: Yugipedia Magical Hats (anime) four-hat hide, not modern TCG deck S/T.",
+  "cards": [
+    {
+      "id": 57728570,
+      "name": "Crush Card Virus",
+      "desc": "Tribute 1 DARK monster with 1000 or less ATK. Check all monsters your opponent controls, your opponent's hand, and all cards they draw (until the end of your opponent's 3rd turn after this card's activation), and destroy all monsters with 1500 or more ATK."
+    },
+    {
+      "id": 81210420,
+      "name": "Magical Hats",
+      "desc": "During your opponent's Battle Phase: Hide 1 monster you control among 4 Magical Hat Tokens (ATK 0/DEF 0) in face-down Defense Position, and shuffle them on the field. The Tokens are destroyed at the end of the Battle Phase. If a Token is attacked, destroy it."
+    }
+  ]
+}
