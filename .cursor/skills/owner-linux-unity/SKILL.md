@@ -31,7 +31,7 @@ That commits in place, merges `origin/main` (no force-push), then `git push orig
 
 If they wanted **this PC's files** and unstick already replaced the folder with GitHub: Close Unity. Same folder. Give this curl:
 
-`curl -fsSL https://raw.githubusercontent.com/GreatSaiyaDave/ProjectARGON/main/Tools/restore_pc_folder_from_before_unstick.sh | bash`
+`curl -fL --show-error -o /tmp/wrldz-restore.sh https://raw.githubusercontent.com/GreatSaiyaDave/ProjectARGON/main/Tools/restore_pc_folder_from_before_unstick.sh && bash /tmp/wrldz-restore.sh`
 
 That resets the folder to the send snapshot in reflog/`ORIG_HEAD`. Does **not** push. Does not force-push. Do not zip-replace.
 

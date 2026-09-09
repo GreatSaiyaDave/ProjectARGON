@@ -16,7 +16,7 @@ namespace WRLDZ.EditorTools
     {
         const string ExpectedRepo = "GreatSaiyaDave/ProjectARGON";
         const string RestoreCurl =
-            "curl -fsSL https://raw.githubusercontent.com/GreatSaiyaDave/ProjectARGON/main/Tools/restore_pc_folder_from_before_unstick.sh | bash";
+            "curl -fL --show-error -o /tmp/wrldz-restore.sh https://raw.githubusercontent.com/GreatSaiyaDave/ProjectARGON/main/Tools/restore_pc_folder_from_before_unstick.sh && bash /tmp/wrldz-restore.sh";
 
         [MenuItem("WRLDZ/Get Latest from GitHub", false, 0)]
         public static void Pull()

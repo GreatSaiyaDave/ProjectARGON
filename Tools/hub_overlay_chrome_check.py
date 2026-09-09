@@ -185,8 +185,15 @@ def main() -> int:
     restore_text = restore.read_text(encoding="utf-8")
     if "git merge --abort" not in restore_text:
         fail("restore script lost merge-abort")
+    if "Restore starting" not in restore_text:
+        fail("restore script lost startup print (silent-exit guard)")
     if "git push" in restore_text:
         fail("restore script must not push to GitHub")
+    must_contain(
+        ROOT / "GET_THE_GAME.txt",
+        "-o /tmp/wrldz-restore.sh",
+        "lost owner restore download-then-run one-liner",
+    )
 
     vc = (ROOT / "ProjectSettings/VersionControlSettings.asset").read_text(encoding="utf-8")
     if "Unity Version Control" in vc:

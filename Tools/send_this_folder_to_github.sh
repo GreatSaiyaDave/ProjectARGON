@@ -5,7 +5,7 @@
 set -euo pipefail
 
 ROOT="$(pwd)"
-RESTORE_CURL='curl -fsSL https://raw.githubusercontent.com/GreatSaiyaDave/ProjectARGON/main/Tools/restore_pc_folder_from_before_unstick.sh | bash'
+RESTORE_CURL='curl -fL --show-error -o /tmp/wrldz-restore.sh https://raw.githubusercontent.com/GreatSaiyaDave/ProjectARGON/main/Tools/restore_pc_folder_from_before_unstick.sh && bash /tmp/wrldz-restore.sh'
 if [[ ! -d "$ROOT/Assets" || ! -d "$ROOT/ProjectSettings" ]]; then
   echo "Run this inside your Unity project folder (the one that contains Assets)."
   echo "Now in: $ROOT"

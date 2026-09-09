@@ -34,7 +34,7 @@ the script will say so.
 If unstick already ran and this folder now has GitHub's files
 instead of yours, close Unity first. Same folder. Paste:
 
-curl -fsSL https://raw.githubusercontent.com/GreatSaiyaDave/ProjectARGON/main/Tools/restore_pc_folder_from_before_unstick.sh | bash
+curl -fL --show-error -o /tmp/wrldz-restore.sh https://raw.githubusercontent.com/GreatSaiyaDave/ProjectARGON/main/Tools/restore_pc_folder_from_before_unstick.sh && bash /tmp/wrldz-restore.sh
 
 That puts THIS folder back to your saved local copy.
 It does not change GitHub.
