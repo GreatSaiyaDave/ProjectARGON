@@ -31,6 +31,12 @@ That saves this folder, keeps GitHub's files too, then uploads.
 It will not wipe this folder. If GitHub asks you to sign in,
 the script will say so.
 
+If send stopped on a merge conflict (Terminal said
+merge conflict in ProjectARGON), close Unity first. Same folder.
+Paste:
+
+curl -fsSL https://raw.githubusercontent.com/GreatSaiyaDave/ProjectARGON/main/Tools/unstick_merge_keep_github.sh | bash
+
 Proof it worked: search the Project window for WRLDZ_BUILD
 = CLEAN-0909. Then WRLDZ → Lab → Open Desktop Lab App.
 

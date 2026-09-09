@@ -29,6 +29,12 @@ That script updates **in place**. It stops if Unity is open, if the remote is no
 
 That commits in place, merges `origin/main` (no force-push), then `git push origin main`. Auth failure: tell them `sudo apt install gh` then `gh auth login` (GitHub.com, HTTPS, browser) and run send again. Do not zip-replace.
 
+If send stopped mid-merge (they paste `merge conflict in ProjectARGON`, or thousands of `official~` lua renames): do not invent a merge. Close Unity. Same folder. Give this curl:
+
+`curl -fsSL https://raw.githubusercontent.com/GreatSaiyaDave/ProjectARGON/main/Tools/unstick_merge_keep_github.sh | bash`
+
+That aborts the half-merge, keeps GitHub's engine/UI, restores unique local assets (Story, eras, warning_respond, docs, original-pool tools), then pushes. Do not force-push. Do not zip-replace. Do not Add a second Hub project.
+
 Proof: `WRLDZ_BUILD` = `CLEAN-0909`. Then **WRLDZ → Lab → Open Desktop Lab App**.
 
 After they have that stamp, later updates: **WRLDZ → Get Latest from GitHub** (in-place pull). Send local work: **WRLDZ → Send this folder to GitHub**.

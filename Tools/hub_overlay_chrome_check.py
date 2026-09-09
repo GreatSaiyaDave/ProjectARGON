@@ -169,6 +169,12 @@ def main() -> int:
         "send_this_folder_to_github.sh",
         "lost owner send-to-GitHub one-liner",
     )
+    must_contain(
+        ROOT / "GET_THE_GAME.txt",
+        "unstick_merge_keep_github.sh",
+        "lost owner unstick-merge one-liner",
+    )
+
     vc = (ROOT / "ProjectSettings/VersionControlSettings.asset").read_text(encoding="utf-8")
     if "Unity Version Control" in vc:
         fail("project Version Control is still Plastic/UVCS (Hub 'synced' != GitHub)")

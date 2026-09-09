@@ -15,6 +15,8 @@ namespace WRLDZ.EditorTools
     public static class GitHubPullMenu
     {
         const string ExpectedRepo = "GreatSaiyaDave/ProjectARGON";
+        const string UnstickCurl =
+            "curl -fsSL https://raw.githubusercontent.com/GreatSaiyaDave/ProjectARGON/main/Tools/unstick_merge_keep_github.sh | bash";
 
         [MenuItem("WRLDZ/Get Latest from GitHub", false, 0)]
         public static void Pull()
@@ -148,6 +150,17 @@ namespace WRLDZ.EditorTools
                 return;
             }
 
+            if (File.Exists(Path.Combine(root, ".git", "MERGE_HEAD"))
+                || Directory.Exists(Path.Combine(root, "Assets", "StreamingAssets", "OcgCore", "scripts", "official~")))
+            {
+                Fail(
+                    "This folder is stuck from the last send. Nothing was deleted. GitHub was not overwritten.\n\n" +
+                    "Close Unity, then paste this in Terminal inside ProjectARGON:\n\n" +
+                    UnstickCurl,
+                    "Could not send to GitHub");
+                return;
+            }
+
             var remote = RunGit(root, "remote get-url origin");
             if (remote.Code != 0 ||
                 remote.Text.IndexOf("ProjectARGON", StringComparison.OrdinalIgnoreCase) < 0)
@@ -188,10 +201,13 @@ namespace WRLDZ.EditorTools
             var merge = RunGit(root, mergeArgs);
             if (fetch.Code != 0 || merge.Code != 0)
             {
+                RunGit(root, "merge --abort");
                 EditorUtility.ClearProgressBar();
                 Fail(
-                    "Stopped so nothing is wiped.\n\n" + fetch.Text + "\n" + merge.Text +
-                    "\nIf files clash, tell the agent: merge conflict in ProjectARGON.",
+                    "Stopped so nothing is wiped. GitHub and this folder both changed the same files.\n\n" +
+                    "Close Unity, then paste this in Terminal inside ProjectARGON:\n\n" +
+                    UnstickCurl + "\n\n" +
+                    fetch.Text + "\n" + merge.Text,
                     "Could not send to GitHub");
                 return;
             }

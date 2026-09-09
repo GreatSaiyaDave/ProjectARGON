@@ -5,6 +5,7 @@
 set -euo pipefail
 
 ROOT="$(pwd)"
+UNSTICK_CURL='curl -fsSL https://raw.githubusercontent.com/GreatSaiyaDave/ProjectARGON/main/Tools/unstick_merge_keep_github.sh | bash'
 if [[ ! -d "$ROOT/Assets" || ! -d "$ROOT/ProjectSettings" ]]; then
   echo "Run this inside your Unity project folder (the one that contains Assets)."
   echo "Now in: $ROOT"
@@ -15,6 +16,27 @@ if [[ -f "$ROOT/Temp/UnityLockfile" ]]; then
   echo "Unity is still open. Close Unity (File → Exit), then run this again."
   echo "Or, if you already have WRLDZ → Get Latest from GitHub, you can use"
   echo "WRLDZ → Send this folder to GitHub from the Unity menu instead."
+  exit 1
+fi
+
+if [[ -f "$ROOT/.git/MERGE_HEAD" ]]; then
+  echo "This folder is stuck in the middle of a merge. Do not send again yet."
+  echo "Close Unity, then paste this in the same Terminal:"
+  echo
+  echo "curl -fsSL https://raw.githubusercontent.com/GreatSaiyaDave/ProjectARGON/main/Tools/unstick_merge_keep_github.sh | bash"
+  echo
+  echo "That uses GitHub's current files for the clash, then puts a few unique"
+  echo "local extras back. It does not delete this folder."
+  exit 1
+fi
+
+if [[ -d "$ROOT/Assets/StreamingAssets/OcgCore/scripts/official~" ]]; then
+  echo "Unity renamed the lab scripts folder to official~ . Do not upload that."
+  echo "Close Unity, then paste this in the same Terminal:"
+  echo
+  echo "curl -fsSL https://raw.githubusercontent.com/GreatSaiyaDave/ProjectARGON/main/Tools/unstick_merge_keep_github.sh | bash"
+  echo
+  echo "That puts the scripts folder back the way GitHub has it."
   exit 1
 fi
 
@@ -51,8 +73,16 @@ merge_github() {
   fi
   echo
   echo "Stopped. GitHub and your folder both changed the same files."
-  echo "Nothing was deleted. Tell the agent: merge conflict in ProjectARGON."
-  echo "Paste this Terminal output."
+  echo "Nothing was deleted. Putting the folder back so it is not stuck."
+  git merge --abort 2>/dev/null || true
+  echo
+  echo "Close Unity if it is open. Then paste this in the same Terminal:"
+  echo
+  echo "curl -fsSL https://raw.githubusercontent.com/GreatSaiyaDave/ProjectARGON/main/Tools/unstick_merge_keep_github.sh | bash"
+  echo
+  echo "That uses GitHub's current files for the clash. Unique extras on this"
+  echo "PC (story, eras, a few docs) are put back if they are still here."
+  echo "This folder is not deleted."
   exit 1
 }
 
@@ -93,9 +123,15 @@ if [[ ! -d "$ROOT/.git" ]]; then
     exit 1
   fi
   if ! git merge origin/main --allow-unrelated-histories --no-edit; then
+    git merge --abort 2>/dev/null || true
     echo
     echo "Stopped. GitHub and your folder both changed the same files."
     echo "Nothing was deleted. Tell the agent: merge conflict in ProjectARGON."
+    echo
+    echo "Close Unity, then paste this in Terminal inside ProjectARGON:"
+    echo
+    echo "  ${UNSTICK_CURL}"
+    echo
     exit 1
   fi
   push_main
