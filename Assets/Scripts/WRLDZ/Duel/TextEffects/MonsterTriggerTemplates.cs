@@ -35,6 +35,14 @@ namespace WRLDZ.Duel.TextEffects
             @"(?:If|When) this card is Summoned:\s*Inflict (\d+) (?:points of )?damage to your opponent\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        /// <summary>
+        /// Sacred Crane family: If this card is Special Summoned: Draw N.
+        /// Colon must follow Special Summoned — Molten Zombie (from the Graveyard) stays refuse.
+        /// </summary>
+        static readonly Regex RxSpecialSummonedDraw = new(
+            @"(?:If|When) this card is Special Summoned:\s*Draw (\d+) cards?\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         static readonly Regex RxFlipMillOpp = new(
             @"FLIP:\s*Send the top (\d+) cards of your opponent's Deck to the Graveyard\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -255,6 +263,19 @@ namespace WRLDZ.Duel.TextEffects
                     Timing = EffectTiming.ThisCardSummoned,
                     Action = EffectActionKind.InflictDamageToOpponent,
                     Amount = Parse(sumDmg, 1, 500),
+                    MakesChainLink = true
+                }
+                : null);
+
+            var ssDraw = RxSpecialSummonedDraw.Match(text);
+            Add(ssDraw, ssDraw.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.ThisCardSummoned,
+                    Action = EffectActionKind.Draw,
+                    Amount = Parse(ssDraw, 1, 1),
+                    Side = EffectSide.Controller,
+                    RequiresThisSpecialSummoned = true,
                     MakesChainLink = true
                 }
                 : null);
@@ -622,7 +643,8 @@ namespace WRLDZ.Duel.TextEffects
                 need.Add(EffectActionKind.Destroy);
             if (RxFlipSummonBounceOpp.IsMatch(text))
                 need.Add(EffectActionKind.ReturnToHand);
-            if (RxFlipDraw.IsMatch(text) || RxBattleGyDraw.IsMatch(text))
+            if (RxFlipDraw.IsMatch(text) || RxBattleGyDraw.IsMatch(text) ||
+                RxSpecialSummonedDraw.IsMatch(text))
                 need.Add(EffectActionKind.Draw);
             if (RxFlipAddEquip.IsMatch(text))
                 need.Add(EffectActionKind.AddFromDeckToHand);

@@ -886,6 +886,7 @@ namespace WRLDZ.Duel.TextEffects
                 if (c == null) continue;
                 if (c.RequiresThisFlipSummoned && !flipSummon) continue;
                 if (c.RequiresThisNormalSummoned && (flipSummon || specialSummon)) continue;
+                if (c.RequiresThisSpecialSummoned && !specialSummon) continue;
                 applicable.Add(c);
             }
             if (applicable.Count == 0) return false;
@@ -3645,6 +3646,15 @@ namespace WRLDZ.Duel.TextEffects
                         if (!m.FaceUp) continue;
                         if (c.Action == EffectActionKind.EffectDamageBothFromOriginalAtk &&
                             m.CurrentAtk > opp.LifePoints) continue;
+                        if (engine.IsDragonTargetProtected(m)) continue;
+                        list.Add(m);
+                    }
+
+                    break;
+                case EffectZoneFilter.OppAttackPositionMonsters:
+                    foreach (var m in opp.MonstersOnField())
+                    {
+                        if (!m.FaceUp || m.Position != BattlePosition.Attack) continue;
                         if (engine.IsDragonTargetProtected(m)) continue;
                         list.Add(m);
                     }
