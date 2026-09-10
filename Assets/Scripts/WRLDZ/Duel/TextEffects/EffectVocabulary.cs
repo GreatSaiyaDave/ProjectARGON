@@ -176,7 +176,8 @@ namespace WRLDZ.Duel.TextEffects
                     EffectActionKind.GainAtkPerSpellCounter or
                     EffectActionKind.SetAttackingMonsterAtkToZeroThisCalc or
                     EffectActionKind.HalveOriginalAtk or
-                    EffectActionKind.ApplyLingeringAtkDef =>
+                    EffectActionKind.ApplyLingeringAtkDef or
+                    EffectActionKind.SwapOriginalAtkDefUntilEnd =>
                     EffectResolutionKind.ModifyStats,
                 EffectActionKind.CanAttackDirectly or
                     EffectActionKind.GrantDirectAttackThisTurn or
@@ -187,7 +188,8 @@ namespace WRLDZ.Duel.TextEffects
                     EffectActionKind.UnequipThisSpecialSummon or
                     EffectActionKind.EquipTargetToThis =>
                     EffectResolutionKind.Equip,
-                EffectActionKind.TakeControlLevelLeq => EffectResolutionKind.TakeControl,
+                EffectActionKind.TakeControlLevelLeq or
+                    EffectActionKind.TakeControlTarget => EffectResolutionKind.TakeControl,
                 EffectActionKind.PlaceSpellCounters => EffectResolutionKind.PlaceCounters,
                 EffectActionKind.NegateAttack or
                     EffectActionKind.NegateThisAttack =>
