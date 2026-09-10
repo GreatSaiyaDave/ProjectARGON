@@ -2073,6 +2073,54 @@ namespace WRLDZ.Duel.Rules
                             c.Zone == EffectZoneFilter.FieldSpellTraps &&
                             !c.RequiresTargetChoice));
 
+                    // Fanbot side-chip: Skull Dice / Remove Brainwashing need new atoms.
+                    // Fail-closed — do not map onto RollDieZorc or TakeControlLevelLeq.
+                    var skullDice = db.Get(126218);
+                    var skullProg = skullDice != null ? CardTextEffectCompiler.Compile(skullDice) : null;
+                    Check("Corpus: Skull Dice stays parked (die-scale mass until-EP needs atom)",
+                        skullProg == null || !skullProg.FullyCompiled,
+                        skullProg == null
+                            ? "null"
+                            : $"full={skullProg.FullyCompiled} n={skullProg.ClauseList.Count} unparsed={string.Join("|", skullProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: Skull Dice is not RollDieZorc",
+                        skullProg == null ||
+                        !skullProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.RollDieZorc));
+                    Check("Corpus: Skull Dice ProgramMayActivate is false",
+                        skullDice == null || !OfficialEffectRegistry.ProgramMayActivate(skullDice));
+
+                    var graceful = db.Get(74137509);
+                    var gracefulProg = graceful != null ? CardTextEffectCompiler.Compile(graceful) : null;
+                    Check("Corpus: Graceful Dice stays parked (same die-scale atom as Skull Dice)",
+                        gracefulProg == null || !gracefulProg.FullyCompiled);
+
+                    var brainwash = db.Get(94739788);
+                    var brainProg = brainwash != null ? CardTextEffectCompiler.Compile(brainwash) : null;
+                    Check("Corpus: Remove Brainwashing stays parked (return-control continuous needs atom)",
+                        brainProg == null || !brainProg.FullyCompiled,
+                        brainProg == null
+                            ? "null"
+                            : $"full={brainProg.FullyCompiled} n={brainProg.ClauseList.Count} unparsed={string.Join("|", brainProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: Remove Brainwashing is not TakeControlLevelLeq",
+                        brainProg == null ||
+                        !brainProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.TakeControlLevelLeq));
+                    Check("Corpus: Remove Brainwashing ProgramMayActivate is false",
+                        brainwash == null || !OfficialEffectRegistry.ProgramMayActivate(brainwash));
+
+                    var leftoverSkull = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000090,
+                        name = "Skull Dice leftover unique",
+                        type = "Trap Card",
+                        race = "Normal",
+                        frameType = "trap",
+                        desc =
+                            "Roll a six-sided die. All monsters your opponent currently controls lose ATK/DEF equal to the result x 100, until the end of this turn. Shuffle your entire Deck into your opponent's Deck."
+                    });
+                    Check("Corpus: Skull Dice leftover unique is not FullyCompiled",
+                        leftoverSkull == null || !leftoverSkull.FullyCompiled);
+
                     Check("Vocabulary: Protection is a shared kind",
                         Array.IndexOf(EffectVocabulary.SharedResolutions,
                             EffectResolutionKind.Protection) >= 0);
