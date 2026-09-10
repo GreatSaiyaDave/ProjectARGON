@@ -106,13 +106,34 @@ namespace WRLDZ.UI.Shell
             {
                 var id = FormatProgress.Ids[i];
                 var owned = FormatProgress.HasBadge(acc?.progress, id);
+                var live = owned && FormatProgress.TableLawsLive(id);
+                System.Action play = null;
+                string rules;
+                if (live)
+                {
+                    rules = "2000 LP · no direct attacks. Story stays standard TCG.\nOWNED · PLAY";
+                    play = () =>
+                    {
+                        if (!CanStartHubNonPractice())
+                            return;
+                        var session = AppSession.Ensure();
+                        session.Account?.EnsureProgress();
+                        if (!FormatProgress.CanOptInDuelistKingdom(session.Account?.progress))
+                            return;
+                        FreeUiKit.PlayConfirm();
+                        session.StartArDuel(ArDuelMatchConfig.DuelistKingdomPvAi());
+                    };
+                }
+                else if (owned)
+                    rules = "Badge owned. Table laws are not live yet.\nOWNED · rules not final";
+                else
+                    rules = "Format badge. Fuse 5 shards + 2500 SE at the Bazaar.\nLOCKED";
+
                 HubChrome.FeaturedCard(
                     scroll.transform,
                     FormatProgress.Titles[i].ToUpperInvariant(),
-                    owned
-                        ? "Badge owned. Table laws are not live yet.\nOWNED · rules not final"
-                        : "Format badge. Fuse 5 shards + 2500 SE at the Bazaar.\nLOCKED",
-                    null,
+                    rules,
+                    play,
                     gold: owned);
             }
 

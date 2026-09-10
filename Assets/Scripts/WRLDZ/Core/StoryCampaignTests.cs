@@ -203,6 +203,30 @@ namespace WRLDZ.Core
                     StoryCampaignService.Stage("s1_weevil"), "s1_weevil", digital: true);
                 Check("Story match still no DK overlay after format badge",
                     !storyCfg.DkOverlay && storyCfg.StartingLp == 8000);
+                Check("DK table laws are live", FormatProgress.TableLawsLive("dk"));
+                Check("Raid table laws are not live", !FormatProgress.TableLawsLive("raid"));
+                Check("Speed table laws are not live", !FormatProgress.TableLawsLive("speed"));
+                Check("Can opt in DK after fuse", FormatProgress.CanOptInDuelistKingdom(p));
+                var fresh = PlayerProgress.DefaultNew();
+                Check("Cannot opt in DK without badge", !FormatProgress.CanOptInDuelistKingdom(fresh));
+                var hub = ArDuelMatchConfig.DefaultQuick();
+                hub.Launch = ArDuelLaunchKind.Hub;
+                Check("Hub DK opt-in applies overlay",
+                    ArDuelMatchConfig.TryApplyDuelistKingdomOptIn(hub, p)
+                    && hub.DkOverlay && hub.StartingLp == 2000
+                    && hub.FormatId == FormatProgress.DuelistKingdomId);
+                Check("Story launch refuses DK opt-in",
+                    !ArDuelMatchConfig.TryApplyDuelistKingdomOptIn(storyCfg, p)
+                    && !storyCfg.DkOverlay && storyCfg.StartingLp == 8000);
+                Check("Hub without badge refuses DK opt-in",
+                    !ArDuelMatchConfig.TryApplyDuelistKingdomOptIn(
+                        new ArDuelMatchConfig { Launch = ArDuelLaunchKind.Hub, StartingLp = 8000 },
+                        fresh));
+                var dk = ArDuelMatchConfig.DuelistKingdomPvAi();
+                Check("DK PvAI factory 2000 LP overlay",
+                    dk.DkOverlay && dk.StartingLp == 2000
+                    && dk.Launch == ArDuelLaunchKind.Hub
+                    && !ArDuelMatchConfig.IsStoryLaunch(dk.Launch));
             }
 
             sb.AppendLine($"Story campaign: {pass} pass, {fail} fail");

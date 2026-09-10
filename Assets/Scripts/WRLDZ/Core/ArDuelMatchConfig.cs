@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using WRLDZ.Data;
 using WRLDZ.Duel.Rules;
 
 namespace WRLDZ.Core
@@ -116,6 +117,8 @@ namespace WRLDZ.Core
         /// <summary>Duelist Kingdom table overlay (2000 LP, no direct attacks).</summary>
         public bool DkOverlay;
 
+        public const int DuelistKingdomStartingLp = 2000;
+
         /// <summary>Tome pages legal (Tear boss + Raid only).</summary>
         public bool TomeLegal;
 
@@ -183,6 +186,45 @@ namespace WRLDZ.Core
         /// <summary>True when both sides are humans (hotseat / nearby peer).</summary>
         public bool IsHumanOpponent =>
             Opponent == ArDuelOpponentKind.LocalPass || Opponent == ArDuelOpponentKind.NearbyPeer;
+
+        public static bool IsStoryLaunch(ArDuelLaunchKind launch) =>
+            launch == ArDuelLaunchKind.StoryEra;
+
+        /// <summary>
+        /// Hub PvAI Duelist Kingdom table. Story must never call this.
+        /// Callers still gate with <see cref="FormatProgress.CanOptInDuelistKingdom"/>.
+        /// </summary>
+        public static ArDuelMatchConfig DuelistKingdomPvAi(float meters = DefaultStandM)
+        {
+            var c = DefaultQuick();
+            c.Launch = ArDuelLaunchKind.Hub;
+            c.Opponent = ArDuelOpponentKind.AiLocal;
+            c.FormatId = FormatProgress.DuelistKingdomId;
+            c.FormatTitle = "Duelist Kingdom · 2000 LP";
+            c.DkOverlay = true;
+            c.StartingLp = DuelistKingdomStartingLp;
+            c.EntrySource = AppSession.SceneMainMenu;
+            c.SeparationMeters = meters;
+            c.ClampSeparation();
+            return c;
+        }
+
+        /// <summary>
+        /// Badge-gated DK overlay for a non-story config. StoryEra always returns false.
+        /// </summary>
+        public static bool TryApplyDuelistKingdomOptIn(ArDuelMatchConfig cfg, PlayerProgress progress)
+        {
+            if (cfg == null || progress == null) return false;
+            if (IsStoryLaunch(cfg.Launch)) return false;
+            if (!FormatProgress.CanOptInDuelistKingdom(progress)) return false;
+            cfg.DkOverlay = true;
+            cfg.StartingLp = DuelistKingdomStartingLp;
+            cfg.FormatId = FormatProgress.DuelistKingdomId;
+            if (string.IsNullOrEmpty(cfg.FormatTitle) ||
+                cfg.FormatTitle.StartsWith("Player vs AI", StringComparison.OrdinalIgnoreCase))
+                cfg.FormatTitle = "Duelist Kingdom · 2000 LP";
+            return true;
+        }
 
         /// <summary>Capture host GPS from <see cref="MapEnvironment"/> when available.</summary>
         public void CaptureHostLocation(MapEnvironment env)

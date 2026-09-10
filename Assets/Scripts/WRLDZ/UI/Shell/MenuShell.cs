@@ -485,7 +485,7 @@ namespace WRLDZ.UI.Shell
                 "Mark P1 + P2 · AR arena sized to measured meters · hotseat.",
             MenuId.FormatSelect =>
                 "Player vs AI AR formats · field distance presets\n" +
-                "START loads DuelSlice with AI opponent.",
+                "format.dk PLAY is 2000 LP · no directs. Story stays 8000.",
             MenuId.Bazaar =>
                 "Stone tablets: 1,000 SE of set X → 10 cards of X.\n" +
                 "Fuse 5 ERAZ shards + 2,500 SE into the next badge.\n" +

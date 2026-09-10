@@ -132,7 +132,11 @@ Fortune teller (gift summary) grants **Original** whole and explains soul / reli
 
 ## Format badges
 
-Same 5-shard + 2500 SE fuse as ERAZ (`format.dk`, `format.raid`, …). Unlocks the Format Select row. Does **not** turn on table laws until that format is finalized.
+Same 5-shard + 2500 SE fuse as ERAZ (`format.dk`, `format.raid`, …). Unlocks the Format Select row.
+
+**Duelist Kingdom (`format.dk`)** — when the badge is owned, Format Select **PLAY** starts a **non-story PvAI** with the honest overlay (2000 LP, no direct attacks). Story duels stay standard TCG (8000 LP, `DkOverlay = false`). Tribute-free summons and no S/T LP damage are not live.
+
+Other format badges do **not** turn on table laws until that format is finalized.
 
 ## Still later
 
