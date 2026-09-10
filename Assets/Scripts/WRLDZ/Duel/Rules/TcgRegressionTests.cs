@@ -2073,6 +2073,147 @@ namespace WRLDZ.Duel.Rules
                             c.Zone == EffectZoneFilter.FieldSpellTraps &&
                             !c.RequiresTargetChoice));
 
+                    // Fanbot surgical shortlist: Rock Bombardment / Backfire /
+                    // Tribe-Infecting Virus / Mysterious Puppeteer / Token Thanksgiving.
+                    // Existing atoms cannot honor the official print (send-Race-from-Deck
+                    // cost, other-card FIRE destroy trigger, declare Type, face-up monster
+                    // NS/FS LP, destroy-tokens-then-gain-LP-per). Fail-closed park.
+                    var rockBomb = db.Get(20781762);
+                    var rockBombProg = rockBomb != null ? CardTextEffectCompiler.Compile(rockBomb) : null;
+                    Check("Corpus: Rock Bombardment stays parked (send Rock from Deck cost needs atom)",
+                        rockBombProg == null || !rockBombProg.FullyCompiled,
+                        rockBombProg == null
+                            ? "null"
+                            : $"full={rockBombProg.FullyCompiled} n={rockBombProg.ClauseList.Count} unparsed={string.Join("|", rockBombProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: Rock Bombardment is not Hinotama-style Inflict 500",
+                        rockBombProg == null ||
+                        !rockBombProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.InflictDamageToOpponent));
+                    Check("Corpus: Rock Bombardment ProgramMayActivate is false",
+                        rockBomb == null || !OfficialEffectRegistry.ProgramMayActivate(rockBomb));
+
+                    var backfire = db.Get(82705573);
+                    var backfireProg = backfire != null ? CardTextEffectCompiler.Compile(backfire) : null;
+                    Check("Corpus: Backfire stays parked (your FIRE destroyed-to-GY trigger needs atom)",
+                        backfireProg == null || !backfireProg.FullyCompiled,
+                        backfireProg == null
+                            ? "null"
+                            : $"full={backfireProg.FullyCompiled} n={backfireProg.ClauseList.Count} unparsed={string.Join("|", backfireProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: Backfire is not InflictDamageToOpponent / this-card SentFromFieldToGy",
+                        backfireProg == null ||
+                        !backfireProg.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.InflictDamageToOpponent ||
+                             c.Timing == EffectTiming.SentFromFieldToGy)));
+                    Check("Corpus: Backfire ProgramMayActivate is false",
+                        backfire == null || !OfficialEffectRegistry.ProgramMayActivate(backfire));
+
+                    var tribeVirus = db.Get(33184167);
+                    var tribeVirusProg = tribeVirus != null ? CardTextEffectCompiler.Compile(tribeVirus) : null;
+                    Check("Corpus: Tribe-Infecting Virus stays parked (declare Type needs atom)",
+                        tribeVirusProg == null || !tribeVirusProg.FullyCompiled,
+                        tribeVirusProg == null
+                            ? "null"
+                            : $"full={tribeVirusProg.FullyCompiled} n={tribeVirusProg.ClauseList.Count} unparsed={string.Join("|", tribeVirusProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: Tribe-Infecting Virus is not discard + Destroy-all without declare",
+                        tribeVirusProg == null ||
+                        !tribeVirusProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.Destroy));
+                    Check("Corpus: Tribe-Infecting Virus ProgramMayActivate is false",
+                        tribeVirus == null || !OfficialEffectRegistry.ProgramMayActivate(tribeVirus));
+
+                    var puppeteer = db.Get(54098121);
+                    var puppeteerProg = puppeteer != null ? CardTextEffectCompiler.Compile(puppeteer) : null;
+                    Check("Corpus: Mysterious Puppeteer stays parked (face-up monster NS/FS LP needs atom)",
+                        puppeteerProg == null || !puppeteerProg.FullyCompiled,
+                        puppeteerProg == null
+                            ? "null"
+                            : $"full={puppeteerProg.FullyCompiled} n={puppeteerProg.ClauseList.Count} unparsed={string.Join("|", puppeteerProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: Mysterious Puppeteer is not GainLifePoints / this-card summoned LP",
+                        puppeteerProg == null ||
+                        !puppeteerProg.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.GainLifePoints ||
+                             c.Timing == EffectTiming.ThisCardSummoned ||
+                             c.Timing == EffectTiming.OpponentNormalOrFlipSummon)));
+                    Check("Corpus: Mysterious Puppeteer ProgramMayActivate is false",
+                        puppeteer == null || !OfficialEffectRegistry.ProgramMayActivate(puppeteer));
+
+                    var tokenThanks = db.Get(57182235);
+                    var tokenThanksProg = tokenThanks != null ? CardTextEffectCompiler.Compile(tokenThanks) : null;
+                    Check("Corpus: Token Thanksgiving stays parked (destroy Tokens then gain 800× needs atom)",
+                        tokenThanksProg == null || !tokenThanksProg.FullyCompiled,
+                        tokenThanksProg == null
+                            ? "null"
+                            : $"full={tokenThanksProg.FullyCompiled} n={tokenThanksProg.ClauseList.Count} unparsed={string.Join("|", tokenThanksProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: Token Thanksgiving is not DestroyTokensInflictPer / flat GainLifePoints",
+                        tokenThanksProg == null ||
+                        !tokenThanksProg.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.DestroyTokensInflictPer ||
+                             c.Action == EffectActionKind.GainLifePoints ||
+                             c.Action == EffectActionKind.Destroy)));
+                    Check("Corpus: Token Thanksgiving ProgramMayActivate is false",
+                        tokenThanks == null || !OfficialEffectRegistry.ProgramMayActivate(tokenThanks));
+
+                    var leftoverRock = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000151,
+                        name = "Send-from-Deck leftover unique (Rock Bombardment family)",
+                        type = "Trap Card",
+                        race = "Normal",
+                        desc =
+                            "Send 1 Rock monster from your Deck to the GY; Shuffle your entire Deck into your opponent's Deck."
+                    });
+                    Check("Corpus: Rock Bombardment leftover unique is not FullyCompiled",
+                        leftoverRock == null || !leftoverRock.FullyCompiled);
+
+                    var leftoverBackfire = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000152,
+                        name = "Other-card FIRE destroy leftover unique (Backfire family)",
+                        type = "Trap Card",
+                        race = "Continuous",
+                        desc =
+                            "If a face-up FIRE monster(s) you control is destroyed and sent to the GY: Shuffle your entire Deck into your opponent's Deck."
+                    });
+                    Check("Corpus: Backfire leftover unique is not FullyCompiled",
+                        leftoverBackfire == null || !leftoverBackfire.FullyCompiled);
+
+                    var leftoverTribe = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000153,
+                        name = "Declare-Type leftover unique (Tribe-Infecting family)",
+                        type = "Effect Monster",
+                        desc =
+                            "Discard 1 card from your hand and declare 1 Type of monster. Shuffle your entire Deck into your opponent's Deck."
+                    });
+                    Check("Corpus: Tribe-Infecting Virus leftover unique is not FullyCompiled",
+                        leftoverTribe == null || !leftoverTribe.FullyCompiled);
+
+                    var leftoverPuppet = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000154,
+                        name = "Each-NS/FS leftover unique (Puppeteer family)",
+                        type = "Effect Monster",
+                        desc =
+                            "Each time you or your opponent Normal Summons or Flip Summons a monster, Shuffle your entire Deck into your opponent's Deck."
+                    });
+                    Check("Corpus: Mysterious Puppeteer leftover unique is not FullyCompiled",
+                        leftoverPuppet == null || !leftoverPuppet.FullyCompiled);
+
+                    var leftoverToken = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000155,
+                        name = "Destroy-tokens leftover unique (Token Thanksgiving family)",
+                        type = "Spell Card",
+                        race = "Normal",
+                        desc =
+                            "Destroy all tokens on the field. Shuffle your entire Deck into your opponent's Deck."
+                    });
+                    Check("Corpus: Token Thanksgiving leftover unique is not FullyCompiled",
+                        leftoverToken == null || !leftoverToken.FullyCompiled);
+
                     Check("Vocabulary: Protection is a shared kind",
                         Array.IndexOf(EffectVocabulary.SharedResolutions,
                             EffectResolutionKind.Protection) >= 0);
