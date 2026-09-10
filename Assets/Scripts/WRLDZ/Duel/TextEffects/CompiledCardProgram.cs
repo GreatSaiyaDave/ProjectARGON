@@ -215,7 +215,18 @@ namespace WRLDZ.Duel.TextEffects
         /// <see cref="EffectClause.DieNegateFacesMask"/> negate the effect and destroy the
         /// opponent's card. The classic Archfiend die-roll protection.
         /// </summary>
-        DieRollNegateWhenTargeted
+        DieRollNegateWhenTargeted,
+        /// <summary>
+        /// Take control of the chosen target until the End Phase
+        /// (Change of Heart / Brain Control). Not Equip take-control,
+        /// not switch-control, not a choice-effect.
+        /// </summary>
+        TakeControlTarget,
+        /// <summary>
+        /// Switch original ATK and DEF of all face-up monsters until the End Phase
+        /// (Shield and Sword). Uses UntilEndOfTurn stat mods.
+        /// </summary>
+        SwapOriginalAtkDefUntilEnd
     }
 
     public enum EffectSide
@@ -409,6 +420,11 @@ namespace WRLDZ.Duel.TextEffects
         public string EquipHostName;
         /// <summary>Falling Down / Snatch Steal: take control of the equipped target.</summary>
         public bool TakeControlOfTarget;
+        /// <summary>
+        /// Brain Control: target must be a monster that can be Normal Summoned/Set
+        /// (not nomi / Ritual / Extra Deck).
+        /// </summary>
+        public bool RequiresCanBeNormalSummonedOrSet;
         public int EquipAtkBonus;
         /// <summary>DEF change while equipped (Steel Shell −200). Independent of EquipAtkBonus.</summary>
         public int EquipDefBonus;

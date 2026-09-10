@@ -16,7 +16,7 @@ namespace WRLDZ.Duel.TextEffects
     /// </summary>
     public static class CardTextEffectCompiler
     {
-        public const int Version = 50;
+        public const int Version = 63;
 
         static readonly Regex RxDraw = new(
             @"(?:^|[.!?]\s+)Draw (\d+) cards?\.",
@@ -199,6 +199,15 @@ namespace WRLDZ.Duel.TextEffects
 
         static readonly Regex RxEnemyControllerPos = new(
             @"Target 1 face-up monster your opponent controls;\s*change that target's battle position",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Shield &amp; Sword family: switch original ATK/DEF of all face-up monsters
+        /// until the end of this turn / End Phase.
+        /// </summary>
+        static readonly Regex RxShieldAndSword = new(
+            @"Switch the original ATK and DEF of all face-up monsters(?: currently)? on the field" +
+            @", until the end of (?:this turn|the End Phase)\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxCyberJar = new(
@@ -803,6 +812,14 @@ namespace WRLDZ.Duel.TextEffects
                 RequiresTargetChoice = true
             });
 
+            Take(RxShieldAndSword.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.SwapOriginalAtkDefUntilEnd,
+                Side = EffectSide.Both,
+                Zone = EffectZoneFilter.FieldMonsters
+            });
+
             Take(RxAlwaysTreatedAsName.Match(text), new EffectClause
             {
                 Timing = EffectTiming.ContinuousWhileFaceUp,
@@ -1180,6 +1197,9 @@ namespace WRLDZ.Duel.TextEffects
             var pay = Regex.Match(paySrc,
                 @"Activate (?:this card )?by paying (\d+) (?:LP|Life Points)",
                 RegexOptions.IgnoreCase);
+            if (!pay.Success)
+                pay = Regex.Match(paySrc, @"\bPay (\d+) (?:LP|Life Points)\b",
+                    RegexOptions.IgnoreCase);
             if (pay.Success)
                 clause.PayLpAmount = int.TryParse(pay.Groups[1].Value, out var lp) ? lp : 0;
 
@@ -1353,6 +1373,10 @@ namespace WRLDZ.Duel.TextEffects
                 if (clause.Zone == EffectZoneFilter.None)
                     clause.Zone = EffectZoneFilter.FieldAnyMonster;
             }
+            else if (TryStampTakeControlTarget(res, act, def, clause))
+            {
+                // TakeControlTarget until End Phase (Change of Heart / Brain Control).
+            }
 
             if (clause.Action == EffectActionKind.None)
             {
@@ -1469,6 +1493,8 @@ namespace WRLDZ.Duel.TextEffects
                 clause.Zone = Regex.IsMatch(act, @"opponent", RegexOptions.IgnoreCase)
                     ? EffectZoneFilter.OppFaceUpMonsters
                     : EffectZoneFilter.FieldAnyMonster;
+                if (Regex.IsMatch(act, @"that can be Normal Summoned", RegexOptions.IgnoreCase))
+                    clause.RequiresCanBeNormalSummonedOrSet = true;
             }
         }
 
@@ -1488,6 +1514,9 @@ namespace WRLDZ.Duel.TextEffects
                 return true;
             if (Regex.IsMatch(act, @"pay \d+", RegexOptions.IgnoreCase) &&
                 clause.PayLpAmount <= 0 && clause.RequiresLpCostMultiple <= 0)
+                return true;
+            if (Regex.IsMatch(act, @"that can be Normal Summoned", RegexOptions.IgnoreCase) &&
+                !clause.RequiresCanBeNormalSummonedOrSet)
                 return true;
             if (Regex.IsMatch(act, @"tribute (?:this|\d+)", RegexOptions.IgnoreCase) &&
                 !clause.RequiresTributeThis && clause.RequiresTributeCount <= 0)
@@ -1517,7 +1546,7 @@ namespace WRLDZ.Duel.TextEffects
             var hay = (sent.Condition ?? "") + " " + (sent.Raw ?? "");
             if (hay.IndexOf("flip summoned", StringComparison.OrdinalIgnoreCase) >= 0)
                 clause.RequiresThisFlipSummoned = true;
-            if (hay.IndexOf("normal summoned", StringComparison.OrdinalIgnoreCase) >= 0 &&
+            if (Regex.IsMatch(hay, @"this card is Normal Summoned", RegexOptions.IgnoreCase) &&
                 hay.IndexOf("flip summoned", StringComparison.OrdinalIgnoreCase) < 0 &&
                 hay.IndexOf("special summoned", StringComparison.OrdinalIgnoreCase) < 0)
                 clause.RequiresThisNormalSummoned = true;
@@ -1686,6 +1715,50 @@ namespace WRLDZ.Duel.TextEffects
             };
             FillTypeOrAttribute(c, filter);
             return c;
+        }
+
+        /// <summary>
+        /// Shared take-control atom until End Phase (Change of Heart / Brain Control).
+        /// Refuse choice-effects, Equip take-control, and switch-control.
+        /// </summary>
+        static bool TryStampTakeControlTarget(string res, string act, CardDef def, EffectClause clause)
+        {
+            if (clause == null || string.IsNullOrWhiteSpace(res)) return false;
+            var desc = def?.desc ?? "";
+            if (Regex.IsMatch(desc, @"Activate 1 of these effects", RegexOptions.IgnoreCase))
+                return false;
+            if (Regex.IsMatch(desc, @"Equip this card to a monster", RegexOptions.IgnoreCase))
+                return false;
+            if (Regex.IsMatch(desc, @"Life Points directly", RegexOptions.IgnoreCase))
+                return false;
+            var body = Normalize(res).Trim().TrimEnd('.');
+            if (Regex.IsMatch(body, @"and if you do|switch control", RegexOptions.IgnoreCase))
+                return false;
+            if (Regex.IsMatch(body, @"equipped monster|while this card is equipped",
+                    RegexOptions.IgnoreCase))
+                return false;
+            if (!Regex.IsMatch(body,
+                    @"^(?:take|gain) control of (?:it|that target) until the(?: end of the)? End Phase$",
+                    RegexOptions.IgnoreCase))
+                return false;
+
+            clause.Action = EffectActionKind.TakeControlTarget;
+            clause.RequiresTargetChoice = true;
+            if (clause.Timing != EffectTiming.Flip)
+                clause.Timing = EffectTiming.Activate;
+            var faceUp = Regex.IsMatch(act ?? "", @"face-up", RegexOptions.IgnoreCase);
+            if (clause.Zone == EffectZoneFilter.None ||
+                clause.Zone == EffectZoneFilter.OppFaceUpMonsters)
+            {
+                clause.Zone = faceUp
+                    ? EffectZoneFilter.OppFaceUpMonsters
+                    : EffectZoneFilter.FieldMonsters;
+                clause.Side = EffectSide.Opponent;
+            }
+
+            if (Regex.IsMatch(act ?? "", @"that can be Normal Summoned", RegexOptions.IgnoreCase))
+                clause.RequiresCanBeNormalSummonedOrSet = true;
+            return true;
         }
 
         static void FillTypeOrAttribute(EffectClause c, string word)

@@ -378,7 +378,8 @@ namespace WRLDZ.Duel.TextEffects
                     return false;
                 }
 
-                if (c.TakeControlOfTarget && engine.FirstEmpty(who.MonsterZones) < 0)
+                if ((c.TakeControlOfTarget || c.Action == EffectActionKind.TakeControlTarget) &&
+                    engine.FirstEmpty(who.MonsterZones) < 0)
                 {
                     reason = "No Monster Zone to take control.";
                     return false;
@@ -2908,6 +2909,18 @@ namespace WRLDZ.Duel.TextEffects
                     break;
                 }
 
+                case EffectActionKind.TakeControlTarget:
+                    if (chosenTarget == null) break;
+                    if (!engine.TryTakeControl(who, chosenTarget))
+                        engine.Log($"{source?.Name}: take control failed — no zone.");
+                    else
+                        chosenTarget.TempControlUntilEndTurn = engine.TurnNumber;
+                    break;
+
+                case EffectActionKind.SwapOriginalAtkDefUntilEnd:
+                    SwapOriginalAtkDefUntilEnd(engine);
+                    break;
+
                 case EffectActionKind.EquipThisToTarget:
                     if (chosenTarget == null || source == null) break;
                     EquipCardTo(engine, who, source, chosenTarget, clause.EquipAtkBonus);
@@ -2960,6 +2973,32 @@ namespace WRLDZ.Duel.TextEffects
                 who.MonsterZones[mi].Occupant = null;
             who.Deck.Insert(0, card.CardId);
             engine.Log($"{card.Name} is placed on top of the Deck.");
+        }
+
+        static void SwapOriginalAtkDefUntilEnd(DuelEngine engine)
+        {
+            if (engine == null) return;
+            foreach (var side in new[] { engine.Player, engine.Opponent })
+            {
+                if (side == null) continue;
+                foreach (var m in side.MonstersOnField())
+                {
+                    if (m?.Def == null || !m.FaceUp) continue;
+                    var origAtk = m.Def.atk;
+                    var origDef = m.Def.def;
+                    m.UntilEndOfTurnAtk += origDef - origAtk;
+                    m.UntilEndOfTurnDef += origAtk - origDef;
+                    engine.Log($"{m.Name}: original ATK/DEF switch until End Phase ({origAtk}/{origDef} → {origDef}/{origAtk}).");
+                }
+            }
+        }
+
+        static bool CanBeNormalSummonedOrSet(CardInstance card)
+        {
+            if (card?.Def == null || !card.Def.IsMonster) return false;
+            if (card.Def.IsExtraDeck || card.Def.IsRitualMonster) return false;
+            return !PsctGrammar.BlocksNormalSummonOrSet(
+                WRLDZ.Duel.Rules.OfficialCardAuthority.OfficialText(card));
         }
 
         public static void NotifyDestroyedOpponentByBattle(DuelEngine engine, DuelistState who,
@@ -3639,6 +3678,26 @@ namespace WRLDZ.Duel.TextEffects
                     foreach (var g in opp.Graveyard)
                         if (g?.Def != null && g.Def.IsMonster && !g.Def.IsExtraDeck) list.Add(g);
                     break;
+                case EffectZoneFilter.FieldMonsters:
+                    if (c.Side == EffectSide.Opponent || c.Side == EffectSide.Both)
+                    {
+                        foreach (var m in opp.MonstersOnField())
+                        {
+                            if (engine.IsDragonTargetProtected(m)) continue;
+                            list.Add(m);
+                        }
+                    }
+
+                    if (c.Side == EffectSide.Controller || c.Side == EffectSide.Both)
+                    {
+                        foreach (var m in who.MonstersOnField())
+                        {
+                            if (engine.IsDragonTargetProtected(m)) continue;
+                            list.Add(m);
+                        }
+                    }
+
+                    break;
                 case EffectZoneFilter.OppFaceUpMonsters:
                     foreach (var m in opp.MonstersOnField())
                     {
@@ -3791,10 +3850,13 @@ namespace WRLDZ.Duel.TextEffects
             if (!string.IsNullOrEmpty(c.TargetSeriesName))
                 list.RemoveAll(t => !CardMatchesSeries(t?.Def, c.TargetSeriesName));
             if (!string.IsNullOrEmpty(c.AttributeFilter) &&
-                c.Action == EffectActionKind.EquipThisToTarget)
+                (c.Action == EffectActionKind.EquipThisToTarget ||
+                 c.Action == EffectActionKind.TakeControlTarget))
                 list.RemoveAll(t => t?.Def?.attribute == null ||
                                     !t.Def.attribute.Equals(c.AttributeFilter,
                                         System.StringComparison.OrdinalIgnoreCase));
+            if (c.RequiresCanBeNormalSummonedOrSet)
+                list.RemoveAll(t => !CanBeNormalSummonedOrSet(t));
             if (c.Action == EffectActionKind.EquipThisToTarget)
                 list.RemoveAll(t => t?.Def == null || !t.Def.IsMonster || !t.FaceUp);
             if (c.Action == EffectActionKind.SetTargetFaceDownDefense)
@@ -3863,6 +3925,12 @@ namespace WRLDZ.Duel.TextEffects
                         .First();
                 case EffectZoneFilter.FieldSpellTraps:
                     return targets.FirstOrDefault(t => opp.TryFindSpellTrap(t, out _)) ?? targets[0];
+                case EffectZoneFilter.FieldMonsters:
+                    return targets
+                               .Where(t => opp.TryFindMonster(t, out _))
+                               .OrderByDescending(t => t.CurrentAtk)
+                               .FirstOrDefault()
+                           ?? targets[0];
                 case EffectZoneFilter.OppFaceUpMonsters:
                     return targets.OrderByDescending(t => t.CurrentAtk).First();
                 case EffectZoneFilter.FieldAnyMonster:
@@ -3893,7 +3961,10 @@ namespace WRLDZ.Duel.TextEffects
             EffectZoneFilter.FieldSpellTraps => EffectTargetKind.SpellTrapOnField,
             EffectZoneFilter.OppFaceUpMonsters when c.Action == EffectActionKind.EffectDamageBothFromOriginalAtk
                 => EffectTargetKind.OppFaceUpMonsterAtkLeqLp,
+            EffectZoneFilter.FieldMonsters => EffectTargetKind.AnyMonsterOnField,
             EffectZoneFilter.OppFaceUpMonsters => EffectTargetKind.OppFaceUpMonster,
+            EffectZoneFilter.OppAttackPositionMonsters => EffectTargetKind.OppFaceUpMonster,
+            EffectZoneFilter.OppDefensePositionMonsters => EffectTargetKind.AnyMonsterOnField,
             EffectZoneFilter.FieldAnyMonster => EffectTargetKind.AnyMonsterOnField,
             EffectZoneFilter.ControllerGySpells => EffectTargetKind.SpellInYourGy,
             EffectZoneFilter.ControllerGyTraps => EffectTargetKind.TrapInYourGy,

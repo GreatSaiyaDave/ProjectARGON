@@ -142,6 +142,12 @@ namespace WRLDZ.Duel
         /// <summary>This monster's current controller is from an Equip take-control (Falling Down).</summary>
         public bool TakenByEquipControl;
 
+        /// <summary>
+        /// Temporary take-control (Change of Heart / Brain Control): return during
+        /// the End Phase of this turn number. -1 = not temporary.
+        /// </summary>
+        public int TempControlUntilEndTurn = -1;
+
         /// <summary>Monsters/Unions currently equipped to this card.</summary>
         public readonly List<CardInstance> Equips = new();
 

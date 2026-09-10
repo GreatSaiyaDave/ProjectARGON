@@ -1183,6 +1183,132 @@ namespace WRLDZ.Duel.Rules
                             c != null && c.TakeControlOfTarget &&
                             c.Zone == EffectZoneFilter.OppFaceUpMonsters));
 
+                    var coh = db.Get(4031928);
+                    var cohProg = coh != null ? CardTextEffectCompiler.Compile(coh) : null;
+                    Check("Corpus: Change of Heart FullyCompiled take-control until End Phase",
+                        cohProg != null && cohProg.FullyCompiled &&
+                        cohProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Activate &&
+                            c.Action == EffectActionKind.TakeControlTarget &&
+                            c.RequiresTargetChoice &&
+                            c.Zone == EffectZoneFilter.FieldMonsters &&
+                            !c.RequiresCanBeNormalSummonedOrSet),
+                        cohProg == null
+                            ? "null"
+                            : $"full={cohProg.FullyCompiled} n={cohProg.ClauseList.Count} unparsed={string.Join("|", cohProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var brain = db.Get(87910978);
+                    var brainProg = brain != null ? CardTextEffectCompiler.Compile(brain) : null;
+                    Check("Corpus: Brain Control FullyCompiled pay 800 + NS/Set take-control until End Phase",
+                        brainProg != null && brainProg.FullyCompiled &&
+                        brainProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Activate &&
+                            c.Action == EffectActionKind.TakeControlTarget &&
+                            c.PayLpAmount == 800 &&
+                            c.RequiresCanBeNormalSummonedOrSet &&
+                            c.Zone == EffectZoneFilter.OppFaceUpMonsters),
+                        brainProg == null
+                            ? "null"
+                            : $"full={brainProg.FullyCompiled} n={brainProg.ClauseList.Count} unparsed={string.Join("|", brainProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var synCoh = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000070,
+                        name = "New Spell (Change of Heart shape)",
+                        type = "Spell Card",
+                        race = "Normal",
+                        desc = "Target 1 monster your opponent controls; take control of it until the End Phase."
+                    });
+                    Check("New-card rule: take-control until End Phase compiles without a cardId branch",
+                        synCoh != null && synCoh.FullyCompiled &&
+                        synCoh.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.TakeControlTarget &&
+                            c.RequiresTargetChoice));
+
+                    var synBrain = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000071,
+                        name = "New Spell (Brain Control shape)",
+                        type = "Spell Card",
+                        race = "Normal",
+                        desc =
+                            "Pay 800 LP, then target 1 face-up monster your opponent controls that can be Normal Summoned/Set; take control of that target until the End Phase."
+                    });
+                    Check("New-card rule: pay-LP take-control with NS/Set filter compiles without a cardId branch",
+                        synBrain != null && synBrain.FullyCompiled &&
+                        synBrain.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.TakeControlTarget &&
+                            c.PayLpAmount == 800 &&
+                            c.RequiresCanBeNormalSummonedOrSet));
+
+                    var cohLeftover = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000072,
+                        name = "Change of Heart leftover unique",
+                        type = "Spell Card",
+                        race = "Normal",
+                        desc =
+                            "Target 1 monster your opponent controls; take control of it until the End Phase. Also skip your opponent's next Draw Phase."
+                    });
+                    Check("Corpus: Change of Heart leftover unique is not FullyCompiled",
+                        cohLeftover == null || !cohLeftover.FullyCompiled);
+
+                    var shield = db.Get(52097679);
+                    var shieldProg = shield != null ? CardTextEffectCompiler.Compile(shield) : null;
+                    Check("Corpus: Shield & Sword FullyCompiled swap original ATK/DEF until end of turn",
+                        shieldProg != null && shieldProg.FullyCompiled &&
+                        shieldProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.SwapOriginalAtkDefUntilEnd),
+                        shieldProg == null
+                            ? "null"
+                            : $"full={shieldProg.FullyCompiled} unparsed={string.Join("|", shieldProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var synShield = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000073,
+                        name = "New Spell (Shield & Sword shape)",
+                        type = "Spell Card",
+                        race = "Normal",
+                        desc =
+                            "Switch the original ATK and DEF of all face-up monsters currently on the field, until the end of this turn."
+                    });
+                    Check("New-card rule: original ATK/DEF switch compiles without a cardId branch",
+                        synShield != null && synShield.FullyCompiled &&
+                        synShield.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.SwapOriginalAtkDefUntilEnd));
+
+                    var shieldLeftover = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000074,
+                        name = "Shield & Sword leftover unique",
+                        type = "Spell Card",
+                        race = "Normal",
+                        desc =
+                            "Switch the original ATK and DEF of all face-up monsters currently on the field, until the end of this turn. Then draw 2 cards."
+                    });
+                    Check("Corpus: Shield & Sword leftover unique is not FullyCompiled",
+                        shieldLeftover == null || !shieldLeftover.FullyCompiled);
+
+                    var lightforce = db.Get(49587034);
+                    var lightforceProg = lightforce != null ? CardTextEffectCompiler.Compile(lightforce) : null;
+                    Check("Corpus: Lightforce Sword delayed hand-banish is not FullyCompiled",
+                        lightforceProg == null || !lightforceProg.FullyCompiled);
+
+                    var offering = db.Get(80604092);
+                    var offeringProg = offering != null ? CardTextEffectCompiler.Compile(offering) : null;
+                    Check("Corpus: Ultimate Offering extra Normal Summon is not FullyCompiled",
+                        offeringProg == null || !offeringProg.FullyCompiled);
+
+                    var ec = db.Get(98045062);
+                    var ecProg = ec != null ? CardTextEffectCompiler.Compile(ec) : null;
+                    Check("Corpus: Enemy Controller choice leftover is not FullyCompiled",
+                        ecProg == null || !ecProg.FullyCompiled);
+
                     var rec = db.Get(74848038);
                     var recProg = rec != null ? CardTextEffectCompiler.Compile(rec) : null;
                     Check("Corpus: Monster Reincarnation FullyCompiled discard + GY monster add",

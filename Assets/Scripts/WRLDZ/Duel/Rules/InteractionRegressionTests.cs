@@ -3015,6 +3015,212 @@ namespace WRLDZ.Duel.Rules
                         p.Graveyard.Exists(c => c.CardId == duster));
                 }
 
+                {
+                    const int changeOfHeart = 4031928;
+                    const int brainControl = 87910978;
+                    const int shieldSword = 52097679;
+                    const int celticId = 91152256;
+                    const int lavaGolem = 102380;
+                    const int giantId = 13039848;
+
+                    var cohDef = db.Get(changeOfHeart);
+                    var cohProg = cohDef != null ? CardTextEffectCompiler.Compile(cohDef) : null;
+                    Check("Change of Heart FullyCompiled take-control until End Phase",
+                        cohProg != null && cohProg.FullyCompiled &&
+                        cohProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.TakeControlTarget));
+
+                    var brainDef = db.Get(brainControl);
+                    var brainLive = brainDef != null ? CardTextEffectCompiler.Compile(brainDef) : null;
+                    Check("Brain Control FullyCompiled pay 800 + NS/Set take-control",
+                        brainLive != null && brainLive.FullyCompiled &&
+                        brainLive.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.TakeControlTarget &&
+                            c.PayLpAmount == 800 &&
+                            c.RequiresCanBeNormalSummonedOrSet));
+
+                    var shieldDef = db.Get(shieldSword);
+                    var shieldLive = shieldDef != null ? CardTextEffectCompiler.Compile(shieldDef) : null;
+                    Check("Shield & Sword FullyCompiled swap original ATK/DEF",
+                        shieldLive != null && shieldLive.FullyCompiled &&
+                        shieldLive.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.SwapOriginalAtkDefUntilEnd));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        var prey = PlaceMonster(engine, opp, celticId, 2, BattlePosition.Attack, true);
+                        var card = PutInHand(engine, p, changeOfHeart);
+                        Check("Change of Heart: Activate legal with opp monster + empty zone",
+                            engine.CanActivateSpellTrap(p, card, fromHand: true));
+                        Check("Change of Heart: Activate opens opp monster target",
+                            engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                            engine.IsAwaitingEffectTarget);
+                        var took = false;
+                        if (engine.IsAwaitingEffectTarget)
+                        {
+                            took = engine.TrySelectEffectTarget(prey) &&
+                                   p.TryFindMonster(prey, out _) &&
+                                   !opp.TryFindMonster(prey, out _) &&
+                                   prey.TempControlUntilEndTurn == engine.TurnNumber;
+                            Check("Change of Heart: select Celtic, take control", took);
+                        }
+
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        Check("Change of Heart: End Phase returns control",
+                            took &&
+                            engine.TryEndTurnSafe(p) &&
+                            opp.TryFindMonster(prey, out _) &&
+                            !p.TryFindMonster(prey, out _) &&
+                            prey.TempControlUntilEndTurn < 0);
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        var fd = PlaceMonster(engine, opp, celticId, 2, BattlePosition.Defense, false);
+                        var card = PutInHand(engine, p, changeOfHeart);
+                        Check("Change of Heart: FD Defense is a legal target",
+                            engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                            engine.IsAwaitingEffectTarget &&
+                            engine.PendingActivation != null &&
+                            engine.PendingActivation.LegalTargets.Contains(fd));
+                        if (engine.IsAwaitingEffectTarget)
+                        {
+                            Check("Change of Heart: take FD Celtic (stays face-down)",
+                                engine.TrySelectEffectTarget(fd) &&
+                                p.TryFindMonster(fd, out _) &&
+                                !fd.FaceUp);
+                        }
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        var card = PutInHand(engine, p, changeOfHeart);
+                        Check("Change of Heart: refuse with no opponent monster",
+                            !engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        PlaceMonster(engine, p, celticId, 0, BattlePosition.Attack, true);
+                        PlaceMonster(engine, p, celticId, 1, BattlePosition.Attack, true);
+                        PlaceMonster(engine, p, celticId, 2, BattlePosition.Attack, true);
+                        PlaceMonster(engine, p, celticId, 3, BattlePosition.Attack, true);
+                        PlaceMonster(engine, p, celticId, 4, BattlePosition.Attack, true);
+                        PlaceMonster(engine, opp, celticId, 2, BattlePosition.Attack, true);
+                        var card = PutInHand(engine, p, changeOfHeart);
+                        Check("Change of Heart: refuse with no empty Monster Zone",
+                            !engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        var prey = PlaceMonster(engine, opp, celticId, 2, BattlePosition.Attack, true);
+                        var nomi = PlaceMonster(engine, opp, lavaGolem, 1, BattlePosition.Attack, true);
+                        var card = PutInHand(engine, p, brainControl);
+                        var lp = p.LifePoints;
+                        Check("Brain Control: Activate legal with NS-legal prey",
+                            engine.CanActivateSpellTrap(p, card, fromHand: true));
+                        Check("Brain Control: Activate opens face-up NS/Set target",
+                            engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                            engine.IsAwaitingEffectTarget);
+                        if (engine.IsAwaitingEffectTarget)
+                        {
+                            var legal = engine.PendingActivation.LegalTargets;
+                            Check("Brain Control: Celtic legal, Lava Golem illegal",
+                                legal.Contains(prey) && !legal.Contains(nomi));
+                            Check("Brain Control: select Celtic, pay 800, take control",
+                                engine.TrySelectEffectTarget(prey) &&
+                                p.LifePoints == lp - 800 &&
+                                p.TryFindMonster(prey, out _) &&
+                                prey.TempControlUntilEndTurn == engine.TurnNumber);
+                        }
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        PlaceMonster(engine, opp, lavaGolem, 2, BattlePosition.Attack, true);
+                        var card = PutInHand(engine, p, brainControl);
+                        Check("Brain Control: refuse when only nomi is face-up",
+                            !engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        PlaceMonster(engine, opp, celticId, 2, BattlePosition.Defense, false);
+                        var card = PutInHand(engine, p, brainControl);
+                        Check("Brain Control: refuse face-down only (must be face-up)",
+                            !engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        var cel = PlaceMonster(engine, p, celticId, 2, BattlePosition.Attack, true);
+                        var giant = PlaceMonster(engine, opp, giantId, 2, BattlePosition.Defense, true);
+                        var fd = PlaceMonster(engine, opp, celticId, 1, BattlePosition.Defense, false);
+                        var celAtk = cel.CurrentAtk;
+                        var celDef = cel.CurrentDef;
+                        var giantAtk = giant.CurrentAtk;
+                        var giantDef = giant.CurrentDef;
+                        var card = PutInHand(engine, p, shieldSword);
+                        Check("Shield & Sword: Activate legal with face-up monsters",
+                            engine.CanActivateSpellTrap(p, card, fromHand: true));
+                        Check("Shield & Sword: swaps face-up originals, skips face-down",
+                            engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                            cel.CurrentAtk == celDef &&
+                            cel.CurrentDef == celAtk &&
+                            giant.CurrentAtk == giantDef &&
+                            giant.CurrentDef == giantAtk &&
+                            fd.CurrentAtk == fd.Def.atk &&
+                            fd.CurrentDef == fd.Def.def,
+                            $"cel {cel.CurrentAtk}/{cel.CurrentDef} giant {giant.CurrentAtk}/{giant.CurrentDef}");
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        Check("Shield & Sword: End Phase restores originals",
+                            engine.TryEndTurnSafe(p) &&
+                            cel.CurrentAtk == celAtk &&
+                            cel.CurrentDef == celDef);
+                    }
+                }
+
                 // ── Equip Spells: Activate + target; host leaving field destroys Equip ──
                 {
                     const int treasure = 1435851;
