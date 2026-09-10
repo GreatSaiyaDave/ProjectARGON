@@ -2073,6 +2073,152 @@ namespace WRLDZ.Duel.Rules
                             c.Zone == EffectZoneFilter.FieldSpellTraps &&
                             !c.RequiresTargetChoice));
 
+                    // Fanbot surgical shortlist: Morphing Jar / Masked Sorcerer /
+                    // Heart of the Underdog / Spring of Rebirth / Nutrient Z.
+                    // Existing atoms cannot honor the official print (discard-then-draw-5,
+                    // this-card battle-damage draw, Draw-Phase Normal reveal, bounce-to-hand
+                    // LP, DC ≥2000 gain-LP-first). Fail-closed park.
+                    var morphJar = db.Get(33508719);
+                    var morphJarProg = morphJar != null ? CardTextEffectCompiler.Compile(morphJar) : null;
+                    Check("Corpus: Morphing Jar stays parked (discard both then draw 5 needs atom)",
+                        morphJarProg == null || !morphJarProg.FullyCompiled,
+                        morphJarProg == null
+                            ? "null"
+                            : $"full={morphJarProg.FullyCompiled} n={morphJarProg.ClauseList.Count} unparsed={string.Join("|", morphJarProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: Morphing Jar is not Card Destruction BothPlayersDiscardAndRedraw / Flip Draw 5",
+                        morphJarProg == null ||
+                        !morphJarProg.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.BothPlayersDiscardAndRedraw ||
+                             c.Action == EffectActionKind.Draw)));
+                    Check("Corpus: Morphing Jar ProgramMayActivate is false",
+                        morphJar == null || !OfficialEffectRegistry.ProgramMayActivate(morphJar));
+
+                    var maskedSorc = db.Get(10189126);
+                    var maskedSorcProg = maskedSorc != null ? CardTextEffectCompiler.Compile(maskedSorc) : null;
+                    Check("Corpus: Masked Sorcerer stays parked (this-card battle-damage draw needs atom)",
+                        maskedSorcProg == null || !maskedSorcProg.FullyCompiled,
+                        maskedSorcProg == null
+                            ? "null"
+                            : $"full={maskedSorcProg.FullyCompiled} n={maskedSorcProg.ClauseList.Count} unparsed={string.Join("|", maskedSorcProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: Masked Sorcerer is not Draw / ThisCardDestroysByBattle skip-Draw",
+                        maskedSorcProg == null ||
+                        !maskedSorcProg.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.Draw ||
+                             c.Action == EffectActionKind.SkipOpponentNextDrawPhase ||
+                             c.Timing == EffectTiming.ThisCardDestroysByBattle)));
+                    Check("Corpus: Masked Sorcerer ProgramMayActivate is false",
+                        maskedSorc == null || !OfficialEffectRegistry.ProgramMayActivate(maskedSorc));
+
+                    var heartUnderdog = db.Get(35762283);
+                    var heartUnderdogProg = heartUnderdog != null ? CardTextEffectCompiler.Compile(heartUnderdog) : null;
+                    Check("Corpus: Heart of the Underdog stays parked (Draw-Phase Normal reveal needs atom)",
+                        heartUnderdogProg == null || !heartUnderdogProg.FullyCompiled,
+                        heartUnderdogProg == null
+                            ? "null"
+                            : $"full={heartUnderdogProg.FullyCompiled} n={heartUnderdogProg.ClauseList.Count} unparsed={string.Join("|", heartUnderdogProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: Heart of the Underdog is not Draw / SkipOpponentNextDrawPhase",
+                        heartUnderdogProg == null ||
+                        !heartUnderdogProg.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.Draw ||
+                             c.Action == EffectActionKind.SkipOpponentNextDrawPhase)));
+                    Check("Corpus: Heart of the Underdog ProgramMayActivate is false",
+                        heartUnderdog == null || !OfficialEffectRegistry.ProgramMayActivate(heartUnderdog));
+
+                    var springRebirth = db.Get(94425169);
+                    var springRebirthProg = springRebirth != null ? CardTextEffectCompiler.Compile(springRebirth) : null;
+                    Check("Corpus: Spring of Rebirth stays parked (bounce-to-hand LP needs atom)",
+                        springRebirthProg == null || !springRebirthProg.FullyCompiled,
+                        springRebirthProg == null
+                            ? "null"
+                            : $"full={springRebirthProg.FullyCompiled} n={springRebirthProg.ClauseList.Count} unparsed={string.Join("|", springRebirthProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: Spring of Rebirth is not GainLifePoints / ReturnToHand",
+                        springRebirthProg == null ||
+                        !springRebirthProg.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.GainLifePoints ||
+                             c.Action == EffectActionKind.ReturnToHand)));
+                    Check("Corpus: Spring of Rebirth ProgramMayActivate is false",
+                        springRebirth == null || !OfficialEffectRegistry.ProgramMayActivate(springRebirth));
+
+                    var nutrientZ = db.Get(29389368);
+                    var nutrientZProg = nutrientZ != null ? CardTextEffectCompiler.Compile(nutrientZ) : null;
+                    Check("Corpus: Nutrient Z stays parked (DC ≥2000 gain-LP-first needs atom)",
+                        nutrientZProg == null || !nutrientZProg.FullyCompiled,
+                        nutrientZProg == null
+                            ? "null"
+                            : $"full={nutrientZProg.FullyCompiled} n={nutrientZProg.ClauseList.Count} unparsed={string.Join("|", nutrientZProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: Nutrient Z is not YouTakeLifePointDamage / PreventControllerBattleDamage / Kuriboh DC",
+                        nutrientZProg == null ||
+                        !nutrientZProg.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.GainLifePoints ||
+                             c.Action == EffectActionKind.PreventControllerBattleDamage ||
+                             c.Action == EffectActionKind.DiscardSelfNoBattleDamageThisBattle ||
+                             c.Timing == EffectTiming.YouTakeLifePointDamage)));
+                    Check("Corpus: Nutrient Z ProgramMayActivate is false",
+                        nutrientZ == null || !OfficialEffectRegistry.ProgramMayActivate(nutrientZ));
+
+                    var leftoverMorph = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000171,
+                        name = "Discard-then-draw-5 leftover unique (Morphing Jar family)",
+                        type = "Flip Effect Monster",
+                        desc =
+                            "FLIP: Both players discard as many cards as possible from their hands, then each player draws 5 cards. Shuffle your entire Deck into your opponent's Deck."
+                    });
+                    Check("Corpus: Morphing Jar leftover unique is not FullyCompiled",
+                        leftoverMorph == null || !leftoverMorph.FullyCompiled);
+
+                    var leftoverMasked = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000172,
+                        name = "Battle-damage draw leftover unique (Masked Sorcerer family)",
+                        type = "Effect Monster",
+                        desc =
+                            "When this card inflicts Battle Damage to your opponent's Life Points, draw 1 card from your Deck. Shuffle your entire Deck into your opponent's Deck."
+                    });
+                    Check("Corpus: Masked Sorcerer leftover unique is not FullyCompiled",
+                        leftoverMasked == null || !leftoverMasked.FullyCompiled);
+
+                    var leftoverHeart = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000173,
+                        name = "Draw-Phase Normal reveal leftover unique (Heart of the Underdog family)",
+                        type = "Spell Card",
+                        race = "Continuous",
+                        desc =
+                            "During your Draw Phase, when you draw a Normal Monster(s): You can reveal it; draw 1 more card. Shuffle your entire Deck into your opponent's Deck."
+                    });
+                    Check("Corpus: Heart of the Underdog leftover unique is not FullyCompiled",
+                        leftoverHeart == null || !leftoverHeart.FullyCompiled);
+
+                    var leftoverSpring = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000174,
+                        name = "Bounce-to-hand LP leftover unique (Spring of Rebirth family)",
+                        type = "Spell Card",
+                        race = "Continuous",
+                        desc =
+                            "Increase your Life Points by 500 points every time monsters return from the field to the owner's hand. Shuffle your entire Deck into your opponent's Deck."
+                    });
+                    Check("Corpus: Spring of Rebirth leftover unique is not FullyCompiled",
+                        leftoverSpring == null || !leftoverSpring.FullyCompiled);
+
+                    var leftoverNutrient = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000175,
+                        name = "DC-2000-gain-first leftover unique (Nutrient Z family)",
+                        type = "Trap Card",
+                        race = "Normal",
+                        desc =
+                            "During damage calculation, when you are about to take 2000 or more battle damage: Gain 4000 LP first. Shuffle your entire Deck into your opponent's Deck."
+                    });
+                    Check("Corpus: Nutrient Z leftover unique is not FullyCompiled",
+                        leftoverNutrient == null || !leftoverNutrient.FullyCompiled);
+
                     Check("Vocabulary: Protection is a shared kind",
                         Array.IndexOf(EffectVocabulary.SharedResolutions,
                             EffectResolutionKind.Protection) >= 0);
