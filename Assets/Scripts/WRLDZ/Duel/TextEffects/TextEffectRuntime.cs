@@ -378,6 +378,14 @@ namespace WRLDZ.Duel.TextEffects
                     return false;
                 }
 
+                if (c.Action == EffectActionKind.ChangeBattlePosition &&
+                    !c.RequiresTargetChoice && !c.TurnPlayerIsSubject &&
+                    !CollectTargets(engine, who, c, card).Exists(m => m != null && m.FaceUp))
+                {
+                    reason = "No face-up monsters to change.";
+                    return false;
+                }
+
                 if (c.TakeControlOfTarget && engine.FirstEmpty(who.MonsterZones) < 0)
                 {
                     reason = "No Monster Zone to take control.";
@@ -1103,10 +1111,9 @@ namespace WRLDZ.Duel.TextEffects
                 EffectActionKind.AddFromGyToHand => true,
                 EffectActionKind.AddFromDeckToHand => true,
                 EffectActionKind.SpecialSummonFromGy => true,
-                EffectActionKind.ChangeBattlePosition => true,
+                EffectActionKind.ChangeBattlePosition => false,
                 EffectActionKind.EffectDamageBothFromOriginalAtk => true,
-                EffectActionKind.Destroy when c.Zone is EffectZoneFilter.FieldAnyMonster
-                    or EffectZoneFilter.OppFaceUpMonsters => true,
+                EffectActionKind.Destroy when c.Zone is EffectZoneFilter.FieldAnyMonster => true,
                 EffectActionKind.Destroy when c.Zone is EffectZoneFilter.FieldSpellTraps &&
                                               c.Side != EffectSide.Both => true,
                 EffectActionKind.ReturnToHand when c.Zone is EffectZoneFilter.FieldMonsters => false,
@@ -1867,9 +1874,10 @@ namespace WRLDZ.Duel.TextEffects
                 costNumeric = c.ScaleAmountByCostCount ? n : atk;
             }
 
-            if (c.RequiresSendHandToGy && autoPick)
+            if ((c.RequiresSendHandToGy || c.RequiresDiscardCost) && autoPick)
             {
-                var hand = CollectDiscardCost(who, "", card);
+                var hand = CollectDiscardCost(who, c.RequiresDiscardCost ? c.DiscardCostAttribute : "",
+                    card);
                 if (hand.Count == 0) return false;
                 var pick = hand[0];
                 costNumeric = pick.CurrentAtk;
@@ -1896,6 +1904,7 @@ namespace WRLDZ.Duel.TextEffects
             var needsPick = chosen.Count > 0 &&
                             (clause.RequiresTributeCount > 0 || clause.RequiresSendHandToGy ||
                              clause.RequiresSendOtherYouControl ||
+                             (clause.RequiresDiscardCost && !autoPick && who.IsPlayer) ||
                              (clause.BanishFromGyCount > 0 && !autoPick && who.IsPlayer));
             if (autoPick || !who.IsPlayer || !needsPick)
             {
@@ -1997,6 +2006,12 @@ namespace WRLDZ.Duel.TextEffects
 
             if (isMonster && activate.Any(x => x.OncePerTurn) && card != null)
                 card.EffectUsedThisTurn = true;
+            else if (!isMonster)
+            {
+                var prog = CompiledEffectCache.GetOrCompile(card);
+                FinishSpellTrap(engine, who, card,
+                    stays: SpellTrapEffects.StaysOnFieldAfterActivate(card, prog));
+            }
         }
 
         static bool DeckHasNamed(DuelEngine engine, DuelistState who, string name)
@@ -2372,6 +2387,17 @@ namespace WRLDZ.Duel.TextEffects
                             : BattlePosition.Attack;
                         engine.Log($"{chosenTarget.Name} → {chosenTarget.Position} Position.");
                     }
+                    else
+                    {
+                        foreach (var m in CollectAllMatching(engine, who, clause).ToList())
+                        {
+                            if (m == null || !m.FaceUp) continue;
+                            m.Position = m.Position == BattlePosition.Attack
+                                ? BattlePosition.Defense
+                                : BattlePosition.Attack;
+                            engine.Log($"{m.Name} → {m.Position} Position.");
+                        }
+                    }
 
                     break;
 
@@ -2476,6 +2502,16 @@ namespace WRLDZ.Duel.TextEffects
                         gained = Mathf.Max(0, clause.Amount) * who.MonsterCount;
                     who.LifePoints += gained;
                     engine.Log($"{who.Name} gains {gained} LP ({who.LifePoints}).");
+                    if (clause.Side == EffectSide.Both)
+                    {
+                        var other = engine.OpponentOf(who);
+                        if (other != null)
+                        {
+                            other.LifePoints += gained;
+                            engine.Log($"{other.Name} gains {gained} LP ({other.LifePoints}).");
+                        }
+                    }
+
                     break;
                 }
 
@@ -2971,6 +3007,17 @@ namespace WRLDZ.Duel.TextEffects
             var dummy = false;
             foreach (var c in prog.ClausesFor(EffectTiming.ThisCardDestroysByBattle))
                 ApplyClause(engine, who, attacker, c, null, ref dummy, ref dummy);
+        }
+
+        public static void NotifyInflictedBattleDamage(DuelEngine engine, DuelistState who,
+            DuelistState opp, CardInstance source)
+        {
+            if (engine == null || who == null || opp == null || source?.Def == null) return;
+            var prog = CompiledEffectCache.GetOrCompile(source);
+            if (prog == null) return;
+            var dummy = false;
+            foreach (var c in prog.ClausesFor(EffectTiming.ThisCardInflictsBattleDamage))
+                ApplyClause(engine, who, source, c, null, ref dummy, ref dummy);
         }
 
         public static void FirePhaseTriggers(DuelEngine engine, DuelistState who, EffectTiming timing)
@@ -3828,6 +3875,11 @@ namespace WRLDZ.Duel.TextEffects
                         yield return who.FieldSpellZone.Occupant;
                     if (opp?.FieldSpellZone?.Occupant != null)
                         yield return opp.FieldSpellZone.Occupant;
+                    break;
+                case EffectZoneFilter.OppFaceUpMonsters:
+                    foreach (var m in opp.MonstersOnField())
+                        if (m != null && m.FaceUp)
+                            yield return m;
                     break;
                 case EffectZoneFilter.OppAttackPositionMonsters:
                     foreach (var m in opp.MonstersOnField())
