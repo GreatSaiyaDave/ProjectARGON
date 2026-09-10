@@ -75,8 +75,10 @@ namespace WRLDZ.Duel.TextEffects
             @"Gains? (\d+) ATK for each Spell Counter on it",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        // Breaker: absorb "You can" + trailing period so leftover unique is not
+        // "You can ." (MST whole-text must not cover this sentence).
         static readonly Regex RxRemoveCounterDestroySt = new(
-            @"remove (\d+) Spell Counter(?:s)? from this card, then target 1 Spell/?Trap on the field;\s*destroy that target",
+            @"(?:You can )?remove (\d+) Spell Counter(?:s)? from this card, then target 1 Spell/?Trap on the field;\s*destroy that target\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxRemoveCounterDraw = new(
