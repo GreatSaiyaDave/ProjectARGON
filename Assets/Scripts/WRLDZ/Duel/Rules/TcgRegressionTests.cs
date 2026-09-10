@@ -1351,6 +1351,11 @@ namespace WRLDZ.Duel.Rules
                     Check("Corpus: Skill Drain leftover unique is not FullyCompiled",
                         skillProg == null || !skillProg.FullyCompiled);
 
+                    var zeroG = db.Get(83133491);
+                    var zgProg = zeroG != null ? CardTextEffectCompiler.Compile(zeroG) : null;
+                    Check("Corpus: Zero Gravity leftover (all-field, not opp-only) is not FullyCompiled",
+                        zgProg == null || !zgProg.FullyCompiled);
+
                     var warrior = db.Get(95281259);
                     var wProg = warrior != null ? CardTextEffectCompiler.Compile(warrior) : null;
                     Check("Corpus: The Warrior Returning Alive FullyCompiled Warrior GY add",
@@ -2072,6 +2077,105 @@ namespace WRLDZ.Duel.Rules
                             c.Side == EffectSide.Opponent &&
                             c.Zone == EffectZoneFilter.FieldSpellTraps &&
                             !c.RequiresTargetChoice));
+
+                    var wind = db.Get(59744639);
+                    var windProg = wind != null ? CardTextEffectCompiler.Compile(wind) : null;
+                    Check("Corpus: Windstorm of Etaqua FullyCompiled opp face-up position toggle",
+                        windProg != null && windProg.FullyCompiled &&
+                        windProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ChangeBattlePosition &&
+                            !c.RequiresTargetChoice));
+
+                    var vortex = db.Get(69162969);
+                    var vortexProg = vortex != null ? CardTextEffectCompiler.Compile(vortex) : null;
+                    Check("Corpus: Lightning Vortex FullyCompiled discard + opp face-up wipe",
+                        vortexProg != null && vortexProg.FullyCompiled &&
+                        vortexProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.Destroy &&
+                            c.RequiresDiscardCost &&
+                            !c.RequiresTargetChoice));
+
+                    var rain = db.Get(66719324);
+                    var rainProg = rain != null ? CardTextEffectCompiler.Compile(rain) : null;
+                    Check("Corpus: Rain of Mercy FullyCompiled both-players GainLifePoints 1000",
+                        rainProg != null && rainProg.FullyCompiled &&
+                        rainProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.GainLifePoints &&
+                            c.Side == EffectSide.Both &&
+                            c.Amount == 1000));
+
+                    var immortal = db.Get(84926738);
+                    var immProg = immortal != null ? CardTextEffectCompiler.Compile(immortal) : null;
+                    Check("Corpus: The Immortal of Thunder FullyCompiled Flip gain + GY lose",
+                        immProg != null && immProg.FullyCompiled &&
+                        immProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.GainLifePoints &&
+                            c.Amount == 3000) &&
+                        immProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.TakeEffectDamage &&
+                            c.Amount == 5000));
+
+                    var synWind = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000068,
+                        name = "Opp Position Gale (new-card shape)",
+                        type = "Trap Card",
+                        race = "Normal",
+                        desc = "Change the battle positions of all face-up monsters your opponent controls."
+                    });
+                    Check("New-card rule: Windstorm-shaped text compiles without a cardId branch",
+                        synWind != null && synWind.FullyCompiled &&
+                        synWind.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ChangeBattlePosition &&
+                            !c.RequiresTargetChoice));
+
+                    var synVortex = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000069,
+                        name = "Discard Face-Up Wipe (new-card shape)",
+                        type = "Spell Card",
+                        race = "Normal",
+                        desc = "Discard 1 card; destroy all face-up monsters your opponent controls."
+                    });
+                    Check("New-card rule: Lightning Vortex-shaped text compiles without a cardId branch",
+                        synVortex != null && synVortex.FullyCompiled &&
+                        synVortex.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.Destroy &&
+                            c.RequiresDiscardCost));
+
+                    var synRain = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000070,
+                        name = "Both Gain (new-card shape)",
+                        type = "Spell Card",
+                        race = "Normal",
+                        desc = "Both players gain 1000 LP."
+                    });
+                    Check("New-card rule: Rain of Mercy-shaped text compiles without a cardId branch",
+                        synRain != null && synRain.FullyCompiled &&
+                        synRain.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.GainLifePoints &&
+                            c.Side == EffectSide.Both));
+
+                    var leftoverWind = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000071,
+                        name = "Windstorm leftover rider",
+                        type = "Trap Card",
+                        race = "Normal",
+                        desc =
+                            "Change the battle positions of all face-up monsters your opponent controls. Also draw 1 card."
+                    });
+                    Check("Corpus: Windstorm leftover rider is not FullyCompiled",
+                        leftoverWind == null || !leftoverWind.FullyCompiled);
 
                     Check("Vocabulary: Protection is a shared kind",
                         Array.IndexOf(EffectVocabulary.SharedResolutions,

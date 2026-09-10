@@ -6605,6 +6605,169 @@ namespace WRLDZ.Duel.Rules
                 }
             }
 
+            // ── Windstorm / Lightning Vortex / Rain of Mercy / Immortal of Thunder ──
+            {
+                const int windstorm = 59744639;
+                const int vortex = 69162969;
+                const int rain = 66719324;
+                const int immortal = 84926738;
+                const int celtic = 91152256;
+                const int bewd = 89631139;
+                const int wall = 13039848;
+
+                {
+                    var def = db.Get(windstorm);
+                    var prog = def != null ? CardTextEffectCompiler.Compile(def) : null;
+                    Check("Windstorm of Etaqua FullyCompiled mass ChangeBattlePosition (opp face-up)",
+                        prog != null && prog.FullyCompiled &&
+                        prog.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ChangeBattlePosition &&
+                            c.Zone == EffectZoneFilter.OppFaceUpMonsters &&
+                            !c.RequiresTargetChoice),
+                        prog == null
+                            ? "null"
+                            : $"full={prog.FullyCompiled} n={prog.ClauseList.Count} unparsed={string.Join("|", prog.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    var atk = PlaceMonster(engine, opp, celtic, 2, BattlePosition.Attack, true);
+                    var defMon = PlaceMonster(engine, opp, wall, 1, BattlePosition.Defense, true);
+                    var setMon = PlaceMonster(engine, opp, bewd, 3, BattlePosition.Defense, false);
+                    var yours = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var trap = PlaceSetTrap(engine, p, windstorm, 2);
+                    Check("Windstorm: Activate legal with opp face-up",
+                        engine.CanActivateSpellTrap(p, trap, fromHand: false));
+                    Check("Windstorm: toggles opp face-up only; Set and yours stay",
+                        engine.TryActivateSpellTrap(p, trap, fromHand: false) &&
+                        atk.Position == BattlePosition.Defense &&
+                        defMon.Position == BattlePosition.Attack &&
+                        !setMon.FaceUp && setMon.Position == BattlePosition.Defense &&
+                        yours.Position == BattlePosition.Attack &&
+                        p.Graveyard.Exists(c => c != null && c.CardId == windstorm),
+                        $"atk={atk.Position} def={defMon.Position} setFace={setMon.FaceUp} yours={yours.Position}");
+
+                    var empty = Fresh(db, pDeck, aDeck);
+                    ClearBoard(empty);
+                    var emptyTrap = PlaceSetTrap(empty, empty.Player, windstorm, 2);
+                    Check("Windstorm: empty opp face-up cannot activate",
+                        !empty.CanActivateSpellTrap(empty.Player, emptyTrap, fromHand: false));
+                }
+
+                {
+                    var def = db.Get(vortex);
+                    var prog = def != null ? CardTextEffectCompiler.Compile(def) : null;
+                    Check("Lightning Vortex FullyCompiled discard + destroy all opp face-up",
+                        prog != null && prog.FullyCompiled &&
+                        prog.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.Destroy &&
+                            c.Zone == EffectZoneFilter.OppFaceUpMonsters &&
+                            c.RequiresDiscardCost &&
+                            !c.RequiresTargetChoice),
+                        prog == null
+                            ? "null"
+                            : $"full={prog.FullyCompiled} n={prog.ClauseList.Count} unparsed={string.Join("|", prog.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var face = PlaceMonster(engine, opp, celtic, 2, BattlePosition.Attack, true);
+                    var setMon = PlaceMonster(engine, opp, bewd, 3, BattlePosition.Defense, false);
+                    var yours = PlaceMonster(engine, p, wall, 2, BattlePosition.Attack, true);
+                    var fodder = PutInHand(engine, p, bewd);
+                    var card = PutInHand(engine, p, vortex);
+                    Check("Lightning Vortex: Activate legal with discard + face-up prey",
+                        engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    Check("Lightning Vortex: opens discard",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null);
+                    Check("Lightning Vortex: pay discard, face-up dies, Set and yours live",
+                        engine.TrySelectEffectTarget(fodder) &&
+                        opp.Graveyard.Contains(face) &&
+                        !opp.TryFindMonster(face, out _) &&
+                        opp.TryFindMonster(setMon, out _) && !setMon.FaceUp &&
+                        p.TryFindMonster(yours, out _) &&
+                        p.Graveyard.Exists(c => c != null && c.CardId == vortex) &&
+                        p.Graveyard.Contains(fodder),
+                        $"faceGy={opp.Graveyard.Contains(face)} setOn={opp.TryFindMonster(setMon, out _)} yoursOn={p.TryFindMonster(yours, out _)}");
+                }
+
+                {
+                    var def = db.Get(rain);
+                    var prog = def != null ? CardTextEffectCompiler.Compile(def) : null;
+                    Check("Rain of Mercy FullyCompiled both players GainLifePoints 1000",
+                        prog != null && prog.FullyCompiled &&
+                        prog.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.GainLifePoints &&
+                            c.Side == EffectSide.Both &&
+                            c.Amount == 1000),
+                        prog == null
+                            ? "null"
+                            : $"full={prog.FullyCompiled} n={prog.ClauseList.Count} unparsed={string.Join("|", prog.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var youLp = p.LifePoints;
+                    var oppLp = opp.LifePoints;
+                    var card = PutInHand(engine, p, rain);
+                    Check("Rain of Mercy: Activate legal in MP1",
+                        engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    Check("Rain of Mercy: both players +1000, spell to GY",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        p.LifePoints == youLp + 1000 &&
+                        opp.LifePoints == oppLp + 1000 &&
+                        p.Graveyard.Exists(c => c != null && c.CardId == rain),
+                        $"you {p.LifePoints} was {youLp}; opp {opp.LifePoints} was {oppLp}");
+                }
+
+                {
+                    var def = db.Get(immortal);
+                    var prog = def != null ? CardTextEffectCompiler.Compile(def) : null;
+                    Check("The Immortal of Thunder FullyCompiled Flip +3000 and GY take 5000",
+                        prog != null && prog.FullyCompiled &&
+                        prog.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Flip &&
+                            c.Action == EffectActionKind.GainLifePoints &&
+                            c.Amount == 3000) &&
+                        prog.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.SentFromFieldToGy &&
+                            c.Action == EffectActionKind.TakeEffectDamage &&
+                            c.Amount == 5000),
+                        prog == null
+                            ? "null"
+                            : $"full={prog.FullyCompiled} n={prog.ClauseList.Count} unparsed={string.Join("|", prog.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var start = p.LifePoints;
+                    var mon = PlaceMonster(engine, p, immortal, 2, BattlePosition.Defense, false);
+                    p.NormalSummonUsed = false;
+                    Check("Immortal of Thunder: Flip Summon",
+                        engine.TryFlipSummon(p, mon) && mon.FaceUp);
+                    Check("Immortal of Thunder: Flip gains 3000 LP",
+                        p.LifePoints == start + 3000,
+                        $"LP {p.LifePoints} start {start}");
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    engine.SendCardToGrave(p, mon);
+                    Check("Immortal of Thunder: sent to GY loses 5000 LP",
+                        p.Graveyard.Contains(mon) && p.LifePoints == start + 3000 - 5000,
+                        $"LP {p.LifePoints} expected {start - 2000}");
+                }
+            }
+
             // ── FirstEmpty order ──
             {
                 var engine = Fresh(db, pDeck, aDeck);

@@ -104,6 +104,11 @@ namespace WRLDZ.Duel.TextEffects
             @"Increase your Life Points by (\d+) points\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        /// <summary>Rain of Mercy family: both players gain a printed LP amount.</summary>
+        static readonly Regex RxBothPlayersGainLp = new(
+            @"(?:Increases? the Life Points of both players by (\d+) points|Both players gain (\d+) LP)\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         static readonly Regex RxSecondAttack = new(
             @"This card can make a second attack during each Battle Phase\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -361,6 +366,20 @@ namespace WRLDZ.Duel.TextEffects
                     }
                     : null);
 
+                var bothLp = RxBothPlayersGainLp.Match(text);
+                Add(bothLp, bothLp.Success
+                    ? new EffectClause
+                    {
+                        Timing = EffectTiming.Activate,
+                        Action = EffectActionKind.GainLifePoints,
+                        Amount = bothLp.Groups[1].Success && bothLp.Groups[1].Length > 0
+                            ? Parse(bothLp, 1, 1000)
+                            : Parse(bothLp, 2, 1000),
+                        Side = EffectSide.Both,
+                        MakesChainLink = true
+                    }
+                    : null);
+
                 var burn = RxInflictOpp.Match(text);
                 if (!burn.Success) burn = RxDecreaseOppLp.Match(text);
                 Add(burn, burn.Success
@@ -573,6 +592,7 @@ namespace WRLDZ.Duel.TextEffects
                    RxEquipOppTakeControlActivate.IsMatch(text) ||
                    RxEquipOppTakeControlOnly.IsMatch(text) ||
                    RxIncreaseLp.IsMatch(text) ||
+                   RxBothPlayersGainLp.IsMatch(text) ||
                    RxSecondAttack.IsMatch(text) ||
                    RxBookMoon.IsMatch(text) ||
                    RxDefYouControl.IsMatch(text) ||
@@ -608,7 +628,7 @@ namespace WRLDZ.Duel.TextEffects
                 need.Add(EffectActionKind.EquipThisToTarget);
             if (IsHandSpell(def))
             {
-                if (RxIncreaseLp.IsMatch(text))
+                if (RxIncreaseLp.IsMatch(text) || RxBothPlayersGainLp.IsMatch(text))
                     need.Add(EffectActionKind.GainLifePoints);
                 if (RxInflictOpp.IsMatch(text) || RxDecreaseOppLp.IsMatch(text))
                     need.Add(EffectActionKind.InflictDamageToOpponent);
