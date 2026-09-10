@@ -1336,6 +1336,115 @@ namespace WRLDZ.Duel.Rules
                             c.DestroyHostWhenThisLeaves &&
                             !c.SummonInDefense));
 
+                    var fissure = db.Get(66788016);
+                    var fisProg = fissure != null ? CardTextEffectCompiler.Compile(fissure) : null;
+                    Check("Corpus: Fissure FullyCompiled destroy lowest ATK",
+                        fisProg != null && fisProg.FullyCompiled &&
+                        fisProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.Destroy &&
+                            c.SelectLowestAtk &&
+                            c.Zone == EffectZoneFilter.OppFaceUpMonsters),
+                        fisProg == null
+                            ? "null"
+                            : $"full={fisProg.FullyCompiled} unparsed={string.Join("|", fisProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var smash = db.Get(97169186);
+                    var smashProg = smash != null ? CardTextEffectCompiler.Compile(smash) : null;
+                    Check("Corpus: Smashing Ground FullyCompiled destroy highest DEF",
+                        smashProg != null && smashProg.FullyCompiled &&
+                        smashProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.Destroy &&
+                            c.SelectHighestDef),
+                        smashProg == null
+                            ? "null"
+                            : $"full={smashProg.FullyCompiled} unparsed={string.Join("|", smashProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var reinf = db.Get(17814387);
+                    var reinfProg = reinf != null ? CardTextEffectCompiler.Compile(reinf) : null;
+                    Check("Corpus: Reinforcements FullyCompiled +500 ATK until End Phase",
+                        reinfProg != null && reinfProg.FullyCompiled &&
+                        reinfProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.LoseAtkDefUntilEndOfTurn &&
+                            c.Amount == -500 &&
+                            c.DefAmount == 0),
+                        reinfProg == null
+                            ? "null"
+                            : $"full={reinfProg.FullyCompiled} unparsed={string.Join("|", reinfProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var walls = db.Get(44209392);
+                    var wallsProg = walls != null ? CardTextEffectCompiler.Compile(walls) : null;
+                    Check("Corpus: Castle Walls FullyCompiled +500 DEF until End Phase",
+                        wallsProg != null && wallsProg.FullyCompiled &&
+                        wallsProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.LoseAtkDefUntilEndOfTurn &&
+                            c.Amount == 0 &&
+                            c.DefAmount == -500),
+                        wallsProg == null
+                            ? "null"
+                            : $"full={wallsProg.FullyCompiled} unparsed={string.Join("|", wallsProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var synFissure = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000046,
+                        name = "New Spell (Fissure shape)",
+                        type = "Spell Card",
+                        race = "Normal",
+                        frameType = "spell",
+                        desc =
+                            "Destroy the 1 face-up monster your opponent controls that has the lowest ATK (your choice, if tied)."
+                    });
+                    Check("New-card rule: Fissure-shaped text compiles without a cardId branch",
+                        synFissure != null && synFissure.FullyCompiled &&
+                        synFissure.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.Destroy && c.SelectLowestAtk));
+
+                    var leftoverFissure = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000047,
+                        name = "Fissure leftover rider",
+                        type = "Spell Card",
+                        race = "Normal",
+                        frameType = "spell",
+                        desc =
+                            "Destroy the 1 face-up monster your opponent controls that has the lowest ATK (your choice, if tied). Shuffle your entire Deck into your opponent's Deck."
+                    });
+                    Check("Fail-closed: Fissure plus extra rider is not FullyCompiled",
+                        leftoverFissure != null && !leftoverFissure.FullyCompiled);
+
+                    var synReinf = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000048,
+                        name = "New Trap (Reinforcements shape)",
+                        type = "Trap Card",
+                        race = "Normal",
+                        frameType = "trap",
+                        desc =
+                            "Target 1 face-up monster on the field; it gains 500 ATK until the end of this turn."
+                    });
+                    Check("New-card rule: Reinforcements-shaped text compiles without a cardId branch",
+                        synReinf != null && synReinf.FullyCompiled &&
+                        synReinf.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.LoseAtkDefUntilEndOfTurn &&
+                            c.Amount == -500));
+
+                    var leftoverReinf = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000049,
+                        name = "Reinforcements leftover rider",
+                        type = "Trap Card",
+                        race = "Normal",
+                        frameType = "trap",
+                        desc =
+                            "Target 1 face-up monster on the field; it gains 500 ATK until the end of this turn. Shuffle your entire Deck into your opponent's Deck."
+                    });
+                    Check("Fail-closed: Reinforcements plus extra rider is not FullyCompiled",
+                        leftoverReinf != null && !leftoverReinf.FullyCompiled);
+
                     var soul = db.Get(92924317);
                     var soulProg = soul != null ? CardTextEffectCompiler.Compile(soul) : null;
                     Check("Corpus: Soul Resurrection FullyCompiled Normal Monster GY SS in Defense",

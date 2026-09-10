@@ -16,7 +16,7 @@ namespace WRLDZ.Duel.TextEffects
     /// </summary>
     public static class CardTextEffectCompiler
     {
-        public const int Version = 50;
+        public const int Version = 60;
 
         static readonly Regex RxDraw = new(
             @"(?:^|[.!?]\s+)Draw (\d+) cards?\.",
@@ -24,6 +24,32 @@ namespace WRLDZ.Duel.TextEffects
 
         static readonly Regex RxDestroyAllOppMonsters = new(
             @"Destroy all monsters your opponent controls\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Fissure: destroy the 1 face-up opponent monster with the lowest ATK
+        /// (controller chooses if tied). Shared Destroy atom + SelectLowestAtk.
+        /// </summary>
+        static readonly Regex RxDestroyLowestAtk = new(
+            @"Destroy the 1 face-up monster your opponent controls that has the lowest ATK \(your choice, if tied\)\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>Smashing Ground: highest-DEF sibling of Fissure.</summary>
+        static readonly Regex RxDestroyHighestDef = new(
+            @"Destroy the 1 face-up monster your opponent controls that has the highest DEF \(your choice, if tied\)\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>Reinforcements: target gains N ATK until the end of this turn.</summary>
+        static readonly Regex RxTargetGainsAtkUntilEnd = new(
+            @"Target 1 face-up monster on the field;\s*it gains (\d+) ATK until the end of this turn\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Castle Walls (pre-PSCT): increase the DEF of 1 face-up monster until end of turn.
+        /// Same LoseAtkDefUntilEndOfTurn atom as Reinforcements (signed DefAmount).
+        /// </summary>
+        static readonly Regex RxIncreaseOneDefUntilEnd = new(
+            @"Increase the DEF of 1 face-up monster on the field by (\d+) points until the end of this turn\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxDestroyAllMonsters = new(
@@ -530,6 +556,48 @@ namespace WRLDZ.Duel.TextEffects
                 Action = EffectActionKind.Destroy,
                 Side = EffectSide.Opponent,
                 Zone = EffectZoneFilter.FieldMonsters
+            });
+
+            Take(RxDestroyLowestAtk.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.Destroy,
+                Side = EffectSide.Opponent,
+                Zone = EffectZoneFilter.OppFaceUpMonsters,
+                RequiresTargetChoice = true,
+                SelectLowestAtk = true
+            });
+
+            Take(RxDestroyHighestDef.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.Destroy,
+                Side = EffectSide.Opponent,
+                Zone = EffectZoneFilter.OppFaceUpMonsters,
+                RequiresTargetChoice = true,
+                SelectHighestDef = true
+            });
+
+            var gainAtkEnd = RxTargetGainsAtkUntilEnd.Match(text);
+            Take(gainAtkEnd, new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.LoseAtkDefUntilEndOfTurn,
+                Zone = EffectZoneFilter.FieldAnyMonster,
+                RequiresTargetChoice = true,
+                Amount = gainAtkEnd.Success ? -ParseInt(gainAtkEnd, 1, 500) : -500,
+                DefAmount = 0
+            });
+
+            var incDefEnd = RxIncreaseOneDefUntilEnd.Match(text);
+            Take(incDefEnd, new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.LoseAtkDefUntilEndOfTurn,
+                Zone = EffectZoneFilter.FieldAnyMonster,
+                RequiresTargetChoice = true,
+                Amount = 0,
+                DefAmount = incDefEnd.Success ? -ParseInt(incDefEnd, 1, 500) : -500
             });
 
             // Dark Hole: all monsters — only if not already matched "opponent controls"
@@ -1238,6 +1306,38 @@ namespace WRLDZ.Duel.TextEffects
                     RegexOptions.IgnoreCase);
                 clause.Action = EffectActionKind.InflictDamageToOpponent;
                 clause.Amount = int.TryParse(m.Groups[1].Value, out var n) ? n : 0;
+            }
+            else if (Regex.IsMatch(res,
+                         @"(?:it|that target) gains (\d+) ATK until the (?:end of this turn|End Phase)",
+                         RegexOptions.IgnoreCase))
+            {
+                var m = Regex.Match(res,
+                    @"(?:it|that target) gains (\d+) ATK until the (?:end of this turn|End Phase)",
+                    RegexOptions.IgnoreCase);
+                clause.Action = EffectActionKind.LoseAtkDefUntilEndOfTurn;
+                clause.Amount = -(int.TryParse(m.Groups[1].Value, out var atkGain) ? atkGain : 0);
+                clause.DefAmount = 0;
+                if (clause.Zone == EffectZoneFilter.None)
+                {
+                    clause.Zone = EffectZoneFilter.FieldAnyMonster;
+                    clause.RequiresTargetChoice = true;
+                }
+            }
+            else if (Regex.IsMatch(res,
+                         @"(?:it|that target) gains (\d+) DEF until the (?:end of this turn|End Phase)",
+                         RegexOptions.IgnoreCase))
+            {
+                var m = Regex.Match(res,
+                    @"(?:it|that target) gains (\d+) DEF until the (?:end of this turn|End Phase)",
+                    RegexOptions.IgnoreCase);
+                clause.Action = EffectActionKind.LoseAtkDefUntilEndOfTurn;
+                clause.Amount = 0;
+                clause.DefAmount = -(int.TryParse(m.Groups[1].Value, out var defGain) ? defGain : 0);
+                if (clause.Zone == EffectZoneFilter.None)
+                {
+                    clause.Zone = EffectZoneFilter.FieldAnyMonster;
+                    clause.RequiresTargetChoice = true;
+                }
             }
             else if (Regex.IsMatch(res,
                          @"this card gains (\d+) ATK and DEF(?! until)", RegexOptions.IgnoreCase))
