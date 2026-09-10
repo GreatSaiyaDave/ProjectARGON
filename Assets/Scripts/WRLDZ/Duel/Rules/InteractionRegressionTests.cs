@@ -6776,6 +6776,97 @@ namespace WRLDZ.Duel.Rules
                 }
             }
 
+            // ── Gaia Power / Follow Wind (Fanbot Field ± and Equip atoms) ──
+            {
+                const int gaiaId = 56594520;
+                const int followId = 98252586;
+                const int celtic = 91152256;
+                const int blueEyes = 89631139;
+                const int harpie = 76812113;
+
+                {
+                    var def = db.Get(gaiaId);
+                    var prog = def != null ? CardTextEffectCompiler.Compile(def) : null;
+                    Check("Gaia Power official text FullyCompiled EARTH +500/−400",
+                        prog != null && prog.FullyCompiled &&
+                        prog.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == WRLDZ.Duel.TextEffects.EffectActionKind.ContinuousGainAtkDef &&
+                            string.Equals(c.AttributeFilter, "EARTH",
+                                System.StringComparison.OrdinalIgnoreCase) &&
+                            c.Amount == 500 && c.DefAmount == -400),
+                        prog == null
+                            ? "null"
+                            : $"unparsed={string.Join("|", prog.UnparsedFragments ?? System.Array.Empty<string>())}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    var earth = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var light = PlaceMonster(engine, opp, blueEyes, 2, BattlePosition.Attack, true);
+                    var gaia = engine.CreateCardInstance(gaiaId);
+                    gaia.FaceUp = true;
+                    p.FieldSpellZone.Occupant = gaia;
+                    FieldSpellEffects.RefreshBoard(engine);
+                    Check("Gaia Power: Celtic EARTH 1400/1200 → 1900/800",
+                        earth.CurrentAtk == 1900 && earth.CurrentDef == 800,
+                        $"ATK {earth.CurrentAtk} DEF {earth.CurrentDef}");
+                    Check("Gaia Power: Blue-Eyes LIGHT unchanged 3000/2500",
+                        light.CurrentAtk == 3000 && light.CurrentDef == 2500,
+                        $"ATK {light.CurrentAtk} DEF {light.CurrentDef}");
+                    p.FieldSpellZone.Occupant = null;
+                    FieldSpellEffects.RefreshBoard(engine);
+                    Check("Gaia Power leaves: EARTH returns to printed",
+                        earth.CurrentAtk == 1400 && earth.CurrentDef == 1200,
+                        $"ATK {earth.CurrentAtk} DEF {earth.CurrentDef}");
+                }
+
+                {
+                    var def = db.Get(followId);
+                    var prog = def != null ? CardTextEffectCompiler.Compile(def) : null;
+                    Check("Follow Wind official text FullyCompiled Winged Beast +300/+300",
+                        prog != null && prog.FullyCompiled &&
+                        prog.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == WRLDZ.Duel.TextEffects.EffectActionKind.EquipThisToTarget &&
+                            string.Equals(c.RaceFilter, "Winged Beast",
+                                System.StringComparison.OrdinalIgnoreCase) &&
+                            c.EquipAtkBonus == 300 && c.EquipDefBonus == 300),
+                        prog == null
+                            ? "null"
+                            : $"unparsed={string.Join("|", prog.UnparsedFragments ?? System.Array.Empty<string>())}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var host = PlaceMonster(engine, p, harpie, 2, BattlePosition.Attack, true);
+                    var eq = PutInHand(engine, p, followId);
+                    Check("Follow Wind: equips to Harpie Lady",
+                        engine.TryActivateSpellTrap(p, eq, fromHand: true) &&
+                        engine.TrySelectEffectTarget(host) &&
+                        host.Equips.Count > 0);
+                    FieldSpellEffects.RefreshBoard(engine);
+                    Check("Follow Wind: Harpie 1300/1400 → 1600/1700",
+                        host.CurrentAtk == 1600 && host.CurrentDef == 1700,
+                        $"ATK {host.CurrentAtk} DEF {host.CurrentDef}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var eq = PutInHand(engine, p, followId);
+                    Check("Follow Wind: refuse Celtic (not Winged Beast)",
+                        !engine.CanActivateSpellTrap(p, eq, fromHand: true));
+                }
+            }
+
             // ── FirstEmpty order ──
             {
                 var engine = Fresh(db, pDeck, aDeck);

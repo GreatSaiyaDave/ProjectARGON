@@ -21,8 +21,13 @@ namespace WRLDZ.Duel.TextEffects
             @"and decreases? (?:its )?DEF by (\d+) points\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        /// <summary>
+        /// Follow Wind / Electro-Whip: Increase the ATK and DEF of a Winged Beast-Type
+        /// (or Thunder-Type) monster equipped with this card by 300 points.
+        /// Multi-word races keep the space; "-Type" is not swallowed into the race.
+        /// </summary>
         static readonly Regex RxEquipIncreaseTyped = new(
-            @"Increase the ATK and DEF of a (\w+)(?:-Type)? monster equipped with this card by (\d+) points\.?",
+            @"Increase the ATK and DEF of a ([A-Za-z]+(?:[ -](?!Type)[A-Za-z]+)*)(?:-Type)? monster equipped with this card by (\d+) points\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         // "an Insect", "Beast-Warrior-Type", "FIRE" — do not swallow "-Type" into the race.

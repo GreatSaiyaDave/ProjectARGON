@@ -2243,6 +2243,160 @@ namespace WRLDZ.Duel.Rules
                     Check("New-card leftover: Tribute-Normal-inflict + unique destroy is not FullyCompiled",
                         synManthroLeftover != null && !synManthroLeftover.FullyCompiled);
 
+                    void CheckFieldGainLose(int id, string name, string attr)
+                    {
+                        var d = db.Get(id);
+                        var pr = d != null ? CardTextEffectCompiler.Compile(d) : null;
+                        Check("Corpus: " + name + " FullyCompiled " + attr + " +500/−400",
+                            pr != null && pr.FullyCompiled &&
+                            pr.ClauseList.Exists(c =>
+                                c != null &&
+                                c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                                string.Equals(c.AttributeFilter, attr, StringComparison.OrdinalIgnoreCase) &&
+                                c.Amount == 500 && c.DefAmount == -400 &&
+                                c.Side == EffectSide.Both && !c.MakesChainLink),
+                            pr == null
+                                ? "null"
+                                : $"full={pr.FullyCompiled} unparsed={string.Join("|", pr.UnparsedFragments ?? Array.Empty<string>())}");
+                    }
+
+                    CheckFieldGainLose(56594520, "Gaia Power", "EARTH");
+                    CheckFieldGainLose(19384334, "Molten Destruction", "FIRE");
+                    CheckFieldGainLose(45778932, "Rising Air Current", "WIND");
+                    CheckFieldGainLose(81777047, "Luminous Spark", "LIGHT");
+
+                    var umiiruka = db.Get(82999629);
+                    var umiirukaProg = umiiruka != null ? CardTextEffectCompiler.Compile(umiiruka) : null;
+                    Check("Corpus: Umiiruka already FullyCompiled WATER +500/−400",
+                        umiirukaProg != null && umiirukaProg.FullyCompiled &&
+                        umiirukaProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                            string.Equals(c.AttributeFilter, "WATER", StringComparison.OrdinalIgnoreCase) &&
+                            c.Amount == 500 && c.DefAmount == -400),
+                        umiirukaProg == null
+                            ? "null"
+                            : $"full={umiirukaProg.FullyCompiled} unparsed={string.Join("|", umiirukaProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var plasma = db.Get(18161786);
+                    var plasmaProg = plasma != null ? CardTextEffectCompiler.Compile(plasma) : null;
+                    Check("Corpus: Mystic Plasma Zone already FullyCompiled DARK +500/−400",
+                        plasmaProg != null && plasmaProg.FullyCompiled &&
+                        plasmaProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                            string.Equals(c.AttributeFilter, "DARK", StringComparison.OrdinalIgnoreCase) &&
+                            c.Amount == 500 && c.DefAmount == -400));
+
+                    var synField = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000088,
+                        name = "Field gain/lose (new-card shape)",
+                        type = "Spell Card",
+                        race = "Field",
+                        desc = "All WATER monsters gain 500 ATK and lose 400 DEF."
+                    });
+                    Check("New-card rule: All-ATTR gain-ATK-lose-DEF compiles without a cardId branch",
+                        synField != null && synField.FullyCompiled &&
+                        synField.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                            string.Equals(c.AttributeFilter, "WATER", StringComparison.OrdinalIgnoreCase) &&
+                            c.Amount == 500 && c.DefAmount == -400));
+
+                    var synFieldLeftover = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000089,
+                        name = "Field gain/lose leftover (new-card shape)",
+                        type = "Spell Card",
+                        race = "Field",
+                        desc = "All WATER monsters gain 500 ATK and lose 400 DEF. Then draw 1 card."
+                    });
+                    Check("New-card leftover: Field gain/lose + unique draw is not FullyCompiled",
+                        synFieldLeftover != null && !synFieldLeftover.FullyCompiled);
+
+                    var follow = db.Get(98252586);
+                    var followProg = follow != null ? CardTextEffectCompiler.Compile(follow) : null;
+                    Check("Corpus: Follow Wind FullyCompiled Winged Beast +300/+300",
+                        followProg != null && followProg.FullyCompiled &&
+                        followProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.EquipThisToTarget &&
+                            string.Equals(c.RaceFilter, "Winged Beast", StringComparison.OrdinalIgnoreCase) &&
+                            c.EquipAtkBonus == 300 && c.EquipDefBonus == 300),
+                        followProg == null
+                            ? "null"
+                            : $"full={followProg.FullyCompiled} unparsed={string.Join("|", followProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var whip = db.Get(37820550);
+                    var whipProg = whip != null ? CardTextEffectCompiler.Compile(whip) : null;
+                    Check("Corpus: Electro-Whip already FullyCompiled Thunder +300/+300",
+                        whipProg != null && whipProg.FullyCompiled &&
+                        whipProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.EquipThisToTarget &&
+                            string.Equals(c.RaceFilter, "Thunder", StringComparison.OrdinalIgnoreCase) &&
+                            c.EquipAtkBonus == 300 && c.EquipDefBonus == 300),
+                        whipProg == null
+                            ? "null"
+                            : $"full={whipProg.FullyCompiled} unparsed={string.Join("|", whipProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var fangs = db.Get(46009906);
+                    var fangsProg = fangs != null ? CardTextEffectCompiler.Compile(fangs) : null;
+                    Check("Corpus: Beast Fangs already FullyCompiled Beast +300/+300",
+                        fangsProg != null && fangsProg.FullyCompiled &&
+                        fangsProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.EquipThisToTarget &&
+                            string.Equals(c.RaceFilter, "Beast", StringComparison.OrdinalIgnoreCase) &&
+                            c.EquipAtkBonus == 300 && c.EquipDefBonus == 300));
+
+                    var synFollow = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000090,
+                        name = "Equip typed both (new-card shape)",
+                        type = "Spell Card",
+                        race = "Equip",
+                        desc =
+                            "Increase the ATK and DEF of a Sea Serpent-Type monster equipped with this card by 400 points."
+                    });
+                    Check("New-card rule: Equip multi-word Type +ATK/DEF compiles without a cardId branch",
+                        synFollow != null && synFollow.FullyCompiled &&
+                        synFollow.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.EquipThisToTarget &&
+                            string.Equals(c.RaceFilter, "Sea Serpent", StringComparison.OrdinalIgnoreCase) &&
+                            c.EquipAtkBonus == 400 && c.EquipDefBonus == 400));
+
+                    var synFollowLeftover = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000091,
+                        name = "Equip typed both leftover (new-card shape)",
+                        type = "Spell Card",
+                        race = "Equip",
+                        desc =
+                            "Increase the ATK and DEF of a Sea Serpent-Type monster equipped with this card by 400 points. Then draw 1 card."
+                    });
+                    Check("New-card leftover: Equip typed both + unique draw is not FullyCompiled",
+                        synFollowLeftover != null && !synFollowLeftover.FullyCompiled);
+
+                    var yami = db.Get(59197169);
+                    var yamiProg = yami != null ? CardTextEffectCompiler.Compile(yami) : null;
+                    Check("Parked: Yami type-list Field is not FullyCompiled",
+                        yamiProg == null || !yamiProg.FullyCompiled);
+                    var umi = db.Get(22702055);
+                    var umiProg = umi != null ? CardTextEffectCompiler.Compile(umi) : null;
+                    Check("Parked: Umi type-list Field is not FullyCompiled",
+                        umiProg == null || !umiProg.FullyCompiled);
+                    var invig = db.Get(98374133);
+                    var invigProg = invig != null ? CardTextEffectCompiler.Compile(invig) : null;
+                    Check("Parked: Invigoration An-EARTH split is not FullyCompiled",
+                        invigProg == null || !invigProg.FullyCompiled);
+                    var swap = db.Get(31036355);
+                    var swapProg = swap != null ? CardTextEffectCompiler.Compile(swap) : null;
+                    Check("Parked: Creature Swap is not FullyCompiled",
+                        swapProg == null || !swapProg.FullyCompiled);
+
                     var painful = db.Get(74191942);
                     var painfulProg = painful != null ? CardTextEffectCompiler.Compile(painful) : null;
                     Check("Parked: Painful Choice is not FullyCompiled",

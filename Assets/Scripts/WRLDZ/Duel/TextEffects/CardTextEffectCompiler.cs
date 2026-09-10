@@ -16,7 +16,7 @@ namespace WRLDZ.Duel.TextEffects
     /// </summary>
     public static class CardTextEffectCompiler
     {
-        public const int Version = 70;
+        public const int Version = 71;
 
         static readonly Regex RxDraw = new(
             @"(?:^|[.!?]\s+)Draw (\d+) cards?\.",
@@ -243,6 +243,15 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         static readonly Regex RxIncDecAtk = new(
             @"increase the ATK of all (\w+)(?:-Type)? monsters by (\d+) points and decrease the ATK of all (\w+)(?:-Type)? monsters by (\d+) points\.?\s*$",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Gaia Power / Molten Destruction / Rising Air Current / Luminous Spark:
+        /// All EARTH monsters gain 500 ATK and lose 400 DEF.
+        /// Same ContinuousGainAtkDef atom as Umiiruka (legacy Increase/decrease wording).
+        /// </summary>
+        static readonly Regex RxAllGainAtkLoseDef = new(
+            @"All (\w+)(?:-Type)? monsters(?: on the field)? gain (\d+) ATK and lose (\d+) DEF\.?\s*$",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         /// <summary>
@@ -1663,6 +1672,14 @@ namespace WRLDZ.Duel.TextEffects
             {
                 list.Add(StatAuraClause(inc.Groups[1].Value, ParseInt(inc, 2, 0), 0, EffectSide.Both));
                 list.Add(StatAuraClause(inc.Groups[3].Value, -ParseInt(inc, 4, 0), 0, EffectSide.Both));
+                return list;
+            }
+
+            var gainLoseDef = RxAllGainAtkLoseDef.Match(body);
+            if (gainLoseDef.Success && gainLoseDef.Index == 0)
+            {
+                list.Add(StatAuraClause(gainLoseDef.Groups[1].Value,
+                    ParseInt(gainLoseDef, 2, 0), -ParseInt(gainLoseDef, 3, 0), EffectSide.Both));
                 return list;
             }
 
