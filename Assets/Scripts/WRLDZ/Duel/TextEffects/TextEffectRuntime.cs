@@ -114,10 +114,9 @@ namespace WRLDZ.Duel.TextEffects
                 {
                     foreach (var c in activate)
                     {
-                        if (c != null && !string.IsNullOrEmpty(c.RequiresFaceUpName) &&
-                            !FieldSpellEffects.NamedCardIsFaceUpOnField(engine, c.RequiresFaceUpName))
+                        if (c != null && !NamedFaceUpConditionMet(engine, who, c))
                         {
-                            reason = $"Requires \"{c.RequiresFaceUpName}\" on the field.";
+                            reason = NamedFaceUpConditionReason(c);
                             return false;
                         }
                     }
@@ -137,10 +136,9 @@ namespace WRLDZ.Duel.TextEffects
 
                     foreach (var c in activate)
                     {
-                        if (c != null && !string.IsNullOrEmpty(c.RequiresFaceUpName) &&
-                            !FieldSpellEffects.NamedCardIsFaceUpOnField(engine, c.RequiresFaceUpName))
+                        if (c != null && !NamedFaceUpConditionMet(engine, who, c))
                         {
-                            reason = $"Requires \"{c.RequiresFaceUpName}\" on the field.";
+                            reason = NamedFaceUpConditionReason(c);
                             return false;
                         }
                     }
@@ -333,10 +331,9 @@ namespace WRLDZ.Duel.TextEffects
                         return false;
                     }
                 }
-                else if (!string.IsNullOrEmpty(c.RequiresFaceUpName) &&
-                         !FieldSpellEffects.NamedCardIsFaceUpOnField(engine, c.RequiresFaceUpName))
+                else if (!NamedFaceUpConditionMet(engine, who, c))
                 {
-                    reason = $"Requires \"{c.RequiresFaceUpName}\" on the field.";
+                    reason = NamedFaceUpConditionReason(c);
                     return false;
                 }
 
@@ -4034,6 +4031,27 @@ namespace WRLDZ.Duel.TextEffects
             who.Hand.Clear();
             foreach (var c in copy)
                 who.Graveyard.Add(c);
+        }
+
+        /// <summary>
+        /// "If you control Name" uses the controller's field; Umi-style auras use either field.
+        /// Empty RequiresFaceUpName is unconditional.
+        /// </summary>
+        static bool NamedFaceUpConditionMet(DuelEngine engine, DuelistState who, EffectClause c)
+        {
+            if (c == null || string.IsNullOrEmpty(c.RequiresFaceUpName)) return true;
+            if (c.RequiresControllerNamedCard)
+                return FieldSpellEffects.ControllerHasNamedCard(who, c.RequiresFaceUpName,
+                    c.NamedCardIsSeries);
+            return FieldSpellEffects.NamedCardIsFaceUpOnField(engine, c.RequiresFaceUpName);
+        }
+
+        static string NamedFaceUpConditionReason(EffectClause c)
+        {
+            var name = c?.RequiresFaceUpName ?? "";
+            return c != null && c.RequiresControllerNamedCard
+                ? $"You must control \"{name}\"."
+                : $"Requires \"{name}\" on the field.";
         }
 
         static bool LordOfDOnField(DuelEngine engine) =>
