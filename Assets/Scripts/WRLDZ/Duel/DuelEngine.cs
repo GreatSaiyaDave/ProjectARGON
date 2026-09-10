@@ -743,6 +743,7 @@ namespace WRLDZ.Duel
             if (monster.SetThisTurn) return false; // includes flipped face-up by effects same turn as Set
             if (monster.AttackedThisTurn) return false;
             if (monster.ChangedPositionThisTurn) return false;
+            if (FieldSpellEffects.ContinuousPositionLockBlocks(this, monster)) return false;
             return true;
         }
 
