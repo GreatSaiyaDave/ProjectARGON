@@ -1067,11 +1067,12 @@ namespace WRLDZ.Duel
             Log($"{card.Name} is banished.");
         }
 
-        public int BanishCopiesFromHandAndDeck(DuelistState who, int cardId)
+        public int BanishCopiesFromHandAndDeck(DuelistState who, int cardId,
+            bool fromHand = true, bool fromDeck = true)
         {
             if (who == null || cardId <= 0) return 0;
             var n = 0;
-            if (who.Hand != null)
+            if (fromHand && who.Hand != null)
             {
                 for (var i = who.Hand.Count - 1; i >= 0; i--)
                 {
@@ -1082,7 +1083,7 @@ namespace WRLDZ.Duel
                 }
             }
 
-            if (who.Deck != null)
+            if (fromDeck && who.Deck != null)
             {
                 for (var i = who.Deck.Count - 1; i >= 0; i--)
                 {
@@ -1097,7 +1098,8 @@ namespace WRLDZ.Duel
             }
 
             if (n > 0)
-                Log($"Banished {n} copy(ies) of #{cardId} from {who.Name}'s hand/Deck.");
+                Log($"Banished {n} copy(ies) of #{cardId} from {who.Name}'s " +
+                    (fromHand && fromDeck ? "hand/Deck" : fromDeck ? "Deck" : "hand") + ".");
             return n;
         }
 

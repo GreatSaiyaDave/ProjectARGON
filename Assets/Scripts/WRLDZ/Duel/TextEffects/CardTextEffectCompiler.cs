@@ -16,7 +16,7 @@ namespace WRLDZ.Duel.TextEffects
     /// </summary>
     public static class CardTextEffectCompiler
     {
-        public const int Version = 50;
+        public const int Version = 61;
 
         static readonly Regex RxDraw = new(
             @"(?:^|[.!?]\s+)Draw (\d+) cards?\.",
@@ -24,6 +24,30 @@ namespace WRLDZ.Duel.TextEffects
 
         static readonly Regex RxDestroyAllOppMonsters = new(
             @"Destroy all monsters your opponent controls\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Fissure: destroy the 1 face-up opponent monster with the lowest ATK
+        /// (controller chooses if tied). Shared Destroy atom + SelectLowestAtk.
+        /// </summary>
+        static readonly Regex RxDestroyLowestAtk = new(
+            @"Destroy the 1 face-up monster your opponent controls that has the lowest ATK \(your choice, if tied\)\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>Smashing Ground: highest-DEF sibling of Fissure.</summary>
+        static readonly Regex RxDestroyHighestDef = new(
+            @"Destroy the 1 face-up monster your opponent controls that has the highest DEF \(your choice, if tied\)\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Nobleman of Crossout: target a face-down monster; destroy and banish it;
+        /// if it was a Flip monster, both players banish same-name copies from the Main Deck.
+        /// Destroy + BanishIfDestroyed + BanishCopiesFromHandAndDeck (Deck only).
+        /// </summary>
+        static readonly Regex RxNoblemanOfCrossout = new(
+            @"Target 1 face-down monster on the field;\s*" +
+            @"destroy that target, and if you do, banish it, then, if it was a Flip monster, " +
+            @"each player reveals their Main Deck, then banishes all cards from it with that monster's name\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxDestroyAllMonsters = new(
@@ -530,6 +554,37 @@ namespace WRLDZ.Duel.TextEffects
                 Action = EffectActionKind.Destroy,
                 Side = EffectSide.Opponent,
                 Zone = EffectZoneFilter.FieldMonsters
+            });
+
+            Take(RxDestroyLowestAtk.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.Destroy,
+                Side = EffectSide.Opponent,
+                Zone = EffectZoneFilter.OppFaceUpMonsters,
+                RequiresTargetChoice = true,
+                SelectLowestAtk = true
+            });
+
+            Take(RxDestroyHighestDef.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.Destroy,
+                Side = EffectSide.Opponent,
+                Zone = EffectZoneFilter.OppFaceUpMonsters,
+                RequiresTargetChoice = true,
+                SelectHighestDef = true
+            });
+
+            Take(RxNoblemanOfCrossout.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.Destroy,
+                Zone = EffectZoneFilter.FieldAnyMonster,
+                RequiresTargetChoice = true,
+                RequiresFaceDown = true,
+                BanishIfDestroyed = true,
+                BanishSameNameFromBothDecksIfFlip = true
             });
 
             // Dark Hole: all monsters — only if not already matched "opponent controls"

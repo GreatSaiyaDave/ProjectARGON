@@ -516,6 +516,20 @@ namespace WRLDZ.Duel.TextEffects
         public bool AmountIsAtkMax;
         /// <summary>Amount is a DEF ceiling (House of Adhesive Tape).</summary>
         public bool AmountIsDefMax;
+        /// <summary>
+        /// Fissure: among Zone matches, keep only the lowest current ATK (ties: choose).
+        /// Official text does not say "target"; the pending choice is "your choice, if tied."
+        /// </summary>
+        public bool SelectLowestAtk;
+        /// <summary>Smashing Ground: keep only the highest current DEF (ties: choose).</summary>
+        public bool SelectHighestDef;
+        /// <summary>Nobleman of Crossout: legal targets are face-down monsters only.</summary>
+        public bool RequiresFaceDown;
+        /// <summary>
+        /// After destroy+banish: if the destroyed card was a Flip monster, each player
+        /// banishes same-name copies from the Main Deck (not hand).
+        /// </summary>
+        public bool BanishSameNameFromBothDecksIfFlip;
         /// <summary>Token Feastevil: the summoned card must be a Token.</summary>
         public bool RequiresSummonedIsToken;
         /// <summary>Mispolymerization: the summoned card must be a Fusion Monster.</summary>
