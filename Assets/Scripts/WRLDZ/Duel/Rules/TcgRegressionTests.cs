@@ -2107,8 +2107,8 @@ namespace WRLDZ.Duel.Rules
                             c.Side == EffectSide.Both &&
                             c.Amount == 1000));
 
-                    var immortal = db.Get(84926738);
-                    var immProg = immortal != null ? CardTextEffectCompiler.Compile(immortal) : null;
+                    var thunder = db.Get(84926738);
+                    var immProg = thunder != null ? CardTextEffectCompiler.Compile(thunder) : null;
                     Check("Corpus: The Immortal of Thunder FullyCompiled Flip gain + GY lose",
                         immProg != null && immProg.FullyCompiled &&
                         immProg.ClauseList.Exists(c =>
