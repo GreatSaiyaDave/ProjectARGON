@@ -16,7 +16,7 @@ namespace WRLDZ.Duel.TextEffects
     /// </summary>
     public static class CardTextEffectCompiler
     {
-        public const int Version = 50;
+        public const int Version = 58;
 
         static readonly Regex RxDraw = new(
             @"(?:^|[.!?]\s+)Draw (\d+) cards?\.",
@@ -234,6 +234,16 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         static readonly Regex RxIncDecAtk = new(
             @"increase the ATK of all (\w+)(?:-Type)? monsters by (\d+) points and decrease the ATK of all (\w+)(?:-Type)? monsters by (\d+) points\.?\s*$",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Gaia Power / Molten Destruction / Rising Air Current / Luminous Spark:
+        /// All FIRE monsters gain 500 ATK and lose 400 DEF.
+        /// Same ContinuousGainAtkDef atom as the pre-PSCT Field "increase ATK / decrease DEF" family.
+        /// Does not consume Yami "gain ATK/DEF, also … lose".
+        /// </summary>
+        static readonly Regex RxAllGainAtkLoseDef = new(
+            @"All (\w+)(?:-Type)? monsters(?: on the field)? gain (\d+) ATK and lose (\d+) DEF\.?\s*$",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         /// <summary>
@@ -1633,6 +1643,17 @@ namespace WRLDZ.Duel.TextEffects
             var list = new List<EffectClause>();
             var body = StripContinuousWhile(raw);
             if (string.IsNullOrEmpty(body)) return list;
+
+            var gainLoseDef = RxAllGainAtkLoseDef.Match(body);
+            if (gainLoseDef.Success && gainLoseDef.Index == 0)
+            {
+                list.Add(StatAuraClause(
+                    gainLoseDef.Groups[1].Value,
+                    ParseInt(gainLoseDef, 2, 0),
+                    -ParseInt(gainLoseDef, 3, 0),
+                    EffectSide.Both));
+                return list;
+            }
 
             var inc = RxIncDecAtk.Match(body);
             if (inc.Success && inc.Index == 0)

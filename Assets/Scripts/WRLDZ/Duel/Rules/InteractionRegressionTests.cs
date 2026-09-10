@@ -1365,6 +1365,96 @@ namespace WRLDZ.Duel.Rules
                     fen.CurrentAtk == 2100, $"ATK {fen.CurrentAtk}");
             }
 
+            // ── SRL Field +500 ATK / −400 DEF (Gaia Power family, existing ContinuousGainAtkDef) ──
+            {
+                const int gaia = 56594520;
+                const int molten = 19384334;
+                const int ox = 5053103; // EARTH Battle Ox 1700/1000
+                const int soul = 96851799; // FIRE Hinotama Soul 600/500
+                const int celtic = 91152256; // EARTH Celtic Guardian 1400/1200
+                const int bird = 10202894; // WIND Skull Red Bird 1550/1200
+
+                var engine = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine);
+                if (engine.IsAwaitingResponse) engine.PassResponse();
+                var p = engine.Player;
+                var opp = engine.Opponent;
+                p.Hand.Clear();
+
+                var oxMon = PlaceMonster(engine, p, ox, 2, BattlePosition.Attack, true);
+                var soulMon = PlaceMonster(engine, opp, soul, 2, BattlePosition.Attack, true);
+                var cel = PlaceMonster(engine, opp, celtic, 1, BattlePosition.Attack, true);
+                var fdOx = PlaceMonster(engine, p, ox, 3, BattlePosition.Defense, false);
+                FieldSpellEffects.RefreshBoard(engine);
+
+                var gaiaCard = PutInHand(engine, p, gaia);
+                Check("Gaia Power: CanActivate from hand (Field Zone placement)",
+                    engine.CanActivateSpellTrap(p, gaiaCard, fromHand: true));
+                Check("Gaia Power: activate from hand into Field Zone",
+                    engine.TryActivateSpellTrap(p, gaiaCard, fromHand: true));
+                Check("Gaia Power sits face-up in Field Spell Zone",
+                    p.FieldSpellZone?.Occupant == gaiaCard && gaiaCard.FaceUp);
+                Check("Gaia Power: EARTH Battle Ox +500/−400 (1700/1000→2200/600)",
+                    oxMon.CurrentAtk == 2200 && oxMon.CurrentDef == 600,
+                    $"ATK {oxMon.CurrentAtk} DEF {oxMon.CurrentDef}");
+                Check("Gaia Power: opponent EARTH Celtic +500/−400 (1400/1200→1900/800)",
+                    cel.CurrentAtk == 1900 && cel.CurrentDef == 800,
+                    $"ATK {cel.CurrentAtk} DEF {cel.CurrentDef}");
+                Check("Gaia Power: FIRE Hinotama Soul unchanged",
+                    soulMon.CurrentAtk == soulMon.Def.atk && soulMon.CurrentDef == soulMon.Def.def,
+                    $"ATK {soulMon.CurrentAtk} DEF {soulMon.CurrentDef}");
+                Check("Gaia Power: face-down EARTH is not boosted",
+                    fdOx.CurrentAtk == fdOx.Def.atk && fdOx.CurrentDef == fdOx.Def.def,
+                    $"ATK {fdOx.CurrentAtk} DEF {fdOx.CurrentDef}");
+
+                p.FieldSpellZone.Occupant = null;
+                FieldSpellEffects.RefreshBoard(engine);
+                Check("Gaia Power leaves: printed ATK/DEF restored",
+                    oxMon.CurrentAtk == oxMon.Def.atk && cel.CurrentAtk == cel.Def.atk &&
+                    soulMon.CurrentAtk == soulMon.Def.atk,
+                    $"ox {oxMon.CurrentAtk} cel {cel.CurrentAtk} soul {soulMon.CurrentAtk}");
+
+                ClearBoard(engine);
+                if (engine.IsAwaitingResponse) engine.PassResponse();
+                p.Hand.Clear();
+                var fireMon = PlaceMonster(engine, p, soul, 2, BattlePosition.Attack, true);
+                var windMon = PlaceMonster(engine, opp, bird, 2, BattlePosition.Attack, true);
+                var moltenCard = PutInHand(engine, p, molten);
+                Check("Molten Destruction: activate from hand",
+                    engine.TryActivateSpellTrap(p, moltenCard, fromHand: true) &&
+                    p.FieldSpellZone?.Occupant == moltenCard);
+                Check("Molten Destruction: FIRE +500/−400; WIND unchanged",
+                    fireMon.CurrentAtk == 1100 && fireMon.CurrentDef == 100 &&
+                    windMon.CurrentAtk == windMon.Def.atk && windMon.CurrentDef == windMon.Def.def,
+                    $"fire {fireMon.CurrentAtk}/{fireMon.CurrentDef} wind {windMon.CurrentAtk}/{windMon.CurrentDef}");
+            }
+
+            // ── MRD Tremendous Fire: 1000 to opponent and 500 to self ──
+            {
+                const int tremendous = 46918794;
+                var engine = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine);
+                if (engine.IsAwaitingResponse) engine.PassResponse();
+                var p = engine.Player;
+                var opp = engine.Opponent;
+                p.Hand.Clear();
+                p.LifePoints = 8000;
+                opp.LifePoints = 8000;
+                var card = PutInHand(engine, p, tremendous);
+                var pBefore = p.LifePoints;
+                var oBefore = opp.LifePoints;
+                Check("Tremendous Fire: CanActivate from hand",
+                    engine.CanActivateSpellTrap(p, card, fromHand: true));
+                Check("Tremendous Fire: activate from hand",
+                    engine.TryActivateSpellTrap(p, card, fromHand: true));
+                Check("Tremendous Fire: opponent takes 1000, controller takes 500",
+                    opp.LifePoints == oBefore - 1000 && p.LifePoints == pBefore - 500,
+                    $"opp {opp.LifePoints} (was {oBefore}) you {p.LifePoints} (was {pBefore})");
+                Check("Tremendous Fire: Normal Spell left the field (not staying)",
+                    p.SpellTrapZones.All(z => z.Occupant != card) &&
+                    p.FieldSpellZone?.Occupant != card);
+            }
+
             // ── Mermaid Knight: extra attack while Umi (ALO counts) ──
             {
                 const int mermaidId = MonsterEffects.MermaidKnight; // 24435369
