@@ -74,6 +74,7 @@ namespace WRLDZ.Duel.Rules
             var fieldFail = new List<string>();
             var ignFail = new List<string>();
             var standbyFail = new List<string>();
+            var ritualActivated = 0;
 
             var engine = Fresh(db, pDeck, aDeck);
 
@@ -152,7 +153,7 @@ namespace WRLDZ.Duel.Rules
                     }
                     else if (def.IsSpell && !def.IsTrap)
                     {
-                        if (!TrySpell(engine, def, prog, triggerFail)) continue;
+                        if (!TrySpell(engine, def, prog, triggerFail, ref ritualActivated)) continue;
                     }
                     else if (def.IsTrap)
                     {
@@ -195,6 +196,8 @@ namespace WRLDZ.Duel.Rules
                 fieldFail.Count == 0, Join(fieldFail));
             Check("Corpus: FullyCompiled Spells Activate on a legal board",
                 triggerFail.Count == 0, Join(triggerFail));
+            Check("Corpus: FullyCompiled Ritual Spells Activate on a provisioned board",
+                ritualActivated >= 16, $"activated={ritualActivated}");
             Check("Corpus: FullyCompiled Traps are legal in their window",
                 trapFail.Count == 0, Join(trapFail));
             Check("Corpus: FullyCompiled Flip monsters Flip Summon",
@@ -413,7 +416,8 @@ namespace WRLDZ.Duel.Rules
             return true;
         }
 
-        static bool TrySpell(DuelEngine engine, CardDef def, CompiledCardProgram prog, List<string> fail)
+        static bool TrySpell(DuelEngine engine, CardDef def, CompiledCardProgram prog, List<string> fail,
+            ref int ritualActivated)
         {
             // FullyCompiled Continuous Spells: playing the card is the activation even
             // when the printed effect is only End Phase / Standby / while-face-up.
@@ -460,6 +464,9 @@ namespace WRLDZ.Duel.Rules
 
             if (!ResolvePendingPicks(engine, def, fail, "target"))
                 return false;
+
+            if (act.Exists(c => c != null && c.Action == EffectActionKind.RitualSummon))
+                ritualActivated++;
 
             return true;
         }
