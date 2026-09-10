@@ -16,7 +16,7 @@ namespace WRLDZ.Duel.TextEffects
     /// </summary>
     public static class CardTextEffectCompiler
     {
-        public const int Version = 64;
+        public const int Version = 65;
 
         static readonly Regex RxDraw = new(
             @"(?:^|[.!?]\s+)Draw (\d+) cards?\.",
@@ -229,6 +229,16 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         static readonly Regex RxEnchantedJavelin = new(
             @"Select 1 attacking monster\.\s*Gain Life Points equal to its ATK\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Tribute Doll: Tribute 1; SS one printed-Level monster from hand that can
+        /// be Normal Summoned/Set; that copy cannot attack this turn.
+        /// SpecialSummonFromHand + RequiresTributeCount + SummonCannotAttackThisTurn.
+        /// </summary>
+        static readonly Regex RxTributeLevelFromHand = new(
+            @"Tribute 1 monster;\s*Special Summon 1 Level (\d+) monster from your hand " +
+            @"that can be Normal Summoned/Set\.\s*It cannot attack this turn\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxCyberJar = new(
@@ -957,6 +967,20 @@ namespace WRLDZ.Duel.TextEffects
                 Action = EffectActionKind.GainLpEqualToAtk,
                 Zone = EffectZoneFilter.AttackingMonster,
                 RequiresTargetChoice = true
+            });
+            var tribLvHand = RxTributeLevelFromHand.Match(text);
+            Take(tribLvHand, new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.SpecialSummonFromHand,
+                Zone = EffectZoneFilter.ControllerHandMonsters,
+                RequiresTargetChoice = true,
+                RequiresTributeCount = 1,
+                Amount = tribLvHand.Success ? ParseInt(tribLvHand, 1, 7) : 7,
+                AmountIsLevel = true,
+                RequiresCanBeNormalSummonedOrSet = true,
+                SummonCannotAttackThisTurn = true,
+                FromHand = true
             });
             if (RxDrainingShield.IsMatch(text) &&
                 !ContainsAction(clauses, EffectActionKind.GainLpEqualToAtk))

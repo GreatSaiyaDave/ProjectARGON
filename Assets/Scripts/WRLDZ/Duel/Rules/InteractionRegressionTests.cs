@@ -977,6 +977,219 @@ namespace WRLDZ.Duel.Rules
                 }
             }
 
+            // ── Level Limit - Area B / Tribute Doll / Reflect Bounder ──
+            {
+                const int areaB = 3136426;
+                const int tributeDoll = 2903036;
+                const int reflectBounder = 2851070;
+                const int celtic = 91152256;
+                const int giantSoldier = 13039848;
+                const int darkMagician = 46986414;
+                const int bewd = 89631139;
+
+                var areaDef = db.Get(areaB);
+                var areaProg = areaDef != null ? CardTextEffectCompiler.Compile(areaDef) : null;
+                Check("Level Limit - Area B FullyCompiled continuous SetToDefense ≥4",
+                    areaProg != null && areaProg.FullyCompiled &&
+                    areaProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.ChangeBattlePosition &&
+                        c.SetToDefense && c.AmountIsLevel && c.Amount == 4),
+                    areaProg == null
+                        ? "null"
+                        : $"full={areaProg.FullyCompiled} unparsed={string.Join("|", areaProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var lv8 = PlaceMonster(engine, p, bewd, 2, BattlePosition.Attack, true);
+                    var lv4 = PlaceMonster(engine, p, celtic, 1, BattlePosition.Attack, true);
+                    var lv3 = PlaceMonster(engine, p, giantSoldier, 3, BattlePosition.Attack, true);
+                    var card = PutInHand(engine, p, areaB);
+                    Check("Area B: Activate stays Continuous",
+                        engine.CanActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        card.FaceUp && p.TryFindSpellTrap(card, out _));
+                    Check("Area B: Level 8 and 4 go to DEF; Level 3 stays ATK",
+                        lv8.Position == BattlePosition.Defense &&
+                        lv4.Position == BattlePosition.Defense &&
+                        lv3.Position == BattlePosition.Attack,
+                        $"lv8={lv8.Position} lv4={lv4.Position} lv3={lv3.Position}");
+                    Check("Area B: Level 8 cannot change to Attack",
+                        engine.ContinuousForceDefenseApplies(lv8) &&
+                        !engine.CanChangePosition(p, lv8));
+                    Check("Area B: Level 3 can still change position",
+                        !engine.ContinuousForceDefenseApplies(lv3) &&
+                        engine.CanChangePosition(p, lv3));
+                }
+
+                var dollDef = db.Get(tributeDoll);
+                var dollProg = dollDef != null ? CardTextEffectCompiler.Compile(dollDef) : null;
+                Check("Tribute Doll FullyCompiled tribute + Level 7 hand SS + no attack",
+                    dollProg != null && dollProg.FullyCompiled &&
+                    dollProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.SpecialSummonFromHand &&
+                        c.RequiresTributeCount == 1 &&
+                        c.AmountIsLevel && c.Amount == 7 &&
+                        c.SummonCannotAttackThisTurn),
+                    dollProg == null
+                        ? "null"
+                        : $"full={dollProg.FullyCompiled} unparsed={string.Join("|", dollProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var trib = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var dm = PutInHand(engine, p, darkMagician);
+                    var extra = PutInHand(engine, p, bewd);
+                    var card = PutInHand(engine, p, tributeDoll);
+                    Check("Tribute Doll: Activate legal with tribute + Level 7 in hand",
+                        engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    Check("Tribute Doll: Activate asks for a Tribute",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.AwaitingIgnitionCost,
+                        $"pending={engine.IsAwaitingEffectTarget} cost={engine.PendingActivation?.AwaitingIgnitionCost}");
+                    Check("Tribute Doll: Tribute Celtic",
+                        engine.TrySelectEffectTarget(trib) &&
+                        p.Graveyard.Contains(trib),
+                        $"gyTrib={p.Graveyard.Contains(trib)}");
+                    Check("Tribute Doll: then choose Dark Magician, not BEWD",
+                        engine.IsAwaitingEffectTarget &&
+                        engine.IsLegalEffectTarget(dm) &&
+                        !engine.IsLegalEffectTarget(extra) &&
+                        engine.TrySelectEffectTarget(dm) &&
+                        p.TryFindMonster(dm, out _) &&
+                        p.Graveyard.Contains(card) &&
+                        dm.CannotAttackThisTurn,
+                        $"ss={p.TryFindMonster(dm, out _)} dollGy={p.Graveyard.Contains(card)} noAtk={dm.CannotAttackThisTurn}");
+                    Check("Tribute Doll: summoned monster cannot attack this turn",
+                        dm.CannotAttackThisTurn);
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    PutInHand(engine, p, bewd);
+                    var card = PutInHand(engine, p, tributeDoll);
+                    Check("Tribute Doll: no Level 7 in hand cannot activate",
+                        !engine.CanActivateSpellTrap(p, card, fromHand: true));
+                }
+
+                var rbDef = db.Get(reflectBounder);
+                var rbProg = rbDef != null ? CardTextEffectCompiler.Compile(rbDef) : null;
+                Check("Reflect Bounder FullyCompiled DC inflict + destroy after",
+                    rbProg != null && rbProg.FullyCompiled &&
+                    rbProg.HasTiming(EffectTiming.DamageCalculation) &&
+                    rbProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.InflictDamageEqualToAtk &&
+                        c.DestroySourceAfterDamageCalculation),
+                    rbProg == null
+                        ? "null"
+                        : $"full={rbProg.FullyCompiled} unparsed={string.Join("|", rbProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    if (!ReachOpponentBattle(engine))
+                    {
+                        Check("Reflect Bounder battle path (skipped — opp not in BP)", false,
+                            $"phase={engine.Phase}");
+                    }
+                    else
+                    {
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.LifePoints = 8000;
+                        opp.LifePoints = 8000;
+                        var bounder = PlaceMonster(engine, p, reflectBounder, 2,
+                            BattlePosition.Attack, true);
+                        bounder.ClearAttackFlags();
+                        var attacker = PlaceMonster(engine, opp, celtic, 2,
+                            BattlePosition.Attack, true);
+                        attacker.ClearAttackFlags();
+                        attacker.SummonedThisTurn = false;
+                        if (engine.Phase == DuelPhase.Main1)
+                            engine.TryEnterBattlePhase(opp);
+                        DrainCombat(engine);
+                        Check("Reflect Bounder: Celtic declares the attack",
+                            engine.TryAttack(opp, attacker, bounder));
+                        if (engine.PendingResponse != null &&
+                            engine.PendingResponse.Timing == ResponseTiming.AttackDeclared)
+                            engine.PassResponse();
+                        Check("Reflect Bounder is legal in Damage Calculation",
+                            engine.PendingResponse != null &&
+                            engine.PendingResponse.Timing == ResponseTiming.DamageCalculation &&
+                            engine.PendingResponse.LegalCards != null &&
+                            engine.PendingResponse.LegalCards.Exists(c =>
+                                c != null && c.CardId == reflectBounder),
+                            engine.PendingResponse == null
+                                ? "no window"
+                                : $"timing={engine.PendingResponse.Timing}");
+                        var oppLp = opp.LifePoints;
+                        var atkVal = attacker.CurrentAtk;
+                        Check("Reflect Bounder activates",
+                            engine.TryActivateSpellTrap(p, bounder, fromHand: false));
+                        DrainCombat(engine);
+                        Check("Reflect Bounder: inflict ATK, then destroy this after DC; attacker dies",
+                            opp.LifePoints == oppLp - atkVal &&
+                            !p.TryFindMonster(bounder, out _) &&
+                            p.Graveyard.Exists(c => c != null && c.CardId == reflectBounder) &&
+                            !opp.TryFindMonster(attacker, out _),
+                            $"oppLP={opp.LifePoints} was {oppLp} atk={atkVal} " +
+                            $"bounderField={p.TryFindMonster(bounder, out _)} " +
+                            $"celticField={opp.TryFindMonster(attacker, out _)}");
+                    }
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    if (!ReachOpponentBattle(engine))
+                    {
+                        Check("Reflect Bounder DEF skip (skipped — opp not in BP)", false,
+                            $"phase={engine.Phase}");
+                    }
+                    else
+                    {
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        var bounder = PlaceMonster(engine, p, reflectBounder, 2,
+                            BattlePosition.Defense, true);
+                        bounder.ClearAttackFlags();
+                        var attacker = PlaceMonster(engine, opp, celtic, 2,
+                            BattlePosition.Attack, true);
+                        attacker.ClearAttackFlags();
+                        attacker.SummonedThisTurn = false;
+                        if (engine.Phase == DuelPhase.Main1)
+                            engine.TryEnterBattlePhase(opp);
+                        DrainCombat(engine);
+                        engine.TryAttack(opp, attacker, bounder);
+                        if (engine.PendingResponse != null &&
+                            engine.PendingResponse.Timing == ResponseTiming.AttackDeclared)
+                            engine.PassResponse();
+                        Check("Reflect Bounder in Defense is not legal at DC",
+                            engine.PendingResponse == null ||
+                            engine.PendingResponse.LegalCards == null ||
+                            !engine.PendingResponse.LegalCards.Exists(c =>
+                                c != null && c.CardId == reflectBounder),
+                            engine.PendingResponse == null
+                                ? "no window (ok)"
+                                : $"n={engine.PendingResponse.LegalCards?.Count ?? 0}");
+                    }
+                }
+            }
+
             // ── Tribute Summon Dark Magician with 2 face-down Sets ──
             {
                 const int darkMagician = 46986414;

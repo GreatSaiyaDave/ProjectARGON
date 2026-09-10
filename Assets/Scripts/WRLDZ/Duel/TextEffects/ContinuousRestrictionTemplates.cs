@@ -14,6 +14,14 @@ namespace WRLDZ.Duel.TextEffects
             @"Level (\d+) or higher monsters cannot attack\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        /// <summary>
+        /// Level Limit - Area B: continuous ChangeBattlePosition + SetToDefense.
+        /// AmountIsLevel uses Gravity Bind's ≥ reading, not Ladybug's exact Level.
+        /// </summary>
+        static readonly Regex RxLevelLimitAreaB = new(
+            @"Change all face-up Level (\d+) or higher monsters to Defense Position\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         static readonly Regex RxInsectBarrier = new(
             @"(\w+)(?:-Type)? monsters your opponent controls cannot declare an attack\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -90,6 +98,22 @@ namespace WRLDZ.Duel.TextEffects
                 }
                 : null);
 
+            var areaB = RxLevelLimitAreaB.Match(text);
+            Add(areaB, areaB.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.ChangeBattlePosition,
+                    SetToDefense = true,
+                    Amount = Parse(areaB, 1, 4),
+                    AmountIsLevel = true,
+                    Zone = EffectZoneFilter.FieldMonsters,
+                    Side = EffectSide.Both,
+                    StaysOnField = true,
+                    MakesChainLink = false
+                }
+                : null);
+
             var ib = RxInsectBarrier.Match(text);
             Add(ib, ib.Success
                 ? new EffectClause
@@ -159,6 +183,8 @@ namespace WRLDZ.Duel.TextEffects
             if (RxGravityBind.IsMatch(text) || RxInsectBarrier.IsMatch(text) ||
                 RxCannotAttackAtk.IsMatch(text))
                 need.Add(EffectActionKind.ContinuousCannotAttack);
+            if (RxLevelLimitAreaB.IsMatch(text))
+                need.Add(EffectActionKind.ChangeBattlePosition);
             if (RxPayOrDestroyStandby.IsMatch(text) || RxPayThenDestroyStandby.IsMatch(text))
                 need.Add(EffectActionKind.PayLpOrDestroyThis);
             if (RxCallOfTheHaunted.IsMatch(text) || RxSoulResurrection.IsMatch(text))
