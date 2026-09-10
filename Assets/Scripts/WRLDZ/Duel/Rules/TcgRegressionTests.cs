@@ -2132,11 +2132,11 @@ namespace WRLDZ.Duel.Rules
                     Check("New-card leftover: Equip split + unique draw is not FullyCompiled",
                         synEqLeftover != null && !synEqLeftover.FullyCompiled);
 
-                    var spirit = db.Get(15866454);
-                    var spiritProg = spirit != null ? CardTextEffectCompiler.Compile(spirit) : null;
+                    var spiritualism = db.Get(15866454);
+                    var spiritualismProg = spiritualism != null ? CardTextEffectCompiler.Compile(spiritualism) : null;
                     Check("Corpus: Spiritualism FullyCompiled bounce 1 opp S/T",
-                        spiritProg != null && spiritProg.FullyCompiled &&
-                        spiritProg.ClauseList.Exists(c =>
+                        spiritualismProg != null && spiritualismProg.FullyCompiled &&
+                        spiritualismProg.ClauseList.Exists(c =>
                             c != null &&
                             c.Action == EffectActionKind.ReturnToHand &&
                             c.Zone == EffectZoneFilter.FieldSpellTraps &&
@@ -2144,9 +2144,9 @@ namespace WRLDZ.Duel.Rules
                             c.RequiresTargetChoice &&
                             !c.ActivationNegatable &&
                             !c.EffectNegatable),
-                        spiritProg == null
+                        spiritualismProg == null
                             ? "null"
-                            : $"full={spiritProg.FullyCompiled} unparsed={string.Join("|", spiritProg.UnparsedFragments ?? Array.Empty<string>())}");
+                            : $"full={spiritualismProg.FullyCompiled} unparsed={string.Join("|", spiritualismProg.UnparsedFragments ?? Array.Empty<string>())}");
 
                     var synBounce = CardTextEffectCompiler.Compile(new CardDef
                     {
