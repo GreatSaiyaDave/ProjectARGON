@@ -1183,6 +1183,87 @@ namespace WRLDZ.Duel.Rules
                             c != null && c.TakeControlOfTarget &&
                             c.Zone == EffectZoneFilter.OppFaceUpMonsters));
 
+                    var exo = db.Get(33396948);
+                    var exoProg = exo != null ? CardTextEffectCompiler.Compile(exo) : null;
+                    bool ExoNames(EffectClause c, params string[] need)
+                    {
+                        if (c?.NamedCards == null || c.NamedCards.Length != need.Length)
+                            return false;
+                        foreach (var n in need)
+                        {
+                            var hit = false;
+                            foreach (var have in c.NamedCards)
+                                if (string.Equals(have, n, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    hit = true;
+                                    break;
+                                }
+                            if (!hit) return false;
+                        }
+                        return true;
+                    }
+
+                    Check("Corpus: Exodia the Forbidden One FullyCompiled hand wincon (allowAi:false)",
+                        exoProg != null && exoProg.FullyCompiled &&
+                        (exoProg.UnparsedFragments == null || exoProg.UnparsedFragments.Length == 0) &&
+                        exoProg.ClauseList.Count == 1 &&
+                        exoProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.ContinuousWhileInHand &&
+                            c.Action == EffectActionKind.WinIfNamedCardsInHand &&
+                            !c.MakesChainLink &&
+                            ExoNames(c,
+                                "Right Leg of the Forbidden One",
+                                "Left Leg of the Forbidden One",
+                                "Right Arm of the Forbidden One",
+                                "Left Arm of the Forbidden One")),
+                        exoProg == null
+                            ? "null"
+                            : $"full={exoProg.FullyCompiled} n={exoProg.ClauseList.Count} " +
+                              $"unparsed={string.Join("|", exoProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Classify: Exodia the Forbidden One Implemented",
+                        exo != null &&
+                        CardEffectStatus.Classify(exo) == CardEffectStatusKind.Implemented);
+
+                    var synExo = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000022,
+                        name = "New Hand Wincon (Exodia shape)",
+                        type = "Effect Monster",
+                        desc =
+                            "If you have \"Right Leg of the Forbidden One\", \"Left Leg of the Forbidden One\", " +
+                            "\"Right Arm of the Forbidden One\" and \"Left Arm of the Forbidden One\" " +
+                            "in addition to this card in your hand, you win the Duel."
+                    });
+                    Check("New-card rule: named pieces in hand win compiles with no cardId branch",
+                        synExo != null && synExo.FullyCompiled &&
+                        synExo.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.ContinuousWhileInHand &&
+                            c.Action == EffectActionKind.WinIfNamedCardsInHand &&
+                            !c.MakesChainLink &&
+                            ExoNames(c,
+                                "Right Leg of the Forbidden One",
+                                "Left Leg of the Forbidden One",
+                                "Right Arm of the Forbidden One",
+                                "Left Arm of the Forbidden One")),
+                        synExo == null
+                            ? "null"
+                            : $"full={synExo.FullyCompiled} n={synExo.ClauseList.Count} " +
+                              $"unparsed={string.Join("|", synExo.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var contract = db.Get(33244944);
+                    var contractProg = contract != null ? CardTextEffectCompiler.Compile(contract) : null;
+                    Check("Corpus: Contract with Exodia is not a hand-win FullyCompiled",
+                        contractProg == null ||
+                        (!contractProg.FullyCompiled &&
+                         !contractProg.ClauseList.Exists(c =>
+                             c != null && c.Action == EffectActionKind.WinIfNamedCardsInHand)),
+                        contractProg == null
+                            ? "null"
+                            : $"full={contractProg.FullyCompiled} n={contractProg.ClauseList.Count} " +
+                              $"unparsed={string.Join("|", contractProg.UnparsedFragments ?? Array.Empty<string>())}");
+
                     var rec = db.Get(74848038);
                     var recProg = rec != null ? CardTextEffectCompiler.Compile(rec) : null;
                     Check("Corpus: Monster Reincarnation FullyCompiled discard + GY monster add",

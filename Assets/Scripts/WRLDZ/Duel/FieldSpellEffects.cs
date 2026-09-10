@@ -65,6 +65,8 @@ namespace WRLDZ.Duel
             ApplyCatalogSpellTraps(engine, engine.Opponent);
             DestroyNamedLeavesContinuous(engine, engine.Player);
             DestroyNamedLeavesContinuous(engine, engine.Opponent);
+            if (!engine.GameOver)
+                TextEffectRuntime.CheckNamedPiecesInHandWin(engine);
         }
 
         static void ClearModifiers(DuelistState who)
