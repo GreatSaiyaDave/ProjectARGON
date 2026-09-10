@@ -1419,7 +1419,7 @@ namespace WRLDZ.Duel.Rules
                         race = "Equip",
                         frameType = "equip",
                         desc =
-                            "Activate this card by paying 800 LP, then target 1 monster in your Graveyard; Special Summon that target in Attack Position and equip it with this card. When this card is destroyed, destroy the equipped monster. Also draw 1 card."
+                            "Activate this card by paying 800 LP, then target 1 monster in your Graveyard; Special Summon that target in Attack Position and equip it with this card. When this card is destroyed, destroy the equipped monster. Shuffle your entire Deck into your opponent's Deck."
                     });
                     Check("Fail-closed: Premature Burial plus extra rider is not FullyCompiled",
                         leftoverPrem != null && !leftoverPrem.FullyCompiled);
