@@ -1365,6 +1365,134 @@ namespace WRLDZ.Duel.Rules
                     fen.CurrentAtk == 2100, $"ATK {fen.CurrentAtk}");
             }
 
+            // ── LOB Field +200 shared type-list atom (Forest / Mountain / Wasteland) ──
+            {
+                const int forestId = 87430998;
+                const int mountainId = 50913601;
+                const int wastelandId = 23424603;
+                const int insect = 26566878; // Fiend Scorpion 900/200
+                const int beast = 5818798; // Gazelle 1500/1200
+                const int plant = 43500484; // Darkworld Thorns 1200/900
+                const int beastWarrior = 5053103; // Battle Ox 1700/1000
+                const int dragon = 11091375; // Luster Dragon 1900/1600
+                const int winged = 10202894; // Skull Red Bird 1550/1200
+                const int thunder = 27324313; // Wattkid 1000/500
+                const int dino = 1784619; // Uraby 1500/800
+                const int zombie = 32864; // The 13th Grave 1200/900
+                const int rock = 13039848; // Giant Soldier of Stone 1300/2000
+                const int warrior = 91152256; // Celtic Guardian — none of the three lists
+
+                bool CompileBoost(int id, out string detail)
+                {
+                    detail = "missing";
+                    if (!db.TryGet(id, out var def) || def == null) return false;
+                    var p = CardTextEffectCompiler.Compile(def);
+                    detail = p == null
+                        ? "null"
+                        : $"full={p.FullyCompiled} n={p.ClauseList.Count} " +
+                          $"filter={p.ClauseList[0]?.RaceFilter} " +
+                          $"unparsed={string.Join("|", p.UnparsedFragments ?? System.Array.Empty<string>())}";
+                    return p != null && p.FullyCompiled &&
+                           p.ClauseList.Exists(c =>
+                               c != null &&
+                               c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                               c.Amount == 200 && c.DefAmount == 200);
+                }
+
+                Check("Forest official text FullyCompiled +200 type-list (allowAi:false)",
+                    CompileBoost(forestId, out var forestDetail), forestDetail);
+                Check("Mountain official text FullyCompiled +200 type-list (allowAi:false)",
+                    CompileBoost(mountainId, out var mountainDetail), mountainDetail);
+                Check("Wasteland official text FullyCompiled +200 type-list (allowAi:false)",
+                    CompileBoost(wastelandId, out var wasteDetail), wasteDetail);
+
+                var engine = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine);
+                if (engine.IsAwaitingResponse) engine.PassResponse();
+                var p = engine.Player;
+                var opp = engine.Opponent;
+                p.Hand.Clear();
+
+                var scorp = PlaceMonster(engine, p, insect, 0, BattlePosition.Attack, true);
+                var gaz = PlaceMonster(engine, p, beast, 1, BattlePosition.Attack, true);
+                var thorn = PlaceMonster(engine, p, plant, 2, BattlePosition.Attack, true);
+                var ox = PlaceMonster(engine, opp, beastWarrior, 2, BattlePosition.Attack, true);
+                var cel = PlaceMonster(engine, opp, warrior, 1, BattlePosition.Attack, true);
+                var fdOx = PlaceMonster(engine, p, beastWarrior, 3, BattlePosition.Defense, false);
+                FieldSpellEffects.RefreshBoard(engine);
+
+                var forest = PutInHand(engine, p, forestId);
+                Check("Forest: CanActivate from hand (Field Zone placement)",
+                    engine.CanActivateSpellTrap(p, forest, fromHand: true));
+                Check("Forest: activate from hand into Field Zone",
+                    engine.TryActivateSpellTrap(p, forest, fromHand: true));
+                Check("Forest sits face-up in Field Spell Zone",
+                    p.FieldSpellZone?.Occupant == forest && forest.FaceUp);
+                Check("Forest: Insect +200 ATK/DEF (900/200→1100/400)",
+                    scorp.CurrentAtk == 1100 && scorp.CurrentDef == 400,
+                    $"ATK {scorp.CurrentAtk} DEF {scorp.CurrentDef}");
+                Check("Forest: Beast +200 ATK/DEF (1500/1200→1700/1400)",
+                    gaz.CurrentAtk == 1700 && gaz.CurrentDef == 1400,
+                    $"ATK {gaz.CurrentAtk} DEF {gaz.CurrentDef}");
+                Check("Forest: Plant +200 ATK/DEF (1200/900→1400/1100)",
+                    thorn.CurrentAtk == 1400 && thorn.CurrentDef == 1100,
+                    $"ATK {thorn.CurrentAtk} DEF {thorn.CurrentDef}");
+                Check("Forest: opponent Beast-Warrior +200 once (1700/1000→1900/1200, not +400)",
+                    ox.CurrentAtk == 1900 && ox.CurrentDef == 1200,
+                    $"ATK {ox.CurrentAtk} DEF {ox.CurrentDef}");
+                Check("Forest: Warrior unchanged",
+                    cel.CurrentAtk == cel.Def.atk && cel.CurrentDef == cel.Def.def,
+                    $"ATK {cel.CurrentAtk} DEF {cel.CurrentDef}");
+                Check("Forest: face-down Beast-Warrior is not boosted",
+                    fdOx.CurrentAtk == fdOx.Def.atk && fdOx.CurrentDef == fdOx.Def.def,
+                    $"ATK {fdOx.CurrentAtk} DEF {fdOx.CurrentDef}");
+
+                p.FieldSpellZone.Occupant = null;
+                FieldSpellEffects.RefreshBoard(engine);
+                Check("Forest leaves: printed ATK/DEF restored",
+                    scorp.CurrentAtk == scorp.Def.atk && ox.CurrentAtk == ox.Def.atk &&
+                    cel.CurrentAtk == cel.Def.atk,
+                    $"scorp {scorp.CurrentAtk} ox {ox.CurrentAtk} cel {cel.CurrentAtk}");
+
+                ClearBoard(engine);
+                if (engine.IsAwaitingResponse) engine.PassResponse();
+                p.Hand.Clear();
+                var lust = PlaceMonster(engine, p, dragon, 2, BattlePosition.Attack, true);
+                var bird = PlaceMonster(engine, opp, winged, 2, BattlePosition.Attack, true);
+                var watt = PlaceMonster(engine, p, thunder, 1, BattlePosition.Attack, true);
+                var cel2 = PlaceMonster(engine, opp, warrior, 1, BattlePosition.Attack, true);
+                var mountain = PutInHand(engine, p, mountainId);
+                Check("Mountain: activate from hand",
+                    engine.TryActivateSpellTrap(p, mountain, fromHand: true) &&
+                    p.FieldSpellZone?.Occupant == mountain);
+                Check("Mountain: Dragon / Winged Beast / Thunder +200; Warrior unchanged",
+                    lust.CurrentAtk == 2100 && lust.CurrentDef == 1800 &&
+                    bird.CurrentAtk == 1750 && bird.CurrentDef == 1400 &&
+                    watt.CurrentAtk == 1200 && watt.CurrentDef == 700 &&
+                    cel2.CurrentAtk == cel2.Def.atk,
+                    $"lust {lust.CurrentAtk}/{lust.CurrentDef} bird {bird.CurrentAtk}/{bird.CurrentDef} " +
+                    $"watt {watt.CurrentAtk}/{watt.CurrentDef} cel {cel2.CurrentAtk}");
+
+                ClearBoard(engine);
+                if (engine.IsAwaitingResponse) engine.PassResponse();
+                p.Hand.Clear();
+                var ura = PlaceMonster(engine, p, dino, 2, BattlePosition.Attack, true);
+                var grave = PlaceMonster(engine, opp, zombie, 2, BattlePosition.Attack, true);
+                var stone = PlaceMonster(engine, p, rock, 1, BattlePosition.Attack, true);
+                var cel3 = PlaceMonster(engine, opp, warrior, 1, BattlePosition.Attack, true);
+                var waste = PutInHand(engine, p, wastelandId);
+                Check("Wasteland: activate from hand",
+                    engine.TryActivateSpellTrap(p, waste, fromHand: true) &&
+                    p.FieldSpellZone?.Occupant == waste);
+                Check("Wasteland: Dinosaur / Zombie / Rock +200; Warrior unchanged",
+                    ura.CurrentAtk == 1700 && ura.CurrentDef == 1000 &&
+                    grave.CurrentAtk == 1400 && grave.CurrentDef == 1100 &&
+                    stone.CurrentAtk == 1500 && stone.CurrentDef == 2200 &&
+                    cel3.CurrentAtk == cel3.Def.atk,
+                    $"ura {ura.CurrentAtk}/{ura.CurrentDef} grave {grave.CurrentAtk}/{grave.CurrentDef} " +
+                    $"stone {stone.CurrentAtk}/{stone.CurrentDef} cel {cel3.CurrentAtk}");
+            }
+
             // ── Mermaid Knight: extra attack while Umi (ALO counts) ──
             {
                 const int mermaidId = MonsterEffects.MermaidKnight; // 24435369
