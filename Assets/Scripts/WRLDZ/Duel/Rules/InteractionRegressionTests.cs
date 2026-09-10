@@ -5003,10 +5003,17 @@ namespace WRLDZ.Duel.Rules
 
                 var sageStone = db.Get(13604200);
                 var sageProg = sageStone != null ? CardTextEffectCompiler.Compile(sageStone) : null;
-                Check("Sage's Stone leftover (no invented spell If-you-control lock)",
-                    sageProg != null && !sageProg.FullyCompiled &&
-                    !sageProg.ClauseList.Exists(c =>
-                        c != null && c.Action == EffectActionKind.SpecialSummonNamed));
+                Check("Sage's Stone official text FullyCompiled If-you-control named SS",
+                    sageProg != null && sageProg.FullyCompiled &&
+                    sageProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.SpecialSummonNamed &&
+                        c.RequiresControllerNamedCard &&
+                        c.FromHand && c.FromDeck),
+                    sageProg == null
+                        ? "null"
+                        : $"full={sageProg.FullyCompiled} n={sageProg.ClauseList.Count} " +
+                          $"unparsed={string.Join("|", sageProg.UnparsedFragments ?? System.Array.Empty<string>())}");
 
                 var release = db.Get(75417459);
                 var relProg = release != null ? CardTextEffectCompiler.Compile(release) : null;
@@ -6602,6 +6609,159 @@ namespace WRLDZ.Duel.Rules
                         !p.Graveyard.Contains(malice),
                         $"onField={p.TryFindMonster(malice, out _)} gy={p.Graveyard.Contains(malice)} " +
                         $"turn={engine.TurnNumber} turnPlayer={engine.TurnPlayer?.Name}");
+                }
+            }
+
+            // ── Dark Magic Attack / Thousand Knives / Sage's Stone (v74 If-you-control) ──
+            {
+                const int dmaId = 2314238;
+                const int knivesId = 63391643;
+                const int sageId = 13604200;
+                const int dmId = 46986414;
+                const int dmgId = 38033121;
+                const int celtic = 91152256;
+                const int waboku = 12607053;
+                const int burstId = 17655904;
+
+                var dmaDef = db.Get(dmaId);
+                var dmaProg = dmaDef != null ? CardTextEffectCompiler.Compile(dmaDef) : null;
+                Check("Dark Magic Attack official text FullyCompiled If-you-control destroy opp S/T",
+                    dmaProg != null && dmaProg.FullyCompiled &&
+                    dmaProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.Destroy &&
+                        c.Side == EffectSide.Opponent &&
+                        c.Zone == EffectZoneFilter.FieldSpellTraps &&
+                        !c.RequiresTargetChoice &&
+                        c.RequiresControllerNamedCard &&
+                        string.Equals(c.RequiresFaceUpName, "Dark Magician",
+                            System.StringComparison.OrdinalIgnoreCase)),
+                    dmaProg == null
+                        ? "null"
+                        : $"full={dmaProg.FullyCompiled} n={dmaProg.ClauseList.Count} " +
+                          $"unparsed={string.Join("|", dmaProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var knivesDef = db.Get(knivesId);
+                var knivesProg = knivesDef != null ? CardTextEffectCompiler.Compile(knivesDef) : null;
+                Check("Thousand Knives official text FullyCompiled If-you-control destroy 1 opp monster",
+                    knivesProg != null && knivesProg.FullyCompiled &&
+                    knivesProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.Destroy &&
+                        c.Zone == EffectZoneFilter.OppFaceUpMonsters &&
+                        c.RequiresTargetChoice &&
+                        c.RequiresControllerNamedCard &&
+                        string.Equals(c.RequiresFaceUpName, "Dark Magician",
+                            System.StringComparison.OrdinalIgnoreCase)),
+                    knivesProg == null
+                        ? "null"
+                        : $"full={knivesProg.FullyCompiled} n={knivesProg.ClauseList.Count} " +
+                          $"unparsed={string.Join("|", knivesProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var burstDef = db.Get(burstId);
+                var burstProg = burstDef != null ? CardTextEffectCompiler.Compile(burstDef) : null;
+                Check("Burst Stream cannot-attack leftover stays refuse",
+                    burstProg == null || !burstProg.FullyCompiled);
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var spell = PutInHand(engine, p, dmaId);
+                    Check("Dark Magic Attack: refuse without your Dark Magician",
+                        !engine.CanActivateSpellTrap(p, spell, fromHand: true));
+                    PlaceMonster(engine, opp, dmId, 2, BattlePosition.Attack, true);
+                    Check("Dark Magic Attack: opponent Dark Magician does not count (YOU control)",
+                        !engine.CanActivateSpellTrap(p, spell, fromHand: true));
+                    ClearBoard(engine);
+                    p.Hand.Clear();
+                    spell = PutInHand(engine, p, dmaId);
+                    PlaceMonster(engine, p, dmId, 2, BattlePosition.Attack, true);
+                    var trap = PlaceSetTrap(engine, opp, waboku, 2);
+                    var oppMon = PlaceMonster(engine, opp, celtic, 1, BattlePosition.Attack, true);
+                    Check("Dark Magic Attack: legal with your Dark Magician + opp S/T",
+                        engine.CanActivateSpellTrap(p, spell, fromHand: true));
+                    Check("Dark Magic Attack: destroyed opponent S/T, left opponent monster",
+                        engine.TryActivateSpellTrap(p, spell, fromHand: true) &&
+                        p.Graveyard.Contains(spell) && opp.Graveyard.Contains(trap) &&
+                        !opp.Graveyard.Contains(oppMon) && opp.TryFindMonster(oppMon, out _),
+                        $"dmaGy={p.Graveyard.Contains(spell)} trapGy={opp.Graveyard.Contains(trap)} " +
+                        $"celticGy={opp.Graveyard.Contains(oppMon)} celticField={opp.TryFindMonster(oppMon, out _)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var knife = PutInHand(engine, p, knivesId);
+                    Check("Thousand Knives: refuse without your Dark Magician",
+                        !engine.CanActivateSpellTrap(p, knife, fromHand: true));
+                    PlaceMonster(engine, p, dmId, 2, BattlePosition.Attack, true);
+                    var yourCeltic = PlaceMonster(engine, p, celtic, 1, BattlePosition.Attack, true);
+                    Check("Thousand Knives: refuse when opponent has no monster",
+                        !engine.CanActivateSpellTrap(p, knife, fromHand: true));
+                    var knivesTarget = PlaceMonster(engine, opp, celtic, 2, BattlePosition.Attack, true);
+                    Check("Thousand Knives: legal with your Dark Magician + opp monster",
+                        engine.CanActivateSpellTrap(p, knife, fromHand: true));
+                    engine.TryActivateSpellTrap(p, knife, fromHand: true);
+                    Check("Thousand Knives: awaiting target",
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.LegalTargets.Contains(knivesTarget),
+                        engine.PendingActivation?.TargetKind.ToString() ?? "no pending");
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        var t = engine.PendingActivation.LegalTargets
+                                    .FirstOrDefault(c => c == knivesTarget) ??
+                                engine.PendingActivation.LegalTargets.FirstOrDefault();
+                        Check("Thousand Knives: select opponent Celtic",
+                            engine.TrySelectEffectTarget(t));
+                    }
+
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    Check("Thousand Knives: destroyed opponent monster, left your Celtic",
+                        p.Graveyard.Contains(knife) && opp.Graveyard.Contains(knivesTarget) &&
+                        p.TryFindMonster(yourCeltic, out _),
+                        $"knifeGy={p.Graveyard.Contains(knife)} tgtGy={opp.Graveyard.Contains(knivesTarget)} " +
+                        $"yourCeltic={p.TryFindMonster(yourCeltic, out _)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    p.Deck.Clear();
+                    var sageSpell = PutInHand(engine, p, sageId);
+                    Check("Sage's Stone: refuse without your Dark Magician Girl",
+                        !engine.CanActivateSpellTrap(p, sageSpell, fromHand: true));
+                    PlaceMonster(engine, opp, dmgId, 2, BattlePosition.Attack, true);
+                    Check("Sage's Stone: opponent Dark Magician Girl does not count",
+                        !engine.CanActivateSpellTrap(p, sageSpell, fromHand: true));
+                    ClearBoard(engine);
+                    p.Hand.Clear();
+                    p.Deck.Clear();
+                    sageSpell = PutInHand(engine, p, sageId);
+                    PlaceMonster(engine, p, dmgId, 2, BattlePosition.Defense, true);
+                    p.Deck.Add(dmId);
+                    Check("Sage's Stone: legal with your Dark Magician Girl + Dark Magician in Deck",
+                        engine.CanActivateSpellTrap(p, sageSpell, fromHand: true));
+                    Check("Sage's Stone: Special Summoned Dark Magician from Deck",
+                        engine.TryActivateSpellTrap(p, sageSpell, fromHand: true) &&
+                        p.Graveyard.Contains(sageSpell) &&
+                        p.MonstersOnField().Any(m => m != null && m.CardId == dmId && m.WasSpecialSummoned) &&
+                        !p.Deck.Contains(dmId),
+                        $"sageGy={p.Graveyard.Contains(sageSpell)} " +
+                        $"dmField={p.MonstersOnField().Any(m => m != null && m.CardId == dmId)} " +
+                        $"stillDeck={p.Deck.Contains(dmId)}");
                 }
             }
 

@@ -192,6 +192,32 @@ namespace WRLDZ.Duel.TextEffects
             @"Decrease your opponent's Life Points by (\d+) points\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        /// <summary>
+        /// Dark Magic Attack family: If you control "Name": destroy all opponent S/T.
+        /// Whole-sentence only ($): Burst Stream's extra cannot-attack rider stays refuse.
+        /// </summary>
+        static readonly Regex RxIfYouControlDestroyOppSt = new(
+            @"^If you control (?:a face-up )?""([^""]+)"":\s*" +
+            @"Destroy all Spells? and Traps?(?: Cards)? your opponent controls\.?\s*$",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Thousand Knives family: If you control "Name": target 1 opp monster; destroy.
+        /// </summary>
+        static readonly Regex RxIfYouControlDestroyOppMonster = new(
+            @"^If you control (?:a face-up )?""([^""]+)"":\s*" +
+            @"Target 1 monster your opponent controls;\s*destroy that target\.?\s*$",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Sage's Stone family: If you control "Name": SS 1 quoted name from hand or Deck.
+        /// Dark Scorpion "any number" leftover stays refuse.
+        /// </summary>
+        static readonly Regex RxIfYouControlSsNamedHandOrDeck = new(
+            @"^If you control (?:a face-up )?""([^""]+)"":\s*" +
+            @"(?:You can )?Special Summon 1 ""([^""]+)"" from your hand or Deck\.?\s*$",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         static readonly string[] Attributes =
             { "DARK", "LIGHT", "WATER", "FIRE", "EARTH", "WIND", "DIVINE" };
 
@@ -349,6 +375,50 @@ namespace WRLDZ.Duel.TextEffects
 
             if (IsHandSpell(def))
             {
+                var ctrlSt = RxIfYouControlDestroyOppSt.Match(text);
+                Add(ctrlSt, ctrlSt.Success
+                    ? new EffectClause
+                    {
+                        Timing = EffectTiming.Activate,
+                        Action = EffectActionKind.Destroy,
+                        Side = EffectSide.Opponent,
+                        Zone = EffectZoneFilter.FieldSpellTraps,
+                        RequiresFaceUpName = ctrlSt.Groups[1].Value,
+                        RequiresControllerNamedCard = true,
+                        MakesChainLink = true
+                    }
+                    : null);
+
+                var ctrlMon = RxIfYouControlDestroyOppMonster.Match(text);
+                Add(ctrlMon, ctrlMon.Success
+                    ? new EffectClause
+                    {
+                        Timing = EffectTiming.Activate,
+                        Action = EffectActionKind.Destroy,
+                        Side = EffectSide.Opponent,
+                        Zone = EffectZoneFilter.OppFaceUpMonsters,
+                        RequiresTargetChoice = true,
+                        RequiresFaceUpName = ctrlMon.Groups[1].Value,
+                        RequiresControllerNamedCard = true,
+                        MakesChainLink = true
+                    }
+                    : null);
+
+                var ctrlSs = RxIfYouControlSsNamedHandOrDeck.Match(text);
+                Add(ctrlSs, ctrlSs.Success
+                    ? new EffectClause
+                    {
+                        Timing = EffectTiming.Activate,
+                        Action = EffectActionKind.SpecialSummonNamed,
+                        NamedCard = ctrlSs.Groups[2].Value,
+                        FromHand = true,
+                        FromDeck = true,
+                        RequiresFaceUpName = ctrlSs.Groups[1].Value,
+                        RequiresControllerNamedCard = true,
+                        MakesChainLink = true
+                    }
+                    : null);
+
                 var lp = RxIncreaseLp.Match(text);
                 Add(lp, lp.Success
                     ? new EffectClause
@@ -587,7 +657,10 @@ namespace WRLDZ.Duel.TextEffects
                    RxTributeNamedDestroy.IsMatch(text) ||
                    RxSuijinAtkZero.IsMatch(text) ||
                    RxSsByBanishAttrGy.IsMatch(text) ||
-                   RxSkipOppNextDraw.IsMatch(text);
+                   RxSkipOppNextDraw.IsMatch(text) ||
+                   RxIfYouControlDestroyOppSt.IsMatch(text) ||
+                   RxIfYouControlDestroyOppMonster.IsMatch(text) ||
+                   RxIfYouControlSsNamedHandOrDeck.IsMatch(text);
         }
 
         public static void ExpectedActions(CardDef def, List<EffectActionKind> need)
@@ -616,6 +689,11 @@ namespace WRLDZ.Duel.TextEffects
                     need.Add(EffectActionKind.AddFromDeckToHand);
                 if (RxAddNamedFromDeck.IsMatch(text) && !RxAddLevelRaceFromDeck.IsMatch(text))
                     need.Add(EffectActionKind.AddNamedFromDeckToHand);
+                if (RxIfYouControlDestroyOppSt.IsMatch(text) ||
+                    RxIfYouControlDestroyOppMonster.IsMatch(text))
+                    need.Add(EffectActionKind.Destroy);
+                if (RxIfYouControlSsNamedHandOrDeck.IsMatch(text))
+                    need.Add(EffectActionKind.SpecialSummonNamed);
             }
             if (RxSecondAttack.IsMatch(text))
                 need.Add(EffectActionKind.ExtraAttacks);
