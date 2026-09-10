@@ -16,7 +16,7 @@ namespace WRLDZ.Duel.TextEffects
     /// </summary>
     public static class CardTextEffectCompiler
     {
-        public const int Version = 50;
+        public const int Version = 67;
 
         static readonly Regex RxDraw = new(
             @"(?:^|[.!?]\s+)Draw (\d+) cards?\.",
@@ -1007,6 +1007,8 @@ namespace WRLDZ.Duel.TextEffects
             AdvancedEffectTemplates.Collect(text, def, clauses, matchedSpans);
             PhaseTriggerTemplates.Collect(text, def, clauses, matchedSpans);
             ContinuousRestrictionTemplates.Collect(text, def, clauses, matchedSpans);
+            ContinuousNegationTemplates.Collect(text, def, clauses, matchedSpans);
+            FanbotSharedAtomTemplates.Collect(text, def, clauses, matchedSpans);
             MonsterTriggerTemplates.Collect(text, def, clauses, matchedSpans);
 
             // Official PSCT split (condition : cost/target ; resolution) for sentences

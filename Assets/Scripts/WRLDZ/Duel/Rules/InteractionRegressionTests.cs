@@ -6605,6 +6605,149 @@ namespace WRLDZ.Duel.Rules
                 }
             }
 
+            // ── Fanbot Jinzo atoms (trap-lock / Amplifier / Soul Exchange / Shallow Grave / Dice) ──
+            {
+                const int jinzoId = 77585513;
+                const int ampId = 303660;
+                const int seId = 68005187;
+                const int sgId = 43434803;
+                const int gdId = 74137509;
+                const int gravityBind = 85742772;
+                const int waboku = 12607053;
+                const int celtic = 91152256;
+                const int bewd = 89631139;
+                const int summonedSkull = 70781052;
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    PlaceMonster(engine, p, jinzoId, 2, BattlePosition.Attack, true);
+                    engine.NotifyPublic();
+                    var trap = PlaceSetTrap(engine, opp, waboku, 2);
+                    trap.SetThisTurn = false;
+                    Check("Jinzo: opponent Set Trap cannot activate",
+                        !engine.CanActivateSpellTrap(opp, trap, fromHand: false));
+                    var bind = PlaceSetTrap(engine, p, gravityBind, 1);
+                    bind.SetThisTurn = false;
+                    Check("Jinzo: controller Set Trap cannot activate either",
+                        !engine.CanActivateSpellTrap(p, bind, fromHand: false));
+                    bind.FaceUp = true;
+                    engine.NotifyPublic();
+                    var lv8 = PlaceMonster(engine, p, bewd, 1, BattlePosition.Attack, true);
+                    Check("Jinzo: face-up Gravity Bind is negated (Level 8 may attack)",
+                        bind.IsNegated && !engine.ContinuousCannotAttackBlocks(p, lv8));
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    var host = PlaceMonster(engine, p, jinzoId, 2, BattlePosition.Attack, true);
+                    var amp = PutInHand(engine, p, ampId);
+                    Check("Amplifier: Equip legal only to Jinzo",
+                        engine.CanActivateSpellTrap(p, amp, fromHand: true));
+                    engine.TryActivateSpellTrap(p, amp, fromHand: true);
+                    if (engine.IsAwaitingEffectTarget)
+                        engine.TrySelectEffectTarget(host);
+                    engine.NotifyPublic();
+                    Check("Amplifier: equipped to Jinzo",
+                        amp.EquippedTo == host && host.Equips.Contains(amp));
+                    var myTrap = PlaceSetTrap(engine, p, waboku, 1);
+                    myTrap.SetThisTurn = false;
+                    var oppTrap = PlaceSetTrap(engine, opp, waboku, 1);
+                    oppTrap.SetThisTurn = false;
+                    Check("Amplifier: controller Traps can activate",
+                        engine.CanActivateSpellTrap(p, myTrap, fromHand: false));
+                    Check("Amplifier: opponent Traps still cannot activate",
+                        !engine.CanActivateSpellTrap(opp, oppTrap, fromHand: false));
+                    var bind = PlaceSetTrap(engine, p, gravityBind, 2);
+                    bind.FaceUp = true;
+                    engine.NotifyPublic();
+                    var lv8 = PlaceMonster(engine, p, bewd, 0, BattlePosition.Attack, true);
+                    Check("Amplifier: Jinzo does not negate controller Trap effects",
+                        !bind.IsNegated && engine.ContinuousCannotAttackBlocks(p, lv8));
+                    engine.SendCardToGrave(p, amp);
+                    Check("Amplifier: leave destroys equipped Jinzo",
+                        !p.TryFindMonster(host, out _) && p.Graveyard.Contains(host));
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    var prey = PlaceMonster(engine, opp, celtic, 2, BattlePosition.Attack, true);
+                    var card = PutInHand(engine, p, seId);
+                    Check("Soul Exchange: Activate legal with opp monster",
+                        engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    engine.TryActivateSpellTrap(p, card, fromHand: true);
+                    Check("Soul Exchange: targeting", engine.IsAwaitingEffectTarget);
+                    if (engine.IsAwaitingEffectTarget)
+                        engine.TrySelectEffectTarget(prey);
+                    Check("Soul Exchange: not a take-control (Celtic stays on opp)",
+                        opp.TryFindMonster(prey, out _) && !p.TryFindMonster(prey, out _));
+                    Check("Soul Exchange: skip Battle Phase this turn",
+                        p.SkipBattlePhaseThisTurn && !engine.CanConductBattlePhase);
+                    var tributeMon = PutInHand(engine, p, summonedSkull);
+                    engine.PendingTributes.Add(prey);
+                    Check("Soul Exchange: Tribute Summon using the opp monster",
+                        engine.TryNormalSummon(p, tributeMon, asSet: false) &&
+                        p.TryFindMonster(tributeMon, out _) &&
+                        !opp.TryFindMonster(prey, out _) &&
+                        opp.Graveyard.Contains(prey),
+                        $"dm={p.TryFindMonster(tributeMon, out _)} preyOpp={opp.TryFindMonster(prey, out _)} " +
+                        $"preyGy={opp.Graveyard.Contains(prey)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    var yours = engine.CreateCardInstance(celtic);
+                    var theirs = engine.CreateCardInstance(bewd);
+                    p.Graveyard.Add(yours);
+                    opp.Graveyard.Add(theirs);
+                    var card = PutInHand(engine, p, sgId);
+                    Check("The Shallow Grave: Activate with both GYs",
+                        engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    engine.TryActivateSpellTrap(p, card, fromHand: true);
+                    if (engine.IsAwaitingEffectTarget)
+                        engine.TrySelectEffectTarget(yours);
+                    if (engine.IsAwaitingEffectTarget)
+                        engine.TrySelectEffectTarget(theirs);
+                    Check("The Shallow Grave: both SS face-down DEF",
+                        p.TryFindMonster(yours, out _) && !yours.FaceUp &&
+                        yours.Position == BattlePosition.Defense &&
+                        opp.TryFindMonster(theirs, out _) && !theirs.FaceUp &&
+                        theirs.Position == BattlePosition.Defense,
+                        $"you={p.TryFindMonster(yours, out _)} face={yours.FaceUp} " +
+                        $"opp={opp.TryFindMonster(theirs, out _)} oface={theirs.FaceUp}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var host = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var card = PutInHand(engine, p, gdId);
+                    engine.Rng.QueueDie(4);
+                    Check("Graceful Dice: Activate",
+                        engine.CanActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.TryActivateSpellTrap(p, card, fromHand: true));
+                    Check("Graceful Dice: +400 ATK/DEF until end (die 4)",
+                        host.CurrentAtk == 1800 && host.CurrentDef == 1600,
+                        $"atk={host.CurrentAtk} def={host.CurrentDef}");
+                    engine.ClearUntilEndOfTurnStatMods();
+                    engine.NotifyPublic();
+                    Check("Graceful Dice: End Phase restores printed",
+                        host.CurrentAtk == 1400 && host.CurrentDef == 1200);
+                }
+            }
+
             // ── FirstEmpty order ──
             {
                 var engine = Fresh(db, pDeck, aDeck);

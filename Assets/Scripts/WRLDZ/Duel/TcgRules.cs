@@ -47,7 +47,9 @@ namespace WRLDZ.Duel
             // Face-up printed lock (Fox Fire) and token lock (Ojama) share this flag.
             if (monster.CannotBeTributedForSummon && monster.FaceUp && !monster.IsNegated)
                 return false;
-            return who.TryFindMonster(monster, out _);
+            if (who.TryFindMonster(monster, out _)) return true;
+            return who.MustTributeAsIfControlled == monster &&
+                   monster.TributableByOpponent == who;
         }
 
         public static bool IsNormalSummonableMonster(CardDef def)

@@ -78,6 +78,7 @@ namespace WRLDZ.Duel
             {
                 if (GameOver || TurnPlayer == null) return false;
                 if (TurnNumber == 1 && TurnPlayer == FirstPlayer) return false;
+                if (TurnPlayer.SkipBattlePhaseThisTurn) return false;
                 return Phase == DuelPhase.Main1; // enter Battle only from MP1
             }
         }
@@ -546,6 +547,10 @@ namespace WRLDZ.Duel
                 .Where(t => TcgRules.CanBeTributedForSummon(who, t))
                 .Distinct()
                 .ToList();
+            var forced = who.MustTributeAsIfControlled;
+            if (forced != null && TcgRules.CanBeTributedForSummon(who, forced) &&
+                !chosen.Contains(forced))
+                chosen.Insert(0, forced);
             if (chosen.Count >= needed)
                 return chosen.Take(needed).ToList();
 
@@ -637,8 +642,9 @@ namespace WRLDZ.Duel
                 foreach (var t in tributes)
                 {
                     Log($"Tributed: {t.Name}");
-                    // Use public path so Sangan / field→GY triggers fire
-                    SendCardToGrave(who, t);
+                    // Use public path so Sangan / field→GY triggers fire.
+                    // Soul Exchange tributes the opponent's monster to its controller's GY.
+                    SendCardToGrave(ControllerOf(t) ?? who, t);
                 }
             }
 
@@ -1195,6 +1201,21 @@ namespace WRLDZ.Duel
             }
         }
 
+        void ClearSoulExchangeTurnLocks()
+        {
+            foreach (var who in new[] { Player, Opponent })
+            {
+                if (who == null) continue;
+                who.SkipBattlePhaseThisTurn = false;
+                who.MustTributeAsIfControlled = null;
+                foreach (var m in who.MonstersOnField())
+                {
+                    if (m == null) continue;
+                    m.TributableByOpponent = null;
+                }
+            }
+        }
+
         public void SendCardToGrave(DuelistState owner, CardInstance card, CardInstance sentBy = null)
         {
             if (owner == null || card == null) return;
@@ -1503,7 +1524,7 @@ namespace WRLDZ.Duel
                 if (side == null) continue;
                 foreach (var st in side.SpellTrapsOnField())
                 {
-                    if (st == null || !st.FaceUp || st.Def == null) continue;
+                    if (st == null || !st.FaceUp || st.Def == null || st.IsNegated) continue;
                     var prog = TextEffects.CompiledEffectCache.GetOrCompile(st.Def);
                     if (prog == null) continue;
                     foreach (var c in prog.ClausesFor(TextEffects.EffectTiming.ContinuousWhileFaceUp))
@@ -2634,6 +2655,7 @@ namespace WRLDZ.Duel
             Opponent.WabokuActive = false;
             Player.MustAttackDirectlyThisTurn = false;
             Opponent.MustAttackDirectlyThisTurn = false;
+            ClearSoulExchangeTurnLocks();
             ClearUntilEndOfTurnStatMods();
 
             PendingTributes.Clear();

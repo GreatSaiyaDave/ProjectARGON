@@ -151,6 +151,12 @@ namespace WRLDZ.Duel
         public bool IsToken;
         public bool IsNegated; // effect negated while face-up
 
+        /// <summary>
+        /// Soul Exchange: this copy may be Tributed this turn by
+        /// <see cref="TributableByOpponent"/> as if they controlled it.
+        /// </summary>
+        public DuelistState TributableByOpponent;
+
         /// <summary>Level change from face-up Field Spells / registered continuous (e.g. A Legendary Ocean −1).</summary>
         public int LevelModifier;
 
@@ -244,6 +250,15 @@ namespace WRLDZ.Duel
 
         /// <summary>Fenrir: skip this player's next Draw Phase.</summary>
         public bool SkipNextDrawPhase;
+
+        /// <summary>Soul Exchange: this player cannot conduct Battle Phase this turn.</summary>
+        public bool SkipBattlePhaseThisTurn;
+
+        /// <summary>
+        /// Soul Exchange: if this player Tributes, they must include this monster
+        /// (opponent's, as if they controlled it).
+        /// </summary>
+        public CardInstance MustTributeAsIfControlled;
 
         /// <summary>Pendulum Summon once per turn (when Pendulum is supported).</summary>
         public bool PendulumSummonedThisTurn;
