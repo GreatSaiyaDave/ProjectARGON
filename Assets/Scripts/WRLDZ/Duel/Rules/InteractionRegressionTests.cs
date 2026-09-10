@@ -3148,7 +3148,6 @@ namespace WRLDZ.Duel.Rules
                         var engine = Fresh(db, pDeck, aDeck);
                         ClearBoard(engine);
                         var p = engine.Player;
-                        var opp = engine.Opponent;
                         p.Hand.Clear();
                         var trap = PlaceSetTrap(engine, p, knaveId, 2);
                         trap.SetThisTurn = false;
@@ -3158,20 +3157,39 @@ namespace WRLDZ.Duel.Rules
                             !engine.CanActivateSpellTrap(p, trap, fromHand: false) &&
                             !engine.TryActivateSpellTrap(p, trap, fromHand: false) &&
                             p.TryFindSpellTrap(trap, out _));
-                        var attacker = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
-                        attacker.ClearAttackFlags();
-                        attacker.SummonedThisTurn = false;
-                        var oppLp = opp.LifePoints;
-                        if (engine.Phase == DuelPhase.Main1)
-                            engine.TryEnterBattlePhase(p);
-                        DrainCombat(engine);
-                        Check("Begone, Knave!: direct attack inflicts damage; attacker stays",
-                            engine.Phase == DuelPhase.Battle &&
-                            ResolveDirect(engine, p, attacker) &&
-                            p.TryFindMonster(attacker, out _) &&
-                            !p.Hand.Exists(c => c != null && c.CardId == celtic) &&
-                            opp.LifePoints == oppLp - attacker.CurrentAtk,
-                            $"phase={engine.Phase} LP={opp.LifePoints} was {oppLp} atk={attacker.CurrentAtk}");
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        if (!ReachPlayerBattle(engine))
+                        {
+                            Check("Begone, Knave! battle path (skipped — not in BP)", false,
+                                $"phase={engine.Phase} turn={engine.TurnNumber}");
+                        }
+                        else
+                        {
+                            ClearBoard(engine);
+                            var p = engine.Player;
+                            var opp = engine.Opponent;
+                            p.Hand.Clear();
+                            var trap = PlaceSetTrap(engine, p, knaveId, 2);
+                            trap.SetThisTurn = false;
+                            var attacker = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                            attacker.ClearAttackFlags();
+                            attacker.SummonedThisTurn = false;
+                            if (engine.Phase == DuelPhase.Main1)
+                                engine.TryEnterBattlePhase(p);
+                            DrainCombat(engine);
+                            var oppLp = opp.LifePoints;
+                            Check("Begone, Knave!: direct attack inflicts damage; attacker stays",
+                                engine.Phase == DuelPhase.Battle &&
+                                ResolveDirect(engine, p, attacker) &&
+                                p.TryFindMonster(attacker, out _) &&
+                                p.TryFindSpellTrap(trap, out _) &&
+                                !p.Hand.Exists(c => c != null && c.CardId == celtic) &&
+                                opp.LifePoints == oppLp - attacker.CurrentAtk,
+                                $"phase={engine.Phase} LP={opp.LifePoints} was {oppLp} atk={attacker.CurrentAtk}");
+                        }
                     }
 
                     var elmaDef = db.Get(elmaId);
