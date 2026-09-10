@@ -1198,7 +1198,8 @@ namespace WRLDZ.Duel.TextEffects
                 @"Activate (?:this card )?by paying (\d+) (?:LP|Life Points)",
                 RegexOptions.IgnoreCase);
             if (!pay.Success)
-                pay = Regex.Match(paySrc, @"\bPay (\d+) (?:LP|Life Points)\b",
+                pay = Regex.Match((paySrc ?? "").Trim(),
+                    @"^(?:You can )?Pay (\d+) (?:LP|Life Points)\b",
                     RegexOptions.IgnoreCase);
             if (pay.Success)
                 clause.PayLpAmount = int.TryParse(pay.Groups[1].Value, out var lp) ? lp : 0;

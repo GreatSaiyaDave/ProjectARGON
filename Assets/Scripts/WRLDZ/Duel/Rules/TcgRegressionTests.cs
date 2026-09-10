@@ -1299,6 +1299,11 @@ namespace WRLDZ.Duel.Rules
                     Check("Corpus: Lightforce Sword delayed hand-banish is not FullyCompiled",
                         lightforceProg == null || !lightforceProg.FullyCompiled);
 
+                    var toll = db.Get(82003859);
+                    var tollProg = toll != null ? CardTextEffectCompiler.Compile(toll) : null;
+                    Check("Corpus: Toll attack-tax leftover is not FullyCompiled",
+                        tollProg == null || !tollProg.FullyCompiled);
+
                     var offering = db.Get(80604092);
                     var offeringProg = offering != null ? CardTextEffectCompiler.Compile(offering) : null;
                     Check("Corpus: Ultimate Offering extra Normal Summon is not FullyCompiled",
