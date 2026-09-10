@@ -16,7 +16,7 @@ namespace WRLDZ.Duel.TextEffects
     /// </summary>
     public static class CardTextEffectCompiler
     {
-        public const int Version = 50;
+        public const int Version = 57;
 
         static readonly Regex RxDraw = new(
             @"(?:^|[.!?]\s+)Draw (\d+) cards?\.",
@@ -1353,6 +1353,11 @@ namespace WRLDZ.Duel.TextEffects
                 if (clause.Zone == EffectZoneFilter.None)
                     clause.Zone = EffectZoneFilter.FieldAnyMonster;
             }
+            else if (TryStampTakeControlTarget(res, def, clause))
+            {
+                // Action / zone / type or Attribute filter stamped.
+                // Until-End-Phase and while-source-face-up Charmers share TakeControlTarget.
+            }
 
             if (clause.Action == EffectActionKind.None)
             {
@@ -1462,6 +1467,19 @@ namespace WRLDZ.Duel.TextEffects
                 return;
             }
 
+            var typedOpp = Regex.Match(act,
+                @"target 1 (?:face-up )?(\w+)(?:-Type)? monster your opponent controls",
+                RegexOptions.IgnoreCase);
+            if (typedOpp.Success && typedOpp.Groups[1].Success && typedOpp.Groups[1].Length > 0 &&
+                !typedOpp.Groups[1].Value.Equals("face", StringComparison.OrdinalIgnoreCase))
+            {
+                clause.RequiresTargetChoice = true;
+                clause.Zone = EffectZoneFilter.OppFaceUpMonsters;
+                clause.Side = EffectSide.Opponent;
+                FillTypeOrAttribute(clause, typedOpp.Groups[1].Value);
+                return;
+            }
+
             if (Regex.IsMatch(act, @"target 1 (?:face-up )?monster (?:on the field|your opponent controls)",
                     RegexOptions.IgnoreCase))
             {
@@ -1488,6 +1506,8 @@ namespace WRLDZ.Duel.TextEffects
                 return true;
             if (Regex.IsMatch(act, @"pay \d+", RegexOptions.IgnoreCase) &&
                 clause.PayLpAmount <= 0 && clause.RequiresLpCostMultiple <= 0)
+                return true;
+            if (Regex.IsMatch(act, @"that can be Normal Summoned", RegexOptions.IgnoreCase))
                 return true;
             if (Regex.IsMatch(act, @"tribute (?:this|\d+)", RegexOptions.IgnoreCase) &&
                 !clause.RequiresTributeThis && clause.RequiresTributeCount <= 0)
@@ -1686,6 +1706,98 @@ namespace WRLDZ.Duel.TextEffects
             };
             FillTypeOrAttribute(c, filter);
             return c;
+        }
+
+        /// <summary>
+        /// Shared take-control atom: until End Phase (Change of Heart / Shadow Tamer /
+        /// Dragon Manipulator) or while the source stays face-up (Charmers).
+        /// Flip Charmers target on Flip resolve — not Ignition. Refuse choice-effects,
+        /// Equip take-control (Brain Jacker / Snatch Steal), switch-control, and extra
+        /// riders (Jowls direct attack). Crass Clown / Dream Clown never match.
+        /// </summary>
+        static bool TryStampTakeControlTarget(string res, CardDef def, EffectClause clause)
+        {
+            if (clause == null || string.IsNullOrWhiteSpace(res)) return false;
+            var desc = def?.desc ?? "";
+            if (Regex.IsMatch(desc, @"Activate 1 of these effects", RegexOptions.IgnoreCase))
+                return false;
+            if (Regex.IsMatch(desc, @"Equip this card to a monster", RegexOptions.IgnoreCase))
+                return false;
+            if (Regex.IsMatch(desc, @"Life Points directly", RegexOptions.IgnoreCase))
+                return false;
+            var body = Normalize(res).Trim().TrimEnd('.');
+            if (Regex.IsMatch(body, @"and if you do|switch control|that can be Normal Summoned",
+                    RegexOptions.IgnoreCase))
+                return false;
+            if (Regex.IsMatch(body, @"equipped monster|while this card is equipped",
+                    RegexOptions.IgnoreCase))
+                return false;
+
+            var whileFaceUp = Regex.IsMatch(body, @"while this card (?:is|remains) face-up",
+                RegexOptions.IgnoreCase);
+
+            if (!whileFaceUp)
+            {
+                if (Regex.IsMatch(body,
+                        @"^(?:take|gain) control of (?:it|that target) until the(?: end of the)? End Phase$",
+                        RegexOptions.IgnoreCase))
+                {
+                    StampTakeControlTarget(clause, whileSourceFaceUp: false);
+                    return true;
+                }
+
+                var oldFlip = Regex.Match(body,
+                    @"^take control of 1 (?:face-up )?(?:(\w+)(?:-Type) )?monster " +
+                    @"(?:your opponent controls|on your opponent's side of the field) " +
+                    @"until the(?: end of the)? End Phase$",
+                    RegexOptions.IgnoreCase);
+                if (!oldFlip.Success) return false;
+                StampTakeControlTarget(clause, whileSourceFaceUp: false);
+                clause.Zone = EffectZoneFilter.OppFaceUpMonsters;
+                clause.Side = EffectSide.Opponent;
+                if (oldFlip.Groups[1].Success && oldFlip.Groups[1].Length > 0)
+                    FillTypeOrAttribute(clause, oldFlip.Groups[1].Value);
+                return true;
+            }
+
+            // Charmers: while this card is face-up. Flip only — never Main Phase ignition.
+            if (clause.Timing != EffectTiming.Flip) return false;
+
+            if (Regex.IsMatch(body,
+                    @"^(?:take|gain) control of (?:it|that target) while this card " +
+                    @"(?:is|remains) face-up(?: on the field)?$",
+                    RegexOptions.IgnoreCase))
+            {
+                StampTakeControlTarget(clause, whileSourceFaceUp: true);
+                return true;
+            }
+
+            var oldCharmer = Regex.Match(body,
+                @"^While this card is face-up on the field,\s*" +
+                @"take control of 1 (?:face-up )?(\w+)(?:-Type)? monster " +
+                @"(?:your opponent controls|on your opponent's side of the field)$",
+                RegexOptions.IgnoreCase);
+            if (!oldCharmer.Success) return false;
+            StampTakeControlTarget(clause, whileSourceFaceUp: true);
+            clause.Zone = EffectZoneFilter.OppFaceUpMonsters;
+            clause.Side = EffectSide.Opponent;
+            if (oldCharmer.Groups[1].Success && oldCharmer.Groups[1].Length > 0)
+                FillTypeOrAttribute(clause, oldCharmer.Groups[1].Value);
+            return true;
+        }
+
+        static void StampTakeControlTarget(EffectClause clause, bool whileSourceFaceUp)
+        {
+            clause.Action = EffectActionKind.TakeControlTarget;
+            clause.RequiresTargetChoice = true;
+            clause.TakeControlWhileSourceFaceUp = whileSourceFaceUp;
+            if (clause.Timing != EffectTiming.Flip)
+                clause.Timing = EffectTiming.Activate;
+            if (clause.Zone == EffectZoneFilter.None)
+            {
+                clause.Zone = EffectZoneFilter.OppFaceUpMonsters;
+                clause.Side = EffectSide.Opponent;
+            }
         }
 
         static void FillTypeOrAttribute(EffectClause c, string word)
