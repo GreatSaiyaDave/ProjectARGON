@@ -1,0 +1,80 @@
+PR #43 Headless evidence summary
+commit=f2f8f4bedb156e5e6d5942e9c4f33a413aa2e493
+utc=2026-09-10T09:06:58Z
+
+quiet: unitPass=1119 unitFail=0 exceptions=0 softLocks=0 ok=YES
+duels: played=40 completed=40 turnCap=0 wins(P/O/D)=18/22/0 result=PASS
+compiler Version: 50 (unchanged)
+
+Park live+corpus (from --quiet):
+PASS  Corpus: Rock Bombardment stays parked (send Rock from Deck cost needs atom)
+PASS  Corpus: Rock Bombardment is not Hinotama-style Inflict 500
+PASS  Corpus: Rock Bombardment ProgramMayActivate is false
+PASS  Corpus: Backfire stays parked (your FIRE destroyed-to-GY trigger needs atom)
+PASS  Corpus: Backfire is not InflictDamageToOpponent / this-card SentFromFieldToGy
+PASS  Corpus: Backfire ProgramMayActivate is false
+PASS  Corpus: Tribe-Infecting Virus stays parked (declare Type needs atom)
+PASS  Corpus: Tribe-Infecting Virus is not discard + Destroy-all without declare
+PASS  Corpus: Tribe-Infecting Virus ProgramMayActivate is false
+PASS  Corpus: Mysterious Puppeteer stays parked (face-up monster NS/FS LP needs atom)
+PASS  Corpus: Mysterious Puppeteer is not GainLifePoints / this-card summoned LP
+PASS  Corpus: Mysterious Puppeteer ProgramMayActivate is false
+PASS  Corpus: Token Thanksgiving stays parked (destroy Tokens then gain 800× needs atom)
+PASS  Corpus: Token Thanksgiving is not DestroyTokensInflictPer / flat GainLifePoints
+PASS  Corpus: Token Thanksgiving ProgramMayActivate is false
+PASS  Corpus: Rock Bombardment leftover unique is not FullyCompiled
+PASS  Corpus: Backfire leftover unique is not FullyCompiled
+PASS  Corpus: Tribe-Infecting Virus leftover unique is not FullyCompiled
+PASS  Corpus: Mysterious Puppeteer leftover unique is not FullyCompiled
+PASS  Corpus: Token Thanksgiving leftover unique is not FullyCompiled
+PASS  Rock Bombardment stays parked (not FullyCompiled)
+PASS  Rock Bombardment is not InflictDamageToOpponent
+PASS  Rock Bombardment: ProgramMayActivate false
+PASS  Rock Bombardment: Activate refused even with Rock in Deck
+PASS  Backfire stays parked (not FullyCompiled)
+PASS  Backfire is not InflictDamageToOpponent
+PASS  Backfire: ProgramMayActivate false
+PASS  Backfire: Activate refused with face-up FIRE on field
+PASS  Tribe-Infecting Virus stays parked (not FullyCompiled)
+PASS  Tribe-Infecting Virus is not Destroy
+PASS  Tribe-Infecting Virus: ProgramMayActivate false
+PASS  Tribe-Infecting Virus: ignition refused with discard + face-up Warrior
+PASS  Mysterious Puppeteer stays parked (not FullyCompiled)
+PASS  Mysterious Puppeteer is not GainLifePoints
+PASS  Mysterious Puppeteer: ProgramMayActivate false
+PASS  Mysterious Puppeteer: Normal Summon of another monster succeeds
+PASS  Mysterious Puppeteer: NS does not gain 500 LP
+PASS  Mysterious Puppeteer: Flip Summon of another monster succeeds
+PASS  Mysterious Puppeteer: Flip Summon does not gain 500 LP
+PASS  Token Thanksgiving stays parked (not FullyCompiled)
+PASS  Token Thanksgiving is not DestroyTokensInflictPer / GainLifePoints
+PASS  Token Thanksgiving: Token SS onto field
+PASS  Token Thanksgiving: ProgramMayActivate false
+PASS  Token Thanksgiving: Activate refused with a Token on the field
+
+--card classify:
+#20781762  Rock Bombardment
+  classify: Unimplemented
+  ProgramMayActivate: False
+  FullyCompiled: False
+  clauses: 0
+#82705573  Backfire
+  classify: Unimplemented
+  ProgramMayActivate: False
+  FullyCompiled: False
+  clauses: 0
+#33184167  Tribe-Infecting Virus
+  classify: Unimplemented
+  ProgramMayActivate: False
+  FullyCompiled: False
+  clauses: 0
+#54098121  Mysterious Puppeteer
+  classify: Unimplemented
+  ProgramMayActivate: False
+  FullyCompiled: False
+  clauses: 0
+#57182235  Token Thanksgiving
+  classify: Unimplemented
+  ProgramMayActivate: False
+  FullyCompiled: False
+  clauses: 0
