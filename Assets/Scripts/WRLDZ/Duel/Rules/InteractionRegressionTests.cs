@@ -3140,6 +3140,38 @@ namespace WRLDZ.Duel.Rules
                         }
                     }
 
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var host = PlaceMonster(engine, p, thirteenthGrave, 2, BattlePosition.Attack, true);
+                        var card = PutInHand(engine, p, violetCrystal);
+                        engine.TryActivateSpellTrap(p, card, fromHand: true);
+                        if (engine.IsAwaitingEffectTarget)
+                            engine.TrySelectEffectTarget(host);
+                        Check("Violet Crystal: equipped +300 before unequip",
+                            card.EquippedTo == host &&
+                            host.Equips.Contains(card) &&
+                            host.CurrentAtk == 1500 &&
+                            host.CurrentDef == 1200,
+                            $"atk={host.CurrentAtk} def={host.CurrentDef}");
+                        engine.SendCardToGrave(p, card);
+                        engine.NotifyPublic();
+                        Check("Violet Crystal: unequip ends boost, printed ATK/DEF restored (1200/900)",
+                            p.TryFindMonster(host, out _) &&
+                            p.Graveyard.Contains(card) &&
+                            card.EquippedTo == null &&
+                            !host.Equips.Contains(card) &&
+                            host.CurrentAtk == host.Def.atk &&
+                            host.CurrentDef == host.Def.def &&
+                            host.CurrentAtk == 1200 &&
+                            host.CurrentDef == 900,
+                            $"atk={host.CurrentAtk} def={host.CurrentDef} " +
+                            $"eq={card.EquippedTo != null} gy={p.Graveyard.Contains(card)} " +
+                            $"onField={p.TryFindMonster(host, out _)}");
+                    }
+
                     var aDef = db.Get(axe);
                     var aProg = aDef != null ? CardTextEffectCompiler.Compile(aDef) : null;
                     Check("Axe of Despair FullyCompiled Equip +1000 and GY tribute to Deck",
