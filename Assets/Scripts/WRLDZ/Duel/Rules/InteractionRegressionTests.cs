@@ -760,6 +760,220 @@ namespace WRLDZ.Duel.Rules
                     srProg != null && !srProg.FullyCompiled);
             }
 
+            // ── Rush Recklessly / The Reliable Guardian / Snake Fang / Enchanted Javelin ──
+            {
+                const int rushRecklessly = 70046172;
+                const int reliableGuardian = 16430187;
+                const int snakeFang = 596051;
+                const int enchantedJavelin = 96355986;
+                const int celtic = 91152256;
+                const int bewd = 89631139;
+
+                var rushDef = db.Get(rushRecklessly);
+                var rushProg = rushDef != null ? CardTextEffectCompiler.Compile(rushDef) : null;
+                Check("Rush Recklessly FullyCompiled +700 ATK until End Phase",
+                    rushProg != null && rushProg.FullyCompiled &&
+                    rushProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.LoseAtkDefUntilEndOfTurn &&
+                        c.Amount == -700 &&
+                        c.DefAmount == 0 &&
+                        c.RequiresTargetChoice),
+                    rushProg == null
+                        ? "null"
+                        : $"full={rushProg.FullyCompiled} unparsed={string.Join("|", rushProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var host = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var card = PutInHand(engine, p, rushRecklessly);
+                    var atkBefore = host.CurrentAtk;
+                    Check("Rush Recklessly: Activate legal with a face-up monster",
+                        engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    Check("Rush Recklessly: Activate opens a face-up monster target",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget);
+                    Check("Rush Recklessly: Celtic gains 700 ATK (1400→2100)",
+                        engine.TrySelectEffectTarget(host) &&
+                        host.CurrentAtk == atkBefore + 700 &&
+                        p.Graveyard.Contains(card),
+                        $"atk={host.CurrentAtk} was {atkBefore}");
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    engine.TryEndTurnSafe(engine.TurnPlayer);
+                    Check("Rush Recklessly: End Phase ends the +700",
+                        host.CurrentAtk == atkBefore,
+                        $"atk={host.CurrentAtk} expected {atkBefore}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var card = PutInHand(engine, p, rushRecklessly);
+                    Check("Rush Recklessly: empty board cannot activate",
+                        !engine.CanActivateSpellTrap(p, card, fromHand: true));
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    PlaceMonster(engine, p, celtic, 2, BattlePosition.Defense, false);
+                    var card = PutInHand(engine, p, rushRecklessly);
+                    Check("Rush Recklessly: face-down only cannot activate",
+                        !engine.CanActivateSpellTrap(p, card, fromHand: true));
+                }
+
+                var guardDef = db.Get(reliableGuardian);
+                var guardProg = guardDef != null ? CardTextEffectCompiler.Compile(guardDef) : null;
+                Check("The Reliable Guardian FullyCompiled +700 DEF until End Phase",
+                    guardProg != null && guardProg.FullyCompiled &&
+                    guardProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.LoseAtkDefUntilEndOfTurn &&
+                        c.Amount == 0 &&
+                        c.DefAmount == -700 &&
+                        c.RequiresTargetChoice),
+                    guardProg == null
+                        ? "null"
+                        : $"full={guardProg.FullyCompiled} unparsed={string.Join("|", guardProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var host = PlaceMonster(engine, p, celtic, 2, BattlePosition.Defense, true);
+                    var card = PutInHand(engine, p, reliableGuardian);
+                    var defBefore = host.CurrentDef;
+                    Check("The Reliable Guardian: Activate legal with a face-up monster",
+                        engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    Check("The Reliable Guardian: Activate opens a face-up monster target",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget);
+                    Check("The Reliable Guardian: Celtic gains 700 DEF",
+                        engine.TrySelectEffectTarget(host) &&
+                        host.CurrentDef == defBefore + 700 &&
+                        p.Graveyard.Contains(card),
+                        $"def={host.CurrentDef} was {defBefore}");
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    engine.TryEndTurnSafe(engine.TurnPlayer);
+                    Check("The Reliable Guardian: End Phase ends the +700 DEF",
+                        host.CurrentDef == defBefore,
+                        $"def={host.CurrentDef} expected {defBefore}");
+                }
+
+                var fangDef = db.Get(snakeFang);
+                var fangProg = fangDef != null ? CardTextEffectCompiler.Compile(fangDef) : null;
+                Check("Snake Fang FullyCompiled −500 DEF until End Phase",
+                    fangProg != null && fangProg.FullyCompiled &&
+                    fangProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.LoseAtkDefUntilEndOfTurn &&
+                        c.Amount == 0 &&
+                        c.DefAmount == 500 &&
+                        c.RequiresTargetChoice),
+                    fangDef == null
+                        ? "null"
+                        : $"full={fangProg.FullyCompiled} unparsed={string.Join("|", fangProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var host = PlaceMonster(engine, p, celtic, 2, BattlePosition.Defense, true);
+                    var trap = PlaceSetTrap(engine, p, snakeFang, 2);
+                    var defBefore = host.CurrentDef;
+                    Check("Snake Fang: Activate legal with a face-up monster",
+                        engine.CanActivateSpellTrap(p, trap, fromHand: false));
+                    Check("Snake Fang: Activate opens a face-up monster target",
+                        engine.TryActivateSpellTrap(p, trap, fromHand: false) &&
+                        engine.IsAwaitingEffectTarget);
+                    Check("Snake Fang: Celtic loses 500 DEF",
+                        engine.TrySelectEffectTarget(host) &&
+                        host.CurrentDef == defBefore - 500 &&
+                        p.Graveyard.Contains(trap),
+                        $"def={host.CurrentDef} was {defBefore}");
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    engine.TryEndTurnSafe(engine.TurnPlayer);
+                    Check("Snake Fang: End Phase ends the −500 DEF",
+                        host.CurrentDef == defBefore,
+                        $"def={host.CurrentDef} expected {defBefore}");
+                }
+
+                var javDef = db.Get(enchantedJavelin);
+                var javProg = javDef != null ? CardTextEffectCompiler.Compile(javDef) : null;
+                Check("Enchanted Javelin FullyCompiled AttackDeclared GainLpEqualToAtk",
+                    javProg != null && javProg.FullyCompiled &&
+                    javProg.HasTiming(EffectTiming.AttackDeclared) &&
+                    javProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.GainLpEqualToAtk &&
+                        c.Zone == EffectZoneFilter.AttackingMonster &&
+                        !javProg.ClauseList.Exists(n =>
+                            n != null && n.Action == EffectActionKind.NegateThisAttack)),
+                    javDef == null
+                        ? "null"
+                        : $"full={javProg.FullyCompiled} unparsed={string.Join("|", javProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    if (!ReachOpponentBattle(engine))
+                    {
+                        Check("Enchanted Javelin battle path (skipped — opp not in BP)", false,
+                            $"phase={engine.Phase}");
+                    }
+                    else
+                    {
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.LifePoints = 8000;
+                        opp.LifePoints = 8000;
+                        var victim = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                        victim.ClearAttackFlags();
+                        var jav = PlaceSetTrap(engine, p, enchantedJavelin, 2);
+                        jav.SetThisTurn = false;
+                        var attacker = PlaceMonster(engine, opp, bewd, 2, BattlePosition.Attack, true);
+                        attacker.ClearAttackFlags();
+                        attacker.SummonedThisTurn = false;
+
+                        if (engine.Phase == DuelPhase.Main1)
+                            engine.TryEnterBattlePhase(opp);
+                        DrainCombat(engine);
+
+                        Check("Enchanted Javelin: declare attack",
+                            engine.TryAttack(opp, attacker, victim));
+                        Check("Enchanted Javelin is legal at attack declaration",
+                            engine.PendingResponse != null &&
+                            engine.PendingResponse.Timing == ResponseTiming.AttackDeclared &&
+                            engine.PendingResponse.LegalCards != null &&
+                            engine.PendingResponse.LegalCards.Exists(c =>
+                                c != null && c.CardId == enchantedJavelin),
+                            engine.PendingResponse == null
+                                ? "no window"
+                                : $"timing={engine.PendingResponse.Timing}");
+                        var lpBefore = p.LifePoints;
+                        Check("Enchanted Javelin activates",
+                            engine.CanActivateSpellTrap(p, jav, fromHand: false) &&
+                            engine.TryActivateSpellTrap(p, jav, fromHand: false));
+                        Check("Enchanted Javelin: gain ATK as LP (attack not negated)",
+                            p.LifePoints == lpBefore + attacker.CurrentAtk,
+                            $"LP {p.LifePoints} was {lpBefore} atk={attacker.CurrentAtk}");
+                        DrainCombat(engine);
+                        Check("Enchanted Javelin: attack still resolved (Celtic dies)",
+                            !p.TryFindMonster(victim, out _) &&
+                            p.Graveyard.Exists(c => c.CardId == celtic),
+                            $"victimField={p.TryFindMonster(victim, out _)}");
+                    }
+                }
+            }
+
             // ── Tribute Summon Dark Magician with 2 face-down Sets ──
             {
                 const int darkMagician = 46986414;

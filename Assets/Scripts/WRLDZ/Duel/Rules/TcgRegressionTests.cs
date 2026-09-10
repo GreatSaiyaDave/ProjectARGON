@@ -1076,6 +1076,120 @@ namespace WRLDZ.Duel.Rules
                             ? "null"
                             : $"full={swp.FullyCompiled} unparsed={string.Join("|", swp.UnparsedFragments ?? Array.Empty<string>())}");
 
+                    var rush = db.Get(70046172);
+                    var rushProg = rush != null ? CardTextEffectCompiler.Compile(rush) : null;
+                    Check("Corpus: Rush Recklessly FullyCompiled +700 ATK until End Phase",
+                        rushProg != null && rushProg.FullyCompiled &&
+                        rushProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.LoseAtkDefUntilEndOfTurn &&
+                            c.Amount == -700 &&
+                            c.DefAmount == 0 &&
+                            c.RequiresTargetChoice),
+                        rushProg == null
+                            ? "null"
+                            : $"full={rushProg.FullyCompiled} unparsed={string.Join("|", rushProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var guardian = db.Get(16430187);
+                    var guardianProg = guardian != null ? CardTextEffectCompiler.Compile(guardian) : null;
+                    Check("Corpus: The Reliable Guardian FullyCompiled +700 DEF until End Phase",
+                        guardianProg != null && guardianProg.FullyCompiled &&
+                        guardianProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.LoseAtkDefUntilEndOfTurn &&
+                            c.Amount == 0 &&
+                            c.DefAmount == -700 &&
+                            c.RequiresTargetChoice),
+                        guardianProg == null
+                            ? "null"
+                            : $"full={guardianProg.FullyCompiled} unparsed={string.Join("|", guardianProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var fang = db.Get(596051);
+                    var fangProg = fang != null ? CardTextEffectCompiler.Compile(fang) : null;
+                    Check("Corpus: Snake Fang FullyCompiled −500 DEF until End Phase",
+                        fangProg != null && fangProg.FullyCompiled &&
+                        fangProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.LoseAtkDefUntilEndOfTurn &&
+                            c.Amount == 0 &&
+                            c.DefAmount == 500 &&
+                            c.RequiresTargetChoice),
+                        fangProg == null
+                            ? "null"
+                            : $"full={fangProg.FullyCompiled} unparsed={string.Join("|", fangProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var javelin = db.Get(96355986);
+                    var javelinProg = javelin != null ? CardTextEffectCompiler.Compile(javelin) : null;
+                    Check("Corpus: Enchanted Javelin FullyCompiled AttackDeclared GainLpEqualToAtk",
+                        javelinProg != null && javelinProg.FullyCompiled &&
+                        javelinProg.HasTiming(EffectTiming.AttackDeclared) &&
+                        javelinProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.GainLpEqualToAtk &&
+                            c.Zone == EffectZoneFilter.AttackingMonster),
+                        javelinProg == null
+                            ? "null"
+                            : $"full={javelinProg.FullyCompiled} unparsed={string.Join("|", javelinProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var synRush = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000070,
+                        name = "New Spell (Rush Recklessly shape)",
+                        type = "Spell Card",
+                        race = "Quick-Play",
+                        frameType = "spell",
+                        desc =
+                            "Target 1 face-up monster on the field; it gains 700 ATK until the end of this turn."
+                    });
+                    Check("New-card rule: Rush Recklessly-shaped text compiles without a cardId branch",
+                        synRush != null && synRush.FullyCompiled &&
+                        synRush.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.LoseAtkDefUntilEndOfTurn &&
+                            c.Amount == -700));
+                    var leftoverRush = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000071,
+                        name = "Rush Recklessly leftover unique",
+                        type = "Spell Card",
+                        race = "Quick-Play",
+                        frameType = "spell",
+                        desc =
+                            "Target 1 face-up monster on the field; it gains 700 ATK until the end of this turn. Shuffle your entire Deck into your opponent's Deck."
+                    });
+                    Check("Corpus: Rush Recklessly leftover unique is not FullyCompiled",
+                        leftoverRush == null || !leftoverRush.FullyCompiled);
+
+                    var synGuard = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000072,
+                        name = "New Spell (Reliable Guardian shape)",
+                        type = "Spell Card",
+                        race = "Quick-Play",
+                        frameType = "spell",
+                        desc =
+                            "Increase 1 face-up monster's DEF by 700 points until the end of this turn."
+                    });
+                    Check("New-card rule: Reliable Guardian-shaped text compiles without a cardId branch",
+                        synGuard != null && synGuard.FullyCompiled &&
+                        synGuard.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.LoseAtkDefUntilEndOfTurn &&
+                            c.DefAmount == -700));
+
+                    var leftoverJavelin = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000073,
+                        name = "Enchanted Javelin leftover unique",
+                        type = "Trap Card",
+                        race = "Normal",
+                        frameType = "trap",
+                        desc =
+                            "Select 1 attacking monster. Gain Life Points equal to its ATK. Shuffle your entire Deck into your opponent's Deck."
+                    });
+                    Check("Corpus: Enchanted Javelin leftover unique is not FullyCompiled",
+                        leftoverJavelin == null || !leftoverJavelin.FullyCompiled);
+
                     var axeDef = db.Get(40619825);
                     var axeProg = axeDef != null ? CardTextEffectCompiler.Compile(axeDef) : null;
                     Check("Corpus: Axe of Despair FullyCompiled Equip +1000 and GY to top of Deck",

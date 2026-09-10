@@ -2455,15 +2455,45 @@ namespace WRLDZ.Duel.TextEffects
                     if (clause.RequiresLpCostMultiple > 0 && engine.PendingActivation != null &&
                         engine.PendingActivation.AwaitingLpCost)
                         pay = 0; // paid in FinishPayLp
-                    if (pay > 0 && chosenTarget != null)
+                    if (chosenTarget != null)
                     {
-                        chosenTarget.UntilEndOfTurnAtk -= pay;
-                        if (clause.DefAmount != 0)
-                            chosenTarget.UntilEndOfTurnDef -= pay;
-                        engine.Log(
-                            $"{chosenTarget.Name} loses {pay} ATK" +
-                            (clause.DefAmount != 0 ? $"/{pay} DEF" : "") +
-                            $" until the End Phase (now {chosenTarget.CurrentAtk}/{chosenTarget.CurrentDef}).");
+                        var atkDelta = pay;
+                        // Bark: DefAmount == 1 means also lose the same ATK amount as DEF.
+                        // Castle Walls / Reliable Guardian / Snake Fang: DefAmount is the
+                        // signed DEF delta to subtract (negative = gain).
+                        var defDelta = clause.DefAmount == 1 ? pay : clause.DefAmount;
+                        if (atkDelta != 0)
+                            chosenTarget.UntilEndOfTurnAtk -= atkDelta;
+                        if (defDelta != 0)
+                            chosenTarget.UntilEndOfTurnDef -= defDelta;
+                        if (atkDelta != 0 || defDelta != 0)
+                        {
+                            string joined;
+                            if (atkDelta != 0 && defDelta == atkDelta)
+                            {
+                                joined = atkDelta > 0
+                                    ? $"loses {atkDelta} ATK/{atkDelta} DEF"
+                                    : $"gains {-atkDelta} ATK/{-atkDelta} DEF";
+                            }
+                            else if (atkDelta != 0 && defDelta != 0)
+                            {
+                                var atkBit = atkDelta > 0 ? $"loses {atkDelta} ATK" : $"gains {-atkDelta} ATK";
+                                var defBit = defDelta > 0 ? $"loses {defDelta} DEF" : $"gains {-defDelta} DEF";
+                                joined = $"{atkBit} and {defBit}";
+                            }
+                            else if (atkDelta != 0)
+                            {
+                                joined = atkDelta > 0 ? $"loses {atkDelta} ATK" : $"gains {-atkDelta} ATK";
+                            }
+                            else
+                            {
+                                joined = defDelta > 0 ? $"loses {defDelta} DEF" : $"gains {-defDelta} DEF";
+                            }
+
+                            engine.Log(
+                                $"{chosenTarget.Name} {joined} until the End Phase " +
+                                $"(now {chosenTarget.CurrentAtk}/{chosenTarget.CurrentDef}).");
+                        }
                     }
 
                     break;
@@ -3800,6 +3830,8 @@ namespace WRLDZ.Duel.TextEffects
             if (c.Action == EffectActionKind.SetTargetFaceDownDefense)
                 list.RemoveAll(t => t == null || !t.FaceUp);
             if (c.Action == EffectActionKind.ChangeBattlePosition)
+                list.RemoveAll(t => t == null || !t.FaceUp);
+            if (c.Action == EffectActionKind.LoseAtkDefUntilEndOfTurn)
                 list.RemoveAll(t => t == null || !t.FaceUp);
 
             return list;
