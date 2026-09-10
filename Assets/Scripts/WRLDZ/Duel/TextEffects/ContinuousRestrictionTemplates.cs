@@ -63,6 +63,17 @@ namespace WRLDZ.Duel.TextEffects
             @"When that monster is destroyed, destroy this card\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        /// <summary>
+        /// Dragon Capture Jar family: force matching face-up Types to Defense
+        /// and lock battle positions while this Continuous S/T stays.
+        /// Requires the "also they cannot change" lock so Level Limit - Area B
+        /// and Earthquake (one-shot / no lock) stay fail-closed.
+        /// </summary>
+        static readonly Regex RxForceDefenseAndLock = new(
+            @"Change all face-up (\w+)(?:-Type)? monsters on the field to Defense Position,\s*" +
+            @"also they cannot change their battle positions\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         public static void Collect(string text, CardDef def, List<EffectClause> into,
             List<(int start, int length)> spans)
         {
@@ -149,6 +160,19 @@ namespace WRLDZ.Duel.TextEffects
             Add(soul, soul.Success
                 ? GyReviveClause(defense: true, normalOnly: true)
                 : null);
+
+            var lockPos = RxForceDefenseAndLock.Match(text);
+            Add(lockPos, lockPos.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.ContinuousForceDefensePosition,
+                    RaceFilter = lockPos.Groups[1].Value,
+                    Side = EffectSide.Both,
+                    StaysOnField = true,
+                    MakesChainLink = false
+                }
+                : null);
         }
 
         public static void ExpectedActions(CardDef def, List<EffectActionKind> need)
@@ -163,6 +187,8 @@ namespace WRLDZ.Duel.TextEffects
                 need.Add(EffectActionKind.PayLpOrDestroyThis);
             if (RxCallOfTheHaunted.IsMatch(text) || RxSoulResurrection.IsMatch(text))
                 need.Add(EffectActionKind.SpecialSummonFromGy);
+            if (RxForceDefenseAndLock.IsMatch(text))
+                need.Add(EffectActionKind.ContinuousForceDefensePosition);
         }
 
         static EffectClause GyReviveClause(bool defense, bool normalOnly)

@@ -189,6 +189,11 @@ namespace WRLDZ.Duel
                         applyToHand: clause.ApplyToHand, applyToField: clause.ApplyToField || !clause.ApplyToHand);
                     any = true;
                 }
+                else if (clause.Action == EffectActionKind.ContinuousForceDefensePosition)
+                {
+                    ApplyForceDefense(engine, field, clause);
+                    any = true;
+                }
             }
 
             return any;
@@ -312,6 +317,57 @@ namespace WRLDZ.Duel
                     ApplyStatMod(engine, "LIGHT", 500, 0);
                     ApplyStatMod(engine, "DARK", -400, 0);
                     break;
+            }
+        }
+
+        /// <summary>
+        /// Dragon Capture Jar family: matching face-up monsters cannot change
+        /// battle positions while a ContinuousForceDefensePosition source stays.
+        /// </summary>
+        public static bool ContinuousPositionLockBlocks(DuelEngine engine, CardInstance monster)
+        {
+            if (engine == null || !IsFaceUpMonster(monster)) return false;
+            var controller = engine.ControllerOf(monster);
+            foreach (var side in new[] { engine.Player, engine.Opponent })
+            {
+                if (side == null) continue;
+                foreach (var st in side.SpellTrapsOnField())
+                {
+                    if (st == null || !st.FaceUp || st.IsNegated || st.Def == null) continue;
+                    var prog = CompiledEffectCache.GetOrCompile(st.Def);
+                    if (prog == null) continue;
+                    foreach (var c in prog.ClausesFor(EffectTiming.ContinuousWhileFaceUp))
+                    {
+                        if (c == null ||
+                            c.Action != EffectActionKind.ContinuousForceDefensePosition)
+                            continue;
+                        if (c.Side == EffectSide.Opponent && side == controller) continue;
+                        if (c.Side == EffectSide.Controller && side != controller) continue;
+                        if (!MatchesRace(monster, c.RaceFilter)) continue;
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        static void ApplyForceDefense(DuelEngine engine, CardInstance source, EffectClause clause)
+        {
+            if (engine == null || clause == null) return;
+            var controller = engine.ControllerOf(source);
+            foreach (var who in new[] { engine.Player, engine.Opponent })
+            {
+                if (who == null) continue;
+                if (clause.Side == EffectSide.Opponent && who == controller) continue;
+                if (clause.Side == EffectSide.Controller && who != controller) continue;
+                foreach (var m in who.MonstersOnField())
+                {
+                    if (!IsFaceUpMonster(m)) continue;
+                    if (!MatchesRace(m, clause.RaceFilter)) continue;
+                    if (m.Position != BattlePosition.Defense)
+                        m.Position = BattlePosition.Defense;
+                }
             }
         }
 

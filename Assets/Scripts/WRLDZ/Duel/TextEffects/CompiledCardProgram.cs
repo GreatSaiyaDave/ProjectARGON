@@ -187,6 +187,11 @@ namespace WRLDZ.Duel.TextEffects
         /// (Gravity Bind / Insect Barrier / Messenger of Peace).
         /// </summary>
         ContinuousCannotAttack,
+        /// <summary>
+        /// While face-up: matching face-up monsters are Defense Position and
+        /// cannot change battle positions (Dragon Capture Jar).
+        /// </summary>
+        ContinuousForceDefensePosition,
         /// <summary>Standby: pay PayLpAmount or destroy this card (Messenger of Peace).</summary>
         PayLpOrDestroyThis,
         /// <summary>

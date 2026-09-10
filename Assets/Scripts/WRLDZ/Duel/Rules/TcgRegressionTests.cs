@@ -1351,6 +1351,68 @@ namespace WRLDZ.Duel.Rules
                     Check("Corpus: Skill Drain leftover unique is not FullyCompiled",
                         skillProg == null || !skillProg.FullyCompiled);
 
+                    var dcj = db.Get(50045299);
+                    var dcjProg = dcj != null ? CardTextEffectCompiler.Compile(dcj) : null;
+                    Check("Corpus: Dragon Capture Jar FullyCompiled Dragon DEF lock (Continuous Trap)",
+                        dcjProg != null && dcjProg.FullyCompiled &&
+                        dcj != null && dcj.IsTrap && dcj.IsContinuousSpellOrTrap &&
+                        dcjProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp &&
+                            c.Action == EffectActionKind.ContinuousForceDefensePosition &&
+                            string.Equals(c.RaceFilter, "Dragon", StringComparison.OrdinalIgnoreCase) &&
+                            c.Side == EffectSide.Both &&
+                            c.StaysOnField &&
+                            !c.MakesChainLink),
+                        dcjProg == null
+                            ? "null"
+                            : $"full={dcjProg.FullyCompiled} type={dcj?.type} race={dcj?.race} unparsed={string.Join("|", dcjProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var synDcj = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000023,
+                        name = "New Continuous (Dragon Capture Jar shape)",
+                        type = "Trap Card",
+                        race = "Continuous",
+                        frameType = "trap",
+                        desc =
+                            "Change all face-up Dragon-Type monsters on the field to Defense Position, also they cannot change their battle positions."
+                    });
+                    Check("New-card rule: face-up Type DEF lock compiles without a cardId branch",
+                        synDcj != null && synDcj.FullyCompiled &&
+                        synDcj.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ContinuousForceDefensePosition &&
+                            string.Equals(c.RaceFilter, "Dragon", StringComparison.OrdinalIgnoreCase)));
+
+                    var quake = db.Get(82828051);
+                    var quakeProg = quake != null ? CardTextEffectCompiler.Compile(quake) : null;
+                    Check("Corpus: Earthquake one-shot DEF change is not this Continuous lock",
+                        quakeProg == null || !quakeProg.FullyCompiled ||
+                        !quakeProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ContinuousForceDefensePosition));
+
+                    foreach (var leftoverId in new[]
+                             {
+                                 33396948, 15052462, 9076207, 33066139, 87430998,
+                                 82542267, 83887306
+                             })
+                    {
+                        var leftover = db.Get(leftoverId);
+                        var leftoverProg = leftover != null
+                            ? CardTextEffectCompiler.Compile(leftover)
+                            : null;
+                        Check($"Corpus: leftover {leftover?.name ?? leftoverId.ToString()} not swallowed by DEF lock",
+                            leftoverProg == null || !leftoverProg.FullyCompiled ||
+                            !leftoverProg.ClauseList.Exists(c =>
+                                c != null &&
+                                c.Action == EffectActionKind.ContinuousForceDefensePosition),
+                            leftover == null
+                                ? "missing"
+                                : $"full={leftoverProg?.FullyCompiled} n={leftoverProg?.ClauseList.Count}");
+                    }
+
                     var warrior = db.Get(95281259);
                     var wProg = warrior != null ? CardTextEffectCompiler.Compile(warrior) : null;
                     Check("Corpus: The Warrior Returning Alive FullyCompiled Warrior GY add",
