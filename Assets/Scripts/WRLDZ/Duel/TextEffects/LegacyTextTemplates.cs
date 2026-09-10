@@ -188,8 +188,27 @@ namespace WRLDZ.Duel.TextEffects
             @"Inflict (\d+) (?:points of )?damage to your opponent(?:'s Life Points)?\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        /// <summary>
+        /// Goblin Thief family: inflict N and gain M LP in one sentence.
+        /// Existing InflictDamageToOpponent + GainLifePoints. Consume the whole
+        /// sentence so leftover "and increase…" is not unique and RxInflictOpp
+        /// does not double-burn.
+        /// </summary>
+        static readonly Regex RxInflictAndGainLp = new(
+            @"Inflict (\d+) (?:points of )?damage to your opponent(?:'s Life Points)? " +
+            @"and increase your Life Points by (\d+) points\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         static readonly Regex RxDecreaseOppLp = new(
             @"Decrease your opponent's Life Points by (\d+) points\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Time Seal family: skip the opponent's next Draw Phase on Activate.
+        /// Same SkipOpponentNextDrawPhase atom as Fenrir (battle-destroy wording).
+        /// </summary>
+        static readonly Regex RxSkipOppNextDrawActivate = new(
+            @"Skip the Draw Phase of your opponent's next turn\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly string[] Attributes =
@@ -360,6 +379,31 @@ namespace WRLDZ.Duel.TextEffects
                         MakesChainLink = true
                     }
                     : null);
+
+                var steal = RxInflictAndGainLp.Match(text);
+                if (steal.Success && !SpanCovered(spans, steal.Index, steal.Length))
+                {
+                    var snip = steal.Value.Trim();
+                    into.Add(new EffectClause
+                    {
+                        Timing = EffectTiming.Activate,
+                        Action = EffectActionKind.InflictDamageToOpponent,
+                        Amount = Parse(steal, 1, 500),
+                        Side = EffectSide.Opponent,
+                        MakesChainLink = true,
+                        SourceSnippet = snip
+                    });
+                    into.Add(new EffectClause
+                    {
+                        Timing = EffectTiming.Activate,
+                        Action = EffectActionKind.GainLifePoints,
+                        Amount = Parse(steal, 2, 500),
+                        Side = EffectSide.Controller,
+                        MakesChainLink = true,
+                        SourceSnippet = snip
+                    });
+                    spans.Add((steal.Index, steal.Length));
+                }
 
                 var burn = RxInflictOpp.Match(text);
                 if (!burn.Success) burn = RxDecreaseOppLp.Match(text);
@@ -556,6 +600,13 @@ namespace WRLDZ.Duel.TextEffects
                 }
                 : null);
 
+            Add(RxSkipOppNextDrawActivate.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.SkipOpponentNextDrawPhase,
+                MakesChainLink = true
+            });
+
             Add(RxSkipOppNextDraw.Match(text), new EffectClause
             {
                 Timing = EffectTiming.ThisCardDestroysByBattle,
@@ -583,10 +634,12 @@ namespace WRLDZ.Duel.TextEffects
                    RxAddLevelRaceFromDeck.IsMatch(text) ||
                    RxAddNamedFromDeck.IsMatch(text) ||
                    RxInflictOpp.IsMatch(text) ||
+                   RxInflictAndGainLp.IsMatch(text) ||
                    RxDecreaseOppLp.IsMatch(text) ||
                    RxTributeNamedDestroy.IsMatch(text) ||
                    RxSuijinAtkZero.IsMatch(text) ||
                    RxSsByBanishAttrGy.IsMatch(text) ||
+                   RxSkipOppNextDrawActivate.IsMatch(text) ||
                    RxSkipOppNextDraw.IsMatch(text);
         }
 
@@ -608,9 +661,10 @@ namespace WRLDZ.Duel.TextEffects
                 need.Add(EffectActionKind.EquipThisToTarget);
             if (IsHandSpell(def))
             {
-                if (RxIncreaseLp.IsMatch(text))
+                if (RxIncreaseLp.IsMatch(text) || RxInflictAndGainLp.IsMatch(text))
                     need.Add(EffectActionKind.GainLifePoints);
-                if (RxInflictOpp.IsMatch(text) || RxDecreaseOppLp.IsMatch(text))
+                if (RxInflictOpp.IsMatch(text) || RxDecreaseOppLp.IsMatch(text) ||
+                    RxInflictAndGainLp.IsMatch(text))
                     need.Add(EffectActionKind.InflictDamageToOpponent);
                 if (RxAddFieldSpell.IsMatch(text) || RxAddLevelRaceFromDeck.IsMatch(text))
                     need.Add(EffectActionKind.AddFromDeckToHand);
@@ -629,6 +683,8 @@ namespace WRLDZ.Duel.TextEffects
                 need.Add(EffectActionKind.GainLifePoints);
             if (RxWhenYouTakeDamage.IsMatch(text) && RxInflictPerCopyInGy.IsMatch(text))
                 need.Add(EffectActionKind.InflictDamageToOpponent);
+            if (RxSkipOppNextDrawActivate.IsMatch(text) || RxSkipOppNextDraw.IsMatch(text))
+                need.Add(EffectActionKind.SkipOpponentNextDrawPhase);
         }
 
         public static bool EquipTargetsOpponent(CardDef def)

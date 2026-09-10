@@ -2073,6 +2073,166 @@ namespace WRLDZ.Duel.Rules
                             c.Zone == EffectZoneFilter.FieldSpellTraps &&
                             !c.RequiresTargetChoice));
 
+                    var thief = db.Get(45311864);
+                    var thiefProg = thief != null ? CardTextEffectCompiler.Compile(thief) : null;
+                    Check("Corpus: Goblin Thief FullyCompiled inflict 500 and gain 500",
+                        thiefProg != null && thiefProg.FullyCompiled &&
+                        thiefProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.InflictDamageToOpponent &&
+                            c.Amount == 500) &&
+                        thiefProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.GainLifePoints &&
+                            c.Amount == 500),
+                        thiefProg == null
+                            ? "null"
+                            : $"full={thiefProg.FullyCompiled} unparsed={string.Join("|", thiefProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var synThief = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000092,
+                        name = "Inflict and gain (new-card shape)",
+                        type = "Spell Card",
+                        race = "Normal",
+                        desc =
+                            "Inflict 700 points of damage to your opponent's Life Points and increase your Life Points by 300 points."
+                    });
+                    Check("New-card rule: inflict-and-gain compiles without a cardId branch",
+                        synThief != null && synThief.FullyCompiled &&
+                        synThief.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.InflictDamageToOpponent &&
+                            c.Amount == 700) &&
+                        synThief.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.GainLifePoints &&
+                            c.Amount == 300));
+
+                    var synThiefLeftover = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000093,
+                        name = "Inflict and gain leftover (new-card shape)",
+                        type = "Spell Card",
+                        race = "Normal",
+                        desc =
+                            "Inflict 700 points of damage to your opponent's Life Points and increase your Life Points by 300 points. Then draw 1 card."
+                    });
+                    Check("New-card leftover: inflict-and-gain + unique draw is not FullyCompiled",
+                        synThiefLeftover != null && !synThiefLeftover.FullyCompiled);
+
+                    var fire = db.Get(46918794);
+                    var fireProg = fire != null ? CardTextEffectCompiler.Compile(fire) : null;
+                    Check("Parked: Tremendous Fire self-and-opp burn is not this inflict-and-gain atom",
+                        fireProg == null || !fireProg.FullyCompiled);
+
+                    var timeSeal = db.Get(35316708);
+                    var tsProg = timeSeal != null ? CardTextEffectCompiler.Compile(timeSeal) : null;
+                    Check("Corpus: Time Seal FullyCompiled SkipOpponentNextDrawPhase Activate",
+                        tsProg != null && tsProg.FullyCompiled &&
+                        tsProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Activate &&
+                            c.Action == EffectActionKind.SkipOpponentNextDrawPhase),
+                        tsProg == null
+                            ? "null"
+                            : $"full={tsProg.FullyCompiled} unparsed={string.Join("|", tsProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var synSeal = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000094,
+                        name = "Skip next Draw (new-card shape)",
+                        type = "Trap Card",
+                        race = "Normal",
+                        desc = "Skip the Draw Phase of your opponent's next turn."
+                    });
+                    Check("New-card rule: skip-opp-next-Draw compiles without a cardId branch",
+                        synSeal != null && synSeal.FullyCompiled &&
+                        synSeal.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.SkipOpponentNextDrawPhase &&
+                            c.Timing == EffectTiming.Activate));
+
+                    var synSealLeftover = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000095,
+                        name = "Skip next Draw leftover (new-card shape)",
+                        type = "Trap Card",
+                        race = "Normal",
+                        desc =
+                            "Skip the Draw Phase of your opponent's next turn. Then destroy 1 card on the field."
+                    });
+                    Check("New-card leftover: skip-Draw + unique destroy is not FullyCompiled",
+                        synSealLeftover != null && !synSealLeftover.FullyCompiled);
+
+                    var fenrir = db.Get(218704);
+                    var fenProg = fenrir != null ? CardTextEffectCompiler.Compile(fenrir) : null;
+                    Check("Corpus: Fenrir still compiles battle skip-Draw (not Time Seal Activate wording)",
+                        fenProg != null &&
+                        fenProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.ThisCardDestroysByBattle &&
+                            c.Action == EffectActionKind.SkipOpponentNextDrawPhase));
+
+                    void CheckRitualSearch(int id, string name, EffectZoneFilter zone)
+                    {
+                        var d = db.Get(id);
+                        var pr = d != null ? CardTextEffectCompiler.Compile(d) : null;
+                        Check("Corpus: " + name + " FullyCompiled Normal/Flip Ritual Deck search",
+                            pr != null && pr.FullyCompiled &&
+                            pr.ClauseList.Exists(c =>
+                                c != null &&
+                                c.Timing == EffectTiming.ThisCardSummoned &&
+                                c.Action == EffectActionKind.AddFromDeckToHand &&
+                                c.Zone == zone &&
+                                c.RequiresThisNormalSummoned) &&
+                            pr.ClauseList.Exists(c =>
+                                c != null &&
+                                c.Timing == EffectTiming.ThisCardSummoned &&
+                                c.Action == EffectActionKind.AddFromDeckToHand &&
+                                c.Zone == zone &&
+                                c.RequiresThisFlipSummoned),
+                            pr == null
+                                ? "null"
+                                : $"full={pr.FullyCompiled} unparsed={string.Join("|", pr.UnparsedFragments ?? Array.Empty<string>())}");
+                    }
+
+                    CheckRitualSearch(23401839, "Senju of the Thousand Hands",
+                        EffectZoneFilter.DeckRitualMonsters);
+                    CheckRitualSearch(57617178, "Sonic Bird",
+                        EffectZoneFilter.DeckRitualSpells);
+
+                    var synSenju = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000096,
+                        name = "Ritual Monster search (new-card shape)",
+                        type = "Effect Monster",
+                        desc =
+                            "When this card is Normal or Flip Summoned: You can add 1 Ritual Monster from your Deck to your hand."
+                    });
+                    Check("New-card rule: Normal-or-Flip Ritual Monster search compiles without a cardId branch",
+                        synSenju != null && synSenju.FullyCompiled &&
+                        synSenju.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.AddFromDeckToHand &&
+                            c.Zone == EffectZoneFilter.DeckRitualMonsters));
+
+                    var synSenjuLeftover = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000097,
+                        name = "Ritual Monster search leftover (new-card shape)",
+                        type = "Effect Monster",
+                        desc =
+                            "When this card is Normal or Flip Summoned: You can add 1 Ritual Monster from your Deck to your hand. Then draw 1 card."
+                    });
+                    Check("New-card leftover: Ritual search + unique draw is not FullyCompiled",
+                        synSenjuLeftover != null && !synSenjuLeftover.FullyCompiled);
+
+                    var manju = db.Get(95492061);
+                    var manjuProg = manju != null ? CardTextEffectCompiler.Compile(manju) : null;
+                    Check("Parked: Manju Monster-or-Spell leftover is not FullyCompiled",
+                        manjuProg == null || !manjuProg.FullyCompiled);
+
                     Check("Vocabulary: Protection is a shared kind",
                         Array.IndexOf(EffectVocabulary.SharedResolutions,
                             EffectResolutionKind.Protection) >= 0);

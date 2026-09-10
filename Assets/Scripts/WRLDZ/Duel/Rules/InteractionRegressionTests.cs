@@ -6605,6 +6605,202 @@ namespace WRLDZ.Duel.Rules
                 }
             }
 
+            // ── Time Seal / Goblin Thief / Senju / Sonic Bird ──
+            {
+                const int timeSeal = 35316708;
+                const int thiefId = 45311864;
+                const int senjuId = 23401839;
+                const int sonicId = 57617178;
+                const int relinquished = 64631466;
+                const int ritualSpell = 41426869;
+                const int celtic = 91152256;
+
+                {
+                    var def = db.Get(timeSeal);
+                    var prog = def != null ? CardTextEffectCompiler.Compile(def) : null;
+                    Check("Time Seal official text FullyCompiled skip opp next Draw",
+                        prog != null && prog.FullyCompiled &&
+                        prog.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Activate &&
+                            c.Action == EffectActionKind.SkipOpponentNextDrawPhase),
+                        prog == null
+                            ? "null"
+                            : $"unparsed={string.Join("|", prog.UnparsedFragments ?? System.Array.Empty<string>())}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    var trap = PlaceSetTrap(engine, p, timeSeal, 2);
+                    Check("Time Seal: Activate legal",
+                        engine.CanActivateSpellTrap(p, trap, fromHand: false));
+                    Check("Time Seal: Activate sets SkipNextDrawPhase, trap to GY",
+                        engine.TryActivateSpellTrap(p, trap, fromHand: false) &&
+                        opp.SkipNextDrawPhase &&
+                        p.Graveyard.Exists(c => c != null && c.CardId == timeSeal),
+                        $"skip={opp.SkipNextDrawPhase} gy={p.Graveyard.Exists(c => c != null && c.CardId == timeSeal)}");
+                    var deckBefore = opp.Deck.Count;
+                    var handBefore = opp.Hand.Count;
+                    Check("Time Seal: reach opponent Main with Draw skipped",
+                        ReachOpponentMain(engine),
+                        $"phase={engine.Phase} turn={engine.TurnPlayer?.Name}");
+                    Check("Time Seal: opponent did not draw",
+                        !opp.SkipNextDrawPhase &&
+                        opp.Deck.Count == deckBefore &&
+                        opp.Hand.Count == handBefore,
+                        $"skip={opp.SkipNextDrawPhase} deck {deckBefore}->{opp.Deck.Count} " +
+                        $"hand {handBefore}->{opp.Hand.Count}");
+                }
+
+                {
+                    var def = db.Get(thiefId);
+                    var prog = def != null ? CardTextEffectCompiler.Compile(def) : null;
+                    Check("Goblin Thief official text FullyCompiled inflict 500 and gain 500",
+                        prog != null && prog.FullyCompiled &&
+                        prog.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.InflictDamageToOpponent &&
+                            c.Amount == 500) &&
+                        prog.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.GainLifePoints &&
+                            c.Amount == 500),
+                        prog == null
+                            ? "null"
+                            : $"unparsed={string.Join("|", prog.UnparsedFragments ?? System.Array.Empty<string>())}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.LifePoints = 8000;
+                    opp.LifePoints = 8000;
+                    var card = PutInHand(engine, p, thiefId);
+                    Check("Goblin Thief: Activate legal",
+                        engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    Check("Goblin Thief: opp −500, you +500, spell to GY",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        opp.LifePoints == 7500 &&
+                        p.LifePoints == 8500 &&
+                        p.Graveyard.Exists(c => c != null && c.CardId == thiefId),
+                        $"you={p.LifePoints} opp={opp.LifePoints}");
+                }
+
+                {
+                    var def = db.Get(senjuId);
+                    var prog = def != null ? CardTextEffectCompiler.Compile(def) : null;
+                    Check("Senju official text FullyCompiled Ritual Monster Deck search",
+                        prog != null && prog.FullyCompiled &&
+                        prog.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.AddFromDeckToHand &&
+                            c.Zone == EffectZoneFilter.DeckRitualMonsters),
+                        prog == null
+                            ? "null"
+                            : $"unparsed={string.Join("|", prog.UnparsedFragments ?? System.Array.Empty<string>())}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    p.Deck.Clear();
+                    p.Deck.Add(relinquished);
+                    p.Deck.Add(celtic);
+                    var senju = PutInHand(engine, p, senjuId);
+                    Check("Senju Normal Summon",
+                        engine.TryNormalSummon(p, senju, asSet: false) && senju.FaceUp);
+                    Check("Senju NS: opens Ritual Monster Deck search",
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.TargetKind == EffectTargetKind.RitualMonsterInYourDeck,
+                        engine.PendingActivation?.TargetKind.ToString() ?? "no pending");
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        var legal = engine.PendingActivation.LegalTargets;
+                        Check("Senju: Relinquished is legal",
+                            legal.Exists(t => t != null && t.CardId == relinquished));
+                        Check("Senju: Celtic is not a Ritual Monster",
+                            !legal.Exists(t => t != null && t.CardId == celtic));
+                        var pick = legal.FirstOrDefault(t => t.CardId == relinquished);
+                        if (pick != null)
+                        {
+                            Check("Senju: select Relinquished", engine.TrySelectEffectTarget(pick));
+                            Check("Senju: Relinquished in hand",
+                                p.Hand.Exists(c => c.CardId == relinquished));
+                        }
+                    }
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    p.Deck.Clear();
+                    p.Deck.Add(relinquished);
+                    var senju = engine.CreateCardInstance(senjuId);
+                    Check("Senju Special Summon does not open search",
+                        engine.SpecialSummonToField(p, senju, BattlePosition.Attack, true) &&
+                        !engine.IsAwaitingEffectTarget,
+                        $"pending={engine.IsAwaitingEffectTarget}");
+                }
+
+                {
+                    var def = db.Get(sonicId);
+                    var prog = def != null ? CardTextEffectCompiler.Compile(def) : null;
+                    Check("Sonic Bird official text FullyCompiled Ritual Spell Deck search",
+                        prog != null && prog.FullyCompiled &&
+                        prog.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.AddFromDeckToHand &&
+                            c.Zone == EffectZoneFilter.DeckRitualSpells),
+                        prog == null
+                            ? "null"
+                            : $"unparsed={string.Join("|", prog.UnparsedFragments ?? System.Array.Empty<string>())}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    p.Deck.Clear();
+                    p.Deck.Add(ritualSpell);
+                    p.Deck.Add(celtic);
+                    var bird = PlaceMonster(engine, p, sonicId, 2, BattlePosition.Defense, false);
+                    bird.SetThisTurn = false;
+                    Check("Sonic Bird Flip Summon",
+                        engine.TryFlipSummon(p, bird) && bird.FaceUp);
+                    Check("Sonic Bird FS: opens Ritual Spell Deck search",
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.TargetKind == EffectTargetKind.RitualSpellInYourDeck,
+                        engine.PendingActivation?.TargetKind.ToString() ?? "no pending");
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        var legal = engine.PendingActivation.LegalTargets;
+                        Check("Sonic Bird: Black Illusion Ritual is legal",
+                            legal.Exists(t => t != null && t.CardId == ritualSpell));
+                        Check("Sonic Bird: Celtic is not a Ritual Spell",
+                            !legal.Exists(t => t != null && t.CardId == celtic));
+                        var pick = legal.FirstOrDefault(t => t.CardId == ritualSpell);
+                        if (pick != null)
+                        {
+                            Check("Sonic Bird: select Ritual Spell", engine.TrySelectEffectTarget(pick));
+                            Check("Sonic Bird: Ritual Spell in hand",
+                                p.Hand.Exists(c => c.CardId == ritualSpell));
+                        }
+                    }
+                }
+            }
+
             // ── FirstEmpty order ──
             {
                 var engine = Fresh(db, pDeck, aDeck);

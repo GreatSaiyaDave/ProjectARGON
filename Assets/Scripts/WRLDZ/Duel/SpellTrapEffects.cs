@@ -46,7 +46,11 @@ namespace WRLDZ.Duel
         /// <summary>ROTA — Level N or lower Race monster in your Deck.</summary>
         MonsterInYourDeckFiltered,
         /// <summary>Iron Blacksmith Kotetsu — Equip Spell in your Deck.</summary>
-        EquipSpellInYourDeck
+        EquipSpellInYourDeck,
+        /// <summary>Senju — Ritual Monster in your Deck.</summary>
+        RitualMonsterInYourDeck,
+        /// <summary>Sonic Bird — Ritual Spell in your Deck.</summary>
+        RitualSpellInYourDeck
     }
 
     /// <summary>In-flight activation waiting for a target choice.</summary>
@@ -115,6 +119,10 @@ namespace WRLDZ.Duel
                         $"{n}: choose a monster from your Deck to add to hand.",
                     EffectTargetKind.EquipSpellInYourDeck =>
                         $"{n}: choose an Equip Spell from your Deck to add to hand.",
+                    EffectTargetKind.RitualMonsterInYourDeck =>
+                        $"{n}: choose a Ritual Monster from your Deck to add to hand.",
+                    EffectTargetKind.RitualSpellInYourDeck =>
+                        $"{n}: choose a Ritual Spell from your Deck to add to hand.",
                     EffectTargetKind.DiscardMonsterInHand =>
                         string.IsNullOrEmpty(DiscardCostAttribute) || DiscardCostAttribute == "*"
                             ? $"{n}: discard 1 card from your hand (cost)."
