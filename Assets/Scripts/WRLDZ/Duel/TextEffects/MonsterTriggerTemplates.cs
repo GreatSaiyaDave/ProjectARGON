@@ -20,7 +20,7 @@ namespace WRLDZ.Duel.TextEffects
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxFlipInflict = new(
-            @"FLIP:\s*Inflict (\d+) (?:points of )?damage to your opponent\.?",
+            @"^FLIP:\s*Inflict (\d+) (?:points of )?damage to your opponent\.?\s*$",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxFlipDraw = new(

@@ -2073,6 +2073,119 @@ namespace WRLDZ.Duel.Rules
                             c.Zone == EffectZoneFilter.FieldSpellTraps &&
                             !c.RequiresTargetChoice));
 
+                    // Fanbot surgical shortlist: official cards_db prints need new runtime
+                    // (2-target Flip destroy, Battle-Phase-only ATK aura, banish-count LP,
+                    // Flip damage × opp hand, ≥4 then destroy face-up). Fail-closed park.
+                    // RxFlipInflict is whole-text only so Des Koala / Princess of Tsurugi
+                    // cannot resolve as flat inflict. Poison Mummy stays FullyCompiled.
+                    var poisonMummy = db.Get(43716289);
+                    var mummyProg = poisonMummy != null ? CardTextEffectCompiler.Compile(poisonMummy) : null;
+                    Check("Corpus: Poison Mummy FullyCompiled Flip inflict 500 (whole-text)",
+                        mummyProg != null && mummyProg.FullyCompiled &&
+                        mummyProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Flip &&
+                            c.Action == EffectActionKind.InflictDamageToOpponent &&
+                            c.Amount == 500),
+                        mummyProg == null
+                            ? "null"
+                            : $"full={mummyProg.FullyCompiled} n={mummyProg.ClauseList.Count} unparsed={string.Join("|", mummyProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var noble = db.Get(65878864);
+                    var nobleProg = noble != null ? CardTextEffectCompiler.Compile(noble) : null;
+                    Check("Corpus: Nobleman-Eater Bug stays parked (Flip destroy 2 needs atom)",
+                        nobleProg == null || !nobleProg.FullyCompiled,
+                        nobleProg == null
+                            ? "null"
+                            : $"full={nobleProg.FullyCompiled} n={nobleProg.ClauseList.Count} unparsed={string.Join("|", nobleProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: Nobleman-Eater Bug is not 1-target / mass Destroy",
+                        nobleProg == null ||
+                        !nobleProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.Destroy));
+                    Check("Corpus: Nobleman-Eater Bug ProgramMayActivate is false",
+                        noble == null || !OfficialEffectRegistry.ProgramMayActivate(noble));
+
+                    var banner = db.Get(10012614);
+                    var bannerProg = banner != null ? CardTextEffectCompiler.Compile(banner) : null;
+                    Check("Corpus: Banner of Courage stays parked (Battle Phase only ATK aura needs atom)",
+                        bannerProg == null || !bannerProg.FullyCompiled,
+                        bannerProg == null
+                            ? "null"
+                            : $"full={bannerProg.FullyCompiled} n={bannerProg.ClauseList.Count} unparsed={string.Join("|", bannerProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: Banner of Courage is not always-on ContinuousGainAtkDef",
+                        bannerProg == null ||
+                        !bannerProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ContinuousGainAtkDef));
+                    Check("Corpus: Banner of Courage ProgramMayActivate is false",
+                        banner == null || !OfficialEffectRegistry.ProgramMayActivate(banner));
+
+                    var soulAbs = db.Get(68073522);
+                    var soulAbsProg = soulAbs != null ? CardTextEffectCompiler.Compile(soulAbs) : null;
+                    Check("Corpus: Soul Absorption stays parked (banish-count LP needs atom)",
+                        soulAbsProg == null || !soulAbsProg.FullyCompiled,
+                        soulAbsProg == null
+                            ? "null"
+                            : $"full={soulAbsProg.FullyCompiled} n={soulAbsProg.ClauseList.Count} unparsed={string.Join("|", soulAbsProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: Soul Absorption is not GainLifePoints / ExtraAmountPerCopyInGy",
+                        soulAbsProg == null ||
+                        !soulAbsProg.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.GainLifePoints ||
+                             c.ExtraAmountPerCopyInGy > 0)));
+                    Check("Corpus: Soul Absorption ProgramMayActivate is false",
+                        soulAbs == null || !OfficialEffectRegistry.ProgramMayActivate(soulAbs));
+
+                    var koala = db.Get(69579761);
+                    var koalaProg = koala != null ? CardTextEffectCompiler.Compile(koala) : null;
+                    Check("Corpus: Des Koala stays parked (Flip 400×opp hand needs atom)",
+                        koalaProg == null || !koalaProg.FullyCompiled,
+                        koalaProg == null
+                            ? "null"
+                            : $"full={koalaProg.FullyCompiled} n={koalaProg.ClauseList.Count} unparsed={string.Join("|", koalaProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: Des Koala is not flat InflictDamageToOpponent",
+                        koalaProg == null ||
+                        !koalaProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.InflictDamageToOpponent));
+                    Check("Corpus: Des Koala ProgramMayActivate is false",
+                        koala == null || !OfficialEffectRegistry.ProgramMayActivate(koala));
+
+                    var princess = db.Get(51371017);
+                    var princessProg = princess != null ? CardTextEffectCompiler.Compile(princess) : null;
+                    Check("Corpus: Princess of Tsurugi stays parked (Flip 500×opp S/T leftover)",
+                        princessProg == null || !princessProg.FullyCompiled,
+                        princessProg == null
+                            ? "null"
+                            : $"full={princessProg.FullyCompiled} n={princessProg.ClauseList.Count} unparsed={string.Join("|", princessProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: Princess of Tsurugi is not flat InflictDamageToOpponent",
+                        princessProg == null ||
+                        !princessProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.InflictDamageToOpponent));
+
+                    var ceiling = db.Get(38411870);
+                    var ceilingProg = ceiling != null ? CardTextEffectCompiler.Compile(ceiling) : null;
+                    Check("Corpus: Needle Ceiling stays parked (≥4 then face-up mass destroy needs atom)",
+                        ceilingProg == null || !ceilingProg.FullyCompiled,
+                        ceilingProg == null
+                            ? "null"
+                            : $"full={ceilingProg.FullyCompiled} n={ceilingProg.ClauseList.Count} unparsed={string.Join("|", ceilingProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: Needle Ceiling is not Dark Hole Destroy-all",
+                        ceilingProg == null ||
+                        !ceilingProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.Destroy));
+                    Check("Corpus: Needle Ceiling ProgramMayActivate is false",
+                        ceiling == null || !OfficialEffectRegistry.ProgramMayActivate(ceiling));
+
+                    var leftoverKoala = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000101,
+                        name = "Flip-inflict leftover unique (Koala family)",
+                        type = "Flip Effect Monster",
+                        desc =
+                            "FLIP: Inflict 400 damage to your opponent for each card in their hand. Shuffle your entire Deck into your opponent's Deck."
+                    });
+                    Check("Corpus: Des Koala leftover unique is not FullyCompiled",
+                        leftoverKoala == null || !leftoverKoala.FullyCompiled);
+
                     Check("Vocabulary: Protection is a shared kind",
                         Array.IndexOf(EffectVocabulary.SharedResolutions,
                             EffectResolutionKind.Protection) >= 0);
