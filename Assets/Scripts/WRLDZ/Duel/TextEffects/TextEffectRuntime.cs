@@ -2006,6 +2006,12 @@ namespace WRLDZ.Duel.TextEffects
 
             if (isMonster && activate.Any(x => x.OncePerTurn) && card != null)
                 card.EffectUsedThisTurn = true;
+            else if (!isMonster)
+            {
+                var prog = CompiledEffectCache.GetOrCompile(card);
+                FinishSpellTrap(engine, who, card,
+                    stays: SpellTrapEffects.StaysOnFieldAfterActivate(card, prog));
+            }
         }
 
         static bool DeckHasNamed(DuelEngine engine, DuelistState who, string name)
