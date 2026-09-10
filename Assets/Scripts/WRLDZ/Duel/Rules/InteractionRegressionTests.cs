@@ -3015,6 +3015,181 @@ namespace WRLDZ.Duel.Rules
                         p.Graveyard.Exists(c => c.CardId == duster));
                 }
 
+                // ── Fanbot park: Maha Vailo / Molten Zombie / Byser Shock /
+                // Fire Princess / Kozaky's Self-Destruct Button ──
+                {
+                    const int mahaId = 93013676;
+                    const int moltenId = 4732017;
+                    const int byserId = 17597059;
+                    const int firePId = 64752646;
+                    const int kozakyId = 21908319;
+                    const int axeId = 40619825;
+                    const int rebornId = 83764719;
+                    const int remedyId = 11868825;
+                    const int wabokuId = 12607053;
+
+                    var mahaDef = db.Get(mahaId);
+                    var mahaLive = mahaDef != null ? CardTextEffectCompiler.Compile(mahaDef) : null;
+                    Check("Maha Vailo stays parked (not FullyCompiled)",
+                        mahaLive == null || !mahaLive.FullyCompiled,
+                        mahaLive == null
+                            ? "null"
+                            : $"full={mahaLive.FullyCompiled} n={mahaLive.ClauseList.Count} unparsed={string.Join("|", mahaLive.UnparsedFragments ?? System.Array.Empty<string>())}");
+                    Check("Maha Vailo is not ContinuousGainAtkDef / Mage Power scale",
+                        mahaLive == null ||
+                        !mahaLive.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.ContinuousGainAtkDef ||
+                             c.ScaleAmountByControllerSpellTraps)));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var host = PlaceMonster(engine, p, mahaId, 2, BattlePosition.Attack, true);
+                        var axe = PutInHand(engine, p, axeId);
+                        Check("Maha Vailo: Axe equips for +1000 only",
+                            engine.TryActivateSpellTrap(p, axe, fromHand: true) &&
+                            engine.IsAwaitingEffectTarget &&
+                            engine.TrySelectEffectTarget(host) &&
+                            axe.EquippedTo == host);
+                        Check("Maha Vailo: ATK is 2550 (Axe +1000, not +500 per Equip)",
+                            host.CurrentAtk == 2550, $"atk={host.CurrentAtk}");
+                    }
+
+                    var moltenDef = db.Get(moltenId);
+                    var moltenLive = moltenDef != null ? CardTextEffectCompiler.Compile(moltenDef) : null;
+                    Check("Molten Zombie stays parked (not FullyCompiled)",
+                        moltenLive == null || !moltenLive.FullyCompiled);
+                    Check("Molten Zombie is not Draw",
+                        moltenLive == null ||
+                        !moltenLive.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.Draw));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var card = PutInHand(engine, p, moltenId);
+                        var handBefore = p.HandCount;
+                        Check("Molten Zombie: Normal Summon succeeds (Lv4)",
+                            engine.TryNormalSummon(p, card, asSet: false) && card.FaceUp);
+                        Check("Molten Zombie NS: does not draw (not any-summon Draw)",
+                            p.HandCount == handBefore - 1, $"hand={p.HandCount} was {handBefore}");
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var gyMon = engine.CreateCardInstance(moltenId);
+                        p.Graveyard.Add(gyMon);
+                        var reborn = PutInHand(engine, p, rebornId);
+                        var handBefore = p.HandCount;
+                        Check("Molten Zombie: Reborn Activate legal",
+                            engine.CanActivateSpellTrap(p, reborn, fromHand: true));
+                        Check("Molten Zombie: Reborn opens GY target",
+                            engine.TryActivateSpellTrap(p, reborn, fromHand: true) &&
+                            engine.IsAwaitingEffectTarget);
+                        var pick = engine.PendingActivation?.LegalTargets
+                            ?.FirstOrDefault(t => t != null && t.CardId == moltenId);
+                        Check("Molten Zombie: GY copy is a legal Reborn target", pick != null);
+                        if (pick != null)
+                        {
+                            Check("Molten Zombie SS from GY: does not draw",
+                                engine.TrySelectEffectTarget(pick) &&
+                                p.MonstersOnField().Any(m => m != null && m.CardId == moltenId) &&
+                                p.HandCount == handBefore - 1,
+                                $"hand={p.HandCount} was {handBefore}");
+                        }
+                    }
+
+                    var byserDef = db.Get(byserId);
+                    var byserLive = byserDef != null ? CardTextEffectCompiler.Compile(byserDef) : null;
+                    Check("Byser Shock stays parked (not FullyCompiled)",
+                        byserLive == null || !byserLive.FullyCompiled);
+                    Check("Byser Shock is not ReturnToHand",
+                        byserLive == null ||
+                        !byserLive.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ReturnToHand));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                        var trap = PlaceSetTrap(engine, opp, wabokuId, 2);
+                        var byser = PutInHand(engine, p, byserId);
+                        Check("Byser Shock: Tribute Summon (Lv5, 1 tribute)",
+                            engine.TryNormalSummon(p, byser, asSet: false) && byser.FaceUp);
+                        Check("Byser Shock Summon: Set cards stay (not bounce-all)",
+                            opp.TryFindSpellTrap(trap, out _) &&
+                            !opp.Hand.Contains(trap) &&
+                            !p.Hand.Contains(trap));
+                    }
+
+                    var fireDef = db.Get(firePId);
+                    var fireLive = fireDef != null ? CardTextEffectCompiler.Compile(fireDef) : null;
+                    Check("Fire Princess stays parked (not FullyCompiled)",
+                        fireLive == null || !fireLive.FullyCompiled);
+                    Check("Fire Princess is not InflictDamageToOpponent",
+                        fireLive == null ||
+                        !fireLive.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.InflictDamageToOpponent));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        PlaceMonster(engine, p, firePId, 2, BattlePosition.Attack, true);
+                        var remedy = PutInHand(engine, p, remedyId);
+                        p.LifePoints = 8000;
+                        opp.LifePoints = 8000;
+                        Check("Fire Princess: Goblin's Secret Remedy gains 600",
+                            engine.TryActivateSpellTrap(p, remedy, fromHand: true) &&
+                            p.LifePoints == 8600, $"you LP={p.LifePoints}");
+                        Check("Fire Princess: opponent LP stays 8000 (not 500 on LP-gain)",
+                            opp.LifePoints == 8000, $"opp LP={opp.LifePoints}");
+                    }
+
+                    var kozDef = db.Get(kozakyId);
+                    var kozLive = kozDef != null ? CardTextEffectCompiler.Compile(kozDef) : null;
+                    Check("Kozaky's Self-Destruct Button stays parked (not FullyCompiled)",
+                        kozLive == null || !kozLive.FullyCompiled);
+                    Check("Kozaky's Self-Destruct Button is not InflictDamageToOpponent",
+                        kozLive == null ||
+                        !kozLive.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.InflictDamageToOpponent));
+                    Check("Kozaky's Self-Destruct Button ProgramMayActivate is false",
+                        kozDef == null || !OfficialEffectRegistry.ProgramMayActivate(kozDef));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        var trap = PlaceSetTrap(engine, opp, kozakyId, 2);
+                        trap.SetThisTurn = false;
+                        var card = PutInHand(engine, p, duster);
+                        p.LifePoints = 8000;
+                        opp.LifePoints = 8000;
+                        Check("Kozaky: Feather Duster destroys the Set card",
+                            engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                            opp.Graveyard.Contains(trap));
+                        Check("Kozaky: neither player takes 1000 (destroyer-of-this-Set)",
+                            p.LifePoints == 8000 && opp.LifePoints == 8000,
+                            $"you={p.LifePoints} opp={opp.LifePoints}");
+                    }
+                }
+
                 // ── Equip Spells: Activate + target; host leaving field destroys Equip ──
                 {
                     const int treasure = 1435851;

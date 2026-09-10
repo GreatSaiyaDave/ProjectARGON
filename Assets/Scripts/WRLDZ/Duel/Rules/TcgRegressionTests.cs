@@ -2073,6 +2073,98 @@ namespace WRLDZ.Duel.Rules
                             c.Zone == EffectZoneFilter.FieldSpellTraps &&
                             !c.RequiresTargetChoice));
 
+                    // Fanbot surgical shortlist: Maha Vailo / Molten Zombie / Byser Shock /
+                    // Fire Princess / Kozaky's Self-Destruct Button. Existing atoms cannot
+                    // honor the official print (equip-count ATK, SS-from-GY draw, bounce all
+                    // Set cards, LP-gain burn, destroyer-of-this-Set burn). Fail-closed park.
+                    var maha = db.Get(93013676);
+                    var mahaProg = maha != null ? CardTextEffectCompiler.Compile(maha) : null;
+                    Check("Corpus: Maha Vailo stays parked (ATK per Equip on this card needs atom)",
+                        mahaProg == null || !mahaProg.FullyCompiled,
+                        mahaProg == null
+                            ? "null"
+                            : $"full={mahaProg.FullyCompiled} n={mahaProg.ClauseList.Count} unparsed={string.Join("|", mahaProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: Maha Vailo is not ContinuousGainAtkDef / Mage Power scale / EquipThisToTarget",
+                        mahaProg == null ||
+                        !mahaProg.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.ContinuousGainAtkDef ||
+                             c.Action == EffectActionKind.EquipThisToTarget ||
+                             c.ScaleAmountByControllerSpellTraps)));
+                    Check("Corpus: Maha Vailo ProgramMayActivate is false",
+                        maha == null || !OfficialEffectRegistry.ProgramMayActivate(maha));
+
+                    var molten = db.Get(4732017);
+                    var moltenProg = molten != null ? CardTextEffectCompiler.Compile(molten) : null;
+                    Check("Corpus: Molten Zombie stays parked (SS-from-GY draw needs atom)",
+                        moltenProg == null || !moltenProg.FullyCompiled,
+                        moltenProg == null
+                            ? "null"
+                            : $"full={moltenProg.FullyCompiled} n={moltenProg.ClauseList.Count} unparsed={string.Join("|", moltenProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: Molten Zombie is not Draw on any summon / Activate",
+                        moltenProg == null ||
+                        !moltenProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.Draw));
+                    Check("Corpus: Molten Zombie ProgramMayActivate is false",
+                        molten == null || !OfficialEffectRegistry.ProgramMayActivate(molten));
+
+                    var byser = db.Get(17597059);
+                    var byserProg = byser != null ? CardTextEffectCompiler.Compile(byser) : null;
+                    Check("Corpus: Byser Shock stays parked (bounce all Set cards needs atom)",
+                        byserProg == null || !byserProg.FullyCompiled,
+                        byserProg == null
+                            ? "null"
+                            : $"full={byserProg.FullyCompiled} n={byserProg.ClauseList.Count} unparsed={string.Join("|", byserProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: Byser Shock is not ReturnToHand (Sphinx bounce-all / 1-target)",
+                        byserProg == null ||
+                        !byserProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ReturnToHand));
+                    Check("Corpus: Byser Shock ProgramMayActivate is false",
+                        byser == null || !OfficialEffectRegistry.ProgramMayActivate(byser));
+
+                    var fireP = db.Get(64752646);
+                    var firePProg = fireP != null ? CardTextEffectCompiler.Compile(fireP) : null;
+                    Check("Corpus: Fire Princess stays parked (each LP-gain inflict 500 needs atom)",
+                        firePProg == null || !firePProg.FullyCompiled,
+                        firePProg == null
+                            ? "null"
+                            : $"full={firePProg.FullyCompiled} n={firePProg.ClauseList.Count} unparsed={string.Join("|", firePProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: Fire Princess is not InflictDamageToOpponent / GainLifePoints",
+                        firePProg == null ||
+                        !firePProg.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.InflictDamageToOpponent ||
+                             c.Action == EffectActionKind.GainLifePoints)));
+                    Check("Corpus: Fire Princess ProgramMayActivate is false",
+                        fireP == null || !OfficialEffectRegistry.ProgramMayActivate(fireP));
+
+                    var kozaky = db.Get(21908319);
+                    var kozakyProg = kozaky != null ? CardTextEffectCompiler.Compile(kozaky) : null;
+                    Check("Corpus: Kozaky's Self-Destruct Button stays parked (destroyer-of-this-Set burn needs atom)",
+                        kozakyProg == null || !kozakyProg.FullyCompiled,
+                        kozakyProg == null
+                            ? "null"
+                            : $"full={kozakyProg.FullyCompiled} n={kozakyProg.ClauseList.Count} unparsed={string.Join("|", kozakyProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: Kozaky's Self-Destruct Button is not InflictDamageToOpponent / TakeEffectDamage",
+                        kozakyProg == null ||
+                        !kozakyProg.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.InflictDamageToOpponent ||
+                             c.Action == EffectActionKind.TakeEffectDamage)));
+                    Check("Corpus: Kozaky's Self-Destruct Button ProgramMayActivate is false",
+                        kozaky == null || !OfficialEffectRegistry.ProgramMayActivate(kozaky));
+
+                    var leftoverMaha = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000111,
+                        name = "Equip-count leftover unique (Maha family)",
+                        type = "Effect Monster",
+                        desc =
+                            "This card gains 500 ATK for each Equip Card equipped to this card. Shuffle your entire Deck into your opponent's Deck."
+                    });
+                    Check("Corpus: Maha Vailo leftover unique is not FullyCompiled",
+                        leftoverMaha == null || !leftoverMaha.FullyCompiled);
+
                     Check("Vocabulary: Protection is a shared kind",
                         Array.IndexOf(EffectVocabulary.SharedResolutions,
                             EffectResolutionKind.Protection) >= 0);
