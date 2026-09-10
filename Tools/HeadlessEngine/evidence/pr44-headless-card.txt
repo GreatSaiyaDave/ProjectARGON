@@ -1,0 +1,57 @@
+HeadlessEngine --card evidence for PR #44
+commit=a32dbbca28e06196e832c5c84583d6b1ff4226f9
+utc=2026-09-10T09:13:00Z
+command=bash Tools/HeadlessEngine/run.sh --card "<name>"
+
+===== Greenkappa =====
+  type=Flip Effect Monster  race=Warrior  attr=DARK  Lv3 650/900
+  desc: FLIP: Target 2 Set Spell/Trap Cards on the field; destroy those targets.
+
+  classify: Unimplemented
+  ProgramMayActivate: False
+  FullyCompiled: False
+  timings: 
+  clauses: 0
+
+===== Tornado Bird =====
+  type=Flip Effect Monster  race=Winged Beast  attr=WIND  Lv4 1100/1000
+  desc: FLIP: Return 2 Spell or Trap Cards on the field to their owners' hands.
+
+  classify: Unimplemented
+  ProgramMayActivate: False
+  FullyCompiled: False
+  timings: 
+  clauses: 0
+
+===== Des Feral Imp =====
+  type=Flip Effect Monster  race=Reptile  attr=DARK  Lv4 1600/1800
+  desc: FLIP: Target 1 card in your Graveyard; shuffle that target into the Deck.
+
+  classify: Unimplemented
+  ProgramMayActivate: False
+  FullyCompiled: False
+  timings: 
+  clauses: 0
+
+===== Begone, Knave! =====
+  type=Trap Card  race=Continuous  attr=  
+  desc: If a monster inflicts battle damage to a player: Return that monster to the hand.
+
+  classify: Unimplemented
+  ProgramMayActivate: False
+  FullyCompiled: False
+  timings: 
+  clauses: 0
+
+===== Butterfly Dagger - Elma =====
+  type=Spell Card  race=Equip  attr=  
+  desc: The equipped monster gains 300 ATK. When this card is destroyed and sent to the Graveyard while equipped: You can return this card to the hand.
+
+  classify: Stub
+  ProgramMayActivate: False
+  FullyCompiled: False
+  timings: Activate
+  clauses: 1
+    [1] Timing=Activate Action=EquipThisToTarget Side=Opponent Zone=ControllerMonsters
+        RequiresTargetChoice=True, StaysOnField=True, TokenCount=1, EquipAtkBonus=300, MakesChainLink=True, ActivationNegatable=True, EffectNegatable=True
+

@@ -2073,6 +2073,151 @@ namespace WRLDZ.Duel.Rules
                             c.Zone == EffectZoneFilter.FieldSpellTraps &&
                             !c.RequiresTargetChoice));
 
+                    // Fanbot surgical shortlist: Greenkappa / Tornado Bird / Des Feral Imp /
+                    // Begone, Knave! / Butterfly Dagger - Elma.
+                    // Existing atoms cannot honor the official print (2 Set S/T destroy,
+                    // 2 S/T bounce, GY-card shuffle into Deck, battle-damage bounce the
+                    // attacker, Equip GY-return-to-hand). Fail-closed park.
+                    var greenkappa = db.Get(61831093);
+                    var greenkappaProg = greenkappa != null ? CardTextEffectCompiler.Compile(greenkappa) : null;
+                    Check("Corpus: Greenkappa stays parked (2 Set S/T destroy needs atom)",
+                        greenkappaProg == null || !greenkappaProg.FullyCompiled,
+                        greenkappaProg == null
+                            ? "null"
+                            : $"full={greenkappaProg.FullyCompiled} n={greenkappaProg.ClauseList.Count} unparsed={string.Join("|", greenkappaProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: Greenkappa is not 1-target Destroy / MST",
+                        greenkappaProg == null ||
+                        !greenkappaProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.Destroy));
+                    Check("Corpus: Greenkappa ProgramMayActivate is false",
+                        greenkappa == null || !OfficialEffectRegistry.ProgramMayActivate(greenkappa));
+
+                    var tornadoBird = db.Get(71283180);
+                    var tornadoBirdProg = tornadoBird != null ? CardTextEffectCompiler.Compile(tornadoBird) : null;
+                    Check("Corpus: Tornado Bird stays parked (2 S/T bounce needs atom)",
+                        tornadoBirdProg == null || !tornadoBirdProg.FullyCompiled,
+                        tornadoBirdProg == null
+                            ? "null"
+                            : $"full={tornadoBirdProg.FullyCompiled} n={tornadoBirdProg.ClauseList.Count} unparsed={string.Join("|", tornadoBirdProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: Tornado Bird is not 1-target ReturnToHand",
+                        tornadoBirdProg == null ||
+                        !tornadoBirdProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ReturnToHand));
+                    Check("Corpus: Tornado Bird ProgramMayActivate is false",
+                        tornadoBird == null || !OfficialEffectRegistry.ProgramMayActivate(tornadoBird));
+
+                    var desFeral = db.Get(81985784);
+                    var desFeralProg = desFeral != null ? CardTextEffectCompiler.Compile(desFeral) : null;
+                    Check("Corpus: Des Feral Imp stays parked (GY-card shuffle into Deck needs atom)",
+                        desFeralProg == null || !desFeralProg.FullyCompiled,
+                        desFeralProg == null
+                            ? "null"
+                            : $"full={desFeralProg.FullyCompiled} n={desFeralProg.ClauseList.Count} unparsed={string.Join("|", desFeralProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: Des Feral Imp is not AddFromGyToHand / PlaceThisOnTopOfDeck",
+                        desFeralProg == null ||
+                        !desFeralProg.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.AddFromGyToHand ||
+                             c.Action == EffectActionKind.PlaceThisOnTopOfDeck)));
+                    Check("Corpus: Des Feral Imp ProgramMayActivate is false",
+                        desFeral == null || !OfficialEffectRegistry.ProgramMayActivate(desFeral));
+
+                    var begoneKnave = db.Get(20374520);
+                    var begoneKnaveProg = begoneKnave != null ? CardTextEffectCompiler.Compile(begoneKnave) : null;
+                    Check("Corpus: Begone, Knave! stays parked (battle-damage bounce attacker needs atom)",
+                        begoneKnaveProg == null || !begoneKnaveProg.FullyCompiled,
+                        begoneKnaveProg == null
+                            ? "null"
+                            : $"full={begoneKnaveProg.FullyCompiled} n={begoneKnaveProg.ClauseList.Count} unparsed={string.Join("|", begoneKnaveProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: Begone, Knave! is not ReturnToHand / YouTakeLifePointDamage",
+                        begoneKnaveProg == null ||
+                        !begoneKnaveProg.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.ReturnToHand ||
+                             c.Timing == EffectTiming.YouTakeLifePointDamage)));
+                    Check("Corpus: Begone, Knave! ProgramMayActivate is false",
+                        begoneKnave == null || !OfficialEffectRegistry.ProgramMayActivate(begoneKnave));
+
+                    var elma = db.Get(69243953);
+                    var elmaProg = elma != null ? CardTextEffectCompiler.Compile(elma) : null;
+                    Check("Corpus: Butterfly Dagger - Elma stays parked (Equip GY-return leftover unique)",
+                        elmaProg == null || !elmaProg.FullyCompiled,
+                        elmaProg == null
+                            ? "null"
+                            : $"full={elmaProg.FullyCompiled} n={elmaProg.ClauseList.Count} unparsed={string.Join("|", elmaProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: Butterfly Dagger - Elma Equip +300 fragment compiles; GY-return leftover",
+                        elmaProg != null && !elmaProg.FullyCompiled &&
+                        elmaProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.EquipThisToTarget &&
+                            c.EquipAtkBonus == 300),
+                        elmaProg == null
+                            ? "null"
+                            : $"full={elmaProg.FullyCompiled} n={elmaProg.ClauseList.Count} unparsed={string.Join("|", elmaProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: Butterfly Dagger - Elma is not PlaceThisOnTopOfDeck",
+                        elmaProg == null ||
+                        !elmaProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.PlaceThisOnTopOfDeck));
+                    Check("Corpus: Butterfly Dagger - Elma ProgramMayActivate is false",
+                        elma == null || !OfficialEffectRegistry.ProgramMayActivate(elma));
+
+                    var leftoverGreen = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000161,
+                        name = "2-Set-ST leftover unique (Greenkappa family)",
+                        type = "Flip Effect Monster",
+                        desc =
+                            "FLIP: Target 2 Set Spell/Trap Cards on the field; destroy those targets. Shuffle your entire Deck into your opponent's Deck."
+                    });
+                    Check("Corpus: Greenkappa leftover unique is not FullyCompiled",
+                        leftoverGreen == null || !leftoverGreen.FullyCompiled);
+
+                    var leftoverTornado = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000162,
+                        name = "2-ST-bounce leftover unique (Tornado Bird family)",
+                        type = "Flip Effect Monster",
+                        desc =
+                            "FLIP: Return 2 Spell or Trap Cards on the field to their owners' hands. Shuffle your entire Deck into your opponent's Deck."
+                    });
+                    Check("Corpus: Tornado Bird leftover unique is not FullyCompiled",
+                        leftoverTornado == null || !leftoverTornado.FullyCompiled);
+
+                    var leftoverDesFeral = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000163,
+                        name = "GY-shuffle leftover unique (Des Feral Imp family)",
+                        type = "Flip Effect Monster",
+                        desc =
+                            "FLIP: Target 1 card in your Graveyard; shuffle that target into the Deck. Shuffle your entire Deck into your opponent's Deck."
+                    });
+                    Check("Corpus: Des Feral Imp leftover unique is not FullyCompiled",
+                        leftoverDesFeral == null || !leftoverDesFeral.FullyCompiled);
+
+                    var leftoverKnave = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000164,
+                        name = "Battle-damage bounce leftover unique (Begone Knave family)",
+                        type = "Trap Card",
+                        race = "Continuous",
+                        desc =
+                            "If a monster inflicts battle damage to a player: Return that monster to the hand. Shuffle your entire Deck into your opponent's Deck."
+                    });
+                    Check("Corpus: Begone, Knave! leftover unique is not FullyCompiled",
+                        leftoverKnave == null || !leftoverKnave.FullyCompiled);
+
+                    var leftoverElma = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000165,
+                        name = "GY-return-while-equipped leftover unique (Elma family)",
+                        type = "Spell Card",
+                        race = "Equip",
+                        desc =
+                            "When this card is destroyed and sent to the Graveyard while equipped: You can return this card to the hand. Shuffle your entire Deck into your opponent's Deck."
+                    });
+                    Check("Corpus: Butterfly Dagger - Elma leftover unique is not FullyCompiled",
+                        leftoverElma == null || !leftoverElma.FullyCompiled);
+
                     Check("Vocabulary: Protection is a shared kind",
                         Array.IndexOf(EffectVocabulary.SharedResolutions,
                             EffectResolutionKind.Protection) >= 0);
