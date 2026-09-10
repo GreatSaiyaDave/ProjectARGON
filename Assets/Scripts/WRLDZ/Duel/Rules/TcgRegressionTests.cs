@@ -1518,6 +1518,81 @@ namespace WRLDZ.Duel.Rules
                             ? "null"
                             : $"full={locustsProg.FullyCompiled} unparsed={string.Join("|", locustsProg.UnparsedFragments ?? Array.Empty<string>())}");
 
+                    bool IsFlipKindDestroy(CompiledCardProgram prog, string kind)
+                    {
+                        return prog != null && prog.FullyCompiled &&
+                               (prog.UnparsedFragments == null || prog.UnparsedFragments.Length == 0) &&
+                               !prog.ClauseList.Exists(c =>
+                                   c != null &&
+                                   (c.Timing == EffectTiming.Activate || c.RequiresThisFlipSummoned)) &&
+                               prog.ClauseList.Exists(c =>
+                                   c != null &&
+                                   c.Timing == EffectTiming.Flip &&
+                                   c.Action == EffectActionKind.Destroy &&
+                                   c.Zone == EffectZoneFilter.FieldSpellTraps &&
+                                   c.RequiresTargetChoice &&
+                                   c.MakesChainLink &&
+                                   string.Equals(c.CardKindFilter, kind, StringComparison.OrdinalIgnoreCase));
+                    }
+
+                    string FlipKindDetail(CompiledCardProgram prog) =>
+                        prog == null
+                            ? "null"
+                            : $"full={prog.FullyCompiled} n={prog.ClauseList.Count} " +
+                              $"kind={prog.ClauseList[0]?.CardKindFilter} " +
+                              $"unparsed={string.Join("|", prog.UnparsedFragments ?? Array.Empty<string>())}";
+
+                    var armed = db.Get(9076207);
+                    var armedProg = armed != null ? CardTextEffectCompiler.Compile(armed) : null;
+                    Check("Corpus: Armed Ninja FullyCompiled Flip Spell set-reveal (allowAi:false)",
+                        IsFlipKindDestroy(armedProg, "Spell"), FlipKindDetail(armedProg));
+
+                    var reaper = db.Get(33066139);
+                    var reaperProg = reaper != null ? CardTextEffectCompiler.Compile(reaper) : null;
+                    Check("Corpus: Reaper of the Cards FullyCompiled Flip Trap set-reveal (allowAi:false)",
+                        IsFlipKindDestroy(reaperProg, "Trap"), FlipKindDetail(reaperProg));
+
+                    var crimson = db.Get(14618326);
+                    var crimsonProg = crimson != null ? CardTextEffectCompiler.Compile(crimson) : null;
+                    Check("Corpus: Crimson Ninja same Flip set-reveal atom (Trap, no passcode branch)",
+                        IsFlipKindDestroy(crimsonProg, "Trap"), FlipKindDetail(crimsonProg));
+
+                    var synFlip = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000011,
+                        name = "Test Flip Spell Set-Reveal",
+                        type = "Flip Effect Monster",
+                        desc =
+                            "FLIP: Target 1 Spell Card on the field; destroy that target. " +
+                            "(If the target is Set, reveal it, and destroy it if it is a Spell Card. " +
+                            "Otherwise, return it to its original position.)"
+                    });
+                    Check("New-card rule: Flip set-reveal Spell compiles with no cardId branch",
+                        IsFlipKindDestroy(synFlip, "Spell"), FlipKindDetail(synFlip));
+
+                    var mst = db.Get(5318639);
+                    var mstProg = mst != null ? CardTextEffectCompiler.Compile(mst) : null;
+                    Check("PSCT MST: Spell/Trap destroy is not the Flip set-reveal atom",
+                        mstProg != null &&
+                        !mstProg.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.Flip) &&
+                        !mstProg.ClauseList.Exists(c =>
+                            c != null && !string.IsNullOrEmpty(c.CardKindFilter)),
+                        mstProg == null
+                            ? "null"
+                            : $"full={mstProg.FullyCompiled} n={mstProg.ClauseList.Count} " +
+                              $"kind={mstProg.ClauseList[0]?.CardKindFilter} " +
+                              $"timing={mstProg.ClauseList[0]?.Timing}");
+
+                    var violet = db.Get(15052462);
+                    var violetProg = violet != null ? CardTextEffectCompiler.Compile(violet) : null;
+                    Check("LOB leftover: Violet Crystal is not swallowed by the Flip set-reveal atom",
+                        violetProg == null || !violetProg.FullyCompiled,
+                        violetProg == null
+                            ? "null"
+                            : $"full={violetProg.FullyCompiled} n={violetProg.ClauseList.Count} " +
+                              $"unparsed={string.Join("|", violetProg.UnparsedFragments ?? Array.Empty<string>())}");
+
                     var crater = db.Get(78243409);
                     var craterProg = crater != null ? CardTextEffectCompiler.Compile(crater) : null;
                     Check("Corpus: The Thing in the Crater destroyed-field Pyro hand SS is not battle-only",

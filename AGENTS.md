@@ -47,7 +47,7 @@ Merged from other agent branches (2026-09-07):
 ## Engine
 
 - Product path: `DuelEngine` + `OfficialEffectRegistry` + `TextEffects`. Do not `if (cardId == …)` except named unique exceptions.
-- After compiler `Version` bump: `Tools/HeadlessEngine/run.sh --export-seed` (`CardTextEffectCompiler.Version` is **50** as of this handoff; older notes may say v48)
+- After compiler `Version` bump: `Tools/HeadlessEngine/run.sh --export-seed` (`CardTextEffectCompiler.Version` is **51** as of this handoff; older notes may say v48/v50)
 - Default check: `Tools/HeadlessEngine/run.sh --quiet` (needs .NET 8)
 
 ## UI chrome

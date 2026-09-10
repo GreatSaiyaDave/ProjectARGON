@@ -2219,6 +2219,8 @@ namespace WRLDZ.Duel.TextEffects
                     {
                         if (clause.Zone == EffectZoneFilter.AttackingMonster)
                             attackNegated = true;
+                        if (!TryDestroyAfterSetReveal(engine, source, clause, chosenTarget))
+                            break;
                         Destroy(chosenTarget);
                         break;
                     }
@@ -3780,6 +3782,10 @@ namespace WRLDZ.Duel.TextEffects
             if (c.RequiresAtkLeqCost && costNumeric > 0)
                 list.RemoveAll(t => t == null || t.CurrentAtk > costNumeric);
 
+            if (!string.IsNullOrEmpty(c.CardKindFilter))
+                list.RemoveAll(t => t == null ||
+                                    (t.FaceUp &&
+                                     !SharedPsctAtomTemplates.MatchesCardKind(t.Def, c.CardKindFilter)));
             if (!string.IsNullOrEmpty(c.RaceFilter) &&
                 c.Zone != EffectZoneFilter.DeckMonstersRaceLevelLeq &&
                 c.Zone != EffectZoneFilter.DeckFieldSpells)
@@ -4001,6 +4007,42 @@ namespace WRLDZ.Duel.TextEffects
             }
 
             return n + copies * clause.ExtraAmountPerCopyInGy;
+        }
+
+        /// <summary>
+        /// Armed Ninja / Reaper family: if the target is Set, reveal it and destroy only
+        /// when the printed Spell/Trap kind matches. Wrong type is returned face-down.
+        /// Face-up "that target" must still match the kind at resolution.
+        /// </summary>
+        static bool TryDestroyAfterSetReveal(DuelEngine engine, CardInstance source,
+            EffectClause clause, CardInstance target)
+        {
+            if (clause == null || string.IsNullOrEmpty(clause.CardKindFilter) || target == null)
+                return true;
+
+            var wasSet = !target.FaceUp;
+            if (wasSet)
+            {
+                target.FaceUp = true;
+                engine.Log($"{source?.Name ?? "Flip"} reveals {target.Name}.");
+            }
+
+            if (SharedPsctAtomTemplates.MatchesCardKind(target.Def, clause.CardKindFilter))
+                return true;
+
+            if (wasSet)
+            {
+                target.FaceUp = false;
+                engine.Log(
+                    $"{target.Name} is not a {clause.CardKindFilter} Card — returned to its original position.");
+            }
+            else
+            {
+                engine.Log(
+                    $"{target.Name} is not a {clause.CardKindFilter} Card — that target is not destroyed.");
+            }
+
+            return false;
         }
 
         static void DestroyCard(DuelEngine engine, CardInstance card, CardInstance source = null,
