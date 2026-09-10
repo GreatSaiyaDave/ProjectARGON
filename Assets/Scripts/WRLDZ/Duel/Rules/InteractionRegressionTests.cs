@@ -3380,22 +3380,42 @@ namespace WRLDZ.Duel.Rules
                             var hostId = celtic;
                             if (clause != null)
                             {
-                                foreach (var cand in db.GetAllCards())
+                                if (!string.IsNullOrEmpty(clause.EquipHostName))
                                 {
-                                    if (cand == null || !cand.IsMonster || cand.IsExtraDeck)
-                                        continue;
-                                    if (!string.IsNullOrEmpty(clause.AttributeFilter) &&
-                                        (cand.attribute == null ||
-                                         !cand.attribute.Equals(clause.AttributeFilter,
-                                             System.StringComparison.OrdinalIgnoreCase)))
-                                        continue;
-                                    if (!string.IsNullOrEmpty(clause.RaceFilter) &&
-                                        (cand.race == null ||
-                                         cand.race.IndexOf(clause.RaceFilter,
-                                             System.StringComparison.OrdinalIgnoreCase) < 0))
-                                        continue;
-                                    hostId = cand.id;
-                                    break;
+                                    foreach (var cand in db.GetAllCards())
+                                    {
+                                        if (cand == null || !cand.IsMonster || cand.IsExtraDeck)
+                                            continue;
+                                        var n = cand.name ?? "";
+                                        if (string.Equals(n, clause.EquipHostName,
+                                                System.StringComparison.OrdinalIgnoreCase) ||
+                                            n.IndexOf(clause.EquipHostName,
+                                                System.StringComparison.OrdinalIgnoreCase) >= 0)
+                                        {
+                                            hostId = cand.id;
+                                            break;
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    foreach (var cand in db.GetAllCards())
+                                    {
+                                        if (cand == null || !cand.IsMonster || cand.IsExtraDeck)
+                                            continue;
+                                        if (!string.IsNullOrEmpty(clause.AttributeFilter) &&
+                                            (cand.attribute == null ||
+                                             !cand.attribute.Equals(clause.AttributeFilter,
+                                                 System.StringComparison.OrdinalIgnoreCase)))
+                                            continue;
+                                        if (!string.IsNullOrEmpty(clause.RaceFilter) &&
+                                            (cand.race == null ||
+                                             cand.race.IndexOf(clause.RaceFilter,
+                                                 System.StringComparison.OrdinalIgnoreCase) < 0))
+                                            continue;
+                                        hostId = cand.id;
+                                        break;
+                                    }
                                 }
                             }
 
@@ -6654,8 +6674,9 @@ namespace WRLDZ.Duel.Rules
                         engine.TrySelectEffectTarget(host);
                     engine.NotifyPublic();
                     Check("Amplifier: equipped to Jinzo",
-                        amp.EquippedTo == host && host.Equips.Contains(amp));
-                    var myTrap = PlaceSetTrap(engine, p, waboku, 1);
+                        amp.EquippedTo == host && host.Equips.Contains(amp) &&
+                        p.TryFindSpellTrap(amp, out _));
+                    var myTrap = PlaceSetTrap(engine, p, waboku, 0);
                     myTrap.SetThisTurn = false;
                     var oppTrap = PlaceSetTrap(engine, opp, waboku, 1);
                     oppTrap.SetThisTurn = false;
@@ -6663,12 +6684,15 @@ namespace WRLDZ.Duel.Rules
                         engine.CanActivateSpellTrap(p, myTrap, fromHand: false));
                     Check("Amplifier: opponent Traps still cannot activate",
                         !engine.CanActivateSpellTrap(opp, oppTrap, fromHand: false));
-                    var bind = PlaceSetTrap(engine, p, gravityBind, 2);
+                    // Equip activates into the center S/T (zone 2) — do not clobber it.
+                    var bind = PlaceSetTrap(engine, p, gravityBind, 4);
                     bind.FaceUp = true;
                     engine.NotifyPublic();
                     var lv8 = PlaceMonster(engine, p, bewd, 0, BattlePosition.Attack, true);
                     Check("Amplifier: Jinzo does not negate controller Trap effects",
                         !bind.IsNegated && engine.ContinuousCannotAttackBlocks(p, lv8));
+                    Check("Amplifier: still on field before leave",
+                        p.TryFindSpellTrap(amp, out _));
                     engine.SendCardToGrave(p, amp);
                     Check("Amplifier: leave destroys equipped Jinzo",
                         !p.TryFindMonster(host, out _) && p.Graveyard.Contains(host));

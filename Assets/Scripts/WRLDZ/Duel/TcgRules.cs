@@ -52,6 +52,21 @@ namespace WRLDZ.Duel
                    monster.TributableByOpponent == who;
         }
 
+        /// <summary>
+        /// Monsters you control, plus a Soul Exchange-style tribute you must use
+        /// as if you controlled it (still on the opponent's field).
+        /// </summary>
+        public static int TributeCandidatesForSummon(DuelistState who)
+        {
+            if (who == null) return 0;
+            var n = who.MonsterCount;
+            var forced = who.MustTributeAsIfControlled;
+            if (forced != null && CanBeTributedForSummon(who, forced) &&
+                !who.TryFindMonster(forced, out _))
+                n++;
+            return n;
+        }
+
         public static bool IsNormalSummonableMonster(CardDef def)
         {
             if (def == null || !def.IsMonster || def.IsExtraDeck) return false;

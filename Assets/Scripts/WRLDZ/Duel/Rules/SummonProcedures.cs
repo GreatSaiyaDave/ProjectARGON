@@ -136,7 +136,7 @@ namespace WRLDZ.Duel.Rules
             }
             else
             {
-                if (who.MonsterCount < r.TributesNeeded)
+                if (TcgRules.TributeCandidatesForSummon(who) < r.TributesNeeded)
                 {
                     r.Reason = $"Need {r.TributesNeeded} Tribute(s).";
                     return r;
