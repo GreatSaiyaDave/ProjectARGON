@@ -460,6 +460,7 @@ namespace WRLDZ.Duel
 
         public void Draw(DuelistState who, int n, bool silent = false)
         {
+            if (GameOver || who == null || n <= 0) return;
             for (var i = 0; i < n; i++)
             {
                 if (who.Deck.Count == 0)
@@ -480,6 +481,9 @@ namespace WRLDZ.Duel
                     else
                         Log($"[{who.Name}] draws 1 card (hand {who.HandCount}, deck {who.DeckCount}).");
                 }
+
+                TextEffects.TextEffectRuntime.CheckNamedPiecesInHandWin(this);
+                if (GameOver) return;
             }
         }
 
@@ -2806,16 +2810,25 @@ namespace WRLDZ.Duel
 
         static bool HasMonsters(DuelistState who) => who.MonsterCount > 0;
 
-        void EndGame(DuelistState winner)
+        /// <summary>
+        /// Match win (LP, deck-out, or compiled hand wincon). Idempotent.
+        /// </summary>
+        public void DeclareVictory(DuelistState winner, string reason = null) =>
+            EndGame(winner, reason);
+
+        void EndGame(DuelistState winner, string reason = null)
         {
             if (GameOver) return;
             GameOver = true;
             Winner = winner;
             Phase = DuelPhase.GameOver;
             var youWin = winner != null && winner.IsPlayer;
-            Log(youWin
-                ? "★ YOU WIN — opponent’s LP is 0 or they could not draw."
-                : "★ YOU LOSE — your LP is 0 or you could not draw.");
+            if (!string.IsNullOrEmpty(reason))
+                Log((youWin ? "★ YOU WIN — " : "★ YOU LOSE — ") + reason);
+            else
+                Log(youWin
+                    ? "★ YOU WIN — opponent’s LP is 0 or they could not draw."
+                    : "★ YOU LOSE — your LP is 0 or you could not draw.");
             OnGameOver?.Invoke();
             Notify();
         }
