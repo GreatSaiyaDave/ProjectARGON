@@ -224,14 +224,12 @@ namespace WRLDZ.Duel.TextEffects
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         /// <summary>
-        /// Later-text classification reminder, not a resolving effect:
-        /// "(This card is not treated as a "Crystal" card.)"
-        /// LOB Violet Crystal predates Crystal Beasts — consume as baggage, do not invent
-        /// AlwaysTreatedAsName / archetype interactions. Fail-closed: only the whole
-        /// parenthetical; glued riders stay unparsed.
+        /// LOB Violet Crystal later-text: "(This card is not treated as a "Crystal" card.)"
+        /// Crystal Beasts did not exist at LOB print — consume as baggage, do not invent
+        /// AlwaysTreatedAsName / Crystal interactions. Fusion/Valkyrie siblings stay leftover.
         /// </summary>
-        static readonly Regex RxNotTreatedAsNameReminder = new(
-            @"^\(This card(?:'s name)? is not treated as (?:an? )?""[^""]+""(?: card)?\.?\)$",
+        static readonly Regex RxNotTreatedAsCrystalReminder = new(
+            @"^\(This card(?:'s name)? is not treated as (?:an? )?""Crystal""(?: card)?\.?\)$",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         /// <summary>All WATER monsters on the field gain 200 ATK/DEF (slash form — both stats).</summary>
@@ -1032,7 +1030,7 @@ namespace WRLDZ.Duel.TextEffects
                     matchedSpans.Add((sent.IndexInText, sent.Length));
                     continue;
                 }
-                if (sent.IsParenthetical && IsIgnoredLaterTextNameReminder(sent.Raw))
+                if (sent.IsParenthetical && IsIgnoredLaterTextCrystalReminder(sent.Raw))
                 {
                     matchedSpans.Add((sent.IndexInText, sent.Length));
                     continue;
@@ -1792,10 +1790,10 @@ namespace WRLDZ.Duel.TextEffects
                 f = Regex.Replace(f, @"\s+", " ").Trim();
                 if (f.Length < 8) return true;
             }
-            if (f.Contains("this card is not treated as"))
+            if (f.Contains("this card is not treated as") && f.Contains("crystal"))
             {
                 f = Regex.Replace(f,
-                    @"\(this card(?:'s name)? is not treated as [^)]+\)\.?",
+                    @"\(this card(?:'s name)? is not treated as (?:an? )?""crystal""(?: card)?\)\.?",
                     " ").Trim();
                 f = Regex.Replace(f, @"\s+", " ").Trim();
                 if (f.Length < 8) return true;
@@ -1808,10 +1806,10 @@ namespace WRLDZ.Duel.TextEffects
             return false;
         }
 
-        static bool IsIgnoredLaterTextNameReminder(string raw)
+        static bool IsIgnoredLaterTextCrystalReminder(string raw)
         {
             if (string.IsNullOrWhiteSpace(raw)) return false;
-            return RxNotTreatedAsNameReminder.IsMatch(raw.Trim());
+            return RxNotTreatedAsCrystalReminder.IsMatch(raw.Trim());
         }
     }
 }
