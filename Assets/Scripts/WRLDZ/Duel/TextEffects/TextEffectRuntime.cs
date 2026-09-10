@@ -2370,6 +2370,11 @@ namespace WRLDZ.Duel.TextEffects
                         chosenTarget.Position = chosenTarget.Position == BattlePosition.Attack
                             ? BattlePosition.Defense
                             : BattlePosition.Attack;
+                        // YGO has no face-down Attack; Stop Defense flipping FD Defense
+                        // to Attack is not a Flip Summon (Flip effects stay closed).
+                        if (chosenTarget.Position == BattlePosition.Attack)
+                            chosenTarget.FaceUp = true;
+                        chosenTarget.ChangedPositionThisTurn = true;
                         engine.Log($"{chosenTarget.Name} → {chosenTarget.Position} Position.");
                     }
 
@@ -3650,6 +3655,24 @@ namespace WRLDZ.Duel.TextEffects
                     }
 
                     break;
+                case EffectZoneFilter.OppAttackPositionMonsters:
+                    foreach (var m in opp.MonstersOnField())
+                    {
+                        if (!m.FaceUp || m.Position != BattlePosition.Attack) continue;
+                        if (engine.IsDragonTargetProtected(m)) continue;
+                        list.Add(m);
+                    }
+
+                    break;
+                case EffectZoneFilter.OppDefensePositionMonsters:
+                    foreach (var m in opp.MonstersOnField())
+                    {
+                        if (m.Position != BattlePosition.Defense) continue;
+                        if (engine.IsDragonTargetProtected(m)) continue;
+                        list.Add(m);
+                    }
+
+                    break;
                 case EffectZoneFilter.FieldAnyMonster:
                     foreach (var m in who.MonstersOnField())
                     {
@@ -3799,7 +3822,8 @@ namespace WRLDZ.Duel.TextEffects
                 list.RemoveAll(t => t?.Def == null || !t.Def.IsMonster || !t.FaceUp);
             if (c.Action == EffectActionKind.SetTargetFaceDownDefense)
                 list.RemoveAll(t => t == null || !t.FaceUp);
-            if (c.Action == EffectActionKind.ChangeBattlePosition)
+            if (c.Action == EffectActionKind.ChangeBattlePosition &&
+                c.Zone != EffectZoneFilter.OppDefensePositionMonsters)
                 list.RemoveAll(t => t == null || !t.FaceUp);
 
             return list;
@@ -3894,6 +3918,8 @@ namespace WRLDZ.Duel.TextEffects
             EffectZoneFilter.OppFaceUpMonsters when c.Action == EffectActionKind.EffectDamageBothFromOriginalAtk
                 => EffectTargetKind.OppFaceUpMonsterAtkLeqLp,
             EffectZoneFilter.OppFaceUpMonsters => EffectTargetKind.OppFaceUpMonster,
+            EffectZoneFilter.OppAttackPositionMonsters => EffectTargetKind.OppFaceUpMonster,
+            EffectZoneFilter.OppDefensePositionMonsters => EffectTargetKind.AnyMonsterOnField,
             EffectZoneFilter.FieldAnyMonster => EffectTargetKind.AnyMonsterOnField,
             EffectZoneFilter.ControllerGySpells => EffectTargetKind.SpellInYourGy,
             EffectZoneFilter.ControllerGyTraps => EffectTargetKind.TrapInYourGy,

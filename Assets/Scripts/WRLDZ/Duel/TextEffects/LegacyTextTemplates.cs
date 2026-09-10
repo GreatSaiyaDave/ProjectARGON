@@ -12,22 +12,26 @@ namespace WRLDZ.Duel.TextEffects
     /// </summary>
     public static class LegacyTextTemplates
     {
+        // "Winged Beast", "Sea Serpent", "Beast-Warrior-Type", "FIRE" — do not swallow "-Type".
+        const string EquipRace =
+            @"([A-Za-z]+(?:[ -](?!Type)[A-Za-z]+)*)";
+
         static readonly Regex RxEquipBoth = new(
-            @"A (\w+)(?:-Type)? monster equipped with this card increases? (?:its )?ATK and DEF by (\d+) points\.?",
+            @"A " + EquipRace + @"(?:-Type)? monster equipped with this card increases? (?:its )?ATK and DEF by (\d+) points\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxEquipSplit = new(
-            @"A (\w+)(?:-Type)? monster equipped with this card increases? (?:its )?ATK by (\d+) points " +
+            @"A " + EquipRace + @"(?:-Type)? monster equipped with this card increases? (?:its )?ATK by (\d+) points " +
             @"and decreases? (?:its )?DEF by (\d+) points\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxEquipIncreaseTyped = new(
-            @"Increase the ATK and DEF of a (\w+)(?:-Type)? monster equipped with this card by (\d+) points\.?",
+            @"Increase the ATK and DEF of (?:an? )?" + EquipRace +
+            @"(?:-Type)? monster equipped with this card by (\d+) points\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-        // "an Insect", "Beast-Warrior-Type", "FIRE" — do not swallow "-Type" into the race.
         const string EquipOnlyPrefix =
-            @"Equip only to (?:an? )?([A-Za-z]+(?:-(?!Type)[A-Za-z]+)*)(?:-Type)? monster\.?\s*";
+            @"Equip only to (?:an? )?" + EquipRace + @"(?:-Type)? monster\.?\s*";
 
         static readonly Regex RxEquipOnlyKind = new(
             EquipOnlyPrefix + @"It gains (\d+) ATK(?:/DEF| and DEF)?\.?",
@@ -65,7 +69,7 @@ namespace WRLDZ.Duel.TextEffects
 
         static readonly Regex RxGyPayLpTopDeckLegacy = new(
             @"When this card is sent from the field to the Graveyard,?\s*" +
-            @"if you pay (\d+) Life Points, this card returns to the top of the Deck\.?",
+            @"if you pay (\d+) Life Points, this card returns to the top of (?:your |the )?Deck\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxGyReturnTopDeck = new(

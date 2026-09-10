@@ -3015,6 +3015,132 @@ namespace WRLDZ.Duel.Rules
                         p.Graveyard.Exists(c => c.CardId == duster));
                 }
 
+                {
+                    const int stopDefense = 63102017;
+                    const int blockAttack = 25880422;
+                    const int manEater = 54652250;
+                    var stopDef = db.Get(stopDefense);
+                    var stopProg = stopDef != null ? CardTextEffectCompiler.Compile(stopDef) : null;
+                    Check("Stop Defense FullyCompiled opp Defense → Attack",
+                        stopProg != null && stopProg.FullyCompiled &&
+                        stopProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ChangeBattlePosition &&
+                            c.Zone == EffectZoneFilter.OppDefensePositionMonsters),
+                        stopProg == null
+                            ? "null"
+                            : $"full={stopProg.FullyCompiled} unparsed={string.Join("|", stopProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                    var blockDef = db.Get(blockAttack);
+                    var blockProg = blockDef != null ? CardTextEffectCompiler.Compile(blockDef) : null;
+                    Check("Block Attack FullyCompiled opp Attack → Defense",
+                        blockProg != null && blockProg.FullyCompiled &&
+                        blockProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ChangeBattlePosition &&
+                            c.Zone == EffectZoneFilter.OppAttackPositionMonsters),
+                        blockProg == null
+                            ? "null"
+                            : $"full={blockProg.FullyCompiled} unparsed={string.Join("|", blockProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        var wall = PlaceMonster(engine, opp, celtic, 2, BattlePosition.Defense, true);
+                        var atkMon = PlaceMonster(engine, opp, bewd, 1, BattlePosition.Attack, true);
+                        var yours = PlaceMonster(engine, p, celtic, 2, BattlePosition.Defense, true);
+                        var card = PutInHand(engine, p, stopDefense);
+                        Check("Stop Defense: Activate legal with opp Defense",
+                            engine.CanActivateSpellTrap(p, card, fromHand: true));
+                        Check("Stop Defense: Activate opens Defense target",
+                            engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                            engine.IsAwaitingEffectTarget);
+                        if (engine.IsAwaitingEffectTarget)
+                        {
+                            var legalWall = engine.PendingActivation.LegalTargets.Contains(wall);
+                            var legalAtk = engine.PendingActivation.LegalTargets.Contains(atkMon);
+                            var legalYours = engine.PendingActivation.LegalTargets.Contains(yours);
+                            Check("Stop Defense: opp Defense is legal", legalWall);
+                            Check("Stop Defense: opp Attack is not legal", !legalAtk);
+                            Check("Stop Defense: your Defense is not legal", !legalYours);
+                            Check("Stop Defense: select wall → face-up Attack",
+                                engine.TrySelectEffectTarget(wall) &&
+                                wall.Position == BattlePosition.Attack && wall.FaceUp,
+                                $"pos={wall.Position} face={wall.FaceUp}");
+                        }
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        PlaceMonster(engine, opp, bewd, 1, BattlePosition.Attack, true);
+                        var card = PutInHand(engine, p, stopDefense);
+                        Check("Stop Defense: illegal with only opp Attack (Set only)",
+                            !engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        var bug = PlaceMonster(engine, opp, manEater, 2, BattlePosition.Defense, false);
+                        var card = PutInHand(engine, p, stopDefense);
+                        Check("Stop Defense: face-down Defense is a legal target",
+                            engine.CanActivateSpellTrap(p, card, fromHand: true));
+                        engine.TryActivateSpellTrap(p, card, fromHand: true);
+                        if (engine.IsAwaitingEffectTarget)
+                            engine.TrySelectEffectTarget(bug);
+                        Check("Stop Defense: FD Defense becomes face-up Attack (no Flip window)",
+                            bug.FaceUp && bug.Position == BattlePosition.Attack &&
+                            !engine.IsAwaitingEffectTarget,
+                            $"face={bug.FaceUp} pos={bug.Position} pending={engine.IsAwaitingEffectTarget}");
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        var atkMon = PlaceMonster(engine, opp, celtic, 2, BattlePosition.Attack, true);
+                        var defMon = PlaceMonster(engine, opp, bewd, 1, BattlePosition.Defense, true);
+                        var card = PutInHand(engine, p, blockAttack);
+                        Check("Block Attack: Activate legal with opp Attack",
+                            engine.CanActivateSpellTrap(p, card, fromHand: true));
+                        engine.TryActivateSpellTrap(p, card, fromHand: true);
+                        if (engine.IsAwaitingEffectTarget)
+                        {
+                            Check("Block Attack: opp Attack is legal, Defense is not",
+                                engine.PendingActivation.LegalTargets.Contains(atkMon) &&
+                                !engine.PendingActivation.LegalTargets.Contains(defMon));
+                            Check("Block Attack: select Celtic → face-up Defense",
+                                engine.TrySelectEffectTarget(atkMon) &&
+                                atkMon.Position == BattlePosition.Defense && atkMon.FaceUp,
+                                $"pos={atkMon.Position} face={atkMon.FaceUp}");
+                        }
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        PlaceMonster(engine, opp, celtic, 2, BattlePosition.Defense, true);
+                        var card = PutInHand(engine, p, blockAttack);
+                        Check("Block Attack: illegal with only opp Defense (Set only)",
+                            !engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    }
+                }
+
                 // ── Equip Spells: Activate + target; host leaving field destroys Equip ──
                 {
                     const int treasure = 1435851;
@@ -3061,6 +3187,95 @@ namespace WRLDZ.Duel.Rules
                         swProg == null
                             ? "null"
                             : $"full={swProg.FullyCompiled} unparsed={string.Join("|", swProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                    {
+                        const int followWind = 98252586;
+                        const int harpie = 76812113;
+                        var fDef = db.Get(followWind);
+                        var fProg = fDef != null ? CardTextEffectCompiler.Compile(fDef) : null;
+                        Check("Follow Wind FullyCompiled Equip Winged Beast +300/+300",
+                            fProg != null && fProg.FullyCompiled &&
+                            fProg.ClauseList.Exists(c =>
+                                c != null && c.Action == EffectActionKind.EquipThisToTarget &&
+                                c.EquipAtkBonus == 300 && c.EquipDefBonus == 300 &&
+                                string.Equals(c.RaceFilter, "Winged Beast",
+                                    System.StringComparison.OrdinalIgnoreCase)),
+                            fProg == null
+                                ? "null"
+                                : $"full={fProg.FullyCompiled} unparsed={string.Join("|", fProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var bird = PlaceMonster(engine, p, harpie, 2, BattlePosition.Attack, true);
+                        var warrior = PlaceMonster(engine, p, celtic, 1, BattlePosition.Attack, true);
+                        var card = PutInHand(engine, p, followWind);
+                        Check("Follow Wind: Activate legal with a Winged Beast",
+                            engine.CanActivateSpellTrap(p, card, fromHand: true));
+                        Check("Follow Wind: Activate opens Equip target",
+                            engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                            engine.IsAwaitingEffectTarget);
+                        if (engine.IsAwaitingEffectTarget)
+                        {
+                            var legalBird = engine.PendingActivation.LegalTargets
+                                .Exists(t => t.CardId == harpie);
+                            var legalWarrior = engine.PendingActivation.LegalTargets
+                                .Exists(t => t.CardId == celtic);
+                            Check("Follow Wind: Harpie Lady is a legal host", legalBird);
+                            Check("Follow Wind: Celtic Guardian is not a Winged Beast host",
+                                !legalWarrior);
+                            Check("Follow Wind: select Harpie, +300 ATK/DEF",
+                                engine.TrySelectEffectTarget(bird) &&
+                                card.EquippedTo == bird &&
+                                bird.CurrentAtk == 1600 && bird.CurrentDef == 1700,
+                                $"atk={bird.CurrentAtk} def={bird.CurrentDef} warrior={warrior.CurrentAtk}");
+                        }
+                    }
+
+                    {
+                        const int hornLight = 38552107;
+                        var hDef = db.Get(hornLight);
+                        var hProg = hDef != null ? CardTextEffectCompiler.Compile(hDef) : null;
+                        Check("Horn of Light FullyCompiled Equip +800 DEF and GY pay 500 to Deck",
+                            hProg != null && hProg.FullyCompiled &&
+                            hProg.ClauseList.Exists(c =>
+                                c != null && c.Action == EffectActionKind.EquipThisToTarget &&
+                                c.EquipDefBonus == 800) &&
+                            hProg.ClauseList.Exists(c =>
+                                c != null &&
+                                c.Action == EffectActionKind.PlaceThisOnTopOfDeck &&
+                                c.PayLpAmount == 500),
+                            hProg == null
+                                ? "null"
+                                : $"full={hProg.FullyCompiled} unparsed={string.Join("|", hProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        p.Deck.Clear();
+                        p.Deck.Add(bewd);
+                        var host = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                        var printedDef = host.CurrentDef;
+                        var card = PutInHand(engine, p, hornLight);
+                        var lp = p.LifePoints;
+                        Check("Horn of Light: Activate legal with a face-up monster",
+                            engine.CanActivateSpellTrap(p, card, fromHand: true));
+                        engine.TryActivateSpellTrap(p, card, fromHand: true);
+                        if (engine.IsAwaitingEffectTarget)
+                            engine.TrySelectEffectTarget(host);
+                        Check("Horn of Light: equipped host gains 800 DEF",
+                            card.EquippedTo == host && host.CurrentDef == printedDef + 800,
+                            $"def={host.CurrentDef} was {printedDef}");
+                        engine.SendCardToGrave(p, card);
+                        Check("Horn of Light: GY pay 500, card on top of Deck",
+                            p.LifePoints == lp - 500 &&
+                            p.Deck.Count > 0 && p.Deck[0] == hornLight &&
+                            !p.Graveyard.Contains(card) &&
+                            host.CurrentDef == printedDef,
+                            $"lp={p.LifePoints} was {lp} top={(p.Deck.Count > 0 ? p.Deck[0].ToString() : "empty")} gy={p.Graveyard.Contains(card)} def={host.CurrentDef}");
+                    }
 
                     var aDef = db.Get(axe);
                     var aProg = aDef != null ? CardTextEffectCompiler.Compile(aDef) : null;
