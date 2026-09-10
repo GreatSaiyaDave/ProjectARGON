@@ -944,16 +944,47 @@ namespace WRLDZ.Duel
                 if (link.Negated)
                 {
                     Log($"CL{link.LinkNumber} {link.Card?.Name ?? "?"} was negated — skipped.");
+                    // One-shot S/T still leave the field after a negated activation.
+                    EnsureDeferredSpellTrapGrave(link);
                     link.Resolved = true;
                     continue;
                 }
 
                 if (resolveLink(link))
                     resolved++;
+                EnsureDeferredSpellTrapGrave(link);
                 link.Resolved = true;
             }
 
             return resolved;
+        }
+
+        /// <summary>
+        /// After chain resolution, Normal/Quick-Play Spells and non-Continuous Traps
+        /// leave the S/T zone for GY (including negated activations). Continuous/Field stay.
+        /// Last-zone repair only — does not invent effect logic.
+        /// </summary>
+        static bool IsOneShotChainSpellTrap(CardInstance card)
+        {
+            var def = card?.Def;
+            if (def == null || def.IsFieldSpell || def.IsContinuousSpellOrTrap) return false;
+            return SpellTrapEffects.IsNormalSpell(def) ||
+                   SpellTrapEffects.IsQuickPlay(def) ||
+                   SpellTrapEffects.IsTrap(def);
+        }
+
+        void EnsureDeferredSpellTrapGrave(ChainLink link)
+        {
+            var card = link?.Card;
+            if (!IsOneShotChainSpellTrap(card)) return;
+            var owner = link.Controller ?? ControllerOf(card);
+            if (owner == null) return;
+            var stillActive = owner.TryFindSpellTrap(card, out _) || owner.Hand.Contains(card);
+            if (!stillActive) return;
+            Log($"[RULE] Chain resolve left {card.Name} active; sending one-shot Spell/Trap to the GY.");
+            Presentation.ArInteraction.SpellActivationPresentation.QueueFadeToGy(card.InstanceId);
+            Presentation.ArInteraction.SpellActivationPresentation.EnqueueGhostIfNeeded(card.InstanceId);
+            SendCardToGrave(owner, card);
         }
 
         /// <summary>While awaiting a target, select a legal card (GY monster, S/T, etc.).</summary>

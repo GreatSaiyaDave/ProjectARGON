@@ -88,3 +88,6 @@ Assets/Screenshots/
 Assets/_Recovery/
 Tools/WRLDZ/edopro-ref/
 Tools/WRLDZ/kaibapro-ref/
+
+# Local Unity Library mix dumps
+Library_mix_*/
