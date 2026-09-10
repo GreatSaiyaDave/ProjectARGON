@@ -267,7 +267,9 @@ namespace WRLDZ.Duel.TextEffects
         /// <summary>Face-up Field Spell Zones on either field (Burning Land).</summary>
         FieldSpellsOnField,
         /// <summary>Equip Spells in the controller's Deck (Iron Blacksmith Kotetsu).</summary>
-        DeckEquipSpells
+        DeckEquipSpells,
+        /// <summary>Monsters in the opponent's GY (Gravedigger Ghoul).</summary>
+        OpponentGyMonsters
     }
 
     /// <summary>One parsed clause from official card text.</summary>
@@ -282,6 +284,17 @@ namespace WRLDZ.Duel.TextEffects
         public int Amount;
         /// <summary>True if the player must choose a target.</summary>
         public bool RequiresTargetChoice;
+        /// <summary>
+        /// How many targets (or the max when <see cref="TargetUpTo"/>). 0 = single
+        /// target when <see cref="RequiresTargetChoice"/> is set.
+        /// </summary>
+        public int TargetCount;
+        /// <summary>"up to" TargetCount (minimum 1 if any legal exist).</summary>
+        public bool TargetUpTo;
+        /// <summary>Required targets you control (Two-Pronged Attack). 0 = unused.</summary>
+        public int ControllerTargetCount;
+        /// <summary>Required targets the opponent controls. 0 = unused.</summary>
+        public int OpponentTargetCount;
         /// <summary>Lord of D. on field required to activate/resolve.</summary>
         public bool RequiresLordOfDOnField;
         /// <summary>Activation only during opponent's turn.</summary>
