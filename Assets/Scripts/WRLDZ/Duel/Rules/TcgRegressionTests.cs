@@ -2073,6 +2073,112 @@ namespace WRLDZ.Duel.Rules
                             c.Zone == EffectZoneFilter.FieldSpellTraps &&
                             !c.RequiresTargetChoice));
 
+                    // Fanbot surgical shortlist: Poison of the Old Man / Meteor of
+                    // Destruction / Cestus of Dagla / Stamping Destruction / 7 Completed.
+                    // Skip Violet Crystal (already on the Equip-only path; Crystal
+                    // name-treatment parens stay leftover unique). Existing atoms cannot
+                    // honor choose-1, opp-LP lock, battle-damage LP rider, Dragon lock +
+                    // controller-burn, or ATK-or-DEF choice. Fail-closed park.
+                    var poisonOld = db.Get(8842266);
+                    var poisonOldProg = poisonOld != null ? CardTextEffectCompiler.Compile(poisonOld) : null;
+                    Check("Corpus: Poison of the Old Man stays parked (choose-1 LP or inflict needs atom)",
+                        poisonOldProg == null || !poisonOldProg.FullyCompiled,
+                        poisonOldProg == null
+                            ? "null"
+                            : $"full={poisonOldProg.FullyCompiled} n={poisonOldProg.ClauseList.Count} unparsed={string.Join("|", poisonOldProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: Poison of the Old Man is not Gain 1200 / Inflict 800 only",
+                        poisonOldProg == null ||
+                        !poisonOldProg.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.GainLifePoints ||
+                             c.Action == EffectActionKind.InflictDamageToOpponent)));
+                    Check("Corpus: Poison of the Old Man ProgramMayActivate is false",
+                        poisonOld == null || !OfficialEffectRegistry.ProgramMayActivate(poisonOld));
+
+                    var meteorDest = db.Get(33767325);
+                    var meteorDestProg = meteorDest != null ? CardTextEffectCompiler.Compile(meteorDest) : null;
+                    Check("Corpus: Meteor of Destruction stays parked (opp LP>3000 lock needs atom)",
+                        meteorDestProg == null || !meteorDestProg.FullyCompiled,
+                        meteorDestProg == null
+                            ? "null"
+                            : $"full={meteorDestProg.FullyCompiled} n={meteorDestProg.ClauseList.Count} unparsed={string.Join("|", meteorDestProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: Meteor of Destruction is not Hinotama-style Inflict 1000",
+                        meteorDestProg == null ||
+                        !meteorDestProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.InflictDamageToOpponent));
+                    Check("Corpus: Meteor of Destruction ProgramMayActivate is false",
+                        meteorDest == null || !OfficialEffectRegistry.ProgramMayActivate(meteorDest));
+
+                    var cestusDagla = db.Get(28106077);
+                    var cestusDaglaProg = cestusDagla != null
+                        ? CardTextEffectCompiler.Compile(cestusDagla)
+                        : null;
+                    Check("Corpus: Cestus of Dagla stays parked (battle-damage LP rider needs atom)",
+                        cestusDaglaProg == null || !cestusDaglaProg.FullyCompiled,
+                        cestusDaglaProg == null
+                            ? "null"
+                            : $"full={cestusDaglaProg.FullyCompiled} n={cestusDaglaProg.ClauseList.Count} unparsed={string.Join("|", cestusDaglaProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: Cestus of Dagla is not Equip Fairy +500 without the LP rider",
+                        cestusDaglaProg == null ||
+                        !cestusDaglaProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.EquipThisToTarget));
+                    Check("Corpus: Cestus of Dagla ProgramMayActivate is false",
+                        cestusDagla == null || !OfficialEffectRegistry.ProgramMayActivate(cestusDagla));
+
+                    var stampDest = db.Get(81385346);
+                    var stampDestProg = stampDest != null ? CardTextEffectCompiler.Compile(stampDest) : null;
+                    Check("Corpus: Stamping Destruction stays parked (Dragon lock + controller-burn needs atom)",
+                        stampDestProg == null || !stampDestProg.FullyCompiled,
+                        stampDestProg == null
+                            ? "null"
+                            : $"full={stampDestProg.FullyCompiled} n={stampDestProg.ClauseList.Count} unparsed={string.Join("|", stampDestProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: Stamping Destruction is not MST / InflictDamageToOpponent",
+                        stampDestProg == null ||
+                        !stampDestProg.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.Destroy ||
+                             c.Action == EffectActionKind.InflictDamageToOpponent)));
+                    Check("Corpus: Stamping Destruction ProgramMayActivate is false",
+                        stampDest == null || !OfficialEffectRegistry.ProgramMayActivate(stampDest));
+
+                    var sevenComp = db.Get(86198326);
+                    var sevenCompProg = sevenComp != null ? CardTextEffectCompiler.Compile(sevenComp) : null;
+                    Check("Corpus: 7 Completed stays parked (choose ATK or DEF Equip needs atom)",
+                        sevenCompProg == null || !sevenCompProg.FullyCompiled,
+                        sevenCompProg == null
+                            ? "null"
+                            : $"full={sevenCompProg.FullyCompiled} n={sevenCompProg.ClauseList.Count} unparsed={string.Join("|", sevenCompProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: 7 Completed is not unrestricted Machine Equip +700 ATK",
+                        sevenCompProg == null ||
+                        !sevenCompProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.EquipThisToTarget));
+                    Check("Corpus: 7 Completed ProgramMayActivate is false",
+                        sevenComp == null || !OfficialEffectRegistry.ProgramMayActivate(sevenComp));
+
+                    var leftoverPoison = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000131,
+                        name = "Choose-1 leftover unique (Poison family)",
+                        type = "Spell Card",
+                        race = "Quick-Play",
+                        desc =
+                            "Activate 1 of these effects;\n● Gain 1200 LP.\n● Shuffle your entire Deck into your opponent's Deck."
+                    });
+                    Check("Corpus: Poison of the Old Man leftover unique is not FullyCompiled",
+                        leftoverPoison == null || !leftoverPoison.FullyCompiled);
+
+                    var leftoverMeteor = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000132,
+                        name = "Opp-LP leftover unique (Meteor family)",
+                        type = "Spell Card",
+                        race = "Normal",
+                        desc =
+                            "If your opponent's Life Points are higher than 3000: Shuffle your entire Deck into your opponent's Deck."
+                    });
+                    Check("Corpus: Meteor of Destruction leftover unique is not FullyCompiled",
+                        leftoverMeteor == null || !leftoverMeteor.FullyCompiled);
+
                     Check("Vocabulary: Protection is a shared kind",
                         Array.IndexOf(EffectVocabulary.SharedResolutions,
                             EffectResolutionKind.Protection) >= 0);

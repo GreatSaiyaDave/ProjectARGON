@@ -184,8 +184,10 @@ namespace WRLDZ.Duel.TextEffects
             @"When this card destroys an opponent's monster as a result of battle, your opponent skips their next Draw Phase",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        // Whole-text Hinotama family only. Meteor of Destruction prefixes an LP>3000
+        // lock; Poison of the Old Man is choose-1. Do not ship a prefix inflict.
         static readonly Regex RxInflictOpp = new(
-            @"Inflict (\d+) (?:points of )?damage to your opponent(?:'s Life Points)?\.?",
+            @"^Inflict (\d+) (?:points of )?damage to your opponent(?:'s Life Points)?\.?$",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxDecreaseOppLp = new(
@@ -245,7 +247,7 @@ namespace WRLDZ.Duel.TextEffects
                 else
                 {
                     var only = RxEquipOnlyKind.Match(text);
-                    if (only.Success)
+                    if (only.Success && EquipOnlyKindCoversPrint(text, only))
                     {
                         var n = Parse(only, 2, 300);
                         var slash = only.Value.IndexOf("ATK/DEF", StringComparison.OrdinalIgnoreCase) >= 0
@@ -597,7 +599,8 @@ namespace WRLDZ.Duel.TextEffects
             if (string.IsNullOrEmpty(text)) return;
             if (def.IsEquipSpell &&
                 (RxEquipBoth.IsMatch(text) || RxEquipSplit.IsMatch(text) ||
-                 RxEquipIncreaseTyped.IsMatch(text) || RxEquipOnlyKind.IsMatch(text) ||
+                 RxEquipIncreaseTyped.IsMatch(text) ||
+                 EquipOnlyKindCoversPrint(text, RxEquipOnlyKind.Match(text)) ||
                  RxEquipOnlyKindLoseDef.IsMatch(text) || RxEquippedGainsAtkDef.IsMatch(text) ||
                  RxEquippedGainsAtkLoseDef.IsMatch(text) || RxEquippedGainsAtk.IsMatch(text) ||
                  RxEquippedGainsPerMonster.IsMatch(text) ||
@@ -677,6 +680,36 @@ namespace WRLDZ.Duel.TextEffects
         {
             if (m == null || !m.Success || m.Groups.Count <= g) return fb;
             return int.TryParse(m.Groups[g].Value, out var n) ? n : fb;
+        }
+
+        /// <summary>
+        /// Equip-only +N ATK/DEF is the whole print (plus name-treatment parens).
+        /// Cestus of Dagla's battle-damage LP rider and 7 Completed's ATK-or-DEF
+        /// choice are leftover unique — do not ship +ATK-only.
+        /// </summary>
+        static bool EquipOnlyKindCoversPrint(string text, Match only)
+        {
+            if (only == null || !only.Success || string.IsNullOrEmpty(text)) return false;
+            var before = text.Substring(0, only.Index);
+            var after = only.Index + only.Length <= text.Length
+                ? text.Substring(only.Index + only.Length)
+                : "";
+            return IsNameTreatmentRemainder(before) && IsNameTreatmentRemainder(after);
+        }
+
+        static bool IsNameTreatmentRemainder(string frag)
+        {
+            var f = Regex.Replace((frag ?? "").Replace('\r', ' ').Replace('\n', ' '),
+                @"\s+", " ").Trim();
+            if (f.Length == 0) return true;
+            f = Regex.Replace(f,
+                @"^\(this card is not treated as [^)]+\)\.?$",
+                "", RegexOptions.IgnoreCase).Trim();
+            if (f.Length == 0) return true;
+            f = Regex.Replace(f,
+                @"^\(this card(?:'s name)? is always treated as [^)]+\)\.?$",
+                "", RegexOptions.IgnoreCase).Trim();
+            return f.Length == 0;
         }
 
         static bool SpanCovered(List<(int start, int length)> spans, int start, int length)
