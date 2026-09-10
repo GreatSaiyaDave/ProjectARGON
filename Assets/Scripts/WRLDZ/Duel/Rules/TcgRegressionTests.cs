@@ -1375,6 +1375,124 @@ namespace WRLDZ.Duel.Rules
                     Check("Corpus: Spell Reproduction leftover send-2 is not FullyCompiled",
                         srProg != null && !srProg.FullyCompiled);
 
+                    var ghoul = db.Get(82542267);
+                    var ghoulProg = ghoul != null ? CardTextEffectCompiler.Compile(ghoul) : null;
+                    Check("Corpus: Gravedigger Ghoul FullyCompiled up-to-2 opponent GY banish",
+                        ghoulProg != null && ghoulProg.FullyCompiled &&
+                        ghoul != null && ghoul.IsSpell &&
+                        ghoulProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Activate &&
+                            c.Action == EffectActionKind.Banish &&
+                            c.Zone == EffectZoneFilter.OpponentGyMonsters &&
+                            c.RequiresTargetChoice &&
+                            c.TargetUpTo &&
+                            c.TargetCount == 2 &&
+                            c.Side == EffectSide.Opponent),
+                        ghoulProg == null
+                            ? "null"
+                            : $"full={ghoulProg.FullyCompiled} n={ghoulProg.ClauseList.Count} unparsed={string.Join("|", ghoulProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var synGhoul = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000024,
+                        name = "New Spell (Gravedigger Ghoul shape)",
+                        type = "Spell Card",
+                        race = "Normal",
+                        frameType = "spell",
+                        desc =
+                            "Select up to 2 Monster Card(s) from your opponent's Graveyard. Remove the selected card(s) from play."
+                    });
+                    Check("New-card rule: opponent-GY up-to-N banish compiles without a cardId branch",
+                        synGhoul != null && synGhoul.FullyCompiled &&
+                        synGhoul.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.Banish &&
+                            c.Zone == EffectZoneFilter.OpponentGyMonsters &&
+                            c.TargetUpTo &&
+                            c.TargetCount == 2));
+
+                    var synGhoulPsct = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000025,
+                        name = "New Spell (Gravedigger PSCT shape)",
+                        type = "Spell Card",
+                        race = "Normal",
+                        frameType = "spell",
+                        desc = "Target up to 2 monsters in your opponent's GY; banish them."
+                    });
+                    Check("New-card rule: PSCT opponent-GY banish compiles without a cardId branch",
+                        synGhoulPsct != null && synGhoulPsct.FullyCompiled &&
+                        synGhoulPsct.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.Banish &&
+                            c.TargetUpTo &&
+                            c.TargetCount == 2));
+
+                    var twoProng = db.Get(83887306);
+                    var twoProg = twoProng != null ? CardTextEffectCompiler.Compile(twoProng) : null;
+                    Check("Corpus: Two-Pronged Attack FullyCompiled 2-yours + 1-opp destroy",
+                        twoProg != null && twoProg.FullyCompiled &&
+                        twoProng != null && twoProng.IsTrap &&
+                        twoProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Activate &&
+                            c.Action == EffectActionKind.Destroy &&
+                            c.RequiresTargetChoice &&
+                            c.ControllerTargetCount == 2 &&
+                            c.OpponentTargetCount == 1),
+                        twoProg == null
+                            ? "null"
+                            : $"full={twoProg.FullyCompiled} n={twoProg.ClauseList.Count} unparsed={string.Join("|", twoProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var synTwo = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000026,
+                        name = "New Trap (Two-Pronged Attack shape)",
+                        type = "Trap Card",
+                        race = "Normal",
+                        frameType = "trap",
+                        desc =
+                            "Select and destroy 2 of your monsters and 1 of your opponent's monsters."
+                    });
+                    Check("New-card rule: mixed-side 2+1 destroy compiles without a cardId branch",
+                        synTwo != null && synTwo.FullyCompiled &&
+                        synTwo.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.Destroy &&
+                            c.ControllerTargetCount == 2 &&
+                            c.OpponentTargetCount == 1));
+
+                    var soulRel = db.Get(5758500);
+                    var soulRelProg = soulRel != null ? CardTextEffectCompiler.Compile(soulRel) : null;
+                    Check("Corpus: Soul Release any-GY cards is not this opponent-monster atom",
+                        soulRelProg == null || !soulRelProg.FullyCompiled ||
+                        !soulRelProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.Banish &&
+                            c.Zone == EffectZoneFilter.OpponentGyMonsters));
+
+                    foreach (var leftoverId in new[]
+                             {
+                                 33396948, 15052462, 9076207, 33066139, 87430998,
+                                 50045299, 83764718, 83764719
+                             })
+                    {
+                        var leftover = db.Get(leftoverId);
+                        var leftoverProg = leftover != null
+                            ? CardTextEffectCompiler.Compile(leftover)
+                            : null;
+                        Check($"Corpus: leftover {leftover?.name ?? leftoverId.ToString()} not swallowed by multi-target atoms",
+                            leftoverProg == null ||
+                            !leftoverProg.ClauseList.Exists(c =>
+                                c != null &&
+                                (c.Zone == EffectZoneFilter.OpponentGyMonsters ||
+                                 c.ControllerTargetCount > 0)),
+                            leftover == null
+                                ? "missing"
+                                : $"full={leftoverProg?.FullyCompiled} n={leftoverProg?.ClauseList.Count}");
+                    }
+
                     var giantRat = db.Get(97017120);
                     var ratProg = giantRat != null ? CardTextEffectCompiler.Compile(giantRat) : null;
                     Check("Corpus: Giant Rat battle-destroyed EARTH 1500 Deck SS is not a free ignition",

@@ -20,7 +20,8 @@ namespace WRLDZ.Duel
         PassResponse,
         EndTurn,
         ClearTributes,
-        CancelTarget
+        CancelTarget,
+        ConfirmTarget
     }
 
     /// <summary>Structured command. Card names/instances optional depending on kind.</summary>

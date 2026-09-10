@@ -85,6 +85,7 @@ namespace WRLDZ.Duel
             {
                 DuelIntentKind.PassResponse => DoPass(engine, who, intent),
                 DuelIntentKind.CancelTarget => DoCancelTarget(engine, who, intent),
+                DuelIntentKind.ConfirmTarget => DoConfirmTarget(engine, who, intent),
                 DuelIntentKind.ClearTributes => ClearTributes(engine, intent),
                 DuelIntentKind.EndTurn => DoEndTurn(engine, who, intent),
                 DuelIntentKind.EnterBattlePhase => DoBattle(engine, who, intent),
@@ -140,6 +141,15 @@ namespace WRLDZ.Duel
                 return DuelCommandResult.Fail(intent, "Nothing to cancel.");
             engine.CancelEffectTargeting();
             return DuelCommandResult.Success(intent, "Target cancelled.");
+        }
+
+        static DuelCommandResult DoConfirmTarget(DuelEngine engine, DuelistState who, DuelIntent intent)
+        {
+            if (!engine.IsAwaitingEffectTarget)
+                return DuelCommandResult.Fail(intent, "Nothing to confirm.");
+            if (!engine.TryConfirmPendingTargets())
+                return DuelCommandResult.Fail(intent, "Need at least one target before confirming.");
+            return DuelCommandResult.Success(intent, "Targets confirmed.");
         }
 
         static DuelCommandResult DoEndTurn(DuelEngine engine, DuelistState who, DuelIntent intent)

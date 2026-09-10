@@ -592,7 +592,7 @@ namespace WRLDZ.Duel.TextEffects
                 }
 
                 var targets = CollectTargets(engine, who, targeted, card);
-                if (targets.Count == 0)
+                if (!HasEnoughFromList(engine, who, targeted, targets))
                 {
                     engine.Log($"{card.Name}: no legal target — activation fails.");
                     if (!monsterIgnition)
@@ -603,12 +603,18 @@ namespace WRLDZ.Duel.TextEffects
 
                 if (autoPickTarget || !who.IsPlayer)
                 {
-                    var pick = AutoPick(targeted, targets, who, engine);
+                    var picks = AutoPickMany(targeted, targets, who, engine);
                     var dummy = false;
                     foreach (var c in activate)
                     {
                         if (c.RequiresTargetChoice)
-                            ApplyClause(engine, who, card, c, pick, ref dummy, ref dummy);
+                        {
+                            if (picks.Count == 0)
+                                ApplyClause(engine, who, card, c, null, ref dummy, ref dummy);
+                            else
+                                foreach (var pick in picks)
+                                    ApplyClause(engine, who, card, c, pick, ref dummy, ref dummy);
+                        }
                         else
                             ApplyClause(engine, who, card, c, null, ref dummy, ref dummy);
                     }
@@ -632,7 +638,10 @@ namespace WRLDZ.Duel.TextEffects
                     IsMonsterEffect = monsterIgnition,
                     UsesTextProgram = true
                 };
-                pending.LegalTargets.AddRange(targets);
+                InitMultiTargetPending(pending, targeted);
+                pending.LegalTargets.AddRange(IsMultiTarget(targeted)
+                    ? FilterLegalForNextPick(engine, who, targeted, card, pending)
+                    : targets);
                 engine.SetPendingActivation(pending);
                 engine.Log(pending.Prompt);
                 engine.NotifyPublic();
@@ -782,8 +791,36 @@ namespace WRLDZ.Duel.TextEffects
 
             var prog = CompiledEffectCache.GetOrCompile(card);
             var costNum = p.CostNumeric;
+            if (prog == null)
+            {
+                engine.ClearPendingActivation();
+                return false;
+            }
+
+            var targeted = prog.ClausesFor(EffectTiming.Activate)
+                .FirstOrDefault(c => c != null && c.RequiresTargetChoice);
+            if (targeted != null && IsMultiTarget(targeted))
+            {
+                if (!p.ChosenTargets.Contains(target))
+                    p.ChosenTargets.Add(target);
+                RecordSidePick(engine, who, p, target);
+                if (p.TargetPicksRemaining > 0)
+                    p.TargetPicksRemaining--;
+
+                var more = FilterLegalForNextPick(engine, who, targeted, card, p);
+                if (StillNeedPicks(p, targeted) && more.Count > 0)
+                {
+                    p.LegalTargets.Clear();
+                    p.LegalTargets.AddRange(more);
+                    engine.Log(p.Prompt);
+                    engine.NotifyPublic();
+                    return true;
+                }
+
+                return FinishMultiTargetPending(engine, p, prog, monsterIgnition);
+            }
+
             engine.ClearPendingActivation();
-            if (prog == null) return false;
 
             var dummy = false;
             foreach (var c in prog.ClausesFor(EffectTiming.Activate))
@@ -1112,6 +1149,7 @@ namespace WRLDZ.Duel.TextEffects
                 EffectActionKind.ReturnToHand when c.Zone is EffectZoneFilter.FieldMonsters => false,
                 EffectActionKind.ReturnToHand => true,
                 EffectActionKind.Banish when c.Zone is EffectZoneFilter.EitherGyMonsters
+                    or EffectZoneFilter.OpponentGyMonsters
                     or EffectZoneFilter.FieldAnyMonster
                     or EffectZoneFilter.OppFaceUpMonsters => true,
                 _ => false
@@ -1272,7 +1310,8 @@ namespace WRLDZ.Duel.TextEffects
         static bool HasLegalTargetsConsideringDiscard(DuelEngine engine, DuelistState who,
             EffectClause c, CardInstance except)
         {
-            if (CollectTargets(engine, who, c, except).Count > 0) return true;
+            var list = CollectTargets(engine, who, c, except);
+            if (HasEnoughFromList(engine, who, c, list)) return true;
             if (c == null || !c.RequiresDiscardCost) return false;
             foreach (var cost in CollectDiscardCost(who, c.DiscardCostAttribute, except))
             {
@@ -1288,7 +1327,8 @@ namespace WRLDZ.Duel.TextEffects
             if (c.Zone == EffectZoneFilter.ControllerGySpells) return card.Def.IsSpell;
             if (c.Zone == EffectZoneFilter.ControllerGyTraps) return card.Def.IsTrap;
             if (c.Zone != EffectZoneFilter.ControllerGyMonsters &&
-                c.Zone != EffectZoneFilter.EitherGyMonsters)
+                c.Zone != EffectZoneFilter.EitherGyMonsters &&
+                c.Zone != EffectZoneFilter.OpponentGyMonsters)
                 return false;
             if (!card.Def.IsMonster || card.Def.IsExtraDeck) return false;
             if (!string.IsNullOrEmpty(c.RaceFilter) &&
@@ -3639,6 +3679,14 @@ namespace WRLDZ.Duel.TextEffects
                     foreach (var g in opp.Graveyard)
                         if (g?.Def != null && g.Def.IsMonster && !g.Def.IsExtraDeck) list.Add(g);
                     break;
+                case EffectZoneFilter.OpponentGyMonsters:
+                    if (opp?.Graveyard != null)
+                    {
+                        foreach (var g in opp.Graveyard)
+                            if (g?.Def != null && g.Def.IsMonster && !g.Def.IsExtraDeck) list.Add(g);
+                    }
+
+                    break;
                 case EffectZoneFilter.OppFaceUpMonsters:
                     foreach (var m in opp.MonstersOnField())
                     {
@@ -3847,7 +3895,240 @@ namespace WRLDZ.Duel.TextEffects
                     var bc = YgoProTriggerCatalog.OpponentBattlingMonster(engine, who);
                     if (bc != null) yield return bc;
                     break;
+                case EffectZoneFilter.OpponentGyMonsters:
+                    if (opp?.Graveyard != null)
+                    {
+                        foreach (var g in opp.Graveyard)
+                            if (g?.Def != null && g.Def.IsMonster && !g.Def.IsExtraDeck)
+                                yield return g;
+                    }
+
+                    break;
             }
+        }
+
+        static bool IsMultiTarget(EffectClause c) =>
+            c != null &&
+            (c.TargetCount > 1 || c.TargetUpTo ||
+             c.ControllerTargetCount > 0 || c.OpponentTargetCount > 0);
+
+        static int MaxPicks(EffectClause c)
+        {
+            if (c == null) return 1;
+            if (c.ControllerTargetCount > 0 || c.OpponentTargetCount > 0)
+                return c.ControllerTargetCount + c.OpponentTargetCount;
+            return c.TargetCount > 0 ? c.TargetCount : 1;
+        }
+
+        static void InitMultiTargetPending(PendingActivation pending, EffectClause c)
+        {
+            if (pending == null || c == null || !IsMultiTarget(c)) return;
+            pending.TargetPicksRemaining = MaxPicks(c);
+            pending.TargetUpTo = c.TargetUpTo;
+            pending.ControllerPicksRemaining = c.ControllerTargetCount;
+            pending.OpponentPicksRemaining = c.OpponentTargetCount;
+        }
+
+        /// <summary>
+        /// TargetUpTo (Ghoul): after ≥1 pick, CONFIRM is legal even when more remain.
+        /// Required mixed-side counts (Two-Pronged) cannot early-confirm.
+        /// </summary>
+        public static bool CanConfirmPendingTargets(DuelEngine engine)
+        {
+            var p = engine?.PendingActivation;
+            if (p == null || !p.UsesTextProgram || !p.TargetUpTo) return false;
+            if (p.AwaitingIgnitionCost || p.AwaitingDiscardCost || p.AwaitingSendNamedCost ||
+                p.AwaitingLpCost || p.AwaitingCoinCall)
+                return false;
+            return p.ChosenTargets != null && p.ChosenTargets.Count >= 1;
+        }
+
+        public static bool TryConfirmPendingTargets(DuelEngine engine)
+        {
+            if (!CanConfirmPendingTargets(engine)) return false;
+            var p = engine.PendingActivation;
+            var card = p.Card;
+            var prog = CompiledEffectCache.GetOrCompile(card);
+            if (prog == null)
+            {
+                engine.ClearPendingActivation();
+                return false;
+            }
+
+            var monsterIgnition = p.IsMonsterEffect || (card?.Def != null && card.Def.IsMonster);
+            engine.Log($"{card?.Name}: confirmed {p.ChosenTargets.Count} target(s).");
+            return FinishMultiTargetPending(engine, p, prog, monsterIgnition);
+        }
+
+        static bool FinishMultiTargetPending(DuelEngine engine, PendingActivation p,
+            CompiledCardProgram prog, bool monsterIgnition)
+        {
+            var who = p.Controller;
+            var card = p.Card;
+            var costNum = p.CostNumeric;
+            var chosen = p.ChosenTargets.ToList();
+            engine.ClearPendingActivation();
+            ApplyChosenTargets(engine, who, card, prog, chosen, costNum, monsterIgnition);
+            return true;
+        }
+
+        static bool HasEnoughFromList(DuelEngine engine, DuelistState who, EffectClause c,
+            List<CardInstance> list)
+        {
+            if (c == null || list == null) return false;
+            if (c.ControllerTargetCount > 0 || c.OpponentTargetCount > 0)
+            {
+                var you = 0;
+                var them = 0;
+                var opp = engine?.OpponentOf(who);
+                foreach (var t in list)
+                {
+                    if (t == null) continue;
+                    if (who != null && who.TryFindMonster(t, out _)) you++;
+                    else if (opp != null && opp.TryFindMonster(t, out _)) them++;
+                }
+
+                return you >= c.ControllerTargetCount && them >= c.OpponentTargetCount;
+            }
+
+            if (c.TargetUpTo) return list.Count >= 1;
+            if (c.TargetCount > 1) return list.Count >= c.TargetCount;
+            return list.Count > 0;
+        }
+
+        static void RecordSidePick(DuelEngine engine, DuelistState who, PendingActivation p,
+            CardInstance target)
+        {
+            if (p == null || target == null || who == null) return;
+            if (who.TryFindMonster(target, out _))
+                p.ControllerPicksRemaining = Mathf.Max(0, p.ControllerPicksRemaining - 1);
+            else
+            {
+                var opp = engine?.OpponentOf(who);
+                if (opp != null && opp.TryFindMonster(target, out _))
+                    p.OpponentPicksRemaining = Mathf.Max(0, p.OpponentPicksRemaining - 1);
+            }
+        }
+
+        static bool StillNeedPicks(PendingActivation p, EffectClause c)
+        {
+            if (p == null || c == null) return false;
+            if (c.ControllerTargetCount > 0 || c.OpponentTargetCount > 0)
+                return p.ControllerPicksRemaining > 0 || p.OpponentPicksRemaining > 0;
+            return p.TargetPicksRemaining > 0;
+        }
+
+        static List<CardInstance> FilterLegalForNextPick(DuelEngine engine, DuelistState who,
+            EffectClause c, CardInstance except, PendingActivation p)
+        {
+            var list = CollectTargets(engine, who, c, except);
+            if (p?.ChosenTargets != null && p.ChosenTargets.Count > 0)
+                list.RemoveAll(t => t != null && p.ChosenTargets.Contains(t));
+            if (c != null && (c.ControllerTargetCount > 0 || c.OpponentTargetCount > 0) &&
+                p != null)
+            {
+                var opp = engine?.OpponentOf(who);
+                if (p.ControllerPicksRemaining <= 0)
+                    list.RemoveAll(t => who != null && who.TryFindMonster(t, out _));
+                if (p.OpponentPicksRemaining <= 0)
+                    list.RemoveAll(t => opp != null && opp.TryFindMonster(t, out _));
+            }
+
+            return list;
+        }
+
+        static bool StillResolves(DuelEngine engine, DuelistState who, EffectClause c,
+            CardInstance t)
+        {
+            if (t == null || c == null || engine == null || who == null) return false;
+            var opp = engine.OpponentOf(who);
+            if (c.Action == EffectActionKind.Banish &&
+                c.Zone == EffectZoneFilter.OpponentGyMonsters)
+                return opp != null && opp.Graveyard != null && opp.Graveyard.Contains(t);
+            if (c.Action == EffectActionKind.Destroy)
+                return who.TryFindMonster(t, out _) ||
+                       (opp != null && opp.TryFindMonster(t, out _));
+            var live = CollectTargets(engine, who, c, null);
+            return live.Contains(t);
+        }
+
+        static List<CardInstance> AutoPickMany(EffectClause c, List<CardInstance> targets,
+            DuelistState who, DuelEngine engine)
+        {
+            var list = new List<CardInstance>();
+            if (c == null || targets == null || targets.Count == 0) return list;
+            var opp = engine?.OpponentOf(who);
+            if (c.ControllerTargetCount > 0 || c.OpponentTargetCount > 0)
+            {
+                foreach (var t in targets
+                             .Where(x => who != null && who.TryFindMonster(x, out _))
+                             .OrderBy(x => x.CurrentAtk)
+                             .Take(Mathf.Max(0, c.ControllerTargetCount)))
+                    list.Add(t);
+                foreach (var t in targets
+                             .Where(x => opp != null && opp.TryFindMonster(x, out _))
+                             .OrderByDescending(x => x.CurrentAtk)
+                             .Take(Mathf.Max(0, c.OpponentTargetCount)))
+                    if (!list.Contains(t))
+                        list.Add(t);
+                return list;
+            }
+
+            var n = c.TargetUpTo
+                ? Mathf.Min(c.TargetCount > 0 ? c.TargetCount : 1, targets.Count)
+                : c.TargetCount > 1 ? Mathf.Min(c.TargetCount, targets.Count) : 1;
+            var ordered = c.Zone == EffectZoneFilter.OpponentGyMonsters ||
+                          c.Zone == EffectZoneFilter.EitherGyMonsters
+                ? targets.OrderByDescending(t => t.CurrentAtk)
+                : targets.OrderByDescending(t =>
+                    opp != null && opp.TryFindMonster(t, out _) ? t.CurrentAtk + 100000 : t.CurrentAtk);
+            foreach (var t in ordered)
+            {
+                if (t == null || list.Contains(t)) continue;
+                list.Add(t);
+                if (list.Count >= n) break;
+            }
+
+            return list;
+        }
+
+        static void ApplyChosenTargets(DuelEngine engine, DuelistState who, CardInstance card,
+            CompiledCardProgram prog, List<CardInstance> chosen, int costNum, bool monsterIgnition)
+        {
+            var dummy = false;
+            foreach (var c in prog.ClausesFor(EffectTiming.Activate))
+            {
+                if (c == null) continue;
+                if (c.RequiresTargetChoice)
+                {
+                    var any = false;
+                    if (chosen != null)
+                    {
+                        foreach (var t in chosen)
+                        {
+                            if (!StillResolves(engine, who, c, t)) continue;
+                            ApplyClause(engine, who, card, c, t, ref dummy, ref dummy, costNum);
+                            any = true;
+                        }
+                    }
+
+                    if (!any)
+                        engine.Log($"{card.Name}: no remaining legal targets.");
+                }
+                else
+                    ApplyClause(engine, who, card, c, null, ref dummy, ref dummy, costNum);
+            }
+
+            if (monsterIgnition)
+            {
+                if (prog.ClausesFor(EffectTiming.Activate).Any(x => x != null && x.OncePerTurn) &&
+                    card != null)
+                    card.EffectUsedThisTurn = true;
+            }
+            else
+                FinishSpellTrap(engine, who, card,
+                    stays: SpellTrapEffects.StaysOnFieldAfterActivate(card, prog));
+            engine.NotifyPublic();
         }
 
         static CardInstance AutoPick(EffectClause c, List<CardInstance> targets, DuelistState who,
@@ -3861,6 +4142,8 @@ namespace WRLDZ.Duel.TextEffects
                         .OrderByDescending(t => who.Graveyard.Contains(t) ? 1 : 0)
                         .ThenByDescending(t => t.CurrentAtk)
                         .First();
+                case EffectZoneFilter.OpponentGyMonsters:
+                    return targets.OrderByDescending(t => t.CurrentAtk).First();
                 case EffectZoneFilter.FieldSpellTraps:
                     return targets.FirstOrDefault(t => opp.TryFindSpellTrap(t, out _)) ?? targets[0];
                 case EffectZoneFilter.OppFaceUpMonsters:
@@ -3890,6 +4173,7 @@ namespace WRLDZ.Duel.TextEffects
         static EffectTargetKind MapTargetKind(EffectClause c) => c.Zone switch
         {
             EffectZoneFilter.EitherGyMonsters => EffectTargetKind.MonsterInEitherGy,
+            EffectZoneFilter.OpponentGyMonsters => EffectTargetKind.MonsterInOppGy,
             EffectZoneFilter.FieldSpellTraps => EffectTargetKind.SpellTrapOnField,
             EffectZoneFilter.OppFaceUpMonsters when c.Action == EffectActionKind.EffectDamageBothFromOriginalAtk
                 => EffectTargetKind.OppFaceUpMonsterAtkLeqLp,
