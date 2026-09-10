@@ -516,6 +516,13 @@ namespace WRLDZ.Duel.TextEffects
         public bool AmountIsAtkMax;
         /// <summary>Amount is a DEF ceiling (House of Adhesive Tape).</summary>
         public bool AmountIsDefMax;
+        /// <summary>
+        /// Stop Defense: set the target to Attack Position (flip face-up if needed).
+        /// Not a toggle — ChangeBattlePosition default still swaps ATK↔DEF.
+        /// </summary>
+        public bool ForceToAttack;
+        /// <summary>Block Attack: set the target to face-up Defense Position.</summary>
+        public bool ForceToDefense;
         /// <summary>Token Feastevil: the summoned card must be a Token.</summary>
         public bool RequiresSummonedIsToken;
         /// <summary>Mispolymerization: the summoned card must be a Fusion Monster.</summary>

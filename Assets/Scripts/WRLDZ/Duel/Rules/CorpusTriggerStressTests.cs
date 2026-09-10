@@ -304,6 +304,9 @@ namespace WRLDZ.Duel.Rules
                     PutInHand(engine, p, fodder);
                 }
 
+                if (c.ForceToAttack || c.Zone == EffectZoneFilter.OppDefensePositionMonsters)
+                    PlaceMonster(engine, opp, Celtic, 3, BattlePosition.Defense, false);
+
                 if (c.Zone == EffectZoneFilter.ControllerGyMonsters ||
                     c.Zone == EffectZoneFilter.EitherGyMonsters)
                 {

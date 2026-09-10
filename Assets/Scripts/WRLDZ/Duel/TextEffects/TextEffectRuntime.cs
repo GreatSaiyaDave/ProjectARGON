@@ -1104,6 +1104,7 @@ namespace WRLDZ.Duel.TextEffects
                 EffectActionKind.AddFromDeckToHand => true,
                 EffectActionKind.SpecialSummonFromGy => true,
                 EffectActionKind.ChangeBattlePosition => true,
+                EffectActionKind.LoseAtkDefUntilEndOfTurn when c.Zone is EffectZoneFilter.FieldAnyMonster => true,
                 EffectActionKind.EffectDamageBothFromOriginalAtk => true,
                 EffectActionKind.Destroy when c.Zone is EffectZoneFilter.FieldAnyMonster
                     or EffectZoneFilter.OppFaceUpMonsters => true,
@@ -2367,10 +2368,25 @@ namespace WRLDZ.Duel.TextEffects
                 case EffectActionKind.ChangeBattlePosition:
                     if (chosenTarget != null)
                     {
-                        chosenTarget.Position = chosenTarget.Position == BattlePosition.Attack
-                            ? BattlePosition.Defense
-                            : BattlePosition.Attack;
-                        engine.Log($"{chosenTarget.Name} → {chosenTarget.Position} Position.");
+                        if (clause.ForceToAttack)
+                        {
+                            chosenTarget.FaceUp = true;
+                            chosenTarget.Position = BattlePosition.Attack;
+                            engine.Log($"{chosenTarget.Name} → face-up Attack Position.");
+                        }
+                        else if (clause.ForceToDefense)
+                        {
+                            chosenTarget.FaceUp = true;
+                            chosenTarget.Position = BattlePosition.Defense;
+                            engine.Log($"{chosenTarget.Name} → face-up Defense Position.");
+                        }
+                        else
+                        {
+                            chosenTarget.Position = chosenTarget.Position == BattlePosition.Attack
+                                ? BattlePosition.Defense
+                                : BattlePosition.Attack;
+                            engine.Log($"{chosenTarget.Name} → {chosenTarget.Position} Position.");
+                        }
                     }
 
                     break;
@@ -2455,15 +2471,44 @@ namespace WRLDZ.Duel.TextEffects
                     if (clause.RequiresLpCostMultiple > 0 && engine.PendingActivation != null &&
                         engine.PendingActivation.AwaitingLpCost)
                         pay = 0; // paid in FinishPayLp
-                    if (pay > 0 && chosenTarget != null)
+                    if (chosenTarget != null)
                     {
-                        chosenTarget.UntilEndOfTurnAtk -= pay;
-                        if (clause.DefAmount != 0)
-                            chosenTarget.UntilEndOfTurnDef -= pay;
-                        engine.Log(
-                            $"{chosenTarget.Name} loses {pay} ATK" +
-                            (clause.DefAmount != 0 ? $"/{pay} DEF" : "") +
-                            $" until the End Phase (now {chosenTarget.CurrentAtk}/{chosenTarget.CurrentDef}).");
+                        var atkDelta = pay;
+                        // Bark: DefAmount == 1 means also lose the same ATK amount as DEF.
+                        // Castle Walls: DefAmount is the signed DEF delta to subtract (negative = gain).
+                        var defDelta = clause.DefAmount == 1 ? pay : clause.DefAmount;
+                        if (atkDelta != 0)
+                            chosenTarget.UntilEndOfTurnAtk -= atkDelta;
+                        if (defDelta != 0)
+                            chosenTarget.UntilEndOfTurnDef -= defDelta;
+                        if (atkDelta != 0 || defDelta != 0)
+                        {
+                            string joined;
+                            if (atkDelta != 0 && defDelta == atkDelta)
+                            {
+                                joined = atkDelta > 0
+                                    ? $"loses {atkDelta} ATK/{atkDelta} DEF"
+                                    : $"gains {-atkDelta} ATK/{-atkDelta} DEF";
+                            }
+                            else if (atkDelta != 0 && defDelta != 0)
+                            {
+                                var atkBit = atkDelta > 0 ? $"loses {atkDelta} ATK" : $"gains {-atkDelta} ATK";
+                                var defBit = defDelta > 0 ? $"loses {defDelta} DEF" : $"gains {-defDelta} DEF";
+                                joined = $"{atkBit} and {defBit}";
+                            }
+                            else if (atkDelta != 0)
+                            {
+                                joined = atkDelta > 0 ? $"loses {atkDelta} ATK" : $"gains {-atkDelta} ATK";
+                            }
+                            else
+                            {
+                                joined = defDelta > 0 ? $"loses {defDelta} DEF" : $"gains {-defDelta} DEF";
+                            }
+
+                            engine.Log(
+                                $"{chosenTarget.Name} {joined} until the End Phase " +
+                                $"(now {chosenTarget.CurrentAtk}/{chosenTarget.CurrentDef}).");
+                        }
                     }
 
                     break;
@@ -3709,6 +3754,24 @@ namespace WRLDZ.Duel.TextEffects
                     foreach (var st in opp.SpellTrapsOnField())
                         list.Add(st);
                     break;
+                case EffectZoneFilter.OppAttackPositionMonsters:
+                    foreach (var m in opp.MonstersOnField())
+                    {
+                        if (!m.FaceUp || m.Position != BattlePosition.Attack) continue;
+                        if (engine.IsDragonTargetProtected(m)) continue;
+                        list.Add(m);
+                    }
+
+                    break;
+                case EffectZoneFilter.OppDefensePositionMonsters:
+                    foreach (var m in opp.MonstersOnField())
+                    {
+                        if (m.Position != BattlePosition.Defense) continue;
+                        if (m.FaceUp && engine.IsDragonTargetProtected(m)) continue;
+                        list.Add(m);
+                    }
+
+                    break;
                 case EffectZoneFilter.ControllerGySpells:
                     foreach (var g in who.Graveyard)
                         if (g?.Def != null && g.Def.IsSpell) list.Add(g);
@@ -3799,7 +3862,13 @@ namespace WRLDZ.Duel.TextEffects
                 list.RemoveAll(t => t?.Def == null || !t.Def.IsMonster || !t.FaceUp);
             if (c.Action == EffectActionKind.SetTargetFaceDownDefense)
                 list.RemoveAll(t => t == null || !t.FaceUp);
-            if (c.Action == EffectActionKind.ChangeBattlePosition)
+            if (c.Action == EffectActionKind.ChangeBattlePosition && !c.ForceToAttack)
+                list.RemoveAll(t => t == null || !t.FaceUp);
+            if (c.ForceToDefense)
+                list.RemoveAll(t => t == null || t.Position != BattlePosition.Attack);
+            if (c.ForceToAttack)
+                list.RemoveAll(t => t == null || t.Position != BattlePosition.Defense);
+            if (c.Action == EffectActionKind.LoseAtkDefUntilEndOfTurn)
                 list.RemoveAll(t => t == null || !t.FaceUp);
 
             return list;

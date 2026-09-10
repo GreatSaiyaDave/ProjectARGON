@@ -760,6 +760,414 @@ namespace WRLDZ.Duel.Rules
                     srProg != null && !srProg.FullyCompiled);
             }
 
+            // ── DK/LOB v62: Reinforcements / Castle Walls / Block Attack / Stop Defense ──
+            {
+                const int reinforcements = 17814387;
+                const int castleWalls = 44209392;
+                const int blockAttack = 25880422;
+                const int stopDefense = 63102017;
+                const int celtic = 91152256;
+                const int bewd = 89631139;
+                const int raigeki = 12580477;
+                const int darkHole = 53129443;
+                const int swords = 72302403;
+                const int mirrorForce = 44095762;
+                const int doomed = 79759861;
+                const int torrential = 53582587;
+
+                var rDef = db.Get(reinforcements);
+                var rProg = rDef != null ? CardTextEffectCompiler.Compile(rDef) : null;
+                Check("Reinforcements FullyCompiled target +500 ATK until End Phase",
+                    rProg != null && rProg.FullyCompiled &&
+                    rProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.LoseAtkDefUntilEndOfTurn &&
+                        c.Amount == -500 &&
+                        c.DefAmount == 0 &&
+                        c.RequiresTargetChoice),
+                    rProg == null
+                        ? "null"
+                        : $"full={rProg.FullyCompiled} unparsed={string.Join("|", rProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var host = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var trap = PlaceSetTrap(engine, p, reinforcements, 2);
+                    var atkBefore = host.CurrentAtk;
+                    Check("Reinforcements: Activate legal with a face-up monster",
+                        engine.CanActivateSpellTrap(p, trap, fromHand: false));
+                    Check("Reinforcements: Activate opens a face-up monster target",
+                        engine.TryActivateSpellTrap(p, trap, fromHand: false) &&
+                        engine.IsAwaitingEffectTarget);
+                    Check("Reinforcements: Celtic gains 500 ATK",
+                        engine.TrySelectEffectTarget(host) &&
+                        host.CurrentAtk == atkBefore + 500 &&
+                        p.Graveyard.Contains(trap),
+                        $"atk={host.CurrentAtk} was {atkBefore}");
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    engine.TryEndTurnSafe(engine.TurnPlayer);
+                    Check("Reinforcements: End Phase ends the +500",
+                        host.CurrentAtk == atkBefore,
+                        $"atk={host.CurrentAtk} expected {atkBefore}");
+                }
+
+                var cDef = db.Get(castleWalls);
+                var cProg = cDef != null ? CardTextEffectCompiler.Compile(cDef) : null;
+                Check("Castle Walls FullyCompiled +500 DEF until End Phase",
+                    cProg != null && cProg.FullyCompiled &&
+                    cProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.LoseAtkDefUntilEndOfTurn &&
+                        c.Amount == 0 &&
+                        c.DefAmount == -500 &&
+                        c.RequiresTargetChoice),
+                    cProg == null
+                        ? "null"
+                        : $"full={cProg.FullyCompiled} unparsed={string.Join("|", cProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var host = PlaceMonster(engine, p, celtic, 2, BattlePosition.Defense, true);
+                    var trap = PlaceSetTrap(engine, p, castleWalls, 2);
+                    var defBefore = host.CurrentDef;
+                    Check("Castle Walls: Activate legal with a face-up monster",
+                        engine.CanActivateSpellTrap(p, trap, fromHand: false));
+                    Check("Castle Walls: Activate opens a face-up monster target",
+                        engine.TryActivateSpellTrap(p, trap, fromHand: false) &&
+                        engine.IsAwaitingEffectTarget);
+                    Check("Castle Walls: Celtic gains 500 DEF",
+                        engine.TrySelectEffectTarget(host) &&
+                        host.CurrentDef == defBefore + 500 &&
+                        p.Graveyard.Contains(trap),
+                        $"def={host.CurrentDef} was {defBefore}");
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    engine.TryEndTurnSafe(engine.TurnPlayer);
+                    Check("Castle Walls: End Phase ends the +500 DEF",
+                        host.CurrentDef == defBefore,
+                        $"def={host.CurrentDef} expected {defBefore}");
+                }
+
+                var bDef = db.Get(blockAttack);
+                var bProg = bDef != null ? CardTextEffectCompiler.Compile(bDef) : null;
+                Check("Block Attack FullyCompiled force face-up Defense",
+                    bProg != null && bProg.FullyCompiled &&
+                    bProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.ChangeBattlePosition &&
+                        c.ForceToDefense &&
+                        !c.ForceToAttack &&
+                        c.Zone == EffectZoneFilter.OppAttackPositionMonsters &&
+                        c.RequiresTargetChoice),
+                    bProg == null
+                        ? "null"
+                        : $"full={bProg.FullyCompiled} unparsed={string.Join("|", bProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var atk = PlaceMonster(engine, opp, celtic, 1, BattlePosition.Attack, true);
+                    var def = PlaceMonster(engine, opp, bewd, 3, BattlePosition.Defense, true);
+                    var card = PutInHand(engine, p, blockAttack);
+                    Check("Block Attack: Activate legal with opp Attack Position",
+                        engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    Check("Block Attack: Activate opens Attack Position only",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.LegalTargets.Contains(atk) &&
+                        !engine.PendingActivation.LegalTargets.Contains(def),
+                        $"n={engine.PendingActivation?.LegalTargets?.Count ?? 0}");
+                    Check("Block Attack: Celtic becomes face-up Defense, BEWD unchanged",
+                        engine.TrySelectEffectTarget(atk) &&
+                        atk.FaceUp &&
+                        atk.Position == BattlePosition.Defense &&
+                        def.Position == BattlePosition.Defense &&
+                        p.Graveyard.Contains(card),
+                        $"pos={atk.Position} face={atk.FaceUp}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    PlaceMonster(engine, engine.Opponent, celtic, 2, BattlePosition.Defense, true);
+                    var card = PutInHand(engine, p, blockAttack);
+                    Check("Block Attack: Defense-only board cannot activate",
+                        !engine.CanActivateSpellTrap(p, card, fromHand: true));
+                }
+
+                var sdDef = db.Get(stopDefense);
+                var sdProg = sdDef != null ? CardTextEffectCompiler.Compile(sdDef) : null;
+                Check("Stop Defense FullyCompiled force Attack including face-down",
+                    sdProg != null && sdProg.FullyCompiled &&
+                    sdProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.ChangeBattlePosition &&
+                        c.ForceToAttack &&
+                        !c.ForceToDefense &&
+                        c.Zone == EffectZoneFilter.OppDefensePositionMonsters &&
+                        c.RequiresTargetChoice),
+                    sdDef == null
+                        ? "null"
+                        : $"full={sdProg.FullyCompiled} unparsed={string.Join("|", sdProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var faceDn = PlaceMonster(engine, opp, celtic, 1, BattlePosition.Defense, false);
+                    var atk = PlaceMonster(engine, opp, bewd, 3, BattlePosition.Attack, true);
+                    var card = PutInHand(engine, p, stopDefense);
+                    Check("Stop Defense: Activate legal with opp Defense Position",
+                        engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    Check("Stop Defense: Activate opens Defense including face-down, not Attack",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.LegalTargets.Contains(faceDn) &&
+                        !engine.PendingActivation.LegalTargets.Contains(atk),
+                        $"n={engine.PendingActivation?.LegalTargets?.Count ?? 0}");
+                    Check("Stop Defense: face-down Celtic becomes face-up Attack, no Flip window",
+                        engine.TrySelectEffectTarget(faceDn) &&
+                        faceDn.FaceUp &&
+                        faceDn.Position == BattlePosition.Attack &&
+                        atk.Position == BattlePosition.Attack &&
+                        !engine.IsAwaitingEffectTarget &&
+                        p.Graveyard.Contains(card),
+                        $"pos={faceDn.Position} face={faceDn.FaceUp} awaiting={engine.IsAwaitingEffectTarget}");
+                }
+
+                // Already FullyCompiled on main — live proof, do not re-implement.
+                var doomedDef = db.Get(doomed);
+                var doomedProg = doomedDef != null ? CardTextEffectCompiler.Compile(doomedDef) : null;
+                Check("Already-FC: Tribute to the Doomed FullyCompiled discard + destroy",
+                    doomedProg != null && doomedProg.FullyCompiled &&
+                    doomedProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.Destroy &&
+                        c.RequiresDiscardCost &&
+                        c.Zone == EffectZoneFilter.FieldAnyMonster));
+
+                var torrDef = db.Get(torrential);
+                var torrProg = torrDef != null ? CardTextEffectCompiler.Compile(torrDef) : null;
+                Check("Already-FC: Torrential Tribute FullyCompiled destroy-all on summon",
+                    torrProg != null && torrProg.FullyCompiled &&
+                    torrProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.Destroy &&
+                        c.AnswersSpecialSummon &&
+                        c.AnswersControllerSummon));
+
+                var raigDef = db.Get(raigeki);
+                var raigProg = raigDef != null ? CardTextEffectCompiler.Compile(raigDef) : null;
+                Check("Already-FC: Raigeki FullyCompiled destroy all opponent monsters",
+                    raigProg != null && raigProg.FullyCompiled &&
+                    raigProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.Destroy &&
+                        c.Side == EffectSide.Opponent &&
+                        c.Zone == EffectZoneFilter.FieldMonsters &&
+                        !c.RequiresTargetChoice),
+                    raigProg == null
+                        ? "null"
+                        : $"full={raigProg.FullyCompiled} unparsed={string.Join("|", raigProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var mine = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var theirs = PlaceMonster(engine, opp, bewd, 2, BattlePosition.Attack, true);
+                    var set = PlaceMonster(engine, opp, celtic, 1, BattlePosition.Defense, false);
+                    var card = PutInHand(engine, p, raigeki);
+                    Check("Already-FC live: Raigeki wipes opponent monsters, yours lives",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        !engine.IsAwaitingEffectTarget &&
+                        p.TryFindMonster(mine, out _) &&
+                        opp.Graveyard.Contains(theirs) &&
+                        opp.Graveyard.Contains(set) &&
+                        p.Graveyard.Contains(card),
+                        $"mine={p.TryFindMonster(mine, out _)} gyN={opp.Graveyard.Count}");
+                }
+
+                var holeDef = db.Get(darkHole);
+                var holeProg = holeDef != null ? CardTextEffectCompiler.Compile(holeDef) : null;
+                Check("Already-FC: Dark Hole FullyCompiled destroy all monsters",
+                    holeProg != null && holeProg.FullyCompiled &&
+                    holeProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.Destroy &&
+                        c.Side == EffectSide.Both &&
+                        c.Zone == EffectZoneFilter.FieldMonsters &&
+                        !c.RequiresTargetChoice));
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var mine = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var theirs = PlaceMonster(engine, opp, bewd, 2, BattlePosition.Attack, true);
+                    var card = PutInHand(engine, p, darkHole);
+                    Check("Already-FC live: Dark Hole wipes both fields",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        !p.TryFindMonster(mine, out _) &&
+                        !opp.TryFindMonster(theirs, out _) &&
+                        p.Graveyard.Contains(mine) &&
+                        opp.Graveyard.Contains(theirs));
+                }
+
+                var swDef = db.Get(swords);
+                var swProg = swDef != null ? CardTextEffectCompiler.Compile(swDef) : null;
+                Check("Already-FC: Swords of Revealing Light FullyCompiled stay + flip + lock",
+                    swProg != null && swProg.FullyCompiled &&
+                    swProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.ApplySwordsOfRevealingLight &&
+                        c.StaysOnField));
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var fd = PlaceMonster(engine, opp, celtic, 2, BattlePosition.Defense, false);
+                    var card = PutInHand(engine, p, swords);
+                    Check("Already-FC live: Swords Activate stays, flips FD, opponent cannot attack",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        p.TryFindSpellTrap(card, out _) &&
+                        fd.FaceUp &&
+                        fd.Position == BattlePosition.Defense,
+                        $"stayed={p.TryFindSpellTrap(card, out _)} face={fd.FaceUp}");
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    engine.TryEndTurnSafe(engine.TurnPlayer);
+                    DrainCombat(engine);
+                    var attacker = PlaceMonster(engine, opp, bewd, 1, BattlePosition.Attack, true);
+                    attacker.SummonedThisTurn = false;
+                    attacker.ClearAttackFlags();
+                    if (engine.TurnPlayer == opp && engine.Phase == DuelPhase.Main1)
+                        engine.TryEnterBattlePhase(opp);
+                    DrainCombat(engine);
+                    Check("Already-FC live: Swords blocks opponent attack declaration",
+                        !engine.CanAttack(opp, attacker),
+                        $"can={engine.CanAttack(opp, attacker)} phase={engine.Phase} turnP={engine.TurnPlayer == opp}");
+                }
+
+                var mfDef = db.Get(mirrorForce);
+                var mfProg = mfDef != null ? CardTextEffectCompiler.Compile(mfDef) : null;
+                Check("Already-FC: Mirror Force FullyCompiled destroy opp Attack Position",
+                    mfProg != null && mfProg.FullyCompiled &&
+                    mfProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Timing == EffectTiming.AttackDeclared &&
+                        c.Action == EffectActionKind.Destroy &&
+                        c.Zone == EffectZoneFilter.OppAttackPositionMonsters));
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    if (!ReachOpponentBattle(engine))
+                    {
+                        Check("Already-FC live: Mirror Force battle path (skipped — opp not in BP)", false,
+                            $"phase={engine.Phase}");
+                    }
+                    else
+                    {
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        var wall = PlaceMonster(engine, p, celtic, 2, BattlePosition.Defense, true);
+                        wall.ClearAttackFlags();
+                        var trap = PlaceSetTrap(engine, p, mirrorForce, 2);
+                        var attacker = PlaceMonster(engine, opp, bewd, 2, BattlePosition.Attack, true);
+                        attacker.ClearAttackFlags();
+                        attacker.SummonedThisTurn = false;
+                        var extraAtk = PlaceMonster(engine, opp, celtic, 1, BattlePosition.Attack, true);
+                        extraAtk.ClearAttackFlags();
+                        extraAtk.SummonedThisTurn = false;
+                        var defMon = PlaceMonster(engine, opp, 32452818, 3, BattlePosition.Defense, true);
+                        if (engine.Phase == DuelPhase.Main1)
+                            engine.TryEnterBattlePhase(opp);
+                        DrainCombat(engine);
+                        Check("Already-FC live: Mirror Force declare",
+                            engine.TryAttack(opp, attacker, wall));
+                        Check("Already-FC live: Mirror Force legal at attack declaration",
+                            engine.PendingResponse != null &&
+                            engine.PendingResponse.Timing == ResponseTiming.AttackDeclared &&
+                            engine.CanActivateSpellTrap(p, trap, fromHand: false));
+                        Check("Already-FC live: Mirror Force wipes opp Attack, Defense lives",
+                            engine.TryActivateSpellTrap(p, trap, fromHand: false) &&
+                            !opp.TryFindMonster(attacker, out _) &&
+                            !opp.TryFindMonster(extraAtk, out _) &&
+                            opp.TryFindMonster(defMon, out _) &&
+                            p.TryFindMonster(wall, out _),
+                            $"atkGy={opp.Graveyard.Contains(attacker)} def={opp.TryFindMonster(defMon, out _)}");
+                    }
+                }
+
+                // Fanbot shortlist (locked follow-up): all five already FullyCompiled.
+                const int sakuretsu = 56120475;
+                const int bookOfMoon = 14087893;
+                var sakDef = db.Get(sakuretsu);
+                var sakProg = sakDef != null ? CardTextEffectCompiler.Compile(sakDef) : null;
+                Check("Fanbot already-FC: Sakuretsu Armor FullyCompiled destroy attacker",
+                    sakProg != null && sakProg.FullyCompiled &&
+                    sakProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Timing == EffectTiming.AttackDeclared &&
+                        c.Action == EffectActionKind.Destroy &&
+                        c.Zone == EffectZoneFilter.AttackingMonster));
+
+                var moonDef = db.Get(bookOfMoon);
+                var moonProg = moonDef != null ? CardTextEffectCompiler.Compile(moonDef) : null;
+                Check("Fanbot already-FC: Book of Moon FullyCompiled set face-down Defense",
+                    moonProg != null && moonProg.FullyCompiled &&
+                    moonProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.SetTargetFaceDownDefense &&
+                        c.RequiresTargetChoice &&
+                        c.Zone == EffectZoneFilter.FieldAnyMonster));
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var prey = PlaceMonster(engine, opp, celtic, 2, BattlePosition.Attack, true);
+                    var fd = PlaceMonster(engine, opp, bewd, 1, BattlePosition.Defense, false);
+                    var card = PutInHand(engine, p, bookOfMoon);
+                    Check("Fanbot already-FC live: Book of Moon Activate legal",
+                        engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    Check("Fanbot already-FC live: Book of Moon opens face-up only",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.LegalTargets.Contains(prey) &&
+                        !engine.PendingActivation.LegalTargets.Contains(fd),
+                        $"n={engine.PendingActivation?.LegalTargets?.Count ?? 0}");
+                    Check("Fanbot already-FC live: Book of Moon sets Celtic face-down Defense",
+                        engine.TrySelectEffectTarget(prey) &&
+                        !prey.FaceUp &&
+                        prey.Position == BattlePosition.Defense &&
+                        p.Graveyard.Contains(card),
+                        $"face={prey.FaceUp} pos={prey.Position}");
+                }
+            }
+
             // ── Tribute Summon Dark Magician with 2 face-down Sets ──
             {
                 const int darkMagician = 46986414;
