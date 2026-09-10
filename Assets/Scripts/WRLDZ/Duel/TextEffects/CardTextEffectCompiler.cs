@@ -16,7 +16,7 @@ namespace WRLDZ.Duel.TextEffects
     /// </summary>
     public static class CardTextEffectCompiler
     {
-        public const int Version = 50;
+        public const int Version = 66;
 
         static readonly Regex RxDraw = new(
             @"(?:^|[.!?]\s+)Draw (\d+) cards?\.",
@@ -32,6 +32,31 @@ namespace WRLDZ.Duel.TextEffects
 
         static readonly Regex RxDestroyAllST = new(
             @"Destroy all Spell and Trap Cards on the field\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Giant Trunade: bounce every Spell/Trap (including this card and Field Spells).
+        /// Same FieldSpellTraps zone as Heavy Storm; ReturnToHand instead of Destroy.
+        /// </summary>
+        static readonly Regex RxGiantTrunade = new(
+            @"Return all Spell and Trap Cards on the field to the hand\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Zero Gravity: toggle every face-up monster. Not Labyrinth (turn-player End Phase)
+        /// and not Windstorm (opponent only).
+        /// </summary>
+        static readonly Regex RxZeroGravity = new(
+            @"Change the battle positions of all face-up monsters on the field\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Umi / Yami: type-list gain ATK/DEF, also type-list lose ATK/DEF.
+        /// Fail-closed on Forest / Sogen / Mountain (gain only, no ", also … lose").
+        /// </summary>
+        static readonly Regex RxTypeListGainAlsoLose = new(
+            @"All (.+?) monsters(?: on the field)? gain (\d+) ATK/DEF,\s*" +
+            @"also all (.+?) monsters(?: on the field)? lose (\d+) ATK/DEF\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxDestroyAllOppST = new(
@@ -554,6 +579,37 @@ namespace WRLDZ.Duel.TextEffects
                 Side = EffectSide.Both,
                 Zone = EffectZoneFilter.FieldSpellTraps
             });
+
+            Take(RxGiantTrunade.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.ReturnToHand,
+                Side = EffectSide.Both,
+                Zone = EffectZoneFilter.FieldSpellTraps,
+                RequiresTargetChoice = false
+            });
+
+            Take(RxZeroGravity.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.ChangeBattlePosition,
+                Side = EffectSide.Both,
+                Zone = EffectZoneFilter.FieldMonsters,
+                RequiresTargetChoice = false
+            });
+
+            var typeGainLose = RxTypeListGainAlsoLose.Match(text);
+            if (typeGainLose.Success)
+            {
+                var gainAmt = ParseInt(typeGainLose, 2, 200);
+                var loseAmt = ParseInt(typeGainLose, 4, 200);
+                Take(typeGainLose, TypeListAuraClause(
+                    typeGainLose.Groups[1].Value, gainAmt, gainAmt, EffectSide.Both));
+                var lose = TypeListAuraClause(
+                    typeGainLose.Groups[3].Value, -loseAmt, -loseAmt, EffectSide.Both);
+                lose.SourceSnippet = typeGainLose.Value.Trim();
+                clauses.Add(lose);
+            }
 
             Take(RxDestroyAllOppST.Match(text), new EffectClause
             {
@@ -1606,6 +1662,40 @@ namespace WRLDZ.Duel.TextEffects
             };
             FillTypeOrAttribute(c, m.Groups[1].Value);
             return c;
+        }
+
+        /// <summary>
+        /// Umi / Yami type lists. RaceFilter is pipe-separated exact Types
+        /// (Beast-Warrior is not Beast).
+        /// </summary>
+        static EffectClause TypeListAuraClause(string rawList, int atk, int def, EffectSide side)
+        {
+            return new EffectClause
+            {
+                Timing = EffectTiming.ContinuousWhileFaceUp,
+                Action = EffectActionKind.ContinuousGainAtkDef,
+                Amount = atk,
+                DefAmount = def,
+                RaceFilter = ParseTypeList(rawList),
+                Side = side,
+                StaysOnField = true,
+                MakesChainLink = false
+            };
+        }
+
+        static string ParseTypeList(string raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw)) return "";
+            var s = Regex.Replace(raw.Trim(), @"\s+and\s+", ",", RegexOptions.IgnoreCase);
+            var parts = s.Split(',');
+            var list = new List<string>();
+            foreach (var p in parts)
+            {
+                var t = Regex.Replace(p.Trim(), @"-Type$", "", RegexOptions.IgnoreCase).Trim();
+                if (t.Length > 0) list.Add(t);
+            }
+
+            return string.Join("|", list);
         }
 
         static readonly HashSet<string> AttributeWords = new(StringComparer.OrdinalIgnoreCase)
