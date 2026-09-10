@@ -837,6 +837,96 @@ namespace WRLDZ.Duel.Rules
                         ? "null"
                         : $"full={ckp.FullyCompiled} n={ckp.ClauseList.Count} unparsed={string.Join("|", ckp.UnparsedFragments ?? Array.Empty<string>())}");
 
+                bool RaceListIs(string filter, params string[] need)
+                {
+                    if (string.IsNullOrEmpty(filter) || need == null || need.Length == 0)
+                        return false;
+                    var parts = filter.Split(SharedPsctAtomTemplates.RaceListSep);
+                    if (parts.Length != need.Length) return false;
+                    foreach (var n in need)
+                    {
+                        var ok = false;
+                        foreach (var p in parts)
+                        {
+                            if (string.Equals((p ?? "").Trim(), n, StringComparison.OrdinalIgnoreCase))
+                            {
+                                ok = true;
+                                break;
+                            }
+                        }
+
+                        if (!ok) return false;
+                    }
+
+                    return true;
+                }
+
+                bool IsTypedFieldBoost(CompiledCardProgram prog, params string[] types)
+                {
+                    return prog != null && prog.FullyCompiled &&
+                           (prog.UnparsedFragments == null || prog.UnparsedFragments.Length == 0) &&
+                           prog.ClauseList.Count == 1 &&
+                           prog.ClauseList.Exists(c =>
+                               c != null &&
+                               c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                               c.Amount == 200 && c.DefAmount == 200 &&
+                               c.Side == EffectSide.Both &&
+                               c.Timing == EffectTiming.ContinuousWhileFaceUp &&
+                               !c.MakesChainLink &&
+                               RaceListIs(c.RaceFilter, types));
+                }
+
+                var grove = new CardDef
+                {
+                    id = 90000002,
+                    name = "Test Grove (new-card shape)",
+                    type = "Spell Card",
+                    race = "Field",
+                    desc =
+                        "All Insect, Beast, Plant, and Beast-Warrior monsters on the field gain 200 ATK/DEF."
+                };
+                var groveProg = CardTextEffectCompiler.Compile(grove);
+                Check("New-card rule: LOB Field +200 type-list compiles with no cardId branch",
+                    IsTypedFieldBoost(groveProg, "Insect", "Beast", "Plant", "Beast-Warrior"),
+                    groveProg == null
+                        ? "null"
+                        : $"full={groveProg.FullyCompiled} n={groveProg.ClauseList.Count} " +
+                          $"filter={groveProg.ClauseList[0]?.RaceFilter} " +
+                          $"unparsed={string.Join("|", groveProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                var dbField = CardDatabase.Load();
+                foreach (var (id, name, types) in new[]
+                         {
+                             (87430998, "Forest",
+                                 new[] { "Insect", "Beast", "Plant", "Beast-Warrior" }),
+                             (50913601, "Mountain",
+                                 new[] { "Dragon", "Winged Beast", "Thunder" }),
+                             (23424603, "Wasteland",
+                                 new[] { "Dinosaur", "Zombie", "Rock" }),
+                             (86318356, "Sogen",
+                                 new[] { "Warrior", "Beast-Warrior" })
+                         })
+                {
+                    var def = dbField?.Get(id);
+                    var prog = def != null ? CardTextEffectCompiler.Compile(def) : null;
+                    Check($"PSCT {name}: FullyCompiled Field type-list +200 ATK/DEF (allowAi:false)",
+                        def != null && IsTypedFieldBoost(prog, types),
+                        prog == null
+                            ? "null"
+                            : $"full={prog.FullyCompiled} n={prog.ClauseList.Count} " +
+                              $"filter={prog.ClauseList[0]?.RaceFilter} " +
+                              $"unparsed={string.Join("|", prog.UnparsedFragments ?? Array.Empty<string>())}");
+                }
+
+                var yami = dbField?.Get(59197169);
+                var yamiProg = yami != null ? CardTextEffectCompiler.Compile(yami) : null;
+                Check("PSCT Yami: gain+lose sentence is not swallowed by the gain-only atom",
+                    yamiProg == null || !yamiProg.FullyCompiled,
+                    yamiProg == null
+                        ? "null"
+                        : $"full={yamiProg.FullyCompiled} n={yamiProg.ClauseList.Count} " +
+                          $"unparsed={string.Join("|", yamiProg.UnparsedFragments ?? Array.Empty<string>())}");
+
                 var combo = new CardDef
                 {
                     id = 99,
