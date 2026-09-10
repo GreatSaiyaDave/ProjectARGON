@@ -120,6 +120,13 @@ namespace WRLDZ.Duel.TextEffects
             @"Increase the ATK of all (\w+)(?:-Type)? monsters by (\d+) points and decrease[s]? their DEF by (\d+) points\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        /// <summary>
+        /// Modern PSCT sibling of <see cref="RxFieldAtkDownDef"/> (Gaia Power family).
+        /// </summary>
+        static readonly Regex RxFieldGainAtkLoseDef = new(
+            @"All (\w+)(?:-Type)? monsters(?: on the field)? gain (\d+) ATK and lose (\d+) DEF\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         static readonly Regex RxActivateOppTurn = new(
             @"(?:Activate only|You can only activate this card) during your opponent's turn\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -186,6 +193,15 @@ namespace WRLDZ.Duel.TextEffects
 
         static readonly Regex RxInflictOpp = new(
             @"Inflict (\d+) (?:points of )?damage to your opponent(?:'s Life Points)?\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Tremendous Fire: inflict N to opponent and M to yourself. Two shared damage atoms.
+        /// Matched before <see cref="RxInflictOpp"/> so the self-damage leftover is not a stub.
+        /// </summary>
+        static readonly Regex RxInflictOppAndSelf = new(
+            @"Inflict (\d+) (?:points of )?damage to your opponent(?:'s Life Points)? " +
+            @"and (\d+) (?:points of )?damage to your Life Points\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxDecreaseOppLp = new(
@@ -361,18 +377,42 @@ namespace WRLDZ.Duel.TextEffects
                     }
                     : null);
 
-                var burn = RxInflictOpp.Match(text);
-                if (!burn.Success) burn = RxDecreaseOppLp.Match(text);
-                Add(burn, burn.Success
-                    ? new EffectClause
+                var bothDmg = RxInflictOppAndSelf.Match(text);
+                if (bothDmg.Success)
+                {
+                    Add(bothDmg, new EffectClause
                     {
                         Timing = EffectTiming.Activate,
                         Action = EffectActionKind.InflictDamageToOpponent,
-                        Amount = Parse(burn, 1, 500),
+                        Amount = Parse(bothDmg, 1, 1000),
                         Side = EffectSide.Opponent,
                         MakesChainLink = true
-                    }
-                    : null);
+                    });
+                    into.Add(new EffectClause
+                    {
+                        Timing = EffectTiming.Activate,
+                        Action = EffectActionKind.TakeEffectDamage,
+                        Amount = Parse(bothDmg, 2, 500),
+                        Side = EffectSide.Controller,
+                        MakesChainLink = true,
+                        SourceSnippet = bothDmg.Value.Trim()
+                    });
+                }
+                else
+                {
+                    var burn = RxInflictOpp.Match(text);
+                    if (!burn.Success) burn = RxDecreaseOppLp.Match(text);
+                    Add(burn, burn.Success
+                        ? new EffectClause
+                        {
+                            Timing = EffectTiming.Activate,
+                            Action = EffectActionKind.InflictDamageToOpponent,
+                            Amount = Parse(burn, 1, 500),
+                            Side = EffectSide.Opponent,
+                            MakesChainLink = true
+                        }
+                        : null);
+                }
 
                 Add(RxAddFieldSpell.Match(text), new EffectClause
                 {
@@ -448,6 +488,7 @@ namespace WRLDZ.Duel.TextEffects
                 : null);
 
             var field = RxFieldAtkDownDef.Match(text);
+            if (!field.Success) field = RxFieldGainAtkLoseDef.Match(text);
             if (field.Success)
             {
                 var key = field.Groups[1].Value;
@@ -457,6 +498,7 @@ namespace WRLDZ.Duel.TextEffects
                     Action = EffectActionKind.ContinuousGainAtkDef,
                     Amount = Parse(field, 2, 500),
                     DefAmount = -Parse(field, 3, 400),
+                    Side = EffectSide.Both,
                     StaysOnField = true,
                     MakesChainLink = false
                 };
@@ -577,6 +619,8 @@ namespace WRLDZ.Duel.TextEffects
                    RxBookMoon.IsMatch(text) ||
                    RxDefYouControl.IsMatch(text) ||
                    RxFieldAtkDownDef.IsMatch(text) ||
+                   RxFieldGainAtkLoseDef.IsMatch(text) ||
+                   RxInflictOppAndSelf.IsMatch(text) ||
                    RxAttacksBecomeDirect.IsMatch(text) ||
                    RxWhenYouTakeDamage.IsMatch(text) ||
                    RxAddFieldSpell.IsMatch(text) ||
@@ -610,7 +654,12 @@ namespace WRLDZ.Duel.TextEffects
             {
                 if (RxIncreaseLp.IsMatch(text))
                     need.Add(EffectActionKind.GainLifePoints);
-                if (RxInflictOpp.IsMatch(text) || RxDecreaseOppLp.IsMatch(text))
+                if (RxInflictOppAndSelf.IsMatch(text))
+                {
+                    need.Add(EffectActionKind.InflictDamageToOpponent);
+                    need.Add(EffectActionKind.TakeEffectDamage);
+                }
+                else if (RxInflictOpp.IsMatch(text) || RxDecreaseOppLp.IsMatch(text))
                     need.Add(EffectActionKind.InflictDamageToOpponent);
                 if (RxAddFieldSpell.IsMatch(text) || RxAddLevelRaceFromDeck.IsMatch(text))
                     need.Add(EffectActionKind.AddFromDeckToHand);
@@ -621,7 +670,8 @@ namespace WRLDZ.Duel.TextEffects
                 need.Add(EffectActionKind.ExtraAttacks);
             if (RxBookMoon.IsMatch(text))
                 need.Add(EffectActionKind.SetTargetFaceDownDefense);
-            if (RxDefYouControl.IsMatch(text) || RxFieldAtkDownDef.IsMatch(text))
+            if (RxDefYouControl.IsMatch(text) || RxFieldAtkDownDef.IsMatch(text) ||
+                RxFieldGainAtkLoseDef.IsMatch(text))
                 need.Add(EffectActionKind.ContinuousGainAtkDef);
             if (RxAttacksBecomeDirect.IsMatch(text))
                 need.Add(EffectActionKind.ForceOpponentDirectAttacksThisTurn);
