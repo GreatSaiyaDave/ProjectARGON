@@ -395,8 +395,21 @@ namespace WRLDZ.Duel
         static bool MatchesRace(CardInstance c, string race)
         {
             if (string.IsNullOrEmpty(race) || c?.Def == null) return true;
-            return c.Def.race != null &&
-                   c.Def.race.IndexOf(race, StringComparison.OrdinalIgnoreCase) >= 0;
+            if (c.Def.race == null) return false;
+            if (race.IndexOf('|') >= 0)
+            {
+                foreach (var part in race.Split('|'))
+                {
+                    var p = part.Trim();
+                    if (p.Length == 0) continue;
+                    if (c.Def.race.Equals(p, StringComparison.OrdinalIgnoreCase))
+                        return true;
+                }
+
+                return false;
+            }
+
+            return c.Def.race.IndexOf(race, StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         public static bool ControlsFaceUpNamed(DuelistState who, string name)

@@ -1103,6 +1103,8 @@ namespace WRLDZ.Duel.TextEffects
                 EffectActionKind.AddFromGyToHand => true,
                 EffectActionKind.AddFromDeckToHand => true,
                 EffectActionKind.SpecialSummonFromGy => true,
+                EffectActionKind.ChangeBattlePosition when c.Zone is EffectZoneFilter.FieldMonsters &&
+                                                           !c.RequiresTargetChoice => false,
                 EffectActionKind.ChangeBattlePosition => true,
                 EffectActionKind.EffectDamageBothFromOriginalAtk => true,
                 EffectActionKind.Destroy when c.Zone is EffectZoneFilter.FieldAnyMonster
@@ -1110,6 +1112,7 @@ namespace WRLDZ.Duel.TextEffects
                 EffectActionKind.Destroy when c.Zone is EffectZoneFilter.FieldSpellTraps &&
                                               c.Side != EffectSide.Both => true,
                 EffectActionKind.ReturnToHand when c.Zone is EffectZoneFilter.FieldMonsters => false,
+                EffectActionKind.ReturnToHand when c.Zone is EffectZoneFilter.FieldSpellTraps => false,
                 EffectActionKind.ReturnToHand => true,
                 EffectActionKind.Banish when c.Zone is EffectZoneFilter.EitherGyMonsters
                     or EffectZoneFilter.FieldAnyMonster
@@ -2371,6 +2374,17 @@ namespace WRLDZ.Duel.TextEffects
                             ? BattlePosition.Defense
                             : BattlePosition.Attack;
                         engine.Log($"{chosenTarget.Name} → {chosenTarget.Position} Position.");
+                    }
+                    else
+                    {
+                        foreach (var m in CollectAllMatching(engine, who, clause).ToList())
+                        {
+                            if (m == null || !m.FaceUp) continue;
+                            m.Position = m.Position == BattlePosition.Attack
+                                ? BattlePosition.Defense
+                                : BattlePosition.Attack;
+                            engine.Log($"{m.Name} → {m.Position} Position.");
+                        }
                     }
 
                     break;
@@ -3959,9 +3973,17 @@ namespace WRLDZ.Duel.TextEffects
             }
             else
             {
-                Presentation.ArInteraction.SpellActivationPresentation.QueueFadeToGy(card.InstanceId);
-                Presentation.ArInteraction.SpellActivationPresentation.EnqueueGhostIfNeeded(card.InstanceId);
-                engine.SendCardToGrave(who, card);
+                // Giant Trunade (and self-destroying Storm): the card already left
+                // the field during resolve. Do not pull it out of the hand into the GY.
+                var stillOnField = who != null && card != null &&
+                    (who.TryFindSpellTrap(card, out _) ||
+                     who.FieldSpellZone?.Occupant == card);
+                if (stillOnField)
+                {
+                    Presentation.ArInteraction.SpellActivationPresentation.QueueFadeToGy(card.InstanceId);
+                    Presentation.ArInteraction.SpellActivationPresentation.EnqueueGhostIfNeeded(card.InstanceId);
+                    engine.SendCardToGrave(who, card);
+                }
             }
 
             if (card?.Def != null && card.Def.IsSpell)
