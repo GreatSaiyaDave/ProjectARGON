@@ -217,9 +217,10 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         DieRollNegateWhenTargeted,
         /// <summary>
-        /// Take control of the chosen target until the End Phase of this turn
-        /// (Change of Heart / Shadow Tamer / Dragon Manipulator). Not Charmers
-        /// (while-source-face-up) and not switch-control.
+        /// Take control of the chosen target. Duration is on the clause:
+        /// until End Phase (Change of Heart / Shadow Tamer / Dragon Manipulator)
+        /// or while the source stays face-up (Charmers). Not switch-control,
+        /// not Equip take-control, not Ignition.
         /// </summary>
         TakeControlTarget
     }
@@ -415,6 +416,12 @@ namespace WRLDZ.Duel.TextEffects
         public string EquipHostName;
         /// <summary>Falling Down / Snatch Steal: take control of the equipped target.</summary>
         public bool TakeControlOfTarget;
+        /// <summary>
+        /// TakeControlTarget lasts while the source card remains face-up on the field
+        /// (Charmers). When the source leaves or is no longer face-up, control returns;
+        /// the taken monster is not destroyed. Mutually exclusive with End-Phase duration.
+        /// </summary>
+        public bool TakeControlWhileSourceFaceUp;
         public int EquipAtkBonus;
         /// <summary>DEF change while equipped (Steel Shell −200). Independent of EquipAtkBonus.</summary>
         public int EquipDefBonus;

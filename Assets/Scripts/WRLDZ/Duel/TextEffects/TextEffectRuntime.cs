@@ -2383,6 +2383,7 @@ namespace WRLDZ.Duel.TextEffects
                         chosenTarget.FaceUp = false;
                         chosenTarget.Position = BattlePosition.Defense;
                         engine.Log($"{chosenTarget.Name} is Set in face-down Defense Position.");
+                        engine.RevertExpiredFaceUpTakeControl();
                     }
 
                     break;
@@ -2745,6 +2746,7 @@ namespace WRLDZ.Duel.TextEffects
                         source.Position = BattlePosition.Defense;
                         source.ChangedPositionThisTurn = true;
                         engine.Log($"{source.Name} is flipped to face-down Defense Position.");
+                        engine.RevertExpiredFaceUpTakeControl();
                     }
 
                     break;
@@ -2914,6 +2916,8 @@ namespace WRLDZ.Duel.TextEffects
                     if (chosenTarget == null) break;
                     if (!engine.TryTakeControl(who, chosenTarget))
                         engine.Log($"{source?.Name}: take control failed — no zone.");
+                    else if (clause.TakeControlWhileSourceFaceUp)
+                        chosenTarget.TempControlBoundToSourceId = source != null ? source.InstanceId : 0;
                     else
                         chosenTarget.TempControlUntilEndTurn = engine.TurnNumber;
                     break;

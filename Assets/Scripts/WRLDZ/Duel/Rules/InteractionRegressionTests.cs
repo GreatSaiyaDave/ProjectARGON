@@ -6696,6 +6696,127 @@ namespace WRLDZ.Duel.Rules
                                 !opp.TryFindMonster(dragon, out _));
                         }
                     }
+
+                    const int eriaId = 74364659;
+                    const int aussaId = 37970940;
+                    const int hyosube = 2118022;
+                    const int inpachi = 5464695;
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        var flip = PlaceMonster(engine, p, eriaId, 2, BattlePosition.Defense, false);
+                        flip.SetThisTurn = false;
+                        var water = PlaceMonster(engine, opp, hyosube, 1, BattlePosition.Attack, true);
+                        var earth = PlaceMonster(engine, opp, celticId, 2, BattlePosition.Attack, true);
+                        var fire = PlaceMonster(engine, opp, inpachi, 3, BattlePosition.Attack, true);
+                        Check("Eria Flip Summon", engine.TryFlipSummon(p, flip) && flip.FaceUp);
+                        Check("Eria Flip: opens WATER take-control target (not Ignition)",
+                            engine.IsAwaitingEffectTarget && engine.PendingActivation != null &&
+                            engine.PendingActivation.IsMonsterEffect);
+                        if (engine.IsAwaitingEffectTarget)
+                        {
+                            var legal = engine.PendingActivation.LegalTargets;
+                            Check("Eria Flip: WATER legal; EARTH and FIRE illegal",
+                                legal.Contains(water) && !legal.Contains(earth) && !legal.Contains(fire));
+                            Check("Eria: select Hyosube, take control while face-up",
+                                engine.TrySelectEffectTarget(water) &&
+                                p.TryFindMonster(water, out _) &&
+                                !opp.TryFindMonster(water, out _) &&
+                                water.TempControlBoundToSourceId == flip.InstanceId &&
+                                water.TempControlUntilEndTurn < 0);
+                        }
+
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        Check("Eria: End Phase keeps control (not until End Phase)",
+                            engine.TryEndTurnSafe(p) &&
+                            p.TryFindMonster(water, out _) &&
+                            !opp.TryFindMonster(water, out _));
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        var flip = PlaceMonster(engine, p, eriaId, 2, BattlePosition.Defense, false);
+                        flip.SetThisTurn = false;
+                        var water = PlaceMonster(engine, opp, hyosube, 1, BattlePosition.Attack, true);
+                        Check("Eria leave: Flip Summon", engine.TryFlipSummon(p, flip) && flip.FaceUp);
+                        var took = false;
+                        if (engine.IsAwaitingEffectTarget)
+                            took = engine.TrySelectEffectTarget(water) && p.TryFindMonster(water, out _);
+                        Check("Eria leave: took WATER", took);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        engine.SendCardToGrave(p, flip);
+                        Check("Eria leaves: control returns; taken monster is not destroyed",
+                            took &&
+                            opp.TryFindMonster(water, out _) &&
+                            !p.TryFindMonster(water, out _) &&
+                            !p.Graveyard.Contains(water) &&
+                            !opp.Graveyard.Contains(water) &&
+                            water.TempControlBoundToSourceId == 0,
+                            $"took={took} oppField={opp.TryFindMonster(water, out _)} pField={p.TryFindMonster(water, out _)} pGY={p.Graveyard.Contains(water)} oppGY={opp.Graveyard.Contains(water)}");
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        var flip = PlaceMonster(engine, p, eriaId, 2, BattlePosition.Defense, false);
+                        flip.SetThisTurn = false;
+                        PlaceMonster(engine, opp, celticId, 2, BattlePosition.Attack, true);
+                        Check("Eria Flip vs wrong Attribute: Flip Summon",
+                            engine.TryFlipSummon(p, flip) && flip.FaceUp);
+                        Check("Eria Flip vs EARTH: no legal WATER target",
+                            !engine.IsAwaitingEffectTarget &&
+                            opp.MonsterZones[2].Occupant != null &&
+                            opp.MonsterZones[2].Occupant.CardId == celticId);
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        var flip = PlaceMonster(engine, p, aussaId, 2, BattlePosition.Defense, false);
+                        flip.SetThisTurn = false;
+                        var earth = PlaceMonster(engine, opp, celticId, 1, BattlePosition.Attack, true);
+                        var water = PlaceMonster(engine, opp, hyosube, 2, BattlePosition.Attack, true);
+                        Check("Aussa Flip Summon", engine.TryFlipSummon(p, flip) && flip.FaceUp);
+                        Check("Aussa Flip: opens EARTH take-control target",
+                            engine.IsAwaitingEffectTarget && engine.PendingActivation != null);
+                        if (engine.IsAwaitingEffectTarget)
+                        {
+                            var legal = engine.PendingActivation.LegalTargets;
+                            Check("Aussa Flip: EARTH legal, WATER illegal",
+                                legal.Contains(earth) && !legal.Contains(water));
+                            Check("Aussa: select Celtic, take control",
+                                engine.TrySelectEffectTarget(earth) &&
+                                p.TryFindMonster(earth, out _) &&
+                                !opp.TryFindMonster(earth, out _) &&
+                                earth.TempControlBoundToSourceId == flip.InstanceId);
+                        }
+
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        engine.DestroyMonsterPublic(p, flip);
+                        Check("Aussa destroyed: control returns; Celtic not destroyed",
+                            opp.TryFindMonster(earth, out _) &&
+                            !p.TryFindMonster(earth, out _) &&
+                            !p.Graveyard.Contains(earth) &&
+                            !opp.Graveyard.Contains(earth));
+                    }
                 }
 
                 {

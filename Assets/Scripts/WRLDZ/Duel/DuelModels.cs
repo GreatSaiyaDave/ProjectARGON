@@ -148,6 +148,13 @@ namespace WRLDZ.Duel
         /// </summary>
         public int TempControlUntilEndTurn = -1;
 
+        /// <summary>
+        /// Charmer-style take-control: InstanceId of the face-up source this copy
+        /// is bound to. 0 = none. When that source leaves or is no longer face-up,
+        /// control returns; this card is not destroyed.
+        /// </summary>
+        public int TempControlBoundToSourceId;
+
         /// <summary>Monsters/Unions currently equipped to this card.</summary>
         public readonly List<CardInstance> Equips = new();
 

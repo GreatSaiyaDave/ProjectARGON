@@ -1156,6 +1156,54 @@ namespace WRLDZ.Duel
             return true;
         }
 
+        /// <summary>
+        /// Charmer family: if the source is no longer face-up on the field, return
+        /// control of bound monsters. Does not destroy them.
+        /// </summary>
+        public void RevertExpiredFaceUpTakeControl()
+        {
+            var returning = new System.Collections.Generic.List<CardInstance>();
+            foreach (var side in new[] { Player, Opponent })
+            {
+                if (side == null) continue;
+                foreach (var m in side.MonstersOnField())
+                {
+                    if (m == null || m.TempControlBoundToSourceId == 0) continue;
+                    if (!FaceUpMonsterOnField(m.TempControlBoundToSourceId))
+                        returning.Add(m);
+                }
+            }
+
+            foreach (var m in returning)
+            {
+                var holder = ControllerOf(m);
+                var original = holder != null ? OpponentOf(holder) : null;
+                m.TempControlBoundToSourceId = 0;
+                if (original == null || holder == original) continue;
+                if (!TryTakeControl(original, m))
+                {
+                    Log($"{m.Name}: control cannot return — sent to the GY.");
+                    DestroyMonsterPublic(holder, m);
+                }
+                else
+                    Log($"{m.Name}: control returns ({m.Name} is not destroyed).");
+            }
+        }
+
+        bool FaceUpMonsterOnField(int instanceId)
+        {
+            if (instanceId <= 0) return false;
+            foreach (var side in new[] { Player, Opponent })
+            {
+                if (side == null) continue;
+                foreach (var m in side.MonstersOnField())
+                    if (m != null && m.InstanceId == instanceId && m.FaceUp)
+                        return true;
+            }
+
+            return false;
+        }
+
         public CardInstance CreateToken(string name, string race, string attribute, int level,
             int atk, int def)
         {
@@ -1266,6 +1314,7 @@ namespace WRLDZ.Duel
                 MarkSentFromFieldToGy(card, sentBy, destroyedByBattle: false, battleDestroyer: null);
                 MonsterEffects.OnSentFromFieldToGy(this, owner, card, destroyed: false,
                     destroyedByBattle: false, battleDestroyer: null);
+                RevertExpiredFaceUpTakeControl();
             }
         }
 
@@ -1333,6 +1382,7 @@ namespace WRLDZ.Duel
                 Log($"{card.Name} returned to {owner.Name}'s hand.");
             }
 
+            RevertExpiredFaceUpTakeControl();
             return true;
         }
 
@@ -2636,6 +2686,8 @@ namespace WRLDZ.Duel
                 }
             }
 
+            RevertExpiredFaceUpTakeControl();
+
             if (GameOver) return;
 
             // After End Phase, Set cards may be activated on following turns
@@ -2727,6 +2779,8 @@ namespace WRLDZ.Duel
 
                 DuelPresentationPacer.HoldCombatResult();
             }
+
+            RevertExpiredFaceUpTakeControl();
         }
 
         /// <summary>
