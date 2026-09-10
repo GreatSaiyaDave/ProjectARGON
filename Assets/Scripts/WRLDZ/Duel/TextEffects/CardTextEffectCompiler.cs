@@ -16,7 +16,7 @@ namespace WRLDZ.Duel.TextEffects
     /// </summary>
     public static class CardTextEffectCompiler
     {
-        public const int Version = 50;
+        public const int Version = 65;
 
         static readonly Regex RxDraw = new(
             @"(?:^|[.!?]\s+)Draw (\d+) cards?\.",
@@ -199,6 +199,46 @@ namespace WRLDZ.Duel.TextEffects
 
         static readonly Regex RxEnemyControllerPos = new(
             @"Target 1 face-up monster your opponent controls;\s*change that target's battle position",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Rush Recklessly / Reinforcements: target gains N ATK until the end of this turn.
+        /// Signed LoseAtkDefUntilEndOfTurn (negative Amount = gain).
+        /// </summary>
+        static readonly Regex RxTargetGainsAtkUntilEnd = new(
+            @"Target 1 face-up monster on the field;\s*it gains (\d+) ATK until the end of this turn\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// The Reliable Guardian / Castle Walls: one face-up monster gains N DEF until end of turn.
+        /// </summary>
+        static readonly Regex RxIncreaseOneDefUntilEnd = new(
+            @"Increase(?: the DEF of)? 1 face-up monster(?:'s DEF| on the field) by (\d+) points until the end of this turn\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Snake Fang (pre-PSCT): selected monster loses N DEF for the rest of the turn.
+        /// </summary>
+        static readonly Regex RxDecreaseOneDefUntilEnd = new(
+            @"Decrease 1 selected monster's DEF by (\d+) points during the turn this card is activated\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Enchanted Javelin: attack-declare, gain LP equal to the attacking monster's ATK.
+        /// Same GainLpEqualToAtk atom as Draining Shield, without negate.
+        /// </summary>
+        static readonly Regex RxEnchantedJavelin = new(
+            @"Select 1 attacking monster\.\s*Gain Life Points equal to its ATK\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Tribute Doll: Tribute 1; SS one printed-Level monster from hand that can
+        /// be Normal Summoned/Set; that copy cannot attack this turn.
+        /// SpecialSummonFromHand + RequiresTributeCount + SummonCannotAttackThisTurn.
+        /// </summary>
+        static readonly Regex RxTributeLevelFromHand = new(
+            @"Tribute 1 monster;\s*Special Summon 1 Level (\d+) monster from your hand " +
+            @"that can be Normal Summoned/Set\.\s*It cannot attack this turn\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxCyberJar = new(
@@ -571,6 +611,39 @@ namespace WRLDZ.Duel.TextEffects
                 RequiresTargetChoice = true
             });
 
+            var gainAtkEnd = RxTargetGainsAtkUntilEnd.Match(text);
+            Take(gainAtkEnd, new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.LoseAtkDefUntilEndOfTurn,
+                Zone = EffectZoneFilter.FieldAnyMonster,
+                RequiresTargetChoice = true,
+                Amount = gainAtkEnd.Success ? -ParseInt(gainAtkEnd, 1, 700) : -700,
+                DefAmount = 0
+            });
+
+            var incDefEnd = RxIncreaseOneDefUntilEnd.Match(text);
+            Take(incDefEnd, new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.LoseAtkDefUntilEndOfTurn,
+                Zone = EffectZoneFilter.FieldAnyMonster,
+                RequiresTargetChoice = true,
+                Amount = 0,
+                DefAmount = incDefEnd.Success ? -ParseInt(incDefEnd, 1, 700) : -700
+            });
+
+            var loseDefEnd = RxDecreaseOneDefUntilEnd.Match(text);
+            Take(loseDefEnd, new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.LoseAtkDefUntilEndOfTurn,
+                Zone = EffectZoneFilter.FieldAnyMonster,
+                RequiresTargetChoice = true,
+                Amount = 0,
+                DefAmount = loseDefEnd.Success ? ParseInt(loseDefEnd, 1, 500) : 500
+            });
+
             Take(RxMonsterReborn.Match(text), new EffectClause
             {
                 Timing = EffectTiming.Activate,
@@ -887,6 +960,27 @@ namespace WRLDZ.Duel.TextEffects
                 Timing = EffectTiming.AttackDeclared,
                 Action = EffectActionKind.NegateThisAttack,
                 Zone = EffectZoneFilter.AttackingMonster
+            });
+            Take(RxEnchantedJavelin.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.AttackDeclared,
+                Action = EffectActionKind.GainLpEqualToAtk,
+                Zone = EffectZoneFilter.AttackingMonster,
+                RequiresTargetChoice = true
+            });
+            var tribLvHand = RxTributeLevelFromHand.Match(text);
+            Take(tribLvHand, new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.SpecialSummonFromHand,
+                Zone = EffectZoneFilter.ControllerHandMonsters,
+                RequiresTargetChoice = true,
+                RequiresTributeCount = 1,
+                Amount = tribLvHand.Success ? ParseInt(tribLvHand, 1, 7) : 7,
+                AmountIsLevel = true,
+                RequiresCanBeNormalSummonedOrSet = true,
+                SummonCannotAttackThisTurn = true,
+                FromHand = true
             });
             if (RxDrainingShield.IsMatch(text) &&
                 !ContainsAction(clauses, EffectActionKind.GainLpEqualToAtk))
@@ -1238,6 +1332,61 @@ namespace WRLDZ.Duel.TextEffects
                     RegexOptions.IgnoreCase);
                 clause.Action = EffectActionKind.InflictDamageToOpponent;
                 clause.Amount = int.TryParse(m.Groups[1].Value, out var n) ? n : 0;
+            }
+            else if (Regex.IsMatch(res,
+                         @"(?:it|that target) gains (\d+) ATK until the (?:end of this turn|End Phase)",
+                         RegexOptions.IgnoreCase))
+            {
+                var m = Regex.Match(res,
+                    @"(?:it|that target) gains (\d+) ATK until the (?:end of this turn|End Phase)",
+                    RegexOptions.IgnoreCase);
+                clause.Action = EffectActionKind.LoseAtkDefUntilEndOfTurn;
+                clause.Amount = -(int.TryParse(m.Groups[1].Value, out var atkGain) ? atkGain : 0);
+                clause.DefAmount = 0;
+                if (clause.Zone == EffectZoneFilter.None)
+                {
+                    clause.Zone = EffectZoneFilter.FieldAnyMonster;
+                    clause.RequiresTargetChoice = true;
+                }
+            }
+            else if (Regex.IsMatch(res,
+                         @"(?:it|that target) gains (\d+) DEF until the (?:end of this turn|End Phase)",
+                         RegexOptions.IgnoreCase))
+            {
+                var m = Regex.Match(res,
+                    @"(?:it|that target) gains (\d+) DEF until the (?:end of this turn|End Phase)",
+                    RegexOptions.IgnoreCase);
+                clause.Action = EffectActionKind.LoseAtkDefUntilEndOfTurn;
+                clause.Amount = 0;
+                clause.DefAmount = -(int.TryParse(m.Groups[1].Value, out var defGain) ? defGain : 0);
+                if (clause.Zone == EffectZoneFilter.None)
+                {
+                    clause.Zone = EffectZoneFilter.FieldAnyMonster;
+                    clause.RequiresTargetChoice = true;
+                }
+            }
+            else if (Regex.IsMatch(res,
+                         @"(?:it|that target) loses (\d+) DEF until the (?:end of this turn|End Phase)",
+                         RegexOptions.IgnoreCase))
+            {
+                var m = Regex.Match(res,
+                    @"(?:it|that target) loses (\d+) DEF until the (?:end of this turn|End Phase)",
+                    RegexOptions.IgnoreCase);
+                clause.Action = EffectActionKind.LoseAtkDefUntilEndOfTurn;
+                clause.Amount = 0;
+                clause.DefAmount = int.TryParse(m.Groups[1].Value, out var defLose) ? defLose : 0;
+                if (clause.Zone == EffectZoneFilter.None)
+                {
+                    clause.Zone = EffectZoneFilter.FieldAnyMonster;
+                    clause.RequiresTargetChoice = true;
+                }
+            }
+            else if (Regex.IsMatch(res, @"gain (?:LP|Life Points) equal to (?:its|that target's) ATK",
+                         RegexOptions.IgnoreCase))
+            {
+                clause.Action = EffectActionKind.GainLpEqualToAtk;
+                clause.Zone = EffectZoneFilter.AttackingMonster;
+                clause.RequiresTargetChoice = true;
             }
             else if (Regex.IsMatch(res,
                          @"this card gains (\d+) ATK and DEF(?! until)", RegexOptions.IgnoreCase))

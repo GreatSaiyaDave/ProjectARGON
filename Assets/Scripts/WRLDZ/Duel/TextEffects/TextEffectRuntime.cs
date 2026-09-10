@@ -543,6 +543,7 @@ namespace WRLDZ.Duel.TextEffects
                     PlaceFaceUp(engine, who, card, fromHand);
                     engine.Log($"Activate: {card.Name}.");
                     FinishSpellTrap(engine, who, card, stays: true);
+                    engine.ApplyContinuousForceDefense();
                     engine.NotifyPublic();
                     return true;
                 }
@@ -1464,7 +1465,7 @@ namespace WRLDZ.Duel.TextEffects
                 c.Action == EffectActionKind.SpecialSummonFromHand)
             {
                 if (engine.FirstEmpty(who.MonsterZones) < 0 && !c.RequiresTributeThis &&
-                    !c.RequiresSendThisToGy)
+                    !c.RequiresSendThisToGy && c.RequiresTributeCount <= 0)
                 {
                     reason = "No free Monster Zone.";
                     return false;
@@ -1997,6 +1998,9 @@ namespace WRLDZ.Duel.TextEffects
 
             if (isMonster && activate.Any(x => x.OncePerTurn) && card != null)
                 card.EffectUsedThisTurn = true;
+            else if (!isMonster)
+                FinishSpellTrap(engine, who, card,
+                    stays: activate.Any(c => c != null && c.StaysOnField));
         }
 
         static bool DeckHasNamed(DuelEngine engine, DuelistState who, string name)
@@ -2091,6 +2095,10 @@ namespace WRLDZ.Duel.TextEffects
                         (tgt != card && tgt.InstanceId != card.InstanceId))
                         return false;
                 }
+
+                if (c.RequiresThisAttackPosition &&
+                    (card == null || !card.FaceUp || card.Position != BattlePosition.Attack))
+                    return false;
 
                 if (c.OnceWhileFaceUp && card != null && card.EffectUsedWhileFaceUp)
                     return false;
@@ -2273,20 +2281,49 @@ namespace WRLDZ.Duel.TextEffects
                         break;
                     }
 
-                    var race = string.IsNullOrEmpty(clause.RaceFilter) ? "Dragon" : clause.RaceFilter;
-                    var dragons = who.Hand
-                        .Where(c => c?.Def != null && c.Def.IsMonster && c.Def.race != null &&
-                                    c.Def.race.IndexOf(race, System.StringComparison.OrdinalIgnoreCase) >= 0)
-                        .Take(Mathf.Max(1, clause.Amount))
-                        .ToList();
-                    foreach (var d in dragons)
+                    if (chosenTarget != null && who.Hand.Contains(chosenTarget))
+                    {
+                        if (!HandSummonLegal(chosenTarget, clause))
+                            break;
+                        who.Hand.Remove(chosenTarget);
+                        if (!engine.SpecialSummonToField(who, chosenTarget, BattlePosition.Attack, true))
+                            who.Hand.Add(chosenTarget);
+                        else
+                        {
+                            if (clause.SummonCannotAttackThisTurn)
+                                chosenTarget.CannotAttackThisTurn = true;
+                            engine.Log($"Special Summoned {chosenTarget.Name} from hand.");
+                        }
+
+                        break;
+                    }
+
+                    IEnumerable<CardInstance> fromHand;
+                    if (clause.AmountIsLevel || clause.RequiresCanBeNormalSummonedOrSet)
+                    {
+                        fromHand = who.Hand.Where(c => HandSummonLegal(c, clause));
+                    }
+                    else
+                    {
+                        var race = string.IsNullOrEmpty(clause.RaceFilter) ? "Dragon" : clause.RaceFilter;
+                        fromHand = who.Hand.Where(c =>
+                            c?.Def != null && c.Def.IsMonster && c.Def.race != null &&
+                            c.Def.race.IndexOf(race, System.StringComparison.OrdinalIgnoreCase) >= 0);
+                    }
+
+                    var take = clause.AmountIsLevel ? 1 : Mathf.Max(1, clause.Amount);
+                    foreach (var d in fromHand.Take(take).ToList())
                     {
                         if (engine.FirstEmpty(who.MonsterZones) < 0) break;
                         who.Hand.Remove(d);
                         if (!engine.SpecialSummonToField(who, d, BattlePosition.Attack, true))
                             who.Hand.Add(d);
                         else
+                        {
+                            if (clause.SummonCannotAttackThisTurn)
+                                d.CannotAttackThisTurn = true;
                             engine.Log($"Special Summoned {d.Name} from hand.");
+                        }
                     }
 
                     break;
@@ -2365,6 +2402,31 @@ namespace WRLDZ.Duel.TextEffects
                 }
 
                 case EffectActionKind.ChangeBattlePosition:
+                    if (clause.SetToDefense)
+                    {
+                        if (chosenTarget != null)
+                        {
+                            if (chosenTarget.FaceUp && chosenTarget.Position != BattlePosition.Defense)
+                            {
+                                chosenTarget.Position = BattlePosition.Defense;
+                                engine.Log($"{chosenTarget.Name} → Defense Position.");
+                            }
+                        }
+                        else
+                        {
+                            foreach (var m in CollectAllMatching(engine, who, clause).ToList())
+                            {
+                                if (m == null || !m.FaceUp) continue;
+                                if (clause.AmountIsLevel && m.Level < clause.Amount) continue;
+                                if (m.Position == BattlePosition.Defense) continue;
+                                m.Position = BattlePosition.Defense;
+                                engine.Log($"{m.Name} → Defense Position.");
+                            }
+                        }
+
+                        break;
+                    }
+
                     if (chosenTarget != null)
                     {
                         chosenTarget.Position = chosenTarget.Position == BattlePosition.Attack
@@ -2436,7 +2498,12 @@ namespace WRLDZ.Duel.TextEffects
 
                 case EffectActionKind.InflictDamageEqualToAtk:
                     if (chosenTarget != null)
+                    {
                         engine.ApplyEffectDamage(opp, chosenTarget.CurrentAtk, source.Name);
+                        if (clause.DestroySourceAfterDamageCalculation && source != null)
+                            source.DestroyAfterThisDamageCalculation = true;
+                    }
+
                     break;
 
                 case EffectActionKind.GainLpEqualToAtk:
@@ -2455,15 +2522,45 @@ namespace WRLDZ.Duel.TextEffects
                     if (clause.RequiresLpCostMultiple > 0 && engine.PendingActivation != null &&
                         engine.PendingActivation.AwaitingLpCost)
                         pay = 0; // paid in FinishPayLp
-                    if (pay > 0 && chosenTarget != null)
+                    if (chosenTarget != null)
                     {
-                        chosenTarget.UntilEndOfTurnAtk -= pay;
-                        if (clause.DefAmount != 0)
-                            chosenTarget.UntilEndOfTurnDef -= pay;
-                        engine.Log(
-                            $"{chosenTarget.Name} loses {pay} ATK" +
-                            (clause.DefAmount != 0 ? $"/{pay} DEF" : "") +
-                            $" until the End Phase (now {chosenTarget.CurrentAtk}/{chosenTarget.CurrentDef}).");
+                        var atkDelta = pay;
+                        // Bark: DefAmount == 1 means also lose the same ATK amount as DEF.
+                        // Castle Walls / Reliable Guardian / Snake Fang: DefAmount is the
+                        // signed DEF delta to subtract (negative = gain).
+                        var defDelta = clause.DefAmount == 1 ? pay : clause.DefAmount;
+                        if (atkDelta != 0)
+                            chosenTarget.UntilEndOfTurnAtk -= atkDelta;
+                        if (defDelta != 0)
+                            chosenTarget.UntilEndOfTurnDef -= defDelta;
+                        if (atkDelta != 0 || defDelta != 0)
+                        {
+                            string joined;
+                            if (atkDelta != 0 && defDelta == atkDelta)
+                            {
+                                joined = atkDelta > 0
+                                    ? $"loses {atkDelta} ATK/{atkDelta} DEF"
+                                    : $"gains {-atkDelta} ATK/{-atkDelta} DEF";
+                            }
+                            else if (atkDelta != 0 && defDelta != 0)
+                            {
+                                var atkBit = atkDelta > 0 ? $"loses {atkDelta} ATK" : $"gains {-atkDelta} ATK";
+                                var defBit = defDelta > 0 ? $"loses {defDelta} DEF" : $"gains {-defDelta} DEF";
+                                joined = $"{atkBit} and {defBit}";
+                            }
+                            else if (atkDelta != 0)
+                            {
+                                joined = atkDelta > 0 ? $"loses {atkDelta} ATK" : $"gains {-atkDelta} ATK";
+                            }
+                            else
+                            {
+                                joined = defDelta > 0 ? $"loses {defDelta} DEF" : $"gains {-defDelta} DEF";
+                            }
+
+                            engine.Log(
+                                $"{chosenTarget.Name} {joined} until the End Phase " +
+                                $"(now {chosenTarget.CurrentAtk}/{chosenTarget.CurrentDef}).");
+                        }
                     }
 
                     break;
@@ -3683,6 +3780,15 @@ namespace WRLDZ.Duel.TextEffects
 
                     }
                     break;
+                case EffectZoneFilter.ControllerHandMonsters:
+                case EffectZoneFilter.ControllerHandDragons:
+                    foreach (var h in who.Hand)
+                    {
+                        if (h == except) continue;
+                        if (!HandSummonLegal(h, c)) continue;
+                        list.Add(h);
+                    }
+                    break;
                 case EffectZoneFilter.ControllerMonsters:
                     foreach (var m in who.MonstersOnField())
                     {
@@ -3801,8 +3907,26 @@ namespace WRLDZ.Duel.TextEffects
                 list.RemoveAll(t => t == null || !t.FaceUp);
             if (c.Action == EffectActionKind.ChangeBattlePosition)
                 list.RemoveAll(t => t == null || !t.FaceUp);
+            if (c.Action == EffectActionKind.LoseAtkDefUntilEndOfTurn)
+                list.RemoveAll(t => t == null || !t.FaceUp);
 
             return list;
+        }
+
+        static bool HandSummonLegal(CardInstance card, EffectClause clause)
+        {
+            if (card?.Def == null || !card.Def.IsMonster || card.Def.IsExtraDeck) return false;
+            if (clause == null) return true;
+            if (clause.AmountIsLevel && clause.Amount > 0 && card.Level != clause.Amount)
+                return false;
+            if (clause.RequiresCanBeNormalSummonedOrSet && !card.Def.CanBeNormalSummonedOrSet)
+                return false;
+            if (!string.IsNullOrEmpty(clause.RaceFilter) &&
+                (card.Def.race == null ||
+                 card.Def.race.IndexOf(clause.RaceFilter,
+                     System.StringComparison.OrdinalIgnoreCase) < 0))
+                return false;
+            return true;
         }
 
         static IEnumerable<CardInstance> CollectAllMatching(DuelEngine engine, DuelistState who,
@@ -3966,6 +4090,8 @@ namespace WRLDZ.Duel.TextEffects
 
             if (card?.Def != null && card.Def.IsSpell)
                 NotifySpellResolved(engine, who);
+            if (stays)
+                engine.ApplyContinuousForceDefense();
             engine.FlushQueuedSummonResponses();
         }
 
