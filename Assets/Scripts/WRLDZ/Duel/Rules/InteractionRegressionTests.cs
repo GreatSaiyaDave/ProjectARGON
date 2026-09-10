@@ -3022,6 +3022,8 @@ namespace WRLDZ.Duel.Rules
                     const int legendarySword = 61854111;
                     const int axe = 40619825;
                     const int angus = 11813953; // Great Angus, FIRE Beast
+                    const int violetCrystal = 15052462;
+                    const int thirteenthGrave = 32864; // Zombie 1200/900
 
                     var tDef = db.Get(treasure);
                     var tProg = tDef != null ? CardTextEffectCompiler.Compile(tDef) : null;
@@ -3061,6 +3063,82 @@ namespace WRLDZ.Duel.Rules
                         swProg == null
                             ? "null"
                             : $"full={swProg.FullyCompiled} unparsed={string.Join("|", swProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                    var vDef = db.Get(violetCrystal);
+                    var vProg = vDef != null ? CardTextEffectCompiler.Compile(vDef) : null;
+                    Check("Violet Crystal FullyCompiled Equip only Zombie +300/+300 (allowAi:false)",
+                        vProg != null && vProg.FullyCompiled &&
+                        (vProg.UnparsedFragments == null || vProg.UnparsedFragments.Length == 0) &&
+                        vProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.EquipThisToTarget &&
+                            c.EquipAtkBonus == 300 && c.EquipDefBonus == 300 &&
+                            string.Equals(c.RaceFilter, "Zombie",
+                                System.StringComparison.OrdinalIgnoreCase)) &&
+                        !vProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.AlwaysTreatedAsName),
+                        vProg == null
+                            ? "null"
+                            : $"full={vProg.FullyCompiled} n={vProg.ClauseList.Count} " +
+                              $"unparsed={string.Join("|", vProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var host = PlaceMonster(engine, p, thirteenthGrave, 2, BattlePosition.Attack, true);
+                        var card = PutInHand(engine, p, violetCrystal);
+                        Check("Violet Crystal: Activate legal with a Zombie you control",
+                            engine.CanActivateSpellTrap(p, card, fromHand: true));
+                        Check("Violet Crystal: Activate opens Equip target",
+                            engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                            engine.IsAwaitingEffectTarget);
+                        if (engine.IsAwaitingEffectTarget)
+                        {
+                            Check("Violet Crystal: The 13th Grave is legal",
+                                engine.PendingActivation.LegalTargets.Contains(host));
+                            Check("Violet Crystal: select Zombie, +300 ATK/DEF (1200/900→1500/1200)",
+                                engine.TrySelectEffectTarget(host) &&
+                                card.EquippedTo == host &&
+                                host.Equips.Contains(card) &&
+                                p.TryFindSpellTrap(card, out _) &&
+                                host.CurrentAtk == 1500 &&
+                                host.CurrentDef == 1200,
+                                $"atk={host.CurrentAtk} def={host.CurrentDef} eq={card.EquippedTo != null}");
+                        }
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                        var card = PutInHand(engine, p, violetCrystal);
+                        Check("Violet Crystal: refuse with only a Warrior you control",
+                            !engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var zombie = PlaceMonster(engine, p, thirteenthGrave, 2, BattlePosition.Attack, true);
+                        var warrior = PlaceMonster(engine, p, celtic, 1, BattlePosition.Attack, true);
+                        var card = PutInHand(engine, p, violetCrystal);
+                        Check("Violet Crystal: mixed board Activate legal",
+                            engine.CanActivateSpellTrap(p, card, fromHand: true) &&
+                            engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                            engine.IsAwaitingEffectTarget);
+                        if (engine.IsAwaitingEffectTarget)
+                        {
+                            Check("Violet Crystal: Zombie legal, Warrior not in list",
+                                engine.PendingActivation.LegalTargets.Contains(zombie) &&
+                                !engine.PendingActivation.LegalTargets.Contains(warrior));
+                        }
+                    }
 
                     var aDef = db.Get(axe);
                     var aProg = aDef != null ? CardTextEffectCompiler.Compile(aDef) : null;
