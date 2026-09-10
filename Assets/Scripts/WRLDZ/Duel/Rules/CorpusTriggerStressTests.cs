@@ -311,6 +311,33 @@ namespace WRLDZ.Duel.Rules
                     p.Graveyard.Add(engine.CreateCardInstance(Bewd));
                 }
 
+                if (c.Zone == EffectZoneFilter.OpponentGyMonsters)
+                {
+                    var n = c.TargetCount > 0 ? c.TargetCount : 2;
+                    for (var i = 0; i < n; i++)
+                        opp.Graveyard.Add(engine.CreateCardInstance(Celtic));
+                }
+
+                if (c.ControllerTargetCount > 1)
+                {
+                    // Provision already seats Bewd in zone 0; fill the rest.
+                    for (var i = 1; i < c.ControllerTargetCount && i < p.MonsterZones.Length; i++)
+                    {
+                        if (p.MonsterZones[i].Occupant != null) continue;
+                        PlaceMonster(engine, p, Celtic, i, BattlePosition.Attack, true);
+                    }
+                }
+
+                if (c.OpponentTargetCount > 1)
+                {
+                    for (var i = 0; i < opp.MonsterZones.Length &&
+                                    opp.MonstersOnField().Count() < c.OpponentTargetCount; i++)
+                    {
+                        if (opp.MonsterZones[i].Occupant != null) continue;
+                        PlaceMonster(engine, opp, Bewd, i, BattlePosition.Attack, true);
+                    }
+                }
+
                 if (c.Zone == EffectZoneFilter.ControllerGySpells)
                     p.Graveyard.Add(engine.CreateCardInstance(PotOfGreed));
                 if (c.Zone == EffectZoneFilter.ControllerGyTraps)
