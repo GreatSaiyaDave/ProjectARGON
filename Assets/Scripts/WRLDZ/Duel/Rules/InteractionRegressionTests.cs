@@ -6660,6 +6660,7 @@ namespace WRLDZ.Duel.Rules
                     var prog = def != null ? CardTextEffectCompiler.Compile(def) : null;
                     Check("Goblin Thief official text FullyCompiled inflict 500 and gain 500",
                         prog != null && prog.FullyCompiled &&
+                        prog.ClauseList.Count == 2 &&
                         prog.ClauseList.Exists(c =>
                             c != null &&
                             c.Action == EffectActionKind.InflictDamageToOpponent &&
@@ -6680,6 +6681,9 @@ namespace WRLDZ.Duel.Rules
                     var opp = engine.Opponent;
                     p.LifePoints = 8000;
                     opp.LifePoints = 8000;
+                    var thiefDef = db.Get(thiefId);
+                    if (thiefDef != null)
+                        CompiledEffectCache.ForceRecompile(thiefDef, allowAi: false);
                     var card = PutInHand(engine, p, thiefId);
                     Check("Goblin Thief: Activate legal",
                         engine.CanActivateSpellTrap(p, card, fromHand: true));
@@ -6689,6 +6693,7 @@ namespace WRLDZ.Duel.Rules
                         p.LifePoints == 8500 &&
                         p.Graveyard.Exists(c => c != null && c.CardId == thiefId),
                         $"you={p.LifePoints} opp={opp.LifePoints}");
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
                 }
 
                 {

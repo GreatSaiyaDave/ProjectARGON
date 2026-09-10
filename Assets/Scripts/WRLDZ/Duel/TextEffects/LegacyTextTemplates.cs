@@ -368,18 +368,9 @@ namespace WRLDZ.Duel.TextEffects
 
             if (IsHandSpell(def))
             {
-                var lp = RxIncreaseLp.Match(text);
-                Add(lp, lp.Success
-                    ? new EffectClause
-                    {
-                        Timing = EffectTiming.Activate,
-                        Action = EffectActionKind.GainLifePoints,
-                        Amount = Parse(lp, 1, 400),
-                        Side = EffectSide.Controller,
-                        MakesChainLink = true
-                    }
-                    : null);
-
+                // Consume the whole "inflict N and increase M" sentence before
+                // RxIncreaseLp / RxInflictOpp, or leftover "increase …" is a
+                // second GainLifePoints (controller +1000 instead of +500).
                 var steal = RxInflictAndGainLp.Match(text);
                 if (steal.Success && !SpanCovered(spans, steal.Index, steal.Length))
                 {
@@ -404,6 +395,18 @@ namespace WRLDZ.Duel.TextEffects
                     });
                     spans.Add((steal.Index, steal.Length));
                 }
+
+                var lp = RxIncreaseLp.Match(text);
+                Add(lp, lp.Success
+                    ? new EffectClause
+                    {
+                        Timing = EffectTiming.Activate,
+                        Action = EffectActionKind.GainLifePoints,
+                        Amount = Parse(lp, 1, 400),
+                        Side = EffectSide.Controller,
+                        MakesChainLink = true
+                    }
+                    : null);
 
                 var burn = RxInflictOpp.Match(text);
                 if (!burn.Success) burn = RxDecreaseOppLp.Match(text);

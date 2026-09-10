@@ -2077,6 +2077,7 @@ namespace WRLDZ.Duel.Rules
                     var thiefProg = thief != null ? CardTextEffectCompiler.Compile(thief) : null;
                     Check("Corpus: Goblin Thief FullyCompiled inflict 500 and gain 500",
                         thiefProg != null && thiefProg.FullyCompiled &&
+                        thiefProg.ClauseList.Count == 2 &&
                         thiefProg.ClauseList.Exists(c =>
                             c != null &&
                             c.Action == EffectActionKind.InflictDamageToOpponent &&
