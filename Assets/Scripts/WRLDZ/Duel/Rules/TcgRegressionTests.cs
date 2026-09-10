@@ -908,14 +908,14 @@ namespace WRLDZ.Duel.Rules
                          })
                 {
                     var def = dbField?.Get(id);
-                    var prog = def != null ? CardTextEffectCompiler.Compile(def) : null;
+                    var fieldProg = def != null ? CardTextEffectCompiler.Compile(def) : null;
                     Check($"PSCT {name}: FullyCompiled Field type-list +200 ATK/DEF (allowAi:false)",
-                        def != null && IsTypedFieldBoost(prog, types),
-                        prog == null
+                        def != null && IsTypedFieldBoost(fieldProg, types),
+                        fieldProg == null
                             ? "null"
-                            : $"full={prog.FullyCompiled} n={prog.ClauseList.Count} " +
-                              $"filter={prog.ClauseList[0]?.RaceFilter} " +
-                              $"unparsed={string.Join("|", prog.UnparsedFragments ?? Array.Empty<string>())}");
+                            : $"full={fieldProg.FullyCompiled} n={fieldProg.ClauseList.Count} " +
+                              $"filter={fieldProg.ClauseList[0]?.RaceFilter} " +
+                              $"unparsed={string.Join("|", fieldProg.UnparsedFragments ?? Array.Empty<string>())}");
                 }
 
                 var yami = dbField?.Get(59197169);
