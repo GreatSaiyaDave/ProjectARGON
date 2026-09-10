@@ -3382,20 +3382,27 @@ namespace WRLDZ.Duel.Rules
                             {
                                 if (!string.IsNullOrEmpty(clause.EquipHostName))
                                 {
+                                    WRLDZ.Data.CardDef named = null;
+                                    WRLDZ.Data.CardDef contains = null;
                                     foreach (var cand in db.GetAllCards())
                                     {
                                         if (cand == null || !cand.IsMonster || cand.IsExtraDeck)
                                             continue;
                                         var n = cand.name ?? "";
                                         if (string.Equals(n, clause.EquipHostName,
-                                                System.StringComparison.OrdinalIgnoreCase) ||
-                                            n.IndexOf(clause.EquipHostName,
-                                                System.StringComparison.OrdinalIgnoreCase) >= 0)
+                                                System.StringComparison.OrdinalIgnoreCase))
                                         {
-                                            hostId = cand.id;
+                                            named = cand;
                                             break;
                                         }
+
+                                        if (contains == null &&
+                                            n.IndexOf(clause.EquipHostName,
+                                                System.StringComparison.OrdinalIgnoreCase) >= 0)
+                                            contains = cand;
                                     }
+
+                                    hostId = (named ?? contains)?.id ?? hostId;
                                 }
                                 else
                                 {
