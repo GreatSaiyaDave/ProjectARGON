@@ -1336,6 +1336,66 @@ namespace WRLDZ.Duel.Rules
                             c.DestroyHostWhenThisLeaves &&
                             !c.SummonInDefense));
 
+                    var raigekiFc = db.Get(12580477);
+                    var raigekiProg = raigekiFc != null ? CardTextEffectCompiler.Compile(raigekiFc) : null;
+                    Check("Fanbot already-FC: Raigeki FullyCompiled destroy all opponent monsters",
+                        raigekiProg != null && raigekiProg.FullyCompiled &&
+                        raigekiProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.Destroy &&
+                            c.Side == EffectSide.Opponent &&
+                            c.Zone == EffectZoneFilter.FieldMonsters));
+
+                    var darkHoleFc = db.Get(53129443);
+                    var darkHoleProg = darkHoleFc != null ? CardTextEffectCompiler.Compile(darkHoleFc) : null;
+                    Check("Fanbot already-FC: Dark Hole FullyCompiled destroy all monsters",
+                        darkHoleProg != null && darkHoleProg.FullyCompiled &&
+                        darkHoleProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.Destroy &&
+                            c.Side == EffectSide.Both &&
+                            c.Zone == EffectZoneFilter.FieldMonsters));
+
+                    var mirrorFc = db.Get(44095762);
+                    var mirrorProg = mirrorFc != null ? CardTextEffectCompiler.Compile(mirrorFc) : null;
+                    Check("Fanbot already-FC: Mirror Force FullyCompiled destroy opp Attack Position",
+                        mirrorProg != null && mirrorProg.FullyCompiled &&
+                        mirrorProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.AttackDeclared &&
+                            c.Action == EffectActionKind.Destroy &&
+                            c.Zone == EffectZoneFilter.OppAttackPositionMonsters));
+
+                    var sakFc = db.Get(56120475);
+                    var sakFcProg = sakFc != null ? CardTextEffectCompiler.Compile(sakFc) : null;
+                    Check("Fanbot already-FC: Sakuretsu Armor FullyCompiled destroy attacker",
+                        sakFcProg != null && sakFcProg.FullyCompiled &&
+                        sakFcProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.AttackDeclared &&
+                            c.Action == EffectActionKind.Destroy &&
+                            c.Zone == EffectZoneFilter.AttackingMonster));
+
+                    var moonFc = db.Get(14087893);
+                    var moonFcProg = moonFc != null ? CardTextEffectCompiler.Compile(moonFc) : null;
+                    Check("Fanbot already-FC: Book of Moon FullyCompiled set face-down Defense",
+                        moonFcProg != null && moonFcProg.FullyCompiled &&
+                        moonFcProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.SetTargetFaceDownDefense));
+
+                    var leftoverFanbot = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000058,
+                        name = "Raigeki leftover rider",
+                        type = "Spell Card",
+                        race = "Normal",
+                        frameType = "spell",
+                        desc =
+                            "Destroy all monsters your opponent controls. Shuffle your entire Deck into your opponent's Deck."
+                    });
+                    Check("Fail-closed: Raigeki plus extra rider is not FullyCompiled",
+                        leftoverFanbot != null && !leftoverFanbot.FullyCompiled);
+
                     var soul = db.Get(92924317);
                     var soulProg = soul != null ? CardTextEffectCompiler.Compile(soul) : null;
                     Check("Corpus: Soul Resurrection FullyCompiled Normal Monster GY SS in Defense",
