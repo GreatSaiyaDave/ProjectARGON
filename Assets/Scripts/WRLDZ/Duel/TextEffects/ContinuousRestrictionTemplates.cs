@@ -5,8 +5,9 @@ using WRLDZ.Data;
 namespace WRLDZ.Duel.TextEffects
 {
     /// <summary>
-    /// Continuous S/T restrictions and GY-revive Continuous Traps that fully map
-    /// onto shared kinds (cannot attack, pay-or-destroy, Call of the Haunted).
+    /// Continuous S/T restrictions and GY-revive Continuous Traps / Equip Spells
+    /// that fully map onto shared kinds (cannot attack, pay-or-destroy,
+    /// Call of the Haunted, Premature Burial).
     /// </summary>
     public static class ContinuousRestrictionTemplates
     {
@@ -61,6 +62,17 @@ namespace WRLDZ.Duel.TextEffects
             @"Special Summon it in Defense Position\.\s*" +
             @"When this card leaves the field, destroy that monster\.\s*" +
             @"When that monster is destroyed, destroy this card\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Premature Burial: pay LP, SS from GY in Attack, equip; when this card
+        /// is destroyed, destroy the equipped monster. Same leave-destroy atom as
+        /// Call of the Haunted (<see cref="EffectClause.DestroyHostWhenThisLeaves"/>).
+        /// </summary>
+        static readonly Regex RxPrematureBurial = new(
+            @"Activate this card by paying (\d+) (?:LP|Life Points), then target 1 monster in your (?:GY|Graveyard);\s*" +
+            @"Special Summon that target in Attack Position and equip it with this card\.\s*" +
+            @"When this card is destroyed, destroy the equipped monster\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         public static void Collect(string text, CardDef def, List<EffectClause> into,
@@ -149,6 +161,17 @@ namespace WRLDZ.Duel.TextEffects
             Add(soul, soul.Success
                 ? GyReviveClause(defense: true, normalOnly: true)
                 : null);
+
+            if (def != null && def.IsEquipSpell)
+            {
+                var prem = RxPrematureBurial.Match(text);
+                if (prem.Success)
+                {
+                    var clause = GyReviveClause(defense: false, normalOnly: false);
+                    clause.PayLpAmount = Parse(prem, 1, 800);
+                    Add(prem, clause);
+                }
+            }
         }
 
         public static void ExpectedActions(CardDef def, List<EffectActionKind> need)
@@ -161,7 +184,8 @@ namespace WRLDZ.Duel.TextEffects
                 need.Add(EffectActionKind.ContinuousCannotAttack);
             if (RxPayOrDestroyStandby.IsMatch(text) || RxPayThenDestroyStandby.IsMatch(text))
                 need.Add(EffectActionKind.PayLpOrDestroyThis);
-            if (RxCallOfTheHaunted.IsMatch(text) || RxSoulResurrection.IsMatch(text))
+            if (RxCallOfTheHaunted.IsMatch(text) || RxSoulResurrection.IsMatch(text) ||
+                (def.IsEquipSpell && RxPrematureBurial.IsMatch(text)))
                 need.Add(EffectActionKind.SpecialSummonFromGy);
         }
 

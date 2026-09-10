@@ -1092,6 +1092,48 @@ namespace WRLDZ.Duel.Rules
                             ? "null"
                             : $"full={axeProg.FullyCompiled} unparsed={string.Join("|", axeProg.UnparsedFragments ?? Array.Empty<string>())}");
 
+                    var pendant = db.Get(65169794);
+                    var pendantProg = pendant != null ? CardTextEffectCompiler.Compile(pendant) : null;
+                    Check("Corpus: Black Pendant FullyCompiled Equip +500 and GY inflict 500",
+                        pendantProg != null && pendantProg.FullyCompiled &&
+                        pendantProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.EquipThisToTarget &&
+                            c.EquipAtkBonus == 500) &&
+                        pendantProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.SentFromFieldToGy &&
+                            c.Action == EffectActionKind.InflictDamageToOpponent &&
+                            c.Amount == 500),
+                        pendantProg == null
+                            ? "null"
+                            : $"full={pendantProg.FullyCompiled} unparsed={string.Join("|", pendantProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var mstDef = db.Get(5318639);
+                    var mstProg = mstDef != null ? CardTextEffectCompiler.Compile(mstDef) : null;
+                    Check("Corpus: Mystical Space Typhoon FullyCompiled target Spell/Trap destroy",
+                        mstProg != null && mstProg.FullyCompiled &&
+                        mstProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Activate &&
+                            c.Action == EffectActionKind.Destroy &&
+                            c.Zone == EffectZoneFilter.FieldSpellTraps &&
+                            c.RequiresTargetChoice),
+                        mstProg == null
+                            ? "null"
+                            : $"full={mstProg.FullyCompiled} unparsed={string.Join("|", mstProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var wabDef = db.Get(12607053);
+                    var wabProg = wabDef != null ? CardTextEffectCompiler.Compile(wabDef) : null;
+                    Check("Corpus: Waboku FullyCompiled ApplyWabokuStyle",
+                        wabProg != null && wabProg.FullyCompiled &&
+                        wabProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Activate &&
+                            c.Action == EffectActionKind.ApplyWabokuStyle),
+                        wabProg == null
+                            ? "null"
+                            : $"full={wabProg.FullyCompiled} unparsed={string.Join("|", wabProg.UnparsedFragments ?? Array.Empty<string>())}");
+
                     var stand = db.Get(56747793);
                     var standProg = stand != null ? CardTextEffectCompiler.Compile(stand) : null;
                     Check("Corpus: United We Stand FullyCompiled +800 ATK/DEF per face-up monster",
@@ -1335,6 +1377,52 @@ namespace WRLDZ.Duel.Rules
                             c.Action == EffectActionKind.SpecialSummonFromGy &&
                             c.DestroyHostWhenThisLeaves &&
                             !c.SummonInDefense));
+
+                    var premature = db.Get(70828912);
+                    var premProg = premature != null ? CardTextEffectCompiler.Compile(premature) : null;
+                    Check("Corpus: Premature Burial FullyCompiled pay 800 GY SS + leave destroy",
+                        premProg != null && premProg.FullyCompiled &&
+                        premProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.SpecialSummonFromGy &&
+                            c.PayLpAmount == 800 &&
+                            c.DestroyHostWhenThisLeaves &&
+                            !c.SummonInDefense &&
+                            c.StaysOnField),
+                        premProg == null
+                            ? "null"
+                            : $"full={premProg.FullyCompiled} unparsed={string.Join("|", premProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var synPrem = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000044,
+                        name = "New Equip (Premature Burial shape)",
+                        type = "Spell Card",
+                        race = "Equip",
+                        frameType = "equip",
+                        desc =
+                            "Activate this card by paying 800 LP, then target 1 monster in your Graveyard; Special Summon that target in Attack Position and equip it with this card. When this card is destroyed, destroy the equipped monster."
+                    });
+                    Check("New-card rule: Premature Burial-shaped text compiles without a cardId branch",
+                        synPrem != null && synPrem.FullyCompiled &&
+                        synPrem.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.SpecialSummonFromGy &&
+                            c.PayLpAmount == 800 &&
+                            c.DestroyHostWhenThisLeaves));
+
+                    var leftoverPrem = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000045,
+                        name = "Premature Burial leftover rider",
+                        type = "Spell Card",
+                        race = "Equip",
+                        frameType = "equip",
+                        desc =
+                            "Activate this card by paying 800 LP, then target 1 monster in your Graveyard; Special Summon that target in Attack Position and equip it with this card. When this card is destroyed, destroy the equipped monster. Also draw 1 card."
+                    });
+                    Check("Fail-closed: Premature Burial plus extra rider is not FullyCompiled",
+                        leftoverPrem != null && !leftoverPrem.FullyCompiled);
 
                     var soul = db.Get(92924317);
                     var soulProg = soul != null ? CardTextEffectCompiler.Compile(soul) : null;
@@ -2138,6 +2226,18 @@ namespace WRLDZ.Duel.Rules
                     !SpellTrapEffects.IsLegalResponseCard(engine, player, trap,
                         ResponseTiming.MonsterSummoned, summonedHi));
                 trap.SetThisTurn = false;
+                var holeProg = CardTextEffectCompiler.Compile(trapDef);
+                Check("Trap Hole FullyCompiled opponent NS/FS ATK≥1000 destroy",
+                    holeProg != null && holeProg.FullyCompiled &&
+                    holeProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Timing == EffectTiming.OpponentNormalOrFlipSummon &&
+                        c.Action == EffectActionKind.Destroy &&
+                        c.Amount == 1000 &&
+                        c.RequiresTargetChoice),
+                    holeProg == null
+                        ? "null"
+                        : $"full={holeProg.FullyCompiled} unparsed={string.Join("|", holeProg.UnparsedFragments ?? Array.Empty<string>())}");
             }
 
             // ── Bottomless Trap Hole (summon destroy + banish, not a target) ──
