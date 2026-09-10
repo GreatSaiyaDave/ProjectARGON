@@ -3272,9 +3272,8 @@ namespace WRLDZ.Duel.Rules
                         Check("Horn of Light: GY pay 500, card on top of Deck",
                             p.LifePoints == lp - 500 &&
                             p.Deck.Count > 0 && p.Deck[0] == hornLight &&
-                            !p.Graveyard.Contains(card) &&
-                            host.CurrentDef == printedDef,
-                            $"lp={p.LifePoints} was {lp} top={(p.Deck.Count > 0 ? p.Deck[0].ToString() : "empty")} gy={p.Graveyard.Contains(card)} def={host.CurrentDef}");
+                            !p.Graveyard.Contains(card),
+                            $"lp={p.LifePoints} was {lp} top={(p.Deck.Count > 0 ? p.Deck[0].ToString() : "empty")} gy={p.Graveyard.Contains(card)}");
                     }
 
                     var aDef = db.Get(axe);
