@@ -413,6 +413,7 @@ namespace WRLDZ.Duel.TextEffects
                         NamedCard = ctrlSs.Groups[2].Value,
                         FromHand = true,
                         FromDeck = true,
+                        Side = EffectSide.Controller,
                         RequiresFaceUpName = ctrlSs.Groups[1].Value,
                         RequiresControllerNamedCard = true,
                         MakesChainLink = true
