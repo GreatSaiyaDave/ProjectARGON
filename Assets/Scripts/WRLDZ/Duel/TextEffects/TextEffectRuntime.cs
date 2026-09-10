@@ -3009,6 +3009,17 @@ namespace WRLDZ.Duel.TextEffects
                 ApplyClause(engine, who, attacker, c, null, ref dummy, ref dummy);
         }
 
+        public static void NotifyInflictedBattleDamage(DuelEngine engine, DuelistState who,
+            DuelistState opp, CardInstance source)
+        {
+            if (engine == null || who == null || opp == null || source?.Def == null) return;
+            var prog = CompiledEffectCache.GetOrCompile(source);
+            if (prog == null) return;
+            var dummy = false;
+            foreach (var c in prog.ClausesFor(EffectTiming.ThisCardInflictsBattleDamage))
+                ApplyClause(engine, who, source, c, null, ref dummy, ref dummy);
+        }
+
         public static void FirePhaseTriggers(DuelEngine engine, DuelistState who, EffectTiming timing)
         {
             if (engine == null || who == null) return;

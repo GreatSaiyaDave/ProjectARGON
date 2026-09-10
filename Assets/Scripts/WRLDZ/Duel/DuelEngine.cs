@@ -1386,6 +1386,14 @@ namespace WRLDZ.Duel
 
         public bool SpecialSummonToField(DuelistState who, CardInstance card, BattlePosition pos, bool faceUp)
         {
+            if (card != null &&
+                TextEffects.PsctGrammar.BlocksSpecialSummon(
+                    Rules.OfficialCardAuthority.OfficialText(card)))
+            {
+                Log($"{card.Name} cannot be Special Summoned.");
+                return false;
+            }
+
             var idx = FirstEmpty(who.MonsterZones);
             if (idx < 0) return false;
             card.FaceUp = faceUp;
@@ -2084,9 +2092,16 @@ namespace WRLDZ.Duel
             DamageSubStep = DamageSubStep.AfterDamageCalculation;
             // Apply LP damage before destruction so UI/orbs update even if destroy is deferred
             if (calc.DamageToDefendingPlayer > 0)
+            {
                 ApplyDamage(opp, calc.DamageToDefendingPlayer);
+                TextEffects.TextEffectRuntime.NotifyInflictedBattleDamage(this, who, opp, attacker);
+            }
             if (calc.DamageToAttackingPlayer > 0)
+            {
                 ApplyDamage(who, calc.DamageToAttackingPlayer);
+                if (targetOrNull != null)
+                    TextEffects.TextEffectRuntime.NotifyInflictedBattleDamage(this, opp, who, targetOrNull);
+            }
             else if (targetOrNull != null &&
                      BattleMechanics.UsesDefenseStat(targetOrNull) &&
                      BattleMechanics.AttackValue(attacker) < BattleMechanics.DefenseValue(targetOrNull) &&
@@ -2102,6 +2117,7 @@ namespace WRLDZ.Duel
                         $"(ATK {BattleMechanics.AttackValue(attacker)} < DEF {BattleMechanics.DefenseValue(targetOrNull)}).");
                     calc.DamageToAttackingPlayer = gap;
                     ApplyDamage(who, gap);
+                    TextEffects.TextEffectRuntime.NotifyInflictedBattleDamage(this, opp, who, targetOrNull);
                 }
             }
 

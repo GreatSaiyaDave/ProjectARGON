@@ -2182,6 +2182,61 @@ namespace WRLDZ.Duel.Rules
                     Check("Corpus: Windstorm leftover rider is not FullyCompiled",
                         leftoverWind == null || !leftoverWind.FullyCompiled);
 
+                    var yata = db.Get(3078576);
+                    var yataProg = yata != null ? CardTextEffectCompiler.Compile(yata) : null;
+                    Check("Corpus: Yata-Garasu FullyCompiled Spirit bounce + battle-damage skip Draw",
+                        yataProg != null && yataProg.FullyCompiled &&
+                        yataProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ReturnToHand &&
+                            c.RequiresSummonedOrFlippedThisTurn) &&
+                        yataProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.ThisCardInflictsBattleDamage &&
+                            c.Action == EffectActionKind.SkipOpponentNextDrawPhase));
+
+                    var synYata = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000072,
+                        name = "Battle-Damage Skip Draw (new-card shape)",
+                        type = "Spirit Monster",
+                        race = "Fiend",
+                        desc =
+                            "This card cannot be Special Summoned. This card returns to its owner's hand during the End Phase of the turn it is Normal Summoned or flipped face-up. When this card inflicts Battle Damage to your opponent, they skip their next Draw Phase."
+                    });
+                    Check("New-card rule: Yata-shaped text compiles without a cardId branch",
+                        synYata != null && synYata.FullyCompiled &&
+                        synYata.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.SkipOpponentNextDrawPhase));
+
+                    var leftoverYata = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000073,
+                        name = "Yata leftover rider",
+                        type = "Spirit Monster",
+                        desc =
+                            "This card cannot be Special Summoned. This card returns to its owner's hand during the End Phase of the turn it is Normal Summoned or flipped face-up. When this card inflicts Battle Damage to your opponent, they skip their next Draw Phase. Also look at the top card of your opponent's Deck."
+                    });
+                    Check("Corpus: Yata leftover rider is not FullyCompiled",
+                        leftoverYata == null || !leftoverYata.FullyCompiled);
+
+                    var painProg = CardTextEffectCompiler.Compile(db.Get(74191942));
+                    Check("Corpus: Painful Choice leftover (excavate) is not FullyCompiled",
+                        painProg == null || !painProg.FullyCompiled);
+                    var duoProg = CardTextEffectCompiler.Compile(db.Get(44763025));
+                    Check("Corpus: Delinquent Duo leftover (opp discard) is not FullyCompiled",
+                        duoProg == null || !duoProg.FullyCompiled);
+                    var confProg = CardTextEffectCompiler.Compile(db.Get(17375316));
+                    Check("Corpus: Confiscation leftover (look-at-hand) is not FullyCompiled",
+                        confProg == null || !confProg.FullyCompiled);
+                    var heartProg = CardTextEffectCompiler.Compile(db.Get(64801562));
+                    Check("Corpus: Heart of Clear Water leftover (equip gate) is not FullyCompiled",
+                        heartProg == null || !heartProg.FullyCompiled);
+                    var hinoProgPark = CardTextEffectCompiler.Compile(db.Get(75745607));
+                    Check("Corpus: Hino-Kagu-Tsuchi leftover (next-Draw wipe) is not FullyCompiled",
+                        hinoProgPark == null || !hinoProgPark.FullyCompiled);
+
                     Check("Vocabulary: Protection is a shared kind",
                         Array.IndexOf(EffectVocabulary.SharedResolutions,
                             EffectResolutionKind.Protection) >= 0);

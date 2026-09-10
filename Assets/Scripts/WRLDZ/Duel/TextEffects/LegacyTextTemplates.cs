@@ -189,6 +189,14 @@ namespace WRLDZ.Duel.TextEffects
             @"When this card destroys an opponent's monster as a result of battle, your opponent skips their next Draw Phase",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        /// <summary>
+        /// Yata-Garasu family: Battle Damage (including a direct attack), not battle-destroy.
+        /// </summary>
+        static readonly Regex RxSkipOppNextDrawBattleDamage = new(
+            @"When this card inflicts Battle Damage to your opponent(?:'s Life Points)?, " +
+            @"(?:they|your opponent) skip(?:s)? their next Draw Phase",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         static readonly Regex RxInflictOpp = new(
             @"Inflict (\d+) (?:points of )?damage to your opponent(?:'s Life Points)?\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -581,6 +589,13 @@ namespace WRLDZ.Duel.TextEffects
                 Action = EffectActionKind.SkipOpponentNextDrawPhase,
                 MakesChainLink = true
             });
+
+            Add(RxSkipOppNextDrawBattleDamage.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.ThisCardInflictsBattleDamage,
+                Action = EffectActionKind.SkipOpponentNextDrawPhase,
+                MakesChainLink = true
+            });
         }
 
         public static bool MatchesSharedKind(string text)
@@ -607,7 +622,8 @@ namespace WRLDZ.Duel.TextEffects
                    RxTributeNamedDestroy.IsMatch(text) ||
                    RxSuijinAtkZero.IsMatch(text) ||
                    RxSsByBanishAttrGy.IsMatch(text) ||
-                   RxSkipOppNextDraw.IsMatch(text);
+                   RxSkipOppNextDraw.IsMatch(text) ||
+                   RxSkipOppNextDrawBattleDamage.IsMatch(text);
         }
 
         public static void ExpectedActions(CardDef def, List<EffectActionKind> need)
@@ -643,6 +659,8 @@ namespace WRLDZ.Duel.TextEffects
                 need.Add(EffectActionKind.SetTargetFaceDownDefense);
             if (RxDefYouControl.IsMatch(text) || RxFieldAtkDownDef.IsMatch(text))
                 need.Add(EffectActionKind.ContinuousGainAtkDef);
+            if (RxSkipOppNextDraw.IsMatch(text) || RxSkipOppNextDrawBattleDamage.IsMatch(text))
+                need.Add(EffectActionKind.SkipOpponentNextDrawPhase);
             if (RxAttacksBecomeDirect.IsMatch(text))
                 need.Add(EffectActionKind.ForceOpponentDirectAttacksThisTurn);
             if (RxWhenYouTakeDamage.IsMatch(text) && RxGainLpPerCopyInGy.IsMatch(text))

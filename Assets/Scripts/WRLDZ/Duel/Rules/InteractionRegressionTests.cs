@@ -6773,6 +6773,116 @@ namespace WRLDZ.Duel.Rules
                 }
             }
 
+            // ── Yata-Garasu (Fanbot): Spirit bounce + battle-damage skip Draw ──
+            {
+                const int yataId = 3078576;
+                const int hinoId = 75745607;
+                const int painful = 74191942;
+                const int duo = 44763025;
+                const int confiscation = 17375316;
+                const int heart = 64801562;
+
+                {
+                    var def = db.Get(yataId);
+                    var prog = def != null ? CardTextEffectCompiler.Compile(def) : null;
+                    Check("Yata-Garasu FullyCompiled Spirit bounce + skip opp Draw on battle damage",
+                        prog != null && prog.FullyCompiled &&
+                        prog.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.EndPhase &&
+                            c.Action == EffectActionKind.ReturnToHand &&
+                            c.RequiresSummonedOrFlippedThisTurn) &&
+                        prog.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.ThisCardInflictsBattleDamage &&
+                            c.Action == EffectActionKind.SkipOpponentNextDrawPhase),
+                        prog == null
+                            ? "null"
+                            : $"full={prog.FullyCompiled} n={prog.ClauseList.Count} unparsed={string.Join("|", prog.UnparsedFragments ?? System.Array.Empty<string>())}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var yata = PutInHand(engine, p, yataId);
+                    Check("Yata-Garasu Normal Summon",
+                        engine.TryNormalSummon(p, yata, asSet: false) &&
+                        p.TryFindMonster(yata, out _));
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    engine.TryEndTurnSafe(p);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    Check("Yata-Garasu: End Phase returns it to hand",
+                        p.Hand.Contains(yata) && !p.TryFindMonster(yata, out _),
+                        $"hand={p.Hand.Contains(yata)} field={p.TryFindMonster(yata, out _)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    var yata = PlaceMonster(engine, p, yataId, 2, BattlePosition.Attack, true);
+                    yata.ClearAttackFlags();
+                    var startOpp = opp.LifePoints;
+                    for (var t = 0; t < 6 &&
+                                    !(engine.TurnPlayer == p && engine.Phase == DuelPhase.Main1 &&
+                                      !(engine.TurnNumber == 1 && p == engine.FirstPlayer)); t++)
+                    {
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        engine.TryEndTurnSafe(engine.TurnPlayer);
+                    }
+
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    Check("Yata-Garasu: Battle Phase after sitting",
+                        engine.TurnPlayer == p && engine.TryEnterBattlePhase(p),
+                        $"turn={engine.TurnPlayer?.Name} phase={engine.Phase} n={engine.TurnNumber}");
+                    DrainCombat(engine);
+                    Check("Yata-Garasu: direct attack inflicts 200",
+                        ResolveDirect(engine, p, yata) &&
+                        opp.LifePoints == startOpp - 200,
+                        $"LP {opp.LifePoints} skip={opp.SkipNextDrawPhase}");
+                    Check("Yata-Garasu: opponent skips next Draw Phase",
+                        opp.SkipNextDrawPhase,
+                        $"skip={opp.SkipNextDrawPhase} LP {opp.LifePoints}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var fromGy = engine.CreateCardInstance(yataId);
+                    p.Graveyard.Add(fromGy);
+                    Check("Yata-Garasu cannot be Special Summoned from GY",
+                        !engine.SpecialSummonToField(p, fromGy, BattlePosition.Attack, true) &&
+                        !p.TryFindMonster(fromGy, out _),
+                        $"onField={p.TryFindMonster(fromGy, out _)}");
+                }
+
+                {
+                    var hino = db.Get(hinoId);
+                    var hinoProg = hino != null ? CardTextEffectCompiler.Compile(hino) : null;
+                    Check("Hino-Kagu-Tsuchi delayed hand wipe stays leftover",
+                        hinoProg == null || !hinoProg.FullyCompiled);
+                    var pain = db.Get(painful);
+                    var painProg = pain != null ? CardTextEffectCompiler.Compile(pain) : null;
+                    Check("Painful Choice excavate stays leftover",
+                        painProg == null || !painProg.FullyCompiled);
+                    var duoDef = db.Get(duo);
+                    var duoProg = duoDef != null ? CardTextEffectCompiler.Compile(duoDef) : null;
+                    Check("Delinquent Duo opp discard stays leftover",
+                        duoProg == null || !duoProg.FullyCompiled);
+                    var conf = db.Get(confiscation);
+                    var confProg = conf != null ? CardTextEffectCompiler.Compile(conf) : null;
+                    Check("Confiscation look-at-hand stays leftover",
+                        confProg == null || !confProg.FullyCompiled);
+                    var heartDef = db.Get(heart);
+                    var heartProg = heartDef != null ? CardTextEffectCompiler.Compile(heartDef) : null;
+                    Check("Heart of Clear Water substitution stays leftover",
+                        heartProg == null || !heartProg.FullyCompiled);
+                }
+            }
+
             // ── FirstEmpty order ──
             {
                 var engine = Fresh(db, pDeck, aDeck);
