@@ -327,6 +327,8 @@ namespace WRLDZ.Duel
                 foreach (var m in who.MonstersOnField())
                 {
                     if (!IsFaceUpMonster(m)) continue;
+                    if (clause.RequiresThisDefensePosition && m.Position != BattlePosition.Defense)
+                        continue;
                     if (!MatchesAttribute(m, clause.AttributeFilter)) continue;
                     if (!MatchesRace(m, clause.RaceFilter)) continue;
                     m.AtkModifier += clause.Amount;
@@ -396,7 +398,7 @@ namespace WRLDZ.Duel
         {
             if (string.IsNullOrEmpty(race) || c?.Def == null) return true;
             return c.Def.race != null &&
-                   c.Def.race.IndexOf(race, StringComparison.OrdinalIgnoreCase) >= 0;
+                   c.Def.race.Equals(race, StringComparison.OrdinalIgnoreCase);
         }
 
         public static bool ControlsFaceUpNamed(DuelistState who, string name)

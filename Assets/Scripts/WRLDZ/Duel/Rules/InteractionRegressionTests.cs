@@ -6605,6 +6605,190 @@ namespace WRLDZ.Duel.Rules
                 }
             }
 
+            // ── v73 FullyCompiled: Block Attack / Chorus / Sogen / Sacred Crane ──
+            {
+                const int blockId = 25880422;
+                const int chorusId = 81380218;
+                const int sogenId = 86318356;
+                const int craneId = 30914564;
+                const int celtic = 91152256;
+                const int oxId = 5053103;
+                const int stoneId = 13039848;
+                const int yamiId = 59197169;
+                const int moltenId = 4732017;
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var atk = PlaceMonster(engine, opp, celtic, 2, BattlePosition.Attack, true);
+                    var def = PlaceMonster(engine, opp, oxId, 1, BattlePosition.Defense, true);
+                    var mine = PlaceMonster(engine, p, stoneId, 2, BattlePosition.Attack, true);
+                    var card = PutInHand(engine, p, blockId);
+                    Check("Block Attack: Activate legal vs opponent Attack Position",
+                        engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    Check("Block Attack: Activate opens ATK-pos-only targets",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget);
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        var legal = engine.PendingActivation.LegalTargets;
+                        Check("Block Attack: opp ATK is legal; opp DEF and your ATK are not",
+                            legal.Contains(atk) && !legal.Contains(def) && !legal.Contains(mine));
+                        Check("Block Attack: select ATK, becomes Defense",
+                            engine.TrySelectEffectTarget(atk) &&
+                            atk.Position == BattlePosition.Defense && atk.FaceUp,
+                            $"pos={atk.Position} faceUp={atk.FaceUp}");
+                    }
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    PlaceMonster(engine, opp, celtic, 2, BattlePosition.Defense, true);
+                    var card = PutInHand(engine, p, blockId);
+                    Check("Block Attack: refuse when opponent has only Defense Position",
+                        !engine.CanActivateSpellTrap(p, card, fromHand: true));
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var youAtk = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var youDef = PlaceMonster(engine, p, stoneId, 1, BattlePosition.Defense, true);
+                    var oppAtk = PlaceMonster(engine, opp, oxId, 2, BattlePosition.Attack, true);
+                    var oppDef = PlaceMonster(engine, opp, celtic, 1, BattlePosition.Defense, true);
+                    var field = PutInHand(engine, p, chorusId);
+                    Check("Chorus of Sanctuary: Activate Field from hand",
+                        engine.TurnPlayer == p && engine.InMainPhase &&
+                        engine.TryActivateSpellTrap(p, field, fromHand: true) &&
+                        p.FieldSpellZone?.Occupant == field && field.FaceUp);
+                    FieldSpellEffects.RefreshBoard(engine);
+                    Check("Chorus: your Attack Position DEF unchanged (1200)",
+                        youAtk.CurrentAtk == 1400 && youAtk.CurrentDef == 1200,
+                        $"atk={youAtk.CurrentAtk} def={youAtk.CurrentDef}");
+                    Check("Chorus: your Defense Position DEF +500 (2000→2500)",
+                        youDef.CurrentAtk == 1300 && youDef.CurrentDef == 2500,
+                        $"atk={youDef.CurrentAtk} def={youDef.CurrentDef}");
+                    Check("Chorus: opponent Attack Position DEF unchanged (1000)",
+                        oppAtk.CurrentAtk == 1700 && oppAtk.CurrentDef == 1000,
+                        $"atk={oppAtk.CurrentAtk} def={oppAtk.CurrentDef}");
+                    Check("Chorus: opponent Defense Position DEF +500 (1200→1700)",
+                        oppDef.CurrentAtk == 1400 && oppDef.CurrentDef == 1700,
+                        $"atk={oppDef.CurrentAtk} def={oppDef.CurrentDef}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var warrior = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var beastW = PlaceMonster(engine, p, oxId, 1, BattlePosition.Attack, true);
+                    var rock = PlaceMonster(engine, opp, stoneId, 2, BattlePosition.Attack, true);
+                    var field = PutInHand(engine, p, sogenId);
+                    Check("Sogen: Activate Field from hand",
+                        engine.TurnPlayer == p && engine.InMainPhase &&
+                        engine.TryActivateSpellTrap(p, field, fromHand: true) &&
+                        p.FieldSpellZone?.Occupant == field && field.FaceUp);
+                    FieldSpellEffects.RefreshBoard(engine);
+                    Check("Sogen: Warrior +200/+200 (1600/1400)",
+                        warrior.CurrentAtk == 1600 && warrior.CurrentDef == 1400,
+                        $"atk={warrior.CurrentAtk} def={warrior.CurrentDef}");
+                    Check("Sogen: Beast-Warrior +200/+200 only, not Warrior-substring +400",
+                        beastW.CurrentAtk == 1900 && beastW.CurrentDef == 1200,
+                        $"atk={beastW.CurrentAtk} def={beastW.CurrentDef}");
+                    Check("Sogen: Rock unchanged",
+                        rock.CurrentAtk == 1300 && rock.CurrentDef == 2000,
+                        $"atk={rock.CurrentAtk} def={rock.CurrentDef}");
+                    var yamiDef = db.Get(yamiId);
+                    var yamiProg = yamiDef != null ? CardTextEffectCompiler.Compile(yamiDef) : null;
+                    Check("Sogen live: Yami still not FullyCompiled",
+                        yamiProg == null || !yamiProg.FullyCompiled);
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    p.Deck.Clear();
+                    p.Deck.Add(celtic);
+                    p.Deck.Add(oxId);
+                    var crane = engine.CreateCardInstance(craneId);
+                    var handBefore = p.HandCount;
+                    Check("Sacred Crane: Special Summon to field",
+                        engine.SpecialSummonToField(p, crane, BattlePosition.Attack, true) &&
+                        crane.WasSpecialSummoned);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    Check("Sacred Crane SS: drew 1",
+                        p.HandCount == handBefore + 1 && p.Deck.Count == 1,
+                        $"hand={p.HandCount} was {handBefore} deck={p.Deck.Count}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    p.Deck.Clear();
+                    p.Deck.Add(celtic);
+                    p.Deck.Add(oxId);
+                    var crane = PutInHand(engine, p, craneId);
+                    var handBefore = p.HandCount;
+                    var deckBefore = p.Deck.Count;
+                    Check("Sacred Crane Normal Summon",
+                        engine.TryNormalSummon(p, crane, asSet: false) && crane.FaceUp);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    Check("Sacred Crane NS: no draw",
+                        p.HandCount == handBefore - 1 && p.Deck.Count == deckBefore,
+                        $"hand={p.HandCount} was {handBefore} deck={p.Deck.Count} was {deckBefore}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    p.Deck.Clear();
+                    p.Deck.Add(celtic);
+                    p.Deck.Add(oxId);
+                    var crane = PlaceMonster(engine, p, craneId, 2, BattlePosition.Defense, false);
+                    crane.SetThisTurn = false;
+                    var handBefore = p.HandCount;
+                    var deckBefore = p.Deck.Count;
+                    Check("Sacred Crane Flip Summon",
+                        engine.TryFlipSummon(p, crane) && crane.FaceUp);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    Check("Sacred Crane Flip Summon: no draw",
+                        p.HandCount == handBefore && p.Deck.Count == deckBefore,
+                        $"hand={p.HandCount} was {handBefore} deck={p.Deck.Count} was {deckBefore}");
+                }
+
+                {
+                    var moltenDef = db.Get(moltenId);
+                    var moltenProg = moltenDef != null ? CardTextEffectCompiler.Compile(moltenDef) : null;
+                    Check("Sacred Crane live: Molten Zombie still not FullyCompiled",
+                        moltenProg == null || !moltenProg.FullyCompiled);
+                }
+            }
+
             // ── FirstEmpty order ──
             {
                 var engine = Fresh(db, pDeck, aDeck);
