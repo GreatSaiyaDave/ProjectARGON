@@ -2610,6 +2610,34 @@ namespace WRLDZ.Duel
             }
             if (GameOver) return;
 
+            // Temporary take-control (Change of Heart / Shadow Tamer / Dragon Manipulator)
+            // returns during the End Phase of the turn the effect resolved.
+            var returning = new System.Collections.Generic.List<CardInstance>();
+            foreach (var side in new[] { Player, Opponent })
+            {
+                if (side == null) continue;
+                foreach (var m in side.MonstersOnField())
+                {
+                    if (m != null && m.TempControlUntilEndTurn == TurnNumber)
+                        returning.Add(m);
+                }
+            }
+
+            foreach (var m in returning)
+            {
+                var holder = ControllerOf(m);
+                var original = holder != null ? OpponentOf(holder) : null;
+                m.TempControlUntilEndTurn = -1;
+                if (original == null || holder == original) continue;
+                if (!TryTakeControl(original, m))
+                {
+                    Log($"{m.Name}: control cannot return — sent to the GY.");
+                    DestroyMonsterPublic(holder, m);
+                }
+            }
+
+            if (GameOver) return;
+
             // After End Phase, Set cards may be activated on following turns
             // (also clear leftover flags on both sides so a Set trap is legal next turn).
             foreach (var side in new[] { Player, Opponent })

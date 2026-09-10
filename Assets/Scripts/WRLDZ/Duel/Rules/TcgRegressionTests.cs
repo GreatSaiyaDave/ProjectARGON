@@ -1183,6 +1183,119 @@ namespace WRLDZ.Duel.Rules
                             c != null && c.TakeControlOfTarget &&
                             c.Zone == EffectZoneFilter.OppFaceUpMonsters));
 
+                    var coh = db.Get(4031928);
+                    var cohProg = coh != null ? CardTextEffectCompiler.Compile(coh) : null;
+                    Check("Corpus: Change of Heart FullyCompiled take-control until End Phase",
+                        cohProg != null && cohProg.FullyCompiled &&
+                        cohProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Activate &&
+                            c.Action == EffectActionKind.TakeControlTarget &&
+                            c.RequiresTargetChoice &&
+                            c.Zone == EffectZoneFilter.OppFaceUpMonsters),
+                        cohProg == null
+                            ? "null"
+                            : $"full={cohProg.FullyCompiled} n={cohProg.ClauseList.Count} unparsed={string.Join("|", cohProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var tamer = db.Get(37620434);
+                    var tamerProg = tamer != null ? CardTextEffectCompiler.Compile(tamer) : null;
+                    Check("Corpus: Shadow Tamer FullyCompiled Flip Fiend take-control until End Phase",
+                        tamerProg != null && tamerProg.FullyCompiled &&
+                        tamerProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Flip &&
+                            c.Action == EffectActionKind.TakeControlTarget &&
+                            c.RequiresTargetChoice &&
+                            string.Equals(c.RaceFilter, "Fiend", StringComparison.OrdinalIgnoreCase)) &&
+                        tamerProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.AlwaysTreatedAsName &&
+                            string.Equals(c.TreatedAsName, "Archfiend", StringComparison.OrdinalIgnoreCase)),
+                        tamerProg == null
+                            ? "null"
+                            : $"full={tamerProg.FullyCompiled} n={tamerProg.ClauseList.Count} unparsed={string.Join("|", tamerProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var manip = db.Get(63018132);
+                    var manipProg = manip != null ? CardTextEffectCompiler.Compile(manip) : null;
+                    Check("Corpus: Dragon Manipulator FullyCompiled Flip Dragon take-control until End Phase",
+                        manipProg != null && manipProg.FullyCompiled &&
+                        manipProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Flip &&
+                            c.Action == EffectActionKind.TakeControlTarget &&
+                            c.RequiresTargetChoice &&
+                            string.Equals(c.RaceFilter, "Dragon", StringComparison.OrdinalIgnoreCase)),
+                        manipProg == null
+                            ? "null"
+                            : $"full={manipProg.FullyCompiled} n={manipProg.ClauseList.Count} unparsed={string.Join("|", manipProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var synCoh = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000056,
+                        name = "New Spell (Change of Heart shape)",
+                        type = "Spell Card",
+                        race = "Normal",
+                        desc = "Target 1 monster your opponent controls; take control of it until the End Phase."
+                    });
+                    Check("New-card rule: take-control until End Phase compiles without a cardId branch",
+                        synCoh != null && synCoh.FullyCompiled &&
+                        synCoh.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.TakeControlTarget &&
+                            c.RequiresTargetChoice));
+
+                    var synTamer = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000057,
+                        name = "New Flip (Shadow Tamer shape)",
+                        type = "Flip Effect Monster",
+                        desc =
+                            "FLIP: Target 1 Aqua-Type monster your opponent controls; take control of that target until the End Phase."
+                    });
+                    Check("New-card rule: Flip Type take-control until End Phase compiles without a cardId branch",
+                        synTamer != null && synTamer.FullyCompiled &&
+                        synTamer.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Flip &&
+                            c.Action == EffectActionKind.TakeControlTarget &&
+                            string.Equals(c.RaceFilter, "Aqua", StringComparison.OrdinalIgnoreCase)));
+
+                    var synManip = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000058,
+                        name = "New Flip (Dragon Manipulator shape)",
+                        type = "Flip Effect Monster",
+                        desc =
+                            "FLIP: Take control of 1 face-up Insect-Type monster on your opponent's side of the field until the end of the End Phase."
+                    });
+                    Check("New-card rule: old Flip take-control wording compiles without a cardId branch",
+                        synManip != null && synManip.FullyCompiled &&
+                        synManip.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Flip &&
+                            c.Action == EffectActionKind.TakeControlTarget &&
+                            string.Equals(c.RaceFilter, "Insect", StringComparison.OrdinalIgnoreCase)));
+
+                    var eria = db.Get(74364659);
+                    var eriaProg = eria != null ? CardTextEffectCompiler.Compile(eria) : null;
+                    Check("Corpus: Eria the Water Charmer while-face-up leftover is not FullyCompiled",
+                        eriaProg == null || !eriaProg.FullyCompiled);
+
+                    var jowls = db.Get(5257687);
+                    var jowlsProg = jowls != null ? CardTextEffectCompiler.Compile(jowls) : null;
+                    Check("Corpus: Jowls of Dark Demise extra rider is not FullyCompiled",
+                        jowlsProg == null || !jowlsProg.FullyCompiled);
+
+                    var ec = db.Get(98045062);
+                    var ecProg = ec != null ? CardTextEffectCompiler.Compile(ec) : null;
+                    Check("Corpus: Enemy Controller choice leftover is not FullyCompiled",
+                        ecProg == null || !ecProg.FullyCompiled);
+
+                    var brain = db.Get(87910978);
+                    var brainProg = brain != null ? CardTextEffectCompiler.Compile(brain) : null;
+                    Check("Corpus: Brain Control Normal Summoned/Set leftover is not FullyCompiled",
+                        brainProg == null || !brainProg.FullyCompiled);
+
                     var rec = db.Get(74848038);
                     var recProg = rec != null ? CardTextEffectCompiler.Compile(rec) : null;
                     Check("Corpus: Monster Reincarnation FullyCompiled discard + GY monster add",

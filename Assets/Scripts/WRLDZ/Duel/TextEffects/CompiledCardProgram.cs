@@ -215,7 +215,13 @@ namespace WRLDZ.Duel.TextEffects
         /// <see cref="EffectClause.DieNegateFacesMask"/> negate the effect and destroy the
         /// opponent's card. The classic Archfiend die-roll protection.
         /// </summary>
-        DieRollNegateWhenTargeted
+        DieRollNegateWhenTargeted,
+        /// <summary>
+        /// Take control of the chosen target until the End Phase of this turn
+        /// (Change of Heart / Shadow Tamer / Dragon Manipulator). Not Charmers
+        /// (while-source-face-up) and not switch-control.
+        /// </summary>
+        TakeControlTarget
     }
 
     public enum EffectSide
