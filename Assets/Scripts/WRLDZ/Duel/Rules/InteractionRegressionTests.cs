@@ -959,13 +959,16 @@ namespace WRLDZ.Duel.Rules
                                 ? "no window"
                                 : $"timing={engine.PendingResponse.Timing}");
                         var lpBefore = p.LifePoints;
+                        var victimAtk = victim.CurrentAtk;
+                        var attackerAtk = attacker.CurrentAtk;
                         Check("Enchanted Javelin activates",
                             engine.CanActivateSpellTrap(p, jav, fromHand: false) &&
                             engine.TryActivateSpellTrap(p, jav, fromHand: false));
-                        Check("Enchanted Javelin: gain ATK as LP (attack not negated)",
-                            p.LifePoints == lpBefore + attacker.CurrentAtk,
-                            $"LP {p.LifePoints} was {lpBefore} atk={attacker.CurrentAtk}");
                         DrainCombat(engine);
+                        var battleDmg = Mathf.Max(0, attackerAtk - victimAtk);
+                        Check("Enchanted Javelin: gain ATK as LP; attack still deals damage",
+                            p.LifePoints == lpBefore + attackerAtk - battleDmg,
+                            $"LP {p.LifePoints} was {lpBefore} atk={attackerAtk} dmg={battleDmg}");
                         Check("Enchanted Javelin: attack still resolved (Celtic dies)",
                             !p.TryFindMonster(victim, out _) &&
                             p.Graveyard.Exists(c => c.CardId == celtic),
