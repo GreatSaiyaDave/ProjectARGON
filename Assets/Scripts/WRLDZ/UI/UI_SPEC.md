@@ -309,7 +309,7 @@ No particle spam that covers names.
 |--------|----------------------|--------|
 | **Quick Duel** | Practice AI · standard LP | Always |
 | **Shadow Duel** | Local / ranked stub · 8000 LP | Always |
-| **Duelist Kingdom** | Story LP / field rules | Story progress |
+| **Duelist Kingdom** | 2000 LP · no directs (PvAI opt-in) | `format.dk` badge |
 | **Raid** | Tome Deck enabled | Level ≥ 10 |
 
 Each card shows: title, 2-line rules, LP, **LOCKED** or **PLAY**.

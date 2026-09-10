@@ -7,12 +7,15 @@ namespace WRLDZ.Core
     /// <summary>
     /// Alternate table-law format badges. Collection only until that format's rules lock.
     /// Quick / PvAI / Practice / Shadow TCG never need one.
+    /// <see cref="TableLawsLive"/> is the only switch that may turn on overlay laws.
     /// </summary>
     public static class FormatProgress
     {
+        public const string DuelistKingdomId = "dk";
+
         public static readonly string[] Ids =
         {
-            "dk", "raid", "ddm", "genesys", "speed", "deckmaster"
+            DuelistKingdomId, "raid", "ddm", "genesys", "speed", "deckmaster"
         };
 
         public static readonly string[] Titles =
@@ -28,6 +31,17 @@ namespace WRLDZ.Core
                     return Titles[i];
             return id;
         }
+
+        /// <summary>
+        /// Formats whose honest overlay is live. Duelist Kingdom: 2000 LP + no
+        /// direct attacks. Tribute-free summons and no S/T LP damage stay off.
+        /// Story never consults this — campaign stays 8000 / !DkOverlay.
+        /// </summary>
+        public static bool TableLawsLive(string formatId) =>
+            string.Equals(formatId, DuelistKingdomId, StringComparison.OrdinalIgnoreCase);
+
+        public static bool CanOptInDuelistKingdom(PlayerProgress p) =>
+            TableLawsLive(DuelistKingdomId) && HasBadge(p, DuelistKingdomId);
 
         public static bool HasBadge(PlayerProgress p, string formatId)
         {

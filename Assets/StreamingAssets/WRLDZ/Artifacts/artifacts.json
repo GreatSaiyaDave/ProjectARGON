@@ -204,7 +204,7 @@
       "kind": 10,
       "name": "Duelist Kingdom Format",
       "typeLine": "ARTIFACT / FORMAT",
-      "desc": "Unlocks the Duelist Kingdom format row. Table laws are not live until that format is finalized.",
+      "desc": "Unlocks Duelist Kingdom PvAI (2000 LP, no direct attacks). Story stays standard TCG. Tribute-free and no S/T LP damage are not live.",
       "art": "WRLDZ/Imagine/icons/icon_story.png",
       "stackable": false,
       "qtyLabel": "",

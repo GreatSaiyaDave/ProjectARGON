@@ -233,7 +233,8 @@ namespace WRLDZ.Core
             {
                 _engine = new DuelEngine();
                 _engine.HumanVsHuman = match != null && match.IsHumanOpponent;
-                if (match != null && match.DkOverlay)
+                if (match != null && match.DkOverlay
+                    && !ArDuelMatchConfig.IsStoryLaunch(match.Launch))
                     _engine.Overlay = DuelRulesOverlay.DuelistKingdomTable();
                 var cinematic = match == null || !match.SkipPreDuelCinematic;
                 if (match != null && (match.Launch == ArDuelLaunchKind.StoryEra
