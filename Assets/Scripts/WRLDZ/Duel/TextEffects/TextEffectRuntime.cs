@@ -2321,7 +2321,9 @@ namespace WRLDZ.Duel.TextEffects
 
                     if (clause.Zone == EffectZoneFilter.DeckFieldSpells ||
                         clause.Zone == EffectZoneFilter.DeckEquipSpells ||
-                        clause.Zone == EffectZoneFilter.DeckMonstersRaceLevelLeq)
+                        clause.Zone == EffectZoneFilter.DeckMonstersRaceLevelLeq ||
+                        clause.Zone == EffectZoneFilter.DeckRitualMonsters ||
+                        clause.Zone == EffectZoneFilter.DeckRitualSpells)
                     {
                         engine.Log(
                             $"Deck search: no legal card in Deck (remaining={who.DeckCount}).");
@@ -3753,6 +3755,12 @@ namespace WRLDZ.Duel.TextEffects
                 case EffectZoneFilter.DeckEquipSpells:
                     AddUniqueDeck(engine, who, list, def => def != null && def.IsEquipSpell);
                     break;
+                case EffectZoneFilter.DeckRitualMonsters:
+                    AddUniqueDeck(engine, who, list, def => def != null && def.IsRitualMonster);
+                    break;
+                case EffectZoneFilter.DeckRitualSpells:
+                    AddUniqueDeck(engine, who, list, def => def != null && def.IsRitualSpell);
+                    break;
                 case EffectZoneFilter.DeckMonstersRaceLevelLeq:
                     AddUniqueDeck(engine, who, list, def =>
                     {
@@ -3782,7 +3790,9 @@ namespace WRLDZ.Duel.TextEffects
 
             if (!string.IsNullOrEmpty(c.RaceFilter) &&
                 c.Zone != EffectZoneFilter.DeckMonstersRaceLevelLeq &&
-                c.Zone != EffectZoneFilter.DeckFieldSpells)
+                c.Zone != EffectZoneFilter.DeckFieldSpells &&
+                c.Zone != EffectZoneFilter.DeckRitualMonsters &&
+                c.Zone != EffectZoneFilter.DeckRitualSpells)
                 list.RemoveAll(t => t?.Def?.race == null ||
                                     t.Def.race.IndexOf(c.RaceFilter,
                                         System.StringComparison.OrdinalIgnoreCase) < 0);
@@ -3906,6 +3916,8 @@ namespace WRLDZ.Duel.TextEffects
             EffectZoneFilter.OppAnyCardOnField => EffectTargetKind.AnyCardOnField,
             EffectZoneFilter.DeckFieldSpells => EffectTargetKind.FieldSpellInYourDeck,
             EffectZoneFilter.DeckEquipSpells => EffectTargetKind.EquipSpellInYourDeck,
+            EffectZoneFilter.DeckRitualMonsters => EffectTargetKind.RitualMonsterInYourDeck,
+            EffectZoneFilter.DeckRitualSpells => EffectTargetKind.RitualSpellInYourDeck,
             EffectZoneFilter.DeckMonstersRaceLevelLeq => EffectTargetKind.MonsterInYourDeckFiltered,
             EffectZoneFilter.DeckMonstersAtkLeq => EffectTargetKind.MonsterInYourDeckAtkLeq,
             _ => EffectTargetKind.None

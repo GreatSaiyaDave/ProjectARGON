@@ -282,6 +282,10 @@ namespace WRLDZ.Duel.Rules
 
                 if (c.Zone == EffectZoneFilter.DeckFieldSpells)
                     p.Deck.Insert(0, Alo);
+                if (c.Zone == EffectZoneFilter.DeckRitualMonsters)
+                    p.Deck.Insert(0, 64631466); // Relinquished
+                if (c.Zone == EffectZoneFilter.DeckRitualSpells)
+                    p.Deck.Insert(0, 41426869); // Black Illusion Ritual
 
                 if (c.Action == EffectActionKind.AddNamedFromDeckToHand &&
                     !string.IsNullOrEmpty(c.NamedCard) &&
