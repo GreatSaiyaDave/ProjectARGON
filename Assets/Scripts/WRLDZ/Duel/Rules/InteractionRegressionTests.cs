@@ -1138,15 +1138,17 @@ namespace WRLDZ.Duel.Rules
                                 : $"timing={engine.PendingResponse.Timing}");
                         var oppLp = opp.LifePoints;
                         var atkVal = attacker.CurrentAtk;
+                        var bounderAtk = bounder.CurrentAtk;
                         Check("Reflect Bounder activates",
                             engine.TryActivateSpellTrap(p, bounder, fromHand: false));
                         DrainCombat(engine);
+                        var battleDmg = Mathf.Max(0, bounderAtk - atkVal);
                         Check("Reflect Bounder: inflict ATK, then destroy this after DC; attacker dies",
-                            opp.LifePoints == oppLp - atkVal &&
+                            opp.LifePoints == oppLp - atkVal - battleDmg &&
                             !p.TryFindMonster(bounder, out _) &&
                             p.Graveyard.Exists(c => c != null && c.CardId == reflectBounder) &&
                             !opp.TryFindMonster(attacker, out _),
-                            $"oppLP={opp.LifePoints} was {oppLp} atk={atkVal} " +
+                            $"oppLP={opp.LifePoints} was {oppLp} atk={atkVal} battle={battleDmg} " +
                             $"bounderField={p.TryFindMonster(bounder, out _)} " +
                             $"celticField={opp.TryFindMonster(attacker, out _)}");
                     }
