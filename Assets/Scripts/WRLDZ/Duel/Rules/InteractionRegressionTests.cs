@@ -3015,6 +3015,156 @@ namespace WRLDZ.Duel.Rules
                         p.Graveyard.Exists(c => c.CardId == duster));
                 }
 
+                // ── Fanbot park: Spy / Ritual Weapon / Spell Absorption /
+                // Dark Magician Girl / Special Hurricane ──
+                {
+                    const int spyId = 81820689;
+                    const int ritualWepId = 54351224;
+                    const int spellAbsId = 51481927;
+                    const int dmgGirlId = 38033121;
+                    const int specHurId = 42598242;
+                    const int relinquishedId = 64631466;
+                    const int darkMagicianId = 46986414;
+
+                    var spyDef = db.Get(spyId);
+                    var spyLive = spyDef != null ? CardTextEffectCompiler.Compile(spyDef) : null;
+                    Check("The Inexperienced Spy stays parked (not FullyCompiled)",
+                        spyLive == null || !spyLive.FullyCompiled,
+                        spyLive == null
+                            ? "null"
+                            : $"full={spyLive.FullyCompiled} n={spyLive.ClauseList.Count} unparsed={string.Join("|", spyLive.UnparsedFragments ?? System.Array.Empty<string>())}");
+                    Check("The Inexperienced Spy is not Banish / AddFrom",
+                        spyLive == null ||
+                        !spyLive.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.Banish ||
+                             c.Action == EffectActionKind.AddFromGyToHand)));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        opp.Hand.Clear();
+                        PutInHand(engine, opp, celtic);
+                        var card = PutInHand(engine, p, spyId);
+                        Check("The Inexperienced Spy: ProgramMayActivate false",
+                            !OfficialEffectRegistry.ProgramMayActivate(card.Def));
+                        Check("The Inexperienced Spy: Activate refused (fail-closed)",
+                            !engine.CanActivateSpellTrap(p, card, fromHand: true) &&
+                            !engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                            p.Hand.Contains(card) &&
+                            opp.Hand.Count == 1);
+                    }
+
+                    var wepDef = db.Get(ritualWepId);
+                    var wepLive = wepDef != null ? CardTextEffectCompiler.Compile(wepDef) : null;
+                    Check("Ritual Weapon stays parked (not FullyCompiled)",
+                        wepLive == null || !wepLive.FullyCompiled);
+                    Check("Ritual Weapon is not EquipThisToTarget",
+                        wepLive == null ||
+                        !wepLive.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.EquipThisToTarget));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var host = PlaceMonster(engine, p, relinquishedId, 2, BattlePosition.Attack, true);
+                        var atkBefore = host.CurrentAtk;
+                        var card = PutInHand(engine, p, ritualWepId);
+                        Check("Ritual Weapon: ProgramMayActivate false",
+                            !OfficialEffectRegistry.ProgramMayActivate(card.Def));
+                        Check("Ritual Weapon: Activate refused even with a Lv1 Ritual (fail-closed)",
+                            !engine.CanActivateSpellTrap(p, card, fromHand: true) &&
+                            !engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                            p.Hand.Contains(card) &&
+                            host.CurrentAtk == atkBefore);
+                    }
+
+                    var absDef = db.Get(spellAbsId);
+                    var absLive = absDef != null ? CardTextEffectCompiler.Compile(absDef) : null;
+                    Check("Spell Absorption stays parked (not FullyCompiled)",
+                        absLive == null || !absLive.FullyCompiled);
+                    Check("Spell Absorption is not GainLifePoints",
+                        absLive == null ||
+                        !absLive.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.GainLifePoints));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var card = PutInHand(engine, p, spellAbsId);
+                        Check("Spell Absorption: ProgramMayActivate false",
+                            !OfficialEffectRegistry.ProgramMayActivate(card.Def));
+                        Check("Spell Absorption: Activate refused (fail-closed)",
+                            !engine.CanActivateSpellTrap(p, card, fromHand: true) &&
+                            !engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                            p.Hand.Contains(card) &&
+                            !p.Graveyard.Contains(card) &&
+                            p.FieldSpellZone?.Occupant != card);
+                    }
+
+                    var girlDef = db.Get(dmgGirlId);
+                    var girlLive = girlDef != null ? CardTextEffectCompiler.Compile(girlDef) : null;
+                    Check("Dark Magician Girl stays parked (not FullyCompiled)",
+                        girlLive == null || !girlLive.FullyCompiled);
+                    Check("Dark Magician Girl is not ContinuousGainAtkDef / ExtraAmountPerCopyInGy",
+                        girlLive == null ||
+                        !girlLive.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.ContinuousGainAtkDef ||
+                             c.ExtraAmountPerCopyInGy > 0)));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var girl = PlaceMonster(engine, p, dmgGirlId, 2, BattlePosition.Attack, true);
+                        p.Graveyard.Add(engine.CreateCardInstance(darkMagicianId));
+                        engine.NotifyPublic();
+                        Check("Dark Magician Girl: ATK stays 2000 with Dark Magician in GY (not +300)",
+                            girl.CurrentAtk == 2000, $"atk={girl.CurrentAtk}");
+                    }
+
+                    var hurDef = db.Get(specHurId);
+                    var hurLive = hurDef != null ? CardTextEffectCompiler.Compile(hurDef) : null;
+                    Check("Special Hurricane stays parked (not FullyCompiled)",
+                        hurLive == null || !hurLive.FullyCompiled);
+                    Check("Special Hurricane is not Destroy / DestroySpecialSummonedMonsters",
+                        hurLive == null ||
+                        !hurLive.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.Destroy ||
+                             c.Action == EffectActionKind.DestroySpecialSummonedMonsters)));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        var ns = PlaceMonster(engine, p, celtic, 1, BattlePosition.Attack, true);
+                        var ss = PlaceMonster(engine, opp, bewd, 2, BattlePosition.Attack, true);
+                        ss.WasSpecialSummoned = true;
+                        PutInHand(engine, p, celtic);
+                        var card = PutInHand(engine, p, specHurId);
+                        Check("Special Hurricane: ProgramMayActivate false",
+                            !OfficialEffectRegistry.ProgramMayActivate(card.Def));
+                        Check("Special Hurricane: Activate refused with SS on field + discard fodder",
+                            !engine.CanActivateSpellTrap(p, card, fromHand: true) &&
+                            !engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                            p.Hand.Contains(card) &&
+                            p.TryFindMonster(ns, out _) &&
+                            opp.TryFindMonster(ss, out _));
+                    }
+                }
+
                 // ── Equip Spells: Activate + target; host leaving field destroys Equip ──
                 {
                     const int treasure = 1435851;

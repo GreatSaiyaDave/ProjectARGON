@@ -2073,6 +2073,100 @@ namespace WRLDZ.Duel.Rules
                             c.Zone == EffectZoneFilter.FieldSpellTraps &&
                             !c.RequiresTargetChoice));
 
+                    // Fanbot surgical shortlist: The Inexperienced Spy / Ritual Weapon /
+                    // Spell Absorption / Dark Magician Girl / Special Hurricane.
+                    // Existing atoms cannot honor the official print (look-at opp hand,
+                    // Level≤6 Ritual Equip, Spell-resolves LP, GY-name ATK scale,
+                    // discard then SS-wipe — no-target discard is not paid). Fail-closed park.
+                    var inexpSpy = db.Get(81820689);
+                    var inexpSpyProg = inexpSpy != null ? CardTextEffectCompiler.Compile(inexpSpy) : null;
+                    Check("Corpus: The Inexperienced Spy stays parked (look-at opp hand needs atom)",
+                        inexpSpyProg == null || !inexpSpyProg.FullyCompiled,
+                        inexpSpyProg == null
+                            ? "null"
+                            : $"full={inexpSpyProg.FullyCompiled} n={inexpSpyProg.ClauseList.Count} unparsed={string.Join("|", inexpSpyProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: The Inexperienced Spy is not Confiscation / Banish / AddFrom hand",
+                        inexpSpyProg == null ||
+                        !inexpSpyProg.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.BanishThenSameNameFromOppHandDeck ||
+                             c.Action == EffectActionKind.AddFromGyToHand ||
+                             c.Action == EffectActionKind.Banish)));
+                    Check("Corpus: The Inexperienced Spy ProgramMayActivate is false",
+                        inexpSpy == null || !OfficialEffectRegistry.ProgramMayActivate(inexpSpy));
+
+                    var ritualWep = db.Get(54351224);
+                    var ritualWepProg = ritualWep != null ? CardTextEffectCompiler.Compile(ritualWep) : null;
+                    Check("Corpus: Ritual Weapon stays parked (Level≤6 Ritual Equip needs atom)",
+                        ritualWepProg == null || !ritualWepProg.FullyCompiled,
+                        ritualWepProg == null
+                            ? "null"
+                            : $"full={ritualWepProg.FullyCompiled} n={ritualWepProg.ClauseList.Count} unparsed={string.Join("|", ritualWepProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: Ritual Weapon is not unrestricted EquipThisToTarget +1500",
+                        ritualWepProg == null ||
+                        !ritualWepProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.EquipThisToTarget));
+                    Check("Corpus: Ritual Weapon ProgramMayActivate is false",
+                        ritualWep == null || !OfficialEffectRegistry.ProgramMayActivate(ritualWep));
+
+                    var spellAbs = db.Get(51481927);
+                    var spellAbsProg = spellAbs != null ? CardTextEffectCompiler.Compile(spellAbs) : null;
+                    Check("Corpus: Spell Absorption stays parked (Spell-resolves LP needs atom)",
+                        spellAbsProg == null || !spellAbsProg.FullyCompiled,
+                        spellAbsProg == null
+                            ? "null"
+                            : $"full={spellAbsProg.FullyCompiled} n={spellAbsProg.ClauseList.Count} unparsed={string.Join("|", spellAbsProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: Spell Absorption is not Activate GainLifePoints",
+                        spellAbsProg == null ||
+                        !spellAbsProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.GainLifePoints));
+                    Check("Corpus: Spell Absorption ProgramMayActivate is false",
+                        spellAbs == null || !OfficialEffectRegistry.ProgramMayActivate(spellAbs));
+
+                    var dmgGirl = db.Get(38033121);
+                    var dmgGirlProg = dmgGirl != null ? CardTextEffectCompiler.Compile(dmgGirl) : null;
+                    Check("Corpus: Dark Magician Girl stays parked (GY Dark Magician / Magician of Black Chaos ATK needs atom)",
+                        dmgGirlProg == null || !dmgGirlProg.FullyCompiled,
+                        dmgGirlProg == null
+                            ? "null"
+                            : $"full={dmgGirlProg.FullyCompiled} n={dmgGirlProg.ClauseList.Count} unparsed={string.Join("|", dmgGirlProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: Dark Magician Girl is not ContinuousGainAtkDef / ExtraAmountPerCopyInGy",
+                        dmgGirlProg == null ||
+                        !dmgGirlProg.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.ContinuousGainAtkDef ||
+                             c.ExtraAmountPerCopyInGy > 0)));
+                    Check("Corpus: Dark Magician Girl ProgramMayActivate is false",
+                        dmgGirl == null || !OfficialEffectRegistry.ProgramMayActivate(dmgGirl));
+
+                    var specHur = db.Get(42598242);
+                    var specHurProg = specHur != null ? CardTextEffectCompiler.Compile(specHur) : null;
+                    Check("Corpus: Special Hurricane stays parked (discard then SS-wipe needs discard-pay runtime)",
+                        specHurProg == null || !specHurProg.FullyCompiled,
+                        specHurProg == null
+                            ? "null"
+                            : $"full={specHurProg.FullyCompiled} n={specHurProg.ClauseList.Count} unparsed={string.Join("|", specHurProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: Special Hurricane is not Dark Hole / discard-free DestroySpecialSummonedMonsters",
+                        specHurProg == null ||
+                        !specHurProg.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.Destroy ||
+                             c.Action == EffectActionKind.DestroySpecialSummonedMonsters)));
+                    Check("Corpus: Special Hurricane ProgramMayActivate is false",
+                        specHur == null || !OfficialEffectRegistry.ProgramMayActivate(specHur));
+
+                    var leftoverSpy = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000121,
+                        name = "Look-at leftover unique (Spy family)",
+                        type = "Spell Card",
+                        race = "Normal",
+                        desc =
+                            "Select and see 1 card in your opponent's hand. Shuffle your entire Deck into your opponent's Deck."
+                    });
+                    Check("Corpus: The Inexperienced Spy leftover unique is not FullyCompiled",
+                        leftoverSpy == null || !leftoverSpy.FullyCompiled);
+
                     Check("Vocabulary: Protection is a shared kind",
                         Array.IndexOf(EffectVocabulary.SharedResolutions,
                             EffectResolutionKind.Protection) >= 0);
