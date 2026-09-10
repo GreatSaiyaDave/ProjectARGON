@@ -23,6 +23,7 @@ namespace WRLDZ.Duel.Rules
         const int Fenrir = 218704;
         const int PotOfGreed = 55144522;
         const int MirrorForce = 44095762;
+        const int Kuriboh = 40640057; // Level 1 tribute fodder (RitualRegressionTests)
 
         public static string Run()
         {
@@ -231,8 +232,10 @@ namespace WRLDZ.Duel.Rules
         static bool NeedsHardBoard(EffectClause c)
         {
             if (c == null) return false;
-            return c.Action == EffectActionKind.RitualSummon || // needs named monster in hand + Tributes
-                   c.RequiresLordOfDOnField ||
+            // RitualSummon is provisioned below (named/attr monster + Level-1 tributes).
+            // Skipping it left the Sept 7 corpus FAIL cluster (White Dragon Ritual, …)
+            // as a silent pass instead of activating on a legal board.
+            return c.RequiresLordOfDOnField ||
                    c.RequiresSendNamedToGy ||
                    c.RequiresTributeThis ||
                    c.RequiresTributeCount > 0 ||
@@ -309,13 +312,85 @@ namespace WRLDZ.Duel.Rules
                 {
                     p.Graveyard.Add(engine.CreateCardInstance(Celtic));
                     p.Graveyard.Add(engine.CreateCardInstance(Bewd));
+                    // Race-filtered GY SS (Zombie / Fiend / …) cannot use Celtic/BEWD.
+                    var raceId = FindMainDeckMonsterId(engine, c.RaceFilter, c.AttributeFilter,
+                        c.RequiresNormalMonster);
+                    if (raceId > 0 && raceId != Celtic && raceId != Bewd)
+                        p.Graveyard.Add(engine.CreateCardInstance(raceId));
+                    if (c.Zone == EffectZoneFilter.EitherGyMonsters)
+                        opp.Graveyard.Add(engine.CreateCardInstance(Celtic));
                 }
 
                 if (c.Zone == EffectZoneFilter.ControllerGySpells)
                     p.Graveyard.Add(engine.CreateCardInstance(PotOfGreed));
                 if (c.Zone == EffectZoneFilter.ControllerGyTraps)
                     p.Graveyard.Add(engine.CreateCardInstance(MirrorForce));
+
+                if (c.Action == EffectActionKind.RitualSummon)
+                    ProvisionRitual(engine, c);
             }
+        }
+
+        /// <summary>
+        /// Corpus legal board for a Ritual Spell: the named (or attribute-matching)
+        /// Ritual Monster in hand plus enough Level-1 tributes. CanActivate refuses
+        /// without both — that was the shared Sept 7 FullyCompiled-spell FAIL, not
+        /// a TextEffects gate bug.
+        /// </summary>
+        static void ProvisionRitual(DuelEngine engine, EffectClause c)
+        {
+            if (engine?.Database == null || c == null) return;
+            var target = FindRitualMonsterDef(engine.Database, c);
+            if (target == null) return;
+            PutInHand(engine, engine.Player, target.id);
+            var need = target.level > 0 ? target.level : Math.Max(1, c.Amount);
+            for (var i = 0; i < need; i++)
+                PutInHand(engine, engine.Player, Kuriboh);
+        }
+
+        static CardDef FindRitualMonsterDef(CardDatabase db, EffectClause c)
+        {
+            if (db == null || c == null) return null;
+            foreach (var d in db.GetAllCards())
+            {
+                if (d == null || !d.IsRitualMonster) continue;
+                if (!string.IsNullOrEmpty(c.NamedCard))
+                {
+                    if (string.Equals(d.name, c.NamedCard, StringComparison.OrdinalIgnoreCase))
+                        return d;
+                    continue;
+                }
+
+                if (!string.IsNullOrEmpty(c.AttributeFilter) &&
+                    string.Equals(d.attribute, c.AttributeFilter, StringComparison.OrdinalIgnoreCase))
+                    return d;
+            }
+
+            return null;
+        }
+
+        static int FindMainDeckMonsterId(DuelEngine engine, string race, string attribute,
+            bool normalOnly)
+        {
+            if (engine?.Database == null) return 0;
+            if (string.IsNullOrEmpty(race) && string.IsNullOrEmpty(attribute) && !normalOnly)
+                return Celtic;
+            foreach (var d in engine.Database.GetAllCards())
+            {
+                if (d == null || !d.IsMonster || d.IsExtraDeck) continue;
+                if (normalOnly && !d.IsNormalMonster) continue;
+                if (!string.IsNullOrEmpty(race) &&
+                    (d.race == null ||
+                     d.race.IndexOf(race, StringComparison.OrdinalIgnoreCase) < 0))
+                    continue;
+                if (!string.IsNullOrEmpty(attribute) &&
+                    (d.attribute == null ||
+                     !d.attribute.Equals(attribute, StringComparison.OrdinalIgnoreCase)))
+                    continue;
+                return d.id;
+            }
+
+            return 0;
         }
 
         static bool TryField(DuelEngine engine, CardDef def, List<string> fail)
@@ -364,6 +439,11 @@ namespace WRLDZ.Duel.Rules
             if (act.Count == 0) return true;
             if (act.Exists(NeedsHardBoard)) return true;
             if (act.Exists(c => c != null && c.OpponentTurnOnly)) return true;
+            // Named Ritual Monster missing from this cards_db → compile-only, same as
+            // RitualRegressionTests (do not fail the activate sweep).
+            if (act.Exists(c => c != null && c.Action == EffectActionKind.RitualSummon &&
+                                FindRitualMonsterDef(engine.Database, c) == null))
+                return true;
             Provision(engine, prog);
             var card = PutInHand(engine, engine.Player, def.id);
             if (!engine.CanActivateSpellTrap(engine.Player, card, fromHand: true))
