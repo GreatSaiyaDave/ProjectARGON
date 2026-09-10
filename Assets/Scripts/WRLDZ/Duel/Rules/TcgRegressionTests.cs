@@ -2073,6 +2073,88 @@ namespace WRLDZ.Duel.Rules
                             c.Zone == EffectZoneFilter.FieldSpellTraps &&
                             !c.RequiresTargetChoice));
 
+                    // Fanbot shortlist: Threatening Roar / Mask of Restrict / The Dark Door /
+                    // Vengeful Bog Spirit / Eradicating Aerosol. Existing atoms cannot honor
+                    // the official print without new runtime. Fail-closed park.
+                    var roar = db.Get(36361633);
+                    var roarProg = roar != null ? CardTextEffectCompiler.Compile(roar) : null;
+                    Check("Corpus: Threatening Roar stays parked (this-turn opp attack lock needs atom)",
+                        roarProg == null || !roarProg.FullyCompiled,
+                        roarProg == null
+                            ? "null"
+                            : $"full={roarProg.FullyCompiled} n={roarProg.ClauseList.Count} unparsed={string.Join("|", roarProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: Threatening Roar is not Waboku / Swords / NegateAttack / EndBattlePhase",
+                        roarProg == null ||
+                        !roarProg.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.ApplyWabokuStyle ||
+                             c.Action == EffectActionKind.ApplySwordsOfRevealingLight ||
+                             c.Action == EffectActionKind.NegateAttack ||
+                             c.Action == EffectActionKind.EndBattlePhase ||
+                             c.Action == EffectActionKind.ContinuousCannotAttack)));
+                    Check("Corpus: Threatening Roar ProgramMayActivate is false",
+                        roar == null || !OfficialEffectRegistry.ProgramMayActivate(roar));
+
+                    var restrict = db.Get(29549364);
+                    var restrictProg = restrict != null ? CardTextEffectCompiler.Compile(restrict) : null;
+                    Check("Corpus: Mask of Restrict stays parked (neither-player Tribute lock needs atom)",
+                        restrictProg == null || !restrictProg.FullyCompiled,
+                        restrictProg == null
+                            ? "null"
+                            : $"full={restrictProg.FullyCompiled} n={restrictProg.ClauseList.Count} unparsed={string.Join("|", restrictProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: Mask of Restrict is not CannotBeTributedForSummon (Fox Fire this-card)",
+                        restrictProg == null ||
+                        !restrictProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.CannotBeTributedForSummon));
+                    Check("Corpus: Mask of Restrict ProgramMayActivate is false",
+                        restrict == null || !OfficialEffectRegistry.ProgramMayActivate(restrict));
+
+                    var door = db.Get(30606547);
+                    var doorProg = door != null ? CardTextEffectCompiler.Compile(door) : null;
+                    Check("Corpus: The Dark Door stays parked (one attack per Battle Phase needs atom)",
+                        doorProg == null || !doorProg.FullyCompiled,
+                        doorProg == null
+                            ? "null"
+                            : $"full={doorProg.FullyCompiled} n={doorProg.ClauseList.Count} unparsed={string.Join("|", doorProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: The Dark Door is not ExtraAttacks / ContinuousCannotAttack",
+                        doorProg == null ||
+                        !doorProg.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.ExtraAttacks ||
+                             c.Action == EffectActionKind.ContinuousCannotAttack)));
+                    Check("Corpus: The Dark Door ProgramMayActivate is false",
+                        door == null || !OfficialEffectRegistry.ProgramMayActivate(door));
+
+                    var bog = db.Get(95220856);
+                    var bogProg = bog != null ? CardTextEffectCompiler.Compile(bog) : null;
+                    Check("Corpus: Vengeful Bog Spirit stays parked (summoned-this-turn attack lock needs atom)",
+                        bogProg == null || !bogProg.FullyCompiled,
+                        bogProg == null
+                            ? "null"
+                            : $"full={bogProg.FullyCompiled} n={bogProg.ClauseList.Count} unparsed={string.Join("|", bogProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Corpus: Vengeful Bog Spirit is not ContinuousCannotAttack (no summoned-this-turn filter)",
+                        bogProg == null ||
+                        !bogProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ContinuousCannotAttack));
+                    Check("Corpus: Vengeful Bog Spirit ProgramMayActivate is false",
+                        bog == null || !OfficialEffectRegistry.ProgramMayActivate(bog));
+
+                    Check("Corpus: Eradicating Aerosol is missing from cards_db (do not invent print)",
+                        db.Get(94716515) == null);
+
+                    var leftoverRoar = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000091,
+                        name = "If-you-control leftover unique (Roar family)",
+                        type = "Trap Card",
+                        race = "Normal",
+                        frameType = "trap",
+                        desc =
+                            "Your opponent cannot declare an attack this turn. Shuffle your entire Deck into your opponent's Deck."
+                    });
+                    Check("Corpus: Threatening Roar leftover unique is not FullyCompiled",
+                        leftoverRoar == null || !leftoverRoar.FullyCompiled);
+
                     Check("Vocabulary: Protection is a shared kind",
                         Array.IndexOf(EffectVocabulary.SharedResolutions,
                             EffectResolutionKind.Protection) >= 0);

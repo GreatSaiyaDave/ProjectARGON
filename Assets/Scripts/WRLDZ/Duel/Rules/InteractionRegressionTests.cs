@@ -3015,6 +3015,120 @@ namespace WRLDZ.Duel.Rules
                         p.Graveyard.Exists(c => c.CardId == duster));
                 }
 
+                // ── Fanbot park: Roar / Restrict / Dark Door / Bog Spirit / Aerosol ──
+                {
+                    const int roarId = 36361633;
+                    const int maskId = 29549364;
+                    const int doorId = 30606547;
+                    const int bogId = 95220856;
+                    const int aerosolId = 94716515;
+
+                    var roarDef = db.Get(roarId);
+                    var roarProg = roarDef != null ? CardTextEffectCompiler.Compile(roarDef) : null;
+                    Check("Threatening Roar stays parked (not FullyCompiled)",
+                        roarProg == null || !roarProg.FullyCompiled,
+                        roarProg == null
+                            ? "null"
+                            : $"full={roarProg.FullyCompiled} n={roarProg.ClauseList.Count} unparsed={string.Join("|", roarProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                    Check("Threatening Roar is not Waboku / Swords / ContinuousCannotAttack",
+                        roarProg == null ||
+                        !roarProg.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.ApplyWabokuStyle ||
+                             c.Action == EffectActionKind.ApplySwordsOfRevealingLight ||
+                             c.Action == EffectActionKind.ContinuousCannotAttack)));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var trap = PlaceSetTrap(engine, p, roarId, 2);
+                        trap.SetThisTurn = false;
+                        Check("Threatening Roar: ProgramMayActivate false",
+                            !OfficialEffectRegistry.ProgramMayActivate(trap.Def));
+                        Check("Threatening Roar: Activate refused (fail-closed)",
+                            !engine.CanActivateSpellTrap(p, trap, fromHand: false) &&
+                            !engine.TryActivateSpellTrap(p, trap, fromHand: false) &&
+                            p.TryFindSpellTrap(trap, out _) &&
+                            !p.Graveyard.Contains(trap));
+                    }
+
+                    var maskDef = db.Get(maskId);
+                    var maskProg = maskDef != null ? CardTextEffectCompiler.Compile(maskDef) : null;
+                    Check("Mask of Restrict stays parked (not FullyCompiled)",
+                        maskProg == null || !maskProg.FullyCompiled);
+                    Check("Mask of Restrict is not CannotBeTributedForSummon",
+                        maskProg == null ||
+                        !maskProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.CannotBeTributedForSummon));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var trap = PlaceSetTrap(engine, p, maskId, 2);
+                        trap.SetThisTurn = false;
+                        Check("Mask of Restrict: ProgramMayActivate false",
+                            !OfficialEffectRegistry.ProgramMayActivate(trap.Def));
+                        Check("Mask of Restrict: Activate refused (fail-closed)",
+                            !engine.CanActivateSpellTrap(p, trap, fromHand: false) &&
+                            !engine.TryActivateSpellTrap(p, trap, fromHand: false) &&
+                            p.TryFindSpellTrap(trap, out _) &&
+                            !p.Graveyard.Contains(trap));
+                    }
+
+                    var doorDef = db.Get(doorId);
+                    var doorProg = doorDef != null ? CardTextEffectCompiler.Compile(doorDef) : null;
+                    Check("The Dark Door stays parked (not FullyCompiled)",
+                        doorProg == null || !doorProg.FullyCompiled);
+                    Check("The Dark Door is not ExtraAttacks",
+                        doorProg == null ||
+                        !doorProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ExtraAttacks));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var card = PutInHand(engine, p, doorId);
+                        Check("The Dark Door: ProgramMayActivate false",
+                            !OfficialEffectRegistry.ProgramMayActivate(card.Def));
+                        Check("The Dark Door: Activate refused (fail-closed)",
+                            !engine.CanActivateSpellTrap(p, card, fromHand: true) &&
+                            !engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                            p.Hand.Contains(card) &&
+                            !p.Graveyard.Contains(card));
+                    }
+
+                    var bogDef = db.Get(bogId);
+                    var bogProg = bogDef != null ? CardTextEffectCompiler.Compile(bogDef) : null;
+                    Check("Vengeful Bog Spirit stays parked (not FullyCompiled)",
+                        bogProg == null || !bogProg.FullyCompiled);
+                    Check("Vengeful Bog Spirit is not ContinuousCannotAttack",
+                        bogProg == null ||
+                        !bogProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ContinuousCannotAttack));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var card = PutInHand(engine, p, bogId);
+                        Check("Vengeful Bog Spirit: ProgramMayActivate false",
+                            !OfficialEffectRegistry.ProgramMayActivate(card.Def));
+                        Check("Vengeful Bog Spirit: Activate refused (fail-closed)",
+                            !engine.CanActivateSpellTrap(p, card, fromHand: true) &&
+                            !engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                            p.Hand.Contains(card) &&
+                            !p.Graveyard.Contains(card));
+                    }
+
+                    Check("Eradicating Aerosol missing from cards_db (do not invent print)",
+                        db.Get(aerosolId) == null);
+                }
+
                 // ── Equip Spells: Activate + target; host leaving field destroys Equip ──
                 {
                     const int treasure = 1435851;
