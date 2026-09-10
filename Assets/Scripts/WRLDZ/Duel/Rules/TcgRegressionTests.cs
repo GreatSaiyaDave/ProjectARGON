@@ -2095,19 +2095,19 @@ namespace WRLDZ.Duel.Rules
                     Check("Corpus: Threatening Roar ProgramMayActivate is false",
                         roar == null || !OfficialEffectRegistry.ProgramMayActivate(roar));
 
-                    var mask = db.Get(29549364);
-                    var maskProg = mask != null ? CardTextEffectCompiler.Compile(mask) : null;
+                    var restrict = db.Get(29549364);
+                    var restrictProg = restrict != null ? CardTextEffectCompiler.Compile(restrict) : null;
                     Check("Corpus: Mask of Restrict stays parked (neither-player Tribute lock needs atom)",
-                        maskProg == null || !maskProg.FullyCompiled,
-                        maskProg == null
+                        restrictProg == null || !restrictProg.FullyCompiled,
+                        restrictProg == null
                             ? "null"
-                            : $"full={maskProg.FullyCompiled} n={maskProg.ClauseList.Count} unparsed={string.Join("|", maskProg.UnparsedFragments ?? Array.Empty<string>())}");
+                            : $"full={restrictProg.FullyCompiled} n={restrictProg.ClauseList.Count} unparsed={string.Join("|", restrictProg.UnparsedFragments ?? Array.Empty<string>())}");
                     Check("Corpus: Mask of Restrict is not CannotBeTributedForSummon (Fox Fire this-card)",
-                        maskProg == null ||
-                        !maskProg.ClauseList.Exists(c =>
+                        restrictProg == null ||
+                        !restrictProg.ClauseList.Exists(c =>
                             c != null && c.Action == EffectActionKind.CannotBeTributedForSummon));
                     Check("Corpus: Mask of Restrict ProgramMayActivate is false",
-                        mask == null || !OfficialEffectRegistry.ProgramMayActivate(mask));
+                        restrict == null || !OfficialEffectRegistry.ProgramMayActivate(restrict));
 
                     var door = db.Get(30606547);
                     var doorProg = door != null ? CardTextEffectCompiler.Compile(door) : null;
