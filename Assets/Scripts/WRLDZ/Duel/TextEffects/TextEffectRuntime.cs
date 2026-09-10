@@ -2455,15 +2455,44 @@ namespace WRLDZ.Duel.TextEffects
                     if (clause.RequiresLpCostMultiple > 0 && engine.PendingActivation != null &&
                         engine.PendingActivation.AwaitingLpCost)
                         pay = 0; // paid in FinishPayLp
-                    if (pay > 0 && chosenTarget != null)
+                    if (chosenTarget != null)
                     {
-                        chosenTarget.UntilEndOfTurnAtk -= pay;
-                        if (clause.DefAmount != 0)
-                            chosenTarget.UntilEndOfTurnDef -= pay;
-                        engine.Log(
-                            $"{chosenTarget.Name} loses {pay} ATK" +
-                            (clause.DefAmount != 0 ? $"/{pay} DEF" : "") +
-                            $" until the End Phase (now {chosenTarget.CurrentAtk}/{chosenTarget.CurrentDef}).");
+                        var atkDelta = pay;
+                        // Bark: DefAmount == 1 means also lose the same ATK amount as DEF.
+                        // Castle Walls: DefAmount is the signed DEF delta to subtract (negative = gain).
+                        var defDelta = clause.DefAmount == 1 ? pay : clause.DefAmount;
+                        if (atkDelta != 0)
+                            chosenTarget.UntilEndOfTurnAtk -= atkDelta;
+                        if (defDelta != 0)
+                            chosenTarget.UntilEndOfTurnDef -= defDelta;
+                        if (atkDelta != 0 || defDelta != 0)
+                        {
+                            string joined;
+                            if (atkDelta != 0 && defDelta == atkDelta)
+                            {
+                                joined = atkDelta > 0
+                                    ? $"loses {atkDelta} ATK/{atkDelta} DEF"
+                                    : $"gains {-atkDelta} ATK/{-atkDelta} DEF";
+                            }
+                            else if (atkDelta != 0 && defDelta != 0)
+                            {
+                                var atkBit = atkDelta > 0 ? $"loses {atkDelta} ATK" : $"gains {-atkDelta} ATK";
+                                var defBit = defDelta > 0 ? $"loses {defDelta} DEF" : $"gains {-defDelta} DEF";
+                                joined = $"{atkBit} and {defBit}";
+                            }
+                            else if (atkDelta != 0)
+                            {
+                                joined = atkDelta > 0 ? $"loses {atkDelta} ATK" : $"gains {-atkDelta} ATK";
+                            }
+                            else
+                            {
+                                joined = defDelta > 0 ? $"loses {defDelta} DEF" : $"gains {-defDelta} DEF";
+                            }
+
+                            engine.Log(
+                                $"{chosenTarget.Name} {joined} until the End Phase " +
+                                $"(now {chosenTarget.CurrentAtk}/{chosenTarget.CurrentDef}).");
+                        }
                     }
 
                     break;
@@ -3645,7 +3674,10 @@ namespace WRLDZ.Duel.TextEffects
                         if (!m.FaceUp) continue;
                         if (c.Action == EffectActionKind.EffectDamageBothFromOriginalAtk &&
                             m.CurrentAtk > opp.LifePoints) continue;
-                        if (engine.IsDragonTargetProtected(m)) continue;
+                        // Fissure / Smashing Ground do not target — Lord of D. does not protect.
+                        if (engine.IsDragonTargetProtected(m) &&
+                            !c.SelectLowestAtk && !c.SelectHighestDef)
+                            continue;
                         list.Add(m);
                     }
 
@@ -3801,8 +3833,43 @@ namespace WRLDZ.Duel.TextEffects
                 list.RemoveAll(t => t == null || !t.FaceUp);
             if (c.Action == EffectActionKind.ChangeBattlePosition)
                 list.RemoveAll(t => t == null || !t.FaceUp);
+            if (c.Action == EffectActionKind.LoseAtkDefUntilEndOfTurn)
+                list.RemoveAll(t => t == null || !t.FaceUp);
+            FilterExtremeStat(list, c);
 
             return list;
+        }
+
+        /// <summary>
+        /// Fissure / Smashing Ground: keep only the extreme-stat face-up monster(s).
+        /// Ties remain so the controller can choose.
+        /// </summary>
+        static void FilterExtremeStat(List<CardInstance> list, EffectClause c)
+        {
+            if (list == null || list.Count == 0 || c == null) return;
+            if (c.SelectLowestAtk)
+            {
+                var min = int.MaxValue;
+                foreach (var t in list)
+                {
+                    if (t == null) continue;
+                    if (t.CurrentAtk < min) min = t.CurrentAtk;
+                }
+
+                list.RemoveAll(t => t == null || t.CurrentAtk != min);
+            }
+
+            if (c.SelectHighestDef)
+            {
+                var max = int.MinValue;
+                foreach (var t in list)
+                {
+                    if (t == null) continue;
+                    if (t.CurrentDef > max) max = t.CurrentDef;
+                }
+
+                list.RemoveAll(t => t == null || t.CurrentDef != max);
+            }
         }
 
         static IEnumerable<CardInstance> CollectAllMatching(DuelEngine engine, DuelistState who,
@@ -3853,6 +3920,11 @@ namespace WRLDZ.Duel.TextEffects
         static CardInstance AutoPick(EffectClause c, List<CardInstance> targets, DuelistState who,
             DuelEngine engine)
         {
+            if (c != null && c.SelectLowestAtk)
+                return targets.OrderBy(t => t.CurrentAtk).ThenBy(t => t.Name ?? "", StringComparer.Ordinal).First();
+            if (c != null && c.SelectHighestDef)
+                return targets.OrderByDescending(t => t.CurrentDef)
+                    .ThenBy(t => t.Name ?? "", StringComparer.Ordinal).First();
             var opp = engine.OpponentOf(who);
             switch (c.Zone)
             {
