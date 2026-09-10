@@ -1874,9 +1874,10 @@ namespace WRLDZ.Duel.TextEffects
                 costNumeric = c.ScaleAmountByCostCount ? n : atk;
             }
 
-            if (c.RequiresSendHandToGy && autoPick)
+            if ((c.RequiresSendHandToGy || c.RequiresDiscardCost) && autoPick)
             {
-                var hand = CollectDiscardCost(who, "", card);
+                var hand = CollectDiscardCost(who, c.RequiresDiscardCost ? c.DiscardCostAttribute : "",
+                    card);
                 if (hand.Count == 0) return false;
                 var pick = hand[0];
                 costNumeric = pick.CurrentAtk;
@@ -1903,6 +1904,7 @@ namespace WRLDZ.Duel.TextEffects
             var needsPick = chosen.Count > 0 &&
                             (clause.RequiresTributeCount > 0 || clause.RequiresSendHandToGy ||
                              clause.RequiresSendOtherYouControl ||
+                             (clause.RequiresDiscardCost && !autoPick && who.IsPlayer) ||
                              (clause.BanishFromGyCount > 0 && !autoPick && who.IsPlayer));
             if (autoPick || !who.IsPlayer || !needsPick)
             {

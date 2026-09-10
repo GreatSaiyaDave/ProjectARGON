@@ -6688,8 +6688,12 @@ namespace WRLDZ.Duel.Rules
                     var card = PutInHand(engine, p, vortex);
                     Check("Lightning Vortex: Activate legal with discard + face-up prey",
                         engine.CanActivateSpellTrap(p, card, fromHand: true));
-                    Check("Lightning Vortex: discard fodder, face-up dies, Set and yours live",
+                    Check("Lightning Vortex: opens discard",
                         engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null);
+                    Check("Lightning Vortex: pay discard, face-up dies, Set and yours live",
+                        engine.TrySelectEffectTarget(fodder) &&
                         opp.Graveyard.Contains(face) &&
                         !opp.TryFindMonster(face, out _) &&
                         opp.TryFindMonster(setMon, out _) && !setMon.FaceUp &&
