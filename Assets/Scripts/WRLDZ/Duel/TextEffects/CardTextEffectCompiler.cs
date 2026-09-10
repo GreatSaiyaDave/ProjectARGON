@@ -16,7 +16,7 @@ namespace WRLDZ.Duel.TextEffects
     /// </summary>
     public static class CardTextEffectCompiler
     {
-        public const int Version = 62;
+        public const int Version = 50;
 
         static readonly Regex RxDraw = new(
             @"(?:^|[.!?]\s+)Draw (\d+) cards?\.",
@@ -24,37 +24,6 @@ namespace WRLDZ.Duel.TextEffects
 
         static readonly Regex RxDestroyAllOppMonsters = new(
             @"Destroy all monsters your opponent controls\.?",
-            RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-        /// <summary>Reinforcements: target gains N ATK until the end of this turn.</summary>
-        static readonly Regex RxTargetGainsAtkUntilEnd = new(
-            @"Target 1 face-up monster on the field;\s*it gains (\d+) ATK until the end of this turn\.?",
-            RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-        /// <summary>
-        /// Castle Walls (pre-PSCT): increase the DEF of 1 face-up monster until end of turn.
-        /// Same LoseAtkDefUntilEndOfTurn atom as Reinforcements (signed DefAmount).
-        /// </summary>
-        static readonly Regex RxIncreaseOneDefUntilEnd = new(
-            @"Increase the DEF of 1 face-up monster on the field by (\d+) points until the end of this turn\.?",
-            RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-        /// <summary>
-        /// Block Attack: target an opponent's face-up Attack Position monster;
-        /// change it to face-up Defense Position (not a toggle).
-        /// </summary>
-        static readonly Regex RxBlockAttack = new(
-            @"Target 1 face-up Attack Position monster your opponent controls;\s*" +
-            @"change that target to face-up Defense Position\.?",
-            RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-        /// <summary>
-        /// Stop Defense (pre-PSCT): select 1 opponent Defense Position monster
-        /// (face-up or face-down) and change it to Attack Position. Face-down
-        /// becomes face-up without a Flip Summon.
-        /// </summary>
-        static readonly Regex RxStopDefense = new(
-            @"Select 1 Defense Position monster on your opponent's side of the field and change it to Attack Position\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxDestroyAllMonsters = new(
@@ -561,48 +530,6 @@ namespace WRLDZ.Duel.TextEffects
                 Action = EffectActionKind.Destroy,
                 Side = EffectSide.Opponent,
                 Zone = EffectZoneFilter.FieldMonsters
-            });
-
-            var gainAtkEnd = RxTargetGainsAtkUntilEnd.Match(text);
-            Take(gainAtkEnd, new EffectClause
-            {
-                Timing = EffectTiming.Activate,
-                Action = EffectActionKind.LoseAtkDefUntilEndOfTurn,
-                Zone = EffectZoneFilter.FieldAnyMonster,
-                RequiresTargetChoice = true,
-                Amount = gainAtkEnd.Success ? -ParseInt(gainAtkEnd, 1, 500) : -500,
-                DefAmount = 0
-            });
-
-            var incDefEnd = RxIncreaseOneDefUntilEnd.Match(text);
-            Take(incDefEnd, new EffectClause
-            {
-                Timing = EffectTiming.Activate,
-                Action = EffectActionKind.LoseAtkDefUntilEndOfTurn,
-                Zone = EffectZoneFilter.FieldAnyMonster,
-                RequiresTargetChoice = true,
-                Amount = 0,
-                DefAmount = incDefEnd.Success ? -ParseInt(incDefEnd, 1, 500) : -500
-            });
-
-            Take(RxBlockAttack.Match(text), new EffectClause
-            {
-                Timing = EffectTiming.Activate,
-                Action = EffectActionKind.ChangeBattlePosition,
-                Side = EffectSide.Opponent,
-                Zone = EffectZoneFilter.OppAttackPositionMonsters,
-                RequiresTargetChoice = true,
-                ForceToDefense = true
-            });
-
-            Take(RxStopDefense.Match(text), new EffectClause
-            {
-                Timing = EffectTiming.Activate,
-                Action = EffectActionKind.ChangeBattlePosition,
-                Side = EffectSide.Opponent,
-                Zone = EffectZoneFilter.OppDefensePositionMonsters,
-                RequiresTargetChoice = true,
-                ForceToAttack = true
             });
 
             // Dark Hole: all monsters — only if not already matched "opponent controls"
@@ -1313,58 +1240,6 @@ namespace WRLDZ.Duel.TextEffects
                 clause.Amount = int.TryParse(m.Groups[1].Value, out var n) ? n : 0;
             }
             else if (Regex.IsMatch(res,
-                         @"(?:it|that target) gains (\d+) ATK until the (?:end of this turn|End Phase)",
-                         RegexOptions.IgnoreCase))
-            {
-                var m = Regex.Match(res,
-                    @"(?:it|that target) gains (\d+) ATK until the (?:end of this turn|End Phase)",
-                    RegexOptions.IgnoreCase);
-                clause.Action = EffectActionKind.LoseAtkDefUntilEndOfTurn;
-                clause.Amount = -(int.TryParse(m.Groups[1].Value, out var atkGain) ? atkGain : 0);
-                clause.DefAmount = 0;
-                if (clause.Zone == EffectZoneFilter.None)
-                {
-                    clause.Zone = EffectZoneFilter.FieldAnyMonster;
-                    clause.RequiresTargetChoice = true;
-                }
-            }
-            else if (Regex.IsMatch(res,
-                         @"(?:it|that target) gains (\d+) DEF until the (?:end of this turn|End Phase)",
-                         RegexOptions.IgnoreCase))
-            {
-                var m = Regex.Match(res,
-                    @"(?:it|that target) gains (\d+) DEF until the (?:end of this turn|End Phase)",
-                    RegexOptions.IgnoreCase);
-                clause.Action = EffectActionKind.LoseAtkDefUntilEndOfTurn;
-                clause.Amount = 0;
-                clause.DefAmount = -(int.TryParse(m.Groups[1].Value, out var defGain) ? defGain : 0);
-                if (clause.Zone == EffectZoneFilter.None)
-                {
-                    clause.Zone = EffectZoneFilter.FieldAnyMonster;
-                    clause.RequiresTargetChoice = true;
-                }
-            }
-            else if (Regex.IsMatch(res,
-                         @"change that target to face-up Defense Position",
-                         RegexOptions.IgnoreCase))
-            {
-                clause.Action = EffectActionKind.ChangeBattlePosition;
-                clause.ForceToDefense = true;
-                clause.RequiresTargetChoice = true;
-                if (clause.Zone == EffectZoneFilter.None)
-                    clause.Zone = EffectZoneFilter.OppAttackPositionMonsters;
-            }
-            else if (Regex.IsMatch(res,
-                         @"change (?:that target|it) to (?:face-up )?Attack Position",
-                         RegexOptions.IgnoreCase))
-            {
-                clause.Action = EffectActionKind.ChangeBattlePosition;
-                clause.ForceToAttack = true;
-                clause.RequiresTargetChoice = true;
-                if (clause.Zone == EffectZoneFilter.None)
-                    clause.Zone = EffectZoneFilter.OppDefensePositionMonsters;
-            }
-            else if (Regex.IsMatch(res,
                          @"this card gains (\d+) ATK and DEF(?! until)", RegexOptions.IgnoreCase))
             {
                 var m = Regex.Match(res, @"this card gains (\d+) ATK and DEF", RegexOptions.IgnoreCase);
@@ -1584,22 +1459,6 @@ namespace WRLDZ.Duel.TextEffects
             {
                 clause.RequiresTargetChoice = true;
                 clause.Zone = EffectZoneFilter.ControllerGyTraps;
-                return;
-            }
-
-            if (Regex.IsMatch(act, @"target 1 face-up Attack Position monster your opponent controls",
-                    RegexOptions.IgnoreCase))
-            {
-                clause.RequiresTargetChoice = true;
-                clause.Zone = EffectZoneFilter.OppAttackPositionMonsters;
-                return;
-            }
-
-            if (Regex.IsMatch(act, @"target 1 (?:face-up )?Defense Position monster your opponent controls",
-                    RegexOptions.IgnoreCase))
-            {
-                clause.RequiresTargetChoice = true;
-                clause.Zone = EffectZoneFilter.OppDefensePositionMonsters;
                 return;
             }
 

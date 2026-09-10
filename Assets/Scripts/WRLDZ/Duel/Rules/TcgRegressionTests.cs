@@ -1336,116 +1336,6 @@ namespace WRLDZ.Duel.Rules
                             c.DestroyHostWhenThisLeaves &&
                             !c.SummonInDefense));
 
-                    var reinf = db.Get(17814387);
-                    var reinfProg = reinf != null ? CardTextEffectCompiler.Compile(reinf) : null;
-                    Check("Corpus: Reinforcements FullyCompiled +500 ATK until End Phase",
-                        reinfProg != null && reinfProg.FullyCompiled &&
-                        reinfProg.ClauseList.Exists(c =>
-                            c != null &&
-                            c.Action == EffectActionKind.LoseAtkDefUntilEndOfTurn &&
-                            c.Amount == -500 &&
-                            c.DefAmount == 0),
-                        reinfProg == null
-                            ? "null"
-                            : $"full={reinfProg.FullyCompiled} unparsed={string.Join("|", reinfProg.UnparsedFragments ?? Array.Empty<string>())}");
-
-                    var walls = db.Get(44209392);
-                    var wallsProg = walls != null ? CardTextEffectCompiler.Compile(walls) : null;
-                    Check("Corpus: Castle Walls FullyCompiled +500 DEF until End Phase",
-                        wallsProg != null && wallsProg.FullyCompiled &&
-                        wallsProg.ClauseList.Exists(c =>
-                            c != null &&
-                            c.Action == EffectActionKind.LoseAtkDefUntilEndOfTurn &&
-                            c.Amount == 0 &&
-                            c.DefAmount == -500),
-                        wallsProg == null
-                            ? "null"
-                            : $"full={wallsProg.FullyCompiled} unparsed={string.Join("|", wallsProg.UnparsedFragments ?? Array.Empty<string>())}");
-
-                    var block = db.Get(25880422);
-                    var blockProg = block != null ? CardTextEffectCompiler.Compile(block) : null;
-                    Check("Corpus: Block Attack FullyCompiled force face-up Defense",
-                        blockProg != null && blockProg.FullyCompiled &&
-                        blockProg.ClauseList.Exists(c =>
-                            c != null &&
-                            c.Action == EffectActionKind.ChangeBattlePosition &&
-                            c.ForceToDefense),
-                        blockProg == null
-                            ? "null"
-                            : $"full={blockProg.FullyCompiled} unparsed={string.Join("|", blockProg.UnparsedFragments ?? Array.Empty<string>())}");
-
-                    var stop = db.Get(63102017);
-                    var stopProg = stop != null ? CardTextEffectCompiler.Compile(stop) : null;
-                    Check("Corpus: Stop Defense FullyCompiled force Attack",
-                        stopProg != null && stopProg.FullyCompiled &&
-                        stopProg.ClauseList.Exists(c =>
-                            c != null &&
-                            c.Action == EffectActionKind.ChangeBattlePosition &&
-                            c.ForceToAttack),
-                        stopProg == null
-                            ? "null"
-                            : $"full={stopProg.FullyCompiled} unparsed={string.Join("|", stopProg.UnparsedFragments ?? Array.Empty<string>())}");
-
-                    var synReinf = CardTextEffectCompiler.Compile(new CardDef
-                    {
-                        id = 90000054,
-                        name = "New Trap (Reinforcements shape)",
-                        type = "Trap Card",
-                        race = "Normal",
-                        frameType = "trap",
-                        desc =
-                            "Target 1 face-up monster on the field; it gains 500 ATK until the end of this turn."
-                    });
-                    Check("New-card rule: Reinforcements-shaped text compiles without a cardId branch",
-                        synReinf != null && synReinf.FullyCompiled &&
-                        synReinf.ClauseList.Exists(c =>
-                            c != null &&
-                            c.Action == EffectActionKind.LoseAtkDefUntilEndOfTurn &&
-                            c.Amount == -500));
-
-                    var leftoverReinf = CardTextEffectCompiler.Compile(new CardDef
-                    {
-                        id = 90000055,
-                        name = "Reinforcements leftover rider",
-                        type = "Trap Card",
-                        race = "Normal",
-                        frameType = "trap",
-                        desc =
-                            "Target 1 face-up monster on the field; it gains 500 ATK until the end of this turn. Shuffle your entire Deck into your opponent's Deck."
-                    });
-                    Check("Fail-closed: Reinforcements plus extra rider is not FullyCompiled",
-                        leftoverReinf != null && !leftoverReinf.FullyCompiled);
-
-                    var synBlock = CardTextEffectCompiler.Compile(new CardDef
-                    {
-                        id = 90000056,
-                        name = "New Spell (Block Attack shape)",
-                        type = "Spell Card",
-                        race = "Normal",
-                        frameType = "spell",
-                        desc =
-                            "Target 1 face-up Attack Position monster your opponent controls; change that target to face-up Defense Position."
-                    });
-                    Check("New-card rule: Block Attack-shaped text compiles without a cardId branch",
-                        synBlock != null && synBlock.FullyCompiled &&
-                        synBlock.ClauseList.Exists(c =>
-                            c != null &&
-                            c.Action == EffectActionKind.ChangeBattlePosition &&
-                            c.ForceToDefense));
-
-                    var leftoverBlock = CardTextEffectCompiler.Compile(new CardDef
-                    {
-                        id = 90000057,
-                        name = "Block Attack leftover rider",
-                        type = "Spell Card",
-                        race = "Normal",
-                        frameType = "spell",
-                        desc =
-                            "Target 1 face-up Attack Position monster your opponent controls; change that target to face-up Defense Position. Shuffle your entire Deck into your opponent's Deck."
-                    });
-                    Check("Fail-closed: Block Attack plus extra rider is not FullyCompiled",
-                        leftoverBlock != null && !leftoverBlock.FullyCompiled);
-
                     var raigekiFc = db.Get(12580477);
                     var raigekiProg = raigekiFc != null ? CardTextEffectCompiler.Compile(raigekiFc) : null;
                     Check("Fanbot already-FC: Raigeki FullyCompiled destroy all opponent monsters",
@@ -1492,6 +1382,19 @@ namespace WRLDZ.Duel.Rules
                         moonFcProg != null && moonFcProg.FullyCompiled &&
                         moonFcProg.ClauseList.Exists(c =>
                             c != null && c.Action == EffectActionKind.SetTargetFaceDownDefense));
+
+                    var leftoverFanbot = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000058,
+                        name = "Raigeki leftover rider",
+                        type = "Spell Card",
+                        race = "Normal",
+                        frameType = "spell",
+                        desc =
+                            "Destroy all monsters your opponent controls. Shuffle your entire Deck into your opponent's Deck."
+                    });
+                    Check("Fail-closed: Raigeki plus extra rider is not FullyCompiled",
+                        leftoverFanbot != null && !leftoverFanbot.FullyCompiled);
 
                     var soul = db.Get(92924317);
                     var soulProg = soul != null ? CardTextEffectCompiler.Compile(soul) : null;
