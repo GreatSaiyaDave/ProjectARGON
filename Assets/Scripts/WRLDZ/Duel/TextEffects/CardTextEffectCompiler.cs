@@ -16,7 +16,7 @@ namespace WRLDZ.Duel.TextEffects
     /// </summary>
     public static class CardTextEffectCompiler
     {
-        public const int Version = 50;
+        public const int Version = 76;
 
         static readonly Regex RxDraw = new(
             @"(?:^|[.!?]\s+)Draw (\d+) cards?\.",
@@ -38,8 +38,10 @@ namespace WRLDZ.Duel.TextEffects
             @"Destroy all Spell and Trap Cards your opponent controls\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        // Whole-text MST family only. Stamping Destruction prefixes this with a Dragon
+        // lock and suffixes controller-burn — leftover unique, do not ship MST.
         static readonly Regex RxTargetStDestroy = new(
-            @"Target 1 Spell/?Trap on the field;\s*destroy that target\.?",
+            @"^Target 1 Spell/?Trap on the field;\s*destroy that target\.?$",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxMonsterReborn = new(
@@ -1215,6 +1217,15 @@ namespace WRLDZ.Duel.TextEffects
             else if (Regex.IsMatch(res, @"destroy (?:that target|it)\.?", RegexOptions.IgnoreCase) ||
                      Regex.IsMatch(combo, @"destroy (?:that target|it)\.?", RegexOptions.IgnoreCase))
             {
+                var destroySrc = !string.IsNullOrEmpty(res) ? res : combo;
+                var destroyHit = Regex.Match(destroySrc, @"destroy (?:that target|it)\.?",
+                    RegexOptions.IgnoreCase);
+                // "and if you do, …" is a second resolution (Stamping controller-burn,
+                // Nobleman banish). Do not ship destroy-only.
+                if (destroyHit.Success &&
+                    Regex.IsMatch(destroySrc.Substring(destroyHit.Index + destroyHit.Length),
+                        @"and if you do", RegexOptions.IgnoreCase))
+                    return null;
                 clause.Action = EffectActionKind.Destroy;
                 if (clause.Zone == EffectZoneFilter.None)
                 {
@@ -1234,6 +1245,12 @@ namespace WRLDZ.Duel.TextEffects
             else if (Regex.IsMatch(res, @"inflict (\d+) (?:points of )?damage to your opponent",
                          RegexOptions.IgnoreCase))
             {
+                // Choose-1 bullets (Poison of the Old Man) need a mode atom — not
+                // a prefix inflict of one option.
+                if (Regex.IsMatch(sent.Raw ?? "", @"^\s*●") ||
+                    Regex.IsMatch(sent.Raw ?? "", @"Activate 1 of these effects",
+                        RegexOptions.IgnoreCase))
+                    return null;
                 var m = Regex.Match(res, @"inflict (\d+) (?:points of )?damage to your opponent",
                     RegexOptions.IgnoreCase);
                 clause.Action = EffectActionKind.InflictDamageToOpponent;

@@ -3015,6 +3015,163 @@ namespace WRLDZ.Duel.Rules
                         p.Graveyard.Exists(c => c.CardId == duster));
                 }
 
+                // ── Fanbot park: Poison of the Old Man / Meteor of Destruction /
+                // Cestus of Dagla / Stamping Destruction / 7 Completed.
+                // Skip Violet Crystal. ──
+                {
+                    const int poisonOldId = 8842266;
+                    const int meteorDestId = 33767325;
+                    const int cestusId = 28106077;
+                    const int stampDestId = 81385346;
+                    const int sevenCompId = 86198326;
+                    const int petitAngel = 38142739; // Fairy Normal
+                    const int gigaTech = 8471389; // Machine Normal
+
+                    var poisonDef = db.Get(poisonOldId);
+                    var poisonLive = poisonDef != null ? CardTextEffectCompiler.Compile(poisonDef) : null;
+                    Check("Poison of the Old Man stays parked (not FullyCompiled)",
+                        poisonLive == null || !poisonLive.FullyCompiled,
+                        poisonLive == null
+                            ? "null"
+                            : $"full={poisonLive.FullyCompiled} n={poisonLive.ClauseList.Count} unparsed={string.Join("|", poisonLive.UnparsedFragments ?? System.Array.Empty<string>())}");
+                    Check("Poison of the Old Man is not GainLifePoints / InflictDamageToOpponent",
+                        poisonLive == null ||
+                        !poisonLive.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.GainLifePoints ||
+                             c.Action == EffectActionKind.InflictDamageToOpponent)));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        var youLp = p.LifePoints;
+                        var oppLp = opp.LifePoints;
+                        var card = PutInHand(engine, p, poisonOldId);
+                        Check("Poison of the Old Man: ProgramMayActivate false",
+                            !OfficialEffectRegistry.ProgramMayActivate(card.Def));
+                        Check("Poison of the Old Man: Activate refused (fail-closed)",
+                            !engine.CanActivateSpellTrap(p, card, fromHand: true) &&
+                            !engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                            p.Hand.Contains(card) &&
+                            p.LifePoints == youLp &&
+                            opp.LifePoints == oppLp);
+                    }
+
+                    var meteorDef = db.Get(meteorDestId);
+                    var meteorLive = meteorDef != null ? CardTextEffectCompiler.Compile(meteorDef) : null;
+                    Check("Meteor of Destruction stays parked (not FullyCompiled)",
+                        meteorLive == null || !meteorLive.FullyCompiled);
+                    Check("Meteor of Destruction is not InflictDamageToOpponent",
+                        meteorLive == null ||
+                        !meteorLive.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.InflictDamageToOpponent));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        opp.LifePoints = 8000;
+                        var oppLp = opp.LifePoints;
+                        var card = PutInHand(engine, p, meteorDestId);
+                        Check("Meteor of Destruction: ProgramMayActivate false",
+                            !OfficialEffectRegistry.ProgramMayActivate(card.Def));
+                        Check("Meteor of Destruction: Activate refused even if opp LP>3000",
+                            !engine.CanActivateSpellTrap(p, card, fromHand: true) &&
+                            !engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                            p.Hand.Contains(card) &&
+                            opp.LifePoints == oppLp);
+                    }
+
+                    var cestusDef = db.Get(cestusId);
+                    var cestusLive = cestusDef != null ? CardTextEffectCompiler.Compile(cestusDef) : null;
+                    Check("Cestus of Dagla stays parked (not FullyCompiled)",
+                        cestusLive == null || !cestusLive.FullyCompiled);
+                    Check("Cestus of Dagla is not EquipThisToTarget",
+                        cestusLive == null ||
+                        !cestusLive.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.EquipThisToTarget));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var host = PlaceMonster(engine, p, petitAngel, 2, BattlePosition.Attack, true);
+                        var atkBefore = host.CurrentAtk;
+                        var card = PutInHand(engine, p, cestusId);
+                        Check("Cestus of Dagla: ProgramMayActivate false",
+                            !OfficialEffectRegistry.ProgramMayActivate(card.Def));
+                        Check("Cestus of Dagla: Activate refused even with a Fairy (fail-closed)",
+                            !engine.CanActivateSpellTrap(p, card, fromHand: true) &&
+                            !engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                            p.Hand.Contains(card) &&
+                            host.CurrentAtk == atkBefore);
+                    }
+
+                    var stampDef = db.Get(stampDestId);
+                    var stampLive = stampDef != null ? CardTextEffectCompiler.Compile(stampDef) : null;
+                    Check("Stamping Destruction stays parked (not FullyCompiled)",
+                        stampLive == null || !stampLive.FullyCompiled);
+                    Check("Stamping Destruction is not Destroy / InflictDamageToOpponent",
+                        stampLive == null ||
+                        !stampLive.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.Destroy ||
+                             c.Action == EffectActionKind.InflictDamageToOpponent)));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        PlaceMonster(engine, p, bewd, 2, BattlePosition.Attack, true);
+                        var prey = PlaceSetTrap(engine, opp, mst, 2);
+                        prey.SetThisTurn = false;
+                        var card = PutInHand(engine, p, stampDestId);
+                        Check("Stamping Destruction: ProgramMayActivate false",
+                            !OfficialEffectRegistry.ProgramMayActivate(card.Def));
+                        Check("Stamping Destruction: Activate refused with Dragon + opp S/T",
+                            !engine.CanActivateSpellTrap(p, card, fromHand: true) &&
+                            !engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                            p.Hand.Contains(card) &&
+                            opp.TryFindSpellTrap(prey, out _));
+                    }
+
+                    var sevenDef = db.Get(sevenCompId);
+                    var sevenLive = sevenDef != null ? CardTextEffectCompiler.Compile(sevenDef) : null;
+                    Check("7 Completed stays parked (not FullyCompiled)",
+                        sevenLive == null || !sevenLive.FullyCompiled);
+                    Check("7 Completed is not EquipThisToTarget",
+                        sevenLive == null ||
+                        !sevenLive.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.EquipThisToTarget));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var host = PlaceMonster(engine, p, gigaTech, 2, BattlePosition.Attack, true);
+                        var atkBefore = host.CurrentAtk;
+                        var defBefore = host.CurrentDef;
+                        var card = PutInHand(engine, p, sevenCompId);
+                        Check("7 Completed: ProgramMayActivate false",
+                            !OfficialEffectRegistry.ProgramMayActivate(card.Def));
+                        Check("7 Completed: Activate refused even with a Machine (fail-closed)",
+                            !engine.CanActivateSpellTrap(p, card, fromHand: true) &&
+                            !engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                            p.Hand.Contains(card) &&
+                            host.CurrentAtk == atkBefore &&
+                            host.CurrentDef == defBefore);
+                    }
+                }
+
                 // ── Equip Spells: Activate + target; host leaving field destroys Equip ──
                 {
                     const int treasure = 1435851;
