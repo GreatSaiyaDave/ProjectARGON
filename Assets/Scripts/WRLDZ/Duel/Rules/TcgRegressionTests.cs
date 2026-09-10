@@ -1601,13 +1601,18 @@ namespace WRLDZ.Duel.Rules
 
                     var immortal = db.Get(84926738);
                     var immortalProg = immortal != null ? CardTextEffectCompiler.Compile(immortal) : null;
-                    Check("Corpus: Immortal of Thunder Flip gain 3000 LP compiles; GY lose leftover",
-                        immortalProg != null && !immortalProg.FullyCompiled &&
+                    Check("Corpus: Immortal of Thunder FullyCompiled Flip gain 3000 + GY lose 5000",
+                        immortalProg != null && immortalProg.FullyCompiled &&
                         immortalProg.ClauseList.Exists(c =>
                             c != null &&
                             c.Timing == EffectTiming.Flip &&
                             c.Action == EffectActionKind.GainLifePoints &&
-                            c.Amount == 3000),
+                            c.Amount == 3000) &&
+                        immortalProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.SentFromFieldToGy &&
+                            c.Action == EffectActionKind.TakeEffectDamage &&
+                            c.Amount == 5000),
                         immortalProg == null
                             ? "null"
                             : $"full={immortalProg.FullyCompiled} unparsed={string.Join("|", immortalProg.UnparsedFragments ?? Array.Empty<string>())}");
@@ -2172,7 +2177,7 @@ namespace WRLDZ.Duel.Rules
                         type = "Trap Card",
                         race = "Normal",
                         desc =
-                            "Change the battle positions of all face-up monsters your opponent controls. Also draw 1 card."
+                            "Change the battle positions of all face-up monsters your opponent controls. Also look at the top card of your opponent's Deck."
                     });
                     Check("Corpus: Windstorm leftover rider is not FullyCompiled",
                         leftoverWind == null || !leftoverWind.FullyCompiled);

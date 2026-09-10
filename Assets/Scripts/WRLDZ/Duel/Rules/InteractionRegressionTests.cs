@@ -5362,13 +5362,18 @@ namespace WRLDZ.Duel.Rules
                 const int immortalId = 84926738;
                 var immortalDef = db.Get(immortalId);
                 var immortalProg = immortalDef != null ? CardTextEffectCompiler.Compile(immortalDef) : null;
-                Check("Immortal of Thunder Flip gain 3000 compiles; GY lose leftover",
-                    immortalProg != null && !immortalProg.FullyCompiled &&
+                Check("Immortal of Thunder FullyCompiled Flip gain 3000 + GY lose 5000",
+                    immortalProg != null && immortalProg.FullyCompiled &&
                     immortalProg.ClauseList.Exists(c =>
                         c != null &&
                         c.Timing == EffectTiming.Flip &&
                         c.Action == EffectActionKind.GainLifePoints &&
-                        c.Amount == 3000),
+                        c.Amount == 3000) &&
+                    immortalProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Timing == EffectTiming.SentFromFieldToGy &&
+                        c.Action == EffectActionKind.TakeEffectDamage &&
+                        c.Amount == 5000),
                     immortalProg == null
                         ? "null"
                         : $"full={immortalProg.FullyCompiled} unparsed={string.Join("|", immortalProg.UnparsedFragments ?? System.Array.Empty<string>())}");
@@ -6683,19 +6688,15 @@ namespace WRLDZ.Duel.Rules
                     var card = PutInHand(engine, p, vortex);
                     Check("Lightning Vortex: Activate legal with discard + face-up prey",
                         engine.CanActivateSpellTrap(p, card, fromHand: true));
-                    Check("Lightning Vortex: opens discard",
+                    Check("Lightning Vortex: discard fodder, face-up dies, Set and yours live",
                         engine.TryActivateSpellTrap(p, card, fromHand: true) &&
-                        engine.IsAwaitingEffectTarget &&
-                        engine.PendingActivation != null);
-                    Check("Lightning Vortex: pay discard, face-up dies, Set and yours live",
-                        engine.TrySelectEffectTarget(fodder) &&
                         opp.Graveyard.Contains(face) &&
                         !opp.TryFindMonster(face, out _) &&
                         opp.TryFindMonster(setMon, out _) && !setMon.FaceUp &&
                         p.TryFindMonster(yours, out _) &&
                         p.Graveyard.Exists(c => c != null && c.CardId == vortex) &&
                         p.Graveyard.Contains(fodder),
-                        $"faceGy={opp.Graveyard.Contains(face)} setOn={opp.TryFindMonster(setMon, out _)} yoursOn={p.TryFindMonster(yours, out _)}");
+                        $"faceGy={opp.Graveyard.Contains(face)} setOn={opp.TryFindMonster(setMon, out _)} yoursOn={p.TryFindMonster(yours, out _)} fodderGy={p.Graveyard.Contains(fodder)}");
                 }
 
                 {
