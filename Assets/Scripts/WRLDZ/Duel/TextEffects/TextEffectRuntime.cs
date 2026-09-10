@@ -2393,6 +2393,12 @@ namespace WRLDZ.Duel.TextEffects
                     battleEnded = true;
                     break;
 
+                case EffectActionKind.EndBattlePhase:
+                    engine.Log("Battle Phase ends.");
+                    engine.ForceEndBattlePhase(engine.DeclaredAttackingPlayer ?? engine.TurnPlayer);
+                    battleEnded = true;
+                    break;
+
                 case EffectActionKind.NegateThisAttack:
                     engine.Log("Attack negated — that monster cannot attack again this turn.");
                     attackNegated = true;
@@ -3801,6 +3807,18 @@ namespace WRLDZ.Duel.TextEffects
                 list.RemoveAll(t => t == null || !t.FaceUp);
             if (c.Action == EffectActionKind.ChangeBattlePosition)
                 list.RemoveAll(t => t == null || !t.FaceUp);
+            if (c.Action == EffectActionKind.ReturnToHand &&
+                c.Zone == EffectZoneFilter.FieldSpellTraps &&
+                c.Side == EffectSide.Opponent)
+            {
+                list.RemoveAll(t =>
+                {
+                    if (t == null) return true;
+                    foreach (var st in opp.SpellTrapsOnField())
+                        if (st == t) return false;
+                    return true;
+                });
+            }
 
             return list;
         }

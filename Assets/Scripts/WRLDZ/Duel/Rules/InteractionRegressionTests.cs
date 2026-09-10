@@ -6605,6 +6605,238 @@ namespace WRLDZ.Duel.Rules
                 }
             }
 
+            // ── Invigoration / Spiritualism / Unhappy Maiden / Hysteric Fairy ──
+            {
+                const int invigoration = 98374133;
+                const int spiritualism = 15866454;
+                const int maidenId = 51275027;
+                const int fairyId = 21297224;
+                const int celtic = 91152256; // EARTH 1400/1200
+                const int bewd = 89631139; // LIGHT 3000/2500
+                const int waboku = 12607053;
+                const int umi = 22702055;
+                const int laJinn = 97590747;
+
+                {
+                    var iDef = db.Get(invigoration);
+                    var iProg = iDef != null ? CardTextEffectCompiler.Compile(iDef) : null;
+                    Check("Invigoration official text FullyCompiled",
+                        iProg != null && iProg.FullyCompiled,
+                        iProg == null
+                            ? "null"
+                            : $"unparsed={string.Join("|", iProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var host = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var card = PutInHand(engine, p, invigoration);
+                    Check("Invigoration: Activate legal with EARTH you control",
+                        engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    Check("Invigoration: Activate opens Equip target",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget);
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        Check("Invigoration: select Celtic, +400 ATK / −200 DEF",
+                            engine.TrySelectEffectTarget(host) &&
+                            card.EquippedTo == host &&
+                            host.CurrentAtk == 1800 &&
+                            host.CurrentDef == 1000,
+                            $"atk={host.CurrentAtk} def={host.CurrentDef}");
+                    }
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    PlaceMonster(engine, p, bewd, 2, BattlePosition.Attack, true);
+                    var card = PutInHand(engine, p, invigoration);
+                    Check("Invigoration: refuse with only a LIGHT you control",
+                        !engine.CanActivateSpellTrap(p, card, fromHand: true));
+                }
+
+                {
+                    var sDef = db.Get(spiritualism);
+                    var sProg = sDef != null ? CardTextEffectCompiler.Compile(sDef) : null;
+                    Check("Spiritualism official text FullyCompiled",
+                        sProg != null && sProg.FullyCompiled,
+                        sProg == null
+                            ? "null"
+                            : $"unparsed={string.Join("|", sProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var st = PlaceSetTrap(engine, opp, waboku, 2);
+                    var mine = PlaceSetTrap(engine, p, waboku, 1);
+                    var card = PutInHand(engine, p, spiritualism);
+                    Check("Spiritualism: Activate legal with opponent S/T",
+                        engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    Check("Spiritualism: Activate opens bounce target",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget);
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        var legal = engine.PendingActivation.LegalTargets;
+                        Check("Spiritualism: opponent S/T legal, yours is not",
+                            legal.Contains(st) && !legal.Contains(mine));
+                        Check("Spiritualism: bounce opp S/T to hand, spell to GY",
+                            engine.TrySelectEffectTarget(st) &&
+                            opp.Hand.Contains(st) &&
+                            !opp.TryFindSpellTrap(st, out _) &&
+                            p.Graveyard.Exists(c => c != null && c.CardId == spiritualism),
+                            $"handHas={opp.Hand.Contains(st)} gy={p.Graveyard.Exists(c => c != null && c.CardId == spiritualism)}");
+                    }
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var field = engine.CreateCardInstance(umi);
+                    field.FaceUp = true;
+                    opp.FieldSpellZone.Occupant = field;
+                    var card = PutInHand(engine, p, spiritualism);
+                    Check("Spiritualism: Field Spell is a legal bounce target",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation.LegalTargets.Contains(field));
+                    if (engine.IsAwaitingEffectTarget)
+                        Check("Spiritualism: bounce Field Spell to opponent hand",
+                            engine.TrySelectEffectTarget(field) &&
+                            opp.Hand.Contains(field) &&
+                            opp.FieldSpellZone.Occupant == null);
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    PlaceSetTrap(engine, p, waboku, 2);
+                    var card = PutInHand(engine, p, spiritualism);
+                    Check("Spiritualism: refuse with no opponent S/T",
+                        !engine.CanActivateSpellTrap(p, card, fromHand: true));
+                }
+
+                {
+                    var mDef = db.Get(maidenId);
+                    var mProg = mDef != null ? CardTextEffectCompiler.Compile(mDef) : null;
+                    Check("Unhappy Maiden official text FullyCompiled",
+                        mProg != null && mProg.FullyCompiled,
+                        mProg == null
+                            ? "null"
+                            : $"unparsed={string.Join("|", mProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    if (ReachOpponentBattle(engine))
+                    {
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        var wall = PlaceMonster(engine, p, maidenId, 2, BattlePosition.Defense, true);
+                        var atk = PlaceMonster(engine, opp, laJinn, 2, BattlePosition.Attack, true);
+                        atk.SummonedThisTurn = false;
+                        atk.ClearAttackFlags();
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        Check("Unhappy Maiden battle: La Jinn can attack face-up Maiden",
+                            engine.Phase == DuelPhase.Battle && engine.CanAttack(opp, atk));
+                        if (engine.Phase == DuelPhase.Battle && engine.CanAttack(opp, atk))
+                        {
+                            engine.TryAttack(opp, atk, wall);
+                            DrainCombat(engine);
+                        }
+
+                        Check("Unhappy Maiden battle: Maiden to GY",
+                            p.Graveyard.Exists(c => c != null && c.CardId == maidenId));
+                        Check("Unhappy Maiden battle: Battle Phase ends (Main2)",
+                            engine.Phase == DuelPhase.Main2,
+                            $"phase={engine.Phase}");
+                    }
+                    else
+                        Check("Unhappy Maiden battle path", false, $"phase={engine.Phase}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    if (ReachOpponentBattle(engine))
+                    {
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        var wall = PlaceMonster(engine, p, maidenId, 2, BattlePosition.Defense, true);
+                        var atk = PlaceMonster(engine, opp, laJinn, 2, BattlePosition.Attack, true);
+                        atk.SummonedThisTurn = false;
+                        atk.ClearAttackFlags();
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        engine.SendCardToGrave(p, wall);
+                        Check("Unhappy Maiden send without battle: still Battle Phase",
+                            engine.Phase == DuelPhase.Battle &&
+                            p.Graveyard.Contains(wall),
+                            $"phase={engine.Phase}");
+                    }
+                    else
+                        Check("Unhappy Maiden non-battle send path", false, $"phase={engine.Phase}");
+                }
+
+                {
+                    var fDef = db.Get(fairyId);
+                    var fProg = fDef != null ? CardTextEffectCompiler.Compile(fDef) : null;
+                    Check("Hysteric Fairy official text FullyCompiled",
+                        fProg != null && fProg.FullyCompiled,
+                        fProg == null
+                            ? "null"
+                            : $"unparsed={string.Join("|", fProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.LifePoints = 8000;
+                    var fairy = PlaceMonster(engine, p, fairyId, 2, BattlePosition.Attack, true);
+                    var fodderA = PlaceMonster(engine, p, celtic, 1, BattlePosition.Attack, true);
+                    var fodderB = PlaceMonster(engine, p, laJinn, 3, BattlePosition.Attack, true);
+                    Check("Hysteric Fairy: Activate legal with 2+ monsters",
+                        engine.CanActivateSpellTrap(p, fairy, fromHand: false));
+                    Check("Hysteric Fairy: Activate opens tribute cost",
+                        engine.TryActivateSpellTrap(p, fairy, fromHand: false) &&
+                        engine.IsAwaitingEffectTarget);
+                    Check("Hysteric Fairy: tribute first fodder",
+                        engine.TrySelectEffectTarget(fodderA) &&
+                        p.Graveyard.Contains(fodderA));
+                    Check("Hysteric Fairy: tribute second fodder, gain 1000 LP",
+                        engine.TrySelectEffectTarget(fodderB) &&
+                        p.Graveyard.Contains(fodderB) &&
+                        p.TryFindMonster(fairy, out _) &&
+                        p.LifePoints == 9000,
+                        $"LP {p.LifePoints} fairyOn={p.TryFindMonster(fairy, out _)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var fairy = PlaceMonster(engine, p, fairyId, 2, BattlePosition.Attack, true);
+                    Check("Hysteric Fairy: refuse with only itself (need 2 tributes)",
+                        !engine.CanActivateSpellTrap(p, fairy, fromHand: false));
+                }
+            }
+
             // ── FirstEmpty order ──
             {
                 var engine = Fresh(db, pDeck, aDeck);

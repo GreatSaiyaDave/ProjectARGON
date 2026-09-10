@@ -2073,6 +2073,211 @@ namespace WRLDZ.Duel.Rules
                             c.Zone == EffectZoneFilter.FieldSpellTraps &&
                             !c.RequiresTargetChoice));
 
+                    var steel = db.Get(2370081);
+                    var steelProg = steel != null ? CardTextEffectCompiler.Compile(steel) : null;
+                    Check("Corpus: Steel Shell FullyCompiled WATER Equip +400/−200",
+                        steelProg != null && steelProg.FullyCompiled &&
+                        steelProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.EquipThisToTarget &&
+                            c.EquipAtkBonus == 400 && c.EquipDefBonus == -200 &&
+                            string.Equals(c.AttributeFilter, "WATER",
+                                StringComparison.OrdinalIgnoreCase)),
+                        steelProg == null
+                            ? "null"
+                            : $"full={steelProg.FullyCompiled} unparsed={string.Join("|", steelProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var invi = db.Get(98374133);
+                    var inviProg = invi != null ? CardTextEffectCompiler.Compile(invi) : null;
+                    Check("Corpus: Invigoration FullyCompiled EARTH Equip +400/−200",
+                        inviProg != null && inviProg.FullyCompiled &&
+                        inviProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.EquipThisToTarget &&
+                            c.EquipAtkBonus == 400 && c.EquipDefBonus == -200 &&
+                            string.Equals(c.AttributeFilter, "EARTH",
+                                StringComparison.OrdinalIgnoreCase)),
+                        inviProg == null
+                            ? "null"
+                            : $"full={inviProg.FullyCompiled} unparsed={string.Join("|", inviProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var synEarthEq = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000070,
+                        name = "Earth Equip (new-card shape)",
+                        type = "Spell Card",
+                        race = "Equip",
+                        frameType = "equip",
+                        desc =
+                            "An EARTH monster equipped with this card increases its ATK by 400 points and decreases its DEF by 200 points."
+                    });
+                    Check("New-card rule: An-EARTH Equip split compiles without a cardId branch",
+                        synEarthEq != null && synEarthEq.FullyCompiled &&
+                        synEarthEq.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.EquipThisToTarget &&
+                            string.Equals(c.AttributeFilter, "EARTH",
+                                StringComparison.OrdinalIgnoreCase)));
+
+                    var synEqLeftover = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000071,
+                        name = "Earth Equip leftover (new-card shape)",
+                        type = "Spell Card",
+                        race = "Equip",
+                        frameType = "equip",
+                        desc =
+                            "An EARTH monster equipped with this card increases its ATK by 400 points and decreases its DEF by 200 points. Then draw 1 card."
+                    });
+                    Check("New-card leftover: Equip split + unique draw is not FullyCompiled",
+                        synEqLeftover != null && !synEqLeftover.FullyCompiled);
+
+                    var spirit = db.Get(15866454);
+                    var spiritProg = spirit != null ? CardTextEffectCompiler.Compile(spirit) : null;
+                    Check("Corpus: Spiritualism FullyCompiled bounce 1 opp S/T",
+                        spiritProg != null && spiritProg.FullyCompiled &&
+                        spiritProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ReturnToHand &&
+                            c.Zone == EffectZoneFilter.FieldSpellTraps &&
+                            c.Side == EffectSide.Opponent &&
+                            c.RequiresTargetChoice &&
+                            !c.ActivationNegatable &&
+                            !c.EffectNegatable),
+                        spiritProg == null
+                            ? "null"
+                            : $"full={spiritProg.FullyCompiled} unparsed={string.Join("|", spiritProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var synBounce = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000072,
+                        name = "Opp S/T bounce (new-card shape)",
+                        type = "Spell Card",
+                        race = "Normal",
+                        desc = "Return 1 Spell/Trap Card your opponent controls to the hand."
+                    });
+                    Check("New-card rule: bounce-1-opp-S/T compiles without a cardId branch",
+                        synBounce != null && synBounce.FullyCompiled &&
+                        synBounce.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ReturnToHand &&
+                            c.Zone == EffectZoneFilter.FieldSpellTraps &&
+                            c.Side == EffectSide.Opponent &&
+                            c.ActivationNegatable &&
+                            c.EffectNegatable));
+
+                    var synBounceLeftover = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000073,
+                        name = "Opp S/T bounce leftover (new-card shape)",
+                        type = "Spell Card",
+                        race = "Normal",
+                        desc =
+                            "Return 1 Spell/Trap Card your opponent controls to the hand. Then draw 1 card."
+                    });
+                    Check("New-card leftover: bounce + unique draw is not FullyCompiled",
+                        synBounceLeftover != null && !synBounceLeftover.FullyCompiled);
+
+                    var maiden = db.Get(51275027);
+                    var maidenProg = maiden != null ? CardTextEffectCompiler.Compile(maiden) : null;
+                    Check("Corpus: Unhappy Maiden FullyCompiled battle-GY EndBattlePhase",
+                        maidenProg != null && maidenProg.FullyCompiled &&
+                        maidenProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.SentFromFieldToGy &&
+                            c.Action == EffectActionKind.EndBattlePhase &&
+                            c.RequiresThisDestroyedByBattle) &&
+                        !maidenProg.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.Activate),
+                        maidenProg == null
+                            ? "null"
+                            : $"full={maidenProg.FullyCompiled} unparsed={string.Join("|", maidenProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var synMaiden = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000074,
+                        name = "Battle-GY end BP (new-card shape)",
+                        type = "Effect Monster",
+                        desc =
+                            "When this card is sent to the Graveyard as a result of battle, the Battle Phase for that turn ends immediately."
+                    });
+                    Check("New-card rule: battle-GY EndBattlePhase compiles without a cardId branch",
+                        synMaiden != null && synMaiden.FullyCompiled &&
+                        synMaiden.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.EndBattlePhase &&
+                            c.RequiresThisDestroyedByBattle));
+
+                    var synMaidenLeftover = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000075,
+                        name = "Battle-GY end BP leftover (new-card shape)",
+                        type = "Effect Monster",
+                        desc =
+                            "When this card is sent to the Graveyard as a result of battle, the Battle Phase for that turn ends immediately. Then draw 1 card."
+                    });
+                    Check("New-card leftover: EndBattlePhase + unique draw is not FullyCompiled",
+                        synMaidenLeftover != null && !synMaidenLeftover.FullyCompiled);
+
+                    var fairy = db.Get(21297224);
+                    var fairyProg = fairy != null ? CardTextEffectCompiler.Compile(fairy) : null;
+                    Check("Corpus: Hysteric Fairy FullyCompiled Tribute 2 gain 1000 LP",
+                        fairyProg != null && fairyProg.FullyCompiled &&
+                        fairyProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Activate &&
+                            c.Action == EffectActionKind.GainLifePoints &&
+                            c.Amount == 1000 &&
+                            c.RequiresTributeCount == 2 &&
+                            !c.TributeExceptThis),
+                        fairyProg == null
+                            ? "null"
+                            : $"full={fairyProg.FullyCompiled} unparsed={string.Join("|", fairyProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var synTribLp = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000076,
+                        name = "Tribute-to-gain-LP (new-card shape)",
+                        type = "Effect Monster",
+                        desc =
+                            "Tribute 2 monsters on your side of the field to increase your Life Points by 1000 points."
+                    });
+                    Check("New-card rule: Tribute-N-to-gain-LP compiles without a cardId branch",
+                        synTribLp != null && synTribLp.FullyCompiled &&
+                        synTribLp.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.GainLifePoints &&
+                            c.RequiresTributeCount == 2 &&
+                            c.Amount == 1000));
+
+                    var synTribLpLeftover = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000077,
+                        name = "Tribute-to-gain-LP leftover (new-card shape)",
+                        type = "Effect Monster",
+                        desc =
+                            "Tribute 2 monsters on your side of the field to increase your Life Points by 1000 points. Then destroy 1 card on the field."
+                    });
+                    Check("New-card leftover: Tribute-LP + unique destroy is not FullyCompiled",
+                        synTribLpLeftover != null && !synTribLpLeftover.FullyCompiled);
+
+                    var painful = db.Get(74191942);
+                    var painfulProg = painful != null ? CardTextEffectCompiler.Compile(painful) : null;
+                    Check("Parked: Painful Choice is not FullyCompiled",
+                        painfulProg == null || !painfulProg.FullyCompiled);
+                    var duo = db.Get(44763025);
+                    var duoProg = duo != null ? CardTextEffectCompiler.Compile(duo) : null;
+                    Check("Parked: Delinquent Duo is not FullyCompiled",
+                        duoProg == null || !duoProg.FullyCompiled);
+                    var confiscation = db.Get(17375316);
+                    var confProg = confiscation != null ? CardTextEffectCompiler.Compile(confiscation) : null;
+                    Check("Parked: Confiscation is not FullyCompiled",
+                        confProg == null || !confProg.FullyCompiled);
+                    var hocw = db.Get(64801562);
+                    var hocwProg = hocw != null ? CardTextEffectCompiler.Compile(hocw) : null;
+                    Check("Parked: Heart of Clear Water is not FullyCompiled",
+                        hocwProg == null || !hocwProg.FullyCompiled);
+
                     Check("Vocabulary: Protection is a shared kind",
                         Array.IndexOf(EffectVocabulary.SharedResolutions,
                             EffectResolutionKind.Protection) >= 0);
