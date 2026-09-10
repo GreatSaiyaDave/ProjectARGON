@@ -1731,6 +1731,8 @@ namespace WRLDZ.Duel.TextEffects
             {
                 clause.Action = EffectActionKind.TakeControlTarget;
                 clause.RequiresTargetChoice = true;
+                if (clause.Timing != EffectTiming.Flip)
+                    clause.Timing = EffectTiming.Activate;
                 if (clause.Zone == EffectZoneFilter.None)
                 {
                     clause.Zone = EffectZoneFilter.OppFaceUpMonsters;
@@ -1748,6 +1750,8 @@ namespace WRLDZ.Duel.TextEffects
             if (!oldFlip.Success) return false;
             clause.Action = EffectActionKind.TakeControlTarget;
             clause.RequiresTargetChoice = true;
+            if (clause.Timing != EffectTiming.Flip)
+                clause.Timing = EffectTiming.Activate;
             clause.Zone = EffectZoneFilter.OppFaceUpMonsters;
             clause.Side = EffectSide.Opponent;
             if (oldFlip.Groups[1].Success && oldFlip.Groups[1].Length > 0)

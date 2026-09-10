@@ -6582,28 +6582,32 @@ namespace WRLDZ.Duel.Rules
                         if (engine.IsAwaitingResponse) engine.PassResponse();
                         var prey = PlaceMonster(engine, opp, celticId, 2, BattlePosition.Attack, true);
                         var card = PutInHand(engine, p, changeOfHeart);
+                        var legal = OfficialEffectRegistry.CanActivateOfficial(
+                            engine, p, card, true, out var why);
                         Check("Change of Heart: Activate legal with opp monster + empty zone",
-                            engine.CanActivateSpellTrap(p, card, fromHand: true));
+                            legal, why ?? "");
                         Check("Change of Heart: Activate opens opp monster target",
                             engine.TryActivateSpellTrap(p, card, fromHand: true) &&
                             engine.IsAwaitingEffectTarget);
+                        var took = false;
                         if (engine.IsAwaitingEffectTarget)
                         {
-                            Check("Change of Heart: select Celtic, take control",
-                                engine.TrySelectEffectTarget(prey) &&
-                                p.TryFindMonster(prey, out _) &&
-                                !opp.TryFindMonster(prey, out _) &&
-                                prey.TempControlUntilEndTurn == engine.TurnNumber);
+                            took = engine.TrySelectEffectTarget(prey) &&
+                                   p.TryFindMonster(prey, out _) &&
+                                   !opp.TryFindMonster(prey, out _) &&
+                                   prey.TempControlUntilEndTurn == engine.TurnNumber;
+                            Check("Change of Heart: select Celtic, take control", took);
                         }
 
                         var turn = engine.TurnNumber;
                         if (engine.IsAwaitingResponse) engine.PassResponse();
                         Check("Change of Heart: End Phase returns control",
+                            took &&
                             engine.TryEndTurnSafe(p) &&
                             opp.TryFindMonster(prey, out _) &&
                             !p.TryFindMonster(prey, out _) &&
                             prey.TempControlUntilEndTurn < 0,
-                            $"turn={turn} now={engine.TurnNumber} mine={p.TryFindMonster(prey, out _)} opp={opp.TryFindMonster(prey, out _)}");
+                            $"took={took} turn={turn} now={engine.TurnNumber} mine={p.TryFindMonster(prey, out _)} opp={opp.TryFindMonster(prey, out _)}");
                     }
 
                     {
