@@ -1191,6 +1191,56 @@ namespace WRLDZ.Duel.Rules
                     $"LP {engine.Player.LifePoints} expected {lpAfterHit + 1000}");
             }
 
+            // ── Waboku: no battle damage / no destroy by battle this turn ──
+            {
+                const int waboku = 12607053;
+                const int bewd = 89631139;
+                const int celtic = 91152256;
+
+                var wDef = db.Get(waboku);
+                var wProg = wDef != null ? CardTextEffectCompiler.Compile(wDef) : null;
+                Check("Waboku FullyCompiled ApplyWabokuStyle",
+                    wProg != null && wProg.FullyCompiled &&
+                    wProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.ApplyWabokuStyle));
+
+                var engine = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine);
+                var trap = PlaceSetTrap(engine, engine.Player, waboku, 2);
+                trap.SetThisTurn = false;
+                var defMon = PlaceMonster(engine, engine.Player, celtic, 2, BattlePosition.Attack, true);
+                var atk = PlaceMonster(engine, engine.Opponent, bewd, 2, BattlePosition.Attack, true);
+                atk.SummonedThisTurn = false;
+                if (engine.IsAwaitingResponse) engine.PassResponse();
+                engine.TryEndTurnSafe(engine.TurnPlayer);
+                if (engine.IsAwaitingResponse) engine.PassResponse();
+                if (engine.TurnPlayer == engine.Opponent && engine.Phase == DuelPhase.Main1)
+                    engine.TryEnterBattlePhase(engine.Opponent);
+                if (engine.IsAwaitingResponse &&
+                    engine.PendingResponse?.Timing == ResponseTiming.OpponentOpenState)
+                    engine.PassResponse();
+
+                var lpBefore = engine.Player.LifePoints;
+                Check("Waboku is legal in AttackDeclared window",
+                    engine.Phase == DuelPhase.Battle &&
+                    SpellTrapEffects.IsLegalResponseCard(engine, engine.Player, trap,
+                        ResponseTiming.AttackDeclared, null),
+                    $"phase={engine.Phase} legal={SpellTrapEffects.IsLegalResponseCard(engine, engine.Player, trap, ResponseTiming.AttackDeclared, null)}");
+                var declared = engine.TryAttack(engine.Opponent, atk, defMon);
+                var activated = declared && engine.IsAwaitingResponse &&
+                                engine.TryActivateSpellTrap(engine.Player, trap, fromHand: false);
+                DrainCombat(engine);
+                Check("Waboku: defender lives, no battle damage",
+                    activated &&
+                    engine.Player.TryFindMonster(defMon, out _) &&
+                    engine.Player.LifePoints == lpBefore &&
+                    engine.Player.Graveyard.Contains(trap),
+                    $"declared={declared} activated={activated} " +
+                    $"alive={engine.Player.TryFindMonster(defMon, out _)} " +
+                    $"LP {engine.Player.LifePoints} was {lpBefore} " +
+                    $"wabokuGy={engine.Player.Graveyard.Contains(trap)}");
+            }
+
             // ── Amphibious Bugroth MK-3: direct attack while Umi (ALO counts) ──
             {
                 const int mk3Id = MonsterEffects.AmphibiousBugrothMk3; // 64342551
@@ -3015,6 +3065,37 @@ namespace WRLDZ.Duel.Rules
                         p.Graveyard.Exists(c => c.CardId == duster));
                 }
 
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var st = PlaceSetTrap(engine, opp, 12607053, 2);
+                    var card = PutInHand(engine, p, mst);
+                    var mDef = db.Get(mst);
+                    var mProg = mDef != null ? CardTextEffectCompiler.Compile(mDef) : null;
+                    Check("Mystical Space Typhoon FullyCompiled target Spell/Trap destroy",
+                        mProg != null && mProg.FullyCompiled &&
+                        mProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.Destroy &&
+                            c.Zone == EffectZoneFilter.FieldSpellTraps &&
+                            c.RequiresTargetChoice));
+                    Check("MST: Activate legal in MP1 with an opposing S/T",
+                        engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    Check("MST: Activate opens Spell/Trap target",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget);
+                    if (engine.IsAwaitingEffectTarget)
+                        Check("MST: destroy the Set trap",
+                            engine.TrySelectEffectTarget(st) &&
+                            opp.Graveyard.Contains(st) &&
+                            p.Graveyard.Contains(card) &&
+                            !opp.TryFindSpellTrap(st, out _),
+                            $"stGy={opp.Graveyard.Contains(st)} mstGy={p.Graveyard.Contains(card)}");
+                }
+
                 // ── Equip Spells: Activate + target; host leaving field destroys Equip ──
                 {
                     const int treasure = 1435851;
@@ -3094,6 +3175,13 @@ namespace WRLDZ.Duel.Rules
                                 card.EquippedTo == host &&
                                 host.CurrentAtk == 4000,
                                 $"atk={host.CurrentAtk}");
+                        engine.SendCardToGrave(p, card);
+                        engine.NotifyPublic();
+                        Check("Axe of Despair: leave field ends +1000",
+                            host.CurrentAtk == 3000 &&
+                            p.TryFindMonster(host, out _) &&
+                            !p.TryFindSpellTrap(card, out _),
+                            $"atk={host.CurrentAtk} gy={p.Graveyard.Contains(card)}");
                     }
 
                     {
@@ -3153,6 +3241,50 @@ namespace WRLDZ.Duel.Rules
                             !p.Graveyard.Contains(card) &&
                             p.Graveyard.Contains(fodder),
                             $"top={((p.Deck.Count > 0) ? p.Deck[0].ToString() : "empty")} gyAxe={p.Graveyard.Contains(card)}");
+                    }
+
+                    {
+                        const int pendant = 65169794;
+                        var pDef = db.Get(pendant);
+                        var pProg = pDef != null ? CardTextEffectCompiler.Compile(pDef) : null;
+                        Check("Black Pendant FullyCompiled Equip +500 and GY inflict 500",
+                            pProg != null && pProg.FullyCompiled &&
+                            pProg.ClauseList.Exists(c =>
+                                c != null && c.Action == EffectActionKind.EquipThisToTarget &&
+                                c.EquipAtkBonus == 500) &&
+                            pProg.ClauseList.Exists(c =>
+                                c != null &&
+                                c.Action == EffectActionKind.InflictDamageToOpponent &&
+                                c.Amount == 500),
+                            pProg == null
+                                ? "null"
+                                : $"full={pProg.FullyCompiled} unparsed={string.Join("|", pProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        var host = PlaceMonster(engine, p, bewd, 2, BattlePosition.Attack, true);
+                        var card = PutInHand(engine, p, pendant);
+                        Check("Black Pendant: Activate legal with a face-up monster",
+                            engine.CanActivateSpellTrap(p, card, fromHand: true));
+                        engine.TryActivateSpellTrap(p, card, fromHand: true);
+                        if (engine.IsAwaitingEffectTarget)
+                            engine.TrySelectEffectTarget(host);
+                        engine.NotifyPublic();
+                        Check("Black Pendant: select host, +500 ATK",
+                            card.EquippedTo == host && host.CurrentAtk == 3500,
+                            $"atk={host.CurrentAtk}");
+                        var oppLp = opp.LifePoints;
+                        engine.SendCardToGrave(p, card);
+                        engine.NotifyPublic();
+                        Check("Black Pendant: leave field ends +500 and inflicts 500",
+                            host.CurrentAtk == 3000 &&
+                            p.TryFindMonster(host, out _) &&
+                            p.Graveyard.Contains(card) &&
+                            opp.LifePoints == oppLp - 500,
+                            $"atk={host.CurrentAtk} gy={p.Graveyard.Contains(card)} oppLP={opp.LifePoints} was {oppLp}");
                     }
 
                     {
@@ -3377,6 +3509,7 @@ namespace WRLDZ.Duel.Rules
                             p.Hand.Clear();
                             var clause = prog.ClauseList.Find(c =>
                                 c != null && c.Action == EffectActionKind.EquipThisToTarget);
+                            if (clause == null) continue;
                             var hostId = celtic;
                             if (clause != null)
                             {
@@ -3743,6 +3876,62 @@ namespace WRLDZ.Duel.Rules
                     }
 
                     {
+                        const int premature = 70828912;
+                        var premDef = db.Get(premature);
+                        var premProg = premDef != null ? CardTextEffectCompiler.Compile(premDef) : null;
+                        Check("Premature Burial FullyCompiled pay 800 GY SS + leave destroy",
+                            premProg != null && premProg.FullyCompiled &&
+                            premProg.ClauseList.Exists(c =>
+                                c != null &&
+                                c.Action == EffectActionKind.SpecialSummonFromGy &&
+                                c.PayLpAmount == 800 &&
+                                c.DestroyHostWhenThisLeaves),
+                            premProg == null
+                                ? "null"
+                                : $"full={premProg.FullyCompiled} unparsed={string.Join("|", premProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var gyMon = engine.CreateCardInstance(celtic);
+                        p.Graveyard.Add(gyMon);
+                        var card = PutInHand(engine, p, premature);
+                        var lp = p.LifePoints;
+                        Check("Premature Burial: Activate legal with a GY monster",
+                            engine.CanActivateSpellTrap(p, card, fromHand: true));
+                        Check("Premature Burial: Activate pays 800 and opens GY target",
+                            engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                            p.LifePoints == lp - 800 &&
+                            engine.IsAwaitingEffectTarget,
+                            $"lp={p.LifePoints} was {lp} awaiting={engine.IsAwaitingEffectTarget}");
+                        Check("Premature Burial: SS Celtic, Equip stays linked",
+                            engine.TrySelectEffectTarget(gyMon) &&
+                            p.TryFindMonster(gyMon, out _) &&
+                            gyMon.Position == BattlePosition.Attack &&
+                            gyMon.WasSpecialSummoned &&
+                            card.EquippedTo == gyMon &&
+                            p.TryFindSpellTrap(card, out _),
+                            $"mz={p.TryFindMonster(gyMon, out _)} link={card.EquippedTo != null} " +
+                            $"st={p.TryFindSpellTrap(card, out _)} pos={gyMon.Position}");
+                        engine.SendCardToGrave(p, card);
+                        Check("Premature Burial: Equip to GY also destroys the summoned monster",
+                            p.Graveyard.Contains(card) && p.Graveyard.Contains(gyMon) &&
+                            !p.TryFindMonster(gyMon, out _),
+                            $"eqGy={p.Graveyard.Contains(card)} monGy={p.Graveyard.Contains(gyMon)}");
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var card = PutInHand(engine, p, 70828912);
+                        Check("Premature Burial: no GY monster cannot activate",
+                            !engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    }
+
+                    {
                         var engine = Fresh(db, pDeck, aDeck);
                         ClearBoard(engine);
                         var p = engine.Player;
@@ -4053,6 +4242,49 @@ namespace WRLDZ.Duel.Rules
                     Check("Trap Hole not legal in OpponentOpenState",
                         !SpellTrapEffects.IsLegalResponseCard(engine, engine.Player, hole,
                             ResponseTiming.OpponentOpenState, null));
+                }
+
+                {
+                    const int laJinn = 97590747;
+                    var engine = Fresh(db, pDeck, aDeck);
+                    if (!ReachOpponentMain(engine))
+                    {
+                        Check("Trap Hole mini-duel reached opponent Main", false,
+                            $"tp={engine.TurnPlayer?.Name} phase={engine.Phase} turn={engine.TurnNumber}");
+                    }
+                    else
+                    {
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        var hole = PlaceSetTrap(engine, p, trapHoleId, 2);
+                        hole.SetThisTurn = false;
+                        opp.Hand.Clear();
+                        var summoned = PutInHand(engine, opp, laJinn);
+                        var summonedOk = engine.TryNormalSummon(opp, summoned, asSet: false);
+                        Check("Opponent Normal Summons La Jinn for Trap Hole",
+                            summonedOk && opp.MonsterZones[2].Occupant == summoned,
+                            $"ok={summonedOk} awaiting={engine.IsAwaitingResponse} " +
+                            $"occ={opp.MonsterZones[2].Occupant?.Name}");
+                        Check("Trap Hole is legal in the summon window",
+                            engine.IsAwaitingResponse &&
+                            engine.PendingResponse != null &&
+                            engine.PendingResponse.Timing == ResponseTiming.MonsterSummoned &&
+                            SpellTrapEffects.IsLegalResponseCard(engine, p, hole,
+                                ResponseTiming.MonsterSummoned, summoned),
+                            $"awaiting={engine.IsAwaitingResponse} timing={engine.PendingResponse?.Timing}");
+                        Check("Trap Hole activates vs La Jinn",
+                            engine.TryActivateSpellTrap(p, hole, fromHand: false));
+                        if (engine.IsAwaitingEffectTarget)
+                            engine.TrySelectEffectTarget(summoned);
+                        Check("Trap Hole destroys La Jinn to GY (not banished)",
+                            opp.Graveyard.Contains(summoned) &&
+                            !opp.Banished.Contains(summoned) &&
+                            opp.MonsterZones[2].Occupant == null &&
+                            p.Graveyard.Contains(hole),
+                            $"gy={opp.Graveyard.Contains(summoned)} banished={opp.Banished.Contains(summoned)} " +
+                            $"field={opp.MonsterZones[2].Occupant?.Name} holeGy={p.Graveyard.Contains(hole)}");
+                    }
                 }
 
                 {
