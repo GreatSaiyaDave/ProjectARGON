@@ -3021,7 +3021,7 @@ namespace WRLDZ.Duel.Rules
                 const int umi = 22702055;
                 const int yami = 59197169;
                 const int zeroGravity = 83133491;
-                const int celtic = 91152256;
+                const int warriorId = 91152256;
                 const int hyosube = 2118022;
                 const int greatWhite = 13429800;
                 const int overdrive = 2311603;
@@ -3029,7 +3029,7 @@ namespace WRLDZ.Duel.Rules
                 const int laJinn = 97590747;
                 const int darkMagician = 46986414;
                 const int doma = 16972957;
-                const int mst = 5318639;
+                const int setMst = 5318639;
                 const int forest = 87430998;
                 const int sogen = 86318356;
 
@@ -3053,8 +3053,8 @@ namespace WRLDZ.Duel.Rules
                     var p = engine.Player;
                     var opp = engine.Opponent;
                     p.Hand.Clear();
-                    var mine = PlaceSetTrap(engine, p, mst, 1);
-                    var theirs = PlaceSetTrap(engine, opp, mst, 2);
+                    var mine = PlaceSetTrap(engine, p, setMst, 1);
+                    var theirs = PlaceSetTrap(engine, opp, setMst, 2);
                     var card = PutInHand(engine, p, trunade);
                     Check("Giant Trunade: Activate legal in MP1",
                         engine.CanActivateSpellTrap(p, card, fromHand: true));
@@ -3120,7 +3120,7 @@ namespace WRLDZ.Duel.Rules
                     var fish = PlaceMonster(engine, p, greatWhite, 1, BattlePosition.Attack, true);
                     var machine = PlaceMonster(engine, p, overdrive, 2, BattlePosition.Attack, true);
                     var pyro = PlaceMonster(engine, opp, inpachi, 0, BattlePosition.Attack, true);
-                    var warrior = PlaceMonster(engine, opp, celtic, 2, BattlePosition.Attack, true);
+                    var warrior = PlaceMonster(engine, opp, warriorId, 2, BattlePosition.Attack, true);
                     var fdAqua = PlaceMonster(engine, p, hyosube, 3, BattlePosition.Defense, false);
                     var card = PutInHand(engine, p, umi);
                     Check("Umi: Activate stays in Field Zone",
@@ -3170,7 +3170,7 @@ namespace WRLDZ.Duel.Rules
                     var fiend = PlaceMonster(engine, p, laJinn, 0, BattlePosition.Attack, true);
                     var caster = PlaceMonster(engine, p, darkMagician, 1, BattlePosition.Attack, true);
                     var fairy = PlaceMonster(engine, opp, doma, 0, BattlePosition.Attack, true);
-                    var warrior = PlaceMonster(engine, opp, celtic, 2, BattlePosition.Attack, true);
+                    var warrior = PlaceMonster(engine, opp, warriorId, 2, BattlePosition.Attack, true);
                     var card = PutInHand(engine, p, yami);
                     Check("Yami: Activate stays in Field Zone",
                         engine.TryActivateSpellTrap(p, card, fromHand: true) &&
@@ -3213,7 +3213,7 @@ namespace WRLDZ.Duel.Rules
                     ClearBoard(engine);
                     var p = engine.Player;
                     var opp = engine.Opponent;
-                    var atk = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var atk = PlaceMonster(engine, p, warriorId, 2, BattlePosition.Attack, true);
                     var def = PlaceMonster(engine, opp, laJinn, 2, BattlePosition.Defense, true);
                     var fd = PlaceMonster(engine, p, hyosube, 0, BattlePosition.Defense, false);
                     var trap = PlaceSetTrap(engine, p, zeroGravity, 2);
