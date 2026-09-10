@@ -81,6 +81,7 @@ def main() -> int:
     must_contain(SELECT, "CanOptInDuelistKingdom", "Format Select PLAY not re-checked at tap")
     must_contain(SELECT, "ArDuelMatchConfig.DuelistKingdomPvAi()", "Format Select PLAY must launch DK PvAI")
     must_contain(SELECT, "Story stays standard TCG", "Format Select copy lost the story lock")
+    must_contain(SELECT, 'cta: live ? "PLAY" : "START"', "live DK card must use PLAY, not START")
 
     must_contain(BOOT, "!ArDuelMatchConfig.IsStoryLaunch(match.Launch)", "bootstrap must refuse story overlay")
     must_contain(TESTS, "StartingLp == 8000 && !cfg.DkOverlay", "lost opponent-match 8000 lock")

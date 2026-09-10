@@ -134,7 +134,8 @@ namespace WRLDZ.UI.Shell
                     FormatProgress.Titles[i].ToUpperInvariant(),
                     rules,
                     play,
-                    gold: owned);
+                    gold: owned,
+                    cta: live ? "PLAY" : "START");
             }
 
             return hostGo.GetComponent<RectTransform>();
