@@ -283,6 +283,9 @@ namespace WRLDZ.Duel.Rules
                 if (c.Zone == EffectZoneFilter.DeckFieldSpells)
                     p.Deck.Insert(0, Alo);
 
+                if (c.Zone == EffectZoneFilter.OppDefensePositionMonsters)
+                    PlaceMonster(engine, opp, Celtic, 1, BattlePosition.Defense, true);
+
                 if (c.Action == EffectActionKind.AddNamedFromDeckToHand &&
                     !string.IsNullOrEmpty(c.NamedCard) &&
                     string.Equals(c.NamedCard, prog.CardName, StringComparison.OrdinalIgnoreCase) &&
