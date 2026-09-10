@@ -187,7 +187,9 @@ namespace WRLDZ.Duel.TextEffects
                     EffectActionKind.UnequipThisSpecialSummon or
                     EffectActionKind.EquipTargetToThis =>
                     EffectResolutionKind.Equip,
-                EffectActionKind.TakeControlLevelLeq => EffectResolutionKind.TakeControl,
+                EffectActionKind.TakeControlLevelLeq or
+                    EffectActionKind.GrantTributeAsIfControlledUntilEnd =>
+                    EffectResolutionKind.TakeControl,
                 EffectActionKind.PlaceSpellCounters => EffectResolutionKind.PlaceCounters,
                 EffectActionKind.NegateAttack or
                     EffectActionKind.NegateThisAttack =>
@@ -205,7 +207,9 @@ namespace WRLDZ.Duel.TextEffects
                     EffectActionKind.ContinuousCannotTargetDragons or
                     EffectActionKind.ContinuousCannotAttack or
                     EffectActionKind.DieRollNegateWhenTargeted or
-                    EffectActionKind.CannotBeTributedForSummon =>
+                    EffectActionKind.CannotBeTributedForSummon or
+                    EffectActionKind.ContinuousCannotActivateTraps or
+                    EffectActionKind.ContinuousNegateFaceUpTraps =>
                     EffectResolutionKind.Protection,
                 EffectActionKind.PayLpOrDestroyThis =>
                     EffectResolutionKind.Destroy,

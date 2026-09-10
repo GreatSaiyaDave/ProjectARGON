@@ -309,6 +309,23 @@ namespace WRLDZ.Duel.Rules
                 {
                     p.Graveyard.Add(engine.CreateCardInstance(Celtic));
                     p.Graveyard.Add(engine.CreateCardInstance(Bewd));
+                    if (c.EachPlayerTargetsOwnGy)
+                    {
+                        opp.Graveyard.Add(engine.CreateCardInstance(Celtic));
+                        opp.Graveyard.Add(engine.CreateCardInstance(Bewd));
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(c.EquipHostName) && engine.Database != null)
+                {
+                    foreach (var host in engine.Database.GetAllCards())
+                    {
+                        if (host == null ||
+                            !string.Equals(host.name, c.EquipHostName, StringComparison.OrdinalIgnoreCase))
+                            continue;
+                        PlaceMonster(engine, p, host.id, 3, BattlePosition.Attack, true);
+                        break;
+                    }
                 }
 
                 if (c.Zone == EffectZoneFilter.ControllerGySpells)

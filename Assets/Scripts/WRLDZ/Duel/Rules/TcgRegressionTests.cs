@@ -1351,6 +1351,141 @@ namespace WRLDZ.Duel.Rules
                     Check("Corpus: Skill Drain leftover unique is not FullyCompiled",
                         skillProg == null || !skillProg.FullyCompiled);
 
+                    var jinzo = db.Get(77585513);
+                    var jinzoProg = jinzo != null ? CardTextEffectCompiler.Compile(jinzo) : null;
+                    Check("Corpus: Jinzo FullyCompiled trap-lock + negate face-up Traps",
+                        jinzoProg != null && jinzoProg.FullyCompiled &&
+                        jinzoProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ContinuousCannotActivateTraps) &&
+                        jinzoProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ContinuousNegateFaceUpTraps &&
+                            !c.NegateOtherOnly),
+                        jinzoProg == null
+                            ? "null"
+                            : $"full={jinzoProg.FullyCompiled} n={jinzoProg.ClauseList.Count} " +
+                              $"unparsed={string.Join("|", jinzoProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var decree = db.Get(51452091);
+                    var decreeProg = decree != null ? CardTextEffectCompiler.Compile(decree) : null;
+                    Check("Corpus: Royal Decree FullyCompiled negate other Trap effects",
+                        decreeProg != null && decreeProg.FullyCompiled &&
+                        decreeProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ContinuousNegateFaceUpTraps &&
+                            c.NegateOtherOnly) &&
+                        !decreeProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ContinuousCannotActivateTraps),
+                        decreeProg == null
+                            ? "null"
+                            : $"full={decreeProg.FullyCompiled} n={decreeProg.ClauseList.Count} " +
+                              $"unparsed={string.Join("|", decreeProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var amp = db.Get(303660);
+                    var ampProg = amp != null ? CardTextEffectCompiler.Compile(amp) : null;
+                    Check("Corpus: Amplifier FullyCompiled Equip only Jinzo + controller-trap exemption",
+                        ampProg != null && ampProg.FullyCompiled &&
+                        ampProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.EquipThisToTarget &&
+                            string.Equals(c.EquipHostName, "Jinzo", StringComparison.OrdinalIgnoreCase) &&
+                            c.ExemptControllerTrapsFromHostNegation &&
+                            c.DestroyHostWhenThisLeaves),
+                        ampProg == null
+                            ? "null"
+                            : $"full={ampProg.FullyCompiled} n={ampProg.ClauseList.Count} " +
+                              $"unparsed={string.Join("|", ampProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var se = db.Get(68005187);
+                    var seProg = se != null ? CardTextEffectCompiler.Compile(se) : null;
+                    Check("Corpus: Soul Exchange FullyCompiled tribute-as-if + skip Battle Phase",
+                        seProg != null && seProg.FullyCompiled &&
+                        seProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.GrantTributeAsIfControlledUntilEnd &&
+                            c.SkipBattlePhaseThisTurn &&
+                            c.Zone == EffectZoneFilter.OppMonsters),
+                        seProg == null
+                            ? "null"
+                            : $"full={seProg.FullyCompiled} n={seProg.ClauseList.Count} " +
+                              $"unparsed={string.Join("|", seProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var sg = db.Get(43434803);
+                    var sgProg = sg != null ? CardTextEffectCompiler.Compile(sg) : null;
+                    Check("Corpus: The Shallow Grave FullyCompiled each-player GY SS face-down DEF",
+                        sgProg != null && sgProg.FullyCompiled &&
+                        sgProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.SpecialSummonFromGy &&
+                            c.EachPlayerTargetsOwnGy &&
+                            c.SummonFaceDown &&
+                            c.SummonInDefense),
+                        sgProg == null
+                            ? "null"
+                            : $"full={sgProg.FullyCompiled} n={sgProg.ClauseList.Count} " +
+                              $"unparsed={string.Join("|", sgProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var gd = db.Get(74137509);
+                    var gdProg = gd != null ? CardTextEffectCompiler.Compile(gd) : null;
+                    Check("Corpus: Graceful Dice FullyCompiled die-scale until-end ATK/DEF",
+                        gdProg != null && gdProg.FullyCompiled &&
+                        gdProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.LoseAtkDefUntilEndOfTurn &&
+                            c.ScaleByDieRoll &&
+                            c.Amount == -100 &&
+                            c.Side == EffectSide.Controller),
+                        gdProg == null
+                            ? "null"
+                            : $"full={gdProg.FullyCompiled} n={gdProg.ClauseList.Count} " +
+                              $"unparsed={string.Join("|", gdProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var sd = db.Get(126218);
+                    var sdProg = sd != null ? CardTextEffectCompiler.Compile(sd) : null;
+                    Check("Corpus: Skull Dice FullyCompiled die-scale opponent lose ATK/DEF",
+                        sdProg != null && sdProg.FullyCompiled &&
+                        sdProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.LoseAtkDefUntilEndOfTurn &&
+                            c.ScaleByDieRoll &&
+                            c.Amount == 100 &&
+                            c.Side == EffectSide.Opponent),
+                        sdProg == null
+                            ? "null"
+                            : $"full={sdProg.FullyCompiled} n={sdProg.ClauseList.Count} " +
+                              $"unparsed={string.Join("|", sdProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var leftoverJinzo = new CardDef
+                    {
+                        id = 90000067,
+                        name = "Jinzo leftover rider",
+                        type = "Effect Monster",
+                        desc =
+                            "Trap Cards, and their effects on the field, cannot be activated. " +
+                            "Negate all Trap effects on the field. Also draw 1 card."
+                    };
+                    var leftoverJinzoProg = CardTextEffectCompiler.Compile(leftoverJinzo);
+                    Check("Corpus: Jinzo leftover rider is not FullyCompiled",
+                        leftoverJinzoProg != null && !leftoverJinzoProg.FullyCompiled);
+
+                    var synJinzo = new CardDef
+                    {
+                        id = 90000068,
+                        name = "New-card trap lock",
+                        type = "Effect Monster",
+                        desc =
+                            "Trap Cards, and their effects on the field, cannot be activated. " +
+                            "Negate all Trap effects on the field."
+                    };
+                    var synJinzoProg = CardTextEffectCompiler.Compile(synJinzo);
+                    Check("Corpus: new-card Jinzo shape FullyCompiled with no cardId branch",
+                        synJinzoProg != null && synJinzoProg.FullyCompiled &&
+                        synJinzoProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ContinuousCannotActivateTraps));
+
                     var warrior = db.Get(95281259);
                     var wProg = warrior != null ? CardTextEffectCompiler.Compile(warrior) : null;
                     Check("Corpus: The Warrior Returning Alive FullyCompiled Warrior GY add",
