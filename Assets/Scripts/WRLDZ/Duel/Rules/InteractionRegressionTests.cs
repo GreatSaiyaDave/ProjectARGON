@@ -746,6 +746,9 @@ namespace WRLDZ.Duel.Rules
                             engine.TrySelectEffectTarget(gyA) &&
                             engine.IsAwaitingEffectTarget &&
                             !opp.Banished.Contains(gyA));
+                        Check("Gravedigger Ghoul: first pick can early-confirm 1 of N (N≥2)",
+                            engine.CanConfirmPendingTargets &&
+                            engine.PendingActivation.LegalTargets.Contains(gyB));
                         Check("Gravedigger Ghoul: second pick banishes both",
                             engine.TrySelectEffectTarget(gyB) &&
                             !engine.IsAwaitingEffectTarget &&
@@ -782,6 +785,70 @@ namespace WRLDZ.Duel.Rules
                 }
 
                 {
+                    const int gravedigger = 82542267;
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var gyA = engine.CreateCardInstance(celtic);
+                    var gyB = engine.CreateCardInstance(bewd);
+                    var gyC = engine.CreateCardInstance(32452818);
+                    opp.Graveyard.Add(gyA);
+                    opp.Graveyard.Add(gyB);
+                    opp.Graveyard.Add(gyC);
+                    var card = PutInHand(engine, p, gravedigger);
+                    Check("Gravedigger Ghoul: cannot CONFIRM before a pick",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        !engine.CanConfirmPendingTargets &&
+                        !engine.TryConfirmPendingTargets());
+                    Check("Gravedigger Ghoul: early-confirm 1 of N when ≥2 legal remain",
+                        engine.TrySelectEffectTarget(gyA) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.CanConfirmPendingTargets &&
+                        engine.PendingActivation.LegalTargets.Count >= 2 &&
+                        engine.TryConfirmPendingTargets() &&
+                        !engine.IsAwaitingEffectTarget &&
+                        opp.Banished.Contains(gyA) &&
+                        !opp.Banished.Contains(gyB) &&
+                        !opp.Banished.Contains(gyC) &&
+                        opp.Graveyard.Contains(gyB) &&
+                        opp.Graveyard.Contains(gyC),
+                        $"pending={engine.IsAwaitingEffectTarget} ban={opp.Banished.Count} gy={opp.Graveyard.Count}");
+                }
+
+                {
+                    const int gravedigger = 82542267;
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var gyA = engine.CreateCardInstance(celtic);
+                    var gyB = engine.CreateCardInstance(bewd);
+                    var gyC = engine.CreateCardInstance(32452818);
+                    opp.Graveyard.Add(gyA);
+                    opp.Graveyard.Add(gyB);
+                    opp.Graveyard.Add(gyC);
+                    var card = PutInHand(engine, p, gravedigger);
+                    Check("Gravedigger Ghoul: cap 2 with 3 legal — first pick pending",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.TrySelectEffectTarget(gyA) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.CanConfirmPendingTargets);
+                    Check("Gravedigger Ghoul: cap 2 with 3 legal — second pick banishes 2, leaves the rest",
+                        engine.TrySelectEffectTarget(gyB) &&
+                        !engine.IsAwaitingEffectTarget &&
+                        opp.Banished.Contains(gyA) &&
+                        opp.Banished.Contains(gyB) &&
+                        !opp.Banished.Contains(gyC) &&
+                        opp.Graveyard.Contains(gyC) &&
+                        opp.Banished.Count == 2,
+                        $"pending={engine.IsAwaitingEffectTarget} ban={opp.Banished.Count}");
+                }
+
+                {
                     const int twoPronged = 83887306;
                     var engine = Fresh(db, pDeck, aDeck);
                     ClearBoard(engine);
@@ -808,6 +875,10 @@ namespace WRLDZ.Duel.Rules
                     {
                         Check("Two-Pronged Attack: first your monster stays pending",
                             engine.TrySelectEffectTarget(youA) && engine.IsAwaitingEffectTarget);
+                        Check("Two-Pronged Attack: cannot early-confirm after 1 of 3 required",
+                            !engine.CanConfirmPendingTargets &&
+                            !engine.TryConfirmPendingTargets() &&
+                            engine.IsAwaitingEffectTarget);
                         Check("Two-Pronged Attack: second your monster stays pending",
                             engine.TrySelectEffectTarget(youB) && engine.IsAwaitingEffectTarget);
                         Check("Two-Pronged Attack: opponent pick destroys all three",

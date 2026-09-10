@@ -817,10 +817,7 @@ namespace WRLDZ.Duel.TextEffects
                     return true;
                 }
 
-                var chosen = p.ChosenTargets.ToList();
-                engine.ClearPendingActivation();
-                ApplyChosenTargets(engine, who, card, prog, chosen, costNum, monsterIgnition);
-                return true;
+                return FinishMultiTargetPending(engine, p, prog, monsterIgnition);
             }
 
             engine.ClearPendingActivation();
@@ -3927,8 +3924,52 @@ namespace WRLDZ.Duel.TextEffects
         {
             if (pending == null || c == null || !IsMultiTarget(c)) return;
             pending.TargetPicksRemaining = MaxPicks(c);
+            pending.TargetUpTo = c.TargetUpTo;
             pending.ControllerPicksRemaining = c.ControllerTargetCount;
             pending.OpponentPicksRemaining = c.OpponentTargetCount;
+        }
+
+        /// <summary>
+        /// TargetUpTo (Ghoul): after ≥1 pick, CONFIRM is legal even when more remain.
+        /// Required mixed-side counts (Two-Pronged) cannot early-confirm.
+        /// </summary>
+        public static bool CanConfirmPendingTargets(DuelEngine engine)
+        {
+            var p = engine?.PendingActivation;
+            if (p == null || !p.UsesTextProgram || !p.TargetUpTo) return false;
+            if (p.AwaitingIgnitionCost || p.AwaitingDiscardCost || p.AwaitingSendNamedCost ||
+                p.AwaitingLpCost || p.AwaitingCoinCall)
+                return false;
+            return p.ChosenTargets != null && p.ChosenTargets.Count >= 1;
+        }
+
+        public static bool TryConfirmPendingTargets(DuelEngine engine)
+        {
+            if (!CanConfirmPendingTargets(engine)) return false;
+            var p = engine.PendingActivation;
+            var card = p.Card;
+            var prog = CompiledEffectCache.GetOrCompile(card);
+            if (prog == null)
+            {
+                engine.ClearPendingActivation();
+                return false;
+            }
+
+            var monsterIgnition = p.IsMonsterEffect || (card?.Def != null && card.Def.IsMonster);
+            engine.Log($"{card?.Name}: confirmed {p.ChosenTargets.Count} target(s).");
+            return FinishMultiTargetPending(engine, p, prog, monsterIgnition);
+        }
+
+        static bool FinishMultiTargetPending(DuelEngine engine, PendingActivation p,
+            CompiledCardProgram prog, bool monsterIgnition)
+        {
+            var who = p.Controller;
+            var card = p.Card;
+            var costNum = p.CostNumeric;
+            var chosen = p.ChosenTargets.ToList();
+            engine.ClearPendingActivation();
+            ApplyChosenTargets(engine, who, card, prog, chosen, costNum, monsterIgnition);
+            return true;
         }
 
         static bool HasEnoughFromList(DuelEngine engine, DuelistState who, EffectClause c,

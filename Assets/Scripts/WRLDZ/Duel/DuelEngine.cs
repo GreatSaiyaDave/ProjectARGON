@@ -968,6 +968,21 @@ namespace WRLDZ.Duel
             return ok;
         }
 
+        /// <summary>
+        /// TargetUpTo: finish with the picks already chosen (min 1). Cap still holds via
+        /// sequential select. Required mixed-side counts cannot use this.
+        /// </summary>
+        public bool CanConfirmPendingTargets =>
+            TextEffects.TextEffectRuntime.CanConfirmPendingTargets(this);
+
+        public bool TryConfirmPendingTargets()
+        {
+            var ok = TextEffects.TextEffectRuntime.TryConfirmPendingTargets(this);
+            if (ok)
+                TryCompleteDeferredBattleDestruction();
+            return ok;
+        }
+
         public bool CancelEffectTargeting()
         {
             var ok = SpellTrapEffects.CancelPending(this);

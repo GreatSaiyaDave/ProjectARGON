@@ -80,6 +80,8 @@ namespace WRLDZ.Duel
         public int CostPicksRemaining;
         /// <summary>How many more effect targets to pick (multi-target).</summary>
         public int TargetPicksRemaining;
+        /// <summary>"up to" TargetCount — player may CONFIRM after 1 pick (Gravedigger Ghoul).</summary>
+        public bool TargetUpTo;
         /// <summary>Remaining controller-side monster picks (mixed-side destroy).</summary>
         public int ControllerPicksRemaining;
         /// <summary>Remaining opponent-side monster picks (mixed-side destroy).</summary>
@@ -112,9 +114,11 @@ namespace WRLDZ.Duel
                     EffectTargetKind.OppFaceUpMonsterAtkLeqLp =>
                         $"{n}: choose a face-up opponent monster with ATK ≤ their LP.",
                     EffectTargetKind.MonsterInOppGy =>
-                        TargetPicksRemaining > 1
-                            ? $"{n}: choose a monster in the opponent's GY ({TargetPicksRemaining} remaining)."
-                            : $"{n}: choose a monster in the opponent's GY.",
+                        TargetUpTo && ChosenTargets.Count >= 1 && TargetPicksRemaining > 0
+                            ? $"{n}: choose another in the opponent's GY, or CONFIRM ({ChosenTargets.Count} selected, {TargetPicksRemaining} remaining)."
+                            : TargetPicksRemaining > 1
+                                ? $"{n}: choose a monster in the opponent's GY ({TargetPicksRemaining} remaining)."
+                                : $"{n}: choose a monster in the opponent's GY.",
                     EffectTargetKind.AnyMonsterOnField =>
                         ControllerPicksRemaining > 0 && OpponentPicksRemaining > 0
                             ? $"{n}: choose {ControllerPicksRemaining} of your monsters and {OpponentPicksRemaining} of your opponent's."
