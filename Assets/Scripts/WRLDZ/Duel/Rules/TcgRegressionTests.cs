@@ -2073,6 +2073,189 @@ namespace WRLDZ.Duel.Rules
                             c.Zone == EffectZoneFilter.FieldSpellTraps &&
                             !c.RequiresTargetChoice));
 
+                    var eternal = db.Get(95051344);
+                    var eternalProg = eternal != null ? CardTextEffectCompiler.Compile(eternal) : null;
+                    Check("Corpus: Eternal Rest FullyCompiled DestroyAllEquippedMonsters",
+                        eternalProg != null && eternalProg.FullyCompiled &&
+                        eternalProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.DestroyAllEquippedMonsters),
+                        eternalProg == null
+                            ? "null"
+                            : $"full={eternalProg.FullyCompiled} unparsed={string.Join("|", eternalProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var reallyRest = db.Get(28121403);
+                    var reallyProg = reallyRest != null ? CardTextEffectCompiler.Compile(reallyRest) : null;
+                    Check("Corpus: Really Eternal Rest FullyCompiled DestroyAllEquippedMonsters",
+                        reallyProg != null && reallyProg.FullyCompiled &&
+                        reallyProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.DestroyAllEquippedMonsters),
+                        reallyProg == null
+                            ? "null"
+                            : $"full={reallyProg.FullyCompiled} unparsed={string.Join("|", reallyProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var synRest = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000080,
+                        name = "Equip-host wipe (new-card shape)",
+                        type = "Trap Card",
+                        race = "Normal",
+                        desc = "Destroy all monsters equipped with an Equip Card(s)."
+                    });
+                    Check("New-card rule: an-Equip-Card(s) wipe compiles without a cardId branch",
+                        synRest != null && synRest.FullyCompiled &&
+                        synRest.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.DestroyAllEquippedMonsters));
+
+                    var synRestLeftover = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000081,
+                        name = "Equip-host wipe leftover (new-card shape)",
+                        type = "Trap Card",
+                        race = "Normal",
+                        desc = "Destroy all monsters equipped with an Equip Card(s). Then draw 1 card."
+                    });
+                    Check("New-card leftover: Equip-host wipe + unique draw is not FullyCompiled",
+                        synRestLeftover != null && !synRestLeftover.FullyCompiled);
+
+                    var exile = db.Get(26725158);
+                    var exileProg = exile != null ? CardTextEffectCompiler.Compile(exile) : null;
+                    Check("Corpus: Exile of the Wicked FullyCompiled Destroy all Fiend",
+                        exileProg != null && exileProg.FullyCompiled &&
+                        exileProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.Destroy &&
+                            c.Zone == EffectZoneFilter.FieldMonsters &&
+                            c.Side == EffectSide.Both &&
+                            string.Equals(c.RaceFilter, "Fiend", StringComparison.OrdinalIgnoreCase)),
+                        exileProg == null
+                            ? "null"
+                            : $"full={exileProg.FullyCompiled} unparsed={string.Join("|", exileProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var synExile = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000082,
+                        name = "Type wipe (new-card shape)",
+                        type = "Spell Card",
+                        race = "Normal",
+                        desc = "Destroy all Warrior-Type monsters on the field."
+                    });
+                    Check("New-card rule: Destroy-all-Type compiles without a cardId branch",
+                        synExile != null && synExile.FullyCompiled &&
+                        synExile.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.Destroy &&
+                            string.Equals(c.RaceFilter, "Warrior", StringComparison.OrdinalIgnoreCase)));
+
+                    var synExileLeftover = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000083,
+                        name = "Type wipe leftover (new-card shape)",
+                        type = "Spell Card",
+                        race = "Normal",
+                        desc = "Destroy all Warrior-Type monsters on the field. Then draw 1 card."
+                    });
+                    Check("New-card leftover: Type wipe + unique draw is not FullyCompiled",
+                        synExileLeftover != null && !synExileLeftover.FullyCompiled);
+
+                    var flower = db.Get(65064143);
+                    var flowerProg = flower != null ? CardTextEffectCompiler.Compile(flower) : null;
+                    Check("Corpus: Anti-Aircraft Flower FullyCompiled Tribute Insect inflict 800",
+                        flowerProg != null && flowerProg.FullyCompiled &&
+                        flowerProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.InflictDamageToOpponent &&
+                            c.Amount == 800 &&
+                            c.RequiresTributeCount == 1 &&
+                            string.Equals(c.TributeRaceFilter, "Insect",
+                                StringComparison.OrdinalIgnoreCase)),
+                        flowerProg == null
+                            ? "null"
+                            : $"full={flowerProg.FullyCompiled} unparsed={string.Join("|", flowerProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var synFlower = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000084,
+                        name = "Tribute-race inflict (new-card shape)",
+                        type = "Effect Monster",
+                        desc =
+                            "By Tributing 1 Pyro-Type monster on your side of the field, inflict 500 points of damage to your opponent's Life Points."
+                    });
+                    Check("New-card rule: Tribute-Type-inflict compiles without a cardId branch",
+                        synFlower != null && synFlower.FullyCompiled &&
+                        synFlower.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.InflictDamageToOpponent &&
+                            c.RequiresTributeCount == 1 &&
+                            string.Equals(c.TributeRaceFilter, "Pyro",
+                                StringComparison.OrdinalIgnoreCase) &&
+                            c.Amount == 500));
+
+                    var synFlowerLeftover = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000085,
+                        name = "Tribute-race inflict leftover (new-card shape)",
+                        type = "Effect Monster",
+                        desc =
+                            "By Tributing 1 Pyro-Type monster on your side of the field, inflict 500 points of damage to your opponent's Life Points. Then draw 1 card."
+                    });
+                    Check("New-card leftover: Tribute-inflict + unique draw is not FullyCompiled",
+                        synFlowerLeftover != null && !synFlowerLeftover.FullyCompiled);
+
+                    var manthro = db.Get(43714890);
+                    var manthroProg = manthro != null ? CardTextEffectCompiler.Compile(manthro) : null;
+                    Check("Corpus: Man-Thro' Tro' FullyCompiled Tribute Normal inflict 800",
+                        manthroProg != null && manthroProg.FullyCompiled &&
+                        manthroProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.InflictDamageToOpponent &&
+                            c.Amount == 800 &&
+                            c.RequiresTributeCount == 1 &&
+                            c.RequiresNormalMonster),
+                        manthroProg == null
+                            ? "null"
+                            : $"full={manthroProg.FullyCompiled} unparsed={string.Join("|", manthroProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var synManthro = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000086,
+                        name = "Tribute-Normal inflict (new-card shape)",
+                        type = "Effect Monster",
+                        desc =
+                            "By Tributing 1 Normal Monster (except a Token) on your side of the field, inflict 400 points of damage to your opponent's Life Points."
+                    });
+                    Check("New-card rule: Tribute-Normal-inflict compiles without a cardId branch",
+                        synManthro != null && synManthro.FullyCompiled &&
+                        synManthro.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.InflictDamageToOpponent &&
+                            c.RequiresTributeCount == 1 &&
+                            c.RequiresNormalMonster &&
+                            c.Amount == 400));
+
+                    var synManthroLeftover = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000087,
+                        name = "Tribute-Normal inflict leftover (new-card shape)",
+                        type = "Effect Monster",
+                        desc =
+                            "By Tributing 1 Normal Monster (except a Token) on your side of the field, inflict 400 points of damage to your opponent's Life Points. Then destroy 1 card on the field."
+                    });
+                    Check("New-card leftover: Tribute-Normal-inflict + unique destroy is not FullyCompiled",
+                        synManthroLeftover != null && !synManthroLeftover.FullyCompiled);
+
+                    var painful = db.Get(74191942);
+                    var painfulProg = painful != null ? CardTextEffectCompiler.Compile(painful) : null;
+                    Check("Parked: Painful Choice is not FullyCompiled",
+                        painfulProg == null || !painfulProg.FullyCompiled);
+                    var duo = db.Get(44763025);
+                    var duoProg = duo != null ? CardTextEffectCompiler.Compile(duo) : null;
+                    Check("Parked: Delinquent Duo is not FullyCompiled",
+                        duoProg == null || !duoProg.FullyCompiled);
+                    var confiscation = db.Get(17375316);
+                    var confProg = confiscation != null ? CardTextEffectCompiler.Compile(confiscation) : null;
+                    Check("Parked: Confiscation is not FullyCompiled",
+                        confProg == null || !confProg.FullyCompiled);
+
                     Check("Vocabulary: Protection is a shared kind",
                         Array.IndexOf(EffectVocabulary.SharedResolutions,
                             EffectResolutionKind.Protection) >= 0);

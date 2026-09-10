@@ -167,6 +167,24 @@ namespace WRLDZ.Duel.TextEffects
             @"By Tributing 1 ""([^""]+)"" on your side of the field, destroy 1 (monster on the field|Spell or Trap Card on the field)\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        /// <summary>
+        /// Anti-Aircraft Flower family: Tribute 1 typed monster you control (cost),
+        /// inflict printed damage. Existing TributeRaceFilter + InflictDamageToOpponent.
+        /// </summary>
+        static readonly Regex RxTributeRaceInflict = new(
+            @"By Tributing 1 (\w+)(?:-Type)? monster on your side of the field, " +
+            @"inflict (\d+) points of damage to your opponent(?:'s Life Points)?\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Man-Thro' Tro' family: Tribute 1 Normal Monster except a Token, inflict N.
+        /// RequiresNormalMonster is the existing GY-target flag, applied to tribute cost.
+        /// </summary>
+        static readonly Regex RxTributeNormalInflict = new(
+            @"By Tributing 1 Normal Monster \(except a Token\) on your side of the field, " +
+            @"inflict (\d+) points of damage to your opponent(?:'s Life Points)?\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         /// <summary>Suijin / Kazejin / Sanga: DC Quick Effect, ATK 0 this calculation.</summary>
         static readonly Regex RxSuijinAtkZero = new(
             @"During damage calculation in your opponent's turn, if this card is being attacked:\s*" +
@@ -529,6 +547,32 @@ namespace WRLDZ.Duel.TextEffects
                 });
             }
 
+            var tribRaceDmg = RxTributeRaceInflict.Match(text);
+            Add(tribRaceDmg, tribRaceDmg.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.InflictDamageToOpponent,
+                    Amount = Parse(tribRaceDmg, 2, 800),
+                    RequiresTributeCount = 1,
+                    TributeRaceFilter = tribRaceDmg.Groups[1].Value,
+                    MakesChainLink = true
+                }
+                : null);
+
+            var tribNormDmg = RxTributeNormalInflict.Match(text);
+            Add(tribNormDmg, tribNormDmg.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.InflictDamageToOpponent,
+                    Amount = Parse(tribNormDmg, 1, 800),
+                    RequiresTributeCount = 1,
+                    RequiresNormalMonster = true,
+                    MakesChainLink = true
+                }
+                : null);
+
             Add(RxSuijinAtkZero.Match(text), new EffectClause
             {
                 Timing = EffectTiming.DamageCalculation,
@@ -585,6 +629,8 @@ namespace WRLDZ.Duel.TextEffects
                    RxInflictOpp.IsMatch(text) ||
                    RxDecreaseOppLp.IsMatch(text) ||
                    RxTributeNamedDestroy.IsMatch(text) ||
+                   RxTributeRaceInflict.IsMatch(text) ||
+                   RxTributeNormalInflict.IsMatch(text) ||
                    RxSuijinAtkZero.IsMatch(text) ||
                    RxSsByBanishAttrGy.IsMatch(text) ||
                    RxSkipOppNextDraw.IsMatch(text);
@@ -617,6 +663,8 @@ namespace WRLDZ.Duel.TextEffects
                 if (RxAddNamedFromDeck.IsMatch(text) && !RxAddLevelRaceFromDeck.IsMatch(text))
                     need.Add(EffectActionKind.AddNamedFromDeckToHand);
             }
+            if (RxTributeRaceInflict.IsMatch(text) || RxTributeNormalInflict.IsMatch(text))
+                need.Add(EffectActionKind.InflictDamageToOpponent);
             if (RxSecondAttack.IsMatch(text))
                 need.Add(EffectActionKind.ExtraAttacks);
             if (RxBookMoon.IsMatch(text))

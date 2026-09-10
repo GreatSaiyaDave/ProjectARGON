@@ -6605,6 +6605,177 @@ namespace WRLDZ.Duel.Rules
                 }
             }
 
+            // ── Really Eternal Rest / Exile / Anti-Aircraft Flower / Man-Thro' Tro' ──
+            {
+                const int reallyRest = 28121403;
+                const int exileId = 26725158;
+                const int flowerId = 65064143;
+                const int manthroId = 43714890;
+                const int axe = 40619825;
+                const int celtic = 91152256;
+                const int laJinn = 97590747;
+                const int basicInsect = 89091579;
+
+                {
+                    var def = db.Get(reallyRest);
+                    var prog = def != null ? CardTextEffectCompiler.Compile(def) : null;
+                    Check("Really Eternal Rest official text FullyCompiled",
+                        prog != null && prog.FullyCompiled,
+                        prog == null
+                            ? "null"
+                            : $"unparsed={string.Join("|", prog.UnparsedFragments ?? System.Array.Empty<string>())}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var host = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var live = PlaceMonster(engine, p, laJinn, 1, BattlePosition.Attack, true);
+                    var eq = PutInHand(engine, p, axe);
+                    Check("Really Eternal Rest: Axe equips to Celtic",
+                        engine.TryActivateSpellTrap(p, eq, fromHand: true) &&
+                        engine.TrySelectEffectTarget(host) &&
+                        host.Equips.Count > 0);
+                    var trap = PlaceSetTrap(engine, p, reallyRest, 2);
+                    Check("Really Eternal Rest: Activate legal with an equipped monster",
+                        engine.CanActivateSpellTrap(p, trap, fromHand: false));
+                    Check("Really Eternal Rest: equipped Celtic dies, unequipped La Jinn lives",
+                        engine.TryActivateSpellTrap(p, trap, fromHand: false) &&
+                        !p.TryFindMonster(host, out _) &&
+                        p.TryFindMonster(live, out _) &&
+                        p.Graveyard.Exists(c => c != null && c.CardId == reallyRest),
+                        $"celticOn={p.TryFindMonster(host, out _)} laJinnOn={p.TryFindMonster(live, out _)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var trap = PlaceSetTrap(engine, p, reallyRest, 2);
+                    Check("Really Eternal Rest: Activate with no equipped hosts is legal (non-targeting)",
+                        engine.CanActivateSpellTrap(p, trap, fromHand: false));
+                    Check("Really Eternal Rest: no equipped hosts — nothing dies, trap to GY",
+                        engine.TryActivateSpellTrap(p, trap, fromHand: false) &&
+                        p.TryFindMonster(p.MonsterZones[2].Occupant, out _) &&
+                        p.Graveyard.Exists(c => c != null && c.CardId == reallyRest));
+                }
+
+                {
+                    var def = db.Get(exileId);
+                    var prog = def != null ? CardTextEffectCompiler.Compile(def) : null;
+                    Check("Exile of the Wicked official text FullyCompiled",
+                        prog != null && prog.FullyCompiled,
+                        prog == null
+                            ? "null"
+                            : $"unparsed={string.Join("|", prog.UnparsedFragments ?? System.Array.Empty<string>())}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    var fiend = PlaceMonster(engine, p, laJinn, 2, BattlePosition.Attack, true);
+                    var warrior = PlaceMonster(engine, p, celtic, 1, BattlePosition.Attack, true);
+                    var oppFiend = PlaceMonster(engine, opp, laJinn, 2, BattlePosition.Attack, true);
+                    var fdFiend = PlaceMonster(engine, opp, laJinn, 1, BattlePosition.Defense, false);
+                    var card = PutInHand(engine, p, exileId);
+                    Check("Exile: Activate legal",
+                        engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    Check("Exile: face-up Fiends die, Warrior and face-down Fiend live",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        !p.TryFindMonster(fiend, out _) &&
+                        !opp.TryFindMonster(oppFiend, out _) &&
+                        p.TryFindMonster(warrior, out _) &&
+                        opp.TryFindMonster(fdFiend, out _),
+                        $"pFiend={p.TryFindMonster(fiend, out _)} oppFiend={opp.TryFindMonster(oppFiend, out _)} " +
+                        $"warrior={p.TryFindMonster(warrior, out _)} fd={opp.TryFindMonster(fdFiend, out _)}");
+                }
+
+                {
+                    var def = db.Get(flowerId);
+                    var prog = def != null ? CardTextEffectCompiler.Compile(def) : null;
+                    Check("Anti-Aircraft Flower official text FullyCompiled",
+                        prog != null && prog.FullyCompiled,
+                        prog == null
+                            ? "null"
+                            : $"unparsed={string.Join("|", prog.UnparsedFragments ?? System.Array.Empty<string>())}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    opp.LifePoints = 8000;
+                    var flower = PlaceMonster(engine, p, flowerId, 2, BattlePosition.Attack, true);
+                    var bug = PlaceMonster(engine, p, basicInsect, 1, BattlePosition.Attack, true);
+                    Check("Anti-Aircraft Flower: Activate legal with an Insect tribute",
+                        engine.CanActivateSpellTrap(p, flower, fromHand: false));
+                    Check("Anti-Aircraft Flower: Activate opens tribute",
+                        engine.TryActivateSpellTrap(p, flower, fromHand: false) &&
+                        engine.IsAwaitingEffectTarget);
+                    Check("Anti-Aircraft Flower: tribute Insect, Flower stays, opp −800",
+                        engine.TrySelectEffectTarget(bug) &&
+                        p.Graveyard.Contains(bug) &&
+                        p.TryFindMonster(flower, out _) &&
+                        opp.LifePoints == 7200,
+                        $"LP {opp.LifePoints} flowerOn={p.TryFindMonster(flower, out _)} bugGy={p.Graveyard.Contains(bug)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var flower = PlaceMonster(engine, p, flowerId, 2, BattlePosition.Attack, true);
+                    PlaceMonster(engine, p, celtic, 1, BattlePosition.Attack, true);
+                    Check("Anti-Aircraft Flower: refuse with no Insect (Plant cannot tribute itself)",
+                        !engine.CanActivateSpellTrap(p, flower, fromHand: false));
+                }
+
+                {
+                    var def = db.Get(manthroId);
+                    var prog = def != null ? CardTextEffectCompiler.Compile(def) : null;
+                    Check("Man-Thro' Tro' official text FullyCompiled",
+                        prog != null && prog.FullyCompiled,
+                        prog == null
+                            ? "null"
+                            : $"unparsed={string.Join("|", prog.UnparsedFragments ?? System.Array.Empty<string>())}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    opp.LifePoints = 8000;
+                    var manthro = PlaceMonster(engine, p, manthroId, 2, BattlePosition.Attack, true);
+                    var fodder = PlaceMonster(engine, p, celtic, 1, BattlePosition.Attack, true);
+                    Check("Man-Thro' Tro': Activate legal with a Normal Monster",
+                        engine.CanActivateSpellTrap(p, manthro, fromHand: false));
+                    Check("Man-Thro' Tro': Activate opens tribute",
+                        engine.TryActivateSpellTrap(p, manthro, fromHand: false) &&
+                        engine.IsAwaitingEffectTarget);
+                    Check("Man-Thro' Tro': tribute Celtic, Man-Thro stays, opp −800",
+                        engine.TrySelectEffectTarget(fodder) &&
+                        p.Graveyard.Contains(fodder) &&
+                        p.TryFindMonster(manthro, out _) &&
+                        opp.LifePoints == 7200,
+                        $"LP {opp.LifePoints} on={p.TryFindMonster(manthro, out _)} gy={p.Graveyard.Contains(fodder)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var manthro = PlaceMonster(engine, p, manthroId, 2, BattlePosition.Attack, true);
+                    Check("Man-Thro' Tro': refuse with only itself (Effect, not Normal)",
+                        !engine.CanActivateSpellTrap(p, manthro, fromHand: false));
+                }
+            }
+
             // ── FirstEmpty order ──
             {
                 var engine = Fresh(db, pDeck, aDeck);
