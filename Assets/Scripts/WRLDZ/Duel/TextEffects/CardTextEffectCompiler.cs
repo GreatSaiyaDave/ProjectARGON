@@ -16,7 +16,7 @@ namespace WRLDZ.Duel.TextEffects
     /// </summary>
     public static class CardTextEffectCompiler
     {
-        public const int Version = 50;
+        public const int Version = 75;
 
         static readonly Regex RxDraw = new(
             @"(?:^|[.!?]\s+)Draw (\d+) cards?\.",
@@ -1236,6 +1236,12 @@ namespace WRLDZ.Duel.TextEffects
             {
                 var m = Regex.Match(res, @"inflict (\d+) (?:points of )?damage to your opponent",
                     RegexOptions.IgnoreCase);
+                // "for each …" is a scale, not flat inflict (Des Koala / Princess of Tsurugi).
+                // Giant Germ's ", then SS" rider is not "for each" and still compiles the 500.
+                if (m.Success &&
+                    Regex.IsMatch(res.Substring(m.Index + m.Length), @"\bfor each\b",
+                        RegexOptions.IgnoreCase))
+                    return null;
                 clause.Action = EffectActionKind.InflictDamageToOpponent;
                 clause.Amount = int.TryParse(m.Groups[1].Value, out var n) ? n : 0;
             }

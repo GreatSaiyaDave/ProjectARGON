@@ -3015,6 +3015,97 @@ namespace WRLDZ.Duel.Rules
                         p.Graveyard.Exists(c => c.CardId == duster));
                 }
 
+                // ── Fanbot park: Banner of Courage / Soul Absorption / Needle Ceiling ──
+                {
+                    const int bannerId = 10012614;
+                    const int soulAbsId = 68073522;
+                    const int ceilingId = 38411870;
+                    const int celticGuard = 91152256;
+                    const int beaver = 32452818;
+                    const int giant = 13039848;
+                    const int blueEyes = 89631139;
+
+                    var bannerDef = db.Get(bannerId);
+                    var bannerProg = bannerDef != null ? CardTextEffectCompiler.Compile(bannerDef) : null;
+                    Check("Banner of Courage stays parked (not FullyCompiled)",
+                        bannerProg == null || !bannerProg.FullyCompiled,
+                        bannerProg == null
+                            ? "null"
+                            : $"full={bannerProg.FullyCompiled} n={bannerProg.ClauseList.Count} unparsed={string.Join("|", bannerProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                    Check("Banner of Courage is not ContinuousGainAtkDef",
+                        bannerProg == null ||
+                        !bannerProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ContinuousGainAtkDef));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var card = PutInHand(engine, p, bannerId);
+                        Check("Banner of Courage: ProgramMayActivate false",
+                            !OfficialEffectRegistry.ProgramMayActivate(card.Def));
+                        Check("Banner of Courage: Activate refused (fail-closed)",
+                            !engine.CanActivateSpellTrap(p, card, fromHand: true) &&
+                            !engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                            p.Hand.Contains(card) &&
+                            !p.Graveyard.Contains(card));
+                    }
+
+                    var soulDef = db.Get(soulAbsId);
+                    var soulProg = soulDef != null ? CardTextEffectCompiler.Compile(soulDef) : null;
+                    Check("Soul Absorption stays parked (not FullyCompiled)",
+                        soulProg == null || !soulProg.FullyCompiled);
+                    Check("Soul Absorption is not GainLifePoints",
+                        soulProg == null ||
+                        !soulProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.GainLifePoints));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var card = PutInHand(engine, p, soulAbsId);
+                        Check("Soul Absorption: ProgramMayActivate false",
+                            !OfficialEffectRegistry.ProgramMayActivate(card.Def));
+                        Check("Soul Absorption: Activate refused (fail-closed)",
+                            !engine.CanActivateSpellTrap(p, card, fromHand: true) &&
+                            !engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                            p.Hand.Contains(card) &&
+                            !p.Graveyard.Contains(card));
+                    }
+
+                    var ceilDef = db.Get(ceilingId);
+                    var ceilProg = ceilDef != null ? CardTextEffectCompiler.Compile(ceilDef) : null;
+                    Check("Needle Ceiling stays parked (not FullyCompiled)",
+                        ceilProg == null || !ceilProg.FullyCompiled);
+                    Check("Needle Ceiling is not Destroy-all (Dark Hole)",
+                        ceilProg == null ||
+                        !ceilProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.Destroy));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        PlaceMonster(engine, p, celticGuard, 0, BattlePosition.Attack, true);
+                        PlaceMonster(engine, p, beaver, 1, BattlePosition.Attack, true);
+                        PlaceMonster(engine, opp, giant, 0, BattlePosition.Attack, true);
+                        PlaceMonster(engine, opp, blueEyes, 1, BattlePosition.Attack, true);
+                        var trap = PlaceSetTrap(engine, p, ceilingId, 2);
+                        trap.SetThisTurn = false;
+                        Check("Needle Ceiling: ProgramMayActivate false",
+                            !OfficialEffectRegistry.ProgramMayActivate(trap.Def));
+                        Check("Needle Ceiling: Activate refused with ≥4 monsters (fail-closed)",
+                            !engine.CanActivateSpellTrap(p, trap, fromHand: false) &&
+                            !engine.TryActivateSpellTrap(p, trap, fromHand: false) &&
+                            p.TryFindSpellTrap(trap, out _) &&
+                            !p.Graveyard.Contains(trap));
+                    }
+                }
+
                 // ── Equip Spells: Activate + target; host leaving field destroys Equip ──
                 {
                     const int treasure = 1435851;
@@ -5438,6 +5529,93 @@ namespace WRLDZ.Duel.Rules
                     Check("Poison Mummy Flip Summon", engine.TryFlipSummon(p, poison));
                     Check("Poison Mummy Flip: opponent takes 500",
                         opp.LifePoints == 7500, $"LP={opp.LifePoints}");
+                }
+
+                {
+                    const int koalaId = 69579761;
+                    const int princessId = 51371017;
+                    const int nobleId = 65878864;
+                    const int mst = 5318639;
+
+                    var koalaDef = db.Get(koalaId);
+                    var koalaLive = koalaDef != null ? CardTextEffectCompiler.Compile(koalaDef) : null;
+                    Check("Des Koala stays parked (not FullyCompiled)",
+                        koalaLive == null || !koalaLive.FullyCompiled);
+                    Check("Des Koala is not flat InflictDamageToOpponent",
+                        koalaLive == null ||
+                        !koalaLive.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.InflictDamageToOpponent));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        opp.Hand.Clear();
+                        PutInHand(engine, opp, celtic);
+                        PutInHand(engine, opp, laJinn);
+                        var koala = PlaceMonster(engine, p, koalaId, 2, BattlePosition.Defense, false);
+                        koala.SetThisTurn = false;
+                        opp.LifePoints = 8000;
+                        Check("Des Koala Flip Summon succeeds (no compiled Flip)",
+                            engine.TryFlipSummon(p, koala) && koala.FaceUp);
+                        Check("Des Koala Flip: opponent LP stays 8000 (not 400×hand)",
+                            opp.LifePoints == 8000, $"LP={opp.LifePoints}");
+                    }
+
+                    var princessDef = db.Get(princessId);
+                    var princessLive = princessDef != null ? CardTextEffectCompiler.Compile(princessDef) : null;
+                    Check("Princess of Tsurugi stays parked (not FullyCompiled)",
+                        princessLive == null || !princessLive.FullyCompiled);
+                    Check("Princess of Tsurugi is not flat InflictDamageToOpponent",
+                        princessLive == null ||
+                        !princessLive.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.InflictDamageToOpponent));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        PlaceSetTrap(engine, opp, mst, 2);
+                        var princess = PlaceMonster(engine, p, princessId, 2, BattlePosition.Defense, false);
+                        princess.SetThisTurn = false;
+                        opp.LifePoints = 8000;
+                        Check("Princess of Tsurugi Flip Summon succeeds (no compiled Flip)",
+                            engine.TryFlipSummon(p, princess) && princess.FaceUp);
+                        Check("Princess of Tsurugi Flip: opponent LP stays 8000 (not 500×S/T)",
+                            opp.LifePoints == 8000, $"LP={opp.LifePoints}");
+                    }
+
+                    var nobleDef = db.Get(nobleId);
+                    var nobleLive = nobleDef != null ? CardTextEffectCompiler.Compile(nobleDef) : null;
+                    Check("Nobleman-Eater Bug stays parked (not FullyCompiled)",
+                        nobleLive == null || !nobleLive.FullyCompiled);
+                    Check("Nobleman-Eater Bug is not Destroy",
+                        nobleLive == null ||
+                        !nobleLive.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.Destroy));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        var bug = PlaceMonster(engine, p, nobleId, 2, BattlePosition.Defense, false);
+                        bug.SetThisTurn = false;
+                        var preyA = PlaceMonster(engine, opp, celtic, 1, BattlePosition.Attack, true);
+                        var preyB = PlaceMonster(engine, opp, laJinn, 2, BattlePosition.Attack, true);
+                        Check("Nobleman-Eater Bug Flip Summon succeeds (no compiled Flip)",
+                            engine.TryFlipSummon(p, bug) && bug.FaceUp);
+                        Check("Nobleman-Eater Bug Flip: does not open 1-target destroy",
+                            !engine.IsAwaitingEffectTarget);
+                        Check("Nobleman-Eater Bug Flip: both monsters remain (not destroy 1 or all)",
+                            opp.TryFindMonster(preyA, out _) &&
+                            opp.TryFindMonster(preyB, out _));
+                    }
                 }
 
                 {

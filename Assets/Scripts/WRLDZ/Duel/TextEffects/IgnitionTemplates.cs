@@ -360,6 +360,9 @@ namespace WRLDZ.Duel.TextEffects
             var dmg = Regex.Match(res, @"inflict (\d+) damage to your opponent", RegexOptions.IgnoreCase);
             if (dmg.Success)
             {
+                if (Regex.IsMatch(res.Substring(dmg.Index + dmg.Length), @"\bfor each\b",
+                        RegexOptions.IgnoreCase))
+                    return false;
                 clause.Action = EffectActionKind.InflictDamageToOpponent;
                 clause.Amount = int.TryParse(dmg.Groups[1].Value, out var n) ? n : 0;
                 return true;
