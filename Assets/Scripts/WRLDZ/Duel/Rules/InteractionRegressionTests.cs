@@ -760,6 +760,245 @@ namespace WRLDZ.Duel.Rules
                     srProg != null && !srProg.FullyCompiled);
             }
 
+            // ── Fanbot shortlist: Fissure / Smashing Ground / Nobleman / Heavy Storm ──
+            {
+                const int fissure = 66788016;
+                const int smash = 97169186;
+                const int nobleman = 71044499;
+                const int heavyStorm = 19613556;
+                const int celtic = 91152256;
+                const int bewd = 89631139;
+                const int manEater = 54652250;
+                const int waboku = 12607053;
+                const int umi = 22702055;
+
+                var fDef = db.Get(fissure);
+                var fProg = fDef != null ? CardTextEffectCompiler.Compile(fDef) : null;
+                Check("Fissure FullyCompiled destroy lowest ATK",
+                    fProg != null && fProg.FullyCompiled &&
+                    fProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.Destroy &&
+                        c.SelectLowestAtk &&
+                        c.Zone == EffectZoneFilter.OppFaceUpMonsters &&
+                        c.RequiresTargetChoice),
+                    fProg == null
+                        ? "null"
+                        : $"full={fProg.FullyCompiled} unparsed={string.Join("|", fProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var low = PlaceMonster(engine, opp, celtic, 1, BattlePosition.Attack, true);
+                    var high = PlaceMonster(engine, opp, bewd, 3, BattlePosition.Attack, true);
+                    var card = PutInHand(engine, p, fissure);
+                    Check("Fissure: Activate legal with a face-up opponent monster",
+                        engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    Check("Fissure: Activate opens lowest-ATK targets only",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.LegalTargets.Contains(low) &&
+                        !engine.PendingActivation.LegalTargets.Contains(high),
+                        $"awaiting={engine.IsAwaitingEffectTarget} n={engine.PendingActivation?.LegalTargets?.Count ?? 0}");
+                    Check("Fissure: destroy Celtic (lowest ATK), BEWD lives",
+                        engine.TrySelectEffectTarget(low) &&
+                        opp.Graveyard.Contains(low) &&
+                        opp.TryFindMonster(high, out _) &&
+                        p.Graveyard.Contains(card),
+                        $"lowGy={opp.Graveyard.Contains(low)} highField={opp.TryFindMonster(high, out _)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var card = PutInHand(engine, p, fissure);
+                    Check("Fissure: no face-up opponent monster cannot activate",
+                        !engine.CanActivateSpellTrap(p, card, fromHand: true));
+                }
+
+                var sDef = db.Get(smash);
+                var sProg = sDef != null ? CardTextEffectCompiler.Compile(sDef) : null;
+                Check("Smashing Ground FullyCompiled destroy highest DEF",
+                    sProg != null && sProg.FullyCompiled &&
+                    sProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.Destroy &&
+                        c.SelectHighestDef &&
+                        c.Zone == EffectZoneFilter.OppFaceUpMonsters &&
+                        c.RequiresTargetChoice),
+                    sProg == null
+                        ? "null"
+                        : $"full={sProg.FullyCompiled} unparsed={string.Join("|", sProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var lowDef = PlaceMonster(engine, opp, celtic, 1, BattlePosition.Defense, true);
+                    var highDef = PlaceMonster(engine, opp, bewd, 3, BattlePosition.Defense, true);
+                    var card = PutInHand(engine, p, smash);
+                    Check("Smashing Ground: Activate opens highest-DEF targets only",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.LegalTargets.Contains(highDef) &&
+                        !engine.PendingActivation.LegalTargets.Contains(lowDef),
+                        $"awaiting={engine.IsAwaitingEffectTarget} n={engine.PendingActivation?.LegalTargets?.Count ?? 0}");
+                    Check("Smashing Ground: destroy BEWD (highest DEF), Celtic lives",
+                        engine.TrySelectEffectTarget(highDef) &&
+                        opp.Graveyard.Contains(highDef) &&
+                        opp.TryFindMonster(lowDef, out _),
+                        $"highGy={opp.Graveyard.Contains(highDef)} lowField={opp.TryFindMonster(lowDef, out _)}");
+                }
+
+                var nDef = db.Get(nobleman);
+                var nProg = nDef != null ? CardTextEffectCompiler.Compile(nDef) : null;
+                Check("Nobleman of Crossout FullyCompiled face-down destroy+banish, Flip both Decks",
+                    nProg != null && nProg.FullyCompiled &&
+                    nProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.Destroy &&
+                        c.RequiresFaceDown &&
+                        c.BanishIfDestroyed &&
+                        c.BanishSameNameFromBothDecksIfFlip &&
+                        c.RequiresTargetChoice),
+                    nProg == null
+                        ? "null"
+                        : $"full={nProg.FullyCompiled} unparsed={string.Join("|", nProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var faceUp = PlaceMonster(engine, opp, celtic, 1, BattlePosition.Attack, true);
+                    var faceDn = PlaceMonster(engine, opp, celtic, 3, BattlePosition.Defense, false);
+                    var card = PutInHand(engine, p, nobleman);
+                    p.Deck.Clear();
+                    p.Deck.Add(celtic);
+                    p.Deck.Add(bewd);
+                    opp.Deck.Clear();
+                    opp.Deck.Add(celtic);
+                    opp.Deck.Add(bewd);
+                    Check("Nobleman: Activate legal with a face-down monster",
+                        engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    Check("Nobleman: Activate opens face-down only",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.LegalTargets.Contains(faceDn) &&
+                        !engine.PendingActivation.LegalTargets.Contains(faceUp),
+                        $"n={engine.PendingActivation?.LegalTargets?.Count ?? 0}");
+                    Check("Nobleman: non-Flip Celtic is banished, Decks keep copies",
+                        engine.TrySelectEffectTarget(faceDn) &&
+                        opp.Banished.Contains(faceDn) &&
+                        !opp.Graveyard.Contains(faceDn) &&
+                        opp.TryFindMonster(faceUp, out _) &&
+                        p.Deck.Contains(celtic) &&
+                        opp.Deck.Contains(celtic),
+                        $"banished={opp.Banished.Contains(faceDn)} gy={opp.Graveyard.Contains(faceDn)} " +
+                        $"pDeck={p.Deck.Contains(celtic)} oDeck={opp.Deck.Contains(celtic)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var flip = PlaceMonster(engine, opp, manEater, 2, BattlePosition.Defense, false);
+                    var card = PutInHand(engine, p, nobleman);
+                    var handCopy = PutInHand(engine, p, manEater);
+                    p.Deck.Clear();
+                    p.Deck.Add(manEater);
+                    p.Deck.Add(manEater);
+                    p.Deck.Add(celtic);
+                    opp.Deck.Clear();
+                    opp.Deck.Add(manEater);
+                    opp.Deck.Add(bewd);
+                    Check("Nobleman Flip: destroy+banish Man-Eater Bug, both Decks lose copies, hand kept",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.TrySelectEffectTarget(flip) &&
+                        opp.Banished.Contains(flip) &&
+                        !opp.Graveyard.Contains(flip) &&
+                        !p.Deck.Contains(manEater) &&
+                        !opp.Deck.Contains(manEater) &&
+                        p.Deck.Contains(celtic) &&
+                        opp.Deck.Contains(bewd) &&
+                        p.Hand.Contains(handCopy) &&
+                        p.Banished.Exists(c => c != null && c.CardId == manEater) &&
+                        opp.Banished.Exists(c => c != null && c.CardId == manEater),
+                        $"banished={opp.Banished.Contains(flip)} pDeckME={p.Deck.Contains(manEater)} " +
+                        $"oDeckME={opp.Deck.Contains(manEater)} hand={p.Hand.Contains(handCopy)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    PlaceMonster(engine, engine.Opponent, celtic, 2, BattlePosition.Attack, true);
+                    var card = PutInHand(engine, p, nobleman);
+                    Check("Nobleman: face-up only cannot activate",
+                        !engine.CanActivateSpellTrap(p, card, fromHand: true));
+                }
+
+                var hDef = db.Get(heavyStorm);
+                var hProg = hDef != null ? CardTextEffectCompiler.Compile(hDef) : null;
+                Check("Heavy Storm FullyCompiled destroy all Spell/Traps",
+                    hProg != null && hProg.FullyCompiled &&
+                    hProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.Destroy &&
+                        c.Zone == EffectZoneFilter.FieldSpellTraps &&
+                        c.Side == EffectSide.Both &&
+                        !c.RequiresTargetChoice),
+                    hProg == null
+                        ? "null"
+                        : $"full={hProg.FullyCompiled} unparsed={string.Join("|", hProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var mon = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var myTrap = PlaceSetTrap(engine, p, waboku, 1);
+                    var oppTrap = PlaceSetTrap(engine, opp, waboku, 2);
+                    var field = engine.CreateCardInstance(umi);
+                    field.FaceUp = true;
+                    opp.FieldSpellZone.Occupant = field;
+                    var card = PutInHand(engine, p, heavyStorm);
+                    Check("Heavy Storm: Activate legal with S/T on the field",
+                        engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    Check("Heavy Storm: destroys all S/T including Field Spell; monsters live",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        !engine.IsAwaitingEffectTarget &&
+                        p.Graveyard.Contains(myTrap) &&
+                        opp.Graveyard.Contains(oppTrap) &&
+                        opp.Graveyard.Contains(field) &&
+                        p.Graveyard.Contains(card) &&
+                        p.TryFindMonster(mon, out _) &&
+                        opp.FieldSpellZone.Occupant == null &&
+                        !p.TryFindSpellTrap(myTrap, out _) &&
+                        !opp.TryFindSpellTrap(oppTrap, out _),
+                        $"myTrapGy={p.Graveyard.Contains(myTrap)} oppTrapGy={opp.Graveyard.Contains(oppTrap)} " +
+                        $"fieldGy={opp.Graveyard.Contains(field)} stormGy={p.Graveyard.Contains(card)} " +
+                        $"mon={p.TryFindMonster(mon, out _)}");
+                }
+            }
+
             // ── Tribute Summon Dark Magician with 2 face-down Sets ──
             {
                 const int darkMagician = 46986414;
@@ -3724,6 +3963,14 @@ namespace WRLDZ.Duel.Rules
                         p.Graveyard.Add(gyMon);
                         var st = PlaceSetTrap(engine, p, callHaunted, 2);
                         st.SetThisTurn = false;
+                        var callDef = db.Get(callHaunted);
+                        var callLive = callDef != null ? CardTextEffectCompiler.Compile(callDef) : null;
+                        Check("Call of the Haunted FullyCompiled GY SS + leave-destroy",
+                            callLive != null && callLive.FullyCompiled &&
+                            callLive.ClauseList.Exists(c =>
+                                c != null &&
+                                c.Action == EffectActionKind.SpecialSummonFromGy &&
+                                c.DestroyHostWhenThisLeaves));
                         Check("Call of the Haunted: Activate from Set with GY monster",
                             engine.CanActivateSpellTrap(p, st, fromHand: false) &&
                             engine.TryActivateSpellTrap(p, st, fromHand: false) &&

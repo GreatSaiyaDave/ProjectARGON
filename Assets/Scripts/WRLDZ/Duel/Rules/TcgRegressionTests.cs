@@ -1336,6 +1336,114 @@ namespace WRLDZ.Duel.Rules
                             c.DestroyHostWhenThisLeaves &&
                             !c.SummonInDefense));
 
+                    var fissure = db.Get(66788016);
+                    var fisProg = fissure != null ? CardTextEffectCompiler.Compile(fissure) : null;
+                    Check("Corpus: Fissure FullyCompiled destroy lowest ATK",
+                        fisProg != null && fisProg.FullyCompiled &&
+                        fisProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.Destroy &&
+                            c.SelectLowestAtk),
+                        fisProg == null
+                            ? "null"
+                            : $"full={fisProg.FullyCompiled} unparsed={string.Join("|", fisProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var smash = db.Get(97169186);
+                    var smashProg = smash != null ? CardTextEffectCompiler.Compile(smash) : null;
+                    Check("Corpus: Smashing Ground FullyCompiled destroy highest DEF",
+                        smashProg != null && smashProg.FullyCompiled &&
+                        smashProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.Destroy && c.SelectHighestDef),
+                        smashProg == null
+                            ? "null"
+                            : $"full={smashProg.FullyCompiled} unparsed={string.Join("|", smashProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var noble = db.Get(71044499);
+                    var nobleProg = noble != null ? CardTextEffectCompiler.Compile(noble) : null;
+                    Check("Corpus: Nobleman of Crossout FullyCompiled face-down destroy+banish Flip Decks",
+                        nobleProg != null && nobleProg.FullyCompiled &&
+                        nobleProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.Destroy &&
+                            c.RequiresFaceDown &&
+                            c.BanishIfDestroyed &&
+                            c.BanishSameNameFromBothDecksIfFlip),
+                        nobleProg == null
+                            ? "null"
+                            : $"full={nobleProg.FullyCompiled} unparsed={string.Join("|", nobleProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var storm = db.Get(19613556);
+                    var stormProg = storm != null ? CardTextEffectCompiler.Compile(storm) : null;
+                    Check("Corpus: Heavy Storm FullyCompiled destroy all Spell/Traps",
+                        stormProg != null && stormProg.FullyCompiled &&
+                        stormProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.Destroy &&
+                            c.Zone == EffectZoneFilter.FieldSpellTraps &&
+                            c.Side == EffectSide.Both),
+                        stormProg == null
+                            ? "null"
+                            : $"full={stormProg.FullyCompiled} unparsed={string.Join("|", stormProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var synFissure = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000050,
+                        name = "New Spell (Fissure shape)",
+                        type = "Spell Card",
+                        race = "Normal",
+                        frameType = "spell",
+                        desc =
+                            "Destroy the 1 face-up monster your opponent controls that has the lowest ATK (your choice, if tied)."
+                    });
+                    Check("New-card rule: Fissure-shaped text compiles without a cardId branch",
+                        synFissure != null && synFissure.FullyCompiled &&
+                        synFissure.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.Destroy && c.SelectLowestAtk));
+
+                    var leftoverFissure = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000051,
+                        name = "Fissure leftover rider",
+                        type = "Spell Card",
+                        race = "Normal",
+                        frameType = "spell",
+                        desc =
+                            "Destroy the 1 face-up monster your opponent controls that has the lowest ATK (your choice, if tied). Shuffle your entire Deck into your opponent's Deck."
+                    });
+                    Check("Fail-closed: Fissure plus extra rider is not FullyCompiled",
+                        leftoverFissure != null && !leftoverFissure.FullyCompiled);
+
+                    var synNoble = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000052,
+                        name = "New Spell (Nobleman of Crossout shape)",
+                        type = "Spell Card",
+                        race = "Normal",
+                        frameType = "spell",
+                        desc =
+                            "Target 1 face-down monster on the field; destroy that target, and if you do, banish it, then, if it was a Flip monster, each player reveals their Main Deck, then banishes all cards from it with that monster's name."
+                    });
+                    Check("New-card rule: Nobleman-shaped text compiles without a cardId branch",
+                        synNoble != null && synNoble.FullyCompiled &&
+                        synNoble.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.Destroy &&
+                            c.BanishIfDestroyed &&
+                            c.BanishSameNameFromBothDecksIfFlip));
+
+                    var leftoverNoble = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000053,
+                        name = "Nobleman leftover rider",
+                        type = "Spell Card",
+                        race = "Normal",
+                        frameType = "spell",
+                        desc =
+                            "Target 1 face-down monster on the field; destroy that target, and if you do, banish it, then, if it was a Flip monster, each player reveals their Main Deck, then banishes all cards from it with that monster's name. Shuffle your entire Deck into your opponent's Deck."
+                    });
+                    Check("Fail-closed: Nobleman plus extra rider is not FullyCompiled",
+                        leftoverNoble != null && !leftoverNoble.FullyCompiled);
+
                     var soul = db.Get(92924317);
                     var soulProg = soul != null ? CardTextEffectCompiler.Compile(soul) : null;
                     Check("Corpus: Soul Resurrection FullyCompiled Normal Monster GY SS in Defense",

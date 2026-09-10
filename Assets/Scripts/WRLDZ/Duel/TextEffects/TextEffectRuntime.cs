@@ -2219,7 +2219,16 @@ namespace WRLDZ.Duel.TextEffects
                     {
                         if (clause.Zone == EffectZoneFilter.AttackingMonster)
                             attackNegated = true;
+                        var flipDeck = clause.BanishSameNameFromBothDecksIfFlip &&
+                                       IsFlipMonster(chosenTarget);
+                        var copyId = chosenTarget.CardId;
                         Destroy(chosenTarget);
+                        // "and if you do": Deck copies only after the target left the field.
+                        if (flipDeck && engine.ControllerOf(chosenTarget) == null)
+                        {
+                            engine.BanishCopiesFromHandAndDeck(who, copyId, fromHand: false, fromDeck: true);
+                            engine.BanishCopiesFromHandAndDeck(opp, copyId, fromHand: false, fromDeck: true);
+                        }
                         break;
                     }
 
@@ -3645,7 +3654,10 @@ namespace WRLDZ.Duel.TextEffects
                         if (!m.FaceUp) continue;
                         if (c.Action == EffectActionKind.EffectDamageBothFromOriginalAtk &&
                             m.CurrentAtk > opp.LifePoints) continue;
-                        if (engine.IsDragonTargetProtected(m)) continue;
+                        // Fissure / Smashing Ground do not target — Lord of D. does not protect.
+                        if (engine.IsDragonTargetProtected(m) &&
+                            !c.SelectLowestAtk && !c.SelectHighestDef)
+                            continue;
                         list.Add(m);
                     }
 
@@ -3801,8 +3813,43 @@ namespace WRLDZ.Duel.TextEffects
                 list.RemoveAll(t => t == null || !t.FaceUp);
             if (c.Action == EffectActionKind.ChangeBattlePosition)
                 list.RemoveAll(t => t == null || !t.FaceUp);
+            if (c.RequiresFaceDown)
+                list.RemoveAll(t => t == null || t.FaceUp);
+            FilterExtremeStat(list, c);
 
             return list;
+        }
+
+        /// <summary>
+        /// Fissure / Smashing Ground: keep only the extreme-stat face-up monster(s).
+        /// Ties remain so the controller can choose.
+        /// </summary>
+        static void FilterExtremeStat(List<CardInstance> list, EffectClause c)
+        {
+            if (list == null || list.Count == 0 || c == null) return;
+            if (c.SelectLowestAtk)
+            {
+                var min = int.MaxValue;
+                foreach (var t in list)
+                {
+                    if (t == null) continue;
+                    if (t.CurrentAtk < min) min = t.CurrentAtk;
+                }
+
+                list.RemoveAll(t => t == null || t.CurrentAtk != min);
+            }
+
+            if (c.SelectHighestDef)
+            {
+                var max = int.MinValue;
+                foreach (var t in list)
+                {
+                    if (t == null) continue;
+                    if (t.CurrentDef > max) max = t.CurrentDef;
+                }
+
+                list.RemoveAll(t => t == null || t.CurrentDef != max);
+            }
         }
 
         static IEnumerable<CardInstance> CollectAllMatching(DuelEngine engine, DuelistState who,
@@ -3853,6 +3900,11 @@ namespace WRLDZ.Duel.TextEffects
         static CardInstance AutoPick(EffectClause c, List<CardInstance> targets, DuelistState who,
             DuelEngine engine)
         {
+            if (c != null && c.SelectLowestAtk)
+                return targets.OrderBy(t => t.CurrentAtk).ThenBy(t => t.Name ?? "", StringComparer.Ordinal).First();
+            if (c != null && c.SelectHighestDef)
+                return targets.OrderByDescending(t => t.CurrentDef)
+                    .ThenBy(t => t.Name ?? "", StringComparer.Ordinal).First();
             var opp = engine.OpponentOf(who);
             switch (c.Zone)
             {
@@ -4001,6 +4053,17 @@ namespace WRLDZ.Duel.TextEffects
             }
 
             return n + copies * clause.ExtraAmountPerCopyInGy;
+        }
+
+        static bool IsFlipMonster(CardInstance card)
+        {
+            var def = card?.Def;
+            if (def == null) return false;
+            if (!string.IsNullOrEmpty(def.frameType) &&
+                def.frameType.IndexOf("flip", StringComparison.OrdinalIgnoreCase) >= 0)
+                return true;
+            return def.type != null &&
+                   def.type.IndexOf("Flip", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         static void DestroyCard(DuelEngine engine, CardInstance card, CardInstance source = null,
