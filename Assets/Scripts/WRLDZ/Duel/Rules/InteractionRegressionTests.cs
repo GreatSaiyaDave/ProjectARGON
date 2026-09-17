@@ -3015,6 +3015,219 @@ namespace WRLDZ.Duel.Rules
                         p.Graveyard.Exists(c => c.CardId == duster));
                 }
 
+                // ── Fanbot park: Morphing Jar / Masked Sorcerer / Heart of the Underdog /
+                // Spring of Rebirth / Nutrient Z. ──
+                {
+                    const int morphJarId = 33508719;
+                    const int maskedSorcId = 10189126;
+                    const int heartId = 35762283;
+                    const int springId = 94425169;
+                    const int nutrientId = 29389368;
+
+                    var mjDef = db.Get(morphJarId);
+                    var mjLive = mjDef != null ? CardTextEffectCompiler.Compile(mjDef) : null;
+                    Check("Morphing Jar stays parked (not FullyCompiled)",
+                        mjLive == null || !mjLive.FullyCompiled,
+                        mjLive == null
+                            ? "null"
+                            : $"full={mjLive.FullyCompiled} n={mjLive.ClauseList.Count} unparsed={string.Join("|", mjLive.UnparsedFragments ?? System.Array.Empty<string>())}");
+                    Check("Morphing Jar is not BothPlayersDiscardAndRedraw / Draw",
+                        mjLive == null ||
+                        !mjLive.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.BothPlayersDiscardAndRedraw ||
+                             c.Action == EffectActionKind.Draw)));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        opp.Hand.Clear();
+                        var youCard = PutInHand(engine, p, celtic);
+                        var oppCard = PutInHand(engine, opp, bewd);
+                        var youDeck = p.Deck.Count;
+                        var oppDeck = opp.Deck.Count;
+                        var flip = PlaceMonster(engine, p, morphJarId, 2, BattlePosition.Defense, false);
+                        flip.SetThisTurn = false;
+                        Check("Morphing Jar: ProgramMayActivate false",
+                            !OfficialEffectRegistry.ProgramMayActivate(flip.Def));
+                        Check("Morphing Jar: Flip Summon succeeds",
+                            engine.TryFlipSummon(p, flip) && flip.FaceUp);
+                        if (engine.IsAwaitingResponse && !engine.IsAwaitingEffectTarget)
+                            engine.PassResponse();
+                        Check("Morphing Jar: hands stay (discard-then-draw-5 parked)",
+                            p.Hand.Contains(youCard) &&
+                            opp.Hand.Contains(oppCard) &&
+                            p.HandCount == 1 &&
+                            opp.HandCount == 1 &&
+                            p.Deck.Count == youDeck &&
+                            opp.Deck.Count == oppDeck &&
+                            !p.Graveyard.Exists(c => c != null && c.CardId == celtic) &&
+                            !opp.Graveyard.Exists(c => c != null && c.CardId == bewd));
+                    }
+
+                    var msDef = db.Get(maskedSorcId);
+                    var msLive = msDef != null ? CardTextEffectCompiler.Compile(msDef) : null;
+                    Check("Masked Sorcerer stays parked (not FullyCompiled)",
+                        msLive == null || !msLive.FullyCompiled);
+                    Check("Masked Sorcerer is not Draw / SkipOpponentNextDrawPhase",
+                        msLive == null ||
+                        !msLive.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.Draw ||
+                             c.Action == EffectActionKind.SkipOpponentNextDrawPhase ||
+                             c.Timing == EffectTiming.ThisCardDestroysByBattle)));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        if (!ReachPlayerBattle(engine))
+                        {
+                            Check("Masked Sorcerer battle path (skipped — not in BP)", false,
+                                $"phase={engine.Phase} turn={engine.TurnNumber}");
+                        }
+                        else
+                        {
+                            ClearBoard(engine);
+                            var p = engine.Player;
+                            var opp = engine.Opponent;
+                            p.Hand.Clear();
+                            var atk = PlaceMonster(engine, p, maskedSorcId, 2, BattlePosition.Attack, true);
+                            atk.ClearAttackFlags();
+                            atk.SummonedThisTurn = false;
+                            if (engine.Phase == DuelPhase.Main1)
+                                engine.TryEnterBattlePhase(p);
+                            DrainCombat(engine);
+                            var handBefore = p.HandCount;
+                            var deckBefore = p.Deck.Count;
+                            var oppLp = opp.LifePoints;
+                            Check("Masked Sorcerer: ProgramMayActivate false",
+                                !OfficialEffectRegistry.ProgramMayActivate(atk.Def));
+                            Check("Masked Sorcerer: direct damage inflicts; no draw",
+                                engine.Phase == DuelPhase.Battle &&
+                                ResolveDirect(engine, p, atk) &&
+                                p.TryFindMonster(atk, out _) &&
+                                p.HandCount == handBefore &&
+                                p.Deck.Count == deckBefore &&
+                                opp.LifePoints == oppLp - atk.CurrentAtk,
+                                $"phase={engine.Phase} hand={p.HandCount} deck={p.Deck.Count} LP={opp.LifePoints} was {oppLp} atk={atk.CurrentAtk}");
+                        }
+                    }
+
+                    var heartDef = db.Get(heartId);
+                    var heartLive = heartDef != null ? CardTextEffectCompiler.Compile(heartDef) : null;
+                    Check("Heart of the Underdog stays parked (not FullyCompiled)",
+                        heartLive == null || !heartLive.FullyCompiled);
+                    Check("Heart of the Underdog is not Draw / SkipOpponentNextDrawPhase",
+                        heartLive == null ||
+                        !heartLive.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.Draw ||
+                             c.Action == EffectActionKind.SkipOpponentNextDrawPhase)));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var card = PutInHand(engine, p, heartId);
+                        Check("Heart of the Underdog: ProgramMayActivate false",
+                            !OfficialEffectRegistry.ProgramMayActivate(card.Def));
+                        Check("Heart of the Underdog: Activate refused from hand",
+                            !engine.CanActivateSpellTrap(p, card, fromHand: true) &&
+                            !engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                            p.Hand.Contains(card));
+                    }
+
+                    var springDef = db.Get(springId);
+                    var springLive = springDef != null ? CardTextEffectCompiler.Compile(springDef) : null;
+                    Check("Spring of Rebirth stays parked (not FullyCompiled)",
+                        springLive == null || !springLive.FullyCompiled);
+                    Check("Spring of Rebirth is not GainLifePoints / ReturnToHand",
+                        springLive == null ||
+                        !springLive.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.GainLifePoints ||
+                             c.Action == EffectActionKind.ReturnToHand)));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var youLp = p.LifePoints;
+                        var card = PutInHand(engine, p, springId);
+                        Check("Spring of Rebirth: ProgramMayActivate false",
+                            !OfficialEffectRegistry.ProgramMayActivate(card.Def));
+                        Check("Spring of Rebirth: Activate refused from hand",
+                            !engine.CanActivateSpellTrap(p, card, fromHand: true) &&
+                            !engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                            p.Hand.Contains(card) &&
+                            p.LifePoints == youLp);
+                    }
+
+                    var nzDef = db.Get(nutrientId);
+                    var nzLive = nzDef != null ? CardTextEffectCompiler.Compile(nzDef) : null;
+                    Check("Nutrient Z stays parked (not FullyCompiled)",
+                        nzLive == null || !nzLive.FullyCompiled);
+                    Check("Nutrient Z is not GainLifePoints / PreventControllerBattleDamage / YouTakeLifePointDamage",
+                        nzLive == null ||
+                        !nzLive.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.GainLifePoints ||
+                             c.Action == EffectActionKind.PreventControllerBattleDamage ||
+                             c.Action == EffectActionKind.DiscardSelfNoBattleDamageThisBattle ||
+                             c.Timing == EffectTiming.YouTakeLifePointDamage)));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var trap = PlaceSetTrap(engine, p, nutrientId, 2);
+                        trap.SetThisTurn = false;
+                        Check("Nutrient Z: ProgramMayActivate false",
+                            !OfficialEffectRegistry.ProgramMayActivate(trap.Def));
+                        Check("Nutrient Z: Activate refused from Set",
+                            !engine.CanActivateSpellTrap(p, trap, fromHand: false) &&
+                            !engine.TryActivateSpellTrap(p, trap, fromHand: false) &&
+                            p.TryFindSpellTrap(trap, out _));
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        if (!ReachOpponentBattle(engine))
+                        {
+                            Check("Nutrient Z battle path (skipped — opp not in BP)", false,
+                                $"phase={engine.Phase} turn={engine.TurnNumber}");
+                        }
+                        else
+                        {
+                            ClearBoard(engine);
+                            var p = engine.Player;
+                            var opp = engine.Opponent;
+                            p.LifePoints = 8000;
+                            opp.LifePoints = 8000;
+                            var trap = PlaceSetTrap(engine, p, nutrientId, 2);
+                            trap.SetThisTurn = false;
+                            var attacker = PlaceMonster(engine, opp, bewd, 2, BattlePosition.Attack, true);
+                            attacker.ClearAttackFlags();
+                            attacker.SummonedThisTurn = false;
+                            if (engine.Phase == DuelPhase.Main1)
+                                engine.TryEnterBattlePhase(opp);
+                            DrainCombat(engine);
+                            var youLp = p.LifePoints;
+                            Check("Nutrient Z: ≥2000 direct damage applies; no 4000 LP first",
+                                engine.Phase == DuelPhase.Battle &&
+                                ResolveDirect(engine, opp, attacker) &&
+                                p.TryFindSpellTrap(trap, out _) &&
+                                p.LifePoints == youLp - attacker.CurrentAtk &&
+                                attacker.CurrentAtk >= 2000,
+                                $"phase={engine.Phase} LP={p.LifePoints} was {youLp} atk={attacker.CurrentAtk}");
+                        }
+                    }
+                }
+
                 // ── Equip Spells: Activate + target; host leaving field destroys Equip ──
                 {
                     const int treasure = 1435851;

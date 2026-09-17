@@ -1,0 +1,73 @@
+PR #45 Headless evidence summary
+commit=55bda4fac4e1007075c23e32da27e3b85eef9a69
+utc=2026-09-10T09:11:40Z
+
+quiet: unitPass=1117 unitFail=0 exceptions=0 softLocks=0 ok=YES
+duels: played=40 completed=40 turnCap=0 wins(P/O/D)=18/22/0 result=PASS
+compiler Version: 50 (unchanged)
+
+Park live+corpus (from --quiet):
+PASS  Corpus: Morphing Jar stays parked (discard both then draw 5 needs atom)
+PASS  Corpus: Morphing Jar is not Card Destruction BothPlayersDiscardAndRedraw / Flip Draw 5
+PASS  Corpus: Morphing Jar ProgramMayActivate is false
+PASS  Corpus: Masked Sorcerer stays parked (this-card battle-damage draw needs atom)
+PASS  Corpus: Masked Sorcerer is not Draw / ThisCardDestroysByBattle skip-Draw
+PASS  Corpus: Masked Sorcerer ProgramMayActivate is false
+PASS  Corpus: Heart of the Underdog stays parked (Draw-Phase Normal reveal needs atom)
+PASS  Corpus: Heart of the Underdog is not Draw / SkipOpponentNextDrawPhase
+PASS  Corpus: Heart of the Underdog ProgramMayActivate is false
+PASS  Corpus: Spring of Rebirth stays parked (bounce-to-hand LP needs atom)
+PASS  Corpus: Spring of Rebirth is not GainLifePoints / ReturnToHand
+PASS  Corpus: Spring of Rebirth ProgramMayActivate is false
+PASS  Corpus: Nutrient Z stays parked (DC ≥2000 gain-LP-first needs atom)
+PASS  Corpus: Nutrient Z is not YouTakeLifePointDamage / PreventControllerBattleDamage / Kuriboh DC
+PASS  Corpus: Nutrient Z ProgramMayActivate is false
+PASS  Corpus: Morphing Jar leftover unique is not FullyCompiled
+PASS  Corpus: Masked Sorcerer leftover unique is not FullyCompiled
+PASS  Corpus: Heart of the Underdog leftover unique is not FullyCompiled
+PASS  Corpus: Spring of Rebirth leftover unique is not FullyCompiled
+PASS  Corpus: Nutrient Z leftover unique is not FullyCompiled
+PASS  Morphing Jar stays parked (not FullyCompiled)
+PASS  Morphing Jar is not BothPlayersDiscardAndRedraw / Draw
+PASS  Morphing Jar: ProgramMayActivate false
+PASS  Morphing Jar: Flip Summon succeeds
+PASS  Morphing Jar: hands stay (discard-then-draw-5 parked)
+PASS  Masked Sorcerer stays parked (not FullyCompiled)
+PASS  Masked Sorcerer is not Draw / SkipOpponentNextDrawPhase
+PASS  Masked Sorcerer: ProgramMayActivate false
+PASS  Masked Sorcerer: direct damage inflicts; no draw
+PASS  Heart of the Underdog stays parked (not FullyCompiled)
+PASS  Heart of the Underdog is not Draw / SkipOpponentNextDrawPhase
+PASS  Heart of the Underdog: ProgramMayActivate false
+PASS  Heart of the Underdog: Activate refused from hand
+PASS  Spring of Rebirth stays parked (not FullyCompiled)
+PASS  Spring of Rebirth is not GainLifePoints / ReturnToHand
+PASS  Spring of Rebirth: ProgramMayActivate false
+PASS  Spring of Rebirth: Activate refused from hand
+PASS  Nutrient Z stays parked (not FullyCompiled)
+PASS  Nutrient Z is not GainLifePoints / PreventControllerBattleDamage / YouTakeLifePointDamage
+PASS  Nutrient Z: ProgramMayActivate false
+PASS  Nutrient Z: Activate refused from Set
+PASS  Nutrient Z: ≥2000 direct damage applies; no 4000 LP first
+
+--card classify:
+  classify: Unimplemented
+  ProgramMayActivate: False
+  FullyCompiled: False
+  clauses: 0
+  classify: Unimplemented
+  ProgramMayActivate: False
+  FullyCompiled: False
+  clauses: 0
+  classify: Unimplemented
+  ProgramMayActivate: False
+  FullyCompiled: False
+  clauses: 0
+  classify: Unimplemented
+  ProgramMayActivate: False
+  FullyCompiled: False
+  clauses: 0
+  classify: Unimplemented
+  ProgramMayActivate: False
+  FullyCompiled: False
+  clauses: 0
