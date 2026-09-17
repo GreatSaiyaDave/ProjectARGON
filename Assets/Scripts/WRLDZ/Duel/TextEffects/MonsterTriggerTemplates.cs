@@ -31,6 +31,17 @@ namespace WRLDZ.Duel.TextEffects
             @"FLIP:\s*Add 1 Equip Spell(?: Card)? from your Deck to your hand\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        /// <summary>
+        /// Senju / Sonic Bird: Normal or Flip Summon (not Special), add 1 Ritual
+        /// Monster or Ritual Spell from Deck. Two clauses reuse existing
+        /// RequiresThisNormalSummoned / RequiresThisFlipSummoned so SS is excluded
+        /// without a new flag. Manju's "Monster or Spell" leftover stays fail-closed.
+        /// </summary>
+        static readonly Regex RxNormalOrFlipAddRitual = new(
+            @"When this card is Normal or Flip Summoned:\s*" +
+            @"(?:You can )?add 1 Ritual (Monster|Spell)(?: Card)? from your Deck to your hand\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         static readonly Regex RxSummonedInflict = new(
             @"(?:If|When) this card is Summoned:\s*Inflict (\d+) (?:points of )?damage to your opponent\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -247,6 +258,34 @@ namespace WRLDZ.Duel.TextEffects
                 RequiresTargetChoice = true,
                 MakesChainLink = true
             });
+
+            var ritualSearch = RxNormalOrFlipAddRitual.Match(text);
+            if (ritualSearch.Success &&
+                !SpanCovered(spans, ritualSearch.Index, ritualSearch.Length))
+            {
+                var kind = ritualSearch.Groups[1].Value;
+                var zone = kind.StartsWith("Spell", StringComparison.OrdinalIgnoreCase)
+                    ? EffectZoneFilter.DeckRitualSpells
+                    : EffectZoneFilter.DeckRitualMonsters;
+                var optional = Regex.IsMatch(ritualSearch.Value, @"you can",
+                    RegexOptions.IgnoreCase);
+                var snip = ritualSearch.Value.Trim();
+                EffectClause Make(bool ns, bool fs) => new EffectClause
+                {
+                    Timing = EffectTiming.ThisCardSummoned,
+                    Action = EffectActionKind.AddFromDeckToHand,
+                    Zone = zone,
+                    RequiresTargetChoice = true,
+                    RequiresThisNormalSummoned = ns,
+                    RequiresThisFlipSummoned = fs,
+                    IsOptional = optional,
+                    MakesChainLink = true,
+                    SourceSnippet = snip
+                };
+                into.Add(Make(true, false));
+                into.Add(Make(false, true));
+                spans.Add((ritualSearch.Index, ritualSearch.Length));
+            }
 
             var sumDmg = RxSummonedInflict.Match(text);
             Add(sumDmg, sumDmg.Success
@@ -624,7 +663,7 @@ namespace WRLDZ.Duel.TextEffects
                 need.Add(EffectActionKind.ReturnToHand);
             if (RxFlipDraw.IsMatch(text) || RxBattleGyDraw.IsMatch(text))
                 need.Add(EffectActionKind.Draw);
-            if (RxFlipAddEquip.IsMatch(text))
+            if (RxFlipAddEquip.IsMatch(text) || RxNormalOrFlipAddRitual.IsMatch(text))
                 need.Add(EffectActionKind.AddFromDeckToHand);
             if (RxFlipMillOpp.IsMatch(text))
                 need.Add(EffectActionKind.SendFromTopOfDeckToGy);

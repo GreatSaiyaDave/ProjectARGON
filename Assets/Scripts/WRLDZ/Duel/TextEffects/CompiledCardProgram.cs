@@ -267,7 +267,11 @@ namespace WRLDZ.Duel.TextEffects
         /// <summary>Face-up Field Spell Zones on either field (Burning Land).</summary>
         FieldSpellsOnField,
         /// <summary>Equip Spells in the controller's Deck (Iron Blacksmith Kotetsu).</summary>
-        DeckEquipSpells
+        DeckEquipSpells,
+        /// <summary>Senju — Ritual Monster in the controller's Deck.</summary>
+        DeckRitualMonsters,
+        /// <summary>Sonic Bird — Ritual Spell in the controller's Deck.</summary>
+        DeckRitualSpells
     }
 
     /// <summary>One parsed clause from official card text.</summary>
