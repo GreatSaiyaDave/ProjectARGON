@@ -63,6 +63,7 @@ namespace WRLDZ.Presentation.ArInteraction
         Transform _ring;
         int _layer;
         bool _spawnAnimating;
+        int _washVersion = -1;
         Vector3 _targetLocalPos;
         Quaternion _targetLocalRot;
         Vector3 _targetLocalScale = Vector3.one;
@@ -318,7 +319,7 @@ namespace WRLDZ.Presentation.ArInteraction
                 _backMat = ArAnimePresentation.MakeFaceMaterial(tex, Color.white, "SpellTrapCardBack");
             CardArtFocus.ApplyToMaterial(_backMat, tex, cropToArtwork: false);
             ArFieldMaterials.ForceFrontFacesOnly(_backMat);
-            var col = ArAnimePresentation.Expose(Color.white);
+            var col = ArAnimePresentation.HoloFaceColor();
             if (_backMat.HasProperty("_BaseColor")) _backMat.SetColor("_BaseColor", col);
             if (_backMat.HasProperty("_Color")) _backMat.SetColor("_Color", col);
             if (_backMr != null)
@@ -810,7 +811,7 @@ namespace WRLDZ.Presentation.ArInteraction
 
             CardArtFocus.ApplyToMaterial(_faceMat, tex, cropToArtwork: false);
             ArFieldMaterials.ForceDoubleSided(_faceMat);
-            var col = ArAnimePresentation.Expose(Color.white);
+            var col = ArAnimePresentation.HoloFaceColor();
             if (_faceMat.HasProperty("_BaseColor")) _faceMat.SetColor("_BaseColor", col);
             if (_faceMat.HasProperty("_Color")) _faceMat.SetColor("_Color", col);
             if (_faceMr != null)
@@ -1182,7 +1183,7 @@ namespace WRLDZ.Presentation.ArInteraction
                     ArFieldMaterials.ForceDoubleSided(_faceMat);
                 else
                     ArFieldMaterials.ForceFrontFacesOnly(_faceMat);
-                var col = ArAnimePresentation.Expose(Color.white);
+                var col = ArAnimePresentation.HoloFaceColor();
                 if (_faceMat.HasProperty("_BaseColor")) _faceMat.SetColor("_BaseColor", col);
                 if (_faceMat.HasProperty("_Color")) _faceMat.SetColor("_Color", col);
 
@@ -1198,8 +1199,43 @@ namespace WRLDZ.Presentation.ArInteraction
             }
         }
 
+        /// <summary>True during the disk → street fly-in.</summary>
+        public bool IsSpawning => _spawnAnimating;
+
+        /// <summary>Re-tint face/back when the Field Spell wash changes (alpha kept for fades).</summary>
+        void ApplyFieldWash()
+        {
+            _washVersion = ArAnimePresentation.FieldWashVersion;
+            var col = ArAnimePresentation.HoloFaceColor();
+            TintTextured(_faceMat, col);
+            if (_backMat != _faceMat) TintTextured(_backMat, col);
+        }
+
+        static void TintTextured(Material m, Color col)
+        {
+            if (m == null) return;
+            var tex = m.HasProperty("_BaseMap") ? m.GetTexture("_BaseMap")
+                : m.HasProperty("_MainTex") ? m.GetTexture("_MainTex") : null;
+            // Placeholder accent quads (no art yet) keep their colour.
+            if (tex == null || tex == Texture2D.whiteTexture) return;
+            if (m.HasProperty("_BaseColor"))
+            {
+                col.a = m.GetColor("_BaseColor").a;
+                m.SetColor("_BaseColor", col);
+            }
+
+            if (m.HasProperty("_Color"))
+            {
+                col.a = m.GetColor("_Color").a;
+                m.SetColor("_Color", col);
+            }
+        }
+
         void Update()
         {
+            if (_washVersion != ArAnimePresentation.FieldWashVersion)
+                ApplyFieldWash();
+
             // Defend shield breathe (shared mat — skip if no pulse & rare tick)
             if (_defendShield != null)
             {
@@ -1252,7 +1288,10 @@ namespace WRLDZ.Presentation.ArInteraction
         {
             ArEffectCallout.Ensure(this);
             if (IsMonster)
+            {
                 ArMonsterStatGauge.Ensure(this);
+                ArFieldTerrainPad.Ensure(this);
+            }
         }
 
         void ClearChildren()
@@ -1262,6 +1301,7 @@ namespace WRLDZ.Presentation.ArInteraction
                 var child = transform.GetChild(i).gameObject;
                 if (child.GetComponent<ArEffectCallout>() != null) continue;
                 if (child.GetComponent<ArMonsterStatGauge>() != null) continue;
+                if (child.GetComponent<ArFieldTerrainPad>() != null) continue;
                 ArObjectUtil.Destroy(child);
             }
             _body = null;

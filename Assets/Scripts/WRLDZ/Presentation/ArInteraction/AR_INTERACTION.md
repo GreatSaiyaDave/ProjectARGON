@@ -20,6 +20,7 @@ Modular AR interaction for Project ARGON / DM WRLDZ. Extends the existing spatia
 | `ArCardDragSystem` | Continuous drag; snap on release |
 | `ArSnapRules` | Type/orientation legality + engine commit |
 | `ArAnimeSequenceDirector` | Summon/activate/attack presentation |
+| `ArFieldSpellFloor` + `ArFieldMotes` + `ArFieldTerrainPad` | **Field Spell environment** — sweep, rising art walls, motes, per-monster terrain + boon/bane aura, holo wash. Rows in `FieldSpellEnvironment.cs`; see `Docs/FIELD_SPELL_SOLID_VISION.md` |
 | `ArDuelSync` / `LocalArDuelSync` | Field snapshot + local multiplayer hook |
 | `ArDuelInteractionSystem` | Root orchestrator mounted by `ArDuelSpace` |
 

@@ -57,7 +57,8 @@ Merged from other agent branches (2026-09-07):
 - Home is **Overworld** Eye, not the Hub scene. DECK must use `DualMenuPresenter.BuildFrame`.
 - Eye dest/featured keep hub plates. Overlays/HUD are Solid Vision slates (`QuietFill` + `FilamentRim` / compact `GetWindowAnchors`) — map stays visible. No L-ticks or tile_hub wells on lists.
 - Visible stamp: `WrldzBuild.Stamp` (`CLEAN-0909`) in `Assets/WRLDZ_BUILD.txt` + Console, **not** on the title plate.
-- Python: `python3 Tools/hub_overlay_chrome_check.py && python3 Tools/ygo_ui_lore_check.py && python3 Tools/deck_editor_layout_check.py`
+- Python: `python3 Tools/hub_overlay_chrome_check.py && python3 Tools/ygo_ui_lore_check.py && python3 Tools/deck_editor_layout_check.py && python3 Tools/field_spell_env_check.py`
+- Field Spells in AR are environments (sweep, walls, terrain, motes, wash), not a floor mat: `Docs/FIELD_SPELL_SOLID_VISION.md`. New sets: add one row to `FieldSpellEnvironment.cs` or rely on the art fallback.
 
 ## Cursor Cloud
 
