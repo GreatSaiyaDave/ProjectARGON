@@ -13,11 +13,11 @@ namespace WRLDZ.Duel.TextEffects
     public static class LegacyTextTemplates
     {
         static readonly Regex RxEquipBoth = new(
-            @"A (\w+)(?:-Type)? monster equipped with this card increases? (?:its )?ATK and DEF by (\d+) points\.?",
+            @"An? (\w+)(?:-Type)? monster equipped with this card increases? (?:its )?ATK and DEF by (\d+) points\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxEquipSplit = new(
-            @"A (\w+)(?:-Type)? monster equipped with this card increases? (?:its )?ATK by (\d+) points " +
+            @"An? (\w+)(?:-Type)? monster equipped with this card increases? (?:its )?ATK by (\d+) points " +
             @"and decreases? (?:its )?DEF by (\d+) points\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
@@ -182,6 +182,16 @@ namespace WRLDZ.Duel.TextEffects
 
         static readonly Regex RxSkipOppNextDraw = new(
             @"When this card destroys an opponent's monster as a result of battle, your opponent skips their next Draw Phase",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Spiritualism family: bounce 1 opponent Spell/Trap. The printed
+        /// "activation and effect cannot be negated" rider maps onto the existing
+        /// negatable flags (counters stay parked; the flags still compile).
+        /// </summary>
+        static readonly Regex RxBounceOppSpellTrap = new(
+            @"Return 1 Spell/?Trap(?: Card)? your opponent controls to the hand\.?" +
+            @"(?:\s*This card's activation and effect cannot be negated\.?)?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxInflictOpp = new(
@@ -562,6 +572,23 @@ namespace WRLDZ.Duel.TextEffects
                 Action = EffectActionKind.SkipOpponentNextDrawPhase,
                 MakesChainLink = true
             });
+
+            var bounceSt = RxBounceOppSpellTrap.Match(text);
+            Add(bounceSt, bounceSt.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.ReturnToHand,
+                    Zone = EffectZoneFilter.FieldSpellTraps,
+                    Side = EffectSide.Opponent,
+                    RequiresTargetChoice = true,
+                    MakesChainLink = true,
+                    ActivationNegatable = bounceSt.Value.IndexOf("cannot be negated",
+                        System.StringComparison.OrdinalIgnoreCase) < 0,
+                    EffectNegatable = bounceSt.Value.IndexOf("cannot be negated",
+                        System.StringComparison.OrdinalIgnoreCase) < 0
+                }
+                : null);
         }
 
         public static bool MatchesSharedKind(string text)
@@ -587,7 +614,8 @@ namespace WRLDZ.Duel.TextEffects
                    RxTributeNamedDestroy.IsMatch(text) ||
                    RxSuijinAtkZero.IsMatch(text) ||
                    RxSsByBanishAttrGy.IsMatch(text) ||
-                   RxSkipOppNextDraw.IsMatch(text);
+                   RxSkipOppNextDraw.IsMatch(text) ||
+                   RxBounceOppSpellTrap.IsMatch(text);
         }
 
         public static void ExpectedActions(CardDef def, List<EffectActionKind> need)
@@ -616,6 +644,8 @@ namespace WRLDZ.Duel.TextEffects
                     need.Add(EffectActionKind.AddFromDeckToHand);
                 if (RxAddNamedFromDeck.IsMatch(text) && !RxAddLevelRaceFromDeck.IsMatch(text))
                     need.Add(EffectActionKind.AddNamedFromDeckToHand);
+                if (RxBounceOppSpellTrap.IsMatch(text))
+                    need.Add(EffectActionKind.ReturnToHand);
             }
             if (RxSecondAttack.IsMatch(text))
                 need.Add(EffectActionKind.ExtraAttacks);

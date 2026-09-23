@@ -150,6 +150,24 @@ namespace WRLDZ.Duel.TextEffects
             @"Gain (\d+) Life Points\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        /// <summary>
+        /// The Unhappy Maiden family: sent to GY as a result of battle → End Battle Phase.
+        /// Uses the existing EndBattlePhase atom (Negate Attack's resolution half).
+        /// </summary>
+        static readonly Regex RxBattleGyEndBattlePhase = new(
+            @"(?:When|If) this card is sent to the (?:GY|Graveyard) as a result of battle,?\s*" +
+            @"the Battle Phase for that turn ends immediately\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Hysteric Fairy family: Tribute N you control (cost) to gain printed LP.
+        /// Pre-PSCT "Tribute N … to increase" is still cost then GainLifePoints.
+        /// </summary>
+        static readonly Regex RxTributeToGainLp = new(
+            @"Tribute (\d+) monsters? (?:on your side of the field )?to " +
+            @"(?:increase your Life Points by|gain) (\d+) (?:Life Points|LP|points)\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         static readonly Regex RxBattleGyDraw = new(
             @"(?:If|When) this card is destroyed by battle and sent to the (?:GY|Graveyard):\s*" +
             @"Draw (\d+) cards?\.?",
@@ -498,6 +516,28 @@ namespace WRLDZ.Duel.TextEffects
                 }
                 : null);
 
+            Add(RxBattleGyEndBattlePhase.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.SentFromFieldToGy,
+                Action = EffectActionKind.EndBattlePhase,
+                RequiresThisDestroyedByBattle = true,
+                RequiresTargetChoice = false,
+                MakesChainLink = true
+            });
+
+            var tribLp = RxTributeToGainLp.Match(text);
+            Add(tribLp, tribLp.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.GainLifePoints,
+                    Amount = Parse(tribLp, 2, 1000),
+                    RequiresTributeCount = Parse(tribLp, 1, 2),
+                    Side = EffectSide.Controller,
+                    MakesChainLink = true
+                }
+                : null);
+
             var gyDraw = RxBattleGyDraw.Match(text);
             Add(gyDraw, gyDraw.Success
                 ? new EffectClause
@@ -612,8 +652,11 @@ namespace WRLDZ.Duel.TextEffects
             if (RxFlipInflict.IsMatch(text) || RxFlipSummonInflict.IsMatch(text) ||
                 RxBattleGyInflict.IsMatch(text) || RxSummonedInflict.IsMatch(text))
                 need.Add(EffectActionKind.InflictDamageToOpponent);
-            if (RxBattleGyGainLp.IsMatch(text) || RxFlipGainLp.IsMatch(text))
+            if (RxBattleGyGainLp.IsMatch(text) || RxFlipGainLp.IsMatch(text) ||
+                RxTributeToGainLp.IsMatch(text))
                 need.Add(EffectActionKind.GainLifePoints);
+            if (RxBattleGyEndBattlePhase.IsMatch(text))
+                need.Add(EffectActionKind.EndBattlePhase);
             if (RxFlipBanishEitherGy.IsMatch(text))
                 need.Add(EffectActionKind.Banish);
             if (RxOptSetFaceDown.IsMatch(text))
