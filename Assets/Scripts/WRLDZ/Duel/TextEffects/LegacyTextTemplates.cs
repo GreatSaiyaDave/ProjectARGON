@@ -104,6 +104,11 @@ namespace WRLDZ.Duel.TextEffects
             @"Increase your Life Points by (\d+) points\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        /// <summary>Rain of Mercy family: both players gain a printed LP amount.</summary>
+        static readonly Regex RxBothPlayersGainLp = new(
+            @"(?:Increases? the Life Points of both players by (\d+) points|Both players gain (\d+) LP)\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         static readonly Regex RxSecondAttack = new(
             @"This card can make a second attack during each Battle Phase\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -182,6 +187,14 @@ namespace WRLDZ.Duel.TextEffects
 
         static readonly Regex RxSkipOppNextDraw = new(
             @"When this card destroys an opponent's monster as a result of battle, your opponent skips their next Draw Phase",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Yata-Garasu family: Battle Damage (including a direct attack), not battle-destroy.
+        /// </summary>
+        static readonly Regex RxSkipOppNextDrawBattleDamage = new(
+            @"When this card inflicts Battle Damage to your opponent(?:'s Life Points)?, " +
+            @"(?:they|your opponent) skip(?:s)? their next Draw Phase",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxInflictOpp = new(
@@ -357,6 +370,20 @@ namespace WRLDZ.Duel.TextEffects
                         Action = EffectActionKind.GainLifePoints,
                         Amount = Parse(lp, 1, 400),
                         Side = EffectSide.Controller,
+                        MakesChainLink = true
+                    }
+                    : null);
+
+                var bothLp = RxBothPlayersGainLp.Match(text);
+                Add(bothLp, bothLp.Success
+                    ? new EffectClause
+                    {
+                        Timing = EffectTiming.Activate,
+                        Action = EffectActionKind.GainLifePoints,
+                        Amount = bothLp.Groups[1].Success && bothLp.Groups[1].Length > 0
+                            ? Parse(bothLp, 1, 1000)
+                            : Parse(bothLp, 2, 1000),
+                        Side = EffectSide.Both,
                         MakesChainLink = true
                     }
                     : null);
@@ -562,6 +589,13 @@ namespace WRLDZ.Duel.TextEffects
                 Action = EffectActionKind.SkipOpponentNextDrawPhase,
                 MakesChainLink = true
             });
+
+            Add(RxSkipOppNextDrawBattleDamage.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.ThisCardInflictsBattleDamage,
+                Action = EffectActionKind.SkipOpponentNextDrawPhase,
+                MakesChainLink = true
+            });
         }
 
         public static bool MatchesSharedKind(string text)
@@ -573,6 +607,7 @@ namespace WRLDZ.Duel.TextEffects
                    RxEquipOppTakeControlActivate.IsMatch(text) ||
                    RxEquipOppTakeControlOnly.IsMatch(text) ||
                    RxIncreaseLp.IsMatch(text) ||
+                   RxBothPlayersGainLp.IsMatch(text) ||
                    RxSecondAttack.IsMatch(text) ||
                    RxBookMoon.IsMatch(text) ||
                    RxDefYouControl.IsMatch(text) ||
@@ -587,7 +622,8 @@ namespace WRLDZ.Duel.TextEffects
                    RxTributeNamedDestroy.IsMatch(text) ||
                    RxSuijinAtkZero.IsMatch(text) ||
                    RxSsByBanishAttrGy.IsMatch(text) ||
-                   RxSkipOppNextDraw.IsMatch(text);
+                   RxSkipOppNextDraw.IsMatch(text) ||
+                   RxSkipOppNextDrawBattleDamage.IsMatch(text);
         }
 
         public static void ExpectedActions(CardDef def, List<EffectActionKind> need)
@@ -608,7 +644,7 @@ namespace WRLDZ.Duel.TextEffects
                 need.Add(EffectActionKind.EquipThisToTarget);
             if (IsHandSpell(def))
             {
-                if (RxIncreaseLp.IsMatch(text))
+                if (RxIncreaseLp.IsMatch(text) || RxBothPlayersGainLp.IsMatch(text))
                     need.Add(EffectActionKind.GainLifePoints);
                 if (RxInflictOpp.IsMatch(text) || RxDecreaseOppLp.IsMatch(text))
                     need.Add(EffectActionKind.InflictDamageToOpponent);
@@ -623,6 +659,8 @@ namespace WRLDZ.Duel.TextEffects
                 need.Add(EffectActionKind.SetTargetFaceDownDefense);
             if (RxDefYouControl.IsMatch(text) || RxFieldAtkDownDef.IsMatch(text))
                 need.Add(EffectActionKind.ContinuousGainAtkDef);
+            if (RxSkipOppNextDraw.IsMatch(text) || RxSkipOppNextDrawBattleDamage.IsMatch(text))
+                need.Add(EffectActionKind.SkipOpponentNextDrawPhase);
             if (RxAttacksBecomeDirect.IsMatch(text))
                 need.Add(EffectActionKind.ForceOpponentDirectAttacksThisTurn);
             if (RxWhenYouTakeDamage.IsMatch(text) && RxGainLpPerCopyInGy.IsMatch(text))

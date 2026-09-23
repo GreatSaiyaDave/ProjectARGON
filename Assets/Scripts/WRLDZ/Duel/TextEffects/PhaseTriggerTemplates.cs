@@ -63,12 +63,14 @@ namespace WRLDZ.Duel.TextEffects
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxSpiritBounce = new(
-            @"during the end phase of the turn (?:this card (?:is|was) |that this card (?:is|was) )?" +
+            @"(?:this card )?returns? to (?:its owner's|the owner's|the) hand during the end phase of the turn " +
+            @"(?:that )?(?:this card |it )?(?:is|was) normal summoned or flipped face-up|" +
+            @"during the end phase of the turn (?:this card (?:is|was) |that this card (?:is|was) |it (?:is|was) )?" +
             @"(?:normal summoned or flipped face-up|this card is normal summoned or flipped face-up)",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxReturnHand = new(
-            @"return (?:it|this card) to (?:the owner's|its owner's|the) hand",
+            @"returns? (?:it |this card )?to (?:the owner's|its owner's|the) hand",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         /// <summary>
@@ -307,6 +309,8 @@ namespace WRLDZ.Duel.TextEffects
                 need.Add(EffectActionKind.TakeEffectDamage);
             if (RxEndPhaseBattleGySelfSs.IsMatch(text))
                 need.Add(EffectActionKind.SpecialSummonFromGy);
+            if (RxSpiritBounce.IsMatch(text) && RxReturnHand.IsMatch(text))
+                need.Add(EffectActionKind.ReturnToHand);
         }
 
         static int Parse(Match m, int g, int fb)

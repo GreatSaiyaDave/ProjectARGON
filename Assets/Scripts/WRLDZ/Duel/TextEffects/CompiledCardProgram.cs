@@ -33,7 +33,9 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         YouTakeLifePointDamage,
         /// <summary>This card destroyed an opponent's monster by battle (Fenrir skip-draw).</summary>
-        ThisCardDestroysByBattle
+        ThisCardDestroysByBattle,
+        /// <summary>This card inflicted Battle Damage to the opponent (Yata-Garasu skip-draw).</summary>
+        ThisCardInflictsBattleDamage
     }
 
     public enum EffectActionKind
@@ -619,6 +621,7 @@ namespace WRLDZ.Duel.TextEffects
              HasTiming(EffectTiming.EndPhase) ||
              HasTiming(EffectTiming.ContinuousWhileFaceUp) ||
              HasTiming(EffectTiming.YouTakeLifePointDamage) ||
-             HasTiming(EffectTiming.ThisCardDestroysByBattle));
+             HasTiming(EffectTiming.ThisCardDestroysByBattle) ||
+             HasTiming(EffectTiming.ThisCardInflictsBattleDamage));
     }
 }

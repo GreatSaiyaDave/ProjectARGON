@@ -92,6 +92,15 @@ namespace WRLDZ.Duel.TextEffects
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         /// <summary>
+        /// Immortal of Thunder family: when this card is sent from the field to the GY,
+        /// its controller loses / takes a printed LP amount (tribute and destroy both count).
+        /// </summary>
+        static readonly Regex RxSentFromFieldLoseLp = new(
+            @"(?:When|If) this card is sent from the field to the (?:GY|Graveyard)[,:]?\s*" +
+            @"(?:you lose|you take|take) (\d+) (?:Life Points|LP|points of damage|damage)\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
         /// Spirit Caller family: Flip SS 1 Level N or lower Normal Monster from GY.
         /// AmountIsLevel is a max Level on GY targeting (<= Amount), not Gravity Bind >=.
         /// </summary>
@@ -363,6 +372,19 @@ namespace WRLDZ.Duel.TextEffects
                     Timing = EffectTiming.Flip,
                     Action = EffectActionKind.GainLifePoints,
                     Amount = Parse(flipLp, 1, 3000),
+                    Side = EffectSide.Controller,
+                    MakesChainLink = true
+                }
+                : null);
+
+            var gyLose = RxSentFromFieldLoseLp.Match(text);
+            Add(gyLose, gyLose.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.SentFromFieldToGy,
+                    Action = EffectActionKind.TakeEffectDamage,
+                    Amount = Parse(gyLose, 1, 5000),
+                    Side = EffectSide.Controller,
                     MakesChainLink = true
                 }
                 : null);
@@ -614,6 +636,8 @@ namespace WRLDZ.Duel.TextEffects
                 need.Add(EffectActionKind.InflictDamageToOpponent);
             if (RxBattleGyGainLp.IsMatch(text) || RxFlipGainLp.IsMatch(text))
                 need.Add(EffectActionKind.GainLifePoints);
+            if (RxSentFromFieldLoseLp.IsMatch(text))
+                need.Add(EffectActionKind.TakeEffectDamage);
             if (RxFlipBanishEitherGy.IsMatch(text))
                 need.Add(EffectActionKind.Banish);
             if (RxOptSetFaceDown.IsMatch(text))

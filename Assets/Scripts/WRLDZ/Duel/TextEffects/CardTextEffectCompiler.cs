@@ -16,7 +16,7 @@ namespace WRLDZ.Duel.TextEffects
     /// </summary>
     public static class CardTextEffectCompiler
     {
-        public const int Version = 50;
+        public const int Version = 68;
 
         static readonly Regex RxDraw = new(
             @"(?:^|[.!?]\s+)Draw (\d+) cards?\.",
@@ -199,6 +199,22 @@ namespace WRLDZ.Duel.TextEffects
 
         static readonly Regex RxEnemyControllerPos = new(
             @"Target 1 face-up monster your opponent controls;\s*change that target's battle position",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Windstorm of Etaqua family: mass-toggle opponent face-up positions.
+        /// Zero Gravity ("on the field") is a different sentence and stays leftover.
+        /// </summary>
+        static readonly Regex RxMassChangeOppFaceUpPos = new(
+            @"Change the battle positions of all face-up monsters your opponent controls\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Lightning Vortex family: optional discard cost + destroy all face-up
+        /// opponent monsters. Distinct from Raigeki (no "face-up").
+        /// </summary>
+        static readonly Regex RxDestroyAllOppFaceUpMonsters = new(
+            @"(?:Discard 1 cards?;\s*)?Destroy all face-up monsters your opponent controls\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxCyberJar = new(
@@ -802,6 +818,33 @@ namespace WRLDZ.Duel.TextEffects
                 Zone = EffectZoneFilter.OppFaceUpMonsters,
                 RequiresTargetChoice = true
             });
+            Take(RxMassChangeOppFaceUpPos.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.ChangeBattlePosition,
+                Zone = EffectZoneFilter.OppFaceUpMonsters,
+                Side = EffectSide.Opponent,
+                RequiresTargetChoice = false,
+                MakesChainLink = true
+            });
+            var faceUpWipe = RxDestroyAllOppFaceUpMonsters.Match(text);
+            Take(faceUpWipe, faceUpWipe.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.Destroy,
+                    Zone = EffectZoneFilter.OppFaceUpMonsters,
+                    Side = EffectSide.Opponent,
+                    RequiresTargetChoice = false,
+                    RequiresDiscardCost = Regex.IsMatch(faceUpWipe.Value, @"discard 1",
+                        RegexOptions.IgnoreCase),
+                    DiscardCostAttribute = Regex.IsMatch(faceUpWipe.Value, @"discard 1",
+                        RegexOptions.IgnoreCase)
+                        ? "*"
+                        : null,
+                    MakesChainLink = true
+                }
+                : null);
 
             Take(RxAlwaysTreatedAsName.Match(text), new EffectClause
             {
@@ -1210,6 +1253,15 @@ namespace WRLDZ.Duel.TextEffects
                 clause.Action = EffectActionKind.Destroy;
                 clause.Zone = EffectZoneFilter.AllOtherCardsOnField;
                 clause.Side = EffectSide.Both;
+                clause.RequiresTargetChoice = false;
+            }
+            else if (Regex.IsMatch(res,
+                         @"destroy all face-up monsters your opponent controls",
+                         RegexOptions.IgnoreCase))
+            {
+                clause.Action = EffectActionKind.Destroy;
+                clause.Zone = EffectZoneFilter.OppFaceUpMonsters;
+                clause.Side = EffectSide.Opponent;
                 clause.RequiresTargetChoice = false;
             }
             else if (Regex.IsMatch(res, @"destroy (?:that target|it)\.?", RegexOptions.IgnoreCase) ||

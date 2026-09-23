@@ -56,7 +56,8 @@ namespace WRLDZ.Duel.TextEffects
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
         static readonly Regex RxYouCan = new(@"\byou can\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
         static readonly Regex RxSummonRestrict = new(
-            @"cannot be normal summoned(?:/set)?|must (?:first )?be special summoned|cannot be special summoned except",
+            @"cannot be normal summoned(?:/set)?|must (?:first )?be special summoned|" +
+            @"cannot be special summoned except|cannot be special summoned\.",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         /// <summary>
@@ -69,6 +70,17 @@ namespace WRLDZ.Duel.TextEffects
 
         public static bool BlocksNormalSummonOrSet(string officialText) =>
             !string.IsNullOrWhiteSpace(officialText) && RxBlocksNormalSummon.IsMatch(officialText);
+
+        /// <summary>
+        /// Printed full Special Summon lock (Spirit family). Does not match
+        /// "Cannot be Special Summoned from the GY" or "...except by…".
+        /// </summary>
+        static readonly Regex RxBlocksSpecialSummon = new(
+            @"cannot be special summoned\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        public static bool BlocksSpecialSummon(string officialText) =>
+            !string.IsNullOrWhiteSpace(officialText) && RxBlocksSpecialSummon.IsMatch(officialText);
 
         public static List<Sentence> Parse(string officialText, CardDef def)
         {

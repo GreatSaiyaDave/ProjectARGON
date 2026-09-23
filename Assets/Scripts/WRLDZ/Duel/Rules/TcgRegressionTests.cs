@@ -1351,6 +1351,11 @@ namespace WRLDZ.Duel.Rules
                     Check("Corpus: Skill Drain leftover unique is not FullyCompiled",
                         skillProg == null || !skillProg.FullyCompiled);
 
+                    var zeroG = db.Get(83133491);
+                    var zgProg = zeroG != null ? CardTextEffectCompiler.Compile(zeroG) : null;
+                    Check("Corpus: Zero Gravity leftover (all-field, not opp-only) is not FullyCompiled",
+                        zgProg == null || !zgProg.FullyCompiled);
+
                     var warrior = db.Get(95281259);
                     var wProg = warrior != null ? CardTextEffectCompiler.Compile(warrior) : null;
                     Check("Corpus: The Warrior Returning Alive FullyCompiled Warrior GY add",
@@ -1596,13 +1601,18 @@ namespace WRLDZ.Duel.Rules
 
                     var immortal = db.Get(84926738);
                     var immortalProg = immortal != null ? CardTextEffectCompiler.Compile(immortal) : null;
-                    Check("Corpus: Immortal of Thunder Flip gain 3000 LP compiles; GY lose leftover",
-                        immortalProg != null && !immortalProg.FullyCompiled &&
+                    Check("Corpus: Immortal of Thunder FullyCompiled Flip gain 3000 + GY lose 5000",
+                        immortalProg != null && immortalProg.FullyCompiled &&
                         immortalProg.ClauseList.Exists(c =>
                             c != null &&
                             c.Timing == EffectTiming.Flip &&
                             c.Action == EffectActionKind.GainLifePoints &&
-                            c.Amount == 3000),
+                            c.Amount == 3000) &&
+                        immortalProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.SentFromFieldToGy &&
+                            c.Action == EffectActionKind.TakeEffectDamage &&
+                            c.Amount == 5000),
                         immortalProg == null
                             ? "null"
                             : $"full={immortalProg.FullyCompiled} unparsed={string.Join("|", immortalProg.UnparsedFragments ?? Array.Empty<string>())}");
@@ -2072,6 +2082,160 @@ namespace WRLDZ.Duel.Rules
                             c.Side == EffectSide.Opponent &&
                             c.Zone == EffectZoneFilter.FieldSpellTraps &&
                             !c.RequiresTargetChoice));
+
+                    var wind = db.Get(59744639);
+                    var windProg = wind != null ? CardTextEffectCompiler.Compile(wind) : null;
+                    Check("Corpus: Windstorm of Etaqua FullyCompiled opp face-up position toggle",
+                        windProg != null && windProg.FullyCompiled &&
+                        windProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ChangeBattlePosition &&
+                            !c.RequiresTargetChoice));
+
+                    var vortex = db.Get(69162969);
+                    var vortexProg = vortex != null ? CardTextEffectCompiler.Compile(vortex) : null;
+                    Check("Corpus: Lightning Vortex FullyCompiled discard + opp face-up wipe",
+                        vortexProg != null && vortexProg.FullyCompiled &&
+                        vortexProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.Destroy &&
+                            c.RequiresDiscardCost &&
+                            !c.RequiresTargetChoice));
+
+                    var rain = db.Get(66719324);
+                    var rainProg = rain != null ? CardTextEffectCompiler.Compile(rain) : null;
+                    Check("Corpus: Rain of Mercy FullyCompiled both-players GainLifePoints 1000",
+                        rainProg != null && rainProg.FullyCompiled &&
+                        rainProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.GainLifePoints &&
+                            c.Side == EffectSide.Both &&
+                            c.Amount == 1000));
+
+                    var thunder = db.Get(84926738);
+                    var immProg = thunder != null ? CardTextEffectCompiler.Compile(thunder) : null;
+                    Check("Corpus: The Immortal of Thunder FullyCompiled Flip gain + GY lose",
+                        immProg != null && immProg.FullyCompiled &&
+                        immProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.GainLifePoints &&
+                            c.Amount == 3000) &&
+                        immProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.TakeEffectDamage &&
+                            c.Amount == 5000));
+
+                    var synWind = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000068,
+                        name = "Opp Position Gale (new-card shape)",
+                        type = "Trap Card",
+                        race = "Normal",
+                        desc = "Change the battle positions of all face-up monsters your opponent controls."
+                    });
+                    Check("New-card rule: Windstorm-shaped text compiles without a cardId branch",
+                        synWind != null && synWind.FullyCompiled &&
+                        synWind.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ChangeBattlePosition &&
+                            !c.RequiresTargetChoice));
+
+                    var synVortex = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000069,
+                        name = "Discard Face-Up Wipe (new-card shape)",
+                        type = "Spell Card",
+                        race = "Normal",
+                        desc = "Discard 1 card; destroy all face-up monsters your opponent controls."
+                    });
+                    Check("New-card rule: Lightning Vortex-shaped text compiles without a cardId branch",
+                        synVortex != null && synVortex.FullyCompiled &&
+                        synVortex.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.Destroy &&
+                            c.RequiresDiscardCost));
+
+                    var synRain = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000070,
+                        name = "Both Gain (new-card shape)",
+                        type = "Spell Card",
+                        race = "Normal",
+                        desc = "Both players gain 1000 LP."
+                    });
+                    Check("New-card rule: Rain of Mercy-shaped text compiles without a cardId branch",
+                        synRain != null && synRain.FullyCompiled &&
+                        synRain.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.GainLifePoints &&
+                            c.Side == EffectSide.Both));
+
+                    var leftoverWind = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000071,
+                        name = "Windstorm leftover rider",
+                        type = "Trap Card",
+                        race = "Normal",
+                        desc =
+                            "Change the battle positions of all face-up monsters your opponent controls. Also look at the top card of your opponent's Deck."
+                    });
+                    Check("Corpus: Windstorm leftover rider is not FullyCompiled",
+                        leftoverWind == null || !leftoverWind.FullyCompiled);
+
+                    var yata = db.Get(3078576);
+                    var yataProg = yata != null ? CardTextEffectCompiler.Compile(yata) : null;
+                    Check("Corpus: Yata-Garasu FullyCompiled Spirit bounce + battle-damage skip Draw",
+                        yataProg != null && yataProg.FullyCompiled &&
+                        yataProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ReturnToHand &&
+                            c.RequiresSummonedOrFlippedThisTurn) &&
+                        yataProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.ThisCardInflictsBattleDamage &&
+                            c.Action == EffectActionKind.SkipOpponentNextDrawPhase));
+
+                    var synYata = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000072,
+                        name = "Battle-Damage Skip Draw (new-card shape)",
+                        type = "Spirit Monster",
+                        race = "Fiend",
+                        desc =
+                            "This card cannot be Special Summoned. This card returns to its owner's hand during the End Phase of the turn it is Normal Summoned or flipped face-up. When this card inflicts Battle Damage to your opponent, they skip their next Draw Phase."
+                    });
+                    Check("New-card rule: Yata-shaped text compiles without a cardId branch",
+                        synYata != null && synYata.FullyCompiled &&
+                        synYata.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.SkipOpponentNextDrawPhase));
+
+                    var leftoverYata = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000073,
+                        name = "Yata leftover rider",
+                        type = "Spirit Monster",
+                        desc =
+                            "This card cannot be Special Summoned. This card returns to its owner's hand during the End Phase of the turn it is Normal Summoned or flipped face-up. When this card inflicts Battle Damage to your opponent, they skip their next Draw Phase. Also look at the top card of your opponent's Deck."
+                    });
+                    Check("Corpus: Yata leftover rider is not FullyCompiled",
+                        leftoverYata == null || !leftoverYata.FullyCompiled);
+
+                    var painProg = CardTextEffectCompiler.Compile(db.Get(74191942));
+                    Check("Corpus: Painful Choice leftover (excavate) is not FullyCompiled",
+                        painProg == null || !painProg.FullyCompiled);
+                    var duoProg = CardTextEffectCompiler.Compile(db.Get(44763025));
+                    Check("Corpus: Delinquent Duo leftover (opp discard) is not FullyCompiled",
+                        duoProg == null || !duoProg.FullyCompiled);
+                    var confProg = CardTextEffectCompiler.Compile(db.Get(17375316));
+                    Check("Corpus: Confiscation leftover (look-at-hand) is not FullyCompiled",
+                        confProg == null || !confProg.FullyCompiled);
+                    var heartProg = CardTextEffectCompiler.Compile(db.Get(64801562));
+                    Check("Corpus: Heart of Clear Water leftover (equip gate) is not FullyCompiled",
+                        heartProg == null || !heartProg.FullyCompiled);
+                    var hinoProgPark = CardTextEffectCompiler.Compile(db.Get(75745607));
+                    Check("Corpus: Hino-Kagu-Tsuchi leftover (next-Draw wipe) is not FullyCompiled",
+                        hinoProgPark == null || !hinoProgPark.FullyCompiled);
 
                     Check("Vocabulary: Protection is a shared kind",
                         Array.IndexOf(EffectVocabulary.SharedResolutions,
