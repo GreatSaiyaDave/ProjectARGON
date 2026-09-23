@@ -760,6 +760,216 @@ namespace WRLDZ.Duel.Rules
                     srProg != null && !srProg.FullyCompiled);
             }
 
+            // ── Fanbot shortlist: all five already FullyCompiled (live proof, no re-implement) ──
+            {
+                const int raigeki = 12580477;
+                const int darkHole = 53129443;
+                const int mirrorForce = 44095762;
+                const int sakuretsu = 56120475;
+                const int bookOfMoon = 14087893;
+                const int celtic = 91152256;
+                const int bewd = 89631139;
+                const int beaver = 32452818;
+
+                var raigDef = db.Get(raigeki);
+                var raigProg = raigDef != null ? CardTextEffectCompiler.Compile(raigDef) : null;
+                Check("Fanbot: Raigeki FullyCompiled destroy all opponent monsters",
+                    raigProg != null && raigProg.FullyCompiled &&
+                    raigProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.Destroy &&
+                        c.Side == EffectSide.Opponent &&
+                        c.Zone == EffectZoneFilter.FieldMonsters &&
+                        !c.RequiresTargetChoice),
+                    raigProg == null
+                        ? "null"
+                        : $"full={raigProg.FullyCompiled} unparsed={string.Join("|", raigProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var mine = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var theirs = PlaceMonster(engine, opp, bewd, 2, BattlePosition.Attack, true);
+                    var set = PlaceMonster(engine, opp, celtic, 1, BattlePosition.Defense, false);
+                    var card = PutInHand(engine, p, raigeki);
+                    Check("Fanbot live: Raigeki wipes opponent monsters, yours lives",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        !engine.IsAwaitingEffectTarget &&
+                        p.TryFindMonster(mine, out _) &&
+                        opp.Graveyard.Contains(theirs) &&
+                        opp.Graveyard.Contains(set) &&
+                        p.Graveyard.Contains(card),
+                        $"mine={p.TryFindMonster(mine, out _)} gyN={opp.Graveyard.Count}");
+                }
+
+                var holeDef = db.Get(darkHole);
+                var holeProg = holeDef != null ? CardTextEffectCompiler.Compile(holeDef) : null;
+                Check("Fanbot: Dark Hole FullyCompiled destroy all monsters",
+                    holeProg != null && holeProg.FullyCompiled &&
+                    holeProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.Destroy &&
+                        c.Side == EffectSide.Both &&
+                        c.Zone == EffectZoneFilter.FieldMonsters &&
+                        !c.RequiresTargetChoice));
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var mine = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var theirs = PlaceMonster(engine, opp, bewd, 2, BattlePosition.Attack, true);
+                    var card = PutInHand(engine, p, darkHole);
+                    Check("Fanbot live: Dark Hole wipes both fields",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        !p.TryFindMonster(mine, out _) &&
+                        !opp.TryFindMonster(theirs, out _) &&
+                        p.Graveyard.Contains(mine) &&
+                        opp.Graveyard.Contains(theirs));
+                }
+
+                var mfDef = db.Get(mirrorForce);
+                var mfProg = mfDef != null ? CardTextEffectCompiler.Compile(mfDef) : null;
+                Check("Fanbot: Mirror Force FullyCompiled destroy opp Attack Position",
+                    mfProg != null && mfProg.FullyCompiled &&
+                    mfProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Timing == EffectTiming.AttackDeclared &&
+                        c.Action == EffectActionKind.Destroy &&
+                        c.Zone == EffectZoneFilter.OppAttackPositionMonsters));
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    if (!ReachOpponentBattle(engine))
+                    {
+                        Check("Fanbot live: Mirror Force battle path (skipped — opp not in BP)", false,
+                            $"phase={engine.Phase}");
+                    }
+                    else
+                    {
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        var wall = PlaceMonster(engine, p, celtic, 2, BattlePosition.Defense, true);
+                        wall.ClearAttackFlags();
+                        var trap = PlaceSetTrap(engine, p, mirrorForce, 2);
+                        var attacker = PlaceMonster(engine, opp, bewd, 2, BattlePosition.Attack, true);
+                        attacker.ClearAttackFlags();
+                        attacker.SummonedThisTurn = false;
+                        var extraAtk = PlaceMonster(engine, opp, celtic, 1, BattlePosition.Attack, true);
+                        extraAtk.ClearAttackFlags();
+                        extraAtk.SummonedThisTurn = false;
+                        var defMon = PlaceMonster(engine, opp, beaver, 3, BattlePosition.Defense, true);
+                        if (engine.Phase == DuelPhase.Main1)
+                            engine.TryEnterBattlePhase(opp);
+                        DrainCombat(engine);
+                        Check("Fanbot live: Mirror Force declare",
+                            engine.TryAttack(opp, attacker, wall));
+                        Check("Fanbot live: Mirror Force legal at attack declaration",
+                            engine.PendingResponse != null &&
+                            engine.PendingResponse.Timing == ResponseTiming.AttackDeclared &&
+                            engine.CanActivateSpellTrap(p, trap, fromHand: false));
+                        Check("Fanbot live: Mirror Force wipes opp Attack, Defense lives",
+                            engine.TryActivateSpellTrap(p, trap, fromHand: false) &&
+                            !opp.TryFindMonster(attacker, out _) &&
+                            !opp.TryFindMonster(extraAtk, out _) &&
+                            opp.TryFindMonster(defMon, out _) &&
+                            p.TryFindMonster(wall, out _),
+                            $"atkGy={opp.Graveyard.Contains(attacker)} def={opp.TryFindMonster(defMon, out _)}");
+                    }
+                }
+
+                var sakDef = db.Get(sakuretsu);
+                var sakProg = sakDef != null ? CardTextEffectCompiler.Compile(sakDef) : null;
+                Check("Fanbot: Sakuretsu Armor FullyCompiled destroy attacker",
+                    sakProg != null && sakProg.FullyCompiled &&
+                    sakProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Timing == EffectTiming.AttackDeclared &&
+                        c.Action == EffectActionKind.Destroy &&
+                        c.Zone == EffectZoneFilter.AttackingMonster));
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    if (!ReachOpponentBattle(engine))
+                    {
+                        Check("Fanbot live: Sakuretsu battle path (skipped — opp not in BP)", false,
+                            $"phase={engine.Phase}");
+                    }
+                    else
+                    {
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        var wall = PlaceMonster(engine, p, celtic, 2, BattlePosition.Defense, true);
+                        wall.ClearAttackFlags();
+                        var trap = PlaceSetTrap(engine, p, sakuretsu, 2);
+                        var attacker = PlaceMonster(engine, opp, bewd, 2, BattlePosition.Attack, true);
+                        attacker.ClearAttackFlags();
+                        attacker.SummonedThisTurn = false;
+                        var extra = PlaceMonster(engine, opp, celtic, 1, BattlePosition.Attack, true);
+                        extra.ClearAttackFlags();
+                        extra.SummonedThisTurn = false;
+                        if (engine.Phase == DuelPhase.Main1)
+                            engine.TryEnterBattlePhase(opp);
+                        DrainCombat(engine);
+                        Check("Fanbot live: Sakuretsu declare",
+                            engine.TryAttack(opp, attacker, wall));
+                        Check("Fanbot live: Sakuretsu legal at attack declaration",
+                            engine.PendingResponse != null &&
+                            engine.PendingResponse.Timing == ResponseTiming.AttackDeclared &&
+                            engine.CanActivateSpellTrap(p, trap, fromHand: false));
+                        Check("Fanbot live: Sakuretsu destroys attacker only",
+                            engine.TryActivateSpellTrap(p, trap, fromHand: false) &&
+                            !opp.TryFindMonster(attacker, out _) &&
+                            opp.TryFindMonster(extra, out _) &&
+                            p.TryFindMonster(wall, out _),
+                            $"atkGy={opp.Graveyard.Contains(attacker)} extra={opp.TryFindMonster(extra, out _)}");
+                    }
+                }
+
+                var moonDef = db.Get(bookOfMoon);
+                var moonProg = moonDef != null ? CardTextEffectCompiler.Compile(moonDef) : null;
+                Check("Fanbot: Book of Moon FullyCompiled set face-down Defense",
+                    moonProg != null && moonProg.FullyCompiled &&
+                    moonProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.SetTargetFaceDownDefense &&
+                        c.RequiresTargetChoice &&
+                        c.Zone == EffectZoneFilter.FieldAnyMonster));
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var prey = PlaceMonster(engine, opp, celtic, 2, BattlePosition.Attack, true);
+                    var fd = PlaceMonster(engine, opp, bewd, 1, BattlePosition.Defense, false);
+                    var card = PutInHand(engine, p, bookOfMoon);
+                    Check("Fanbot live: Book of Moon Activate legal",
+                        engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    Check("Fanbot live: Book of Moon opens face-up only",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.LegalTargets.Contains(prey) &&
+                        !engine.PendingActivation.LegalTargets.Contains(fd),
+                        $"n={engine.PendingActivation?.LegalTargets?.Count ?? 0}");
+                    Check("Fanbot live: Book of Moon sets Celtic face-down Defense",
+                        engine.TrySelectEffectTarget(prey) &&
+                        !prey.FaceUp &&
+                        prey.Position == BattlePosition.Defense &&
+                        p.Graveyard.Contains(card),
+                        $"face={prey.FaceUp} pos={prey.Position}");
+                }
+            }
+
             // ── Tribute Summon Dark Magician with 2 face-down Sets ──
             {
                 const int darkMagician = 46986414;
