@@ -384,6 +384,7 @@ namespace WRLDZ.Duel.TextEffects
                 PhaseTriggerTemplates.ExpectedActions(def, need);
                 ContinuousRestrictionTemplates.ExpectedActions(def, need);
                 MonsterTriggerTemplates.ExpectedActions(def, need);
+                HandWinconTemplates.ExpectedActions(def, need);
 
                 if (need.Count == 0) continue;
                 var prog = CardTextEffectCompiler.Compile(def);

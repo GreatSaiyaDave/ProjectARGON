@@ -51,7 +51,9 @@ namespace WRLDZ.Duel.TextEffects
         /// <summary>Unaffected / cannot-be-attacked / cannot-be-targeted (Fisherman family).</summary>
         Protection,
         /// <summary>One-card or tiny-family mechanic. Handle as an exception, not a new kind.</summary>
-        UniqueException
+        UniqueException,
+        /// <summary>Match win while named pieces are in the controller's hand (Exodia family).</summary>
+        WinDuel
     }
 
     public static class EffectVocabulary
@@ -80,7 +82,8 @@ namespace WRLDZ.Duel.TextEffects
             EffectResolutionKind.PreventDamage,
             EffectResolutionKind.TreatAsName,
             EffectResolutionKind.Randomize,
-            EffectResolutionKind.Protection
+            EffectResolutionKind.Protection,
+            EffectResolutionKind.WinDuel
         };
 
         /// <summary>
@@ -207,6 +210,8 @@ namespace WRLDZ.Duel.TextEffects
                     EffectActionKind.DieRollNegateWhenTargeted or
                     EffectActionKind.CannotBeTributedForSummon =>
                     EffectResolutionKind.Protection,
+                EffectActionKind.WinIfNamedCardsInHand =>
+                    EffectResolutionKind.WinDuel,
                 EffectActionKind.PayLpOrDestroyThis =>
                     EffectResolutionKind.Destroy,
                 // Mandatory upkeep: a life-point decrease with no other resolution.

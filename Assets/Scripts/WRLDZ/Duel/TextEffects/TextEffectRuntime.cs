@@ -4039,5 +4039,70 @@ namespace WRLDZ.Duel.TextEffects
         static bool LordOfDOnField(DuelEngine engine) =>
             engine.Player.MonstersOnField().Any(m => m.FaceUp && m.CardId == MonsterEffects.LordOfD) ||
             engine.Opponent.MonstersOnField().Any(m => m.FaceUp && m.CardId == MonsterEffects.LordOfD);
+
+        /// <summary>
+        /// Continuous hand wincon (WinIfNamedCardsInHand). Scans each player's hand
+        /// only — GY/field copies do not count. Not an activation. Idempotent if
+        /// <see cref="DuelEngine.GameOver"/> is already set.
+        /// </summary>
+        public static void CheckNamedPiecesInHandWin(DuelEngine engine)
+        {
+            if (engine == null || engine.GameOver) return;
+            CheckNamedPiecesInHandWin(engine, engine.Player);
+            if (engine.GameOver) return;
+            CheckNamedPiecesInHandWin(engine, engine.Opponent);
+        }
+
+        static void CheckNamedPiecesInHandWin(DuelEngine engine, DuelistState who)
+        {
+            if (engine == null || engine.GameOver || who?.Hand == null) return;
+            foreach (var card in who.Hand)
+            {
+                if (card?.Def == null) continue;
+                var prog = CompiledEffectCache.GetOrCompile(card);
+                if (prog == null || !prog.FullyCompiled) continue;
+                foreach (var clause in prog.ClauseList)
+                {
+                    if (clause == null ||
+                        clause.Action != EffectActionKind.WinIfNamedCardsInHand ||
+                        clause.Timing != EffectTiming.ContinuousWhileInHand)
+                        continue;
+                    if (!HandHasDistinctNamedPieces(who, card, clause.NamedCards))
+                        continue;
+                    engine.DeclareVictory(who,
+                        $"{who.Name} has all named pieces in hand ({card.Name}).");
+                    return;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Each required name must match a distinct card in <paramref name="who"/>'s
+        /// hand besides <paramref name="source"/> (the "this card" copy).
+        /// </summary>
+        static bool HandHasDistinctNamedPieces(DuelistState who, CardInstance source,
+            string[] names)
+        {
+            if (who?.Hand == null || source == null || names == null || names.Length == 0)
+                return false;
+            var used = new HashSet<int> { source.InstanceId };
+            foreach (var name in names)
+            {
+                if (string.IsNullOrEmpty(name)) return false;
+                CardInstance found = null;
+                foreach (var c in who.Hand)
+                {
+                    if (c == null || used.Contains(c.InstanceId)) continue;
+                    if (!c.IsNamed(name)) continue;
+                    found = c;
+                    break;
+                }
+
+                if (found == null) return false;
+                used.Add(found.InstanceId);
+            }
+
+            return true;
+        }
     }
 }

@@ -20,6 +20,11 @@ namespace WRLDZ.Duel.TextEffects
         OpponentNormalOrFlipSummon,
         /// <summary>Continuous while face-up on field.</summary>
         ContinuousWhileFaceUp,
+        /// <summary>
+        /// Continuous while this card is in its controller's hand (Exodia-style
+        /// named-pieces win). Not an activation — no Chain Link.
+        /// </summary>
+        ContinuousWhileInHand,
         /// <summary>During damage calculation (hand trap style).</summary>
         DamageCalculation,
         /// <summary>This card was Normal, Flip, or Special Summoned (Granadora).</summary>
@@ -215,7 +220,13 @@ namespace WRLDZ.Duel.TextEffects
         /// <see cref="EffectClause.DieNegateFacesMask"/> negate the effect and destroy the
         /// opponent's card. The classic Archfiend die-roll protection.
         /// </summary>
-        DieRollNegateWhenTargeted
+        DieRollNegateWhenTargeted,
+        /// <summary>
+        /// Continuous: if each name in <see cref="EffectClause.NamedCards"/> is in the
+        /// controller's hand in addition to this card, that player wins the Duel.
+        /// Pieces in GY/field do not count. Not an Ignition / activation.
+        /// </summary>
+        WinIfNamedCardsInHand
     }
 
     public enum EffectSide
@@ -341,6 +352,11 @@ namespace WRLDZ.Duel.TextEffects
         public bool BanishFromGyUpTo;
         /// <summary>Quoted name for SpecialSummonNamed / AddNamedFromDeckToHand / tribute name filter.</summary>
         public string NamedCard;
+        /// <summary>
+        /// Quoted names that must each occupy a distinct card in the controller's hand
+        /// in addition to this card (WinIfNamedCardsInHand / Exodia family).
+        /// </summary>
+        public string[] NamedCards;
         /// <summary>
         /// Target cannot have this printed / rules name
         /// (Lord Poison: except "Lord Poison"). Distinct from TributeExceptThis.
@@ -618,6 +634,7 @@ namespace WRLDZ.Duel.TextEffects
              HasTiming(EffectTiming.StandbyPhase) ||
              HasTiming(EffectTiming.EndPhase) ||
              HasTiming(EffectTiming.ContinuousWhileFaceUp) ||
+             HasTiming(EffectTiming.ContinuousWhileInHand) ||
              HasTiming(EffectTiming.YouTakeLifePointDamage) ||
              HasTiming(EffectTiming.ThisCardDestroysByBattle));
     }

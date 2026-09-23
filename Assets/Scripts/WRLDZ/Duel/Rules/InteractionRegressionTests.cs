@@ -6605,6 +6605,128 @@ namespace WRLDZ.Duel.Rules
                 }
             }
 
+            // ── Exodia the Forbidden One: continuous named-pieces-in-hand win ──
+            {
+                const int exodia = 33396948;
+                const int rightLeg = 8124921;
+                const int leftLeg = 44519536;
+                const int rightArm = 70903634;
+                const int leftArm = 7902349;
+                const int celtic = 91152256;
+
+                var exoDef = db.Get(exodia);
+                var exoProg = exoDef != null ? CardTextEffectCompiler.Compile(exoDef) : null;
+                Check("Exodia FullyCompiled ContinuousWhileInHand win (allowAi:false)",
+                    exoProg != null && exoProg.FullyCompiled &&
+                    exoProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Timing == EffectTiming.ContinuousWhileInHand &&
+                        c.Action == EffectActionKind.WinIfNamedCardsInHand &&
+                        !c.MakesChainLink),
+                    exoProg == null
+                        ? "null"
+                        : $"full={exoProg.FullyCompiled} n={exoProg.ClauseList.Count} " +
+                          $"unparsed={string.Join("|", exoProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var exo = PutInHand(engine, p, exodia);
+                    Check("Exodia: not an Ignition / Activate from hand",
+                        !engine.CanActivateSpellTrap(p, exo, fromHand: true));
+                    PlaceMonster(engine, p, exodia, 2, BattlePosition.Attack, true);
+                    var onField = p.MonsterZones[2].Occupant;
+                    Check("Exodia: not an Ignition on the field",
+                        onField != null &&
+                        !engine.CanActivateSpellTrap(p, onField, fromHand: false));
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    PutInHand(engine, p, exodia);
+                    PutInHand(engine, p, rightLeg);
+                    PutInHand(engine, p, leftLeg);
+                    PutInHand(engine, p, rightArm);
+                    Check("Exodia: four pieces in hand does not win",
+                        !engine.GameOver && engine.Winner == null);
+                    engine.NotifyPublic();
+                    Check("Exodia: missing Left Arm still does not win",
+                        !engine.GameOver && engine.Winner == null);
+                    PutInHand(engine, p, leftArm);
+                    engine.NotifyPublic();
+                    Check("Exodia: all 5 pieces in hand wins",
+                        engine.GameOver && engine.Winner == p,
+                        $"over={engine.GameOver} winner={engine.Winner?.Name} hand={p.Hand.Count}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    PutInHand(engine, p, exodia);
+                    PutInHand(engine, p, rightLeg);
+                    PutInHand(engine, p, leftLeg);
+                    PutInHand(engine, p, rightArm);
+                    p.Graveyard.Add(engine.CreateCardInstance(leftArm));
+                    engine.NotifyPublic();
+                    Check("Exodia: Left Arm in GY does not count",
+                        !engine.GameOver && engine.Winner == null);
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    PlaceMonster(engine, p, exodia, 2, BattlePosition.Attack, true);
+                    PutInHand(engine, p, rightLeg);
+                    PutInHand(engine, p, leftLeg);
+                    PutInHand(engine, p, rightArm);
+                    PutInHand(engine, p, leftArm);
+                    engine.NotifyPublic();
+                    Check("Exodia: head on field + limbs in hand does not win",
+                        !engine.GameOver && engine.Winner == null);
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    PutInHand(engine, p, exodia);
+                    PutInHand(engine, p, rightLeg);
+                    PutInHand(engine, p, leftLeg);
+                    PutInHand(engine, p, rightArm);
+                    p.Deck.Insert(0, leftArm);
+                    engine.Draw(p, 1);
+                    Check("Exodia: drawing the fifth piece wins",
+                        engine.GameOver && engine.Winner == p &&
+                        p.Hand.Exists(c => c != null && c.CardId == leftArm),
+                        $"over={engine.GameOver} winner={engine.Winner?.Name} hand={p.Hand.Count}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    PutInHand(engine, p, exodia);
+                    PutInHand(engine, p, rightLeg);
+                    PutInHand(engine, p, leftLeg);
+                    PutInHand(engine, p, rightArm);
+                    PutInHand(engine, p, celtic);
+                    engine.NotifyPublic();
+                    Check("Exodia: unrelated extra card does not substitute a limb",
+                        !engine.GameOver && engine.Winner == null);
+                }
+            }
+
             // ── FirstEmpty order ──
             {
                 var engine = Fresh(db, pDeck, aDeck);
