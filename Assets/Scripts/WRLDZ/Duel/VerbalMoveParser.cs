@@ -56,6 +56,8 @@ namespace WRLDZ.Duel
                 return Intent(DuelIntentKind.DirectAttack, text);
             if (text is "cancel" or "cancel target" or "never mind" or "nevermind")
                 return Intent(DuelIntentKind.CancelTarget, text);
+            if (text is "confirm" or "done" or "that's all" or "thats all" or "finish targeting")
+                return Intent(DuelIntentKind.ConfirmTarget, text);
             if (text.Contains("clear tribute") || text == "clear tributes")
                 return Intent(DuelIntentKind.ClearTributes, text);
 

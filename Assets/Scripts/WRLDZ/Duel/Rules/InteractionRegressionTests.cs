@@ -716,6 +716,228 @@ namespace WRLDZ.Duel.Rules
                         opp.MonsterZones[2].Occupant != prey);
                 }
 
+                {
+                    const int gravedigger = 82542267;
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var gyA = engine.CreateCardInstance(celtic);
+                    var gyB = engine.CreateCardInstance(bewd);
+                    var yourGy = engine.CreateCardInstance(13039848);
+                    opp.Graveyard.Add(gyA);
+                    opp.Graveyard.Add(gyB);
+                    p.Graveyard.Add(yourGy);
+                    var card = PutInHand(engine, p, gravedigger);
+                    Check("Gravedigger Ghoul: Activate legal with 2 in opponent GY",
+                        engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    Check("Gravedigger Ghoul: opens opponent-GY targets",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.TargetKind == EffectTargetKind.MonsterInOppGy);
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        var legal = engine.PendingActivation.LegalTargets;
+                        Check("Gravedigger Ghoul: both opp GY legal, controller GY is not",
+                            legal.Contains(gyA) && legal.Contains(gyB) && !legal.Contains(yourGy));
+                        Check("Gravedigger Ghoul: first pick stays pending (up to 2)",
+                            engine.TrySelectEffectTarget(gyA) &&
+                            engine.IsAwaitingEffectTarget &&
+                            !opp.Banished.Contains(gyA));
+                        Check("Gravedigger Ghoul: first pick can early-confirm 1 of N (N≥2)",
+                            engine.CanConfirmPendingTargets &&
+                            engine.PendingActivation.LegalTargets.Contains(gyB));
+                        Check("Gravedigger Ghoul: second pick banishes both",
+                            engine.TrySelectEffectTarget(gyB) &&
+                            !engine.IsAwaitingEffectTarget &&
+                            opp.Banished.Contains(gyA) &&
+                            opp.Banished.Contains(gyB) &&
+                            !opp.Graveyard.Contains(gyA) &&
+                            !opp.Graveyard.Contains(gyB) &&
+                            p.Graveyard.Contains(yourGy),
+                            $"pending={engine.IsAwaitingEffectTarget} ban={opp.Banished.Count} yourGy={p.Graveyard.Contains(yourGy)}");
+                    }
+                }
+
+                {
+                    const int gravedigger = 82542267;
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var empty = PutInHand(engine, p, gravedigger);
+                    Check("Gravedigger Ghoul: illegal with empty opponent GY",
+                        !engine.CanActivateSpellTrap(p, empty, fromHand: true));
+                    var only = engine.CreateCardInstance(celtic);
+                    opp.Graveyard.Add(only);
+                    Check("Gravedigger Ghoul: legal with 1 in opponent GY",
+                        engine.CanActivateSpellTrap(p, empty, fromHand: true));
+                    Check("Gravedigger Ghoul: one target banishes that one",
+                        engine.TryActivateSpellTrap(p, empty, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.TrySelectEffectTarget(only) &&
+                        !engine.IsAwaitingEffectTarget &&
+                        opp.Banished.Contains(only) &&
+                        !opp.Graveyard.Contains(only));
+                }
+
+                {
+                    const int gravedigger = 82542267;
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var gyA = engine.CreateCardInstance(celtic);
+                    var gyB = engine.CreateCardInstance(bewd);
+                    var gyC = engine.CreateCardInstance(32452818);
+                    opp.Graveyard.Add(gyA);
+                    opp.Graveyard.Add(gyB);
+                    opp.Graveyard.Add(gyC);
+                    var card = PutInHand(engine, p, gravedigger);
+                    Check("Gravedigger Ghoul: cannot CONFIRM before a pick",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        !engine.CanConfirmPendingTargets &&
+                        !engine.TryConfirmPendingTargets());
+                    Check("Gravedigger Ghoul: early-confirm 1 of N when ≥2 legal remain",
+                        engine.TrySelectEffectTarget(gyA) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.CanConfirmPendingTargets &&
+                        engine.PendingActivation.LegalTargets.Count >= 2 &&
+                        engine.TryConfirmPendingTargets() &&
+                        !engine.IsAwaitingEffectTarget &&
+                        opp.Banished.Contains(gyA) &&
+                        !opp.Banished.Contains(gyB) &&
+                        !opp.Banished.Contains(gyC) &&
+                        opp.Graveyard.Contains(gyB) &&
+                        opp.Graveyard.Contains(gyC),
+                        $"pending={engine.IsAwaitingEffectTarget} ban={opp.Banished.Count} gy={opp.Graveyard.Count}");
+                }
+
+                {
+                    const int gravedigger = 82542267;
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var gyA = engine.CreateCardInstance(celtic);
+                    var gyB = engine.CreateCardInstance(bewd);
+                    var gyC = engine.CreateCardInstance(32452818);
+                    opp.Graveyard.Add(gyA);
+                    opp.Graveyard.Add(gyB);
+                    opp.Graveyard.Add(gyC);
+                    var card = PutInHand(engine, p, gravedigger);
+                    Check("Gravedigger Ghoul: cap 2 with 3 legal — first pick pending",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.TrySelectEffectTarget(gyA) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.CanConfirmPendingTargets);
+                    Check("Gravedigger Ghoul: cap 2 with 3 legal — second pick banishes 2, leaves the rest",
+                        engine.TrySelectEffectTarget(gyB) &&
+                        !engine.IsAwaitingEffectTarget &&
+                        opp.Banished.Contains(gyA) &&
+                        opp.Banished.Contains(gyB) &&
+                        !opp.Banished.Contains(gyC) &&
+                        opp.Graveyard.Contains(gyC) &&
+                        opp.Banished.Count == 2,
+                        $"pending={engine.IsAwaitingEffectTarget} ban={opp.Banished.Count}");
+                }
+
+                {
+                    const int twoPronged = 83887306;
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var youA = PlaceMonster(engine, p, celtic, 1, BattlePosition.Attack, true);
+                    var youB = PlaceMonster(engine, p, 13039848, 2, BattlePosition.Attack, true);
+                    var youC = PlaceMonster(engine, p, 32452818, 3, BattlePosition.Attack, true);
+                    var oppA = PlaceMonster(engine, opp, bewd, 2, BattlePosition.Attack, true);
+                    var fromHand = PutInHand(engine, p, twoPronged);
+                    var st = PlaceSetTrap(engine, p, twoPronged, 2);
+                    st.SetThisTurn = false;
+                    Check("Two-Pronged Attack: Trap must be Set, not from hand",
+                        !engine.CanActivateSpellTrap(p, fromHand, fromHand: true) &&
+                        engine.CanActivateSpellTrap(p, st, fromHand: false));
+                    p.Hand.Remove(fromHand);
+                    Check("Two-Pronged Attack: Activate from Set opens mixed targets",
+                        engine.TryActivateSpellTrap(p, st, fromHand: false) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.TargetKind == EffectTargetKind.AnyMonsterOnField);
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        Check("Two-Pronged Attack: first your monster stays pending",
+                            engine.TrySelectEffectTarget(youA) && engine.IsAwaitingEffectTarget);
+                        Check("Two-Pronged Attack: cannot early-confirm after 1 of 3 required",
+                            !engine.CanConfirmPendingTargets &&
+                            !engine.TryConfirmPendingTargets() &&
+                            engine.IsAwaitingEffectTarget);
+                        Check("Two-Pronged Attack: second your monster stays pending",
+                            engine.TrySelectEffectTarget(youB) && engine.IsAwaitingEffectTarget);
+                        Check("Two-Pronged Attack: opponent pick destroys all three",
+                            engine.TrySelectEffectTarget(oppA) &&
+                            !engine.IsAwaitingEffectTarget &&
+                            p.Graveyard.Contains(youA) &&
+                            p.Graveyard.Contains(youB) &&
+                            opp.Graveyard.Contains(oppA) &&
+                            !p.Graveyard.Contains(youC) &&
+                            p.MonsterZones[3].Occupant == youC,
+                            $"pending={engine.IsAwaitingEffectTarget} youA={p.Graveyard.Contains(youA)} opp={opp.Graveyard.Contains(oppA)}");
+                    }
+                }
+
+                {
+                    const int twoPronged = 83887306;
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    PlaceMonster(engine, opp, bewd, 2, BattlePosition.Attack, true);
+                    var st = PlaceSetTrap(engine, p, twoPronged, 2);
+                    st.SetThisTurn = false;
+                    Check("Two-Pronged Attack: illegal with only 1 you control",
+                        !engine.CanActivateSpellTrap(p, st, fromHand: false));
+                }
+
+                {
+                    const int twoPronged = 83887306;
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var youA = PlaceMonster(engine, p, celtic, 1, BattlePosition.Attack, true);
+                    var youB = PlaceMonster(engine, p, 13039848, 2, BattlePosition.Attack, true);
+                    var oppA = PlaceMonster(engine, opp, bewd, 2, BattlePosition.Attack, true);
+                    var st = PlaceSetTrap(engine, p, twoPronged, 2);
+                    st.SetThisTurn = false;
+                    Check("Two-Pronged Attack mid-chain: Activate",
+                        engine.TryActivateSpellTrap(p, st, fromHand: false) &&
+                        engine.IsAwaitingEffectTarget);
+                    Check("Two-Pronged Attack mid-chain: first pick",
+                        engine.TrySelectEffectTarget(youA) && engine.IsAwaitingEffectTarget);
+                    engine.SendCardToGrave(opp, oppA);
+                    Check("Two-Pronged Attack mid-chain: opp target left, still pending (no soft-lock)",
+                        engine.IsAwaitingEffectTarget &&
+                        opp.Graveyard.Contains(oppA));
+                    Check("Two-Pronged Attack mid-chain: remaining your monster still resolves",
+                        engine.TrySelectEffectTarget(youB) &&
+                        !engine.IsAwaitingEffectTarget &&
+                        p.Graveyard.Contains(youA) &&
+                        p.Graveyard.Contains(youB) &&
+                        opp.Graveyard.Contains(oppA),
+                        $"pending={engine.IsAwaitingEffectTarget} youA={p.Graveyard.Contains(youA)} youB={p.Graveyard.Contains(youB)}");
+                }
+
                 var mDef = db.Get(mask);
                 var mProg = mDef != null ? CardTextEffectCompiler.Compile(mDef) : null;
                 Check("Mask of Darkness FullyCompiled Flip Trap GY add",

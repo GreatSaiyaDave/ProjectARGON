@@ -81,6 +81,7 @@ namespace WRLDZ.UI
         Button _btnMenu;
         Button _btnClearTrib;
         Button _btnCancelTarget;
+        Button _btnConfirmTarget;
         Button _btnPassResponse;
 
         Transform _targetRow;
@@ -89,6 +90,7 @@ namespace WRLDZ.UI
         GameObject _targetPanel;
         GameObject _targetDim;
         Button _targetCancelBtn;
+        Button _targetConfirmBtn;
 
         /// <summary>
         /// Response tray: PASS + hand QEs (Kuriboh). Field Set traps use zone blink, not buttons.
@@ -796,6 +798,7 @@ namespace WRLDZ.UI
             ShrinkPhaseChip(_btnEnd);
 
             _btnPassResponse = CreateButton(_floatHud.ContextRow, "PASS", DoPassResponse, GbaTheme.CmdSafe);
+            _btnConfirmTarget = CreateButton(_floatHud.ContextRow, "CONFIRM", DoConfirmTarget, GbaTheme.CmdSafe);
             _btnCancelTarget = CreateButton(_floatHud.ContextRow, "CANCEL", DoCancelTarget, GbaTheme.CmdDanger);
             _btnClearTrib = CreateButton(_floatHud.ContextRow, "TRIBUTES", () =>
             {
@@ -1790,6 +1793,10 @@ namespace WRLDZ.UI
             _targetHint.text = "Tap a card below · works on phone / desktop (no AR required)";
             _targetHint.color = new Color(0.85f, 0.92f, 1f, 0.95f);
 
+            _targetConfirmBtn = CreateButton(targetBg, "CONFIRM", DoConfirmTarget, GbaTheme.CmdSafe);
+            Place(_targetConfirmBtn.GetComponent<RectTransform>(), 0.78f, 0.86f, 0.97f, 0.96f);
+            _targetConfirmBtn.gameObject.SetActive(false);
+
             _targetCancelBtn = CreateButton(targetBg, "CANCEL", DoCancelTarget, GbaTheme.CmdDanger);
             Place(_targetCancelBtn.GetComponent<RectTransform>(), 0.78f, 0.86f, 0.97f, 0.96f);
 
@@ -1878,6 +1885,8 @@ namespace WRLDZ.UI
                 _targetPrompt.text = prompt;
             }
 
+            LayoutTargetConfirmButtons(false);
+
             if (pending.AwaitingCoinCall)
             {
                 if (_targetHint != null)
@@ -1923,12 +1932,20 @@ namespace WRLDZ.UI
             if (_targetHint != null)
             {
                 var n = pending.LegalTargets?.Count ?? 0;
-                _targetHint.text = n <= 0
-                    ? "No legal targets — tap CANCEL"
-                    : n == 1
-                        ? "1 legal target — choose it in the menu, or CANCEL"
-                        : $"{n} legal targets — choose one in the menu, or CANCEL";
+                var canConfirm = _engine.CanConfirmPendingTargets;
+                if (canConfirm)
+                    _targetHint.text = n <= 0
+                        ? "CONFIRM the chosen target(s), or CANCEL"
+                        : $"{n} still legal — tap another, or CONFIRM with the ones already chosen";
+                else
+                    _targetHint.text = n <= 0
+                        ? "No legal targets — tap CANCEL"
+                        : n == 1
+                            ? "1 legal target — choose it in the menu, or CANCEL"
+                            : $"{n} legal targets — choose one in the menu, or CANCEL";
             }
+
+            LayoutTargetConfirmButtons(_engine.CanConfirmPendingTargets);
 
             if (pending.LegalTargets == null) return;
 
@@ -2033,11 +2050,35 @@ namespace WRLDZ.UI
                 }
             }
 
+            if (_engine.CanConfirmPendingTargets)
+            {
+                var confirm = CreateButton(_targetRow, "CONFIRM", DoConfirmTarget, GbaTheme.CmdSafe);
+                var qle = confirm.gameObject.AddComponent<LayoutElement>();
+                qle.minWidth = 92f;
+                qle.minHeight = 56f;
+                qle.preferredWidth = 100f;
+            }
+
             var cancel = CreateButton(_targetRow, "CANCEL", DoCancelTarget, GbaTheme.CmdDanger);
             var cle = cancel.gameObject.AddComponent<LayoutElement>();
             cle.minWidth = 92f;
             cle.minHeight = 56f;
             cle.preferredWidth = 100f;
+        }
+
+        void LayoutTargetConfirmButtons(bool canConfirm)
+        {
+            if (_targetConfirmBtn != null)
+            {
+                _targetConfirmBtn.gameObject.SetActive(canConfirm);
+                SetBtn(_targetConfirmBtn, canConfirm);
+            }
+
+            if (_targetCancelBtn == null) return;
+            if (canConfirm)
+                Place(_targetCancelBtn.GetComponent<RectTransform>(), 0.78f, 0.74f, 0.97f, 0.84f);
+            else
+                Place(_targetCancelBtn.GetComponent<RectTransform>(), 0.78f, 0.86f, 0.97f, 0.96f);
         }
 
         void UpdateButtonStates()
@@ -2073,7 +2114,7 @@ namespace WRLDZ.UI
             if (targeting)
             {
                 SetPhaseButtons(false, false, false);
-                ShowContextualAction(_btnCancelTarget);
+                ShowTargetContextButtons();
                 SetBtn(_btnRestartBar, true);
                 SetBtn(_btnMenu, true);
                 return;
@@ -2135,13 +2176,33 @@ namespace WRLDZ.UI
             SetBtn(_btnMenu, true);
         }
 
-        /// <summary>Pass / Cancel / Tributes share the thumb island — only one visible at a time.</summary>
+        /// <summary>Pass / Cancel / Tributes share the thumb island — only one visible at a time.
+        /// Targeting may show CONFIRM beside CANCEL when TargetUpTo has ≥1 pick.</summary>
         void ShowContextualAction(Button which)
         {
             HideContextualActions();
             if (which == null) return;
             which.gameObject.SetActive(true);
             SetBtn(which, true);
+            _floatHud?.SetContextVisible(true);
+        }
+
+        void ShowTargetContextButtons()
+        {
+            HideContextualActions();
+            var confirm = _engine != null && _engine.CanConfirmPendingTargets;
+            if (confirm && _btnConfirmTarget != null)
+            {
+                _btnConfirmTarget.gameObject.SetActive(true);
+                SetBtn(_btnConfirmTarget, true);
+            }
+
+            if (_btnCancelTarget != null)
+            {
+                _btnCancelTarget.gameObject.SetActive(true);
+                SetBtn(_btnCancelTarget, true);
+            }
+
             _floatHud?.SetContextVisible(true);
         }
 
@@ -2157,6 +2218,12 @@ namespace WRLDZ.UI
             {
                 _btnCancelTarget.gameObject.SetActive(false);
                 SetBtn(_btnCancelTarget, false);
+            }
+
+            if (_btnConfirmTarget != null)
+            {
+                _btnConfirmTarget.gameObject.SetActive(false);
+                SetBtn(_btnConfirmTarget, false);
             }
 
             if (_btnClearTrib != null)
@@ -4412,6 +4479,14 @@ namespace WRLDZ.UI
         {
             if (_engine == null || !_engine.IsAwaitingEffectTarget) return;
             Cmd(DuelIntent.Of(DuelIntentKind.CancelTarget));
+            ClearCardSelection();
+            Refresh();
+        }
+
+        void DoConfirmTarget()
+        {
+            if (_engine == null || !_engine.CanConfirmPendingTargets) return;
+            Cmd(DuelIntent.Of(DuelIntentKind.ConfirmTarget));
             ClearCardSelection();
             Refresh();
         }

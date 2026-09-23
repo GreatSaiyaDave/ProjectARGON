@@ -381,6 +381,7 @@ namespace WRLDZ.Duel.TextEffects
                 ArchfiendTemplates.ExpectedActions(def, need);
                 ProtectionTemplates.ExpectedActions(def.desc, need);
                 LegacyTextTemplates.ExpectedActions(def, need);
+                MultiTargetTemplates.ExpectedActions(def, need);
                 PhaseTriggerTemplates.ExpectedActions(def, need);
                 ContinuousRestrictionTemplates.ExpectedActions(def, need);
                 MonsterTriggerTemplates.ExpectedActions(def, need);

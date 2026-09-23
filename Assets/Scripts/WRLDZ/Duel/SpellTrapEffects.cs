@@ -46,7 +46,9 @@ namespace WRLDZ.Duel
         /// <summary>ROTA — Level N or lower Race monster in your Deck.</summary>
         MonsterInYourDeckFiltered,
         /// <summary>Iron Blacksmith Kotetsu — Equip Spell in your Deck.</summary>
-        EquipSpellInYourDeck
+        EquipSpellInYourDeck,
+        /// <summary>Gravedigger Ghoul — monster in the opponent's GY.</summary>
+        MonsterInOppGy
     }
 
     /// <summary>In-flight activation waiting for a target choice.</summary>
@@ -76,6 +78,16 @@ namespace WRLDZ.Duel
         public int CostNumeric;
         /// <summary>How many more cost cards to pick.</summary>
         public int CostPicksRemaining;
+        /// <summary>How many more effect targets to pick (multi-target).</summary>
+        public int TargetPicksRemaining;
+        /// <summary>"up to" TargetCount — player may CONFIRM after 1 pick (Gravedigger Ghoul).</summary>
+        public bool TargetUpTo;
+        /// <summary>Remaining controller-side monster picks (mixed-side destroy).</summary>
+        public int ControllerPicksRemaining;
+        /// <summary>Remaining opponent-side monster picks (mixed-side destroy).</summary>
+        public int OpponentPicksRemaining;
+        /// <summary>Targets already chosen for a multi-target activation.</summary>
+        public readonly List<CardInstance> ChosenTargets = new();
         public readonly List<CardInstance> LegalTargets = new();
         /// <summary>Bark of Dark Ruler: choose LP cost in multiples of 100.</summary>
         public bool AwaitingLpCost;
@@ -101,8 +113,20 @@ namespace WRLDZ.Duel
                         $"{n}: choose an opponent's face-up monster.",
                     EffectTargetKind.OppFaceUpMonsterAtkLeqLp =>
                         $"{n}: choose a face-up opponent monster with ATK ≤ their LP.",
+                    EffectTargetKind.MonsterInOppGy =>
+                        TargetUpTo && ChosenTargets.Count >= 1 && TargetPicksRemaining > 0
+                            ? $"{n}: choose another in the opponent's GY, or CONFIRM ({ChosenTargets.Count} selected, {TargetPicksRemaining} remaining)."
+                            : TargetPicksRemaining > 1
+                                ? $"{n}: choose a monster in the opponent's GY ({TargetPicksRemaining} remaining)."
+                                : $"{n}: choose a monster in the opponent's GY.",
                     EffectTargetKind.AnyMonsterOnField =>
-                        $"{n}: choose a monster on the field to destroy.",
+                        ControllerPicksRemaining > 0 && OpponentPicksRemaining > 0
+                            ? $"{n}: choose {ControllerPicksRemaining} of your monsters and {OpponentPicksRemaining} of your opponent's."
+                            : ControllerPicksRemaining > 0
+                                ? $"{n}: choose a monster you control ({ControllerPicksRemaining} remaining)."
+                                : OpponentPicksRemaining > 0
+                                    ? $"{n}: choose an opponent's monster ({OpponentPicksRemaining} remaining)."
+                                    : $"{n}: choose a monster on the field to destroy.",
                     EffectTargetKind.SpellInYourGy =>
                         $"{n}: choose a Spell in your GY to add to hand.",
                     EffectTargetKind.TrapInYourGy =>
