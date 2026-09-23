@@ -62,7 +62,8 @@ namespace WRLDZ.Presentation.ArInteraction
         const float FoamLift = 0.006f;
         /// <summary>Keeps every foam corner this far inside the rim.</summary>
         const float EdgeMargin = 0.03f;
-        const float MinScale = 0.05f;
+        /// <summary>Anchors at or below this Scale are skipped, never inflated past their own size.</summary>
+        const float MinScale = 0.001f;
 
         const float RippleStart = 0.14f;
         const float RippleEnd = 0.9f;
@@ -263,7 +264,7 @@ namespace WRLDZ.Presentation.ArInteraction
                 return;
             }
 
-            Advance(Mathf.Max(0f, dt));
+            Advance(dt > 0f ? dt : 0f);
             level = Mathf.Min(level, 1f);
             var bounds = new Bounds(street.Center, street.Half * 2f);
             var drew = false;
@@ -273,7 +274,7 @@ namespace WRLDZ.Presentation.ArInteraction
                 if (WriteSlot(i, a, level))
                 {
                     drew = true;
-                    var s = Mathf.Max(MinScale, a.Scale);
+                    var s = a.Scale;
                     bounds.Encapsulate(new Bounds(
                         a.Position + new Vector3(0f, MaxAnchorHeight * 0.5f * s, 0f),
                         new Vector3(MaxAnchorRadius * 2f * s, MaxAnchorHeight * s, MaxAnchorRadius * 2f * s)));
@@ -316,10 +317,10 @@ namespace WRLDZ.Presentation.ArInteraction
         bool WriteSlot(int slot, in FieldAnchor a, float level)
         {
             var fade = Mathf.Clamp01(a.Presence) * level;
-            if (fade <= 0.001f) return false;
+            if (fade <= 0.001f || a.Scale <= MinScale) return false;
 
             _o = a.Position;
-            _s = Mathf.Max(MinScale, a.Scale);
+            _s = a.Scale;
             _r = _rim * _s;
             _lift = FoamLift * _s;
             var rise = Mathf.Lerp(RiseFloor, 1f, Smooth(0f, 1f, fade));
