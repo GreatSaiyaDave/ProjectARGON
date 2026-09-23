@@ -23,6 +23,25 @@ namespace WRLDZ.Presentation.ArInteraction
     }
 
     /// <summary>
+    /// A Field Spell's signature set piece — the one element a viewer names the
+    /// field by (Umi's sea, Sogen's grass). Rendered by an
+    /// <see cref="ArFieldSignature"/> kit; <see cref="FieldSpellEnvironment.SignatureVariant"/>
+    /// picks the look within a kit. Per-monster kits decorate only a small
+    /// radius around each monster; street kits stay thin and high.
+    /// </summary>
+    public enum FieldSignature
+    {
+        None,
+        Waterline,   // monsters wade: shin-high water ring + ripples (0 Umi sea, 1 Umiiruka tide)
+        GroundCover, // swaying blades around each monster (0 short grass, 1 tall ferns, 2 roots)
+        Outcrops,    // faceted rock shards ringing each monster (0 dusty boulders, 1 crags, 2 lava-cracked)
+        Shroud,      // shadow tendrils curling up from each monster's ground
+        Arcs,        // plasma lightning flashing high over the street
+        Shafts,      // light shafts slanting down through the street
+        Updraft      // spiral wind ribbons climbing around each monster
+    }
+
+    /// <summary>
     /// One Field Spell's Solid Vision look. These rows are the field spell
     /// "assets": no prefabs or authored scenes. <see cref="ArFieldSpellFloor"/>
     /// builds every layer from the palette plus the card's own illustration.
@@ -45,10 +64,20 @@ namespace WRLDZ.Presentation.ArInteraction
         public readonly float Wash;
         /// <summary>True for hand-tuned rows; false when derived from art.</summary>
         public readonly bool Curated;
+        /// <summary>Signature set piece (None = palette layers only).</summary>
+        public readonly FieldSignature Signature;
+        /// <summary>0…3 look within the signature kit (see <see cref="FieldSignature"/>).</summary>
+        public readonly int SignatureVariant;
+        /// <summary>0.5…1.5 size / intensity of the signature.</summary>
+        public readonly float SignatureScale;
 
         public FieldSpellEnvironment(int cardId, string key, Color sky, Color ground, Color accent,
-            FieldMotes motes, float moteDensity, float wash, bool curated)
+            FieldMotes motes, float moteDensity, float wash, bool curated,
+            FieldSignature signature = FieldSignature.None, int signatureVariant = 0, float signatureScale = 1f)
         {
+            Signature = signature;
+            SignatureVariant = Mathf.Clamp(signatureVariant, 0, 3);
+            SignatureScale = Mathf.Clamp(signatureScale, 0.5f, 1.5f);
             CardId = cardId;
             Key = key;
             Sky = sky;
@@ -99,26 +128,41 @@ namespace WRLDZ.Presentation.ArInteraction
             var d = new Dictionary<int, FieldSpellEnvironment>();
 
             void E(int id, string key, string sky, string ground, string accent,
-                FieldMotes motes, float density, float wash) =>
+                FieldMotes motes, float density, float wash,
+                FieldSignature sig = FieldSignature.None, int variant = 0, float scale = 1f) =>
                 d[id] = new FieldSpellEnvironment(id, key, H(sky), H(ground), H(accent),
-                    motes, density, wash, curated: true);
+                    motes, density, wash, curated: true, sig, variant, scale);
 
+            // Easy tier: the 12 pure ATK/DEF fields carry a signature set piece.
+            // Named fields with rule effects get theirs with event presentation.
             // ── Duelist Kingdom terrains (+200 ATK/DEF by Type) ──────────────
-            E(59197169, "Yami", "#1a0710", "#3a1426", "#d84577", FieldMotes.Wisps, 0.55f, 0.18f);
-            E(87430998, "Forest", "#2f6a2c", "#5f8f38", "#8ee05c", FieldMotes.Leaves, 0.45f, 0.08f);
-            E(50913601, "Mountain", "#7fa6c4", "#5e5860", "#6cb6ec", FieldMotes.Wind, 0.35f, 0.06f);
-            E(86318356, "Sogen", "#4a9aa6", "#6a9e3c", "#9ee070", FieldMotes.Pollen, 0.35f, 0.06f);
-            E(22702055, "Umi", "#3aa0d4", "#1a5ea8", "#2fb4f0", FieldMotes.Bubbles, 0.55f, 0.14f);
-            E(23424603, "Wasteland", "#8a7c6a", "#5a4332", "#d89a5e", FieldMotes.Dust, 0.45f, 0.10f);
+            E(59197169, "Yami", "#1a0710", "#3a1426", "#d84577", FieldMotes.Wisps, 0.55f, 0.18f,
+                FieldSignature.Shroud, 0, 1.0f);
+            E(87430998, "Forest", "#2f6a2c", "#5f8f38", "#8ee05c", FieldMotes.Leaves, 0.45f, 0.08f,
+                FieldSignature.GroundCover, 1, 1.0f);
+            E(50913601, "Mountain", "#7fa6c4", "#5e5860", "#6cb6ec", FieldMotes.Wind, 0.35f, 0.06f,
+                FieldSignature.Outcrops, 1, 1.0f);
+            E(86318356, "Sogen", "#4a9aa6", "#6a9e3c", "#9ee070", FieldMotes.Pollen, 0.35f, 0.06f,
+                FieldSignature.GroundCover, 0, 1.0f);
+            E(22702055, "Umi", "#3aa0d4", "#1a5ea8", "#2fb4f0", FieldMotes.Bubbles, 0.55f, 0.14f,
+                FieldSignature.Waterline, 0, 1.0f);
+            E(23424603, "Wasteland", "#8a7c6a", "#5a4332", "#d89a5e", FieldMotes.Dust, 0.45f, 0.10f,
+                FieldSignature.Outcrops, 0, 1.0f);
 
             // ── Attribute zones (+500 ATK / −400 DEF by Attribute) ───────────
-            E(19384334, "Molten Destruction", "#2b1510", "#5c240c", "#ff7a22", FieldMotes.Embers, 0.70f, 0.16f);
-            E(18161786, "Mystic Plasma Zone", "#3c2f78", "#2a2d48", "#8b6cff", FieldMotes.Sparks, 0.50f, 0.16f);
+            E(19384334, "Molten Destruction", "#2b1510", "#5c240c", "#ff7a22", FieldMotes.Embers, 0.70f, 0.16f,
+                FieldSignature.Outcrops, 2, 1.0f);
+            E(18161786, "Mystic Plasma Zone", "#3c2f78", "#2a2d48", "#8b6cff", FieldMotes.Sparks, 0.50f, 0.16f,
+                FieldSignature.Arcs, 0, 1.0f);
             // Art is mostly white rays; the vivid pixels are the red fiend. LIGHT reads white-gold.
-            E(81777047, "Luminous Spark", "#f2ecd8", "#b8aa8a", "#ffe27a", FieldMotes.Sparks, 0.45f, 0.08f);
-            E(56594520, "Gaia Power", "#24391a", "#8a7f56", "#9bd86a", FieldMotes.Leaves, 0.40f, 0.08f);
-            E(45778932, "Rising Air Current", "#4c78aa", "#6a98cc", "#9fd4ff", FieldMotes.Wind, 0.60f, 0.08f);
-            E(82999629, "Umiiruka", "#5588d8", "#5a9cc6", "#4cb8f5", FieldMotes.Bubbles, 0.50f, 0.12f);
+            E(81777047, "Luminous Spark", "#f2ecd8", "#b8aa8a", "#ffe27a", FieldMotes.Sparks, 0.45f, 0.08f,
+                FieldSignature.Shafts, 0, 1.0f);
+            E(56594520, "Gaia Power", "#24391a", "#8a7f56", "#9bd86a", FieldMotes.Leaves, 0.40f, 0.08f,
+                FieldSignature.GroundCover, 2, 1.0f);
+            E(45778932, "Rising Air Current", "#4c78aa", "#6a98cc", "#9fd4ff", FieldMotes.Wind, 0.60f, 0.08f,
+                FieldSignature.Updraft, 0, 1.0f);
+            E(82999629, "Umiiruka", "#5588d8", "#5a9cc6", "#4cb8f5", FieldMotes.Bubbles, 0.50f, 0.12f,
+                FieldSignature.Waterline, 1, 1.0f);
 
             // ── Named / archetype fields ─────────────────────────────────────
             E(295517, "A Legendary Ocean", "#7a9cb6", "#506a76", "#7cc8ec", FieldMotes.Bubbles, 0.50f, 0.12f);

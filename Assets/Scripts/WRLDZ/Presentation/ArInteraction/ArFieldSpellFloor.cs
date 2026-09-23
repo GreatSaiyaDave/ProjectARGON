@@ -14,6 +14,7 @@ namespace WRLDZ.Presentation.ArInteraction
     /// <item>terrain — art-baked ground under each monster (<see cref="ArFieldTerrainPad"/>)</item>
     /// <item>motes — palette atmosphere in the street volume (<see cref="ArFieldMotes"/>)</item>
     /// <item>wash — a capped tint on arena holos (<see cref="ArAnimePresentation.SetFieldWash"/>)</item>
+    /// <item>signature — the field's set piece (Umi's sea, Sogen's grass) from an <see cref="ArFieldSignature"/> kit</item>
     /// </list>
     /// Midfield stays empty air — no floor carpet, no far backdrop. Disk still
     /// holds the physical card. Newest activation wins; a replaced field wipes
@@ -54,6 +55,8 @@ namespace WRLDZ.Presentation.ArInteraction
         LineRenderer _ring;
         Material _ringMat;
         ArFieldMotes _motes;
+        ArFieldSignature _signature;
+        readonly System.Collections.Generic.List<FieldAnchor> _anchors = new();
 
         Phase _phase;
         float _phaseStart;
@@ -149,6 +152,7 @@ namespace WRLDZ.Presentation.ArInteraction
             }
 
             ReleaseTextures();
+            DestroySignature();
             ArObjectUtil.Destroy(_leftMat);
             ArObjectUtil.Destroy(_rightMat);
             ArObjectUtil.Destroy(_ringMat);
@@ -274,6 +278,7 @@ namespace WRLDZ.Presentation.ArInteraction
                     if (_presence <= 0f)
                     {
                         _shownInstance = 0;
+                        DestroySignature();
                         SetPhase(Phase.Idle, now);
                     }
                     break;
@@ -295,6 +300,8 @@ namespace WRLDZ.Presentation.ArInteraction
             Layout();
             SyncMoteVolume();
             _motes?.SetEnvironment(_env);
+            DestroySignature();
+            _signature = ArFieldSignature.Create(_env, transform, _layer);
             _originLocal = ArPlaymatLayout.FieldSpellArenaLocal(_targetPlayerSide);
             _originLocal.y = GroundLift;
             _sweepMaxR = FarthestCorner(_originLocal);
@@ -351,6 +358,11 @@ namespace WRLDZ.Presentation.ArInteraction
 
             Layout();
             SyncMoteVolume();
+            if (_signature != null)
+            {
+                ArFieldTerrainPad.CollectAnchors(transform, _anchors);
+                _signature.Tick(level, Street(), _anchors, Mathf.Min(Time.unscaledDeltaTime, 0.1f));
+            }
 
             var hasArt = _wallTex != null;
             PaintWall(_leftMr, _leftMat, hasArt ? WallLevel(-1f, now) : 0f);
@@ -419,9 +431,21 @@ namespace WRLDZ.Presentation.ArInteraction
 
         void SyncMoteVolume()
         {
+            var st = Street();
+            _motes?.SetVolume(st.Center, new Vector3(st.Half.x * 0.92f, st.Half.y, st.Half.z * 0.92f));
+        }
+
+        FieldStreet Street()
+        {
             var halfH = StreetHeight * 0.5f * ArPlaymatLayout.LiveHoloScale;
-            _motes?.SetVolume(new Vector3(_centerX, halfH, 0f),
-                new Vector3(_halfW * 0.92f, halfH, _halfZ * 0.92f));
+            return new FieldStreet(new Vector3(_centerX, halfH, 0f), new Vector3(_halfW, halfH, _halfZ),
+                ArPlaymatLayout.LiveHoloScale);
+        }
+
+        void DestroySignature()
+        {
+            if (_signature != null) ArObjectUtil.Destroy(_signature.gameObject);
+            _signature = null;
         }
 
         float FarthestCorner(Vector3 o)

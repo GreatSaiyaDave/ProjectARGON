@@ -29,8 +29,18 @@ MIN_ACCENT_VALUE = 0.6  # motes / aura / sweep ring must read on a bright street
 
 ROW = re.compile(
     r'E\((\d+),\s*"([^"]+)",\s*"(#[0-9a-fA-F]{6})",\s*"(#[0-9a-fA-F]{6})",\s*"(#[0-9a-fA-F]{6})",'
-    r"\s*FieldMotes\.(\w+),\s*([0-9.]+)f,\s*([0-9.]+)f\)"
+    r"\s*FieldMotes\.(\w+),\s*([0-9.]+)f,\s*([0-9.]+)f"
+    r"(?:,\s*FieldSignature\.(\w+),\s*(\d+),\s*([0-9.]+)f)?\)"
 )
+# Kit lint: things a signature kit must never do (see ArFieldSignature contract).
+KIT_FORBIDDEN = {
+    r"\bShader\.Find\b": "use VertexColorMaterial() from the base class",
+    r"\bFindObject": "no Find* calls per frame",
+    r"\bInput\.": "input goes through WrldzInput (and kits take none)",
+    r"\bPhysics\.": "no physics in presentation kits",
+    r"\bTime\.(time|deltaTime)\b": "use the dt passed to Tick / Time.unscaledTime",
+    r"\bnew Material\(": "use VertexColorMaterial() so the kit destroys it",
+}
 # Monster Types / Attributes: the aura must come from engine deltas, not a table here.
 RULE_WORDS = ("Aqua", "Fiend", "Spellcaster", "Warrior", "Machine", "Pyro", "Zombie", "WATER", "DARK")
 
@@ -38,6 +48,12 @@ RULE_WORDS = ("Aqua", "Fiend", "Spellcaster", "Warrior", "Machine", "Pyro", "Zom
 def fail(msg: str) -> None:
     print(f"FAIL: {msg}")
     sys.exit(1)
+
+
+def enum_members(src: str, name: str) -> set[str]:
+    body = re.search(rf"enum {name}\s*\{{([^}}]*)\}}", src).group(1)
+    body = re.sub(r"//[^\n]*", "", body)
+    return {k.strip() for k in body.split(",") if k.strip().isidentifier()}
 
 
 def rgb(hex_: str) -> tuple[float, float, float]:
@@ -50,8 +66,7 @@ def main() -> int:
             fail(f"missing {p.relative_to(ROOT)}")
 
     src = ENV.read_text(encoding="utf-8")
-    kinds = set(re.search(r"enum FieldMotes\s*\{([^}]*)\}", src).group(1).replace(",", " ").split())
-    kinds = {k for k in kinds if k.isidentifier()}
+    kinds = enum_members(src, "FieldMotes")
     rows = ROW.findall(src)
     if not rows:
         fail("no curated rows parsed from FieldSpellEnvironment.cs")
@@ -60,8 +75,10 @@ def main() -> int:
     fields = {c["id"]: c["name"] for c in cards
               if "Spell" in (c.get("type") or "") and "Field" in (c.get("race") or "")}
 
+    sig_kinds = enum_members(src, "FieldSignature")
+    used_kits: dict[str, list[str]] = {}
     seen: set[int] = set()
-    for cid, key, sky, ground, accent, motes, density, wash in rows:
+    for cid, key, sky, ground, accent, motes, density, wash, sig, variant, scale in rows:
         cid = int(cid)
         if cid in seen:
             fail(f"duplicate row {cid} ({key})")
@@ -76,6 +93,14 @@ def main() -> int:
             fail(f"{key}: mote density {density} outside 0..1")
         if not 0.0 <= float(wash) <= MAX_WASH:
             fail(f"{key}: wash {wash} above the {MAX_WASH} legibility cap")
+        if sig:
+            if sig not in sig_kinds or sig == "None":
+                fail(f"{key}: unknown FieldSignature.{sig}")
+            if not 0 <= int(variant) <= 3:
+                fail(f"{key}: signature variant {variant} outside 0..3")
+            if not 0.5 <= float(scale) <= 1.5:
+                fail(f"{key}: signature scale {scale} outside 0.5..1.5")
+            used_kits.setdefault(sig, []).append(key)
         _, _, v = colorsys.rgb_to_hsv(*rgb(accent))
         if v < MIN_ACCENT_VALUE:
             fail(f"{key}: accent {accent} too dark for passthrough (V={v:.2f})")
@@ -103,6 +128,25 @@ def main() -> int:
     if -1 in order or order != sorted(order):
         fail("RefreshBoard must record field deltas after both fields and before monster auras")
 
+    registry = (AR / "ArFieldSignatureKits.cs").read_text(encoding="utf-8")
+    for kind in sorted(sig_kinds - {"None"}):
+        kit = AR / f"ArFieldSig{kind}.cs"
+        if f"FieldSignature.{kind} => typeof(ArFieldSig{kind})" not in registry:
+            fail(f"ArFieldSignatureKits does not map FieldSignature.{kind}")
+        if not kit.is_file():
+            fail(f"missing kit {kit.relative_to(ROOT)}")
+        ksrc = kit.read_text(encoding="utf-8")
+        if kind in used_kits and "STUB" in ksrc:
+            fail(f"ArFieldSig{kind} is still a stub but {', '.join(used_kits[kind])} use it")
+        kcode = re.sub(r"//[^\n]*|/\*.*?\*/", "", ksrc, flags=re.S)
+        for pat, why in KIT_FORBIDDEN.items():
+            m = re.search(pat, kcode)
+            if m:
+                fail(f"ArFieldSig{kind}: '{m.group(0)}' — {why}")
+        for cid, name in fields.items():
+            if re.search(rf"\b{cid}\b", kcode) or f'"{name}"' in kcode:
+                fail(f"ArFieldSig{kind} names {name}; vary looks by Variant/Scale, not by card")
+
     floor = FLOOR.read_text(encoding="utf-8")
     if "FieldSpellEnvironments.Resolve" not in floor:
         fail("ArFieldSpellFloor no longer resolves environments from the table")
@@ -119,6 +163,8 @@ def main() -> int:
     print("Field Spell Solid Vision environments")
     print(f"  curated {len(seen)}/{len(fields)} Field Spells · wash ≤ {MAX_WASH} · accents readable")
     print(f"  fallback (art-derived): {', '.join(uncurated) if uncurated else 'none'}")
+    kit_line = "; ".join(f"{k}: {', '.join(v)}" for k, v in sorted(used_kits.items()))
+    print(f"  signature kits: {kit_line or 'none'}")
     print("  aura reads engine FieldAtkDelta; face-down gate present; RefreshBoard order ok")
     print(f"  illustration inset: {art_note}")
     print("PASS")

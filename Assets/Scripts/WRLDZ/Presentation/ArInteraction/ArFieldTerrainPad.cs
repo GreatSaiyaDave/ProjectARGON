@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using WRLDZ.Duel;
 
@@ -28,6 +29,8 @@ namespace WRLDZ.Presentation.ArInteraction
         static Material _padMat;
         static Material _auraMat;
         static int _padMatVersion = -1;
+
+        static readonly List<ArFieldTerrainPad> Live = new();
 
         static readonly int ColorId = Shader.PropertyToID("_Color");
         static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
@@ -83,6 +86,63 @@ namespace WRLDZ.Presentation.ArInteraction
             return mr;
         }
 
+        void OnEnable() => Live.Add(this);
+        void OnDisable() => Live.Remove(this);
+
+        /// <summary>
+        /// Monsters a signature kit may decorate, in <paramref name="floor"/>-local
+        /// space (see <see cref="FieldAnchor"/>). Skips monsters still flying in.
+        /// </summary>
+        public static void CollectAnchors(Transform floor, List<FieldAnchor> into)
+        {
+            into.Clear();
+            if (floor == null) return;
+            var fs = Mathf.Max(1e-4f, floor.lossyScale.x);
+            foreach (var p in Live)
+            {
+                if (p == null || p._host == null || p._ramp <= 0.001f) continue;
+                var world = p.GroundWorld(out _);
+                var local = floor.InverseTransformPoint(world);
+                local.y = 0f;
+                into.Add(new FieldAnchor
+                {
+                    Position = local,
+                    Presence = p._ramp * ArFieldSpellFloor.PresenceAt(world),
+                    Aura = p.AuraSign(),
+                    PlayerSide = p._host.PlayerSide,
+                    Scale = p._host.transform.lossyScale.x / fs
+                });
+            }
+        }
+
+        /// <summary>
+        /// Street point under the monster whatever pose the card takes (Set =
+        /// pitched, Defense = rolled, attacks lunge), with the street's rotation.
+        /// </summary>
+        Vector3 GroundWorld(out Quaternion rotation)
+        {
+            var plane = _host.transform.parent;
+            if (plane == null)
+            {
+                rotation = transform.rotation;
+                return _host.transform.position;
+            }
+
+            var local = plane.InverseTransformPoint(_host.transform.position);
+            local.y = ArPlaymatLayout.MonsterHoverY + PadLift;
+            rotation = plane.rotation;
+            return plane.TransformPoint(local);
+        }
+
+        /// <summary>+1 boon / −1 bane from the engine's field deltas; 0 when face-down (hidden information).</summary>
+        int AuraSign()
+        {
+            var card = _host != null ? _host.Card : null;
+            if (card == null || !_host.FaceUp) return 0;
+            var delta = card.FieldAtkDelta != 0 ? card.FieldAtkDelta : card.FieldDefDelta;
+            return delta > 0 ? 1 : delta < 0 ? -1 : 0;
+        }
+
         void LateUpdate()
         {
             if (_host == null) return;
@@ -90,15 +150,8 @@ namespace WRLDZ.Presentation.ArInteraction
             var want = ArFieldSpellFloor.IsLive && _host.IsMonster && card != null && !_host.IsSpawning;
             _ramp = Mathf.MoveTowards(_ramp, want ? 1f : 0f, Time.unscaledDeltaTime / RampSeconds);
 
-            // Stay flat on the street whatever pose the card takes (Set = pitched,
-            // Defense = rolled, attacks lunge): ground-locked under the monster.
-            var plane = _host.transform.parent;
-            if (plane != null)
-            {
-                var local = plane.InverseTransformPoint(_host.transform.position);
-                local.y = ArPlaymatLayout.MonsterHoverY + PadLift;
-                transform.SetPositionAndRotation(plane.TransformPoint(local), plane.rotation);
-            }
+            var ground = GroundWorld(out var rot);
+            transform.SetPositionAndRotation(ground, rot);
 
             var vis = _ramp * ArFieldSpellFloor.PresenceAt(transform.position);
             if (vis <= 0.001f)
@@ -114,7 +167,7 @@ namespace WRLDZ.Presentation.ArInteraction
             SetTint(_pad, new Color(1f, 1f, 1f, PadAlpha * vis));
 
             // Hidden information: a face-down monster shows terrain, never an aura.
-            var delta = card.FieldAtkDelta != 0 ? card.FieldAtkDelta : card.FieldDefDelta;
+            var delta = AuraSign();
             if (!_host.FaceUp || delta == 0)
             {
                 if (_aura.enabled) _aura.enabled = false;
