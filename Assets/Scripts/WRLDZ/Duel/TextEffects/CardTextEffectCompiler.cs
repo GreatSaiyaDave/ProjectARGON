@@ -16,7 +16,7 @@ namespace WRLDZ.Duel.TextEffects
     /// </summary>
     public static class CardTextEffectCompiler
     {
-        public const int Version = 50;
+        public const int Version = 73;
 
         static readonly Regex RxDraw = new(
             @"(?:^|[.!?]\s+)Draw (\d+) cards?\.",
@@ -226,6 +226,14 @@ namespace WRLDZ.Duel.TextEffects
         /// <summary>All WATER monsters on the field gain 200 ATK/DEF (slash form — both stats).</summary>
         static readonly Regex RxAllAttrGainAtkDef = new(
             @"All (\w+) monsters(?: on the field)? gain (\d+) ATK/DEF\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Sogen family: All Warrior and Beast-Warrior monsters on the field gain 200 ATK/DEF.
+        /// Whole-sentence only ($): Yami's extra "also … lose" leftover must stay refuse.
+        /// </summary>
+        static readonly Regex RxTwoTypeGainAtkDef = new(
+            @"All (\w+(?:-(?!Type)[A-Za-z]+)*) and (\w+(?:-(?!Type)[A-Za-z]+)*) monsters(?: on the field)? gain (\d+) ATK(?:/DEF| and DEF)?\.?\s*$",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         /// <summary>
@@ -1353,6 +1361,22 @@ namespace WRLDZ.Duel.TextEffects
                 if (clause.Zone == EffectZoneFilter.None)
                     clause.Zone = EffectZoneFilter.FieldAnyMonster;
             }
+            else if (Regex.IsMatch(res,
+                         @"change that target to face-up Defense Position",
+                         RegexOptions.IgnoreCase))
+            {
+                // Toggle is honest only when the target is already Attack Position.
+                var atkPos = clause.Zone == EffectZoneFilter.OppAttackPositionMonsters ||
+                             Regex.IsMatch(act, @"Attack Position", RegexOptions.IgnoreCase);
+                var opp = clause.Zone == EffectZoneFilter.OppAttackPositionMonsters ||
+                          clause.Zone == EffectZoneFilter.OppFaceUpMonsters ||
+                          Regex.IsMatch(act, @"opponent", RegexOptions.IgnoreCase);
+                if (!atkPos || !opp)
+                    return null;
+                clause.Action = EffectActionKind.ChangeBattlePosition;
+                clause.RequiresTargetChoice = true;
+                clause.Zone = EffectZoneFilter.OppAttackPositionMonsters;
+            }
 
             if (clause.Action == EffectActionKind.None)
             {
@@ -1459,6 +1483,15 @@ namespace WRLDZ.Duel.TextEffects
             {
                 clause.RequiresTargetChoice = true;
                 clause.Zone = EffectZoneFilter.ControllerGyTraps;
+                return;
+            }
+
+            if (Regex.IsMatch(act,
+                    @"target 1 (?:face-up )?Attack Position monster your opponent controls",
+                    RegexOptions.IgnoreCase))
+            {
+                clause.RequiresTargetChoice = true;
+                clause.Zone = EffectZoneFilter.OppAttackPositionMonsters;
                 return;
             }
 
@@ -1639,6 +1672,17 @@ namespace WRLDZ.Duel.TextEffects
             {
                 list.Add(StatAuraClause(inc.Groups[1].Value, ParseInt(inc, 2, 0), 0, EffectSide.Both));
                 list.Add(StatAuraClause(inc.Groups[3].Value, -ParseInt(inc, 4, 0), 0, EffectSide.Both));
+                return list;
+            }
+
+            var twoType = RxTwoTypeGainAtkDef.Match(body);
+            if (twoType.Success && twoType.Index == 0)
+            {
+                var n = ParseInt(twoType, 3, 0);
+                var bothStats = twoType.Value.IndexOf("DEF", StringComparison.OrdinalIgnoreCase) >= 0;
+                var defN = bothStats ? n : 0;
+                list.Add(StatAuraClause(twoType.Groups[1].Value, n, defN, EffectSide.Both));
+                list.Add(StatAuraClause(twoType.Groups[2].Value, n, defN, EffectSide.Both));
                 return list;
             }
 

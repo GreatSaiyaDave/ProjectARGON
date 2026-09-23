@@ -116,6 +116,14 @@ namespace WRLDZ.Duel.TextEffects
             @"Increase the DEF of all monsters on your side of the field by (\d+) points\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        /// <summary>
+        /// Chorus of Sanctuary: Increase the DEF of all Defense Position monsters by 500.
+        /// Both sides. Distinct from Yellow Luster Shield (your side, any position).
+        /// </summary>
+        static readonly Regex RxDefDefensePosition = new(
+            @"Increase the DEF of all Defense Position monsters(?: on the field)? by (\d+) points\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         static readonly Regex RxFieldAtkDownDef = new(
             @"Increase the ATK of all (\w+)(?:-Type)? monsters by (\d+) points and decrease[s]? their DEF by (\d+) points\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -447,6 +455,21 @@ namespace WRLDZ.Duel.TextEffects
                 }
                 : null);
 
+            var chorus = RxDefDefensePosition.Match(text);
+            Add(chorus, chorus.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.ContinuousGainAtkDef,
+                    Amount = 0,
+                    DefAmount = Parse(chorus, 1, 500),
+                    Side = EffectSide.Both,
+                    StaysOnField = true,
+                    RequiresThisDefensePosition = true,
+                    MakesChainLink = false
+                }
+                : null);
+
             var field = RxFieldAtkDownDef.Match(text);
             if (field.Success)
             {
@@ -576,6 +599,7 @@ namespace WRLDZ.Duel.TextEffects
                    RxSecondAttack.IsMatch(text) ||
                    RxBookMoon.IsMatch(text) ||
                    RxDefYouControl.IsMatch(text) ||
+                   RxDefDefensePosition.IsMatch(text) ||
                    RxFieldAtkDownDef.IsMatch(text) ||
                    RxAttacksBecomeDirect.IsMatch(text) ||
                    RxWhenYouTakeDamage.IsMatch(text) ||
@@ -621,7 +645,8 @@ namespace WRLDZ.Duel.TextEffects
                 need.Add(EffectActionKind.ExtraAttacks);
             if (RxBookMoon.IsMatch(text))
                 need.Add(EffectActionKind.SetTargetFaceDownDefense);
-            if (RxDefYouControl.IsMatch(text) || RxFieldAtkDownDef.IsMatch(text))
+            if (RxDefYouControl.IsMatch(text) || RxDefDefensePosition.IsMatch(text) ||
+                RxFieldAtkDownDef.IsMatch(text))
                 need.Add(EffectActionKind.ContinuousGainAtkDef);
             if (RxAttacksBecomeDirect.IsMatch(text))
                 need.Add(EffectActionKind.ForceOpponentDirectAttacksThisTurn);

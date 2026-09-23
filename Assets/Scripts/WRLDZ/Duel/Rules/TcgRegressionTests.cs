@@ -2073,6 +2073,168 @@ namespace WRLDZ.Duel.Rules
                             c.Zone == EffectZoneFilter.FieldSpellTraps &&
                             !c.RequiresTargetChoice));
 
+                    var blockAtk = db.Get(25880422);
+                    var blockProg = blockAtk != null ? CardTextEffectCompiler.Compile(blockAtk) : null;
+                    Check("Corpus: Block Attack FullyCompiled opp ATK-pos to Defense",
+                        blockProg != null && blockProg.FullyCompiled &&
+                        blockProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ChangeBattlePosition &&
+                            c.Zone == EffectZoneFilter.OppAttackPositionMonsters &&
+                            c.RequiresTargetChoice),
+                        blockProg == null
+                            ? "null"
+                            : $"full={blockProg.FullyCompiled} n={blockProg.ClauseList.Count} unparsed={string.Join("|", blockProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var synBlock = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000021,
+                        name = "Block Attack (new-card shape)",
+                        type = "Spell Card",
+                        race = "Normal",
+                        desc =
+                            "Target 1 face-up Attack Position monster your opponent controls; change that target to face-up Defense Position."
+                    });
+                    Check("New-card rule: Block Attack-shaped text compiles without a cardId branch",
+                        synBlock != null && synBlock.FullyCompiled &&
+                        synBlock.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ChangeBattlePosition &&
+                            c.Zone == EffectZoneFilter.OppAttackPositionMonsters));
+
+                    var chorus = db.Get(81380218);
+                    var chorusProg = chorus != null ? CardTextEffectCompiler.Compile(chorus) : null;
+                    Check("Corpus: Chorus of Sanctuary FullyCompiled DEF+500 Defense Position both sides",
+                        chorusProg != null && chorusProg.FullyCompiled &&
+                        chorusProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                            c.Amount == 0 && c.DefAmount == 500 &&
+                            c.Side == EffectSide.Both &&
+                            c.RequiresThisDefensePosition),
+                        chorusProg == null
+                            ? "null"
+                            : $"full={chorusProg.FullyCompiled} n={chorusProg.ClauseList.Count} unparsed={string.Join("|", chorusProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var yellow = db.Get(4542651);
+                    var yellowProg = yellow != null ? CardTextEffectCompiler.Compile(yellow) : null;
+                    Check("Corpus: Yellow Luster Shield stays controller DEF aura, not Defense-Position-only",
+                        yellowProg != null && yellowProg.FullyCompiled &&
+                        yellowProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                            c.Side == EffectSide.Controller &&
+                            !c.RequiresThisDefensePosition));
+
+                    var synChorusLeft = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000022,
+                        name = "Chorus leftover (unique sentence)",
+                        type = "Spell Card",
+                        race = "Field",
+                        desc =
+                            "Increase the DEF of all Defense Position monsters by 500 points. Unique leftover clause that is not a known template."
+                    });
+                    Check("New-card leftover: Chorus-shaped text plus unique sentence is not FullyCompiled",
+                        synChorusLeft != null && !synChorusLeft.FullyCompiled &&
+                        synChorusLeft.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ContinuousGainAtkDef));
+
+                    var sogen = db.Get(86318356);
+                    var sogenProg = sogen != null ? CardTextEffectCompiler.Compile(sogen) : null;
+                    Check("Corpus: Sogen FullyCompiled Warrior and Beast-Warrior +200/+200",
+                        sogenProg != null && sogenProg.FullyCompiled &&
+                        sogenProg.ClauseList.Count == 2 &&
+                        sogenProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                            string.Equals(c.RaceFilter, "Warrior", StringComparison.OrdinalIgnoreCase) &&
+                            c.Amount == 200 && c.DefAmount == 200) &&
+                        sogenProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                            string.Equals(c.RaceFilter, "Beast-Warrior", StringComparison.OrdinalIgnoreCase) &&
+                            c.Amount == 200 && c.DefAmount == 200),
+                        sogenProg == null
+                            ? "null"
+                            : $"full={sogenProg.FullyCompiled} n={sogenProg.ClauseList.Count} unparsed={string.Join("|", sogenProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var yami = db.Get(59197169);
+                    var yamiProg = yami != null ? CardTextEffectCompiler.Compile(yami) : null;
+                    Check("Corpus: Yami two-type gain plus Fairy lose stays refuse",
+                        yamiProg == null || !yamiProg.FullyCompiled);
+
+                    var forest = db.Get(87430998);
+                    var forestProg = forest != null ? CardTextEffectCompiler.Compile(forest) : null;
+                    Check("Corpus: Forest comma-list Field aura stays refuse",
+                        forestProg == null || !forestProg.FullyCompiled);
+
+                    var synTwoLeft = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000023,
+                        name = "Two-type leftover (unique sentence)",
+                        type = "Spell Card",
+                        race = "Field",
+                        desc =
+                            "All Warrior and Beast-Warrior monsters on the field gain 200 ATK/DEF. Unique leftover clause that is not a known template."
+                    });
+                    Check("New-card leftover: two-type aura plus unique sentence is not FullyCompiled",
+                        synTwoLeft != null && !synTwoLeft.FullyCompiled &&
+                        synTwoLeft.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                            string.Equals(c.RaceFilter, "Warrior", StringComparison.OrdinalIgnoreCase)));
+
+                    var crane = db.Get(30914564);
+                    var craneProg = crane != null ? CardTextEffectCompiler.Compile(crane) : null;
+                    Check("Corpus: Sacred Crane FullyCompiled SS Draw 1",
+                        craneProg != null && craneProg.FullyCompiled &&
+                        craneProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.ThisCardSummoned &&
+                            c.Action == EffectActionKind.Draw &&
+                            c.Amount == 1 &&
+                            c.RequiresThisSpecialSummoned &&
+                            !c.RequiresThisNormalSummoned &&
+                            !c.RequiresThisFlipSummoned),
+                        craneProg == null
+                            ? "null"
+                            : $"full={craneProg.FullyCompiled} n={craneProg.ClauseList.Count} unparsed={string.Join("|", craneProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var synCrane = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000024,
+                        name = "SS Draw (new-card shape)",
+                        type = "Effect Monster",
+                        desc = "If this card is Special Summoned: Draw 1 card."
+                    });
+                    Check("New-card rule: Sacred Crane-shaped text compiles without a cardId branch",
+                        synCrane != null && synCrane.FullyCompiled &&
+                        synCrane.ClauseList.Exists(c =>
+                            c != null &&
+                            c.RequiresThisSpecialSummoned &&
+                            c.Action == EffectActionKind.Draw));
+
+                    var molten = db.Get(4732017);
+                    var moltenProg = molten != null ? CardTextEffectCompiler.Compile(molten) : null;
+                    Check("Corpus: Molten Zombie SS-from-GY Draw stays refuse",
+                        moltenProg == null || !moltenProg.FullyCompiled);
+
+                    var gift = db.Get(98299011);
+                    var giftProg = gift != null ? CardTextEffectCompiler.Compile(gift) : null;
+                    Check("Corpus: Gift of The Mystical Elf per-monster LP stays refuse",
+                        giftProg == null || !giftProg.FullyCompiled);
+
+                    var manju = db.Get(95492061);
+                    var manjuProg = manju != null ? CardTextEffectCompiler.Compile(manju) : null;
+                    Check("Corpus: Manju of the Ten Thousand Hands stays refuse",
+                        manjuProg == null || !manjuProg.FullyCompiled);
+
+                    var fire = db.Get(46918794);
+                    var fireProg = fire != null ? CardTextEffectCompiler.Compile(fire) : null;
+                    Check("Corpus: Tremendous Fire stays refuse",
+                        fireProg == null || !fireProg.FullyCompiled);
+
                     Check("Vocabulary: Protection is a shared kind",
                         Array.IndexOf(EffectVocabulary.SharedResolutions,
                             EffectResolutionKind.Protection) >= 0);

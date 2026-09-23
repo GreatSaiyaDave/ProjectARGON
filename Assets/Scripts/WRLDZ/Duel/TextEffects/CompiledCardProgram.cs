@@ -439,6 +439,8 @@ namespace WRLDZ.Duel.TextEffects
         public bool RequiresThisFlipSummoned;
         /// <summary>Vampiric Orchis family: "When this card is Normal Summoned" — not FS/SS.</summary>
         public bool RequiresThisNormalSummoned;
+        /// <summary>Sacred Crane family: "If this card is Special Summoned" — not NS/FS.</summary>
+        public bool RequiresThisSpecialSummoned;
         /// <summary>
         /// Ectoplasmer: the turn player tributes (not the card's controller).
         /// Damage goes to that player's opponent.
