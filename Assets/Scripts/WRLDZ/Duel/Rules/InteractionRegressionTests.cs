@@ -760,6 +760,179 @@ namespace WRLDZ.Duel.Rules
                     srProg != null && !srProg.FullyCompiled);
             }
 
+            // ── Fissure / Smashing Ground / Reinforcements / Castle Walls ──
+            {
+                const int fissure = 66788016;
+                const int smash = 97169186;
+                const int reinforcements = 17814387;
+                const int castleWalls = 44209392;
+                const int celtic = 91152256;
+                const int bewd = 89631139;
+
+                var fDef = db.Get(fissure);
+                var fProg = fDef != null ? CardTextEffectCompiler.Compile(fDef) : null;
+                Check("Fissure FullyCompiled destroy lowest ATK",
+                    fProg != null && fProg.FullyCompiled &&
+                    fProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.Destroy &&
+                        c.SelectLowestAtk &&
+                        c.Zone == EffectZoneFilter.OppFaceUpMonsters &&
+                        c.RequiresTargetChoice),
+                    fProg == null
+                        ? "null"
+                        : $"full={fProg.FullyCompiled} unparsed={string.Join("|", fProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var low = PlaceMonster(engine, opp, celtic, 1, BattlePosition.Attack, true);
+                    var high = PlaceMonster(engine, opp, bewd, 3, BattlePosition.Attack, true);
+                    var card = PutInHand(engine, p, fissure);
+                    Check("Fissure: Activate legal with a face-up opponent monster",
+                        engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    Check("Fissure: Activate opens lowest-ATK targets only",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.LegalTargets.Contains(low) &&
+                        !engine.PendingActivation.LegalTargets.Contains(high),
+                        $"awaiting={engine.IsAwaitingEffectTarget} n={engine.PendingActivation?.LegalTargets?.Count ?? 0}");
+                    Check("Fissure: destroy Celtic (lowest ATK), BEWD lives",
+                        engine.TrySelectEffectTarget(low) &&
+                        opp.Graveyard.Contains(low) &&
+                        opp.TryFindMonster(high, out _) &&
+                        p.Graveyard.Contains(card),
+                        $"lowGy={opp.Graveyard.Contains(low)} highField={opp.TryFindMonster(high, out _)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var card = PutInHand(engine, p, fissure);
+                    Check("Fissure: no face-up opponent monster cannot activate",
+                        !engine.CanActivateSpellTrap(p, card, fromHand: true));
+                }
+
+                var sDef = db.Get(smash);
+                var sProg = sDef != null ? CardTextEffectCompiler.Compile(sDef) : null;
+                Check("Smashing Ground FullyCompiled destroy highest DEF",
+                    sProg != null && sProg.FullyCompiled &&
+                    sProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.Destroy &&
+                        c.SelectHighestDef &&
+                        c.Zone == EffectZoneFilter.OppFaceUpMonsters &&
+                        c.RequiresTargetChoice),
+                    sProg == null
+                        ? "null"
+                        : $"full={sProg.FullyCompiled} unparsed={string.Join("|", sProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var lowDef = PlaceMonster(engine, opp, celtic, 1, BattlePosition.Defense, true);
+                    var highDef = PlaceMonster(engine, opp, bewd, 3, BattlePosition.Defense, true);
+                    var card = PutInHand(engine, p, smash);
+                    Check("Smashing Ground: Activate opens highest-DEF targets only",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.LegalTargets.Contains(highDef) &&
+                        !engine.PendingActivation.LegalTargets.Contains(lowDef),
+                        $"awaiting={engine.IsAwaitingEffectTarget} n={engine.PendingActivation?.LegalTargets?.Count ?? 0}");
+                    Check("Smashing Ground: destroy BEWD (highest DEF), Celtic lives",
+                        engine.TrySelectEffectTarget(highDef) &&
+                        opp.Graveyard.Contains(highDef) &&
+                        opp.TryFindMonster(lowDef, out _),
+                        $"highGy={opp.Graveyard.Contains(highDef)} lowField={opp.TryFindMonster(lowDef, out _)}");
+                }
+
+                var rDef = db.Get(reinforcements);
+                var rProg = rDef != null ? CardTextEffectCompiler.Compile(rDef) : null;
+                Check("Reinforcements FullyCompiled target +500 ATK until End Phase",
+                    rProg != null && rProg.FullyCompiled &&
+                    rProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.LoseAtkDefUntilEndOfTurn &&
+                        c.Amount == -500 &&
+                        c.DefAmount == 0 &&
+                        c.RequiresTargetChoice),
+                    rProg == null
+                        ? "null"
+                        : $"full={rProg.FullyCompiled} unparsed={string.Join("|", rProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var host = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var trap = PlaceSetTrap(engine, p, reinforcements, 2);
+                    var atkBefore = host.CurrentAtk;
+                    Check("Reinforcements: Activate legal with a face-up monster",
+                        engine.CanActivateSpellTrap(p, trap, fromHand: false));
+                    Check("Reinforcements: Activate opens a face-up monster target",
+                        engine.TryActivateSpellTrap(p, trap, fromHand: false) &&
+                        engine.IsAwaitingEffectTarget);
+                    Check("Reinforcements: Celtic gains 500 ATK",
+                        engine.TrySelectEffectTarget(host) &&
+                        host.CurrentAtk == atkBefore + 500 &&
+                        p.Graveyard.Contains(trap),
+                        $"atk={host.CurrentAtk} was {atkBefore}");
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    engine.TryEndTurnSafe(engine.TurnPlayer);
+                    Check("Reinforcements: End Phase ends the +500",
+                        host.CurrentAtk == atkBefore,
+                        $"atk={host.CurrentAtk} expected {atkBefore}");
+                }
+
+                var cDef = db.Get(castleWalls);
+                var cProg = cDef != null ? CardTextEffectCompiler.Compile(cDef) : null;
+                Check("Castle Walls FullyCompiled +500 DEF until End Phase",
+                    cProg != null && cProg.FullyCompiled &&
+                    cProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.LoseAtkDefUntilEndOfTurn &&
+                        c.Amount == 0 &&
+                        c.DefAmount == -500 &&
+                        c.RequiresTargetChoice),
+                    cProg == null
+                        ? "null"
+                        : $"full={cProg.FullyCompiled} unparsed={string.Join("|", cProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var host = PlaceMonster(engine, p, celtic, 2, BattlePosition.Defense, true);
+                    var trap = PlaceSetTrap(engine, p, castleWalls, 2);
+                    var defBefore = host.CurrentDef;
+                    Check("Castle Walls: Activate legal with a face-up monster",
+                        engine.CanActivateSpellTrap(p, trap, fromHand: false));
+                    Check("Castle Walls: Activate opens a face-up monster target",
+                        engine.TryActivateSpellTrap(p, trap, fromHand: false) &&
+                        engine.IsAwaitingEffectTarget);
+                    Check("Castle Walls: Celtic gains 500 DEF",
+                        engine.TrySelectEffectTarget(host) &&
+                        host.CurrentDef == defBefore + 500 &&
+                        p.Graveyard.Contains(trap),
+                        $"def={host.CurrentDef} was {defBefore}");
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    engine.TryEndTurnSafe(engine.TurnPlayer);
+                    Check("Castle Walls: End Phase ends the +500 DEF",
+                        host.CurrentDef == defBefore,
+                        $"def={host.CurrentDef} expected {defBefore}");
+                }
+            }
+
             // ── Tribute Summon Dark Magician with 2 face-down Sets ──
             {
                 const int darkMagician = 46986414;
