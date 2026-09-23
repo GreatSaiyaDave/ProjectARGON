@@ -16,7 +16,7 @@ namespace WRLDZ.Duel.TextEffects
     /// </summary>
     public static class CardTextEffectCompiler
     {
-        public const int Version = 50;
+        public const int Version = 71;
 
         static readonly Regex RxDraw = new(
             @"(?:^|[.!?]\s+)Draw (\d+) cards?\.",
@@ -28,6 +28,15 @@ namespace WRLDZ.Duel.TextEffects
 
         static readonly Regex RxDestroyAllMonsters = new(
             @"Destroy all monsters on the field\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Exile of the Wicked family: Destroy all Fiend / FIRE / … monsters on the field.
+        /// Same Destroy + FieldMonsters mass path as Dark Hole; Race/AttributeFilter
+        /// is the existing CollectTargets post-filter (face-up only — FD has no public Type).
+        /// </summary>
+        static readonly Regex RxDestroyAllTypedMonsters = new(
+            @"Destroy all (\w+)(?:-Type)? monsters on the field\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxDestroyAllST = new(
@@ -146,7 +155,7 @@ namespace WRLDZ.Duel.TextEffects
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxEternalRest = new(
-            @"Destroy all monsters equipped with Equip Cards\.?",
+            @"Destroy all monsters equipped with (?:an )?Equip Cards?(?:\(s\))?\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxMirrorForce = new(
@@ -234,6 +243,15 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         static readonly Regex RxIncDecAtk = new(
             @"increase the ATK of all (\w+)(?:-Type)? monsters by (\d+) points and decrease the ATK of all (\w+)(?:-Type)? monsters by (\d+) points\.?\s*$",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Gaia Power / Molten Destruction / Rising Air Current / Luminous Spark:
+        /// All EARTH monsters gain 500 ATK and lose 400 DEF.
+        /// Same ContinuousGainAtkDef atom as Umiiruka (legacy Increase/decrease wording).
+        /// </summary>
+        static readonly Regex RxAllGainAtkLoseDef = new(
+            @"All (\w+)(?:-Type)? monsters(?: on the field)? gain (\d+) ATK and lose (\d+) DEF\.?\s*$",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         /// <summary>
@@ -531,6 +549,21 @@ namespace WRLDZ.Duel.TextEffects
                 Side = EffectSide.Opponent,
                 Zone = EffectZoneFilter.FieldMonsters
             });
+
+            var typedWipe = RxDestroyAllTypedMonsters.Match(text);
+            if (typedWipe.Success &&
+                !string.Equals(typedWipe.Groups[1].Value, "the", StringComparison.OrdinalIgnoreCase))
+            {
+                var wipe = new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.Destroy,
+                    Side = EffectSide.Both,
+                    Zone = EffectZoneFilter.FieldMonsters
+                };
+                FillTypeOrAttribute(wipe, typedWipe.Groups[1].Value);
+                Take(typedWipe, wipe);
+            }
 
             // Dark Hole: all monsters — only if not already matched "opponent controls"
             // or a summon-window Torrential sentence that contains the same fragment.
@@ -1639,6 +1672,14 @@ namespace WRLDZ.Duel.TextEffects
             {
                 list.Add(StatAuraClause(inc.Groups[1].Value, ParseInt(inc, 2, 0), 0, EffectSide.Both));
                 list.Add(StatAuraClause(inc.Groups[3].Value, -ParseInt(inc, 4, 0), 0, EffectSide.Both));
+                return list;
+            }
+
+            var gainLoseDef = RxAllGainAtkLoseDef.Match(body);
+            if (gainLoseDef.Success && gainLoseDef.Index == 0)
+            {
+                list.Add(StatAuraClause(gainLoseDef.Groups[1].Value,
+                    ParseInt(gainLoseDef, 2, 0), -ParseInt(gainLoseDef, 3, 0), EffectSide.Both));
                 return list;
             }
 

@@ -1540,6 +1540,11 @@ namespace WRLDZ.Duel.TextEffects
                 if (m == null) continue;
                 if (c.TributeFaceUpOnly && !m.FaceUp) continue;
                 if (c.TributeExceptThis && m == source) continue;
+                if (c.RequiresNormalMonster)
+                {
+                    if (m.IsToken) continue;
+                    if (m.Def == null || !m.Def.IsNormalMonster) continue;
+                }
                 if (!string.IsNullOrEmpty(c.TributeRaceFilter) &&
                     (m.Def?.race == null ||
                      m.Def.race.IndexOf(c.TributeRaceFilter,
@@ -2226,6 +2231,19 @@ namespace WRLDZ.Duel.TextEffects
                     var mass = CollectAllMatching(engine, who, clause).ToList();
                     if (clause.AmountIsLevel && clause.Amount > 0)
                         mass.RemoveAll(m => m == null || m.Level != clause.Amount);
+                    if (!string.IsNullOrEmpty(clause.RaceFilter) ||
+                        !string.IsNullOrEmpty(clause.AttributeFilter))
+                    {
+                        mass.RemoveAll(m => m == null || !m.FaceUp);
+                        if (!string.IsNullOrEmpty(clause.RaceFilter))
+                            mass.RemoveAll(m => m?.Def?.race == null ||
+                                                m.Def.race.IndexOf(clause.RaceFilter,
+                                                    System.StringComparison.OrdinalIgnoreCase) < 0);
+                        if (!string.IsNullOrEmpty(clause.AttributeFilter))
+                            mass.RemoveAll(m => m?.Def?.attribute == null ||
+                                                !m.Def.attribute.Equals(clause.AttributeFilter,
+                                                    System.StringComparison.OrdinalIgnoreCase));
+                    }
                     foreach (var m in mass)
                         Destroy(m);
                     if (mass.Count > 0)
