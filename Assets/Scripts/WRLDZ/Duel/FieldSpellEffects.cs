@@ -85,6 +85,7 @@ namespace WRLDZ.Duel
             c.AtkModifier = 0;
             c.DefModifier = 0;
             c.LevelModifier = 0;
+            c.PositionLockedByEffect = false;
         }
 
         static void ApplyFaceUpField(DuelEngine engine, CardInstance field)
@@ -137,6 +138,8 @@ namespace WRLDZ.Duel
             {
                 var ep = eq?.Def != null ? CompiledEffectCache.GetOrCompile(eq.Def) : null;
                 if (ep == null) continue;
+                // Germ Infection / Stim-Pack: ATK lost per Standby Phase counted on the Equip.
+                host.AtkModifier -= TextEffectRuntime.EquipStandbyDecay(eq);
                 foreach (var c in ep.ClauseList)
                 {
                     if (c != null && (c.EquipAtkBonus != 0 || c.EquipDefBonus != 0))
@@ -189,9 +192,71 @@ namespace WRLDZ.Duel
                         applyToHand: clause.ApplyToHand, applyToField: clause.ApplyToField || !clause.ApplyToHand);
                     any = true;
                 }
+                else if (clause.Action == EffectActionKind.ContinuousForceDefenseLockPosition)
+                {
+                    ApplyPositionLock(engine, clause);
+                    any = true;
+                }
+                else if (clause.Action == EffectActionKind.GainSelfAtkPerCount)
+                {
+                    ApplySelfScale(engine, field, clause);
+                    any = true;
+                }
             }
 
             return any;
+        }
+
+        /// <summary>
+        /// Dragon Capture Jar: every face-up matching monster on the field is in Defense
+        /// Position and cannot change its battle position while the lock is face-up.
+        /// Continuous — monsters flipped or Summoned later are changed too.
+        /// </summary>
+        static void ApplyPositionLock(DuelEngine engine, EffectClause clause)
+        {
+            foreach (var who in new[] { engine.Player, engine.Opponent })
+            {
+                if (who == null) continue;
+                foreach (var m in who.MonstersOnField())
+                {
+                    if (!IsFaceUpMonster(m)) continue;
+                    if (!MatchesAttribute(m, clause.AttributeFilter)) continue;
+                    if (!MatchesRace(m, clause.RaceFilter)) continue;
+                    m.Position = BattlePosition.Defense;
+                    m.PositionLockedByEffect = true;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Battleguards / Shadow Ghoul / Muka Muka: this face-up monster gains Amount ATK
+        /// (DefAmount DEF) per counted thing, recomputed on every board refresh.
+        /// </summary>
+        static void ApplySelfScale(DuelEngine engine, CardInstance self, EffectClause clause)
+        {
+            if (!IsFaceUpMonster(self)) return;
+            var who = engine.ControllerOf(self);
+            if (who == null) return;
+            var n = 0;
+            switch (clause.CountSource)
+            {
+                case "NamedYouControl":
+                    foreach (var m in who.MonstersOnField())
+                        if (m != null && m.FaceUp && m.IsNamed(clause.NamedCard)) n++;
+                    foreach (var st in who.SpellTrapsOnField())
+                        if (st != null && st.FaceUp && st.IsNamed(clause.NamedCard)) n++;
+                    break;
+                case "MonstersInYourGy":
+                    foreach (var g in who.Graveyard)
+                        if (g?.Def != null && g.Def.IsMonster) n++;
+                    break;
+                case "CardsInYourHand":
+                    n = who.Hand?.Count ?? 0;
+                    break;
+            }
+
+            self.AtkModifier += clause.Amount * n;
+            self.DefModifier += clause.DefAmount * n;
         }
 
         /// <summary>
@@ -207,13 +272,22 @@ namespace WRLDZ.Duel
             ApplyLevelMod(engine, "WATER", -1, applyToHand: true, applyToField: true);
         }
 
+        static bool HasCompiledDamageStepBoost(CardInstance m)
+        {
+            var prog = CompiledEffectCache.GetOrCompile(m.Def);
+            return prog != null && prog.FullyCompiled &&
+                   prog.ClauseList.Exists(c => c != null && c.Action == EffectActionKind.GainAtkWhenAttackingMatching);
+        }
+
         static void ApplyFaceUpMonsterAuras(DuelEngine engine, DuelistState who)
         {
             if (who == null) return;
             foreach (var m in who.MonstersOnField())
             {
                 if (m?.Def == null || !m.FaceUp || m.IsNegated) continue;
-                if (ApplyCatalogAuras(engine, m, "MZONE")) continue;
+                // The Lua-extracted catalog drops Damage-Step conditions (Insect Soldiers of
+                // the Sky became a permanent +1000). Official text wins for those cards.
+                if (!HasCompiledDamageStepBoost(m) && ApplyCatalogAuras(engine, m, "MZONE")) continue;
                 ApplySpellCounterAtk(engine, m);
                 ApplyEquipStats(engine, m);
                 if (ApplyCompiledContinuous(engine, m)) continue;
@@ -392,11 +466,11 @@ namespace WRLDZ.Duel
                    c.Def.attribute.Equals(attribute, StringComparison.OrdinalIgnoreCase);
         }
 
+        /// <summary>Exact Type match; the filter may list several Types ("Fish,Aqua").</summary>
         static bool MatchesRace(CardInstance c, string race)
         {
             if (string.IsNullOrEmpty(race) || c?.Def == null) return true;
-            return c.Def.race != null &&
-                   c.Def.race.IndexOf(race, StringComparison.OrdinalIgnoreCase) >= 0;
+            return ClassicEraTemplates.RaceMatches(c.Def.race, race);
         }
 
         public static bool ControlsFaceUpNamed(DuelistState who, string name)

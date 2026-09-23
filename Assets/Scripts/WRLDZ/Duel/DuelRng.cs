@@ -12,6 +12,7 @@ namespace WRLDZ.Duel
     {
         readonly Queue<bool> _coins = new();
         readonly Queue<int> _dice = new();
+        readonly Queue<int> _picks = new();
         readonly Random _live = new();
 
         /// <summary>
@@ -36,10 +37,30 @@ namespace WRLDZ.Duel
             _dice.Enqueue(n);
         }
 
+        /// <summary>Queue the index the next <see cref="PickIndex"/> returns (tests).</summary>
+        public void QueuePick(int index) => _picks.Enqueue(index < 0 ? 0 : index);
+
         public void ClearQueues()
         {
             _coins.Clear();
             _dice.Clear();
+            _picks.Clear();
+        }
+
+        /// <summary>
+        /// Uniform random index in [0, count) — random discards (White Magical Hat /
+        /// Robbin' Goblin). Queued picks are clamped into range. Returns -1 if count ≤ 0.
+        /// </summary>
+        public int PickIndex(int count)
+        {
+            if (count <= 0) return -1;
+            if (_picks.Count > 0)
+            {
+                var q = _picks.Dequeue();
+                return q >= count ? count - 1 : q;
+            }
+
+            return _live.Next(0, count);
         }
 
         public bool TossCoin()

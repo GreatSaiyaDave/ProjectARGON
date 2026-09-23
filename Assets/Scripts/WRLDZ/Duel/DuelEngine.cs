@@ -720,6 +720,8 @@ namespace WRLDZ.Duel
             // Official Flip effects (Man-Eater Bug, Magician of Faith, Cyber Jar, …)
             MonsterEffects.OnFlipSummoned(this, who, monster);
             TextEffects.TextEffectRuntime.TryResolveThisCardSummoned(this, who, monster, flipSummon: true);
+            // Face-down Defense → face-up Attack is a Defense → Attack change (Crass Clown).
+            TextEffects.TextEffectRuntime.NotifyPositionChanged(this, monster, toDefense: false);
             // If Flip opened a target window, do not open summon-response yet
             if (PendingActivation == null)
             {
@@ -743,6 +745,7 @@ namespace WRLDZ.Duel
             if (monster.SetThisTurn) return false; // includes flipped face-up by effects same turn as Set
             if (monster.AttackedThisTurn) return false;
             if (monster.ChangedPositionThisTurn) return false;
+            if (monster.PositionLockedByEffect) return false; // Dragon Capture Jar
             return true;
         }
 
@@ -756,6 +759,9 @@ namespace WRLDZ.Duel
             Log(who.IsPlayer
                 ? $"{monster.Name} → {monster.Position} Position"
                 : $"Opponent changes {monster.Name} to {monster.Position}.");
+            // Dream Clown / Crass Clown / Tainted Wisdom
+            TextEffects.TextEffectRuntime.NotifyPositionChanged(this, monster,
+                toDefense: monster.Position == BattlePosition.Defense);
             Notify();
             return true;
         }
@@ -1062,8 +1068,9 @@ namespace WRLDZ.Duel
             owner.Hand?.Remove(card);
             owner.Graveyard?.Remove(card);
             card.FaceUp = true;
-            if (!owner.Banished.Contains(card))
-                owner.Banished.Add(card);
+            var pile = PileOwner(owner, card);
+            if (!pile.Banished.Contains(card))
+                pile.Banished.Add(card);
             Log($"{card.Name} is banished.");
         }
 
@@ -1152,8 +1159,52 @@ namespace WRLDZ.Duel
             if (dest < 0) return false;
             DetachFromField(old, card);
             newController.MonsterZones[dest].Occupant = card;
+            // Remember the owner while someone else controls the card; clear on return.
+            if (card.ControlOwner == null)
+                card.ControlOwner = old;
+            else if (card.ControlOwner == newController)
+            {
+                card.ControlOwner = null;
+                card.ReturnControlAtEndOfTurn = -1;
+            }
             Log($"{newController.Name} takes control of {card.Name}.");
             return true;
+        }
+
+        /// <summary>
+        /// The pile a card leaving the field goes to: its owner's if control changed,
+        /// else the current controller's. Clears the control bookkeeping.
+        /// </summary>
+        DuelistState PileOwner(DuelistState controller, CardInstance card)
+        {
+            if (card == null) return controller;
+            var owner = card.ControlOwner;
+            card.ControlOwner = null;
+            card.ReturnControlAtEndOfTurn = -1;
+            return owner ?? controller;
+        }
+
+        /// <summary>
+        /// Lose LP by a card effect (not damage: no damage windows / reflection), then
+        /// check for a loss. The Immortal of Thunder / Jirai Gumo family.
+        /// </summary>
+        public void LoseLifePoints(DuelistState who, int amount, string sourceName = null)
+        {
+            if (who == null || amount <= 0) return;
+            who.LifePoints = Mathf.Max(0, who.LifePoints - amount);
+            var src = string.IsNullOrEmpty(sourceName) ? "effect" : sourceName;
+            Log($"{who.Name} loses {amount} LP ({src}) → {who.LifePoints} LP.");
+            if (!IsAwaitingResponse)
+                CheckLpWin(Player, Opponent);
+        }
+
+        /// <summary>A card effect ends the Duel (Exodia). Null winner = draw.</summary>
+        public void EndGameByCardEffect(DuelistState winner, string reason)
+        {
+            if (GameOver) return;
+            if (!string.IsNullOrEmpty(reason))
+                Log(winner == null ? $"★ {reason}" : $"★ {winner.Name} wins: {reason}.");
+            EndGame(winner);
         }
 
         public CardInstance CreateToken(string name, string race, string attribute, int level,
@@ -1226,8 +1277,9 @@ namespace WRLDZ.Duel
             }
 
             owner.Hand.Remove(card);
-            if (!owner.Graveyard.Contains(card))
-                owner.Graveyard.Add(card);
+            var pile = PileOwner(owner, card);
+            if (!pile.Graveyard.Contains(card))
+                pile.Graveyard.Add(card);
             PendingTributes.Remove(card);
 
             if (card.EquippedTo != null)
@@ -1322,6 +1374,7 @@ namespace WRLDZ.Duel
             card.SentByContinuousSpellEffect = false;
             card.SentFromFieldTurnNumber = 0;
 
+            owner = PileOwner(owner, card);
             if (card.Def != null && card.Def.IsExtraDeck)
             {
                 owner.ExtraDeck.Add(card.CardId);
@@ -1488,6 +1541,13 @@ namespace WRLDZ.Duel
                 return false;
             if (ContinuousCannotAttackBlocks(who, attacker))
                 return false;
+            // Paralyzing Potion / Electric Lizard lock
+            if (TextEffects.TextEffectRuntime.AttackForbiddenByEffect(this, attacker))
+                return false;
+            // Dark Elf: the LP cost must be payable
+            var lpCost = TextEffects.TextEffectRuntime.AttackLpCost(attacker);
+            if (lpCost > 0 && who.LifePoints < lpCost)
+                return false;
             return true;
         }
 
@@ -1516,9 +1576,7 @@ namespace WRLDZ.Duel
                         if (c.Side == TextEffects.EffectSide.Controller && side != attackerController)
                             continue;
                         if (!string.IsNullOrEmpty(c.RaceFilter) &&
-                            (attacker.Def.race == null ||
-                             attacker.Def.race.IndexOf(c.RaceFilter,
-                                 System.StringComparison.OrdinalIgnoreCase) < 0))
+                            !TextEffects.ClassicEraTemplates.RaceMatches(attacker.Def.race, c.RaceFilter))
                             continue;
                         if (c.AmountIsLevel)
                         {
@@ -1673,6 +1731,20 @@ namespace WRLDZ.Duel
                 return false;
             }
 
+            // Ring of Magnetism: only the equipped monster may be attacked.
+            var forced = TextEffects.TextEffectRuntime.ForcedAttackTargets(opp);
+            if (forced.Count > 0 && (targetOrNull == null || !forced.Contains(targetOrNull)))
+            {
+                Log($"You can only attack {forced[0].Name} (Ring of Magnetism).");
+                return false;
+            }
+
+            // Dark Elf: pay the LP cost to attack.
+            var attackCost = TextEffects.TextEffectRuntime.AttackLpCost(attacker);
+            if (attackCost > 0)
+                PayLifePointCost(who, attackCost, $"{attacker.Name} attack cost");
+            if (GameOver) return false;
+
             // —— Attack declaration + combat animation starts immediately ——
             DeclaredAttacker = attacker;
             DeclaredAttackTarget = targetOrNull;
@@ -1697,6 +1769,9 @@ namespace WRLDZ.Duel
                 ? "directly"
                 : (targetOrNull.FaceUp ? targetOrNull.Name : "a face-down monster");
             Log($"{attacker.Name} attacks {tName}.");
+            // "When this card declares an attack:" (Jirai Gumo)
+            TextEffects.TextEffectRuntime.FireAttackDeclared(this, who, attacker);
+            if (GameOver) return true;
 
             // Defender may fire Fast Effects / traps while the attack anim plays
             if (OpenResponseWindow(opp, ResponseTiming.AttackDeclared, attacker, targetOrNull, who, null, null,
@@ -2072,6 +2147,13 @@ namespace WRLDZ.Duel
             if (opp.PreventBattleDamageThisBattle)
                 Log($"[Damage Calculation] {opp.Name}: no battle damage from that battle (Kuriboh / effect).");
 
+            // Insect Soldiers of the Sky: ATK gain during the Damage Step only.
+            attacker.DamageStepAtkBonus = TextEffects.TextEffectRuntime.DamageStepAtkBonus(attacker, targetOrNull);
+            if (attacker.DamageStepAtkBonus > 0)
+                Log($"{attacker.Name} gains {attacker.DamageStepAtkBonus} ATK during this Damage Step.");
+            if (targetOrNull != null)
+                TextEffects.TextEffectRuntime.NotifyAttackedBy(this, targetOrNull, attacker);
+
             var calc = BattleMechanics.Calculate(attacker, targetOrNull, piercing, atkNoDes, defNoDes,
                 noDmgAtk, noDmgDef);
             // Pass prevention flags so ATK < DEF still deals (DEF−ATK) to the attacker
@@ -2079,14 +2161,22 @@ namespace WRLDZ.Duel
             BattleMechanics.Sanitize(ref calc, attacker, targetOrNull, noDmgAtk, noDmgDef);
             Log(calc.LogLine);
             if (attacker != null) attacker.AtkBecomesZeroThisCalculation = false;
+            if (attacker != null) attacker.DamageStepAtkBonus = 0;
             if (targetOrNull != null) targetOrNull.AtkBecomesZeroThisCalculation = false;
 
             DamageSubStep = DamageSubStep.AfterDamageCalculation;
             // Apply LP damage before destruction so UI/orbs update even if destroy is deferred
             if (calc.DamageToDefendingPlayer > 0)
+            {
                 ApplyDamage(opp, calc.DamageToDefendingPlayer);
+                TextEffects.TextEffectRuntime.NotifyBattleDamageInflicted(this, who, attacker, opp);
+            }
             if (calc.DamageToAttackingPlayer > 0)
+            {
                 ApplyDamage(who, calc.DamageToAttackingPlayer);
+                if (targetOrNull != null)
+                    TextEffects.TextEffectRuntime.NotifyBattleDamageInflicted(this, opp, targetOrNull, who);
+            }
             else if (targetOrNull != null &&
                      BattleMechanics.UsesDefenseStat(targetOrNull) &&
                      BattleMechanics.AttackValue(attacker) < BattleMechanics.DefenseValue(targetOrNull) &&
@@ -2102,6 +2192,7 @@ namespace WRLDZ.Duel
                         $"(ATK {BattleMechanics.AttackValue(attacker)} < DEF {BattleMechanics.DefenseValue(targetOrNull)}).");
                     calc.DamageToAttackingPlayer = gap;
                     ApplyDamage(who, gap);
+                    TextEffects.TextEffectRuntime.NotifyBattleDamageInflicted(this, opp, targetOrNull, who);
                 }
             }
 
@@ -2596,6 +2687,24 @@ namespace WRLDZ.Duel
                 }
             }
 
+            // Temporary control (Change of Heart) returns during the End Phase. With no
+            // free Monster Zone on the owner's side, the monster is sent to the GY.
+            foreach (var side in new[] { Player, Opponent })
+            {
+                if (side == null) continue;
+                foreach (var m in side.MonstersOnField().ToList())
+                {
+                    if (m == null || m.ReturnControlAtEndOfTurn != TurnNumber || m.ControlOwner == null)
+                        continue;
+                    var back = m.ControlOwner;
+                    if (!TryTakeControl(back, m))
+                    {
+                        Log($"{m.Name}: no Monster Zone to return to — sent to the GY.");
+                        SendCardToGrave(side, m);
+                    }
+                }
+            }
+
             // Temporary Special Summons (Archfiend's Roar) are destroyed during the End
             // Phase of the turn they were summoned.
             foreach (var side in new[] { Player, Opponent })
@@ -2683,14 +2792,16 @@ namespace WRLDZ.Duel
                 else if (banishIfDestroyed)
                 {
                     card.FaceUp = true;
-                    if (!owner.Banished.Contains(card))
-                        owner.Banished.Add(card);
+                    var banPile = PileOwner(owner, card);
+                    if (!banPile.Banished.Contains(card))
+                        banPile.Banished.Add(card);
                     Log($"Destroyed: {card.Name} (banished).");
                 }
                 else
                 {
-                    if (!owner.Graveyard.Contains(card))
-                        owner.Graveyard.Add(card);
+                    var gyPile = PileOwner(owner, card);
+                    if (!gyPile.Graveyard.Contains(card))
+                        gyPile.Graveyard.Add(card);
                     Log($"Destroyed: {card.Name}");
                     MarkSentFromFieldToGy(card, byEffect, destroyedByBattle, battleDestroyer);
                     MonsterEffects.OnSentFromFieldToGy(this, owner, card, destroyed: true,
@@ -2813,9 +2924,11 @@ namespace WRLDZ.Duel
             Winner = winner;
             Phase = DuelPhase.GameOver;
             var youWin = winner != null && winner.IsPlayer;
-            Log(youWin
-                ? "★ YOU WIN — opponent’s LP is 0 or they could not draw."
-                : "★ YOU LOSE — your LP is 0 or you could not draw.");
+            Log(winner == null
+                ? "★ DRAW — both players met a win condition at the same time."
+                : youWin
+                    ? "★ YOU WIN — opponent’s LP is 0 or they could not draw."
+                    : "★ YOU LOSE — your LP is 0 or you could not draw.");
             OnGameOver?.Invoke();
             Notify();
         }
@@ -2841,7 +2954,12 @@ namespace WRLDZ.Duel
         void Notify()
         {
             if (!Ocg.OcgLabDuelHost.IsActive)
+            {
                 FieldSpellEffects.RefreshBoard(this);
+                // Exodia family: a hand win condition is checked whenever the state changes.
+                if (!GameOver && TextEffects.TextEffectRuntime.CheckHandWinConditions(this))
+                    return; // EndGame already notified.
+            }
             LastRulesSnapshot = GameStateSnapshotBuilder.Capture(this);
             OnStateChanged?.Invoke();
         }
@@ -2855,7 +2973,7 @@ namespace WRLDZ.Duel
                 return "Loading duel…";
 
             if (GameOver)
-                return Winner != null && Winner.IsPlayer ? "YOU WIN" : "YOU LOSE";
+                return Winner == null ? "DRAW" : Winner.IsPlayer ? "YOU WIN" : "YOU LOSE";
 
             var whose = TurnPlayer != null && TurnPlayer.IsPlayer ? "YOUR TURN" : "OPP TURN";
             var battleLock = TurnNumber == 1 && TurnPlayer == FirstPlayer ? " · NO BATTLE" : "";

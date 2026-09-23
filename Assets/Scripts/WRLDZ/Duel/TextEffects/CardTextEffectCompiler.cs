@@ -16,7 +16,7 @@ namespace WRLDZ.Duel.TextEffects
     /// </summary>
     public static class CardTextEffectCompiler
     {
-        public const int Version = 50;
+        public const int Version = 52;
 
         static readonly Regex RxDraw = new(
             @"(?:^|[.!?]\s+)Draw (\d+) cards?\.",
@@ -397,6 +397,11 @@ namespace WRLDZ.Duel.TextEffects
         static readonly Regex RxSendNamedDestroyExceptThis = new(
             @"(?:You can )?send 1 face-up ""([^""]+)"" you control to the (?:GY|Graveyard);\s*" +
             @"destroy all cards on the field except this card\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>Element monsters: conditional bullet effects keyed on Attributes on the field.</summary>
+        static readonly Regex RxConditionalAttributeBullets = new(
+            @"(?:gets|gains) the following effect\(s\) while there (?:is|are) (?:a )?monster\(s\) with the following Attribute\(s\) on the field",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         /// <summary>Compile official text into a program (does not touch cache).</summary>
@@ -1003,6 +1008,7 @@ namespace WRLDZ.Duel.TextEffects
 
             ArchfiendTemplates.Collect(text, def, clauses, matchedSpans);
             ProtectionTemplates.Collect(text, def, clauses, matchedSpans);
+            ClassicEraTemplates.Collect(text, def, clauses, matchedSpans);
             LegacyTextTemplates.Collect(text, def, clauses, matchedSpans);
             AdvancedEffectTemplates.Collect(text, def, clauses, matchedSpans);
             PhaseTriggerTemplates.Collect(text, def, clauses, matchedSpans);
@@ -1049,6 +1055,18 @@ namespace WRLDZ.Duel.TextEffects
                 // Ignore hard-once-per-turn / you can only activate 1 boilerplate
                 if (IsBoilerplate(frag)) continue;
                 unparsed.Add(frag.Trim());
+            }
+
+            // Fail closed: "This monster gets the following effect(s) while there is a
+            // monster(s) with the following Attribute(s) on the field: ● FIRE: …" is a set of
+            // conditional continuous effects (Element monsters). The bullet lines would
+            // otherwise compile as unconditional ignitions — refuse the whole card instead.
+            var conditionalBullets = RxConditionalAttributeBullets.Match(text);
+            if (conditionalBullets.Success)
+            {
+                clauses.Clear();
+                unparsed.Clear();
+                unparsed.Add(text.Trim());
             }
 
             prog.SetClauses(clauses);

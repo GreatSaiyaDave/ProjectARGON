@@ -98,7 +98,9 @@ namespace WRLDZ.Duel.TextEffects
             action == EffectActionKind.CoinCallDoubleOrHalveAtk ||
             action == EffectActionKind.RollDieZorc ||
             action == EffectActionKind.ApplyWabokuStyle ||
-            action == EffectActionKind.SkipOpponentNextDrawPhase;
+            action == EffectActionKind.SkipOpponentNextDrawPhase ||
+            // Exodia: the only hand win condition in the pool (a named rule, not a shared kind).
+            action == EffectActionKind.WinDuelWithNamedSetInHand;
 
         public static EffectCostKind CostOf(EffectClause c)
         {
@@ -212,8 +214,18 @@ namespace WRLDZ.Duel.TextEffects
                 // Mandatory upkeep: a life-point decrease with no other resolution.
                 EffectActionKind.StandbyMaintenancePayLp =>
                     EffectResolutionKind.Damage,
-                EffectActionKind.SetTargetFaceDownDefense =>
+                EffectActionKind.SetTargetFaceDownDefense or
+                    EffectActionKind.ChangeToFaceUpAttack or
+                    EffectActionKind.ChangeToFaceUpDefense or
+                    EffectActionKind.ChangeAllToAttackPosition or
+                    EffectActionKind.ContinuousForceDefenseLockPosition =>
                     EffectResolutionKind.ChangePosition,
+                EffectActionKind.TakeControlUntilEndPhase => EffectResolutionKind.TakeControl,
+                EffectActionKind.LoseLifePoints => EffectResolutionKind.Damage,
+                EffectActionKind.GainSelfAtkPerCount => EffectResolutionKind.ModifyStats,
+                // Random discard is a hand → GY send (Destroy family of removals).
+                EffectActionKind.DiscardRandomFromHand => EffectResolutionKind.Destroy,
+                EffectActionKind.EndBattlePhase => EffectResolutionKind.NegateAttack,
                 EffectActionKind.None => EffectResolutionKind.None,
                 _ => EffectResolutionKind.UniqueException
             };

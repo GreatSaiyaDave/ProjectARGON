@@ -33,7 +33,25 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         YouTakeLifePointDamage,
         /// <summary>This card destroyed an opponent's monster by battle (Fenrir skip-draw).</summary>
-        ThisCardDestroysByBattle
+        ThisCardDestroysByBattle,
+        /// <summary>
+        /// This card inflicted battle damage to the opponent (Masked Sorcerer / Bistro Butcher /
+        /// White Magical Hat).
+        /// </summary>
+        ThisCardInflictsBattleDamage,
+        /// <summary>
+        /// A monster the controller controls inflicted battle damage to the opponent
+        /// (Robbin' Goblin — continuous Trap "each time").
+        /// </summary>
+        YourMonsterInflictsBattleDamage,
+        /// <summary>This card declared an attack (Jirai Gumo).</summary>
+        ThisCardDeclaresAttack,
+        /// <summary>
+        /// This card's battle position changed. <see cref="EffectClause.PositionChangeToDefense"/>
+        /// true = Attack → face-up Defense (Dream Clown / Tainted Wisdom); false = Defense →
+        /// Attack, including a Flip Summon (Crass Clown).
+        /// </summary>
+        ThisCardPositionChanged
     }
 
     public enum EffectActionKind
@@ -215,7 +233,72 @@ namespace WRLDZ.Duel.TextEffects
         /// <see cref="EffectClause.DieNegateFacesMask"/> negate the effect and destroy the
         /// opponent's card. The classic Archfiend die-roll protection.
         /// </summary>
-        DieRollNegateWhenTargeted
+        DieRollNegateWhenTargeted,
+        /// <summary>
+        /// Exodia: win the Duel while every name in NamedCard ("A|B|C|D", split on '|')
+        /// is in the controller's hand together with this card.
+        /// </summary>
+        WinDuelWithNamedSetInHand,
+        /// <summary>
+        /// While face-up: face-up RaceFilter monsters on the field are in Defense Position and
+        /// cannot change their battle positions (Dragon Capture Jar).
+        /// </summary>
+        ContinuousForceDefenseLockPosition,
+        /// <summary>Change the target to face-up Attack Position (Stop Defense). Flips a Set target.</summary>
+        ChangeToFaceUpAttack,
+        /// <summary>Change the target to face-up Defense Position (Block Attack).</summary>
+        ChangeToFaceUpDefense,
+        /// <summary>Take control of the target until the End Phase (Change of Heart).</summary>
+        TakeControlUntilEndPhase,
+        /// <summary>
+        /// The controller loses Amount LP (not damage — no damage windows / reflection).
+        /// <see cref="EffectClause.HalveLifePoints"/> loses half instead (Jirai Gumo family).
+        /// </summary>
+        LoseLifePoints,
+        /// <summary>
+        /// While face-up: this card gains Amount ATK (and DefAmount DEF) for each counted
+        /// thing named by <see cref="EffectClause.CountSource"/> (Battleguards / Shadow Ghoul /
+        /// Muka Muka).
+        /// </summary>
+        GainSelfAtkPerCount,
+        /// <summary>Side discards Amount random card(s) from their hand (White Magical Hat).</summary>
+        DiscardRandomFromHand,
+        /// <summary>
+        /// Change all face-up RaceFilter monsters on the field to Attack Position; with
+        /// <see cref="EffectClause.RequiresPreviousClauseHit"/>, only if the previous clause
+        /// destroyed at least one card (Dragon Piper).
+        /// </summary>
+        ChangeAllToAttackPosition,
+        /// <summary>While face-up: this card must pay Amount LP to declare an attack (Dark Elf).</summary>
+        AttackCostLp,
+        /// <summary>While face-up: this card gains Amount ATK during the Damage Step when it attacks a
+        /// monster matching AttributeFilter / RaceFilter (Insect Soldiers of the Sky).</summary>
+        GainAtkWhenAttackingMatching,
+        /// <summary>Toss a coin and call it; on a wrong call the controller loses half their LP (Jirai Gumo).</summary>
+        CoinCallWrongLoseHalfLp,
+        /// <summary>
+        /// While face-up: a monster (not ExceptRaceFilter) that attacks this card cannot attack
+        /// during its controller's next turn (Electric Lizard).
+        /// </summary>
+        AttackerCannotAttackNextTurn,
+        /// <summary>Switch the original ATK and DEF of all face-up monsters until the end of this turn (Shield &amp; Sword).</summary>
+        SwapOriginalAtkDefUntilEndOfTurn,
+        /// <summary>Send the chosen cards from the hand to the GY — a discard, not a cost (The Cheerful Coffin).</summary>
+        DiscardChosenFromHand,
+        /// <summary>Shuffle the controller's Deck (Tainted Wisdom).</summary>
+        ShuffleDeck,
+        /// <summary>
+        /// Equip rider: the equipped monster loses Amount ATK for each Standby Phase this Equip
+        /// has seen (counted on the Equip). <see cref="EffectClause.DecayOnEquippedControllersStandby"/>
+        /// picks whose Standby counts (Germ Infection) vs the Equip controller's (Stim-Pack).
+        /// </summary>
+        EquipAtkDecayPerStandby,
+        /// <summary>Equip rider: the equipped monster cannot attack (Paralyzing Potion).</summary>
+        EquippedCannotAttack,
+        /// <summary>
+        /// Equip rider: the opponent's monsters can only attack the equipped monster (Ring of Magnetism).
+        /// </summary>
+        EquippedMustBeAttackTarget
     }
 
     public enum EffectSide
@@ -267,7 +350,17 @@ namespace WRLDZ.Duel.TextEffects
         /// <summary>Face-up Field Spell Zones on either field (Burning Land).</summary>
         FieldSpellsOnField,
         /// <summary>Equip Spells in the controller's Deck (Iron Blacksmith Kotetsu).</summary>
-        DeckEquipSpells
+        DeckEquipSpells,
+        /// <summary>Monsters in the opponent's GY (Gravedigger Ghoul).</summary>
+        OppGyMonsters,
+        /// <summary>Any card in either GY (Soul Release).</summary>
+        AnyGyCards,
+        /// <summary>Monsters the controller controls, face-up or face-down (Two-Pronged Attack).</summary>
+        ControllerAnyMonsters,
+        /// <summary>Monsters the opponent controls, face-up or face-down (Change of Heart).</summary>
+        OppAnyMonsters,
+        /// <summary>Face-up Spell/Trap Cards on either field with the printed name NamedCard (Dragon Piper).</summary>
+        FaceUpNamedSpellTraps
     }
 
     /// <summary>One parsed clause from official card text.</summary>
@@ -528,6 +621,53 @@ namespace WRLDZ.Duel.TextEffects
         public OncePerTurnScope OptScope = OncePerTurnScope.None;
         public bool ActivationNegatable = true;
         public bool EffectNegatable = true;
+        /// <summary>
+        /// Targets this clause takes (Two-Pronged Attack: 2 of yours + 1 of theirs).
+        /// Values ≤ 1 mean a single target. With <see cref="TargetUpTo"/>, 1..TargetCount.
+        /// </summary>
+        public int TargetCount = 1;
+        /// <summary>"up to N" targets (Gravedigger Ghoul / Soul Release). Cancel ends picking early.</summary>
+        public bool TargetUpTo;
+        /// <summary>
+        /// This targeted clause is its own target group with distinct targets from the
+        /// card's other targeted clauses (Two-Pronged Attack: yours + theirs). Without it,
+        /// several targeted clauses share the single chosen target (legacy behavior).
+        /// </summary>
+        public bool DistinctTargetGroup;
+        /// <summary>
+        /// Spell/Trap target must be this card kind ("Spell" or "Trap"). A Set card is a
+        /// legal target; it is revealed on resolution and only destroyed if it matches
+        /// (Armed Ninja / Reaper of the Cards).
+        /// </summary>
+        public string TargetCardKind;
+        /// <summary>Only the monster(s) with the lowest ATK are eligible (Fissure).</summary>
+        public bool LowestAtkOnly;
+        /// <summary>
+        /// The player chooses among eligible cards but does not target them (Fissure):
+        /// no targeting protections or target-negation apply.
+        /// </summary>
+        public bool ChoiceDoesNotTarget;
+        /// <summary>LoseLifePoints: lose half of the current LP (rounded up).</summary>
+        public bool HalveLifePoints;
+        /// <summary>
+        /// GainSelfAtkPerCount source: "NamedYouControl" (NamedCard), "MonstersInYourGy",
+        /// "CardsInYourHand".
+        /// </summary>
+        public string CountSource;
+        /// <summary>This clause only applies if the previous clause of the same timing destroyed something.</summary>
+        public bool RequiresPreviousClauseHit;
+        /// <summary>
+        /// Draw / DiscardRandomFromHand act on the opponent of the card's controller
+        /// (The Bistro Butcher: "your opponent draws"). <see cref="Side"/> keeps its
+        /// legacy default, so this is the explicit subject flag.
+        /// </summary>
+        public bool OpponentIsSubject;
+        /// <summary>Targets / attackers of this Type are excluded ("a non Machine-Type monster").</summary>
+        public string ExceptRaceFilter;
+        /// <summary>ThisCardPositionChanged: true = Attack → face-up Defense, false = Defense → Attack.</summary>
+        public bool PositionChangeToDefense;
+        /// <summary>EquipAtkDecayPerStandby: count the equipped monster's controller's Standby Phases.</summary>
+        public bool DecayOnEquippedControllersStandby;
     }
 
     /// <summary>When the activation condition is tested (PSCT "when" vs "if").</summary>
@@ -619,6 +759,10 @@ namespace WRLDZ.Duel.TextEffects
              HasTiming(EffectTiming.EndPhase) ||
              HasTiming(EffectTiming.ContinuousWhileFaceUp) ||
              HasTiming(EffectTiming.YouTakeLifePointDamage) ||
-             HasTiming(EffectTiming.ThisCardDestroysByBattle));
+             HasTiming(EffectTiming.ThisCardDestroysByBattle) ||
+             HasTiming(EffectTiming.ThisCardInflictsBattleDamage) ||
+             HasTiming(EffectTiming.YourMonsterInflictsBattleDamage) ||
+             HasTiming(EffectTiming.ThisCardDeclaresAttack) ||
+             HasTiming(EffectTiming.ThisCardPositionChanged));
     }
 }

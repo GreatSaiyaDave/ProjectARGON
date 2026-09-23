@@ -142,6 +142,31 @@ namespace WRLDZ.Duel
         /// <summary>This monster's current controller is from an Equip take-control (Falling Down).</summary>
         public bool TakenByEquipControl;
 
+        /// <summary>
+        /// The owner, set when control of this card moves to the other player (it is null
+        /// while the owner controls it). Cards leaving the field go to this player's
+        /// GY / banished pile / hand, not the current controller's.
+        /// </summary>
+        public DuelistState ControlOwner;
+
+        /// <summary>
+        /// Temporary control (Change of Heart): return control to <see cref="ControlOwner"/>
+        /// during the End Phase of the turn whose number this equals. -1 = none.
+        /// </summary>
+        public int ReturnControlAtEndOfTurn = -1;
+
+        /// <summary>
+        /// Refreshed each board update by a face-up position lock (Dragon Capture Jar):
+        /// this monster cannot change its battle position.
+        /// </summary>
+        public bool PositionLockedByEffect;
+
+        /// <summary>This monster cannot declare an attack while TurnNumber ≤ this value (Electric Lizard).</summary>
+        public int CannotAttackThroughTurn = -1;
+
+        /// <summary>Damage Step-only ATK gain for the current battle (Insect Soldiers of the Sky).</summary>
+        public int DamageStepAtkBonus;
+
         /// <summary>Monsters/Unions currently equipped to this card.</summary>
         public readonly List<CardInstance> Equips = new();
 
@@ -164,7 +189,8 @@ namespace WRLDZ.Duel
             AtkBecomesZeroThisCalculation
                 ? 0
                 : Def != null && Def.atk >= 0
-                    ? System.Math.Max(0, Def.atk + AtkModifier + UntilEndOfTurnAtk + LingeringAtkModifier)
+                    ? System.Math.Max(0, Def.atk + AtkModifier + UntilEndOfTurnAtk + LingeringAtkModifier +
+                                         DamageStepAtkBonus)
                     : 0;
         public int CurrentDef =>
             Def != null && Def.def >= 0

@@ -22,7 +22,7 @@ namespace WRLDZ.Duel.TextEffects
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxEquipIncreaseTyped = new(
-            @"Increase the ATK and DEF of a (\w+)(?:-Type)? monster equipped with this card by (\d+) points\.?",
+            @"Increase the ATK and DEF of an? ([A-Za-z]+(?:(?: |-(?!Type\b))[A-Za-z]+)*)(?:-Type)? monster equipped with this card by (\d+) points\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         // "an Insect", "Beast-Warrior-Type", "FIRE" — do not swallow "-Type" into the race.
