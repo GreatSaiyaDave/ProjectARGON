@@ -114,6 +114,25 @@ namespace WRLDZ.Duel.Rules
             engine.Chain.Clear();
             Check("Chain: empty chain resolves nothing", engine.ResolveChainLifo(_ => true) == 0);
 
+            // ── One-shot Normal Spell leaves the S/T zone for GY after LIFO resolve ──
+            engine.Chain.Clear();
+            engine.Chain.BeginBuilding();
+            var raigeki = engine.CreateCardInstance(Raigeki);
+            if (raigeki != null)
+            {
+                engine.Player.SpellTrapZones[0].Occupant = raigeki;
+                raigeki.FaceUp = true;
+            }
+            var gyLink = engine.Chain.AddLink(engine.Player, raigeki, SpellSpeed.Speed1,
+                EffectClass.Ignition, CardLocation.SpellTrapZone,
+                fromHand: false, wasSet: false, effectKey: "test");
+            engine.ResolveChainLifo(_ => true);
+            var stillOnField = engine.Player.TryFindSpellTrap(raigeki, out _);
+            var inGy = raigeki != null && engine.Player.Graveyard.Contains(raigeki);
+            Check("Chain: one-shot Normal Spell sent to GY after resolve",
+                gyLink != null && !stillOnField && inGy,
+                $"link={gyLink != null} onField={stillOnField} inGy={inGy}");
+
             return Finish(sb, pass, fail);
         }
 
