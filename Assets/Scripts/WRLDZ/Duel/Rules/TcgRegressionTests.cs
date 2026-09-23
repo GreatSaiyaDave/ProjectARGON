@@ -2073,6 +2073,158 @@ namespace WRLDZ.Duel.Rules
                             c.Zone == EffectZoneFilter.FieldSpellTraps &&
                             !c.RequiresTargetChoice));
 
+                    var trunade = db.Get(42703248);
+                    var trunadeProg = trunade != null ? CardTextEffectCompiler.Compile(trunade) : null;
+                    Check("Corpus: Giant Trunade FullyCompiled ReturnToHand all S/T",
+                        trunadeProg != null && trunadeProg.FullyCompiled &&
+                        trunadeProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ReturnToHand &&
+                            c.Zone == EffectZoneFilter.FieldSpellTraps &&
+                            !c.RequiresTargetChoice),
+                        trunadeProg == null
+                            ? "null"
+                            : $"full={trunadeProg.FullyCompiled} unparsed={string.Join("|", trunadeProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    var synTrunade = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000080,
+                        name = "New Spell (Giant Trunade shape)",
+                        type = "Spell Card",
+                        race = "Normal",
+                        frameType = "spell",
+                        desc = "Return all Spell and Trap Cards on the field to the hand."
+                    });
+                    Check("New-card rule: Giant Trunade-shaped text compiles without a cardId branch",
+                        synTrunade != null && synTrunade.FullyCompiled &&
+                        synTrunade.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ReturnToHand &&
+                            c.Zone == EffectZoneFilter.FieldSpellTraps));
+                    var leftoverTrunade = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000081,
+                        name = "Giant Trunade leftover unique",
+                        type = "Spell Card",
+                        race = "Normal",
+                        frameType = "spell",
+                        desc =
+                            "Return all Spell and Trap Cards on the field to the hand. Shuffle your entire Deck into your opponent's Deck."
+                    });
+                    Check("Corpus: Giant Trunade leftover unique is not FullyCompiled",
+                        leftoverTrunade == null || !leftoverTrunade.FullyCompiled);
+
+                    var umi = db.Get(22702055);
+                    var umiProg = umi != null ? CardTextEffectCompiler.Compile(umi) : null;
+                    Check("Corpus: Umi FullyCompiled type-list gain and lose ATK/DEF",
+                        umiProg != null && umiProg.FullyCompiled &&
+                        umiProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                            c.Amount == 200 &&
+                            c.RaceFilter != null &&
+                            c.RaceFilter.IndexOf("Aqua", StringComparison.OrdinalIgnoreCase) >= 0) &&
+                        umiProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                            c.Amount == -200 &&
+                            c.RaceFilter != null &&
+                            c.RaceFilter.IndexOf("Machine", StringComparison.OrdinalIgnoreCase) >= 0),
+                        umiProg == null
+                            ? "null"
+                            : $"full={umiProg.FullyCompiled} unparsed={string.Join("|", umiProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    var synUmi = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000082,
+                        name = "New Field (Umi shape)",
+                        type = "Spell Card",
+                        race = "Field",
+                        frameType = "spell",
+                        desc =
+                            "All Fish, Sea Serpent, Thunder, and Aqua monsters on the field gain 200 ATK/DEF, also all Machine and Pyro monsters on the field lose 200 ATK/DEF."
+                    });
+                    Check("New-card rule: Umi-shaped text compiles without a cardId branch",
+                        synUmi != null && synUmi.FullyCompiled &&
+                        synUmi.ClauseList.Count >= 2);
+
+                    var yami = db.Get(59197169);
+                    var yamiProg = yami != null ? CardTextEffectCompiler.Compile(yami) : null;
+                    Check("Corpus: Yami FullyCompiled Fiend/Spellcaster gain and Fairy lose",
+                        yamiProg != null && yamiProg.FullyCompiled &&
+                        yamiProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                            c.Amount == 200 &&
+                            c.RaceFilter != null &&
+                            c.RaceFilter.IndexOf("Fiend", StringComparison.OrdinalIgnoreCase) >= 0) &&
+                        yamiProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                            c.Amount == -200 &&
+                            string.Equals(c.RaceFilter, "Fairy", StringComparison.OrdinalIgnoreCase)),
+                        yamiProg == null
+                            ? "null"
+                            : $"full={yamiProg.FullyCompiled} unparsed={string.Join("|", yamiProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var forest = db.Get(87430998);
+                    var forestProg = forest != null ? CardTextEffectCompiler.Compile(forest) : null;
+                    Check("Corpus: Forest stays parked (gain-only type list)",
+                        forestProg == null || !forestProg.FullyCompiled);
+                    var sogen = db.Get(86318356);
+                    var sogenProg = sogen != null ? CardTextEffectCompiler.Compile(sogen) : null;
+                    Check("Corpus: Sogen stays parked (gain-only type list)",
+                        sogenProg == null || !sogenProg.FullyCompiled);
+
+                    var leftoverYami = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000083,
+                        name = "Yami leftover unique",
+                        type = "Spell Card",
+                        race = "Field",
+                        frameType = "spell",
+                        desc =
+                            "All Fiend and Spellcaster monsters on the field gain 200 ATK/DEF, also all Fairy monsters on the field lose 200 ATK/DEF. Shuffle your entire Deck into your opponent's Deck."
+                    });
+                    Check("Corpus: Yami leftover unique is not FullyCompiled",
+                        leftoverYami == null || !leftoverYami.FullyCompiled);
+
+                    var zeroG = db.Get(83133491);
+                    var zeroProg = zeroG != null ? CardTextEffectCompiler.Compile(zeroG) : null;
+                    Check("Corpus: Zero Gravity FullyCompiled mass ChangeBattlePosition",
+                        zeroProg != null && zeroProg.FullyCompiled &&
+                        zeroProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ChangeBattlePosition &&
+                            c.Zone == EffectZoneFilter.FieldMonsters &&
+                            !c.RequiresTargetChoice),
+                        zeroProg == null
+                            ? "null"
+                            : $"full={zeroProg.FullyCompiled} unparsed={string.Join("|", zeroProg.UnparsedFragments ?? Array.Empty<string>())}");
+                    var synZero = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000084,
+                        name = "New Trap (Zero Gravity shape)",
+                        type = "Trap Card",
+                        race = "Normal",
+                        frameType = "trap",
+                        desc = "Change the battle positions of all face-up monsters on the field."
+                    });
+                    Check("New-card rule: Zero Gravity-shaped text compiles without a cardId branch",
+                        synZero != null && synZero.FullyCompiled &&
+                        synZero.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ChangeBattlePosition &&
+                            !c.RequiresTargetChoice));
+
+                    var concealing = db.Get(12923641);
+                    var concealingProg = concealing != null
+                        ? CardTextEffectCompiler.Compile(concealing)
+                        : null;
+                    Check("Corpus: Swords of Concealing Light stays parked (not FullyCompiled)",
+                        concealingProg == null || !concealingProg.FullyCompiled);
+                    var fakeTrap = db.Get(3027001);
+                    var fakeProg = fakeTrap != null ? CardTextEffectCompiler.Compile(fakeTrap) : null;
+                    Check("Corpus: Fake Trap stays parked (not FullyCompiled)",
+                        fakeProg == null || !fakeProg.FullyCompiled);
+
                     Check("Vocabulary: Protection is a shared kind",
                         Array.IndexOf(EffectVocabulary.SharedResolutions,
                             EffectResolutionKind.Protection) >= 0);

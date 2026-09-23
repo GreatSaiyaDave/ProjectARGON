@@ -3015,8 +3015,223 @@ namespace WRLDZ.Duel.Rules
                         p.Graveyard.Exists(c => c.CardId == duster));
                 }
 
-                // ── Equip Spells: Activate + target; host leaving field destroys Equip ──
+            // ── Giant Trunade / Umi / Yami / Zero Gravity (v66) ──
+            {
+                const int trunade = 42703248;
+                const int umi = 22702055;
+                const int yami = 59197169;
+                const int zeroGravity = 83133491;
+                const int warriorId = 91152256;
+                const int hyosube = 2118022;
+                const int greatWhite = 13429800;
+                const int overdrive = 2311603;
+                const int inpachi = 5464695;
+                const int laJinn = 97590747;
+                const int darkMagician = 46986414;
+                const int doma = 16972957;
+                const int setMst = 5318639;
+                const int forest = 87430998;
+                const int sogen = 86318356;
+
+                var trDef = db.Get(trunade);
+                var trProg = trDef != null ? CardTextEffectCompiler.Compile(trDef) : null;
+                Check("Giant Trunade FullyCompiled ReturnToHand all S/T",
+                    trProg != null && trProg.FullyCompiled &&
+                    trProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.ReturnToHand &&
+                        c.Zone == EffectZoneFilter.FieldSpellTraps &&
+                        c.Side == EffectSide.Both &&
+                        !c.RequiresTargetChoice),
+                    trProg == null
+                        ? "null"
+                        : $"full={trProg.FullyCompiled} unparsed={string.Join("|", trProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
                 {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var mine = PlaceSetTrap(engine, p, setMst, 1);
+                    var theirs = PlaceSetTrap(engine, opp, setMst, 2);
+                    var card = PutInHand(engine, p, trunade);
+                    Check("Giant Trunade: Activate legal in MP1",
+                        engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    Check("Giant Trunade: returns all S/T including itself to hand, not GY",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        !p.TryFindSpellTrap(mine, out _) &&
+                        !opp.TryFindSpellTrap(theirs, out _) &&
+                        p.Hand.Exists(c => c != null && c.CardId == trunade) &&
+                        p.Hand.Contains(mine) &&
+                        opp.Hand.Contains(theirs) &&
+                        !p.Graveyard.Exists(c => c != null && c.CardId == trunade),
+                        $"trunadeHand={p.Hand.Exists(c => c != null && c.CardId == trunade)} " +
+                        $"trunadeGy={p.Graveyard.Exists(c => c != null && c.CardId == trunade)} " +
+                        $"mineHand={p.Hand.Contains(mine)} theirsHand={opp.Hand.Contains(theirs)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var field = PutInHand(engine, p, umi);
+                    engine.TryActivateSpellTrap(p, field, fromHand: true);
+                    var card = PutInHand(engine, p, trunade);
+                    Check("Giant Trunade: Field Spell also returns to hand",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        p.FieldSpellZone?.Occupant == null &&
+                        p.Hand.Exists(c => c != null && c.CardId == umi) &&
+                        p.Hand.Exists(c => c != null && c.CardId == trunade));
+                }
+
+                var umiDef = db.Get(umi);
+                var umiProg = umiDef != null ? CardTextEffectCompiler.Compile(umiDef) : null;
+                Check("Umi FullyCompiled type-list +200 and −200",
+                    umiProg != null && umiProg.FullyCompiled &&
+                    umiProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                        c.Amount == 200 && c.DefAmount == 200 &&
+                        c.RaceFilter != null &&
+                        c.RaceFilter.IndexOf("Aqua", System.StringComparison.OrdinalIgnoreCase) >= 0 &&
+                        c.RaceFilter.IndexOf("Fish", System.StringComparison.OrdinalIgnoreCase) >= 0 &&
+                        c.RaceFilter.IndexOf("Thunder", System.StringComparison.OrdinalIgnoreCase) >= 0 &&
+                        c.RaceFilter.IndexOf("Sea Serpent", System.StringComparison.OrdinalIgnoreCase) >= 0) &&
+                    umiProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                        c.Amount == -200 && c.DefAmount == -200 &&
+                        c.RaceFilter != null &&
+                        c.RaceFilter.IndexOf("Machine", System.StringComparison.OrdinalIgnoreCase) >= 0 &&
+                        c.RaceFilter.IndexOf("Pyro", System.StringComparison.OrdinalIgnoreCase) >= 0),
+                    umiProg == null
+                        ? "null"
+                        : $"full={umiProg.FullyCompiled} unparsed={string.Join("|", umiProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var aqua = PlaceMonster(engine, p, hyosube, 0, BattlePosition.Attack, true);
+                    var fish = PlaceMonster(engine, p, greatWhite, 1, BattlePosition.Attack, true);
+                    var machine = PlaceMonster(engine, p, overdrive, 2, BattlePosition.Attack, true);
+                    var pyro = PlaceMonster(engine, opp, inpachi, 0, BattlePosition.Attack, true);
+                    var warrior = PlaceMonster(engine, opp, warriorId, 2, BattlePosition.Attack, true);
+                    var fdAqua = PlaceMonster(engine, p, hyosube, 3, BattlePosition.Defense, false);
+                    var card = PutInHand(engine, p, umi);
+                    Check("Umi: Activate stays in Field Zone",
+                        engine.CanActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        card.FaceUp && p.FieldSpellZone?.Occupant == card);
+                    FieldSpellEffects.RefreshBoard(engine);
+                    Check("Umi: Aqua/Fish +200; Machine/Pyro −200; Warrior unchanged; face-down skipped",
+                        aqua.CurrentAtk == 1700 && aqua.CurrentDef == 1100 &&
+                        fish.CurrentAtk == 1800 && fish.CurrentDef == 1000 &&
+                        machine.CurrentAtk == 1400 && machine.CurrentDef == 1300 &&
+                        pyro.CurrentAtk == 1650 && pyro.CurrentDef == 0 &&
+                        warrior.CurrentAtk == warrior.Def.atk &&
+                        fdAqua.CurrentAtk == fdAqua.Def.atk,
+                        $"aqua={aqua.CurrentAtk}/{aqua.CurrentDef} fish={fish.CurrentAtk}/{fish.CurrentDef} " +
+                        $"mach={machine.CurrentAtk}/{machine.CurrentDef} pyro={pyro.CurrentAtk}/{pyro.CurrentDef} " +
+                        $"war={warrior.CurrentAtk} fd={fdAqua.CurrentAtk}");
+                }
+
+                var yamiDef = db.Get(yami);
+                var yamiProg = yamiDef != null ? CardTextEffectCompiler.Compile(yamiDef) : null;
+                Check("Yami FullyCompiled Fiend/Spellcaster +200, Fairy −200",
+                    yamiProg != null && yamiProg.FullyCompiled &&
+                    yamiProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                        c.Amount == 200 &&
+                        c.RaceFilter != null &&
+                        c.RaceFilter.IndexOf("Fiend", System.StringComparison.OrdinalIgnoreCase) >= 0 &&
+                        c.RaceFilter.IndexOf("Spellcaster", System.StringComparison.OrdinalIgnoreCase) >= 0) &&
+                    yamiProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                        c.Amount == -200 &&
+                        c.RaceFilter != null &&
+                        string.Equals(c.RaceFilter, "Fairy", System.StringComparison.OrdinalIgnoreCase)),
+                    yamiProg == null
+                        ? "null"
+                        : $"full={yamiProg.FullyCompiled} unparsed={string.Join("|", yamiProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var fiend = PlaceMonster(engine, p, laJinn, 0, BattlePosition.Attack, true);
+                    var caster = PlaceMonster(engine, p, darkMagician, 1, BattlePosition.Attack, true);
+                    var fairy = PlaceMonster(engine, opp, doma, 0, BattlePosition.Attack, true);
+                    var warrior = PlaceMonster(engine, opp, warriorId, 2, BattlePosition.Attack, true);
+                    var card = PutInHand(engine, p, yami);
+                    Check("Yami: Activate stays in Field Zone",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        p.FieldSpellZone?.Occupant == card);
+                    FieldSpellEffects.RefreshBoard(engine);
+                    Check("Yami: Fiend/Spellcaster +200; Fairy −200; Warrior unchanged",
+                        fiend.CurrentAtk == 2000 && fiend.CurrentDef == 1200 &&
+                        caster.CurrentAtk == 2700 && caster.CurrentDef == 2300 &&
+                        fairy.CurrentAtk == 1400 && fairy.CurrentDef == 1200 &&
+                        warrior.CurrentAtk == warrior.Def.atk,
+                        $"fiend={fiend.CurrentAtk}/{fiend.CurrentDef} dm={caster.CurrentAtk}/{caster.CurrentDef} " +
+                        $"fairy={fairy.CurrentAtk}/{fairy.CurrentDef} war={warrior.CurrentAtk}");
+                }
+
+                var forestDef = db.Get(forest);
+                var forestProg = forestDef != null ? CardTextEffectCompiler.Compile(forestDef) : null;
+                Check("Forest stays parked (gain-only type list is PR #14)",
+                    forestProg == null || !forestProg.FullyCompiled);
+                var sogenDef = db.Get(sogen);
+                var sogenProg = sogenDef != null ? CardTextEffectCompiler.Compile(sogenDef) : null;
+                Check("Sogen stays parked (gain-only type list is PR #14)",
+                    sogenProg == null || !sogenProg.FullyCompiled);
+
+                var zgDef = db.Get(zeroGravity);
+                var zgProg = zgDef != null ? CardTextEffectCompiler.Compile(zgDef) : null;
+                Check("Zero Gravity FullyCompiled mass ChangeBattlePosition",
+                    zgProg != null && zgProg.FullyCompiled &&
+                    zgProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.ChangeBattlePosition &&
+                        c.Zone == EffectZoneFilter.FieldMonsters &&
+                        c.Side == EffectSide.Both &&
+                        !c.RequiresTargetChoice),
+                    zgProg == null
+                        ? "null"
+                        : $"full={zgProg.FullyCompiled} unparsed={string.Join("|", zgProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    var atk = PlaceMonster(engine, p, warriorId, 2, BattlePosition.Attack, true);
+                    var def = PlaceMonster(engine, opp, laJinn, 2, BattlePosition.Defense, true);
+                    var fd = PlaceMonster(engine, p, hyosube, 0, BattlePosition.Defense, false);
+                    var trap = PlaceSetTrap(engine, p, zeroGravity, 2);
+                    trap.SetThisTurn = false;
+                    Check("Zero Gravity: Activate legal",
+                        engine.CanActivateSpellTrap(p, trap, fromHand: false));
+                    Check("Zero Gravity: toggles face-up only",
+                        engine.TryActivateSpellTrap(p, trap, fromHand: false) &&
+                        atk.Position == BattlePosition.Defense &&
+                        def.Position == BattlePosition.Attack &&
+                        !fd.FaceUp && fd.Position == BattlePosition.Defense &&
+                        p.Graveyard.Contains(trap),
+                        $"atk={atk.Position} def={def.Position} fdUp={fd.FaceUp} fdPos={fd.Position}");
+                }
+            }
+
+            // ── Equip Spells: Activate + target; host leaving field destroys Equip ──
+            {
                     const int treasure = 1435851;
                     const int salamandra = 32268901;
                     const int legendarySword = 61854111;
