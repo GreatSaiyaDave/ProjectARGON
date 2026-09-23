@@ -164,6 +164,6 @@ namespace WRLDZ.Duel.TextEffects
         static bool MatchesRace(CardInstance m, string race) =>
             m?.Def?.race != null &&
             !string.IsNullOrEmpty(race) &&
-            m.Def.race.IndexOf(race, StringComparison.OrdinalIgnoreCase) >= 0;
+            ClassicEraTemplates.RaceMatches(m.Def.race, race);
     }
 }

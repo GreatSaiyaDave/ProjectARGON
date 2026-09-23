@@ -46,7 +46,13 @@ namespace WRLDZ.Duel
         /// <summary>ROTA — Level N or lower Race monster in your Deck.</summary>
         MonsterInYourDeckFiltered,
         /// <summary>Iron Blacksmith Kotetsu — Equip Spell in your Deck.</summary>
-        EquipSpellInYourDeck
+        EquipSpellInYourDeck,
+        /// <summary>Soul Release / Gravedigger Ghoul — a card in either GY.</summary>
+        CardInEitherGy,
+        /// <summary>Change of Heart / Stop Defense / Block Attack — a monster your opponent controls.</summary>
+        OppMonster,
+        /// <summary>Two-Pronged Attack — a monster you control.</summary>
+        YourMonster
     }
 
     /// <summary>In-flight activation waiting for a target choice.</summary>
@@ -77,6 +83,19 @@ namespace WRLDZ.Duel
         /// <summary>How many more cost cards to pick.</summary>
         public int CostPicksRemaining;
         public readonly List<CardInstance> LegalTargets = new();
+        /// <summary>
+        /// Multi-target activation (Two-Pronged Attack / Gravedigger Ghoul / Soul Release):
+        /// picks are collected step by step, one step per targeted clause.
+        /// </summary>
+        public bool MultiTarget;
+        /// <summary>Index into the card's targeted Activate clauses for the current step.</summary>
+        public int MultiStep;
+        /// <summary>Picks made so far, paired with the targeted-clause index they belong to.</summary>
+        public readonly List<(int step, CardInstance target)> MultiPicks = new();
+        /// <summary>Picks still allowed in the current step.</summary>
+        public int MultiStepRemaining;
+        /// <summary>Current step is "up to N": Cancel after ≥1 pick finishes the step.</summary>
+        public bool MultiStepUpTo;
         /// <summary>Bark of Dark Ruler: choose LP cost in multiples of 100.</summary>
         public bool AwaitingLpCost;
         public readonly List<int> LpCostChoices = new();
@@ -133,14 +152,30 @@ namespace WRLDZ.Duel
                         $"{n}: banish a monster from your GY (cost).",
                     EffectTargetKind.SendMonsterYouControlToGy =>
                         $"{n}: send a monster you control to the GY (cost).",
+                    EffectTargetKind.CardInEitherGy =>
+                        $"{n}: choose a card in either GY{MultiNote}.",
+                    EffectTargetKind.OppMonster =>
+                        $"{n}: choose a monster your opponent controls{MultiNote}.",
+                    EffectTargetKind.YourMonster =>
+                        $"{n}: choose a monster you control{MultiNote}.",
                     _ when AwaitingLpCost =>
                         $"{n}: pay LP (multiples of 100) as the cost.",
                     _ when AwaitingCoinCall =>
                         $"{n}: call Heads or Tails.",
-                    _ => $"{n}: choose a target."
+                    _ => $"{n}: choose a target{MultiNote}."
                 };
             }
         }
+
+        /// <summary>" (2 more)" / " (up to 2 more — Cancel to finish)" while multi-targeting.</summary>
+        string MultiNote =>
+            !MultiTarget || MultiStepRemaining <= 0
+                ? ""
+                : MultiStepUpTo && MultiPicks.Exists(p => p.step == MultiStep)
+                    ? $" (up to {MultiStepRemaining} more — Cancel to finish)"
+                    : MultiStepUpTo
+                        ? $" (up to {MultiStepRemaining})"
+                        : $" ({MultiStepRemaining} more)";
     }
 
     /// <summary>
@@ -988,6 +1023,11 @@ namespace WRLDZ.Duel
         {
             var p = engine.PendingActivation;
             if (p == null) return false;
+
+            // "Up to N" targets: Cancel after at least one pick finishes that step.
+            if (p.MultiTarget && p.UsesTextProgram &&
+                TextEffects.TextEffectRuntime.FinishMultiTargetStep(engine))
+                return true;
 
             var who = p.Controller;
             var card = p.Card;

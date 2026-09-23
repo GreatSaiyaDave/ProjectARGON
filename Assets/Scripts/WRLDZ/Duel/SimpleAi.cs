@@ -187,6 +187,7 @@ namespace WRLDZ.Duel
                 foreach (var m in ai.MonstersOnField().ToList())
                 {
                     if (m == null || !engine.CanActivateSpellTrap(ai, m, fromHand: false)) continue;
+                    if (TributesForTempAtkOnly(m)) continue;
                     if (!engine.TryActivateSpellTrap(ai, m, fromHand: false)) continue;
                     while (engine.IsAwaitingEffectTarget && engine.PendingActivation != null)
                     {
@@ -320,6 +321,21 @@ namespace WRLDZ.Duel
             if (card == null) return false;
             // Engine logs activation.
             return engine.TryActivateSpellTrap(ai, card, true);
+        }
+
+        /// <summary>
+        /// "Tribute another monster → this card gains ATK until the end of the turn"
+        /// (The Little Swordsman of Aile): a card-for-a-turn trade the simple AI must not
+        /// spend every Main Phase.
+        /// </summary>
+        static bool TributesForTempAtkOnly(CardInstance m)
+        {
+            var prog = TextEffects.CompiledEffectCache.GetOrCompile(m);
+            if (prog == null) return false;
+            var act = prog.ClausesFor(TextEffects.EffectTiming.Activate);
+            return act.Count > 0 && act.TrueForAll(c =>
+                c != null && c.Action == TextEffects.EffectActionKind.GainThisAtkUntilEnd &&
+                c.RequiresTributeCount > 0);
         }
 
         static bool IsFlipEffectMonster(CardInstance c) =>

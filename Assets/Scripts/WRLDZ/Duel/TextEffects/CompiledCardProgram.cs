@@ -33,7 +33,17 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         YouTakeLifePointDamage,
         /// <summary>This card destroyed an opponent's monster by battle (Fenrir skip-draw).</summary>
-        ThisCardDestroysByBattle
+        ThisCardDestroysByBattle,
+        /// <summary>
+        /// This card inflicted battle damage to the opponent (Masked Sorcerer / Bistro Butcher /
+        /// White Magical Hat).
+        /// </summary>
+        ThisCardInflictsBattleDamage,
+        /// <summary>
+        /// A monster the controller controls inflicted battle damage to the opponent
+        /// (Robbin' Goblin — continuous Trap "each time").
+        /// </summary>
+        YourMonsterInflictsBattleDamage
     }
 
     public enum EffectActionKind
@@ -215,7 +225,42 @@ namespace WRLDZ.Duel.TextEffects
         /// <see cref="EffectClause.DieNegateFacesMask"/> negate the effect and destroy the
         /// opponent's card. The classic Archfiend die-roll protection.
         /// </summary>
-        DieRollNegateWhenTargeted
+        DieRollNegateWhenTargeted,
+        /// <summary>
+        /// Exodia: win the Duel while every name in NamedCard ("A|B|C|D", split on '|')
+        /// is in the controller's hand together with this card.
+        /// </summary>
+        WinDuelWithNamedSetInHand,
+        /// <summary>
+        /// While face-up: face-up RaceFilter monsters on the field are in Defense Position and
+        /// cannot change their battle positions (Dragon Capture Jar).
+        /// </summary>
+        ContinuousForceDefenseLockPosition,
+        /// <summary>Change the target to face-up Attack Position (Stop Defense). Flips a Set target.</summary>
+        ChangeToFaceUpAttack,
+        /// <summary>Change the target to face-up Defense Position (Block Attack).</summary>
+        ChangeToFaceUpDefense,
+        /// <summary>Take control of the target until the End Phase (Change of Heart).</summary>
+        TakeControlUntilEndPhase,
+        /// <summary>
+        /// The controller loses Amount LP (not damage — no damage windows / reflection).
+        /// <see cref="EffectClause.HalveLifePoints"/> loses half instead (Jirai Gumo family).
+        /// </summary>
+        LoseLifePoints,
+        /// <summary>
+        /// While face-up: this card gains Amount ATK (and DefAmount DEF) for each counted
+        /// thing named by <see cref="EffectClause.CountSource"/> (Battleguards / Shadow Ghoul /
+        /// Muka Muka).
+        /// </summary>
+        GainSelfAtkPerCount,
+        /// <summary>Side discards Amount random card(s) from their hand (White Magical Hat).</summary>
+        DiscardRandomFromHand,
+        /// <summary>
+        /// Change all face-up RaceFilter monsters on the field to Attack Position; with
+        /// <see cref="EffectClause.RequiresPreviousClauseHit"/>, only if the previous clause
+        /// destroyed at least one card (Dragon Piper).
+        /// </summary>
+        ChangeAllToAttackPosition
     }
 
     public enum EffectSide
@@ -267,7 +312,17 @@ namespace WRLDZ.Duel.TextEffects
         /// <summary>Face-up Field Spell Zones on either field (Burning Land).</summary>
         FieldSpellsOnField,
         /// <summary>Equip Spells in the controller's Deck (Iron Blacksmith Kotetsu).</summary>
-        DeckEquipSpells
+        DeckEquipSpells,
+        /// <summary>Monsters in the opponent's GY (Gravedigger Ghoul).</summary>
+        OppGyMonsters,
+        /// <summary>Any card in either GY (Soul Release).</summary>
+        AnyGyCards,
+        /// <summary>Monsters the controller controls, face-up or face-down (Two-Pronged Attack).</summary>
+        ControllerAnyMonsters,
+        /// <summary>Monsters the opponent controls, face-up or face-down (Change of Heart).</summary>
+        OppAnyMonsters,
+        /// <summary>Face-up Spell/Trap Cards on either field with the printed name NamedCard (Dragon Piper).</summary>
+        FaceUpNamedSpellTraps
     }
 
     /// <summary>One parsed clause from official card text.</summary>
@@ -528,6 +583,47 @@ namespace WRLDZ.Duel.TextEffects
         public OncePerTurnScope OptScope = OncePerTurnScope.None;
         public bool ActivationNegatable = true;
         public bool EffectNegatable = true;
+        /// <summary>
+        /// Targets this clause takes (Two-Pronged Attack: 2 of yours + 1 of theirs).
+        /// Values ≤ 1 mean a single target. With <see cref="TargetUpTo"/>, 1..TargetCount.
+        /// </summary>
+        public int TargetCount = 1;
+        /// <summary>"up to N" targets (Gravedigger Ghoul / Soul Release). Cancel ends picking early.</summary>
+        public bool TargetUpTo;
+        /// <summary>
+        /// This targeted clause is its own target group with distinct targets from the
+        /// card's other targeted clauses (Two-Pronged Attack: yours + theirs). Without it,
+        /// several targeted clauses share the single chosen target (legacy behavior).
+        /// </summary>
+        public bool DistinctTargetGroup;
+        /// <summary>
+        /// Spell/Trap target must be this card kind ("Spell" or "Trap"). A Set card is a
+        /// legal target; it is revealed on resolution and only destroyed if it matches
+        /// (Armed Ninja / Reaper of the Cards).
+        /// </summary>
+        public string TargetCardKind;
+        /// <summary>Only the monster(s) with the lowest ATK are eligible (Fissure).</summary>
+        public bool LowestAtkOnly;
+        /// <summary>
+        /// The player chooses among eligible cards but does not target them (Fissure):
+        /// no targeting protections or target-negation apply.
+        /// </summary>
+        public bool ChoiceDoesNotTarget;
+        /// <summary>LoseLifePoints: lose half of the current LP (rounded up).</summary>
+        public bool HalveLifePoints;
+        /// <summary>
+        /// GainSelfAtkPerCount source: "NamedYouControl" (NamedCard), "MonstersInYourGy",
+        /// "CardsInYourHand".
+        /// </summary>
+        public string CountSource;
+        /// <summary>This clause only applies if the previous clause of the same timing destroyed something.</summary>
+        public bool RequiresPreviousClauseHit;
+        /// <summary>
+        /// Draw / DiscardRandomFromHand act on the opponent of the card's controller
+        /// (The Bistro Butcher: "your opponent draws"). <see cref="Side"/> keeps its
+        /// legacy default, so this is the explicit subject flag.
+        /// </summary>
+        public bool OpponentIsSubject;
     }
 
     /// <summary>When the activation condition is tested (PSCT "when" vs "if").</summary>
@@ -619,6 +715,8 @@ namespace WRLDZ.Duel.TextEffects
              HasTiming(EffectTiming.EndPhase) ||
              HasTiming(EffectTiming.ContinuousWhileFaceUp) ||
              HasTiming(EffectTiming.YouTakeLifePointDamage) ||
-             HasTiming(EffectTiming.ThisCardDestroysByBattle));
+             HasTiming(EffectTiming.ThisCardDestroysByBattle) ||
+             HasTiming(EffectTiming.ThisCardInflictsBattleDamage) ||
+             HasTiming(EffectTiming.YourMonsterInflictsBattleDamage));
     }
 }

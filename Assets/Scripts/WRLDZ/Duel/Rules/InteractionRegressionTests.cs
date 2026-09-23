@@ -5362,13 +5362,18 @@ namespace WRLDZ.Duel.Rules
                 const int immortalId = 84926738;
                 var immortalDef = db.Get(immortalId);
                 var immortalProg = immortalDef != null ? CardTextEffectCompiler.Compile(immortalDef) : null;
-                Check("Immortal of Thunder Flip gain 3000 compiles; GY lose leftover",
-                    immortalProg != null && !immortalProg.FullyCompiled &&
+                Check("Immortal of Thunder Flip gain 3000 compiles; GY lose 5000 LP compiles",
+                    immortalProg != null && immortalProg.FullyCompiled &&
                     immortalProg.ClauseList.Exists(c =>
                         c != null &&
                         c.Timing == EffectTiming.Flip &&
                         c.Action == EffectActionKind.GainLifePoints &&
-                        c.Amount == 3000),
+                        c.Amount == 3000) &&
+                        immortalProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.SentFromFieldToGy &&
+                            c.Action == EffectActionKind.LoseLifePoints &&
+                            c.Amount == 5000),
                     immortalProg == null
                         ? "null"
                         : $"full={immortalProg.FullyCompiled} unparsed={string.Join("|", immortalProg.UnparsedFragments ?? System.Array.Empty<string>())}");

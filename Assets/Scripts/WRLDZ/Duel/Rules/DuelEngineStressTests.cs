@@ -139,6 +139,15 @@ namespace WRLDZ.Duel.Rules
             report.UnitPass += afaPass;
             report.UnitFail += afaFail;
 
+            // ── 1j) Classic-era curriculum batch (LOB close + MRD tranche 1) ──
+            sb.AppendLine();
+            sb.AppendLine("── Unit: ClassicEraRegressionTests ──");
+            var classic = ClassicEraRegressionTests.RunAll();
+            sb.AppendLine(classic.TrimEnd());
+            ParseUnitCounts(classic, out var cePass, out var ceFail);
+            report.UnitPass += cePass;
+            report.UnitFail += ceFail;
+
             // ── 2) Text effect compile (lab unique cards) ──
             sb.AppendLine();
             sb.AppendLine("── Text: lab deck compile (regex, no AI) ──");

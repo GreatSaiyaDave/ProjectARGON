@@ -311,6 +311,22 @@ namespace WRLDZ.Duel.Rules
                     p.Graveyard.Add(engine.CreateCardInstance(Bewd));
                 }
 
+                // Classic-era target zones (Gravedigger Ghoul / Soul Release / Stop Defense /
+                // Two-Pronged Attack): give each targeted clause enough legal targets.
+                if (c.Zone == EffectZoneFilter.OppGyMonsters || c.Zone == EffectZoneFilter.AnyGyCards)
+                {
+                    opp.Graveyard.Add(engine.CreateCardInstance(Celtic));
+                    opp.Graveyard.Add(engine.CreateCardInstance(Bewd));
+                }
+
+                if (c.Zone == EffectZoneFilter.OppDefensePositionMonsters)
+                    PlaceMonster(engine, opp, Celtic, 3, BattlePosition.Defense, false);
+
+                if (c.Zone == EffectZoneFilter.ControllerAnyMonsters)
+                    for (var z = 1; z < p.MonsterZones.Length && p.MonsterCount < Math.Max(1, c.TargetCount); z++)
+                        if (p.MonsterZones[z].IsEmpty)
+                            PlaceMonster(engine, p, Celtic, z, BattlePosition.Attack, true);
+
                 if (c.Zone == EffectZoneFilter.ControllerGySpells)
                     p.Graveyard.Add(engine.CreateCardInstance(PotOfGreed));
                 if (c.Zone == EffectZoneFilter.ControllerGyTraps)
@@ -598,7 +614,8 @@ namespace WRLDZ.Duel.Rules
         static bool ResolvePendingPicks(DuelEngine engine, CardDef def, List<string> fail,
             string tag)
         {
-            for (var n = 0; n < 4 && engine.IsAwaitingEffectTarget; n++)
+            // Multi-target cards (Soul Release: up to 5) need more than 4 picks.
+            for (var n = 0; n < 12 && engine.IsAwaitingEffectTarget; n++)
             {
                 var pick = engine.PendingActivation?.LegalTargets?.FirstOrDefault();
                 if (pick == null || !engine.TrySelectEffectTarget(pick))

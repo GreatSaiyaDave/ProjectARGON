@@ -1385,9 +1385,12 @@ namespace WRLDZ.UI
             _arSpace?.RetractDisks();
             if (_overlay == null) return;
             var win = _engine.Winner != null && _engine.Winner.IsPlayer;
+            var draw = _engine.Winner == null;
             _overlay.SetActive(true);
-            _overlayTitle.text = win ? "YOU WIN!" : "YOU LOSE…";
-            _overlayTitle.color = win ? GbaTheme.GoldBright : new Color(1f, 0.45f, 0.45f);
+            _overlayTitle.text = draw ? "DRAW" : win ? "YOU WIN!" : "YOU LOSE…";
+            _overlayTitle.color = win ? GbaTheme.GoldBright
+                : draw ? Color.white
+                : new Color(1f, 0.45f, 0.45f);
 
             // Duelist XP (Pokémon GO pace) — skip pure practice
             var rewardLine = ApplyDuelProgressionRewards(win);
@@ -1939,7 +1942,8 @@ namespace WRLDZ.UI
             {
                 var card = t;
                 var tag = "";
-                if (pending.TargetKind == EffectTargetKind.MonsterInEitherGy)
+                if (pending.TargetKind == EffectTargetKind.MonsterInEitherGy ||
+                    pending.TargetKind == EffectTargetKind.CardInEitherGy)
                 {
                     if (controller != null && controller.Graveyard.Contains(card)) tag = "YOURS\n";
                     else if (oppOfController != null && oppOfController.Graveyard.Contains(card))
@@ -1981,7 +1985,9 @@ namespace WRLDZ.UI
                 }
                 else if (pending.TargetKind == EffectTargetKind.AnyMonsterOnField ||
                          pending.TargetKind == EffectTargetKind.OppFaceUpMonster ||
-                         pending.TargetKind == EffectTargetKind.OppFaceUpMonsterAtkLeqLp)
+                         pending.TargetKind == EffectTargetKind.OppFaceUpMonsterAtkLeqLp ||
+                         pending.TargetKind == EffectTargetKind.OppMonster ||
+                         pending.TargetKind == EffectTargetKind.YourMonster)
                 {
                     // Own-field targets must read clearly (Man-Eater Bug, Raigeki Break, etc.)
                     if (controller != null && controller.TryFindMonster(card, out _))
