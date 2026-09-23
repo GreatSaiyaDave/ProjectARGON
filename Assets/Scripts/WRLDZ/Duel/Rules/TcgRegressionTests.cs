@@ -1885,10 +1885,19 @@ namespace WRLDZ.Duel.Rules
 
                     var sage = db.Get(13604200);
                     var sageProg = sage != null ? CardTextEffectCompiler.Compile(sage) : null;
-                    Check("Corpus: Sage's Stone leftover (no invented If-you-control spell lock)",
-                        sageProg != null && !sageProg.FullyCompiled &&
-                        !sageProg.ClauseList.Exists(c =>
-                            c != null && c.Action == EffectActionKind.SpecialSummonNamed));
+                    Check("Corpus: Sage's Stone FullyCompiled If-you-control named SS from hand or Deck",
+                        sageProg != null && sageProg.FullyCompiled &&
+                        sageProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.SpecialSummonNamed &&
+                            string.Equals(c.NamedCard, "Dark Magician",
+                                StringComparison.OrdinalIgnoreCase) &&
+                            string.Equals(c.RequiresFaceUpName, "Dark Magician Girl",
+                                StringComparison.OrdinalIgnoreCase) &&
+                            c.RequiresControllerNamedCard && c.FromHand && c.FromDeck),
+                        sageProg == null
+                            ? "null"
+                            : $"full={sageProg.FullyCompiled} n={sageProg.ClauseList.Count} unparsed={string.Join("|", sageProg.UnparsedFragments ?? Array.Empty<string>())}");
 
                     var release = db.Get(75417459);
                     var relProg = release != null ? CardTextEffectCompiler.Compile(release) : null;
@@ -2072,6 +2081,79 @@ namespace WRLDZ.Duel.Rules
                             c.Side == EffectSide.Opponent &&
                             c.Zone == EffectZoneFilter.FieldSpellTraps &&
                             !c.RequiresTargetChoice));
+
+                    var dma = db.Get(2314238);
+                    var dmaProg = dma != null ? CardTextEffectCompiler.Compile(dma) : null;
+                    Check("Corpus: Dark Magic Attack FullyCompiled If-you-control destroy opp S/T",
+                        dmaProg != null && dmaProg.FullyCompiled &&
+                        dmaProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.Destroy &&
+                            c.Side == EffectSide.Opponent &&
+                            c.Zone == EffectZoneFilter.FieldSpellTraps &&
+                            !c.RequiresTargetChoice &&
+                            c.RequiresControllerNamedCard &&
+                            string.Equals(c.RequiresFaceUpName, "Dark Magician",
+                                StringComparison.OrdinalIgnoreCase)),
+                        dmaProg == null
+                            ? "null"
+                            : $"full={dmaProg.FullyCompiled} n={dmaProg.ClauseList.Count} unparsed={string.Join("|", dmaProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var knives = db.Get(63391643);
+                    var knivesProg = knives != null ? CardTextEffectCompiler.Compile(knives) : null;
+                    Check("Corpus: Thousand Knives FullyCompiled If-you-control destroy 1 opp monster",
+                        knivesProg != null && knivesProg.FullyCompiled &&
+                        knivesProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.Destroy &&
+                            c.Zone == EffectZoneFilter.OppFaceUpMonsters &&
+                            c.RequiresTargetChoice &&
+                            c.RequiresControllerNamedCard &&
+                            string.Equals(c.RequiresFaceUpName, "Dark Magician",
+                                StringComparison.OrdinalIgnoreCase)),
+                        knivesProg == null
+                            ? "null"
+                            : $"full={knivesProg.FullyCompiled} n={knivesProg.ClauseList.Count} unparsed={string.Join("|", knivesProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var synDma = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000025,
+                        name = "If-you-control destroy opp S/T (new-card shape)",
+                        type = "Spell Card",
+                        race = "Normal",
+                        desc =
+                            "If you control \"Celtic Guardian\": Destroy all Spells and Traps your opponent controls."
+                    });
+                    Check("New-card rule: Dark Magic Attack-shaped text compiles without a cardId branch",
+                        synDma != null && synDma.FullyCompiled &&
+                        synDma.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.Destroy &&
+                            c.RequiresControllerNamedCard &&
+                            string.Equals(c.RequiresFaceUpName, "Celtic Guardian",
+                                StringComparison.OrdinalIgnoreCase)));
+
+                    var synDmaLeft = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000026,
+                        name = "If-you-control leftover (unique sentence)",
+                        type = "Spell Card",
+                        race = "Normal",
+                        desc =
+                            "If you control \"Dark Magician\": Destroy all Spells and Traps your opponent controls. Unique leftover clause that is not a known template."
+                    });
+                    Check("New-card leftover: If-you-control plus unique sentence is not FullyCompiled",
+                        synDmaLeft != null && !synDmaLeft.FullyCompiled);
+
+                    var burst = db.Get(17655904);
+                    var burstProg = burst != null ? CardTextEffectCompiler.Compile(burst) : null;
+                    Check("Corpus: Burst Stream cannot-attack leftover stays refuse",
+                        burstProg == null || !burstProg.FullyCompiled);
+
+                    var necro = db.Get(72405967);
+                    var necroProg = necro != null ? CardTextEffectCompiler.Compile(necro) : null;
+                    Check("Corpus: Necrovalley both-discard If-you-control stays refuse",
+                        necroProg == null || !necroProg.FullyCompiled);
 
                     Check("Vocabulary: Protection is a shared kind",
                         Array.IndexOf(EffectVocabulary.SharedResolutions,

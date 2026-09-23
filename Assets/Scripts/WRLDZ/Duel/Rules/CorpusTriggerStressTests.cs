@@ -270,9 +270,27 @@ namespace WRLDZ.Duel.Rules
                 }
 
                 if (c.RequiresControllerNamedCard &&
-                    !string.IsNullOrEmpty(c.RequiresFaceUpName) &&
-                    c.RequiresFaceUpName.IndexOf("Archfiend", StringComparison.OrdinalIgnoreCase) >= 0)
-                    PlaceMonster(engine, p, ArchfiendSoldier, 1, BattlePosition.Attack, true);
+                    !string.IsNullOrEmpty(c.RequiresFaceUpName))
+                {
+                    if (c.NamedCardIsSeries &&
+                        c.RequiresFaceUpName.IndexOf("Archfiend", StringComparison.OrdinalIgnoreCase) >= 0)
+                        PlaceMonster(engine, p, ArchfiendSoldier, 1, BattlePosition.Attack, true);
+                    else
+                        PlaceNamedYouControl(engine, p, c.RequiresFaceUpName);
+                }
+
+                if (c.Action == EffectActionKind.SpecialSummonNamed &&
+                    !string.IsNullOrEmpty(c.NamedCard))
+                {
+                    var ssId = FindNamedId(engine, c.NamedCard);
+                    if (ssId > 0)
+                    {
+                        if (c.FromDeck)
+                            p.Deck.Insert(0, ssId);
+                        if (c.FromHand && !c.FromDeck)
+                            PutInHand(engine, p, ssId);
+                    }
+                }
 
                 // Battle-Scarred targets an "Archfiend" monster you control.
                 if (!string.IsNullOrEmpty(c.TargetSeriesName) &&
@@ -584,6 +602,49 @@ namespace WRLDZ.Duel.Rules
             c.SummonedThisTurn = false;
             who.MonsterZones[zone].Occupant = c;
             return c;
+        }
+
+        static int FindNamedId(DuelEngine engine, string name)
+        {
+            if (engine?.Database == null || string.IsNullOrEmpty(name)) return 0;
+            foreach (var d in engine.Database.GetAllCards())
+            {
+                if (d != null &&
+                    string.Equals(d.name, name, StringComparison.OrdinalIgnoreCase))
+                    return d.id;
+            }
+
+            return 0;
+        }
+
+        static void PlaceNamedYouControl(DuelEngine engine, DuelistState who, string name)
+        {
+            var id = FindNamedId(engine, name);
+            if (id <= 0 || engine.Database == null || !engine.Database.TryGet(id, out var def) ||
+                def == null)
+                return;
+            if (def.IsMonster)
+            {
+                var z = engine.FirstEmpty(who.MonsterZones);
+                if (z < 0) z = 1;
+                PlaceMonster(engine, who, id, z, BattlePosition.Attack, true);
+                return;
+            }
+
+            if (def.IsFieldSpell && who.FieldSpellZone != null)
+            {
+                var fs = engine.CreateCardInstance(id);
+                fs.FaceUp = true;
+                who.FieldSpellZone.Occupant = fs;
+                return;
+            }
+
+            var stz = engine.FirstEmpty(who.SpellTrapZones);
+            if (stz < 0) stz = 0;
+            var st = engine.CreateCardInstance(id);
+            st.FaceUp = true;
+            st.SetThisTurn = false;
+            who.SpellTrapZones[stz].Occupant = st;
         }
 
         static CardInstance PlaceSetTrap(DuelEngine engine, DuelistState who, int id, int zone)
