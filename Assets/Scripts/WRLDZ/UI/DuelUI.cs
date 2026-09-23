@@ -1951,8 +1951,11 @@ namespace WRLDZ.UI
                 }
                 else if (pending.TargetKind == EffectTargetKind.MonsterInYourDeckAtkLeq ||
                          pending.TargetKind == EffectTargetKind.FieldSpellInYourDeck ||
-                         pending.TargetKind == EffectTargetKind.MonsterInYourDeckFiltered)
+                         pending.TargetKind == EffectTargetKind.MonsterInYourDeckFiltered ||
+                         pending.TargetKind == EffectTargetKind.CardInYourDeck)
                     tag = "DECK\n";
+                else if (pending.TargetKind == EffectTargetKind.CardInOppHand)
+                    tag = "OPP HAND\n";
                 else if (pending.TargetKind == EffectTargetKind.SpellInYourGy ||
                          pending.TargetKind == EffectTargetKind.TrapInYourGy)
                     tag = "GY\n";
@@ -1989,7 +1992,8 @@ namespace WRLDZ.UI
                          pending.TargetKind == EffectTargetKind.OppFaceUpMonsterAtkLeqLp ||
                          pending.TargetKind == EffectTargetKind.OppMonster ||
                          pending.TargetKind == EffectTargetKind.YourMonster ||
-                         pending.TargetKind == EffectTargetKind.EquipAnyMonster)
+                         pending.TargetKind == EffectTargetKind.EquipAnyMonster ||
+                         pending.TargetKind == EffectTargetKind.FaceUpMonsterOnField)
                 {
                     // Own-field targets must read clearly (Man-Eater Bug, Raigeki Break, etc.)
                     if (controller != null && controller.TryFindMonster(card, out _))

@@ -1167,6 +1167,7 @@ namespace WRLDZ.Duel.TextEffects
                 if (c == null) continue;
                 if (c.RequiresThisFlipSummoned && !flipSummon) continue;
                 if (c.RequiresThisNormalSummoned && (flipSummon || specialSummon)) continue;
+                if (c.RequiresNormalOrFlipSummon && specialSummon) continue;
                 applicable.Add(c);
             }
             if (applicable.Count == 0) return false;
@@ -2755,11 +2756,57 @@ namespace WRLDZ.Duel.TextEffects
                     break;
 
                 case EffectActionKind.DiscardChosenFromHand:
-                    if (chosenTarget != null && who.Hand.Contains(chosenTarget))
+                {
+                    var handOwner = chosenTarget != null && opp.Hand.Contains(chosenTarget) ? opp : who;
+                    if (chosenTarget != null && handOwner.Hand.Contains(chosenTarget))
                     {
-                        MonsterEffects.DiscardFromHandByInstance(who, chosenTarget);
-                        engine.Log($"{who.Name} discards {chosenTarget.Name} ({source?.Name}).");
+                        MonsterEffects.DiscardFromHandByInstance(handOwner, chosenTarget);
+                        engine.Log($"{handOwner.Name} discards {chosenTarget.Name} ({source?.Name}).");
                     }
+                    break;
+                }
+
+                case EffectActionKind.ReturnChosenToDeckShuffle:
+                    if (chosenTarget != null && opp.Hand.Remove(chosenTarget))
+                    {
+                        opp.Deck.Add(chosenTarget.CardId);
+                        CardDatabase.Shuffle(opp.Deck);
+                        engine.Log($"{chosenTarget.Name} returns to {opp.Name}'s Deck, which is shuffled.");
+                    }
+                    break;
+
+                case EffectActionKind.ModifyTargetUntilEndOfTurn:
+                    if (chosenTarget != null)
+                    {
+                        chosenTarget.UntilEndOfTurnAtk += clause.Amount;
+                        chosenTarget.UntilEndOfTurnDef += clause.DefAmount;
+                        engine.Log(
+                            $"{chosenTarget.Name}: {chosenTarget.CurrentAtk}/{chosenTarget.CurrentDef} until the end of this turn.");
+                    }
+                    break;
+
+                case EffectActionKind.LinkThisToTarget:
+                    if (chosenTarget != null && source != null)
+                    {
+                        source.EquippedTo = chosenTarget;
+                        if (!chosenTarget.Equips.Contains(source))
+                            chosenTarget.Equips.Add(source);
+                        engine.Log($"{source.Name} binds {chosenTarget.Name}.");
+                    }
+                    break;
+
+                case EffectActionKind.DestroyThisCard:
+                    if (source != null && engine.ControllerOf(source) != null)
+                    {
+                        engine.Log($"{source.Name} destroys itself.");
+                        Destroy(source);
+                    }
+                    break;
+
+                case EffectActionKind.AttackCostLpForAll:
+                case EffectActionKind.AttackCostMillForOpponent:
+                case EffectActionKind.EquipAtkByLpComparison:
+                case EffectActionKind.EquippedCannotChangePosition:
                     break;
 
                 case EffectActionKind.SwapOriginalAtkDefUntilEndOfTurn:
@@ -2906,11 +2953,12 @@ namespace WRLDZ.Duel.TextEffects
 
                 case EffectActionKind.GainLifePoints:
                 {
+                    var gainer = clause.OpponentIsSubject ? opp : who;
                     var gained = AmountWithGyCopies(who, source, clause);
                     if (clause.ScaleAmountByControllerMonsters)
                         gained = Mathf.Max(0, clause.Amount) * who.MonsterCount;
-                    who.LifePoints += gained;
-                    engine.Log($"{who.Name} gains {gained} LP ({who.LifePoints}).");
+                    gainer.LifePoints += gained;
+                    engine.Log($"{gainer.Name} gains {gained} LP ({gainer.LifePoints}).");
                     break;
                 }
 
@@ -3148,7 +3196,7 @@ namespace WRLDZ.Duel.TextEffects
                         if (clause.RequiresTargetChoice) break;
                         foreach (var m in CollectAllMatching(engine, who, clause).ToList())
                         {
-                            if (m == null) continue;
+                            if (m == null || m == source) continue; // Giant Trunade stays to resolve
                             if (m.IsToken) Destroy(m);
                             else engine.ReturnCardToHand(m);
                         }
@@ -3220,8 +3268,15 @@ namespace WRLDZ.Duel.TextEffects
                 case EffectActionKind.GainThisAtkUntilEnd:
                 {
                     var gain = clause.Amount;
+                    if (clause.AmountIsOriginalAtk && source?.Def != null)
+                        gain = Mathf.Max(0, source.Def.atk); // "double the original ATK"
                     if (clause.ScaleAmountByCostCount)
                         gain *= Mathf.Max(1, costNumeric);
+                    if (clause.DestroyThisAtEndPhase && source != null)
+                    {
+                        source.TempDestroyOnEndOfTurn = engine.TurnNumber;
+                        engine.Log($"{source.Name} will be destroyed during the End Phase.");
+                    }
                     if (source != null && gain != 0)
                     {
                         source.UntilEndOfTurnAtk += gain;
@@ -3489,6 +3544,61 @@ namespace WRLDZ.Duel.TextEffects
             foreach (var c in FaceUpClauses(attacker, EffectActionKind.AttackCostLp))
                 n += Mathf.Max(0, c.Amount);
             return n;
+        }
+
+        /// <summary>
+        /// Every attack cost for this declaration: the monster's own (Dark Elf) plus face-up
+        /// Continuous cards (Toll: each player pays; Gravekeeper's Servant: the opponent mills).
+        /// </summary>
+        public static void AttackCosts(DuelEngine engine, DuelistState attackerSide, CardInstance attacker,
+            out int lp, out int mill)
+        {
+            lp = AttackLpCost(attacker);
+            mill = 0;
+            if (engine == null || attackerSide == null) return;
+            foreach (var side in new[] { engine.Player, engine.Opponent })
+            {
+                if (side == null) continue;
+                foreach (var st in side.SpellTrapsOnField())
+                {
+                    foreach (var c in FaceUpClauses(st, EffectActionKind.AttackCostLpForAll))
+                        if (c.Side == EffectSide.Both || side != attackerSide)
+                            lp += Mathf.Max(0, c.Amount);
+                    foreach (var c in FaceUpClauses(st, EffectActionKind.AttackCostMillForOpponent))
+                        if (side != attackerSide)
+                            mill += Mathf.Max(0, c.Amount);
+                }
+            }
+        }
+
+        /// <summary>Pay the mill part of an attack cost (Gravekeeper's Servant).</summary>
+        public static void PayAttackMill(DuelEngine engine, DuelistState who, int n)
+        {
+            if (n > 0) SendTopOfDeckToGy(engine, who, n);
+        }
+
+        /// <summary>Spellbinding Circle: a linked card forbids this monster changing position.</summary>
+        public static bool PositionChangeForbiddenByEffect(CardInstance monster)
+        {
+            if (monster?.Equips == null) return false;
+            foreach (var eq in monster.Equips)
+                if (FaceUpClauses(eq, EffectActionKind.EquippedCannotChangePosition).Any())
+                    return true;
+            return false;
+        }
+
+        /// <summary>Megamorph: ATK change the equip applies to its host right now.</summary>
+        public static int LpComparisonAtkDelta(DuelEngine engine, CardInstance equip, CardInstance host)
+        {
+            if (engine == null || host?.Def == null || host.Def.atk < 0) return 0;
+            if (!FaceUpClauses(equip, EffectActionKind.EquipAtkByLpComparison).Any()) return 0;
+            var mine = engine.ControllerOf(equip);
+            var theirs = engine.OpponentOf(mine);
+            if (mine == null || theirs == null) return 0;
+            var orig = host.Def.atk;
+            if (mine.LifePoints < theirs.LifePoints) return orig;             // becomes double
+            if (mine.LifePoints > theirs.LifePoints) return -(orig - (orig + 1) / 2); // becomes half
+            return 0;
         }
 
         /// <summary>
@@ -4173,22 +4283,31 @@ namespace WRLDZ.Duel.TextEffects
 
             if (clause.FromDeck && who.Deck != null && engine.Database != null)
             {
+                var pos = clause.SummonInDefense ? BattlePosition.Defense : BattlePosition.Attack;
+                var summoned = 0;
                 for (var i = 0; i < who.Deck.Count; i++)
                 {
                     var id = who.Deck[i];
                     if (!engine.Database.TryGet(id, out var def) || !DefMatchesSummonFilter(def, clause))
                         continue;
+                    if (engine.FirstEmpty(who.MonsterZones) < 0) break;
                     who.Deck.RemoveAt(i);
                     var inst = engine.CreateCardInstance(id);
-                    if (engine.SpecialSummonToField(who, inst, BattlePosition.Attack, true))
+                    if (engine.SpecialSummonToField(who, inst, pos, !clause.SummonFaceDown))
                     {
-                        engine.Log($"Special Summoned {inst.Name} from Deck.");
-                        return;
+                        engine.Log($"Special Summoned {inst.Name} from Deck" +
+                                   (clause.SummonFaceDown ? " in face-down Defense Position." : "."));
+                        summoned++;
+                        if (!clause.SummonAllCopies) return;
+                        i--; // the list shifted
+                        continue;
                     }
 
                     who.Deck.Insert(i, id);
                     break;
                 }
+
+                if (summoned > 0) return;
             }
 
             if (clause.FromGrave && who.Graveyard != null)
@@ -4428,6 +4547,18 @@ namespace WRLDZ.Duel.TextEffects
                     foreach (var g in opp.Graveyard)
                         if (g?.Def != null && g.Def.IsMonster) list.Add(g);
                     break;
+                case EffectZoneFilter.OppHandCards:
+                    foreach (var h in opp.Hand)
+                        if (h?.Def != null) list.Add(h);
+                    break;
+                case EffectZoneFilter.DeckRitualMonsters:
+                    AddUniqueDeck(engine, who, list, def => def != null && def.IsMonster && def.IsRitualMonster);
+                    break;
+                case EffectZoneFilter.DeckRitualSpells:
+                    AddUniqueDeck(engine, who, list, def =>
+                        def != null && def.IsSpell &&
+                        string.Equals(def.race, "Ritual", StringComparison.OrdinalIgnoreCase));
+                    break;
                 case EffectZoneFilter.ControllerHandMonsters:
                     foreach (var h in who.Hand)
                         if (h != null && h != except && h.Def != null && h.Def.IsMonster) list.Add(h);
@@ -4534,6 +4665,8 @@ namespace WRLDZ.Duel.TextEffects
                                         System.StringComparison.OrdinalIgnoreCase));
             if (c.Action == EffectActionKind.EquipThisToTarget)
                 list.RemoveAll(t => t?.Def == null || !t.Def.IsMonster || !t.FaceUp);
+            if (c.Action == EffectActionKind.ModifyTargetUntilEndOfTurn)
+                list.RemoveAll(t => t?.Def == null || !t.Def.IsMonster || !t.FaceUp);
             // "a non Machine-Type monster" (Paralyzing Potion / Germ Infection)
             if (!string.IsNullOrEmpty(c.ExceptRaceFilter))
                 list.RemoveAll(t => t?.Def == null ||
@@ -4633,6 +4766,14 @@ namespace WRLDZ.Duel.TextEffects
                         .First();
                 case EffectZoneFilter.ControllerHandMonsters:
                     return targets.OrderBy(t => t.Def?.atk ?? 0).First();
+                case EffectZoneFilter.OppHandCards:
+                    // Take the opponent's strongest-looking card: Spells/Traps, then high-ATK monsters.
+                    return targets
+                        .OrderByDescending(t => t.Def != null && !t.Def.IsMonster ? 1 : 0)
+                        .ThenByDescending(t => t.Def?.atk ?? 0)
+                        .First();
+                case EffectZoneFilter.DeckRitualMonsters:
+                    return targets.OrderByDescending(t => t.Def?.atk ?? 0).First();
                 case EffectZoneFilter.ControllerAnyMonsters:
                     // Sacrifice your weakest monsters.
                     return targets.OrderBy(t => t.CurrentAtk).First();
@@ -4656,6 +4797,11 @@ namespace WRLDZ.Duel.TextEffects
             EffectZoneFilter.OppFaceUpMonsters => EffectTargetKind.OppFaceUpMonster,
             EffectZoneFilter.FieldAnyMonster when c.Action == EffectActionKind.EquipThisToTarget
                 => EffectTargetKind.EquipAnyMonster,
+            EffectZoneFilter.FieldAnyMonster when c.Action == EffectActionKind.ModifyTargetUntilEndOfTurn
+                => EffectTargetKind.FaceUpMonsterOnField,
+            EffectZoneFilter.OppHandCards => EffectTargetKind.CardInOppHand,
+            EffectZoneFilter.DeckRitualMonsters => EffectTargetKind.CardInYourDeck,
+            EffectZoneFilter.DeckRitualSpells => EffectTargetKind.CardInYourDeck,
             EffectZoneFilter.FieldAnyMonster => EffectTargetKind.AnyMonsterOnField,
             EffectZoneFilter.ControllerGySpells => EffectTargetKind.SpellInYourGy,
             EffectZoneFilter.ControllerGyTraps => EffectTargetKind.TrapInYourGy,

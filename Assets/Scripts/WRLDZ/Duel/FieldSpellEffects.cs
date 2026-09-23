@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using WRLDZ.Data;
 using WRLDZ.Duel.TextEffects;
 
@@ -140,6 +141,8 @@ namespace WRLDZ.Duel
                 if (ep == null) continue;
                 // Germ Infection / Stim-Pack: ATK lost per Standby Phase counted on the Equip.
                 host.AtkModifier -= TextEffectRuntime.EquipStandbyDecay(eq);
+                // Megamorph: ATK becomes double / half its original by LP comparison.
+                host.AtkModifier += TextEffectRuntime.LpComparisonAtkDelta(engine, eq, host);
                 foreach (var c in ep.ClauseList)
                 {
                     if (c != null && (c.EquipAtkBonus != 0 || c.EquipDefBonus != 0))
@@ -253,6 +256,12 @@ namespace WRLDZ.Duel
                 case "CardsInYourHand":
                     n = who.Hand?.Count ?? 0;
                     break;
+                case "EquipsOnThis":
+                    n = self.Equips?.Count(eq => eq?.Def != null && (eq.Def.IsEquipSpell || eq.Def.IsMonster)) ?? 0; // Equip Spells + Union monsters
+                    break;
+                case "OppControlsAnyMonster":
+                    n = engine.OpponentOf(who)?.MonsterCount > 0 ? 1 : 0;
+                    break;
             }
 
             self.AtkModifier += clause.Amount * n;
@@ -272,11 +281,13 @@ namespace WRLDZ.Duel
             ApplyLevelMod(engine, "WATER", -1, applyToHand: true, applyToField: true);
         }
 
-        static bool HasCompiledDamageStepBoost(CardInstance m)
+        static bool HasCompiledConditionalSelfStat(CardInstance m)
         {
             var prog = CompiledEffectCache.GetOrCompile(m.Def);
             return prog != null && prog.FullyCompiled &&
-                   prog.ClauseList.Exists(c => c != null && c.Action == EffectActionKind.GainAtkWhenAttackingMatching);
+                   prog.ClauseList.Exists(c => c != null &&
+                                               (c.Action == EffectActionKind.GainAtkWhenAttackingMatching ||
+                                                c.Action == EffectActionKind.GainSelfAtkPerCount));
         }
 
         static void ApplyFaceUpMonsterAuras(DuelEngine engine, DuelistState who)
@@ -285,9 +296,9 @@ namespace WRLDZ.Duel
             foreach (var m in who.MonstersOnField())
             {
                 if (m?.Def == null || !m.FaceUp || m.IsNegated) continue;
-                // The Lua-extracted catalog drops Damage-Step conditions (Insect Soldiers of
-                // the Sky became a permanent +1000). Official text wins for those cards.
-                if (!HasCompiledDamageStepBoost(m) && ApplyCatalogAuras(engine, m, "MZONE")) continue;
+                // The Lua-extracted catalog drops conditions (Insect Soldiers of the Sky became a
+                // permanent +1000, Boar Soldier a permanent −1000). Official text wins for those.
+                if (!HasCompiledConditionalSelfStat(m) && ApplyCatalogAuras(engine, m, "MZONE")) continue;
                 ApplySpellCounterAtk(engine, m);
                 ApplyEquipStats(engine, m);
                 if (ApplyCompiledContinuous(engine, m)) continue;
@@ -403,6 +414,7 @@ namespace WRLDZ.Duel
                     if (!IsFaceUpMonster(m)) continue;
                     if (!MatchesAttribute(m, clause.AttributeFilter)) continue;
                     if (!MatchesRace(m, clause.RaceFilter)) continue;
+                    if (clause.AffectsDefensePositionOnly && m.Position != BattlePosition.Defense) continue;
                     m.AtkModifier += clause.Amount;
                     m.DefModifier += clause.DefAmount;
                 }
