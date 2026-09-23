@@ -132,10 +132,52 @@ Needs Play mode / an S23 (not visible from the VM):
 - `Sprites/Default` surviving shader stripping in a device build (same
   dependency as `ArArenaStartFlash` and the legal-zone glows).
 
-## 7. Deliberately not done
+## 7. Signature set pieces (one per field)
 
-- No procedural cliffs, trees or towers. The walls already carry the scenery
-  from the real illustration; a second, cruder silhouette layer would compete with it.
+The layers above make every field feel like a field. What the anime really
+sells is the one element a viewer names the field by: Umi's sea, Sogen's grass,
+Yami's dark. That element is a **signature kit**: a procedural component under
+the floor (`ArFieldSignature` subclasses, `ArFieldSig*.cs`), chosen by the
+row's `FieldSignature` and styled by `SignatureVariant` / `SignatureScale` plus
+the row palette.
+
+**Easy tier first.** The 12 fields that only change ATK/DEF already have their
+whole rules effect on screen (the aura), so they only need a signature. The 9
+named fields with rule effects (Necrovalley, Fusion Gate, …) get theirs with
+event presentation later.
+
+| Kit | Scope | Fields (variant) | Look |
+|---|---|---|---|
+| Waterline | per monster | Umi (0), Umiiruka (1) | Monsters wade: shin-high water ring, ripples, foam |
+| GroundCover | per monster | Sogen (0), Forest (1), Gaia Power (2) | Meadow grass / fern undergrowth / roots breaking the ground |
+| Outcrops | per monster | Wasteland (0), Mountain (1), Molten Destruction (2) | Dusty boulders / crags / lava-cracked rock |
+| Shroud | per monster | Yami (0) | Shadow tendrils curling up from the ground |
+| Arcs | street | Mystic Plasma Zone (0) | Plasma lightning flashing high over the street |
+| Shafts | street | Luminous Spark (0) | Light shafts slanting down, fading before the ground |
+| Updraft | per monster | Rising Air Current (0) | Wind ribbons spiralling around the feet |
+
+**Kit contract** (enforced by review and, where static, by the guard):
+
+- Per-monster pieces stay within 0.75 × and below 0.6 × the monster's scale.
+  They sit around the monster, never under the card, so the terrain pad,
+  ownership ring and aura stay readable. Street pieces stay above 1.3 m × street
+  scale. Nothing is drawn across the open aisle floor.
+- Every alpha is multiplied by the sweep/dissolve level and each monster's
+  presence, so set pieces ripple in with the sweep and never pop.
+- At most 2 draw calls and 4096 vertices, zero per-frame allocations, unscaled
+  time, no physics, no `Find*`, materials only from the base class helpers.
+- Colours come from the row palette, and looks vary only by variant and scale
+  (the guard fails a kit that names a card). Face-down monsters report no aura,
+  so kits cannot leak a set monster's Type.
+
+Monster positions come from the terrain pads (`ArFieldTerrainPad.CollectAnchors`),
+so a kit never touches cards or the engine.
+
+## 8. Deliberately not done
+
+- No scenery-scale cliffs, trees or towers across the street. The walls
+  already carry the scenery from the real illustration. Signature kits
+  decorate only around monsters or high over the street (§7).
 - No wash on the hand or the disk. Those are physical cards, not projections.
 - No change to the shared monster crop (`ArtworkNormRect`). It has the same frame
   bleed, but it affects every holo, so it is a separate change.
