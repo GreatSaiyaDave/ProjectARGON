@@ -215,7 +215,22 @@ namespace WRLDZ.Duel.TextEffects
         /// <see cref="EffectClause.DieNegateFacesMask"/> negate the effect and destroy the
         /// opponent's card. The classic Archfiend die-roll protection.
         /// </summary>
-        DieRollNegateWhenTargeted
+        DieRollNegateWhenTargeted,
+        /// <summary>
+        /// Continuous: Trap Cards (and their on-field effects) cannot be activated
+        /// (Jinzo first sentence). Royal Decree does not use this.
+        /// </summary>
+        ContinuousCannotActivateTraps,
+        /// <summary>
+        /// Continuous: negate face-up Trap effects (Jinzo second sentence / Royal Decree).
+        /// <see cref="EffectClause.NegateOtherOnly"/> skips the source (Decree "other").
+        /// </summary>
+        ContinuousNegateFaceUpTraps,
+        /// <summary>
+        /// Target an opponent's monster; this turn it may (and must, if you Tribute)
+        /// be Tributed as if you controlled it. Not a take-control.
+        /// </summary>
+        GrantTributeAsIfControlledUntilEnd
     }
 
     public enum EffectSide
@@ -243,6 +258,8 @@ namespace WRLDZ.Duel.TextEffects
         OpponentBattlingMonster,
         /// <summary>Opponent's Defense Position monsters (Dark Mirror Force).</summary>
         OppDefensePositionMonsters,
+        /// <summary>Any monster the opponent controls (face-up or face-down).</summary>
+        OppMonsters,
         /// <summary>Any card on either field (monsters, S/T, Field Spell).</summary>
         AnyCardOnField,
         /// <summary>Monsters in the controller's hand (discard cost).</summary>
@@ -528,6 +545,23 @@ namespace WRLDZ.Duel.TextEffects
         public OncePerTurnScope OptScope = OncePerTurnScope.None;
         public bool ActivationNegatable = true;
         public bool EffectNegatable = true;
+        /// <summary>Royal Decree: negate other Trap effects, not this card.</summary>
+        public bool NegateOtherOnly;
+        /// <summary>
+        /// Amplifier: the equipped host's trap-lock does not block or negate
+        /// its controller's Trap Cards.
+        /// </summary>
+        public bool ExemptControllerTrapsFromHostNegation;
+        /// <summary>Graceful / Skull Dice: Amount is per die face (1–6).</summary>
+        public bool ScaleByDieRoll;
+        /// <summary>
+        /// The Shallow Grave: each player targets 1 monster in their own GY.
+        /// </summary>
+        public bool EachPlayerTargetsOwnGy;
+        /// <summary>Special Summon face-down (Shallow Grave).</summary>
+        public bool SummonFaceDown;
+        /// <summary>Soul Exchange: skip the activator's Battle Phase this turn.</summary>
+        public bool SkipBattlePhaseThisTurn;
     }
 
     /// <summary>When the activation condition is tested (PSCT "when" vs "if").</summary>

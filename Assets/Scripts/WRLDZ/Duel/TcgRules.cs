@@ -47,7 +47,24 @@ namespace WRLDZ.Duel
             // Face-up printed lock (Fox Fire) and token lock (Ojama) share this flag.
             if (monster.CannotBeTributedForSummon && monster.FaceUp && !monster.IsNegated)
                 return false;
-            return who.TryFindMonster(monster, out _);
+            if (who.TryFindMonster(monster, out _)) return true;
+            return who.MustTributeAsIfControlled == monster &&
+                   monster.TributableByOpponent == who;
+        }
+
+        /// <summary>
+        /// Monsters you control, plus a Soul Exchange-style tribute you must use
+        /// as if you controlled it (still on the opponent's field).
+        /// </summary>
+        public static int TributeCandidatesForSummon(DuelistState who)
+        {
+            if (who == null) return 0;
+            var n = who.MonsterCount;
+            var forced = who.MustTributeAsIfControlled;
+            if (forced != null && CanBeTributedForSummon(who, forced) &&
+                !who.TryFindMonster(forced, out _))
+                n++;
+            return n;
         }
 
         public static bool IsNormalSummonableMonster(CardDef def)

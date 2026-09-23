@@ -138,6 +138,12 @@ namespace WRLDZ.Duel.Rules
             }
 
             var def = card.Def;
+            if (def.IsTrap && ContinuousNegations.TrapsCannotActivate(engine, who, card))
+            {
+                reason = "Trap Cards cannot be activated.";
+                return false;
+            }
+
             var text = OfficialCardAuthority.OfficialText(def);
             if (string.IsNullOrEmpty(text) && !OfficialCardAuthority.HasNoActivatableEffect(def))
             {

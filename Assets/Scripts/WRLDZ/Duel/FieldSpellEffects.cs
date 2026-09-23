@@ -57,6 +57,7 @@ namespace WRLDZ.Duel
             if (engine?.Player == null || engine.Opponent == null) return;
             ClearModifiers(engine.Player);
             ClearModifiers(engine.Opponent);
+            ContinuousNegations.Refresh(engine);
             ApplyFaceUpField(engine, engine.Player.FieldSpellZone?.Occupant);
             ApplyFaceUpField(engine, engine.Opponent.FieldSpellZone?.Occupant);
             ApplyFaceUpMonsterAuras(engine, engine.Player);
