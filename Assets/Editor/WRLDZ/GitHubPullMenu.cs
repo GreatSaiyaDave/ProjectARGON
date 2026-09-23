@@ -81,18 +81,48 @@ namespace WRLDZ.EditorTools
 
             EditorUtility.DisplayProgressBar("WRLDZ", "Fetching GitHub main…", 0.4f);
             var fetch = RunGit(root, "fetch origin main");
-            var pull = RunGit(root, "pull --ff-only origin main");
-            EditorUtility.ClearProgressBar();
-
-            if (fetch.Code != 0 || pull.Code != 0)
+            if (fetch.Code != 0)
             {
-                Fail(
-                    "GitHub pull failed.\n\n" + fetch.Text + "\n" + pull.Text +
-                    "\nIf this folder has local edits, the pull stopped on purpose. " +
-                    "Do not zip-replace. Close Unity and run " +
-                    "Tools/get_latest_into_this_folder.sh (see GET_THE_GAME.txt).");
+                EditorUtility.ClearProgressBar();
+                Fail("Could not reach GitHub.\n\n" + fetch.Text +
+                     "\nCheck the internet connection, then try again.");
                 return;
             }
+
+            var pull = RunGit(root, "pull --ff-only origin main");
+            if (pull.Code != 0)
+            {
+                // This folder and GitHub both have new commits (they "diverged").
+                // Same as Tools/get_latest_into_this_folder.sh: merge, never wipe.
+                var dirty = RunGit(root, "status --porcelain");
+                if (dirty.Code != 0 || !string.IsNullOrWhiteSpace(dirty.Text))
+                {
+                    EditorUtility.ClearProgressBar();
+                    Fail(
+                        "This folder has unsaved changes, so the update stopped. Nothing was deleted.\n\n" +
+                        "To keep your changes and get GitHub's: close Unity, open Linux Terminal in this " +
+                        "folder, and paste:\n\n" +
+                        "curl -fsSL https://raw.githubusercontent.com/GreatSaiyaDave/ProjectARGON/main/Tools/send_this_folder_to_github.sh | bash");
+                    return;
+                }
+
+                EditorUtility.DisplayProgressBar("WRLDZ", "Combining GitHub with this folder…", 0.7f);
+                EnsureGitIdentity(root);
+                var merge = RunGit(root, "merge FETCH_HEAD --no-edit");
+                if (merge.Code != 0)
+                {
+                    RunGit(root, "merge --abort");
+                    EditorUtility.ClearProgressBar();
+                    Fail(
+                        "GitHub and this folder changed the same files, so the update stopped. " +
+                        "Nothing was deleted; this folder is back the way it was.\n\n" +
+                        "Tell the agent: merge conflict in ProjectARGON, and paste this message.\n\n" +
+                        merge.Text);
+                    return;
+                }
+            }
+
+            EditorUtility.ClearProgressBar();
 
             AssetDatabase.Refresh();
             var log = RunGit(root, "log -1 --oneline");
