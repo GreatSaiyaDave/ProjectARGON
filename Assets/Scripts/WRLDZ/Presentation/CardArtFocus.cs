@@ -13,9 +13,13 @@ namespace WRLDZ.Presentation
         /// <summary>
         /// Normalized illustration rect on a standard Konami TCG card scan
         /// (origin bottom-left, matching Unity texture UVs).
-        /// Tuned for LOB–era and modern portrait cards in StreamingAssets/CardArt.
+        /// On the 268×391 scans in StreamingAssets/CardArt every frame (Normal, Effect,
+        /// Fusion, Ritual, Spell, Trap) puts the art at texels x 32–235, y 116–318
+        /// inside a 4-texel bevel. This rect sits ~2 texels in from that, so bilinear
+        /// sampling never reads the bevel or frame, and is square like the monster holo quad.
+        /// Guarded by Tools/card_art_focus_check.py.
         /// </summary>
-        public static readonly Rect ArtworkNormRect = new(0.09f, 0.30f, 0.82f, 0.55f);
+        public static readonly Rect ArtworkNormRect = new(0.127f, 0.301f, 0.746f, 0.511f);
 
         /// <summary>Typical full card scan width/height (~59×86 mm).</summary>
         public const float FullCardAspect = 59f / 86f; // ≈ 0.686

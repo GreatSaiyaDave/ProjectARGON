@@ -24,6 +24,7 @@ These are string/layout contracts, not a Game view.
 | `Tools/hub_overlay_chrome_check.py` | Overlay sheets stay compact (header / well / BACK); dest tiles stay on Eye/hub |
 | `Tools/ygo_ui_lore_check.py` | Lore / chrome skill needles (no Konami dump paths) |
 | `Tools/deck_editor_layout_check.py` | CARD LIST panel pin — **not** scroll-content pin from `deck-builder-collection-fill` |
+| `Tools/card_art_focus_check.py` | `CardArtFocus.ArtworkNormRect` edges stay on the illustration, off the frame and bevel of every frame type (the image half needs Pillow); square packs stay uncropped |
 
 ## Cloud bootstrap
 
