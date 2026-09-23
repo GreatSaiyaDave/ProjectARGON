@@ -57,6 +57,18 @@ namespace WRLDZ.Duel.TextEffects
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         /// <summary>
+        /// Reflect Bounder: before DC, if this is the attack target and was face-up
+        /// Attack, inflict the attacker's ATK; if you do, destroy this after DC.
+        /// InflictDamageEqualToAtk + DestroySourceAfterDamageCalculation.
+        /// </summary>
+        static readonly Regex RxReflectBounder = new(
+            @"Before damage calculation, if this card is being attacked by an opponent's monster" +
+            @"(?:, and was in face-up Attack Position at the start of the Damage Step)?:\s*" +
+            @"Inflict damage to your opponent equal to the attacking monster's ATK\.\s*" +
+            @"If you do, after damage calculation:\s*Destroy this card\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
         /// Ryu-Kishin Clown family: any Summon, change 1 face-up monster's battle position.
         /// Bite Shoes action on ThisCardSummoned. Parenthetical is Konami "all summons".
         /// </summary>
@@ -203,6 +215,17 @@ namespace WRLDZ.Duel.TextEffects
                 into.Add(c);
                 spans?.Add((m.Index, m.Length));
             }
+
+            Add(RxReflectBounder.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.DamageCalculation,
+                Action = EffectActionKind.InflictDamageEqualToAtk,
+                Zone = EffectZoneFilter.AttackingMonster,
+                RequiresThisIsAttackTarget = true,
+                RequiresThisAttackPosition = true,
+                DestroySourceAfterDamageCalculation = true,
+                MakesChainLink = true
+            });
 
             var gain = RxFlipGainAtkDef.Match(text);
             Add(gain, gain.Success
@@ -612,6 +635,8 @@ namespace WRLDZ.Duel.TextEffects
             if (RxFlipInflict.IsMatch(text) || RxFlipSummonInflict.IsMatch(text) ||
                 RxBattleGyInflict.IsMatch(text) || RxSummonedInflict.IsMatch(text))
                 need.Add(EffectActionKind.InflictDamageToOpponent);
+            if (RxReflectBounder.IsMatch(text))
+                need.Add(EffectActionKind.InflictDamageEqualToAtk);
             if (RxBattleGyGainLp.IsMatch(text) || RxFlipGainLp.IsMatch(text))
                 need.Add(EffectActionKind.GainLifePoints);
             if (RxFlipBanishEitherGy.IsMatch(text))

@@ -231,7 +231,6 @@ RX_SOUL_RES = re.compile(
 )
 
 UNIQUE_ST_LEFTOVER = {
-    3136426,  # Level Limit - Area B
     21770260,  # Jam Breeding Machine
     82732705,  # Skill Drain
     82003859,  # Toll

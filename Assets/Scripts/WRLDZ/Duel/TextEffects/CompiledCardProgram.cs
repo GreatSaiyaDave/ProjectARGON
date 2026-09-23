@@ -465,6 +465,23 @@ namespace WRLDZ.Duel.TextEffects
         public bool RitualExactLevel;
         /// <summary>ContinuousCannotAttack: Amount is a printed Level (Gravity Bind), not ATK.</summary>
         public bool AmountIsLevel;
+        /// <summary>
+        /// ChangeBattlePosition: set the monster to Defense (do not toggle).
+        /// ContinuousWhileFaceUp + AmountIsLevel is Level Limit - Area B.
+        /// </summary>
+        public bool SetToDefense;
+        /// <summary>
+        /// SpecialSummonFromHand: the summoned monster must be Normal Summonable/Set
+        /// (Tribute Doll). Uses <see cref="WRLDZ.Data.CardDef.CanBeNormalSummonedOrSet"/>.
+        /// </summary>
+        public bool RequiresCanBeNormalSummonedOrSet;
+        /// <summary>The Special Summoned copy cannot declare an attack this turn.</summary>
+        public bool SummonCannotAttackThisTurn;
+        /// <summary>
+        /// InflictDamageEqualToAtk: after this damage calculation, destroy the source
+        /// (Reflect Bounder).
+        /// </summary>
+        public bool DestroySourceAfterDamageCalculation;
         /// <summary>Suijin: this card must be the current attack target.</summary>
         public bool RequiresThisIsAttackTarget;
         /// <summary>Suijin: once while this copy remains face-up.</summary>

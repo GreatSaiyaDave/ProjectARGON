@@ -419,6 +419,7 @@ namespace WRLDZ.Duel
                 m.ChangedPositionThisTurn = false;
                 m.EffectUsedThisTurn = false;
                 m.DirectAttackThisTurn = false;
+                m.CannotAttackThisTurn = false;
                 m.DestroyedByBattleThisTurn = false;
             }
 
@@ -681,6 +682,8 @@ namespace WRLDZ.Duel
             card.WasSpecialSummoned = false;
             card.WasTributeSummoned = need > 0 && !asSet;
             who.NormalSummonUsed = true;
+            if (!asSet)
+                ApplyContinuousForceDefense();
             PendingTributes.Clear();
             if (!who.IsPlayer)
                 DuelPresentationPacer.HoldOpponentSummon(card.Name, asSet);
@@ -714,6 +717,7 @@ namespace WRLDZ.Duel
             monster.Position = BattlePosition.Attack;
             monster.SummonedThisTurn = true;
             monster.ChangedPositionThisTurn = true;
+            ApplyContinuousForceDefense();
             Log(who.IsPlayer
                 ? $"Flip Summon {monster.Name}!"
                 : $"Opponent Flip Summons {monster.Name}.");
@@ -743,6 +747,8 @@ namespace WRLDZ.Duel
             if (monster.SetThisTurn) return false; // includes flipped face-up by effects same turn as Set
             if (monster.AttackedThisTurn) return false;
             if (monster.ChangedPositionThisTurn) return false;
+            if (ContinuousForceDefenseApplies(monster) && monster.Position == BattlePosition.Defense)
+                return false;
             return true;
         }
 
@@ -1401,6 +1407,8 @@ namespace WRLDZ.Duel
             card.SentFromFieldTurnNumber = 0;
             who.MonsterZones[idx].Occupant = card;
             if (faceUp)
+                ApplyContinuousForceDefense();
+            if (faceUp)
                 TextEffects.TextEffectRuntime.TryResolveThisCardSummoned(
                     this, who, card, specialSummon: true);
             if (faceUp)
@@ -1488,6 +1496,8 @@ namespace WRLDZ.Duel
                 return false;
             if (ContinuousCannotAttackBlocks(who, attacker))
                 return false;
+            if (attacker.CannotAttackThisTurn)
+                return false;
             return true;
         }
 
@@ -1534,6 +1544,78 @@ namespace WRLDZ.Duel
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Level Limit - Area B: a face-up Continuous ChangeBattlePosition + SetToDefense
+        /// program keeps this face-up monster in Defense Position.
+        /// </summary>
+        public bool ContinuousForceDefenseApplies(CardInstance monster)
+        {
+            if (monster?.Def == null || !monster.FaceUp) return false;
+            foreach (var side in new[] { Player, Opponent })
+            {
+                if (side == null) continue;
+                foreach (var st in side.SpellTrapsOnField())
+                {
+                    if (st == null || !st.FaceUp || st.Def == null) continue;
+                    var prog = TextEffects.CompiledEffectCache.GetOrCompile(st.Def);
+                    if (prog == null) continue;
+                    foreach (var c in prog.ClausesFor(TextEffects.EffectTiming.ContinuousWhileFaceUp))
+                    {
+                        if (c == null ||
+                            c.Action != TextEffects.EffectActionKind.ChangeBattlePosition ||
+                            !c.SetToDefense)
+                            continue;
+                        var controller = ControllerOf(monster);
+                        if (c.Side == TextEffects.EffectSide.Opponent && side == controller)
+                            continue;
+                        if (c.Side == TextEffects.EffectSide.Controller && side != controller)
+                            continue;
+                        if (!string.IsNullOrEmpty(c.RaceFilter) &&
+                            (monster.Def.race == null ||
+                             monster.Def.race.IndexOf(c.RaceFilter,
+                                 System.StringComparison.OrdinalIgnoreCase) < 0))
+                            continue;
+                        if (c.AmountIsLevel && monster.Level < c.Amount)
+                            continue;
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>Snap matching face-up monsters into Defense while Area B-style cards are up.</summary>
+        public void ApplyContinuousForceDefense()
+        {
+            foreach (var side in new[] { Player, Opponent })
+            {
+                if (side == null) continue;
+                foreach (var m in side.MonstersOnField())
+                {
+                    if (m == null || !ContinuousForceDefenseApplies(m)) continue;
+                    if (m.Position == BattlePosition.Defense) continue;
+                    m.Position = BattlePosition.Defense;
+                    Log($"{m.Name} is changed to Defense Position (Level Limit).");
+                }
+            }
+        }
+
+        void DestroyMarkedAfterDamageCalculation()
+        {
+            foreach (var side in new[] { Player, Opponent })
+            {
+                if (side == null) continue;
+                foreach (var m in side.MonstersOnField().ToList())
+                {
+                    if (m == null || !m.DestroyAfterThisDamageCalculation) continue;
+                    m.DestroyAfterThisDamageCalculation = false;
+                    Log($"{m.Name} is destroyed after damage calculation.");
+                    SendCardToGrave(side, m);
+                }
+            }
         }
 
         /// <summary>Rulebook 1 attack, plus continuous extra attacks (Mermaid Knight while Umi, …).</summary>
@@ -2119,6 +2201,9 @@ namespace WRLDZ.Duel
             // Clear per-battle damage prevention after this battle's calc
             who.PreventBattleDamageThisBattle = false;
             opp.PreventBattleDamageThisBattle = false;
+
+            // Reflect Bounder: after damage calculation, destroy this card.
+            DestroyMarkedAfterDamageCalculation();
 
             // —— Flip effects (after damage calculation, before battle destruction) ——
             if (flippedByBattle != null && opp.TryFindMonster(flippedByBattle, out _))

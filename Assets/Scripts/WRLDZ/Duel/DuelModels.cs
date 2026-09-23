@@ -110,6 +110,12 @@ namespace WRLDZ.Duel
         /// <summary>Gear Golem-style: this copy may attack directly this turn only.</summary>
         public bool DirectAttackThisTurn;
 
+        /// <summary>Tribute Doll family: this copy cannot declare an attack this turn.</summary>
+        public bool CannotAttackThisTurn;
+
+        /// <summary>Reflect Bounder: destroy this copy after the current damage calculation.</summary>
+        public bool DestroyAfterThisDamageCalculation;
+
         /// <summary>True if this copy was Special Summoned (Jowgen, etc.).</summary>
         public bool WasSpecialSummoned;
         /// <summary>True if this copy was Tribute Summoned (Blast Held by a Tribute).</summary>
