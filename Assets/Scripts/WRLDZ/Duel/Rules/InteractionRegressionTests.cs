@@ -3015,6 +3015,76 @@ namespace WRLDZ.Duel.Rules
                         p.Graveyard.Exists(c => c.CardId == duster));
                 }
 
+                // ── Fanbot park: Skull Dice / Remove Brainwashing (new atoms, fail-closed) ──
+                {
+                    const int skullDice = 126218;
+                    const int removeBrainwashing = 94739788;
+                    const int gracefulDice = 74137509;
+
+                    var skullDef = db.Get(skullDice);
+                    var skullProg = skullDef != null ? CardTextEffectCompiler.Compile(skullDef) : null;
+                    Check("Skull Dice stays parked (not FullyCompiled)",
+                        skullProg == null || !skullProg.FullyCompiled,
+                        skullProg == null
+                            ? "null"
+                            : $"full={skullProg.FullyCompiled} n={skullProg.ClauseList.Count} unparsed={string.Join("|", skullProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                    Check("Skull Dice is not mapped to RollDieZorc",
+                        skullProg == null ||
+                        !skullProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.RollDieZorc));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        PlaceMonster(engine, opp, 91152256, 2, BattlePosition.Attack, true);
+                        var card = PutInHand(engine, p, skullDice);
+                        Check("Skull Dice: ProgramMayActivate false",
+                            !OfficialEffectRegistry.ProgramMayActivate(card.Def));
+                        Check("Skull Dice: Activate refused (fail-closed)",
+                            !engine.CanActivateSpellTrap(p, card, fromHand: true) &&
+                            !engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                            p.Hand.Contains(card) &&
+                            !p.Graveyard.Contains(card));
+                    }
+
+                    var gracefulDef = db.Get(gracefulDice);
+                    var gracefulProg = gracefulDef != null
+                        ? CardTextEffectCompiler.Compile(gracefulDef)
+                        : null;
+                    Check("Graceful Dice stays parked (same die-scale atom)",
+                        gracefulProg == null || !gracefulProg.FullyCompiled);
+
+                    var brainDef = db.Get(removeBrainwashing);
+                    var brainProg = brainDef != null ? CardTextEffectCompiler.Compile(brainDef) : null;
+                    Check("Remove Brainwashing stays parked (not FullyCompiled)",
+                        brainProg == null || !brainProg.FullyCompiled,
+                        brainProg == null
+                            ? "null"
+                            : $"full={brainProg.FullyCompiled} n={brainProg.ClauseList.Count} unparsed={string.Join("|", brainProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                    Check("Remove Brainwashing is not mapped to TakeControlLevelLeq",
+                        brainProg == null ||
+                        !brainProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.TakeControlLevelLeq));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var trap = PlaceSetTrap(engine, p, removeBrainwashing, 2);
+                        trap.SetThisTurn = false;
+                        Check("Remove Brainwashing: ProgramMayActivate false",
+                            !OfficialEffectRegistry.ProgramMayActivate(trap.Def));
+                        Check("Remove Brainwashing: Activate refused (fail-closed)",
+                            !engine.CanActivateSpellTrap(p, trap, fromHand: false) &&
+                            !engine.TryActivateSpellTrap(p, trap, fromHand: false) &&
+                            p.TryFindSpellTrap(trap, out _) &&
+                            !p.Graveyard.Contains(trap));
+                    }
+                }
+
                 // ── Equip Spells: Activate + target; host leaving field destroys Equip ──
                 {
                     const int treasure = 1435851;
