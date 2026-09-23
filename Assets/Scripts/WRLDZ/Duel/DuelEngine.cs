@@ -704,6 +704,7 @@ namespace WRLDZ.Duel
             // Face-down Defense → face-up Attack
             if (monster.FaceUp || monster.Position != BattlePosition.Defense) return false;
             if (monster.SetThisTurn) return false; // cannot Flip Summon same turn it was Set
+            if (TextEffects.TextEffectRuntime.PositionChangeForbiddenByEffect(monster)) return false;
             return true;
         }
 
@@ -746,6 +747,7 @@ namespace WRLDZ.Duel
             if (monster.AttackedThisTurn) return false;
             if (monster.ChangedPositionThisTurn) return false;
             if (monster.PositionLockedByEffect) return false; // Dragon Capture Jar
+            if (TextEffects.TextEffectRuntime.PositionChangeForbiddenByEffect(monster)) return false; // Spellbinding Circle
             return true;
         }
 
@@ -1544,9 +1546,11 @@ namespace WRLDZ.Duel
             // Paralyzing Potion / Electric Lizard lock
             if (TextEffects.TextEffectRuntime.AttackForbiddenByEffect(this, attacker))
                 return false;
-            // Dark Elf: the LP cost must be payable
-            var lpCost = TextEffects.TextEffectRuntime.AttackLpCost(attacker);
+            // Dark Elf / Toll / Gravekeeper's Servant: the attack cost must be payable
+            TextEffects.TextEffectRuntime.AttackCosts(this, who, attacker, out var lpCost, out var millCost);
             if (lpCost > 0 && who.LifePoints < lpCost)
+                return false;
+            if (millCost > 0 && who.DeckCount < millCost)
                 return false;
             return true;
         }
@@ -1739,10 +1743,12 @@ namespace WRLDZ.Duel
                 return false;
             }
 
-            // Dark Elf: pay the LP cost to attack.
-            var attackCost = TextEffects.TextEffectRuntime.AttackLpCost(attacker);
+            // Dark Elf / Toll: pay LP; Gravekeeper's Servant: send the top card(s) to the GY.
+            TextEffects.TextEffectRuntime.AttackCosts(this, who, attacker, out var attackCost, out var attackMill);
             if (attackCost > 0)
                 PayLifePointCost(who, attackCost, $"{attacker.Name} attack cost");
+            if (attackMill > 0)
+                TextEffects.TextEffectRuntime.PayAttackMill(this, who, attackMill);
             if (GameOver) return false;
 
             // —— Attack declaration + combat animation starts immediately ——

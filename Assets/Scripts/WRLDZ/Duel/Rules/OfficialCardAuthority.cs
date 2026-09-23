@@ -166,6 +166,11 @@ namespace WRLDZ.Duel.Rules
             if (IsNormalMonsterNoEffect(def)) return true;
             if (!def.IsMonster) return false;
 
+            // Non-effect Ritual Monsters: the text only names the Ritual Spell that summons
+            // them. Normal Summon is already refused and the Ritual Spell does the summon.
+            if (string.Equals(def.type, "Ritual Monster", System.StringComparison.OrdinalIgnoreCase))
+                return true;
+
             // Non-Effect Extra Deck monsters (Fusion / Synchro / Xyz / Link without Effect)
             if (def.IsExtraDeck)
             {

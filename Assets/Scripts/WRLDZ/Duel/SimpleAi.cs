@@ -328,6 +328,13 @@ namespace WRLDZ.Duel
         /// (The Little Swordsman of Aile): a card-for-a-turn trade the simple AI must not
         /// spend every Main Phase.
         /// </summary>
+        /// <summary>Dark Elf / Toll: never pay the last Life Points just to attack.</summary>
+        static bool AttackCostIsLethal(DuelEngine engine, DuelistState ai, CardInstance m)
+        {
+            TextEffects.TextEffectRuntime.AttackCosts(engine, ai, m, out var lp, out _);
+            return lp > 0 && lp >= ai.LifePoints;
+        }
+
         static bool TributesForTempAtkOnly(CardInstance m)
         {
             var prog = TextEffects.CompiledEffectCache.GetOrCompile(m);
@@ -349,7 +356,7 @@ namespace WRLDZ.Duel
             while (!engine.GameOver && engine.Phase == DuelPhase.Battle && engine.TurnPlayer == ai)
             {
                 var attacker = ai.MonstersOnField()
-                    .Where(m => engine.CanAttack(ai, m))
+                    .Where(m => engine.CanAttack(ai, m) && !AttackCostIsLethal(engine, ai, m))
                     .OrderByDescending(m => m.CurrentAtk)
                     .FirstOrDefault();
 

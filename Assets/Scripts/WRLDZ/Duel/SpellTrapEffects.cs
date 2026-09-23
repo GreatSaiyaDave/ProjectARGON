@@ -56,7 +56,13 @@ namespace WRLDZ.Duel
         /// <summary>Paralyzing Potion / Germ Infection — any face-up monster to Equip.</summary>
         EquipAnyMonster,
         /// <summary>The Cheerful Coffin — a monster in your hand to discard (not a cost).</summary>
-        DiscardFromHand
+        DiscardFromHand,
+        /// <summary>Rush Recklessly / The Reliable Guardian — a face-up monster on either field.</summary>
+        FaceUpMonsterOnField,
+        /// <summary>Confiscation / The Forceful Sentry — a card in the opponent's revealed hand.</summary>
+        CardInOppHand,
+        /// <summary>Senju / Sonic Bird — a card in your Deck to add to your hand.</summary>
+        CardInYourDeck
     }
 
     /// <summary>In-flight activation waiting for a target choice.</summary>
@@ -164,6 +170,12 @@ namespace WRLDZ.Duel
                         $"{n}: choose a monster you control{MultiNote}.",
                     EffectTargetKind.EquipAnyMonster =>
                         $"{n}: choose a face-up monster to Equip.",
+                    EffectTargetKind.FaceUpMonsterOnField =>
+                        $"{n}: choose a face-up monster.",
+                    EffectTargetKind.CardInOppHand =>
+                        $"{n}: choose a card in your opponent's hand.",
+                    EffectTargetKind.CardInYourDeck =>
+                        $"{n}: choose a card from your Deck to add to your hand.",
                     EffectTargetKind.DiscardFromHand =>
                         $"{n}: choose a monster in your hand to discard{MultiNote}.",
                     _ when AwaitingLpCost =>

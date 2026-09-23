@@ -875,6 +875,235 @@ namespace WRLDZ.Duel.Rules
                     $"left={monstersLeft} gy={me.Graveyard.Count}");
             }
 
+            // ═════════════════════ SRL tranche 1 (compiler v53) ═════════════════════
+            {
+                var ids = new[] { 19384334, 45778932, 56594520, 81777047, 81380218, 70046172, 16430187, 596051,
+                    93013676, 96890582, 23401839, 57617178, 42703248, 23289281, 21340051, 82003859, 16762927,
+                    22046459, 18807108, 38552107, 45986603, 22567609, 95178994, 17375316, 42829885 };
+                var bad = ids.Where(id =>
+                {
+                    var d = db.Get(id);
+                    var pr = d != null ? CardTextEffectCompiler.Compile(d) : null;
+                    return pr == null || !pr.FullyCompiled;
+                }).Select(id => db.Get(id)?.name ?? id.ToString()).ToList();
+                Check($"Compile: SRL tranche 1 ({ids.Length} effect cards) FullyCompiled", bad.Count == 0,
+                    string.Join(", ", bad));
+                var rituals = new[] { 4849037, 30243636, 91782219 }
+                    .Where(id => CardEffectStatus.Classify(db.Get(id)) != CardEffectStatusKind.Structural)
+                    .Select(id => db.Get(id)?.name).ToList();
+                Check("Non-effect Ritual Monsters are structural (summoned by their Ritual Spell)",
+                    rituals.Count == 0, string.Join(", ", rituals));
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                ClearField(me); ClearField(opp);
+                var earth = PlaceMonster(e, me, Celtic, 0); // EARTH 1400/1200
+                var water = PlaceMonster(e, opp, GreatWhite, 0);
+                PlaceField(e, me, 56594520); // Gaia Power
+                e.NotifyPublic();
+                Check("Gaia Power: EARTH +500 ATK / −400 DEF, others unchanged",
+                    earth.CurrentAtk == 1900 && earth.CurrentDef == 800 && water.CurrentAtk == 1600,
+                    $"{earth.CurrentAtk}/{earth.CurrentDef}");
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                ClearField(me); ClearField(opp);
+                var def = PlaceMonster(e, me, Celtic, 0); def.Position = BattlePosition.Defense;
+                var atk = PlaceMonster(e, opp, Celtic, 0);
+                PlaceField(e, me, 81380218); // Chorus of Sanctuary
+                e.NotifyPublic();
+                Check("Chorus of Sanctuary: Defense Position monsters +500 DEF only",
+                    def.CurrentDef == 1700 && atk.CurrentDef == 1200);
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Hand.Clear();
+                var mine = PlaceMonster(e, me, Celtic, 0);
+                var rush = Hand(e, me, 70046172); // Rush Recklessly
+                var ok = Activate(e, me, rush, true);
+                var boosted = mine.CurrentAtk;
+                e.TryEndTurnSafe(me);
+                Check("Rush Recklessly: +700 ATK until the end of this turn",
+                    ok && boosted == 2100 && mine.CurrentAtk == 1400, $"{boosted}→{mine.CurrentAtk}");
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                ClearField(me); ClearField(opp); me.Hand.Clear();
+                var theirs = PlaceMonster(e, opp, Celtic, 0);
+                var fang = PlaceSet(e, me, 596051, 0); // Snake Fang
+                var ok = Activate(e, me, fang, false);
+                Check("Snake Fang: a monster loses 500 DEF this turn", ok && theirs.CurrentDef == 700,
+                    theirs.CurrentDef.ToString());
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                ClearField(me); ClearField(opp); me.Hand.Clear();
+                var maha = PlaceMonster(e, me, 93013676, 0); // Maha Vailo 1550
+                var horn = PlaceSpellTrap(e, me, 38552107, 0); // Horn of Light
+                horn.EquippedTo = maha; maha.Equips.Add(horn);
+                e.NotifyPublic();
+                Check("Maha Vailo: +500 ATK per Equip Card (Horn of Light also +800 DEF)",
+                    maha.CurrentAtk == 2050 && maha.CurrentDef == 2200, $"{maha.CurrentAtk}/{maha.CurrentDef}");
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                ClearField(me); ClearField(opp); me.Hand.Clear();
+                var flash = PlaceMonster(e, me, 96890582, 0); // Flash Assailant 2000/2000
+                Hand(e, me, Celtic); Hand(e, me, PotOfGreed);
+                e.NotifyPublic();
+                Check("Flash Assailant: −400/−400 per card in hand",
+                    flash.CurrentAtk == 1200 && flash.CurrentDef == 1200, $"{flash.CurrentAtk}/{flash.CurrentDef}");
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Hand.Clear();
+                me.Deck.Clear(); me.Deck.Add(Celtic); me.Deck.Add(91782219); me.Deck.Add(76806714);
+                var senju = Hand(e, me, 23401839);
+                var ok = e.TryNormalSummon(me, senju, false);
+                Resolve(e);
+                Check("Senju: Normal Summon adds a Ritual Monster from the Deck",
+                    ok && me.Hand.Exists(c => c.CardId == 91782219) && !me.Deck.Contains(91782219));
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Hand.Clear();
+                me.Deck.Clear(); me.Deck.Add(Celtic); me.Deck.Add(91782219); me.Deck.Add(76806714);
+                var bird = Hand(e, me, 57617178);
+                var ok = e.TryNormalSummon(me, bird, false);
+                Resolve(e);
+                Check("Sonic Bird: Normal Summon adds a Ritual Spell from the Deck",
+                    ok && me.Hand.Exists(c => c.CardId == 76806714) && !me.Deck.Contains(76806714));
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                ClearField(me); ClearField(opp); me.Hand.Clear(); opp.Hand.Clear();
+                var mySet = PlaceSet(e, me, TrapHole, 1);
+                var theirSet = PlaceSet(e, opp, Mst, 0);
+                var field = PlaceField(e, opp, 56594520);
+                var tr = Hand(e, me, 42703248); // Giant Trunade
+                var ok = Activate(e, me, tr, true);
+                Check("Giant Trunade: every Spell/Trap returns to its owner's hand",
+                    ok && me.Hand.Contains(mySet) && opp.Hand.Contains(theirSet) && opp.Hand.Contains(field) &&
+                    me.Graveyard.Contains(tr));
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp);
+                var karate = PlaceMonster(e, me, 23289281, 0); // Karate Man 1000
+                var prog = CompiledEffectCache.GetOrCompile(karate.Def);
+                var ok = TextEffectRuntime.CanActivate(e, me, karate, false, prog, out _) &&
+                         TextEffectRuntime.TryResolveActivation(e, me, karate, false, prog, true);
+                Resolve(e);
+                var doubled = karate.CurrentAtk;
+                e.TryEndTurnSafe(me);
+                Check("Karate Man: doubles its original ATK, then is destroyed in the End Phase",
+                    ok && doubled == 2000 && me.Graveyard.Contains(karate), $"atk={doubled}");
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Hand.Clear();
+                var boar = Hand(e, me, 21340051);
+                e.TryNormalSummon(me, boar, false);
+                Resolve(e);
+                Check("Boar Soldier: destroyed when Normal Summoned", me.Graveyard.Contains(boar));
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                ClearField(me); ClearField(opp);
+                var boar = PlaceMonster(e, me, 21340051, 0);
+                e.NotifyPublic();
+                var alone = boar.CurrentAtk;
+                PlaceMonster(e, opp, Celtic, 0);
+                e.NotifyPublic();
+                Check("Boar Soldier: −1000 ATK while the opponent controls a monster",
+                    alone == 2000 && boar.CurrentAtk == 1000);
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                BattleFor(e, me);
+                ClearField(me); ClearField(opp);
+                PlaceSpellTrap(e, opp, 82003859, 0); // Toll
+                var atk = PlaceMonster(e, me, Celtic, 0);
+                var lp = me.LifePoints;
+                Attack(e, me, atk, null);
+                Check("Toll: attacking costs 500 LP", me.LifePoints == lp - 500, $"LP {me.LifePoints}");
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                BattleFor(e, me);
+                ClearField(me); ClearField(opp);
+                PlaceSpellTrap(e, opp, 16762927, 0); // Gravekeeper's Servant (opponent's card)
+                var atk = PlaceMonster(e, me, Celtic, 0);
+                var deck = me.Deck.Count; var gy = me.Graveyard.Count;
+                Attack(e, me, atk, null);
+                Check("Gravekeeper's Servant: attacker sends the top card of their Deck to the GY",
+                    me.Deck.Count == deck - 1 && me.Graveyard.Count == gy + 1);
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                ClearField(me); ClearField(opp);
+                var host = PlaceMonster(e, me, Celtic, 0); // 1400
+                var mega = PlaceSpellTrap(e, me, 22046459, 0);
+                mega.EquippedTo = host; host.Equips.Add(mega);
+                me.LifePoints = 3000; opp.LifePoints = 8000; e.NotifyPublic();
+                var low = host.CurrentAtk;
+                me.LifePoints = 8000; opp.LifePoints = 3000; e.NotifyPublic();
+                Check("Megamorph: double original ATK when behind on LP, half when ahead",
+                    low == 2800 && host.CurrentAtk == 700, $"{low}/{host.CurrentAtk}");
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                ClearField(me); ClearField(opp);
+                var target = PlaceMonster(e, opp, Mechanicalchaser, 0);
+                var circle = PlaceSet(e, me, 18807108, 0); // Spellbinding Circle
+                var ok = Activate(e, me, circle, false);
+                var bound = OnField(me, circle) && TextEffectRuntime.AttackForbiddenByEffect(e, target) &&
+                            TextEffectRuntime.PositionChangeForbiddenByEffect(target);
+                e.DestroyMonsterPublic(opp, target);
+                Check("Spellbinding Circle: target cannot attack or change position; leaves with it",
+                    ok && bound && me.Graveyard.Contains(circle), $"ok={ok} bound={bound}");
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                ClearField(me); ClearField(opp);
+                var snatch = PlaceSpellTrap(e, me, 45986603, 0); // Snatch Steal
+                var lp = opp.LifePoints;
+                TextEffectRuntime.FirePhaseTriggers(e, opp, EffectTiming.StandbyPhase);
+                var afterOppStandby = opp.LifePoints;
+                TextEffectRuntime.FirePhaseTriggers(e, me, EffectTiming.StandbyPhase);
+                Check("Snatch Steal: the opponent gains 1000 LP in each of THEIR Standby Phases",
+                    afterOppStandby == lp + 1000 && opp.LifePoints == lp + 1000,
+                    $"{lp}→{afterOppStandby}→{opp.LifePoints}");
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Hand.Clear(); opp.Hand.Clear();
+                var theirs = Hand(e, opp, PotOfGreed); Hand(e, opp, SkullServant);
+                var conf = Hand(e, me, 17375316); // Confiscation
+                var lp = me.LifePoints;
+                var ok = Activate(e, me, conf, true);
+                Check("Confiscation: pay 1000, discard 1 card from the opponent's hand",
+                    ok && me.LifePoints == lp - 1000 && opp.Hand.Count == 1 && opp.Graveyard.Contains(theirs),
+                    $"ok={ok} lp={me.LifePoints} oppHand={opp.Hand.Count}");
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Hand.Clear(); opp.Hand.Clear();
+                var theirs = Hand(e, opp, PotOfGreed);
+                var deck = opp.Deck.Count;
+                var sentry = Hand(e, me, 42829885); // The Forceful Sentry
+                var ok = Activate(e, me, sentry, true);
+                Check("The Forceful Sentry: a card from the opponent's hand is shuffled into their Deck",
+                    ok && opp.Hand.Count == 0 && opp.Deck.Count == deck + 1 && opp.Deck.Contains(PotOfGreed));
+            }
+
             // ─────── Legacy duplicate targeted clauses still share one target ───────
             {
                 var e = Fresh(db); var me = e.Player; var opp = e.Opponent;

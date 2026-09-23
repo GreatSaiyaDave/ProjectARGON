@@ -65,7 +65,7 @@ namespace WRLDZ.Duel.TextEffects
 
         static readonly Regex RxGyPayLpTopDeckLegacy = new(
             @"When this card is sent from the field to the Graveyard,?\s*" +
-            @"if you pay (\d+) Life Points, this card returns to the top of the Deck\.?",
+            @"if you pay (\d+) Life Points, this card returns to the top of (?:the|your) Deck\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxGyReturnTopDeck = new(

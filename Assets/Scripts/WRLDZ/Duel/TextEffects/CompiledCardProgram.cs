@@ -298,7 +298,23 @@ namespace WRLDZ.Duel.TextEffects
         /// <summary>
         /// Equip rider: the opponent's monsters can only attack the equipped monster (Ring of Magnetism).
         /// </summary>
-        EquippedMustBeAttackTarget
+        EquippedMustBeAttackTarget,
+        /// <summary>The target gains Amount ATK and DefAmount DEF until the end of this turn (Rush Recklessly).</summary>
+        ModifyTargetUntilEndOfTurn,
+        /// <summary>Continuous S/T: every attack declaration costs Amount LP (Toll) — Side Both / Opponent.</summary>
+        AttackCostLpForAll,
+        /// <summary>Continuous S/T: the opponent sends Amount card(s) from the top of their Deck to the GY to attack (Gravekeeper's Servant).</summary>
+        AttackCostMillForOpponent,
+        /// <summary>Equip: ATK becomes double its original while your LP is lower, half while higher (Megamorph).</summary>
+        EquipAtkByLpComparison,
+        /// <summary>Link this card to the target like an Equip (Spellbinding Circle); destroyed when it is.</summary>
+        LinkThisToTarget,
+        /// <summary>Equip / link rider: the host cannot change its battle position (Spellbinding Circle).</summary>
+        EquippedCannotChangePosition,
+        /// <summary>Destroy this card (Boar Soldier when Normal Summoned).</summary>
+        DestroyThisCard,
+        /// <summary>Return the chosen card from the opponent's hand to the Deck and shuffle (The Forceful Sentry).</summary>
+        ReturnChosenToDeckShuffle
     }
 
     public enum EffectSide
@@ -351,6 +367,12 @@ namespace WRLDZ.Duel.TextEffects
         FieldSpellsOnField,
         /// <summary>Equip Spells in the controller's Deck (Iron Blacksmith Kotetsu).</summary>
         DeckEquipSpells,
+        /// <summary>Ritual Monsters in the controller's Deck (Senju of the Thousand Hands).</summary>
+        DeckRitualMonsters,
+        /// <summary>Ritual Spells in the controller's Deck (Sonic Bird).</summary>
+        DeckRitualSpells,
+        /// <summary>Cards in the opponent's hand, revealed to choose (Confiscation / The Forceful Sentry).</summary>
+        OppHandCards,
         /// <summary>Monsters in the opponent's GY (Gravedigger Ghoul).</summary>
         OppGyMonsters,
         /// <summary>Any card in either GY (Soul Release).</summary>
@@ -668,6 +690,18 @@ namespace WRLDZ.Duel.TextEffects
         public bool PositionChangeToDefense;
         /// <summary>EquipAtkDecayPerStandby: count the equipped monster's controller's Standby Phases.</summary>
         public bool DecayOnEquippedControllersStandby;
+        /// <summary>Stat aura only affects Defense Position monsters (Chorus of Sanctuary).</summary>
+        public bool AffectsDefensePositionOnly;
+        /// <summary>ThisCardSummoned: Normal or Flip Summon only, not Special Summon (Senju).</summary>
+        public bool RequiresNormalOrFlipSummon;
+        /// <summary>GainThisAtkUntilEnd: the gain equals this card's original ATK (Karate Man doubles it).</summary>
+        public bool AmountIsOriginalAtk;
+        /// <summary>After this effect, destroy this card during the End Phase (Karate Man).</summary>
+        public bool DestroyThisAtEndPhase;
+        /// <summary>SpecialSummonNamed: summon every copy that fits (Nimble Momonga "any number").</summary>
+        public bool SummonAllCopies;
+        /// <summary>Special Summon in face-down Defense Position (Nimble Momonga).</summary>
+        public bool SummonFaceDown;
     }
 
     /// <summary>When the activation condition is tested (PSCT "when" vs "if").</summary>

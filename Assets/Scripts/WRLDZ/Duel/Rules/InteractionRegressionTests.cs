@@ -4704,16 +4704,17 @@ namespace WRLDZ.Duel.Rules
                 const int giantGermId = 95178994;
                 var germDef = db.Get(giantGermId);
                 var germProg = germDef != null ? CardTextEffectCompiler.Compile(germDef) : null;
-                Check("Giant Germ battle-GY 500 burn compiles; any-number SS leftover",
-                    germProg != null && !germProg.FullyCompiled &&
+                Check("Giant Germ battle-GY 500 burn compiles; any-number SS from Deck compiles",
+                    germProg != null && germProg.FullyCompiled &&
                     germProg.ClauseList.Exists(c =>
                         c != null &&
                         c.Timing == EffectTiming.SentFromFieldToGy &&
                         c.RequiresThisDestroyedByBattle &&
                         c.Action == EffectActionKind.InflictDamageToOpponent &&
                         c.Amount == 500) &&
-                    !germProg.ClauseList.Exists(c =>
-                        c != null && c.Action == EffectActionKind.SpecialSummonNamed),
+                    germProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.SpecialSummonNamed &&
+                        c.FromDeck && c.SummonAllCopies),
                     germProg == null
                         ? "null"
                         : $"full={germProg.FullyCompiled} n={germProg.ClauseList.Count} " +
@@ -4722,16 +4723,17 @@ namespace WRLDZ.Duel.Rules
                 const int momongaId = 22567609;
                 var momDef = db.Get(momongaId);
                 var momProg = momDef != null ? CardTextEffectCompiler.Compile(momDef) : null;
-                Check("Nimble Momonga battle-GY 1000 LP compiles; any-number SS leftover",
-                    momProg != null && !momProg.FullyCompiled &&
+                Check("Nimble Momonga battle-GY 1000 LP compiles; any-number SS from Deck compiles",
+                    momProg != null && momProg.FullyCompiled &&
                     momProg.ClauseList.Exists(c =>
                         c != null &&
                         c.Timing == EffectTiming.SentFromFieldToGy &&
                         c.RequiresThisDestroyedByBattle &&
                         c.Action == EffectActionKind.GainLifePoints &&
                         c.Amount == 1000) &&
-                    !momProg.ClauseList.Exists(c =>
-                        c != null && c.Action == EffectActionKind.SpecialSummonNamed),
+                    momProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.SpecialSummonNamed &&
+                        c.FromDeck && c.SummonAllCopies),
                     momProg == null
                         ? "null"
                         : $"full={momProg.FullyCompiled} n={momProg.ClauseList.Count} " +
@@ -5719,8 +5721,10 @@ namespace WRLDZ.Duel.Rules
                             opp.LifePoints == lp - 500 &&
                             p.Graveyard.Exists(c => c != null && c.CardId == giantGermId),
                             $"lp={opp.LifePoints} was {lp}");
-                        Check("Giant Germ any-number SS leftover: Deck copies remain",
-                            p.Deck.Count == 2,
+                        Check("Giant Germ: Special Summons every Deck copy in face-up Attack Position",
+                            p.Deck.Count == 0 &&
+                            p.MonstersOnField().Count(m => m.CardId == giantGermId && m.FaceUp &&
+                                                           m.Position == BattlePosition.Attack) == 2,
                             $"deck={p.Deck.Count} field={p.MonstersOnField().Count()}");
                     }
                 }
@@ -5781,8 +5785,10 @@ namespace WRLDZ.Duel.Rules
                             p.LifePoints == lp + 1000 &&
                             p.Graveyard.Exists(c => c != null && c.CardId == momongaId),
                             $"lp={p.LifePoints} was {lp}");
-                        Check("Nimble Momonga any-number SS leftover: Deck copies remain",
-                            p.Deck.Count == 2,
+                        Check("Nimble Momonga: Special Summons every Deck copy face-down in Defense",
+                            p.Deck.Count == 0 &&
+                            p.MonstersOnField().Count(m => m.CardId == momongaId && !m.FaceUp &&
+                                                           m.Position == BattlePosition.Defense) == 2,
                             $"deck={p.Deck.Count} field={p.MonstersOnField().Count()}");
                     }
                 }
