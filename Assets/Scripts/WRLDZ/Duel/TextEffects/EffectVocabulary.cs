@@ -167,7 +167,8 @@ namespace WRLDZ.Duel.TextEffects
                     EffectResolutionKind.GainLp,
                 EffectActionKind.ChangeBattlePosition or
                     EffectActionKind.SetThisFaceDownDefense or
-                    EffectActionKind.ChangeThisBattlePosition =>
+                    EffectActionKind.ChangeThisBattlePosition or
+                    EffectActionKind.ContinuousForceDefensePosition =>
                     EffectResolutionKind.ChangePosition,
                 EffectActionKind.ContinuousGainAtkDef or
                     EffectActionKind.ContinuousReduceLevel or

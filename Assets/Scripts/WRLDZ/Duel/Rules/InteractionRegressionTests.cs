@@ -3474,6 +3474,7 @@ namespace WRLDZ.Duel.Rules
                     const int messenger = 44656491;
                     const int callHaunted = 97077563;
                     const int soulRes = 92924317;
+                    const int dragonCaptureJar = 50045299;
                     const int giantSoldier = 13039848;
                     const int umi = 22702055;
                     const int insect = 3134241; // Flying Kamakiri #2
@@ -3759,6 +3760,63 @@ namespace WRLDZ.Duel.Rules
                             gyMon.Position == BattlePosition.Defense &&
                             p.TryFindSpellTrap(st, out _),
                             $"pos={gyMon.Position} st={p.TryFindSpellTrap(st, out _)}");
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        var dragon = PlaceMonster(engine, p, bewd, 2, BattlePosition.Attack, true);
+                        var warrior = PlaceMonster(engine, p, celtic, 1, BattlePosition.Attack, true);
+                        var setDragon = PlaceMonster(engine, p, 67724379, 0,
+                            BattlePosition.Defense, false); // Koumori Dragon
+                        var oppDragon = PlaceMonster(engine, opp, bewd, 2, BattlePosition.Attack, true);
+                        var st = PlaceSetTrap(engine, p, dragonCaptureJar, 2);
+                        st.SetThisTurn = false;
+                        var fromHand = PutInHand(engine, p, dragonCaptureJar);
+                        Check("Dragon Capture Jar: Continuous Trap, not from hand",
+                            !engine.CanActivateSpellTrap(p, fromHand, fromHand: true) &&
+                            engine.CanActivateSpellTrap(p, st, fromHand: false));
+                        p.Hand.Remove(fromHand);
+                        Check("Dragon Capture Jar: Activate from Set stays Continuous",
+                            engine.TryActivateSpellTrap(p, st, fromHand: false) &&
+                            st.FaceUp &&
+                            p.TryFindSpellTrap(st, out _) &&
+                            !p.Graveyard.Contains(st),
+                            $"face={st.FaceUp} st={p.TryFindSpellTrap(st, out _)}");
+                        Check("Dragon Capture Jar: face-up Dragons forced to Defense",
+                            dragon.Position == BattlePosition.Defense &&
+                            dragon.FaceUp &&
+                            oppDragon.Position == BattlePosition.Defense &&
+                            oppDragon.FaceUp,
+                            $"you={dragon.Position} opp={oppDragon.Position}");
+                        Check("Dragon Capture Jar: non-Dragon stays Attack; face-down Dragon stays Set",
+                            warrior.Position == BattlePosition.Attack &&
+                            warrior.FaceUp &&
+                            !setDragon.FaceUp &&
+                            setDragon.Position == BattlePosition.Defense,
+                            $"war={warrior.Position} setFace={setDragon.FaceUp}");
+                        Check("Dragon Capture Jar: Dragons cannot change battle position",
+                            !engine.CanChangePosition(p, dragon) &&
+                            FieldSpellEffects.ContinuousPositionLockBlocks(engine, oppDragon) &&
+                            !FieldSpellEffects.ContinuousPositionLockBlocks(engine, warrior) &&
+                            engine.CanChangePosition(p, warrior));
+                        var later = PlaceMonster(engine, p, bewd, 3, BattlePosition.Attack, true);
+                        FieldSpellEffects.RefreshBoard(engine);
+                        Check("Dragon Capture Jar: newly face-up Dragon snaps to Defense",
+                            later.Position == BattlePosition.Defense && later.FaceUp,
+                            $"pos={later.Position}");
+                        engine.SendCardToGrave(p, st);
+                        Check("Dragon Capture Jar: leave-field ends the lock",
+                            p.Graveyard.Contains(st) &&
+                            !p.TryFindSpellTrap(st, out _) &&
+                            dragon.Position == BattlePosition.Defense &&
+                            engine.CanChangePosition(p, dragon) &&
+                            engine.TryChangePosition(p, dragon) &&
+                            dragon.Position == BattlePosition.Attack,
+                            $"gy={p.Graveyard.Contains(st)} pos={dragon.Position} can={engine.CanChangePosition(p, dragon)}");
                     }
 
                     {
