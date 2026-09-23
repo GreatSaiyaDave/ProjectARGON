@@ -1076,6 +1076,68 @@ namespace WRLDZ.Duel.Rules
                             ? "null"
                             : $"full={swp.FullyCompiled} unparsed={string.Join("|", swp.UnparsedFragments ?? Array.Empty<string>())}");
 
+                    var violet = db.Get(15052462);
+                    var vp = violet != null ? CardTextEffectCompiler.Compile(violet) : null;
+                    Check("Corpus: Violet Crystal FullyCompiled Equip only Zombie +300/+300 (allowAi:false)",
+                        vp != null && vp.FullyCompiled &&
+                        (vp.UnparsedFragments == null || vp.UnparsedFragments.Length == 0) &&
+                        vp.ClauseList.Count == 1 &&
+                        vp.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.EquipThisToTarget &&
+                            c.EquipAtkBonus == 300 && c.EquipDefBonus == 300 &&
+                            string.Equals(c.RaceFilter, "Zombie", StringComparison.OrdinalIgnoreCase) &&
+                            c.Action != EffectActionKind.AlwaysTreatedAsName) &&
+                        !vp.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.AlwaysTreatedAsName),
+                        vp == null
+                            ? "null"
+                            : $"full={vp.FullyCompiled} n={vp.ClauseList.Count} " +
+                              $"unparsed={string.Join("|", vp.UnparsedFragments ?? Array.Empty<string>())}");
+                    Check("Classify: Violet Crystal Implemented (Crystal parenthetical ignored)",
+                        violet != null &&
+                        CardEffectStatus.Classify(violet) == CardEffectStatusKind.Implemented);
+
+                    var synViolet = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000021,
+                        name = "New Equip (Violet Crystal shape)",
+                        type = "Spell Card",
+                        race = "Equip",
+                        frameType = "equip",
+                        desc = "(This card is not treated as a \"Crystal\" card.)\r\n" +
+                               "Equip only to a Zombie monster. It gains 300 ATK/DEF."
+                    });
+                    Check("New-card rule: Equip-only Zombie + later-text not-treated-as compiles with no cardId branch",
+                        synViolet != null && synViolet.FullyCompiled &&
+                        synViolet.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.EquipThisToTarget &&
+                            c.EquipAtkBonus == 300 && c.EquipDefBonus == 300 &&
+                            string.Equals(c.RaceFilter, "Zombie", StringComparison.OrdinalIgnoreCase)) &&
+                        !synViolet.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.AlwaysTreatedAsName),
+                        synViolet == null
+                            ? "null"
+                            : $"full={synViolet.FullyCompiled} n={synViolet.ClauseList.Count} " +
+                              $"unparsed={string.Join("|", synViolet.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var wave = db.Get(87880531);
+                    var waveProg = wave != null ? CardTextEffectCompiler.Compile(wave) : null;
+                    Check("Corpus: Diffusion Wave-Motion leftover unique is not FullyCompiled",
+                        waveProg == null || !waveProg.FullyCompiled,
+                        waveProg == null
+                            ? "null"
+                            : $"full={waveProg.FullyCompiled} n={waveProg.ClauseList.Count} " +
+                              $"unparsed={string.Join("|", waveProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var valk = db.Get(97623219);
+                    var valkProg = valk != null ? CardTextEffectCompiler.Compile(valk) : null;
+                    Check("Corpus: Element Valkyrie leftover unique is not FullyCompiled",
+                        valkProg == null || !valkProg.FullyCompiled,
+                        valkProg == null
+                            ? "null"
+                            : $"full={valkProg.FullyCompiled} n={valkProg.ClauseList.Count} " +
+                              $"unparsed={string.Join("|", valkProg.UnparsedFragments ?? Array.Empty<string>())}");
+
                     var axeDef = db.Get(40619825);
                     var axeProg = axeDef != null ? CardTextEffectCompiler.Compile(axeDef) : null;
                     Check("Corpus: Axe of Despair FullyCompiled Equip +1000 and GY to top of Deck",

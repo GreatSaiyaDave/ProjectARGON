@@ -25,7 +25,8 @@ namespace WRLDZ.Duel.TextEffects
             @"Increase the ATK and DEF of a (\w+)(?:-Type)? monster equipped with this card by (\d+) points\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-        // "an Insect", "Beast-Warrior-Type", "FIRE" — do not swallow "-Type" into the race.
+        // Shared Equip-only-to-<Type|Attribute> + Gain ATK/DEF (Legendary Sword, Violet Crystal,
+        // Beast Fangs, …). "an Insect", "Beast-Warrior-Type", "FIRE" — do not swallow "-Type".
         const string EquipOnlyPrefix =
             @"Equip only to (?:an? )?([A-Za-z]+(?:-(?!Type)[A-Za-z]+)*)(?:-Type)? monster\.?\s*";
 
