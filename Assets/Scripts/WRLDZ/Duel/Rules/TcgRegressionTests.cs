@@ -1076,6 +1076,108 @@ namespace WRLDZ.Duel.Rules
                             ? "null"
                             : $"full={swp.FullyCompiled} unparsed={string.Join("|", swp.UnparsedFragments ?? Array.Empty<string>())}");
 
+                    var follow = db.Get(98252586);
+                    var followProg = follow != null ? CardTextEffectCompiler.Compile(follow) : null;
+                    Check("Corpus: Follow Wind FullyCompiled Equip Winged Beast +300/+300",
+                        followProg != null && followProg.FullyCompiled &&
+                        followProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.EquipThisToTarget &&
+                            c.EquipAtkBonus == 300 && c.EquipDefBonus == 300 &&
+                            string.Equals(c.RaceFilter, "Winged Beast",
+                                StringComparison.OrdinalIgnoreCase)),
+                        followProg == null
+                            ? "null"
+                            : $"full={followProg.FullyCompiled} unparsed={string.Join("|", followProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var synFollow = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000062,
+                        name = "New Equip (Follow Wind shape)",
+                        type = "Spell Card",
+                        race = "Equip",
+                        frameType = "equip",
+                        desc =
+                            "Increase the ATK and DEF of a Winged Beast-Type monster equipped with this card by 300 points."
+                    });
+                    Check("New-card rule: Winged Beast Equip ATK/DEF compiles without a cardId branch",
+                        synFollow != null && synFollow.FullyCompiled &&
+                        synFollow.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.EquipThisToTarget &&
+                            c.EquipAtkBonus == 300 &&
+                            string.Equals(c.RaceFilter, "Winged Beast",
+                                StringComparison.OrdinalIgnoreCase)));
+                    var followLeftover = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000063,
+                        name = "Follow Wind leftover unique",
+                        type = "Spell Card",
+                        race = "Equip",
+                        frameType = "equip",
+                        desc =
+                            "Increase the ATK and DEF of a Winged Beast-Type monster equipped with this card by 300 points. Also shuffle both Decks and skip your next Draw Phase."
+                    });
+                    Check("Corpus: Follow Wind leftover unique is not FullyCompiled",
+                        followLeftover == null || !followLeftover.FullyCompiled);
+
+                    var stopDef = db.Get(63102017);
+                    var stopProg = stopDef != null ? CardTextEffectCompiler.Compile(stopDef) : null;
+                    Check("Corpus: Stop Defense FullyCompiled opp Defense → Attack",
+                        stopProg != null && stopProg.FullyCompiled &&
+                        stopProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ChangeBattlePosition &&
+                            c.Zone == EffectZoneFilter.OppDefensePositionMonsters &&
+                            c.RequiresTargetChoice),
+                        stopProg == null
+                            ? "null"
+                            : $"full={stopProg.FullyCompiled} unparsed={string.Join("|", stopProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var blockAtk = db.Get(25880422);
+                    var blockProg = blockAtk != null ? CardTextEffectCompiler.Compile(blockAtk) : null;
+                    Check("Corpus: Block Attack FullyCompiled opp Attack → Defense",
+                        blockProg != null && blockProg.FullyCompiled &&
+                        blockProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ChangeBattlePosition &&
+                            c.Zone == EffectZoneFilter.OppAttackPositionMonsters &&
+                            c.RequiresTargetChoice),
+                        blockProg == null
+                            ? "null"
+                            : $"full={blockProg.FullyCompiled} unparsed={string.Join("|", blockProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var synStop = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000064,
+                        name = "New Spell (Stop Defense shape)",
+                        type = "Spell Card",
+                        race = "Normal",
+                        desc =
+                            "Select 1 Defense Position monster on your opponent's side of the field and change it to Attack Position."
+                    });
+                    Check("New-card rule: Stop Defense-shaped text compiles without a cardId branch",
+                        synStop != null && synStop.FullyCompiled &&
+                        synStop.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ChangeBattlePosition &&
+                            c.Zone == EffectZoneFilter.OppDefensePositionMonsters));
+
+                    var hornLight = db.Get(38552107);
+                    var hornProg = hornLight != null ? CardTextEffectCompiler.Compile(hornLight) : null;
+                    Check("Corpus: Horn of Light FullyCompiled Equip +800 DEF and GY pay 500 to Deck",
+                        hornProg != null && hornProg.FullyCompiled &&
+                        hornProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.EquipThisToTarget &&
+                            c.EquipDefBonus == 800) &&
+                        hornProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.SentFromFieldToGy &&
+                            c.Action == EffectActionKind.PlaceThisOnTopOfDeck &&
+                            c.PayLpAmount == 500 &&
+                            c.IsOptional),
+                        hornProg == null
+                            ? "null"
+                            : $"full={hornProg.FullyCompiled} unparsed={string.Join("|", hornProg.UnparsedFragments ?? Array.Empty<string>())}");
+
                     var axeDef = db.Get(40619825);
                     var axeProg = axeDef != null ? CardTextEffectCompiler.Compile(axeDef) : null;
                     Check("Corpus: Axe of Despair FullyCompiled Equip +1000 and GY to top of Deck",

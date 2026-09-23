@@ -16,7 +16,7 @@ namespace WRLDZ.Duel.TextEffects
     /// </summary>
     public static class CardTextEffectCompiler
     {
-        public const int Version = 50;
+        public const int Version = 62;
 
         static readonly Regex RxDraw = new(
             @"(?:^|[.!?]\s+)Draw (\d+) cards?\.",
@@ -199,6 +199,27 @@ namespace WRLDZ.Duel.TextEffects
 
         static readonly Regex RxEnemyControllerPos = new(
             @"Target 1 face-up monster your opponent controls;\s*change that target's battle position",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Stop Defense family: opponent Defense Position monster → Attack Position.
+        /// Pre-PSCT "Select 1 … and change" and PSCT "Target 1 …; change".
+        /// </summary>
+        static readonly Regex RxStopDefense = new(
+            @"(?:Select|Target) 1 Defense Position monster " +
+            @"(?:on your opponent's side of the field|your opponent controls)" +
+            @"(?: and change it to (?:face-up )?Attack Position|" +
+            @";\s*change (?:it|that target) to (?:face-up )?Attack Position)\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Block Attack family: opponent face-up Attack Position monster → Defense Position.
+        /// </summary>
+        static readonly Regex RxBlockAttack = new(
+            @"(?:Select|Target) 1 (?:face-up )?Attack Position monster " +
+            @"(?:on your opponent's side of the field|your opponent controls)" +
+            @"(?: and change it to (?:face-up )?Defense Position|" +
+            @";\s*change (?:it|that target) to (?:face-up )?Defense Position)\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxCyberJar = new(
@@ -800,6 +821,22 @@ namespace WRLDZ.Duel.TextEffects
                 Timing = EffectTiming.Activate,
                 Action = EffectActionKind.ChangeBattlePosition,
                 Zone = EffectZoneFilter.OppFaceUpMonsters,
+                RequiresTargetChoice = true
+            });
+
+            Take(RxStopDefense.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.ChangeBattlePosition,
+                Zone = EffectZoneFilter.OppDefensePositionMonsters,
+                RequiresTargetChoice = true
+            });
+
+            Take(RxBlockAttack.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.ChangeBattlePosition,
+                Zone = EffectZoneFilter.OppAttackPositionMonsters,
                 RequiresTargetChoice = true
             });
 
