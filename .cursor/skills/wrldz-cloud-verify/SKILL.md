@@ -11,7 +11,7 @@ This Cloud VM has **no Unity Editor**. Do not wait for `GET /health` on ports 80
 
 1. **Engine:** `Tools/HeadlessEngine/run.sh --quiet` (needs .NET 8). Same `DuelEngine` sources as Unity; shims live under `Tools/HeadlessEngine/Shim/` (never under `Assets/`).
 2. **UI chrome (no Game view):** `python3 Tools/hub_overlay_chrome_check.py && python3 Tools/ygo_ui_lore_check.py && python3 Tools/deck_editor_layout_check.py`
-3. **Compiler version bump:** if you change `CardTextEffectCompiler.Version`, run `Tools/HeadlessEngine/run.sh --export-seed` so `compiled_effects_seed_v1.json` matches. Current Version is **51** (older notes may still say v48/v50).
+3. **Compiler version bump:** if you change `CardTextEffectCompiler.Version`, run `Tools/HeadlessEngine/run.sh --export-seed` so `compiled_effects_seed_v1.json` matches. Current Version is **52** (older notes may still say v48–v51).
 4b. **Headless compile cache:** the harness keeps learned programs in `/tmp/wrldz-headless/`. After editing a template without a Version bump, `rm -rf /tmp/wrldz-headless` before `--card`, `--coverage` or `--export-seed`, or you read stale programs.
 4. **Owner Unity Hub does not fetch GitHub.** After merge to `main`, tell them to update **in place** via `.cursor/skills/owner-linux-unity/` (`GET_THE_GAME.txt`). Never zip-replace `DMWRDLZUnityProject/ProjectARGON`. Hub cloud icon is not GitHub.
 5. **Do not scrape** DuelingBook / Master Duel. Do not ship Ignis Lua as product rules.

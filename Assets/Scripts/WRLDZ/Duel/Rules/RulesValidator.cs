@@ -300,6 +300,13 @@ namespace WRLDZ.Duel.Rules
                 return v;
             }
 
+            var forced = WRLDZ.Duel.TextEffects.TextEffectRuntime.ForcedAttackTargets(opp);
+            if (forced.Count > 0 && (targetOrNull == null || !forced.Contains(targetOrNull)))
+            {
+                v.Reason = $"Only {forced[0].Name} can be attacked (Ring of Magnetism).";
+                return v;
+            }
+
             if (engine.BattleStep != BattleStep.BattleStep && engine.BattleStep != BattleStep.StartStep &&
                 engine.Phase == DuelPhase.Battle && engine.BattleStep != BattleStep.None)
             {

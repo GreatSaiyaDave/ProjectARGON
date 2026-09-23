@@ -319,6 +319,10 @@ namespace WRLDZ.Duel.Rules
                     opp.Graveyard.Add(engine.CreateCardInstance(Bewd));
                 }
 
+                if (c.Zone == EffectZoneFilter.ControllerHandMonsters &&
+                    c.Action == EffectActionKind.DiscardChosenFromHand)
+                    PutInHand(engine, p, Celtic);
+
                 if (c.Zone == EffectZoneFilter.OppDefensePositionMonsters)
                     PlaceMonster(engine, opp, Celtic, 3, BattlePosition.Defense, false);
 

@@ -43,7 +43,15 @@ namespace WRLDZ.Duel.TextEffects
         /// A monster the controller controls inflicted battle damage to the opponent
         /// (Robbin' Goblin — continuous Trap "each time").
         /// </summary>
-        YourMonsterInflictsBattleDamage
+        YourMonsterInflictsBattleDamage,
+        /// <summary>This card declared an attack (Jirai Gumo).</summary>
+        ThisCardDeclaresAttack,
+        /// <summary>
+        /// This card's battle position changed. <see cref="EffectClause.PositionChangeToDefense"/>
+        /// true = Attack → face-up Defense (Dream Clown / Tainted Wisdom); false = Defense →
+        /// Attack, including a Flip Summon (Crass Clown).
+        /// </summary>
+        ThisCardPositionChanged
     }
 
     public enum EffectActionKind
@@ -260,7 +268,37 @@ namespace WRLDZ.Duel.TextEffects
         /// <see cref="EffectClause.RequiresPreviousClauseHit"/>, only if the previous clause
         /// destroyed at least one card (Dragon Piper).
         /// </summary>
-        ChangeAllToAttackPosition
+        ChangeAllToAttackPosition,
+        /// <summary>While face-up: this card must pay Amount LP to declare an attack (Dark Elf).</summary>
+        AttackCostLp,
+        /// <summary>While face-up: this card gains Amount ATK during the Damage Step when it attacks a
+        /// monster matching AttributeFilter / RaceFilter (Insect Soldiers of the Sky).</summary>
+        GainAtkWhenAttackingMatching,
+        /// <summary>Toss a coin and call it; on a wrong call the controller loses half their LP (Jirai Gumo).</summary>
+        CoinCallWrongLoseHalfLp,
+        /// <summary>
+        /// While face-up: a monster (not ExceptRaceFilter) that attacks this card cannot attack
+        /// during its controller's next turn (Electric Lizard).
+        /// </summary>
+        AttackerCannotAttackNextTurn,
+        /// <summary>Switch the original ATK and DEF of all face-up monsters until the end of this turn (Shield &amp; Sword).</summary>
+        SwapOriginalAtkDefUntilEndOfTurn,
+        /// <summary>Send the chosen cards from the hand to the GY — a discard, not a cost (The Cheerful Coffin).</summary>
+        DiscardChosenFromHand,
+        /// <summary>Shuffle the controller's Deck (Tainted Wisdom).</summary>
+        ShuffleDeck,
+        /// <summary>
+        /// Equip rider: the equipped monster loses Amount ATK for each Standby Phase this Equip
+        /// has seen (counted on the Equip). <see cref="EffectClause.DecayOnEquippedControllersStandby"/>
+        /// picks whose Standby counts (Germ Infection) vs the Equip controller's (Stim-Pack).
+        /// </summary>
+        EquipAtkDecayPerStandby,
+        /// <summary>Equip rider: the equipped monster cannot attack (Paralyzing Potion).</summary>
+        EquippedCannotAttack,
+        /// <summary>
+        /// Equip rider: the opponent's monsters can only attack the equipped monster (Ring of Magnetism).
+        /// </summary>
+        EquippedMustBeAttackTarget
     }
 
     public enum EffectSide
@@ -624,6 +662,12 @@ namespace WRLDZ.Duel.TextEffects
         /// legacy default, so this is the explicit subject flag.
         /// </summary>
         public bool OpponentIsSubject;
+        /// <summary>Targets / attackers of this Type are excluded ("a non Machine-Type monster").</summary>
+        public string ExceptRaceFilter;
+        /// <summary>ThisCardPositionChanged: true = Attack → face-up Defense, false = Defense → Attack.</summary>
+        public bool PositionChangeToDefense;
+        /// <summary>EquipAtkDecayPerStandby: count the equipped monster's controller's Standby Phases.</summary>
+        public bool DecayOnEquippedControllersStandby;
     }
 
     /// <summary>When the activation condition is tested (PSCT "when" vs "if").</summary>
@@ -717,6 +761,8 @@ namespace WRLDZ.Duel.TextEffects
              HasTiming(EffectTiming.YouTakeLifePointDamage) ||
              HasTiming(EffectTiming.ThisCardDestroysByBattle) ||
              HasTiming(EffectTiming.ThisCardInflictsBattleDamage) ||
-             HasTiming(EffectTiming.YourMonsterInflictsBattleDamage));
+             HasTiming(EffectTiming.YourMonsterInflictsBattleDamage) ||
+             HasTiming(EffectTiming.ThisCardDeclaresAttack) ||
+             HasTiming(EffectTiming.ThisCardPositionChanged));
     }
 }

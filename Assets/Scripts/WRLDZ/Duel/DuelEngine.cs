@@ -720,6 +720,8 @@ namespace WRLDZ.Duel
             // Official Flip effects (Man-Eater Bug, Magician of Faith, Cyber Jar, …)
             MonsterEffects.OnFlipSummoned(this, who, monster);
             TextEffects.TextEffectRuntime.TryResolveThisCardSummoned(this, who, monster, flipSummon: true);
+            // Face-down Defense → face-up Attack is a Defense → Attack change (Crass Clown).
+            TextEffects.TextEffectRuntime.NotifyPositionChanged(this, monster, toDefense: false);
             // If Flip opened a target window, do not open summon-response yet
             if (PendingActivation == null)
             {
@@ -757,6 +759,9 @@ namespace WRLDZ.Duel
             Log(who.IsPlayer
                 ? $"{monster.Name} → {monster.Position} Position"
                 : $"Opponent changes {monster.Name} to {monster.Position}.");
+            // Dream Clown / Crass Clown / Tainted Wisdom
+            TextEffects.TextEffectRuntime.NotifyPositionChanged(this, monster,
+                toDefense: monster.Position == BattlePosition.Defense);
             Notify();
             return true;
         }
@@ -1536,6 +1541,13 @@ namespace WRLDZ.Duel
                 return false;
             if (ContinuousCannotAttackBlocks(who, attacker))
                 return false;
+            // Paralyzing Potion / Electric Lizard lock
+            if (TextEffects.TextEffectRuntime.AttackForbiddenByEffect(this, attacker))
+                return false;
+            // Dark Elf: the LP cost must be payable
+            var lpCost = TextEffects.TextEffectRuntime.AttackLpCost(attacker);
+            if (lpCost > 0 && who.LifePoints < lpCost)
+                return false;
             return true;
         }
 
@@ -1719,6 +1731,20 @@ namespace WRLDZ.Duel
                 return false;
             }
 
+            // Ring of Magnetism: only the equipped monster may be attacked.
+            var forced = TextEffects.TextEffectRuntime.ForcedAttackTargets(opp);
+            if (forced.Count > 0 && (targetOrNull == null || !forced.Contains(targetOrNull)))
+            {
+                Log($"You can only attack {forced[0].Name} (Ring of Magnetism).");
+                return false;
+            }
+
+            // Dark Elf: pay the LP cost to attack.
+            var attackCost = TextEffects.TextEffectRuntime.AttackLpCost(attacker);
+            if (attackCost > 0)
+                PayLifePointCost(who, attackCost, $"{attacker.Name} attack cost");
+            if (GameOver) return false;
+
             // —— Attack declaration + combat animation starts immediately ——
             DeclaredAttacker = attacker;
             DeclaredAttackTarget = targetOrNull;
@@ -1743,6 +1769,9 @@ namespace WRLDZ.Duel
                 ? "directly"
                 : (targetOrNull.FaceUp ? targetOrNull.Name : "a face-down monster");
             Log($"{attacker.Name} attacks {tName}.");
+            // "When this card declares an attack:" (Jirai Gumo)
+            TextEffects.TextEffectRuntime.FireAttackDeclared(this, who, attacker);
+            if (GameOver) return true;
 
             // Defender may fire Fast Effects / traps while the attack anim plays
             if (OpenResponseWindow(opp, ResponseTiming.AttackDeclared, attacker, targetOrNull, who, null, null,
@@ -2118,6 +2147,13 @@ namespace WRLDZ.Duel
             if (opp.PreventBattleDamageThisBattle)
                 Log($"[Damage Calculation] {opp.Name}: no battle damage from that battle (Kuriboh / effect).");
 
+            // Insect Soldiers of the Sky: ATK gain during the Damage Step only.
+            attacker.DamageStepAtkBonus = TextEffects.TextEffectRuntime.DamageStepAtkBonus(attacker, targetOrNull);
+            if (attacker.DamageStepAtkBonus > 0)
+                Log($"{attacker.Name} gains {attacker.DamageStepAtkBonus} ATK during this Damage Step.");
+            if (targetOrNull != null)
+                TextEffects.TextEffectRuntime.NotifyAttackedBy(this, targetOrNull, attacker);
+
             var calc = BattleMechanics.Calculate(attacker, targetOrNull, piercing, atkNoDes, defNoDes,
                 noDmgAtk, noDmgDef);
             // Pass prevention flags so ATK < DEF still deals (DEF−ATK) to the attacker
@@ -2125,6 +2161,7 @@ namespace WRLDZ.Duel
             BattleMechanics.Sanitize(ref calc, attacker, targetOrNull, noDmgAtk, noDmgDef);
             Log(calc.LogLine);
             if (attacker != null) attacker.AtkBecomesZeroThisCalculation = false;
+            if (attacker != null) attacker.DamageStepAtkBonus = 0;
             if (targetOrNull != null) targetOrNull.AtkBecomesZeroThisCalculation = false;
 
             DamageSubStep = DamageSubStep.AfterDamageCalculation;

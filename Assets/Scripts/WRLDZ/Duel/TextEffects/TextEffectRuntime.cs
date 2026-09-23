@@ -1432,8 +1432,14 @@ namespace WRLDZ.Duel.TextEffects
             var flip = prog.ClausesFor(EffectTiming.Flip);
             var gy = prog.ClausesFor(EffectTiming.SentFromFieldToGy);
             var summoned = prog.ClausesFor(EffectTiming.ThisCardSummoned);
+            var posChanged = prog.ClausesFor(EffectTiming.ThisCardPositionChanged);
             List<EffectClause> clauses;
-            if (flip.Exists(c => c != null && c.RequiresTargetChoice))
+            if (posChanged.Exists(c => c != null && c.RequiresTargetChoice) &&
+                !flip.Exists(c => c != null && c.RequiresTargetChoice) &&
+                !summoned.Exists(c => c != null && c.RequiresTargetChoice) &&
+                !gy.Exists(c => c != null && c.RequiresTargetChoice))
+                clauses = posChanged;
+            else if (flip.Exists(c => c != null && c.RequiresTargetChoice))
                 clauses = flip;
             else if (summoned.Exists(c => c != null && c.RequiresTargetChoice))
                 clauses = summoned;
@@ -2743,6 +2749,48 @@ namespace WRLDZ.Duel.TextEffects
                     }
                     break;
 
+                case EffectActionKind.ShuffleDeck:
+                    CardDatabase.Shuffle(who.Deck);
+                    engine.Log($"{who.Name} shuffles their Deck ({source?.Name}).");
+                    break;
+
+                case EffectActionKind.DiscardChosenFromHand:
+                    if (chosenTarget != null && who.Hand.Contains(chosenTarget))
+                    {
+                        MonsterEffects.DiscardFromHandByInstance(who, chosenTarget);
+                        engine.Log($"{who.Name} discards {chosenTarget.Name} ({source?.Name}).");
+                    }
+                    break;
+
+                case EffectActionKind.SwapOriginalAtkDefUntilEndOfTurn:
+                    foreach (var side in new[] { who, opp })
+                        foreach (var m in side.MonstersOnField())
+                        {
+                            if (m?.Def == null || !m.FaceUp || m.Def.atk < 0 || m.Def.def < 0) continue;
+                            var delta = m.Def.def - m.Def.atk;
+                            m.UntilEndOfTurnAtk += delta;
+                            m.UntilEndOfTurnDef -= delta;
+                            engine.Log($"{m.Name}: original ATK/DEF switched → {m.CurrentAtk}/{m.CurrentDef}.");
+                        }
+                    break;
+
+                case EffectActionKind.CoinCallWrongLoseHalfLp:
+                {
+                    // The call has no strategic value (a fair coin), so the controller calls Heads.
+                    engine.Rng.SetPresentationContext(who.IsPlayer, source?.Name);
+                    var heads = engine.Rng.TossCoin();
+                    engine.Log($"{source?.Name}: {who.Name} calls Heads — the coin shows {(heads ? "Heads" : "Tails")}.");
+                    if (!heads)
+                        engine.LoseLifePoints(who, (who.LifePoints + 1) / 2, source?.Name);
+                    break;
+                }
+
+                case EffectActionKind.AttackCostLp:
+                case EffectActionKind.GainAtkWhenAttackingMatching:
+                case EffectActionKind.AttackerCannotAttackNextTurn:
+                case EffectActionKind.EquipAtkDecayPerStandby:
+                case EffectActionKind.EquippedCannotAttack:
+                case EffectActionKind.EquippedMustBeAttackTarget:
                 case EffectActionKind.WinDuelWithNamedSetInHand:
                 case EffectActionKind.ContinuousForceDefenseLockPosition:
                 case EffectActionKind.GainSelfAtkPerCount:
@@ -2756,6 +2804,8 @@ namespace WRLDZ.Duel.TextEffects
                             ? BattlePosition.Defense
                             : BattlePosition.Attack;
                         engine.Log($"{chosenTarget.Name} → {chosenTarget.Position} Position.");
+                        NotifyPositionChanged(engine, chosenTarget,
+                            toDefense: chosenTarget.Position == BattlePosition.Defense);
                     }
 
                     break;
@@ -3387,9 +3437,207 @@ namespace WRLDZ.Duel.TextEffects
             }
         }
 
+        // ───────────────────── Classic-era hooks (MRD tranche 2) ─────────────────────
+
+        static IEnumerable<EffectClause> FaceUpClauses(CardInstance card, EffectActionKind action)
+        {
+            if (card?.Def == null || !card.FaceUp || card.IsNegated) yield break;
+            var prog = CompiledEffectCache.GetOrCompile(card);
+            if (prog == null) yield break;
+            foreach (var c in prog.ClauseList)
+                if (c != null && c.Action == action) yield return c;
+        }
+
+        /// <summary>Germ Infection / Stim-Pack: count one more Standby Phase on each matching Equip.</summary>
+        static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
+        {
+            foreach (var side in new[] { engine.Player, engine.Opponent })
+            {
+                if (side == null) continue;
+                foreach (var host in side.MonstersOnField())
+                {
+                    if (host?.Equips == null) continue;
+                    foreach (var eq in host.Equips)
+                    {
+                        foreach (var c in FaceUpClauses(eq, EffectActionKind.EquipAtkDecayPerStandby))
+                        {
+                            var whose = c.DecayOnEquippedControllersStandby
+                                ? engine.ControllerOf(host)
+                                : engine.ControllerOf(eq);
+                            if (whose != turnPlayer) continue;
+                            eq.Counters++;
+                            engine.Log($"{eq.Name}: {host.Name} loses {c.Amount} ATK (Standby).");
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>Total ATK loss the equip's Standby counter applies to its host.</summary>
+        public static int EquipStandbyDecay(CardInstance equip)
+        {
+            var total = 0;
+            foreach (var c in FaceUpClauses(equip, EffectActionKind.EquipAtkDecayPerStandby))
+                total += c.Amount * Mathf.Max(0, equip.Counters);
+            return total;
+        }
+
+        /// <summary>LP this monster must pay to declare an attack (Dark Elf). 0 = none.</summary>
+        public static int AttackLpCost(CardInstance attacker)
+        {
+            var n = 0;
+            foreach (var c in FaceUpClauses(attacker, EffectActionKind.AttackCostLp))
+                n += Mathf.Max(0, c.Amount);
+            return n;
+        }
+
+        /// <summary>
+        /// Effects that stop this monster declaring an attack: an Equip that forbids it
+        /// (Paralyzing Potion) or an Electric Lizard lock that lasts through this turn.
+        /// </summary>
+        public static bool AttackForbiddenByEffect(DuelEngine engine, CardInstance attacker)
+        {
+            if (attacker == null) return false;
+            if (attacker.CannotAttackThroughTurn >= engine.TurnNumber) return true;
+            if (attacker.Equips != null)
+                foreach (var eq in attacker.Equips)
+                    if (FaceUpClauses(eq, EffectActionKind.EquippedCannotAttack).Any())
+                        return true;
+            return false;
+        }
+
+        /// <summary>
+        /// Ring of Magnetism: the defending player's face-up monsters equipped with it are the
+        /// only legal attack targets (and no direct attack). Empty = no restriction.
+        /// </summary>
+        public static List<CardInstance> ForcedAttackTargets(DuelistState defender)
+        {
+            var list = new List<CardInstance>();
+            if (defender == null) return list;
+            foreach (var m in defender.MonstersOnField())
+            {
+                if (m?.Equips == null || !m.FaceUp) continue;
+                if (m.Equips.Any(eq => FaceUpClauses(eq, EffectActionKind.EquippedMustBeAttackTarget).Any()))
+                    list.Add(m);
+            }
+
+            return list;
+        }
+
+        /// <summary>Insect Soldiers of the Sky: Damage Step-only ATK when attacking a matching monster.</summary>
+        public static int DamageStepAtkBonus(CardInstance attacker, CardInstance target)
+        {
+            if (target?.Def == null) return 0;
+            var n = 0;
+            foreach (var c in FaceUpClauses(attacker, EffectActionKind.GainAtkWhenAttackingMatching))
+            {
+                if (!string.IsNullOrEmpty(c.AttributeFilter) &&
+                    !string.Equals(target.Def.attribute, c.AttributeFilter, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (!string.IsNullOrEmpty(c.RaceFilter) &&
+                    !ClassicEraTemplates.RaceMatches(target.Def.race, c.RaceFilter))
+                    continue;
+                n += c.Amount;
+            }
+
+            return n;
+        }
+
+        /// <summary>
+        /// Electric Lizard: a monster (not of the excepted Type) that attacked it cannot attack
+        /// during its controller's next turn.
+        /// </summary>
+        public static void NotifyAttackedBy(DuelEngine engine, CardInstance defender, CardInstance attacker)
+        {
+            if (engine == null || defender == null || attacker?.Def == null) return;
+            foreach (var c in FaceUpClauses(defender, EffectActionKind.AttackerCannotAttackNextTurn))
+            {
+                if (!string.IsNullOrEmpty(c.ExceptRaceFilter) &&
+                    ClassicEraTemplates.RaceMatches(attacker.Def.race, c.ExceptRaceFilter))
+                    continue;
+                attacker.CannotAttackThroughTurn = engine.TurnNumber + 2;
+                engine.Log($"{defender.Name}: {attacker.Name} cannot attack during its controller's next turn.");
+            }
+        }
+
+        /// <summary>Jirai Gumo: "When this card declares an attack:" clauses.</summary>
+        public static void FireAttackDeclared(DuelEngine engine, DuelistState who, CardInstance attacker)
+        {
+            if (engine == null || who == null || attacker?.Def == null || !attacker.FaceUp || attacker.IsNegated)
+                return;
+            var prog = CompiledEffectCache.GetOrCompile(attacker);
+            if (prog == null) return;
+            var d = false;
+            foreach (var c in prog.ClausesFor(EffectTiming.ThisCardDeclaresAttack))
+                ApplyClause(engine, who, attacker, c, null, ref d, ref d);
+        }
+
+        /// <summary>
+        /// Dream Clown / Crass Clown / Tainted Wisdom: this monster's battle position changed.
+        /// <paramref name="toDefense"/> = Attack → face-up Defense; false = Defense → Attack.
+        /// A targeted clause asks the human controller to pick; the AI picks automatically.
+        /// </summary>
+        public static void NotifyPositionChanged(DuelEngine engine, CardInstance card, bool toDefense)
+        {
+            if (engine == null || card?.Def == null || !card.FaceUp || card.IsNegated) return;
+            var who = engine.ControllerOf(card);
+            if (who == null) return;
+            var prog = CompiledEffectCache.GetOrCompile(card);
+            var clauses = prog?.ClausesFor(EffectTiming.ThisCardPositionChanged)
+                .Where(c => c != null && c.PositionChangeToDefense == toDefense).ToList();
+            if (clauses == null || clauses.Count == 0) return;
+            if (engine.PendingActivation != null)
+            {
+                engine.Log($"{card.Name}: position trigger skipped — another choice is open.");
+                return;
+            }
+
+            engine.Log($"{card.Name}: position change effect.");
+            var targeted = clauses.FirstOrDefault(c => c.RequiresTargetChoice);
+            var d = false;
+            if (targeted == null)
+            {
+                foreach (var c in clauses)
+                    ApplyClause(engine, who, card, c, null, ref d, ref d);
+                engine.NotifyPublic();
+                return;
+            }
+
+            var targets = CollectTargets(engine, who, targeted, card);
+            if (targets.Count == 0)
+            {
+                engine.Log($"{card.Name}: no legal targets.");
+                return;
+            }
+
+            if (!who.IsPlayer)
+            {
+                var pick = AutoPick(targeted, targets, who, engine);
+                foreach (var c in clauses)
+                    ApplyClause(engine, who, card, c, c.RequiresTargetChoice ? pick : null, ref d, ref d);
+                engine.NotifyPublic();
+                return;
+            }
+
+            var pending = new PendingActivation
+            {
+                Controller = who,
+                Card = card,
+                TargetKind = MapTargetKind(targeted),
+                IsMonsterEffect = true,
+                UsesTextProgram = true
+            };
+            pending.LegalTargets.AddRange(targets);
+            engine.SetPendingActivation(pending);
+            engine.Log(pending.Prompt);
+            engine.NotifyPublic();
+        }
+
         public static void FirePhaseTriggers(DuelEngine engine, DuelistState who, EffectTiming timing)
         {
             if (engine == null || who == null) return;
+            if (timing == EffectTiming.StandbyPhase)
+                TickEquipStandbyDecay(engine, who);
             FirePhaseTriggersFor(engine, who, timing, opponentTurnClauses: false);
             if (timing == EffectTiming.StandbyPhase || timing == EffectTiming.EndPhase)
             {
@@ -3830,6 +4078,7 @@ namespace WRLDZ.Duel.TextEffects
             }
 
             equip.EquippedTo = host;
+            equip.Counters = 0; // Standby decay count (Germ Infection / Stim-Pack) restarts
             if (!host.Equips.Contains(equip))
                 host.Equips.Add(equip);
             engine.Log($"{equip.Name} is equipped to {host.Name}.");
@@ -4179,6 +4428,10 @@ namespace WRLDZ.Duel.TextEffects
                     foreach (var g in opp.Graveyard)
                         if (g?.Def != null && g.Def.IsMonster) list.Add(g);
                     break;
+                case EffectZoneFilter.ControllerHandMonsters:
+                    foreach (var h in who.Hand)
+                        if (h != null && h != except && h.Def != null && h.Def.IsMonster) list.Add(h);
+                    break;
                 case EffectZoneFilter.AnyGyCards:
                     foreach (var g in who.Graveyard)
                         if (g?.Def != null) list.Add(g);
@@ -4281,6 +4534,10 @@ namespace WRLDZ.Duel.TextEffects
                                         System.StringComparison.OrdinalIgnoreCase));
             if (c.Action == EffectActionKind.EquipThisToTarget)
                 list.RemoveAll(t => t?.Def == null || !t.Def.IsMonster || !t.FaceUp);
+            // "a non Machine-Type monster" (Paralyzing Potion / Germ Infection)
+            if (!string.IsNullOrEmpty(c.ExceptRaceFilter))
+                list.RemoveAll(t => t?.Def == null ||
+                                    ClassicEraTemplates.RaceMatches(t.Def.race, c.ExceptRaceFilter));
             if (c.Action == EffectActionKind.SetTargetFaceDownDefense)
                 list.RemoveAll(t => t == null || !t.FaceUp);
             if (c.Action == EffectActionKind.ChangeBattlePosition)
@@ -4374,6 +4631,8 @@ namespace WRLDZ.Duel.TextEffects
                         .OrderByDescending(t => opp.Graveyard.Contains(t) ? 1 : 0)
                         .ThenByDescending(t => t.Def != null && t.Def.IsMonster ? t.CurrentAtk : -1)
                         .First();
+                case EffectZoneFilter.ControllerHandMonsters:
+                    return targets.OrderBy(t => t.Def?.atk ?? 0).First();
                 case EffectZoneFilter.ControllerAnyMonsters:
                     // Sacrifice your weakest monsters.
                     return targets.OrderBy(t => t.CurrentAtk).First();
@@ -4395,10 +4654,14 @@ namespace WRLDZ.Duel.TextEffects
             EffectZoneFilter.OppFaceUpMonsters when c.Action == EffectActionKind.EffectDamageBothFromOriginalAtk
                 => EffectTargetKind.OppFaceUpMonsterAtkLeqLp,
             EffectZoneFilter.OppFaceUpMonsters => EffectTargetKind.OppFaceUpMonster,
+            EffectZoneFilter.FieldAnyMonster when c.Action == EffectActionKind.EquipThisToTarget
+                => EffectTargetKind.EquipAnyMonster,
             EffectZoneFilter.FieldAnyMonster => EffectTargetKind.AnyMonsterOnField,
             EffectZoneFilter.ControllerGySpells => EffectTargetKind.SpellInYourGy,
             EffectZoneFilter.ControllerGyTraps => EffectTargetKind.TrapInYourGy,
             EffectZoneFilter.AnyCardOnField => EffectTargetKind.AnyCardOnField,
+            EffectZoneFilter.ControllerHandMonsters when c.Action == EffectActionKind.DiscardChosenFromHand
+                => EffectTargetKind.DiscardFromHand,
             EffectZoneFilter.ControllerHandMonsters => EffectTargetKind.DiscardMonsterInHand,
             EffectZoneFilter.ControllerGyMonsters => EffectTargetKind.MonsterInEitherGy,
             EffectZoneFilter.ControllerMonsters when c.Action == EffectActionKind.EquipThisToTarget
@@ -4522,11 +4785,14 @@ namespace WRLDZ.Duel.TextEffects
             var controller = engine.ControllerOf(m);
             if (controller == null) return;
             var wasFaceDown = !m.FaceUp;
+            var before = m.Position;
             m.FaceUp = true;
             m.Position = pos;
             engine.Log($"{m.Name} → face-up {pos} Position.");
             if (wasFaceDown)
                 MonsterEffects.OnFlipSummoned(engine, controller, m);
+            if (before != pos)
+                NotifyPositionChanged(engine, m, toDefense: pos == BattlePosition.Defense);
         }
 
         /// <summary>

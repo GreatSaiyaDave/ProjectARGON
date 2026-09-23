@@ -173,6 +173,78 @@ namespace WRLDZ.Duel.TextEffects
             @"your opponent discards (\d+) random cards?\.",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        // ——— MRD tranche 2 ———
+
+        // Dream Clown.
+        static readonly Regex RxToDefenseDestroyOpp = new(
+            @"When this card is changed from Attack Position to face-up Defense Position, " +
+            @"select 1 monster your opponent controls and destroy it\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        // Crass Clown.
+        static readonly Regex RxToAttackBounceOpp = new(
+            @"When this card is changed from Defense Position to Attack Position, " +
+            @"return 1 monster on your opponent's side of the field to the owner's hand\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        // Tainted Wisdom.
+        static readonly Regex RxToDefenseShuffle = new(
+            @"If this Attack Position card is changed to face-up Defense Position:\s*Shuffle your Deck\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        // Paralyzing Potion.
+        static readonly Regex RxEquipNonTypeCannotAttack = new(
+            @"A non ([A-Za-z]+(?: [A-Za-z]+)?)-Type [Mm]onster equipped with this card cannot attack\.",
+            RegexOptions.Compiled);
+
+        // Germ Infection.
+        static readonly Regex RxEquipNonTypeStandbyDecay = new(
+            @"The ATK of a non ([A-Za-z]+(?: [A-Za-z]+)?)-Type monster equipped with this card is decreased by (\d+) points at each of its Standby Phases\.",
+            RegexOptions.Compiled);
+
+        // Stim-Pack rider (the "gains 700 ATK" sentence is the shared Equip template).
+        static readonly Regex RxEquipYourStandbyDecay = new(
+            @"During each of your Standby Phases, the equipped monster loses (\d+) ATK\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        // Ring of Magnetism.
+        static readonly Regex RxRingOfMagnetism = new(
+            @"You can only equip this card to a monster on your side of the field\.\s*" +
+            @"Decrease the ATK and DEF of a monster equipped with this card by (\d+) points\.\s*" +
+            @"In addition, all the monsters on your opponent's side of the field can only attack the monster equipped with this card, if they attack\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        // Dark Elf.
+        static readonly Regex RxAttackCostLp = new(
+            @"This card requires a cost of (\d+) of your own Life Points to attack\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        // Insect Soldiers of the Sky.
+        static readonly Regex RxGainWhenAttacksKind = new(
+            @"If this card attacks an? (\w+)(?:-Type)? monster, it gains (\d+) ATK during the Damage Step only\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        // Jirai Gumo.
+        static readonly Regex RxAttackCoinLoseHalf = new(
+            @"When this card declares an attack:\s*Toss a coin and call it\.\s*" +
+            @"If you call it wrong, (?:you )?lose half your (?:LP|Life Points)\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        // Electric Lizard.
+        static readonly Regex RxAttackerLocked = new(
+            @"A non ([A-Za-z]+(?: [A-Za-z]+)?)-Type monster attacking ""[^""]+"" cannot attack on its following turn\.",
+            RegexOptions.Compiled);
+
+        // Shield & Sword.
+        static readonly Regex RxSwapAtkDef = new(
+            @"Switch the original ATK and DEF of all face-up monsters currently on the field, until the end of this turn\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        // The Cheerful Coffin.
+        static readonly Regex RxDiscardUpToMonsters = new(
+            @"Discard up to (\d+) Monster Cards? from your hand to the (?:GY|Graveyard)\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         public static void Collect(string text, CardDef def, List<EffectClause> into,
             List<(int start, int length)> spans)
         {
@@ -511,7 +583,206 @@ namespace WRLDZ.Duel.TextEffects
                     MakesChainLink = true
                 }
                 : null);
+            // ═══ MRD tranche 2 ═══
+
+            // —— Position-change triggers ——
+            var dream = RxToDefenseDestroyOpp.Match(text);
+            Add(dream, dream.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.ThisCardPositionChanged,
+                    Action = EffectActionKind.Destroy,
+                    Zone = EffectZoneFilter.OppAnyMonsters,
+                    RequiresTargetChoice = true,
+                    PositionChangeToDefense = true,
+                    MakesChainLink = true
+                }
+                : null);
+            var crass = RxToAttackBounceOpp.Match(text);
+            Add(crass, crass.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.ThisCardPositionChanged,
+                    Action = EffectActionKind.ReturnToHand,
+                    Zone = EffectZoneFilter.OppAnyMonsters,
+                    RequiresTargetChoice = true,
+                    PositionChangeToDefense = false,
+                    MakesChainLink = true
+                }
+                : null);
+            var wisdom = RxToDefenseShuffle.Match(text);
+            Add(wisdom, wisdom.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.ThisCardPositionChanged,
+                    Action = EffectActionKind.ShuffleDeck,
+                    PositionChangeToDefense = true,
+                    MakesChainLink = true
+                }
+                : null);
+
+            // —— Equip riders ——
+            if (def != null && def.IsEquipSpell)
+            {
+                var potion = RxEquipNonTypeCannotAttack.Match(text);
+                if (potion.Success && MonsterTypes.Contains(potion.Groups[1].Value))
+                {
+                    Add(potion,
+                        AnyMonsterEquip(potion.Groups[1].Value, 0, 0),
+                        new EffectClause
+                        {
+                            Timing = EffectTiming.ContinuousWhileFaceUp,
+                            Action = EffectActionKind.EquippedCannotAttack,
+                            StaysOnField = true,
+                            MakesChainLink = false
+                        });
+                }
+
+                var germ = RxEquipNonTypeStandbyDecay.Match(text);
+                if (germ.Success && MonsterTypes.Contains(germ.Groups[1].Value))
+                {
+                    Add(germ,
+                        AnyMonsterEquip(germ.Groups[1].Value, 0, 0),
+                        new EffectClause
+                        {
+                            Timing = EffectTiming.ContinuousWhileFaceUp,
+                            Action = EffectActionKind.EquipAtkDecayPerStandby,
+                            Amount = ParseInt(germ, 2, 0),
+                            DecayOnEquippedControllersStandby = true,
+                            StaysOnField = true,
+                            MakesChainLink = false
+                        });
+                }
+
+                var stim = RxEquipYourStandbyDecay.Match(text);
+                Add(stim, stim.Success
+                    ? new EffectClause
+                    {
+                        Timing = EffectTiming.ContinuousWhileFaceUp,
+                        Action = EffectActionKind.EquipAtkDecayPerStandby,
+                        Amount = ParseInt(stim, 1, 0),
+                        DecayOnEquippedControllersStandby = false,
+                        StaysOnField = true,
+                        MakesChainLink = false
+                    }
+                    : null);
+
+                var ring = RxRingOfMagnetism.Match(text);
+                if (ring.Success)
+                {
+                    var n = ParseInt(ring, 1, 0);
+                    Add(ring,
+                        new EffectClause
+                        {
+                            Timing = EffectTiming.Activate,
+                            Action = EffectActionKind.EquipThisToTarget,
+                            RequiresTargetChoice = true,
+                            Zone = EffectZoneFilter.ControllerMonsters,
+                            EquipAtkBonus = -n,
+                            EquipDefBonus = -n,
+                            StaysOnField = true,
+                            MakesChainLink = true
+                        },
+                        new EffectClause
+                        {
+                            Timing = EffectTiming.ContinuousWhileFaceUp,
+                            Action = EffectActionKind.EquippedMustBeAttackTarget,
+                            StaysOnField = true,
+                            MakesChainLink = false
+                        });
+                }
+            }
+
+            // —— Attack rules ——
+            var elf = RxAttackCostLp.Match(text);
+            Add(elf, elf.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.AttackCostLp,
+                    Amount = ParseInt(elf, 1, 0),
+                    MakesChainLink = false
+                }
+                : null);
+
+            var soldiers = RxGainWhenAttacksKind.Match(text);
+            if (soldiers.Success)
+            {
+                var c = new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.GainAtkWhenAttackingMatching,
+                    Amount = ParseInt(soldiers, 2, 0),
+                    MakesChainLink = false
+                };
+                var kindWord = soldiers.Groups[1].Value;
+                if (Regex.IsMatch(kindWord, "^(DARK|LIGHT|EARTH|WATER|FIRE|WIND|DIVINE)$", RegexOptions.IgnoreCase))
+                    c.AttributeFilter = kindWord.ToUpperInvariant();
+                else if (MonsterTypes.Contains(kindWord))
+                    c.RaceFilter = kindWord;
+                else
+                    c = null;
+                Add(soldiers, c);
+            }
+
+            var gumo = RxAttackCoinLoseHalf.Match(text);
+            Add(gumo, gumo.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.ThisCardDeclaresAttack,
+                    Action = EffectActionKind.CoinCallWrongLoseHalfLp,
+                    HalveLifePoints = true,
+                    MakesChainLink = true
+                }
+                : null);
+
+            var lizard = RxAttackerLocked.Match(text);
+            if (lizard.Success && MonsterTypes.Contains(lizard.Groups[1].Value))
+                Add(lizard, new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.AttackerCannotAttackNextTurn,
+                    ExceptRaceFilter = lizard.Groups[1].Value,
+                    MakesChainLink = false
+                });
+
+            // —— Spells ——
+            Add(RxSwapAtkDef.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.SwapOriginalAtkDefUntilEndOfTurn,
+                MakesChainLink = true
+            });
+
+            var coffin = RxDiscardUpToMonsters.Match(text);
+            Add(coffin, coffin.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.DiscardChosenFromHand,
+                    Zone = EffectZoneFilter.ControllerHandMonsters,
+                    RequiresTargetChoice = true,
+                    ChoiceDoesNotTarget = true,
+                    TargetCount = ParseInt(coffin, 1, 1),
+                    TargetUpTo = true,
+                    MakesChainLink = true
+                }
+                : null);
         }
+
+        /// <summary>Equip Spell that may equip any face-up monster except the given Type.</summary>
+        static EffectClause AnyMonsterEquip(string exceptType, int atk, int def) => new()
+        {
+            Timing = EffectTiming.Activate,
+            Action = EffectActionKind.EquipThisToTarget,
+            RequiresTargetChoice = true,
+            Zone = EffectZoneFilter.FieldAnyMonster,
+            ExceptRaceFilter = exceptType,
+            EquipAtkBonus = atk,
+            EquipDefBonus = def,
+            StaysOnField = true,
+            MakesChainLink = true
+        };
 
         /// <summary>
         /// Split "Fish, Sea Serpent, Thunder, and Aqua" into Types. Fails (false) if any

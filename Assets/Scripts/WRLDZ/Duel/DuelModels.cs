@@ -161,6 +161,12 @@ namespace WRLDZ.Duel
         /// </summary>
         public bool PositionLockedByEffect;
 
+        /// <summary>This monster cannot declare an attack while TurnNumber ≤ this value (Electric Lizard).</summary>
+        public int CannotAttackThroughTurn = -1;
+
+        /// <summary>Damage Step-only ATK gain for the current battle (Insect Soldiers of the Sky).</summary>
+        public int DamageStepAtkBonus;
+
         /// <summary>Monsters/Unions currently equipped to this card.</summary>
         public readonly List<CardInstance> Equips = new();
 
@@ -183,7 +189,8 @@ namespace WRLDZ.Duel
             AtkBecomesZeroThisCalculation
                 ? 0
                 : Def != null && Def.atk >= 0
-                    ? System.Math.Max(0, Def.atk + AtkModifier + UntilEndOfTurnAtk + LingeringAtkModifier)
+                    ? System.Math.Max(0, Def.atk + AtkModifier + UntilEndOfTurnAtk + LingeringAtkModifier +
+                                         DamageStepAtkBonus)
                     : 0;
         public int CurrentDef =>
             Def != null && Def.def >= 0

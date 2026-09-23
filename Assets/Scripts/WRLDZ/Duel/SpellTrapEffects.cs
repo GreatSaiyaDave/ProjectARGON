@@ -52,7 +52,11 @@ namespace WRLDZ.Duel
         /// <summary>Change of Heart / Stop Defense / Block Attack — a monster your opponent controls.</summary>
         OppMonster,
         /// <summary>Two-Pronged Attack — a monster you control.</summary>
-        YourMonster
+        YourMonster,
+        /// <summary>Paralyzing Potion / Germ Infection — any face-up monster to Equip.</summary>
+        EquipAnyMonster,
+        /// <summary>The Cheerful Coffin — a monster in your hand to discard (not a cost).</summary>
+        DiscardFromHand
     }
 
     /// <summary>In-flight activation waiting for a target choice.</summary>
@@ -158,6 +162,10 @@ namespace WRLDZ.Duel
                         $"{n}: choose a monster your opponent controls{MultiNote}.",
                     EffectTargetKind.YourMonster =>
                         $"{n}: choose a monster you control{MultiNote}.",
+                    EffectTargetKind.EquipAnyMonster =>
+                        $"{n}: choose a face-up monster to Equip.",
+                    EffectTargetKind.DiscardFromHand =>
+                        $"{n}: choose a monster in your hand to discard{MultiNote}.",
                     _ when AwaitingLpCost =>
                         $"{n}: pay LP (multiples of 100) as the cost.",
                     _ when AwaitingCoinCall =>

@@ -52,7 +52,9 @@ namespace WRLDZ.Duel.Rules
             if (defender?.Def == null) return 0;
             // Printed DEF may be 0; only treat "N/A" as non-stat when def &lt; 0 in DB
             if (defender.Def.def < 0) return 0;
-            return Mathf.Max(0, defender.Def.def + defender.DefModifier + defender.UntilEndOfTurnDef);
+            // Same total as CardInstance.CurrentDef (lingering changes count in battle).
+            return Mathf.Max(0, defender.Def.def + defender.DefModifier + defender.UntilEndOfTurnDef +
+                                defender.LingeringDefModifier);
         }
 
         public static int AttackValue(CardInstance monster)
@@ -60,7 +62,10 @@ namespace WRLDZ.Duel.Rules
             if (monster?.Def == null) return 0;
             if (monster.AtkBecomesZeroThisCalculation) return 0;
             if (monster.Def.atk < 0) return 0;
-            return Mathf.Max(0, monster.Def.atk + monster.AtkModifier + monster.UntilEndOfTurnAtk);
+            // Same total as CardInstance.CurrentAtk: lingering changes (Adhesion Trap Hole,
+            // Slate Warrior) and Damage Step-only gains (Insect Soldiers) count in battle.
+            return Mathf.Max(0, monster.Def.atk + monster.AtkModifier + monster.UntilEndOfTurnAtk +
+                                monster.LingeringAtkModifier + monster.DamageStepAtkBonus);
         }
 
         public static BattleResult Calculate(

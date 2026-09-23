@@ -138,6 +138,8 @@ namespace WRLDZ.Duel
             {
                 var ep = eq?.Def != null ? CompiledEffectCache.GetOrCompile(eq.Def) : null;
                 if (ep == null) continue;
+                // Germ Infection / Stim-Pack: ATK lost per Standby Phase counted on the Equip.
+                host.AtkModifier -= TextEffectRuntime.EquipStandbyDecay(eq);
                 foreach (var c in ep.ClauseList)
                 {
                     if (c != null && (c.EquipAtkBonus != 0 || c.EquipDefBonus != 0))
@@ -270,13 +272,22 @@ namespace WRLDZ.Duel
             ApplyLevelMod(engine, "WATER", -1, applyToHand: true, applyToField: true);
         }
 
+        static bool HasCompiledDamageStepBoost(CardInstance m)
+        {
+            var prog = CompiledEffectCache.GetOrCompile(m.Def);
+            return prog != null && prog.FullyCompiled &&
+                   prog.ClauseList.Exists(c => c != null && c.Action == EffectActionKind.GainAtkWhenAttackingMatching);
+        }
+
         static void ApplyFaceUpMonsterAuras(DuelEngine engine, DuelistState who)
         {
             if (who == null) return;
             foreach (var m in who.MonstersOnField())
             {
                 if (m?.Def == null || !m.FaceUp || m.IsNegated) continue;
-                if (ApplyCatalogAuras(engine, m, "MZONE")) continue;
+                // The Lua-extracted catalog drops Damage-Step conditions (Insect Soldiers of
+                // the Sky became a permanent +1000). Official text wins for those cards.
+                if (!HasCompiledDamageStepBoost(m) && ApplyCatalogAuras(engine, m, "MZONE")) continue;
                 ApplySpellCounterAtk(engine, m);
                 ApplyEquipStats(engine, m);
                 if (ApplyCompiledContinuous(engine, m)) continue;

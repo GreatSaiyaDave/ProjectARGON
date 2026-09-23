@@ -634,6 +634,247 @@ namespace WRLDZ.Duel.Rules
                     me.Hand.Count == hand0);
             }
 
+            // ═════════════════════ MRD tranche 2 (compiler v52) ═════════════════════
+            {
+                var ids = new[] { 13215230, 93889755, 28725004, 50152549, 24668830, 83225447, 20436034,
+                    21417692, 7019529, 94773007, 55875323, 52097679, 41142615 };
+                var bad = ids.Where(id =>
+                {
+                    var d = db.Get(id);
+                    var pr = d != null ? CardTextEffectCompiler.Compile(d) : null;
+                    return pr == null || !pr.FullyCompiled;
+                }).Select(id => db.Get(id)?.name ?? id.ToString()).ToList();
+                Check("Compile: MRD tranche 2 (13 cards) FullyCompiled", bad.Count == 0, string.Join(", ", bad));
+            }
+
+            // Position-change triggers
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp);
+                var clown = PlaceMonster(e, me, 13215230, 0); // Dream Clown
+                var victim = PlaceMonster(e, opp, Celtic, 0);
+                var ok = e.TryChangePosition(me, clown);
+                Resolve(e);
+                Check("Dream Clown: Attack → Defense destroys an opponent's monster",
+                    ok && !OnField(opp, victim) && opp.Graveyard.Contains(victim));
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); opp.Hand.Clear();
+                var clown = PlaceMonster(e, me, 93889755, 0); // Crass Clown
+                clown.Position = BattlePosition.Defense;
+                var victim = PlaceMonster(e, opp, Celtic, 0);
+                var ok = e.TryChangePosition(me, clown);
+                Resolve(e);
+                Check("Crass Clown: Defense → Attack returns an opponent's monster to the hand",
+                    ok && !OnField(opp, victim) && opp.Hand.Contains(victim));
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp);
+                var clown = PlaceMonster(e, me, 13215230, 0); // Dream Clown
+                clown.Position = BattlePosition.Defense;
+                var victim = PlaceMonster(e, opp, Celtic, 0);
+                e.TryChangePosition(me, clown);
+                Resolve(e);
+                Check("Dream Clown: Defense → Attack does not trigger", OnField(opp, victim));
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp);
+                var wisdom = PlaceMonster(e, me, 28725004, 0); // Tainted Wisdom
+                var deck0 = me.Deck.Count;
+                var ok = e.TryChangePosition(me, wisdom);
+                Check("Tainted Wisdom: Attack → Defense shuffles the Deck (same cards)",
+                    ok && me.Deck.Count == deck0 && e.PendingActivation == null);
+            }
+
+            // Equips
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                ClearField(me); ClearField(opp); me.Hand.Clear();
+                var target = PlaceMonster(e, opp, KoumoriDragon, 0);
+                var potion = Hand(e, me, 50152549); // Paralyzing Potion
+                var ok = Activate(e, me, potion, true);
+                Check("Paralyzing Potion: equips an opponent's monster; it cannot attack",
+                    ok && target.Equips.Contains(potion) &&
+                    TextEffectRuntime.AttackForbiddenByEffect(e, target));
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                ClearField(me); ClearField(opp); me.Hand.Clear();
+                PlaceMonster(e, opp, Mechanicalchaser, 0);
+                var potion = Hand(e, me, 50152549);
+                Check("Paralyzing Potion: cannot equip a Machine",
+                    !e.CanActivateSpellTrap(me, potion, fromHand: true));
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                ClearField(me); ClearField(opp); me.Hand.Clear();
+                var target = PlaceMonster(e, opp, KoumoriDragon, 0);
+                var germ = Hand(e, me, 24668830); // Germ Infection
+                Activate(e, me, germ, true);
+                TextEffectRuntime.FirePhaseTriggers(e, me, EffectTiming.StandbyPhase);
+                var afterMine = target.CurrentAtk;
+                TextEffectRuntime.FirePhaseTriggers(e, opp, EffectTiming.StandbyPhase);
+                var afterTheirs = target.CurrentAtk;
+                TextEffectRuntime.FirePhaseTriggers(e, opp, EffectTiming.StandbyPhase);
+                Check("Germ Infection: −300 ATK at each of the equipped monster's Standby Phases",
+                    afterMine == 1500 && afterTheirs == 1200 && target.CurrentAtk == 900,
+                    $"{afterMine}/{afterTheirs}/{target.CurrentAtk}");
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                ClearField(me); ClearField(opp); me.Hand.Clear();
+                var mine = PlaceMonster(e, me, Celtic, 0);
+                var stim = Hand(e, me, 83225447); // Stim-Pack
+                Activate(e, me, stim, true);
+                var boosted = mine.CurrentAtk;
+                TextEffectRuntime.FirePhaseTriggers(e, opp, EffectTiming.StandbyPhase);
+                var oppStandby = mine.CurrentAtk;
+                TextEffectRuntime.FirePhaseTriggers(e, me, EffectTiming.StandbyPhase);
+                Check("Stim-Pack: +700, then −200 at each of YOUR Standby Phases",
+                    boosted == 2100 && oppStandby == 2100 && mine.CurrentAtk == 1900,
+                    $"{boosted}/{oppStandby}/{mine.CurrentAtk}");
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                BattleFor(e, opp);
+                ClearField(me); ClearField(opp);
+                var ringed = PlaceMonster(e, me, Celtic, 0);
+                var other = PlaceMonster(e, me, SkullServant, 1);
+                var ring = PlaceSpellTrap(e, me, 20436034, 0); // Ring of Magnetism
+                ring.EquippedTo = ringed; ringed.Equips.Add(ring);
+                var atk = PlaceMonster(e, opp, Mechanicalchaser, 0);
+                e.NotifyPublic();
+                var vOther = e.ValidateAttack(opp, atk, other);
+                var vDirect = e.ValidateAttack(opp, atk, null);
+                var vRing = e.ValidateAttack(opp, atk, ringed);
+                Check("Ring of Magnetism: −500/−500 and only the equipped monster can be attacked",
+                    ringed.CurrentAtk == 900 && !vOther.Legal && !vDirect.Legal && vRing.Legal,
+                    $"atk={ringed.CurrentAtk} other={vOther.Legal} direct={vDirect.Legal} ring={vRing.Legal}");
+            }
+
+            // Attack rules
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                BattleFor(e, me);
+                ClearField(me); ClearField(opp);
+                var elf = PlaceMonster(e, me, 21417692, 0); // Dark Elf
+                var lp = me.LifePoints; var oppLp = opp.LifePoints;
+                Attack(e, me, elf, null);
+                Check("Dark Elf: pays 1000 LP to attack", me.LifePoints == lp - 1000 && opp.LifePoints == oppLp - 2000,
+                    $"me {me.LifePoints} opp {opp.LifePoints}");
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                BattleFor(e, me);
+                ClearField(me); ClearField(opp);
+                var elf = PlaceMonster(e, me, 21417692, 0);
+                me.LifePoints = 900;
+                Check("Dark Elf: cannot attack with less than 1000 LP", !e.CanAttack(me, elf));
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                BattleFor(e, me);
+                ClearField(me); ClearField(opp);
+                var bug = PlaceMonster(e, me, 7019529, 0); // Insect Soldiers of the Sky 1000
+                var harpie = PlaceMonster(e, opp, HarpieLady, 0); // WIND 1300
+                var oppLp = opp.LifePoints;
+                Attack(e, me, bug, harpie);
+                Check("Insect Soldiers: +1000 ATK only while attacking a WIND monster",
+                    !OnField(opp, harpie) && opp.LifePoints == oppLp - 700 && bug.CurrentAtk == 1000,
+                    $"oppLP {opp.LifePoints} atk {bug.CurrentAtk}");
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                BattleFor(e, me);
+                ClearField(me); ClearField(opp);
+                var gumo = PlaceMonster(e, me, 94773007, 0); // Jirai Gumo
+                var lp = me.LifePoints;
+                e.Rng.QueueCoin(false);
+                Attack(e, me, gumo, null);
+                Check("Jirai Gumo: wrong call → lose half your LP", me.LifePoints == lp - (lp + 1) / 2,
+                    $"LP {lp}→{me.LifePoints}");
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                BattleFor(e, me);
+                ClearField(me); ClearField(opp);
+                var gumo = PlaceMonster(e, me, 94773007, 0);
+                var lp = me.LifePoints;
+                e.Rng.QueueCoin(true);
+                Attack(e, me, gumo, null);
+                Check("Jirai Gumo: right call → no LP loss", me.LifePoints == lp);
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                BattleFor(e, me);
+                ClearField(me); ClearField(opp);
+                var atk = PlaceMonster(e, me, Mechanicalchaser, 0);
+                var lizard = PlaceMonster(e, opp, 55875323, 0); // Electric Lizard
+                var turn = e.TurnNumber;
+                Attack(e, me, atk, lizard);
+                Check("Electric Lizard: a non-Zombie attacker cannot attack next turn",
+                    atk.CannotAttackThroughTurn == turn + 2);
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                BattleFor(e, me);
+                ClearField(me); ClearField(opp);
+                var zombie = PlaceMonster(e, me, SkullServant, 0);
+                var lizard = PlaceMonster(e, opp, 55875323, 0);
+                lizard.Position = BattlePosition.Defense;
+                Attack(e, me, zombie, lizard);
+                Check("Electric Lizard: a Zombie attacker is not locked", zombie.CannotAttackThroughTurn < e.TurnNumber);
+            }
+
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                BattleFor(e, me);
+                ClearField(me); ClearField(opp);
+                var halved = PlaceMonster(e, me, Mechanicalchaser, 0); // 1850
+                halved.LingeringAtkModifier = -925; // e.g. Adhesion Trap Hole
+                var wall = PlaceMonster(e, opp, Celtic, 0); // 1400
+                var myLp = me.LifePoints;
+                Attack(e, me, halved, wall);
+                Check("Battle uses lingering ATK changes (halved 925 loses to 1400)",
+                    !OnField(me, halved) && OnField(opp, wall) && me.LifePoints == myLp - 475,
+                    $"LP {myLp}→{me.LifePoints}");
+            }
+
+            // Spells
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Hand.Clear();
+                var elf = PlaceMonster(e, me, MysticalElf, 0); // 800/2000
+                var card = Hand(e, me, 52097679); // Shield & Sword
+                var ok = Activate(e, me, card, true);
+                var swapped = elf.CurrentAtk == 2000 && elf.CurrentDef == 800;
+                e.TryEndTurnSafe(me);
+                Check("Shield & Sword: original ATK/DEF switched until the end of the turn",
+                    ok && swapped && elf.CurrentAtk == 800 && elf.CurrentDef == 2000,
+                    $"swapped={swapped} after={elf.CurrentAtk}/{elf.CurrentDef}");
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                ClearField(me); ClearField(opp); me.Hand.Clear(); me.Graveyard.Clear();
+                Hand(e, me, Celtic); Hand(e, me, SkullServant); Hand(e, me, PetitAngel); Hand(e, me, KoumoriDragon);
+                var spell = Hand(e, me, PotOfGreed);
+                var coffin = Hand(e, me, 41142615); // The Cheerful Coffin
+                var ok = Activate(e, me, coffin, true);
+                var monstersLeft = me.Hand.Count(c => c.Def.IsMonster);
+                Check("The Cheerful Coffin: discards up to 3 monsters (not Spells)",
+                    ok && monstersLeft == 1 && me.Hand.Contains(spell) &&
+                    me.Graveyard.Count(c => c.Def.IsMonster) == 3,
+                    $"left={monstersLeft} gy={me.Graveyard.Count}");
+            }
+
             // ─────── Legacy duplicate targeted clauses still share one target ───────
             {
                 var e = Fresh(db); var me = e.Player; var opp = e.Opponent;

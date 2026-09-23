@@ -1,4 +1,4 @@
-# Curriculum batch — LOB close + MRD tranche 1 (compiler v51)
+# Curriculum batch — LOB close + MRD tranches 1–2 (compiler v52)
 
 Date: 2026-09-23. Engine path only (`DuelEngine` + `TextEffects`). No card ids in rules code.
 
@@ -7,11 +7,11 @@ Date: 2026-09-23. Engine path only (`DuelEngine` + `TextEffects`). No card ids i
 | Set | Before | After |
 |-----|-------:|------:|
 | LOB — Legend of Blue Eyes White Dragon | 110/126 (87.3%) | **126/126 (100%)** |
-| MRD — Metal Raiders | 96/144 (66.7%) | **112/144 (77.8%)** |
-| Whole `cards_db` fully compiled | 682 | 718 |
+| MRD — Metal Raiders | 96/144 (66.7%) | **125/144 (86.8%)** |
+| Whole `cards_db` fully compiled | 682 | 729 |
 
-Seed: `compiled_effects_seed_v1.json` re-exported at v51 (446 → 471 programs).
-Checks: headless 1128 pass / 0 fail, 250 AI-vs-AI duels completed, 0 soft-locks, Python UI guards pass.
+Seed: `compiled_effects_seed_v1.json` re-exported at v52 (446 → 483 programs).
+Checks: headless 1148 pass / 0 fail, 250 AI-vs-AI duels completed, 0 soft-locks, Python UI guards pass.
 
 ## Cards compiled (32)
 
@@ -25,6 +25,21 @@ The Unhappy Maiden, Dragon Piper, Masked Sorcerer, The Bistro Butcher, White Mag
 Robbin' Goblin.
 
 Shared templates also completed Crimson Ninja and Enraged Muka Muka (other sets).
+
+## MRD tranche 2 (13 more, v52)
+
+Dream Clown, Crass Clown, Tainted Wisdom, Paralyzing Potion, Germ Infection, Stim-Pack,
+Ring of Magnetism, Dark Elf, Insect Soldiers of the Sky, Jirai Gumo, Electric Lizard,
+Shield & Sword, The Cheerful Coffin.
+
+New shared pieces: position-change triggers (manual change, Flip Summon, card effects),
+Equip riders (cannot attack, Standby ATK decay, must-be-attacked), "non X-Type" equip limits,
+attack LP cost, Damage Step-only ATK, attack-declared coin toss, attacker lock, ATK/DEF swap
+until end of turn, choose-and-discard from hand.
+
+Fixes found on the way: battle math now uses the same ATK/DEF the card shows (lasting changes
+such as Adhesion Trap Hole's halving were ignored in battle); the Lua-extracted catalog no
+longer gives Insect Soldiers a permanent +1000.
 
 ## Shared mechanics added (reusable by later sets)
 
@@ -61,13 +76,9 @@ effects are modeled.
 | Gate Guardian, Harpie Lady Sisters, Great Moth, Larvae Moth, Cocoon of Evolution | Need "properly Summoned" tracking for nomi monsters and the Petit Moth turn count. |
 | Castle of Dark Illusions, Pumpking the King of Ghosts | Growing Standby counters tied to Castle staying face-up. |
 | Big Eye, Yado Karu | Need a deck-order / bottom-of-deck ordering UI. |
-| Dream Clown, Crass Clown, Tainted Wisdom | Need a "changed battle position" trigger window. |
-| Steel Scorpion, Electric Lizard, Mushroom Man #2, Jirai Gumo, Blast Juggler | Delayed / attacker-marking effects and Standby ignitions not yet modeled. |
-| Ring of Magnetism, Germ Infection, Paralyzing Potion, Stim-Pack | Equip attack-restriction and Standby decay on Equips. |
-| Dark Elf | Attack cost (pay LP to declare an attack). |
-| Insect Soldiers of the Sky, Shield & Sword, The Cheerful Coffin, Share the Pain, Elegant Egotist | Damage-Step-only boost, ATK/DEF swap, hand-discard choice, opponent-chosen Tribute, two-name summon. |
+| Steel Scorpion, Mushroom Man #2, Blast Juggler | Delayed destruction timing, optional End Phase control swap, Standby-Phase ignition. |
+| Share the Pain, Elegant Egotist | Opponent-chosen Tribute; two-name Summon tied to Harpie Lady Sisters' nomi rule. |
 
 ## Next batch
 
-Finish MRD (32 left, table above), starting with the position-change trigger window (3 cards)
-and Equip restrictions (4 cards), then SRL (44.2%).
+Finish MRD (19 left, table above) or move on to SRL (58 left). 859 cards remain across the 15 pre-Link sets.
