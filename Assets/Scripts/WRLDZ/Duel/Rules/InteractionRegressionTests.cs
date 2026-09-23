@@ -5141,6 +5141,40 @@ namespace WRLDZ.Duel.Rules
                         : $"full={locustsProg.FullyCompiled} n={locustsProg.ClauseList.Count} " +
                           $"unparsed={string.Join("|", locustsProg.UnparsedFragments ?? System.Array.Empty<string>())}");
 
+                bool IsFlipKindDestroy(CompiledCardProgram prog, string kind)
+                {
+                    return prog != null && prog.FullyCompiled &&
+                           (prog.UnparsedFragments == null || prog.UnparsedFragments.Length == 0) &&
+                           !prog.ClauseList.Exists(c =>
+                               c != null &&
+                               (c.Timing == EffectTiming.Activate || c.RequiresThisFlipSummoned)) &&
+                           prog.ClauseList.Exists(c =>
+                               c != null &&
+                               c.Timing == EffectTiming.Flip &&
+                               c.Action == EffectActionKind.Destroy &&
+                               c.Zone == EffectZoneFilter.FieldSpellTraps &&
+                               c.RequiresTargetChoice &&
+                               string.Equals(c.CardKindFilter, kind, System.StringComparison.OrdinalIgnoreCase));
+                }
+
+                string FlipKindDetail(CompiledCardProgram prog) =>
+                    prog == null
+                        ? "null"
+                        : $"full={prog.FullyCompiled} n={prog.ClauseList.Count} " +
+                          $"kind={prog.ClauseList[0]?.CardKindFilter} " +
+                          $"unparsed={string.Join("|", prog.UnparsedFragments ?? System.Array.Empty<string>())}";
+
+                const int armedNinjaId = 9076207;
+                const int reaperId = 33066139;
+                var armedDef = db.Get(armedNinjaId);
+                var armedProg = armedDef != null ? CardTextEffectCompiler.Compile(armedDef) : null;
+                Check("Armed Ninja official text FullyCompiled Flip Spell set-reveal (allowAi:false)",
+                    IsFlipKindDestroy(armedProg, "Spell"), FlipKindDetail(armedProg));
+                var reaperDef = db.Get(reaperId);
+                var reaperProg = reaperDef != null ? CardTextEffectCompiler.Compile(reaperDef) : null;
+                Check("Reaper of the Cards official text FullyCompiled Flip Trap set-reveal (allowAi:false)",
+                    IsFlipKindDestroy(reaperProg, "Trap"), FlipKindDetail(reaperProg));
+
                 const int craterId = 78243409;
                 var craterDef = db.Get(craterId);
                 var craterProg = craterDef != null ? CardTextEffectCompiler.Compile(craterDef) : null;
@@ -6210,6 +6244,137 @@ namespace WRLDZ.Duel.Rules
                 }
 
                 {
+                    const int armedNinja = 9076207;
+                    const int reaper = 33066139;
+                    const int hinotama = 46130346;
+                    const int pot = 55144522;
+                    const int waboku = SpellTrapEffects.Waboku;
+
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var ninja = PlaceMonster(engine, p, armedNinja, 2, BattlePosition.Defense, false);
+                    ninja.SetThisTurn = false;
+                    var faceSpell = PlaceSpellTrap(engine, opp, hinotama, 2, faceUp: true);
+                    var faceTrap = PlaceSpellTrap(engine, opp, waboku, 1, faceUp: true);
+                    Check("Armed Ninja Flip Summon", engine.TryFlipSummon(p, ninja) && ninja.FaceUp);
+                    Check("Armed Ninja Flip: opens Spell/Set target (not face-up Trap)",
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.LegalTargets != null &&
+                        engine.PendingActivation.LegalTargets.Exists(c => c != null && c.CardId == hinotama) &&
+                        !engine.PendingActivation.LegalTargets.Exists(c => c != null && c.CardId == waboku && c.FaceUp),
+                        engine.PendingActivation?.TargetKind.ToString() ?? "no pending");
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        var t = engine.PendingActivation.LegalTargets
+                                    .FirstOrDefault(c => c.CardId == hinotama) ??
+                                engine.PendingActivation.LegalTargets.FirstOrDefault();
+                        Check("Armed Ninja: select face-up Spell", engine.TrySelectEffectTarget(t));
+                        Check("Armed Ninja: face-up Spell destroyed; face-up Trap stays",
+                            !opp.TryFindSpellTrap(faceSpell, out _) &&
+                            opp.Graveyard.Exists(c => c.CardId == hinotama) &&
+                            opp.TryFindSpellTrap(faceTrap, out _) && faceTrap.FaceUp);
+                    }
+
+                    engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    p = engine.Player;
+                    opp = engine.Opponent;
+                    p.Hand.Clear();
+                    ninja = PlaceMonster(engine, p, armedNinja, 2, BattlePosition.Defense, false);
+                    ninja.SetThisTurn = false;
+                    var setSpell = PlaceSpellTrap(engine, opp, pot, 2, faceUp: false);
+                    Check("Armed Ninja Flip Summon vs Set Spell",
+                        engine.TryFlipSummon(p, ninja) && ninja.FaceUp && engine.IsAwaitingEffectTarget);
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        var t = engine.PendingActivation.LegalTargets
+                                    .FirstOrDefault(c => c.CardId == pot) ??
+                                engine.PendingActivation.LegalTargets.FirstOrDefault();
+                        Check("Armed Ninja: select Set Spell", engine.TrySelectEffectTarget(t));
+                        Check("Armed Ninja: Set Spell revealed and destroyed",
+                            !opp.TryFindSpellTrap(setSpell, out _) &&
+                            opp.Graveyard.Exists(c => c.CardId == pot));
+                    }
+
+                    engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    p = engine.Player;
+                    opp = engine.Opponent;
+                    p.Hand.Clear();
+                    ninja = PlaceMonster(engine, p, armedNinja, 2, BattlePosition.Defense, false);
+                    ninja.SetThisTurn = false;
+                    var setTrap = PlaceSpellTrap(engine, opp, waboku, 2, faceUp: false);
+                    Check("Armed Ninja Flip Summon vs Set Trap",
+                        engine.TryFlipSummon(p, ninja) && engine.IsAwaitingEffectTarget);
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        var t = engine.PendingActivation.LegalTargets
+                                    .FirstOrDefault(c => c.CardId == waboku) ??
+                                engine.PendingActivation.LegalTargets.FirstOrDefault();
+                        Check("Armed Ninja: select Set Trap", engine.TrySelectEffectTarget(t));
+                        Check("Armed Ninja: Set Trap revealed and returned face-down",
+                            opp.TryFindSpellTrap(setTrap, out _) &&
+                            !setTrap.FaceUp &&
+                            !opp.Graveyard.Exists(c => c.CardId == waboku));
+                    }
+
+                    engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    p = engine.Player;
+                    opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var reap = PlaceMonster(engine, p, reaper, 2, BattlePosition.Defense, false);
+                    reap.SetThisTurn = false;
+                    faceTrap = PlaceSpellTrap(engine, opp, waboku, 2, faceUp: true);
+                    faceSpell = PlaceSpellTrap(engine, opp, hinotama, 1, faceUp: true);
+                    Check("Reaper Flip Summon", engine.TryFlipSummon(p, reap) && reap.FaceUp);
+                    Check("Reaper Flip: opens Trap/Set target (not face-up Spell)",
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.LegalTargets != null &&
+                        engine.PendingActivation.LegalTargets.Exists(c => c != null && c.CardId == waboku) &&
+                        !engine.PendingActivation.LegalTargets.Exists(c => c != null && c.CardId == hinotama && c.FaceUp),
+                        engine.PendingActivation?.TargetKind.ToString() ?? "no pending");
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        var t = engine.PendingActivation.LegalTargets
+                                    .FirstOrDefault(c => c.CardId == waboku) ??
+                                engine.PendingActivation.LegalTargets.FirstOrDefault();
+                        Check("Reaper: select face-up Trap", engine.TrySelectEffectTarget(t));
+                        Check("Reaper: face-up Trap destroyed; face-up Spell stays",
+                            !opp.TryFindSpellTrap(faceTrap, out _) &&
+                            opp.Graveyard.Exists(c => c.CardId == waboku) &&
+                            opp.TryFindSpellTrap(faceSpell, out _) && faceSpell.FaceUp);
+                    }
+
+                    engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    p = engine.Player;
+                    opp = engine.Opponent;
+                    p.Hand.Clear();
+                    reap = PlaceMonster(engine, p, reaper, 2, BattlePosition.Defense, false);
+                    reap.SetThisTurn = false;
+                    setSpell = PlaceSpellTrap(engine, opp, pot, 2, faceUp: false);
+                    Check("Reaper Flip Summon vs Set Spell",
+                        engine.TryFlipSummon(p, reap) && engine.IsAwaitingEffectTarget);
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        var t = engine.PendingActivation.LegalTargets
+                                    .FirstOrDefault(c => c.CardId == pot) ??
+                                engine.PendingActivation.LegalTargets.FirstOrDefault();
+                        Check("Reaper: select Set Spell", engine.TrySelectEffectTarget(t));
+                        Check("Reaper: Set Spell revealed and returned face-down",
+                            opp.TryFindSpellTrap(setSpell, out _) &&
+                            !setSpell.FaceUp &&
+                            !opp.Graveyard.Exists(c => c.CardId == pot));
+                    }
+                }
+
+                {
                     var engine = Fresh(db, pDeck, aDeck);
                     ClearBoard(engine);
                     var p = engine.Player;
@@ -6671,10 +6836,14 @@ namespace WRLDZ.Duel.Rules
             return c;
         }
 
-        static CardInstance PlaceSetTrap(DuelEngine engine, DuelistState who, int id, int zone)
+        static CardInstance PlaceSetTrap(DuelEngine engine, DuelistState who, int id, int zone) =>
+            PlaceSpellTrap(engine, who, id, zone, faceUp: false);
+
+        static CardInstance PlaceSpellTrap(DuelEngine engine, DuelistState who, int id, int zone,
+            bool faceUp)
         {
             var c = engine.CreateCardInstance(id);
-            c.FaceUp = false;
+            c.FaceUp = faceUp;
             c.SetThisTurn = false;
             who.SpellTrapZones[zone].Occupant = c;
             return c;

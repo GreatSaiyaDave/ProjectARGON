@@ -294,6 +294,12 @@ namespace WRLDZ.Duel.TextEffects
         public string AttributeFilter;
         /// <summary>Type/race filter (Warrior, Aqua, …). Empty = all. Used when the text is not an Attribute.</summary>
         public string RaceFilter;
+        /// <summary>
+        /// Printed card kind for Flip set-reveal destroy (Spell or Trap). Face-up targets
+        /// must match at activation; Set cards are revealed at resolution and destroyed
+        /// only if this kind matches. Empty = no kind gate.
+        /// </summary>
+        public string CardKindFilter;
         /// <summary>Name this card is always treated as (AlwaysTreatedAsName).</summary>
         public string TreatedAsName;
         /// <summary>DEF change for ContinuousGainAtkDef. 0 = ATK-only (Star Boy). ALO sets this equal to Amount.</summary>
