@@ -7,8 +7,11 @@ namespace WRLDZ.Duel.TextEffects
 {
     /// <summary>
     /// Flip / battle-destroyed / delayed-GY Standby templates from official text.
-    /// Shared families only — no cardId branches. Unique leftover (Charmers,
-    /// Dice Jar, Penguin Soldier up-to-N, Revival Jam optional delayed pay) stays refuse.
+    /// Shared families only — no cardId branches. Unique leftover (Dice Jar,
+    /// Penguin Soldier up-to-N, Revival Jam optional delayed pay) stays refuse.
+    /// Flip take-control is TakeControlTarget (until End Phase, or Charmers
+    /// while the source stays face-up). Crass Clown / Dream Clown are not
+    /// take-control.
     /// </summary>
     public static class MonsterTriggerTemplates
     {
@@ -647,6 +650,28 @@ namespace WRLDZ.Duel.TextEffects
             if (RxBattleDestroyTheDestroyer.IsMatch(text) || RxBattleGyTargetDestroy.IsMatch(text) ||
                 RxBattleGyDestroyAllSt.IsMatch(text) || RxFlipDestroyOppLevel.IsMatch(text))
                 need.Add(EffectActionKind.Destroy);
+            if (!Regex.IsMatch(text, @"Activate 1 of these effects", RegexOptions.IgnoreCase) &&
+                !Regex.IsMatch(text, @"that can be Normal Summoned", RegexOptions.IgnoreCase) &&
+                !Regex.IsMatch(text, @"and if you do|switch control", RegexOptions.IgnoreCase) &&
+                !Regex.IsMatch(text, @"Equip this card to a monster", RegexOptions.IgnoreCase) &&
+                !Regex.IsMatch(text, @"Life Points directly", RegexOptions.IgnoreCase) &&
+                (Regex.IsMatch(text,
+                     @"(?:take|gain) control of (?:it|that target) until the End Phase\.?\s*$",
+                     RegexOptions.IgnoreCase) ||
+                 Regex.IsMatch(text,
+                     @"FLIP:\s*Take control of 1 (?:face-up )?(?:\w+(?:-Type) )?monster " +
+                     @"(?:your opponent controls|on your opponent's side of the field) " +
+                     @"until the(?: end of the)? End Phase\.?\s*$",
+                     RegexOptions.IgnoreCase) ||
+                 Regex.IsMatch(text,
+                     @"FLIP:\s*Target 1 face-up \w+ monster your opponent controls;\s*" +
+                     @"take control of that target while this card is face-up on the field\.?\s*$",
+                     RegexOptions.IgnoreCase) ||
+                 Regex.IsMatch(text,
+                     @"FLIP:\s*While this card is face-up on the field,\s*" +
+                     @"take control of 1 \w+ monster your opponent controls\.?\s*$",
+                     RegexOptions.IgnoreCase)))
+                need.Add(EffectActionKind.TakeControlTarget);
         }
 
         static bool IsAttribute(string s)

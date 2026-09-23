@@ -187,7 +187,8 @@ namespace WRLDZ.Duel.TextEffects
                     EffectActionKind.UnequipThisSpecialSummon or
                     EffectActionKind.EquipTargetToThis =>
                     EffectResolutionKind.Equip,
-                EffectActionKind.TakeControlLevelLeq => EffectResolutionKind.TakeControl,
+                EffectActionKind.TakeControlLevelLeq or
+                    EffectActionKind.TakeControlTarget => EffectResolutionKind.TakeControl,
                 EffectActionKind.PlaceSpellCounters => EffectResolutionKind.PlaceCounters,
                 EffectActionKind.NegateAttack or
                     EffectActionKind.NegateThisAttack =>

@@ -142,6 +142,19 @@ namespace WRLDZ.Duel
         /// <summary>This monster's current controller is from an Equip take-control (Falling Down).</summary>
         public bool TakenByEquipControl;
 
+        /// <summary>
+        /// Temporary take-control (Change of Heart family): return during the End
+        /// Phase of this turn number. -1 = not temporary.
+        /// </summary>
+        public int TempControlUntilEndTurn = -1;
+
+        /// <summary>
+        /// Charmer-style take-control: InstanceId of the face-up source this copy
+        /// is bound to. 0 = none. When that source leaves or is no longer face-up,
+        /// control returns; this card is not destroyed.
+        /// </summary>
+        public int TempControlBoundToSourceId;
+
         /// <summary>Monsters/Unions currently equipped to this card.</summary>
         public readonly List<CardInstance> Equips = new();
 

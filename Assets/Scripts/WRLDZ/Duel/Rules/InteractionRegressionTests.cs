@@ -6566,6 +6566,260 @@ namespace WRLDZ.Duel.Rules
                 }
 
                 {
+                    const int changeOfHeart = 4031928;
+                    const int shadowTamer = 37620434;
+                    const int dragonManip = 63018132;
+                    const int archfiendSoldier = 49881766;
+                    const int bewd = 89631139;
+                    const int celticId = 91152256;
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        var prey = PlaceMonster(engine, opp, celticId, 2, BattlePosition.Attack, true);
+                        var card = PutInHand(engine, p, changeOfHeart);
+                        var legal = OfficialEffectRegistry.CanActivateOfficial(
+                            engine, p, card, true, out var why);
+                        Check("Change of Heart: Activate legal with opp monster + empty zone",
+                            legal, why ?? "");
+                        Check("Change of Heart: Activate opens opp monster target",
+                            engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                            engine.IsAwaitingEffectTarget);
+                        var took = false;
+                        if (engine.IsAwaitingEffectTarget)
+                        {
+                            took = engine.TrySelectEffectTarget(prey) &&
+                                   p.TryFindMonster(prey, out _) &&
+                                   !opp.TryFindMonster(prey, out _) &&
+                                   prey.TempControlUntilEndTurn == engine.TurnNumber;
+                            Check("Change of Heart: select Celtic, take control", took);
+                        }
+
+                        var turn = engine.TurnNumber;
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        Check("Change of Heart: End Phase returns control",
+                            took &&
+                            engine.TryEndTurnSafe(p) &&
+                            opp.TryFindMonster(prey, out _) &&
+                            !p.TryFindMonster(prey, out _) &&
+                            prey.TempControlUntilEndTurn < 0,
+                            $"took={took} turn={turn} now={engine.TurnNumber} mine={p.TryFindMonster(prey, out _)} opp={opp.TryFindMonster(prey, out _)}");
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        var card = PutInHand(engine, p, changeOfHeart);
+                        Check("Change of Heart: refuse with no opponent monster",
+                            !engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        PlaceMonster(engine, p, celticId, 0, BattlePosition.Attack, true);
+                        PlaceMonster(engine, p, celticId, 1, BattlePosition.Attack, true);
+                        PlaceMonster(engine, p, celticId, 2, BattlePosition.Attack, true);
+                        PlaceMonster(engine, p, celticId, 3, BattlePosition.Attack, true);
+                        PlaceMonster(engine, p, celticId, 4, BattlePosition.Attack, true);
+                        PlaceMonster(engine, opp, celticId, 2, BattlePosition.Attack, true);
+                        var card = PutInHand(engine, p, changeOfHeart);
+                        Check("Change of Heart: refuse with no empty Monster Zone",
+                            !engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        var flip = PlaceMonster(engine, p, shadowTamer, 2, BattlePosition.Defense, false);
+                        flip.SetThisTurn = false;
+                        var fiend = PlaceMonster(engine, opp, archfiendSoldier, 1, BattlePosition.Attack, true);
+                        var warrior = PlaceMonster(engine, opp, celticId, 2, BattlePosition.Attack, true);
+                        Check("Shadow Tamer Flip Summon", engine.TryFlipSummon(p, flip) && flip.FaceUp);
+                        Check("Shadow Tamer Flip: opens Fiend take-control target",
+                            engine.IsAwaitingEffectTarget && engine.PendingActivation != null);
+                        if (engine.IsAwaitingEffectTarget)
+                        {
+                            var legal = engine.PendingActivation.LegalTargets;
+                            Check("Shadow Tamer Flip: Fiend legal, Warrior illegal",
+                                legal.Contains(fiend) && !legal.Contains(warrior));
+                            Check("Shadow Tamer: select Archfiend Soldier, take control",
+                                engine.TrySelectEffectTarget(fiend) &&
+                                p.TryFindMonster(fiend, out _) &&
+                                !opp.TryFindMonster(fiend, out _));
+                        }
+
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        Check("Shadow Tamer: End Phase returns Fiend",
+                            engine.TryEndTurnSafe(p) &&
+                            opp.TryFindMonster(fiend, out _) &&
+                            !p.TryFindMonster(fiend, out _));
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        var flip = PlaceMonster(engine, p, dragonManip, 2, BattlePosition.Defense, false);
+                        flip.SetThisTurn = false;
+                        var dragon = PlaceMonster(engine, opp, bewd, 1, BattlePosition.Attack, true);
+                        var warrior = PlaceMonster(engine, opp, celticId, 2, BattlePosition.Attack, true);
+                        Check("Dragon Manipulator Flip Summon", engine.TryFlipSummon(p, flip) && flip.FaceUp);
+                        Check("Dragon Manipulator Flip: opens Dragon take-control target",
+                            engine.IsAwaitingEffectTarget && engine.PendingActivation != null);
+                        if (engine.IsAwaitingEffectTarget)
+                        {
+                            var legal = engine.PendingActivation.LegalTargets;
+                            Check("Dragon Manipulator Flip: Dragon legal, Warrior illegal",
+                                legal.Contains(dragon) && !legal.Contains(warrior));
+                            Check("Dragon Manipulator: select BEWD, take control",
+                                engine.TrySelectEffectTarget(dragon) &&
+                                p.TryFindMonster(dragon, out _) &&
+                                !opp.TryFindMonster(dragon, out _));
+                        }
+                    }
+
+                    const int eriaId = 74364659;
+                    const int aussaId = 37970940;
+                    const int hyosube = 2118022;
+                    const int inpachi = 5464695;
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        var flip = PlaceMonster(engine, p, eriaId, 2, BattlePosition.Defense, false);
+                        flip.SetThisTurn = false;
+                        var water = PlaceMonster(engine, opp, hyosube, 1, BattlePosition.Attack, true);
+                        var earth = PlaceMonster(engine, opp, celticId, 2, BattlePosition.Attack, true);
+                        var fire = PlaceMonster(engine, opp, inpachi, 3, BattlePosition.Attack, true);
+                        Check("Eria Flip Summon", engine.TryFlipSummon(p, flip) && flip.FaceUp);
+                        Check("Eria Flip: opens WATER take-control target (not Ignition)",
+                            engine.IsAwaitingEffectTarget && engine.PendingActivation != null &&
+                            engine.PendingActivation.IsMonsterEffect);
+                        if (engine.IsAwaitingEffectTarget)
+                        {
+                            var legal = engine.PendingActivation.LegalTargets;
+                            Check("Eria Flip: WATER legal; EARTH and FIRE illegal",
+                                legal.Contains(water) && !legal.Contains(earth) && !legal.Contains(fire));
+                            Check("Eria: select Hyosube, take control while face-up",
+                                engine.TrySelectEffectTarget(water) &&
+                                p.TryFindMonster(water, out _) &&
+                                !opp.TryFindMonster(water, out _) &&
+                                water.TempControlBoundToSourceId == flip.InstanceId &&
+                                water.TempControlUntilEndTurn < 0);
+                        }
+
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        Check("Eria: End Phase keeps control (not until End Phase)",
+                            engine.TryEndTurnSafe(p) &&
+                            p.TryFindMonster(water, out _) &&
+                            !opp.TryFindMonster(water, out _));
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        var flip = PlaceMonster(engine, p, eriaId, 2, BattlePosition.Defense, false);
+                        flip.SetThisTurn = false;
+                        var water = PlaceMonster(engine, opp, hyosube, 1, BattlePosition.Attack, true);
+                        Check("Eria leave: Flip Summon", engine.TryFlipSummon(p, flip) && flip.FaceUp);
+                        var took = false;
+                        if (engine.IsAwaitingEffectTarget)
+                            took = engine.TrySelectEffectTarget(water) && p.TryFindMonster(water, out _);
+                        Check("Eria leave: took WATER", took);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        engine.SendCardToGrave(p, flip);
+                        Check("Eria leaves: control returns; taken monster is not destroyed",
+                            took &&
+                            opp.TryFindMonster(water, out _) &&
+                            !p.TryFindMonster(water, out _) &&
+                            !p.Graveyard.Contains(water) &&
+                            !opp.Graveyard.Contains(water) &&
+                            water.TempControlBoundToSourceId == 0,
+                            $"took={took} oppField={opp.TryFindMonster(water, out _)} pField={p.TryFindMonster(water, out _)} pGY={p.Graveyard.Contains(water)} oppGY={opp.Graveyard.Contains(water)}");
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        var flip = PlaceMonster(engine, p, eriaId, 2, BattlePosition.Defense, false);
+                        flip.SetThisTurn = false;
+                        PlaceMonster(engine, opp, celticId, 2, BattlePosition.Attack, true);
+                        Check("Eria Flip vs wrong Attribute: Flip Summon",
+                            engine.TryFlipSummon(p, flip) && flip.FaceUp);
+                        Check("Eria Flip vs EARTH: no legal WATER target",
+                            !engine.IsAwaitingEffectTarget &&
+                            opp.MonsterZones[2].Occupant != null &&
+                            opp.MonsterZones[2].Occupant.CardId == celticId);
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        var flip = PlaceMonster(engine, p, aussaId, 2, BattlePosition.Defense, false);
+                        flip.SetThisTurn = false;
+                        var earth = PlaceMonster(engine, opp, celticId, 1, BattlePosition.Attack, true);
+                        var water = PlaceMonster(engine, opp, hyosube, 2, BattlePosition.Attack, true);
+                        Check("Aussa Flip Summon", engine.TryFlipSummon(p, flip) && flip.FaceUp);
+                        Check("Aussa Flip: opens EARTH take-control target",
+                            engine.IsAwaitingEffectTarget && engine.PendingActivation != null);
+                        if (engine.IsAwaitingEffectTarget)
+                        {
+                            var legal = engine.PendingActivation.LegalTargets;
+                            Check("Aussa Flip: EARTH legal, WATER illegal",
+                                legal.Contains(earth) && !legal.Contains(water));
+                            Check("Aussa: select Celtic, take control",
+                                engine.TrySelectEffectTarget(earth) &&
+                                p.TryFindMonster(earth, out _) &&
+                                !opp.TryFindMonster(earth, out _) &&
+                                earth.TempControlBoundToSourceId == flip.InstanceId);
+                        }
+
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        engine.DestroyMonsterPublic(p, flip);
+                        Check("Aussa destroyed: control returns; Celtic not destroyed",
+                            opp.TryFindMonster(earth, out _) &&
+                            !p.TryFindMonster(earth, out _) &&
+                            !p.Graveyard.Contains(earth) &&
+                            !opp.Graveyard.Contains(earth));
+                    }
+                }
+
+                {
                     var engine = Fresh(db, pDeck, aDeck);
                     ClearBoard(engine);
                     if (engine.IsAwaitingResponse) engine.PassResponse();

@@ -378,7 +378,8 @@ namespace WRLDZ.Duel.TextEffects
                     return false;
                 }
 
-                if (c.TakeControlOfTarget && engine.FirstEmpty(who.MonsterZones) < 0)
+                if ((c.TakeControlOfTarget || c.Action == EffectActionKind.TakeControlTarget) &&
+                    engine.FirstEmpty(who.MonsterZones) < 0)
                 {
                     reason = "No Monster Zone to take control.";
                     return false;
@@ -1109,6 +1110,7 @@ namespace WRLDZ.Duel.TextEffects
                     or EffectZoneFilter.OppFaceUpMonsters => true,
                 EffectActionKind.Destroy when c.Zone is EffectZoneFilter.FieldSpellTraps &&
                                               c.Side != EffectSide.Both => true,
+                EffectActionKind.TakeControlTarget => true,
                 EffectActionKind.ReturnToHand when c.Zone is EffectZoneFilter.FieldMonsters => false,
                 EffectActionKind.ReturnToHand => true,
                 EffectActionKind.Banish when c.Zone is EffectZoneFilter.EitherGyMonsters
@@ -2381,6 +2383,7 @@ namespace WRLDZ.Duel.TextEffects
                         chosenTarget.FaceUp = false;
                         chosenTarget.Position = BattlePosition.Defense;
                         engine.Log($"{chosenTarget.Name} is Set in face-down Defense Position.");
+                        engine.RevertExpiredFaceUpTakeControl();
                     }
 
                     break;
@@ -2743,6 +2746,7 @@ namespace WRLDZ.Duel.TextEffects
                         source.Position = BattlePosition.Defense;
                         source.ChangedPositionThisTurn = true;
                         engine.Log($"{source.Name} is flipped to face-down Defense Position.");
+                        engine.RevertExpiredFaceUpTakeControl();
                     }
 
                     break;
@@ -2907,6 +2911,16 @@ namespace WRLDZ.Duel.TextEffects
 
                     break;
                 }
+
+                case EffectActionKind.TakeControlTarget:
+                    if (chosenTarget == null) break;
+                    if (!engine.TryTakeControl(who, chosenTarget))
+                        engine.Log($"{source?.Name}: take control failed — no zone.");
+                    else if (clause.TakeControlWhileSourceFaceUp)
+                        chosenTarget.TempControlBoundToSourceId = source != null ? source.InstanceId : 0;
+                    else
+                        chosenTarget.TempControlUntilEndTurn = engine.TurnNumber;
+                    break;
 
                 case EffectActionKind.EquipThisToTarget:
                     if (chosenTarget == null || source == null) break;
@@ -3791,7 +3805,8 @@ namespace WRLDZ.Duel.TextEffects
             if (!string.IsNullOrEmpty(c.TargetSeriesName))
                 list.RemoveAll(t => !CardMatchesSeries(t?.Def, c.TargetSeriesName));
             if (!string.IsNullOrEmpty(c.AttributeFilter) &&
-                c.Action == EffectActionKind.EquipThisToTarget)
+                (c.Action == EffectActionKind.EquipThisToTarget ||
+                 c.Action == EffectActionKind.TakeControlTarget))
                 list.RemoveAll(t => t?.Def?.attribute == null ||
                                     !t.Def.attribute.Equals(c.AttributeFilter,
                                         System.StringComparison.OrdinalIgnoreCase));
