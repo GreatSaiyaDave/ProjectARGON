@@ -1003,6 +1003,7 @@ namespace WRLDZ.Duel.TextEffects
 
             ArchfiendTemplates.Collect(text, def, clauses, matchedSpans);
             ProtectionTemplates.Collect(text, def, clauses, matchedSpans);
+            SharedPsctAtomTemplates.Collect(text, def, clauses, matchedSpans);
             LegacyTextTemplates.Collect(text, def, clauses, matchedSpans);
             AdvancedEffectTemplates.Collect(text, def, clauses, matchedSpans);
             PhaseTriggerTemplates.Collect(text, def, clauses, matchedSpans);
@@ -1112,6 +1113,9 @@ namespace WRLDZ.Duel.TextEffects
 
             if (!sent.MakesChainLink)
             {
+                var typed = SharedPsctAtomTemplates.TryCompile(sent.Raw);
+                if (typed != null && typed.Count == 1)
+                    return Stamp(sent, typed[0]);
                 var auras = CompileAuraClauses(sent.Raw);
                 if (auras.Count == 1)
                     return Stamp(sent, auras[0]);
@@ -1633,6 +1637,10 @@ namespace WRLDZ.Duel.TextEffects
             var list = new List<EffectClause>();
             var body = StripContinuousWhile(raw);
             if (string.IsNullOrEmpty(body)) return list;
+
+            var typedField = SharedPsctAtomTemplates.TryCompile(body);
+            if (typedField != null && typedField.Count > 0)
+                return typedField;
 
             var inc = RxIncDecAtk.Match(body);
             if (inc.Success && inc.Index == 0)
