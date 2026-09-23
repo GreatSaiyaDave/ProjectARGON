@@ -837,6 +837,84 @@ namespace WRLDZ.Duel.Rules
                         ? "null"
                         : $"full={ckp.FullyCompiled} n={ckp.ClauseList.Count} unparsed={string.Join("|", ckp.UnparsedFragments ?? Array.Empty<string>())}");
 
+                bool IsAttrFieldGainLose(CompiledCardProgram p, string attr, int atk, int defLoss)
+                {
+                    return p != null && p.FullyCompiled &&
+                           (p.UnparsedFragments == null || p.UnparsedFragments.Length == 0) &&
+                           p.ClauseList.Exists(c =>
+                               c != null &&
+                               c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                               c.Timing == EffectTiming.ContinuousWhileFaceUp &&
+                               string.Equals(c.AttributeFilter, attr, StringComparison.OrdinalIgnoreCase) &&
+                               c.Amount == atk && c.DefAmount == -defLoss &&
+                               !c.MakesChainLink);
+                }
+
+                var synField = new CardDef
+                {
+                    id = 90000058,
+                    name = "Test Ember Field (new-card shape)",
+                    type = "Spell Card",
+                    race = "Field",
+                    desc = "All FIRE monsters gain 500 ATK and lose 400 DEF."
+                };
+                var synFieldProg = CardTextEffectCompiler.Compile(synField);
+                Check("New-card rule: Field +ATK/−DEF compiles with no cardId branch",
+                    IsAttrFieldGainLose(synFieldProg, "FIRE", 500, 400),
+                    synFieldProg == null
+                        ? "null"
+                        : $"full={synFieldProg.FullyCompiled} n={synFieldProg.ClauseList.Count} " +
+                          $"attr={synFieldProg.ClauseList[0]?.AttributeFilter} " +
+                          $"atk={synFieldProg.ClauseList[0]?.Amount} def={synFieldProg.ClauseList[0]?.DefAmount} " +
+                          $"unparsed={string.Join("|", synFieldProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                var yamiShape = new CardDef
+                {
+                    id = 90000059,
+                    name = "Test Yami-shaped leftover",
+                    type = "Spell Card",
+                    race = "Field",
+                    desc =
+                        "All Fiend and Spellcaster monsters on the field gain 200 ATK/DEF, also all Fairy monsters on the field lose 200 ATK/DEF."
+                };
+                var yamiShapeProg = CardTextEffectCompiler.Compile(yamiShape);
+                Check("Fail-closed: Yami gain+also-lose is not the +ATK/−DEF atom",
+                    yamiShapeProg == null ||
+                    !yamiShapeProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                        c.DefAmount < 0 &&
+                        string.IsNullOrEmpty(c.RaceFilter) == false &&
+                        c.RaceFilter.IndexOf('|') < 0 &&
+                        c.Amount == 500),
+                    yamiShapeProg == null
+                        ? "null"
+                        : $"full={yamiShapeProg.FullyCompiled} n={yamiShapeProg.ClauseList.Count} " +
+                          $"unparsed={string.Join("|", yamiShapeProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                var dbFieldAura = CardDatabase.Load();
+                foreach (var (id, name, attr) in new[]
+                         {
+                             (56594520, "Gaia Power", "EARTH"),
+                             (19384334, "Molten Destruction", "FIRE"),
+                             (45778932, "Rising Air Current", "WIND"),
+                             (81777047, "Luminous Spark", "LIGHT"),
+                             (82999629, "Umiiruka", "WATER"),
+                             (18161786, "Mystic Plasma Zone", "DARK")
+                         })
+                {
+                    var def = dbFieldAura?.Get(id);
+                    var fieldProg = def != null ? CardTextEffectCompiler.Compile(def) : null;
+                    Check($"PSCT {name}: FullyCompiled Field {attr} +500 ATK / −400 DEF (allowAi:false)",
+                        def != null && IsAttrFieldGainLose(fieldProg, attr, 500, 400),
+                        fieldProg == null
+                            ? "null"
+                            : $"full={fieldProg.FullyCompiled} n={fieldProg.ClauseList.Count} " +
+                              $"attr={fieldProg.ClauseList[0]?.AttributeFilter} " +
+                              $"atk={fieldProg.ClauseList[0]?.Amount} def={fieldProg.ClauseList[0]?.DefAmount} " +
+                              $"unparsed={string.Join("|", fieldProg.UnparsedFragments ?? Array.Empty<string>())}");
+                }
+
                 var combo = new CardDef
                 {
                     id = 99,
@@ -2061,6 +2139,48 @@ namespace WRLDZ.Duel.Rules
                             c != null &&
                             c.Action == EffectActionKind.InflictDamageToOpponent &&
                             c.Amount == 500));
+
+                    var fire = db.Get(46918794);
+                    var fireProg = fire != null ? CardTextEffectCompiler.Compile(fire) : null;
+                    Check("Corpus: Tremendous Fire FullyCompiled 1000 opp + 500 self (allowAi:false)",
+                        fireProg != null && fireProg.FullyCompiled &&
+                        fireProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.InflictDamageToOpponent &&
+                            c.Amount == 1000) &&
+                        fireProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.TakeEffectDamage &&
+                            c.Amount == 500),
+                        fireProg == null
+                            ? "null"
+                            : $"full={fireProg.FullyCompiled} n={fireProg.ClauseList.Count} " +
+                              $"unparsed={string.Join("|", fireProg.UnparsedFragments ?? Array.Empty<string>())}");
+
+                    var synFire = new CardDef
+                    {
+                        id = 90000060,
+                        name = "Test Twin Burn (new-card shape)",
+                        type = "Spell Card",
+                        race = "Normal",
+                        desc =
+                            "Inflict 1000 points of damage to your opponent's Life Points and 500 points of damage to your Life Points."
+                    };
+                    var synFireProg = CardTextEffectCompiler.Compile(synFire);
+                    Check("New-card rule: opp+self burn compiles with no cardId branch",
+                        synFireProg != null && synFireProg.FullyCompiled &&
+                        synFireProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.InflictDamageToOpponent &&
+                            c.Amount == 1000) &&
+                        synFireProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.TakeEffectDamage &&
+                            c.Amount == 500),
+                        synFireProg == null
+                            ? "null"
+                            : $"full={synFireProg.FullyCompiled} n={synFireProg.ClauseList.Count} " +
+                              $"unparsed={string.Join("|", synFireProg.UnparsedFragments ?? Array.Empty<string>())}");
 
                     var duster = db.Get(18144507);
                     var dusterProg = duster != null ? CardTextEffectCompiler.Compile(duster) : null;
