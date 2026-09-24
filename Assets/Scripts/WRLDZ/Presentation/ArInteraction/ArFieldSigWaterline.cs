@@ -5,8 +5,9 @@ namespace WRLDZ.Presentation.ArInteraction
 {
     /// <summary>
     /// Monsters wade. Around each monster a translucent pool of the field's
-    /// water stands at shin height: deepest where the monster stands, dipping
-    /// to a soft shoreline that fades to nothing inside
+    /// water stands level at shin height, deepest in colour round the
+    /// monster's legs. Water is level, so where it crosses the card it cuts a
+    /// straight waterline; its shore fades to nothing inside
     /// <see cref="ArFieldSignature.MaxAnchorRadius"/>, so the aisle stays street.
     /// The surface rolls with one shared wave field (neighbouring pools agree),
     /// ripple rings spread from the monster's shins and a broken foam line laps
@@ -15,7 +16,8 @@ namespace WRLDZ.Presentation.ArInteraction
     /// <para>Variant 0, open sea: deep, dark and choppy. Peaked cross-swell,
     /// three quick broken ripples, white-cap streaks along the crest lines.</para>
     /// <para>Variant 1, tropical tide: bright, shallow and calm. Long swell, two
-    /// slow ripples, a white crest running round the pool and sun glints.
+    /// slow ripples, a straight line of surf rolling in on each swell crest and
+    /// sun glints.
     /// Any other variant draws the open sea.</para>
     /// One dynamic mesh, one draw call. Soft edges come from vertex alpha and the
     /// shared soft dot: strips sample its centre line, flecks the whole dot.
@@ -48,9 +50,7 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary>Hard cap on the rim, inside MaxAnchorRadius at any SigScale.</summary>
         const float RimCap = 0.7f;
         const float SurfacePerSigScale = 0.03f;
-        /// <summary>Surface height at the rim as a share of the middle: the shoreline dips toward the street.</summary>
-        const float RimSag = 0.4f;
-        const float SagStart = 0.6f;
+        /// <summary>The level surface fades out from here to the rim, so the shore is soft.</summary>
         const float ShoreFadeStart = 0.58f;
         /// <summary>Waves flatten out toward the shore from here.</summary>
         const float CalmStart = 0.7f;
@@ -77,14 +77,14 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary>Foam break-up drifting round the waterline (noise segments per second).</summary>
         const float LipFlow = 1.1f;
 
-        const float CrestRadius = 0.64f;
-        const float CrestBreath = 0.03f;
+        /// <summary>Surf line ends stay inside this rim fraction, out where the foam line laps.</summary>
+        const float CrestReach = 0.8f;
         const float CrestWidth = 0.11f;
-        /// <summary>Radians of foam trailing the crest head.</summary>
-        const float CrestArc = 1.9f;
         const float CrestLift = 0.028f;
 
         const int FleckWrapCycles = 4096;
+        /// <summary>Fleck seeding cell (host-local m): pools share a seed only if they share a cell.</summary>
+        const float FleckCellSize = 0.3f;
 
         const float BoonLipGain = 1.9f;
         const float BoonLipBreak = 0.4f;
@@ -130,8 +130,7 @@ namespace WRLDZ.Presentation.ArInteraction
             public float RippleAlpha;
             public float Break;        // how broken ripples and foam are round the ring
             public float LipAlpha;
-            public float CrestAlpha;   // 0 = no travelling crest
-            public float CrestSpeed;
+            public float CrestAlpha;   // 0 = no surf line
             public bool Glints;        // flecks twinkle as sun glints instead of white-cap streaks
             public float FleckLife;
             public float FleckHalfLength;
@@ -149,7 +148,7 @@ namespace WRLDZ.Presentation.ArInteraction
             B = new Wave(-48f, 0.34f, 5.1f, 0.3f),
             C = new Wave(105f, 0.66f, 2.9f, 0.2f),
             Ripples = 3, RipplePeriod = 1.5f, RippleAlpha = 0.4f, Break = 0.6f,
-            LipAlpha = 0.3f, CrestAlpha = 0f, CrestSpeed = 0f,
+            LipAlpha = 0.3f, CrestAlpha = 0f,
             Glints = false, FleckLife = 1.2f, FleckHalfLength = 0.12f, FleckHalfWidth = 0.03f,
             FleckDrift = 0.12f, FleckAlpha = 0.75f, FleckMin = 0.22f, FleckMax = 0.8f
         };
@@ -161,7 +160,7 @@ namespace WRLDZ.Presentation.ArInteraction
             B = new Wave(20f, 0.5f, 2.5f, 0.25f),
             C = new Wave(150f, 0.4f, 2.9f, 0.15f),
             Ripples = 2, RipplePeriod = 2.6f, RippleAlpha = 0.5f, Break = 0.15f,
-            LipAlpha = 0.45f, CrestAlpha = 0.8f, CrestSpeed = 0.75f,
+            LipAlpha = 0.45f, CrestAlpha = 0.8f,
             Glints = true, FleckLife = 0.7f, FleckHalfLength = 0.045f, FleckHalfWidth = 0.045f,
             FleckDrift = 0f, FleckAlpha = 0.9f, FleckMin = 0.2f, FleckMax = 0.75f
         };
@@ -181,13 +180,14 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary>Second-harmonic share in <see cref="Swell"/>.</summary>
         float _chop;
         float _fleckReach;
+        /// <summary>Wave A's length in rim units: one surf line per crest.</summary>
+        float _crestSpan;
 
         // Unit-rim disc template, one entry per disc vertex.
         float[] _vx;
         float[] _vz;
         float[] _vShade;
         float[] _vAlpha;
-        float[] _vSag;
         float[] _vCalm;
         /// <summary>WaveCount × DiscVerts: each wave's phase across the pool (anchor-independent).</summary>
         float[] _proj;
@@ -210,7 +210,6 @@ namespace WRLDZ.Presentation.ArInteraction
         float _ripplePh;
         float _lipPh;
         float _lipDrift;
-        float _crestPh;
         float _fleckClock;
         Vector2 _capAlong;
         Vector2 _capDrift;
@@ -309,7 +308,6 @@ namespace WRLDZ.Presentation.ArInteraction
             _ripplePh = Mathf.Repeat(_ripplePh + dt / Mathf.Max(0.1f, _look.RipplePeriod), 1f);
             _lipPh = Mathf.Repeat(_lipPh + LipLapSpeed * dt, TwoPi);
             _lipDrift = Mathf.Repeat(_lipDrift + LipFlow * dt, Segs);
-            _crestPh = Mathf.Repeat(_crestPh + _look.CrestSpeed * dt, TwoPi);
             _fleckClock = Mathf.Repeat(_fleckClock + dt, _look.FleckLife * FleckWrapCycles);
         }
 
@@ -332,7 +330,7 @@ namespace WRLDZ.Presentation.ArInteraction
             WriteRipples(b, fade, offset, a.Aura > 0 ? BoonRippleGain : 1f);
             WriteLip(b, fade, offset, a.Aura);
             if (_look.CrestAlpha > 0f) WriteCrest(b, fade, rise, offset, a.Aura > 0);
-            WriteFlecks(b, slot, fade);
+            WriteFlecks(b, offset, FleckCell(), fade);
             return true;
         }
 
@@ -349,7 +347,7 @@ namespace WRLDZ.Presentation.ArInteraction
                 for (var j = 0; j < WaveCount; j++)
                     w += _wWeight[j] * Swell(_proj[j * DiscVerts + v] + _base[j]);
 
-                var y = Mathf.Max(_lift, surface * _vSag[v] + amp * _vCalm[v] * w);
+                var y = Mathf.Max(_lift, surface + amp * _vCalm[v] * w);
                 _hy[v] = y;
                 _verts[b + v] = new Vector3(_o.x + _r * _vx[v], _o.y + y, _o.z + _r * _vz[v]);
 
@@ -419,24 +417,37 @@ namespace WRLDZ.Presentation.ArInteraction
             }
         }
 
-        /// <summary>White surf running round the pool: brightest just behind its head, lifted as it curls.</summary>
+        /// <summary>
+        /// A straight line of surf riding wave A's crest across the pool, square
+        /// to the swell: it builds as the crest comes in, runs white through the
+        /// middle, lifted as it curls, and fades before the far shore. Its phase
+        /// is the shared swell's, so neighbouring pools break together.
+        /// </summary>
         void WriteCrest(int b, float fade, float rise, float offset, bool boon)
         {
+            // Crest nearest the centre (wave A's phase wraps to 0 there); t runs 0…1 as it crosses.
+            var t = 1f - Mathf.Repeat(_base[0] + Mathf.PI, TwoPi) / TwoPi;
+            var half = 0.5f * CrestWidth;
+            var q = Mathf.Clamp((t - 0.5f) * _crestSpan, half - CrestReach, CrestReach - half);
+            var edge = Mathf.Abs(q) + half;
+            var chord = Mathf.Sqrt(Mathf.Max(0f, CrestReach * CrestReach - edge * edge));
+            var alpha = _look.CrestAlpha * Smooth(0f, 0.2f, t) * (1f - Smooth(0.8f, 1f, t)) * fade *
+                        (boon ? BoonCrestGain : 1f);
+            var dx = _wDirX[0];
+            var dz = _wDirZ[0];
             var i = b + CrestBase;
-            var head = _crestPh + offset * TwoPi;
-            var alpha = _look.CrestAlpha * fade * (boon ? BoonCrestGain : 1f);
             for (var c = 0; c < CrestCols; c++)
             {
                 var taper = _crestTaper[c];
-                var ang = head - c * (CrestArc / (CrestCols - 1));
-                var mid = CrestRadius + CrestBreath * Mathf.Sin(2f * ang + _lipPh);
-                var half = 0.5f * CrestWidth * (0.35f + 0.65f * taper);
-                var cs = Mathf.Cos(ang);
-                var sn = Mathf.Sin(ang);
-                var y = _o.y + SurfaceAt(mid, ang) + _lift + CrestLift * _s * rise * taper;
-                _verts[i + c] = new Vector3(_o.x + _r * (mid - half) * cs, y, _o.z + _r * (mid - half) * sn);
-                _verts[i + CrestCols + c] = new Vector3(_o.x + _r * (mid + half) * cs, y, _o.z + _r * (mid + half) * sn);
-                Color32 col = WithAlpha(_crest, alpha * taper);
+                var along = chord * (2f * c / (CrestCols - 1) - 1f);
+                var px = q * dx - along * dz;
+                var pz = q * dz + along * dx;
+                var w = half * (0.35f + 0.65f * taper);
+                var y = _o.y + SurfaceAt(Mathf.Sqrt(px * px + pz * pz), Mathf.Atan2(pz, px)) + _lift +
+                        CrestLift * _s * rise * taper;
+                _verts[i + c] = new Vector3(_o.x + _r * (px - w * dx), y, _o.z + _r * (pz - w * dz));
+                _verts[i + CrestCols + c] = new Vector3(_o.x + _r * (px + w * dx), y, _o.z + _r * (pz + w * dz));
+                Color32 col = WithAlpha(_crest, alpha * taper * (1f - _look.Break * Noise(c + offset * Segs)));
                 _cols[i + c] = col;
                 _cols[i + CrestCols + c] = col;
             }
@@ -447,15 +458,14 @@ namespace WRLDZ.Presentation.ArInteraction
         /// lead wave's crest lines (sea) or twinkling sun glints (tide). Each
         /// cycle re-seeds from a hash, so there is no per-fleck state.
         /// </summary>
-        void WriteFlecks(int b, int slot, float fade)
+        void WriteFlecks(int b, float stagger, int cell, float fade)
         {
             var life = _look.FleckLife;
-            var stagger = Hash01(slot, 53);
             var lx = _capAlong.x * _look.FleckHalfLength;
             var lz = _capAlong.y * _look.FleckHalfLength;
             var wx = -_capAlong.y * _look.FleckHalfWidth;
             var wz = _capAlong.x * _look.FleckHalfWidth;
-            var salt = slot * 131;
+            var salt = cell * 131;
             for (var f = 0; f < FleckCount; f++)
             {
                 var cycle = _fleckClock / life + (f + stagger) / FleckCount;
@@ -491,6 +501,16 @@ namespace WRLDZ.Presentation.ArInteraction
                 _cols[i + 2] = col;
                 _cols[i + 3] = col;
             }
+        }
+
+        /// <summary>
+        /// Coarse position cell of the pool being written: seeds its flecks, so
+        /// they stay put when the anchor list reorders and ignore pose jitter.
+        /// </summary>
+        int FleckCell()
+        {
+            var cell = FleckCellSize * _s;
+            return Mathf.RoundToInt(_o.x / cell) * 7919 + Mathf.RoundToInt(_o.z / cell);
         }
 
         void ClearSlot(int slot)
@@ -552,9 +572,9 @@ namespace WRLDZ.Presentation.ArInteraction
             var accent = Env.Accent;
             if (tide)
             {
-                // Sunlit shallows: turquoise body, white surf, glints off the sky.
+                // Sunlit shallows: saturated body brightening toward the shore; white only in surf and glints.
                 _deep = Color.Lerp(ground, sky, 0.3f);
-                _shallow = Color.Lerp(accent, Color.white, 0.35f);
+                _shallow = Color.Lerp(ground, accent, 0.6f);
                 _trough = Color.Lerp(ground, Color.black, 0.15f);
                 _crest = Color.Lerp(accent, Color.white, 0.85f);
                 _ripple = Color.Lerp(accent, Color.white, 0.6f);
@@ -563,10 +583,11 @@ namespace WRLDZ.Presentation.ArInteraction
             }
             else
             {
-                // Open sea: navy depths, blue shallows, white caps.
-                _deep = Color.Lerp(ground, Color.black, 0.3f);
+                // Open sea: deep blue depths, bluer shallows, white caps. Kept off black so
+                // the pool never reads as a dark hole in passthrough at night.
+                _deep = Color.Lerp(ground, Color.black, 0.1f);
                 _shallow = Color.Lerp(ground, sky, 0.6f);
-                _trough = Color.Lerp(ground, Color.black, 0.55f);
+                _trough = Color.Lerp(ground, Color.black, 0.3f);
                 _crest = Color.Lerp(accent, Color.white, 0.5f);
                 _ripple = Color.Lerp(sky, Color.white, 0.45f);
                 _foam = Color.Lerp(accent, Color.white, 0.7f);
@@ -575,6 +596,19 @@ namespace WRLDZ.Presentation.ArInteraction
 
             _foamBoon = Color.Lerp(_foam, Color.white, 0.6f);
             _murk = Color.Lerp(ground, Color.black, 0.7f);
+
+            // Mesh vertex colours reach the shader untouched. In a Linear project the sRGB
+            // palette must be converted once here, or every colour shows gamma-lifted and pale.
+            if (QualitySettings.activeColorSpace != ColorSpace.Linear) return;
+            _deep = _deep.linear;
+            _shallow = _shallow.linear;
+            _trough = _trough.linear;
+            _crest = _crest.linear;
+            _ripple = _ripple.linear;
+            _foam = _foam.linear;
+            _foamBoon = _foamBoon.linear;
+            _fleck = _fleck.linear;
+            _murk = _murk.linear;
         }
 
         void BuildTables()
@@ -592,7 +626,6 @@ namespace WRLDZ.Presentation.ArInteraction
             _vz = new float[DiscVerts];
             _vShade = new float[DiscVerts];
             _vAlpha = new float[DiscVerts];
-            _vSag = new float[DiscVerts];
             _vCalm = new float[DiscVerts];
             _hy = new float[DiscVerts];
             for (var v = 0; v < DiscVerts; v++)
@@ -608,7 +641,6 @@ namespace WRLDZ.Presentation.ArInteraction
 
                 _vShade[v] = Smooth(0.1f, 1f, rn);
                 _vAlpha[v] = Mathf.Lerp(CentreAlpha, 1f, Smooth(0f, 0.35f, rn)) * (1f - Smooth(ShoreFadeStart, 1f, rn));
-                _vSag[v] = Mathf.Lerp(1f, RimSag, Smooth(SagStart, 1f, rn));
                 _vCalm[v] = 1f - Smooth(CalmStart, 1f, rn);
             }
 
@@ -640,7 +672,8 @@ namespace WRLDZ.Presentation.ArInteraction
 
             _crestTaper = new float[CrestCols];
             for (var c = 0; c < CrestCols; c++)
-                _crestTaper[c] = Mathf.Sin(Mathf.PI * Mathf.Pow(c / (float)(CrestCols - 1), 0.65f));
+                _crestTaper[c] = Mathf.Sqrt(Mathf.Max(0f, Mathf.Sin(Mathf.PI * c / (CrestCols - 1))));
+            _crestSpan = TwoPi / (_wK[0] * _rim);
 
             _capAlong = new Vector2(-_wDirZ[0], _wDirX[0]);
             _capDrift = new Vector2(_wDirX[0], _wDirZ[0]) * _look.FleckDrift;
@@ -650,7 +683,6 @@ namespace WRLDZ.Presentation.ArInteraction
 
             _ripplePh = R(0f, 1f);
             _lipPh = R(0f, TwoPi);
-            _crestPh = R(0f, TwoPi);
         }
 
         void SetWave(int j, Wave w)
