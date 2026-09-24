@@ -14,45 +14,48 @@ namespace WRLDZ.Presentation.ArInteraction
     /// respawns at the feet at a new angle. The player's vortices turn one way
     /// and the opponent's the other, so the two rows mirror across the aisle.
     /// The vortex rises with the sweep and sinks back on dissolve.
-    /// <para>Calm: 0.54 × Scale out at the feet and top, drawn in to about 0.50 at
-    /// mid-height. Boon (the wind lifts the monster): one extra streak, whiter,
-    /// brighter and a little bolder, whipping round faster in more turns on a
-    /// straight column about 0.54 out. Its centre line stays at least 0.08 × Scale
-    /// outside the 0.45 aura column, so it reads as wind round the column, not as
-    /// part of it. Bane: a slack draught, low, slow and dim, drained toward the
-    /// ground colour. An aura change fades the old streaks out and the new shape's
-    /// in.</para>
+    /// <para>Calm: about 0.54 × Scale out at the feet and top, drawn in to about
+    /// 0.50 at mid-height. Boon (the wind lifts the monster): one extra streak,
+    /// whiter, brighter and a little bolder, whipping round faster in more turns
+    /// on a near-straight column about 0.54 out. Its centre line stays at least
+    /// 0.08 × Scale outside the 0.45 aura column, so it reads as wind round the
+    /// column, not as part of it. Bane: a slack draught, low, slow and dim,
+    /// drained toward the ground colour. An aura change fades the old streaks out
+    /// and the new shape's in.</para>
     /// <para>Room: sized by the monster's resting scale, so it does not swell on
-    /// a hit. Every ribbon edge stays outside the 0.45 ownership ring and within
-    /// <see cref="ArFieldSignature.LaneHalfWidth"/> sideways. On the design row
-    /// (0.7 × Scale from the midline) it also stays
-    /// <see cref="ArFieldSignature.AisleClear"/> short of the midline. A guard
-    /// pulls in any vertex that would cross either line
-    /// (<see cref="ArFieldSignature.MidlineGap"/>), and it fades out at the aisle
-    /// line. A monster lunging toward the midline fades its whole vortex.</para>
+    /// a hit. Every visible ribbon edge stays outside the 0.45 ownership ring and
+    /// within <see cref="ArFieldSignature.LaneHalfWidth"/> sideways (at most 0.593
+    /// with SigScale 1.5). On the design row (0.7 × Scale from the midline) it
+    /// also stays <see cref="ArFieldSignature.AisleClear"/> short of the midline.
+    /// A guard pulls in any vertex that would cross either line
+    /// (<see cref="ArFieldSignature.MidlineGap"/>), and a streak fades out at the
+    /// aisle line. A monster standing much nearer the midline than its row fades
+    /// its whole vortex.</para>
     /// <para>Cards: every vertex is clamped with
     /// <see cref="ArFieldSignature.CoverLimit"/>, for its own monster and for any
     /// neighbour whose card it reaches: a Set card's footprint, or face-up art
-    /// in the same row. Streaks ease down before they reach a limit, so they
-    /// never meet the clamp while visible. In front of upright art the vortex is
-    /// squeezed into the art's lower ~22 % (0.30 × Scale): the camera side keeps
-    /// a low spiral and the full climb happens behind the opaque art. In front of
-    /// sideways Defense art (0.10 × Scale) there is no room for a ribbon, so
-    /// streaks fade out there. Beside sideways art, or with no stage camera, they
-    /// climb to full height. A lower limit applies at once; a higher one is grown
-    /// into over 0.6 s. Streaks fade out before they reach a neighbour's Set card,
-    /// and a card standing up after its flip clears that fade over 0.6 s.</para>
+    /// in the same row. Streaks ease down, or fade out where no ribbon fits,
+    /// before they reach a limit, so the clamp only moves hidden vertices. In
+    /// front of upright art the vortex is squeezed into the art's lower ~22 %
+    /// (0.30 × Scale): the camera side keeps a low spiral round the feet and the
+    /// full climb happens behind the opaque art. In front of sideways Defense art
+    /// the limit is 0.10 × Scale, too low for most streaks, so they fade out
+    /// there. Beside sideways art, or with no stage camera, streaks climb to full
+    /// height. A card's cover height drops at once and rises over 0.6 s (a flip
+    /// standing up, Defense back to Attack). Streaks fade out before they reach a
+    /// neighbour's Set card, and after that card stands up its fade clears over
+    /// 0.6 s.</para>
     /// <para>Set monster, or a flip still animating: no vortex. The card lies
     /// almost flat across the street (footprint 1.40 × 0.91 host-local,
     /// <see cref="ArFieldSignature.InSetCard"/>). That is wider than the 1.2
-    /// column pitch, so no ring of streaks could circle it without crossing
-    /// the card. Turning Set hides the vortex at once. Once the card stands up
+    /// column pitch, so no ring of streaks could circle it without crossing the
+    /// card. Turning Set hides the vortex at once. Once the card has stood up
     /// after its flip, the vortex gathers up from the feet over 0.6 s.</para>
     /// <para>Each monster's spin, streak timing and ease state (flip, aura fade,
     /// cover) are keyed by its <see cref="FieldAnchor.Key"/>. It keeps its look,
-    /// and an ease in progress carries on, while it lunges or while other monsters
-    /// come and go. A monster not seen last frame starts settled; its entrance is
-    /// the pad's presence ramp.</para>
+    /// and an ease in progress carries on, when it moves or other monsters come
+    /// and go. A monster not seen last frame starts settled; its entrance is the
+    /// pad's presence ramp.</para>
     /// <para>One look (variant 0). Any other variant draws the same vortex.
     /// SigScale sets the streak count (2 at 0.5, 3 at 1, 4 at 1.5), the vortex
     /// height and the line width.</para>
@@ -131,9 +134,9 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary>A vertex fades out over this last stretch before the aisle line (MidlineGap 0).</summary>
         const float MidlineFade = 0.01f;
         /// <summary>
-        /// Room left to the aisle line at the anchor itself (MidlineGap / Scale) over
-        /// which a monster lunging toward the midline fades its whole vortex. The design
-        /// row leaves 0.6.
+        /// Room left to the aisle line at the anchor itself (MidlineGap / Scale) over which
+        /// a monster standing nearer the midline than its row fades its whole vortex. The
+        /// design row leaves 0.6.
         /// </summary>
         const float AisleFadeFrom = 0.5f;
         const float AisleFadeTo = 0.25f;
@@ -201,13 +204,14 @@ namespace WRLDZ.Presentation.ArInteraction
             Period = 3.2f, Span = 0.3f, Alpha = 0.62f, Width = 1f
         };
 
-        /// <summary>Waist about 0.538: ≥ 0.532 after radius jitter, 0.08 outside the 0.45 aura column.</summary>
+        /// <summary>Waist about 0.538: ≥ 0.532 after radius jitter, ≥ 0.08 outside the 0.45 aura column.</summary>
         static readonly Shape Boon = new Shape
         {
             RFoot = 0.54f, RMid = 0.535f, RTop = 0.54f, Turns = 1.1f, Height = 1f,
             Period = 2.5f, Span = 0.34f, Alpha = 0.8f, Width = 1.05f
         };
 
+        /// <summary>Waist about 0.53, 0.29 tall at SigScale 1.5: inside the bane column's height, clear of its wall.</summary>
         static readonly Shape Bane = new Shape
         {
             RFoot = 0.54f, RMid = 0.52f, RTop = 0.54f, Turns = 0.55f, Height = 0.55f,
@@ -364,7 +368,7 @@ namespace WRLDZ.Presentation.ArInteraction
                 var fade = Mathf.Clamp01(a.Presence) * level;
                 // A Set monster (Open 0) takes no slot: nothing is drawn near its flat card.
                 if (fade <= 0.001f || a.Scale <= MinScale || a.FaceDown || _state[i].Open <= 0f) continue;
-                // Lunging toward the midline: the whole vortex fades before it can reach the aisle.
+                // Nearer the midline than its row: the whole vortex fades before it can reach the aisle.
                 fade *= Ramp(AisleFadeTo, AisleFadeFrom, MidlineGap(a, a.Position) / a.Scale);
                 if (fade <= 0.001f) continue;
                 FindNeighbours(i);
