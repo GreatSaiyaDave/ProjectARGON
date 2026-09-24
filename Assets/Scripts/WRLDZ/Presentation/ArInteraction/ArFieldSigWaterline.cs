@@ -21,7 +21,9 @@ namespace WRLDZ.Presentation.ArInteraction
     /// included. On a boon the foam is brighter and pulses; on a bane the
     /// water turns murky. The water rises with the sweep and drains on dissolve.
     /// <para>Cards: every vertex is clamped with
-    /// <see cref="ArFieldSignature.CoverLimit"/>. In front of upright art the
+    /// <see cref="ArFieldSignature.CoverLimitAll"/>, so the monster's own card
+    /// and every neighbour's card limit it. That clamp is only the guard: the
+    /// pool is shaped so no triangle needs it. In front of upright art the
     /// water stays inside the art's lower band (at most 0.30 × Scale at any
     /// SignatureScale up to 1.5). When face-up art turns sideways into Defense,
     /// the whole level drops at once, so its tallest point (swell, surf and
@@ -32,8 +34,16 @@ namespace WRLDZ.Presentation.ArInteraction
     /// footprint (InSetCard): level water cannot stand shin-high in the narrow
     /// strips in front of and behind the card and also stay 1 cm high over the
     /// card. Once the card stands, or the art rolls
-    /// upright, the water swells back over 0.6 s. Each monster's depth ease,
-    /// and its ripple, foam and fleck timing, is keyed by its anchor Key, so
+    /// upright, the water swells back over 0.6 s.</para>
+    /// <para>Neighbours' cards: a Set card is wider than a lane, so a
+    /// neighbour's card (or one still flipping) reaches into this pool. The
+    /// side facing it stops short of its footprint and that side's water, foam
+    /// and surf fade out; once the card stands or goes, the water spreads back
+    /// over about 0.6 s. Sideways Defense art lies across a whole neighbouring
+    /// lane: when any face-up neighbour's camera-side cover can reach the
+    /// pool, the whole level drops to that art's FrontCoverHeight, as it does
+    /// for the monster's own art. Each monster's depth and spread eases, and
+    /// its ripple, foam and fleck timing, are keyed by its anchor Key, so
     /// nothing jumps while other monsters come and go.</para>
     /// <para>Variant 0, open sea: deep, dark and choppy. Peaked cross-swell,
     /// three quick broken ripples, short white-cap streaks along the crest lines.</para>
@@ -82,14 +92,21 @@ namespace WRLDZ.Presentation.ArInteraction
         const float RimPerSigScale = 0.12f;
         /// <summary>Hard cap on the rim, inside MaxAnchorRadius at any SigScale.</summary>
         const float RimCap = 0.72f;
-        /// <summary>A spoke that the lane or aisle cuts shorter than DryRadius + this fades out.</summary>
+        /// <summary>A spoke that the lane, aisle or a neighbour's Set card cuts shorter than the dry ring + this fades out.</summary>
         const float MinWetBand = 0.1f;
-        /// <summary>Light pieces fade out on spokes with less room than this outside LightInner.</summary>
+        /// <summary>Light pieces fade out on spokes with less room than this outside the light ring (LightInner's).</summary>
         const float MinLightBand = 0.05f;
         /// <summary>Light pieces stay this far inside the shore.</summary>
         const float EdgeMargin = 0.015f;
-        /// <summary>Shaved off the lane and aisle limits so rounding never crosses them.</summary>
+        /// <summary>Shaved off the lane, aisle and neighbour-card limits so rounding never crosses them.</summary>
         const float LimitSafety = 0.005f;
+        /// <summary>InSetCard's default margin round a Set card's footprint.</summary>
+        const float SetMargin = 0.03f;
+        /// <summary>
+        /// Added to CoverLimitAll's per-card reach (it uses 0.05) when picking the
+        /// neighbours a pool can touch, so the pick never misses one it tests.
+        /// </summary>
+        const float NearSlack = 0.1f;
         const float SurfacePerSigScale = 0.03f;
         /// <summary>Share of the wet band (wet edge → shore) where the surface starts fading out.</summary>
         const float ShoreFadeStart = 0.3f;
@@ -103,7 +120,11 @@ namespace WRLDZ.Presentation.ArInteraction
         const float WaterFloor = 0.003f;
         /// <summary>Anchors at or below this Scale are skipped, never inflated past their own size.</summary>
         const float MinScale = 0.001f;
-        /// <summary>Seconds for the water to swell back once a flipped card has stood up (or art rolls upright).</summary>
+        /// <summary>
+        /// Seconds for the water to swell back once a flipped card has stood up
+        /// (or art rolls upright), and roughly to spread back once a neighbour's
+        /// Set card stands or goes.
+        /// </summary>
         const float FlipRiseSeconds = 0.6f;
         /// <summary>Peak alpha of any light piece (foam, ripples, surf, flecks), boon gains included.</summary>
         const float LightCap = 0.6f;
@@ -224,13 +245,34 @@ namespace WRLDZ.Presentation.ArInteraction
         float _crestSpan;
         /// <summary>Dry-edge ring radius whose chords between spokes stay outside DryRadius.</summary>
         float _dryRing;
+        /// <summary>The same for LightInner: light pieces show only where their spokes reach past it.</summary>
+        float _lightRing;
 
-        // Last frame's (Key, depth) pairs, so an ease survives others coming and going. Swapped every Tick.
-        int[] _prevKey;
-        float[] _prevDepth;
+        /// <summary>One monster's eased state, carried to the next frame under its anchor Key.</summary>
+        struct Pool
+        {
+            public int Key;
+            /// <summary>Share of full depth (see <see cref="Fit"/>).</summary>
+            public float Depth;
+            /// <summary>
+            /// Host-local room neighbours' Set cards leave on each side: +X, −X,
+            /// +Z, −Z (fixed axes, so a lunge across the midline keeps them apart).
+            /// The rim means no card.
+            /// </summary>
+            public float East, West, North, South;
+        }
+
+        // Last frame's pools by Key, so an ease survives others coming and going. Swapped every Tick.
+        Pool[] _prev;
         int _prevCount;
-        int[] _nextKey;
-        float[] _nextDepth;
+        Pool[] _next;
+        /// <summary>Host-local metres per second a side spreads back once a neighbour's Set card stands or goes.</summary>
+        float _spread;
+        /// <summary>
+        /// Neighbours whose cards the current pool can touch: CoverLimitAll runs
+        /// over these instead of every anchor. Emptied after each Tick.
+        /// </summary>
+        List<FieldAnchor> _near;
 
         // Per ring, the same on every spoke. Ring 0 is the dry edge; rings 1… run wet edge (f = 0) → shore (f = 1).
         float[] _ringF;
@@ -289,9 +331,14 @@ namespace WRLDZ.Presentation.ArInteraction
         float _s;
         /// <summary>−1 on the player's half, +1 on the opponent's (MidlineGap's rule).</summary>
         float _side;
-        /// <summary>Room from the anchor toward the midline, less AisleClear.</summary>
-        float _aisle;
-        float _lane;
+        // Room from the anchor on each side (host-local, LimitSafety off): +X and −X (lane or a
+        // neighbour's Set card), toward the midline (aisle or a card), away from it (a card or the rim).
+        float _east;
+        float _west;
+        float _mid;
+        float _back;
+        /// <summary>False when the anchor stands outside its own room (deep in a lunge, or on a card): no pool.</summary>
+        bool _open;
 
         protected override void Build()
         {
@@ -303,10 +350,10 @@ namespace WRLDZ.Presentation.ArInteraction
             _amplitude = _look.Amplitude * sig;
             _chop = 0.5f * Mathf.Clamp01(_look.Chop);
             _peak = Mathf.Max(1e-4f, _surface + _amplitude + (_look.CrestAlpha > 0f ? CrestLift : 0f));
-            _prevKey = new int[MaxAnchors];
-            _prevDepth = new float[MaxAnchors];
-            _nextKey = new int[MaxAnchors];
-            _nextDepth = new float[MaxAnchors];
+            _prev = new Pool[MaxAnchors];
+            _next = new Pool[MaxAnchors];
+            _near = new List<FieldAnchor>(MaxAnchors);
+            _spread = (_rim - DryRadius) / FlipRiseSeconds;
             _reach = new float[Segs];
             _wet = new float[Segs];
             _light = new float[Segs];
@@ -343,10 +390,8 @@ namespace WRLDZ.Presentation.ArInteraction
             for (var i = 0; i < count; i++)
             {
                 var a = anchors[i];
-                var depth = Depth(a, step);
-                _nextKey[i] = a.Key;
-                _nextDepth[i] = depth;
-                if (WriteSlot(i, a, level, depth))
+                _next[i] = Fit(a, anchors, step);
+                if (WriteSlot(i, a, level, _next[i].Depth))
                 {
                     drew = true;
                     var s = a.Scale;
@@ -360,14 +405,13 @@ namespace WRLDZ.Presentation.ArInteraction
                 }
             }
 
-            // This frame's depths become next frame's lookup (swap, no allocation).
-            var keys = _prevKey;
-            _prevKey = _nextKey;
-            _nextKey = keys;
-            var depths = _prevDepth;
-            _prevDepth = _nextDepth;
-            _nextDepth = depths;
+            // This frame's pools become next frame's lookup (swap, no allocation).
+            var pools = _prev;
+            _prev = _next;
+            _next = pools;
             _prevCount = count;
+            // Hold no anchor data between frames.
+            _near.Clear();
 
             for (var i = count; i < _lit; i++)
                 ClearSlot(i);
@@ -397,62 +441,155 @@ namespace WRLDZ.Presentation.ArInteraction
         }
 
         /// <summary>
-        /// Share of full depth for this monster. It drops at once when the target
-        /// falls and eases back up over <see cref="FlipRiseSeconds"/>. State is
-        /// looked up by Key in last frame's anchors; a monster not seen then
-        /// starts at its target.
+        /// Fits one monster's pool and returns its state for this frame. Sets the
+        /// current anchor, each side's room (lane, aisle and neighbours' Set
+        /// cards), the spokes' reach and fades, and the neighbours whose cards
+        /// the pool can touch. Depth: the ceiling the monster's own card and any
+        /// neighbour's art put on the pool. It drops at once when the target falls
+        /// and eases back up over <see cref="FlipRiseSeconds"/>; a side a Set card
+        /// cut spreads back the same way. State is looked up by Key in last
+        /// frame's pools; a monster not seen then starts at its target.
         /// </summary>
-        float Depth(in FieldAnchor a, float dt)
+        Pool Fit(in FieldAnchor a, IReadOnlyList<FieldAnchor> anchors, float dt)
         {
-            var target = DepthTarget(a);
+            var was = -1;
             for (var j = 0; j < _prevCount; j++)
             {
-                if (_prevKey[j] != a.Key) continue;
-                var was = _prevDepth[j];
-                return target < was ? target : Mathf.MoveTowards(was, target, dt / FlipRiseSeconds);
+                if (_prev[j].Key != a.Key) continue;
+                was = j;
+                break;
             }
 
-            return target;
+            var st = new Pool { Key = a.Key, East = _rim, West = _rim, North = _rim, South = _rim };
+            var ceiling = MaxAnchorHeight;
+            if (a.FaceDown) ceiling = SetCardClearHeight;
+            _near.Clear();
+            _open = false;
+            if (a.Scale > MinScale)
+            {
+                _a = a;
+                _o = a.Position;
+                _s = a.Scale;
+                // MidlineGap's side rule: the pool keeps AisleClear on its own side of the midline.
+                _side = _o.z < 0f ? -1f : 1f;
+                if (!a.FaceDown && a.FrontCoverHeight > 0f)
+                    ceiling = Mathf.Min(ceiling, a.FrontCoverHeight / _s);
+
+                var poolReach = MaxAnchorRadius * _s;
+                for (var i = 0; i < anchors.Count; i++)
+                {
+                    var b = anchors[i];
+                    if (b.Key == a.Key) continue;
+                    var dx = b.Position.x - _o.x;
+                    var dz = b.Position.z - _o.z;
+                    // CoverLimitAll's test of b's cards, widened by the pool's radius and NearSlack.
+                    var cardReach = Mathf.Max(2f * b.ArtHalf, SetCardClearRadius * b.Scale) + NearSlack * b.Scale;
+                    var span = cardReach + poolReach;
+                    if (dx * dx + dz * dz > span * span) continue;
+                    _near.Add(b);
+                    if (!b.FaceDown) ceiling = Mathf.Min(ceiling, ArtCeiling(b, -dx, -dz, cardReach));
+                    else if (b.Scale > MinScale) CutSetCard(dx / _s, dz / _s, b.Scale / _s, ref st);
+                }
+
+                if (was >= 0)
+                {
+                    var p = _prev[was];
+                    st.East = Spread(p.East, st.East, dt);
+                    st.West = Spread(p.West, st.West, dt);
+                    st.North = Spread(p.North, st.North, dt);
+                    st.South = Spread(p.South, st.South, dt);
+                }
+
+                var lane = LaneHalfWidth - LimitSafety;
+                _east = Mathf.Min(lane, st.East);
+                _west = Mathf.Min(lane, st.West);
+                // The player's half (side −1) faces the midline at +Z.
+                _mid = Mathf.Min(_side * _o.z / _s - AisleClear - LimitSafety, _side < 0f ? st.North : st.South);
+                _back = _side < 0f ? st.South : st.North;
+                _open = _east > 0f && _west > 0f && _mid > 0f && _back > 0f;
+                for (var s = 0; s < Segs; s++)
+                    _reach[s] = Reach(_cos[s], _sin[s], 0f);
+                // A spoke cut inside the dry disc (deep in a lunge, or facing a Set card) folds its
+                // vertices inward. Its neighbours fade with it, and a spoke shows only once it and both
+                // neighbours reach the dry ring (the light ring for light pieces), so every visible
+                // triangle's chords stay outside DryRadius (LightInner).
+                for (var s = 0; s < Segs; s++)
+                {
+                    var room = Mathf.Min(_reach[s], Mathf.Min(_reach[(s + 1) % Segs], _reach[(s + Segs - 1) % Segs]));
+                    _wet[s] = Mathf.Clamp01((room - _dryRing) / MinWetBand);
+                    _light[s] = Mathf.Clamp01((room - EdgeMargin - _lightRing) / MinLightBand);
+                }
+            }
+
+            // The tallest point (level, swell, surf curl and foam lift) meets the ceiling.
+            var target = Mathf.Clamp01((ceiling - FoamLift) / _peak);
+            var from = was >= 0 ? _prev[was].Depth : target;
+            st.Depth = target < from ? target : Mathf.MoveTowards(from, target, dt / FlipRiseSeconds);
+            return st;
+        }
+
+        /// <summary>Tightens at once; widens by <see cref="_spread"/> per second.</summary>
+        float Spread(float was, float target, float dt) =>
+            target < was ? target : Mathf.MoveTowards(was, target, _spread * dt);
+
+        /// <summary>
+        /// A neighbour's Set card (centre (cx, cz) from the anchor, host-local;
+        /// <paramref name="k"/> its Scale over the anchor's) cuts the side facing
+        /// it: the pool stops LimitSafety short of InSetCard's footprint along the
+        /// axis that separates them. No room left (the anchor on the card) means
+        /// no pool.
+        /// </summary>
+        void CutSetCard(float cx, float cz, float k, ref Pool st)
+        {
+            var gx = Mathf.Abs(cx) - (SetCardHalfX + SetMargin) * k;
+            var gz = Mathf.Abs(cz) - (SetCardHalfZ + SetMargin) * k;
+            var room = Mathf.Max(0f, Mathf.Max(gx, gz) - LimitSafety);
+            if (room >= _rim) return;
+            if (gx >= gz)
+            {
+                if (cx >= 0f) st.East = Mathf.Min(st.East, room);
+                else st.West = Mathf.Min(st.West, room);
+            }
+            else if (cz >= 0f)
+            {
+                st.North = Mathf.Min(st.North, room);
+            }
+            else
+            {
+                st.South = Mathf.Min(st.South, room);
+            }
         }
 
         /// <summary>
-        /// Depth whose tallest point (level, swell, surf curl and foam lift)
-        /// meets the card's ceiling. Face-down, including a flip until the card
-        /// stands: under SetCardClearHeight. Face-up: the art's FrontCoverHeight,
-        /// which is low for sideways Defense art. Upright art stays at full depth.
+        /// Ceiling (host-local, over the anchor's Scale) that face-up neighbour
+        /// <paramref name="b"/>'s art puts on the whole pool: its FrontCoverHeight
+        /// when the art's camera-side cover (CardLimit's half-strip, within
+        /// <paramref name="cardReach"/> of b) comes within the rim of the anchor,
+        /// which sits at (ox, oz) from b. The distance used never overestimates,
+        /// so a cover that touches the pool is never missed.
         /// </summary>
-        float DepthTarget(in FieldAnchor a)
+        float ArtCeiling(in FieldAnchor b, float ox, float oz, float cardReach)
         {
-            var ceiling = MaxAnchorHeight;
-            if (a.FaceDown) ceiling = SetCardClearHeight;
-            else if (a.FrontCoverHeight > 0f && a.Scale > MinScale)
-                ceiling = Mathf.Min(ceiling, a.FrontCoverHeight / a.Scale);
-            return Mathf.Clamp01((ceiling - FoamLift) / _peak);
+            if (!_street.HasCamera || b.ArtHalf <= 0f) return MaxAnchorHeight;
+            var fx = _street.Camera.x - b.Position.x;
+            var fz = _street.Camera.z - b.Position.z;
+            var len = Mathf.Sqrt(fx * fx + fz * fz);
+            if (len < 1e-4f) return MaxAnchorHeight;
+            fx /= len;
+            fz /= len;
+            // Behind the art plane, then outside the art's lateral span (camera-right is (−fz, fx)).
+            var behind = Mathf.Max(0f, -(ox * fx + oz * fz));
+            var aside = Mathf.Max(0f, Mathf.Abs(oz * fx - ox * fz - b.ArtLateral) - b.ArtHalf);
+            var gap = Mathf.Max(Mathf.Sqrt(behind * behind + aside * aside),
+                Mathf.Sqrt(ox * ox + oz * oz) - cardReach);
+            return gap <= _rim * _s ? Mathf.Max(0f, b.FrontCoverHeight) / _s : MaxAnchorHeight;
         }
 
-        /// <summary>Writes one pool; false when the anchor is not visible yet (slot gets cleared).</summary>
+        /// <summary>Writes one pool fitted by <see cref="Fit"/>; false when the anchor is not visible yet (slot gets cleared).</summary>
         bool WriteSlot(int slot, in FieldAnchor a, float level, float depth)
         {
             var fade = Mathf.Clamp01(a.Presence) * level;
             if (fade <= 0.001f || a.Scale <= MinScale) return false;
-
-            _a = a;
-            _o = a.Position;
-            _s = a.Scale;
-            // MidlineGap's side rule: the pool keeps AisleClear on its own side of the midline.
-            _side = a.Position.z < 0f ? -1f : 1f;
-            _aisle = _side * a.Position.z / _s - AisleClear - LimitSafety;
-            _lane = LaneHalfWidth - LimitSafety;
-            for (var s = 0; s < Segs; s++)
-                _reach[s] = Reach(_cos[s], _sin[s], 0f);
-            // A spoke cut inside the dry disc (deep in a lunge) folds its vertices inward. Its
-            // neighbours fade with it, so no visible triangle stretches into the disc.
-            for (var s = 0; s < Segs; s++)
-            {
-                var room = Mathf.Min(_reach[s], Mathf.Min(_reach[(s + 1) % Segs], _reach[(s + Segs - 1) % Segs]));
-                _wet[s] = Mathf.Clamp01((room - DryRadius) / MinWetBand);
-                _light[s] = Mathf.Clamp01((room - EdgeMargin - LightInner) / MinLightBand);
-            }
 
             // Every height scales with rise, so a lowered pool keeps surf and foam low too.
             var rise = Mathf.Lerp(RiseFloor, 1f, Smooth(0f, 1f, fade)) * depth;
@@ -470,32 +607,39 @@ namespace WRLDZ.Presentation.ArInteraction
 
         /// <summary>
         /// Distance from the current anchor along unit direction (c, sn), kept
-        /// <paramref name="inset"/> inside the rim, the lane (LaneHalfWidth
-        /// sideways) and the aisle (AisleClear short of the midline). 0 when the
-        /// anchor has no aisle room left, for example deep in a lunge.
+        /// <paramref name="inset"/> inside the rim and each side's room: the lane
+        /// (LaneHalfWidth sideways), the aisle (AisleClear short of the midline)
+        /// and any neighbour's Set card. 0 when a side has no room left, for
+        /// example deep in a lunge.
         /// </summary>
         float Reach(float c, float sn, float inset)
         {
-            var aisle = _aisle - inset;
-            if (aisle <= 0f) return 0f;
             var r = _rim - inset;
-            var lane = _lane - inset;
-            var ac = Mathf.Abs(c);
-            if (ac * r > lane) r = lane / ac;
             var toMid = -_side * sn;
-            if (toMid * r > aisle) r = aisle / toMid;
+            if (!Within(ref r, c, _east - inset) || !Within(ref r, -c, _west - inset) ||
+                !Within(ref r, toMid, _mid - inset) || !Within(ref r, -toMid, _back - inset))
+                return 0f;
             return Mathf.Max(0f, r);
+        }
+
+        /// <summary>Shortens <paramref name="r"/> so r × <paramref name="along"/> ≤ <paramref name="room"/>; false when there is no room.</summary>
+        static bool Within(ref float r, float along, float room)
+        {
+            if (room <= 0f) return false;
+            if (along * r > room) r = room / along;
+            return true;
         }
 
         /// <summary>
         /// Floor-local vertex at offset (x, z) from the anchor and height y, all
-        /// host-local. Its top is clamped with CoverLimit, which covers the Set card
-        /// footprint and the camera side of the art.
+        /// host-local. Its top is clamped with CoverLimitAll over the neighbours
+        /// Fit picked, which covers every Set card footprint and the camera side
+        /// of every face-up art, the monster's own and its neighbours'.
         /// </summary>
         Vector3 Place(float x, float y, float z)
         {
             var p = new Vector3(_o.x + _s * x, _o.y + _s * y, _o.z + _s * z);
-            var top = _o.y + CoverLimit(_a, _street, p);
+            var top = _o.y + CoverLimitAll(_a, _near, _street, p);
             if (p.y > top) p.y = top;
             return p;
         }
@@ -605,7 +749,8 @@ namespace WRLDZ.Presentation.ArInteraction
         /// Surf on wave A's crest nearest the monster: a straight line square to
         /// the swell that builds as the crest comes in and fades as it leaves,
         /// lifted as it curls. The dry disc splits it into two runs, and every
-        /// run stays inside the rim, the lane and the aisle. Its phase is the
+        /// run stays inside the rim and each side's room (lane, aisle and any
+        /// neighbour's Set card). Its phase is the
         /// shared swell's, so neighbouring rings break together.
         /// </summary>
         void WriteCrest(int b, float fade, float rise, float offset, bool boon)
@@ -625,14 +770,19 @@ namespace WRLDZ.Presentation.ArInteraction
             var far = aq + half;
             var lo = 0f;
             var hi = -1f;
-            if (far < outer && _aisle > 0f)
+            if (far < outer && _open)
             {
                 hi = Mathf.Sqrt(outer * outer - far * far);
                 lo = -hi;
-                // Lane: |x| = |q·dx − u·dz ± half·dx| ≤ lane − EdgeMargin.
-                Slab(ref lo, ref hi, q * dx, -dz, _lane - EdgeMargin - half * Mathf.Abs(dx));
-                // Aisle: toward the midline, −side·(q·dz + u·dx ± half·dz) ≤ aisle − EdgeMargin.
-                HalfPlane(ref lo, ref hi, -_side * q * dz, -_side * dx, _aisle - EdgeMargin - half * Mathf.Abs(dz));
+                // Sideways (lane or a neighbour's Set card): ±(q·dx − u·dz ± half·dx) ≤ room − EdgeMargin.
+                var sx = half * Mathf.Abs(dx);
+                HalfPlane(ref lo, ref hi, q * dx, -dz, _east - EdgeMargin - sx);
+                HalfPlane(ref lo, ref hi, -q * dx, dz, _west - EdgeMargin - sx);
+                // Toward the midline (aisle or a card), −side·(q·dz + u·dx ± half·dz) ≤ room − EdgeMargin;
+                // away from it (a card), the same with +side.
+                var sz = half * Mathf.Abs(dz);
+                HalfPlane(ref lo, ref hi, -_side * q * dz, -_side * dx, _mid - EdgeMargin - sz);
+                HalfPlane(ref lo, ref hi, _side * q * dz, _side * dx, _back - EdgeMargin - sz);
             }
 
             // The dry disc: the strip's near edge must stay outside LightInner.
@@ -679,27 +829,6 @@ namespace WRLDZ.Presentation.ArInteraction
                 _cols[i + c] = col;
                 _cols[i + CrestCols + c] = col;
             }
-        }
-
-        /// <summary>Narrows [lo, hi] to where |a + b·u| ≤ m.</summary>
-        static void Slab(ref float lo, ref float hi, float a, float b, float m)
-        {
-            if (m < 0f)
-            {
-                hi = lo - 1f;
-                return;
-            }
-
-            if (Mathf.Abs(b) < 1e-5f)
-            {
-                if (Mathf.Abs(a) > m) hi = lo - 1f;
-                return;
-            }
-
-            var u1 = (-m - a) / b;
-            var u2 = (m - a) / b;
-            lo = Mathf.Max(lo, Mathf.Min(u1, u2));
-            hi = Mathf.Min(hi, Mathf.Max(u1, u2));
         }
 
         /// <summary>Narrows [lo, hi] to where a + b·u ≤ m.</summary>
@@ -937,6 +1066,7 @@ namespace WRLDZ.Presentation.ArInteraction
             }
 
             _dryRing = DryRadius / Mathf.Cos(Mathf.PI / Segs);
+            _lightRing = LightInner / Mathf.Cos(Mathf.PI / Segs);
             _ringR = new float[DiscVerts];
             _hy = new float[DiscVerts];
 

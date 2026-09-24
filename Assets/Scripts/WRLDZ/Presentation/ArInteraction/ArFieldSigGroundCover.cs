@@ -16,11 +16,17 @@ namespace WRLDZ.Presentation.ArInteraction
     /// short of the street midline: items near those lines shrink toward their
     /// base and fade out, so facing and neighbouring rings never meet.
     /// The side of each ring facing the stage camera stays short and sparse, and
-    /// ankle-low along the near edge of the disc; every item's top is clamped with
-    /// <see cref="ArFieldSignature.CoverLimit"/> so upright art keeps all but its
-    /// feet clear and sideways (Defense) art keeps its middle clear. While a
-    /// monster is Set (or its flip is still animating) the items over its card
-    /// lie flat under it; once the card stands up they rise again over 0.6 s.
+    /// ankle-low along the near edge of the disc. Every item's top is clamped by
+    /// its own monster's card and by every neighbour's (a Set card is wider than
+    /// a lane, and rolled Defense art lies across the next one): each item is
+    /// capped at its worst point against each nearby card (a same-row neighbour's
+    /// art as the monster's own, one across the aisle within
+    /// <see cref="ArFieldSignature.CoverLimitAll"/>'s reach), and each vertex is held
+    /// under <see cref="ArFieldSignature.CoverLimitAll"/>, so upright art keeps
+    /// all but its feet clear and sideways (Defense) art keeps its middle clear.
+    /// While a monster is Set (or its flip is still animating) the items over its
+    /// card, from its own ring or a neighbour's, lie flat under it; once the card
+    /// stands up they rise again over 0.6 s.
     /// Boon/bane shows only once the card stands. One dynamic mesh (one draw
     /// call): camera-facing tufts, flat fronds and view-aligned root ribbons over
     /// a small procedural atlas.
@@ -85,6 +91,20 @@ namespace WRLDZ.Presentation.ArInteraction
         const float SetLieHeight = SetCardClearHeight * SetClearMargin;
         /// <summary>Seconds for the items over a Set card to stand back up once the card has stood up.</summary>
         const float FlipRiseSeconds = 0.6f;
+        /// <summary>An item lies within this × its reach of its base, square box corners included (√2, rounded up).</summary>
+        const float BoxCorner = 1.415f;
+        /// <summary>
+        /// Slack (× Scale) past a card's sideways art or Set-card corner, as in
+        /// <see cref="ArFieldSignature.CoverLimitAll"/>: beyond this its card constrains nothing.
+        /// </summary>
+        const float CardReachPad = 0.05f;
+        /// <summary>
+        /// Neighbours within this z (× Scale) share the monster's row. Their face-up art caps
+        /// items anywhere on its camera side inside its lateral span, as the monster's own art
+        /// does. The camera side of art across the aisle spans the whole near row, so there it
+        /// counts only within <see cref="ArFieldSignature.CoverLimitAll"/>'s reach.
+        /// </summary>
+        const float SameRowZ = 0.3f;
 
         /// <summary>Tufts are sheared quads: the texture carries the blades, the top row carries lean and sway.</summary>
         const int TuftRows = 2;
@@ -248,11 +268,22 @@ namespace WRLDZ.Presentation.ArInteraction
         readonly float[] _dist = new float[MaxAnchors];
         // Lie-down state (1 = flat under a Set card) per monster, matched by Key against last
         // frame's anchors so an ease survives others coming and going. Swapped each frame.
+        // This frame's (_curDown, by slot) also lays a neighbour's items down over that card.
         int[] _prevKey = new int[MaxAnchors];
         float[] _prevDown = new float[MaxAnchors];
         int[] _curKey = new int[MaxAnchors];
         float[] _curDown = new float[MaxAnchors];
         int _prevCount;
+        // This frame's anchors, set in Tick for the write loop and cleared after it (never kept),
+        // with each slot's flat direction to the eye, and the neighbours whose cards can reach
+        // the ring being written (slots).
+        IReadOnlyList<FieldAnchor> _anchors;
+        readonly float[] _slotCamX = new float[MaxAnchors];
+        readonly float[] _slotCamZ = new float[MaxAnchors];
+        readonly int[] _near = new int[MaxAnchors];
+        int _nearCount;
+        /// <summary>Farthest any item's reach box gets from its anchor (host-local metres).</summary>
+        float _ringReach;
         int _blockCount;
         Blade[] _blades;
         int _bladeCursor;
@@ -373,9 +404,11 @@ namespace WRLDZ.Presentation.ArInteraction
             }
 
             // Every mix above (and the bane darkening) is in sRGB, as designed; convert once for the Linear project.
+            _ringReach = 0f;
             for (var i = 0; i < _blades.Length; i++)
             {
                 ref var b = ref _blades[i];
+                _ringReach = Mathf.Max(_ringReach, b.Radius + (b.Along + b.Spread) * BoxCorner);
                 b.Dark = VertexColor(b.Base * BaneBark);
                 b.Base = VertexColor(b.Base);
                 b.Mid = VertexColor(b.Mid);
@@ -411,8 +444,12 @@ namespace WRLDZ.Presentation.ArInteraction
                 var a = anchors[i];
                 _curKey[i] = a.Key;
                 _curDown[i] = LieDown(a, dt);
-                var d = a.Position - eye;
-                _dist[i] = d.x * d.x + d.z * d.z;
+                var toEye = eye - a.Position;
+                var flat2 = toEye.x * toEye.x + toEye.z * toEye.z;
+                var flat = Mathf.Sqrt(flat2);
+                _slotCamX[i] = flat > 1e-4f ? toEye.x / flat : 0f;
+                _slotCamZ[i] = flat > 1e-4f ? toEye.z / flat : -1f;
+                _dist[i] = flat2;
                 _order[i] = i;
             }
 
@@ -429,6 +466,8 @@ namespace WRLDZ.Presentation.ArInteraction
                 _order[j + 1] = key;
             }
 
+            // Neighbours' cards are read while writing each ring; the list is the caller's, so drop it after.
+            _anchors = anchors;
             var drawn = 0;
             for (var k = 0; k < count; k++)
             {
@@ -436,9 +475,11 @@ namespace WRLDZ.Presentation.ArInteraction
                 var a = anchors[slot];
                 var vis = Mathf.Clamp01(a.Presence) * level;
                 if (vis <= 0.001f || a.Scale <= 1e-4f) continue;
-                WriteAnchor(drawn * _anchorVerts, a, vis, _curDown[slot], eye);
+                WriteAnchor(drawn * _anchorVerts, slot, count, a, vis, _curDown[slot], eye);
                 drawn++;
             }
+
+            _anchors = null;
 
             // This frame's lie-down state becomes next frame's lookup (swap, no allocation).
             var keys = _prevKey;
@@ -484,8 +525,11 @@ namespace WRLDZ.Presentation.ArInteraction
             return target;
         }
 
-        /// <summary>One monster's ring into the vertex run at <paramref name="vStart"/>, each block back to front.</summary>
-        void WriteAnchor(int vStart, in FieldAnchor a, float vis, float down, Vector3 eye)
+        /// <summary>
+        /// Monster <paramref name="slot"/>'s ring into the vertex run at <paramref name="vStart"/>,
+        /// each block back to front. <paramref name="count"/> is how many slots Tick filled.
+        /// </summary>
+        void WriteAnchor(int vStart, int slot, int count, in FieldAnchor a, float vis, float down, Vector3 eye)
         {
             _anchor = a;
             _card = a;
@@ -498,11 +542,23 @@ namespace WRLDZ.Presentation.ArInteraction
             _midReach = MidlineGap(a, a.Position);
             _towardMid = a.Position.z < 0f ? 1f : -1f;
             var toEye = eye - _pos;
-            var flat = Mathf.Sqrt(toEye.x * toEye.x + toEye.z * toEye.z);
-            _camX = flat > 1e-4f ? toEye.x / flat : 0f;
-            _camZ = flat > 1e-4f ? toEye.z / flat : -1f;
+            _camX = _slotCamX[slot];
+            _camZ = _slotCamZ[slot];
             _right = new Vector3(-_camZ, 0f, _camX);
             _view = toEye.sqrMagnitude > 1e-8f ? toEye.normalized : Vector3.up;
+
+            // Neighbours whose Set card or face-up art any item of this ring can reach.
+            _nearCount = 0;
+            for (var j = 0; j < count; j++)
+            {
+                if (j == slot) continue;
+                var b = _anchors[j];
+                if (b.Scale <= 1e-4f || b.Key == a.Key) continue;
+                var ex = b.Position.x - _pos.x;
+                var ez = b.Position.z - _pos.z;
+                var within = _ringReach * _sc + CardReach(b);
+                if (ex * ex + ez * ez <= within * within) _near[_nearCount++] = j;
+            }
 
             // Seeded by the monster, not its slot or spot: the ring keeps its layout while others come and go or it lunges.
             var spin = Hash01(a.Key, 3) * TwoPi;
@@ -575,6 +631,46 @@ namespace WRLDZ.Presentation.ArInteraction
             var shift = Mathf.Clamp(_anchor.ArtLateral - (ox * _right.x + oz * _right.z), -reach, reach);
             var cap = Mathf.Min(GuardHeight * _sc, CoverLimit(_anchor, _street,
                 new Vector3(bx + _camX * reach + _right.x * shift, _pos.y, bz + _camZ * reach + _right.z * shift)));
+
+            // Neighbours' cards (a Set card is wider than a lane; rolled Defense art lies across the
+            // next one): each nearby face-up card caps the item at its worst point, the same test in
+            // that monster's own camera frame (across the aisle, only within CoverLimitAll's reach);
+            // a Set card the item's box reaches lays it down with that card's ease, so it rises as
+            // the neighbour stands. Contain holds every vertex under CoverLimitAll as well.
+            var lie = 0f;
+            var lieScale = _sc;
+            for (var n = 0; n < _nearCount; n++)
+            {
+                var j = _near[n];
+                var nb = _anchors[j];
+                var ex = bx - nb.Position.x;
+                var ez = bz - nb.Position.z;
+                var within = CardReach(nb) + reach * BoxCorner;
+                if (ex * ex + ez * ez > within * within &&
+                    Mathf.Abs(nb.Position.z - _pos.z) >= SameRowZ * _sc) continue;
+                var nd = _curDown[j];
+                if (nd > 0f)
+                {
+                    var flat = nb;
+                    flat.FaceDown = true;
+                    if (InSetCard(flat, new Vector3(Mathf.Clamp(nb.Position.x, bx - reach, bx + reach), _pos.y,
+                            Mathf.Clamp(nb.Position.z, bz - reach, bz + reach))))
+                    {
+                        lie = Mathf.Max(lie, nd);
+                        lieScale = Mathf.Min(lieScale, nb.Scale);
+                    }
+                }
+
+                if (nb.FaceDown || nb.ArtHalf <= 0f) continue;
+                var nx = _slotCamX[j];
+                var nz = _slotCamZ[j];
+                var nShift = Mathf.Clamp(nb.ArtLateral - (ex * -nz + ez * nx), -reach, reach);
+                var lim = CoverLimit(nb, _street,
+                    new Vector3(bx + nx * reach - nz * nShift, _pos.y, bz + nz * reach + nx * nShift));
+                // CoverLimit also carries that monster's plain height cap; only its card counts here.
+                if (lim < MaxAnchorHeight * nb.Scale) cap = Mathf.Min(cap, lim);
+            }
+
             // Near edge of the summon disc: camera-side items rooted close to it stay ankle-low.
             // Roots apply it per vertex instead, so they dive under the disc edge and break out beyond it.
             var near = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(NearDiscFrontFrom, NearDiscFrontTo, front));
@@ -588,20 +684,19 @@ namespace WRLDZ.Presentation.ArInteraction
             var top = Mathf.Max(b.Top * size, 1e-5f);
             lift = Mathf.Min(lift, Mathf.Max(0f, cap - b.Rim * size) / top);
 
-            // Over a Set card's footprint the item lies down to a low skirt, shape and all (sway
-            // scales with lift too), and stands back up after the card does. Tested at the point
-            // of its worst case nearest the card's centre; items in the strips before and behind
-            // the card stand as usual.
-            var lie = 0f;
+            // Over a Set card's footprint (its own monster's or a neighbour's, above) the item lies
+            // down to a low skirt, shape and all (sway scales with lift too), and stands back up
+            // after the card does. Tested at the point of its worst case nearest the card's centre;
+            // items in the strips before and behind the card stand as usual.
             if (_down > 0f)
             {
                 var sx = Mathf.Sign(ox) * Mathf.Max(0f, Mathf.Abs(ox) - reach);
                 var sz = Mathf.Sign(oz) * Mathf.Max(0f, Mathf.Abs(oz) - reach);
-                if (InSetCard(_card, new Vector3(_pos.x + sx, _pos.y, _pos.z + sz))) lie = _down;
+                if (InSetCard(_card, new Vector3(_pos.x + sx, _pos.y, _pos.z + sz))) lie = Mathf.Max(lie, _down);
             }
 
-            if (lie > 0f) lift = Mathf.Lerp(lift, Mathf.Min(lift, SetLieHeight * _sc / top), lie);
-            _itemTop = Mathf.Lerp(cap, SetCardClearHeight * _sc, lie);
+            if (lie > 0f) lift = Mathf.Lerp(lift, Mathf.Min(lift, SetLieHeight * lieScale / top), lie);
+            _itemTop = Mathf.Lerp(cap, Mathf.Min(cap, SetCardClearHeight * lieScale), lie);
 
             var sway = 0f;
             if (blk.Kind != Kind.Root)
@@ -704,9 +799,17 @@ namespace WRLDZ.Presentation.ArInteraction
         }
 
         /// <summary>
+        /// How far round monster <paramref name="b"/> its card can constrain a piece: past its
+        /// sideways art or its Set card's corner, the radius <see cref="ArFieldSignature.CoverLimitAll"/> checks.
+        /// </summary>
+        static float CardReach(in FieldAnchor b) =>
+            Mathf.Max(2f * b.ArtHalf, SetCardClearRadius * b.Scale) + CardReachPad * b.Scale;
+
+        /// <summary>
         /// Backstop for one vertex of the item being written: inside the per-monster radius,
-        /// its lane and its side of the midline, under the item's cap, under a Set card, and
-        /// (roots) low over the near edge of the summon disc.
+        /// its lane and its side of the midline, under the item's cap, under every card's
+        /// <see cref="ArFieldSignature.CoverLimitAll"/> (its own monster's and its neighbours'),
+        /// and (roots) low over the near edge of the summon disc.
         /// </summary>
         Vector3 Contain(Vector3 p)
         {
@@ -727,8 +830,8 @@ namespace WRLDZ.Presentation.ArInteraction
             var gap = MidlineGap(_anchor, p);
             if (gap < 0f) p.z += _towardMid * gap;
 
-            var top = Mathf.Min(GuardHeight * _sc, _itemTop);
-            if (InSetCard(_anchor, p)) top = Mathf.Min(top, SetCardClearHeight * _sc);
+            // Its own card and every neighbour's: under a Set card, low in front of face-up art.
+            var top = Mathf.Min(Mathf.Min(GuardHeight * _sc, _itemTop), CoverLimitAll(_anchor, _anchors, _street, p));
             if (_nearFront > 0f)
             {
                 var edge = 1f - Mathf.SmoothStep(0f, 1f,

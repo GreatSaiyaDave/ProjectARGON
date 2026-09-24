@@ -26,14 +26,19 @@ namespace WRLDZ.Presentation.ArInteraction
     /// the camera. Each monster's spacing, sway, rhythm and ease state come from
     /// its Key, so it keeps its look while it lunges or others come and go.</para>
     /// <para>Cards: every tendril's top is clamped with
-    /// <see cref="ArFieldSignature.CoverLimit"/>, so in front of upright art the
-    /// tendrils stay in its lower ~22 % (0.30 × Scale) and in front of sideways
-    /// Defense art under 0.10 × Scale; only beside sideways art (or with no stage
-    /// camera) do they stand to full height. A lower limit applies at once; a higher one is grown into over
-    /// 0.6 s. Tendrils over the art's centre are also shorter and fainter. A Set
-    /// card, or a flip still animating, lies flat over the ring: its tendrils sink
-    /// at once, leaving only the pool (0.005 × Scale, below the card), and rise over
-    /// 0.6 s once the card stands up.</para>
+    /// <see cref="ArFieldSignature.CoverLimitAll"/>, which covers the monster's own
+    /// card and its neighbours' cards: a neighbour's Set card (0.72 × Scale each
+    /// side) reaches past the lane line, and a neighbour's sideways Defense art lies
+    /// across this lane. In front of upright art the tendrils stay in its lower
+    /// ~22 % (0.30 × Scale), and in front of sideways Defense art they stay under
+    /// 0.10 × Scale. A flank tendril over a neighbour's Set card fades out. They
+    /// stand to full height only where no card, their own or a neighbour's, limits
+    /// them (with no stage camera only Set cards limit them). A lower limit applies
+    /// at once; a higher one is grown into over 0.6 s. Tendrils over the art's
+    /// centre are also shorter and fainter. A Set card, or a flip still animating,
+    /// lies flat over the ring: its tendrils sink at once, leaving only the pool
+    /// (0.005 × Scale, below every card), and rise over 0.6 s once the card stands
+    /// up.</para>
     /// <para>Room: rows above a tendril's root keep their rim light 0.47 × Scale out
     /// from the monster, outside the 0.45 aura column. The pool ring is squeezed to
     /// stay within <see cref="ArFieldSignature.LaneHalfWidth"/> sideways and
@@ -124,7 +129,7 @@ namespace WRLDZ.Presentation.ArInteraction
         const float SwaySpeed = 0.35f;
 
         // Tendrils over the art's centre (lateral offset from it, host-local) stay shorter and
-        // fainter, on top of CoverLimit; the flanks keep their length.
+        // fainter, on top of CoverLimitAll; the flanks keep their length.
         const float CentreFrom = 0.25f;
         const float CentreTo = 0.5f;
         const float CentreLength = 0.6f;
@@ -132,7 +137,8 @@ namespace WRLDZ.Presentation.ArInteraction
 
         /// <summary>
         /// Seconds for tendrils to rise out of the pool once a Set card stands up after
-        /// its flip, and to grow into a higher <see cref="ArFieldSignature.CoverLimit"/>.
+        /// its flip, and to grow into a higher <see cref="ArFieldSignature.CoverLimitAll"/>
+        /// (their own card's or a neighbour's).
         /// </summary>
         const float FlipRiseSeconds = 0.6f;
 
@@ -292,6 +298,9 @@ namespace WRLDZ.Presentation.ArInteraction
         Color _rimBoon;
         Color _rimBane;
 
+        /// <summary>This Tick's anchors, for <see cref="ArFieldSignature.CoverLimitAll"/>; null between Ticks.</summary>
+        IReadOnlyList<FieldAnchor> _anchors;
+
         // Anchor being written.
         Vector3 _o;
         float _s;
@@ -370,6 +379,8 @@ namespace WRLDZ.Presentation.ArInteraction
 
             var bounds = new Bounds(street.Center, street.Half * 2f);
             var drawn = 0;
+            // Neighbours' cards limit this monster's tendrils too (CoverLimitAll).
+            _anchors = anchors;
             for (var k = 0; k < count; k++)
             {
                 var i = _order[k];
@@ -386,6 +397,8 @@ namespace WRLDZ.Presentation.ArInteraction
                     a.Position + new Vector3(0f, MaxAnchorHeight * 0.5f * s, 0f),
                     new Vector3(MaxAnchorRadius * 2f * s, MaxAnchorHeight * s, MaxAnchorRadius * 2f * s)));
             }
+
+            _anchors = null;
 
             // This frame's state becomes next frame's lookup (swap, no allocation).
             var keys = _prevKey;
@@ -611,9 +624,10 @@ namespace WRLDZ.Presentation.ArInteraction
         /// the aisle and outside <see cref="InnerClear"/> (each of those holds straight
         /// above the root, so some scale always fits); then the whole tendril shrinks
         /// about its root under its height budget, which follows
-        /// <see cref="ArFieldSignature.CoverLimit"/> down at once and up over
-        /// <see cref="FlipRiseSeconds"/>. Shrinking only moves rows toward the root, so
-        /// the earlier fits still hold.</para>
+        /// <see cref="ArFieldSignature.CoverLimitAll"/> (its own card and its neighbours'
+        /// Set cards and art) down at once and up over <see cref="FlipRiseSeconds"/>.
+        /// A budget too low for the lit ribbon fades the tendril out. Shrinking only moves
+        /// rows toward the root, so the earlier fits still hold.</para>
         /// </summary>
         void WriteTendril(int v, int ti, in FieldAnchor a, in FieldStreet street, float fade, float grow, int aura,
             int bi, float dt)
@@ -712,6 +726,8 @@ namespace WRLDZ.Presentation.ArInteraction
             }
 
             // Height budget: the lowest cover limit under any row, across the ribbon's full width.
+            // Flank tendrils reach into a neighbour's Set card and its rolled Defense art, so
+            // every nearby card counts, not only this monster's own.
             var limit = MaxAnchorHeight * _s;
             for (var j = 0; j < Rows; j++)
             {
@@ -719,8 +735,8 @@ namespace WRLDZ.Presentation.ArInteraction
                 var hw = _halfWidth[j] * wide;
                 var ex = _rightX * hw;
                 var ez = _rightZ * hw;
-                limit = Mathf.Min(limit, CoverLimit(a, street, new Vector3(q.x + ex, q.y, q.z + ez)));
-                limit = Mathf.Min(limit, CoverLimit(a, street, new Vector3(q.x - ex, q.y, q.z - ez)));
+                limit = Mathf.Min(limit, CoverLimitAll(a, _anchors, street, new Vector3(q.x + ex, q.y, q.z + ez)));
+                limit = Mathf.Min(limit, CoverLimitAll(a, _anchors, street, new Vector3(q.x - ex, q.y, q.z - ez)));
             }
 
             var target = limit / _s;

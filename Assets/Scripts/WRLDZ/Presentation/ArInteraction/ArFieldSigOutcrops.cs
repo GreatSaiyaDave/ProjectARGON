@@ -30,12 +30,17 @@ namespace WRLDZ.Presentation.ArInteraction
     /// <see cref="FitShow"/> a shard fades, and at <see cref="FitHide"/> it is
     /// not drawn (deep in a lunge).</para>
     /// <para>Cards: each shard's top is clamped every frame against the real
-    /// camera. Face-up: <see cref="ArFieldSignature.CoverLimit"/>, tested at the
-    /// rock's most camera-ward point shifted toward the art's centre. In front of
-    /// upright art a rock stays in the art's lower band (0.30 × Scale). Defense
-    /// art is rolled onto its side and centred at street level beside the
+    /// camera with <see cref="ArFieldSignature.CoverLimitAll"/>: every card near
+    /// it counts, its own monster's and the neighbours'. Face-up art:
+    /// <see cref="ArFieldSignature.CoverLimit"/> of that card, tested at the rock's
+    /// most camera-ward point as seen from it, shifted toward the art's centre. In
+    /// front of upright art a rock stays in the art's lower band (0.30 × Scale).
+    /// Defense art is rolled onto its side and centred at street level beside its
     /// monster, so in front of it the rocks drop to 0.10 × Scale while the other
-    /// flank keeps its tall ones. A Set card lies almost flat (1.40 × 0.91,
+    /// flank keeps its tall ones. Rolled art lies across the whole neighbouring
+    /// lane, so the neighbour's rocks in front of it drop as well, and a facing
+    /// monster's art stands behind a ring's back shards as seen from the camera,
+    /// so those stay under its cover too. A Set card lies almost flat (1.40 × 0.91,
     /// <see cref="ArFieldSignature.InSetCard"/>), and a flip counts as Set until
     /// the card stands. A shard whose footprint overlaps any Set card (its own,
     /// or a neighbour's, whose ends reach past the lane line at full size) drops
@@ -43,8 +48,8 @@ namespace WRLDZ.Presentation.ArInteraction
     /// the belt lies under the card; the few shards in the strip behind their
     /// own card keep standing, and those in the strip between it and the camera
     /// stay under <see cref="SetFrontHeight"/>. Drops are instant. When a shard
-    /// may stand taller again (the card stands up, the art rolls upright, or
-    /// the camera moves off it) it grows back over <see cref="RiseSeconds"/>.
+    /// may stand taller again (a card stands up, art rolls upright, or the
+    /// camera moves off it) it grows back over <see cref="RiseSeconds"/>.
     /// This ceiling is kept per shard and looked up by anchor Key, so an ease
     /// survives others coming and going. Boon and bane wait until the card
     /// stands.</para>
@@ -116,6 +121,8 @@ namespace WRLDZ.Presentation.ArInteraction
         /// about 1 cm up, so a 0.3 rock there would hide its near third.
         /// </summary>
         const float SetFrontHeight = 0.1f;
+        /// <summary>Margin (host-local, × the card's Scale) that CoverLimitAll adds to a card's reach.</summary>
+        const float NeighbourReachPad = 0.05f;
         /// <summary>
         /// Seconds for a shard to grow back once it may stand taller: a Set card
         /// standing up after its flip, Defense art rolling upright, or the camera
@@ -344,6 +351,20 @@ namespace WRLDZ.Presentation.ArInteraction
         /// </summary>
         FieldAnchor[] _sets;
         int _setCount;
+        /// <summary>
+        /// This frame's face-up anchors (with a camera), for the art half of
+        /// <see cref="ArFieldSignature.CoverLimitAll"/>. Sideways Defense art lies
+        /// across a whole neighbouring lane, and a facing monster's art stands
+        /// behind a ring's back shards as seen from the camera, so every shard is
+        /// tested against every card near it, its own included.
+        /// </summary>
+        FieldAnchor[] _arts;
+        /// <summary>Per face-up anchor: flat unit vector toward the camera.</summary>
+        float[] _artCamX;
+        float[] _artCamZ;
+        /// <summary>Per face-up anchor: CoverLimitAll's reach round it (floor metres).</summary>
+        float[] _artReach;
+        int _artCount;
 
         // Candidate shards this frame, sorted far-to-near through _order.
         int[] _sAnchor;
@@ -421,6 +442,10 @@ namespace WRLDZ.Presentation.ArInteraction
             _aKey = new int[MaxAnchors];
             _ceil = new float[slots];
             _sets = new FieldAnchor[MaxAnchors];
+            _arts = new FieldAnchor[MaxAnchors];
+            _artCamX = new float[MaxAnchors];
+            _artCamZ = new float[MaxAnchors];
+            _artReach = new float[MaxAnchors];
             _prevKey = new int[MaxAnchors];
             _prevCeil = new float[slots];
             _sAnchor = new int[slots];
@@ -469,10 +494,30 @@ namespace WRLDZ.Presentation.ArInteraction
             var bounds = new Bounds(street.Center, street.Half * 2f);
 
             _setCount = 0;
+            _artCount = 0;
             for (var i = 0; i < count; i++)
             {
                 var a = anchors[i];
-                if (a.FaceDown && a.Scale > MinScale) _sets[_setCount++] = a;
+                if (a.Scale <= MinScale) continue;
+                if (a.FaceDown)
+                {
+                    _sets[_setCount++] = a;
+                    continue;
+                }
+
+                // Face-up art constrains nothing without a camera (CoverLimit's own rule).
+                if (!street.HasCamera || a.ArtHalf <= 0f) continue;
+                var tx = street.Camera.x - a.Position.x;
+                var tz = street.Camera.z - a.Position.z;
+                var tl = Mathf.Sqrt(tx * tx + tz * tz);
+                if (tl < 1e-4f) continue;
+                _arts[_artCount] = a;
+                _artCamX[_artCount] = tx / tl;
+                _artCamZ[_artCount] = tz / tl;
+                // CoverLimitAll's reach round a card: its sideways art, or its Set card's corner.
+                _artReach[_artCount] = Mathf.Max(2f * a.ArtHalf, SetCardClearRadius * a.Scale) +
+                                       NeighbourReachPad * a.Scale;
+                _artCount++;
             }
 
             var live = 0;
@@ -669,15 +714,19 @@ namespace WRLDZ.Presentation.ArInteraction
 
         /// <summary>
         /// Tallest shard <paramref name="q"/> may stand, as a multiple of its template
-        /// height (<see cref="_risePeak"/> = free). Over any Set card's footprint (its
-        /// own or a neighbour's; a flip counts as Set until the card stands):
-        /// under <see cref="ArFieldSignature.SetCardClearHeight"/>, tested with
+        /// height (<see cref="_risePeak"/> = free): <see cref="ArFieldSignature.CoverLimitAll"/>
+        /// over the shard's footprint, or a stricter kit rule. Over any Set card's
+        /// footprint (its own or a neighbour's; a flip counts as Set until the card
+        /// stands): under <see cref="ArFieldSignature.SetCardClearHeight"/>, tested with
         /// <see cref="ArFieldSignature.InSetCard"/> over the shard's footprint. Face-down
         /// otherwise: under <see cref="SetFrontHeight"/> in the strip between its card
-        /// and the camera, free in the strip behind it. Face-up:
-        /// <see cref="ArFieldSignature.CoverLimit"/> at the rock's most camera-ward
-        /// point, shifted toward the art's centre, so any rock reaching in front of
-        /// the art (upright or rolled sideways) meets its FrontCoverHeight.
+        /// and the camera, free in the strip behind it. Every face-up card near the
+        /// shard, its own and any neighbour's (sideways Defense art lies across a whole
+        /// neighbouring lane; a facing monster's art stands behind the back shards):
+        /// <see cref="ArFieldSignature.CoverLimit"/> of that card at the rock's most
+        /// camera-ward point as seen from it, shifted toward the art's centre, so any
+        /// rock reaching in front of the art (upright or rolled sideways) meets its
+        /// FrontCoverHeight.
         /// </summary>
         float Ceiling(in FieldAnchor a, in FieldStreet street, int q, float fit, float fan, float cx, float cz)
         {
@@ -695,15 +744,6 @@ namespace WRLDZ.Presentation.ArInteraction
                 else if (cx * _camX + cz * _camZ > 0f)
                     limit = SetFrontHeight * s;
             }
-            else
-            {
-                var r = rock * s;
-                var rightX = -_camZ;
-                var rightZ = _camX;
-                var shift = Mathf.Clamp(a.ArtLateral - (cx * rightX + cz * rightZ), -r, r);
-                limit = CoverLimit(a, street, new Vector3(o.x + cx + _camX * r + rightX * shift, o.y,
-                    o.z + cz + _camZ * r + rightZ * shift));
-            }
 
             for (var j = 0; j < _setCount; j++)
             {
@@ -711,6 +751,27 @@ namespace WRLDZ.Presentation.ArInteraction
                 if (b.Key == a.Key) continue;
                 if (InSetCard(b, centre, SetCardMargin + setReach * s / b.Scale))
                     limit = Mathf.Min(limit, SetClearMargin * SetCardClearHeight * b.Scale);
+            }
+
+            // Face-up art: CoverLimitAll evaluated at each card's worst footprint point. Ground
+            // fans lie under any art's cover (FanLift ≤ 0.035 × Scale), so the rock radius is enough.
+            var r = rock * s;
+            for (var j = 0; j < _artCount; j++)
+            {
+                ref var b = ref _arts[j];
+                var dx = centre.x - b.Position.x;
+                var dz = centre.z - b.Position.z;
+                // CoverLimitAll ignores the card wherever the whole footprint is past its reach.
+                var reach = _artReach[j] + r;
+                if (dx * dx + dz * dz > reach * reach) continue;
+                var tx = _artCamX[j];
+                var tz = _artCamZ[j];
+                // Most camera-ward point as seen from b (right = (−tz, tx)), shifted toward its art's centre.
+                var shift = Mathf.Clamp(b.ArtLateral - (tx * dz - tz * dx), -r, r);
+                var lb = CoverLimit(b, street,
+                    new Vector3(centre.x + tx * r - tz * shift, o.y, centre.z + tz * r + tx * shift));
+                // Only b's card counts here: CoverLimit's MaxAnchorHeight cap is b's, not this ring's.
+                if (lb < MaxAnchorHeight * b.Scale) limit = Mathf.Min(limit, lb);
             }
 
             return Mathf.Min(_risePeak, limit / Mathf.Max(1e-6f, _rTop[q] * s));

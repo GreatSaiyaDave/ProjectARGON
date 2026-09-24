@@ -32,19 +32,24 @@ namespace WRLDZ.Presentation.ArInteraction
     /// aisle line. A monster standing much nearer the midline than its row fades
     /// its whole vortex.</para>
     /// <para>Cards: every vertex is clamped with
-    /// <see cref="ArFieldSignature.CoverLimit"/>, for its own monster and for any
-    /// neighbour whose card it reaches: a Set card's footprint, or face-up art
-    /// in the same row. Streaks ease down, or fade out where no ribbon fits,
-    /// before they reach a limit, so the clamp only moves hidden vertices. In
-    /// front of upright art the vortex is squeezed into the art's lower ~22 %
-    /// (0.30 × Scale): the camera side keeps a low spiral round the feet and the
-    /// full climb happens behind the opaque art. In front of sideways Defense art
-    /// the limit is 0.10 × Scale, too low for most streaks, so they fade out
-    /// there. Beside sideways art, or with no stage camera, streaks climb to full
-    /// height. A card's cover height drops at once and rises over 0.6 s (a flip
-    /// standing up, Defense back to Attack). Streaks fade out before they reach a
-    /// neighbour's Set card, and after that card stands up its fade clears over
-    /// 0.6 s.</para>
+    /// <see cref="ArFieldSignature.CoverLimitAll"/>: its own monster's card and
+    /// every other card within that function's reach, in either row (a Set
+    /// card's footprint, or the camera side of face-up art). Streaks ease down,
+    /// or fade out where no ribbon fits, before they reach a limit, so the clamp
+    /// only moves hidden vertices. In front of upright art the vortex is
+    /// squeezed into the art's lower ~22 % (0.30 × Scale), and the full climb
+    /// happens behind its own opaque art. A player's vortex also stands in front
+    /// of the monsters facing it across the aisle (straight across and
+    /// diagonally), so upright art there squeezes its far side too; with its
+    /// own art upright as well, the whole vortex stays a low spiral round the
+    /// feet.
+    /// In front of sideways Defense art (its own, or a neighbour's in either
+    /// row) the limit is 0.10 × Scale, too low for most streaks, so they fade
+    /// out there. Beside sideways art, or with no stage camera, streaks climb to
+    /// full height. A card's cover height drops at once and rises over 0.6 s (a
+    /// flip standing up, Defense back to Attack). Streaks fade out before they
+    /// reach a neighbour's Set card, and after that card stands up its fade
+    /// clears over 0.6 s.</para>
     /// <para>Set monster, or a flip still animating: no vortex. The card lies
     /// almost flat across the street (footprint 1.40 × 0.91 host-local,
     /// <see cref="ArFieldSignature.InSetCard"/>). That is wider than the 1.2
@@ -67,7 +72,13 @@ namespace WRLDZ.Presentation.ArInteraction
     /// </summary>
     public sealed class ArFieldSigUpdraft : ArFieldSignature
     {
+        /// <summary>Vortices drawn (mesh slots).</summary>
         const int MaxAnchors = 10;
+        /// <summary>
+        /// Monsters tracked per frame (eases, cards near a vortex): more than the slots, so
+        /// every card <see cref="ArFieldSignature.CoverLimitAll"/> can bind also softens the streaks.
+        /// </summary>
+        const int MaxTracked = 16;
         const int MinStreaks = 2;
         const int MaxBaseStreaks = 4;
         /// <summary>Base streaks plus the boon's extra one.</summary>
@@ -153,10 +164,18 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary>Squeezed below this share of its climb a streak starts to fade; gone at <see cref="SqueezeHide"/>.</summary>
         const float SqueezeShow = 0.3f;
         const float SqueezeHide = 0.12f;
-        /// <summary>Face-up neighbours within this z of the monster share its row; their art may be crossed.</summary>
-        const float SameRowZ = 0.3f;
         /// <summary><see cref="ArFieldSignature.InSetCard"/>'s own margin (host-local).</summary>
         const float SetMargin = 0.03f;
+        /// <summary>
+        /// Margin (host-local) <see cref="ArFieldSignature.CoverLimitAll"/> adds to a card's reach
+        /// (<see cref="CardReach"/>): past it that card limits nothing.
+        /// </summary>
+        const float CardReachMargin = 0.05f;
+        /// <summary>
+        /// A neighbour's art zone eases in over this many times the usual band at its reach edge.
+        /// That edge moves with the card, so it sweeps across a vortex at lunge speed.
+        /// </summary>
+        const float ReachSoft = 2f;
 
         /// <summary>
         /// Seconds a vortex takes to gather up from the feet once a flipped card stands up
@@ -265,6 +284,11 @@ namespace WRLDZ.Presentation.ArInteraction
 
         /// <summary>This frame's anchors (copied: the caller's list is only read) and their states, by index.</summary>
         FieldAnchor[] _anchors;
+        /// <summary>
+        /// The caller's list, for <see cref="ArFieldSignature.CoverLimitAll"/> while the vortices are
+        /// written; cleared before Tick returns (the caller reuses it).
+        /// </summary>
+        IReadOnlyList<FieldAnchor> _anchorList;
         AnchorState[] _state;
         /// <summary>Last frame's states, looked up by Key; swapped with <see cref="_state"/> each Tick.</summary>
         AnchorState[] _prevState;
@@ -335,7 +359,7 @@ namespace WRLDZ.Presentation.ArInteraction
         public override void Tick(float level, in FieldStreet street, IReadOnlyList<FieldAnchor> anchors, float dt)
         {
             if (_mr == null) return;
-            var count = anchors == null ? 0 : Mathf.Min(anchors.Count, MaxAnchors);
+            var count = anchors == null ? 0 : Mathf.Min(anchors.Count, MaxTracked);
             if (level <= 0.001f || count == 0)
             {
                 // Nothing tracked while hidden: monsters met again start settled.
@@ -362,7 +386,8 @@ namespace WRLDZ.Presentation.ArInteraction
 
             var bounds = new Bounds(street.Center, street.Half * 2f);
             var drawn = 0;
-            for (var i = 0; i < count; i++)
+            _anchorList = anchors;
+            for (var i = 0; i < count && drawn < MaxAnchors; i++)
             {
                 var a = _anchors[i];
                 var fade = Mathf.Clamp01(a.Presence) * level;
@@ -380,6 +405,7 @@ namespace WRLDZ.Presentation.ArInteraction
                     new Vector3(MaxAnchorRadius * 2f * s, MaxAnchorHeight * s, MaxAnchorRadius * 2f * s)));
             }
 
+            _anchorList = null;
             // This frame's states are next frame's lookup table.
             var swap = _prevState;
             _prevState = _state;
@@ -493,29 +519,38 @@ namespace WRLDZ.Presentation.ArInteraction
         }
 
         /// <summary>
-        /// Other anchors whose cards the vortex at index <paramref name="i"/> can reach:
-        /// any Set card (or one still standing up) near enough, and face-up art in its row.
+        /// Other anchors whose cards the vortex at index <paramref name="i"/> can reach, in
+        /// either row: a Set card (or one still standing up) or face-up art whose
+        /// <see cref="CardReach"/> comes within the vortex's radius plus its squeeze and fade
+        /// bands (<see cref="ReachSoft"/> times wider at the reach edge).
+        /// <see cref="ArFieldSignature.CoverLimitAll"/> counts no card beyond that reach.
         /// </summary>
         void FindNeighbours(int i)
         {
             _nearCount = 0;
             var a = _anchors[i];
-            var reach = (MaxAnchorRadius + SqueezeBand + FadeBand) * a.Scale;
+            var reach = (MaxAnchorRadius + ReachSoft * (SqueezeBand + FadeBand)) * a.Scale;
             for (var k = 0; k < _anchorCount; k++)
             {
                 if (k == i) continue;
                 var b = _anchors[k];
                 if (b.Scale <= MinScale) continue;
-                var dx = Mathf.Abs(b.Position.x - a.Position.x);
-                var dz = Mathf.Abs(b.Position.z - a.Position.z);
-                var card = (b.FaceDown || _state[k].Open < 1f) &&
-                           dx < (SetCardHalfX + SetMargin) * b.Scale + reach &&
-                           dz < (SetCardHalfZ + SetMargin) * b.Scale + reach;
-                var art = !b.FaceDown && _hasFwd[k] && b.ArtHalf > 0f && dz < SameRowZ * a.Scale &&
-                          dx < Mathf.Abs(b.ArtLateral) + b.ArtHalf + reach;
-                if (card || art) _near[_nearCount++] = k;
+                var card = b.FaceDown || _state[k].Open < 1f;
+                var art = !b.FaceDown && _hasFwd[k] && b.ArtHalf > 0f;
+                if (!card && !art) continue;
+                var dx = b.Position.x - a.Position.x;
+                var dz = b.Position.z - a.Position.z;
+                var r = CardReach(b) + reach;
+                if (dx * dx + dz * dz < r * r) _near[_nearCount++] = k;
             }
         }
+
+        /// <summary>
+        /// Floor-local metres from its anchor within which <see cref="ArFieldSignature.CoverLimitAll"/>
+        /// lets another monster's card limit a piece: its sideways art or its Set card's corner.
+        /// </summary>
+        static float CardReach(in FieldAnchor b) =>
+            Mathf.Max(2f * b.ArtHalf, SetCardClearRadius * b.Scale) + CardReachMargin * b.Scale;
 
         /// <summary>
         /// One monster's vortex: its streaks, each a main line and a companion,
@@ -653,7 +688,7 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary>
         /// Smooth, conservative cover height at floor-local (<paramref name="x"/>, <paramref name="z"/>)
         /// for a ribbon row reaching <paramref name="pad"/> either side, and in <paramref name="show"/>
-        /// how much of the row may be seen. Never above <see cref="ArFieldSignature.CoverLimit"/>
+        /// how much of the row may be seen. Never above <see cref="ArFieldSignature.CoverLimitAll"/>
         /// anywhere the ribbon touches: each card's zone is widened by the ribbon's reach.
         /// </summary>
         float Ceiling(float x, float z, float pad, float climbS, out float show)
@@ -669,7 +704,9 @@ namespace WRLDZ.Presentation.ArInteraction
         /// Anchor <paramref name="k"/>'s card as the vortex being written sees it: a Set card's
         /// footprint (<see cref="ArFieldSignature.InSetCard"/>'s box; a neighbour that just stood
         /// up keeps it while its flip ease runs), and the camera side of face-up art inside its
-        /// lateral span (<see cref="ArFieldSignature.CoverLimit"/>'s test, at the eased cover height).
+        /// lateral span (<see cref="ArFieldSignature.CoverLimit"/>'s test, at the eased cover height),
+        /// for a neighbour only within its <see cref="CardReach"/> as
+        /// <see cref="ArFieldSignature.CoverLimitAll"/> counts it.
         /// </summary>
         float CardCeiling(int k, float x, float z, float pad, float climbS, ref float show)
         {
@@ -691,6 +728,7 @@ namespace WRLDZ.Presentation.ArInteraction
             var depth = dx * _fwdX[k] + dz * _fwdZ[k];
             var lateral = dz * _fwdX[k] - dx * _fwdZ[k];
             var inFront = Mathf.Min(depth, b.ArtHalf - Mathf.Abs(lateral - b.ArtLateral));
+            if (k != _self) inFront = Mathf.Min(inFront, (CardReach(b) - Mathf.Sqrt(dx * dx + dz * dz)) / ReachSoft);
             var cover = Mathf.Min(b.FrontCoverHeight, _state[k].Cover);
             return Mathf.Min(c, Zone(inFront + pad, cover, b.FrontCoverHeight, 1f, pad, climbS, free, ref show));
         }
@@ -719,8 +757,8 @@ namespace WRLDZ.Presentation.ArInteraction
         /// Hard guards for a vertex of the anchor being written: inside the contract radius,
         /// within <see cref="ArFieldSignature.LaneHalfWidth"/> sideways, pulled back to its own
         /// side of the aisle line (<paramref name="gap"/> = MidlineGap after the pull), and no
-        /// taller than <see cref="ArFieldSignature.CoverLimit"/> for its own card and any
-        /// neighbour's card it reaches.
+        /// taller than <see cref="ArFieldSignature.CoverLimitAll"/> (its own card and every
+        /// other card that reaches it, in either row).
         /// </summary>
         Vector3 Contain(Vector3 p, out float gap)
         {
@@ -744,13 +782,7 @@ namespace WRLDZ.Presentation.ArInteraction
                 gap = 0f;
             }
 
-            var top = Mathf.Min(GuardHeight * _s, CoverLimit(_a, _street, p));
-            for (var n = 0; n < _nearCount; n++)
-            {
-                var lim = CoverLimit(_anchors[_near[n]], _street, p);
-                if (lim < MaxAnchorHeight * _anchors[_near[n]].Scale) top = Mathf.Min(top, lim);
-            }
-
+            var top = Mathf.Min(GuardHeight * _s, CoverLimitAll(_a, _anchorList, _street, p));
             p.y = Mathf.Clamp(p.y, _o.y, _o.y + top);
             return p;
         }
@@ -819,13 +851,13 @@ namespace WRLDZ.Presentation.ArInteraction
             _streaks = new Streak[MaxStreaks];
             _phase = new float[Shapes.Length * MaxStreaks];
             _cycle = new int[_phase.Length];
-            _anchors = new FieldAnchor[MaxAnchors];
-            _state = new AnchorState[MaxAnchors];
-            _prevState = new AnchorState[MaxAnchors];
-            _fwdX = new float[MaxAnchors];
-            _fwdZ = new float[MaxAnchors];
-            _hasFwd = new bool[MaxAnchors];
-            _near = new int[MaxAnchors];
+            _anchors = new FieldAnchor[MaxTracked];
+            _state = new AnchorState[MaxTracked];
+            _prevState = new AnchorState[MaxTracked];
+            _fwdX = new float[MaxTracked];
+            _fwdZ = new float[MaxTracked];
+            _hasFwd = new bool[MaxTracked];
+            _near = new int[MaxTracked];
             for (var i = 0; i < MaxStreaks; i++)
             {
                 _streaks[i] = new Streak
