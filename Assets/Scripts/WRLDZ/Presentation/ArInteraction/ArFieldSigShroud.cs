@@ -19,11 +19,18 @@ namespace WRLDZ.Presentation.ArInteraction
     /// <para>One look (variant 0). Any other variant draws the same shroud.
     /// SigScale sets the tendril count (4 at 0.5, 5 at 1, 6 at 1.5) and their
     /// length.</para>
-    /// Nothing reaches under the card: the pool starts outside the ownership
-    /// ring and the tendril tips stop short of the card. The side of each ring
-    /// facing the stage camera stays shorter and fainter so the monster art
-    /// reads through it. One dynamic mesh (one draw call) with flat colour: soft
-    /// edges come from vertex alpha. Scope: per-monster.
+    /// <para>The opaque monster art stands in the ring facing the stage camera
+    /// and hides its far half, so tendrils are laid out from the camera's side:
+    /// tall on the flanks, framing the art the way claws frame the void, and
+    /// shorter and fainter on the front flanks, so the monster reads through
+    /// them. Each monster's spacing, sway and rhythm come from its Key, so it
+    /// keeps its look while it lunges or others come and go.</para>
+    /// <para>Nothing reaches under the card: the pool starts outside the
+    /// ownership ring, and the tendril tips stop in front of the art. A Set
+    /// card lies flat over the ring, so its tendrils sink at once, leaving
+    /// only the pool (below the card), and rise again after a flip.</para>
+    /// One dynamic mesh (one draw call) with flat colour: soft edges come from
+    /// vertex alpha. Scope: per-monster.
     /// </summary>
     public sealed class ArFieldSigShroud : ArFieldSignature
     {
@@ -69,17 +76,30 @@ namespace WRLDZ.Presentation.ArInteraction
         const float WritheSpeedSide = 0.75f;
         const float TwitchSpeed = 7f;
 
-        // Camera side of each ring: shorter, fainter tendrils keep the monster readable.
-        const float FrontCosFrom = 0f;
-        const float FrontCosTo = 0.8f;
-        const float FrontLength = 0.55f;
-        const float FrontAlpha = 0.6f;
+        // Layout, in radians either side of the camera direction: the far half of
+        // the ring is behind the opaque art, so tendrils stand on the flanks and front flanks.
+        const float ArcFrom = 0.7f;
+        const float ArcTo = 1.36f;
+        /// <summary>Per-monster shift of each tendril inside its share of the arc (share of the spacing).</summary>
+        const float ArcJitter = 0.25f;
+        /// <summary>Slow sway of each side of the layout round the ring (radians, radians per second).</summary>
+        const float SwayAngle = 0.1f;
+        const float SwaySpeed = 0.35f;
 
-        /// <summary>Ring rotation per host-local metre of monster position: neighbours differ, a lunge swirls it.</summary>
-        const float SpinPerMetreX = 1.3f;
-        const float SpinPerMetreZ = 0.9f;
+        // Tendrils over the art's centre (lateral offset × Scale) stay shorter and fainter; flanks keep full length.
+        const float CentreFrom = 0.25f;
+        const float CentreTo = 0.5f;
+        const float CentreLength = 0.6f;
+        const float CentreAlpha = 0.7f;
 
-        const float CoreAlpha = 0.4f;
+        /// <summary>Seconds for a flipped monster's tendrils to rise back out of the pool.</summary>
+        const float FlipRiseSeconds = 0.6f;
+
+        // Per-monster hashes: tendril i uses salts TendrilSalt + i × TendrilSaltStride + 0…7.
+        const int TendrilSalt = 100;
+        const int TendrilSaltStride = 16;
+
+        const float CoreAlpha = 0.34f;
         const float RimAlpha = 0.45f;
         const float CoreGroundShare = 0.4f;
         const float CoreDarken = 0.3f;
@@ -90,7 +110,7 @@ namespace WRLDZ.Presentation.ArInteraction
         const float PoolRim = 0.645f;
         const float PoolOuter = 0.71f;
         const float PoolLift = 0.005f;
-        const float PoolAlpha = 0.3f;
+        const float PoolAlpha = 0.28f;
         const float PoolRimAlpha = 0.28f;
         const float PoolBreath = 0.25f;
         const float BreathSpeed = 0.9f;
@@ -150,10 +170,9 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary>Indexed by Aura + 1.</summary>
         static readonly Shape[] Shapes = { Bane, Calm, Boon };
 
-        /// <summary>One tendril of the ring template, shared by every monster.</summary>
+        /// <summary>One tendril of the monster being written, hashed from its Key.</summary>
         struct Tendril
         {
-            public float Angle;
             public float Root;
             public float Length;
             public float Width;
@@ -191,13 +210,18 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary>0…1 per pool segment: breaks the crimson rim into patches.</summary>
         float[] _noise;
 
-        // Draw order: far monsters first, and within a monster the far side of the ring first.
+        // Draw order: far monsters first, and within a monster the flanks before the front.
         int[] _order;
-        float[] _key;
+        float[] _dist;
         int[] _tOrder;
-        float[] _tKey;
+        float[] _tFront;
         float[] _tRx;
         float[] _tRz;
+
+        // Per anchor index, re-keyed whenever a different monster lands there.
+        int[] _anchorKey;
+        /// <summary>0…1 tendril height: drops to 0 at once when a card is Set, rises again after a flip.</summary>
+        float[] _anchorRise;
 
         /// <summary>Writhe phases per shape (index = Aura + 1), so each shape keeps its own speed.</summary>
         readonly float[] _phLean = new float[3];
@@ -205,6 +229,7 @@ namespace WRLDZ.Presentation.ArInteraction
         float _phTwitch;
         float _phPulse;
         float _phBreath;
+        float _phSway;
         float _flicker;
 
         Color _core;
@@ -219,8 +244,6 @@ namespace WRLDZ.Presentation.ArInteraction
         Vector3 _view;
         float _camX;
         float _camZ;
-        float _spin;
-        float _offset;
 
         protected override void Build()
         {
@@ -257,28 +280,32 @@ namespace WRLDZ.Presentation.ArInteraction
                 return;
             }
 
-            Advance(dt > 0f ? dt : 0f);
+            var step = dt > 0f ? dt : 0f;
+            Advance(step);
             level = Mathf.Min(level, 1f);
             var eye = EyeLocal(street);
 
             // Far monsters first so nearer shrouds blend over them.
             for (var i = 0; i < count; i++)
             {
-                var d = anchors[i].Position - eye;
-                _key[i] = -(d.x * d.x + d.z * d.z);
+                var a = anchors[i];
+                Rise(i, a, step);
+                var d = a.Position - eye;
+                _dist[i] = -(d.x * d.x + d.z * d.z);
                 _order[i] = i;
             }
 
-            SortByKey(_order, _key, count);
+            SortByKey(_order, _dist, count);
 
             var bounds = new Bounds(street.Center, street.Half * 2f);
             var drawn = 0;
             for (var k = 0; k < count; k++)
             {
-                var a = anchors[_order[k]];
+                var i = _order[k];
+                var a = anchors[i];
                 var fade = Mathf.Clamp01(a.Presence) * level;
                 if (fade <= 0.001f || a.Scale <= MinScale) continue;
-                WriteAnchor(drawn * _slotVerts, a, fade, eye);
+                WriteAnchor(drawn * _slotVerts, a, fade, _anchorRise[i], eye);
                 drawn++;
                 var s = a.Scale;
                 bounds.Encapsulate(new Bounds(
@@ -314,7 +341,28 @@ namespace WRLDZ.Presentation.ArInteraction
             _phTwitch = Mathf.Repeat(_phTwitch + TwitchSpeed * dt, TwoPi);
             _phPulse = Mathf.Repeat(_phPulse + PulseSpeed * dt, TwoPi);
             _phBreath = Mathf.Repeat(_phBreath + BreathSpeed * dt, TwoPi);
+            _phSway = Mathf.Repeat(_phSway + SwaySpeed * dt, TwoPi);
             _flicker = Mathf.Repeat(_flicker + FlickerDrift * dt, PoolSegs);
+        }
+
+        /// <summary>
+        /// Tendril height for the monster at anchor index <paramref name="i"/>: a Set
+        /// card lies flat over the ring, so its tendrils drop into the pool at once,
+        /// and rise over <see cref="FlipRiseSeconds"/> once it is face-up. A different
+        /// monster at the index starts at its own target.
+        /// </summary>
+        void Rise(int i, in FieldAnchor a, float dt)
+        {
+            var target = a.FaceDown ? 0f : 1f;
+            if (_anchorKey[i] != a.Key || target < _anchorRise[i])
+            {
+                _anchorKey[i] = a.Key;
+                _anchorRise[i] = target;
+            }
+            else
+            {
+                _anchorRise[i] = Mathf.MoveTowards(_anchorRise[i], target, dt / FlipRiseSeconds);
+            }
         }
 
         /// <summary>Stage camera in floor-local space; the player's end of the street without one.</summary>
@@ -325,8 +373,8 @@ namespace WRLDZ.Presentation.ArInteraction
             return new Vector3(street.Center.x, street.Center.y, street.Center.z - street.Half.z - 1f);
         }
 
-        /// <summary>One monster: pool first, then its tendrils from the far side of the ring to the near side.</summary>
-        void WriteAnchor(int v, in FieldAnchor a, float fade, Vector3 eye)
+        /// <summary>One monster: pool first, then its tendrils from the flanks to the front.</summary>
+        void WriteAnchor(int v, in FieldAnchor a, float fade, float rise, Vector3 eye)
         {
             _o = a.Position;
             _s = a.Scale;
@@ -336,35 +384,74 @@ namespace WRLDZ.Presentation.ArInteraction
             _camZ = flat > 1e-4f ? toEye.z / flat : -1f;
             _view = toEye.sqrMagnitude > 1e-8f ? toEye.normalized : Vector3.up;
 
-            // Continuous in position, so a monster keeps its ring when the anchor list reorders.
-            var hx = _o.x / _s;
-            var hz = _o.z / _s;
-            _spin = hx * SpinPerMetreX + hz * SpinPerMetreZ;
-            _offset = Mathf.Repeat(hx * 0.61f + hz * 0.37f, 1f) * TwoPi;
-
             var aura = a.Aura > 0 ? 1 : a.Aura < 0 ? -1 : 0;
-            WritePool(v, fade, aura);
+            WritePool(v, fade, aura, Hash01(a.Key, 47) * TwoPi);
 
+            var tv = v + PoolVerts;
+            var risen = Mathf.SmoothStep(0f, 1f, rise);
+            if (risen <= 0.001f)
+            {
+                // Set card flat over the ring: zero-area, clear tendrils keep the slot layout.
+                Collapse(tv, _count * TendrilVerts, _o);
+                return;
+            }
+
+            Layout(a.Key);
             for (var i = 0; i < _count; i++)
             {
-                var ang = _tendrils[i].Angle + _spin;
-                _tRx[i] = Mathf.Cos(ang);
-                _tRz[i] = Mathf.Sin(ang);
-                _tKey[i] = _tRx[i] * _camX + _tRz[i] * _camZ;
+                _tFront[i] = _tRx[i] * _camX + _tRz[i] * _camZ;
                 _tOrder[i] = i;
             }
 
-            SortByKey(_tOrder, _tKey, _count);
+            SortByKey(_tOrder, _tFront, _count);
 
-            var grow = Mathf.Lerp(GrowFloor, 1f, Mathf.SmoothStep(0f, 1f, fade));
+            var grow = Mathf.Lerp(GrowFloor, 1f, Mathf.SmoothStep(0f, 1f, fade)) * risen;
             for (var k = 0; k < _count; k++)
-                WriteTendril(v + PoolVerts + k * TendrilVerts, _tOrder[k], fade, grow, aura);
+                WriteTendril(tv + k * TendrilVerts, _tOrder[k], fade * risen, grow, aura);
+        }
+
+        /// <summary>
+        /// Spreads this monster's tendrils over both flanks as seen from the stage
+        /// camera (the art hides the far half of the ring), and hashes everything
+        /// else from its <paramref name="key"/>.
+        /// </summary>
+        void Layout(int key)
+        {
+            var cam = Mathf.Atan2(_camZ, _camX);
+            // Odd counts put the extra tendril on one side, chosen per monster.
+            var plus = (_count + (Hash01(key, 43) < 0.5f ? 1 : 0)) / 2;
+            // Each side sways as a whole, so its tendrils keep their spacing.
+            var swayPlus = SwayAngle * Mathf.Sin(_phSway + Hash01(key, 44) * TwoPi);
+            var swayMinus = SwayAngle * Mathf.Sin(_phSway + Hash01(key, 45) * TwoPi);
+            for (var i = 0; i < _count; i++)
+            {
+                var onPlus = i < plus;
+                var side = onPlus ? 1f : -1f;
+                var n = onPlus ? plus : _count - plus;
+                var k = onPlus ? i : i - plus;
+                var salt = TendrilSalt + i * TendrilSaltStride;
+                var at = (k + 0.5f + ArcJitter * (2f * Hash01(key, salt) - 1f)) / n;
+                var ang = cam + side * (Mathf.Lerp(ArcFrom, ArcTo, at) + (onPlus ? swayPlus : swayMinus));
+                _tRx[i] = Mathf.Cos(ang);
+                _tRz[i] = Mathf.Sin(ang);
+
+                ref var t = ref _tendrils[i];
+                t.Root = Mathf.Lerp(0.94f, 1.06f, Hash01(key, salt + 1));
+                t.Length = Mathf.Lerp(0.85f, 1f, Hash01(key, salt + 2));
+                t.Width = Mathf.Lerp(0.85f, 1.1f, Hash01(key, salt + 3));
+                // Coil toward the camera: coiling away would carry the tip behind the art.
+                t.SwirlDir = -side;
+                t.PhaseLean = Hash01(key, salt + 4) * TwoPi;
+                t.PhaseSide = Hash01(key, salt + 5) * TwoPi;
+                t.PhaseTwitch = Hash01(key, salt + 6) * TwoPi;
+                t.PhasePulse = Hash01(key, salt + 7) * TwoPi;
+            }
         }
 
         /// <summary>Flat ring of void outside the ownership ring, with a patchy crimson outer edge.</summary>
-        void WritePool(int v, float fade, int aura)
+        void WritePool(int v, float fade, int aura, float offset)
         {
-            var breath = 1f - PoolBreath * (0.5f + 0.5f * Mathf.Sin(_phBreath + _offset));
+            var breath = 1f - PoolBreath * (0.5f + 0.5f * Mathf.Sin(_phBreath + offset));
             var dark = Mathf.Min(MaxAlpha, PoolAlpha * (aura < 0 ? BanePoolGain : 1f)) * breath * fade;
             var rimGain = aura > 0 ? BoonRimGain : aura < 0 ? BaneRimGain : 1f;
             var rimA = Mathf.Min(MaxAlpha, PoolRimAlpha * rimGain) * fade;
@@ -375,7 +462,7 @@ namespace WRLDZ.Presentation.ArInteraction
             Color32 outer = WithAlpha(rim, 0f);
 
             var y = _o.y + PoolLift * _s;
-            var drift = _flicker + _offset / TwoPi * PoolSegs;
+            var drift = _flicker + offset / TwoPi * PoolSegs;
             for (var i = 0; i < PoolSegs; i++)
             {
                 var cs = _poolCos[i] * _s;
@@ -404,14 +491,15 @@ namespace WRLDZ.Presentation.ArInteraction
             var rx = _tRx[ti];
             var rz = _tRz[ti];
 
-            var front = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(FrontCosFrom, FrontCosTo, rx * _camX + rz * _camZ));
-            var len = _length * sh.Length * t.Length * Mathf.Lerp(1f, FrontLength, front) * grow * _s;
-            var alpha = fade * Mathf.Lerp(1f, FrontAlpha, front);
+            // Over the art's centre the monster must read through; the flanks frame it at full length.
+            var centre = 1f - Ramp(CentreFrom, CentreTo, Mathf.Abs(rx * _camZ - rz * _camX) * sh.Root * t.Root);
+            var len = _length * sh.Length * t.Length * Mathf.Lerp(1f, CentreLength, centre) * grow * _s;
+            var alpha = fade * Mathf.Lerp(1f, CentreAlpha, centre);
             var ds = len / (Rows - 1);
             var root = sh.Root * t.Root * _s;
-            var phLean = _phLean[si] - t.PhaseLean - _offset;
-            var phSide = _phSide[si] - t.PhaseSide - _offset;
-            var tw = _phTwitch + t.PhaseTwitch + _offset;
+            var phLean = _phLean[si] - t.PhaseLean;
+            var phSide = _phSide[si] - t.PhaseSide;
+            var tw = _phTwitch + t.PhaseTwitch;
             var twitch = sh.Twitch * (0.65f * Mathf.Sin(tw) + 0.35f * Mathf.Sin(3f * tw + 1.3f));
 
             var p = new Vector3(_o.x + rx * root, _o.y, _o.z + rz * root);
@@ -442,7 +530,7 @@ namespace WRLDZ.Presentation.ArInteraction
             // A boon lights the tendrils with climbing pulses instead of a flat gain, so the cap never flattens them.
             var rimBase = RimAlpha * (aura < 0 ? BaneRimGain : 1f);
             var wide = t.Width * _s * (0.5f + 0.5f * grow);
-            var phPulse = _phPulse - t.PhasePulse - _offset;
+            var phPulse = _phPulse - t.PhasePulse;
             var across = new Vector3(-rz, 0f, rx);
 
             for (var j = 0; j < Rows; j++)
@@ -550,35 +638,21 @@ namespace WRLDZ.Presentation.ArInteraction
 
         // ── Build ───────────────────────────────────────────────────────────
 
+        /// <summary>Mixed in sRGB like the palette, then converted once for the Linear project.</summary>
         void BuildColours()
         {
             var accent = Env.Accent;
-            _core = Color.Lerp(Color.Lerp(Env.Sky, Env.Ground, CoreGroundShare), Color.black, CoreDarken);
-            _coreBane = Color.Lerp(_core, Color.black, BaneDarken);
-            _rim = accent;
-            _rimBoon = Color.Lerp(accent, Color.white, BoonRimWhite);
-            _rimBane = Color.Lerp(accent, Env.Ground, BaneRimDrain);
+            var core = Color.Lerp(Color.Lerp(Env.Sky, Env.Ground, CoreGroundShare), Color.black, CoreDarken);
+            _core = VertexColor(core);
+            _coreBane = VertexColor(Color.Lerp(core, Color.black, BaneDarken));
+            _rim = VertexColor(accent);
+            _rimBoon = VertexColor(Color.Lerp(accent, Color.white, BoonRimWhite));
+            _rimBane = VertexColor(Color.Lerp(accent, Env.Ground, BaneRimDrain));
         }
 
         void BuildTables()
         {
-            _tendrils = new Tendril[_count];
-            for (var i = 0; i < _count; i++)
-            {
-                _tendrils[i] = new Tendril
-                {
-                    Angle = (i + Mathf.Lerp(-0.22f, 0.22f, Hash01(i, 11))) / _count * TwoPi,
-                    Root = Mathf.Lerp(0.94f, 1.06f, Hash01(i, 13)),
-                    Length = Mathf.Lerp(0.85f, 1f, Hash01(i, 17)),
-                    Width = Mathf.Lerp(0.85f, 1.1f, Hash01(i, 19)),
-                    SwirlDir = (i & 1) == 0 ? 1f : -1f,
-                    PhaseLean = Hash01(i, 23) * TwoPi,
-                    PhaseSide = Hash01(i, 29) * TwoPi,
-                    PhaseTwitch = Hash01(i, 31) * TwoPi,
-                    PhasePulse = Hash01(i, 37) * TwoPi
-                };
-            }
-
+            _tendrils = new Tendril[MaxTendrils];
             _halfWidth = new float[Rows];
             _coreAlong = new float[Rows];
             _rimAlong = new float[Rows];
@@ -607,9 +681,11 @@ namespace WRLDZ.Presentation.ArInteraction
             }
 
             _order = new int[MaxAnchors];
-            _key = new float[MaxAnchors];
+            _dist = new float[MaxAnchors];
+            _anchorKey = new int[MaxAnchors];
+            _anchorRise = new float[MaxAnchors];
             _tOrder = new int[MaxTendrils];
-            _tKey = new float[MaxTendrils];
+            _tFront = new float[MaxTendrils];
             _tRx = new float[MaxTendrils];
             _tRz = new float[MaxTendrils];
         }

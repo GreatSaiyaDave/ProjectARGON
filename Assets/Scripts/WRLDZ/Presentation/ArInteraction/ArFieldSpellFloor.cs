@@ -446,7 +446,10 @@ namespace WRLDZ.Presentation.ArInteraction
             // The local duelist stands one stand-off behind their S/T row (−Z end).
             var playerZ = -(ArPlaymatLayout.LiveSpellTrapRowFromMid + ArPlaymatLayout.LiveStandOff);
             var nearZ = Mathf.Min(playerZ + ArFieldSignature.StreetCameraClear * Mathf.Max(scale, 0.5f), _halfZ * 0.5f);
-            return new FieldStreet(new Vector3(_centerX, halfH, 0f), new Vector3(_halfW, halfH, _halfZ), scale, nearZ);
+            var cam = ArStageView.FindCamera(transform);
+            var camLocal = cam != null ? transform.InverseTransformPoint(cam.transform.position) : Vector3.zero;
+            return new FieldStreet(new Vector3(_centerX, halfH, 0f), new Vector3(_halfW, halfH, _halfZ), scale, nearZ,
+                camLocal, cam != null);
         }
 
         void DestroySignature()

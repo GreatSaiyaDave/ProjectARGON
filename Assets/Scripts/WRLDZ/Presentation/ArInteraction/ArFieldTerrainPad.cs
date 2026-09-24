@@ -98,22 +98,51 @@ namespace WRLDZ.Presentation.ArInteraction
             into.Clear();
             if (floor == null) return;
             var fs = Mathf.Max(1e-4f, floor.lossyScale.x);
+            var cam = ArStageView.FindCamera(floor);
+            var camLocal = cam != null ? floor.InverseTransformPoint(cam.transform.position) : Vector3.zero;
             foreach (var p in Live)
             {
                 if (p == null || p._host == null || p._ramp <= 0.001f) continue;
+                var host = p._host;
                 var world = p.GroundWorld(out _);
                 var local = floor.InverseTransformPoint(world);
                 local.y = 0f;
-                into.Add(new FieldAnchor
+                // Resting scale: decorations must not swell with the hit punch.
+                var parentScale = host.transform.parent != null ? host.transform.parent.lossyScale.x : 1f;
+                var scale = parentScale * host.RestingLocalScale.x / fs;
+                // A flip still animating keeps the card flat: stay in Set clearance until it stands.
+                var faceDown = !host.FaceUp || host.FlipAnimating;
+                var a = new FieldAnchor
                 {
                     Position = local,
                     Presence = p._ramp * ArFieldSpellFloor.PresenceAt(world),
                     Aura = p.AuraSign(),
-                    PlayerSide = p._host.PlayerSide,
-                    FaceDown = !p._host.FaceUp,
+                    PlayerSide = host.PlayerSide,
+                    FaceDown = faceDown,
                     Key = p.GetInstanceID(),
-                    Scale = p._host.transform.lossyScale.x / fs
-                });
+                    Scale = scale,
+                    ArtHalf = CardArtFocus.MonsterArtworkScale.x * 0.5f * scale
+                };
+                if (!faceDown)
+                {
+                    // The art quad is lifted half its height along the holo's local up;
+                    // rolled into Defense, that lift points sideways.
+                    var artWorld = host.transform.TransformPoint(new Vector3(0f, CardArtFocus.MonsterArtLift, 0f));
+                    var art = floor.InverseTransformPoint(artWorld) - local;
+                    a.ArtSideways = art.y < 0.5f * CardArtFocus.MonsterArtLift * scale;
+                    a.FrontCoverHeight = (a.ArtSideways
+                        ? ArFieldSignature.SidewaysCoverHeight
+                        : ArFieldSignature.UprightCoverHeight) * scale;
+                    if (cam != null)
+                    {
+                        var toCam = new Vector3(camLocal.x - local.x, 0f, camLocal.z - local.z);
+                        var len = toCam.magnitude;
+                        if (len > 1e-4f)
+                            a.ArtLateral = art.x * (-toCam.z / len) + art.z * (toCam.x / len);
+                    }
+                }
+
+                into.Add(a);
             }
         }
 

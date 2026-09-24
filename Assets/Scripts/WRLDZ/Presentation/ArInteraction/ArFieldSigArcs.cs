@@ -4,31 +4,35 @@ using UnityEngine;
 namespace WRLDZ.Presentation.ArInteraction
 {
     /// <summary>
-    /// Mystic Plasma Zone's storm. An unseen storm eye turns slowly high over
-    /// the middle of the street, like the vortex in the illustration. Every
-    /// 0.6–1.8 s (at SigScale 1) a bolt of plasma lightning cracks out of it and
-    /// forks down and outward, or skitters between two points under the ceiling.
-    /// Now and then a second bolt follows a beat later, never more than two at
-    /// once. Each channel is jagged by midpoint displacement and may throw one or
-    /// two short branches that fade out to wisps. A bolt races out from its source
-    /// in 30 ms, flickers with two or three return strokes over a dim afterglow,
-    /// and is gone within a quarter second. A violet glow in the accent carries a
-    /// thin near-white core. The cloud around the source lights up in one soft
-    /// flash per bolt, never more than three a second (it is the only piece with
-    /// any area, so it is kept gentle for photosensitive players).
+    /// Mystic Plasma Zone's storm. A faint three-armed storm eye turns slowly
+    /// high over the middle of the street, like the vortex in the illustration.
+    /// Every 0.6–1.8 s (at SigScale 1) a bolt of plasma lightning cracks out of it
+    /// and forks down and outward, or skitters between two points under the
+    /// ceiling. Now and then a second bolt follows a third of a second later.
+    /// Each channel is jagged by midpoint displacement and may throw one or two
+    /// short branches that fade out to wisps. A bolt races out from its source in
+    /// 30 ms and is gone within a quarter second: a violet glow in the accent
+    /// swells once and fades to a dim afterglow, while its thin near-white core
+    /// flickers with two or three return strokes. The cloud round the source
+    /// lights up in one soft flash per bolt, and the eye brightens with it.
+    /// <para>Kept gentle for photosensitive players: everything with any area
+    /// (glow, cloud flash, eye) rises once and then only fades, and bolts start at
+    /// least <see cref="FlashSpacing"/> apart, so there are never more than three
+    /// flashes in any second. Only the core, at most 3.5 cm wide, flickers.</para>
     /// <para>One look (variant 0). Any other variant draws the same storm.
     /// SigScale sets how often bolts strike, how far they reach, how thick they
     /// are and how often they branch and triple-stroke.</para>
-    /// Everything stays inside the street box and above head-clear height.
-    /// Channel points keep to a band whose floor is the clear height plus the
-    /// widest glow, and every vertex is clamped to the box as a guard, so no
-    /// bolt ever reaches down into the aisle. The renderer is off between
-    /// bolts. One dynamic mesh of camera-facing ribbons and flash quads on the
-    /// soft dot: one draw call, 416 vertices. Scope: street.
+    /// Everything stays inside the street box, above head-clear height and at
+    /// z ≥ NearZ, clear of the local camera. Channel points keep to a band and a
+    /// depth range inset by the widest glow, and every vertex is clamped to the
+    /// box and NearZ as a guard, so no bolt ever reaches down into the aisle or
+    /// up to the lens. One dynamic mesh of camera-facing ribbons and flash quads
+    /// on the soft dot: one draw call, 304 vertices. Scope: street.
     /// </summary>
     public sealed class ArFieldSigArcs : ArFieldSignature
     {
-        const int MaxBolts = 2;
+        /// <summary>One bolt at a time: bolts start <see cref="FlashSpacing"/> apart and live at most <see cref="LifeMax"/>.</summary>
+        const int MaxBolts = 1;
         /// <summary>Main channel segments: a power of two for midpoint displacement.</summary>
         const int MainSegs = 32;
         const int MainPts = MainSegs + 1;
@@ -40,12 +44,16 @@ namespace WRLDZ.Presentation.ArInteraction
         const int BoltPts = MainPts + MaxBranches * BranchPts;
         /// <summary>Left and right vertex per channel point, in each of the glow and core ribbons.</summary>
         const int RibbonVerts = BoltPts * 2;
+        const int EyeArms = 3;
+        const int ArmPts = 16;
+        const int EyeVerts = EyeArms * ArmPts * 2;
 
-        // Vertex layout = draw order: flash quads behind, then every glow ribbon, then every core.
-        const int FlashBase = 0;
+        // Vertex layout = draw order: the eye, flash quads, then every glow ribbon, then every core.
+        const int EyeBase = 0;
+        const int FlashBase = EyeBase + EyeVerts;
         const int GlowBase = FlashBase + MaxBolts * 4;
         const int CoreBase = GlowBase + MaxBolts * RibbonVerts;
-        /// <summary>2 × 4 + 2 × 2 × 102 = 416 ≤ <see cref="ArFieldSignature.MaxVertices"/>.</summary>
+        /// <summary>96 + 4 + 2 × 102 = 304 ≤ <see cref="ArFieldSignature.MaxVertices"/>.</summary>
         const int TotalVerts = CoreBase + MaxBolts * RibbonVerts;
 
         const float TwoPi = Mathf.PI * 2f;
@@ -58,10 +66,15 @@ namespace WRLDZ.Presentation.ArInteraction
         const float IntervalMax = 1.8f;
         const float FirstWaitMin = 0.25f;
         const float FirstWaitMax = 0.8f;
+        /// <summary>
+        /// Minimum time between bolt starts, whatever the schedule: at most three
+        /// flashes in any second. Longer than <see cref="LifeMax"/>, so bolts never overlap.
+        /// </summary>
+        const float FlashSpacing = 0.34f;
         /// <summary>Chance a bolt is followed by a second one a beat later.</summary>
         const float PairChance = 0.3f;
-        const float PairGapMin = 0.05f;
-        const float PairGapMax = 0.14f;
+        const float PairGapMin = FlashSpacing;
+        const float PairGapMax = 0.46f;
         const float LifeMin = 0.12f;
         const float LifeMax = 0.25f;
         /// <summary>The channel races from its source to its tip in this long, then the first stroke fires.</summary>
@@ -70,9 +83,11 @@ namespace WRLDZ.Presentation.ArInteraction
         const float LeaderGlow = 0.55f;
         /// <summary>A branch races out in this share of the leader time once the main leader passes its fork.</summary>
         const float BranchLead = 0.6f;
-        /// <summary>E-folding time of each return stroke's flare.</summary>
+        /// <summary>E-folding time of each return stroke's flare in the core.</summary>
         const float StrokeDecay = 0.035f;
-        /// <summary>Dim afterglow of the channel between strokes (fades over the bolt's life).</summary>
+        /// <summary>E-folding time of the glow's single swell as the leader lands.</summary>
+        const float GlowDecay = 0.07f;
+        /// <summary>Dim afterglow of the channel (fades over the bolt's life).</summary>
         const float Residual = 0.3f;
         const float TailFade = 0.04f;
 
@@ -97,7 +112,7 @@ namespace WRLDZ.Presentation.ArInteraction
         const float CrawlReachMax = 3f;
         /// <summary>Crawler ends stay above this share of the band.</summary>
         const float CrawlFloor = 0.5f;
-        /// <summary>Crawler centres, as shares of the street half extents (not over the duelists' heads).</summary>
+        /// <summary>Crawler centres, as shares of the free half extents (not over the duelists' heads).</summary>
         const float CrawlSpreadX = 0.7f;
         const float CrawlSpreadZ = 0.55f;
         /// <summary>Channel points stay inside this share of the street half extents.</summary>
@@ -125,7 +140,7 @@ namespace WRLDZ.Presentation.ArInteraction
         const float MinWidthScale = 0.3f;
         const float GlowHalf = 0.07f;
         const float CoreHalf = 0.014f;
-        /// <summary>Glow widens by up to this share at a stroke's peak.</summary>
+        /// <summary>Glow widens by up to this share as the leader lands.</summary>
         const float GlowSwell = 0.25f;
         /// <summary>Core width between strokes, as a share of its peak width.</summary>
         const float CoreRest = 0.75f;
@@ -145,8 +160,6 @@ namespace WRLDZ.Presentation.ArInteraction
         const float FlashAlpha = 0.25f;
         /// <summary>The cloud flash rises with the leader, then fades over this e-folding time (once per bolt).</summary>
         const float FlashDecay = 0.06f;
-        /// <summary>Minimum seconds between cloud flashes: at most three in any second.</summary>
-        const float FlashSpacing = 0.34f;
         const float FlashWhite = 0.12f;
         /// <summary>Crawlers light the cloud less than strikes out of the eye.</summary>
         const float CrawlFlash = 0.6f;
@@ -154,14 +167,29 @@ namespace WRLDZ.Presentation.ArInteraction
         const float AcrossMin = 0.1f;
         const float BoundsPad = 0.25f;
 
+        // Storm eye: log-spiral arms in the view plane.
+        /// <summary>Arm tip radius across the view (× HoloScale × size).</summary>
+        const float EyeRadius = 0.28f;
+        /// <summary>Eye height as a share of its width: a level vortex seen from below at a slant.</summary>
+        const float EyeTilt = 0.45f;
+        /// <summary>Radians each arm winds from its inner end to its tip, trailing the spin.</summary>
+        const float ArmWind = 3.2f;
+        /// <summary>Arms start at e^−ArmTighten (about 0.17) of the tip radius.</summary>
+        const float ArmTighten = 1.8f;
+        const float EyeHalf = 0.035f;
+        /// <summary>Inner end width as a share of the tip width.</summary>
+        const float ArmTaper = 0.5f;
+        /// <summary>Faint but still legible over daylight passthrough.</summary>
+        const float EyeAlpha = 0.15f;
+        /// <summary>Extra eye alpha at the peak of a strike's cloud flash.</summary>
+        const float EyeFlare = 0.2f;
+
         /// <summary>One flash. Its channel lives in <see cref="_pts"/> at slot × <see cref="BoltPts"/>.</summary>
         struct Bolt
         {
             public bool Alive;
             /// <summary>Cracks out of the storm eye (flash at its source); otherwise crawls (flash mid-channel).</summary>
             public bool Strike;
-            /// <summary>Lights the cloud (false when another flash started under <see cref="FlashSpacing"/> ago).</summary>
-            public bool Flash;
             public float Age;
             public float Life;
             /// <summary>× the kit's ribbon widths.</summary>
@@ -176,6 +204,17 @@ namespace WRLDZ.Presentation.ArInteraction
             /// <summary>Main-channel point each branch leaves from.</summary>
             public int Fork0;
             public int Fork1;
+        }
+
+        /// <summary>One bolt's ribbon widths and brightness this frame.</summary>
+        struct Pulse
+        {
+            public float GlowHalf;
+            public float CoreHalf;
+            /// <summary>Glow brightness: rises with the leader, then only fades.</summary>
+            public float Glow;
+            /// <summary>Core brightness: flickers with the return strokes.</summary>
+            public float Core;
         }
 
         Mesh _mesh;
@@ -194,6 +233,7 @@ namespace WRLDZ.Presentation.ArInteraction
         float _branchTwo;
         float _tripleStroke;
 
+        // Vertex colours (converted from the sRGB palette once).
         Color _glow;
         Color _branchGlow;
         Color _core;
@@ -201,8 +241,10 @@ namespace WRLDZ.Presentation.ArInteraction
 
         float _wait;
         bool _pairPending;
-        float _sinceFlash = FlashSpacing;
+        /// <summary>Seconds since the last bolt started.</summary>
+        float _sinceStart = FlashSpacing;
         float _eyePhase;
+        Vector3 _viewer;
 
         // This frame's street, from Frame().
         float _h;
@@ -216,6 +258,15 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary>Band the channel centre lines keep to: the guard band minus the widest glow.</summary>
         float _yLow;
         float _yHigh;
+        float _xLo;
+        float _xHi;
+        /// <summary>Depth range the channel centre lines keep to: NearZ plus the widest glow up to the inset far wall.</summary>
+        float _zNear;
+        float _zFar;
+        /// <summary>Hard near limit for every vertex: the box's near face or NearZ, whichever is farther.</summary>
+        float _zGuard;
+        /// <summary>Centre of the eye's orbit along the street, pushed forward when NearZ cuts into it.</summary>
+        float _eyeZ;
 
         protected override void Build()
         {
@@ -228,10 +279,10 @@ namespace WRLDZ.Presentation.ArInteraction
             _tripleStroke = 0.15f + 0.3f * sig;
 
             var accent = Env.Accent;
-            _glow = Color.Lerp(accent, Env.Sky, GlowSky);
-            _branchGlow = Color.Lerp(accent, Env.Sky, BranchSky);
-            _core = Color.Lerp(accent, Color.white, CoreWhite);
-            _flash = Color.Lerp(accent, Color.white, FlashWhite);
+            _glow = VertexColor(Color.Lerp(accent, Env.Sky, GlowSky));
+            _branchGlow = VertexColor(Color.Lerp(accent, Env.Sky, BranchSky));
+            _core = VertexColor(Color.Lerp(accent, Color.white, CoreWhite));
+            _flash = VertexColor(Color.Lerp(accent, Color.white, FlashWhite));
 
             _bolts = new Bolt[MaxBolts];
             _pts = new Vector3[MaxBolts * BoltPts];
@@ -252,7 +303,7 @@ namespace WRLDZ.Presentation.ArInteraction
         public override void Tick(float level, in FieldStreet street, IReadOnlyList<FieldAnchor> anchors, float dt)
         {
             if (_mr == null) return;
-            if (level <= MinLevel || street.HoloScale <= MinHolo)
+            if (level <= MinLevel || street.HoloScale <= MinHolo || !Frame(street))
             {
                 Hide();
                 return;
@@ -260,9 +311,8 @@ namespace WRLDZ.Presentation.ArInteraction
 
             level = Mathf.Min(level, 1f);
             dt = Mathf.Max(0f, dt);
-            Frame(street);
             _eyePhase = Mathf.Repeat(_eyePhase + EyeSpin * dt, TwoPi);
-            _sinceFlash += dt;
+            _sinceStart += dt;
 
             var live = 0;
             for (var i = 0; i < MaxBolts; i++)
@@ -275,25 +325,26 @@ namespace WRLDZ.Presentation.ArInteraction
             }
 
             _wait -= dt;
-            if (_wait <= 0f && live < MaxBolts && Spawn(Mathf.Min(-_wait, dt)))
+            if (_wait <= 0f && _sinceStart >= FlashSpacing && live < MaxBolts)
             {
-                live++;
-                Schedule();
+                // Back-dated by the overshoot, but never nearer than FlashSpacing to the last start.
+                var age = Mathf.Min(Mathf.Min(-_wait, dt), _sinceStart - FlashSpacing);
+                if (Spawn(age))
+                {
+                    _sinceStart = age;
+                    Schedule();
+                }
             }
 
-            if (live == 0)
-            {
-                if (_mr.enabled) _mr.enabled = false;
-                return;
-            }
-
-            var viewer = Viewer(street);
+            _viewer = Viewer(street);
+            var eyeFlare = 0f;
             for (var i = 0; i < MaxBolts; i++)
             {
-                if (_bolts[i].Alive) WriteBolt(i, level, viewer);
+                if (_bolts[i].Alive) eyeFlare = Mathf.Max(eyeFlare, WriteBolt(i, level));
                 else Park(i);
             }
 
+            WriteEye(level, eyeFlare);
             _mesh.vertices = _verts;
             _mesh.colors32 = _cols;
             // Vertices move every frame: the street box keeps the renderer from being culled.
@@ -308,8 +359,8 @@ namespace WRLDZ.Presentation.ArInteraction
             if (_mr.enabled) _mr.enabled = false;
         }
 
-        /// <summary>Street box and the height band for this frame.</summary>
-        void Frame(in FieldStreet street)
+        /// <summary>Street box, height band and free depth for this frame. False when no depth is left clear of the camera.</summary>
+        bool Frame(in FieldStreet street)
         {
             _h = street.HoloScale;
             _w = Mathf.Max(MinWidthScale, _h) * _size;
@@ -319,11 +370,20 @@ namespace WRLDZ.Presentation.ArInteraction
             _hz = Mathf.Max(0f, street.Half.z);
             _yFloor = (StreetClearHeight + GuardMargin) * _h;
             _yCeil = Mathf.Max(_yFloor, street.Center.y + street.Half.y - GuardMargin * _h);
-            // A camera-facing ribbon reaches at most its half width above or below its centre line.
+            // A camera-facing ribbon reaches at most its half width from its centre line, in any direction.
             var glowMax = GlowHalf * _w * BoltWidthMax * (1f + GlowSwell);
             _yLow = _yFloor + glowMax;
             _yHigh = _yCeil - glowMax;
             if (_yHigh < _yLow) _yLow = _yHigh = (_yFloor + _yCeil) * 0.5f;
+            _xLo = _cx - _hx * BoxInset;
+            _xHi = _cx + _hx * BoxInset;
+            // The local camera is at the −Z end, often inside the box: nothing is drawn nearer than NearZ.
+            _zGuard = Mathf.Max(_cz - _hz, street.NearZ);
+            _zNear = Mathf.Max(_cz - _hz * BoxInset, street.NearZ + glowMax);
+            _zFar = _cz + _hz * BoxInset;
+            var orbit = (EyeOrbit + EyeJitter) * _h;
+            _eyeZ = Mathf.Clamp(_cz, _zNear + orbit, Mathf.Max(_zNear + orbit, _zFar - orbit));
+            return _zNear < _zFar;
         }
 
         void Schedule()
@@ -351,11 +411,11 @@ namespace WRLDZ.Presentation.ArInteraction
         Vector3 StormEye() => new Vector3(
             _cx + Mathf.Cos(_eyePhase) * EyeOrbit * _h,
             Mathf.Lerp(_yLow, _yHigh, EyeRise),
-            _cz + Mathf.Sin(_eyePhase) * EyeOrbit * _h);
+            _eyeZ + Mathf.Sin(_eyePhase) * EyeOrbit * _h);
 
         // ── Spawn ───────────────────────────────────────────────────────────
 
-        /// <summary>New bolt in a free slot, <paramref name="age"/> seconds old. False when both are busy.</summary>
+        /// <summary>New bolt in a free slot, <paramref name="age"/> seconds old. False when none is free.</summary>
         bool Spawn(float age)
         {
             var slot = -1;
@@ -384,14 +444,15 @@ namespace WRLDZ.Presentation.ArInteraction
             }
             else
             {
-                // Spider lightning crawling under the ceiling.
+                // Spider lightning crawling under the ceiling, round the middle of the free depth.
                 var mx = _cx + R(-1f, 1f) * CrawlSpreadX * _hx;
-                var mz = _cz + R(-1f, 1f) * CrawlSpreadZ * _hz;
+                var mz = (_zNear + _zFar) * 0.5f + R(-1f, 1f) * CrawlSpreadZ * (_zFar - _zNear) * 0.5f;
                 var ang = R(0f, TwoPi);
                 var cos = Mathf.Cos(ang);
                 var sin = Mathf.Sin(ang);
-                // Symmetric about the centre, so fitting one end fits both.
-                var half = Fit(mx, mz, cos, sin, R(CrawlReachMin, CrawlReachMax) * _reach * _h * 0.5f);
+                // The free depth is not centred on the street, so each end is fitted on its own.
+                var want = R(CrawlReachMin, CrawlReachMax) * _reach * _h * 0.5f;
+                var half = Mathf.Min(Fit(mx, mz, cos, sin, want), Fit(mx, mz, -cos, -sin, want));
                 var dx = cos * half;
                 var dz = sin * half;
                 from = new Vector3(mx - dx, Mathf.Lerp(_yLow, _yHigh, R(CrawlFloor, 1f)), mz - dz);
@@ -432,8 +493,6 @@ namespace WRLDZ.Presentation.ArInteraction
 
             b.Alive = true;
             b.Strike = strike;
-            b.Flash = _sinceFlash >= FlashSpacing;
-            if (b.Flash) _sinceFlash = 0f;
             b.Age = Mathf.Max(0f, age);
             b.Life = R(LifeMin, LifeMax);
             b.Width = R(BoltWidthMin, BoltWidthMax);
@@ -477,12 +536,13 @@ namespace WRLDZ.Presentation.ArInteraction
 
         /// <summary>
         /// Longest reach up to <paramref name="reach"/> from (x, z) along the level heading
-        /// (cos, sin) that stays inside the inset street box, so bolt ends never squash onto a wall.
+        /// (cos, sin) that stays inside the channel box (<see cref="Keep"/>), so bolt ends
+        /// never squash onto a wall or the NearZ plane.
         /// </summary>
         float Fit(float x, float z, float cos, float sin, float reach)
         {
-            var roomX = _hx * BoxInset - Mathf.Abs(x - _cx);
-            var roomZ = _hz * BoxInset - Mathf.Abs(z - _cz);
+            var roomX = cos < 0f ? x - _xLo : _xHi - x;
+            var roomZ = sin < 0f ? z - _zNear : _zFar - z;
             var dx = Mathf.Abs(cos);
             var dz = Mathf.Abs(sin);
             if (dx > 1e-5f && dx * reach > roomX) reach = Mathf.Max(0f, roomX) / dx;
@@ -490,27 +550,27 @@ namespace WRLDZ.Presentation.ArInteraction
             return reach;
         }
 
-        /// <summary>Channel centre line: inside the inset street box and the band.</summary>
+        /// <summary>Channel centre line: inside the inset street box, the band and the free depth.</summary>
         Vector3 Keep(Vector3 p)
         {
-            p.x = Mathf.Clamp(p.x, _cx - _hx * BoxInset, _cx + _hx * BoxInset);
+            p.x = Mathf.Clamp(p.x, _xLo, _xHi);
             p.y = Mathf.Clamp(p.y, _yLow, _yHigh);
-            p.z = Mathf.Clamp(p.z, _cz - _hz * BoxInset, _cz + _hz * BoxInset);
+            p.z = Mathf.Clamp(p.z, _zNear, _zFar);
             return p;
         }
 
-        /// <summary>Hard guard on every drawn vertex: inside the street box, above clear height.</summary>
+        /// <summary>Hard guard on every drawn vertex: inside the street box, above clear height, at z ≥ NearZ.</summary>
         Vector3 Contain(Vector3 p)
         {
             p.x = Mathf.Clamp(p.x, _cx - _hx, _cx + _hx);
             p.y = Mathf.Clamp(p.y, _yFloor, _yCeil);
-            p.z = Mathf.Clamp(p.z, _cz - _hz, _cz + _hz);
+            p.z = Mathf.Clamp(p.z, _zGuard, _cz + _hz);
             return p;
         }
 
         // ── Write ───────────────────────────────────────────────────────────
 
-        /// <summary>Stroke flare 0…1: an instant peak per return stroke, decaying.</summary>
+        /// <summary>Core flare 0…1: an instant peak per return stroke, decaying.</summary>
         static float Stroke(in Bolt b)
         {
             var t = b.Age;
@@ -520,20 +580,26 @@ namespace WRLDZ.Presentation.ArInteraction
             return s;
         }
 
-        void WriteBolt(int slot, float level, Vector3 viewer)
+        /// <summary>Writes one live bolt. Returns its cloud flash (0…1) when it left the eye, else 0.</summary>
+        float WriteBolt(int slot, float level)
         {
             var b = _bolts[slot];
             var p0 = slot * BoltPts;
-            var stroke = Stroke(b);
+            var landed = b.Age >= LeaderSeconds;
+            var since = b.Age - LeaderSeconds;
             var tail = Mathf.Clamp01((b.Life - b.Age) / TailFade);
-            var channel = b.Age < LeaderSeconds ? LeaderGlow : Mathf.Max(stroke, Residual * (1f - b.Age / b.Life));
-            var bright = channel * tail * level;
-            var glowHalf = GlowHalf * _w * b.Width * (1f + GlowSwell * stroke);
-            var coreHalf = CoreHalf * _w * b.Width * (CoreRest + (1f - CoreRest) * stroke);
+            var afterglow = Residual * (1f - b.Age / b.Life);
+            // Everything with area swells once as the leader lands; only the thin core follows the strokes.
+            var swell = landed ? Mathf.Exp(-since / GlowDecay) : 0f;
+            var stroke = Stroke(b);
+            Pulse pulse;
+            pulse.Glow = (landed ? Mathf.Max(swell, afterglow) : LeaderGlow) * tail * level;
+            pulse.Core = (landed ? Mathf.Max(stroke, afterglow) : LeaderGlow) * tail * level;
+            pulse.GlowHalf = GlowHalf * _w * b.Width * (1f + GlowSwell * swell);
+            pulse.CoreHalf = CoreHalf * _w * b.Width * (CoreRest + (1f - CoreRest) * stroke);
             var lead = Mathf.Clamp01(b.Age / LeaderSeconds);
 
-            WriteRibbon(slot, 0, MainPts, 1f, TipWidth, 1f, TipAlpha, lead, glowHalf, coreHalf, _glow, bright,
-                viewer);
+            WriteRibbon(slot, 0, MainPts, 1f, TipWidth, 1f, TipAlpha, lead, pulse, _glow);
             for (var k = 0; k < MaxBranches; k++)
             {
                 var local = MainPts + k * BranchPts;
@@ -547,13 +613,13 @@ namespace WRLDZ.Presentation.ArInteraction
                 var sf = fork / (float)MainSegs;
                 var wf = Mathf.Lerp(1f, TipWidth, sf) * BranchWidth;
                 var reveal = Mathf.Clamp01((b.Age - LeaderSeconds * sf) / (LeaderSeconds * BranchLead));
-                WriteRibbon(slot, local, BranchPts, wf, wf * TipWidth, BranchAlpha, 0f, reveal, glowHalf, coreHalf,
-                    _branchGlow, bright, viewer);
+                WriteRibbon(slot, local, BranchPts, wf, wf * TipWidth, BranchAlpha, 0f, reveal, pulse, _branchGlow);
             }
 
-            var cloud = b.Age < LeaderSeconds ? b.Age / LeaderSeconds : Mathf.Exp(-(b.Age - LeaderSeconds) / FlashDecay);
-            var flash = b.Flash ? FlashAlpha * cloud * tail * level * (b.Strike ? 1f : CrawlFlash) : 0f;
-            WriteFlash(slot, b.Strike ? _pts[p0] : _pts[p0 + MainSegs / 2], flash, viewer);
+            var cloud = (landed ? Mathf.Exp(-since / FlashDecay) : b.Age / LeaderSeconds) * tail;
+            var flash = FlashAlpha * cloud * level * (b.Strike ? 1f : CrawlFlash);
+            WriteFlash(slot, b.Strike ? _pts[p0] : _pts[p0 + MainSegs / 2], flash);
+            return b.Strike ? cloud : 0f;
         }
 
         /// <summary>
@@ -562,7 +628,7 @@ namespace WRLDZ.Presentation.ArInteraction
         /// Width and alpha run from the w0 / a0 end to the w1 / a1 end.
         /// </summary>
         void WriteRibbon(int slot, int local, int n, float w0, float w1, float a0, float a1, float reveal,
-            float glowHalf, float coreHalf, Color glowCol, float bright, Vector3 viewer)
+            in Pulse pulse, Color glowCol)
         {
             var pt = slot * BoltPts + local;
             var g = GlowBase + slot * RibbonVerts + local * 2;
@@ -574,7 +640,7 @@ namespace WRLDZ.Presentation.ArInteraction
             {
                 var p = _pts[pt + j];
                 var after = j < segs ? Unit(_pts[pt + j + 1] - p) : Vector3.zero;
-                var view = Unit(viewer - p);
+                var view = Unit(_viewer - p);
                 // Each neighbouring segment votes for a side, weighted by how far it is from
                 // end-on, so a segment pointing at the camera cannot twist the ribbon.
                 var x = Side(before, view, across) + Side(after, view, across);
@@ -585,16 +651,16 @@ namespace WRLDZ.Presentation.ArInteraction
                 var s = j / (float)segs;
                 var shown = Mathf.Clamp01(reveal * n - j);
                 var w = Mathf.Lerp(w0, w1, s);
-                var a = Mathf.Lerp(a0, a1, s) * shown * bright;
-                var gh = across * (glowHalf * w);
-                var ch = across * (coreHalf * w);
+                var a = Mathf.Lerp(a0, a1, s) * shown;
+                var gh = across * (pulse.GlowHalf * w);
+                var ch = across * (pulse.CoreHalf * w);
                 var o = j * 2;
                 _verts[g + o] = Contain(p - gh);
                 _verts[g + o + 1] = Contain(p + gh);
                 _verts[c + o] = Contain(p - ch);
                 _verts[c + o + 1] = Contain(p + ch);
-                Color32 gc = WithAlpha(glowCol, GlowAlpha * a);
-                Color32 cc = WithAlpha(_core, CoreAlpha * a);
+                Color32 gc = WithAlpha(glowCol, GlowAlpha * pulse.Glow * a);
+                Color32 cc = WithAlpha(_core, CoreAlpha * pulse.Core * a);
                 _cols[g + o] = gc;
                 _cols[g + o + 1] = gc;
                 _cols[c + o] = cc;
@@ -616,31 +682,50 @@ namespace WRLDZ.Presentation.ArInteraction
             return Vector3.Dot(c, prev) < 0f ? -c : c;
         }
 
-        /// <summary>
-        /// Soft ellipse of light, wide along the ceiling. Its long axis is kept
-        /// level, so it reaches at most its short radius above or below its centre.
-        /// </summary>
-        void WriteFlash(int slot, Vector3 at, float alpha, Vector3 viewer)
+        /// <summary>Level right and matching up across the view at <paramref name="at"/>.</summary>
+        void Facing(Vector3 at, out Vector3 right, out Vector3 up)
         {
-            var rx = FlashRadiusX * _h * _size;
-            var ry = FlashRadiusY * _h * _size;
-            var view = viewer - at;
-            var right = new Vector3(view.z, 0f, -view.x);
+            var view = _viewer - at;
+            right = new Vector3(view.z, 0f, -view.x);
             var rm = right.magnitude;
-            var vm = view.magnitude;
-            Vector3 up;
             if (rm > 1e-5f)
             {
                 right /= rm;
-                up = Vector3.Cross(view / vm, right);
+                up = Vector3.Cross(view / view.magnitude, right);
             }
             else
             {
                 right = Vector3.right;
                 up = Vector3.forward;
             }
+        }
 
-            at.y = Mathf.Clamp(at.y, _yFloor + ry, Mathf.Max(_yFloor + ry, _yCeil - ry));
+        /// <summary>
+        /// Moves the centre of a camera-facing patch (half extents <paramref name="rx"/>
+        /// along right, <paramref name="ry"/> along up) so all of it fits the guard box
+        /// and NearZ, instead of being squashed by <see cref="Contain"/>.
+        /// </summary>
+        Vector3 Settle(Vector3 at, Vector3 right, Vector3 up, float rx, float ry)
+        {
+            var ex = rx * Mathf.Abs(right.x) + ry * Mathf.Abs(up.x);
+            var ey = ry * Mathf.Abs(up.y);
+            var ez = rx * Mathf.Abs(right.z) + ry * Mathf.Abs(up.z);
+            at.x = Mathf.Clamp(at.x, _cx - _hx + ex, Mathf.Max(_cx - _hx + ex, _cx + _hx - ex));
+            at.y = Mathf.Clamp(at.y, _yFloor + ey, Mathf.Max(_yFloor + ey, _yCeil - ey));
+            at.z = Mathf.Clamp(at.z, _zGuard + ez, Mathf.Max(_zGuard + ez, _cz + _hz - ez));
+            return at;
+        }
+
+        /// <summary>
+        /// Soft ellipse of light, wide along the ceiling. Its long axis is kept
+        /// level, so it reaches at most its short radius above or below its centre.
+        /// </summary>
+        void WriteFlash(int slot, Vector3 at, float alpha)
+        {
+            var rx = FlashRadiusX * _h * _size;
+            var ry = FlashRadiusY * _h * _size;
+            Facing(at, out var right, out var up);
+            at = Settle(at, right, up, rx, ry);
             var r = right * rx;
             var u = up * ry;
             var v = FlashBase + slot * 4;
@@ -655,10 +740,50 @@ namespace WRLDZ.Presentation.ArInteraction
             _cols[v + 3] = col;
         }
 
-        /// <summary>Zero-area, fully transparent vertices for a free slot, parked in the band.</summary>
+        /// <summary>
+        /// The storm eye bolts leave from: three log-spiral arms in the view plane,
+        /// squashed like a level vortex seen from below and turning with the eye.
+        /// Faint; it brightens with the cloud flash when a strike leaves it.
+        /// </summary>
+        void WriteEye(float level, float flare)
+        {
+            var at = StormEye();
+            Facing(at, out var right, out var up);
+            var rx = EyeRadius * _h * _size;
+            var ry = rx * EyeTilt;
+            var half = EyeHalf * _w;
+            at = Settle(at, right, up, rx + half, ry + half);
+            var alpha = (EyeAlpha + EyeFlare * flare) * level;
+            for (var arm = 0; arm < EyeArms; arm++)
+            {
+                var turn = _eyePhase + arm * (TwoPi / EyeArms);
+                var v = EyeBase + arm * ArmPts * 2;
+                for (var j = 0; j < ArmPts; j++)
+                {
+                    var s = j / (float)(ArmPts - 1);
+                    var r = Mathf.Exp((s - 1f) * ArmTighten);
+                    var th = turn - s * ArmWind;
+                    var cos = Mathf.Cos(th);
+                    var sin = Mathf.Sin(th);
+                    // Tangent along the arm in (right, up) metres; the ribbon's side is square to it.
+                    var tx = (ArmTighten * cos + ArmWind * sin) * r * rx;
+                    var ty = (ArmTighten * sin - ArmWind * cos) * r * ry;
+                    var side = Unit(up * tx - right * ty) * (half * Mathf.Lerp(ArmTaper, 1f, s));
+                    var p = at + right * (rx * r * cos) + up * (ry * r * sin);
+                    _verts[v + j * 2] = Contain(p - side);
+                    _verts[v + j * 2 + 1] = Contain(p + side);
+                    // Hollow at the centre, fading out at the tip.
+                    Color32 col = WithAlpha(_glow, alpha * Mathf.Sin(Mathf.PI * s));
+                    _cols[v + j * 2] = col;
+                    _cols[v + j * 2 + 1] = col;
+                }
+            }
+        }
+
+        /// <summary>Zero-area, fully transparent vertices for a free slot, parked in the channel box.</summary>
         void Park(int slot)
         {
-            var at = Contain(new Vector3(_cx, (_yLow + _yHigh) * 0.5f, _cz));
+            var at = Contain(new Vector3(_cx, (_yLow + _yHigh) * 0.5f, (_zNear + _zFar) * 0.5f));
             var v = FlashBase + slot * 4;
             for (var i = 0; i < 4; i++)
             {
@@ -684,10 +809,16 @@ namespace WRLDZ.Presentation.ArInteraction
 
         // ── Build ───────────────────────────────────────────────────────────
 
-        /// <summary>Flash quads take the whole soft dot; ribbons run along its centre row.</summary>
+        /// <summary>Ribbons run along the soft dot's centre row; flash quads take the whole dot.</summary>
         static Vector2[] BuildUvs()
         {
             var uvs = new Vector2[TotalVerts];
+            for (var i = 0; i < TotalVerts; i += 2)
+            {
+                uvs[i] = new Vector2(0f, 0.5f);
+                uvs[i + 1] = new Vector2(1f, 0.5f);
+            }
+
             for (var b = 0; b < MaxBolts; b++)
             {
                 var v = FlashBase + b * 4;
@@ -697,20 +828,17 @@ namespace WRLDZ.Presentation.ArInteraction
                 uvs[v + 3] = new Vector2(0f, 1f);
             }
 
-            for (var i = GlowBase; i < TotalVerts; i += 2)
-            {
-                uvs[i] = new Vector2(0f, 0.5f);
-                uvs[i + 1] = new Vector2(1f, 0.5f);
-            }
-
             return uvs;
         }
 
         static int[] BuildTriangles()
         {
-            var quads = MaxBolts + 2 * MaxBolts * (MainSegs + MaxBranches * BranchSegs);
+            var quads = EyeArms * (ArmPts - 1) + MaxBolts + 2 * MaxBolts * (MainSegs + MaxBranches * BranchSegs);
             var tris = new int[quads * 6];
             var t = 0;
+            for (var arm = 0; arm < EyeArms; arm++)
+                t = Strip(tris, t, EyeBase + arm * ArmPts * 2, ArmPts);
+
             for (var b = 0; b < MaxBolts; b++)
             {
                 var v = FlashBase + b * 4;

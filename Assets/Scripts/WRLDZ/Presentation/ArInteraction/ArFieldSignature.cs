@@ -23,13 +23,19 @@ namespace WRLDZ.Presentation.ArInteraction
         /// between the lens and anything drawn.
         /// </summary>
         public readonly float NearZ;
+        /// <summary>Stage camera position, floor-local (valid when <see cref="HasCamera"/>).</summary>
+        public readonly Vector3 Camera;
+        public readonly bool HasCamera;
 
-        public FieldStreet(Vector3 center, Vector3 half, float holoScale, float nearZ)
+        public FieldStreet(Vector3 center, Vector3 half, float holoScale, float nearZ,
+            Vector3 camera = default, bool hasCamera = false)
         {
             Center = center;
             Half = half;
             HoloScale = holoScale;
             NearZ = nearZ;
+            Camera = camera;
+            HasCamera = hasCamera;
         }
     }
 
@@ -45,12 +51,30 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary>Monster owner (cyan / magenta side).</summary>
         public bool PlayerSide;
         /// <summary>
-        /// Set monster: its card lies almost flat over the anchor, so keep pieces
-        /// outside <see cref="ArFieldSignature.SetCardClearRadius"/> × Scale or
-        /// below <see cref="ArFieldSignature.SetCardClearHeight"/> × Scale.
-        /// Being face-down is public; the monster's identity is not, and kits never learn it.
+        /// Set monster (or a flip still animating): its card lies almost flat over
+        /// the anchor. Test pieces with <see cref="ArFieldSignature.InSetCard"/> or
+        /// clamp them with <see cref="ArFieldSignature.CoverLimit"/>. Being
+        /// face-down is public; the monster's identity is not, and kits never learn it.
         /// </summary>
         public bool FaceDown;
+        /// <summary>
+        /// Face-up art rolled sideways (Defense): its centre sits at street level
+        /// beside the anchor instead of standing over it, so the art's middle is
+        /// low and at one flank.
+        /// </summary>
+        public bool ArtSideways;
+        /// <summary>
+        /// Floor-local metres from the anchor to the art centre along the camera's
+        /// right axis: 0 for upright art, about ±<see cref="ArtHalf"/> when sideways.
+        /// </summary>
+        public float ArtLateral;
+        /// <summary>Half the face-up art's width, floor-local metres.</summary>
+        public float ArtHalf;
+        /// <summary>
+        /// Floor-local metres: the tallest a camera-side piece may stand inside the
+        /// art's lateral span (feet in grass for upright art; low for sideways art).
+        /// </summary>
+        public float FrontCoverHeight;
         /// <summary>
         /// Stable per-monster key (the terrain pad's instance id): seed per-monster
         /// variation from this, not from list slot or position, so a monster keeps
@@ -90,10 +114,22 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary>Street pieces keep their lowest point above this (floor-local metres, × HoloScale).</summary>
         public const float StreetClearHeight = 1.3f;
         public const int MaxVertices = 4096;
-        /// <summary>Half-diagonal of a Set monster's flat card (0.96 × 0.66 host-local) plus margin.</summary>
-        public const float SetCardClearRadius = 0.62f;
+        /// <summary>
+        /// Set card footprint half extents, host-local (× Scale): the landscape card
+        /// is 1.40 across the street (X) and 0.91 along it (Z), pitched 18° off flat,
+        /// with its low edge about 0.012 above the street.
+        /// </summary>
+        public const float SetCardHalfX = 0.72f;
+        public const float SetCardHalfZ = 0.48f;
+        /// <summary>Half-diagonal of the Set card footprint: nothing taller than
+        /// <see cref="SetCardClearHeight"/> within this radius without <see cref="InSetCard"/>.</summary>
+        public const float SetCardClearRadius = 0.87f;
         /// <summary>Pieces inside the Set card's footprint must stay below this (host-local, × Scale).</summary>
-        public const float SetCardClearHeight = 0.05f;
+        public const float SetCardClearHeight = 0.01f;
+        /// <summary>Camera-side cover over upright art: the art's lower ~22% (host-local, × Scale).</summary>
+        public const float UprightCoverHeight = 0.30f;
+        /// <summary>Camera-side cover over sideways (Defense) art, whose middle starts at the street.</summary>
+        public const float SidewaysCoverHeight = 0.10f;
         /// <summary>Metres (× max(HoloScale, 0.5)) kept between the local camera and any street piece.</summary>
         public const float StreetCameraClear = 1.5f;
 
@@ -231,6 +267,36 @@ namespace WRLDZ.Presentation.ArInteraction
         /// </summary>
         protected static Color VertexColor(Color srgb) =>
             QualitySettings.activeColorSpace == ColorSpace.Linear ? srgb.linear : srgb;
+
+        /// <summary>True when floor-local point <paramref name="p"/> (XZ) lies over a Set card's footprint.</summary>
+        protected static bool InSetCard(in FieldAnchor a, Vector3 p, float margin = 0.03f)
+        {
+            if (!a.FaceDown) return false;
+            return Mathf.Abs(p.x - a.Position.x) < (SetCardHalfX + margin) * a.Scale &&
+                   Mathf.Abs(p.z - a.Position.z) < (SetCardHalfZ + margin) * a.Scale;
+        }
+
+        /// <summary>
+        /// Tallest a piece may stand at floor-local point <paramref name="p"/> (XZ)
+        /// near anchor <paramref name="a"/>: under a Set card, in front of the face-up
+        /// art (camera side, inside its lateral span), or the kit's normal cap.
+        /// Clamp heights with this so every kit treats cards the same way.
+        /// </summary>
+        protected static float CoverLimit(in FieldAnchor a, in FieldStreet street, Vector3 p)
+        {
+            var cap = MaxAnchorHeight * a.Scale;
+            if (a.FaceDown)
+                return InSetCard(a, p) ? SetCardClearHeight * a.Scale : cap;
+            if (!street.HasCamera) return cap;
+            var toCam = new Vector3(street.Camera.x - a.Position.x, 0f, street.Camera.z - a.Position.z);
+            var d = new Vector3(p.x - a.Position.x, 0f, p.z - a.Position.z);
+            if (Vector3.Dot(d, toCam) <= 0f) return cap; // behind the art plane: hidden by depth anyway
+            var len = toCam.magnitude;
+            if (len < 1e-4f) return cap;
+            var right = new Vector3(-toCam.z / len, 0f, toCam.x / len);
+            var lateral = Vector3.Dot(d, right);
+            return Mathf.Abs(lateral - a.ArtLateral) < a.ArtHalf ? Mathf.Min(cap, a.FrontCoverHeight) : cap;
+        }
 
         /// <summary>Colour with alpha replaced.</summary>
         protected static Color WithAlpha(Color c, float a)

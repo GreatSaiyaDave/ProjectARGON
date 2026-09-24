@@ -7,12 +7,17 @@ namespace WRLDZ.Presentation.ArInteraction
     /// Monsters wade. Around each monster a translucent pool of the field's
     /// water stands level at shin height, deepest in colour round the
     /// monster's legs. Water is level, so where it crosses the card it cuts a
-    /// straight waterline; its shore fades to nothing inside
+    /// straight waterline; the pool's edge thins out to nothing inside
     /// <see cref="ArFieldSignature.MaxAnchorRadius"/>, so the aisle stays street.
     /// The surface rolls with one shared wave field (neighbouring pools agree),
     /// ripple rings spread from the monster's shins and a broken foam line laps
     /// at the waterline — brighter and pulsing on a boon, over murkier water on
     /// a bane. The water rises with the sweep and drains on dissolve.
+    /// <para>A Set card lies flat on the water: under a face-down monster the
+    /// pool drops at once to a thin sheet below the card, and swells back to
+    /// shin height after the monster flips face-up. Each monster's ripple, foam
+    /// and fleck timing is seeded from its anchor key, so it keeps its rhythm
+    /// while others come and go.</para>
     /// <para>Variant 0, open sea: deep, dark and choppy. Peaked cross-swell,
     /// three quick broken ripples, white-cap streaks along the crest lines.</para>
     /// <para>Variant 1, tropical tide: bright, shallow and calm. Long swell, two
@@ -64,6 +69,10 @@ namespace WRLDZ.Presentation.ArInteraction
         const float EdgeMargin = 0.03f;
         /// <summary>Anchors at or below this Scale are skipped, never inflated past their own size.</summary>
         const float MinScale = 0.001f;
+        /// <summary>A Set card's sheet of water, foam and surf included, tops out at this share of SetCardClearHeight.</summary>
+        const float SetClearMargin = 0.8f;
+        /// <summary>Seconds for the water to swell back to shin height once a Set monster is face-up.</summary>
+        const float FlipRiseSeconds = 0.8f;
 
         const float RippleStart = 0.14f;
         const float RippleEnd = 0.9f;
@@ -83,8 +92,6 @@ namespace WRLDZ.Presentation.ArInteraction
         const float CrestLift = 0.028f;
 
         const int FleckWrapCycles = 4096;
-        /// <summary>Fleck seeding cell (host-local m): pools share a seed only if they share a cell.</summary>
-        const float FleckCellSize = 0.3f;
 
         const float BoonLipGain = 1.9f;
         const float BoonLipBreak = 0.4f;
@@ -182,6 +189,13 @@ namespace WRLDZ.Presentation.ArInteraction
         float _fleckReach;
         /// <summary>Wave A's length in rim units: one surf line per crest.</summary>
         float _crestSpan;
+        /// <summary>Share of full depth that keeps a Set card's pool, surf and foam included, under the card.</summary>
+        float _setDepth;
+
+        // Per slot, re-keyed whenever a different monster lands in the slot.
+        int[] _slotKey;
+        /// <summary><see cref="_setDepth"/> … 1: drops at once when a card is Set, eases back up after a flip.</summary>
+        float[] _slotDepth;
 
         // Unit-rim disc template, one entry per disc vertex.
         float[] _vx;
@@ -239,6 +253,11 @@ namespace WRLDZ.Presentation.ArInteraction
             _surface = _look.Surface + SurfacePerSigScale * (sig - 1f);
             _amplitude = _look.Amplitude * sig;
             _chop = 0.5f * Mathf.Clamp01(_look.Chop);
+            // Tallest point (level + swell + surf curl) squashed under a flat Set card; foam lift rides on top.
+            _setDepth = Mathf.Clamp01((SetCardClearHeight * SetClearMargin - FoamLift) /
+                                      Mathf.Max(1e-4f, _surface + _amplitude + CrestLift));
+            _slotKey = new int[MaxAnchors];
+            _slotDepth = new float[MaxAnchors];
 
             BuildColours(tide);
             BuildTables();
@@ -263,14 +282,15 @@ namespace WRLDZ.Presentation.ArInteraction
                 return;
             }
 
-            Advance(dt > 0f ? dt : 0f);
+            var step = dt > 0f ? dt : 0f;
+            Advance(step);
             level = Mathf.Min(level, 1f);
             var bounds = new Bounds(street.Center, street.Half * 2f);
             var drew = false;
             for (var i = 0; i < count; i++)
             {
                 var a = anchors[i];
-                if (WriteSlot(i, a, level))
+                if (WriteSlot(i, a, level, step))
                 {
                     drew = true;
                     var s = a.Scale;
@@ -312,7 +332,7 @@ namespace WRLDZ.Presentation.ArInteraction
         }
 
         /// <summary>Writes one pool; false when the anchor is not visible yet (slot gets cleared).</summary>
-        bool WriteSlot(int slot, in FieldAnchor a, float level)
+        bool WriteSlot(int slot, in FieldAnchor a, float level, float dt)
         {
             var fade = Mathf.Clamp01(a.Presence) * level;
             if (fade <= 0.001f || a.Scale <= MinScale) return false;
@@ -321,23 +341,48 @@ namespace WRLDZ.Presentation.ArInteraction
             _s = a.Scale;
             _r = _rim * _s;
             _lift = FoamLift * _s;
-            var rise = Mathf.Lerp(RiseFloor, 1f, Smooth(0f, 1f, fade));
-            // Continuous in position, so a monster keeps its rhythm when the anchor list reorders.
-            var offset = Mathf.Repeat((_o.x * 0.61f + _o.z * 0.37f) / _s, 1f);
+            // Every height scales with rise, so a Set card's share keeps surf and foam under it too.
+            var rise = Mathf.Lerp(RiseFloor, 1f, Smooth(0f, 1f, fade)) * Depth(slot, a, dt);
+            // Seeded by the monster, not its slot or spot: it keeps its rhythm while others come and go or it lunges.
+            var offset = Hash01(a.Key, 19);
             var b = slot * SlotVerts;
 
             WriteDisc(b, fade, rise, a.Aura < 0);
             WriteRipples(b, fade, offset, a.Aura > 0 ? BoonRippleGain : 1f);
             WriteLip(b, fade, offset, a.Aura);
             if (_look.CrestAlpha > 0f) WriteCrest(b, fade, rise, offset, a.Aura > 0);
-            WriteFlecks(b, offset, FleckCell(), fade);
+            WriteFlecks(b, offset, Mathf.FloorToInt(Hash01(a.Key, 131) * 65536f), fade);
             return true;
+        }
+
+        /// <summary>
+        /// Share of full depth for the monster in <paramref name="slot"/>: a Set
+        /// card lies flat over its anchor, so the water drops under it at once,
+        /// and swells back over <see cref="FlipRiseSeconds"/> once it is face-up.
+        /// A different monster in the slot starts at its own target.
+        /// </summary>
+        float Depth(int slot, in FieldAnchor a, float dt)
+        {
+            var target = a.FaceDown ? _setDepth : 1f;
+            if (_slotKey[slot] != a.Key || target < _slotDepth[slot])
+            {
+                _slotKey[slot] = a.Key;
+                _slotDepth[slot] = target;
+            }
+            else
+            {
+                _slotDepth[slot] = Mathf.MoveTowards(_slotDepth[slot], target, dt / FlipRiseSeconds);
+            }
+
+            return _slotDepth[slot];
         }
 
         void WriteDisc(int b, float fade, float rise, bool bane)
         {
             var surface = _surface * _s * rise;
             var amp = _amplitude * _s * rise;
+            // One sea under every pool: wave phase follows the floor position, so neighbours agree
+            // and a lunging monster wades through the swell instead of dragging it along.
             for (var j = 0; j < WaveCount; j++)
                 _base[j] = _wK[j] * (_o.x * _wDirX[j] + _o.z * _wDirZ[j]) / _s + _ph[j];
 
@@ -458,22 +503,22 @@ namespace WRLDZ.Presentation.ArInteraction
         /// lead wave's crest lines (sea) or twinkling sun glints (tide). Each
         /// cycle re-seeds from a hash, so there is no per-fleck state.
         /// </summary>
-        void WriteFlecks(int b, float stagger, int cell, float fade)
+        void WriteFlecks(int b, float stagger, int seed, float fade)
         {
             var life = _look.FleckLife;
             var lx = _capAlong.x * _look.FleckHalfLength;
             var lz = _capAlong.y * _look.FleckHalfLength;
             var wx = -_capAlong.y * _look.FleckHalfWidth;
             var wz = _capAlong.x * _look.FleckHalfWidth;
-            var salt = cell * 131;
+            var salt = seed * 131;
             for (var f = 0; f < FleckCount; f++)
             {
                 var cycle = _fleckClock / life + (f + stagger) / FleckCount;
                 var n = Mathf.FloorToInt(cycle);
                 var u = cycle - n;
-                var key = n * FleckCount + f;
-                var rad = Mathf.Lerp(_look.FleckMin, _look.FleckMax, Mathf.Sqrt(Hash01(key, 17 + salt)));
-                var ang = Hash01(key, 71 + salt) * TwoPi;
+                var id = n * FleckCount + f;
+                var rad = Mathf.Lerp(_look.FleckMin, _look.FleckMax, Mathf.Sqrt(Hash01(id, 17 + salt)));
+                var ang = Hash01(id, 71 + salt) * TwoPi;
                 var px = rad * Mathf.Cos(ang) + _capDrift.x * u;
                 var pz = rad * Mathf.Sin(ang) + _capDrift.y * u;
                 var pr = Mathf.Sqrt(px * px + pz * pz);
@@ -501,16 +546,6 @@ namespace WRLDZ.Presentation.ArInteraction
                 _cols[i + 2] = col;
                 _cols[i + 3] = col;
             }
-        }
-
-        /// <summary>
-        /// Coarse position cell of the pool being written: seeds its flecks, so
-        /// they stay put when the anchor list reorders and ignore pose jitter.
-        /// </summary>
-        int FleckCell()
-        {
-            var cell = FleckCellSize * _s;
-            return Mathf.RoundToInt(_o.x / cell) * 7919 + Mathf.RoundToInt(_o.z / cell);
         }
 
         void ClearSlot(int slot)
@@ -570,45 +605,41 @@ namespace WRLDZ.Presentation.ArInteraction
             var sky = Env.Sky;
             var ground = Env.Ground;
             var accent = Env.Accent;
+            Color deep, shallow, trough, crest, ripple, foam, fleck;
             if (tide)
             {
                 // Sunlit shallows: saturated body brightening toward the shore; white only in surf and glints.
-                _deep = Color.Lerp(ground, sky, 0.3f);
-                _shallow = Color.Lerp(ground, accent, 0.6f);
-                _trough = Color.Lerp(ground, Color.black, 0.15f);
-                _crest = Color.Lerp(accent, Color.white, 0.85f);
-                _ripple = Color.Lerp(accent, Color.white, 0.6f);
-                _foam = Color.Lerp(accent, Color.white, 0.8f);
-                _fleck = Color.Lerp(sky, Color.white, 0.92f);
+                deep = Color.Lerp(ground, sky, 0.3f);
+                shallow = Color.Lerp(ground, accent, 0.6f);
+                trough = Color.Lerp(ground, Color.black, 0.15f);
+                crest = Color.Lerp(accent, Color.white, 0.85f);
+                ripple = Color.Lerp(accent, Color.white, 0.6f);
+                foam = Color.Lerp(accent, Color.white, 0.8f);
+                fleck = Color.Lerp(sky, Color.white, 0.92f);
             }
             else
             {
                 // Open sea: deep blue depths, bluer shallows, white caps. Kept off black so
                 // the pool never reads as a dark hole in passthrough at night.
-                _deep = Color.Lerp(ground, Color.black, 0.1f);
-                _shallow = Color.Lerp(ground, sky, 0.6f);
-                _trough = Color.Lerp(ground, Color.black, 0.3f);
-                _crest = Color.Lerp(accent, Color.white, 0.5f);
-                _ripple = Color.Lerp(sky, Color.white, 0.45f);
-                _foam = Color.Lerp(accent, Color.white, 0.7f);
-                _fleck = Color.Lerp(accent, Color.white, 0.8f);
+                deep = Color.Lerp(ground, Color.black, 0.1f);
+                shallow = Color.Lerp(ground, sky, 0.6f);
+                trough = Color.Lerp(ground, Color.black, 0.3f);
+                crest = Color.Lerp(accent, Color.white, 0.5f);
+                ripple = Color.Lerp(sky, Color.white, 0.45f);
+                foam = Color.Lerp(accent, Color.white, 0.7f);
+                fleck = Color.Lerp(accent, Color.white, 0.8f);
             }
 
-            _foamBoon = Color.Lerp(_foam, Color.white, 0.6f);
-            _murk = Color.Lerp(ground, Color.black, 0.7f);
-
-            // Mesh vertex colours reach the shader untouched. In a Linear project the sRGB
-            // palette must be converted once here, or every colour shows gamma-lifted and pale.
-            if (QualitySettings.activeColorSpace != ColorSpace.Linear) return;
-            _deep = _deep.linear;
-            _shallow = _shallow.linear;
-            _trough = _trough.linear;
-            _crest = _crest.linear;
-            _ripple = _ripple.linear;
-            _foam = _foam.linear;
-            _foamBoon = _foamBoon.linear;
-            _fleck = _fleck.linear;
-            _murk = _murk.linear;
+            // Mixed in sRGB above, converted once here: mesh vertex colours reach the shader untouched.
+            _deep = VertexColor(deep);
+            _shallow = VertexColor(shallow);
+            _trough = VertexColor(trough);
+            _crest = VertexColor(crest);
+            _ripple = VertexColor(ripple);
+            _foam = VertexColor(foam);
+            _foamBoon = VertexColor(Color.Lerp(foam, Color.white, 0.6f));
+            _fleck = VertexColor(fleck);
+            _murk = VertexColor(Color.Lerp(ground, Color.black, 0.7f));
         }
 
         void BuildTables()

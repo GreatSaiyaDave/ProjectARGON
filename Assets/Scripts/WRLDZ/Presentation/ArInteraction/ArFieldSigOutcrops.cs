@@ -13,34 +13,41 @@ namespace WRLDZ.Presentation.ArInteraction
     /// monster's presence ramps in (height eases up with a small overshoot) and
     /// sink back on dissolve.
     /// <para>Layout: a face-up monster's art is an opaque billboard wider than
-    /// the belt, so the half of the ring behind it is hidden. The front stays
-    /// open over the monster's feet. The tallest shards stand on the front
-    /// flanks, the back of what the duelist can see, where they frame the art's
-    /// lower corners. The far side keeps mid-height shards for face-down and
-    /// spawning cards. "Toward the duelist" is fixed from the street's player
-    /// end, so rings never turn as the phone moves. No shard reaches further
-    /// sideways than half a column pitch, so neighbouring rings never
-    /// interpenetrate.</para>
+    /// the belt, so the half of the ring behind it is hidden and anything in
+    /// front of it draws over its lower band. The front stays open over the
+    /// monster's feet, and no shard reaching in front of the art plane stands
+    /// taller than <see cref="FrontHeightCap"/>, so the art's lower corners
+    /// stay readable; the front flanks carry the tallest shards the duelist
+    /// sees. "Toward the duelist" is fixed from the street's player end, so
+    /// rings never turn as the phone moves. No shard reaches further sideways
+    /// than half a column pitch, so neighbouring rings never interpenetrate.
+    /// Each monster's layout and heat phase are seeded from its anchor Key, so
+    /// it keeps them while others come and go or it lunges.</para>
+    /// <para>A Set card lies flat over the whole belt, so a face-down monster's
+    /// rocks drop at once to rubble under
+    /// <see cref="ArFieldSignature.SetCardClearHeight"/> and burst back up over
+    /// <see cref="FlipRiseSeconds"/> once it is face-up.</para>
     /// <para>Variant 0, dusty boulders: six low, rounded tan boulders with a pale
     /// strata line and a flat-topped mesa slab at one front corner. A contact
     /// shadow under each puffs into dust as the boulder breaks the ground.</para>
     /// <para>Variant 1, crags: six leaning cool-grey spires with snow on their
-    /// upper facets, tall ones on both flanks. A breathing cloud bank is drawn
-    /// over each foot, so the peaks stand above the clouds.</para>
+    /// upper facets, tall ones on the front flanks and the tallest behind the
+    /// monster. A breathing cloud bank is drawn over each foot.</para>
     /// <para>Variant 2, lava-cracked: five dark basalt chunks split by glowing
     /// accent seams over a pooled lava glow, with a crater cone glowing at one
     /// front corner. The heat pulses slowly round the ring. Any other variant
     /// draws the boulders.</para>
     /// A face-up monster the field favours gets an accent sheen on its rock tops.
-    /// One dynamic mesh, one draw call. Sprites/Default writes no depth, so each
-    /// frame the shards are written far-to-near into fixed slots and faces
-    /// turned away from the camera are collapsed; convex shards then need no
-    /// depth buffer of their own.
+    /// Palette colours are mixed in sRGB and converted with VertexColor() once
+    /// at build time. One dynamic mesh, one draw call. Sprites/Default writes
+    /// no depth, so each frame the shards are written far-to-near into fixed
+    /// slots and faces turned away from the camera are collapsed; convex shards
+    /// then need no depth buffer of their own.
     /// </summary>
     public sealed class ArFieldSigOutcrops : ArFieldSignature
     {
         const int MaxAnchors = 10;
-        /// <summary>Prebuilt ring layouts; each monster zone picks one so neighbouring rings differ.</summary>
+        /// <summary>Prebuilt ring layouts; each monster picks one from its anchor Key.</summary>
         const int Templates = 4;
         /// <summary>Sides per shard: pentagonal solids read as faceted rock at phone distance.</summary>
         const int Sides = 5;
@@ -74,6 +81,16 @@ namespace WRLDZ.Presentation.ArInteraction
         const float FanInner = 0.4f;
         /// <summary>Hard cap on any vertex's height at the peak of the rise, inside MaxAnchorHeight (0.6).</summary>
         const float HeightCap = 0.57f;
+        /// <summary>
+        /// Height cap at the peak of the rise for any shard reaching in front of
+        /// the art plane (toward the duelist): the opaque art stands on the anchor,
+        /// so taller rock there hides its lower corners.
+        /// </summary>
+        const float FrontHeightCap = 0.3f;
+        /// <summary>A Set monster's rocks, ground fan included, top out at this share of SetCardClearHeight.</summary>
+        const float SetClearMargin = 0.8f;
+        /// <summary>Seconds for a Set monster's rocks to regrow once it is face-up.</summary>
+        const float FlipRiseSeconds = 0.8f;
         const float MinScale = 0.001f;
         /// <summary>Duelist's spot behind the street box (floor-local m); rings orient away from it.</summary>
         const float NominalEyeBack = 1f;
@@ -110,15 +127,18 @@ namespace WRLDZ.Presentation.ArInteraction
         const float CrackWidth0 = 0.12f;
         const float CrackWidth1 = 0.05f;
         const float CrackWander = 0.15f;
-        const float CraterRim = 0.3f;
+        // Glow and drain weights blend linear vertex colours: over near-black basalt a
+        // linear blend toward lava reads far brighter than the same sRGB weight, so these
+        // sit low to keep the heat pulse's range (and a bane's drain reads weaker, so higher).
+        const float CraterRim = 0.1f;
         /// <summary>Radians per second: a ~3.5 s heat cycle round the ring.</summary>
         const float PulseRate = 1.8f;
-        const float GlowFloor = 0.35f;
+        const float GlowFloor = 0.1f;
         const float BreathRate = 0.6f;
         const float SheenRate = 2.2f;
         const float BoonSheen = 0.4f;
         const float BoonHeat = 1.3f;
-        const float BaneDrain = 0.35f;
+        const float BaneDrain = 0.5f;
 
         const float TwoPi = Mathf.PI * 2f;
 
@@ -186,7 +206,7 @@ namespace WRLDZ.Presentation.ArInteraction
         static readonly Look Crags = new Look
         {
             At = new[] { -132f, -62f, -26f, 28f, 60f, 128f },
-            Height = new[] { 0.26f, 0.43f, 0.14f, 0.12f, 0.4f, 0.28f },
+            Height = new[] { 0.3f, 0.27f, 0.14f, 0.12f, 0.26f, 0.32f },
             KeystoneAt = -1, HJitter = 0.12f,
             FootMin = 0.07f, FootMax = 0.115f, Body = new Shape(0.3f, 0.66f, 0.64f, 0.34f, 0.28f),
             Wobble = 0.1f, Keystone = Keystone.None, Alpha = 0.95f, Strata = 0f, Snow = 0.9f, FootGlow = 0f,
@@ -200,7 +220,7 @@ namespace WRLDZ.Presentation.ArInteraction
             Height = new[] { 0.17f, 0.22f, 0.12f, 0.26f, 0.2f },
             KeystoneAt = 3, HJitter = 0.15f,
             FootMin = 0.075f, FootMax = 0.11f, Body = new Shape(0.5f, 0.9f, 0.8f, 0.55f, 0.2f),
-            Wobble = 0.12f, Keystone = Keystone.Crater, Alpha = 0.96f, Strata = 0f, Snow = 0f, FootGlow = 0.6f,
+            Wobble = 0.12f, Keystone = Keystone.Crater, Alpha = 0.96f, Strata = 0f, Snow = 0f, FootGlow = 0.35f,
             Cracks = 2, Fan = FanKind.Lava, FanOver = false, FanReach = 1.7f, FanAlpha = 0.5f, FanLift = 0.004f,
             FanGrow = 0.08f
         };
@@ -221,7 +241,7 @@ namespace WRLDZ.Presentation.ArInteraction
 
         // Template shards (Templates × _rocks) in the anchor frame at unit Scale: +Z away from the duelist.
         Vector3[] _tp;
-        /// <summary>Rock: lit base colour. Fan / seam: white with the alpha weight in a.</summary>
+        /// <summary>Rock: lit, converted vertex colour. Fan / seam: white with the alpha weight in a.</summary>
         Color[] _tc;
         /// <summary>Lava glow weight (seams, basalt feet, crater tip).</summary>
         float[] _tg;
@@ -237,6 +257,8 @@ namespace WRLDZ.Presentation.ArInteraction
         float[] _rTheta;
         /// <summary>Share of the monster's presence before this shard starts to rise.</summary>
         float[] _rDelay;
+        /// <summary>Rise multiplier that keeps the whole shard under a flat Set card.</summary>
+        float[] _rSquash;
         /// <summary>Per slot vertex: fan, rock face or seam (same for every slot).</summary>
         byte[] _kind;
 
@@ -249,6 +271,14 @@ namespace WRLDZ.Presentation.ArInteraction
         int[] _aTpl;
         int[] _aAura;
         float[] _aPhase;
+        int[] _aKey;
+        /// <summary>How far a Set monster's rocks have regrown: 0 squashed under the card … 1 full height.</summary>
+        float[] _aUp;
+
+        // Last frame's live anchors, matched by Key so a regrow survives others coming and going.
+        int[] _prevKey;
+        float[] _prevUp;
+        int _prevLive;
 
         // Candidate shards this frame, sorted far-to-near through _order.
         int[] _sAnchor;
@@ -264,10 +294,12 @@ namespace WRLDZ.Presentation.ArInteraction
         float _breathPh;
         float _sheenPh;
 
+        // Build-time rock inputs, sRGB: faces are mixed and lit from these, then converted per vertex.
         Color _lit;
         Color _dark;
         Color _strata;
         Color _snow;
+        // Tick blend targets, already converted with VertexColor().
         Color _shadow;
         Color _dust;
         Color _cloud;
@@ -312,6 +344,10 @@ namespace WRLDZ.Presentation.ArInteraction
             _aTpl = new int[MaxAnchors];
             _aAura = new int[MaxAnchors];
             _aPhase = new float[MaxAnchors];
+            _aKey = new int[MaxAnchors];
+            _aUp = new float[MaxAnchors];
+            _prevKey = new int[MaxAnchors];
+            _prevUp = new float[MaxAnchors];
             _sAnchor = new int[slots];
             _sRock = new int[slots];
             _sProg = new float[slots];
@@ -341,11 +377,13 @@ namespace WRLDZ.Presentation.ArInteraction
             if (level <= 0.001f || count == 0)
             {
                 if (_mr.enabled) _mr.enabled = false;
+                _prevLive = 0;
                 return;
             }
 
             level = Mathf.Min(level, 1f);
-            Advance(dt > 0f ? dt : 0f);
+            var step = dt > 0f ? dt : 0f;
+            Advance(step);
             var eye = EyeLocal(street);
             var viewX = street.Center.x;
             var viewZ = street.Center.z - street.Half.z - NominalEyeBack;
@@ -365,15 +403,19 @@ namespace WRLDZ.Presentation.ArInteraction
                 var dx = p.x - viewX;
                 var dz = p.z - viewZ;
                 var len = Mathf.Sqrt(dx * dx + dz * dz);
-                var key = ZoneKey(p.x, s, a.PlayerSide);
+                var up = Regrow(a.Key, a.FaceDown, step);
                 _aPos[live] = p;
                 _aScale[live] = s;
                 _aFade[live] = fade;
                 _aBx[live] = len > 1e-4f ? dx / len : 0f;
                 _aBz[live] = len > 1e-4f ? dz / len : 1f;
-                _aTpl[live] = Mathf.Min(Templates - 1, (int)(Hash01(key, 29) * Templates));
+                // Seeded by the monster, not its slot or spot: it keeps its look while others come and go.
+                _aTpl[live] = Mathf.Min(Templates - 1, (int)(Hash01(a.Key, 29) * Templates));
                 _aAura[live] = a.Aura;
-                _aPhase[live] = Hash01(key, 41) * TwoPi;
+                _aPhase[live] = Hash01(a.Key, 41) * TwoPi;
+                _aKey[live] = a.Key;
+                _aUp[live] = up;
+                var grown = Smooth(0f, 1f, up);
 
                 var first = _aTpl[live] * _rocks;
                 for (var k = 0; k < _rocks; k++)
@@ -383,7 +425,9 @@ namespace WRLDZ.Presentation.ArInteraction
                     var prog = Mathf.Clamp01((fade - delay) / (1f - delay));
                     if (prog <= 0f) continue;
 
+                    // A Set card lies over the whole belt: its rocks stay squashed flat under it.
                     var rise = EaseOutBack(prog);
+                    if (up < 1f) rise *= Mathf.Lerp(_rSquash[q], 1f, grown);
                     var c = _rc[q];
                     var centre = ToFloor(live, c.x, _rh[q] * 0.5f * rise, c.z);
                     _sAnchor[shards] = live;
@@ -400,6 +444,15 @@ namespace WRLDZ.Presentation.ArInteraction
                     new Vector3(MaxAnchorRadius * 2f * s, MaxAnchorHeight * s, MaxAnchorRadius * 2f * s)));
                 live++;
             }
+
+            // This frame's regrow state becomes next frame's lookup (swap, no allocation).
+            var keys = _prevKey;
+            _prevKey = _aKey;
+            _aKey = keys;
+            var ups = _prevUp;
+            _prevUp = _aUp;
+            _aUp = ups;
+            _prevLive = live;
 
             if (shards == 0)
             {
@@ -585,12 +638,23 @@ namespace WRLDZ.Presentation.ArInteraction
             System.Array.Clear(_cols, slot * _slotVerts, _slotVerts);
         }
 
-        /// <summary>Stable per-zone key (column from the side's centre, owner) so a monster keeps its layout.</summary>
-        static int ZoneKey(float x, float scale, bool playerSide)
+        /// <summary>
+        /// Share of full height for a monster's rocks: a Set card lies flat over
+        /// the anchor, so they drop under it at once, and regrow over
+        /// <see cref="FlipRiseSeconds"/> once the monster is face-up. Looked up by
+        /// Key in last frame's anchors; a monster not seen then starts at its target.
+        /// </summary>
+        float Regrow(int key, bool faceDown, float dt)
         {
-            var centre = playerSide ? ArPlaymatLayout.PlayerHoloX : ArPlaymatLayout.OppHoloX;
-            var pitch = ArPlaymatLayout.MonsterColumnPitch * Mathf.Max(0.3f, scale);
-            return Mathf.RoundToInt((x - centre) / pitch) * 2 + (playerSide ? 1 : 0) + 64;
+            var target = faceDown ? 0f : 1f;
+            for (var j = 0; j < _prevLive; j++)
+            {
+                if (_prevKey[j] != key) continue;
+                var was = _prevUp[j];
+                return target < was ? target : Mathf.MoveTowards(was, target, dt / FlipRiseSeconds);
+            }
+
+            return target;
         }
 
         /// <summary>easeOutBack: 0 → 1 with a small overshoot (<see cref="RiseBack"/>).</summary>
@@ -654,6 +718,16 @@ namespace WRLDZ.Presentation.ArInteraction
 
             _boonTint = Color.Lerp(accent, white, 0.3f);
             _drained = Color.Lerp(ground, black, 0.55f);
+
+            // Tick blends these straight into vertex colours: convert once (unset ones stay black).
+            _shadow = VertexColor(_shadow);
+            _dust = VertexColor(_dust);
+            _cloud = VertexColor(_cloud);
+            _emberHot = VertexColor(_emberHot);
+            _emberDim = VertexColor(_emberDim);
+            _lavaPool = VertexColor(_lavaPool);
+            _boonTint = VertexColor(_boonTint);
+            _drained = VertexColor(_drained);
         }
 
         void BuildTemplates()
@@ -670,6 +744,7 @@ namespace WRLDZ.Presentation.ArInteraction
             _rh = new float[shards];
             _rTheta = new float[shards];
             _rDelay = new float[shards];
+            _rSquash = new float[shards];
 
             // The tallest possible shard, at the top of its overshoot, stays under HeightCap at any SigScale.
             var tallest = 0f;
@@ -701,6 +776,16 @@ namespace WRLDZ.Presentation.ArInteraction
             }
 
             ClampExtents();
+
+            // A Set card (about 1.4 × 0.96 host-local once laid flat) covers the whole belt, so a
+            // Set monster squashes every shard, ground fan included, under SetCardClearHeight.
+            for (var q = 0; q < shards; q++)
+            {
+                var top = 0f;
+                for (var v = q * _slotVerts; v < (q + 1) * _slotVerts; v++)
+                    top = Mathf.Max(top, _tp[v].y);
+                _rSquash[q] = Mathf.Min(1f, SetClearMargin * SetCardClearHeight / Mathf.Max(1e-4f, top * _risePeak));
+            }
         }
 
         bool IsKeystone(int k) => k == _look.KeystoneAt && _look.Keystone != Keystone.None;
@@ -728,8 +813,6 @@ namespace WRLDZ.Presentation.ArInteraction
             {
                 shape = CraterShape;
             }
-
-            _bH = h;
 
             // Shared column angles, so side edges run straight up the shard.
             var yaw = R(0f, TwoPi);
@@ -774,8 +857,15 @@ namespace WRLDZ.Presentation.ArInteraction
             if (side > 1e-3f) far = Mathf.Min(far, (SideReach - reach) / side);
             var d = Mathf.Lerp(BeltInner + reach, Mathf.Max(BeltInner + reach, far), R(0.25f, 0.75f));
             var c = new Vector3(Mathf.Sin(phi) * d, 0f, -Mathf.Cos(phi) * d);
+            // Any shard reaching in front of the art plane stays low, clear of the art's lower corners.
+            var fy = c.z < reach && h * _risePeak > FrontHeightCap ? FrontHeightCap / (h * _risePeak) : 1f;
+            h *= fy;
+            _bH = h;
             for (var i = 0; i <= 3 * Sides; i++)
+            {
+                ring[i].y *= fy;
                 ring[i] += c;
+            }
 
             var b = q * _slotVerts;
             var fanR = Mathf.Min(Mathf.Min(_look.FanReach * reach, SideReach - d * side),
@@ -820,8 +910,9 @@ namespace WRLDZ.Presentation.ArInteraction
         /// One flat-shaded face on its own vertices: outward normal and centre for
         /// the facing test, one lit colour, then per-corner touches (shaded foot,
         /// strata, snow, lava). Corners run bottom edge p0 → p1, top edge p2 → p3.
+        /// <paramref name="tv"/> is the first corner's absolute template index.
         /// </summary>
-        void Face(int q, int f, int v, int corners, Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3,
+        void Face(int q, int f, int tv, int corners, Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3,
             int lowRing, int highRing, Vector3 axis)
         {
             var n = corners == 4 ? Vector3.Cross(p2 - p0, p3 - p1) : Vector3.Cross(p1 - p0, p2 - p0);
@@ -834,7 +925,6 @@ namespace WRLDZ.Presentation.ArInteraction
             var light = Mathf.Clamp01(Ambient + UpLight * Mathf.Max(0f, n.y) +
                                       SunLight * Mathf.Max(0f, Vector3.Dot(n, Sun)));
             var shade = Color.Lerp(_dark, _lit, light);
-            var tv = q * _slotVerts + v;
             Corner(tv, p0, shade, n.y, lowRing, f);
             Corner(tv + 1, p1, shade, n.y, lowRing, f);
             Corner(tv + 2, p2, shade, n.y, highRing, f);
@@ -868,9 +958,10 @@ namespace WRLDZ.Presentation.ArInteraction
                 c = Color.Lerp(c, _snow, _look.Snow * line * Mathf.Lerp(0.45f, 1f, Mathf.Clamp01(up * 2f)));
             }
 
+            // Mixed and lit in sRGB as tuned; converted once here so it shows as designed.
             c.a = 1f;
             _tp[tv] = p;
-            _tc[tv] = c;
+            _tc[tv] = VertexColor(c);
             _tg[tv] = glow;
             _ts[tv] = Mathf.Clamp01(up);
             _th[tv] = host;

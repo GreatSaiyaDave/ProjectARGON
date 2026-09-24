@@ -13,19 +13,26 @@ namespace WRLDZ.Presentation.ArInteraction
     /// tail that thins into sky blue. It lifts off the ground, fades out before
     /// the height cap, rests a moment and respawns at the feet at a new angle.
     /// The player's vortices turn one way and the opponent's the other, so the
-    /// two rows mirror across the aisle. The vortex rises with the sweep and
-    /// sinks back on dissolve.
+    /// two rows mirror across the aisle. Each monster's spin and streak timing
+    /// come from its stable key, so a lunge, a hit punch or a relayout never
+    /// twists it. The vortex rises with the sweep and sinks back on dissolve.
     /// <para>Boon (the wind lifts the monster): one extra streak, whiter and
     /// brighter, whipping round faster in more turns. Bane: a slack draught,
     /// low, slow and dim, drained toward the ground colour.</para>
+    /// <para>Set monster: no vortex. Its flat card back (0.96 × 1.40 host-local,
+    /// lying across the street) reaches 0.70 from the feet along its long axis,
+    /// so no ribbon inside the per-monster radius could circle it without
+    /// cutting its ends. Turning Set hides the vortex at once; a flip gathers
+    /// it up from the feet.</para>
     /// <para>One look (variant 0). Any other variant draws the same vortex.
     /// SigScale sets the streak count (2 at 0.5, 3 at 1, 4 at 1.5), the vortex
     /// height and the line width.</para>
     /// Nothing reaches under the card: the path stays outside the ownership
     /// ring. The side of each vortex facing the stage camera is fainter so the
-    /// monster reads through it. One dynamic mesh (one draw call) of ribbons
-    /// turned toward the camera; soft edges come from the shared soft dot's
-    /// centre line. Scope: per-monster.
+    /// monster reads through it. Palette mixes are done in sRGB and converted
+    /// with VertexColor() once at build. One dynamic mesh (one draw call) of
+    /// ribbons turned toward the camera; soft edges come from the shared soft
+    /// dot's centre line. Scope: per-monster.
     /// </summary>
     public sealed class ArFieldSigUpdraft : ArFieldSignature
     {
@@ -92,11 +99,12 @@ namespace WRLDZ.Presentation.ArInteraction
         const float FrontCosTo = 0.9f;
         const float FrontAlpha = 0.7f;
 
-        /// <summary>Vortex rotation and phase per host-local metre of position: neighbours differ, a lunge swirls it.</summary>
-        const float SpinPerMetreX = 1.9f;
-        const float SpinPerMetreZ = 1.1f;
-        const float PhasePerMetreX = 0.29f;
-        const float PhasePerMetreZ = 0.23f;
+        /// <summary>Seconds a flipped monster's vortex takes to gather up from its feet. Turning Set hides it at once.</summary>
+        const float FlipOpenSeconds = 0.6f;
+        /// <summary>On an aura change the old streaks fade out over this, then the new shape's fade in over it.</summary>
+        const float AuraFadeSeconds = 0.25f;
+        /// <summary>Mixes the respawn cycle into a monster's key for per-cycle jitter.</summary>
+        const int CyclePrime = 7919;
 
         // Colour roles: white head, accent body, sky tail.
         const float HeadWhite = 0.6f;
@@ -151,6 +159,18 @@ namespace WRLDZ.Presentation.ArInteraction
             public float Width;
         }
 
+        /// <summary>Which monster an anchor index holds and how its vortex is easing through a flip or an aura change.</summary>
+        struct AnchorState
+        {
+            public int Key;
+            /// <summary>0 = hidden (Set), 1 = full vortex.</summary>
+            public float Open;
+            /// <summary>Aura being drawn (−1, 0, +1); lags a change until the old streaks have faded out.</summary>
+            public int Aura;
+            /// <summary>0 = fully shown, 1 = faded out for an aura change.</summary>
+            public float Dim;
+        }
+
         Mesh _mesh;
         MeshRenderer _mr;
         Vector3[] _verts;
@@ -165,11 +185,14 @@ namespace WRLDZ.Presentation.ArInteraction
 
         /// <summary>
         /// Streak phase 0…1 and completed cycles, per shape (index = (Aura + 1) × MaxStreaks + streak),
-        /// so each shape keeps its own speed. A monster adds its own phase shift on top; one whose
-        /// aura changes (a flip, a new field) picks up that shape's streaks where they are.
+        /// so each shape keeps its own speed. A monster adds a phase shift from its key on top; one whose
+        /// aura changes fades out and back in on the new shape's streaks (<see cref="Track"/>).
         /// </summary>
         float[] _phase;
         int[] _cycle;
+
+        /// <summary>Per anchor index; re-keyed when a different monster takes the index.</summary>
+        AnchorState[] _state;
 
         // Per-row tables along a strand (index = row, tail → head).
         float[] _rowS;
@@ -231,7 +254,8 @@ namespace WRLDZ.Presentation.ArInteraction
                 return;
             }
 
-            Advance(dt > 0f ? dt : 0f);
+            var step = dt > 0f ? dt : 0f;
+            Advance(step);
             level = Mathf.Min(level, 1f);
             var eye = EyeLocal(street);
 
@@ -240,9 +264,11 @@ namespace WRLDZ.Presentation.ArInteraction
             for (var i = 0; i < count; i++)
             {
                 var a = anchors[i];
+                Track(i, a, step);
                 var fade = Mathf.Clamp01(a.Presence) * level;
-                if (fade <= 0.001f || a.Scale <= MinScale) continue;
-                WriteAnchor(drawn * SlotVerts, a, fade, eye);
+                // A Set monster (Open 0) takes no slot: nothing is drawn near its flat card.
+                if (fade <= 0.001f || a.Scale <= MinScale || _state[i].Open <= 0f) continue;
+                WriteAnchor(drawn * SlotVerts, a, _state[i], fade, eye);
                 drawn++;
                 var s = a.Scale;
                 bounds.Encapsulate(new Bounds(
@@ -285,6 +311,45 @@ namespace WRLDZ.Presentation.ArInteraction
             }
         }
 
+        /// <summary>
+        /// Eases the monster at anchor index <paramref name="i"/>. Turning Set hides
+        /// its vortex at once (the flat card needs the room); a flip gathers it up
+        /// over <see cref="FlipOpenSeconds"/>. An aura change on show fades the old
+        /// streaks out and the new shape's in (each shape runs its own clock, so a
+        /// cut would jump). A different monster at the index starts settled.
+        /// </summary>
+        void Track(int i, in FieldAnchor a, float dt)
+        {
+            ref var st = ref _state[i];
+            var aura = a.Aura > 0 ? 1 : a.Aura < 0 ? -1 : 0;
+            if (st.Key != a.Key)
+            {
+                st.Key = a.Key;
+                st.Open = a.FaceDown ? 0f : 1f;
+                st.Aura = aura;
+                st.Dim = 0f;
+                return;
+            }
+
+            if (a.FaceDown || st.Open <= 0f)
+            {
+                // Nothing on show: take the aura (always none while Set) without a fade.
+                st.Aura = aura;
+                st.Dim = 0f;
+            }
+
+            st.Open = a.FaceDown ? 0f : Mathf.MoveTowards(st.Open, 1f, dt / FlipOpenSeconds);
+            if (st.Aura != aura)
+            {
+                st.Dim = Mathf.MoveTowards(st.Dim, 1f, dt / AuraFadeSeconds);
+                if (st.Dim >= 1f) st.Aura = aura;
+            }
+            else
+            {
+                st.Dim = Mathf.MoveTowards(st.Dim, 0f, dt / AuraFadeSeconds);
+            }
+        }
+
         /// <summary>Stage camera in floor-local space; the player's end of the street without one.</summary>
         Vector3 EyeLocal(in FieldStreet street)
         {
@@ -293,8 +358,11 @@ namespace WRLDZ.Presentation.ArInteraction
             return new Vector3(street.Center.x, street.Center.y, street.Center.z - street.Half.z - 1f);
         }
 
-        /// <summary>One monster's vortex: its streaks, each a main line and a companion.</summary>
-        void WriteAnchor(int v, in FieldAnchor a, float fade, Vector3 eye)
+        /// <summary>
+        /// One monster's vortex: its streaks, each a main line and a companion,
+        /// grown and faded in by <c>st.Open</c> and dimmed by <c>st.Dim</c>.
+        /// </summary>
+        void WriteAnchor(int v, in FieldAnchor a, in AnchorState st, float fade, Vector3 eye)
         {
             _o = a.Position;
             _s = a.Scale;
@@ -304,20 +372,18 @@ namespace WRLDZ.Presentation.ArInteraction
             _camZ = flat > 1e-4f ? toEye.z / flat : -1f;
             _view = toEye.sqrMagnitude > 1e-8f ? toEye.normalized : Vector3.up;
 
-            // Continuous in position, so a monster keeps its vortex when the anchor list reorders.
-            var hx = _o.x / _s;
-            var hz = _o.z / _s;
-            var spin = hx * SpinPerMetreX + hz * SpinPerMetreZ;
-            var shift = Mathf.Repeat(hx * PhasePerMetreX + hz * PhasePerMetreZ, 1f);
+            // From the monster's stable key: steady through lunges, hit punches, relayouts and list reorders.
+            var spin = TwoPi * Hash01(a.Key, 71);
+            var shift = Hash01(a.Key, 73);
 
-            var aura = a.Aura > 0 ? 1 : a.Aura < 0 ? -1 : 0;
-            var si = aura + 1;
+            var si = st.Aura + 1;
             var sh = Shapes[si];
-            var n = _count + (aura > 0 ? 1 : 0);
-            var grow = Mathf.Lerp(GrowFloor, 1f, Mathf.SmoothStep(0f, 1f, fade));
+            var opened = Mathf.SmoothStep(0f, 1f, st.Open);
+            var n = _count + (st.Aura > 0 ? 1 : 0);
+            var grow = Mathf.Lerp(GrowFloor, 1f, Mathf.SmoothStep(0f, 1f, fade) * opened);
             var height = _height * sh.Height * grow;
             var turns = (a.PlayerSide ? 1f : -1f) * sh.Turns * TwoPi;
-            var alpha = sh.Alpha * fade;
+            var alpha = sh.Alpha * fade * opened * (1f - Mathf.SmoothStep(0f, 1f, st.Dim));
 
             for (var i = 0; i < MaxStreaks; i++)
             {
@@ -333,11 +399,12 @@ namespace WRLDZ.Presentation.ArInteraction
                     continue;
                 }
 
-                var cycle = _cycle[k] + wrap;
-                var span = sh.Span * (1f + SpanJitter * (Hash01(cycle, 101 + i) - 0.5f));
+                // Respawn jitter per monster and cycle; the cycle only turns over while the streak rests.
+                var seed = unchecked((_cycle[k] + wrap) * CyclePrime + a.Key);
+                var span = sh.Span * (1f + SpanJitter * (Hash01(seed, 101 + i) - 0.5f));
                 var head = q / Busy * (1f + span);
-                var theta = _streaks[i].Angle + spin + AngleJitter * (Hash01(cycle, 131 + i) - 0.5f);
-                var rMul = 1f + RadiusJitter * (Hash01(cycle, 151 + i) - 0.5f);
+                var theta = _streaks[i].Angle + spin + AngleJitter * (Hash01(seed, 131 + i) - 0.5f);
+                var rMul = 1f + RadiusJitter * (Hash01(seed, 151 + i) - 0.5f);
                 var w = _halfWidth * sh.Width * _streaks[i].Width;
 
                 WriteStrand(sv, head, span, theta, turns, height, sh, rMul, 0f, 0f, w, alpha,
@@ -469,6 +536,17 @@ namespace WRLDZ.Presentation.ArInteraction
                 _echoBody[i] = Color.Lerp(_body[i], sky, EchoSky);
                 _echoTail[i] = Color.Lerp(_tail[i], sky, EchoSky);
             }
+
+            // Every mix above is sRGB; convert once for the Linear project's vertex colours.
+            for (var i = 0; i < 3; i++)
+            {
+                _head[i] = VertexColor(_head[i]);
+                _body[i] = VertexColor(_body[i]);
+                _tail[i] = VertexColor(_tail[i]);
+                _echoHead[i] = VertexColor(_echoHead[i]);
+                _echoBody[i] = VertexColor(_echoBody[i]);
+                _echoTail[i] = VertexColor(_echoTail[i]);
+            }
         }
 
         Color Drain(Color c) => Color.Lerp(Color.Lerp(c, Env.Ground, BaneDrain), Color.black, BaneDarken);
@@ -478,6 +556,7 @@ namespace WRLDZ.Presentation.ArInteraction
             _streaks = new Streak[MaxStreaks];
             _phase = new float[Shapes.Length * MaxStreaks];
             _cycle = new int[_phase.Length];
+            _state = new AnchorState[MaxAnchors];
             for (var i = 0; i < MaxStreaks; i++)
             {
                 _streaks[i] = new Streak

@@ -1202,6 +1202,9 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary>True during the disk → street fly-in.</summary>
         public bool IsSpawning => _spawnAnimating;
 
+        /// <summary>Local scale at rest (ignores spawn pop and hit punch).</summary>
+        public Vector3 RestingLocalScale => _targetLocalScale;
+
         /// <summary>Re-tint face/back when the Field Spell wash changes (alpha kept for fades).</summary>
         void ApplyFieldWash()
         {

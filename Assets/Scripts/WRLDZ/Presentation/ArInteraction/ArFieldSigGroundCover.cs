@@ -12,8 +12,10 @@ namespace WRLDZ.Presentation.ArInteraction
     /// grass. Plants run from the palette Ground at the base to Accent at the tips,
     /// sway in one wind that travels across the street, and grow in with the sweep.
     /// The side of each ring facing the stage camera stays short and sparse so the
-    /// monster art is never hidden. One dynamic mesh (one draw call): camera-facing
-    /// tufts, flat fronds and view-aligned root ribbons over a small procedural atlas.
+    /// monster art is never hidden; a Set monster's whole ring lies down under its
+    /// flat card and stands back up once it is face-up. One dynamic mesh (one draw
+    /// call): camera-facing tufts, flat fronds and view-aligned root ribbons over a
+    /// small procedural atlas.
     /// Scope: per-monster.
     /// </summary>
     public sealed class ArFieldSigGroundCover : ArFieldSignature
@@ -49,6 +51,12 @@ namespace WRLDZ.Presentation.ArInteraction
         const float BaneHeight = 0.8f;
         const float BaneDrain = 0.45f;
         const float BoonGlow = 0.25f;
+
+        /// <summary>Under a Set card every item's top lies at this share of SetCardClearHeight.</summary>
+        const float SetClearMargin = 0.8f;
+        const float SetLieHeight = SetCardClearHeight * SetClearMargin;
+        /// <summary>Seconds for a Set monster's ring to stand back up once it is face-up.</summary>
+        const float FlipRiseSeconds = 0.8f;
 
         /// <summary>Tufts are sheared quads: the texture carries the blades, the top row carries lean and sway.</summary>
         const int TuftRows = 2;
@@ -173,6 +181,7 @@ namespace WRLDZ.Presentation.ArInteraction
             public float HeadSin;
             public int Row;       // first row in _shape / _halfWidth
             public float Size;    // sway length (host-local metres)
+            public float Top;     // highest point of the shape (host-local metres)
             public float Phase;   // radians (sway) or 0…1 (root pulse)
             public float Freq;
             public float Keep;    // camera-side items with Keep under the cull share fade out
@@ -198,6 +207,9 @@ namespace WRLDZ.Presentation.ArInteraction
         readonly Block[] _blocks = new Block[2];
         readonly int[] _order = new int[MaxAnchors];
         readonly float[] _dist = new float[MaxAnchors];
+        // Per anchor-list slot, re-keyed when a different monster takes it: 1 = lying under a Set card.
+        readonly int[] _slotKey = new int[MaxAnchors];
+        readonly float[] _slotDown = new float[MaxAnchors];
         int _blockCount;
         Blade[] _blades;
         int _bladeCursor;
@@ -231,6 +243,10 @@ namespace WRLDZ.Presentation.ArInteraction
         float _phase;
         float _time;
         int _aura;
+        float _down;
+        /// <summary>Squared Set-card footprint radius (0 when face-up); vertices inside stay under <see cref="_setTop"/>.</summary>
+        float _setClear2;
+        float _setTop;
 
         float WidthScale => 0.75f + 0.25f * SigScale;
 
@@ -305,6 +321,15 @@ namespace WRLDZ.Presentation.ArInteraction
                 }
             }
 
+            // Every mix above is in sRGB, as designed; convert once for the Linear project.
+            for (var i = 0; i < _blades.Length; i++)
+            {
+                ref var b = ref _blades[i];
+                b.Base = VertexColor(b.Base);
+                b.Mid = VertexColor(b.Mid);
+                b.Tip = VertexColor(b.Tip);
+            }
+
             BuildMesh();
         }
 
@@ -347,10 +372,12 @@ namespace WRLDZ.Presentation.ArInteraction
             var drawn = 0;
             for (var k = 0; k < count; k++)
             {
-                var a = anchors[_order[k]];
+                var slot = _order[k];
+                var a = anchors[slot];
+                var down = LieDown(slot, a, dt);
                 var vis = Mathf.Clamp01(a.Presence) * level;
                 if (vis <= 0.001f || a.Scale <= 1e-4f) continue;
-                WriteAnchor(drawn * _anchorVerts, a, vis, eye);
+                WriteAnchor(drawn * _anchorVerts, a, vis, down, eye, street.HoloScale);
                 drawn++;
             }
 
@@ -378,11 +405,38 @@ namespace WRLDZ.Presentation.ArInteraction
             return new Vector3(street.Center.x, street.Center.y, street.Center.z - street.Half.z - 1f);
         }
 
+        /// <summary>
+        /// How far the ring of the monster in list <paramref name="slot"/> lies down:
+        /// 1 at once when its card is Set, easing back to 0 over <see cref="FlipRiseSeconds"/>
+        /// once it is face-up. A different monster in the slot starts at its own target.
+        /// </summary>
+        float LieDown(int slot, in FieldAnchor a, float dt)
+        {
+            var target = a.FaceDown ? 1f : 0f;
+            if (_slotKey[slot] != a.Key || target > _slotDown[slot])
+            {
+                _slotKey[slot] = a.Key;
+                _slotDown[slot] = target;
+            }
+            else
+            {
+                _slotDown[slot] = Mathf.MoveTowards(_slotDown[slot], target, dt / FlipRiseSeconds);
+            }
+
+            return _slotDown[slot];
+        }
+
         /// <summary>One monster's ring into the vertex run at <paramref name="vStart"/>, each block back to front.</summary>
-        void WriteAnchor(int vStart, in FieldAnchor a, float vis, Vector3 eye)
+        void WriteAnchor(int vStart, in FieldAnchor a, float vis, float down, Vector3 eye, float holoScale)
         {
             _pos = a.Position;
-            _sc = a.Scale;
+            // Geometry follows the steady hologram scale, not the hit punch: the ground stays put while the monster flinches.
+            // Never above a.Scale, so the contract limits (× a.Scale) still hold.
+            _sc = Mathf.Min(a.Scale, holoScale);
+            _down = down;
+            var clear = SetCardClearRadius * a.Scale;
+            _setClear2 = a.FaceDown ? clear * clear : 0f;
+            _setTop = SetCardClearHeight * _sc;
             var toEye = eye - _pos;
             var flat = Mathf.Sqrt(toEye.x * toEye.x + toEye.z * toEye.z);
             _camX = flat > 1e-4f ? toEye.x / flat : 0f;
@@ -390,11 +444,11 @@ namespace WRLDZ.Presentation.ArInteraction
             _right = new Vector3(-_camZ, 0f, _camX);
             _view = toEye.sqrMagnitude > 1e-8f ? toEye.normalized : Vector3.up;
 
-            var key = SlotKey(_pos, _sc);
-            var spin = Hash01(key, 3) * TwoPi;
+            // Seeded by the monster, not its slot or spot: the ring keeps its layout while others come and go or it lunges.
+            var spin = Hash01(a.Key, 3) * TwoPi;
             _spinCos = Mathf.Cos(spin);
             _spinSin = Mathf.Sin(spin);
-            _phase = Hash01(key, 5) * TwoPi;
+            _phase = Hash01(a.Key, 5) * TwoPi;
             _aura = a.Aura;
             _lift = Mathf.Lerp(GrowFloor, 1f, Mathf.SmoothStep(0f, 1f, vis)) * (_aura < 0 ? BaneHeight : 1f);
             _alpha = vis;
@@ -439,6 +493,9 @@ namespace WRLDZ.Presentation.ArInteraction
             }
 
             var lift = _lift * Mathf.Lerp(1f, blk.FrontHeight, front) * Mathf.Lerp(0.6f, 1f, fade);
+            // Every item starts inside a Set card's footprint: under one it lies down to a low skirt,
+            // shape and all (sway scales with lift too), and stands back up after the flip.
+            if (_down > 0f) lift = Mathf.Lerp(lift, Mathf.Min(lift, SetLieHeight / Mathf.Max(b.Top, 1e-3f)), _down);
             var hx = dx * b.HeadCos - dz * b.HeadSin;
             var hz = dz * b.HeadCos + dx * b.HeadSin;
             var bx = _pos.x + dx * b.Radius * _sc;
@@ -531,7 +588,7 @@ namespace WRLDZ.Presentation.ArInteraction
             return c;
         }
 
-        /// <summary>Clamp a vertex into the per-monster volume of the anchor being written.</summary>
+        /// <summary>Clamp a vertex into the per-monster volume of the anchor being written (and under a Set card).</summary>
         Vector3 Contain(Vector3 p)
         {
             var dx = p.x - _pos.x;
@@ -543,9 +600,11 @@ namespace WRLDZ.Presentation.ArInteraction
                 var k = r / Mathf.Sqrt(d2);
                 p.x = _pos.x + dx * k;
                 p.z = _pos.z + dz * k;
+                d2 = r * r;
             }
 
-            p.y = Mathf.Clamp(p.y, _pos.y, _pos.y + GuardHeight * _sc);
+            var top = d2 < _setClear2 ? _setTop : GuardHeight * _sc;
+            p.y = Mathf.Clamp(p.y, _pos.y, _pos.y + top);
             return p;
         }
 
@@ -557,13 +616,6 @@ namespace WRLDZ.Presentation.ArInteraction
                 _verts[i] = at;
                 _cols[i] = default;
             }
-        }
-
-        /// <summary>Stable key per monster zone so a ring keeps its rotation when the anchor list reorders.</summary>
-        static int SlotKey(Vector3 p, float scale)
-        {
-            var pitch = ArPlaymatLayout.MonsterColumnPitch * Mathf.Max(0.3f, scale);
-            return Mathf.FloorToInt(p.x / pitch) * 2 + (p.z >= 0f ? 1 : 0) + 64;
         }
 
         static int Scaled(int n, float density) => Mathf.Max(4, Mathf.RoundToInt(n * density));
@@ -626,6 +678,7 @@ namespace WRLDZ.Presentation.ArInteraction
                 b.DirZ = Mathf.Sin(angle);
                 b.Radius = Mathf.Lerp(spec.Inner, outer, r01);
                 b.Size = h;
+                b.Top = h;
                 b.Phase = Hash01(i, salt + 6) * TwoPi;
                 b.Freq = Mathf.Lerp(1.5f, 2.6f, Hash01(i, salt + 7));
                 b.Keep = Hash01(i, salt + 8);
@@ -672,6 +725,7 @@ namespace WRLDZ.Presentation.ArInteraction
                     b.HeadCos = Mathf.Cos(turn * Mathf.Deg2Rad);
                     b.HeadSin = Mathf.Sin(turn * Mathf.Deg2Rad);
                     b.Size = reach;
+                    b.Top = height;
                     b.Phase = Hash01(i, salt + 5) * TwoPi;
                     b.Freq = Mathf.Lerp(1.0f, 1.5f, Hash01(i, salt + 6));
                     b.Keep = Hash01(i, salt + 7);
@@ -732,6 +786,7 @@ namespace WRLDZ.Presentation.ArInteraction
 
                 ref var b = ref NextBlade(rows);
                 var far = 0f;
+                var top = 0f;
                 for (var j = 0; j < rows; j++)
                 {
                     var s = j / (float)(rows - 1);
@@ -745,12 +800,14 @@ namespace WRLDZ.Presentation.ArInteraction
                     _shape[b.Row + j] = new Vector3(x, arch * h, z);
                     _halfWidth[b.Row + j] = hw;
                     far = Mathf.Max(far, Mathf.Sqrt(x * x + z * z) + hw);
+                    top = Mathf.Max(top, arch * h);
                 }
 
                 b.DirX = Mathf.Cos(angle);
                 b.DirZ = Mathf.Sin(angle);
                 b.Radius = Mathf.Min(Mathf.Lerp(RootInnerMin, RootInnerMax, Hash01(i, salt + 7)), DesignRadius - far);
                 b.Size = length;
+                b.Top = top;
                 b.Phase = Hash01(i, salt + 8);
                 var tone = Mathf.Lerp(0.85f, 1f, Hash01(i, salt + 9));
                 b.Base = bark * tone;
@@ -780,8 +837,6 @@ namespace WRLDZ.Presentation.ArInteraction
             _cols = new Color32[total];
             _rowP = new Vector3[maxRows];
             var uvs = new Vector2[total];
-            var tris = new int[quads * 6 * MaxAnchors];
-            var ti = 0;
             for (var a = 0; a < MaxAnchors; a++)
             for (var bi = 0; bi < _blockCount; bi++)
             {
@@ -797,7 +852,35 @@ namespace WRLDZ.Presentation.ArInteraction
                         uvs[v + j * 2] = new Vector2(u0, tv);
                         uvs[v + j * 2 + 1] = new Vector2(u1, tv);
                     }
+                }
+            }
 
+            // Triangle order is draw order (no depth write). Slot k of a block's zig-zag sits about
+            // πk/Count round from the ring's back (see WriteAnchor), so merge the blocks on that
+            // share: far leaves and far fronds draw first, near ones of both kinds last.
+            var tris = new int[quads * 6 * MaxAnchors];
+            var next = new int[_blockCount];
+            var ti = 0;
+            for (var a = 0; a < MaxAnchors; a++)
+            {
+                for (var bi = 0; bi < _blockCount; bi++)
+                    next[bi] = 0;
+                while (true)
+                {
+                    var pick = -1;
+                    var best = float.MaxValue;
+                    for (var bi = 0; bi < _blockCount; bi++)
+                    {
+                        if (next[bi] >= _blocks[bi].Count) continue;
+                        var at = (next[bi] + 0.5f) / _blocks[bi].Count;
+                        if (at >= best) continue;
+                        best = at;
+                        pick = bi;
+                    }
+
+                    if (pick < 0) break;
+                    var blk = _blocks[pick];
+                    var v = a * _anchorVerts + blk.VertStart + next[pick]++ * blk.Rows * 2;
                     for (var j = 0; j < blk.Rows - 1; j++)
                     {
                         var q = v + j * 2;

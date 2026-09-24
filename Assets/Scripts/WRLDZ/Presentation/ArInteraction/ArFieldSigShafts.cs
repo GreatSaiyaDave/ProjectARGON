@@ -18,11 +18,16 @@ namespace WRLDZ.Presentation.ArInteraction
     /// SigScale sets the shaft count (4 at 0.5, 5 at 1, 6 at 1.5) and their
     /// width.</para>
     /// Every shaft is a ribbon turned toward the stage camera around its own
-    /// axis. It reads as a beam from any side and never as a curtain. The part
-    /// of a shaft at the centre of the view, or close to the phone, dims so the
-    /// monsters stay readable. One dynamic mesh (one draw call). Soft edges come
-    /// from the shared soft dot: ribbons sample its centre line, glints the
-    /// whole dot. Scope: street.
+    /// axis. It reads as a beam from any side and never as a curtain. The
+    /// bright band sits low enough to stay in a portrait frame aimed at the
+    /// field. Any part of a shaft that would draw over a face-up monster's card
+    /// from the camera fades out, as does the part right at the phone, and the
+    /// centre of the view dims a little. A face-up card turns to face the camera
+    /// (yaw and tilt), so each card is tested in its own camera-facing plane,
+    /// upright or rolled onto its side. Every drawn point stays at z ≥ the
+    /// street's NearZ. One dynamic mesh (one draw call) with a kit-owned beam texture:
+    /// ribbons sample its solid-cored centre row, glints the whole texture.
+    /// Scope: street.
     /// </summary>
     public sealed class ArFieldSigShafts : ArFieldSignature
     {
@@ -33,25 +38,32 @@ namespace WRLDZ.Presentation.ArInteraction
         const int ShaftVerts = Rows * 2;
         const int GlintsPerShaft = 2;
         const int GlintVerts = 4;
+        /// <summary>Monster cards checked for overdraw; extra anchors are ignored.</summary>
+        const int MaxCards = 10;
+        const int BeamTexSize = 32;
 
         const float TwoPi = Mathf.PI * 2f;
         /// <summary>Streets at or below this HoloScale draw nothing.</summary>
         const float MinScale = 1e-4f;
 
         /// <summary>Per-vertex alpha cap before level.</summary>
-        const float MaxAlpha = 0.35f;
+        const float MaxAlpha = 0.6f;
         /// <summary>
         /// Shaft and glint alpha at full breath. A glint over its shaft composites to
-        /// at most 0.21 + 0.172 × (1 − 0.21) ≈ 0.346 ≤ <see cref="MaxAlpha"/>
-        /// (0.348 after 8-bit vertex colour rounding).
+        /// at most 0.42 + 0.3 × (1 − 0.42) ≈ 0.594 ≤ <see cref="MaxAlpha"/>
+        /// (about 0.595 after 8-bit vertex colour rounding).
         /// </summary>
-        const float ShaftAlpha = 0.21f;
-        const float GlintAlpha = 0.172f;
+        const float ShaftAlpha = 0.42f;
+        const float GlintAlpha = 0.3f;
 
         // Heights (× HoloScale). Every vertex is held at or above ClearMargin × StreetClearHeight.
         const float ClearMargin = 1.02f;
-        /// <summary>Shaft tops start this far above the street box.</summary>
-        const float TopOver = 1.0f;
+        /// <summary>
+        /// Shaft tops start this far above the street box. With the long soft entry and hold
+        /// below, the bright band sits about 2.1–2.5 m × HoloScale up, inside a portrait frame
+        /// aimed at the field.
+        /// </summary>
+        const float TopOver = 0.7f;
         const float TopJitter = 0.15f;
         /// <summary>Some shafts end up to this much higher than the lowest line.</summary>
         const float LiftJitter = 0.25f;
@@ -78,7 +90,8 @@ namespace WRLDZ.Presentation.ArInteraction
 
         // Layout: shaft tops as a share of the street half extents. Tops sit left of centre
         // because the shafts run right as they fall. Shafts alternate between a far band and
-        // a band around mid, never over the player's end of the street.
+        // a band around mid, never over the player's end of the street. Where NearZ reaches
+        // past the mid band's near edge, both bands squeeze toward the far end.
         const float TopXMin = -0.85f;
         const float TopXMax = 0.3f;
         const float CellJitter = 0.3f;
@@ -105,9 +118,10 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary>Share of the full drop drawn as the sweep first arrives.</summary>
         const float GrowFloor = 0.2f;
 
-        // Alpha along a shaft (0 = top, 1 = bottom): soft entry, hold, then a smooth fall to 0.
-        const float TopSoft = 0.1f;
-        const float HoldTo = 0.35f;
+        // Alpha along a shaft (0 = top, 1 = bottom): a long soft entry (the shaft emerges from the
+        // air), hold, then a smooth fall to 0.
+        const float TopSoft = 0.3f;
+        const float HoldTo = 0.6f;
 
         // Glints: thin speed lines racing down a shaft.
         /// <summary>Glint length as a share of its shaft.</summary>
@@ -120,11 +134,11 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary>Glints shorter than this share of the shaft (entering or leaving) collapse.</summary>
         const float MinGlint = 0.02f;
 
-        // Stage camera: the centre of the view and the space right at the phone stay clear.
+        // Stage camera: the centre of the view dims a little and the space right at the phone stays clear.
         const float ConeInnerDeg = 6f;
         const float ConeOuterDeg = 20f;
         /// <summary>Alpha share left at the very centre of the view.</summary>
-        const float ConeFloor = 0.55f;
+        const float ConeFloor = 0.85f;
         /// <summary>Floor-local metres from the camera: clear inside NearIn, full from NearOut.</summary>
         const float NearIn = 0.4f;
         const float NearOut = 1.2f;
@@ -132,16 +146,25 @@ namespace WRLDZ.Presentation.ArInteraction
         const float FallbackEyeHeight = 1.5f;
         const float FallbackEyeBack = 0.5f;
 
-        // Colours: near-white where the light enters, gold with a little sky lower down.
+        // Face-up monster cards (host-local, × anchor.Scale): the opaque art quad on the anchor,
+        // turned about its foot to face the camera on both axes (yaw and tilt back), as
+        // ArArenaCardVisual.FaceCamera does. Upright it spans ±CardHalfWidth × [0, CardTop] in
+        // that plane; in face-up defense the same quad rolls 90° onto its side. Shaft points
+        // between the eye and a card fade over its silhouette.
+        const float CardHalfWidth = 0.67f;
+        const float CardTop = 1.36f;
+        /// <summary>Fade band around a card's silhouette, measured in the card's plane.</summary>
+        const float CardSoft = 0.15f;
+
+        // Colours: near-white where the light enters, the accent's gold lower down.
         const float TopWhite = 0.8f;
-        const float LowSky = 0.3f;
         const float GlintWhite = 0.9f;
 
         /// <summary>One shaft of the fan. Positions and sizes are shares or × HoloScale; phases in radians.</summary>
         struct Shaft
         {
             public float X;       // top x, share of the street half width
-            public float Z;       // top z, share of the street half length
+            public float Z;       // top z, share of the street half length (before a short street squeezes it)
             public float Top;     // top height above the street box (× HoloScale)
             public float Lift;    // bottom height above the clear line (× HoloScale); covers the half width
             public float Width;   // × the half widths
@@ -158,6 +181,18 @@ namespace WRLDZ.Presentation.ArInteraction
             public float GlintPhase; // 0…1
         }
 
+        /// <summary>A face-up card this frame, in its camera-facing plane (floor-local metres).</summary>
+        struct Card
+        {
+            public Vector3 Foot;  // card root on the street, the pivot it turns about
+            public Vector3 N;     // plane normal, toward the eye
+            public Vector3 R;     // card right (its local +X)
+            public Vector3 U;     // card up in the plane (its local +Y, tilted back)
+            public float HalfW;
+            public float Top;
+            public float Soft;
+        }
+
         Mesh _mesh;
         MeshRenderer _mr;
         Vector3[] _verts;
@@ -167,20 +202,26 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary>First glint vertex: all shaft ribbons are drawn first, glints over them.</summary>
         int _glintBase;
 
-        // Per-row tables (index = row).
+        // Per-row tables (index = row). Colours are vertex colours (converted for the colour space).
         float[] _rowT;
         float[] _rowProfile;
+        /// <summary>This shaft's view factor per row (scratch, rewritten per shaft).</summary>
+        float[] _rowView;
         Color[] _rowCol;
         Color _glintCol;
 
         float _cosInner;
         float _cosOuter;
 
-        // This frame: view, clear line and the extent of every written vertex.
+        Card[] _cardList;
+        int _cards;
+
+        // This frame: view, clear line, near share of the layout and the extent of every written vertex.
         Vector3 _eye;
         Vector3 _fwd;
         bool _hasCam;
         float _clearY;
+        float _zMin;
         Vector3 _lo;
         Vector3 _hi;
 
@@ -190,6 +231,7 @@ namespace WRLDZ.Presentation.ArInteraction
             _count = Mathf.Clamp(Mathf.RoundToInt(3f + 2f * sig), MinShafts, MaxShafts);
             _cosInner = Mathf.Cos(ConeInnerDeg * Mathf.Deg2Rad);
             _cosOuter = Mathf.Cos(ConeOuterDeg * Mathf.Deg2Rad);
+            _cardList = new Card[MaxCards];
 
             BuildShafts(1f + WidthPerSigScale * (sig - 1f));
             BuildTables();
@@ -220,7 +262,8 @@ namespace WRLDZ.Presentation.ArInteraction
             _mesh.uv = uvs;
             _mesh.colors32 = _cols;
             _mesh.triangles = BuildTriangles(total);
-            _mr = AddMeshChild("Shafts", _mesh, VertexColorMaterial("FieldShaftsMat", StreetQueue));
+            _mr = AddMeshChild("Shafts", _mesh,
+                VertexColorMaterial("FieldShaftsMat", StreetQueue, OwnTexture(BuildBeamTexture())));
         }
 
         public override void Tick(float level, in FieldStreet street, IReadOnlyList<FieldAnchor> anchors, float dt)
@@ -236,8 +279,11 @@ namespace WRLDZ.Presentation.ArInteraction
             level = Mathf.Min(level, 1f);
             Advance(Mathf.Clamp(dt, 0f, 0.1f));
             UpdateView(street, h);
+            CollectCards(anchors);
 
             _clearY = StreetClearHeight * ClearMargin * h;
+            _zMin = Mathf.Min(FarZMax,
+                Mathf.Max(MidZMin, (street.NearZ - street.Center.z) / Mathf.Max(street.Half.z, 1e-3f)));
             _lo = street.Center - street.Half;
             _hi = street.Center + street.Half;
             var grow = Mathf.Lerp(GrowFloor, 1f, Mathf.SmoothStep(0f, 1f, level));
@@ -286,6 +332,39 @@ namespace WRLDZ.Presentation.ArInteraction
         }
 
         /// <summary>
+        /// Face-up monster cards this frame (positions only), each turned to face this
+        /// frame's eye about its foot: the same frame as LookRotation(eye − foot, up). Set
+        /// cards lie flat and show no art, so they are left out. Needs <see cref="UpdateView"/> first.
+        /// </summary>
+        void CollectCards(IReadOnlyList<FieldAnchor> anchors)
+        {
+            _cards = 0;
+            // Without a stage camera nothing fades (see View), so there is nothing to test.
+            if (anchors == null || !_hasCam) return;
+            var count = Mathf.Min(anchors.Count, MaxCards);
+            for (var i = 0; i < count; i++)
+            {
+                var a = anchors[i];
+                if (a.FaceDown || a.Scale <= 0f) continue;
+                var n = _eye - a.Position;
+                if (n.sqrMagnitude < 1e-8f) continue;
+                n.Normalize();
+                var r = Vector3.Cross(Vector3.up, n);
+                if (r.sqrMagnitude < 1e-8f) r = Vector3.right;
+                r.Normalize();
+                ref var c = ref _cardList[_cards];
+                c.Foot = a.Position;
+                c.N = n;
+                c.R = r;
+                c.U = Vector3.Cross(n, r);
+                c.HalfW = CardHalfWidth * a.Scale;
+                c.Top = CardTop * a.Scale;
+                c.Soft = CardSoft * a.Scale;
+                _cards++;
+            }
+        }
+
+        /// <summary>
         /// One shaft: a ribbon from its top down to its own low line, turned to the
         /// eye around its axis, then its glints on top.
         /// </summary>
@@ -300,13 +379,15 @@ namespace WRLDZ.Presentation.ArInteraction
             // clear line, so no edge vertex dips below it whichever way the ribbon turns.
             var low = _clearY + s.Lift * h;
             var topY = Mathf.Max(street.Center.y + street.Half.y + s.Top * h, low + MinDrop * h);
+            var zShare = Mathf.Lerp(_zMin, FarZMax, (s.Z - MidZMin) / (FarZMax - MidZMin));
             var top = new Vector3(
                 street.Center.x + s.X * street.Half.x + SwayAmp * h * Mathf.Sin(s.SwayPhase),
                 topY,
-                street.Center.z + s.Z * street.Half.z + DriftAmp * h * Mathf.Sin(s.DriftPhase));
+                street.Center.z + zShare * street.Half.z + DriftAmp * h * Mathf.Sin(s.DriftPhase));
             var axis = new Vector3(s.Slant + Wobble * Mathf.Sin(s.WobblePhase), -1f, SlantZ) * ((topY - low) * grow);
             var bottom = top + axis;
-            Fit(ref top, ref bottom, street);
+            // Clear of NearZ by the widest half width: the turned ribbon's edge can reach that far in z.
+            Fit(ref top, ref bottom, street, street.NearZ + BottomHalfWidth * s.Width * (1f + WidthBreath) * h);
 
             var side = Vector3.Cross(axis, _eye - (top + bottom) * 0.5f);
             if (side.sqrMagnitude < 1e-10f)
@@ -316,15 +397,19 @@ namespace WRLDZ.Presentation.ArInteraction
             var v = i * ShaftVerts;
             var hwTop = TopHalfWidth * wide * h;
             var hwLow = BottomHalfWidth * wide * h;
+            // Alpha is interpolated between rows, so each row's card test reaches one row further.
+            var step = axis.magnitude / (Rows - 1);
             for (var j = 0; j < Rows; j++)
             {
                 var t = _rowT[j];
                 var p = top + axis * t;
-                var off = side * Mathf.Lerp(hwTop, hwLow, t);
+                var hw = Mathf.Lerp(hwTop, hwLow, t);
+                var off = side * hw;
                 Put(v, p - off);
                 Put(v + 1, p + off);
+                _rowView[j] = View(p, hw + step);
                 Color32 c = WithAlpha(_rowCol[j],
-                    Mathf.Min(MaxAlpha, ShaftAlpha * bright * _rowProfile[j] * View(p)) * level);
+                    Mathf.Min(MaxAlpha, ShaftAlpha * bright * _rowProfile[j] * _rowView[j]) * level);
                 _cols[v] = c;
                 _cols[v + 1] = c;
                 v += 2;
@@ -351,10 +436,16 @@ namespace WRLDZ.Presentation.ArInteraction
                 Put(gv + 1, pt + gOff);
                 Put(gv + 2, ph + gOff);
                 Put(gv + 3, ph - gOff);
+                // A glint spans several rows: it takes the dimmest view of the rows around it,
+                // so it never streaks across a card between its two ends.
+                var view = 1f;
+                var jHi = Mathf.Min(Rows - 1, Mathf.CeilToInt(head * (Rows - 1)));
+                for (var j = Mathf.Max(0, Mathf.FloorToInt(tail * (Rows - 1))); j <= jHi; j++)
+                    view = Mathf.Min(view, _rowView[j]);
                 Color32 ct = WithAlpha(_glintCol,
-                    Mathf.Min(MaxAlpha, GlintAlpha * bright * Profile(tail) * View(pt)) * level);
+                    Mathf.Min(MaxAlpha, GlintAlpha * bright * Profile(tail) * view) * level);
                 Color32 ch = WithAlpha(_glintCol,
-                    Mathf.Min(MaxAlpha, GlintAlpha * bright * Profile(head) * View(ph)) * level);
+                    Mathf.Min(MaxAlpha, GlintAlpha * bright * Profile(head) * view) * level);
                 _cols[gv] = ct;
                 _cols[gv + 1] = ct;
                 _cols[gv + 2] = ch;
@@ -381,10 +472,11 @@ namespace WRLDZ.Presentation.ArInteraction
         }
 
         /// <summary>
-        /// 0…1 view factor at <paramref name="p"/>: dims toward the centre of the
-        /// stage camera's view and fades out right at the phone.
+        /// 0…1 view factor at <paramref name="p"/>, for a piece drawn up to <paramref name="reach"/>
+        /// around it: fades out over face-up monster cards and right at the phone, and dims a
+        /// little toward the centre of the stage camera's view.
         /// </summary>
-        float View(Vector3 p)
+        float View(Vector3 p, float reach)
         {
             if (!_hasCam) return 1f;
             var d = p - _eye;
@@ -392,7 +484,43 @@ namespace WRLDZ.Presentation.ArInteraction
             if (dist <= 1e-4f) return 0f;
             var near = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(NearIn, NearOut, dist));
             var off = Mathf.InverseLerp(_cosInner, _cosOuter, Vector3.Dot(d, _fwd) / dist);
-            return near * Mathf.Lerp(ConeFloor, 1f, Mathf.SmoothStep(0f, 1f, off));
+            return near * Mathf.Lerp(ConeFloor, 1f, Mathf.SmoothStep(0f, 1f, off)) * CardClear(d, reach);
+        }
+
+        /// <summary>
+        /// 0 where the piece at <paramref name="d"/> from the eye (anything within
+        /// <paramref name="reach"/> of that point) would draw over a face-up card, 1 once it
+        /// clears the card's silhouette by the fade band. Tested in each card's camera-facing
+        /// plane; a point well behind that plane needs no fade because the opaque card hides it.
+        /// </summary>
+        float CardClear(Vector3 d, float reach)
+        {
+            if (_cards == 0) return 1f;
+            var d2 = d.sqrMagnitude;
+            var clear = 1f;
+            for (var i = 0; i < _cards; i++)
+            {
+                ref var c = ref _cardList[i];
+                // The ray must run toward the card's face to cross it in front of the eye.
+                var dn = Vector3.Dot(d, c.N);
+                if (dn > -1e-4f) continue;
+                var t = Vector3.Dot(c.Foot - _eye, c.N) / dn;
+                if (t <= 0f || (1f - t) * -dn > reach) continue;
+                // A sphere of radius reach around the point lands in the plane within
+                // reach × t / cos(slant) of where the ray crosses it.
+                var rr = reach * t * Mathf.Sqrt(d2 / (dn * dn));
+                var q = _eye + d * t - c.Foot;
+                var x = Vector3.Dot(q, c.R);
+                var y = Vector3.Dot(q, c.U);
+                // Upright art, or the same quad rolled 90° about its normal onto its −R side
+                // (face-up defense): whichever silhouette the point comes closer to.
+                var upright = Mathf.Max(Mathf.Abs(x) - c.HalfW, Mathf.Max(y - c.Top, -y));
+                var rolled = Mathf.Max(Mathf.Max(x, -x - c.Top), Mathf.Abs(y) - c.HalfW);
+                var gap = Mathf.Min(upright, rolled) - rr;
+                clear = Mathf.Min(clear, Mathf.SmoothStep(0f, 1f, gap / c.Soft));
+            }
+
+            return clear;
         }
 
         /// <summary>Alpha share along a shaft (0 = top, 1 = bottom): soft entry, hold, smooth fall to 0.</summary>
@@ -402,24 +530,28 @@ namespace WRLDZ.Presentation.ArInteraction
             return entry * (1f - Mathf.SmoothStep(0f, 1f, (t - HoldTo) / (1f - HoldTo)));
         }
 
-        /// <summary>Slides a shaft (both ends together) inside the street's x / z extents.</summary>
-        static void Fit(ref Vector3 a, ref Vector3 b, in FieldStreet street)
+        /// <summary>
+        /// Slides a shaft (both ends together) inside the street's x extent and between
+        /// <paramref name="zNear"/> and the far end. The near limit wins if it cannot fit.
+        /// </summary>
+        static void Fit(ref Vector3 a, ref Vector3 b, in FieldStreet street, float zNear)
         {
-            var dx = Shift(Mathf.Min(a.x, b.x), Mathf.Max(a.x, b.x), street.Center.x, street.Half.x * BoxInset);
-            var dz = Shift(Mathf.Min(a.z, b.z), Mathf.Max(a.z, b.z), street.Center.z, street.Half.z * BoxInset);
+            var hx = street.Half.x * BoxInset;
+            var hz = street.Half.z * BoxInset;
+            var dx = Shift(Mathf.Min(a.x, b.x), Mathf.Max(a.x, b.x), street.Center.x - hx, street.Center.x + hx);
+            var dz = Shift(Mathf.Min(a.z, b.z), Mathf.Max(a.z, b.z),
+                Mathf.Max(street.Center.z - hz, zNear), street.Center.z + hz);
             a.x += dx;
             b.x += dx;
             a.z += dz;
             b.z += dz;
         }
 
-        /// <summary>Offset that brings [lo, hi] inside centre ± half (centred on it when it cannot fit).</summary>
-        static float Shift(float lo, float hi, float centre, float half)
+        /// <summary>Offset that brings [lo, hi] inside [min, max]; min wins when it cannot fit.</summary>
+        static float Shift(float lo, float hi, float min, float max)
         {
-            if (hi - lo >= 2f * half) return centre - (lo + hi) * 0.5f;
-            if (lo < centre - half) return centre - half - lo;
-            if (hi > centre + half) return centre + half - hi;
-            return 0f;
+            if (hi > max) return Mathf.Max(max - hi, min - lo);
+            return lo < min ? min - lo : 0f;
         }
 
         /// <summary>
@@ -453,13 +585,15 @@ namespace WRLDZ.Presentation.ArInteraction
             }
         }
 
+        /// <summary>Mixes the palette in sRGB, then converts once to vertex colours.</summary>
         void BuildTables()
         {
-            var top = Color.Lerp(Env.Accent, Color.white, TopWhite);
-            var low = Color.Lerp(Env.Accent, Env.Sky, LowSky);
-            _glintCol = Color.Lerp(Env.Accent, Color.white, GlintWhite);
+            var top = VertexColor(Color.Lerp(Env.Accent, Color.white, TopWhite));
+            var low = VertexColor(Env.Accent);
+            _glintCol = VertexColor(Color.Lerp(Env.Accent, Color.white, GlintWhite));
             _rowT = new float[Rows];
             _rowProfile = new float[Rows];
+            _rowView = new float[Rows];
             _rowCol = new Color[Rows];
             for (var j = 0; j < Rows; j++)
             {
@@ -468,6 +602,36 @@ namespace WRLDZ.Presentation.ArInteraction
                 _rowProfile[j] = Profile(t);
                 _rowCol[j] = Color.Lerp(top, low, t);
             }
+        }
+
+        /// <summary>
+        /// Beam texture: alpha (1 − x²)² across u and v (x = 0 at the centre, 1 at the edge).
+        /// Its centre row gives the ribbons a solid core with soft edges; glints use it whole.
+        /// </summary>
+        static Texture2D BuildBeamTexture()
+        {
+            const int n = BeamTexSize;
+            var px = new Color32[n * n];
+            for (var y = 0; y < n; y++)
+            for (var x = 0; x < n; x++)
+                px[y * n + x] = new Color(1f, 1f, 1f, Beam((x + 0.5f) / n) * Beam((y + 0.5f) / n));
+
+            var tex = new Texture2D(n, n, TextureFormat.RGBA32, false)
+            {
+                name = "FieldShaftBeam",
+                wrapMode = TextureWrapMode.Clamp,
+                filterMode = FilterMode.Bilinear
+            };
+            tex.SetPixels32(px);
+            tex.Apply(false, true);
+            return tex;
+        }
+
+        static float Beam(float u)
+        {
+            var x = u * 2f - 1f;
+            var a = 1f - x * x;
+            return a * a;
         }
 
         int[] BuildTriangles(int total)
