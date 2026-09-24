@@ -226,6 +226,22 @@ namespace WRLDZ.Duel.TextEffects
                 // Random discard is a hand → GY send (Destroy family of removals).
                 EffectActionKind.DiscardRandomFromHand => EffectResolutionKind.Destroy,
                 EffectActionKind.EndBattlePhase => EffectResolutionKind.NegateAttack,
+                // PSV tranche 1: shared shapes, not new kinds.
+                EffectActionKind.DestroySummonedThisTurnLevelLeq or
+                    EffectActionKind.DestroyEquipsAttachedToThis =>
+                    EffectResolutionKind.Destroy,
+                EffectActionKind.PlaceNamedFromDeckOnTop => EffectResolutionKind.Search,
+                EffectActionKind.SpecialSummonChosenFromHandOrDeck => EffectResolutionKind.SpecialSummon,
+                EffectActionKind.ShuffleTargetAndHandIntoDeckDraw or
+                    EffectActionKind.OpponentDrawsThenDiscardsDrawnSpells =>
+                    EffectResolutionKind.Draw,
+                EffectActionKind.FlipAllFaceDownDefenseNoFlipEffects => EffectResolutionKind.ChangePosition,
+                EffectActionKind.DoubleAtkOfYourMatchingThenDestroyAtEnd => EffectResolutionKind.ModifyStats,
+                EffectActionKind.LockTargetCannotAttackWhileFaceUp => EffectResolutionKind.Protection,
+                // Piercing: battle damage reaches the player, like a direct-attack grant.
+                EffectActionKind.ContinuousPiercing or
+                    EffectActionKind.EquippedGainsPiercing =>
+                    EffectResolutionKind.DirectAttack,
                 EffectActionKind.None => EffectResolutionKind.None,
                 _ => EffectResolutionKind.UniqueException
             };

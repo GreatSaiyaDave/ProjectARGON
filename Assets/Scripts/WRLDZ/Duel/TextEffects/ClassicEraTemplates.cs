@@ -312,6 +312,101 @@ namespace WRLDZ.Duel.TextEffects
             @"Look at your opponent's hand\.\s*Select 1 card among them and return it to (?:his/her|their) Deck\.\s*The Deck is then shuffled\.",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        // ——— PSV tranche 1 (+ SRL/MRD leftovers) ———
+        static readonly Regex RxAmebaControlShift = new(
+            @"When the control of this face-up card on the field shifts to your opponent, inflict (\d+) points of damage to your opponent's Life Points\.\s*This effect can only be used once as long as this card remains face-up on the field\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        static readonly Regex RxGriggleControlShift = new(
+            @"When the control of this face-up card on the field shifts to your opponent, increase your Life Points by (\d+) points\.\s*This effect can only be used once as long as this card remains face-up on the field\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        static readonly Regex RxBackupSoldier = new(
+            @"While there are (\d+) or more monsters in your (?:GY|Graveyard):\s*Target up to (\d+) non-Effect Monsters with (\d+) or less ATK in your (?:GY|Graveyard);\s*add them to your hand\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        static readonly Regex RxBombardmentBeetle = new(
+            @"FLIP:\s*Pick up and see 1 face-down Defense Position Monster Card on your opponent's side of the field\.\s*If it is an Effect Monster, destroy it \(its Flip Effect is not activated\), and if the card is not, return it to its original position\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        static readonly Regex RxFlipSsOneCopyFaceDown = new(
+            @"FLIP:\s*You can Special Summon 1 ""([^""]+)"" from your Deck in face-down Defense Position\.\s*Then shuffle your Deck\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        static readonly Regex RxGainPerOppRace = new(
+            @"Gains (\d+) ATK for each (\w+) monster your opponent controls or is in their (?:GY|Graveyard)\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        static readonly Regex RxCeasefire = new(
+            @"If a face-down Defense Position monster or an Effect Monster is on the field:\s*Change all face-down Defense Position monsters on the field to face-up Defense Position \(Flip monsters' effects are not activated at this time\), also inflict (\d+) damage to your opponent for each Effect Monster on the field\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        static readonly Regex RxDarkZebra = new(
+            @"If this is the only Monster Card in your control during your Standby Phase, it is changed to Defense Position\.\s*You cannot change the position of this card during the same turn\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        static readonly Regex RxDiscardNThenSetFaceDown = new(
+            @"Discard (\d+) cards from your hand\.\s*Select 1 face-up monster and change it to face-down Defense Position\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        static readonly Regex RxDiscardNDestroyAll = new(
+            @"Discard (\d+) cards from your hand\.\s*Destroy all cards on the field\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        static readonly Regex RxDrillBug = new(
+            @"When this card inflicts Battle Damage to your opponent's Life Points, you can select 1 ""([^""]+)"" card from your Deck, shuffle the Deck, and place ""\1"" on top of the Deck\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        static readonly Regex RxEgotist = new(
+            @"If ""([^""]+)"" is on the field:\s*Special Summon 1 ""([^""]+)"" or ""([^""]+)"" from your hand or Deck\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        static readonly Regex RxSelectAttackerGainLp = new(
+            @"Select 1 attacking monster\.\s*Gain Life Points equal to its ATK\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        static readonly Regex RxEquipPiercing = new(
+            @"If the equipped monster attacks a Defense Position monster, inflict piercing battle damage to your opponent\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        static readonly Regex RxSelfPiercing = new(
+            @"If this card attacks a Defense Position monster, inflict piercing battle damage\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        static readonly Regex RxGearfried = new(
+            @"If either player equips an Equip Card\(s\) to this card:\s*Destroy that Equip Card\(s\)\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        static readonly Regex RxGainPerFieldMonster = new(
+            @"Increase your Life Points by (\d+) points for each monster on the field\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        static readonly Regex RxHirosScout = new(
+            @"FLIP:\s*Your opponent draws (\d+) cards\.\s*Both players look at the cards\.\s*If there are any Spell Cards among them, discard all those Spell Card\(s\) to the (?:GY|Graveyard)\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        static readonly Regex RxInfiniteDismissal = new(
+            @"Level (\d+) or lower monsters are destroyed during the End Phase of the turn that they are Normal Summoned or Flip Summoned\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        static readonly Regex RxInvitationDarkSleep = new(
+            @"When this monster is summoned \(excluding Special Summon\), select 1 of your opponent's monsters\.\s*As long as this card remains face-up on the field, the selected monster cannot attack\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        static readonly Regex RxLimiterRemoval = new(
+            @"Double the ATK of all (\w+) monsters you currently control, until the end of this turn\.\s*During the End Phase of this turn, destroy those monsters\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        static readonly Regex RxMinorGoblin = new(
+            @"You can only activate this card when your opponent's Life Points are (\d+) or less\.\s*Inflict (\d+) points of damage to your opponent's Life Points during each of his/her Standby Phases\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        static readonly Regex RxMonsterRecovery = new(
+            @"Target 1 monster you control that is owned by you;\s*if that monster is still on the field, shuffle it and your entire hand into the Deck, also, after that, draw cards equal to the number of cards you shuffled from your hand into the Deck by this effect\.\s*\(You cannot activate this card if you have a card in your hand that is owned by your opponent\.\)",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        static readonly Regex RxNoblemanExtermination = new(
+            @"Select, destroy, and remove from play 1 face-down Spell or Trap Card\.\s*If it was a Trap Card, both players must remove from play all copies of that card from their Decks\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        static readonly Regex RxPrematureBurial = new(
+            @"Activate this card by paying (\d+) LP, then target 1 monster in your (?:GY|Graveyard);\s*Special Summon that target in Attack Position and equip it with this card\.\s*When this card is destroyed, destroy the equipped monster\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        static readonly Regex RxBothPlayersGainLp = new(
+            @"Increases the Life Points of both players by (\d+) points\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        static readonly Regex RxShadowOfEyes = new(
+            @"When a monster\(s\) is Set on your opponent's field:\s*Target 1 of those Set monsters;\s*change that Set monster to face-up Attack Position\.\s*\(Flip Effects are not activated\.\)",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        static readonly Regex RxSolemnWishes = new(
+            @"Increase your Life Points by (\d+) points each time you draw a card \(or cards\)\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        static readonly Regex RxSkipYourStandby = new(
+            @"Skip your next Standby Phase\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        static readonly Regex RxFiendMegacyber = new(
+            @"If your opponent controls at least (\d+) more monsters than you do, you can Special Summon this card \(from your hand\)\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        static readonly Regex RxTimeSeal = new(
+            @"Skip the Draw Phase of your opponent's next turn\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         public static void Collect(string text, CardDef def, List<EffectClause> into,
             List<(int start, int length)> spans)
         {
@@ -1073,6 +1168,393 @@ namespace WRLDZ.Duel.TextEffects
                 Zone = EffectZoneFilter.OppHandCards,
                 RequiresTargetChoice = true,
                 ChoiceDoesNotTarget = true,
+                MakesChainLink = true
+            });
+            // ═══ PSV tranche 1 (+ SRL/MRD leftovers) ═══
+            var ameba = RxAmebaControlShift.Match(text);
+            Add(ameba, ameba.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.ThisCardControlChanged,
+                    Action = EffectActionKind.TakeEffectDamage, // the NEW controller takes it
+                    Amount = ParseInt(ameba, 1, 0),
+                    OnceWhileFaceUp = true,
+                    MakesChainLink = true
+                }
+                : null);
+            var griggle = RxGriggleControlShift.Match(text);
+            Add(griggle, griggle.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.ThisCardControlChanged,
+                    Action = EffectActionKind.GainLifePoints,
+                    Amount = ParseInt(griggle, 1, 0),
+                    OpponentIsSubject = true, // the player who LOST control
+                    OnceWhileFaceUp = true,
+                    MakesChainLink = true
+                }
+                : null);
+
+            var backup = RxBackupSoldier.Match(text);
+            Add(backup, backup.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.AddFromGyToHand,
+                    Zone = EffectZoneFilter.ControllerGyMonsters,
+                    RequiresTargetChoice = true,
+                    TargetCount = ParseInt(backup, 2, 3),
+                    TargetUpTo = true,
+                    RequiresNonEffectMonster = true,
+                    Amount = ParseInt(backup, 3, 1500),
+                    AmountIsAtkMax = true,
+                    ActivationCondition = "YourGyMonstersAtLeast",
+                    ConditionAmount = ParseInt(backup, 1, 5),
+                    MakesChainLink = true
+                }
+                : null);
+
+            Add(RxBombardmentBeetle.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Flip,
+                Action = EffectActionKind.Destroy,
+                Zone = EffectZoneFilter.OppFaceDownMonsters,
+                RequiresTargetChoice = true,
+                TargetCardKind = "EffectMonster",
+                MakesChainLink = true
+            });
+
+            var vermin = RxFlipSsOneCopyFaceDown.Match(text);
+            Add(vermin, vermin.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.Flip,
+                    Action = EffectActionKind.SpecialSummonNamed,
+                    NamedCard = vermin.Groups[1].Value,
+                    FromDeck = true,
+                    SummonInDefense = true,
+                    SummonFaceDown = true,
+                    IsOptional = true,
+                    MakesChainLink = true
+                }
+                : null);
+
+            var blader = RxGainPerOppRace.Match(text);
+            if (blader.Success && MonsterTypes.Contains(blader.Groups[2].Value))
+            {
+                var c = SelfScale(ParseInt(blader, 1, 0), 0, "OppRaceFaceUpAndGy", null);
+                c.RaceFilter = blader.Groups[2].Value;
+                Add(blader, c);
+            }
+
+            var cease = RxCeasefire.Match(text);
+            if (cease.Success)
+            {
+                Add(cease,
+                    new EffectClause
+                    {
+                        Timing = EffectTiming.Activate,
+                        Action = EffectActionKind.FlipAllFaceDownDefenseNoFlipEffects,
+                        SuppressFlipEffects = true,
+                        ActivationCondition = "FaceDownDefOrFaceUpEffect",
+                        MakesChainLink = true
+                    },
+                    new EffectClause
+                    {
+                        Timing = EffectTiming.Activate,
+                        Action = EffectActionKind.InflictDamageToOpponent,
+                        Amount = ParseInt(cease, 1, 500),
+                        ScaleAmountByFaceUpEffectMonsters = true,
+                        MakesChainLink = true
+                    });
+            }
+
+            Add(RxDarkZebra.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.StandbyPhase,
+                Action = EffectActionKind.ChangeThisBattlePosition,
+                RequiresOnlyMonsterYouControl = true,
+                RequiresThisAttackPosition = true,
+                MakesChainLink = true
+            });
+
+            var approach = RxDiscardNThenSetFaceDown.Match(text);
+            Add(approach, approach.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.SetTargetFaceDownDefense,
+                    Zone = EffectZoneFilter.FieldAnyMonster,
+                    RequiresTargetChoice = true,
+                    DiscardCostCount = ParseInt(approach, 1, 2),
+                    DiscardCostAttribute = "*",
+                    MakesChainLink = true
+                }
+                : null);
+            var destiny = RxDiscardNDestroyAll.Match(text);
+            Add(destiny, destiny.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.Destroy,
+                    Zone = EffectZoneFilter.AllOtherCardsOnField,
+                    Side = EffectSide.Both,
+                    DiscardCostCount = ParseInt(destiny, 1, 5),
+                    DiscardCostAttribute = "*",
+                    MakesChainLink = true
+                }
+                : null);
+
+            var drill = RxDrillBug.Match(text);
+            Add(drill, drill.Success
+                ? new EffectClause
+                {
+                    // Official script: mandatory (the OCG text has no "you can").
+                    Timing = EffectTiming.ThisCardInflictsBattleDamage,
+                    Action = EffectActionKind.PlaceNamedFromDeckOnTop,
+                    NamedCard = drill.Groups[1].Value,
+                    MakesChainLink = true
+                }
+                : null);
+
+            var egotist = RxEgotist.Match(text);
+            Add(egotist, egotist.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.SpecialSummonChosenFromHandOrDeck,
+                    Zone = EffectZoneFilter.HandOrDeckNamed,
+                    NamedCard = egotist.Groups[2].Value + "|" + egotist.Groups[3].Value,
+                    RequiresTargetChoice = true,
+                    ChoiceDoesNotTarget = true,
+                    ActivationCondition = "FaceUpNamedMonster",
+                    ConditionName = egotist.Groups[1].Value,
+                    MakesChainLink = true
+                }
+                : null);
+
+            Add(RxSelectAttackerGainLp.Match(text), new EffectClause
+            {
+                // Enchanted Javelin: answers an attack declaration; does not negate the attack.
+                Timing = EffectTiming.AttackDeclared,
+                Action = EffectActionKind.GainLpEqualToAtk,
+                Zone = EffectZoneFilter.AttackingMonster,
+                MakesChainLink = true
+            });
+
+            if (def != null && def.IsEquipSpell)
+            {
+                var crush = RxEquipPiercing.Match(text);
+                Add(crush, crush.Success
+                    ? new EffectClause[]
+                    {
+                        AnyMonsterEquip(null, 0, 0),
+                        new EffectClause
+                        {
+                            Timing = EffectTiming.ContinuousWhileFaceUp,
+                            Action = EffectActionKind.EquippedGainsPiercing,
+                            StaysOnField = true,
+                            MakesChainLink = false
+                        }
+                    }
+                    : null);
+
+                var burial = RxPrematureBurial.Match(text);
+                Add(burial, burial.Success
+                    ? new EffectClause
+                    {
+                        Timing = EffectTiming.Activate,
+                        Action = EffectActionKind.SpecialSummonFromGy,
+                        Zone = EffectZoneFilter.ControllerGyMonsters,
+                        RequiresTargetChoice = true,
+                        PayLpAmount = ParseInt(burial, 1, 800),
+                        DestroyHostWhenThisLeaves = true,
+                        DestroyHostOnlyIfThisDestroyed = true,
+                        StaysOnField = true,
+                        MakesChainLink = true
+                    }
+                    : null);
+            }
+
+            Add(RxSelfPiercing.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.ContinuousWhileFaceUp,
+                Action = EffectActionKind.ContinuousPiercing,
+                MakesChainLink = false
+            });
+
+            Add(RxGearfried.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.ContinuousWhileFaceUp,
+                Action = EffectActionKind.DestroyEquipsAttachedToThis,
+                MakesChainLink = true
+            });
+
+            var elfGift = RxGainPerFieldMonster.Match(text);
+            Add(elfGift, elfGift.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.GainLifePoints,
+                    Amount = ParseInt(elfGift, 1, 0),
+                    ScaleAmountByAllFieldMonsters = true,
+                    ActivationCondition = "AnyMonsterOnField",
+                    MakesChainLink = true
+                }
+                : null);
+
+            var scout = RxHirosScout.Match(text);
+            Add(scout, scout.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.Flip,
+                    Action = EffectActionKind.OpponentDrawsThenDiscardsDrawnSpells,
+                    Amount = ParseInt(scout, 1, 3),
+                    MakesChainLink = true
+                }
+                : null);
+
+            var dismissal = RxInfiniteDismissal.Match(text);
+            Add(dismissal, dismissal.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.EndPhase,
+                    Action = EffectActionKind.DestroySummonedThisTurnLevelLeq,
+                    Amount = ParseInt(dismissal, 1, 3),
+                    AmountIsLevel = true,
+                    StaysOnField = true,
+                    MakesChainLink = true
+                }
+                : null);
+
+            Add(RxInvitationDarkSleep.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.ThisCardSummoned,
+                Action = EffectActionKind.LockTargetCannotAttackWhileFaceUp,
+                Zone = EffectZoneFilter.OppAnyMonsters,
+                RequiresTargetChoice = true,
+                RequiresNormalOrFlipSummon = true,
+                MakesChainLink = true
+            });
+
+            var limiter = RxLimiterRemoval.Match(text);
+            if (limiter.Success && MonsterTypes.Contains(limiter.Groups[1].Value))
+                Add(limiter, new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.DoubleAtkOfYourMatchingThenDestroyAtEnd,
+                    RaceFilter = limiter.Groups[1].Value,
+                    ActivationCondition = "YouControlFaceUpRace",
+                    MakesChainLink = true
+                });
+
+            var goblinOfficial = RxMinorGoblin.Match(text);
+            Add(goblinOfficial, goblinOfficial.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.StandbyPhase,
+                    Action = EffectActionKind.InflictDamageToOpponent,
+                    Amount = ParseInt(goblinOfficial, 2, 500),
+                    OpponentTurnOnly = true,
+                    ActivationCondition = "OppLpAtMost",
+                    ConditionAmount = ParseInt(goblinOfficial, 1, 3000),
+                    StaysOnField = true,
+                    MakesChainLink = true
+                }
+                : null);
+
+            Add(RxMonsterRecovery.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.ShuffleTargetAndHandIntoDeckDraw,
+                Zone = EffectZoneFilter.ControllerAnyMonsters,
+                RequiresTargetChoice = true,
+                RequiresTargetOwnedByController = true,
+                ActivationCondition = "HandHasOtherCard",
+                MakesChainLink = true
+            });
+
+            Add(RxNoblemanExtermination.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.Destroy,
+                Zone = EffectZoneFilter.FaceDownSpellTraps,
+                RequiresTargetChoice = true,
+                BanishIfDestroyed = true,
+                PurgeDecksIfTrap = true,
+                MakesChainLink = true
+            });
+
+            var mercy = RxBothPlayersGainLp.Match(text);
+            if (mercy.Success)
+            {
+                var n = ParseInt(mercy, 1, 0);
+                Add(mercy,
+                    new EffectClause
+                    {
+                        Timing = EffectTiming.Activate,
+                        Action = EffectActionKind.GainLifePoints,
+                        Amount = n,
+                        MakesChainLink = true
+                    },
+                    new EffectClause
+                    {
+                        Timing = EffectTiming.Activate,
+                        Action = EffectActionKind.GainLifePoints,
+                        Amount = n,
+                        OpponentIsSubject = true,
+                        MakesChainLink = true
+                    });
+            }
+
+            Add(RxShadowOfEyes.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.OpponentNormalOrFlipSummon,
+                Action = EffectActionKind.ChangeToFaceUpAttack,
+                Zone = EffectZoneFilter.FieldAnyMonster,
+                RequiresSummonedFaceDown = true,
+                SuppressFlipEffects = true,
+                AnswersSpecialSummon = true,
+                MakesChainLink = true
+            });
+
+            var wishes = RxSolemnWishes.Match(text);
+            Add(wishes, wishes.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.ControllerDraws,
+                    Action = EffectActionKind.GainLifePoints,
+                    Amount = ParseInt(wishes, 1, 0),
+                    StaysOnField = true,
+                    MakesChainLink = false
+                }
+                : null);
+
+            Add(RxSkipYourStandby.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.SkipControllerNextStandbyPhase,
+                MakesChainLink = true
+            });
+
+            var megacyber = RxFiendMegacyber.Match(text);
+            Add(megacyber, megacyber.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.SpecialSummonThisFromHand,
+                    ActivatesFromHand = true,
+                    ActivationCondition = "OppMonsterLeadAtLeast",
+                    ConditionAmount = ParseInt(megacyber, 1, 2),
+                    IsOptional = true,
+                    MakesChainLink = false // a summon procedure, not an activated effect
+                }
+                : null);
+
+            Add(RxTimeSeal.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.SkipOpponentNextDrawPhase,
                 MakesChainLink = true
             });
         }

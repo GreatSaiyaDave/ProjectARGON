@@ -1956,6 +1956,8 @@ namespace WRLDZ.UI
                     tag = "DECK\n";
                 else if (pending.TargetKind == EffectTargetKind.CardInOppHand)
                     tag = "OPP HAND\n";
+                else if (pending.TargetKind == EffectTargetKind.MonsterInHandOrDeck)
+                    tag = controller != null && controller.Hand.Contains(card) ? "HAND\n" : "DECK\n";
                 else if (pending.TargetKind == EffectTargetKind.SpellInYourGy ||
                          pending.TargetKind == EffectTargetKind.TrapInYourGy)
                     tag = "GY\n";

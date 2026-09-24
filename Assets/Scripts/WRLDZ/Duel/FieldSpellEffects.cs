@@ -66,6 +66,7 @@ namespace WRLDZ.Duel
             ApplyCatalogSpellTraps(engine, engine.Opponent);
             DestroyNamedLeavesContinuous(engine, engine.Player);
             DestroyNamedLeavesContinuous(engine, engine.Opponent);
+            TextEffects.TextEffectRuntime.SweepClassicStateChecks(engine);
         }
 
         static void ClearModifiers(DuelistState who)
@@ -262,6 +263,17 @@ namespace WRLDZ.Duel
                 case "OppControlsAnyMonster":
                     n = engine.OpponentOf(who)?.MonsterCount > 0 ? 1 : 0;
                     break;
+                case "OppRaceFaceUpAndGy":
+                {
+                    // Buster Blader: face-up matching monsters the opponent controls + their GY.
+                    var opp = engine.OpponentOf(who);
+                    if (opp == null) break;
+                    foreach (var m in opp.MonstersOnField())
+                        if (m != null && m.FaceUp && MatchesRace(m, clause.RaceFilter)) n++;
+                    foreach (var g in opp.Graveyard)
+                        if (g?.Def != null && g.Def.IsMonster && MatchesRace(g, clause.RaceFilter)) n++;
+                    break;
+                }
             }
 
             self.AtkModifier += clause.Amount * n;

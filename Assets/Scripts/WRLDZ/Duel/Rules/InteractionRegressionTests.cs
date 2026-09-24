@@ -3371,6 +3371,10 @@ namespace WRLDZ.Duel.Rules
                             if (def == null || !def.IsEquipSpell) continue;
                             var prog = CardTextEffectCompiler.Compile(def);
                             if (prog == null || !prog.FullyCompiled) continue;
+                            // Premature Burial equips the monster it revives (ClassicEraRegressionTests).
+                            if (prog.ClauseList.Exists(c => c != null &&
+                                    c.Action == EffectActionKind.SpecialSummonFromGy))
+                                continue;
                             if (engine.IsAwaitingResponse) engine.PassResponse();
                             ClearBoard(engine);
                             var p = engine.Player;
@@ -3393,6 +3397,11 @@ namespace WRLDZ.Duel.Rules
                                         (cand.race == null ||
                                          cand.race.IndexOf(clause.RaceFilter,
                                              System.StringComparison.OrdinalIgnoreCase) < 0))
+                                        continue;
+                                    // Gearfried the Iron Knight destroys any Equip Card attached to it.
+                                    if (CardTextEffectCompiler.Compile(cand)?.ClauseList.Exists(c =>
+                                            c != null && c.Action ==
+                                            EffectActionKind.DestroyEquipsAttachedToThis) == true)
                                         continue;
                                     hostId = cand.id;
                                     break;
@@ -3781,6 +3790,11 @@ namespace WRLDZ.Duel.Rules
                             }
 
                             if (unique) continue;
+                            // "Activate only when …" (Minor Goblin Official): covered with a board
+                            // by ClassicEraRegressionTests / CorpusTriggerStressTests.
+                            if (prog.ClauseList.Exists(c => c != null &&
+                                    (!string.IsNullOrEmpty(c.ActivationCondition) || c.DiscardCostCount > 0)))
+                                continue;
                             var act = prog.ClausesFor(EffectTiming.Activate);
                             if (act.Exists(c => c != null && c.OpponentTurnOnly))
                                 continue;
@@ -3907,6 +3921,7 @@ namespace WRLDZ.Duel.Rules
                             if (c == null) continue;
                             if (c.RequiresTargetChoice || c.RequiresLordOfDOnField ||
                                 c.RequiresDiscardCost || c.RequiresSendNamedToGy ||
+                                c.DiscardCostCount > 0 || !string.IsNullOrEmpty(c.ActivationCondition) ||
                                 !string.IsNullOrEmpty(c.RequiresFaceUpName) ||
                                 c.Action == EffectActionKind.FusionSummonRegistered ||
                                 c.Action == EffectActionKind.AddFromDeckToHand ||

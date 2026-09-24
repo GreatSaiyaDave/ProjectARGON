@@ -331,11 +331,62 @@ namespace WRLDZ.Duel.Rules
                         if (p.MonsterZones[z].IsEmpty)
                             PlaceMonster(engine, p, Celtic, z, BattlePosition.Attack, true);
 
+                // PSV tranche: N-card discard costs and "Activate only when …" conditions.
+                for (var i = 0; i < c.DiscardCostCount; i++)
+                    PutInHand(engine, p, Celtic);
+                switch (c.ActivationCondition)
+                {
+                    case "OppLpAtMost":
+                        opp.LifePoints = Math.Min(opp.LifePoints, c.ConditionAmount);
+                        break;
+                    case "YourGyMonstersAtLeast":
+                        while (p.Graveyard.Count(g => g?.Def != null && g.Def.IsMonster) < c.ConditionAmount)
+                            p.Graveyard.Add(engine.CreateCardInstance(Celtic));
+                        break;
+                    case "FaceDownDefOrFaceUpEffect":
+                        PlaceMonster(engine, opp, Celtic, 3, BattlePosition.Defense, false);
+                        break;
+                    case "HandHasOtherCard":
+                        PutInHand(engine, p, Celtic);
+                        break;
+                    case "YouControlFaceUpRace":
+                    {
+                        var raceId = FirstMonsterId(engine, d =>
+                            ClassicEraTemplates.RaceMatches(d.race, c.RaceFilter));
+                        if (raceId > 0) PlaceMonster(engine, p, raceId, 3, BattlePosition.Attack, true);
+                        break;
+                    }
+                    case "FaceUpNamedMonster":
+                    {
+                        var namedId = FirstMonsterId(engine, d =>
+                            string.Equals(d.name, c.ConditionName, StringComparison.OrdinalIgnoreCase));
+                        if (namedId > 0) PlaceMonster(engine, p, namedId, 3, BattlePosition.Attack, true);
+                        break;
+                    }
+                }
+
+                if (c.Zone == EffectZoneFilter.HandOrDeckNamed && !string.IsNullOrEmpty(c.NamedCard))
+                {
+                    var first = c.NamedCard.Split('|')[0].Trim();
+                    var deckId = FirstMonsterId(engine, d =>
+                        string.Equals(d.name, first, StringComparison.OrdinalIgnoreCase));
+                    if (deckId > 0) p.Deck.Insert(0, deckId);
+                }
+
                 if (c.Zone == EffectZoneFilter.ControllerGySpells)
                     p.Graveyard.Add(engine.CreateCardInstance(PotOfGreed));
                 if (c.Zone == EffectZoneFilter.ControllerGyTraps)
                     p.Graveyard.Add(engine.CreateCardInstance(MirrorForce));
             }
+        }
+
+        static int FirstMonsterId(DuelEngine engine, Func<CardDef, bool> ok)
+        {
+            if (engine?.Database == null) return 0;
+            foreach (var d in engine.Database.GetAllCards())
+                if (d != null && d.IsMonster && !d.IsExtraDeck && ok(d))
+                    return d.id;
+            return 0;
         }
 
         static bool TryField(DuelEngine engine, CardDef def, List<string> fail)
@@ -451,8 +502,9 @@ namespace WRLDZ.Duel.Rules
                         sid = 51275027; // Unhappy Maiden DEF 100
                     else if (cl.Count > 0 && cl[0] != null && cl[0].AmountIsAtkMax)
                         sid = 13179332; // Charcoal Inpachi ATK 100
+                    var setOnly = cl.Count > 0 && cl[0] != null && cl[0].RequiresSummonedFaceDown;
                     summoned = PlaceMonster(engine, engine.Opponent, sid, 3,
-                        BattlePosition.Attack, true);
+                        setOnly ? BattlePosition.Defense : BattlePosition.Attack, !setOnly);
                     if (cl.Count > 0 && cl[0] != null && cl[0].AnswersSpecialSummon &&
                         !cl[0].AnswersControllerSummon)
                     {
