@@ -6,33 +6,61 @@ namespace WRLDZ.Presentation.ArInteraction
     /// <summary>
     /// Rising Air Current's thermal. Thin wind streaks whip round each monster's
     /// feet and climb in a spiral, like the white cirrus streaks the hawk rides
-    /// in the illustration. Each streak is a pair of speed lines, a bright line
-    /// with a fainter companion just outside and below it, running up a vortex
-    /// path: wide and almost flat round the feet, cinched at mid-height, opening
-    /// again near the top. A streak has a near-white head, an accent body and a
-    /// tail that thins into sky blue. It lifts off the ground, fades out before
-    /// the height cap, rests a moment and respawns at the feet at a new angle.
-    /// The player's vortices turn one way and the opponent's the other, so the
-    /// two rows mirror across the aisle. Each monster's spin and streak timing
-    /// come from its stable key, so a lunge, a hit punch or a relayout never
-    /// twists it. The vortex rises with the sweep and sinks back on dissolve.
-    /// <para>Boon (the wind lifts the monster): one extra streak, whiter and
-    /// brighter, whipping round faster in more turns. Bane: a slack draught,
-    /// low, slow and dim, drained toward the ground colour.</para>
-    /// <para>Set monster: no vortex. Its flat card back (0.96 × 1.40 host-local,
-    /// lying across the street) reaches 0.70 from the feet along its long axis,
-    /// so no ribbon inside the per-monster radius could circle it without
-    /// cutting its ends. Turning Set hides the vortex at once; a flip gathers
-    /// it up from the feet.</para>
+    /// in the illustration. Each streak is a pair of speed lines: a bright line
+    /// with a fainter companion just outside and below it. They run up a vortex
+    /// that leaves the feet almost flat and steepens toward the top. A streak has
+    /// a near-white head, an accent body and a tail that thins into sky blue. It
+    /// lifts off the ground, fades out before the height cap, rests a moment and
+    /// respawns at the feet at a new angle. The player's vortices turn one way
+    /// and the opponent's the other, so the two rows mirror across the aisle.
+    /// The vortex rises with the sweep and sinks back on dissolve.
+    /// <para>Calm: 0.54 × Scale out at the feet and top, drawn in to about 0.50 at
+    /// mid-height. Boon (the wind lifts the monster): one extra streak, whiter,
+    /// brighter and a little bolder, whipping round faster in more turns on a
+    /// straight column about 0.54 out. Its centre line stays at least 0.08 × Scale
+    /// outside the 0.45 aura column, so it reads as wind round the column, not as
+    /// part of it. Bane: a slack draught, low, slow and dim, drained toward the
+    /// ground colour. An aura change fades the old streaks out and the new shape's
+    /// in.</para>
+    /// <para>Room: sized by the monster's resting scale, so it does not swell on
+    /// a hit. Every ribbon edge stays outside the 0.45 ownership ring and within
+    /// <see cref="ArFieldSignature.LaneHalfWidth"/> sideways. On the design row
+    /// (0.7 × Scale from the midline) it also stays
+    /// <see cref="ArFieldSignature.AisleClear"/> short of the midline. A guard
+    /// pulls in any vertex that would cross either line
+    /// (<see cref="ArFieldSignature.MidlineGap"/>), and it fades out at the aisle
+    /// line. A monster lunging toward the midline fades its whole vortex.</para>
+    /// <para>Cards: every vertex is clamped with
+    /// <see cref="ArFieldSignature.CoverLimit"/>, for its own monster and for any
+    /// neighbour whose card it reaches: a Set card's footprint, or face-up art
+    /// in the same row. Streaks ease down before they reach a limit, so they
+    /// never meet the clamp while visible. In front of upright art the vortex is
+    /// squeezed into the art's lower ~22 % (0.30 × Scale): the camera side keeps
+    /// a low spiral and the full climb happens behind the opaque art. In front of
+    /// sideways Defense art (0.10 × Scale) there is no room for a ribbon, so
+    /// streaks fade out there. Beside sideways art, or with no stage camera, they
+    /// climb to full height. A lower limit applies at once; a higher one is grown
+    /// into over 0.6 s. Streaks fade out before they reach a neighbour's Set card,
+    /// and a card standing up after its flip clears that fade over 0.6 s.</para>
+    /// <para>Set monster, or a flip still animating: no vortex. The card lies
+    /// almost flat across the street (footprint 1.40 × 0.91 host-local,
+    /// <see cref="ArFieldSignature.InSetCard"/>). That is wider than the 1.2
+    /// column pitch, so no ring of streaks could circle it without crossing
+    /// the card. Turning Set hides the vortex at once. Once the card stands up
+    /// after its flip, the vortex gathers up from the feet over 0.6 s.</para>
+    /// <para>Each monster's spin, streak timing and ease state (flip, aura fade,
+    /// cover) are keyed by its <see cref="FieldAnchor.Key"/>. It keeps its look,
+    /// and an ease in progress carries on, while it lunges or while other monsters
+    /// come and go. A monster not seen last frame starts settled; its entrance is
+    /// the pad's presence ramp.</para>
     /// <para>One look (variant 0). Any other variant draws the same vortex.
     /// SigScale sets the streak count (2 at 0.5, 3 at 1, 4 at 1.5), the vortex
     /// height and the line width.</para>
-    /// Nothing reaches under the card: the path stays outside the ownership
-    /// ring. The side of each vortex facing the stage camera is fainter so the
-    /// monster reads through it. Palette mixes are done in sRGB and converted
-    /// with VertexColor() once at build. One dynamic mesh (one draw call) of
-    /// ribbons turned toward the camera; soft edges come from the shared soft
-    /// dot's centre line. Scope: per-monster.
+    /// The camera side of each vortex is also fainter, so the monster reads
+    /// through it. Palette mixes are done in sRGB and converted with
+    /// VertexColor() once at build. One dynamic mesh (one draw call) of ribbons
+    /// turned toward the camera; soft edges come from the shared soft dot's
+    /// centre line. Scope: per-monster.
     /// </summary>
     public sealed class ArFieldSigUpdraft : ArFieldSignature
     {
@@ -67,7 +95,7 @@ namespace WRLDZ.Presentation.ArInteraction
         // Vortex size in host-local metres (× anchor.Scale). Radii live in the shapes below.
         const float BaseHeight = 0.5f;
         const float HeightPerSigScale = 0.04f;
-        /// <summary>Path starts above the terrain pad, clear of the widest ribbon's lower edge (0.048).</summary>
+        /// <summary>Path starts above the terrain pad, clear of the widest ribbon's lower edge (0.041).</summary>
         const float Lift = 0.05f;
         /// <summary>Slope of the rise at the feet (1 = straight); it steepens toward the top.</summary>
         const float RiseAtFeet = 0.6f;
@@ -77,7 +105,7 @@ namespace WRLDZ.Presentation.ArInteraction
         const float GrowFloor = 0.35f;
 
         // Companion line: just outside, dropping slightly below, a step behind.
-        const float EchoOut = 0.035f;
+        const float EchoOut = 0.025f;
         const float EchoDrop = 0.025f;
         const float EchoLag = 0.05f;
         const float EchoWidth = 0.55f;
@@ -92,14 +120,46 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary>Per-respawn jitter (full range): start angle in radians, span and radius as shares.</summary>
         const float AngleJitter = 1f;
         const float SpanJitter = 0.3f;
-        const float RadiusJitter = 0.06f;
+        const float RadiusJitter = 0.02f;
 
-        // Camera side of each vortex: fainter, so the monster art reads through it.
+        // Camera side of each vortex: fainter, so the monster art reads through it (on top of CoverLimit).
         const float FrontCosFrom = 0.1f;
         const float FrontCosTo = 0.9f;
         const float FrontAlpha = 0.7f;
 
-        /// <summary>Seconds a flipped monster's vortex takes to gather up from its feet. Turning Set hides it at once.</summary>
+        // Room (× Scale).
+        /// <summary>A vertex fades out over this last stretch before the aisle line (MidlineGap 0).</summary>
+        const float MidlineFade = 0.01f;
+        /// <summary>
+        /// Room left to the aisle line at the anchor itself (MidlineGap / Scale) over
+        /// which a monster lunging toward the midline fades its whole vortex. The design
+        /// row leaves 0.6.
+        /// </summary>
+        const float AisleFadeFrom = 0.5f;
+        const float AisleFadeTo = 0.25f;
+
+        // Cards (× Scale).
+        /// <summary>A streak eases its climb down over this band before a card zone with room for it (upright art).</summary>
+        const float SqueezeBand = 0.15f;
+        /// <summary>
+        /// Before a zone with no room for a ribbon (a Set card, sideways art) a streak fades out
+        /// over <see cref="FadeBand"/> first, then drops over <see cref="DiveBand"/> unseen.
+        /// </summary>
+        const float FadeBand = 0.1f;
+        const float DiveBand = 0.02f;
+        /// <summary>Squeezed below this share of its climb a streak starts to fade; gone at <see cref="SqueezeHide"/>.</summary>
+        const float SqueezeShow = 0.3f;
+        const float SqueezeHide = 0.12f;
+        /// <summary>Face-up neighbours within this z of the monster share its row; their art may be crossed.</summary>
+        const float SameRowZ = 0.3f;
+        /// <summary><see cref="ArFieldSignature.InSetCard"/>'s own margin (host-local).</summary>
+        const float SetMargin = 0.03f;
+
+        /// <summary>
+        /// Seconds a vortex takes to gather up from the feet once a flipped card stands up
+        /// (a flip counts as Set until then), and to grow into a higher cover height.
+        /// Turning Set hides the vortex at once.
+        /// </summary>
         const float FlipOpenSeconds = 0.6f;
         /// <summary>On an aura change the old streaks fade out over this, then the new shape's fade in over it.</summary>
         const float AuraFadeSeconds = 0.25f;
@@ -116,7 +176,11 @@ namespace WRLDZ.Presentation.ArInteraction
         const float BaneDrain = 0.5f;
         const float BaneDarken = 0.2f;
 
-        /// <summary>How one monster's vortex turns. Radii are host-local metres on a quadratic curve foot → mid → top.</summary>
+        /// <summary>
+        /// How one monster's vortex turns. Radii are host-local metres on a quadratic curve
+        /// foot → mid → top. Sized so the widest ribbon edge (radius jitter, companion line and
+        /// SigScale 1.5 included) stays inside 0.6 and outside the 0.45 ownership ring.
+        /// </summary>
         struct Shape
         {
             public float RFoot;
@@ -130,21 +194,23 @@ namespace WRLDZ.Presentation.ArInteraction
             public float Width;
         }
 
+        /// <summary>Waist about 0.504 at mid-height; no aura column to clear.</summary>
         static readonly Shape Calm = new Shape
         {
-            RFoot = 0.6f, RMid = 0.44f, RTop = 0.58f, Turns = 0.85f, Height = 1f,
+            RFoot = 0.54f, RMid = 0.47f, RTop = 0.535f, Turns = 0.85f, Height = 1f,
             Period = 3.2f, Span = 0.3f, Alpha = 0.62f, Width = 1f
         };
 
+        /// <summary>Waist about 0.538: ≥ 0.532 after radius jitter, 0.08 outside the 0.45 aura column.</summary>
         static readonly Shape Boon = new Shape
         {
-            RFoot = 0.62f, RMid = 0.42f, RTop = 0.6f, Turns = 1.1f, Height = 1f,
-            Period = 2.5f, Span = 0.34f, Alpha = 0.8f, Width = 1.2f
+            RFoot = 0.54f, RMid = 0.535f, RTop = 0.54f, Turns = 1.1f, Height = 1f,
+            Period = 2.5f, Span = 0.34f, Alpha = 0.8f, Width = 1.05f
         };
 
         static readonly Shape Bane = new Shape
         {
-            RFoot = 0.62f, RMid = 0.54f, RTop = 0.62f, Turns = 0.55f, Height = 0.55f,
+            RFoot = 0.54f, RMid = 0.52f, RTop = 0.54f, Turns = 0.55f, Height = 0.55f,
             Period = 4.4f, Span = 0.26f, Alpha = 0.42f, Width = 0.85f
         };
 
@@ -159,7 +225,7 @@ namespace WRLDZ.Presentation.ArInteraction
             public float Width;
         }
 
-        /// <summary>Which monster an anchor index holds and how its vortex is easing through a flip or an aura change.</summary>
+        /// <summary>One monster's eases, found again next frame by its <see cref="FieldAnchor.Key"/>.</summary>
         struct AnchorState
         {
             public int Key;
@@ -169,6 +235,8 @@ namespace WRLDZ.Presentation.ArInteraction
             public int Aura;
             /// <summary>0 = fully shown, 1 = faded out for an aura change.</summary>
             public float Dim;
+            /// <summary>Front cover height in use (floor-local): follows a lower one at once, a higher one over time.</summary>
+            public float Cover;
         }
 
         Mesh _mesh;
@@ -191,8 +259,21 @@ namespace WRLDZ.Presentation.ArInteraction
         float[] _phase;
         int[] _cycle;
 
-        /// <summary>Per anchor index; re-keyed when a different monster takes the index.</summary>
+        /// <summary>This frame's anchors (copied: the caller's list is only read) and their states, by index.</summary>
+        FieldAnchor[] _anchors;
         AnchorState[] _state;
+        /// <summary>Last frame's states, looked up by Key; swapped with <see cref="_state"/> each Tick.</summary>
+        AnchorState[] _prevState;
+        int _prevCount;
+        int _anchorCount;
+        /// <summary>Horizontal unit vector from each anchor toward the camera, as CoverLimit measures it.</summary>
+        float[] _fwdX;
+        float[] _fwdZ;
+        bool[] _hasFwd;
+        /// <summary>Other anchors whose cards the monster being written can reach.</summary>
+        int[] _near;
+        int _nearCount;
+        FieldStreet _street;
 
         // Per-row tables along a strand (index = row, tail → head).
         float[] _rowS;
@@ -210,8 +291,11 @@ namespace WRLDZ.Presentation.ArInteraction
         Color[] _echoTail;
 
         // Anchor being written.
+        int _self;
+        FieldAnchor _a;
         Vector3 _o;
         float _s;
+        float _side;
         Vector3 _view;
         float _camX;
         float _camZ;
@@ -250,6 +334,8 @@ namespace WRLDZ.Presentation.ArInteraction
             var count = anchors == null ? 0 : Mathf.Min(anchors.Count, MaxAnchors);
             if (level <= 0.001f || count == 0)
             {
+                // Nothing tracked while hidden: monsters met again start settled.
+                _prevCount = 0;
                 if (_mr.enabled) _mr.enabled = false;
                 return;
             }
@@ -257,24 +343,44 @@ namespace WRLDZ.Presentation.ArInteraction
             var step = dt > 0f ? dt : 0f;
             Advance(step);
             level = Mathf.Min(level, 1f);
-            var eye = EyeLocal(street);
+            _street = street;
+            var eye = street.HasCamera
+                ? street.Camera
+                : new Vector3(street.Center.x, street.Center.y, street.Center.z - street.Half.z - 1f);
+
+            _anchorCount = count;
+            for (var i = 0; i < count; i++)
+            {
+                _anchors[i] = anchors[i];
+                Track(i, step);
+                FaceCamera(i);
+            }
 
             var bounds = new Bounds(street.Center, street.Half * 2f);
             var drawn = 0;
             for (var i = 0; i < count; i++)
             {
-                var a = anchors[i];
-                Track(i, a, step);
+                var a = _anchors[i];
                 var fade = Mathf.Clamp01(a.Presence) * level;
                 // A Set monster (Open 0) takes no slot: nothing is drawn near its flat card.
-                if (fade <= 0.001f || a.Scale <= MinScale || _state[i].Open <= 0f) continue;
-                WriteAnchor(drawn * SlotVerts, a, _state[i], fade, eye);
+                if (fade <= 0.001f || a.Scale <= MinScale || a.FaceDown || _state[i].Open <= 0f) continue;
+                // Lunging toward the midline: the whole vortex fades before it can reach the aisle.
+                fade *= Ramp(AisleFadeTo, AisleFadeFrom, MidlineGap(a, a.Position) / a.Scale);
+                if (fade <= 0.001f) continue;
+                FindNeighbours(i);
+                WriteAnchor(drawn * SlotVerts, i, fade, eye);
                 drawn++;
                 var s = a.Scale;
                 bounds.Encapsulate(new Bounds(
                     a.Position + new Vector3(0f, MaxAnchorHeight * 0.5f * s, 0f),
                     new Vector3(MaxAnchorRadius * 2f * s, MaxAnchorHeight * s, MaxAnchorRadius * 2f * s)));
             }
+
+            // This frame's states are next frame's lookup table.
+            var swap = _prevState;
+            _prevState = _state;
+            _state = swap;
+            _prevCount = count;
 
             if (drawn == 0)
             {
@@ -312,22 +418,37 @@ namespace WRLDZ.Presentation.ArInteraction
         }
 
         /// <summary>
-        /// Eases the monster at anchor index <paramref name="i"/>. Turning Set hides
-        /// its vortex at once (the flat card needs the room); a flip gathers it up
-        /// over <see cref="FlipOpenSeconds"/>. An aura change on show fades the old
-        /// streaks out and the new shape's in (each shape runs its own clock, so a
-        /// cut would jump). A different monster at the index starts settled.
+        /// Eases the monster at anchor index <paramref name="i"/>, carrying on from its
+        /// state last frame (found by Key, so a monster keeps its ease when others leave).
+        /// Turning Set hides its vortex at once (the flat card needs the room); once the
+        /// card stands up after a flip it gathers up over <see cref="FlipOpenSeconds"/>.
+        /// An aura change on show fades the old streaks out and the new shape's in (each
+        /// shape runs its own clock, so a cut would jump). A monster not seen last frame
+        /// starts settled.
         /// </summary>
-        void Track(int i, in FieldAnchor a, float dt)
+        void Track(int i, float dt)
         {
-            ref var st = ref _state[i];
+            var a = _anchors[i];
             var aura = a.Aura > 0 ? 1 : a.Aura < 0 ? -1 : 0;
-            if (st.Key != a.Key)
+            var cover = a.FaceDown ? 0f : a.FrontCoverHeight;
+            var found = false;
+            var st = default(AnchorState);
+            for (var k = 0; k < _prevCount; k++)
+            {
+                if (_prevState[k].Key != a.Key) continue;
+                st = _prevState[k];
+                found = true;
+                break;
+            }
+
+            if (!found)
             {
                 st.Key = a.Key;
                 st.Open = a.FaceDown ? 0f : 1f;
                 st.Aura = aura;
                 st.Dim = 0f;
+                st.Cover = cover;
+                _state[i] = st;
                 return;
             }
 
@@ -348,24 +469,62 @@ namespace WRLDZ.Presentation.ArInteraction
             {
                 st.Dim = Mathf.MoveTowards(st.Dim, 0f, dt / AuraFadeSeconds);
             }
+
+            // A lower cover applies at once; a higher one (standing up, Defense → Attack) is grown into.
+            var rate = a.Scale * UprightCoverHeight / FlipOpenSeconds;
+            st.Cover = Mathf.Min(cover, Mathf.MoveTowards(st.Cover, cover, rate * dt));
+            _state[i] = st;
         }
 
-        /// <summary>Stage camera in floor-local space; the player's end of the street without one.</summary>
-        Vector3 EyeLocal(in FieldStreet street)
+        /// <summary>The camera direction <see cref="ArFieldSignature.CoverLimit"/> uses for anchor <paramref name="i"/>.</summary>
+        void FaceCamera(int i)
         {
-            var cam = StageCamera;
-            if (cam != null) return transform.InverseTransformPoint(cam.transform.position);
-            return new Vector3(street.Center.x, street.Center.y, street.Center.z - street.Half.z - 1f);
+            var p = _anchors[i].Position;
+            var tx = _street.Camera.x - p.x;
+            var tz = _street.Camera.z - p.z;
+            var len = Mathf.Sqrt(tx * tx + tz * tz);
+            _hasFwd[i] = _street.HasCamera && len >= 1e-4f;
+            _fwdX[i] = _hasFwd[i] ? tx / len : 0f;
+            _fwdZ[i] = _hasFwd[i] ? tz / len : 0f;
+        }
+
+        /// <summary>
+        /// Other anchors whose cards the vortex at index <paramref name="i"/> can reach:
+        /// any Set card (or one still standing up) near enough, and face-up art in its row.
+        /// </summary>
+        void FindNeighbours(int i)
+        {
+            _nearCount = 0;
+            var a = _anchors[i];
+            var reach = (MaxAnchorRadius + SqueezeBand + FadeBand) * a.Scale;
+            for (var k = 0; k < _anchorCount; k++)
+            {
+                if (k == i) continue;
+                var b = _anchors[k];
+                if (b.Scale <= MinScale) continue;
+                var dx = Mathf.Abs(b.Position.x - a.Position.x);
+                var dz = Mathf.Abs(b.Position.z - a.Position.z);
+                var card = (b.FaceDown || _state[k].Open < 1f) &&
+                           dx < (SetCardHalfX + SetMargin) * b.Scale + reach &&
+                           dz < (SetCardHalfZ + SetMargin) * b.Scale + reach;
+                var art = !b.FaceDown && _hasFwd[k] && b.ArtHalf > 0f && dz < SameRowZ * a.Scale &&
+                          dx < Mathf.Abs(b.ArtLateral) + b.ArtHalf + reach;
+                if (card || art) _near[_nearCount++] = k;
+            }
         }
 
         /// <summary>
         /// One monster's vortex: its streaks, each a main line and a companion,
-        /// grown and faded in by <c>st.Open</c> and dimmed by <c>st.Dim</c>.
+        /// grown and faded in by its Open ease and dimmed by its Dim ease.
         /// </summary>
-        void WriteAnchor(int v, in FieldAnchor a, in AnchorState st, float fade, Vector3 eye)
+        void WriteAnchor(int v, int ai, float fade, Vector3 eye)
         {
-            _o = a.Position;
-            _s = a.Scale;
+            _self = ai;
+            _a = _anchors[ai];
+            var st = _state[ai];
+            _o = _a.Position;
+            _s = _a.Scale;
+            _side = _o.z < 0f ? -1f : 1f;
             var toEye = eye - _o;
             var flat = Mathf.Sqrt(toEye.x * toEye.x + toEye.z * toEye.z);
             _camX = flat > 1e-4f ? toEye.x / flat : 0f;
@@ -373,8 +532,8 @@ namespace WRLDZ.Presentation.ArInteraction
             _view = toEye.sqrMagnitude > 1e-8f ? toEye.normalized : Vector3.up;
 
             // From the monster's stable key: steady through lunges, hit punches, relayouts and list reorders.
-            var spin = TwoPi * Hash01(a.Key, 71);
-            var shift = Hash01(a.Key, 73);
+            var spin = TwoPi * Hash01(_a.Key, 71);
+            var shift = Hash01(_a.Key, 73);
 
             var si = st.Aura + 1;
             var sh = Shapes[si];
@@ -382,7 +541,7 @@ namespace WRLDZ.Presentation.ArInteraction
             var n = _count + (st.Aura > 0 ? 1 : 0);
             var grow = Mathf.Lerp(GrowFloor, 1f, Mathf.SmoothStep(0f, 1f, fade) * opened);
             var height = _height * sh.Height * grow;
-            var turns = (a.PlayerSide ? 1f : -1f) * sh.Turns * TwoPi;
+            var turns = (_a.PlayerSide ? 1f : -1f) * sh.Turns * TwoPi;
             var alpha = sh.Alpha * fade * opened * (1f - Mathf.SmoothStep(0f, 1f, st.Dim));
 
             for (var i = 0; i < MaxStreaks; i++)
@@ -400,7 +559,7 @@ namespace WRLDZ.Presentation.ArInteraction
                 }
 
                 // Respawn jitter per monster and cycle; the cycle only turns over while the streak rests.
-                var seed = unchecked((_cycle[k] + wrap) * CyclePrime + a.Key);
+                var seed = unchecked((_cycle[k] + wrap) * CyclePrime + _a.Key);
                 var span = sh.Span * (1f + SpanJitter * (Hash01(seed, 101 + i) - 0.5f));
                 var head = q / Busy * (1f + span);
                 var theta = _streaks[i].Angle + spin + AngleJitter * (Hash01(seed, 131 + i) - 0.5f);
@@ -417,7 +576,9 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary>
         /// One speed line covering path positions head − span … head. Rows past
         /// either end of the path fold onto it with zero alpha, so a streak rises
-        /// out of the feet and thins away near the top.
+        /// out of the feet and thins away near the top. Each row's climb is squeezed
+        /// under the cards' cover (<see cref="Ceiling"/>) with room for its ribbon, and
+        /// a row with too little room left fades out.
         /// </summary>
         void WriteStrand(int v, float head, float span, float theta0, float turns, float height, in Shape sh,
             float rMul, float rOut, float drop, float halfW, float alpha, Color cHead, Color cBody, Color cTail)
@@ -432,6 +593,9 @@ namespace WRLDZ.Presentation.ArInteraction
             var across = Vector3.up;
             var haveAcross = false;
             var climb = height - Lift;
+            var lift = Lift * _s;
+            var climbS = climb * _s;
+            var midFade = MidlineFade * _s;
             for (var j = 0; j < Rows; j++)
             {
                 var u = tail + span * _rowS[j];
@@ -444,11 +608,18 @@ namespace WRLDZ.Presentation.ArInteraction
                 // Quadratic radius foot → waist → top, and a rise that starts nearly flat.
                 var r = ((sh.RFoot * m * m + 2f * sh.RMid * uc * m + sh.RTop * uc * uc) * rMul + rOut) * _s;
                 var dr = 2f * ((sh.RMid - sh.RFoot) * m + (sh.RTop - sh.RMid) * uc) * rMul * _s;
-                var y = (Lift + climb * uc * (RiseAtFeet + (1f - RiseAtFeet) * uc) - drop * uc) * _s;
+                var rise = (climb * uc * (RiseAtFeet + (1f - RiseAtFeet) * uc) - drop * uc) * _s;
                 var dy = (climb * (RiseAtFeet + 2f * (1f - RiseAtFeet) * uc) - drop) * _s;
 
-                var c = new Vector3(_o.x + cs * r, _o.y + y, _o.z + sn * r);
-                var tangent = new Vector3(dr * cs - r * sn * turns, dy, dr * sn + r * cs * turns);
+                // Squeeze the climb under the cards' cover here, keeping room for the ribbon's half width.
+                var pad = halfW * _alongWidth[j] * _s;
+                var cx = _o.x + cs * r;
+                var cz = _o.z + sn * r;
+                var room = Ceiling(cx, cz, pad, climbS, out var show) - _o.y - lift - pad;
+                var squeeze = climbS > 1e-6f ? Mathf.Clamp01(room / climbS) : 1f;
+
+                var c = new Vector3(cx, _o.y + lift + rise * squeeze, cz);
+                var tangent = new Vector3(dr * cs - r * sn * turns, dy * squeeze, dr * sn + r * cs * turns);
 
                 // Ribbon across the view; near-parallel to it the previous side is kept so it never folds over.
                 var cross = Vector3.Cross(tangent, _view);
@@ -462,20 +633,92 @@ namespace WRLDZ.Presentation.ArInteraction
 
                 var pathFade = Ramp(0f, FadeInU, u) * (1f - Ramp(FadeOutFrom, 1f, u));
                 var front = Ramp(FrontCosFrom, FrontCosTo, cs * _camX + sn * _camZ);
-                var a = Mathf.Min(MaxAlpha, alpha * _alongAlpha[j]) * pathFade * Mathf.Lerp(1f, FrontAlpha, front);
-                Color32 col = WithAlpha(Color.Lerp(Color.Lerp(cTail, cBody, _mixBody[j]), cHead, _mixHead[j]), a);
+                var a = Mathf.Min(MaxAlpha, alpha * _alongAlpha[j]) * pathFade * Mathf.Lerp(1f, FrontAlpha, front) *
+                        show * Ramp(SqueezeHide, SqueezeShow, squeeze);
+                var col = Color.Lerp(Color.Lerp(cTail, cBody, _mixBody[j]), cHead, _mixHead[j]);
 
-                var e = across * (halfW * _alongWidth[j] * _s);
+                var e = across * pad;
                 var o = v + j * 2;
-                _verts[o] = Contain(c - e);
-                _verts[o + 1] = Contain(c + e);
-                _cols[o] = col;
-                _cols[o + 1] = col;
+                _verts[o] = Contain(c - e, out var gap0);
+                _verts[o + 1] = Contain(c + e, out var gap1);
+                _cols[o] = WithAlpha(col, a * Ramp(0f, midFade, gap0));
+                _cols[o + 1] = WithAlpha(col, a * Ramp(0f, midFade, gap1));
             }
         }
 
-        /// <summary>Clamps a vertex inside the contract cylinder of the anchor being written.</summary>
-        Vector3 Contain(Vector3 p)
+        /// <summary>
+        /// Smooth, conservative cover height at floor-local (<paramref name="x"/>, <paramref name="z"/>)
+        /// for a ribbon row reaching <paramref name="pad"/> either side, and in <paramref name="show"/>
+        /// how much of the row may be seen. Never above <see cref="ArFieldSignature.CoverLimit"/>
+        /// anywhere the ribbon touches: each card's zone is widened by the ribbon's reach.
+        /// </summary>
+        float Ceiling(float x, float z, float pad, float climbS, out float show)
+        {
+            show = 1f;
+            var c = CardCeiling(_self, x, z, pad, climbS, ref show);
+            for (var n = 0; n < _nearCount; n++)
+                c = Mathf.Min(c, CardCeiling(_near[n], x, z, pad, climbS, ref show));
+            return c;
+        }
+
+        /// <summary>
+        /// Anchor <paramref name="k"/>'s card as the vortex being written sees it: a Set card's
+        /// footprint (<see cref="ArFieldSignature.InSetCard"/>'s box; a neighbour that just stood
+        /// up keeps it while its flip ease runs), and the camera side of face-up art inside its
+        /// lateral span (<see cref="ArFieldSignature.CoverLimit"/>'s test, at the eased cover height).
+        /// </summary>
+        float CardCeiling(int k, float x, float z, float pad, float climbS, ref float show)
+        {
+            var b = _anchors[k];
+            var free = GuardHeight * _s;
+            var c = free;
+            var setShare = b.FaceDown ? 1f : k == _self ? 0f : 1f - Mathf.SmoothStep(0f, 1f, _state[k].Open);
+            if (setShare > 0f)
+            {
+                var inCard = Mathf.Min((SetCardHalfX + SetMargin) * b.Scale - Mathf.Abs(x - b.Position.x),
+                    (SetCardHalfZ + SetMargin) * b.Scale - Mathf.Abs(z - b.Position.z));
+                var clear = SetCardClearHeight * b.Scale;
+                c = Zone(inCard + pad, clear, clear, setShare, pad, climbS, free, ref show);
+            }
+
+            if (b.FaceDown || !_hasFwd[k] || b.ArtHalf <= 0f) return c;
+            var dx = x - b.Position.x;
+            var dz = z - b.Position.z;
+            var depth = dx * _fwdX[k] + dz * _fwdZ[k];
+            var lateral = dz * _fwdX[k] - dx * _fwdZ[k];
+            var inFront = Mathf.Min(depth, b.ArtHalf - Mathf.Abs(lateral - b.ArtLateral));
+            var cover = Mathf.Min(b.FrontCoverHeight, _state[k].Cover);
+            return Mathf.Min(c, Zone(inFront + pad, cover, b.FrontCoverHeight, 1f, pad, climbS, free, ref show));
+        }
+
+        /// <summary>
+        /// Ceiling near one card zone, <paramref name="t"/> = how far the ribbon reaches into it
+        /// (negative outside). A zone whose settled cover (<paramref name="target"/>) leaves room
+        /// for the climb squeezes it down over <see cref="SqueezeBand"/>; one without room fades
+        /// the streak out over <see cref="FadeBand"/> before it drops over <see cref="DiveBand"/>.
+        /// While the cover in use is still growing toward its target the streak shows only as
+        /// far as that cover leaves room.
+        /// </summary>
+        float Zone(float t, float cover, float target, float share, float pad, float climbS, float free, ref float show)
+        {
+            var floor = _o.y + Lift * _s + pad;
+            var band = Mathf.Lerp(SqueezeBand, DiveBand, Low(target - floor, climbS)) * _s;
+            show *= 1f - share * Low(cover - floor, climbS) * Ramp(-band - FadeBand * _s, -band, t);
+            return Mathf.Lerp(free, Mathf.Min(free, cover), share * Ramp(-band, 0f, t));
+        }
+
+        /// <summary>1 when a ceiling leaves no room for a ribbon's climb, 0 when it leaves enough to show it.</summary>
+        static float Low(float room, float climbS) =>
+            climbS > 1e-6f ? 1f - Ramp(SqueezeHide, SqueezeShow, room / climbS) : 0f;
+
+        /// <summary>
+        /// Hard guards for a vertex of the anchor being written: inside the contract radius,
+        /// within <see cref="ArFieldSignature.LaneHalfWidth"/> sideways, pulled back to its own
+        /// side of the aisle line (<paramref name="gap"/> = MidlineGap after the pull), and no
+        /// taller than <see cref="ArFieldSignature.CoverLimit"/> for its own card and any
+        /// neighbour's card it reaches.
+        /// </summary>
+        Vector3 Contain(Vector3 p, out float gap)
         {
             var dx = p.x - _o.x;
             var dz = p.z - _o.z;
@@ -488,7 +731,23 @@ namespace WRLDZ.Presentation.ArInteraction
                 p.z = _o.z + dz * k;
             }
 
-            p.y = Mathf.Clamp(p.y, _o.y, _o.y + GuardHeight * _s);
+            var lane = LaneHalfWidth * _s;
+            p.x = Mathf.Clamp(p.x, _o.x - lane, _o.x + lane);
+            gap = MidlineGap(_a, p);
+            if (gap < 0f)
+            {
+                p.z -= _side * gap;
+                gap = 0f;
+            }
+
+            var top = Mathf.Min(GuardHeight * _s, CoverLimit(_a, _street, p));
+            for (var n = 0; n < _nearCount; n++)
+            {
+                var lim = CoverLimit(_anchors[_near[n]], _street, p);
+                if (lim < MaxAnchorHeight * _anchors[_near[n]].Scale) top = Mathf.Min(top, lim);
+            }
+
+            p.y = Mathf.Clamp(p.y, _o.y, _o.y + top);
             return p;
         }
 
@@ -556,7 +815,13 @@ namespace WRLDZ.Presentation.ArInteraction
             _streaks = new Streak[MaxStreaks];
             _phase = new float[Shapes.Length * MaxStreaks];
             _cycle = new int[_phase.Length];
+            _anchors = new FieldAnchor[MaxAnchors];
             _state = new AnchorState[MaxAnchors];
+            _prevState = new AnchorState[MaxAnchors];
+            _fwdX = new float[MaxAnchors];
+            _fwdZ = new float[MaxAnchors];
+            _hasFwd = new bool[MaxAnchors];
+            _near = new int[MaxAnchors];
             for (var i = 0; i < MaxStreaks; i++)
             {
                 _streaks[i] = new Streak
