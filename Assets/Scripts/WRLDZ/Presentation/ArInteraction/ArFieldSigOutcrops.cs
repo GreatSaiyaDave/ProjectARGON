@@ -6,27 +6,48 @@ namespace WRLDZ.Presentation.ArInteraction
     /// <summary>
     /// Faceted low-poly rock shards ringing each monster, set in a belt just
     /// outside the ownership ring so the terrain pad, ring and aura stay
-    /// readable and the aisle stays street. Each shard is a flat-shaded
-    /// pentagonal solid (two side bands and a peaked cap) coloured from the
-    /// palette ground and lit by a fixed fake sun: tops light, sides darker,
-    /// feet shaded. Shards break out of the street one after another as a
-    /// monster's presence ramps in (height eases up with a small overshoot) and
-    /// sink back on dissolve.
-    /// <para>Layout: a face-up monster's art is an opaque billboard wider than
-    /// the belt, so the half of the ring behind it is hidden and anything in
-    /// front of it draws over its lower band. The front stays open over the
-    /// monster's feet, and no shard reaching in front of the art plane stands
-    /// taller than <see cref="FrontHeightCap"/>, so the art's lower corners
-    /// stay readable; the front flanks carry the tallest shards the duelist
-    /// sees. "Toward the duelist" is fixed from the street's player end, so
-    /// rings never turn as the phone moves. No shard reaches further sideways
-    /// than half a column pitch, so neighbouring rings never interpenetrate.
-    /// Each monster's layout and heat phase are seeded from its anchor Key, so
-    /// it keeps them while others come and go or it lunges.</para>
-    /// <para>A Set card lies flat over the whole belt, so a face-down monster's
-    /// rocks drop at once to rubble under
-    /// <see cref="ArFieldSignature.SetCardClearHeight"/> and burst back up over
-    /// <see cref="FlipRiseSeconds"/> once it is face-up.</para>
+    /// readable. Each shard is a flat-shaded pentagonal solid (two side bands
+    /// and a peaked cap) coloured from the palette ground and lit by a fixed
+    /// fake sun: tops light, sides darker, feet shaded. Shards break out of the
+    /// street one after another as a monster's presence ramps in (height eases
+    /// up with a small overshoot) and sink back on dissolve. Sizes follow the
+    /// anchor's resting Scale, so the rocks stay put while the hologram flinches.
+    /// <para>Layout: "toward the duelist" is fixed from the street's player end,
+    /// so rings never turn as the phone moves. The front stays open over the
+    /// monster's feet, shards in front of the art as seen from there are built
+    /// under <see cref="ArFieldSignature.UprightCoverHeight"/>, and the front
+    /// flanks carry the tallest shards the duelist sees. Each monster's layout
+    /// and heat phase are seeded from its anchor Key, so it keeps them while
+    /// others come and go or it lunges.</para>
+    /// <para>Lane and aisle, per shard every frame in the floor frame (outer
+    /// columns' rings are turned up to ~36°): a rock that would reach further
+    /// sideways than <see cref="ArFieldSignature.LaneHalfWidth"/>, or past the
+    /// line <see cref="ArFieldSignature.AisleClear"/> short of the street midline
+    /// (<see cref="ArFieldSignature.MidlineGap"/>), is first pulled in toward the
+    /// monster, no closer than the belt's inner edge, then narrowed until it
+    /// fits (height × √fit); its ground fan shrinks to fit as well. On the real
+    /// layout every shard keeps at least about half its footprint. Squeezed below
+    /// <see cref="FitShow"/> a shard fades, and at <see cref="FitHide"/> it is
+    /// not drawn (deep in a lunge).</para>
+    /// <para>Cards: each shard's top is clamped every frame against the real
+    /// camera. Face-up: <see cref="ArFieldSignature.CoverLimit"/>, tested at the
+    /// rock's most camera-ward point shifted toward the art's centre. In front of
+    /// upright art a rock stays in the art's lower band (0.30 × Scale). Defense
+    /// art is rolled onto its side and centred at street level beside the
+    /// monster, so in front of it the rocks drop to 0.10 × Scale while the other
+    /// flank keeps its tall ones. A Set card lies almost flat (1.40 × 0.91,
+    /// <see cref="ArFieldSignature.InSetCard"/>), and a flip counts as Set until
+    /// the card stands. A shard whose footprint overlaps any Set card (its own,
+    /// or a neighbour's, whose ends reach past the lane line at full size) drops
+    /// to rubble under <see cref="ArFieldSignature.SetCardClearHeight"/>. Most of
+    /// the belt lies under the card; the few shards in the strip behind their
+    /// own card keep standing, and those in the strip between it and the camera
+    /// stay under <see cref="SetFrontHeight"/>. Drops are instant. When a shard
+    /// may stand taller again (the card stands up, the art rolls upright, or
+    /// the camera moves off it) it grows back over <see cref="RiseSeconds"/>.
+    /// This ceiling is kept per shard and looked up by anchor Key, so an ease
+    /// survives others coming and going. Boon and bane wait until the card
+    /// stands.</para>
     /// <para>Variant 0, dusty boulders: six low, rounded tan boulders with a pale
     /// strata line and a flat-topped mesa slab at one front corner. A contact
     /// shadow under each puffs into dust as the boulder breaks the ground.</para>
@@ -39,10 +60,11 @@ namespace WRLDZ.Presentation.ArInteraction
     /// draws the boulders.</para>
     /// A face-up monster the field favours gets an accent sheen on its rock tops.
     /// Palette colours are mixed in sRGB and converted with VertexColor() once
-    /// at build time. One dynamic mesh, one draw call. Sprites/Default writes
-    /// no depth, so each frame the shards are written far-to-near into fixed
-    /// slots and faces turned away from the camera are collapsed; convex shards
-    /// then need no depth buffer of their own.
+    /// at build time. One dynamic mesh, one draw call, at most 3800 vertices,
+    /// no per-frame allocation. Sprites/Default writes no depth, so each frame
+    /// the shards are written far-to-near into fixed slots and faces turned
+    /// away from the camera are collapsed; convex shards then need no depth
+    /// buffer of their own.
     /// </summary>
     public sealed class ArFieldSigOutcrops : ArFieldSignature
     {
@@ -75,22 +97,40 @@ namespace WRLDZ.Presentation.ArInteraction
         const float BeltInner = 0.47f;
         /// <summary>Hard cap on any vertex's reach, inside MaxAnchorRadius (0.75).</summary>
         const float ReachCap = 0.72f;
-        /// <summary>Sideways reach: half the column pitch (1.2), so neighbouring rings never interpenetrate.</summary>
+        /// <summary>
+        /// Build-time sideways reach in the ring's own frame (= LaneHalfWidth, half the
+        /// column pitch). Fit re-checks the lane in the floor frame, where outer rings are turned.
+        /// </summary>
         const float SideReach = 0.6f;
         /// <summary>Soft ground fans stop here on the monster side.</summary>
         const float FanInner = 0.4f;
         /// <summary>Hard cap on any vertex's height at the peak of the rise, inside MaxAnchorHeight (0.6).</summary>
         const float HeightCap = 0.57f;
-        /// <summary>
-        /// Height cap at the peak of the rise for any shard reaching in front of
-        /// the art plane (toward the duelist): the opaque art stands on the anchor,
-        /// so taller rock there hides its lower corners.
-        /// </summary>
-        const float FrontHeightCap = 0.3f;
-        /// <summary>A Set monster's rocks, ground fan included, top out at this share of SetCardClearHeight.</summary>
+        /// <summary>A shard over a Set card, ground fan included, tops out at this share of SetCardClearHeight.</summary>
         const float SetClearMargin = 0.8f;
-        /// <summary>Seconds for a Set monster's rocks to regrow once it is face-up.</summary>
-        const float FlipRiseSeconds = 0.8f;
+        /// <summary>InSetCard's own margin (host-local): a footprint is tested with this plus its radius.</summary>
+        const float SetCardMargin = 0.03f;
+        /// <summary>
+        /// Kit rule, stricter than CoverLimit: a shard in the strip between a Set
+        /// card and the camera stays this low (× Scale). The card's near edge is
+        /// about 1 cm up, so a 0.3 rock there would hide its near third.
+        /// </summary>
+        const float SetFrontHeight = 0.1f;
+        /// <summary>
+        /// Seconds for a shard to grow back once it may stand taller: a Set card
+        /// standing up after its flip, Defense art rolling upright, or the camera
+        /// moving so the shard no longer stands in front of the art. Drops are instant.
+        /// </summary>
+        const float RiseSeconds = 0.6f;
+        /// <summary>
+        /// Lane / aisle fit: a shard squeezed below FitShow of its footprint fades
+        /// out by FitHide and is then not drawn. On the real layout (rows 0.7 ×
+        /// Scale from the midline, columns turned up to ~36° from the player's end)
+        /// no shard falls below about 0.52, so these only act deep in a lunge or
+        /// on a crowded street.
+        /// </summary>
+        const float FitHide = 0.3f;
+        const float FitShow = 0.5f;
         const float MinScale = 0.001f;
         /// <summary>Duelist's spot behind the street box (floor-local m); rings orient away from it.</summary>
         const float NominalEyeBack = 1f;
@@ -238,6 +278,8 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary>Slots written last frame; slots past this frame's count are cleared once.</summary>
         int _slotsLive;
         float _risePeak;
+        /// <summary>The ground fan stands taller than a Set card's clearance (cloud), so it counts in that test.</summary>
+        bool _tallFan;
 
         // Template shards (Templates × _rocks) in the anchor frame at unit Scale: +Z away from the duelist.
         Vector3[] _tp;
@@ -257,8 +299,12 @@ namespace WRLDZ.Presentation.ArInteraction
         float[] _rTheta;
         /// <summary>Share of the monster's presence before this shard starts to rise.</summary>
         float[] _rDelay;
-        /// <summary>Rise multiplier that keeps the whole shard under a flat Set card.</summary>
-        float[] _rSquash;
+        /// <summary>Highest template vertex of the shard, ground fan included (unit Scale).</summary>
+        float[] _rTop;
+        /// <summary>Rock body footprint radius round <see cref="_rc"/>, seams included (unit Scale).</summary>
+        float[] _rRock;
+        /// <summary>Ground fan radius round <see cref="_rc"/> (unit Scale).</summary>
+        float[] _rFan;
         /// <summary>Per slot vertex: fan, rock face or seam (same for every slot).</summary>
         byte[] _kind;
 
@@ -272,19 +318,45 @@ namespace WRLDZ.Presentation.ArInteraction
         int[] _aAura;
         float[] _aPhase;
         int[] _aKey;
-        /// <summary>How far a Set monster's rocks have regrown: 0 squashed under the card … 1 full height.</summary>
-        float[] _aUp;
+        /// <summary>
+        /// Per shard (live anchor × _rocks + k): the tallest it may stand, as a
+        /// multiple of its template height. Drops at once, grows back over RiseSeconds.
+        /// </summary>
+        float[] _ceil;
 
-        // Last frame's live anchors, matched by Key so a regrow survives others coming and going.
+        // Last frame's live anchors and their shards' ceilings, matched by Key so an
+        // ease survives others coming and going (swapped with the arrays above, no allocation).
         int[] _prevKey;
-        float[] _prevUp;
+        float[] _prevCeil;
         int _prevLive;
+
+        // Anchor being fitted: flat unit vector toward the camera, lane and aisle room (floor metres).
+        float _camX;
+        float _camZ;
+        float _lane;
+        float _aisle;
+        /// <summary>+1 when the midline is at +Z from the anchor (player half), −1 on the opponent's.</summary>
+        float _toMid;
+        /// <summary>
+        /// This frame's Set anchors. A Set card is 1.40 × Scale wide, so at full size
+        /// its ends reach past the neighbouring rings' lane line (0.6 × Scale from
+        /// their anchor, 0.6 from its own): every shard is tested against every card.
+        /// </summary>
+        FieldAnchor[] _sets;
+        int _setCount;
 
         // Candidate shards this frame, sorted far-to-near through _order.
         int[] _sAnchor;
         int[] _sRock;
         float[] _sProg;
+        /// <summary>Height as a multiple of the template's (rise × √fit, under the ceiling).</summary>
         float[] _sRise;
+        /// <summary>Footprint as a share of the template's (lane / aisle fit).</summary>
+        float[] _sFit;
+        /// <summary>Share of the fitted ground fan's radius that still clears the lines and the ring.</summary>
+        float[] _sFan;
+        /// <summary>Floor-local shard centre at street level, after any pull-in.</summary>
+        Vector3[] _sBase;
         float[] _sDist;
         Vector3[] _sCentre;
         int[] _order;
@@ -325,6 +397,11 @@ namespace WRLDZ.Presentation.ArInteraction
             _rocks = Mathf.Clamp(Mathf.Min(_look.At.Length, _look.Height.Length), 1, budget);
             var q = -2f * RiseBack / (3f * (RiseBack + 1f));
             _risePeak = EaseOutBack(1f + q);
+            _tallFan = _look.FanLift * _risePeak > SetClearMargin * SetCardClearHeight;
+
+            _kind = new byte[_slotVerts];
+            for (var v = 0; v < _slotVerts; v++)
+                _kind[v] = v < FanVerts ? KindFan : v < CrackBase ? KindRock : KindCrack;
 
             BuildColours();
             BuildTemplates();
@@ -332,9 +409,6 @@ namespace WRLDZ.Presentation.ArInteraction
             var slots = MaxAnchors * _rocks;
             _verts = new Vector3[slots * _slotVerts];
             _cols = new Color32[_verts.Length];
-            _kind = new byte[_slotVerts];
-            for (var v = 0; v < _slotVerts; v++)
-                _kind[v] = v < FanVerts ? KindFan : v < CrackBase ? KindRock : KindCrack;
 
             _aPos = new Vector3[MaxAnchors];
             _aScale = new float[MaxAnchors];
@@ -345,13 +419,17 @@ namespace WRLDZ.Presentation.ArInteraction
             _aAura = new int[MaxAnchors];
             _aPhase = new float[MaxAnchors];
             _aKey = new int[MaxAnchors];
-            _aUp = new float[MaxAnchors];
+            _ceil = new float[slots];
+            _sets = new FieldAnchor[MaxAnchors];
             _prevKey = new int[MaxAnchors];
-            _prevUp = new float[MaxAnchors];
+            _prevCeil = new float[slots];
             _sAnchor = new int[slots];
             _sRock = new int[slots];
             _sProg = new float[slots];
             _sRise = new float[slots];
+            _sFit = new float[slots];
+            _sFan = new float[slots];
+            _sBase = new Vector3[slots];
             _sDist = new float[slots];
             _sCentre = new Vector3[slots];
             _order = new int[slots];
@@ -384,10 +462,18 @@ namespace WRLDZ.Presentation.ArInteraction
             level = Mathf.Min(level, 1f);
             var step = dt > 0f ? dt : 0f;
             Advance(step);
-            var eye = EyeLocal(street);
             var viewX = street.Center.x;
             var viewZ = street.Center.z - street.Half.z - NominalEyeBack;
+            // The stage camera as CoverLimit sees it; the duelist's end of the street without one.
+            var eye = street.HasCamera ? street.Camera : new Vector3(viewX, street.Center.y, viewZ);
             var bounds = new Bounds(street.Center, street.Half * 2f);
+
+            _setCount = 0;
+            for (var i = 0; i < count; i++)
+            {
+                var a = anchors[i];
+                if (a.FaceDown && a.Scale > MinScale) _sets[_setCount++] = a;
+            }
 
             var live = 0;
             var shards = 0;
@@ -403,37 +489,52 @@ namespace WRLDZ.Presentation.ArInteraction
                 var dx = p.x - viewX;
                 var dz = p.z - viewZ;
                 var len = Mathf.Sqrt(dx * dx + dz * dz);
-                var up = Regrow(a.Key, a.FaceDown, step);
                 _aPos[live] = p;
                 _aScale[live] = s;
                 _aFade[live] = fade;
                 _aBx[live] = len > 1e-4f ? dx / len : 0f;
                 _aBz[live] = len > 1e-4f ? dz / len : 1f;
-                // Seeded by the monster, not its slot or spot: it keeps its look while others come and go.
+                // Seeded by the monster, not its slot or spot: it keeps its look while others come and go or it lunges.
                 _aTpl[live] = Mathf.Min(Templates - 1, (int)(Hash01(a.Key, 29) * Templates));
-                _aAura[live] = a.Aura;
+                // Boon/bane waits until the card stands: a flip still animating reads as Set.
+                _aAura[live] = a.FaceDown ? 0 : a.Aura;
                 _aPhase[live] = Hash01(a.Key, 41) * TwoPi;
                 _aKey[live] = a.Key;
-                _aUp[live] = up;
-                var grown = Smooth(0f, 1f, up);
+                BeginAnchor(a, eye);
+                var prev = PrevSlot(a.Key);
 
                 var first = _aTpl[live] * _rocks;
                 for (var k = 0; k < _rocks; k++)
                 {
                     var q = first + k;
+                    var fit = Fit(live, q, out var cx, out var cz, out var fan);
+                    // Every shard's ceiling is eased, hidden or not, so it never jumps when it reappears.
+                    var ceil = Ceiling(a, street, q, fit, fan, cx, cz);
+                    if (prev >= 0)
+                    {
+                        var was = _prevCeil[prev * _rocks + k];
+                        if (ceil > was) ceil = Mathf.MoveTowards(was, ceil, step / RiseSeconds);
+                    }
+
+                    _ceil[live * _rocks + k] = ceil;
+                    if (fit <= FitHide) continue;
+
                     var delay = _rDelay[q];
                     var prog = Mathf.Clamp01((fade - delay) / (1f - delay));
                     if (prog <= 0f) continue;
 
-                    // A Set card lies over the whole belt: its rocks stay squashed flat under it.
-                    var rise = EaseOutBack(prog);
-                    if (up < 1f) rise *= Mathf.Lerp(_rSquash[q], 1f, grown);
-                    var c = _rc[q];
-                    var centre = ToFloor(live, c.x, _rh[q] * 0.5f * rise, c.z);
+                    // A squeezed shard narrows more than it shortens (height × √fit), so the tall
+                    // spires still read as tall; the ceiling still caps its top.
+                    var rise = Mathf.Min(Mathf.Sqrt(fit) * EaseOutBack(prog), ceil);
+                    var basePt = new Vector3(p.x + cx, p.y, p.z + cz);
+                    var centre = basePt + new Vector3(0f, s * _rh[q] * 0.5f * rise, 0f);
                     _sAnchor[shards] = live;
                     _sRock[shards] = q;
                     _sProg[shards] = prog;
                     _sRise[shards] = rise;
+                    _sFit[shards] = fit;
+                    _sFan[shards] = fan;
+                    _sBase[shards] = basePt;
                     _sDist[shards] = (centre - eye).sqrMagnitude;
                     _sCentre[shards] = centre;
                     shards++;
@@ -445,13 +546,13 @@ namespace WRLDZ.Presentation.ArInteraction
                 live++;
             }
 
-            // This frame's regrow state becomes next frame's lookup (swap, no allocation).
+            // This frame's ceilings become next frame's lookup (swap, no allocation).
             var keys = _prevKey;
             _prevKey = _aKey;
             _aKey = keys;
-            var ups = _prevUp;
-            _prevUp = _aUp;
-            _aUp = ups;
+            var ceils = _prevCeil;
+            _prevCeil = _ceil;
+            _ceil = ceils;
             _prevLive = live;
 
             if (shards == 0)
@@ -481,12 +582,138 @@ namespace WRLDZ.Presentation.ArInteraction
             _sheenPh = Mathf.Repeat(_sheenPh + SheenRate * dt, TwoPi);
         }
 
-        /// <summary>Stage camera in floor-local space; the duelist's end of the street without one.</summary>
-        Vector3 EyeLocal(in FieldStreet street)
+        /// <summary>Last frame's slot for this Key, or −1 (a monster not seen then starts at its targets).</summary>
+        int PrevSlot(int key)
         {
-            var cam = StageCamera;
-            if (cam != null) return transform.InverseTransformPoint(cam.transform.position);
-            return new Vector3(street.Center.x, street.Center.y, street.Center.z - street.Half.z - NominalEyeBack);
+            for (var j = 0; j < _prevLive; j++)
+                if (_prevKey[j] == key)
+                    return j;
+            return -1;
+        }
+
+        /// <summary>Per-anchor inputs for <see cref="Fit"/> and <see cref="Ceiling"/>.</summary>
+        void BeginAnchor(in FieldAnchor a, Vector3 eye)
+        {
+            var tx = eye.x - a.Position.x;
+            var tz = eye.z - a.Position.z;
+            var len = Mathf.Sqrt(tx * tx + tz * tz);
+            _camX = len > 1e-4f ? tx / len : 0f;
+            _camZ = len > 1e-4f ? tz / len : -1f;
+            _lane = LaneHalfWidth * a.Scale;
+            // MidlineGap at the anchor itself is the room it has toward the midline.
+            _aisle = MidlineGap(a, a.Position);
+            _toMid = a.Position.z < 0f ? 1f : -1f;
+        }
+
+        /// <summary>
+        /// Lane and aisle fit for template shard <paramref name="q"/> of live anchor
+        /// <paramref name="la"/>. Returns the share of its size it keeps (1 = as built;
+        /// at or below <see cref="FitHide"/> it is not drawn) and its centre relative to
+        /// the anchor in floor metres. A shard whose rock would cross the lane
+        /// (<see cref="ArFieldSignature.LaneHalfWidth"/> sideways) or the aisle line
+        /// (<see cref="ArFieldSignature.MidlineGap"/>) is first pulled in toward the
+        /// anchor, no closer than the belt's inner edge, then shrunk about its centre.
+        /// <paramref name="fan"/> is the share of the fitted ground fan that still clears
+        /// both lines and stays off the ownership ring.
+        /// </summary>
+        float Fit(int la, int q, out float cx, out float cz, out float fan)
+        {
+            var s = _aScale[la];
+            var bx = _aBx[la];
+            var bz = _aBz[la];
+            var c = _rc[q];
+            cx = s * (c.x * bz + c.z * bx);
+            cz = s * (c.z * bz - c.x * bx);
+            fan = 1f;
+            var d = Mathf.Sqrt(cx * cx + cz * cz);
+            if (d < 1e-5f) return 1f;
+
+            var ux = cx / d;
+            var uz = cz / d;
+            var mid = _toMid * uz;
+            var rock = Mathf.Max(1e-5f, _rRock[q] * s);
+            var inner = BeltInner * s;
+            var fit = Mathf.Min(1f, LineFit(ux, d, rock, inner, _lane));
+            fit = Mathf.Min(fit, LineFit(-ux, d, rock, inner, _lane));
+            fit = Mathf.Min(fit, LineFit(mid, d, rock, inner, _aisle));
+            if (fit <= 0f) return 0f;
+
+            var r = rock * fit;
+            var dn = Pull(Pull(Pull(d, ux, r, _lane), -ux, r, _lane), mid, r, _aisle);
+            cx = ux * dn;
+            cz = uz * dn;
+
+            var room = Mathf.Min(Mathf.Min(_lane - dn * ux, _lane + dn * ux), _aisle - dn * mid);
+            room = Mathf.Min(room, dn - FanInner * s);
+            var fanR = _rFan[q] * s * fit;
+            fan = fanR > 1e-6f ? Mathf.Clamp01(room / fanR) : 1f;
+            return fit;
+        }
+
+        /// <summary>
+        /// Largest size share a rock of radius <paramref name="rock"/>, at distance
+        /// <paramref name="d"/> on a bearing whose cosine with the line's outward normal
+        /// is <paramref name="k"/>, can keep inside a line <paramref name="limit"/> from
+        /// the anchor: where it stands, or pulled in until it meets the belt's inner edge.
+        /// </summary>
+        static float LineFit(float k, float d, float rock, float inner, float limit)
+        {
+            var stay = (limit - d * k) / rock;
+            if (k <= 1e-4f) return stay;
+            return Mathf.Max(stay, (limit - inner * k) / (rock * (1f + k)));
+        }
+
+        /// <summary>Distance along the bearing at which a rock of radius r just meets the line.</summary>
+        static float Pull(float d, float k, float r, float limit) =>
+            k > 1e-4f ? Mathf.Min(d, (limit - r) / k) : d;
+
+        /// <summary>
+        /// Tallest shard <paramref name="q"/> may stand, as a multiple of its template
+        /// height (<see cref="_risePeak"/> = free). Over any Set card's footprint (its
+        /// own or a neighbour's; a flip counts as Set until the card stands):
+        /// under <see cref="ArFieldSignature.SetCardClearHeight"/>, tested with
+        /// <see cref="ArFieldSignature.InSetCard"/> over the shard's footprint. Face-down
+        /// otherwise: under <see cref="SetFrontHeight"/> in the strip between its card
+        /// and the camera, free in the strip behind it. Face-up:
+        /// <see cref="ArFieldSignature.CoverLimit"/> at the rock's most camera-ward
+        /// point, shifted toward the art's centre, so any rock reaching in front of
+        /// the art (upright or rolled sideways) meets its FrontCoverHeight.
+        /// </summary>
+        float Ceiling(in FieldAnchor a, in FieldStreet street, int q, float fit, float fan, float cx, float cz)
+        {
+            var s = a.Scale;
+            var o = a.Position;
+            var rock = _rRock[q] * fit;
+            // The cloud fan stands above a Set card's clearance, so it counts in the card test.
+            var setReach = _tallFan ? Mathf.Max(rock, _rFan[q] * fit * fan) : rock;
+            var centre = new Vector3(o.x + cx, o.y, o.z + cz);
+            var limit = float.MaxValue;
+            if (a.FaceDown)
+            {
+                if (InSetCard(a, centre, SetCardMargin + setReach))
+                    limit = SetClearMargin * SetCardClearHeight * s;
+                else if (cx * _camX + cz * _camZ > 0f)
+                    limit = SetFrontHeight * s;
+            }
+            else
+            {
+                var r = rock * s;
+                var rightX = -_camZ;
+                var rightZ = _camX;
+                var shift = Mathf.Clamp(a.ArtLateral - (cx * rightX + cz * rightZ), -r, r);
+                limit = CoverLimit(a, street, new Vector3(o.x + cx + _camX * r + rightX * shift, o.y,
+                    o.z + cz + _camZ * r + rightZ * shift));
+            }
+
+            for (var j = 0; j < _setCount; j++)
+            {
+                ref var b = ref _sets[j];
+                if (b.Key == a.Key) continue;
+                if (InSetCard(b, centre, SetCardMargin + setReach * s / b.Scale))
+                    limit = Mathf.Min(limit, SetClearMargin * SetCardClearHeight * b.Scale);
+            }
+
+            return Mathf.Min(_risePeak, limit / Mathf.Max(1e-6f, _rTop[q] * s));
         }
 
         /// <summary>Insertion sort of candidate shards, farthest first (painter's order, no depth writes).</summary>
@@ -509,40 +736,43 @@ namespace WRLDZ.Presentation.ArInteraction
             }
         }
 
-        /// <summary>Template point (anchor frame, y already risen) to floor-local.</summary>
-        Vector3 ToFloor(int la, float x, float y, float z)
-        {
-            var o = _aPos[la];
-            var s = _aScale[la];
-            var bx = _aBx[la];
-            var bz = _aBz[la];
-            return new Vector3(o.x + s * (x * bz + z * bx), o.y + s * y, o.z + s * (z * bz - x * bx));
-        }
-
+        /// <summary>
+        /// One shard into slot <paramref name="slot"/>: template points about the
+        /// shard's own centre, turned into the ring's frame, scaled by fit × Scale
+        /// across and by <see cref="_sRise"/> × Scale up, and set on its (possibly
+        /// pulled-in) base point.
+        /// </summary>
         void WriteShard(int slot, int si, Vector3 eye)
         {
             var la = _sAnchor[si];
             var q = _sRock[si];
             var prog = _sProg[si];
             var rise = _sRise[si];
+            var fit = _sFit[si];
             var o = _aPos[la];
             var s = _aScale[la];
+            var fs = fit * s;
             var bx = _aBx[la];
             var bz = _aBz[la];
-            var alpha = _aFade[la] * Smooth(0f, EmergeFade, prog);
+            var basePt = _sBase[si];
+            var rc = _rc[q];
+            var alpha = _aFade[la] * Smooth(0f, EmergeFade, prog) * Smooth(FitHide, FitShow, fit);
 
-            // Faces turned away from the camera are collapsed. Normals follow the rise squash (inverse transpose).
+            // Faces turned away from the camera are collapsed. Normals follow the fit and
+            // rise scales (inverse transpose: across × rise, up × fit).
             var fb = q * Faces;
             for (var f = 0; f < Faces; f++)
             {
                 var n = _fn[fb + f];
                 var c = _fc[fb + f];
+                var ux = c.x - rc.x;
+                var uz = c.z - rc.z;
                 var nx = (n.x * bz + n.z * bx) * rise;
                 var nz = (n.z * bz - n.x * bx) * rise;
-                var cx = o.x + s * (c.x * bz + c.z * bx);
+                var cx = basePt.x + fs * (ux * bz + uz * bx);
                 var cy = o.y + s * c.y * rise;
-                var cz = o.z + s * (c.z * bz - c.x * bx);
-                _faceVis[f] = nx * (eye.x - cx) + n.y * (eye.y - cy) + nz * (eye.z - cz) > 0f;
+                var cz = basePt.z + fs * (uz * bz - ux * bx);
+                _faceVis[f] = nx * (eye.x - cx) + n.y * fit * (eye.y - cy) + nz * (eye.z - cz) > 0f;
             }
 
             var phase = _rTheta[q] + _aPhase[la];
@@ -553,7 +783,7 @@ namespace WRLDZ.Presentation.ArInteraction
             var sheen = aura > 0 ? BoonSheen * (0.75f + 0.25f * Mathf.Sin(_sheenPh + phase)) : 0f;
             var drain = aura < 0 ? BaneDrain : 0f;
             FanStyle(prog, pw, phase, out var fanCol, out var fanAlpha, out var fanSize);
-            var rc = _rc[q];
+            fanSize *= _sFan[si];
             var collapse = _sCentre[si];
 
             var tb = q * _slotVerts;
@@ -597,8 +827,10 @@ namespace WRLDZ.Presentation.ArInteraction
 
                 col.a = a * alpha;
                 _cols[vb + v] = col;
-                _verts[vb + v] = new Vector3(o.x + s * (p.x * bz + p.z * bx), o.y + s * p.y * rise,
-                    o.z + s * (p.z * bz - p.x * bx));
+                var px = p.x - rc.x;
+                var pz = p.z - rc.z;
+                _verts[vb + v] = new Vector3(basePt.x + fs * (px * bz + pz * bx), o.y + s * p.y * rise,
+                    basePt.z + fs * (pz * bz - px * bx));
             }
         }
 
@@ -636,25 +868,6 @@ namespace WRLDZ.Presentation.ArInteraction
         {
             System.Array.Clear(_verts, slot * _slotVerts, _slotVerts);
             System.Array.Clear(_cols, slot * _slotVerts, _slotVerts);
-        }
-
-        /// <summary>
-        /// Share of full height for a monster's rocks: a Set card lies flat over
-        /// the anchor, so they drop under it at once, and regrow over
-        /// <see cref="FlipRiseSeconds"/> once the monster is face-up. Looked up by
-        /// Key in last frame's anchors; a monster not seen then starts at its target.
-        /// </summary>
-        float Regrow(int key, bool faceDown, float dt)
-        {
-            var target = faceDown ? 0f : 1f;
-            for (var j = 0; j < _prevLive; j++)
-            {
-                if (_prevKey[j] != key) continue;
-                var was = _prevUp[j];
-                return target < was ? target : Mathf.MoveTowards(was, target, dt / FlipRiseSeconds);
-            }
-
-            return target;
         }
 
         /// <summary>easeOutBack: 0 → 1 with a small overshoot (<see cref="RiseBack"/>).</summary>
@@ -744,7 +957,9 @@ namespace WRLDZ.Presentation.ArInteraction
             _rh = new float[shards];
             _rTheta = new float[shards];
             _rDelay = new float[shards];
-            _rSquash = new float[shards];
+            _rTop = new float[shards];
+            _rRock = new float[shards];
+            _rFan = new float[shards];
 
             // The tallest possible shard, at the top of its overshoot, stays under HeightCap at any SigScale.
             var tallest = 0f;
@@ -777,14 +992,25 @@ namespace WRLDZ.Presentation.ArInteraction
 
             ClampExtents();
 
-            // A Set card (about 1.4 × 0.96 host-local once laid flat) covers the whole belt, so a
-            // Set monster squashes every shard, ground fan included, under SetCardClearHeight.
+            // Runtime fit and ceiling inputs: top, rock radius and fan radius round each shard's centre.
             for (var q = 0; q < shards; q++)
             {
+                var c = _rc[q];
                 var top = 0f;
-                for (var v = q * _slotVerts; v < (q + 1) * _slotVerts; v++)
-                    top = Mathf.Max(top, _tp[v].y);
-                _rSquash[q] = Mathf.Min(1f, SetClearMargin * SetCardClearHeight / Mathf.Max(1e-4f, top * _risePeak));
+                var rock = 0f;
+                var fan = 0f;
+                for (var v = 0; v < _slotVerts; v++)
+                {
+                    var p = _tp[q * _slotVerts + v];
+                    top = Mathf.Max(top, p.y);
+                    var r = Flat(p - c);
+                    if (_kind[v] == KindFan) fan = Mathf.Max(fan, r);
+                    else rock = Mathf.Max(rock, r);
+                }
+
+                _rTop[q] = Mathf.Max(1e-4f, top);
+                _rRock[q] = rock;
+                _rFan[q] = fan;
             }
         }
 
@@ -857,8 +1083,10 @@ namespace WRLDZ.Presentation.ArInteraction
             if (side > 1e-3f) far = Mathf.Min(far, (SideReach - reach) / side);
             var d = Mathf.Lerp(BeltInner + reach, Mathf.Max(BeltInner + reach, far), R(0.25f, 0.75f));
             var c = new Vector3(Mathf.Sin(phi) * d, 0f, -Mathf.Cos(phi) * d);
-            // Any shard reaching in front of the art plane stays low, clear of the art's lower corners.
-            var fy = c.z < reach && h * _risePeak > FrontHeightCap ? FrontHeightCap / (h * _risePeak) : 1f;
+            // Layout: a shard reaching in front of the art plane as seen from the street's player end is
+            // built under the upright art's cover height. CoverLimit re-checks every shard against the
+            // real camera each frame (outer columns turn, Defense art rolls).
+            var fy = c.z < reach && h * _risePeak > UprightCoverHeight ? UprightCoverHeight / (h * _risePeak) : 1f;
             h *= fy;
             _bH = h;
             for (var i = 0; i <= 3 * Sides; i++)

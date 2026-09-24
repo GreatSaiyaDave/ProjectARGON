@@ -22,12 +22,23 @@ namespace WRLDZ.Presentation.ArInteraction
     /// <para>One look (variant 0). Any other variant draws the same storm.
     /// SigScale sets how often bolts strike, how far they reach, how thick they
     /// are and how often they branch and triple-stroke.</para>
+    /// <para>The storm recedes behind the monsters: nothing crosses a face-up
+    /// card's art as seen from the stage camera (<see cref="FieldStreet.Camera"/>),
+    /// Defense art included. Each new bolt draws up to <see cref="SpawnTries"/>
+    /// channels and keeps the first whose chord clears the art (else the
+    /// clearest), so strikes mostly land beside or beyond the cards instead of
+    /// vanishing in front of them. Every ribbon point then fades by
+    /// <see cref="ArFieldSignature.ArtClear"/> over its widest glow plus its
+    /// longer neighbouring segment (a segment with any part over the art draws
+    /// nothing there), each eye arm point likewise, and the cloud flash as a
+    /// whole over its long radius. With no stage camera nothing fades.</para>
     /// Everything stays inside the street box, above head-clear height and at
     /// z ≥ NearZ, clear of the local camera. Channel points keep to a band and a
     /// depth range inset by the widest glow, and every vertex is clamped to the
     /// box and NearZ as a guard, so no bolt ever reaches down into the aisle or
-    /// up to the lens. One dynamic mesh of camera-facing ribbons and flash quads
-    /// on the soft dot: one draw call, 304 vertices. Scope: street.
+    /// up to the lens. Every alpha × level. One dynamic mesh of camera-facing
+    /// ribbons and flash quads on the soft dot: one draw call, 304 vertices, no
+    /// per-frame allocation. Scope: street.
     /// </summary>
     public sealed class ArFieldSigArcs : ArFieldSignature
     {
@@ -122,6 +133,12 @@ namespace WRLDZ.Presentation.ArInteraction
         const float JagDecay = 0.7f;
         /// <summary>Vertical jag as a share of the sideways jag.</summary>
         const float JagVertical = 0.6f;
+        /// <summary>Channels drawn per new bolt; the first whose chord clears the art (else the clearest) is kept.</summary>
+        const int SpawnTries = 4;
+        /// <summary>Points along a chord scored with ArtClear, ends included.</summary>
+        const int ChordSamples = 5;
+        /// <summary>Mean chord clearance that ends the search early.</summary>
+        const float ClearEnough = 0.99f;
 
         // Branches.
         const float ForkMin = 0.3f;
@@ -211,6 +228,8 @@ namespace WRLDZ.Presentation.ArInteraction
         {
             public float GlowHalf;
             public float CoreHalf;
+            /// <summary>Widest glow half width over the bolt's life (full swell): the art fade's reach, steady per bolt.</summary>
+            public float GlowReach;
             /// <summary>Glow brightness: rises with the leader, then only fades.</summary>
             public float Glow;
             /// <summary>Core brightness: flickers with the return strokes.</summary>
@@ -267,6 +286,8 @@ namespace WRLDZ.Presentation.ArInteraction
         float _zGuard;
         /// <summary>Centre of the eye's orbit along the street, pushed forward when NearZ cuts into it.</summary>
         float _eyeZ;
+        /// <summary>Widest glow half width any bolt can reach this frame.</summary>
+        float _glowMax;
 
         protected override void Build()
         {
@@ -313,6 +334,11 @@ namespace WRLDZ.Presentation.ArInteraction
             dt = Mathf.Max(0f, dt);
             _eyePhase = Mathf.Repeat(_eyePhase + EyeSpin * dt, TwoPi);
             _sinceStart += dt;
+            // Before Spawn: a new bolt picks its heading clear of the face-up art.
+            _viewer = street.HasCamera
+                ? street.Camera
+                : new Vector3(street.Center.x, street.Center.y, street.Center.z - street.Half.z - 1f);
+            CollectArtCards(anchors, street);
 
             var live = 0;
             for (var i = 0; i < MaxBolts; i++)
@@ -336,7 +362,6 @@ namespace WRLDZ.Presentation.ArInteraction
                 }
             }
 
-            _viewer = Viewer(street);
             var eyeFlare = 0f;
             for (var i = 0; i < MaxBolts; i++)
             {
@@ -372,6 +397,7 @@ namespace WRLDZ.Presentation.ArInteraction
             _yCeil = Mathf.Max(_yFloor, street.Center.y + street.Half.y - GuardMargin * _h);
             // A camera-facing ribbon reaches at most its half width from its centre line, in any direction.
             var glowMax = GlowHalf * _w * BoltWidthMax * (1f + GlowSwell);
+            _glowMax = glowMax;
             _yLow = _yFloor + glowMax;
             _yHigh = _yCeil - glowMax;
             if (_yHigh < _yLow) _yLow = _yHigh = (_yFloor + _yCeil) * 0.5f;
@@ -400,14 +426,6 @@ namespace WRLDZ.Presentation.ArInteraction
             }
         }
 
-        /// <summary>Stage camera in floor-local space; the player's end of the street without one.</summary>
-        Vector3 Viewer(in FieldStreet street)
-        {
-            var cam = StageCamera;
-            if (cam != null) return transform.InverseTransformPoint(cam.transform.position);
-            return new Vector3(street.Center.x, street.Center.y, street.Center.z - street.Half.z - 1f);
-        }
-
         Vector3 StormEye() => new Vector3(
             _cx + Mathf.Cos(_eyePhase) * EyeOrbit * _h,
             Mathf.Lerp(_yLow, _yHigh, EyeRise),
@@ -429,34 +447,49 @@ namespace WRLDZ.Presentation.ArInteraction
             if (slot < 0) return false;
             var p0 = slot * BoltPts;
             var strike = R(0f, 1f) < StrikeChance;
-            Vector3 from;
-            Vector3 to;
-            if (strike)
+            var from = Vector3.zero;
+            var to = Vector3.zero;
+            if (strike) from = Keep(StormEye() + new Vector3(R(-1f, 1f), 0f, R(-1f, 1f)) * (EyeJitter * _h));
+            // A few draws; the channel that best clears the face-up art wins, so a bolt
+            // rarely has to fade out in front of a monster (WriteRibbon still fades it there).
+            var best = -1f;
+            for (var tries = 0; tries < SpawnTries && best < ClearEnough; tries++)
             {
-                // Out of the eye, down and away.
-                from = Keep(StormEye() + new Vector3(R(-1f, 1f), 0f, R(-1f, 1f)) * (EyeJitter * _h));
-                var ang = R(0f, TwoPi);
-                var cos = Mathf.Cos(ang);
-                var sin = Mathf.Sin(ang);
-                var reach = Fit(from.x, from.z, cos, sin, R(StrikeReachMin, StrikeReachMax) * _reach * _h);
-                to = new Vector3(from.x + cos * reach, Mathf.Lerp(_yLow, _yHigh, R(0f, StrikeTipRise)),
-                    from.z + sin * reach);
-            }
-            else
-            {
-                // Spider lightning crawling under the ceiling, round the middle of the free depth.
-                var mx = _cx + R(-1f, 1f) * CrawlSpreadX * _hx;
-                var mz = (_zNear + _zFar) * 0.5f + R(-1f, 1f) * CrawlSpreadZ * (_zFar - _zNear) * 0.5f;
-                var ang = R(0f, TwoPi);
-                var cos = Mathf.Cos(ang);
-                var sin = Mathf.Sin(ang);
-                // The free depth is not centred on the street, so each end is fitted on its own.
-                var want = R(CrawlReachMin, CrawlReachMax) * _reach * _h * 0.5f;
-                var half = Mathf.Min(Fit(mx, mz, cos, sin, want), Fit(mx, mz, -cos, -sin, want));
-                var dx = cos * half;
-                var dz = sin * half;
-                from = new Vector3(mx - dx, Mathf.Lerp(_yLow, _yHigh, R(CrawlFloor, 1f)), mz - dz);
-                to = new Vector3(mx + dx, Mathf.Lerp(_yLow, _yHigh, R(CrawlFloor, 1f)), mz + dz);
+                Vector3 start;
+                Vector3 end;
+                if (strike)
+                {
+                    // Out of the eye, down and away.
+                    start = from;
+                    var ang = R(0f, TwoPi);
+                    var cos = Mathf.Cos(ang);
+                    var sin = Mathf.Sin(ang);
+                    var reach = Fit(start.x, start.z, cos, sin, R(StrikeReachMin, StrikeReachMax) * _reach * _h);
+                    end = new Vector3(start.x + cos * reach, Mathf.Lerp(_yLow, _yHigh, R(0f, StrikeTipRise)),
+                        start.z + sin * reach);
+                }
+                else
+                {
+                    // Spider lightning crawling under the ceiling, round the middle of the free depth.
+                    var mx = _cx + R(-1f, 1f) * CrawlSpreadX * _hx;
+                    var mz = (_zNear + _zFar) * 0.5f + R(-1f, 1f) * CrawlSpreadZ * (_zFar - _zNear) * 0.5f;
+                    var ang = R(0f, TwoPi);
+                    var cos = Mathf.Cos(ang);
+                    var sin = Mathf.Sin(ang);
+                    // The free depth is not centred on the street, so each end is fitted on its own.
+                    var want = R(CrawlReachMin, CrawlReachMax) * _reach * _h * 0.5f;
+                    var half = Mathf.Min(Fit(mx, mz, cos, sin, want), Fit(mx, mz, -cos, -sin, want));
+                    var dx = cos * half;
+                    var dz = sin * half;
+                    start = new Vector3(mx - dx, Mathf.Lerp(_yLow, _yHigh, R(CrawlFloor, 1f)), mz - dz);
+                    end = new Vector3(mx + dx, Mathf.Lerp(_yLow, _yHigh, R(CrawlFloor, 1f)), mz + dz);
+                }
+
+                var score = ChordClear(Keep(start), Keep(end));
+                if (score <= best) continue;
+                best = score;
+                from = start;
+                to = end;
             }
 
             _pts[p0] = Keep(from);
@@ -550,6 +583,18 @@ namespace WRLDZ.Presentation.ArInteraction
             return reach;
         }
 
+        /// <summary>
+        /// Mean <see cref="ArFieldSignature.ArtClear"/> along the chord a → b for the
+        /// widest glow: 1 when a straight bolt there would miss every face-up card's art.
+        /// </summary>
+        float ChordClear(Vector3 a, Vector3 b)
+        {
+            var sum = 0f;
+            for (var i = 0; i < ChordSamples; i++)
+                sum += ArtClear(Vector3.Lerp(a, b, i / (ChordSamples - 1f)), _glowMax);
+            return sum / ChordSamples;
+        }
+
         /// <summary>Channel centre line: inside the inset street box, the band and the free depth.</summary>
         Vector3 Keep(Vector3 p)
         {
@@ -597,6 +642,7 @@ namespace WRLDZ.Presentation.ArInteraction
             pulse.Core = (landed ? Mathf.Max(stroke, afterglow) : LeaderGlow) * tail * level;
             pulse.GlowHalf = GlowHalf * _w * b.Width * (1f + GlowSwell * swell);
             pulse.CoreHalf = CoreHalf * _w * b.Width * (CoreRest + (1f - CoreRest) * stroke);
+            pulse.GlowReach = GlowHalf * _w * b.Width * (1f + GlowSwell);
             var lead = Mathf.Clamp01(b.Age / LeaderSeconds);
 
             WriteRibbon(slot, 0, MainPts, 1f, TipWidth, 1f, TipAlpha, lead, pulse, _glow);
@@ -625,7 +671,10 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary>
         /// Glow and core ribbons along one channel, turned across the view at every
         /// point. <paramref name="reveal"/> 0…1 is how far the leader has raced along it.
-        /// Width and alpha run from the w0 / a0 end to the w1 / a1 end.
+        /// Width and alpha run from the w0 / a0 end to the w1 / a1 end. Each point
+        /// fades by <see cref="ArFieldSignature.ArtClear"/> over its widest glow plus
+        /// its longer neighbouring segment, so a segment with any part in front of a
+        /// face-up card's art has both ends at 0 and draws nothing there.
         /// </summary>
         void WriteRibbon(int slot, int local, int n, float w0, float w1, float a0, float a1, float reveal,
             in Pulse pulse, Color glowCol)
@@ -636,10 +685,13 @@ namespace WRLDZ.Presentation.ArInteraction
             var segs = n - 1;
             var across = Vector3.up;
             var before = Vector3.zero;
+            var lenBefore = 0f;
             for (var j = 0; j < n; j++)
             {
                 var p = _pts[pt + j];
-                var after = j < segs ? Unit(_pts[pt + j + 1] - p) : Vector3.zero;
+                var next = j < segs ? _pts[pt + j + 1] - p : Vector3.zero;
+                var lenAfter = next.magnitude;
+                var after = lenAfter > 1e-6f ? next / lenAfter : Vector3.zero;
                 var view = Unit(_viewer - p);
                 // Each neighbouring segment votes for a side, weighted by how far it is from
                 // end-on, so a segment pointing at the camera cannot twist the ribbon.
@@ -651,7 +703,11 @@ namespace WRLDZ.Presentation.ArInteraction
                 var s = j / (float)segs;
                 var shown = Mathf.Clamp01(reveal * n - j);
                 var w = Mathf.Lerp(w0, w1, s);
-                var a = Mathf.Lerp(a0, a1, s) * shown;
+                // Widest of this point's two segments (Lerp clamps past the ends).
+                var wide = Mathf.Max(Mathf.Lerp(w0, w1, (j - 1f) / segs), Mathf.Lerp(w0, w1, (j + 1f) / segs));
+                var clear = ArtClear(p, pulse.GlowReach * wide + Mathf.Max(lenBefore, lenAfter));
+                lenBefore = lenAfter;
+                var a = Mathf.Lerp(a0, a1, s) * shown * clear;
                 var gh = across * (pulse.GlowHalf * w);
                 var ch = across * (pulse.CoreHalf * w);
                 var o = j * 2;
@@ -719,6 +775,7 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary>
         /// Soft ellipse of light, wide along the ceiling. Its long axis is kept
         /// level, so it reaches at most its short radius above or below its centre.
+        /// The whole flash fades while any of the ellipse would cross face-up art.
         /// </summary>
         void WriteFlash(int slot, Vector3 at, float alpha)
         {
@@ -733,7 +790,8 @@ namespace WRLDZ.Presentation.ArInteraction
             _verts[v + 1] = Contain(at + r - u);
             _verts[v + 2] = Contain(at + r + u);
             _verts[v + 3] = Contain(at - r + u);
-            Color32 col = WithAlpha(_flash, alpha);
+            // The dot's light lies inside the ellipse: within rx of its centre.
+            Color32 col = WithAlpha(_flash, alpha * ArtClear(at, rx));
             _cols[v] = col;
             _cols[v + 1] = col;
             _cols[v + 2] = col;
@@ -743,7 +801,9 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary>
         /// The storm eye bolts leave from: three log-spiral arms in the view plane,
         /// squashed like a level vortex seen from below and turning with the eye.
-        /// Faint; it brightens with the cloud flash when a strike leaves it.
+        /// Faint; it brightens with the cloud flash when a strike leaves it. Arm points
+        /// fade by <see cref="ArFieldSignature.ArtClear"/> over the arm's width plus
+        /// its longer neighbouring segment.
         /// </summary>
         void WriteEye(float level, float flare)
         {
@@ -754,6 +814,10 @@ namespace WRLDZ.Presentation.ArInteraction
             var half = EyeHalf * _w;
             at = Settle(at, right, up, rx + half, ry + half);
             var alpha = (EyeAlpha + EyeFlare * flare) * level;
+            // Arm segments are no longer than |d(position)/ds| × Δs at the outer end:
+            // r × rx × √(tighten² + wind²) × e^(tighten Δs) × Δs (ry ≤ rx; r grows outward).
+            var ds = 1f / (ArmPts - 1);
+            var step = rx * Mathf.Sqrt(ArmTighten * ArmTighten + ArmWind * ArmWind) * Mathf.Exp(ArmTighten * ds) * ds;
             for (var arm = 0; arm < EyeArms; arm++)
             {
                 var turn = _eyePhase + arm * (TwoPi / EyeArms);
@@ -773,7 +837,7 @@ namespace WRLDZ.Presentation.ArInteraction
                     _verts[v + j * 2] = Contain(p - side);
                     _verts[v + j * 2 + 1] = Contain(p + side);
                     // Hollow at the centre, fading out at the tip.
-                    Color32 col = WithAlpha(_glow, alpha * Mathf.Sin(Mathf.PI * s));
+                    Color32 col = WithAlpha(_glow, alpha * Mathf.Sin(Mathf.PI * s) * ArtClear(p, half + step * r));
                     _cols[v + j * 2] = col;
                     _cols[v + j * 2 + 1] = col;
                 }

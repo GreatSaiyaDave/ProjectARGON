@@ -7,26 +7,30 @@ namespace WRLDZ.Presentation.ArInteraction
     /// Luminous Spark's radiance. Four to six thin shafts of white-gold light
     /// pour in above the street and slant down across it, as if from a blinding
     /// source beyond its far left corner. Each shaft is near-white where it
-    /// enters, turns gold as it falls and fades to nothing well above
-    /// head-clear height, so the aisle floor stays street. Shafts further right
-    /// lean further, so they fan out like the rays in the illustration. Each
-    /// shaft drifts slowly across the street, sways a few degrees and breathes
-    /// in brightness on its own phase, and thin speed-line glints race down it.
-    /// The shafts pour down from above as the sweep arrives and draw back up on
-    /// dissolve.
+    /// enters, turns to the palette's accent (gold) as it falls and fades to
+    /// nothing at its own low line, which sits above head-clear height, so the
+    /// aisle floor stays street. Shafts further right lean further, so they fan
+    /// out like the rays in the illustration. Each shaft's top wanders slowly
+    /// across and along the street, its slant sways a few degrees, it breathes in
+    /// brightness and width on its own phase, and thin speed-line glints race
+    /// down it. The shafts pour down from above as the sweep arrives and draw
+    /// back up on dissolve; every alpha is × level.
     /// <para>One look (variant 0). Any other variant draws the same shafts.
     /// SigScale sets the shaft count (4 at 0.5, 5 at 1, 6 at 1.5) and their
     /// width.</para>
-    /// Every shaft is a ribbon turned toward the stage camera around its own
-    /// axis. It reads as a beam from any side and never as a curtain. The
-    /// bright band sits low enough to stay in a portrait frame aimed at the
-    /// field. Any part of a shaft that would draw over a face-up monster's card
-    /// from the camera fades out, as does the part right at the phone, and the
-    /// centre of the view dims a little. A face-up card turns to face the camera
-    /// (yaw and tilt), so each card is tested in its own camera-facing plane,
-    /// upright or rolled onto its side. Every drawn point stays at z ≥ the
-    /// street's NearZ. One dynamic mesh (one draw call) with a kit-owned beam texture:
-    /// ribbons sample its solid-cored centre row, glints the whole texture.
+    /// Every shaft is a ribbon turned toward the stage camera
+    /// (<see cref="FieldStreet.Camera"/>) around its own axis. It reads as a beam
+    /// from any side and never as a curtain. The bright band sits low enough to
+    /// stay in a portrait frame aimed at the field. Any part of a shaft or glint
+    /// that would draw over a face-up monster's art from the camera fades out
+    /// (<see cref="ArFieldSignature.ArtClear"/>: each card in its camera-facing
+    /// plane and its actual pose, upright or sideways in Defense), as does the
+    /// part right at the phone, and the centre of the view dims a little. With
+    /// no stage camera the ribbons face a stand-in eye behind the player's end and
+    /// nothing fades or dims. Every drawn point stays at or above head-clear
+    /// height and at z ≥ the street's NearZ. One dynamic mesh (one draw call,
+    /// at most 168 vertices) with a kit-owned beam texture: ribbons sample its
+    /// solid-cored centre row, glints the whole texture.
     /// Scope: street.
     /// </summary>
     public sealed class ArFieldSigShafts : ArFieldSignature
@@ -38,8 +42,6 @@ namespace WRLDZ.Presentation.ArInteraction
         const int ShaftVerts = Rows * 2;
         const int GlintsPerShaft = 2;
         const int GlintVerts = 4;
-        /// <summary>Monster cards checked for overdraw; extra anchors are ignored.</summary>
-        const int MaxCards = 10;
         const int BeamTexSize = 32;
 
         const float TwoPi = Mathf.PI * 2f;
@@ -146,16 +148,6 @@ namespace WRLDZ.Presentation.ArInteraction
         const float FallbackEyeHeight = 1.5f;
         const float FallbackEyeBack = 0.5f;
 
-        // Face-up monster cards (host-local, × anchor.Scale): the opaque art quad on the anchor,
-        // turned about its foot to face the camera on both axes (yaw and tilt back), as
-        // ArArenaCardVisual.FaceCamera does. Upright it spans ±CardHalfWidth × [0, CardTop] in
-        // that plane; in face-up defense the same quad rolls 90° onto its side. Shaft points
-        // between the eye and a card fade over its silhouette.
-        const float CardHalfWidth = 0.67f;
-        const float CardTop = 1.36f;
-        /// <summary>Fade band around a card's silhouette, measured in the card's plane.</summary>
-        const float CardSoft = 0.15f;
-
         // Colours: near-white where the light enters, the accent's gold lower down.
         const float TopWhite = 0.8f;
         const float GlintWhite = 0.9f;
@@ -181,18 +173,6 @@ namespace WRLDZ.Presentation.ArInteraction
             public float GlintPhase; // 0…1
         }
 
-        /// <summary>A face-up card this frame, in its camera-facing plane (floor-local metres).</summary>
-        struct Card
-        {
-            public Vector3 Foot;  // card root on the street, the pivot it turns about
-            public Vector3 N;     // plane normal, toward the eye
-            public Vector3 R;     // card right (its local +X)
-            public Vector3 U;     // card up in the plane (its local +Y, tilted back)
-            public float HalfW;
-            public float Top;
-            public float Soft;
-        }
-
         Mesh _mesh;
         MeshRenderer _mr;
         Vector3[] _verts;
@@ -213,9 +193,6 @@ namespace WRLDZ.Presentation.ArInteraction
         float _cosInner;
         float _cosOuter;
 
-        Card[] _cardList;
-        int _cards;
-
         // This frame: view, clear line, near share of the layout and the extent of every written vertex.
         Vector3 _eye;
         Vector3 _fwd;
@@ -231,7 +208,6 @@ namespace WRLDZ.Presentation.ArInteraction
             _count = Mathf.Clamp(Mathf.RoundToInt(3f + 2f * sig), MinShafts, MaxShafts);
             _cosInner = Mathf.Cos(ConeInnerDeg * Mathf.Deg2Rad);
             _cosOuter = Mathf.Cos(ConeOuterDeg * Mathf.Deg2Rad);
-            _cardList = new Card[MaxCards];
 
             BuildShafts(1f + WidthPerSigScale * (sig - 1f));
             BuildTables();
@@ -279,7 +255,7 @@ namespace WRLDZ.Presentation.ArInteraction
             level = Mathf.Min(level, 1f);
             Advance(Mathf.Clamp(dt, 0f, 0.1f));
             UpdateView(street, h);
-            CollectCards(anchors);
+            CollectArtCards(anchors, street);
 
             _clearY = StreetClearHeight * ClearMargin * h;
             _zMin = Mathf.Min(FarZMax,
@@ -312,15 +288,21 @@ namespace WRLDZ.Presentation.ArInteraction
             }
         }
 
-        /// <summary>Stage camera in floor-local space; without one, an eye behind the player's end (no dimming).</summary>
+        /// <summary>
+        /// The street's stage camera (floor-local), the same eye <see cref="ArFieldSignature.ArtClear"/>
+        /// tests from; its facing comes from the camera itself. Without one, an eye behind the
+        /// player's end that only turns the ribbons (no fading or dimming).
+        /// </summary>
         void UpdateView(in FieldStreet street, float h)
         {
-            var cam = StageCamera;
-            if (cam != null)
+            if (street.HasCamera)
             {
-                var ct = cam.transform;
-                _eye = transform.InverseTransformPoint(ct.position);
-                _fwd = transform.InverseTransformDirection(ct.forward).normalized;
+                _eye = street.Camera;
+                var cam = StageCamera;
+                var fwd = cam != null
+                    ? transform.InverseTransformDirection(cam.transform.forward)
+                    : street.Center - _eye;
+                _fwd = fwd.sqrMagnitude > 1e-8f ? fwd.normalized : Vector3.forward;
                 _hasCam = true;
                 return;
             }
@@ -329,39 +311,6 @@ namespace WRLDZ.Presentation.ArInteraction
                 street.Center.z - street.Half.z - FallbackEyeBack);
             _fwd = Vector3.forward;
             _hasCam = false;
-        }
-
-        /// <summary>
-        /// Face-up monster cards this frame (positions only), each turned to face this
-        /// frame's eye about its foot: the same frame as LookRotation(eye − foot, up). Set
-        /// cards lie flat and show no art, so they are left out. Needs <see cref="UpdateView"/> first.
-        /// </summary>
-        void CollectCards(IReadOnlyList<FieldAnchor> anchors)
-        {
-            _cards = 0;
-            // Without a stage camera nothing fades (see View), so there is nothing to test.
-            if (anchors == null || !_hasCam) return;
-            var count = Mathf.Min(anchors.Count, MaxCards);
-            for (var i = 0; i < count; i++)
-            {
-                var a = anchors[i];
-                if (a.FaceDown || a.Scale <= 0f) continue;
-                var n = _eye - a.Position;
-                if (n.sqrMagnitude < 1e-8f) continue;
-                n.Normalize();
-                var r = Vector3.Cross(Vector3.up, n);
-                if (r.sqrMagnitude < 1e-8f) r = Vector3.right;
-                r.Normalize();
-                ref var c = ref _cardList[_cards];
-                c.Foot = a.Position;
-                c.N = n;
-                c.R = r;
-                c.U = Vector3.Cross(n, r);
-                c.HalfW = CardHalfWidth * a.Scale;
-                c.Top = CardTop * a.Scale;
-                c.Soft = CardSoft * a.Scale;
-                _cards++;
-            }
         }
 
         /// <summary>
@@ -397,7 +346,7 @@ namespace WRLDZ.Presentation.ArInteraction
             var v = i * ShaftVerts;
             var hwTop = TopHalfWidth * wide * h;
             var hwLow = BottomHalfWidth * wide * h;
-            // Alpha is interpolated between rows, so each row's card test reaches one row further.
+            // Alpha is interpolated between rows, so each row's art test reaches one row further.
             var step = axis.magnitude / (Rows - 1);
             for (var j = 0; j < Rows; j++)
             {
@@ -473,8 +422,9 @@ namespace WRLDZ.Presentation.ArInteraction
 
         /// <summary>
         /// 0…1 view factor at <paramref name="p"/>, for a piece drawn up to <paramref name="reach"/>
-        /// around it: fades out over face-up monster cards and right at the phone, and dims a
-        /// little toward the centre of the stage camera's view.
+        /// around it: fades out over face-up monster art (<see cref="ArFieldSignature.ArtClear"/>,
+        /// cards from this Tick's <see cref="ArFieldSignature.CollectArtCards"/>) and right at the
+        /// phone, and dims a little toward the centre of the stage camera's view.
         /// </summary>
         float View(Vector3 p, float reach)
         {
@@ -484,43 +434,7 @@ namespace WRLDZ.Presentation.ArInteraction
             if (dist <= 1e-4f) return 0f;
             var near = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(NearIn, NearOut, dist));
             var off = Mathf.InverseLerp(_cosInner, _cosOuter, Vector3.Dot(d, _fwd) / dist);
-            return near * Mathf.Lerp(ConeFloor, 1f, Mathf.SmoothStep(0f, 1f, off)) * CardClear(d, reach);
-        }
-
-        /// <summary>
-        /// 0 where the piece at <paramref name="d"/> from the eye (anything within
-        /// <paramref name="reach"/> of that point) would draw over a face-up card, 1 once it
-        /// clears the card's silhouette by the fade band. Tested in each card's camera-facing
-        /// plane; a point well behind that plane needs no fade because the opaque card hides it.
-        /// </summary>
-        float CardClear(Vector3 d, float reach)
-        {
-            if (_cards == 0) return 1f;
-            var d2 = d.sqrMagnitude;
-            var clear = 1f;
-            for (var i = 0; i < _cards; i++)
-            {
-                ref var c = ref _cardList[i];
-                // The ray must run toward the card's face to cross it in front of the eye.
-                var dn = Vector3.Dot(d, c.N);
-                if (dn > -1e-4f) continue;
-                var t = Vector3.Dot(c.Foot - _eye, c.N) / dn;
-                if (t <= 0f || (1f - t) * -dn > reach) continue;
-                // A sphere of radius reach around the point lands in the plane within
-                // reach × t / cos(slant) of where the ray crosses it.
-                var rr = reach * t * Mathf.Sqrt(d2 / (dn * dn));
-                var q = _eye + d * t - c.Foot;
-                var x = Vector3.Dot(q, c.R);
-                var y = Vector3.Dot(q, c.U);
-                // Upright art, or the same quad rolled 90° about its normal onto its −R side
-                // (face-up defense): whichever silhouette the point comes closer to.
-                var upright = Mathf.Max(Mathf.Abs(x) - c.HalfW, Mathf.Max(y - c.Top, -y));
-                var rolled = Mathf.Max(Mathf.Max(x, -x - c.Top), Mathf.Abs(y) - c.HalfW);
-                var gap = Mathf.Min(upright, rolled) - rr;
-                clear = Mathf.Min(clear, Mathf.SmoothStep(0f, 1f, gap / c.Soft));
-            }
-
-            return clear;
+            return near * Mathf.Lerp(ConeFloor, 1f, Mathf.SmoothStep(0f, 1f, off)) * ArtClear(p, reach);
         }
 
         /// <summary>Alpha share along a shaft (0 = top, 1 = bottom): soft entry, hold, smooth fall to 0.</summary>

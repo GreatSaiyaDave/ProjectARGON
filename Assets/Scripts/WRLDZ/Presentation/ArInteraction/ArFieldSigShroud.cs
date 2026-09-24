@@ -12,23 +12,36 @@ namespace WRLDZ.Presentation.ArInteraction
     /// then hook back toward the monster, writhe slowly as waves climb them, and
     /// fade out toward the tip, where the rim light lasts longer than the core.
     /// They rise out of the ground with the sweep and sink back on dissolve.
-    /// <para>Boon (the dark empowers): tendrils coil in close around the monster,
-    /// stand taller and calmer, and bands of brighter rim light run up them.
+    /// <para>Boon (the dark empowers): tendrils grow longer and calmer where the
+    /// cards leave room, coil round the monster, and bands of brighter rim light run
+    /// up them.
     /// Bane (the dark weakens): tendrils stay low, claw inward with hooked tips
-    /// and twitch restlessly over a deeper pool with a drained rim.</para>
+    /// and twitch restlessly over a deeper pool with a drained rim. Boon and bane
+    /// wait until the card stands: a flip still animating reads as Set.</para>
     /// <para>One look (variant 0). Any other variant draws the same shroud.
     /// SigScale sets the tendril count (4 at 0.5, 5 at 1, 6 at 1.5) and their
     /// length.</para>
-    /// <para>The opaque monster art stands in the ring facing the stage camera
-    /// and hides its far half, so tendrils are laid out from the camera's side:
-    /// tall on the flanks, framing the art the way claws frame the void, and
-    /// shorter and fainter on the front flanks, so the monster reads through
-    /// them. Each monster's spacing, sway and rhythm come from its Key, so it
-    /// keeps its look while it lunges or others come and go.</para>
-    /// <para>Nothing reaches under the card: the pool starts outside the
-    /// ownership ring, and the tendril tips stop in front of the art. A Set
-    /// card lies flat over the ring, so its tendrils sink at once, leaving
-    /// only the pool (below the card), and rise again after a flip.</para>
+    /// <para>The opaque monster art faces the stage camera and hides the far half
+    /// of the ring, so tendrils stand on the flanks and front flanks as seen from
+    /// the camera. Each monster's spacing, sway, rhythm and ease state come from
+    /// its Key, so it keeps its look while it lunges or others come and go.</para>
+    /// <para>Cards: every tendril's top is clamped with
+    /// <see cref="ArFieldSignature.CoverLimit"/>, so in front of upright art the
+    /// tendrils stay in its lower ~22 % (0.30 × Scale) and in front of sideways
+    /// Defense art under 0.10 × Scale; only beside sideways art (or with no stage
+    /// camera) do they stand to full height. A lower limit applies at once; a higher one is grown into over
+    /// 0.6 s. Tendrils over the art's centre are also shorter and fainter. A Set
+    /// card, or a flip still animating, lies flat over the ring: its tendrils sink
+    /// at once, leaving only the pool (0.005 × Scale, below the card), and rise over
+    /// 0.6 s once the card stands up.</para>
+    /// <para>Room: rows above a tendril's root keep their rim light 0.47 × Scale out
+    /// from the monster, outside the 0.45 aura column. The pool ring is squeezed to
+    /// stay within <see cref="ArFieldSignature.LaneHalfWidth"/> sideways and
+    /// <see cref="ArFieldSignature.AisleClear"/> short of the street midline
+    /// (<see cref="ArFieldSignature.MidlineGap"/>). Each tendril slides in along its
+    /// ray and straightens until its lit ribbon keeps inside the same lines; a guard
+    /// trims the clear outer fringe. A tendril with no room left fades out, and a
+    /// monster lunging close to the midline fades its whole shroud.</para>
     /// One dynamic mesh (one draw call) with flat colour: soft edges come from
     /// vertex alpha. Scope: per-monster.
     /// </summary>
@@ -55,6 +68,30 @@ namespace WRLDZ.Presentation.ArInteraction
         const float MaxAlpha = 0.55f;
         /// <summary>Anchors at or below this Scale are skipped.</summary>
         const float MinScale = 1e-4f;
+
+        /// <summary>
+        /// Rows above a tendril's root keep their rim light at least this far from the
+        /// monster (× Scale): the boon / bane aura column stands at 0.45.
+        /// </summary>
+        const float InnerClear = 0.47f;
+        /// <summary>A root with less than this room (× Scale) past the closest it may stand fades out.</summary>
+        const float RootFade = 0.02f;
+        /// <summary>A tendril cut below this share of its height fades out instead of standing as a stub.</summary>
+        const float StubFade = 0.2f;
+        /// <summary>Share of its width a tendril keeps when cut right down.</summary>
+        const float StubWidth = 0.5f;
+        /// <summary>
+        /// Room left to the street midline (<see cref="ArFieldSignature.MidlineGap"/> at the
+        /// anchor, × Scale) over which a monster lunging toward it fades its whole shroud.
+        /// Rows sit 0.7 × Scale out, which leaves 0.6.
+        /// </summary>
+        const float AisleFadeFrom = 0.4f;
+        const float AisleFadeTo = 0.15f;
+        /// <summary>Pool bands squeezed below this share of their width (lane / aisle clip) fade out.</summary>
+        const float SqueezeFadeFrom = 0.35f;
+        const float SqueezeFadeTo = 0.1f;
+        /// <summary>Height budget not known yet: take the limit at once.</summary>
+        const float NoBudget = -1f;
 
         // Tendril size in host-local metres (× anchor.Scale).
         const float TendrilLength = 0.46f;
@@ -86,13 +123,17 @@ namespace WRLDZ.Presentation.ArInteraction
         const float SwayAngle = 0.1f;
         const float SwaySpeed = 0.35f;
 
-        // Tendrils over the art's centre (lateral offset × Scale) stay shorter and fainter; flanks keep full length.
+        // Tendrils over the art's centre (lateral offset from it, host-local) stay shorter and
+        // fainter, on top of CoverLimit; the flanks keep their length.
         const float CentreFrom = 0.25f;
         const float CentreTo = 0.5f;
         const float CentreLength = 0.6f;
         const float CentreAlpha = 0.7f;
 
-        /// <summary>Seconds for a flipped monster's tendrils to rise back out of the pool.</summary>
+        /// <summary>
+        /// Seconds for tendrils to rise out of the pool once a Set card stands up after
+        /// its flip, and to grow into a higher <see cref="ArFieldSignature.CoverLimit"/>.
+        /// </summary>
         const float FlipRiseSeconds = 0.6f;
 
         // Per-monster hashes: tendril i uses salts TendrilSalt + i × TendrilSaltStride + 0…7.
@@ -149,22 +190,25 @@ namespace WRLDZ.Presentation.ArInteraction
             public float Speed;       // × writhe speed
         }
 
+        // Roots and curls keep the tips outside InnerClear on their own (a replay over the
+        // Root / Length jitter and writhe phases at SigScale 1.5); the straightening in
+        // WriteTendril only has to act where the lane or aisle pulls a root in.
         static readonly Shape Calm = new Shape
         {
-            Root = 0.56f, Length = 1f, Lean = -0.3f, Curl = 1.55f,
+            Root = 0.58f, Length = 1f, Lean = -0.3f, Curl = 1.3f,
             WritheLean = 0.3f, WritheSide = 0.4f, Swirl = 0.35f, Twitch = 0f, Speed = 1f
         };
 
         static readonly Shape Boon = new Shape
         {
-            Root = 0.5f, Length = 1.15f, Lean = -0.1f, Curl = 1.15f,
+            Root = 0.6f, Length = 1.15f, Lean = -0.1f, Curl = 0.8f,
             WritheLean = 0.22f, WritheSide = 0.3f, Swirl = 0.85f, Twitch = 0f, Speed = 0.8f
         };
 
         static readonly Shape Bane = new Shape
         {
-            Root = 0.56f, Length = 0.7f, Lean = -0.45f, Curl = 2.4f,
-            WritheLean = 0.5f, WritheSide = 0.6f, Swirl = 0.3f, Twitch = 0.35f, Speed = 1.8f
+            Root = 0.6f, Length = 0.7f, Lean = -0.35f, Curl = 2f,
+            WritheLean = 0.4f, WritheSide = 0.6f, Swirl = 0.3f, Twitch = 0.35f, Speed = 1.8f
         };
 
         /// <summary>Indexed by Aura + 1.</summary>
@@ -218,10 +262,20 @@ namespace WRLDZ.Presentation.ArInteraction
         float[] _tRx;
         float[] _tRz;
 
-        // Per anchor index, re-keyed whenever a different monster lands there.
-        int[] _anchorKey;
-        /// <summary>0…1 tendril height: drops to 0 at once when a card is Set, rises again after a flip.</summary>
-        float[] _anchorRise;
+        // Per-monster ease state, keyed by FieldAnchor.Key: this frame's by anchor index,
+        // last frame's looked up by Key (≤ 10 entries), arrays swapped each frame.
+        int[] _key;
+        int[] _prevKey;
+        int _prevCount;
+        /// <summary>0…1 tendril height: 0 at once while the card lies Set (or still flips), then rises.</summary>
+        float[] _rise;
+        float[] _prevRise;
+        /// <summary>
+        /// Per tendril (anchor index × <see cref="MaxTendrils"/> + tendril): eased height
+        /// budget in host-local metres, or <see cref="NoBudget"/>.
+        /// </summary>
+        float[] _budget;
+        float[] _prevBudget;
 
         /// <summary>Writhe phases per shape (index = Aura + 1), so each shape keeps its own speed.</summary>
         readonly float[] _phLean = new float[3];
@@ -244,6 +298,21 @@ namespace WRLDZ.Presentation.ArInteraction
         Vector3 _view;
         float _camX;
         float _camZ;
+        /// <summary>Camera right, flat (the axis <see cref="FieldAnchor.ArtLateral"/> runs along).</summary>
+        float _rightX;
+        float _rightZ;
+        /// <summary>Art centre along camera right, host-local.</summary>
+        float _artLat;
+        /// <summary>Sideways reach allowed from the anchor (floor m).</summary>
+        float _lane;
+        /// <summary>−1 / +1: the anchor's side of the street midline.</summary>
+        float _side;
+        /// <summary>AisleClear × Scale: the closest to the midline anything may come.</summary>
+        float _aisle;
+        /// <summary>MidlineGap at the anchor itself: how far a piece may reach toward the midline.</summary>
+        float _midRoom;
+        /// <summary>Tallest any vertex being written may stand above the street (floor m).</summary>
+        float _ceiling;
 
         protected override void Build()
         {
@@ -276,6 +345,8 @@ namespace WRLDZ.Presentation.ArInteraction
             var count = anchors == null ? 0 : Mathf.Min(anchors.Count, MaxAnchors);
             if (level <= 0.001f || count == 0)
             {
+                // Nothing on the street: the next monsters start at their targets.
+                _prevCount = 0;
                 if (_mr.enabled) _mr.enabled = false;
                 return;
             }
@@ -289,7 +360,7 @@ namespace WRLDZ.Presentation.ArInteraction
             for (var i = 0; i < count; i++)
             {
                 var a = anchors[i];
-                Rise(i, a, step);
+                Track(i, a, step);
                 var d = a.Position - eye;
                 _dist[i] = -(d.x * d.x + d.z * d.z);
                 _order[i] = i;
@@ -303,15 +374,30 @@ namespace WRLDZ.Presentation.ArInteraction
             {
                 var i = _order[k];
                 var a = anchors[i];
-                var fade = Mathf.Clamp01(a.Presence) * level;
-                if (fade <= 0.001f || a.Scale <= MinScale) continue;
-                WriteAnchor(drawn * _slotVerts, a, fade, _anchorRise[i], eye);
-                drawn++;
                 var s = a.Scale;
+                if (s <= MinScale) continue;
+                // A lunge toward the street midline fades the whole shroud before it would crowd the aisle.
+                var fade = Mathf.Clamp01(a.Presence) * level *
+                           Ramp(AisleFadeTo, AisleFadeFrom, MidlineGap(a, a.Position) / s);
+                if (fade <= 0.001f) continue;
+                WriteAnchor(drawn * _slotVerts, i, a, street, fade, eye, step);
+                drawn++;
                 bounds.Encapsulate(new Bounds(
                     a.Position + new Vector3(0f, MaxAnchorHeight * 0.5f * s, 0f),
                     new Vector3(MaxAnchorRadius * 2f * s, MaxAnchorHeight * s, MaxAnchorRadius * 2f * s)));
             }
+
+            // This frame's state becomes next frame's lookup (swap, no allocation).
+            var keys = _prevKey;
+            _prevKey = _key;
+            _key = keys;
+            var rise = _prevRise;
+            _prevRise = _rise;
+            _rise = rise;
+            var budget = _prevBudget;
+            _prevBudget = _budget;
+            _budget = budget;
+            _prevCount = count;
 
             if (drawn == 0)
             {
@@ -346,35 +432,41 @@ namespace WRLDZ.Presentation.ArInteraction
         }
 
         /// <summary>
-        /// Tendril height for the monster at anchor index <paramref name="i"/>: a Set
-        /// card lies flat over the ring, so its tendrils drop into the pool at once,
-        /// and rise over <see cref="FlipRiseSeconds"/> once it is face-up. A different
-        /// monster at the index starts at its own target.
+        /// Ease state for the monster at anchor index <paramref name="i"/>, found by its Key
+        /// in last frame's list. Its tendrils drop into the pool at once while its card lies
+        /// Set (FaceDown also covers a flip until the card stands up) and rise over
+        /// <see cref="FlipRiseSeconds"/> after that. A monster not seen last frame starts at
+        /// its target; its height budgets start at their limits when first written.
         /// </summary>
-        void Rise(int i, in FieldAnchor a, float dt)
+        void Track(int i, in FieldAnchor a, float dt)
         {
+            var prev = -1;
+            for (var j = 0; j < _prevCount; j++)
+            {
+                if (_prevKey[j] != a.Key) continue;
+                prev = j;
+                break;
+            }
+
+            _key[i] = a.Key;
             var target = a.FaceDown ? 0f : 1f;
-            if (_anchorKey[i] != a.Key || target < _anchorRise[i])
-            {
-                _anchorKey[i] = a.Key;
-                _anchorRise[i] = target;
-            }
-            else
-            {
-                _anchorRise[i] = Mathf.MoveTowards(_anchorRise[i], target, dt / FlipRiseSeconds);
-            }
+            _rise[i] = prev < 0 || target < _prevRise[prev]
+                ? target
+                : Mathf.MoveTowards(_prevRise[prev], target, dt / FlipRiseSeconds);
+            var b = i * MaxTendrils;
+            var pb = prev * MaxTendrils;
+            for (var t = 0; t < MaxTendrils; t++)
+                _budget[b + t] = prev < 0 ? NoBudget : _prevBudget[pb + t];
         }
 
         /// <summary>Stage camera in floor-local space; the player's end of the street without one.</summary>
-        Vector3 EyeLocal(in FieldStreet street)
-        {
-            var cam = StageCamera;
-            if (cam != null) return transform.InverseTransformPoint(cam.transform.position);
-            return new Vector3(street.Center.x, street.Center.y, street.Center.z - street.Half.z - 1f);
-        }
+        static Vector3 EyeLocal(in FieldStreet street) =>
+            street.HasCamera
+                ? street.Camera
+                : new Vector3(street.Center.x, street.Center.y, street.Center.z - street.Half.z - 1f);
 
         /// <summary>One monster: pool first, then its tendrils from the flanks to the front.</summary>
-        void WriteAnchor(int v, in FieldAnchor a, float fade, float rise, Vector3 eye)
+        void WriteAnchor(int v, int i, in FieldAnchor a, in FieldStreet street, float fade, Vector3 eye, float dt)
         {
             _o = a.Position;
             _s = a.Scale;
@@ -382,32 +474,47 @@ namespace WRLDZ.Presentation.ArInteraction
             var flat = Mathf.Sqrt(toEye.x * toEye.x + toEye.z * toEye.z);
             _camX = flat > 1e-4f ? toEye.x / flat : 0f;
             _camZ = flat > 1e-4f ? toEye.z / flat : -1f;
+            _rightX = -_camZ;
+            _rightZ = _camX;
             _view = toEye.sqrMagnitude > 1e-8f ? toEye.normalized : Vector3.up;
+            _artLat = a.ArtLateral / _s;
+            _lane = LaneHalfWidth * _s;
+            _side = _o.z < 0f ? -1f : 1f;
+            _aisle = AisleClear * _s;
+            _midRoom = MidlineGap(a, _o);
+            _ceiling = GuardHeight * _s;
 
-            var aura = a.Aura > 0 ? 1 : a.Aura < 0 ? -1 : 0;
+            // Boon / bane waits until the card stands: a flip still animating reads as Set.
+            var aura = a.FaceDown ? 0 : a.Aura > 0 ? 1 : a.Aura < 0 ? -1 : 0;
             WritePool(v, fade, aura, Hash01(a.Key, 47) * TwoPi);
 
             var tv = v + PoolVerts;
-            var risen = Mathf.SmoothStep(0f, 1f, rise);
+            var bi = i * MaxTendrils;
+            var risen = Mathf.SmoothStep(0f, 1f, _rise[i]);
             if (risen <= 0.001f)
             {
                 // Set card flat over the ring: zero-area, clear tendrils keep the slot layout.
                 Collapse(tv, _count * TendrilVerts, _o);
+                for (var t = 0; t < MaxTendrils; t++)
+                    _budget[bi + t] = NoBudget;
                 return;
             }
 
             Layout(a.Key);
-            for (var i = 0; i < _count; i++)
+            for (var t = 0; t < _count; t++)
             {
-                _tFront[i] = _tRx[i] * _camX + _tRz[i] * _camZ;
-                _tOrder[i] = i;
+                _tFront[t] = _tRx[t] * _camX + _tRz[t] * _camZ;
+                _tOrder[t] = t;
             }
 
             SortByKey(_tOrder, _tFront, _count);
 
             var grow = Mathf.Lerp(GrowFloor, 1f, Mathf.SmoothStep(0f, 1f, fade)) * risen;
             for (var k = 0; k < _count; k++)
-                WriteTendril(tv + k * TendrilVerts, _tOrder[k], fade * risen, grow, aura);
+            {
+                var ti = _tOrder[k];
+                WriteTendril(tv + k * TendrilVerts, ti, a, street, fade * risen, grow, aura, bi + ti, dt);
+            }
         }
 
         /// <summary>
@@ -448,7 +555,11 @@ namespace WRLDZ.Presentation.ArInteraction
             }
         }
 
-        /// <summary>Flat ring of void outside the ownership ring, with a patchy crimson outer edge.</summary>
+        /// <summary>
+        /// Flat ring of void outside the ownership ring, with a patchy crimson outer edge.
+        /// Toward a neighbouring lane or the street midline the ring is squeezed toward its
+        /// inner edge so its outer edge stays on the line; bands squeezed thin fade out.
+        /// </summary>
         void WritePool(int v, float fade, int aura, float offset)
         {
             var breath = 1f - PoolBreath * (0.5f + 0.5f * Mathf.Sin(_phBreath + offset));
@@ -458,51 +569,92 @@ namespace WRLDZ.Presentation.ArInteraction
             var core = aura < 0 ? _coreBane : _core;
             var rim = aura > 0 ? _rimBoon : aura < 0 ? _rimBane : _rim;
             Color32 inner = WithAlpha(core, 0f);
-            Color32 band = WithAlpha(core, dark);
             Color32 outer = WithAlpha(rim, 0f);
 
             var y = _o.y + PoolLift * _s;
             var drift = _flicker + offset / TwoPi * PoolSegs;
+            var r0 = PoolInner * _s;
+            var span = (PoolOuter - PoolInner) * _s;
             for (var i = 0; i < PoolSegs; i++)
             {
-                var cs = _poolCos[i] * _s;
-                var sn = _poolSin[i] * _s;
-                _verts[v + i] = new Vector3(_o.x + cs * PoolInner, y, _o.z + sn * PoolInner);
-                _verts[v + PoolSegs + i] = new Vector3(_o.x + cs * PoolDark, y, _o.z + sn * PoolDark);
-                _verts[v + 2 * PoolSegs + i] = new Vector3(_o.x + cs * PoolRim, y, _o.z + sn * PoolRim);
-                _verts[v + 3 * PoolSegs + i] = new Vector3(_o.x + cs * PoolOuter, y, _o.z + sn * PoolOuter);
+                var cs = _poolCos[i];
+                var sn = _poolSin[i];
+                var reach = PoolOuter * _s;
+                var across = Mathf.Abs(cs);
+                if (across * reach > _lane) reach = _lane / across;
+                var toMid = -_side * sn;
+                if (toMid > 1e-4f && toMid * reach > _midRoom) reach = Mathf.Max(0f, _midRoom / toMid);
+                var k = Mathf.Clamp01((reach - r0) / span);
+                var ri = Mathf.Min(r0, reach);
+                var squeeze = Ramp(SqueezeFadeTo, SqueezeFadeFrom, k);
+                _verts[v + i] = Contain(new Vector3(_o.x + cs * ri, y, _o.z + sn * ri));
+                var rd = ri + (PoolDark - PoolInner) * _s * k;
+                _verts[v + PoolSegs + i] = Contain(new Vector3(_o.x + cs * rd, y, _o.z + sn * rd));
+                var rr = ri + (PoolRim - PoolInner) * _s * k;
+                _verts[v + 2 * PoolSegs + i] = Contain(new Vector3(_o.x + cs * rr, y, _o.z + sn * rr));
+                var ro = ri + span * k;
+                _verts[v + 3 * PoolSegs + i] = Contain(new Vector3(_o.x + cs * ro, y, _o.z + sn * ro));
                 _cols[v + i] = inner;
-                _cols[v + PoolSegs + i] = band;
-                _cols[v + 2 * PoolSegs + i] = WithAlpha(rim, rimA * (1f - PoolFlicker * Noise(i + drift)));
+                _cols[v + PoolSegs + i] = WithAlpha(core, dark * squeeze);
+                _cols[v + 2 * PoolSegs + i] = WithAlpha(rim, rimA * squeeze * (1f - PoolFlicker * Noise(i + drift)));
                 _cols[v + 3 * PoolSegs + i] = outer;
             }
         }
 
         /// <summary>
         /// One tendril: walk its centre line up from the root one row at a time
-        /// (a unit heading per row, so it never stretches), then lay a view-facing
-        /// ribbon of edge / rim / core / rim / edge across it.
+        /// (a unit heading per row, so it never stretches), fit it to the room it
+        /// has, then lay a view-facing ribbon of edge / rim / core / rim / edge across it.
+        /// <para>Fitting, in order: the root slides in along its ray until its lit base
+        /// is inside the lane and the aisle; the sideways offsets from the root are
+        /// scaled down until every row's rim light is inside the lane, on its side of
+        /// the aisle and outside <see cref="InnerClear"/> (each of those holds straight
+        /// above the root, so some scale always fits); then the whole tendril shrinks
+        /// about its root under its height budget, which follows
+        /// <see cref="ArFieldSignature.CoverLimit"/> down at once and up over
+        /// <see cref="FlipRiseSeconds"/>. Shrinking only moves rows toward the root, so
+        /// the earlier fits still hold.</para>
         /// </summary>
-        void WriteTendril(int v, int ti, float fade, float grow, int aura)
+        void WriteTendril(int v, int ti, in FieldAnchor a, in FieldStreet street, float fade, float grow, int aura,
+            int bi, float dt)
         {
             ref var t = ref _tendrils[ti];
             var si = aura + 1;
             var sh = Shapes[si];
             var rx = _tRx[ti];
             var rz = _tRz[ti];
+            var wide = t.Width * _s * (0.5f + 0.5f * grow);
+
+            // Root: in along its ray until the lit base fits the lane and the aisle.
+            var baseRim = RimAt * _halfWidth[0] * wide;
+            var root = sh.Root * t.Root * _s;
+            var across = Mathf.Abs(rx);
+            if (across * root > _lane - baseRim) root = (_lane - baseRim) / across;
+            var toMid = -_side * rz;
+            if (toMid > 1e-4f && toMid * root > _midRoom - baseRim) root = (_midRoom - baseRim) / toMid;
+            // Straight above the root, the widest row above it must still clear the aura column.
+            var room = root - (InnerClear * _s + RimAt * _halfWidth[1] * wide);
+            if (room <= 0f)
+            {
+                Collapse(v, TendrilVerts, _o);
+                return;
+            }
+
+            var alpha = fade * Ramp(0f, RootFade * _s, room);
 
             // Over the art's centre the monster must read through; the flanks frame it at full length.
-            var centre = 1f - Ramp(CentreFrom, CentreTo, Mathf.Abs(rx * _camZ - rz * _camX) * sh.Root * t.Root);
+            var lateral = (rx * _rightX + rz * _rightZ) * root / _s;
+            var centre = 1f - Ramp(CentreFrom, CentreTo, Mathf.Abs(lateral - _artLat));
             var len = _length * sh.Length * t.Length * Mathf.Lerp(1f, CentreLength, centre) * grow * _s;
-            var alpha = fade * Mathf.Lerp(1f, CentreAlpha, centre);
+            alpha *= Mathf.Lerp(1f, CentreAlpha, centre);
             var ds = len / (Rows - 1);
-            var root = sh.Root * t.Root * _s;
             var phLean = _phLean[si] - t.PhaseLean;
             var phSide = _phSide[si] - t.PhaseSide;
             var tw = _phTwitch + t.PhaseTwitch;
             var twitch = sh.Twitch * (0.65f * Mathf.Sin(tw) + 0.35f * Mathf.Sin(3f * tw + 1.3f));
 
-            var p = new Vector3(_o.x + rx * root, _o.y, _o.z + rz * root);
+            var rootP = new Vector3(_o.x + rx * root, _o.y, _o.z + rz * root);
+            var p = rootP;
             for (var j = 0; j < Rows; j++)
             {
                 _rowP[j] = p;
@@ -524,14 +676,90 @@ namespace WRLDZ.Presentation.ArInteraction
                 p.z += (-rz * sl + rx * ss) * ds;
             }
 
+            // Straighten: largest share of the sideways offsets that keeps every row's rim light in its room.
+            var ax = rootP.x - _o.x;
+            var az = rootP.z - _o.z;
+            var a2 = ax * ax + az * az;
+            var fit = 1f;
+            for (var j = 1; j < Rows; j++)
+            {
+                var rowRim = RimAt * _halfWidth[j] * wide;
+                var bx = _rowP[j].x - rootP.x;
+                var bz = _rowP[j].z - rootP.z;
+                if (bx > 1e-6f) fit = Mathf.Min(fit, (_lane - rowRim - ax) / bx);
+                else if (bx < -1e-6f) fit = Mathf.Min(fit, (_lane - rowRim + ax) / -bx);
+                var drift = -_side * bz;
+                if (drift > 1e-6f) fit = Mathf.Min(fit, (_midRoom + _side * az - rowRim) / drift);
+                // Aura column: the first share at which |root + share × offset| meets the clear radius.
+                var need = InnerClear * _s + rowRim;
+                var bb = bx * bx + bz * bz;
+                var ab = ax * bx + az * bz;
+                var disc = ab * ab - bb * (a2 - need * need);
+                if (bb > 1e-10f && disc >= 0f)
+                {
+                    var hit = (-ab - Mathf.Sqrt(disc)) / bb;
+                    if (hit >= 0f) fit = Mathf.Min(fit, hit);
+                }
+            }
+
+            fit = Mathf.Max(0f, fit);
+            for (var j = 1; j < Rows; j++)
+            {
+                var q = _rowP[j];
+                q.x = rootP.x + (q.x - rootP.x) * fit;
+                q.z = rootP.z + (q.z - rootP.z) * fit;
+                _rowP[j] = q;
+            }
+
+            // Height budget: the lowest cover limit under any row, across the ribbon's full width.
+            var limit = MaxAnchorHeight * _s;
+            for (var j = 0; j < Rows; j++)
+            {
+                var q = _rowP[j];
+                var hw = _halfWidth[j] * wide;
+                var ex = _rightX * hw;
+                var ez = _rightZ * hw;
+                limit = Mathf.Min(limit, CoverLimit(a, street, new Vector3(q.x + ex, q.y, q.z + ez)));
+                limit = Mathf.Min(limit, CoverLimit(a, street, new Vector3(q.x - ex, q.y, q.z - ez)));
+            }
+
+            var target = limit / _s;
+            var budget = _budget[bi];
+            budget = budget < 0f || target < budget
+                ? target
+                : Mathf.MoveTowards(budget, target, dt * MaxAnchorHeight / FlipRiseSeconds);
+            _budget[bi] = budget;
+            _ceiling = Mathf.Min(budget, GuardHeight) * _s;
+            // Largest shrink that keeps every row's rim light under the ceiling (at a hook the ribbon tilts up).
+            var shrink = 1f;
+            for (var j = 1; j < Rows; j++)
+            {
+                var h = _rowP[j].y - _o.y;
+                var lift = RimAt * _halfWidth[j] * wide;
+                if (h > 1e-6f && h + lift > _ceiling) shrink = Mathf.Min(shrink, Mathf.Max(0f, _ceiling - lift) / h);
+            }
+
+            alpha *= Mathf.SmoothStep(0f, 1f, shrink / StubFade);
+            if (alpha <= 0.001f)
+            {
+                Collapse(v, TendrilVerts, _o);
+                return;
+            }
+
+            if (shrink < 1f)
+            {
+                for (var j = 1; j < Rows; j++)
+                    _rowP[j] = rootP + (_rowP[j] - rootP) * shrink;
+                wide *= Mathf.Lerp(StubWidth, 1f, shrink);
+            }
+
             var core = aura < 0 ? _coreBane : _core;
             var rim = aura > 0 ? _rimBoon : aura < 0 ? _rimBane : _rim;
             var coreA = Mathf.Min(MaxAlpha, CoreAlpha * (aura < 0 ? BaneCoreGain : 1f)) * alpha;
             // A boon lights the tendrils with climbing pulses instead of a flat gain, so the cap never flattens them.
             var rimBase = RimAlpha * (aura < 0 ? BaneRimGain : 1f);
-            var wide = t.Width * _s * (0.5f + 0.5f * grow);
             var phPulse = _phPulse - t.PhasePulse;
-            var across = new Vector3(-rz, 0f, rx);
+            var side0 = new Vector3(-rz, 0f, rx);
 
             for (var j = 0; j < Rows; j++)
             {
@@ -543,7 +771,7 @@ namespace WRLDZ.Presentation.ArInteraction
                 if (m > 0.05f * tangent.magnitude && m > 1e-7f)
                 {
                     cross /= m;
-                    across = Vector3.Dot(cross, across) < 0f ? -cross : cross;
+                    side0 = Vector3.Dot(cross, side0) < 0f ? -cross : cross;
                 }
 
                 var rimA = rimBase;
@@ -563,7 +791,7 @@ namespace WRLDZ.Presentation.ArInteraction
                 Color32 cEdge = WithAlpha(rimCol, 0f);
 
                 var c = _rowP[j];
-                var edge = across * (_halfWidth[j] * wide);
+                var edge = side0 * (_halfWidth[j] * wide);
                 var lit = edge * RimAt;
                 var o = v + j * RowVerts;
                 _verts[o] = Contain(c - edge);
@@ -579,7 +807,11 @@ namespace WRLDZ.Presentation.ArInteraction
             }
         }
 
-        /// <summary>Clamps a vertex inside the contract cylinder of the anchor being written.</summary>
+        /// <summary>
+        /// Hard guard for every vertex of the anchor being written: inside the contract
+        /// cylinder, the lane and its side of the aisle, and under <see cref="_ceiling"/>.
+        /// The fits above keep the lit ribbon inside; this only trims the clear fringe.
+        /// </summary>
         Vector3 Contain(Vector3 p)
         {
             var dx = p.x - _o.x;
@@ -593,7 +825,9 @@ namespace WRLDZ.Presentation.ArInteraction
                 p.z = _o.z + dz * k;
             }
 
-            p.y = Mathf.Clamp(p.y, _o.y, _o.y + GuardHeight * _s);
+            p.x = Mathf.Clamp(p.x, _o.x - _lane, _o.x + _lane);
+            if (_side * p.z < _aisle) p.z = _side * _aisle;
+            p.y = Mathf.Clamp(p.y, _o.y, _o.y + _ceiling);
             return p;
         }
 
@@ -682,8 +916,12 @@ namespace WRLDZ.Presentation.ArInteraction
 
             _order = new int[MaxAnchors];
             _dist = new float[MaxAnchors];
-            _anchorKey = new int[MaxAnchors];
-            _anchorRise = new float[MaxAnchors];
+            _key = new int[MaxAnchors];
+            _prevKey = new int[MaxAnchors];
+            _rise = new float[MaxAnchors];
+            _prevRise = new float[MaxAnchors];
+            _budget = new float[MaxAnchors * MaxTendrils];
+            _prevBudget = new float[MaxAnchors * MaxTendrils];
             _tOrder = new int[MaxTendrils];
             _tFront = new float[MaxTendrils];
             _tRx = new float[MaxTendrils];

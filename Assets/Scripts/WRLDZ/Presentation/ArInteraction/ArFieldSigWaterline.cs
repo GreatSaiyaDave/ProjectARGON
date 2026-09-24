@@ -4,92 +4,125 @@ using UnityEngine;
 namespace WRLDZ.Presentation.ArInteraction
 {
     /// <summary>
-    /// Monsters wade. Around each monster a translucent pool of the field's
-    /// water stands level at shin height, deepest in colour round the
-    /// monster's legs. Water is level, so where it crosses the card it cuts a
-    /// straight waterline; the pool's edge thins out to nothing inside
-    /// <see cref="ArFieldSignature.MaxAnchorRadius"/>, so the aisle stays street.
-    /// The surface rolls with one shared wave field (neighbouring pools agree),
-    /// ripple rings spread from the monster's shins and a broken foam line laps
-    /// at the waterline — brighter and pulsing on a boon, over murkier water on
-    /// a bane. The water rises with the sweep and drains on dissolve.
-    /// <para>A Set card lies flat on the water: under a face-down monster the
-    /// pool drops at once to a thin sheet below the card, and swells back to
-    /// shin height after the monster flips face-up. Each monster's ripple, foam
-    /// and fleck timing is seeded from its anchor key, so it keeps its rhythm
-    /// while others come and go.</para>
+    /// Monsters wade. Around each monster a ring of the field's water stands
+    /// level at shin height. The ring opens just outside the cyan/magenta
+    /// ownership disc: the water is clear inside 0.46 × Scale and full by 0.52,
+    /// so the disc, the middle of the terrain pad and the aura stay dry and
+    /// readable. It runs out to a soft shore at the rim (0.70 × Scale at
+    /// SignatureScale 1, 0.64–0.72 across the range). Sideways the shore is
+    /// pulled in to <see cref="ArFieldSignature.LaneHalfWidth"/>, and toward
+    /// the street midline it stops <see cref="ArFieldSignature.AisleClear"/>
+    /// short (<see cref="ArFieldSignature.MidlineGap"/>), so neighbouring and
+    /// facing rings never meet. A monster lunging toward the midline loses its
+    /// water on that side. The surface rolls with one shared wave field,
+    /// so neighbouring rings agree. A broken foam line laps at the inner
+    /// waterline and ripple rings spread outward from it. Foam, ripples, surf
+    /// and flecks all stay outside 0.5 × Scale and peak at alpha 0.6, boon
+    /// included. On a boon the foam is brighter and pulses; on a bane the
+    /// water turns murky. The water rises with the sweep and drains on dissolve.
+    /// <para>Cards: every vertex is clamped with
+    /// <see cref="ArFieldSignature.CoverLimit"/>. In front of upright art the
+    /// water stays inside the art's lower band (at most 0.30 × Scale at any
+    /// SignatureScale up to 1.5). When face-up art turns sideways into Defense,
+    /// the whole level drops at once, so its tallest point (swell, surf and
+    /// foam included) sits at the art's FrontCoverHeight. A Set card lies flat
+    /// on the water. Face-down, and through a flip until the card has stood up,
+    /// the whole pool drops at once to a thin sheet under SetCardClearHeight.
+    /// This is stricter than the contract, which only limits the card's
+    /// footprint (InSetCard): level water cannot stand shin-high in the narrow
+    /// strips in front of and behind the card and also stay 1 cm high over the
+    /// card. Once the card stands, or the art rolls
+    /// upright, the water swells back over 0.6 s. Each monster's depth ease,
+    /// and its ripple, foam and fleck timing, is keyed by its anchor Key, so
+    /// nothing jumps while other monsters come and go.</para>
     /// <para>Variant 0, open sea: deep, dark and choppy. Peaked cross-swell,
-    /// three quick broken ripples, white-cap streaks along the crest lines.</para>
+    /// three quick broken ripples, short white-cap streaks along the crest lines.</para>
     /// <para>Variant 1, tropical tide: bright, shallow and calm. Long swell, two
-    /// slow ripples, a straight line of surf rolling in on each swell crest and
-    /// sun glints.
+    /// slow ripples and sun glints. Surf breaks white along each swell crest
+    /// where it rolls past the monster's flanks; the dry disc splits it into two runs.
     /// Any other variant draws the open sea.</para>
-    /// One dynamic mesh, one draw call. Soft edges come from vertex alpha and the
-    /// shared soft dot: strips sample its centre line, flecks the whole dot.
+    /// One dynamic mesh, one draw call, 396 vertices per monster (3960 for ten).
+    /// Soft edges come from vertex alpha and the shared soft dot: strips sample
+    /// its centre line, flecks the whole dot.
     /// </summary>
     public sealed class ArFieldSigWaterline : ArFieldSignature
     {
         const int MaxAnchors = 10;
         const int Segs = 24;
+        /// <summary>Rings per spoke: the dry edge, the wet edge, then four more out to the shore.</summary>
         const int DiscRings = 6;
         const int WaveCount = 3;
         const int RippleCount = 3;
-        const int CrestCols = 13;
+        /// <summary>The dry disc splits the surf line into up to two runs.</summary>
+        const int CrestRuns = 2;
+        const int CrestCols = 7;
         const int FleckCount = 8;
 
-        // Vertex layout of one anchor slot: disc, ripple strips, waterline strip, crest strip, fleck quads.
-        const int DiscVerts = 1 + DiscRings * Segs;
+        // Vertex layout of one anchor slot: water ring, ripple strips, waterline strip, surf runs, fleck quads.
+        const int DiscVerts = DiscRings * Segs;
         const int StripVerts = Segs * 2;
         const int RippleBase = DiscVerts;
         const int LipBase = RippleBase + RippleCount * StripVerts;
         const int CrestBase = LipBase + StripVerts;
-        const int FleckBase = CrestBase + CrestCols * 2;
-        /// <summary>395 per slot; × <see cref="MaxAnchors"/> = 3950 ≤ <see cref="ArFieldSignature.MaxVertices"/>.</summary>
+        const int RunVerts = CrestCols * 2;
+        const int FleckBase = CrestBase + CrestRuns * RunVerts;
+        /// <summary>396 per slot; × <see cref="MaxAnchors"/> = 3960 ≤ <see cref="ArFieldSignature.MaxVertices"/>.</summary>
         const int SlotVerts = FleckBase + FleckCount * 4;
-        const int DiscTris = Segs + (DiscRings - 1) * Segs * 2;
-        const int SlotTris = DiscTris + (RippleCount + 1) * Segs * 2 + (CrestCols - 1) * 2 + FleckCount * 2;
+        const int DiscTris = (DiscRings - 1) * Segs * 2;
+        const int SlotTris = DiscTris + (RippleCount + 1) * Segs * 2 + CrestRuns * (CrestCols - 1) * 2 + FleckCount * 2;
 
-        // Pool size in host-local metres (× anchor.Scale). Every other radius is a fraction of the rim.
-        const float RimBase = 0.52f;
+        // Radii in host-local metres (× anchor.Scale). The ownership disc is 0.45.
+        /// <summary>Water alpha is 0 here and there is no water inside it.</summary>
+        const float DryRadius = 0.46f;
+        /// <summary>Full water from here out to where the shore fade starts.</summary>
+        const float WetRadius = 0.52f;
+        /// <summary>Foam, ripples, surf and flecks all stay outside this.</summary>
+        const float LightInner = 0.5f;
+        const float RimBase = 0.58f;
         const float RimPerSigScale = 0.12f;
         /// <summary>Hard cap on the rim, inside MaxAnchorRadius at any SigScale.</summary>
-        const float RimCap = 0.7f;
+        const float RimCap = 0.72f;
+        /// <summary>A spoke that the lane or aisle cuts shorter than DryRadius + this fades out.</summary>
+        const float MinWetBand = 0.1f;
+        /// <summary>Light pieces fade out on spokes with less room than this outside LightInner.</summary>
+        const float MinLightBand = 0.05f;
+        /// <summary>Light pieces stay this far inside the shore.</summary>
+        const float EdgeMargin = 0.015f;
+        /// <summary>Shaved off the lane and aisle limits so rounding never crosses them.</summary>
+        const float LimitSafety = 0.005f;
         const float SurfacePerSigScale = 0.03f;
-        /// <summary>The level surface fades out from here to the rim, so the shore is soft.</summary>
-        const float ShoreFadeStart = 0.58f;
-        /// <summary>Waves flatten out toward the shore from here.</summary>
-        const float CalmStart = 0.7f;
-        /// <summary>Relative water alpha around the monster's legs.</summary>
-        const float CentreAlpha = 0.7f;
+        /// <summary>Share of the wet band (wet edge → shore) where the surface starts fading out.</summary>
+        const float ShoreFadeStart = 0.3f;
+        /// <summary>Share of the wet band where waves start flattening toward the shore.</summary>
+        const float CalmStart = 0.6f;
         /// <summary>Water level (share of full) as the sweep first reaches a monster.</summary>
         const float RiseFloor = 0.3f;
-        /// <summary>Foam, ripples and flecks ride this far above the surface (host-local m).</summary>
+        /// <summary>Foam, ripples and flecks ride this far above the surface.</summary>
         const float FoamLift = 0.006f;
-        /// <summary>Keeps every foam corner this far inside the rim.</summary>
-        const float EdgeMargin = 0.03f;
+        /// <summary>Lowest the water sheet sits above the street.</summary>
+        const float WaterFloor = 0.003f;
         /// <summary>Anchors at or below this Scale are skipped, never inflated past their own size.</summary>
         const float MinScale = 0.001f;
-        /// <summary>A Set card's sheet of water, foam and surf included, tops out at this share of SetCardClearHeight.</summary>
-        const float SetClearMargin = 0.8f;
-        /// <summary>Seconds for the water to swell back to shin height once a Set monster is face-up.</summary>
-        const float FlipRiseSeconds = 0.8f;
+        /// <summary>Seconds for the water to swell back once a flipped card has stood up (or art rolls upright).</summary>
+        const float FlipRiseSeconds = 0.6f;
+        /// <summary>Peak alpha of any light piece (foam, ripples, surf, flecks), boon gains included.</summary>
+        const float LightCap = 0.6f;
 
-        const float RippleStart = 0.14f;
-        const float RippleEnd = 0.9f;
-        const float RippleWidth0 = 0.05f;
-        const float RippleWidth1 = 0.11f;
+        const float RippleStart = 0.53f;
+        const float RippleWidth0 = 0.025f;
+        const float RippleWidth1 = 0.05f;
 
-        const float LipRadius = 0.78f;
-        const float LipBreath = 0.025f;
-        const float LipWidth = 0.09f;
+        const float LipRadius = 0.545f;
+        const float LipBreath = 0.01f;
+        const float LipWidth = 0.05f;
         const float LipLapSpeed = 1.3f;
         /// <summary>Foam break-up drifting round the waterline (noise segments per second).</summary>
         const float LipFlow = 1.1f;
 
-        /// <summary>Surf line ends stay inside this rim fraction, out where the foam line laps.</summary>
-        const float CrestReach = 0.8f;
-        const float CrestWidth = 0.11f;
+        const float CrestWidth = 0.07f;
         const float CrestLift = 0.028f;
+        /// <summary>Surf runs shorter than this are not drawn; twice this is full strength.</summary>
+        const float CrestMinRun = 0.04f;
 
         const int FleckWrapCycles = 4096;
 
@@ -122,16 +155,16 @@ namespace WRLDZ.Presentation.ArInteraction
             }
         }
 
-        /// <summary>One variant's water: depth, chop, motion and foam.</summary>
+        /// <summary>One variant's water: depth, chop, motion and foam. Lengths are host-local metres.</summary>
         struct Look
         {
-            public float Surface;      // shin height at SigScale 1 (host-local m)
-            public float Amplitude;    // wave height per unit SigScale (host-local m)
+            public float Surface;      // shin height at SigScale 1
+            public float Amplitude;    // wave height per unit SigScale
             public float Chop;         // 0 round swell … 1 peaked crests, flat troughs
             public float Alpha;
             public float CrestGain;
             public float TroughGain;
-            public Wave A, B, C;       // A leads: white caps line up with its crests
+            public Wave A, B, C;       // A leads: white caps and surf line up with its crests
             public int Ripples;
             public float RipplePeriod;
             public float RippleAlpha;
@@ -142,10 +175,8 @@ namespace WRLDZ.Presentation.ArInteraction
             public float FleckLife;
             public float FleckHalfLength;
             public float FleckHalfWidth;
-            public float FleckDrift;
+            public float FleckDrift;   // per life, along wave A
             public float FleckAlpha;
-            public float FleckMin;
-            public float FleckMax;
         }
 
         static readonly Look Sea = new Look
@@ -156,8 +187,8 @@ namespace WRLDZ.Presentation.ArInteraction
             C = new Wave(105f, 0.66f, 2.9f, 0.2f),
             Ripples = 3, RipplePeriod = 1.5f, RippleAlpha = 0.4f, Break = 0.6f,
             LipAlpha = 0.3f, CrestAlpha = 0f,
-            Glints = false, FleckLife = 1.2f, FleckHalfLength = 0.12f, FleckHalfWidth = 0.03f,
-            FleckDrift = 0.12f, FleckAlpha = 0.75f, FleckMin = 0.22f, FleckMax = 0.8f
+            Glints = false, FleckLife = 1.2f, FleckHalfLength = 0.04f, FleckHalfWidth = 0.014f,
+            FleckDrift = 0.05f, FleckAlpha = 0.6f
         };
 
         static readonly Look Tide = new Look
@@ -167,9 +198,9 @@ namespace WRLDZ.Presentation.ArInteraction
             B = new Wave(20f, 0.5f, 2.5f, 0.25f),
             C = new Wave(150f, 0.4f, 2.9f, 0.15f),
             Ripples = 2, RipplePeriod = 2.6f, RippleAlpha = 0.5f, Break = 0.15f,
-            LipAlpha = 0.45f, CrestAlpha = 0.8f,
-            Glints = true, FleckLife = 0.7f, FleckHalfLength = 0.045f, FleckHalfWidth = 0.045f,
-            FleckDrift = 0f, FleckAlpha = 0.9f, FleckMin = 0.2f, FleckMax = 0.75f
+            LipAlpha = 0.45f, CrestAlpha = 0.5f,
+            Glints = true, FleckLife = 0.7f, FleckHalfLength = 0.028f, FleckHalfWidth = 0.028f,
+            FleckDrift = 0f, FleckAlpha = 0.6f
         };
 
         Look _look;
@@ -180,35 +211,48 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary>Slots written last frame; slots past the live count are cleared once.</summary>
         int _lit;
 
-        // Kit-wide shape (fractions of anchor.Scale).
+        // Kit-wide shape (host-local metres).
         float _rim;
         float _surface;
         float _amplitude;
         /// <summary>Second-harmonic share in <see cref="Swell"/>.</summary>
         float _chop;
-        float _fleckReach;
-        /// <summary>Wave A's length in rim units: one surf line per crest.</summary>
+        /// <summary>Tallest point per unit depth: level + swell + surf curl.</summary>
+        float _peak;
+        float _fleckHalfDiag;
+        /// <summary>Wave A's length: the surf rides its crest nearest the monster.</summary>
         float _crestSpan;
-        /// <summary>Share of full depth that keeps a Set card's pool, surf and foam included, under the card.</summary>
-        float _setDepth;
+        /// <summary>Dry-edge ring radius whose chords between spokes stay outside DryRadius.</summary>
+        float _dryRing;
 
-        // Per slot, re-keyed whenever a different monster lands in the slot.
-        int[] _slotKey;
-        /// <summary><see cref="_setDepth"/> … 1: drops at once when a card is Set, eases back up after a flip.</summary>
-        float[] _slotDepth;
+        // Last frame's (Key, depth) pairs, so an ease survives others coming and going. Swapped every Tick.
+        int[] _prevKey;
+        float[] _prevDepth;
+        int _prevCount;
+        int[] _nextKey;
+        float[] _nextDepth;
 
-        // Unit-rim disc template, one entry per disc vertex.
-        float[] _vx;
-        float[] _vz;
-        float[] _vShade;
-        float[] _vAlpha;
-        float[] _vCalm;
-        /// <summary>WaveCount × DiscVerts: each wave's phase across the pool (anchor-independent).</summary>
-        float[] _proj;
-        /// <summary>Current anchor's surface height per disc vertex; foam reads it so it rides the drawn surface.</summary>
+        // Per ring, the same on every spoke. Ring 0 is the dry edge; rings 1… run wet edge (f = 0) → shore (f = 1).
+        float[] _ringF;
+        float[] _ringAlpha;
+        float[] _ringShade;
+        float[] _ringCalm;
+
+        // Current anchor: per spoke, then per water vertex.
+        /// <summary>How far the water reaches along each spoke (rim, lane and aisle).</summary>
+        float[] _reach;
+        /// <summary>0…1: water fades on spokes the lane or aisle cuts short.</summary>
+        float[] _wet;
+        /// <summary>0…1: light pieces fade on spokes without room outside LightInner.</summary>
+        float[] _light;
+        float[] _ringR;
+        /// <summary>Surface height per water vertex; foam reads it so it rides the drawn surface.</summary>
         float[] _hy;
+
         float[] _cos;
         float[] _sin;
+        /// <summary>WaveCount × Segs: each spoke's direction · each wave's travel direction.</summary>
+        float[] _spokeDot;
         /// <summary>0…1 per segment: breaks ripples and foam into patches.</summary>
         float[] _noise;
         float[] _crestTaper;
@@ -239,10 +283,15 @@ namespace WRLDZ.Presentation.ArInteraction
         Color _murk;
 
         // Anchor being written.
+        FieldAnchor _a;
+        FieldStreet _street;
         Vector3 _o;
         float _s;
-        float _r;
-        float _lift;
+        /// <summary>−1 on the player's half, +1 on the opponent's (MidlineGap's rule).</summary>
+        float _side;
+        /// <summary>Room from the anchor toward the midline, less AisleClear.</summary>
+        float _aisle;
+        float _lane;
 
         protected override void Build()
         {
@@ -253,11 +302,14 @@ namespace WRLDZ.Presentation.ArInteraction
             _surface = _look.Surface + SurfacePerSigScale * (sig - 1f);
             _amplitude = _look.Amplitude * sig;
             _chop = 0.5f * Mathf.Clamp01(_look.Chop);
-            // Tallest point (level + swell + surf curl) squashed under a flat Set card; foam lift rides on top.
-            _setDepth = Mathf.Clamp01((SetCardClearHeight * SetClearMargin - FoamLift) /
-                                      Mathf.Max(1e-4f, _surface + _amplitude + CrestLift));
-            _slotKey = new int[MaxAnchors];
-            _slotDepth = new float[MaxAnchors];
+            _peak = Mathf.Max(1e-4f, _surface + _amplitude + (_look.CrestAlpha > 0f ? CrestLift : 0f));
+            _prevKey = new int[MaxAnchors];
+            _prevDepth = new float[MaxAnchors];
+            _nextKey = new int[MaxAnchors];
+            _nextDepth = new float[MaxAnchors];
+            _reach = new float[Segs];
+            _wet = new float[Segs];
+            _light = new float[Segs];
 
             BuildColours(tide);
             BuildTables();
@@ -285,12 +337,16 @@ namespace WRLDZ.Presentation.ArInteraction
             var step = dt > 0f ? dt : 0f;
             Advance(step);
             level = Mathf.Min(level, 1f);
+            _street = street;
             var bounds = new Bounds(street.Center, street.Half * 2f);
             var drew = false;
             for (var i = 0; i < count; i++)
             {
                 var a = anchors[i];
-                if (WriteSlot(i, a, level, step))
+                var depth = Depth(a, step);
+                _nextKey[i] = a.Key;
+                _nextDepth[i] = depth;
+                if (WriteSlot(i, a, level, depth))
                 {
                     drew = true;
                     var s = a.Scale;
@@ -303,6 +359,15 @@ namespace WRLDZ.Presentation.ArInteraction
                     ClearSlot(i);
                 }
             }
+
+            // This frame's depths become next frame's lookup (swap, no allocation).
+            var keys = _prevKey;
+            _prevKey = _nextKey;
+            _nextKey = keys;
+            var depths = _prevDepth;
+            _prevDepth = _nextDepth;
+            _nextDepth = depths;
+            _prevCount = count;
 
             for (var i = count; i < _lit; i++)
                 ClearSlot(i);
@@ -331,24 +396,72 @@ namespace WRLDZ.Presentation.ArInteraction
             _fleckClock = Mathf.Repeat(_fleckClock + dt, _look.FleckLife * FleckWrapCycles);
         }
 
+        /// <summary>
+        /// Share of full depth for this monster. It drops at once when the target
+        /// falls and eases back up over <see cref="FlipRiseSeconds"/>. State is
+        /// looked up by Key in last frame's anchors; a monster not seen then
+        /// starts at its target.
+        /// </summary>
+        float Depth(in FieldAnchor a, float dt)
+        {
+            var target = DepthTarget(a);
+            for (var j = 0; j < _prevCount; j++)
+            {
+                if (_prevKey[j] != a.Key) continue;
+                var was = _prevDepth[j];
+                return target < was ? target : Mathf.MoveTowards(was, target, dt / FlipRiseSeconds);
+            }
+
+            return target;
+        }
+
+        /// <summary>
+        /// Depth whose tallest point (level, swell, surf curl and foam lift)
+        /// meets the card's ceiling. Face-down, including a flip until the card
+        /// stands: under SetCardClearHeight. Face-up: the art's FrontCoverHeight,
+        /// which is low for sideways Defense art. Upright art stays at full depth.
+        /// </summary>
+        float DepthTarget(in FieldAnchor a)
+        {
+            var ceiling = MaxAnchorHeight;
+            if (a.FaceDown) ceiling = SetCardClearHeight;
+            else if (a.FrontCoverHeight > 0f && a.Scale > MinScale)
+                ceiling = Mathf.Min(ceiling, a.FrontCoverHeight / a.Scale);
+            return Mathf.Clamp01((ceiling - FoamLift) / _peak);
+        }
+
         /// <summary>Writes one pool; false when the anchor is not visible yet (slot gets cleared).</summary>
-        bool WriteSlot(int slot, in FieldAnchor a, float level, float dt)
+        bool WriteSlot(int slot, in FieldAnchor a, float level, float depth)
         {
             var fade = Mathf.Clamp01(a.Presence) * level;
             if (fade <= 0.001f || a.Scale <= MinScale) return false;
 
+            _a = a;
             _o = a.Position;
             _s = a.Scale;
-            _r = _rim * _s;
-            _lift = FoamLift * _s;
-            // Every height scales with rise, so a Set card's share keeps surf and foam under it too.
-            var rise = Mathf.Lerp(RiseFloor, 1f, Smooth(0f, 1f, fade)) * Depth(slot, a, dt);
+            // MidlineGap's side rule: the pool keeps AisleClear on its own side of the midline.
+            _side = a.Position.z < 0f ? -1f : 1f;
+            _aisle = _side * a.Position.z / _s - AisleClear - LimitSafety;
+            _lane = LaneHalfWidth - LimitSafety;
+            for (var s = 0; s < Segs; s++)
+                _reach[s] = Reach(_cos[s], _sin[s], 0f);
+            // A spoke cut inside the dry disc (deep in a lunge) folds its vertices inward. Its
+            // neighbours fade with it, so no visible triangle stretches into the disc.
+            for (var s = 0; s < Segs; s++)
+            {
+                var room = Mathf.Min(_reach[s], Mathf.Min(_reach[(s + 1) % Segs], _reach[(s + Segs - 1) % Segs]));
+                _wet[s] = Mathf.Clamp01((room - DryRadius) / MinWetBand);
+                _light[s] = Mathf.Clamp01((room - EdgeMargin - LightInner) / MinLightBand);
+            }
+
+            // Every height scales with rise, so a lowered pool keeps surf and foam low too.
+            var rise = Mathf.Lerp(RiseFloor, 1f, Smooth(0f, 1f, fade)) * depth;
             // Seeded by the monster, not its slot or spot: it keeps its rhythm while others come and go or it lunges.
             var offset = Hash01(a.Key, 19);
             var b = slot * SlotVerts;
 
             WriteDisc(b, fade, rise, a.Aura < 0);
-            WriteRipples(b, fade, offset, a.Aura > 0 ? BoonRippleGain : 1f);
+            WriteRipples(b, fade, offset, a.Aura > 0);
             WriteLip(b, fade, offset, a.Aura);
             if (_look.CrestAlpha > 0f) WriteCrest(b, fade, rise, offset, a.Aura > 0);
             WriteFlecks(b, offset, Mathf.FloorToInt(Hash01(a.Key, 131) * 65536f), fade);
@@ -356,66 +469,87 @@ namespace WRLDZ.Presentation.ArInteraction
         }
 
         /// <summary>
-        /// Share of full depth for the monster in <paramref name="slot"/>: a Set
-        /// card lies flat over its anchor, so the water drops under it at once,
-        /// and swells back over <see cref="FlipRiseSeconds"/> once it is face-up.
-        /// A different monster in the slot starts at its own target.
+        /// Distance from the current anchor along unit direction (c, sn), kept
+        /// <paramref name="inset"/> inside the rim, the lane (LaneHalfWidth
+        /// sideways) and the aisle (AisleClear short of the midline). 0 when the
+        /// anchor has no aisle room left, for example deep in a lunge.
         /// </summary>
-        float Depth(int slot, in FieldAnchor a, float dt)
+        float Reach(float c, float sn, float inset)
         {
-            var target = a.FaceDown ? _setDepth : 1f;
-            if (_slotKey[slot] != a.Key || target < _slotDepth[slot])
-            {
-                _slotKey[slot] = a.Key;
-                _slotDepth[slot] = target;
-            }
-            else
-            {
-                _slotDepth[slot] = Mathf.MoveTowards(_slotDepth[slot], target, dt / FlipRiseSeconds);
-            }
+            var aisle = _aisle - inset;
+            if (aisle <= 0f) return 0f;
+            var r = _rim - inset;
+            var lane = _lane - inset;
+            var ac = Mathf.Abs(c);
+            if (ac * r > lane) r = lane / ac;
+            var toMid = -_side * sn;
+            if (toMid * r > aisle) r = aisle / toMid;
+            return Mathf.Max(0f, r);
+        }
 
-            return _slotDepth[slot];
+        /// <summary>
+        /// Floor-local vertex at offset (x, z) from the anchor and height y, all
+        /// host-local. Its top is clamped with CoverLimit, which covers the Set card
+        /// footprint and the camera side of the art.
+        /// </summary>
+        Vector3 Place(float x, float y, float z)
+        {
+            var p = new Vector3(_o.x + _s * x, _o.y + _s * y, _o.z + _s * z);
+            var top = _o.y + CoverLimit(_a, _street, p);
+            if (p.y > top) p.y = top;
+            return p;
         }
 
         void WriteDisc(int b, float fade, float rise, bool bane)
         {
-            var surface = _surface * _s * rise;
-            var amp = _amplitude * _s * rise;
+            var surface = _surface * rise;
+            var amp = _amplitude * rise;
             // One sea under every pool: wave phase follows the floor position, so neighbours agree
             // and a lunging monster wades through the swell instead of dragging it along.
             for (var j = 0; j < WaveCount; j++)
                 _base[j] = _wK[j] * (_o.x * _wDirX[j] + _o.z * _wDirZ[j]) / _s + _ph[j];
 
-            for (var v = 0; v < DiscVerts; v++)
+            for (var s = 0; s < Segs; s++)
             {
-                var w = 0f;
-                for (var j = 0; j < WaveCount; j++)
-                    w += _wWeight[j] * Swell(_proj[j * DiscVerts + v] + _base[j]);
+                var reach = _reach[s];
+                var wet = Mathf.Min(WetRadius, reach);
+                var cs = _cos[s];
+                var sn = _sin[s];
+                for (var k = 0; k < DiscRings; k++)
+                {
+                    var v = k * Segs + s;
+                    var r = k == 0 ? Mathf.Min(_dryRing, reach) : Mathf.Lerp(wet, reach, _ringF[k]);
+                    var w = 0f;
+                    for (var j = 0; j < WaveCount; j++)
+                        w += _wWeight[j] * Swell(_wK[j] * r * _spokeDot[j * Segs + s] + _base[j]);
 
-                var y = Mathf.Max(_lift, surface + amp * _vCalm[v] * w);
-                _hy[v] = y;
-                _verts[b + v] = new Vector3(_o.x + _r * _vx[v], _o.y + y, _o.z + _r * _vz[v]);
+                    var calm = _ringCalm[k];
+                    var y = Mathf.Max(WaterFloor, surface + amp * calm * w);
+                    _ringR[v] = r;
+                    _hy[v] = y;
+                    _verts[b + v] = Place(r * cs, y, r * sn);
 
-                var hi = Mathf.Clamp01((w - 0.3f) / 0.7f) * _vCalm[v];
-                var c = Color.Lerp(_deep, _shallow, _vShade[v]);
-                c = Color.Lerp(c, _trough, Mathf.Clamp01(-w) * _look.TroughGain);
-                c = Color.Lerp(c, _crest, hi * _look.CrestGain);
-                if (bane) c = Color.Lerp(c, _murk, BaneMurk);
-                _cols[b + v] = WithAlpha(c, _look.Alpha * _vAlpha[v] * (1f + 0.35f * hi) * fade);
+                    var hi = Mathf.Clamp01((w - 0.3f) / 0.7f) * calm;
+                    var c = Color.Lerp(_deep, _shallow, _ringShade[k]);
+                    c = Color.Lerp(c, _trough, Mathf.Clamp01(-w) * _look.TroughGain);
+                    c = Color.Lerp(c, _crest, hi * _look.CrestGain);
+                    if (bane) c = Color.Lerp(c, _murk, BaneMurk);
+                    _cols[b + v] = WithAlpha(c, _look.Alpha * _ringAlpha[k] * _wet[s] * (1f + 0.35f * hi) * fade);
+                }
             }
         }
 
-        void WriteRipples(int b, float fade, float offset, float gain)
+        void WriteRipples(int b, float fade, float offset, bool boon)
         {
             var n = Mathf.Clamp(_look.Ripples, 0, RippleCount);
+            var peak = Mathf.Min(LightCap, _look.RippleAlpha * (boon ? BoonRippleGain : 1f));
             for (var k = 0; k < n; k++)
             {
                 var t = Mathf.Repeat(_ripplePh + (k + offset) / n, 1f);
                 var grow = 1f - (1f - t) * (1f - t);
                 var half = 0.5f * Mathf.Lerp(RippleWidth0, RippleWidth1, t);
-                var mid = Mathf.Min(Mathf.Lerp(RippleStart, RippleEnd, grow), 1f - EdgeMargin - half);
-                var alpha = _look.RippleAlpha * gain * Mathf.Sin(Mathf.PI * t) * (1f - 0.4f * t) * fade;
-                WriteRing(b + RippleBase + k * StripVerts, mid - half, mid + half, _ripple, alpha,
+                var alpha = peak * Mathf.Sin(Mathf.PI * t) * (1f - 0.4f * t) * fade;
+                WriteRing(b + RippleBase + k * StripVerts, RippleStart, grow, half, _ripple, alpha,
                     _look.Break, 7.3f * k + offset * Segs);
             }
         }
@@ -423,13 +557,13 @@ namespace WRLDZ.Presentation.ArInteraction
         void WriteLip(int b, float fade, float offset, int aura)
         {
             var mid = LipRadius + LipBreath * Mathf.Sin(_lipPh + offset * TwoPi);
-            var half = 0.5f * LipWidth;
-            var alpha = _look.LipAlpha * fade;
+            var alpha = _look.LipAlpha;
             var col = _foam;
             var breakUp = _look.Break;
             if (aura > 0)
             {
-                alpha *= BoonLipGain * (0.85f + 0.15f * Mathf.Sin(2f * _lipPh));
+                // The gain is clamped before the pulse, so the pulse still shows under the cap.
+                alpha = Mathf.Min(LightCap, alpha * BoonLipGain) * (0.85f + 0.15f * Mathf.Sin(2f * _lipPh));
                 col = _foamBoon;
                 breakUp *= BoonLipBreak;
             }
@@ -438,70 +572,157 @@ namespace WRLDZ.Presentation.ArInteraction
                 alpha *= BaneLipGain;
             }
 
-            WriteRing(b + LipBase, mid - half, mid + half, col, alpha, breakUp, offset * Segs + _lipDrift);
+            WriteRing(b + LipBase, mid, 0f, 0.5f * LipWidth, col, Mathf.Min(LightCap, alpha) * fade, breakUp,
+                offset * Segs + _lipDrift);
         }
 
         /// <summary>
-        /// Closed soft band between two rim fractions, riding the surface. The
-        /// inner row samples the dot's bottom edge and the outer row its top, so
-        /// both edges fade.
+        /// Closed soft band riding the surface. Its centre moves from
+        /// <paramref name="start"/> toward each spoke's shore by
+        /// <paramref name="grow"/>, and the band stays EdgeMargin inside the
+        /// spoke's reach. The inner row samples the dot's bottom edge and the
+        /// outer row its top, so both edges fade.
         /// </summary>
-        void WriteRing(int i, float inner, float outer, Color col, float alpha, float breakUp, float noiseAt)
+        void WriteRing(int i, float start, float grow, float half, Color col, float alpha, float breakUp, float noiseAt)
         {
             for (var s = 0; s < Segs; s++)
             {
+                var edge = _reach[s] - EdgeMargin;
+                var mid = Mathf.Lerp(start, Mathf.Max(start, edge - half), grow);
+                var outer = Mathf.Min(mid + half, edge);
+                var inner = Mathf.Min(mid - half, outer);
                 var cs = _cos[s];
                 var sn = _sin[s];
-                _verts[i + s] = new Vector3(_o.x + _r * inner * cs, _o.y + SpokeHeight(inner, s) + _lift,
-                    _o.z + _r * inner * sn);
-                _verts[i + Segs + s] = new Vector3(_o.x + _r * outer * cs, _o.y + SpokeHeight(outer, s) + _lift,
-                    _o.z + _r * outer * sn);
-                Color32 c = WithAlpha(col, alpha * (1f - breakUp * Noise(s + noiseAt)));
+                _verts[i + s] = Place(inner * cs, SpokeHeight(inner, s) + FoamLift, inner * sn);
+                _verts[i + Segs + s] = Place(outer * cs, SpokeHeight(outer, s) + FoamLift, outer * sn);
+                Color32 c = WithAlpha(col, alpha * _light[s] * (1f - breakUp * Noise(s + noiseAt)));
                 _cols[i + s] = c;
                 _cols[i + Segs + s] = c;
             }
         }
 
         /// <summary>
-        /// A straight line of surf riding wave A's crest across the pool, square
-        /// to the swell: it builds as the crest comes in, runs white through the
-        /// middle, lifted as it curls, and fades before the far shore. Its phase
-        /// is the shared swell's, so neighbouring pools break together.
+        /// Surf on wave A's crest nearest the monster: a straight line square to
+        /// the swell that builds as the crest comes in and fades as it leaves,
+        /// lifted as it curls. The dry disc splits it into two runs, and every
+        /// run stays inside the rim, the lane and the aisle. Its phase is the
+        /// shared swell's, so neighbouring rings break together.
         /// </summary>
         void WriteCrest(int b, float fade, float rise, float offset, bool boon)
         {
             // Crest nearest the centre (wave A's phase wraps to 0 there); t runs 0…1 as it crosses.
             var t = 1f - Mathf.Repeat(_base[0] + Mathf.PI, TwoPi) / TwoPi;
             var half = 0.5f * CrestWidth;
-            var q = Mathf.Clamp((t - 0.5f) * _crestSpan, half - CrestReach, CrestReach - half);
-            var edge = Mathf.Abs(q) + half;
-            var chord = Mathf.Sqrt(Mathf.Max(0f, CrestReach * CrestReach - edge * edge));
-            var alpha = _look.CrestAlpha * Smooth(0f, 0.2f, t) * (1f - Smooth(0.8f, 1f, t)) * fade *
-                        (boon ? BoonCrestGain : 1f);
+            var outer = _rim - EdgeMargin;
+            var q = Mathf.Clamp((t - 0.5f) * _crestSpan, half - outer, outer - half);
+            var alpha = Mathf.Min(LightCap, _look.CrestAlpha * (boon ? BoonCrestGain : 1f)) *
+                        Smooth(0f, 0.2f, t) * (1f - Smooth(0.8f, 1f, t)) * fade;
             var dx = _wDirX[0];
             var dz = _wDirZ[0];
+
+            // The run is the line q·d + u·(−dz, dx), up to ±half wide along d. Find the u it may span.
+            var aq = Mathf.Abs(q);
+            var far = aq + half;
+            var lo = 0f;
+            var hi = -1f;
+            if (far < outer && _aisle > 0f)
+            {
+                hi = Mathf.Sqrt(outer * outer - far * far);
+                lo = -hi;
+                // Lane: |x| = |q·dx − u·dz ± half·dx| ≤ lane − EdgeMargin.
+                Slab(ref lo, ref hi, q * dx, -dz, _lane - EdgeMargin - half * Mathf.Abs(dx));
+                // Aisle: toward the midline, −side·(q·dz + u·dx ± half·dz) ≤ aisle − EdgeMargin.
+                HalfPlane(ref lo, ref hi, -_side * q * dz, -_side * dx, _aisle - EdgeMargin - half * Mathf.Abs(dz));
+            }
+
+            // The dry disc: the strip's near edge must stay outside LightInner.
+            var near = Mathf.Max(0f, aq - half);
+            var hole = near < LightInner ? Mathf.Sqrt(LightInner * LightInner - near * near) : 0f;
             var i = b + CrestBase;
+            var noise = offset * Segs;
+            if (hole <= 0f)
+            {
+                WriteRun(i, lo, hi, q, half, alpha, rise, noise);
+                Collapse(i + RunVerts, RunVerts);
+            }
+            else
+            {
+                WriteRun(i, lo, Mathf.Min(hi, -hole), q, half, alpha, rise, noise);
+                WriteRun(i + RunVerts, Mathf.Max(lo, hole), hi, q, half, alpha, rise, noise + 7f);
+            }
+        }
+
+        /// <summary>One surf run from u0 to u1 along the crest line, tapered at both ends.</summary>
+        void WriteRun(int i, float u0, float u1, float q, float half, float alpha, float rise, float noiseAt)
+        {
+            var runAlpha = alpha * Smooth(CrestMinRun, 2f * CrestMinRun, u1 - u0);
+            if (runAlpha <= 0f)
+            {
+                Collapse(i, RunVerts);
+                return;
+            }
+
+            var dx = _wDirX[0];
+            var dz = _wDirZ[0];
             for (var c = 0; c < CrestCols; c++)
             {
                 var taper = _crestTaper[c];
-                var along = chord * (2f * c / (CrestCols - 1) - 1f);
-                var px = q * dx - along * dz;
-                var pz = q * dz + along * dx;
+                var u = Mathf.Lerp(u0, u1, c / (float)(CrestCols - 1));
+                var px = q * dx - u * dz;
+                var pz = q * dz + u * dx;
                 var w = half * (0.35f + 0.65f * taper);
-                var y = _o.y + SurfaceAt(Mathf.Sqrt(px * px + pz * pz), Mathf.Atan2(pz, px)) + _lift +
-                        CrestLift * _s * rise * taper;
-                _verts[i + c] = new Vector3(_o.x + _r * (px - w * dx), y, _o.z + _r * (pz - w * dz));
-                _verts[i + CrestCols + c] = new Vector3(_o.x + _r * (px + w * dx), y, _o.z + _r * (pz + w * dz));
-                Color32 col = WithAlpha(_crest, alpha * taper * (1f - _look.Break * Noise(c + offset * Segs)));
+                var y = SurfaceAt(Mathf.Sqrt(px * px + pz * pz), Mathf.Atan2(pz, px)) + FoamLift +
+                        CrestLift * rise * taper;
+                _verts[i + c] = Place(px - w * dx, y, pz - w * dz);
+                _verts[i + CrestCols + c] = Place(px + w * dx, y, pz + w * dz);
+                Color32 col = WithAlpha(_crest, runAlpha * taper * (1f - _look.Break * Noise(c + noiseAt)));
                 _cols[i + c] = col;
                 _cols[i + CrestCols + c] = col;
             }
         }
 
+        /// <summary>Narrows [lo, hi] to where |a + b·u| ≤ m.</summary>
+        static void Slab(ref float lo, ref float hi, float a, float b, float m)
+        {
+            if (m < 0f)
+            {
+                hi = lo - 1f;
+                return;
+            }
+
+            if (Mathf.Abs(b) < 1e-5f)
+            {
+                if (Mathf.Abs(a) > m) hi = lo - 1f;
+                return;
+            }
+
+            var u1 = (-m - a) / b;
+            var u2 = (m - a) / b;
+            lo = Mathf.Max(lo, Mathf.Min(u1, u2));
+            hi = Mathf.Min(hi, Mathf.Max(u1, u2));
+        }
+
+        /// <summary>Narrows [lo, hi] to where a + b·u ≤ m.</summary>
+        static void HalfPlane(ref float lo, ref float hi, float a, float b, float m)
+        {
+            if (Mathf.Abs(b) < 1e-5f)
+            {
+                if (a > m) hi = lo - 1f;
+                return;
+            }
+
+            var u = (m - a) / b;
+            if (b > 0f) hi = Mathf.Min(hi, u);
+            else lo = Mathf.Max(lo, u);
+        }
+
         /// <summary>
         /// Short-lived flat flecks on the surface: white-cap streaks along the
         /// lead wave's crest lines (sea) or twinkling sun glints (tide). Each
-        /// cycle re-seeds from a hash, so there is no per-fleck state.
+        /// cycle re-seeds from a hash, so there is no per-fleck state. A fleck
+        /// takes a bearing and a radius in the room that bearing has between
+        /// LightInner and the shore. A life whose start or end bearing has no
+        /// room is skipped, so no fleck pops out mid-life.
         /// </summary>
         void WriteFlecks(int b, float stagger, int seed, float fade)
         {
@@ -510,41 +731,77 @@ namespace WRLDZ.Presentation.ArInteraction
             var lz = _capAlong.y * _look.FleckHalfLength;
             var wx = -_capAlong.y * _look.FleckHalfWidth;
             var wz = _capAlong.x * _look.FleckHalfWidth;
+            var inner = LightInner + _fleckHalfDiag;
+            var inset = EdgeMargin + _fleckHalfDiag;
+            var peak = Mathf.Min(LightCap, _look.FleckAlpha);
             var salt = seed * 131;
             for (var f = 0; f < FleckCount; f++)
             {
+                var i = b + FleckBase + f * 4;
                 var cycle = _fleckClock / life + (f + stagger) / FleckCount;
                 var n = Mathf.FloorToInt(cycle);
                 var u = cycle - n;
                 var id = n * FleckCount + f;
-                var rad = Mathf.Lerp(_look.FleckMin, _look.FleckMax, Mathf.Sqrt(Hash01(id, 17 + salt)));
                 var ang = Hash01(id, 71 + salt) * TwoPi;
-                var px = rad * Mathf.Cos(ang) + _capDrift.x * u;
-                var pz = rad * Mathf.Sin(ang) + _capDrift.y * u;
-                var pr = Mathf.Sqrt(px * px + pz * pz);
-                if (pr > _fleckReach)
+                var ca = Mathf.Cos(ang);
+                var sa = Mathf.Sin(ang);
+                var rad = Mathf.Lerp(inner, Reach(ca, sa, inset), Hash01(id, 17 + salt));
+                var x0 = rad * ca;
+                var z0 = rad * sa;
+                if (!HasRoom(x0, z0, inner, inset) ||
+                    !HasRoom(x0 + _capDrift.x, z0 + _capDrift.y, inner, inset))
                 {
-                    px *= _fleckReach / pr;
-                    pz *= _fleckReach / pr;
-                    pr = _fleckReach;
+                    Collapse(i, 4);
+                    continue;
                 }
 
-                var y = _o.y + SurfaceAt(pr, Mathf.Atan2(pz, px)) + _lift;
+                // Drift, then hold the fleck inside the room along its current bearing.
+                var px = x0 + _capDrift.x * u;
+                var pz = z0 + _capDrift.y * u;
+                var pr = Mathf.Sqrt(px * px + pz * pz);
+                var bc = px / pr;
+                var bs = pz / pr;
+                var room = Reach(bc, bs, inset);
+                if (room < inner)
+                {
+                    Collapse(i, 4);
+                    continue;
+                }
+
+                pr = Mathf.Clamp(pr, inner, room);
+                px = bc * pr;
+                pz = bs * pr;
+
+                var y = SurfaceAt(pr, Mathf.Atan2(pz, px)) + FoamLift;
                 var env = Mathf.Sin(Mathf.PI * u);
                 if (_look.Glints) env *= env * env;
-                Color32 col = WithAlpha(_fleck, _look.FleckAlpha * env * fade);
+                Color32 col = WithAlpha(_fleck, peak * env * fade);
 
-                var i = b + FleckBase + f * 4;
-                var cx = _o.x + _r * px;
-                var cz = _o.z + _r * pz;
-                _verts[i] = new Vector3(cx - _r * (lx + wx), y, cz - _r * (lz + wz));
-                _verts[i + 1] = new Vector3(cx + _r * (lx - wx), y, cz + _r * (lz - wz));
-                _verts[i + 2] = new Vector3(cx + _r * (lx + wx), y, cz + _r * (lz + wz));
-                _verts[i + 3] = new Vector3(cx - _r * (lx - wx), y, cz - _r * (lz - wz));
+                _verts[i] = Place(px - (lx + wx), y, pz - (lz + wz));
+                _verts[i + 1] = Place(px + (lx - wx), y, pz + (lz - wz));
+                _verts[i + 2] = Place(px + (lx + wx), y, pz + (lz + wz));
+                _verts[i + 3] = Place(px - (lx - wx), y, pz - (lz - wz));
                 _cols[i] = col;
                 _cols[i + 1] = col;
                 _cols[i + 2] = col;
                 _cols[i + 3] = col;
+            }
+        }
+
+        /// <summary>True when the bearing of (x, z) leaves a fleck room between <paramref name="inner"/> and the shore.</summary>
+        bool HasRoom(float x, float z, float inner, float inset)
+        {
+            var r = Mathf.Sqrt(x * x + z * z);
+            return r > 1e-5f && Reach(x / r, z / r, inset) >= inner;
+        }
+
+        /// <summary>Folds <paramref name="n"/> vertices onto the anchor, fully transparent: nothing drawn.</summary>
+        void Collapse(int i, int n)
+        {
+            for (var k = 0; k < n; k++)
+            {
+                _verts[i + k] = _o;
+                _cols[i + k] = default;
             }
         }
 
@@ -561,25 +818,36 @@ namespace WRLDZ.Presentation.ArInteraction
             return (c + _chop * (2f * c * c - 1f)) / (1f + _chop);
         }
 
-        /// <summary>Surface height along spoke <paramref name="s"/> at rim fraction <paramref name="rn"/>, as drawn.</summary>
-        float SpokeHeight(float rn, int s)
+        /// <summary>Surface height along spoke <paramref name="s"/> at radius <paramref name="r"/>, as drawn.</summary>
+        float SpokeHeight(float r, int s)
         {
-            var f = Mathf.Clamp01(rn) * DiscRings;
-            var r = Mathf.Min((int)f, DiscRings - 1);
-            var h0 = r == 0 ? _hy[0] : _hy[1 + (r - 1) * Segs + s];
-            var h1 = _hy[1 + r * Segs + s];
-            return h0 + (h1 - h0) * (f - r);
+            var r0 = _ringR[s];
+            if (r <= r0) return _hy[s];
+            for (var k = 1; k < DiscRings; k++)
+            {
+                var v = k * Segs + s;
+                var r1 = _ringR[v];
+                if (r <= r1)
+                {
+                    var span = r1 - r0;
+                    return span > 1e-5f ? Mathf.Lerp(_hy[v - Segs], _hy[v], (r - r0) / span) : _hy[v];
+                }
+
+                r0 = r1;
+            }
+
+            return _hy[(DiscRings - 1) * Segs + s];
         }
 
-        /// <summary>Surface height at rim fraction <paramref name="rn"/> and angle <paramref name="ang"/> (radians from +X toward +Z).</summary>
-        float SurfaceAt(float rn, float ang)
+        /// <summary>Surface height at radius <paramref name="r"/> and angle <paramref name="ang"/> (radians from +X toward +Z).</summary>
+        float SurfaceAt(float r, float ang)
         {
             var f = Mathf.Repeat(ang / TwoPi, 1f) * Segs;
             var s0 = (int)f;
             var t = f - s0;
             s0 %= Segs;
             var s1 = (s0 + 1) % Segs;
-            return Mathf.Lerp(SpokeHeight(rn, s0), SpokeHeight(rn, s1), t);
+            return Mathf.Lerp(SpokeHeight(r, s0), SpokeHeight(r, s1), t);
         }
 
         float Noise(float at)
@@ -653,27 +921,24 @@ namespace WRLDZ.Presentation.ArInteraction
                 _sin[s] = Mathf.Sin(a);
             }
 
-            _vx = new float[DiscVerts];
-            _vz = new float[DiscVerts];
-            _vShade = new float[DiscVerts];
-            _vAlpha = new float[DiscVerts];
-            _vCalm = new float[DiscVerts];
-            _hy = new float[DiscVerts];
-            for (var v = 0; v < DiscVerts; v++)
+            _ringF = new float[DiscRings];
+            _ringAlpha = new float[DiscRings];
+            _ringShade = new float[DiscRings];
+            _ringCalm = new float[DiscRings];
+            for (var k = 0; k < DiscRings; k++)
             {
-                var rn = 0f;
-                if (v > 0)
-                {
-                    var s = (v - 1) % Segs;
-                    rn = ((v - 1) / Segs + 1) / (float)DiscRings;
-                    _vx[v] = rn * _cos[s];
-                    _vz[v] = rn * _sin[s];
-                }
-
-                _vShade[v] = Smooth(0.1f, 1f, rn);
-                _vAlpha[v] = Mathf.Lerp(CentreAlpha, 1f, Smooth(0f, 0.35f, rn)) * (1f - Smooth(ShoreFadeStart, 1f, rn));
-                _vCalm[v] = 1f - Smooth(CalmStart, 1f, rn);
+                var f = k == 0 ? 0f : (k - 1) / (float)(DiscRings - 2);
+                _ringF[k] = f;
+                // Clear at the dry edge, full at the wet edge, thinning out to the shore.
+                _ringAlpha[k] = k == 0 ? 0f : 1f - Smooth(ShoreFadeStart, 1f, f);
+                // Deepest in colour round the monster's legs, shallower toward the shore.
+                _ringShade[k] = Smooth(0f, 1f, f);
+                _ringCalm[k] = 1f - Smooth(CalmStart, 1f, f);
             }
+
+            _dryRing = DryRadius / Mathf.Cos(Mathf.PI / Segs);
+            _ringR = new float[DiscVerts];
+            _hy = new float[DiscVerts];
 
             _wDirX = new float[WaveCount];
             _wDirZ = new float[WaveCount];
@@ -689,10 +954,10 @@ namespace WRLDZ.Presentation.ArInteraction
             for (var j = 0; j < WaveCount; j++)
                 _wWeight[j] /= total; // |sum| ≤ 1, so the height bound holds for any tuning
 
-            _proj = new float[WaveCount * DiscVerts];
+            _spokeDot = new float[WaveCount * Segs];
             for (var j = 0; j < WaveCount; j++)
-            for (var v = 0; v < DiscVerts; v++)
-                _proj[j * DiscVerts + v] = _wK[j] * _rim * (_vx[v] * _wDirX[j] + _vz[v] * _wDirZ[j]);
+            for (var s = 0; s < Segs; s++)
+                _spokeDot[j * Segs + s] = _cos[s] * _wDirX[j] + _sin[s] * _wDirZ[j];
 
             var raw = new float[Segs];
             for (var s = 0; s < Segs; s++)
@@ -704,13 +969,12 @@ namespace WRLDZ.Presentation.ArInteraction
             _crestTaper = new float[CrestCols];
             for (var c = 0; c < CrestCols; c++)
                 _crestTaper[c] = Mathf.Sqrt(Mathf.Max(0f, Mathf.Sin(Mathf.PI * c / (CrestCols - 1))));
-            _crestSpan = TwoPi / (_wK[0] * _rim);
+            _crestSpan = TwoPi / _wK[0];
 
             _capAlong = new Vector2(-_wDirZ[0], _wDirX[0]);
             _capDrift = new Vector2(_wDirX[0], _wDirZ[0]) * _look.FleckDrift;
-            var halfDiag = Mathf.Sqrt(_look.FleckHalfLength * _look.FleckHalfLength +
-                                      _look.FleckHalfWidth * _look.FleckHalfWidth);
-            _fleckReach = Mathf.Max(0f, 1f - EdgeMargin - halfDiag);
+            _fleckHalfDiag = Mathf.Sqrt(_look.FleckHalfLength * _look.FleckHalfLength +
+                                        _look.FleckHalfWidth * _look.FleckHalfWidth);
 
             _ripplePh = R(0f, 1f);
             _lipPh = R(0f, TwoPi);
@@ -728,8 +992,8 @@ namespace WRLDZ.Presentation.ArInteraction
         }
 
         /// <summary>
-        /// Disc samples the dot's centre (flat); strips run u = 0.5 with v across
-        /// the band (soft both edges); flecks take the whole dot.
+        /// Water samples the dot's centre (flat); strips and surf runs take
+        /// u = 0.5 with v across the band (soft both edges); flecks take the whole dot.
         /// </summary>
         Vector2[] BuildUvs()
         {
@@ -753,10 +1017,12 @@ namespace WRLDZ.Presentation.ArInteraction
                     }
                 }
 
+                for (var run = 0; run < CrestRuns; run++)
                 for (var c = 0; c < CrestCols; c++)
                 {
-                    uv[b + CrestBase + c] = low;
-                    uv[b + CrestBase + CrestCols + c] = high;
+                    var i = b + CrestBase + run * RunVerts;
+                    uv[i + c] = low;
+                    uv[i + CrestCols + c] = high;
                 }
 
                 for (var f = 0; f < FleckCount; f++)
@@ -774,7 +1040,7 @@ namespace WRLDZ.Presentation.ArInteraction
 
         /// <summary>
         /// Index order is the draw order inside the single draw call: every
-        /// pool's water first, then ripples and waterlines, crests, flecks, so
+        /// pool's water first, then ripples and waterlines, surf, flecks, so
         /// foam always lands on water.
         /// </summary>
         int[] BuildTriangles()
@@ -783,29 +1049,18 @@ namespace WRLDZ.Presentation.ArInteraction
             var t = 0;
 
             for (var slot = 0; slot < MaxAnchors; slot++)
+            for (var r = 0; r < DiscRings - 1; r++)
             {
-                var b = slot * SlotVerts;
+                var ring = slot * SlotVerts + r * Segs;
                 for (var s = 0; s < Segs; s++)
                 {
                     var s1 = (s + 1) % Segs;
-                    tris[t++] = b;
-                    tris[t++] = b + 1 + s;
-                    tris[t++] = b + 1 + s1;
-                }
-
-                for (var r = 0; r < DiscRings - 1; r++)
-                {
-                    var ring = b + 1 + r * Segs;
-                    for (var s = 0; s < Segs; s++)
-                    {
-                        var s1 = (s + 1) % Segs;
-                        tris[t++] = ring + s;
-                        tris[t++] = ring + Segs + s;
-                        tris[t++] = ring + s1;
-                        tris[t++] = ring + s1;
-                        tris[t++] = ring + Segs + s;
-                        tris[t++] = ring + Segs + s1;
-                    }
+                    tris[t++] = ring + s;
+                    tris[t++] = ring + Segs + s;
+                    tris[t++] = ring + s1;
+                    tris[t++] = ring + s1;
+                    tris[t++] = ring + Segs + s;
+                    tris[t++] = ring + Segs + s1;
                 }
             }
 
@@ -826,8 +1081,9 @@ namespace WRLDZ.Presentation.ArInteraction
             }
 
             for (var slot = 0; slot < MaxAnchors; slot++)
+            for (var run = 0; run < CrestRuns; run++)
             {
-                var i = slot * SlotVerts + CrestBase;
+                var i = slot * SlotVerts + CrestBase + run * RunVerts;
                 for (var c = 0; c < CrestCols - 1; c++)
                 {
                     tris[t++] = i + c;

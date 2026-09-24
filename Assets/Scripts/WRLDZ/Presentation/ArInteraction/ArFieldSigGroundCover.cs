@@ -5,17 +5,25 @@ namespace WRLDZ.Presentation.ArInteraction
 {
     /// <summary>
     /// Duelist Kingdom ground cover: a ring of swaying vegetation around each
-    /// monster that keeps the ground under the card itself clear. Variant 0 (Sogen)
-    /// is short, dense meadow grass with sunlit tips; 1 (Forest) is arching fern
-    /// fronds over broad-leaf undergrowth; 2 (Gaia Power) is gnarled roots breaking
-    /// out of the ground with accent pulses running outward along them, plus sparse
+    /// monster, rooted outside the summon ring's disc (0.47–0.72 × Scale) so the
+    /// disc, pad and aura stay readable. Variant 0 (Sogen) is short, dense meadow
+    /// grass with sunlit tips; 1 (Forest) is arching fern fronds over broad-leaf
+    /// undergrowth; 2 (Gaia Power) is gnarled roots breaking out of the ground at
+    /// the disc's edge with accent pulses running outward along them, plus sparse
     /// grass. Plants run from the palette Ground at the base to Accent at the tips,
     /// sway in one wind that travels across the street, and grow in with the sweep.
-    /// The side of each ring facing the stage camera stays short and sparse so the
-    /// monster art is never hidden; a Set monster's whole ring lies down under its
-    /// flat card and stands back up once it is face-up. One dynamic mesh (one draw
-    /// call): camera-facing tufts, flat fronds and view-aligned root ribbons over a
-    /// small procedural atlas.
+    /// Each ring keeps to its lane (half the column pitch sideways) and stops
+    /// short of the street midline: items near those lines shrink toward their
+    /// base and fade out, so facing and neighbouring rings never meet.
+    /// The side of each ring facing the stage camera stays short and sparse, and
+    /// ankle-low along the near edge of the disc; every item's top is clamped with
+    /// <see cref="ArFieldSignature.CoverLimit"/> so upright art keeps all but its
+    /// feet clear and sideways (Defense) art keeps its middle clear. While a
+    /// monster is Set (or its flip is still animating) the items over its card
+    /// lie flat under it; once the card stands up they rise again over 0.6 s.
+    /// Boon/bane shows only once the card stands. One dynamic mesh (one draw
+    /// call): camera-facing tufts, flat fronds and view-aligned root ribbons over
+    /// a small procedural atlas.
     /// Scope: per-monster.
     /// </summary>
     public sealed class ArFieldSigGroundCover : ArFieldSignature
@@ -24,6 +32,8 @@ namespace WRLDZ.Presentation.ArInteraction
         const float TwoPi = Mathf.PI * 2f;
         const float Golden = 0.618034f;
 
+        /// <summary>The summon ring's opaque disc is 0.45 × Scale: every item roots outside this radius.</summary>
+        const float DiscClear = 0.47f;
         /// <summary>Each item's worst case (width + lean + full sway) ends inside this radius (× Scale).</summary>
         const float DesignRadius = 0.72f;
         /// <summary>Hard per-vertex guards (× Scale), just inside the contract.</summary>
@@ -38,6 +48,22 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary>Width of the fade band (1 / this) as the cull threshold passes an item's Keep.</summary>
         const float FrontFadeSharpness = 10f;
 
+        // Near edge of the summon disc: camera-side items rooted inside NearDiscRadius stay under
+        // NearDiscHeight (× Scale), easing in from front share NearDiscFrontFrom to NearDiscFrontTo
+        // and out between NearDiscRadius and NearDiscFadeTo.
+        const float NearDiscFrontFrom = 0.35f;
+        const float NearDiscFrontTo = 0.5f;
+        const float NearDiscRadius = 0.55f;
+        const float NearDiscFadeTo = 0.6f;
+        const float NearDiscHeight = 0.05f;
+
+        /// <summary>
+        /// Lane / aisle fit: the share of its size an item keeps so its worst case clears
+        /// both lines. Hidden at or below FitHide, fully opaque from FitShow.
+        /// </summary>
+        const float FitHide = 0.25f;
+        const float FitShow = 0.5f;
+
         // One wind for the whole street: a steady lean plus a gust wave.
         const float GustLean = 0.08f;
         const float GustSpeed = 1.3f;
@@ -50,20 +76,22 @@ namespace WRLDZ.Presentation.ArInteraction
         const float PlantBaseAlpha = 0.55f;
         const float BaneHeight = 0.8f;
         const float BaneDrain = 0.45f;
+        /// <summary>Bane roots darken toward this share of their bark colour (mixed in sRGB).</summary>
+        const float BaneBark = 0.7f;
         const float BoonGlow = 0.25f;
 
-        /// <summary>Under a Set card every item's top lies at this share of SetCardClearHeight.</summary>
+        /// <summary>Under a Set card an item's top lies at this share of SetCardClearHeight.</summary>
         const float SetClearMargin = 0.8f;
         const float SetLieHeight = SetCardClearHeight * SetClearMargin;
-        /// <summary>Seconds for a Set monster's ring to stand back up once it is face-up.</summary>
-        const float FlipRiseSeconds = 0.8f;
+        /// <summary>Seconds for the items over a Set card to stand back up once the card has stood up.</summary>
+        const float FlipRiseSeconds = 0.6f;
 
         /// <summary>Tufts are sheared quads: the texture carries the blades, the top row carries lean and sway.</summary>
         const int TuftRows = 2;
 
         // Variant 0: meadow grass.
-        const int MeadowTufts = 99;
-        const float MeadowInner = 0.34f;
+        const int MeadowTufts = 69;
+        const float MeadowInner = DiscClear;
         const float MeadowHeightMin = 0.16f;
         const float MeadowHeightMax = 0.30f;
         const float MeadowWidthMin = 0.13f;
@@ -77,19 +105,22 @@ namespace WRLDZ.Presentation.ArInteraction
         const int FernCrowns = 6;
         const int FrondsPerCrown = 3;
         const int FrondRows = 5;
-        const float FernCrownRadius = 0.40f;
+        /// <summary>Crowns sit on the disc's edge, up to FernCrownJitter further out.</summary>
+        const float FernCrownRadius = DiscClear;
+        const float FernCrownJitter = 0.03f;
+        /// <summary>Design reach; each frond is shortened until it ends inside <see cref="DesignRadius"/>.</summary>
         const float FrondReachMin = 0.19f;
         const float FrondReachMax = 0.25f;
         const float FrondHeightMin = 0.24f;
         const float FrondHeightMax = 0.34f;
         const float FrondWidthMin = 0.11f;
         const float FrondWidthMax = 0.15f;
-        const float FrondSpreadDeg = 50f;
+        const float FrondSpreadDeg = 55f;
         const float FrondSway = 0.07f;
         const float FernFrontCull = 0.3f;
         const float FernFrontHeight = 0.35f;
-        const int LeafClumps = 54;
-        const float LeafInner = 0.36f;
+        const int LeafClumps = 38;
+        const float LeafInner = DiscClear;
         const float LeafHeightMin = 0.18f;
         const float LeafHeightMax = 0.28f;
         const float LeafWidthMin = 0.12f;
@@ -102,10 +133,14 @@ namespace WRLDZ.Presentation.ArInteraction
         // Variant 2: roots breaking the ground, sparse grass between them.
         const int Roots = 11;
         const int RootRows = 9;
-        const float RootInnerMin = 0.30f;
-        const float RootInnerMax = 0.36f;
-        const float RootLengthMin = 0.26f;
-        const float RootLengthMax = 0.34f;
+        const float RootInnerMin = DiscClear;
+        const float RootInnerMax = 0.50f;
+        /// <summary>Design length; each root is shortened until it ends inside <see cref="DesignRadius"/>.</summary>
+        const float RootLengthMin = 0.24f;
+        const float RootLengthMax = 0.32f;
+        /// <summary>Heading off the radial (degrees, either way), so roots splay round the disc.</summary>
+        const float RootTurnMin = 10f;
+        const float RootTurnMax = 35f;
         /// <summary>Sideways drift of the root tip (host-local metres).</summary>
         const float RootCurve = 0.06f;
         const float RootWiggle = 0.02f;
@@ -124,8 +159,8 @@ namespace WRLDZ.Presentation.ArInteraction
         const float RootPulseWidth = 0.18f;
         const float RootPulseGlow = 0.75f;
         const float RootOpacity = 0.92f;
-        const int RootGrass = 49;
-        const float RootGrassInner = 0.36f;
+        const int RootGrass = 34;
+        const float RootGrassInner = DiscClear;
         const float RootGrassHeightMin = 0.10f;
         const float RootGrassHeightMax = 0.20f;
         const float RootGrassWidthMin = 0.10f;
@@ -182,6 +217,9 @@ namespace WRLDZ.Presentation.ArInteraction
             public int Row;       // first row in _shape / _halfWidth
             public float Size;    // sway length (host-local metres)
             public float Top;     // highest point of the shape (host-local metres)
+            public float Along;   // worst reach from the base along the heading (host-local metres)
+            public float Spread;  // worst reach from the base in any direction: width, sway, drift
+            public float Rim;     // view-aligned ribbon half width that can stand above the shape (roots)
             public float Phase;   // radians (sway) or 0…1 (root pulse)
             public float Freq;
             public float Keep;    // camera-side items with Keep under the cull share fade out
@@ -189,6 +227,7 @@ namespace WRLDZ.Presentation.ArInteraction
             public Color Base;
             public Color Mid;
             public Color Tip;
+            public Color Dark;    // bane-drained base (roots)
         }
 
         struct TuftSpec
@@ -207,9 +246,13 @@ namespace WRLDZ.Presentation.ArInteraction
         readonly Block[] _blocks = new Block[2];
         readonly int[] _order = new int[MaxAnchors];
         readonly float[] _dist = new float[MaxAnchors];
-        // Per anchor-list slot, re-keyed when a different monster takes it: 1 = lying under a Set card.
-        readonly int[] _slotKey = new int[MaxAnchors];
-        readonly float[] _slotDown = new float[MaxAnchors];
+        // Lie-down state (1 = flat under a Set card) per monster, matched by Key against last
+        // frame's anchors so an ease survives others coming and going. Swapped each frame.
+        int[] _prevKey = new int[MaxAnchors];
+        float[] _prevDown = new float[MaxAnchors];
+        int[] _curKey = new int[MaxAnchors];
+        float[] _curDown = new float[MaxAnchors];
+        int _prevCount;
         int _blockCount;
         Blade[] _blades;
         int _bladeCursor;
@@ -227,8 +270,12 @@ namespace WRLDZ.Presentation.ArInteraction
         int _slotsLive;
         Vector3 _wind;
         float _windClock;
+        FieldStreet _street;
 
-        // Frame of the anchor being written (set by WriteAnchor, read by WriteBlade).
+        // Frame of the anchor being written (set by WriteAnchor, read by WriteBlade / Contain).
+        FieldAnchor _anchor;
+        /// <summary>The same monster with its card lying flat: tests an item against the Set footprint during the rise too.</summary>
+        FieldAnchor _card;
         Vector3 _pos;
         float _sc;
         float _spinCos;
@@ -244,9 +291,13 @@ namespace WRLDZ.Presentation.ArInteraction
         float _time;
         int _aura;
         float _down;
-        /// <summary>Squared Set-card footprint radius (0 when face-up); vertices inside stay under <see cref="_setTop"/>.</summary>
-        float _setClear2;
-        float _setTop;
+        /// <summary>Floor metres an item may reach sideways, and toward the street midline (+z = _towardMid).</summary>
+        float _laneReach;
+        float _midReach;
+        float _towardMid;
+        // Item being written: its height cap, and (roots) how much the near-disc cap applies per vertex.
+        float _itemTop;
+        float _nearFront;
 
         float WidthScale => 0.75f + 0.25f * SigScale;
 
@@ -321,10 +372,11 @@ namespace WRLDZ.Presentation.ArInteraction
                 }
             }
 
-            // Every mix above is in sRGB, as designed; convert once for the Linear project.
+            // Every mix above (and the bane darkening) is in sRGB, as designed; convert once for the Linear project.
             for (var i = 0; i < _blades.Length; i++)
             {
                 ref var b = ref _blades[i];
+                b.Dark = VertexColor(b.Base * BaneBark);
                 b.Base = VertexColor(b.Base);
                 b.Mid = VertexColor(b.Mid);
                 b.Tip = VertexColor(b.Tip);
@@ -339,6 +391,7 @@ namespace WRLDZ.Presentation.ArInteraction
             var count = anchors == null ? 0 : Mathf.Min(anchors.Count, MaxAnchors);
             if (level <= 0.001f || count == 0)
             {
+                _prevCount = 0;
                 if (_mr.enabled) _mr.enabled = false;
                 return;
             }
@@ -346,12 +399,19 @@ namespace WRLDZ.Presentation.ArInteraction
             var t = Time.unscaledTime;
             _time = t;
             _windClock += dt * (1f + GustVariation * Mathf.Sin(t * GustDrift));
-            var eye = EyeLocal(street);
+            _street = street;
+            var eye = street.HasCamera
+                ? street.Camera
+                : new Vector3(street.Center.x, street.Center.y, street.Center.z - street.Half.z - 1f);
 
+            // Every monster's lie-down ease, even ones drawn nowhere this frame, so none loses its state.
             // Far monsters first so nearer rings blend over them.
             for (var i = 0; i < count; i++)
             {
-                var d = anchors[i].Position - eye;
+                var a = anchors[i];
+                _curKey[i] = a.Key;
+                _curDown[i] = LieDown(a, dt);
+                var d = a.Position - eye;
                 _dist[i] = d.x * d.x + d.z * d.z;
                 _order[i] = i;
             }
@@ -374,12 +434,20 @@ namespace WRLDZ.Presentation.ArInteraction
             {
                 var slot = _order[k];
                 var a = anchors[slot];
-                var down = LieDown(slot, a, dt);
                 var vis = Mathf.Clamp01(a.Presence) * level;
                 if (vis <= 0.001f || a.Scale <= 1e-4f) continue;
-                WriteAnchor(drawn * _anchorVerts, a, vis, down, eye, street.HoloScale);
+                WriteAnchor(drawn * _anchorVerts, a, vis, _curDown[slot], eye);
                 drawn++;
             }
+
+            // This frame's lie-down state becomes next frame's lookup (swap, no allocation).
+            var keys = _prevKey;
+            _prevKey = _curKey;
+            _curKey = keys;
+            var downs = _prevDown;
+            _prevDown = _curDown;
+            _curDown = downs;
+            _prevCount = count;
 
             if (drawn == 0)
             {
@@ -397,46 +465,38 @@ namespace WRLDZ.Presentation.ArInteraction
             if (!_mr.enabled) _mr.enabled = true;
         }
 
-        /// <summary>Stage camera in floor-local space; the player's end of the street without one.</summary>
-        Vector3 EyeLocal(in FieldStreet street)
-        {
-            var cam = StageCamera;
-            if (cam != null) return transform.InverseTransformPoint(cam.transform.position);
-            return new Vector3(street.Center.x, street.Center.y, street.Center.z - street.Half.z - 1f);
-        }
-
         /// <summary>
-        /// How far the ring of the monster in list <paramref name="slot"/> lies down:
-        /// 1 at once when its card is Set, easing back to 0 over <see cref="FlipRiseSeconds"/>
-        /// once it is face-up. A different monster in the slot starts at its own target.
+        /// How far the items over this monster's card lie down: 1 at once while it is Set
+        /// (a flip counts as Set until the card stands), then easing back to 0 over
+        /// <see cref="FlipRiseSeconds"/>. Looked up by Key in last frame's anchors; a
+        /// monster not seen then starts at its target.
         /// </summary>
-        float LieDown(int slot, in FieldAnchor a, float dt)
+        float LieDown(in FieldAnchor a, float dt)
         {
             var target = a.FaceDown ? 1f : 0f;
-            if (_slotKey[slot] != a.Key || target > _slotDown[slot])
+            for (var j = 0; j < _prevCount; j++)
             {
-                _slotKey[slot] = a.Key;
-                _slotDown[slot] = target;
-            }
-            else
-            {
-                _slotDown[slot] = Mathf.MoveTowards(_slotDown[slot], target, dt / FlipRiseSeconds);
+                if (_prevKey[j] != a.Key) continue;
+                var was = _prevDown[j];
+                return target > was ? target : Mathf.MoveTowards(was, target, dt / FlipRiseSeconds);
             }
 
-            return _slotDown[slot];
+            return target;
         }
 
         /// <summary>One monster's ring into the vertex run at <paramref name="vStart"/>, each block back to front.</summary>
-        void WriteAnchor(int vStart, in FieldAnchor a, float vis, float down, Vector3 eye, float holoScale)
+        void WriteAnchor(int vStart, in FieldAnchor a, float vis, float down, Vector3 eye)
         {
+            _anchor = a;
+            _card = a;
+            _card.FaceDown = true;
             _pos = a.Position;
-            // Geometry follows the steady hologram scale, not the hit punch: the ground stays put while the monster flinches.
-            // Never above a.Scale, so the contract limits (× a.Scale) still hold.
-            _sc = Mathf.Min(a.Scale, holoScale);
+            // Resting scale: the ground stays put while the monster flinches on a hit.
+            _sc = a.Scale;
             _down = down;
-            var clear = SetCardClearRadius * a.Scale;
-            _setClear2 = a.FaceDown ? clear * clear : 0f;
-            _setTop = SetCardClearHeight * _sc;
+            _laneReach = LaneHalfWidth * _sc;
+            _midReach = MidlineGap(a, a.Position);
+            _towardMid = a.Position.z < 0f ? 1f : -1f;
             var toEye = eye - _pos;
             var flat = Mathf.Sqrt(toEye.x * toEye.x + toEye.z * toEye.z);
             _camX = flat > 1e-4f ? toEye.x / flat : 0f;
@@ -449,7 +509,8 @@ namespace WRLDZ.Presentation.ArInteraction
             _spinCos = Mathf.Cos(spin);
             _spinSin = Mathf.Sin(spin);
             _phase = Hash01(a.Key, 5) * TwoPi;
-            _aura = a.Aura;
+            // Boon/bane waits until the card stands: a flip still animating reads as Set.
+            _aura = a.FaceDown ? 0 : a.Aura;
             _lift = Mathf.Lerp(GrowFloor, 1f, Mathf.SmoothStep(0f, 1f, vis)) * (_aura < 0 ? BaneHeight : 1f);
             _alpha = vis;
             _gust = Mathf.Sin(_windClock * GustSpeed - (_pos.x * _wind.x + _pos.z * _wind.z) * GustWaveNumber);
@@ -476,35 +537,77 @@ namespace WRLDZ.Presentation.ArInteraction
             }
         }
 
-        /// <summary>One item: camera-side fade, wind, then its rows as vertex pairs.</summary>
+        /// <summary>One item: lane fit, camera-side fade, height caps, wind, then its rows as vertex pairs.</summary>
         void WriteBlade(in Block blk, int i, int v)
         {
             ref var b = ref _blades[i];
             var dx = b.DirX * _spinCos - b.DirZ * _spinSin;
             var dz = b.DirZ * _spinCos + b.DirX * _spinSin;
+            var hx = dx * b.HeadCos - dz * b.HeadSin;
+            var hz = dz * b.HeadCos + dx * b.HeadSin;
+            var ox = dx * b.Radius * _sc;
+            var oz = dz * b.Radius * _sc;
+
+            // Lane and aisle: the item shrinks toward its base until its worst case clears both lines.
+            var along = b.Along * _sc;
+            var spread = b.Spread * _sc;
+            var fit = Fit(ox, along * Mathf.Max(0f, hx) + spread, _laneReach);
+            fit = Mathf.Min(fit, Fit(-ox, along * Mathf.Max(0f, -hx) + spread, _laneReach));
+            fit = Mathf.Min(fit, Fit(_towardMid * oz, along * Mathf.Max(0f, _towardMid * hz) + spread, _midReach));
 
             // Camera side: shorter and sparser so the monster art stays clear.
             var front = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(FrontCosFrom, FrontCosTo, dx * _camX + dz * _camZ));
-            var fade = Mathf.Clamp01((b.Keep - blk.FrontCull * front) * FrontFadeSharpness + 1f);
+            var fade = Mathf.Clamp01((b.Keep - blk.FrontCull * front) * FrontFadeSharpness + 1f) *
+                       Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(FitHide, FitShow, fit));
             if (fade <= 0.001f)
             {
                 Collapse(v, blk.Rows * 2, _pos);
                 return;
             }
 
+            var size = _sc * fit;
             var lift = _lift * Mathf.Lerp(1f, blk.FrontHeight, front) * Mathf.Lerp(0.6f, 1f, fade);
-            // Every item starts inside a Set card's footprint: under one it lies down to a low skirt,
-            // shape and all (sway scales with lift too), and stands back up after the flip.
-            if (_down > 0f) lift = Mathf.Lerp(lift, Mathf.Min(lift, SetLieHeight / Mathf.Max(b.Top, 1e-3f)), _down);
-            var hx = dx * b.HeadCos - dz * b.HeadSin;
-            var hz = dz * b.HeadCos + dx * b.HeadSin;
-            var bx = _pos.x + dx * b.Radius * _sc;
-            var bz = _pos.z + dz * b.Radius * _sc;
+            var bx = _pos.x + ox;
+            var bz = _pos.z + oz;
+
+            // Art cover, tested at the item's most camera-ward point, shifted toward the art's centre.
+            var reach = (b.Along + b.Spread) * size;
+            var shift = Mathf.Clamp(_anchor.ArtLateral - (ox * _right.x + oz * _right.z), -reach, reach);
+            var cap = Mathf.Min(GuardHeight * _sc, CoverLimit(_anchor, _street,
+                new Vector3(bx + _camX * reach + _right.x * shift, _pos.y, bz + _camZ * reach + _right.z * shift)));
+            // Near edge of the summon disc: camera-side items rooted close to it stay ankle-low.
+            // Roots apply it per vertex instead, so they dive under the disc edge and break out beyond it.
+            var near = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(NearDiscFrontFrom, NearDiscFrontTo, front));
+            _nearFront = 0f;
+            if (blk.Kind == Kind.Root)
+                _nearFront = near;
+            else
+                cap = Mathf.Min(cap, Mathf.Lerp(cap, NearDiscHeight * _sc,
+                    near * (1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(NearDiscRadius, NearDiscFadeTo, b.Radius)))));
+
+            var top = Mathf.Max(b.Top * size, 1e-5f);
+            lift = Mathf.Min(lift, Mathf.Max(0f, cap - b.Rim * size) / top);
+
+            // Over a Set card's footprint the item lies down to a low skirt, shape and all (sway
+            // scales with lift too), and stands back up after the card does. Tested at the point
+            // of its worst case nearest the card's centre; items in the strips before and behind
+            // the card stand as usual.
+            var lie = 0f;
+            if (_down > 0f)
+            {
+                var sx = Mathf.Sign(ox) * Mathf.Max(0f, Mathf.Abs(ox) - reach);
+                var sz = Mathf.Sign(oz) * Mathf.Max(0f, Mathf.Abs(oz) - reach);
+                if (InSetCard(_card, new Vector3(_pos.x + sx, _pos.y, _pos.z + sz))) lie = _down;
+            }
+
+            if (lie > 0f) lift = Mathf.Lerp(lift, Mathf.Min(lift, SetLieHeight * _sc / top), lie);
+            _itemTop = Mathf.Lerp(cap, SetCardClearHeight * _sc, lie);
+
             var sway = 0f;
             if (blk.Kind != Kind.Root)
             {
                 var osc = 0.55f * Mathf.Sin(_time * b.Freq + b.Phase + _phase) + 0.45f * _gust;
-                sway = (blk.Sway * osc + GustLean * (0.5f + 0.5f * _gust)) * b.Size * _sc * lift;
+                sway = (blk.Sway * osc + GustLean * (0.5f + 0.5f * _gust)) * b.Size * size * lift;
             }
 
             var last = blk.Rows - 1;
@@ -514,9 +617,9 @@ namespace WRLDZ.Presentation.ArInteraction
                 var s = j / (float)last;
                 var bend = sway * s * s;
                 _rowP[j] = new Vector3(
-                    bx + (hx * q.x - hz * q.z) * _sc + _wind.x * bend,
-                    _pos.y + q.y * _sc * lift,
-                    bz + (hz * q.x + hx * q.z) * _sc + _wind.z * bend);
+                    bx + (hx * q.x - hz * q.z) * size + _wind.x * bend,
+                    _pos.y + q.y * size * lift,
+                    bz + (hz * q.x + hx * q.z) * size + _wind.z * bend);
             }
 
             var alpha = _alpha * fade;
@@ -524,7 +627,7 @@ namespace WRLDZ.Presentation.ArInteraction
             for (var j = 0; j <= last; j++)
             {
                 var s = j / (float)last;
-                var hw = _halfWidth[b.Row + j] * _sc;
+                var hw = _halfWidth[b.Row + j] * size;
                 Vector3 w;
                 Color32 c;
                 switch (blk.Kind)
@@ -564,6 +667,18 @@ namespace WRLDZ.Presentation.ArInteraction
             }
         }
 
+        /// <summary>
+        /// Share of its size an item keeps so that, from base offset <paramref name="offset"/>
+        /// (along the line's normal) with worst reach <paramref name="reach"/> toward the line,
+        /// it stays within <paramref name="limit"/>; 0 when its base is already past the line.
+        /// </summary>
+        static float Fit(float offset, float reach, float limit)
+        {
+            var room = limit - offset;
+            if (room <= 0f) return 0f;
+            return reach > room ? room / reach : 1f;
+        }
+
         /// <summary>Base → Mid → Tip up the plant; a bane drains it, a boon lights the tips.</summary>
         Color32 PlantColour(in Blade b, float s, float alpha)
         {
@@ -582,13 +697,17 @@ namespace WRLDZ.Presentation.ArInteraction
             var g = Mathf.Clamp01(1f - Mathf.Abs(s - p) / RootPulseWidth);
             g = g * g * (3f - 2f * g) * RootPulseGlow * (_aura > 0 ? 1.3f : _aura < 0 ? 0.3f : 1f);
             var c = Color.Lerp(Color.Lerp(b.Base, b.Mid, s), b.Tip, Mathf.Clamp01(g));
-            if (_aura < 0) c = Color.Lerp(c, b.Base * 0.7f, BaneDrain);
+            if (_aura < 0) c = Color.Lerp(c, b.Dark, BaneDrain);
             var ends = Mathf.SmoothStep(0f, 1f, s / RootEndFade) * Mathf.SmoothStep(0f, 1f, (1f - s) / RootEndFade);
             c.a = RootOpacity * ends * alpha;
             return c;
         }
 
-        /// <summary>Clamp a vertex into the per-monster volume of the anchor being written (and under a Set card).</summary>
+        /// <summary>
+        /// Backstop for one vertex of the item being written: inside the per-monster radius,
+        /// its lane and its side of the midline, under the item's cap, under a Set card, and
+        /// (roots) low over the near edge of the summon disc.
+        /// </summary>
         Vector3 Contain(Vector3 p)
         {
             var dx = p.x - _pos.x;
@@ -598,12 +717,25 @@ namespace WRLDZ.Presentation.ArInteraction
             if (d2 > r * r)
             {
                 var k = r / Mathf.Sqrt(d2);
-                p.x = _pos.x + dx * k;
-                p.z = _pos.z + dz * k;
+                dx *= k;
+                dz *= k;
+                p.z = _pos.z + dz;
                 d2 = r * r;
             }
 
-            var top = d2 < _setClear2 ? _setTop : GuardHeight * _sc;
+            p.x = _pos.x + Mathf.Clamp(dx, -_laneReach, _laneReach);
+            var gap = MidlineGap(_anchor, p);
+            if (gap < 0f) p.z += _towardMid * gap;
+
+            var top = Mathf.Min(GuardHeight * _sc, _itemTop);
+            if (InSetCard(_anchor, p)) top = Mathf.Min(top, SetCardClearHeight * _sc);
+            if (_nearFront > 0f)
+            {
+                var edge = 1f - Mathf.SmoothStep(0f, 1f,
+                    Mathf.InverseLerp(NearDiscRadius, NearDiscFadeTo, Mathf.Sqrt(d2) / _sc));
+                top = Mathf.Lerp(top, Mathf.Min(top, NearDiscHeight * _sc), _nearFront * edge);
+            }
+
             p.y = Mathf.Clamp(p.y, _pos.y, _pos.y + top);
             return p;
         }
@@ -655,19 +787,31 @@ namespace WRLDZ.Presentation.ArInteraction
         }
 
         /// <summary>
-        /// Camera-facing clumps leaning outward. The base radius is pulled in so
-        /// half width + lean + full sway still ends inside <see cref="DesignRadius"/>.
+        /// Camera-facing clumps leaning outward, rooted between <c>spec.Inner</c> and the
+        /// radius where half width + lean + full sway still ends inside <see cref="DesignRadius"/>
+        /// (a clump too big for the band is scaled down to fit it).
         /// </summary>
         void FillTufts(ref Block blk, in TuftSpec spec, int salt)
         {
             var n = blk.Count;
+            var room = DesignRadius - spec.Inner;
             for (var i = 0; i < n; i++)
             {
                 var h = Mathf.Lerp(spec.HeightMin, spec.HeightMax, Hash01(i, salt)) * SigScale;
                 var w = Mathf.Lerp(spec.WidthMin, spec.WidthMax, Hash01(i, salt + 1)) * WidthScale;
                 var lean = spec.Lean * Mathf.Lerp(0.4f, 1f, Hash01(i, salt + 2));
-                var reach = w * 0.5f + (lean + blk.Sway + GustLean) * h;
-                var outer = Mathf.Max(spec.Inner, DesignRadius - reach);
+                var along = lean * h;
+                var spread = w * 0.5f + (blk.Sway + GustLean) * h;
+                if (along + spread > room)
+                {
+                    var k = room / (along + spread);
+                    h *= k;
+                    w *= k;
+                    along *= k;
+                    spread *= k;
+                }
+
+                var outer = Mathf.Max(spec.Inner, DesignRadius - along - spread);
                 var r01 = i * Golden + 0.25f * Hash01(i, salt + 3);
                 r01 -= Mathf.Floor(r01);
                 var angle = (i + Mathf.Lerp(0.15f, 0.85f, Hash01(i, salt + 4))) / n * TwoPi;
@@ -679,6 +823,8 @@ namespace WRLDZ.Presentation.ArInteraction
                 b.Radius = Mathf.Lerp(spec.Inner, outer, r01);
                 b.Size = h;
                 b.Top = h;
+                b.Along = along;
+                b.Spread = spread;
                 b.Phase = Hash01(i, salt + 6) * TwoPi;
                 b.Freq = Mathf.Lerp(1.5f, 2.6f, Hash01(i, salt + 7));
                 b.Keep = Hash01(i, salt + 8);
@@ -696,36 +842,41 @@ namespace WRLDZ.Presentation.ArInteraction
         }
 
         /// <summary>
-        /// Fern crowns: one upright centre frond, two side fronds arching out and
-        /// drooping. The crown sits in far enough for its longest frond to fit.
+        /// Fern crowns on the disc's edge: one upright centre frond, two side fronds
+        /// arching out round the ring and drooping. Each frond is shortened (and a
+        /// little lowered) until its tip, half width and full sway end inside
+        /// <see cref="DesignRadius"/>, so the outward centre frond is the shortest.
         /// </summary>
         void FillFerns(ref Block blk, int crowns, Color baseC, Color midC, Color tipC, int salt)
         {
             var rows = blk.Rows;
+            var give = blk.Sway + GustLean;
             for (var c = 0; c < crowns; c++)
             {
                 var angle = (c + Mathf.Lerp(0.2f, 0.8f, Hash01(c, salt))) / crowns * TwoPi;
-                var first = _bladeCursor;
-                var worst = 0f;
+                var radius = FernCrownRadius + FernCrownJitter * Hash01(c, salt + 11);
                 for (var f = 0; f < FrondsPerCrown; f++)
                 {
                     var i = c * FrondsPerCrown + f;
                     var side = Mathf.Abs(f - (FrondsPerCrown - 1) * 0.5f);
-                    var turn = (f - (FrondsPerCrown - 1) * 0.5f) * FrondSpreadDeg +
-                               Mathf.Lerp(-10f, 10f, Hash01(i, salt + 1));
-                    var reach = Mathf.Lerp(FrondReachMin, FrondReachMax, Hash01(i, salt + 2));
-                    var height = Mathf.Lerp(FrondHeightMin, FrondHeightMax, Hash01(i, salt + 3)) * SigScale *
-                                 (1f - 0.2f * side);
+                    var turn = ((f - (FrondsPerCrown - 1) * 0.5f) * FrondSpreadDeg +
+                                Mathf.Lerp(-10f, 10f, Hash01(i, salt + 1))) * Mathf.Deg2Rad;
+                    var design = Mathf.Lerp(FrondReachMin, FrondReachMax, Hash01(i, salt + 2));
                     var w = Mathf.Lerp(FrondWidthMin, FrondWidthMax, Hash01(i, salt + 4)) * WidthScale;
-                    worst = Mathf.Max(worst, reach + w * 0.5f + (blk.Sway + GustLean) * reach);
+                    var reach = FitFrond(radius, Mathf.Cos(turn), Mathf.Sin(turn), design, w * 0.5f, give);
+                    var height = Mathf.Lerp(FrondHeightMin, FrondHeightMax, Hash01(i, salt + 3)) * SigScale *
+                                 (1f - 0.2f * side) * Mathf.Sqrt(reach / design);
 
                     ref var b = ref NextBlade(rows);
                     b.DirX = Mathf.Cos(angle);
                     b.DirZ = Mathf.Sin(angle);
-                    b.HeadCos = Mathf.Cos(turn * Mathf.Deg2Rad);
-                    b.HeadSin = Mathf.Sin(turn * Mathf.Deg2Rad);
+                    b.Radius = radius;
+                    b.HeadCos = Mathf.Cos(turn);
+                    b.HeadSin = Mathf.Sin(turn);
                     b.Size = reach;
                     b.Top = height;
+                    b.Along = reach;
+                    b.Spread = w * 0.5f + give * reach;
                     b.Phase = Hash01(i, salt + 5) * TwoPi;
                     b.Freq = Mathf.Lerp(1.0f, 1.5f, Hash01(i, salt + 6));
                     b.Keep = Hash01(i, salt + 7);
@@ -738,11 +889,25 @@ namespace WRLDZ.Presentation.ArInteraction
                     for (var j = 0; j < rows; j++)
                         _halfWidth[b.Row + j] = w * 0.5f;
                 }
-
-                var radius = Mathf.Min(FernCrownRadius, DesignRadius - worst);
-                for (var k = first; k < _bladeCursor; k++)
-                    _blades[k].Radius = radius;
             }
+        }
+
+        /// <summary>
+        /// Longest reach up to <paramref name="reach"/> for a straight frond from a crown at
+        /// <paramref name="radius"/>, heading (cos, sin) off the radial, whose tip plus
+        /// <paramref name="pad"/> + <paramref name="give"/> × reach stays inside <see cref="DesignRadius"/>.
+        /// </summary>
+        static float FitFrond(float radius, float cos, float sin, float reach, float pad, float give)
+        {
+            for (var it = 0; it < 40; it++)
+            {
+                var x = radius + reach * cos;
+                var z = reach * sin;
+                if (Mathf.Sqrt(x * x + z * z) + pad + give * reach <= DesignRadius) break;
+                reach *= 0.97f;
+            }
+
+            return reach;
         }
 
         /// <summary>Centre line whose pitch eases from <paramref name="up0"/> to <paramref name="up1"/> degrees, fitted to reach × height.</summary>
@@ -767,8 +932,9 @@ namespace WRLDZ.Presentation.ArInteraction
         }
 
         /// <summary>
-        /// Roots running outward from the summon disc's edge: a low arch (some sink
-        /// mid-way and break out again), drifting sideways, thick at the trunk end.
+        /// Roots breaking out at the summon disc's edge and splaying round it: a low
+        /// arch (some sink mid-way and break out again), drifting sideways, thick at
+        /// the trunk end. Each is shortened until every row ends inside <see cref="DesignRadius"/>.
         /// </summary>
         void FillRoots(ref Block blk, Color bark, Color barkTip, Color glow, int salt)
         {
@@ -783,37 +949,77 @@ namespace WRLDZ.Presentation.ArInteraction
                 var h = Mathf.Lerp(RootHeightMin, RootHeightMax, Hash01(i, salt + 4)) * SigScale;
                 var twin = Hash01(i, salt + 5) < RootTwinShare;
                 var w0 = Mathf.Lerp(RootWidthMin, RootWidthMax, Hash01(i, salt + 6)) * WidthScale * 0.5f;
+                var radius = Mathf.Lerp(RootInnerMin, RootInnerMax, Hash01(i, salt + 7));
+                var turn = Mathf.Lerp(RootTurnMin, RootTurnMax, Hash01(i, salt + 10)) * Mathf.Deg2Rad *
+                           (Hash01(i, salt + 11) < 0.5f ? -1f : 1f);
+                var cos = Mathf.Cos(turn);
+                var sin = Mathf.Sin(turn);
 
                 ref var b = ref NextBlade(rows);
-                var far = 0f;
+                for (var it = 0; it < 40; it++)
+                {
+                    if (RootFar(radius, cos, sin, length, curve, ph, w0, rows) <= DesignRadius) break;
+                    length *= 0.97f;
+                }
+
+                var drift = 0f;
+                var rim = 0f;
                 var top = 0f;
                 for (var j = 0; j < rows; j++)
                 {
                     var s = j / (float)(rows - 1);
-                    var x = length * s;
-                    var z = curve * s * s + RootWiggle * Mathf.Sin(3f * Mathf.PI * s + ph) * Mathf.Sin(Mathf.PI * s);
+                    var z = RootDrift(s, curve, ph);
                     var hump = Mathf.Max(0f, Mathf.Sin(Mathf.PI * s));
                     var arch = twin
                         ? (0.75f * Mathf.Abs(Mathf.Sin(TwoPi * Mathf.Pow(s, 0.8f))) + 0.25f * hump) * (1f - 0.3f * s)
                         : Mathf.Pow(Mathf.Max(0f, Mathf.Sin(Mathf.PI * Mathf.Pow(s, 0.75f))), 0.85f);
-                    var hw = w0 * Mathf.Lerp(1f, RootTipWidth, s) * (1f + RootKnob * Mathf.Sin(19f * s + ph));
-                    _shape[b.Row + j] = new Vector3(x, arch * h, z);
+                    var hw = RootHalfWidth(s, w0, ph);
+                    _shape[b.Row + j] = new Vector3(length * s, arch * h, z);
                     _halfWidth[b.Row + j] = hw;
-                    far = Mathf.Max(far, Mathf.Sqrt(x * x + z * z) + hw);
+                    drift = Mathf.Max(drift, Mathf.Abs(z));
+                    rim = Mathf.Max(rim, hw);
                     top = Mathf.Max(top, arch * h);
                 }
 
                 b.DirX = Mathf.Cos(angle);
                 b.DirZ = Mathf.Sin(angle);
-                b.Radius = Mathf.Min(Mathf.Lerp(RootInnerMin, RootInnerMax, Hash01(i, salt + 7)), DesignRadius - far);
+                b.Radius = radius;
+                b.HeadCos = cos;
+                b.HeadSin = sin;
                 b.Size = length;
                 b.Top = top;
+                b.Along = length;
+                b.Spread = drift + rim;
+                b.Rim = rim;
                 b.Phase = Hash01(i, salt + 8);
                 var tone = Mathf.Lerp(0.85f, 1f, Hash01(i, salt + 9));
                 b.Base = bark * tone;
                 b.Mid = barkTip * tone;
                 b.Tip = glow;
             }
+        }
+
+        static float RootDrift(float s, float curve, float ph) =>
+            curve * s * s + RootWiggle * Mathf.Sin(3f * Mathf.PI * s + ph) * Mathf.Sin(Mathf.PI * s);
+
+        static float RootHalfWidth(float s, float w0, float ph) =>
+            w0 * Mathf.Lerp(1f, RootTipWidth, s) * (1f + RootKnob * Mathf.Sin(19f * s + ph));
+
+        /// <summary>Farthest any row of a root (plus its half width) gets from the anchor, template frame.</summary>
+        static float RootFar(float radius, float cos, float sin, float length, float curve, float ph, float w0, int rows)
+        {
+            var far = 0f;
+            for (var j = 0; j < rows; j++)
+            {
+                var s = j / (float)(rows - 1);
+                var x = length * s;
+                var z = RootDrift(s, curve, ph);
+                var px = radius + x * cos - z * sin;
+                var pz = x * sin + z * cos;
+                far = Mathf.Max(far, Mathf.Sqrt(px * px + pz * pz) + RootHalfWidth(s, w0, ph));
+            }
+
+            return far;
         }
 
         // ── Mesh + atlas ────────────────────────────────────────────────────
