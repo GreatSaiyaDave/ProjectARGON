@@ -196,9 +196,10 @@ namespace WRLDZ.Presentation.ArInteraction
             public float Speed;       // × writhe speed
         }
 
-        // Roots and curls keep the tips outside InnerClear on their own (a replay over the
-        // Root / Length jitter and writhe phases at SigScale 1.5); the straightening in
-        // WriteTendril only has to act where the lane or aisle pulls a root in.
+        // Roots and curls keep Boon tips outside InnerClear on their own. Calm and Bane
+        // tips can curl to about 0.456 at SigScale 1.5, so the aura-column straightening
+        // in WriteTendril is what keeps every shape out (it also acts where the lane or
+        // aisle pulls a root in).
         static readonly Shape Calm = new Shape
         {
             Root = 0.58f, Length = 1f, Lean = -0.3f, Curl = 1.3f,

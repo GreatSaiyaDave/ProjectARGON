@@ -102,7 +102,7 @@ namespace WRLDZ.Presentation.ArInteraction
         const float GuardRadius = MaxAnchorRadius * 0.97f;
         const float GuardHeight = MaxAnchorHeight * 0.97f;
         /// <summary>Per-vertex alpha cap before presence × level.</summary>
-        const float MaxAlpha = 0.85f;
+        const float MaxAlpha = 0.65f;
         /// <summary>Anchors at or below this Scale are skipped.</summary>
         const float MinScale = 1e-4f;
 
@@ -167,11 +167,6 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary><see cref="ArFieldSignature.InSetCard"/>'s own margin (host-local).</summary>
         const float SetMargin = 0.03f;
         /// <summary>
-        /// Margin (host-local) <see cref="ArFieldSignature.CoverLimitAll"/> adds to a card's reach
-        /// (<see cref="CardReach"/>): past it that card limits nothing.
-        /// </summary>
-        const float CardReachMargin = 0.05f;
-        /// <summary>
         /// A neighbour's art zone eases in over this many times the usual band at its reach edge.
         /// That edge moves with the card, so it sweeps across a vortex at lunge speed.
         /// </summary>
@@ -220,14 +215,14 @@ namespace WRLDZ.Presentation.ArInteraction
         static readonly Shape Calm = new Shape
         {
             RFoot = 0.54f, RMid = 0.47f, RTop = 0.535f, Turns = 0.85f, Height = 1f,
-            Period = 3.2f, Span = 0.3f, Alpha = 0.62f, Width = 1f
+            Period = 3.2f, Span = 0.3f, Alpha = 0.5f, Width = 1f
         };
 
         /// <summary>Waist about 0.538: ≥ 0.532 after radius jitter, ≥ 0.08 outside the 0.45 aura column.</summary>
         static readonly Shape Boon = new Shape
         {
             RFoot = 0.54f, RMid = 0.535f, RTop = 0.54f, Turns = 1.1f, Height = 1f,
-            Period = 2.5f, Span = 0.34f, Alpha = 0.8f, Width = 1.05f
+            Period = 2.5f, Span = 0.34f, Alpha = 0.62f, Width = 1.05f
         };
 
         /// <summary>Waist about 0.53, 0.29 tall at SigScale 1.5: inside the bane column's height, clear of its wall.</summary>
@@ -545,12 +540,6 @@ namespace WRLDZ.Presentation.ArInteraction
             }
         }
 
-        /// <summary>
-        /// Floor-local metres from its anchor within which <see cref="ArFieldSignature.CoverLimitAll"/>
-        /// lets another monster's card limit a piece: its sideways art or its Set card's corner.
-        /// </summary>
-        static float CardReach(in FieldAnchor b) =>
-            Mathf.Max(2f * b.ArtHalf, SetCardClearRadius * b.Scale) + CardReachMargin * b.Scale;
 
         /// <summary>
         /// One monster's vortex: its streaks, each a main line and a companion,

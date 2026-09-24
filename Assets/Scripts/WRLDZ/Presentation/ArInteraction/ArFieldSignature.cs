@@ -410,8 +410,7 @@ namespace WRLDZ.Presentation.ArInteraction
             {
                 var b = anchors[i];
                 if (b.Key == own.Key) continue;
-                // Nothing of b's reaches past its sideways art (2 × ArtHalf) or its Set card corner.
-                var reach = Mathf.Max(2f * b.ArtHalf, SetCardClearRadius * b.Scale) + 0.05f * b.Scale;
+                var reach = CardReach(b);
                 var dx = p.x - b.Position.x;
                 var dz = p.z - b.Position.z;
                 if (dx * dx + dz * dz > reach * reach) continue;
@@ -420,6 +419,18 @@ namespace WRLDZ.Presentation.ArInteraction
 
             return limit;
         }
+
+        /// <summary>Margin (host-local, × Scale) past a card's furthest extent in <see cref="CardReach"/>.</summary>
+        protected const float CardReachPad = 0.05f;
+
+        /// <summary>
+        /// Floor-local radius beyond which anchor <paramref name="b"/>'s card cannot
+        /// constrain anything: its sideways art (2 × ArtHalf) or its Set card corner,
+        /// plus <see cref="CardReachPad"/>. Use this for neighbour culling so every
+        /// kit agrees with <see cref="CoverLimitAll"/>.
+        /// </summary>
+        protected static float CardReach(in FieldAnchor b) =>
+            Mathf.Max(2f * b.ArtHalf, SetCardClearRadius * b.Scale) + CardReachPad * b.Scale;
 
         /// <summary>
         /// Height limit that anchor <paramref name="a"/>'s card puts on floor-local point

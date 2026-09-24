@@ -102,9 +102,14 @@ namespace WRLDZ.Presentation.ArInteraction
             var camLocal = cam != null ? floor.InverseTransformPoint(cam.transform.position) : Vector3.zero;
             foreach (var p in Live)
             {
-                if (p == null || p._host == null || p._ramp <= 0.001f) continue;
+                if (p == null || p._host == null) continue;
                 var host = p._host;
-                var world = p.GroundWorld(out _);
+                // A monster still flying in is reported at its landing spot with no
+                // presence: kits draw nothing for it, but neighbours clear its card
+                // before it lands instead of dropping in one frame on the summon beat.
+                var spawning = host.IsSpawning && host.IsMonster && host.Card != null;
+                if (p._ramp <= 0.001f && !spawning) continue;
+                var world = spawning ? p.GroundAt(p.RestingHostWorld()) : p.GroundWorld(out _);
                 var local = floor.InverseTransformPoint(world);
                 local.y = 0f;
                 // Resting scale: decorations must not swell with the hit punch.
@@ -115,15 +120,25 @@ namespace WRLDZ.Presentation.ArInteraction
                 var a = new FieldAnchor
                 {
                     Position = local,
-                    Presence = p._ramp * ArFieldSpellFloor.PresenceAt(world),
-                    Aura = p.AuraSign(),
+                    Presence = spawning ? 0f : p._ramp * ArFieldSpellFloor.PresenceAt(world),
+                    Aura = spawning ? 0 : p.AuraSign(),
                     PlayerSide = host.PlayerSide,
                     FaceDown = faceDown,
                     Key = p.GetInstanceID(),
                     Scale = scale,
                     ArtHalf = CardArtFocus.MonsterArtworkScale.x * 0.5f * scale
                 };
-                if (!faceDown)
+                if (!faceDown && spawning)
+                {
+                    // Landing pose: face-up monsters billboard once they land; a fresh
+                    // Defense holo is rolled, which puts its art on the camera's right.
+                    a.ArtSideways = host.Defense;
+                    a.ArtLateral = host.Defense ? CardArtFocus.MonsterArtLift * scale : 0f;
+                    a.FrontCoverHeight = (a.ArtSideways
+                        ? ArFieldSignature.SidewaysCoverHeight
+                        : ArFieldSignature.UprightCoverHeight) * scale;
+                }
+                else if (!faceDown)
                 {
                     // The art quad is lifted half its height along the holo's local up;
                     // rolled into Defense, that lift points sideways.
@@ -153,23 +168,35 @@ namespace WRLDZ.Presentation.ArInteraction
         Vector3 GroundWorld(out Quaternion rotation)
         {
             var plane = _host.transform.parent;
-            if (plane == null)
-            {
-                rotation = transform.rotation;
-                return _host.transform.position;
-            }
+            rotation = plane != null ? plane.rotation : transform.rotation;
+            return GroundAt(_host.transform.position);
+        }
 
-            var local = plane.InverseTransformPoint(_host.transform.position);
+        /// <summary>Street point under a host-space world position.</summary>
+        Vector3 GroundAt(Vector3 hostWorld)
+        {
+            var plane = _host.transform.parent;
+            if (plane == null) return hostWorld;
+            var local = plane.InverseTransformPoint(hostWorld);
             local.y = ArPlaymatLayout.MonsterHoverY + PadLift;
-            rotation = plane.rotation;
             return plane.TransformPoint(local);
         }
 
-        /// <summary>+1 boon / −1 bane from the engine's field deltas; 0 when face-down (hidden information).</summary>
+        /// <summary>Where the host will stand once its spawn flight lands.</summary>
+        Vector3 RestingHostWorld()
+        {
+            var plane = _host.transform.parent;
+            return plane != null ? plane.TransformPoint(_host.RestingLocalPosition) : _host.transform.position;
+        }
+
+        /// <summary>
+        /// +1 boon / −1 bane from the engine's field deltas; 0 when face-down (hidden
+        /// information) and while a flip animates, since the card still lies flat.
+        /// </summary>
         int AuraSign()
         {
             var card = _host != null ? _host.Card : null;
-            if (card == null || !_host.FaceUp) return 0;
+            if (card == null || !_host.FaceUp || _host.FlipAnimating) return 0;
             var delta = card.FieldAtkDelta != 0 ? card.FieldAtkDelta : card.FieldDefDelta;
             return delta > 0 ? 1 : delta < 0 ? -1 : 0;
         }

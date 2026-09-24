@@ -121,8 +121,6 @@ namespace WRLDZ.Presentation.ArInteraction
         /// about 1 cm up, so a 0.3 rock there would hide its near third.
         /// </summary>
         const float SetFrontHeight = 0.1f;
-        /// <summary>Margin (host-local, × the card's Scale) that CoverLimitAll adds to a card's reach.</summary>
-        const float NeighbourReachPad = 0.05f;
         /// <summary>
         /// Seconds for a shard to grow back once it may stand taller: a Set card
         /// standing up after its flip, Defense art rolling upright, or the camera
@@ -515,8 +513,7 @@ namespace WRLDZ.Presentation.ArInteraction
                 _artCamX[_artCount] = tx / tl;
                 _artCamZ[_artCount] = tz / tl;
                 // CoverLimitAll's reach round a card: its sideways art, or its Set card's corner.
-                _artReach[_artCount] = Mathf.Max(2f * a.ArtHalf, SetCardClearRadius * a.Scale) +
-                                       NeighbourReachPad * a.Scale;
+                _artReach[_artCount] = CardReach(a);
                 _artCount++;
             }
 

@@ -32,6 +32,14 @@ ROW = re.compile(
     r"\s*FieldMotes\.(\w+),\s*([0-9.]+)f,\s*([0-9.]+)f"
     r"(?:,\s*FieldSignature\.(\w+),\s*(\d+),\s*([0-9.]+)f)?\)"
 )
+# Street kits draw high over the street; every other kit decorates around monsters.
+STREET_KITS = {"Arcs", "Shafts"}
+# Shared helpers each scope must use, so kits agree with the framework's card rules.
+REQUIRED_CALLS = {
+    "street": (("CollectArtCards(",), ("ArtClear(",), ("NearZ",), ("VertexColor(",)),
+    "monster": (("CoverLimitAll(", "CardReach("), ("InSetCard(", "CoverLimit"), ("MidlineGap(", "AisleClear"),
+                (".Key",), ("VertexColor(",)),
+}
 # Kit lint: things a signature kit must never do (see ArFieldSignature contract).
 KIT_FORBIDDEN = {
     r"\bShader\.Find\b": "use VertexColorMaterial() from the base class",
@@ -146,6 +154,11 @@ def main() -> int:
         for cid, name in fields.items():
             if re.search(rf"\b{cid}\b", kcode) or f'"{name}"' in kcode:
                 fail(f"ArFieldSig{kind} names {name}; vary looks by Variant/Scale, not by card")
+        if kind in used_kits:
+            scope = "street" if kind in STREET_KITS else "monster"
+            for options in REQUIRED_CALLS[scope]:
+                if not any(o in kcode for o in options):
+                    fail(f"ArFieldSig{kind} ({scope} kit) never uses {' or '.join(options)}")
 
     floor = FLOOR.read_text(encoding="utf-8")
     if "FieldSpellEnvironments.Resolve" not in floor:
@@ -165,6 +178,7 @@ def main() -> int:
     print(f"  fallback (art-derived): {', '.join(uncurated) if uncurated else 'none'}")
     kit_line = "; ".join(f"{k}: {', '.join(v)}" for k, v in sorted(used_kits.items()))
     print(f"  signature kits: {kit_line or 'none'}")
+    print("  kits use the shared card, aisle and camera helpers")
     print("  aura reads engine FieldAtkDelta; face-down gate present; RefreshBoard order ok")
     print(f"  illustration inset: {art_note}")
     print("PASS")

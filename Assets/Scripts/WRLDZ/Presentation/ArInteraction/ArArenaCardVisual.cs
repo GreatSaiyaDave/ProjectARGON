@@ -1205,6 +1205,9 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary>Local scale at rest (ignores spawn pop and hit punch).</summary>
         public Vector3 RestingLocalScale => _targetLocalScale;
 
+        /// <summary>Local position at rest: the landing zone while spawning.</summary>
+        public Vector3 RestingLocalPosition => _targetLocalPos;
+
         /// <summary>Re-tint face/back when the Field Spell wash changes (alpha kept for fades).</summary>
         void ApplyFieldWash()
         {

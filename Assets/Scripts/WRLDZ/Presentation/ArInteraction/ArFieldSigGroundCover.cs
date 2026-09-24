@@ -40,6 +40,14 @@ namespace WRLDZ.Presentation.ArInteraction
 
         /// <summary>The summon ring's opaque disc is 0.45 × Scale: every item roots outside this radius.</summary>
         const float DiscClear = 0.47f;
+        /// <summary>
+        /// Per-vertex backstop (× Scale): anything standing is pushed out to this radius.
+        /// Bases sit at DiscClear, but a camera-facing tuft's inner half and the wind
+        /// bend can lean back over the ownership disc.
+        /// </summary>
+        const float DiscGuard = 0.46f;
+        /// <summary>Vertices below this height (× Scale) lie on the street and are left where they are.</summary>
+        const float DiscGuardLift = 0.01f;
         /// <summary>Each item's worst case (width + lean + full sway) ends inside this radius (× Scale).</summary>
         const float DesignRadius = 0.72f;
         /// <summary>Hard per-vertex guards (× Scale), just inside the contract.</summary>
@@ -93,11 +101,6 @@ namespace WRLDZ.Presentation.ArInteraction
         const float FlipRiseSeconds = 0.6f;
         /// <summary>An item lies within this × its reach of its base, square box corners included (√2, rounded up).</summary>
         const float BoxCorner = 1.415f;
-        /// <summary>
-        /// Slack (× Scale) past a card's sideways art or Set-card corner, as in
-        /// <see cref="ArFieldSignature.CoverLimitAll"/>: beyond this its card constrains nothing.
-        /// </summary>
-        const float CardReachPad = 0.05f;
         /// <summary>
         /// Neighbours within this z (× Scale) share the monster's row. Their face-up art caps
         /// items anywhere on its camera side inside its lateral span, as the monster's own art
@@ -799,13 +802,6 @@ namespace WRLDZ.Presentation.ArInteraction
         }
 
         /// <summary>
-        /// How far round monster <paramref name="b"/> its card can constrain a piece: past its
-        /// sideways art or its Set card's corner, the radius <see cref="ArFieldSignature.CoverLimitAll"/> checks.
-        /// </summary>
-        static float CardReach(in FieldAnchor b) =>
-            Mathf.Max(2f * b.ArtHalf, SetCardClearRadius * b.Scale) + CardReachPad * b.Scale;
-
-        /// <summary>
         /// Backstop for one vertex of the item being written: inside the per-monster radius,
         /// its lane and its side of the midline, under the item's cap, under every card's
         /// <see cref="ArFieldSignature.CoverLimitAll"/> (its own monster's and its neighbours'),
@@ -824,6 +820,17 @@ namespace WRLDZ.Presentation.ArInteraction
                 dz *= k;
                 p.z = _pos.z + dz;
                 d2 = r * r;
+            }
+
+            // Nothing standing inside the ownership disc.
+            var inner = DiscGuard * _sc;
+            if (p.y - _pos.y > DiscGuardLift * _sc && d2 < inner * inner && d2 > 1e-10f)
+            {
+                var k = inner / Mathf.Sqrt(d2);
+                dx *= k;
+                dz *= k;
+                p.z = _pos.z + dz;
+                d2 = inner * inner;
             }
 
             p.x = _pos.x + Mathf.Clamp(dx, -_laneReach, _laneReach);

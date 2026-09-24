@@ -122,6 +122,16 @@ presentation files compile against Unity reference assemblies
 (`UnityEngine.Modules` 2021.3); the guard passes; the inset is clear of the frame
 on all 21 scans.
 
+Signature kits (§7): each kit was built from its card art and adversarially reviewed
+from two sides (Unity correctness/performance; AR safety, legibility and anime
+fidelity), then fixed and re-confirmed. Two cross-kit critic passes found the
+framework-level gaps: flip timing, Defense art, Set card size, neighbours' cards,
+hit punch and the spawn frame. Those were fixed centrally; the last critic pass
+had no blocker or major. Reviewers replayed the real kit code on managed Unity
+shims and measured: 0 bytes allocated per frame, ≤ 3,960 of 4,096 vertices, 1
+draw call per kit, and no visible point past the contract's radius, height, aisle
+or card limits.
+
 Needs Play mode / an S23 (not visible from the VM):
 
 - Wall translucency. The wall material now sets URP `_Surface` = Transparent.
@@ -129,8 +139,12 @@ Needs Play mode / an S23 (not visible from the VM):
   likely opaque. Walls will look lighter than before.
 - The sweep reading as an event from the owner's side, and motes staying
   readable against a bright street.
-- `Sprites/Default` surviving shader stripping in a device build (same
-  dependency as `ArArenaStartFlash` and the legal-zone glows).
+- `Sprites/Default` (motes, pads, aura, every kit) is safe in builds: it is in
+  Always Included Shaders. The walls' URP Unlit *transparent* variant is set at
+  runtime; if a device build strips it, the walls fall back to opaque (the old look).
+- Kit looks over a real street, day and night. Tunables to try first: Umi's
+  water alpha (dark navy over a bright street), Umiiruka's glint size (6 cm at
+  3–4 m), Yami's darkening, and how loud Arcs' flashes read.
 
 ## 7. Signature set pieces (one per field)
 
@@ -166,11 +180,19 @@ event presentation later.
   1.5 m from the player's camera. Nothing is drawn across the open aisle floor.
 - Cards: a Set card lies nearly flat (1.40 × 0.91, low edge about 1 cm up), so
   nothing inside its footprint stands taller than 1 cm. A flip counts as Set
-  until the card stands up. In front of face-up art a piece may cover only its
-  lower ~22%. Defense art is rolled onto its side, centred at street level
-  beside the monster, so in front of it pieces stay under 0.1 ×. The base class
-  answers both with `CoverLimit()`. Street kits fade wherever they would cross a
-  card's art from the camera (`ArtClear()`).
+  (and shows no aura) until the card stands up. In front of face-up art a piece
+  may cover only its lower ~22%. Defense art is rolled onto its side, centred at
+  street level beside the monster, so in front of it pieces stay under 0.1 ×.
+  Neighbours count too: a Set card is wider than a lane and rolled art lies
+  across the next one, so kits clamp with `CoverLimitAll()` (every nearby
+  card), not only their own monster's `CoverLimit()`. A monster still flying in
+  is already reported at its landing spot, so neighbours clear its card before
+  it lands. Street kits fade wherever they would cross a card's art from the
+  camera (`ArtClear()`).
+- The guard (`Tools/field_spell_env_check.py`) checks each kit uses the shared
+  helpers for its scope: card clearance (incl. neighbours), aisle, stable keys
+  and Linear-space vertex colours for per-monster kits; art clearance, camera
+  clearance and vertex colours for street kits.
 - Every alpha is multiplied by the sweep/dissolve level and each monster's
   presence, so set pieces ripple in with the sweep and never pop.
 - At most 2 draw calls and 4096 vertices, zero per-frame allocations, unscaled
@@ -192,3 +214,13 @@ so a kit never touches cards or the engine.
   bleed, but it affects every holo, so it is a separate change.
 - Field Spell sounds (the anime's "whoomph") are not wired. `WrldzAudio` would
   be the place.
+- Named fields (Necrovalley, Fusion Gate, Pandemonium, …) have no signature
+  yet. Their set pieces come with presentation for their rule effects.
+- Known minor: GroundCover and Updraft release a neighbour's card clamp in one
+  frame when that monster leaves; the other kits ease it back over 0.2–0.6 s.
+- Pre-existing, not changed here: face-up Defense art renders centred at street
+  level (half below the street), because the art's lift rolls sideways with it.
+  Kits work around it. Fixing the pose itself would change `ArArenaCardVisual`
+  for every Defense monster.
+- Waterline is a ring of water around the monster's shins, not a true cut
+  through the hologram's legs; that would need a depth or stencil pass.

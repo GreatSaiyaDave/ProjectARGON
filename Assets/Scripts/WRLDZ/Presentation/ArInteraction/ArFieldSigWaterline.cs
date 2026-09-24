@@ -281,9 +281,9 @@ namespace WRLDZ.Presentation.ArInteraction
         float[] _ringCalm;
 
         // Current anchor: per spoke, then per water vertex.
-        /// <summary>How far the water reaches along each spoke (rim, lane and aisle).</summary>
+        /// <summary>How far the water reaches along each spoke (rim, lane, aisle and a neighbour's Set card).</summary>
         float[] _reach;
-        /// <summary>0…1: water fades on spokes the lane or aisle cuts short.</summary>
+        /// <summary>0…1: water fades on spokes the lane, aisle or a neighbour's Set card cuts short.</summary>
         float[] _wet;
         /// <summary>0…1: light pieces fade on spokes without room outside LightInner.</summary>
         float[] _light;
