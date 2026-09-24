@@ -1301,6 +1301,7 @@ namespace WRLDZ.Duel.TextEffects
                     Side = EffectSide.Both,
                     DiscardCostCount = ParseInt(destiny, 1, 5),
                     DiscardCostAttribute = "*",
+                    ActivationCondition = "AnyOtherCardOnField",
                     MakesChainLink = true
                 }
                 : null);

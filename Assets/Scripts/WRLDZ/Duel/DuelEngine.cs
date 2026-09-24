@@ -1214,7 +1214,7 @@ namespace WRLDZ.Duel
                 {
                     var hostController = ControllerOf(host);
                     if (hostController != null)
-                        SendCardToGrave(hostController, host);
+                        DestroyMonster(hostController, host, card);
                 }
             }
 
@@ -1226,6 +1226,9 @@ namespace WRLDZ.Duel
                 {
                     if (eq == null) continue;
                     eq.EquippedTo = null;
+                    // Call of the Haunted / Spellbinding Circle are not Equip Cards: they leave only
+                    // when the linked monster is destroyed, so a bounce / banish leaves them face-up.
+                    if (!destroyed && !TextEffects.TextEffectRuntime.IsRealEquipCard(eq)) continue;
                     var eqController = ControllerOf(eq);
                     if (eqController != null)
                         SendCardToGrave(eqController, eq);
@@ -1396,8 +1399,10 @@ namespace WRLDZ.Duel
                     if (linkProg != null &&
                         linkProg.ClauseList.Exists(c => c != null && c.DestroyHostWhenThisLeaves))
                     {
-                        var hostOwner = ControllerOf(host) ?? owner;
-                        SendCardToGrave(hostOwner, host);
+                        // "Destroy that monster" (Call of the Haunted / Premature Burial): a destruction.
+                        var hostOwner = ControllerOf(host);
+                        if (hostOwner != null)
+                            DestroyMonster(hostOwner, host, card);
                     }
                 }
             }

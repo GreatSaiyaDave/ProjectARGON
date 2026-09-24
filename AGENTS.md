@@ -47,7 +47,7 @@ Merged from other agent branches (2026-09-07):
 ## Engine
 
 - Product path: `DuelEngine` + `OfficialEffectRegistry` + `TextEffects`. Do not `if (cardId == …)` except named unique exceptions.
-- After compiler `Version` bump: `Tools/HeadlessEngine/run.sh --export-seed` (`CardTextEffectCompiler.Version` is **54** as of 2026-09-24; older notes may say v48–v53)
+- After compiler `Version` bump: `Tools/HeadlessEngine/run.sh --export-seed` (`CardTextEffectCompiler.Version` is **55** as of 2026-09-24; older notes may say v48–v54)
 - Default check: `Tools/HeadlessEngine/run.sh --quiet` (needs .NET 8)
 - Card batches follow `CardEraCurriculum` set order (LOB → MRD → SRL …). Last batch: `Docs/CURRICULUM_BATCH_PSV1_2026-09-24.md` (LOB 100%, MRD 87.5%, SRL 76.9%, PSV 62.9%)
 

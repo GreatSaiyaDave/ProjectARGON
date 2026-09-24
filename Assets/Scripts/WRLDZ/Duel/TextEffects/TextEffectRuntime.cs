@@ -36,6 +36,9 @@ namespace WRLDZ.Duel.TextEffects
                                   prog.HasTiming(EffectTiming.YourMonsterInflictsBattleDamage) ||
                                   prog.HasTiming(EffectTiming.ControllerDraws) ||
                                   activate.Count > 0);
+            // A monster on the field cannot use its hand-only clauses (The Fiend Megacyber).
+            if (card.Def.IsMonster && !fromHand)
+                activate = activate.FindAll(c => c != null && !c.ActivatesFromHand);
             if (activate.Count == 0 && attack.Count == 0 && summon.Count == 0 && dmg.Count == 0 &&
                 takeLp.Count == 0 && !continuousPlay)
             {
@@ -432,7 +435,8 @@ namespace WRLDZ.Duel.TextEffects
                     return false;
                 }
 
-                if (c.Action == EffectActionKind.SpecialSummonFromGy &&
+                if ((c.Action == EffectActionKind.SpecialSummonFromGy ||
+                     c.Action == EffectActionKind.SpecialSummonChosenFromHandOrDeck) &&
                     engine.FirstEmpty(who.MonsterZones) < 0)
                 {
                     reason = "No free Monster Zone.";
@@ -572,7 +576,8 @@ namespace WRLDZ.Duel.TextEffects
                             !(c.Action == EffectActionKind.UnequipThisSpecialSummon &&
                               card.EquippedTo == null) &&
                             !(c.Action == EffectActionKind.EquipThisToTarget &&
-                              card.EquippedTo != null))
+                              card.EquippedTo != null) &&
+                            !(c.ActivatesFromHand && !fromHand && card.Def != null && card.Def.IsMonster))
                 .ToList();
             if (activate.Count == 0)
             {
@@ -598,6 +603,7 @@ namespace WRLDZ.Duel.TextEffects
             if (multiDiscard != null && !ReferenceEquals(s_multiDiscardPaidFor, card))
                 return StartOrPayMultiDiscard(engine, who, card, fromHand, multiDiscard,
                     autoPickTarget, monsterIgnition);
+            var multiCostPaid = multiDiscard != null; // ResumeAfterMultiDiscard already discarded
             s_multiDiscardPaidFor = null;
 
             if (!isMonster)
@@ -683,7 +689,8 @@ namespace WRLDZ.Duel.TextEffects
                     WasSetOnField = !fromHand && !monsterIgnition,
                     TargetKind = MapTargetKind(targeted),
                     IsMonsterEffect = monsterIgnition,
-                    UsesTextProgram = true
+                    UsesTextProgram = true,
+                    CostPaid = multiCostPaid
                 };
                 pending.LegalTargets.AddRange(targets);
                 engine.SetPendingActivation(pending);
@@ -2303,10 +2310,12 @@ namespace WRLDZ.Duel.TextEffects
                              (clause.BanishFromGyCount > 0 && !autoPick && who.IsPlayer));
             if (autoPick || !who.IsPlayer || !needsPick)
             {
+                var lpBefore = who.LifePoints;
                 if (!PayAutoIgnitionCosts(engine, who, card, clause, autoPick: true,
                         out var costNumeric))
                     return false;
-                return FinishIgnitionAfterCost(engine, who, card, fromHand, isMonster, costNumeric);
+                return FinishIgnitionAfterCost(engine, who, card, fromHand, isMonster, costNumeric,
+                    lpBefore - who.LifePoints);
             }
 
             if (!PayAutoIgnitionCosts(engine, who, card, clause, autoPick: false, out _))
@@ -2337,7 +2346,7 @@ namespace WRLDZ.Duel.TextEffects
         }
 
         static bool FinishIgnitionAfterCost(DuelEngine engine, DuelistState who, CardInstance card,
-            bool fromHand, bool isMonster, int costNumeric)
+            bool fromHand, bool isMonster, int costNumeric, int paidLp = 0)
         {
             var prog = CompiledEffectCache.GetOrCompile(card);
             var activate = prog?.ClausesFor(EffectTiming.Activate);
@@ -2369,11 +2378,12 @@ namespace WRLDZ.Duel.TextEffects
                     Controller = who,
                     Card = card,
                     FromHand = fromHand,
-                    WasSetOnField = false,
+                    WasSetOnField = !fromHand && !isMonster,
                     TargetKind = MapTargetKind(clause),
                     IsMonsterEffect = isMonster,
                     UsesTextProgram = true,
-                    CostNumeric = costNumeric
+                    CostNumeric = costNumeric,
+                    PaidLpCost = Mathf.Max(0, paidLp) // refunded if the target choice is cancelled
                 };
                 pending.LegalTargets.AddRange(targets);
                 engine.SetPendingActivation(pending);
@@ -3066,6 +3076,9 @@ namespace WRLDZ.Duel.TextEffects
                 }
 
                 case EffectActionKind.DestroySummonedThisTurnLevelLeq:
+                    if (source == null || !source.FaceUp ||
+                        engine.ControllerOf(source)?.TryFindSpellTrap(source, out _) != true)
+                        break;
                     foreach (var side in new[] { who, opp })
                         foreach (var m in side.MonstersOnField().ToList())
                         {
@@ -3538,6 +3551,7 @@ namespace WRLDZ.Duel.TextEffects
                         source.FaceUp = false;
                         source.Position = BattlePosition.Defense;
                         source.ChangedPositionThisTurn = true;
+                        ClearFaceUpMarks(source);
                         engine.Log($"{source.Name} is flipped to face-down Defense Position.");
                     }
 
@@ -3857,9 +3871,22 @@ namespace WRLDZ.Duel.TextEffects
         public static void ClearFaceUpMarks(CardInstance m)
         {
             if (m == null) return;
+            ClearFaceDownMarks(m);
+            m.AttackLockedBy = null; // turned face-down: the Invitation lock ends
+        }
+
+        /// <summary>
+        /// What a face-down monster never keeps: once-while-face-up limits, the summoned-this-turn
+        /// mark, End Phase self-destruction and until-end-of-turn stats (Limiter Removal + Book of Moon).
+        /// An attack lock stays: Invitation to a Dark Sleep may target a monster already Set.
+        /// </summary>
+        static void ClearFaceDownMarks(CardInstance m)
+        {
             m.EffectUsedWhileFaceUp = false;
             m.NormalOrFlipSummonedTurn = -1;
-            m.AttackLockedBy = null;
+            m.TempDestroyOnEndOfTurn = -1;
+            m.UntilEndOfTurnAtk = 0;
+            m.UntilEndOfTurnDef = 0;
         }
 
         /// <summary>
@@ -3873,25 +3900,37 @@ namespace WRLDZ.Duel.TextEffects
                 foreach (var m in side.MonstersOnField().ToList())
                 {
                     if (m == null) continue;
-                    if (!m.FaceUp)
-                    {
-                        ClearFaceUpMarks(m);
-                        continue;
-                    }
-
                     if (m.AttackLockedBy != null &&
                         (!m.AttackLockedBy.FaceUp || engine.ControllerOf(m.AttackLockedBy) == null))
                         m.AttackLockedBy = null;
+                    if (!m.FaceUp)
+                    {
+                        ClearFaceDownMarks(m);
+                        continue;
+                    }
 
                     if (m.Equips == null || m.Equips.Count == 0 || m.IsNegated) continue;
                     if (!FaceUpClauses(m, EffectActionKind.DestroyEquipsAttachedToThis).Any()) continue;
                     foreach (var eq in m.Equips.ToList())
                     {
-                        if (eq == null) continue;
+                        if (!IsRealEquipCard(eq)) continue;
                         engine.Log($"{m.Name} destroys the Equip Card {eq.Name}.");
                         DestroyCard(engine, eq, m);
                     }
                 }
+        }
+
+        /// <summary>
+        /// An Equip Card (Equip Spell, a card that equips itself such as Battle-Scarred, or an
+        /// equipped monster) — not a link recorded in Equips (Call of the Haunted, Spellbinding Circle).
+        /// </summary>
+        public static bool IsRealEquipCard(CardInstance eq)
+        {
+            if (eq?.Def == null) return false;
+            if (eq.Def.IsEquipSpell || eq.Def.IsMonster) return true;
+            var prog = CompiledEffectCache.GetOrCompile(eq.Def);
+            return prog != null && prog.ClauseList.Exists(c =>
+                c != null && c.Action == EffectActionKind.EquipThisToTarget);
         }
 
         /// <summary>Nobleman of Extermination: banish every copy of a Trap from both Decks.</summary>
@@ -3992,6 +4031,10 @@ namespace WRLDZ.Duel.TextEffects
                         ok = opp.MonsterCount - who.MonsterCount >= c.ConditionAmount &&
                              engine.FirstEmpty(who.MonsterZones) >= 0;
                         reason = $"Your opponent must control at least {c.ConditionAmount} more monsters than you.";
+                        break;
+                    case "AnyOtherCardOnField":
+                        ok = CollectAllOtherCards(engine, who, card).Count > 0;
+                        reason = "Needs another card on the field.";
                         break;
                     case "HandHasOtherCard":
                         ok = who.Hand.Any(h => h != null && h != card);
@@ -4440,6 +4483,9 @@ namespace WRLDZ.Duel.TextEffects
                         continue;
                     if (c.RequiresOnlyMonsterYouControl &&
                         (who.MonsterCount != 1 || !who.TryFindMonster(card, out _)))
+                        continue;
+                    // Infinite Dismissal works only face-up in the Spell & Trap Zone, never from the GY.
+                    if (eitherTurn && (!card.FaceUp || !who.TryFindSpellTrap(card, out _)))
                         continue;
                     if (c.TurnPlayerTributes)
                     {
@@ -5368,6 +5414,8 @@ namespace WRLDZ.Duel.TextEffects
             EffectZoneFilter.HandOrDeckNamed => EffectTargetKind.MonsterInHandOrDeck,
             EffectZoneFilter.DeckRitualMonsters => EffectTargetKind.CardInYourDeck,
             EffectZoneFilter.DeckRitualSpells => EffectTargetKind.CardInYourDeck,
+            EffectZoneFilter.FieldAnyMonster when c.Action == EffectActionKind.SetTargetFaceDownDefense
+                => EffectTargetKind.FaceUpMonsterOnField,
             EffectZoneFilter.FieldAnyMonster => EffectTargetKind.AnyMonsterOnField,
             EffectZoneFilter.ControllerGySpells => EffectTargetKind.SpellInYourGy,
             EffectZoneFilter.ControllerGyTraps => EffectTargetKind.TrapInYourGy,

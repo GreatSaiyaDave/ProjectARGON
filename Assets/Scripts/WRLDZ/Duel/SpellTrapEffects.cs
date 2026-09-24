@@ -114,6 +114,10 @@ namespace WRLDZ.Duel
         public int MultiDiscardRemaining;
         /// <summary>Chosen cost cards; discarded together once all are picked.</summary>
         public readonly List<CardInstance> MultiDiscardPicks = new();
+        /// <summary>A non-refundable cost (Darkness Approaches' discards) is paid: Cancel cannot undo.</summary>
+        public bool CostPaid;
+        /// <summary>LP paid as the activation cost (Premature Burial); refunded if the target choice is cancelled.</summary>
+        public int PaidLpCost;
         /// <summary>Bark of Dark Ruler: choose LP cost in multiples of 100.</summary>
         public bool AwaitingLpCost;
         public readonly List<int> LpCostChoices = new();
@@ -1096,6 +1100,20 @@ namespace WRLDZ.Duel
                 engine.Log($"Cancelled {card?.Name} target choice — Flip effect fizzles.");
                 engine.NotifyPublic();
                 return true;
+            }
+
+            if (p.CostPaid && card != null && who != null)
+            {
+                engine.SendCardToGrave(who, card);
+                engine.Log($"{card.Name}: the cost is already paid — no target chosen, so it resolves with no effect.");
+                engine.NotifyPublic();
+                return true;
+            }
+
+            if (p.PaidLpCost > 0 && who != null)
+            {
+                who.LifePoints += p.PaidLpCost;
+                engine.Log($"Cancelled {card?.Name} — {p.PaidLpCost} LP cost refunded ({who.LifePoints} LP).");
             }
 
             // Undo Spell/Trap activation: return to prior state

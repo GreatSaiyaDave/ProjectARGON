@@ -108,6 +108,8 @@ namespace WRLDZ.Duel.Rules
         const int LegendarySword = 61854111;
         const int Sangan = 26202165;
         const int MonsterReborn = 83764719;
+        const int CallOfTheHaunted = 97077563;
+        const int SpellbindingCircle = 18807108;
 
         public static string RunAll()
         {
@@ -1844,6 +1846,140 @@ namespace WRLDZ.Duel.Rules
                 var ok = Activate(e, me, fiend, true);
                 Check("The Fiend Megacyber: Special Summon from hand when the opponent controls 2+ more monsters",
                     !early && ok && OnField(me, fiend) && !me.NormalSummonUsed, $"early={early} ok={ok}");
+            }
+
+            // ─────────────────────── Review follow-ups (PSV tranche 1) ───────────────────────
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Graveyard.Clear();
+                var gear = Gy(e, me, Gearfried);
+                var coth = PlaceSet(e, me, CallOfTheHaunted, 0);
+                var ok = Activate(e, me, coth, false);
+                Check("Gearfried + Call of the Haunted: not an Equip Card — both stay on the field",
+                    ok && OnField(me, gear) && OnField(me, coth), $"ok={ok}");
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp);
+                var gear = PlaceMonster(e, opp, Gearfried, 0);
+                var circle = PlaceSet(e, me, SpellbindingCircle, 0);
+                var ok = Activate(e, me, circle, false);
+                Check("Gearfried + Spellbinding Circle: the Circle stays and still stops the attack",
+                    ok && OnField(me, circle) && TextEffectRuntime.AttackForbiddenByEffect(e, gear), $"ok={ok}");
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Graveyard.Clear();
+                var revived = Gy(e, me, Celtic);
+                var coth = PlaceSet(e, me, CallOfTheHaunted, 0);
+                Activate(e, me, coth, false);
+                e.ReturnCardToHand(revived);
+                e.NotifyPublic();
+                Check("Call of the Haunted: its monster bounced (not destroyed) → the Trap stays, unlinked",
+                    OnField(me, coth) && coth.EquippedTo == null && me.Hand.Contains(revived));
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Hand.Clear();
+                var target = PlaceMonster(e, opp, KoumoriDragon, 0);
+                var da = Hand(e, me, DarknessApproaches);
+                var a = Hand(e, me, Celtic); var b = Hand(e, me, SkullServant);
+                TextEffectRuntime.TryResolveActivation(e, me, da, true, CompiledEffectCache.GetOrCompile(da.Def), false);
+                e.TrySelectEffectTarget(a);
+                e.TrySelectEffectTarget(b);
+                e.CancelEffectTargeting();
+                Check("Darkness Approaches: Cancel after the discards are paid cannot undo the activation",
+                    me.Graveyard.Contains(da) && !me.Hand.Contains(da) && me.Graveyard.Contains(a) &&
+                    me.Graveyard.Contains(b) && target.FaceUp);
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Hand.Clear();
+                var fd = Hand(e, me, FinalDestiny);
+                for (var i = 0; i < 5; i++) Hand(e, me, SkullServant);
+                var fdLegal = TextEffectRuntime.CanActivate(e, me, fd, true,
+                    CompiledEffectCache.GetOrCompile(fd.Def), out var fdWhy);
+                Check("Final Destiny: needs another card on the field", !fdLegal, $"why={fdWhy}");
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Hand.Clear();
+                var dismissal = PlaceSpellTrap(e, me, InfiniteDismissal, 0);
+                e.SendCardToGrave(me, dismissal);
+                var ns = Hand(e, me, SkullServant);
+                e.TryNormalSummon(me, ns, false);
+                Resolve(e);
+                e.TryEndTurnSafe(me);
+                Resolve(e);
+                Check("Infinite Dismissal: does nothing from the GY", OnField(me, ns));
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp);
+                var target = PlaceMonster(e, opp, Celtic, 0);
+                target.FaceUp = false; target.Position = BattlePosition.Defense;
+                var inv = PlaceMonster(e, me, InvitationToADarkSleep, 1);
+                inv.FaceUp = false; inv.Position = BattlePosition.Defense;
+                e.TryFlipSummon(me, inv);
+                Resolve(e);
+                target.FaceUp = true; target.Position = BattlePosition.Attack;
+                e.NotifyPublic();
+                Check("Invitation to a Dark Sleep: a Set target stays locked after it flips face-up",
+                    TextEffectRuntime.AttackForbiddenByEffect(e, target));
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Hand.Clear();
+                var mech = PlaceMonster(e, me, Mechanicalchaser, 0);
+                Activate(e, me, Hand(e, me, LimiterRemoval), true);
+                mech.FaceUp = false; mech.Position = BattlePosition.Defense; // Book of Moon
+                e.NotifyPublic();
+                e.TryEndTurnSafe(me);
+                Resolve(e);
+                Check("Limiter Removal: a Machine turned face-down is not destroyed and loses the boost",
+                    OnField(me, mech) && mech.UntilEndOfTurnAtk == 0);
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Hand.Clear();
+                PlaceMonster(e, me, HarpieLady, 0);
+                for (var z = 1; z < me.MonsterZones.Length; z++) PlaceMonster(e, me, Celtic, z);
+                me.Deck.Insert(0, HarpieLadySisters);
+                var ego = Hand(e, me, ElegantEgotist);
+                Check("Elegant Egotist: needs a free Monster Zone",
+                    !TextEffectRuntime.CanActivate(e, me, ego, true, CompiledEffectCache.GetOrCompile(ego.Def), out _));
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp);
+                var fiend = PlaceMonster(e, me, FiendMegacyber, 0);
+                for (var z = 0; z < 3; z++) PlaceMonster(e, opp, Celtic, z);
+                Check("The Fiend Megacyber: its hand-only summon cannot be used from the field",
+                    !e.CanActivateSpellTrap(me, fiend, false));
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Hand.Clear(); me.Graveyard.Clear();
+                Gy(e, me, 89631139);
+                var burial = Hand(e, me, PrematureBurial);
+                var lp = me.LifePoints;
+                TextEffectRuntime.TryResolveActivation(e, me, burial, true,
+                    CompiledEffectCache.GetOrCompile(burial.Def), false);
+                var asked = e.IsAwaitingEffectTarget;
+                e.CancelEffectTargeting();
+                Check("Premature Burial: cancelling the target choice refunds the 800 LP",
+                    asked && me.LifePoints == lp && me.Hand.Contains(burial), $"asked={asked} lp={me.LifePoints}");
             }
 
             // ─────── Legacy duplicate targeted clauses still share one target ───────

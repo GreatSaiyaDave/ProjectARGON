@@ -1,4 +1,4 @@
-# Curriculum batch — PSV tranche 1 + SRL/MRD leftovers (compiler v54)
+# Curriculum batch — PSV tranche 1 + SRL/MRD leftovers (compiler v54–v55)
 
 Date: 2026-09-24. Follows `Docs/CURRICULUM_BATCH_SRL1_2026-09-23.md`.
 
@@ -12,7 +12,7 @@ Date: 2026-09-24. Follows `Docs/CURRICULUM_BATCH_SRL1_2026-09-23.md`.
 | IOC — Invasion of Chaos | 36/112 | 37/112 (Dark Driceratops, shared piercing) |
 | All 15 pre-Link curriculum sets | 641/1471 | 673/1471 (798 left) |
 
-Seed re-exported at v54 (536 programs). Headless 1216 pass / 0 fail, 250 AI-vs-AI duels
+Seed re-exported at v55 after the review fixes. Headless 1227 pass / 0 fail, 250 AI-vs-AI duels
 completed, 0 soft-locks, 0 exceptions, Python UI guards pass.
 
 ## Cards compiled (31 + 1)
@@ -76,3 +76,14 @@ Dimensionhole, Parasite Paracide, Armored Glass, Gamble, The Shallow Grave, Appr
 Mystic Probe, Lightforce Sword, Sword Hunter, Vampire Baby, Shift, Cold Wave, Earthshaker,
 Graverobber, Gust, Forced Requisition, Goblin Attack Force, Morphing Jar #2, Ground Collapse,
 Insect Imitation, Skull Invitation, Major Riot, World Suppression, The Regulation of Tribe.
+
+## Review fixes (v55)
+
+An independent review found and we fixed: Gearfried destroying Call of the Haunted /
+Spellbinding Circle (they are links, not Equip Cards); Cancel after Darkness Approaches'
+discards undoing the activation; Premature Burial's 800 LP not refunded when its target choice
+is cancelled; Final Destiny playable on an empty field; Elegant Egotist with no free zone;
+Infinite Dismissal working from the GY; Invitation's lock lost on a Set target; Limiter Removal
+destroying a monster turned face-down; a field Megacyber offering its hand-only summon; a
+bounced monster taking Call of the Haunted with it; "destroy that monster" links now destroy
+(so destroy triggers fire) instead of just sending to the GY.
