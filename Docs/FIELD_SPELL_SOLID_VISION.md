@@ -158,10 +158,19 @@ event presentation later.
 
 **Kit contract** (enforced by review and, where static, by the guard):
 
-- Per-monster pieces stay within 0.75 × and below 0.6 × the monster's scale.
-  They sit around the monster, never under the card, so the terrain pad,
-  ownership ring and aura stay readable. Street pieces stay above 1.3 m × street
-  scale. Nothing is drawn across the open aisle floor.
+- Per-monster pieces stay within 0.75 × and below 0.6 × the monster's resting
+  scale (they don't swell when the hologram flinches on a hit), and 0.1 × short
+  of the street midline so facing monsters' rings never meet. They sit around
+  the monster, never under the card, so the terrain pad, ownership ring and aura
+  stay readable. Street pieces stay above 1.3 m × street scale and at least
+  1.5 m from the player's camera. Nothing is drawn across the open aisle floor.
+- Cards: a Set card lies nearly flat (1.40 × 0.91, low edge about 1 cm up), so
+  nothing inside its footprint stands taller than 1 cm. A flip counts as Set
+  until the card stands up. In front of face-up art a piece may cover only its
+  lower ~22%. Defense art is rolled onto its side, centred at street level
+  beside the monster, so in front of it pieces stay under 0.1 ×. The base class
+  answers both with `CoverLimit()`. Street kits fade wherever they would cross a
+  card's art from the camera (`ArtClear()`).
 - Every alpha is multiplied by the sweep/dissolve level and each monster's
   presence, so set pieces ripple in with the sweep and never pop.
 - At most 2 draw calls and 4096 vertices, zero per-frame allocations, unscaled

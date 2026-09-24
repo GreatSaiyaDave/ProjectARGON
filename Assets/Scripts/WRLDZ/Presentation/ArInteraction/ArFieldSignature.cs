@@ -84,6 +84,8 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary>
         /// Multiply host-local design sizes by this to get floor-local metres
         /// (e.g. <see cref="ArPlaymatLayout.SummonRingDiameter"/> × Scale = the ring's size here).
+        /// It is the monster's RESTING scale: ground pieces stay put while the
+        /// hologram flinches on a hit.
         /// </summary>
         public float Scale;
     }
@@ -132,12 +134,39 @@ namespace WRLDZ.Presentation.ArInteraction
         public const float SidewaysCoverHeight = 0.10f;
         /// <summary>Metres (× max(HoloScale, 0.5)) kept between the local camera and any street piece.</summary>
         public const float StreetCameraClear = 1.5f;
+        /// <summary>
+        /// Per-monster pieces stay this far (host-local, × Scale) on their own side of
+        /// the street midline (z = 0): facing monsters' rings must not meet.
+        /// </summary>
+        public const float AisleClear = 0.1f;
+        /// <summary>Per-monster pieces reach at most this far sideways (half the column pitch, × Scale).</summary>
+        public const float LaneHalfWidth = 0.6f;
+        /// <summary>Most face-up cards <see cref="CollectArtCards"/> tracks per frame.</summary>
+        public const int MaxArtCards = 10;
+        /// <summary>Fade band around a card's silhouette (host-local, × Scale) for <see cref="ArtClear"/>.</summary>
+        public const float ArtSoft = 0.15f;
 
         /// <summary>Render queues: ground decorations sit over terrain pads, street pieces under motes.</summary>
         public const int GroundQueue = 2465;
         public const int StreetQueue = 3040;
 
         readonly List<Object> _owned = new();
+        readonly ArtCard[] _artCards = new ArtCard[MaxArtCards];
+        int _artCardCount;
+        Vector3 _artEye;
+
+        /// <summary>A face-up card in its camera-facing plane (floor-local metres).</summary>
+        struct ArtCard
+        {
+            public Vector3 Foot;  // anchor on the street: the pivot the holo turns about
+            public Vector3 N;     // plane normal, toward the eye
+            public Vector3 L;     // camera-right in the plane (horizontal)
+            public Vector3 U;     // up in the plane (tilted back toward the eye)
+            public float HalfW;
+            public float Lateral; // art centre offset along L (sideways Defense art)
+            public bool Sideways;
+            public float Soft;
+        }
         uint _rng = 0x9E3779B9u;
         static Texture2D _softDot;
 
@@ -267,6 +296,86 @@ namespace WRLDZ.Presentation.ArInteraction
         /// </summary>
         protected static Color VertexColor(Color srgb) =>
             QualitySettings.activeColorSpace == ColorSpace.Linear ? srgb.linear : srgb;
+
+        /// <summary>
+        /// ≥ 0 when floor-local point <paramref name="p"/> stays on the anchor's own side
+        /// of the street midline by <see cref="AisleClear"/> × Scale; negative by how far it crosses.
+        /// </summary>
+        protected static float MidlineGap(in FieldAnchor a, Vector3 p)
+        {
+            var side = a.Position.z < 0f ? -1f : 1f;
+            return side * p.z - AisleClear * a.Scale;
+        }
+
+        /// <summary>
+        /// Face-up monster art this frame, for <see cref="ArtClear"/>. Call once per
+        /// Tick. Each card turns to face the eye about its foot, as
+        /// ArArenaCardVisual.FaceCamera does; sideways (Defense) art is centred at
+        /// street level, <see cref="FieldAnchor.ArtLateral"/> to one side. Set cards
+        /// lie flat and show no art, so they are skipped. No camera, no cards.
+        /// </summary>
+        protected void CollectArtCards(IReadOnlyList<FieldAnchor> anchors, in FieldStreet street)
+        {
+            _artCardCount = 0;
+            if (anchors == null || !street.HasCamera) return;
+            _artEye = street.Camera;
+            for (var i = 0; i < anchors.Count && _artCardCount < MaxArtCards; i++)
+            {
+                var a = anchors[i];
+                if (a.FaceDown || a.Scale <= 0f || a.ArtHalf <= 0f) continue;
+                var n = _artEye - a.Position;
+                if (n.sqrMagnitude < 1e-8f) continue;
+                n.Normalize();
+                var l = new Vector3(-n.z, 0f, n.x);
+                if (l.sqrMagnitude < 1e-8f) l = Vector3.right;
+                l.Normalize();
+                ref var c = ref _artCards[_artCardCount++];
+                c.Foot = a.Position;
+                c.N = n;
+                c.L = l;
+                c.U = Vector3.Cross(l, n);
+                c.HalfW = a.ArtHalf;
+                c.Lateral = a.ArtLateral;
+                c.Sideways = a.ArtSideways;
+                c.Soft = ArtSoft * a.Scale;
+            }
+        }
+
+        /// <summary>
+        /// 0 where something at floor-local <paramref name="point"/> (anything within
+        /// <paramref name="reach"/> of it) would draw over a face-up card's art as seen
+        /// from the camera, 1 once it clears the art's silhouette by the fade band.
+        /// Points behind a card need no fade: the opaque art hides them.
+        /// Call <see cref="CollectArtCards"/> first in the same Tick.
+        /// </summary>
+        protected float ArtClear(Vector3 point, float reach = 0f)
+        {
+            if (_artCardCount == 0) return 1f;
+            var d = point - _artEye;
+            var d2 = d.sqrMagnitude;
+            var clear = 1f;
+            for (var i = 0; i < _artCardCount; i++)
+            {
+                ref var c = ref _artCards[i];
+                // The ray must run toward the card's face to cross it in front of the eye.
+                var dn = Vector3.Dot(d, c.N);
+                if (dn > -1e-4f) continue;
+                var t = Vector3.Dot(c.Foot - _artEye, c.N) / dn;
+                if (t <= 0f || (1f - t) * -dn > reach) continue;
+                // A sphere of radius reach around the point lands in the plane within
+                // reach × t / cos(slant) of where the ray crosses it.
+                var rr = reach * t * Mathf.Sqrt(d2 / (dn * dn));
+                var q = _artEye + d * t - c.Foot;
+                var x = Vector3.Dot(q, c.L);
+                var y = Vector3.Dot(q, c.U);
+                var gap = c.Sideways
+                    ? Mathf.Max(Mathf.Abs(x - c.Lateral) - c.HalfW, Mathf.Abs(y) - c.HalfW)
+                    : Mathf.Max(Mathf.Abs(x) - c.HalfW, Mathf.Max(y - 2f * c.HalfW, -y));
+                clear = Mathf.Min(clear, Mathf.SmoothStep(0f, 1f, (gap - rr) / c.Soft));
+            }
+
+            return clear;
+        }
 
         /// <summary>True when floor-local point <paramref name="p"/> (XZ) lies over a Set card's footprint.</summary>
         protected static bool InSetCard(in FieldAnchor a, Vector3 p, float margin = 0.03f)
