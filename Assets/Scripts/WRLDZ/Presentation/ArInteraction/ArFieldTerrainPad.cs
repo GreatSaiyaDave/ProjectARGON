@@ -110,6 +110,8 @@ namespace WRLDZ.Presentation.ArInteraction
                     Presence = p._ramp * ArFieldSpellFloor.PresenceAt(world),
                     Aura = p.AuraSign(),
                     PlayerSide = p._host.PlayerSide,
+                    FaceDown = !p._host.FaceUp,
+                    Key = p.GetInstanceID(),
                     Scale = p._host.transform.lossyScale.x / fs
                 });
             }

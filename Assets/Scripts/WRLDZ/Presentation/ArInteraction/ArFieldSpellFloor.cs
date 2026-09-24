@@ -431,15 +431,22 @@ namespace WRLDZ.Presentation.ArInteraction
 
         void SyncMoteVolume()
         {
+            // Motes stay NearZ-clear of the lens: a 3 cm dot at 10 cm fills the screen.
             var st = Street();
-            _motes?.SetVolume(st.Center, new Vector3(st.Half.x * 0.92f, st.Half.y, st.Half.z * 0.92f));
+            var far = st.Center.z + st.Half.z * 0.92f;
+            var near = Mathf.Max(st.Center.z - st.Half.z * 0.92f, st.NearZ);
+            _motes?.SetVolume(new Vector3(st.Center.x, st.Center.y, (near + far) * 0.5f),
+                new Vector3(st.Half.x * 0.92f, st.Half.y, Mathf.Max(0.1f, (far - near) * 0.5f)));
         }
 
         FieldStreet Street()
         {
-            var halfH = StreetHeight * 0.5f * ArPlaymatLayout.LiveHoloScale;
-            return new FieldStreet(new Vector3(_centerX, halfH, 0f), new Vector3(_halfW, halfH, _halfZ),
-                ArPlaymatLayout.LiveHoloScale);
+            var scale = ArPlaymatLayout.LiveHoloScale;
+            var halfH = StreetHeight * 0.5f * scale;
+            // The local duelist stands one stand-off behind their S/T row (−Z end).
+            var playerZ = -(ArPlaymatLayout.LiveSpellTrapRowFromMid + ArPlaymatLayout.LiveStandOff);
+            var nearZ = Mathf.Min(playerZ + ArFieldSignature.StreetCameraClear * Mathf.Max(scale, 0.5f), _halfZ * 0.5f);
+            return new FieldStreet(new Vector3(_centerX, halfH, 0f), new Vector3(_halfW, halfH, _halfZ), scale, nearZ);
         }
 
         void DestroySignature()

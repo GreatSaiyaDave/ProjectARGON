@@ -16,12 +16,20 @@ namespace WRLDZ.Presentation.ArInteraction
         public readonly Vector3 Half;
         /// <summary><see cref="ArPlaymatLayout.LiveHoloScale"/>: 1 on a full street, smaller on short ones.</summary>
         public readonly float HoloScale;
+        /// <summary>
+        /// Street pieces must stay at z ≥ NearZ: the local duelist's camera is
+        /// at the −Z end, and the street box's near face can be only centimetres
+        /// in front of it. NearZ keeps <see cref="ArFieldSignature.StreetCameraClear"/>
+        /// between the lens and anything drawn.
+        /// </summary>
+        public readonly float NearZ;
 
-        public FieldStreet(Vector3 center, Vector3 half, float holoScale)
+        public FieldStreet(Vector3 center, Vector3 half, float holoScale, float nearZ)
         {
             Center = center;
             Half = half;
             HoloScale = holoScale;
+            NearZ = nearZ;
         }
     }
 
@@ -36,6 +44,19 @@ namespace WRLDZ.Presentation.ArInteraction
         public int Aura;
         /// <summary>Monster owner (cyan / magenta side).</summary>
         public bool PlayerSide;
+        /// <summary>
+        /// Set monster: its card lies almost flat over the anchor, so keep pieces
+        /// outside <see cref="ArFieldSignature.SetCardClearRadius"/> × Scale or
+        /// below <see cref="ArFieldSignature.SetCardClearHeight"/> × Scale.
+        /// Being face-down is public; the monster's identity is not, and kits never learn it.
+        /// </summary>
+        public bool FaceDown;
+        /// <summary>
+        /// Stable per-monster key (the terrain pad's instance id): seed per-monster
+        /// variation from this, not from list slot or position, so a monster keeps
+        /// its look while others come and go or it lunges.
+        /// </summary>
+        public int Key;
         /// <summary>
         /// Multiply host-local design sizes by this to get floor-local metres
         /// (e.g. <see cref="ArPlaymatLayout.SummonRingDiameter"/> × Scale = the ring's size here).
@@ -69,6 +90,12 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary>Street pieces keep their lowest point above this (floor-local metres, × HoloScale).</summary>
         public const float StreetClearHeight = 1.3f;
         public const int MaxVertices = 4096;
+        /// <summary>Half-diagonal of a Set monster's flat card (0.96 × 0.66 host-local) plus margin.</summary>
+        public const float SetCardClearRadius = 0.62f;
+        /// <summary>Pieces inside the Set card's footprint must stay below this (host-local, × Scale).</summary>
+        public const float SetCardClearHeight = 0.05f;
+        /// <summary>Metres (× max(HoloScale, 0.5)) kept between the local camera and any street piece.</summary>
+        public const float StreetCameraClear = 1.5f;
 
         /// <summary>Render queues: ground decorations sit over terrain pads, street pieces under motes.</summary>
         public const int GroundQueue = 2465;
@@ -195,6 +222,15 @@ namespace WRLDZ.Presentation.ArInteraction
             _rng ^= _rng << 5;
             return a + (b - a) * ((_rng & 0xFFFFFF) / 16777216f);
         }
+
+        /// <summary>
+        /// Palette colour → mesh vertex colour. The project renders in Linear
+        /// space and Sprites/Default does not convert vertex colours, so raw sRGB
+        /// palette values would show washed out. Convert once at build time and
+        /// cache the result; alpha is unchanged.
+        /// </summary>
+        protected static Color VertexColor(Color srgb) =>
+            QualitySettings.activeColorSpace == ColorSpace.Linear ? srgb.linear : srgb;
 
         /// <summary>Colour with alpha replaced.</summary>
         protected static Color WithAlpha(Color c, float a)

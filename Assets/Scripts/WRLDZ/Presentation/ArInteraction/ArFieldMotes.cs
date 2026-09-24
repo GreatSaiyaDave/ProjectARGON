@@ -100,7 +100,8 @@ namespace WRLDZ.Presentation.ArInteraction
         public void SetEnvironment(FieldSpellEnvironment env)
         {
             _kind = env.Motes;
-            _color = env.Accent;
+            // Linear project: Sprites/Default does not convert vertex colours.
+            _color = QualitySettings.activeColorSpace == ColorSpace.Linear ? env.Accent.linear : env.Accent;
             _density = env.MoteDensity;
             _rng ^= (uint)env.CardId * 2654435761u;
             if (_rng == 0) _rng = 0x9E3779B9u; // xorshift never leaves 0
