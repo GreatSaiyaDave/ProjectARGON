@@ -391,20 +391,53 @@ namespace WRLDZ.Presentation.ArInteraction
         /// art (camera side, inside its lateral span), or the kit's normal cap.
         /// Clamp heights with this so every kit treats cards the same way.
         /// </summary>
-        protected static float CoverLimit(in FieldAnchor a, in FieldStreet street, Vector3 p)
+        protected static float CoverLimit(in FieldAnchor a, in FieldStreet street, Vector3 p) =>
+            Mathf.Min(MaxAnchorHeight * a.Scale, CardLimit(a, street, p));
+
+        /// <summary>
+        /// <see cref="CoverLimit"/> for a piece of <paramref name="own"/>'s set piece,
+        /// also honouring every OTHER monster's card: a Set card (0.72 × Scale each
+        /// side) is wider than a lane (<see cref="LaneHalfWidth"/>), and sideways
+        /// Defense art lies across a whole neighbouring lane, so a neighbour's pieces
+        /// can land on them. Call per piece (≤ 10 anchors, no allocation).
+        /// </summary>
+        protected static float CoverLimitAll(in FieldAnchor own, IReadOnlyList<FieldAnchor> anchors,
+            in FieldStreet street, Vector3 p)
         {
-            var cap = MaxAnchorHeight * a.Scale;
+            var limit = CoverLimit(own, street, p);
+            if (anchors == null) return limit;
+            for (var i = 0; i < anchors.Count; i++)
+            {
+                var b = anchors[i];
+                if (b.Key == own.Key) continue;
+                // Nothing of b's reaches past its sideways art (2 × ArtHalf) or its Set card corner.
+                var reach = Mathf.Max(2f * b.ArtHalf, SetCardClearRadius * b.Scale) + 0.05f * b.Scale;
+                var dx = p.x - b.Position.x;
+                var dz = p.z - b.Position.z;
+                if (dx * dx + dz * dz > reach * reach) continue;
+                limit = Mathf.Min(limit, CardLimit(b, street, p));
+            }
+
+            return limit;
+        }
+
+        /// <summary>
+        /// Height limit that anchor <paramref name="a"/>'s card puts on floor-local point
+        /// <paramref name="p"/>, or +∞ when its card does not constrain that point.
+        /// </summary>
+        static float CardLimit(in FieldAnchor a, in FieldStreet street, Vector3 p)
+        {
             if (a.FaceDown)
-                return InSetCard(a, p) ? SetCardClearHeight * a.Scale : cap;
-            if (!street.HasCamera) return cap;
+                return InSetCard(a, p) ? SetCardClearHeight * a.Scale : float.PositiveInfinity;
+            if (!street.HasCamera) return float.PositiveInfinity;
             var toCam = new Vector3(street.Camera.x - a.Position.x, 0f, street.Camera.z - a.Position.z);
             var d = new Vector3(p.x - a.Position.x, 0f, p.z - a.Position.z);
-            if (Vector3.Dot(d, toCam) <= 0f) return cap; // behind the art plane: hidden by depth anyway
+            if (Vector3.Dot(d, toCam) <= 0f) return float.PositiveInfinity; // behind the art plane: hidden by depth
             var len = toCam.magnitude;
-            if (len < 1e-4f) return cap;
+            if (len < 1e-4f) return float.PositiveInfinity;
             var right = new Vector3(-toCam.z / len, 0f, toCam.x / len);
             var lateral = Vector3.Dot(d, right);
-            return Mathf.Abs(lateral - a.ArtLateral) < a.ArtHalf ? Mathf.Min(cap, a.FrontCoverHeight) : cap;
+            return Mathf.Abs(lateral - a.ArtLateral) < a.ArtHalf ? a.FrontCoverHeight : float.PositiveInfinity;
         }
 
         /// <summary>Colour with alpha replaced.</summary>
