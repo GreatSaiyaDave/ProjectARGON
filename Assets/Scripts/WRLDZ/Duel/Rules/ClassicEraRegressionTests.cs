@@ -231,6 +231,31 @@ namespace WRLDZ.Duel.Rules
                     $"{angel.CurrentAtk}/{angel.CurrentDef}");
             }
             {
+                // AR field aura reads FieldAtkDelta/FieldDefDelta: the Field Spell's share only.
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                ClearField(me); ClearField(opp);
+                var fish = PlaceMonster(e, me, GreatWhite, 0);
+                var machine = PlaceMonster(e, opp, Mechanicalchaser, 0);
+                PlaceMonster(e, me, CommandKnight, 1);
+                var warrior = PlaceMonster(e, me, Celtic, 2);
+                PlaceField(e, me, Umi);
+                e.NotifyPublic();
+                Check("Field delta: Umi boon on Fish is +200/+200",
+                    fish.FieldAtkDelta == 200 && fish.FieldDefDelta == 200,
+                    $"{fish.FieldAtkDelta}/{fish.FieldDefDelta}");
+                Check("Field delta: Umi bane on the opponent's Machine is −200/−200",
+                    machine.FieldAtkDelta == -200 && machine.FieldDefDelta == -200,
+                    $"{machine.FieldAtkDelta}/{machine.FieldDefDelta}");
+                Check("Field delta: Command Knight's Warrior aura is not the field's",
+                    warrior.AtkModifier > 0 && warrior.FieldAtkDelta == 0,
+                    $"mod={warrior.AtkModifier} field={warrior.FieldAtkDelta}");
+                me.FieldSpellZone.Occupant = null;
+                e.NotifyPublic();
+                Check("Field delta: clears when the Field Spell leaves",
+                    fish.FieldAtkDelta == 0 && machine.FieldAtkDelta == 0,
+                    $"{fish.FieldAtkDelta}/{machine.FieldAtkDelta}");
+            }
+            {
                 var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
                 ClearField(me); ClearField(opp);
                 var knight = PlaceMonster(e, me, CommandKnight, 0);

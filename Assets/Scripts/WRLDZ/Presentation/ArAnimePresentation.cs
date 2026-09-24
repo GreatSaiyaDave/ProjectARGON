@@ -94,6 +94,37 @@ namespace WRLDZ.Presentation
                 c.a);
         }
 
+        /// <summary>Live Field Spell tint on arena holos (see <c>ArFieldSpellFloor</c>).</summary>
+        public static Color FieldWashTint { get; private set; } = Color.white;
+
+        /// <summary>0 = no field; capped by the environment's wash (≤ 0.2).</summary>
+        public static float FieldWashStrength { get; private set; }
+
+        /// <summary>Bumps when the wash visibly changes so holos re-tint once, not per frame.</summary>
+        public static int FieldWashVersion { get; private set; }
+
+        /// <summary>Set by the field stage each frame; quantized so versions stay rare.</summary>
+        public static void SetFieldWash(Color tint, float strength)
+        {
+            strength = Mathf.Round(Mathf.Clamp01(strength) * 64f) / 64f;
+            tint.a = 1f;
+            if (Mathf.Approximately(strength, FieldWashStrength) &&
+                (strength <= 0f || tint == FieldWashTint))
+                return;
+            FieldWashTint = tint;
+            FieldWashStrength = strength;
+            FieldWashVersion++;
+        }
+
+        /// <summary>Base colour for an arena holo face: exposure plus the Field Spell wash.</summary>
+        public static Color HoloFaceColor()
+        {
+            var c = Expose(Color.white);
+            if (FieldWashStrength <= 0f) return c;
+            var w = Color.Lerp(Color.white, FieldWashTint, FieldWashStrength);
+            return new Color(c.r * w.r, c.g * w.g, c.b * w.b, c.a);
+        }
+
         public static Shader UnlitShader()
         {
             return Shader.Find("Universal Render Pipeline/Unlit")

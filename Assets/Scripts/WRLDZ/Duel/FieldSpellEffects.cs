@@ -60,6 +60,10 @@ namespace WRLDZ.Duel
             ClearModifiers(engine.Opponent);
             ApplyFaceUpField(engine, engine.Player.FieldSpellZone?.Occupant);
             ApplyFaceUpField(engine, engine.Opponent.FieldSpellZone?.Occupant);
+            // Only Field Spells have written ATK/DEF since the clear — snapshot
+            // their share for the AR aura before monster/equip auras stack on.
+            RecordFieldDeltas(engine.Player);
+            RecordFieldDeltas(engine.Opponent);
             ApplyFaceUpMonsterAuras(engine, engine.Player);
             ApplyFaceUpMonsterAuras(engine, engine.Opponent);
             ApplyCatalogSpellTraps(engine, engine.Player);
@@ -78,6 +82,17 @@ namespace WRLDZ.Duel
             {
                 foreach (var c in who.Hand)
                     if (c != null) c.LevelModifier = 0;
+            }
+        }
+
+        static void RecordFieldDeltas(DuelistState who)
+        {
+            if (who == null) return;
+            foreach (var m in who.MonstersOnField())
+            {
+                if (m == null) continue;
+                m.FieldAtkDelta = m.AtkModifier;
+                m.FieldDefDelta = m.DefModifier;
             }
         }
 

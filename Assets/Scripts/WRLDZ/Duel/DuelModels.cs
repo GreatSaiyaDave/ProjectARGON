@@ -88,6 +88,14 @@ namespace WRLDZ.Duel
         public int AtkModifier;
         public int DefModifier;
 
+        /// <summary>
+        /// Presentation receipt: the part of <see cref="AtkModifier"/> /
+        /// <see cref="DefModifier"/> that came from face-up Field Spells on the
+        /// last board refresh. Never read by rules; drives the AR field aura.
+        /// </summary>
+        public int FieldAtkDelta;
+        public int FieldDefDelta;
+
         /// <summary>Until End Phase (Bark of Dark Ruler, Mask of Weakness). Not cleared by aura refresh.</summary>
         public int UntilEndOfTurnAtk;
         public int UntilEndOfTurnDef;
