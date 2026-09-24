@@ -443,8 +443,16 @@ namespace WRLDZ.Duel
             Phase = DuelPhase.Standby;
             BattleStep = BattleStep.None;
             DamageSubStep = DamageSubStep.None;
-            Continuous.TickStandby(who);
-            TextEffects.TextEffectRuntime.FirePhaseTriggers(this, who, TextEffects.EffectTiming.StandbyPhase);
+            if (who.SkipNextStandbyPhase)
+            {
+                who.SkipNextStandbyPhase = false;
+                Log($"[{who.Name}] Standby Phase skipped (card effect).");
+            }
+            else
+            {
+                Continuous.TickStandby(who);
+                TextEffects.TextEffectRuntime.FirePhaseTriggers(this, who, TextEffects.EffectTiming.StandbyPhase);
+            }
             if (GameOver) return;
 
             // —— Main Phase 1 ——
@@ -460,6 +468,7 @@ namespace WRLDZ.Duel
 
         public void Draw(DuelistState who, int n, bool silent = false)
         {
+            var drew = 0;
             for (var i = 0; i < n; i++)
             {
                 if (who.Deck.Count == 0)
@@ -468,6 +477,8 @@ namespace WRLDZ.Duel
                     EndGame(OpponentOf(who));
                     return;
                 }
+
+                drew++;
 
                 var id = who.Deck[0];
                 who.Deck.RemoveAt(0);
@@ -481,6 +492,9 @@ namespace WRLDZ.Duel
                         Log($"[{who.Name}] draws 1 card (hand {who.HandCount}, deck {who.DeckCount}).");
                 }
             }
+
+            if (drew > 0 && TurnNumber > 0)
+                TextEffects.TextEffectRuntime.NotifyDraw(this, who);
         }
 
         CardInstance CreateInstance(int cardId)
@@ -677,6 +691,9 @@ namespace WRLDZ.Duel
                     : $"Opponent Normal Summons {(card.FaceUp ? card.Name : "a monster")}.");
             }
 
+            ResetOnFieldEntry(card);
+            if (!asSet)
+                card.NormalOrFlipSummonedTurn = TurnNumber;
             who.MonsterZones[idx].Occupant = card;
             card.WasSpecialSummoned = false;
             card.WasTributeSummoned = need > 0 && !asSet;
@@ -715,6 +732,7 @@ namespace WRLDZ.Duel
             monster.Position = BattlePosition.Attack;
             monster.SummonedThisTurn = true;
             monster.ChangedPositionThisTurn = true;
+            monster.NormalOrFlipSummonedTurn = TurnNumber;
             Log(who.IsPlayer
                 ? $"Flip Summon {monster.Name}!"
                 : $"Opponent Flip Summons {monster.Name}.");
@@ -1063,10 +1081,11 @@ namespace WRLDZ.Duel
             return YgoProTriggerCatalog.FinishPayLp(this, amount);
         }
 
-        public void BanishCard(DuelistState owner, CardInstance card)
+        public void BanishCard(DuelistState owner, CardInstance card, bool destroyed = false)
         {
             if (owner == null || card == null) return;
             DetachFromField(owner, card);
+            UnlinkLeavingField(owner, card, destroyed);
             owner.Hand?.Remove(card);
             owner.Graveyard?.Remove(card);
             card.FaceUp = true;
@@ -1170,6 +1189,90 @@ namespace WRLDZ.Duel
                 card.ReturnControlAtEndOfTurn = -1;
             }
             Log($"{newController.Name} takes control of {card.Name}.");
+            TextEffects.TextEffectRuntime.NotifyControlChanged(this, newController, card);
+            return true;
+        }
+
+        /// <summary>
+        /// A card leaving the field other than to the GY (hand / Deck / banish): Equip Cards on it
+        /// go to the GY; if it was equipped, it unlinks and a Call of the Haunted-style link
+        /// destroys its host (Premature Burial only when this card was destroyed).
+        /// </summary>
+        void UnlinkLeavingField(DuelistState controller, CardInstance card, bool destroyed)
+        {
+            if (card == null) return;
+            if (card.EquippedTo != null)
+            {
+                var host = card.EquippedTo;
+                host.Equips.Remove(card);
+                card.EquippedTo = null;
+                RevertEquipTakeControl(controller, card, host);
+                var linkProg = TextEffects.CompiledEffectCache.GetOrCompile(card.Def);
+                if (linkProg != null && linkProg.ClauseList.Exists(c =>
+                        c != null && c.DestroyHostWhenThisLeaves &&
+                        (destroyed || !c.DestroyHostOnlyIfThisDestroyed)))
+                {
+                    var hostController = ControllerOf(host);
+                    if (hostController != null)
+                        DestroyMonster(hostController, host, card);
+                }
+            }
+
+            if (card.Equips != null && card.Equips.Count > 0)
+            {
+                var eqs = card.Equips.ToList();
+                card.Equips.Clear();
+                foreach (var eq in eqs)
+                {
+                    if (eq == null) continue;
+                    eq.EquippedTo = null;
+                    // Call of the Haunted / Spellbinding Circle are not Equip Cards: they leave only
+                    // when the linked monster is destroyed, so a bounce / banish leaves them face-up.
+                    if (!destroyed && !TextEffects.TextEffectRuntime.IsRealEquipCard(eq)) continue;
+                    var eqController = ControllerOf(eq);
+                    if (eqController != null)
+                        SendCardToGrave(eqController, eq);
+                }
+            }
+        }
+
+        /// <summary>Fresh field presence: effects that lasted "while face-up on the field" end.</summary>
+        static void ResetOnFieldEntry(CardInstance card)
+        {
+            if (card == null) return;
+            card.EffectUsedWhileFaceUp = false;
+            card.AttackLockedBy = null;
+            card.NormalOrFlipSummonedTurn = -1;
+            card.TempDestroyOnEndOfTurn = -1;
+            card.UntilEndOfTurnAtk = 0;
+            card.UntilEndOfTurnDef = 0;
+        }
+
+        /// <summary>
+        /// Shuffle-into-Deck destination for a card on the field (Monster Recovery): its owner's
+        /// Deck, or the Extra Deck for Fusion-type monsters. Tokens vanish. The caller shuffles.
+        /// </summary>
+        public bool ReturnCardToDeck(CardInstance card)
+        {
+            var controller = ControllerOf(card);
+            if (controller == null) return false;
+            DetachFromField(controller, card);
+            PendingTributes.Remove(card);
+            UnlinkLeavingField(controller, card, destroyed: false);
+            var owner = PileOwner(controller, card);
+            if (card.IsToken)
+                Log($"{card.Name} leaves the field (Token).");
+            else if (card.Def != null && card.Def.IsExtraDeck)
+            {
+                owner.ExtraDeck.Add(card.CardId);
+                Log($"{card.Name} returns to the Extra Deck.");
+            }
+            else
+            {
+                owner.Deck.Add(card.CardId);
+                Log($"{card.Name} returns to {owner.Name}'s Deck.");
+            }
+
             return true;
         }
 
@@ -1296,8 +1399,10 @@ namespace WRLDZ.Duel
                     if (linkProg != null &&
                         linkProg.ClauseList.Exists(c => c != null && c.DestroyHostWhenThisLeaves))
                     {
-                        var hostOwner = ControllerOf(host) ?? owner;
-                        SendCardToGrave(hostOwner, host);
+                        // "Destroy that monster" (Call of the Haunted / Premature Burial): a destruction.
+                        var hostOwner = ControllerOf(host);
+                        if (hostOwner != null)
+                            DestroyMonster(hostOwner, host, card);
                     }
                 }
             }
@@ -1360,6 +1465,7 @@ namespace WRLDZ.Duel
 
             DetachFromField(owner, card);
             PendingTributes.Remove(card);
+            UnlinkLeavingField(owner, card, destroyed: false);
             card.FaceUp = true;
             card.Position = BattlePosition.Attack;
             card.SummonedThisTurn = false;
@@ -1443,6 +1549,7 @@ namespace WRLDZ.Duel
         {
             var idx = FirstEmpty(who.MonsterZones);
             if (idx < 0) return false;
+            ResetOnFieldEntry(card);
             card.FaceUp = faceUp;
             card.Position = pos;
             card.SummonedThisTurn = true;
@@ -2139,7 +2246,8 @@ namespace WRLDZ.Duel
             DamageSubStep = DamageSubStep.DamageCalculation;
 
             var piercing = OfficialEffectRegistry.HasPiercing(attacker) ||
-                           Continuous.SourceGrantsPiercing(attacker);
+                           Continuous.SourceGrantsPiercing(attacker) ||
+                           TextEffects.TextEffectRuntime.GrantsPiercing(attacker);
             var atkNoDes = OfficialEffectRegistry.CannotBeDestroyedByBattle(attacker) || who.WabokuActive;
             var defNoDes = targetOrNull != null &&
                            (OfficialEffectRegistry.CannotBeDestroyedByBattle(targetOrNull) || opp.WabokuActive);

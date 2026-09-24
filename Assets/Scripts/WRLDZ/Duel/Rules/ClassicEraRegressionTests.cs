@@ -69,6 +69,47 @@ namespace WRLDZ.Duel.Rules
         const int PotOfGreed = 55144522;
         const int TrapHole = 4206964;
         const int Mst = 5318639;
+        // PSV tranche 1 (+ SRL/MRD leftovers)
+        const int Ameba = 95174353;
+        const int Griggle = 95744531;
+        const int BackupSoldier = 36280194;
+        const int BombardmentBeetle = 57409948;
+        const int BubonicVermin = 6104968;
+        const int BusterBlader = 78193831;
+        const int Ceasefire = 36468556;
+        const int DarkZebra = 59784896;
+        const int DarknessApproaches = 80168720;
+        const int FinalDestiny = 18591904;
+        const int DrillBug = 88733579;
+        const int ElegantEgotist = 90219263;
+        const int EnchantedJavelin = 96355986;
+        const int FairyMeteorCrush = 97687912;
+        const int Gearfried = 423705;
+        const int GiftOfTheMysticalElf = 98299011;
+        const int HirosShadowScout = 81863068;
+        const int InfiniteDismissal = 54109233;
+        const int InvitationToADarkSleep = 52675689;
+        const int LimiterRemoval = 23171610;
+        const int MadSwordBeast = 79870141;
+        const int MinorGoblinOfficial = 1918087;
+        const int MonsterRecovery = 93108433;
+        const int NoblemanOfExtermination = 17449108;
+        const int PrematureBurial = 70828912;
+        const int RainOfMercy = 66719324;
+        const int ShadowOfEyes = 58621589;
+        const int SolemnWishes = 35346968;
+        const int SolomonsLawbook = 23471572;
+        const int FiendMegacyber = 66362965;
+        const int TimeSeal = 35316708;
+        const int ParasiteParacide = 27911549;
+        const int HarpieLadySisters = 12206212;
+        const int ManEaterBug = 54652250;
+        const int KarbonalaWarrior = 54541900;
+        const int LegendarySword = 61854111;
+        const int Sangan = 26202165;
+        const int MonsterReborn = 83764719;
+        const int CallOfTheHaunted = 97077563;
+        const int SpellbindingCircle = 18807108;
 
         public static string RunAll()
         {
@@ -1102,6 +1143,843 @@ namespace WRLDZ.Duel.Rules
                 var ok = Activate(e, me, sentry, true);
                 Check("The Forceful Sentry: a card from the opponent's hand is shuffled into their Deck",
                     ok && opp.Hand.Count == 0 && opp.Deck.Count == deck + 1 && opp.Deck.Contains(PotOfGreed));
+            }
+
+            // ═══════════════ PSV tranche 1 (+ SRL/MRD leftovers), compiler v54 ═══════════════
+            {
+                var ids = new[]
+                {
+                    Ameba, Griggle, BackupSoldier, BombardmentBeetle, BubonicVermin, BusterBlader, Ceasefire,
+                    DarkZebra, DarknessApproaches, FinalDestiny, DrillBug, ElegantEgotist, EnchantedJavelin,
+                    FairyMeteorCrush, Gearfried, GiftOfTheMysticalElf, HirosShadowScout, InfiniteDismissal,
+                    InvitationToADarkSleep, LimiterRemoval, MadSwordBeast, MinorGoblinOfficial, MonsterRecovery,
+                    NoblemanOfExtermination, PrematureBurial, RainOfMercy, ShadowOfEyes, SolemnWishes,
+                    SolomonsLawbook, FiendMegacyber, TimeSeal
+                };
+                var bad = ids.Where(id =>
+                {
+                    var d = db.Get(id);
+                    var pr = d != null ? CardTextEffectCompiler.Compile(d) : null;
+                    return pr == null || !pr.FullyCompiled || pr.ClauseList.Count == 0;
+                }).Select(id => db.Get(id)?.name ?? id.ToString()).ToList();
+                Check($"Compile: all {ids.Length} PSV-tranche cards FullyCompiled from official text",
+                    bad.Count == 0, string.Join(", ", bad));
+            }
+
+            // ─────────────────────── Ameba / Griggle ───────────────────────
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                ClearField(me); ClearField(opp);
+                var ameba = PlaceMonster(e, me, Ameba, 0);
+                var myLp = me.LifePoints; var oppLp = opp.LifePoints;
+                e.TryTakeControl(opp, ameba);
+                var afterSteal = opp.LifePoints;
+                e.TryTakeControl(me, ameba); // control returns: once while face-up
+                Check("Ameba: the player who takes control takes 2000; the return does not trigger again",
+                    afterSteal == oppLp - 2000 && opp.LifePoints == afterSteal && me.LifePoints == myLp,
+                    $"opp {oppLp}→{afterSteal}→{opp.LifePoints} me={me.LifePoints}");
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                ClearField(me); ClearField(opp);
+                var ameba = PlaceMonster(e, me, Ameba, 0);
+                ameba.FaceUp = false; ameba.Position = BattlePosition.Defense;
+                var oppLp = opp.LifePoints;
+                e.TryTakeControl(opp, ameba);
+                Check("Ameba: a face-down Ameba changing control does nothing", opp.LifePoints == oppLp);
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                ClearField(me); ClearField(opp);
+                var griggle = PlaceMonster(e, me, Griggle, 0);
+                var myLp = me.LifePoints; var oppLp = opp.LifePoints;
+                e.TryTakeControl(opp, griggle);
+                var afterSteal = me.LifePoints;
+                e.TryTakeControl(me, griggle);
+                Check("Griggle: the player who lost control gains 3000, once while face-up",
+                    afterSteal == myLp + 3000 && me.LifePoints == afterSteal && opp.LifePoints == oppLp,
+                    $"me {myLp}→{afterSteal}→{me.LifePoints} opp={opp.LifePoints}");
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                ClearField(me); ClearField(opp);
+                var ameba = PlaceMonster(e, me, Ameba, 0);
+                e.TryTakeControl(opp, ameba);
+                e.TryTakeControl(me, ameba);
+                e.DestroyMonsterPublic(me, ameba);
+                me.Graveyard.Remove(ameba);
+                e.SpecialSummonToField(me, ameba, BattlePosition.Attack, true);
+                var oppLp = opp.LifePoints;
+                e.TryTakeControl(opp, ameba);
+                Check("Ameba: a new trip to the field resets the once-while-face-up limit",
+                    opp.LifePoints == oppLp - 2000, $"opp {oppLp}→{opp.LifePoints}");
+            }
+
+            // ─────────────────────── Backup Soldier ───────────────────────
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Hand.Clear(); me.Graveyard.Clear();
+                var bug = Gy(e, me, ManEaterBug);           // Effect Monster: not legal
+                var bewd = Gy(e, me, 89631139);             // 3000 ATK: not legal
+                var celtic = Gy(e, me, Celtic);
+                var karbonala = Gy(e, me, KarbonalaWarrior); // effectless Fusion, 1500
+                var skull = Gy(e, me, SkullServant);
+                var extra = me.ExtraDeck.Count;
+                var trap = PlaceSet(e, me, BackupSoldier, 0);
+                var ok = Activate(e, me, trap, false);
+                Check("Backup Soldier: up to 3 non-Effect monsters (≤1500 ATK) return; a Fusion goes to the Extra Deck",
+                    ok && me.Hand.Contains(celtic) && me.Hand.Contains(skull) &&
+                    me.ExtraDeck.Count == extra + 1 && !me.Graveyard.Contains(karbonala) &&
+                    me.Graveyard.Contains(bug) && me.Graveyard.Contains(bewd),
+                    $"ok={ok} hand={me.Hand.Count} extra={me.ExtraDeck.Count - extra}");
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Graveyard.Clear();
+                for (var i = 0; i < 4; i++) Gy(e, me, Celtic);
+                var trap = PlaceSet(e, me, BackupSoldier, 0);
+                var legal = TextEffectRuntime.CanActivate(e, me, trap, false,
+                    CompiledEffectCache.GetOrCompile(trap.Def), out _);
+                Check("Backup Soldier: needs 5 or more monsters in your GY", !legal);
+            }
+
+            // ─────────────────── Bombardment Beetle / Bubonic Vermin ───────────────────
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp);
+                var mine = PlaceMonster(e, me, Celtic, 1);
+                var bug = PlaceMonster(e, opp, ManEaterBug, 0);
+                bug.FaceUp = false; bug.Position = BattlePosition.Defense;
+                var beetle = PlaceMonster(e, me, BombardmentBeetle, 0);
+                beetle.FaceUp = false; beetle.Position = BattlePosition.Defense;
+                var flipped = e.TryFlipSummon(me, beetle);
+                Resolve(e);
+                Check("Bombardment Beetle: a face-down Effect Monster is destroyed (its FLIP does not activate)",
+                    flipped && opp.Graveyard.Contains(bug) && OnField(me, mine), $"flipped={flipped}");
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp);
+                var vanilla = PlaceMonster(e, opp, Celtic, 0);
+                vanilla.FaceUp = false; vanilla.Position = BattlePosition.Defense;
+                var beetle = PlaceMonster(e, me, BombardmentBeetle, 0);
+                beetle.FaceUp = false; beetle.Position = BattlePosition.Defense;
+                e.TryFlipSummon(me, beetle);
+                Resolve(e);
+                Check("Bombardment Beetle: a non-Effect monster returns face-down",
+                    OnField(opp, vanilla) && !vanilla.FaceUp && vanilla.Position == BattlePosition.Defense);
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp);
+                me.Deck.Insert(3, BubonicVermin);
+                var vermin = PlaceMonster(e, me, BubonicVermin, 0);
+                vermin.FaceUp = false; vermin.Position = BattlePosition.Defense;
+                var deck = me.Deck.Count;
+                e.TryFlipSummon(me, vermin);
+                Resolve(e);
+                var copy = me.MonstersOnField().FirstOrDefault(m => m != vermin && m.CardId == BubonicVermin);
+                Check("Bubonic Vermin: FLIP Special Summons 1 copy from the Deck in face-down Defense",
+                    copy != null && !copy.FaceUp && copy.Position == BattlePosition.Defense &&
+                    me.Deck.Count == deck - 1, $"copy={copy != null} deck={deck}→{me.Deck.Count}");
+            }
+
+            // ─────────────────────── Buster Blader ───────────────────────
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                ClearField(me); ClearField(opp); opp.Graveyard.Clear();
+                var blader = PlaceMonster(e, me, BusterBlader, 0);
+                PlaceMonster(e, opp, KoumoriDragon, 0);
+                var hidden = PlaceMonster(e, opp, KoumoriDragon, 1);
+                hidden.FaceUp = false; hidden.Position = BattlePosition.Defense;
+                Gy(e, opp, 89631139);
+                Gy(e, me, 89631139); // my own GY does not count
+                e.NotifyPublic();
+                Check("Buster Blader: +500 per face-up Dragon the opponent controls and per Dragon in their GY",
+                    blader.CurrentAtk == 2600 + 1000, $"atk={blader.CurrentAtk}");
+            }
+
+            // ─────────────────────── Ceasefire ───────────────────────
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp);
+                var bug = PlaceMonster(e, me, ManEaterBug, 0);
+                bug.FaceUp = false; bug.Position = BattlePosition.Defense;
+                var celtic = PlaceMonster(e, opp, Celtic, 0);
+                celtic.FaceUp = false; celtic.Position = BattlePosition.Defense;
+                PlaceMonster(e, opp, Sangan, 1);
+                var lp = opp.LifePoints;
+                var cease = PlaceSet(e, me, Ceasefire, 0);
+                var ok = Activate(e, me, cease, false);
+                Check("Ceasefire: face-down Defense monsters flip face-up (no FLIP); 500 per Effect Monster",
+                    ok && bug.FaceUp && bug.Position == BattlePosition.Defense && celtic.FaceUp &&
+                    OnField(opp, celtic) && opp.MonsterCount == 2 && opp.LifePoints == lp - 1000,
+                    $"ok={ok} lp={lp}→{opp.LifePoints} oppMonsters={opp.MonsterCount}");
+            }
+
+            // ─────────────────────── Dark Zebra ───────────────────────
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                ClearField(me); ClearField(opp);
+                var zebra = PlaceMonster(e, me, DarkZebra, 0);
+                TextEffectRuntime.FirePhaseTriggers(e, me, EffectTiming.StandbyPhase);
+                var alone = zebra.Position == BattlePosition.Defense && zebra.ChangedPositionThisTurn;
+                zebra.Position = BattlePosition.Attack;
+                PlaceMonster(e, me, Celtic, 1);
+                TextEffectRuntime.FirePhaseTriggers(e, me, EffectTiming.StandbyPhase);
+                Check("Dark Zebra: the only monster you control → Defense (locked this turn); not with company",
+                    alone && zebra.Position == BattlePosition.Attack);
+            }
+
+            // ─────────────────── Darkness Approaches / Final Destiny ───────────────────
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Hand.Clear();
+                var target = PlaceMonster(e, opp, KoumoriDragon, 0);
+                var da = Hand(e, me, DarknessApproaches);
+                var a = Hand(e, me, Celtic); var b = Hand(e, me, SkullServant); var keep = Hand(e, me, PotOfGreed);
+                var prog = CompiledEffectCache.GetOrCompile(da.Def);
+                var ok = TextEffectRuntime.CanActivate(e, me, da, true, prog, out var why) &&
+                         TextEffectRuntime.TryResolveActivation(e, me, da, true, prog, false);
+                var askedTwo = e.IsAwaitingEffectTarget && e.PendingActivation.AwaitingMultiDiscard &&
+                               e.PendingActivation.MultiDiscardRemaining == 2 &&
+                               !e.PendingActivation.LegalTargets.Contains(da);
+                e.TrySelectEffectTarget(a);
+                var stillHand = me.Hand.Contains(a); // discards happen once all are chosen
+                e.TrySelectEffectTarget(b);
+                var askedTarget = e.IsAwaitingEffectTarget && e.PendingActivation.LegalTargets.Contains(target);
+                if (askedTarget) e.TrySelectEffectTarget(target);
+                Check("Darkness Approaches: you choose 2 discards, then a face-up monster turns face-down",
+                    ok && askedTwo && stillHand && askedTarget && me.Graveyard.Contains(a) &&
+                    me.Graveyard.Contains(b) && me.Hand.Contains(keep) && !target.FaceUp &&
+                    target.Position == BattlePosition.Defense,
+                    $"ok={ok} why={why} askedTwo={askedTwo} askedTarget={askedTarget}");
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Hand.Clear();
+                PlaceMonster(e, opp, KoumoriDragon, 0);
+                var da = Hand(e, me, DarknessApproaches);
+                var a = Hand(e, me, Celtic); Hand(e, me, SkullServant);
+                var prog = CompiledEffectCache.GetOrCompile(da.Def);
+                TextEffectRuntime.TryResolveActivation(e, me, da, true, prog, false);
+                e.TrySelectEffectTarget(a);
+                e.CancelEffectTargeting();
+                Check("Darkness Approaches: Cancel during the discard choice discards nothing",
+                    !e.IsAwaitingEffectTarget && me.Hand.Count == 3 && me.Hand.Contains(da) &&
+                    me.Hand.Contains(a) && !me.Graveyard.Contains(a), $"hand={me.Hand.Count}");
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Hand.Clear();
+                PlaceMonster(e, opp, KoumoriDragon, 0);
+                var da = Hand(e, me, DarknessApproaches);
+                Hand(e, me, Celtic);
+                var legal = TextEffectRuntime.CanActivate(e, me, da, true,
+                    CompiledEffectCache.GetOrCompile(da.Def), out _);
+                Check("Darkness Approaches: 1 other card in hand is not enough", !legal);
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Hand.Clear();
+                var mine = PlaceMonster(e, me, Celtic, 0);
+                var theirs = PlaceMonster(e, opp, KoumoriDragon, 0);
+                var set = PlaceSet(e, opp, TrapHole, 0);
+                var fd = Hand(e, me, FinalDestiny);
+                for (var i = 0; i < 5; i++) Hand(e, me, SkullServant);
+                var ok = Activate(e, me, fd, true);
+                Check("Final Destiny: discard 5, destroy all cards on the field",
+                    ok && me.Hand.Count == 0 && !OnField(me, mine) && !OnField(opp, theirs) &&
+                    !OnField(opp, set) && me.Graveyard.Contains(fd),
+                    $"ok={ok} hand={me.Hand.Count}");
+            }
+
+            // ─────────────────────── Drill Bug ───────────────────────
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                BattleFor(e, me);
+                ClearField(me); ClearField(opp);
+                me.Deck.Insert(me.Deck.Count / 2, ParasiteParacide);
+                var drill = PlaceMonster(e, me, DrillBug, 0);
+                Attack(e, me, drill, null);
+                Check("Drill Bug: battle damage → \"Parasite Paracide\" is placed on top of the Deck",
+                    me.Deck.Count > 0 && me.Deck[0] == ParasiteParacide, $"top={me.Deck.FirstOrDefault()}");
+            }
+
+            // ─────────────────────── Elegant Egotist ───────────────────────
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Hand.Clear();
+                PlaceMonster(e, me, HarpieLady, 0);
+                me.Deck.Insert(4, HarpieLadySisters);
+                var deck = me.Deck.Count;
+                var ego = Hand(e, me, ElegantEgotist);
+                var ok = Activate(e, me, ego, true);
+                var sisters = me.MonstersOnField().FirstOrDefault(m => m.CardId == HarpieLadySisters);
+                Check("Elegant Egotist: with \"Harpie Lady\" face-up, Special Summon Harpie Lady Sisters from the Deck",
+                    ok && sisters != null && sisters.FaceUp && me.Deck.Count == deck - 1,
+                    $"ok={ok} deck={deck}→{me.Deck.Count}");
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Hand.Clear();
+                PlaceMonster(e, me, Celtic, 0);
+                me.Deck.Insert(0, HarpieLadySisters);
+                var ego = Hand(e, me, ElegantEgotist);
+                var legal = TextEffectRuntime.CanActivate(e, me, ego, true,
+                    CompiledEffectCache.GetOrCompile(ego.Def), out _);
+                Check("Elegant Egotist: no face-up \"Harpie Lady\" → cannot activate", !legal);
+            }
+
+            // ─────────────────────── Enchanted Javelin ───────────────────────
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                BattleFor(e, opp);
+                ClearField(me); ClearField(opp);
+                var wall = PlaceMonster(e, me, MysticalElf, 0);
+                wall.Position = BattlePosition.Defense;
+                var jav = PlaceSet(e, me, EnchantedJavelin, 0);
+                var attacker = PlaceMonster(e, opp, Mechanicalchaser, 0);
+                attacker.ClearAttackFlags(); attacker.SummonedThisTurn = false;
+                var lp = me.LifePoints;
+                e.TryAttack(opp, attacker, wall);
+                var ok = e.IsAwaitingResponse && e.TryActivateSpellTrap(me, jav, fromHand: false);
+                Check("Enchanted Javelin: gain LP equal to the attacking monster's ATK",
+                    ok && me.LifePoints == lp + 1850, $"ok={ok} lp={lp}→{me.LifePoints}");
+            }
+
+            // ─────────────────── Fairy Meteor Crush / Mad Sword Beast ───────────────────
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                BattleFor(e, me);
+                ClearField(me); ClearField(opp);
+                var host = PlaceMonster(e, me, Celtic, 0); // 1400
+                var crush = PlaceSpellTrap(e, me, FairyMeteorCrush, 0);
+                crush.EquippedTo = host; host.Equips.Add(crush);
+                var wall = PlaceMonster(e, opp, SkullServant, 0); // DEF 200
+                wall.Position = BattlePosition.Defense;
+                var lp = opp.LifePoints;
+                Attack(e, me, host, wall);
+                Check("Fairy Meteor Crush: the equipped monster inflicts piercing damage",
+                    opp.LifePoints == lp - 1200, $"lp={lp}→{opp.LifePoints}");
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                BattleFor(e, me);
+                ClearField(me); ClearField(opp);
+                var beast = PlaceMonster(e, me, MadSwordBeast, 0); // 1400
+                var wall = PlaceMonster(e, opp, SkullServant, 0);
+                wall.Position = BattlePosition.Defense;
+                var lp = opp.LifePoints;
+                Attack(e, me, beast, wall);
+                var pierced = opp.LifePoints == lp - 1200;
+                var plain = PlaceMonster(e, me, Celtic, 1);
+                var wall2 = PlaceMonster(e, opp, SkullServant, 1);
+                wall2.Position = BattlePosition.Defense;
+                lp = opp.LifePoints;
+                Attack(e, me, plain, wall2);
+                Check("Mad Sword Beast: piercing damage (a plain attacker does none)",
+                    pierced && opp.LifePoints == lp, $"lp now {opp.LifePoints}");
+            }
+
+            // ─────────────────────── Gearfried the Iron Knight ───────────────────────
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Hand.Clear();
+                var gear = PlaceMonster(e, me, Gearfried, 0);
+                var sword = Hand(e, me, LegendarySword);
+                var ok = Activate(e, me, sword, true);
+                Check("Gearfried: an Equip Card equipped to it is destroyed (ATK unchanged)",
+                    ok && me.Graveyard.Contains(sword) && gear.Equips.Count == 0 && gear.CurrentAtk == 1800,
+                    $"ok={ok} atk={gear.CurrentAtk} equips={gear.Equips.Count}");
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Hand.Clear(); me.Graveyard.Clear();
+                var gear = Gy(e, me, Gearfried);
+                var burial = Hand(e, me, PrematureBurial);
+                var ok = Activate(e, me, burial, true);
+                Check("Gearfried + Premature Burial: Burial is destroyed, so Gearfried is destroyed too",
+                    ok && me.Graveyard.Contains(burial) && me.Graveyard.Contains(gear) && me.MonsterCount == 0,
+                    $"ok={ok} monsters={me.MonsterCount}");
+            }
+
+            // ─────────────────── LP gain: Gift of the Mystical Elf / Rain of Mercy ───────────────────
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp);
+                PlaceMonster(e, me, Celtic, 0); PlaceMonster(e, opp, Celtic, 0); PlaceMonster(e, opp, Celtic, 1);
+                var lp = me.LifePoints;
+                var gift = PlaceSet(e, me, GiftOfTheMysticalElf, 0);
+                var ok = Activate(e, me, gift, false);
+                Check("Gift of the Mystical Elf: +300 LP per monster on the field",
+                    ok && me.LifePoints == lp + 900, $"ok={ok} lp={lp}→{me.LifePoints}");
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp);
+                var a = me.LifePoints; var b = opp.LifePoints;
+                var rain = Hand(e, me, RainOfMercy);
+                var ok = Activate(e, me, rain, true);
+                Check("Rain of Mercy: both players gain 1000 LP",
+                    ok && me.LifePoints == a + 1000 && opp.LifePoints == b + 1000);
+            }
+
+            // ─────────────────────── Hiro's Shadow Scout ───────────────────────
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); opp.Hand.Clear();
+                opp.Deck.Insert(0, MonsterReborn); opp.Deck.Insert(0, Celtic); opp.Deck.Insert(0, PotOfGreed);
+                var scout = PlaceMonster(e, me, HirosShadowScout, 0);
+                scout.FaceUp = false; scout.Position = BattlePosition.Defense;
+                e.TryFlipSummon(me, scout);
+                Resolve(e);
+                Check("Hiro's Shadow Scout: the opponent draws 3 and discards the Spells among them",
+                    opp.Hand.Count == 1 && opp.Hand[0].CardId == Celtic &&
+                    opp.Graveyard.Count(g => g.CardId == PotOfGreed || g.CardId == MonsterReborn) == 2,
+                    $"hand={opp.Hand.Count}");
+            }
+
+            // ─────────────────────── Infinite Dismissal ───────────────────────
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Hand.Clear();
+                PlaceSpellTrap(e, me, InfiniteDismissal, 0);
+                var ns = Hand(e, me, SkullServant);
+                e.TryNormalSummon(me, ns, false);
+                Resolve(e);
+                var ss = e.CreateCardInstance(SkullServant);
+                e.SpecialSummonToField(me, ss, BattlePosition.Attack, true);
+                var big = PlaceMonster(e, me, Celtic, 3);
+                big.NormalOrFlipSummonedTurn = e.TurnNumber; // Level 4: out of range
+                e.TryEndTurnSafe(me);
+                Resolve(e);
+                Check("Infinite Dismissal: a Normal Summoned Level ≤3 is destroyed in the End Phase; SS and Lv4 stay",
+                    me.Graveyard.Contains(ns) && OnField(me, ss) && OnField(me, big),
+                    $"nsGy={me.Graveyard.Contains(ns)} ss={OnField(me, ss)} big={OnField(me, big)}");
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, opp);
+                ClearField(me); ClearField(opp); opp.Hand.Clear();
+                PlaceSpellTrap(e, me, InfiniteDismissal, 0);
+                var theirs = Hand(e, opp, SkullServant);
+                e.TryNormalSummon(opp, theirs, false);
+                Resolve(e);
+                var set = Hand(e, opp, SkullServant);
+                set.FaceUp = false;
+                e.TryEndTurnSafe(opp);
+                Resolve(e);
+                Check("Infinite Dismissal: works in the opponent's End Phase too",
+                    opp.Graveyard.Contains(theirs));
+            }
+
+            // ─────────────────────── Invitation to a Dark Sleep ───────────────────────
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Hand.Clear();
+                var target = PlaceMonster(e, opp, Celtic, 0);
+                var inv = PlaceMonster(e, me, InvitationToADarkSleep, 0); // Level 5: Flip Summon it
+                inv.FaceUp = false; inv.Position = BattlePosition.Defense;
+                var flipped = e.TryFlipSummon(me, inv);
+                Resolve(e);
+                var locked = flipped && TextEffectRuntime.AttackForbiddenByEffect(e, target);
+                e.DestroyMonsterPublic(me, inv);
+                e.NotifyPublic();
+                Check("Invitation to a Dark Sleep: the target cannot attack while Invitation is face-up",
+                    locked && !TextEffectRuntime.AttackForbiddenByEffect(e, target) && target.AttackLockedBy == null,
+                    $"locked={locked}");
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp);
+                var target = PlaceMonster(e, opp, Celtic, 0);
+                var inv = e.CreateCardInstance(InvitationToADarkSleep);
+                e.SpecialSummonToField(me, inv, BattlePosition.Attack, true);
+                Resolve(e);
+                Check("Invitation to a Dark Sleep: a Special Summon does not trigger it",
+                    !TextEffectRuntime.AttackForbiddenByEffect(e, target));
+            }
+
+            // ─────────────────────── Limiter Removal ───────────────────────
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Hand.Clear();
+                var mech = PlaceMonster(e, me, Mechanicalchaser, 0);
+                var celtic = PlaceMonster(e, me, Celtic, 1);
+                var lr = Hand(e, me, LimiterRemoval);
+                var ok = Activate(e, me, lr, true);
+                var doubled = mech.CurrentAtk;
+                e.TryEndTurnSafe(me);
+                Resolve(e);
+                Check("Limiter Removal: your Machines' ATK doubles; they are destroyed in the End Phase",
+                    ok && doubled == 3700 && me.Graveyard.Contains(mech) && OnField(me, celtic),
+                    $"ok={ok} atk={doubled}");
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Hand.Clear();
+                PlaceMonster(e, me, Celtic, 0);
+                PlaceMonster(e, opp, Mechanicalchaser, 0);
+                var lr = Hand(e, me, LimiterRemoval);
+                Check("Limiter Removal: needs a face-up Machine you control",
+                    !TextEffectRuntime.CanActivate(e, me, lr, true, CompiledEffectCache.GetOrCompile(lr.Def), out _));
+            }
+
+            // ─────────────────────── Minor Goblin Official ───────────────────────
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp);
+                var mgo = PlaceSet(e, me, MinorGoblinOfficial, 0);
+                opp.LifePoints = 3500;
+                var early = TextEffectRuntime.CanActivate(e, me, mgo, false,
+                    CompiledEffectCache.GetOrCompile(mgo.Def), out _);
+                opp.LifePoints = 3000;
+                var ok = Activate(e, me, mgo, false);
+                TextEffectRuntime.FirePhaseTriggers(e, me, EffectTiming.StandbyPhase);
+                var afterMine = opp.LifePoints;
+                TextEffectRuntime.FirePhaseTriggers(e, opp, EffectTiming.StandbyPhase);
+                Check("Minor Goblin Official: only at ≤3000 LP; 500 damage in each of the opponent's Standby Phases",
+                    !early && ok && OnField(me, mgo) && afterMine == 3000 && opp.LifePoints == 2500,
+                    $"early={early} ok={ok} {afterMine}→{opp.LifePoints}");
+            }
+
+            // ─────────────────────── Monster Recovery ───────────────────────
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Hand.Clear();
+                var mon = PlaceMonster(e, me, Celtic, 0);
+                var mr = Hand(e, me, MonsterRecovery);
+                Hand(e, me, PotOfGreed); Hand(e, me, SkullServant);
+                var deck = me.Deck.Count;
+                var ok = Activate(e, me, mr, true);
+                Check("Monster Recovery: the monster + your hand go into the Deck; draw as many as came from the hand",
+                    ok && !OnField(me, mon) && me.Hand.Count == 2 && me.Deck.Count == deck + 1 &&
+                    me.Graveyard.Contains(mr), $"ok={ok} hand={me.Hand.Count} deck={deck}→{me.Deck.Count}");
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Hand.Clear();
+                var borrowed = PlaceMonster(e, opp, Celtic, 0);
+                e.TryTakeControl(me, borrowed);
+                var mr = Hand(e, me, MonsterRecovery);
+                Hand(e, me, PotOfGreed);
+                Check("Monster Recovery: a monster you control but do not own is not a legal target",
+                    !TextEffectRuntime.CanActivate(e, me, mr, true, CompiledEffectCache.GetOrCompile(mr.Def), out _));
+            }
+
+            // ─────────────────────── Nobleman of Extermination ───────────────────────
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Hand.Clear();
+                var set = PlaceSet(e, opp, TrapHole, 0);
+                opp.Deck.Insert(2, TrapHole); opp.Deck.Insert(5, TrapHole);
+                me.Deck.Insert(1, TrapHole);
+                var oppCopies = opp.Deck.Count(id => id == TrapHole);
+                var myCopies = me.Deck.Count(id => id == TrapHole);
+                var oppBan = opp.Banished.Count(b => b.CardId == TrapHole);
+                var myBan = me.Banished.Count(b => b.CardId == TrapHole);
+                var nob = Hand(e, me, NoblemanOfExtermination);
+                var ok = Activate(e, me, nob, true);
+                Check("Nobleman of Extermination: a Set Trap is destroyed and banished; every copy leaves both Decks",
+                    ok && opp.Banished.Contains(set) && !opp.Graveyard.Contains(set) &&
+                    !opp.Deck.Contains(TrapHole) && !me.Deck.Contains(TrapHole) &&
+                    opp.Banished.Count(b => b.CardId == TrapHole) == oppBan + oppCopies + 1 &&
+                    me.Banished.Count(b => b.CardId == TrapHole) == myBan + myCopies,
+                    $"ok={ok} oppBan={opp.Banished.Count} myBan={me.Banished.Count}");
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Hand.Clear();
+                var set = PlaceSet(e, opp, PotOfGreed, 0);
+                PlaceSpellTrap(e, opp, SolemnWishes, 1); // face-up: not a target
+                opp.Deck.Insert(0, PotOfGreed);
+                var nob = Hand(e, me, NoblemanOfExtermination);
+                var ok = Activate(e, me, nob, true);
+                Check("Nobleman of Extermination: a Set Spell is banished; Decks are untouched",
+                    ok && opp.Banished.Contains(set) && opp.Deck.Contains(PotOfGreed), $"ok={ok}");
+            }
+
+            // ─────────────────────── Premature Burial ───────────────────────
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Hand.Clear(); me.Graveyard.Clear();
+                var bewd = Gy(e, me, 89631139);
+                var burial = Hand(e, me, PrematureBurial);
+                var lp = me.LifePoints;
+                var ok = Activate(e, me, burial, true);
+                var revived = OnField(me, bewd) && bewd.FaceUp && bewd.Position == BattlePosition.Attack &&
+                              burial.EquippedTo == bewd && me.LifePoints == lp - 800;
+                var mst = PlaceSpellTrap(e, opp, Mst, 0);
+                var mstProg = CompiledEffectCache.GetOrCompile(mst.Def);
+                TextEffectRuntime.TryResolveActivation(e, opp, mst, false, mstProg, true);
+                Resolve(e);
+                Check("Premature Burial: pay 800, revive in Attack Position; destroying Burial destroys the monster",
+                    ok && revived && me.Graveyard.Contains(burial) && me.Graveyard.Contains(bewd),
+                    $"ok={ok} revived={revived} lp={me.LifePoints}");
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Hand.Clear(); me.Graveyard.Clear();
+                var bewd = Gy(e, me, 89631139);
+                var burial = Hand(e, me, PrematureBurial);
+                Activate(e, me, burial, true);
+                e.ReturnCardToHand(burial);
+                e.NotifyPublic();
+                Check("Premature Burial: returned to the hand (not destroyed) → the monster stays",
+                    OnField(me, bewd) && me.Hand.Contains(burial) && bewd.Equips.Count == 0 &&
+                    burial.EquippedTo == null);
+            }
+
+            // ─────────────────────── Shadow of Eyes ───────────────────────
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, opp);
+                ClearField(me); ClearField(opp); opp.Hand.Clear();
+                var mine = PlaceMonster(e, me, Celtic, 0);
+                var shadow = PlaceSet(e, me, ShadowOfEyes, 0);
+                var bug = Hand(e, opp, ManEaterBug);
+                e.TryNormalSummon(opp, bug, asSet: true);
+                var window = e.IsAwaitingResponse && e.PendingResponse.Timing == ResponseTiming.MonsterSummoned;
+                var ok = window && e.TryActivateSpellTrap(me, shadow, fromHand: false);
+                Resolve(e);
+                Check("Shadow of Eyes: a Set monster flips to face-up Attack; its FLIP does not activate",
+                    ok && bug.FaceUp && bug.Position == BattlePosition.Attack && OnField(me, mine),
+                    $"window={window} ok={ok} faceUp={bug.FaceUp}");
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, opp);
+                ClearField(me); ClearField(opp); opp.Hand.Clear();
+                var shadow = PlaceSet(e, me, ShadowOfEyes, 0);
+                var celtic = Hand(e, opp, Celtic);
+                e.TryNormalSummon(opp, celtic, asSet: false);
+                var legal = e.IsAwaitingResponse &&
+                            e.PendingResponse.LegalCards != null && e.PendingResponse.LegalCards.Contains(shadow);
+                Check("Shadow of Eyes: a face-up Normal Summon is not a Set", !legal);
+            }
+
+            // ─────────────────────── Solemn Wishes ───────────────────────
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                ClearField(me); ClearField(opp);
+                PlaceSpellTrap(e, me, SolemnWishes, 0);
+                var lp = me.LifePoints; var oppLp = opp.LifePoints;
+                e.Draw(me, 2);
+                var afterTwo = me.LifePoints;
+                e.Draw(opp, 1);
+                Check("Solemn Wishes: +500 once per draw (not per card); the opponent's draws do not count",
+                    afterTwo == lp + 500 && me.LifePoints == afterTwo && opp.LifePoints == oppLp,
+                    $"{lp}→{afterTwo}→{me.LifePoints}");
+            }
+
+            // ─────────────────── Solomon's Lawbook / Time Seal ───────────────────
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp);
+                PlaceSpellTrap(e, opp, MinorGoblinOfficial, 0); // hits me in my Standby Phase
+                me.LifePoints = 3000;
+                var law = PlaceSet(e, me, SolomonsLawbook, 1);
+                var ok = Activate(e, me, law, false);
+                e.TryEndTurnSafe(me); Resolve(e);
+                e.TryEndTurnSafe(opp); Resolve(e);
+                var skipped = me.LifePoints;
+                e.TryEndTurnSafe(me); Resolve(e);
+                e.TryEndTurnSafe(opp); Resolve(e);
+                Check("Solomon's Lawbook: your next Standby Phase is skipped (only the next one)",
+                    ok && e.TurnPlayer == me && skipped == 3000 && me.LifePoints == 2500,
+                    $"ok={ok} {skipped}→{me.LifePoints}");
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp);
+                var seal = PlaceSet(e, me, TimeSeal, 0);
+                var ok = Activate(e, me, seal, false);
+                var hand = opp.Hand.Count;
+                e.TryEndTurnSafe(me); Resolve(e);
+                Check("Time Seal: the opponent skips their next Draw Phase",
+                    ok && e.TurnPlayer == opp && opp.Hand.Count == hand, $"ok={ok} hand={hand}→{opp.Hand.Count}");
+            }
+
+            // ─────────────────────── The Fiend Megacyber ───────────────────────
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Hand.Clear();
+                PlaceMonster(e, me, Celtic, 0);
+                PlaceMonster(e, opp, Celtic, 0); PlaceMonster(e, opp, Celtic, 1);
+                var fiend = Hand(e, me, FiendMegacyber);
+                var prog = CompiledEffectCache.GetOrCompile(fiend.Def);
+                var early = TextEffectRuntime.CanActivate(e, me, fiend, true, prog, out _);
+                PlaceMonster(e, opp, Celtic, 2);
+                var ok = Activate(e, me, fiend, true);
+                Check("The Fiend Megacyber: Special Summon from hand when the opponent controls 2+ more monsters",
+                    !early && ok && OnField(me, fiend) && !me.NormalSummonUsed, $"early={early} ok={ok}");
+            }
+
+            // ─────────────────────── Review follow-ups (PSV tranche 1) ───────────────────────
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Graveyard.Clear();
+                var gear = Gy(e, me, Gearfried);
+                var coth = PlaceSet(e, me, CallOfTheHaunted, 0);
+                var ok = Activate(e, me, coth, false);
+                Check("Gearfried + Call of the Haunted: not an Equip Card — both stay on the field",
+                    ok && OnField(me, gear) && OnField(me, coth), $"ok={ok}");
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp);
+                var gear = PlaceMonster(e, opp, Gearfried, 0);
+                var circle = PlaceSet(e, me, SpellbindingCircle, 0);
+                var ok = Activate(e, me, circle, false);
+                Check("Gearfried + Spellbinding Circle: the Circle stays and still stops the attack",
+                    ok && OnField(me, circle) && TextEffectRuntime.AttackForbiddenByEffect(e, gear), $"ok={ok}");
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Graveyard.Clear();
+                var revived = Gy(e, me, Celtic);
+                var coth = PlaceSet(e, me, CallOfTheHaunted, 0);
+                Activate(e, me, coth, false);
+                e.ReturnCardToHand(revived);
+                e.NotifyPublic();
+                Check("Call of the Haunted: its monster bounced (not destroyed) → the Trap stays, unlinked",
+                    OnField(me, coth) && coth.EquippedTo == null && me.Hand.Contains(revived));
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Hand.Clear();
+                var target = PlaceMonster(e, opp, KoumoriDragon, 0);
+                var da = Hand(e, me, DarknessApproaches);
+                var a = Hand(e, me, Celtic); var b = Hand(e, me, SkullServant);
+                TextEffectRuntime.TryResolveActivation(e, me, da, true, CompiledEffectCache.GetOrCompile(da.Def), false);
+                e.TrySelectEffectTarget(a);
+                e.TrySelectEffectTarget(b);
+                e.CancelEffectTargeting();
+                Check("Darkness Approaches: Cancel after the discards are paid cannot undo the activation",
+                    me.Graveyard.Contains(da) && !me.Hand.Contains(da) && me.Graveyard.Contains(a) &&
+                    me.Graveyard.Contains(b) && target.FaceUp);
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Hand.Clear();
+                var fd = Hand(e, me, FinalDestiny);
+                for (var i = 0; i < 5; i++) Hand(e, me, SkullServant);
+                var fdLegal = TextEffectRuntime.CanActivate(e, me, fd, true,
+                    CompiledEffectCache.GetOrCompile(fd.Def), out var fdWhy);
+                Check("Final Destiny: needs another card on the field", !fdLegal, $"why={fdWhy}");
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Hand.Clear();
+                var dismissal = PlaceSpellTrap(e, me, InfiniteDismissal, 0);
+                e.SendCardToGrave(me, dismissal);
+                var ns = Hand(e, me, SkullServant);
+                e.TryNormalSummon(me, ns, false);
+                Resolve(e);
+                e.TryEndTurnSafe(me);
+                Resolve(e);
+                Check("Infinite Dismissal: does nothing from the GY", OnField(me, ns));
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp);
+                var target = PlaceMonster(e, opp, Celtic, 0);
+                target.FaceUp = false; target.Position = BattlePosition.Defense;
+                var inv = PlaceMonster(e, me, InvitationToADarkSleep, 1);
+                inv.FaceUp = false; inv.Position = BattlePosition.Defense;
+                e.TryFlipSummon(me, inv);
+                Resolve(e);
+                target.FaceUp = true; target.Position = BattlePosition.Attack;
+                e.NotifyPublic();
+                Check("Invitation to a Dark Sleep: a Set target stays locked after it flips face-up",
+                    TextEffectRuntime.AttackForbiddenByEffect(e, target));
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Hand.Clear();
+                var mech = PlaceMonster(e, me, Mechanicalchaser, 0);
+                Activate(e, me, Hand(e, me, LimiterRemoval), true);
+                mech.FaceUp = false; mech.Position = BattlePosition.Defense; // Book of Moon
+                e.NotifyPublic();
+                e.TryEndTurnSafe(me);
+                Resolve(e);
+                Check("Limiter Removal: a Machine turned face-down is not destroyed and loses the boost",
+                    OnField(me, mech) && mech.UntilEndOfTurnAtk == 0);
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Hand.Clear();
+                PlaceMonster(e, me, HarpieLady, 0);
+                for (var z = 1; z < me.MonsterZones.Length; z++) PlaceMonster(e, me, Celtic, z);
+                me.Deck.Insert(0, HarpieLadySisters);
+                var ego = Hand(e, me, ElegantEgotist);
+                Check("Elegant Egotist: needs a free Monster Zone",
+                    !TextEffectRuntime.CanActivate(e, me, ego, true, CompiledEffectCache.GetOrCompile(ego.Def), out _));
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp);
+                var fiend = PlaceMonster(e, me, FiendMegacyber, 0);
+                for (var z = 0; z < 3; z++) PlaceMonster(e, opp, Celtic, z);
+                Check("The Fiend Megacyber: its hand-only summon cannot be used from the field",
+                    !e.CanActivateSpellTrap(me, fiend, false));
+            }
+            {
+                var e = Fresh(db); var me = e.Player; var opp = e.Opponent;
+                MainFor(e, me);
+                ClearField(me); ClearField(opp); me.Hand.Clear(); me.Graveyard.Clear();
+                Gy(e, me, 89631139);
+                var burial = Hand(e, me, PrematureBurial);
+                var lp = me.LifePoints;
+                TextEffectRuntime.TryResolveActivation(e, me, burial, true,
+                    CompiledEffectCache.GetOrCompile(burial.Def), false);
+                var asked = e.IsAwaitingEffectTarget;
+                e.CancelEffectTargeting();
+                Check("Premature Burial: cancelling the target choice refunds the 800 LP",
+                    asked && me.LifePoints == lp && me.Hand.Contains(burial), $"asked={asked} lp={me.LifePoints}");
             }
 
             // ─────── Legacy duplicate targeted clauses still share one target ───────

@@ -51,7 +51,11 @@ namespace WRLDZ.Duel.TextEffects
         /// true = Attack → face-up Defense (Dream Clown / Tainted Wisdom); false = Defense →
         /// Attack, including a Flip Summon (Crass Clown).
         /// </summary>
-        ThisCardPositionChanged
+        ThisCardPositionChanged,
+        /// <summary>The controller drew a card or cards — once per draw action (Solemn Wishes).</summary>
+        ControllerDraws,
+        /// <summary>Control of this face-up card changed (Ameba / Griggle). Resolved for the NEW controller.</summary>
+        ThisCardControlChanged
     }
 
     public enum EffectActionKind
@@ -314,7 +318,40 @@ namespace WRLDZ.Duel.TextEffects
         /// <summary>Destroy this card (Boar Soldier when Normal Summoned).</summary>
         DestroyThisCard,
         /// <summary>Return the chosen card from the opponent's hand to the Deck and shuffle (The Forceful Sentry).</summary>
-        ReturnChosenToDeckShuffle
+        ReturnChosenToDeckShuffle,
+        /// <summary>Put 1 NamedCard from the Deck on top after shuffling (Drill Bug).</summary>
+        PlaceNamedFromDeckOnTop,
+        /// <summary>Change every face-down Defense Position monster to face-up Defense without FLIP effects (Ceasefire).</summary>
+        FlipAllFaceDownDefenseNoFlipEffects,
+        /// <summary>While face-up: this card inflicts piercing battle damage (Mad Sword Beast).</summary>
+        ContinuousPiercing,
+        /// <summary>Equip rider: the equipped monster inflicts piercing battle damage (Fairy Meteor Crush).</summary>
+        EquippedGainsPiercing,
+        /// <summary>
+        /// Double the current ATK of every face-up RaceFilter monster you control until the end of
+        /// the turn, then destroy them in the End Phase (Limiter Removal).
+        /// </summary>
+        DoubleAtkOfYourMatchingThenDestroyAtEnd,
+        /// <summary>The target cannot attack while this card stays face-up (Invitation to a Dark Sleep).</summary>
+        LockTargetCannotAttackWhileFaceUp,
+        /// <summary>The controller skips their next Standby Phase (Solomon's Lawbook).</summary>
+        SkipControllerNextStandbyPhase,
+        /// <summary>
+        /// Shuffle the target and your whole hand into the Deck, then draw as many as came from the hand
+        /// (Monster Recovery).
+        /// </summary>
+        ShuffleTargetAndHandIntoDeckDraw,
+        /// <summary>Special Summon the chosen card (NamedCard names, '|'-separated) from your hand or Deck (Elegant Egotist).</summary>
+        SpecialSummonChosenFromHandOrDeck,
+        /// <summary>
+        /// Destroy every monster with current Level ≤ Amount that was Normal or Flip Summoned this turn
+        /// (Infinite Dismissal, each End Phase).
+        /// </summary>
+        DestroySummonedThisTurnLevelLeq,
+        /// <summary>The opponent draws Amount, then discards the Spells among the drawn cards (Hiro's Shadow Scout).</summary>
+        OpponentDrawsThenDiscardsDrawnSpells,
+        /// <summary>Continuous: destroy any Equip Card equipped to this card (Gearfried the Iron Knight).</summary>
+        DestroyEquipsAttachedToThis
     }
 
     public enum EffectSide
@@ -373,6 +410,12 @@ namespace WRLDZ.Duel.TextEffects
         DeckRitualSpells,
         /// <summary>Cards in the opponent's hand, revealed to choose (Confiscation / The Forceful Sentry).</summary>
         OppHandCards,
+        /// <summary>The opponent's face-down monsters (Bombardment Beetle).</summary>
+        OppFaceDownMonsters,
+        /// <summary>Face-down Spell/Trap Cards on either field (Nobleman of Extermination).</summary>
+        FaceDownSpellTraps,
+        /// <summary>Cards in your hand or Deck whose rules name matches NamedCard (Elegant Egotist).</summary>
+        HandOrDeckNamed,
         /// <summary>Monsters in the opponent's GY (Gravedigger Ghoul).</summary>
         OppGyMonsters,
         /// <summary>Any card in either GY (Soul Release).</summary>
@@ -702,6 +745,38 @@ namespace WRLDZ.Duel.TextEffects
         public bool SummonAllCopies;
         /// <summary>Special Summon in face-down Defense Position (Nimble Momonga).</summary>
         public bool SummonFaceDown;
+        /// <summary>GainLifePoints: Amount per monster on the field, both sides, face-down included (Gift of the Mystical Elf).</summary>
+        public bool ScaleAmountByAllFieldMonsters;
+        /// <summary>Damage: Amount per face-up Effect Monster on the field, counted at resolution (Ceasefire).</summary>
+        public bool ScaleAmountByFaceUpEffectMonsters;
+        /// <summary>Phase trigger only if this is the only monster its controller controls (Dark Zebra).</summary>
+        public bool RequiresOnlyMonsterYouControl;
+        /// <summary>
+        /// Activation-only condition (checked when the card is activated, not at resolution):
+        /// "AnyMonsterOnField", "OppLpAtMost" (ConditionAmount), "YourGyMonstersAtLeast" (ConditionAmount),
+        /// "FaceDownDefOrFaceUpEffect", "YouControlFaceUpRace" (RaceFilter), "FaceUpNamedMonster" (ConditionName),
+        /// "OppMonsterLeadAtLeast" (ConditionAmount), "HandHasOtherCard".
+        /// </summary>
+        public string ActivationCondition;
+        public int ConditionAmount;
+        public string ConditionName;
+        /// <summary>GY target must be a non-Effect monster (Backup Soldier); includes non-effect Fusions.</summary>
+        public bool RequiresNonEffectMonster;
+        /// <summary>Target must be owned by the controller, not borrowed (Monster Recovery).</summary>
+        public bool RequiresTargetOwnedByController;
+        /// <summary>Summon window: the summoned monster was Set face-down (Shadow of Eyes).</summary>
+        public bool RequiresSummonedFaceDown;
+        /// <summary>Position change does not activate FLIP effects (Shadow of Eyes / Ceasefire).</summary>
+        public bool SuppressFlipEffects;
+        /// <summary>
+        /// With DestroyHostWhenThisLeaves: destroy the linked monster only when this card is DESTROYED,
+        /// not when it is bounced or banished (Premature Burial).
+        /// </summary>
+        public bool DestroyHostOnlyIfThisDestroyed;
+        /// <summary>Number of cards discarded as the activation cost (Darkness Approaches 2, Final Destiny 5).</summary>
+        public int DiscardCostCount;
+        /// <summary>After destroying and banishing a Trap, banish every copy from both Decks (Nobleman of Extermination).</summary>
+        public bool PurgeDecksIfTrap;
     }
 
     /// <summary>When the activation condition is tested (PSCT "when" vs "if").</summary>
@@ -797,6 +872,8 @@ namespace WRLDZ.Duel.TextEffects
              HasTiming(EffectTiming.ThisCardInflictsBattleDamage) ||
              HasTiming(EffectTiming.YourMonsterInflictsBattleDamage) ||
              HasTiming(EffectTiming.ThisCardDeclaresAttack) ||
-             HasTiming(EffectTiming.ThisCardPositionChanged));
+             HasTiming(EffectTiming.ThisCardPositionChanged) ||
+             HasTiming(EffectTiming.ControllerDraws) ||
+             HasTiming(EffectTiming.ThisCardControlChanged));
     }
 }

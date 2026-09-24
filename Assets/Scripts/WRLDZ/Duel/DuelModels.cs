@@ -167,6 +167,12 @@ namespace WRLDZ.Duel
         /// <summary>Damage Step-only ATK gain for the current battle (Insect Soldiers of the Sky).</summary>
         public int DamageStepAtkBonus;
 
+        /// <summary>Turn number this copy was Normal (incl. Tribute) or Flip Summoned; -1 otherwise (Infinite Dismissal).</summary>
+        public int NormalOrFlipSummonedTurn = -1;
+
+        /// <summary>This monster cannot attack while this card stays face-up on the field (Invitation to a Dark Sleep).</summary>
+        public CardInstance AttackLockedBy;
+
         /// <summary>Monsters/Unions currently equipped to this card.</summary>
         public readonly List<CardInstance> Equips = new();
 
@@ -270,6 +276,9 @@ namespace WRLDZ.Duel
 
         /// <summary>Fenrir: skip this player's next Draw Phase.</summary>
         public bool SkipNextDrawPhase;
+
+        /// <summary>Skip this player's next Standby Phase (Solomon's Lawbook).</summary>
+        public bool SkipNextStandbyPhase;
 
         /// <summary>Pendulum Summon once per turn (when Pendulum is supported).</summary>
         public bool PendulumSummonedThisTurn;

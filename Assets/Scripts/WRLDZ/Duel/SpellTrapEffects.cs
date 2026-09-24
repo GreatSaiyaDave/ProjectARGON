@@ -62,7 +62,9 @@ namespace WRLDZ.Duel
         /// <summary>Confiscation / The Forceful Sentry — a card in the opponent's revealed hand.</summary>
         CardInOppHand,
         /// <summary>Senju / Sonic Bird — a card in your Deck to add to your hand.</summary>
-        CardInYourDeck
+        CardInYourDeck,
+        /// <summary>Elegant Egotist — a monster in your hand or Deck to Special Summon.</summary>
+        MonsterInHandOrDeck
     }
 
     /// <summary>In-flight activation waiting for a target choice.</summary>
@@ -106,6 +108,16 @@ namespace WRLDZ.Duel
         public int MultiStepRemaining;
         /// <summary>Current step is "up to N": Cancel after ≥1 pick finishes the step.</summary>
         public bool MultiStepUpTo;
+        /// <summary>Darkness Approaches / Final Destiny: discard N cards (cost) before resolving.</summary>
+        public bool AwaitingMultiDiscard;
+        /// <summary>Discards still to choose for <see cref="AwaitingMultiDiscard"/>.</summary>
+        public int MultiDiscardRemaining;
+        /// <summary>Chosen cost cards; discarded together once all are picked.</summary>
+        public readonly List<CardInstance> MultiDiscardPicks = new();
+        /// <summary>A non-refundable cost (Darkness Approaches' discards) is paid: Cancel cannot undo.</summary>
+        public bool CostPaid;
+        /// <summary>LP paid as the activation cost (Premature Burial); refunded if the target choice is cancelled.</summary>
+        public int PaidLpCost;
         /// <summary>Bark of Dark Ruler: choose LP cost in multiples of 100.</summary>
         public bool AwaitingLpCost;
         public readonly List<int> LpCostChoices = new();
@@ -120,6 +132,8 @@ namespace WRLDZ.Duel
             get
             {
                 var n = Card?.Name ?? "Card";
+                if (AwaitingMultiDiscard)
+                    return $"{n}: discard {MultiDiscardRemaining} more card(s) from your hand (cost).";
                 return TargetKind switch
                 {
                     EffectTargetKind.MonsterInEitherGy =>
@@ -174,6 +188,8 @@ namespace WRLDZ.Duel
                         $"{n}: choose a face-up monster.",
                     EffectTargetKind.CardInOppHand =>
                         $"{n}: choose a card in your opponent's hand.",
+                    EffectTargetKind.MonsterInHandOrDeck =>
+                        $"{n}: choose a monster in your hand or Deck to Special Summon.",
                     EffectTargetKind.CardInYourDeck =>
                         $"{n}: choose a card from your Deck to add to your hand.",
                     EffectTargetKind.DiscardFromHand =>
@@ -530,6 +546,8 @@ namespace WRLDZ.Duel
             if (summoner != null && summoner == responder && !clause.AnswersControllerSummon)
                 return false;
             if (clause.RequiresSummonedIsToken && !summoned.IsToken) return false;
+            // Shadow of Eyes answers a Set (face-down) monster only.
+            if (clause.RequiresSummonedFaceDown && summoned.FaceUp) return false;
             if (clause.RequiresSummonedIsFusion &&
                 (summoned.Def == null || summoned.Def.type == null ||
                  summoned.Def.type.IndexOf("Fusion", System.StringComparison.OrdinalIgnoreCase) < 0))
@@ -1082,6 +1100,20 @@ namespace WRLDZ.Duel
                 engine.Log($"Cancelled {card?.Name} target choice — Flip effect fizzles.");
                 engine.NotifyPublic();
                 return true;
+            }
+
+            if (p.CostPaid && card != null && who != null)
+            {
+                engine.SendCardToGrave(who, card);
+                engine.Log($"{card.Name}: the cost is already paid — no target chosen, so it resolves with no effect.");
+                engine.NotifyPublic();
+                return true;
+            }
+
+            if (p.PaidLpCost > 0 && who != null)
+            {
+                who.LifePoints += p.PaidLpCost;
+                engine.Log($"Cancelled {card?.Name} — {p.PaidLpCost} LP cost refunded ({who.LifePoints} LP).");
             }
 
             // Undo Spell/Trap activation: return to prior state
