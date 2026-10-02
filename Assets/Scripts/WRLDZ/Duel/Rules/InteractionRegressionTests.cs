@@ -3015,6 +3015,181 @@ namespace WRLDZ.Duel.Rules
                         p.Graveyard.Exists(c => c.CardId == duster));
                 }
 
+                // ── Fanbot park: Rock Bombardment / Backfire / Tribe-Infecting Virus /
+                // Mysterious Puppeteer / Token Thanksgiving. ──
+                {
+                    const int rockBombId = 20781762;
+                    const int backfireId = 82705573;
+                    const int tribeId = 33184167;
+                    const int puppetId = 54098121;
+                    const int tokenThanksId = 57182235;
+                    const int giantStone = 13039848; // Rock Normal
+                    const int greatAngus = 11813953; // FIRE Beast Normal
+
+                    var rockDef = db.Get(rockBombId);
+                    var rockLive = rockDef != null ? CardTextEffectCompiler.Compile(rockDef) : null;
+                    Check("Rock Bombardment stays parked (not FullyCompiled)",
+                        rockLive == null || !rockLive.FullyCompiled,
+                        rockLive == null
+                            ? "null"
+                            : $"full={rockLive.FullyCompiled} n={rockLive.ClauseList.Count} unparsed={string.Join("|", rockLive.UnparsedFragments ?? System.Array.Empty<string>())}");
+                    Check("Rock Bombardment is not InflictDamageToOpponent",
+                        rockLive == null ||
+                        !rockLive.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.InflictDamageToOpponent));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        p.Deck.Clear();
+                        p.Deck.Add(giantStone);
+                        var youLp = p.LifePoints;
+                        var oppLp = opp.LifePoints;
+                        var trap = PlaceSetTrap(engine, p, rockBombId, 2);
+                        trap.SetThisTurn = false;
+                        Check("Rock Bombardment: ProgramMayActivate false",
+                            !OfficialEffectRegistry.ProgramMayActivate(trap.Def));
+                        Check("Rock Bombardment: Activate refused even with Rock in Deck",
+                            !engine.CanActivateSpellTrap(p, trap, fromHand: false) &&
+                            !engine.TryActivateSpellTrap(p, trap, fromHand: false) &&
+                            p.TryFindSpellTrap(trap, out _) &&
+                            p.Deck.Contains(giantStone) &&
+                            p.LifePoints == youLp &&
+                            opp.LifePoints == oppLp);
+                    }
+
+                    var backDef = db.Get(backfireId);
+                    var backLive = backDef != null ? CardTextEffectCompiler.Compile(backDef) : null;
+                    Check("Backfire stays parked (not FullyCompiled)",
+                        backLive == null || !backLive.FullyCompiled);
+                    Check("Backfire is not InflictDamageToOpponent",
+                        backLive == null ||
+                        !backLive.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.InflictDamageToOpponent));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        var fire = PlaceMonster(engine, p, greatAngus, 1, BattlePosition.Attack, true);
+                        var trap = PlaceSetTrap(engine, p, backfireId, 2);
+                        trap.SetThisTurn = false;
+                        var oppLp = opp.LifePoints;
+                        Check("Backfire: ProgramMayActivate false",
+                            !OfficialEffectRegistry.ProgramMayActivate(trap.Def));
+                        Check("Backfire: Activate refused with face-up FIRE on field",
+                            !engine.CanActivateSpellTrap(p, trap, fromHand: false) &&
+                            !engine.TryActivateSpellTrap(p, trap, fromHand: false) &&
+                            p.TryFindSpellTrap(trap, out _) &&
+                            p.TryFindMonster(fire, out _) &&
+                            opp.LifePoints == oppLp);
+                    }
+
+                    var tribeDef = db.Get(tribeId);
+                    var tribeLive = tribeDef != null ? CardTextEffectCompiler.Compile(tribeDef) : null;
+                    Check("Tribe-Infecting Virus stays parked (not FullyCompiled)",
+                        tribeLive == null || !tribeLive.FullyCompiled);
+                    Check("Tribe-Infecting Virus is not Destroy",
+                        tribeLive == null ||
+                        !tribeLive.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.Destroy));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        var virus = PlaceMonster(engine, p, tribeId, 2, BattlePosition.Attack, true);
+                        var fodder = PutInHand(engine, p, celtic);
+                        var prey = PlaceMonster(engine, opp, celtic, 2, BattlePosition.Attack, true);
+                        Check("Tribe-Infecting Virus: ProgramMayActivate false",
+                            !OfficialEffectRegistry.ProgramMayActivate(virus.Def));
+                        Check("Tribe-Infecting Virus: ignition refused with discard + face-up Warrior",
+                            !engine.CanActivateSpellTrap(p, virus, fromHand: false) &&
+                            !engine.TryActivateSpellTrap(p, virus, fromHand: false) &&
+                            p.Hand.Contains(fodder) &&
+                            opp.TryFindMonster(prey, out _) &&
+                            p.TryFindMonster(virus, out _));
+                    }
+
+                    var puppetDef = db.Get(puppetId);
+                    var puppetLive = puppetDef != null ? CardTextEffectCompiler.Compile(puppetDef) : null;
+                    Check("Mysterious Puppeteer stays parked (not FullyCompiled)",
+                        puppetLive == null || !puppetLive.FullyCompiled);
+                    Check("Mysterious Puppeteer is not GainLifePoints",
+                        puppetLive == null ||
+                        !puppetLive.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.GainLifePoints));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        PlaceMonster(engine, p, puppetId, 2, BattlePosition.Attack, true);
+                        var youLp = p.LifePoints;
+                        var ns = PutInHand(engine, p, celtic);
+                        Check("Mysterious Puppeteer: ProgramMayActivate false",
+                            puppetDef == null || !OfficialEffectRegistry.ProgramMayActivate(puppetDef));
+                        Check("Mysterious Puppeteer: Normal Summon of another monster succeeds",
+                            engine.TryNormalSummon(p, ns, asSet: false) && ns.FaceUp);
+                        Check("Mysterious Puppeteer: NS does not gain 500 LP",
+                            p.LifePoints == youLp, $"you LP={p.LifePoints} was {youLp}");
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        PlaceMonster(engine, p, puppetId, 1, BattlePosition.Attack, true);
+                        var set = PlaceMonster(engine, p, celtic, 2, BattlePosition.Defense, false);
+                        var youLp = p.LifePoints;
+                        Check("Mysterious Puppeteer: Flip Summon of another monster succeeds",
+                            engine.TryFlipSummon(p, set) && set.FaceUp);
+                        Check("Mysterious Puppeteer: Flip Summon does not gain 500 LP",
+                            p.LifePoints == youLp, $"you LP={p.LifePoints} was {youLp}");
+                    }
+
+                    var thanksDef = db.Get(tokenThanksId);
+                    var thanksLive = thanksDef != null ? CardTextEffectCompiler.Compile(thanksDef) : null;
+                    Check("Token Thanksgiving stays parked (not FullyCompiled)",
+                        thanksLive == null || !thanksLive.FullyCompiled);
+                    Check("Token Thanksgiving is not DestroyTokensInflictPer / GainLifePoints",
+                        thanksLive == null ||
+                        !thanksLive.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.DestroyTokensInflictPer ||
+                             c.Action == EffectActionKind.GainLifePoints)));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var youLp = p.LifePoints;
+                        var tok = engine.CreateToken("Sheep Token", "Beast", "EARTH", 1, 0, 0);
+                        Check("Token Thanksgiving: Token SS onto field",
+                            engine.SpecialSummonToField(p, tok, BattlePosition.Attack, true));
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        var card = PutInHand(engine, p, tokenThanksId);
+                        Check("Token Thanksgiving: ProgramMayActivate false",
+                            !OfficialEffectRegistry.ProgramMayActivate(card.Def));
+                        Check("Token Thanksgiving: Activate refused with a Token on the field",
+                            !engine.CanActivateSpellTrap(p, card, fromHand: true) &&
+                            !engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                            p.Hand.Contains(card) &&
+                            p.TryFindMonster(tok, out _) &&
+                            p.LifePoints == youLp);
+                    }
+                }
+
                 // ── Equip Spells: Activate + target; host leaving field destroys Equip ──
                 {
                     const int treasure = 1435851;
