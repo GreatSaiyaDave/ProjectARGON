@@ -3015,6 +3015,217 @@ namespace WRLDZ.Duel.Rules
                         p.Graveyard.Exists(c => c.CardId == duster));
                 }
 
+                // ── Fanbot park: Greenkappa / Tornado Bird / Des Feral Imp /
+                // Begone, Knave! / Butterfly Dagger - Elma. ──
+                {
+                    const int greenkappaId = 61831093;
+                    const int tornadoBirdId = 71283180;
+                    const int desFeralId = 81985784;
+                    const int knaveId = 20374520;
+                    const int elmaId = 69243953;
+                    const int waboku = 12607053;
+
+                    var gkDef = db.Get(greenkappaId);
+                    var gkLive = gkDef != null ? CardTextEffectCompiler.Compile(gkDef) : null;
+                    Check("Greenkappa stays parked (not FullyCompiled)",
+                        gkLive == null || !gkLive.FullyCompiled,
+                        gkLive == null
+                            ? "null"
+                            : $"full={gkLive.FullyCompiled} n={gkLive.ClauseList.Count} unparsed={string.Join("|", gkLive.UnparsedFragments ?? System.Array.Empty<string>())}");
+                    Check("Greenkappa is not 1-target Destroy",
+                        gkLive == null ||
+                        !gkLive.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.Destroy));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        var flip = PlaceMonster(engine, p, greenkappaId, 2, BattlePosition.Defense, false);
+                        flip.SetThisTurn = false;
+                        var st1 = PlaceSetTrap(engine, opp, mst, 1);
+                        var st2 = PlaceSetTrap(engine, opp, waboku, 2);
+                        Check("Greenkappa: ProgramMayActivate false",
+                            !OfficialEffectRegistry.ProgramMayActivate(flip.Def));
+                        Check("Greenkappa: Flip Summon succeeds",
+                            engine.TryFlipSummon(p, flip) && flip.FaceUp);
+                        if (engine.IsAwaitingResponse && !engine.IsAwaitingEffectTarget)
+                            engine.PassResponse();
+                        Check("Greenkappa: Flip does not open 1-target destroy",
+                            !engine.IsAwaitingEffectTarget);
+                        Check("Greenkappa: both Set S/T stay (2-destroy parked)",
+                            opp.TryFindSpellTrap(st1, out _) &&
+                            opp.TryFindSpellTrap(st2, out _) &&
+                            !opp.Graveyard.Exists(c => c != null &&
+                                (c.CardId == mst || c.CardId == waboku)));
+                    }
+
+                    var tbDef = db.Get(tornadoBirdId);
+                    var tbLive = tbDef != null ? CardTextEffectCompiler.Compile(tbDef) : null;
+                    Check("Tornado Bird stays parked (not FullyCompiled)",
+                        tbLive == null || !tbLive.FullyCompiled);
+                    Check("Tornado Bird is not 1-target ReturnToHand",
+                        tbLive == null ||
+                        !tbLive.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ReturnToHand));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        var flip = PlaceMonster(engine, p, tornadoBirdId, 2, BattlePosition.Defense, false);
+                        flip.SetThisTurn = false;
+                        var st1 = PlaceSetTrap(engine, opp, mst, 1);
+                        var st2 = PlaceSetTrap(engine, opp, waboku, 2);
+                        var oppHand = opp.HandCount;
+                        Check("Tornado Bird: ProgramMayActivate false",
+                            !OfficialEffectRegistry.ProgramMayActivate(flip.Def));
+                        Check("Tornado Bird: Flip Summon succeeds",
+                            engine.TryFlipSummon(p, flip) && flip.FaceUp);
+                        if (engine.IsAwaitingResponse && !engine.IsAwaitingEffectTarget)
+                            engine.PassResponse();
+                        Check("Tornado Bird: Flip does not open bounce target",
+                            !engine.IsAwaitingEffectTarget);
+                        Check("Tornado Bird: both S/T stay (2-bounce parked)",
+                            opp.TryFindSpellTrap(st1, out _) &&
+                            opp.TryFindSpellTrap(st2, out _) &&
+                            opp.HandCount == oppHand);
+                    }
+
+                    var dfDef = db.Get(desFeralId);
+                    var dfLive = dfDef != null ? CardTextEffectCompiler.Compile(dfDef) : null;
+                    Check("Des Feral Imp stays parked (not FullyCompiled)",
+                        dfLive == null || !dfLive.FullyCompiled);
+                    Check("Des Feral Imp is not AddFromGyToHand / PlaceThisOnTopOfDeck",
+                        dfLive == null ||
+                        !dfLive.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.AddFromGyToHand ||
+                             c.Action == EffectActionKind.PlaceThisOnTopOfDeck)));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var gyCard = engine.CreateCardInstance(celtic);
+                        p.Graveyard.Add(gyCard);
+                        var deckBefore = p.Deck.Count;
+                        var gyBefore = p.Graveyard.Count;
+                        var flip = PlaceMonster(engine, p, desFeralId, 2, BattlePosition.Defense, false);
+                        flip.SetThisTurn = false;
+                        Check("Des Feral Imp: ProgramMayActivate false",
+                            !OfficialEffectRegistry.ProgramMayActivate(flip.Def));
+                        Check("Des Feral Imp: Flip Summon succeeds",
+                            engine.TryFlipSummon(p, flip) && flip.FaceUp);
+                        if (engine.IsAwaitingResponse && !engine.IsAwaitingEffectTarget)
+                            engine.PassResponse();
+                        Check("Des Feral Imp: Flip does not open GY target",
+                            !engine.IsAwaitingEffectTarget);
+                        Check("Des Feral Imp: GY card stays; Deck unchanged (shuffle parked)",
+                            p.Graveyard.Contains(gyCard) &&
+                            p.Graveyard.Count == gyBefore &&
+                            p.Deck.Count == deckBefore &&
+                            !p.Hand.Exists(c => c != null && c.CardId == celtic));
+                    }
+
+                    var knaveDef = db.Get(knaveId);
+                    var knaveLive = knaveDef != null ? CardTextEffectCompiler.Compile(knaveDef) : null;
+                    Check("Begone, Knave! stays parked (not FullyCompiled)",
+                        knaveLive == null || !knaveLive.FullyCompiled);
+                    Check("Begone, Knave! is not ReturnToHand / YouTakeLifePointDamage",
+                        knaveLive == null ||
+                        !knaveLive.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.ReturnToHand ||
+                             c.Timing == EffectTiming.YouTakeLifePointDamage)));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var trap = PlaceSetTrap(engine, p, knaveId, 2);
+                        trap.SetThisTurn = false;
+                        Check("Begone, Knave!: ProgramMayActivate false",
+                            !OfficialEffectRegistry.ProgramMayActivate(trap.Def));
+                        Check("Begone, Knave!: Activate refused from Set",
+                            !engine.CanActivateSpellTrap(p, trap, fromHand: false) &&
+                            !engine.TryActivateSpellTrap(p, trap, fromHand: false) &&
+                            p.TryFindSpellTrap(trap, out _));
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        if (!ReachPlayerBattle(engine))
+                        {
+                            Check("Begone, Knave! battle path (skipped — not in BP)", false,
+                                $"phase={engine.Phase} turn={engine.TurnNumber}");
+                        }
+                        else
+                        {
+                            ClearBoard(engine);
+                            var p = engine.Player;
+                            var opp = engine.Opponent;
+                            p.Hand.Clear();
+                            var trap = PlaceSetTrap(engine, p, knaveId, 2);
+                            trap.SetThisTurn = false;
+                            var attacker = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                            attacker.ClearAttackFlags();
+                            attacker.SummonedThisTurn = false;
+                            if (engine.Phase == DuelPhase.Main1)
+                                engine.TryEnterBattlePhase(p);
+                            DrainCombat(engine);
+                            var oppLp = opp.LifePoints;
+                            Check("Begone, Knave!: direct attack inflicts damage; attacker stays",
+                                engine.Phase == DuelPhase.Battle &&
+                                ResolveDirect(engine, p, attacker) &&
+                                p.TryFindMonster(attacker, out _) &&
+                                p.TryFindSpellTrap(trap, out _) &&
+                                !p.Hand.Exists(c => c != null && c.CardId == celtic) &&
+                                opp.LifePoints == oppLp - attacker.CurrentAtk,
+                                $"phase={engine.Phase} LP={opp.LifePoints} was {oppLp} atk={attacker.CurrentAtk}");
+                        }
+                    }
+
+                    var elmaDef = db.Get(elmaId);
+                    var elmaLive = elmaDef != null ? CardTextEffectCompiler.Compile(elmaDef) : null;
+                    Check("Butterfly Dagger - Elma stays parked (not FullyCompiled)",
+                        elmaLive == null || !elmaLive.FullyCompiled);
+                    Check("Butterfly Dagger - Elma Equip +300 fragment; GY-return leftover",
+                        elmaLive != null && !elmaLive.FullyCompiled &&
+                        elmaLive.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.EquipThisToTarget &&
+                            c.EquipAtkBonus == 300));
+                    Check("Butterfly Dagger - Elma is not PlaceThisOnTopOfDeck",
+                        elmaLive == null ||
+                        !elmaLive.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.PlaceThisOnTopOfDeck));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var host = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                        var atkBefore = host.CurrentAtk;
+                        var card = PutInHand(engine, p, elmaId);
+                        Check("Butterfly Dagger - Elma: ProgramMayActivate false",
+                            !OfficialEffectRegistry.ProgramMayActivate(card.Def));
+                        Check("Butterfly Dagger - Elma: Activate refused (leftover unique)",
+                            !engine.CanActivateSpellTrap(p, card, fromHand: true) &&
+                            !engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                            p.Hand.Contains(card) &&
+                            host.CurrentAtk == atkBefore &&
+                            card.EquippedTo == null);
+                    }
+                }
+
                 // ── Equip Spells: Activate + target; host leaving field destroys Equip ──
                 {
                     const int treasure = 1435851;
