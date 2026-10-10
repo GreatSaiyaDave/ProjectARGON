@@ -140,7 +140,7 @@ namespace WRLDZ.UI
             t.resizeTextForBestFit = false;
             t.raycastTarget = false;
             t.alignByGeometry = true;
-            var o = t.GetComponent<Outline>() ?? t.gameObject.AddComponent<Outline>();
+            var o = UiFoundation.GetOrAdd<Outline>(t.gameObject);
             o.effectColor = new Color(0f, 0f, 0f, 0.88f);
             o.effectDistance = new Vector2(1.1f, -1.1f);
             o.useGraphicAlpha = true;

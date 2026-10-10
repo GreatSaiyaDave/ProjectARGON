@@ -1,0 +1,124 @@
+{
+  "name": "PaniK · Duelist Kingdom",
+  "format": "wrldz_dk_character",
+  "character": "PaniK",
+  "era": "duelist_kingdom",
+  "erazBandId": "original",
+  "notes": "Castle of Dark Illusions, Metal Guardian, Barox in the extra. Dark Chimera omitted (OCG-only, never TCG).",
+  "main": [
+    {
+      "id": 62121,
+      "name": "Castle of Dark Illusions",
+      "qty": 3
+    },
+    {
+      "id": 69455834,
+      "name": "King of Yamimakai",
+      "qty": 3
+    },
+    {
+      "id": 33066139,
+      "name": "Reaper of the Cards",
+      "qty": 3
+    },
+    {
+      "id": 93889755,
+      "name": "Crass Clown",
+      "qty": 2
+    },
+    {
+      "id": 24611934,
+      "name": "Ryu-Kishin Powered",
+      "qty": 2
+    },
+    {
+      "id": 15303296,
+      "name": "Ryu-Kishin",
+      "qty": 2
+    },
+    {
+      "id": 66602787,
+      "name": "Saggi the Dark Clown",
+      "qty": 2
+    },
+    {
+      "id": 47060154,
+      "name": "Mystic Clown",
+      "qty": 2
+    },
+    {
+      "id": 13945283,
+      "name": "Wall of Illusion",
+      "qty": 2
+    },
+    {
+      "id": 4614116,
+      "name": "Dark Energy",
+      "qty": 3
+    },
+    {
+      "id": 63102017,
+      "name": "Stop Defense",
+      "qty": 2
+    },
+    {
+      "id": 72302403,
+      "name": "Swords of Revealing Light",
+      "qty": 1
+    },
+    {
+      "id": 24094653,
+      "name": "Polymerization",
+      "qty": 1
+    },
+    {
+      "id": 66788016,
+      "name": "Fissure",
+      "qty": 1
+    },
+    {
+      "id": 18807108,
+      "name": "Spellbinding Circle",
+      "qty": 2
+    },
+    {
+      "id": 4206964,
+      "name": "Trap Hole",
+      "qty": 2
+    },
+    {
+      "id": 14315573,
+      "name": "Negate Attack",
+      "qty": 2
+    },
+    {
+      "id": 44095762,
+      "name": "Mirror Force",
+      "qty": 1
+    },
+    {
+      "id": 12607053,
+      "name": "Waboku",
+      "qty": 2
+    },
+    {
+      "id": 68339286,
+      "name": "Metal Guardian",
+      "qty": 2
+    }
+  ],
+  "extra": [
+    {
+      "id": 6840573,
+      "name": "Barox",
+      "qty": 1
+    }
+  ],
+  "side": [],
+  "counts": {
+    "main": 40,
+    "extra": 1,
+    "side": 0
+  },
+  "role": "character_dk"
+}

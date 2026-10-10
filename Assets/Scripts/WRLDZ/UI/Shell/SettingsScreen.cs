@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using WRLDZ.Duel;
 using WRLDZ.Presentation;
 
 namespace WRLDZ.UI.Shell
@@ -13,9 +14,12 @@ namespace WRLDZ.UI.Shell
         public static RectTransform Build(Transform parent, MenuShell shell, System.Action onClose)
         {
             FreeUiKit.EnsureLoaded();
+#if UNITY_EDITOR
+            // Editor art hot-reload only.
             StreamingSprite.ClearCache("WRLDZ/Imagine/bg/bg_auth.png");
             StreamingSprite.ClearCache("WRLDZ/Imagine/bg/bg_menu_void.png");
             StreamingSprite.ClearCache("WRLDZ/Imagine/ui/panel_boot_glass.png");
+#endif
 
             DualMenuPresenter.Frame frame = default;
             void Close()
@@ -25,7 +29,7 @@ namespace WRLDZ.UI.Shell
             }
 
             frame = DualMenuPresenter.BuildFrame(
-                parent, "SETTINGS", "Menu size · device · audio", Close);
+                parent, "SETTINGS", "Menu size · device", Close);
             var body = frame.BodyHost;
             var well = frame.Root != null ? frame.Root.Find("BodyWell")?.GetComponent<Image>() : null;
 
@@ -51,15 +55,20 @@ namespace WRLDZ.UI.Shell
                     well.color = MenuChromePrefs.InsetColor;
             });
 
+            // Only rows that do something. AR Quality, Eye Tracking, Right-Arm Disk, High Contrast and
+            // Master Volume were wired to nothing and are hidden until implemented (QC F12).
             HubChrome.ListHead(list, "DEVICE");
-            Toggle(list, "AR Quality");
-            Toggle(list, "Battery Saver", on => shell?.SetBatterySaver(on));
-            Toggle(list, "Eye Tracking");
-            Toggle(list, "Right-Arm Disk");
-            Toggle(list, "High Contrast");
+            Toggle(list, "Battery Saver", WrldzTheme.BatterySaver, on =>
+            {
+                if (shell != null) shell.SetBatterySaver(on);
+                else WrldzTheme.BatterySaver = on;
+            });
 
-            HubChrome.ListHead(list, "AUDIO");
-            HubChrome.ListRow(list, "Master Volume", null);
+            HubChrome.ListHead(list, "DUEL");
+            CycleRow(list, () => "AI Difficulty · " + AiDifficultyPrefs.Current, () =>
+            {
+                AiDifficultyPrefs.Cycle(AiDifficultyPrefs.Current);
+            });
 
             return frame.Root;
         }
@@ -75,20 +84,27 @@ namespace WRLDZ.UI.Shell
             });
         }
 
-        static void Toggle(Transform list, string label, System.Action<bool> onChange = null)
+        /// <summary>On/off row that starts from the stored value (<paramref name="initial"/>).</summary>
+        static void Toggle(Transform list, string label, bool initial, System.Action<bool> onChange = null)
         {
-            var on = false;
+            var on = initial;
             Button btn = null;
-            btn = HubChrome.ListRow(list, label, () =>
+            void Paint()
             {
-                on = !on;
                 var t = btn.transform.Find("Title")?.GetComponent<Text>();
                 if (t != null)
                     t.color = on ? DuelystUi.Cyan : DuelystUi.TextCream;
                 HubChrome.LiftPlate(btn.GetComponent<Image>(),
                     on ? DuelystUi.Gold : DuelystUi.Cyan);
+            }
+
+            btn = HubChrome.ListRow(list, label, () =>
+            {
+                on = !on;
+                Paint();
                 onChange?.Invoke(on);
             });
+            if (on) Paint();
         }
     }
 }

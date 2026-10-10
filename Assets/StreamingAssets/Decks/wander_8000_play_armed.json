@@ -1,0 +1,141 @@
+{
+  "name": "Schoolyard Armed Dragon",
+  "format": "wrldz_street_playground_8000",
+  "flaw": "LV3 is a 3-of, LV5 is a 2-of, LV7 is a singleton. Masked Dragon stands in for a 3rd LV5.",
+  "main": [
+    {
+      "id": 980973,
+      "name": "Armed Dragon LV3",
+      "qty": 3
+    },
+    {
+      "id": 46384672,
+      "name": "Armed Dragon LV5",
+      "qty": 2
+    },
+    {
+      "id": 73879377,
+      "name": "Armed Dragon LV7",
+      "qty": 1
+    },
+    {
+      "id": 39191307,
+      "name": "Masked Dragon",
+      "qty": 3
+    },
+    {
+      "id": 11091375,
+      "name": "Luster Dragon",
+      "qty": 2
+    },
+    {
+      "id": 26202165,
+      "name": "Sangan",
+      "qty": 1
+    },
+    {
+      "id": 54652250,
+      "name": "Man-Eater Bug",
+      "qty": 2
+    },
+    {
+      "id": 55144522,
+      "name": "Pot of Greed",
+      "qty": 1
+    },
+    {
+      "id": 19613556,
+      "name": "Heavy Storm",
+      "qty": 1
+    },
+    {
+      "id": 5318639,
+      "name": "Mystical Space Typhoon",
+      "qty": 1
+    },
+    {
+      "id": 72302403,
+      "name": "Swords of Revealing Light",
+      "qty": 1
+    },
+    {
+      "id": 66788016,
+      "name": "Fissure",
+      "qty": 2
+    },
+    {
+      "id": 97169186,
+      "name": "Smashing Ground",
+      "qty": 1
+    },
+    {
+      "id": 79759861,
+      "name": "Tribute to the Doomed",
+      "qty": 2
+    },
+    {
+      "id": 26412047,
+      "name": "Hammer Shot",
+      "qty": 1
+    },
+    {
+      "id": 70046172,
+      "name": "Rush Recklessly",
+      "qty": 2
+    },
+    {
+      "id": 65169794,
+      "name": "Black Pendant",
+      "qty": 1
+    },
+    {
+      "id": 4206964,
+      "name": "Trap Hole",
+      "qty": 2
+    },
+    {
+      "id": 17814387,
+      "name": "Reinforcements",
+      "qty": 2
+    },
+    {
+      "id": 44209392,
+      "name": "Castle Walls",
+      "qty": 2
+    },
+    {
+      "id": 3819470,
+      "name": "Seven Tools of the Bandit",
+      "qty": 1
+    },
+    {
+      "id": 14315573,
+      "name": "Negate Attack",
+      "qty": 1
+    },
+    {
+      "id": 12607053,
+      "name": "Waboku",
+      "qty": 2
+    },
+    {
+      "id": 77414722,
+      "name": "Magic Jammer",
+      "qty": 1
+    },
+    {
+      "id": 56120475,
+      "name": "Sakuretsu Armor",
+      "qty": 2
+    }
+  ],
+  "extra": [],
+  "side": [],
+  "counts": {
+    "main": 40,
+    "extra": 0,
+    "side": 0
+  },
+  "lpBand": 8000,
+  "role": "street_npc_playground"
+}

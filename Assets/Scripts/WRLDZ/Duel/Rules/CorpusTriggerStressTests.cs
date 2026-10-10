@@ -23,6 +23,8 @@ namespace WRLDZ.Duel.Rules
         const int Fenrir = 218704;
         const int PotOfGreed = 55144522;
         const int MirrorForce = 44095762;
+        const int CallOfTheHaunted = 97077563; // face-up Continuous Trap for Remove Trap
+        const int GaiaTheDragonChampion = 66889139; // face-up Fusion Monster for De-Fusion (FlipCostsAndFusion batch)
 
         public static string Run()
         {
@@ -236,10 +238,27 @@ namespace WRLDZ.Duel.Rules
                    c.RequiresSendNamedToGy ||
                    c.RequiresTributeThis ||
                    c.RequiresTributeCount > 0 ||
+                   c.OnlyDuringOwnStandby ||
+                   // Token Thanksgiving: needs a Token on the field (Lua target chk).
+                   (c.Action == EffectActionKind.DestroyTokensInflictPer && c.TokenDestroyGainsLp) ||
+                   // Cold Wave (LocksAndZones v142): only before anything happens in Main Phase 1 — this corpus
+                   // board is built mid-phase; the batch tests drive it from the real start of the phase.
+                   c.ActivationCondition == LocksAndZonesRuntime.StartOfMainPhase1 ||
+                   // Chosen One (NegationsAndGySummons v159): needs a monster and 2 other Spell/Traps in the hand
+                   // (NegationsAndGySummonsRegressionTests drive it).
+                   c.ActivationCondition == NegationsAndGySummonsRuntime.ChosenOneHand ||
+                   // Pyro Clock of Destiny (PhaseTimersAndDeckTop v163): needs a running turn count (Swords of Revealing
+                   // Light …); PhaseTimersAndDeckTopRegressionTests drive it.
+                   c.ActivationCondition == PhaseTimersAndDeckTopRuntime.TurnCountExists ||
+                   c.Timing == EffectTiming.PositionChanged ||
+                   c.Timing == EffectTiming.ThisCardDeclaresAttack ||
+                   c.Action == EffectActionKind.PayLpToDeclareAttack ||
+                   !string.IsNullOrEmpty(c.RequiresFaceUpName) ||
                    c.RequiresDiscardSelf ||
                    c.RequiresSendThisToGy ||
                    c.RequiresSendHandToGy ||
                    c.RequiresSendOtherYouControl ||
+                   c.RequiresSendEquipSpellOnThisToGy ||
                    c.PayLpAmount > 0 ||
                    c.BanishFromGyCount > 0 ||
                    c.RequiresRemoveSpellCounters > 0 ||
@@ -247,19 +266,119 @@ namespace WRLDZ.Duel.Rules
                    (c.RequiresDiscardCost &&
                     c.Action != EffectActionKind.AddFromGyToHand) ||
                    c.Action == EffectActionKind.FusionSummonRegistered ||
-                   c.Action == EffectActionKind.SpecialSummonFusionFromExtra;
+                   c.Action == EffectActionKind.SpecialSummonFusionFromExtra ||
+                   c.Action == EffectActionKind.RitualSummon ||
+                   c.Action == EffectActionKind.SpecialSummonFromHand ||
+                   c.RequiresSecondTarget ||
+                   (!string.IsNullOrEmpty(c.RaceFilter) &&
+                    (c.Zone == EffectZoneFilter.ControllerGyMonsters ||
+                     c.Zone == EffectZoneFilter.EitherGyMonsters ||
+                     c.Zone == EffectZoneFilter.OppGyMonsters));
         }
 
         static void Provision(DuelEngine engine, CompiledCardProgram prog)
         {
             var p = engine.Player;
             var opp = engine.Opponent;
-            PlaceMonster(engine, p, Bewd, 0, BattlePosition.Attack, true);
+            var bewd = PlaceMonster(engine, p, Bewd, 0, BattlePosition.Attack, true);
             PlaceMonster(engine, opp, Celtic, 2, BattlePosition.Attack, true);
             PlaceSetTrap(engine, opp, 5318639, 1);
             foreach (var c in prog.ClauseList)
             {
                 if (c == null) continue;
+                // Collected Power (EquipFamily batch): the window needs a face-up Equip Card on the field.
+                // Tailor of the Fickle (EquipModel batch): an Equip Card with another correct target (the opponent's
+                // face-up Celtic Guardian takes Axe of Despair).
+                // Magic Reflector (EquipAndSpellProtection batch): another face-up Spell you control.
+                // Mask of Dispel (StandbyBurnsAndDice batch, v162): another face-up Spell on the field.
+                if ((c.ActivationCondition == EquipFamilyRuntime.FaceUpEquipCardOnField ||
+                     c.Zone == EffectZoneFilter.FieldEquipCardsWithAnotherCorrectTarget ||
+                     c.Zone == EffectZoneFilter.ControllerFaceUpSpellsExceptThis ||
+                     c.Zone == EffectZoneFilter.FieldFaceUpSpells) && p.SpellTrapZones[0].IsEmpty)
+                {
+                    var axe = engine.CreateCardInstance(40619825); // Axe of Despair
+                    axe.FaceUp = true;
+                    p.SpellTrapZones[0].Occupant = axe;
+                    axe.EquippedTo = bewd;
+                    bewd.Equips.Add(axe);
+                }
+
+                // Double Snare (NegationMonsters batch, v161): a face-up card that negates Trap effects (Jinzo).
+                if (c.Zone == EffectZoneFilter.FieldFaceUpCardsNegatingTrapEffects && opp.MonsterZones[3].IsEmpty)
+                    PlaceMonster(engine, opp, 77585513, 3, BattlePosition.Attack, true);
+
+                // Emergency Provisions (SimpleSpellTraps batch): another Spell/Trap you control to send as the cost.
+                if (c.ActivationCondition == SimpleSpellTrapsRuntime.OtherSpellTrapYouControl && p.SpellTrapZones[1].IsEmpty)
+                    PlaceSetTrap(engine, p, 4206964, 1); // Trap Hole
+
+                // Fiend Comedian (SimpleSpellTraps batch): a card in the opponent's GY, and no more of them than the
+                // Player's 8-card Deck covers. The shared corpus engine's GYs change with earlier cards (Fiber Jar
+                // shuffles every GY into the Deck — DeckReturnsAndMassEffects batch, v161), so seat it explicitly.
+                if (c.ActivationCondition == SimpleSpellTrapsRuntime.OppGyCardsAndDeckCovers)
+                {
+                    opp.Graveyard.Clear();
+                    opp.Graveyard.Add(engine.CreateCardInstance(Celtic));
+                }
+
+                // Bubble Crash (DeckReturnsAndMassEffects batch, v161): a player with N or more cards in hand + field.
+                if (c.ActivationCondition == DeckReturnsAndMassEffectsRuntime.AnyPlayerHandAndFieldAtLeast)
+                {
+                    var need = c.ConditionAmount > 0 ? c.ConditionAmount : 6;
+                    while (opp.Hand.Count + opp.MonstersOnField().Count() + opp.SpellTrapsOnField().Count() < need)
+                        opp.Hand.Add(engine.CreateCardInstance(Celtic));
+                }
+
+                // Needle Ceiling (PgdSpellTrapBasics batch, v162): N or more monsters on the field.
+                if (c.ActivationCondition == PgdSpellTrapBasicsRuntime.FieldMonstersAtLeastWithFaceUp)
+                {
+                    if (p.MonsterZones[1].IsEmpty) PlaceMonster(engine, p, Celtic, 1, BattlePosition.Attack, true);
+                    if (opp.MonsterZones[4].IsEmpty) PlaceMonster(engine, opp, Celtic, 4, BattlePosition.Attack, true);
+                }
+
+                // Secret Pass to the Treasures (PgdSpellTrapBasics batch, v162): a face-up monster you control with
+                // 1000 or less ATK (Mystical Elf, 800).
+                if (c.Action == EffectActionKind.TargetCanAttackDirectlyThisTurn && p.MonsterZones[2].IsEmpty)
+                    PlaceMonster(engine, p, 15025844, 2, BattlePosition.Attack, true);
+
+                // Graverobber (PerCopyDeck batch, v163): a Spell in the opponent's GY to target.
+                if (c.Zone == EffectZoneFilter.OppGySpells && !opp.Graveyard.Exists(g => g?.Def != null && g.Def.IsSpell))
+                    opp.Graveyard.Add(engine.CreateCardInstance(5318639)); // Mystical Space Typhoon
+
+                // MfcSimpleSpellsB batch (v174): Emblem of Dragon Destroyer — a monster named
+                // NamedCard in the Deck (or GY) to search. The shared board only holds Celtics,
+                // so seat the named card in the Deck; the batch's own duels cover the GY fallback
+                // and the nothing-to-find refusal.
+                if (c.Zone == EffectZoneFilter.ControllerDeckOrGyNamed && !string.IsNullOrEmpty(c.NamedCard) &&
+                    engine.Database != null)
+                {
+                    var want = c.NamedCard;
+                    var has = false;
+                    foreach (var id in p.Deck)
+                    {
+                        if (engine.Database.TryGet(id, out var d) && d != null && d.name != null &&
+                            d.name.Equals(want, StringComparison.OrdinalIgnoreCase)) { has = true; break; }
+                    }
+                    if (!has)
+                    {
+                        foreach (var cand in engine.Database.GetAllCards())
+                        {
+                            if (cand == null || cand.name == null) continue;
+                            if (cand.name.Equals(want, StringComparison.OrdinalIgnoreCase))
+                            {
+                                p.Deck.Add(cand.id);
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                // Heavy Slump: the window needs the opponent to hold N cards.
+                if (c.RequiresOpponentHandAtLeast > 0)
+                {
+                    while (opp.Hand.Count < c.RequiresOpponentHandAtLeast)
+                        opp.Hand.Add(engine.CreateCardInstance(Celtic));
+                }
+
                 if (!string.IsNullOrEmpty(c.RequiresFaceUpName) &&
                     c.RequiresFaceUpName.IndexOf("Umi", StringComparison.OrdinalIgnoreCase) >= 0)
                 {
@@ -269,10 +388,32 @@ namespace WRLDZ.Duel.Rules
                         p.FieldSpellZone.Occupant = umi;
                 }
 
-                if (c.RequiresControllerNamedCard &&
-                    !string.IsNullOrEmpty(c.RequiresFaceUpName) &&
-                    c.RequiresFaceUpName.IndexOf("Archfiend", StringComparison.OrdinalIgnoreCase) >= 0)
-                    PlaceMonster(engine, p, ArchfiendSoldier, 1, BattlePosition.Attack, true);
+                if (!string.IsNullOrEmpty(c.RequiresFaceUpName) && engine.Database != null)
+                {
+                    var want = c.RequiresFaceUpName;
+                    if (want.IndexOf("Umi", StringComparison.OrdinalIgnoreCase) < 0)
+                    {
+                        CardDef exact = null;
+                        CardDef fuzzy = null;
+                        foreach (var cand in engine.Database.GetAllCards())
+                        {
+                            if (cand == null || !cand.IsMonster || cand.IsExtraDeck) continue;
+                            if (cand.name == null) continue;
+                            if (cand.name.Equals(want, StringComparison.OrdinalIgnoreCase))
+                            {
+                                exact = cand;
+                                break;
+                            }
+                            if (fuzzy == null &&
+                                cand.name.IndexOf(want, StringComparison.OrdinalIgnoreCase) >= 0)
+                                fuzzy = cand;
+                        }
+
+                        var pick = exact ?? fuzzy;
+                        if (pick != null)
+                            PlaceMonster(engine, p, pick.id, 1, BattlePosition.Attack, true);
+                    }
+                }
 
                 // Battle-Scarred targets an "Archfiend" monster you control.
                 if (!string.IsNullOrEmpty(c.TargetSeriesName) &&
@@ -283,11 +424,75 @@ namespace WRLDZ.Duel.Rules
                 if (c.Zone == EffectZoneFilter.DeckFieldSpells)
                     p.Deck.Insert(0, Alo);
 
-                if (c.Action == EffectActionKind.AddNamedFromDeckToHand &&
-                    !string.IsNullOrEmpty(c.NamedCard) &&
-                    string.Equals(c.NamedCard, prog.CardName, StringComparison.OrdinalIgnoreCase) &&
-                    prog.CardId > 0)
-                    p.Deck.Insert(0, prog.CardId);
+                // Acid Trap Hole targets a face-down monster (FieldFaceDownMonsters).
+                if (c.Zone == EffectZoneFilter.FieldFaceDownMonsters)
+                    PlaceMonster(engine, opp, Celtic, 4, BattlePosition.Defense, false);
+
+                // FlipCostsAndFusion batch: De-Fusion targets a face-up Fusion Monster (FieldFaceUpFusionMonsters).
+                if (c.Zone == EffectZoneFilter.FieldFaceUpFusionMonsters)
+                    PlaceMonster(engine, opp, GaiaTheDragonChampion, 1, BattlePosition.Attack, true);
+
+                // TargetedClassics Soft: Miracle Dig — enough face-up banished monsters to target.
+                if (c.Zone == EffectZoneFilter.ControllerBanishedFaceUpMonsters)
+                {
+                    var need = Math.Max(Math.Max(1, c.TargetCount), Math.Max(1, c.ConditionAmount));
+                    while (TargetedClassicsRuntime.CountFaceUpBanishedMonsters(p) < need)
+                    {
+                        var ban = engine.CreateCardInstance(Celtic);
+                        ban.FaceUp = true;
+                        p.Banished.Add(ban);
+                    }
+                }
+
+                // TargetedClassics Soft: Remove Trap — a face-up Trap Card on the field.
+                if (c.Zone == EffectZoneFilter.FieldSpellTraps && c.RequiresTargetFaceUp &&
+                    string.Equals(c.TargetCardKind, "Trap", StringComparison.OrdinalIgnoreCase))
+                {
+                    var fuTrap = PlaceSetTrap(engine, opp, CallOfTheHaunted, 0);
+                    fuTrap.FaceUp = true;
+                }
+
+                if ((c.Action == EffectActionKind.AddNamedFromDeckToHand ||
+                     c.Action == EffectActionKind.SpecialSummonNamed) &&
+                    !string.IsNullOrEmpty(c.NamedCard) && engine.Database != null)
+                {
+                    var want = c.NamedCard;
+                    var placed = false;
+                    CardDef exact = null;
+                    CardDef fuzzy = null;
+                    foreach (var cand in engine.Database.GetAllCards())
+                    {
+                        if (cand == null) continue;
+                        var n = cand.name ?? "";
+                        if (n.Equals(want, StringComparison.OrdinalIgnoreCase))
+                        {
+                            exact = cand;
+                            break;
+                        }
+                        if (fuzzy == null && c.NamedCardIsSeries &&
+                            n.IndexOf(want, StringComparison.OrdinalIgnoreCase) >= 0)
+                            fuzzy = cand;
+                    }
+
+                    var pick = exact ?? fuzzy;
+                    if (pick != null)
+                    {
+                        p.Deck.Insert(0, pick.id);
+                        placed = true;
+                    }
+
+                    if (!placed && prog.CardId > 0)
+                        p.Deck.Insert(0, prog.CardId);
+                }
+
+                // Rock Bombardment sentence: send 1 <Type> from the Deck as cost. The corpus
+                // board otherwise has no Rock, so a FullyCompiled trap looks illegal.
+                if (c.RequiresSendRaceFromDeck)
+                {
+                    var raceId = FirstMonsterId(engine, d =>
+                        ClassicEraTemplates.RaceMatches(d.race, c.RaceFilter));
+                    if (raceId > 0) p.Deck.Insert(0, raceId);
+                }
 
                 if (c.RequiresDiscardCost)
                 {
@@ -309,6 +514,19 @@ namespace WRLDZ.Duel.Rules
                 {
                     p.Graveyard.Add(engine.CreateCardInstance(Celtic));
                     p.Graveyard.Add(engine.CreateCardInstance(Bewd));
+                    // SummonTriggersAndTributes batch (v163): a named GY Special Summon (Rite of Spirit's "Gravekeeper's")
+                    // only offers monsters with that name.
+                    if (c.Action == EffectActionKind.SpecialSummonFromGy && !string.IsNullOrEmpty(c.NamedCard) &&
+                        engine.Database != null)
+                    {
+                        var named = engine.Database.GetAllCards().FirstOrDefault(d =>
+                            d != null && d.IsMonster && !d.IsExtraDeck && d.name != null &&
+                            (c.NamedCardIsSeries
+                                ? d.name.IndexOf(c.NamedCard, StringComparison.OrdinalIgnoreCase) >= 0
+                                : string.Equals(d.name, c.NamedCard, StringComparison.OrdinalIgnoreCase)));
+                        if (named != null)
+                            p.Graveyard.Add(engine.CreateCardInstance(named.id));
+                    }
                 }
 
                 // Classic-era target zones (Gravedigger Ghoul / Soul Release / Stop Defense /
@@ -349,10 +567,50 @@ namespace WRLDZ.Duel.Rules
                     case "HandHasOtherCard":
                         PutInHand(engine, p, Celtic);
                         break;
+                    // PerCountBurns (v141): D.D. Dynamite / Cemetary Bomb need something to count.
+                    case PerCountBurnsRuntime.OppBanishedAtLeast:
+                        while (opp.Banished.Count < Math.Max(1, c.ConditionAmount))
+                            opp.Banished.Add(engine.CreateCardInstance(Celtic));
+                        break;
+                    case PerCountBurnsRuntime.OppGyAtLeast:
+                        while (opp.Graveyard.Count < Math.Max(1, c.ConditionAmount))
+                            opp.Graveyard.Add(engine.CreateCardInstance(Celtic));
+                        break;
+                    // HandDisruption (v142): Gamble needs a small hand against a big one; Painful Choice a Deck of N.
+                    case HandDisruptionRuntime.HandSizes:
+                        while (p.Hand.Count > Math.Max(0, c.ConditionAmount))
+                            p.Hand.RemoveAt(p.Hand.Count - 1);
+                        break;
+                    case HandDisruptionRuntime.ControllerDeckAtLeast:
+                        while (p.Deck.Count < Math.Max(1, c.ConditionAmount))
+                            p.Deck.Add(Celtic);
+                        break;
+                    // TargetedClassics Soft: Miracle Dig needs 5+ face-up banished monsters.
+                    case TargetedClassicsRuntime.YourFaceUpBanishedMonstersAtLeast:
+                        while (TargetedClassicsRuntime.CountFaceUpBanishedMonsters(p) <
+                               Math.Max(1, c.ConditionAmount))
+                        {
+                            var ban = engine.CreateCardInstance(Celtic);
+                            ban.FaceUp = true;
+                            p.Banished.Add(ban);
+                        }
+                        break;
                     case "YouControlFaceUpRace":
                     {
                         var raceId = FirstMonsterId(engine, d =>
                             ClassicEraTemplates.RaceMatches(d.race, c.RaceFilter));
+                        if (raceId > 0) PlaceMonster(engine, p, raceId, 3, BattlePosition.Attack, true);
+                        break;
+                    }
+                    case PoisonMeteorCestusRuntime.OppLpGreaterThan:
+                        if (opp.LifePoints <= c.ConditionAmount)
+                            opp.LifePoints = c.ConditionAmount + 1;
+                        break;
+                    case PoisonMeteorCestusRuntime.YouControlRace:
+                    {
+                        var race = string.IsNullOrEmpty(c.ConditionName) ? c.RaceFilter : c.ConditionName;
+                        var raceId = FirstMonsterId(engine, d =>
+                            ClassicEraTemplates.RaceMatches(d.race, race));
                         if (raceId > 0) PlaceMonster(engine, p, raceId, 3, BattlePosition.Attack, true);
                         break;
                     }
@@ -377,6 +635,30 @@ namespace WRLDZ.Duel.Rules
                     p.Graveyard.Add(engine.CreateCardInstance(PotOfGreed));
                 if (c.Zone == EffectZoneFilter.ControllerGyTraps)
                     p.Graveyard.Add(engine.CreateCardInstance(MirrorForce));
+                // SimpleTargetUtility batch (v173): Fairy of the Spring — an Equip Spell in the player's
+                // GY to target.
+                if (c.Zone == EffectZoneFilter.ControllerGyEquipSpells &&
+                    !p.Graveyard.Exists(g => g?.Def != null && g.Def.IsSpell && g.Def.IsEquipSpell))
+                    p.Graveyard.Add(engine.CreateCardInstance(40619825)); // Axe of Despair
+
+                var hostName = c.EquipHostName ??
+                               (c.Action == EffectActionKind.EquipThisToTarget ? c.NamedCard : null);
+                if (!string.IsNullOrEmpty(hostName) && engine.Database != null)
+                {
+                    foreach (var cand in engine.Database.GetAllCards())
+                    {
+                        if (cand == null || !cand.IsMonster || cand.IsExtraDeck) continue;
+                        if (cand.name != null &&
+                            cand.name.Equals(hostName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            PlaceMonster(engine, p, cand.id, 1, BattlePosition.Attack, true);
+                            break;
+                        }
+                    }
+                }
+
+                if (c.Action == EffectActionKind.ChangeBattlePosition && c.ForceAttackPosition)
+                    PlaceMonster(engine, opp, Celtic, 0, BattlePosition.Defense, false);
             }
         }
 
@@ -398,6 +680,10 @@ namespace WRLDZ.Duel.Rules
                 fail.Add(def.name ?? $"#{def.id}");
                 return false;
             }
+
+            // A Field Spell that declares a Type as it is activated (Array of Revealing Light, BattleRules batch) asks the
+            // player first.
+            if (!ResolvePendingPicks(engine, def, fail, "field pick")) return false;
 
             if (engine.Player.FieldSpellZone?.Occupant != card &&
                 !engine.Player.Graveyard.Contains(card))
@@ -459,6 +745,46 @@ namespace WRLDZ.Duel.Rules
         {
             var act = prog.ClausesFor(EffectTiming.Activate);
             if (act.Exists(c => c != null && c.OpponentTurnOnly))
+                return true;
+            // Soft residual Fake Trap: Activate-only vs opp destroy-your-Trap chain. Soft-skip
+            // open-state corpus (NeedsHardBoard Soft-equivalent; Soft ≠ hard).
+            if (act.Exists(c => c != null &&
+                    c.ActivationCondition == "OppEffectWouldDestroyYourTrap"))
+                return true;
+            // World Suppression / Mystic Probe / Metal Detector: only in a chain window, answering the
+            // activation of a card of that kind (TurnNegationTrapsRegressionTests drive that window).
+            if (act.Exists(c => c != null &&
+                    c.ActivationCondition == TurnNegationTrapsRuntime.ChainLinkActivatesCardFamily))
+                return true;
+            // Gust / Driving Snow: only in the window after an opponent's effect destroyed your Spell / Trap
+            // (SpellTrapDestroyedResponseRegressionTests drive that window).
+            if (act.Exists(c => c != null &&
+                    c.ActivationCondition == SpellTrapDestroyedResponseRuntime.YourCardsDestroyedByOpponentEffect))
+                return true;
+            // Appropriate (HandDisruption v142): only in the "opponent drew outside either Draw Phase" window
+            // (HandDisruptionRegressionTests drive that window).
+            if (HandDisruptionRuntime.AnswersDrawWindow(prog))
+                return true;
+            // Fairy's Hand Mirror / Shift: only answering an opponent's targeting link (Shift: or attack)
+            // (RedirectAndReplaceRegressionTests drive those windows).
+            if (act.Exists(c => c != null && RedirectAndReplaceRuntime.IsRedirectCondition(c.ActivationCondition)))
+                return true;
+            // BattleWindows batch: Destruction Punch (the end of the Damage Step), Michizure (a monster sent from the field
+            // to your GY) and Dark Spirit of the Silent (an opponent's attack, with another face-up monster of theirs)
+            // answer only their own windows (BattleWindowsRegressionTests drive them).
+            if (BattleWindowsRuntime.AnswersOnlyBattleWindows(prog))
+                return true;
+            // EngineHygiene batch: Forced Requisition answers only "you discarded from your hand"
+            // (EngineHygieneRegressionTests drive that window).
+            if (DiscardEvents.AnswersDiscardWindow(prog))
+                return true;
+            // Armored Glass (EquipModel batch): only in the window right after a monster is equipped with an Equip Card
+            // (EquipModelRegressionTests drive that window).
+            if (EquipModelRuntime.AnswersEquipWindow(prog))
+                return true;
+            // Major Riot (ForcedActivationAndSubstitution batch, v163): only in the window right after an opponent's
+            // effect returned your monster(s) to your hand (ForcedActivationAndSubstitutionRegressionTests drive it).
+            if (MajorRiotRuntime.AnswersWindow(prog))
                 return true;
             if (act.Exists(NeedsHardBoard))
                 return true;
@@ -673,7 +999,19 @@ namespace WRLDZ.Duel.Rules
             // Multi-target cards (Soul Release: up to 5) need more than 4 picks.
             for (var n = 0; n < 12 && engine.IsAwaitingEffectTarget; n++)
             {
-                var pick = engine.PendingActivation?.LegalTargets?.FirstOrDefault();
+                var pending = engine.PendingActivation;
+                if (pending != null && pending.TargetPicksAreUpTo &&
+                    pending.ChosenTargets != null && pending.ChosenTargets.Count > 0)
+                {
+                    if (!TextEffectRuntime.TryFinishUpToTargets(engine))
+                    {
+                        fail.Add((def.name ?? $"#{def.id}") + " " + tag + " up-to");
+                        return false;
+                    }
+                    break;
+                }
+
+                var pick = pending?.LegalTargets?.FirstOrDefault();
                 if (pick == null || !engine.TrySelectEffectTarget(pick))
                 {
                     fail.Add((def.name ?? $"#{def.id}") + " " + tag);

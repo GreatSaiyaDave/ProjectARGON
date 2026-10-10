@@ -43,6 +43,15 @@ namespace WRLDZ.Duel
             var text = Normalize(utterance);
             if (text.Length == 0) return null;
 
+            if (engine.PendingActivation != null && engine.PendingActivation.AwaitingLpZeroConfirm)
+            {
+                if (text is "yes" or "sure" or "confirm" or "ok" or "okay" or "do it" or
+                    "i'm sure" or "im sure" or "pay" or "pay lp")
+                    return Intent(DuelIntentKind.ConfirmLpZero, text);
+                if (IsPass(text) || text is "cancel" or "cancel target" or "never mind" or "nevermind")
+                    return Intent(DuelIntentKind.CancelTarget, text);
+            }
+
             // —— Global phrases (no card) ——
             if (IsPass(text))
                 return Intent(DuelIntentKind.PassResponse, text);
@@ -52,6 +61,8 @@ namespace WRLDZ.Duel
                 return Intent(DuelIntentKind.EnterBattlePhase, text);
             if (IsMain2(text))
                 return Intent(DuelIntentKind.EnterMainPhase2, text);
+            if (IsMain1(text))
+                return Intent(DuelIntentKind.EnterMainPhase1, text);
             if (IsDirectOnly(text))
                 return Intent(DuelIntentKind.DirectAttack, text);
             if (text is "cancel" or "cancel target" or "never mind" or "nevermind")
@@ -251,6 +262,11 @@ namespace WRLDZ.Duel
 
         static bool IsMain2(string t) =>
             t.Contains("main phase 2") || t.Contains("main 2") || t == "mp2";
+
+        /// <summary>Leave a Standby Phase held for Blast Juggler (checked after <see cref="IsMain2"/>).</summary>
+        static bool IsMain1(string t) =>
+            t.Contains("main phase 1") || t.Contains("main 1") || t == "mp1" || t == "main phase" ||
+            t == "continue";
 
         static bool IsDirectOnly(string t) =>
             t is "direct attack" or "attack directly" or "i attack directly";

@@ -3,7 +3,7 @@
 **Data:** `AvatarAppearance` (`vrmId`, `use3dPreview`).  
 **Folder:** `StreamingAssets/WRLDZ/Avatar3D/{vrmId}.vrm`  
 **2D fallback:** `StreamingAssets/WRLDZ/Avatar/` (portraits + layered parts).  
-**Legal:** original WRLDZ looks only. No DMO, no Konami meshes. See `DMO_AND_AVATAR.md`.
+**Legal:** no DMO assets. See `DMO_AND_AVATAR.md`.
 
 Until a VRM file is present, the customizer and HUD stay 2D.
 
@@ -52,3 +52,460 @@ Spiky hair, school or street coats, strong collars, high-contrast eyes. Palette:
 | `title` | Profile line |
 | `vrmId` | File stem under `Avatar3D/` |
 | `use3dPreview` | Prefer VRM when the file and UniVRM are present |
+
+---
+
+## Implemented path (2026-09-22) — modular MakeHuman base, not VRM
+
+Decision: **modular body + swappable parts, Skyrim-grade sliders, Takahashi style, free/modifiable
+base.** VRM/VRoid stays optional; nothing free gave anime *and* sliders, so the engine is
+MPFB2/MakeHuman (CC0 mesh, 1,258 CC0 targets) restyled toward Takahashi on top. Build pipeline and
+licences: `~/argon-avatar/PLAN.md`, `~/argon-avatar/packs/LICENSES.md`.
+
+| piece | where |
+|---|---|
+| Rigged bases, dressed | `Resources/WRLDZ/Avatar3D/argon_base_{male,female}.fbx` — mixamo skeleton (52 bones → Humanoid), **118 slider blendshapes**, parts `ArgonPart_{Shirt,Bottoms,Shoes,Hair,Eyes,Eyebrows,Eyelashes}` skinned to the same rig |
+| Slider catalogue | `Resources/WRLDZ/Avatar3D/argon_base_manifest.json` (groups face / eyes / nose / mouth / ears / body; l-/r- pairs are one slider) |
+| Clips | `Resources/WRLDZ/Avatar3D/ArgonClips_UAL.fbx` — Quaternius Universal Animation Library (CC0), Humanoid; `Idle_Loop`, `Walk_Loop` used |
+| Import rule | `Assets/Editor/WRLDZ/AvatarImportPostprocessor.cs` — Humanoid, blendshapes kept, materials not imported |
+| Data | `AvatarAppearance.morphs` (`List<MorphWeight>`; `GetMorph`/`SetMorph`; clamped in `ClampToCatalog`) |
+| Token | `Presentation/Avatar/OverworldAvatar3d.cs` — `Attach(slot, look)` mirrors `OverworldAvatarToken.Attach`; blendshapes from `morphs`, skin/hair tints, Idle↔Walk Playable blend from `Speed` |
+| Wiring | `OverworldUI` calls `OverworldAvatar3d.Attach` first and falls back to the OBJ token; `Speed` = map slide rate in m/s |
+
+**Not yet:** cel shader + ink outline (parts currently take Unity's default material), Takahashi
+spike hair (placeholder MakeHuman hair), the `ClothingCatalog` items in 3D (default outfit only),
+customizer slider pages, and parts following the body sliders (garments do not carry shape keys —
+extreme slider values can push skin through cloth; the garment delete-groups hide moderate ones).
+
+**To verify in the Editor:** focus → both FBX import as Humanoid with 118 blendshapes → Overworld
+scene: the token shows the dressed base, idles when still and walks when the map pans.
+
+### Addendum, later 2026-09-22 — anime pass + presence rule
+- Bases are now the **anime build** (`~/argon-avatar/tools/build_avatar.sh`): smoothed face on every slider,
+  **drawn eyes** (CC0 VRoid eye cards: `ArgonPart_EyeL/R`, five alpha layers each), procedural Takahashi spike hair
+  (`ArgonPart_Hair`, `crown` style default). Parts and their submesh textures are listed in
+  `Resources/WRLDZ/Avatar3D/argon_base_<sex>.parts.json`; textures live in `Resources/WRLDZ/Avatar3D/Textures/`.
+- `OverworldAvatar3d.BuildMaterials(sex)` rebuilds all submesh materials as **unlit** from that manifest (materials are
+  never imported — the art guide forbids PBR). Eye/lash/brow layers are alpha-blended and drawn after the skin.
+- **Presence rule (Dave):** the avatar is *translucent in Zone or Duel mode* — the player's physical form inhabits
+  that space. `SetPresence(0.3f)` when `ZoneModePrompt` opens (both Tear and NPC sites in `OverworldUI`), `1f` on close.
+
+### Addendum, night 2026-09-22 — v0.6 hair + face decals
+- Bases rebuilt from the ROM-cel construction (`~/argon-avatar/PLAN.md`, status "night"): Yugi-type tri-colour
+  star with fringe / lightning streaks / side-locks, Takahashi iris in the VRoid iris slot, and two new alpha
+  decal parts **`ArgonPart_Mouth`** and **`ArgonPart_Nose`** (11 parts per base). `BuildMaterials` treats them like
+  the eye layers (unlit, alpha-blended, queue 3005). `Textures/` gained `ArgonPart_Mouth_MAT.png`,
+  `ArgonPart_Nose_MAT.png`; the iris/highlight PNGs were overwritten in place (same names).
+- Limit: the decal cards are skinned to the head bone but carry no blendshapes — mouth/nose sliders move the
+  (flattened) skin under them, not the drawn line. Next pass binds them to nearest-vertex shape keys.
+
+### Addendum, 2026-09-23 — hidden during duels and Zone Mode
+- Owner rule refined: *"the player's avatar should not be obstructive or really visible to the player during duels or
+  zone mode"*. `SetPresence(0)` now **hides** the body (every `Renderer` disabled; GameObject, Playable graph and look
+  stay alive); `SetPresence(>0)` restores. `0.3` remains only for the Zone Mode **prompt** sheet on the map.
+- Global hide reasons stack via `OverworldAvatar3d.HideBody(reason, bool)` and override any requested presence:
+  `ArDuelSpace` holds `duel:<id>` for its lifetime (AR duel, Zone Mode stage, free-view stage), `ZoneModeSession`
+  holds `zone:<id>`, and `AppSession.StartArDuel` sets `duel-launch` for the scene hop (cleared on the next
+  single-mode scene load, so a refused launch never leaves the map token invisible).
+
+### Addendum, 2026-09-23 — AR floating right hand (`argon_hand_right.fbx`)
+- **Asset:** `Resources/WRLDZ/Avatar3D/argon_hand_right.fbx` — the player's right hand + a ~7 cm forearm stub, cut from
+  the CC0 rigged base `~/argon-avatar/build/argon_base_male.glb` by **`~/argon-avatar/tools/make_hand.py`** (Blender 5.2
+  headless: `blender -b --python tools/make_hand.py [-- in.glb out.fbx render_dir]`). Same MakeHuman (CC0) body and
+  mixamorig skeleton as the bases; no third-party mesh added.
+- Contents: mesh `ArgonHand_R` (1,749 verts, skinned to the 17 bones from `mixamorig:RightForeArm` down), blend shapes
+  **`Relaxed` / `FanHold` / `Pinch`** (finger poses baked with *Apply as Shape Key* from the armature, so Unity needs no
+  retarget), and `Anchor_*` empties (Wrist, Palm, PalmNormal, MiddleTip, Grip, IndexTip, PinkyTip, ThumbTip, Pinch)
+  that `ArFloatingHand` reads to frame itself. 1:1 metres (wrist → middle fingertip 0.184 m).
+- Import: `AvatarImportPostprocessor` treats `argon_hand_*` as `animationType None` (a forearm-only skeleton cannot
+  be Humanoid), blend shapes on, materials off (the hand is drawn with `WRLDZ/SpiritGhostUnlit`, skin-tinted, alpha 0.35).
+- Runtime + behaviour: `Presentation/ArInteraction/FLOATING_HAND.md`.
+- **Confirmed by owner (2026-09-23):** opening free view (`FreeViewScreen`, which mounts an `ArDuelSpace`) hides the map avatar
+  body too — same rule as duels and Zone Mode.
+
+### Addendum, 2026-09-23 (evening) — Meshy modular base v1 replaces the procedural v0.6 bases
+- **Owner's call:** the procedural MakeHuman v0.6 look was rejected; the owner generated modular parts with Meshy AI.
+  `argon_base_{male,female}.fbx` are now built by **`~/argon-avatar/tools/build_meshy_avatar.sh <sex> --install`**
+  (details, metrics, defects: `~/argon-avatar/PLAN.md`, status "Meshy modular base v1"; comparison sheet
+  `~/argon-avatar/build/render/FINAL_meshy_vs_refs.png`).
+- **Same contract:** one armature `ArgonAvatarRig`, 52 `mixamorig:*` bones (the MPFB mixamo armature fitted to the Meshy
+  body's landmarks), root `mixamorig:Hips`, **5 parts** `ArgonBody_<sex>`, `ArgonPart_Hair`, `ArgonPart_Shirt` (the coat),
+  `ArgonPart_Bottoms`, `ArgonPart_Shoes`, all skinned to it (≤ 4 influences). Male 1.75 m body / 1.83 m with hair,
+  female 1.65 / 1.77 m. ~70k triangles per avatar.
+- **Gone:** eye cards (`ArgonPart_EyeL/R`), brows, lashes, `ArgonPart_Mouth` / `ArgonPart_Nose` — the Meshy face is
+  painted into the body texture. Nothing in code requires them (they are only recognised by name when present).
+- **No blendshapes.** `OverworldAvatar3d.Apply` skips the slider loop when the body has none; `AvatarAppearance.morphs`
+  and `argon_base_manifest.json` stay for the planned bone-scale / procedural-morph sliders.
+- **Textures:** every part is textured (`Textures/Meshy_<sex>_{Body,Hair,Shirt,Bottoms,Shoes}.png`, 2048², base colour
+  only). `BuildMaterials` records which renderers got a texture; **skin and hair tints now apply only to untextured
+  parts**, so `skinHex` / `hairHex` no longer change the Meshy look (they would multiply into the painted face and hair).
+  `TintGarments` (NPC palettes) still multiplies over the garment textures.
+- **Humanoid:** the two FBX `.meta` files keep their GUIDs, but their stored `humanDescription.human` / `skeleton` lists
+  (the old MPFB rest pose) were cleared so the importer re-generates the avatar from the new rig. The old v0.6 FBX, metas,
+  parts.json and textures are backed up in `~/argon-avatar/build/meshy/unity_backup_v06/`. Old textures are left in `Textures/`.
+- **To verify in the Editor:** both FBX re-import as Humanoid with a valid (green) auto-mapping; Idle_Loop / Walk_Loop
+  retarget without twisted forearms/hands (the fitted rig has large roll changes there) and the feet stay planted
+  (Meshy feet are plantar-flexed); textures appear on all 5 parts; the token size in the HUD slot (male body 1.75 m vs
+  1.715 m in v0.6, and the hair adds 8 cm).
+- **Licence:** Meshy output rights depend on the owner's Meshy plan — **not confirmed**. Everything under `Resources/`
+  ships in a player build; do not cut a release build with these files until the owner confirms (see
+  `~/argon-avatar/packs/meshy_avatar/PROVENANCE.md`).
+
+### Addendum, 2026-09-29 — Customization v1 (height, weight, hairstyles, hair dye, clothes colours)
+Built on the Meshy modular base v1 (the owner's Downloads bodies stay the male / female bases). Pipeline and tools:
+`~/argon-avatar/tools/custom/` (status "Customization v1" in `~/argon-avatar/PLAN.md`).
+
+| piece | where / how |
+|---|---|
+| Height | `AvatarAppearance.heightCm` (0 = base 175 / 165 cm; range 152–203 male, 145–190 female) → uniform scale of the body (`HeightScale`); skeleton, clothes and hair scale as one. |
+| Weight | `AvatarAppearance.weight` 0..1 (0.5 = as built). Shape keys **`Weight_Thin` / `Weight_Heavy`** on the body AND every garment (`custom_body.py`: inflate-around-bone + belly band, clothes take the nearest body point's displacement, so nothing clips more than at rest). |
+| Body type | `AvatarAppearance.bodyType` (0 male, 1 female, -1 legacy = old portrait/body parity rule). `IsFemale` replaces the parity checks in `OverworldAvatar3d`. |
+| Hairstyles | `Resources/WRLDZ/Avatar3D/Hair/argon_hair_<id>_<male|female>.fbx` (ArgonAvatarRig + one skinned `ArgonHair`, Generic import) + `Hair_<id>.png` + `thumb_<id>.png`; list in `Hair/hair_catalog.json` (20 styles, 76 named palettes, wild swatches). `OverworldAvatar3d.GraftHair` re-points the hair's bones at the body's by name; the base's `ArgonPart_Hair` is only the fallback. `hairStyleId` "" = the body's own Meshy hair rebuilt as `storm_crown` / `crimson_flame`. |
+| Hair dye | `WRLDZ/AvatarHair` shader. Zones baked per vertex by `hair_build.py`: colour R tip, G fringe/bangs, B streak, A side; UV1.x = the original colour's luminance (keeps painted lock shading). `hairPattern` Original / Solid / Ombré tips / Tri-color / Streaks / Split with `hairHex` (root) + `hairTipHex` / `hairFringeHex` / `hairStreakHex` / `hairSideHex`. |
+| Clothes / skin colour | `WRLDZ/AvatarRecolor` shader on body + garments with `Textures/Meshy_<sex>_<Slot>_mask.png` (linear; garments R main / G accent / B trim, body R skin / G undersuit) and `argon_base_<sex>.paint.json` (region mean luminance). `AvatarAppearance.paints` "Shirt.0" … "Body.1"; empty = original. Full palette = `AvatarCatalog.ClothingSwatches` + HSV picker. |
+| Materials | `Resources/WRLDZ/Avatar3D/Materials/AvatarRecolor.mat` / `AvatarHair.mat` reference the shaders so player builds keep them (no `Shader.Find` stripping). |
+| Customizer | `AvatarCustomizerUI` (+ `.Body3d.cs`): live 3D preview (`AvatarPreview3d`, layer 27 stage + RenderTexture, drag to turn, FACE/BODY zoom), tabs BODY / HAIR / HAIR DYE / SKIN / CLOTHES + the old wardrobe tabs; landscape = preview left, editors right; portrait = stacked. |
+| Import | `AvatarImportPostprocessor`: `Hair/` FBX → Generic, no materials, no mesh compression; `*_mask.png` → linear, uncompressed. |
+
+Also fixed: the idle clip pick matched any `*Idle_Loop` (Swim/Pistol/Spell…), so the map token idled with raised arms; it now takes exactly `Idle_Loop` / `Walk_Loop`.
+
+Hair generation (Meshy, 648 credits, log `~/argon-avatar/packs/meshy_hair/spend.log`): our bald body rendered in key green →
+image-to-image `nano-banana` paints the style on it (3) → multi-view (3) → `multi-image-to-3d` meshy-7.1 textured (30) →
+`hair_fit.py` (green = mannequin; top-slice + head ICP onto our body, ~3 mm median) → `hair_build.py` (face-hug filter,
+scalp cap from the body's painted skull, push-out, zones, skin) for BOTH bodies → `build_hair_set.py --install`.
+Adding a style: add it to `research/customization/hair_catalog.json`, `gen_batch.py images <id>` → review the sheet →
+`gen_batch.py meshes <id>` → `build_hair_set.py --install`.
+
+**Not yet:** hair has no weight morph (long hair on a Heavy body can sit inside the coat's back), no hair physics,
+garment shapes are still one outfit per body (colours only), 20 of the 58 researched styles are built.
+
+### Addendum, 2026-09-29 — Spirit companions (3D Kuribohs) + admin chooser
+- Six Meshy companions (`~/argon-avatar/tools/custom/kuri_gen.py` → `kuri_build.py`): Kuriboh, Winged Kuriboh, Junkuriboh,
+  Galactikuriboh, Kuribandit, Darkuriboh — `Resources/WRLDZ/Companions/<id>.fbx` + `<id>.png` + `thumb_<id>.png`. Winged
+  ones carry a Root / Wing_L / Wing_R armature (Generic import) that `SpiritCompanionModel` flaps; size and centre come
+  from the rendered bounds (static and rigged FBX import at different unit scales).
+- `Data/SpiritCompanions` + `PlayerProgress.companionId` ("" = the Kuriboh of the player's team). `KuribohCompanion.CurrentId`
+  resolves it; `LabAdminService.IsAdmin` accounts may pick any of the six (profile sheet, SPIRIT column); others see theirs.
+- Map token: a 3D companion beside the avatar (falls back to the navi sprite). AR duel: `KuribohArBehaviour` swaps its
+  art quads for the model (same hover / orbit / dart behaviour, bounce on draws, fade via `SetAlpha`).
+
+### Addendum, 2026-09-29 — Canon duelist outfits (full outfits, not just colours)
+- One Meshy generation per character paints the whole canon outfit onto OUR green body (`tools/custom/render_body.py`
+  → `outfit_gen.py images|meshes <id>`, ~36 credits) and `outfit_build.py <id> <sex>` turns it into one garment:
+  box + ICP fit on the bare skin the outfit leaves (head, neck, hands; ~5–7 mm), mannequin cut, 4 mm clearance,
+  nearest-body skin weights (coat tails blend to the hips), the body's Weight_Thin / Heavy morphs, a main / accent /
+  trim recolour mask, and a **body hide map** (`Outfit_<id>_<sex>_hide.png`, body UV space): body faces the outfit
+  covers (ray tests along each face normal; feet under shoes; never head / neck / hands) are discarded by
+  `WRLDZ/AvatarRecolor` (`_HideMap` / `_HideOn`) while the outfit is worn. `install_outfits.py` copies everything to
+  `Resources/WRLDZ/Avatar3D/Outfits/` and writes `outfit_catalog.json` (id, name, character, suit, refLum, sexes).
+- `AvatarAppearance.outfitId` ("" = base clothes). `OverworldAvatar3d.ApplyOutfit` grafts `argon_outfit_<id>_<sex>` by bone
+  name (shared `GraftSkinned` with the hair), hides ArgonPart_Shirt / Bottoms / Shoes, and paints the body's undersuit
+  with the outfit's `suit` colour ("skin" for bare arms; e.g. black under Kaiba's coat = his turtleneck and pants) unless
+  the player painted Body.1. Paint keys `Outfit.0/1/2`.
+- Customizer: **OUTFIT** tab (base clothes + every outfit built for the current body); CLOTHES recolours the outfit.
+  AI duelists: `AiDuelistLooks` puts a character's canon outfit on when one is built (`character` match).
+- Built: Battle City Yugi, Battle City Kaiba (male). Specs for the rest of the cast: `research/customization/outfit_catalog.json`.
+
+## Addendum — canon faces as decals (2026-09-29, night)
+The Meshy base body's face texture is a scattered atlas (the face is split across many islands), so a character's face
+cannot be swapped by editing a texture region. Instead `AvatarAppearance.faceId` names a decal set in
+`Resources/WRLDZ/Avatar3D/Faces/`:
+- `<id>.png` — eyes + brows in HD anime cel style on a skin-colour patch with a feathered alpha edge (1024×540). Drawn on a
+  quad 13.2 × 7.0 cm in front of the base eyes, parented to the head bone: 3.6 cm above the head bone, 12.1 cm ahead
+  (calibrated on the male base in Unity renders; `OverworldAvatar3d.ApplyFace`).
+- `<id>_mouth.png` (optional) — a mouth on the same kind of patch, 8.4 × 4.2 cm, 1.4 cm below the head bone, 11.8 cm ahead.
+- The quads use `WRLDZ/AvatarRecolor` with `_UseTexAlpha = 1` (alpha from the texture, no outline / shadow band), queue 2460.
+- `seto_kaiba`: eyes redrawn by Meshy nano-banana (3 credits) from the Capsule Monster Coliseum dialogue bust
+  `research/menu_overhaul/game_assets/characters/cmc/kaiba/cmc_dialogue_kaiba_80_464x480.png`; the stern mouth is drawn
+  in PIL. `AiDuelistLooks` sets `faceId` for Kaiba (`WithFace`).
+- References for the other canon duelists (Yugi, Joey, Mai, Marik, Bakura, Pegasus, Weevil, Rex, Téa …) are in
+  `research/menu_overhaul/game_assets/characters/` (CMC / Falsebound Kingdom / DOTR art, `CHARACTERS.md`); no 3D
+  character models exist in any game on this machine.
+
+## Addendum, 2026-10-04 — asset audit, Darkuriboh rebuild, clothing hide fix, breathing + blinking
+Audit result (sourced models): nothing on this machine is a life-size, rigged, HD-anime DM-era duelist. The Models Resource
+rips (`~/yugi300274_work`, `~/kaiba300265_work`: 3DS *Saikyo Card Battle* Yugi / Yami / Kaiba, 256² atlases, chibi, Grok's
+FBXs lie on their backs) and the owner's Meshy statues (`~/Downloads/Meshy_AI_Yami_Yugi_*.glb` etc., unrigged single shells)
+stay **references**. Duel Links on Steam holds only 2D character art; Master Duel holds a rigged official Kuriboh *mate*
+(`mate/m04064`, 4.3k tris, generic rig, Unity-only animation clips) — an upgrade path for the companions, not used yet. The
+Meshy modular base therefore remains the player body; the work went into making it hold up.
+
+- **Darkuriboh** (`Resources/WRLDZ/Companions/darkuriboh.*`) is rebuilt from the owner-approved Kuriboh by
+  `~/argon-avatar/tools/custom/darkuriboh_build.py` to the card (passcode 1035143, `~/argon-avatar/refs/darkuriboh/`): the
+  Kuriboh body (atlas untouched), two curved eye patches 1.2 % of the body radius proud of the fur (half-discs, flat lid
+  tilted 30°, iris low, yellow-green ring, white highlights) that cover the painted round eyes, and procedural bat wings
+  (humerus / forearm / four finger rays / scalloped double-skinned membrane, dark navy bones, red-violet membrane) on the
+  same `Root / Wing_L / Wing_R` contract `SpiritCompanionModel` flaps. 12.1k tris, one 1024² texture (atlas in the top
+  80 %, eye cell + wing swatches in the bottom strip). Wing tips reach ~0.5 R above the head (the card's go higher; the
+  model is normalised to its bounds height, so the body would shrink further). The previous text-prompt Meshy generation
+  (purple fur, slit eyes, fangs) is kept in `~/argon-avatar/build/custom/companions_v2/old_darkuriboh/`.
+- **Clothing hide maps.** `AvatarImportPostprocessor` only matched `*_hide.png` / `*_mask.png`; the slot pieces write
+  `hide_<id>_<sex>.png` / `mask_<id>.png`, so all 63 hide maps imported sRGB + DXT1 + unreadable and `CombineHides` could
+  read none of them (the body showed through every signature set). Rule widened to both spellings and the 65 maps rebuilt
+  at 1024² by `~/argon-avatar/tools/custom/rebuild_hide_maps.py` (the 256² originals missed most islands of the 2048²
+  scatter atlas; the one-mesh outfit maps had been saved at 76/255 and never passed the shader threshold).
+- **Signature looks** (`CharacterLook.ApplyTo`) now clear the garment paints `Shirt/Bottoms/Shoes/Outfit.0-2`: the set is
+  its own painted albedo. `AiDuelistLooks` still sets the generic coat colours first; they no longer leak onto the set.
+- **Procedural idle** (`OverworldAvatar3d.ProceduralTick`, every body): breathing (chest pitch ±1.4°, shoulder roll, head
+  drift, a 3° lean into the walk; rotations only, so the Humanoid Animator's per-frame rewrite keeps them from piling up;
+  the Animator is `AlwaysAnimate` for that reason) and blinking (an eyelid card in the look's skin tone over the eyes,
+  ~0.1 s every 2.2–6.5 s with the occasional double blink; never on silhouettes or sourced characters). Per-instance seeds,
+  so duelists never breathe or blink in step. `DisableLocomotion` turns breathing off (AI duelists pose themselves).
+- **`AvatarAppearance.Clone()`** now copies `faceId`, `characterId`, `silhouette`, `silhouetteHex` (every account load /
+  save went through it, so a saved face decal was lost on the next session).
+- **Edit-mode preview**: `Assets/Editor/WRLDZ/AvatarAssetPreview.cs` — `Render("player"|"npc"|"companion", arg)` spawns
+  through the runtime paths and writes front / side / 3-4 / back / face PNGs + a renderer log to `Temp/AvatarPreview/`;
+  `seconds, fps` adds a face frame sequence (blink / breathing checks). `OverworldAvatar3d.EvaluatePreview(dt)` steps
+  the body outside Play mode.
+- Removed from `Textures/`: 17 orphaned v0.6 MakeHuman / VRoid textures (no references by GUID or name), and from
+  `Clothes/` the two duplicate `Outfit_*_mask.png` copies — backups in `~/argon-avatar/build/custom/unity_removed_20261004/`.
+
+Still open after this pass: the 16 shell signature looks are flat colour (no texture detail); hair `yugi_muto` shows a
+floating scalp cap above the spikes; female base has three unweighted finger bones; feet are plantar-flexed; no LODs; the
+Meshy CC BY credit line is not yet in the product UI.
+- Open (found 2026-10-04, pre-existing): the **female base** shows a small skin-coloured disc with a dark line floating
+  ~15 cm above the head in 3/4 and face views. It is not the hair and not the body (both switched off in a probe; it
+  stays) and not the blink card (blink disabled; it stays): it is a stray island of one of the Meshy female garment
+  meshes (`ArgonPart_Shoes` / `Shirt` / `Bottoms` — the boots carry a tan toe-cap texture and the Shoes renderer bounds are
+  0.93 m tall) skinned to the Head bone by `meshy_parts.py`'s Data Transfer weights. Fix: find the garment island whose
+  weights name `mixamorig:Head` and delete it or re-weight it, then rebuild `argon_base_female.fbx`. Present in the 09:31
+  baseline renders, i.e. before this pass.
+
+## Addendum, 2026-10-04 (later) — wardrobe pass: every clothing option as a real, named, pictured 3D piece
+- **Base wardrobe items are 3D now.** The 13 catalogue items that only had paper-doll art (street cap, night beanie, duel
+  goggles, holo visor, path hoodie, cargo jacket, duel coat, fingerless gloves, disk gauntlets, duel slacks, cargo pants,
+  neon kicks, path boots) are constructed shells on BOTH bodies — `~/argon-avatar/tools/custom/base_items_build.py`,
+  colours from the catalogue's Fallback colour — so picking them changes the 3D avatar. Files follow the slot-clothes
+  contract: `Clothes/argon_<id>_<sex>.fbx`, `albedo_<id>.png`, `hide_<id>_<sex>.png`. The three Meshy defaults
+  (`shirt_plain` / `bottoms_plain` / `shoes_plain`) stayed the base parts in this pass (superseded: see the night
+  addendum, they are shells now).
+- **Clean seams.** `slot_clothes.py` shells used to end on the bone-weight boundary (triangle-ragged hems). Every piece now
+  reaches past its seam and is cut by a plane (`bisect_keep`): a high neckline (a crew neck for the plain tee), sleeve
+  ends across the arm (wrist / past the elbow; sleeveless armholes are relaxed, not cut — see below), hem at the upper hip, waistband tucked 5 cm under the hem, trouser cuff over the shoe collar, shoe collar
+  at the ankle, boot top below the knee, glove cuff above the wrist, hat band edges, hood / veil edge at the neck, and
+  straight coat-tail hems and inner edges. `push_normals` now also writes the mesh coordinates (the FBX exporter ignores
+  shape-key data), so shells really stand off the skin (pushed 9 mm shirts, 8 mm shoes, 6 mm trousers, 5 mm gloves; measured medians 4–8 mm) and crowned hats 2.2 cm; before this every shell exported
+  skin-tight and the coat flares never reached the file.
+- **Hats hide the hairstyle** (`ClothingCatalog.HatHidesHair`: cap, beanie, Rex's beanie, Bonz's and Odion's hoods, and —
+  since the night addendum — Ishizu's veil); bands keep it. `OverworldAvatar3d.ApplyClothes` turns the grafted hair off while one is worn.
+- **Thumbnails + names in the customizer.** `tools/custom/clothes_thumbs.py` renders every piece on a dim body ghost
+  (`Clothes/thumb_<id>_<sex>.png`, 256², import rule: no mips, transparent); `AvatarCustomizerUI` wardrobe tiles use them
+  with the item's catalogue name as the tile label (96 px tiles). Fallback order: thumb → paper doll → slot glyph.
+- **Hairstyle `yugi_muto`** lost its floating tan ring: 248 mannequin-skull faces above the hairline removed in both sex
+  variants by `tools/custom/hair_fix_ring.py` (Zones colours, RefLum UV, weight keys and groups verified after the round trip).
+- The female "floating disc" of the earlier addendum did not reproduce after the Editor was relaunched: it was a stale
+  import in the previous Editor session, not an asset defect. Verified on 13 base items per body + the 18 signature looks (15 male, 3 female).
+- Tooling: `Packages/manifest.json` moved `com.unity.pipeline` 0.5.0-exp.1 → 0.8.0-exp.1 (`unity pipeline upgrade`); the
+  CLI refused every `unity cmd eval` against the relaunched Editor until then. `recompile_status` now prints a bare word.
+
+## Addendum, 2026-10-04 (evening) — wardrobe fit pass: no clipping, headwear on the hairline, distinct pieces
+Review of the wardrobe pass found hats cut at the jaw, eyewear inside the face, a sleeveless cut through the ribs, hide
+maps erasing 4 cm of skin past every hem, and two identical jackets. Every clothing piece on both bodies was rebuilt with
+`~/argon-avatar/tools/custom/slot_clothes.py` v3 (+ `base_items_build.py`, `rebuild_hide_maps.py`, `clothes_thumbs.py`):
+- **Head geometry, measured** (Blender, both bodies): `mixamorig:Head` sits at the skull base; eye line = Head + 3.1 cm,
+  brows ≈ +5.5 cm, hairline ≈ +10 cm, crown = +16.8 cm (male) / +16.4 cm (female); face surface at the eye line is
+  y = −0.076 (male) / −0.051 (female). Crowned hats (cap, beanie, Rex's beanie) now cover Head +2.5 cm up; the rim is two planes
+  that meet behind the ear: 8.8 cm above the skull base at the forehead, 1.2 cm over the top of the ear (the ear is
+  measured per body as the part of the head more than 8.5 cm from the midline), then down to 3.5 cm at the nape. A fixed
+  ear notch used to reach the female temple and open a hole in the rim above the eye. The hem lip below the cut brings
+  the installed edge about 1 cm lower; the cap's peak is a
+  plate at the hairline. Bands are a lathe across the forehead (+8.5..+12.5 cm) with a hair allowance: 8 mm off the skin at the
+  forehead, 3 cm at the sides and back, so a bandana stands over the hair instead of inside it. Hoods and veils are generated, not cut from the head: a
+  lathe round the skull's axis whose radius per angle follows the head + neck silhouette (`make_dome`; the body-face
+  extraction tore on the female head's ear and jaw geometry), opening at the ear line from the chin to the brows and
+  leaning forward over the forehead above them; a hood keeps a cowl round the neck, a veil hangs only behind. The goggles are three
+  lens blocks and the visor a ribbon that follows the face, both placed 1 cm off the skin surface under them at the eye
+  line (the blocks' corners come nearer where the face curves away).
+- **No clipping, by construction.** Shells are welded (the body's UV-seam splits used to open as skin-coloured cracks
+  once a shell was smoothed), oriented outward per connected component, smoothed (4 relaxations, 2 for gloves, 3 for hats)
+  so pecs / abs / kneecaps do not read through, pushed off the skin, cut by planes, then `ensure_clearance` holds every
+  vertex at least 60 % of the push above the skin point it was cut from (a per-vertex `orig_co` / `orig_no` attribute;
+  a global nearest-skin rule is applied only where the normals agree, so armpit / sternum / navel creases cannot flip
+  it). Ray-parity "inside" tests were tried and rejected: the Meshy body is not a single closed shell, so they walked
+  sleeves 3.5 cm inward. Measured on the installed files (`clearance_check.py`, signed distance of every vertex to the nearest skin point): the
+  worst generated piece is −8.7 mm (a few side-seam vertices of the male sleeveless tops), −7.7 mm on the female ones,
+  −5.5 mm at the female toes; the distance metric reads negative in creases (armpit, between the toes), so these are
+  at the noise floor, and no skin shows through any generated piece in the Editor renders. The two authored Meshy sets
+  (Yugi, Kaiba) are untouched and intersect the body by up to 2.6 cm (Kaiba's coat sleeves and thighs) — open work.
+- **Cuts are region-limited.** A sleeveless top keeps no upper-arm faces at all (the clavicle / trapezius, which the
+  weights count as 'arm', stays with the top); its armhole is the bone-weight boundary relaxed along the skin by
+  `smooth_boundary` (12 passes within 18 cm of the shoulder joints, below the neckline, snapped back onto the skin) — every
+  plane-cut variant either sliced the ribs or left teeth; the hem plane skips the sleeves (the forearms hang
+  below the hip in the A-pose, so every shirt lost its cuffs); long / short sleeves and glove cuffs are limited to the
+  arm + hand marker groups (`Mk_Sleeve` / `Mk_SleeveGlove`, stripped before export).
+- **Skirts and coats are tubes, not leg pairs.** A skirt is one lathe from under the shirt hem to the knee whose radius
+  per angle follows the body silhouette at that height (so the spread A-pose legs stay inside), skinned hips → thighs with
+  the Weight keys copied from the nearest skin vertex. Knee / full coats (`outer` 2 / 3) hang the same tube from a waist
+  seam 2 cm under the shirt hem, open at the front (straight 11 cm opening). Hip-length jackets (`outer` 1) are one closed
+  shell to the hip. Flares follow the horizontal normal (the old copysign flare tore the side seams).
+- **Distinct pieces.** Path hoodie = soft roll round the back of the neck (hood down) + kangaroo pouch; cargo jacket = two
+  chest flaps + two hip pockets (surface patches pushed 2.1 cm with closed sides); disk gauntlets = the glove thickened by 7 mm over the
+  palm, hand back and cuff (never between the fingers, where it would cross into the next finger). Duplicate catalogue names are qualified ("Kaiba's knee boots",
+  "Joey's sneakers" …); Ishizu's veil now hides the hairstyle like the hoods.
+- **Hide maps** (`rebuild_hide_maps.py`): a skin point is hidden only if the garment lies within 3 cm straight above it
+  (the old 4 cm proximity test and 9 cm ray erased rings of flesh past every hem and, beside a sleeveless top, the whole
+  inner arm, because the ray from the arm reached the shirt on the torso); faces a hem crosses are resolved per texel so
+  the hidden region ends on the hem line instead of a face-wide notch. The maps are 2048² (the body atlas's own
+  resolution, 1.5 mm at the thigh), not dilated, imported without mipmaps as single-channel R8 (`AvatarImportPostprocessor`):
+  at 1024 with a 1-texel dilation and a mip chain the hidden band reached 5–8 mm below every hem and read as grey
+  saw-teeth in the Editor. The two authored Meshy sets (Yugi, Kaiba) and the one-mesh outfits keep a generous rule
+  (garment within 3 cm above or below, or 1.5 cm around) because they were never pushed off the skin and sit up to
+  2.5 cm inside it in places. Hats, bands and eyewear hide nothing and ship no map (`GraftCloth` treats a missing map
+  as "hide nothing").
+- **Hem lips and two-sided cloth.** Every open edge of a shell that lies within 3.5 cm of the skin is extruded one row
+  down to 1.5 mm above the skin (`hem_lip`), so no hem opens into the gap between cloth and body; coat and skirt hems in
+  the air stay free. Cloth materials render both sides (`_Cull` property on `AvatarRecolor.shader`, set to Off by
+  `GraftCloth`), so the inside of an open coat or skirt is cloth, not a hole.
+- **Closed robes.** Ishizu's dress and Odion's robe are closed tubes (`closed=True` in the SHELLS spec); the other knee /
+  full coats open at the front.
+- **Thumbnails** frame the piece in the upper two thirds of the tile (the label band covers the lower 32 %), gloves on one
+  hand. **Code:** `OverworldAvatar3d.SyncHairUnderHat` runs after every apply (the hat / hair toggle used to sit inside the
+  keyed clothes block, so changing hairstyle under a cap re-showed the hair); `hair_fix_ring.py` imports and exports the
+  Zones vertex colours as linear data (the first run had darkened `yugi_muto`'s zone masks by one sRGB decode; restored
+  from git and redone).
+
+### Addendum, 2026-10-04 (night) — review round: colours, defaults, tiles
+- **Colours were wrong everywhere.** `slot_clothes.save_u8` wrote the catalogue's sRGB colours into a float-buffer
+  Blender image (read as linear) and saved it back as sRGB, so every solid albedo was gamma-lifted (the navy duel coat
+  rendered lilac-grey, black boots mid-grey). It now writes the PNG bytes exactly; every `albedo_*.png` regenerated.
+- **The three defaults are real pieces.** `shirt_plain` / `bottoms_plain` / `shoes_plain` were the Meshy body's own
+  jacket, trousers and boots, which stand 2–3 cm off the skin and pierced every shell they were mixed with, and did not
+  match their names. They are now a tee, trousers and sneakers built like every other piece; the Meshy parts switch off
+  whenever a graft succeeds (unchanged logic, now always true).
+- **Wardrobe tiles** are 128 px with a 9–14 px name, a gold wash marks the selected tile (the Outline alone only echoed
+  the sprite's silhouette), the strip is taller on wardrobe tabs in the wide layout, thumbnails ship a mip chain, the
+  ghost body in the thumbnails is dark (Workbench took the material's viewport colour, not the node colour), pieces of
+  one slot are framed at the same scale (waist to ankle for bottoms, knee to floor for shoes), gloves from outside the arm.
+- **Runtime:** a hat hides the hair only when it was actually grafted (`_hatWorn`), not whenever its id is set — a male-only
+  hat id on the female body used to leave the avatar bald; face decals and the eyelid card use a per-sex forward offset
+  (female face 1.5 cm nearer the head bone); per-piece materials and the hide composite are destroyed with the grafts;
+  `CombineHides` builds a one-channel composite and resamples a map of another size instead of dropping it.
+- **Remaining one-word signature names** are qualified (Keith's bandana, Weevil's shorts, Mako's spats, …).
+- **Neon kicks** are built in the catalogue's cyan; they were near-white and matched the white sneakers.
+
+### Addendum, 2026-10-04 (late night) — re-check round
+An independent re-check of the 64 review findings against the rebuilt files (seven agents) confirmed most fixes and
+found these, now fixed:
+- **NPC variety regression.** The new default shells had no recolour mask, so every street duelist wore the same
+  white tee. `GraftCloth` now treats a base shirt / bottoms / shoes piece without an authored mask as one paint region
+  (`Texture2D.redTexture` mask, `_RefLum` = the flat colour's own luminance), so `Shirt.0` / `Bottoms.0` / `Shoes.0`
+  recolour it exactly. Signature pieces keep their colours.
+- **Undersuit.** The base shirts carry their undersuit colour in the catalogue (`N(..., suit)`): plain tee and hoodie
+  skin, cargo jacket `#3A3A40`, duel coat `#E8ECEF` (the male default showed grey undersuit forearms).
+- **Fallbacks.** A piece that does not fit the body falls back to the slot's default shell, never to the Meshy body
+  garments; a signature look's forced skin (Marik's) is cleared by the next look unless the player painted their own.
+- **Eyewear** is real: two rims (tori) 1.2 cm off the face, a bridge that meets them, temple arms to the front of the
+  ear; thin round rims for Weevil's glasses, thick rims and strap-width arms for the duel goggles.
+- **Every generated piece follows the body build** (visor, glasses, bands, cap brim, hood roll): Weight_Thin / Heavy
+  copied from the nearest skin (`keys_from_body`), so a heavy face no longer grows through the visor.
+- **Hood roll** (hoodie, and now Marik's sleeveless hoodie) sits on the measured back of the neck; the cap and beanie
+  lose the flakes the rim planes left behind the ears; pocket patches take torso skin only (no plates on the forearms).
+- **Skirts and coat tails** blend left / right thigh weights by angle (a hard centre split tore the hem in motion).
+- **Mai's cropped vest** ends 17 cm above the hips (it was the same mesh as Téa's blouse); the plain tee has a crew neck.
+- **Hide maps:** the per-texel hem test samples the texel's true point on the triangle (clipped weights pushed the
+  probe 5 cm off the body and punched holes); trousers, skirts and shoes never hide arm skin; Kaiba's and Yugi's
+  sculpted trousers and boots hide by body region (their meshes sit inside the skin, which left the ankles bare). The
+  builders no longer install their 256 px proximity maps over the 2048 ones.
+- **Customizer:** wardrobe tabs use a two-row scrolling grid in the wide layout (the single strip showed 10 of 19
+  shirts at 720p); the selected tile has a gold frame and backing with the picture drawn on top (the earlier wash
+  covered the picture); empty slots show the bare head / face / hand instead of a glyph of the item they remove;
+  thumbnails use one fixed frame per slot, eyewear is shot front-on, gloves with the depth clipped to the hand.
+- **Lining and coat backs.** Cloth back faces are shaded with the flipped normal and 22 % darker (`AvatarRecolor.shader`,
+  `SV_IsFrontFace`), so the inside of an open coat reads as lining, not shadow blotches; the back of a coat / skirt tube
+  takes little thigh weight, so a stepping leg no longer swings the whole back panel out into a fin.
+- **Sculpted Yugi / Kaiba trousers and shoes** lost their stray weights (`~/argon-avatar/tools/custom/fix_authored_weights.py`):
+  shoes kept 190–235 units of mixamorig:Hips weight (they stretched into a spike when the hips moved) and the trousers
+  carried forearm / hand weight; trousers now keep Hips / Spine / legs, shoes the lower leg and foot. Originals backed up
+  in the session scratchpad; geometry, UVs, materials and shape keys verified unchanged on re-import.
+- **Open:** shoes still follow the toes (a voxel toe box was tried and failed: lace from a thin wall, spikes from a
+  thick one); several signature pieces share one mesh and differ only in colour (the white sneakers, the dark trousers);
+  bands sit in the hair volume of big hairstyles; crowned hats hide the whole hairstyle including long hair below the
+  rim, and the painted scalp band under a hat takes the undersuit colour; long hair tips rest inside coat shoulders;
+  Kaiba's authored coat sleeves intersect the undershirt.
+
+### Addendum, 2026-10-04 (continued) — hair under hats, two-tone pieces, hollow fill, sculpted sets
+- **Hair under hats is clipped, not removed.** `AvatarHair.shader` takes a world-space plane (`_HatClip`,
+  `_HatClipOn`) and discards hair fragments above it in both passes. `OverworldAvatar3d.SetupHatClip` builds the plane in
+  head-bone space from the hat landmarks (caps / beanies: 7.8 cm above the skull base at the forehead to 2.5 cm at the
+  nape, i.e. 1 cm under the cut rim; hoods / Ishizu's veil: level with the hood's lower edge at the neck) and
+  `PushHatClip` moves it with the head every frame. Fringe, sideburns and long hair below the rim stay, so a cap no
+  longer leaves a bald painted scalp; long hair falls out from under a hood or the veil. `ClothingCatalog.HatHairClip`
+  says which hats do this; the built-in fallback hair is still hidden under a hat.
+- **Two-tone pieces.** Every generated piece now samples one of two colours through its UVs (u 0.25 main, u 0.75 trim)
+  on an 8x8 swatch (`two_tone_image`); the region borders are cut into the mesh along planes, so they are straight:
+  every shoe has a sole band (derived from the upper's colour, or `sole_hex`: Neon kicks are a white upper on a cyan
+  sole), the base shirts have collar, cuff and hem bands, the base trousers a waistband, the duel coat white edging, and
+  Mokuba's puffer vest shows the striped shirt's sleeves (`sleeve_hex` = his undersuit colour). Recolourable base pieces
+  use a 2x1 split mask, so paint key .0 recolours the main region and .1 the trim (`GraftCloth.SplitMask`). Swatch
+  albedos import point-filtered, uncompressed, without mips and readable.
+- **Catalogue pockets on trousers.** Plain pants: one back hip pocket; Duel slacks: one cargo pocket on the right thigh;
+  Cargo pants: a deep pocket on each thigh (side-facing `make_patch`). The cargo jacket has the three pockets its blurb
+  names.
+- **Hollow fill** (`fill_concavities`): shirts relax over the sternum, under-bust creases and navel without sinking
+  (trouser waistbands sit underneath); shoes may lose 3 mm on the toe tops so the gaps between toes partly close.
+  Toes are still readable on low shoes.
+- **Sculpted Yugi / Kaiba pieces** (`push_authored_out.py`): every vertex under or within 4 mm of the skin moved out to
+  4 mm (Kaiba's coat and trousers were up to 2.6 cm inside); originals backed up in the session scratchpad.
+
+### Addendum, 2026-10-05 — material lifetime, scalp colour, sculpted-set skin weights
+- **Magenta hair fixed.** `DestroySlotGrafts` (runs on every clothes apply) also destroyed the hair, outfit and face-decal
+  material instances while those pieces stayed, so a grafted hairstyle kept a null material and drew Unity's error
+  magenta (seen on Yami Yugi in the opponent previews). Only the clothes' own materials go there now; every other
+  instance the avatar made (`Own()`, kept in `_ownedMats`) is destroyed in `OnDestroy`. `KillMaterials` / `Kill` never
+  touch a project template, and `Kill` uses `DestroyImmediate` outside Play mode.
+- **Painted hairline under hats.** The body's head region (`Textures/scalp_<sex>_mask.png`, R = scalp in body UV space)
+  takes the look's hair colour through `_ScalpMap` / `_ScalpColor` on `AvatarRecolor` (`ApplyScalpColour`), so the strip
+  between a hat's rim and the clipped hair no longer shows the undersuit colour (Rex's beanie was a cream band).
+- **Hat clip pushed at render time.** `SetupHatClip` hooks `RenderPipelineManager.beginContextRendering` and re-pushes the
+  plane for every live avatar that wears a clipping hat, so AR opponents and edit-mode previews (which do not tick the
+  avatar) cut the hair where the head is now, not where it was at the last tick.
+- **Swatch import rule reads the PNG header.** `AvatarImportPostprocessor` decides the point-filter / no-mip rule for
+  `albedo_*` swatches (16 px or less) from the file's IHDR, because `GetSourceTextureWidthAndHeight` throws on a first
+  import.
+- **Sculpted Yugi / Kaiba tops follow the arms** (`tools/custom/fix_sleeve_weights.py`, found with the opponent-animation
+  session's `OpponentDeploySweep` renders). Yugi's sleeves hung on torso / shoulder weights, so a raised disk arm left the
+  sleeve behind as bare skin. His two wristbands (separate islands) were 100 % torso, so one stayed at the hip while the
+  disk hand rose. Two toe pieces were also on torso weight. Kaiba's raised arm pulled chest-weighted strands out of the
+  armpit, and 146 cuff vertices were weighted to both the forearm and the thigh (the hands rest on the thighs in the bind
+  pose) and stretched into black blades. The tool blends the base body's own skinning into vertices nearest the shoulder
+  or upper arm (fade 6 to 10 cm, smoothed over the mesh), gives detached islands the skin's weights outright, moves loose
+  cuff hand weight to the forearm, and gives every arm-plus-leg vertex to one limb (within 7 cm of the arm axis it is
+  sleeve). The jacket hem beside the hanging hands keeps its torso weights, so it does not follow the hands. Geometry,
+  UVs, materials and shape keys are unchanged (round trip checked); originals are in the session scratchpad
+  (`authored_backup3/`). The disk crossing counts of the sweep did not change (Yugi 12, Kaiba 5).
+- **Bottoms import rule.** The opponent-animation session added `OnPostprocessModel`, which strips Arm / Hand / Shoulder
+  weights from `Clothes/argon_bottoms_*` at import. The source files are already clean (Yugi's trousers 0 such vertices
+  since `fix_authored_weights.py`; generated male bottoms carry 10 waist vertices at 3 % or less from the body skin), so
+  the rule is a safety net.
+
+### Addendum, 2026-10-05 (later) — posed clipping probe, coat tails, cloth over cloth, hats, item shapes
+- **Posed clipping probe** (session scratchpad `poke/poke_tail.cs`, run with `unity cmd eval`): for each look, rays from the
+  hips' vertical axis to every trouser / boot / visible leg vertex over 12 idle and 16 walk samples; a hit on the outer piece
+  means the vertex sits outside it. Bake with `BakeMesh(m, false)` and map with position + rotation only (the body renderer
+  carries a ~100x FBX scale). Hem-lip rings and layered sculpted geometry give false positives; confirm by eye.
+- **Coat tails and skirts follow the legs** (`slot_clothes.make_skirt`): the back sectors keep 70 % of the thigh share (they
+  used to hang 75 % on the hips), the hem is fully on the thighs and the left / right blend is narrower. Idle probe hits on the
+  duel coat (both bodies), Pegasus, Tristan and Odion went from 870-1,320 to 0-29; the trailing calf no longer shows through
+  any back panel. The top two rings hug the waist (no +-22 deg window there). Kaiba's sculpted trench keeps its rigid tail:
+  on the thighs its halves swung out like wings.
+- **Cloth over cloth** (`tools/custom/layer_clearance.py`, run after the builders, then hides and thumbs): every top is pushed
+  4 mm outside each bottoms piece it can be worn over (generated pants / shorts of that body, its own look's bottoms; never
+  another look's skirt or the sculpted sets), visible outer surface only, dilate-smoothed. Ishizu's skirt is straight
+  (`skirt_flare` 0) so it sits inside her robe (idle probe hits 1,587 -> 130).
+- **Hair under crowned hats tucks in.** `AvatarHair.shader TuckUnderHat` draws hair within 4 cm under the rim plane in toward
+  an ellipsoid round the cranium (fitted once per body mesh from head-skinned vertices above the eye line, 1.8 cm out), so the
+  cut edge sits under the rim and long hair flows out from under it. The rim plane is derived from the bind pose
+  (`RestBoneToRoot`), not the pose at the moment the hat goes on. Hair and recolour shaders have DepthOnly / DepthNormals
+  passes applying the same cuts (SSAO no longer sees clipped hair or hidden skin). In edit mode avatars are not in `s_live`, so
+  the render-time push does not run there; previews rely on `EvaluatePreview` -> `ProceduralTick` to push.
+- **Two-tone seams.** Cuff and sleeve-colour regions need an arm-weighted vertex past the elbow and a surface facing away from
+  the arm's axis: no more white patches at the female duel coat's hips or sleeve colour on Mokuba's torso side.
+- **Sleeveless armholes** (`cut_armholes`): one plane cut per side through the armpit and the shoulder top, above armpit
+  height only; the zig-zag weight boundary is gone (Tea, Mai, Duke, Ishizu, Marik, Mako).
+- **Items match their names.** Sandals (Tea, Mako, Ishizu) are a sole band, a toe strap and an ankle strap with the foot
+  visible (`rebuild_hide_maps.py` uses the geometric rule for sandals); Tea's sole band is 3.2 cm. Fingerless gloves stop past
+  the knuckles and the thumb's middle joint; Mai's long gloves reach 12 cm further up the forearm; Keith's wristbands are bands.
+  Rex's open jacket and Bakura's open overshirt are open at the front over their undersuit colours. Catalogue text that
+  promised what nothing builds now describes the piece (Joey: "White short-sleeved tee.", Keith: "Wristbands").
+- **Customizer grid:** `WholeColumnGrid` keeps whole tile columns at the right edge (spacing absorbs the remainder) and shows a
+  chevron while more tiles lie past it.

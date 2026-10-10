@@ -1,10 +1,10 @@
 # Overworld 3D — map presence, not a second game
 
 **Scene:** `Overworld` (home).  
-**Canon:** `FLOW.md`, `PRODUCT_VISION.md`, `AR_GPS_SETUP.md`, `GO_CHROME.md`.  
+**Canon:** `FLOW.md`, `PRODUCT_VISION.md`, `AR_GPS_SETUP.md`, `GO_CHROME.md` (layout, rewritten 2026-09-23), `VISUAL_SYSTEM.md` (style).
 **Avatar mesh:** `AVATAR_3D_INTEGRATION.md`.
 
-Home stays a Pokémon GO map: you walk the real world (or WASD / walk pad indoors), the avatar stays on screen, the map pans underneath. Tears still prompt Zone Mode. 3D belongs on that map as presence, not as a replacement city you explore with a third-person camera.
+Home stays a Pokémon GO map: you walk the real world (WASD keyboard walk in Editor / Development builds only; there is no on-screen walk pad), the avatar stays on screen, the map pans underneath. Tears still prompt Zone Mode. 3D belongs on that map as presence, not as a replacement city you explore with a third-person camera.
 
 ---
 

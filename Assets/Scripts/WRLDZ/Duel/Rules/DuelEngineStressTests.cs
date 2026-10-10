@@ -210,11 +210,11 @@ namespace WRLDZ.Duel.Rules
                     {
                         for (var g = 0; g < duelCount; g++)
                         {
-                            // Deterministic shuffle variety
+                            // Deterministic shuffle variety (DuelRng coins / dice use the same seed)
                             UnityEngine.Random.InitState(1000 + g * 17);
                             try
                             {
-                                var one = PlayOneDuel(db, pDeck, aDeck, g);
+                                var one = PlayOneDuel(db, pDeck, aDeck, g, rngSeed: 1000 + g * 17);
                                 report.DuelsPlayed++;
                                 report.SoftLocksRecovered += one.SoftLocks;
                                 if (one.Exception)
@@ -322,10 +322,12 @@ namespace WRLDZ.Duel.Rules
             public string Note;
         }
 
-        static OneDuel PlayOneDuel(CardDatabase db, DeckFile pDeck, DeckFile aDeck, int seed)
+        static OneDuel PlayOneDuel(CardDatabase db, DeckFile pDeck, DeckFile aDeck, int seed, int rngSeed)
         {
             var result = new OneDuel();
             var engine = new DuelEngine();
+            // Coin tosses / dice reproduce with the shuffle seed, so a failing duel#N can be replayed (DR-16).
+            engine.Rng.Reseed(rngSeed);
             engine.StartDuel(db, pDeck, aDeck);
 
             // Integrity: starting hands

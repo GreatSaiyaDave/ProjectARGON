@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using WRLDZ.Core;
 
 namespace WRLDZ.Duel.Ocg
 {
@@ -30,9 +31,8 @@ namespace WRLDZ.Duel.Ocg
         {
             _window = new Dictionary<int, float>();
             _default = 1f;
-            var path = Path.Combine(Application.streamingAssetsPath, "OcgCore", "speed_table.json");
-            if (!File.Exists(path)) return;
-            var file = JsonUtility.FromJson<OcgSpeedFile>(File.ReadAllText(path));
+            if (!StreamingFiles.TryReadAllText("OcgCore/speed_table.json", out var json)) return;
+            var file = JsonUtility.FromJson<OcgSpeedFile>(json);
             if (file == null) return;
             _default = file.defaultWindowScale <= 0f ? 1f : file.defaultWindowScale;
             if (file.cards == null) return;

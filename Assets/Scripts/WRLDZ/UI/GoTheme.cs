@@ -2,21 +2,27 @@ using System;
 using UnityEngine;
 using UnityEngine.UI;
 using WRLDZ.Presentation;
+using WRLDZ.UI.Eldritch;
 
 namespace WRLDZ.UI
 {
     /// <summary>
-    /// Overworld + hub chrome — coordinated with Open Duelyst CCG kit (DuelystUi).
-    /// Layout is GO-inspired; art language is one cyber-TCG family only.
+    /// Overworld + hub chrome, now on the Eldritch Solid Vision theme.
+    /// Layout stays GO-inspired; the art language is carved lapis and millennium gold read as
+    /// holographic instruments floating over the map — never white frosted GO chips.
+    /// <para>Field names are load-bearing (OverworldUI / AvatarCustomizerUI read them); values moved.</para>
     /// </summary>
     public static class GoTheme
     {
-        public static readonly Color WhiteUi = DuelystUi.TextCream;
-        public static readonly Color Ink = DuelystUi.TextCream;
-        public static readonly Color InkSoft = DuelystUi.TextMuted;
-        public static readonly Color LevelGold = DuelystUi.Gold;
-        public static readonly Color MainCyan = DuelystUi.Cyan;
-        public static readonly Color MapGrass = new(0.35f, 0.55f, 0.4f, 1f);
+        public static readonly Color WhiteUi = EldritchPalette.TextCream;
+        public static readonly Color Ink = EldritchPalette.TextCream;
+        public static readonly Color InkSoft = EldritchPalette.TextMuted;
+        public static readonly Color LevelGold = EldritchPalette.MillenniumGold;
+        public static readonly Color MainCyan = EldritchPalette.SolidVisionCyan;
+
+        /// <summary>Kept for the map ground plate — now sun-bleached sandstone, not park grass.</summary>
+        public static readonly Color MapGrass =
+            Color.Lerp(EldritchPalette.SandstoneDark, EldritchPalette.LapisDeep, 0.40f);
 
         public static void EnsureAssets()
         {
@@ -75,6 +81,10 @@ namespace WRLDZ.UI
         public static Sprite PinStory() => ImagineAssets.PinStory() ?? PinPortal();
         public static Sprite PinPvp() => ImagineAssets.PinPvp() ?? PinEvent();
 
+        /// <summary>
+        /// Map orb: the authored circle sprite, warmed toward sandstone, wearing a millennium-gold
+        /// rune ring. Callers that pass a real mood tint keep it; a plain white tint gets the theme.
+        /// </summary>
         public static Button CircleButton(Transform parent, string name, Sprite sprite, Color tint,
             float x0, float y0, float x1, float y1, Action onClick)
         {
@@ -85,13 +95,35 @@ namespace WRLDZ.UI
 
             var img = go.GetComponent<Image>();
             img.sprite = sprite ?? DuelystUi.BtnCircle() ?? UiFoundation.WhiteSprite();
-            img.color = tint;
+            img.color = IsPlainWhite(tint)
+                ? Color.Lerp(Color.white, EldritchPalette.Sandstone, 0.38f)
+                : tint;
             img.preserveAspect = true;
             img.raycastTarget = true;
             img.type = Image.Type.Simple;
 
+            // Gold rune halo — ring art, so it reads as inlay over the orb rather than a wash.
+            var ring = EldritchAssets.RuneRing();
+            if (ring != null)
+            {
+                var haloGo = new GameObject("RuneHalo", typeof(RectTransform), typeof(Image));
+                haloGo.transform.SetParent(go.transform, false);
+                Place(haloGo.GetComponent<RectTransform>(), -0.06f, -0.06f, 1.06f, 1.06f);
+                var halo = haloGo.GetComponent<Image>();
+                halo.sprite = ring;
+                halo.preserveAspect = true;
+                halo.raycastTarget = false;
+                halo.color = EldritchPalette.WithAlpha(EldritchPalette.MillenniumGold, 0.55f);
+            }
+
             var btn = go.GetComponent<Button>();
             btn.targetGraphic = img;
+            var block = ColorBlock.defaultColorBlock;
+            block.normalColor = Color.white;
+            block.highlightedColor = new Color(1.14f, 1.10f, 0.92f, 1f);  // gold lift
+            block.pressedColor = new Color(0.78f, 0.82f, 0.88f, 1f);
+            block.fadeDuration = 0.08f;
+            btn.colors = block;
             if (onClick != null)
                 btn.onClick.AddListener(() =>
                 {
@@ -101,54 +133,90 @@ namespace WRLDZ.UI
             return btn;
         }
 
+        static bool IsPlainWhite(Color c) =>
+            c.r > 0.92f && c.g > 0.92f && c.b > 0.92f && c.a > 0.92f;
+
+        /// <summary>
+        /// Floating map read-out (toasts, "NEARBY", wallet). Was a white frosted plate; now a
+        /// Tertiary Solid Vision slate — thin obsidian glass with a cool cyan edge, so cream type
+        /// on it still clears outdoor glare. The name is kept for the existing call sites; nothing
+        /// about it is white any more.
+        /// </summary>
         public static RectTransform WhiteChip(Transform parent, string name,
             float x0, float y0, float x1, float y1)
         {
             EnsureAssets();
+            var slate = SolidVisionSlate.Create(parent, name, EldritchTier.Tertiary,
+                hoverGlow: false, raycast: false);
+            if (slate != null)
+            {
+                Place(slate.Rect, x0, y0, x1, y1);
+                return slate.Rect;
+            }
+
+            // Shader unavailable — flat obsidian chip rather than a white one.
             var go = new GameObject(name, typeof(RectTransform), typeof(Image));
             go.transform.SetParent(parent, false);
             var rt = go.GetComponent<RectTransform>();
             Place(rt, x0, y0, x1, y1);
             var img = go.GetComponent<Image>();
-            img.sprite = NearbyPlate() ?? UiFoundation.WhiteSprite();
-            img.type = img.sprite != null && img.sprite.border.sqrMagnitude > 0
-                ? Image.Type.Sliced
-                : Image.Type.Simple;
-            img.color = Color.white;
+            img.sprite = UiFoundation.WhiteSprite();
+            img.type = Image.Type.Simple;
+            img.color = EldritchPalette.WithAlpha(EldritchPalette.Obsidian, 0.90f);
             img.raycastTarget = false;
             return rt;
         }
 
+        /// <summary>
+        /// Map sheet / drawer: a Secondary (lapis) Solid Vision slate with a gold hieroglyph
+        /// cornice along the top edge. Reads as a carved instrument panel over the city.
+        /// </summary>
         public static RectTransform Sheet(Transform parent, string name,
             float x0, float y0, float x1, float y1)
         {
             EnsureAssets();
-            var go = new GameObject(name, typeof(RectTransform), typeof(Image));
-            go.transform.SetParent(parent, false);
-            var rt = go.GetComponent<RectTransform>();
+            var slate = SolidVisionSlate.Create(parent, name, EldritchTier.Secondary,
+                hoverGlow: false, raycast: true);
+            if (slate == null)
+            {
+                var go = new GameObject(name, typeof(RectTransform), typeof(Image));
+                go.transform.SetParent(parent, false);
+                var fallback = go.GetComponent<RectTransform>();
+                Place(fallback, x0, y0, x1, y1);
+                var fimg = go.GetComponent<Image>();
+                fimg.sprite = UiFoundation.WhiteSprite();
+                fimg.type = Image.Type.Simple;
+                fimg.color = EldritchPalette.WithAlpha(EldritchPalette.Obsidian, 0.96f);
+                fimg.raycastTarget = true;
+                return fallback;
+            }
+
+            var rt = slate.Rect;
             Place(rt, x0, y0, x1, y1);
-            var img = go.GetComponent<Image>();
-            var plate = ImagineAssets.PanelHolo() ?? DuelystUi.Panel() ?? UiFoundation.WhiteSprite();
-            img.sprite = plate;
-            img.type = plate != null && plate.border.sqrMagnitude > 0
-                ? Image.Type.Sliced
-                : Image.Type.Simple;
-            img.color = plate != null && plate != UiFoundation.WhiteSprite()
-                ? Color.white
-                : new Color(0.05f, 0.07f, 0.11f, 0.96f);
-            img.raycastTarget = true;
+
+            var band = HieroglyphBorder.Create(rt, HieroglyphBorder.Edge.Top, 26f,
+                EldritchPalette.MillenniumGold, 2.2f);
+            if (band != null) band.SetIntensity(0.75f);
+
             return rt;
         }
 
+        /// <summary>
+        /// Map action button. <paramref name="primary"/> now selects the gold-on-obsidian Primary
+        /// tier (with a hieroglyph ring) over the cyan-on-lapis Secondary tier.
+        /// </summary>
         public static Button RectAction(Transform parent, string name, string label,
             float x0, float y0, float x1, float y1, bool primary, Action onClick)
         {
             EnsureAssets();
-            var kind = primary ? Shell.MenuCommandButton.Kind.Primary : Shell.MenuCommandButton.Kind.Secondary;
-            var btn = Shell.MenuCommandButton.Create(parent, label, onClick, kind);
-            btn.name = name;
-            Place(btn.GetComponent<RectTransform>(), x0, y0, x1, y1);
-            return btn;
+            var tier = primary ? EldritchTier.Primary : EldritchTier.Secondary;
+            var ab = ArcaneButton.Create(parent, label, onClick, tier,
+                blurb: null, icon: null, titleSize: 20, centerTitle: true,
+                hieroglyphBorder: primary);
+            if (ab == null) return null;
+            ab.gameObject.name = name;
+            Place(ab.Rect, x0, y0, x1, y1);
+            return ab.Button;
         }
 
         public static Text Label(Transform parent, string name, string text, int size, Color color,

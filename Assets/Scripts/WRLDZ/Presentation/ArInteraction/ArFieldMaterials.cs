@@ -19,8 +19,32 @@ namespace WRLDZ.Presentation.ArInteraction
                 if (_shader == null)
                     _shader = UnityEngine.Shader.Find("Universal Render Pipeline/Unlit")
                               ?? UnityEngine.Shader.Find("Unlit/Color")
-                              ?? UnityEngine.Shader.Find("UI/Default");
+                              ?? UnityEngine.Shader.Find("UI/Default")
+                              ?? UnityEngine.Shader.Find("Sprites/Default");
                 return _shader;
+            }
+        }
+
+        static Shader _holo;
+
+        /// <summary>
+        /// WRLDZ/HoloUnlit (Presentation/Resources/WRLDZ/Shaders, so always in the build): unlit with material-driven
+        /// blend / ZWrite / cull. Used for alpha glass and real additive light. Sprites/Default (the old choice)
+        /// hard-codes premultiplied alpha, which made every "additive" FX alpha-blend instead.
+        /// </summary>
+        public static Shader HoloShader
+        {
+            get
+            {
+                if (_holo == null)
+                {
+                    var named = UnityEngine.Shader.Find("WRLDZ/HoloUnlit");
+                    _holo = named != null && named.isSupported
+                        ? named
+                        : UnityEngine.Shader.Find("Sprites/Default") ?? Shader;
+                }
+
+                return _holo;
             }
         }
 
@@ -63,11 +87,7 @@ namespace WRLDZ.Presentation.ArInteraction
                 return mat;
             }
 
-            var sh = UnityEngine.Shader.Find("Sprites/Default")
-                     ?? UnityEngine.Shader.Find("Unlit/Color")
-                     ?? UnityEngine.Shader.Find("Unlit/Transparent")
-                     ?? Shader;
-            mat = new Material(sh) { name = "ArLegalGlow_" + key.ToString("X8") };
+            mat = new Material(HoloShader) { name = "ArLegalGlow_" + key.ToString("X8") };
             if (mat.HasProperty("_MainTex"))
                 mat.SetTexture("_MainTex", Texture2D.whiteTexture);
             if (mat.HasProperty("_BaseMap"))
@@ -102,10 +122,7 @@ namespace WRLDZ.Presentation.ArInteraction
                 return mat;
             }
 
-            var sh = UnityEngine.Shader.Find("Sprites/Default")
-                     ?? UnityEngine.Shader.Find("Unlit/Color")
-                     ?? Shader;
-            mat = new Material(sh) { name = "ArHoloLight_" + key.ToString("X8") };
+            mat = new Material(HoloShader) { name = "ArHoloLight_" + key.ToString("X8") };
             if (mat.HasProperty("_MainTex"))
                 mat.SetTexture("_MainTex", Texture2D.whiteTexture);
             if (mat.HasProperty("_BaseMap"))
@@ -125,6 +142,41 @@ namespace WRLDZ.Presentation.ArInteraction
         public static void ApplyAdditive(MeshRenderer mr, Color c)
         {
             if (mr != null) mr.sharedMaterial = GetAdditive(c);
+        }
+
+        static Material _particleSoft;
+
+        /// <summary>
+        /// Shared unlit additive material for code-built burst particles: a procedural soft round mote
+        /// (no asset), tint from the particle's vertex colour. Never PBR.
+        /// </summary>
+        public static Material ParticleSoftAdditive()
+        {
+            if (_particleSoft != null) return _particleSoft;
+            const int n = 32;
+            var tex = new Texture2D(n, n, TextureFormat.RGBA32, false)
+            {
+                name = "ArParticleSoftDot", wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear
+            };
+            var px = new Color32[n * n];
+            for (var y = 0; y < n; y++)
+            for (var x = 0; x < n; x++)
+            {
+                var dx = (x + 0.5f) / n * 2f - 1f;
+                var dy = (y + 0.5f) / n * 2f - 1f;
+                var f = Mathf.Clamp01(1f - Mathf.Sqrt(dx * dx + dy * dy));
+                px[y * n + x] = new Color32(255, 255, 255, (byte)(f * f * 255f));
+            }
+
+            tex.SetPixels32(px);
+            tex.Apply(false, true);
+            var mat = new Material(GetAdditive(Color.white)) { name = "ArParticleSoftAdditive" };
+            if (mat.HasProperty("_MainTex")) mat.SetTexture("_MainTex", tex);
+            if (mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", tex);
+            if (mat.HasProperty("_Color")) mat.SetColor("_Color", Color.white);
+            if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", Color.white);
+            _particleSoft = mat;
+            return mat;
         }
 
         /// <summary>

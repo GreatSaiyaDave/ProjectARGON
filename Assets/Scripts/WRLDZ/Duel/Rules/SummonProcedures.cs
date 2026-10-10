@@ -84,6 +84,13 @@ namespace WRLDZ.Duel.Rules
                 r.Reason = "This card cannot be Normal Summoned/Set.";
                 return r;
             }
+            var summonGate = PsctGrammar.SummonGateNamed(OfficialCardAuthority.OfficialText(card));
+            if (!string.IsNullOrEmpty(summonGate) && !FieldSpellEffects.ControlsFaceUpNamed(who, summonGate))
+            {
+                r.Reason = $"Requires face-up \"{summonGate}\" you control.";
+                return r;
+            }
+
 
             if (!who.Hand.Contains(card))
             {
@@ -122,6 +129,41 @@ namespace WRLDZ.Duel.Rules
                 return r;
             }
 
+            // RuleLocks batch: Jam Breeding Machine — its controller cannot Normal (Tribute) Summon; Setting stays legal.
+            if (!asSet && RuleLocksRuntime.NormalSummonLocked(engine, who, card, out var jamReason))
+            {
+                r.Reason = jamReason;
+                return r;
+            }
+
+            // ContinuousLocksAndIgnitions batch (v163): Non Aggression Area — no Normal Summon and no Set this turn.
+            if (ContinuousLocksAndIgnitionsRuntime.SummonOrSetLocked(engine, who, out var naaReason))
+            {
+                r.Reason = naaReason;
+                return r;
+            }
+
+            // BattleRules batch: Cave Dragon — "Cannot be Normal Summoned while you control a monster" (Set stays legal).
+            if (!asSet && BattleRulesRuntime.NormalSummonForbiddenByOwnText(engine, who, card, out var ownReason))
+            {
+                r.Reason = ownReason;
+                return r;
+            }
+
+            // SummonTriggersAndTributes batch (v163): "You can only control 1 face-up X" — a Set stays legal.
+            if (!asSet && SummonTriggersAndTributesRuntime.UniqueBlocksFaceUp(engine, who, card, out var uniqueReason))
+            {
+                r.Reason = uniqueReason;
+                return r;
+            }
+
+            // RuleLocks batch: Chain Energy — Normal Summoning or Setting a monster from the hand needs the LP toll.
+            if (RuleLocksRuntime.HandActionUnaffordable(engine, who, card, out var tollReason))
+            {
+                r.Reason = tollReason;
+                return r;
+            }
+
             r.TributesNeeded = TcgRules.TributesRequired(card.Level);
             if (r.TributesNeeded > 0)
                 r.Kind = asSet ? SummonKind.TributeSet : SummonKind.TributeSummon;
@@ -136,9 +178,22 @@ namespace WRLDZ.Duel.Rules
             }
             else
             {
-                if (who.MonsterCount < r.TributesNeeded)
+                // Mask of Restrict Soft ContinuousProtections: neither player can Tribute.
+                if (ContinuousProtections.NeitherPlayerCanTribute(engine))
+                {
+                    r.Reason = "Neither player can Tribute cards (Mask of Restrict).";
+                    return r;
+                }
+                // Double Coston / The Trojan Horse count as 2 for a matching Attribute.
+                if (TextEffectRuntime.TributesAvailableFor(who, card) < r.TributesNeeded)
                 {
                     r.Reason = $"Need {r.TributesNeeded} Tribute(s).";
+                    return r;
+                }
+                // Soul Exchange: the opponent's monster you must Tribute frees none of your zones.
+                if (TributeSummonsRuntime.ForcedTributeLeavesNoZone(engine, who, card, r.TributesNeeded))
+                {
+                    r.Reason = "No free Monster Zone (the Tribute you must use is your opponent's monster).";
                     return r;
                 }
             }

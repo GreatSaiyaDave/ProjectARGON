@@ -1,5 +1,6 @@
 using System.IO;
 using UnityEngine;
+using WRLDZ.Core;
 using UnityEngine.UI;
 using WRLDZ.Presentation.ArInteraction;
 using WRLDZ.UI;
@@ -15,7 +16,6 @@ namespace WRLDZ.Presentation
     public class SpiritDuelerDiskView : MonoBehaviour
     {
         public const string StreamingRelativePath = "Models/SpiritDueler/BattleCityDuelDisk.obj";
-        public const string StreamingGlbRelative = "Models/SpiritDueler/BattleCityDuelDisk.glb";
 
         public enum PoseMode
         {
@@ -42,7 +42,6 @@ namespace WRLDZ.Presentation
         Color _tint = new(0.25f, 0.85f, 1f, 1f);
 
         static Mesh _sharedMesh;
-        static Material _sharedMat;
 
         /// <summary>
         /// Spawn a disk view that draws into <paramref name="rawImage"/> (must already be on canvas).
@@ -229,10 +228,9 @@ namespace WRLDZ.Presentation
             if (_sharedMesh != null) return;
 
             // Prefer StreamingAssets copy (always present after deploy)
-            var stream = Path.Combine(Application.streamingAssetsPath, StreamingRelativePath);
-            if (File.Exists(stream))
+            if (StreamingFiles.Exists(StreamingRelativePath))
             {
-                _sharedMesh = ObjMeshLoader.LoadFromFile(stream, "BattleCityDuelDisk");
+                _sharedMesh = ObjMeshLoader.LoadFromStreaming(StreamingRelativePath, "BattleCityDuelDisk");
                 if (_sharedMesh != null) return;
             }
 
@@ -244,17 +242,7 @@ namespace WRLDZ.Presentation
 
         static Material CreateMaterial(Color tint) => SpiritDuelerSkin.BuildGhostMaterial(tint);
 
-        static Material CreateGlowMaterial(Color tint)
-        {
-            var shader = Shader.Find("Universal Render Pipeline/Unlit")
-                         ?? Shader.Find("Unlit/Color")
-                         ?? Shader.Find("UI/Default");
-            var mat = new Material(shader) { name = "DiskGlowPlate" };
-            var c = new Color(tint.r, tint.g, tint.b, 0.25f);
-            if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", c);
-            if (mat.HasProperty("_Color")) mat.SetColor("_Color", c);
-            return mat;
-        }
+        static Material CreateGlowMaterial(Color tint) => SpiritDuelerSkin.BuildGlowLayer(tint);
 
         static void SetLayerRecurse(GameObject go, int layer)
         {
@@ -263,11 +251,11 @@ namespace WRLDZ.Presentation
                 SetLayerRecurse(t.gameObject, layer);
         }
 
-        /// <summary>Absolute path helper for tooling / docs.</summary>
+        /// <summary>Path helper for tooling / docs / logs (an APK entry on Android, not a file path).</summary>
         public static string ResolveObjPath()
         {
-            var stream = Path.Combine(Application.streamingAssetsPath, StreamingRelativePath);
-            if (File.Exists(stream)) return stream;
+            if (StreamingFiles.Exists(StreamingRelativePath))
+                return StreamingFiles.FullPathForLog(StreamingRelativePath);
             return Path.Combine(Application.dataPath, "Models/WRLDZ/SpiritDueler/BattleCityDuelDisk.obj");
         }
     }

@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using UnityEngine;
+using WRLDZ.Core;
 using WRLDZ.Data;
 using WRLDZ.Duel.TextEffects;
 
@@ -53,8 +54,7 @@ namespace WRLDZ.Duel.Rules
         public static SetFile Load()
         {
             if (_cached != null) return _cached;
-            var path = Path.Combine(Application.streamingAssetsPath, "WRLDZ", "eras", "pre_link_sets.json");
-            if (!File.Exists(path))
+            if (!StreamingFiles.TryReadAllText("WRLDZ/eras/pre_link_sets.json", out var json))
             {
                 Debug.LogWarning("[WRLDZ Era] Missing pre_link_sets.json");
                 return new SetFile { sets = Array.Empty<SetDef>() };
@@ -62,7 +62,7 @@ namespace WRLDZ.Duel.Rules
 
             try
             {
-                _cached = JsonUtility.FromJson<SetFile>(File.ReadAllText(path));
+                _cached = JsonUtility.FromJson<SetFile>(json);
             }
             catch (Exception ex)
             {

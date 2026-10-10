@@ -1,0 +1,149 @@
+{
+  "name": "Joey Wheeler · Duelist Kingdom",
+  "format": "wrldz_dk_character",
+  "character": "Joey Wheeler",
+  "era": "duelist_kingdom",
+  "erazBandId": "original",
+  "notes": "Red-Eyes, Time Wizard, Baby Dragon, Flame Swordsman / Thousand Dragon. Alligator's Sword, Alligator's Sword Dragon, Kunai with Chain, Magical Arm Shield.",
+  "main": [
+    {
+      "id": 74677422,
+      "name": "Red-Eyes Black Dragon",
+      "qty": 3
+    },
+    {
+      "id": 71625222,
+      "name": "Time Wizard",
+      "qty": 3
+    },
+    {
+      "id": 88819587,
+      "name": "Baby Dragon",
+      "qty": 3
+    },
+    {
+      "id": 48305365,
+      "name": "Axe Raider",
+      "qty": 3
+    },
+    {
+      "id": 49791927,
+      "name": "Tiger Axe",
+      "qty": 2
+    },
+    {
+      "id": 14977074,
+      "name": "Garoozis",
+      "qty": 2
+    },
+    {
+      "id": 15480588,
+      "name": "Armored Lizard",
+      "qty": 2
+    },
+    {
+      "id": 34460851,
+      "name": "Flame Manipulator",
+      "qty": 2
+    },
+    {
+      "id": 44287299,
+      "name": "Masaki the Legendary Swordsman",
+      "qty": 2
+    },
+    {
+      "id": 24094653,
+      "name": "Polymerization",
+      "qty": 3
+    },
+    {
+      "id": 32268901,
+      "name": "Salamandra",
+      "qty": 2
+    },
+    {
+      "id": 61854111,
+      "name": "Legendary Sword",
+      "qty": 1
+    },
+    {
+      "id": 52097679,
+      "name": "Shield & Sword",
+      "qty": 1
+    },
+    {
+      "id": 74137509,
+      "name": "Graceful Dice",
+      "qty": 1
+    },
+    {
+      "id": 72302403,
+      "name": "Swords of Revealing Light",
+      "qty": 1
+    },
+    {
+      "id": 55144522,
+      "name": "Pot of Greed",
+      "qty": 1
+    },
+    {
+      "id": 126218,
+      "name": "Skull Dice",
+      "qty": 2
+    },
+    {
+      "id": 4206964,
+      "name": "Trap Hole",
+      "qty": 1
+    },
+    {
+      "id": 44095762,
+      "name": "Mirror Force",
+      "qty": 1
+    },
+    {
+      "id": 64428736,
+      "name": "Alligator's Sword",
+      "qty": 2
+    },
+    {
+      "id": 37390589,
+      "name": "Kunai with Chain",
+      "qty": 1
+    },
+    {
+      "id": 96008713,
+      "name": "Magical Arm Shield",
+      "qty": 1
+    }
+  ],
+  "extra": [
+    {
+      "id": 45231177,
+      "name": "Flame Swordsman",
+      "qty": 2
+    },
+    {
+      "id": 41462083,
+      "name": "Thousand Dragon",
+      "qty": 1
+    },
+    {
+      "id": 11901678,
+      "name": "Black Skull Dragon",
+      "qty": 1
+    },
+    {
+      "id": 3366982,
+      "name": "Alligator's Sword Dragon",
+      "qty": 1
+    }
+  ],
+  "side": [],
+  "counts": {
+    "main": 40,
+    "extra": 5,
+    "side": 0
+  },
+  "role": "character_dk"
+}

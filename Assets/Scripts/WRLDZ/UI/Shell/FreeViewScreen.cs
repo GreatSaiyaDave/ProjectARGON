@@ -173,7 +173,7 @@ namespace WRLDZ.UI.Shell
         {
             var b = HubChrome.Capsule(parent, label, () => PlaceOn(kind, index),
                 MenuCommandButton.Kind.Primary, centerTitle: true, titleSize: 14);
-            var le = b.GetComponent<LayoutElement>() ?? b.gameObject.AddComponent<LayoutElement>();
+            var le = UiFoundation.GetOrAdd<LayoutElement>(b.gameObject);
             le.minHeight = 36;
             le.preferredHeight = 40;
         }
@@ -198,7 +198,7 @@ namespace WRLDZ.UI.Shell
 
             var playerDeck = CardDatabase.LoadDeck("player_starter.json")
                              ?? CardDatabase.LoadDeck("lab_rules_player.json");
-            var aiDeck = CardDatabase.LoadDeck("ai_kaiba.json")
+            var aiDeck = CardDatabase.LoadDeck("character_dk_kaiba.json")
                          ?? CardDatabase.LoadDeck("lab_rules_ai.json");
             _engine = new DuelEngine();
             try

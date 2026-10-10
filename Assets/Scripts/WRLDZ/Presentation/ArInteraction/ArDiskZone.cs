@@ -24,6 +24,12 @@ namespace WRLDZ.Presentation.ArInteraction
 
         public CardInstance Occupant;
         public ArFloatingCard LockedCard;
+        /// <summary>
+        /// A hand is carrying this zone's new card here (generated opponent gesture): until contact the field
+        /// controller does not seat a visual of its own. A time, so a gesture that never lands cannot hide the card.
+        /// </summary>
+        public float IncomingGestureUntil;
+        public bool IncomingGesture => Time.unscaledTime < IncomingGestureUntil;
         Coroutine _slotInsertCo;
         /// <summary>While &gt; Time.time, LateUpdate will not stomp an insert tween.</summary>
         public float SeatAnimUntil;
@@ -161,11 +167,16 @@ namespace WRLDZ.Presentation.ArInteraction
             _marker.gameObject.SetActive(AlwaysShowZoneMarkers || hot);
         }
 
-        static readonly Color LegalHover = new(0.55f, 1f, 0.65f, 0.55f);
-        static readonly Color LegalMonster = new(0.25f, 0.90f, 1f, 0.38f);
-        static readonly Color LegalSpell = new(0.40f, 1f, 0.50f, 0.38f);
+        // Faint glass, slow breathe: the sculpted pad stays the board. The pick volume (ArLegalZonePad) is much
+        // larger than what is drawn, so the zone is easy to hit without a loud slab over the disk.
+        static readonly Color LegalHover = new(0.60f, 1f, 0.72f, 0.42f);
+        static readonly Color LegalMonster = new(0.30f, 0.90f, 1f, 0.20f);
+        static readonly Color LegalSpell = new(0.45f, 1f, 0.58f, 0.20f);
         bool _legalOn;
         bool _legalHover;
+
+        /// <summary>This zone is lit as an engine-legal pick right now (placement or response activation).</summary>
+        public bool LegalOn => _legalOn && _legalGlow != null && _legalGlow.gameObject.activeInHierarchy;
 
         /// <summary>
         /// Engine-legal placement glass. Off when no card is selected.
@@ -197,7 +208,7 @@ namespace WRLDZ.Presentation.ArInteraction
                 : LegalSpell;
             var col = _legalHover ? LegalHover : baseCol;
             if (!_legalHover)
-                col.a = 0.32f + 0.14f * Mathf.Abs(Mathf.Sin(Time.unscaledTime * 3.4f));
+                col.a = baseCol.a * (0.75f + 0.35f * (0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 2.2f)));
             _legalMr.sharedMaterial = ArFieldMaterials.GetTransparent(col);
         }
 
@@ -215,17 +226,37 @@ namespace WRLDZ.Presentation.ArInteraction
             }
 
             go.layer = gameObject.layer;
-            if (Kind == ArDuelZoneKind.SpellTrap || Kind == ArDuelZoneKind.FieldSpell)
+            // Drawn: a 1.5 mm film just over the pad. Picked: the BoxCollider (cube-local units) is widened and
+            // stood up so grazing rays from the eye and slightly-off taps still land on it.
+            var box = existingCol as BoxCollider;
+            go.transform.localRotation = Quaternion.identity;
+            if (Kind == ArDuelZoneKind.SpellTrap)
             {
-                go.transform.localPosition = new Vector3(0f, 0.010f, 0.020f);
-                go.transform.localRotation = Quaternion.identity;
-                go.transform.localScale = new Vector3(0.088f, 0.008f, 0.034f);
+                // On the lip that sticks out of the slot (WorldPeekPoint), not beyond it
+                go.transform.localPosition = transform.InverseTransformPoint(WorldPeekPoint) + new Vector3(0f, 0.004f, 0f);
+                go.transform.localScale = new Vector3(0.060f, 0.0015f, 0.024f);
+                if (box != null)
+                {
+                    box.size = new Vector3(1.25f, 14f, 2.3f);
+                    box.center = new Vector3(0f, 4f, 0.25f);
+                }
+            }
+            else if (Kind == ArDuelZoneKind.FieldSpell)
+            {
+                go.transform.localPosition = new Vector3(0f, 0.008f, 0.020f);
+                go.transform.localScale = new Vector3(0.080f, 0.0015f, 0.030f);
+                if (box != null) box.size = new Vector3(1.2f, 14f, 1.6f);
             }
             else
             {
-                go.transform.localPosition = new Vector3(0f, 0.010f, 0f);
-                go.transform.localRotation = Quaternion.identity;
-                go.transform.localScale = new Vector3(0.108f, 0.008f, 0.098f);
+                // inside the 66 × 69 mm pocket outline the zone sits on (ArPlaymatLayout.DiskMonsterSurface)
+                go.transform.localPosition = new Vector3(0f, 0.0045f, 0f);
+                go.transform.localScale = new Vector3(0.062f, 0.0015f, 0.066f);
+                if (box != null)
+                {
+                    box.size = new Vector3(1.3f, 12f, 1.15f);
+                    box.center = new Vector3(0f, 4f, 0f);
+                }
             }
 
             _legalMr = go.GetComponent<MeshRenderer>();

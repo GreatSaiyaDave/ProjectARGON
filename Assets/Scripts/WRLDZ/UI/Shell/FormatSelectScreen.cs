@@ -59,6 +59,22 @@ namespace WRLDZ.UI.Shell
             v.padding = new RectOffset(4, 4, 4, 4);
             scroll.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
+            HubChrome.FeaturedCard(scroll.transform, "CHOOSE OPPONENT",
+                "Yugi · Kaiba · Joey · street lists. Standard TCG, 8000 LP.\nYour deck vs theirs",
+                () =>
+                {
+                    if (!CanStartHubNonPractice())
+                        return;
+                    FreeUiKit.PlayConfirm();
+                    RectTransform sheet = null;
+                    sheet = OpponentSelectScreen.Build(parent, () =>
+                    {
+                        if (sheet != null)
+                            FloatingPanel.DestroyDeferred(sheet.gameObject);
+                    }, labTest: false);
+                },
+                gold: true);
+
             var cards = new[]
             {
                 PvAiCard("STANDING", "Default AR field · face-to-face",
@@ -83,6 +99,22 @@ namespace WRLDZ.UI.Shell
                         : null,
                     gold: true);
 
+
+            var acc = AppSession.Instance != null ? AppSession.Instance.Account : null;
+            acc?.EnsureProgress();
+            for (var i = 0; i < FormatProgress.Ids.Length; i++)
+            {
+                var id = FormatProgress.Ids[i];
+                var owned = FormatProgress.HasBadge(acc?.progress, id);
+                HubChrome.FeaturedCard(
+                    scroll.transform,
+                    FormatProgress.Titles[i].ToUpperInvariant(),
+                    owned
+                        ? "Badge owned. Table laws are not live yet.\nOWNED · rules not final"
+                        : "Format badge. Fuse 5 shards + 2500 SE at the Bazaar.\nLOCKED",
+                    null,
+                    gold: owned);
+            }
 
             return hostGo.GetComponent<RectTransform>();
         }

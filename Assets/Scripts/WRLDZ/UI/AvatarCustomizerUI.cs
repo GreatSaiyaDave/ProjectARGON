@@ -16,7 +16,7 @@ namespace WRLDZ.UI
     /// · Full customizer (body, hair, eyes, outfit, accessory, colors, title, display name)
     /// Saves to local account DB and refreshes map/hub portraits.
     /// </summary>
-    public class AvatarCustomizerUI : MonoBehaviour
+    public partial class AvatarCustomizerUI : MonoBehaviour
     {
         Transform _canvasRoot;
         GameObject _profileSheet;
@@ -32,6 +32,7 @@ namespace WRLDZ.UI
         Image _profileXpFill;
         SoulBadgeView _soulBadge;
         Text _optionLabel;
+        RectTransform _companionHost;
         InputField _nameField;
         Action _onSaved;
         ClothingWardrobe _wardrobe;
@@ -41,8 +42,15 @@ namespace WRLDZ.UI
         readonly List<Part> _slotParts = new();
 
         // Cycle indices shown as current option labels
-        enum Part { Look, Hat, Facial, Shirt, Hands, Bottoms, Shoes, Accent, Title, Skin, HairColor, OutfitTint }
-        Part _focus = Part.Look;
+        enum Part { Look, Hat, Facial, Shirt, Hands, Bottoms, Shoes, Accent, Title, Skin, HairColor, OutfitTint, Disk, Aura, Body, Hair, Paint, Outfit }
+        Part _focus = Part.Body;
+
+        // 3D customization (Customization v1): live 3D preview, body / hair / colour editors
+        AvatarPreview3d _preview3d;
+        RectTransform _chipsHost, _stripRt, _controlsHost, _previewRt, _nameRt, _labelRt, _statusRt, _saveRt, _backRt;
+        string _hairZone = "root";
+        string _paintKey = "Shirt.0";
+        bool _wide;
 
         public static AvatarCustomizerUI Ensure(Transform parent = null)
         {
@@ -195,6 +203,10 @@ namespace WRLDZ.UI
             FloatingPanel.Place(pip.GetComponent<RectTransform>(), 0.70f, 0.02f, 0.98f, 0.22f);
             _profileLevel = StyleLevelPip(pip.transform);
 
+            _companionHost = new GameObject("Companions", typeof(RectTransform)).GetComponent<RectTransform>();
+            _companionHost.SetParent(body, false);
+            FloatingPanel.Place(_companionHost, 0.01f, 0.50f, 0.21f, 0.98f);
+
             _soulBadge = SoulBadgeView.Create(body);
             FloatingPanel.Place(_soulBadge.GetComponent<RectTransform>(), 0.84f, 0.82f, 0.98f, 0.98f);
 
@@ -345,28 +357,37 @@ namespace WRLDZ.UI
             GoTheme.Stretch(_customizerSheet.GetComponent<RectTransform>());
 
             var frame = DualMenuPresenter.BuildFrame(
-                _customizerSheet.transform, "CUSTOMIZE", "Look · wardrobe · title", () =>
+                _customizerSheet.transform, "CUSTOMIZE", "Body · hair · colours · wardrobe", () =>
                 {
                     FreeUiKit.PlayClick();
                     OpenProfile(_onSaved);
-                });
+                }, dense: true);
             var body = frame.BodyHost;
 
             _nameField = MakeInput(body, "NameField", 0.02f, 0.90f, 0.98f, 0.99f);
+            _nameRt = _nameField.GetComponent<RectTransform>();
 
+            // 2D portrait stays as the fallback when the 3D base is not in the build
             _preview = AvatarPortraitView.CreateFullBody(body, 0.22f, 0.48f, 0.78f, 0.88f,
                 hideBackground: true, badgeCrop: false);
+            _preview3d = AvatarPreview3d.Create(body);
+            _previewRt = _preview3d.GetComponent<RectTransform>();
 
-            BuildPartChips(body);
+            _chipsHost = new GameObject("Chips", typeof(RectTransform)).GetComponent<RectTransform>();
+            _chipsHost.SetParent(body, false);
+            BuildPartChips(_chipsHost);
 
             _optionLabel = FloatingPanel.Body(body, "", 14);
-            FloatingPanel.Grid.Full(_optionLabel.rectTransform, 0.28f, 0.34f);
+            _labelRt = _optionLabel.rectTransform;
             StyleReadable(_optionLabel, 15, DuelystUi.GoldHot, TextAnchor.MiddleCenter);
 
             BuildOptionStrip(body);
 
+            _controlsHost = new GameObject("Controls", typeof(RectTransform)).GetComponent<RectTransform>();
+            _controlsHost.SetParent(body, false);
+
             _status = FloatingPanel.Body(body, "", 13);
-            FloatingPanel.Grid.Full(_status.rectTransform, 0.12f, 0.16f);
+            _statusRt = _status.rectTransform;
             StyleReadable(_status, 14, DuelystUi.TextMuted, TextAnchor.MiddleCenter);
 
             var save = HubChrome.Capsule(body, "SAVE LOOK", Save, MenuCommandButton.Kind.Gold,
@@ -376,48 +397,112 @@ namespace WRLDZ.UI
                 FreeUiKit.PlayClick();
                 OpenProfile(_onSaved);
             }, MenuCommandButton.Kind.Secondary, centerTitle: true, titleSize: 16);
-            FloatingPanel.Grid.Pair(
-                save.GetComponent<RectTransform>(),
-                back.GetComponent<RectTransform>(),
-                0.02f, 0.11f);
+            _saveRt = save.GetComponent<RectTransform>();
+            _backRt = back.GetComponent<RectTransform>();
+
+            body.gameObject.AddComponent<RectChangeRelay>().Changed = () => Relayout(false);
+            Relayout(true);
         }
+
+        /// <summary>
+        /// Landscape (the Editor's 1920x1080 Game view, tablets): 3D body on the left third, editors on the right.
+        /// Portrait phone: stacked. Re-run whenever the body well changes size.
+        /// </summary>
+        void Relayout(bool force)
+        {
+            if (_nameRt == null) return;
+            var host = (RectTransform)_nameRt.parent;
+            var r = host.rect;
+            var wide = r.width > r.height * 1.15f;
+            if (!force && wide == _wide) return;
+            _wide = wide;
+            if (wide)
+            {
+                GoTheme.Place(_previewRt, 0.01f, 0.13f, 0.37f, 0.99f);
+                GoTheme.Place(_preview.GetComponent<RectTransform>(), 0.01f, 0.13f, 0.37f, 0.99f);
+                GoTheme.Place(_saveRt, 0.01f, 0.01f, 0.185f, 0.11f);
+                GoTheme.Place(_backRt, 0.195f, 0.01f, 0.37f, 0.11f);
+                GoTheme.Place(_nameRt, 0.39f, 0.915f, 0.99f, 0.99f);
+                GoTheme.Place(_chipsHost, 0.39f, 0.70f, 0.99f, 0.905f);
+                GoTheme.Place(_labelRt, 0.39f, 0.645f, 0.99f, 0.695f);
+                GoTheme.Place(_stripRt, 0.39f, 0.495f, 0.99f, 0.64f);
+                GoTheme.Place(_controlsHost, 0.39f, 0.07f, 0.99f, 0.485f);
+                GoTheme.Place(_statusRt, 0.39f, 0.005f, 0.99f, 0.06f);
+            }
+            else
+            {
+                GoTheme.Place(_nameRt, 0.02f, 0.925f, 0.98f, 0.99f);
+                GoTheme.Place(_previewRt, 0.12f, 0.585f, 0.88f, 0.92f);
+                GoTheme.Place(_preview.GetComponent<RectTransform>(), 0.22f, 0.585f, 0.78f, 0.92f);
+                GoTheme.Place(_chipsHost, 0.02f, 0.425f, 0.98f, 0.58f);
+                GoTheme.Place(_labelRt, 0.02f, 0.39f, 0.98f, 0.42f);
+                GoTheme.Place(_stripRt, 0.02f, 0.30f, 0.98f, 0.385f);
+                GoTheme.Place(_controlsHost, 0.02f, 0.125f, 0.98f, 0.295f);
+                GoTheme.Place(_statusRt, 0.02f, 0.10f, 0.98f, 0.123f);
+                FloatingPanel.Grid.Pair(_saveRt, _backRt, 0.01f, 0.095f);
+            }
+            if (_customizerSheet != null && _customizerSheet.activeInHierarchy) RebuildOptionStrip();
+        }
+
+        static readonly Part[] ChipOrder =
+        {
+            Part.Body, Part.Hair, Part.HairColor, Part.Skin, Part.Outfit, Part.Paint, Part.Look, Part.Title, Part.Accent,
+            Part.Hat, Part.Facial, Part.Shirt, Part.Hands, Part.Bottoms, Part.Shoes, Part.Disk, Part.Aura
+        };
+
+        static string ChipLabel(Part p) => p switch
+        {
+            Part.Body => "BODY", Part.Hair => "HAIR", Part.HairColor => "HAIR DYE", Part.Skin => "SKIN",
+            Part.Paint => "CLOTHES", Part.Outfit => "OUTFIT", Part.Look => "PORTRAIT", Part.Title => "TITLE", Part.Accent => "SPIRIT",
+            Part.Hat => "HAT", Part.Facial => "FACE", Part.Shirt => "SHIRT", Part.Hands => "HANDS",
+            Part.Bottoms => "BOTTOMS", Part.Shoes => "SHOES", Part.Disk => "DISK", Part.Aura => "AURA", _ => ""
+        };
 
         void BuildPartChips(Transform sheet)
         {
             _slotImgs.Clear();
             _slotRings.Clear();
             _slotParts.Clear();
-            var parts = new[]
+            const int cols = 9;
+            const float gap = 0.010f, rowGap = 0.06f;
+            var cellW = (1f - gap * (cols - 1)) / cols;
+            var rows = (ChipOrder.Length + cols - 1) / cols;
+            var rowH = (1f - rowGap * (rows - 1)) / rows;
+            for (var i = 0; i < ChipOrder.Length; i++)
             {
-                Part.Look, Part.Hat, Part.Facial,
-                Part.Shirt, Part.Hands, Part.Bottoms,
-                Part.Shoes, Part.Accent, Part.Title
-            };
-            const int cols = 5;
-            const float x0 = 0.02f, x1 = 0.98f, yTop = 0.51f, rowH = 0.09f, gap = 0.012f;
-            var cellW = ((x1 - x0) - gap * (cols - 1)) / cols;
-            for (var i = 0; i < parts.Length; i++)
-            {
-                var p = parts[i];
+                var p = ChipOrder[i];
                 var col = i % cols;
                 var row = i / cols;
-                var xx0 = x0 + col * (cellW + gap);
-                var xx1 = xx0 + cellW;
-                var yy1 = yTop - row * (rowH + gap);
-                var yy0 = yy1 - rowH;
-                var chip = new GameObject("Slot_" + p, typeof(RectTransform), typeof(Image), typeof(Button),
-                    typeof(Outline));
+                var xx0 = col * (cellW + gap);
+                var yy1 = 1f - row * (rowH + rowGap);
+                var chip = new GameObject("Slot_" + p, typeof(RectTransform), typeof(Image), typeof(Button));
                 chip.transform.SetParent(sheet, false);
-                GoTheme.Place(chip.GetComponent<RectTransform>(), xx0, yy0, xx1, yy1);
-                var img = chip.GetComponent<Image>();
+                GoTheme.Place(chip.GetComponent<RectTransform>(), xx0, yy1 - rowH, xx0 + cellW, yy1);
+                var bg = chip.GetComponent<Image>();
+                bg.sprite = UiFoundation.WhiteSprite();
+                bg.color = new Color(0.04f, 0.06f, 0.10f, 0.55f);
+
+                var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(Image), typeof(Outline));
+                iconGo.transform.SetParent(chip.transform, false);
+                GoTheme.Place(iconGo.GetComponent<RectTransform>(), 0.12f, 0.30f, 0.88f, 0.97f);
+                var img = iconGo.GetComponent<Image>();
                 img.sprite = SlotIcon(p);
                 img.preserveAspect = true;
-                img.color = Color.white;
-                var ring = chip.GetComponent<Outline>();
+                img.raycastTarget = false;
+                var ring = chip.AddComponent<Outline>();
                 ring.effectColor = new Color(DuelystUi.Gold.r, DuelystUi.Gold.g, DuelystUi.Gold.b, 0.95f);
                 ring.effectDistance = new Vector2(2f, -2f);
                 ring.useGraphicAlpha = false;
                 ring.enabled = false;
+                Destroy(iconGo.GetComponent<Outline>());
+
+                var lbl = FloatingPanel.Body(chip.transform, ChipLabel(p), 10);
+                GoTheme.Place(lbl.rectTransform, 0f, 0f, 1f, 0.30f);
+                StyleReadable(lbl, 10, DuelystUi.TextCream, TextAnchor.MiddleCenter);
+                lbl.resizeTextForBestFit = true; lbl.resizeTextMinSize = 7; lbl.resizeTextMaxSize = 12;
+                lbl.horizontalOverflow = HorizontalWrapMode.Wrap;
+                lbl.raycastTarget = false;
+
                 var captured = p;
                 chip.GetComponent<Button>().onClick.AddListener(() =>
                 {
@@ -438,7 +523,48 @@ namespace WRLDZ.UI
             var strip = new GameObject("OptionStrip", typeof(RectTransform), typeof(Image), typeof(ScrollRect),
                 typeof(RectMask2D));
             strip.transform.SetParent(sheet, false);
-            FloatingPanel.Grid.Full(strip.GetComponent<RectTransform>(), 0.17f, 0.27f);
+            _stripRt = strip.GetComponent<RectTransform>();
+            _optionHost = MakeScrollStrip(strip);
+            _stripHost = _optionHost;
+            // wardrobe tabs in the wide layout: a two-row scrolling grid over the strip + the (unused) controls area, so a
+            // slot's pieces are visible at once with legible names (the single strip showed 10 of 19 shirts at 720p)
+            var grid = new GameObject("WardrobeGrid", typeof(RectTransform), typeof(Image), typeof(ScrollRect), typeof(RectMask2D));
+            grid.transform.SetParent(sheet, false);
+            _gridRt = grid.GetComponent<RectTransform>();
+            _gridHost = MakeScrollStrip(grid);
+            var hl = _gridHost.GetComponent<HorizontalLayoutGroup>();
+            if (hl != null) DestroyImmediate(hl);
+            var gl = _gridHost.gameObject.AddComponent<GridLayoutGroup>();
+            gl.startAxis = GridLayoutGroup.Axis.Vertical;
+            gl.constraint = GridLayoutGroup.Constraint.FixedRowCount;
+            gl.constraintCount = 2;
+            gl.spacing = new Vector2(10f, 10f);
+            gl.padding = new RectOffset(8, 8, 6, 6);
+            gl.childAlignment = TextAnchor.UpperLeft;
+            // "more" cue at the right edge while tiles lie past it (a dark fade strip + chevron, never a raycast target)
+            var cue = new GameObject("MoreCue", typeof(RectTransform), typeof(Image));
+            cue.transform.SetParent(grid.transform, false);
+            var cueRt = cue.GetComponent<RectTransform>();
+            cueRt.anchorMin = new Vector2(1f, 0f); cueRt.anchorMax = new Vector2(1f, 1f); cueRt.pivot = new Vector2(1f, 0.5f);
+            cueRt.sizeDelta = new Vector2(34f, 0f); cueRt.anchoredPosition = Vector2.zero;
+            var cueImg = cue.GetComponent<Image>(); cueImg.sprite = UiFoundation.WhiteSprite();
+            cueImg.color = new Color(0.03f, 0.04f, 0.08f, 0.72f); cueImg.raycastTarget = false;
+            var chev = FloatingPanel.Body(cue.transform, "\u203A", 34);
+            chev.alignment = TextAnchor.MiddleCenter;
+            var chevRt = chev.GetComponent<RectTransform>(); chevRt.anchorMin = Vector2.zero; chevRt.anchorMax = Vector2.one;
+            chevRt.offsetMin = chevRt.offsetMax = Vector2.zero;
+            cue.SetActive(false);
+            var fit = grid.AddComponent<WholeColumnGrid>();
+            fit.Grid = gl; fit.Viewport = _gridRt; fit.Scroll = grid.GetComponent<ScrollRect>(); fit.Cue = cue;
+            grid.SetActive(false);
+        }
+
+        Transform _stripHost, _gridHost;
+        RectTransform _gridRt;
+
+        /// <summary>Horizontal scrolling tile row on an existing GameObject (Image + ScrollRect + RectMask2D).</summary>
+        static Transform MakeScrollStrip(GameObject strip)
+        {
             var bg = strip.GetComponent<Image>();
             bg.sprite = UiFoundation.WhiteSprite();
             bg.color = new Color(0.04f, 0.06f, 0.10f, 0.42f);
@@ -469,7 +595,7 @@ namespace WRLDZ.UI
             sr.movementType = ScrollRect.MovementType.Clamped;
             sr.viewport = strip.GetComponent<RectTransform>();
             sr.content = crt;
-            _optionHost = content.transform;
+            return content.transform;
         }
 
         void ApplySwatch(int idx)
@@ -494,6 +620,12 @@ namespace WRLDZ.UI
                     hex = AvatarCatalog.AccentPresets[Mathf.Clamp(idx, 0, AvatarCatalog.AccentPresets.Length - 1)];
                     _draft.outfitTintHex = hex;
                     break;
+                case Part.Disk:
+                    _draft.diskHex = AvatarCatalog.DiskPalettes[Mathf.Clamp(idx, 0, AvatarCatalog.DiskPalettes.Length - 1)];
+                    break;
+                case Part.Aura:
+                    _draft.auraHex = AvatarCatalog.AuraPalettes[Mathf.Clamp(idx, 0, AvatarCatalog.AuraPalettes.Length - 1)];
+                    break;
                 default:
                     // If not on a color part, treat as accent
                     hex = AvatarCatalog.AccentPresets[Mathf.Clamp(idx, 0, AvatarCatalog.AccentPresets.Length - 1)];
@@ -504,6 +636,21 @@ namespace WRLDZ.UI
             ApplyPreview();
             UpdateOptionLabel();
             RebuildOptionStrip();
+        }
+
+        static readonly Dictionary<string, Sprite> s_clothThumbs = new();
+
+        /// <summary>Wardrobe tile picture: the piece rendered on this body (thumb_&lt;id&gt;_&lt;sex&gt;.png), else null.</summary>
+        static Sprite ClothThumb(string id, bool female)
+        {
+            if (string.IsNullOrEmpty(id)) return null;
+            var key = id + (female ? "_female" : "_male");
+            if (s_clothThumbs.TryGetValue(key, out var sp)) return sp;
+            var tex = Resources.Load<Texture2D>(OverworldAvatar3d.ClothRes + "thumb_" + key)
+                      ?? Resources.Load<Texture2D>(OverworldAvatar3d.ClothRes + "thumb_" + id + (female ? "_male" : "_female"));
+            sp = tex != null ? Sprite.Create(tex, new Rect(0f, 0f, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f) : null;
+            s_clothThumbs[key] = sp;
+            return sp;
         }
 
         static Sprite SlotIcon(Part part) => part switch
@@ -517,6 +664,14 @@ namespace WRLDZ.UI
             Part.Shoes => ImagineAssets.IconSlotShoes(),
             Part.Accent => ImagineAssets.IconSlotAccent(),
             Part.Title => ImagineAssets.IconSlotTitle(),
+            Part.Disk => ImagineAssets.IconDuel(),
+            Part.Aura => ImagineAssets.IconSoul(),
+            Part.Body => ImagineAssets.IconSlotLook(),
+            Part.Hair => ImagineAssets.IconSlotHat(),
+            Part.HairColor => ImagineAssets.IconSlotAccent(),
+            Part.Skin => ImagineAssets.IconSlotFacial(),
+            Part.Paint => ImagineAssets.IconSlotShirt(),
+            Part.Outfit => ImagineAssets.IconSlotShirt(),
             _ => ImagineAssets.IconSlotLook()
         };
 
@@ -536,6 +691,35 @@ namespace WRLDZ.UI
         {
             if (_optionHost == null || _draft == null) return;
             FloatingPanel.DestroyChildrenNow(_optionHost);
+            if (_controlsHost != null) FloatingPanel.DestroyChildrenNow(_controlsHost);
+            // wardrobe tabs have no slider block under the strip: in the wide layout they use the two-row grid
+            var wardrobe = _focus is Part.Hat or Part.Facial or Part.Shirt or Part.Hands or Part.Bottoms or Part.Shoes;
+            var useGrid = wardrobe && _wide && _gridHost != null;
+            if (_gridHost != null) FloatingPanel.DestroyChildrenNow(_gridHost);
+            if (_stripHost != null) FloatingPanel.DestroyChildrenNow(_stripHost);
+            if (_gridRt != null)
+            {
+                _gridRt.gameObject.SetActive(useGrid);
+                if (useGrid)
+                {
+                    GoTheme.Place(_gridRt, 0.39f, 0.07f, 0.99f, 0.64f);
+                    Canvas.ForceUpdateCanvases();
+                    var h = Mathf.Max(120f, _gridRt.rect.height);
+                    var cellH = (h - 12f - 10f) * 0.5f;
+                    var g = _gridHost.GetComponent<GridLayoutGroup>();
+                    g.cellSize = new Vector2(Mathf.Round(cellH * 0.80f), Mathf.Round(cellH));
+                    var sr = _gridRt.GetComponent<ScrollRect>(); if (sr != null) sr.horizontalNormalizedPosition = 0f;
+                }
+            }
+            if (_stripRt != null) _stripRt.gameObject.SetActive(!useGrid);
+            if (_stripHost != null) _optionHost = useGrid ? _gridHost : _stripHost;
+
+            if (_focus is Part.Body or Part.Hair or Part.HairColor or Part.Paint or Part.Skin or Part.Outfit)
+            {
+                BuildEditor3d();
+                RefreshSlotRings();
+                return;
+            }
 
             if (_focus == Part.Look)
             {
@@ -563,21 +747,25 @@ namespace WRLDZ.UI
                     Part.Bottoms => ClothingSlot.Bottoms,
                     _ => ClothingSlot.Shoes
                 };
-                var owned = ClothingCatalog.OwnedInSlot(_wardrobe, slot);
+                var owned = ClothingCatalog.OwnedInSlot(_wardrobe, slot, _draft.IsFemale);
                 var cur = _draft.SlotId(slot);
                 for (var i = 0; i < owned.Count; i++)
                 {
                     var item = owned[i];
-                    var spr = !item.EmptySlot && !string.IsNullOrEmpty(item.ArtPath)
-                        ? StreamingSprite.Load(item.ArtPath)
-                        : SlotIcon(_focus);
-                    OptionTile(spr ?? SlotIcon(_focus), item.Id == cur, Color.white, () =>
+                    // a thumbnail of the 3D piece on the current body (Clothes/thumb_<id>_<sex>.png, tools/custom/clothes_thumbs.py);
+                    // the empty slots keep the slot glyph; anything without a thumb falls back to its paper-doll art
+                    // empty slots show the bare body part (thumb_hat_none_* ...), not a glyph of the item they remove
+                    var spr = item.EmptySlot ? (ClothThumb(item.Id, _draft.IsFemale) ?? SlotIcon(_focus))
+                        : ClothThumb(item.Id, _draft.IsFemale)
+                          ?? (!string.IsNullOrEmpty(item.ArtPath) ? StreamingSprite.Load(item.ArtPath) : null)
+                          ?? SlotIcon(_focus);
+                    OptionTile(_optionHost, spr, item.Id == cur, Color.white, () =>
                     {
                         _draft.SetSlot(slot, item.Id);
                         ApplyPreview();
                         UpdateOptionLabel();
                         RebuildOptionStrip();
-                    });
+                    }, item.Name, 128f);
                 }
             }
             else if (_focus == Part.Accent)
@@ -590,6 +778,28 @@ namespace WRLDZ.UI
                     OptionTile(UiFoundation.WhiteSprite(), on, AvatarPortraitView.Parse(hex, Color.gray), () =>
                     {
                         _draft.accentHex = hex;
+                        ApplyPreview();
+                        UpdateOptionLabel();
+                        RebuildOptionStrip();
+                    });
+                }
+            }
+            else if (_focus == Part.Disk || _focus == Part.Aura)
+            {
+                // Spirit Dueler palettes. Swatch 0 ("") follows the Spirit magic colour, as disks did before palettes.
+                var disk = _focus == Part.Disk;
+                var hexes = disk ? AvatarCatalog.DiskPalettes : AvatarCatalog.AuraPalettes;
+                var cur = (disk ? _draft.diskHex : _draft.auraHex) ?? "";
+                var spirit = AvatarPortraitView.Parse(_draft.accentHex, Color.cyan);
+                for (var i = 0; i < hexes.Length; i++)
+                {
+                    var hex = hexes[i];
+                    var on = string.Equals(cur, hex, StringComparison.OrdinalIgnoreCase);
+                    var tint = hex.Length == 0 ? spirit : AvatarPortraitView.Parse(hex, Color.gray);
+                    OptionTile(hex.Length == 0 ? SlotIcon(_focus) : UiFoundation.WhiteSprite(), on, tint, () =>
+                    {
+                        if (disk) _draft.diskHex = hex;
+                        else _draft.auraHex = hex;
                         ApplyPreview();
                         UpdateOptionLabel();
                         RebuildOptionStrip();
@@ -615,18 +825,22 @@ namespace WRLDZ.UI
             RefreshSlotRings();
         }
 
-        void OptionTile(Sprite spr, bool on, Color tint, Action click)
+        void OptionTile(Sprite spr, bool on, Color tint, Action click) => OptionTile(_optionHost, spr, on, tint, click);
+
+        GameObject OptionTile(Transform host, Sprite spr, bool on, Color tint, Action click, string label = null, float width = 84f)
         {
             var go = new GameObject("Opt", typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement),
                 typeof(Outline));
-            go.transform.SetParent(_optionHost, false);
+            go.transform.SetParent(host, false);
             var le = go.GetComponent<LayoutElement>();
-            le.preferredWidth = 84f;
-            le.minWidth = 84f;
+            le.preferredWidth = width;
+            le.minWidth = width;
+            // the strip's HorizontalLayoutGroup does not control child width: size the rect itself
+            ((RectTransform)go.transform).sizeDelta = new Vector2(width, 0f);
             le.flexibleWidth = 0f;
             var img = go.GetComponent<Image>();
             img.sprite = spr ?? UiFoundation.WhiteSprite();
-            img.preserveAspect = true;
+            img.preserveAspect = img.sprite != UiFoundation.WhiteSprite();   // colour swatches fill the tile
             img.color = tint;
             img.raycastTarget = true;
             var ring = go.GetComponent<Outline>();
@@ -642,6 +856,34 @@ namespace WRLDZ.UI
                 FreeUiKit.PlaySelect();
                 click?.Invoke();
             });
+            if (!string.IsNullOrEmpty(label))
+            {
+                // wardrobe tile: the tile's own Image becomes a plain backing, the picture moves into a child drawn after the
+                // selection wash (UGUI draws children over their parent, so a wash child of the picture covered it)
+                ring.enabled = false;                                   // the Outline only echoed the sprite's silhouette
+                img.sprite = UiFoundation.WhiteSprite(); img.preserveAspect = false;
+                img.color = on ? new Color(DuelystUi.Gold.r, DuelystUi.Gold.g, DuelystUi.Gold.b, 0.85f) : new Color(0.06f, 0.08f, 0.14f, 0.55f);
+                var inner = new GameObject("Backing", typeof(RectTransform), typeof(Image));
+                inner.transform.SetParent(go.transform, false);
+                var irt = inner.GetComponent<RectTransform>(); irt.anchorMin = Vector2.zero; irt.anchorMax = Vector2.one;
+                var bw = on ? 3f : 1f; irt.offsetMin = new Vector2(bw, bw); irt.offsetMax = new Vector2(-bw, -bw);
+                var ii = inner.GetComponent<Image>(); ii.sprite = UiFoundation.WhiteSprite(); ii.raycastTarget = false;
+                ii.color = on ? new Color(0.20f, 0.17f, 0.10f, 1f) : new Color(0.07f, 0.09f, 0.16f, 1f);
+                var pic = new GameObject("Picture", typeof(RectTransform), typeof(Image));
+                pic.transform.SetParent(go.transform, false);
+                GoTheme.Place(pic.GetComponent<RectTransform>(), 0.03f, 0.30f, 0.97f, 0.98f);
+                var pi = pic.GetComponent<Image>(); pi.sprite = spr ?? UiFoundation.WhiteSprite(); pi.preserveAspect = true;
+                pi.color = tint; pi.raycastTarget = false;
+                var t = FloatingPanel.Body(go.transform, label, 12);
+                GoTheme.Place(t.rectTransform, 0.02f, 0f, 0.98f, 0.32f);
+                StyleReadable(t, 14, DuelystUi.TextCream, TextAnchor.MiddleCenter);
+                t.resizeTextForBestFit = true; t.resizeTextMinSize = 12; t.resizeTextMaxSize = 18;
+                t.horizontalOverflow = HorizontalWrapMode.Wrap;
+                t.raycastTarget = false;
+                // (no shade: the opaque backing already sits under the label)
+                t.transform.SetAsLastSibling();
+            }
+            return go;
         }
 
         void Cycle(int dir)
@@ -685,6 +927,12 @@ namespace WRLDZ.UI
                 case Part.OutfitTint:
                     CycleHex(ref _draft.outfitTintHex, AvatarCatalog.AccentPresets, dir);
                     break;
+                case Part.Disk:
+                    CycleHex(ref _draft.diskHex, AvatarCatalog.DiskPalettes, dir);
+                    break;
+                case Part.Aura:
+                    CycleHex(ref _draft.auraHex, AvatarCatalog.AuraPalettes, dir);
+                    break;
                 case Part.Accent:
                     CycleHex(ref _draft.accentHex, AvatarCatalog.AccentPresets, dir);
                     break;
@@ -697,7 +945,7 @@ namespace WRLDZ.UI
 
         void CycleClothing(ClothingSlot slot, int dir)
         {
-            var owned = ClothingCatalog.OwnedInSlot(_wardrobe, slot);
+            var owned = ClothingCatalog.OwnedInSlot(_wardrobe, slot, _draft.IsFemale);
             if (owned == null || owned.Count == 0) return;
             var cur = _draft.SlotId(slot);
             var i = 0;
@@ -747,10 +995,19 @@ namespace WRLDZ.UI
                 Part.Hands => ClothingLabel(ClothingSlot.Hands),
                 Part.Bottoms => ClothingLabel(ClothingSlot.Bottoms),
                 Part.Shoes => ClothingLabel(ClothingSlot.Shoes),
-                Part.Skin => $"Skin: {_draft.skinHex}",
-                Part.HairColor => $"Hair color: {_draft.hairHex}",
+                Part.Skin => "Skin: " + (string.IsNullOrEmpty(_draft.GetPaint("Body.0")) ? "original" : _draft.GetPaint("Body.0")),
+                Part.HairColor => "Hair color: " + AvatarCatalog.HairPatternNames[Mathf.Clamp(_draft.hairPattern, 0, AvatarCatalog.HairPatternNames.Length - 1)]
+                                  + (_draft.hairPattern == 0 ? "" : "  ·  " + _hairZone.ToUpperInvariant()),
+                Part.Body => $"{(_draft.IsFemale ? "Female" : "Male")} base  ·  {_draft.EffectiveHeightCm:0} cm  ·  weight {Mathf.RoundToInt(_draft.weight * 100f)}",
+                Part.Hair => "Hair: " + HairName(_draft.hairStyleId),
+                Part.Outfit => OutfitOptionLabel(),
+                Part.Paint => "Clothes color: " + PaintLabel(_paintKey) + "  ·  " + (string.IsNullOrEmpty(_draft.GetPaint(_paintKey)) ? "original" : _draft.GetPaint(_paintKey)),
                 Part.OutfitTint => $"Outfit tint: {_draft.outfitTintHex}",
-                Part.Accent => $"Accent: {_draft.accentHex}",
+                Part.Accent => $"Spirit magic: {_draft.accentHex}",
+                Part.Disk => "Duel Disk: " + AvatarCatalog.PaletteName(AvatarCatalog.DiskPalettes,
+                    AvatarCatalog.DiskPaletteNames, _draft.diskHex),
+                Part.Aura => "Aura: " + AvatarCatalog.PaletteName(AvatarCatalog.AuraPalettes,
+                    AvatarCatalog.AuraPaletteNames, _draft.auraHex),
                 Part.Title => $"Title: {_draft.title}",
                 _ => ""
             };
@@ -776,11 +1033,14 @@ namespace WRLDZ.UI
         {
             _draft?.ClampToCatalog();
             _preview?.Apply(_draft);
+            var has3d = _preview3d != null && _preview3d.Apply(_draft);
+            if (_preview != null) _preview.gameObject.SetActive(!has3d);
         }
 
         void RefreshProfile()
         {
             _profilePortrait?.Apply(_draft);
+            RefreshCompanions();
             var acc = AppSession.Ensure().Account;
             if (acc == null)
             {
@@ -882,6 +1142,7 @@ namespace WRLDZ.UI
             }
 
             session.SetAccount(acc);
+            WRLDZ.Presentation.ArInteraction.SpiritDuelerPalette.NotifyChanged();
             if (_status != null) _status.text = "Saved! Look applied.";
             _onSaved?.Invoke();
             RefreshProfile();
@@ -971,6 +1232,40 @@ namespace WRLDZ.UI
             field.placeholder = ph;
             field.characterLimit = 24;
             return field;
+        }
+    }
+
+    /// <summary>
+    /// The wardrobe grid scrolls sideways in two rows. At rest its right edge used to cut a column in half with nothing
+    /// saying more tiles followed (review 2026-10-04). This keeps whole columns at the edge (the column spacing absorbs
+    /// the leftover width, at least 6 px) and shows a "more" chevron while tiles lie past the right edge.
+    /// </summary>
+    sealed class WholeColumnGrid : MonoBehaviour
+    {
+        public GridLayoutGroup Grid;
+        public RectTransform Viewport;
+        public ScrollRect Scroll;
+        public GameObject Cue;
+        float _w = -1f, _cell = -1f;
+        int _n = -1;
+
+        void LateUpdate()
+        {
+            if (Grid == null || Viewport == null) return;
+            var w = Viewport.rect.width; var n = Grid.transform.childCount; var cell = Grid.cellSize.x;
+            if (!Mathf.Approximately(w, _w) || n != _n || !Mathf.Approximately(cell, _cell))
+            {
+                _w = w; _n = n; _cell = cell;
+                var inner = w - Grid.padding.left - Grid.padding.right;
+                var cols = Mathf.Max(1, Mathf.FloorToInt((inner + 6f) / (cell + 6f)));
+                var sx = cols > 1 ? (inner - cols * cell) / (cols - 1) : 6f;
+                Grid.spacing = new Vector2(Mathf.Max(6f, Mathf.Floor(sx)), Grid.spacing.y);
+            }
+            if (Cue == null) return;
+            var content = Scroll != null ? Scroll.content : null;
+            var overflow = content != null && content.rect.width > w + 1f;
+            var atEnd = Scroll != null && Scroll.horizontalNormalizedPosition > 0.98f;
+            if (Cue.activeSelf != (overflow && !atEnd)) Cue.SetActive(overflow && !atEnd);
         }
     }
 }

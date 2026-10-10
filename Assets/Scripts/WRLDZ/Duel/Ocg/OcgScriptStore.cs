@@ -2,18 +2,34 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using WRLDZ.Core;
 
 namespace WRLDZ.Duel.Ocg
 {
-    /// <summary>Allow-listed filename → file. Nested official/ trees are indexed by basename.</summary>
+    /// <summary>Allow-listed filename → file. Nested official~/ trees are indexed by basename (folder is ~ so Unity does not import 13k lua files).</summary>
     public static class OcgScriptStore
     {
         public const string EditorPrefsRootKey = "WRLDZ.OcgScriptsRoot";
 
-        public static string ScriptsDir =>
-            Path.Combine(Application.streamingAssetsPath, "OcgCore", "scripts");
+        /// <summary>StreamingAssets-relative scripts root, read through <see cref="StreamingFiles"/> (APK-safe).</summary>
+        public const string ScriptsDir = "OcgCore/scripts";
 
-        static Dictionary<string, string> _index;
+        /// <summary>Where one indexed script lives: StreamingAssets-relative, or an absolute disk path (Editor extra roots).</summary>
+        readonly struct ScriptRef
+        {
+            public readonly bool Streaming;
+            public readonly string Path;
+
+            public ScriptRef(bool streaming, string path)
+            {
+                Streaming = streaming;
+                Path = path;
+            }
+
+            public override string ToString() => Streaming ? StreamingFiles.FullPathForLog(Path) : Path;
+        }
+
+        static Dictionary<string, ScriptRef> _index;
         static string _indexError;
 
         public static int IndexedCount
@@ -49,6 +65,17 @@ namespace WRLDZ.Duel.Ocg
             _indexError = null;
         }
 
+        /// <summary>
+        /// True when the basename c{passcode}.lua is present in the indexed OCG corpus. Index lookup only —
+        /// no file read (this runs from activation-legality queries every drag frame, PERF-05).
+        /// </summary>
+        public static bool HasCardScript(int cardId)
+        {
+            if (cardId <= 0) return false;
+            EnsureIndex();
+            return _index != null && _index.ContainsKey("c" + cardId + ".lua");
+        }
+
         public static bool TryRead(string name, out byte[] bytes, out string error)
         {
             bytes = null;
@@ -66,10 +93,19 @@ namespace WRLDZ.Duel.Ocg
                 return false;
             }
             EnsureIndex();
-            if (_index != null && _index.TryGetValue(name, out var full) && File.Exists(full))
+            if (_index != null && _index.TryGetValue(name, out var script))
             {
-                bytes = File.ReadAllBytes(full);
-                return true;
+                if (script.Streaming)
+                {
+                    if (StreamingFiles.TryReadAllBytes(script.Path, out bytes))
+                        return true;
+                }
+                else if (File.Exists(script.Path))
+                {
+                    bytes = File.ReadAllBytes(script.Path);
+                    PinEditorCwd();
+                    return true;
+                }
             }
             error = "missing " + name;
             return false;
@@ -88,11 +124,11 @@ namespace WRLDZ.Duel.Ocg
         static void EnsureIndex()
         {
             if (_index != null) return;
-            _index = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            _index = new Dictionary<string, ScriptRef>(StringComparer.OrdinalIgnoreCase);
             _indexError = null;
-            IndexRoot(ScriptsDir, streamingPreferred: true);
+            IndexStreaming();
             foreach (var extra in ExtraRoots())
-                IndexRoot(extra, streamingPreferred: false);
+                IndexRoot(extra);
         }
 
         static IEnumerable<string> ExtraRoots()
@@ -109,7 +145,40 @@ namespace WRLDZ.Duel.Ocg
             yield break;
         }
 
-        static void IndexRoot(string root, bool streamingPreferred)
+        /// <summary>Shipped corpus under StreamingAssets/OcgCore/scripts (preferred; duplicates are an error).</summary>
+        static void IndexStreaming()
+        {
+            if (!StreamingFiles.DirectoryExists(ScriptsDir)) return;
+            string[] files;
+            try
+            {
+                files = StreamingFiles.GetFiles(ScriptsDir, "*.lua", recursive: true);
+            }
+            catch (Exception ex)
+            {
+                _indexError = "scan " + StreamingFiles.FullPathForLog(ScriptsDir) + ": " + ex.Message;
+                return;
+            }
+            foreach (var rel in files)
+            {
+                if (IsExcludedPath("/" + rel))
+                    continue;
+                var slash = rel.LastIndexOf('/');
+                var name = slash >= 0 ? rel.Substring(slash + 1) : rel;
+                if (string.IsNullOrEmpty(name)) continue;
+                if (_index.TryGetValue(name, out var existing))
+                {
+                    if (existing.Streaming && string.Equals(existing.Path, rel, StringComparison.Ordinal)) continue;
+                    _indexError = "duplicate script basename " + name + " (" + existing + " vs " +
+                                  StreamingFiles.FullPathForLog(rel) + ")";
+                    continue;
+                }
+                _index[name] = new ScriptRef(true, rel);
+            }
+        }
+
+        /// <summary>Editor-only extra roots on disk (OCG_SCRIPTS_ROOT / EditorPrefs); never override the shipped corpus.</summary>
+        static void IndexRoot(string root)
         {
             if (string.IsNullOrEmpty(root) || !Directory.Exists(root)) return;
             var fullRoot = Path.GetFullPath(root);
@@ -134,15 +203,9 @@ namespace WRLDZ.Duel.Ocg
                     continue;
                 var name = Path.GetFileName(full);
                 if (string.IsNullOrEmpty(name)) continue;
-                if (_index.TryGetValue(name, out var existing))
-                {
-                    if (string.Equals(existing, full, StringComparison.Ordinal)) continue;
-                    if (!streamingPreferred)
-                        continue;
-                    _indexError = "duplicate script basename " + name + " (" + existing + " vs " + full + ")";
+                if (_index.ContainsKey(name))
                     continue;
-                }
-                _index[name] = full;
+                _index[name] = new ScriptRef(false, full);
             }
         }
 
@@ -160,19 +223,6 @@ namespace WRLDZ.Duel.Ocg
         static bool ContainsDir(string path, string dir) =>
             path.IndexOf(dir, StringComparison.OrdinalIgnoreCase) >= 0;
 
-        static void PinEditorCwd()
-        {
-#if UNITY_EDITOR
-            try
-            {
-                var root = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
-                Directory.SetCurrentDirectory(root);
-            }
-            catch
-            {
-                // Editor guard also pins on compile.
-            }
-#endif
-        }
+        static void PinEditorCwd() => WRLDZ.Core.EditorWorkingDirectory.Pin();
     }
 }

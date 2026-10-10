@@ -19,6 +19,7 @@ namespace WRLDZ.Core
             public string displayName;
             public string passwordHash;
             public string email;
+            public string googleSub;
             public string avatarColor = "#3ECFFF";
             public AvatarAppearance avatar;
             public string createdUtc;
@@ -46,6 +47,7 @@ namespace WRLDZ.Core
                     displayName = a.displayName,
                     passwordHash = a.passwordHash,
                     email = a.email,
+                    googleSub = a.googleSub,
                     avatarColor = a.avatarColor,
                     avatar = a.avatar != null ? a.avatar.Clone() : null,
                     createdUtc = a.createdUtc,
@@ -74,6 +76,7 @@ namespace WRLDZ.Core
                     displayName = displayName,
                     passwordHash = passwordHash,
                     email = email,
+                    googleSub = googleSub,
                     avatarColor = avatarColor,
                     avatar = avatar != null ? avatar.Clone() : null,
                     createdUtc = createdUtc,
@@ -155,10 +158,50 @@ namespace WRLDZ.Core
             return true;
         }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        /// <summary>Lab door only (Editor / development builds): may create the reserved lab account name.</summary>
+        public static bool TryCreateLabAccount(string username, string password, string displayName, string email,
+            out Account account, out string error)
+        {
+            account = null;
+            if (!PlayerAccountDatabase.TryCreateLabAccount(username, password, displayName, email, out var dbAcc,
+                    out error))
+                return false;
+            account = Account.FromDb(dbAcc);
+            return true;
+        }
+#endif
+
+        /// <summary>
+        /// Explicitly bind a Google sign-in to an existing password account (the player types that account's
+        /// password). Google sign-in never links by email on its own.
+        /// </summary>
+        public static bool TryLinkGoogle(string username, string password, string sub, string email,
+            out Account account, out string error)
+        {
+            account = null;
+            if (!PlayerAccountDatabase.TryLinkGoogle(username, password, sub, email, out var dbAcc, out error))
+                return false;
+            account = Account.FromDb(dbAcc);
+            TickSoulCards(account);
+            return true;
+        }
+
         public static bool TryLogin(string username, string password, out Account account, out string error)
         {
             account = null;
             if (!PlayerAccountDatabase.TryLogin(username, password, out var dbAcc, out error))
+                return false;
+            account = Account.FromDb(dbAcc);
+            TickSoulCards(account);
+            return true;
+        }
+
+        public static bool TryLoginGoogle(string sub, string email, string displayName,
+            out Account account, out string error)
+        {
+            account = null;
+            if (!PlayerAccountDatabase.TryLoginGoogle(sub, email, displayName, out var dbAcc, out error))
                 return false;
             account = Account.FromDb(dbAcc);
             TickSoulCards(account);
@@ -176,7 +219,9 @@ namespace WRLDZ.Core
         {
             if (acc == null) return;
             acc.EnsureInventory();
-            var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            acc.EnsureProgress();
+            // Guarded clock (QC F7): setting the date back must not keep temporary soul cards alive forever.
+            var now = ClockGuard.NowUnix(acc.progress);
             var paused = acc.inventory != null && acc.inventory.soulPauseStartedUnix > 0;
             var gone = SoulCardService.Tick(acc.inventory, now, paused);
             if (gone > 0)

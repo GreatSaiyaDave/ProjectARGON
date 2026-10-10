@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using WRLDZ.Data;
+using WRLDZ.Duel;
 
 namespace WRLDZ.Duel.Rules
 {
@@ -19,10 +20,38 @@ namespace WRLDZ.Duel.Rules
         public CardInstance Target;
         public readonly List<CardInstance> Targets = new();
         public string EffectKey;
+        /// Link this effect answers (response links only).
+        public ChainLink TargetLink;
+        /// Response effect metadata, stamped when the link is activated.
+        public bool NegatesActivation;
+        public bool DestroyNegatedCard;
+        public bool FlipSelfFaceUpDefense;
         public bool Negated;
         public bool Resolved;
         /// <summary>Official text at activation time (immutable snapshot).</summary>
         public string OfficialTextSnapshot;
+        /// <summary>
+        /// Combat/summon window this link answered. None = open-game Activate clauses.
+        /// Resolution must apply the matching trigger timing, not re-enter the window.
+        /// </summary>
+        public ResponseTiming SeatedFrom;
+        public CardInstance SeatedSummoned;
+        /// <summary>
+        /// SummonNegation batch (v141, Magic Drain): before this negation applies, the controller of the answered
+        /// link may discard 1 Spell Card to negate this effect instead.
+        /// </summary>
+        public bool NegationWaivableBySpellDiscard;
+        /// <summary>
+        /// A compiled Spell/Trap activation whose costs were paid and targets chosen when this link was created
+        /// (<see cref="TextEffects.CompiledActivationChainRuntime"/>): its recorded effect applies when the link resolves.
+        /// </summary>
+        public TextEffects.DeferredActivationEffect DeferredEffect;
+        /// <summary>
+        /// The activation's LP cost ("Activate this card by paying 1000 LP", "Pay 800 LP, then target …") was paid
+        /// when this link was created (TextEffects.ActivationLpCostRuntime), so its resolution must not pay it again.
+        /// A negated link keeps it paid.
+        /// </summary>
+        public bool ActivationLpCostPaid;
     }
 
     /// <summary>
@@ -43,6 +72,14 @@ namespace WRLDZ.Duel.Rules
 
         public event Action OnChainChanged;
         public event Action OnChainFullyResolved;
+
+        /// <summary>
+        /// Every link ever added, less the ones taken back unresolved (<see cref="RemoveUnresolved"/>: the
+        /// activation was undone). Never reset by <see cref="Clear"/>. Lets a rule tell that a card or effect
+        /// was activated since a mark (Cold Wave's "start of Main Phase 1", ygopro Duel.CheckPhaseActivity) even
+        /// when the activation changed nothing else it can see (Karate Man's ignition).
+        /// </summary>
+        public long ActivationCount { get; private set; }
 
         public void BeginBuilding()
         {
@@ -97,6 +134,10 @@ namespace WRLDZ.Duel.Rules
             };
             if (target != null) link.Targets.Add(target);
             _links.Add(link);
+            ActivationCount++;
+            // Presentation only: the name banner labels the link with its real chain number.
+            if (card != null)
+                WRLDZ.Presentation.ArInteraction.ActivationBeat.NoteChainLink(card.InstanceId, link.LinkNumber);
             OnChainChanged?.Invoke();
             return link;
         }
@@ -127,6 +168,23 @@ namespace WRLDZ.Duel.Rules
 
             OnChainChanged?.Invoke();
             return last;
+        }
+
+        /// <summary>
+        /// Take back a link whose activation was undone before the chain resolved (target or cost
+        /// pick cancelled). Later links are renumbered. No-op while the chain is resolving.
+        /// </summary>
+        public bool RemoveUnresolved(ChainLink link)
+        {
+            if (link == null || IsResolving) return false;
+            if (!_links.Remove(link)) return false;
+            ActivationCount--;
+            for (var i = 0; i < _links.Count; i++)
+                _links[i].LinkNumber = i + 1;
+            if (_links.Count == 0)
+                IsBuilding = false;
+            OnChainChanged?.Invoke();
+            return true;
         }
 
         public void Clear()

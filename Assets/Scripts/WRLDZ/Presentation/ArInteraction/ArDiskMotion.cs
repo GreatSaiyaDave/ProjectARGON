@@ -11,6 +11,17 @@ namespace WRLDZ.Presentation.ArInteraction
     {
         // ── Durations (seconds, unscaled) ───────────────────────────────────
         public const float PadSnap = 0.48f;
+
+        /// <summary>Arena hologram waits until the disk card has finished seating.</summary>
+        public const float ArenaAfterMonsterSeat = PadSnap;
+
+        /// <summary>Arena S/T hologram waits until the toaster slide-in finishes.</summary>
+        public const float ArenaAfterSlotSeat = SlotInsertTotal;
+
+        /// <summary>
+        /// Activate: disk ejects, then turns. The arena card starts once that turn is past halfway.
+        /// </summary>
+        public const float ArenaAfterSetFlip = ToasterEject + ToasterFlip * 0.5f;
         /// <summary>Card presents above the plate, then drops to the slot mouth.</summary>
         public const float SlotInsertPresent = 0.34f;
         /// <summary>Aligns at the mouth before the pocket slide.</summary>
@@ -27,6 +38,8 @@ namespace WRLDZ.Presentation.ArInteraction
         public const float ToasterFlip = 0.70f;
         public const float ToasterReseat = 0.52f;
         public const float ToasterToGy = 0.85f;
+        /// <summary>A Spell activated from the hand appears in its slot (no slide-in, it was only shown).</summary>
+        public const float HandActivateAppear = 0.34f;
         public const float FaceFlipHold = 0.12f;
         public const float MonsterLeave = 0.52f;
         public const float PositionTurn = 0.42f;
@@ -38,11 +51,21 @@ namespace WRLDZ.Presentation.ArInteraction
         public const float FlipSummonTurn = PositionTurn;
         /// <summary>Battle flip: same reveal beat as the toaster flip (no ATK turn).</summary>
         public const float BattleFlipReveal = ToasterFlip;
-        /// <summary>Battle flip (arena only): set card stands up into ATK artwork.</summary>
+        /// <summary>Battle flip reference beat (a position turn); the arena settle is a fraction of it.</summary>
         public const float BattleFlipRise = PositionTurn;
+        /// <summary>Arena battle flip: the face-up card settles flat on the street as the Defense plate.</summary>
+        public const float BattleFlipSettle = BattleFlipRise * 0.35f;
+        /// <summary>Arena battle flip: the monster rises braced out of its Defense card.</summary>
+        public const float BattleFlipArtRise = 0.45f;
+        /// <summary>Flip-then-destroy: the braced monster holds over its card this long before it shatters.</summary>
+        public const float BattleFlipDestroyHold = BattleFlipArtRise + FaceFlipHold;
         public const float BattleFlipDiskTotal = BattleFlipReveal + FaceFlipHold;
+        /// <summary>
+        /// Arena battle flip: FlipY (reveal + its mid-edge hold) + a beat on the face + settle as the
+        /// Defense plate + braced art rise (≈ 1.54 s). DuelPresentationPacer.BattleFlipMotion mirrors it.
+        /// </summary>
         public const float BattleFlipArenaTotal =
-            BattleFlipReveal + FaceFlipHold + BattleFlipRise;
+            BattleFlipReveal + FaceFlipHold + FaceFlipHold + BattleFlipSettle + BattleFlipArtRise;
         /// <summary>
         /// Lift + FlipY (includes mid-edge hold) + a beat on the revealed face + ATK turn.
         /// </summary>

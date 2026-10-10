@@ -29,11 +29,18 @@ namespace WRLDZ.Duel.Rules
 
         public bool IsOpen => Kind != WindowKind.None;
 
+        // The two duelists as seated when the window opened; the pass flags follow them, not the
+        // priority swap (the old swap re-marked the same side, so two passes never closed a window).
+        DuelistState _openedFirst;
+        DuelistState _openedSecond;
+
         public void Open(WindowKind kind, DuelistState priority, DuelistState other, ChainEvent cause)
         {
             Kind = kind;
             PriorityPlayer = priority;
             OtherPlayer = other;
+            _openedFirst = priority;
+            _openedSecond = other;
             Cause = cause;
             TurnPlayerPassed = false;
             OpponentPassed = false;
@@ -44,35 +51,41 @@ namespace WRLDZ.Duel.Rules
             Kind = WindowKind.None;
             PriorityPlayer = null;
             OtherPlayer = null;
+            _openedFirst = null;
+            _openedSecond = null;
             Cause = ChainEvent.None;
             TurnPlayerPassed = false;
             OpponentPassed = false;
         }
 
-        /// <summary>Player with priority passes.</summary>
+        /// <summary>
+        /// <paramref name="who"/> passes. <see cref="TurnPlayerPassed"/> is the duelist who had priority when
+        /// the window opened, <see cref="OpponentPassed"/> the other one. After one pass priority moves to
+        /// the other duelist; when both have passed (with no new activation in between, which reopens
+        /// the window) the window closes and this returns true.
+        /// </summary>
         public bool Pass(DuelistState who)
         {
             if (!IsOpen || who == null) return false;
-            if (who == PriorityPlayer)
+            if (who == _openedFirst)
                 TurnPlayerPassed = true;
-            else if (who == OtherPlayer)
+            else if (who == _openedSecond)
                 OpponentPassed = true;
             else
                 return false;
 
-            // If priority passed, other gets chance; if both passed, window closes
             if (TurnPlayerPassed && OpponentPassed)
             {
                 Close();
                 return true; // fully closed
             }
 
-            // Swap priority to the other player after first pass
-            if (TurnPlayerPassed && !OpponentPassed && PriorityPlayer != OtherPlayer)
+            // Priority goes to whoever has not passed yet.
+            var next = who == _openedFirst ? _openedSecond : _openedFirst;
+            if (next != null && next != who)
             {
-                var tmp = PriorityPlayer;
-                PriorityPlayer = OtherPlayer;
-                OtherPlayer = tmp;
+                PriorityPlayer = next;
+                OtherPlayer = who;
             }
 
             return false;

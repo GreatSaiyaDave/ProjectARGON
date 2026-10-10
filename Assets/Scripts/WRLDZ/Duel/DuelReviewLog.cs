@@ -55,8 +55,10 @@ namespace WRLDZ.Duel
     /// <summary>
     /// In-duel review log: captures every engine line + board snapshots, keeps a
     /// visible ring buffer, and exports JSONL for offline AI review/learning.
+    /// An <see cref="IDuelEventSink"/> (R4): stamps come from the engine's <see cref="IClock"/>, and it never
+    /// draws from the match RNG, so turning it on or off cannot change a shuffle.
     /// </summary>
-    public class DuelReviewLog
+    public class DuelReviewLog : IDuelEventSink
     {
         public const int DefaultCapacity = 400;
         public const int VisibleLinesDefault = 14;
@@ -64,6 +66,7 @@ namespace WRLDZ.Duel
         readonly List<DuelLogEvent> _events = new();
         readonly List<string> _visible = new();
         DuelEngine _engine;
+        IClock _clock = UnityDuelClock.Instance;
         float _startedUnscaled;
         int _seq;
         string _sessionId;
@@ -82,9 +85,11 @@ namespace WRLDZ.Duel
             Unbind();
             _engine = engine;
             if (_engine == null) return;
-            _startedUnscaled = Time.unscaledTime;
-            _sessionId = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss") + "_" +
-                         UnityEngine.Random.Range(1000, 9999);
+            _clock = _engine.Clock ?? UnityDuelClock.Instance;
+            _startedUnscaled = _clock.UnscaledTime;
+            // Session id: wall stamp + a 4-digit tag that is NOT drawn from any game RNG (R1).
+            _sessionId = _clock.UtcNow.ToString("yyyyMMdd_HHmmss") + "_" +
+                         (1000 + (Guid.NewGuid().GetHashCode() & 0x7fffffff) % 9000);
             _seq = 0;
             _events.Clear();
             _visible.Clear();
@@ -128,7 +133,10 @@ namespace WRLDZ.Duel
                 : winner.IsPlayer
                     ? "OUTCOME: YOU WIN"
                     : "OUTCOME: AI WINS";
+            if (_engine != null && _engine.EndReason == DuelEndReason.Forfeit)
+                outcome += $" (forfeit by {_engine.ConcededBy?.Name ?? "?"})";
             Record(DuelLogKind.Outcome, "System", outcome);
+            if (_engine != null && !_engine.Config.ExportReviewLog) return;
             LastExportPath = ExportToDisk();
             if (!string.IsNullOrEmpty(LastExportPath))
                 Record(DuelLogKind.Info, "System", "Review export → " + LastExportPath);
@@ -217,8 +225,8 @@ namespace WRLDZ.Duel
             return new DuelLogEvent
             {
                 seq = ++_seq,
-                utc = DateTime.UtcNow.ToString("o"),
-                duelTime = Time.unscaledTime - _startedUnscaled,
+                utc = _clock.UtcNow.ToString("o"),
+                duelTime = _clock.UnscaledTime - _startedUnscaled,
                 turn = eng?.TurnNumber ?? 0,
                 phase = eng?.Phase.ToString() ?? "?",
                 actor = actor ?? "System",
@@ -437,7 +445,7 @@ namespace WRLDZ.Duel
         {
             var sb = new StringBuilder();
             sb.AppendLine($"# WRLDZ Duel Review  session={_sessionId}");
-            sb.AppendLine($"# events={_events.Count}  exportedUtc={DateTime.UtcNow:o}");
+            sb.AppendLine($"# events={_events.Count}  exportedUtc={_clock.UtcNow:o}");
             sb.AppendLine("# columns: SEQ | TURN | PHASE | ACTOR | KIND | LP_YOU/LP_AI | MESSAGE");
             foreach (var e in _events)
             {
@@ -470,18 +478,18 @@ namespace WRLDZ.Duel
                 var dir = Path.Combine(Application.persistentDataPath, "WRLDZ", "duel_reviews");
                 if (!Directory.Exists(dir))
                     Directory.CreateDirectory(dir);
-                var baseName = "duel_" + (_sessionId ?? DateTime.UtcNow.ToString("yyyyMMdd_HHmmss"));
+                var baseName = "duel_" + (_sessionId ?? _clock.UtcNow.ToString("yyyyMMdd_HHmmss"));
                 var jsonlPath = Path.Combine(dir, baseName + ".jsonl");
                 var txtPath = Path.Combine(dir, baseName + ".txt");
                 File.WriteAllText(jsonlPath, ToJsonl(), Encoding.UTF8);
                 File.WriteAllText(txtPath, FormatTranscript(), Encoding.UTF8);
                 LastExportPath = jsonlPath;
-                Debug.Log("[WRLDZ ReviewLog] Exported " + jsonlPath);
+                (_engine?.Diagnostics ?? UnityDuelLog.Instance).Info("[WRLDZ ReviewLog] Exported " + jsonlPath);
                 return jsonlPath;
             }
             catch (Exception ex)
             {
-                Debug.LogWarning("[WRLDZ ReviewLog] Export failed: " + ex.Message);
+                (_engine?.Diagnostics ?? UnityDuelLog.Instance).Warning("[WRLDZ ReviewLog] Export failed: " + ex.Message);
                 return null;
             }
         }

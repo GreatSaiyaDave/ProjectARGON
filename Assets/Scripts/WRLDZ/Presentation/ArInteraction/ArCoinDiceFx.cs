@@ -25,7 +25,7 @@ namespace WRLDZ.Presentation.ArInteraction
         static readonly Color CoinEdge = new Color(0.85f, 0.7f, 0.3f, 1f);
         static readonly Color DieBody = new Color(0.95f, 0.94f, 0.9f, 1f);
         static readonly Color DiePip = new Color(0.12f, 0.1f, 0.14f, 1f);
-        static readonly Color Glow = new Color(0.6f, 0.85f, 1f, 0.9f);
+        static readonly Color Glow = new Color(0.6f, 0.85f, 1f, 0.30f);
 
         public static ArCoinDiceFx Ensure(Transform host = null, int layer = 28)
         {
@@ -83,14 +83,14 @@ namespace WRLDZ.Presentation.ArInteraction
             }
             SetChildLayer(coin.transform);
 
-            var glow = MakeGlow(pos, 0.24f);
+            var glow = MakeGlow(pos, 0.09f);
 
             // Heads = face up (disc normal +Y, i.e. flat); Tails = flipped 180° about X.
             // Spin about X so the coin visibly flips edge-over-edge, decelerating to rest.
-            var spinDur = 1.15f;
+            var spinDur = 1.5f;
             var t = 0f;
             var startY = pos.y;
-            var rise = 0.18f;
+            var rise = 0.22f;
             var extraSpins = heads ? 5 : 5; // whole flips
             var endFlip = heads ? 0f : 180f;
             var totalDeg = 360f * extraSpins + endFlip + 90f; // +90 so a face (not edge) rests up
@@ -111,7 +111,7 @@ namespace WRLDZ.Presentation.ArInteraction
             coin.transform.rotation = Quaternion.Euler(90f + endFlip, 0f, 0f);
             coin.transform.position = new Vector3(pos.x, startY, pos.z);
 
-            yield return HoldThenFade(coin.transform, glow, 0.85f, 0.4f);
+            yield return HoldThenFade(coin.transform, glow, 1.25f, 0.55f);
             ArObjectUtil.Destroy(coin);
             if (glow != null) ArObjectUtil.Destroy(glow);
         }
@@ -154,16 +154,16 @@ namespace WRLDZ.Presentation.ArInteraction
                 pips.Add(pip);
             }
 
-            var glow = MakeGlow(pos, 0.22f);
+            var glow = MakeGlow(pos, 0.09f);
 
             // Tumble about a fixed skew axis, decelerating; land axis-aligned so the
             // pip face rests upward.
-            var tumbleDur = 1.15f;
+            var tumbleDur = 1.5f;
             var t = 0f;
             var axis = new Vector3(1f, 0.6f, 0.35f).normalized;
             var totalDeg = 360f * 3f + 720f;
             var startY = pos.y;
-            var rise = 0.16f;
+            var rise = 0.20f;
             while (t < tumbleDur)
             {
                 t += Time.unscaledDeltaTime;
@@ -181,7 +181,7 @@ namespace WRLDZ.Presentation.ArInteraction
             die.transform.rotation = Quaternion.identity;
             die.transform.position = new Vector3(pos.x, startY, pos.z);
 
-            yield return HoldThenFade(die.transform, glow, 0.9f, 0.4f);
+            yield return HoldThenFade(die.transform, glow, 1.25f, 0.55f);
             for (var i = 0; i < pips.Count; i++)
                 if (pips[i] != null) ArObjectUtil.Destroy(pips[i]);
             ArObjectUtil.Destroy(die);
@@ -232,18 +232,35 @@ namespace WRLDZ.Presentation.ArInteraction
 
         IEnumerator HoldThenFade(Transform body, GameObject glow, float hold, float fade)
         {
+            // Landing pop: 0.12 s scale pulse (1.0 → 1.18 → 1.0) so the settle reads.
+            var baseScale = body != null ? body.localScale : Vector3.one;
+            const float popDur = 0.12f;
+            var popT = 0f;
+            while (popT < popDur)
+            {
+                popT += Time.unscaledDeltaTime;
+                if (body == null) yield break;
+                var u = Mathf.Clamp01(popT / popDur);
+                var k = 1f + 0.18f * (1f - 4f * (u - 0.5f) * (u - 0.5f));
+                body.localScale = baseScale * k;
+                yield return null;
+            }
+            if (body != null) body.localScale = baseScale;
+
             var t = 0f;
             while (t < hold)
             {
                 t += Time.unscaledDeltaTime;
                 if (body == null) yield break;
-                var bob = Mathf.Sin(Time.unscaledTime * 3f) * 0.006f;
+                // Gentle halo bob (2.2 rad/s, ±4 mm) so the glow reads as a living aura,
+                // not a static flat disc.
+                var bob = Mathf.Sin(Time.unscaledTime * 2.2f) * 0.004f;
                 body.position += new Vector3(0f, bob, 0f);
                 yield return null;
             }
 
-            var baseScale = body != null ? body.localScale : Vector3.one;
             var glowScale = glow != null ? glow.transform.localScale : Vector3.one;
+            baseScale = body != null ? body.localScale : Vector3.one;
             t = 0f;
             while (t < fade)
             {

@@ -11,34 +11,44 @@ namespace WRLDZ.Duel.TextEffects
     /// <summary>
     /// Remembers compiled effect programs after first play / bulk compile.
     /// Load order: StreamingAssets seed → persistent disk → memory.
-    /// Compile path: regex templates → optional schema-validated SpaceXAI (first-play only).
+    /// Compile path: regex templates → optional schema-validated SpaceXAI (explicit tooling opt-in only).
     /// Live duel resolution never calls the LLM — only cached programs are executed.
-    /// Memory key is (cardId, eraId); default era is <see cref="ErazFormat.Original"/>.
+    /// Memory key is (cardId, eraId); the default text (no era band) is keyed "".
     /// </summary>
     public static class CompiledEffectCache
     {
         static readonly Dictionary<(int cardId, string eraId), CompiledCardProgram> Memory = new();
         static bool _diskLoaded;
+        /// <summary>Programs learned since the last write; written by <see cref="Flush"/> (PERF-07).</summary>
+        static bool _dirty;
+        static bool _flushHooksInstalled;
         const string FileName = "wrldz_compiled_effects_v1.json";
         const string SeedFileName = "compiled_effects_seed_v1.json";
 
         static string DiskPath =>
             Path.Combine(Application.persistentDataPath, "WRLDZ", FileName);
 
-        /// <summary>Shipped seed under StreamingAssets (offline bulk / lab).</summary>
+        /// <summary>Shipped seed, StreamingAssets-relative: read through <see cref="StreamingFiles"/> (APK-safe).</summary>
+        public const string SeedRelative = "WRLDZ/" + SeedFileName;
+
+        /// <summary>
+        /// Seed file on disk — the WRITE target for <see cref="ExportSeed"/> (Editor / tooling only;
+        /// on Android this is a jar: URL and is never written). Reads use <see cref="SeedRelative"/>.
+        /// </summary>
         public static string SeedPath =>
             Path.Combine(Application.streamingAssetsPath, "WRLDZ", SeedFileName);
 
         /// <summary>
         /// Get cached program or compile from official text (first play / first query).
-        /// Order: memory/disk/seed → regex → optional AI if incomplete and allowed.
+        /// Order: memory/disk/seed → regex → optional AI only when explicitly enabled by tooling.
         /// </summary>
-        public static CompiledCardProgram GetOrCompile(CardDef def) =>
-            GetOrCompileInternal(def, force: false, allowAi: true);
+        public static CompiledCardProgram GetOrCompile(CardDef def, bool allowAi = false) =>
+            GetOrCompileInternal(def, force: false, allowAi: allowAi);
 
-        public static CompiledCardProgram GetOrCompile(CardInstance card) =>
-            GetOrCompile(card?.Def);
+        public static CompiledCardProgram GetOrCompile(CardInstance card, bool allowAi = false) =>
+            GetOrCompile(card?.Def, allowAi);
 
+        /// <summary>Cache-only lookup; never compiles or invokes AI.</summary>
         public static bool TryGetCached(int cardId, out CompiledCardProgram prog) =>
             TryGetCached(cardId, ResolveEraId(), out prog);
 
@@ -58,8 +68,8 @@ namespace WRLDZ.Duel.TextEffects
             if (save) SaveDiskNow();
         }
 
-        /// <summary>Force recompile (regex + optional AI), ignoring cache for this id.</summary>
-        public static CompiledCardProgram ForceRecompile(CardDef def, bool allowAi = true) =>
+        /// <summary>Force recompile (regex + optional explicitly enabled AI), ignoring cache for this id.</summary>
+        public static CompiledCardProgram ForceRecompile(CardDef def, bool allowAi = false) =>
             GetOrCompileInternal(def, force: true, allowAi: allowAi);
 
         static CompiledCardProgram GetOrCompileInternal(CardDef def, bool force, bool allowAi)
@@ -68,15 +78,41 @@ namespace WRLDZ.Duel.TextEffects
             EnsureDiskLoaded();
 
             var eraId = ResolveEraId();
-            var hash = OfficialCardAuthority.TextHash(def, eraId);
-            var key = (def.id, eraId);
+            var hash = string.IsNullOrEmpty(eraId)
+                ? OfficialCardAuthority.TextHash(def)
+                : OfficialCardAuthority.TextHash(def, eraId);
+            var key = (def.id, NormalizeEra(eraId));
             if (!force &&
                 Memory.TryGetValue(key, out var cached) && cached != null &&
                 cached.TextHash == hash &&
                 cached.CompilerVersion == CardTextEffectCompiler.Version)
+            {
+                // Soft residual (PositionLocks re-QC): a same-Version incomplete disk/seed entry must
+                // not block a Soft land that now FullyCompiles (Curse of Fiend / Aqua Spirit / Garuda).
+                // PreferProgram already picks FullyCompiled over Stub; apply it on the live compile.
+                // TargetedClassics Soft cleared classify via live path after Version bump; Soft here
+                // keeps Version (seed still v152) and upgrades incomplete same-Version cache in place.
+                if (cached.FullyCompiled)
+                    return cached;
+                var liveUpgrade = CardTextEffectCompiler.Compile(def, eraId);
+                if (liveUpgrade != null)
+                {
+                    if (string.IsNullOrEmpty(liveUpgrade.CompileSource))
+                        liveUpgrade.CompileSource = "regex";
+                    liveUpgrade.EraId = eraId;
+                    liveUpgrade.TextHash = hash;
+                }
+                if (PreferProgram(liveUpgrade, cached))
+                {
+                    Memory[key] = liveUpgrade;
+                    _dirty = true;
+                    EnsureFlushHooks();
+                    return liveUpgrade;
+                }
                 return cached;
+            }
 
-            var prog = CardTextEffectCompiler.Compile(def);
+            var prog = CardTextEffectCompiler.Compile(def, eraId);
             if (prog != null)
             {
                 if (string.IsNullOrEmpty(prog.CompileSource))
@@ -114,7 +150,10 @@ namespace WRLDZ.Duel.TextEffects
             }
 
             Memory[key] = prog;
-            SaveDiskNow();
+            // No synchronous full rewrite per cache miss during a duel (PERF-07): mark dirty and let
+            // Flush write once — at duel end, when the app loses focus or quits.
+            _dirty = true;
+            EnsureFlushHooks();
             var nUn = prog.UnparsedFragments?.Length ?? 0;
             Debug.Log(
                 $"[WRLDZ TextFX] Learned {def.id} «{def.name}»: source={prog.CompileSource} " +
@@ -122,32 +161,53 @@ namespace WRLDZ.Duel.TextEffects
             return prog;
         }
 
+        /// <summary>Tests set this to force an ERAZ snapshot (e.g. original). Null = cards_db.</summary>
+        public static string ForcedEraId;
+
         /// <summary>
-        /// Active match era from pending duel config; <see cref="ErazFormat.Original"/> when null.
+        /// Active match era from pending duel config. Null when no match band is set
+        /// (editor tests compile <c>cards_db.json</c>). DK live play sets Original.
         /// Does not call <c>AppSession.Ensure</c> (edit-mode / batch safe).
         /// </summary>
         public static string ResolveEraId()
         {
+            if (!string.IsNullOrEmpty(ForcedEraId)) return ForcedEraId;
             try
             {
                 var band = AppSession.Instance != null
                     ? AppSession.Instance.PendingArMatch?.ErazBandId
                     : null;
-                return NormalizeEra(band);
+                return string.IsNullOrEmpty(band) ? null : band;
             }
             catch
             {
-                return ErazFormat.Original;
+                return null;
             }
         }
 
+        /// <summary>
+        /// Memory key for an era. The default text (no era band: <see cref="ResolveEraId"/> returns null)
+        /// is keyed "" — the same key <see cref="GetOrCompileInternal"/> uses — so seed / disk programs
+        /// loaded with an empty EraId are found again instead of being recompiled and stored twice.
+        /// </summary>
+        /// <summary>
+        /// One cache key for the default era. Headless/Editor compiles run with no era (null) while live
+        /// matches resolve ErazFormat.Original, and both read the same printed text — so both map to "".
+        /// Keying them apart made the seed miss in live play (it is exported with no era) and made a
+        /// re-export list a card twice. A genuinely different era keeps its own key, and the TextHash +
+        /// CompilerVersion check in GetOrCompileInternal still rejects a program whose era text differs.
+        /// </summary>
         static string NormalizeEra(string eraId) =>
-            string.IsNullOrEmpty(eraId) ? ErazFormat.Original : eraId;
+            string.IsNullOrEmpty(eraId) ||
+            string.Equals(eraId, WRLDZ.Duel.Rules.ErazFormat.Original, System.StringComparison.OrdinalIgnoreCase)
+                ? ""
+                : eraId;
 
         public static void ClearMemory()
         {
             Memory.Clear();
             _diskLoaded = false;
+            _dirty = false;
         }
 
         public static int CachedCount
@@ -190,10 +250,23 @@ namespace WRLDZ.Duel.TextEffects
             if (_diskLoaded) return;
             _diskLoaded = true;
             // Seed first (shipped), then persistent overwrites with learned programs.
-            LoadFromPath(SeedPath, "seed");
+            LoadSeed();
             LoadFromPath(DiskPath, "disk");
             if (Memory.Count > 0)
                 Debug.Log($"[WRLDZ TextFX] Remembered {Memory.Count} card effect programs.");
+        }
+
+        static void LoadSeed()
+        {
+            try
+            {
+                if (!StreamingFiles.TryReadAllText(SeedRelative, out var json)) return;
+                LoadFromJson(json, "seed", StreamingFiles.FullPathForLog(SeedRelative));
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning("[WRLDZ TextFX] seed load failed: " + ex.Message);
+            }
         }
 
         static void LoadFromPath(string path, string label)
@@ -201,42 +274,87 @@ namespace WRLDZ.Duel.TextEffects
             try
             {
                 if (string.IsNullOrEmpty(path) || !File.Exists(path)) return;
-                var json = File.ReadAllText(path);
-                var wrapper = JsonUtility.FromJson<CacheWrapper>(json);
-                if (wrapper?.programs == null) return;
-                if (wrapper.version != CardTextEffectCompiler.Version)
-                {
-                    Debug.LogWarning(
-                        $"[WRLDZ TextFX] {label} cache version {wrapper.version} != " +
-                        $"{CardTextEffectCompiler.Version}; skipping.");
-                    return;
-                }
-
-                var n = 0;
-                foreach (var p in wrapper.programs)
-                {
-                    if (p == null || p.CardId <= 0) continue;
-                    if (p.CompilerVersion != CardTextEffectCompiler.Version) continue;
-                    if (string.IsNullOrEmpty(p.CompileSource))
-                        p.CompileSource = label == "seed" ? "seed" : "regex";
-                    p.EraId = NormalizeEra(p.EraId);
-                    // Rebuild non-serialized lists from arrays
-                    if (p.Clauses != null)
-                        p.SetClauses(new List<EffectClause>(p.Clauses));
-                    Memory[(p.CardId, p.EraId)] = p;
-                    n++;
-                }
-
-                if (n > 0)
-                    Debug.Log($"[WRLDZ TextFX] Loaded {n} programs from {label}: {path}");
+                LoadFromJson(File.ReadAllText(path), label, path);
             }
             catch (Exception ex)
             {
                 Debug.LogWarning($"[WRLDZ TextFX] {label} load failed: " + ex.Message);
             }
+            finally
+            {
+                WRLDZ.Core.EditorWorkingDirectory.Pin();
+            }
         }
 
+        static void LoadFromJson(string json, string label, string path)
+        {
+            var wrapper = JsonUtility.FromJson<CacheWrapper>(json);
+            if (wrapper?.programs == null) return;
+            if (wrapper.version != CardTextEffectCompiler.Version)
+            {
+                Debug.LogWarning(
+                    $"[WRLDZ TextFX] {label} cache version {wrapper.version} != " +
+                    $"{CardTextEffectCompiler.Version}; skipping.");
+                return;
+            }
+
+            var n = 0;
+            foreach (var p in wrapper.programs)
+            {
+                if (p == null || p.CardId <= 0) continue;
+                if (p.CompilerVersion != CardTextEffectCompiler.Version) continue;
+                if (string.IsNullOrEmpty(p.CompileSource))
+                    p.CompileSource = label == "seed" ? "seed" : "regex";
+                p.EraId = NormalizeEra(p.EraId);
+                // Rebuild non-serialized lists from arrays
+                if (p.Clauses != null)
+                    p.SetClauses(new List<EffectClause>(p.Clauses));
+                Memory[(p.CardId, p.EraId)] = p;
+                n++;
+            }
+
+            if (n > 0)
+                Debug.Log($"[WRLDZ TextFX] Loaded {n} programs from {label}: {path}");
+        }
+
+        /// <summary>
+        /// Write programs learned since the last write (compact JSON). Cheap no-op when nothing changed.
+        /// Called at duel end (<see cref="DuelEngine"/> game over), on focus loss and on quit.
+        /// </summary>
+        public static void Flush()
+        {
+            if (!_dirty) return;
+            _dirty = false;
+            SaveDisk(prettyPrint: false);
+        }
+
+        static void EnsureFlushHooks()
+        {
+            if (_flushHooksInstalled) return;
+            _flushHooksInstalled = true;
+            try
+            {
+                Application.quitting += Flush;
+                Application.focusChanged += focused =>
+                {
+                    if (!focused) Flush();
+                };
+            }
+            catch (Exception ex)
+            {
+                // Outside a player (batch tools) the hooks may be unavailable; duel end still flushes.
+                Debug.LogWarning("[WRLDZ TextFX] cache flush hooks unavailable: " + ex.Message);
+            }
+        }
+
+        /// <summary>Write the whole cache now (tooling / explicit saves; pretty-printed).</summary>
         public static void SaveDiskNow()
+        {
+            _dirty = false;
+            SaveDisk(prettyPrint: true);
+        }
+
+        static void SaveDisk(bool prettyPrint)
         {
             try
             {
@@ -244,11 +362,15 @@ namespace WRLDZ.Duel.TextEffects
                 if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
                     Directory.CreateDirectory(dir);
 
-                WriteWrapper(DiskPath);
+                WriteWrapper(DiskPath, prettyPrint);
             }
             catch (Exception ex)
             {
                 Debug.LogWarning("[WRLDZ TextFX] Cache save failed: " + ex.Message);
+            }
+            finally
+            {
+                WRLDZ.Core.EditorWorkingDirectory.Pin();
             }
         }
 
@@ -267,7 +389,7 @@ namespace WRLDZ.Duel.TextEffects
                 if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
                     Directory.CreateDirectory(dir);
                 EnsureDiskLoaded();
-                var written = WriteWrapper(path, filter);
+                var written = WriteWrapper(path, prettyPrint: true, filter);
                 Debug.Log($"[WRLDZ TextFX] Exported seed ({written} programs) → {path}");
                 return true;
             }
@@ -278,7 +400,7 @@ namespace WRLDZ.Duel.TextEffects
             }
         }
 
-        static int WriteWrapper(string path, Func<CompiledCardProgram, bool> filter = null)
+        static int WriteWrapper(string path, bool prettyPrint, Func<CompiledCardProgram, bool> filter = null)
         {
             var list = new List<CompiledCardProgram>();
             foreach (var p in Memory.Values)
@@ -289,7 +411,7 @@ namespace WRLDZ.Duel.TextEffects
                 version = CardTextEffectCompiler.Version,
                 programs = list.ToArray()
             };
-            File.WriteAllText(path, JsonUtility.ToJson(wrapper, true));
+            File.WriteAllText(path, JsonUtility.ToJson(wrapper, prettyPrint));
             return list.Count;
         }
 

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using UnityEngine;
+using WRLDZ.Core;
 
 namespace WRLDZ.Duel.Ocg
 {
@@ -11,13 +12,11 @@ namespace WRLDZ.Duel.Ocg
         {
             ids = new List<int>();
             reason = null;
-            var path = Path.Combine(Application.streamingAssetsPath, streamingRelative);
-            if (!File.Exists(path))
+            if (!StreamingFiles.TryReadAllText(streamingRelative, out var json))
             {
                 reason = "golden missing (skip): " + streamingRelative;
                 return false;
             }
-            var json = File.ReadAllText(path);
             var file = JsonUtility.FromJson<GoldenFile>(json);
             if (file?.ids == null || file.ids.Length == 0)
             {

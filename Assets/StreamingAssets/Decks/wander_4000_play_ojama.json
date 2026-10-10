@@ -1,0 +1,137 @@
+{
+  "name": "Cafeteria Ojamas",
+  "format": "wrldz_street_playground_4000",
+  "flaw": "All three colors, but Yellow is the only 3-of. Green and Black are 2. Ojama Trio is the trap they actually opened. Polymerization stands in for missing Ojama spells.",
+  "main": [
+    {
+      "id": 42941100,
+      "name": "Ojama Yellow",
+      "qty": 3
+    },
+    {
+      "id": 12482652,
+      "name": "Ojama Green",
+      "qty": 2
+    },
+    {
+      "id": 79335209,
+      "name": "Ojama Black",
+      "qty": 2
+    },
+    {
+      "id": 13039848,
+      "name": "Giant Soldier of Stone",
+      "qty": 2
+    },
+    {
+      "id": 15025844,
+      "name": "Mystical Elf",
+      "qty": 2
+    },
+    {
+      "id": 54652250,
+      "name": "Man-Eater Bug",
+      "qty": 2
+    },
+    {
+      "id": 24094653,
+      "name": "Polymerization",
+      "qty": 2
+    },
+    {
+      "id": 29843091,
+      "name": "Ojama Trio",
+      "qty": 2
+    },
+    {
+      "id": 72302403,
+      "name": "Swords of Revealing Light",
+      "qty": 1
+    },
+    {
+      "id": 66788016,
+      "name": "Fissure",
+      "qty": 2
+    },
+    {
+      "id": 97169186,
+      "name": "Smashing Ground",
+      "qty": 1
+    },
+    {
+      "id": 79759861,
+      "name": "Tribute to the Doomed",
+      "qty": 2
+    },
+    {
+      "id": 26412047,
+      "name": "Hammer Shot",
+      "qty": 1
+    },
+    {
+      "id": 70046172,
+      "name": "Rush Recklessly",
+      "qty": 2
+    },
+    {
+      "id": 65169794,
+      "name": "Black Pendant",
+      "qty": 1
+    },
+    {
+      "id": 4206964,
+      "name": "Trap Hole",
+      "qty": 2
+    },
+    {
+      "id": 17814387,
+      "name": "Reinforcements",
+      "qty": 2
+    },
+    {
+      "id": 44209392,
+      "name": "Castle Walls",
+      "qty": 2
+    },
+    {
+      "id": 3819470,
+      "name": "Seven Tools of the Bandit",
+      "qty": 1
+    },
+    {
+      "id": 14315573,
+      "name": "Negate Attack",
+      "qty": 1
+    },
+    {
+      "id": 12607053,
+      "name": "Waboku",
+      "qty": 2
+    },
+    {
+      "id": 77414722,
+      "name": "Magic Jammer",
+      "qty": 1
+    },
+    {
+      "id": 56120475,
+      "name": "Sakuretsu Armor",
+      "qty": 2
+    }
+  ],
+  "extra": [
+    {
+      "id": 90140980,
+      "name": "Ojama King",
+      "qty": 1
+    }
+  ],
+  "side": [],
+  "counts": {
+    "main": 40,
+    "extra": 1,
+    "side": 0
+  },
+  "lpBand": 4000,
+  "role": "street_npc_playground"
+}

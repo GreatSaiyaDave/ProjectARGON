@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: AvatarRecolor
+  m_Shader: {fileID: 4800000, guid: e3b180332d7a4dac9fbc68f5c8b7e85c, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 1
+  m_CustomRenderQueue: -1
+  stringTagMap:
+    RenderPipeline: URP
+  disabledShaderPasses: []
+ serializedVersion: 8
+  m_PropLineTex: {fileID: 0}
+  m_PropLineTex_Gamma: 0
+  m_PropLineTex_AlphaSource: 0
+  m_PropLineTex_SpecSpace: 0
+  _BaseMap: {fileID: 0}
+  _BaseColor: {r: 1, g: 1, b: 1, a: 1}
+  _MaskMap: {fileID: 0}
+  _ColorA: {r: 1, g: 1, b: 1, a: 0}
+  _ColorB: {r: 1, g: 1, b: 1, a: 0}
+  _ColorC: {r: 1, g: 1, b: 1, a: 0}
+  _RefLum: {x: 0.2, y: 0.2, z: 0.2, w: 0}
+  _HideMap: {fileID: 0}
+  _ScalpMap: {fileID: 0}
+  _ScalpColor: {r: 0, g: 0, b: 0, a: 0}
+  _HideOn: 0
+  _ShadowAmt: 0.08
+  _RimAmt: 0.6
+  _OutlineWidth: 1.4
+  _OutlineDark: 0.28
+  _UseTexAlpha: 0
+  _RimColor: {r: 0, g: 0, b: 0, a: 0}
+  _Cull: 2
+  _Surface: 0
+  _SrcBlend: 1
+  _DstBlend: 0
+  _ZWrite: 1

@@ -7,7 +7,7 @@ namespace WRLDZ.Duel.Rules
 {
     /// <summary>
     /// ERAZ badge ownership on <see cref="PlayerProgress.erazBadgesCsv"/>.
-    /// Tutorial grants Original; season complete unlocks the next band in order.
+    /// Fortune teller grants Original whole. Later bands are 5 shards + SE at the Bazaar.
     /// </summary>
     public static class ErazProgress
     {
@@ -65,10 +65,12 @@ namespace WRLDZ.Duel.Rules
                 GrantTutorialBadge(p);
         }
 
-        public static void GrantNextOnSeasonComplete(PlayerProgress p)
+        /// <summary>
+        /// Highest whole badge in band order. Original if none (pre-tutorial).
+        /// Street NPCs may only use this ERAZ.
+        /// </summary>
+        public static string HighestOwned(PlayerProgress p)
         {
-            if (p == null) return;
-
             var order = ErazFormat.BandIdsInOrder();
             string highest = null;
             for (var i = 0; i < order.Count; i++)
@@ -77,15 +79,42 @@ namespace WRLDZ.Duel.Rules
                     highest = order[i];
             }
 
-            if (highest == null)
+            return string.IsNullOrEmpty(highest) ? ErazFormat.Original : highest;
+        }
+
+        /// <summary>
+        /// Season clear grants a shard of the next band, not the whole badge.
+        /// Merge at the Bazaar (5 shards + Set Energy).
+        /// </summary>
+        public static string NextPieceBand(PlayerProgress p)
+        {
+            if (p == null) return ErazFormat.Gx;
+            var highest = HighestOwned(p);
+            if (!HasBadge(p, ErazFormat.Original))
+                return ErazFormat.Original;
+            return ErazFormat.NextBand(highest) ?? "";
+        }
+
+        public static void GrantNextOnSeasonComplete(PlayerProgress p)
+        {
+            // Kept for tests: season complete no longer grants a whole badge.
+            // Shards are artifact cards — use GrantNextSeasonPiece.
+        }
+
+        public static void GrantNextSeasonPiece(PlayerProgress p, PlayerInventory inv)
+        {
+            if (p == null || inv == null) return;
+            var next = NextPieceBand(p);
+            if (string.IsNullOrEmpty(next)) return;
+            if (string.Equals(next, ErazFormat.Original, StringComparison.OrdinalIgnoreCase)
+                && !HasBadge(p, ErazFormat.Original))
             {
-                GrantBadge(p, ErazFormat.Original);
+                GrantTutorialBadge(p);
+                ArtifactService.Grant(p, inv, ArtifactService.ErazId(ErazFormat.Original), 1);
                 return;
             }
 
-            var next = ErazFormat.NextBand(highest);
-            if (!string.IsNullOrEmpty(next))
-                GrantBadge(p, next);
+            ArtifactService.Grant(p, inv, ArtifactService.ErazPieceId(next), 1);
         }
 
         public static bool CanSelectBand(PlayerProgress p, string eraId) =>

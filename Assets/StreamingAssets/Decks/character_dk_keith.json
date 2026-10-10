@@ -1,0 +1,134 @@
+{
+  "name": "Bandit Keith · Duelist Kingdom",
+  "format": "wrldz_dk_character",
+  "character": "Bandit Keith",
+  "era": "duelist_kingdom",
+  "erazBandId": "original",
+  "notes": "Barrel Dragon, Slot Machine, Zoa / Metalzoa. Blast Sphere and Pendulum Machine in. Sphere needs an effect script to pop.",
+  "main": [
+    {
+      "id": 81480460,
+      "name": "Barrel Dragon",
+      "qty": 3
+    },
+    {
+      "id": 3797883,
+      "name": "Slot Machine",
+      "qty": 3
+    },
+    {
+      "id": 87322377,
+      "name": "Launcher Spider",
+      "qty": 2
+    },
+    {
+      "id": 24311372,
+      "name": "Zoa",
+      "qty": 2
+    },
+    {
+      "id": 23771716,
+      "name": "7 Colored Fish",
+      "qty": 3
+    },
+    {
+      "id": 7359741,
+      "name": "Mechanicalchaser",
+      "qty": 3
+    },
+    {
+      "id": 11384280,
+      "name": "Cannon Soldier",
+      "qty": 2
+    },
+    {
+      "id": 44203504,
+      "name": "Robotic Knight",
+      "qty": 1
+    },
+    {
+      "id": 68540059,
+      "name": "Metalmorph",
+      "qty": 3
+    },
+    {
+      "id": 25769732,
+      "name": "Machine Conversion Factory",
+      "qty": 2
+    },
+    {
+      "id": 86198326,
+      "name": "7 Completed",
+      "qty": 2
+    },
+    {
+      "id": 63102017,
+      "name": "Stop Defense",
+      "qty": 1
+    },
+    {
+      "id": 72302403,
+      "name": "Swords of Revealing Light",
+      "qty": 1
+    },
+    {
+      "id": 24094653,
+      "name": "Polymerization",
+      "qty": 1
+    },
+    {
+      "id": 4206964,
+      "name": "Trap Hole",
+      "qty": 2
+    },
+    {
+      "id": 14315573,
+      "name": "Negate Attack",
+      "qty": 2
+    },
+    {
+      "id": 44095762,
+      "name": "Mirror Force",
+      "qty": 1
+    },
+    {
+      "id": 3819470,
+      "name": "Seven Tools of the Bandit",
+      "qty": 2
+    },
+    {
+      "id": 18807108,
+      "name": "Spellbinding Circle",
+      "qty": 1
+    },
+    {
+      "id": 26302522,
+      "name": "Blast Sphere",
+      "qty": 2
+    },
+    {
+      "id": 24433920,
+      "name": "Pendulum Machine",
+      "qty": 1
+    }
+  ],
+  "extra": [
+    {
+      "id": 50705071,
+      "name": "Metalzoa",
+      "qty": 1
+    },
+    {
+      "id": 99551425,
+      "name": "Labyrinth Tank",
+      "qty": 1
+    }
+  ],
+  "side": [],
+  "counts": {
+    "main": 40,
+    "extra": 2,
+    "side": 0
+  },
+  "role": "character_dk"
+}

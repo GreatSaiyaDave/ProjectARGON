@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using WRLDZ.Core;
 
 namespace WRLDZ.Duel.Rules
 {
@@ -60,11 +61,10 @@ namespace WRLDZ.Duel.Rules
         {
             if (_tried) return;
             _tried = true;
-            var path = Path.Combine(Application.streamingAssetsPath, "OcgCore", "tcg_pool.json");
-            if (!File.Exists(path)) return;
+            if (!StreamingFiles.TryReadAllText("OcgCore/tcg_pool.json", out var json)) return;
             try
             {
-                var file = JsonUtility.FromJson<PoolFile>(File.ReadAllText(path));
+                var file = JsonUtility.FromJson<PoolFile>(json);
                 if (file == null) return;
                 _tcg = new HashSet<int>();
                 if (file.ids != null)

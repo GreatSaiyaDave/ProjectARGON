@@ -71,6 +71,8 @@ namespace WRLDZ.Presentation
             pimg.sprite = UiFoundation.WhiteSprite();
             pimg.color = new Color(0.04f, 0.06f, 0.10f, 0.55f);
             pimg.raycastTarget = true;
+            HubChrome.QuietFill(pimg, new Color(0.04f, 0.06f, 0.10f, 0.55f), DuelystUi.Gold);
+            MenuHoloPulse.Attach(panel, scan: true, breathe: false);
             var glass = ImagineAssets.HudCalloutGlass() ?? ImagineAssets.HudIslandGlass();
             if (glass != null)
             {
@@ -388,8 +390,7 @@ namespace WRLDZ.Presentation
 
             if (_root == null || !_root.activeSelf)
             {
-                if (gen < 0 || _showGen == gen)
-                    Hide();
+                // Action already closed the sheet (disk placement). Do not fire onClose.
                 return;
             }
 

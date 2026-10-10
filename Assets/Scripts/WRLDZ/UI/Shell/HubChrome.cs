@@ -3,21 +3,29 @@ using UnityEngine;
 using UnityEngine.UI;
 using WRLDZ.Presentation;
 using WRLDZ.UI;
+using WRLDZ.UI.Eldritch;
 
 namespace WRLDZ.UI.Shell
 {
     /// <summary>
-    /// Battle City dest tiles for the Eye / hub. Overlays are Solid Vision slates:
-    /// obsidian fill, 1 px KaibaCorp filament, millennia gold stakes. Map stays
-    /// visible around compact windows — never smoked glass covering the street.
+    /// Shared chrome for every non-menu screen, re-skinned onto Eldritch Solid Vision.
+    /// Plates and wells are <see cref="SolidVisionSlate"/> surfaces (carved lapis / obsidian with a
+    /// sandstone rim); capsules are <see cref="ArcaneButton"/> energy tiles; section caps and
+    /// headers carry a hieroglyph read-head strip. Every public signature here is frozen — ~35
+    /// screens call into it.
     /// </summary>
     public static class HubChrome
     {
-        public static readonly Color Dusk = new(0.04f, 0.03f, 0.09f, 0.48f);
-        public static readonly Color WellFill = new(0.05f, 0.04f, 0.10f, 0.55f);
-        public static readonly Color LowerDusk = new(0.05f, 0.04f, 0.10f, 0.82f);
-        public static readonly Color Slate = new(0.055f, 0.062f, 0.125f, 0.94f);
-        public static readonly Color ShadowWash = new(0.18f, 0.07f, 0.30f, 0.22f);
+        public static readonly Color Dusk = EldritchPalette.WithAlpha(EldritchPalette.Void, 0.88f);
+        public static readonly Color WellFill = EldritchPalette.WithAlpha(EldritchPalette.Obsidian, 0.88f);
+        public static readonly Color LowerDusk = EldritchPalette.WithAlpha(EldritchPalette.Void, 0.92f);
+        public static readonly Color Slate = EldritchPalette.WithAlpha(EldritchPalette.Obsidian, 0.96f);
+        public static readonly Color SlateGold = EldritchPalette.WithAlpha(
+            Color.Lerp(EldritchPalette.Obsidian, EldritchPalette.SandstoneDark, 0.40f), 0.96f);
+        public static readonly Color ShadowWash = new(0.22f, 0.06f, 0.38f, 0.18f);
+
+        /// <summary>Plate body opacity — stone, not glass (command chips stay at 0.70).</summary>
+        const float PlateAlpha = 0.92f;
 
         public static void Place(RectTransform rt, float x0, float y0, float x1, float y1)
         {
@@ -28,11 +36,72 @@ namespace WRLDZ.UI.Shell
             rt.offsetMax = Vector2.zero;
         }
 
+        // ──────────────────────────────────────────────── theme mapping
+
+        /// <summary>
+        /// Old Battle City chrome colors become Egyptian: cyan → sandstone, cyan-gold → millennium
+        /// gold. Eldritch accents (violet, magenta, blood, ichor) pass through untouched so Zone
+        /// Mode and danger rims keep their hue.
+        /// </summary>
+        public static Color ThemeEdge(Color c)
+        {
+            if (c.b > c.r + 0.15f && c.g > c.r + 0.10f)
+                return EldritchPalette.WithAlpha(EldritchPalette.Sandstone, Mathf.Max(c.a, 0.85f));
+            if (c.r > 0.75f && c.g > 0.55f && c.b < 0.40f)   // sandstone (b≈0.42) stays sandstone
+                return EldritchPalette.WithAlpha(EldritchPalette.MillenniumGold, Mathf.Max(c.a, 0.85f));
+            return c;
+        }
+
+        /// <summary>
+        /// Attach (or re-tier) the component that OWNS and releases this Image's per-instance
+        /// material and keeps _RectSize in sync. Returns null for faces an ArcaneButton already owns.
+        /// </summary>
+        static SolidVisionSlate DressSlate(Image img, EldritchTier tier)
+        {
+            if (img == null) return null;
+            if (img.GetComponent<ArcaneButton>() != null) return null;   // energy face owns its material
+            var slate = img.GetComponent<SolidVisionSlate>();
+            if (slate == null)
+            {
+                if (img.sprite == null) img.sprite = UiFoundation.WhiteSprite();
+                slate = SolidVisionSlate.Attach(img, tier);
+                if (slate != null)
+                {
+                    slate.HoverGlow = img.GetComponent<Button>() != null;
+                    slate.OpenEmbers = false;
+                }
+            }
+            else if (slate.Tier != tier)
+            {
+                slate.SetTier(tier);
+            }
+
+            return slate;
+        }
+
+        /// <summary>
+        /// Body color rides the Image vertex color and _FillColor stays neutral: the slate shader
+        /// scales fill AND emissive by vertex alpha, and the menu smoke test reads Image.color.a on
+        /// HUD islands / chips, so the caller's opacity intent has to survive verbatim.
+        /// </summary>
+        static void Body(SolidVisionSlate slate, Image img, Color body, float alpha, Color edge)
+        {
+            if (img != null) img.color = new Color(body.r, body.g, body.b, Mathf.Clamp01(alpha));
+            if (slate != null) slate.SetTint(Color.white, edge);
+        }
+
+        // ──────────────────────────────────────────────── rims & ticks
+
         public static void LiftPlate(Image face, Color edge)
         {
             if (face == null) return;
+            // Outline/Shadow duplicate the quad; on the rect-space shaders that draws the whole
+            // effect a second time, offset. Eldritch surfaces glow from the shader instead.
+            if (face.GetComponent<ArcaneButton>() != null || face.GetComponent<SolidVisionSlate>() != null)
+                return;
+            edge = ThemeEdge(edge);
             // Hairline only — Outline blobs were the smoked-glass halo.
-            var ol = face.GetComponent<Outline>() ?? face.gameObject.AddComponent<Outline>();
+            var ol = UiFoundation.GetOrAdd<Outline>(face.gameObject);
             ol.effectColor = new Color(edge.r, edge.g, edge.b, 0.38f);
             ol.effectDistance = new Vector2(1.0f, -1.0f);
             ol.useGraphicAlpha = false;
@@ -51,11 +120,13 @@ namespace WRLDZ.UI.Shell
         }
 
         /// <summary>
-        /// Sharp KaibaCorp filament on overlay wells. Not dest-tile L-ticks.
+        /// Sharp cartouche filament on overlay wells. Not dest-tile L-ticks.
+        /// Sandstone / gold since the overhaul; eldritch accents keep their hue.
         /// </summary>
-        public static void FilamentRim(Transform parent, Color color, float px = 1.5f)
+        public static void FilamentRim(Transform parent, Color color, float px = 2f)
         {
             if (parent == null) return;
+            color = ThemeEdge(color);
             void Edge(string name, Vector2 aMin, Vector2 aMax, Vector2 pivot, Vector2 size, Vector2 pos)
             {
                 var t = parent.Find(name);
@@ -149,16 +220,24 @@ namespace WRLDZ.UI.Shell
             Place(go.GetComponent<RectTransform>(), x0, y0, x1, y1);
             var img = go.GetComponent<Image>();
             img.sprite = UiFoundation.WhiteSprite();
-            img.color = new Color(0.02f, 0.04f, 0.08f, 0.55f);
+            img.color = new Color(EldritchPalette.Void.r, EldritchPalette.Void.g, EldritchPalette.Void.b, 0.55f);
             img.raycastTarget = false;
         }
 
+        /// <summary>
+        /// Section header: gold epigraphic type over a sandstone stake, with a hieroglyph read-head
+        /// strip running the free gutter to its right. The <paramref name="color"/> argument now
+        /// only chooses between the two golds — cyan caps were the old chrome.
+        /// </summary>
         public static Text SectionCap(Transform parent, string name, string text, Color color,
             float x0, float y0, float x1, float y1)
         {
-            var cap = GoTheme.Label(parent, name, text, 20, color, TextAnchor.MiddleLeft);
+            var warm = color.r > 0.75f && color.g > 0.55f && color.b < 0.55f;
+            var ink = warm ? EldritchPalette.GoldHot : EldritchPalette.MillenniumGold;
+
+            var cap = GoTheme.Label(parent, name, text, 20, ink, TextAnchor.MiddleLeft);
             WrldzType.Style(cap, 20, display: true, heavyOutline: true);
-            cap.color = color;
+            cap.color = ink;
             WrldzType.ApplyOutline(cap, heavy: true, buttonContrast: true);
             GoTheme.Place(cap.rectTransform, x0, y0, x1, y1);
 
@@ -167,8 +246,20 @@ namespace WRLDZ.UI.Shell
             GoTheme.Place(tick.GetComponent<RectTransform>(), x0, y0 - 0.006f, x0 + 0.10f, y0);
             var timg = tick.GetComponent<Image>();
             timg.sprite = UiFoundation.WhiteSprite();
-            timg.color = new Color(color.r, color.g, color.b, 0.85f);
+            timg.color = EldritchPalette.WithAlpha(EldritchPalette.Sandstone, 0.90f);
             timg.raycastTarget = false;
+
+            // Every section header in the game reads Egyptian: cells only when the gutter is real.
+            if (0.96f - x1 > 0.12f)
+            {
+                var strip = new GameObject(name + "Glyphs", typeof(RectTransform), typeof(LayoutElement));
+                strip.transform.SetParent(parent, false);
+                strip.GetComponent<LayoutElement>().ignoreLayout = true;
+                GoTheme.Place(strip.GetComponent<RectTransform>(), x1 + 0.02f, y0, 0.96f, y1);
+                HieroglyphBorder.Create(strip.transform, HieroglyphBorder.Edge.Top, 30f,
+                    EldritchPalette.MillenniumGold, 2.5f);
+            }
+
             return cap;
         }
 
@@ -181,7 +272,8 @@ namespace WRLDZ.UI.Shell
             dim.transform.SetAsFirstSibling();
             var img = dim.GetComponent<Image>();
             img.sprite = UiFoundation.WhiteSprite();
-            img.color = new Color(0.04f, 0.03f, 0.09f, MenuChromePrefs.DimAlpha);
+            img.color = new Color(EldritchPalette.Abyss.r, EldritchPalette.Abyss.g, EldritchPalette.Abyss.b,
+                MenuChromePrefs.DimAlpha);
             img.raycastTarget = true;
             var btn = dim.GetComponent<Button>();
             btn.targetGraphic = img;
@@ -191,6 +283,11 @@ namespace WRLDZ.UI.Shell
             return img;
         }
 
+        /// <summary>
+        /// The workhorse button (43 call sites). Routes to <see cref="ArcaneButton"/> through
+        /// <see cref="MenuCommandButton.Create"/> but still returns a plain <see cref="Button"/>
+        /// with the same "Title" / "Blurb" children — callers Find() and re-place them.
+        /// </summary>
         public static Button Capsule(Transform parent, string title, Action onClick,
             MenuCommandButton.Kind kind = MenuCommandButton.Kind.Primary,
             string blurb = null, bool centerTitle = true, int titleSize = 20,
@@ -199,107 +296,129 @@ namespace WRLDZ.UI.Shell
             var btn = MenuCommandButton.Create(parent, title, onClick, kind, blurb,
                 centerTitle, plated);
             Dress(btn, kind, titleSize, displayTitle: true);
-            if (plated && centerTitle && string.IsNullOrEmpty(blurb))
-                FlattenPlate(btn.GetComponent<Image>());
             return btn;
         }
 
-        /// <summary>Dest / featured plate — obsidian filament tile, not smoked glass.</summary>
+        /// <summary>Hero / dest plate: carved sandstone over lapis (or obsidian + gold when gold).</summary>
         public static void PaintPlate(Image img, Color edge, bool gold = false, bool sliced = true)
         {
             if (img == null) return;
-            var plate = gold
-                ? ImagineAssets.TileHubGold() ?? ImagineAssets.BtnGold() ?? ImagineAssets.PanelModal()
-                : ImagineAssets.TileHub() ?? ImagineAssets.BtnPrimary() ?? ImagineAssets.PanelModal();
-            if (plate != null)
+            HideFilament(img.transform);
+            var ol = img.GetComponent<Outline>();
+            if (ol != null) ol.enabled = false;
+
+            var tier = gold ? EldritchTier.Primary : EldritchTier.Secondary;
+            var ticks = gold ? EldritchPalette.MillenniumGold : EldritchPalette.Sandstone;
+
+            var ab = img.GetComponent<ArcaneButton>();
+            if (ab != null)
             {
-                img.sprite = plate;
-                img.type = sliced && plate.border.sqrMagnitude > 0.1f
-                    ? Image.Type.Sliced
-                    : Image.Type.Simple;
-                img.color = Color.white;
-            }
-            else
-            {
-                img.sprite = UiFoundation.WhiteSprite();
-                img.type = Image.Type.Simple;
-                img.color = gold
-                    ? new Color(0.16f, 0.12f, 0.05f, 0.96f)
-                    : Slate;
-                FilamentRim(img.transform, edge);
+                // Toggle chips re-call this to flip gold on/off; keep the face's own opacity.
+                if (ab.Tier != tier) ab.SetTier(tier);
+                MenuCommandButton.CarveStone(img);
+                CornerTicks(img.transform, ticks);
+                return;
             }
 
-            LiftPlate(img, edge);
+            var slate = DressSlate(img, tier);
+            MenuCommandButton.CarveStone(img);
+            Body(slate, img, gold ? EldritchPalette.Obsidian : EldritchPalette.Lapis, PlateAlpha,
+                gold ? EldritchPalette.MillenniumGold : ThemeEdge(edge));
+            CornerTicks(img.transform, ticks);
         }
 
-        /// <summary>Avoid 9-slice collapse on short toolbar rows.</summary>
+        /// <summary>Kept for callers that used it to dodge 9-slice collapse; plates are Simple now.</summary>
         public static void FlattenPlate(Image img)
         {
             if (img == null) return;
             img.type = Image.Type.Simple;
             if (img.sprite == null)
-                PaintPlate(img, DuelystUi.Cyan, sliced: false);
+                PaintPlate(img, EldritchPalette.Sandstone, sliced: false);
         }
 
-        /// <summary>Quiet obsidian fill — HUD / list wells, not dest-tile art.</summary>
-        public static void QuietFill(Image img, Color fill, Color? edge = null)
+        /// <summary>Quiet obsidian slate — HUD islands / list wells, not dest-tile art.</summary>
+        public static void QuietFill(Image img, Color fill, Color? edge = null, bool millennia = false)
         {
             if (img == null) return;
-            img.sprite = UiFoundation.WhiteSprite();
-            img.type = Image.Type.Simple;
-            img.color = fill;
             var ol = img.GetComponent<Outline>();
             if (ol != null) ol.enabled = false;
-            if (edge.HasValue)
-                FilamentRim(img.transform, edge.Value);
+            if (img.GetComponent<ArcaneButton>() != null) return;   // MenuCommandButton faces
+
+            img.sprite = UiFoundation.WhiteSprite();
+            img.type = Image.Type.Simple;
+
+            var rim = ThemeEdge(edge ?? EldritchPalette.WithAlpha(EldritchPalette.SolidVisionCyan, 0.55f));
+            var slate = DressSlate(img, EldritchTier.Tertiary);
+            // Hue re-points at obsidian; the caller's alpha is their readability budget, keep it.
+            Body(slate, img, EldritchPalette.Obsidian, fill.a, rim);
+            if (millennia) CornerTicks(img.transform, rim);
         }
 
-        /// <summary>List / meter / inspect well. No tile_hub, no L-ticks.</summary>
+        /// <summary>List / meter / inspect well. Quiet Tertiary slate — no grain, no L-ticks.</summary>
         public static void PaintWell(Image img, bool flatten = false)
         {
-            QuietFill(img, MenuChromePrefs.PanelColor, DuelystUi.Cyan);
+            // No HideFilament here: wells are painted onto panels that own a RiftWash, and the
+            // old code never struck it.
+            QuietFill(img, MenuChromePrefs.PanelColor,
+                EldritchPalette.WithAlpha(EldritchPalette.Sandstone, 0.55f));
         }
 
-        /// <summary>Map / wallet chip — GO-soft navy, thin accent rim.</summary>
+        /// <summary>Map / wallet chip — obsidian slate, sandstone rim + millennia ticks.</summary>
         public static void PaintChip(Image img, Color edge)
         {
-            QuietFill(img, new Color(0.07f, 0.08f, 0.14f, 0.90f), edge);
+            QuietFill(img, EldritchPalette.WithAlpha(EldritchPalette.Obsidian, 0.90f), edge,
+                millennia: true);
         }
 
-        /// <summary>Gold / cyan L-corner ticks from the hub featured/dest tiles.</summary>
-        public static void CornerTicks(Transform parent, Color color)
+        /// <summary>Millennia L-corner stakes. Sandstone / gold since the overhaul.</summary>
+        public static void CornerTicks(Transform parent, Color color, float arm = 18f, float thick = 2.4f,
+            float inset = 6f)
         {
             if (parent == null) return;
+            color = ThemeEdge(color);
+            var tint = new Color(color.r, color.g, color.b, 0.92f);
             void Arm(string name, Vector2 anchor, Vector2 pivot, Vector2 size, Vector2 pos)
             {
-                if (parent.Find(name) != null) return;
-                var go = new GameObject(name, typeof(RectTransform), typeof(Image));
-                go.transform.SetParent(parent, false);
-                var rt = go.GetComponent<RectTransform>();
+                var t = parent.Find(name);
+                RectTransform rt;
+                Image img;
+                if (t == null)
+                {
+                    var go = new GameObject(name, typeof(RectTransform), typeof(Image));
+                    go.transform.SetParent(parent, false);
+                    rt = go.GetComponent<RectTransform>();
+                    img = go.GetComponent<Image>();
+                    img.sprite = UiFoundation.WhiteSprite();
+                    img.raycastTarget = false;
+                    var le = go.AddComponent<LayoutElement>();
+                    le.ignoreLayout = true;
+                }
+                else
+                {
+                    rt = t as RectTransform;
+                    img = t.GetComponent<Image>();
+                    t.gameObject.SetActive(true);
+                }
+
                 rt.anchorMin = anchor;
                 rt.anchorMax = anchor;
                 rt.pivot = pivot;
                 rt.anchoredPosition = pos;
                 rt.sizeDelta = size;
-                var img = go.GetComponent<Image>();
-                img.sprite = UiFoundation.WhiteSprite();
-                img.color = new Color(color.r, color.g, color.b, 0.92f);
-                img.raycastTarget = false;
-                var le = go.AddComponent<LayoutElement>();
-                le.ignoreLayout = true;
+                img.color = tint;
             }
 
-            Arm("TickTL_H", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, 2.4f), new Vector2(6f, -6f));
-            Arm("TickTL_V", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(2.4f, 18f), new Vector2(6f, -6f));
-            Arm("TickTR_H", new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(18f, 2.4f), new Vector2(-6f, -6f));
-            Arm("TickTR_V", new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(2.4f, 18f), new Vector2(-6f, -6f));
-            Arm("TickBL_H", new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(18f, 2.4f), new Vector2(6f, 6f));
-            Arm("TickBL_V", new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(2.4f, 18f), new Vector2(6f, 6f));
-            Arm("TickBR_H", new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(18f, 2.4f), new Vector2(-6f, 6f));
-            Arm("TickBR_V", new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(2.4f, 18f), new Vector2(-6f, 6f));
+            Arm("TickTL_H", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(arm, thick), new Vector2(inset, -inset));
+            Arm("TickTL_V", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(thick, arm), new Vector2(inset, -inset));
+            Arm("TickTR_H", new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(arm, thick), new Vector2(-inset, -inset));
+            Arm("TickTR_V", new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(thick, arm), new Vector2(-inset, -inset));
+            Arm("TickBL_H", new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(arm, thick), new Vector2(inset, inset));
+            Arm("TickBL_V", new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(thick, arm), new Vector2(inset, inset));
+            Arm("TickBR_H", new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(arm, thick), new Vector2(-inset, inset));
+            Arm("TickBR_V", new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(thick, arm), new Vector2(-inset, inset));
         }
 
-        /// <summary>Floating overlay sheet — quiet navy, thin rim.</summary>
+        /// <summary>Floating overlay sheet — obsidian slate, sandstone rim, umbrax wash.</summary>
         public static RectTransform Sheet(Transform parent, string name,
             float x0, float y0, float x1, float y1, bool gold = false)
         {
@@ -308,7 +427,8 @@ namespace WRLDZ.UI.Shell
             Place(go.GetComponent<RectTransform>(), x0, y0, x1, y1);
             var img = go.GetComponent<Image>();
             img.raycastTarget = true;
-            QuietFill(img, MenuChromePrefs.PanelColor, gold ? DuelystUi.Gold : DuelystUi.Cyan);
+            QuietFill(img, MenuChromePrefs.PanelColor,
+                gold ? EldritchPalette.MillenniumGold : EldritchPalette.Sandstone, millennia: true);
             RiftWash(go.transform);
             return go.GetComponent<RectTransform>();
         }
@@ -319,43 +439,28 @@ namespace WRLDZ.UI.Shell
             if (btn == null) return;
             var titleColor = kind switch
             {
-                MenuCommandButton.Kind.Gold => DuelystUi.GoldHot,
-                MenuCommandButton.Kind.Danger => new Color(1f, 0.72f, 0.74f, 1f),
-                MenuCommandButton.Kind.Secondary => DuelystUi.TextCream,
-                _ => Color.white
+                MenuCommandButton.Kind.Gold => EldritchPalette.GoldHot,
+                MenuCommandButton.Kind.Danger => new Color(1f, 0.74f, 0.76f, 1f),
+                _ => EldritchPalette.TextCream
             };
             MenuCommandButton.ApplyHubType(btn, titleSize, titleColor, displayTitle);
-            var edge = kind switch
-            {
-                MenuCommandButton.Kind.Gold => DuelystUi.Gold,
-                MenuCommandButton.Kind.Danger => MenuCommandButton.EdgeDanger,
-                MenuCommandButton.Kind.Secondary => DuelystUi.Cyan,
-                _ => DuelystUi.Cyan
-            };
-            LiftPlate(btn.GetComponent<Image>(), edge);
+            // LiftPlate is a no-op on Eldritch faces (the shader draws the rim) — kept for the
+            // plain Images that still come through Dress.
+            LiftPlate(btn.GetComponent<Image>(), MenuCommandButton.EdgeFor(kind));
         }
 
-        /// <summary>Header X — gold hub nugget (Simple stretch, never 9-slice).</summary>
+        /// <summary>Header X — gold cartouche nugget, 56 px touch target.</summary>
         public static Button CloseChip(Transform parent, Action onClose, string label = "X")
         {
             var btn = MenuCommandButton.Create(parent, label, onClose,
-                MenuCommandButton.Kind.Secondary, centerTitle: true);
+                MenuCommandButton.Kind.Gold, centerTitle: true);
             btn.name = "Close";
-            Dress(btn, MenuCommandButton.Kind.Secondary, 18, displayTitle: true);
-            var face = btn.GetComponent<Image>();
-            var nugget = ImagineAssets.BtnGold() ?? ImagineAssets.TileHubGold();
-            if (face != null && nugget != null)
-            {
-                face.sprite = nugget;
-                face.type = Image.Type.Simple;
-                face.color = Color.white;
-                LiftPlate(face, DuelystUi.Gold);
-            }
+            Dress(btn, MenuCommandButton.Kind.Gold, 18, displayTitle: true);
             var rt = btn.GetComponent<RectTransform>();
             rt.anchorMin = new Vector2(1f, 1f);
             rt.anchorMax = new Vector2(1f, 1f);
             rt.pivot = new Vector2(1f, 1f);
-            rt.sizeDelta = new Vector2(48f, 48f);
+            rt.sizeDelta = new Vector2(56f, 56f);
             rt.anchoredPosition = new Vector2(-6f, -6f);
             return btn;
         }
@@ -380,22 +485,33 @@ namespace WRLDZ.UI.Shell
             Place(go.GetComponent<RectTransform>(), 0.03f, 0.90f, 0.97f, 0.995f);
             var img = go.GetComponent<Image>();
             img.raycastTarget = false;
-            QuietFill(img, new Color(0.05f, 0.04f, 0.10f, 0.22f));
+            QuietFill(img, new Color(0f, 0f, 0f, 0.22f), EldritchPalette.MillenniumGold, millennia: true);
 
             var rule = new GameObject("GoldRule", typeof(RectTransform), typeof(Image));
             rule.transform.SetParent(go.transform, false);
             Place(rule.GetComponent<RectTransform>(), 0.04f, 0.00f, 0.50f, 0.06f);
             var rimg = rule.GetComponent<Image>();
             rimg.sprite = UiFoundation.WhiteSprite();
-            rimg.color = new Color(DuelystUi.GoldHot.r, DuelystUi.GoldHot.g, DuelystUi.GoldHot.b, 0.85f);
+            rimg.color = EldritchPalette.WithAlpha(EldritchPalette.MillenniumGold, 0.85f);
             rimg.raycastTarget = false;
+
+            // Glyph run along the header's lower right — the close chip owns the upper right.
+            var strip = new GameObject("HeaderGlyphs", typeof(RectTransform), typeof(LayoutElement));
+            strip.transform.SetParent(go.transform, false);
+            strip.GetComponent<LayoutElement>().ignoreLayout = true;
+            Place(strip.GetComponent<RectTransform>(), 0.54f, 0.02f, 0.96f, 0.26f);
+            HieroglyphBorder.Create(strip.transform, HieroglyphBorder.Edge.Top, 22f,
+                EldritchPalette.WithAlpha(EldritchPalette.Sandstone, 0.85f), 2f);
 
             var hasSub = !string.IsNullOrEmpty(subtitle);
             titleT = FloatingPanel.Title(go.transform, title ?? "", 24);
             WrldzType.StyleGoldTitle(titleT, 24);
             titleT.fontStyle = FontStyle.Bold | FontStyle.Italic;
             titleT.horizontalOverflow = HorizontalWrapMode.Overflow;
-            titleT.verticalOverflow = VerticalWrapMode.Truncate;
+            // Overflow, not Truncate: the header is 9.5 % of the frame, so at the readable type scale the title's
+            // 46 % slot can be a pixel shorter than the glyph line — Truncate then drops the whole line and the sheet
+            // shows no title at all (seen on DUEL SETUP and OPPONENTS at 4K). The header's RectMask2D still clips.
+            titleT.verticalOverflow = VerticalWrapMode.Overflow;
             Place(titleT.rectTransform, 0.05f, hasSub ? 0.46f : 0.12f, 0.78f, 0.92f);
 
             subT = null;
@@ -403,8 +519,9 @@ namespace WRLDZ.UI.Shell
             {
                 subT = FloatingPanel.Body(go.transform, subtitle, 14);
                 WrldzType.Style(subT, 14, display: false, heavyOutline: true);
-                subT.color = DuelystUi.TextCream;
+                subT.color = EldritchPalette.TextCream;
                 subT.alignment = TextAnchor.MiddleLeft;
+                subT.verticalOverflow = VerticalWrapMode.Overflow;   // same: a 40 % slot vs the body line height
                 Place(subT.rectTransform, 0.05f, 0.08f, 0.78f, 0.48f);
             }
 
@@ -421,7 +538,8 @@ namespace WRLDZ.UI.Shell
             Place(go.GetComponent<RectTransform>(), x0, y0, x1, y1);
             var img = go.GetComponent<Image>();
             img.raycastTarget = true;
-            QuietFill(img, MenuChromePrefs.InsetColor);
+            QuietFill(img, MenuChromePrefs.InsetColor,
+                EldritchPalette.WithAlpha(EldritchPalette.Sandstone, 0.45f));
             return go.GetComponent<RectTransform>();
         }
 
@@ -432,7 +550,7 @@ namespace WRLDZ.UI.Shell
             go.GetComponent<LayoutElement>().minHeight = 32f;
             var t = FloatingPanel.Body(go.transform, text ?? "", 14);
             WrldzType.Style(t, 14, display: true, heavyOutline: true);
-            t.color = DuelystUi.GoldHot;
+            t.color = EldritchPalette.GoldHot;
             t.alignment = TextAnchor.MiddleLeft;
             Place(t.rectTransform, 0.02f, 0.22f, 0.98f, 0.98f);
             var tick = new GameObject("Tick", typeof(RectTransform), typeof(Image));
@@ -440,7 +558,7 @@ namespace WRLDZ.UI.Shell
             Place(tick.GetComponent<RectTransform>(), 0.02f, 0.04f, 0.18f, 0.16f);
             var timg = tick.GetComponent<Image>();
             timg.sprite = UiFoundation.WhiteSprite();
-            timg.color = new Color(DuelystUi.GoldHot.r, DuelystUi.GoldHot.g, DuelystUi.GoldHot.b, 0.85f);
+            timg.color = EldritchPalette.WithAlpha(EldritchPalette.Sandstone, 0.90f);
             timg.raycastTarget = false;
             return go.GetComponent<RectTransform>();
         }
@@ -457,8 +575,22 @@ namespace WRLDZ.UI.Shell
             var tall = text != null && text.IndexOf('\n') >= 0;
             le.minHeight = tall ? 76f : 64f;
             le.preferredHeight = le.minHeight;
+            // Without a width hint the row collapsed to the capsule's own preferred size,
+            // truncating labels to chips ("Master Volume" -> "MAST"). Rows span the list.
+            le.flexibleWidth = 1f;
+            // ...and flexibleWidth is inert unless the list actually drives child widths.
+            // These lists are authored as full-width bars, so opt the parent in here rather
+            // than in every screen that happens to call ListRow.
+            var group = host != null ? host.GetComponent<VerticalLayoutGroup>() : null;
+            if (group != null)
+                group.childControlWidth = true;
             if (onClick == null)
+            {
                 btn.interactable = false;
+                // Dim the energy line too, or a dead row still races gold.
+                btn.GetComponent<ArcaneButton>()?.SetInteractable(false);
+            }
+
             var titleRt = btn.transform.Find("Title") as RectTransform;
             if (titleRt != null)
                 Place(titleRt, 0.06f, 0.10f, 0.94f, 0.90f);
@@ -468,7 +600,7 @@ namespace WRLDZ.UI.Shell
                 title.alignment = TextAnchor.MiddleLeft;
                 title.horizontalOverflow = HorizontalWrapMode.Wrap;
                 title.verticalOverflow = VerticalWrapMode.Truncate;
-                title.color = gold ? DuelystUi.GoldHot : DuelystUi.TextCream;
+                title.color = gold ? EldritchPalette.GoldHot : EldritchPalette.TextCream;
             }
 
             return btn;
@@ -481,22 +613,7 @@ namespace WRLDZ.UI.Shell
                 typeof(RectTransform), typeof(Image), typeof(LayoutElement));
             go.transform.SetParent(parent, false);
             var img = go.GetComponent<Image>();
-            var plate = gold
-                ? ImagineAssets.TileHubGold() ?? ImagineAssets.BtnGold()
-                : ImagineAssets.BtnPrimary() ?? ImagineAssets.TileHub();
-            if (plate != null)
-            {
-                img.sprite = plate;
-                img.type = plate.border.sqrMagnitude > 0.1f ? Image.Type.Sliced : Image.Type.Simple;
-                img.color = Color.white;
-            }
-            else
-            {
-                img.sprite = UiFoundation.WhiteSprite();
-                img.color = gold ? MenuCommandButton.FillGold : MenuCommandButton.FillPrimary;
-            }
-
-            LiftPlate(img, gold ? DuelystUi.Gold : DuelystUi.Cyan);
+            PaintPlate(img, gold ? EldritchPalette.MillenniumGold : EldritchPalette.Sandstone, gold: gold);
             var le = go.GetComponent<LayoutElement>();
             le.minHeight = 152f;
             le.preferredHeight = 160f;
@@ -507,7 +624,7 @@ namespace WRLDZ.UI.Shell
             Place(titleT.rectTransform, 0.06f, 0.46f, 0.62f, 0.92f);
             var blurbT = FloatingPanel.Body(go.transform, blurb ?? "", 14);
             WrldzType.Style(blurbT, 14, display: false, heavyOutline: true);
-            blurbT.color = DuelystUi.TextCream;
+            blurbT.color = EldritchPalette.TextCream;
             Place(blurbT.rectTransform, 0.06f, 0.10f, 0.62f, 0.46f);
 
             if (onClick != null)
@@ -519,7 +636,7 @@ namespace WRLDZ.UI.Shell
             else
             {
                 var lockL = FloatingPanel.Body(go.transform, "LOCKED", 16);
-                lockL.color = DuelystUi.Danger;
+                lockL.color = EldritchPalette.BloodDanger;
                 lockL.alignment = TextAnchor.MiddleCenter;
                 Place(lockL.rectTransform, 0.66f, 0.22f, 0.96f, 0.78f);
             }
@@ -534,9 +651,10 @@ namespace WRLDZ.UI.Shell
             var kind = gold ? MenuCommandButton.Kind.Gold : MenuCommandButton.Kind.Primary;
             var btn = MenuCommandButton.Create(parent, title, onClick, kind, blurb, plated: true);
             MenuCommandButton.ApplyHubType(btn, 24,
-                gold ? DuelystUi.GoldHot : DuelystUi.Cyan, displayTitle: true,
-                blurbSize: 16, blurbColor: DuelystUi.TextCream);
-            LiftPlate(btn.GetComponent<Image>(), gold ? DuelystUi.Gold : DuelystUi.Cyan);
+                gold ? EldritchPalette.GoldHot : EldritchPalette.TextCream, displayTitle: true,
+                blurbSize: 16, blurbColor: EldritchPalette.TextCream);
+            PaintPlate(btn.GetComponent<Image>(),
+                gold ? EldritchPalette.MillenniumGold : EldritchPalette.Sandstone, gold: gold);
 
             var titleRt = btn.transform.Find("Title") as RectTransform;
             if (titleRt != null)
@@ -545,19 +663,14 @@ namespace WRLDZ.UI.Shell
             if (blurbRt != null)
                 Place(blurbRt, 0.06f, 0.10f, 0.62f, 0.46f);
 
-            var well = false;
-            if (!string.IsNullOrEmpty(propStem))
-            {
-                well = HubPropView.CreateInUi(btn.transform, propStem,
-                    0.62f, 0.08f, 0.97f, 0.92f,
-                    gold ? DuelystUi.GoldHot : DuelystUi.Cyan, HubPropView.FeaturedRt) != null;
-            }
+            if (btn.GetComponent<RectMask2D>() == null)
+                btn.gameObject.AddComponent<RectMask2D>();
 
-            if (!well && icon != null)
+            if (icon != null)
             {
                 var ico = new GameObject("Ico", typeof(RectTransform), typeof(Image));
                 ico.transform.SetParent(btn.transform, false);
-                Place(ico.GetComponent<RectTransform>(), 0.64f, 0.12f, 0.96f, 0.88f);
+                Place(ico.GetComponent<RectTransform>(), 0.68f, 0.16f, 0.94f, 0.84f);
                 var img = ico.GetComponent<Image>();
                 img.sprite = icon;
                 img.preserveAspect = true;
@@ -567,43 +680,41 @@ namespace WRLDZ.UI.Shell
             return btn;
         }
 
-        /// <summary>Hub / Eye COMMAND dest plate (DECK, BAG, …).</summary>
+        /// <summary>
+        /// Hub / Eye / Overworld COMMAND dest plate (DECK, BAG, …). Carved treatment: sandstone
+        /// grain face plus one struck hieroglyph in the left margin, same as the main menu tiles.
+        /// </summary>
         public static Button MountDest(Transform parent, string title, Sprite icon,
             Action onClick, string propStem = null)
         {
             var btn = MenuCommandButton.Create(parent, title, onClick,
                 MenuCommandButton.Kind.Primary, centerTitle: true, plated: true);
             var face = btn.GetComponent<Image>();
-            var plate = ImagineAssets.BtnPrimary() ?? ImagineAssets.TileHub() ?? ImagineAssets.PanelHolo();
-            if (face != null && plate != null)
-            {
-                face.sprite = plate;
-                face.type = plate.border.sqrMagnitude > 0.1f ? Image.Type.Sliced : Image.Type.Simple;
-                face.color = Color.white;
-            }
+            PaintPlate(face, EldritchPalette.Sandstone);
+            MenuCommandButton.ApplyHubType(btn, 20, EldritchPalette.TextCream, displayTitle: true);
 
-            LiftPlate(face, DuelystUi.Cyan);
-            MenuCommandButton.ApplyHubType(btn, 20, Color.white, displayTitle: true);
+            if (btn.GetComponent<RectMask2D>() == null)
+                btn.gameObject.AddComponent<RectMask2D>();
 
-            var well = HubPropView.CreateInUi(btn.transform, propStem,
-                0.03f, 0.10f, 0.36f, 0.90f, DuelystUi.Cyan, HubPropView.DestRt) != null;
-            if (!well && icon != null)
+            if (icon != null)
             {
                 var ico = new GameObject("Ico", typeof(RectTransform), typeof(Image));
                 ico.transform.SetParent(btn.transform, false);
-                Place(ico.GetComponent<RectTransform>(), 0.03f, 0.12f, 0.36f, 0.88f);
+                Place(ico.GetComponent<RectTransform>(), 0.28f, 0.38f, 0.72f, 0.90f);
                 var iimg = ico.GetComponent<Image>();
                 iimg.sprite = icon;
                 iimg.preserveAspect = true;
                 iimg.raycastTarget = false;
             }
 
+            MenuCommandButton.CarveGlyph(btn.transform, 0.80f, 0.04f, 0.50f, 0.19f, 0.92f);
+
             var titleRt = btn.transform.Find("Title") as RectTransform;
             if (titleRt != null)
-                Place(titleRt, 0.38f, 0.14f, 0.96f, 0.86f);
+                Place(titleRt, 0.06f, 0.06f, 0.94f, 0.34f);
             var titleTxt = titleRt != null ? titleRt.GetComponent<Text>() : null;
             if (titleTxt != null)
-                titleTxt.alignment = TextAnchor.MiddleLeft;
+                titleTxt.alignment = TextAnchor.MiddleCenter;
 
             return btn;
         }

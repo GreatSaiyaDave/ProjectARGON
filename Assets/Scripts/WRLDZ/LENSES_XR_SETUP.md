@@ -1,6 +1,7 @@
 # Lenses XR setup — Quest 3 life-size duels
 
-**Product path:** AR lenses / OpenXR HMD.  
+**Product path:** AR lenses / OpenXR HMD. **Shipping target (owner decision 2026-09-23): Android XR glasses** (Unity / OpenXR APK); Quest 3 is a dev headset.  
+Before an Android XR build, run **WRLDZ → Repair → Restore Android XR Quality + Shaders** (Mobile quality level as the Android/AndroidXR default, Always Included runtime shaders).  
 **Phone camera does not validate arm anchoring or life-size scale.**
 
 This project uses **one duel graph** (`ArDuelSpace` → `ArDuelInteractionSystem`).  

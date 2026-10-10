@@ -102,8 +102,16 @@ namespace WRLDZ.UI
             FreeUiKit.PlayConfirm();
             cfg.FormatTitle = "Player vs AI · Surface Scan";
             cfg.FormatId = "pvai";
-            cfg.EntrySource = AppSession.SceneOverworld;
+            OpponentCatalog.ApplyPending(cfg);
+            if (string.IsNullOrEmpty(cfg.AiDeckFile) || OpponentCatalog.IsBanned(cfg.AiDeckFile))
+                cfg.AiDeckFile = OpponentCatalog.DefaultFile;
+            cfg.DkOverlay = false;
+            cfg.StartingLp = cfg.StartingLp >= 1000 ? cfg.StartingLp : 8000;
+            // VS AI opens from the Duel Disk (MainMenu) and from the Overworld CREATE sheet —
+            // return to whichever scene actually launched it.
+            cfg.EntrySource = AppSession.LaunchEntrySource();
             StopTick();
+            OpponentCatalog.ClearPending();
             _onClose?.Invoke();
             session.StartArDuel(cfg);
         }

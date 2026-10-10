@@ -8,9 +8,18 @@ namespace WRLDZ.Duel.TextEffects
     /// SpaceXAI / xAI settings for offline + first-play effect compilation.
     /// Key resolution order: environment XAI_API_KEY → PlayerPrefs → optional local config file.
     /// Never ship a real key in the repo; use env or a gitignored config.
+    /// Release player builds: the PlayerPrefs / local-file key paths and runtime AI compilation are
+    /// compiled out (Editor and Development builds only) — the compiler runs from Editor tooling, and a
+    /// plaintext key must never be read on a shipped device.
     /// </summary>
     public static class AiEffectCompileSettings
     {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        const bool KeyStoresAllowed = true;
+#else
+        const bool KeyStoresAllowed = false;
+#endif
+
         public const string EnvKeyName = "XAI_API_KEY";
         public const string PrefsKeyName = "wrldz_xai_api_key";
         public const string DefaultBaseUrl = "https://api.x.ai/v1";
@@ -19,9 +28,10 @@ namespace WRLDZ.Duel.TextEffects
         /// <summary>When true, cache miss + incomplete regex may call xAI (can hitch on main thread).</summary>
         public static bool AllowRuntimeAi
         {
-            get => PlayerPrefs.GetInt("wrldz_ai_fx_runtime", 0) != 0;
+            get => KeyStoresAllowed && PlayerPrefs.GetInt("wrldz_ai_fx_runtime", 0) != 0;
             set
             {
+                if (!KeyStoresAllowed) return;
                 PlayerPrefs.SetInt("wrldz_ai_fx_runtime", value ? 1 : 0);
                 PlayerPrefs.Save();
             }
@@ -59,6 +69,7 @@ namespace WRLDZ.Duel.TextEffects
         {
             var env = Environment.GetEnvironmentVariable(EnvKeyName);
             if (!string.IsNullOrWhiteSpace(env)) return env.Trim();
+            if (!KeyStoresAllowed) return null;
 
             var prefs = PlayerPrefs.GetString(PrefsKeyName, "");
             if (!string.IsNullOrWhiteSpace(prefs)) return prefs.Trim();
@@ -84,6 +95,7 @@ namespace WRLDZ.Duel.TextEffects
 
         public static void SetApiKeyInPrefs(string key)
         {
+            if (!KeyStoresAllowed) return;
             if (string.IsNullOrEmpty(key))
                 PlayerPrefs.DeleteKey(PrefsKeyName);
             else

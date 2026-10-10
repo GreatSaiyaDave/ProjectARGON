@@ -152,7 +152,6 @@ namespace WRLDZ.UI.Shell
             public RectTransform Body;
             public Text Title;
             public Text Status;
-            public Text ModeBadge;
             public GameObject Inspect;
             public Image InspectArt;
             public Text InspectName;
@@ -164,11 +163,7 @@ namespace WRLDZ.UI.Shell
             public Action Rebuild;
             public Action RefreshCards;
             public Transform PoolGrid;
-            public Transform DeckGrid;
             public ScrollRect PoolScroll;
-            public ScrollRect DeckScroll;
-            public Text PoolHeader;
-            public Text DeckHeader;
             public Text MatchLine;
             public RectTransform BoardHost;
             public RectTransform MainTray;
@@ -221,7 +216,10 @@ namespace WRLDZ.UI.Shell
                 "DECK",
                 "Tap name to rename · caret to switch",
                 CloseAll,
-                presentation);
+                presentation,
+                // The builder is two card grids plus a search rail — it needs the screen, not a
+                // Compact sheet. At 72%x64% the card cells collapse to unreadable thumbnails.
+                dense: true);
 
             Debug.Log("[WRLDZ] DECK HubChrome overlay — Hierarchy should show PhoneMenu_DECK, not DeckMenuRoot.");
 
@@ -240,9 +238,10 @@ namespace WRLDZ.UI.Shell
                 Phase = Phase.Editor
             };
 
-            if (st.Acc != null &&
-                (LabAdminService.IsAdmin(st.Acc) || Application.isEditor ||
-                 LabCatalogService.IsGranted(st.Acc)))
+            // Admin grants only for explicit lab/admin accounts, and only in Editor / Development
+            // builds (owner decision 5). Ordinary playtest accounts in the Editor stay untouched.
+            if (st.Acc != null && WrldzLab.LabDoorsEnabled &&
+                (LabAdminService.IsAdmin(st.Acc) || LabCatalogService.IsGranted(st.Acc)))
             {
                 var firstAdmin = st.Acc.progress == null || !st.Acc.progress.labAdmin;
                 LabAdminService.MaxOut(st.Acc);
@@ -925,7 +924,7 @@ namespace WRLDZ.UI.Shell
                     btn.targetGraphic = go.GetComponent<Image>();
             }
 
-            var h = go.GetComponent<DeckSwitcherHold>() ?? go.AddComponent<DeckSwitcherHold>();
+            var h = UiFoundation.GetOrAdd<DeckSwitcherHold>(go);
             h.LongPressSec = LongPressSec;
             h.OnTap = () =>
             {
@@ -1579,6 +1578,7 @@ namespace WRLDZ.UI.Shell
                 BuildFilterBar(phase, st, wide, searchTop, searchH);
                 if (wide)
                 {
+                    // Construction LEFT (Main + Extra + Side) · card list RIGHT.
                     BuildConstructionBoard(phase, st, 0.00f, 0.00f, 0.615f, 0.840f);
                     PinBelow(phase.Find("ConstructionBoard") as RectTransform,
                         0f, 0.615f, chromeBottom, 0f);
@@ -1606,6 +1606,8 @@ namespace WRLDZ.UI.Shell
             }
             else
             {
+                // The top 16% is not spare room — the deck switcher and close chip sit at
+                // fromTop 8..104 and this hint below them. Raising the board into it buries both.
                 var hint = Label(phase, "full builder on PHONE", 11, DuelystUi.TextMuted,
                     TextAnchor.MiddleLeft);
                 FloatingPanel.Place(hint.rectTransform, 0.02f, 0.848f, 0.70f, 0.900f);
@@ -1651,7 +1653,7 @@ namespace WRLDZ.UI.Shell
                 ? gridContent.parent.parent
                 : null;
             if (panel == null) return;
-            var ol = panel.GetComponent<Outline>() ?? panel.gameObject.AddComponent<Outline>();
+            var ol = UiFoundation.GetOrAdd<Outline>(panel.gameObject);
             ol.enabled = on;
             ol.effectColor = new Color(0.55f, 0.90f, 1f, on ? 0.45f : 0f);
             ol.effectDistance = new Vector2(2.2f, -2.2f);
@@ -2844,7 +2846,8 @@ namespace WRLDZ.UI.Shell
 
         static void PoolChip(State st, Transform host, PoolRow row)
         {
-            var go = ArtChip(st, host, row.Id, row.OnHand + row.AtHome, row.Id == st.SelectedId);
+            var owned = Mathf.Max(1, row.OnHand + row.AtHome);
+            var go = ArtChip(st, host, row.Id, owned, row.Id == st.SelectedId);
             if (row.HomeOnly || row.OnHand <= 0)
             {
                 var veil = new GameObject("V", typeof(RectTransform), typeof(Image));
@@ -2853,6 +2856,8 @@ namespace WRLDZ.UI.Shell
                 veil.GetComponent<Image>().sprite = UiFoundation.WhiteSprite();
                 veil.GetComponent<Image>().color = new Color(0.12f, 0.12f, 0.14f, 0.55f);
                 veil.GetComponent<Image>().raycastTarget = false;
+                var stamp = go.transform.Find("Qty");
+                if (stamp != null) stamp.SetAsLastSibling();
             }
 
             BindChipInteract(go, st, row.Id, fromPool: !(row.HomeOnly || row.OnHand <= 0),
@@ -2930,12 +2935,6 @@ namespace WRLDZ.UI.Shell
             }
         }
 
-        static void DeckChip(State st, Transform host, int id, int qty)
-        {
-            var go = ArtChip(st, host, id, qty, id == st.SelectedId);
-            BindChipInteract(go, st, id, fromPool: false, st.Section, st.DeckScroll);
-        }
-
         static void BindChipInteract(GameObject go, State st, int id, bool fromPool,
             Section section, ScrollRect scroll)
         {
@@ -2954,7 +2953,7 @@ namespace WRLDZ.UI.Shell
                 ShowInspect(st, id);
             });
 
-            var pass = go.GetComponent<DeckChipInteract>() ?? go.AddComponent<DeckChipInteract>();
+            var pass = UiFoundation.GetOrAdd<DeckChipInteract>(go);
             pass.Bind(st, id, fromPool, section, scroll);
         }
 
@@ -2990,7 +2989,7 @@ namespace WRLDZ.UI.Shell
             var lazy = artGo.AddComponent<DeferredCardArt>();
             lazy.Bind(st.Db, id, art);
 
-            if (qty > 1)
+            if (qty >= 1)
                 CopiesStamp(go.transform, qty);
             BanlistPip(go.transform, id);
 
@@ -3019,10 +3018,10 @@ namespace WRLDZ.UI.Shell
             img.color = Color.white;
         }
 
-        /// <summary>Corner stamp on the card face: X2 / X3 so duplicate copies read at a glance.</summary>
+        /// <summary>Corner stamp on the card face so the copy count reads at a glance.</summary>
         static void CopiesStamp(Transform card, int qty)
         {
-            var n = Mathf.Clamp(qty, 2, 99);
+            var n = Mathf.Clamp(qty, 1, 99);
             var badge = new GameObject("Qty", typeof(RectTransform), typeof(Image));
             badge.transform.SetParent(card, false);
             badge.transform.SetAsLastSibling();
@@ -3037,15 +3036,17 @@ namespace WRLDZ.UI.Shell
             FloatingPanel.Stretch(tGo.GetComponent<RectTransform>(), 1f);
             var t = tGo.GetComponent<Text>();
             t.font = WrldzType.Display() ?? WrldzType.Body() ?? UiFoundation.BuiltinFont();
-            t.fontSize = 16;
+            t.fontSize = 18;
             t.fontStyle = FontStyle.Bold;
-            t.text = "X" + n;
-            t.color = Color.white;
+            t.text = "×" + n;
+            t.color = DuelystUi.TextCream;
             t.alignment = TextAnchor.MiddleCenter;
             t.raycastTarget = false;
             t.horizontalOverflow = HorizontalWrapMode.Overflow;
             t.verticalOverflow = VerticalWrapMode.Overflow;
-            t.resizeTextForBestFit = false;
+            t.resizeTextForBestFit = true;
+            t.resizeTextMinSize = 10;
+            t.resizeTextMaxSize = 22;
             var o = tGo.GetComponent<Outline>();
             o.effectColor = new Color(0f, 0f, 0f, 1f);
             o.effectDistance = new Vector2(1.6f, -1.6f);
@@ -3055,7 +3056,7 @@ namespace WRLDZ.UI.Shell
 
         static void AddDrag(GameObject go, State st, int cardId, bool fromPool)
         {
-            var tr = go.GetComponent<EventTrigger>() ?? go.AddComponent<EventTrigger>();
+            var tr = UiFoundation.GetOrAdd<EventTrigger>(go);
             tr.triggers = new List<EventTrigger.Entry>();
 
             void E(EventTriggerType t, Action<PointerEventData> a)
@@ -3107,8 +3108,10 @@ namespace WRLDZ.UI.Shell
                     st.Ghost = null;
                 }
 
-                // Vertical split: collection LEFT · deck RIGHT (drop across the gutter)
-                var dropOnDeck = ped.position.x > Screen.width * 0.5f;
+                // Drop onto any construction tray, not a screen-half guess.
+                var dropOnDeck = PointHitsTray(st.MainTray, ped.position) ||
+                                 PointHitsTray(st.ExtraTray, ped.position) ||
+                                 PointHitsTray(st.SideTray, ped.position);
                 if (st.DragFromPool && dropOnDeck)
                 {
                     if (TryAdd(st, st.DragId, out var msg))
@@ -3133,6 +3136,12 @@ namespace WRLDZ.UI.Shell
 
                 st.DragId = 0;
             });
+        }
+
+        static bool PointHitsTray(RectTransform tray, Vector2 screen)
+        {
+            if (tray == null) return false;
+            return RectTransformUtility.RectangleContainsScreenPoint(tray, screen, null);
         }
 
         static bool TryAdd(State st, int id, out string msg, Section? dest = null)

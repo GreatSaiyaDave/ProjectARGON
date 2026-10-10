@@ -208,7 +208,7 @@ namespace WRLDZ.UI
 
         static Image goAddImage(GameObject go, Color c)
         {
-            var img = go.GetComponent<Image>() ?? go.AddComponent<Image>();
+            var img = UiFoundation.GetOrAdd<Image>(go);
             img.color = c;
             return img;
         }

@@ -26,6 +26,34 @@ namespace WRLDZ.Core
         static bool _permissionsRequested;
 
         /// <summary>
+        /// Lab / test doors (TEST DUEL, Desktop Lab, the lab_tester account) and every admin grant exist only
+        /// in the Editor and in Development builds (owner decision 2026-09-23 #5). Compile-time, so release
+        /// players carry neither the lab credentials nor a working admin path. Admin is never derived from a
+        /// username — only from <see cref="WRLDZ.Data.PlayerProgress.labAdmin"/>, which only the lab door sets.
+        /// </summary>
+        public static bool LabDoorsEnabled
+        {
+            get
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                return true;
+#else
+                return false;
+#endif
+            }
+        }
+
+        /// <summary>
+        /// False when <paramref name="p"/> belongs to a lab/admin account and this is a release player.
+        /// A dev build can leave lab_tester on the device; a release install over it must not log into it.
+        /// </summary>
+        public static bool AccountAllowedInThisBuild(WRLDZ.Data.PlayerProgress p) =>
+            LabDoorsEnabled || p == null || !p.labAdmin;
+
+        public const string LabAccountBlockedMessage =
+            "Lab accounts only open in the Editor and development builds.";
+
+        /// <summary>
         /// Portrait lock, FPS, presentation logging. Safe to call multiple times.
         /// </summary>
         public static void Apply()

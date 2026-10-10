@@ -18,6 +18,13 @@ namespace WRLDZ.Presentation.ArInteraction
         public ArDiskZone LockedZone;
         public bool IsDragging;
         public int Layer = 28;
+        /// <summary>
+        /// The floating hand (<see cref="ArFloatingHand"/>) writes this card's transform every LateUpdate while it
+        /// sits in the fan: it moves rigidly with the hand (no idle spring, no own bob) and only its lift / slot
+        /// changes are eased, by the hand. A return to the fan (<see cref="ReturnToHandRest"/>) then tracks the
+        /// live rest so the card lands exactly in its slot.
+        /// </summary>
+        public bool HeldByHand;
 
         MeshRenderer _mr;
         Material _mat;
@@ -32,6 +39,11 @@ namespace WRLDZ.Presentation.ArInteraction
 
         /// <summary>Opponent / hidden hand — never flip to the face during a draw.</summary>
         public bool KeepFaceHidden;
+        /// <summary>
+        /// A hand gesture owns this card past the moment it leaves the engine hand (a reveal activates it and then
+        /// dissolves it): the hand volume's sync stops tracking it but does not destroy it.
+        /// </summary>
+        public bool HeldByGesture;
 
         public void MarkDrawArriving() => IsDrawArriving = true;
         ArDuelDiskRig _drawDeck;
@@ -116,10 +128,84 @@ namespace WRLDZ.Presentation.ArInteraction
             _hasRest = true;
         }
 
+        public Vector3 HandRestLocal => _handRestLocal;
+        public Quaternion HandRestRotation => _handRestRot;
+        public Vector3 HandRestScale => _handRestScale;
+
+        /// <summary>
+        /// Rest pose that is also applied this frame (no spring). <see cref="ArFloatingHand"/> uses it while it
+        /// animates the fan itself (riffle), so the idle spring does not smear the flicks.
+        /// </summary>
+        public void SetHandRestImmediate(Vector3 localPos, Quaternion localRot, Vector3 localScale)
+        {
+            _handRestLocal = localPos;
+            _handRestRot = localRot;
+            _handRestScale = localScale;
+            _hasRest = true;
+            if (IsLockedToZone || IsDragging || IsDrawArriving) return;
+            if (_snapCo != null)
+            {
+                StopCoroutine(_snapCo);
+                _snapCo = null;
+            }
+
+            _freeOffsetLocal = Vector3.zero;
+            _physSepLocal = Vector3.zero;
+            transform.localPosition = localPos;
+            transform.localRotation = localRot;
+            transform.localScale = localScale;
+        }
+
+        /// <summary>
+        /// Hand-driven draw (<see cref="ArFloatingHand"/>): the card waits invisible "in the deck" until the hand
+        /// reaches the well, then the hand writes its transform every frame. Idle spring and picks stay off.
+        /// </summary>
+        public void BeginHandDraw()
+        {
+            IsDrawArriving = true;
+            if (_snapCo != null)
+            {
+                StopCoroutine(_snapCo);
+                _snapCo = null;
+            }
+
+            transform.localScale = Vector3.one * 0.001f;
+            RefreshArtFace(showFace: false);
+        }
+
+        /// <summary>End of the hand-driven draw: settle on the fan slot, face per <see cref="KeepFaceHidden"/>.</summary>
+        public void EndHandDraw()
+        {
+            if (!IsDrawArriving) return;
+            IsDrawArriving = false;
+            _freeOffsetLocal = Vector3.zero;
+            _physSepLocal = Vector3.zero;
+            if (_hasRest && !IsLockedToZone)
+            {
+                transform.localPosition = _handRestLocal;
+                transform.localRotation = _handRestRot;
+                transform.localScale = _handRestScale;
+            }
+
+            RefreshArtFace(showFace: !KeepFaceHidden);
+        }
+
         public void ReturnToHandRest()
         {
             IsDragging = false;
             if (IsLockedToZone) return;
+            if (HeldByHand)
+            {
+                // into the hand's fan: straight to the slot, following the rest as the hand moves (a stale target
+                // plus a leftover free offset used to land the card beside its slot, then drift it in)
+                _freeOffsetLocal = Vector3.zero;
+                _physSepLocal = Vector3.zero;
+                if (_snapCo != null) StopCoroutine(_snapCo);
+                _snapCo = StartCoroutine(SnapRoutine(_handRestLocal, _handRestRot, _handRestScale, false, -1f,
+                    trackRest: true));
+                return;
+            }
+
             // Capture residual free offset from current pose (light freeroam leftover)
             var delta = transform.localPosition - _handRestLocal;
             if (delta.magnitude > FreeLeash)
@@ -136,7 +222,7 @@ namespace WRLDZ.Presentation.ArInteraction
         }
 
         IEnumerator SnapRoutine(Vector3 pos, Quaternion rot, Vector3 scale, bool worldSpace,
-            float duration)
+            float duration, bool trackRest = false)
         {
             var startP = worldSpace ? transform.position : transform.localPosition;
             var startR = worldSpace ? transform.rotation : transform.localRotation;
@@ -146,8 +232,16 @@ namespace WRLDZ.Presentation.ArInteraction
             var u = 0f;
             while (u < 1f)
             {
-                u += Time.unscaledDeltaTime / dur;
+                u += Mathf.Min(Time.unscaledDeltaTime, 1f / 20f) / dur;
                 var e = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(u));
+                if (trackRest)
+                {
+                    // the hand keeps writing the live slot (SetHandRest) while this runs
+                    pos = _handRestLocal;
+                    rot = _handRestRot;
+                    scale = _handRestScale;
+                }
+
                 if (worldSpace)
                 {
                     transform.position = Vector3.Lerp(startP, pos, e);
@@ -161,6 +255,13 @@ namespace WRLDZ.Presentation.ArInteraction
 
                 transform.localScale = Vector3.Lerp(startS, scale, e);
                 yield return null;
+            }
+
+            if (trackRest)
+            {
+                pos = _handRestLocal;
+                rot = _handRestRot;
+                scale = _handRestScale;
             }
 
             if (!worldSpace)
@@ -342,13 +443,16 @@ namespace WRLDZ.Presentation.ArInteraction
 
         void OnDisable()
         {
-            if (!IsDrawArriving) return;
-            IsDrawArriving = false;
+            // Unity stops the coroutine with the object: clear the handle too, or the idle spring and the disk's
+            // flush lock (both gated on IsSnapAnimating) stay off for good once the card is shown again
             if (_snapCo != null)
             {
                 StopCoroutine(_snapCo);
                 _snapCo = null;
             }
+
+            if (!IsDrawArriving) return;
+            IsDrawArriving = false;
 
             if (_hasRest && !IsLockedToZone)
             {
@@ -363,6 +467,10 @@ namespace WRLDZ.Presentation.ArInteraction
         {
             if (IsLockedToZone || IsDragging || !_hasRest || IsDrawArriving) return;
             if (_snapCo != null) return;
+            // in the hand's fan the hand places this card rigidly every LateUpdate (ArFloatingHand.Tick): a spring
+            // here lagged its slot by a frame plus a 0.13 s time constant, and the per-card bob had the cards
+            // sloshing against each other in a hand that is supposed to be holding them
+            if (HeldByHand) return;
 
             // Soft spring toward rest + free offset (not glued)
             _freeOffsetLocal = Vector3.Lerp(_freeOffsetLocal, Vector3.zero, Time.deltaTime * 1.8f);

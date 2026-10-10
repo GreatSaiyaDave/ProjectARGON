@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using WRLDZ.Core;
 using WRLDZ.Data;
 
 namespace WRLDZ.Duel.Rules
@@ -22,14 +23,19 @@ namespace WRLDZ.Duel.Rules
         public const string KonamiBanlist = "https://www.yugioh-card.com/en/limited/";
         public const string KonamiDb = "https://www.db.yugioh-card.com/yugiohdb/";
 
-        public static string LocalCardDbPath =>
-            Path.Combine(Application.streamingAssetsPath, "Cards", "cards_db.json");
+        /// <summary>StreamingAssets-relative; read through <see cref="StreamingFiles"/> (APK-safe).</summary>
+        public const string LocalCardDbRelative = "Cards/cards_db.json";
+        public const string LocalBanlistRelative = "Cards/banlist_advanced.json";
+        public const string LocalRulingsNotesRelative = "Cards/RULINGS_NOTES.md";
 
-        public static string LocalBanlistPath =>
-            Path.Combine(Application.streamingAssetsPath, "Cards", "banlist_advanced.json");
+        /// <summary>Display/log location only — on Android this is an APK entry, not a file path.</summary>
+        public static string LocalCardDbPath => StreamingFiles.FullPathForLog(LocalCardDbRelative);
 
-        public static string LocalRulingsNotesPath =>
-            Path.Combine(Application.streamingAssetsPath, "Cards", "RULINGS_NOTES.md");
+        /// <summary>Display/log location only — on Android this is an APK entry, not a file path.</summary>
+        public static string LocalBanlistPath => StreamingFiles.FullPathForLog(LocalBanlistRelative);
+
+        /// <summary>Display/log location only — on Android this is an APK entry, not a file path.</summary>
+        public static string LocalRulingsNotesPath => StreamingFiles.FullPathForLog(LocalRulingsNotesRelative);
 
         /// <summary>Placeholder card record ready for Wiki/Konami population or OCR merge.</summary>
         [Serializable]
@@ -68,12 +74,11 @@ namespace WRLDZ.Duel.Rules
         public static BanlistFile LoadBanlist()
         {
             if (_banlist != null) return _banlist;
-            var path = LocalBanlistPath;
-            if (File.Exists(path))
+            if (StreamingFiles.TryReadAllText(LocalBanlistRelative, out var json))
             {
                 try
                 {
-                    _banlist = JsonUtility.FromJson<BanlistFile>(File.ReadAllText(path));
+                    _banlist = JsonUtility.FromJson<BanlistFile>(json);
                 }
                 catch (Exception ex)
                 {
@@ -121,6 +126,17 @@ namespace WRLDZ.Duel.Rules
         public static int MaxCopies(int passcode, string eraId)
         {
             if (UsesAdvancedBanlist(eraId))
+                return MaxCopies(passcode);
+            return TcgRules.MaxCopiesPerCard;
+        }
+
+        /// <summary>
+        /// Same, with the list chosen by the duel format (<see cref="WRLDZ.Core.DuelFormatCatalog"/>): Advanced TCG
+        /// checks any band against the current Advanced list; Standard TCG keeps the band's own rule.
+        /// </summary>
+        public static int MaxCopies(int passcode, string eraId, bool advancedBanlist)
+        {
+            if (advancedBanlist || UsesAdvancedBanlist(eraId))
                 return MaxCopies(passcode);
             return TcgRules.MaxCopiesPerCard;
         }

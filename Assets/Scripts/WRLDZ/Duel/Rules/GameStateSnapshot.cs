@@ -21,6 +21,8 @@ namespace WRLDZ.Duel.Rules
         public bool OppNormalSummonUsed;
         public bool GameOver;
         public string WinnerSide; // "player" | "opponent" | ""
+        /// <summary><see cref="DuelEndReason"/> name ("None" while running; "Draw" has WinnerSide "").</summary>
+        public string EndReason;
         public string ChainDescribe;
         public long TimestampMs;
 
@@ -75,8 +77,12 @@ namespace WRLDZ.Duel.Rules
                 GameOver = engine.GameOver,
                 WinnerSide = engine.Winner == null ? "" :
                     engine.Winner.IsPlayer ? "player" : "opponent",
+                EndReason = engine.EndReason.ToString(),
                 ChainDescribe = engine.Chain?.Describe() ?? "",
-                TimestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                // Engine clock (R4): a server / replay stamps its own time, never the host's wall clock.
+                TimestampMs = new DateTimeOffset(
+                    DateTime.SpecifyKind((engine.Clock ?? UnityDuelClock.Instance).UtcNow, DateTimeKind.Utc))
+                    .ToUnixTimeMilliseconds(),
                 PlayerDeckCount = engine.Player?.DeckCount ?? 0,
                 OppDeckCount = engine.Opponent?.DeckCount ?? 0,
                 PlayerGyCount = engine.Player?.Graveyard?.Count ?? 0,

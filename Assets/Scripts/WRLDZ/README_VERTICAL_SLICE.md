@@ -2,11 +2,11 @@
 
 **Project ARGON** — free indie YGO duel prototype (anime TCG rules + AR stage).
 
-**Lab rig (now):** **Galaxy S23 Ultra + PC** — no headset.  
-**Product north star:** AR lenses later (same stage).  
+**Shipping target:** **Android XR glasses** (Unity / OpenXR APK) — owner decision 2026-09-23.  
+**Dev testbed (now):** **Galaxy S23 Ultra + PC** — no headset. Android APK constraints apply to both.  
 See [`PRODUCT_VISION.md`](PRODUCT_VISION.md) · [`S23_LAB.md`](S23_LAB.md) · [`LENSES_FIRST_ROADMAP.md`](LENSES_FIRST_ROADMAP.md).
 
-Unity **6000.4.8f1** (Unity 6).
+Unity **6000.5.10f1** (Unity 6; see `ProjectSettings/ProjectVersion.txt`).
 
 ## Open & play (PC Editor)
 
@@ -14,14 +14,19 @@ Unity **6000.4.8f1** (Unity 6).
    ```
    ~/DMWRLDZUnityProject/ProjectARGON
    ```
-2. Editor **6000.4.8f1**.
+2. Editor **6000.5.10f1**.
 3. Scene `Assets/Scenes/Boot.unity` (full flow) or `DuelSlice.unity` (duel only).
 4. Game view aspect **1080×2340** (portrait).
 5. Press **Play**.
 
 ## Build to S23 Ultra
 
+Before the first Android build, click **WRLDZ → Repair → Restore Android XR Quality + Shaders** once
+(restores the `Mobile` quality level / `Mobile_RPAsset` for Android, AndroidXR and iPhone and adds the
+runtime `Shader.Find` shaders to Always Included; it is idempotent and logs what it changed).
+
 **WRLDZ → Lab → Build APK for S23 Ultra** → install `Builds/Android/WRLDZ_S23_Debug.apk`  
+The APK path is **implemented but not yet verified on a device** (see `S23_LAB.md` → StreamingAssets on the APK).  
 Full steps: [`S23_LAB.md`](S23_LAB.md).
 
 ## Controls (in Play mode)

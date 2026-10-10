@@ -5,7 +5,9 @@
 - **Repo:** https://github.com/open-duelyst/duelyst  
 - **License:** CC0 1.0 (entire game + art)  
 - **Art root:** `app/resources/`  
-- **Installed:** `StreamingAssets/WRLDZ/Vendor/OpenDuelyst/` (~200 MB)
+- **Installed:** `StreamingAssets/WRLDZ/Vendor/OpenDuelyst/ui/` only (~9 MB, loaded by `DuelystUi`), plus LICENSE / README / SOURCE.
+  Every other subfolder below (~193 MB) had no loader and moved off-build on 2026-09-23 (owner decision 4;
+  `tools/OFFBUILD_MANIFEST.md`). Restore a folder before wiring it (the "Next wiring" items below need `units/`).
 
 | Subfolder | What you get | WRLDZ fit |
 |-----------|--------------|-----------|
@@ -25,7 +27,7 @@
 
 - **Page:** https://opengameart.org/content/public-domain-pack  
 - **License:** CC0  
-- **Installed:** `StreamingAssets/WRLDZ/Vendor/OpenGameArt_PublicDomain/` (~26 MB, 95 files)  
+- **Was installed** at `StreamingAssets/WRLDZ/Vendor/OpenGameArt_PublicDomain/` (~26 MB, 95 files). Nothing loads it, so it moved off-build since 2026-09-23 (owner decision 4; `tools/OFFBUILD_MANIFEST.md`). Restore it (`tools/offbuild_move.sh --restore`, or move the folder back) before wiring it.  
 - **Contents:** cut-out animals, architecture (cathedral/temple/columns), forest/house BGs, portraits, decorations, skulls, trees/rocks  
 - **Fit:** map props, NPC faces, Umbrax flourishes — **not** a YGO UI substitute
 
@@ -67,7 +69,7 @@ Filter: **Downloadable** + read the **description license** every time.
 
 ## Priority order for WRLDZ
 
-1. **YgoRefs + CardArt** — real YGO look (your reference pack + YGOPRODeck)  
+1. **CardArt** — card faces (YGOPRODeck local cache). **YgoRefs** (Yu-Gi-Oh! screenshots) is parked off-build since 2026-09-23 (owner decision 4; `tools/OFFBUILD_MANIFEST.md`).  
 2. **OpenDuelyst** — free animated CCG creatures + polished UI chrome  
 3. **OGA Public Domain Pack** — scenic props  
 4. **Kenney / GDquest** — GO-style orbs / generic buttons  

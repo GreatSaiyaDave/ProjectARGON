@@ -1,0 +1,130 @@
+{
+  "name": "Park Amazoness",
+  "format": "wrldz_street_8000",
+  "main": [
+    {
+      "id": 47480070,
+      "name": "Amazoness Paladin",
+      "qty": 3
+    },
+    {
+      "id": 55821894,
+      "name": "Amazoness Fighter",
+      "qty": 3
+    },
+    {
+      "id": 94004268,
+      "name": "Amazoness Swords Woman",
+      "qty": 3
+    },
+    {
+      "id": 91869203,
+      "name": "Amazoness Archer",
+      "qty": 2
+    },
+    {
+      "id": 73574678,
+      "name": "Amazoness Blowpiper",
+      "qty": 2
+    },
+    {
+      "id": 10979723,
+      "name": "Amazoness Tiger",
+      "qty": 2
+    },
+    {
+      "id": 74131780,
+      "name": "Exiled Force",
+      "qty": 1
+    },
+    {
+      "id": 2460565,
+      "name": "Marauding Captain",
+      "qty": 2
+    },
+    {
+      "id": 7572887,
+      "name": "D.D. Warrior Lady",
+      "qty": 1
+    },
+    {
+      "id": 26202165,
+      "name": "Sangan",
+      "qty": 1
+    },
+    {
+      "id": 81325903,
+      "name": "Amazoness Spellcaster",
+      "qty": 2
+    },
+    {
+      "id": 32807846,
+      "name": "Reinforcement of the Army",
+      "qty": 2
+    },
+    {
+      "id": 95281259,
+      "name": "The Warrior Returning Alive",
+      "qty": 2
+    },
+    {
+      "id": 55144522,
+      "name": "Pot of Greed",
+      "qty": 1
+    },
+    {
+      "id": 19613556,
+      "name": "Heavy Storm",
+      "qty": 1
+    },
+    {
+      "id": 5318639,
+      "name": "Mystical Space Typhoon",
+      "qty": 1
+    },
+    {
+      "id": 70046172,
+      "name": "Rush Recklessly",
+      "qty": 2
+    },
+    {
+      "id": 40619825,
+      "name": "Axe of Despair",
+      "qty": 1
+    },
+    {
+      "id": 67987611,
+      "name": "Amazoness Archers",
+      "qty": 3
+    },
+    {
+      "id": 80193355,
+      "name": "Dramatic Rescue",
+      "qty": 2
+    },
+    {
+      "id": 44095762,
+      "name": "Mirror Force",
+      "qty": 1
+    },
+    {
+      "id": 97077563,
+      "name": "Call of the Haunted",
+      "qty": 1
+    },
+    {
+      "id": 4206964,
+      "name": "Trap Hole",
+      "qty": 1
+    }
+  ],
+  "extra": [],
+  "side": [],
+  "counts": {
+    "main": 40,
+    "extra": 0,
+    "side": 0
+  },
+  "lpBand": 8000,
+  "role": "street_npc"
+}

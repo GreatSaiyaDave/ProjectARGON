@@ -41,6 +41,18 @@ namespace WRLDZ.UI
             return _whiteSprite;
         }
 
+        /// <summary>
+        /// Existing component or a new one. Never write <c>GetComponent&lt;T&gt;() ?? AddComponent&lt;T&gt;()</c>:
+        /// <c>??</c> skips Unity's overloaded null check, so a destroyed-but-not-null (fake-null)
+        /// component is returned instead of a fresh one (UNT0007; this hung Boot once).
+        /// </summary>
+        public static T GetOrAdd<T>(GameObject go) where T : Component
+        {
+            if (go == null) return null;
+            var c = go.GetComponent<T>();
+            return c != null ? c : go.AddComponent<T>();
+        }
+
         public static void ApplySolidImage(Image img, Color color)
         {
             if (img == null) return;

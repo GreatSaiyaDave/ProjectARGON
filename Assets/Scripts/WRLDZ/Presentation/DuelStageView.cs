@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using WRLDZ.Core;
 using UnityEngine.UI;
 using WRLDZ.Data;
 using WRLDZ.Duel;
@@ -463,10 +464,8 @@ namespace WRLDZ.Presentation
         static void EnsureDiskMesh()
         {
             if (_diskMesh != null) return;
-            var stream = Path.Combine(Application.streamingAssetsPath,
-                SpiritDuelerDiskView.StreamingRelativePath);
-            if (File.Exists(stream))
-                _diskMesh = ObjMeshLoader.LoadFromFile(stream, "BattleCityDuelDisk");
+            if (StreamingFiles.Exists(SpiritDuelerDiskView.StreamingRelativePath))
+                _diskMesh = ObjMeshLoader.LoadFromStreaming(SpiritDuelerDiskView.StreamingRelativePath, "BattleCityDuelDisk");
             if (_diskMesh != null) return;
             var proj = Path.Combine(Application.dataPath,
                 "Models/WRLDZ/SpiritDueler/BattleCityDuelDisk.obj");
@@ -476,9 +475,7 @@ namespace WRLDZ.Presentation
 
         static Material MakeDiskMaterial(Color accent)
         {
-            var shader = Shader.Find("Universal Render Pipeline/Lit")
-                         ?? Shader.Find("Standard")
-                         ?? Shader.Find("Unlit/Color");
+            var shader = ArAnimePresentation.LitShader();
             var mat = new Material(shader) { name = "StageDiskMat" };
             // Cool metal body
             var baseCol = new Color(0.12f, 0.16f, 0.22f, 1f);
@@ -497,9 +494,7 @@ namespace WRLDZ.Presentation
 
         static Material MakeUnlit(Color c)
         {
-            var shader = Shader.Find("Universal Render Pipeline/Unlit")
-                         ?? Shader.Find("Unlit/Color")
-                         ?? Shader.Find("UI/Default");
+            var shader = ArAnimePresentation.UnlitShader();
             var mat = new Material(shader);
             if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", c);
             if (mat.HasProperty("_Color")) mat.SetColor("_Color", c);

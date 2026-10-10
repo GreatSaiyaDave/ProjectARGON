@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using WRLDZ.Duel;
 using WRLDZ.Duel.Rules;
 
 namespace WRLDZ.Core
@@ -33,6 +34,15 @@ namespace WRLDZ.Core
         Tournament = 11
     }
 
+    /// <summary>How the first turn is decided in an AR duel.</summary>
+    public enum FirstPlayerMethod
+    {
+        /// <summary>Coin toss: sides are dealt at setup, then the engine's stream tosses.</summary>
+        CoinToss = 0,
+        /// <summary>Dice roll: both roll, higher goes first, ties roll again.</summary>
+        DiceRoll = 1
+    }
+
     /// <summary>Who you face in the AR field.</summary>
     public enum ArDuelOpponentKind
     {
@@ -55,10 +65,21 @@ namespace WRLDZ.Core
         public ArDuelOpponentKind Opponent = ArDuelOpponentKind.AiLocal;
         public string FormatId = "quick";
         public string FormatTitle = "AR Quick Duel";
+        // Restored 2026-10-09: pre-deletion member (stash e8e69e05); OpponentCatalog/QuestService read it.
+        public AiDifficulty Difficulty = AiDifficulty.Normal;
         public string EntrySource = AppSession.SceneOverworld;
 
         /// <summary>ERAZ TCG band id for this match (default Original).</summary>
         public string ErazBandId = ErazFormat.Original;
+
+        // ── Pre-duel setup (the option sheet before the cinematic) ───────────────────────────────────────
+        // Restored 2026-10-09: pre-deletion members (stash e8e69e05); DuelFormatCatalog/StoryCampaign use them.
+        /// <summary><see cref="DuelFormatCatalog"/> id of the rules format chosen for this duel; empty = Standard TCG.</summary>
+        public string RulesFormatId = "";
+        /// <summary>Player deck box chosen at setup; -1 = the equipped deck (skip deck selection).</summary>
+        public int PlayerDeckBoxIndex = -1;
+        /// <summary>The setup sheet was confirmed (or the launch needs none); the duel starts with its values.</summary>
+        [NonSerialized] public bool PreDuelSetupDone;
 
         /// <summary>
         /// Real-world meters between you and the opponent.
@@ -110,6 +131,13 @@ namespace WRLDZ.Core
         /// <summary>0 = use TCG default 8000. Street 4000 / 8000, Tear boss 10–15k, Raid 20k+.</summary>
         public int StartingLp;
 
+        // Restored 2026-10-09: pre-deletion members (stash e8e69e05); StoryCampaign/OpponentCatalog use them.
+        /// <summary>Story catalog stage id when <see cref="Launch"/> is StoryEra.</summary>
+        public string StoryStageId = "";
+
+        /// <summary>Duelist Kingdom table overlay (2000 LP, no direct attacks).</summary>
+        public bool DkOverlay;
+
         /// <summary>Tome pages legal (Tear boss + Raid only).</summary>
         public bool TomeLegal;
 
@@ -121,6 +149,33 @@ namespace WRLDZ.Core
 
         /// <summary>Empty raid seats filled with AI allies (placeholder until networked 3-on-1).</summary>
         public bool RaidFillAlliesAi;
+
+        /// <summary>How turn 1 is decided (the setup's coin toss or dice roll).</summary>
+        public FirstPlayerMethod FirstPlayerMethod = FirstPlayerMethod.CoinToss;
+
+        /// <summary>True when the coin toss's heads side was assigned to Player 1 (shown before the toss).</summary>
+        public bool CoinHeadsIsPlayerOne = true;
+
+        /// <summary>True when the coin landed heads (set by the cinematic after the toss).</summary>
+        public bool CoinLandedHeads;
+
+        /// <summary>Player 1's dice roll (DiceRoll method). 0 until the cinematic rolls.</summary>
+        public int FirstPlayerPlayerRoll;
+
+        /// <summary>Player 2's dice roll (DiceRoll method). 0 until the cinematic rolls.</summary>
+        public int FirstPlayerOpponentRoll;
+
+        /// <summary>True after the cinematic has decided who goes first (for the engine to skip its own decision).</summary>
+        public bool FirstPlayerDecided;
+
+        /// <summary>True when the opponent (Player 2) goes first, as decided by the cinematic.</summary>
+        public bool OpponentGoesFirst;
+
+        /// <summary>Display name for the opponent in AR (tag team member 0, or the AI's name).</summary>
+        public string OpponentDisplayName;
+
+        /// <summary>Tag team members separated by '|' (e.g. "Para|Dox"). Empty for a single opponent.</summary>
+        public string OpponentMembers;
 
         public const float MinSeparationM = 1.2f;
         public const float MaxSeparationM = 8f;
@@ -177,6 +232,42 @@ namespace WRLDZ.Core
         /// <summary>True when both sides are humans (hotseat / nearby peer).</summary>
         public bool IsHumanOpponent =>
             Opponent == ArDuelOpponentKind.LocalPass || Opponent == ArDuelOpponentKind.NearbyPeer;
+
+        // Restored 2026-10-09: pre-deletion members (stash e8e69e05); Quest/PendingDuel/ShellLoops use them.
+        /// <summary>
+        /// Both seats are played on this one device. In the current build every human-vs-human duel is
+        /// (GDD 3.8: "Hotseat PvP with a distance scan is in the current build. Networked PvP is later"),
+        /// including NearbyPeer after the distance scan. The result cannot be verified — one person can play
+        /// both sides — so these duels pay no rewards (see <see cref="ProgressionService.AwardDuelRewards"/>).
+        /// Networked PvP must add its own opponent kind, backed by server-verified results.
+        /// </summary>
+        public bool IsSameDeviceHotseat => IsHumanOpponent;
+
+        /// <summary>Practice / training / lab duels: no rewards, no stakes, free restarts.</summary>
+        public bool IsPracticeOrLab =>
+            Launch == ArDuelLaunchKind.Practice
+            || Launch == ArDuelLaunchKind.LabTest
+            || FormatId == "practice";
+
+        /// <summary>
+        /// Owner rule 2026-09-23 #3: Restart exists only in practice / lab duels. Everywhere else leaving
+        /// early is a forfeit loss and a finished duel pays once.
+        /// </summary>
+        public bool AllowsRestart => IsPracticeOrLab;
+
+        /// <summary>
+        /// Identity of the duel currently being played under this config. Rewards are claimed once per id
+        /// (<see cref="WRLDZ.Data.PlayerProgress.claimedDuelIds"/>). Assigned by <see cref="BeginNewDuel"/>
+        /// when a duel actually starts; empty for configs that never reached a duel.
+        /// </summary>
+        [NonSerialized] public string DuelResultId = "";
+
+        /// <summary>A fresh duel (first start or a practice restart) begins under this config.</summary>
+        public string BeginNewDuel()
+        {
+            DuelResultId = Guid.NewGuid().ToString("N");
+            return DuelResultId;
+        }
 
         /// <summary>Capture host GPS from <see cref="MapEnvironment"/> when available.</summary>
         public void CaptureHostLocation(MapEnvironment env)
@@ -272,7 +363,8 @@ namespace WRLDZ.Core
             var mode = PreferDigital ? "digital" : "AR";
             var scan = AutoSurfaceScan ? "scan" : "set";
             var lp = StartingLp > 0 ? $" · {StartingLp} LP" : "";
-            return $"{FormatTitle} · {vs} · {SeparationMeters:0.0}m ({scan}) · {mode}{lp}";
+            var rules = string.IsNullOrEmpty(RulesFormatId) ? "" : $" · {DuelFormatCatalog.Get(RulesFormatId).Title}";
+            return $"{FormatTitle}{rules} · {vs} · {SeparationMeters:0.0}m ({scan}) · {mode}{lp}";
         }
     }
 }

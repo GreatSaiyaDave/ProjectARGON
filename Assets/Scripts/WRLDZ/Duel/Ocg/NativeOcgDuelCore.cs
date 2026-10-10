@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Runtime.InteropServices;
 using UnityEngine;
+using WRLDZ.Core;
 using Debug = UnityEngine.Debug;
 
 namespace WRLDZ.Duel.Ocg
@@ -394,9 +395,7 @@ namespace WRLDZ.Duel.Ocg
 
         static string ExpectedHash()
         {
-            var p = Path.Combine(Application.streamingAssetsPath, "OcgCore", "PROVENANCE.json");
-            if (!File.Exists(p)) return null;
-            var json = File.ReadAllText(p);
+            if (!StreamingFiles.TryReadAllText("OcgCore/PROVENANCE.json", out var json)) return null;
             var key =
 #if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN
                 "windowsDll";
@@ -454,8 +453,8 @@ namespace WRLDZ.Duel.Ocg
 
         static int[] Expand(string fileName, bool extra)
         {
-            var path = Path.Combine(Application.streamingAssetsPath, "Decks", fileName);
-            var deck = JsonUtility.FromJson<WRLDZ.Data.DeckFile>(File.ReadAllText(path));
+            // Throws FileNotFoundException when the deck is missing, as File.ReadAllText did.
+            var deck = JsonUtility.FromJson<WRLDZ.Data.DeckFile>(StreamingFiles.ReadAllText("Decks/" + fileName));
             var src = extra ? deck?.extra : deck?.main;
             var list = new List<int>();
             if (src == null) return Array.Empty<int>();

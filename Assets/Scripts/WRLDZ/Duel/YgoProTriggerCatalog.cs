@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using WRLDZ.Core;
+using WRLDZ.Duel.TextEffects;
 
 namespace WRLDZ.Duel
 {
@@ -43,16 +45,16 @@ namespace WRLDZ.Duel
         {
             if (_loaded) return;
             _loaded = true;
-            var path = Path.Combine(Application.streamingAssetsPath, "WRLDZ", SeedFile);
-            if (!File.Exists(path))
+            var path = "WRLDZ/" + SeedFile;
+            if (!StreamingFiles.Exists(path))
             {
-                Debug.LogWarning("[WRLDZ] YGOPro trigger seed missing: " + path);
+                Debug.LogWarning("[WRLDZ] YGOPro trigger seed missing: " + StreamingFiles.FullPathForLog(path));
                 return;
             }
 
             try
             {
-                var dto = JsonUtility.FromJson<SeedDto>(File.ReadAllText(path));
+                var dto = JsonUtility.FromJson<SeedDto>(StreamingFiles.ReadAllText(path));
                 if (dto?.triggers == null) return;
                 foreach (var t in dto.triggers)
                 {
@@ -173,10 +175,16 @@ namespace WRLDZ.Duel
         static void ApplyPayLpLoss(DuelEngine engine, DuelistState who, CardInstance card,
             CardInstance target, int amount, bool alsoDef)
         {
-            who.LifePoints = Math.Max(0, who.LifePoints - amount);
-            engine.Log($"Cost: pay {amount} LP → {who.Name} at {who.LifePoints} LP.");
+            engine.PayLifePoints(who, amount,
+                $"Cost: pay {amount} LP → {who.Name} at {Math.Max(0, who.LifePoints - amount)} LP.");
             if (target != null)
             {
+                if (ContinuousProtections.TargetedEffectBlocked(engine, target, card)) {
+                    engine.Log("Target is protected at resolution.");
+                    SpellTrapEffects.FinishCardPublic(engine, who, card, staysOnField: false);
+                    engine.ContinueAfterResponseActivation(false, false);
+                    return;
+                }
                 target.UntilEndOfTurnAtk -= amount;
                 if (alsoDef) target.UntilEndOfTurnDef -= amount;
                 engine.Log(
@@ -199,6 +207,10 @@ namespace WRLDZ.Duel
                 case "destroy_attacker":
                     if (attacker != null)
                     {
+                        if (ContinuousProtections.TargetedEffectBlocked(engine, attacker, card)) {
+                            engine.Log("Target is protected at resolution.");
+                            break;
+                        }
                         engine.DestroyMonsterPublic(engine.ControllerOf(attacker) ?? opp, attacker);
                         attackNegated = true;
                     }
@@ -227,14 +239,19 @@ namespace WRLDZ.Duel
                 case "negate_this_attack":
                 case "negate_attack_damage":
                 case "negate_attack_gain_lp":
+                    if (fact.action != "negate_this_attack" &&
+                        ContinuousProtections.TargetedEffectBlocked(engine, attacker, card)) {
+                        engine.Log("Target is protected at resolution.");
+                        break;
+                    }
+
                     engine.Log("Attack negated.");
                     attackNegated = true;
                     if (fact.action == "negate_attack_damage" && attacker != null)
                         engine.ApplyEffectDamage(opp, attacker.CurrentAtk, card.Name);
                     if (fact.action == "negate_attack_gain_lp" && attacker != null)
                     {
-                        who.LifePoints += attacker.CurrentAtk;
-                        engine.Log($"{who.Name} gains {attacker.CurrentAtk} LP ({who.LifePoints}).");
+                        TextEffectRuntime.ApplyLifePointGain(engine, who, attacker.CurrentAtk, card?.Name);
                     }
 
                     break;
@@ -250,6 +267,10 @@ namespace WRLDZ.Duel
                 case "lose_atk_eot":
                     if (attacker != null)
                     {
+                        if (ContinuousProtections.TargetedEffectBlocked(engine, attacker, card)) {
+                            engine.Log("Target is protected at resolution.");
+                            break;
+                        }
                         attacker.UntilEndOfTurnAtk -= Math.Max(0, fact.amount);
                         engine.Log(
                             $"{attacker.Name} loses {fact.amount} ATK until the End Phase " +
@@ -263,7 +284,13 @@ namespace WRLDZ.Duel
                     var summoner = engine.PendingResponse?.Summoner;
                     if (summoned != null && summoner != null &&
                         summoned.CurrentAtk >= Math.Max(1, fact.amount))
+                    {
+                        if (ContinuousProtections.TargetedEffectBlocked(engine, summoned, card)) {
+                            engine.Log("Target is protected at resolution.");
+                            break;
+                        }
                         engine.DestroyMonsterPublic(summoner, summoned);
+                    }
                     break;
                 }
             }
@@ -300,7 +327,7 @@ namespace WRLDZ.Duel
         {
             if (m == null || !m.FaceUp || m.Def == null) return false;
             if (!who.TryFindMonster(m, out _)) return false;
-            return string.Equals(m.Def.race, race, StringComparison.OrdinalIgnoreCase);
+            return string.Equals(m.Race, race, StringComparison.OrdinalIgnoreCase);
         }
 
         public static List<int> LpChoices(DuelistState who, CardInstance target, int multiple)

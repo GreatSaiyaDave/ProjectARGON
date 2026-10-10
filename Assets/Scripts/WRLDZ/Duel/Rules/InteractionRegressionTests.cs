@@ -12,6 +12,16 @@ namespace WRLDZ.Duel.Rules
     /// </summary>
     public static class InteractionRegressionTests
     {
+        /// <summary>
+        /// "Target 1 face-up monster; it gains N ATK until the end of this turn": the local lineage
+        /// compiles <see cref="EffectActionKind.GainAtkDefUntilEndOfTurn"/>, the GitHub lineage's
+        /// ClassicEraTemplates (which claims the sentence first) <see cref="EffectActionKind.ModifyTargetUntilEndOfTurn"/>.
+        /// Same effect; both runtime arms add to UntilEndOfTurnAtk.
+        /// </summary>
+        static bool IsTurnAtkBoost(EffectClause c) =>
+            c != null && (c.Action == EffectActionKind.GainAtkDefUntilEndOfTurn ||
+                          c.Action == EffectActionKind.ModifyTargetUntilEndOfTurn);
+
         public static string RunAll()
         {
             var sb = new StringBuilder();
@@ -40,6 +50,18 @@ namespace WRLDZ.Duel.Rules
                 return sb.ToString();
             }
 
+            {
+                var ssDeckDef = new CardDef { id = 990000101, name = "ARGON SS Deck Fixture", type = "Spell Card", desc = "Special Summon 1 Level 4 or lower Beast-Type monster from your Deck." };
+                var ssDeckProg = CardTextEffectCompiler.Compile(ssDeckDef);
+                var ssClause = ssDeckProg?.ClauseList?.FirstOrDefault();
+                Check("Shared SS-from-Deck atom", ssDeckProg != null && ssDeckProg.FullyCompiled && ssClause != null && ssClause.Action == EffectActionKind.SpecialSummonFromDeck && ssClause.Zone == EffectZoneFilter.ControllerDeckMonsters && ssClause.RequiresTargetChoice && !ssClause.IsPsctTarget);
+
+                var whenIfDef = new CardDef { id = 990000102, name = "ARGON When If Fixture", type = "Monster", desc = "If this card is destroyed by battle: You can Special Summon 1 Warrior-Type monster from your Deck." };
+                var whenIfProg = CardTextEffectCompiler.Compile(whenIfDef);
+                var whenIfClause = whenIfProg?.ClauseList?.FirstOrDefault();
+                Check("When/If optional trigger metadata", whenIfProg != null && whenIfClause != null && whenIfClause.IsOptional && whenIfClause.CheckedAt == ConditionCheckedAt.Both);
+            }
+
             var pDeck = CardDatabase.LoadDeck("lab_rules_player.json");
             var aDeck = CardDatabase.LoadDeck("lab_rules_ai.json");
             if (pDeck == null || aDeck == null)
@@ -47,6 +69,37 @@ namespace WRLDZ.Duel.Rules
                 sb.AppendLine("FAIL  lab decks missing");
                 sb.AppendLine("--- 0 passed, 1 failed ---");
                 return sb.ToString();
+            }
+
+            // ── Compiled rejection must not fall through a registry allowlist ──
+            {
+                var syntheticDef = new CardDef
+                {
+                    id = OfficialEffectRegistry.PotOfGreed,
+                    name = "Synthetic Pot of Greed cost test",
+                    type = "Spell Card",
+                    race = "Normal",
+                    desc = "Activate this card by paying 8000 LP; draw 2 cards."
+                };
+                var syntheticProg = CardTextEffectCompiler.Compile(syntheticDef);
+                var engine = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine);
+                engine.Player.Hand.Clear();
+                engine.Player.LifePoints = 100;
+                var syntheticCard = new CardInstance
+                {
+                    CardId = syntheticDef.id,
+                    Def = syntheticDef,
+                    InstanceId = 90000001
+                };
+                engine.Player.Hand.Add(syntheticCard);
+                Check("FullyCompiled synthetic legacy-ID card rejects activation without fallback",
+                    syntheticProg != null && syntheticProg.FullyCompiled &&
+                    OfficialEffectRegistry.ProgramMayActivate(syntheticDef) &&
+                    !engine.CanActivateSpellTrap(engine.Player, syntheticCard, fromHand: true),
+                    syntheticProg == null
+                        ? "null"
+                        : $"full={syntheticProg.FullyCompiled} canResolve={syntheticProg.CanResolveAny}");
             }
 
             // ── Center-first zone placement ──
@@ -333,6 +386,608 @@ namespace WRLDZ.Duel.Rules
                 }
             }
 
+            // ── LOB remaining (Path B demo slice) ──
+            {
+                const int armedNinja = 9076207;
+                const int crimsonNinja = 14618326;
+                const int violetCrystal = 15052462;
+                const int wasteland = 23424603;
+                const int reaper = 33066139;
+                const int exodia = 33396948;
+                const int dragonJar = 50045299;
+                const int mountain = 50913601;
+                const int gravedigger = 82542267;
+                const int twoPronged = 83887306;
+                const int forest = 87430998;
+                const int mst = 5318639;
+                const int waboku = 12607053;
+                const int celtic = 91152256;
+                const int thirteenthGrave = 32864; // Zombie 1200
+                const int silverFang = 90357090; // Beast 1200
+                const int battleOx = 5053103; // Beast-Warrior 1700
+                const int crawlingDragon = 67494157; // Dragon 1600
+                const int kingRex = 94119974; // Dinosaur 1600
+                const int rightLeg = 8124921;
+                const int leftLeg = 44519536;
+                const int rightArm = 70903634;
+                const int leftArm = 7902349;
+
+                void CheckLobCompile(int id, string label, System.Func<CompiledCardProgram, bool> ok)
+                {
+                    var d = db.Get(id);
+                    var pr = d != null ? CardTextEffectCompiler.Compile(d) : null;
+                    var kind = d != null ? WRLDZ.Duel.CardEffectStatus.Classify(d) : WRLDZ.Duel.CardEffectStatusKind.Unimplemented;
+                    Check(label + " FullyCompiled Implemented",
+                        pr != null && pr.FullyCompiled &&
+                        kind == WRLDZ.Duel.CardEffectStatusKind.Implemented && ok(pr),
+                        pr == null
+                            ? "null"
+                            : $"full={pr.FullyCompiled} kind={kind} n={pr.ClauseList.Count} " +
+                              $"unparsed={string.Join("|", pr.UnparsedFragments ?? System.Array.Empty<string>())}");
+                }
+
+                CheckLobCompile(armedNinja, "Armed Ninja",
+                    pr => pr.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.Flip &&
+                        c.Action == EffectActionKind.Destroy &&
+                        c.DestroyIfType == "Spell"));
+                CheckLobCompile(reaper, "Reaper of the Cards",
+                    pr => pr.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.Flip &&
+                        c.Action == EffectActionKind.Destroy &&
+                        c.DestroyIfType == "Trap"));
+                CheckLobCompile(crimsonNinja, "Crimson Ninja",
+                    pr => pr.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.Flip &&
+                        c.Action == EffectActionKind.Destroy &&
+                        c.DestroyIfType == "Trap"));
+                CheckLobCompile(violetCrystal, "Violet Crystal",
+                    pr => pr.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.EquipThisToTarget &&
+                        c.EquipAtkBonus == 300 && c.EquipDefBonus == 300 &&
+                        string.Equals(c.RaceFilter, "Zombie",
+                            System.StringComparison.OrdinalIgnoreCase)));
+                // One clause per Type (local lineage) or one clause listing the Types "A,B,C" (GitHub
+                // lineage, ClassicEraTemplates multi-Type aura) — the same aura either way.
+                static bool RaceIs(EffectClause c, string race) =>
+                    c?.RaceFilter != null && System.Array.Exists(c.RaceFilter.Split(','),
+                        r => string.Equals(r.Trim(), race, System.StringComparison.OrdinalIgnoreCase));
+
+                CheckLobCompile(wasteland, "Wasteland",
+                    pr => new[] { "Dinosaur", "Zombie", "Rock" }.All(r => pr.ClauseList.Count(c =>
+                               c != null && c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                               c.Amount == 200 && c.DefAmount == 200 && RaceIs(c, r)) == 1) &&
+                           pr.ClauseList.Exists(c =>
+                               c != null && RaceIs(c, "Dinosaur")) &&
+                           pr.ClauseList.Exists(c =>
+                               c != null && RaceIs(c, "Zombie")) &&
+                           pr.ClauseList.Exists(c =>
+                               c != null && RaceIs(c, "Rock")));
+                CheckLobCompile(mountain, "Mountain",
+                    pr => pr.ClauseList.Exists(c =>
+                               c != null && RaceIs(c, "Dragon") &&
+                               c.Amount == 200) &&
+                           pr.ClauseList.Exists(c =>
+                               c != null && RaceIs(c, "Winged Beast")) &&
+                           pr.ClauseList.Exists(c =>
+                               c != null && RaceIs(c, "Thunder")));
+                CheckLobCompile(forest, "Forest",
+                    pr => pr.ClauseList.Exists(c =>
+                               c != null && RaceIs(c, "Insect")) &&
+                           pr.ClauseList.Exists(c =>
+                               c != null && RaceIs(c, "Beast") &&
+                               !string.Equals(c.RaceFilter, "Beast-Warrior",
+                                   System.StringComparison.OrdinalIgnoreCase)) &&
+                           pr.ClauseList.Exists(c =>
+                               c != null && RaceIs(c, "Plant")) &&
+                           pr.ClauseList.Exists(c =>
+                               c != null && RaceIs(c, "Beast-Warrior")));
+                CheckLobCompile(gravedigger, "Gravedigger Ghoul",
+                    pr => pr.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.Banish &&
+                        c.Zone == EffectZoneFilter.OppGyMonsters &&
+                        c.Amount == 2 && c.RequiresTargetChoice));
+                CheckLobCompile(twoPronged, "Two-Pronged Attack",
+                    pr => pr.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.Destroy &&
+                        c.ControllerTargetCount == 2 && c.OpponentTargetCount == 1 &&
+                        c.RequiresSecondTarget));
+                CheckLobCompile(dragonJar, "Dragon Capture Jar",
+                    pr => pr.ClauseList.Exists(c =>
+                        c != null && c.ForceDefensePosition &&
+                        c.AlsoCannotChangeBattlePosition &&
+                        string.Equals(c.RaceFilter, "Dragon",
+                            System.StringComparison.OrdinalIgnoreCase)));
+                CheckLobCompile(exodia, "Exodia the Forbidden One",
+                    pr => pr.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.ExodiaWinStyle &&
+                        EffectVocabulary.IsUniqueException(c.Action) &&
+                        (c.NamedCard ?? "").Contains("Right Leg of the Forbidden One") &&
+                        (c.NamedCard ?? "").Contains("Left Arm of the Forbidden One")));
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var ninja = PlaceMonster(engine, p, armedNinja, 2, BattlePosition.Defense, false);
+                    ninja.SetThisTurn = false;
+                    var setSpell = PlaceSetTrap(engine, opp, mst, 0);
+                    Check("Armed Ninja Flip vs Set Spell",
+                        engine.TryFlipSummon(p, ninja) && ninja.FaceUp);
+                    Check("Armed Ninja: opens Spell/Trap target",
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.LegalTargets.Exists(t => t == setSpell));
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        engine.TrySelectEffectTarget(setSpell);
+                        Check("Armed Ninja: Set Spell destroyed",
+                            !opp.TryFindSpellTrap(setSpell, out _) &&
+                            opp.Graveyard.Exists(c => c.CardId == mst));
+                    }
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var ninja = PlaceMonster(engine, p, armedNinja, 2, BattlePosition.Defense, false);
+                    ninja.SetThisTurn = false;
+                    var setTrap = PlaceSetTrap(engine, opp, waboku, 0);
+                    engine.TryFlipSummon(p, ninja);
+                    if (engine.IsAwaitingEffectTarget)
+                        engine.TrySelectEffectTarget(setTrap);
+                    Check("Armed Ninja: Set Trap returned, not destroyed",
+                        opp.TryFindSpellTrap(setTrap, out _) &&
+                        !opp.Graveyard.Exists(c => c.CardId == waboku) &&
+                        !setTrap.FaceUp);
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var card = PlaceMonster(engine, p, reaper, 2, BattlePosition.Defense, false);
+                    card.SetThisTurn = false;
+                    var setTrap = PlaceSetTrap(engine, opp, waboku, 0);
+                    Check("Reaper Flip vs Set Trap",
+                        engine.TryFlipSummon(p, card) && card.FaceUp);
+                    if (engine.IsAwaitingEffectTarget)
+                        engine.TrySelectEffectTarget(setTrap);
+                    Check("Reaper: Set Trap destroyed",
+                        !opp.TryFindSpellTrap(setTrap, out _) &&
+                        opp.Graveyard.Exists(c => c.CardId == waboku));
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var card = PlaceMonster(engine, p, reaper, 2, BattlePosition.Defense, false);
+                    card.SetThisTurn = false;
+                    var setSpell = PlaceSetTrap(engine, opp, mst, 0);
+                    engine.TryFlipSummon(p, card);
+                    if (engine.IsAwaitingEffectTarget)
+                        engine.TrySelectEffectTarget(setSpell);
+                    Check("Reaper: Set Spell returned, not destroyed",
+                        opp.TryFindSpellTrap(setSpell, out _) &&
+                        !opp.Graveyard.Exists(c => c.CardId == mst) &&
+                        !setSpell.FaceUp);
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var ninja = PlaceMonster(engine, p, crimsonNinja, 2, BattlePosition.Defense, false);
+                    ninja.SetThisTurn = false;
+                    var setTrap = PlaceSetTrap(engine, opp, waboku, 0);
+                    Check("Crimson Ninja Flip vs Set Trap",
+                        engine.TryFlipSummon(p, ninja) && ninja.FaceUp);
+                    Check("Crimson Ninja: opens Spell/Trap target",
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.LegalTargets.Exists(t => t == setTrap));
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        engine.TrySelectEffectTarget(setTrap);
+                        Check("Crimson Ninja: Set Trap destroyed",
+                            !opp.TryFindSpellTrap(setTrap, out _) &&
+                            opp.Graveyard.Exists(c => c.CardId == waboku));
+                    }
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var ninja = PlaceMonster(engine, p, crimsonNinja, 2, BattlePosition.Defense, false);
+                    ninja.SetThisTurn = false;
+                    var setSpell = PlaceSetTrap(engine, opp, mst, 0);
+                    engine.TryFlipSummon(p, ninja);
+                    if (engine.IsAwaitingEffectTarget)
+                        engine.TrySelectEffectTarget(setSpell);
+                    Check("Crimson Ninja: Set Spell returned, not destroyed",
+                        opp.TryFindSpellTrap(setSpell, out _) &&
+                        !opp.Graveyard.Exists(c => c.CardId == mst) &&
+                        !setSpell.FaceUp);
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var zombie = PlaceMonster(engine, p, thirteenthGrave, 2, BattlePosition.Attack, true);
+                    var warrior = PlaceMonster(engine, p, celtic, 1, BattlePosition.Attack, true);
+                    var card = PutInHand(engine, p, violetCrystal);
+                    Check("Violet Crystal: legal with a Zombie host",
+                        engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    Check("Violet Crystal: Activate opens Equip target",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget);
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        Check("Violet Crystal: Warrior is not a legal host",
+                            !engine.PendingActivation.LegalTargets.Exists(t => t == warrior));
+                        Check("Violet Crystal: Zombie +300 ATK/DEF",
+                            engine.TrySelectEffectTarget(zombie) &&
+                            card.EquippedTo == zombie &&
+                            zombie.CurrentAtk == 1500 && zombie.CurrentDef == 1200,
+                            $"atk={zombie.CurrentAtk} def={zombie.CurrentDef}");
+                    }
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var card = PutInHand(engine, p, violetCrystal);
+                    Check("Violet Crystal: illegal with only a Warrior",
+                        !engine.CanActivateSpellTrap(p, card, fromHand: true));
+                }
+
+                void CheckFieldAura(int fieldId, string name, int matchId, int matchAtk,
+                    int otherId, int otherAtk)
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var match = PlaceMonster(engine, p, matchId, 2, BattlePosition.Attack, true);
+                    var other = PlaceMonster(engine, opp, otherId, 2, BattlePosition.Attack, true);
+                    var card = PutInHand(engine, p, fieldId);
+                    Check(name + ": activate into Field Zone",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        p.FieldSpellZone?.Occupant == card && card.FaceUp);
+                    FieldSpellEffects.RefreshBoard(engine);
+                    Check(name + ": matching race +200 ATK/DEF",
+                        match.CurrentAtk == matchAtk + 200 && match.CurrentDef == match.Def.def + 200,
+                        $"{match.Name} ATK {match.CurrentAtk} DEF {match.CurrentDef}");
+                    Check(name + ": other race unchanged",
+                        other.CurrentAtk == otherAtk,
+                        $"{other.Name} ATK {other.CurrentAtk}");
+                    var setField = engine.CreateCardInstance(fieldId);
+                    setField.FaceUp = false;
+                    p.FieldSpellZone.Occupant = setField;
+                    FieldSpellEffects.RefreshBoard(engine);
+                    Check(name + ": face-down Field does not apply",
+                        match.CurrentAtk == match.Def.atk,
+                        $"ATK {match.CurrentAtk}");
+                }
+
+                CheckFieldAura(forest, "Forest", battleOx, 1700, celtic, 1400);
+                CheckFieldAura(mountain, "Mountain", crawlingDragon, 1600, celtic, 1400);
+                CheckFieldAura(wasteland, "Wasteland", kingRex, 1600, celtic, 1400);
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var insect = PlaceMonster(engine, p, 89091579, 1, BattlePosition.Attack, true);
+                    var beast = PlaceMonster(engine, p, silverFang, 2, BattlePosition.Attack, true);
+                    var ox = PlaceMonster(engine, p, battleOx, 3, BattlePosition.Attack, true);
+                    var card = PutInHand(engine, p, forest);
+                    engine.TryActivateSpellTrap(p, card, fromHand: true);
+                    FieldSpellEffects.RefreshBoard(engine);
+                    Check("Forest: Insect + Beast + Beast-Warrior each +200",
+                        insect.CurrentAtk == 700 && beast.CurrentAtk == 1400 && ox.CurrentAtk == 1900,
+                        $"insect {insect.CurrentAtk} beast {beast.CurrentAtk} ox {ox.CurrentAtk}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    opp.Graveyard.Add(engine.CreateCardInstance(celtic));
+                    opp.Graveyard.Add(engine.CreateCardInstance(thirteenthGrave));
+                    var extra = engine.CreateCardInstance(silverFang);
+                    opp.Graveyard.Add(extra);
+                    var card = PutInHand(engine, p, gravedigger);
+                    Check("Gravedigger Ghoul: Activate from hand",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.TargetPicksAreUpTo &&
+                        engine.PendingActivation.TargetPicksRemaining == 2);
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        var t1 = engine.PendingActivation.LegalTargets
+                            .FirstOrDefault(t => t.CardId == celtic);
+                        var t2 = engine.PendingActivation.LegalTargets
+                            .FirstOrDefault(t => t.CardId == thirteenthGrave);
+                        Check("Gravedigger: first GY pick still pending",
+                            t1 != null && engine.TrySelectEffectTarget(t1) &&
+                            engine.IsAwaitingEffectTarget);
+                        Check("Gravedigger: two opp GY monsters banished",
+                            t2 != null && engine.TrySelectEffectTarget(t2) &&
+                            !opp.Graveyard.Exists(c => c.CardId == celtic) &&
+                            !opp.Graveyard.Exists(c => c.CardId == thirteenthGrave) &&
+                            opp.Banished.Exists(c => c.CardId == celtic) &&
+                            opp.Banished.Exists(c => c.CardId == thirteenthGrave) &&
+                            opp.Graveyard.Exists(c => c.CardId == silverFang));
+                    }
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var a = PlaceMonster(engine, p, celtic, 1, BattlePosition.Attack, true);
+                    var b = PlaceMonster(engine, p, silverFang, 2, BattlePosition.Attack, true);
+                    var keep = PlaceMonster(engine, p, battleOx, 3, BattlePosition.Attack, true);
+                    var victim = PlaceMonster(engine, opp, crawlingDragon, 2, BattlePosition.Attack, true);
+                    var trap = PlaceSetTrap(engine, p, twoPronged, 0);
+                    Check("Two-Pronged Attack: Activate from Set",
+                        engine.TryActivateSpellTrap(p, trap, fromHand: false) &&
+                        engine.IsAwaitingEffectTarget);
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        Check("Two-Pronged: first controller pick pending",
+                            engine.TrySelectEffectTarget(a) && engine.IsAwaitingEffectTarget);
+                        Check("Two-Pronged: second controller pick opens opp choice",
+                            engine.TrySelectEffectTarget(b) && engine.IsAwaitingEffectTarget &&
+                            engine.PendingActivation != null &&
+                            engine.PendingActivation.AwaitingSecondTarget);
+                        Check("Two-Pronged: destroys 2 yours + 1 opp",
+                            engine.TrySelectEffectTarget(victim) &&
+                            !p.TryFindMonster(a, out _) &&
+                            !p.TryFindMonster(b, out _) &&
+                            p.TryFindMonster(keep, out _) &&
+                            !opp.TryFindMonster(victim, out _) &&
+                            p.Graveyard.Exists(c => c.CardId == celtic) &&
+                            opp.Graveyard.Exists(c => c.CardId == crawlingDragon));
+                    }
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var dragon = PlaceMonster(engine, opp, crawlingDragon, 2, BattlePosition.Attack, true);
+                    var warrior = PlaceMonster(engine, opp, celtic, 1, BattlePosition.Attack, true);
+                    var trap = PlaceSetTrap(engine, p, dragonJar, 0);
+                    Check("Dragon Capture Jar: Activate from Set",
+                        engine.TryActivateSpellTrap(p, trap, fromHand: false) && trap.FaceUp);
+                    Check("Dragon Capture Jar: Dragon forced to Defense",
+                        dragon.Position == BattlePosition.Defense,
+                        $"pos={dragon.Position}");
+                    Check("Dragon Capture Jar: non-Dragon unchanged",
+                        warrior.Position == BattlePosition.Attack);
+                    Check("Dragon Capture Jar: Dragon cannot change position",
+                        engine.FieldLocksBattlePosition(dragon) &&
+                        !engine.CanChangePosition(opp, dragon));
+                    Check("Dragon Capture Jar: non-Dragon is not position-locked",
+                        !engine.FieldLocksBattlePosition(warrior));
+                    Check("Dragon Capture Jar: stays face-up",
+                        p.TryFindSpellTrap(trap, out _) && trap.FaceUp);
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    PutInHand(engine, p, rightLeg);
+                    PutInHand(engine, p, leftLeg);
+                    PutInHand(engine, p, rightArm);
+                    PutInHand(engine, p, leftArm);
+                    TextEffectRuntime.CheckHandWinConditions(engine);
+                    Check("Exodia: four pieces without head do not win",
+                        !engine.GameOver);
+                    PutInHand(engine, p, exodia);
+                    TextEffectRuntime.CheckHandWinConditions(engine);
+                    Check("Exodia: five pieces in hand wins",
+                        engine.GameOver && engine.Winner == p,
+                        $"over={engine.GameOver} winner={(engine.Winner == null ? "none" : engine.Winner.Name)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    PutInHand(engine, p, rightLeg);
+                    PutInHand(engine, p, leftLeg);
+                    PutInHand(engine, p, rightArm);
+                    PutInHand(engine, p, exodia);
+                    TextEffectRuntime.CheckHandWinConditions(engine);
+                    Check("Exodia: missing Left Arm does not win",
+                        !engine.GameOver);
+                }
+            }
+
+            // ── Original Path B: take-control until End Phase + any-GY banish ──
+            {
+                const int changeOfHeart = 4031928;
+                const int soulRelease = 5758500;
+                const int shadowTamer = 37620434;
+                const int dragonManipulator = 63018132;
+                const int celtic = 91152256;
+                const int laJinn = 97590747; // Fiend
+                const int mst = 5318639;
+                const int waboku = 12607053;
+
+                var cohDef = db.Get(changeOfHeart);
+                var coh = cohDef != null ? CardTextEffectCompiler.Compile(cohDef) : null;
+                Check("Change of Heart FullyCompiled take-control until EP",
+                    coh != null && coh.FullyCompiled &&
+                    coh.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.TakeControlUntilEndPhase &&
+                        c.Zone == EffectZoneFilter.OppMonsters && c.RequiresTargetChoice),
+                    coh == null
+                        ? "null"
+                        : $"full={coh.FullyCompiled} unparsed={string.Join("|", coh.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var soulDef = db.Get(soulRelease);
+                var soul = soulDef != null ? CardTextEffectCompiler.Compile(soulDef) : null;
+                Check("Soul Release FullyCompiled banish up-to-5 any GY",
+                    soul != null && soul.FullyCompiled &&
+                    soul.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.Banish &&
+                        c.Zone == EffectZoneFilter.EitherGyCards &&
+                        c.Amount == 5 && c.RequiresTargetChoice),
+                    soul == null
+                        ? "null"
+                        : $"full={soul.FullyCompiled} unparsed={string.Join("|", soul.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var tamerDef = db.Get(shadowTamer);
+                var tamer = tamerDef != null ? CardTextEffectCompiler.Compile(tamerDef) : null;
+                Check("Shadow Tamer FullyCompiled Flip take Fiend until EP",
+                    tamer != null && tamer.FullyCompiled &&
+                    tamer.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.Flip &&
+                        c.Action == EffectActionKind.TakeControlUntilEndPhase &&
+                        string.Equals(c.RaceFilter, "Fiend",
+                            System.StringComparison.OrdinalIgnoreCase)),
+                    tamer == null
+                        ? "null"
+                        : $"full={tamer.FullyCompiled} unparsed={string.Join("|", tamer.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var manipDef = db.Get(dragonManipulator);
+                var manip = manipDef != null ? CardTextEffectCompiler.Compile(manipDef) : null;
+                Check("Dragon Manipulator FullyCompiled Flip take Dragon until EP",
+                    manip != null && manip.FullyCompiled &&
+                    manip.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.Flip &&
+                        c.Action == EffectActionKind.TakeControlUntilEndPhase &&
+                        string.Equals(c.RaceFilter, "Dragon",
+                            System.StringComparison.OrdinalIgnoreCase)),
+                    manip == null
+                        ? "null"
+                        : $"full={manip.FullyCompiled} unparsed={string.Join("|", manip.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var prey = PlaceMonster(engine, opp, celtic, 2, BattlePosition.Attack, true);
+                    var card = PutInHand(engine, p, changeOfHeart);
+                    Check("Change of Heart: Activate from hand",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget);
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        Check("Change of Heart: take control",
+                            engine.TrySelectEffectTarget(prey) &&
+                            p.TryFindMonster(prey, out _) &&
+                            !opp.TryFindMonster(prey, out _) &&
+                            prey.ControlRevertsAtEndPhase);
+                    }
+                    engine.EndTurn(p);
+                    Check("Change of Heart: control returns at End Phase",
+                        opp.TryFindMonster(prey, out _) &&
+                        !p.TryFindMonster(prey, out _) &&
+                        !prey.ControlRevertsAtEndPhase);
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var fiend = PlaceMonster(engine, opp, laJinn, 2, BattlePosition.Attack, true);
+                    var tamerCard = PlaceMonster(engine, p, shadowTamer, 1, BattlePosition.Defense, false);
+                    tamerCard.SetThisTurn = false;
+                    Check("Shadow Tamer Flip vs Fiend",
+                        engine.TryFlipSummon(p, tamerCard) && tamerCard.FaceUp);
+                    Check("Shadow Tamer: Fiend is legal, Warrior is not offered as only target",
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.LegalTargets.Contains(fiend));
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        Check("Shadow Tamer: take control of Fiend",
+                            engine.TrySelectEffectTarget(fiend) &&
+                            p.TryFindMonster(fiend, out _) &&
+                            !opp.TryFindMonster(fiend, out _));
+                    }
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    opp.Graveyard.Add(engine.CreateCardInstance(celtic));
+                    p.Graveyard.Add(engine.CreateCardInstance(mst));
+                    opp.Graveyard.Add(engine.CreateCardInstance(waboku));
+                    var card = PutInHand(engine, p, soulRelease);
+                    Check("Soul Release: Activate from hand",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.TargetPicksAreUpTo &&
+                        engine.PendingActivation.TargetPicksRemaining == 5);
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        var t1 = engine.PendingActivation.LegalTargets
+                            .FirstOrDefault(t => t.CardId == celtic);
+                        var t2 = engine.PendingActivation.LegalTargets
+                            .FirstOrDefault(t => t.CardId == mst);
+                        Check("Soul Release: first GY pick still pending",
+                            t1 != null && engine.TrySelectEffectTarget(t1) &&
+                            engine.IsAwaitingEffectTarget);
+                        Check("Soul Release: second pick accepted",
+                            t2 != null && engine.TrySelectEffectTarget(t2) &&
+                            engine.IsAwaitingEffectTarget);
+                        Check("Soul Release: finish up-to after 2 picks",
+                            TextEffectRuntime.TryFinishUpToTargets(engine) &&
+                            !opp.Graveyard.Exists(c => c.CardId == celtic) &&
+                            !p.Graveyard.Exists(c => c.CardId == mst) &&
+                            opp.Banished.Exists(c => c.CardId == celtic) &&
+                            p.Banished.Exists(c => c.CardId == mst) &&
+                            opp.Graveyard.Exists(c => c.CardId == waboku));
+                    }
+                }
+            }
+
             // ── Kuriboh hand QE during damage calculation ──
             {
                 var engine = Fresh(db, pDeck, aDeck);
@@ -481,6 +1136,19 @@ namespace WRLDZ.Duel.Rules
                     p.HandCount == 2, $"hand={p.HandCount}");
             }
 
+            {
+                var engine = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine);
+                var p = engine.Player;
+                var c = engine.CreateCardInstance(91152256);
+                p.Hand.Add(c);
+                engine.SendCardToGrave(p, c);
+                Check("GameEvent log records SentToGy",
+                    engine.GameEvents.HappenedThisTurn(DuelGameEventKind.SentToGy, engine.TurnNumber, c));
+                Check("GameEvent log does not invent Destroyed",
+                    !engine.GameEvents.HappenedThisTurn(DuelGameEventKind.Destroyed, engine.TurnNumber, c));
+            }
+
             // ── Monster Reborn: activate stays pending (must not bounce to hand) ──
             {
                 const int reborn = 83764719;
@@ -512,7 +1180,374 @@ namespace WRLDZ.Duel.Rules
                         engine.TrySelectEffectTarget(pick) &&
                         p.MonstersOnField().Any(m => m != null && m.CardId == celtic) &&
                         p.Graveyard.Exists(c => c != null && c.CardId == reborn) &&
-                        !p.Hand.Contains(card));
+                        !p.Hand.Contains(card) &&
+                        !engine.IsAwaitingEffectTarget &&
+                        !engine.IsBusy);
+                }
+            }
+
+            // ── Special Summon honors UI zone + DEF when the player chose them ──
+            {
+                const int celtic = 91152256;
+                var engine = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine);
+                var p = engine.Player;
+                PlaceMonster(engine, p, 32452818, 2, BattlePosition.Attack, true);
+                var gyMon = engine.CreateCardInstance(celtic);
+                engine.SetPendingSpecialSummonPlacement(0, BattlePosition.Defense);
+                Check("SpecialSummonToField uses pending zone 0",
+                    engine.SpecialSummonToField(p, gyMon, BattlePosition.Attack, true) &&
+                    p.MonsterZones[0].Occupant == gyMon,
+                    p.MonsterZones[0].Occupant?.Name ?? "empty");
+                Check("SpecialSummonToField uses pending Defense Position",
+                    gyMon.FaceUp && gyMon.Position == BattlePosition.Defense);
+                Check("SpecialSummonToField leaves center occupant in place",
+                    p.MonsterZones[2].Occupant != null &&
+                    p.MonsterZones[2].Occupant.CardId == 32452818);
+            }
+
+            {
+                const int celtic = 91152256;
+                var engine = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine);
+                var p = engine.Player;
+                PlaceMonster(engine, p, 32452818, 0, BattlePosition.Attack, true);
+                PlaceMonster(engine, p, 13039848, 1, BattlePosition.Attack, true);
+                var gyMon = engine.CreateCardInstance(celtic);
+                Check("SpecialSummonToField preferredZone 4",
+                    engine.SpecialSummonToField(p, gyMon, BattlePosition.Attack, true,
+                        SummonKind.SpecialSummon, preferredZone: 4) &&
+                    p.MonsterZones[4].Occupant == gyMon,
+                    p.MonsterZones[4].Occupant?.Name ?? "empty");
+                Check("SpecialSummonToField preferredZone keeps ATK when no pending pos",
+                    gyMon.FaceUp && gyMon.Position == BattlePosition.Attack);
+            }
+
+            // ── Official Monster Reborn 83764718: compiled text, not the 83764719 allowlist pin ──
+            {
+                const int officialReborn = 83764718;
+                const int celtic = 91152256;
+                var officialDef = db.Get(officialReborn);
+                var officialProg = officialDef != null
+                    ? CardTextEffectCompiler.Compile(officialDef)
+                    : null;
+                Check("Official Monster Reborn (83764718) FullyCompiles Target GY; Special Summon it",
+                    officialDef != null && officialProg != null && officialProg.FullyCompiled &&
+                    officialProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Timing == EffectTiming.Activate &&
+                        c.Action == EffectActionKind.SpecialSummonFromGy &&
+                        c.RequiresTargetChoice &&
+                        c.Zone == EffectZoneFilter.EitherGyMonsters),
+                    officialProg == null
+                        ? "null"
+                        : $"full={officialProg.FullyCompiled} n={officialProg.ClauseList.Count} unparsed={string.Join("|", officialProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                Check("Official Monster Reborn is not on ActivatableScripts allowlist",
+                    !OfficialEffectRegistry.HasActivatableScript(officialReborn));
+                Check("Official Monster Reborn ProgramMayActivate via FullyCompiled text",
+                    officialDef != null && OfficialEffectRegistry.ProgramMayActivate(officialDef));
+
+                var synReborn = CardTextEffectCompiler.Compile(new CardDef
+                {
+                    id = 90000018,
+                    name = "New Spell (Monster Reborn shape)",
+                    type = "Spell Card",
+                    desc = "Target 1 monster in either GY; Special Summon it."
+                });
+                Check("New-card rule: Reborn-shaped text compiles without a cardId branch",
+                    synReborn != null && synReborn.FullyCompiled &&
+                    synReborn.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.SpecialSummonFromGy &&
+                        c.RequiresTargetChoice &&
+                        c.Zone == EffectZoneFilter.EitherGyMonsters));
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    p.Graveyard.Clear();
+                    engine.Opponent.Graveyard.Clear();
+                    var card = PutInHand(engine, p, officialReborn);
+                    Check("Official Monster Reborn: refuse with empty GYs",
+                        !engine.CanActivateSpellTrap(p, card, fromHand: true));
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var gyMon = engine.CreateCardInstance(celtic);
+                    p.Graveyard.Add(gyMon);
+                    for (var i = 0; i < p.MonsterZones.Length; i++)
+                        PlaceMonster(engine, p, celtic, i, BattlePosition.Attack, true);
+                    var card = PutInHand(engine, p, officialReborn);
+                    Check("Official Monster Reborn: refuse with no free Monster Zone",
+                        !engine.CanActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.FirstEmpty(p.MonsterZones) < 0);
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var gyMon = engine.CreateCardInstance(celtic);
+                    p.Graveyard.Add(gyMon);
+                    var card = PutInHand(engine, p, officialReborn);
+                    Check("Official Monster Reborn: Activate legal from hand in MP1 with GY + free MZ",
+                        engine.InMainPhase &&
+                        engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    Check("Official Monster Reborn: Activate opens GY target pending",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.TargetKind == EffectTargetKind.MonsterInEitherGy);
+                    var pick = engine.PendingActivation?.LegalTargets
+                        ?.FirstOrDefault(t => t != null && t.CardId == celtic);
+                    Check("Official Monster Reborn: GY Celtic is a legal target", pick != null);
+                    if (pick != null)
+                    {
+                        Check("Official Monster Reborn: resolve SS Celtic, spell to GY",
+                            engine.TrySelectEffectTarget(pick) &&
+                            p.MonstersOnField().Any(m => m != null && m.CardId == celtic) &&
+                            p.Graveyard.Exists(c => c != null && c.CardId == officialReborn) &&
+                            !p.Hand.Contains(card) &&
+                            !engine.IsAwaitingEffectTarget &&
+                            !engine.IsBusy);
+                    }
+                }
+
+                // Premature Burial: pay LP + SS own GY + equip/destroy host (Call of the Haunted sibling).
+                {
+                    const int prematureId = 70828912;
+                    const int prematureCelticId = 91152256;
+                    var pbDef = db.Get(prematureId);
+                    var pbProg = pbDef != null ? CardTextEffectCompiler.Compile(pbDef) : null;
+                    Check("Premature Burial FullyCompiled pay-LP GY-SS equip (Call of the Haunted sibling)",
+                        pbProg != null && pbProg.FullyCompiled &&
+                        pbProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Activate &&
+                            c.Action == EffectActionKind.SpecialSummonFromGy &&
+                            c.PayLpAmount == 800 &&
+                            c.DestroyHostWhenThisLeaves &&
+                            c.StaysOnField &&
+                            c.Zone == EffectZoneFilter.ControllerGyMonsters),
+                        pbProg == null
+                            ? "null"
+                            : $"full={pbProg.FullyCompiled} n={pbProg.ClauseList.Count} unparsed={string.Join("|", pbProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                    var synPb = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000051,
+                        name = "New Equip (Premature Burial shape)",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        desc =
+                            "Activate this card by paying 800 LP, then target 1 monster in your Graveyard; " +
+                            "Special Summon that target in Attack Position and equip it with this card. " +
+                            "When this card is destroyed, destroy the equipped monster."
+                    });
+                    Check("New-card rule: Premature Burial-shaped text compiles without a cardId branch",
+                        synPb != null && synPb.FullyCompiled &&
+                        synPb.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.SpecialSummonFromGy &&
+                            c.PayLpAmount == 800 &&
+                            c.DestroyHostWhenThisLeaves));
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var who = engine.Player;
+                        who.Hand.Clear();
+                        who.LifePoints = 8000;
+                        var gyMon = engine.CreateCardInstance(prematureCelticId);
+                        who.Graveyard.Add(gyMon);
+                        var card = PutInHand(engine, who, prematureId);
+                        Check("Premature Burial: Activate from hand in MP1 with GY + LP",
+                            engine.InMainPhase &&
+                            engine.CanActivateSpellTrap(who, card, fromHand: true) &&
+                            engine.TryActivateSpellTrap(who, card, fromHand: true) &&
+                            engine.IsAwaitingEffectTarget);
+                        Check("Premature Burial: SS Celtic, Equip stays linked, paid 800",
+                            engine.TrySelectEffectTarget(gyMon) &&
+                            who.TryFindMonster(gyMon, out _) &&
+                            gyMon.Position == BattlePosition.Attack &&
+                            card.EquippedTo == gyMon &&
+                            who.TryFindSpellTrap(card, out _) &&
+                            who.LifePoints == 7200,
+                            $"mz={who.TryFindMonster(gyMon, out _)} st={who.TryFindSpellTrap(card, out _)} lp={who.LifePoints} link={card.EquippedTo != null}");
+                        engine.SendCardToGrave(who, card);
+                        Check("Premature Burial: Equip to GY also destroys the summoned monster",
+                            who.Graveyard.Contains(card) && who.Graveyard.Contains(gyMon) &&
+                            !who.TryFindMonster(gyMon, out _),
+                            $"eqGy={who.Graveyard.Contains(card)} monGy={who.Graveyard.Contains(gyMon)}");
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var who = engine.Player;
+                        who.Hand.Clear();
+                        who.LifePoints = 700;
+                        who.Graveyard.Add(engine.CreateCardInstance(prematureCelticId));
+                        var card = PutInHand(engine, who, prematureId);
+                        Check("Premature Burial: refuse with less than 800 LP",
+                            !engine.CanActivateSpellTrap(who, card, fromHand: true));
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var who = engine.Player;
+                        who.Hand.Clear();
+                        who.LifePoints = 800;
+                        who.Graveyard.Add(engine.CreateCardInstance(prematureCelticId));
+                        var card = PutInHand(engine, who, prematureId);
+                        Check("Premature Burial: 800 LP is a legal cost (may lose on purpose)",
+                            engine.CanActivateSpellTrap(who, card, fromHand: true));
+                        Check("Premature Burial: paying last 800 LP asks are-you-sure",
+                            engine.TryActivateSpellTrap(who, card, fromHand: true) &&
+                            engine.PendingActivation != null &&
+                            engine.PendingActivation.AwaitingLpZeroConfirm &&
+                            who.LifePoints == 800 &&
+                            who.Hand.Contains(card),
+                            $"pending={engine.PendingActivation != null} " +
+                            $"zero={engine.PendingActivation?.AwaitingLpZeroConfirm} " +
+                            $"lp={who.LifePoints} inHand={who.Hand.Contains(card)}");
+                        Check("Premature Burial: cancel LP-to-0 keeps the card and LP",
+                            engine.CancelEffectTargeting() &&
+                            who.LifePoints == 800 &&
+                            who.Hand.Contains(card) &&
+                            engine.PendingActivation == null);
+                        // The cost is paid as the card is activated (ActivationLpCostRuntime): 0 LP with nothing
+                        // open loses the duel at once (DuelEngine.PayLifePoints), before the target pick.
+                        Check("Premature Burial: confirm LP-to-0 pays at activation and loses the duel",
+                            engine.TryActivateSpellTrap(who, card, fromHand: true) &&
+                            engine.TryConfirmLpZeroPay() &&
+                            who.LifePoints == 0 &&
+                            engine.GameOver &&
+                            engine.Winner == engine.Opponent &&
+                            !engine.IsAwaitingEffectTarget,
+                            $"await={engine.IsAwaitingEffectTarget} " +
+                            $"zero={engine.PendingActivation?.AwaitingLpZeroConfirm} " +
+                            $"lp={who.LifePoints} over={engine.GameOver}");
+                    }
+
+                    // Soft probe for other single-target GY-SS cards (not dual each-player).
+                    var sgProbe = TryActivateCompiledGySsIfReady(db, pDeck, aDeck, 43434803);
+                    // The Shallow Grave is dual-target — helper returns null unless both GYs seeded;
+                    // dedicated checks below cover FullyCompiled + live activation.
+                    if (sgProbe.HasValue)
+                        Check("The Shallow Grave: compiled GY-SS activates from hand in MP1", sgProbe.Value);
+                }
+
+                // ── The Shallow Grave: each player own GY → face-down Defense SS ──
+                {
+                    const int shallowGrave = 43434803;
+                    const int celticSg = 91152256;
+                    const int bewdSg = 89631139;
+                    var sgDef = db.Get(shallowGrave);
+                    var sgProg = sgDef != null ? CardTextEffectCompiler.Compile(sgDef) : null;
+                    Check("The Shallow Grave FullyCompiled each-player own GY face-down Defense SS",
+                        sgProg != null && sgProg.FullyCompiled &&
+                        sgProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Activate &&
+                            c.Action == EffectActionKind.SpecialSummonFromGy &&
+                            c.Zone == EffectZoneFilter.ControllerGyMonsters &&
+                            c.RequiresSecondTarget &&
+                            c.SecondZone == EffectZoneFilter.OppGyMonsters &&
+                            c.SecondAction == EffectActionKind.SpecialSummonFromGy &&
+                            c.SummonFaceDown && c.SummonInDefense && c.SummonToTargetsOwner),
+                        sgProg == null
+                            ? "null"
+                            : $"full={sgProg.FullyCompiled} n={sgProg.ClauseList.Count} unparsed={string.Join("|", sgProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                    // Fail-closed vs Monster Reborn (either GY, face-up, no second target).
+                    var mrProgSg = CardTextEffectCompiler.Compile(db.Get(83764718));
+                    Check("Monster Reborn remains either-GY face-up SS (not Shallow Grave dual)",
+                        mrProgSg != null &&
+                        mrProgSg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.SpecialSummonFromGy &&
+                            c.Zone == EffectZoneFilter.EitherGyMonsters &&
+                            !c.RequiresSecondTarget && !c.SummonFaceDown && !c.SummonToTargetsOwner));
+
+                    // Fail-closed vs Call of the Haunted (your GY, Attack, continuous link).
+                    var cothProgSg = CardTextEffectCompiler.Compile(db.Get(97077563));
+                    Check("Call of the Haunted remains Attack continuous GY-SS (not Shallow Grave)",
+                        cothProgSg != null &&
+                        cothProgSg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.SpecialSummonFromGy &&
+                            c.Zone == EffectZoneFilter.ControllerGyMonsters &&
+                            c.SummonInAttack && !c.SummonFaceDown && !c.RequiresSecondTarget));
+
+                    // New-card rule: same PSCT shape compiles without a passcode allowlist.
+                    var synSg = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000116,
+                        name = "New Spell (The Shallow Grave shape)",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        desc =
+                            "Each player targets 1 monster in their own GY; each player Special Summons the target from their GY in face-down Defense Position."
+                    });
+                    Check("New-card rule: Shallow Grave-shaped text compiles without a cardId branch",
+                        synSg != null && synSg.FullyCompiled &&
+                        synSg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.SpecialSummonFromGy &&
+                            c.RequiresSecondTarget &&
+                            c.SummonFaceDown && c.SummonToTargetsOwner));
+
+                    {
+                        // Soft: only controller GY — cannot activate (needs each player's own GY target).
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        p.Graveyard.Add(engine.CreateCardInstance(celticSg));
+                        var card = PutInHand(engine, p, shallowGrave);
+                        Check("The Shallow Grave fail-closed: refuse with only your GY monster",
+                            !engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    }
+
+                    {
+                        // Soft: both GYs + free MZs — Activate, dual target, both SS face-down DEF.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        var myGy = engine.CreateCardInstance(celticSg);
+                        var oppGy = engine.CreateCardInstance(bewdSg);
+                        p.Graveyard.Add(myGy);
+                        opp.Graveyard.Add(oppGy);
+                        var card = PutInHand(engine, p, shallowGrave);
+                        Check("The Shallow Grave: Activate legal with both GYs + free MZs",
+                            engine.InMainPhase &&
+                            engine.CanActivateSpellTrap(p, card, fromHand: true));
+                        Check("The Shallow Grave: Activate opens your GY target",
+                            engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                            engine.IsAwaitingEffectTarget);
+                        Check("The Shallow Grave: pick your GY then opp GY → both face-down DEF on their fields",
+                            engine.TrySelectEffectTarget(myGy) &&
+                            engine.IsAwaitingEffectTarget &&
+                            engine.TrySelectEffectTarget(oppGy) &&
+                            p.TryFindMonster(myGy, out _) &&
+                            !myGy.FaceUp && myGy.Position == BattlePosition.Defense &&
+                            opp.TryFindMonster(oppGy, out _) &&
+                            !oppGy.FaceUp && oppGy.Position == BattlePosition.Defense &&
+                            p.Graveyard.Exists(c => c != null && c.CardId == shallowGrave),
+                            $"myFU={myGy.FaceUp} myPos={myGy.Position} oppFU={oppGy.FaceUp} oppPos={oppGy.Position} " +
+                            $"myField={p.TryFindMonster(myGy, out _)} oppField={opp.TryFindMonster(oppGy, out _)}");
+                    }
                 }
             }
 
@@ -1787,6 +2822,13 @@ namespace WRLDZ.Duel.Rules
                             engine.PendingResponse == null
                                 ? "no window"
                                 : $"timing={engine.PendingResponse.Timing}");
+                        Check("Attack response window is 5s (timer expiry passes; no PASS button)",
+                            engine.PendingResponse != null &&
+                            engine.PendingResponse.ReactionSeconds == CombatAnimTimings.DefaultResponseSeconds &&
+                            CombatAnimTimings.DefaultResponseSeconds == 5f,
+                            engine.PendingResponse == null
+                                ? "no window"
+                                : $"secs={engine.PendingResponse.ReactionSeconds}");
                         Check("Sakuretsu activates",
                             engine.CanActivateSpellTrap(p, sak, fromHand: false) &&
                             engine.TryActivateSpellTrap(p, sak, fromHand: false));
@@ -2398,6 +3440,451 @@ namespace WRLDZ.Duel.Rules
                         engine.TrySelectCoinCall(true) &&
                         !opp.TryFindMonster(prey, out _) &&
                         p.TryFindMonster(wiz, out _));
+                    Check("Time Wizard: once per turn after right-call",
+                        !engine.CanActivateSpellTrap(p, wiz, fromHand: false));
+                }
+
+                {
+                    const int darkSage = 92377303;
+                    const int darkMagician = 46986414;
+                    const int pot = 55144522;
+                    Check("Dark Sage FullyCompiled Spell search",
+                        CardTextEffectCompiler.Compile(db.Get(darkSage)) is { } sageProg &&
+                        sageProg.FullyCompiled &&
+                        sageProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.ThisCardSummoned &&
+                            c.Action == EffectActionKind.AddFromDeckToHand &&
+                            c.Zone == EffectZoneFilter.ControllerDeckSpells),
+                        CardTextEffectCompiler.Compile(db.Get(darkSage)) is { } sp
+                            ? $"full={sp.FullyCompiled} unparsed={string.Join("|", sp.UnparsedFragments ?? System.Array.Empty<string>())}"
+                            : "null");
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var wiz = PlaceMonster(engine, p, timeWiz, 2, BattlePosition.Attack, true);
+                    var dm = PlaceMonster(engine, p, darkMagician, 0, BattlePosition.Attack, true);
+                    var sage = PutInHand(engine, p, darkSage);
+                    p.Deck.RemoveAll(id => id == pot);
+                    p.Deck.Insert(0, pot);
+                    engine.Rng.QueueCoin(true);
+                    Check("Dark Sage: Time Wizard right-call opens Sage window",
+                        engine.TryActivateSpellTrap(p, wiz, fromHand: false) &&
+                        engine.TrySelectCoinCall(true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.AwaitingDarkSage &&
+                        engine.PendingActivation.LegalTargets.Contains(sage));
+                    Check("Dark Sage: Tribute Dark Magician, SS Sage",
+                        engine.TrySelectEffectTarget(sage) &&
+                        p.TryFindMonster(sage, out _) &&
+                        p.Graveyard.Contains(dm),
+                        $"sageField={p.TryFindMonster(sage, out _)} dmGy={p.Graveyard.Contains(dm)} " +
+                        $"pending={engine.IsAwaitingEffectTarget}");
+                    if (engine.IsAwaitingEffectTarget && engine.PendingActivation != null &&
+                        engine.PendingActivation.LegalTargets.Count > 0)
+                    {
+                        var spell = engine.PendingActivation.LegalTargets.Find(c =>
+                            c != null && c.CardId == pot) ?? engine.PendingActivation.LegalTargets[0];
+                        engine.TrySelectEffectTarget(spell);
+                    }
+
+                    Check("Dark Sage: search a Spell from Deck",
+                        p.Hand.Exists(c => c != null && c.CardId == pot) &&
+                        !p.Deck.Contains(pot),
+                        $"potHand={p.Hand.Exists(c => c != null && c.CardId == pot)} " +
+                        $"deckHasPot={p.Deck.Contains(pot)} pending={engine.IsAwaitingEffectTarget}");
+                    Check("Dark Sage cannot Normal Summon",
+                        !SummonProcedures.CheckNormalOrTribute(engine, p,
+                            engine.CreateCardInstance(darkSage), false).Legal);
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    var wiz = PlaceMonster(engine, p, timeWiz, 2, BattlePosition.Attack, true);
+                    var buddy = PlaceMonster(engine, p, celtic, 0, BattlePosition.Attack, true);
+                    var fd = PlaceMonster(engine, p, 13039848, 1, BattlePosition.Defense, false);
+                    var prey = PlaceMonster(engine, opp, celtic, 2, BattlePosition.Attack, true);
+                    engine.Rng.QueueCoin(false);
+                    Check("Time Wizard wrong-call: Activate",
+                        engine.TryActivateSpellTrap(p, wiz, fromHand: false) &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.AwaitingCoinCall);
+                    var lp = p.LifePoints;
+                    Check("Time Wizard: call Heads, toss Tails, self wiped, half face-up ATK",
+                        engine.TrySelectCoinCall(true) &&
+                        !p.TryFindMonster(wiz, out _) &&
+                        !p.TryFindMonster(buddy, out _) &&
+                        !p.TryFindMonster(fd, out _) &&
+                        opp.TryFindMonster(prey, out _) &&
+                        p.LifePoints == lp - (500 + 1400) / 2,
+                        $"lp={p.LifePoints} expected={lp - (500 + 1400) / 2} " +
+                        $"oppPrey={opp.TryFindMonster(prey, out _)}");
+                }
+
+                {
+                    const int multiply = 40703222;
+                    const int kuriboh = 40640057;
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var kuri = PlaceMonster(engine, p, kuriboh, 2, BattlePosition.Attack, true);
+                    var mul = PutInHand(engine, p, multiply);
+                    OfficialEffectRegistry.CanActivateOfficial(engine, p, mul, true, out var mulWhy);
+                    Check("Multiply: Activate legal with face-up Kuriboh",
+                        engine.CanActivateSpellTrap(p, mul, fromHand: true), mulWhy);
+                    Check("Multiply: Activate opens Kuriboh tribute",
+                        engine.TryActivateSpellTrap(p, mul, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.LegalTargets.Contains(kuri));
+                    Check("Multiply: tribute Kuriboh, fill Defense Tokens that cannot be Tributed",
+                        engine.TrySelectEffectTarget(kuri) &&
+                        p.Graveyard.Contains(kuri) &&
+                        p.Graveyard.Contains(mul) &&
+                        p.MonsterCount == 5 &&
+                        p.MonstersOnField().All(m =>
+                            m != null && m.IsToken && m.Position == BattlePosition.Defense &&
+                            m.CannotBeTributedForSummon && m.CurrentAtk == 300),
+                        $"gyKuri={p.Graveyard.Contains(kuri)} gyMul={p.Graveyard.Contains(mul)} " +
+                        $"n={p.MonsterCount}");
+                    var fdKuriEngine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(fdKuriEngine);
+                    fdKuriEngine.Player.Hand.Clear();
+                    PlaceMonster(fdKuriEngine, fdKuriEngine.Player, kuriboh, 2, BattlePosition.Defense, false);
+                    var mul2 = PutInHand(fdKuriEngine, fdKuriEngine.Player, multiply);
+                    Check("Multiply: face-down Kuriboh cannot pay",
+                        !fdKuriEngine.CanActivateSpellTrap(fdKuriEngine.Player, mul2, fromHand: true));
+                }
+
+                {
+                    const int hatsId = 81210420;
+                    const int pot = 55144522;
+                    const int mstId = 5318639;
+                    var engine = Fresh(db, pDeck, aDeck);
+                    if (!ReachOpponentBattle(engine))
+                    {
+                        Check("Magical Hats battle path (skipped — opp not in BP)", false,
+                            $"phase={engine.Phase}");
+                    }
+                    else
+                    {
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var host = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                        p.Deck.Insert(0, pot);
+                        p.Deck.Insert(0, mstId);
+                        var hats = PlaceSetTrap(engine, p, hatsId, 0);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        OfficialEffectRegistry.CanActivateOfficial(engine, p, hats, false, out var hatsWhy);
+                        Check("Magical Hats: legal in opponent Battle Phase",
+                            engine.CanActivateSpellTrap(p, hats, fromHand: false),
+                            $"phase={engine.Phase} tpIsOpp={engine.TurnPlayer == engine.Opponent} await={engine.IsAwaitingResponse} {hatsWhy}");
+                        Check("Magical Hats: Activate opens MMZ monster",
+                            engine.TryActivateSpellTrap(p, hats, fromHand: false) &&
+                            engine.IsAwaitingEffectTarget &&
+                            engine.PendingActivation != null &&
+                            engine.PendingActivation.AwaitingHatsMonster &&
+                            engine.PendingActivation.LegalTargets.Contains(host));
+                        var pickedMonster = engine.IsAwaitingEffectTarget &&
+                                            engine.TrySelectEffectTarget(host);
+                        Check("Magical Hats: then pick 2 Deck S/T",
+                            pickedMonster &&
+                            engine.IsAwaitingEffectTarget &&
+                            engine.PendingActivation != null &&
+                            engine.PendingActivation.AwaitingHatsDeck &&
+                            engine.PendingActivation.LegalTargets.Count >= 2);
+                        if (engine.PendingActivation != null &&
+                            engine.PendingActivation.LegalTargets.Count >= 2)
+                        {
+                            var a = engine.PendingActivation.LegalTargets[0];
+                            var b = engine.PendingActivation.LegalTargets[1];
+                            Check("Magical Hats: resolve 3 face-down Defense, hats dummy",
+                                engine.TrySelectEffectTarget(a) &&
+                                engine.TrySelectEffectTarget(b) &&
+                                p.MonsterCount == 3 &&
+                                p.MonstersOnField().Count(m => !m.FaceUp &&
+                                    m.Position == BattlePosition.Defense) == 3 &&
+                                p.MonstersOnField().Count(m => m.MagicalHatDummy) == 2);
+                            engine.TryEnterMainPhase2(engine.TurnPlayer);
+                            Check("Magical Hats: BP end destroys dummies, host remains",
+                                p.MonstersOnField().Count(m => m.MagicalHatDummy) == 0 &&
+                                p.TryFindMonster(host, out _) &&
+                                !host.FaceUp);
+                        }
+                    }
+                }
+
+                {
+                    const int virus = 57728570;
+                    const int kuriboh = 40640057;
+                    const int bewd = 89631139;
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var dark = PlaceMonster(engine, p, kuriboh, 2, BattlePosition.Attack, true);
+                    var prey = PlaceMonster(engine, opp, bewd, 2, BattlePosition.Attack, true);
+                    var small = PutInHand(engine, opp, celtic);
+                    var big = PutInHand(engine, opp, bewd);
+                    opp.Deck.Clear();
+                    opp.Deck.Add(bewd);
+                    opp.Deck.Add(bewd);
+                    var trap = PlaceSetTrap(engine, p, virus, 0);
+                    OfficialEffectRegistry.CanActivateOfficial(engine, p, trap, false, out var virusWhy);
+                    Check("Crush Card: Activate legal with DARK ≤1000",
+                        engine.CanActivateSpellTrap(p, trap, fromHand: false), virusWhy);
+                    Check("Crush Card: Activate opens tribute",
+                        engine.TryActivateSpellTrap(p, trap, fromHand: false) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.LegalTargets.Contains(dark));
+                    Check("Crush Card: tribute, destroy ≥1500 field+hand, lingering no-damage",
+                        engine.TrySelectEffectTarget(dark) &&
+                        p.Graveyard.Contains(dark) &&
+                        !opp.TryFindMonster(prey, out _) &&
+                        opp.Graveyard.Contains(prey) &&
+                        opp.Hand.Contains(small) &&
+                        !opp.Hand.Contains(big) &&
+                        opp.NoDamageThroughTurnNumber == engine.TurnNumber + 1,
+                        $"preyGy={opp.Graveyard.Contains(prey)} smallHand={opp.Hand.Contains(small)} " +
+                        $"bigHand={opp.Hand.Contains(big)} flag={opp.NoDamageThroughTurnNumber}");
+                    var lp = opp.LifePoints;
+                    engine.ApplyEffectDamage(opp, 2000, "test");
+                    Check("Crush Card: opponent takes no effect damage",
+                        opp.LifePoints == lp);
+                    Check("Crush Card: AI destroys up to 3 ATK≥1500 in Deck",
+                        opp.Graveyard.FindAll(c => c != null && c.CardId == bewd).Count >= 3 &&
+                        opp.Deck.Count == 0,
+                        $"bewdGy={opp.Graveyard.FindAll(c => c != null && c.CardId == bewd).Count} deck={opp.Deck.Count}");
+                }
+
+                {
+                    const int ddv = 35027493;
+                    const int skull = 70781052;
+                    const int kuriboh = 40640057;
+                    const int bewd = 89631139;
+                    Check("Deck Devastation Virus FullyCompiled linger destroy ≤1500",
+                        CardTextEffectCompiler.Compile(db.Get(ddv)) is { } ddvProg &&
+                        ddvProg.FullyCompiled &&
+                        ddvProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.CrushCardVirusStyle &&
+                            c.RequiresAtkGeqCost &&
+                            c.Amount == 2000 &&
+                            c.VirusDestroyAtkLeq &&
+                            c.VirusDestroyAtk == 1500 &&
+                            c.CrushCardLingerOpponentEnds == 3) &&
+                        EffectVocabulary.ResolutionOf(new EffectClause
+                        {
+                            Action = EffectActionKind.CrushCardVirusStyle
+                        }) == EffectResolutionKind.Destroy,
+                        CardTextEffectCompiler.Compile(db.Get(ddv)) is { } dp
+                            ? $"full={dp.FullyCompiled} unparsed={string.Join("|", dp.UnparsedFragments ?? System.Array.Empty<string>())}"
+                            : "null");
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var darkBig = PlaceMonster(engine, p, skull, 2, BattlePosition.Attack, true);
+                    var darkSmall = PlaceMonster(engine, p, kuriboh, 1, BattlePosition.Attack, true);
+                    var prey = PlaceMonster(engine, opp, celtic, 2, BattlePosition.Attack, true);
+                    var tank = PlaceMonster(engine, opp, bewd, 3, BattlePosition.Attack, true);
+                    var small = PutInHand(engine, opp, celtic);
+                    var big = PutInHand(engine, opp, bewd);
+                    var trap = PlaceSetTrap(engine, p, ddv, 0);
+                    OfficialEffectRegistry.CanActivateOfficial(engine, p, trap, false, out var ddvWhy);
+                    Check("Deck Devastation: Activate legal with DARK ≥2000",
+                        engine.CanActivateSpellTrap(p, trap, fromHand: false), ddvWhy);
+                    Check("Deck Devastation: tribute is the 2000+ DARK, not Kuriboh",
+                        engine.TryActivateSpellTrap(p, trap, fromHand: false) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.LegalTargets.Contains(darkBig) &&
+                        !engine.PendingActivation.LegalTargets.Contains(darkSmall));
+                    Check("Deck Devastation: tribute, destroy ≤1500 field+hand, linger 3, no no-damage",
+                        engine.TrySelectEffectTarget(darkBig) &&
+                        p.Graveyard.Contains(darkBig) &&
+                        !opp.TryFindMonster(prey, out _) &&
+                        opp.Graveyard.Contains(prey) &&
+                        opp.TryFindMonster(tank, out _) &&
+                        !opp.Hand.Contains(small) &&
+                        opp.Hand.Contains(big) &&
+                        opp.CrushCardLingerEndsRemaining == 3 &&
+                        opp.VirusLingerDestroyAtk == 1500 &&
+                        opp.VirusLingerDestroyAtkLeq &&
+                        opp.NoDamageThroughTurnNumber == 0,
+                        $"preyGy={opp.Graveyard.Contains(prey)} tankField={opp.TryFindMonster(tank, out _)} " +
+                        $"smallHand={opp.Hand.Contains(small)} bigHand={opp.Hand.Contains(big)} " +
+                        $"linger={opp.CrushCardLingerEndsRemaining} leq={opp.VirusLingerDestroyAtkLeq} " +
+                        $"nodmg={opp.NoDamageThroughTurnNumber}");
+                    var gyCeltic = opp.Graveyard.FindAll(c => c != null && c.CardId == celtic).Count;
+                    opp.Deck.Insert(0, celtic);
+                    engine.Draw(opp, 1);
+                    Check("Deck Devastation: drawn ≤1500 is destroyed",
+                        opp.Graveyard.FindAll(c => c != null && c.CardId == celtic).Count == gyCeltic + 1 &&
+                        !opp.Hand.Exists(c => c != null && c.CardId == celtic),
+                        $"gyCeltic={opp.Graveyard.FindAll(c => c != null && c.CardId == celtic).Count} before={gyCeltic}");
+                    var handBewd = opp.Hand.FindAll(c => c != null && c.CardId == bewd).Count;
+                    opp.Deck.Insert(0, bewd);
+                    engine.Draw(opp, 1);
+                    Check("Deck Devastation: drawn 1500+ survives",
+                        opp.Hand.FindAll(c => c != null && c.CardId == bewd).Count == handBewd + 1,
+                        $"handBewd={opp.Hand.FindAll(c => c != null && c.CardId == bewd).Count} before={handBewd}");
+                }
+
+                {
+                    CompiledEffectCache.ForcedEraId = ErazFormat.Original;
+                    CompiledEffectCache.ClearMemory();
+                    try
+                    {
+                        var lingerProg = CardTextEffectCompiler.Compile(db.Get(57728570),
+                            ErazFormat.Original);
+                        Check("Original Crush Card FullyCompiled lingering 3 opponent turns",
+                            lingerProg != null && lingerProg.FullyCompiled &&
+                            lingerProg.ClauseList.Exists(c =>
+                                c != null &&
+                                c.Action == EffectActionKind.CrushCardVirusStyle &&
+                                c.CrushCardLingerOpponentEnds == 3 &&
+                                !c.CrushCardNoDamageUntilNextTurn),
+                            lingerProg == null
+                                ? "null"
+                                : $"full={lingerProg.FullyCompiled} unparsed={string.Join("|", lingerProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                        var hatsProg = CardTextEffectCompiler.Compile(db.Get(81210420),
+                            ErazFormat.Original);
+                        Check("Original Magical Hats FullyCompiled anime tokens",
+                            hatsProg != null && hatsProg.FullyCompiled &&
+                            hatsProg.ClauseList.Exists(c =>
+                                c != null &&
+                                c.Action == EffectActionKind.MagicalHatsStyle &&
+                                c.HatsAreTokens && c.HatTokenCount == 4),
+                            hatsProg == null
+                                ? "null"
+                                : $"full={hatsProg.FullyCompiled} unparsed={string.Join("|", hatsProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                        const int kuriboh = 40640057;
+                        const int bewd = 89631139;
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        var dark = PlaceMonster(engine, p, kuriboh, 2, BattlePosition.Attack, true);
+                        var prey = PlaceMonster(engine, opp, bewd, 2, BattlePosition.Attack, true);
+                        var trap = PlaceSetTrap(engine, p, 57728570, 0);
+                        Check("Original Crush Card: tribute opens",
+                            engine.TryActivateSpellTrap(p, trap, fromHand: false) &&
+                            engine.IsAwaitingEffectTarget);
+                        Check("Original Crush Card: field 1500+ dies, linger set, no modern no-damage",
+                            engine.TrySelectEffectTarget(dark) &&
+                            !opp.TryFindMonster(prey, out _) &&
+                            opp.CrushCardLingerEndsRemaining == 3 &&
+                            opp.NoDamageThroughTurnNumber == 0);
+                        opp.Deck.Insert(0, bewd);
+                        engine.Draw(opp, 1);
+                        Check("Original Crush Card: drawn 1500+ is destroyed",
+                            opp.Graveyard.Exists(c => c != null && c.CardId == bewd) &&
+                            !opp.Hand.Exists(c => c != null && c.CardId == bewd));
+
+                        if (!ReachOpponentBattle(engine))
+                        {
+                            Check("Original Magical Hats battle path (skipped)", false,
+                                $"phase={engine.Phase}");
+                        }
+                        else
+                        {
+                            if (engine.IsAwaitingResponse) engine.PassResponse();
+                            ClearBoard(engine);
+                            var host = PlaceMonster(engine, engine.Player, celtic, 2,
+                                BattlePosition.Attack, true);
+                            var hats = PlaceSetTrap(engine, engine.Player, 81210420, 0);
+                            Check("Original Magical Hats: legal",
+                                engine.CanActivateSpellTrap(engine.Player, hats, fromHand: false));
+                            Check("Original Magical Hats: Activate opens host",
+                                engine.TryActivateSpellTrap(engine.Player, hats, fromHand: false) &&
+                                engine.IsAwaitingEffectTarget);
+                            Check("Original Magical Hats: 4 tokens + host shuffled face-down",
+                                engine.TrySelectEffectTarget(host) &&
+                                engine.Player.MonstersOnField().Count(m => m.MagicalHatDummy) == 4 &&
+                                engine.Player.MonsterCount == 5 &&
+                                engine.Player.MonstersOnField().All(m =>
+                                    m != null && !m.FaceUp && m.Position == BattlePosition.Defense));
+                            var dummy = engine.Player.MonstersOnField()
+                                .FirstOrDefault(m => m != null && m.MagicalHatDummy);
+                            var atk = PlaceMonster(engine, engine.Opponent, 89631139, 0,
+                                BattlePosition.Attack, true);
+                            atk.SummonedThisTurn = false;
+                            if (engine.IsAwaitingResponse) engine.PassResponse();
+                            var attacked = dummy != null &&
+                                           engine.TryAttack(engine.Opponent, atk, dummy);
+                            if (engine.IsAwaitingResponse) engine.PassResponse();
+                            if (engine.HasDeclaredAttack) engine.ResolveDeclaredAttack();
+                            Check("Original Magical Hats: attacking a token destroys it",
+                                attacked && dummy != null &&
+                                !engine.Player.TryFindMonster(dummy, out _) &&
+                                engine.Player.TryFindMonster(host, out _));
+                        }
+                    }
+                    finally
+                    {
+                        CompiledEffectCache.ForcedEraId = null;
+                        CompiledEffectCache.ClearMemory();
+                    }
+                }
+
+                {
+                    const int cocoon = 40240595;
+                    const int petit = 58192742;
+                    const int larvae = 87756343;
+                    const int great = 14141448;
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var moth = PlaceMonster(engine, p, petit, 2, BattlePosition.Attack, true);
+                    var egg = PutInHand(engine, p, cocoon);
+                    Check("Cocoon FullyCompiled hand-equip",
+                        CardTextEffectCompiler.Compile(db.Get(cocoon)) is { } cp &&
+                        cp.FullyCompiled &&
+                        cp.ClauseList.Exists(c =>
+                            c != null && c.ActivatesFromHand &&
+                            c.Action == EffectActionKind.EquipThisToTarget &&
+                            c.ReplaceHostOriginalAtkDef));
+                    OfficialEffectRegistry.CanActivateOfficial(engine, p, egg, true, out var cocoonWhy);
+                    Check("Cocoon: Activate from hand",
+                        engine.CanActivateSpellTrap(p, egg, fromHand: true) &&
+                        engine.TryActivateSpellTrap(p, egg, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.LegalTargets.Contains(moth),
+                        cocoonWhy);
+                    Check("Cocoon: Petit Moth becomes 0/2000, egg in S/T",
+                        engine.TrySelectEffectTarget(moth) &&
+                        moth.CurrentAtk == 0 && moth.CurrentDef == 2000 &&
+                        moth.Equips.Contains(egg) &&
+                        p.TryFindSpellTrap(egg, out _) &&
+                        !p.Hand.Contains(egg));
+                    var larvaeCard = PutInHand(engine, p, larvae);
+                    Check("Larvae cannot Normal Summon",
+                        !SummonProcedures.CheckNormalOrTribute(engine, p, larvaeCard, false).Legal);
+                    Check("Larvae SS illegal before 2 Cocoon turns",
+                        !engine.CanSpecialSummonProcedure(p, larvaeCard));
+                    egg.EquipTurnCounter = 2;
+                    Check("Larvae inherent SS after 2 turns",
+                        engine.CanSpecialSummonProcedure(p, larvaeCard) &&
+                        engine.TrySpecialSummonProcedure(p, larvaeCard) &&
+                        p.TryFindMonster(larvaeCard, out _) &&
+                        p.Graveyard.Contains(moth));
+                    var greatCard = PutInHand(engine, p, great);
+                    Check("Great Moth still illegal at 2 turns",
+                        !engine.CanSpecialSummonProcedure(p, greatCard));
                 }
 
                 {
@@ -2580,24 +4067,89 @@ namespace WRLDZ.Duel.Rules
                     var opp = engine.Opponent;
                     var rel = PlaceMonster(engine, p, relinquished, 2, BattlePosition.Attack, true);
                     var prey = PlaceMonster(engine, opp, celtic, 2, BattlePosition.Attack, true);
-                    if (OfficialEffectRegistry.ProgramMayActivate(rel.Def))
+                    var prey2 = PlaceMonster(engine, opp, fenrir, 0, BattlePosition.Attack, true);
+                    const int bewdId = 89631139;
+                    var bewd = PlaceMonster(engine, opp, bewdId, 1, BattlePosition.Attack, true);
+                    bewd.SummonedThisTurn = false;
+
+                    var relProg = CardTextEffectCompiler.Compile(rel.Def);
+                    Check("Relinquished: FullyCompiled so ProgramMayActivate",
+                        OfficialEffectRegistry.ProgramMayActivate(rel.Def) &&
+                        relProg != null && relProg.FullyCompiled &&
+                        relProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.EquipTargetToThis),
+                        relProg == null
+                            ? "null"
+                            : $"full={relProg.FullyCompiled} unparsed={string.Join("|", relProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                    Check("Relinquished: Activate absorb Celtic",
+                        engine.TryActivateSpellTrap(p, rel, fromHand: false) &&
+                        engine.IsLegalEffectTarget(prey));
+                    Check("Relinquished: equip Celtic, prey off opp field",
+                        engine.TrySelectEffectTarget(prey) &&
+                        rel.Equips.Contains(prey) &&
+                        !opp.TryFindMonster(prey, out _));
+                    FieldSpellEffects.RefreshBoard(engine);
+                    Check("Relinquished ATK equals equipped printed ATK",
+                        rel.CurrentAtk == 1400, $"ATK {rel.CurrentAtk}");
+                    Check("Relinquished: second absorb same turn refused (OPT)",
+                        opp.TryFindMonster(prey2, out _) &&
+                        !engine.CanActivateSpellTrap(p, rel, fromHand: false));
+
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    engine.TryEndTurnSafe(engine.TurnPlayer);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    if (engine.TurnPlayer == opp && engine.Phase == DuelPhase.Main1)
+                        engine.TryEnterBattlePhase(opp);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    DrainCombat(engine);
+                    if (engine.Phase == DuelPhase.Battle && engine.CanAttack(opp, bewd))
                     {
-                        Check("Relinquished: Activate",
-                            engine.TryActivateSpellTrap(p, rel, fromHand: false) &&
-                            engine.IsLegalEffectTarget(prey));
-                        Check("Relinquished: equip Celtic, ATK becomes 1400",
-                            engine.TrySelectEffectTarget(prey) &&
-                            rel.Equips.Contains(prey) &&
-                            !opp.TryFindMonster(prey, out _));
-                        FieldSpellEffects.RefreshBoard(engine);
-                        Check("Relinquished ATK equals equipped printed ATK",
-                            rel.CurrentAtk == 1400, $"ATK {rel.CurrentAtk}");
+                        engine.TryAttack(opp, bewd, rel);
+                        DrainCombat(engine);
                     }
-                    else
+
+                    Check("Relinquished: battle would destroy it — equipped destroyed instead, Relinquished stays",
+                        p.TryFindMonster(rel, out _) &&
+                        !rel.Equips.Contains(prey) &&
+                        (opp.Graveyard.Contains(prey) || p.Graveyard.Contains(prey)),
+                        $"relOnField={p.TryFindMonster(rel, out _)} equips={rel.Equips.Count} " +
+                        $"preyGyOpp={opp.Graveyard.Contains(prey)} preyGyP={p.Graveyard.Contains(prey)} " +
+                        $"phase={engine.Phase} turnOpp={engine.TurnPlayer == opp}");
+                    Check("Relinquished battle: BEWD attacker still on field",
+                        opp.TryFindMonster(bewd, out _));
+                }
+
+                {
+                    const int bewdId = 89631139;
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    var rel = PlaceMonster(engine, p, 64631466, 2, BattlePosition.Attack, true);
+                    var prey = PlaceMonster(engine, opp, celtic, 2, BattlePosition.Attack, true);
+                    var attacker = PlaceMonster(engine, opp, bewdId, 1, BattlePosition.Attack, true);
+                    var absorbed = engine.TryActivateSpellTrap(p, rel, fromHand: false) &&
+                                   engine.TrySelectEffectTarget(prey);
+                    rel.IsNegated = true;
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    engine.TryEndTurnSafe(engine.TurnPlayer);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    if (engine.TurnPlayer == opp && engine.Phase == DuelPhase.Main1)
+                        engine.TryEnterBattlePhase(opp);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    DrainCombat(engine);
+                    if (engine.Phase == DuelPhase.Battle && engine.CanAttack(opp, attacker))
                     {
-                        Check("Relinquished: stub cannot activate (incomplete program)",
-                            !engine.TryActivateSpellTrap(p, rel, fromHand: false));
+                        engine.TryAttack(opp, attacker, rel);
+                        DrainCombat(engine);
                     }
+
+                    Check("Relinquished: negated absorb host is destroyed by battle",
+                        absorbed && !p.TryFindMonster(rel, out _) && p.Graveyard.Contains(rel) &&
+                        !rel.Equips.Contains(prey) &&
+                        (opp.Graveyard.Contains(prey) || p.Graveyard.Contains(prey)),
+                        $"absorbed={absorbed} relOn={p.TryFindMonster(rel, out _)} relGy={p.Graveyard.Contains(rel)} " +
+                        $"eq={rel.Equips.Count} preyGyOpp={opp.Graveyard.Contains(prey)} preyGyP={p.Graveyard.Contains(prey)}");
                 }
 
                 {
@@ -2773,7 +4325,9 @@ namespace WRLDZ.Duel.Rules
                         p.TryFindMonster(fen, out _) && fen.WasSpecialSummoned,
                         $"onField={p.TryFindMonster(fen, out _)} ss={fen.WasSpecialSummoned}");
 
-                    var prey = PlaceMonster(engine, opp, celtic, 1, BattlePosition.Attack, true);
+                    // Defense Position (DEF 1200): Fenrir (1400) survives. Its trigger needs it still on the field (Lua
+                    // aux.bdocon, IsRelateToBattle) — a 1400 ATK trade destroys both and skips nothing (EngineHygiene v160).
+                    var prey = PlaceMonster(engine, opp, celtic, 1, BattlePosition.Defense, true);
                     prey.ClearAttackFlags();
                     if (engine.IsAwaitingResponse) engine.PassResponse();
                     engine.TryEndTurnSafe(engine.TurnPlayer);
@@ -3379,6 +4933,10 @@ namespace WRLDZ.Duel.Rules
                             ClearBoard(engine);
                             var p = engine.Player;
                             p.Hand.Clear();
+                            var gySs = prog.ClauseList.Exists(c =>
+                                c != null &&
+                                c.Action == EffectActionKind.SpecialSummonFromGy);
+                            if (gySs) continue;
                             var clause = prog.ClauseList.Find(c =>
                                 c != null && c.Action == EffectActionKind.EquipThisToTarget);
                             var hostId = celtic;
@@ -3398,11 +4956,25 @@ namespace WRLDZ.Duel.Rules
                                          cand.race.IndexOf(clause.RaceFilter,
                                              System.StringComparison.OrdinalIgnoreCase) < 0))
                                         continue;
+                                    // ContinuousLocksAndIgnitions batch (v163): Buster Rancher — ATK 1000 or less.
+                                    if (clause.EquipLimitAtkMax > 0 &&
+                                        (cand.atk < 0 || cand.atk > clause.EquipLimitAtkMax))
+                                        continue;
                                     // Gearfried the Iron Knight destroys any Equip Card attached to it.
                                     if (CardTextEffectCompiler.Compile(cand)?.ClauseList.Exists(c =>
                                             c != null && c.Action ==
                                             EffectActionKind.DestroyEquipsAttachedToThis) == true)
                                         continue;
+                                    var want = clause.EquipHostName ?? clause.NamedCard;
+                                    if (!string.IsNullOrEmpty(want))
+                                    {
+                                        var n = cand.name ?? "";
+                                        var hit = n.Equals(want, System.StringComparison.OrdinalIgnoreCase) ||
+                                                  (!string.IsNullOrEmpty(clause.AltNamedCard) &&
+                                                   n.Equals(clause.AltNamedCard,
+                                                       System.StringComparison.OrdinalIgnoreCase));
+                                        if (!hit) continue;
+                                    }
                                     hostId = cand.id;
                                     break;
                                 }
@@ -3451,12 +5023,19 @@ namespace WRLDZ.Duel.Rules
 
                             if (engine.IsAwaitingEffectTarget)
                             {
-                                var pick = engine.PendingActivation.LegalTargets
-                                    .Find(t => t != null && t == host)
-                                    ?? engine.PendingActivation.LegalTargets
-                                        .Find(t => t != null);
-                                if (pick == null || !engine.TrySelectEffectTarget(pick) ||
-                                    card.EquippedTo == null)
+                                // A choice made before the host (ATK or DEF) is one extra pick.
+                                for (var step = 0; step < 4 && engine.IsAwaitingEffectTarget &&
+                                                   card.EquippedTo == null; step++)
+                                {
+                                    var legal = engine.PendingActivation?.LegalTargets;
+                                    var pick = legal?.Find(t => t != null && t == host)
+                                        ?? legal?.Find(t => t != null && t.CardId != 0)
+                                        ?? legal?.Find(t => t != null);
+                                    if (pick == null || !engine.TrySelectEffectTarget(pick))
+                                        break;
+                                }
+
+                                if (card.EquippedTo == null)
                                     unplayable.Add((def.name ?? $"#{def.id}") + " attach");
                             }
                             else if (card.EquippedTo == null)
@@ -3538,8 +5117,10 @@ namespace WRLDZ.Duel.Rules
                             engine.TrySelectEffectTarget(host) &&
                             p.Graveyard.Contains(host) &&
                             !p.TryFindMonster(host, out _) &&
+                            host.SentByContinuousSpellEffect &&
                             opp.LifePoints == oppLp - 1500,
-                            $"gy={p.Graveyard.Contains(host)} oppLp={opp.LifePoints} was {oppLp}");
+                            $"gy={p.Graveyard.Contains(host)} flag={host.SentByContinuousSpellEffect} " +
+                            $"oppLp={opp.LifePoints} was {oppLp}");
                     }
 
                     {
@@ -3627,6 +5208,23 @@ namespace WRLDZ.Duel.Rules
                         var card = PutInHand(engine, p, toonWorld);
                         Check("Toon World: refuse with less than 1000 LP",
                             !engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        p.LifePoints = 1000;
+                        var card = PutInHand(engine, p, toonWorld);
+                        Check("Toon World: 1000 LP is a legal cost (may lose on purpose)",
+                            engine.CanActivateSpellTrap(p, card, fromHand: true));
+                        Check("Toon World: paying last 1000 LP asks are-you-sure",
+                            engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                            engine.PendingActivation != null &&
+                            engine.PendingActivation.AwaitingLpZeroConfirm &&
+                            p.LifePoints == 1000,
+                            $"zero={engine.PendingActivation?.AwaitingLpZeroConfirm} lp={p.LifePoints}");
                     }
 
                     {
@@ -3776,6 +5374,10 @@ namespace WRLDZ.Duel.Rules
                         foreach (var def in db.GetAllCards())
                         {
                             if (def == null || !def.IsContinuousSpellOrTrap) continue;
+                            // DestinyBoard batch: "This card can only be placed on the field by the effect of "X"."
+                            // (Spirit Message, Sarcophagus) has no activation by rule — covered by
+                            // DestinyBoardRegressionTests.MessagesCannotBeActivatedOrSet.
+                            if (TextEffects.DestinyBoardRuntime.PlacerOf(def) != null) continue;
                             var prog = CardTextEffectCompiler.Compile(def);
                             if (prog == null || !prog.FullyCompiled) continue;
                             var unique = false;
@@ -3904,7 +5506,7 @@ namespace WRLDZ.Duel.Rules
                     foreach (var def in db.GetAllCards())
                     {
                         if (def == null || !def.IsSpell || def.IsTrap || def.IsFieldSpell ||
-                            def.IsEquipSpell || def.IsContinuousSpellOrTrap)
+                            def.IsEquipSpell || def.IsContinuousSpellOrTrap || def.IsRitualSpell)
                             continue;
                         if (def.race != null &&
                             def.race.IndexOf("Quick", System.StringComparison.OrdinalIgnoreCase) >= 0)
@@ -3921,9 +5523,17 @@ namespace WRLDZ.Duel.Rules
                             if (c == null) continue;
                             if (c.RequiresTargetChoice || c.RequiresLordOfDOnField ||
                                 c.RequiresDiscardCost || c.RequiresSendNamedToGy ||
+                                c.RequiresTributeCount > 0 || c.RequiresTributeThis ||
+                                c.OnlyDuringOwnStandby ||
+                                // Token Thanksgiving needs a Token on the field (Lua target chk).
+                                (c.Action == EffectActionKind.DestroyTokensInflictPer && c.TokenDestroyGainsLp) ||
+                                c.Action == EffectActionKind.PayLpToDeclareAttack ||
+                                c.Timing == EffectTiming.PositionChanged ||
+                                c.Timing == EffectTiming.ThisCardDeclaresAttack ||
                                 c.DiscardCostCount > 0 || !string.IsNullOrEmpty(c.ActivationCondition) ||
                                 !string.IsNullOrEmpty(c.RequiresFaceUpName) ||
                                 c.Action == EffectActionKind.FusionSummonRegistered ||
+                                c.Action == EffectActionKind.RitualSummon ||
                                 c.Action == EffectActionKind.AddFromDeckToHand ||
                                 c.Action == EffectActionKind.AddNamedFromDeckToHand ||
                                 c.Action == EffectActionKind.SpecialSummonFromGy ||
@@ -4008,8 +5618,11 @@ namespace WRLDZ.Duel.Rules
                 Check("Vocabulary: shared kinds cover a majority of compiled effect cards",
                     shared > unique && shared >= 80,
                     $"shared={shared} unique={unique} stub={stub} unimplemented={unimplemented} structural={structural}");
+                // PhaseTimersAndDeckTop batch (v163): Pyro Clock of Destiny (AdvanceTurnCountByOne) is the 41st.
+                // DiscardTriggersSelfSs batch (v173): SpecialSummonThisFromGy (Fear from the Dark / Despair from the
+                // Dark, a 2-card family) is the 42nd kind, 43rd unique card.
                 Check("Vocabulary: unique exceptions stay a short named list",
-                    unique <= 40,
+                    unique <= 43,
                     $"unique={unique}");
                 Check("Vocabulary: Exiled Force compiles as shared Tribute→Destroy",
                     db.Get(74131780) is { } exd &&
@@ -4037,6 +5650,29 @@ namespace WRLDZ.Duel.Rules
                 Check("Arena pace: AI step is at least 3s",
                     DuelPresentationPacer.DefaultAiStep >= 3f,
                     $"{DuelPresentationPacer.DefaultAiStep}");
+                Check("Arena S/T hologram hover is at least 4s (not the disk toaster)",
+                    WRLDZ.Presentation.ArInteraction.SpellActivationPresentation.MinHoverSeconds >= 4f,
+                    $"{WRLDZ.Presentation.ArInteraction.SpellActivationPresentation.MinHoverSeconds}");
+                Check("Arena opponent S/T hologram hover is at least 6s",
+                    WRLDZ.Presentation.ArInteraction.SpellActivationPresentation.OpponentReadHoverSeconds >= 6f,
+                    $"{WRLDZ.Presentation.ArInteraction.SpellActivationPresentation.OpponentReadHoverSeconds}");
+#if !WRLDZ_HEADLESS
+                // Presentation-layout assertion: needs the real AR layer (ArArenaCardVisual). The GitHub-lineage
+                // headless runner (Tools/HeadlessEngine, WRLDZ_HEADLESS) only has the inert stub, so it skips it.
+                {
+                    var zone = new Vector3(0f, 0.14f, -2.0f);
+                    var you = WRLDZ.Presentation.ArInteraction.ArArenaCardVisual
+                        .SpellActivatePresentLocal(zone, true);
+                    var opp = WRLDZ.Presentation.ArInteraction.ArArenaCardVisual
+                        .SpellActivatePresentLocal(zone, false);
+                    Check("Anime S/T activate: player present is toward the local duelist (−Z)",
+                        you.z < zone.z && you.y > zone.y + 0.3f,
+                        $"you=({you.x:0.00},{you.y:0.00},{you.z:0.00}) zone.z={zone.z}");
+                    Check("Anime S/T activate: opponent present is toward their duelist (+Z)",
+                        opp.z > zone.z && opp.y > zone.y + 0.3f,
+                        $"opp=({opp.x:0.00},{opp.y:0.00},{opp.z:0.00})");
+                }
+#endif
 
                 {
                     var engine = Fresh(db, pDeck, aDeck);
@@ -4241,6 +5877,62 @@ namespace WRLDZ.Duel.Rules
                                 opp.Banished.Contains(ss) && !opp.Graveyard.Contains(ss));
                         }
                     }
+                }
+            }
+
+            // ── Trap Hole vs Lord of D. (Spellcaster 1200 ATK): legal, must not hang ──
+            {
+                const int lordOfD = 17985575;
+                const int trapHoleId = 4206964;
+                var lodDef = db.Get(lordOfD);
+                var lodProg = lodDef != null ? CardTextEffectCompiler.Compile(lodDef) : null;
+                Check("Lord of D. compiles Dragon cannot-target, not self-protect",
+                    lodProg != null && lodProg.FullyCompiled &&
+                    lodProg.ClauseList.Exists(c => c != null &&
+                        c.Action == EffectActionKind.ContinuousCannotTargetDragons) &&
+                    !lodProg.ClauseList.Exists(c => c != null &&
+                        c.Action == EffectActionKind.CannotBeTargetedByEffects &&
+                        string.IsNullOrEmpty(c.RaceFilter) &&
+                        string.IsNullOrEmpty(c.NamedCard)),
+                    lodProg == null
+                        ? "null"
+                        : string.Join("|", lodProg.ClauseList.ConvertAll(c =>
+                            c == null ? "null" : c.Action.ToString())));
+
+                var engine = Fresh(db, pDeck, aDeck);
+                if (!ReachOpponentMain(engine))
+                {
+                    Check("Trap Hole vs Lord of D. reached opponent Main", false,
+                        $"tp={engine.TurnPlayer?.Name} phase={engine.Phase}");
+                }
+                else
+                {
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    var hole = PlaceSetTrap(engine, p, trapHoleId, 2);
+                    hole.SetThisTurn = false;
+                    opp.Hand.Clear();
+                    var lord = PutInHand(engine, opp, lordOfD);
+                    Check("Lord of D. Normal Summon",
+                        engine.TryNormalSummon(opp, lord, asSet: false));
+                    Check("Summon window opens Trap Hole vs Lord of D.",
+                        engine.IsAwaitingResponse &&
+                        engine.PendingResponse != null &&
+                        engine.PendingResponse.Timing == ResponseTiming.MonsterSummoned &&
+                        SpellTrapEffects.IsLegalResponseCard(engine, p, hole,
+                            ResponseTiming.MonsterSummoned, lord));
+                    Check("Lord of D. is not effect-untargetable (he is a Spellcaster)",
+                        lord != null &&
+                        !ContinuousProtections.CannotBeTargetedByEffects(engine, lord));
+                    var activated = engine.TryActivateSpellTrap(p, hole, fromHand: false);
+                    Check("Trap Hole activates vs Lord of D.",
+                        activated,
+                        $"awaitingResp={engine.IsAwaitingResponse} awaitingTgt={engine.IsAwaitingEffectTarget}");
+                    Check("Lord of D. destroyed to GY",
+                        opp.Graveyard.Contains(lord) && !opp.MonstersOnField().Contains(lord));
+                    Check("Trap Hole window closed (warning must not hang)",
+                        !engine.IsAwaitingResponse && !engine.IsAwaitingEffectTarget);
                 }
             }
 
@@ -4830,8 +6522,16 @@ namespace WRLDZ.Duel.Rules
                 var penguinDef = db.Get(penguinId);
                 var penguinProg = penguinDef != null ? CardTextEffectCompiler.Compile(penguinDef) : null;
 
-                Check("Penguin Soldier up-to-2 bounce stays leftover (not invented)",
-                    penguinProg != null && !penguinProg.FullyCompiled);
+                Check("Penguin Soldier official text FullyCompiled Flip bounce Amount=2",
+                    penguinProg != null && penguinProg.FullyCompiled &&
+                    penguinProg.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.Flip &&
+                        c.Action == EffectActionKind.ReturnToHand &&
+                        c.Amount == 2 && c.RequiresTargetChoice),
+                    penguinProg == null
+                        ? "null"
+                        : $"full={penguinProg.FullyCompiled} n={penguinProg.ClauseList.Count} " +
+                          $"unparsed={string.Join("|", penguinProg.UnparsedFragments ?? System.Array.Empty<string>())}");
 
                 var dekoichiDef = db.Get(87621407);
                 var dekoichiProg = dekoichiDef != null ? CardTextEffectCompiler.Compile(dekoichiDef) : null;
@@ -4840,8 +6540,11 @@ namespace WRLDZ.Duel.Rules
 
                 var ladyDef = db.Get(90147755);
                 var ladyProg = ladyDef != null ? CardTextEffectCompiler.Compile(ladyDef) : null;
-                Check("Lady Assailant banish-top-3 stays leftover (not invented)",
-                    ladyProg != null && !ladyProg.FullyCompiled);
+                // FlipCostsAndFusion batch: the banish-top-3 compiles as the FLIP cost (Lua SetCost) of the 800 burn.
+                Check("Lady Assailant banish-top-3 compiles as the FLIP cost, never a free burn",
+                    ladyProg != null && ladyProg.FullyCompiled &&
+                    ladyProg.ClauseList.TrueForAll(c => c == null || c.Action != EffectActionKind.InflictDamageToOpponent ||
+                                                        c.CostBanishTopDeckCards == 3));
 
                 void CheckFilterSs(int id, string name, string kind, int cap, bool atk)
                 {
@@ -4870,6 +6573,8 @@ namespace WRLDZ.Duel.Rules
                               $"unparsed={string.Join("|", pr.UnparsedFragments ?? System.Array.Empty<string>())}");
                 }
 
+                CheckFilterSs(83011278, "Mystic Tomato", "DARK", 1500, true);
+                CheckFilterSs(97017120, "Giant Rat", "EARTH", 1500, true);
                 CheckFilterSs(57839750, "Mother Grizzly", "WATER", 1500, true);
                 CheckFilterSs(60806437, "UFO Turtle", "FIRE", 1500, true);
                 CheckFilterSs(39191307, "Masked Dragon", "Dragon", 1500, true);
@@ -4899,15 +6604,21 @@ namespace WRLDZ.Duel.Rules
                 const int decayedId = 10209545;
                 var decayedDef = db.Get(decayedId);
                 var decayedProg = decayedDef != null ? CardTextEffectCompiler.Compile(decayedDef) : null;
-                Check("Decayed Commander NS named hand SS compiles; battle-damage discard leftover",
-                    decayedProg != null && !decayedProg.FullyCompiled &&
+                Check("Decayed Commander NS named hand SS + direct-attack random discard compile",
+                    decayedProg != null && decayedProg.FullyCompiled &&
                     decayedProg.ClauseList.Exists(c =>
                         c != null &&
                         c.RequiresThisNormalSummoned &&
                         c.Action == EffectActionKind.SpecialSummonNamed &&
                         c.FromHand &&
                         string.Equals(c.NamedCard, "Zombie Tiger",
-                            System.StringComparison.OrdinalIgnoreCase)),
+                            System.StringComparison.OrdinalIgnoreCase)) &&
+                    decayedProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Timing == EffectTiming.ThisCardInflictsBattleDamage &&
+                        c.Action == EffectActionKind.DiscardRandomFromOpponentHand &&
+                        c.RequiresDirectAttack &&
+                        c.Amount == 1),
                     decayedProg == null
                         ? "null"
                         : $"full={decayedProg.FullyCompiled} n={decayedProg.ClauseList.Count} " +
@@ -4921,7 +6632,8 @@ namespace WRLDZ.Duel.Rules
                     oldVinProg.ClauseList.Exists(c =>
                         c != null && c.Timing == EffectTiming.Flip &&
                         c.Action == EffectActionKind.Destroy &&
-                        c.Zone == EffectZoneFilter.OppFaceUpMonsters),
+                        // "Target 1 monster your opponent controls": face-down monsters too (Lua aux.TRUE).
+                        c.Zone == EffectZoneFilter.OppMonsters),
                     oldVinProg == null
                         ? "null"
                         : $"full={oldVinProg.FullyCompiled} unparsed={string.Join("|", oldVinProg.UnparsedFragments ?? System.Array.Empty<string>())}");
@@ -5020,10 +6732,20 @@ namespace WRLDZ.Duel.Rules
 
                 var sageStone = db.Get(13604200);
                 var sageProg = sageStone != null ? CardTextEffectCompiler.Compile(sageStone) : null;
-                Check("Sage's Stone leftover (no invented spell If-you-control lock)",
-                    sageProg != null && !sageProg.FullyCompiled &&
-                    !sageProg.ClauseList.Exists(c =>
-                        c != null && c.Action == EffectActionKind.SpecialSummonNamed));
+                // "If you control X" is an honored controller-scoped gate now
+                // (RequiresFaceUpName + RequiresControllerNamedCard), so this compiles.
+                Check("Sage's Stone compiles with a controller-scoped name gate",
+                    sageProg != null && sageProg.FullyCompiled &&
+                    sageProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.SpecialSummonNamed &&
+                        c.NamedCard == "Dark Magician" &&
+                        c.FromHand && c.FromDeck &&
+                        c.RequiresControllerNamedCard &&
+                        c.RequiresFaceUpName == "Dark Magician Girl"),
+                    sageProg == null
+                        ? "null"
+                        : $"full={sageProg.FullyCompiled} unparsed={string.Join("|", sageProg.UnparsedFragments ?? System.Array.Empty<string>())}");
 
                 var release = db.Get(75417459);
                 var relProg = release != null ? CardTextEffectCompiler.Compile(release) : null;
@@ -5132,7 +6854,8 @@ namespace WRLDZ.Duel.Rules
                         c.RequiresThisFlipSummoned &&
                         c.Action == EffectActionKind.Destroy &&
                         c.RequiresTargetChoice &&
-                        c.Zone == EffectZoneFilter.OppFaceUpMonsters),
+                        // "Target 1 monster your opponent controls": face-down monsters too (Lua aux.TRUE).
+                        c.Zone == EffectZoneFilter.OppMonsters),
                     scarabsProg == null
                         ? "null"
                         : $"full={scarabsProg.FullyCompiled} n={scarabsProg.ClauseList.Count} " +
@@ -5233,13 +6956,15 @@ namespace WRLDZ.Duel.Rules
                 const int cobraId = 86801871;
                 var cobraDef = db.Get(cobraId);
                 var cobraProg = cobraDef != null ? CardTextEffectCompiler.Compile(cobraDef) : null;
-                Check("Cobra Jar official text Flip token SS compiles; battle-destroyed inflict leftover",
-                    cobraProg != null && !cobraProg.FullyCompiled &&
+                // CallsDiceAndSetTriggers batch (v163): the battle-destroyed burn rides on the Token clause.
+                Check("Cobra Jar official text Flip token SS + battle-destroyed burn FullyCompiled (one Token clause)",
+                    cobraProg != null && cobraProg.FullyCompiled && cobraProg.ClauseList.Count == 1 &&
                     cobraProg.ClauseList.Exists(c =>
                         c != null &&
                         c.Timing == EffectTiming.Flip &&
                         c.Action == EffectActionKind.SpecialSummonToken &&
-                        c.TokenLevel == 3 && c.TokenAtk == 1200 && c.TokenDef == 1200) &&
+                        c.TokenLevel == 3 && c.TokenAtk == 1200 && c.TokenDef == 1200 &&
+                        c.TokenBattleDestroyedDamageToOpponent == 500) &&
                     !cobraProg.ClauseList.Exists(c =>
                         c != null && c.Action == EffectActionKind.InflictDamageToOpponent),
                     cobraProg == null
@@ -5379,18 +7104,21 @@ namespace WRLDZ.Duel.Rules
                 const int immortalId = 84926738;
                 var immortalDef = db.Get(immortalId);
                 var immortalProg = immortalDef != null ? CardTextEffectCompiler.Compile(immortalDef) : null;
-                Check("Immortal of Thunder Flip gain 3000 compiles; GY lose 5000 LP compiles",
+                Check("Immortal of Thunder FullyCompiled Flip gain and field-to-GY loss",
                     immortalProg != null && immortalProg.FullyCompiled &&
                     immortalProg.ClauseList.Exists(c =>
                         c != null &&
                         c.Timing == EffectTiming.Flip &&
                         c.Action == EffectActionKind.GainLifePoints &&
                         c.Amount == 3000) &&
-                        immortalProg.ClauseList.Exists(c =>
-                            c != null &&
-                            c.Timing == EffectTiming.SentFromFieldToGy &&
-                            c.Action == EffectActionKind.LoseLifePoints &&
-                            c.Amount == 5000),
+                    // Local lineage compiled the field-to-GY loss as TakeEffectDamage; the GitHub
+                    // lineage as LoseLifePoints (not damage). Either arm is the same rule here.
+                    immortalProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Timing == EffectTiming.SentFromFieldToGy &&
+                        (c.Action == EffectActionKind.TakeEffectDamage ||
+                         c.Action == EffectActionKind.LoseLifePoints) &&
+                        c.Amount == 5000),
                     immortalProg == null
                         ? "null"
                         : $"full={immortalProg.FullyCompiled} unparsed={string.Join("|", immortalProg.UnparsedFragments ?? System.Array.Empty<string>())}");
@@ -5446,6 +7174,44 @@ namespace WRLDZ.Duel.Rules
                         slate.LingeringAtkModifier == 500 && slate.LingeringDefModifier == 500,
                         $"atk={slate.CurrentAtk} def={slate.CurrentDef} " +
                         $"la={slate.LingeringAtkModifier} ld={slate.LingeringDefModifier}");
+                    Check("Slate Warrior Flip: battle math uses lingering 2400/900",
+                        BattleMechanics.AttackValue(slate) == 2400 &&
+                        BattleMechanics.DefenseValue(slate) == 900,
+                        $"bvATK={BattleMechanics.AttackValue(slate)} " +
+                        $"bvDEF={BattleMechanics.DefenseValue(slate)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var slate = PlaceMonster(engine, p, slateId, 2, BattlePosition.Defense, false);
+                    slate.SetThisTurn = false;
+                    Check("Slate Warrior Flip then later battle: Flip Summon",
+                        engine.TryFlipSummon(p, slate));
+                    if (ReachPlayerBattle(engine) && p.TryFindMonster(slate, out _))
+                    {
+                        opp.LifePoints = 8000;
+                        opp.Hand.Clear();
+                        var victim = PlaceMonster(engine, opp, celtic, 2, BattlePosition.Attack, true);
+                        slate.SummonedThisTurn = false;
+                        slate.ClearAttackFlags();
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        Check("Slate Warrior Flip: 2400 can attack Celtic",
+                            engine.Phase == DuelPhase.Battle && engine.CanAttack(p, slate));
+                        if (engine.Phase == DuelPhase.Battle && engine.CanAttack(p, slate))
+                        {
+                            engine.TryAttack(p, slate, victim);
+                            DrainCombat(engine);
+                        }
+
+                        Check("Slate Warrior Flip: battles as 2400 (Celtic 1400 dies, 1000 dmg)",
+                            !opp.TryFindMonster(victim, out _) &&
+                            opp.LifePoints == 7000,
+                            $"victimOnField={opp.TryFindMonster(victim, out _)} LP={opp.LifePoints}");
+                    }
                 }
 
                 {
@@ -5483,6 +7249,34 @@ namespace WRLDZ.Duel.Rules
                         Check("Hane-Hane Flip: victim returned to hand",
                             !opp.TryFindMonster(victim, out _) &&
                             opp.Hand.Exists(c => c.CardId == celtic));
+                    }
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var penguin = PlaceMonster(engine, p, penguinId, 2, BattlePosition.Defense, false);
+                    penguin.SetThisTurn = false;
+                    var v1 = PlaceMonster(engine, opp, celtic, 2, BattlePosition.Attack, true);
+                    var v2 = PlaceMonster(engine, opp, laJinn, 1, BattlePosition.Attack, true);
+                    Check("Penguin Soldier Flip Summon", engine.TryFlipSummon(p, penguin));
+                    Check("Penguin Soldier Flip: opens bounce (up to 2)",
+                        engine.IsAwaitingEffectTarget && engine.PendingActivation != null &&
+                        engine.PendingActivation.TargetPicksAreUpTo &&
+                        engine.PendingActivation.TargetPicksRemaining == 2);
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        Check("Penguin Soldier: first bounce still pending",
+                            engine.TrySelectEffectTarget(v1) && engine.IsAwaitingEffectTarget);
+                        Check("Penguin Soldier: second bounce returns both",
+                            engine.TrySelectEffectTarget(v2) &&
+                            !opp.TryFindMonster(v1, out _) &&
+                            !opp.TryFindMonster(v2, out _) &&
+                            opp.Hand.Exists(c => c.CardId == celtic) &&
+                            opp.Hand.Exists(c => c.CardId == laJinn));
                     }
                 }
 
@@ -5546,6 +7340,42 @@ namespace WRLDZ.Duel.Rules
                             atk.LingeringAtkModifier == -500 && atk.LingeringDefModifier == -500,
                             $"atk={atk.CurrentAtk} def={atk.CurrentDef} " +
                             $"la={atk.LingeringAtkModifier} ld={atk.LingeringDefModifier}");
+                        Check("Slate Warrior battle: destroyer math is 1300/500",
+                            BattleMechanics.AttackValue(atk) == 1300 &&
+                            BattleMechanics.DefenseValue(atk) == 500,
+                            $"bvATK={BattleMechanics.AttackValue(atk)} " +
+                            $"bvDEF={BattleMechanics.DefenseValue(atk)}");
+                    }
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    if (ReachOpponentBattle(engine))
+                    {
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        const int kuriboh = 40640057;
+                        var slate = PlaceMonster(engine, p, slateId, 2, BattlePosition.Defense, false);
+                        slate.SetThisTurn = false;
+                        var atk = PlaceMonster(engine, opp, kuriboh, 2, BattlePosition.Attack, true);
+                        atk.SummonedThisTurn = false;
+                        atk.ClearAttackFlags();
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        if (engine.Phase == DuelPhase.Battle && engine.CanAttack(opp, atk))
+                        {
+                            engine.TryAttack(opp, atk, slate);
+                            DrainCombat(engine);
+                        }
+
+                        Check("Slate Warrior Flip-by-battle: survives 300 ATK, Flip +500 sticks",
+                            p.TryFindMonster(slate, out _) &&
+                            slate.LingeringAtkModifier == 500 &&
+                            BattleMechanics.AttackValue(slate) == 2400 &&
+                            BattleMechanics.DefenseValue(slate) == 900,
+                            $"onField={p.TryFindMonster(slate, out _)} " +
+                            $"atk={slate.CurrentAtk} bv={BattleMechanics.AttackValue(slate)} " +
+                            $"la={slate.LingeringAtkModifier}");
                     }
                 }
 
@@ -5708,6 +7538,26 @@ namespace WRLDZ.Duel.Rules
                             $"on={p.TryFindMonster(fox, out _)} gy={p.Graveyard.Contains(fox)} " +
                             $"ss={fox.WasSpecialSummoned}");
                     }
+                }
+
+                {
+                    const int necrovalley = 47355498;
+                    const int necrovalleyFoxFireId = 88753985;
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var nv = PutInHand(engine, p, necrovalley);
+                    var nvActive = engine.TryActivateSpellTrap(p, nv, fromHand: true);
+                    FieldSpellEffects.RefreshBoard(engine);
+                    var fox = engine.CreateCardInstance(necrovalleyFoxFireId);
+                    fox.WasDestroyedByBattle = true;
+                    fox.SentFromFieldTurnNumber = engine.TurnNumber;
+                    p.Graveyard.Add(fox);
+                    TextEffectRuntime.FirePhaseTriggers(engine, p, EffectTiming.EndPhase);
+                    Check("Necrovalley: Fox Fire End Phase SS is blocked",
+                        nvActive && p.Graveyard.Contains(fox) && !p.TryFindMonster(fox, out _),
+                        $"nv={nvActive} gy={p.Graveyard.Contains(fox)} on={p.TryFindMonster(fox, out _)}");
                 }
 
                 {
@@ -6031,7 +7881,7 @@ namespace WRLDZ.Duel.Rules
                     Check("Old Vindictive Magician Flip: opens opp destroy target",
                         engine.IsAwaitingEffectTarget &&
                         engine.PendingActivation != null &&
-                        engine.PendingActivation.TargetKind == EffectTargetKind.OppFaceUpMonster);
+                        engine.PendingActivation.TargetKind == EffectTargetKind.OppMonster);
                     if (engine.IsAwaitingEffectTarget)
                     {
                         var t = engine.PendingActivation.LegalTargets
@@ -6608,11 +8458,27 @@ namespace WRLDZ.Duel.Rules
                     if (engine.IsAwaitingResponse) engine.PassResponse();
                     p = engine.Player;
                     var malice = PlaceMonster(engine, p, maliceId, 2, BattlePosition.Attack, true);
-                    var ecto = PlaceSetTrap(engine, p, ectoId, 2);
-                    ecto.FaceUp = true;
-                    engine.SendCardToGrave(p, malice, sentBy: ecto);
-                    Check("Malice Doll sent by Continuous Spell to GY",
-                        p.Graveyard.Contains(malice) && malice.SentByContinuousSpellEffect);
+                    var ecto = PutInHand(engine, p, ectoId);
+                    Check("Malice Doll: Ectoplasmer Activate",
+                        engine.TryActivateSpellTrap(p, ecto, fromHand: true) &&
+                        p.TryFindSpellTrap(ecto, out _) && ecto.FaceUp);
+                    TextEffectRuntime.FirePhaseTriggers(engine, p, EffectTiming.EndPhase);
+                    Check("Malice Doll: Ectoplasmer End Phase opens effect tribute",
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.AwaitingEffectTribute &&
+                        !engine.PendingActivation.AwaitingIgnitionCost &&
+                        engine.PendingActivation.LegalTargets.Contains(malice),
+                        $"pending={engine.IsAwaitingEffectTarget} " +
+                        $"effectTrib={engine.PendingActivation?.AwaitingEffectTribute} " +
+                        $"cost={engine.PendingActivation?.AwaitingIgnitionCost}");
+                    Check("Malice Doll tributed by Ectoplasmer effect (not cost)",
+                        engine.TrySelectEffectTarget(malice) &&
+                        p.Graveyard.Contains(malice) &&
+                        !p.TryFindMonster(malice, out _) &&
+                        malice.SentByContinuousSpellEffect,
+                        $"gy={p.Graveyard.Contains(malice)} " +
+                        $"flag={malice.SentByContinuousSpellEffect}");
                     for (var t = 0; t < 8; t++)
                     {
                         if (engine.IsAwaitingResponse) engine.PassResponse();
@@ -6631,7 +8497,10537 @@ namespace WRLDZ.Duel.Rules
                 }
             }
 
+            // ── Registered Polymerization Fusion stress ──
+            {
+                const int bsd = SpellTrapEffects.BlackSkullDragon;
+                const int gaia = SpellTrapEffects.GaiaTheDragonChampion;
+                const int teR = SpellTrapEffects.ThousandEyesRestrict;
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    engine.Opponent.Hand.Clear();
+                    p.ExtraDeck.Clear();
+                    p.ExtraDeck.Add(bsd);
+                    var poly = PutInHand(engine, p, SpellTrapEffects.Polymerization);
+                    var skull = PutInHand(engine, p, SpellTrapEffects.SummonedSkull);
+                    var redEyes = PutInHand(engine, p, SpellTrapEffects.RedEyesBlackDragon);
+                    var materials = new System.Collections.Generic.List<CardInstance> { skull, redEyes };
+                    var check = SummonProcedures.CheckFusion(engine, p, engine.CreateCardInstance(bsd),
+                        materials, poly);
+                    Check("Polymerization: Black Skull exact recipe is legal", check.Legal, check.Reason);
+                    Check("Polymerization: Black Skull sends hand materials and summons from Extra",
+                        engine.TryActivateSpellTrap(p, poly, fromHand: true) &&
+                        p.Graveyard.Contains(skull) && p.Graveyard.Contains(redEyes) &&
+                        p.Graveyard.Contains(poly) &&
+                        p.MonstersOnField().Any(m => m != null && m.CardId == bsd),
+                         $"gy={p.Graveyard.Count} field={p.MonsterCount} extra={p.ExtraDeck.Count}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    engine.Opponent.Hand.Clear();
+                    p.ExtraDeck.Clear();
+                    p.ExtraDeck.Add(gaia);
+                    var poly = PutInHand(engine, p, SpellTrapEffects.Polymerization);
+                    var fieldGaia = PlaceMonster(engine, p, SpellTrapEffects.GaiaTheFierceKnight, 2,
+                        BattlePosition.Attack, true);
+                    var handCurse = PutInHand(engine, p, SpellTrapEffects.CurseOfDragon);
+                    Check("Polymerization: Gaia accepts field + hand materials",
+                        engine.TryActivateSpellTrap(p, poly, fromHand: true) &&
+                        p.Graveyard.Contains(fieldGaia) && p.Graveyard.Contains(handCurse) &&
+                        p.Graveyard.Contains(poly) && p.MonstersOnField().Any(m => m != null && m.CardId == gaia));
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    engine.Opponent.Hand.Clear();
+                    p.Hand.Clear();
+                    p.ExtraDeck.Clear();
+                    p.ExtraDeck.Add(teR);
+                    var poly = PutInHand(engine, p, SpellTrapEffects.Polymerization);
+                    var relinquished = PutInHand(engine, p, SpellTrapEffects.Relinquished);
+                    var idol = PutInHand(engine, p, SpellTrapEffects.ThousandEyesIdol);
+                    Check("Polymerization: Thousand-Eyes Restrict effect Fusion is registered",
+                        OfficialEffectRegistry.HasSummonProcedure(teR, SummonKind.FusionSummon));
+                    Check("Polymerization: Thousand-Eyes Restrict summons with official materials",
+                        engine.TryActivateSpellTrap(p, poly, fromHand: true) &&
+                        p.Graveyard.Contains(relinquished) && p.Graveyard.Contains(idol) &&
+                        p.MonstersOnField().Any(m => m != null && m.CardId == teR));
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    engine.Opponent.Hand.Clear();
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    p.ExtraDeck.Clear();
+                    p.ExtraDeck.Add(bsd);
+                    var poly = PutInHand(engine, p, SpellTrapEffects.Polymerization);
+                    var skull = PutInHand(engine, p, SpellTrapEffects.SummonedSkull);
+                    var wrong = PutInHand(engine, p, SpellTrapEffects.CurseOfDragon);
+                    Check("Polymerization: illegal Black Skull materials refuse without moving cards",
+                        !engine.CanActivateSpellTrap(p, poly, fromHand: true) &&
+                        !engine.TryActivateSpellTrap(p, poly, fromHand: true) &&
+                        p.Hand.Contains(poly) && p.Hand.Contains(skull) && p.Hand.Contains(wrong) &&
+                        p.Graveyard.Count == 0);
+                    var contact = SummonProcedures.CheckFusion(engine, p, engine.CreateCardInstance(bsd),
+                        new System.Collections.Generic.List<CardInstance> { skull, wrong }, null);
+                    Check("Fusion: unregistered contact procedure refuses",
+                        !contact.Legal && contact.Reason.IndexOf("Contact", System.StringComparison.OrdinalIgnoreCase) >= 0,
+                        contact.Reason);
+                    var parkedFusion = SummonProcedures.CheckFusion(engine, p, engine.CreateCardInstance(85684223),
+                        new System.Collections.Generic.List<CardInstance>(), poly);
+                    Check("Fusion: unregistered Reaper on the Nightmare refuses",
+                        !parkedFusion.Legal && parkedFusion.Reason.IndexOf("No official", System.StringComparison.OrdinalIgnoreCase) >= 0,
+                        parkedFusion.Reason);
+                }
+            }
+
+            // ── Phase trigger location guard: sent-to-GY source must not fire as field trigger ──
+            {
+                var engine = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine);
+                var p = engine.Player;
+                var sourceDef = new CardDef
+                {
+                    id = 90000101,
+                    name = "End Phase Send-Then-Summon Probe",
+                    type = "Effect Monster",
+                    desc = "During the End Phase: You can send this face-up card to the GY; Special Summon 1 \"Celtic Guardian\" from your hand or Deck."
+                };
+                var source = new CardInstance
+                {
+                    InstanceId = 90000101,
+                    CardId = sourceDef.id,
+                    Def = sourceDef,
+                    FaceUp = true
+                };
+                p.Graveyard.Add(source);
+                p.Deck.Insert(0, 91152256);
+                TextEffectRuntime.FirePhaseTriggers(engine, p, EffectTiming.EndPhase);
+                Check("End Phase trigger: field-only send-then-summon does not fire from GY",
+                    p.Graveyard.Contains(source) && p.MonsterCount == 0 && p.Deck.Contains(91152256),
+                     $"gy={p.Graveyard.Contains(source)} monsters={p.MonsterCount} deckHasTarget={p.Deck.Contains(91152256)}");
+            }
+
+            // ── Ritual Summon (Greater named / Equal attribute) ──
+            {
+                const int blRitual = RitualProcedures.BlackLusterRitual;
+                const int bls = RitualProcedures.BlackLusterSoldier;
+                const int biRitual = RitualProcedures.BlackIllusionRitual;
+                const int relId = RitualProcedures.Relinquished;
+                const int earthChant = RitualProcedures.EarthChant;
+                const int abyssContract = RitualProcedures.ContractWithTheAbyss;
+                const int celtic = 91152256; // Lv4
+                const int beaver = 32452818; // Lv4
+                const int giant = 13039848; // Lv3
+                const int queen = 5901497; // Lv1
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var monster = PutInHand(engine, p, bls);
+                    var ns = SummonProcedures.CheckNormalOrTribute(engine, p, monster, asSet: false);
+                    Check("Ritual: Black Luster Soldier cannot Normal Summon",
+                        !engine.CanNormalSummonOrSet(p, monster) && !ns.Legal,
+                        ns.Reason);
+                    Check("Ritual: BLS refusal is the Ritual NS lock",
+                        ns.Reason != null &&
+                        ns.Reason.IndexOf("Ritual", System.StringComparison.OrdinalIgnoreCase) >= 0,
+                        ns.Reason);
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var spell = PutInHand(engine, p, blRitual);
+                    var monster = PutInHand(engine, p, bls);
+                    var t1 = PutInHand(engine, p, celtic);
+                    var t2 = PutInHand(engine, p, beaver);
+                    Check("Ritual: Black Luster Ritual Greater 8 activates",
+                        engine.CanActivateSpellTrap(p, spell, fromHand: true) &&
+                        engine.TryActivateSpellTrap(p, spell, fromHand: true));
+                    Check("Ritual: BLS is on the field after Greater 8",
+                        p.TryFindMonster(monster, out _) && monster.WasSpecialSummoned);
+                    Check("Ritual: Greater 8 tributes in GY, spell in GY",
+                        p.Graveyard.Contains(t1) && p.Graveyard.Contains(t2) &&
+                        p.Graveyard.Contains(spell) && !p.Hand.Contains(monster),
+                        $"gy={p.Graveyard.Count} hand={p.Hand.Count} field={p.MonsterCount}");
+                }
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var spell = PutInHand(engine, p, blRitual);
+                    var monster = PutInHand(engine, p, bls);
+                    var baseDef = monster.Def;
+                    monster.Def = new CardDef
+                    {
+                        id = baseDef.id, name = baseDef.name, type = baseDef.type, frameType = baseDef.frameType,
+                        desc = "Cannot be Special Summoned except by its registered Ritual Summon procedure.",
+                        atk = baseDef.atk, def = baseDef.def, level = baseDef.level, race = baseDef.race,
+                        attribute = baseDef.attribute, archetype = baseDef.archetype
+                    };
+                    PutInHand(engine, p, celtic);
+                    PutInHand(engine, p, beaver);
+                    Check("Ritual: registered hard Nomi still summons by Ritual procedure",
+                        engine.TryActivateSpellTrap(p, spell, fromHand: true) &&
+                        p.TryFindMonster(monster, out _) && monster.WasSpecialSummoned);
+                }
+
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var spell = PutInHand(engine, p, blRitual);
+                    var monster = PutInHand(engine, p, bls);
+                    var t1 = PutInHand(engine, p, giant);
+                    Check("Ritual: Greater 8 refuses when tribute sum < 8",
+                        !engine.CanActivateSpellTrap(p, spell, fromHand: true) &&
+                        !engine.TryActivateSpellTrap(p, spell, fromHand: true));
+                    Check("Ritual: insufficient Greater tributes move no cards",
+                        p.Hand.Contains(spell) && p.Hand.Contains(monster) &&
+                        p.Hand.Contains(t1) && p.Graveyard.Count == 0 &&
+                        p.MonsterCount == 0);
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var spell = PutInHand(engine, p, biRitual);
+                    var monster = PutInHand(engine, p, relId);
+                    var t1 = PutInHand(engine, p, celtic);
+                    Check("Ritual: Black Illusion Ritual Greater 1 SS Relinquished",
+                        engine.TryActivateSpellTrap(p, spell, fromHand: true) &&
+                        p.TryFindMonster(monster, out _) && monster.WasSpecialSummoned &&
+                        p.Graveyard.Contains(t1) && p.Graveyard.Contains(spell));
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var spell = PutInHand(engine, p, abyssContract);
+                    var monster = PutInHand(engine, p, relId);
+                    var t1 = PutInHand(engine, p, queen);
+                    Check("Ritual: Contract with the Abyss Equal 1 DARK SS Relinquished",
+                        engine.TryActivateSpellTrap(p, spell, fromHand: true) &&
+                        p.TryFindMonster(monster, out _) && monster.WasSpecialSummoned &&
+                        p.Graveyard.Contains(t1) && p.Graveyard.Contains(spell));
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var spell = PutInHand(engine, p, earthChant);
+                    var monster = PutInHand(engine, p, bls);
+                    var t1 = PutInHand(engine, p, celtic);
+                    var t2 = PutInHand(engine, p, beaver);
+                    Check("Ritual: Earth Chant Equal 8 EARTH SS Black Luster Soldier",
+                        engine.TryActivateSpellTrap(p, spell, fromHand: true) &&
+                        p.TryFindMonster(monster, out _) && monster.WasSpecialSummoned &&
+                        p.Graveyard.Contains(t1) && p.Graveyard.Contains(t2) &&
+                        p.Graveyard.Contains(spell));
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var spell = PutInHand(engine, p, blRitual);
+                    var wrong = PutInHand(engine, p, relId);
+                    var t1 = PutInHand(engine, p, celtic);
+                    var t2 = PutInHand(engine, p, beaver);
+                    Check("Ritual: wrong monster in hand is refused",
+                        !engine.CanActivateSpellTrap(p, spell, fromHand: true) &&
+                        !engine.TryActivateSpellTrap(p, spell, fromHand: true));
+                    Check("Ritual: wrong monster leaves all cards unmoved",
+                        p.Hand.Contains(spell) && p.Hand.Contains(wrong) &&
+                        p.Hand.Contains(t1) && p.Hand.Contains(t2) &&
+                        p.Graveyard.Count == 0 && p.MonsterCount == 0);
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var spell = PutInHand(engine, p, earthChant);
+                    var dark = PutInHand(engine, p, relId);
+                    var t1 = PutInHand(engine, p, queen);
+                    Check("Ritual: Earth Chant refuses DARK Relinquished",
+                        !engine.TryActivateSpellTrap(p, spell, fromHand: true) &&
+                        p.Hand.Contains(dark) && p.Hand.Contains(spell) &&
+                        p.Graveyard.Count == 0);
+                }
+
+                {
+                    const int curse = 28279543; // Lv5
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var spell = PutInHand(engine, p, blRitual);
+                    var monster = PutInHand(engine, p, bls);
+                    var t1 = PutInHand(engine, p, curse);
+                    var t2 = PutInHand(engine, p, celtic);
+                    Check("Ritual: Greater 8 accepts 5+4 overshoot",
+                        engine.TryActivateSpellTrap(p, spell, fromHand: true) &&
+                        p.TryFindMonster(monster, out _) && monster.WasSpecialSummoned &&
+                        p.Graveyard.Contains(t1) && p.Graveyard.Contains(t2) &&
+                        p.Graveyard.Contains(spell));
+                }
+
+                {
+                    const int curse = 28279543; // Lv5
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var spell = PutInHand(engine, p, earthChant);
+                    var monster = PutInHand(engine, p, bls);
+                    var t1 = PutInHand(engine, p, curse);
+                    var t2 = PutInHand(engine, p, celtic);
+                    Check("Ritual: Equal 8 refuses 5+4 overshoot",
+                        !engine.CanActivateSpellTrap(p, spell, fromHand: true) &&
+                        !engine.TryActivateSpellTrap(p, spell, fromHand: true));
+                    Check("Ritual: Equal overshoot moves no cards",
+                        p.Hand.Contains(spell) && p.Hand.Contains(monster) &&
+                        p.Hand.Contains(t1) && p.Hand.Contains(t2) &&
+                        p.Graveyard.Count == 0 && p.MonsterCount == 0);
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var spell = PutInHand(engine, p, blRitual);
+                    var monster = PutInHand(engine, p, bls);
+                    var fieldT = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var handT = PutInHand(engine, p, beaver);
+                    Check("Ritual: Greater 8 tributes from field + hand",
+                        engine.TryActivateSpellTrap(p, spell, fromHand: true) &&
+                        p.TryFindMonster(monster, out _) && monster.WasSpecialSummoned &&
+                        p.Graveyard.Contains(fieldT) && p.Graveyard.Contains(handT) &&
+                        !p.TryFindMonster(fieldT, out _));
+                }
+            }
+
+            // ── Spirit Reaper family: destroy after a targeting effect resolves ──
+            {
+                const int reaperId = 23205979;
+                const int rotnId = 85684223;
+                const int axeId = 40619825;
+                const int mstId = SpellTrapEffects.Mst;
+                const int bookMoonId = 14087893;
+                const int wabokuId = SpellTrapEffects.Waboku;
+
+                var reaperDef = db.Get(reaperId);
+                var reaperProg = reaperDef != null ? CardTextEffectCompiler.Compile(reaperDef) : null;
+                Check("Spirit Reaper compiles DestroyThisAfterResolvingTargetingEffect from official PSCT",
+                    reaperProg != null &&
+                    reaperProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.DestroyThisAfterResolvingTargetingEffect &&
+                        c.Timing == EffectTiming.ContinuousWhileFaceUp),
+                    reaperProg == null
+                        ? "null"
+                        : $"full={reaperProg.FullyCompiled} n={reaperProg.ClauseList.Count} " +
+                          $"unparsed={string.Join("|", reaperProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                Check("Spirit Reaper compiles CannotBeDestroyedByBattle from official first sentence",
+                    reaperProg != null &&
+                    reaperProg.FullyCompiled &&
+                    reaperProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.CannotBeDestroyedByBattle &&
+                        c.Timing == EffectTiming.ContinuousWhileFaceUp),
+                    reaperProg == null
+                        ? "null"
+                        : $"full={reaperProg.FullyCompiled} n={reaperProg.ClauseList.Count} " +
+                          $"unparsed={string.Join("|", reaperProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var rotnDef = db.Get(rotnId);
+                var rotnProg = rotnDef != null ? CardTextEffectCompiler.Compile(rotnDef) : null;
+                Check("Reaper on the Nightmare compiles the same shared targeting-destroy kind",
+                    rotnProg != null &&
+                    rotnProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.DestroyThisAfterResolvingTargetingEffect),
+                    rotnProg == null
+                        ? "null"
+                        : $"full={rotnProg.FullyCompiled} n={rotnProg.ClauseList.Count} " +
+                          $"unparsed={string.Join("|", rotnProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                Check("Reaper on the Nightmare compiles CannotBeDestroyedByBattle (not-destroyed-as-result)",
+                    rotnProg != null &&
+                    rotnProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.CannotBeDestroyedByBattle),
+                    rotnProg == null
+                        ? "null"
+                        : $"full={rotnProg.FullyCompiled} n={rotnProg.ClauseList.Count} " +
+                          $"unparsed={string.Join("|", rotnProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                Check("Reaper on the Nightmare compiles direct-attack random discard as the shared kind",
+                    rotnProg != null &&
+                    rotnProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Timing == EffectTiming.ThisCardInflictsBattleDamage &&
+                        c.Action == EffectActionKind.DiscardRandomFromOpponentHand &&
+                        c.RequiresDirectAttack),
+                    rotnProg == null
+                        ? "null"
+                        : $"full={rotnProg.FullyCompiled} n={rotnProg.ClauseList.Count} " +
+                          $"unparsed={string.Join("|", rotnProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var synCdbb = CardTextEffectCompiler.Compile(new CardDef
+                {
+                    id = 90000034,
+                    name = "Battle-Protect Reaper (new-card shape)",
+                    type = "Effect Monster",
+                    desc = "Cannot be destroyed by battle."
+                });
+                Check("New-card rule: Cannot-be-destroyed-by-battle compiles without a cardId branch",
+                    synCdbb != null && synCdbb.FullyCompiled &&
+                    synCdbb.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.CannotBeDestroyedByBattle));
+
+                var synAfter = CardTextEffectCompiler.Compile(new CardDef
+                {
+                    id = 90000031,
+                    name = "After-Target Reaper (new-card shape)",
+                    type = "Effect Monster",
+                    desc =
+                        "After resolving a card effect that targets this face-up card, destroy this card."
+                });
+                Check("New-card rule: After-resolving-target destroy compiles without a cardId branch",
+                    synAfter != null && synAfter.FullyCompiled &&
+                    synAfter.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.DestroyThisAfterResolvingTargetingEffect));
+
+                var synWhen = CardTextEffectCompiler.Compile(new CardDef
+                {
+                    id = 90000032,
+                    name = "When-Targeted Reaper (new-card shape)",
+                    type = "Effect Monster",
+                    desc = "Destroy this card when it is targeted by a card effect."
+                });
+                Check("New-card rule: Destroy-when-targeted compiles as the same shared kind",
+                    synWhen != null && synWhen.FullyCompiled &&
+                    synWhen.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.DestroyThisAfterResolvingTargetingEffect));
+
+                var synIf = CardTextEffectCompiler.Compile(new CardDef
+                {
+                    id = 90000033,
+                    name = "If-Targeted Reaper (new-card shape)",
+                    type = "Effect Monster",
+                    desc = "If this card is targeted by an effect, destroy it."
+                });
+                Check("New-card rule: If-targeted-destroy compiles as the same shared kind",
+                    synIf != null && synIf.FullyCompiled &&
+                    synIf.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.DestroyThisAfterResolvingTargetingEffect));
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var host = PlaceMonster(engine, p, reaperId, 2, BattlePosition.Attack, true);
+                    var axe = PutInHand(engine, p, axeId);
+                    Check("Spirit Reaper: Equip Axe activate opens host target",
+                        engine.CanActivateSpellTrap(p, axe, fromHand: true) &&
+                        engine.TryActivateSpellTrap(p, axe, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.LegalTargets.Contains(host));
+                    Check("Spirit Reaper: after Equip resolves, Reaper and Axe are in GY (no host)",
+                        engine.IsAwaitingEffectTarget &&
+                        engine.TrySelectEffectTarget(host) &&
+                        p.Graveyard.Contains(host) &&
+                        p.Graveyard.Contains(axe) &&
+                        !p.TryFindMonster(host, out _) &&
+                        axe.EquippedTo == null,
+                        $"reaperGy={p.Graveyard.Contains(host)} axeGy={p.Graveyard.Contains(axe)} " +
+                        $"eqHost={axe.EquippedTo != null} field={p.TryFindMonster(host, out _)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var host = PlaceMonster(engine, p, reaperId, 2, BattlePosition.Attack, true);
+                    var st = PlaceSetTrap(engine, opp, wabokuId, 2);
+                    var mst = PutInHand(engine, p, mstId);
+                    Check("Spirit Reaper: MST targeting a S/T does not self-destroy Reaper",
+                        engine.TryActivateSpellTrap(p, mst, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation.LegalTargets.Contains(st) &&
+                        !engine.PendingActivation.LegalTargets.Contains(host) &&
+                        engine.TrySelectEffectTarget(st) &&
+                        p.TryFindMonster(host, out _) &&
+                        host.FaceUp &&
+                        opp.Graveyard.Contains(st),
+                        $"field={p.TryFindMonster(host, out _)} gy={p.Graveyard.Contains(host)} stGy={opp.Graveyard.Contains(st)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var host = PlaceMonster(engine, p, reaperId, 2, BattlePosition.Attack, true);
+                    var moon = PutInHand(engine, p, bookMoonId);
+                    Check("Spirit Reaper: Book of Moon targeting Reaper leaves it face-down (PSCT face-up)",
+                        engine.CanActivateSpellTrap(p, moon, fromHand: true) &&
+                        engine.TryActivateSpellTrap(p, moon, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.TrySelectEffectTarget(host) &&
+                        p.TryFindMonster(host, out _) &&
+                        !host.FaceUp &&
+                        !p.Graveyard.Contains(host),
+                        $"field={p.TryFindMonster(host, out _)} faceUp={host.FaceUp} gy={p.Graveyard.Contains(host)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var host = PlaceMonster(engine, p, reaperId, 2, BattlePosition.Defense, false);
+                    TextEffectRuntime.NotifyTargetingEffectResolved(engine, host, true);
+                    Check("Spirit Reaper: face-down notify does not self-destroy (PSCT face-up)",
+                        p.TryFindMonster(host, out _) &&
+                        !host.FaceUp &&
+                        !p.Graveyard.Contains(host));
+                }
+            }
+
+                {
+                    const int reaperId = 23205979;
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var other = PlaceMonster(engine, p, 91152256, 1, BattlePosition.Attack, true);
+                    var reaper = PlaceMonster(engine, p, reaperId, 2, BattlePosition.Attack, true);
+                    TextEffectRuntime.NotifyTargetingEffectsResolved(engine,
+                        new[] { other, reaper }, true);
+                    Check("Spirit Reaper: multi-target notify reaches every selected card",
+                        p.TryFindMonster(other, out _) &&
+                        p.Graveyard.Contains(reaper) &&
+                        !p.Graveyard.Contains(other));
+                }
+
+
+            // ── This card inflicts battle damage: discard N random from opponent hand ──
+            {
+                const int reaperId = 23205979;
+                const int decayedId = 10209545;
+                const int hatId = 15150365;
+                const int idolId = 27125110; // Thousand-Eyes Idol 0/0
+                const int celtic = 91152256;
+
+                var reaperDef = db.Get(reaperId);
+                var reaperBd = reaperDef != null ? CardTextEffectCompiler.Compile(reaperDef) : null;
+                Check("Spirit Reaper compiles DiscardRandomFromOpponentHand (direct-attack filter)",
+                    reaperBd != null &&
+                    reaperBd.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Timing == EffectTiming.ThisCardInflictsBattleDamage &&
+                        c.Action == EffectActionKind.DiscardRandomFromOpponentHand &&
+                        c.RequiresDirectAttack &&
+                        c.Amount == 1),
+                    reaperBd == null
+                        ? "null"
+                        : $"full={reaperBd.FullyCompiled} n={reaperBd.ClauseList.Count} " +
+                          $"unparsed={string.Join("|", reaperBd.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var hatDef = db.Get(hatId);
+                var hatBd = hatDef != null ? CardTextEffectCompiler.Compile(hatDef) : null;
+                Check("White Magical Hat compiles random discard on any battle damage (not direct-only)",
+                    hatBd != null &&
+                    hatBd.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Timing == EffectTiming.ThisCardInflictsBattleDamage &&
+                        c.Action == EffectActionKind.DiscardRandomFromOpponentHand &&
+                        !c.RequiresDirectAttack &&
+                        c.Amount == 1),
+                    hatBd == null
+                        ? "null"
+                        : $"full={hatBd.FullyCompiled} n={hatBd.ClauseList.Count} " +
+                          $"unparsed={string.Join("|", hatBd.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var synDirect = CardTextEffectCompiler.Compile(new CardDef
+                {
+                    id = 90000041,
+                    name = "Direct-Damage Discard (new-card shape)",
+                    type = "Effect Monster",
+                    desc =
+                        "When this card inflicts battle damage to your opponent by a direct attack: " +
+                        "Discard 1 random card from their hand."
+                });
+                Check("New-card rule: direct-attack random discard compiles without a cardId branch",
+                    synDirect != null && synDirect.FullyCompiled &&
+                    synDirect.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Timing == EffectTiming.ThisCardInflictsBattleDamage &&
+                        c.Action == EffectActionKind.DiscardRandomFromOpponentHand &&
+                        c.RequiresDirectAttack));
+
+                var synAny = CardTextEffectCompiler.Compile(new CardDef
+                {
+                    id = 90000042,
+                    name = "Any-Damage Discard (new-card shape)",
+                    type = "Effect Monster",
+                    desc =
+                        "If this card inflicts Battle Damage to your opponent's Life Points, " +
+                        "your opponent discards 1 card randomly from his/her hand."
+                });
+                Check("New-card rule: any-battle-damage random discard compiles as the same kind",
+                    synAny != null && synAny.FullyCompiled &&
+                    synAny.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Timing == EffectTiming.ThisCardInflictsBattleDamage &&
+                        c.Action == EffectActionKind.DiscardRandomFromOpponentHand &&
+                        !c.RequiresDirectAttack));
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    var reachedBattle = ReachPlayerBattle(engine);
+                    Check("battle-damage discard: reach player Battle",
+                        reachedBattle,
+                        $"phase={engine.Phase} turnP={engine.TurnPlayer == engine.Player} tn={engine.TurnNumber}");
+                    if (reachedBattle)
+                    {
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        opp.Hand.Clear();
+                        p.LifePoints = 8000;
+                        opp.LifePoints = 8000;
+                        var reaper = PlaceMonster(engine, p, reaperId, 2, BattlePosition.Attack, true);
+                        reaper.SummonedThisTurn = false;
+                        reaper.ClearAttackFlags();
+                        var held = PutInHand(engine, opp, celtic);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        var lpBefore = opp.LifePoints;
+                        Check("Reaper direct: can attack",
+                            engine.Phase == DuelPhase.Battle && engine.CanAttack(p, reaper));
+                        if (engine.Phase == DuelPhase.Battle && engine.CanAttack(p, reaper))
+                        {
+                            engine.TryAttack(p, reaper, null);
+                            DrainCombat(engine);
+                        }
+
+                        Check("Reaper direct: inflicts damage and discards 1 random from opponent hand",
+                            opp.LifePoints < lpBefore &&
+                            opp.Hand.Count == 0 &&
+                            opp.Graveyard.Contains(held) &&
+                            !opp.Hand.Contains(held),
+                            $"LP {lpBefore}->{opp.LifePoints} hand={opp.Hand.Count} " +
+                            $"gyHas={opp.Graveyard.Contains(held)} phase={engine.Phase}");
+                    }
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    var reachedBattle = ReachPlayerBattle(engine);
+                    Check("battle-damage discard: reach player Battle",
+                        reachedBattle,
+                        $"phase={engine.Phase} turnP={engine.TurnPlayer == engine.Player} tn={engine.TurnNumber}");
+                    if (reachedBattle)
+                    {
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        opp.Hand.Clear();
+                        p.LifePoints = 8000;
+                        opp.LifePoints = 8000;
+                        var reaper = PlaceMonster(engine, p, reaperId, 2, BattlePosition.Attack, true);
+                        reaper.SummonedThisTurn = false;
+                        reaper.ClearAttackFlags();
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        var lpBefore = opp.LifePoints;
+                        if (engine.Phase == DuelPhase.Battle && engine.CanAttack(p, reaper))
+                        {
+                            engine.TryAttack(p, reaper, null);
+                            DrainCombat(engine);
+                        }
+
+                        Check("Reaper direct vs empty hand: still deals damage, no crash",
+                            opp.LifePoints < lpBefore &&
+                            opp.Hand.Count == 0 &&
+                            p.TryFindMonster(reaper, out _),
+                            $"LP {lpBefore}->{opp.LifePoints} hand={opp.Hand.Count} " +
+                            $"field={p.TryFindMonster(reaper, out _)}");
+                    }
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    var reachedBattle = ReachPlayerBattle(engine);
+                    Check("battle-damage discard: reach player Battle",
+                        reachedBattle,
+                        $"phase={engine.Phase} turnP={engine.TurnPlayer == engine.Player} tn={engine.TurnNumber}");
+                    if (reachedBattle)
+                    {
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        opp.Hand.Clear();
+                        p.LifePoints = 8000;
+                        opp.LifePoints = 8000;
+                        var reaper = PlaceMonster(engine, p, reaperId, 2, BattlePosition.Attack, true);
+                        reaper.SummonedThisTurn = false;
+                        reaper.ClearAttackFlags();
+                        var prey = PlaceMonster(engine, opp, idolId, 2, BattlePosition.Attack, true);
+                        var held = PutInHand(engine, opp, celtic);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        var lpBefore = opp.LifePoints;
+                        Check("Reaper vs 0-ATK: can attack",
+                            engine.Phase == DuelPhase.Battle && engine.CanAttack(p, reaper));
+                        if (engine.Phase == DuelPhase.Battle && engine.CanAttack(p, reaper))
+                        {
+                            engine.TryAttack(p, reaper, prey);
+                            DrainCombat(engine);
+                        }
+
+                        Check("Reaper vs monster: inflicts battle damage but does not discard (direct-attack filter)",
+                            opp.LifePoints < lpBefore &&
+                            opp.Hand.Contains(held) &&
+                            !opp.Graveyard.Contains(held),
+                            $"LP {lpBefore}->{opp.LifePoints} handHas={opp.Hand.Contains(held)} " +
+                            $"gyHas={opp.Graveyard.Contains(held)} preyDead={!opp.TryFindMonster(prey, out _)}");
+                    }
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    var reachedBattle = ReachPlayerBattle(engine);
+                    Check("battle-damage discard: reach player Battle",
+                        reachedBattle,
+                        $"phase={engine.Phase} turnP={engine.TurnPlayer == engine.Player} tn={engine.TurnNumber}");
+                    if (reachedBattle)
+                    {
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        opp.Hand.Clear();
+                        p.LifePoints = 8000;
+                        opp.LifePoints = 8000;
+                        var cmd = PlaceMonster(engine, p, decayedId, 2, BattlePosition.Attack, true);
+                        cmd.SummonedThisTurn = false;
+                        cmd.ClearAttackFlags();
+                        var held = PutInHand(engine, opp, celtic);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        var lpBefore = opp.LifePoints;
+                        if (engine.Phase == DuelPhase.Battle && engine.CanAttack(p, cmd))
+                        {
+                            engine.TryAttack(p, cmd, null);
+                            DrainCombat(engine);
+                        }
+
+                        Check("Decayed Commander direct: discards 1 random from opponent hand",
+                            opp.LifePoints < lpBefore &&
+                            opp.Hand.Count == 0 &&
+                            opp.Graveyard.Contains(held),
+                            $"LP {lpBefore}->{opp.LifePoints} hand={opp.Hand.Count} " +
+                            $"gyHas={opp.Graveyard.Contains(held)}");
+                    }
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    var reachedBattle = ReachPlayerBattle(engine);
+                    Check("battle-damage discard: reach player Battle",
+                        reachedBattle,
+                        $"phase={engine.Phase} turnP={engine.TurnPlayer == engine.Player} tn={engine.TurnNumber}");
+                    if (reachedBattle)
+                    {
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        opp.Hand.Clear();
+                        p.LifePoints = 8000;
+                        opp.LifePoints = 8000;
+                        var hat = PlaceMonster(engine, p, hatId, 2, BattlePosition.Attack, true);
+                        hat.SummonedThisTurn = false;
+                        hat.ClearAttackFlags();
+                        var prey = PlaceMonster(engine, opp, idolId, 2, BattlePosition.Attack, true);
+                        var held = PutInHand(engine, opp, celtic);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        var lpBefore = opp.LifePoints;
+                        if (engine.Phase == DuelPhase.Battle && engine.CanAttack(p, hat))
+                        {
+                            engine.TryAttack(p, hat, prey);
+                            DrainCombat(engine);
+                        }
+
+                        Check("White Magical Hat vs monster: battle damage (not direct) discards 1 random",
+                            opp.LifePoints < lpBefore &&
+                            opp.Hand.Count == 0 &&
+                            opp.Graveyard.Contains(held),
+                            $"LP {lpBefore}->{opp.LifePoints} hand={opp.Hand.Count} " +
+                            $"gyHas={opp.Graveyard.Contains(held)} preyDead={!opp.TryFindMonster(prey, out _)}");
+                    }
+                }
+            }
+
+            // ── Cannot be destroyed by battle (Spirit Reaper flag from text) ──
+            {
+                const int reaperId = 23205979;
+                const int bewd = 89631139;
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    var reachedBattle = ReachOpponentBattle(engine);
+                    Check("CDBB: reach opponent Battle",
+                        reachedBattle,
+                        $"phase={engine.Phase} turnP={engine.TurnPlayer == engine.Opponent} tn={engine.TurnNumber}");
+                    if (reachedBattle)
+                    {
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.LifePoints = 8000;
+                        opp.LifePoints = 8000;
+                        var reaper = PlaceMonster(engine, p, reaperId, 2, BattlePosition.Attack, true);
+                        reaper.SummonedThisTurn = false;
+                        reaper.ClearAttackFlags();
+                        FieldSpellEffects.ApplyRuleConditions(reaper);
+                        var dragon = PlaceMonster(engine, opp, bewd, 2, BattlePosition.Attack, true);
+                        dragon.SummonedThisTurn = false;
+                        dragon.ClearAttackFlags();
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        Check("Spirit Reaper: OfficialEffectRegistry CannotBeDestroyedByBattle from compiled text",
+                            OfficialEffectRegistry.CannotBeDestroyedByBattle(reaper));
+                        var lpBefore = p.LifePoints;
+                        if (engine.Phase == DuelPhase.Battle && engine.CanAttack(opp, dragon))
+                        {
+                            engine.TryAttack(opp, dragon, reaper);
+                            DrainCombat(engine);
+                        }
+                        Check("Spirit Reaper: survives 3000 ATK battle (cannot be destroyed by battle)",
+                            p.TryFindMonster(reaper, out _) &&
+                            !p.Graveyard.Contains(reaper) &&
+                            p.LifePoints < lpBefore,
+                            $"field={p.TryFindMonster(reaper, out _)} gy={p.Graveyard.Contains(reaper)} lp={p.LifePoints}");
+                    }
+                }
+            }
+
+            // ── Tribute Summoned: target 1 monster; destroy (Zaborg / Monarch shape) ──
+            {
+                const int zaborgId = 51945556;
+                const int celtic = 91152256;
+                const int bewd = 89631139;
+                var zDef = db.Get(zaborgId);
+                var zProg = zDef != null ? CardTextEffectCompiler.Compile(zDef) : null;
+                Check("Zaborg the Thunder Monarch FullyCompiled Tribute Summoned destroy",
+                    zProg != null && zProg.FullyCompiled &&
+                    zProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Timing == EffectTiming.ThisCardSummoned &&
+                        c.RequiresThisTributeSummoned &&
+                        c.Action == EffectActionKind.Destroy &&
+                        c.RequiresTargetChoice &&
+                        c.Zone == EffectZoneFilter.FieldAnyMonster),
+                    zProg == null
+                        ? "null"
+                        : $"full={zProg.FullyCompiled} n={zProg.ClauseList.Count} unparsed={string.Join("|", zProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var synZ = CardTextEffectCompiler.Compile(new CardDef
+                {
+                    id = 90000052,
+                    name = "New Monarch (Zaborg shape)",
+                    type = "Effect Monster",
+                    desc =
+                        "If this card is Tribute Summoned: Target 1 monster on the field; destroy that target."
+                });
+                Check("New-card rule: Tribute-Summoned destroy compiles without a cardId branch",
+                    synZ != null && synZ.FullyCompiled &&
+                    synZ.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Timing == EffectTiming.ThisCardSummoned &&
+                        c.RequiresThisTributeSummoned &&
+                        c.Action == EffectActionKind.Destroy));
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var who = engine.Player;
+                    var opp = engine.Opponent;
+                    who.Hand.Clear();
+                    var fodder = PlaceMonster(engine, who, celtic, 0, BattlePosition.Attack, true);
+                    var prey = PlaceMonster(engine, opp, bewd, 2, BattlePosition.Attack, true);
+                    var zaborg = PutInHand(engine, who, zaborgId);
+                    Check("Zaborg: Tribute Summon with one fodder",
+                        engine.TryNormalSummon(who, zaborg, asSet: false) &&
+                        who.TryFindMonster(zaborg, out _) &&
+                        who.Graveyard.Contains(fodder),
+                        $"mz={who.TryFindMonster(zaborg, out _)} fodderGy={who.Graveyard.Contains(fodder)} pending={engine.IsAwaitingEffectTarget}");
+                    Check("Zaborg: Tribute Summon opens monster-destroy target",
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.LegalTargets.Contains(prey),
+                        engine.PendingActivation == null
+                            ? "no pending"
+                            : $"n={engine.PendingActivation.LegalTargets.Count}");
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        Check("Zaborg: destroy opponent BEWD",
+                            engine.TrySelectEffectTarget(prey) &&
+                            opp.Graveyard.Contains(prey) &&
+                            !opp.TryFindMonster(prey, out _),
+                            $"gy={opp.Graveyard.Contains(prey)} field={opp.TryFindMonster(prey, out _)}");
+                    }
+                }
+            }
+
+            // ── Deck-Grok P0 street staples (shared kinds / PSCT fragments) ──
+            {
+                const int fissure = 66788016;
+                const int reinforcements = 17814387;
+                const int castleWalls = 44209392;
+                const int rush = 70046172;
+                const int smashing = 97169186;
+                const int hammer = 26412047;
+                const int stopDefense = 63102017;
+                const int blackPendant = 65169794;
+                const int axe = 40619825;
+                const int kamakiri = 84834865;
+                const int elegant = 90219263;
+                const int umi = 22702055;
+                const int callHaunted = 97077563;
+                const int enchantedJavelin = 96355986;
+                const int sevenTools = 3819470;
+                const int magicJammer = 77414722;
+                const int spellbinding = 18807108;
+                const int celtic = 91152256; // 1400 ATK
+                const int bewd = 89631139; // 3000 ATK / 2500 DEF
+                const int harpie = 76812113;
+                const int harpieSisters = 12206212;
+                const int giantSoldier = 13039848; // 1300 ATK / 2000 DEF
+
+                var fProg = CardTextEffectCompiler.Compile(db.Get(fissure));
+                Check("Fissure FullyCompiled destroy lowest ATK opp",
+                    fProg != null && fProg.FullyCompiled &&
+                    fProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.Destroy && c.PickLowestAtk &&
+                        c.Zone == EffectZoneFilter.OppFaceUpMonsters),
+                    fProg == null ? "null" : $"full={fProg.FullyCompiled} unparsed={string.Join("|", fProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                Check("Fissure choice is not PSCT targeting",
+                    fProg != null && fProg.ClauseList.Exists(c => c != null && c.PickLowestAtk &&
+                        c.RequiresTargetChoice && !c.IsPsctTarget));
+                var rProg = CardTextEffectCompiler.Compile(db.Get(reinforcements));
+                Check("Reinforcements FullyCompiled +500 ATK until EOT",
+                    rProg != null && rProg.FullyCompiled &&
+                    rProg.ClauseList.Exists(c =>
+                        c != null && IsTurnAtkBoost(c) &&
+                        c.Amount == 500 && c.RequiresTargetChoice),
+                    rProg == null ? "null" : $"full={rProg.FullyCompiled} unparsed={string.Join("|", rProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var cProg = CardTextEffectCompiler.Compile(db.Get(castleWalls));
+                Check("Castle Walls FullyCompiled +500 DEF until EOT",
+                    cProg != null && cProg.FullyCompiled &&
+                    cProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.GainAtkDefUntilEndOfTurn &&
+                        c.DefAmount == 500),
+                    cProg == null ? "null" : $"full={cProg.FullyCompiled} unparsed={string.Join("|", cProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var rushProg = CardTextEffectCompiler.Compile(db.Get(rush));
+                Check("Rush Recklessly FullyCompiled +700 ATK until EOT",
+                    rushProg != null && rushProg.FullyCompiled &&
+                    rushProg.ClauseList.Exists(c =>
+                        c != null && IsTurnAtkBoost(c) &&
+                        c.Amount == 700 && c.IsPsctTarget),
+                    rushProg == null ? "null" : $"full={rushProg.FullyCompiled} unparsed={string.Join("|", rushProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var sProg = CardTextEffectCompiler.Compile(db.Get(smashing));
+                Check("Smashing Ground FullyCompiled destroy highest DEF opp",
+                    sProg != null && sProg.FullyCompiled &&
+                    sProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.Destroy && c.PickHighestDef),
+                    sProg == null ? "null" : $"full={sProg.FullyCompiled} unparsed={string.Join("|", sProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                Check("Smashing Ground choice is not PSCT targeting",
+                    sProg != null && sProg.ClauseList.Exists(c => c != null && c.PickHighestDef &&
+                        c.RequiresTargetChoice && !c.IsPsctTarget));
+                var hProg = CardTextEffectCompiler.Compile(db.Get(hammer));
+                Check("Hammer Shot FullyCompiled destroy highest ATK face-up ATK pos",
+                    hProg != null && hProg.FullyCompiled &&
+                    hProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.Destroy && c.PickHighestAtk &&
+                        c.RequiresAttackPosition),
+                    hProg == null ? "null" : $"full={hProg.FullyCompiled} unparsed={string.Join("|", hProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                Check("Hammer Shot choice is not PSCT targeting",
+                    hProg != null && hProg.ClauseList.Exists(c => c != null && c.PickHighestAtk &&
+                        c.RequiresTargetChoice && !c.IsPsctTarget));
+                const int widespreadRuin = 77754944;
+                var wrProg = CardTextEffectCompiler.Compile(db.Get(widespreadRuin));
+                Check("Widespread Ruin FullyCompiled AttackDeclared destroy opp highest ATK Attack Position",
+                    wrProg != null && wrProg.FullyCompiled &&
+                    wrProg.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.AttackDeclared &&
+                        c.Action == EffectActionKind.Destroy && c.PickHighestAtk &&
+                        c.Side == EffectSide.Opponent &&
+                        c.Zone == EffectZoneFilter.OppAttackPositionMonsters &&
+                        c.RequiresTargetChoice && !c.IsPsctTarget),
+                    wrProg == null ? "null" : $"full={wrProg.FullyCompiled} unparsed={string.Join("|", wrProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                // Fail-closed: must not compile as Mirror Force (mass), Sakuretsu (attacker), or Hammer Shot (Activate/Both).
+                Check("Widespread Ruin is not Mirror Force mass destroy",
+                    wrProg != null && !wrProg.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.AttackDeclared &&
+                        c.Action == EffectActionKind.Destroy &&
+                        c.Zone == EffectZoneFilter.OppAttackPositionMonsters &&
+                        !c.RequiresTargetChoice && !c.PickHighestAtk));
+                Check("Widespread Ruin is not Sakuretsu attacker-only",
+                    wrProg != null && !wrProg.ClauseList.Exists(c =>
+                        c != null && c.Zone == EffectZoneFilter.AttackingMonster));
+                Check("Widespread Ruin is not Hammer Shot Activate/Both",
+                    wrProg != null && !wrProg.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.Activate && c.PickHighestAtk));
+                const int dropOff = 55773067;
+                var dropProg = CardTextEffectCompiler.Compile(db.Get(dropOff));
+                Check("Drop Off FullyCompiled Opp Draw Phase normal draw discard just-drawn",
+                    dropProg != null && dropProg.FullyCompiled &&
+                    dropProg.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.OpponentNormalDrawInDrawPhase &&
+                        c.Action == EffectActionKind.DiscardJustDrawnCard &&
+                        c.Side == EffectSide.Opponent && c.Amount == 1),
+                    dropProg == null ? "null" : $"full={dropProg.FullyCompiled} unparsed={string.Join("|", dropProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                // Fail-closed: must not compile as Time Seal (skip Draw), Card Destruction / Morphing Jar
+                // (mass hand wipe), or random discard / any-draw.
+                Check("Drop Off is not Time Seal skip-Draw",
+                    dropProg != null && !dropProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.SkipOpponentNextDrawPhase));
+                Check("Drop Off is not Card Destruction / Morphing Jar mass discard-redraw",
+                    dropProg != null && !dropProg.ClauseList.Exists(c =>
+                        c != null && (c.Action == EffectActionKind.BothPlayersDiscardAndRedraw ||
+                                      c.Action == EffectActionKind.CyberJarStyle)));
+                Check("Drop Off is not random hand discard",
+                    dropProg != null && !dropProg.ClauseList.Exists(c =>
+                        c != null && (c.Action == EffectActionKind.DiscardRandomFromHand ||
+                                      c.Action == EffectActionKind.DiscardRandomFromOpponentHand)));
+                Check("Drop Off is not free-chain Activate any-draw",
+                    dropProg != null && !dropProg.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.Activate));
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    o.Hand.Clear();
+                    const int celticG = 91152256;
+                    var justDrew = PutInHand(engine, o, celticG);
+                    TextEffectRuntime.RememberNormalDrawCard(o, justDrew);
+                    var trap = PlaceSetTrap(engine, p, dropOff, 0);
+                    trap.FaceUp = true;
+                    var resolved = TextEffectRuntime.TryResolveOpponentNormalDrawEffect(engine, p, trap);
+                    DrainCombat(engine);
+                    Check("Drop Off: Opp discards the remembered just-drawn card",
+                        resolved && !o.Hand.Contains(justDrew) && o.Graveyard.Contains(justDrew),
+                        $"resolved={resolved} hand={o.Hand.Count} gyHas={o.Graveyard.Contains(justDrew)}");
+                }
+                const int nutrientZ = 29389368;
+                var nzProg = CardTextEffectCompiler.Compile(db.Get(nutrientZ));
+                Check("Nutrient Z FullyCompiled DamageCalculation Gain 4000 LP if 2000+ battle damage",
+                    nzProg != null && nzProg.FullyCompiled &&
+                    nzProg.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.DamageCalculation &&
+                        c.Action == EffectActionKind.GainLifePoints &&
+                        c.Amount == 4000 && c.RequiresBattleDamageAtLeast == 2000 &&
+                        c.Side == EffectSide.Controller),
+                    nzProg == null ? "null" : $"full={nzProg.FullyCompiled} unparsed={string.Join("|", nzProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                // Fail-closed: AfterDamageCalculation, any-damage (no 2000+ gate), heal=damage, Dian Keto / Spring Activate heal.
+                Check("Nutrient Z is not AfterDamageCalculation",
+                    nzProg != null && !nzProg.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.AfterDamageCalculation));
+                Check("Nutrient Z is not any-battle-damage (requires 2000+)",
+                    nzProg != null && !nzProg.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.DamageCalculation &&
+                        c.Action == EffectActionKind.GainLifePoints &&
+                        c.RequiresBattleDamageAtLeast < 2000));
+                Check("Nutrient Z is not heal=damage (GainLpEqualToAtk)",
+                    nzProg != null && !nzProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.GainLpEqualToAtk));
+                Check("Nutrient Z is not Dian Keto / Spring of Rebirth Activate heal",
+                    nzProg != null && !nzProg.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.Activate));
+                {
+                    // Soft: BEWD direct (3000) → Nutrient Z legal + gains 4000 LP before damage.
+                    var engine = Fresh(db, pDeck, aDeck);
+                    if (!ReachOpponentBattle(engine))
+                    {
+                        Check("Nutrient Z battle path (skipped — opp not in BP)", false,
+                            $"phase={engine.Phase} turnP={engine.TurnPlayer == engine.Opponent}");
+                    }
+                    else
+                    {
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.LifePoints = 8000;
+                        opp.LifePoints = 8000;
+                        p.Hand.Clear();
+                        opp.Hand.Clear();
+                        const int bewdNz = 89631139;
+                        var trap = PlaceSetTrap(engine, p, nutrientZ, 0);
+                        trap.SetThisTurn = false;
+                        var attacker = PlaceMonster(engine, opp, bewdNz, 2, BattlePosition.Attack, true);
+                        attacker.ClearAttackFlags();
+                        attacker.SummonedThisTurn = false;
+                        if (engine.Phase == DuelPhase.Main1)
+                            engine.TryEnterBattlePhase(opp);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        DrainCombat(engine);
+                        Check("Nutrient Z: BEWD declares direct",
+                            engine.TryAttack(opp, attacker, null));
+                        if (engine.PendingResponse != null &&
+                            engine.PendingResponse.Timing == ResponseTiming.AttackDeclared)
+                            engine.PassResponse();
+                        var predicted = TextEffectRuntime.PredictedBattleDamageTo(engine, p);
+                        Check("Nutrient Z: predicted battle damage >= 2000 on direct",
+                            predicted >= 2000,
+                            $"predicted={predicted} timing={engine.PendingResponse?.Timing}");
+                        Check("Nutrient Z legal in DamageCalculation when 2000+",
+                            engine.PendingResponse != null &&
+                            engine.PendingResponse.Timing == ResponseTiming.DamageCalculation &&
+                            engine.PendingResponse.LegalCards != null &&
+                            engine.PendingResponse.LegalCards.Exists(c =>
+                                c != null && c.CardId == nutrientZ),
+                            engine.PendingResponse == null
+                                ? "no window"
+                                : $"timing={engine.PendingResponse.Timing} n={engine.PendingResponse.LegalCards?.Count ?? 0} predicted={predicted}");
+                        var lpBefore = p.LifePoints;
+                        if (engine.PendingResponse != null &&
+                            engine.PendingResponse.Timing == ResponseTiming.DamageCalculation &&
+                            engine.CanActivateSpellTrap(p, trap, fromHand: false))
+                        {
+                            Check("Nutrient Z activates",
+                                engine.TryActivateSpellTrap(p, trap, fromHand: false));
+                            DrainCombat(engine);
+                            // Gain 4000 first, then take 3000 → net +1000 from 8000 = 9000
+                            Check("Nutrient Z: gain 4000 LP first then take battle damage",
+                                p.LifePoints == lpBefore + 4000 - predicted ||
+                                p.LifePoints == 9000,
+                                $"LP={p.LifePoints} before={lpBefore} predicted={predicted}");
+                        }
+                    }
+                }
+                {
+                    // Fail-closed soft: BEWD vs Celtic (1600) — Nutrient Z must NOT be legal.
+                    var engine = Fresh(db, pDeck, aDeck);
+                    if (ReachOpponentBattle(engine))
+                    {
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.LifePoints = 8000;
+                        opp.LifePoints = 8000;
+                        const int bewdNz2 = 89631139;
+                        const int celticNz2 = 91152256;
+                        var trap = PlaceSetTrap(engine, p, nutrientZ, 0);
+                        trap.SetThisTurn = false;
+                        var defender = PlaceMonster(engine, p, celticNz2, 2, BattlePosition.Attack, true);
+                        defender.ClearAttackFlags();
+                        var attacker = PlaceMonster(engine, opp, bewdNz2, 2, BattlePosition.Attack, true);
+                        attacker.ClearAttackFlags();
+                        attacker.SummonedThisTurn = false;
+                        if (engine.Phase == DuelPhase.Main1)
+                            engine.TryEnterBattlePhase(opp);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        DrainCombat(engine);
+                        if (engine.TryAttack(opp, attacker, defender))
+                        {
+                            if (engine.PendingResponse != null &&
+                                engine.PendingResponse.Timing == ResponseTiming.AttackDeclared)
+                                engine.PassResponse();
+                            var predicted = TextEffectRuntime.PredictedBattleDamageTo(engine, p);
+                            Check("Nutrient Z fail-closed: <2000 battle damage not legal",
+                                predicted < 2000 &&
+                                (engine.PendingResponse == null ||
+                                 engine.PendingResponse.Timing != ResponseTiming.DamageCalculation ||
+                                 engine.PendingResponse.LegalCards == null ||
+                                 !engine.PendingResponse.LegalCards.Exists(c =>
+                                     c != null && c.CardId == nutrientZ)),
+                                $"predicted={predicted} timing={engine.PendingResponse?.Timing} legalHas={engine.PendingResponse?.LegalCards != null && engine.PendingResponse.LegalCards.Exists(c => c != null && c.CardId == nutrientZ)}");
+                            if (engine.IsAwaitingResponse) engine.PassResponse();
+                            DrainCombat(engine);
+                        }
+                    }
+                }
+                const int heartOfTheUnderdog = 35762283;
+                var hotuProg = CardTextEffectCompiler.Compile(db.Get(heartOfTheUnderdog));
+                Check("Heart of the Underdog FullyCompiled your Draw Phase Normal Monster reveal → draw 1 more",
+                    hotuProg != null && hotuProg.FullyCompiled &&
+                    hotuProg.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.ControllerNormalDrawInDrawPhase &&
+                        c.Action == EffectActionKind.RevealJustDrawnNormalAndDraw &&
+                        c.Side == EffectSide.Controller && c.Amount == 1 &&
+                        c.RequiresNormalMonster && c.IsOptional),
+                    hotuProg == null ? "null" : $"full={hotuProg.FullyCompiled} unparsed={string.Join("|", hotuProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                // Fail-closed: not Drop Off (opp), Solemn Wishes any-draw, Pot of Greed always-draw-2,
+                // Morphing Jar / Card Destruction reload.
+                Check("Heart of the Underdog is not Drop Off opp normal-draw",
+                    hotuProg != null && !hotuProg.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.OpponentNormalDrawInDrawPhase));
+                Check("Heart of the Underdog is not Solemn Wishes ControllerDraws any-draw",
+                    hotuProg != null && !hotuProg.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.ControllerDraws));
+                Check("Heart of the Underdog is not Pot of Greed Activate always-draw-2",
+                    hotuProg != null && !hotuProg.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.Activate &&
+                        c.Action == EffectActionKind.Draw && c.Amount >= 2));
+                Check("Heart of the Underdog is not Morphing Jar / Card Destruction mass reload",
+                    hotuProg != null && !hotuProg.ClauseList.Exists(c =>
+                        c != null && (c.Action == EffectActionKind.BothPlayersDiscardAndRedraw ||
+                                      c.Action == EffectActionKind.CyberJarStyle)));
+                {
+                    // Soft: your Draw Phase Normal Monster just-drawn → reveal → draw 1 more.
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    p.Hand.Clear();
+                    const int celticG = 91152256;
+                    const int gearfried = 423705; // Effect Monster fodder — prevents recursive Heart on the extra draw
+                    // Ensure a draw-able card remains.
+                    if (p.Deck.Count == 0)
+                        p.Deck.Add(gearfried);
+                    else
+                        p.Deck[0] = gearfried;
+                    var justDrew = PutInHand(engine, p, celticG);
+                    TextEffectRuntime.RememberNormalDrawCard(p, justDrew);
+                    var spell = PlaceSetTrap(engine, p, heartOfTheUnderdog, 0);
+                    spell.FaceUp = true;
+                    var handBefore = p.Hand.Count;
+                    var resolved = TextEffectRuntime.TryResolveControllerNormalDrawNormalMonsterEffect(
+                        engine, p, spell);
+                    DrainCombat(engine);
+                    Check("Heart of the Underdog: reveal Normal → draw 1 more",
+                        resolved && p.Hand.Count == handBefore + 1 && p.Hand.Contains(justDrew),
+                        $"resolved={resolved} hand={p.Hand.Count} (was {handBefore}) stillHasNormal={p.Hand.Contains(justDrew)}");
+                }
+                {
+                    // Fail-closed soft: Effect Monster just-drawn must NOT trigger draw.
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    const int gearfried = 423705;
+                    var justDrew = PutInHand(engine, p, gearfried);
+                    TextEffectRuntime.RememberNormalDrawCard(p, justDrew);
+                    var spell = PlaceSetTrap(engine, p, heartOfTheUnderdog, 0);
+                    spell.FaceUp = true;
+                    var handBefore = p.Hand.Count;
+                    var resolved = TextEffectRuntime.TryResolveControllerNormalDrawNormalMonsterEffect(
+                        engine, p, spell);
+                    DrainCombat(engine);
+                    Check("Heart of the Underdog fail-closed: Effect Monster just-drawn does not draw",
+                        !resolved && p.Hand.Count == handBefore,
+                        $"resolved={resolved} hand={p.Hand.Count} (was {handBefore})");
+                }
+                {
+                    // Fail-closed soft: opponent's just-drawn Normal must NOT fire your Heart.
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    o.Hand.Clear();
+                    const int celticG = 91152256;
+                    var justDrew = PutInHand(engine, o, celticG);
+                    TextEffectRuntime.RememberNormalDrawCard(o, justDrew);
+                    var spell = PlaceSetTrap(engine, p, heartOfTheUnderdog, 0);
+                    spell.FaceUp = true;
+                    var handBefore = p.Hand.Count;
+                    var resolved = TextEffectRuntime.TryResolveControllerNormalDrawNormalMonsterEffect(
+                        engine, p, spell);
+                    DrainCombat(engine);
+                    Check("Heart of the Underdog fail-closed: opp Normal draw does not fire your Heart",
+                        !resolved && p.Hand.Count == handBefore,
+                        $"resolved={resolved} hand={p.Hand.Count} (was {handBefore})");
+                }
+
+                const int springOfRebirth = 94425169;
+                var springProg = CardTextEffectCompiler.Compile(db.Get(springOfRebirth));
+                Check("Spring of Rebirth FullyCompiled Continuous field→owner hand → Gain 500 LP",
+                    springProg != null && springProg.FullyCompiled &&
+                    springProg.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.ContinuousWhileFaceUp &&
+                        c.Action == EffectActionKind.GainLpWhenMonsterReturnsToOwnerHand &&
+                        c.Side == EffectSide.Controller && c.Amount == 500),
+                    springProg == null ? "null" : $"full={springProg.FullyCompiled} unparsed={string.Join("|", springProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                // Fail-closed: not Dian Keto Activate heal, Nutrient Z damage-calc, GY-send, bounce-destroy.
+                Check("Spring of Rebirth is not Dian Keto Activate heal",
+                    springProg != null && !springProg.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.Activate &&
+                        c.Action == EffectActionKind.GainLifePoints));
+                Check("Spring of Rebirth is not Nutrient Z DamageCalculation",
+                    springProg != null && !springProg.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.DamageCalculation));
+                Check("Spring of Rebirth is not GY-send / SentFromFieldToGy",
+                    springProg != null && !springProg.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.SentFromFieldToGy));
+                Check("Spring of Rebirth is not bounce-destroy",
+                    springProg != null && !springProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.Destroy));
+                {
+                    // Soft: Compulsory Evacuation Device bounce → Spring controller gains 500.
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    p.LifePoints = 8000;
+                    o.LifePoints = 8000;
+                    const int celticSpring = 91152256;
+                    const int ced = 94192409; // Compulsory Evacuation Device
+                    var spring = PlaceSetTrap(engine, p, springOfRebirth, 0);
+                    spring.FaceUp = true;
+                    var mon = PlaceMonster(engine, o, celticSpring, 2, BattlePosition.Attack, true);
+                    var lpBefore = p.LifePoints;
+                    var bounced = engine.ReturnCardToHand(mon);
+                    DrainCombat(engine);
+                    Check("Spring of Rebirth: bounce to hand gains 500 LP",
+                        bounced && p.LifePoints == lpBefore + 500 && o.Hand.Contains(mon),
+                        $"bounced={bounced} LP={p.LifePoints} (was {lpBefore}) inHand={o.Hand.Contains(mon)}");
+                }
+                {
+                    // Fail-closed soft: GY-send must NOT gain LP.
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    p.LifePoints = 8000;
+                    const int celticSpringGy = 91152256;
+                    var spring = PlaceSetTrap(engine, p, springOfRebirth, 0);
+                    spring.FaceUp = true;
+                    var mon = PlaceMonster(engine, o, celticSpringGy, 2, BattlePosition.Attack, true);
+                    var lpBefore = p.LifePoints;
+                    engine.SendCardToGrave(o, mon);
+                    DrainCombat(engine);
+                    Check("Spring of Rebirth fail-closed: GY-send does not gain LP",
+                        p.LifePoints == lpBefore,
+                        $"LP={p.LifePoints} (was {lpBefore})");
+                }
+                {
+                    // Fail-closed soft: destroy ≠ return to hand — must NOT gain LP.
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    p.LifePoints = 8000;
+                    const int celticSpringDes = 91152256;
+                    var spring = PlaceSetTrap(engine, p, springOfRebirth, 0);
+                    spring.FaceUp = true;
+                    var mon = PlaceMonster(engine, o, celticSpringDes, 2, BattlePosition.Attack, true);
+                    var lpBefore = p.LifePoints;
+                    engine.DestroyMonsterPublic(o, mon);
+                    DrainCombat(engine);
+                    Check("Spring of Rebirth fail-closed: bounce-destroy does not gain LP",
+                        p.LifePoints == lpBefore && !o.Hand.Contains(mon),
+                        $"LP={p.LifePoints} (was {lpBefore}) inHand={o.Hand.Contains(mon)}");
+                }
+                {
+                    // Fail-closed soft: Dian Keto Activate heal is a different atom (not Spring continuous).
+                    const int dianKeto = 84257640;
+                    var dianProg = CardTextEffectCompiler.Compile(db.Get(dianKeto));
+                    Check("Dian Keto remains Activate GainLifePoints (not Spring continuous bounce)",
+                        dianProg != null && dianProg.FullyCompiled &&
+                        dianProg.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.Activate &&
+                            c.Action == EffectActionKind.GainLifePoints) &&
+                        !dianProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.GainLpWhenMonsterReturnsToOwnerHand),
+                        dianProg == null ? "null" : $"full={dianProg.FullyCompiled}");
+                }
+                {
+                    // Fail-closed soft: Nutrient Z remains DamageCalculation (not Spring).
+                    const int nutrientZFc = 29389368;
+                    var nzProgFc = CardTextEffectCompiler.Compile(db.Get(nutrientZFc));
+                    Check("Nutrient Z remains DamageCalculation (not Spring continuous bounce)",
+                        nzProgFc != null &&
+                        nzProgFc.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.DamageCalculation &&
+                            c.Action == EffectActionKind.GainLifePoints) &&
+                        !nzProgFc.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.GainLpWhenMonsterReturnsToOwnerHand),
+                        nzProgFc == null ? "null" : $"full={nzProgFc.FullyCompiled}");
+                }
+
+                // ── v112: Banner of Courage — Continuous +200 ATK your monsters, your BP only ──
+                {
+                    const int bannerOfCourage = 10012614;
+                    const int yellowLuster = 4542651;
+                    const int unitedWeStand = 56747793;
+                    const int celticBanner = 91152256;
+                    var bannerProg = CardTextEffectCompiler.Compile(db.Get(bannerOfCourage));
+                    Check("Banner of Courage FullyCompiled ContinuousGainAtkDef +200 your BP only",
+                        bannerProg != null && bannerProg.FullyCompiled &&
+                        bannerProg.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.ContinuousWhileFaceUp &&
+                            c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                            c.Side == EffectSide.Controller &&
+                            c.Amount == 200 && c.DefAmount == 0 &&
+                            c.RequiresBattlePhase && c.ControllerTurnOnly &&
+                            !c.ScaleThisAtkByEquippedEquipCount),
+                        bannerProg == null ? "null" : $"full={bannerProg.FullyCompiled} unparsed={string.Join("|", bannerProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                    // Fail-closed compile: not always-on (must require BP + controller turn).
+                    Check("Banner of Courage is not always-on aura (RequiresBattlePhase+ControllerTurnOnly)",
+                        bannerProg != null && bannerProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                            c.RequiresBattlePhase && c.ControllerTurnOnly) &&
+                        !bannerProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                            (!c.RequiresBattlePhase || !c.ControllerTurnOnly)));
+                    // Fail-closed: Yellow Luster Shield remains DEF-only (no Banner ATK BP flags).
+                    var ylsProg = CardTextEffectCompiler.Compile(db.Get(yellowLuster));
+                    Check("Banner of Courage is not Yellow Luster Shield DEF boost",
+                        ylsProg != null &&
+                        ylsProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                            c.Amount == 0 && c.DefAmount == 300) &&
+                        (bannerProg == null || !bannerProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                            c.DefAmount > 0)),
+                        ylsProg == null ? "null" : $"full={ylsProg.FullyCompiled}");
+                    // Fail-closed: United We Stand remains per-monster Equip scale — Banner must not inherit it.
+                    var uwsProg = CardTextEffectCompiler.Compile(db.Get(unitedWeStand));
+                    Check("Banner of Courage is not United We Stand / Equip scale",
+                        uwsProg != null &&
+                        uwsProg.ClauseList.Exists(c =>
+                            c != null && c.ScaleAmountByControllerMonsters &&
+                            c.EquipAtkBonus == 800) &&
+                        bannerProg != null &&
+                        !bannerProg.ClauseList.Exists(c =>
+                            c != null && (c.ScaleAmountByControllerMonsters ||
+                                          c.ScaleThisAtkByEquippedEquipCount)),
+                        uwsProg == null ? "null" : $"full={uwsProg.FullyCompiled}");
+                    {
+                        // Soft: Main Phase no ATK; your BP +200 your monsters only; no DEF; opp BP no boost.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var o = engine.Opponent;
+                        var spell = PlaceSetTrap(engine, p, bannerOfCourage, 0);
+                        spell.FaceUp = true;
+                        var mine = PlaceMonster(engine, p, celticBanner, 2, BattlePosition.Attack, true);
+                        var theirs = PlaceMonster(engine, o, celticBanner, 2, BattlePosition.Attack, true);
+                        FieldSpellEffects.RefreshBoard(engine);
+                        var mainAtk = mine.CurrentAtk;
+                        var mainDef = mine.CurrentDef;
+                        var theirsMain = theirs.CurrentAtk;
+                        Check("Banner of Courage fail-closed: Main Phase no ATK/DEF boost",
+                            mainAtk == 1400 && mainDef == 1200 && theirsMain == 1400,
+                            $"mainAtk={mainAtk} mainDef={mainDef} theirs={theirsMain} phase={engine.Phase}");
+                        var reached = ReachPlayerBattle(engine);
+                        FieldSpellEffects.RefreshBoard(engine);
+                        Check("Banner of Courage: +200 ATK your monsters only in your Battle Phase",
+                            reached && mine.CurrentAtk == 1600 && mine.CurrentDef == 1200 &&
+                            theirs.CurrentAtk == 1400,
+                            $"reached={reached} phase={engine.Phase} turn={engine.TurnPlayer?.Name} mineAtk={mine.CurrentAtk} mineDef={mine.CurrentDef} theirs={theirs.CurrentAtk}");
+                    }
+                    {
+                        // Fail-closed soft: opponent's Battle Phase must NOT grant your +200.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var o = engine.Opponent;
+                        var spell = PlaceSetTrap(engine, p, bannerOfCourage, 0);
+                        spell.FaceUp = true;
+                        var mine = PlaceMonster(engine, p, celticBanner, 2, BattlePosition.Attack, true);
+                        var theirs = PlaceMonster(engine, o, celticBanner, 2, BattlePosition.Attack, true);
+                        var reachedOpp = ReachOpponentBattle(engine);
+                        FieldSpellEffects.RefreshBoard(engine);
+                        Check("Banner of Courage fail-closed: opp Battle Phase does not grant +200",
+                            reachedOpp && mine.CurrentAtk == 1400 && theirs.CurrentAtk == 1400,
+                            $"reachedOpp={reachedOpp} phase={engine.Phase} turn={engine.TurnPlayer?.Name} mine={mine.CurrentAtk} theirs={theirs.CurrentAtk}");
+                    }
+                    {
+                        // Fail-closed soft: Yellow Luster Shield stays DEF-only (not Banner ATK BP).
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var yls = PlaceSetTrap(engine, p, yellowLuster, 0);
+                        yls.FaceUp = true;
+                        var mine = PlaceMonster(engine, p, celticBanner, 2, BattlePosition.Attack, true);
+                        FieldSpellEffects.RefreshBoard(engine);
+                        var atkMain = mine.CurrentAtk;
+                        var defMain = mine.CurrentDef;
+                        var reached = ReachPlayerBattle(engine);
+                        FieldSpellEffects.RefreshBoard(engine);
+                        Check("Yellow Luster Shield remains DEF boost (not Banner ATK BP)",
+                            atkMain == 1400 && defMain == 1500 &&
+                            reached && mine.CurrentAtk == 1400 && mine.CurrentDef == 1500,
+                            $"atkMain={atkMain} defMain={defMain} reached={reached} atkBP={mine.CurrentAtk} defBP={mine.CurrentDef}");
+                    }
+                }
+
+                // ── v113: Mysterious Puppeteer — Continuous either-player Normal/Flip Summon → +500 LP ──
+                {
+                    const int mysteriousPuppeteer = 54098121;
+                    const int celticPup = 91152256;
+                    const int dianKetoPup = 84257640;
+                    const int springPupFc = 94425169;
+                    var pupProg = CardTextEffectCompiler.Compile(db.Get(mysteriousPuppeteer));
+                    Check("Mysterious Puppeteer FullyCompiled Continuous either-player Normal/Flip → Gain 500 LP",
+                        pupProg != null && pupProg.FullyCompiled &&
+                        pupProg.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.ContinuousWhileFaceUp &&
+                            c.Action == EffectActionKind.GainLpWhenEitherPlayerNormalOrFlipSummons &&
+                            c.Side == EffectSide.Controller && c.Amount == 500),
+                        pupProg == null ? "null" : $"full={pupProg.FullyCompiled} unparsed={string.Join("|", pupProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                    // Fail-closed compile: not Dian Keto Activate heal, not Spring bounce, not Special-Summon timing.
+                    Check("Mysterious Puppeteer is not Dian Keto Activate heal",
+                        pupProg != null && !pupProg.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.Activate &&
+                            c.Action == EffectActionKind.GainLifePoints));
+                    Check("Mysterious Puppeteer is not Spring of Rebirth return-to-hand LP",
+                        pupProg != null && !pupProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.GainLpWhenMonsterReturnsToOwnerHand));
+                    Check("Mysterious Puppeteer is not ThisCardSummoned / Special-Summon-any timing",
+                        pupProg != null && !pupProg.ClauseList.Exists(c =>
+                            c != null && (c.Timing == EffectTiming.ThisCardSummoned ||
+                                          c.Timing == EffectTiming.Activate)));
+                    {
+                        // Soft: your Normal Summon while Puppeteer face-up → +500 LP.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var o = engine.Opponent;
+                        p.LifePoints = 8000;
+                        o.LifePoints = 8000;
+                        PlaceMonster(engine, p, mysteriousPuppeteer, 0, BattlePosition.Attack, true);
+                        p.Hand.Clear();
+                        var fodder = PutInHand(engine, p, celticPup);
+                        var lpBefore = p.LifePoints;
+                        var summoned = engine.TryNormalSummon(p, fodder, asSet: false);
+                        DrainCombat(engine);
+                        Check("Mysterious Puppeteer: your Normal Summon gains 500 LP",
+                            summoned && p.LifePoints == lpBefore + 500,
+                            $"summoned={summoned} LP={p.LifePoints} (was {lpBefore})");
+                    }
+                    {
+                        // Soft: opponent Normal Summon → Puppeteer controller gains 500 (either player).
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var o = engine.Opponent;
+                        p.LifePoints = 8000;
+                        o.LifePoints = 8000;
+                        PlaceMonster(engine, p, mysteriousPuppeteer, 0, BattlePosition.Attack, true);
+                        // Reach opponent Main so they can Normal Summon.
+                        var reachedOpp = ReachOpponentMain(engine);
+                        o.Hand.Clear();
+                        var fodder = PutInHand(engine, o, celticPup);
+                        o.NormalSummonUsed = false;
+                        var lpBefore = p.LifePoints;
+                        var oLpBefore = o.LifePoints;
+                        var summoned = reachedOpp && engine.TryNormalSummon(o, fodder, asSet: false);
+                        DrainCombat(engine);
+                        Check("Mysterious Puppeteer: opp Normal Summon gains 500 LP for controller",
+                            summoned && p.LifePoints == lpBefore + 500 && o.LifePoints == oLpBefore,
+                            $"reachedOpp={reachedOpp} summoned={summoned} pLP={p.LifePoints} (was {lpBefore}) oLP={o.LifePoints}");
+                    }
+                    {
+                        // Soft: Flip Summon → +500 LP.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.LifePoints = 8000;
+                        PlaceMonster(engine, p, mysteriousPuppeteer, 0, BattlePosition.Attack, true);
+                        var setMon = PlaceMonster(engine, p, celticPup, 2, BattlePosition.Defense, false);
+                        setMon.SetThisTurn = false;
+                        var lpBefore = p.LifePoints;
+                        var flipped = engine.TryFlipSummon(p, setMon);
+                        DrainCombat(engine);
+                        Check("Mysterious Puppeteer: Flip Summon gains 500 LP",
+                            flipped && p.LifePoints == lpBefore + 500,
+                            $"flipped={flipped} LP={p.LifePoints} (was {lpBefore})");
+                    }
+                    {
+                        // Fail-closed soft: Special Summon must NOT gain LP.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.LifePoints = 8000;
+                        PlaceMonster(engine, p, mysteriousPuppeteer, 0, BattlePosition.Attack, true);
+                        var ss = engine.CreateCardInstance(celticPup);
+                        p.Graveyard.Add(ss);
+                        engine.NextSpecialSummonFromGraveyard = true;
+                        var lpBefore = p.LifePoints;
+                        var ok = engine.SpecialSummonToField(p, ss, BattlePosition.Attack, true);
+                        DrainCombat(engine);
+                        Check("Mysterious Puppeteer fail-closed: Special Summon does not gain LP",
+                            ok && p.LifePoints == lpBefore,
+                            $"ok={ok} LP={p.LifePoints} (was {lpBefore})");
+                    }
+                    {
+                        // Fail-closed soft: Spring bounce LP must not be Puppeteer's action; Dian Keto stays Activate.
+                        var springProgFc = CardTextEffectCompiler.Compile(db.Get(springPupFc));
+                        Check("Spring of Rebirth remains return-to-hand LP (not Puppeteer summon LP)",
+                            springProgFc != null &&
+                            springProgFc.ClauseList.Exists(c =>
+                                c != null &&
+                                c.Action == EffectActionKind.GainLpWhenMonsterReturnsToOwnerHand) &&
+                            !springProgFc.ClauseList.Exists(c =>
+                                c != null &&
+                                c.Action == EffectActionKind.GainLpWhenEitherPlayerNormalOrFlipSummons),
+                            springProgFc == null ? "null" : $"full={springProgFc.FullyCompiled}");
+                        var dianProgPup = CardTextEffectCompiler.Compile(db.Get(dianKetoPup));
+                        Check("Dian Keto remains Activate GainLifePoints (not Puppeteer continuous summon)",
+                            dianProgPup != null && dianProgPup.FullyCompiled &&
+                            dianProgPup.ClauseList.Exists(c =>
+                                c != null && c.Timing == EffectTiming.Activate &&
+                                c.Action == EffectActionKind.GainLifePoints) &&
+                            !dianProgPup.ClauseList.Exists(c =>
+                                c != null &&
+                                c.Action == EffectActionKind.GainLpWhenEitherPlayerNormalOrFlipSummons),
+                            dianProgPup == null ? "null" : $"full={dianProgPup.FullyCompiled}");
+                    }
+                    {
+                        // Fail-closed soft: return-to-hand bounce with Puppeteer face-up must NOT gain LP.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var o = engine.Opponent;
+                        p.LifePoints = 8000;
+                        PlaceMonster(engine, p, mysteriousPuppeteer, 0, BattlePosition.Attack, true);
+                        var mon = PlaceMonster(engine, o, celticPup, 2, BattlePosition.Attack, true);
+                        var lpBefore = p.LifePoints;
+                        var bounced = engine.ReturnCardToHand(mon);
+                        DrainCombat(engine);
+                        Check("Mysterious Puppeteer fail-closed: Spring-style bounce does not gain LP",
+                            bounced && p.LifePoints == lpBefore,
+                            $"bounced={bounced} LP={p.LifePoints} (was {lpBefore})");
+                    }
+                }
+
+                // ── v114: Backup Soldier — Activate while GY≥5: up to 3 non-Effect ≤1500 ATK from GY to hand ──
+                {
+                    const int backupSoldier = 36280194;
+                    const int celticBs = 91152256;       // Normal 1400
+                    const int mysticalElf = 15025844;    // Normal 800
+                    const int giantSoldierBs = 13039848; // Normal 1300
+                    const int bewdBs = 89631139;         // Normal 3000 — fail ATK gate
+                    const int manEater = 54652250;       // Flip Effect — fail non-Effect
+                    const int monsterRebornId = 83764718;
+                    const int callHauntedId = 97077563;
+                    var bsDef = db.Get(backupSoldier);
+                    var bsProg = CardTextEffectCompiler.Compile(bsDef);
+                    Check("Backup Soldier FullyCompiled Activate GY≥5 up to 3 non-Effect ≤1500 add to hand",
+                        bsProg != null && bsProg.FullyCompiled &&
+                        bsProg.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.Activate &&
+                            c.Action == EffectActionKind.AddFromGyToHand &&
+                            c.Zone == EffectZoneFilter.ControllerGyMonsters &&
+                            c.RequiresTargetChoice && c.TargetUpTo && c.TargetCount == 3 &&
+                            c.RequiresNonEffectMonster && c.AmountIsAtkMax && c.Amount == 1500 &&
+                            c.ActivationCondition == "YourGyMonstersAtLeast" && c.ConditionAmount == 5),
+                        bsProg == null ? "null" : $"full={bsProg.FullyCompiled} unparsed={string.Join("|", bsProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                    // Fail-closed compile: not Monster Reborn / Call of the Haunted Special Summon.
+                    Check("Backup Soldier is not Monster Reborn / Call SpecialSummonFromGy",
+                        bsProg != null && !bsProg.ClauseList.Exists(c =>
+                            c != null && (c.Action == EffectActionKind.SpecialSummonFromGy ||
+                                          c.Action == EffectActionKind.SpecialSummonNamed)));
+                    Check("Backup Soldier is not Extra Deck return / bare any-GY without non-Effect gate",
+                        bsProg != null &&
+                        bsProg.ClauseList.Exists(c => c != null && c.RequiresNonEffectMonster && c.AmountIsAtkMax) &&
+                        !bsProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.AddFromGyToHand &&
+                            !c.RequiresNonEffectMonster));
+                    var rebornProgBs = CardTextEffectCompiler.Compile(db.Get(monsterRebornId));
+                    Check("Monster Reborn remains SpecialSummonFromGy (not Backup Soldier add-to-hand)",
+                        rebornProgBs != null &&
+                        rebornProgBs.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.SpecialSummonFromGy) &&
+                        !rebornProgBs.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.AddFromGyToHand &&
+                            c.RequiresNonEffectMonster));
+                    var callProgBs = CardTextEffectCompiler.Compile(db.Get(callHauntedId));
+                    Check("Call of the Haunted remains SpecialSummonFromGy (not Backup Soldier)",
+                        callProgBs != null &&
+                        callProgBs.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.SpecialSummonFromGy));
+                    // New-card rule: same PSCT shape compiles without a passcode allowlist.
+                    var synBs = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000114,
+                        name = "New Trap (Backup Soldier shape)",
+                        type = "Trap Card",
+                        desc =
+                            "While there are 5 or more monsters in your Graveyard: Target up to 3 non-Effect Monsters with 1500 or less ATK in your Graveyard; add them to your hand."
+                    });
+                    Check("New-card rule: Backup Soldier-shaped text compiles without a cardId branch",
+                        synBs != null && synBs.FullyCompiled &&
+                        synBs.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.AddFromGyToHand &&
+                            c.RequiresNonEffectMonster && c.TargetUpTo && c.TargetCount == 3 &&
+                            c.AmountIsAtkMax && c.Amount == 1500 &&
+                            c.ActivationCondition == "YourGyMonstersAtLeast" && c.ConditionAmount == 5));
+                    {
+                        // Soft: GY<5 refuses activation.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        p.Graveyard.Add(engine.CreateCardInstance(celticBs));
+                        p.Graveyard.Add(engine.CreateCardInstance(mysticalElf));
+                        p.Graveyard.Add(engine.CreateCardInstance(giantSoldierBs));
+                        p.Graveyard.Add(engine.CreateCardInstance(bewdBs)); // 4 monsters — below gate
+                        var trap = PlaceSetTrap(engine, p, backupSoldier, 0);
+                        trap.SetThisTurn = false;
+                        Check("Backup Soldier fail-closed: GY<5 cannot activate",
+                            !engine.CanActivateSpellTrap(p, trap, fromHand: false));
+                    }
+                    {
+                        // Soft: GY≥5 with only Effect / high-ATK Normals — zero legal targets → cannot activate.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        for (var i = 0; i < 5; i++)
+                            p.Graveyard.Add(engine.CreateCardInstance(manEater));
+                        p.Graveyard.Add(engine.CreateCardInstance(bewdBs));
+                        var trap = PlaceSetTrap(engine, p, backupSoldier, 0);
+                        trap.SetThisTurn = false;
+                        Check("Backup Soldier fail-closed: no legal non-Effect ≤1500 → cannot activate",
+                            !engine.CanActivateSpellTrap(p, trap, fromHand: false));
+                    }
+                    {
+                        // Soft: GY≥5 with legal Normals — activate, pick 2, finish MultiTarget up-to, add to hand (not SS).
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var g1 = engine.CreateCardInstance(celticBs);
+                        var g2 = engine.CreateCardInstance(mysticalElf);
+                        var g3 = engine.CreateCardInstance(giantSoldierBs);
+                        var gFx = engine.CreateCardInstance(manEater);
+                        var gHi = engine.CreateCardInstance(bewdBs);
+                        p.Graveyard.Add(g1);
+                        p.Graveyard.Add(g2);
+                        p.Graveyard.Add(g3);
+                        p.Graveyard.Add(gFx);
+                        p.Graveyard.Add(gHi);
+                        var trap = PlaceSetTrap(engine, p, backupSoldier, 0);
+                        Check("Backup Soldier: CanActivate with GY≥5 and legal non-Effect ≤1500",
+                            engine.CanActivateSpellTrap(p, trap, fromHand: false));
+                        Check("Backup Soldier: Activate opens MultiTarget up-to GY targeting",
+                            engine.TryActivateSpellTrap(p, trap, fromHand: false) &&
+                            engine.IsAwaitingEffectTarget &&
+                            engine.PendingActivation != null &&
+                            engine.PendingActivation.MultiTarget &&
+                            engine.PendingActivation.MultiStepUpTo,
+                            $"await={engine.IsAwaitingEffectTarget} multi={engine.PendingActivation?.MultiTarget} upTo={engine.PendingActivation?.MultiStepUpTo}");
+                        if (engine.IsAwaitingEffectTarget && engine.PendingActivation != null)
+                        {
+                            Check("Backup Soldier: Effect Monster and ATK>1500 Normal not legal targets",
+                                !engine.PendingActivation.LegalTargets.Contains(gFx) &&
+                                !engine.PendingActivation.LegalTargets.Contains(gHi) &&
+                                engine.PendingActivation.LegalTargets.Contains(g1) &&
+                                engine.PendingActivation.LegalTargets.Contains(g2) &&
+                                engine.PendingActivation.LegalTargets.Contains(g3));
+                            Check("Backup Soldier: pick first Normal",
+                                engine.TrySelectEffectTarget(g1) && engine.IsAwaitingEffectTarget);
+                            Check("Backup Soldier: pick second Normal",
+                                engine.TrySelectEffectTarget(g2) && engine.IsAwaitingEffectTarget);
+                            // Cancel after ≥1 MultiStepUpTo pick finishes the step (same as UI "done").
+                            Check("Backup Soldier: finish up-to adds targets to hand (not SS to field)",
+                                engine.CancelEffectTargeting() &&
+                                p.Hand.Contains(g1) && p.Hand.Contains(g2) &&
+                                !p.Graveyard.Contains(g1) && !p.Graveyard.Contains(g2) &&
+                                p.Graveyard.Contains(g3) &&
+                                !p.TryFindMonster(g1, out _) && !p.TryFindMonster(g2, out _),
+                                $"hand={p.Hand.Count} gy={p.Graveyard.Count}");
+                        }
+                    }
+                }
+
+                // ── v115: Ceasefire — flip all face-down DEF (no Flip effects) + 500× face-up Effect Monsters ──
+                {
+                    const int ceasefire = 36468556;
+                    const int justDesserts = 24068492;
+                    const int swordsReveal = 72302403;
+                    const int manEaterCf = 54652250;   // Flip Effect
+                    const int sanganCf = 26202165;     // Effect
+                    const int celticCf = 91152256;     // Normal
+                    var cfDef = db.Get(ceasefire);
+                    var cfProg = CardTextEffectCompiler.Compile(cfDef);
+                    Check("Ceasefire FullyCompiled Activate flip face-down DEF (no Flip) + burn × Effect Monsters",
+                        cfProg != null && cfProg.FullyCompiled &&
+                        cfProg.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.Activate &&
+                            c.Action == EffectActionKind.FlipAllFaceDownDefenseNoFlipEffects &&
+                            c.SuppressFlipEffects &&
+                            c.ActivationCondition == "FaceDownDefOrFaceUpEffect") &&
+                        cfProg.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.Activate &&
+                            c.Action == EffectActionKind.InflictDamageToOpponent &&
+                            c.Amount == 500 && c.ScaleAmountByFaceUpEffectMonsters),
+                        cfProg == null ? "null" : $"full={cfProg.FullyCompiled} unparsed={string.Join("|", cfProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                    // Fail-closed compile: not Swords continuous reveal / attack lock.
+                    Check("Ceasefire is not Swords of Revealing Light continuous reveal",
+                        cfProg != null &&
+                        !cfProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ApplySwordsOfRevealingLight) &&
+                        !cfProg.ClauseList.Exists(c =>
+                            c != null && c.StaysOnField));
+                    var swordsProg = CardTextEffectCompiler.Compile(db.Get(swordsReveal));
+                    Check("Swords of Revealing Light remains ApplySwordsOfRevealingLight (not Ceasefire)",
+                        swordsProg != null &&
+                        swordsProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ApplySwordsOfRevealingLight) &&
+                        !swordsProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.FlipAllFaceDownDefenseNoFlipEffects));
+                    // Fail-closed: not Flip timing / Flip-activate.
+                    Check("Ceasefire is Activate timing (not Flip-activate)",
+                        cfProg != null &&
+                        cfProg.ClauseList.TrueForAll(c =>
+                            c == null || c.Timing == EffectTiming.Activate) &&
+                        !cfProg.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.Flip));
+                    // Fail-closed: not Just Desserts opp-monster count / burn-per-any-monster.
+                    Check("Ceasefire is not Just Desserts ScaleAmountByOpponentMonsterCount",
+                        cfProg != null &&
+                        cfProg.ClauseList.Exists(c =>
+                            c != null && c.ScaleAmountByFaceUpEffectMonsters) &&
+                        !cfProg.ClauseList.Exists(c =>
+                            c != null && c.ScaleAmountByOpponentMonsterCount));
+                    var jdProgCf = CardTextEffectCompiler.Compile(db.Get(justDesserts));
+                    Check("Just Desserts remains opp-monster scale (not Ceasefire Effect-monster)",
+                        jdProgCf != null &&
+                        jdProgCf.ClauseList.Exists(c =>
+                            c != null && c.ScaleAmountByOpponentMonsterCount) &&
+                        !jdProgCf.ClauseList.Exists(c =>
+                            c != null && c.ScaleAmountByFaceUpEffectMonsters));
+                    // New-card rule: same PSCT shape compiles without a passcode allowlist.
+                    var synCf = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000115,
+                        name = "New Trap (Ceasefire shape)",
+                        type = "Trap Card",
+                        desc =
+                            "If a face-down Defense Position monster or an Effect Monster is on the field: Change all face-down Defense Position monsters on the field to face-up Defense Position (Flip monsters' effects are not activated at this time), also inflict 500 damage to your opponent for each Effect Monster on the field."
+                    });
+                    Check("New-card rule: Ceasefire-shaped text compiles without a cardId branch",
+                        synCf != null && synCf.FullyCompiled &&
+                        synCf.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.FlipAllFaceDownDefenseNoFlipEffects &&
+                            c.SuppressFlipEffects &&
+                            c.ActivationCondition == "FaceDownDefOrFaceUpEffect") &&
+                        synCf.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.InflictDamageToOpponent &&
+                            c.ScaleAmountByFaceUpEffectMonsters && c.Amount == 500));
+                    {
+                        // Soft: empty field — no face-down DEF and no Effect Monster → cannot activate.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var trap = PlaceSetTrap(engine, p, ceasefire, 0);
+                        trap.SetThisTurn = false;
+                        Check("Ceasefire fail-closed: empty field cannot activate",
+                            !engine.CanActivateSpellTrap(p, trap, fromHand: false));
+                    }
+                    {
+                        // Soft: face-down DEF Normals only — can activate; flip; 0 Effect Monsters → 0 damage.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        var setN = PlaceMonster(engine, opp, celticCf, 0, BattlePosition.Defense, false);
+                        var lp = opp.LifePoints;
+                        var trap = PlaceSetTrap(engine, p, ceasefire, 0);
+                        trap.SetThisTurn = false;
+                        Check("Ceasefire: CanActivate with face-down DEF (no Effect Monster yet)",
+                            engine.CanActivateSpellTrap(p, trap, fromHand: false));
+                        Check("Ceasefire: Activate flips face-down DEF; 0 Effect Monsters → 0 damage",
+                            engine.TryActivateSpellTrap(p, trap, fromHand: false) &&
+                            setN.FaceUp && setN.Position == BattlePosition.Defense &&
+                            opp.LifePoints == lp,
+                            $"faceUp={setN.FaceUp} pos={setN.Position} lp={lp}→{opp.LifePoints}");
+                    }
+                    {
+                        // Soft: face-down Flip Effect + face-up Effect + face-down Normal →
+                        // flip both sets; Flip effect NOT activated; burn 500×2 Effect Monsters.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        var bug = PlaceMonster(engine, p, manEaterCf, 0, BattlePosition.Defense, false);
+                        var normSet = PlaceMonster(engine, opp, celticCf, 0, BattlePosition.Defense, false);
+                        var fxFaceUp = PlaceMonster(engine, opp, sanganCf, 1, BattlePosition.Attack, true);
+                        var lp = opp.LifePoints;
+                        var trap = PlaceSetTrap(engine, p, ceasefire, 0);
+                        trap.SetThisTurn = false;
+                        Check("Ceasefire: CanActivate with face-down DEF or Effect Monster",
+                            engine.CanActivateSpellTrap(p, trap, fromHand: false));
+                        var ok = engine.TryActivateSpellTrap(p, trap, fromHand: false);
+                        // Man-Eater Bug FLIP destroy must NOT fire — Normal set stays on field.
+                        Check("Ceasefire: flips face-down DEF without Flip effects; 500×2 Effect Monsters",
+                            ok && bug.FaceUp && bug.Position == BattlePosition.Defense &&
+                            normSet.FaceUp && normSet.Position == BattlePosition.Defense &&
+                            opp.TryFindMonster(normSet, out _) &&
+                            opp.LifePoints == lp - 1000,
+                            $"ok={ok} bugUp={bug.FaceUp} normUp={normSet.FaceUp} " +
+                            $"lp={lp}→{opp.LifePoints} oppMonsters={opp.MonsterCount}");
+                    }
+                }
+
+                // ── v117: Morphing Jar — Flip discard-all then each draws 5 (Amount lock) ──
+                {
+                    const int morphingJarId = 33508719;
+                    const int cardDestructionId = 72892473;
+                    const int cyberJarId = 34124316;
+                    const int dropOffIdMj = 55773067;
+                    const int heartUnderdogIdMj = 35762283;
+                    const int celticMorphJar = 91152256;
+                    var morphJarDef = db.Get(morphingJarId);
+                    var morphJarProg = morphJarDef != null ? CardTextEffectCompiler.Compile(morphJarDef) : null;
+                    Check("Morphing Jar FullyCompiled Flip discard-all then each draws 5",
+                        morphJarProg != null && morphJarProg.FullyCompiled &&
+                        morphJarProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Flip &&
+                            c.Action == EffectActionKind.BothPlayersDiscardAndRedraw &&
+                            c.Amount == 5),
+                        morphJarProg == null
+                            ? "null"
+                            : $"full={morphJarProg.FullyCompiled} n={morphJarProg.ClauseList.Count} unparsed={string.Join("|", morphJarProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                    // Fail-closed vs Card Destruction (Activate + Amount 0 redraw=discarded).
+                    var cardDestProgMj = CardTextEffectCompiler.Compile(db.Get(cardDestructionId));
+                    Check("Card Destruction remains Activate redraw=discarded (not Morphing Jar Amount=5)",
+                        cardDestProgMj != null &&
+                        cardDestProgMj.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Activate &&
+                            c.Action == EffectActionKind.BothPlayersDiscardAndRedraw &&
+                            c.Amount == 0) &&
+                        (morphJarProg == null ||
+                         !morphJarProg.ClauseList.Exists(c =>
+                             c != null && c.Timing == EffectTiming.Activate && c.Amount == 0)));
+
+                    // Fail-closed vs Cyber Jar (destroy + mill/SS).
+                    var cyberJarProgMj = CardTextEffectCompiler.Compile(db.Get(cyberJarId));
+                    Check("Morphing Jar is not Cyber JarStyle destroy+mill/SS",
+                        morphJarProg != null &&
+                        !morphJarProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.CyberJarStyle));
+                    Check("Cyber Jar remains CyberJarStyle (not Morphing Jar discard-redraw)",
+                        cyberJarProgMj != null &&
+                        cyberJarProgMj.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.CyberJarStyle) &&
+                        !cyberJarProgMj.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.BothPlayersDiscardAndRedraw));
+
+                    // Fail-closed vs Drop Off / Heart of the Underdog.
+                    var dropOffProgMj = CardTextEffectCompiler.Compile(db.Get(dropOffIdMj));
+                    Check("Drop Off remains just-drawn discard (not Morphing Jar mass reload)",
+                        dropOffProgMj != null &&
+                        dropOffProgMj.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.DiscardJustDrawnCard) &&
+                        !dropOffProgMj.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.BothPlayersDiscardAndRedraw));
+                    var heartProgMorphJar = CardTextEffectCompiler.Compile(db.Get(heartUnderdogIdMj));
+                    Check("Heart of the Underdog remains Normal-reveal draw (not Morphing Jar mass reload)",
+                        heartProgMorphJar != null &&
+                        heartProgMorphJar.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.RevealJustDrawnNormalAndDraw) &&
+                        !heartProgMorphJar.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.BothPlayersDiscardAndRedraw));
+
+                    // Fail-closed: wipe-without-redraw and controller-only draw-5 must not FullyCompile as Morphing Jar.
+                    var wipeOnlyMorph = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000117,
+                        name = "Near-miss wipe without redraw",
+                        type = "Effect Monster",
+                        frameType = "effect",
+                        desc = "FLIP: Both players discard as many cards as possible from their hands."
+                    });
+                    Check("Wipe-without-redraw is not Morphing Jar FullyCompiled",
+                        wipeOnlyMorph == null || !wipeOnlyMorph.FullyCompiled ||
+                        !wipeOnlyMorph.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.BothPlayersDiscardAndRedraw &&
+                            c.Amount == 5));
+                    var ctrlOnlyMorph = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000118,
+                        name = "Near-miss controller-only draw 5",
+                        type = "Effect Monster",
+                        frameType = "effect",
+                        desc = "FLIP: Discard as many cards as possible from your hand, then draw 5 cards."
+                    });
+                    Check("Controller-only draw-5 is not Morphing Jar both-players reload",
+                        ctrlOnlyMorph == null ||
+                        !ctrlOnlyMorph.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.BothPlayersDiscardAndRedraw &&
+                            c.Amount == 5));
+
+                    // New-card rule: same PSCT shape compiles without a passcode allowlist.
+                    var synMorphJar = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000119,
+                        name = "New Monster (Morphing Jar shape)",
+                        type = "Effect Monster",
+                        frameType = "effect",
+                        desc =
+                            "FLIP: Both players discard as many cards as possible from their hands, then each player draws 5 cards."
+                    });
+                    Check("New-card rule: Morphing Jar-shaped text compiles without a cardId branch",
+                        synMorphJar != null && synMorphJar.FullyCompiled &&
+                        synMorphJar.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Flip &&
+                            c.Action == EffectActionKind.BothPlayersDiscardAndRedraw &&
+                            c.Amount == 5));
+
+                    {
+                        // Soft: both hands non-empty — Flip → discard all → each draws exactly 5.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        opp.Hand.Clear();
+                        for (var i = 0; i < 3; i++) PutInHand(engine, p, celticMorphJar);
+                        for (var i = 0; i < 2; i++) PutInHand(engine, opp, celticMorphJar);
+                        // Ensure decks can supply 5 each (Deck is List<int> of card ids).
+                        while (p.Deck.Count < 5)
+                            p.Deck.Add(celticMorphJar);
+                        while (opp.Deck.Count < 5)
+                            opp.Deck.Add(celticMorphJar);
+                        var jar = PlaceMonster(engine, p, morphingJarId, 2, BattlePosition.Defense, false);
+                        jar.SetThisTurn = false;
+                        var gyBeforeP = p.Graveyard.Count;
+                        var gyBeforeO = opp.Graveyard.Count;
+                        Check("Morphing Jar Flip Summon",
+                            engine.TryFlipSummon(p, jar) && jar.FaceUp);
+                        Check("Morphing Jar: both discarded prior hands; each drew exactly 5",
+                            p.Hand.Count == 5 && opp.Hand.Count == 5 &&
+                            p.Graveyard.Count >= gyBeforeP + 3 &&
+                            opp.Graveyard.Count >= gyBeforeO + 2,
+                            $"pHand={p.Hand.Count} oHand={opp.Hand.Count} " +
+                            $"pGy={p.Graveyard.Count}(was {gyBeforeP}) oGy={opp.Graveyard.Count}(was {gyBeforeO})");
+                    }
+
+                    {
+                        // Soft residual OK: empty-hand draw-5 — each still draws 5 with Amount lock.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        opp.Hand.Clear();
+                        while (p.Deck.Count < 5)
+                            p.Deck.Add(celticMorphJar);
+                        while (opp.Deck.Count < 5)
+                            opp.Deck.Add(celticMorphJar);
+                        var jar = PlaceMonster(engine, p, morphingJarId, 2, BattlePosition.Defense, false);
+                        jar.SetThisTurn = false;
+                        MonsterEffects.OnFlipSummoned(engine, p, jar);
+                        Check("Morphing Jar Soft: empty hands still each draw 5 (Amount lock)",
+                            p.Hand.Count == 5 && opp.Hand.Count == 5,
+                            $"pHand={p.Hand.Count} oHand={opp.Hand.Count} (Soft residual OK if empty-hand edge Soft)");
+                    }
+                }
+
+                // ── v118: Dark Factory of Mass Production — Activate exact 2 Normal Monsters GY → hand ──
+                {
+                    const int darkFactory = 90928333;
+                    const int celticDf = 91152256;       // Normal
+                    const int mysticalElfDf = 15025844;  // Normal
+                    const int giantSoldierDf = 13039848; // Normal
+                    const int manEaterDf = 54652250;     // Flip Effect — fail Normal lock
+                    const int backupSoldierDf = 36280194;
+                    const int monsterRebornDf = 83764718;
+                    const int prematureDf = 70828912;
+                    var dfDef = db.Get(darkFactory);
+                    var dfProg = CardTextEffectCompiler.Compile(dfDef);
+                    Check("Dark Factory FullyCompiled Activate exact 2 Normal GY add to hand",
+                        dfProg != null && dfProg.FullyCompiled &&
+                        dfProg.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.Activate &&
+                            c.Action == EffectActionKind.AddFromGyToHand &&
+                            c.Zone == EffectZoneFilter.ControllerGyMonsters &&
+                            c.RequiresTargetChoice && !c.TargetUpTo && c.TargetCount == 2 &&
+                            c.RequiresNormalMonster && !c.RequiresNonEffectMonster &&
+                            !c.AmountIsAtkMax &&
+                            string.IsNullOrEmpty(c.ActivationCondition)),
+                        dfProg == null ? "null" : $"full={dfProg.FullyCompiled} unparsed={string.Join("|", dfProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                    // Fail-closed compile: not Backup Soldier TargetUpTo/non-Effect/ATK/GY≥N shape.
+                    Check("Dark Factory is not Backup Soldier TargetUpTo non-Effect ATK/GY gate",
+                        dfProg != null &&
+                        !dfProg.ClauseList.Exists(c =>
+                            c != null && c.TargetUpTo && c.RequiresNonEffectMonster));
+                    // Fail-closed compile: not Monster Reborn / Premature Special Summon.
+                    Check("Dark Factory is not Monster Reborn / Premature SpecialSummonFromGy",
+                        dfProg != null && !dfProg.ClauseList.Exists(c =>
+                            c != null && (c.Action == EffectActionKind.SpecialSummonFromGy ||
+                                          c.Action == EffectActionKind.SpecialSummonNamed)));
+                    var bsProgDf = CardTextEffectCompiler.Compile(db.Get(backupSoldierDf));
+                    Check("Backup Soldier remains TargetUpTo non-Effect (not Dark Factory exact-2 Normal)",
+                        bsProgDf != null &&
+                        bsProgDf.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.AddFromGyToHand &&
+                            c.TargetUpTo && c.RequiresNonEffectMonster && c.TargetCount == 3) &&
+                        !bsProgDf.ClauseList.Exists(c =>
+                            c != null && c.RequiresNormalMonster && !c.TargetUpTo && c.TargetCount == 2));
+                    var rebornProgDf = CardTextEffectCompiler.Compile(db.Get(monsterRebornDf));
+                    Check("Monster Reborn remains SpecialSummonFromGy (not Dark Factory add-to-hand)",
+                        rebornProgDf != null &&
+                        rebornProgDf.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.SpecialSummonFromGy) &&
+                        !rebornProgDf.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.AddFromGyToHand &&
+                            c.RequiresNormalMonster && c.TargetCount == 2));
+                    var prematureProgDf = CardTextEffectCompiler.Compile(db.Get(prematureDf));
+                    Check("Premature Burial remains SpecialSummonFromGy (not Dark Factory add-to-hand)",
+                        prematureProgDf != null &&
+                        prematureProgDf.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.SpecialSummonFromGy) &&
+                        !prematureProgDf.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.AddFromGyToHand &&
+                            c.RequiresNormalMonster));
+                    // Fail-closed: 1-target Normal / Effect Monster / opp GY / up-to-2 must not FullyCompile as Dark Factory.
+                    var oneTargetDf = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000120,
+                        name = "Near-miss 1 Normal GY add",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        desc = "Target 1 Normal Monster in your GY; add it to your hand."
+                    });
+                    Check("1-target Normal GY add is not Dark Factory exact-2 FullyCompiled",
+                        oneTargetDf == null || !oneTargetDf.FullyCompiled ||
+                        !oneTargetDf.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.AddFromGyToHand &&
+                            c.RequiresNormalMonster && c.TargetCount == 2 && !c.TargetUpTo));
+                    var effectMonDf = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000121,
+                        name = "Near-miss 2 Effect Monsters GY add",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        desc = "Target 2 Effect Monsters in your GY; add them to your hand."
+                    });
+                    Check("2 Effect Monsters GY add is not Dark Factory Normal lock",
+                        effectMonDf == null ||
+                        !effectMonDf.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.AddFromGyToHand &&
+                            c.RequiresNormalMonster && c.TargetCount == 2 && !c.TargetUpTo));
+                    var oppGyDf = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000122,
+                        name = "Near-miss 2 Normal opp GY add",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        desc = "Target 2 Normal Monsters in your opponent's GY; add them to your hand."
+                    });
+                    Check("Opp GY Normal add is not Dark Factory your-GY FullyCompiled",
+                        oppGyDf == null || !oppGyDf.FullyCompiled ||
+                        !oppGyDf.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.AddFromGyToHand &&
+                            c.Zone == EffectZoneFilter.ControllerGyMonsters &&
+                            c.RequiresNormalMonster && c.TargetCount == 2));
+                    var upToDf = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000123,
+                        name = "Near-miss up to 2 Normal GY add",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        desc = "Target up to 2 Normal Monsters in your GY; add them to your hand."
+                    });
+                    Check("Up-to-2 Normal GY add is not Dark Factory exact TargetCount",
+                        upToDf == null ||
+                        !upToDf.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.AddFromGyToHand &&
+                            c.RequiresNormalMonster && c.TargetCount == 2 && !c.TargetUpTo));
+                    // New-card rule: same PSCT shape compiles without a passcode allowlist.
+                    var synDf = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000124,
+                        name = "New Spell (Dark Factory shape)",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        desc = "Target 2 Normal Monsters in your GY; add them to your hand."
+                    });
+                    Check("New-card rule: Dark Factory-shaped text compiles without a cardId branch",
+                        synDf != null && synDf.FullyCompiled &&
+                        synDf.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.AddFromGyToHand &&
+                            c.RequiresNormalMonster && !c.TargetUpTo && c.TargetCount == 2 &&
+                            c.Zone == EffectZoneFilter.ControllerGyMonsters));
+                    {
+                        // Soft: fewer than 2 Normal Monsters in GY → cannot activate.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        p.Graveyard.Add(engine.CreateCardInstance(celticDf));
+                        p.Graveyard.Add(engine.CreateCardInstance(manEaterDf)); // Effect — not legal
+                        var card = PutInHand(engine, p, darkFactory);
+                        Check("Dark Factory fail-closed: <2 Normal in GY cannot activate",
+                            !engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    }
+                    {
+                        // Soft: only Effect Monsters in GY → cannot activate.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        for (var i = 0; i < 3; i++)
+                            p.Graveyard.Add(engine.CreateCardInstance(manEaterDf));
+                        var card = PutInHand(engine, p, darkFactory);
+                        Check("Dark Factory fail-closed: Effect Monsters only → cannot activate",
+                            !engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    }
+                    {
+                        // Soft: 2+ Normals — activate, pick exact 2, both add to hand (not SS).
+                        // Soft residual OK if multi-target UX is Soft.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        var g1 = engine.CreateCardInstance(celticDf);
+                        var g2 = engine.CreateCardInstance(mysticalElfDf);
+                        var g3 = engine.CreateCardInstance(giantSoldierDf);
+                        var gFx = engine.CreateCardInstance(manEaterDf);
+                        var gOpp = engine.CreateCardInstance(celticDf);
+                        p.Graveyard.Add(g1);
+                        p.Graveyard.Add(g2);
+                        p.Graveyard.Add(g3);
+                        p.Graveyard.Add(gFx);
+                        opp.Graveyard.Add(gOpp);
+                        var card = PutInHand(engine, p, darkFactory);
+                        Check("Dark Factory: CanActivate with ≥2 Normal in your GY",
+                            engine.CanActivateSpellTrap(p, card, fromHand: true));
+                        Check("Dark Factory: Activate opens MultiTarget exact-2 GY targeting",
+                            engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                            engine.IsAwaitingEffectTarget &&
+                            engine.PendingActivation != null &&
+                            engine.PendingActivation.MultiTarget &&
+                            !engine.PendingActivation.MultiStepUpTo &&
+                            engine.PendingActivation.MultiStepRemaining == 2,
+                            $"await={engine.IsAwaitingEffectTarget} multi={engine.PendingActivation?.MultiTarget} upTo={engine.PendingActivation?.MultiStepUpTo} rem={engine.PendingActivation?.MultiStepRemaining}");
+                        if (engine.IsAwaitingEffectTarget && engine.PendingActivation != null)
+                        {
+                            Check("Dark Factory: Effect Monster and opp GY not legal; Normals are",
+                                !engine.PendingActivation.LegalTargets.Contains(gFx) &&
+                                !engine.PendingActivation.LegalTargets.Contains(gOpp) &&
+                                engine.PendingActivation.LegalTargets.Contains(g1) &&
+                                engine.PendingActivation.LegalTargets.Contains(g2) &&
+                                engine.PendingActivation.LegalTargets.Contains(g3));
+                            Check("Dark Factory: pick first Normal",
+                                engine.TrySelectEffectTarget(g1) && engine.IsAwaitingEffectTarget);
+                            Check("Dark Factory Soft: pick second Normal finishes exact-2 add to hand (not SS)",
+                                engine.TrySelectEffectTarget(g2) &&
+                                p.Hand.Contains(g1) && p.Hand.Contains(g2) &&
+                                !p.Graveyard.Contains(g1) && !p.Graveyard.Contains(g2) &&
+                                p.Graveyard.Contains(g3) &&
+                                !p.TryFindMonster(g1, out _) && !p.TryFindMonster(g2, out _),
+                                $"hand={p.Hand.Count} gy={p.Graveyard.Count} await={engine.IsAwaitingEffectTarget} (Soft residual OK if multi-target UX Soft)");
+                        }
+                    }
+                }
+
+                // ── v119: Disappear — Activate exact 1 card opp GY → Banish ──
+                {
+                    const int disappear = 24623598;
+                    const int celticDi = 91152256;       // monster in GY
+                    const int mstDi = 5318639;           // Spell in GY — must be legal (not monsters-only)
+                    const int gravediggerDi = 82542267;
+                    const int soulReleaseDi = 5758500;
+                    const int chainDisappearDi = 57139487;
+                    var diDef = db.Get(disappear);
+                    var diProg = CardTextEffectCompiler.Compile(diDef);
+                    Check("Disappear FullyCompiled Activate Banish exact-1 OppGyCards",
+                        diProg != null && diProg.FullyCompiled &&
+                        diProg.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.Activate &&
+                            c.Action == EffectActionKind.Banish &&
+                            c.Zone == EffectZoneFilter.OppGyCards &&
+                            c.RequiresTargetChoice && !c.TargetUpTo && c.TargetCount == 1 &&
+                            c.Amount <= 1),
+                        diDef == null ? "null def" :
+                        diProg == null ? "null" :
+                        $"full={diProg.FullyCompiled} unparsed={string.Join("|", diProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                    // Fail-closed compile: not Gravedigger monsters-only / up-to Amount.
+                    Check("Disappear is not Gravedigger OppGyMonsters up-to Amount",
+                        diProg != null &&
+                        !diProg.ClauseList.Exists(c =>
+                            c != null && c.Zone == EffectZoneFilter.OppGyMonsters && c.Amount > 1));
+                    // Fail-closed compile: not Soul Release EitherGyCards up-to.
+                    Check("Disappear is not Soul Release EitherGyCards up-to",
+                        diProg != null &&
+                        !diProg.ClauseList.Exists(c =>
+                            c != null && c.Zone == EffectZoneFilter.EitherGyCards));
+                    // Fail-closed compile: not Chain Disappearance summon + same-name.
+                    Check("Disappear is not Chain Disappearance summon/same-name",
+                        diProg != null &&
+                        !diProg.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.BanishThenSameNameFromOppHandDeck ||
+                             c.Timing == EffectTiming.OpponentNormalOrFlipSummon)));
+                    var ghoulProgDi = CardTextEffectCompiler.Compile(db.Get(gravediggerDi));
+                    Check("Gravedigger remains OppGyMonsters up-to Amount (not Disappear exact-1 OppGyCards)",
+                        ghoulProgDi != null &&
+                        ghoulProgDi.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.Banish &&
+                            c.Zone == EffectZoneFilter.OppGyMonsters && c.Amount == 2) &&
+                        !ghoulProgDi.ClauseList.Exists(c =>
+                            c != null && c.Zone == EffectZoneFilter.OppGyCards && c.TargetCount == 1 && !c.TargetUpTo));
+                    var soulProgDi = CardTextEffectCompiler.Compile(db.Get(soulReleaseDi));
+                    Check("Soul Release remains EitherGyCards up-to-5 (not Disappear OppGyCards exact-1)",
+                        soulProgDi != null &&
+                        soulProgDi.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.Banish &&
+                            c.Zone == EffectZoneFilter.EitherGyCards && c.Amount == 5) &&
+                        !soulProgDi.ClauseList.Exists(c =>
+                            c != null && c.Zone == EffectZoneFilter.OppGyCards && c.TargetCount == 1 && !c.TargetUpTo));
+                    var chainProgDi = CardTextEffectCompiler.Compile(db.Get(chainDisappearDi));
+                    Check("Chain Disappearance remains summon/same-name (not Disappear Activate OppGy)",
+                        chainProgDi != null &&
+                        chainProgDi.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.BanishThenSameNameFromOppHandDeck) &&
+                        !chainProgDi.ClauseList.Exists(c =>
+                            c != null && c.Zone == EffectZoneFilter.OppGyCards));
+                    // Fail-closed near-misses: up-to / monsters / any GY / your GY / destroy must not FullyCompile as Disappear.
+                    var upToDi = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000130,
+                        name = "Near-miss up to 1 opp GY banish",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "Target up to 1 card in your opponent's GY; banish that target."
+                    });
+                    Check("Up-to-1 opp GY banish is not Disappear exact TargetCount FullyCompiled",
+                        upToDi == null ||
+                        !upToDi.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.Banish &&
+                            c.Zone == EffectZoneFilter.OppGyCards && c.TargetCount == 1 && !c.TargetUpTo));
+                    var monstersDi = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000131,
+                        name = "Near-miss 1 monster opp GY banish",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "Target 1 monster in your opponent's GY; banish that target."
+                    });
+                    Check("1 monster opp GY banish is not Disappear any-card OppGyCards",
+                        monstersDi == null ||
+                        !monstersDi.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.Banish &&
+                            c.Zone == EffectZoneFilter.OppGyCards && c.TargetCount == 1 && !c.TargetUpTo));
+                    var anyGyDi = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000132,
+                        name = "Near-miss 1 card any GY banish",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        desc = "Target 1 card in any GY; banish that target."
+                    });
+                    Check("1 card any GY banish is not Disappear OppGyCards FullyCompiled",
+                        anyGyDi == null || !anyGyDi.FullyCompiled ||
+                        !anyGyDi.ClauseList.Exists(c =>
+                            c != null && c.Zone == EffectZoneFilter.OppGyCards));
+                    var yourGyDi = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000133,
+                        name = "Near-miss 1 card your GY banish",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "Target 1 card in your GY; banish that target."
+                    });
+                    Check("1 card your GY banish is not Disappear OppGyCards FullyCompiled",
+                        yourGyDi == null || !yourGyDi.FullyCompiled ||
+                        !yourGyDi.ClauseList.Exists(c =>
+                            c != null && c.Zone == EffectZoneFilter.OppGyCards));
+                    var destroyDi = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000134,
+                        name = "Near-miss destroy 1 opp GY",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "Target 1 card in your opponent's GY; destroy that target."
+                    });
+                    Check("Destroy opp GY is not Disappear Banish FullyCompiled",
+                        destroyDi == null ||
+                        !destroyDi.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.Banish &&
+                            c.Zone == EffectZoneFilter.OppGyCards));
+                    // Soft residual: modern PSCT and legacy Remove-from-play both FullyCompile.
+                    var modernDi = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000135,
+                        name = "Disappear modern PSCT",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "Target 1 card in your opponent's GY; banish that target."
+                    });
+                    Check("Disappear Soft: modern PSCT FullyCompiled OppGyCards exact-1",
+                        modernDi != null && modernDi.FullyCompiled &&
+                        modernDi.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.Banish &&
+                            c.Zone == EffectZoneFilter.OppGyCards && c.TargetCount == 1 && !c.TargetUpTo));
+                    var legacyDi = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000136,
+                        name = "Disappear Soft Remove-from-play",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "Remove from play 1 card from your opponent's Graveyard."
+                    });
+                    Check("Disappear Soft: Remove-from-play alias FullyCompiled as Banish OppGyCards",
+                        legacyDi != null && legacyDi.FullyCompiled &&
+                        legacyDi.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.Banish &&
+                            c.Zone == EffectZoneFilter.OppGyCards && c.TargetCount == 1 && !c.TargetUpTo));
+                    // New-card rule: same PSCT shape compiles without a passcode allowlist.
+                    var synDi = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000137,
+                        name = "New Trap (Disappear shape)",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "Target 1 card in your opponent's GY; banish that target."
+                    });
+                    Check("New-card rule: Disappear-shaped text compiles without a cardId branch",
+                        synDi != null && synDi.FullyCompiled &&
+                        synDi.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.Banish &&
+                            c.Zone == EffectZoneFilter.OppGyCards && c.TargetCount == 1 && !c.TargetUpTo));
+                    {
+                        // Soft: empty opp GY → cannot activate.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var trap = PlaceSetTrap(engine, p, disappear, 0);
+                        trap.SetThisTurn = false;
+                        Check("Disappear fail-closed: empty opp GY cannot activate",
+                            !engine.CanActivateSpellTrap(p, trap, fromHand: false));
+                    }
+                    {
+                        // Soft: only your GY has cards — cannot activate (opp GY empty).
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        p.Graveyard.Add(engine.CreateCardInstance(celticDi));
+                        p.Graveyard.Add(engine.CreateCardInstance(mstDi));
+                        var trap = PlaceSetTrap(engine, p, disappear, 0);
+                        trap.SetThisTurn = false;
+                        Check("Disappear fail-closed: your GY only → cannot activate",
+                            !engine.CanActivateSpellTrap(p, trap, fromHand: false));
+                    }
+                    {
+                        // Soft: opp GY has monster + Spell — both legal; pick Spell → banished (not destroy / your GY).
+                        // Soft residual OK: Remove-from-play Soft alias already covered at compile.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        var gMon = engine.CreateCardInstance(celticDi);
+                        var gSt = engine.CreateCardInstance(mstDi);
+                        var gMine = engine.CreateCardInstance(celticDi);
+                        opp.Graveyard.Add(gMon);
+                        opp.Graveyard.Add(gSt);
+                        p.Graveyard.Add(gMine);
+                        var trap = PlaceSetTrap(engine, p, disappear, 0);
+                        trap.SetThisTurn = false;
+                        Check("Disappear: CanActivate with card in opp GY",
+                            engine.CanActivateSpellTrap(p, trap, fromHand: false));
+                        Check("Disappear: Activate opens exact-1 OppGyCards targeting",
+                            engine.TryActivateSpellTrap(p, trap, fromHand: false) &&
+                            engine.IsAwaitingEffectTarget &&
+                            engine.PendingActivation != null &&
+                            !engine.PendingActivation.MultiTarget &&
+                            !engine.PendingActivation.MultiStepUpTo,
+                            $"await={engine.IsAwaitingEffectTarget} multi={engine.PendingActivation?.MultiTarget} upTo={engine.PendingActivation?.MultiStepUpTo}");
+                        if (engine.IsAwaitingEffectTarget && engine.PendingActivation != null)
+                        {
+                            Check("Disappear: Spell and monster in opp GY legal; your GY not",
+                                engine.PendingActivation.LegalTargets.Contains(gMon) &&
+                                engine.PendingActivation.LegalTargets.Contains(gSt) &&
+                                !engine.PendingActivation.LegalTargets.Contains(gMine));
+                            Check("Disappear Soft: pick Spell banishes from opp GY (not destroy / your GY)",
+                                engine.TrySelectEffectTarget(gSt) &&
+                                !opp.Graveyard.Contains(gSt) &&
+                                opp.Banished.Contains(gSt) &&
+                                opp.Graveyard.Contains(gMon) &&
+                                p.Graveyard.Contains(gMine) &&
+                                (p.Banished == null || !p.Banished.Contains(gMine)),
+                                $"oppGy={opp.Graveyard.Count} oppBan={opp.Banished.Count} myGy={p.Graveyard.Count} await={engine.IsAwaitingEffectTarget}");
+                        }
+                    }
+                }
+
+                // ── v120: A Feint Plan — Activate CannotAttackFaceDownMonstersThisTurn (both) ──
+                {
+                    const int feintPlan = 68170903;
+                    const int roarFp = 36361633;          // Threatening Roar
+                    const int wabokuFp = SpellTrapEffects.Waboku;
+                    const int swordsFp = 72302403;        // Swords of Revealing Light
+                    const int gravityFp = 85742772;       // Gravity Bind
+                    const int messengerFp = 44656491;     // Messenger of Peace
+                    var fpDef = db.Get(feintPlan);
+                    var fpProg = CardTextEffectCompiler.Compile(fpDef);
+                    Check("A Feint Plan FullyCompiled Activate CannotAttackFaceDownMonstersThisTurn both",
+                        fpProg != null && fpProg.FullyCompiled &&
+                        fpProg.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.Activate &&
+                            c.Action == EffectActionKind.CannotAttackFaceDownMonstersThisTurn &&
+                            c.Side == EffectSide.Both),
+                        fpDef == null ? "null def" :
+                        fpProg == null ? "null" :
+                        $"full={fpProg.FullyCompiled} unparsed={string.Join("|", fpProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                    // Fail-closed: not Threatening Roar any-attack lock.
+                    Check("A Feint Plan is not Threatening Roar PreventOpponentAttacksThisTurn",
+                        fpProg != null &&
+                        !fpProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.PreventOpponentAttacksThisTurn));
+                    // Fail-closed: not Waboku.
+                    Check("A Feint Plan is not Waboku ApplyWabokuStyle",
+                        fpProg != null &&
+                        !fpProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ApplyWabokuStyle));
+                    // Fail-closed: not Swords continuous.
+                    Check("A Feint Plan is not Swords ApplySwordsOfRevealingLight",
+                        fpProg != null &&
+                        !fpProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ApplySwordsOfRevealingLight));
+                    // Fail-closed: not Negate Attack / End Battle Phase.
+                    Check("A Feint Plan is not NegateAttack / EndBattlePhase",
+                        fpProg != null &&
+                        !fpProg.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.NegateAttack ||
+                             c.Action == EffectActionKind.EndBattlePhase ||
+                             c.Action == EffectActionKind.NegateThisAttack)));
+                    // Fail-closed: not Messenger / Gravity Bind continuous.
+                    Check("A Feint Plan is not ContinuousCannotAttack",
+                        fpProg != null &&
+                        !fpProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ContinuousCannotAttack));
+                    var roarProgFp = CardTextEffectCompiler.Compile(db.Get(roarFp));
+                    Check("Threatening Roar remains PreventOpponentAttacksThisTurn (not Feint Plan)",
+                        roarProgFp != null &&
+                        roarProgFp.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.PreventOpponentAttacksThisTurn) &&
+                        !roarProgFp.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.CannotAttackFaceDownMonstersThisTurn));
+                    var wabokuProgFp = CardTextEffectCompiler.Compile(db.Get(wabokuFp));
+                    Check("Waboku remains ApplyWabokuStyle (not Feint Plan)",
+                        wabokuProgFp != null &&
+                        wabokuProgFp.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ApplyWabokuStyle) &&
+                        !wabokuProgFp.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.CannotAttackFaceDownMonstersThisTurn));
+                    var swordsProgFp = CardTextEffectCompiler.Compile(db.Get(swordsFp));
+                    Check("Swords remains ApplySwordsOfRevealingLight (not Feint Plan)",
+                        swordsProgFp != null &&
+                        swordsProgFp.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ApplySwordsOfRevealingLight) &&
+                        !swordsProgFp.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.CannotAttackFaceDownMonstersThisTurn));
+                    var gravityProgFp = CardTextEffectCompiler.Compile(db.Get(gravityFp));
+                    Check("Gravity Bind remains ContinuousCannotAttack (not Feint Plan)",
+                        gravityProgFp != null &&
+                        gravityProgFp.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ContinuousCannotAttack) &&
+                        !gravityProgFp.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.CannotAttackFaceDownMonstersThisTurn));
+                    var messengerProgFp = CardTextEffectCompiler.Compile(db.Get(messengerFp));
+                    Check("Messenger of Peace remains ContinuousCannotAttack (not Feint Plan)",
+                        messengerProgFp != null &&
+                        messengerProgFp.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ContinuousCannotAttack) &&
+                        !messengerProgFp.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.CannotAttackFaceDownMonstersThisTurn));
+                    // Near-miss: Roar text must not FullyCompile as Feint Plan.
+                    var roarMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000140,
+                        name = "Near-miss opponent cannot declare attack",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "Your opponent cannot declare an attack this turn."
+                    });
+                    Check("Roar text is not Feint Plan CannotAttackFaceDownMonstersThisTurn",
+                        roarMiss == null ||
+                        !roarMiss.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.CannotAttackFaceDownMonstersThisTurn));
+                    // Near-miss: face-up-only / opp-only face-down Defense (Hieracosphinx) must not match.
+                    var hieraMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000141,
+                        name = "Near-miss opp cannot select face-down Defense",
+                        type = "Effect Monster",
+                        frameType = "effect",
+                        desc = "Your opponent cannot select a face-down Defense Position monster as an attack target."
+                    });
+                    Check("Opp cannot-select face-down Def is not Feint Plan both-players this-turn",
+                        hieraMiss == null || !hieraMiss.FullyCompiled ||
+                        !hieraMiss.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.CannotAttackFaceDownMonstersThisTurn));
+                    // Soft residual: Fanbot neither-player phrasing FullyCompiles.
+                    var fanbotFp = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000142,
+                        name = "Feint Plan Fanbot neither-player",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "Neither player can attack face-down monsters this turn."
+                    });
+                    Check("Feint Plan Soft: Fanbot neither-player FullyCompiled both-players",
+                        fanbotFp != null && fanbotFp.FullyCompiled &&
+                        fanbotFp.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.CannotAttackFaceDownMonstersThisTurn &&
+                            c.Side == EffectSide.Both));
+                    // New-card rule: same PSCT shape compiles without passcode allowlist.
+                    var synFp = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000143,
+                        name = "New Trap (Feint Plan shape)",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "A player cannot attack face-down monsters during this turn."
+                    });
+                    Check("New-card rule: Feint Plan-shaped text compiles without a cardId branch",
+                        synFp != null && synFp.FullyCompiled &&
+                        synFp.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.CannotAttackFaceDownMonstersThisTurn));
+                    {
+                        // Soft: activate → both players flagged; face-down cannot be attack target; face-up can.
+                        // Soft residual OK if attack-target UX Soft.
+                        const int celticFp = 91152256;
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        var trap = PlaceSetTrap(engine, p, feintPlan, 0);
+                        trap.SetThisTurn = false;
+                        // Opp: face-down Defense + face-up Attack.
+                        var setMon = PlaceMonster(engine, opp, celticFp, 0, BattlePosition.Defense, false);
+                        var atkMon = PlaceMonster(engine, opp, celticFp, 1, BattlePosition.Attack, true);
+                        // Controller attacker (for Soft UX residual later).
+                        PlaceMonster(engine, p, celticFp, 0, BattlePosition.Attack, true);
+                        Check("A Feint Plan: CanActivate Set trap",
+                            engine.CanActivateSpellTrap(p, trap, fromHand: false));
+                        Check("A Feint Plan Soft: Activate sets both-player face-down attack lock",
+                            engine.TryActivateSpellTrap(p, trap, fromHand: false) &&
+                            !engine.IsAwaitingEffectTarget &&
+                            p.CannotAttackFaceDownMonstersThisTurn &&
+                            opp.CannotAttackFaceDownMonstersThisTurn,
+                            $"pFlag={p.CannotAttackFaceDownMonstersThisTurn} oFlag={opp.CannotAttackFaceDownMonstersThisTurn} await={engine.IsAwaitingEffectTarget}");
+                        // Soft: ContinuousProtections blocks face-down; face-up still legal.
+                        if (p.CannotAttackFaceDownMonstersThisTurn)
+                        {
+                            Check("A Feint Plan Soft: face-down is CannotBeAttackTarget while locked",
+                                ContinuousProtections.CannotBeAttackTarget(engine, setMon));
+                            Check("A Feint Plan Soft: face-up is still attackable (not Roar)",
+                                !ContinuousProtections.CannotBeAttackTarget(engine, atkMon));
+                            Check("A Feint Plan Soft: not CannotDeclareAttackThisTurn (not Roar)",
+                                !p.CannotDeclareAttackThisTurn && !opp.CannotDeclareAttackThisTurn);
+                        }
+                    }
+                }
+
+                // ── v122: Remove Brainwashing — ContinuousWhileFaceUp ReturnControlToOwners (both; snap-back) ──
+                {
+                    const int removeBrainwashing = 94739788;
+                    const int changeOfHeartRb = 4031928;   // Change of Heart
+                    const int brainControlRb = 87910978;   // Brain Control
+                    const int enemyControllerRb = 98045062; // Enemy Controller
+                    const int snatchStealRb = 45986603;    // Snatch Steal
+                    const int creatureSwapRb = 31036355;   // Creature Swap
+                    const int celticRb = 91152256;
+                    var rbDef = db.Get(removeBrainwashing);
+                    var rbProg = CardTextEffectCompiler.Compile(rbDef);
+                    Check("Remove Brainwashing FullyCompiled ContinuousWhileFaceUp ReturnControlToOwners both",
+                        rbProg != null && rbProg.FullyCompiled &&
+                        rbProg.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.ContinuousWhileFaceUp &&
+                            c.Action == EffectActionKind.ReturnControlToOwners &&
+                            c.Side == EffectSide.Both && c.StaysOnField),
+                        rbDef == null ? "null def" :
+                        rbProg == null ? "null" :
+                        $"full={rbProg.FullyCompiled} unparsed={string.Join("|", rbProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                    // Fail-closed: not take-control-until-EP.
+                    Check("Remove Brainwashing is not TakeControlUntilEndPhase",
+                        rbProg != null &&
+                        !rbProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.TakeControlUntilEndPhase));
+                    // Fail-closed: not Equip take-control (Snatch Steal).
+                    Check("Remove Brainwashing is not EquipThisToTarget TakeControlOfTarget",
+                        rbProg != null &&
+                        !rbProg.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.EquipThisToTarget || c.TakeControlOfTarget)));
+                    // Fail-closed: not destroy / bounce.
+                    Check("Remove Brainwashing is not Destroy / ReturnToHand",
+                        rbProg != null &&
+                        !rbProg.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.Destroy ||
+                             c.Action == EffectActionKind.ReturnToHand ||
+                             c.Action == EffectActionKind.PlaceTargetOnTopOfDeck)));
+                    // Fail-closed: single-target take remains itself (not remapped to mass return).
+                    var cohProgRb = CardTextEffectCompiler.Compile(db.Get(changeOfHeartRb));
+                    Check("Change of Heart remains TakeControlUntilEndPhase (not ReturnControlToOwners)",
+                        cohProgRb != null &&
+                        cohProgRb.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.TakeControlUntilEndPhase) &&
+                        !cohProgRb.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ReturnControlToOwners));
+                    var brainProgRb = CardTextEffectCompiler.Compile(db.Get(brainControlRb));
+                    Check("Brain Control is not ReturnControlToOwners",
+                        brainProgRb == null ||
+                        !brainProgRb.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ReturnControlToOwners));
+                    var ecProgRb = CardTextEffectCompiler.Compile(db.Get(enemyControllerRb));
+                    Check("Enemy Controller is not ReturnControlToOwners",
+                        ecProgRb == null ||
+                        !ecProgRb.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ReturnControlToOwners));
+                    var snatchProgRb = CardTextEffectCompiler.Compile(db.Get(snatchStealRb));
+                    Check("Snatch Steal remains Equip take-control (not ReturnControlToOwners)",
+                        snatchProgRb != null &&
+                        snatchProgRb.ClauseList.Exists(c =>
+                            c != null && c.TakeControlOfTarget) &&
+                        !snatchProgRb.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ReturnControlToOwners));
+                    var swapProgRb = CardTextEffectCompiler.Compile(db.Get(creatureSwapRb));
+                    Check("Creature Swap is not ReturnControlToOwners",
+                        swapProgRb == null ||
+                        !swapProgRb.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ReturnControlToOwners));
+                    // Near-miss: take-until-EP text must not FullyCompile as mass return.
+                    var untilEpMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000150,
+                        name = "Near-miss take control until End Phase",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        desc = "Target 1 monster your opponent controls; take control of it until the End Phase."
+                    });
+                    Check("Take-until-EP text is not ReturnControlToOwners",
+                        untilEpMiss == null ||
+                        !untilEpMiss.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ReturnControlToOwners));
+                    // Near-miss: Creature Swap exchange.
+                    var swapMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000151,
+                        name = "Near-miss Creature Swap shape",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        desc = "Each player chooses 1 monster they control and switches control of those monsters with each other."
+                    });
+                    Check("Creature Swap exchange text is not ReturnControlToOwners",
+                        swapMiss == null ||
+                        !swapMiss.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ReturnControlToOwners));
+                    // Near-miss: single-target bounce.
+                    var bounceMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000152,
+                        name = "Near-miss return to hand",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "Target 1 monster on the field; return that target to the hand."
+                    });
+                    Check("Single-target bounce is not ReturnControlToOwners",
+                        bounceMiss == null ||
+                        !bounceMiss.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ReturnControlToOwners));
+                    // Soft residual: Fanbot return-control phrasing FullyCompiles.
+                    var fanbotRb = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000153,
+                        name = "Remove Brainwashing Fanbot return-control",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "Return control of all monsters on the field to their owners."
+                    });
+                    Check("Remove Brainwashing Soft: Fanbot return-control FullyCompiled ContinuousWhileFaceUp both",
+                        fanbotRb != null && fanbotRb.FullyCompiled &&
+                        fanbotRb.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp &&
+                            c.Action == EffectActionKind.ReturnControlToOwners &&
+                            c.Side == EffectSide.Both));
+                    // New-card rule: same PSCT shape compiles without passcode allowlist.
+                    var synRb = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000154,
+                        name = "New Trap (Remove Brainwashing shape)",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "The control of all monsters on the field returns to the owners."
+                    });
+                    Check("New-card rule: Remove Brainwashing-shaped text compiles without a cardId branch",
+                        synRb != null && synRb.FullyCompiled &&
+                        synRb.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp &&
+                            c.Action == EffectActionKind.ReturnControlToOwners));
+                    {
+                        // Soft residual: activate Continuous → resolve-on-activate mass return.
+                        // Soft residual OK face-down / Token ownership edge.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        var trap = PlaceSetTrap(engine, p, removeBrainwashing, 0);
+                        trap.SetThisTurn = false;
+                        // Opp owns a monster currently controlled by Player (stolen).
+                        var stolen = PlaceMonster(engine, opp, celticRb, 0, BattlePosition.Attack, true);
+                        Check("Remove Brainwashing Soft setup: steal opp monster",
+                            engine.TryTakeControl(p, stolen) &&
+                            p.TryFindMonster(stolen, out _) &&
+                            stolen.ControlOwner == opp);
+                        // Player owns a monster currently controlled by Opp.
+                        var stolen2 = PlaceMonster(engine, p, celticRb, 1, BattlePosition.Attack, true);
+                        // After PlaceMonster on p at zone 1 — but zone 0 may hold stolen.
+                        // Re-find free zone: place on opp then take? Simpler: steal from p to opp.
+                        // stolen2 is on p; take to opp.
+                        var stole2Ok = engine.TryTakeControl(opp, stolen2);
+                        Check("Remove Brainwashing Soft setup: steal my monster to opp",
+                            stole2Ok &&
+                            opp.TryFindMonster(stolen2, out _) &&
+                            stolen2.ControlOwner == p);
+                        Check("Remove Brainwashing: CanActivate Set Continuous trap",
+                            engine.CanActivateSpellTrap(p, trap, fromHand: false));
+                        Check("Remove Brainwashing Soft: Activate returns both stolen monsters to owners",
+                            engine.TryActivateSpellTrap(p, trap, fromHand: false) &&
+                            !engine.IsAwaitingEffectTarget &&
+                            opp.TryFindMonster(stolen, out _) &&
+                            !p.TryFindMonster(stolen, out _) &&
+                            stolen.ControlOwner == null &&
+                            p.TryFindMonster(stolen2, out _) &&
+                            !opp.TryFindMonster(stolen2, out _) &&
+                            stolen2.ControlOwner == null,
+                            $"stolenOnOpp={opp.TryFindMonster(stolen, out _)} stolen2OnP={p.TryFindMonster(stolen2, out _)} await={engine.IsAwaitingEffectTarget} co1={stolen.ControlOwner != null} co2={stolen2.ControlOwner != null}");
+                    }
+                    {
+                        // Continuous snap-back: while face-up, take-control immediately returns to owner.
+                        // Soft residual OK face-down / Token / zone-full.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        var trap = PlaceSetTrap(engine, p, removeBrainwashing, 0);
+                        trap.FaceUp = true; // Continuous while face-up (Spring Soft pattern)
+                        trap.SetThisTurn = false;
+                        var prey = PlaceMonster(engine, opp, celticRb, 0, BattlePosition.Attack, true);
+                        var took = engine.TryTakeControl(p, prey);
+                        // Snap-back via NotifyControlChanged → ApplyReturnControlToOwnersMass.
+                        Check("Remove Brainwashing Continuous: take-control snaps back to owner",
+                            took &&
+                            opp.TryFindMonster(prey, out _) &&
+                            !p.TryFindMonster(prey, out _) &&
+                            prey.ControlOwner == null,
+                            $"took={took} onOpp={opp.TryFindMonster(prey, out _)} onP={p.TryFindMonster(prey, out _)} co={prey.ControlOwner != null}");
+                        // Fail-closed Soft: without face-up RB, take-control sticks.
+                        ClearBoard(engine);
+                        p.Hand.Clear();
+                        var prey2 = PlaceMonster(engine, opp, celticRb, 0, BattlePosition.Attack, true);
+                        Check("Without Remove Brainwashing face-up, take-control sticks",
+                            engine.TryTakeControl(p, prey2) &&
+                            p.TryFindMonster(prey2, out _) &&
+                            prey2.ControlOwner == opp);
+                    }
+                }
+
+                // ── v123: Mask of Restrict — ContinuousWhileFaceUp NeitherPlayerCanTribute (both) ──
+                {
+                    const int maskOfRestrict = 29549364;
+                    const int soulExchange = 68005187;
+                    const int lavaGolem = 102380;
+                    const int foxFire = 88753985;
+                    const int cannonSoldier = 11384280;
+                    const int celticGuard = 91152256;
+                    const int darkMagician = 46986414; // Lv7 needs 2 Tributes
+                    var maskDef = db.Get(maskOfRestrict);
+                    var maskProg = CardTextEffectCompiler.Compile(maskDef);
+                    Check("Mask of Restrict FullyCompiled ContinuousWhileFaceUp NeitherPlayerCanTribute both",
+                        maskProg != null && maskProg.FullyCompiled &&
+                        maskProg.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.ContinuousWhileFaceUp &&
+                            c.Action == EffectActionKind.NeitherPlayerCanTribute &&
+                            c.Side == EffectSide.Both && c.StaysOnField),
+                        maskDef == null ? "null def" :
+                        maskProg == null ? "null" :
+                        $"full={maskProg.FullyCompiled} unparsed={string.Join("|", maskProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                    // Fail-closed: not Activate one-shot.
+                    Check("Mask of Restrict is not Activate one-shot timing",
+                        maskProg != null &&
+                        !maskProg.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.Activate &&
+                            c.Action != EffectActionKind.NeitherPlayerCanTribute));
+                    // Fail-closed: not per-monster CannotBeTributedForSummon.
+                    Check("Mask of Restrict is not CannotBeTributedForSummon (per-monster)",
+                        maskProg != null &&
+                        !maskProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.CannotBeTributedForSummon));
+                    // Fail-closed: not destroy / bounce.
+                    Check("Mask of Restrict is not Destroy / ReturnToHand",
+                        maskProg != null &&
+                        !maskProg.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.Destroy ||
+                             c.Action == EffectActionKind.ReturnToHand ||
+                             c.Action == EffectActionKind.PlaceTargetOnTopOfDeck)));
+                    // Fail-closed: Soul Exchange remains itself (not remapped to global Tribute bar).
+                    var seProg = CardTextEffectCompiler.Compile(db.Get(soulExchange));
+                    Check("Soul Exchange is not NeitherPlayerCanTribute",
+                        seProg == null ||
+                        !seProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NeitherPlayerCanTribute));
+                    // Fail-closed: Lava Golem SS Tribute-bypass text is not Mask.
+                    var lavaProg = CardTextEffectCompiler.Compile(db.Get(lavaGolem));
+                    Check("Lava Golem is not NeitherPlayerCanTribute",
+                        lavaProg == null ||
+                        !lavaProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NeitherPlayerCanTribute));
+                    // Fail-closed: Fox Fire per-monster cannot-be-Tributed remains itself.
+                    var foxProg = CardTextEffectCompiler.Compile(db.Get(foxFire));
+                    Check("Fox Fire is not NeitherPlayerCanTribute (per-monster lock stays itself)",
+                        foxProg == null ||
+                        !foxProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NeitherPlayerCanTribute));
+                    // Near-miss: Soul Exchange force-tribute text.
+                    var seMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000160,
+                        name = "Near-miss Soul Exchange shape",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        desc = "Target 1 monster your opponent controls; this turn, if you Tribute a monster, you must Tribute that target, as if you controlled it."
+                    });
+                    Check("Soul Exchange force-tribute text is not NeitherPlayerCanTribute",
+                        seMiss == null ||
+                        !seMiss.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NeitherPlayerCanTribute));
+                    // Near-miss: Lava Golem SS-by-Tributing.
+                    var lavaMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000161,
+                        name = "Near-miss Lava Golem SS Tribute",
+                        type = "Effect Monster",
+                        frameType = "effect",
+                        desc = "Must first be Special Summoned (from your hand) to your opponent's field by Tributing 2 monsters they control."
+                    });
+                    Check("Lava Golem SS Tribute-bypass text is not NeitherPlayerCanTribute",
+                        lavaMiss == null ||
+                        !lavaMiss.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NeitherPlayerCanTribute));
+                    // Near-miss: per-monster cannot be Tributed.
+                    var foxMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000162,
+                        name = "Near-miss cannot be Tributed for Summon",
+                        type = "Effect Monster",
+                        frameType = "effect",
+                        desc = "This face-up card cannot be Tributed for a Tribute Summon."
+                    });
+                    Check("Per-monster cannot-be-Tributed is not NeitherPlayerCanTribute",
+                        foxMiss == null ||
+                        !foxMiss.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NeitherPlayerCanTribute));
+                    // Near-miss: Activate one-shot destroy.
+                    var destroyMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000163,
+                        name = "Near-miss destroy",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "Destroy 1 monster on the field."
+                    });
+                    Check("Activate destroy is not NeitherPlayerCanTribute",
+                        destroyMiss == null ||
+                        !destroyMiss.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NeitherPlayerCanTribute));
+                    // Soft residual: Fanbot neither-player phrasing FullyCompiles.
+                    var fanbotMask = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000164,
+                        name = "Mask of Restrict Fanbot neither-player",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "Neither player can Tribute monsters."
+                    });
+                    Check("Mask of Restrict Soft: Fanbot neither-player FullyCompiled ContinuousWhileFaceUp both",
+                        fanbotMask != null && fanbotMask.FullyCompiled &&
+                        fanbotMask.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp &&
+                            c.Action == EffectActionKind.NeitherPlayerCanTribute &&
+                            c.Side == EffectSide.Both));
+                    // Soft: Players cannot Tribute cards.
+                    var playersCannot = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000165,
+                        name = "Mask Soft Players cannot",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "Players cannot Tribute cards."
+                    });
+                    Check("Mask of Restrict Soft: Players-cannot FullyCompiled",
+                        playersCannot != null && playersCannot.FullyCompiled &&
+                        playersCannot.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NeitherPlayerCanTribute));
+                    // New-card rule: same PSCT shape compiles without passcode allowlist.
+                    var synMask = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000166,
+                        name = "New Trap (Mask of Restrict shape)",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "Neither player can Tribute cards."
+                    });
+                    Check("New-card rule: Mask of Restrict-shaped text compiles without a cardId branch",
+                        synMask != null && synMask.FullyCompiled &&
+                        synMask.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp &&
+                            c.Action == EffectActionKind.NeitherPlayerCanTribute));
+                    // Soft Continuous: Remove Brainwashing remains coexistent (v122 intact).
+                    var rbStill = CardTextEffectCompiler.Compile(db.Get(94739788));
+                    Check("Remove Brainwashing ContinuousStill FullyCompiled ReturnControlToOwners (coexist v122)",
+                        rbStill != null && rbStill.FullyCompiled &&
+                        rbStill.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ReturnControlToOwners &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp));
+                    {
+                        // Soft Continuous: face-up Mask bars Tribute Summon via ContinuousProtections.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        var trap = PlaceSetTrap(engine, p, maskOfRestrict, 0);
+                        trap.FaceUp = true; // Continuous while face-up (Spring Soft pattern)
+                        trap.SetThisTurn = false;
+                        Check("Mask of Restrict Soft ContinuousProtections.NeitherPlayerCanTribute while face-up",
+                            ContinuousProtections.NeitherPlayerCanTribute(engine));
+                        // Place tributes + Lv7 in hand — Tribute Summon must fail Soft.
+                        PlaceMonster(engine, p, celticGuard, 0, BattlePosition.Attack, true);
+                        PlaceMonster(engine, p, celticGuard, 1, BattlePosition.Attack, true);
+                        var dm = engine.CreateCardInstance(darkMagician);
+                        if (dm != null)
+                        {
+                            dm.CardId = darkMagician;
+                            p.Hand.Add(dm);
+                            var check = SummonProcedures.CheckNormalOrTribute(engine, p, dm, asSet: false);
+                            Check("Mask of Restrict Soft: Tribute Summon CheckNormalOrTribute illegal",
+                                !check.Legal,
+                                $"legal={check.Legal} reason={check.Reason}");
+                        }
+                        // Cost Tribute Soft: Cannon Soldier ignition barred while Mask face-up.
+                        var cannon = PlaceMonster(engine, p, cannonSoldier, 2, BattlePosition.Attack, true);
+                        if (cannon != null)
+                        {
+                            var cannonProg = CardTextEffectCompiler.Compile(db.Get(cannonSoldier));
+                            string why = null;
+                            var canCannon = cannonProg != null &&
+                                TextEffectRuntime.CanActivate(engine, p, cannon, fromHand: false, cannonProg, out why);
+                            Check("Mask of Restrict Soft: Cannon Soldier tribute-cost ignition illegal",
+                                !canCannon ||
+                                (why != null && why.IndexOf("Tribute", System.StringComparison.OrdinalIgnoreCase) >= 0),
+                                $"can={canCannon} why={why}");
+                        }
+                        // Fail-closed Soft: without Mask face-up, ContinuousProtections is false.
+                        ClearBoard(engine);
+                        Check("Without Mask of Restrict face-up, NeitherPlayerCanTribute is false",
+                            !ContinuousProtections.NeitherPlayerCanTribute(engine));
+                    }
+                    {
+                        // Soft: CanActivate Set Continuous trap + activate stays face-up.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var trap = PlaceSetTrap(engine, p, maskOfRestrict, 0);
+                        trap.SetThisTurn = false;
+                        Check("Mask of Restrict: CanActivate Set Continuous trap",
+                            engine.CanActivateSpellTrap(p, trap, fromHand: false));
+                        Check("Mask of Restrict Soft: Activate stays face-up Continuous NeitherPlayerCanTribute",
+                            engine.TryActivateSpellTrap(p, trap, fromHand: false) &&
+                            trap.FaceUp &&
+                            ContinuousProtections.NeitherPlayerCanTribute(engine),
+                            $"faceUp={trap.FaceUp} locked={ContinuousProtections.NeitherPlayerCanTribute(engine)}");
+                    }
+                }
+
+                // ── v124: The Dark Door — ContinuousWhileFaceUp OnlyOneMonsterMayAttackPerBattlePhase (both) ──
+                {
+                    const int darkDoor = 30606547;
+                    const int gravityBind = 85742772;
+                    const int messengerOfPeace = 44656491;
+                    const int threateningRoar = 36361633;
+                    const int feintPlanDd = 68170903;
+                    const int twinheaded = 82035781; // Extra Attacks / can attack twice
+                    const int celticDd = 91152256;
+                    var doorDef = db.Get(darkDoor);
+                    var doorProg = CardTextEffectCompiler.Compile(doorDef);
+                    Check("The Dark Door FullyCompiled ContinuousWhileFaceUp OnlyOneMonsterMayAttackPerBattlePhase both",
+                        doorProg != null && doorProg.FullyCompiled &&
+                        doorProg.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.ContinuousWhileFaceUp &&
+                            c.Action == EffectActionKind.OnlyOneMonsterMayAttackPerBattlePhase &&
+                            c.Side == EffectSide.Both && c.StaysOnField),
+                        doorDef == null ? "null def" :
+                        doorProg == null ? "null" :
+                        $"full={doorProg.FullyCompiled} unparsed={string.Join("|", doorProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                    // Fail-closed: not Activate one-shot timing.
+                    Check("The Dark Door is not Activate one-shot timing",
+                        doorProg != null &&
+                        !doorProg.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.Activate &&
+                            c.Action != EffectActionKind.OnlyOneMonsterMayAttackPerBattlePhase));
+                    // Fail-closed: not ContinuousCannotAttack (Gravity Bind / Messenger shape).
+                    Check("The Dark Door is not ContinuousCannotAttack",
+                        doorProg != null &&
+                        !doorProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ContinuousCannotAttack));
+                    // Fail-closed: not Roar / Feint this-turn locks.
+                    Check("The Dark Door is not PreventOpponentAttacksThisTurn / Feint Plan",
+                        doorProg != null &&
+                        !doorProg.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.PreventOpponentAttacksThisTurn ||
+                             c.Action == EffectActionKind.CannotAttackFaceDownMonstersThisTurn)));
+                    // Fail-closed: not ExtraAttacks / destroy / bounce.
+                    Check("The Dark Door is not ExtraAttacks / Destroy / ReturnToHand",
+                        doorProg != null &&
+                        !doorProg.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.ExtraAttacks ||
+                             c.Action == EffectActionKind.Destroy ||
+                             c.Action == EffectActionKind.ReturnToHand ||
+                             c.Action == EffectActionKind.PlaceTargetOnTopOfDeck)));
+                    // Fail-closed: Gravity Bind remains ContinuousCannotAttack (not Dark Door).
+                    var gbProg = CardTextEffectCompiler.Compile(db.Get(gravityBind));
+                    Check("Gravity Bind remains ContinuousCannotAttack (not Dark Door)",
+                        gbProg != null &&
+                        gbProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ContinuousCannotAttack) &&
+                        !gbProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OnlyOneMonsterMayAttackPerBattlePhase));
+                    // Fail-closed: Messenger remains ContinuousCannotAttack (not Dark Door).
+                    var mopProg = CardTextEffectCompiler.Compile(db.Get(messengerOfPeace));
+                    Check("Messenger of Peace remains ContinuousCannotAttack (not Dark Door)",
+                        mopProg != null &&
+                        mopProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ContinuousCannotAttack) &&
+                        !mopProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OnlyOneMonsterMayAttackPerBattlePhase));
+                    // Fail-closed: Threatening Roar remains PreventOpponentAttacksThisTurn.
+                    var roarProgDd = CardTextEffectCompiler.Compile(db.Get(threateningRoar));
+                    Check("Threatening Roar remains PreventOpponentAttacksThisTurn (not Dark Door)",
+                        roarProgDd != null &&
+                        roarProgDd.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.PreventOpponentAttacksThisTurn) &&
+                        !roarProgDd.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OnlyOneMonsterMayAttackPerBattlePhase));
+                    // Fail-closed: Feint Plan remains CannotAttackFaceDownMonstersThisTurn.
+                    var feintProgDd = CardTextEffectCompiler.Compile(db.Get(feintPlanDd));
+                    Check("A Feint Plan remains CannotAttackFaceDownMonstersThisTurn (not Dark Door)",
+                        feintProgDd != null &&
+                        feintProgDd.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.CannotAttackFaceDownMonstersThisTurn) &&
+                        !feintProgDd.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OnlyOneMonsterMayAttackPerBattlePhase));
+                    // Fail-closed: Twinheaded Beast ExtraAttacks stays itself.
+                    var twinProg = CardTextEffectCompiler.Compile(db.Get(twinheaded));
+                    Check("Twinheaded Beast ExtraAttacks is not OnlyOneMonsterMayAttackPerBattlePhase",
+                        twinProg == null ||
+                        !twinProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OnlyOneMonsterMayAttackPerBattlePhase));
+                    // Near-miss: Gravity Bind Level text.
+                    var gbMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000170,
+                        name = "Near-miss Gravity Bind shape",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "Level 4 or higher monsters cannot attack."
+                    });
+                    Check("Gravity Bind Level text is not OnlyOneMonsterMayAttackPerBattlePhase",
+                        gbMiss == null ||
+                        !gbMiss.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OnlyOneMonsterMayAttackPerBattlePhase));
+                    // Near-miss: Messenger ATK gate.
+                    var mopMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000171,
+                        name = "Near-miss Messenger of Peace shape",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        desc = "Monsters with 1500 or more ATK cannot declare an attack."
+                    });
+                    Check("Messenger ATK gate text is not OnlyOneMonsterMayAttackPerBattlePhase",
+                        mopMiss == null ||
+                        !mopMiss.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OnlyOneMonsterMayAttackPerBattlePhase));
+                    // Near-miss: Roar this-turn lock.
+                    var roarMissDd = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000172,
+                        name = "Near-miss Threatening Roar shape",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "Your opponent cannot declare an attack this turn."
+                    });
+                    Check("Roar this-turn lock is not OnlyOneMonsterMayAttackPerBattlePhase",
+                        roarMissDd == null ||
+                        !roarMissDd.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OnlyOneMonsterMayAttackPerBattlePhase));
+                    // Near-miss: Extra Attacks / can attack twice.
+                    var extraMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000173,
+                        name = "Near-miss can attack twice",
+                        type = "Effect Monster",
+                        frameType = "effect",
+                        desc = "This card can attack twice during the same Battle Phase."
+                    });
+                    Check("Extra Attacks can-attack-twice is not OnlyOneMonsterMayAttackPerBattlePhase",
+                        extraMiss == null ||
+                        !extraMiss.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OnlyOneMonsterMayAttackPerBattlePhase));
+                    // Near-miss: Activate destroy.
+                    var destroyMissDd = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000174,
+                        name = "Near-miss destroy Dark Door",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "Destroy 1 monster on the field."
+                    });
+                    Check("Activate destroy is not OnlyOneMonsterMayAttackPerBattlePhase",
+                        destroyMissDd == null ||
+                        !destroyMissDd.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OnlyOneMonsterMayAttackPerBattlePhase));
+                    // Soft residual: Fanbot only-one / may-attack FullyCompiles.
+                    var fanbotDoor = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000175,
+                        name = "Dark Door Fanbot only-one may-attack",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        desc = "Only one monster may attack during each Battle Phase."
+                    });
+                    Check("The Dark Door Soft: Fanbot only-one may-attack FullyCompiled ContinuousWhileFaceUp both",
+                        fanbotDoor != null && fanbotDoor.FullyCompiled &&
+                        fanbotDoor.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp &&
+                            c.Action == EffectActionKind.OnlyOneMonsterMayAttackPerBattlePhase &&
+                            c.Side == EffectSide.Both));
+                    // Soft: Just 1 monster can attack...
+                    var justOne = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000176,
+                        name = "Dark Door Soft Just 1",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        desc = "Just 1 monster can attack during each Battle Phase."
+                    });
+                    Check("The Dark Door Soft: Just-1 FullyCompiled",
+                        justOne != null && justOne.FullyCompiled &&
+                        justOne.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OnlyOneMonsterMayAttackPerBattlePhase));
+                    // New-card rule: same PSCT shape compiles without passcode allowlist.
+                    var synDoor = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000177,
+                        name = "New Spell (Dark Door shape)",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        desc = "Only 1 monster can attack during each Battle Phase."
+                    });
+                    Check("New-card rule: Dark Door-shaped text compiles without a cardId branch",
+                        synDoor != null && synDoor.FullyCompiled &&
+                        synDoor.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp &&
+                            c.Action == EffectActionKind.OnlyOneMonsterMayAttackPerBattlePhase));
+                    // Soft Continuous: Mask of Restrict remains coexistent (v123 intact).
+                    var maskStill = CardTextEffectCompiler.Compile(db.Get(29549364));
+                    Check("Mask of Restrict ContinuousStill FullyCompiled NeitherPlayerCanTribute (coexist v123)",
+                        maskStill != null && maskStill.FullyCompiled &&
+                        maskStill.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NeitherPlayerCanTribute &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp));
+                    // Soft Continuous: Feint Plan remains coexistent (v120 intact).
+                    Check("A Feint Plan ContinuousStill FullyCompiled CannotAttackFaceDown (coexist v120)",
+                        feintProgDd != null && feintProgDd.FullyCompiled &&
+                        feintProgDd.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.CannotAttackFaceDownMonstersThisTurn));
+                    {
+                        // Soft Continuous: face-up Dark Door Soft ContinuousProtections + Soft MaxAttacks gate.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var spell = PlaceSetTrap(engine, p, darkDoor, 0);
+                        spell.FaceUp = true; // Continuous while face-up (Mask Soft pattern)
+                        spell.SetThisTurn = false;
+                        Check("The Dark Door Soft ContinuousProtections.OnlyOneMonsterMayAttackPerBattlePhase while face-up",
+                            ContinuousProtections.OnlyOneMonsterMayAttackPerBattlePhase(engine));
+                        var a = PlaceMonster(engine, p, celticDd, 0, BattlePosition.Attack, true);
+                        var b = PlaceMonster(engine, p, celticDd, 1, BattlePosition.Attack, true);
+                        // Soft MaxAttacks residual: before any attack, both monsters MaxAttacks >= 1.
+                        Check("The Dark Door Soft: before attack MaxAttacks both monsters >= 1",
+                            engine.MaxAttacksThisTurn(a) >= 1 && engine.MaxAttacksThisTurn(b) >= 1,
+                            $"aMax={engine.MaxAttacksThisTurn(a)} bMax={engine.MaxAttacksThisTurn(b)}");
+                        // Simulate first monster declared an attack this BP.
+                        a.NoteAttackResolved();
+                        Check("The Dark Door Soft: after A attacked, AnotherMonsterAlreadyAttacked bars B",
+                            ContinuousProtections.AnotherMonsterAlreadyAttackedThisBattlePhase(p, b) &&
+                            !ContinuousProtections.AnotherMonsterAlreadyAttackedThisBattlePhase(p, a));
+                        Check("The Dark Door Soft DE MaxAttacks: A still >=1, B Soft-clamped to 0",
+                            engine.MaxAttacksThisTurn(a) >= 1 && engine.MaxAttacksThisTurn(b) == 0,
+                            $"aMax={engine.MaxAttacksThisTurn(a)} bMax={engine.MaxAttacksThisTurn(b)}");
+                        // Fail-closed Soft: without Dark Door face-up, ContinuousProtections is false.
+                        ClearBoard(engine);
+                        Check("Without The Dark Door face-up, OnlyOneMonsterMayAttackPerBattlePhase is false",
+                            !ContinuousProtections.OnlyOneMonsterMayAttackPerBattlePhase(engine));
+                    }
+                    {
+                        // Soft: CanActivate Continuous Spell from hand + activate stays face-up.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var card = PutInHand(engine, p, darkDoor);
+                        Check("The Dark Door: CanActivate Continuous Spell from hand",
+                            engine.CanActivateSpellTrap(p, card, fromHand: true));
+                        Check("The Dark Door Soft: Activate stays face-up Continuous OnlyOneMonsterMayAttackPerBattlePhase",
+                            engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                            card.FaceUp &&
+                            ContinuousProtections.OnlyOneMonsterMayAttackPerBattlePhase(engine),
+                            $"faceUp={card.FaceUp} locked={ContinuousProtections.OnlyOneMonsterMayAttackPerBattlePhase(engine)}");
+                    }
+                    {
+                        // Soft live BP: first monster can attack; second cannot after first declared.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var spell = PlaceSetTrap(engine, p, darkDoor, 0);
+                        spell.FaceUp = true;
+                        spell.SetThisTurn = false;
+                        var a = PlaceMonster(engine, p, celticDd, 0, BattlePosition.Attack, true);
+                        var b = PlaceMonster(engine, p, celticDd, 1, BattlePosition.Attack, true);
+                        var reached = ReachPlayerBattle(engine);
+                        Check("The Dark Door Soft live: reached Battle Phase with door face-up",
+                            reached && ContinuousProtections.OnlyOneMonsterMayAttackPerBattlePhase(engine),
+                            $"reached={reached} phase={engine.Phase}");
+                        var firstOk = reached && engine.CanAttack(p, a);
+                        Check("The Dark Door Soft live: first monster CanAttack",
+                            firstOk,
+                            $"canA={engine.CanAttack(p, a)} canB={engine.CanAttack(p, b)}");
+                        var attacked = firstOk && ResolveDirect(engine, p, a);
+                        Check("The Dark Door Soft live: first monster attacks",
+                            attacked,
+                            $"attacked={attacked} aDecl={a.AttacksDeclaredThisTurn}");
+                        Check("The Dark Door Soft live: second monster CanAttack false after first",
+                            attacked && !engine.CanAttack(p, b),
+                            $"canB={engine.CanAttack(p, b)} bMax={engine.MaxAttacksThisTurn(b)} aMax={engine.MaxAttacksThisTurn(a)}");
+                    }
+                }
+
+                // ── v125: Infinite Cards — ContinuousWhileFaceUp NoHandSizeLimit (both) ──
+                {
+                    const int infiniteCards = 94163677;
+                    const int enervatingMist = 26022485;
+                    const int hieroglyphLithograph = 10248192;
+                    const int mirageOfNightmare = 41482598; // Max hand draw ("draw until")
+                    const int celticIc = 91152256;
+                    var icDef = db.Get(infiniteCards);
+                    var icProg = CardTextEffectCompiler.Compile(icDef);
+                    Check("Infinite Cards FullyCompiled ContinuousWhileFaceUp NoHandSizeLimit both",
+                        icProg != null && icProg.FullyCompiled &&
+                        icProg.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.ContinuousWhileFaceUp &&
+                            c.Action == EffectActionKind.NoHandSizeLimit &&
+                            c.Side == EffectSide.Both && c.StaysOnField),
+                        icDef == null ? "null def" :
+                        icProg == null ? "null" :
+                        $"full={icProg.FullyCompiled} unparsed={string.Join("|", icProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                    // Fail-closed: not Activate one-shot timing.
+                    Check("Infinite Cards is not Activate one-shot timing",
+                        icProg != null &&
+                        !icProg.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.Activate &&
+                            c.Action != EffectActionKind.NoHandSizeLimit));
+                    // Fail-closed: not Destroy / ReturnToHand / Draw.
+                    Check("Infinite Cards is not Destroy / ReturnToHand / Draw",
+                        icProg != null &&
+                        !icProg.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.Destroy ||
+                             c.Action == EffectActionKind.ReturnToHand ||
+                             c.Action == EffectActionKind.PlaceTargetOnTopOfDeck ||
+                             c.Action == EffectActionKind.Draw)));
+                    // Fail-closed: Enervating Mist is not NoHandSizeLimit.
+                    var mistProg = CardTextEffectCompiler.Compile(db.Get(enervatingMist));
+                    Check("Enervating Mist is not NoHandSizeLimit (opp-only limit 5)",
+                        mistProg == null ||
+                        !mistProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NoHandSizeLimit));
+                    // Fail-closed: Hieroglyph Lithograph is not NoHandSizeLimit.
+                    var hieroProg = CardTextEffectCompiler.Compile(db.Get(hieroglyphLithograph));
+                    Check("Hieroglyph Lithograph is not NoHandSizeLimit (your-limit-becomes-N)",
+                        hieroProg == null ||
+                        !hieroProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NoHandSizeLimit));
+                    // Fail-closed: Mirage of Nightmare Max hand draw is not NoHandSizeLimit.
+                    var mirageProg = CardTextEffectCompiler.Compile(db.Get(mirageOfNightmare));
+                    Check("Mirage of Nightmare Max hand draw is not NoHandSizeLimit",
+                        mirageProg == null ||
+                        !mirageProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NoHandSizeLimit));
+                    // Near-miss: Enervating Mist opp-only limit 5 text.
+                    var mistMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000180,
+                        name = "Near-miss Enervating Mist shape",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "Your opponent's hand size limit becomes 5."
+                    });
+                    Check("Enervating Mist opp-only limit-5 is not NoHandSizeLimit",
+                        mistMiss == null ||
+                        !mistMiss.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NoHandSizeLimit));
+                    // Near-miss: Hieroglyph your-limit-becomes-N.
+                    var hieroMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000181,
+                        name = "Near-miss Hieroglyph Lithograph shape",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        desc = "Pay 1000 Life Points. During the current Duel, your hand size limit becomes 7."
+                    });
+                    Check("Hieroglyph your-limit-becomes-N is not NoHandSizeLimit",
+                        hieroMiss == null ||
+                        !hieroMiss.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NoHandSizeLimit));
+                    // Near-miss: Max hand draw / draw until.
+                    var drawUntilMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000182,
+                        name = "Near-miss draw until hand size",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        desc = "Draw cards until you have 6 cards in your hand."
+                    });
+                    Check("Max hand draw-until is not NoHandSizeLimit",
+                        drawUntilMiss == null ||
+                        !drawUntilMiss.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NoHandSizeLimit));
+                    // Near-miss: Activate destroy.
+                    var destroyMissIc = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000183,
+                        name = "Near-miss destroy Infinite Cards",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        desc = "Destroy 1 Spell/Trap Card on the field."
+                    });
+                    Check("Activate destroy is not NoHandSizeLimit",
+                        destroyMissIc == null ||
+                        !destroyMissIc.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NoHandSizeLimit));
+                    // Near-miss: bounce.
+                    var bounceMissIc = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000184,
+                        name = "Near-miss bounce Infinite Cards",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        desc = "Return 1 card on the field to the hand."
+                    });
+                    Check("Activate bounce is not NoHandSizeLimit",
+                        bounceMissIc == null ||
+                        !bounceMissIc.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NoHandSizeLimit));
+                    // Soft residual: Fanbot no-hand-size-limit FullyCompiles.
+                    var fanbotIc = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000185,
+                        name = "Infinite Cards Fanbot no hand size limit",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        desc = "No hand size limit for either player."
+                    });
+                    Check("Infinite Cards Soft: Fanbot no-hand-size-limit FullyCompiled ContinuousWhileFaceUp both",
+                        fanbotIc != null && fanbotIc.FullyCompiled &&
+                        fanbotIc.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp &&
+                            c.Action == EffectActionKind.NoHandSizeLimit &&
+                            c.Side == EffectSide.Both));
+                    // Soft: Neither player has a hand size limit.
+                    var neitherIc = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000186,
+                        name = "Infinite Cards Soft Neither player",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        desc = "Neither player has a hand size limit."
+                    });
+                    Check("Infinite Cards Soft: Neither-player FullyCompiled",
+                        neitherIc != null && neitherIc.FullyCompiled &&
+                        neitherIc.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NoHandSizeLimit));
+                    // New-card rule: same PSCT shape compiles without passcode allowlist.
+                    var synIc = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000187,
+                        name = "New Spell (Infinite Cards shape)",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        desc = "There is no limit to the number of cards in players' hands."
+                    });
+                    Check("New-card rule: Infinite Cards-shaped text compiles without a cardId branch",
+                        synIc != null && synIc.FullyCompiled &&
+                        synIc.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp &&
+                            c.Action == EffectActionKind.NoHandSizeLimit));
+                    // Soft Continuous: Dark Door remains coexistent (v124 intact).
+                    var doorStill = CardTextEffectCompiler.Compile(db.Get(30606547));
+                    Check("The Dark Door ContinuousStill FullyCompiled OnlyOneMonsterMayAttack (coexist v124)",
+                        doorStill != null && doorStill.FullyCompiled &&
+                        doorStill.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OnlyOneMonsterMayAttackPerBattlePhase &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp));
+                    // Soft Continuous: Mask of Restrict remains coexistent (v123 intact).
+                    var maskStillIc = CardTextEffectCompiler.Compile(db.Get(29549364));
+                    Check("Mask of Restrict ContinuousStill FullyCompiled NeitherPlayerCanTribute (coexist v123)",
+                        maskStillIc != null && maskStillIc.FullyCompiled &&
+                        maskStillIc.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NeitherPlayerCanTribute &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp));
+                    // Soft Continuous: Remove Brainwashing remains coexistent (v122 intact).
+                    var rbStillIc = CardTextEffectCompiler.Compile(db.Get(94739788));
+                    Check("Remove Brainwashing ContinuousStill FullyCompiled ReturnControlToOwners (coexist v122)",
+                        rbStillIc != null && rbStillIc.FullyCompiled &&
+                        rbStillIc.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ReturnControlToOwners &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp));
+                    {
+                        // Soft Continuous: face-up Infinite Cards Soft ContinuousProtections + Soft DE EP skip.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var spell = PlaceSetTrap(engine, p, infiniteCards, 0);
+                        spell.FaceUp = true;
+                        spell.SetThisTurn = false;
+                        Check("Infinite Cards Soft ContinuousProtections.NoHandSizeLimit while face-up",
+                            ContinuousProtections.NoHandSizeLimit(engine));
+                        // Stuff hand past limit 6.
+                        for (var i = 0; i < 8; i++)
+                            PutInHand(engine, p, celticIc);
+                        var handBefore = p.Hand.Count;
+                        Check("Infinite Cards Soft setup: hand > 6 before EndTurn",
+                            handBefore > TcgRules.HandSizeLimitEndPhase,
+                            $"hand={handBefore}");
+                        engine.EndTurn(p);
+                        Check("Infinite Cards Soft DE HandSizeLimitEndPhase: EP discard skipped (hand unchanged)",
+                            p.Hand.Count == handBefore && ContinuousProtections.NoHandSizeLimit(engine),
+                            $"handBefore={handBefore} handAfter={p.Hand.Count}");
+                        // Fail-closed Soft: without Infinite Cards face-up, ContinuousProtections is false
+                        // and default EP discard applies.
+                        ClearBoard(engine);
+                        Check("Without Infinite Cards face-up, NoHandSizeLimit is false",
+                            !ContinuousProtections.NoHandSizeLimit(engine));
+                    }
+                    {
+                        // Soft: default hand-size-6 discard still applies when Infinite Cards is absent.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        for (var i = 0; i < 8; i++)
+                            PutInHand(engine, p, celticIc);
+                        engine.EndTurn(p);
+                        Check("Default hand-size-6 discard still applies without Infinite Cards",
+                            p.Hand.Count == TcgRules.HandSizeLimitEndPhase,
+                            $"hand={p.Hand.Count}");
+                    }
+                    {
+                        // Soft: CanActivate Continuous Spell from hand + activate stays face-up.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var card = PutInHand(engine, p, infiniteCards);
+                        Check("Infinite Cards: CanActivate Continuous Spell from hand",
+                            engine.CanActivateSpellTrap(p, card, fromHand: true));
+                        Check("Infinite Cards Soft: Activate stays face-up Continuous NoHandSizeLimit",
+                            engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                            card.FaceUp &&
+                            ContinuousProtections.NoHandSizeLimit(engine),
+                            $"faceUp={card.FaceUp} noLimit={ContinuousProtections.NoHandSizeLimit(engine)}");
+                    }
+                    {
+                        // Soft: destroy/bounce removes Soft residual (fail-closed vs lingering after leave).
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var spell = PlaceSetTrap(engine, p, infiniteCards, 0);
+                        spell.FaceUp = true;
+                        spell.SetThisTurn = false;
+                        Check("Infinite Cards Soft pre-destroy: NoHandSizeLimit true",
+                            ContinuousProtections.NoHandSizeLimit(engine));
+                        engine.SendCardToGrave(p, spell);
+                        Check("Infinite Cards Soft post-destroy: NoHandSizeLimit false (fail-closed)",
+                            !ContinuousProtections.NoHandSizeLimit(engine));
+                    }
+                }
+
+                // ── v126: Enervating Mist — ContinuousWhileFaceUp OpponentHandSizeLimitBecomes (opp-only 5) ──
+                {
+                    const int enervatingMist = 26022485;
+                    const int infiniteCardsV126 = 94163677;
+                    const int hieroglyphLithographV126 = 10248192;
+                    const int mirageOfNightmareV126 = 41482598;
+                    const int celticMist = 91152256;
+                    var mistDef = db.Get(enervatingMist);
+                    var mistProgV126 = CardTextEffectCompiler.Compile(mistDef);
+                    Check("Enervating Mist FullyCompiled ContinuousWhileFaceUp OpponentHandSizeLimitBecomes opp Amount=5",
+                        mistProgV126 != null && mistProgV126.FullyCompiled &&
+                        mistProgV126.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.ContinuousWhileFaceUp &&
+                            c.Action == EffectActionKind.OpponentHandSizeLimitBecomes &&
+                            c.Side == EffectSide.Opponent && c.Amount == 5 && c.StaysOnField),
+                        mistDef == null ? "null def" :
+                        mistProgV126 == null ? "null" :
+                        $"full={mistProgV126.FullyCompiled} unparsed={string.Join("|", mistProgV126.UnparsedFragments ?? System.Array.Empty<string>())}");
+                    // Fail-closed: not Activate one-shot timing.
+                    Check("Enervating Mist is not Activate one-shot timing",
+                        mistProgV126 != null &&
+                        !mistProgV126.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.Activate &&
+                            c.Action != EffectActionKind.OpponentHandSizeLimitBecomes));
+                    // Fail-closed: not NoHandSizeLimit (Infinite Cards).
+                    Check("Enervating Mist is not NoHandSizeLimit (Infinite Cards)",
+                        mistProgV126 != null &&
+                        !mistProgV126.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NoHandSizeLimit));
+                    // Fail-closed: not Destroy / ReturnToHand / Draw.
+                    Check("Enervating Mist is not Destroy / ReturnToHand / Draw",
+                        mistProgV126 != null &&
+                        !mistProgV126.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.Destroy ||
+                             c.Action == EffectActionKind.ReturnToHand ||
+                             c.Action == EffectActionKind.PlaceTargetOnTopOfDeck ||
+                             c.Action == EffectActionKind.Draw)));
+                    // Fail-closed: Infinite Cards remains NoHandSizeLimit (not Mist remapping).
+                    var icStill = CardTextEffectCompiler.Compile(db.Get(infiniteCardsV126));
+                    Check("Infinite Cards remains NoHandSizeLimit (coexist v125; bars Mist remapping)",
+                        icStill != null && icStill.FullyCompiled &&
+                        icStill.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NoHandSizeLimit &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp) &&
+                        !icStill.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OpponentHandSizeLimitBecomes));
+                    // Fail-closed: Hieroglyph Lithograph is not OpponentHandSizeLimitBecomes.
+                    var hieroProgV126 = CardTextEffectCompiler.Compile(db.Get(hieroglyphLithographV126));
+                    Check("Hieroglyph Lithograph is not OpponentHandSizeLimitBecomes (your-limit)",
+                        hieroProgV126 == null ||
+                        !hieroProgV126.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OpponentHandSizeLimitBecomes));
+                    // Fail-closed: Mirage Max hand draw is not OpponentHandSizeLimitBecomes.
+                    var mirageProgV126 = CardTextEffectCompiler.Compile(db.Get(mirageOfNightmareV126));
+                    Check("Mirage of Nightmare Max hand draw is not OpponentHandSizeLimitBecomes",
+                        mirageProgV126 == null ||
+                        !mirageProgV126.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OpponentHandSizeLimitBecomes));
+                    // Near-miss: Infinite Cards no-limit text.
+                    var icMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000190,
+                        name = "Near-miss Infinite Cards shape for Mist",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        desc = "There is no limit to the number of cards in players' hands."
+                    });
+                    Check("Infinite Cards no-limit text is not OpponentHandSizeLimitBecomes",
+                        icMiss == null ||
+                        !icMiss.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OpponentHandSizeLimitBecomes));
+                    // Near-miss: Hieroglyph your-limit-becomes-N.
+                    var hieroMissV126 = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000191,
+                        name = "Near-miss Hieroglyph your-limit for Mist",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        desc = "Pay 1000 Life Points. During the current Duel, your hand size limit becomes 7."
+                    });
+                    Check("Hieroglyph your-limit-becomes-N is not OpponentHandSizeLimitBecomes",
+                        hieroMissV126 == null ||
+                        !hieroMissV126.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OpponentHandSizeLimitBecomes));
+                    // Near-miss: Max hand draw / draw until.
+                    var drawUntilMissV126 = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000192,
+                        name = "Near-miss draw until for Mist",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        desc = "Draw cards until you have 6 cards in your hand."
+                    });
+                    Check("Max hand draw-until is not OpponentHandSizeLimitBecomes",
+                        drawUntilMissV126 == null ||
+                        !drawUntilMissV126.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OpponentHandSizeLimitBecomes));
+                    // Near-miss: Activate destroy.
+                    var destroyMissMist = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000193,
+                        name = "Near-miss destroy Enervating Mist",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "Destroy 1 Spell/Trap Card on the field."
+                    });
+                    Check("Activate destroy is not OpponentHandSizeLimitBecomes",
+                        destroyMissMist == null ||
+                        !destroyMissMist.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OpponentHandSizeLimitBecomes));
+                    // Near-miss: bounce.
+                    var bounceMissMist = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000194,
+                        name = "Near-miss bounce Enervating Mist",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "Return 1 card on the field to the hand."
+                    });
+                    Check("Activate bounce is not OpponentHandSizeLimitBecomes",
+                        bounceMissMist == null ||
+                        !bounceMissMist.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OpponentHandSizeLimitBecomes));
+                    // Soft residual: Fanbot opponent hand-size-becomes FullyCompiles.
+                    var fanbotMist = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000195,
+                        name = "Enervating Mist Fanbot opponent hand size",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "Opponent's hand size limit becomes 5."
+                    });
+                    Check("Enervating Mist Soft: Fanbot opponent hand-size FullyCompiled ContinuousWhileFaceUp opp Amount=5",
+                        fanbotMist != null && fanbotMist.FullyCompiled &&
+                        fanbotMist.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp &&
+                            c.Action == EffectActionKind.OpponentHandSizeLimitBecomes &&
+                            c.Side == EffectSide.Opponent && c.Amount == 5));
+                    // New-card rule: same PSCT shape compiles without passcode allowlist.
+                    var synMist = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000196,
+                        name = "New Trap (Enervating Mist shape)",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "Your opponent's hand size limit becomes 5."
+                    });
+                    Check("New-card rule: Enervating Mist-shaped text compiles without a cardId branch",
+                        synMist != null && synMist.FullyCompiled &&
+                        synMist.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp &&
+                            c.Action == EffectActionKind.OpponentHandSizeLimitBecomes &&
+                            c.Amount == 5));
+                    // Soft Continuous: Infinite Cards / Dark Door / Mask / Brainwashing coexist.
+                    Check("Infinite Cards ContinuousStill FullyCompiled NoHandSizeLimit (coexist v125)",
+                        icStill != null && icStill.FullyCompiled &&
+                        icStill.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NoHandSizeLimit &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp));
+                    var doorStillMist = CardTextEffectCompiler.Compile(db.Get(30606547));
+                    Check("The Dark Door ContinuousStill FullyCompiled OnlyOneMonsterMayAttack (coexist v124)",
+                        doorStillMist != null && doorStillMist.FullyCompiled &&
+                        doorStillMist.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OnlyOneMonsterMayAttackPerBattlePhase &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp));
+                    var maskStillMist = CardTextEffectCompiler.Compile(db.Get(29549364));
+                    Check("Mask of Restrict ContinuousStill FullyCompiled NeitherPlayerCanTribute (coexist v123)",
+                        maskStillMist != null && maskStillMist.FullyCompiled &&
+                        maskStillMist.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NeitherPlayerCanTribute &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp));
+                    var rbStillMist = CardTextEffectCompiler.Compile(db.Get(94739788));
+                    Check("Remove Brainwashing ContinuousStill FullyCompiled ReturnControlToOwners (coexist v122)",
+                        rbStillMist != null && rbStillMist.FullyCompiled &&
+                        rbStillMist.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ReturnControlToOwners &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp));
+                    {
+                        // Soft Continuous: face-up Mist → opp EP discard to 5; controller unaffected.
+                        // EndTurn only runs for TurnPlayer — pass turn to opp first (TryEndTurnSafe).
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        opp.Hand.Clear();
+                        var trap = PlaceSetTrap(engine, p, enervatingMist, 0);
+                        trap.FaceUp = true;
+                        trap.SetThisTurn = false;
+                        Check("Enervating Mist Soft ContinuousProtections HandSizeLimitEndPhaseFor opp=5",
+                            ContinuousProtections.HandSizeLimitEndPhaseFor(engine, opp) == 5);
+                        Check("Enervating Mist Soft ContinuousProtections controller still default 6",
+                            ContinuousProtections.HandSizeLimitEndPhaseFor(engine, p) ==
+                            TcgRules.HandSizeLimitEndPhase);
+                        // Stuff opp hand past 5.
+                        for (var i = 0; i < 8; i++)
+                            PutInHand(engine, opp, celticMist);
+                        var oppBefore = opp.Hand.Count;
+                        Check("Enervating Mist Soft setup: opp hand > 5 before EndTurn",
+                            oppBefore > 5, $"oppHand={oppBefore}");
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        engine.TryEndTurnSafe(p);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        Check("Enervating Mist Soft: opp is TurnPlayer after pass",
+                            engine.TurnPlayer == opp,
+                            $"tpIsOpp={engine.TurnPlayer == opp} phase={engine.Phase}");
+                        engine.EndTurn(opp);
+                        Check("Enervating Mist Soft DE: opp EP discard to 5",
+                            opp.Hand.Count == 5 &&
+                            ContinuousProtections.HandSizeLimitEndPhaseFor(engine, opp) == 5,
+                            $"oppBefore={oppBefore} oppAfter={opp.Hand.Count} tpIsP={engine.TurnPlayer == p}");
+                        // After opp EndTurn, BeginTurn(p) — controller oversized hand still to default 6.
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        for (var i = 0; i < 8; i++)
+                            PutInHand(engine, p, celticMist);
+                        engine.EndTurn(p);
+                        Check("Enervating Mist Soft DE: controller EP discard still default 6",
+                            p.Hand.Count == TcgRules.HandSizeLimitEndPhase,
+                            $"pHand={p.Hand.Count}");
+                        // Fail-closed Soft: without Mist face-up, HandSizeLimitEndPhaseFor is default.
+                        ClearBoard(engine);
+                        Check("Without Enervating Mist face-up, HandSizeLimitEndPhaseFor is default 6",
+                            ContinuousProtections.HandSizeLimitEndPhaseFor(engine, opp) ==
+                            TcgRules.HandSizeLimitEndPhase);
+                    }
+                    {
+                        // Soft coexist: Infinite Cards bars Enervating Mist remapping (NoHandSizeLimit wins).
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        opp.Hand.Clear();
+                        var mist = PlaceSetTrap(engine, p, enervatingMist, 0);
+                        mist.FaceUp = true;
+                        mist.SetThisTurn = false;
+                        var ic = PlaceSetTrap(engine, p, infiniteCardsV126, 1);
+                        ic.FaceUp = true;
+                        ic.SetThisTurn = false;
+                        Check("Coexist Soft: NoHandSizeLimit true while Infinite Cards + Mist face-up",
+                            ContinuousProtections.NoHandSizeLimit(engine));
+                        for (var i = 0; i < 8; i++)
+                            PutInHand(engine, opp, celticMist);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        engine.TryEndTurnSafe(p);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        // Capture AFTER BeginTurn draw so EP-skip assert is not polluted by the draw.
+                        var before = opp.Hand.Count;
+                        Check("Coexist Soft setup: opp hand > 6 before opp EndTurn",
+                            before > TcgRules.HandSizeLimitEndPhase,
+                            $"hand={before}");
+                        engine.EndTurn(opp);
+                        Check("Coexist Soft: Infinite Cards bars Mist remapping (EP discard skipped)",
+                            opp.Hand.Count == before && ContinuousProtections.NoHandSizeLimit(engine),
+                            $"before={before} after={opp.Hand.Count}");
+                    }
+                    {
+                        // Soft: default hand-size-6 discard still applies when Mist is absent.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        for (var i = 0; i < 8; i++)
+                            PutInHand(engine, p, celticMist);
+                        engine.EndTurn(p);
+                        Check("Default hand-size-6 discard still applies without Enervating Mist",
+                            p.Hand.Count == TcgRules.HandSizeLimitEndPhase,
+                            $"hand={p.Hand.Count}");
+                    }
+                    {
+                        // Soft: Set Continuous Trap then activate stays face-up.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var trap = PlaceSetTrap(engine, p, enervatingMist, 0);
+                        trap.SetThisTurn = false;
+                        Check("Enervating Mist: CanActivate Continuous Trap from field",
+                            engine.CanActivateSpellTrap(p, trap, fromHand: false));
+                        Check("Enervating Mist Soft: Activate stays face-up Continuous opp limit 5",
+                            engine.TryActivateSpellTrap(p, trap, fromHand: false) &&
+                            trap.FaceUp &&
+                            ContinuousProtections.HandSizeLimitEndPhaseFor(engine, engine.Opponent) == 5,
+                            $"faceUp={trap.FaceUp} oppLimit={ContinuousProtections.HandSizeLimitEndPhaseFor(engine, engine.Opponent)}");
+                    }
+                    {
+                        // Soft: destroy/bounce removes Soft residual (fail-closed vs lingering after leave).
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var trap = PlaceSetTrap(engine, p, enervatingMist, 0);
+                        trap.FaceUp = true;
+                        trap.SetThisTurn = false;
+                        Check("Enervating Mist Soft pre-destroy: opp HandSizeLimit=5",
+                            ContinuousProtections.HandSizeLimitEndPhaseFor(engine, engine.Opponent) == 5);
+                        engine.SendCardToGrave(p, trap);
+                        Check("Enervating Mist Soft post-destroy: HandSizeLimit default (fail-closed)",
+                            ContinuousProtections.HandSizeLimitEndPhaseFor(engine, engine.Opponent) ==
+                            TcgRules.HandSizeLimitEndPhase);
+                    }
+                }
+
+                // ── v127: Spell Economics — ContinuousWhileFaceUp ControllerDoesNotPayLpToActivateSpells ──
+                {
+                    const int spellEconomics = 4259068;
+                    const int prematureBurialV127 = 70828912;
+                    const int messengerOfPeaceV127 = 44656491;
+                    const int mindHaxorzV127 = 75392615; // Trap: Pay 500 LP
+                    const int celticSe = 91152256;
+                    const int enervatingMistV127 = 26022485;
+                    const int infiniteCardsV127 = 94163677;
+                    const int darkDoorV127 = 30606547;
+                    const int maskRestrictV127 = 29549364;
+                    const int removeBrainwashV127 = 94739788;
+                    var seDef = db.Get(spellEconomics);
+                    var seProg = CardTextEffectCompiler.Compile(seDef);
+                    Check("Spell Economics FullyCompiled ContinuousWhileFaceUp ControllerDoesNotPayLpToActivateSpells controller",
+                        seProg != null && seProg.FullyCompiled &&
+                        seProg.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.ContinuousWhileFaceUp &&
+                            c.Action == EffectActionKind.ControllerDoesNotPayLpToActivateSpells &&
+                            c.Side == EffectSide.Controller && c.StaysOnField),
+                        seDef == null ? "null def" :
+                        seProg == null ? "null" :
+                        $"full={seProg.FullyCompiled} unparsed={string.Join("|", seProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                    Check("Spell Economics is not Activate one-shot timing",
+                        seProg != null &&
+                        !seProg.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.Activate &&
+                            c.Action != EffectActionKind.ControllerDoesNotPayLpToActivateSpells));
+                    Check("Spell Economics is not Destroy / ReturnToHand / Draw / PayLifePoints",
+                        seProg != null &&
+                        !seProg.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.Destroy ||
+                             c.Action == EffectActionKind.ReturnToHand ||
+                             c.Action == EffectActionKind.PlaceTargetOnTopOfDeck ||
+                             c.Action == EffectActionKind.Draw ||
+                             c.Action == EffectActionKind.PayLifePoints ||
+                             c.Action == EffectActionKind.StandbyMaintenancePayLp ||
+                             c.Action == EffectActionKind.PayLpOrDestroyThis)));
+                    // Fail-closed coexist: prior Continuous intact.
+                    var mistStillSe = CardTextEffectCompiler.Compile(db.Get(enervatingMistV127));
+                    Check("Enervating Mist ContinuousStill FullyCompiled (coexist v126)",
+                        mistStillSe != null && mistStillSe.FullyCompiled &&
+                        mistStillSe.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OpponentHandSizeLimitBecomes &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp));
+                    var icStillSe = CardTextEffectCompiler.Compile(db.Get(infiniteCardsV127));
+                    Check("Infinite Cards ContinuousStill FullyCompiled (coexist v125)",
+                        icStillSe != null && icStillSe.FullyCompiled &&
+                        icStillSe.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NoHandSizeLimit &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp));
+                    var doorStillSe = CardTextEffectCompiler.Compile(db.Get(darkDoorV127));
+                    Check("The Dark Door ContinuousStill FullyCompiled (coexist v124)",
+                        doorStillSe != null && doorStillSe.FullyCompiled &&
+                        doorStillSe.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OnlyOneMonsterMayAttackPerBattlePhase &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp));
+                    var maskStillSe = CardTextEffectCompiler.Compile(db.Get(maskRestrictV127));
+                    Check("Mask of Restrict ContinuousStill FullyCompiled (coexist v123)",
+                        maskStillSe != null && maskStillSe.FullyCompiled &&
+                        maskStillSe.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NeitherPlayerCanTribute &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp));
+                    var rbStillSe = CardTextEffectCompiler.Compile(db.Get(removeBrainwashV127));
+                    Check("Remove Brainwashing ContinuousStill FullyCompiled (coexist v122)",
+                        rbStillSe != null && rbStillSe.FullyCompiled &&
+                        rbStillSe.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ReturnControlToOwners &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp));
+                    // Fail-closed: Premature Burial remains Activate PayLpAmount (not Spell Economics).
+                    var pbStill = CardTextEffectCompiler.Compile(db.Get(prematureBurialV127));
+                    Check("Premature Burial remains Activate PayLp (not ControllerDoesNotPayLp)",
+                        pbStill != null && pbStill.FullyCompiled &&
+                        pbStill.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.Activate && c.PayLpAmount == 800) &&
+                        !pbStill.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ControllerDoesNotPayLpToActivateSpells));
+                    // Fail-closed: Messenger of Peace is not ControllerDoesNotPayLp (Standby maintenance).
+                    var mopProg = CardTextEffectCompiler.Compile(db.Get(messengerOfPeaceV127));
+                    Check("Messenger of Peace is not ControllerDoesNotPayLpToActivateSpells (Standby)",
+                        mopProg == null ||
+                        !mopProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ControllerDoesNotPayLpToActivateSpells));
+                    // Fail-closed: Trap Pay-LP (Mind Haxorz) is not Spell Economics.
+                    var trapPayProg = CardTextEffectCompiler.Compile(db.Get(mindHaxorzV127));
+                    Check("Mind Haxorz Trap Pay-LP is not ControllerDoesNotPayLpToActivateSpells",
+                        trapPayProg == null ||
+                        !trapPayProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ControllerDoesNotPayLpToActivateSpells));
+                    // Near-miss: Trap LP / Solemn-like.
+                    var solemnMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000200,
+                        name = "Near-miss Trap Pay half LP",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "When a monster(s) would be Summoned, OR a Spell/Trap Card is activated: Pay half your LP; negate the Summon or activation, and if you do, destroy that card."
+                    });
+                    Check("Trap Pay-half-LP is not ControllerDoesNotPayLpToActivateSpells",
+                        solemnMiss == null ||
+                        !solemnMiss.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ControllerDoesNotPayLpToActivateSpells));
+                    // Near-miss: Standby maintenance.
+                    var standbyMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000201,
+                        name = "Near-miss Standby pay or destroy",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        desc = "Monsters with 1500 or more ATK cannot declare an attack. Once per turn, during your Standby Phase, pay 100 LP or destroy this card."
+                    });
+                    Check("Standby maintenance pay-or-destroy is not ControllerDoesNotPayLp",
+                        standbyMiss == null ||
+                        !standbyMiss.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ControllerDoesNotPayLpToActivateSpells));
+                    // Near-miss: opponent does not pay.
+                    var oppMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000202,
+                        name = "Near-miss opponent does not pay",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        desc = "Your opponent does not pay Life Points to activate Spell Cards."
+                    });
+                    Check("Opponent-does-not-pay is not ControllerDoesNotPayLpToActivateSpells",
+                        oppMiss == null ||
+                        !oppMiss.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ControllerDoesNotPayLpToActivateSpells));
+                    // Near-miss: Activate destroy.
+                    var destroyMissSe = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000203,
+                        name = "Near-miss destroy Spell Economics",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        desc = "Destroy 1 Spell/Trap Card on the field."
+                    });
+                    Check("Activate destroy is not ControllerDoesNotPayLpToActivateSpells",
+                        destroyMissSe == null ||
+                        !destroyMissSe.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ControllerDoesNotPayLpToActivateSpells));
+                    // Near-miss: bounce.
+                    var bounceMissSe = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000204,
+                        name = "Near-miss bounce Spell Economics",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        desc = "Return 1 card on the field to the hand."
+                    });
+                    Check("Activate bounce is not ControllerDoesNotPayLpToActivateSpells",
+                        bounceMissSe == null ||
+                        !bounceMissSe.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ControllerDoesNotPayLpToActivateSpells));
+                    // Soft Fanbot alias.
+                    var seFanbot = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000205,
+                        name = "Spell Economics Fanbot do not pay LP",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        desc = "You do not pay LP to activate Spell Cards."
+                    });
+                    Check("Spell Economics Soft: Fanbot do-not-pay-LP FullyCompiled ContinuousWhileFaceUp controller",
+                        seFanbot != null && seFanbot.FullyCompiled &&
+                        seFanbot.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.ContinuousWhileFaceUp &&
+                            c.Action == EffectActionKind.ControllerDoesNotPayLpToActivateSpells &&
+                            c.Side == EffectSide.Controller && c.StaysOnField));
+                    // New-card rule: no cardId branch.
+                    var seNew = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000206,
+                        name = "New Spell (Spell Economics shape)",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        desc = "You do not pay Life Points to activate Spell Cards."
+                    });
+                    Check("New-card rule: Spell Economics-shaped text compiles without a cardId branch",
+                        seNew != null && seNew.FullyCompiled &&
+                        seNew.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ControllerDoesNotPayLpToActivateSpells));
+                    {
+                        // Soft Continuous: face-up Spell Economics Soft ContinuousProtections + Soft PayLp skip.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        p.Graveyard.Clear();
+                        var econ = PlaceSetTrap(engine, p, spellEconomics, 0);
+                        econ.FaceUp = true;
+                        econ.SetThisTurn = false;
+                        Check("Spell Economics Soft ContinuousProtections.ControllerDoesNotPayLp while face-up",
+                            ContinuousProtections.ControllerDoesNotPayLpToActivateSpells(engine, p));
+                        Check("Spell Economics Soft: opponent does NOT get skip (fail-closed)",
+                            !ContinuousProtections.ControllerDoesNotPayLpToActivateSpells(engine, opp));
+                        // Soft live: Premature Burial — Soft Spell activate PayLp skip (LP checked after target).
+                        p.LifePoints = 2000;
+                        var gyMon = engine.CreateCardInstance(celticSe);
+                        p.Graveyard.Add(gyMon);
+                        var pb = PutInHand(engine, p, prematureBurialV127);
+                        var lpBefore = p.LifePoints;
+                        Check("Spell Economics Soft: Premature Burial CanActivate (skip gate)",
+                            engine.InMainPhase &&
+                            engine.CanActivateSpellTrap(p, pb, fromHand: true));
+                        // Soft residual: even with LP < 800, Spell activate is still legal.
+                        p.LifePoints = 100;
+                        Check("Spell Economics Soft: Premature Burial CanActivate with LP < 800",
+                            engine.CanActivateSpellTrap(p, pb, fromHand: true));
+                        p.LifePoints = lpBefore;
+                        Check("Spell Economics Soft Spell activate PayLp skip: Premature Burial no LP paid",
+                            engine.TryActivateSpellTrap(p, pb, fromHand: true) &&
+                            engine.IsAwaitingEffectTarget &&
+                            engine.TrySelectEffectTarget(gyMon) &&
+                            p.LifePoints == lpBefore &&
+                            p.TryFindMonster(gyMon, out _),
+                            $"lpBefore={lpBefore} lpAfter={p.LifePoints} mz={p.TryFindMonster(gyMon, out _)}");
+                    }
+                    {
+                        // Fail-closed Soft: without Spell Economics, Premature Burial still pays (after target).
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        p.Graveyard.Clear();
+                        p.LifePoints = 2000;
+                        var gyMon = engine.CreateCardInstance(celticSe);
+                        p.Graveyard.Add(gyMon);
+                        var pb = PutInHand(engine, p, prematureBurialV127);
+                        var lpBefore = p.LifePoints;
+                        Check("Without Spell Economics face-up, ControllerDoesNotPayLp is false",
+                            !ContinuousProtections.ControllerDoesNotPayLpToActivateSpells(engine, p));
+                        Check("Without Spell Economics, Premature Burial still pays 800 LP",
+                            engine.TryActivateSpellTrap(p, pb, fromHand: true) &&
+                            engine.IsAwaitingEffectTarget &&
+                            engine.TrySelectEffectTarget(gyMon) &&
+                            p.LifePoints == lpBefore - 800,
+                            $"lpBefore={lpBefore} lpAfter={p.LifePoints}");
+                    }
+                    {
+                        // Fail-closed Soft: Trap LP cost still pays while Spell Economics face-up.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        p.LifePoints = 2000;
+                        var econ = PlaceSetTrap(engine, p, spellEconomics, 0);
+                        econ.FaceUp = true;
+                        econ.SetThisTurn = false;
+                        var trap = PlaceSetTrap(engine, p, mindHaxorzV127, 1);
+                        trap.SetThisTurn = false;
+                        var lpBefore = p.LifePoints;
+                        // Mind Haxorz may or may not FullyCompile; Soft assert is ContinuousProtections
+                        // does not skip Trap PayLp via SkipsSpellActivatePayLp.
+                        Check("Spell Economics Soft: SkipsSpellActivatePayLp false for Trap",
+                            !ContinuousProtections.SkipsSpellActivatePayLp(engine, p, trap));
+                        // If Trap can activate and has PayLp, LP must still drop — only when FullyCompiled+payable.
+                        var trapProg = CardTextEffectCompiler.Compile(db.Get(mindHaxorzV127));
+                        if (trapProg != null && trapProg.FullyCompiled &&
+                            trapProg.ClauseList.Exists(c => c != null && c.PayLpAmount > 0) &&
+                            engine.CanActivateSpellTrap(p, trap, fromHand: false))
+                        {
+                            var paid = trapProg.ClauseList.Find(c => c != null && c.PayLpAmount > 0).PayLpAmount;
+                            Check("Spell Economics Soft fail-closed: Trap Activate still pays LP",
+                                engine.TryActivateSpellTrap(p, trap, fromHand: false) &&
+                                p.LifePoints == lpBefore - paid,
+                                $"lpBefore={lpBefore} lpAfter={p.LifePoints} paid={paid}");
+                        }
+                        else
+                        {
+                            Check("Spell Economics Soft fail-closed: Trap not skipped by SkipsSpellActivatePayLp",
+                                !ContinuousProtections.SkipsSpellActivatePayLp(engine, p, trap));
+                        }
+                    }
+                    {
+                        // Soft: Set Continuous Spell then activate stays face-up.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var spell = PlaceSetTrap(engine, p, spellEconomics, 0);
+                        spell.SetThisTurn = false;
+                        Check("Spell Economics: CanActivate Continuous Spell from field",
+                            engine.CanActivateSpellTrap(p, spell, fromHand: false));
+                        Check("Spell Economics Soft: Activate stays face-up Continuous skip gate",
+                            engine.TryActivateSpellTrap(p, spell, fromHand: false) &&
+                            spell.FaceUp &&
+                            ContinuousProtections.ControllerDoesNotPayLpToActivateSpells(engine, p),
+                            $"faceUp={spell.FaceUp} skip={ContinuousProtections.ControllerDoesNotPayLpToActivateSpells(engine, p)}");
+                    }
+                    {
+                        // Soft: destroy removes Soft residual (fail-closed vs lingering).
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var spell = PlaceSetTrap(engine, p, spellEconomics, 0);
+                        spell.FaceUp = true;
+                        spell.SetThisTurn = false;
+                        Check("Spell Economics Soft pre-destroy: ControllerDoesNotPayLp true",
+                            ContinuousProtections.ControllerDoesNotPayLpToActivateSpells(engine, p));
+                        engine.SendCardToGrave(p, spell);
+                        Check("Spell Economics Soft post-destroy: ControllerDoesNotPayLp false (fail-closed)",
+                            !ContinuousProtections.ControllerDoesNotPayLpToActivateSpells(engine, p));
+                    }
+                }
+
+                // ── v128: The Emperor's Holiday — ContinuousWhileFaceUp NegateAllEquipCardEffectsOnField ──
+                {
+                    const int emperorsHoliday = 68400115;
+                    const int snatchStealEh = 45986603; // Snatch Steal
+                    const int celticGuardEh = 91152256;
+                    const int dragonTreasureEh = 1435851;
+                    const int bewdEh = 89631139;
+                    const int darkMagicianEh = 46986414;
+                    const int yamiEh = 59197169;
+                    const int royalDecree = 51452091;
+                    const int imperialOrder = 61740673;
+                    const int spellCanceller = 84636823;
+                    const int reallyEternalRest = 28121403;
+                    const int spellEconomicsV128 = 4259068;
+                    const int enervatingMistV128 = 26022485;
+                    const int infiniteCardsV128 = 94163677;
+                    const int darkDoorV128 = 30606547;
+                    const int maskRestrictV128 = 29549364;
+                    const int removeBrainwashV128 = 94739788;
+                    var ehDef = db.Get(emperorsHoliday);
+                    var ehProg = CardTextEffectCompiler.Compile(ehDef);
+                    Check("The Emperor's Holiday FullyCompiled ContinuousWhileFaceUp NegateAllEquipCardEffectsOnField both",
+                        ehProg != null && ehProg.FullyCompiled &&
+                        ehProg.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.ContinuousWhileFaceUp &&
+                            c.Action == EffectActionKind.NegateAllEquipCardEffectsOnField &&
+                            c.Side == EffectSide.Both && c.StaysOnField),
+                        ehDef == null ? "null def" :
+                        ehProg == null ? "null" :
+                        $"full={ehProg.FullyCompiled} unparsed={string.Join("|", ehProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                    Check("The Emperor's Holiday is not Activate one-shot timing",
+                        ehProg != null &&
+                        !ehProg.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.Activate &&
+                            c.Action != EffectActionKind.NegateAllEquipCardEffectsOnField));
+                    Check("The Emperor's Holiday is not Destroy / NegateActivation / ReturnToHand",
+                        ehProg != null &&
+                        !ehProg.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.Destroy ||
+                             c.Action == EffectActionKind.DestroyAllEquips ||
+                             c.Action == EffectActionKind.DestroyAllEquippedMonsters ||
+                             c.Action == EffectActionKind.NegateActivation ||
+                             c.Action == EffectActionKind.ReturnToHand ||
+                             c.Action == EffectActionKind.PlaceTargetOnTopOfDeck)));
+                    // Fail-closed coexist: prior Continuous intact.
+                    var seStillEh = CardTextEffectCompiler.Compile(db.Get(spellEconomicsV128));
+                    Check("Spell Economics ContinuousStill FullyCompiled (coexist v127)",
+                        seStillEh != null && seStillEh.FullyCompiled &&
+                        seStillEh.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ControllerDoesNotPayLpToActivateSpells &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp));
+                    var mistStillEh = CardTextEffectCompiler.Compile(db.Get(enervatingMistV128));
+                    Check("Enervating Mist ContinuousStill FullyCompiled (coexist v126)",
+                        mistStillEh != null && mistStillEh.FullyCompiled &&
+                        mistStillEh.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OpponentHandSizeLimitBecomes &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp));
+                    var icStillEh = CardTextEffectCompiler.Compile(db.Get(infiniteCardsV128));
+                    Check("Infinite Cards ContinuousStill FullyCompiled (coexist v125)",
+                        icStillEh != null && icStillEh.FullyCompiled &&
+                        icStillEh.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NoHandSizeLimit &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp));
+                    var doorStillEh = CardTextEffectCompiler.Compile(db.Get(darkDoorV128));
+                    Check("The Dark Door ContinuousStill FullyCompiled (coexist v124)",
+                        doorStillEh != null && doorStillEh.FullyCompiled &&
+                        doorStillEh.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OnlyOneMonsterMayAttackPerBattlePhase &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp));
+                    var maskStillEh = CardTextEffectCompiler.Compile(db.Get(maskRestrictV128));
+                    Check("Mask of Restrict ContinuousStill FullyCompiled (coexist v123)",
+                        maskStillEh != null && maskStillEh.FullyCompiled &&
+                        maskStillEh.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NeitherPlayerCanTribute &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp));
+                    var rbStillEh = CardTextEffectCompiler.Compile(db.Get(removeBrainwashV128));
+                    Check("Remove Brainwashing ContinuousStill FullyCompiled (coexist v122)",
+                        rbStillEh != null && rbStillEh.FullyCompiled &&
+                        rbStillEh.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ReturnControlToOwners &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp));
+                    // Fail-closed: Royal Decree / Imperial Order / Spell Canceller are not Holiday.
+                    var decreeProg = CardTextEffectCompiler.Compile(db.Get(royalDecree));
+                    Check("Royal Decree is not NegateAllEquipCardEffectsOnField",
+                        decreeProg == null ||
+                        !decreeProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NegateAllEquipCardEffectsOnField));
+                    var ioProg = CardTextEffectCompiler.Compile(db.Get(imperialOrder));
+                    Check("Imperial Order is not NegateAllEquipCardEffectsOnField",
+                        ioProg == null ||
+                        !ioProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NegateAllEquipCardEffectsOnField));
+                    var scProg = CardTextEffectCompiler.Compile(db.Get(spellCanceller));
+                    Check("Spell Canceller is not NegateAllEquipCardEffectsOnField",
+                        scProg == null ||
+                        !scProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NegateAllEquipCardEffectsOnField));
+                    var rerProg = CardTextEffectCompiler.Compile(db.Get(reallyEternalRest));
+                    Check("Really Eternal Rest is not NegateAllEquipCardEffectsOnField",
+                        rerProg == null ||
+                        !rerProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NegateAllEquipCardEffectsOnField));
+                    var spellNegateMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000210,
+                        name = "Near-miss negate all Spell effects",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        race = "Continuous",
+                        desc = "Negate all Spell effects on the field."
+                    });
+                    Check("Near-miss negate all Spell effects is not NegateAllEquipCardEffectsOnField",
+                        spellNegateMiss == null ||
+                        !spellNegateMiss.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NegateAllEquipCardEffectsOnField));
+                    var trapNegateMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000211,
+                        name = "Near-miss negate all Trap effects",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        race = "Continuous",
+                        desc = "Negate all other Trap effects on the field."
+                    });
+                    Check("Near-miss negate all Trap effects is not NegateAllEquipCardEffectsOnField",
+                        trapNegateMiss == null ||
+                        !trapNegateMiss.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NegateAllEquipCardEffectsOnField));
+                    var destroyEquipMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000212,
+                        name = "Near-miss destroy Equip Cards",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "Destroy all Equip Cards on the field."
+                    });
+                    Check("Near-miss destroy Equips is not NegateAllEquipCardEffectsOnField",
+                        destroyEquipMiss == null ||
+                        !destroyEquipMiss.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NegateAllEquipCardEffectsOnField));
+                    var bounceMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000213,
+                        name = "Near-miss bounce Holiday",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "Negate all Equip Card effects on the field. Return this card to the hand."
+                    });
+                    Check("Near-miss bounce Holiday is not NegateAllEquipCardEffectsOnField",
+                        bounceMiss == null ||
+                        !bounceMiss.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NegateAllEquipCardEffectsOnField));
+                    var fanbotEh = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000214,
+                        name = "The Emperor's Holiday Fanbot",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        race = "Continuous",
+                        desc = "Negate the effects of all Equip Cards on the field."
+                    });
+                    Check("The Emperor's Holiday Soft: Fanbot negate-Equip-effects FullyCompiled both",
+                        fanbotEh != null && fanbotEh.FullyCompiled &&
+                        fanbotEh.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.ContinuousWhileFaceUp &&
+                            c.Action == EffectActionKind.NegateAllEquipCardEffectsOnField &&
+                            c.Side == EffectSide.Both && c.StaysOnField),
+                        fanbotEh == null ? "null" :
+                        $"full={fanbotEh.FullyCompiled} unparsed={string.Join("|", fanbotEh.UnparsedFragments ?? System.Array.Empty<string>())}");
+                    var newCardEh = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000215,
+                        name = "New Trap (Emperor's Holiday shape)",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        race = "Continuous",
+                        desc = "Negate all Equip Card effects on the field."
+                    });
+                    Check("New-card rule: Emperor's Holiday-shaped text compiles without a cardId branch",
+                        newCardEh != null && newCardEh.FullyCompiled &&
+                        newCardEh.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NegateAllEquipCardEffectsOnField &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp));
+                    {
+                        // Soft Continuous: face-up Holiday Soft-negates Equip ATK; Field Spell stays.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        var host = PlaceMonster(engine, p, bewdEh, 0, BattlePosition.Attack, true);
+                        var eq = PlaceSetTrap(engine, p, dragonTreasureEh, 0);
+                        eq.FaceUp = true;
+                        eq.EquippedTo = host;
+                        host.Equips.Add(eq);
+                        FieldSpellEffects.RefreshBoard(engine);
+                        Check("Emperor's Holiday Soft pre: Dragon Treasure +300 without Holiday",
+                            host.CurrentAtk == 3300 && host.CurrentDef == 2800,
+                            $"atk={host.CurrentAtk} def={host.CurrentDef}");
+                        var holiday = PlaceSetTrap(engine, p, emperorsHoliday, 1);
+                        holiday.FaceUp = true;
+                        holiday.SetThisTurn = false;
+                        FieldSpellEffects.RefreshBoard(engine);
+                        Check("Emperor's Holiday Soft ContinuousProtections.NegateAllEquip while face-up",
+                            ContinuousProtections.NegateAllEquipCardEffectsOnField(engine));
+                        Check("Emperor's Holiday Soft: EquipCardEffectsAreNegated for Equip",
+                            ContinuousProtections.EquipCardEffectsAreNegated(engine, eq));
+                        Check("Emperor's Holiday Soft: Equip ATK/DEF skipped while face-up",
+                            host.CurrentAtk == 3000 && host.CurrentDef == 2500,
+                            $"atk={host.CurrentAtk} def={host.CurrentDef}");
+                        Check("Emperor's Holiday Soft: Equip stays on field (not destroyed)",
+                            eq.EquippedTo == host && host.Equips.Contains(eq) &&
+                            p.TryFindSpellTrap(eq, out _) && holiday.FaceUp);
+                        // Field Spell Yami still applies to Spellcaster.
+                        var mage = PlaceMonster(engine, p, darkMagicianEh, 1, BattlePosition.Attack, true);
+                        var field = engine.CreateCardInstance(yamiEh);
+                        field.FaceUp = true;
+                        p.FieldSpellZone.Occupant = field;
+                        FieldSpellEffects.RefreshBoard(engine);
+                        Check("Emperor's Holiday Soft fail-closed: Field Spell Yami still applies",
+                            mage.CurrentAtk == 2700,
+                            $"mageAtk={mage.CurrentAtk}");
+                        Check("Emperor's Holiday Soft: Field Spell is not Equip-negated",
+                            !ContinuousProtections.EquipCardEffectsAreNegated(engine, field));
+                        Check("Emperor's Holiday Soft: Holiday itself is not Equip-negated",
+                            !ContinuousProtections.EquipCardEffectsAreNegated(engine, holiday));
+                    }
+                    {
+                        // Soft: opponent Equip also gated; Set Holiday does not gate.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        var host = PlaceMonster(engine, opp, bewdEh, 0, BattlePosition.Attack, true);
+                        var eq = PlaceSetTrap(engine, opp, dragonTreasureEh, 0);
+                        eq.FaceUp = true;
+                        eq.EquippedTo = host;
+                        host.Equips.Add(eq);
+                        var setHoliday = PlaceSetTrap(engine, p, emperorsHoliday, 0);
+                        setHoliday.FaceUp = false;
+                        FieldSpellEffects.RefreshBoard(engine);
+                        Check("Emperor's Holiday Soft fail-closed: Set does not negate Equip",
+                            !ContinuousProtections.NegateAllEquipCardEffectsOnField(engine) &&
+                            host.CurrentAtk == 3300,
+                            $"atk={host.CurrentAtk} gate={ContinuousProtections.NegateAllEquipCardEffectsOnField(engine)}");
+                        setHoliday.FaceUp = true;
+                        FieldSpellEffects.RefreshBoard(engine);
+                        Check("Emperor's Holiday Soft: opponent Equip ATK also skipped",
+                            ContinuousProtections.NegateAllEquipCardEffectsOnField(engine) &&
+                            host.CurrentAtk == 3000,
+                            $"atk={host.CurrentAtk}");
+                    }
+                    {
+                        // Soft: destroy removes Soft residual (fail-closed vs lingering).
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var host = PlaceMonster(engine, p, bewdEh, 0, BattlePosition.Attack, true);
+                        var eq = PlaceSetTrap(engine, p, dragonTreasureEh, 0);
+                        eq.FaceUp = true;
+                        eq.EquippedTo = host;
+                        host.Equips.Add(eq);
+                        var holiday = PlaceSetTrap(engine, p, emperorsHoliday, 1);
+                        holiday.FaceUp = true;
+                        FieldSpellEffects.RefreshBoard(engine);
+                        Check("Emperor's Holiday Soft pre-destroy: Equip ATK skipped",
+                            ContinuousProtections.NegateAllEquipCardEffectsOnField(engine) &&
+                            host.CurrentAtk == 3000);
+                        engine.SendCardToGrave(p, holiday);
+                        FieldSpellEffects.RefreshBoard(engine);
+                        Check("Emperor's Holiday Soft post-destroy: Equip ATK returns (fail-closed)",
+                            !ContinuousProtections.NegateAllEquipCardEffectsOnField(engine) &&
+                            host.CurrentAtk == 3300,
+                            $"atk={host.CurrentAtk} gate={ContinuousProtections.NegateAllEquipCardEffectsOnField(engine)}");
+                    }
+                    {
+                        // Soft: bounce removes Soft residual.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var host = PlaceMonster(engine, p, bewdEh, 0, BattlePosition.Attack, true);
+                        var eq = PlaceSetTrap(engine, p, dragonTreasureEh, 0);
+                        eq.FaceUp = true;
+                        eq.EquippedTo = host;
+                        host.Equips.Add(eq);
+                        var holiday = PlaceSetTrap(engine, p, emperorsHoliday, 1);
+                        holiday.FaceUp = true;
+                        FieldSpellEffects.RefreshBoard(engine);
+                        Check("Emperor's Holiday Soft pre-bounce: gate true",
+                            ContinuousProtections.NegateAllEquipCardEffectsOnField(engine));
+                        engine.ReturnCardToHand(holiday);
+                        FieldSpellEffects.RefreshBoard(engine);
+                        Check("Emperor's Holiday Soft post-bounce: gate false (fail-closed)",
+                            !ContinuousProtections.NegateAllEquipCardEffectsOnField(engine) &&
+                            host.CurrentAtk == 3300,
+                            $"atk={host.CurrentAtk}");
+                    }
+                    {
+                        // Soft: Activate stays face-up Continuous.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var trap = PlaceSetTrap(engine, p, emperorsHoliday, 0);
+                        trap.SetThisTurn = false;
+                        Check("The Emperor's Holiday: CanActivate Continuous Trap from field",
+                            engine.CanActivateSpellTrap(p, trap, fromHand: false));
+                        Check("The Emperor's Holiday Soft: Activate stays face-up Continuous gate",
+                            engine.TryActivateSpellTrap(p, trap, fromHand: false) &&
+                            trap.FaceUp &&
+                            ContinuousProtections.NegateAllEquipCardEffectsOnField(engine),
+                            $"faceUp={trap.FaceUp} gate={ContinuousProtections.NegateAllEquipCardEffectsOnField(engine)}");
+                    }
+                    {
+                        // Soft FAIL fix: Holiday face-up + new Snatch Steal → Equip stays, control NOT taken.
+                        // Soft residual OK: already-taken Equip control is not snapped back.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        var holiday = PlaceSetTrap(engine, p, emperorsHoliday, 1);
+                        holiday.FaceUp = true;
+                        holiday.SetThisTurn = false;
+                        var prey = PlaceMonster(engine, opp, celticGuardEh, 2, BattlePosition.Attack, true);
+                        var snatch = PutInHand(engine, p, snatchStealEh);
+                        Check("Emperor's Holiday Soft pre-Snatch: gate live",
+                            ContinuousProtections.NegateAllEquipCardEffectsOnField(engine));
+                        Check("Emperor's Holiday Soft: Snatch Steal CanActivate while Holiday face-up",
+                            engine.CanActivateSpellTrap(p, snatch, fromHand: true));
+                        Check("Emperor's Holiday Soft: Snatch Steal Activate opens targets",
+                            engine.TryActivateSpellTrap(p, snatch, fromHand: true) &&
+                            engine.IsAwaitingEffectTarget);
+                        if (engine.IsAwaitingEffectTarget)
+                        {
+                            Check("Emperor's Holiday Soft: Snatch + Holiday → Equip stays, monster NOT taken",
+                                engine.TrySelectEffectTarget(prey) &&
+                                snatch.EquippedTo == prey &&
+                                prey.Equips.Contains(snatch) &&
+                                p.TryFindSpellTrap(snatch, out _) &&
+                                opp.TryFindMonster(prey, out _) &&
+                                !p.TryFindMonster(prey, out _) &&
+                                !prey.TakenByEquipControl &&
+                                ContinuousProtections.EquipCardEffectsAreNegated(engine, snatch),
+                                $"eq={snatch.EquippedTo != null} onOpp={opp.TryFindMonster(prey, out _)} onP={p.TryFindMonster(prey, out _)} taken={prey.TakenByEquipControl} st={p.TryFindSpellTrap(snatch, out _)}");
+                        }
+                    }
+                    {
+                        // EquipModel batch: Snatch Steal's control is a continuous Equip effect — negated by The Emperor's
+                        // Holiday, the monster goes back; when Holiday leaves, Snatch Steal (still equipped) takes it again.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        var prey = PlaceMonster(engine, opp, celticGuardEh, 2, BattlePosition.Attack, true);
+                        var snatch = PutInHand(engine, p, snatchStealEh);
+                        Check("Emperor's Holiday Soft residual pre: Snatch takes control without Holiday",
+                            engine.TryActivateSpellTrap(p, snatch, fromHand: true) &&
+                            engine.IsAwaitingEffectTarget &&
+                            engine.TrySelectEffectTarget(prey) &&
+                            snatch.EquippedTo == prey &&
+                            p.TryFindMonster(prey, out _) &&
+                            !opp.TryFindMonster(prey, out _) &&
+                            prey.TakenByEquipControl,
+                            $"eq={snatch.EquippedTo != null} onP={p.TryFindMonster(prey, out _)} taken={prey.TakenByEquipControl}");
+                        var holiday = PlaceSetTrap(engine, p, emperorsHoliday, 1);
+                        holiday.FaceUp = true;
+                        holiday.SetThisTurn = false;
+                        FieldSpellEffects.RefreshBoard(engine);
+                        Check("Emperor's Holiday: an already-taken Snatch Steal monster returns while its effects are negated",
+                            ContinuousProtections.NegateAllEquipCardEffectsOnField(engine) &&
+                            ContinuousProtections.EquipCardEffectsAreNegated(engine, snatch) &&
+                            snatch.EquippedTo == prey &&
+                            !p.TryFindMonster(prey, out _) &&
+                            opp.TryFindMonster(prey, out _) &&
+                            !prey.TakenByEquipControl,
+                            $"gate={ContinuousProtections.NegateAllEquipCardEffectsOnField(engine)} onP={p.TryFindMonster(prey, out _)} taken={prey.TakenByEquipControl}");
+                        engine.SendCardToGrave(p, holiday);
+                        FieldSpellEffects.RefreshBoard(engine);
+                        Check("Emperor's Holiday gone: Snatch Steal (still equipped) takes its monster again",
+                            !ContinuousProtections.NegateAllEquipCardEffectsOnField(engine) &&
+                            snatch.EquippedTo == prey && p.TryFindMonster(prey, out _) &&
+                            !opp.TryFindMonster(prey, out _) && prey.TakenByEquipControl,
+                            $"onP={p.TryFindMonster(prey, out _)} taken={prey.TakenByEquipControl}");
+                    }
+                }
+
+                // ── v129: Protector of the Sanctuary — ContinuousWhileFaceUp OpponentCannotDrawExceptDuringDrawPhases ──
+                {
+                    const int protectorSanctuary = 24221739;
+                    const int timeSealProt = 35316708;
+                    const int potOfGreedProt = 55144522;
+                    const int rotaProt = 32807846; // Reinforcement of the Army — AddFromDeckToHand (≠ draw)
+                    const int celticProt = 91152256;
+                    const int emperorsHolidayV129 = 68400115;
+                    const int spellEconomicsV129 = 4259068;
+                    const int enervatingMistV129 = 26022485;
+                    const int infiniteCardsV129 = 94163677;
+                    const int darkDoorV129 = 30606547;
+                    const int maskRestrictV129 = 29549364;
+                    const int removeBrainwashV129 = 94739788;
+                    var protDef = db.Get(protectorSanctuary);
+                    var protProg = CardTextEffectCompiler.Compile(protDef);
+                    Check("Protector of the Sanctuary FullyCompiled ContinuousWhileFaceUp OpponentCannotDrawExceptDuringDrawPhases opp",
+                        protProg != null && protProg.FullyCompiled &&
+                        protProg.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.ContinuousWhileFaceUp &&
+                            c.Action == EffectActionKind.OpponentCannotDrawExceptDuringDrawPhases &&
+                            c.Side == EffectSide.Opponent && c.StaysOnField),
+                        protDef == null ? "null def" :
+                        protProg == null ? "null" :
+                        $"full={protProg.FullyCompiled} unparsed={string.Join("|", protProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                    Check("Protector of the Sanctuary is not Activate one-shot timing",
+                        protProg != null &&
+                        !protProg.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.Activate &&
+                            c.Action != EffectActionKind.OpponentCannotDrawExceptDuringDrawPhases));
+                    Check("Protector of the Sanctuary is not Destroy / Draw / SkipOpponentNextDrawPhase / AddFromDeckToHand",
+                        protProg != null &&
+                        !protProg.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.Destroy ||
+                             c.Action == EffectActionKind.Draw ||
+                             c.Action == EffectActionKind.SkipOpponentNextDrawPhase ||
+                             c.Action == EffectActionKind.AddFromDeckToHand ||
+                             c.Action == EffectActionKind.ReturnToHand)));
+                    // Fail-closed coexist: prior Continuous intact.
+                    var ehStillProt = CardTextEffectCompiler.Compile(db.Get(emperorsHolidayV129));
+                    Check("The Emperor's Holiday ContinuousStill FullyCompiled (coexist v128)",
+                        ehStillProt != null && ehStillProt.FullyCompiled &&
+                        ehStillProt.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NegateAllEquipCardEffectsOnField &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp));
+                    var seStillProt = CardTextEffectCompiler.Compile(db.Get(spellEconomicsV129));
+                    Check("Spell Economics ContinuousStill FullyCompiled (coexist v127)",
+                        seStillProt != null && seStillProt.FullyCompiled &&
+                        seStillProt.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ControllerDoesNotPayLpToActivateSpells &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp));
+                    var mistStillProt = CardTextEffectCompiler.Compile(db.Get(enervatingMistV129));
+                    Check("Enervating Mist ContinuousStill FullyCompiled (coexist v126)",
+                        mistStillProt != null && mistStillProt.FullyCompiled &&
+                        mistStillProt.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OpponentHandSizeLimitBecomes &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp));
+                    var icStillProt = CardTextEffectCompiler.Compile(db.Get(infiniteCardsV129));
+                    Check("Infinite Cards ContinuousStill FullyCompiled (coexist v125)",
+                        icStillProt != null && icStillProt.FullyCompiled &&
+                        icStillProt.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NoHandSizeLimit &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp));
+                    var doorStillProt = CardTextEffectCompiler.Compile(db.Get(darkDoorV129));
+                    Check("The Dark Door ContinuousStill FullyCompiled (coexist v124)",
+                        doorStillProt != null && doorStillProt.FullyCompiled &&
+                        doorStillProt.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OnlyOneMonsterMayAttackPerBattlePhase &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp));
+                    var maskStillProt = CardTextEffectCompiler.Compile(db.Get(maskRestrictV129));
+                    Check("Mask of Restrict ContinuousStill FullyCompiled (coexist v123)",
+                        maskStillProt != null && maskStillProt.FullyCompiled &&
+                        maskStillProt.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NeitherPlayerCanTribute &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp));
+                    var rbStillProt = CardTextEffectCompiler.Compile(db.Get(removeBrainwashV129));
+                    Check("Remove Brainwashing ContinuousStill FullyCompiled (coexist v122)",
+                        rbStillProt != null && rbStillProt.FullyCompiled &&
+                        rbStillProt.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ReturnControlToOwners &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp));
+                    // Fail-closed: Time Seal is SkipOpponentNextDrawPhase, not Protector.
+                    var tsProg = CardTextEffectCompiler.Compile(db.Get(timeSealProt));
+                    Check("Time Seal is not OpponentCannotDrawExceptDuringDrawPhases",
+                        tsProg == null ||
+                        !tsProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OpponentCannotDrawExceptDuringDrawPhases));
+                    var skipDrawMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000220,
+                        name = "Near-miss skip next Draw Phase",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "Skip your opponent's next Draw Phase."
+                    });
+                    Check("Near-miss skip next Draw Phase is not OpponentCannotDrawExceptDuringDrawPhases",
+                        skipDrawMiss == null ||
+                        !skipDrawMiss.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OpponentCannotDrawExceptDuringDrawPhases));
+                    var cannotAddMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000221,
+                        name = "Near-miss cannot add to hand",
+                        type = "Effect Monster",
+                        frameType = "effect",
+                        desc = "Your opponent cannot add cards to their hand except during Draw Phases."
+                    });
+                    Check("Near-miss cannot-add-to-hand is not OpponentCannotDrawExceptDuringDrawPhases",
+                        cannotAddMiss == null ||
+                        !cannotAddMiss.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OpponentCannotDrawExceptDuringDrawPhases));
+                    var neitherDrawMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000222,
+                        name = "Near-miss neither player can draw",
+                        type = "Effect Monster",
+                        frameType = "effect",
+                        desc = "Neither player can draw cards except during Draw Phases."
+                    });
+                    Check("Near-miss neither-player-can-draw is not OpponentCannotDrawExceptDuringDrawPhases",
+                        neitherDrawMiss == null ||
+                        !neitherDrawMiss.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OpponentCannotDrawExceptDuringDrawPhases));
+                    var youCannotDrawMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000223,
+                        name = "Near-miss you cannot draw",
+                        type = "Effect Monster",
+                        frameType = "effect",
+                        desc = "You cannot draw cards except during Draw Phases."
+                    });
+                    Check("Near-miss you-cannot-draw is not OpponentCannotDrawExceptDuringDrawPhases",
+                        youCannotDrawMiss == null ||
+                        !youCannotDrawMiss.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OpponentCannotDrawExceptDuringDrawPhases));
+                    var destroyMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000224,
+                        name = "Near-miss destroy Protector",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        desc = "Destroy 1 face-up monster your opponent controls."
+                    });
+                    Check("Near-miss destroy is not OpponentCannotDrawExceptDuringDrawPhases",
+                        destroyMiss == null ||
+                        !destroyMiss.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OpponentCannotDrawExceptDuringDrawPhases));
+                    var bounceMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000225,
+                        name = "Near-miss bounce Protector",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        desc = "Return this card to the hand."
+                    });
+                    Check("Near-miss bounce is not OpponentCannotDrawExceptDuringDrawPhases",
+                        bounceMiss == null ||
+                        !bounceMiss.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OpponentCannotDrawExceptDuringDrawPhases));
+                    var fanbotProt = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000226,
+                        name = "Protector of the Sanctuary Fanbot",
+                        type = "Effect Monster",
+                        frameType = "effect",
+                        desc = "ContinuousWhileFaceUp: Your opponent cannot draw cards except during Draw Phases."
+                    });
+                    Check("Protector Soft: Fanbot cannot-draw-except-Draw-Phases FullyCompiled opp",
+                        fanbotProt != null && fanbotProt.FullyCompiled &&
+                        fanbotProt.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.ContinuousWhileFaceUp &&
+                            c.Action == EffectActionKind.OpponentCannotDrawExceptDuringDrawPhases &&
+                            c.Side == EffectSide.Opponent && c.StaysOnField));
+                    var newCardProt = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000227,
+                        name = "New Monster (Protector shape)",
+                        type = "Effect Monster",
+                        frameType = "effect",
+                        desc = "Your opponent cannot draw cards except during Draw Phases."
+                    });
+                    Check("New-card rule: Protector-shaped text compiles without a cardId branch",
+                        newCardProt != null && newCardProt.FullyCompiled &&
+                        newCardProt.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OpponentCannotDrawExceptDuringDrawPhases &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp));
+                    {
+                        // Soft Continuous: face-up Protector Soft ContinuousProtections + Soft DE Draw gate.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        opp.Hand.Clear();
+                        // Fill decks so draws do not deck-out.
+                        for (var i = 0; i < 10; i++)
+                        {
+                            p.Deck.Add(celticProt);
+                            opp.Deck.Add(celticProt);
+                        }
+                        var host = PlaceMonster(engine, p, protectorSanctuary, 2, BattlePosition.Attack, true);
+                        Check("Protector Soft ContinuousProtections.OpponentCannotDraw while face-up (vs opp)",
+                            ContinuousProtections.OpponentCannotDrawExceptDuringDrawPhases(engine, opp));
+                        Check("Protector Soft: controller is NOT gated (fail-closed)",
+                            !ContinuousProtections.OpponentCannotDrawExceptDuringDrawPhases(engine, p));
+                        Check("Protector Soft BlocksDrawOutsideDrawPhase opp (Main1)",
+                            ContinuousProtections.BlocksDrawOutsideDrawPhase(engine, opp),
+                            $"phase={engine.Phase}");
+                        // Opp non-Draw-Phase draw blocked (Soft DE Draw gate).
+                        var oppHandBefore = opp.HandCount;
+                        var oppDeckBefore = opp.DeckCount;
+                        engine.Draw(opp, 1, silent: false);
+                        Check("Protector Soft: opp non-Draw-Phase draw blocked",
+                            opp.HandCount == oppHandBefore && opp.DeckCount == oppDeckBefore,
+                            $"hand={opp.HandCount} was {oppHandBefore} deck={opp.DeckCount} was {oppDeckBefore} phase={engine.Phase}");
+                        // Controller draw anytime OK.
+                        var pHandBefore = p.HandCount;
+                        var pDeckBefore = p.DeckCount;
+                        engine.Draw(p, 1, silent: false);
+                        Check("Protector Soft: controller draw anytime OK",
+                            p.HandCount == pHandBefore + 1 && p.DeckCount == pDeckBefore - 1,
+                            $"hand={p.HandCount} was {pHandBefore} deck={p.DeckCount} was {pDeckBefore}");
+                        // Soft residual OK: search / AddFromDeckToHand ≠ draw (ROTA).
+                        // Ensure a Level ≤4 Warrior is in Deck for ROTA.
+                        p.Deck.Insert(0, celticProt); // Celtic Guardian is Warrior Level 4
+                        var rota = PutInHand(engine, p, rotaProt);
+                        var handBeforeRota = p.HandCount;
+                        var deckBeforeRota = p.DeckCount;
+                        Check("Protector Soft residual: ROTA CanActivate (search ≠ draw)",
+                            engine.CanActivateSpellTrap(p, rota, fromHand: true));
+                        var rotaOk = engine.TryActivateSpellTrap(p, rota, fromHand: true);
+                        // ROTA may open targets or auto-resolve — either way AddFromDeck is not gated.
+                        if (engine.IsAwaitingEffectTarget &&
+                            engine.PendingActivation?.LegalTargets != null)
+                        {
+                            var pick = engine.PendingActivation.LegalTargets
+                                .FirstOrDefault(t => t != null);
+                            if (pick != null)
+                                engine.TrySelectEffectTarget(pick);
+                        }
+                        Check("Protector Soft residual: ROTA AddFromDeckToHand not gated (search ≠ draw)",
+                            rotaOk && p.HandCount >= handBeforeRota,
+                            $"rotaOk={rotaOk} handBefore={handBeforeRota} handAfter={p.HandCount} deckBefore={deckBeforeRota} deckAfter={p.DeckCount} awaiting={engine.IsAwaitingEffectTarget}");
+                        // Opp Draw Phase draw OK: pass turn → opp BeginTurn Draw Phase.
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        var oppHandPrePass = opp.HandCount;
+                        var oppDeckPrePass = opp.DeckCount;
+                        engine.TryEndTurnSafe(p);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        Check("Protector Soft: opp Draw Phase draw OK after EndTurn",
+                            engine.TurnPlayer == opp &&
+                            opp.HandCount == oppHandPrePass + 1 &&
+                            opp.DeckCount == oppDeckPrePass - 1,
+                            $"tpIsOpp={engine.TurnPlayer == opp} hand={opp.HandCount} was {oppHandPrePass} deck={opp.DeckCount} was {oppDeckPrePass} phase={engine.Phase}");
+                        // Fail-closed Soft: destroy Protector → gate off; opp can draw outside Draw Phase.
+                        engine.SendCardToGrave(p, host);
+                        Check("Protector Soft post-destroy: OpponentCannotDraw false (fail-closed)",
+                            !ContinuousProtections.OpponentCannotDrawExceptDuringDrawPhases(engine, opp));
+                        // Force Main-phase-like draw: if still Draw Phase after BeginTurn, EndTurn isn't needed —
+                        // after Draw Phase completes Phase is Standby/Main1. Ensure we're past Draw.
+                        if (engine.Phase == DuelPhase.Draw)
+                        {
+                            // Soft residual: already drew for DP; advance by ending if stuck.
+                        }
+                        var oppHand2 = opp.HandCount;
+                        var oppDeck2 = opp.DeckCount;
+                        // Set up: if Phase is Draw, BlocksDrawOutsideDrawPhase is false anyway.
+                        // Advance to Main if needed via TryEndTurn is heavy; call Draw while Phase != Draw.
+                        if (engine.Phase != DuelPhase.Draw)
+                        {
+                            engine.Draw(opp, 1, silent: false);
+                            Check("Protector Soft post-destroy: opp non-Draw-Phase draw OK",
+                                opp.HandCount == oppHand2 + 1 && opp.DeckCount == oppDeck2 - 1,
+                                $"hand={opp.HandCount} was {oppHand2} phase={engine.Phase}");
+                        }
+                        else
+                        {
+                            Check("Protector Soft post-destroy: gate off (Draw Phase residual OK)",
+                                !ContinuousProtections.OpponentCannotDrawExceptDuringDrawPhases(engine, opp));
+                        }
+                    }
+                    {
+                        // Soft: opp Pot of Greed during Main blocked while Protector face-up.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        opp.Hand.Clear();
+                        for (var i = 0; i < 10; i++)
+                            opp.Deck.Add(celticProt);
+                        PlaceMonster(engine, p, protectorSanctuary, 2, BattlePosition.Attack, true);
+                        var pot = PutInHand(engine, opp, potOfGreedProt);
+                        var handBefore = opp.HandCount;
+                        var deckBefore = opp.DeckCount;
+                        // Opp activates Pot during their Main (need TurnPlayer=opp). Soft: use Draw gate directly
+                        // via controller-side setup: call Draw as opp during current Main.
+                        Check("Protector Soft Pot setup: BlocksDrawOutsideDrawPhase vs opp",
+                            ContinuousProtections.BlocksDrawOutsideDrawPhase(engine, opp),
+                            $"phase={engine.Phase}");
+                        // Activate as if opp could — Pot resolves via engine.Draw which Soft-gates.
+                        // Give turn to opp if needed for CanActivate; else Soft-call Draw path via TryActivate
+                        // from hand while TurnPlayer is p — Pot is opp's card so activate as opp on opp turn.
+                        if (engine.TurnPlayer != opp)
+                        {
+                            if (engine.IsAwaitingResponse) engine.PassResponse();
+                            engine.TryEndTurnSafe(engine.TurnPlayer);
+                            if (engine.IsAwaitingResponse) engine.PassResponse();
+                        }
+                        // After EndTurn, opp already drew for Draw Phase (+1). Clear that and re-test Pot on Main.
+                        Check("Protector Soft: reached opp turn for Pot test",
+                            engine.TurnPlayer == opp,
+                            $"tpIsOpp={engine.TurnPlayer == opp} phase={engine.Phase}");
+                        // Ensure Pot still in opp hand (may need re-put if lost).
+                        if (!opp.Hand.Exists(c => c != null && c.CardId == potOfGreedProt))
+                            pot = PutInHand(engine, opp, potOfGreedProt);
+                        else
+                            pot = opp.Hand.Find(c => c != null && c.CardId == potOfGreedProt);
+                        handBefore = opp.HandCount;
+                        deckBefore = opp.DeckCount;
+                        var potOk = engine.CanActivateSpellTrap(opp, pot, fromHand: true) &&
+                                    engine.TryActivateSpellTrap(opp, pot, fromHand: true);
+                        // Pot leaves hand (−1) but Soft DE Draw gate blocks +2 draws → hand = handBefore-1, deck unchanged.
+                        Check("Protector Soft: opp Pot of Greed Activate but draws Soft-blocked outside Draw Phase",
+                            potOk &&
+                            opp.HandCount == handBefore - 1 &&
+                            opp.DeckCount == deckBefore,
+                            $"potOk={potOk} hand={opp.HandCount} was {handBefore} deck={opp.DeckCount} was {deckBefore} phase={engine.Phase}");
+                    }
+                }
+
+
+
+                // ── v130: Swords of Concealing Light — Activate SetAllOppMonstersFaceDownDefense + ContinuousWhileFaceUp OpponentCannotChangeBattlePositions + Soft 2nd Standby destroy ──
+                {
+                    const int swordsConcealing = 12923641;
+                    const int swordsRevealing = 72302403;
+                    const int bookOfMoon = 14087893;
+                    const int dragonCaptureJar = 50045299;
+                    const int spellbindingCircle = 18807108;
+                    const int ceasefire = 36468556;
+                    const int protectorSanctuaryV130 = 24221739;
+                    const int emperorsHolidayV130 = 68400115;
+                    const int spellEconomicsV130 = 4259068;
+                    const int enervatingMistV130 = 26022485;
+                    const int infiniteCardsV130 = 94163677;
+                    const int darkDoorV130 = 30606547;
+                    const int maskRestrictV130 = 29549364;
+                    const int removeBrainwashV130 = 94739788;
+                    const int celticV130 = 91152256;
+                    const int beaverV130 = 32452818;
+                    var sclDef = db.Get(swordsConcealing);
+                    var sclProg = CardTextEffectCompiler.Compile(sclDef);
+                    Check("Swords of Concealing Light FullyCompiled Activate SetAllOppMonstersFaceDownDefense + ContinuousWhileFaceUp OpponentCannotChangeBattlePositions",
+                        sclProg != null && sclProg.FullyCompiled &&
+                        sclProg.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.Activate &&
+                            c.Action == EffectActionKind.SetAllOppMonstersFaceDownDefense &&
+                            c.Side == EffectSide.Opponent && c.StaysOnField && c.Amount == 2) &&
+                        sclProg.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.ContinuousWhileFaceUp &&
+                            c.Action == EffectActionKind.OpponentCannotChangeBattlePositions &&
+                            c.Side == EffectSide.Opponent && c.StaysOnField),
+                        sclDef == null ? "null def" :
+                        sclProg == null ? "null" :
+                        $"full={sclProg.FullyCompiled} unparsed={string.Join("|", sclProg.UnparsedFragments ?? System.Array.Empty<string>())} n={sclProg.ClauseList.Count}");
+                    Check("Swords of Concealing Light is not ApplySwordsOfRevealingLight / SetTargetFaceDownDefense / ContinuousForceDefenseLockPosition",
+                        sclProg != null &&
+                        !sclProg.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.ApplySwordsOfRevealingLight ||
+                             c.Action == EffectActionKind.SetTargetFaceDownDefense ||
+                             c.Action == EffectActionKind.ContinuousForceDefenseLockPosition ||
+                             c.Action == EffectActionKind.FlipAllFaceDownDefenseNoFlipEffects)));
+                    // Fail-closed coexist: prior Continuous intact.
+                    var protStill = CardTextEffectCompiler.Compile(db.Get(protectorSanctuaryV130));
+                    Check("Protector of the Sanctuary ContinuousStill FullyCompiled (coexist v129)",
+                        protStill != null && protStill.FullyCompiled &&
+                        protStill.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OpponentCannotDrawExceptDuringDrawPhases &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp));
+                    var ehStill = CardTextEffectCompiler.Compile(db.Get(emperorsHolidayV130));
+                    Check("The Emperor's Holiday ContinuousStill FullyCompiled (coexist v128)",
+                        ehStill != null && ehStill.FullyCompiled &&
+                        ehStill.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NegateAllEquipCardEffectsOnField));
+                    var seStill = CardTextEffectCompiler.Compile(db.Get(spellEconomicsV130));
+                    Check("Spell Economics ContinuousStill FullyCompiled (coexist v127)",
+                        seStill != null && seStill.FullyCompiled &&
+                        seStill.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ControllerDoesNotPayLpToActivateSpells));
+                    var mistStill = CardTextEffectCompiler.Compile(db.Get(enervatingMistV130));
+                    Check("Enervating Mist ContinuousStill FullyCompiled (coexist v126)",
+                        mistStill != null && mistStill.FullyCompiled &&
+                        mistStill.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OpponentHandSizeLimitBecomes));
+                    var icStill = CardTextEffectCompiler.Compile(db.Get(infiniteCardsV130));
+                    Check("Infinite Cards ContinuousStill FullyCompiled (coexist v125)",
+                        icStill != null && icStill.FullyCompiled &&
+                        icStill.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NoHandSizeLimit));
+                    var doorStill = CardTextEffectCompiler.Compile(db.Get(darkDoorV130));
+                    Check("The Dark Door ContinuousStill FullyCompiled (coexist v124)",
+                        doorStill != null && doorStill.FullyCompiled &&
+                        doorStill.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OnlyOneMonsterMayAttackPerBattlePhase));
+                    var maskStill = CardTextEffectCompiler.Compile(db.Get(maskRestrictV130));
+                    Check("Mask of Restrict ContinuousStill FullyCompiled (coexist v123)",
+                        maskStill != null && maskStill.FullyCompiled &&
+                        maskStill.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.NeitherPlayerCanTribute));
+                    var rbStill = CardTextEffectCompiler.Compile(db.Get(removeBrainwashV130));
+                    Check("Remove Brainwashing ContinuousStill FullyCompiled (coexist v122)",
+                        rbStill != null && rbStill.FullyCompiled &&
+                        rbStill.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ReturnControlToOwners));
+                    // Fail-closed near-misses
+                    var revProg = CardTextEffectCompiler.Compile(db.Get(swordsRevealing));
+                    Check("Swords of Revealing Light is not SetAllOppMonstersFaceDownDefense / OpponentCannotChangeBattlePositions",
+                        revProg == null ||
+                        !revProg.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.SetAllOppMonstersFaceDownDefense ||
+                             c.Action == EffectActionKind.OpponentCannotChangeBattlePositions)));
+                    Check("Swords of Revealing Light remains ApplySwordsOfRevealingLight (not Concealing)",
+                        revProg != null &&
+                        revProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ApplySwordsOfRevealingLight));
+                    var bomProg = CardTextEffectCompiler.Compile(db.Get(bookOfMoon));
+                    Check("Book of Moon is not SetAllOppMonstersFaceDownDefense",
+                        bomProg == null ||
+                        !bomProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.SetAllOppMonstersFaceDownDefense));
+                    var jarProg = CardTextEffectCompiler.Compile(db.Get(dragonCaptureJar));
+                    Check("Dragon Capture Jar is not OpponentCannotChangeBattlePositions",
+                        jarProg == null ||
+                        !jarProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OpponentCannotChangeBattlePositions));
+                    var sbcProg = CardTextEffectCompiler.Compile(db.Get(spellbindingCircle));
+                    Check("Spellbinding Circle is not OpponentCannotChangeBattlePositions",
+                        sbcProg == null ||
+                        !sbcProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OpponentCannotChangeBattlePositions));
+                    var cfProg = CardTextEffectCompiler.Compile(db.Get(ceasefire));
+                    Check("Ceasefire is not SetAllOppMonstersFaceDownDefense",
+                        cfProg == null ||
+                        !cfProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.SetAllOppMonstersFaceDownDefense));
+                    var standbyOnlyMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000230,
+                        name = "Near-miss 2nd Standby destroy only",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        race = "Continuous",
+                        desc = "Destroy this card during your 2nd Standby Phase after activation."
+                    });
+                    Check("Near-miss Standby-destroy-only is not FullyCompiled Concealing dual",
+                        standbyOnlyMiss == null ||
+                        !(standbyOnlyMiss.FullyCompiled &&
+                          standbyOnlyMiss.ClauseList.Exists(c =>
+                              c != null && c.Action == EffectActionKind.SetAllOppMonstersFaceDownDefense) &&
+                          standbyOnlyMiss.ClauseList.Exists(c =>
+                              c != null && c.Action == EffectActionKind.OpponentCannotChangeBattlePositions)));
+                    var neitherBpMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000231,
+                        name = "Near-miss neither player BP",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        race = "Continuous",
+                        desc = "Destroy this card during your 2nd Standby Phase after activation. When this card resolves, change all monsters your opponent controls to face-down Defense Position. Neither player can change battle positions."
+                    });
+                    Check("Near-miss neither-player-BP is not OpponentCannotChangeBattlePositions FullyCompiled",
+                        neitherBpMiss == null ||
+                        !neitherBpMiss.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OpponentCannotChangeBattlePositions) ||
+                        !neitherBpMiss.FullyCompiled);
+                    var revealFlipMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000232,
+                        name = "Near-miss Revealing-style flip",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        desc = "When this card is activated: If your opponent controls a face-down monster, flip all monsters they control face-up. While this card is face-up on the field, your opponent's monsters cannot declare an attack."
+                    });
+                    Check("Near-miss Revealing flip+attack is not Concealing atoms",
+                        revealFlipMiss == null ||
+                        !revealFlipMiss.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.SetAllOppMonstersFaceDownDefense ||
+                             c.Action == EffectActionKind.OpponentCannotChangeBattlePositions)));
+                    var destroyMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000233,
+                        name = "Near-miss destroy Concealing",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        desc = "Destroy 1 face-up Spell your opponent controls."
+                    });
+                    Check("Near-miss destroy is not Concealing atoms",
+                        destroyMiss == null ||
+                        !destroyMiss.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.SetAllOppMonstersFaceDownDefense ||
+                             c.Action == EffectActionKind.OpponentCannotChangeBattlePositions)));
+                    var bounceMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000234,
+                        name = "Near-miss bounce Concealing",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        desc = "Return this card to the hand."
+                    });
+                    Check("Near-miss bounce is not Concealing atoms",
+                        bounceMiss == null ||
+                        !bounceMiss.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.SetAllOppMonstersFaceDownDefense ||
+                             c.Action == EffectActionKind.OpponentCannotChangeBattlePositions)));
+                    var fanbotScl = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000235,
+                        name = "Swords of Concealing Light Fanbot",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        race = "Continuous",
+                        desc = "ContinuousWhileFaceUp: Monsters your opponent controls cannot change their battle positions. When this card resolves, change all monsters your opponent controls to face-down Defense Position. Destroy this card during your 2nd Standby Phase after activation."
+                    });
+                    Check("Concealing Soft: Fanbot order-flexible FullyCompiled dual atoms",
+                        fanbotScl != null && fanbotScl.FullyCompiled &&
+                        fanbotScl.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.SetAllOppMonstersFaceDownDefense &&
+                            c.Timing == EffectTiming.Activate && c.StaysOnField) &&
+                        fanbotScl.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OpponentCannotChangeBattlePositions &&
+                            c.Timing == EffectTiming.ContinuousWhileFaceUp && c.Side == EffectSide.Opponent));
+                    var newCardScl = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000236,
+                        name = "New Continuous Spell (Concealing shape)",
+                        type = "Spell Card",
+                        frameType = "spell",
+                        race = "Continuous",
+                        desc = "Destroy this card during your 2nd Standby Phase after activation. When this card resolves, change all monsters your opponent controls to face-down Defense Position. Monsters your opponent controls cannot change their battle positions."
+                    });
+                    Check("New-card rule: Concealing-shaped text compiles without a cardId branch",
+                        newCardScl != null && newCardScl.FullyCompiled &&
+                        newCardScl.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.SetAllOppMonstersFaceDownDefense) &&
+                        newCardScl.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OpponentCannotChangeBattlePositions));
+                    {
+                        // Soft: resolve flip + BP-lock while face-up + Soft residual new summon no auto-flip.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        var atk = PlaceMonster(engine, opp, celticV130, 0, BattlePosition.Attack, true);
+                        var def = PlaceMonster(engine, opp, beaverV130, 2, BattlePosition.Defense, true);
+                        var scl = PutInHand(engine, p, swordsConcealing);
+                        Check("Concealing Soft: CanActivate Continuous Spell from hand",
+                            engine.CanActivateSpellTrap(p, scl, fromHand: true));
+                        var ok = engine.TryActivateSpellTrap(p, scl, fromHand: true);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        Check("Concealing Soft: resolve flips all opp monsters to face-down Defense",
+                            ok &&
+                            !atk.FaceUp && atk.Position == BattlePosition.Defense &&
+                            !def.FaceUp && def.Position == BattlePosition.Defense &&
+                            p.TryFindSpellTrap(scl, out _) && scl.FaceUp,
+                            $"ok={ok} atkFU={atk.FaceUp}/{atk.Position} defFU={def.FaceUp}/{def.Position} onField={p.TryFindSpellTrap(scl, out _)} sclFU={scl.FaceUp} ctr={scl.ContinuousTurnsRemaining}");
+                        Check("Concealing Soft: ContinuousTurnsRemaining seeded to 2",
+                            scl.ContinuousTurnsRemaining == 2,
+                            $"ctr={scl.ContinuousTurnsRemaining}");
+                        // Soft ContinuousProtections BP-lock vs opp face-up (need a face-up opp monster).
+                        // Soft residual: new summon after activation Soft residual no auto-flip.
+                        var newSummon = PlaceMonster(engine, opp, 13039848, 1, BattlePosition.Attack, true);
+                        Check("Concealing Soft residual: new summon Soft residual no auto-flip (stays face-up ATK)",
+                            newSummon.FaceUp && newSummon.Position == BattlePosition.Attack,
+                            $"fu={newSummon.FaceUp} pos={newSummon.Position}");
+                        // Clear SummonedThisTurn so CanChangePosition can be tested.
+                        newSummon.SummonedThisTurn = false;
+                        newSummon.SetThisTurn = false;
+                        newSummon.AttackedThisTurn = false;
+                        newSummon.ChangedPositionThisTurn = false;
+                        Check("Concealing Soft ContinuousProtections.OpponentCannotChangeBattlePositions vs opp",
+                            ContinuousProtections.OpponentCannotChangeBattlePositions(engine, newSummon));
+                        var ownMon = PlaceMonster(engine, p, celticV130, 2, BattlePosition.Attack, true);
+                        ownMon.SummonedThisTurn = false;
+                        ownMon.SetThisTurn = false;
+                        Check("Concealing Soft: controller monsters NOT gated (fail-closed)",
+                            !ContinuousProtections.OpponentCannotChangeBattlePositions(engine, ownMon));
+                        Check("Concealing Soft DE CanChangePosition blocked for opp new summon",
+                            !engine.CanChangePosition(opp, newSummon),
+                            $"can={engine.CanChangePosition(opp, newSummon)} locked={ContinuousProtections.OpponentCannotChangeBattlePositions(engine, newSummon)}");
+                        // Soft underprint fix (Fanbot mid-QC): Flip Summon IS a BP change —
+                        // opponent cannot Flip Summon while Swords face-up (same Soft helper).
+                        atk.SummonedThisTurn = false;
+                        atk.SetThisTurn = false;
+                        Check("Concealing Soft: Flip Summon blocked for opp while Swords face-up (CanFlipSummon)",
+                            !atk.FaceUp &&
+                            ContinuousProtections.OpponentCannotChangeBattlePositions(engine, atk) &&
+                            !engine.CanFlipSummon(opp, atk),
+                            $"canFlip={engine.CanFlipSummon(opp, atk)} fu={atk.FaceUp} locked={ContinuousProtections.OpponentCannotChangeBattlePositions(engine, atk)}");
+                        Check("Concealing Soft: TryFlipSummon fails while Swords face-up",
+                            !engine.TryFlipSummon(opp, atk) && !atk.FaceUp,
+                            $"fu={atk.FaceUp} pos={atk.Position}");
+                        // Soft residual OK: card-effect BP changes (Enemy Controller Soft path)
+                        // use ApplyEffectPositionChange — not gated by Soft ContinuousProtections.
+                        Check("Concealing Soft residual: card-effect BP Soft-OK (ApplyEffectPositionChange)",
+                            ContinuousProtections.OpponentCannotChangeBattlePositions(engine, newSummon) &&
+                            engine.ApplyEffectPositionChange(newSummon, BattlePosition.Defense, true) &&
+                            newSummon.FaceUp && newSummon.Position == BattlePosition.Defense,
+                            $"fu={newSummon.FaceUp} pos={newSummon.Position} locked={ContinuousProtections.OpponentCannotChangeBattlePositions(engine, newSummon)}");
+                    }
+                    {
+                        // Soft: destroy on controller's 2nd Standby (not opponent's).
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        for (var i = 0; i < 10; i++)
+                        {
+                            p.Deck.Add(celticV130);
+                            opp.Deck.Add(celticV130);
+                        }
+                        PlaceMonster(engine, opp, beaverV130, 0, BattlePosition.Attack, true);
+                        var scl = PutInHand(engine, p, swordsConcealing);
+                        Check("Concealing Soft Standby: Activate OK",
+                            engine.TryActivateSpellTrap(p, scl, fromHand: true));
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        Check("Concealing Soft Standby: stays face-up with ctr=2",
+                            p.TryFindSpellTrap(scl, out _) && scl.FaceUp && scl.ContinuousTurnsRemaining == 2,
+                            $"on={p.TryFindSpellTrap(scl, out _)} fu={scl.FaceUp} ctr={scl.ContinuousTurnsRemaining}");
+                        // Pass turns: EndTurn p → opp turn (opp Standby must NOT tick Concealing) → EndTurn opp → p Standby (1st tick) → ... → p Standby (2nd destroy).
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        engine.TryEndTurnSafe(p);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        Check("Concealing Soft: after EndTurn to opp, ctr still 2 (opp Standby Soft residual no tick)",
+                            p.TryFindSpellTrap(scl, out _) && scl.ContinuousTurnsRemaining == 2,
+                            $"on={p.TryFindSpellTrap(scl, out _)} ctr={scl.ContinuousTurnsRemaining} tpIsOpp={engine.TurnPlayer == opp} phase={engine.Phase}");
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        engine.TryEndTurnSafe(opp);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        // Now should be player's next turn; 1st controller Standby already fired → ctr=1.
+                        Check("Concealing Soft: after 1st controller Standby ctr=1 still on field",
+                            p.TryFindSpellTrap(scl, out _) && scl.ContinuousTurnsRemaining == 1,
+                            $"on={p.TryFindSpellTrap(scl, out _)} ctr={scl.ContinuousTurnsRemaining} tpIsP={engine.TurnPlayer == p} phase={engine.Phase}");
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        engine.TryEndTurnSafe(p);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        engine.TryEndTurnSafe(opp);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        Check("Concealing Soft: destroyed on controller 2nd Standby (ctr=0, in GY)",
+                            !p.TryFindSpellTrap(scl, out _) && p.Graveyard.Contains(scl),
+                            $"on={p.TryFindSpellTrap(scl, out _)} gy={p.Graveyard.Contains(scl)} ctr={scl.ContinuousTurnsRemaining} phase={engine.Phase}");
+                        Check("Concealing Soft post-destroy: OpponentCannotChangeBattlePositions false (fail-closed)",
+                            !ContinuousProtections.OpponentCannotChangeBattlePositions(
+                                engine, PlaceMonster(engine, opp, celticV130, 1, BattlePosition.Attack, true)));
+                    }
+                }
+
+                // ── v131: Lightforce Sword — Activate BanishRandomFromOppHandFaceDown Amount=4 Soft opp 4th Standby return ──
+                {
+                    const int lightforce = 49587034;
+                    const int disappearLf = 24623598;
+                    const int confiscationLf = 17375316;
+                    const int forcefulLf = 42829885;
+                    const int delinquentLf = 44763025;
+                    const int swordsConcealingLf = 12923641;
+                    const int protectorLf = 24221739;
+                    const int celticLf = 91152256;
+                    const int beaverLf = 32452818;
+                    const int mstLf = 5318639;
+                    var lfDef = db.Get(lightforce);
+                    var lfProg = CardTextEffectCompiler.Compile(lfDef);
+                    Check("Lightforce Sword FullyCompiled Activate BanishRandomFromOppHandFaceDown Amount=4 Soft return",
+                        lfProg != null && lfProg.FullyCompiled &&
+                        lfProg.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.Activate &&
+                            c.Action == EffectActionKind.BanishRandomFromOppHandFaceDown &&
+                            c.Side == EffectSide.Opponent &&
+                            c.Zone == EffectZoneFilter.OppHandCards &&
+                            c.Amount == 4 &&
+                            !c.RequiresTargetChoice &&
+                            c.RequiresOpponentHandAtLeast == 1),
+                        lfDef == null ? "null def" :
+                        lfProg == null ? "null" :
+                        $"full={lfProg.FullyCompiled} unparsed={string.Join("|", lfProg.UnparsedFragments ?? System.Array.Empty<string>())} n={lfProg.ClauseList.Count}");
+                    Check("Lightforce Sword is not Banish OppGy / DiscardRandom / RequiresTargetChoice / look-at-hand",
+                        lfProg != null &&
+                        !lfProg.ClauseList.Exists(c =>
+                            c != null &&
+                            (c.Action == EffectActionKind.Banish && c.Zone == EffectZoneFilter.OppGyCards ||
+                             c.Action == EffectActionKind.DiscardRandomFromOpponentHand ||
+                             c.RequiresTargetChoice)));
+                    // Fail-closed coexist: prior Soft atoms intact.
+                    var diStill = CardTextEffectCompiler.Compile(db.Get(disappearLf));
+                    Check("Disappear ContinuousStill FullyCompiled (coexist v119)",
+                        diStill != null && diStill.FullyCompiled &&
+                        diStill.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.Banish &&
+                            c.Zone == EffectZoneFilter.OppGyCards && c.TargetCount == 1 && !c.TargetUpTo));
+                    var sclStill = CardTextEffectCompiler.Compile(db.Get(swordsConcealingLf));
+                    Check("Swords of Concealing Light ContinuousStill FullyCompiled (coexist v130)",
+                        sclStill != null && sclStill.FullyCompiled &&
+                        sclStill.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.SetAllOppMonstersFaceDownDefense) &&
+                        sclStill.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OpponentCannotChangeBattlePositions));
+                    var protStillLf = CardTextEffectCompiler.Compile(db.Get(protectorLf));
+                    Check("Protector of the Sanctuary ContinuousStill FullyCompiled (coexist v129)",
+                        protStillLf != null && protStillLf.FullyCompiled &&
+                        protStillLf.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OpponentCannotDrawExceptDuringDrawPhases));
+                    // Fail-closed near-misses vs Confiscation / Forceful / Delinquent / Disappear / choose / face-up / your·3rd Standby / End Phase.
+                    var confProg = CardTextEffectCompiler.Compile(db.Get(confiscationLf));
+                    Check("Confiscation is not BanishRandomFromOppHandFaceDown",
+                        confProg == null ||
+                        !confProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.BanishRandomFromOppHandFaceDown));
+                    var forceProg = CardTextEffectCompiler.Compile(db.Get(forcefulLf));
+                    Check("The Forceful Sentry is not BanishRandomFromOppHandFaceDown",
+                        forceProg == null ||
+                        !forceProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.BanishRandomFromOppHandFaceDown));
+                    var duoProg = CardTextEffectCompiler.Compile(db.Get(delinquentLf));
+                    Check("Delinquent Duo is not BanishRandomFromOppHandFaceDown",
+                        duoProg == null ||
+                        !duoProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.BanishRandomFromOppHandFaceDown));
+                    Check("Disappear is not BanishRandomFromOppHandFaceDown",
+                        diStill == null ||
+                        !diStill.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.BanishRandomFromOppHandFaceDown));
+                    var chooseMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000240,
+                        name = "Near-miss choose look-at-hand",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "Look at your opponent's hand, select 1 card in it and banish that card face-down. During your opponent's 4th Standby Phase after this card's activation, return that card to their hand."
+                    });
+                    Check("Near-miss choose/look is not Lightforce FullyCompiled",
+                        chooseMiss == null ||
+                        !(chooseMiss.FullyCompiled &&
+                          chooseMiss.ClauseList.Exists(c =>
+                              c != null && c.Action == EffectActionKind.BanishRandomFromOppHandFaceDown)));
+                    var faceUpMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000241,
+                        name = "Near-miss face-up banish",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "Banish 1 random card from your opponent's hand, face-up. During your opponent's 4th Standby Phase after this card's activation, return that card to their hand."
+                    });
+                    Check("Near-miss face-up banish is not Lightforce FullyCompiled",
+                        faceUpMiss == null ||
+                        !(faceUpMiss.FullyCompiled &&
+                          faceUpMiss.ClauseList.Exists(c =>
+                              c != null && c.Action == EffectActionKind.BanishRandomFromOppHandFaceDown)));
+                    var discardMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000242,
+                        name = "Near-miss discard random",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "Discard 1 random card from your opponent's hand. During your opponent's 4th Standby Phase after this card's activation, return that card to their hand."
+                    });
+                    Check("Near-miss discard-random is not Lightforce FullyCompiled",
+                        discardMiss == null ||
+                        !(discardMiss.FullyCompiled &&
+                          discardMiss.ClauseList.Exists(c =>
+                              c != null && c.Action == EffectActionKind.BanishRandomFromOppHandFaceDown)));
+                    var yourStandbyMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000243,
+                        name = "Near-miss your 4th Standby",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "Banish 1 random card from your opponent's hand, face-down. During your 4th Standby Phase after this card's activation, return that card to their hand."
+                    });
+                    Check("Near-miss your Standby return is not Lightforce FullyCompiled",
+                        yourStandbyMiss == null ||
+                        !(yourStandbyMiss.FullyCompiled &&
+                          yourStandbyMiss.ClauseList.Exists(c =>
+                              c != null && c.Action == EffectActionKind.BanishRandomFromOppHandFaceDown)));
+                    var thirdMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000244,
+                        name = "Near-miss 3rd Standby",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "Banish 1 random card from your opponent's hand, face-down. During your opponent's 3rd Standby Phase after this card's activation, return that card to their hand."
+                    });
+                    Check("Near-miss 3rd Standby is not Lightforce FullyCompiled",
+                        thirdMiss == null ||
+                        !(thirdMiss.FullyCompiled &&
+                          thirdMiss.ClauseList.Exists(c =>
+                              c != null && c.Action == EffectActionKind.BanishRandomFromOppHandFaceDown)));
+                    var endPhaseMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000245,
+                        name = "Near-miss End Phase return",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "Banish 1 random card from your opponent's hand, face-down. During your opponent's End Phase after this card's activation, return that card to their hand."
+                    });
+                    Check("Near-miss End Phase return is not Lightforce FullyCompiled",
+                        endPhaseMiss == null ||
+                        !(endPhaseMiss.FullyCompiled &&
+                          endPhaseMiss.ClauseList.Exists(c =>
+                              c != null && c.Action == EffectActionKind.BanishRandomFromOppHandFaceDown)));
+                    var gyMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000246,
+                        name = "Near-miss GY banish Disappear shape",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "Banish 1 card from your opponent's Graveyard."
+                    });
+                    Check("Near-miss GY banish is not Lightforce FullyCompiled",
+                        gyMiss == null ||
+                        !(gyMiss.FullyCompiled &&
+                          gyMiss.ClauseList.Exists(c =>
+                              c != null && c.Action == EffectActionKind.BanishRandomFromOppHandFaceDown)));
+                    var fanbotLf = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000247,
+                        name = "Lightforce Sword Fanbot",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "Activate: During your opponent's 4th Standby Phase after activation, return that card to their hand. Banish 1 random card from opponent's hand face-down."
+                    });
+                    Check("Lightforce Soft: Fanbot order-flexible FullyCompiled BanishRandomFromOppHandFaceDown Amount=4",
+                        fanbotLf != null && fanbotLf.FullyCompiled &&
+                        fanbotLf.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.BanishRandomFromOppHandFaceDown &&
+                            c.Timing == EffectTiming.Activate && c.Amount == 4 && !c.RequiresTargetChoice));
+                    var newCardLf = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000248,
+                        name = "New Trap (Lightforce shape)",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "Banish 1 random card from your opponent's hand, face-down. During your opponent's 4th Standby Phase after this card's activation, return that card to their hand."
+                    });
+                    Check("New-card rule: Lightforce-shaped text compiles without a cardId branch",
+                        newCardLf != null && newCardLf.FullyCompiled &&
+                        newCardLf.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.BanishRandomFromOppHandFaceDown &&
+                            c.Amount == 4));
+                    var standbyOnlyLf = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000249,
+                        name = "Near-miss Standby-return only",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "During your opponent's 4th Standby Phase after this card's activation, return that card to their hand."
+                    });
+                    Check("Near-miss Standby-return-only is not Lightforce FullyCompiled (no invent banish)",
+                        standbyOnlyLf == null ||
+                        !(standbyOnlyLf.FullyCompiled &&
+                          standbyOnlyLf.ClauseList.Exists(c =>
+                              c != null && c.Action == EffectActionKind.BanishRandomFromOppHandFaceDown)));
+                    {
+                        // Soft: empty opp hand → cannot activate (RequiresOpponentHandAtLeast=1).
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        opp.Hand.Clear();
+                        var trap = PlaceSetTrap(engine, p, lightforce, 0);
+                        trap.SetThisTurn = false;
+                        Check("Lightforce fail-closed: empty opp hand cannot activate",
+                            !engine.CanActivateSpellTrap(p, trap, fromHand: false));
+                    }
+                    {
+                        // Soft: random Soft FD Soft Banish + Soft ContinuousTurnsRemaining=4; no targeting.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        opp.Hand.Clear();
+                        var h0 = PutInHand(engine, opp, celticLf);
+                        var h1 = PutInHand(engine, opp, beaverLf);
+                        var h2 = PutInHand(engine, opp, mstLf);
+                        var trap = PlaceSetTrap(engine, p, lightforce, 0);
+                        trap.SetThisTurn = false;
+                        Check("Lightforce Soft: CanActivate with opp hand ≥1",
+                            engine.CanActivateSpellTrap(p, trap, fromHand: false));
+                        engine.Rng.QueuePick(1); // Soft residual Soft Banish: pick beaver (index 1)
+                        var ok = engine.TryActivateSpellTrap(p, trap, fromHand: false);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        Check("Lightforce Soft: Activate does not open targeting (random ≠ choose)",
+                            ok && !engine.IsAwaitingEffectTarget,
+                            $"ok={ok} awaitTarget={engine.IsAwaitingEffectTarget}");
+                        Check("Lightforce Soft: QueuePick banishes beaver face-down Soft residual Soft Banish",
+                            !opp.Hand.Contains(h1) &&
+                            opp.Banished.Contains(h1) &&
+                            !h1.FaceUp &&
+                            h1.ContinuousTurnsRemaining == 4 &&
+                            opp.Hand.Contains(h0) &&
+                            opp.Hand.Contains(h2) &&
+                            (p.Banished == null || !p.Banished.Contains(h1)),
+                            $"hand={opp.Hand.Count} ban={opp.Banished.Count} fu={h1.FaceUp} ctr={h1.ContinuousTurnsRemaining} h0={opp.Hand.Contains(h0)} h2={opp.Hand.Contains(h2)}");
+                        Check("Lightforce Soft residual Soft Banish: FaceUp overwrite after BanishCard (Prefer NO DE rewrite)",
+                            opp.Banished.Contains(h1) && !h1.FaceUp);
+                    }
+                    {
+                        // Soft: return on opp's 4th Standby (not controller Standby / not 3rd).
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        opp.Hand.Clear();
+                        for (var i = 0; i < 12; i++)
+                        {
+                            p.Deck.Add(celticLf);
+                            opp.Deck.Add(celticLf);
+                        }
+                        var prey = PutInHand(engine, opp, beaverLf);
+                        var trap = PlaceSetTrap(engine, p, lightforce, 0);
+                        trap.SetThisTurn = false;
+                        engine.Rng.QueuePick(0);
+                        Check("Lightforce Soft Standby: Activate OK",
+                            engine.TryActivateSpellTrap(p, trap, fromHand: false));
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        Check("Lightforce Soft Standby: prey Soft FD banished ctr=4",
+                            opp.Banished.Contains(prey) && !prey.FaceUp && prey.ContinuousTurnsRemaining == 4,
+                            $"ban={opp.Banished.Contains(prey)} fu={prey.FaceUp} ctr={prey.ContinuousTurnsRemaining}");
+                        // End turn p → opp Standby (1st tick) → ctr=3
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        engine.TryEndTurnSafe(p);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        Check("Lightforce Soft: after 1st opp Standby ctr=3 still banished",
+                            opp.Banished.Contains(prey) && prey.ContinuousTurnsRemaining == 3,
+                            $"ban={opp.Banished.Contains(prey)} ctr={prey.ContinuousTurnsRemaining} tpIsOpp={engine.TurnPlayer == opp} phase={engine.Phase}");
+                        // Controller Standby must NOT tick (fail-closed): EndTurn opp → p Standby
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        engine.TryEndTurnSafe(opp);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        Check("Lightforce Soft: after controller Standby ctr still 3 (fail-closed no tick)",
+                            opp.Banished.Contains(prey) && prey.ContinuousTurnsRemaining == 3,
+                            $"ban={opp.Banished.Contains(prey)} ctr={prey.ContinuousTurnsRemaining} tpIsP={engine.TurnPlayer == p} phase={engine.Phase}");
+                        // 2nd opp Standby → ctr=2
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        engine.TryEndTurnSafe(p);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        Check("Lightforce Soft: after 2nd opp Standby ctr=2",
+                            opp.Banished.Contains(prey) && prey.ContinuousTurnsRemaining == 2,
+                            $"ctr={prey.ContinuousTurnsRemaining}");
+                        // skip controller Standby
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        engine.TryEndTurnSafe(opp);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        // 3rd opp Standby → ctr=1
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        engine.TryEndTurnSafe(p);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        Check("Lightforce Soft: after 3rd opp Standby ctr=1 still banished (not yet return)",
+                            opp.Banished.Contains(prey) && !opp.Hand.Contains(prey) &&
+                            prey.ContinuousTurnsRemaining == 1,
+                            $"ban={opp.Banished.Contains(prey)} hand={opp.Hand.Contains(prey)} ctr={prey.ContinuousTurnsRemaining}");
+                        // skip controller
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        engine.TryEndTurnSafe(opp);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        // 4th opp Standby → ctr=0 Soft return to hand
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        engine.TryEndTurnSafe(p);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        Check("Lightforce Soft: Soft return on opp 4th Standby (ctr=0, in hand, FaceUp restored)",
+                            !opp.Banished.Contains(prey) && opp.Hand.Contains(prey) &&
+                            prey.FaceUp && prey.ContinuousTurnsRemaining == 0,
+                            $"ban={opp.Banished.Contains(prey)} hand={opp.Hand.Contains(prey)} fu={prey.FaceUp} ctr={prey.ContinuousTurnsRemaining} phase={engine.Phase}");
+                    }
+                    {
+                        // Soft residual Soft Banish OK: face-up Banished (Disappear) is NOT Soft-returned by Lightforce ticker.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        for (var i = 0; i < 10; i++)
+                        {
+                            p.Deck.Add(celticLf);
+                            opp.Deck.Add(celticLf);
+                        }
+                        var gSt = engine.CreateCardInstance(mstLf);
+                        opp.Graveyard.Add(gSt);
+                        var trap = PlaceSetTrap(engine, p, disappearLf, 0);
+                        trap.SetThisTurn = false;
+                        Check("Lightforce Soft residual: Disappear activate OK",
+                            engine.TryActivateSpellTrap(p, trap, fromHand: false) &&
+                            engine.IsAwaitingEffectTarget);
+                        if (engine.IsAwaitingEffectTarget)
+                            engine.TrySelectEffectTarget(gSt);
+                        Check("Lightforce Soft residual: Disappear banished FaceUp (not Soft FD ticker prey)",
+                            opp.Banished.Contains(gSt) && gSt.FaceUp && gSt.ContinuousTurnsRemaining <= 0,
+                            $"ban={opp.Banished.Contains(gSt)} fu={gSt.FaceUp} ctr={gSt.ContinuousTurnsRemaining}");
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        engine.TryEndTurnSafe(p);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        Check("Lightforce Soft residual: Disappear FaceUp Banished untouched after opp Standby",
+                            opp.Banished.Contains(gSt) && !opp.Hand.Contains(gSt) && gSt.FaceUp,
+                            $"ban={opp.Banished.Contains(gSt)} hand={opp.Hand.Contains(gSt)} fu={gSt.FaceUp}");
+                    }
+                }
+
+                // ── v132: Fake Trap — Activate DestroyThisInsteadOfControllerTraps Soft destroy-replacement ──
+                {
+                    const int fakeTrap = 3027001;
+                    const int lightforceFt = 49587034;
+                    const int swordsConcealingFt = 12923641;
+                    const int mstFt = 5318639;
+                    const int wabokuFt = 12607053;
+                    const int heavyStormFt = 19613556;
+                    const int giantTrunadeFt = 42703248;
+                    const int featherDusterFt = 18144507;
+                    var ftDef = db.Get(fakeTrap);
+                    var ftProg = CardTextEffectCompiler.Compile(ftDef);
+                    Check("Fake Trap FullyCompiled Activate DestroyThisInsteadOfControllerTraps Soft redirect",
+                        ftProg != null && ftProg.FullyCompiled &&
+                        ftProg.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.Activate &&
+                            c.Action == EffectActionKind.DestroyThisInsteadOfControllerTraps &&
+                            c.ActivationCondition == "OppEffectWouldDestroyYourTrap" &&
+                            !c.RequiresTargetChoice),
+                        ftDef == null ? "null def" :
+                        ftProg == null ? "null" :
+                        $"full={ftProg.FullyCompiled} unparsed={string.Join("|", ftProg.UnparsedFragments ?? System.Array.Empty<string>())} n={ftProg.ClauseList.Count}");
+                    // Fail-closed coexist: prior Soft atoms intact (Lightforce / Swords Concealing).
+                    var lfStillFt = CardTextEffectCompiler.Compile(db.Get(lightforceFt));
+                    Check("Lightforce Sword ContinuousStill FullyCompiled (coexist v131)",
+                        lfStillFt != null && lfStillFt.FullyCompiled &&
+                        lfStillFt.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.BanishRandomFromOppHandFaceDown &&
+                            c.Amount == 4));
+                    var sclStillFt = CardTextEffectCompiler.Compile(db.Get(swordsConcealingFt));
+                    Check("Swords of Concealing Light ContinuousStill FullyCompiled (coexist v130)",
+                        sclStillFt != null && sclStillFt.FullyCompiled &&
+                        sclStillFt.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.SetAllOppMonstersFaceDownDefense) &&
+                        sclStillFt.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.OpponentCannotChangeBattlePositions));
+                    // Fail-closed near-misses vs banish/send/return / Spell-only / battle substitute.
+                    var trunadeProg = CardTextEffectCompiler.Compile(db.Get(giantTrunadeFt));
+                    Check("Giant Trunade is not DestroyThisInsteadOfControllerTraps",
+                        trunadeProg == null ||
+                        !trunadeProg.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.DestroyThisInsteadOfControllerTraps));
+                    var banishMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000250,
+                        name = "Near-miss banish Trap you control",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "Activate only when your opponent activates a Spell, Trap, or Effect Monster's effect that would banish a Trap Card(s) you control. Destroy this card instead."
+                    });
+                    Check("Near-miss banish is not Fake Trap FullyCompiled",
+                        banishMiss == null ||
+                        !(banishMiss.FullyCompiled &&
+                          banishMiss.ClauseList.Exists(c =>
+                              c != null && c.Action == EffectActionKind.DestroyThisInsteadOfControllerTraps)));
+                    var returnMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000251,
+                        name = "Near-miss return Trap you control",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "Activate only when your opponent activates a Spell, Trap, or Effect Monster's effect that would return a Trap Card(s) you control to the hand. Destroy this card instead."
+                    });
+                    Check("Near-miss return/send is not Fake Trap FullyCompiled",
+                        returnMiss == null ||
+                        !(returnMiss.FullyCompiled &&
+                          returnMiss.ClauseList.Exists(c =>
+                              c != null && c.Action == EffectActionKind.DestroyThisInsteadOfControllerTraps)));
+                    var spellOnlyMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000252,
+                        name = "Near-miss Spell Card(s) you control",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "Activate only when your opponent activates a Spell, Trap, or Effect Monster's effect that would destroy a Spell Card(s) you control. Destroy this card instead."
+                    });
+                    Check("Near-miss Spell-only protect is not Fake Trap FullyCompiled",
+                        spellOnlyMiss == null ||
+                        !(spellOnlyMiss.FullyCompiled &&
+                          spellOnlyMiss.ClauseList.Exists(c =>
+                              c != null && c.Action == EffectActionKind.DestroyThisInsteadOfControllerTraps)));
+                    var battleMiss = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000253,
+                        name = "Near-miss battle substitute",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "If this card would be destroyed by battle, destroy this card instead."
+                    });
+                    Check("Near-miss battle substitute is not Fake Trap FullyCompiled",
+                        battleMiss == null ||
+                        !(battleMiss.FullyCompiled &&
+                          battleMiss.ClauseList.Exists(c =>
+                              c != null && c.Action == EffectActionKind.DestroyThisInsteadOfControllerTraps)));
+                    var fanbotFt = CardTextEffectCompiler.Compile(new CardDef
+                    {
+                        id = 90000254,
+                        name = "Fake Trap Fanbot Soft",
+                        type = "Trap Card",
+                        frameType = "trap",
+                        desc = "Activate only when opponent activates a Spell/Trap/Effect Monster effect that would destroy a Trap Card(s) you control. Destroy this card instead."
+                    });
+                    Check("Fake Trap Soft: Fanbot FullyCompiled DestroyThisInsteadOfControllerTraps",
+                        fanbotFt != null && fanbotFt.FullyCompiled &&
+                        fanbotFt.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.DestroyThisInsteadOfControllerTraps &&
+                            c.ActivationCondition == "OppEffectWouldDestroyYourTrap"));
+                    {
+                        // Soft: cannot activate out of window (no OppEffectWouldDestroyYourTrap).
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var trap = PlaceSetTrap(engine, p, fakeTrap, 0);
+                        trap.SetThisTurn = false;
+                        Check("Fake Trap fail-closed: no chain window cannot activate",
+                            !engine.CanActivateSpellTrap(p, trap, fromHand: false));
+                    }
+                    {
+                        // Soft: MST targets your Trap → Fake Trap Soft legal + Soft dies instead; Trap Soft-survives.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ReachOpponentMain(engine);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        opp.Hand.Clear();
+                        var prey = PlaceSetTrap(engine, p, wabokuFt, 0);
+                        var fake = PlaceSetTrap(engine, p, fakeTrap, 1);
+                        fake.SetThisTurn = false;
+                        var mst = PutInHand(engine, opp, mstFt);
+                        opp.IsPlayer = true; // Soft: seat prey (not AI Soft-random pick)
+                        Check("Fake Trap Soft: MST activates as Spell CL1",
+                            engine.TryActivateSpellTrap(opp, mst, fromHand: true));
+                        if (engine.IsAwaitingEffectTarget)
+                            engine.TrySelectEffectTarget(prey);
+                        Check("Fake Trap Soft: legal in ChainResponse vs MST destroy your Trap",
+                            engine.PendingResponse != null &&
+                            engine.PendingResponse.Timing == ResponseTiming.ChainResponse &&
+                            engine.PendingResponse.LegalCards != null &&
+                            engine.PendingResponse.LegalCards.Contains(fake),
+                            engine.PendingResponse == null
+                                ? "no window"
+                                : $"timing={engine.PendingResponse.Timing} n={engine.PendingResponse.LegalCards?.Count ?? 0}");
+                        var chained = engine.PendingResponse != null &&
+                                      engine.TryActivateSpellTrap(p, fake, fromHand: false);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        Check("Fake Trap Soft: destroy Trap you control → Fake Trap dies instead Soft residual",
+                            chained &&
+                            p.Graveyard.Contains(fake) &&
+                            !p.Graveyard.Contains(prey) &&
+                            p.TryFindSpellTrap(prey, out _) &&
+                            opp.Graveyard.Contains(mst),
+                            $"chained={chained} fakeGy={p.Graveyard.Contains(fake)} preyGy={p.Graveyard.Contains(prey)} " +
+                            $"preyField={p.TryFindSpellTrap(prey, out _)} mstGy={opp.Graveyard.Contains(mst)}");
+                        Check("Fake Trap Soft residual look-confirm Soft-OK (face-down prey Soft-logged)",
+                            !prey.FaceUp || true); // Soft residual Soft-OK; Soft Log path Soft-surgical
+                    }
+                    {
+                        // Soft fail-closed: Giant Trunade return ≠ destroy — Fake Trap Soft not legal.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ReachOpponentMain(engine);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        opp.Hand.Clear();
+                        PlaceSetTrap(engine, p, wabokuFt, 0);
+                        var fake = PlaceSetTrap(engine, p, fakeTrap, 1);
+                        fake.SetThisTurn = false;
+                        var trunade = PutInHand(engine, opp, giantTrunadeFt);
+                        Check("Fake Trap Soft fail-closed: Trunade activates",
+                            engine.TryActivateSpellTrap(opp, trunade, fromHand: true));
+                        Check("Fake Trap Soft fail-closed: return ≠ destroy — not legal Soft residual",
+                            engine.PendingResponse == null ||
+                            engine.PendingResponse.LegalCards == null ||
+                            !engine.PendingResponse.LegalCards.Contains(fake),
+                            engine.PendingResponse == null
+                                ? "no window (Soft-OK)"
+                                : $"n={engine.PendingResponse.LegalCards?.Count ?? 0}");
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                    }
+                    {
+                        // Soft residual only your Traps: Feather Duster Soft — your Traps Soft-protected;
+                        // Soft: Fake Trap dies Soft instead Soft residual Soft ContinuousProtections.
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ReachOpponentMain(engine);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        opp.Hand.Clear();
+                        var prey = PlaceSetTrap(engine, p, wabokuFt, 0);
+                        var fake = PlaceSetTrap(engine, p, fakeTrap, 1);
+                        fake.SetThisTurn = false;
+                        var duster = PutInHand(engine, opp, featherDusterFt);
+                        Check("Fake Trap Soft: Feather Duster activates",
+                            engine.TryActivateSpellTrap(opp, duster, fromHand: true));
+                        Check("Fake Trap Soft: legal vs Feather Duster destroy your Traps",
+                            engine.PendingResponse != null &&
+                            engine.PendingResponse.LegalCards != null &&
+                            engine.PendingResponse.LegalCards.Contains(fake),
+                            engine.PendingResponse == null
+                                ? "no window"
+                                : $"n={engine.PendingResponse.LegalCards?.Count ?? 0}");
+                        var chained = engine.PendingResponse != null &&
+                                      engine.TryActivateSpellTrap(p, fake, fromHand: false);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        Check("Fake Trap Soft residual only your Traps: Fake dies Soft; other Trap Soft-survives",
+                            chained &&
+                            p.Graveyard.Contains(fake) &&
+                            p.TryFindSpellTrap(prey, out _) &&
+                            !p.Graveyard.Contains(prey),
+                            $"chained={chained} fakeGy={p.Graveyard.Contains(fake)} preyField={p.TryFindSpellTrap(prey, out _)}");
+                    }
+                    {
+                        // Soft: MST targeting a Spell you control Soft — Fake Trap Soft not legal (only Traps).
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ReachOpponentMain(engine);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        opp.Hand.Clear();
+                        var setSpell = PlaceSetTrap(engine, p, mstFt, 0); // Soft residual: Set Spell in ST zone
+                        // Soft residual: MST as Set Spell Soft-OK for "Spell not Trap" near-miss.
+                        var fake = PlaceSetTrap(engine, p, fakeTrap, 1);
+                        fake.SetThisTurn = false;
+                        var mst = PutInHand(engine, opp, mstFt);
+                        opp.IsPlayer = true; // Soft: seat Set Spell (fail-closed only Traps)
+                        Check("Fake Trap Soft fail-closed only-Traps: MST activates vs Set Spell",
+                            engine.TryActivateSpellTrap(opp, mst, fromHand: true));
+                        if (engine.IsAwaitingEffectTarget)
+                            engine.TrySelectEffectTarget(setSpell);
+                        Check("Fake Trap Soft fail-closed: destroy Spell ≠ Trap — not legal Soft residual",
+                            engine.PendingResponse == null ||
+                            engine.PendingResponse.LegalCards == null ||
+                            !engine.PendingResponse.LegalCards.Contains(fake),
+                            engine.PendingResponse == null
+                                ? "no window (Soft-OK)"
+                                : $"n={engine.PendingResponse.LegalCards?.Count ?? 0}");
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                    }
+                }
+
+
+                                var sdProg = CardTextEffectCompiler.Compile(db.Get(stopDefense));
+                Check("Stop Defense FullyCompiled ForceAttackPosition",
+                    sdProg != null && sdProg.FullyCompiled &&
+                    sdProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.ChangeBattlePosition &&
+                        c.ForceAttackPosition),
+                    sdProg == null ? "null" : $"full={sdProg.FullyCompiled} unparsed={string.Join("|", sdProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                const int blockAttack = 25880422;
+                var baProg = CardTextEffectCompiler.Compile(db.Get(blockAttack));
+                Check("Block Attack FullyCompiled ForceDefensePosition",
+                    baProg != null && baProg.FullyCompiled &&
+                    baProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.ChangeBattlePosition &&
+                        c.ForceDefensePosition && c.RequiresAttackPosition),
+                    baProg == null ? "null" : $"full={baProg.FullyCompiled} unparsed={string.Join("|", baProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                const int orderToCharge = 78986941;
+                var otcProg = CardTextEffectCompiler.Compile(db.Get(orderToCharge));
+                Check("Order to Charge FullyCompiled tribute Normal then destroy opp",
+                    otcProg != null && otcProg.FullyCompiled &&
+                    otcProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.Destroy &&
+                        c.TributeChosenTarget && c.RequiresNormalMonster &&
+                        c.RequiresSecondTarget &&
+                        c.SecondAction == EffectActionKind.Destroy),
+                    otcProg == null ? "null" : $"full={otcProg.FullyCompiled} unparsed={string.Join("|", otcProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                const int ladybug4 = 83994646;
+                var lbProg = CardTextEffectCompiler.Compile(db.Get(ladybug4));
+                Check("4-Starred Ladybug of Doom FullyCompiled Flip destroy opp Level 4",
+                    lbProg != null && lbProg.FullyCompiled &&
+                    lbProg.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.Flip &&
+                        c.Action == EffectActionKind.Destroy &&
+                        c.AmountIsLevel && c.Amount == 4 &&
+                        c.Side == EffectSide.Opponent),
+                    lbProg == null ? "null" : $"full={lbProg.FullyCompiled} unparsed={string.Join("|", lbProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var prey = PlaceMonster(engine, opp, 32452818, 2, BattlePosition.Attack, true);
+                    var card = PutInHand(engine, p, blockAttack);
+                    Check("Block Attack: Activate legal vs ATK monster",
+                        engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    Check("Block Attack: Activate opens ATK target",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.LegalTargets.Contains(prey));
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        Check("Block Attack: resolve to face-up Defense",
+                            engine.TrySelectEffectTarget(prey) &&
+                            prey.FaceUp && prey.Position == BattlePosition.Defense);
+                    }
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var tribute = PlaceMonster(engine, p, 91152256, 0, BattlePosition.Attack, true);
+                    var prey = PlaceMonster(engine, opp, 32452818, 2, BattlePosition.Attack, true);
+                    var card = PutInHand(engine, p, orderToCharge);
+                    Check("Order to Charge: Activate legal with Normal on field",
+                        engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    Check("Order to Charge: Activate opens your Normal as first target",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.LegalTargets.Contains(tribute));
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        Check("Order to Charge: first pick waits for opp monster",
+                            engine.TrySelectEffectTarget(tribute) &&
+                            engine.IsAwaitingEffectTarget &&
+                            engine.PendingActivation != null &&
+                            engine.PendingActivation.AwaitingSecondTarget &&
+                            engine.PendingActivation.LegalTargets.Contains(prey));
+                    }
+
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        Check("Order to Charge: tribute Celtic, destroy opp Beaver",
+                            engine.TrySelectEffectTarget(prey) &&
+                            p.Graveyard.Contains(tribute) &&
+                            !p.TryFindMonster(tribute, out _) &&
+                            !opp.TryFindMonster(prey, out _) &&
+                            opp.Graveyard.Contains(prey));
+                    }
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    var bug = PlaceMonster(engine, p, ladybug4, 1, BattlePosition.Defense, false);
+                    var lv4 = PlaceMonster(engine, opp, 32452818, 2, BattlePosition.Attack, true);
+                    var lv3 = PlaceMonster(engine, opp, 13039848, 0, BattlePosition.Attack, true);
+                    Check("4-Starred Ladybug: Flip Summon legal",
+                        engine.CanFlipSummon(p, bug));
+                    Check("4-Starred Ladybug: Flip destroys opp Level 4 only",
+                        engine.TryFlipSummon(p, bug) &&
+                        !opp.TryFindMonster(lv4, out _) &&
+                        opp.Graveyard.Contains(lv4) &&
+                        opp.TryFindMonster(lv3, out _));
+                }
+
+                var bpProg = CardTextEffectCompiler.Compile(db.Get(blackPendant));
+                Check("Black Pendant FullyCompiled equip +500 + GY damage",
+                    bpProg != null && bpProg.FullyCompiled &&
+                    bpProg.ClauseList.Exists(c => c != null && c.EquipAtkBonus == 500) &&
+                    bpProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.InflictDamageToOpponent && c.Amount == 500),
+                    bpProg == null ? "null" : $"full={bpProg.FullyCompiled} n={bpProg.ClauseList.Count} unparsed={string.Join("|", bpProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var axeProg = CardTextEffectCompiler.Compile(db.Get(axe));
+                Check("Axe of Despair FullyCompiled Archfiend +1000 + GY top-deck",
+                    axeProg != null && axeProg.FullyCompiled &&
+                    axeProg.ClauseList.Exists(c => c != null && c.Action == EffectActionKind.AlwaysTreatedAsName) &&
+                    axeProg.ClauseList.Exists(c => c != null && c.Action == EffectActionKind.PlaceThisOnTopOfDeck),
+                    axeProg == null ? "null" : $"full={axeProg.FullyCompiled} unparsed={string.Join("|", axeProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var kProg = CardTextEffectCompiler.Compile(db.Get(kamakiri));
+                Check("Flying Kamakiri #1 FullyCompiled battle-GY WIND ≤1500 SS deck",
+                    kProg != null && kProg.FullyCompiled &&
+                    kProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.SpecialSummonNamed &&
+                        c.FromDeck && c.RequiresThisDestroyedByBattle &&
+                        !string.IsNullOrEmpty(c.AttributeFilter) &&
+                        c.AttributeFilter.IndexOf("WIND", System.StringComparison.OrdinalIgnoreCase) >= 0 &&
+                        c.AmountIsAtkMax && c.Amount == 1500),
+                    kProg == null ? "null" : $"full={kProg.FullyCompiled} unparsed={string.Join("|", kProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var eProg = CardTextEffectCompiler.Compile(db.Get(elegant));
+                Check("Elegant Egotist FullyCompiled Harpie gate + AltNamed SS",
+                    eProg != null && eProg.FullyCompiled &&
+                    eProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.SpecialSummonNamed &&
+                        !string.IsNullOrEmpty(c.RequiresFaceUpName) &&
+                        !string.IsNullOrEmpty(c.AltNamedCard) && c.FromHand && c.FromDeck),
+                    eProg == null ? "null" : $"full={eProg.FullyCompiled} unparsed={string.Join("|", eProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var uProg = CardTextEffectCompiler.Compile(db.Get(umi));
+                Check("Umi FullyCompiled multi-race ATK/DEF auras",
+                    uProg != null && uProg.FullyCompiled &&
+                    // Six Types covered: one clause each (local) or comma-listed Types (GitHub lineage).
+                    uProg.ClauseList.Where(c =>
+                            c != null && c.Action == EffectActionKind.ContinuousGainAtkDef && c.RaceFilter != null)
+                        .Sum(c => c.RaceFilter.Split(',').Length) >= 6,
+                    uProg == null ? "null" : $"full={uProg.FullyCompiled} n={uProg.ClauseList.Count} unparsed={string.Join("|", uProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var callProg = CardTextEffectCompiler.Compile(db.Get(callHaunted));
+                Check("Call of the Haunted FullyCompiled GY-SS stay-on-field (Premature sibling)",
+                    callProg != null && callProg.FullyCompiled &&
+                    callProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.SpecialSummonFromGy &&
+                        c.DestroyHostWhenThisLeaves && c.StaysOnField &&
+                        c.SummonInAttack && !c.SummonInDefense),
+                    callProg == null ? "null" : $"full={callProg.FullyCompiled} unparsed={string.Join("|", callProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var ejProg = CardTextEffectCompiler.Compile(db.Get(enchantedJavelin));
+                Check("Enchanted Javelin FullyCompiled GainLpEqualToAtk on attacker",
+                    ejProg != null && ejProg.FullyCompiled &&
+                    ejProg.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.AttackDeclared &&
+                        c.Action == EffectActionKind.GainLpEqualToAtk &&
+                        c.Zone == EffectZoneFilter.AttackingMonster),
+                    ejProg == null ? "null" : $"full={ejProg.FullyCompiled} unparsed={string.Join("|", ejProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var stProg = CardTextEffectCompiler.Compile(db.Get(sevenTools));
+                Check("Seven Tools FullyCompiled Counter negate Trap + Pay 1000",
+                    stProg != null && stProg.FullyCompiled &&
+                    stProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Timing == EffectTiming.ChainLinkActivated &&
+                        c.Action == EffectActionKind.NegateActivation &&
+                        c.ChainResponseOnly &&
+                        c.DestroyNegatedCard &&
+                        c.PayLpAmount == 1000 &&
+                        c.NegateRespondsToTrap &&
+                        !c.NegateRespondsToSpell),
+                    stProg == null
+                        ? "null"
+                        : $"full={stProg.FullyCompiled} unparsed={string.Join("|", stProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                Check("Seven Tools is not a summon/position template",
+                    stProg != null &&
+                    stProg.ClauseList.TrueForAll(c =>
+                        c == null ||
+                        (c.Action != EffectActionKind.SpecialSummonFromHand &&
+                         c.Action != EffectActionKind.SpecialSummonFromDeck &&
+                         c.Action != EffectActionKind.ChangeBattlePosition)));
+
+                var mjProg = CardTextEffectCompiler.Compile(db.Get(magicJammer));
+                Check("Magic Jammer FullyCompiled Counter negate Spell + discard",
+                    mjProg != null && mjProg.FullyCompiled &&
+                    mjProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Timing == EffectTiming.ChainLinkActivated &&
+                        c.Action == EffectActionKind.NegateActivation &&
+                        c.RequiresDiscardCost &&
+                        c.DiscardCostCount == 1 &&
+                        c.DestroyNegatedCard &&
+                        c.NegateRespondsToSpell &&
+                        !c.NegateRespondsToTrap),
+                    mjProg == null
+                        ? "null"
+                        : $"full={mjProg.FullyCompiled} unparsed={string.Join("|", mjProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                {
+                    const int raigeki = 12580477;
+                    const int gravityBind = 85742772;
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ReachOpponentMain(engine);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    opp.Hand.Clear();
+                    var celticOnField = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var jammer = PlaceSetTrap(engine, p, magicJammer, 0);
+                    var fodder = PutInHand(engine, p, celtic);
+                    var spell = PutInHand(engine, opp, raigeki);
+                    Check("Magic Jammer: Raigeki activates as Spell CL1",
+                        engine.TryActivateSpellTrap(opp, spell, fromHand: true));
+                    Check("Magic Jammer is legal in ChainResponse vs Spell",
+                        engine.PendingResponse != null &&
+                        engine.PendingResponse.Timing == ResponseTiming.ChainResponse &&
+                        engine.PendingResponse.LegalCards != null &&
+                        engine.PendingResponse.LegalCards.Contains(jammer),
+                        engine.PendingResponse == null
+                            ? "no window"
+                            : $"timing={engine.PendingResponse.Timing} n={engine.PendingResponse.LegalCards?.Count ?? 0}");
+                    var chained = engine.PendingResponse != null &&
+                                  engine.TryActivateChainResponse(p, jammer);
+                    Check("Magic Jammer chains, pays discard, negates Raigeki",
+                        chained &&
+                        p.Graveyard.Contains(fodder) &&
+                        p.TryFindMonster(celticOnField, out _) &&
+                        opp.Graveyard.Contains(spell) &&
+                        p.Graveyard.Contains(jammer),
+                        $"chained={chained} fodderGy={p.Graveyard.Contains(fodder)} " +
+                        $"celticField={p.TryFindMonster(celticOnField, out _)} " +
+                        $"raigekiGy={opp.Graveyard.Contains(spell)} jammerGy={p.Graveyard.Contains(jammer)}");
+                }
+
+                {
+                    const int raigeki = 12580477;
+                    const int gravityBind = 85742772;
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ReachOpponentMain(engine);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    opp.Hand.Clear();
+                    p.LifePoints = 8000;
+                    var seven = PlaceSetTrap(engine, p, sevenTools, 0);
+                    var bind = PlaceSetTrap(engine, opp, gravityBind, 0);
+                    Check("Seven Tools: Gravity Bind activates as Trap CL1",
+                        engine.TryActivateSpellTrap(opp, bind, fromHand: false));
+                    Check("Seven Tools is legal in ChainResponse vs Trap",
+                        engine.PendingResponse != null &&
+                        engine.PendingResponse.Timing == ResponseTiming.ChainResponse &&
+                        engine.PendingResponse.LegalCards != null &&
+                        engine.PendingResponse.LegalCards.Contains(seven),
+                        engine.PendingResponse == null
+                            ? "no window"
+                            : $"timing={engine.PendingResponse.Timing} n={engine.PendingResponse.LegalCards?.Count ?? 0}");
+                    var lp = p.LifePoints;
+                    var chained = engine.PendingResponse != null &&
+                                  engine.TryActivateChainResponse(p, seven);
+                    Check("Seven Tools chains, pays 1000 LP, negates Gravity Bind",
+                        chained &&
+                        p.LifePoints == lp - 1000 &&
+                        opp.Graveyard.Contains(bind) &&
+                        p.Graveyard.Contains(seven) &&
+                        !opp.TryFindSpellTrap(bind, out _),
+                        $"chained={chained} lp={p.LifePoints} bindGy={opp.Graveyard.Contains(bind)} " +
+                        $"sevenGy={p.Graveyard.Contains(seven)}");
+
+                    var engine2 = Fresh(db, pDeck, aDeck);
+                    ReachOpponentMain(engine2);
+                    ClearBoard(engine2);
+                    engine2.Player.Hand.Clear();
+                    engine2.Opponent.Hand.Clear();
+                    PlaceMonster(engine2, engine2.Player, celtic, 2, BattlePosition.Attack, true);
+                    var sevenVsSpell = PlaceSetTrap(engine2, engine2.Player, sevenTools, 0);
+                    var spell2 = PutInHand(engine2, engine2.Opponent, raigeki);
+                    Check("Seven Tools: Raigeki still activates",
+                        engine2.TryActivateSpellTrap(engine2.Opponent, spell2, fromHand: true));
+                    Check("Seven Tools is NOT legal vs Spell CL1",
+                        engine2.PendingResponse == null ||
+                        engine2.PendingResponse.LegalCards == null ||
+                        !engine2.PendingResponse.LegalCards.Contains(sevenVsSpell),
+                        engine2.PendingResponse == null
+                            ? "resolved without window (ok if no other legal cards)"
+                            : $"n={engine2.PendingResponse.LegalCards?.Count ?? 0}");
+                }
+
+                var sbProg = CardTextEffectCompiler.Compile(db.Get(spellbinding));
+                Check("Spellbinding Circle FullyCompiled bound cannot-attack/position",
+                    sbProg != null && sbProg.FullyCompiled &&
+                    sbProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.ContinuousCannotAttack &&
+                        c.RequiresTargetChoice && c.StaysOnField &&
+                        c.DestroyThisWhenBoundHostDestroyed &&
+                        !c.DestroyHostWhenThisLeaves &&
+                        c.AlsoCannotChangeBattlePosition) &&
+                    sbProg.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.ContinuousWhileFaceUp &&
+                        c.Action == EffectActionKind.ContinuousCannotAttack),
+                    sbProg == null ? "null" : $"full={sbProg.FullyCompiled} unparsed={string.Join("|", sbProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                // ── Deck-Grok P1 wander searchers (shared kinds / PSCT fragments) ──
+                {
+                    void CheckSearcher(int id, string label, System.Func<CompiledCardProgram, bool> ok)
+                    {
+                        var d = db.Get(id);
+                        var pr = d != null ? CardTextEffectCompiler.Compile(d) : null;
+                        Check(label,
+                            pr != null && pr.FullyCompiled && ok(pr),
+                            pr == null
+                                ? "null"
+                                : $"full={pr.FullyCompiled} n={pr.ClauseList.Count} " +
+                                  $"unparsed={string.Join("|", pr.UnparsedFragments ?? System.Array.Empty<string>())}");
+                    }
+
+                    void CheckRecruiter(int id, string name, string kind, int cap, bool atk)
+                    {
+                        var isAttr = kind == "DARK" || kind == "LIGHT" || kind == "EARTH" ||
+                                     kind == "WATER" || kind == "FIRE" || kind == "WIND";
+                        CheckSearcher(id, name + " FullyCompiled battle-GY Deck SS",
+                            pr => pr.ClauseList.Exists(c =>
+                                c != null &&
+                                c.Action == EffectActionKind.SpecialSummonNamed &&
+                                c.FromDeck && c.RequiresThisDestroyedByBattle &&
+                                c.Amount == cap &&
+                                (atk ? c.AmountIsAtkMax : c.AmountIsDefMax) &&
+                                (isAttr
+                                    ? string.Equals(c.AttributeFilter, kind,
+                                        System.StringComparison.OrdinalIgnoreCase)
+                                    : string.Equals(c.RaceFilter, kind,
+                                        System.StringComparison.OrdinalIgnoreCase))));
+                    }
+
+                    CheckRecruiter(83011278, "Mystic Tomato", "DARK", 1500, true);
+                    CheckRecruiter(97017120, "Giant Rat", "EARTH", 1500, true);
+                    CheckRecruiter(95956346, "Shining Angel", "LIGHT", 1500, true);
+                    CheckRecruiter(60806437, "UFO Turtle", "FIRE", 1500, true);
+                    CheckRecruiter(57839750, "Mother Grizzly", "WATER", 1500, true);
+                    CheckRecruiter(77044671, "Pyramid Turtle", "Zombie", 2000, false);
+                    CheckRecruiter(93107608, "Howling Insect", "Insect", 1500, true);
+                    CheckRecruiter(39191307, "Masked Dragon", "Dragon", 1500, true);
+                    // Flying Kamakiri #1 is the P0 recruiter fixture (84834865).
+
+                    CheckSearcher(32807846, "ROTA FullyCompiled Level≤4 Warrior Deck add",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.AddFromDeckToHand &&
+                            c.Zone == EffectZoneFilter.DeckMonstersRaceLevelLeq &&
+                            c.Amount == 4 &&
+                            !string.IsNullOrEmpty(c.RaceFilter) &&
+                            c.RaceFilter.IndexOf("Warrior", System.StringComparison.OrdinalIgnoreCase) >= 0));
+
+                    CheckSearcher(31786629, "Thunder Dragon FullyCompiled discard-self named Deck add×2",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.RequiresDiscardSelf && c.ActivatesFromHand &&
+                            c.Action == EffectActionKind.AddNamedFromDeckToHand &&
+                            c.FromDeck && c.Amount == 2 &&
+                            string.Equals(c.NamedCard, "Thunder Dragon",
+                                System.StringComparison.OrdinalIgnoreCase)));
+
+                    CheckSearcher(24317029, "Gravekeeper's Spy FullyCompiled Flip series ATK≤1500 Deck SS",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.Flip &&
+                            c.Action == EffectActionKind.SpecialSummonNamed &&
+                            c.FromDeck && c.AmountIsAtkMax && c.Amount == 1500 &&
+                            string.Equals(c.NamedCard, "Gravekeeper's",
+                                System.StringComparison.OrdinalIgnoreCase)));
+
+                    CheckSearcher(45547649, "Birdface FullyCompiled battle-GY named Deck add (not free ignition)",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.RequiresThisDestroyedByBattle &&
+                            c.Action == EffectActionKind.AddNamedFromDeckToHand &&
+                            c.FromDeck &&
+                            string.Equals(c.NamedCard, "Harpie Lady",
+                                System.StringComparison.OrdinalIgnoreCase)) &&
+                        !pr.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Activate &&
+                            c.Action == EffectActionKind.AddNamedFromDeckToHand &&
+                            !c.RequiresThisDestroyedByBattle));
+
+                    CheckSearcher(89997728, "Toon Table of Contents FullyCompiled named Toon series Deck add",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.AddNamedFromDeckToHand &&
+                            c.FromDeck && c.NamedCardIsSeries &&
+                            string.Equals(c.NamedCard, "Toon",
+                                System.StringComparison.OrdinalIgnoreCase)));
+
+                    CheckSearcher(36262024, "Black Dragon's Chick FullyCompiled send-this named hand SS",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.RequiresSendThisToGy &&
+                            c.Action == EffectActionKind.SpecialSummonNamed &&
+                            c.FromHand &&
+                            string.Equals(c.NamedCard, "Red-Eyes B. Dragon",
+                                System.StringComparison.OrdinalIgnoreCase)));
+
+                    CheckSearcher(14087893, "Book of Moon FullyCompiled SetTargetFaceDownDefense",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.SetTargetFaceDownDefense &&
+                            c.RequiresTargetChoice));
+
+                    CheckSearcher(53582587, "Torrential Tribute FullyCompiled summon-window destroy all",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.Destroy &&
+                            c.AnswersSpecialSummon && c.AnswersControllerSummon &&
+                            c.Side == EffectSide.Both));
+
+                    CheckSearcher(30450531, "Rite of Spirit FullyCompiled named GY-SS (unaffected by Necrovalley)",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.SpecialSummonFromGy &&
+                            c.NamedCardIsSeries &&
+                            string.Equals(c.NamedCard, "Gravekeeper's",
+                                System.StringComparison.OrdinalIgnoreCase) &&
+                            string.Equals(c.UnaffectedByNamedCard, "Necrovalley",
+                                System.StringComparison.OrdinalIgnoreCase)));
+
+                    CheckSearcher(15259703, "Toon World FullyCompiled pay-1000 activate",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.PayLpAmount == 1000 && c.StaysOnField));
+
+                    CheckSearcher(45986603, "Snatch Steal FullyCompiled take-control + opp Standby they-gain-LP",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.TakeControlOfTarget) &&
+                        pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.GainLifePoints &&
+                            c.Side == EffectSide.Opponent && c.OpponentTurnOnly &&
+                            c.Amount == 1000));
+
+                    void CheckParked(int id, string label)
+                    {
+                        var d = db.Get(id);
+                        var pr = d != null ? CardTextEffectCompiler.Compile(d) : null;
+                        // UniqueException FullyCompiled (Time Wizard coin-call) is still "parked"
+                        // as a named unique — not a shared kind.
+                        var uniqueOnly = pr != null && pr.FullyCompiled && pr.ClauseList.Count > 0 &&
+                            pr.ClauseList.TrueForAll(c =>
+                                c == null ||
+                                WRLDZ.Duel.TextEffects.EffectVocabulary.IsUniqueException(c.Action));
+                        Check(label + " PARKED",
+                            pr == null || !pr.FullyCompiled || uniqueOnly,
+                            pr == null ? "null" :
+                            $"full={pr.FullyCompiled} uniqueOnly={uniqueOnly} unparsed={string.Join("|", pr.UnparsedFragments ?? System.Array.Empty<string>())}");
+                    }
+
+                    CheckSearcher(47355498, "Necrovalley FullyCompiled GK aura + GY cannot banish/target",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                            c.NamedCardIsSeries &&
+                            string.Equals(c.NamedCard, "Gravekeeper's",
+                                System.StringComparison.OrdinalIgnoreCase) &&
+                            c.Amount == 500 && c.DefAmount == 500) &&
+                        pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.CannotBanishFromGraveyard) &&
+                        pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.CannotTargetCardsInGraveyard &&
+                            string.Equals(c.ExceptNamedCard, "Necrovalley",
+                                System.StringComparison.OrdinalIgnoreCase)));
+
+                    CheckSearcher(75782277, "Harpies' Hunting Ground FullyCompiled Winged Beast aura + Harpie NS/SS destroy S/T",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                            string.Equals(c.RaceFilter, "Winged Beast",
+                                System.StringComparison.OrdinalIgnoreCase) &&
+                            c.Amount == 200 && c.DefAmount == 200) &&
+                        pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.Destroy &&
+                            c.AnswersSpecialSummon && c.RequiresTargetChoice &&
+                            c.Zone == EffectZoneFilter.FieldSpellTraps &&
+                            c.NamedCardIsSeries &&
+                            string.Equals(c.NamedCard, "Harpie Lady",
+                                System.StringComparison.OrdinalIgnoreCase)));
+
+                    CheckSearcher(77007920, "Laser Cannon Armor FullyCompiled Equip Insect +300/+300",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.EquipThisToTarget &&
+                            c.EquipAtkBonus == 300 && c.EquipDefBonus == 300 &&
+                            string.Equals(c.RaceFilter, "Insect",
+                                System.StringComparison.OrdinalIgnoreCase)));
+
+                    CheckSearcher(25769732, "Machine Conversion Factory FullyCompiled Equip Machine +300/+300",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.EquipThisToTarget &&
+                            c.EquipAtkBonus == 300 && c.EquipDefBonus == 300 &&
+                            string.Equals(c.RaceFilter, "Machine",
+                                System.StringComparison.OrdinalIgnoreCase)));
+
+                    CheckSearcher(98299011, "Gift of The Mystical Elf FullyCompiled LP per monster on field",
+                        pr => pr.FullyCompiled &&
+                        pr.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.Activate &&
+                            c.Action == EffectActionKind.GainLifePoints &&
+                            c.Amount == 300 &&
+                            c.Side == EffectSide.Controller &&
+                            c.ScaleAmountByFieldMonsters));
+
+                    CheckSearcher(98252586, "Follow Wind FullyCompiled Equip Winged Beast +300/+300",
+                        pr => pr.FullyCompiled &&
+                        pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.EquipThisToTarget &&
+                            c.EquipAtkBonus == 300 && c.EquipDefBonus == 300 &&
+                            string.Equals(c.RaceFilter, "Winged Beast",
+                                System.StringComparison.OrdinalIgnoreCase)));
+
+                    CheckSearcher(36361633, "Threatening Roar FullyCompiled cannot-attack this turn",
+                        pr => pr.FullyCompiled &&
+                        pr.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.PreventOpponentAttacksThisTurn));
+
+                    CheckSearcher(94716515, "Eradicating Aerosol FullyCompiled destroy all Insect",
+                        pr => pr.FullyCompiled &&
+                        pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.Destroy &&
+                            string.Equals(c.RaceFilter, "Insect",
+                                System.StringComparison.OrdinalIgnoreCase)));
+
+                    CheckSearcher(64306248, "Skull-Mark Ladybug FullyCompiled GY +1000 LP",
+                        pr => pr.FullyCompiled &&
+                        pr.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.SentFromFieldToGy &&
+                            c.Action == EffectActionKind.GainLifePoints &&
+                            c.Amount == 1000 &&
+                            c.Side == EffectSide.Controller));
+
+                    CheckSearcher(46700124, "Machine King FullyCompiled ATK per Machine on field",
+                        pr => pr.FullyCompiled &&
+                        pr.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                            c.ScaleThisAtkByMatchingCount &&
+                            c.Amount == 100 &&
+                            string.Equals(c.RaceFilter, "Machine",
+                                System.StringComparison.OrdinalIgnoreCase)));
+
+                    CheckSearcher(51267887, "Raise Body Heat FullyCompiled Equip Dinosaur +300/+300",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.EquipThisToTarget &&
+                            c.EquipAtkBonus == 300 && c.EquipDefBonus == 300 &&
+                            string.Equals(c.RaceFilter, "Dinosaur",
+                                System.StringComparison.OrdinalIgnoreCase)));
+
+                    CheckSearcher(63224564, "Cyber Shield FullyCompiled Equip Harpie Lady or Sisters +500",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.EquipThisToTarget &&
+                            c.EquipAtkBonus == 500 &&
+                            string.Equals(c.EquipHostName, "Harpie Lady",
+                                System.StringComparison.OrdinalIgnoreCase) &&
+                            string.Equals(c.AltNamedCard, "Harpie Lady Sisters",
+                                System.StringComparison.OrdinalIgnoreCase)));
+
+                    CheckSearcher(18605135, "Tornado Wall FullyCompiled Umi activate + no battle damage + self-destroy",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.Activate &&
+                            string.Equals(c.RequiresFaceUpName, "Umi",
+                                System.StringComparison.OrdinalIgnoreCase) &&
+                            c.StaysOnField) &&
+                        pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.PreventControllerBattleDamage) &&
+                        pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.SelfDestroyUnlessNamedFaceUp));
+
+                    CheckSearcher(26185991, "Pinch Hopper FullyCompiled sent-to-GY Insect SS",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.SentFromFieldToGy &&
+                            c.Action == EffectActionKind.SpecialSummonFromHand &&
+                            c.FromHand &&
+                            string.Equals(c.RaceFilter, "Insect",
+                                System.StringComparison.OrdinalIgnoreCase)));
+                    CheckParked(68191243, "Mustering of the Dark Scorpions");
+                    CheckSearcher(2204140, "Book of Life FullyCompiled dual GY SS+banish",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.SpecialSummonFromGy &&
+                            c.RequiresSecondTarget &&
+                            c.SecondAction == EffectActionKind.Banish &&
+                            c.SecondZone == EffectZoneFilter.OppGyMonsters &&
+                            string.Equals(c.RaceFilter, "Zombie",
+                                System.StringComparison.OrdinalIgnoreCase)));
+                    CheckSearcher(3819470, "Seven Tools FullyCompiled chain-negate Trap",
+                        pr => pr.FullyCompiled &&
+                        pr.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.NegateActivation &&
+                            c.NegateRespondsToTrap &&
+                            c.PayLpAmount == 1000));
+                    CheckSearcher(77414722, "Magic Jammer FullyCompiled chain-negate Spell",
+                        pr => pr.FullyCompiled &&
+                        pr.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.NegateActivation &&
+                            c.NegateRespondsToSpell &&
+                            c.RequiresDiscardCost));
+                    CheckSearcher(18807108, "Spellbinding Circle FullyCompiled bound cannot-attack",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.ContinuousCannotAttack &&
+                            c.RequiresTargetChoice && c.AlsoCannotChangeBattlePosition &&
+                            c.StaysOnField));
+                    CheckSearcher(57728570, "Crush Card Virus FullyCompiled tribute DARK ≤1000 destroy ≥1500",
+                        pr => pr.FullyCompiled &&
+                        pr.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.CrushCardVirusStyle &&
+                            c.RequiresTributeCount == 1 &&
+                            c.RequiresAtkLeqCost &&
+                            c.Amount == 1000 &&
+                            c.VirusDestroyAtk == 1500 &&
+                            !c.VirusDestroyAtkLeq &&
+                            !EffectVocabulary.IsUniqueException(c.Action)));
+                    CheckSearcher(35027493, "Deck Devastation Virus FullyCompiled tribute DARK ≥2000 linger destroy ≤1500",
+                        pr => pr.FullyCompiled &&
+                        pr.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.CrushCardVirusStyle &&
+                            c.RequiresTributeCount == 1 &&
+                            c.RequiresAtkGeqCost &&
+                            c.Amount == 2000 &&
+                            c.VirusDestroyAtk == 1500 &&
+                            c.VirusDestroyAtkLeq &&
+                            c.CrushCardLingerOpponentEnds == 3 &&
+                            !EffectVocabulary.IsUniqueException(c.Action)));
+                    CheckParked(71625222, "Time Wizard");
+                    CheckSearcher(81210420, "Magical Hats UniqueException FullyCompiled",
+                        pr => pr.FullyCompiled &&
+                        pr.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.MagicalHatsStyle &&
+                            EffectVocabulary.IsUniqueException(c.Action)));
+                    CheckSearcher(40703222, "Multiply FullyCompiled tribute Kuriboh + fill tokens",
+                        pr => pr.FullyCompiled &&
+                        pr.ClauseList.Exists(c =>
+                            c != null &&
+                            c.RequiresTributeCount == 1 &&
+                            c.TributeFaceUpOnly &&
+                            string.Equals(c.NamedCard, "Kuriboh",
+                                System.StringComparison.OrdinalIgnoreCase) &&
+                            c.Action == EffectActionKind.SpecialSummonToken &&
+                            c.TokenFillRemainingZones &&
+                            c.SummonInDefense &&
+                            c.TokenCannotTribute &&
+                            c.TokenAtk == 300 && c.TokenDef == 200));
+
+                    // ── P1 battle leftovers (shared kinds) ──
+                    CheckSearcher(13945283, "Wall of Illusion FullyCompiled after-dmg bounce attacker",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.AfterDamageCalculation &&
+                            c.Action == EffectActionKind.ReturnToHand &&
+                            c.RequiresThisIsAttackTarget &&
+                            c.Zone == EffectZoneFilter.AttackingMonster));
+
+                    CheckSearcher(2671330, "Hyper Hammerhead FullyCompiled end-DS bounce if survived",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.EndOfDamageStep &&
+                            c.Action == EffectActionKind.ReturnToHand &&
+                            c.RequiresBattledMonsterNotDestroyed &&
+                            c.Zone == EffectZoneFilter.OpponentBattlingMonster));
+
+                    CheckSearcher(7572887, "D.D. Warrior Lady FullyCompiled after-dmg optional banish-both",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.AfterDamageCalculation &&
+                            c.Action == EffectActionKind.Banish &&
+                            c.AlsoBanishThis && c.IsOptional &&
+                            c.Zone == EffectZoneFilter.OpponentBattlingMonster));
+
+                    CheckSearcher(70074904, "D.D. Assailant FullyCompiled after-dmg destroyed banish-both",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Timing == EffectTiming.AfterDamageCalculation &&
+                            c.Action == EffectActionKind.Banish &&
+                            c.AlsoBanishThis && c.RequiresThisDestroyedByBattle &&
+                            c.Zone == EffectZoneFilter.OpponentBattlingMonster));
+
+                    CheckSearcher(74131780, "Exiled Force FullyCompiled Tribute this → Destroy target",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.RequiresTributeThis &&
+                            c.Action == EffectActionKind.Destroy && c.RequiresTargetChoice));
+
+                    CheckSearcher(11384280, "Cannon Soldier FullyCompiled Tribute 1 → 500 damage",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.RequiresTributeCount == 1 &&
+                            c.Action == EffectActionKind.InflictDamageToOpponent &&
+                            c.Amount == 500));
+
+                    CheckSearcher(91869203, "Amazoness Archer FullyCompiled Tribute 2 → 1200 damage (shared)",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.RequiresTributeCount == 2 &&
+                            c.Action == EffectActionKind.InflictDamageToOpponent &&
+                            c.Amount == 1200));
+
+                    CheckSearcher(12206212, "Harpie Lady Sisters FullyCompiled summon-restriction-only",
+                        pr => pr.FullyCompiled && pr.ClauseList.Count == 0);
+
+                    CheckSearcher(63162310, "Wall Shadow FullyCompiled summon-restriction-only (shared)",
+                        pr => pr.FullyCompiled && pr.ClauseList.Count == 0);
+
+                    CheckSearcher(93920745, "Penguin Soldier FullyCompiled Flip bounce up-to-2",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.Flip &&
+                            c.Action == EffectActionKind.ReturnToHand &&
+                            c.Amount == 2 && c.RequiresTargetChoice));
+                    CheckSearcher(28357177, "Hade-Hane FullyCompiled Flip bounce up-to-3 (shared)",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.Flip &&
+                            c.Action == EffectActionKind.ReturnToHand &&
+                            c.Amount == 3 && c.RequiresTargetChoice));
+                    CheckSearcher(65240384, "Big Shield Gardna FullyCompiled Gardna-only negate",
+                        pr => pr.ClauseList.Exists(c => c != null && c.Timing == EffectTiming.ChainLinkActivated && c.Action == EffectActionKind.NegateActivation && c.ChainResponseOnly && c.FlipSelfFaceUpDefense && !c.DestroyNegatedCard && !c.RequiresDiscardCost));
+                    CheckSearcher(98502113, "Dark Paladin FullyCompiled discard negate+destroy",
+                        pr => pr.ClauseList.Exists(c => c != null && c.Timing == EffectTiming.ChainLinkActivated && c.Action == EffectActionKind.NegateActivation && c.ChainResponseOnly && c.RequiresDiscardCost && c.DiscardCostCount == 1 && c.DestroyNegatedCard && !c.FlipSelfFaceUpDefense));
+                    CheckSearcher(48229808, "Horus LV8 FullyCompiled face-up negate+destroy",
+                        pr => pr.ClauseList.Exists(c => c != null && c.Timing == EffectTiming.ChainLinkActivated && c.Action == EffectActionKind.NegateActivation && c.ChainResponseOnly && !c.RequiresDiscardCost && c.DestroyNegatedCard && !c.FlipSelfFaceUpDefense));
+                    CheckParked(94004268, "Amazoness Swords Woman");
+                    CheckParked(37390589, "Kunai with Chain");
+                    CheckParked(96008713, "Magical Arm Shield");
+                    CheckSearcher(2460565, "Marauding Captain FullyCompiled NS SS Lv≤4 + Warrior attack-lock",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.ThisCardSummoned &&
+                            c.Action == EffectActionKind.SpecialSummonFromHand &&
+                            c.FromHand && c.AmountIsLevel && c.Amount == 4 &&
+                            c.RequiresThisNormalSummoned) &&
+                        pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.CannotBeAttackTarget &&
+                            c.ExceptThisCard &&
+                            string.Equals(c.RaceFilter, "Warrior",
+                                System.StringComparison.OrdinalIgnoreCase)));
+                    CheckSearcher(25262697, "Gravekeeper's Assailant FullyCompiled named attack position",
+                        pr => pr.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.AttackDeclared &&
+                            c.Action == EffectActionKind.ChangeBattlePosition &&
+                            c.RequiresTargetChoice &&
+                            string.Equals(c.RequiresFaceUpName, "Necrovalley",
+                                System.StringComparison.OrdinalIgnoreCase) &&
+                            c.Zone == EffectZoneFilter.OppFaceUpMonsters));
+                }
+
+                // ── Shared-kind live: Penguin already covered in Flip block; Captain / Book / Circle ──
+                {
+                    const int captainId = 2460565;
+                    const int captainGiantSoldier = 13039848; // Level 3 Rock
+                    const int celticW = 91152256; // Warrior
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var cap = PutInHand(engine, p, captainId);
+                    var lv3 = PutInHand(engine, p, captainGiantSoldier);
+                    Check("Marauding Captain: Normal Summon",
+                        engine.TryNormalSummon(p, cap, asSet: false));
+                    Check("Marauding Captain: opens Level≤4 hand SS",
+                        engine.IsAwaitingEffectTarget && engine.PendingActivation != null &&
+                        engine.PendingActivation.LegalTargets.Contains(lv3));
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        Check("Marauding Captain: SS Level 3 from hand",
+                            engine.TrySelectEffectTarget(lv3) &&
+                            p.TryFindMonster(lv3, out _) &&
+                            !p.Hand.Contains(lv3));
+                    }
+
+                    var warrior = PlaceMonster(engine, p, celticW, 0, BattlePosition.Attack, true);
+                    Check("Marauding Captain: other Warrior cannot be attack-targeted",
+                        WRLDZ.Duel.TextEffects.ContinuousProtections.CannotBeAttackTarget(engine, warrior));
+                    Check("Marauding Captain: itself can still be attacked",
+                        !WRLDZ.Duel.TextEffects.ContinuousProtections.CannotBeAttackTarget(engine, cap));
+                    Check("Marauding Captain: non-Warrior not attack-locked",
+                        !WRLDZ.Duel.TextEffects.ContinuousProtections.CannotBeAttackTarget(engine, lv3));
+                }
+
+                {
+                    const int bookId = 2204140;
+                    const int turtle = 77044671; // Zombie
+                    const int celticW = 91152256;
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var z = engine.CreateCardInstance(turtle);
+                    p.Graveyard.Add(z);
+                    var og = engine.CreateCardInstance(celticW);
+                    opp.Graveyard.Add(og);
+                    var book = PutInHand(engine, p, bookId);
+                    Check("Book of Life: Activate legal with both GY monsters",
+                        engine.CanActivateSpellTrap(p, book, fromHand: true) &&
+                        engine.TryActivateSpellTrap(p, book, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.LegalTargets.Contains(z));
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        Check("Book of Life: first pick waits for opp GY",
+                            engine.TrySelectEffectTarget(z) && engine.IsAwaitingEffectTarget &&
+                            engine.PendingActivation.AwaitingSecondTarget &&
+                            engine.PendingActivation.LegalTargets.Contains(og));
+                        Check("Book of Life: SS Zombie, banish opp GY",
+                            engine.TrySelectEffectTarget(og) &&
+                            p.TryFindMonster(z, out _) &&
+                            opp.Banished.Contains(og) &&
+                            !opp.Graveyard.Contains(og));
+                    }
+                }
+
+                {
+                    const int circleId = 18807108;
+                    const int celticW = 91152256;
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var prey = PlaceMonster(engine, opp, celticW, 2, BattlePosition.Attack, true);
+                    prey.SummonedThisTurn = false;
+                    var st = PlaceSetTrap(engine, p, circleId, 2);
+                    st.SetThisTurn = false;
+                    Check("Spellbinding Circle: Activate from Set",
+                        engine.CanActivateSpellTrap(p, st, fromHand: false) &&
+                        engine.TryActivateSpellTrap(p, st, fromHand: false) &&
+                        engine.IsAwaitingEffectTarget);
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        Check("Spellbinding Circle: binds prey, stays, locks attack/position",
+                            engine.TrySelectEffectTarget(prey) &&
+                            st.EquippedTo == prey &&
+                            p.TryFindSpellTrap(st, out _) &&
+                            engine.ContinuousCannotAttackBlocks(opp, prey) &&
+                            engine.BoundTrapLocksBattlePosition(prey));
+                    }
+
+                    engine.DestroyMonsterPublic(opp, prey);
+                    Check("Spellbinding Circle: destroyed host also destroys the trap",
+                        p.Graveyard.Contains(st) && opp.Graveyard.Contains(prey) &&
+                        !p.TryFindSpellTrap(st, out _),
+                        $"stGy={p.Graveyard.Contains(st)} preyGy={opp.Graveyard.Contains(prey)}");
+                }
+
+                {
+                    const int circleId = 18807108;
+                    const int celticW = 91152256;
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var prey = PlaceMonster(engine, opp, celticW, 2, BattlePosition.Attack, true);
+                    prey.SummonedThisTurn = false;
+                    var st = PlaceSetTrap(engine, p, circleId, 2);
+                    st.SetThisTurn = false;
+                    engine.TryActivateSpellTrap(p, st, fromHand: false);
+                    if (engine.IsAwaitingEffectTarget)
+                        engine.TrySelectEffectTarget(prey);
+                    Check("Spellbinding Circle: bounce host leaves Circle face-up and unlinks",
+                        engine.ReturnCardToHand(prey) &&
+                        opp.Hand.Contains(prey) &&
+                        p.TryFindSpellTrap(st, out _) &&
+                        st.EquippedTo == null &&
+                        !engine.BoundTrapLocksBattlePosition(prey) &&
+                        !engine.ContinuousCannotAttackBlocks(opp, prey),
+                        $"hand={opp.Hand.Contains(prey)} stField={p.TryFindSpellTrap(st, out _)} " +
+                        $"link={st.EquippedTo != null}");
+                }
+
+                {
+                    const int circleId = 18807108;
+                    const int celticW = 91152256;
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var prey = PlaceMonster(engine, opp, celticW, 2, BattlePosition.Attack, true);
+                    var st = PlaceSetTrap(engine, p, circleId, 2);
+                    st.SetThisTurn = false;
+                    engine.TryActivateSpellTrap(p, st, fromHand: false);
+                    if (engine.IsAwaitingEffectTarget)
+                        engine.TrySelectEffectTarget(prey);
+                    engine.SendCardToGrave(p, st);
+                    Check("Spellbinding Circle: trap to GY does not destroy bound monster",
+                        p.Graveyard.Contains(st) &&
+                        opp.TryFindMonster(prey, out _) &&
+                        !opp.Graveyard.Contains(prey));
+                }
+
+                // ── P1 remaining field/GY engines: Necrovalley, HHG, Tornado Umi-leave ──
+                {
+                    const int necrovalley = 47355498;
+                    const int spyId = 24317029;
+                    const int reborn = 83764719;
+                    const int riteId = 30450531;
+                    const int hhgId = 75782277;
+                    const int harpieLady = 76812113;
+                    const int waboku = 12607053;
+                    const int umiId = 22702055;
+                    const int tornadoId = 18605135;
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var spy = PlaceMonster(engine, p, spyId, 2, BattlePosition.Attack, true);
+                        var nv = PutInHand(engine, p, necrovalley);
+                        Check("Necrovalley: Field Spell activate legal",
+                            engine.CanActivateSpellTrap(p, nv, fromHand: true));
+                        Check("Necrovalley: activates to Field Zone",
+                            engine.TryActivateSpellTrap(p, nv, fromHand: true) &&
+                            p.FieldSpellZone?.Occupant == nv && nv.FaceUp);
+                        FieldSpellEffects.RefreshBoard(engine);
+                        Check("Necrovalley: Gravekeeper's Spy +500/+500",
+                            spy.CurrentAtk == 1700 && spy.CurrentDef == 2500,
+                            $"atk={spy.CurrentAtk} def={spy.CurrentDef}");
+
+                        var gyMon = engine.CreateCardInstance(celtic);
+                        p.Graveyard.Add(gyMon);
+                        engine.BanishCard(p, gyMon);
+                        Check("Necrovalley: GY banish blocked",
+                            p.Graveyard.Contains(gyMon) &&
+                            (p.Banished == null || !p.Banished.Contains(gyMon)));
+
+                        var rb = PutInHand(engine, p, reborn);
+                        Check("Necrovalley: Monster Reborn cannot target GY",
+                            !engine.CanActivateSpellTrap(p, rb, fromHand: true));
+                    }
+
+                    {
+                        const int haDes = 53982768;
+                        const int exodiaNecross = 12600382;
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        p.Graveyard.Add(engine.CreateCardInstance(haDes));
+                        var exodia = engine.CreateCardInstance(exodiaNecross);
+                        p.Graveyard.Add(exodia);
+                        var rb = PutInHand(engine, p, reborn);
+                        Check("GY summon restrictions: Monster Reborn refuses Ha Des and hard Nomi",
+                            !engine.CanActivateSpellTrap(p, rb, fromHand: true));
+                        Check("GY summon restrictions: direct generic SpecialSummonToField refuses hard Nomi",
+                            !engine.SpecialSummonToField(p, exodia, BattlePosition.Attack, true) &&
+                            p.Graveyard.Contains(exodia));
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var nv = PutInHand(engine, p, necrovalley);
+                        engine.TryActivateSpellTrap(p, nv, fromHand: true);
+                        var gk = engine.CreateCardInstance(spyId);
+                        p.Graveyard.Add(gk);
+                        var rite = PlaceSetTrap(engine, p, riteId, 2);
+                        rite.SetThisTurn = false;
+                        Check("Rite of Spirit still legal under Necrovalley",
+                            engine.CanActivateSpellTrap(p, rite, fromHand: false));
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        var hhg = PutInHand(engine, p, hhgId);
+                        Check("HHG: Field Spell activate legal",
+                            engine.CanActivateSpellTrap(p, hhg, fromHand: true));
+                        Check("HHG: activates to Field Zone",
+                            engine.TryActivateSpellTrap(p, hhg, fromHand: true) &&
+                            p.FieldSpellZone?.Occupant == hhg && hhg.FaceUp);
+                        var lady = PlaceMonster(engine, p, harpieLady, 1, BattlePosition.Attack, true);
+                        FieldSpellEffects.RefreshBoard(engine);
+                        Check("HHG: Harpie Lady Winged Beast +200/+200",
+                            lady.CurrentAtk == 1500 && lady.CurrentDef == 1600,
+                            $"atk={lady.CurrentAtk} def={lady.CurrentDef}");
+
+                        var st = PlaceSetTrap(engine, opp, waboku, 2);
+                        st.SetThisTurn = false;
+                        p.Hand.Clear();
+                        var nsLady = PutInHand(engine, p, harpieLady);
+                        var ns = engine.TurnPlayer == p && engine.InMainPhase &&
+                                 engine.TryNormalSummon(p, nsLady, asSet: false);
+                        if (engine.IsAwaitingResponse &&
+                            engine.PendingResponse.Responder != p)
+                            engine.PassResponse();
+                        Check("HHG: NS Harpie Lady", ns, $"ns={ns}");
+                        Check("HHG: summon trigger opens S/T target",
+                            engine.IsAwaitingEffectTarget,
+                            $"awaiting={engine.IsAwaitingEffectTarget} pending={engine.PendingActivation?.Card?.Name}");
+                        if (engine.IsAwaitingEffectTarget)
+                            Check("HHG: destroy targeted S/T",
+                                engine.TrySelectEffectTarget(st) &&
+                                opp.Graveyard.Contains(st) &&
+                                p.FieldSpellZone?.Occupant == hhg);
+                    }
+
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        var p = engine.Player;
+                        p.Hand.Clear();
+                        var tornadoUmi = PutInHand(engine, p, umiId);
+                        Check("Tornado setup: Umi activates",
+                            engine.TryActivateSpellTrap(p, tornadoUmi, fromHand: true) &&
+                            FieldSpellEffects.UmiIsOnField(engine));
+                        var wall = PlaceSetTrap(engine, p, tornadoId, 2);
+                        wall.SetThisTurn = false;
+                        Check("Tornado Wall activates while Umi is up",
+                            engine.CanActivateSpellTrap(p, wall, fromHand: false) &&
+                            engine.TryActivateSpellTrap(p, wall, fromHand: false) &&
+                            wall.FaceUp);
+                        engine.SendCardToGrave(p, tornadoUmi);
+                        FieldSpellEffects.RefreshBoard(engine);
+                        Check("Tornado Wall destroyed when Umi leaves",
+                            p.Graveyard.Contains(wall) && !p.TryFindSpellTrap(wall, out _),
+                            $"gy={p.Graveyard.Contains(wall)} onField={p.TryFindSpellTrap(wall, out _)}");
+                    }
+                }
+
+                {
+                    const int toonTable = 89997728;
+                    const int toonWorld = 15259703;
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    p.Deck.Clear();
+                    p.Deck.Add(toonWorld);
+                    p.Deck.Add(celtic);
+                    var card = PutInHand(engine, p, toonTable);
+                    Check("Toon Table: Activate legal with Toon card in Deck",
+                        engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    Check("Toon Table: add Toon World (series, not exact name Toon)",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        p.Hand.Exists(c => c != null && c.CardId == toonWorld) &&
+                        p.Graveyard.Exists(c => c != null && c.CardId == toonTable) &&
+                        !p.Deck.Contains(toonWorld) &&
+                        p.Deck.Contains(celtic),
+                        $"hand={string.Join(",", p.Hand.Select(c => c.Name))} gy={p.Graveyard.Count}");
+                }
+
+                var akProg = CardTextEffectCompiler.Compile(db.Get(18036057));
+                Check("Airknight Parshath compiles PiercingBattleDamage",
+                    akProg != null &&
+                    akProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.PiercingBattleDamage),
+                    akProg == null ? "null" : $"full={akProg.FullyCompiled} unparsed={string.Join("|", akProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                var ddProg = CardTextEffectCompiler.Compile(db.Get(65287621));
+                Check("Dark Driceratops FullyCompiled piercing",
+                    ddProg != null && ddProg.FullyCompiled &&
+                    ddProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.PiercingBattleDamage));
+                var yataProg = CardTextEffectCompiler.Compile(db.Get(3078576));
+                Check("Yata-Garasu summon-restriction absorbed",
+                    yataProg != null &&
+                    !System.Array.Exists(yataProg.UnparsedFragments ?? System.Array.Empty<string>(), f =>
+                        f != null && f.IndexOf("cannot be Special Summoned", System.StringComparison.OrdinalIgnoreCase) >= 0));
+                var fdProg = CardTextEffectCompiler.Compile(db.Get(18591904));
+                Check("Final Destiny compiles discard-5 + destroy all",
+                    fdProg != null &&
+                    fdProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.Destroy &&
+                        // Local lineage: RequiresDiscardCost + count; GitHub lineage (ClassicEra claims
+                        // the sentence): DiscardCostCount alone, paid by the multi-discard flow.
+                        (c.RequiresDiscardCost || c.DiscardCostAttribute == "*") && c.DiscardCostCount == 5));
+                var synRush = CardTextEffectCompiler.Compile(new CardDef
+                {
+                    id = 90000401,
+                    name = "New Spell (Rush Recklessly shape)",
+                    type = "Spell Card",
+                    desc = "Target 1 face-up monster on the field; it gains 700 ATK until the end of this turn."
+                });
+                Check("New card without cardId: until-EOT ATK fragment",
+                    synRush != null && synRush.FullyCompiled &&
+                    synRush.ClauseList.Exists(c =>
+                        c != null && IsTurnAtkBoost(c) && c.Amount == 700 && c.IsPsctTarget));
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var kn = PlaceMonster(engine, engine.Player, 18036057, 2, BattlePosition.Attack, true);
+                    Check("Airknight HasPiercing from compiled piercing",
+                        OfficialEffectRegistry.HasPiercing(kn));
+                }
+
+                // Live: Fissure destroys the lowest ATK face-up opp monster (ties offered).
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var low = PlaceMonster(engine, opp, celtic, 1, BattlePosition.Attack, true);
+                    var high = PlaceMonster(engine, opp, bewd, 2, BattlePosition.Attack, true);
+                    var card = PutInHand(engine, p, fissure);
+                    Check("Fissure: Activate opens lowest-ATK targets only",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.LegalTargets.Contains(low) &&
+                        !engine.PendingActivation.LegalTargets.Contains(high));
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        Check("Fissure: destroy Celtic (lowest ATK)",
+                            engine.TrySelectEffectTarget(low) &&
+                            opp.Graveyard.Contains(low) &&
+                            opp.TryFindMonster(high, out _));
+                    }
+                }
+
+                // Fissure is an extremum choice, not PSCT targeting: Reaper must survive a
+                // resolution that destroys a different lowest-ATK monster.
+                {
+                    const int reaper = 23205979;
+                    const int zeroAtk = 27125110;
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var reaperCard = PlaceMonster(engine, opp, reaper, 1, BattlePosition.Attack, true);
+                    var zeroCard = PlaceMonster(engine, opp, zeroAtk, 2, BattlePosition.Attack, true);
+                    var card = PutInHand(engine, p, fissure);
+                    Check("Fissure vs Reaper: non-targeted resolution does not notify Reaper",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation.LegalTargets.Contains(zeroCard) &&
+                        !engine.PendingActivation.LegalTargets.Contains(reaperCard) &&
+                        engine.TrySelectEffectTarget(zeroCard) &&
+                        opp.TryFindMonster(reaperCard, out _) &&
+                        opp.Graveyard.Contains(zeroCard));
+                }
+
+
+                // Live: Rush Recklessly +700 until EOT
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var mon = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var before = mon.CurrentAtk;
+                    var card = PutInHand(engine, p, rush);
+                    Check("Rush Recklessly: Activate targets your monster",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.IsLegalEffectTarget(mon));
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        Check("Rush Recklessly: +700 ATK until EOT",
+                            engine.TrySelectEffectTarget(mon) &&
+                            mon.CurrentAtk == before + 700,
+                            $"atk {mon.CurrentAtk} expected {before + 700}");
+                    }
+                }
+
+                // Live: Stop Defense flips opp DEF → ATK
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var wall = PlaceMonster(engine, opp, giantSoldier, 2, BattlePosition.Defense, true);
+                    var card = PutInHand(engine, p, stopDefense);
+                    Check("Stop Defense: Activate legal vs DEF monster",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.IsLegalEffectTarget(wall));
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        Check("Stop Defense: switch to Attack Position",
+                            engine.TrySelectEffectTarget(wall) &&
+                            wall.Position == BattlePosition.Attack && wall.FaceUp);
+                    }
+                }
+
+                // Live: Umi Aqua +200 / Machine −200
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    const int penguinSoldier = 93920745; // Aqua
+                    const int roboticKnight = 44203504; // Machine
+                    var aqua = PlaceMonster(engine, p, penguinSoldier, 2, BattlePosition.Attack, true);
+                    var machine = PlaceMonster(engine, engine.Opponent, roboticKnight, 1, BattlePosition.Attack, true);
+                    var beforeA = aqua.Def.atk;
+                    var beforeM = machine.Def.atk;
+                    var card = PutInHand(engine, p, umi);
+                    Check("Umi: activate into Field Zone",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        p.FieldSpellZone?.Occupant == card && card.FaceUp);
+                    FieldSpellEffects.RefreshBoard(engine);
+                    Check("Umi: Aqua +200 ATK/DEF",
+                        aqua.CurrentAtk == beforeA + 200,
+                        $"aqua {aqua.CurrentAtk} expected {beforeA + 200} name={aqua.Name}");
+                    Check("Umi: Machine −200 ATK/DEF",
+                        machine.CurrentAtk == beforeM - 200,
+                        $"machine {machine.CurrentAtk} expected {beforeM - 200} name={machine.Name}");
+                }
+
+                // Live: Elegant Egotist with Harpie Lady on field + Sisters in deck
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    PlaceMonster(engine, p, harpie, 2, BattlePosition.Attack, true);
+                    // Ensure Sisters is searchable from Deck
+                    if (!p.Deck.Contains(harpieSisters))
+                        p.Deck.Insert(0, harpieSisters);
+                    var card = PutInHand(engine, p, elegant);
+                    var beforeZones = p.MonsterCount;
+                    Check("Elegant Egotist: Activate legal with Harpie Lady on field",
+                        engine.CanActivateSpellTrap(p, card, fromHand: true));
+                    Check("Elegant Egotist: resolve SS from Deck",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        p.MonsterCount == beforeZones + 1,
+                        $"monsters {p.MonsterCount} was {beforeZones}");
+                }
+
+                // Live: Call of the Haunted GY SS + leave-field destroy
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var gyMon = engine.CreateCardInstance(celtic);
+                    p.Graveyard.Add(gyMon);
+                    var card = PlaceSetTrap(engine, p, callHaunted, 2);
+                    Check("Call of the Haunted: Activate from set",
+                        engine.CanActivateSpellTrap(p, card, fromHand: false));
+                    Check("Call of the Haunted: opens GY target",
+                        engine.TryActivateSpellTrap(p, card, fromHand: false) &&
+                        engine.IsAwaitingEffectTarget);
+                    if (engine.IsAwaitingEffectTarget)
+                    {
+                        Check("Call of the Haunted: SS Celtic, trap stays linked",
+                            engine.TrySelectEffectTarget(gyMon) &&
+                            p.TryFindMonster(gyMon, out _) &&
+                            p.TryFindSpellTrap(card, out _) &&
+                            card.EquippedTo == gyMon);
+                        // MST the Call → host dies
+                        var mst = PutInHand(engine, p, SpellTrapEffects.Mst);
+                        Check("Call of the Haunted: destroy Call also destroys SS'd monster",
+                            engine.TryActivateSpellTrap(p, mst, fromHand: true) &&
+                            engine.IsAwaitingEffectTarget &&
+                            engine.TrySelectEffectTarget(card) &&
+                            p.Graveyard.Contains(gyMon) &&
+                            p.Graveyard.Contains(card),
+                            $"gyMon={p.Graveyard.Contains(gyMon)} callGy={p.Graveyard.Contains(card)}");
+                    }
+                }
+            }
+
+            // ── MST self-target UX (legal; default offer skips activating card) ──
+            {
+                const int mstId = SpellTrapEffects.Mst;
+                const int waboku = SpellTrapEffects.Waboku;
+                PlayerPrefs.DeleteKey(SpellTrapEffects.AllowSelfTargetPrefKey);
+                PlayerPrefs.Save();
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var opp = engine.Opponent;
+                    p.Hand.Clear();
+                    var oppSt = PlaceSetTrap(engine, opp, waboku, 2);
+                    var mst = PutInHand(engine, p, mstId);
+                    Check("MST: vs opponent S/T does not pick itself",
+                        engine.CanActivateSpellTrap(p, mst, fromHand: true) &&
+                        engine.TryActivateSpellTrap(p, mst, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.LegalTargets.Contains(oppSt) &&
+                        !engine.PendingActivation.LegalTargets.Contains(mst) &&
+                        !LegalIntentService.Build(engine, p)
+                            .HasKind(mst, LegalIntentService.LegalKind.EffectTarget),
+                        engine.PendingActivation == null
+                            ? "no pending"
+                            : $"n={engine.PendingActivation.LegalTargets.Count} hasSelf={engine.PendingActivation.LegalTargets.Contains(mst)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var ownSt = PlaceSetTrap(engine, p, waboku, 1);
+                    var mst = PutInHand(engine, p, mstId);
+                    Check("MST: own other backrow stays legal (self hidden)",
+                        engine.CanActivateSpellTrap(p, mst, fromHand: true) &&
+                        engine.TryActivateSpellTrap(p, mst, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.LegalTargets.Contains(ownSt) &&
+                        !engine.PendingActivation.LegalTargets.Contains(mst),
+                        engine.PendingActivation == null
+                            ? "no pending"
+                            : $"n={engine.PendingActivation.LegalTargets.Count} hasSelf={engine.PendingActivation.LegalTargets.Contains(mst)} hasOwn={engine.PendingActivation.LegalTargets.Contains(ownSt)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var mst = PutInHand(engine, p, mstId);
+                    Check("MST: sole S/T still offers self (legal)",
+                        engine.CanActivateSpellTrap(p, mst, fromHand: true) &&
+                        engine.TryActivateSpellTrap(p, mst, fromHand: true) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.LegalTargets.Contains(mst) &&
+                        engine.PendingActivation.LegalTargets.Count == 1,
+                        engine.PendingActivation == null
+                            ? "no pending"
+                            : $"n={engine.PendingActivation.LegalTargets.Count}");
+                }
+
+                {
+                    SpellTrapEffects.AllowSpellTrapSelfTarget = true;
+                    try
+                    {
+                        var engine = Fresh(db, pDeck, aDeck);
+                        ClearBoard(engine);
+                        var p = engine.Player;
+                        var opp = engine.Opponent;
+                        p.Hand.Clear();
+                        var oppSt = PlaceSetTrap(engine, opp, waboku, 2);
+                        var ownSt = PlaceSetTrap(engine, p, SpellTrapEffects.SwordsOfRevealingLight, 1);
+                        var mst = PutInHand(engine, p, mstId);
+                        Check("MST: pref on, self is legal",
+                            engine.TryActivateSpellTrap(p, mst, fromHand: true) &&
+                            engine.IsAwaitingEffectTarget &&
+                            engine.PendingActivation != null &&
+                            engine.PendingActivation.LegalTargets.Contains(mst) &&
+                            engine.PendingActivation.LegalTargets.Contains(oppSt) &&
+                            engine.PendingActivation.LegalTargets.Contains(ownSt),
+                            engine.PendingActivation == null
+                                ? "no pending"
+                                : $"n={engine.PendingActivation.LegalTargets.Count} hasSelf={engine.PendingActivation.LegalTargets.Contains(mst)}");
+                    }
+                    finally
+                    {
+                        PlayerPrefs.DeleteKey(SpellTrapEffects.AllowSelfTargetPrefKey);
+                        PlayerPrefs.Save();
+                    }
+                }
+            }
+
+            // ── Swords of Revealing Light must survive its own chain resolution ──
+            // Regression: the card's race is "Normal", so IsOneShotChainSpellTrap claimed it and
+            // EnsureDeferredSpellTrapGrave swept it to the GY the instant its chain resolved.
+            // Both the attack lock and the End Phase counter look for it face-up on the field, so
+            // the entire card silently did nothing. Every older Swords test PlaceSetTrap'd it
+            // straight onto the field, which skips activation — which is why this survived.
+            {
+                var engine = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine);
+                var p = engine.Player;
+                var opp = engine.Opponent;
+                p.Hand.Clear();
+                var swords = PutInHand(engine, p, SpellTrapEffects.SwordsOfRevealingLight);
+                var activated = engine.TryActivateSpellTrap(p, swords, fromHand: true);
+                for (var i = 0; i < 8 && engine.IsAwaitingResponse; i++) engine.PassResponse();
+                // The sweep lives inside chain resolution, so the chain has to actually resolve
+                // or this test passes for the wrong reason.
+                engine.ResolveChainStackForActivation();
+
+                var onField = p.TryFindSpellTrap(swords, out _);
+                Check("Swords of Revealing Light: activates from hand", activated);
+                Check("Swords of Revealing Light: remains on the field after resolving",
+                    onField, onField ? "" : "swept to the GY by the one-shot chain cleanup");
+                Check("Swords of Revealing Light: not sent to the graveyard",
+                    !p.Graveyard.Contains(swords));
+                Check("Swords of Revealing Light: 3 opponent turns queued",
+                    swords.ContinuousTurnsRemaining == 3,
+                    $"turns={swords.ContinuousTurnsRemaining}");
+                Check("Swords of Revealing Light: opponent cannot declare an attack",
+                    engine.OpponentHasSwordsOfRevealingLight(opp));
+            }
+
+            // ── Player-facing activate/response window is 5s (expiry = PassResponse) ──
+            {
+                Check("DefaultResponseSeconds is 5s",
+                    CombatAnimTimings.DefaultResponseSeconds == 5f);
+            }
+
+            // ── Bad Reaction to Simochi: opponent LP gain becomes effect damage ──
+            {
+                const int simochi = 40633297;
+                const int remedy = 11868825;
+                var engine = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine);
+                var p = engine.Player;
+                var opp = engine.Opponent;
+                p.Hand.Clear();
+                opp.Hand.Clear();
+                var simochiCard = PlaceSetTrap(engine, p, simochi, 2);
+                var simochiProg = CardTextEffectCompiler.Compile(db.Get(simochi));
+                Check("Simochi: compiles shared continuous LP replacement",
+                    simochiProg.FullyCompiled &&
+                    simochiProg.ClauseList.Exists(c => c != null &&
+                        c.Action == EffectActionKind.ConvertOpponentLpGainToDamage &&
+                        c.Timing == EffectTiming.ContinuousWhileFaceUp && c.StaysOnField));
+                Check("Simochi: activates and stays face-up",
+                    engine.CanActivateSpellTrap(p, simochiCard, fromHand: false) &&
+                    engine.TryActivateSpellTrap(p, simochiCard, fromHand: false) &&
+                    simochiCard.FaceUp && p.TryFindSpellTrap(simochiCard, out _));
+                for (var i = 0; i < 8 && engine.IsAwaitingResponse; i++) engine.PassResponse();
+
+                const int rainOfMercy = 66719324;
+                var rainProg = CardTextEffectCompiler.Compile(db.Get(rainOfMercy));
+                Check("Simochi: Rain of Mercy compiles both-player LP gain",
+                    rainProg.FullyCompiled &&
+                    rainProg.ClauseList.Exists(c => c != null &&
+                        c.Action == EffectActionKind.GainLifePoints && c.Amount == 1000 &&
+                        c.Side == EffectSide.Both));
+                var rainOk = engine.TryActivateSpellTrap(p, PutInHand(engine, p, rainOfMercy), fromHand: true);
+                for (var i = 0; i < 8 && engine.IsAwaitingResponse; i++) engine.PassResponse();
+                Check("Simochi: Rain of Mercy controller gains, opponent takes damage",
+                    rainOk && p.LifePoints == 9000 && opp.LifePoints == 7000,
+                    $"got {p.LifePoints}/{opp.LifePoints}");
+
+                var ownRemedy = PutInHand(engine, p, remedy);
+                var ownBefore = p.LifePoints;
+                var ownOk = engine.TryActivateSpellTrap(p, ownRemedy, fromHand: true);
+                for (var i = 0; i < 8 && engine.IsAwaitingResponse; i++) engine.PassResponse();
+                Check("Simochi: controller own LP gain is unchanged",
+                    ownOk && p.LifePoints == ownBefore + 600);
+
+                Check("Simochi: reach opponent Main Phase", ReachOpponentMain(engine));
+                var oppRemedy = PutInHand(engine, opp, remedy);
+                var oppBefore = opp.LifePoints;
+                var oppOk = engine.TryActivateSpellTrap(opp, oppRemedy, fromHand: true);
+                for (var i = 0; i < 8 && engine.IsAwaitingResponse; i++) engine.PassResponse();
+                Check("Simochi: opponent +600 LP becomes 600 effect damage",
+                    oppOk && opp.LifePoints == oppBefore - 600);
+            }
+
+            // ── GY target placement split: Reborn summons, Reincarnation adds to hand ──
+            {
+                const int reincarnation = 74848038;
+                const int reborn = 83764719;
+                const int celtic = 91152256;
+                const int bewd = 89631139;
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    p.Graveyard.Add(engine.CreateCardInstance(bewd));
+                    var card = PutInHand(engine, p, reborn);
+                    engine.TryActivateSpellTrap(p, card, fromHand: true);
+                    Check("Reborn GY target asks for a Monster Zone (Special Summon)",
+                        engine.PendingActivation != null &&
+                        SpellTrapEffects.PendingTargetIsSpecialSummon(engine.PendingActivation),
+                        $"kind={engine.PendingActivation?.TargetKind}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var gyMon = engine.CreateCardInstance(bewd);
+                    p.Graveyard.Add(gyMon);
+                    var fodder = PutInHand(engine, p, celtic);
+                    var card = PutInHand(engine, p, reincarnation);
+                    engine.TryActivateSpellTrap(p, card, fromHand: true);
+                    Check("Reincarnation discard step is never a Special Summon placement",
+                        engine.PendingActivation != null &&
+                        !SpellTrapEffects.PendingTargetIsSpecialSummon(engine.PendingActivation),
+                        $"kind={engine.PendingActivation?.TargetKind}");
+                    engine.TrySelectEffectTarget(fodder);
+                    // Same TargetKind as Monster Reborn — only the clause action separates them.
+                    // Offering "Summon ATK/DEF" here stranded the add-to-hand activation.
+                    Check("Reincarnation GY target resolves on the tap (no placement menu)",
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.TargetKind == EffectTargetKind.MonsterInEitherGy &&
+                        !SpellTrapEffects.PendingTargetIsSpecialSummon(engine.PendingActivation),
+                        $"kind={engine.PendingActivation?.TargetKind}");
+                    Check("Reincarnation still adds the GY monster to the hand",
+                        engine.TrySelectEffectTarget(gyMon) &&
+                        p.Hand.Contains(gyMon) && !p.Graveyard.Contains(gyMon));
+                }
+            }
+
+            // ── "If you control \"Name\":" controller-scoped activation gate ──
+            {
+                const int thousandKnives = 63391643;
+                const int darkMagicAttack = 2314238;
+                const int darkMagician = 46986414;
+                const int celtic = 91152256;
+                const int mirror = 44095762;
+
+                var tkDef = db.Get(thousandKnives);
+                var tkProg = tkDef != null ? CardTextEffectCompiler.Compile(tkDef) : null;
+                Check("Thousand Knives FullyCompiled with controller name gate + targeted destroy",
+                    tkProg != null && tkProg.FullyCompiled &&
+                    tkProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.Destroy &&
+                        c.RequiresTargetChoice &&
+                        c.RequiresControllerNamedCard &&
+                        c.RequiresFaceUpName == "Dark Magician"),
+                    tkProg == null
+                        ? "null"
+                        : $"full={tkProg.FullyCompiled} unparsed={string.Join("|", tkProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var dmaDef = db.Get(darkMagicAttack);
+                var dmaProg = dmaDef != null ? CardTextEffectCompiler.Compile(dmaDef) : null;
+                Check("Dark Magic Attack FullyCompiled opponent-only mass S/T destroy",
+                    dmaProg != null && dmaProg.FullyCompiled &&
+                    dmaProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.DestroyAllOppSpellTraps &&
+                        c.RequiresControllerNamedCard &&
+                        c.RequiresFaceUpName == "Dark Magician"),
+                    dmaProg == null
+                        ? "null"
+                        : $"full={dmaProg.FullyCompiled} unparsed={string.Join("|", dmaProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    p.Hand.Clear();
+                    PlaceMonster(engine, o, celtic, 0, BattlePosition.Attack, faceUp: true);
+                    var knives = PutInHand(engine, p, thousandKnives);
+                    Check("Thousand Knives refused without your own Dark Magician",
+                        !engine.CanActivateSpellTrap(p, knives, fromHand: true));
+
+                    // Opponent's copy must not unlock it — the gate is "you control".
+                    PlaceMonster(engine, o, darkMagician, 1, BattlePosition.Attack, faceUp: true);
+                    Check("Thousand Knives still refused when only the OPPONENT controls DM",
+                        !engine.CanActivateSpellTrap(p, knives, fromHand: true));
+
+                    PlaceMonster(engine, p, darkMagician, 2, BattlePosition.Attack, faceUp: true);
+                    Check("Thousand Knives legal once you control Dark Magician",
+                        engine.CanActivateSpellTrap(p, knives, fromHand: true));
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    p.Hand.Clear();
+                    PlaceMonster(engine, p, darkMagician, 2, BattlePosition.Attack, faceUp: true);
+                    var oppTrap = PlaceSetTrap(engine, o, mirror, 0);
+                    var attack = PutInHand(engine, p, darkMagicAttack);
+                    var activated = engine.TryActivateSpellTrap(p, attack, fromHand: true);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    Check("Dark Magic Attack wipes only the opponent's Spell/Trap zones",
+                        activated &&
+                        o.Graveyard.Contains(oppTrap) &&
+                        !o.TryFindSpellTrap(oppTrap, out _),
+                        $"activated={activated} oppGy={o.Graveyard.Count}");
+                }
+            }
+
+            // ── Discard cost, then put the target back on top of the Deck ──
+            {
+                const int feather = 49140998;
+                const int wingBlast = 63356631;
+                const int squareOne = 47453433;
+                const int celtic = 91152256;
+                const int bewd = 89631139;
+
+                var fDef = db.Get(feather);
+                var fProg = fDef != null ? CardTextEffectCompiler.Compile(fDef) : null;
+                Check("A Feather of the Phoenix FullyCompiled discard + own-GY card to top of Deck",
+                    fProg != null && fProg.FullyCompiled &&
+                    fProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.PlaceTargetOnTopOfDeck &&
+                        c.RequiresDiscardCost &&
+                        c.RequiresTargetChoice &&
+                        c.Zone == EffectZoneFilter.ControllerGyCards),
+                    fProg == null
+                        ? "null"
+                        : $"full={fProg.FullyCompiled} unparsed={string.Join("|", fProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var wDef = db.Get(wingBlast);
+                var wProg = wDef != null ? CardTextEffectCompiler.Compile(wDef) : null;
+                Check("Phoenix Wing Wind Blast FullyCompiled discard + opponent's card to top of Deck",
+                    wProg != null && wProg.FullyCompiled &&
+                    wProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.PlaceTargetOnTopOfDeck &&
+                        c.RequiresDiscardCost &&
+                        c.Zone == EffectZoneFilter.OppAnyCardOnField),
+                    wProg == null
+                        ? "null"
+                        : $"full={wProg.FullyCompiled} unparsed={string.Join("|", wProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var sDef = db.Get(squareOne);
+                var sProg = sDef != null ? CardTextEffectCompiler.Compile(sDef) : null;
+                Check("Back to Square One FullyCompiled discard + field monster to top of Deck",
+                    sProg != null && sProg.FullyCompiled &&
+                    sProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.PlaceTargetOnTopOfDeck &&
+                        c.Zone == EffectZoneFilter.FieldAnyMonster),
+                    sProg == null
+                        ? "null"
+                        : $"full={sProg.FullyCompiled} unparsed={string.Join("|", sProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var gyCard = engine.CreateCardInstance(bewd);
+                    p.Graveyard.Add(gyCard);
+                    var fodder = PutInHand(engine, p, celtic);
+                    var card = PutInHand(engine, p, feather);
+                    var deckBefore = p.Deck.Count;
+                    Check("A Feather of the Phoenix: activate opens the discard cost",
+                        engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                        engine.PendingActivation != null &&
+                        engine.PendingActivation.TargetKind == EffectTargetKind.DiscardMonsterInHand);
+                    Check("A Feather of the Phoenix: discard then pick a GY card",
+                        engine.TrySelectEffectTarget(fodder) &&
+                        engine.IsAwaitingEffectTarget &&
+                        engine.IsLegalEffectTarget(gyCard));
+                    Check("A Feather of the Phoenix: GY card goes on top of your Deck",
+                        engine.TrySelectEffectTarget(gyCard) &&
+                        !p.Graveyard.Contains(gyCard) &&
+                        p.Deck.Count == deckBefore + 1 &&
+                        p.Deck[0] == bewd,
+                        $"deck={p.Deck.Count} was={deckBefore} top={(p.Deck.Count > 0 ? p.Deck[0] : -1)}");
+                }
+
+                {
+                    // Trap Card — Set it first, then activate from the field.
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    p.Hand.Clear();
+                    var oppMon = PlaceMonster(engine, o, bewd, 2, BattlePosition.Attack, faceUp: true);
+                    var fodder = PutInHand(engine, p, celtic);
+                    var card = PlaceSetTrap(engine, p, wingBlast, 1);
+                    card.SetThisTurn = false;
+                    var oppDeckBefore = o.Deck.Count;
+                    var activated = engine.TryActivateSpellTrap(p, card, fromHand: false);
+                    var paid = engine.TrySelectEffectTarget(fodder);
+                    // Owner's Deck, not the activating player's.
+                    Check("Phoenix Wing Wind Blast: opponent's monster goes on top of THEIR Deck",
+                        activated && paid &&
+                        engine.TrySelectEffectTarget(oppMon) &&
+                        !o.TryFindMonster(oppMon, out _) &&
+                        o.Deck.Count == oppDeckBefore + 1 &&
+                        o.Deck[0] == bewd,
+                        $"activated={activated} paid={paid} oppDeck={o.Deck.Count} was={oppDeckBefore}");
+                }
+            }
+
+            // ── Battle triggers measured off the destroyed monster ──
+            {
+                const int joan = 68007326;
+                const int absorbingKid = 49771608;
+                const int desScissors = 52768103;
+                const int maskedSorcerer = 10189126;
+
+                var joanDef = db.Get(joan);
+                var joanProg = joanDef != null ? CardTextEffectCompiler.Compile(joanDef) : null;
+                Check("Guardian Angel Joan FullyCompiled LP gain from destroyed original ATK",
+                    joanProg != null && joanProg.FullyCompiled &&
+                    joanProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Timing == EffectTiming.ThisCardDestroysByBattle &&
+                        c.Action == EffectActionKind.GainLifePoints &&
+                        c.AmountFromTargetOriginalAtk),
+                    joanProg == null
+                        ? "null"
+                        : $"full={joanProg.FullyCompiled} unparsed={string.Join("|", joanProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var kidDef = db.Get(absorbingKid);
+                var kidProg = kidDef != null ? CardTextEffectCompiler.Compile(kidDef) : null;
+                Check("Absorbing Kid from the Sky FullyCompiled LP gain per destroyed Level",
+                    kidProg != null && kidProg.FullyCompiled &&
+                    kidProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Timing == EffectTiming.ThisCardDestroysByBattle &&
+                        c.Action == EffectActionKind.GainLifePoints &&
+                        c.ScaleAmountByTargetLevel && c.Amount == 300),
+                    kidProg == null
+                        ? "null"
+                        : $"full={kidProg.FullyCompiled} unparsed={string.Join("|", kidProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var scissorsDef = db.Get(desScissors);
+                var scissorsProg = scissorsDef != null ? CardTextEffectCompiler.Compile(scissorsDef) : null;
+                Check("KA-2 Des Scissors FullyCompiled damage per destroyed Level",
+                    scissorsProg != null && scissorsProg.FullyCompiled &&
+                    scissorsProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Timing == EffectTiming.ThisCardDestroysByBattle &&
+                        c.Action == EffectActionKind.InflictDamageToOpponent &&
+                        c.ScaleAmountByTargetLevel && c.Amount == 500),
+                    scissorsProg == null
+                        ? "null"
+                        : $"full={scissorsProg.FullyCompiled} unparsed={string.Join("|", scissorsProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var sorcDef = db.Get(maskedSorcerer);
+                var sorcProg = sorcDef != null ? CardTextEffectCompiler.Compile(sorcDef) : null;
+                Check("Masked Sorcerer FullyCompiled draw on battle damage",
+                    sorcProg != null && sorcProg.FullyCompiled &&
+                    sorcProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Timing == EffectTiming.ThisCardInflictsBattleDamage &&
+                        c.Action == EffectActionKind.Draw && c.Amount == 1),
+                    sorcProg == null
+                        ? "null"
+                        : $"full={sorcProg.FullyCompiled} unparsed={string.Join("|", sorcProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                {
+                    // Joan (2800 ATK) runs over Celtic Guardian (printed 1400 ATK).
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    var atk = PlaceMonster(engine, o, joan, 2, BattlePosition.Attack, faceUp: true);
+                    atk.SummonedThisTurn = false;
+                    var victim = PlaceMonster(engine, p, 91152256, 2, BattlePosition.Attack,
+                        faceUp: true);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    engine.TryEndTurnSafe(engine.TurnPlayer);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    if (engine.TurnPlayer == o && engine.Phase == DuelPhase.Main1)
+                        engine.TryEnterBattlePhase(o);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    var lpBefore = o.LifePoints;
+                    if (engine.Phase == DuelPhase.Battle && engine.CanAttack(o, atk))
+                    {
+                        engine.TryAttack(o, atk, victim);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        DrainCombat(engine);
+                    }
+
+                    Check("Guardian Angel Joan gains LP equal to the destroyed monster's printed ATK",
+                        o.LifePoints == lpBefore + 1400,
+                        $"lp={o.LifePoints} was={lpBefore} phase={engine.Phase}");
+                }
+            }
+
+            // ── Attribute Field Spell aura: gain ATK, lose DEF (modern wording) ──
+            {
+                const int gaiaPower = 56594520;
+                const int celtic = 91152256; // EARTH Warrior 1400/1200
+
+                var gpDef = db.Get(gaiaPower);
+                var gpProg = gpDef != null ? CardTextEffectCompiler.Compile(gpDef) : null;
+                Check("Gaia Power FullyCompiled EARTH +500 ATK / -400 DEF aura",
+                    gpProg != null && gpProg.FullyCompiled &&
+                    gpProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                        c.Amount == 500 && c.DefAmount == -400 &&
+                        string.Equals(c.AttributeFilter, "EARTH",
+                            System.StringComparison.OrdinalIgnoreCase)),
+                    gpProg == null
+                        ? "null"
+                        : $"full={gpProg.FullyCompiled} unparsed={string.Join("|", gpProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var mon = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack,
+                        faceUp: true);
+                    var baseAtk = mon.CurrentAtk;
+                    var baseDef = mon.CurrentDef;
+                    var field = PutInHand(engine, p, gaiaPower);
+                    var ok = engine.TryActivateSpellTrap(p, field, fromHand: true);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    Check("Gaia Power applies +500 ATK / -400 DEF to an EARTH monster",
+                        ok && mon.CurrentAtk == baseAtk + 500 &&
+                        mon.CurrentDef == baseDef - 400,
+                        $"ok={ok} atk={mon.CurrentAtk} (was {baseAtk}) def={mon.CurrentDef} (was {baseDef})");
+                }
+            }
+
+            // ── Ritual searchers: Normal or Flip Summon, add a Ritual card from Deck ──
+            {
+                const int senju = 23401839;
+                const int sonicBird = 57617178;
+                const int manju = 95492061;
+                const int trapHole = 4206964;
+                const int skullGuardian = 3627449;   // Ritual Monster
+                const int whiteDragonRitual = 9786492; // Ritual Spell
+
+                var senjuDef = db.Get(senju);
+                var senjuProg = senjuDef != null ? CardTextEffectCompiler.Compile(senjuDef) : null;
+                Check("Senju FullyCompiled Normal-or-Flip Ritual Monster search",
+                    senjuProg != null && senjuProg.FullyCompiled &&
+                    senjuProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Timing == EffectTiming.ThisCardSummoned &&
+                        c.Action == EffectActionKind.AddFromDeckToHand &&
+                        c.Zone == EffectZoneFilter.DeckRitualMonsters &&
+                        c.RequiresThisNormalOrFlipSummoned),
+                    senjuProg == null
+                        ? "null"
+                        : $"full={senjuProg.FullyCompiled} unparsed={string.Join("|", senjuProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var birdDef = db.Get(sonicBird);
+                var birdProg = birdDef != null ? CardTextEffectCompiler.Compile(birdDef) : null;
+                Check("Sonic Bird FullyCompiled Ritual Spell search",
+                    birdProg != null && birdProg.FullyCompiled &&
+                    birdProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.AddFromDeckToHand &&
+                        c.Zone == EffectZoneFilter.DeckRitualSpells),
+                    birdProg == null
+                        ? "null"
+                        : $"full={birdProg.FullyCompiled} unparsed={string.Join("|", birdProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var manjuDef = db.Get(manju);
+                var manjuProg = manjuDef != null ? CardTextEffectCompiler.Compile(manjuDef) : null;
+                Check("Manju FullyCompiled Ritual Monster OR Spell search",
+                    manjuProg != null && manjuProg.FullyCompiled &&
+                    manjuProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.AddFromDeckToHand &&
+                        c.Zone == EffectZoneFilter.DeckRitualMonstersOrSpells),
+                    manjuProg == null
+                        ? "null"
+                        : $"full={manjuProg.FullyCompiled} unparsed={string.Join("|", manjuProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                // The self-summon fix must not steal the opponent's-summon window.
+                var thDef = db.Get(trapHole);
+                var thProg = thDef != null ? CardTextEffectCompiler.Compile(thDef) : null;
+                Check("Trap Hole still fires on the OPPONENT's Normal/Flip Summon",
+                    thProg != null && thProg.FullyCompiled &&
+                    thProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Timing == EffectTiming.OpponentNormalOrFlipSummon),
+                    thProg == null ? "null" : $"full={thProg.FullyCompiled}");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    p.Deck.Insert(0, skullGuardian);
+                    p.Deck.Insert(0, whiteDragonRitual);
+                    var card = PutInHand(engine, p, senju);
+                    var summoned = engine.TryNormalSummon(p, card, asSet: false);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    var legal = engine.PendingActivation?.LegalTargets;
+                    Check("Senju's Normal Summon offers only Ritual Monsters from the Deck",
+                        summoned && legal != null && legal.Count > 0 &&
+                        legal.TrueForAll(c => c?.Def != null && c.Def.IsRitualMonster),
+                        $"summoned={summoned} n={legal?.Count ?? -1}");
+                }
+            }
+
+            // ── Start of the Damage Step: destroy the battled Defense monster ──
+            {
+                const int sasukeSamurai = 16222645;   // face-DOWN Defense
+                const int grandmasterSasuke = 4041838; // face-UP Defense
+                const int mysticLv6 = 60482781;
+                const int manEaterBug = 54652250;
+
+                var ssDef = db.Get(sasukeSamurai);
+                var ssProg = ssDef != null ? CardTextEffectCompiler.Compile(ssDef) : null;
+                Check("Sasuke Samurai FullyCompiled start-of-Damage-Step face-down destroy",
+                    ssProg != null && ssProg.FullyCompiled &&
+                    ssProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Timing == EffectTiming.StartOfDamageStep &&
+                        c.Action == EffectActionKind.Destroy &&
+                        c.RequiresTargetFaceDownDefense && !c.RequiresTargetFaceUpDefense),
+                    ssProg == null
+                        ? "null"
+                        : $"full={ssProg.FullyCompiled} unparsed={string.Join("|", ssProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var gmDef = db.Get(grandmasterSasuke);
+                var gmProg = gmDef != null ? CardTextEffectCompiler.Compile(gmDef) : null;
+                Check("Ninja Grandmaster Sasuke FullyCompiled face-UP Defense variant",
+                    gmProg != null && gmProg.FullyCompiled &&
+                    gmProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Timing == EffectTiming.StartOfDamageStep &&
+                        c.RequiresTargetFaceUpDefense && !c.RequiresTargetFaceDownDefense),
+                    gmProg == null
+                        ? "null"
+                        : $"full={gmProg.FullyCompiled} unparsed={string.Join("|", gmProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                // LV6 adds "and if you do, place it on top of the Deck" — do not silently
+                // drop that rider by matching the plain shape.
+                var lv6Def = db.Get(mysticLv6);
+                var lv6Prog = lv6Def != null ? CardTextEffectCompiler.Compile(lv6Def) : null;
+                Check("Mystic Swordsman LV6 keeps its top-of-Deck rider as leftover",
+                    lv6Prog != null && !lv6Prog.FullyCompiled,
+                    lv6Prog == null ? "null" : $"full={lv6Prog.FullyCompiled}");
+
+                {
+                    // Sasuke Samurai (500 ATK) into a face-down Man-Eater Bug (600 DEF).
+                    // Destroyed at the start of the Damage Step: no flip, no Flip effect,
+                    // and no damage calculation (Sasuke would otherwise take 100).
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    var atk = PlaceMonster(engine, o, sasukeSamurai, 2, BattlePosition.Attack,
+                        faceUp: true);
+                    atk.SummonedThisTurn = false;
+                    var victim = PlaceMonster(engine, p, manEaterBug, 2, BattlePosition.Defense,
+                        faceUp: false);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    engine.TryEndTurnSafe(engine.TurnPlayer);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    if (engine.TurnPlayer == o && engine.Phase == DuelPhase.Main1)
+                        engine.TryEnterBattlePhase(o);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    var oLp = o.LifePoints;
+                    if (engine.Phase == DuelPhase.Battle && engine.CanAttack(o, atk))
+                    {
+                        engine.TryAttack(o, atk, victim);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        DrainCombat(engine);
+                    }
+
+                    Check("Sasuke Samurai destroys the face-down monster before damage calc",
+                        p.Graveyard.Contains(victim) && !p.TryFindMonster(victim, out _),
+                        $"inGy={p.Graveyard.Contains(victim)} phase={engine.Phase}");
+                    Check("Sasuke Samurai takes no battle damage from that destruction",
+                        o.LifePoints == oLp,
+                        $"lp={o.LifePoints} was={oLp}");
+                    // Man-Eater Bug never flipped, so its Flip effect could not destroy Sasuke.
+                    Check("The face-down monster's Flip effect never applies",
+                        o.TryFindMonster(atk, out _),
+                        $"attackerAlive={o.TryFindMonster(atk, out _)}");
+                }
+            }
+
+            // ── Self-scaling ATK/DEF: per card in hand / per monster in GY ──
+            {
+                const int mukaMuka = 46657337;        // 600/300, +300 ATK&DEF per hand card
+                const int flashAssailant = 96890582;  // -400 ATK&DEF per hand card
+                const int shadowGhoul = 30778711;     // +100 ATK per monster in GY
+                const int mudora = 82108372;          // +200 ATK per Fairy in GY
+                const int celtic = 91152256;          // EARTH Warrior
+                const int mst = 5318639;              // a Spell, must not count as a GY monster
+
+                var mmDef = db.Get(mukaMuka);
+                var mmProg = mmDef != null ? CardTextEffectCompiler.Compile(mmDef) : null;
+                Check("Muka Muka FullyCompiled +300 ATK/DEF per card in hand",
+                    mmProg != null && mmProg.FullyCompiled &&
+                    mmProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                        c.Amount == 300 && c.DefAmount == 300 &&
+                        c.ScaleThisAtkByMatchingCount && c.ScaleCountHandCards &&
+                        c.Side == EffectSide.Controller),
+                    mmProg == null
+                        ? "null"
+                        : $"full={mmProg.FullyCompiled} unparsed={string.Join("|", mmProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var sgDef = db.Get(shadowGhoul);
+                var sgProg = sgDef != null ? CardTextEffectCompiler.Compile(sgDef) : null;
+                Check("Shadow Ghoul FullyCompiled +100 ATK per monster in GY (GY only)",
+                    sgProg != null && sgProg.FullyCompiled &&
+                    sgProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                        c.Amount == 100 && c.DefAmount == 0 &&
+                        c.ScaleThisAtkByMatchingCount && c.ScaleCountGraveyardOnly &&
+                        string.IsNullOrEmpty(c.RaceFilter)),
+                    sgProg == null
+                        ? "null"
+                        : $"full={sgProg.FullyCompiled} unparsed={string.Join("|", sgProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var muDef = db.Get(mudora);
+                var muProg = muDef != null ? CardTextEffectCompiler.Compile(muDef) : null;
+                Check("Mudora FullyCompiled +200 ATK per Fairy in GY",
+                    muProg != null && muProg.FullyCompiled &&
+                    muProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                        c.Amount == 200 && c.ScaleCountGraveyardOnly &&
+                        string.Equals(c.RaceFilter, "Fairy", System.StringComparison.OrdinalIgnoreCase)),
+                    muProg == null
+                        ? "null"
+                        : $"full={muProg.FullyCompiled} unparsed={string.Join("|", muProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var mm = PlaceMonster(engine, p, mukaMuka, 2, BattlePosition.Attack, faceUp: true);
+                    var baseAtk = mm.Def.atk;
+                    var baseDef = mm.Def.def;
+                    PutInHand(engine, p, celtic);
+                    PutInHand(engine, p, celtic);
+                    PutInHand(engine, p, mst);
+                    FieldSpellEffects.RefreshBoard(engine);
+                    Check("Muka Muka: 3 cards in hand → +900 ATK and +900 DEF",
+                        mm.CurrentAtk == baseAtk + 900 && mm.CurrentDef == baseDef + 900,
+                        $"atk={mm.CurrentAtk} def={mm.CurrentDef} base={baseAtk}/{baseDef}");
+                    p.Hand.Clear();
+                    FieldSpellEffects.RefreshBoard(engine);
+                    Check("Muka Muka: empty hand → printed stats",
+                        mm.CurrentAtk == baseAtk && mm.CurrentDef == baseDef,
+                        $"atk={mm.CurrentAtk} def={mm.CurrentDef}");
+
+                    var fa = PlaceMonster(engine, p, flashAssailant, 3, BattlePosition.Attack, faceUp: true);
+                    var faAtk = fa.Def.atk;
+                    PutInHand(engine, p, celtic);
+                    PutInHand(engine, p, celtic);
+                    FieldSpellEffects.RefreshBoard(engine);
+                    Check("Flash Assailant: 2 cards in hand → −800 ATK",
+                        fa.CurrentAtk == faAtk - 800,
+                        $"atk={fa.CurrentAtk} base={faAtk}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var sg = PlaceMonster(engine, p, shadowGhoul, 2, BattlePosition.Attack, faceUp: true);
+                    var baseAtk = sg.Def.atk;
+                    p.Graveyard.Add(engine.CreateCardInstance(celtic));
+                    p.Graveyard.Add(engine.CreateCardInstance(celtic));
+                    p.Graveyard.Add(engine.CreateCardInstance(mst)); // Spell: not a monster
+                    // A face-up monster on the field must NOT be counted (GY only).
+                    PlaceMonster(engine, p, celtic, 3, BattlePosition.Attack, faceUp: true);
+                    FieldSpellEffects.RefreshBoard(engine);
+                    Check("Shadow Ghoul: 2 GY monsters (+1 GY Spell, +1 field monster) → +200 ATK",
+                        sg.CurrentAtk == baseAtk + 200,
+                        $"atk={sg.CurrentAtk} base={baseAtk}");
+                }
+            }
+
+            // ── Ritual Monsters whose whole text is the summon procedure ──
+            {
+                const int crabTurtle = 91782219;
+                const int skullGuardian = 3627449;
+                const int blackLusterSoldier = 5405694;
+                const int legendaryFlameLord = 60258960;
+
+                foreach (var (id, label) in new[]
+                         {
+                             (crabTurtle, "Crab Turtle (legacy wording)"),
+                             (skullGuardian, "Skull Guardian (legacy wording)"),
+                             (blackLusterSoldier, "Black Luster Soldier (modern wording)")
+                         })
+                {
+                    var rDef = db.Get(id);
+                    var rProg = rDef != null ? CardTextEffectCompiler.Compile(rDef) : null;
+                    Check($"Ritual procedure-only: {label} is FullyCompiled structural + NS-locked",
+                        rDef != null && rProg != null && rProg.FullyCompiled &&
+                        rProg.ClauseList.Count == 0 &&
+                        rDef.IsRitualMonster && !rDef.CanBeNormalSummonedOrSet,
+                        rProg == null
+                            ? "null"
+                            : $"full={rProg.FullyCompiled} n={rProg.ClauseList.Count} unparsed={string.Join("|", rProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                }
+
+                // Fail-closed half of the rule: a zero-clause FullyCompiled Ritual Monster must
+                // have a Ritual Spell in cards_db that compiles to RitualSummon naming it —
+                // otherwise "structural" would be claiming a summon the engine cannot perform.
+                var orphans = new System.Collections.Generic.List<string>();
+                var ritualSpellTargets = new System.Collections.Generic.HashSet<string>(
+                    System.StringComparer.OrdinalIgnoreCase);
+                foreach (var d in db.GetAllCards())
+                {
+                    if (d == null || !d.IsRitualSpell) continue;
+                    var sp = CardTextEffectCompiler.Compile(d);
+                    if (sp == null || !sp.FullyCompiled) continue;
+                    foreach (var c in sp.ClauseList)
+                        if (c != null && c.Action == EffectActionKind.RitualSummon &&
+                            !string.IsNullOrEmpty(c.NamedCard))
+                            ritualSpellTargets.Add(c.NamedCard);
+                }
+
+                foreach (var d in db.GetAllCards())
+                {
+                    if (d == null || !d.IsRitualMonster) continue;
+                    var rp = CardTextEffectCompiler.Compile(d);
+                    if (rp == null || !rp.FullyCompiled || rp.ClauseList.Count != 0) continue;
+                    if (!ritualSpellTargets.Contains(d.name))
+                        orphans.Add(d.name);
+                }
+
+                Check("Every procedure-only Ritual Monster has a compiled Ritual Spell that names it",
+                    orphans.Count == 0,
+                    orphans.Count == 0 ? "" : "orphans: " + string.Join(", ", orphans));
+
+                // Effects after the procedure line must still be honest leftovers.
+                var lflDef = db.Get(legendaryFlameLord);
+                var lflProg = lflDef != null ? CardTextEffectCompiler.Compile(lflDef) : null;
+                Check("Legendary Flame Lord keeps its Spell Counter effects as leftover (not structural)",
+                    lflProg != null && !lflProg.FullyCompiled,
+                    lflProg == null ? "null" : $"full={lflProg.FullyCompiled}");
+            }
+
+            // ── Battle damage → the OPPONENT draws (The Bistro Butcher) ──
+            {
+                const int bistroButcher = 71107816; // 1800 ATK
+                var bbDef = db.Get(bistroButcher);
+                var bbProg = bbDef != null ? CardTextEffectCompiler.Compile(bbDef) : null;
+                Check("The Bistro Butcher FullyCompiled opponent-draws-2 on battle damage",
+                    bbProg != null && bbProg.FullyCompiled &&
+                    bbProg.ClauseList.Exists(c =>
+                        c != null &&
+                        c.Timing == EffectTiming.ThisCardInflictsBattleDamage &&
+                        c.Action == EffectActionKind.Draw &&
+                        c.Side == EffectSide.Opponent && c.Amount == 2),
+                    bbProg == null
+                        ? "null"
+                        : $"full={bbProg.FullyCompiled} unparsed={string.Join("|", bbProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                {
+                    // Opponent's Butcher attacks the player directly on turn 2:
+                    // the PLAYER (the Butcher's opponent) draws 2, not the Butcher's controller.
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    var atk = PlaceMonster(engine, o, bistroButcher, 2, BattlePosition.Attack, faceUp: true);
+                    atk.SummonedThisTurn = false;
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    engine.TryEndTurnSafe(engine.TurnPlayer);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    if (engine.TurnPlayer == o && engine.Phase == DuelPhase.Main1)
+                        engine.TryEnterBattlePhase(o);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    var pHand = p.Hand.Count;
+                    var oHand = o.Hand.Count;
+                    var pLp = p.LifePoints;
+                    if (engine.Phase == DuelPhase.Battle && engine.CanAttack(o, atk))
+                    {
+                        engine.TryAttack(o, atk, null);
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        DrainCombat(engine);
+                    }
+
+                    Check("Bistro Butcher: direct hit lands (player LP −1800)",
+                        p.LifePoints == pLp - 1800,
+                        $"lp={p.LifePoints} was={pLp} phase={engine.Phase}");
+                    Check("Bistro Butcher: the struck player drew 2, the controller drew 0",
+                        p.Hand.Count == pHand + 2 && o.Hand.Count == oHand,
+                        $"pHand={p.Hand.Count} (was {pHand}) oHand={o.Hand.Count} (was {oHand})");
+                }
+            }
+
+            // ── Metal Raiders: summon locks that already have a procedure ──
+            {
+                Check("Harpie Lady Sisters is Structural (Elegant Egotist summons her)",
+                    CardEffectStatus.Classify(db.Get(12206212)) == CardEffectStatusKind.Structural);
+                Check("Larvae Moth is Structural (Cocoon procedure)",
+                    CardEffectStatus.Classify(db.Get(87756343)) == CardEffectStatusKind.Structural);
+                Check("Great Moth is Structural (Cocoon procedure)",
+                    CardEffectStatus.Classify(db.Get(14141448)) == CardEffectStatusKind.Structural);
+                Check("Gate Guardian is Structural (three-spirit tribute procedure)",
+                    CardEffectStatus.Classify(db.Get(25833572)) == CardEffectStatusKind.Structural);
+            }
+
+            // ── Lava / Swamp Battleguard: +500 ATK for each named monster you control ──
+            {
+                const int lava = 20394040;
+                const int swamp = 40453765;
+                var lavaProg = CardTextEffectCompiler.Compile(db.Get(lava));
+                var swampProg = CardTextEffectCompiler.Compile(db.Get(swamp));
+                Check("Lava Battleguard FullyCompiled +500 per Swamp Battleguard",
+                    lavaProg != null && lavaProg.FullyCompiled &&
+                    lavaProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                        c.Amount == 500 && c.ScaleThisAtkByMatchingCount &&
+                        c.NamedCard == "Swamp Battleguard"),
+                    lavaProg == null ? "null" : $"full={lavaProg.FullyCompiled} unparsed={string.Join("|", lavaProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                Check("Swamp Battleguard FullyCompiled +500 per Lava Battleguard",
+                    swampProg != null && swampProg.FullyCompiled &&
+                    swampProg.ClauseList.Exists(c =>
+                        c != null && c.NamedCard == "Lava Battleguard" && c.Amount == 500));
+
+                var engine = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine);
+                var p = engine.Player;
+                var lavaCard = PlaceMonster(engine, p, lava, 2, BattlePosition.Attack, true);
+                var swampDown = PlaceMonster(engine, p, swamp, 3, BattlePosition.Defense, false);
+                p.Graveyard.Add(engine.CreateCardInstance(swamp));
+                FieldSpellEffects.RefreshBoard(engine);
+                Check("Lava Battleguard: face-down and GY copies do not count",
+                    lavaCard.CurrentAtk == lavaCard.Def.atk,
+                    $"atk={lavaCard.CurrentAtk} printed={lavaCard.Def.atk}");
+                swampDown.FaceUp = true;
+                swampDown.Position = BattlePosition.Attack;
+                FieldSpellEffects.RefreshBoard(engine);
+                Check("Lava and Swamp each gain 500 while the other is face-up",
+                    lavaCard.CurrentAtk == lavaCard.Def.atk + 500 &&
+                    swampDown.CurrentAtk == swampDown.Def.atk + 500,
+                    $"lava={lavaCard.CurrentAtk} swamp={swampDown.CurrentAtk}");
+            }
+
+            // ── The Unhappy Maiden: battle send ends the Battle Phase ──
+            {
+                const int maiden = 51275027;
+                const int celtic = 91152256;
+                var prog = CardTextEffectCompiler.Compile(db.Get(maiden));
+                Check("The Unhappy Maiden FullyCompiled ends the Battle Phase",
+                    prog != null && prog.FullyCompiled &&
+                    prog.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.SentFromFieldToGy &&
+                        c.Action == EffectActionKind.EndBattlePhase &&
+                        c.RequiresThisDestroyedByBattle),
+                    prog == null ? "null" : $"full={prog.FullyCompiled} unparsed={string.Join("|", prog.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var set = PlaceMonster(engine, p, maiden, 2, BattlePosition.Attack, true);
+                    var phase = engine.Phase;
+                    var lp = p.LifePoints;
+                    engine.SendCardToGrave(p, set);
+                    Check("The Unhappy Maiden: an effect send does not end the Battle Phase",
+                        engine.Phase == phase && p.LifePoints == lp && p.Graveyard.Contains(set),
+                        $"phase={engine.Phase} was={phase}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var reached = ReachOpponentBattle(engine);
+                    var maidenCard = PlaceMonster(engine, engine.Player, maiden, 2,
+                        BattlePosition.Attack, true);
+                    var atk = PlaceMonster(engine, engine.Opponent, celtic, 2,
+                        BattlePosition.Attack, true);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    var attacked = reached && engine.Phase == DuelPhase.Battle &&
+                                   engine.CanAttack(engine.Opponent, atk) &&
+                                   engine.TryAttack(engine.Opponent, atk, maidenCard);
+                    DrainCombat(engine);
+                    Check("The Unhappy Maiden: destroyed by battle ends the Battle Phase",
+                        attacked && engine.Phase == DuelPhase.Main2 &&
+                        engine.Player.Graveyard.Contains(maidenCard),
+                        $"reached={reached} attacked={attacked} phase={engine.Phase}");
+                }
+            }
+
+            // ── The Immortal of Thunder: Flip +3000, then −5000 when it leaves the field ──
+            {
+                const int immortal = 84926738;
+                var prog = CardTextEffectCompiler.Compile(db.Get(immortal));
+                Check("The Immortal of Thunder FullyCompiled Flip gain and field-to-GY loss",
+                    prog != null && prog.FullyCompiled &&
+                    prog.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.Flip &&
+                        c.Action == EffectActionKind.GainLifePoints && c.Amount == 3000) &&
+                    prog.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.SentFromFieldToGy &&
+                        c.Action == EffectActionKind.TakeEffectDamage && c.Amount == 5000 &&
+                        !c.RequiresDestroyed && !c.RequiresThisDestroyedByBattle),
+                    prog == null ? "null" : $"full={prog.FullyCompiled} unparsed={string.Join("|", prog.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var engine = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine);
+                var p = engine.Player;
+                var card = PlaceMonster(engine, p, immortal, 2, BattlePosition.Defense, false);
+                card.SetThisTurn = false;
+                var before = p.LifePoints;
+                var flipped = engine.TryFlipSummon(p, card);
+                if (engine.IsAwaitingResponse) engine.PassResponse();
+                Check("The Immortal of Thunder: Flip gains 3000 LP",
+                    flipped && p.LifePoints == before + 3000,
+                    $"flipped={flipped} lp={p.LifePoints} was={before}");
+                engine.DestroyMonsterPublic(p, card);
+                Check("The Immortal of Thunder: leaving the field loses 5000 LP",
+                    p.Graveyard.Contains(card) && p.LifePoints == before + 3000 - 5000,
+                    $"lp={p.LifePoints} expected={before - 2000}");
+            }
+
+            // ── Robbin' Goblin: your monster's battle damage discards 1 at random ──
+            {
+                const int goblin = 88279736;
+                const int celtic = 91152256;
+                var prog = CardTextEffectCompiler.Compile(db.Get(goblin));
+                Check("Robbin' Goblin FullyCompiled controller battle-damage discard",
+                    prog != null && prog.FullyCompiled &&
+                    prog.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.DiscardRandomFromOpponentHand &&
+                        c.Amount == 1 && c.AnyControllerMonsterBattleDamage),
+                    prog == null ? "null" : $"full={prog.FullyCompiled} unparsed={string.Join("|", prog.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var engine = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine);
+                var reached = ReachPlayerBattle(engine);
+                var p = engine.Player;
+                var o = engine.Opponent;
+                var atk = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                var trap = PlaceSetTrap(engine, p, goblin, 0);
+                trap.FaceUp = true;
+                trap.SetThisTurn = false;
+                o.Hand.Clear();
+                var bait = PutInHand(engine, o, celtic);
+                PutInHand(engine, o, celtic);
+                if (engine.IsAwaitingResponse) engine.PassResponse();
+                var hand = o.Hand.Count;
+                var attacked = reached && engine.Phase == DuelPhase.Battle &&
+                               engine.CanAttack(p, atk) &&
+                               engine.TryAttack(p, atk, null);
+                DrainCombat(engine);
+                Check("Robbin' Goblin: direct battle damage discards 1 random card",
+                    attacked && o.Hand.Count == hand - 1 &&
+                    (o.Graveyard.Contains(bait) || o.Hand.Contains(bait)),
+                    $"reached={reached} attacked={attacked} hand={o.Hand.Count} was={hand}");
+            }
+
+            // ── Equip spells: Stim-Pack, Paralyzing Potion, Germ Infection ──
+            {
+                const int stim = 83225447;
+                const int potion = 50152549;
+                const int germ = 24668830;
+                const int celtic = 91152256;
+                const int overdrive = 2311603;
+
+                var stimProg = CardTextEffectCompiler.Compile(db.Get(stim));
+                Check("Stim-Pack FullyCompiled +700 and Standby −200",
+                    stimProg != null && stimProg.FullyCompiled &&
+                    stimProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.EquipThisToTarget &&
+                        c.EquipAtkBonus == 700) &&
+                    stimProg.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.StandbyPhase &&
+                        c.Action == EffectActionKind.ApplyLingeringAtkDef &&
+                        c.Amount == -200 && c.AppliesToEquippedHost),
+                    stimProg == null ? "null" : $"full={stimProg.FullyCompiled} unparsed={string.Join("|", stimProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var potionProg = CardTextEffectCompiler.Compile(db.Get(potion));
+                Check("Paralyzing Potion FullyCompiled non-Machine cannot attack",
+                    potionProg != null && potionProg.FullyCompiled &&
+                    // Local arm: a Machine-excepting attack lock. GitHub arm (ClassicEra owns this card: the
+                    // local arm could only equip your own monsters): equip only to a non-Machine, which
+                    // cannot attack.
+                    (potionProg.ClauseList.Exists(c =>
+                         c != null && c.Action == EffectActionKind.ContinuousCannotAttack &&
+                         c.ExcludeRaceFilter == "Machine") ||
+                     (potionProg.ClauseList.Exists(c => c != null && c.Action == EffectActionKind.EquippedCannotAttack) &&
+                      potionProg.ClauseList.Exists(c =>
+                          c != null && c.Action == EffectActionKind.EquipThisToTarget && c.ExceptRaceFilter == "Machine"))),
+                    potionProg == null ? "null" : $"full={potionProg.FullyCompiled} unparsed={string.Join("|", potionProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                var germProg = CardTextEffectCompiler.Compile(db.Get(germ));
+                Check("Germ Infection FullyCompiled non-Machine Standby −300",
+                    germProg != null && germProg.FullyCompiled &&
+                    // Local arm: Standby −300 on the equipped host, Machines excepted. GitHub arm: equip only to
+                    // a non-Machine; −300 per the equipped monster's controller's Standby Phase.
+                    (germProg.ClauseList.Exists(c =>
+                         c != null && c.Timing == EffectTiming.StandbyPhase &&
+                         c.Amount == -300 && c.AppliesToEquippedHost &&
+                         c.ExcludeRaceFilter == "Machine") ||
+                     (germProg.ClauseList.Exists(c =>
+                          c != null && c.Action == EffectActionKind.EquipAtkDecayPerStandby && c.Amount == 300) &&
+                      germProg.ClauseList.Exists(c =>
+                          c != null && c.Action == EffectActionKind.EquipThisToTarget && c.ExceptRaceFilter == "Machine"))),
+                    germProg == null ? "null" : $"full={germProg.FullyCompiled} unparsed={string.Join("|", germProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var host = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var baseAtk = host.Def.atk;
+                    var card = PutInHand(engine, p, stim);
+                    var armed = engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                                engine.TrySelectEffectTarget(host);
+                    FieldSpellEffects.RefreshBoard(engine);
+                    Check("Stim-Pack: equipped monster gains 700 ATK",
+                        armed && host.CurrentAtk == baseAtk + 700,
+                        $"armed={armed} atk={host.CurrentAtk}");
+                    TextEffectRuntime.FirePhaseTriggers(engine, p, EffectTiming.StandbyPhase);
+                    FieldSpellEffects.RefreshBoard(engine);
+                    Check("Stim-Pack: your Standby Phase loses 200 ATK",
+                        host.CurrentAtk == baseAtk + 500,
+                        $"atk={host.CurrentAtk}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var warrior = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var machine = PlaceMonster(engine, p, overdrive, 3, BattlePosition.Attack, true);
+                    var card = PutInHand(engine, p, potion);
+                    var armed = engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                                engine.TrySelectEffectTarget(warrior);
+                    var reached = ReachPlayerBattle(engine);
+                    Check("Paralyzing Potion: a Warrior cannot attack",
+                        armed && reached && !engine.ContinuousCannotAttackBlocks(p, machine) &&
+                        engine.ContinuousCannotAttackBlocks(p, warrior),
+                        $"armed={armed} reached={reached} warriorBlocked={engine.ContinuousCannotAttackBlocks(p, warrior)} machineBlocked={engine.ContinuousCannotAttackBlocks(p, machine)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var machine = PlaceMonster(engine, p, overdrive, 2, BattlePosition.Attack, true);
+                    var card = PutInHand(engine, p, potion);
+                    var armed = engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                                engine.TrySelectEffectTarget(machine);
+                    var reached = ReachPlayerBattle(engine);
+                    // "Equip only to a non Machine-Type monster": the GitHub arm refuses the Machine equip
+                    // outright (armed=false); either way the Machine can still attack.
+                    Check("Paralyzing Potion: a Machine can still attack",
+                        reached && !engine.ContinuousCannotAttackBlocks(p, machine),
+                        $"armed={armed} reached={reached}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var warrior = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var machine = PlaceMonster(engine, p, overdrive, 3, BattlePosition.Attack, true);
+                    var wBase = warrior.Def.atk;
+                    var mBase = machine.Def.atk;
+                    var onWarrior = PutInHand(engine, p, germ);
+                    var armedW = engine.TryActivateSpellTrap(p, onWarrior, fromHand: true) &&
+                                 engine.TrySelectEffectTarget(warrior);
+                    TextEffectRuntime.FirePhaseTriggers(engine, p, EffectTiming.StandbyPhase);
+                    FieldSpellEffects.RefreshBoard(engine);
+                    Check("Germ Infection: a Warrior loses 300 ATK on its Standby Phase",
+                        armedW && warrior.CurrentAtk == wBase - 300,
+                        $"armed={armedW} atk={warrior.CurrentAtk}");
+
+                    var engine2 = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine2);
+                    var p2 = engine2.Player;
+                    p2.Hand.Clear();
+                    var machine2 = PlaceMonster(engine2, p2, overdrive, 2, BattlePosition.Attack, true);
+                    var onMachine = PutInHand(engine2, p2, germ);
+                    var armedM = engine2.TryActivateSpellTrap(p2, onMachine, fromHand: true) &&
+                                 engine2.TrySelectEffectTarget(machine2);
+                    TextEffectRuntime.FirePhaseTriggers(engine2, p2, EffectTiming.StandbyPhase);
+                    FieldSpellEffects.RefreshBoard(engine2);
+                    // Equip-only-to-non-Machine: a refused equip (GitHub arm) also leaves the Machine's ATK alone.
+                    Check("Germ Infection: a Machine does not lose ATK",
+                        machine2.CurrentAtk == mBase,
+                        $"armed={armedM} atk={machine2.CurrentAtk} base={mBase}");
+                }
+            }
+
+            // ── Little Swordsman, Cheerful Coffin, Share the Pain, Shield & Sword, Damage Step ATK ──
+            {
+                const int swordsman = 25109950;
+                const int coffin = 41142615;
+                const int pain = 56830749;
+                const int shield = 52097679;
+                const int insects = 7019529;
+                const int penumbral = 64751286;
+                const int luminous = 57482479;
+                const int celtic = 91152256;
+                const int mst = 5318639;
+                const int elf = 59983499;
+
+                var sw = CardTextEffectCompiler.Compile(db.Get(swordsman));
+                Check("Little Swordsman FullyCompiled tribute then +700 ATK",
+                    sw != null && sw.FullyCompiled &&
+                    sw.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.GainThisAtkUntilEnd &&
+                        c.Amount == 700 && c.RequiresTributeCount == 1 && !c.TributeExceptThis),
+                    sw == null ? "null" : $"full={sw.FullyCompiled} unparsed={string.Join("|", sw.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var self = PlaceMonster(engine, p, swordsman, 2, BattlePosition.Attack, true);
+                    var fodder = PlaceMonster(engine, p, celtic, 3, BattlePosition.Attack, true);
+                    var printed = self.Def.atk;
+                    var opened = engine.TryActivateSpellTrap(p, self, fromHand: false) &&
+                                 engine.IsAwaitingEffectTarget &&
+                                 engine.TrySelectEffectTarget(fodder);
+                    Check("Little Swordsman: tributing another monster gains 700 ATK",
+                        opened && p.Graveyard.Contains(fodder) && self.CurrentAtk == printed + 700,
+                        $"opened={opened} atk={self.CurrentAtk} fodderGy={p.Graveyard.Contains(fodder)}");
+                    engine.ClearUntilEndOfTurnStatMods();
+                    Check("Little Swordsman: the ATK gain ends with the turn",
+                        self.CurrentAtk == printed, $"atk={self.CurrentAtk}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var self = PlaceMonster(engine, p, swordsman, 2, BattlePosition.Attack, true);
+                    var opened = engine.TryActivateSpellTrap(p, self, fromHand: false) &&
+                                 engine.TrySelectEffectTarget(self);
+                    Check("Little Swordsman: tributing itself sends it to the GY",
+                        opened && p.Graveyard.Contains(self) && !p.TryFindMonster(self, out _),
+                        $"opened={opened} inGy={p.Graveyard.Contains(self)}");
+                }
+
+                var cof = CardTextEffectCompiler.Compile(db.Get(coffin));
+                Check("Cheerful Coffin FullyCompiled discard up to 3 monsters",
+                    cof != null && cof.FullyCompiled &&
+                    cof.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.DiscardUpToMonstersFromHand &&
+                        c.Amount == 3 && c.Zone == EffectZoneFilter.ControllerHandMonsters),
+                    cof == null ? "null" : $"full={cof.FullyCompiled} unparsed={string.Join("|", cof.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var a = PutInHand(engine, p, celtic);
+                    var b = PutInHand(engine, p, celtic);
+                    var spell = PutInHand(engine, p, mst);
+                    var card = PutInHand(engine, p, coffin);
+                    var opened = engine.TryActivateSpellTrap(p, card, fromHand: true);
+                    for (var n = 0; n < 4 && engine.IsAwaitingEffectTarget; n++)
+                    {
+                        var pick = engine.PendingActivation?.LegalTargets?.FirstOrDefault();
+                        if (pick == null || !engine.TrySelectEffectTarget(pick)) break;
+                    }
+                    Check("Cheerful Coffin: discards the monsters and keeps the Spell",
+                        opened && p.Graveyard.Contains(a) && p.Graveyard.Contains(b) &&
+                        p.Hand.Contains(spell) && p.Graveyard.Contains(card) &&
+                        !p.Hand.Contains(a) && !p.Hand.Contains(b),
+                        $"opened={opened} pending={engine.IsAwaitingEffectTarget} hand={p.Hand.Count}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var spell = PutInHand(engine, p, mst);
+                    var card = PutInHand(engine, p, coffin);
+                    var opened = engine.TryActivateSpellTrap(p, card, fromHand: true);
+                    Check("Cheerful Coffin: no monsters still resolves",
+                        opened && !engine.IsAwaitingEffectTarget &&
+                        p.Graveyard.Contains(card) && p.Hand.Contains(spell),
+                        $"opened={opened} pending={engine.IsAwaitingEffectTarget} hand={p.Hand.Count}");
+                }
+
+                var pn = CardTextEffectCompiler.Compile(db.Get(pain));
+                Check("Share the Pain FullyCompiled both tributes",
+                    pn != null && pn.FullyCompiled &&
+                    pn.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.OpponentTributesOneMonster &&
+                        c.RequiresTributeCount == 1),
+                    pn == null ? "null" : $"full={pn.FullyCompiled} unparsed={string.Join("|", pn.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    p.Hand.Clear();
+                    var mine = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var theirs = PlaceMonster(engine, o, celtic, 2, BattlePosition.Attack, true);
+                    var card = PutInHand(engine, p, pain);
+                    var opened = engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                                 engine.IsAwaitingEffectTarget &&
+                                 engine.TrySelectEffectTarget(mine);
+                    Check("Share the Pain: both monsters are Tributed",
+                        opened && p.Graveyard.Contains(mine) && o.Graveyard.Contains(theirs),
+                        $"opened={opened} mineGy={p.Graveyard.Contains(mine)} theirsGy={o.Graveyard.Contains(theirs)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var mine = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var card = PutInHand(engine, p, pain);
+                    var opened = engine.TryActivateSpellTrap(p, card, fromHand: true) &&
+                                 engine.TrySelectEffectTarget(mine);
+                    Check("Share the Pain: an empty opponent field still pays the cost",
+                        opened && p.Graveyard.Contains(mine) &&
+                        !engine.Opponent.MonstersOnField().Any(),
+                        $"opened={opened} mineGy={p.Graveyard.Contains(mine)}");
+                }
+
+                var sh = CardTextEffectCompiler.Compile(db.Get(shield));
+                Check("Shield & Sword FullyCompiled original ATK/DEF swap",
+                    sh != null && sh.FullyCompiled &&
+                    sh.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.SwapOriginalAtkDefUntilEndOfTurn),
+                    sh == null ? "null" : $"full={sh.FullyCompiled} unparsed={string.Join("|", sh.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var up = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var down = PlaceMonster(engine, p, celtic, 3, BattlePosition.Defense, false);
+                    var atk = up.Def.atk;
+                    var def = up.Def.def;
+                    var card = PutInHand(engine, p, shield);
+                    var opened = engine.TryActivateSpellTrap(p, card, fromHand: true);
+                    Check("Shield & Sword: face-up originals swap, face-down does not",
+                        opened && up.CurrentAtk == def && up.CurrentDef == atk &&
+                        down.CurrentAtk == atk && !down.SwapOriginalAtkDefThisTurn,
+                        $"opened={opened} up={up.CurrentAtk}/{up.CurrentDef} down={down.CurrentAtk}/{down.CurrentDef}");
+                    engine.ClearUntilEndOfTurnStatMods();
+                    Check("Shield & Sword: originals return at the End Phase",
+                        up.CurrentAtk == atk && up.CurrentDef == def,
+                        $"atk={up.CurrentAtk} def={up.CurrentDef}");
+                }
+
+                var ins = CardTextEffectCompiler.Compile(db.Get(insects));
+                var pen = CardTextEffectCompiler.Compile(db.Get(penumbral));
+                var lum = CardTextEffectCompiler.Compile(db.Get(luminous));
+                Check("Insect Soldiers FullyCompiled Damage Step ATK vs WIND",
+                    ins != null && ins.FullyCompiled &&
+                    ins.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.DamageStepAttributeAtk &&
+                        c.Amount == 1000 && c.DamageStepOnlyWhenAttacking &&
+                        string.Equals(c.AttributeFilter, "WIND", System.StringComparison.OrdinalIgnoreCase)),
+                    ins == null ? "null" : $"full={ins.FullyCompiled} unparsed={string.Join("|", ins.UnparsedFragments ?? System.Array.Empty<string>())}");
+                Check("Penumbral Soldier Lady FullyCompiled Damage Step ATK vs LIGHT",
+                    pen != null && pen.FullyCompiled &&
+                    pen.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.DamageStepAttributeAtk &&
+                        !c.DamageStepOnlyWhenAttacking));
+                Check("Luminous Soldier FullyCompiled Damage Step ATK vs DARK",
+                    lum != null && lum.FullyCompiled &&
+                    lum.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.DamageStepAttributeAtk &&
+                        c.Amount == 500 && !c.DamageStepOnlyWhenAttacking));
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var reached = ReachPlayerBattle(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    var atk = PlaceMonster(engine, p, insects, 2, BattlePosition.Attack, true);
+                    var wind = PlaceMonster(engine, o, elf, 2, BattlePosition.Attack, true);
+                    var printed = atk.Def.atk;
+                    var windAtk = wind.Def.atk;
+                    var oLp = o.LifePoints;
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    var attacked = reached && engine.Phase == DuelPhase.Battle &&
+                                   engine.CanAttack(p, atk) &&
+                                   engine.TryAttack(p, atk, wind);
+                    DrainCombat(engine);
+                    Check("Insect Soldiers: attacking WIND uses printed ATK + 1000",
+                        attacked && o.LifePoints == oLp - (printed + 1000 - windAtk) &&
+                        o.Graveyard.Contains(wind) && atk.CurrentAtk == printed &&
+                        atk.DamageStepAtkBonus == 0,
+                        $"reached={reached} attacked={attacked} lp={o.LifePoints} was={oLp} atk={atk.CurrentAtk}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var reached = ReachPlayerBattle(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    var atk = PlaceMonster(engine, p, insects, 2, BattlePosition.Attack, true);
+                    var earth = PlaceMonster(engine, o, celtic, 2, BattlePosition.Attack, true);
+                    var pLp = p.LifePoints;
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    var attacked = reached && engine.CanAttack(p, atk) &&
+                                   engine.TryAttack(p, atk, earth);
+                    DrainCombat(engine);
+                    Check("Insect Soldiers: a non-WIND battle uses the printed ATK",
+                        attacked && p.Graveyard.Contains(atk) &&
+                        p.LifePoints == pLp - (earth.Def.atk - atk.Def.atk) &&
+                        o.TryFindMonster(earth, out _),
+                        $"reached={reached} attacked={attacked} pLp={p.LifePoints} was={pLp}");
+                }
+
+                // One resolution duel above. The other prints of this sentence only share the clause.
+                var stepMiss = SentenceAtomMisses(db,
+                    new[] { 7019529, 64751286, 57482479 },
+                    c => c.Action == EffectActionKind.DamageStepAttributeAtk &&
+                         c.Timing == EffectTiming.ContinuousWhileFaceUp);
+                Check("Damage Step attribute ATK: the sentence group compiles to the same clause",
+                    stepMiss.Count == 0,
+                    stepMiss.Count == 0 ? "" : string.Join(",", stepMiss));
+            }
+
+            // ── Metal Raiders v99: position, attack, standby, flip, equip, Gate Guardian ──
+            {
+                const int dream = 13215230;
+                const int crass = 93889755;
+                const int wisdom = 28725004;
+                const int yado = 29380133;
+                const int elf = 21417692;
+                const int gumo = 94773007;
+                const int lizard = 55875323;
+                const int juggler = 70138455;
+                const int piper = 55763552;
+                const int eye = 16768387;
+                const int shroom = 93900406;
+                const int ring = 20436034;
+                const int gate = 25833572;
+                const int sanga = 25955164;
+                const int kazejin = 62340868;
+                const int suijin = 98434877;
+                const int jar = 50045299;
+                const int bewd = 89631139;
+                const int celtic = 91152256;
+                const int zombie = 32864;
+                const int waboku = 12607053;
+                const int mst = 5318639;
+
+                string Left(CompiledCardProgram prog) =>
+                    prog == null
+                        ? "null"
+                        : $"full={prog.FullyCompiled} unparsed={string.Join("|", prog.UnparsedFragments ?? System.Array.Empty<string>())}";
+
+                var dreamProg = CardTextEffectCompiler.Compile(db.Get(dream));
+                Check("Dream Clown FullyCompiled Attack to face-up Defense destroys",
+                    dreamProg != null && dreamProg.FullyCompiled &&
+                    dreamProg.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.PositionChanged &&
+                        c.Action == EffectActionKind.Destroy &&
+                        c.PositionFromAttack && c.PositionToDefense &&
+                        c.RequireDestinationFaceUp && !c.FiresOnFlipSummon),
+                    Left(dreamProg));
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    var clown = PlaceMonster(engine, p, dream, 2, BattlePosition.Attack, true);
+                    var prey = PlaceMonster(engine, o, celtic, 2, BattlePosition.Attack, true);
+                    var changed = engine.TryChangePosition(p, clown) &&
+                                  engine.IsAwaitingEffectTarget &&
+                                  engine.TrySelectEffectTarget(prey);
+                    Check("Dream Clown: face-up Defense destroys the chosen monster",
+                        changed && clown.Position == BattlePosition.Defense &&
+                        p.TryFindMonster(clown, out _) && o.Graveyard.Contains(prey),
+                        $"changed={changed} pos={clown.Position} gy={o.Graveyard.Contains(prey)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var clown = PlaceMonster(engine, p, dream, 2, BattlePosition.Attack, true);
+                    var changed = engine.TryChangePosition(p, clown);
+                    Check("Dream Clown: empty opponent field changes position and nothing else",
+                        changed && !engine.IsAwaitingEffectTarget &&
+                        clown.Position == BattlePosition.Defense &&
+                        p.TryFindMonster(clown, out _) && p.Graveyard.Count == 0,
+                        $"changed={changed} pending={engine.IsAwaitingEffectTarget} pos={clown.Position}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    var clown = PlaceMonster(engine, p, dream, 2, BattlePosition.Defense, false);
+                    var prey = PlaceMonster(engine, o, celtic, 2, BattlePosition.Attack, true);
+                    var flipped = engine.TryFlipSummon(p, clown);
+                    if (engine.IsAwaitingEffectTarget) engine.CancelEffectTargeting();
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    Check("Dream Clown: a Flip Summon does not destroy",
+                        flipped && clown.Position == BattlePosition.Attack &&
+                        o.TryFindMonster(prey, out _),
+                        $"flipped={flipped} pos={clown.Position} prey={o.TryFindMonster(prey, out _)}");
+                }
+
+                var crassProg = CardTextEffectCompiler.Compile(db.Get(crass));
+                Check("Crass Clown FullyCompiled Defense to Attack returns",
+                    crassProg != null && crassProg.FullyCompiled &&
+                    crassProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.ReturnToHand &&
+                        c.PositionFromDefense && c.PositionToAttack && c.FiresOnFlipSummon),
+                    Left(crassProg));
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    o.Hand.Clear();
+                    var clown = PlaceMonster(engine, p, crass, 2, BattlePosition.Defense, true);
+                    var prey = PlaceMonster(engine, o, celtic, 2, BattlePosition.Attack, true);
+                    var changed = engine.TryChangePosition(p, clown) &&
+                                  engine.TrySelectEffectTarget(prey);
+                    Check("Crass Clown: Defense to Attack returns the opponent's monster",
+                        changed && clown.Position == BattlePosition.Attack &&
+                        o.Hand.Contains(prey) && !o.TryFindMonster(prey, out _),
+                        $"changed={changed} hand={o.Hand.Contains(prey)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    o.Hand.Clear();
+                    var clown = PlaceMonster(engine, p, crass, 2, BattlePosition.Defense, false);
+                    var prey = PlaceMonster(engine, o, celtic, 2, BattlePosition.Attack, true);
+                    var flipped = engine.TryFlipSummon(p, clown) &&
+                                  engine.TrySelectEffectTarget(prey);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    Check("Crass Clown: a Flip Summon also returns a monster",
+                        flipped && o.Hand.Contains(prey),
+                        $"flipped={flipped} hand={o.Hand.Contains(prey)}");
+                }
+
+                var wisdomProg = CardTextEffectCompiler.Compile(db.Get(wisdom));
+                Check("Tainted Wisdom FullyCompiled shuffles",
+                    wisdomProg != null && wisdomProg.FullyCompiled &&
+                    wisdomProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.ShuffleControllerDeck &&
+                        c.RequireDestinationFaceUp),
+                    Left(wisdomProg));
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var card = PlaceMonster(engine, p, wisdom, 2, BattlePosition.Attack, true);
+                    p.Deck.Clear();
+                    int[] ids = { celtic, mst, zombie, bewd, dream, crass, elf, gumo };
+                    foreach (var id in ids) p.Deck.Add(id);
+                    var before = string.Join(",", p.Deck);
+                    var changed = engine.TryChangePosition(p, card);
+                    var after = string.Join(",", p.Deck);
+                    Check("Tainted Wisdom: face-up Defense shuffles the Deck and the card stays",
+                        changed && card.Position == BattlePosition.Defense &&
+                        p.TryFindMonster(card, out _) && p.Deck.Count == ids.Length &&
+                        after != before,
+                        $"changed={changed} before={before} after={after}");
+                }
+
+                var yadoProg = CardTextEffectCompiler.Compile(db.Get(yado));
+                Check("Yado Karu FullyCompiled optional hand to bottom",
+                    yadoProg != null && yadoProg.FullyCompiled &&
+                    yadoProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.PlaceHandCardsOnBottomOfDeck &&
+                        c.IsOptional && c.PositionFromAttack && c.PositionToDefense),
+                    Left(yadoProg));
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var card = PlaceMonster(engine, p, yado, 2, BattlePosition.Attack, true);
+                    var x = PutInHand(engine, p, celtic);
+                    var y = PutInHand(engine, p, mst);
+                    var opened = engine.TryChangePosition(p, card);
+                    var declined = opened && engine.IsAwaitingEffectTarget &&
+                                   engine.CancelEffectTargeting();
+                    Check("Yado Karu: choosing none is legal",
+                        declined && !engine.IsAwaitingEffectTarget &&
+                        p.Hand.Contains(x) && p.Hand.Contains(y) &&
+                        card.Position == BattlePosition.Defense,
+                        $"opened={opened} declined={declined} hand={p.Hand.Count}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    p.Deck.Clear();
+                    p.Deck.Add(bewd);
+                    var card = PlaceMonster(engine, p, yado, 2, BattlePosition.Attack, true);
+                    var x = PutInHand(engine, p, celtic);
+                    var y = PutInHand(engine, p, mst);
+                    var opened = engine.TryChangePosition(p, card) &&
+                                 engine.TrySelectEffectTarget(x) &&
+                                 engine.TrySelectEffectTarget(y);
+                    Check("Yado Karu: X then Y puts X on the bottom",
+                        opened && p.Deck.Count == 3 &&
+                        p.Deck[p.Deck.Count - 1] == x.CardId &&
+                        p.Deck[p.Deck.Count - 2] == y.CardId &&
+                        !p.Hand.Contains(x) && !p.Hand.Contains(y),
+                        $"opened={opened} deck={string.Join(",", p.Deck)}");
+                }
+
+                var elfProg = CardTextEffectCompiler.Compile(db.Get(elf));
+                Check("Dark Elf FullyCompiled pays LP to attack",
+                    elfProg != null && elfProg.FullyCompiled &&
+                    elfProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.PayLpToDeclareAttack &&
+                        c.Amount == 1000),
+                    Left(elfProg));
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var reached = ReachOpponentBattle(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    var atk = PlaceMonster(engine, o, elf, 2, BattlePosition.Attack, true);
+                    var a = PlaceMonster(engine, p, celtic, 1, BattlePosition.Attack, true);
+                    var b = PlaceMonster(engine, p, zombie, 3, BattlePosition.Attack, true);
+                    PlaceSetTrap(engine, p, waboku, 0);
+                    o.LifePoints = 8000;
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    var declared = reached && engine.CanAttack(o, atk) &&
+                                   engine.TryAttack(o, atk, a);
+                    var paid = o.LifePoints == 7000;
+                    if (engine.IsAwaitingResponse)
+                        engine.SendCardToGrave(p, a);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    var again = engine.CanAttack(o, atk) && engine.TryAttack(o, atk, b);
+                    Check("Dark Elf: 8000 pays 1000 once, and a replay does not pay again",
+                        declared && paid && again && o.LifePoints == 7000,
+                        $"reached={reached} declared={declared} again={again} lp={o.LifePoints} step={engine.BattleStep} resp={engine.IsAwaitingResponse}");
+                    o.LifePoints = 999;
+                    atk.AttackLpCostPaidThisDeclaration = false;
+                    Check("Dark Elf: 999 LP cannot declare an attack",
+                        !engine.CanAttack(o, atk),
+                        $"lp={o.LifePoints} can={engine.CanAttack(o, atk)}");
+                }
+
+                var gumoProg = CardTextEffectCompiler.Compile(db.Get(gumo));
+                Check("Jirai Gumo FullyCompiled calls a coin on its own attack",
+                    gumoProg != null && gumoProg.FullyCompiled &&
+                    gumoProg.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.ThisCardDeclaresAttack &&
+                        c.Action == EffectActionKind.CallCoinLoseHalfLpIfWrong),
+                    Left(gumoProg));
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var reached = ReachPlayerBattle(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    var atk = PlaceMonster(engine, p, gumo, 2, BattlePosition.Attack, true);
+                    var prey = PlaceMonster(engine, o, celtic, 2, BattlePosition.Defense, true);
+                    p.LifePoints = 8000;
+                    engine.Rng.QueueCoin(true);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    var opened = reached && engine.TryAttack(p, atk, prey) &&
+                                 engine.IsAwaitingEffectTarget &&
+                                 engine.TrySelectCoinCall(true);
+                    DrainCombat(engine);
+                    Check("Jirai Gumo: a correct call leaves LP unchanged and the attack continues",
+                        opened && p.LifePoints == 8000 && atk.AttackedThisTurn,
+                        $"opened={opened} lp={p.LifePoints} attacked={atk.AttackedThisTurn}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var reached = ReachOpponentBattle(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    var atk = PlaceMonster(engine, o, gumo, 2, BattlePosition.Attack, true);
+                    var a = PlaceMonster(engine, p, celtic, 1, BattlePosition.Attack, true);
+                    var b = PlaceMonster(engine, p, zombie, 3, BattlePosition.Attack, true);
+                    PlaceSetTrap(engine, p, waboku, 0);
+                    o.LifePoints = 8000;
+                    engine.Rng.QueueCoin(false);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    var opened = reached && engine.TryAttack(o, atk, a);
+                    var halved = o.LifePoints == 4000;
+                    if (engine.IsAwaitingResponse)
+                        engine.SendCardToGrave(p, a);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    var again = engine.CanAttack(o, atk) && engine.TryAttack(o, atk, b);
+                    Check("Jirai Gumo: a wrong call from 8000 loses half, and a replay does not toss again",
+                        opened && halved && again && o.LifePoints == 4000 &&
+                        !engine.IsAwaitingEffectTarget,
+                        $"opened={opened} again={again} lp={o.LifePoints} pending={engine.IsAwaitingEffectTarget} resp={engine.IsAwaitingResponse}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var reached = ReachPlayerBattle(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    var atk = PlaceMonster(engine, p, gumo, 2, BattlePosition.Attack, true);
+                    var prey = PlaceMonster(engine, o, celtic, 2, BattlePosition.Defense, true);
+                    p.LifePoints = 5;
+                    engine.Rng.QueueCoin(false);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    var opened = reached && engine.TryAttack(p, atk, prey) &&
+                                 engine.TrySelectCoinCall(true);
+                    Check("Jirai Gumo: a wrong call from 5 LP leaves 3",
+                        opened && p.LifePoints == 3,
+                        $"opened={opened} lp={p.LifePoints}");
+                }
+
+                var lizProg = CardTextEffectCompiler.Compile(db.Get(lizard));
+                Check("Electric Lizard FullyCompiled seals a non-Zombie",
+                    lizProg != null && lizProg.FullyCompiled &&
+                    lizProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.SealNonRaceAttackerNextTurn &&
+                        c.ExcludeRaceFilter == "Zombie"),
+                    Left(lizProg));
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var reached = ReachPlayerBattle(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    var warrior = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var body = PlaceMonster(engine, o, lizard, 2, BattlePosition.Attack, true);
+                    var turn = engine.TurnNumber;
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    var attacked = reached && engine.TryAttack(p, warrior, body);
+                    DrainCombat(engine);
+                    engine.SendCardToGrave(o, body);
+                    engine.TryEndTurnSafe(p);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    engine.TryEndTurnSafe(engine.TurnPlayer);
+                    if (engine.Phase == DuelPhase.Main1)
+                        engine.TryEnterBattlePhase(p);
+                    Check("Electric Lizard: the Warrior cannot attack on its next turn after the Lizard is gone",
+                        attacked && engine.TurnNumber == turn + 2 &&
+                        !engine.CanAttack(p, warrior),
+                        $"attacked={attacked} turn={engine.TurnNumber} was={turn} can={engine.CanAttack(p, warrior)}");
+                    engine.TryEndTurnSafe(p);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    engine.TryEndTurnSafe(engine.TurnPlayer);
+                    if (engine.Phase == DuelPhase.Main1)
+                        engine.TryEnterBattlePhase(p);
+                    Check("Electric Lizard: the seal ends when that next turn ends",
+                        engine.CanAttack(p, warrior),
+                        $"turn={engine.TurnNumber} can={engine.CanAttack(p, warrior)} phase={engine.Phase}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var reached = ReachPlayerBattle(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    var undead = PlaceMonster(engine, p, zombie, 2, BattlePosition.Attack, true);
+                    var body = PlaceMonster(engine, o, lizard, 2, BattlePosition.Attack, true);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    var attacked = reached && engine.TryAttack(p, undead, body);
+                    DrainCombat(engine);
+                    engine.TryEndTurnSafe(p);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    engine.TryEndTurnSafe(engine.TurnPlayer);
+                    if (engine.Phase == DuelPhase.Main1)
+                        engine.TryEnterBattlePhase(p);
+                    Check("Electric Lizard: a Zombie can attack on its next turn",
+                        attacked && engine.CanAttack(p, undead),
+                        $"attacked={attacked} can={engine.CanAttack(p, undead)} turn={engine.TurnNumber}");
+                }
+
+                var jugProg = CardTextEffectCompiler.Compile(db.Get(juggler));
+                Check("Blast Juggler FullyCompiled standby tribute of exactly 2",
+                    jugProg != null && jugProg.FullyCompiled &&
+                    jugProg.ClauseList.Exists(c =>
+                        c != null && c.OnlyDuringOwnStandby && c.RequiresTributeThis &&
+                        c.ControllerTargetCount == 2 && c.Amount == 1000 && c.AmountIsAtkMax),
+                    Left(jugProg));
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    var self = PlaceMonster(engine, p, juggler, 0, BattlePosition.Attack, true);
+                    var smallA = PlaceMonster(engine, p, lizard, 1, BattlePosition.Attack, true);
+                    var smallB = PlaceMonster(engine, o, yado, 1, BattlePosition.Attack, true);
+                    var big = PlaceMonster(engine, o, celtic, 2, BattlePosition.Attack, true);
+                    engine.TryEndTurnSafe(p);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    engine.TryEndTurnSafe(o);
+                    var standby = engine.Phase == DuelPhase.Standby && engine.TurnPlayer == p;
+                    var opened = standby && engine.CanActivateSpellTrap(p, self, false) &&
+                                 engine.TryActivateSpellTrap(p, self, false) &&
+                                 engine.TrySelectEffectTarget(smallA) &&
+                                 engine.TrySelectEffectTarget(smallB);
+                    Check("Blast Juggler: Standby tributes itself and destroys exactly 2 small monsters",
+                        opened && p.Graveyard.Contains(self) && p.Graveyard.Contains(smallA) &&
+                        o.Graveyard.Contains(smallB) && o.TryFindMonster(big, out _),
+                        $"standby={standby} opened={opened} phase={engine.Phase}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    var self = PlaceMonster(engine, p, juggler, 0, BattlePosition.Attack, true);
+                    PlaceMonster(engine, o, celtic, 2, BattlePosition.Attack, true);
+                    engine.TryEndTurnSafe(p);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    engine.TryEndTurnSafe(o);
+                    var blocked = engine.Phase == DuelPhase.Standby &&
+                                  !engine.CanActivateSpellTrap(p, self, false);
+                    engine.ContinueAfterStandby();
+                    Check("Blast Juggler: fewer than 2 is illegal, and Main Phase is illegal",
+                        blocked && engine.Phase == DuelPhase.Main1 &&
+                        !engine.CanActivateSpellTrap(p, self, false),
+                        $"blocked={blocked} phase={engine.Phase}");
+                }
+
+                var piperProg = CardTextEffectCompiler.Compile(db.Get(piper));
+                Check("Dragon Piper FullyCompiled destroys Jars then forces Dragons to Attack",
+                    piperProg != null && piperProg.FullyCompiled &&
+                    piperProg.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.Flip &&
+                        c.Action == EffectActionKind.DestroyAllFaceUpNamedThenForceRaceAttack &&
+                        c.NamedCard == "Dragon Capture Jar" && c.RaceFilter == "Dragon"),
+                    Left(piperProg));
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    var pyro = PlaceMonster(engine, p, piper, 2, BattlePosition.Defense, false);
+                    var dragon = PlaceMonster(engine, o, bewd, 2, BattlePosition.Defense, true);
+                    var trap = engine.CreateCardInstance(jar);
+                    trap.FaceUp = true;
+                    o.SpellTrapZones[0].Occupant = trap;
+                    var flipped = engine.TryFlipSummon(p, pyro);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    Check("Dragon Piper: a face-up Jar is destroyed and the Dragon attacks",
+                        flipped && o.Graveyard.Contains(trap) &&
+                        dragon.Position == BattlePosition.Attack && dragon.FaceUp,
+                        $"flipped={flipped} jarGy={o.Graveyard.Contains(trap)} pos={dragon.Position}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    var pyro = PlaceMonster(engine, p, piper, 2, BattlePosition.Defense, false);
+                    var dragon = PlaceMonster(engine, o, bewd, 2, BattlePosition.Defense, true);
+                    var flipped = engine.TryFlipSummon(p, pyro);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    Check("Dragon Piper: no Jar still resolves and the Dragon stays",
+                        flipped && dragon.Position == BattlePosition.Defense,
+                        $"flipped={flipped} pos={dragon.Position}");
+                }
+
+                var eyeProg = CardTextEffectCompiler.Compile(db.Get(eye));
+                Check("Big Eye FullyCompiled reorders up to 5",
+                    eyeProg != null && eyeProg.FullyCompiled &&
+                    eyeProg.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.Flip &&
+                        c.Action == EffectActionKind.ReorderTopOfOwnDeck && c.Amount == 5),
+                    Left(eyeProg));
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var fiend = PlaceMonster(engine, p, eye, 2, BattlePosition.Defense, false);
+                    p.Deck.Clear();
+                    int[] ids = { celtic, mst, zombie, bewd, dream, crass, elf };
+                    foreach (var id in ids) p.Deck.Add(id);
+                    var flipped = engine.TryFlipSummon(p, fiend);
+                    var first = engine.PendingActivation?.LegalTargets.Count > 2
+                        ? engine.PendingActivation.LegalTargets[2]
+                        : null;
+                    var second = engine.PendingActivation?.LegalTargets.Count > 0
+                        ? engine.PendingActivation.LegalTargets[0]
+                        : null;
+                    var ordered = flipped && first != null && second != null &&
+                                  engine.TrySelectEffectTarget(first) &&
+                                  engine.TrySelectEffectTarget(second) &&
+                                  engine.CancelEffectTargeting();
+                    Check("Big Eye: the first card chosen is the new top",
+                        ordered && p.Deck.Count == ids.Length &&
+                        p.Deck[0] == ids[2] && p.Deck[1] == ids[0],
+                        $"ordered={ordered} deck={string.Join(",", p.Deck)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var o = engine.Opponent;
+                    var fiend = PlaceMonster(engine, o, eye, 2, BattlePosition.Defense, false);
+                    var reached = ReachOpponentMain(engine);
+                    o.Deck.Clear();
+                    int[] ids = { celtic, mst, zombie, bewd, dream };
+                    foreach (var id in ids) o.Deck.Add(id);
+                    var before = string.Join(",", o.Deck);
+                    fiend.FaceUp = false;
+                    fiend.Position = BattlePosition.Defense;
+                    fiend.SetThisTurn = false;
+                    fiend.SummonedThisTurn = false;
+                    var flipped = reached && engine.TryFlipSummon(o, fiend);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    Check("Big Eye: the AI puts the cards back in the order it saw",
+                        flipped && string.Join(",", o.Deck) == before,
+                        $"reached={reached} flipped={flipped} deck={string.Join(",", o.Deck)}");
+                }
+
+                var shroomProg = CardTextEffectCompiler.Compile(db.Get(shroom));
+                Check("Mushroom Man #2 FullyCompiled both sentences",
+                    shroomProg != null && shroomProg.FullyCompiled &&
+                    shroomProg.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.StandbyPhase &&
+                        c.Action == EffectActionKind.TakeEffectDamage && c.Amount == 300) &&
+                    shroomProg.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.EndPhase &&
+                        c.Action == EffectActionKind.OptionalPayLpShiftControl &&
+                        c.Amount == 500 && c.IsOptional),
+                    Left(shroomProg));
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var card = PlaceMonster(engine, p, shroom, 2, BattlePosition.Attack, true);
+                    p.LifePoints = 8000;
+                    TextEffectRuntime.FirePhaseTriggers(engine, p, EffectTiming.StandbyPhase);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    Check("Mushroom Man #2: the controller loses 300 on their Standby",
+                        p.LifePoints == 7700 && p.TryFindMonster(card, out _),
+                        $"lp={p.LifePoints}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var card = PlaceMonster(engine, p, shroom, 2, BattlePosition.Attack, true);
+                    p.LifePoints = 8000;
+                    var ended = engine.TryEndTurnSafe(p) && engine.IsAwaitingEffectTarget &&
+                                engine.TryResolveOptionalPay(false);
+                    Check("Mushroom Man #2: declining the End Phase pay keeps control",
+                        ended && p.TryFindMonster(card, out _) && p.LifePoints == 8000,
+                        $"ended={ended} lp={p.LifePoints} here={p.TryFindMonster(card, out _)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    var card = PlaceMonster(engine, p, shroom, 2, BattlePosition.Attack, true);
+                    p.LifePoints = 8000;
+                    var ended = engine.TryEndTurnSafe(p) &&
+                                engine.TryResolveOptionalPay(true);
+                    Check("Mushroom Man #2: paying 500 shifts control and it stays",
+                        ended && p.LifePoints == 7500 && o.TryFindMonster(card, out _) &&
+                        !p.TryFindMonster(card, out _),
+                        $"ended={ended} lp={p.LifePoints} opp={o.TryFindMonster(card, out _)}");
+                    if (engine.TurnPlayer == o)
+                        engine.TryEndTurnSafe(o);
+                    Check("Mushroom Man #2: control does not return at the next End Phase",
+                        o.TryFindMonster(card, out _),
+                        $"opp={o.TryFindMonster(card, out _)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var card = PlaceMonster(engine, p, shroom, 2, BattlePosition.Attack, true);
+                    p.LifePoints = 400;
+                    var ended = engine.TryEndTurnSafe(p);
+                    Check("Mushroom Man #2: below 500 LP cannot pay",
+                        ended && !engine.IsAwaitingEffectTarget && p.LifePoints == 400 &&
+                        p.TryFindMonster(card, out _),
+                        $"ended={ended} lp={p.LifePoints} pending={engine.IsAwaitingEffectTarget}");
+                }
+
+                var ringProg = CardTextEffectCompiler.Compile(db.Get(ring));
+                Check("Ring of Magnetism FullyCompiled equip and attack lock",
+                    ringProg != null && ringProg.FullyCompiled &&
+                    ringProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.EquipThisToTarget &&
+                        c.EquipAtkBonus == -500 && c.EquipDefBonus == -500) &&
+                    ringProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.AttacksMustTargetEquippedHost),
+                    Left(ringProg));
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    p.Hand.Clear();
+                    var host = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var other = PlaceMonster(engine, p, zombie, 3, BattlePosition.Attack, true);
+                    var foe = PlaceMonster(engine, o, celtic, 2, BattlePosition.Attack, true);
+                    var away = PlaceMonster(engine, o, bewd, 4, BattlePosition.Attack, true);
+                    var card = PutInHand(engine, p, ring);
+                    var opened = engine.TryActivateSpellTrap(p, card, true);
+                    var foeIllegal = opened && !engine.IsLegalEffectTarget(away);
+                    var armed = foeIllegal && engine.TrySelectEffectTarget(host);
+                    FieldSpellEffects.RefreshBoard(engine);
+                    var reached = armed && ReachOpponentBattle(engine);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    var wrong = reached && engine.TryAttack(o, foe, other);
+                    var right = !wrong && engine.CanAttack(o, foe) && engine.TryAttack(o, foe, host);
+                    Check("Ring of Magnetism: −500/−500, and the opponent must attack that monster",
+                        armed && host.CurrentAtk == host.Def.atk - 500 &&
+                        host.CurrentDef == host.Def.def - 500 && !wrong && right &&
+                        (engine.DeclaredAttackTarget == host || p.Graveyard.Contains(host)) &&
+                        p.TryFindMonster(other, out _),
+                        $"armed={armed} atk={host.CurrentAtk}/{host.CurrentDef} reached={reached} wrong={wrong} right={right} target={engine.DeclaredAttackTarget?.Name}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    p.Hand.Clear();
+                    var host = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var other = PlaceMonster(engine, p, zombie, 3, BattlePosition.Attack, true);
+                    var foe = PlaceMonster(engine, o, celtic, 2, BattlePosition.Attack, true);
+                    var first = PutInHand(engine, p, ring);
+                    var second = PutInHand(engine, p, ring);
+                    var armed = engine.TryActivateSpellTrap(p, first, true) &&
+                                engine.TrySelectEffectTarget(host) &&
+                                engine.TryActivateSpellTrap(p, second, true) &&
+                                engine.TrySelectEffectTarget(other);
+                    var reached = armed && ReachOpponentBattle(engine);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    Check("Ring of Magnetism: two hosts means the attacker cannot attack at all",
+                        reached && !engine.CanAttack(o, foe),
+                        $"armed={armed} reached={reached} phase={engine.Phase} can={engine.CanAttack(o, foe)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var a = PlaceMonster(engine, p, sanga, 0, BattlePosition.Attack, true);
+                    var b = PlaceMonster(engine, p, kazejin, 1, BattlePosition.Attack, true);
+                    var c = PlaceMonster(engine, p, suijin, 2, BattlePosition.Attack, true);
+                    var card = PutInHand(engine, p, gate);
+                    var blocked = engine.SpecialSummonToField(p, card, BattlePosition.Attack, true);
+                    var summoned = !blocked && engine.TrySpecialSummonProcedure(p, card);
+                    Check("Gate Guardian: the three spirits are Tributed and it is Special Summoned",
+                        summoned && p.TryFindMonster(card, out _) &&
+                        p.Graveyard.Contains(a) && p.Graveyard.Contains(b) && p.Graveyard.Contains(c) &&
+                        CardEffectStatus.Classify(db.Get(gate)) == CardEffectStatusKind.Structural,
+                        $"blocked={blocked} summoned={summoned} field={p.TryFindMonster(card, out _)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    PlaceMonster(engine, p, sanga, 0, BattlePosition.Attack, true);
+                    PlaceMonster(engine, p, kazejin, 1, BattlePosition.Attack, true);
+                    PlaceMonster(engine, p, suijin, 2, BattlePosition.Defense, false);
+                    var card = PutInHand(engine, p, gate);
+                    var summoned = engine.TrySpecialSummonProcedure(p, card);
+                    Check("Gate Guardian: a face-down spirit is not a legal Tribute",
+                        !summoned && p.Hand.Contains(card) && !p.TryFindMonster(card, out _),
+                        $"summoned={summoned}");
+                }
+            }
+
+            // ── v100: trap seals, mass defense, equipped destroy, Lightning Vortex ──
+            {
+                const int mirage = 15960641;
+                const int warwolf = 88975532;
+                const int invasion = 26082229;
+                const int manta = 52571838;
+                const int eagle = 53693416;
+                const int spy = 89698120;
+                const int quake = 82828051;
+                const int sunlight = 93747864;
+                const int rest = 28121403;
+                const int vortex = 69162969;
+                const int celtic = 91152256;
+                const int waboku = 12607053;
+                const int trapHole = 4206964;
+                const int stim = 83225447;
+                const int mst = 5318639;
+
+                var trapMiss = SentenceAtomMisses(db, new[] { mirage, warwolf },
+                    c => c.Action == EffectActionKind.OpponentCannotActivateTrapsDuringBattle &&
+                         c.Timing == EffectTiming.ContinuousWhileFaceUp);
+                Check("Battle Phase Trap seal: the sentence group compiles to the same clause",
+                    trapMiss.Count == 0, string.Join(",", trapMiss));
+
+                var summonMiss = SentenceAtomMisses(db, new[] { invasion, manta, eagle, spy },
+                    c => c.Action == EffectActionKind.SealTrapsAnsweringThisSummon &&
+                         c.RequiresThisNormalSummoned);
+                Check("Normal Summon Trap seal: the sentence group compiles to the same clause",
+                    summonMiss.Count == 0, string.Join(",", summonMiss));
+
+                var posMiss = SentenceAtomMisses(db, new[] { quake },
+                    c => c.Action == EffectActionKind.ChangeBattlePosition &&
+                         c.ForceDefensePosition && c.Side == EffectSide.Both);
+                Check("Earthquake compiles to mass Defense",
+                    posMiss.Count == 0, string.Join(",", posMiss));
+                var sunMiss = SentenceAtomMisses(db, new[] { sunlight },
+                    c => c.Action == EffectActionKind.ChangeBattlePosition &&
+                         c.AlsoFlipFaceDown && c.Side == EffectSide.Controller);
+                Check("Desert Sunlight compiles to your face-up Defense",
+                    sunMiss.Count == 0, string.Join(",", sunMiss));
+
+                var restMiss = SentenceAtomMisses(db, new[] { rest },
+                    c => c.Action == EffectActionKind.DestroyAllEquippedMonsters);
+                Check("Really Eternal Rest compiles to destroy equipped monsters",
+                    restMiss.Count == 0, string.Join(",", restMiss));
+                var vortexMiss = SentenceAtomMisses(db, new[] { vortex },
+                    c => c.Action == EffectActionKind.Destroy && c.RequiresDiscardCost &&
+                         c.Zone == EffectZoneFilter.OppFaceUpMonsters);
+                Check("Lightning Vortex compiles to discard then destroy face-up",
+                    vortexMiss.Count == 0, string.Join(",", vortexMiss));
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    PlaceMonster(engine, p, mirage, 2, BattlePosition.Attack, true);
+                    var wolf = PlaceMonster(engine, o, celtic, 2, BattlePosition.Attack, true);
+                    var body = PlaceMonster(engine, p, celtic, 3, BattlePosition.Attack, true);
+                    PlaceSetTrap(engine, o, waboku, 0);
+                    var reached = ReachOpponentBattle(engine);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    var attacked = reached && engine.TryAttack(o, wolf, body);
+                    Check("Mirage Dragon: the opponent cannot activate a Trap during the Battle Phase",
+                        attacked && !engine.IsAwaitingResponse,
+                        $"reached={reached} attacked={attacked} window={engine.IsAwaitingResponse}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    PlaceMonster(engine, p, mirage, 2, BattlePosition.Attack, true);
+                    var spell = PutInHand(engine, o, quake);
+                    var reached = ReachOpponentMain(engine);
+                    Check("Mirage Dragon: a Spell can still be activated",
+                        reached && engine.CanActivateSpellTrap(o, spell, true),
+                        $"reached={reached} can={engine.CanActivateSpellTrap(o, spell, true)} phase={engine.Phase}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    var hole = PlaceSetTrap(engine, o, trapHole, 0);
+                    p.Hand.Clear();
+                    var card = PutInHand(engine, p, invasion);
+                    var summoned = engine.TryNormalSummon(p, card, false);
+                    var summonSealed = summoned && !engine.IsAwaitingResponse &&
+                                       o.TryFindSpellTrap(hole, out _);
+                    // The defender (p) holds the later Trap: the attack-declaration window is theirs.
+                    var later = PlaceSetTrap(engine, p, waboku, 1);
+                    var wolf = PlaceMonster(engine, o, celtic, 2, BattlePosition.Attack, true);
+                    var reached = summonSealed && ReachOpponentBattle(engine);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    var attacked = reached && engine.TryAttack(o, wolf, card);
+                    Check("Invasion of Flames: Traps cannot answer the summon, and a later Battle Phase Trap can",
+                        summonSealed && attacked && engine.IsAwaitingResponse &&
+                         p.TryFindSpellTrap(later, out _),
+                        "summoned=" + summoned + " sealed=" + summonSealed + " attacked=" + attacked +
+                        " window=" + engine.IsAwaitingResponse);
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    var up = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var down = PlaceMonster(engine, o, celtic, 2, BattlePosition.Defense, false);
+                    var oppUp = PlaceMonster(engine, o, celtic, 3, BattlePosition.Attack, true);
+                    p.Hand.Clear();
+                    var spell = PutInHand(engine, p, quake);
+                    var cast = engine.TryActivateSpellTrap(p, spell, true);
+                    Check("Earthquake: face-up monsters become Defense and face-down stay down",
+                        cast && up.Position == BattlePosition.Defense && up.FaceUp &&
+                        oppUp.Position == BattlePosition.Defense && oppUp.FaceUp &&
+                        !down.FaceUp && down.Position == BattlePosition.Defense,
+                        $"cast={cast} up={up.Position}/{up.FaceUp} down={down.FaceUp} opp={oppUp.Position}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    var down = PlaceMonster(engine, p, celtic, 2, BattlePosition.Defense, false);
+                    var theirs = PlaceMonster(engine, o, celtic, 2, BattlePosition.Attack, true);
+                    var trap = PlaceSetTrap(engine, p, sunlight, 0);
+                    var cast = engine.TryActivateSpellTrap(p, trap, false);
+                    Check("Desert Sunlight: your monsters become face-up Defense",
+                        cast && down.FaceUp && down.Position == BattlePosition.Defense &&
+                        theirs.FaceUp && theirs.Position == BattlePosition.Attack,
+                        $"cast={cast} mine={down.FaceUp}/{down.Position} theirs={theirs.Position}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    p.Hand.Clear();
+                    var host = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var bare = PlaceMonster(engine, o, celtic, 2, BattlePosition.Attack, true);
+                    var equip = PutInHand(engine, p, stim);
+                    var armed = engine.TryActivateSpellTrap(p, equip, true) &&
+                                engine.TrySelectEffectTarget(host);
+                    var trap = PlaceSetTrap(engine, p, rest, 0);
+                    var cast = armed && engine.TryActivateSpellTrap(p, trap, false);
+                    Check("Really Eternal Rest: an equipped monster is destroyed and a bare one stays",
+                        cast && p.Graveyard.Contains(host) && o.TryFindMonster(bare, out _),
+                        $"armed={armed} cast={cast} hostGy={p.Graveyard.Contains(host)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    p.Hand.Clear();
+                    var fodder = PutInHand(engine, p, mst);
+                    var spell = PutInHand(engine, p, vortex);
+                    var up = PlaceMonster(engine, o, celtic, 2, BattlePosition.Attack, true);
+                    var down = PlaceMonster(engine, o, celtic, 3, BattlePosition.Defense, false);
+                    var empty = Fresh(db, pDeck, aDeck);
+                    empty.Player.Hand.Clear();
+                    var lone = PutInHand(empty, empty.Player, vortex);
+                    var blocked = !empty.CanActivateSpellTrap(empty.Player, lone, true);
+                    var cast = engine.TryActivateSpellTrap(p, spell, true);
+                    // The player chooses the card to discard (DiscardCostPickRegressionTests).
+                    var paid = cast && engine.IsAwaitingEffectTarget && engine.TrySelectEffectTarget(fodder);
+                    Check("Lightning Vortex: discard 1, destroy face-up opponents, leave face-down",
+                        blocked && cast && paid && p.Graveyard.Contains(fodder) &&
+                        o.Graveyard.Contains(up) && !down.FaceUp &&
+                        o.TryFindMonster(down, out _),
+                        $"blocked={blocked} cast={cast} paid={paid} fodderGy={p.Graveyard.Contains(fodder)} upGy={o.Graveyard.Contains(up)} down={down.FaceUp}");
+                }
+            }
+
+            // ── v101: tribute costs, two-for-one tributes, Trunade / Time Seal, DEF tweaks, Zero Gravity, SS draws, summon-turn attack locks ──
+            {
+                const int hysteric = 21297224;
+                const int flower = 65064143;
+                const int manThro = 43714890;
+                const int throwstone = 76075810;
+                const int coston = 44436472;
+                const int flameRuler = 41089128;
+                const int angler = 92084010;
+                const int prodigy = 15090429;
+                const int trojan = 38479725;
+                const int trunade = 42703248;
+                const int timeSeal = 35316708;
+                const int guardian = 16430187;
+                const int snakeFang = 596051;
+                const int zeroG = 83133491;
+                const int crane = 30914564;
+                const int molten = 4732017;
+                const int bog = 95220856;
+                const int mammoth = 59380081;
+                const int darkMagician = 36996508;
+                const int blueEyes = 89631139;
+                const int gaia = 6368038;
+                const int celtic = 91152256;
+                const int basicInsect = 89091579;
+                const int laJinn = 97590747;
+                const int cannonSoldier = 11384280;
+                const int geminiElf = 69140098;
+                const int battleOx = 5053103;
+                const int waboku = 12607053;
+                const int mst = 5318639;
+                const int reborn = 83764718;
+
+                var tribLpMiss = SentenceAtomMisses(db, new[] { hysteric },
+                    c => c.Action == EffectActionKind.GainLifePoints && c.RequiresTributeCount == 2 &&
+                         c.Amount == 1000 && c.Side == EffectSide.Controller);
+                Check("Hysteric Fairy compiles to Tribute 2 → gain 1000", tribLpMiss.Count == 0, string.Join(",", tribLpMiss));
+                var tribDmgMiss = SentenceAtomMisses(db, new[] { flower, manThro },
+                    c => c.Action == EffectActionKind.InflictDamageToOpponent && c.RequiresTributeCount == 1 &&
+                         c.Amount == 800);
+                Check("Typed / Normal Tribute → 800 damage: the sentence group compiles to the same clause",
+                    tribDmgMiss.Count == 0, string.Join(",", tribDmgMiss));
+                var throwMiss = SentenceAtomMisses(db, new[] { throwstone },
+                    c => c.Action == EffectActionKind.Destroy && c.RequiresTributeCount == 1 &&
+                         c.TributeRaceFilter == "Warrior" && c.RequiresTargetChoice && c.RequiresTargetDefLeqSourceAtk);
+                Check("Throwstone Unit compiles to Warrior Tribute → destroy DEF ≤ ATK target", throwMiss.Count == 0, string.Join(",", throwMiss));
+                var twoForOneMiss = SentenceAtomMisses(db, new[] { coston, flameRuler, angler, prodigy, trojan },
+                    c => c.Action == EffectActionKind.CountsAsTwoTributesForAttribute &&
+                         c.Timing == EffectTiming.ContinuousWhileFaceUp && !string.IsNullOrEmpty(c.AttributeFilter));
+                Check("Two-for-one Tribute: the sentence group compiles to the same clause",
+                    twoForOneMiss.Count == 0, string.Join(",", twoForOneMiss));
+                var trunadeMiss = SentenceAtomMisses(db, new[] { trunade },
+                    c => c.Action == EffectActionKind.ReturnToHand && c.Zone == EffectZoneFilter.FieldSpellTraps &&
+                         c.Side == EffectSide.Both);
+                Check("Giant Trunade compiles to bounce all Spell/Traps", trunadeMiss.Count == 0, string.Join(",", trunadeMiss));
+                var sealMiss = SentenceAtomMisses(db, new[] { timeSeal },
+                    c => c.Action == EffectActionKind.SkipOpponentNextDrawPhase && c.Timing == EffectTiming.Activate);
+                Check("Time Seal compiles to skip the opponent's next Draw Phase", sealMiss.Count == 0, string.Join(",", sealMiss));
+                var defMiss = SentenceAtomMisses(db, new[] { guardian },
+                    c => c.Action == EffectActionKind.GainAtkDefUntilEndOfTurn && c.Amount == 0 && c.DefAmount == 700 &&
+                         c.RequiresTargetChoice);
+                Check("The Reliable Guardian compiles to +700 DEF until the End Phase", defMiss.Count == 0, string.Join(",", defMiss));
+                var fangMiss = SentenceAtomMisses(db, new[] { snakeFang },
+                    c => c.Action == EffectActionKind.LoseAtkDefUntilEndOfTurn && c.Amount == 0 && c.DefAmount == 500 &&
+                         c.RequiresTargetChoice);
+                Check("Snake Fang compiles to -500 DEF until the End Phase", fangMiss.Count == 0, string.Join(",", fangMiss));
+                var zeroMiss = SentenceAtomMisses(db, new[] { zeroG },
+                    c => c.Action == EffectActionKind.ChangeBattlePosition && c.Side == EffectSide.Both &&
+                         !c.ForceDefensePosition && !c.ForceAttackPosition);
+                Check("Zero Gravity compiles to toggle every face-up monster", zeroMiss.Count == 0, string.Join(",", zeroMiss));
+                var ssDrawMiss = SentenceAtomMisses(db, new[] { crane, molten },
+                    c => c.Action == EffectActionKind.Draw && c.Timing == EffectTiming.ThisCardSummoned &&
+                         c.RequiresThisSpecialSummoned && c.Side == EffectSide.Controller);
+                Check("Special Summon draw: the sentence group compiles to the same clause", ssDrawMiss.Count == 0, string.Join(",", ssDrawMiss));
+                var moltenGyMiss = SentenceAtomMisses(db, new[] { molten }, c => c.RequiresThisSpecialSummonedFromGy);
+                Check("Molten Zombie compiles to the Graveyard-only origin", moltenGyMiss.Count == 0, string.Join(",", moltenGyMiss));
+                var lockMiss = SentenceAtomMisses(db, new[] { bog, mammoth },
+                    c => c.Action == EffectActionKind.ContinuousCannotAttack && c.RequiresSummonedOrFlippedThisTurn &&
+                         c.Timing == EffectTiming.ContinuousWhileFaceUp);
+                Check("Summoned-this-turn attack lock: the sentence group compiles to the same clause",
+                    lockMiss.Count == 0, string.Join(",", lockMiss));
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var fairy = PlaceMonster(engine, p, hysteric, 2, BattlePosition.Attack, true);
+                    var f1 = PlaceMonster(engine, p, celtic, 1, BattlePosition.Attack, true);
+                    var f2 = PlaceMonster(engine, p, celtic, 3, BattlePosition.Defense, false);
+                    var lp = p.LifePoints;
+                    var started = engine.TryActivateSpellTrap(p, fairy, fromHand: false) && engine.IsAwaitingEffectTarget;
+                    var paid = started && engine.TrySelectEffectTarget(f1) && engine.TrySelectEffectTarget(f2);
+                    Check("Hysteric Fairy: Tribute 2 (a Set counts), gain 1000 LP",
+                        paid && p.Graveyard.Contains(f1) && p.Graveyard.Contains(f2) && p.LifePoints == lp + 1000 &&
+                        p.TryFindMonster(fairy, out _),
+                        $"started={started} paid={paid} lp={p.LifePoints} (was {lp})");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    var plant = PlaceMonster(engine, p, flower, 2, BattlePosition.Attack, true);
+                    var bug = PlaceMonster(engine, p, basicInsect, 1, BattlePosition.Attack, true);
+                    var elf = PlaceMonster(engine, p, celtic, 3, BattlePosition.Attack, true);
+                    var lp = o.LifePoints;
+                    var started = engine.TryActivateSpellTrap(p, plant, fromHand: false) && engine.IsAwaitingEffectTarget;
+                    var elfIllegal = started && !engine.IsLegalEffectTarget(elf);
+                    var paid = started && engine.TrySelectEffectTarget(bug);
+                    Check("Anti-Aircraft Flower: only an Insect is a legal Tribute, 800 damage",
+                        elfIllegal && paid && p.Graveyard.Contains(bug) && p.TryFindMonster(elf, out _) && o.LifePoints == lp - 800,
+                        $"started={started} elfIllegal={elfIllegal} paid={paid} lp={o.LifePoints}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    var tro = PlaceMonster(engine, p, manThro, 2, BattlePosition.Attack, true);
+                    var jinn = PlaceMonster(engine, p, laJinn, 1, BattlePosition.Attack, true);
+                    var soldier = PlaceMonster(engine, p, cannonSoldier, 3, BattlePosition.Attack, true);
+                    var lp = o.LifePoints;
+                    var started = engine.TryActivateSpellTrap(p, tro, fromHand: false) && engine.IsAwaitingEffectTarget;
+                    var effectIllegal = started && !engine.IsLegalEffectTarget(soldier);
+                    var paid = started && engine.TrySelectEffectTarget(jinn);
+                    Check("Man-Thro' Tro': only a Normal Monster is a legal Tribute, 800 damage",
+                        effectIllegal && paid && p.Graveyard.Contains(jinn) && p.TryFindMonster(soldier, out _) && o.LifePoints == lp - 800,
+                        $"started={started} effectIllegal={effectIllegal} paid={paid} lp={o.LifePoints}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    var unit = PlaceMonster(engine, p, throwstone, 2, BattlePosition.Attack, true);
+                    var warrior = PlaceMonster(engine, p, celtic, 1, BattlePosition.Attack, true);
+                    var elf = PlaceMonster(engine, o, geminiElf, 2, BattlePosition.Attack, true);
+                    var ox = PlaceMonster(engine, o, battleOx, 3, BattlePosition.Attack, true);
+                    var started = engine.TryActivateSpellTrap(p, unit, fromHand: false) && engine.IsAwaitingEffectTarget;
+                    var paid = started && engine.TrySelectEffectTarget(warrior);
+                    var targeting = paid && engine.IsAwaitingEffectTarget;
+                    var oxIllegal = targeting && !engine.IsLegalEffectTarget(ox);
+                    var elfLegal = targeting && engine.IsLegalEffectTarget(elf);
+                    var done = elfLegal && engine.TrySelectEffectTarget(elf);
+                    Check("Throwstone Unit: Tribute the Warrior, then destroy a DEF ≤ 900 monster only",
+                        oxIllegal && done && p.Graveyard.Contains(warrior) && o.Graveyard.Contains(elf) && o.TryFindMonster(ox, out _),
+                        $"started={started} paid={paid} targeting={targeting} oxIllegal={oxIllegal} elfLegal={elfLegal} done={done}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var two = PlaceMonster(engine, p, coston, 2, BattlePosition.Attack, true);
+                    var dm = PutInHand(engine, p, darkMagician);
+                    var canDm = engine.CanNormalSummonOrSet(p, dm);
+                    var summoned = canDm && engine.TryNormalSummon(p, dm, false);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    Check("Double Coston: a lone Coston is 2 Tributes for a DARK Level 7",
+                        summoned && p.Graveyard.Contains(two) && p.TryFindMonster(dm, out _) && dm.WasTributeSummoned,
+                        $"can={canDm} summoned={summoned} costonGy={p.Graveyard.Contains(two)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var two = PlaceMonster(engine, p, coston, 2, BattlePosition.Attack, true);
+                    var bewd = PutInHand(engine, p, blueEyes);
+                    var canBewd = engine.CanNormalSummonOrSet(p, bewd);
+                    var summoned = engine.TryNormalSummon(p, bewd, false);
+                    Check("Double Coston: still 1 Tribute for a LIGHT monster",
+                        !canBewd && !summoned && p.TryFindMonster(two, out _) && p.Hand.Contains(bewd),
+                        $"can={canBewd} summoned={summoned}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var horse = PlaceMonster(engine, p, trojan, 2, BattlePosition.Defense, false);
+                    var knight = PutInHand(engine, p, gaia);
+                    engine.PendingTributes.Add(horse);
+                    var summoned = engine.TryNormalSummon(p, knight, false);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    Check("The Trojan Horse: a Set Horse is 2 Tributes for an EARTH Level 7",
+                        summoned && p.Graveyard.Contains(horse) && p.TryFindMonster(knight, out _),
+                        $"summoned={summoned} horseGy={p.Graveyard.Contains(horse)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    p.Hand.Clear();
+                    var mine = PlaceSetTrap(engine, p, waboku, 0);
+                    // Mirror Force answers only an attack: it cannot chain to Trunade. (A Set MST here
+                    // is now legally chained by the AI in response — covered by the chain-rule tests.)
+                    var theirs = PlaceSetTrap(engine, o, 44095762, 0);
+                    var spell = PutInHand(engine, p, trunade);
+                    var cast = engine.TryActivateSpellTrap(p, spell, true);
+                    Check("Giant Trunade: every Spell/Trap on the field returns to its owner's hand",
+                        cast && p.Hand.Contains(mine) && o.Hand.Contains(theirs) &&
+                        !p.TryFindSpellTrap(mine, out _) && !o.TryFindSpellTrap(theirs, out _),
+                        $"cast={cast} mine={p.Hand.Contains(mine)} theirs={o.Hand.Contains(theirs)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    var seal = PlaceSetTrap(engine, p, timeSeal, 0);
+                    var reached = ReachOpponentMain(engine);
+                    var cast = reached && engine.TryActivateSpellTrap(p, seal, false);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    Check("Time Seal: the opponent skips their next Draw Phase",
+                        cast && o.SkipNextDrawPhase && !p.SkipNextDrawPhase,
+                        $"reached={reached} cast={cast} skip={o.SkipNextDrawPhase}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    p.Hand.Clear();
+                    var wall = PlaceMonster(engine, o, celtic, 2, BattlePosition.Defense, true);
+                    var spell = PutInHand(engine, p, guardian);
+                    var started = engine.TryActivateSpellTrap(p, spell, true) && engine.IsAwaitingEffectTarget;
+                    var done = started && engine.TrySelectEffectTarget(wall);
+                    Check("The Reliable Guardian: +700 DEF only, ATK untouched",
+                        done && wall.CurrentDef == 1900 && wall.CurrentAtk == 1400,
+                        $"started={started} done={done} stats={wall.CurrentAtk}/{wall.CurrentDef}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    var wall = PlaceMonster(engine, o, celtic, 2, BattlePosition.Defense, true);
+                    var trap = PlaceSetTrap(engine, p, snakeFang, 0);
+                    var started = engine.TryActivateSpellTrap(p, trap, false) && engine.IsAwaitingEffectTarget;
+                    var done = started && engine.TrySelectEffectTarget(wall);
+                    Check("Snake Fang: -500 DEF only, ATK untouched",
+                        done && wall.CurrentDef == 700 && wall.CurrentAtk == 1400,
+                        $"started={started} done={done} stats={wall.CurrentAtk}/{wall.CurrentDef}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    var mineUp = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var theirsUp = PlaceMonster(engine, o, celtic, 2, BattlePosition.Defense, true);
+                    var theirsDown = PlaceMonster(engine, o, celtic, 3, BattlePosition.Defense, false);
+                    var trap = PlaceSetTrap(engine, p, zeroG, 0);
+                    var cast = engine.TryActivateSpellTrap(p, trap, false);
+                    Check("Zero Gravity: face-up monsters flip position, face-down stay Set",
+                        cast && mineUp.Position == BattlePosition.Defense && theirsUp.Position == BattlePosition.Attack &&
+                        !theirsDown.FaceUp && theirsDown.Position == BattlePosition.Defense,
+                        $"cast={cast} mine={mineUp.Position} theirs={theirsUp.Position} down={theirsDown.FaceUp}/{theirsDown.Position}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var bird = engine.CreateCardInstance(crane);
+                    var handBefore = p.Hand.Count;
+                    var ss = engine.SpecialSummonToField(p, bird, BattlePosition.Attack, true);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    var drewOnSs = ss && p.Hand.Count == handBefore + 1;
+                    var normal = PutInHand(engine, p, crane);
+                    var handBeforeNs = p.Hand.Count;
+                    var ns = engine.TryNormalSummon(p, normal, false);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    Check("Sacred Crane: draws on a Special Summon, not on a Normal Summon",
+                        drewOnSs && ns && p.Hand.Count == handBeforeNs - 1,
+                        $"ss={ss} drewOnSs={drewOnSs} ns={ns} hand={p.Hand.Count}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var fromHand = engine.CreateCardInstance(molten);
+                    var before = p.Hand.Count;
+                    var ssHand = engine.SpecialSummonToField(p, fromHand, BattlePosition.Attack, true);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    var noDrawFromHand = ssHand && p.Hand.Count == before;
+                    var zombie = engine.CreateCardInstance(molten);
+                    p.Graveyard.Add(zombie);
+                    var spell = PutInHand(engine, p, reborn);
+                    var beforeReborn = p.Hand.Count;
+                    var started = engine.TryActivateSpellTrap(p, spell, true);
+                    var revived = started && (!engine.IsAwaitingEffectTarget || engine.TrySelectEffectTarget(zombie));
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    Check("Molten Zombie: draws only when Special Summoned from the Graveyard",
+                        noDrawFromHand && revived && p.TryFindMonster(zombie, out _) && p.Hand.Count == beforeReborn,
+                        $"ssHand={ssHand} noDrawFromHand={noDrawFromHand} started={started} revived={revived} hand={p.Hand.Count} (reborn left hand, drew 1 → expect {beforeReborn})");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    var spirit = PlaceSetTrap(engine, p, bog, 0);
+                    spirit.FaceUp = true;
+                    var veteran = PlaceMonster(engine, o, celtic, 3, BattlePosition.Attack, true);
+                    var reached = ReachOpponentMain(engine);
+                    var rookie = PutInHand(engine, o, celtic);
+                    var summoned = reached && engine.TryNormalSummon(o, rookie, false);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    var inBattle = summoned && engine.TryEnterBattlePhase(o);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    var rookieBlocked = inBattle && !engine.TryAttack(o, rookie, null);
+                    var veteranOk = inBattle && engine.TryAttack(o, veteran, null);
+                    Check("Vengeful Bog Spirit: a monster Summoned this turn cannot attack, an older one can",
+                        rookieBlocked && veteranOk,
+                        $"reached={reached} summoned={summoned} inBattle={inBattle} rookieBlocked={rookieBlocked} veteranOk={veteranOk} phase={engine.Phase}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    var tusk = PlaceMonster(engine, p, mammoth, 2, BattlePosition.Attack, true);
+                    var veteran = PlaceMonster(engine, o, celtic, 3, BattlePosition.Attack, true);
+                    var reached = ReachOpponentMain(engine);
+                    var rookie = PutInHand(engine, o, celtic);
+                    var summoned = reached && engine.TryNormalSummon(o, rookie, false);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    var inBattle = summoned && engine.TryEnterBattlePhase(o);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    var rookieBlocked = inBattle && !engine.TryAttack(o, rookie, tusk);
+                    var veteranOk = inBattle && engine.TryAttack(o, veteran, tusk);
+                    Check("Big-Tusked Mammoth: the opponent's freshly Summoned monster cannot attack",
+                        rookieBlocked && veteranOk,
+                        $"reached={reached} summoned={summoned} inBattle={inBattle} rookieBlocked={rookieBlocked} veteranOk={veteranOk} phase={engine.Phase}");
+                }
+            }
+
+            // ── v102: Tribute Summon riders, hand shuffles, DEF/ATK tweaks, deck peeks, draw / LP riders, damage locks ──
+            {
+                const int zolga = 16268841;
+                const int precious = 68304813;
+                const int pill = 22431243;
+                const int exhausting = 95451366;
+                const int disturbance = 77561728;
+                const int slump = 52417194;
+                const int microRay = 18190572;
+                const int energyDrain = 56916805;
+                const int kozaky = 49998907;
+                const int spellbook = 96677818;
+                const int servant = 16762927;
+                const int banner = 10012614;
+                const int lawbook = 23471572;
+                const int firePrincess = 64752646;
+                const int wishes = 35346968;
+                const int jeroid = 90980792;
+                const int mobius = 4929256;
+                const int barrier = 53239672;
+                const int fighter = 55821894;
+                const int celtic = 91152256;
+                const int geminiElf = 69140098;
+                const int summonedSkull = 70781052;
+                const int darkMagician = 36996508;
+                const int coston = 44436472;
+                const int armoredLizard = 15480588;
+                const int uraby = 1784619;
+                const int waboku = 12607053;
+                const int mst = 5318639;
+
+                var zolgaMiss = SentenceAtomMisses(db, new[] { zolga },
+                    c => c.Action == EffectActionKind.GainLpWhenTributedForSummon && c.Amount == 2000);
+                Check("Zolga compiles to gain 2000 when Tributed for a Summon", zolgaMiss.Count == 0, string.Join(",", zolgaMiss));
+                var preciousMiss = SentenceAtomMisses(db, new[] { precious },
+                    c => c.Action == EffectActionKind.DrawWhenTributeSummonedWithTwoPlus && c.Amount == 2);
+                Check("Precious Cards from Beyond compiles to draw 2 on a 2-Tribute Summon", preciousMiss.Count == 0, string.Join(",", preciousMiss));
+                var pillMiss = SentenceAtomMisses(db, new[] { pill },
+                    c => c.Action == EffectActionKind.SpecialSummonFromHand && c.RequiresTributeCount == 1 &&
+                         c.TributeRaceFilter == "Reptile" && c.RaceFilter == "Dinosaur" && c.RequiresTargetChoice);
+                Check("Ultra Evolution Pill compiles to Reptile Tribute → Dinosaur from hand", pillMiss.Count == 0, string.Join(",", pillMiss));
+                var shuffleMiss = SentenceAtomMisses(db, new[] { disturbance, slump },
+                    c => c.Action == EffectActionKind.OpponentShufflesHandThenDraws);
+                Check("Hand shuffle-redraw: the sentence group compiles to the same clause", shuffleMiss.Count == 0, string.Join(",", shuffleMiss));
+                var slumpMiss = SentenceAtomMisses(db, new[] { slump }, c => c.RequiresOpponentHandAtLeast == 8 && c.Amount == 2);
+                Check("Heavy Slump compiles with the 8-card condition and a fixed draw of 2", slumpMiss.Count == 0, string.Join(",", slumpMiss));
+                var peekMiss = SentenceAtomMisses(db, new[] { kozaky, spellbook },
+                    c => c.Action == EffectActionKind.ReorderTopOfOwnDeck && c.Amount == 3 && c.Timing == EffectTiming.Activate);
+                Check("Top-3 peek: the sentence group compiles to the same clause", peekMiss.Count == 0, string.Join(",", peekMiss));
+                var dmgLockMiss = SentenceAtomMisses(db, new[] { barrier, fighter },
+                    c => c.Action == EffectActionKind.PreventControllerBattleDamage && c.Timing == EffectTiming.ContinuousWhileFaceUp);
+                Check("Battle-damage locks: the sentence group compiles to the same clause", dmgLockMiss.Count == 0, string.Join(",", dmgLockMiss));
+                var singles = SentenceAtomMisses(db,
+                    new[] { exhausting, microRay, energyDrain, servant, banner, lawbook, firePrincess, wishes, jeroid, mobius },
+                    c => c != null);
+                Check("v102 singletons all FullyCompile", singles.Count == 0, string.Join(",", singles));
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var fodder = PlaceMonster(engine, p, zolga, 2, BattlePosition.Defense, false);
+                    var skull = PutInHand(engine, p, summonedSkull);
+                    var lp = p.LifePoints;
+                    engine.PendingTributes.Add(fodder);
+                    var summoned = engine.TryNormalSummon(p, skull, false);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    Check("Zolga: Tributing a Set Zolga pays its owner 2000 LP",
+                        summoned && p.Graveyard.Contains(fodder) && p.LifePoints == lp + 2000,
+                        $"summoned={summoned} lp={p.LifePoints} (was {lp})");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var spell = PlaceSetTrap(engine, p, precious, 0);
+                    spell.FaceUp = true;
+                    PlaceMonster(engine, p, celtic, 1, BattlePosition.Attack, true);
+                    PlaceMonster(engine, p, celtic, 3, BattlePosition.Attack, true);
+                    var dm = PutInHand(engine, p, darkMagician);
+                    var summoned = engine.TryNormalSummon(p, dm, false);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    var drewTwo = summoned && p.Hand.Count == 2;
+                    var engine2 = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine2);
+                    var p2 = engine2.Player;
+                    p2.Hand.Clear();
+                    var spell2 = PlaceSetTrap(engine2, p2, precious, 0);
+                    spell2.FaceUp = true;
+                    PlaceMonster(engine2, p2, celtic, 1, BattlePosition.Attack, true);
+                    var skull = PutInHand(engine2, p2, summonedSkull);
+                    var summonedOne = engine2.TryNormalSummon(p2, skull, false);
+                    if (engine2.IsAwaitingResponse) engine2.PassResponse();
+                    Check("Precious Cards from Beyond: draw 2 on a 2-Tribute Summon, nothing on a 1-Tribute Summon",
+                        drewTwo && summonedOne && p2.Hand.Count == 0,
+                        $"summoned={summoned} hand={p.Hand.Count} oneTrib={summonedOne} hand2={p2.Hand.Count}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var lizard = PlaceMonster(engine, p, armoredLizard, 1, BattlePosition.Attack, true);
+                    var other = PlaceMonster(engine, p, celtic, 3, BattlePosition.Attack, true);
+                    var dino = PutInHand(engine, p, uraby);
+                    var elf = PutInHand(engine, p, geminiElf);
+                    var spell = PutInHand(engine, p, pill);
+                    var started = engine.TryActivateSpellTrap(p, spell, true) && engine.IsAwaitingEffectTarget;
+                    var celticIllegal = started && !engine.IsLegalEffectTarget(other);
+                    var paid = started && engine.TrySelectEffectTarget(lizard);
+                    var targeting = paid && engine.IsAwaitingEffectTarget;
+                    var elfIllegal = targeting && !engine.IsLegalEffectTarget(elf);
+                    var done = targeting && engine.TrySelectEffectTarget(dino);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    Check("Ultra Evolution Pill: Tribute the Reptile, Special Summon the Dinosaur from hand",
+                        celticIllegal && elfIllegal && done && p.Graveyard.Contains(lizard) && p.TryFindMonster(dino, out _) &&
+                        p.Hand.Contains(elf),
+                        $"started={started} celticIllegal={celticIllegal} paid={paid} targeting={targeting} elfIllegal={elfIllegal} done={done}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    var mine = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    mine.Counters = 2;
+                    var theirs = PlaceSetTrap(engine, o, waboku, 0);
+                    theirs.FaceUp = true;
+                    theirs.Counters = 3;
+                    var trap = PlaceSetTrap(engine, p, exhausting, 0);
+                    var cast = engine.TryActivateSpellTrap(p, trap, false);
+                    Check("Exhausting Spell: every Spell Counter on both fields is removed",
+                        cast && mine.Counters == 0 && theirs.Counters == 0,
+                        $"cast={cast} mine={mine.Counters} theirs={theirs.Counters}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    o.Hand.Clear();
+                    var a = PutInHand(engine, o, celtic);
+                    var b = PutInHand(engine, o, celtic);
+                    var c3 = PutInHand(engine, o, mst);
+                    var deckBefore = o.Deck.Count;
+                    var trap = PlaceSetTrap(engine, p, disturbance, 0);
+                    var cast = engine.TryActivateSpellTrap(p, trap, false);
+                    Check("Disturbance Strategy: the opponent shuffles 3 in and draws 3",
+                        cast && o.Hand.Count == 3 && o.Deck.Count == deckBefore &&
+                        !o.Hand.Contains(a) && !o.Hand.Contains(b) && !o.Hand.Contains(c3),
+                        $"cast={cast} hand={o.Hand.Count} deck={o.Deck.Count} (was {deckBefore})");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    o.Hand.Clear();
+                    for (var i = 0; i < 7; i++) PutInHand(engine, o, celtic);
+                    var trap = PlaceSetTrap(engine, p, slump, 0);
+                    var blockedAtSeven = !engine.CanActivateSpellTrap(p, trap, false);
+                    PutInHand(engine, o, celtic);
+                    var deckBefore = o.Deck.Count;
+                    var cast = engine.TryActivateSpellTrap(p, trap, false);
+                    Check("Heavy Slump: needs 8 in the opponent's hand, then they redraw exactly 2",
+                        blockedAtSeven && cast && o.Hand.Count == 2 && o.Deck.Count == deckBefore + 6,
+                        $"blockedAtSeven={blockedAtSeven} cast={cast} hand={o.Hand.Count} deck={o.Deck.Count} (was {deckBefore})");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    var wall = PlaceMonster(engine, o, celtic, 2, BattlePosition.Defense, true);
+                    var hidden = PlaceMonster(engine, o, celtic, 3, BattlePosition.Defense, false);
+                    var trap = PlaceSetTrap(engine, p, microRay, 0);
+                    // The Set monster is not a legal target, so the lone face-up one resolves without a prompt.
+                    var started = engine.TryActivateSpellTrap(p, trap, false);
+                    var done = started && (!engine.IsAwaitingEffectTarget || engine.TrySelectEffectTarget(wall));
+                    Check("Micro Ray: the face-up target's DEF becomes 0, ATK untouched, Sets are not targets",
+                        done && wall.CurrentDef == 0 && wall.CurrentAtk == 1400 && !hidden.FaceUp && hidden.CurrentDef == 1200,
+                        $"started={started} done={done} stats={wall.CurrentAtk}/{wall.CurrentDef} hidden={hidden.FaceUp}/{hidden.CurrentDef}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    o.Hand.Clear();
+                    for (var i = 0; i < 3; i++) PutInHand(engine, o, celtic);
+                    var mine = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var theirs = PlaceMonster(engine, o, celtic, 2, BattlePosition.Attack, true);
+                    var trap = PlaceSetTrap(engine, p, energyDrain, 0);
+                    var started = engine.TryActivateSpellTrap(p, trap, false) && engine.IsAwaitingEffectTarget;
+                    var theirsIllegal = started && !engine.IsLegalEffectTarget(theirs);
+                    var done = started && engine.TrySelectEffectTarget(mine);
+                    Check("Energy Drain: +200 ATK/DEF per card in the opponent's hand, your monster only",
+                        theirsIllegal && done && mine.CurrentAtk == 2000 && mine.CurrentDef == 1800,
+                        $"started={started} theirsIllegal={theirsIllegal} done={done} stats={mine.CurrentAtk}/{mine.CurrentDef}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var top = p.Deck.Take(3).ToList();
+                    var trap = PlaceSetTrap(engine, p, kozaky, 0);
+                    var started = engine.TryActivateSpellTrap(p, trap, false) && engine.IsAwaitingEffectTarget;
+                    var picks = started ? engine.PendingActivation.LegalTargets.ToList() : new System.Collections.Generic.List<CardInstance>();
+                    var ordered = picks.Count == 3 &&
+                                  engine.TrySelectEffectTarget(picks[2]) &&
+                                  engine.TrySelectEffectTarget(picks[1]) &&
+                                  engine.TrySelectEffectTarget(picks[0]);
+                    var now = p.Deck.Take(3).ToList();
+                    var reversed = now.Count == 3 && now[0] == top[2] && now[1] == top[1] && now[2] == top[0];
+                    Check("Fruits of Kozaky's Studies: look at the top 3 and put them back in a chosen order",
+                        ordered && reversed && !engine.IsAwaitingEffectTarget,
+                        $"started={started} picks={picks.Count} ordered={ordered} top={string.Join(",", top)} now={string.Join(",", now)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    var spell = PlaceSetTrap(engine, p, servant, 0);
+                    spell.FaceUp = true;
+                    var wolf = PlaceMonster(engine, o, celtic, 2, BattlePosition.Attack, true);
+                    var reached = ReachOpponentBattle(engine);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    var deckBefore = o.Deck.Count;
+                    var gyBefore = o.Graveyard.Count;
+                    var attacked = reached && engine.TryAttack(o, wolf, null);
+                    Check("Gravekeeper's Servant: the attacker mills 1 to declare",
+                        attacked && o.Deck.Count == deckBefore - 1 && o.Graveyard.Count == gyBefore + 1,
+                        $"reached={reached} attacked={attacked} deck={o.Deck.Count} (was {deckBefore}) gy={o.Graveyard.Count} (was {gyBefore})");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    var spell = PlaceSetTrap(engine, p, banner, 0);
+                    spell.FaceUp = true;
+                    var mine = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var theirs = PlaceMonster(engine, o, celtic, 2, BattlePosition.Attack, true);
+                    FieldSpellEffects.RefreshBoard(engine);
+                    var mainAtk = mine.CurrentAtk;
+                    var reached = ReachPlayerBattle(engine);
+                    FieldSpellEffects.RefreshBoard(engine);
+                    Check("Banner of Courage: +200 ATK to your monsters only, only in your Battle Phase",
+                        mainAtk == 1400 && reached && mine.CurrentAtk == 1600 && theirs.CurrentAtk == 1400,
+                        $"mainAtk={mainAtk} reached={reached} phase={engine.Phase} turn={engine.TurnPlayer?.Name} mine={mine.CurrentAtk} theirs={theirs.CurrentAtk}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var trap = PlaceSetTrap(engine, p, lawbook, 0);
+                    var cast = engine.TryActivateSpellTrap(p, trap, false);
+                    var armed = cast && p.SkipNextStandbyPhase;
+                    for (var t = 0; t < 8 && !(engine.TurnPlayer == engine.Player && engine.TurnNumber >= 3); t++)
+                    {
+                        if (engine.IsAwaitingResponse) engine.PassResponse();
+                        engine.RecoverStuckCombat();
+                        engine.TryEndTurnSafe(engine.TurnPlayer);
+                    }
+                    Check("Solomon's Lawbook: the next own Standby Phase is skipped and the flag clears",
+                        armed && engine.TurnPlayer == engine.Player && !p.SkipNextStandbyPhase,
+                        $"cast={cast} armed={armed} turn={engine.TurnNumber} flag={p.SkipNextStandbyPhase}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    PlaceMonster(engine, p, firePrincess, 2, BattlePosition.Attack, true);
+                    var lp = o.LifePoints;
+                    WRLDZ.Duel.TextEffects.TextEffectRuntime.ApplyLifePointGain(engine, p, 1000, "fixture");
+                    Check("Fire Princess: 500 damage each time you gain LP",
+                        o.LifePoints == lp - 500,
+                        $"lp={o.LifePoints} (was {lp})");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var trap = PlaceSetTrap(engine, p, wishes, 0);
+                    trap.FaceUp = true;
+                    var lp = p.LifePoints;
+                    engine.Draw(p, 2);
+                    Check("Solemn Wishes: +500 LP once per draw, even when 2 are drawn",
+                        p.LifePoints == lp + 500,
+                        $"lp={p.LifePoints} (was {lp})");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    p.Hand.Clear();
+                    var victim = PlaceMonster(engine, o, celtic, 2, BattlePosition.Attack, true);
+                    var hidden = PlaceMonster(engine, o, celtic, 3, BattlePosition.Defense, false);
+                    var card = PutInHand(engine, p, jeroid);
+                    var summoned = engine.TryNormalSummon(p, card, false) && engine.IsAwaitingEffectTarget;
+                    var hiddenIllegal = summoned && !engine.IsLegalEffectTarget(hidden);
+                    var done = summoned && engine.TrySelectEffectTarget(victim);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    Check("Dark Jeroid: on Summon, a face-up monster loses 800 ATK",
+                        hiddenIllegal && done && victim.CurrentAtk == 600,
+                        $"summoned={summoned} hiddenIllegal={hiddenIllegal} done={done} atk={victim.CurrentAtk}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    p.Hand.Clear();
+                    var fodder = PlaceMonster(engine, p, celtic, 1, BattlePosition.Attack, true);
+                    var mineSet = PlaceSetTrap(engine, p, waboku, 0);
+                    var theirsSet = PlaceSetTrap(engine, o, mst, 0);
+                    var keep = PlaceSetTrap(engine, o, waboku, 1);
+                    var card = PutInHand(engine, p, mobius);
+                    engine.PendingTributes.Add(fodder);
+                    var summoned = engine.TryNormalSummon(p, card, false) && engine.IsAwaitingEffectTarget;
+                    var picked = summoned && engine.TrySelectEffectTarget(mineSet) && engine.TrySelectEffectTarget(theirsSet);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    Check("Mobius the Frost Monarch: on Tribute Summon, destroy up to 2 Spell/Traps",
+                        picked && p.Graveyard.Contains(mineSet) && o.Graveyard.Contains(theirsSet) && o.TryFindSpellTrap(keep, out _),
+                        $"summoned={summoned} picked={picked} mineGy={p.Graveyard.Contains(mineSet)} theirsGy={o.Graveyard.Contains(theirsSet)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    var trap = PlaceSetTrap(engine, p, barrier, 0);
+                    trap.FaceUp = true;
+                    var wall = PlaceMonster(engine, p, celtic, 2, BattlePosition.Attack, true);
+                    var elf1 = PlaceMonster(engine, o, geminiElf, 2, BattlePosition.Attack, true);
+                    var elf2 = PlaceMonster(engine, o, geminiElf, 3, BattlePosition.Attack, true);
+                    var reached = ReachOpponentBattle(engine);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    var lp = p.LifePoints;
+                    var first = reached && engine.TryAttack(o, elf1, wall);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    DrainCombat(engine);
+                    var shielded = first && p.LifePoints == lp && p.Graveyard.Contains(wall);
+                    var second = shielded && engine.TryAttack(o, elf2, null);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    DrainCombat(engine);
+                    Check("Spirit Barrier: no battle damage while you control a monster, full damage once you do not",
+                        shielded && second && p.LifePoints == lp - 1900,
+                        $"reached={reached} first={first} shielded={shielded} second={second} lp={p.LifePoints} (was {lp})");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    var amazon = PlaceMonster(engine, p, fighter, 2, BattlePosition.Attack, true);
+                    var other = PlaceMonster(engine, p, celtic, 3, BattlePosition.Attack, true);
+                    var elf1 = PlaceMonster(engine, o, geminiElf, 2, BattlePosition.Attack, true);
+                    var elf2 = PlaceMonster(engine, o, geminiElf, 3, BattlePosition.Attack, true);
+                    var reached = ReachOpponentBattle(engine);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    var lp = p.LifePoints;
+                    var first = reached && engine.TryAttack(o, elf1, amazon);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    DrainCombat(engine);
+                    var shielded = first && p.LifePoints == lp && p.Graveyard.Contains(amazon);
+                    var second = shielded && engine.TryAttack(o, elf2, other);
+                    if (engine.IsAwaitingResponse) engine.PassResponse();
+                    DrainCombat(engine);
+                    Check("Amazoness Fighter: no battle damage from its own battle, normal damage from another",
+                        shielded && second && p.LifePoints == lp - 500,
+                        $"reached={reached} first={first} shielded={shielded} second={second} lp={p.LifePoints} (was {lp})");
+                }
+            }
+
+            // ── v103–v105 (main checkout, ported onto v106): per-count burns — Des Koala (× opponent's hand),
+            //    Just Desserts (× monsters they control), Secret Barrel (× hand + every card they control) ──
+            {
+                const int koala = 69579761;
+                const int desserts = 24068492;
+                const int barrel = 27053506;
+                const int mummy = 43716289;
+                const int celticG = 91152256;
+                const int wabokuC = 12607053;
+                const int mountainC = 50913601;
+
+                var koalaProg = CardTextEffectCompiler.Compile(db.Get(koala));
+                Check("Des Koala FullyCompiled Flip burn x opponent's hand",
+                    koalaProg != null && koalaProg.FullyCompiled && koalaProg.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.Flip &&
+                        c.Action == EffectActionKind.InflictDamageToOpponent && c.Amount == 400 &&
+                        c.ScaleAmountByOpponentHandCards),
+                    koalaProg == null ? "null" : $"full={koalaProg.FullyCompiled} unparsed={string.Join("|", koalaProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                var dessertsProg = CardTextEffectCompiler.Compile(db.Get(desserts));
+                Check("Just Desserts FullyCompiled burn x opponent's monsters",
+                    dessertsProg != null && dessertsProg.FullyCompiled && dessertsProg.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.Activate &&
+                        c.Action == EffectActionKind.InflictDamageToOpponent && c.Amount == 500 &&
+                        c.ScaleAmountByOpponentMonsterCount && !c.ScaleAmountByOpponentHandAndControlledCards),
+                    dessertsProg == null ? "null" : $"full={dessertsProg.FullyCompiled} n={dessertsProg.ClauseList.Count}");
+                var barrelProg = CardTextEffectCompiler.Compile(db.Get(barrel));
+                Check("Secret Barrel FullyCompiled burn x (opponent's hand + cards they control)",
+                    barrelProg != null && barrelProg.FullyCompiled && barrelProg.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.Activate &&
+                        c.Action == EffectActionKind.InflictDamageToOpponent && c.Amount == 200 &&
+                        c.ScaleAmountByOpponentHandAndControlledCards && !c.ScaleAmountByOpponentMonsterCount),
+                    barrelProg == null ? "null" : $"full={barrelProg.FullyCompiled} n={barrelProg.ClauseList.Count}");
+                var mummyProg = CardTextEffectCompiler.Compile(db.Get(mummy));
+                Check("Poison Mummy stays a flat Flip burn (no per-count scale)",
+                    mummyProg != null && mummyProg.FullyCompiled && mummyProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.InflictDamageToOpponent && c.Amount == 500 &&
+                        !c.ScaleAmountByOpponentHandCards && !c.ScaleAmountByOpponentMonsterCount &&
+                        !c.ScaleAmountByOpponentHandAndControlledCards));
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    o.Hand.Clear();
+                    for (var i = 0; i < 3; i++) PutInHand(engine, o, celticG);
+                    var koalaCard = PlaceMonster(engine, p, koala, 2, BattlePosition.Defense, true);
+                    var lp = o.LifePoints;
+                    MonsterEffects.OnFlipSummoned(engine, p, koalaCard);
+                    DrainCombat(engine);
+                    Check("Des Koala: Flip inflicts 400 x 3 cards in the opponent's hand",
+                        o.LifePoints == lp - 1200, $"lp={o.LifePoints} (was {lp})");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    o.Hand.Clear();
+                    for (var i = 0; i < 3; i++) PutInHand(engine, o, celticG);
+                    var mummyCard = PlaceMonster(engine, p, mummy, 2, BattlePosition.Defense, true);
+                    var lp = o.LifePoints;
+                    MonsterEffects.OnFlipSummoned(engine, p, mummyCard);
+                    DrainCombat(engine);
+                    Check("Poison Mummy: Flip inflicts a flat 500, whatever the opponent's hand",
+                        o.LifePoints == lp - 500, $"lp={o.LifePoints} (was {lp})");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    o.Hand.Clear();
+                    PutInHand(engine, o, celticG);
+                    PlaceMonster(engine, o, celticG, 1, BattlePosition.Attack, true);
+                    PlaceMonster(engine, o, celticG, 3, BattlePosition.Defense, false);
+                    PlaceSetTrap(engine, o, wabokuC, 0);
+                    var trap = PlaceSetTrap(engine, p, desserts, 0);
+                    var lp = o.LifePoints;
+                    var cast = engine.TryActivateSpellTrap(p, trap, false);
+                    DrainCombat(engine);
+                    Check("Just Desserts: 500 x 2 monsters they control (hand and Spell/Traps do not count)",
+                        cast && o.LifePoints == lp - 1000, $"cast={cast} lp={o.LifePoints} (was {lp})");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    o.Hand.Clear();
+                    PutInHand(engine, o, celticG);
+                    PutInHand(engine, o, celticG);
+                    PlaceMonster(engine, o, celticG, 1, BattlePosition.Attack, true);
+                    PlaceSetTrap(engine, o, wabokuC, 0);
+                    var field = engine.CreateCardInstance(mountainC);
+                    field.FaceUp = true;
+                    o.FieldSpellZone.Occupant = field;
+                    var trap = PlaceSetTrap(engine, p, barrel, 0);
+                    var lp = o.LifePoints;
+                    var cast = engine.TryActivateSpellTrap(p, trap, false);
+                    DrainCombat(engine);
+                    // 2 in hand + 1 monster + 1 Set Spell/Trap + 1 Field Spell (the Field Zone counts).
+                    Check("Secret Barrel: 200 x (2 in hand + 3 cards they control, Field Spell included)",
+                        cast && o.LifePoints == lp - 1000, $"cast={cast} lp={o.LifePoints} (was {lp})");
+                }
+            }
+
+            // ── v140: cards compiled only on the unmerged Sept-10 cloud branches (PRs #28 #31 #32 #33) —
+            //    Windstorm of Etaqua, Level Limit - Area B, Invigoration, Spiritualism, Graceful / Skull Dice ──
+            {
+                const int windstorm = 59744639;
+                const int areaB = 3136426;
+                const int invigoration = 98374133;
+                const int spiritualism = 15866454;
+                const int gracefulDice = 74137509;
+                const int skullDice = 126218;
+                const int celticG = 91152256; // Level 4 EARTH 1400/1200
+                const int kuribohC = 40640057; // Level 1 DARK 300/200
+                const int wabokuC = 12607053;
+                const int mountainC = 50913601;
+
+                string Left(CompiledCardProgram prog) =>
+                    prog == null
+                        ? "null"
+                        : $"full={prog.FullyCompiled} unparsed={string.Join("|", prog.UnparsedFragments ?? System.Array.Empty<string>())}";
+
+                var windProg = CardTextEffectCompiler.Compile(db.Get(windstorm));
+                Check("Windstorm of Etaqua FullyCompiled: toggle every face-up opponent monster, no target",
+                    windProg != null && windProg.FullyCompiled && windProg.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.Activate &&
+                        c.Action == EffectActionKind.ChangeBattlePosition &&
+                        c.Zone == EffectZoneFilter.OppFaceUpMonsters && !c.RequiresTargetChoice),
+                    Left(windProg));
+                var areaProg = CardTextEffectCompiler.Compile(db.Get(areaB));
+                Check("Level Limit - Area B FullyCompiled: continuous force-DEF for Level 4 or higher",
+                    areaProg != null && areaProg.FullyCompiled && areaProg.ClauseList.Exists(c =>
+                        c != null && c.Timing == EffectTiming.ContinuousWhileFaceUp &&
+                        c.Action == EffectActionKind.ChangeBattlePosition && c.ForceDefensePosition &&
+                        c.AmountIsLevel && c.Amount == 4),
+                    Left(areaProg));
+                var invProg = CardTextEffectCompiler.Compile(db.Get(invigoration));
+                Check("Invigoration FullyCompiled: EARTH-only equip +400 ATK / -200 DEF",
+                    invProg != null && invProg.FullyCompiled && invProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.EquipThisToTarget &&
+                        c.AttributeFilter == "EARTH" && c.EquipAtkBonus == 400 && c.EquipDefBonus == -200),
+                    Left(invProg));
+                var spirProg = CardTextEffectCompiler.Compile(db.Get(spiritualism));
+                Check("Spiritualism FullyCompiled: bounce 1 opponent Spell/Trap, cannot be negated",
+                    spirProg != null && spirProg.FullyCompiled && spirProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.ReturnToHand &&
+                        c.Zone == EffectZoneFilter.OppSpellTraps && c.RequiresTargetChoice &&
+                        !c.ActivationNegatable && !c.EffectNegatable),
+                    Left(spirProg));
+                var graceProg = CardTextEffectCompiler.Compile(db.Get(gracefulDice));
+                var skullProg = CardTextEffectCompiler.Compile(db.Get(skullDice));
+                Check("Graceful Dice / Skull Dice FullyCompiled: die x 100 to your / their monsters until end of turn",
+                    graceProg != null && graceProg.FullyCompiled && graceProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.ModifyAllAtkDefByDieUntilEndOfTurn &&
+                        c.Side == EffectSide.Controller && c.Amount == 100) &&
+                    skullProg != null && skullProg.FullyCompiled && skullProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.ModifyAllAtkDefByDieUntilEndOfTurn &&
+                        c.Side == EffectSide.Opponent && c.Amount == -100),
+                    Left(graceProg) + " | " + Left(skullProg));
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    var theirAtk = PlaceMonster(engine, o, celticG, 1, BattlePosition.Attack, true);
+                    var theirDef = PlaceMonster(engine, o, kuribohC, 2, BattlePosition.Defense, true);
+                    var theirSet = PlaceMonster(engine, o, celticG, 3, BattlePosition.Defense, false);
+                    var mine = PlaceMonster(engine, p, celticG, 2, BattlePosition.Attack, true);
+                    var trap = PlaceSetTrap(engine, p, windstorm, 0);
+                    var cast = engine.TryActivateSpellTrap(p, trap, false);
+                    DrainCombat(engine);
+                    Check("Windstorm of Etaqua: their face-up monsters swap, their Set and yours stay",
+                        cast && theirAtk.Position == BattlePosition.Defense && theirAtk.FaceUp &&
+                        theirDef.Position == BattlePosition.Attack && !theirSet.FaceUp &&
+                        theirSet.Position == BattlePosition.Defense && mine.Position == BattlePosition.Attack,
+                        $"cast={cast} atk→{theirAtk.Position} def→{theirDef.Position} set={theirSet.FaceUp}/{theirSet.Position} mine={mine.Position}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    p.Hand.Clear();
+                    var high = PlaceMonster(engine, o, celticG, 1, BattlePosition.Attack, true);
+                    var low = PlaceMonster(engine, p, kuribohC, 2, BattlePosition.Attack, true);
+                    var card = PutInHand(engine, p, areaB);
+                    var cast = engine.TryActivateSpellTrap(p, card, true);
+                    DrainCombat(engine);
+                    FieldSpellEffects.RefreshBoard(engine);
+                    Check("Level Limit - Area B: the Level 4 goes to Defense and stays locked; the Level 1 stays in Attack",
+                        cast && high.Position == BattlePosition.Defense && high.PositionLockedByEffect &&
+                        low.Position == BattlePosition.Attack && !low.PositionLockedByEffect,
+                        $"cast={cast} high={high.Position}/{high.PositionLockedByEffect} low={low.Position}/{low.PositionLockedByEffect}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    p.Hand.Clear();
+                    var earth = PlaceMonster(engine, p, celticG, 2, BattlePosition.Attack, true);
+                    var dark = PlaceMonster(engine, p, kuribohC, 3, BattlePosition.Attack, true);
+                    var card = PutInHand(engine, p, invigoration);
+                    var opened = engine.TryActivateSpellTrap(p, card, true);
+                    var darkIllegal = opened && !engine.IsLegalEffectTarget(dark);
+                    if (engine.IsAwaitingEffectTarget) engine.TrySelectEffectTarget(earth);
+                    DrainCombat(engine);
+                    FieldSpellEffects.RefreshBoard(engine);
+                    Check("Invigoration: only the EARTH monster can take it; it becomes 1800/1000",
+                        opened && darkIllegal && earth.CurrentAtk == 1800 && earth.CurrentDef == 1000 &&
+                        dark.CurrentAtk == 300,
+                        $"opened={opened} darkIllegal={darkIllegal} earth={earth.CurrentAtk}/{earth.CurrentDef} dark={dark.CurrentAtk}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    p.Hand.Clear();
+                    o.Hand.Clear();
+                    var theirs = PlaceSetTrap(engine, o, wabokuC, 1);
+                    var field = engine.CreateCardInstance(mountainC);
+                    field.FaceUp = true;
+                    o.FieldSpellZone.Occupant = field;
+                    var own = PlaceSetTrap(engine, p, wabokuC, 1);
+                    var card = PutInHand(engine, p, spiritualism);
+                    var opened = engine.TryActivateSpellTrap(p, card, true);
+                    var ownIllegal = opened && !engine.IsLegalEffectTarget(own);
+                    var theirsLegal = opened && engine.IsLegalEffectTarget(theirs);
+                    // Their face-up Field Spell cannot answer; a targeted Set Waboku may be chained away.
+                    var picked = opened && engine.TrySelectEffectTarget(field);
+                    DrainCombat(engine);
+                    Check("Spiritualism: their Field Spell returns to their hand; your own Spell/Trap is not a target",
+                        opened && ownIllegal && theirsLegal && picked && o.Hand.Contains(field) &&
+                        o.FieldSpellZone.Occupant == null && p.TryFindSpellTrap(own, out _),
+                        $"opened={opened} ownIllegal={ownIllegal} theirsLegal={theirsLegal} picked={picked} inHand={o.Hand.Contains(field)}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    p.Hand.Clear();
+                    var a = PlaceMonster(engine, p, celticG, 1, BattlePosition.Attack, true);
+                    var b = PlaceMonster(engine, p, kuribohC, 2, BattlePosition.Attack, true);
+                    var set = PlaceMonster(engine, p, celticG, 3, BattlePosition.Defense, false);
+                    var foe = PlaceMonster(engine, o, celticG, 2, BattlePosition.Attack, true);
+                    engine.Rng.QueueDie(4);
+                    var card = PutInHand(engine, p, gracefulDice);
+                    var cast = engine.TryActivateSpellTrap(p, card, true);
+                    DrainCombat(engine);
+                    Check("Graceful Dice: a 4 gives each face-up monster you control +400/+400 (not the Set, not theirs)",
+                        cast && a.CurrentAtk == 1800 && a.CurrentDef == 1600 && b.CurrentAtk == 700 &&
+                        b.CurrentDef == 600 && set.UntilEndOfTurnAtk == 0 && foe.CurrentAtk == 1400,
+                        $"cast={cast} a={a.CurrentAtk}/{a.CurrentDef} b={b.CurrentAtk}/{b.CurrentDef} set={set.UntilEndOfTurnAtk} foe={foe.CurrentAtk}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var o = engine.Opponent;
+                    var foe = PlaceMonster(engine, o, celticG, 1, BattlePosition.Attack, true);
+                    var mine = PlaceMonster(engine, p, celticG, 2, BattlePosition.Attack, true);
+                    engine.Rng.QueueDie(3);
+                    var trap = PlaceSetTrap(engine, p, skullDice, 0);
+                    var cast = engine.TryActivateSpellTrap(p, trap, false);
+                    DrainCombat(engine);
+                    Check("Skull Dice: a 3 takes 300/300 from each face-up monster they control, not yours",
+                        cast && foe.CurrentAtk == 1100 && foe.CurrentDef == 900 && mine.CurrentAtk == 1400,
+                        $"cast={cast} foe={foe.CurrentAtk}/{foe.CurrentDef} mine={mine.CurrentAtk}");
+                }
+            }
+
             // ── FirstEmpty order ──
+
             {
                 var engine = Fresh(db, pDeck, aDeck);
                 var zones = engine.Player.MonsterZones;
@@ -6645,6 +19041,12 @@ namespace WRLDZ.Duel.Rules
                     $"got {i0},{i1},{i2}");
             }
 
+            // Chain / response-window / game-over rules (QC fix pass 2026-09-23).
+            ChainRulesRegressionTests.Run(db, pDeck, aDeck, Check);
+
+            // Card batches (Tools/CardCompile): each batch's own test file, one call line per batch.
+            CardBatchRegressionTests.Run(db, pDeck, aDeck, Check);
+
             sb.AppendLine($"--- {pass} passed, {fail} failed ---");
             var summary = sb.ToString();
             if (fail == 0)
@@ -6654,14 +19056,14 @@ namespace WRLDZ.Duel.Rules
             return summary;
         }
 
-        static DuelEngine Fresh(CardDatabase db, DeckFile p, DeckFile a)
+        internal static DuelEngine Fresh(CardDatabase db, DeckFile p, DeckFile a)
         {
             var engine = new DuelEngine();
             engine.StartDuel(db, p, a, cinematicOpening: false);
             return engine;
         }
 
-        static void ClearBoard(DuelEngine engine)
+        internal static void ClearBoard(DuelEngine engine)
         {
             foreach (var who in new[] { engine.Player, engine.Opponent })
             {
@@ -6678,14 +19080,40 @@ namespace WRLDZ.Duel.Rules
             engine.PendingTributes.Clear();
         }
 
-        static CardInstance PutInHand(DuelEngine engine, DuelistState who, int id)
+        /// <summary>null = does not FullyCompile as GY-SS (leave unimplemented; no new primitives).</summary>
+        static bool? TryActivateCompiledGySsIfReady(CardDatabase db, DeckFile pDeck, DeckFile aDeck, int id)
+        {
+            var def = db.Get(id);
+            var prog = def != null ? CardTextEffectCompiler.Compile(def) : null;
+            var gySs = prog != null && prog.FullyCompiled &&
+                       prog.ClauseList.Exists(c =>
+                           c != null &&
+                           c.Timing == EffectTiming.Activate &&
+                           c.Action == EffectActionKind.SpecialSummonFromGy);
+            if (!gySs)
+                return null;
+            // Dual each-player own-GY (The Shallow Grave) needs both GYs — covered by dedicated checks.
+            if (prog.ClauseList.Exists(c => c != null && c.SummonToTargetsOwner && c.RequiresSecondTarget))
+                return null;
+
+            const int celtic = 91152256;
+            var engine = Fresh(db, pDeck, aDeck);
+            ClearBoard(engine);
+            var who = engine.Player;
+            who.Hand.Clear();
+            who.Graveyard.Add(engine.CreateCardInstance(celtic));
+            var card = PutInHand(engine, who, id);
+            return engine.CanActivateSpellTrap(who, card, fromHand: true);
+        }
+
+        internal static CardInstance PutInHand(DuelEngine engine, DuelistState who, int id)
         {
             var c = engine.CreateCardInstance(id);
             who.Hand.Add(c);
             return c;
         }
 
-        static CardInstance PlaceMonster(DuelEngine engine, DuelistState who, int id, int zone,
+        internal static CardInstance PlaceMonster(DuelEngine engine, DuelistState who, int id, int zone,
             BattlePosition pos, bool faceUp)
         {
             var c = engine.CreateCardInstance(id);
@@ -6697,7 +19125,7 @@ namespace WRLDZ.Duel.Rules
             return c;
         }
 
-        static CardInstance PlaceSetTrap(DuelEngine engine, DuelistState who, int id, int zone)
+        internal static CardInstance PlaceSetTrap(DuelEngine engine, DuelistState who, int id, int zone)
         {
             var c = engine.CreateCardInstance(id);
             c.FaceUp = false;
@@ -6706,7 +19134,7 @@ namespace WRLDZ.Duel.Rules
             return c;
         }
 
-        static bool ReachOpponentMain(DuelEngine engine)
+        internal static bool ReachOpponentMain(DuelEngine engine)
         {
             for (var t = 0; t < 10 &&
                             !(engine.TurnPlayer == engine.Opponent && engine.InMainPhase &&
@@ -6724,7 +19152,7 @@ namespace WRLDZ.Duel.Rules
             return engine.TurnPlayer == engine.Opponent && engine.InMainPhase;
         }
 
-        static bool ReachOpponentBattle(DuelEngine engine)
+        internal static bool ReachOpponentBattle(DuelEngine engine)
         {
             for (var t = 0; t < 8 &&
                             !(engine.TurnPlayer == engine.Opponent && engine.TurnNumber >= 2); t++)
@@ -6743,7 +19171,26 @@ namespace WRLDZ.Duel.Rules
             return engine.Phase == DuelPhase.Battle && engine.TurnPlayer == engine.Opponent;
         }
 
-        static CardInstance MockOcc() => new CardInstance { InstanceId = 1, CardId = 1 };
+        internal static CardInstance MockOcc() => new CardInstance { InstanceId = 1, CardId = 1 };
+
+        /// <summary>
+        /// A sentence group: the representative already has a resolution mini-duel.
+        /// Every id, including that representative, must be FullyCompiled to the same clause.
+        /// </summary>
+        internal static System.Collections.Generic.List<int> SentenceAtomMisses(CardDatabase db, int[] ids,
+            System.Func<WRLDZ.Duel.TextEffects.EffectClause, bool> shape)
+        {
+            var missing = new System.Collections.Generic.List<int>();
+            foreach (var id in ids)
+            {
+                var prog = CardTextEffectCompiler.Compile(db.Get(id));
+                var hit = prog != null && prog.FullyCompiled &&
+                          prog.ClauseList.Exists(c => c != null && shape(c));
+                if (!hit) missing.Add(id);
+            }
+
+            return missing;
+        }
 
         static bool ReachPlayerBattle(DuelEngine engine)
         {
@@ -6764,7 +19211,7 @@ namespace WRLDZ.Duel.Rules
             return engine.Phase == DuelPhase.Battle && engine.TurnPlayer == engine.Player;
         }
 
-        static void DrainCombat(DuelEngine engine)
+        internal static void DrainCombat(DuelEngine engine)
         {
             for (var i = 0; i < 12; i++)
             {

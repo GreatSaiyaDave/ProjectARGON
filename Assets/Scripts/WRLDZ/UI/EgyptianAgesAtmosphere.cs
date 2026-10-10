@@ -47,6 +47,8 @@ namespace WRLDZ.UI
         Image _vignette;
         Image _veil;
         readonly List<RectTransform> _stars = new();
+        readonly List<Image> _starImgs = new();   // cached at Build (no per-frame GetComponent)
+        readonly List<Text> _glyphTexts = new();
         readonly List<float> _starPhase = new();
         readonly List<RectTransform> _glyphs = new();
         readonly List<float> _glyphSpeed = new();
@@ -79,6 +81,10 @@ namespace WRLDZ.UI
             var go = new GameObject("EgyptianAgesAtmosphere", typeof(RectTransform));
             go.transform.SetParent(parent, false);
             go.transform.SetAsFirstSibling();
+            // Own canvas: ~80 graphics animate every frame; without it the whole menu canvas
+            // (buttons, text, panels) re-batches each frame. Still first sibling, no override
+            // sorting, so it keeps drawing behind the menu.
+            UiFoundation.GetOrAdd<Canvas>(go);
             var rt = go.GetComponent<RectTransform>();
             rt.anchorMin = Vector2.zero;
             rt.anchorMax = Vector2.one;
@@ -144,6 +150,7 @@ namespace WRLDZ.UI
                 Place(s.rectTransform, x, y, x + sz, y + sz * 1.6f);
                 s.color = new Color(1f, 0.95f, 0.85f, 0.15f + (i % 4) * 0.12f);
                 _stars.Add(s.rectTransform);
+                _starImgs.Add(s);
                 _starPhase.Add(i * 0.7f + AgeSeed());
             }
 
@@ -193,6 +200,7 @@ namespace WRLDZ.UI
                 var y = 0.2f + Mathf.Repeat(i * 0.11f, 0.55f);
                 Place(g.rectTransform, x, y, x + 0.08f, y + 0.06f);
                 _glyphs.Add(g.rectTransform);
+                _glyphTexts.Add(g);
                 _glyphSpeed.Add(0.012f + (i % 5) * 0.006f + (Age == MenuAge.LabNecropolis ? 0.02f : 0f));
             }
 
@@ -331,7 +339,7 @@ namespace WRLDZ.UI
             // Star twinkle
             for (var i = 0; i < _stars.Count; i++)
             {
-                var img = _stars[i].GetComponent<Image>();
+                var img = i < _starImgs.Count ? _starImgs[i] : null;
                 if (img == null) continue;
                 var a = 0.12f + 0.55f * (0.5f + 0.5f * Mathf.Sin(_t * 1.7f + _starPhase[i]));
                 // Rare meteor flash
@@ -395,7 +403,7 @@ namespace WRLDZ.UI
                 b.y = a.y + h;
                 g.anchorMin = a;
                 g.anchorMax = b;
-                var ti = g.GetComponent<Text>();
+                var ti = i < _glyphTexts.Count ? _glyphTexts[i] : null;
                 if (ti != null)
                 {
                     var col = ti.color;

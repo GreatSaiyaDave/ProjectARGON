@@ -110,6 +110,12 @@ namespace WRLDZ.Duel.TextEffects
                 clause.RequiresFaceUpName = sendNamed.Groups[1].Value;
             }
 
+            // Guardian Ceal: this cost is the only limit on its ignition effect.
+            if (Regex.IsMatch(act,
+                    @"send 1 Equip Spell Card you control that is equipped to this card to the (?:GY|Graveyard)",
+                    RegexOptions.IgnoreCase))
+                clause.RequiresSendEquipSpellOnThisToGy = true;
+
             if (Regex.IsMatch(act,
                     @"send this (?:face-up )?card (?:you control )?to the (?:GY|Graveyard)",
                     RegexOptions.IgnoreCase) ||
@@ -189,7 +195,11 @@ namespace WRLDZ.Duel.TextEffects
         static void ParseTarget(string act, EffectClause clause)
         {
             if (string.IsNullOrEmpty(act)) return;
-            if (Regex.IsMatch(act, @"target 1 (?:spell/?trap|spell or trap)", RegexOptions.IgnoreCase))
+            if (SharedPsctAtomTemplates.TryApplyOppSpellTrapTarget(act, clause))
+            {
+                // Opp ST only — Side=Opponent already set by shared atom.
+            }
+            else if (Regex.IsMatch(act, @"target 1 (?:spell/?trap|spell or trap)", RegexOptions.IgnoreCase))
             {
                 clause.RequiresTargetChoice = true;
                 clause.Zone = EffectZoneFilter.FieldSpellTraps;
@@ -243,7 +253,14 @@ namespace WRLDZ.Duel.TextEffects
                          RegexOptions.IgnoreCase))
             {
                 clause.RequiresTargetChoice = true;
-                clause.Zone = EffectZoneFilter.OppFaceUpMonsters;
+                // "Target 1 monster your opponent controls" includes face-down monsters (Guardian Ceal: Lua
+                // SelectTarget(aux.TRUE, 0, LOCATION_MZONE)). A printed "face-up", or a target picked by its ATK/DEF
+                // (Armed Dragon LV5: Lua dfilter c:IsFaceup() and c:GetAttack()<=atk), stays face-up only.
+                clause.Zone = Regex.IsMatch(act,
+                    @"target 1 (?:face-up monster your opponent controls|monster your opponent controls with (?:\w+ )?(?:ATK|DEF))",
+                    RegexOptions.IgnoreCase)
+                    ? EffectZoneFilter.OppFaceUpMonsters
+                    : EffectZoneFilter.OppMonsters;
             }
             else if (Regex.IsMatch(act, @"target 1 face-up monster on the field", RegexOptions.IgnoreCase) ||
                      Regex.IsMatch(act, @"target 1 monster on the field", RegexOptions.IgnoreCase) ||
@@ -256,6 +273,12 @@ namespace WRLDZ.Duel.TextEffects
             if (Regex.IsMatch(act, @"with ATK less than or equal to", RegexOptions.IgnoreCase) ||
                 Regex.IsMatch(act, @"with ATK less than or equal to the sent", RegexOptions.IgnoreCase))
                 clause.RequiresAtkLeqCost = true;
+
+            // Freed: higher ATK than this face-up card (strict > source). Fail-closed vs ≤ cost.
+            if (Regex.IsMatch(act,
+                    @"with higher ATK than this(?: face-up)? card",
+                    RegexOptions.IgnoreCase))
+                clause.RequiresHigherAtkThanSource = true;
         }
 
         static bool ParseResolution(string res, EffectClause clause)
@@ -376,6 +399,10 @@ namespace WRLDZ.Duel.TextEffects
             var draw = Regex.Match(res, @"draw (\d+) cards?", RegexOptions.IgnoreCase);
             if (draw.Success)
             {
+                // "Draw 1 card, then discard 1 card" is not a flat draw: refuse it (fail closed) rather than drop
+                // what follows the draw (the Graceful Charity bug in the PSCT draw fallback).
+                if (Regex.IsMatch(res, @"draw \d+ cards?(?: from your Deck)?,?\s+then\b", RegexOptions.IgnoreCase))
+                    return false;
                 clause.Action = EffectActionKind.Draw;
                 clause.Side = EffectSide.Controller;
                 clause.Amount = int.TryParse(draw.Groups[1].Value, out var n) ? n : 1;

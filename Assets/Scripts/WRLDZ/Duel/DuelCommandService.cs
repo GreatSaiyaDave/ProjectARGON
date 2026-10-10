@@ -47,6 +47,11 @@ namespace WRLDZ.Duel
             if ((src is "voice" or "type") && !string.IsNullOrEmpty(intent.RawText))
                 engine.Log($"🎙 [{who.Name}] \"{intent.RawText.Trim()}\"");
 
+            // Typed / voice / UI declarations wait for the Spell/Trap beat on screen, the same rule
+            // DuelUI applies to its BATTLE / MAIN 2 / END and attack taps.
+            if (BeatBlocks(engine, intent.Kind, out var waitLine))
+                return DuelCommandResult.Fail(intent, waitLine);
+
             engine.IsProcessingAction = true;
             DuelCommandResult result = DuelCommandResult.Fail(intent, "No result.");
             try
@@ -79,14 +84,51 @@ namespace WRLDZ.Duel
             return result;
         }
 
+        /// <summary>
+        /// Phase / turn advance and attack declarations wait while a Spell/Trap activation beat is still
+        /// playing (card revealed → result → read → GY; <see cref="Presentation.ArInteraction.ActivationBeat.BlocksAdvance"/>).
+        /// Response windows are never blocked. Returns the "wait" line to show when blocked.
+        /// </summary>
+        public static bool BeatBlocks(DuelEngine engine, DuelIntentKind kind, out string waitLine)
+        {
+            waitLine = null;
+            if (engine == null || engine.GameOver || engine.IsAwaitingPlayerResponse) return false;
+            string what;
+            switch (kind)
+            {
+                case DuelIntentKind.EnterMainPhase1: what = "enter Main Phase 1"; break;
+                case DuelIntentKind.EnterBattlePhase: what = "enter the Battle Phase"; break;
+                case DuelIntentKind.EnterMainPhase2: what = "enter Main Phase 2"; break;
+                case DuelIntentKind.EndTurn: what = "end your turn"; break;
+                case DuelIntentKind.Attack:
+                case DuelIntentKind.DirectAttack: what = "attack"; break;
+                default: return false;
+            }
+
+            return BeatWaitLine(what, out waitLine);
+        }
+
+        static bool BeatWaitLine(string what, out string waitLine)
+        {
+            waitLine = null;
+            if (!Presentation.ArInteraction.ActivationBeat.BlocksAdvance(out var name, out var left))
+                return false;
+            waitLine = string.IsNullOrEmpty(name)
+                ? $"Wait — a card is resolving ({left:0.0}s) before you {what}."
+                : $"Wait — {name} is resolving ({left:0.0}s) before you {what}.";
+            return true;
+        }
+
         static DuelCommandResult Dispatch(DuelEngine engine, DuelistState who, DuelIntent intent)
         {
             return intent.Kind switch
             {
                 DuelIntentKind.PassResponse => DoPass(engine, who, intent),
                 DuelIntentKind.CancelTarget => DoCancelTarget(engine, who, intent),
+                DuelIntentKind.ConfirmLpZero => DoConfirmLpZero(engine, who, intent),
                 DuelIntentKind.ClearTributes => ClearTributes(engine, intent),
                 DuelIntentKind.EndTurn => DoEndTurn(engine, who, intent),
+                DuelIntentKind.EnterMainPhase1 => DoMain1(engine, who, intent),
                 DuelIntentKind.EnterBattlePhase => DoBattle(engine, who, intent),
                 DuelIntentKind.EnterMainPhase2 => DoMain2(engine, who, intent),
                 DuelIntentKind.NormalSummonAtk => DoSummon(engine, who, intent, asSet: false),
@@ -97,6 +139,7 @@ namespace WRLDZ.Duel
                 DuelIntentKind.ChangePosition => DoPos(engine, who, intent),
                 DuelIntentKind.Attack => DoAttack(engine, who, intent, forceDirect: false),
                 DuelIntentKind.DirectAttack => DoAttack(engine, who, intent, forceDirect: true),
+                DuelIntentKind.SpecialSummon => DoSpecialSummon(engine, who, intent),
                 _ => DuelCommandResult.Fail(intent, "Unknown declaration.")
             };
         }
@@ -126,6 +169,9 @@ namespace WRLDZ.Duel
 
         static DuelCommandResult DoPass(DuelEngine engine, DuelistState who, DuelIntent intent)
         {
+            // "Pass" / "skip" while the Standby Phase waits on your Blast Juggler: decline it, go to Main Phase 1.
+            if (!engine.IsAwaitingResponse && engine.CanContinueAfterStandby(who))
+                return DoMain1(engine, who, intent);
             if (!engine.IsAwaitingResponse)
                 return DuelCommandResult.Fail(intent, "No response window is open.");
             if (engine.PendingResponse.Responder != who)
@@ -142,6 +188,17 @@ namespace WRLDZ.Duel
             return DuelCommandResult.Success(intent, "Target cancelled.");
         }
 
+        static DuelCommandResult DoConfirmLpZero(DuelEngine engine, DuelistState who, DuelIntent intent)
+        {
+            if (engine.PendingActivation == null || !engine.PendingActivation.AwaitingLpZeroConfirm)
+                return DuelCommandResult.Fail(intent, "Nothing to confirm.");
+            if (engine.PendingActivation.Controller != who)
+                return DuelCommandResult.Fail(intent, "It is not your cost.");
+            if (!engine.TryConfirmLpZeroPay())
+                return DuelCommandResult.Fail(intent, "Could not confirm that LP cost.");
+            return DuelCommandResult.Success(intent, $"{who.Name} pays the last of their LP.");
+        }
+
         static DuelCommandResult DoEndTurn(DuelEngine engine, DuelistState who, DuelIntent intent)
         {
             if (engine.TurnPlayer != who)
@@ -155,6 +212,18 @@ namespace WRLDZ.Duel
             }
 
             return DuelCommandResult.Success(intent, $"{who.Name} ends their turn.");
+        }
+
+        /// <summary>Standby Phase held for a standby-only ignition (Blast Juggler) → Main Phase 1.</summary>
+        static DuelCommandResult DoMain1(DuelEngine engine, DuelistState who, DuelIntent intent)
+        {
+            if (engine.TurnPlayer != who)
+                return DuelCommandResult.Fail(intent, "Not your turn.");
+            if (engine.StandbyPausedFor != who || engine.Phase != DuelPhase.Standby)
+                return DuelCommandResult.Fail(intent, "Main Phase 1 follows your Standby Phase.");
+            if (!engine.ContinueAfterStandby())
+                return DuelCommandResult.Fail(intent, "Finish the effect, response or target first.");
+            return DuelCommandResult.Success(intent, "Main Phase 1.");
         }
 
         static DuelCommandResult DoBattle(DuelEngine engine, DuelistState who, DuelIntent intent)
@@ -195,6 +264,20 @@ namespace WRLDZ.Duel
                 return DuelCommandResult.Fail(intent, $"Summon failed for {intent.Card.Name}.");
             return DuelCommandResult.Success(intent,
                 asSet ? $"Set {intent.Card.Name}!" : $"Normal Summon {intent.Card.Name}!");
+        }
+
+        static DuelCommandResult DoSpecialSummon(DuelEngine engine, DuelistState who, DuelIntent intent)
+        {
+            if (engine.TurnPlayer != who)
+                return DuelCommandResult.Fail(intent, "Not your turn.");
+            if (intent.Card == null)
+                return DuelCommandResult.Fail(intent, "Name a monster to Special Summon.");
+            if (!engine.CanSpecialSummonProcedure(who, intent.Card))
+                return DuelCommandResult.Fail(intent,
+                    $"Cannot Special Summon {intent.Card.Name} right now.");
+            if (!engine.TrySpecialSummonProcedure(who, intent.Card))
+                return DuelCommandResult.Fail(intent, $"Special Summon failed for {intent.Card.Name}.");
+            return DuelCommandResult.Success(intent, $"Special Summon {intent.Card.Name}!");
         }
 
         static DuelCommandResult DoSetSt(DuelEngine engine, DuelistState who, DuelIntent intent)

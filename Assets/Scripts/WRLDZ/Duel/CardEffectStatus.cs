@@ -1,4 +1,5 @@
 using System;
+using System.Text.RegularExpressions;
 using UnityEngine;
 using WRLDZ.Data;
 using WRLDZ.Duel.Rules;
@@ -43,11 +44,70 @@ namespace WRLDZ.Duel
             var prog = CompiledEffectCache.GetOrCompile(def);
             if (prog != null && prog.FullyCompiled && prog.CanResolveAny)
                 return CardEffectStatusKind.Implemented;
+            // Summon-lock text with no effect, and a procedure the engine can already
+            // perform (Cocoon moths, Elegant Egotist → Harpie Lady Sisters,
+            // Gate Guardian's three face-up tributes).
+            if (prog != null && prog.FullyCompiled && prog.ClauseList.Count == 0 &&
+                HasLiveSummonPath(def))
+                return CardEffectStatusKind.Structural;
             if (prog != null && prog.ClauseList.Count > 0)
                 return CardEffectStatusKind.Stub;
 
             return CardEffectStatusKind.Unimplemented;
         }
+
+        static readonly Regex RxMustFirstWithNamedSpell = new(
+            @"Must first be Special Summoned with ""([^""]+)""",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// True when the printed lock names a summon the engine already performs.
+        /// A restriction-only compile with no path stays Unimplemented.
+        /// </summary>
+        static bool HasLiveSummonPath(CardDef def)
+        {
+            if (def == null) return false;
+            if (OfficialEffectRegistry.CocoonTurnsNeeded(def.id) > 0) return true;
+            if (OfficialEffectRegistry.HasInherentHandTribute(def.id)) return true;
+            // DestinyBoard batch: "This card can only be placed on the field by the effect of "X"." (Spirit Message) is
+            // live while X compiles to a placement that names it.
+            if (DestinyBoardRuntime.HasLivePlacementPath(def)) return true;
+            var named = RxMustFirstWithNamedSpell.Match(def.desc ?? "");
+            if (!named.Success) return false;
+            var db = CardDatabase.Instance ?? CardDatabase.Load();
+            if (db == null) return false;
+            CardDef spell = null;
+            foreach (var c in db.GetAllCards())
+            {
+                if (c != null && string.Equals(c.name, named.Groups[1].Value,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    spell = c;
+                    break;
+                }
+            }
+
+            if (spell == null) return false;
+            var prog = CompiledEffectCache.GetOrCompile(spell);
+            if (prog == null || !prog.FullyCompiled) return false;
+            foreach (var clause in prog.ClauseList)
+            {
+                if (clause == null) continue;
+                if (clause.Action != EffectActionKind.SpecialSummonNamed &&
+                    clause.Action != EffectActionKind.SpecialSummonFromDeck &&
+                    clause.Action != EffectActionKind.SpecialSummonFromHand)
+                    continue;
+                if (NamesThis(clause.NamedCard, def.name) ||
+                    NamesThis(clause.AltNamedCard, def.name))
+                    return true;
+            }
+
+            return false;
+        }
+
+        static bool NamesThis(string printed, string cardName) =>
+            !string.IsNullOrEmpty(printed) && !string.IsNullOrEmpty(cardName) &&
+            string.Equals(printed, cardName, StringComparison.OrdinalIgnoreCase);
 
         /// <summary>
         /// Vocabulary view of a compiled program: shared kinds vs unique exceptions.
@@ -58,6 +118,9 @@ namespace WRLDZ.Duel
             if (OfficialCardAuthority.HasNoActivatableEffect(def))
                 return "structural";
             var prog = CompiledEffectCache.GetOrCompile(def);
+            if (prog != null && prog.FullyCompiled && prog.ClauseList.Count == 0 &&
+                HasLiveSummonPath(def))
+                return "structural";
             if (prog == null || prog.ClauseList.Count == 0)
                 return "unimplemented";
             var kinds = EffectVocabulary.KindsUsed(prog);

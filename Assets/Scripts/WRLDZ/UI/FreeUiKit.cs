@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using WRLDZ.Core;
 
 namespace WRLDZ.UI
 {
@@ -21,8 +22,10 @@ namespace WRLDZ.UI
         static AudioSource _sfx;
         static bool _attempted;
 
-        public static string KitRoot => Path.Combine(Application.streamingAssetsPath, "UI", "kit");
-        public static string UiRoot => Path.Combine(Application.streamingAssetsPath, "UI");
+        /// <summary>StreamingAssets-relative kit folder (read through <see cref="StreamingFiles"/>).</summary>
+        public const string KitRoot = "UI/kit";
+        /// <summary>StreamingAssets-relative UI folder (read through <see cref="StreamingFiles"/>).</summary>
+        public const string UiRoot = "UI";
 
         public static void EnsureLoaded()
         {
@@ -178,19 +181,14 @@ namespace WRLDZ.UI
             if (Textures.TryGetValue(relativePath, out var t) && t != null)
                 return t;
 
-            var path = Path.Combine(KitRoot, relativePath);
-            if (!File.Exists(path))
+            // Kit folder first, then UI root (e.g. battle_city_disk_bg.jpg)
+            if (!StreamingFiles.TryReadAllBytes(KitRoot + "/" + relativePath, out var bytes) &&
+                !StreamingFiles.TryReadAllBytes(UiRoot + "/" + relativePath, out bytes))
             {
-                // Try UI root (e.g. battle_city_disk_bg.jpg)
-                path = Path.Combine(UiRoot, relativePath);
-                if (!File.Exists(path))
-                {
-                    Debug.LogWarning("[WRLDZ] Missing kit texture: " + relativePath);
-                    return null;
-                }
+                Debug.LogWarning("[WRLDZ] Missing kit texture: " + relativePath);
+                return null;
             }
 
-            var bytes = File.ReadAllBytes(path);
             t = new Texture2D(2, 2, TextureFormat.RGBA32, false)
             {
                 name = relativePath,
@@ -207,11 +205,9 @@ namespace WRLDZ.UI
 
         static void LoadExternalSprite(string fileName)
         {
-            var path = Path.Combine(UiRoot, fileName);
-            if (!File.Exists(path)) return;
             var key = fileName;
             if (Textures.ContainsKey(key)) return;
-            var bytes = File.ReadAllBytes(path);
+            if (!StreamingFiles.TryReadAllBytes(UiRoot + "/" + fileName, out var bytes)) return;
             var t = new Texture2D(2, 2, TextureFormat.RGBA32, false)
             {
                 name = key,
@@ -357,7 +353,9 @@ namespace WRLDZ.UI
             if (_sfx == null)
             {
                 var go = new GameObject("WRLDZ_Sfx");
-                Object.DontDestroyOnLoad(go);
+                // DontDestroyOnLoad throws outside Play Mode (edit-mode smoke tests click buttons).
+                if (Application.isPlaying)
+                    Object.DontDestroyOnLoad(go);
                 _sfx = go.AddComponent<AudioSource>();
                 _sfx.playOnAwake = false;
                 _sfx.spatialBlend = 0f;

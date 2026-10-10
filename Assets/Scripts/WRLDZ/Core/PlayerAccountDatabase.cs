@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using UnityEngine;
 
 namespace WRLDZ.Core
@@ -39,6 +40,8 @@ namespace WRLDZ.Core
             public string displayName;
             public string passwordHash;
             public string email;
+            /// <summary>Google account subject (sub). Empty for password-only players.</summary>
+            public string googleSub;
             public string avatarColor = "#3ECFFF"; // legacy accent; mirrored from avatar.accentHex
             /// <summary>Full Spirit Dueler look (body/hair/outfit/…). Null on very old saves.</summary>
             public WRLDZ.Data.AvatarAppearance avatar;
@@ -112,6 +115,28 @@ namespace WRLDZ.Core
             Path.Combine(AccountsDir, SanitizeFileName(NormalizeUser(username)) + ".json");
 
         public static string DatabasePath => Root;
+
+        /// <summary>
+        /// New usernames: 3–24 chars of a–z, 0–9, '_', '-', '.', starting with a letter or digit. The name is
+        /// its own file name (no two names can share a save), and a leading '_' can never collide with
+        /// _index.json or the __test* fixtures (QC F10). Existing accounts outside the rule still log in.
+        /// </summary>
+        static readonly Regex UsernamePattern = new("^[a-z0-9][a-z0-9_.-]{2,23}$", RegexOptions.CultureInvariant);
+
+        public const string UsernameRuleMessage =
+            "Username: 3–24 letters, digits, '_', '-' or '.', starting with a letter or digit.";
+
+        /// <summary>Names players can never register or be given by Google sign-in (lab door, staff-looking names).</summary>
+        static readonly HashSet<string> ReservedUsernames = new(StringComparer.Ordinal)
+        {
+            AppSession.LabTestUsername, "admin", "administrator", "root", "system", "moderator", "referobot"
+        };
+
+        public static bool IsReservedUsername(string username) =>
+            ReservedUsernames.Contains(NormalizeUser(username));
+
+        public static bool IsValidNewUsername(string username) =>
+            UsernamePattern.IsMatch(NormalizeUser(username)) && !IsReservedUsername(username);
 
         public static void Initialize()
         {
@@ -188,11 +213,27 @@ namespace WRLDZ.Core
         public static bool UsernameExists(string username)
         {
             Initialize();
-            return _index.Contains(NormalizeUser(username));
+            var u = NormalizeUser(username);
+            if (u.Length == 0) return false;
+            if (_index.Contains(u)) return true;
+            // Another name can own this save file (legacy names sanitize: "a b" and "a_b" → a_b.json).
+            var path = AccountPath(u);
+            return File.Exists(path) || File.Exists(path + ".tmp") || File.Exists(path + ".bak");
         }
 
         public static bool TryCreate(string username, string password, string displayName, string email,
-            out Account account, out string error)
+            out Account account, out string error) =>
+            TryCreateCore(username, password, displayName, email, allowReserved: false, out account, out error);
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        /// <summary>Lab door only (Editor / development builds): may create the reserved lab_tester name.</summary>
+        public static bool TryCreateLabAccount(string username, string password, string displayName, string email,
+            out Account account, out string error) =>
+            TryCreateCore(username, password, displayName, email, allowReserved: true, out account, out error);
+#endif
+
+        static bool TryCreateCore(string username, string password, string displayName, string email,
+            bool allowReserved, out Account account, out string error)
         {
             account = null;
             error = null;
@@ -200,9 +241,15 @@ namespace WRLDZ.Core
 
             username = NormalizeUser(username);
             displayName = (displayName ?? "").Trim();
-            if (username.Length < 3)
+            if (!UsernamePattern.IsMatch(username))
             {
-                error = "Username must be at least 3 characters.";
+                error = UsernameRuleMessage;
+                return false;
+            }
+
+            if (!allowReserved && IsReservedUsername(username))
+            {
+                error = "That username is reserved.";
                 return false;
             }
 
@@ -269,6 +316,13 @@ namespace WRLDZ.Core
             }
 
             account.EnsureProgress();
+            if (!WrldzLab.AccountAllowedInThisBuild(account.progress))
+            {
+                error = WrldzLab.LabAccountBlockedMessage;
+                account = null;
+                return false;
+            }
+
             SoulFractureService.SyncDeactivation(account);
             if (account.deactivated)
             {
@@ -283,6 +337,187 @@ namespace WRLDZ.Core
             SetSession(account);
             Debug.Log($"[WRLDZ] Login OK: {username}");
             return true;
+        }
+
+        /// <summary>
+        /// Sign in with a verified Google subject. Finds the player already bound to that subject, or forges a
+        /// new player. Never binds to an existing local account by email — the email field is free text and
+        /// unverified locally, so matching on it would hand one player's save to anyone whose Google address
+        /// matches (QC F8). Binding an existing password account is explicit: <see cref="TryLinkGoogle"/>.
+        /// </summary>
+        public static bool TryLoginGoogle(string sub, string email, string displayName,
+            out Account account, out string error)
+        {
+            account = null;
+            error = null;
+            Initialize();
+            sub = (sub ?? "").Trim();
+            email = (email ?? "").Trim();
+            if (sub.Length < 4)
+            {
+                error = "Google did not return an account id.";
+                return false;
+            }
+
+            account = FindByGoogleSub(sub);
+            if (account == null)
+            {
+                var user = UsernameFromGoogle(email, sub);
+                var accent = RandomAvatarHex();
+                account = new Account
+                {
+                    id = Guid.NewGuid().ToString("N"),
+                    username = user,
+                    displayName = string.IsNullOrEmpty(displayName) ? user : displayName.Trim(),
+                    passwordHash = HashPassword("google|" + sub + "|" + Guid.NewGuid().ToString("N")),
+                    email = email,
+                    googleSub = sub,
+                    avatarColor = accent,
+                    avatar = new WRLDZ.Data.AvatarAppearance { accentHex = accent },
+                    createdUtc = DateTime.UtcNow.ToString("o"),
+                    lastLoginUtc = DateTime.UtcNow.ToString("o"),
+                    spiritRank = 1,
+                    progress = WRLDZ.Data.PlayerProgress.DefaultNew(),
+                    inventory = WRLDZ.Data.PlayerInventory.Empty()
+                };
+                if (!WriteAccount(account))
+                {
+                    error = "Failed to write the Google player.";
+                    account = null;
+                    return false;
+                }
+
+                _index.Add(user);
+                SaveIndex();
+                SetSession(account);
+                Debug.Log("[WRLDZ] Google player created: " + user);
+                return true;
+            }
+
+            if (!string.IsNullOrEmpty(email))
+                account.email = email;
+            account.EnsureProgress();
+            if (!WrldzLab.AccountAllowedInThisBuild(account.progress))
+            {
+                error = WrldzLab.LabAccountBlockedMessage;
+                account = null;
+                return false;
+            }
+
+            SoulFractureService.SyncDeactivation(account);
+            if (account.deactivated)
+            {
+                WriteAccount(account);
+                error = SoulFractureService.DeactivatedLoginMessage;
+                account = null;
+                return false;
+            }
+
+            account.lastLoginUtc = DateTime.UtcNow.ToString("o");
+            WriteAccount(account);
+            SetSession(account);
+            Debug.Log("[WRLDZ] Google login OK: " + account.username);
+            return true;
+        }
+
+        /// <summary>
+        /// Explicit link: bind Google subject <paramref name="sub"/> to an existing password account after the
+        /// player proves ownership with that account's password. Refuses when the account is already bound to
+        /// a different Google account, or when <paramref name="sub"/> already belongs to another player.
+        /// </summary>
+        public static bool TryLinkGoogle(string username, string password, string sub, string email,
+            out Account account, out string error)
+        {
+            account = null;
+            error = null;
+            Initialize();
+            sub = (sub ?? "").Trim();
+            if (sub.Length < 4)
+            {
+                error = "Google did not return an account id.";
+                return false;
+            }
+
+            var owner = FindByGoogleSub(sub);
+            if (owner != null && owner.username != NormalizeUser(username))
+            {
+                error = "That Google account already belongs to another Spirit Dueler.";
+                return false;
+            }
+
+            if (!TryLogin(username, password, out account, out error))
+                return false;
+
+            if (!string.IsNullOrEmpty(account.googleSub) &&
+                !string.Equals(account.googleSub, sub, StringComparison.Ordinal))
+            {
+                error = "This Spirit Dueler is already linked to a different Google account.";
+                account = null;
+                return false;
+            }
+
+            account.googleSub = sub;
+            if (!string.IsNullOrEmpty(email))
+                account.email = email.Trim();
+            WriteAccount(account);
+            SetSession(account);
+            Debug.Log("[WRLDZ] Google account linked to " + account.username);
+            return true;
+        }
+
+        static Account FindByGoogleSub(string sub)
+        {
+            if (string.IsNullOrEmpty(sub)) return null;
+            foreach (var name in _index)
+            {
+                var acc = ReadAccountRaw(name);
+                if (acc == null || string.IsNullOrEmpty(acc.googleSub)) continue;
+                if (!string.Equals(acc.googleSub, sub, StringComparison.Ordinal)) continue;
+                acc.EnsureProgress();
+                acc.EnsureInventory();
+                return acc;
+            }
+
+            return null;
+        }
+
+        static string UsernameFromGoogle(string email, string sub)
+        {
+            var local = (email ?? "").Contains("@") ? email.Split('@')[0] : email ?? "";
+            var sb = new StringBuilder();
+            foreach (var c in local.ToLowerInvariant())
+            {
+                if (c is >= 'a' and <= 'z' or >= '0' and <= '9' || c == '_')
+                    sb.Append(c);
+            }
+
+            var baseName = sb.ToString().TrimStart('_');
+            if (baseName.Length < 3) baseName = "duelist";
+            if (baseName.Length > 16)
+                baseName = baseName.Substring(0, 16);
+            var name = baseName;
+            var n = 2;
+            while (UsernameExists(name) || !IsValidNewUsername(name))
+            {
+                name = baseName + n;
+                n++;
+                if (n > 40)
+                {
+                    var tail = sub.Length > 6 ? sub.Substring(sub.Length - 6) : sub;
+                    var sbTail = new StringBuilder("g");
+                    foreach (var c in tail.ToLowerInvariant())
+                        if (c is >= 'a' and <= 'z' or >= '0' and <= '9') sbTail.Append(c);
+                    name = sbTail.ToString();
+                    while (name.Length < 3) name += "0";
+                    var k = 2;
+                    var stem = name;
+                    while (UsernameExists(name))
+                        name = stem + k++;
+                    break;
+                }
+            }
+
+            return NormalizeUser(name);
         }
 
         public static Account GetSessionAccount()
@@ -341,7 +576,7 @@ namespace WRLDZ.Core
             var json = JsonUtility.ToJson(account, false);
             try
             {
-                File.WriteAllText(SessionPath, json);
+                WriteFileAtomic(SessionPath, json, keepBackup: false);
             }
             catch (Exception ex)
             {
@@ -374,7 +609,9 @@ namespace WRLDZ.Core
             if (account == null) return;
             Initialize();
             WriteAccount(account);
-            if (GetSessionAccount()?.username == account.username)
+            // The session user key is enough to know whether this is the signed-in player; re-reading and
+            // re-parsing session.json + the whole account file on every save was pure overhead (QC F13).
+            if (string.Equals(PlayerPrefs.GetString(PrefsSessionUser, ""), account.username, StringComparison.Ordinal))
                 SetSession(account);
         }
 
@@ -391,12 +628,8 @@ namespace WRLDZ.Core
             try
             {
                 Directory.CreateDirectory(AccountsDir);
-                var path = AccountPath(account.username);
-                var json = JsonUtility.ToJson(account, true);
-                var tmp = path + ".tmp";
-                File.WriteAllText(tmp, json);
-                if (File.Exists(path)) File.Delete(path);
-                File.Move(tmp, path);
+                // Compact: the pretty form was 4.2x larger (237 KB vs 56 KB for a full-catalog account, QC F13).
+                WriteFileAtomic(AccountPath(account.username), JsonUtility.ToJson(account, false), keepBackup: true);
                 return true;
             }
             catch (Exception ex)
@@ -406,26 +639,110 @@ namespace WRLDZ.Core
             }
         }
 
+        /// <summary>
+        /// Crash-safe replace (QC F3): write <c>path.tmp</c>, flush it to the device, then swap it in with
+        /// File.Replace (the previous file becomes <c>path.bak</c> when <paramref name="keepBackup"/>). There is
+        /// no moment where neither the old nor the new file exists under a readable name: a crash leaves either
+        /// the old file, or the new one, or <c>.tmp</c>/<c>.bak</c> that <see cref="ReadAccount"/> recovers.
+        /// </summary>
+        static void WriteFileAtomic(string path, string text, bool keepBackup)
+        {
+            var tmp = path + ".tmp";
+            var bytes = new UTF8Encoding(false).GetBytes(text ?? "");
+            using (var fs = new FileStream(tmp, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
+                fs.Write(bytes, 0, bytes.Length);
+                fs.Flush(true);
+            }
+
+            if (!File.Exists(path))
+            {
+                File.Move(tmp, path);
+                return;
+            }
+
+            var bak = keepBackup ? path + ".bak" : null;
+            try
+            {
+                File.Replace(tmp, path, bak, ignoreMetadataErrors: true);
+            }
+            catch (Exception ex) when (ex is PlatformNotSupportedException or IOException or UnauthorizedAccessException)
+            {
+                // Fallback for file systems without an atomic replace. The old file is copied aside first, so
+                // the delete→move gap still leaves .bak and .tmp for ReadAccount to recover from.
+                File.Copy(path, bak ?? path + ".bak", overwrite: true);
+                File.Delete(path);
+                File.Move(tmp, path);
+                if (bak == null) TryDelete(path + ".bak");
+            }
+        }
+
+        static void TryDelete(string path)
+        {
+            try
+            {
+                if (File.Exists(path)) File.Delete(path);
+            }
+            catch { /* best effort */ }
+        }
+
+        /// <summary>Account with migrations applied (EnsureProgress / EnsureInventory).</summary>
         static Account ReadAccount(string username)
+        {
+            var acc = ReadAccountRaw(username);
+            if (acc != null)
+            {
+                acc.EnsureProgress();
+                acc.EnsureInventory();
+            }
+
+            return acc;
+        }
+
+        /// <summary>
+        /// Parse the account file; when it is missing or unreadable, recover from <c>.tmp</c> (a write that
+        /// finished but was not swapped in) and then <c>.bak</c> (the previous save), and put the recovered
+        /// save back in place.
+        /// </summary>
+        static Account ReadAccountRaw(string username)
         {
             username = NormalizeUser(username);
             if (string.IsNullOrEmpty(username)) return null;
             var path = AccountPath(username);
-            if (!File.Exists(path)) return null;
-            try
+            var primary = TryParseAccountFile(path);
+            if (primary != null) return primary;
+
+            foreach (var candidate in new[] { path + ".tmp", path + ".bak" })
             {
-                var acc = JsonUtility.FromJson<Account>(File.ReadAllText(path));
-                if (acc != null)
+                var acc = TryParseAccountFile(candidate);
+                if (acc == null) continue;
+                Debug.LogWarning($"[WRLDZ] Account '{username}' recovered from {Path.GetFileName(candidate)}.");
+                try
                 {
-                    acc.EnsureProgress();
-                    acc.EnsureInventory();
+                    WriteFileAtomic(path, JsonUtility.ToJson(acc, false), keepBackup: false);
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning("[WRLDZ] Account restore write: " + ex.Message);
                 }
 
                 return acc;
             }
+
+            return null;
+        }
+
+        static Account TryParseAccountFile(string file)
+        {
+            if (!File.Exists(file)) return null;
+            try
+            {
+                var acc = JsonUtility.FromJson<Account>(File.ReadAllText(file));
+                return acc != null && !string.IsNullOrEmpty(acc.username) ? acc : null;
+            }
             catch (Exception ex)
             {
-                Debug.LogWarning("[WRLDZ] ReadAccount: " + ex.Message);
+                Debug.LogWarning($"[WRLDZ] ReadAccount {Path.GetFileName(file)}: " + ex.Message);
                 return null;
             }
         }
@@ -454,7 +771,7 @@ namespace WRLDZ.Core
             try
             {
                 Directory.CreateDirectory(Root);
-                File.WriteAllText(MetaPath, JsonUtility.ToJson(_meta, true));
+                WriteFileAtomic(MetaPath, JsonUtility.ToJson(_meta, true), keepBackup: false);
             }
             catch (Exception ex)
             {
@@ -482,9 +799,16 @@ namespace WRLDZ.Core
             {
                 if (Directory.Exists(AccountsDir))
                 {
-                    foreach (var f in Directory.GetFiles(AccountsDir, "*.json"))
+                    foreach (var f in Directory.GetFiles(AccountsDir))
                     {
-                        var name = Path.GetFileNameWithoutExtension(f);
+                        // <name>.json, plus <name>.json.tmp / .json.bak left by an interrupted save.
+                        var file = Path.GetFileName(f);
+                        var cut = file.EndsWith(".json", StringComparison.Ordinal) ? file.Length - 5
+                            : file.EndsWith(".json.tmp", StringComparison.Ordinal) ? file.Length - 9
+                            : file.EndsWith(".json.bak", StringComparison.Ordinal) ? file.Length - 9
+                            : -1;
+                        if (cut <= 0) continue;
+                        var name = file.Substring(0, cut);
                         if (name.StartsWith("_")) continue;
                         _index.Add(name);
                     }
@@ -506,7 +830,7 @@ namespace WRLDZ.Core
                 var arr = new string[_index.Count];
                 _index.CopyTo(arr);
                 Array.Sort(arr, StringComparer.Ordinal);
-                File.WriteAllText(IndexPath, JsonUtility.ToJson(new IndexFile { usernames = arr }, true));
+                WriteFileAtomic(IndexPath, JsonUtility.ToJson(new IndexFile { usernames = arr }, true), keepBackup: false);
             }
             catch (Exception ex)
             {

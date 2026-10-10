@@ -326,7 +326,7 @@ namespace WRLDZ.UI.Shell
             vlg.padding = new RectOffset(6, 6, 6, 6);
             content.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-            var scroll = pane.gameObject.GetComponent<ScrollRect>() ?? pane.gameObject.AddComponent<ScrollRect>();
+            var scroll = UiFoundation.GetOrAdd<ScrollRect>(pane.gameObject);
             scroll.viewport = viewport.GetComponent<RectTransform>();
             scroll.content = crt;
             scroll.horizontal = false;
@@ -355,17 +355,7 @@ namespace WRLDZ.UI.Shell
                     btn.transition = Selectable.Transition.None;
                     btn.targetGraphic = face;
                 }
-                var plate = on
-                    ? ImagineAssets.TileHubGold() ?? ImagineAssets.BtnGold()
-                    : ImagineAssets.BtnPrimary() ?? ImagineAssets.TileHub();
-                if (plate != null)
-                {
-                    face.sprite = plate;
-                    face.type = Image.Type.Simple;
-                }
-
-                HubChrome.FlattenPlate(face);
-                HubChrome.LiftPlate(face, on ? DuelystUi.Gold : DuelystUi.Cyan);
+                HubChrome.PaintPlate(face, on ? DuelystUi.GoldHot : DuelystUi.Cyan, gold: on);
             }
 
             RefreshWallet(st);

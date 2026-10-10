@@ -1,17 +1,31 @@
 using UnityEngine;
 using UnityEngine.UI;
 using WRLDZ.Presentation;
+using WRLDZ.UI.Eldritch;
 
 namespace WRLDZ.UI.Shell
 {
     /// <summary>
-    /// Shared sheet: one matte plate + 1 px edge. No nested glass, no gold hairline.
-    /// Button helpers stay high-contrast for outdoor / AR.
+    /// Shared sheet chrome, Eldritch Solid Vision: one holographic slate
+    /// (<see cref="SolidVisionSlate"/>) ringed by a <see cref="HieroglyphBorder"/>.
+    /// Button helpers route to the Eldritch tiers and stay high-contrast for outdoor / AR.
+    /// Layout maths (<see cref="Place"/> / <see cref="Stretch"/> / <see cref="Grid"/>) is
+    /// untouched — 44 screens depend on it.
     /// </summary>
     public static class FloatingPanel
     {
         public const float MinButtonHeight = 56f;
         public const float MinTouch = 48f;
+
+        /// <summary>
+        /// Vertex alpha on an Eldritch face. The shaders multiply by vertex color, so this is the
+        /// single knob that keeps a chip "floating glass" (MenuSmokeTest rejects a face above 0.72).
+        /// </summary>
+        const float GlassAlpha = 0.70f;
+
+        /// <summary>Ring thickness on a generic floating sheet — thinner than a HieroglyphPanel
+        /// so callers placing content at a 6 % inset still clear the glyph cells.</summary>
+        const float RingPx = 26f;
 
         /// <summary>
         /// Translucent glass tints — cream labels stay readable without a black well.
@@ -67,48 +81,93 @@ namespace WRLDZ.UI.Shell
 #endif
         }
 
+        /// <summary>
+        /// Eldritch tier for the legacy (goldEdge / danger / primary) flags every caller still
+        /// speaks. Gold → Primary (gold on obsidian), plain → Secondary (lapis + sandstone).
+        /// </summary>
+        public static EldritchTier TierFor(bool gold = false, bool danger = false,
+            bool primary = true)
+        {
+            if (danger) return EldritchTier.Danger;
+            if (gold) return EldritchTier.Primary;
+            return primary ? EldritchTier.Secondary : EldritchTier.Tertiary;
+        }
+
+        /// <summary>
+        /// Floating sheet: a Solid Vision slate with a hieroglyph ring. Signature is frozen —
+        /// <paramref name="goldEdge"/> now selects the gold (Primary) tier instead of a gold rim.
+        /// </summary>
         public static RectTransform Create(Transform parent, string name, bool goldEdge = false)
         {
             FreeUiKit.EnsureLoaded();
-            var edge = goldEdge
-                ? new Color(DuelystUi.Gold.r, DuelystUi.Gold.g, DuelystUi.Gold.b, 0.70f)
-                : new Color(DuelystUi.Cyan.r, DuelystUi.Cyan.g, DuelystUi.Cyan.b, 0.70f);
+            var tier = goldEdge ? EldritchTier.Primary : EldritchTier.Secondary;
 
-            var shell = new GameObject(name, typeof(RectTransform), typeof(Image));
-            shell.transform.SetParent(parent, false);
-            var img = shell.GetComponent<Image>();
-            var plate = DuelystUi.Panel() ?? ImagineAssets.PanelHolo();
-            img.sprite = plate ?? UiFoundation.WhiteSprite();
-            img.type = img.sprite != null && img.sprite.border.sqrMagnitude > 0
-                ? Image.Type.Sliced
-                : Image.Type.Simple;
-            img.color = plate != null ? Color.white : HubChrome.Slate;
-            img.raycastTarget = true;
+            var slate = SolidVisionSlate.Create(parent,
+                string.IsNullOrEmpty(name) ? "FloatingPanel" : name, tier,
+                hoverGlow: false, raycast: true);
+            if (slate == null) return null;
 
-            var ol = shell.AddComponent<Outline>();
-            ol.effectColor = edge;
-            ol.effectDistance = new Vector2(1.0f, -1.0f);
-            ol.useGraphicAlpha = false;
+            var shell = slate.gameObject;
+            var ol = shell.GetComponent<Outline>();
+            if (ol != null) ol.enabled = false;
 
-            return shell.GetComponent<RectTransform>();
+            // Shader missing (asset import / headless): keep it a readable dark plate, not white.
+            if (slate.Mat == null && slate.Face != null)
+                slate.Face.color = EldritchPalette.FillFor(tier);
+
+            // Ring first so caller content (added afterwards) draws on top of the glyph cells.
+            var ring = HieroglyphBorder.Create(shell.transform, HieroglyphBorder.Edge.Ring, RingPx,
+                goldEdge ? EldritchPalette.MillenniumGold : EldritchPalette.SolidVisionCyan, 3f);
+            if (ring != null) ring.SetIntensity(0.80f);
+
+            return slate.Rect;
         }
 
         public static Button PrimaryButton(Transform parent, string label, System.Action onClick,
             bool danger = false, bool gold = false, bool centerLabel = false)
         {
-            var kind = danger ? MenuCommandButton.Kind.Danger
-                : gold ? MenuCommandButton.Kind.Gold
-                : MenuCommandButton.Kind.Primary;
-            return MenuCommandButton.Create(parent, label, onClick, kind, centerTitle: true);
+            var ab = ArcaneButton.Create(parent, label, onClick, TierFor(gold, danger),
+                titleSize: 20, centerTitle: true);
+            if (ab == null)
+            {
+                var kind = danger ? MenuCommandButton.Kind.Danger
+                    : gold ? MenuCommandButton.Kind.Gold
+                    : MenuCommandButton.Kind.Primary;
+                return MenuCommandButton.Create(parent, label, onClick, kind, centerTitle: true);
+            }
+
+            // Floating glass, not a solid chip: the flow shader multiplies by vertex color.
+            if (ab.Face != null) ab.Face.color = new Color(1f, 1f, 1f, GlassAlpha);
+            if (ab.Title != null)
+            {
+                ab.Title.font = EldritchPalette.Ui() ?? ab.Title.font;
+                WrldzType.ApplyOutline(ab.Title, heavy: true, buttonContrast: true);
+            }
+
+            return ab.Button;
         }
 
-        /// <summary>Tint a floating chip. Always Simple + WhiteSprite — never a 9-slice plate.</summary>
+        /// <summary>
+        /// Tint a floating chip onto the Eldritch tiers. Always Simple + WhiteSprite — never a
+        /// 9-slice plate. The slate component owns (and releases) the per-instance material.
+        /// </summary>
         public static void ApplyButtonFace(Image img, bool primary = true, bool gold = false,
             bool danger = false)
         {
             if (img == null) return;
             img.sprite = UiFoundation.WhiteSprite();
             img.type = Image.Type.Simple;
+
+            var slate = SolidVisionSlate.Attach(img, TierFor(gold, danger, primary));
+            if (slate != null && slate.Mat != null)
+            {
+                slate.HoverGlow = false;
+                slate.OpenEmbers = false;
+                img.color = new Color(1f, 1f, 1f, GlassAlpha);
+                return;
+            }
+
+            // Shader missing (asset import / headless): flat tier tints, still translucent.
             if (danger) img.color = FaceDanger;
             else if (gold) img.color = FaceGold;
             else if (primary) img.color = FacePrimary;
@@ -125,28 +184,49 @@ namespace WRLDZ.UI.Shell
             return null;
         }
 
+        /// <summary>
+        /// Sheet title: Eldritch display face, millennium gold on obsidian, heavy black outline.
+        /// Size is still the caller's design size (WrldzType.Readable does the DPI scaling).
+        /// </summary>
         public static Text Title(Transform parent, string text, int size = 28)
         {
             var go = new GameObject("Title", typeof(RectTransform), typeof(Text));
             go.transform.SetParent(parent, false);
             var t = go.GetComponent<Text>();
             WrldzType.StyleGoldTitle(t, size);
+            t.font = EldritchPalette.Display() ?? t.font;
+            t.color = EldritchPalette.MillenniumGold;
+            WrldzType.ApplyOutline(t, heavy: true, buttonContrast: true);
             t.text = text;
             t.alignment = TextAnchor.MiddleLeft;
             t.raycastTarget = false;
             return t;
         }
 
+        /// <summary>
+        /// Sheet body copy: Exo 2 Bold, cream, heavy outline. Never shrunk — this carries the
+        /// small print on 40-odd screens, so <paramref name="size"/> passes straight through.
+        /// </summary>
         public static Text Body(Transform parent, string text, int size = 18)
         {
             var go = new GameObject("Body", typeof(RectTransform), typeof(Text));
             go.transform.SetParent(parent, false);
             var t = go.GetComponent<Text>();
             WrldzType.Style(t, size, display: false, heavyOutline: true);
+            t.font = EldritchPalette.Body() ?? t.font;
+            t.color = EldritchPalette.TextCream;
+            WrldzType.ApplyOutline(t, heavy: true, buttonContrast: true);
             t.text = text;
-            t.color = DuelystUi.TextCream;
             t.alignment = TextAnchor.MiddleLeft;
             t.raycastTarget = false;
+            return t;
+        }
+
+        /// <summary>Muted variant of <see cref="Body"/> for subtitles / captions under a title.</summary>
+        public static Text Caption(Transform parent, string text, int size = 15)
+        {
+            var t = Body(parent, text, size);
+            t.color = EldritchPalette.TextMuted;
             return t;
         }
 

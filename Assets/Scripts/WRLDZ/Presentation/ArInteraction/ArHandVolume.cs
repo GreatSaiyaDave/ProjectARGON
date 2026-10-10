@@ -9,8 +9,20 @@ namespace WRLDZ.Presentation.ArInteraction
 {
     /// <summary>
     /// Stable interaction volume directly in front of the torso.
-    /// Spawns hand cards as floating holograms with fan layout.
+    /// Spawns hand cards as floating holograms. The player's volume carries an <see cref="ArFloatingHand"/>:
+    /// a translucent right hand that holds the cards as a fan, pinch-draws from the disk and riffles on shuffle
+    /// (FLOATING_HAND.md). With <see cref="ArFloatingHand.Enabled"/> off (or no hand FBX) the cards use the
+    /// older free-floating fan (<see cref="ComputeFanSlot"/>). The opponent volume carries the same hand, tinted
+    /// by their disk: it draws for them and GENERATES the gesture of every card they put on their disk (there is no
+    /// hand data for an AI or a remote duelist), in step with the engine (<see cref="GestureInFlight"/>).
+    /// <para>
+    /// Placed in Update (order 600, after <see cref="ArFreeLookCamera"/> applies the look at 500: the volume faces the
+    /// stage camera's forward) and again in LateUpdate for late tracker poses. The Update placement is what the
+    /// hand's draw / place coroutines see, so a card at the deck well no longer jitters against a turning camera.
+    /// <see cref="ArOpponentDuelist"/> (650) then IK-solves its arm onto the hand placed this frame.
+    /// </para>
     /// </summary>
+    [DefaultExecutionOrder(600)]
     public class ArHandVolume : MonoBehaviour
     {
         public IArTrackingSource Tracker;
@@ -18,6 +30,11 @@ namespace WRLDZ.Presentation.ArInteraction
         public ArDuelDiskRig SourceDeck;
         /// <summary>Far-side AI / P2 hand — backs toward the local camera, not tappable.</summary>
         public bool IsOpponent;
+        /// <summary>
+        /// When set, the volume sits on this transform instead of the tracker's torso pose (the AI opponent duelist
+        /// hangs its fan in front of its own chest; the simulated opponent torso is not where a body would stand).
+        /// </summary>
+        public Transform AnchorOverride;
         /// <summary>Local player sees faces; the opposite hand is public backs only.</summary>
         public bool RevealFaces = true;
         public int Layer = 28;
@@ -35,6 +52,53 @@ namespace WRLDZ.Presentation.ArInteraction
 
         public IReadOnlyList<ArFloatingCard> Cards => _cards;
 
+        /// <summary>The translucent hand that holds the fan (both sides).</summary>
+        public ArFloatingHand FloatingHand { get; private set; }
+
+        /// <summary>True when the hand owns the layout (switch on, FBX loaded).</summary>
+        public bool HandLive => FloatingHand != null && FloatingHand.IsLive;
+
+        /// <summary>Longest a generated place may keep its zone waiting before the card is shown anyway.</summary>
+        public const float GeneratedPlaceTimeout = 3f;
+        /// <summary>Grip + carry + seat of a generated place (the AI waits this long).</summary>
+        public const float GeneratedPlaceSeconds =
+            ArFloatingHand.PlaceGripSeconds + ArFloatingHand.PlaceCarrySeconds + ArDiskMotion.PadSnap + 0.25f;
+
+        /// <summary>A generated place touched its zone: the disk (and the arena) can present the card now.</summary>
+        public System.Action GestureLanded;
+
+        readonly Queue<(ArFloatingCard card, ArDiskZone zone, ArZoneOrientation orient, bool reveal)> _places = new();
+        /// <summary>One-shot Spells the opponent's hand is (about to be) revealing, by instance.</summary>
+        readonly HashSet<int> _revealing = new();
+
+        /// <summary>The opponent's hand shows this activated card instead of setting it on a zone (queued or playing).</summary>
+        public bool IsRevealing(int instanceId) => _revealing.Contains(instanceId);
+
+        /// <summary>A generated place is queued or on its way (its zone is still waiting for the card).</summary>
+        public bool GestureInFlight
+        {
+            get
+            {
+                if (_places.Count > 0) return true;
+                if (SourceDeck == null) return false;
+                foreach (var z in SourceDeck.Zones)
+                    if (z != null && z.IncomingGesture) return true;
+                return false;
+            }
+        }
+
+        // Engine hand order from the last sync (0 = leftmost) — the fan slots and riffle read it.
+        readonly Dictionary<ArFloatingCard, int> _slotIndex = new();
+        readonly List<int> _lastOrder = new();
+        bool _lastHandLive;
+
+        /// <summary>Cards in the engine hand at the last <see cref="SyncHand"/>.</summary>
+        public int SlotCount { get; private set; }
+
+        /// <summary>Engine hand index of a floating card, or -1 when it is not (or no longer) in the hand.</summary>
+        public int SlotIndexOf(ArFloatingCard card) =>
+            card != null && _slotIndex.TryGetValue(card, out var i) ? i : -1;
+
         public static ArHandVolume Create(Transform parent, int layer, Color tint,
             bool opponent = false)
         {
@@ -49,34 +113,118 @@ namespace WRLDZ.Presentation.ArInteraction
             hv.VolumeRoot = new GameObject("Cards").transform;
             hv.VolumeRoot.SetParent(go.transform, false);
             // No volume guide cube — it read as a messy cyan box in the AR stage
+            try { hv.FloatingHand = ArFloatingHand.Attach(hv); }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning("[WRLDZ AR] Floating hand skipped: " + ex.Message);
+            }
+
             return hv;
         }
 
-        void LateUpdate()
+        void Update() => PlaceVolume();
+
+        /// <summary>Torso / anchor pose → this transform. True when a pose was available.</summary>
+        bool PlaceVolume()
         {
-            if (Tracker == null) return;
+            if (AnchorOverride != null)
+            {
+                transform.SetPositionAndRotation(AnchorOverride.position, AnchorOverride.rotation);
+                return true;
+            }
+
+            if (Tracker == null) return false;
             Pose torso;
             var ok = IsOpponent
                 ? Tracker.TryGetOpponentTorso(out torso)
                 : Tracker.TryGetTorso(out torso);
-            if (!ok) return;
+            if (!ok) return false;
             // Volume in front of chest, slightly down toward the worn disk
             // (human ready stance: hand holos between eyes and left-arm plate)
             var pos = torso.position + torso.forward * 0.28f + torso.up * -0.12f;
             transform.SetPositionAndRotation(pos, torso.rotation);
-            SeparateOverlappingCards();
+            return true;
         }
+
+        void LateUpdate()
+        {
+            var placed = PlaceVolume();
+
+            var live = HandLive;
+            if (live != _lastHandLive)
+            {
+                // A/B flip (ArFloatingHand.Enabled) mid-duel: move every idle card to the other layout
+                _lastHandLive = live;
+                foreach (var fc in _cards)
+                {
+                    if (fc == null || fc.IsLockedToZone || fc.IsDragging || fc.IsDrawArriving) continue;
+                    var i = SlotIndexOf(fc);
+                    if (i >= 0) LayoutCard(fc, i, SlotCount);
+                }
+            }
+
+            // mixed reality: the fan rides the player's real right palm instead of floating at the torso
+            if (FloatingHand != null && !IsOpponent)
+            {
+                if (Tracker is IArHandInput hands && hands.TryGetHand(false, out var right) && right.Tracked)
+                    FloatingHand.SetTrackedGrip(right.Grip);
+                else
+                    FloatingHand.ClearTrackedGrip();
+            }
+
+            if (FloatingHand != null) FloatingHand.Tick(_cards);
+            TickGeneratedPlaces();
+            // The held fan stacks cards in parallel planes (never interpenetrating), and its lifted card
+            // must not shove neighbours; the depenetration pass is for the free-floating layout only.
+            if (!live && placed) SeparateOverlappingCards();
+        }
+
+        /// <summary>Last SyncHand held back new cards (Spell/Trap result gate) — caller re-syncs later.</summary>
+        public bool ArrivalsDeferred { get; private set; }
+
+        readonly List<CardInstance> _syncHand = new();
 
         public void SyncHand(DuelistState who, CardDatabase db)
         {
             if (who == null || db == null) return;
+            // Spell/Trap result gate (Pot of Greed…): cards that ARRIVE in the hand are results and wait
+            // until the activating card has been readable (ActivationBeat). Cards leaving still leave now.
+            var holdArrivals = Application.isPlaying && ActivationBeat.AnyResultPending;
+            ArrivalsDeferred = false;
+            _syncHand.Clear();
+            foreach (var c in who.Hand)
+            {
+                if (c == null) continue;
+                if (holdArrivals && !_byInstance.ContainsKey(c.InstanceId))
+                {
+                    ArrivalsDeferred = true;
+                    continue;
+                }
+
+                _syncHand.Add(c);
+            }
+
             var live = new HashSet<int>();
             var arriveSlot = 0;
             var arrivedThisSync = 0;
-            for (var i = 0; i < who.Hand.Count; i++)
+            var order = new List<int>(_syncHand.Count);
+            foreach (var c in _syncHand)
+                order.Add(c.InstanceId);
+            // the SHUFFLE flag belongs to the player's volume; the opponent volume never consumes it
+            var shuffled = !IsOpponent && ArFloatingHand.ConsumeShufflePending();
+            var riffle = HandLive && (shuffled || IsReorderOnly(order));
+            // the fan closes from the pre-shuffle angles: keep the old index of every card for the riffle
+            var riffleFrom = riffle ? new Dictionary<ArFloatingCard, int>(_slotIndex) : null;
+            _lastOrder.Clear();
+            _lastOrder.AddRange(order);
+            SlotCount = order.Count;
+            _slotIndex.Clear();
+            var slot = 0;
+            for (var i = 0; i < _syncHand.Count; i++)
             {
-                var card = who.Hand[i];
+                var card = _syncHand[i];
                 if (card == null) continue;
+                var handSlot = slot++;
                 live.Add(card.InstanceId);
                 if (!_byInstance.TryGetValue(card.InstanceId, out var fc) || fc == null)
                 {
@@ -84,22 +232,30 @@ namespace WRLDZ.Presentation.ArInteraction
                     fc.KeepFaceHidden = !RevealFaces;
                     _byInstance[card.InstanceId] = fc;
                     _cards.Add(fc);
-                    LayoutCard(fc, i, who.Hand.Count);
+                    _slotIndex[fc] = handSlot;
+                    LayoutCard(fc, handSlot, SlotCount);
                     fc.RefreshArtFace(showFace: RevealFaces);
                     if (Application.isPlaying && gameObject.activeInHierarchy)
                     {
-                        BeginArriveFromDeck(fc, arriveSlot++);
+                        if (HandLive)
+                            FloatingHand.QueueDraw(fc);   // pinch-draw: the hand sequences these
+                        else
+                            BeginArriveFromDeck(fc, arriveSlot++);
                         arrivedThisSync++;
                     }
                     continue;
                 }
 
                 fc.Card = card;
+                _slotIndex[fc] = handSlot;
 
                 // Don't fight free-roam drag; layout only updates rest pose (soft spring)
                 if (fc.IsLockedToZone || fc.IsDragging || fc.IsDrawArriving) continue;
-                LayoutCard(fc, i, who.Hand.Count);
+                LayoutCard(fc, handSlot, SlotCount);
             }
+
+            if (riffle && arrivedThisSync == 0)
+                FloatingHand.PlayRiffle(riffleFrom);
 
             // Remove hand tracking for cards that left the hand.
             // Zone-locked cards stay in the scene (parented to disk) — do not Destroy.
@@ -107,7 +263,9 @@ namespace WRLDZ.Presentation.ArInteraction
             foreach (var kv in _byInstance)
             {
                 if (live.Contains(kv.Key)) continue;
-                if (kv.Value != null && !kv.Value.IsLockedToZone)
+                // the opponent put it on their disk: their hand carries it there instead of it vanishing
+                if (kv.Value != null && !kv.Value.IsLockedToZone && !kv.Value.HeldByGesture &&
+                    !TryQueueGeneratedPlace(who, kv.Value))
                     ArObjectUtil.Destroy(kv.Value.gameObject);
                 dead.Add(kv.Key);
             }
@@ -118,8 +276,155 @@ namespace WRLDZ.Presentation.ArInteraction
                 _cards.RemoveAll(c => c == null || c.Card == null || c.Card.InstanceId == id);
             }
 
-            if (arrivedThisSync > 0 && !IsOpponent)
+            // the AI waits for its own drawing hand too, so the engine never runs ahead of the gesture
+            if (arrivedThisSync > 0 && (!IsOpponent || HandLive))
                 DuelPresentationPacer.HoldDraw(arrivedThisSync);
+        }
+
+        /// <summary>
+        /// Opponent only: a card that left their hand for a monster zone or a face-down Spell/Trap slot is carried
+        /// there by their hand; a one-shot Spell they activated is shown to you (<see cref="ArFloatingHand.PlayReveal"/>).
+        /// Other face-up activations keep their own activation choreography.
+        /// </summary>
+        bool TryQueueGeneratedPlace(DuelistState who, ArFloatingCard fc)
+        {
+            if (!IsOpponent || !HandLive || !Application.isPlaying || SourceDeck == null || who == null) return false;
+            if (!gameObject.activeInHierarchy) return false;
+            var card = fc != null ? fc.Card : null;
+            if (card == null) return false;
+
+            // A one-shot Spell the AI activated from its hand: the hand shows it to you instead of setting it on a
+            // zone (owner 2026-10-04). The engine has already activated it (often resolved it): its disk slot and the
+            // arena wait for the reveal, and its beat counts from the end of the reveal.
+            // (FaceUp is not required: a resolved one-shot is usually already face-down in the GY at this sync)
+            if (ArSnapRules.RevealsFromHand(card) &&
+                SpellActivationPresentation.TryGet(card.InstanceId, out var act) && !act.PlayerSide &&
+                Time.unscaledTime - act.QueuedUnscaledTime < 3f)
+            {
+                Debug.Log($"[WRLDZ AR] Opponent reveals {card.Name} (S/T {act.ZoneIndex}) before it activates on the disk");
+                var rz = act.ZoneIndex >= 0 && act.ZoneIndex < SourceDeck.SpellTrapZones.Length
+                    ? SourceDeck.SpellTrapZones[act.ZoneIndex]
+                    : null;
+                var wait = ArFloatingHand.RevealSeconds + ArFloatingHand.RevealDissolveSeconds + _places.Count * GeneratedPlaceSeconds;
+                if (rz != null) rz.IncomingGestureUntil = Time.unscaledTime + GeneratedPlaceTimeout + wait;
+                fc.IsDragging = true;   // out of the fan: no idle spring, no layout
+                _revealing.Add(card.InstanceId);
+                _places.Enqueue((fc, rz, ArZoneOrientation.FaceUpAttack, true));
+                DuelPresentationPacer.Hold(wait + 0.2f, "Opponent shows a card…");
+                return true;
+            }
+
+            ArDiskZone zone = null;
+            var orient = ArZoneOrientation.FaceDownSet;
+            if (who.TryFindMonster(card, out var mi) && mi >= 0 && mi < SourceDeck.MonsterZones.Length)
+            {
+                zone = SourceDeck.MonsterZones[mi];
+                orient = !card.FaceUp ? ArZoneOrientation.FaceDownSet
+                    : card.Position == BattlePosition.Defense ? ArZoneOrientation.FaceUpDefense
+                    : ArZoneOrientation.FaceUpAttack;
+            }
+            else if (!card.FaceUp && who.TryFindSpellTrap(card, out var si) && si >= 0 &&
+                     si < SourceDeck.SpellTrapZones.Length)
+            {
+                zone = SourceDeck.SpellTrapZones[si];
+            }
+
+            if (zone == null || zone.IncomingGesture) return false;
+            if (card.FaceUp)
+            {
+                // the art faces its owner in the fan; as the card turns onto the pad it faces up for everyone
+                fc.KeepFaceHidden = false;
+                fc.RefreshArtFace(showFace: true);
+            }
+
+            fc.IsDragging = true;   // out of the fan: no idle spring, no layout
+            zone.IncomingGestureUntil = Time.unscaledTime + GeneratedPlaceTimeout + _places.Count * GeneratedPlaceSeconds;
+            _places.Enqueue((fc, zone, orient, false));
+            DuelPresentationPacer.Hold(GeneratedPlaceSeconds * _places.Count, "Opponent plays a card…");
+            return true;
+        }
+
+        void TickGeneratedPlaces()
+        {
+            if (_places.Count == 0) return;
+            var hand = FloatingHand;
+            var (fc, zone, orient, reveal) = _places.Peek();
+            if (fc == null || (zone == null && !reveal))
+            {
+                _places.Dequeue();
+                if (zone != null) zone.IncomingGestureUntil = 0f;
+                if (fc != null && fc.Card != null) _revealing.Remove(fc.Card.InstanceId);
+                GestureLanded?.Invoke();
+                return;
+            }
+
+            if (hand == null || !hand.IsLive)
+            {
+                AbandonPlace();
+                return;
+            }
+
+            if (hand.IsPlacing || hand.IsDrawing || hand.IsRiffling) return;
+            if (reveal)
+            {
+                var id = fc.Card != null ? fc.Card.InstanceId : 0;
+                var startedReveal = hand.PlayReveal(fc,
+                    atReveal: () =>
+                    {
+                        // shown: the activation is presented from now (disk slot, arena hologram, results)
+                        ActivationBeat.RestartClock(id);
+                        if (zone != null) zone.IncomingGestureUntil = 0f;
+                        GestureLanded?.Invoke();
+                        return true;
+                    },
+                    done: _ => _revealing.Remove(id));
+                if (startedReveal) _places.Dequeue();
+                else AbandonPlace();
+                return;
+            }
+
+            var started = hand.PlayPlace(fc, zone, orient,
+                atContact: () =>
+                {
+                    zone.IncomingGestureUntil = 0f;
+                    zone.SnapLock(fc, orient);
+                    GestureLanded?.Invoke();
+                    return true;
+                });
+            if (started) _places.Dequeue();
+            else AbandonPlace();
+        }
+
+        /// <summary>The hand cannot carry it (hidden, busy for good): the card is shown on its zone at once.</summary>
+        void AbandonPlace()
+        {
+            var (fc, zone, _, _) = _places.Dequeue();
+            if (zone != null) zone.IncomingGestureUntil = 0f;
+            if (fc != null && fc.Card != null)
+            {
+                _revealing.Remove(fc.Card.InstanceId);
+                ActivationBeat.RestartClock(fc.Card.InstanceId);
+            }
+            if (fc != null) ArObjectUtil.Destroy(fc.gameObject);
+            GestureLanded?.Invoke();
+        }
+
+        void OnDisable()
+        {
+            // hidden mid-gesture (retract / zone mode): every waiting card is shown on its zone
+            var any = _places.Count > 0;
+            while (_places.Count > 0)
+            {
+                var (fc, zone, _, _) = _places.Dequeue();
+                if (zone != null) zone.IncomingGestureUntil = 0f;
+                if (fc != null && !fc.IsLockedToZone) ArObjectUtil.Destroy(fc.gameObject);
+            }
+
+            if (SourceDeck != null)
+                foreach (var z in SourceDeck.Zones)
+                    if (z != null && z.IncomingGesture) { z.IncomingGestureUntil = 0f; any = true; }
+            _revealing.Clear();
+            if (any) GestureLanded?.Invoke();
         }
 
         void BeginArriveFromDeck(ArFloatingCard fc, int slot)
@@ -162,8 +467,35 @@ namespace WRLDZ.Presentation.ArInteraction
 
         void LayoutCard(ArFloatingCard fc, int index, int total)
         {
-            ComputeFanSlot(index, total, CardScale, out var local, out var rot, out var scale);
+            Vector3 local;
+            Quaternion rot;
+            Vector3 scale;
+            if (HandLive)
+                FloatingHand.SlotFor(index, total, out local, out rot, out scale);
+            else
+                ComputeFanSlot(index, total, CardScale, out local, out rot, out scale);
+            fc.HeldByHand = HandLive;
             fc.SetHandRest(local, rot, scale);
+        }
+
+        /// <summary>
+        /// Same cards as the last sync, different order, nothing drawn or played: the hand was shuffled
+        /// (in AR the 2D drag-reorder tray is hidden, so a permutation only comes from SHUFFLE).
+        /// </summary>
+        bool IsReorderOnly(List<int> order)
+        {
+            if (order.Count < 2 || order.Count != _lastOrder.Count) return false;
+            var same = true;
+            for (var i = 0; i < order.Count; i++)
+            {
+                if (order[i] == _lastOrder[i]) continue;
+                same = false;
+                break;
+            }
+
+            if (same) return false;
+            var a = new HashSet<int>(order);
+            return a.SetEquals(_lastOrder);
         }
 
         /// <summary>
@@ -291,7 +623,7 @@ namespace WRLDZ.Presentation.ArInteraction
 
         public ArFloatingCard PickByRay(Ray ray, float maxDist = 3f)
         {
-            if (IsOpponent) return null;
+            if (IsOpponent || HandBusy) return null;
             ArFloatingCard best = null;
             var bestT = maxDist;
             foreach (var c in _cards)
@@ -315,7 +647,11 @@ namespace WRLDZ.Presentation.ArInteraction
         /// </summary>
         public ArFloatingCard PickForPointer(Camera cam, Vector2 screen, Ray ray, float maxDist = 12f)
         {
-            if (IsOpponent) return null;
+            if (IsOpponent || HandBusy) return null;
+            // Held fan: the hand picks (nearest card box along the ray, tested on the transforms of this frame —
+            // physics auto-sync is off, so collider raycasts saw last step's poses — with hysteresis on the hovered
+            // and selected cards so their own lift cannot move them out from under the pointer and flicker).
+            if (HandLive) return FloatingHand.PickCard(ray) ?? PickNearestToRay(ray, 0.04f, maxDist);
             ArFloatingCard best = null;
             var bestScore = float.MaxValue;
             var anyHit = false;
@@ -351,7 +687,7 @@ namespace WRLDZ.Presentation.ArInteraction
         /// </summary>
         public ArFloatingCard PickNearestToRay(Ray ray, float maxRadius = 0.15f, float maxDist = 8f)
         {
-            if (IsOpponent) return null;
+            if (IsOpponent || HandBusy) return null;
             ArFloatingCard best = null;
             var bestScore = float.MaxValue;
             foreach (var c in _cards)
@@ -372,11 +708,22 @@ namespace WRLDZ.Presentation.ArInteraction
             return best;
         }
 
+        /// <summary>The hand is riffling: cards are mid-flick, picks wait until the fan reopens.</summary>
+        bool HandBusy => HandLive && FloatingHand.IsRiffling;
+
+        /// <summary>The floating card for an engine hand card (null when it is not in this volume).</summary>
+        public bool TryGetCard(int instanceId, out ArFloatingCard fc)
+        {
+            return _byInstance.TryGetValue(instanceId, out fc) && fc != null;
+        }
+
         public void RemoveCard(ArFloatingCard fc)
         {
             if (fc?.Card == null) return;
             _byInstance.Remove(fc.Card.InstanceId);
             _cards.Remove(fc);
+            _slotIndex.Remove(fc);
+            if (FloatingHand != null && FloatingHand.Selected == fc) FloatingHand.ClearSelected();
         }
     }
 }

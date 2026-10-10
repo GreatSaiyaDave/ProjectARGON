@@ -22,11 +22,17 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary>Center-to-center X between adjacent monster columns (street-scale).</summary>
         public const float MonsterColumnPitch = 1.20f;
 
+        /// <summary>Gap between neighbouring S/T card faces at full hologram scale.</summary>
+        public const float SpellTrapFaceGap = 0.10f;
+
         /// <summary>
-        /// S/T columns match monster pitch so each spell sits behind its monster,
-        /// not clustered into the infield.
+        /// Center-to-center X between adjacent S/T holos at full hologram scale: one card face plus a narrow gap, so
+        /// the row stands as a tight group round the M3 column (owner 2026-10-04: "grouped tighter together ... so
+        /// that the artwork of all activated spells and traps are facing the opponent"). It shrinks with the
+        /// holograms (<see cref="LiveSpellTrapColumnPitch"/>). The earlier row used the 1.20 monster pitch,
+        /// staggered into the gaps of the monster wall: 4.8 wide, its side cards had to turn to the camera to read.
         /// </summary>
-        public const float SpellTrapColumnPitch = MonsterColumnPitch;
+        public const float SpellTrapColumnPitch = 0.58f + SpellTrapFaceGap;   // CardArtFocus.SpellTrapArtworkScale.x
 
         /// <summary>
         /// Fallback X shift when the disk pose is unknown: toward the body
@@ -178,13 +184,18 @@ namespace WRLDZ.Presentation.ArInteraction
             if (monZ < minMid)
                 monZ = minMid;
 
+            // The S/T row sits 40% of the gap closer to the monsters (the aisle goes from 2.10 m to 1.26 m
+            // at full scale). The monster row stays; the field-spell slot uses the same Z, so it comes with
+            // the row. The disk pads on the arm do not move.
+            stZ = monZ + (stZ - monZ) * 0.6f;
+
             var changed = !Mathf.Approximately(LiveSpellTrapRowFromMid, stZ) ||
                           !Mathf.Approximately(LiveMonsterRowFromMid, monZ) ||
                           !Mathf.Approximately(LiveHoloScale, scale);
             LiveSpellTrapRowFromMid = stZ;
             LiveMonsterRowFromMid = monZ;
-            LiveStandOff = stand;
-            LiveStep = step;
+            LiveStandOff = halfSpan - stZ;
+            LiveStep = stZ - monZ;
             LiveHoloScale = scale;
             return changed;
         }
@@ -205,22 +216,30 @@ namespace WRLDZ.Presentation.ArInteraction
                 side * LiveMonsterRowFromMid);
         }
 
+        /// <summary>Live S/T column pitch: the card face plus its gap, at the live hologram scale.</summary>
+        public static float LiveSpellTrapColumnPitch => SpellTrapColumnPitch * LiveHoloScale;
+
+        /// <summary>S/T column X: S/T 1-5 in the disk's M1→M5 order, grouped tight round the M3 column.</summary>
+        static float SpellTrapColumnX(int zone, bool playerSide) => ColumnX(zone, LiveSpellTrapColumnPitch, playerSide);
+
         /// <summary>Arena local position for an S/T zone (0–4).</summary>
         public static Vector3 SpellTrapArenaLocal(int zone, bool playerSide)
         {
             var side = playerSide ? -1f : 1f;
-            return new Vector3(ColumnX(zone, SpellTrapColumnPitch, playerSide), SpellTrapHoverY,
+            return new Vector3(SpellTrapColumnX(zone, playerSide), SpellTrapHoverY,
                 side * LiveSpellTrapRowFromMid);
         }
 
         public static Vector3 FieldSpellArenaLocal(bool playerSide)
         {
             var side = playerSide ? -1f : 1f;
-            var m1 = ColumnX(0, MonsterColumnPitch, playerSide);
-            var m2 = ColumnX(1, MonsterColumnPitch, playerSide);
-            var dir = Mathf.Sign(m1 - m2);
+            var pitch = LiveSpellTrapColumnPitch;
+            var st0 = SpellTrapColumnX(0, playerSide);
+            var st1 = SpellTrapColumnX(1, playerSide);
+            var dir = Mathf.Sign(st0 - st1);
             if (dir == 0f) dir = -1f;
-            return new Vector3(m1 + dir * 0.48f, FieldHoverY, side * LiveSpellTrapRowFromMid);
+            return new Vector3(st0 + dir * (pitch * 0.55f + 0.08f), FieldHoverY,
+                side * LiveSpellTrapRowFromMid);
         }
 
         public static Vector3 PendulumArenaLocal(int idx)
@@ -297,34 +316,56 @@ namespace WRLDZ.Presentation.ArInteraction
         public const float DiskMonsterColumnPitch = 0.092f;
 
         /// <summary>
-        /// Monster stages — geometric center of each recessed top-face
-        /// rectangle (not the triangle decal, not the outer S/T groove).
-        /// M1/M2 = SMALL 2-card BLADE (field-spell end, −X). M3–M5 = BIG
-        /// BLADE (dividers at X ≈ 0.042 and 0.134). Straight-blade pad
-        /// floor Z ≈ 0.022 … 0.090; center Z = 0.056 (not the triangle).
+        /// Monster Card Zones — the centre of each blade pocket: the 66 × 69 mm Spell/Trap card cavity that runs
+        /// under every monster stage, open at the outer rim (the S/T slit). The plate renders see-through, so these
+        /// pockets are the rectangles the player reads as the zone spots, and a monster card sits square over its
+        /// pocket with the Set card under it (Battle City). Measured on the v37 mesh (pocket floors at −3.2 / −5.2 /
+        /// −6.8 mm): the BIG blade's three share z 0.020 at the 92 mm pitch; the SMALL blade's two follow its 26° bend
+        /// (<see cref="DiskSmallBladeYawDeg"/>). The old flat-top centres (z 0.038–0.044, M1 z 0.116) sat every card
+        /// 18–30 mm toward the wearer, off its spot. M1/M2 = SMALL blade (field-spell end, −X), M3–M5 = BIG blade.
         /// </summary>
         public static readonly Vector3[] DiskMonsterSurface =
         {
-            new(-0.2000f, DiskPlateSurfaceY, 0.1100f), // M1 · SMALL tip stage (nudged off inner rail)
-            new(-0.1110f, DiskPlateSurfaceY, 0.0650f), // M2 · SMALL join stage (not the triangle)
-            new(-0.0050f, DiskPlateSurfaceY, 0.0380f), // M3 · BIG join stage (nudged off inner rail)
-            new(0.0870f, DiskPlateSurfaceY, 0.0380f),  // M4 · BIG mid stage (nudged off inner rail)
-            new(0.1790f, DiskPlateSurfaceY, 0.0380f),  // M5 · BIG tip stage (nudged off inner rail)
+            new(-0.2045f, DiskPlateSurfaceY, 0.0861f), // M1 · SMALL tip pocket
+            new(-0.1216f, DiskPlateSurfaceY, 0.0461f), // M2 · SMALL join pocket
+            new(-0.0040f, DiskPlateSurfaceY, 0.0200f), // M3 · BIG join pocket
+            new(0.0880f, DiskPlateSurfaceY, 0.0200f),  // M4 · BIG mid pocket
+            new(0.1800f, DiskPlateSurfaceY, 0.0200f),  // M5 · BIG tip pocket
         };
 
         /// <summary>
-        /// Unity Y yaw so zone +X follows each pad's divider-wall normal
-        /// (along the blade toward the BIG tip). Unity: +X = (cos y, 0, −sin y).
-        /// SMALL BLADE is hinged; those yaws are opposite the previous sign
-        /// (negative yaw twisted M1/M2 against the rails).
+        /// S/T slit mouth: this far out from its pocket's centre along the pocket's own outward axis (−zone Z), and
+        /// centred on it across (the slit spans the pocket's full 69 mm width). Same on every pad: the pockets are
+        /// identical on both blades.
+        /// </summary>
+        public const float DiskSpellTrapMouthFromPocket = 0.0291f;
+
+        static Vector3 SlotMouthOnPocket(int index)
+        {
+            var outward = Quaternion.Euler(0f, DiskMonsterEdgeYawDeg[index], 0f) * Vector3.back;
+            var p = DiskMonsterSurface[index] + outward * DiskSpellTrapMouthFromPocket;
+            return new Vector3(p.x, DiskSpellTrapPocketFloorY, p.z);
+        }
+
+        /// <summary>
+        /// Yaw of the SMALL BLADE's pads, outer edge and Field Card Slot drawer (measured: the M2 pad floor fits a
+        /// 64.5 × 82.5 mm rectangle at 26.0°; the outer edge runs ≈ 26–27°). The inner rail's 19.3° taper
+        /// (<see cref="DiskTaperRailSlope"/>) left the M1 / M2 cards ~7° crooked on their pads.
+        /// </summary>
+        public const float DiskSmallBladeYawDeg = 26f;
+
+        /// <summary>
+        /// Unity Y yaw so zone +X follows the pad rails toward the BIG tip.
+        /// Unity: +X = (cos y, 0, −sin y). SMALL blade pads sit at <see cref="DiskSmallBladeYawDeg"/>;
+        /// the BIG blade is straight.
         /// </summary>
         public static readonly float[] DiskMonsterEdgeYawDeg =
         {
-            27f, // M1 · SMALL tip — triangle/pad PCA
-            26f, // M2 · SMALL join — triangle/pad PCA
-            2f,  // M3 · BIG join — triangle/pad PCA
-            2f,  // M4 · BIG mid — triangle/pad PCA
-            2f   // M5 · BIG tip — triangle/pad PCA
+            DiskSmallBladeYawDeg, // M1 · SMALL tip — square on its pad
+            DiskSmallBladeYawDeg, // M2 · SMALL join — square on its pad
+            0f,     // M3 · BIG blade is straight
+            0f,     // M4
+            0f      // M5
         };
 
         /// <summary>
@@ -340,11 +381,11 @@ namespace WRLDZ.Presentation.ArInteraction
         /// </summary>
         public static readonly float[] DiskSpellTrapMouthZ =
         {
-            0.0609f,  // ST1 · M1 slit
-            0.0227f,  // ST2 · M2 slit
-            -0.0091f, // ST3 · M3 slit
-            -0.0094f, // ST4 · M4 slit
-            -0.0089f, // ST5 · M5 slit
+            SlotMouthOnPocket(0).z, // ST1 · M1 slit
+            SlotMouthOnPocket(1).z, // ST2 · M2 slit
+            SlotMouthOnPocket(2).z, // ST3 · M3 slit
+            SlotMouthOnPocket(3).z, // ST4 · M4 slit
+            SlotMouthOnPocket(4).z, // ST5 · M5 slit
         };
 
         /// <summary>Legacy name — groove depth below the plate top.</summary>
@@ -366,16 +407,17 @@ namespace WRLDZ.Presentation.ArInteraction
                 : DiskInnerRailZ + (DiskTaperRailStartX - x) * DiskTaperRailSlope;
 
         /// <summary>
-        /// S/T groove mouths — one outer-rim slit per signed-off monster pad,
-        /// on that pad's own along/outer axes (SMALL blade is hinged).
+        /// S/T groove mouths — the outer-rim slit of each monster pocket, on that pocket's own along/outer axes
+        /// (SMALL blade is hinged), so the Set card slides in under its monster. Was hand-measured per slit, which
+        /// left ST3–ST5 2.7 mm and ST1 7.4 mm off their pockets' centre lines.
         /// </summary>
         public static readonly Vector3[] DiskSpellTrapSlots =
         {
-            new(-0.2250f, DiskSpellTrapPocketFloorY, 0.0609f),  // ST1 · M1
-            new(-0.1316f, DiskSpellTrapPocketFloorY, 0.0227f),  // ST2 · M2
-            new(-0.0068f, DiskSpellTrapPocketFloorY, -0.0091f), // ST3 · M3
-            new(0.0853f, DiskSpellTrapPocketFloorY, -0.0094f),  // ST4 · M4
-            new(0.1774f, DiskSpellTrapPocketFloorY, -0.0089f),  // ST5 · M5
+            SlotMouthOnPocket(0), // ST1 · M1
+            SlotMouthOnPocket(1), // ST2 · M2
+            SlotMouthOnPocket(2), // ST3 · M3
+            SlotMouthOnPocket(3), // ST4 · M4
+            SlotMouthOnPocket(4), // ST5 · M5
         };
 
         /// <summary>Legacy name — outer groove mouths.</summary>
@@ -424,27 +466,6 @@ namespace WRLDZ.Presentation.ArInteraction
         /// </summary>
         public static readonly Vector2 DiskLpWindowSize = new(0.056f, 0.020f);
 
-        /// <summary>
-        /// Phase CTAs share the LP counter's hub band (same Y/Z, same facing).
-        /// They sit +X of the LCD (screen-left of the deck, away from the magazine).
-        /// 0 = BATTLE, 1 = MAIN 2, 2 = END.
-        /// </summary>
-        public static Vector3 DiskPhaseRailLocal(int index)
-        {
-            index = Mathf.Clamp(index, 0, 2);
-            var lp = DiskLpWindowLocal;
-            var gap = 0.006f;
-            var halfChip = DiskPhaseChipSize.x * 0.5f;
-            var first = lp.x + DiskLpWindowSize.x * 0.5f + gap + halfChip;
-            var pitch = DiskPhaseChipSize.x + gap;
-            return new Vector3(first + index * pitch, lp.y, lp.z);
-        }
-
-        /// <summary>Same facing as the LP glass (no pad yaw).</summary>
-        public static float DiskPhaseRailYawDeg(int index) => 0f;
-
-        /// <summary>World size of one phase chip — matches LP glass height.</summary>
-        public static readonly Vector2 DiskPhaseChipSize = new(0.040f, 0.020f);
 
         /// <summary>
         /// GY tray — the lower rectangular opening on the hub, under the H-slot,
@@ -458,12 +479,35 @@ namespace WRLDZ.Presentation.ArInteraction
         /// </summary>
         public static readonly Vector3 DiskExtraDeckHubLocal = new(0.000f, -0.030f, 0.220f);
 
-        /// <summary>Field Spell holder — SMALL BLADE tip tab (past M1, −X).</summary>
+        /// <summary>
+        /// Field Spell holder — SMALL BLADE tip tab (past M1, −X). Open drawer. The card seats at the CENTRE of the
+        /// kit's Field Card Slot pocket: measured in the zone's own frame the pocket (8.9 x 10.8 cm) is centred
+        /// (+0.0172, +0.0008, −0.0021) from the zone origin, so that offset (turned by the zone's yaw) is added here.
+        /// The drawer part itself keeps the kit's authored place (SpiritDuelerMechanics offsets from this point).
+        /// </summary>
         public static Vector3 DiskFieldSpellSurface =>
-            new(-0.2871f, -0.0132f, 0.1641f);
+            new Vector3(-0.2871f, -0.0132f, 0.1641f)
+            + Quaternion.Euler(0f, DiskFieldSpellYawDeg, 0f) * new Vector3(0.0172f, 0.0008f, -0.0021f);
 
-        /// <summary>Field zone yaw (matches the tip taper).</summary>
-        public const float DiskFieldSpellYawDeg = -28f;
+        /// <summary>
+        /// Field Card Slot stowed in the plate. The anime drawer slides straight out of
+        /// the tip only when a Field Spell is played; this is that same travel, inward.
+        /// </summary>
+        public static Vector3 DiskFieldSpellClosed
+        {
+            get
+            {
+                var outward = Quaternion.Euler(0f, DiskFieldSpellYawDeg, 0f) * Vector3.left;
+                return DiskFieldSpellSurface - outward * 0.062f;
+            }
+        }
+
+        /// <summary>
+        /// Field Card Slot yaw — along the SMALL BLADE, the axis the drawer slides on (Unity: outward =
+        /// Euler(0, yaw, 0) · −X, toward the tip). −28° slid the drawer sideways off the blade and turned the
+        /// Field Spell against the drawer.
+        /// </summary>
+        public const float DiskFieldSpellYawDeg = DiskSmallBladeYawDeg;
 
         /// <summary>Column X of the five monster pads (for debug / UI).</summary>
         public static readonly float[] DiskColumnX =
@@ -475,8 +519,11 @@ namespace WRLDZ.Presentation.ArInteraction
             DiskMonsterSurface[4].x
         };
 
-        /// <summary>Typical monster stage-center Z (straight BIG BLADE).</summary>
-        public const float DiskMonsterZ = 0.056f;
+        /// <summary>
+        /// Monster zone centre Z on the straight BIG BLADE: the pocket centre (<see cref="DiskMonsterSurface"/>), not
+        /// the flat top's 0.044 midline. Nothing reads it; kept in step for debug.
+        /// </summary>
+        public const float DiskMonsterZ = 0.020f;
 
         /// <summary>Typical S/T mouth Z (outer slit on the straight blade rim).</summary>
         public const float DiskSpellTrapZ = -0.009f;
@@ -528,6 +575,10 @@ namespace WRLDZ.Presentation.ArInteraction
             var savedStand = LiveStandOff;
             var savedStep = LiveStep;
             var savedScale = LiveHoloScale;
+            var savedPx = PlayerHoloX;
+            var savedPs = PlayerColumnSign;
+            var savedOx = OppHoloX;
+            var savedOs = OppColumnSign;
 
             void Check(string name, bool ok, string detail = "")
             {
@@ -549,9 +600,10 @@ namespace WRLDZ.Presentation.ArInteraction
                 ApplyAnimeField(DesignHalfSpan * 2f);
                 Check("Design span: full hologram scale", Mathf.Approximately(LiveHoloScale, 1f),
                     $"scale={LiveHoloScale:0.000}");
-                Check("Design span: S/T–monster aisle is the design step",
-                    Mathf.Abs(LiveStep - MonsterStepFromSpellTrap) < 0.01f,
-                    $"step={LiveStep:0.00}");
+                Check("Design span: S/T–monster aisle is 1.26 m (40% closer)",
+                    Mathf.Abs(LiveStep - MonsterStepFromSpellTrap * 0.6f) < 0.01f &&
+                    Mathf.Abs((LiveSpellTrapRowFromMid - LiveMonsterRowFromMid) - 1.26f) < 0.02f,
+                    $"step={LiveStep:0.00} gap={LiveSpellTrapRowFromMid - LiveMonsterRowFromMid:0.00}");
                 Check("Design span: monsters sit at min mid",
                     Mathf.Abs(LiveMonsterRowFromMid - MinMonsterRowFromMid) < 0.02f,
                     $"monZ={LiveMonsterRowFromMid:0.00}");
@@ -560,13 +612,13 @@ namespace WRLDZ.Presentation.ArInteraction
                 Check("Wide street: scale stays 1", Mathf.Approximately(LiveHoloScale, 1f));
                 Check("Wide street: extra span goes to mid, not onto S/T",
                     LiveStandOff > DiskToHoloMinGap - 0.01f &&
-                    LiveStep > MonsterStepFromSpellTrap - 0.01f &&
+                    LiveStep > MonsterStepFromSpellTrap * 0.6f - 0.01f &&
                     LiveMonsterRowFromMid > MinMonsterRowFromMid + 0.2f,
                     $"stand={LiveStandOff:0.00} step={LiveStep:0.00} monZ={LiveMonsterRowFromMid:0.00}");
 
                 ApplyAnimeField(2.5f);
                 Check("Standing 2.5 m: aisle stays a real step (not the 0.35 m collapse)",
-                    LiveStep > 0.55f && LiveSpellTrapRowFromMid - LiveMonsterRowFromMid > 0.55f,
+                    LiveStep > 0.35f && LiveSpellTrapRowFromMid - LiveMonsterRowFromMid > 0.35f,
                     $"step={LiveStep:0.00} gap={LiveSpellTrapRowFromMid - LiveMonsterRowFromMid:0.00}");
                 Check("Standing 2.5 m: holos scale down with the street",
                     LiveHoloScale < 0.5f && LiveHoloScale > 0.2f,
@@ -574,18 +626,71 @@ namespace WRLDZ.Presentation.ArInteraction
 
                 ApplyAnimeField(4f);
                 Check("Street 4.0 m: S/T still further from mid than monsters",
-                    LiveSpellTrapRowFromMid > LiveMonsterRowFromMid + 0.7f,
+                    LiveSpellTrapRowFromMid > LiveMonsterRowFromMid + 0.5f,
                     $"ST={LiveSpellTrapRowFromMid:0.00} M={LiveMonsterRowFromMid:0.00}");
 
                 ApplyAnimeField(DesignHalfSpan * 2f);
-                for (var i = 0; i < 5; i++)
+                foreach (var mine in new[] { true, false })
                 {
-                    var mx = MonsterArenaLocal(i, true).x;
-                    var sx = SpellTrapArenaLocal(i, true).x;
-                    Check($"Column {i}: S/T X matches monster X",
-                        Mathf.Abs(mx - sx) < 0.001f,
-                        $"M={mx:0.00} ST={sx:0.00}");
+                    // The S/T row is one tight group centred on the M3 column (both sides).
+                    var mid = SpellTrapArenaLocal(2, mine).x;
+                    Check($"S/T row centred on M3 ({(mine ? "you" : "opp")})",
+                        Mathf.Abs(mid - MonsterArenaLocal(2, mine).x) < 0.002f, $"S/T3 x={mid:0.00}");
+                    var width = Mathf.Abs(SpellTrapArenaLocal(4, mine).x - SpellTrapArenaLocal(0, mine).x);
+                    Check($"S/T row grouped tight ({(mine ? "you" : "opp")})",
+                        width < MonsterColumnPitch * 2.5f, $"S/T1→S/T5={width:0.00}");
                 }
+                Check("S/T pitch leaves a gap between 0.58 m faces",
+                    SpellTrapColumnPitch > 0.58f + 0.08f,
+                    $"pitch={SpellTrapColumnPitch:0.00}");
+                for (var i = 0; i < 4; i++)
+                {
+                    var a = SpellTrapArenaLocal(i, true).x;
+                    var b = SpellTrapArenaLocal(i + 1, true).x;
+                    Check($"S/T {i}→{i + 1}: pitch {SpellTrapColumnPitch:0.00} m",
+                        Mathf.Abs(Mathf.Abs(b - a) - SpellTrapColumnPitch) < 0.002f,
+                        $"dx={Mathf.Abs(b - a):0.000}");
+                }
+                {
+                    var you0 = SpellTrapArenaLocal(0, true).x;
+                    var opp0 = SpellTrapArenaLocal(0, false).x;
+                    Check("Opp S/T uses same pitch as You (mirrored)",
+                        Mathf.Abs(Mathf.Abs(SpellTrapArenaLocal(1, false).x - opp0) -
+                                  Mathf.Abs(SpellTrapArenaLocal(1, true).x - you0)) < 0.002f);
+                }
+
+                Check("M1/M2 yaw is square on the SMALL-blade pads",
+                    Mathf.Abs(DiskMonsterEdgeYawDeg[0] - DiskSmallBladeYawDeg) < 0.2f &&
+                    Mathf.Abs(DiskMonsterEdgeYawDeg[1] - DiskSmallBladeYawDeg) < 0.2f,
+                    $"M1={DiskMonsterEdgeYawDeg[0]:0.00} M2={DiskMonsterEdgeYawDeg[1]:0.00} pads={DiskSmallBladeYawDeg:0.00}");
+                {
+                    // The drawer slides along the small blade toward its tip (−X), not sideways off it.
+                    var outward = Quaternion.Euler(0f, DiskFieldSpellYawDeg, 0f) * Vector3.left;
+                    var bladeAxis = Quaternion.Euler(0f, DiskSmallBladeYawDeg, 0f) * Vector3.left;
+                    Check("Field Card Slot drawer slides along the small blade",
+                        Vector3.Dot(outward, bladeAxis) > 0.99f && outward.x < -0.8f,
+                        $"outward={outward}");
+                }
+                {
+                    // Each Set card slides in under its own monster: slit centred on the pocket, same depth on all five.
+                    var ok = true;
+                    var worst = 0f;
+                    for (var i = 0; i < 5; i++)
+                    {
+                        var inv = Quaternion.Inverse(Quaternion.Euler(0f, DiskMonsterEdgeYawDeg[i], 0f));
+                        var d = inv * (DiskSpellTrapSlots[i] - DiskMonsterSurface[i]);
+                        var err = Mathf.Max(Mathf.Abs(d.x), Mathf.Abs(-d.z - DiskSpellTrapMouthFromPocket));
+                        worst = Mathf.Max(worst, err);
+                        ok &= err < 0.0005f;
+                    }
+
+                    Check("S/T slits are centred on their monster pockets", ok, $"worst={worst * 1000f:0.0} mm");
+                }
+                Check("M3–M5 yaw is square on the straight BIG blade",
+                    Mathf.Abs(DiskMonsterEdgeYawDeg[2]) < 0.05f &&
+                    Mathf.Abs(DiskMonsterEdgeYawDeg[3]) < 0.05f &&
+                    Mathf.Abs(DiskMonsterEdgeYawDeg[4]) < 0.05f,
+                    $"M3={DiskMonsterEdgeYawDeg[2]:0.00}");
 
                 Check("Hand fan: 2-card rest bodies do not overlap",
                     !ArHandVolume.RestBodiesOverlap(0, 1, 2, 0.22f));
@@ -599,6 +704,23 @@ namespace WRLDZ.Presentation.ArInteraction
                 Check("Hand fan: spacing exceeds projected body width",
                     ArHandVolume.RestCenterSpacing(6, 0.22f) >
                     ArHandVolume.ProjectedWidth(0.22f, 16f) + 0.001f);
+
+                // Mr. Referobot stood in the aisle beside M3 and blocked the holograms.
+                foreach (var span in new[] { 2.5f, DesignHalfSpan * 2f, 8f })
+                {
+                    ApplyAnimeField(span);
+                    var margin = float.MaxValue;
+                    foreach (var sign in new[] { 1f, -1f })
+                    {
+                        SetHoloColumns(-0.2f * sign, sign, 0.22f * sign, sign);
+                        for (var p = 0; p < ReferobotWorldBody.PostCount; p++)
+                            margin = Mathf.Min(margin,
+                                NearestZoneDistance(ReferobotWorldBody.Post(p)) - ReferobotWorldBody.ZoneClearance);
+                    }
+
+                    Check($"Referobot {span:0.0} m street: every sideline post clears all hologram zones",
+                        margin > 0f, $"margin={margin:0.00}");
+                }
             }
             finally
             {
@@ -607,10 +729,38 @@ namespace WRLDZ.Presentation.ArInteraction
                 LiveStandOff = savedStand;
                 LiveStep = savedStep;
                 LiveHoloScale = savedScale;
+                SetHoloColumns(savedPx, savedPs, savedOx, savedOs);
             }
 
             sb.AppendLine($"--- {pass} passed, {fail} failed ---");
             return sb.ToString();
+        }
+
+        /// <summary>Flat distance from an arena-local point to the nearest zone centre of either player.</summary>
+        static float NearestZoneDistance(Vector3 p)
+        {
+            var best = float.MaxValue;
+
+            void Try(Vector3 zone)
+            {
+                var dx = zone.x - p.x;
+                var dz = zone.z - p.z;
+                best = Mathf.Min(best, Mathf.Sqrt(dx * dx + dz * dz));
+            }
+
+            for (var zone = 0; zone < 5; zone++)
+            {
+                Try(MonsterArenaLocal(zone, true));
+                Try(MonsterArenaLocal(zone, false));
+                Try(SpellTrapArenaLocal(zone, true));
+                Try(SpellTrapArenaLocal(zone, false));
+            }
+
+            Try(FieldSpellArenaLocal(true));
+            Try(FieldSpellArenaLocal(false));
+            Try(PendulumArenaLocal(0));
+            Try(PendulumArenaLocal(1));
+            return best;
         }
     }
 }

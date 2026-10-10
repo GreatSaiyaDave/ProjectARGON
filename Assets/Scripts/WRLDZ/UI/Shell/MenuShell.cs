@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using WRLDZ.Core;
 using WRLDZ.Presentation;
 using WRLDZ.UI;
 
@@ -21,7 +22,8 @@ namespace WRLDZ.UI.Shell
         public RectTransform ModalHost { get; private set; }
         public RectTransform ToastHost { get; private set; }
         public HudTokens Hud { get; private set; }
-        public bool BatterySaver { get; private set; }
+        /// <summary>Persisted in PlayerPrefs (<see cref="WrldzTheme.BatterySaver"/>), so it survives scenes and restarts.</summary>
+        public bool BatterySaver => WrldzTheme.BatterySaver;
 
         /// <summary>
         /// True when built via <see cref="CreateOverlay"/> — sheets open over map/hub
@@ -92,7 +94,7 @@ namespace WRLDZ.UI.Shell
             _batteryVeil.sprite = UiFoundation.WhiteSprite();
             _batteryVeil.color = new Color(0f, 0f, 0f, 0.28f);
             _batteryVeil.raycastTarget = false;
-            veil.SetActive(false);
+            veil.SetActive(WrldzTheme.BatterySaver);
         }
 
         void BuildOverlay(RectTransform canvas)
@@ -145,14 +147,13 @@ namespace WRLDZ.UI.Shell
             h.childForceExpandHeight = true;
             h.padding = new RectOffset(8, 8, 6, 6);
 
-            // Same words as overworld map bar where possible
-            NavBtn(row.transform, "VS AI", DuelystUi.IconAtk() ?? DuelystUi.IconMenu(),
-                () => ScreenRouter.Ensure(this).OpenPlayerVsAi(), gold: true);
+            // Same four as the overworld bar. MAP is the center, the way closing the ball returns to the map.
+            // Duel start stays on the Eye's DUEL row. Profile is the trainer portrait.
             NavBtn(row.transform, "DECK", DuelystUi.IconDeck(), () => ScreenRouter.Ensure(this).OpenDeck());
+            NavBtn(row.transform, "BAG", DuelystUi.IconBag(), () => ScreenRouter.Ensure(this).OpenInventory());
             NavBtn(row.transform, "MAP", ImagineAssets.IconCompass() ?? DuelystUi.IconMenu(),
-                () => ScreenRouter.Ensure(this).GoHome());
+                () => ScreenRouter.Ensure(this).GoHome(), gold: true);
             NavBtn(row.transform, "STORY", DuelystUi.IconStory(), () => ScreenRouter.Ensure(this).OpenStory());
-            NavBtn(row.transform, "YOU", DuelystUi.IconMenu(), () => ScreenRouter.Ensure(this).OpenAvatar());
         }
 
         static void NavBtn(Transform parent, string label, Sprite icon, System.Action onClick, bool gold = false)
@@ -187,10 +188,9 @@ namespace WRLDZ.UI.Shell
 
         public void SetBatterySaver(bool on)
         {
-            BatterySaver = on;
+            WrldzTheme.BatterySaver = on; // persists + applies 30 / 60 fps
             if (_batteryVeil != null)
                 _batteryVeil.gameObject.SetActive(on);
-            Application.targetFrameRate = on ? 30 : 60;
         }
 
         public void Toast(string msg)
@@ -220,15 +220,25 @@ namespace WRLDZ.UI.Shell
             if (ToastHost != null)
                 ToastHost.gameObject.SetActive(false);
 
-            // ── Player vs AI create (logical endpoint path) ──
+            // ── Player vs AI: opponent sheet, then surface-scan create ──
             if (id == MenuId.ArDuelCreate)
             {
-                var createPanel = ArDuelCreateScreen.Build(ModalHost, () =>
+                void CloseCreate()
                 {
+                    OpponentCatalog.ClearPending();
                     ClearOverlays();
                     ScreenRouter.Ensure(this).Back();
-                });
-                _overlays[id] = createPanel.gameObject;
+                }
+
+                var oppPanel = OpponentSelectScreen.Build(ModalHost, CloseCreate, labTest: false,
+                    onPicked: _ =>
+                    {
+                        ClearOverlays(keepCanvasVisible: true);
+                        var createPanel = ArDuelCreateScreen.Build(ModalHost, CloseCreate);
+                        _overlays[id] = createPanel.gameObject;
+                        PresentMounted();
+                    });
+                _overlays[id] = oppPanel.gameObject;
                 PresentMounted();
                 return;
             }
@@ -465,10 +475,10 @@ namespace WRLDZ.UI.Shell
                 "Endless Artifact Deck Box. Currencies, badges, keys. Always with you.\n" +
                 "Open from wallet chips or BAG · HOME / ON YOU.",
             MenuId.StorySeason =>
-                "Story Zone missions on the map.\nStarter sets LOB / MRD / SRL. Set orbs through L50.",
+                "Season 1 Duelist Kingdom · parchment gates.\nDailies under Referobot. Indoor DUEL needs no GPS.",
             MenuId.ArDuelCreate =>
-                "Player vs AI · choose field distance · AR stage\n" +
-                "Standing / Table / Street / Practice → START.",
+                "Player vs AI · pick opponent · size the AR field\n" +
+                "Yugi / Kaiba / Joey / street lists → walk the space → START.",
             MenuId.ArDuelPvpCreate =>
                 "Player vs Player · auto-scan distance between duelists\n" +
                 "Mark P1 + P2 · AR arena sized to measured meters · hotseat.",
@@ -476,9 +486,9 @@ namespace WRLDZ.UI.Shell
                 "Player vs AI AR formats · field distance presets\n" +
                 "START loads DuelSlice with AI opponent.",
             MenuId.Bazaar =>
-                "Stone tablets · packs · challenges\n" +
-                "Altars: offer cards → Set Energy of that card's set\n" +
-                "SE from story / CPU decks only — never PvP (see SET_ENERGY_AND_BAZAAR).",
+                "Stone tablets: 1,000 SE of set X → 10 cards of X.\n" +
+                "Fuse 5 ERAZ shards + 2,500 SE into the next badge.\n" +
+                "SE from story / CPU / Tears — never PvP.",
             MenuId.Settings =>
                 "AR quality · Battery saver · Eye-tracking · Right-arm disk\nHigh contrast · Volume\n\nEssentials only.",
             MenuId.TomeRaid =>

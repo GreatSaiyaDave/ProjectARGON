@@ -4,6 +4,7 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using UnityEngine;
+using WRLDZ.Core;
 using WRLDZ.Data;
 
 namespace WRLDZ.Duel.Rules
@@ -99,14 +100,12 @@ namespace WRLDZ.Duel.Rules
                 return null;
             EraTextTried.Add(eraId);
 
-            var path = Path.Combine(
-                Application.streamingAssetsPath, "WRLDZ", "eras", "text", eraId + ".json");
-            if (!File.Exists(path))
+            if (!StreamingFiles.TryReadAllText("WRLDZ/eras/text/" + eraId + ".json", out var json))
                 return null;
 
             try
             {
-                var wrapper = JsonUtility.FromJson<EraTextFile>(File.ReadAllText(path));
+                var wrapper = JsonUtility.FromJson<EraTextFile>(json);
                 var map = new Dictionary<int, EraTextCard>();
                 if (wrapper?.cards != null)
                 {

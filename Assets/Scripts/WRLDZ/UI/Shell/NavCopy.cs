@@ -47,7 +47,7 @@ namespace WRLDZ.UI.Shell
             MenuId.Bazaar => "Tablets & packs",
             MenuId.StorySeason => "Story Zone",
             MenuId.AvatarProfile => "Avatar look",
-            MenuId.ArDuelCreate => "Field distance",
+            MenuId.ArDuelCreate => "Choose opponent",
             MenuId.ArDuelPvpCreate => "Scan distance",
             MenuId.FreeView => "Place cards · view models",
             MenuId.Tournament => "Host a room · start when enough join",

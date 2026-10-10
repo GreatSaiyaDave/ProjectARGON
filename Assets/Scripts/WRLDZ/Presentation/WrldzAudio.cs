@@ -1,6 +1,7 @@
 using System.Collections;
 using System.IO;
 using UnityEngine;
+using WRLDZ.Core;
 using UnityEngine.Networking;
 
 namespace WRLDZ.Presentation
@@ -8,6 +9,7 @@ namespace WRLDZ.Presentation
     /// <summary>
     /// Soft UI SFX + BGM from StreamingAssets/WRLDZ/Audio.
     /// Boot / title: <c>bgm_scarab_under_stone.mp3</c> ("Scarab Under Stone").
+    /// Splash / credits / title eye: <c>bgm_spirit_eye.mp3</c> (the Tear's bed).
     /// Overworld: <c>bgm_alternate_under_stone.mp3</c> ("Alternate Under Stone").
     /// Duel: <c>bgm_aetherborn.mp3</c> ("Aetherborn").
     /// </summary>
@@ -21,7 +23,9 @@ namespace WRLDZ.Presentation
             /// <summary>Overworld / hub map — Alternate Under Stone.</summary>
             Overworld = 2,
             /// <summary>Duel — Aetherborn.</summary>
-            Ambient = 3
+            Ambient = 3,
+            /// <summary>Splash, credits, and title — the spirit eye's own bed.</summary>
+            SpiritEye = 4
         }
 
         static WrldzAudio _instance;
@@ -30,6 +34,7 @@ namespace WRLDZ.Presentation
         AudioSource _lpTickSrc;
         AudioClip _click, _select, _confirm, _millenniumEye;
         AudioClip _titleClip;
+        AudioClip _spiritEyeClip;
         AudioClip _overworldClip;
         AudioClip _ambientClip;
         AudioClip _lpTickLoop, _lpLock, _duelBegin;
@@ -92,7 +97,8 @@ namespace WRLDZ.Presentation
         {
             if (_loading) yield break;
             _loading = true;
-            var root = Path.Combine(Application.streamingAssetsPath, "WRLDZ", "Audio");
+            // StreamingAssets-relative; LoadClip resolves it through StreamingFiles (APK-safe).
+            var root = "WRLDZ/Audio";
 
             // Soft UI overrides if present
             yield return LoadClip(Path.Combine(root, "ui_click.ogg"), c => { if (c != null) _click = c; });
@@ -125,6 +131,14 @@ namespace WRLDZ.Presentation
                     else
                         Debug.LogWarning("[WRLDZ Audio] Title BGM missing: bgm_scarab_under_stone.mp3");
                 });
+
+            // Splash / title eye. Falls back to Scarab inside ApplyTrack if this file is missing.
+            yield return LoadClip(Path.Combine(root, "bgm_spirit_eye.mp3"), c =>
+            {
+                _spiritEyeClip = c;
+                if (c != null)
+                    Debug.Log("[WRLDZ Audio] Spirit eye BGM loaded");
+            });
 
             // Overworld — Alternate Under Stone
             yield return LoadClip(Path.Combine(root, "bgm_alternate_under_stone.mp3"), c =>
@@ -191,9 +205,10 @@ namespace WRLDZ.Presentation
             _loading = false;
         }
 
+        /// <param name="path">StreamingAssets-relative clip path.</param>
         IEnumerator LoadClip(string path, System.Action<AudioClip> onDone)
         {
-            if (string.IsNullOrEmpty(path) || !File.Exists(path))
+            if (string.IsNullOrEmpty(path) || !StreamingFiles.Exists(path))
             {
                 onDone?.Invoke(null);
                 yield break;
@@ -208,10 +223,8 @@ namespace WRLDZ.Presentation
                 _ => AudioType.UNKNOWN
             };
 
-            // Editor / desktop: file:// URL. Android StreamingAssets is a jar URL already.
-            var url = path;
-            if (!path.Contains("://"))
-                url = "file://" + path;
+            // Editor / desktop: file:// URL. Android: the jar:file://…apk!/assets/… URL (UWR reads the APK).
+            var url = StreamingFiles.UrlFor(path);
 
             using (var req = UnityWebRequestMultimedia.GetAudioClip(url, type))
             {
@@ -372,8 +385,11 @@ namespace WRLDZ.Presentation
             return Mathf.Lerp(HoloEnvelope[i], HoloEnvelope[j], x - i);
         }
 
-        /// <summary>Splash / title / boot cascade — Scarab Under Stone.</summary>
+        /// <summary>Account steps of the boot cascade — Scarab Under Stone.</summary>
         public static void PlayTitleBgm() => Ensure().ApplyTrack(BgmTrack.Title, forceRestart: false);
+
+        /// <summary>Splash, credits, and title, while the spirit eye is up.</summary>
+        public static void PlaySpiritEyeBgm() => Ensure().ApplyTrack(BgmTrack.SpiritEye, forceRestart: false);
 
         /// <summary>Battle City map / hub — Alternate Under Stone.</summary>
         public static void PlayOverworldBgm() => Ensure().ApplyTrack(BgmTrack.Overworld, forceRestart: false);
@@ -427,6 +443,7 @@ namespace WRLDZ.Presentation
             AudioClip clip = track switch
             {
                 BgmTrack.Title => _titleClip ?? _overworldClip ?? _ambientClip,
+                BgmTrack.SpiritEye => _spiritEyeClip ?? _titleClip ?? _overworldClip ?? _ambientClip,
                 BgmTrack.Overworld => _overworldClip ?? _ambientClip ?? _titleClip,
                 BgmTrack.Ambient => _ambientClip ?? _overworldClip ?? _titleClip,
                 _ => null

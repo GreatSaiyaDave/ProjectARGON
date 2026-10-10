@@ -22,9 +22,15 @@ namespace WRLDZ.Presentation
     public class ArDuelSpace : MonoBehaviour
     {
         const int Layer = 28;
-        /// <summary>S23-class portrait RT (good clarity without cooking the SoC).</summary>
-        const int RtW = 1080;
-        const int RtH = 1920;
+        /// <summary>
+        /// Long side of the stage RT (S23-class clarity without cooking the SoC). The short side
+        /// follows the viewport's aspect — a fixed 1080×1920 RT was stretched ~3× wide across a
+        /// landscape Editor Game View.
+        /// </summary>
+        const int RtLong = 1920;
+
+        /// <summary>Portrait default until the viewport has a size.</summary>
+        const int RtShortDefault = 1080;
 
         RenderTexture _rt;
         Camera _cam;
@@ -399,18 +405,10 @@ namespace WRLDZ.Presentation
             _cam.transform.LookAt(_stage.TransformPoint(new Vector3(0f, 0.28f, 0.15f)));
             _freeLook = ArFreeLookCamera.Attach(_cam);
 
-            var aa = Application.isMobilePlatform ? 1 : 2;
-            _rt = new RenderTexture(RtW, RtH, 16, RenderTextureFormat.ARGB32)
-            {
-                name = "ArDuelSpaceRT",
-                antiAliasing = aa
-            };
-            _cam.targetTexture = _rt;
+            var size = StageRtSize();
+            BindStageRt(size.x, size.y);
             if (_target != null)
-            {
-                _target.texture = _rt;
                 _target.color = Color.white;
-            }
 
             // No floor / board / props — empty volume + one key light for holograms
             EnsureEmptyArenaRoot();
@@ -505,9 +503,11 @@ namespace WRLDZ.Presentation
 
             // Sit behind the player at eye height. Look into the standing holos
             // (not the pavement at your feet — that made look-up feel like a spring).
+            // Look height 1.0 (was 1.22): the player's own monster row — and a Defense card lying
+            // under a braced monster there — is in frame, not below the bottom edge.
             var lookDist = ArPlaymatLayout.LiveStandOff +
                            ArPlaymatLayout.LiveStep * 0.55f;
-            var look = you + along * lookDist + Vector3.up * 1.22f;
+            var look = you + along * lookDist + Vector3.up * 1.0f;
             var camWorld = you - along * 0.28f + Vector3.up * 1.46f + right * 0.08f;
             _cam.transform.position = camWorld;
             _cam.transform.LookAt(look);
@@ -579,6 +579,8 @@ namespace WRLDZ.Presentation
             _boundEngine = engine;
             _boundDb = db;
             _interaction?.BindEngine(engine, db);
+            // Kuriboh AR companion (KuribohArBehaviour, mounted by the interaction build): follow summons / draws.
+            KuribohArBehaviour.BindUnder(_stage, engine);
             // Re-frame after disks bind so midfield holos + both arms stay in AR view
             FrameStageForEditor();
         }
@@ -637,8 +639,10 @@ namespace WRLDZ.Presentation
             SetLayer(plane);
 
             _passthroughMat = new Material(
-                Shader.Find("Unlit/Texture")
-                ?? Shader.Find("Universal Render Pipeline/Unlit")
+                // Same shader in the Editor and on device (URP/Unlit is anchored into builds); the built-in
+                // Unlit/Texture used to come first here, so the Editor and the player rendered differently.
+                Shader.Find("Universal Render Pipeline/Unlit")
+                ?? Shader.Find("Unlit/Texture")
                 ?? Shader.Find("Sprites/Default"));
             _passthroughMat.mainTexture = _webCam;
             if (_passthroughMat.HasProperty("_BaseMap"))
@@ -694,9 +698,57 @@ namespace WRLDZ.Presentation
             L.cullingMask = 1 << Layer;
         }
 
+        /// <summary>RT size matching the on-screen viewport's aspect, long side <see cref="RtLong"/>.</summary>
+        Vector2Int StageRtSize()
+        {
+            var rect = _target != null ? _target.rectTransform.rect : default;
+            if (rect.width < 8f || rect.height < 8f)
+                return new Vector2Int(RtShortDefault, RtLong);
+            var aspect = rect.width / rect.height;
+            return aspect >= 1f
+                ? new Vector2Int(RtLong, Mathf.Max(64, Mathf.RoundToInt(RtLong / aspect)))
+                : new Vector2Int(Mathf.Max(64, Mathf.RoundToInt(RtLong * aspect)), RtLong);
+        }
+
+        void BindStageRt(int w, int h)
+        {
+            var old = _rt;
+            _rt = new RenderTexture(w, h, 16, RenderTextureFormat.ARGB32)
+            {
+                name = "ArDuelSpaceRT",
+                antiAliasing = Application.isMobilePlatform ? 1 : 2
+            };
+            if (_cam != null)
+            {
+                _cam.targetTexture = _rt;
+                _cam.ResetAspect();
+            }
+            if (_target != null)
+                _target.texture = _rt;
+            if (old != null)
+            {
+                old.Release();
+                Object.Destroy(old);
+            }
+        }
+
+        /// <summary>Re-fit the RT when the Game View / screen changes shape (rotation, window resize).</summary>
+        void SyncStageRtAspect()
+        {
+            if (_rt == null || _target == null || !_target.enabled || _cam == null
+                || _cam.targetTexture != _rt)
+                return;
+            var want = StageRtSize();
+            if (Mathf.Abs(want.x - _rt.width) <= 8 && Mathf.Abs(want.y - _rt.height) <= 8) return;
+            BindStageRt(want.x, want.y);
+        }
+
         void Update()
         {
             if (!_ready) return;
+
+            if ((Time.frameCount % 20) == 0)
+                SyncStageRtAspect();
 
             // Variable real-world lighting: keep anime holos readable outdoors/indoors
             if ((Time.frameCount & 3) == 0)
@@ -756,6 +808,8 @@ namespace WRLDZ.Presentation
                 {
                     _interaction.BindEngine(engine, db);
                     _interactionEngine = engine;
+                    // Kuriboh AR companion: follow summons / draws (no-op if already bound).
+                    KuribohArBehaviour.BindUnder(_stage, engine);
                 }
                 else
                     _interaction.SyncNow();
@@ -890,8 +944,32 @@ namespace WRLDZ.Presentation
             }
         }
 
+        // Owner rule: while an AR duel / Zone Mode stage is alive the player's own body is physically
+        // there, so the overworld avatar body is hidden (not ghosted) until the stage goes away.
+        string BodyHideKey => OverworldAvatar3d.HideForDuel + ":" + GetEntityId();
+
+        void OnEnable() => OverworldAvatar3d.HideBody(BodyHideKey, true);
+
+        void OnDisable() => OverworldAvatar3d.HideBody(BodyHideKey, false);
+
         void OnDestroy()
         {
+            OverworldAvatar3d.HideBody(BodyHideKey, false);
+
+            // ARCore / Lenses / Salvage parent the stage under the session's DontDestroyOnLoad FloorAnchor, so it does
+            // not die with this host: without this the disks, hands, arena, Referobot, Kuriboh and lights survive the
+            // scene change, keep following the (still alive) session tracker, and a second stage piles up next duel.
+            // EditorSim / phone-RT stages are our own children and are destroyed with us anyway. The session eye
+            // cameras live under the session Origin (not under _stage); only our own fallback cameras sit inside.
+            if (_stage != null && _stage.parent != transform)
+            {
+                Object.Destroy(_stage.gameObject);
+                _stage = null;
+            }
+
+            // Duel over: drop the cached GLB shell reliefs (meshes + textures) once their visuals are gone.
+            CardModelCatalog.ReleaseIdleShellTemplates();
+
             if (ArPresentationTarget.IsSalvageOst)
                 ArSalvageLensesSession.Instance?.Shutdown();
             if (ArFoundationSession.Instance != null)

@@ -211,7 +211,10 @@ namespace WRLDZ.Presentation.ArInteraction
         {
             if (_host == null || _plate == null) return;
 
-            var live = _host.IsMonster && _host.FaceUp && _host.Card?.Def != null;
+            // Only while the hologram itself is on screen: during the disk-seat hold the host's renderers are off,
+            // but this world-space canvas is not a Renderer, so it used to fade in before the monster materialized.
+            // A face-down set (its card back) never shows ATK/DEF.
+            var live = _host.IsMonster && _host.FaceUp && _host.IsShown && _host.Card?.Def != null;
             var battle = live && LivePhase == DuelPhase.Battle;
             if (battle)
             {

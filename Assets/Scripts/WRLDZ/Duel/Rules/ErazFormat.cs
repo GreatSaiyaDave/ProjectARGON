@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEngine;
+using WRLDZ.Core;
 using WRLDZ.Data;
 
 namespace WRLDZ.Duel.Rules
@@ -204,8 +205,7 @@ namespace WRLDZ.Duel.Rules
         static ErazFile Load()
         {
             if (_cached != null) return _cached;
-            var path = Path.Combine(Application.streamingAssetsPath, "WRLDZ", "eras", "eraz_eras.json");
-            if (!File.Exists(path))
+            if (!StreamingFiles.TryReadAllText("WRLDZ/eras/eraz_eras.json", out var json))
             {
                 Debug.LogWarning("[WRLDZ ERAZ] Missing eraz_eras.json");
                 _cached = new ErazFile { bands = Array.Empty<ErazBand>() };
@@ -214,7 +214,7 @@ namespace WRLDZ.Duel.Rules
 
             try
             {
-                _cached = JsonUtility.FromJson<ErazFile>(File.ReadAllText(path));
+                _cached = JsonUtility.FromJson<ErazFile>(json);
             }
             catch (Exception ex)
             {

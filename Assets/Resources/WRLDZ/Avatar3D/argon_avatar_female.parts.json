@@ -1,0 +1,52 @@
+{
+ "ArgonBody_female": {
+  "verts": 9626,
+  "blendshapes": 2,
+  "materials": [
+   {
+    "material": "Meshy_female_Body",
+    "texture": "Meshy_female_Body.png"
+   }
+  ]
+ },
+ "ArgonPart_Bottoms": {
+  "verts": 7875,
+  "blendshapes": 2,
+  "materials": [
+   {
+    "material": "Meshy_female_Bottoms",
+    "texture": "Meshy_female_Bottoms.png"
+   }
+  ]
+ },
+ "ArgonPart_Hair": {
+  "verts": 22662,
+  "blendshapes": 2,
+  "materials": [
+   {
+    "material": "Meshy_female_Hair",
+    "texture": "Meshy_female_Hair.png"
+   }
+  ]
+ },
+ "ArgonPart_Shirt": {
+  "verts": 12761,
+  "blendshapes": 2,
+  "materials": [
+   {
+    "material": "Meshy_female_Shirt",
+    "texture": "Meshy_female_Shirt.png"
+   }
+  ]
+ },
+ "ArgonPart_Shoes": {
+  "verts": 7735,
+  "blendshapes": 2,
+  "materials": [
+   {
+    "material": "Meshy_female_Shoes",
+    "texture": "Meshy_female_Shoes.png"
+   }
+  ]
+ }
+}

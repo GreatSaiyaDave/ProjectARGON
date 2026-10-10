@@ -77,6 +77,15 @@ namespace WRLDZ.Presentation.ArInteraction
         int _lastOppLive;
         CardDatabase _db;
 
+        /// <summary>
+        /// Disks whose Field Card Slot gates the street change: the Field Spell only sweeps in once the
+        /// drawer has shut on the card. Null = change immediately (the disk is not deployed).
+        /// </summary>
+        public ArDuelDiskRig PlayerDisk;
+        public ArDuelDiskRig OppDisk;
+
+        static bool Seated(ArDuelDiskRig disk) => disk == null || !disk.IsDeployed || disk.FieldSpellSeated;
+
         // What is rendered (or animating in/out).
         int _shownInstance;
         FieldSpellEnvironment _env = FieldSpellEnvironments.Neutral;
@@ -223,8 +232,10 @@ namespace WRLDZ.Presentation.ArInteraction
         public void Sync(CardInstance youField, CardInstance oppField, CardDatabase db)
         {
             _db = db;
-            var you = Live(youField);
-            var opp = Live(oppField);
+            // A Field Spell still travelling in its Field Card Slot does not change the street yet: the
+            // drawer opens, takes the card, closes, then the sweep runs.
+            var you = Seated(PlayerDisk) ? Live(youField) : null;
+            var opp = Seated(OppDisk) ? Live(oppField) : null;
             var youId = you?.InstanceId ?? 0;
             var oppId = opp?.InstanceId ?? 0;
 

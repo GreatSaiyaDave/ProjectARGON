@@ -1,0 +1,149 @@
+{
+  "name": "Maximillion Pegasus · Duelist Kingdom",
+  "format": "wrldz_dk_character",
+  "character": "Maximillion Pegasus",
+  "era": "duelist_kingdom",
+  "erazBandId": "original",
+  "notes": "Toon World + Toon bosses, Relinquished. Toon Table of Contents, Toon Defense, Shadow Toon in. TToC needs a spell script to search.",
+  "main": [
+    {
+      "id": 65458948,
+      "name": "Toon Mermaid",
+      "qty": 3
+    },
+    {
+      "id": 91842653,
+      "name": "Toon Summoned Skull",
+      "qty": 2
+    },
+    {
+      "id": 53183600,
+      "name": "Blue-Eyes Toon Dragon",
+      "qty": 2
+    },
+    {
+      "id": 38369349,
+      "name": "Manga Ryu-Ran",
+      "qty": 2
+    },
+    {
+      "id": 42386471,
+      "name": "Toon Gemini Elf",
+      "qty": 2
+    },
+    {
+      "id": 59383041,
+      "name": "Toon Alligator",
+      "qty": 2
+    },
+    {
+      "id": 55763552,
+      "name": "Dragon Piper",
+      "qty": 2
+    },
+    {
+      "id": 28546905,
+      "name": "Illusionist Faceless Mage",
+      "qty": 2
+    },
+    {
+      "id": 64631466,
+      "name": "Relinquished",
+      "qty": 1
+    },
+    {
+      "id": 27125110,
+      "name": "Thousand-Eyes Idol",
+      "qty": 1
+    },
+    {
+      "id": 2964201,
+      "name": "Ryu-Ran",
+      "qty": 1
+    },
+    {
+      "id": 62762898,
+      "name": "Parrot Dragon",
+      "qty": 1
+    },
+    {
+      "id": 15259703,
+      "name": "Toon World",
+      "qty": 3
+    },
+    {
+      "id": 41426869,
+      "name": "Black Illusion Ritual",
+      "qty": 2
+    },
+    {
+      "id": 24094653,
+      "name": "Polymerization",
+      "qty": 1
+    },
+    {
+      "id": 72302403,
+      "name": "Swords of Revealing Light",
+      "qty": 1
+    },
+    {
+      "id": 55144522,
+      "name": "Pot of Greed",
+      "qty": 1
+    },
+    {
+      "id": 63102017,
+      "name": "Stop Defense",
+      "qty": 1
+    },
+    {
+      "id": 4206964,
+      "name": "Trap Hole",
+      "qty": 2
+    },
+    {
+      "id": 44095762,
+      "name": "Mirror Force",
+      "qty": 1
+    },
+    {
+      "id": 18807108,
+      "name": "Spellbinding Circle",
+      "qty": 1
+    },
+    {
+      "id": 14315573,
+      "name": "Negate Attack",
+      "qty": 1
+    },
+    {
+      "id": 89997728,
+      "name": "Toon Table of Contents",
+      "qty": 3
+    },
+    {
+      "id": 43509019,
+      "name": "Toon Defense",
+      "qty": 1
+    },
+    {
+      "id": 6958551,
+      "name": "Shadow Toon",
+      "qty": 1
+    }
+  ],
+  "extra": [
+    {
+      "id": 63519819,
+      "name": "Thousand-Eyes Restrict",
+      "qty": 1
+    }
+  ],
+  "side": [],
+  "counts": {
+    "main": 40,
+    "extra": 1,
+    "side": 0
+  },
+  "role": "character_dk"
+}

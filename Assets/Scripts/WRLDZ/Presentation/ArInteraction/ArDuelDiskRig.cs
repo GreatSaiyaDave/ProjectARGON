@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using WRLDZ.Core;
 using WRLDZ.Data;
 using WRLDZ.Duel;
 using WRLDZ.Presentation;
@@ -16,7 +17,10 @@ namespace WRLDZ.Presentation.ArInteraction
         public bool IsPlayerSide = true;
         public IArTrackingSource Tracker;
         public int Layer = 28;
+        /// <summary>Duel Disk body colour (palette: <see cref="SpiritDuelerPalette"/>).</summary>
         public Color Accent = new(0.25f, 0.9f, 1f);
+        /// <summary>Aura colour (aura, disk light, zone light-ups, the spirit hand's glow).</summary>
+        public Color AuraColor = new(0.25f, 0.9f, 1f);
 
         public Transform DiskRoot { get; private set; }
         /// <summary>Hinge for the Battle City blade panel (folds when retracted).</summary>
@@ -42,7 +46,16 @@ namespace WRLDZ.Presentation.ArInteraction
 
         Transform _deckStackVisual;
         readonly List<Transform> _shuffleCards = new();
+        bool _loggedDeckWell;
         Coroutine _dispenseCo;
+        int _shownCount = -1;
+        int _pendingCount = -1;
+        bool _shuffleBusy;
+        // Floating-hand draws the engine has made but the hand has not pinched yet (see ReserveDraw).
+        const float DrawReserveSeconds = 1.6f;
+        int _drawsInFlight;
+        float _drawsInFlightUntil;
+        int _engineDeckCount = -1;
 
         MeshRenderer _diskMr;
         Material _diskMat;
@@ -51,9 +64,24 @@ namespace WRLDZ.Presentation.ArInteraction
         Light _diskLight;
         Coroutine _deployRoutine;
         bool _deployed;
+        float _fieldDrawer;
+        bool _fieldSpellDrag;
+        bool _fieldSpellCommitted;
+        bool _fieldDrawerHadCard;
+        Vector3 _gyOpenLocal;
+        SpiritDuelerSkin _skin;
+        SpiritDuelerMechanics _mech;
+        static Dictionary<string, Mesh> _diskParts;
+        int _lastGyCount = -1;
 
         public DiskFxDriver Fx => _fx;
+        /// <summary>The kit-part mechanism (null with an OBJ that has no groups: the single rigid mesh is used).</summary>
+        public SpiritDuelerMechanics Mechanics => _mech;
+        /// <summary>Where the graveyard tray sits when open (BladePivot local); the tray locks toward the deck.</summary>
+        public Vector3 GraveyardOpenLocal => _gyOpenLocal;
         public bool IsDeployed => _deployed;
+        /// <summary>0 = field slot stowed in the tip. 1 = drawer slid out.</summary>
+        public float FieldDrawer => _fieldDrawer;
         public float BladeOpen01 => _fx.BladeOpen;
         /// <summary>Hub LCD — 4-digit 7-seg in the print-kit counter window.</summary>
         public ArDiskLpCounter LpCounter { get; private set; }
@@ -69,6 +97,7 @@ namespace WRLDZ.Presentation.ArInteraction
             rig.IsPlayerSide = playerSide;
             rig.Layer = layer;
             rig.Accent = accent;
+            rig.AuraColor = accent;
             rig._fx.Accent = accent;
             rig._fx.SpinSpeed = playerSide ? 10f : -8f;
             rig.BuildDisk();
@@ -115,6 +144,15 @@ namespace WRLDZ.Presentation.ArInteraction
                 _diskMr = disk.GetComponent<MeshRenderer>();
                 _diskMr.sharedMaterial = _diskMat;
                 SetLayer(disk);
+
+                // the Battle City mechanism from the kit parts; the merged mesh stays as the (unrendered) body for
+                // bounds and the aura's outline
+                _mech = SpiritDuelerMechanics.Build(this, BladePivot, _diskParts, _diskMat, Layer);
+                if (_mech != null)
+                {
+                    _fx.Mechanical = true;
+                    _diskMr.forceRenderingOff = true;
+                }
             }
             else
             {
@@ -206,7 +244,8 @@ namespace WRLDZ.Presentation.ArInteraction
             _deployed = false;
             DiskRoot.localPosition = SpiritDuelerSkin.WristCalibratedDiskRoot();
             _fx.CaptureBase(DiskRoot);
-            SpiritDuelerSkin.Attach(this);
+            _skin = SpiritDuelerSkin.Attach(this);
+            _skin?.SnapPresence(0f);
             ApplyImmediatePose();
             Debug.Log(
                 $"[WRLDZ AR] Spirit Dueler ready ({(IsPlayerSide ? "player" : "opp")}) · " +
@@ -225,6 +264,16 @@ namespace WRLDZ.Presentation.ArInteraction
                 {
                     MonsterZones[i].transform.localPosition = ArZoneLayout.MonsterLocal(i);
                     MonsterZones[i].transform.localRotation = ArZoneLayout.MonsterZoneRotation(i);
+                    if (MonsterZones[i].LockedCard != null)
+                    {
+                        var orient = MonsterZones[i].LockedCard.Card != null &&
+                                     MonsterZones[i].LockedCard.Card.Position == WRLDZ.Duel.BattlePosition.Defense
+                            ? (MonsterZones[i].LockedCard.Card.FaceUp
+                                ? ArZoneOrientation.FaceUpDefense
+                                : ArZoneOrientation.FaceDownSet)
+                            : ArZoneOrientation.FaceUpAttack;
+                        MonsterZones[i].RefreshFlushLock(orient);
+                    }
                 }
 
                 if (SpellTrapZones[i] != null)
@@ -237,8 +286,8 @@ namespace WRLDZ.Presentation.ArInteraction
 
             if (FieldSpellZone != null)
             {
-                FieldSpellZone.transform.localPosition = ArZoneLayout.FieldSpellLocal;
                 FieldSpellZone.transform.localRotation = ArZoneLayout.FieldSpellZoneRotation();
+                ApplyFieldDrawerPose();
             }
         }
 
@@ -255,7 +304,7 @@ namespace WRLDZ.Presentation.ArInteraction
             MainDeckZone.localScale = Vector3.one;
             SetLayer(MainDeckZone.gameObject);
 
-            BuildDeckCardStack();
+            BuildDeckCardStack(0);
             BuildHubZoneLabel(MainDeckZone, "DECK", Accent, new Vector3(0f, 0.04f, 0f));
 
             var hit = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -302,8 +351,44 @@ namespace WRLDZ.Presentation.ArInteraction
         /// Visible main deck = stacked card-back assets (not a solid floating slab).
         /// Never throws — pre-duel shuffle depends on this stack existing.
         /// </summary>
-        void BuildDeckCardStack()
+        /// <summary>
+        /// Match the magazine to the public Main Deck count, plus any card a drawing hand has not pinched off the
+        /// top yet (<see cref="ReserveDraw"/>). Skipped while a riffle or draw peel is running.
+        /// </summary>
+        public void SyncDeckCount(int count)
         {
+            count = Mathf.Max(0, count);
+            _engineDeckCount = count;
+            if (_drawsInFlight > 0 && Time.unscaledTime > _drawsInFlightUntil)
+                _drawsInFlight = 0;   // a draw that never reached the pinch (hand hidden / destroyed mid-gesture)
+            count += _drawsInFlight;
+            if (_shuffleBusy || _dispenseCo != null)
+            {
+                _pendingCount = count;
+                return;
+            }
+
+            if (count == _shownCount && _deckStackVisual != null)
+                return;
+            BuildDeckCardStack(count);
+        }
+
+        void FlushPendingDeckCount()
+        {
+            if (_pendingCount < 0 || _pendingCount == _shownCount)
+            {
+                _pendingCount = -1;
+                return;
+            }
+
+            var count = _pendingCount;
+            _pendingCount = -1;
+            BuildDeckCardStack(count);
+        }
+
+        void BuildDeckCardStack(int count)
+        {
+            count = Mathf.Max(0, count);
             try
             {
                 // Replace any previous stack this frame — deferred Destroy left a stray pack
@@ -324,19 +409,49 @@ namespace WRLDZ.Presentation.ArInteraction
                 }
 
                 _shuffleCards.Clear();
-                _deckStackVisual = ArDeckWellCards.Build(MainDeckZone, Layer, out var loose);
+                _deckStackVisual = ArDeckWellCards.Build(MainDeckZone, Layer, count, out var loose);
                 _shuffleCards.AddRange(loose);
+                _shownCount = count;
+                _pendingCount = -1;
+                FitDeckHit();
 
-                Debug.Log(
-                    $"[WRLDZ AR] Deck well cards · n={_shuffleCards.Count} · " +
-                    $"size={ArDeckWellCards.Width:0.000}x{ArDeckWellCards.Height:0.000} · " +
-                    $"hub={MainDeckZone.localPosition}");
+                // Once per rig: this rebuild runs on every draw / search / mill for both disks.
+                if (!_loggedDeckWell)
+                {
+                    _loggedDeckWell = true;
+                    Debug.Log(
+                        $"[WRLDZ AR] Deck well cards · n={_shuffleCards.Count} · " +
+                        $"size={ArDeckWellCards.Width:0.000}x{ArDeckWellCards.Height:0.000} · " +
+                        $"hub={MainDeckZone.localPosition}");
+                }
             }
             catch (System.Exception ex)
             {
                 Debug.LogWarning("[WRLDZ AR] Deck stack build failed (fallback cubes): " + ex.Message);
                 BuildDeckCardStackFallback();
             }
+        }
+
+        void FitDeckHit()
+        {
+            if (MainDeckCollider == null) return;
+            var h = Mathf.Max(0.004f, ArDeckWellCards.StackHeight(Mathf.Max(_shownCount, 1)));
+            MainDeckCollider.transform.localScale = new Vector3(
+                ArDeckWellCards.Width * 1.1f,
+                h * 1.05f,
+                ArDeckWellCards.Length * 1.1f);
+            MainDeckCollider.transform.localPosition = new Vector3(0f, h * 0.5f, 0f);
+        }
+
+        /// <summary>Keep a riffle card under the flap. Draw peels are allowed to leave the well.</summary>
+        Vector3 WellLocal(Vector3 p)
+        {
+            var n = Mathf.Max(_shuffleCards.Count, 1);
+            var half = ArDeckWellCards.CardThickness(n) * 0.5f;
+            var ceiling = ArDeckWellCards.UsableHeight - half;
+            if (ceiling < half) ceiling = half;
+            p.y = Mathf.Clamp(p.y, 0f, ceiling);
+            return p;
         }
 
         void BuildDeckCardStackFallback()
@@ -355,7 +470,7 @@ namespace WRLDZ.Presentation.ArInteraction
                 c.transform.SetParent(_deckStackVisual, false);
                 c.transform.localScale = new Vector3(
                     ArDeckWellCards.Width, 0.002f, ArDeckWellCards.Length);
-                c.transform.localPosition = ArDeckWellCards.RestLocal(i);
+                c.transform.localPosition = ArDeckWellCards.RestLocal(i, 8);
                 ArObjectUtil.Destroy(c.GetComponent<Collider>());
                 SetLayer(c);
                 c.GetComponent<MeshRenderer>().sharedMaterial =
@@ -414,7 +529,8 @@ namespace WRLDZ.Presentation.ArInteraction
             GraveyardZone = new GameObject("Graveyard").transform;
             GraveyardZone.SetParent(BladePivot != null ? BladePivot : DiskRoot, false);
             var s = ArPlaymatLayout.DiskMeshVisualScale;
-            GraveyardZone.localPosition = ArZoneLayout.GraveyardLocal * s;
+            _gyOpenLocal = ArZoneLayout.GraveyardLocal * s;
+            GraveyardZone.localPosition = _gyOpenLocal;
             GraveyardZone.localRotation = Quaternion.Euler(4f, 0f, 0f);
             GraveyardZone.localScale = Vector3.one * s;
             SetLayer(GraveyardZone.gameObject);
@@ -443,6 +559,9 @@ namespace WRLDZ.Presentation.ArInteraction
         public void SyncGraveyardPile(IReadOnlyList<CardInstance> gy, CardDatabase db)
         {
             if (GraveyardZone == null) return;
+            var gyCount = gy?.Count ?? 0;
+            if (_lastGyCount >= 0 && gyCount > _lastGyCount) _mech?.PulseGraveyard();
+            _lastGyCount = gyCount;
             Transform pile = GraveyardZone.Find("GyPile");
             if (pile == null)
             {
@@ -507,8 +626,8 @@ namespace WRLDZ.Presentation.ArInteraction
             if (MainDeckZone == null) BuildMainDeckZone();
             // Drop destroyed refs
             _shuffleCards.RemoveAll(t => t == null);
-            if (_shuffleCards.Count == 0)
-                BuildDeckCardStack();
+            if (_deckStackVisual == null)
+                BuildDeckCardStack(Mathf.Max(0, _shownCount));
             // Always show stack during pre-duel (never leave inactive)
             if (_deckStackVisual != null)
                 _deckStackVisual.gameObject.SetActive(true);
@@ -522,8 +641,12 @@ namespace WRLDZ.Presentation.ArInteraction
         public void SetDeckStackPresentationScale(float scale)
         {
             if (_deckStackVisual != null)
-                // Never grow past the well — shuffle emphasis is motion, not size
-                _deckStackVisual.localScale = Vector3.one * Mathf.Clamp(scale, 0.5f, 1.06f);
+            {
+                // Never grow past the well — shuffle emphasis is motion, not size.
+                var h = ArDeckWellCards.StackHeight(Mathf.Max(_shownCount, 1));
+                var fit = h > 0.0001f ? ArDeckWellCards.UsableHeight / h : 1f;
+                _deckStackVisual.localScale = Vector3.one * Mathf.Clamp(scale, 0.5f, Mathf.Min(1.06f, fit));
+            }
         }
 
         /// <summary>
@@ -532,11 +655,14 @@ namespace WRLDZ.Presentation.ArInteraction
         /// </summary>
         public IEnumerator PlayShuffleRoutine(float duration = 1.75f)
         {
+            _shuffleBusy = true;
+            try
+            {
             EnsureDeckStackVisual();
             if (_shuffleCards.Count == 0)
             {
                 Debug.LogWarning("[WRLDZ AR] Shuffle skipped — no deck cards — hard rebuild");
-                BuildDeckCardStack();
+                BuildDeckCardStack(Mathf.Max(0, _shownCount));
             }
 
             if (_shuffleCards.Count == 0)
@@ -555,17 +681,20 @@ namespace WRLDZ.Presentation.ArInteraction
             const float bridgeLift = 0.006f;
             const float riffleDrop = 0.004f;
 
-            Vector3 RestPos(int i) => ArDeckWellCards.RestLocal(i);
+            Vector3 RestPos(int i) => WellLocal(ArDeckWellCards.RestLocal(i, n));
 
-            Quaternion RestRot(int i) =>
-                Quaternion.Euler(0f, (i - n * 0.5f) * 0.35f, 0f);
+            Quaternion RestRot(int i)
+            {
+                _ = i;
+                return Quaternion.identity;
+            }
 
             // Packet poses while held apart (slight fan like thumbs on edges)
             Vector3 PacketPos(int i, bool left)
             {
                 var rest = RestPos(i);
                 var side = left ? -1f : 1f;
-                return rest + new Vector3(side * packetSep, bridgeLift, 0f);
+                return WellLocal(rest + new Vector3(side * packetSep, bridgeLift, 0f));
             }
 
             Quaternion PacketRot(bool left) =>
@@ -606,7 +735,7 @@ namespace WRLDZ.Presentation.ArInteraction
                         var c = _shuffleCards[i];
                         if (c == null) continue;
                         var left = i < mid;
-                        c.localPosition = Vector3.Lerp(startPos[i], PacketPos(i, left), e);
+                        c.localPosition = WellLocal(Vector3.Lerp(startPos[i], PacketPos(i, left), e));
                         c.localRotation = Quaternion.Slerp(startRot[i], PacketRot(left), e);
                     }
 
@@ -648,7 +777,7 @@ namespace WRLDZ.Presentation.ArInteraction
                         {
                             // Still in packet — slight thumb pressure (tiny inward drift)
                             var press = Mathf.Clamp01(u / Mathf.Max(0.01f, releaseU)) * 0.004f;
-                            c.localPosition = from + new Vector3(left ? press : -press, 0f, 0f);
+                            c.localPosition = WellLocal(from + new Vector3(left ? press : -press, 0f, 0f));
                             c.localRotation = fromR;
                             continue;
                         }
@@ -667,7 +796,7 @@ namespace WRLDZ.Presentation.ArInteraction
                         var tiltX = Mathf.Lerp(6f, 0f, e) + Mathf.Sin(e * Mathf.PI) * 12f;
                         var toR = Quaternion.Euler(tiltX, (destIdx - n * 0.5f) * 0.35f, tiltZ);
 
-                        c.localPosition = Vector3.Lerp(from, to, e);
+                        c.localPosition = WellLocal(Vector3.Lerp(from, to, e));
                         c.localRotation = Quaternion.Slerp(fromR, toR, e);
                     }
 
@@ -705,8 +834,8 @@ namespace WRLDZ.Presentation.ArInteraction
                         var destIdx = RankInRelease(order, i);
                         var rest = RestPos(destIdx);
                         // Squeeze toward center X, tiny Y settle
-                        c.localPosition = rest + new Vector3(pulse * (destIdx % 2 == 0 ? 1f : -1f),
-                            -Mathf.Abs(pulse) * 0.3f, 0f);
+                        c.localPosition = WellLocal(rest + new Vector3(pulse * (destIdx % 2 == 0 ? 1f : -1f),
+                            -Mathf.Abs(pulse) * 0.3f, 0f));
                         c.localRotation = Quaternion.Slerp(
                             postRiffleRot[i], RestRot(destIdx), SmoothStep(u));
                     }
@@ -734,7 +863,7 @@ namespace WRLDZ.Presentation.ArInteraction
                     {
                         var c = _shuffleCards[i];
                         if (c == null) continue;
-                        c.localPosition = Vector3.Lerp(postRifflePos[i], RestPos(i), u);
+                        c.localPosition = WellLocal(Vector3.Lerp(postRifflePos[i], RestPos(i), u));
                         c.localRotation = Quaternion.Slerp(postRiffleRot[i], RestRot(i), u);
                     }
 
@@ -754,6 +883,12 @@ namespace WRLDZ.Presentation.ArInteraction
             SetDeckStackPresentationScale(1f);
             SnapDeckCardsHome();
             Debug.Log("[WRLDZ AR] Hand shuffle complete");
+            }
+            finally
+            {
+                _shuffleBusy = false;
+                FlushPendingDeckCount();
+            }
         }
 
         /// <summary>Every well card back in the pack — kills leftover shuffle / draw lifts.</summary>
@@ -764,10 +899,9 @@ namespace WRLDZ.Presentation.ArInteraction
             {
                 var c = _shuffleCards[i];
                 if (c == null) continue;
-                c.localPosition = ArDeckWellCards.RestLocal(i);
-                c.localRotation = Quaternion.Euler(0f, (i - _shuffleCards.Count * 0.5f) * 0.35f, 0f);
+                c.localPosition = WellLocal(ArDeckWellCards.RestLocal(i, _shuffleCards.Count));
+                c.localRotation = Quaternion.identity;
                 c.localScale = Vector3.one;
-                SetDeckCardAlpha(c, 1f);
             }
         }
 
@@ -847,7 +981,7 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary>World-space center of the main deck for hand proximity tests.</summary>
         public Vector3 MainDeckWorldCenter =>
             MainDeckZone != null
-                ? MainDeckZone.position + MainDeckZone.up * (ArDeckWellCards.PackHeight * 0.5f)
+                ? MainDeckZone.position + MainDeckZone.up * (ArDeckWellCards.StackHeight(Mathf.Max(_shownCount, 0)) * 0.5f)
                 : transform.position;
 
         public float MainDeckReachRadius => 0.16f;
@@ -862,7 +996,8 @@ namespace WRLDZ.Presentation.ArInteraction
             if (MainDeckZone != null)
             {
                 var ls = MainDeckZone.lossyScale;
-                pos = MainDeckZone.TransformPoint(new Vector3(0f, ArDeckWellCards.PackHeight + 0.0012f, 0f));
+                pos = MainDeckZone.TransformPoint(new Vector3(
+                    0f, ArDeckWellCards.StackHeight(Mathf.Max(_shownCount, 0)) + 0.0012f, 0f));
                 rot = MainDeckZone.rotation;
                 worldScale = new Vector3(
                     ArDeckWellCards.Width * ls.x,
@@ -920,11 +1055,35 @@ namespace WRLDZ.Presentation.ArInteraction
             return false;
         }
 
-        /// <summary>Lift + fade the top well card so a draw reads as leaving the disk.</summary>
+        /// <summary>Lift + shrink the top well card so a draw reads as leaving the disk.</summary>
+        /// <summary>
+        /// The floating hand queued a draw (<see cref="ArFloatingHand"/>): the engine already counts the card in the
+        /// hand, but it stays on top of the well until the pinch takes it (<see cref="TakeTopCardForDraw"/>), so the
+        /// stack never thins while the hand is still reaching. Call before this sync's <see cref="SyncDeckCount"/>.
+        /// </summary>
+        public void ReserveDraw()
+        {
+            var now = Time.unscaledTime;
+            _drawsInFlightUntil = Mathf.Max(_drawsInFlightUntil, now) + DrawReserveSeconds;
+            _drawsInFlight++;
+        }
+
+        /// <summary>
+        /// The drawing hand pinched the top card: it leaves the well this frame and the hand's own card, posed and
+        /// sized exactly like it, carries on. No lift of a second well card (that is <see cref="PulseDispenseTopCard"/>).
+        /// </summary>
+        public void TakeTopCardForDraw()
+        {
+            if (_drawsInFlight > 0) _drawsInFlight--;
+            if (Application.isPlaying && isActiveAndEnabled) _mech?.PulseDeckFlap();
+            if (_engineDeckCount >= 0) SyncDeckCount(_engineDeckCount);
+        }
+
         public void PulseDispenseTopCard()
         {
             if (!Application.isPlaying || !isActiveAndEnabled)
                 return;
+            _mech?.PulseDeckFlap();
             if (_dispenseCo != null)
                 StopCoroutine(_dispenseCo);
             SnapDeckCardsHome();
@@ -942,8 +1101,9 @@ namespace WRLDZ.Presentation.ArInteraction
             }
 
             if (top == null) yield break;
-            var startP = ArDeckWellCards.RestLocal(0);
-            var startR = Quaternion.Euler(0f, (0 - _shuffleCards.Count * 0.5f) * 0.35f, 0f);
+            // Start exactly where SnapDeckCardsHome rests it (well-local, no yaw) so the lift never pops.
+            var startP = WellLocal(ArDeckWellCards.RestLocal(0, Mathf.Max(_shuffleCards.Count, 1)));
+            var startR = Quaternion.identity;
             var startS = Vector3.one;
             top.localPosition = startP;
             top.localRotation = startR;
@@ -957,46 +1117,132 @@ namespace WRLDZ.Presentation.ArInteraction
                 var e = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(u));
                 top.localPosition = Vector3.Lerp(startP, lift, e);
                 top.localRotation = startR * Quaternion.Euler(-28f * e, 0f, 6f * e);
-                top.localScale = Vector3.Lerp(startS, startS * 0.96f, e);
-                SetDeckCardAlpha(top, 1f - e);
+                // The well cards are opaque cardboard (queue 3100, ZWrite on), so an alpha fade never showed and
+                // only cloned materials every frame. Shrink the lifted card away instead, before the drawn hand
+                // card materialises at the same spot (no two solid cards interpenetrating).
+                var gone = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.35f, 0.9f, e));
+                top.localScale = startS * Mathf.Lerp(0.96f, 0f, gone);
                 yield return null;
             }
 
             if (top == null)
             {
                 _dispenseCo = null;
+                FlushPendingDeckCount();
                 yield break;
             }
 
             SnapDeckCardsHome();
             _dispenseCo = null;
+            FlushPendingDeckCount();
         }
 
-        static void SetDeckCardAlpha(Transform card, float a)
+        /// <summary>
+        /// A Field Spell has been picked up to play. The tip drawer opens.
+        /// Releasing the drag without placing the card slides it shut again.
+        /// </summary>
+        public void NoteFieldSpellDrag(bool dragging)
         {
-            if (card == null) return;
-            foreach (var mr in card.GetComponentsInChildren<MeshRenderer>(true))
-            {
-                if (mr?.material == null) continue;
-                if (mr.material.HasProperty("_BaseColor"))
-                {
-                    var c = mr.material.GetColor("_BaseColor");
-                    c.a = a;
-                    mr.material.SetColor("_BaseColor", c);
-                }
+            _fieldSpellDrag = dragging;
+            if (dragging)
+                _fieldSpellCommitted = true;
+        }
 
-                if (mr.material.HasProperty("_Color"))
-                {
-                    var c = mr.material.color;
-                    c.a = a;
-                    mr.material.color = c;
-                }
+        /// <summary>Drag ended. <paramref name="keepOpen"/> when the Field Spell was actually played.</summary>
+        public void EndFieldSpellDrag(bool keepOpen)
+        {
+            _fieldSpellDrag = false;
+            if (keepOpen)
+                _fieldSpellCommitted = true;
+            else if (FieldSpellZone == null || FieldSpellZone.Occupant == null)
+                _fieldSpellCommitted = false;
+        }
+
+        void ApplyGraveyardTray()
+        {
+            if (GraveyardZone == null) return;
+            if (_gyOpenLocal == Vector3.zero)
+                _gyOpenLocal = GraveyardZone.localPosition;
+            var deck = ArZoneLayout.MainDeckLocal * ArPlaymatLayout.DiskMeshVisualScale;
+            var locked = Vector3.Lerp(_gyOpenLocal, deck, 0.72f);
+            GraveyardZone.localPosition = Vector3.Lerp(locked, _gyOpenLocal, _fx.GraveyardTray);
+        }
+
+        // Last drawer state written by ApplyFieldDrawerPose (NaN = never), so an idle drawer costs nothing per frame.
+        float _fieldDrawerApplied = float.NaN;
+        bool _fieldCommittedApplied;
+        Transform _fieldZoneMarker;
+        ArDiskZone _fieldZoneMarkerOf;
+
+        /// <summary>Drawer stays out this long after a Field Spell lands in it, so the card is seen going in.</summary>
+        const float FieldDrawerSeatHold = 1.6f;
+
+        /// <summary>Drawer slides out this long when the Field Spell leaves, to let the card go.</summary>
+        const float FieldDrawerReleaseHold = 1.2f;
+
+        /// <summary>Seconds for the drawer to slide fully out or in (readable, not a snap).</summary>
+        const float FieldDrawerSlideSeconds = 0.75f;
+
+        CardInstance _fieldDrawerCard;
+        float _fieldDrawerOpenUntil;
+
+        /// <summary>
+        /// A Field Spell is in the Field Card Slot and the drawer has shut on it. The arena field changes only
+        /// from this point (see <see cref="ArFieldSpellFloor"/>).
+        /// </summary>
+        public bool FieldSpellSeated =>
+            FieldSpellZone != null && FieldSpellZone.Occupant != null &&
+            // the drawer has registered this card (the engine sync can ask before the drawer's next tick)
+            FieldSpellZone.Occupant == _fieldDrawerCard &&
+            _fieldDrawer <= 0.001f && Time.unscaledTime >= _fieldDrawerOpenUntil;
+
+        /// <summary>
+        /// Field Card Slot drawer: stowed inside the small blade until a Field Spell is played. It slides out while
+        /// one is dragged / committed, holds while the card seats, then shuts with the card inside. When the Field
+        /// Spell leaves it slides out to release it and shuts again.
+        /// </summary>
+        void TickFieldDrawer(float dt)
+        {
+            if (FieldSpellZone == null) return;
+            var card = FieldSpellZone.Occupant;
+            if (card != _fieldDrawerCard)
+            {
+                _fieldDrawerOpenUntil = Time.unscaledTime + (card != null ? FieldDrawerSeatHold : FieldDrawerReleaseHold);
+                _fieldDrawerCard = card;
             }
+
+            var waiting = _fieldSpellDrag || (_fieldSpellCommitted && card == null);
+            var target = waiting || Time.unscaledTime < _fieldDrawerOpenUntil ? 1f : 0f;
+            _fieldDrawer = Mathf.MoveTowards(_fieldDrawer, target, dt / FieldDrawerSlideSeconds);
+            if (_fieldDrawer == _fieldDrawerApplied && _fieldSpellCommitted == _fieldCommittedApplied) return;
+            ApplyFieldDrawerPose();
+        }
+
+        void ApplyFieldDrawerPose()
+        {
+            if (FieldSpellZone == null) return;
+            _fieldDrawerApplied = _fieldDrawer;
+            _fieldCommittedApplied = _fieldSpellCommitted;
+            var t = _fieldDrawer * _fieldDrawer * (3f - 2f * _fieldDrawer);
+            FieldSpellZone.transform.localPosition = Vector3.Lerp(
+                ArPlaymatLayout.DiskFieldSpellClosed,
+                ArPlaymatLayout.DiskFieldSpellSurface,
+                t);
+            // The marker never changes after build: resolve it once per zone instead of a Find every frame.
+            if (_fieldZoneMarkerOf != FieldSpellZone || _fieldZoneMarker == null)
+            {
+                _fieldZoneMarkerOf = FieldSpellZone;
+                _fieldZoneMarker = FieldSpellZone.transform.Find("ZoneMarker");
+            }
+
+            if (_fieldZoneMarker != null)
+                _fieldZoneMarker.gameObject.SetActive(_fieldSpellCommitted || t > 0.08f);
         }
 
         void ApplyImmediatePose()
         {
             _fx.Tick(0f, DiskRoot, _diskMat, BladePivot, ZonesRoot, EnergyRing);
+            _mech?.Tick(0f);
             if (_diskLight != null)
                 _diskLight.intensity = 0f;
         }
@@ -1012,29 +1258,71 @@ namespace WRLDZ.Presentation.ArInteraction
             SnapDeckCardsHome();
         }
 
+        /// <summary>
+        /// Lenses: kill high-frequency wrist jitter without a visible lag.
+        /// A jump larger than 35 cm is a reacquire, so it snaps instead of sliding.
+        /// Lab and phone poses are already stable and stay rigid.
+        /// </summary>
+        void ApplyWristPose(Pose pose)
+        {
+            if (Tracker is not XrWorldArmTracker || !Application.isPlaying)
+            {
+                transform.SetPositionAndRotation(pose.position, pose.rotation);
+                return;
+            }
+
+            var dt = Mathf.Max(Time.deltaTime, 0.0001f);
+            if ((transform.position - pose.position).sqrMagnitude > 0.35f * 0.35f)
+            {
+                transform.SetPositionAndRotation(pose.position, pose.rotation);
+                return;
+            }
+
+            var a = 1f - Mathf.Exp(-dt / 0.02f);
+            transform.SetPositionAndRotation(
+                Vector3.Lerp(transform.position, pose.position, a),
+                Quaternion.Slerp(transform.rotation, pose.rotation, a));
+        }
+
+        /// <summary>
+        /// A body wears this disk and moves it (the AI opponent duelist writes the pose from its left hand bone every
+        /// frame, so the disk stays strapped on through a fall); the tracker lock below is skipped.
+        /// </summary>
+        public bool ExternalPose;
+
         void LateUpdate()
         {
             // Rigid lock to left forearm (Yugipedia: strap around left arm)
-            if (Tracker != null && IsPlayerSide && Tracker.TryGetLeftForearm(out var pose))
-            {
-                // Orient disk so blade points outward along forearm axis
-                transform.SetPositionAndRotation(pose.position, pose.rotation);
-            }
+            if (ExternalPose) { }
+            else if (Tracker != null && IsPlayerSide && Tracker.TryGetLeftForearm(out var pose))
+                ApplyWristPose(pose);
             else if (Tracker != null && !IsPlayerSide && Tracker.TryGetOpponentLeftForearm(out var opose))
-            {
-                transform.SetPositionAndRotation(opose.position, opose.rotation);
-            }
+                ApplyWristPose(opose);
 
-            _fx.Tick(Time.deltaTime, DiskRoot, _diskMat, BladePivot, ZonesRoot, EnergyRing);
-
+            // Pass null disk mat — body color is SpiritDuelerSkin only (do not fight zone cards).
+            _fx.Tick(Time.deltaTime, DiskRoot, null, BladePivot, ZonesRoot, EnergyRing);
+            ApplyGraveyardTray();
+            TickFieldDrawer(Time.deltaTime);
+            _mech?.Tick(Time.unscaledDeltaTime);
             if (_diskLight != null)
             {
-                // Light ramps with blade open + energy pulse
+                var presence = _skin != null ? _skin.Presence : 1f;
                 var open = _fx.BladeOpen;
-                _diskLight.intensity = open * (0.55f + _fx.EnergyPulse * 1.8f);
-                _diskLight.range = 0.6f + open * 1.4f;
+                _diskLight.intensity = presence * (0.22f + open * (0.55f + _fx.EnergyPulse * 1.4f));
+                _diskLight.range = 0.7f + open * 1.5f;
+                _diskLight.color = AuraColorNow;
+            }
+
+            // Editor / development builds: preview palettes live in a duel (F7 aura, F8 disk; not saved)
+            if (IsPlayerSide && Application.isPlaying && (Application.isEditor || Debug.isDebugBuild))
+            {
+                if (WrldzInput.KeyDown(KeyCode.F7)) SpiritDuelerPalette.CyclePreviewAura();
+                if (WrldzInput.KeyDown(KeyCode.F8)) SpiritDuelerPalette.CyclePreviewDisk();
             }
         }
+
+        /// <summary>The aura colour on screen right now (mid-crossfade during a palette swap).</summary>
+        public Color AuraColorNow => _skin != null ? _skin.AuraColorNow : AuraColor;
 
         public void PlayFx(DiskFxEvent evt, float duration = -1f)
         {
@@ -1045,10 +1333,63 @@ namespace WRLDZ.Presentation.ArInteraction
             _fx.Play(evt, duration);
         }
 
+        public void SetAccent(Color accent) => SetPalette(accent, accent, 0f);
+
         /// <summary>
-        /// Anime duel start: blade snaps open from retracted wrist form.
-        /// <paramref name="delay"/> staggers opponent disk slightly (Play Mode only).
-        /// Outside Play Mode, deploys immediately (editor smoke / batch).
+        /// Palette swap: the disk body and the aura take separate colours, crossfading over
+        /// <paramref name="fadeSeconds"/> (0 = at once).
+        /// </summary>
+        public void SetPalette(Color disk, Color aura, float fadeSeconds = 0.6f)
+        {
+            disk.a = aura.a = 1f;
+            Accent = disk;
+            AuraColor = aura;
+            _fx.Accent = aura;
+            if (_skin != null) _skin.SetColors(disk, aura, fadeSeconds);
+            else
+            {
+                _mech?.SetAccent(aura);
+                if (_diskLight != null) _diskLight.color = aura;
+            }
+        }
+
+        /// <summary>A card finished seating on <paramref name="zone"/> (any actor): its slot lights.</summary>
+        public void NoteSeated(ArDiskZone zone) => _mech?.FlashZone(zone);
+
+        /// <summary>A Set card on <paramref name="zone"/> is activated: the hub button presses and the slot lights.</summary>
+        public void NoteSetActivated(ArDiskZone zone)
+        {
+            _mech?.PressButton();
+            _mech?.FlashZone(zone);
+        }
+
+        /// <summary>Instant Duel / skip cinematic — no swing.</summary>
+        public void SnapVisibleDeployed()
+        {
+            _skin?.SnapPresence(1f);
+            _fx.SnapDeployed();
+            _deployed = true;
+            PhaseButtons?.SetDeployed(true);
+            RelayoutOfficialZones();
+        }
+
+        /// <summary>Ghost cuff appears folded (Zone Mode / pre-duel). Does not open the blade.</summary>
+        public void FadeInRetracted(float delay = 0f)
+        {
+            if (_deployRoutine != null) StopCoroutine(_deployRoutine);
+            if (!Application.isPlaying || !isActiveAndEnabled)
+            {
+                _fx.SnapRetracted();
+                _skin?.SnapPresence(1f);
+                _deployed = false;
+                return;
+            }
+
+            _deployRoutine = StartCoroutine(FadeInRetractedRoutine(delay));
+        }
+
+        /// <summary>
+        /// Retracted → Deployed: fade in if needed, then Battle City blade swing.
         /// </summary>
         public void DeployForDuel(float delay = 0f)
         {
@@ -1056,6 +1397,7 @@ namespace WRLDZ.Presentation.ArInteraction
             {
                 _deployed = true;
                 PhaseButtons?.SetDeployed(true);
+                _skin?.SnapPresence(1f);
                 _fx.Play(DiskFxEvent.BladeDeploy);
                 return;
             }
@@ -1066,7 +1408,12 @@ namespace WRLDZ.Presentation.ArInteraction
         }
 
         /// <summary>Fold disk shut (leave duel / inactive AR arm).</summary>
-        public void Retract(float delay = 0f)
+        public void Retract(float delay = 0f) => Retract(delay, fadeOut: false);
+
+        /// <summary>Fold then dissipate (Map / leave AR).</summary>
+        public void RetractThenFadeOut(float delay = 0f) => Retract(delay, fadeOut: true);
+
+        void Retract(float delay, bool fadeOut)
         {
             if (!Application.isPlaying || !isActiveAndEnabled)
             {
@@ -1074,12 +1421,25 @@ namespace WRLDZ.Presentation.ArInteraction
                 LpCounter?.PowerOff();
                 PhaseButtons?.SetDeployed(false);
                 _fx.Play(DiskFxEvent.BladeRetract);
+                _skin?.SnapPresence(fadeOut ? 0f : 1f);
                 return;
             }
 
             if (_deployRoutine != null)
                 StopCoroutine(_deployRoutine);
-            _deployRoutine = StartCoroutine(RetractRoutine(delay));
+            _deployRoutine = StartCoroutine(RetractRoutine(delay, fadeOut));
+        }
+
+        IEnumerator FadeInRetractedRoutine(float delay)
+        {
+            if (delay > 0f)
+                yield return new WaitForSecondsRealtime(delay);
+            _fx.SnapRetracted();
+            _deployed = false;
+            PhaseButtons?.SetDeployed(false);
+            _skin?.FadePresence(1f, SpiritDuelerSkin.FadeInSeconds);
+            yield return new WaitForSecondsRealtime(SpiritDuelerSkin.FadeInSeconds);
+            _deployRoutine = null;
         }
 
         IEnumerator DeployRoutine(float delay)
@@ -1087,22 +1447,26 @@ namespace WRLDZ.Presentation.ArInteraction
             if (delay > 0f)
                 yield return new WaitForSecondsRealtime(delay);
             RelayoutOfficialZones();
+            if (_skin != null && _skin.Presence < 0.85f)
+            {
+                _skin.FadePresence(1f, SpiritDuelerSkin.FadeInSeconds);
+                yield return new WaitForSecondsRealtime(0.28f);
+            }
+
             _deployed = true;
             PhaseButtons?.SetDeployed(true);
             _fx.Play(DiskFxEvent.BladeDeploy);
-            // Editor: snap open if coroutine ticks are sparse so zones/deck never stay collapsed
-            if (Application.isEditor)
-            {
-                yield return new WaitForSecondsRealtime(0.9f);
-                if (_fx.BladeOpen < 0.85f)
-                    _fx.SnapDeployed();
-            }
+            // the safety snap waits for the whole mechanism: at 1.25 s it used to teleport the sections to the lock
+            // from three quarters of the way through the activation
+            yield return new WaitForSecondsRealtime(DiskFxDriver.DeploySeconds + 0.15f);
+            if (_fx.BladeOpen < 0.85f)
+                _fx.SnapDeployed();
 
             Debug.Log($"[WRLDZ AR] {(IsPlayerSide ? "Player" : "Opp")} disk DEPLOY open={_fx.BladeOpen:0.00}");
             _deployRoutine = null;
         }
 
-        IEnumerator RetractRoutine(float delay)
+        IEnumerator RetractRoutine(float delay, bool fadeOut)
         {
             if (delay > 0f)
                 yield return new WaitForSecondsRealtime(delay);
@@ -1110,7 +1474,14 @@ namespace WRLDZ.Presentation.ArInteraction
             LpCounter?.PowerOff();
             PhaseButtons?.SetDeployed(false);
             _fx.Play(DiskFxEvent.BladeRetract);
-            Debug.Log($"[WRLDZ AR] {(IsPlayerSide ? "Player" : "Opp")} disk RETRACT");
+            yield return new WaitForSecondsRealtime(0.72f);
+            if (fadeOut)
+            {
+                _skin?.FadePresence(0f, SpiritDuelerSkin.FadeOutSeconds);
+                yield return new WaitForSecondsRealtime(SpiritDuelerSkin.FadeOutSeconds);
+            }
+
+            Debug.Log($"[WRLDZ AR] {(IsPlayerSide ? "Player" : "Opp")} disk RETRACT fadeOut={fadeOut}");
             _deployRoutine = null;
         }
 
@@ -1219,7 +1590,15 @@ namespace WRLDZ.Presentation.ArInteraction
             }
 
             if (FieldSpellZone != null)
+            {
                 FieldSpellZone.Occupant = who.FieldSpellZone?.Occupant;
+                var has = FieldSpellZone.Occupant != null;
+                if (has)
+                    _fieldSpellCommitted = true;
+                else if (_fieldDrawerHadCard)
+                    _fieldSpellCommitted = false;
+                _fieldDrawerHadCard = has;
+            }
             if (PendulumLeft != null)
                 PendulumLeft.Occupant = who.PendulumZones != null && who.PendulumZones.Length > 0
                     ? who.PendulumZones[0]?.Occupant
@@ -1232,18 +1611,21 @@ namespace WRLDZ.Presentation.ArInteraction
 
         static void EnsureDiskMesh()
         {
-            if (_diskMesh != null) return;
-            var stream = System.IO.Path.Combine(Application.streamingAssetsPath,
-                SpiritDuelerDiskView.StreamingRelativePath);
-            if (System.IO.File.Exists(stream))
-                _diskMesh = ObjMeshLoader.LoadFromFile(stream, "BattleCityDuelDisk");
+            if (_diskMesh == null)
+            {
+                // one read: the merged body plus the kit parts (the mechanism)
+                if (StreamingFiles.Exists(SpiritDuelerDiskView.StreamingRelativePath))
+                    _diskMesh = ObjMeshLoader.LoadWithGroupsFromStreaming(
+                        SpiritDuelerDiskView.StreamingRelativePath, "BattleCityDuelDisk", out _diskParts);
+            }
+
+            if (_diskMesh != null)
+                _diskMesh.RecalculateNormals();
         }
 
         static Material MakeDiskMat(Color accent)
         {
-            var shader = Shader.Find("Universal Render Pipeline/Lit")
-                         ?? Shader.Find("Standard")
-                         ?? Shader.Find("Unlit/Color");
+            var shader = ArAnimePresentation.LitShader();
             var mat = new Material(shader) { name = "ArDiskRigMat" };
             var baseCol = new Color(0.1f, 0.14f, 0.2f, 1f);
             if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", baseCol);

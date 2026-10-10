@@ -43,6 +43,41 @@ namespace WRLDZ.Duel.TextEffects
             @"(?: to your opponent's field)?(?: in (Attack|Defense) Position)?\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        static readonly Regex RxMagicalHats = new(
+            @"During your opponent's Battle Phase:\s*Choose 2 Spell/?Trap Cards from your Deck and 1 monster in your Main Monster Zone\.\s*" +
+            @"Special Summon them as Normal Monsters \(ATK 0/DEF 0\) in face-down Defense Position.*",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.Singleline);
+
+        static readonly Regex RxMagicalHatsAnime = new(
+            @"During your opponent's Battle Phase:\s*Hide 1 monster you control among (\d+) Magical Hat Tokens.*",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.Singleline);
+
+        static readonly Regex RxCrushCardVirus = new(
+            @"Tribute 1 DARK monster with (\d+) or less ATK;\s*your opponent takes no damage until the end of the next turn.*destroy the monsters among them with (\d+) or more ATK.*",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.Singleline);
+
+        static readonly Regex RxCrushCardVirusLinger = new(
+            @"Tribute 1 DARK monster with (\d+) or less ATK\.\s*Check all monsters your opponent controls, your opponent's hand, and all cards they draw \(until the end of your opponent's (\d+)(?:st|nd|rd|th) turn after this card's activation\), and destroy all monsters with (\d+) or more ATK\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.Singleline);
+
+        static readonly Regex RxDeckDevastationVirus = new(
+            @"Tribute 1 DARK monster with (\d+) or more ATK;\s*look at your opponent's hand, all monsters they control, and all cards they draw until the end of their (\d+)(?:st|nd|rd|th) turn after this card's activation, and destroy all those monsters with (\d+) or less ATK\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.Singleline);
+
+        static readonly Regex RxDarkSage = new(
+            @"Must first be Special Summoned \(from your hand or Deck\) by Tributing 1 ""Dark Magician"" immediately after applying the effect of ""Time Wizard"" in which you called the coin toss right\.\s*" +
+            @"When Special Summoned this way:\s*Add 1 Spell Card from your Deck to your hand\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxCocoonHandEquip = new(
+            @"You can target 1 ""([^""]+)"" you control;\s*equip this card from your hand to that target\.\s*" +
+            @"While equipped by this effect, the original ATK/DEF of that ""[^""]+"" becomes the ATK/DEF of ""([^""]+)""",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxTokenSsAsMany = new(
+            @"special summon as many ""([^""]+?) Tokens?"" \(([^)/]+)/(\w+)/Level (\d+)/ATK (\d+)/DEF (\d+)\) as possible(?:, in (Attack|Defense) Position)?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         static readonly Regex RxCyberStein = new(
             @"(?:You can )?pay (\d+) LP;\s*special summon 1 fusion monster from your extra deck" +
             @"(?: in Attack Position)?\.?",
@@ -54,13 +89,52 @@ namespace WRLDZ.Duel.TextEffects
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxEquipTargetToThis = new(
-            @"(?:Once per turn:\s*)?(?:You can\s+)?(?:target 1 monster your opponent controls;\s*)?" +
+            @"(?:Once per turn:\s*)?(?:You can\s+)?(?<opp>target 1 monster your opponent controls;\s*)?" +
             @"equip that target to this card(?:\s*\(max\.\s*\d+\))?\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxUnionEither = new(
-            @"you can either:\s*Target 1 ""([^""]+)"" you control;\s*equip this card to that target, " +
-            @"OR:\s*Unequip this card and Special Summon it",
+            @"Once per turn,\s*you can either:\s*Target 1 ""([^""]+)""(?: or ""([^""]+)"")? you control;\s*" +
+            @"equip this card to that target,\s*OR:\s*Unequip this card and Special Summon it(?: in Attack Position)?\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        // Union procedure, classic print (Pitch-Dark Dragon, Koitsu, and the rest of the MFC Unions).
+        static readonly Regex RxUnionClassic = new(
+            @"Once per turn, during your Main Phase, if you control this (?:monster|card) on the field, " +
+            @"you can equip it to your ""([^""]+)"" as an Equip Spell Card, OR unequip the Union equipment " +
+            @"and Special Summon this card in face-up Attack Position\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        // Union battle-discard rider (Zombie Tiger).
+        static readonly Regex RxUnionBattleDiscard = new(
+            @"If the equipped monster destroys an opponent's monster by battle:\s*" +
+            @"Discard 1 random card from their hand\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        // Union stat rider, printed after the procedure sentence. Three printings:
+        // "While equipped by this effect, the equipped monster gains 500 ATK/DEF." (Zombie Tiger)
+        // "A monster equipped with this card gains 600 ATK/DEF" (Z-Metal Tank — the
+        // destroy-instead rider glued after the comma is the shared Union substitute,
+        // which the runtime reads from the raw text, so the leftover is boilerplate).
+        // "While equipped to a monster by this card's effect, increase the ATK/DEF of
+        // the equipped monster by 400 points." (Pitch-Dark Dragon; Koitsu prints ATK only).
+        static readonly Regex RxUnionBonusGains = new(
+            @"(?:(?:While equipped(?: by this effect)?, the equipped monster)|(?:A monster equipped with this card))" +
+            @" gains? (\d+) ATK(?:/DEF)?\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxUnionBonusIncrease = new(
+            @"While equipped to a monster by this card's effect, increase the (ATK/DEF|ATK) " +
+            @"of the equipped monster by (\d+) points\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        // Union pierce rider (Pitch-Dark Dragon, Koitsu): the classic printing of
+        // piercing, whole sentence. Compiles to the same EquippedGainsPiercing atom
+        // Fairy Meteor Crush uses, so GrantsPiercing honors it from the Spell/Trap
+        // Zone the same way.
+        static readonly Regex RxUnionPiercing = new(
+            @"When (?:it|the equipped monster) attacks with an ATK that is higher than the DEF " +
+            @"of a Defense Position monster, inflict the difference as Battle Damage to your opponent\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxPlaceOnNs = new(
@@ -68,23 +142,45 @@ namespace WRLDZ.Duel.TextEffects
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxPlaceOnSpell = new(
-            @"Each time a Spell Card is activated, place (\d+) Spell Counter on this card when that Spell(?: Card)? resolves \(max\. (\d+)\)",
+            @"Each time a Spell Card is activated, place (\d+) Spell Counter on this card when that Spell(?: Card)? resolves(?:\s*\(max\.\s*(\d+)\))?\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        // Spell Counter family. Each anchor spans the WHOLE sentence (leading "You can" / "This card"
+        // included, trailing period optional). A mid-sentence match left the prefix and the period
+        // behind as residue, so the card compiled its action but kept a "You can        ." fragment
+        // and stayed a Stub: Royal Magical Library, Skilled Dark / White Magician, Magical Marionette.
         static readonly Regex RxGainPerCounter = new(
-            @"Gains? (\d+) ATK for each Spell Counter on it",
+            @"(?:This card\s+)?Gains? (\d+) ATK for each Spell Counter on it\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxRemoveCounterDestroySt = new(
-            @"remove (\d+) Spell Counter(?:s)? from this card, then target 1 Spell/?Trap on the field;\s*destroy that target",
+            @"(?:You can\s+)?remove (\d+) Spell Counter(?:s)? from this card, then target 1 Spell/?Trap on the field;\s*destroy that target\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        // Marionette destroys a monster, not a Spell/Trap: its own sentence shape.
+        static readonly Regex RxRemoveCounterDestroyMonster = new(
+            @"(?:You can\s+)?remove (\d+) Spell Counters? from this card, then target 1 monster on the field;\s*destroy that target\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxRemoveCounterDraw = new(
-            @"remove (\d+) Spell Counters from this card;\s*draw (\d+) card",
+            @"(?:You can\s+)?remove (\d+) Spell Counters? from this card;\s*draw (\d+) card\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        // The zone may be a printed list: "from your hand, Deck, or GY" (Skilled Dark Magician) or
+        // "from your hand, Deck, or Graveyard" (Skilled White Magician). Capture the first zone of
+        // the list as the source; the list is the same effect either way.
         static readonly Regex RxTributeWithCountersSs = new(
-            @"tribute this card with (\d+) Spell Counters on it;\s*special summon 1 ""([^""]+)"" from your (hand|deck|graveyard|gy)",
+            @"(?:You can\s+)?tribute this card with (\d+) Spell Counters on it;\s*" +
+            @"special summon 1 ""([^""]+)"" from your (?:(hand|deck|graveyard|gy)(?:\s*,\s*(?:deck|graveyard|gy|hand)\s*,?\s*or\s*(?:hand|deck|graveyard|gy)\b)?)\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Book of Life: target A (Race in your GY) then B (monster in opp GY);
+        /// SS the first, banish the second. Shared two-target resolve.
+        /// </summary>
+        static readonly Regex RxBookOfLife = new(
+            @"Target 1 (\w+) monster in your (?:GY|Graveyard) and 1 monster in your opponent's (?:GY|Graveyard);\s*" +
+            @"Special Summon the first target, also banish the second target\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         public static void Collect(string text, CardDef def, System.Collections.Generic.List<EffectClause> into,
@@ -100,6 +196,114 @@ namespace WRLDZ.Duel.TextEffects
                 spans?.Add((m.Index, m.Length));
             }
 
+            var book = RxBookOfLife.Match(text);
+            Add(book, book.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.SpecialSummonFromGy,
+                    Zone = EffectZoneFilter.ControllerGyMonsters,
+                    RaceFilter = book.Groups[1].Value,
+                    RequiresTargetChoice = true,
+                    RequiresSecondTarget = true,
+                    SecondZone = EffectZoneFilter.OppGyMonsters,
+                    SecondAction = EffectActionKind.Banish,
+                    MakesChainLink = true
+                }
+                : null);
+
+            Add(RxMagicalHats.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.MagicalHatsStyle,
+                OpponentTurnOnly = true,
+                RequiresBattlePhase = true,
+                MakesChainLink = true
+            });
+            var hatsAnime = RxMagicalHatsAnime.Match(text);
+            Add(hatsAnime, hatsAnime.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.MagicalHatsStyle,
+                    OpponentTurnOnly = true,
+                    RequiresBattlePhase = true,
+                    HatsAreTokens = true,
+                    HatTokenCount = Parse(hatsAnime, 1, 4),
+                    MakesChainLink = true
+                }
+                : null);
+            var crushModern = RxCrushCardVirus.Match(text);
+            Add(crushModern, crushModern.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.CrushCardVirusStyle,
+                    RequiresTributeCount = 1,
+                    TributeFaceUpOnly = true,
+                    AttributeFilter = "DARK",
+                    RequiresAtkLeqCost = true,
+                    Amount = Parse(crushModern, 1, 1000),
+                    VirusDestroyAtk = Parse(crushModern, 2, 1500),
+                    CrushCardNoDamageUntilNextTurn = true,
+                    CrushCardDeckDestroyUpTo = true,
+                    MakesChainLink = true
+                }
+                : null);
+            var virusLinger = RxCrushCardVirusLinger.Match(text);
+            Add(virusLinger, virusLinger.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.CrushCardVirusStyle,
+                    RequiresTributeCount = 1,
+                    TributeFaceUpOnly = true,
+                    AttributeFilter = "DARK",
+                    RequiresAtkLeqCost = true,
+                    Amount = Parse(virusLinger, 1, 1000),
+                    CrushCardLingerOpponentEnds = Parse(virusLinger, 2, 3),
+                    VirusDestroyAtk = Parse(virusLinger, 3, 1500),
+                    MakesChainLink = true
+                }
+                : null);
+            var ddv = RxDeckDevastationVirus.Match(text);
+            Add(ddv, ddv.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.CrushCardVirusStyle,
+                    RequiresTributeCount = 1,
+                    TributeFaceUpOnly = true,
+                    AttributeFilter = "DARK",
+                    RequiresAtkGeqCost = true,
+                    Amount = Parse(ddv, 1, 2000),
+                    CrushCardLingerOpponentEnds = Parse(ddv, 2, 3),
+                    VirusDestroyAtk = Parse(ddv, 3, 1500),
+                    VirusDestroyAtkLeq = true,
+                    MakesChainLink = true
+                }
+                : null);
+            Add(RxDarkSage.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.ThisCardSummoned,
+                Action = EffectActionKind.AddFromDeckToHand,
+                Zone = EffectZoneFilter.ControllerDeckSpells,
+                RequiresTargetChoice = true,
+                MakesChainLink = true
+            });
+            var cocoon = RxCocoonHandEquip.Match(text);
+            Add(cocoon, new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.EquipThisToTarget,
+                ActivatesFromHand = true,
+                RequiresTargetChoice = true,
+                Zone = EffectZoneFilter.ControllerMonsters,
+                NamedCard = cocoon.Success ? cocoon.Groups[1].Value : "Petit Moth",
+                ReplaceHostOriginalAtkDef = true,
+                MakesChainLink = true,
+                IsOptional = true
+            });
             Add(RxTimeWizard.Match(text), new EffectClause
             {
                 Timing = EffectTiming.Activate,
@@ -123,9 +327,11 @@ namespace WRLDZ.Duel.TextEffects
                 CoinCount = 3,
                 Amount = 2,
                 RequiresTargetChoice = true,
+                // Barrel Dragon: "target 1 monster your opponent controls" includes face-down monsters (Lua
+                // SelectTarget(nil, 0, LOCATION_MZONE)).
                 Zone = Regex.IsMatch(text, @"target 1 card your opponent", RegexOptions.IgnoreCase)
                     ? EffectZoneFilter.OppAnyCardOnField
-                    : EffectZoneFilter.OppFaceUpMonsters,
+                    : EffectZoneFilter.OppMonsters,
                 OncePerTurn = true,
                 IsOptional = true,
                 MakesChainLink = true
@@ -143,24 +349,44 @@ namespace WRLDZ.Duel.TextEffects
 
             var tok = RxTokenSs.Match(text);
             if (!tok.Success) tok = RxTokenSsAlt.Match(text);
-            if (tok.Success)
+            var tokAsMany = !tok.Success ? RxTokenSsAsMany.Match(text) : null;
+            // RuleLocks batch: a whole-text atom that already compiled this Token sentence (Jam Breeding Machine's
+            // Standby Token) owns it — a second Token clause here would Summon twice.
+            var tokUsed = tok.Success ? tok : tokAsMany;
+            var tokOwnedByAtom = tokUsed != null && tokUsed.Success && spans != null &&
+                                 spans.Exists(sp => sp.start <= tokUsed.Index &&
+                                                    sp.start + sp.length >= tokUsed.Index + tokUsed.Length) &&
+                                 into.Exists(c => c != null && c.Action == EffectActionKind.SpecialSummonToken);
+            if (!tokOwnedByAtom && (tok.Success || (tokAsMany != null && tokAsMany.Success)))
             {
+                var asMany = tokAsMany != null && tokAsMany.Success;
+                var used = asMany ? tokAsMany : tok;
                 var toOpp = Regex.IsMatch(text ?? "", @"opponent.?s field", RegexOptions.IgnoreCase);
-                Add(tok, new EffectClause
+                var nameIdx = asMany ? 1 : 2;
+                var raceIdx = asMany ? 2 : 3;
+                var attrIdx = asMany ? 3 : 4;
+                Add(used, new EffectClause
                 {
                     Timing = SuggestTokenTiming(text),
                     Action = EffectActionKind.SpecialSummonToken,
-                    TokenCount = Parse(tok, 1, 1),
-                    TokenName = tok.Groups[2].Value.Trim() +
-                                (tok.Groups[2].Value.IndexOf("Token", System.StringComparison.OrdinalIgnoreCase) >= 0
+                    TokenCount = asMany ? 99 : Parse(used, 1, 1),
+                    TokenFillRemainingZones = asMany,
+                    TokenName = used.Groups[nameIdx].Value.Trim() +
+                                (used.Groups[nameIdx].Value.IndexOf("Token", System.StringComparison.OrdinalIgnoreCase) >= 0
                                     ? ""
                                     : " Token"),
-                    TokenRace = CleanType(tok.Groups[3].Value),
-                    TokenAttribute = tok.Groups[4].Value,
-                    TokenLevel = Parse(tok, 5, 0) > 0 ? Parse(tok, 5, 1) : Parse(tok, 6, 1),
-                    TokenAtk = Parse(tok, 7, 0),
-                    TokenDef = Parse(tok, 8, 0),
+                    TokenRace = CleanType(used.Groups[raceIdx].Value),
+                    TokenAttribute = used.Groups[attrIdx].Value,
+                    TokenLevel = asMany
+                        ? Parse(used, 4, 1)
+                        : (Parse(used, 5, 0) > 0 ? Parse(used, 5, 1) : Parse(used, 6, 1)),
+                    TokenAtk = asMany ? Parse(used, 5, 0) : Parse(used, 7, 0),
+                    TokenDef = asMany ? Parse(used, 6, 0) : Parse(used, 8, 0),
                     TokenToOpponent = toOpp,
+                    SummonInDefense = asMany
+                        ? used.Groups[7].Success &&
+                          used.Groups[7].Value.Equals("Defense", System.StringComparison.OrdinalIgnoreCase)
+                        : false,
                     TokenCannotTribute = Regex.IsMatch(text, @"cannot be tributed", RegexOptions.IgnoreCase),
                     TokenDestroyedDamage = Regex.IsMatch(text, @"takes (\d+) damage", RegexOptions.IgnoreCase)
                         ? ExtractInt(text, @"takes (\d+) damage", 300)
@@ -193,6 +419,17 @@ namespace WRLDZ.Duel.TextEffects
                     RegexOptions.IgnoreCase);
                 if (tokRestrictAlt.Success)
                     spans?.Add((tokRestrictAlt.Index, tokRestrictAlt.Length));
+                var tribNamed = Regex.Match(text,
+                    @"tribute 1 face-up ""([^""]+)""",
+                    RegexOptions.IgnoreCase);
+                if (tribNamed.Success && into.Count > 0)
+                {
+                    var last = into[into.Count - 1];
+                    last.RequiresTributeCount = 1;
+                    last.NamedCard = tribNamed.Groups[1].Value;
+                    last.TributeFaceUpOnly = true;
+                    spans?.Add((tribNamed.Index, tribNamed.Length));
+                }
             }
 
             var stein = RxCyberStein.Match(text);
@@ -217,16 +454,27 @@ namespace WRLDZ.Duel.TextEffects
             });
 
             var equipToThis = RxEquipTargetToThis.Match(text);
-            Add(equipToThis, new EffectClause
-            {
-                Timing = EffectTiming.Activate,
-                Action = EffectActionKind.EquipTargetToThis,
-                RequiresTargetChoice = true,
-                Zone = EffectZoneFilter.OppFaceUpMonsters,
-                OncePerTurn = true,
-                IsOptional = true,
-                MakesChainLink = true
-            });
+            // Cyber Raider's choice bullet "equip that target to this card" is owned by the choice-bullet atom;
+            // a second generic Activate clause would double the effect.
+            var equipAlreadyOwned = equipToThis.Success && spans != null &&
+                AtomRegistration.SpanCovered(spans, equipToThis.Index, equipToThis.Length);
+            Add(equipToThis, equipAlreadyOwned
+                ? null
+                : new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.EquipTargetToThis,
+                    RequiresTargetChoice = true,
+                    // Relinquished / Thousand-Eyes Restrict: a face-down monster may be targeted and equipped (Lua
+                    // SelectTarget(Card.IsAbleToChangeControler, 0, LOCATION_MZONE); OCG ruling). A partial match with no
+                    // "target 1 monster your opponent controls" (Cyber Raider, Guardian Elma: Stubs) keeps its old zone.
+                    Zone = equipToThis.Groups["opp"].Success
+                        ? EffectZoneFilter.OppMonsters
+                        : EffectZoneFilter.OppFaceUpMonsters,
+                    OncePerTurn = true,
+                    IsOptional = true,
+                    MakesChainLink = true
+                });
             // ATK/DEF equal equipped is implemented by FieldSpellEffects.ApplyEquipStats for this action.
             if (equipToThis.Success)
             {
@@ -237,37 +485,34 @@ namespace WRLDZ.Duel.TextEffects
                     spans?.Add((atkEq.Index, atkEq.Length));
             }
 
-            var uni = RxUnionEither.Match(text);
-            if (uni.Success)
+            AddUnionProcedure(RxUnionEither.Match(text), text, into, spans);
+            AddUnionProcedure(RxUnionClassic.Match(text), text, into, spans);
+            var battleDiscard = RxUnionBattleDiscard.Match(text);
+            if (battleDiscard.Success)
             {
-                Add(uni, new EffectClause
-                {
-                    Timing = EffectTiming.Activate,
-                    Action = EffectActionKind.EquipThisToTarget,
-                    EquipHostName = uni.Groups[1].Value,
-                    RequiresTargetChoice = true,
-                    Zone = EffectZoneFilter.ControllerMonsters,
-                    NamedCard = uni.Groups[1].Value,
-                    OncePerTurn = true,
-                    IsOptional = true,
-                    MakesChainLink = true
-                });
                 into.Add(new EffectClause
                 {
-                    Timing = EffectTiming.Activate,
-                    Action = EffectActionKind.UnequipThisSpecialSummon,
-                    OncePerTurn = true,
-                    IsOptional = true,
+                    Timing = EffectTiming.EquippedMonsterDestroysByBattle,
+                    Action = EffectActionKind.DiscardRandomFromOpponentHand,
+                    Amount = 1,
                     MakesChainLink = true,
-                    SourceSnippet = "OR: Unequip this card and Special Summon it"
+                    SourceSnippet = battleDiscard.Value.Trim()
                 });
-                var atk = Regex.Match(text, @"gains? (\d+) ATK/DEF", RegexOptions.IgnoreCase);
-                if (atk.Success)
+                spans?.Add((battleDiscard.Index, battleDiscard.Length));
+            }
+
+            var pierce = RxUnionPiercing.Match(text);
+            if (pierce.Success)
+            {
+                into.Add(new EffectClause
                 {
-                    var n = Parse(atk, 1, 400);
-                    into[into.Count - 2].EquipAtkBonus = n;
-                    into[into.Count - 2].EquipDefBonus = n;
-                }
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.EquippedGainsPiercing,
+                    StaysOnField = true,
+                    MakesChainLink = false,
+                    SourceSnippet = pierce.Value.Trim()
+                });
+                spans?.Add((pierce.Index, pierce.Length));
             }
 
             var ns = RxPlaceOnNs.Match(text);
@@ -276,7 +521,7 @@ namespace WRLDZ.Duel.TextEffects
                 Timing = EffectTiming.ThisCardSummoned,
                 Action = EffectActionKind.PlaceSpellCounters,
                 Amount = ns.Success ? Parse(ns, 1, 1) : 1,
-                CounterMax = ns.Success ? Parse(ns, 2, 1) : 1,
+                CounterMax = PrintedMax(ns, 2),
                 MakesChainLink = true
             });
             var onSp = RxPlaceOnSpell.Match(text);
@@ -285,7 +530,7 @@ namespace WRLDZ.Duel.TextEffects
                 Timing = EffectTiming.ContinuousWhileFaceUp,
                 Action = EffectActionKind.PlaceSpellCounters,
                 Amount = onSp.Success ? Parse(onSp, 1, 1) : 1,
-                CounterMax = onSp.Success ? Parse(onSp, 2, 3) : 3,
+                CounterMax = PrintedMax(onSp, 2),
                 PlaceCounterOnSpellActivate = true,
                 MakesChainLink = false
             });
@@ -305,6 +550,21 @@ namespace WRLDZ.Duel.TextEffects
                 Zone = EffectZoneFilter.FieldSpellTraps,
                 RequiresTargetChoice = true,
                 RequiresRemoveSpellCounters = rmSt.Success ? Parse(rmSt, 1, 1) : 1,
+                IsOptional = true,
+                MakesChainLink = true
+            });
+// Magical Marionette: same cost, but the target is a monster on the field. The printed filter is
+                // "1 monster on the field" — either side — so this is FieldAnyMonster, not FieldMonsters
+                // (the controller's own). FieldMonsters compiled into a clause that could never be
+                // activated: the engine found no legal target and refused.
+                var rmMo = RxRemoveCounterDestroyMonster.Match(text);
+                Add(rmMo, new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.Destroy,
+                    Zone = EffectZoneFilter.FieldAnyMonster,
+                RequiresTargetChoice = true,
+                RequiresRemoveSpellCounters = rmMo.Success ? Parse(rmMo, 1, 1) : 1,
                 IsOptional = true,
                 MakesChainLink = true
             });
@@ -347,6 +607,57 @@ namespace WRLDZ.Duel.TextEffects
             }
         }
 
+        static void AddUnionProcedure(Match uni, string text,
+            System.Collections.Generic.List<EffectClause> into,
+            System.Collections.Generic.List<(int start, int length)> spans)
+        {
+            if (!uni.Success || into == null) return;
+            var host = uni.Groups[1].Value;
+            var alt = uni.Groups.Count > 2 && uni.Groups[2].Success ? uni.Groups[2].Value : null;
+            into.Add(new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.EquipThisToTarget,
+                EquipHostName = host,
+                RequiresTargetChoice = true,
+                Zone = EffectZoneFilter.ControllerMonsters,
+                NamedCard = host,
+                AltNamedCard = alt,
+                OncePerTurn = true,
+                IsOptional = true,
+                MakesChainLink = true,
+                SourceSnippet = uni.Value.Trim()
+            });
+            spans?.Add((uni.Index, uni.Length));
+            into.Add(new EffectClause
+            {
+                Timing = EffectTiming.Activate,
+                Action = EffectActionKind.UnequipThisSpecialSummon,
+                OncePerTurn = true,
+                IsOptional = true,
+                MakesChainLink = true,
+                SourceSnippet = "Unequip this card and Special Summon it"
+            });
+            var atk = RxUnionBonusGains.Match(text ?? "");
+            var incr = RxUnionBonusIncrease.Match(text ?? "");
+            if (atk.Success)
+            {
+                var n = Parse(atk, 1, 0);
+                into[into.Count - 2].EquipAtkBonus = n;
+                into[into.Count - 2].EquipDefBonus =
+                    atk.Value.IndexOf("/def", System.StringComparison.OrdinalIgnoreCase) >= 0 ? n : 0;
+                spans?.Add((atk.Index, atk.Length));
+            }
+            else if (incr.Success)
+            {
+                var n = Parse(incr, 2, 0);
+                into[into.Count - 2].EquipAtkBonus = n;
+                into[into.Count - 2].EquipDefBonus =
+                    incr.Groups[1].Value.IndexOf('/') >= 0 ? n : 0;
+                spans?.Add((incr.Index, incr.Length));
+            }
+        }
+
         static EffectTiming SuggestTokenTiming(string text)
         {
             if (Regex.IsMatch(text ?? "", @"\bFLIP:", RegexOptions.IgnoreCase))
@@ -371,6 +682,20 @@ namespace WRLDZ.Duel.TextEffects
 
         static string CleanType(string s) =>
             (s ?? "").Replace("-Type", "").Replace("Type", "").Trim();
+
+        /// <summary>
+        /// The printed "(max. N)" of a counter-placement sentence, or 0 when the card prints none.
+        ///
+        /// 0 means "no cap" to the runtime (<c>TextEffectRuntime</c> only clamps and records
+        /// <c>SpellCounterMax</c> when the value is positive), and it is the only honest answer for a card
+        /// like Magical Marionette that prints no maximum. Falling back to a number here would invent a cap
+        /// the card does not have and silently freeze its ATK growth once the counters reached it.
+        /// </summary>
+        static int PrintedMax(Match m, int g)
+        {
+            if (m == null || !m.Success) return 0;
+            return int.TryParse(m.Groups[g].Value, out var n) && n > 0 ? n : 0;
+        }
 
         static int Parse(Match m, int g, int fb)
         {

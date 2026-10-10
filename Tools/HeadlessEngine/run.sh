@@ -11,6 +11,10 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if ! command -v dotnet >/dev/null 2>&1; then
   if [[ -x "$HOME/.dotnet/dotnet" ]]; then
     export PATH="$HOME/.dotnet:$PATH"
+  elif [[ -x "/home/greatsaiyadave/Unity/Hub/Editor/6000.5.10f1/Editor/Data/DotNetSdk/dotnet" ]]; then
+    export PATH="/home/greatsaiyadave/Unity/Hub/Editor/6000.5.10f1/Editor/Data/DotNetSdk:$PATH"
+  elif [[ -x "/home/greatsaiyadave/Unity/Hub/Editor/6000.6.3f1/Editor/Data/DotNetSdk/dotnet" ]]; then
+    export PATH="/home/greatsaiyadave/Unity/Hub/Editor/6000.6.3f1/Editor/Data/DotNetSdk:$PATH"
   else
     echo "error: dotnet SDK not found. Install .NET 8 SDK (e.g. https://dot.net/v1/dotnet-install.sh --channel 8.0)." >&2
     exit 127

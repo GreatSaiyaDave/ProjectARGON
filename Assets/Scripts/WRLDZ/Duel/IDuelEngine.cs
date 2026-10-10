@@ -64,6 +64,9 @@ namespace WRLDZ.Duel
         void EndTurn(DuelistState who);
         bool PassResponse();
 
+        /// <summary>Forfeit: <paramref name="who"/> loses through the normal game-over path (once).</summary>
+        bool Concede(DuelistState who, string reason);
+
         DuelistState OpponentOf(DuelistState who);
         void Log(string msg);
     }

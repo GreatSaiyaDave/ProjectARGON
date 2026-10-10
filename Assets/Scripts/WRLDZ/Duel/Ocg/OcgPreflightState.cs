@@ -3,6 +3,7 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using UnityEngine;
+using WRLDZ.Core;
 
 namespace WRLDZ.Duel.Ocg
 {
@@ -77,21 +78,29 @@ namespace WRLDZ.Duel.Ocg
 
             using (var sha = SHA256.Create())
             {
-                void AddFile(string path)
+                void AddBytes(string fileName, byte[] bytes)
                 {
-                    var bytes = File.Exists(path) ? File.ReadAllBytes(path) : Array.Empty<byte>();
-                    var n = Encoding.UTF8.GetBytes(Path.GetFileName(path) + "\n");
+                    var n = Encoding.UTF8.GetBytes(fileName + "\n");
                     sha.TransformBlock(n, 0, n.Length, null, 0);
                     sha.TransformBlock(bytes, 0, bytes.Length, null, 0);
                 }
 
+                // Disk file (the native plugin next to the player).
+                void AddFile(string path) =>
+                    AddBytes(Path.GetFileName(path), File.Exists(path) ? File.ReadAllBytes(path) : Array.Empty<byte>());
+
+                // StreamingAssets file: same name + bytes as before, so existing fingerprints still match.
+                void AddStreaming(string rel) =>
+                    AddBytes(Path.GetFileName(rel),
+                        StreamingFiles.TryReadAllBytes(rel, out var b) ? b : Array.Empty<byte>());
+
                 AddFile(OcgNative.ResolvePluginFile());
-                AddFile(Path.Combine(Application.streamingAssetsPath, "OcgCore", "cards.cdb"));
+                AddStreaming("OcgCore/cards.cdb");
                 var commit = Encoding.UTF8.GetBytes("scriptsCommit=" + ScriptsCommit() + "\n");
                 sha.TransformBlock(commit, 0, commit.Length, null, 0);
-                AddFile(Path.Combine(Application.streamingAssetsPath, "OcgCore", "lab_card_manifest.json"));
-                AddFile(Path.Combine(Application.streamingAssetsPath, "Decks", "ocg_lab_player.json"));
-                AddFile(Path.Combine(Application.streamingAssetsPath, "Decks", "ocg_lab_ai.json"));
+                AddStreaming("OcgCore/lab_card_manifest.json");
+                AddStreaming("Decks/ocg_lab_player.json");
+                AddStreaming("Decks/ocg_lab_ai.json");
                 var ver = Encoding.UTF8.GetBytes("major=" + major + ",minor=" + minor);
                 sha.TransformFinalBlock(ver, 0, ver.Length);
                 var h = sha.Hash;
@@ -103,9 +112,7 @@ namespace WRLDZ.Duel.Ocg
 
         static string ScriptsCommit()
         {
-            var p = Path.Combine(Application.streamingAssetsPath, "OcgCore", "PROVENANCE.json");
-            if (!File.Exists(p)) return "";
-            var json = File.ReadAllText(p);
+            if (!StreamingFiles.TryReadAllText("OcgCore/PROVENANCE.json", out var json)) return "";
             const string key = "\"git\"";
             var i = json.IndexOf(key, StringComparison.Ordinal);
             if (i < 0) return "";

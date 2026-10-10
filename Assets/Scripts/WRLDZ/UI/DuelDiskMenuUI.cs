@@ -4,14 +4,15 @@ using UnityEngine.UI;
 using WRLDZ.Core;
 using WRLDZ.Data;
 using WRLDZ.Presentation;
+using WRLDZ.UI.Eldritch;
 using WRLDZ.UI.Shell;
-// DuelystUi = coordinated CCG chrome
 
 namespace WRLDZ.UI
 {
     /// <summary>
-    /// Hub menu (MainMenu scene) — piano-glass tiles on a Battle City rooftop.
-    /// Duel actions first, then a 2×3 destination grid. MAP returns home.
+    /// Main menu (MainMenu scene) — Eldritch Solid Vision hierarchy (ELDRITCH_CONTRACT §6).
+    /// Identity slate → DUEL hero (Solid Vision disk) → COMMAND 2×2 → VIEW/SET → WORLD MAP | QUIT.
+    /// Boot lands here; WORLD MAP leaves for the Overworld.
     /// </summary>
     public class DuelDiskMenuUI : MonoBehaviour
     {
@@ -21,6 +22,10 @@ namespace WRLDZ.UI
 
         Text _status;
         SpiritDuelerDiskView _hubDisk;
+        RectTransform _root;
+        // Only one popover (DuelChoice / QuitConfirm) lives at a time.
+        GameObject _popoverHost;
+        HieroglyphPanel _popover;
 
         public void Build()
         {
@@ -38,6 +43,8 @@ namespace WRLDZ.UI
             HubPropView.DestroyAll();
         }
 
+        // ── Build ───────────────────────────────────────────────────────────
+
         void BuildVisuals()
         {
             var canvas = WrldzTheme.Canvas("DiskMenuCanvas", 50);
@@ -47,8 +54,19 @@ namespace WRLDZ.UI
             bgImg.preserveAspect = false;
             bgImg.raycastTarget = false;
 
-            var root = WrldzTheme.StretchFill(canvas, "Root", new Color(0.02f, 0.03f, 0.07f, 0.38f));
+            // Animated motes (stars · drifting glyphs · gold dust) float over the painted backdrop.
+            // The atmosphere's opaque sky / sand / veil plates would bury bg_hub, so only the
+            // moving layers stay on; Attach() forces index 0 — move it above the bg sprite.
+            var atmosphere = EgyptianAgesAtmosphere.Attach(canvas, MenuAge.NewKingdom, false);
+            if (atmosphere != null)
+            {
+                atmosphere.transform.SetSiblingIndex(1);
+                EldritchDressing.KeepOnlyStars(atmosphere.transform);
+            }
+
+            var root = WrldzTheme.StretchFill(canvas, "Root", new Color(0.02f, 0.03f, 0.07f, 0.30f));
             root.GetComponent<Image>().raycastTarget = false;
+            _root = root;
 
             var account = AppSession.Ensure().Account;
             account?.EnsureProgress();
@@ -58,114 +76,408 @@ namespace WRLDZ.UI
                 ? KuribohTeamInfo.DisplayName(account.progress.Team)
                 : "Unbound";
 
-            var dusk = WrldzTheme.StretchFill(root, "LowerDusk", new Color(0.02f, 0.03f, 0.08f, 0.42f));
+            var dusk = WrldzTheme.StretchFill(root, "LowerDusk", new Color(0.02f, 0.03f, 0.08f, 0.46f));
             GoTheme.Place(dusk, 0f, 0f, 1f, 0.58f);
             dusk.GetComponent<Image>().raycastTarget = false;
 
-            var header = GoTheme.Sheet(root, "Header", 0.04f, 0.84f, 0.96f, 0.978f);
-            if (header.GetComponent<UnityEngine.UI.RectMask2D>() == null)
-                header.gameObject.AddComponent<UnityEngine.UI.RectMask2D>();
+            // Thin dim hieroglyph rails hugging the screen edges (decorative).
+            var railGlow = new Color(EldritchPalette.Sandstone.r, EldritchPalette.Sandstone.g,
+                EldritchPalette.Sandstone.b, 0.55f);
+            var railL = HieroglyphBorder.Create(root, HieroglyphBorder.Edge.Left, 28f, railGlow, 1.2f);
+            if (railL != null) railL.SetIntensity(0.6f);
+            var railR = HieroglyphBorder.Create(root, HieroglyphBorder.Edge.Right, 28f, railGlow, 1.2f);
+            if (railR != null)
+            {
+                railR.Reverse = true;
+                railR.SetIntensity(0.6f);
+            }
+
+            EldritchDressing.ScreenTentacles(root);
+            BuildIdentity(root, account, who, lvl, team);
+            BuildDiskCap(root);
+
+            HubChrome.SectionCap(root, "SysCap", "COMMAND", EldritchPalette.SolidVisionCyan,
+                0.06f, 0.530f, 0.46f, 0.568f);
+
+            // Tiles host: every interactive plate lives here so one stagger reveals them in order.
+            var tiles = new GameObject("Tiles", typeof(RectTransform)).GetComponent<RectTransform>();
+            tiles.SetParent(root, false);
+            GoTheme.Stretch(tiles);
+
+            BuildHero(tiles);
+
+            // COMMAND 2×2 (lapis / cyan) — icons from ImagineAssets.
+            DestTile(tiles, 0.04f, 0.440f, 0.49f, 0.525f, "DECK", ImagineAssets.IconDeck(), OpenDeckHub);
+            DestTile(tiles, 0.51f, 0.440f, 0.96f, 0.525f, "BAG", ImagineAssets.IconBag(), ShowInventory);
+            DestTile(tiles, 0.04f, 0.345f, 0.49f, 0.430f, "STORY", ImagineAssets.IconStory(), OpenStory);
+            DestTile(tiles, 0.51f, 0.345f, 0.96f, 0.430f, "BAZAAR", ImagineAssets.IconBazaar(), OpenBazaar);
+
+            // Tertiary row (compact).
+            CompactTile(tiles, 0.04f, 0.250f, 0.49f, 0.335f, "VIEW", ImagineAssets.IconView(), OpenFreeView);
+            CompactTile(tiles, 0.51f, 0.250f, 0.96f, 0.335f, "SET", ImagineAssets.IconSettings(), OpenSettings);
+
+            // WORLD MAP | QUIT (QUIT = right 28% of the width).
+            // contract note: "Primary-outline" has no tier of its own; Primary tier carries the gold line.
+            var mapBtn = ArcaneButton.Create(tiles, "WORLD MAP", () =>
+            {
+                FreeUiKit.PlayConfirm();
+                AppSession.Ensure().GoOverworld();
+            }, EldritchTier.Primary, "Return to the Battle City streets",
+                ImagineAssets.IconCompass() ?? WrldzPresentation.SpiritEye() ?? DuelystUi.IconDeck(),
+                24, false, false);
+            mapBtn.name = "MapBack";
+            EldritchDressing.SealFace(mapBtn, SealState.Intact);
+            GoTheme.Place(mapBtn.Rect, 0.04f, 0.135f, 0.66f, 0.235f);
+            HardenLabel(mapBtn.Title, 24, display: true);
+            HardenLabel(mapBtn.Blurb, 14, display: false);
+
+            var quitBtn = ArcaneButton.Create(tiles, "QUIT", OpenQuitConfirm, EldritchTier.Danger,
+                null, null, 24, true, false);
+            quitBtn.name = "Quit";
+            EldritchDressing.SealFace(quitBtn, SealState.Condemned);
+            GoTheme.Place(quitBtn.Rect, 0.68f, 0.135f, 0.96f, 0.235f);
+            HardenLabel(quitBtn.Title, 24, display: true);
+
+            _status = GoTheme.Label(root, "S", "", 14, EldritchPalette.TextMuted, TextAnchor.MiddleCenter, bold: false);
+            WrldzType.Style(_status, 14, display: false, heavyOutline: true);
+            _status.color = EldritchPalette.TextMuted;
+            GoTheme.Place(_status.rectTransform, 0.08f, 0.100f, 0.92f, 0.130f);
+
+            // Ambient dust + rare embers across the whole canvas (canvas-safe pooled Images).
+            var embers = UiEmberField.Attach(canvas, 48, true);
+            if (embers != null)
+                embers.AmbientRate = 1.5f;
+
+            if (Application.isPlaying)
+                MenuMotion.PlayOn(tiles.gameObject, MenuMotion.StaggerChildren(tiles, 0.26f, 0.045f));
+        }
+
+        void BuildIdentity(RectTransform root, LocalAccountStore.Account account, string who, int lvl, string team)
+        {
+            var slate = SolidVisionSlate.Create(root, "Identity", EldritchTier.Tertiary, false, false);
+            var header = slate.Rect;
+            GoTheme.Place(header, 0.04f, 0.905f, 0.96f, 0.985f);
+            if (header.GetComponent<RectMask2D>() == null)
+                header.gameObject.AddComponent<RectMask2D>();
 
             var faceHost = new GameObject("FaceHost", typeof(RectTransform), typeof(Image), typeof(Button));
             faceHost.transform.SetParent(header, false);
-            GoTheme.Place(faceHost.GetComponent<RectTransform>(), 0.03f, 0.08f, 0.22f, 0.92f);
+            GoTheme.Place(faceHost.GetComponent<RectTransform>(), 0.02f, 0.08f, 0.18f, 0.92f);
             var faceImg = faceHost.GetComponent<Image>();
             faceImg.sprite = DuelystUi.OrbRing() ?? DuelystUi.BtnCircle();
             faceImg.color = Color.white;
             faceImg.preserveAspect = true;
+            // The avatar frame is a plain Image, not an Eldritch surface, so it has no shader edge
+            // of its own — it needs the shared hairline. LiftPlate self-skips ArcaneButton and
+            // SolidVisionSlate faces, so this is the one hub plate it still acts on, and routing
+            // it through HubChrome is what hub_overlay_chrome_check.py checks for.
+            HubChrome.LiftPlate(faceImg, EldritchPalette.EdgeFor(EldritchTier.Tertiary));
             var portrait = AvatarPortraitView.CreateFullBodyFill(faceHost.transform, hideBackground: true, badgeCrop: true);
             portrait.Apply(account != null ? account.GetAvatarOrDefault() : AvatarAppearance.Default());
             faceHost.GetComponent<Button>().onClick.AddListener(OpenAvatarMenus);
 
             var look = account != null ? account.GetAvatarOrDefault() : null;
-            var title = GoTheme.Label(header, "Title", who, 28, DuelystUi.GoldHot, TextAnchor.MiddleLeft);
+            var title = GoTheme.Label(header, "Title", who, 28, EldritchPalette.GoldHot, TextAnchor.MiddleLeft);
             WrldzType.StyleGoldTitle(title, 28);
             title.alignment = TextAnchor.MiddleLeft;
-            GoTheme.Place(title.rectTransform, 0.25f, 0.46f, 0.97f, 0.94f);
+            GoTheme.Place(title.rectTransform, 0.20f, 0.46f, 0.82f, 0.94f);
             var sub = GoTheme.Label(header, "Sub",
                 $"Lv{lvl}  ·  {team}  ·  {(look?.title ?? "Spirit Dueler")}", 16,
-                DuelystUi.TextCream, TextAnchor.MiddleLeft, bold: true);
+                EldritchPalette.TextCream, TextAnchor.MiddleLeft, bold: true);
             WrldzType.Style(sub, 16, display: false, heavyOutline: true);
-            sub.color = DuelystUi.TextCream;
+            sub.color = EldritchPalette.TextCream;
             WrldzType.ApplyOutline(sub, heavy: true, buttonContrast: true);
-            GoTheme.Place(sub.rectTransform, 0.25f, 0.08f, 0.97f, 0.48f);
+            GoTheme.Place(sub.rectTransform, 0.20f, 0.08f, 0.82f, 0.48f);
 
-            HubChrome.SectionCap(root, "DuelCap", "DUEL", DuelystUi.GoldHot, 0.06f, 0.795f, 0.40f, 0.838f);
+            // Soul gem at the right end of the slate.
+            var soul = SoulBadgeView.Create(header);
+            GoTheme.Place(soul.GetComponent<RectTransform>(), 0.855f, 0.14f, 0.975f, 0.86f);
+            soul.Bind(account?.progress);
 
-            FeaturedTile(root, 0.04f, 0.555f, 0.49f, 0.790f,
-                "VS AI", "Practice · table · street", ImagineAssets.IconDuel(),
-                OpenPlayerVsAi, gold: true, propStem: null, useDisk: true);
-            FeaturedTile(root, 0.51f, 0.555f, 0.96f, 0.790f,
-                "VS PLAYER", "Scan · shared arena", ImagineAssets.IconVsPvp(),
-                OpenPlayerVsPlayer, gold: false, propStem: "hub_prop_pvp", useDisk: false);
-
-            HubChrome.SectionCap(root, "SysCap", "COMMAND", DuelystUi.Cyan, 0.06f, 0.508f, 0.46f, 0.548f);
-
-            DestTile(root, 0.04f, 0.330f, 0.34f, 0.492f, "DECK", ImagineAssets.IconDeck(),
-                OpenDeckHub, "hub_prop_deckbox");
-            DestTile(root, 0.355f, 0.330f, 0.645f, 0.492f, "BAG", ImagineAssets.IconBag(),
-                ShowInventory, "hub_prop_bag");
-            DestTile(root, 0.66f, 0.330f, 0.96f, 0.492f, "STORY", ImagineAssets.IconStory(),
-                OpenStory, "hub_prop_tome");
-            DestTile(root, 0.04f, 0.160f, 0.34f, 0.322f, "BAZAAR", ImagineAssets.IconBazaar(),
-                OpenBazaar, "hub_prop_bazaar");
-            DestTile(root, 0.355f, 0.160f, 0.645f, 0.322f, "VIEW", ImagineAssets.IconView(),
-                OpenFreeView, "hub_prop_view");
-            DestTile(root, 0.66f, 0.160f, 0.96f, 0.322f, "SET", ImagineAssets.IconSettings(),
-                OpenSettings, "hub_prop_settings");
-
-            _status = GoTheme.Label(root, "S", "", 14, DuelystUi.TextMuted, TextAnchor.MiddleCenter, bold: false);
-            WrldzType.Style(_status, 14, display: false, heavyOutline: true);
-            GoTheme.Place(_status.rectTransform, 0.08f, 0.128f, 0.92f, 0.154f);
-
-            var mapBtn = MenuCommandButton.Create(root, "BATTLE CITY MAP", () =>
-            {
-                FreeUiKit.PlayConfirm();
-                AppSession.Ensure().GoOverworld();
-            }, MenuCommandButton.Kind.Gold, plated: true);
-            mapBtn.name = "MapBack";
-            GoTheme.Place(mapBtn.GetComponent<RectTransform>(), 0.18f, 0.012f, 0.82f, 0.125f);
-            MenuCommandButton.ApplyHubType(mapBtn, 20, DuelystUi.GoldHot, displayTitle: true);
-            var mapTitle = mapBtn.transform.Find("Title") as RectTransform;
-            if (mapTitle != null)
-                GoTheme.Place(mapTitle, 0.28f, 0.12f, 0.94f, 0.88f);
-            HubChrome.LiftPlate(mapBtn.GetComponent<Image>(), DuelystUi.Gold);
-            MenuHoloPulse.Attach(mapBtn.gameObject, scan: true, breathe: false, phase: 0.4f);
-
-            var compass = HubPropView.CreateInUi(mapBtn.transform, "hub_prop_compass",
-                0.04f, 0.10f, 0.26f, 0.90f, DuelystUi.GoldHot, HubPropView.DestRt);
-            if (compass == null)
-            {
-                var ico = new GameObject("Ico", typeof(RectTransform), typeof(Image));
-                ico.transform.SetParent(mapBtn.transform, false);
-                GoTheme.Place(ico.GetComponent<RectTransform>(), 0.04f, 0.12f, 0.26f, 0.88f);
-                var img = ico.GetComponent<Image>();
-                img.sprite = ImagineAssets.IconCompass() ?? WrldzPresentation.SpiritEye() ?? DuelystUi.IconDeck();
-                img.preserveAspect = true;
-                img.raycastTarget = false;
-            }
+            slate.PlayOpen();
         }
 
-        void FeaturedTile(Transform parent, float x0, float y0, float x1, float y1,
-            string title, string blurb, Sprite icon, Action onClick, bool gold,
-            string propStem, bool useDisk)
+        void BuildDiskCap(RectTransform root)
         {
-            var btn = HubChrome.MountFeatured(parent, title, blurb, useDisk ? null : icon, onClick, gold,
-                useDisk ? null : propStem);
-            GoTheme.Place(btn.GetComponent<RectTransform>(), x0, y0, x1, y1);
-            if (!useDisk) return;
-            _hubDisk = SpiritDuelerDiskView.CreateInUi(btn.transform,
+            var cap = new GameObject("DiskCap", typeof(RectTransform)).GetComponent<RectTransform>();
+            cap.SetParent(root, false);
+            GoTheme.Place(cap, 0.04f, 0.862f, 0.96f, 0.900f);
+
+            var label = GoTheme.Label(cap, "Cap", "DUEL DISK · SOLID VISION", 16, EldritchPalette.MillenniumGold,
+                TextAnchor.MiddleLeft);
+            WrldzType.Style(label, 16, display: true, heavyOutline: true);
+            label.color = EldritchPalette.MillenniumGold;
+            WrldzType.ApplyOutline(label, heavy: true, buttonContrast: true);
+            GoTheme.Place(label.rectTransform, 0.02f, 0f, 0.56f, 1f);
+
+            // Glyph strip runs the remainder of the cap width.
+            var strip = new GameObject("GlyphStrip", typeof(RectTransform)).GetComponent<RectTransform>();
+            strip.SetParent(cap, false);
+            GoTheme.Place(strip, 0.58f, 0.10f, 1f, 0.90f);
+            HieroglyphBorder.Create(strip, HieroglyphBorder.Edge.Top, 40f, EldritchPalette.MillenniumGold, 3f);
+        }
+
+        void BuildHero(RectTransform tiles)
+        {
+            var hero = ArcaneButton.Create(tiles, "DUEL", OpenDuelChoice, EldritchTier.Primary,
+                "Summon the Solid Vision", null, 34, false, true);
+            hero.name = "Hero";
+            EldritchDressing.SealFace(hero, SealState.Intact);
+            GoTheme.Place(hero.Rect, 0.04f, 0.575f, 0.96f, 0.855f);
+
+            // The hero is the one true Solid Vision slate: thin enough for the sealed pyramid in
+            // bg_hub to ghost through it; labels keep the heavy outline for legibility.
+            if (hero.Mat != null)
+            {
+                if (hero.Mat.HasProperty(EldritchMaterials.FillColorAId))
+                {
+                    var a = hero.Mat.GetColor(EldritchMaterials.FillColorAId);
+                    a.a = 0.56f;
+                    hero.Mat.SetColor(EldritchMaterials.FillColorAId, a);
+                }
+
+                if (hero.Mat.HasProperty(EldritchMaterials.FillColorBId))
+                {
+                    var b = hero.Mat.GetColor(EldritchMaterials.FillColorBId);
+                    b.a = 0.74f;
+                    hero.Mat.SetColor(EldritchMaterials.FillColorBId, b);
+                }
+            }
+
+            // Copy on the left 58%; the disk showcase owns the right 38%.
+            if (hero.Title != null)
+            {
+                GoTheme.Place(hero.Title.rectTransform, 0.06f, 0.50f, 0.58f, 0.90f);
+                hero.Title.alignment = TextAnchor.MiddleLeft;
+                HardenLabel(hero.Title, 34, display: true);
+            }
+
+            if (hero.Blurb != null)
+            {
+                GoTheme.Place(hero.Blurb.rectTransform, 0.06f, 0.14f, 0.58f, 0.50f);
+                hero.Blurb.alignment = TextAnchor.UpperLeft;
+                HardenLabel(hero.Blurb, 16, display: false);
+            }
+
+            // Arcane summoning ring behind the disk — slow spin in play mode, static in edit mode.
+            var ringSpr = EldritchAssets.RuneRing();
+            if (ringSpr != null)
+            {
+                var ring = new GameObject("SummonRing", typeof(RectTransform), typeof(Image), typeof(RuneRingSpin));
+                ring.transform.SetParent(hero.transform, false);
+                GoTheme.Place(ring.GetComponent<RectTransform>(), 0.60f, 0.06f, 0.98f, 0.94f);
+                var rimg = ring.GetComponent<Image>();
+                rimg.sprite = ringSpr;
+                rimg.preserveAspect = true;
+                rimg.raycastTarget = false;
+                rimg.color = new Color(EldritchPalette.MillenniumGold.r, EldritchPalette.MillenniumGold.g,
+                    EldritchPalette.MillenniumGold.b, 0.30f);
+            }
+
+            _hubDisk = SpiritDuelerDiskView.CreateInUi(hero.transform,
                 SpiritDuelerDiskView.PoseMode.HubShowcase,
-                0.62f, 0.08f, 0.97f, 0.92f, DuelystUi.GoldHot,
+                0.60f, 0.06f, 0.98f, 0.94f, EldritchPalette.MillenniumGold,
                 HubPropView.EnsureWorldRoot(), false);
         }
 
-        void DestTile(Transform parent, float x0, float y0, float x1, float y1,
-            string title, Sprite icon, Action onClick, string propStem)
+        /// <summary>Slow clockwise spin + breathing alpha for the hero summoning ring (unscaled, play mode only).</summary>
+        sealed class RuneRingSpin : MonoBehaviour
         {
-            var btn = HubChrome.MountDest(parent, title, icon, onClick, propStem);
-            GoTheme.Place(btn.GetComponent<RectTransform>(), x0, y0, x1, y1);
+            Image _img;
+            float _t;
+
+            void Update()
+            {
+                if (!Application.isPlaying) return;
+                _t += Time.unscaledDeltaTime;
+                transform.Rotate(0f, 0f, -7f * Time.unscaledDeltaTime);
+                if (_img == null) _img = GetComponent<Image>();
+                if (_img == null) return;
+                var c = _img.color;
+                c.a = 0.22f + 0.12f * (0.5f + 0.5f * Mathf.Sin(_t * 1.3f));
+                _img.color = c;
+            }
         }
+
+        void DestTile(Transform parent, float x0, float y0, float x1, float y1,
+            string title, Sprite icon, Action onClick)
+        {
+            var btn = ArcaneButton.Create(parent, title, onClick, EldritchTier.Secondary,
+                null, icon, 22, false, false);
+            btn.name = "Dest_" + title;
+            GoTheme.Place(btn.Rect, x0, y0, x1, y1);
+            HardenLabel(btn.Title, 22, display: true);
+            EldritchDressing.CarveFace(btn, glyphAlpha: 0.85f);
+            EldritchDressing.SealFace(btn, SealState.Fractured);
+        }
+
+        void CompactTile(Transform parent, float x0, float y0, float x1, float y1,
+            string title, Sprite icon, Action onClick)
+        {
+            var btn = ArcaneButton.Create(parent, title, onClick, EldritchTier.Tertiary,
+                null, icon, 20, false, false);
+            btn.name = "Tert_" + title;
+            GoTheme.Place(btn.Rect, x0, y0, x1, y1);
+            HardenLabel(btn.Title, 20, display: true);
+            EldritchDressing.CarveFace(btn, glyphAlpha: 0.5f);
+            EldritchDressing.SealFace(btn, SealState.Sealed);
+        }
+
+        /// <summary>Outdoor readability on busy plates: white ink + thick black outline, tier color preserved for display titles.</summary>
+        static void HardenLabel(Text t, int designSize, bool display)
+        {
+            if (t == null) return;
+            var keep = t.color;
+            WrldzType.StyleButtonLabel(t, designSize, display);
+            // Display titles keep the tier's ink (gold / cream); body copy stays pure white.
+            if (display) t.color = keep;
+        }
+
+        // ── Popovers ────────────────────────────────────────────────────────
+
+        void OpenDuelChoice()
+        {
+            FreeUiKit.PlaySelect();
+            var panel = OpenPopover("DuelChoice", EldritchTier.Primary, "CHOOSE YOUR DUEL", 0.30f, 0.80f);
+            if (panel == null) return;
+            var body = panel.Body;
+
+            var ai = ArcaneButton.Create(body, "VS AI", () =>
+            {
+                ClosePopover();
+                OpenPlayerVsAi();
+            }, EldritchTier.Primary, "Practice · table · street", ImagineAssets.IconDuel(), 24, false, false);
+            GoTheme.Place(ai.Rect, 0.04f, 0.70f, 0.96f, 0.94f);
+            HardenLabel(ai.Title, 24, display: true);
+            HardenLabel(ai.Blurb, 14, display: false);
+
+            var pvp = ArcaneButton.Create(body, "VS PLAYER", () =>
+            {
+                ClosePopover();
+                OpenPlayerVsPlayer();
+            }, EldritchTier.Secondary, "Scan · shared arena", ImagineAssets.IconVsPvp(), 24, false, false);
+            GoTheme.Place(pvp.Rect, 0.04f, 0.42f, 0.96f, 0.66f);
+            HardenLabel(pvp.Title, 24, display: true);
+            HardenLabel(pvp.Blurb, 14, display: false);
+
+            var zone = ArcaneButton.Create(body, "ZONE MODE", () =>
+            {
+                FreeUiKit.PlayConfirm();
+                ClosePopover();
+                ZoneModeSession.EnterFromHub(transform);
+            }, EldritchTier.Eldritch, "Your Duel Disk at your location", ImagineAssets.IconCompass(), 24, false, false);
+            GoTheme.Place(zone.Rect, 0.04f, 0.14f, 0.96f, 0.38f);
+            HardenLabel(zone.Title, 24, display: true);
+            HardenLabel(zone.Blurb, 14, display: false);
+
+            var close = ArcaneButton.Create(body, "CLOSE", ClosePopover, EldritchTier.Tertiary,
+                null, null, 18, true, false);
+            GoTheme.Place(close.Rect, 0.30f, 0.00f, 0.70f, 0.10f);
+            HardenLabel(close.Title, 18, display: true);
+
+            panel.Open();
+        }
+
+        void OpenQuitConfirm()
+        {
+            FreeUiKit.PlaySelect();
+            var panel = OpenPopover("QuitConfirm", EldritchTier.Danger, "LEAVE THE SHADOW REALM?", 0.38f, 0.62f);
+            if (panel == null) return;
+            var body = panel.Body;
+
+            var copy = GoTheme.Label(body, "Copy",
+                "Your progress is saved. The Duel Disk powers down and you return to the gate.",
+                16, EldritchPalette.TextCream, TextAnchor.MiddleCenter, bold: true);
+            WrldzType.Style(copy, 16, display: false, heavyOutline: true);
+            copy.color = EldritchPalette.TextCream;
+            copy.horizontalOverflow = HorizontalWrapMode.Wrap;
+            GoTheme.Place(copy.rectTransform, 0.06f, 0.52f, 0.94f, 0.96f);
+
+            var quit = ArcaneButton.Create(body, "QUIT", () =>
+            {
+                FreeUiKit.PlayConfirm();
+                ClosePopover();
+                var s = AppSession.Ensure();
+                s.Logout();
+                s.GoBoot();
+            }, EldritchTier.Danger, null, null, 24, true, false);
+            GoTheme.Place(quit.Rect, 0.06f, 0.06f, 0.48f, 0.46f);
+            HardenLabel(quit.Title, 24, display: true);
+
+            var stay = ArcaneButton.Create(body, "STAY", ClosePopover, EldritchTier.Tertiary,
+                null, null, 24, true, false);
+            GoTheme.Place(stay.Rect, 0.52f, 0.06f, 0.94f, 0.46f);
+            HardenLabel(stay.Title, 24, display: true);
+
+            panel.Open();
+        }
+
+        /// <summary>Dim + HieroglyphPanel over Root; replaces any live popover.</summary>
+        HieroglyphPanel OpenPopover(string name, EldritchTier tier, string title, float y0, float y1)
+        {
+            if (_root == null) return null;
+            if (_popoverHost != null) DestroyPopoverNow();
+
+            var host = new GameObject("Popover_" + name, typeof(RectTransform));
+            host.transform.SetParent(_root, false);
+            GoTheme.Stretch(host.GetComponent<RectTransform>());
+            _popoverHost = host;
+
+            HubChrome.OverlayDim(host.transform, ClosePopover);
+
+            var panel = HieroglyphPanel.Create(host.transform, name, tier, title, true, true);
+            if (panel == null)
+            {
+                DestroyPopoverNow();
+                return null;
+            }
+
+            GoTheme.Place(panel.Root, 0.06f, y0, 0.94f, y1);
+            _popover = panel;
+            return panel;
+        }
+
+        void ClosePopover()
+        {
+            if (_popoverHost == null) return;
+            var host = _popoverHost;
+            var panel = _popover;
+            _popoverHost = null;
+            _popover = null;
+
+            if (!Application.isPlaying || panel == null)
+            {
+                if (Application.isPlaying) Destroy(host);
+                else DestroyImmediate(host);
+                return;
+            }
+
+            // Dim drops out while the slate sheets away; the host follows once the panel is gone.
+            var dim = host.transform.Find("Dim");
+            if (dim != null)
+            {
+                var dimImg = dim.GetComponent<Image>();
+                if (dimImg != null) dimImg.raycastTarget = false;
+                MenuMotion.PlayOn(dim.gameObject, MenuMotion.Fade(MenuMotion.EnsureGroup(dim.gameObject), 1f, 0f, 0.18f));
+            }
+
+            panel.Close(() =>
+            {
+                if (host != null) Destroy(host);
+            });
+        }
+
+        void DestroyPopoverNow()
+        {
+            var host = _popoverHost;
+            _popoverHost = null;
+            _popover = null;
+            if (host == null) return;
+            if (Application.isPlaying) Destroy(host);
+            else DestroyImmediate(host);
+        }
+
+        // ── Navigation ──────────────────────────────────────────────────────
 
         /// <summary>Hub primary: Player vs AI create → START → AR DuelSlice.</summary>
         void OpenPlayerVsAi() => OpenHubOverlay(MenuId.ArDuelCreate);

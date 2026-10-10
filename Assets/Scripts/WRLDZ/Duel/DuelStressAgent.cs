@@ -76,11 +76,12 @@ namespace WRLDZ.Duel
             DrainWindows(engine);
             if (engine.GameOver || engine.TurnPlayer != me) return;
 
-            // Battle
+            // Battle. CanAttack is false until Phase==Battle, so gate like SimpleAi
+            // on face-up Attack-position monsters, then enter BP.
             if (engine.Phase == DuelPhase.Main1 && engine.CanConductBattlePhase)
             {
                 var canAtk = me.MonstersOnField()
-                    .Any(m => m.FaceUp && m.Position == BattlePosition.Attack && engine.CanAttack(me, m));
+                    .Any(m => m.FaceUp && m.Position == BattlePosition.Attack);
                 if (canAtk)
                 {
                     engine.TryEnterBattlePhase(me);
@@ -172,9 +173,12 @@ namespace WRLDZ.Duel
                 if (!me.NormalSummonUsed)
                 {
                     var summonable = me.Hand.Where(c => engine.CanNormalSummonOrSet(me, c)).ToList();
-                    var freeAtk = summonable.Where(c => c.Level <= 4 && !IsFlip(c))
+                    // Kiseitai-style "attacked while face-down" monsters are Set like Flip monsters (SpiritsAndMisc).
+                    var freeAtk = summonable.Where(c => c.Level <= 4 && !IsFlip(c) &&
+                                                        !TextEffects.SpiritsAndMiscRuntime.AiSetsFaceDown(c))
                         .OrderByDescending(c => c.CurrentAtk).ToList();
-                    var freeFlip = summonable.Where(c => c.Level <= 4 && IsFlip(c))
+                    var freeFlip = summonable.Where(c => c.Level <= 4 &&
+                                                         (IsFlip(c) || TextEffects.SpiritsAndMiscRuntime.AiSetsFaceDown(c)))
                         .OrderByDescending(c => c.CurrentDef).ToList();
                     var tribute = summonable.Where(c => c.Level >= 5)
                         .OrderByDescending(c => c.CurrentAtk).ToList();
@@ -258,6 +262,9 @@ namespace WRLDZ.Duel
                 if (attacker == null) break;
 
                 var target = ChooseTarget(opp, attacker);
+                // SpiritMonsters batch: Inaba White Rabbit attacks directly only; Asura Priest each monster once.
+                if (target != null && TextEffects.SpiritMonstersRuntime.ForbidsAttackTarget(engine, attacker, target))
+                    target = null;
                 if (target == null && opp.MonsterCount > 0 && !engine.CanAttackDirectly(me, attacker))
                     break; // no beneficial attack
 
@@ -360,7 +367,8 @@ namespace WRLDZ.Duel
             if (p.TargetKind == EffectTargetKind.MonsterInYourDeckAtkLeq ||
                 p.TargetKind == EffectTargetKind.FieldSpellInYourDeck ||
                 p.TargetKind == EffectTargetKind.EquipSpellInYourDeck ||
-                p.TargetKind == EffectTargetKind.MonsterInYourDeckFiltered)
+                p.TargetKind == EffectTargetKind.MonsterInYourDeckFiltered ||
+                p.TargetKind == EffectTargetKind.MonsterInYourDeckToSummon)
                 t = p.LegalTargets
                     .OrderBy(x => x.Def != null ? x.Def.atk : 9999)
                     .ThenBy(x => x.Name)

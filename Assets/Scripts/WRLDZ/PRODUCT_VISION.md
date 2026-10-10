@@ -2,8 +2,10 @@
 
 **Canon sources:** Blueprint v1.1 (design bible) + this file (implementation implications made explicit).  
 **Genre:** Free-to-play **AR lenses-first** duel MMO — **Yu-Gi-GO next gen** (Niantic loop + spatial YGO).  
-**Presentation:** Product **north star = AR lenses**; **lab/demo device = Galaxy S23 Ultra + PC** (no headset yet).  
-**Near target:** Playable **phone AR demo on S23 in ~30 days** — architecture stays OpenXR-ready — see `LENSES_FIRST_ROADMAP.md`.
+**Presentation:** **Shipping target = Android XR glasses** (Unity / OpenXR APK) — owner decision 2026-09-23.
+**Dev testbed:** Galaxy S23 Ultra + PC. The S23 is a test device only: every Android APK constraint applies
+(StreamingAssets inside the APK, read through `Core/StreamingFiles`; mobile quality level; APK size), and new
+features are **not** designed phone-first. See `LENSES_FIRST_ROADMAP.md`.
 
 ---
 
@@ -134,9 +136,9 @@ IMenuSurface
   ├── NonArView   // phone portrait canvas (default)
   └── ArView      // same intents, AR presentation
 
-IArBackend
-  ├── LensBackend     // primary target (Spectacles / XR glasses / etc.)
-  └── PhoneCameraBackend  // full feature parity via phone AR
+IArBackend   // DESIGN ONLY — no such interface in code yet (see status table)
+  ├── LensBackend     // primary target: Android XR glasses (today: ArLensesSession, OpenXR)
+  └── PhoneCameraBackend  // dev testbed (today: ArFoundationSession, ARCore)
 ```
 
 - **One feature flag / session mode:** `PresentationMode = NonAr | Ar`  
@@ -238,7 +240,7 @@ Keep **rules**, **inventory**, and **match state** outside AR backends. AR only 
 |-------|--------|
 | Card DB + art pipeline | ✅ |
 | TCG-structure duel + AI | ✅ vertical slice + hotseat PvP |
-| Portrait home + duel UI (GBA-inspired non-AR) | ✅ |
+| Portrait home + duel UI (GBA-inspired non-AR) | ⚠️ home ✅; the 2D non-AR duel board is dead code (QC M3). "Digital" duels render the AR stage in a RawImage. Whether a 2D board is still wanted is an open owner decision |
 | Master AI / Mr. Referobot companion path | ✅ training + phone PWA slice |
 | Overworld map / GPS / tears | ✅ `OverworldUI` + `MapEnvironment` |
 | Encounter → AR entry prompt | ✅ `ZoneModePrompt` (ENTER AR / DIGITAL / Cancel) |
@@ -246,7 +248,7 @@ Keep **rules**, **inventory**, and **match state** outside AR backends. AR only 
 | Real-world **duel arena** shell | ✅ dual disks + midfield art (`ArDuelSpace`) |
 | Life-size AR assets pipeline | ❌ (enlarged card art now; 3D models later) |
 | AR menu variants | ⚠️ partial (disk/arena spatial; full dual chrome later) |
-| `IArBackend` (Lens + PhoneCamera) | ✅ Phone = ARCore 6DOF (`ArFoundationSession`); lenses = OpenXR; webcam is fallback only |
+| AR backends (no `IArBackend` interface exists) | ⚠️ concrete sessions picked by `ArPresentationTarget`: phone = ARCore 6DOF (`ArFoundationSession`), lenses / Android XR = OpenXR (`ArLensesSession`), webcam fallback only. No shared backend interface yet |
 | Multiplayer / events / raids | ❌ (hotseat PvP only) |
 
 ---
@@ -270,7 +272,7 @@ Keep **rules**, **inventory**, and **match state** outside AR backends. AR only 
 2. Overworld map shell + tear / **arena** pins  
 3. **Encounter proximity → AR entry prompt** UI beat  
 4. `PresentationMode` + stub dual menu for home  
-5. `IArBackend` PhoneCamera first → Lens adapter  
+5. AR backend seam (today: `ArPresentationTarget` + `ArFoundationSession` / `ArLensesSession`; no `IArBackend` interface yet)  
 6. **Arena v0:** ground plane field + dual disks in AR  
 7. **Life-size v0:** one spirit / one monster at human scale in arena → start duel  
 8. Multiplayer / events on the same arena shell  

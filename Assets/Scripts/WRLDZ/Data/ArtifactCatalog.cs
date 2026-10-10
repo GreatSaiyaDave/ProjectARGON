@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using WRLDZ.Core;
 
 namespace WRLDZ.Data
 {
@@ -22,10 +23,9 @@ namespace WRLDZ.Data
         public static ArtifactCatalogFile Load()
         {
             if (_cached != null) return _cached;
-            var path = Path.Combine(Application.streamingAssetsPath, RelativePath);
-            if (!File.Exists(path))
+            if (!StreamingFiles.TryReadAllText(RelativePath, out var json))
             {
-                Debug.LogWarning("[WRLDZ Artifacts] Missing " + path);
+                Debug.LogWarning("[WRLDZ Artifacts] Missing " + StreamingFiles.FullPathForLog(RelativePath));
                 _cached = new ArtifactCatalogFile { defs = Array.Empty<ArtifactDef>() };
                 Index();
                 return _cached;
@@ -33,7 +33,7 @@ namespace WRLDZ.Data
 
             try
             {
-                _cached = JsonUtility.FromJson<ArtifactCatalogFile>(File.ReadAllText(path))
+                _cached = JsonUtility.FromJson<ArtifactCatalogFile>(json)
                           ?? new ArtifactCatalogFile();
             }
             catch (Exception ex)

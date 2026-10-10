@@ -9,7 +9,7 @@ namespace WRLDZ.Presentation.ArInteraction
     /// Fixes Editor/S23 testing where Update-only mouse polling misses overlay UI focus.
     /// </summary>
     public class ArViewportInput : MonoBehaviour, IPointerDownHandler, IDragHandler, IPointerUpHandler,
-        IPointerExitHandler
+        IPointerExitHandler, IPointerMoveHandler
     {
         public ArCardDragSystem Drag;
         public Camera StageCamera;
@@ -20,8 +20,7 @@ namespace WRLDZ.Presentation.ArInteraction
         {
             if (raw == null || drag == null) return null;
             raw.raycastTarget = true;
-            var bridge = raw.gameObject.GetComponent<ArViewportInput>()
-                         ?? raw.gameObject.AddComponent<ArViewportInput>();
+            var bridge = ArObjectUtil.GetOrAdd<ArViewportInput>(raw.gameObject);
             bridge.Drag = drag;
             bridge.StageCamera = stageCam;
             bridge.ViewportRect = raw.rectTransform;
@@ -57,9 +56,16 @@ namespace WRLDZ.Presentation.ArInteraction
             FreeLook?.OnPointerUp();
         }
 
+        /// <summary>Unpressed pointer motion (mouse): the hand card under it peeks up.</summary>
+        public void OnPointerMove(PointerEventData e)
+        {
+            Drag?.HoverFromScreen(e.position);
+        }
+
         public void OnPointerExit(PointerEventData e)
         {
             // Don't cancel mid-drag when slightly leaving — EndFromScreen handles release
+            Drag?.ClearHover();
         }
     }
 }

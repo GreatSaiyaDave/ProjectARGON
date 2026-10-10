@@ -36,6 +36,14 @@ namespace WRLDZ.Presentation
     {
         public float SpinSpeed = 8f;
         public float HoverAmp = 0.028f;
+        /// <summary>The Battle City activation (SpiritDuelerMechanics): extend · sweep and meet · slide to the lock, with
+        /// the reference's pauses. PreDuelCinematic and the rig's deploy routine wait on this.</summary>
+        public const float DeploySeconds = 2.4f;
+        /// <summary>
+        /// The kit parts carry the deploy / retract (<see cref="ArInteraction.SpiritDuelerMechanics"/>): BladePivot
+        /// stays in the play pose and only jolts on impacts, instead of the whole disk tilting and shrinking.
+        /// </summary>
+        public bool Mechanical;
         public Color Accent = new(0.25f, 0.9f, 1f, 1f);
 
         float _eventT;
@@ -47,10 +55,25 @@ namespace WRLDZ.Presentation
         float _scalePunch = 1f;
         /// <summary>0 = fully retracted (compact wrist) · 1 = fully deployed field.</summary>
         float _bladeOpen;
+        /// <summary>Blade open amount when the current BladeDeploy started (deploy resumes from here).</summary>
+        float _bladeFrom;
+        /// <summary>Tray position when the current BladeDeploy started (an already-open tray never re-locks).</summary>
+        float _trayFrom;
         Vector3 _baseLocalPos;
         bool _baseCaptured;
         /// <summary>True while a duel is live — idle keeps blade open; false keeps retracted.</summary>
         bool _duelActive;
+        float _mech;
+        /// <summary>Where the mechanism is heading (0 standby, 1 locked) and how long a full travel takes. The
+        /// mechanism advances toward its target every tick whatever event is playing, so a pulse fired while a
+        /// deploy is running (the cinematic's LP power-on HoloProject landed at 95 % of the travel, after the rig's
+        /// 0.28 s skin fade had pushed the start back) can no longer freeze the plate short of the lock.</summary>
+        float _mechTarget;
+        float _mechSeconds = DeploySeconds;
+        /// <summary>While true, the standby hub/plate emission drops to near-zero so the
+        /// coin/die hologram reads clean (PreDuelCinematic.DecideFirstTurn). Cleared by
+        /// BladeDeploy, SnapDeployed and SnapRetracted.</summary>
+        bool _standbyGlowSuppressed;
 
         // Deployed pose targets (Battle City arm disk)
         public static readonly Quaternion BladeDeployedRot = Quaternion.identity;
@@ -62,10 +85,21 @@ namespace WRLDZ.Presentation
         public float Charge01 => _charge01;
         public float ScalePunch => _scalePunch;
         public float BladeOpen => _bladeOpen;
+        /// <summary>
+        /// Deploy progress of the mechanism, 0 standby .. 1 play (linear in time; the mechanics shape it). Only
+        /// BladeDeploy, BladeRetract and the snaps move it: the event pulses that dip <see cref="BladeOpen"/>
+        /// never fold the blades.
+        /// </summary>
+        public float MechOpen => _mech;
         public bool DuelActive => _duelActive;
         public DiskFxEvent Current => _evt;
         /// <summary>0–1 ring burst for deploy/summon energy sweep.</summary>
         public float EnergyPulse { get; private set; }
+        /// <summary>
+        /// 0 = graveyard locked over the deck (standby). 1 = tray slid out.
+        /// The anime unlocks the tray after the plate has started to unfold.
+        /// </summary>
+        public float GraveyardTray { get; private set; }
 
         public void Play(DiskFxEvent evt, float duration = -1f)
         {
@@ -77,11 +111,21 @@ namespace WRLDZ.Presentation
             if (evt == DiskFxEvent.BladeDeploy)
             {
                 _duelActive = true;
-                // Animate from current open amount (usually 0) → 1
+                _standbyGlowSuppressed = false;
+                // Animate from the current open amount (usually 0) → 1. Re-triggering on an open plate is an
+                // energy pulse only: the plate must not snap shut and re-unfold (PreDuel shuffle beat, QC M1).
+                _bladeFrom = Mathf.Clamp01(_bladeOpen);
+                _trayFrom = GraveyardTray;
+                _mechTarget = 1f;
+                _mechSeconds = _eventDuration;
             }
 
             if (evt == DiskFxEvent.BladeRetract)
+            {
                 _duelActive = false;
+                _mechTarget = 0f;
+                _mechSeconds = _eventDuration;
+            }
         }
 
         /// <summary>Mark duel live without a full deploy anim (already open).</summary>
@@ -92,11 +136,18 @@ namespace WRLDZ.Presentation
                 _bladeOpen = Mathf.Min(_bladeOpen, 0.05f);
         }
 
+        /// <summary>Dim the standby hub/plate glow (coin/dice beat); false restores it.</summary>
+        public void SuppressStandbyGlow(bool suppress) => _standbyGlowSuppressed = suppress;
+
         /// <summary>Snap instantly to retracted (pre-duel / overworld arm).</summary>
         public void SnapRetracted()
         {
             _duelActive = false;
+            _standbyGlowSuppressed = false;
             _bladeOpen = 0f;
+            _mech = 0f;
+            _mechTarget = 0f;
+            GraveyardTray = 0f;
             _evt = DiskFxEvent.Idle;
             _emissionBoost = 0.15f;
             EnergyPulse = 0f;
@@ -115,7 +166,11 @@ namespace WRLDZ.Presentation
         public void SnapDeployed()
         {
             _duelActive = true;
+            _standbyGlowSuppressed = false;
             _bladeOpen = 1f;
+            _mech = 1f;
+            _mechTarget = 1f;
+            GraveyardTray = 1f;
             _evt = DiskFxEvent.Idle;
             _emissionBoost = 0.55f;
         }
@@ -141,11 +196,15 @@ namespace WRLDZ.Presentation
 
             _eventT += dt;
             var u = _eventDuration <= 0.001f ? 1f : Mathf.Clamp01(_eventT / _eventDuration);
+            // the mechanism runs at its own constant speed toward its target, independent of the event pulses
+            _mech = Mathf.MoveTowards(_mech, _mechTarget, dt / Mathf.Max(0.05f, _mechSeconds));
 
             var spin = SpinSpeed * (_duelActive ? 1f : 0.12f);
             _emissionBoost = _duelActive
                 ? 0.45f + 0.1f * Mathf.Sin(Time.time * 3f)
-                : 0.12f + 0.04f * Mathf.Sin(Time.time * 1.5f);
+                : _standbyGlowSuppressed
+                    ? 0.02f
+                    : 0.12f + 0.04f * Mathf.Sin(Time.time * 1.5f);
             _shake = 0f;
             _scalePunch = Mathf.Lerp(_scalePunch, 1f, dt * 6f);
             EnergyPulse = Mathf.Lerp(EnergyPulse, 0f, dt * 2.5f);
@@ -162,9 +221,10 @@ namespace WRLDZ.Presentation
                     break;
 
                 case DiskFxEvent.BladeDeploy:
-                    // Snap open like a Battle City disk arm (Yugi's disk deploy)
+                    // Version 2 standby → duel: plate unfolds, then the graveyard
+                    // tray unlocks. Lights sweep the hub for the whole travel.
                     spin = SpinSpeed * (1.5f + 10f * (1f - u));
-                    _bladeOpen = Mathf.SmoothStep(0f, 1f, u);
+                    _bladeOpen = Mathf.Lerp(_bladeFrom, 1f, Mathf.SmoothStep(0f, 1f, u));
                     _emissionBoost = 0.5f + 3.2f * Mathf.Sin(u * Mathf.PI);
                     _scalePunch = 1f + 0.22f * Mathf.Sin(u * Mathf.PI);
                     EnergyPulse = Mathf.Sin(u * Mathf.PI);
@@ -172,6 +232,7 @@ namespace WRLDZ.Presentation
                     if (u >= 1f)
                     {
                         _bladeOpen = 1f;
+                        _mech = 1f;
                         _duelActive = true;
                         _evt = DiskFxEvent.Idle;
                     }
@@ -188,6 +249,7 @@ namespace WRLDZ.Presentation
                     if (u >= 1f)
                     {
                         _bladeOpen = 0f;
+                        _mech = 0f;
                         _duelActive = false;
                         _evt = DiskFxEvent.Idle;
                     }
@@ -253,9 +315,14 @@ namespace WRLDZ.Presentation
                     break;
 
                 case DiskFxEvent.LegalZonePulse:
-                    _emissionBoost = 0.55f + 0.9f * (0.5f + 0.5f * Mathf.Sin(Time.time * 9f));
-                    _bladeOpen = Mathf.Max(_bladeOpen, 0.7f + 0.15f * Mathf.Sin(Time.time * 6f));
-                    EnergyPulse = 0.35f + 0.25f * Mathf.Sin(Time.time * 8f);
+                    // One soft breath (drag start / hand shuffle), not a strobe, and the plate holds still so the
+                    // lit zones are easy to hit. Mid-duel it hands back to Idle; the pre-duel shuffle keeps the
+                    // blade held open until BladeDeploy takes over, as before.
+                    var breathe = Mathf.Sin(u * Mathf.PI);
+                    _emissionBoost = 0.45f + 0.35f * breathe;
+                    _bladeOpen = Mathf.Max(_bladeOpen, 0.75f);
+                    EnergyPulse = Mathf.Max(EnergyPulse, 0.3f * breathe);
+                    if (u >= 1f && _duelActive) _evt = DiskFxEvent.Idle;
                     break;
             }
 
@@ -270,6 +337,19 @@ namespace WRLDZ.Presentation
                 // Only tiny hover / hit-shake.
                 diskRoot.localPosition = basePos + new Vector3(sx * 0.35f, hover * 0.5f, sz * 0.35f);
             }
+
+            // Graveyard stays locked over the deck until the plate is well into the unfold.
+            var trayTarget = 0f;
+            if (_evt == DiskFxEvent.BladeDeploy)
+            {
+                var trayU = Mathf.InverseLerp(0.38f, 1f, u);
+                trayTarget = trayU <= 0f ? 0f : trayU * trayU * (3f - 2f * trayU);
+                // A re-deploy on an already-unlocked tray keeps it out (never retract toward 0 mid-duel).
+                trayTarget = Mathf.Max(trayTarget, _trayFrom);
+            }
+            else if (_duelActive && _bladeOpen > 0.72f)
+                trayTarget = 1f;
+            GraveyardTray = Mathf.MoveTowards(GraveyardTray, trayTarget, dt * 2.4f);
 
             // Blade pivot + zones — real retract/deploy
             ApplyBladeHierarchy(bladePivot, zonesRoot, energyRing, dt);
@@ -286,7 +366,14 @@ namespace WRLDZ.Presentation
             var t = Mathf.Clamp01(_bladeOpen);
             var smooth = t * t * (3f - 2f * t); // smoothstep
 
-            if (bladePivot != null)
+            if (bladePivot != null && Mechanical)
+            {
+                bladePivot.localRotation = BladeDeployedRot;
+                bladePivot.localPosition = BladeDeployedPos;
+                // an impact reads as a jolt through the disk, not the disk ballooning: a third of the old punch
+                bladePivot.localScale = Vector3.one * (1f + (_scalePunch - 1f) * 0.3f);
+            }
+            else if (bladePivot != null)
             {
                 bladePivot.localRotation = Quaternion.Slerp(BladeRetractedRot, BladeDeployedRot, smooth);
                 bladePivot.localPosition = Vector3.Lerp(BladeRetractedPos, BladeDeployedPos, smooth);
@@ -300,8 +387,12 @@ namespace WRLDZ.Presentation
             {
                 // Must match the disk mesh scale or pad cards sink into the hub.
                 var meshS = ArInteraction.ArPlaymatLayout.DiskMeshVisualScale;
-                if (_duelActive && t > 0.35f)
+                if (Mechanical || (_duelActive && t > 0.35f))
                 {
+                    // The kit's hub never shrinks: the zone root carries the deck holder, the graveyard tray, the LP
+                    // counter and the zone anchors in mesh-local metres, so it stays at mesh scale through the whole
+                    // activation. The ramp below belongs to the old folding blade (it drew the deck 72 % of the way
+                    // in toward the hub centre — 35 % on a phone — until the plate was most of the way open).
                     zonesRoot.localScale = Vector3.one * meshS;
                 }
                 else
@@ -321,8 +412,8 @@ namespace WRLDZ.Presentation
 
         static float DefaultDuration(DiskFxEvent e) => e switch
         {
-            DiskFxEvent.BladeDeploy => 0.85f,
-            DiskFxEvent.BladeRetract => 0.7f,
+            DiskFxEvent.BladeDeploy => DeploySeconds,   // the sections extend, sweep round and meet, the plate slides out, lock (art bar: readable)
+            DiskFxEvent.BladeRetract => 1.1f,
             DiskFxEvent.SummonFlash => 0.95f,
             DiskFxEvent.SetSlide => 0.6f,
             DiskFxEvent.ActivateBurst => 0.85f,

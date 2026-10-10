@@ -173,7 +173,7 @@ namespace WRLDZ.Duel
             {
                 case AbyssSoldier:
                     if (!HandHasAttributeMonster(who, "WATER")) return false;
-                    return CollectBounceTargets(engine, who).Count > 0;
+                    return CollectBounceTargets(engine, who, card).Count > 0;
                 default:
                     return false;
             }
@@ -186,7 +186,7 @@ namespace WRLDZ.Duel
             if (card.CardId != AbyssSoldier) return false;
 
             var costs = CollectHandAttributeMonsters(who, "WATER");
-            var targets = CollectBounceTargets(engine, who);
+            var targets = CollectBounceTargets(engine, who, card);
             if (costs.Count == 0 || targets.Count == 0) return false;
 
             engine.Log($"Activate: {card.Name} (Ignition).");
@@ -196,7 +196,7 @@ namespace WRLDZ.Duel
                 var discarded = DiscardFromHandByInstance(who, cost);
                 if (discarded == null) return false;
                 engine.Log($"Cost: discard {discarded.Name}.");
-                targets = CollectBounceTargets(engine, who);
+                targets = CollectBounceTargets(engine, who, card);
                 if (targets.Count == 0)
                 {
                     card.EffectUsedThisTurn = true;
@@ -208,7 +208,14 @@ namespace WRLDZ.Duel
                 var pick = targets.FirstOrDefault(t => opp.TryFindMonster(t, out _))
                            ?? targets.FirstOrDefault(t => opp.TryFindSpellTrap(t, out _))
                            ?? targets[0];
-                engine.ReturnCardToHand(pick);
+                if (TextEffects.ContinuousProtections.TargetedEffectBlocked(engine, pick, card))
+                {
+                    engine.Log("Abyss Soldier: target is protected at resolution.");
+                    card.EffectUsedThisTurn = true;
+                    engine.NotifyPublic();
+                    return true;
+                }
+                engine.ReturnCardToHand(pick, by: who);
                 card.EffectUsedThisTurn = true;
                 engine.NotifyPublic();
                 return true;
@@ -249,7 +256,7 @@ namespace WRLDZ.Duel
                 var discarded = DiscardFromHandByInstance(who, resolved);
                 if (discarded == null) return false;
                 engine.Log($"Cost: discard {discarded.Name}.");
-                var bounce = CollectBounceTargets(engine, who);
+                var bounce = CollectBounceTargets(engine, who, card);
                 if (bounce.Count == 0)
                 {
                     engine.ClearPendingActivation();
@@ -268,7 +275,14 @@ namespace WRLDZ.Duel
             }
 
             engine.ClearPendingActivation();
-            engine.ReturnCardToHand(resolved);
+            if (TextEffects.ContinuousProtections.TargetedEffectBlocked(engine, resolved, card))
+            {
+                engine.Log("Abyss Soldier: target is protected at resolution.");
+                card.EffectUsedThisTurn = true;
+                engine.NotifyPublic();
+                return true;
+            }
+            engine.ReturnCardToHand(resolved, by: who);
             card.EffectUsedThisTurn = true;
             engine.NotifyPublic();
             return true;
@@ -293,7 +307,7 @@ namespace WRLDZ.Duel
             return list;
         }
 
-        static List<CardInstance> CollectBounceTargets(DuelEngine engine, DuelistState who)
+        static List<CardInstance> CollectBounceTargets(DuelEngine engine, DuelistState who, CardInstance source = null)
         {
             var list = new List<CardInstance>();
             if (engine == null || who == null) return list;
@@ -303,6 +317,9 @@ namespace WRLDZ.Duel
                 foreach (var m in side.MonstersOnField())
                 {
                     if (engine.IsDragonTargetProtected(m)) continue;
+                    if (source != null &&
+                        TextEffects.ContinuousProtections.TargetedEffectBlocked(engine, m, source))
+                        continue;
                     list.Add(m);
                 }
             }
@@ -310,18 +327,38 @@ namespace WRLDZ.Duel
             AddMonsters(who);
             AddMonsters(opp);
             foreach (var st in who.SpellTrapsOnField())
-                list.Add(st);
+                if (source == null ||
+                    !TextEffects.ContinuousProtections.TargetedEffectBlocked(engine, st, source))
+                    list.Add(st);
             foreach (var st in opp.SpellTrapsOnField())
-                list.Add(st);
+                if (source == null ||
+                    !TextEffects.ContinuousProtections.TargetedEffectBlocked(engine, st, source))
+                    list.Add(st);
             return list;
         }
 
-        public static CardInstance DiscardFromHandByInstance(DuelistState who, CardInstance card)
+        /// <summary>
+        /// Discard <paramref name="card"/> from <paramref name="who"/>'s hand (a cost or an effect). Raises the central
+        /// discard event (EngineHygiene batch: TextEffects.DiscardEvents). A "send from your hand to the GY" that is not a
+        /// discard uses <see cref="SendFromHandToGraveByInstance"/>.
+        /// </summary>
+        public static CardInstance DiscardFromHandByInstance(DuelistState who, CardInstance card,
+            TextEffects.DiscardCause cause = TextEffects.DiscardCause.Unknown, DuelistState by = null)
+        {
+            var gone = SendFromHandToGraveByInstance(who, card);
+            if (gone != null)
+                TextEffects.DiscardEvents.Record(who.Engine, who, gone, cause, by);
+            return gone;
+        }
+
+        /// <summary>Send <paramref name="card"/> from the hand to the GY without discarding it (no discard event).</summary>
+        public static CardInstance SendFromHandToGraveByInstance(DuelistState who, CardInstance card)
         {
             if (who?.Hand == null || card == null) return null;
+            // Banisher of the Light (RedirectAndReplace batch, v142): a discarded card is banished instead.
             if (who.Hand.Remove(card))
             {
-                who.Graveyard.Add(card);
+                TextEffects.RedirectAndReplaceRuntime.PutInGraveyard(null, who, card);
                 return card;
             }
 
@@ -330,7 +367,7 @@ namespace WRLDZ.Duel
                 var c = who.Hand[i];
                 if (c == null || c.InstanceId != card.InstanceId) continue;
                 who.Hand.RemoveAt(i);
-                who.Graveyard.Add(c);
+                TextEffects.RedirectAndReplaceRuntime.PutInGraveyard(null, who, c);
                 return c;
             }
 
@@ -344,30 +381,31 @@ namespace WRLDZ.Duel
         public static void OnFlipSummoned(DuelEngine engine, DuelistState controller, CardInstance monster)
         {
             if (engine == null || controller == null || monster?.Def == null) return;
-
-            // Registered Flip scripts first — never silent-skip via incomplete text apply
-            switch (monster.CardId)
+            // RuleLocks batch: Royal Command — the FLIP effect's activation is negated (no target prompt, no effect).
+            if (TextEffects.RuleLocksRuntime.NegatesFlipEffect(engine, monster))
             {
-                case ManEaterBug:
-                    BeginManEaterBug(engine, controller, monster);
-                    return;
-                case MagicianOfFaith:
-                    BeginMagicianOfFaith(engine, controller, monster);
-                    return;
-                case CyberJar:
-                    ResolveCyberJarPublic(engine, controller);
-                    return;
+                // Its cost is paid as it activates, before Royal Command negates it (Lua EVENT_CHAIN_ACTIVATING):
+                // Fire Sorcerer / Lady Assailant of Flames still banish (FlipCostsAndFusion batch, v159-lon-b audit).
+                var negatedFlip = TextEffects.CompiledEffectCache.GetOrCompile(monster)
+                    ?.ClausesFor(TextEffects.EffectTiming.Flip);
+                if (negatedFlip != null && negatedFlip.Count > 0)
+                    TextEffects.FlipCostsAndFusionRuntime.TryPayFlipCost(engine, controller, monster, negatedFlip);
+                return;
             }
 
-            // Learn text on first flip, then run remembered program (other Flip monsters)
+            // Registered Flip scripts first — never silent-skip via incomplete text apply
+            if (RegisteredFlips.TryGetValue(monster.CardId, out var script))
+            {
+                script.Begin(engine, controller, monster);
+                return;
+            }
+
+            // Learn text on first flip, then run remembered program (other Flip monsters; Cyber Jar is its
+            // compiled CyberJarStyle clause, FlipMassEffects batch v142)
             var prog = TextEffects.CompiledEffectCache.GetOrCompile(monster);
             if (prog != null && prog.HasTiming(TextEffects.EffectTiming.Flip))
                 TextEffects.TextEffectRuntime.TryResolveFlip(engine, controller, monster, prog);
         }
-
-        /// <summary>Text-effect runtime entry (no re-entry into text flip path).</summary>
-        public static void ResolveCyberJarPublic(DuelEngine engine, DuelistState flipController) =>
-            ResolveCyberJar(engine, flipController);
 
         /// <summary>When a monster leaves the field for the GY (destroy, tribute, fusion material, etc.).</summary>
         public static void OnSentFromFieldToGy(DuelEngine engine, DuelistState owner, CardInstance card,
@@ -375,18 +413,58 @@ namespace WRLDZ.Duel
         {
             if (engine == null || owner == null || card == null) return;
 
+            // A simultaneous event that is still happening (Dark Hole, both battling monsters destroyed, Cyber Jar,
+            // a Summon's Tributes — FlipMassEffectsRuntime.Simultaneously, v142) holds these triggers until it has
+            // finished, then replays them here in order.
+            if (TextEffects.FlipMassEffectsRuntime.TryHoldSentToGy(engine, owner, card, destroyed,
+                    destroyedByBattle, battleDestroyer))
+                return;
+
             // Pandemonium: an Archfiend destroyed (not by battle) lets its owner search a
             // lower-Level Archfiend from the Deck. Runs alongside any other GY trigger.
             FieldSpellEffects.TryPandemoniumSearchOnDestroy(engine, owner, card, destroyed, destroyedByBattle);
 
-            // Registered field→GY scripts first (never silent-skip via empty text apply)
+            // NegationMonsters batch (v161): negated by Dark Ruler Ha Des / Twin-Headed Wolf as it was destroyed by battle,
+            // its "sent to the GY" / "destroyed by battle" effects do not apply while it stays in the GY.
+            if (TextEffects.NegationMonstersRuntime.NegatedInGy(engine, card))
+            {
+                engine.Log($"{card.Name}: its effects are negated — nothing happens.");
+                return;
+            }
+
+            // Prefer FullyCompiled text program (Sangan/Witch name-lock rider) over
+            // legacy hardcode. Fail-closed: incomplete text still falls through.
+            var prog = TextEffects.CompiledEffectCache.GetOrCompile(card);
+            // TriggerChainResponses batch (v163): sent while a Chain resolves (an "If" trigger such as Sangan / Witch of
+            // the Black Forest), it activates once that Chain is over, on a new Chain the opponent may respond to.
+            if (prog != null && prog.FullyCompiled &&
+                prog.HasTiming(TextEffects.EffectTiming.SentFromFieldToGy) &&
+                TextEffects.SimultaneousTriggersRuntime.TryDeferSentToGy(engine, owner, card, prog,
+                    () => ResolveSentFromFieldToGy(engine, owner, card, prog, destroyed, destroyedByBattle,
+                        battleDestroyer)))
+                return;
+            ResolveSentFromFieldToGy(engine, owner, card, prog, destroyed, destroyedByBattle, battleDestroyer);
+        }
+
+        /// <summary>The "sent from the field to the GY" effects of <paramref name="card"/> resolve (compiled text first).</summary>
+        static void ResolveSentFromFieldToGy(DuelEngine engine, DuelistState owner, CardInstance card,
+            TextEffects.CompiledCardProgram prog, bool destroyed, bool destroyedByBattle, CardInstance battleDestroyer)
+        {
+            if (prog != null && prog.FullyCompiled &&
+                prog.HasTiming(TextEffects.EffectTiming.SentFromFieldToGy))
+            {
+                if (TextEffects.TextEffectRuntime.TryResolveSentToGy(engine, owner, card, prog,
+                        destroyed, destroyedByBattle, battleDestroyer))
+                    return;
+            }
+
+            // Legacy Sangan hardcode only when text path did not FullyCompile.
             if (card.CardId == Sangan)
             {
                 ResolveSangan(engine, owner, card);
                 return;
             }
 
-            var prog = TextEffects.CompiledEffectCache.GetOrCompile(card);
             if (prog != null && prog.HasTiming(TextEffects.EffectTiming.SentFromFieldToGy))
             {
                 if (TextEffects.TextEffectRuntime.TryResolveSentToGy(engine, owner, card, prog,
@@ -394,6 +472,27 @@ namespace WRLDZ.Duel
                     return;
             }
         }
+
+        /// <summary>
+        /// The one list of FLIP effects run by a registered script instead of compiled text (the existing named
+        /// exceptions <see cref="ManEaterBug"/> and <see cref="MagicianOfFaith"/>): how it starts on its own
+        /// (<see cref="OnFlipSummoned"/>) and the kind of target it picks when a Chain splits it into activation and
+        /// resolution (<see cref="TryRegisteredFlipTargets"/> / <see cref="ResolveRegisteredFlip"/>). Every reader goes
+        /// through this table, so a script added here is chained like the others (v163 review).
+        /// </summary>
+        static readonly Dictionary<int, (EffectTargetKind Kind, System.Action<DuelEngine, DuelistState, CardInstance> Begin)>
+            RegisteredFlips = new()
+            {
+                [ManEaterBug] = (EffectTargetKind.AnyMonsterOnField, BeginManEaterBug),
+                [MagicianOfFaith] = (EffectTargetKind.SpellInYourGy, BeginMagicianOfFaith),
+            };
+
+        /// <summary>
+        /// TriggerChainResponses batch (v163): a FLIP effect run by a registered script (<see cref="RegisteredFlips"/>;
+        /// <see cref="OnFlipSummoned"/>), which a simultaneous-trigger Chain splits like a compiled one.
+        /// </summary>
+        public static bool IsRegisteredFlip(CardInstance monster) =>
+            monster != null && RegisteredFlips.ContainsKey(monster.CardId);
 
         static void BeginManEaterBug(DuelEngine engine, DuelistState who, CardInstance source)
         {
@@ -418,7 +517,7 @@ namespace WRLDZ.Duel
                                .FirstOrDefault()
                            ?? targets.OrderByDescending(t => t.CurrentAtk).First();
                 engine.Log($"Man-Eater Bug destroys {pick.Name}!");
-                DestroyFieldMonster(engine, pick);
+                DestroyFieldMonster(engine, pick, source);
                 return;
             }
 
@@ -452,6 +551,8 @@ namespace WRLDZ.Duel
                     skippedDragons++;
                     return;
                 }
+                if (TextEffects.ContinuousProtections.TargetedEffectBlocked(engine, m, source))
+                    return;
 
                 targets.Add(m);
             }
@@ -467,10 +568,87 @@ namespace WRLDZ.Duel
             return targets;
         }
 
+        // ── SimultaneousTriggers batch (v160): the registered FLIP scripts above, split into their activation (target)
+        // step and their resolution, for a FLIP that goes on one Chain with other simultaneous triggers
+        // (TextEffects.SimultaneousTriggersRuntime). Same card exceptions as OnFlipSummoned, no new ones.
+
+        /// <summary>
+        /// True when <paramref name="monster"/>'s FLIP effect is a registered script (Man-Eater Bug, Magician of
+        /// Faith): <paramref name="legal"/> is what it can target now and <paramref name="kind"/> the pick's kind.
+        /// </summary>
+        internal static bool TryRegisteredFlipTargets(DuelEngine engine, DuelistState who, CardInstance monster,
+            out EffectTargetKind kind, out List<CardInstance> legal)
+        {
+            kind = EffectTargetKind.None;
+            legal = null;
+            if (engine == null || who == null || monster == null ||
+                !RegisteredFlips.TryGetValue(monster.CardId, out var script))
+                return false;
+            switch (script.Kind)
+            {
+                case EffectTargetKind.AnyMonsterOnField:
+                    kind = EffectTargetKind.AnyMonsterOnField;
+                    legal = CollectManEaterTargets(engine, who, monster);
+                    return true;
+                case EffectTargetKind.SpellInYourGy:
+                    kind = EffectTargetKind.SpellInYourGy;
+                    legal = who.Graveyard.Where(c => c?.Def != null && c.Def.IsSpell &&
+                        !TextEffects.ContinuousProtections.GyMovementLocked(engine, monster, c)).ToList();
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        /// <summary>The AI's target for a registered FLIP script (the same choice BeginManEaterBug / BeginMagicianOfFaith make).</summary>
+        internal static CardInstance RegisteredFlipAiPick(DuelEngine engine, DuelistState who, EffectTargetKind kind,
+            List<CardInstance> legal)
+        {
+            if (legal == null || legal.Count == 0) return null;
+            if (kind != EffectTargetKind.AnyMonsterOnField) return legal[0];
+            var opp = engine.OpponentOf(who);
+            return legal.Where(t => opp.TryFindMonster(t, out _)).OrderByDescending(t => t.CurrentAtk).FirstOrDefault()
+                   ?? legal.OrderByDescending(t => t.CurrentAtk).First();
+        }
+
+        /// <summary>Resolution of a registered FLIP script on the target it chose when it activated.</summary>
+        internal static void ResolveRegisteredFlip(DuelEngine engine, DuelistState who, CardInstance source,
+            EffectTargetKind kind, CardInstance target)
+        {
+            if (engine == null || who == null || target == null) return;
+            switch (kind)
+            {
+                case EffectTargetKind.AnyMonsterOnField:
+                    engine.Log($"{source?.Name ?? "Man-Eater Bug"} destroys {target.Name}!");
+                    DestroyFieldMonster(engine, target, source);
+                    break;
+                case EffectTargetKind.SpellInYourGy:
+                    if (!who.Graveyard.Contains(target) || target.Def == null || !target.Def.IsSpell)
+                    {
+                        engine.Log($"{source?.Name}: its target is no longer in the GY.");
+                        break;
+                    }
+
+                    if (TextEffects.ContinuousProtections.GyMovementLocked(engine, source, target))
+                    {
+                        engine.Log("Necrovalley prevents the target from leaving the GY.");
+                        break;
+                    }
+
+                    who.Graveyard.Remove(target);
+                    who.Hand.Add(target);
+                    engine.Log($"{source?.Name} adds {target.Name} from the GY to the hand.");
+                    break;
+            }
+
+            engine.NotifyPublic();
+        }
+
         static void BeginMagicianOfFaith(DuelEngine engine, DuelistState who, CardInstance source)
         {
             // FLIP: Target 1 Spell in your GY; add that target to your hand.
-            var spells = who.Graveyard.Where(c => c?.Def != null && c.Def.IsSpell).ToList();
+            var spells = who.Graveyard.Where(c => c?.Def != null && c.Def.IsSpell &&
+                !TextEffects.ContinuousProtections.GyMovementLocked(engine, source, c)).ToList();
             if (spells.Count == 0)
             {
                 engine.Log("Magician of Faith Flip: no Spells in your GY.");
@@ -519,12 +697,17 @@ namespace WRLDZ.Duel
             {
                 case EffectTargetKind.AnyMonsterOnField:
                     engine.Log($"Man-Eater Bug destroys {target.Name}!");
-                    DestroyFieldMonster(engine, target);
+                    DestroyFieldMonster(engine, target, p.Card);
                     break;
                 case EffectTargetKind.SpellInYourGy:
                     if (!who.Graveyard.Contains(target) || target.Def == null || !target.Def.IsSpell)
                     {
                         engine.Log("Magician of Faith: illegal target.");
+                        break;
+                    }
+                    if (TextEffects.ContinuousProtections.GyMovementLocked(engine, p.Card, target))
+                    {
+                        engine.Log("Necrovalley prevents the target from leaving the GY.");
                         break;
                     }
 
@@ -551,55 +734,6 @@ namespace WRLDZ.Duel
 
             engine.NotifyPublic();
             return true;
-        }
-
-        static void ResolveCyberJar(DuelEngine engine, DuelistState flipController)
-        {
-            // Official (simplified structural resolution matching PSCT flow):
-            // Destroy all monsters, then each player reveals top 5; SS Level 4 or lower;
-            // other revealed cards to GY.
-            engine.Log("Cyber Jar FLIP: Destroy all monsters on the field!");
-            var all = engine.Player.MonstersOnField().Concat(engine.Opponent.MonstersOnField()).ToList();
-            foreach (var m in all)
-            {
-                var owner = engine.Player.TryFindMonster(m, out _) ? engine.Player : engine.Opponent;
-                engine.DestroyMonsterPublic(owner, m);
-            }
-
-            RevealAndSummonFromDeck(engine, engine.Player, 5);
-            RevealAndSummonFromDeck(engine, engine.Opponent, 5);
-            engine.NotifyPublic();
-        }
-
-        static void RevealAndSummonFromDeck(DuelEngine engine, DuelistState who, int n)
-        {
-            if (who == null || engine == null) return;
-            var revealed = new List<CardInstance>();
-            for (var i = 0; i < n && who.Deck.Count > 0; i++)
-            {
-                var id = who.Deck[0];
-                who.Deck.RemoveAt(0);
-                revealed.Add(engine.CreateCardInstance(id));
-            }
-
-            if (revealed.Count == 0) return;
-            engine.Log($"{who.Name} reveals: {string.Join(", ", revealed.Select(c => c.Name))}");
-
-            foreach (var c in revealed)
-            {
-                if (c.Def != null && c.Def.IsMonster && c.Level <= 4 && c.Level >= 1 &&
-                    !c.Def.IsExtraDeck)
-                {
-                    if (engine.FirstEmpty(who.MonsterZones) >= 0 &&
-                        engine.SpecialSummonToField(who, c, BattlePosition.Attack, faceUp: true))
-                    {
-                        engine.Log($"Cyber Jar Special Summons {c.Name}!");
-                        continue;
-                    }
-                }
-
-                who.Graveyard.Add(c);
-            }
         }
 
         /// <summary>
@@ -693,12 +827,17 @@ namespace WRLDZ.Duel
             return true;
         }
 
-        static void DestroyFieldMonster(DuelEngine engine, CardInstance m)
+        static void DestroyFieldMonster(DuelEngine engine, CardInstance m, CardInstance source = null)
         {
+            if (TextEffects.ContinuousProtections.TargetedEffectBlocked(engine, m, source))
+            {
+                engine.Log("Target is protected at resolution.");
+                return;
+            }
             if (engine.Player.TryFindMonster(m, out _))
-                engine.DestroyMonsterPublic(engine.Player, m);
+                engine.DestroyMonsterPublic(engine.Player, m, source);
             else if (engine.Opponent.TryFindMonster(m, out _))
-                engine.DestroyMonsterPublic(engine.Opponent, m);
+                engine.DestroyMonsterPublic(engine.Opponent, m, source);
         }
     }
 }

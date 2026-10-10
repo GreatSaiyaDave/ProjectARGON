@@ -51,6 +51,16 @@ namespace UnityEngine
         public static float Repeat(float t, float length) { var r = t - (float)Math.Floor(t / length) * length; return Clamp(r, 0f, length); }
     }
 
+    // Local-lineage StreamingFiles resets its index on a Unity domain reload; inert headlessly.
+    [AttributeUsage(AttributeTargets.Method)]
+    public sealed class RuntimeInitializeOnLoadMethodAttribute : Attribute
+    {
+        public RuntimeInitializeOnLoadMethodAttribute() { }
+        public RuntimeInitializeOnLoadMethodAttribute(RuntimeInitializeLoadType t) { }
+    }
+
+    public enum RuntimeInitializeLoadType { AfterSceneLoad, BeforeSceneLoad, SubsystemRegistration }
+
     public static class Application
     {
         // Set by the headless entrypoint (Program.Main) to the repo's Assets/StreamingAssets.
@@ -61,6 +71,13 @@ namespace UnityEngine
         public static bool isBatchMode = true;
         public static bool isEditor = false;
         public static bool isPlaying = true;
+        // Local-lineage StreamingFiles (Android APK loader) and CompiledEffectCache (flush on quit / focus loss).
+        public static string version = "headless";
+        public static string buildGUID = "headless";
+#pragma warning disable CS0067
+        public static event Action quitting;
+        public static event Action<bool> focusChanged;
+#pragma warning restore CS0067
     }
 
     public static class JsonUtility
@@ -245,6 +262,7 @@ namespace UnityEngine
         public Texture2D(int w, int h) { width = w; height = h; }
         public Texture2D(int w, int h, TextureFormat fmt, bool mipmaps) { width = w; height = h; }
         public bool LoadImage(byte[] data) => false;
+        public bool LoadImage(byte[] data, bool markNonReadable) => false;
         public byte[] EncodeToPNG() => Array.Empty<byte>();
     }
 
@@ -254,6 +272,20 @@ namespace UnityEngine
         public Rect rect;
         public static Sprite Create(Texture2D tex, Rect rect, Vector2 pivot, float pixelsPerUnit)
             => new Sprite { texture = tex, rect = rect };
+    }
+
+    // Inert asset stand-ins for Data-layer code that reads Resources (AvatarAppearance's hair catalog). The
+    // rules engine never needs them headless: Load returns null and callers fall back to their defaults.
+    public class TextAsset : Object
+    {
+        public string text = "";
+        public byte[] bytes = Array.Empty<byte>();
+    }
+
+    public static class Resources
+    {
+        public static T Load<T>(string path) where T : Object => null;
+        public static Object Load(string path) => null;
     }
 
     // SimpleAi derives from MonoBehaviour; an empty base is enough headlessly.

@@ -157,7 +157,9 @@ namespace WRLDZ.UI.Shell
                 return Filter.Tablet;
             if (focusDefId.StartsWith("currency.", StringComparison.OrdinalIgnoreCase))
                 return Filter.Currency;
-            if (focusDefId.StartsWith("eraz.", StringComparison.OrdinalIgnoreCase)) return Filter.Badge;
+            if (focusDefId.StartsWith("eraz.", StringComparison.OrdinalIgnoreCase)
+                || focusDefId.StartsWith("format.", StringComparison.OrdinalIgnoreCase))
+                return Filter.Badge;
             return Filter.Key;
         }
 
@@ -168,10 +170,12 @@ namespace WRLDZ.UI.Shell
             return filter switch
             {
                 Filter.Currency => def.Kind == ArtifactKind.Currency,
-                Filter.Badge => def.Kind == ArtifactKind.ErazBadge,
+                Filter.Badge => def.Kind is ArtifactKind.ErazBadge or ArtifactKind.BadgePiece
+                    or ArtifactKind.FormatBadge,
                 Filter.Tablet => def.Kind == ArtifactKind.SetEnergy,
                 Filter.Key => def.Kind is ArtifactKind.StoryKey or ArtifactKind.Tome
-                    or ArtifactKind.TradeTransport or ArtifactKind.Millennium,
+                    or ArtifactKind.TradeTransport or ArtifactKind.Millennium
+                    or ArtifactKind.SoulFragment,
                 _ => true
             };
         }

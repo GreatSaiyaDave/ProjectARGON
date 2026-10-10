@@ -113,7 +113,7 @@ namespace WRLDZ.UI
             note.resizeTextForBestFit = false;
 
             // Two-column systems grid
-            var tileY = new[] { 0.54f, 0.40f, 0.26f };
+            var tileY = new[] { 0.56f, 0.44f, 0.32f, 0.20f };
             var tileI = 0;
             void Tile(string label, string blurb, Action open, bool gold = false)
             {
@@ -127,7 +127,7 @@ namespace WRLDZ.UI
                 var col = tileI % 2;
                 var row = tileI / 2;
                 var y1 = tileY[Mathf.Min(row, tileY.Length - 1)];
-                var y0 = y1 - 0.12f;
+                var y0 = y1 - 0.10f;
                 if (col == 0)
                     FloatingPanel.Place(b.GetComponent<RectTransform>(), 0.02f, y0, 0.48f, y1);
                 else
@@ -149,18 +149,25 @@ namespace WRLDZ.UI
                 InventoryScreen.Build(modal, ClearModal, UiPresentation.ArDiskHolo);
             });
 
+            Tile("STORY", NavCopy.BlurbFor(MenuId.StorySeason), () =>
+            {
+                if (status != null)
+                    status.text = NavCopy.ToastFor(MenuId.StorySeason, UiPresentation.ArDiskHolo);
+                SystemsSheets.BuildStory(modal, ClearModal, UiPresentation.ArDiskHolo);
+            });
+
+            Tile("BAZAAR", NavCopy.BlurbFor(MenuId.Bazaar), () =>
+            {
+                if (status != null)
+                    status.text = NavCopy.ToastFor(MenuId.Bazaar);
+                SystemsSheets.BuildBazaar(modal, ClearModal, UiPresentation.ArDiskHolo);
+            });
+
             Tile("TOME", NavCopy.BlurbFor(MenuId.TomeRaid), () =>
             {
                 if (status != null)
                     status.text = NavCopy.ToastFor(MenuId.TomeRaid);
                 SystemsSheets.BuildTome(modal, ClearModal, UiPresentation.ArDiskHolo);
-            });
-
-            Tile("ARTIFACTS", NavCopy.BlurbFor(MenuId.Artifacts), () =>
-            {
-                if (status != null)
-                    status.text = NavCopy.ToastFor(MenuId.Artifacts);
-                ArtifactBoxScreen.Build(modal, ClearModal, UiPresentation.ArDiskHolo);
             });
 
             Tile("SETTINGS", NavCopy.BlurbFor(MenuId.Settings), () =>

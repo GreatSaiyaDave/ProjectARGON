@@ -37,14 +37,23 @@ namespace WRLDZ.Duel
             }
 
             AiHeuristicPolicy.EnsureLoaded();
+            AiHeuristicPolicy.ApplyDifficulty(AiDifficultyPrefs.Current);
             // Phase banner already logged by BeginTurn — no ">>> takes their turn" / policy spam.
             engine.LogReview(DuelLogKind.Ai, "AI",
                 $"Turn start — LP you={engine.Player.LifePoints} ai={ai.LifePoints} " +
                 $"hand={ai.HandCount} monsters={ai.MonsterCount} NS_used={ai.NormalSummonUsed}");
             onStep?.Invoke();
             yield return Wait();
+            // TriggerChainResponses batch (v163): a trigger Chain of this turn's Draw / Standby / End Phase (Freed's search,
+            // Life Absorbing Machine, Spirit's Invitation) may wait on the player's Chain response; the turn goes on after it.
+            while (engine.IsAwaitingPlayerResponse && engine.TurnPlayer == ai &&
+                   (engine.Phase == DuelPhase.Draw || engine.Phase == DuelPhase.Standby || engine.Phase == DuelPhase.End))
+                yield return null;
+            if (engine.GameOver || engine.TurnPlayer != ai) yield break;
 
-            if (engine.Phase != DuelPhase.Main1)
+            // Timeater (BattleOutcomeTriggers batch, v162): Main Phase 1 was skipped — the turn starts in its Battle Phase.
+            var mainPhase1Skipped = engine.Phase == DuelPhase.Battle;
+            if (engine.Phase != DuelPhase.Main1 && !mainPhase1Skipped)
             {
                 engine.Log($"[AI] Expected Main Phase 1, got {engine.Phase}. Forcing End Turn.");
                 engine.EndTurn(ai);
@@ -53,31 +62,46 @@ namespace WRLDZ.Duel
             }
 
             // ── Main Phase 1 (engine already logged phase) ──
-            onStep?.Invoke();
-            yield return Wait();
-            while (engine.IsAwaitingPlayerResponse || engine.IsAwaitingEffectTarget)
-                yield return null;
-            if (engine.GameOver || engine.TurnPlayer != ai) yield break;
-
-            foreach (var _ in RunMainPhaseActions(engine, ai, "MP1"))
+            if (!mainPhase1Skipped)
             {
                 onStep?.Invoke();
                 yield return Wait();
-                // Summon response window (Trap Hole) for the player
+                while (engine.IsAwaitingPlayerResponse || engine.IsAwaitingEffectTarget)
+                    yield return null;
+                if (engine.GameOver || engine.TurnPlayer != ai) yield break;
+
+                foreach (var _ in RunMainPhaseActions(engine, ai, "MP1"))
+                {
+                    onStep?.Invoke();
+                    yield return Wait();
+                    // Summon response window (Trap Hole) for the player
+                    while (engine.IsAwaitingPlayerResponse || engine.IsAwaitingEffectTarget)
+                        yield return null;
+                    if (engine.GameOver || engine.TurnPlayer != ai) yield break;
+                }
+            }
+            else
+            {
+                // The skip entered the Battle Phase, which opened the player's Battle-Phase-start response window:
+                // it is answered before the AI looks at its attackers or leaves the Battle Phase (v162 review fix).
+                onStep?.Invoke();
+                yield return Wait();
                 while (engine.IsAwaitingPlayerResponse || engine.IsAwaitingEffectTarget)
                     yield return null;
                 if (engine.GameOver || engine.TurnPlayer != ai) yield break;
             }
 
             // ── Battle ──
-            if (engine.Phase == DuelPhase.Main1 && engine.CanConductBattlePhase)
+            if (mainPhase1Skipped && engine.Phase == DuelPhase.Battle ||
+                !mainPhase1Skipped && engine.Phase == DuelPhase.Main1 && engine.CanConductBattlePhase)
             {
                 var canAttackSomeone = ai.MonstersOnField()
                     .Any(m => m.FaceUp && m.Position == BattlePosition.Attack);
 
                 if (canAttackSomeone)
                 {
-                    engine.TryEnterBattlePhase(ai);
+                    if (!mainPhase1Skipped)
+                        engine.TryEnterBattlePhase(ai);
                     onStep?.Invoke();
                     yield return Wait();
                     while (engine.IsAwaitingPlayerResponse || engine.IsAwaitingEffectTarget)
@@ -99,15 +123,66 @@ namespace WRLDZ.Duel
             // ── Main Phase 2 ──
             if (engine.Phase == DuelPhase.Battle || engine.Phase == DuelPhase.Main1)
             {
-                engine.TryEnterMainPhase2(ai);
-                onStep?.Invoke();
-                yield return Wait();
+                foreach (var _ in EnterMainPhase2(engine, ai))
+                    yield return _;
+                if (engine.GameOver || engine.TurnPlayer != ai) yield break;
 
-                foreach (var _ in RunMainPhaseActions(engine, ai, "MP2"))
+                if (engine.Phase == DuelPhase.Main2)
                 {
                     onStep?.Invoke();
                     yield return Wait();
+
+                    foreach (var _ in RunMainPhaseActions(engine, ai, "MP2"))
+                    {
+                        // The action's yield can land while the player's chain or Summon response is open.
+                        // That window is answered before the next visible step.
+                        while (engine.IsAwaitingPlayerResponse || engine.IsAwaitingEffectTarget)
+                            yield return null;
+                        onStep?.Invoke();
+                        yield return Wait();
+                        if (engine.GameOver || engine.TurnPlayer != ai) yield break;
+                    }
+                }
+            }
+
+            if (engine.GameOver || engine.TurnPlayer != ai) yield break;
+
+            // ── Second Battle Phase (Weather Report: "perform your Battle Phase twice"), then Main Phase 2 ──
+            if (ai.BattlePhaseTwiceTurns.Contains(engine.TurnNumber))
+            {
+                while (engine.IsAwaitingPlayerResponse || engine.IsAwaitingEffectTarget)
+                    yield return null;
+                if (engine.GameOver || engine.TurnPlayer != ai) yield break;
+            }
+
+            if (engine.Phase == DuelPhase.Main2 && engine.CanConductBattlePhase &&
+                ai.MonstersOnField().Any(m => m.FaceUp && m.Position == BattlePosition.Attack))
+            {
+                engine.TryEnterBattlePhase(ai);
+                onStep?.Invoke();
+                yield return Wait();
+                while (engine.IsAwaitingPlayerResponse || engine.IsAwaitingEffectTarget)
+                    yield return null;
+                if (engine.GameOver || engine.TurnPlayer != ai) yield break;
+
+                foreach (var _ in RunBattlePhase(engine, ai))
+                {
+                    onStep?.Invoke();
+                    yield return Wait();
+                    if (engine.GameOver || engine.Phase != DuelPhase.Battle) break;
+                }
+
+                if (engine.GameOver || engine.TurnPlayer != ai) yield break;
+                if (engine.Phase == DuelPhase.Battle)
+                {
+                    foreach (var _ in EnterMainPhase2(engine, ai))
+                        yield return _;
                     if (engine.GameOver || engine.TurnPlayer != ai) yield break;
+                    if (engine.Phase == DuelPhase.Main2)
+                    {
+                        onStep?.Invoke();
+                        yield return Wait();
+                    }
                 }
             }
 
@@ -116,8 +191,31 @@ namespace WRLDZ.Duel
             // ── End ──
             onStep?.Invoke();
             yield return Wait();
+            // A player's choice still open (an end-of-Battle-Phase Special Summon offer, SummonPromptsAndCosts v163) is
+            // answered first: EndTurn refuses to end the turn while it is open.
+            while (engine.IsAwaitingPlayerResponse || engine.IsAwaitingEffectTarget)
+                yield return null;
+            if (engine.GameOver || engine.TurnPlayer != ai) yield break;
             engine.EndTurn(ai);
             onStep?.Invoke();
+        }
+
+        /// <summary>
+        /// Battle or Main Phase 1 → Main Phase 2. An open response is answered first
+        /// (<see cref="DuelEngine.TryEnterMainPhase2"/> refuses while one is open).
+        /// </summary>
+        static IEnumerable<object> EnterMainPhase2(DuelEngine engine, DuelistState ai)
+        {
+            while (!engine.GameOver && engine.TurnPlayer == ai &&
+                   (engine.Phase == DuelPhase.Battle || engine.Phase == DuelPhase.Main1))
+            {
+                if (engine.TryEnterMainPhase2(ai))
+                    yield break;
+                if (!engine.IsAwaitingPlayerResponse && !engine.IsAwaitingEffectTarget)
+                    yield break;
+                while (engine.IsAwaitingPlayerResponse || engine.IsAwaitingEffectTarget)
+                    yield return null;
+            }
         }
 
         static IEnumerator Wait()
@@ -137,6 +235,12 @@ namespace WRLDZ.Duel
             {
                 if (engine.GameOver || engine.TurnPlayer != ai || !engine.InMainPhase)
                     yield break;
+                // A response opened by the previous action (a search, a Normal Summon) is answered
+                // before this step activates or summons again.
+                while (engine.IsAwaitingPlayerResponse || engine.IsAwaitingEffectTarget)
+                    yield return null;
+                if (engine.GameOver || engine.TurnPlayer != ai || !engine.InMainPhase)
+                    yield break;
 
                 // Advantage spells first (policy table)
                 if (AiHeuristicPolicy.PreferPotOfGreed &&
@@ -144,6 +248,30 @@ namespace WRLDZ.Duel
                 {
                     yield return null;
                     continue;
+                }
+
+                // Search cards (Normal+): fetch a key piece from the Deck
+                if (AiHeuristicPolicy.UseSearchCards)
+                {
+                    var searchCard = ai.Hand.FirstOrDefault(c =>
+                        c?.Def != null && HasSearchEffect(c) && engine.CanActivateSpellTrap(ai, c, true));
+                    if (searchCard != null && engine.TryActivateSpellTrap(ai, searchCard, true))
+                    {
+                        yield return null;
+                        continue;
+                    }
+                }
+
+                // Graveyard recursion (Normal+): bring back a fallen monster or recycle a key spell
+                if (AiHeuristicPolicy.UseGraveyardRecursion)
+                {
+                    var gyCard = ai.Hand.FirstOrDefault(c =>
+                        c?.Def != null && HasGyRecursion(c) && engine.CanActivateSpellTrap(ai, c, true));
+                    if (gyCard != null && engine.TryActivateSpellTrap(ai, gyCard, true))
+                    {
+                        yield return null;
+                        continue;
+                    }
                 }
 
                 // Raigeki: only when player has a real board threat (face-up monster or 2+ monsters).
@@ -173,6 +301,18 @@ namespace WRLDZ.Duel
                     continue;
                 }
 
+                // Fusion / Ritual (Hard+): summon a boss monster from the Extra / Deck
+                if (AiHeuristicPolicy.UseExtraDeck && AiHeuristicPolicy.PreferSynchroFusion)
+                {
+                    var extraCard = ai.Hand.FirstOrDefault(c =>
+                        c?.Def != null && HasFusionOrRitual(c) && engine.CanActivateSpellTrap(ai, c, true));
+                    if (extraCard != null && engine.TryActivateSpellTrap(ai, extraCard, true))
+                    {
+                        yield return null;
+                        continue;
+                    }
+                }
+
                 // Field Spells first so WATER Level 5 can Normal Summon without Tribute the same turn.
                 var fieldSpell = ai.Hand.FirstOrDefault(c =>
                     c?.Def != null && c.Def.IsFieldSpell &&
@@ -188,8 +328,17 @@ namespace WRLDZ.Duel
                 {
                     if (m == null || !engine.CanActivateSpellTrap(ai, m, fromHand: false)) continue;
                     if (TributesForTempAtkOnly(m)) continue;
+                    // Winged Minion: no own monster to boost (SpecialSummonEffects batch, v161).
+                    if (TextEffects.SpecialSummonEffectsRuntime.AiSkipsIgnition(engine, ai, m)) continue;
+                    // BattleBoosts batch (v161): Gray Wing's discard only when a second attack can matter.
+                    if (TextEffects.BattleBoostsRuntime.AiSkipsIgnition(engine, ai, m)) continue;
+                    // BattleDestroyedGyRecovery batch (v162): Crimson Sentry family — only for a better monster back.
+                    if (TextEffects.BattleDestroyedGyRecoveryRuntime.AiSkipsIgnition(engine, ai, m)) continue;
                     if (!engine.TryActivateSpellTrap(ai, m, fromHand: false)) continue;
-                    while (engine.IsAwaitingEffectTarget && engine.PendingActivation != null)
+                    // Only the AI's own pick: a choice the effect gives the player (Spear Cretin's GY
+                    // selection, FlipMassEffects v142) waits for the player below.
+                    while (engine.IsAwaitingEffectTarget && engine.PendingActivation != null &&
+                           engine.PendingActivation.Controller != engine.Player)
                     {
                         var t = engine.PendingActivation.LegalTargets
                             .OrderByDescending(x => x.CurrentAtk).FirstOrDefault();
@@ -197,6 +346,73 @@ namespace WRLDZ.Duel
                             engine.CancelEffectTargeting();
                     }
 
+                    yield return null;
+                    continue;
+                }
+
+                // Face-up Spell ignition burns (Wave-Motion Cannon, PerCountBurns v141): lethal, or 3+ counted.
+                var fieldIgnition = ai.SpellTrapsOnField().FirstOrDefault(st =>
+                    TextEffects.PerCountBurnsRuntime.AiWantsFaceUpFieldIgnition(engine, ai, st) &&
+                    engine.CanActivateSpellTrap(ai, st, fromHand: false));
+                if (fieldIgnition != null && engine.TryActivateSpellTrap(ai, fieldIgnition, fromHand: false))
+                {
+                    yield return null;
+                    continue;
+                }
+
+                // Face-up Quick Effects (FaceUpQuickEffects v160): Type Zero Magic Crusher, Skull Lair.
+                var quickEffect = ai.SpellTrapsOnField().FirstOrDefault(st =>
+                    TextEffects.FaceUpQuickEffectsRuntime.AiWantsQuickEffect(engine, ai, st) &&
+                    engine.CanActivateSpellTrap(ai, st, fromHand: false));
+                if (quickEffect != null && engine.TryActivateSpellTrap(ai, quickEffect, fromHand: false))
+                {
+                    yield return null;
+                    continue;
+                }
+
+                // Their Set copies are activated (placed face-up) once the Quick Effect has a use.
+                var quickSet = ai.SpellTrapsOnField().FirstOrDefault(st =>
+                    TextEffects.FaceUpQuickEffectsRuntime.AiWantsToActivateSetCopy(engine, ai, st) &&
+                    engine.CanActivateSpellTrap(ai, st, fromHand: false));
+                if (quickSet != null && engine.TryActivateSpellTrap(ai, quickSet, fromHand: false))
+                {
+                    yield return null;
+                    continue;
+                }
+
+                // Delinquent Duo (DiscardTriggers v142): 2 of the player's cards for 1 while the AI's LP allow it.
+                // Main Phase 1 only: there RunTurn waits (IsAwaitingEffectTarget) for the human victim's forced
+                // choice; its Main Phase 2 loop does not, and would try to end the turn with the choice open.
+                var discardSpell = engine.Phase != DuelPhase.Main1
+                    ? null
+                    : ai.Hand.FirstOrDefault(c =>
+                        TextEffects.DiscardTriggersRuntime.AiWantsToActivateFromHand(engine, ai, c) &&
+                        engine.CanActivateSpellTrap(ai, c, true));
+                if (discardSpell != null && engine.TryActivateSpellTrap(ai, discardSpell, true))
+                {
+                    yield return null;
+                    continue;
+                }
+
+                // Reasoning / Reversal Quiz (CallsDiceAndSetTriggers v163). Main Phase 1 only, like Delinquent Duo: RunTurn
+                // waits there for the human opponent's Level declaration.
+                var callSpell = engine.Phase != DuelPhase.Main1
+                    ? null
+                    : ai.Hand.FirstOrDefault(c =>
+                        TextEffects.CallsDiceAndSetTriggersRuntime.AiWantsToActivateFromHand(engine, ai, c) &&
+                        engine.CanActivateSpellTrap(ai, c, true));
+                if (callSpell != null && engine.TryActivateSpellTrap(ai, callSpell, true))
+                {
+                    yield return null;
+                    continue;
+                }
+
+                // Painful Choice (HandDisruption v142): show 5 Deck cards, the opponent gives one to the hand.
+                var handDisruption = ai.Hand.FirstOrDefault(c =>
+                    TextEffects.HandDisruptionRuntime.AiWantsToActivateFromHand(engine, ai, c) &&
+                    engine.CanActivateSpellTrap(ai, c, true));
+                if (handDisruption != null && engine.TryActivateSpellTrap(ai, handDisruption, true))
+                {
                     yield return null;
                     continue;
                 }
@@ -211,9 +427,11 @@ namespace WRLDZ.Duel
                     {
                         if (engine.TryFlipSummon(ai, m))
                         {
-                            // Resolve pending monster targets (AI auto-picks inside MonsterEffects)
+                            // Resolve pending monster targets (AI auto-picks inside MonsterEffects). Not the
+                            // player's own choice (Cyber Jar / Morphing Jar #2 summons, FlipMassEffects v142).
                             while (engine.IsAwaitingEffectTarget && engine.PendingActivation != null &&
-                                   engine.PendingActivation.IsMonsterEffect)
+                                   engine.PendingActivation.IsMonsterEffect &&
+                                   engine.PendingActivation.Controller != engine.Player)
                             {
                                 var t = engine.PendingActivation.LegalTargets
                                     .OrderByDescending(x => x.CurrentAtk).FirstOrDefault();
@@ -229,6 +447,26 @@ namespace WRLDZ.Duel
                     }
                 }
 
+                // A printed Special Summon from the hand (Toon monsters while it controls "Toon World", Toons
+                // batch): does not use the Normal Summon; only when the Tributes are worth less ATK than the Toon.
+                var ownProcedure = ai.Hand.FirstOrDefault(c =>
+                    c != null && (TextEffects.ToonsRuntime.AiWantsHandProcedure(engine, ai, c) ||
+                                  TextEffects.NegationsAndGySummonsRuntime.AiWantsOwnHandProcedure(engine, ai, c)));
+                if (ownProcedure != null)
+                {
+                    engine.ClearTributes();
+                    if (engine.TrySpecialSummonProcedure(ai, ownProcedure))
+                    {
+                        engine.LogReview(DuelLogKind.Ai, "AI",
+                            $"{phaseLabel}: SS {ownProcedure.Name} by its own procedure (ATK {ownProcedure.CurrentAtk})");
+                        // The player may answer the Summon (Solemn Judgment) before the AI goes on.
+                        while (engine.IsAwaitingPlayerResponse)
+                            yield return null;
+                        yield return null;
+                        continue;
+                    }
+                }
+
                 // Normal Summon / Set best legal monster
                 if (!ai.NormalSummonUsed)
                 {
@@ -236,13 +474,16 @@ namespace WRLDZ.Duel
                         .Where(c => engine.CanNormalSummonOrSet(ai, c))
                         .ToList();
 
-                    // Prefer Level ≤4 non-Flip for face-up Attack; Set Flip Effect monsters
+                    // Prefer Level ≤4 non-Flip for face-up Attack; Set Flip Effect monsters (and Kiseitai-style
+                    // "attacked while face-down" monsters, SpiritsAndMisc batch)
                     var freeAtk = summonable
-                        .Where(c => c.Level <= 4 && !IsFlipEffectMonster(c))
+                        .Where(c => c.Level <= 4 && !IsFlipEffectMonster(c) &&
+                                    !TextEffects.SpiritsAndMiscRuntime.AiSetsFaceDown(c))
                         .OrderByDescending(c => c.CurrentAtk)
                         .ToList();
                     var freeFlip = summonable
-                        .Where(c => c.Level <= 4 && IsFlipEffectMonster(c))
+                        .Where(c => c.Level <= 4 && (IsFlipEffectMonster(c) ||
+                                                     TextEffects.SpiritsAndMiscRuntime.AiSetsFaceDown(c)))
                         .OrderByDescending(c => c.CurrentDef)
                         .ToList();
                     var tribute = summonable
@@ -259,7 +500,6 @@ namespace WRLDZ.Duel
                     }
                     else if (freeFlip.Count > 0 && AiHeuristicPolicy.PreferSetFlipMonsters)
                     {
-                        // Official: Flip monsters are usually Set face-down Defense
                         pick = freeFlip[0];
                         asSet = true;
                     }
@@ -268,7 +508,7 @@ namespace WRLDZ.Duel
                         pick = freeFlip[0];
                         asSet = true;
                     }
-                    else if (tribute.Count > 0)
+                    else if (tribute.Count > 0 && !(AiHeuristicPolicy.AvoidSacrifice && ai.MonsterCount < engine.Player.MonsterCount))
                     {
                         pick = tribute[0];
                         asSet = false;
@@ -278,6 +518,14 @@ namespace WRLDZ.Duel
                     {
                         engine.ClearTributes();
                         var ok = engine.TryNormalSummon(ai, pick, asSet);
+                        // RuleLocks batch: under a Summon lock (Jam Breeding Machine) the monster can still be Set.
+                        if (!ok && !asSet &&
+                            Rules.SummonProcedures.CheckNormalOrTribute(engine, ai, pick, asSet: true).Legal)
+                        {
+                            engine.ClearTributes();
+                            asSet = true;
+                            ok = engine.TryNormalSummon(ai, pick, asSet: true);
+                        }
                         // Engine logs the summon/set itself.
                         if (ok)
                         {
@@ -291,7 +539,8 @@ namespace WRLDZ.Duel
                 }
 
                 // Set a Trap (max 2 on field) — policy prefers Mirror Force / Trap Hole / Waboku
-                if (AiHeuristicPolicy.PreferSetTrapsBeforeEnd && ai.SpellTrapsOnField().Count() < 2)
+                var trapSlots = AiHeuristicPolicy.DefensivePlay ? 3 : AiHeuristicPolicy.AggressivePlay ? 1 : 2;
+                if (AiHeuristicPolicy.PreferSetTrapsBeforeEnd && ai.SpellTrapsOnField().Count() < trapSlots)
                 {
                     var trap = ai.Hand
                         .Where(c => c.Def != null && c.Def.IsTrap && engine.CanSetSpellTrap(ai, c))
@@ -332,6 +581,10 @@ namespace WRLDZ.Duel
         static bool AttackCostIsLethal(DuelEngine engine, DuelistState ai, CardInstance m)
         {
             TextEffects.TextEffectRuntime.AttackCosts(engine, ai, m, out var lp, out _);
+            // The monster's own local-lineage attack cost (Dark Elf / Toon "You must pay 500 LP to declare an
+            // attack with this monster", Toons batch).
+            if (!m.AttackLpCostPaidThisDeclaration)
+                lp += TextEffects.TextEffectRuntime.DeclareAttackLpCost(m);
             return lp > 0 && lp >= ai.LifePoints;
         }
 
@@ -349,16 +602,73 @@ namespace WRLDZ.Duel
             c?.Def?.type != null &&
             c.Def.type.IndexOf("Flip", System.StringComparison.OrdinalIgnoreCase) >= 0;
 
+        static bool CardHasAction(CardInstance card, TextEffects.EffectActionKind action)
+        {
+            var prog = TextEffects.CompiledEffectCache.GetOrCompile(card);
+            if (prog == null) return false;
+            return prog.ClausesFor(TextEffects.EffectTiming.Activate).Any(c => c != null && c.Action == action);
+        }
+
+        static bool HasGyRecursion(CardInstance card) =>
+            CardHasAction(card, TextEffects.EffectActionKind.AddFromGyToHand) ||
+            CardHasAction(card, TextEffects.EffectActionKind.SpecialSummonFromGy);
+
+        static bool HasSearchEffect(CardInstance card) =>
+            CardHasAction(card, TextEffects.EffectActionKind.AddFromDeckToHand);
+
+        static bool HasFusionOrRitual(CardInstance card) =>
+            CardHasAction(card, TextEffects.EffectActionKind.FusionSummonRegistered) ||
+            CardHasAction(card, TextEffects.EffectActionKind.RitualSummon);
+
         /// <summary>Yields once per attack declaration.</summary>
         static IEnumerable<object> RunBattlePhase(DuelEngine engine, DuelistState ai)
         {
-            // Refresh attacker list each step (board changes)
-            while (!engine.GameOver && engine.Phase == DuelPhase.Battle && engine.TurnPlayer == ai)
+            // Monsters whose declaration the engine refused this Battle Phase (Ring of Magnetism,
+            // "cannot be targeted for attacks", Duelist Kingdom no-direct …). Without this the loop
+            // retried the same illegal attack forever and the AI turn never ended (DR-03).
+            var refused = new HashSet<CardInstance>();
+            // Hard cap as a second guard: no field allows this many declarations in one Battle Phase.
+            const int maxIterations = 64;
+            for (var iteration = 0;
+                 iteration < maxIterations &&
+                 !engine.GameOver && engine.Phase == DuelPhase.Battle && engine.TurnPlayer == ai;
+                 iteration++)
             {
-                var attacker = ai.MonstersOnField()
-                    .Where(m => engine.CanAttack(ai, m) && !AttackCostIsLethal(engine, ai, m))
-                    .OrderByDescending(m => m.CurrentAtk)
-                    .FirstOrDefault();
+                // Refresh attacker list each step (board changes)
+                var attackers = ai.MonstersOnField()
+                    .Where(m => !refused.Contains(m) && engine.CanAttack(ai, m) && !AttackCostIsLethal(engine, ai, m))
+                    .ToList();
+
+                CardInstance attacker = null;
+
+                // BaitTraps (Hard+): lead with the weakest attacker to soak Mirror Force / Waboku
+                if (AiHeuristicPolicy.BaitTraps && attackers.Count > 1)
+                {
+                    var weakest = attackers.OrderBy(m => m.CurrentAtk).FirstOrDefault();
+                    var others = attackers.Where(m => m != weakest).ToList();
+                    if (weakest != null && others.Any(o => o.CurrentAtk >= weakest.CurrentAtk * 2))
+                    {
+                        attacker = weakest;
+                        refused.Add(weakest);
+                    }
+                }
+
+                if (attacker == null)
+                {
+                    // CalculateLethal: if any attacker can kill, lead with it
+                    if (AiHeuristicPolicy.CalculateLethal)
+                    {
+                        var lethal = attackers
+                            .Where(m => m.CurrentAtk >= engine.Player.LifePoints)
+                            .OrderByDescending(m => m.CurrentAtk)
+                            .FirstOrDefault();
+                        if (lethal != null)
+                            attacker = lethal;
+                    }
+
+                    if (attacker == null)
+                        attacker = attackers.OrderByDescending(m => m.CurrentAtk).FirstOrDefault();
+                }
 
                 if (attacker == null)
                     yield break;
@@ -369,7 +679,12 @@ namespace WRLDZ.Duel
                     (engine.Player.MonsterCount == 0 || engine.CanAttackDirectly(ai, attacker)))
                 {
                     // Engine logs the attack declaration.
-                    engine.TryAttack(ai, attacker, null);
+                    if (!engine.TryAttack(ai, attacker, null))
+                    {
+                        refused.Add(attacker);
+                        continue;
+                    }
+
                     while (engine.IsAwaitingPlayerResponse || engine.IsAwaitingEffectTarget)
                         yield return null;
                     yield return null;
@@ -378,7 +693,18 @@ namespace WRLDZ.Duel
 
                 if (target == null)
                 {
-                    // Prefer skip further attacks if no beneficial target (no log spam).
+                    // A Toon limited to face-up Toon targets (Toons batch) may find none while a weaker attacker still
+                    // can: skip only this one.
+                    if (TextEffects.ToonsRuntime.ForbidsDirectAttack(engine, attacker) ||
+                        TextEffects.SelfStatMonstersRuntime.ForbidsDirectAttack(engine, attacker) ||
+                        // Asura Priest (SpiritMonsters batch): no worthwhile monster left that it has not attacked.
+                        TextEffects.SpiritMonstersRuntime.IsAttackAllFollowUp(engine, attacker))
+                    {
+                        refused.Add(attacker);
+                        continue;
+                    }
+
+                    // No beneficial target for the strongest attacker: weaker ones will not find one either.
                     yield break;
                 }
 
@@ -388,7 +714,12 @@ namespace WRLDZ.Duel
                         ? $"{target.Name}({target.CurrentAtk}/{target.CurrentDef})"
                         : "face-down"));
                 // Engine logs the attack declaration.
-                engine.TryAttack(ai, attacker, target);
+                if (!engine.TryAttack(ai, attacker, target))
+                {
+                    refused.Add(attacker);
+                    continue;
+                }
+
                 // Player may activate Mirror Force / Negate Attack / Waboku — do not continue until resolved
                 while (engine.IsAwaitingPlayerResponse || engine.IsAwaitingEffectTarget)
                     yield return null;
@@ -397,16 +728,36 @@ namespace WRLDZ.Duel
         }
 
         /// <summary>
-        /// Legal target selection using official battle math (never treats face-down as 0 DEF).
-        /// Face-down monsters use printed DEF for evaluation (revealed at damage calculation).
+        /// Legal target selection using official battle math. Only targets the engine will accept are
+        /// considered (Ring of Magnetism host, "cannot be targeted for attacks", attacks-must-be-direct).
+        /// Face-down monsters are judged by <see cref="AiHeuristicPolicy.FaceDownDefEstimate"/>, never by
+        /// their hidden DEF (GDD 3.2: the AI does not look at face-down cards).
         /// </summary>
         static CardInstance ChooseAttackTarget(DuelEngine engine, DuelistState ai, CardInstance attacker)
         {
-            var playerMonsters = engine.Player.MonstersOnField().ToList();
+            if (ai.MustAttackDirectlyThisTurn) return null;
+            // A Toon that may attack directly (the player controls no face-up Toon) goes for the LP (Toons batch).
+            if (TextEffects.ToonsRuntime.GrantsDirectAttack(engine, attacker) &&
+                engine.CanAttackDirectly(ai, attacker))
+                return null;
+            var playerMonsters = engine.Player.MonstersOnField()
+                .Where(m => m != null && !TextEffects.ContinuousProtections.CannotBeAttackTarget(engine, m) &&
+                            // Toon rule: only face-up Toon monsters while the player controls one.
+                            !TextEffects.ToonsRuntime.ForbidsAttackTarget(engine, attacker, m) &&
+                            // SpiritMonsters batch: Inaba White Rabbit attacks directly only; Asura Priest attacks
+                            // each monster once per Battle Phase.
+                            !TextEffects.SpiritMonstersRuntime.ForbidsAttackTarget(engine, attacker, m))
+                .ToList();
+            var magnetHosts = engine.MagnetismHosts(ai);
+            if (magnetHosts.Count == 1)
+                playerMonsters = playerMonsters.Where(m => m == magnetHosts[0]).ToList();
             if (playerMonsters.Count == 0) return null;
 
             bool IsDefense(CardInstance m) =>
                 !m.FaceUp || m.Position == BattlePosition.Defense;
+
+            int KnownDef(CardInstance m) =>
+                m.FaceUp ? m.CurrentDef : (AiHeuristicPolicy.RespectBackrow ? 2000 : AiHeuristicPolicy.FaceDownDefEstimate);
 
             var atk = attacker.CurrentAtk;
 
@@ -419,12 +770,13 @@ namespace WRLDZ.Duel
                     return t;
             }
 
-            // 2) Destroy face-down / DEF only if ATK > DEF (official — otherwise we take damage & they live)
+            // 2) Destroy face-down / DEF only if ATK > (known or estimated) DEF — otherwise we take
+            //    damage and they live.
             foreach (var t in playerMonsters
                          .Where(IsDefense)
-                         .OrderBy(m => m.CurrentDef))
+                         .OrderBy(KnownDef))
             {
-                if (atk > t.CurrentDef)
+                if (atk > KnownDef(t))
                     return t;
             }
 

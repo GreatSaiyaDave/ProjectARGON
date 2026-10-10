@@ -1,0 +1,93 @@
+using System.Text.RegularExpressions;
+
+namespace WRLDZ.Duel.TextEffects
+{
+    /// <summary>
+    /// SelfStatMonsters (v153). Shared sentence shapes, not a card-name list.
+    /// The "Must first be Special Summoned by banishing N ATTRIBUTE" procedure is not an atom: Gigantes'
+    /// test treats that nomi line as a summon restriction, and an Activate clause there fails the suite.
+    /// "If this card destroys a monster by battle: This card loses N ATK" is not compiled. The attacker
+    /// path already fires; the defender-destroyed-the-attacker path is a DuelEngine block, not the
+    /// existing one-line direct-attack gate, so that sentence stays unparsed (not FullyCompiled).
+    /// "If this card/monster is Normal Summoned, destroy this card" stays on
+    /// <see cref="ClassicEraTemplates"/> (this card or this monster).
+    /// Runtime: <see cref="SelfStatMonstersRuntime"/> for the direct-attack lock and the per-monster count.
+    /// </summary>
+    public static class SelfStatMonstersAtoms
+    {
+        const string Start = @"(?:^|(?<=[.!?)]\s))";
+        const string End = @"\.(?=\s|$)";
+
+        public static readonly AtomRegistration.Atom[] Atoms =
+        {
+            // This card only, opponent's Battle Phase (The Rock Spirit). Banner of Courage is every monster you
+            // control during your Battle Phase; AffectsThisCardOnly keeps those apart.
+            new AtomRegistration.Atom(
+                Start + @"Increase the ATK of this (?:monster|card) by (\d+) points during your opponent's Battle Phase" +
+                End,
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.ContinuousGainAtkDef,
+                    Side = EffectSide.Controller,
+                    Amount = Parse(m, 1, 300),
+                    DefAmount = 0,
+                    AffectsThisCardOnly = true,
+                    RequiresBattlePhase = true,
+                    OpponentTurnOnly = true,
+                    MakesChainLink = false
+                }),
+
+            // Spirit of Flames' "This card gains N ATK during your Battle Phase only." lives in EngineHygieneAtoms (v160),
+            // with the banish procedure it needs.
+
+            // Opponent's monsters, their Battle Phase (Soul of Purity and Light). OpponentIsSubject so it is not
+            // both fields.
+            new AtomRegistration.Atom(
+                Start + @"All monsters your opponent controls lose (\d+) ATK during their Battle Phase only" + End,
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.ContinuousGainAtkDef,
+                    Side = EffectSide.Opponent,
+                    OpponentIsSubject = true,
+                    Amount = -Parse(m, 1, 300),
+                    DefAmount = 0,
+                    RequiresBattlePhase = true,
+                    OpponentTurnOnly = true,
+                    MakesChainLink = false
+                }),
+
+            // Per monster the opponent controls, face-down included. Not Boar Soldier's flat "1 or more".
+            new AtomRegistration.Atom(
+                Start + @"If your opponent controls any monsters?, decrease the ATK of this card by (\d+) points? " +
+                @"for each monster on your opponent'?s side of the field" + End,
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.GainSelfAtkPerCount,
+                    Side = EffectSide.Controller,
+                    Amount = -Parse(m, 1, 200),
+                    DefAmount = 0,
+                    CountSource = SelfStatMonstersRuntime.OppMonsterCount,
+                    MakesChainLink = false
+                }),
+
+            // Direct-attack lock. The ATK-loss sentence of the same cards is intentionally not an atom.
+            new AtomRegistration.Atom(
+                Start + @"This card cannot attack your opponent directly" + End,
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.CannotAttackDirectly,
+                    MakesChainLink = false
+                }),
+        };
+
+        static int Parse(Match m, int group, int fallback)
+        {
+            if (m == null || !m.Success || m.Groups.Count <= group) return fallback;
+            return int.TryParse(m.Groups[group].Value, out var n) ? n : fallback;
+        }
+    }
+}

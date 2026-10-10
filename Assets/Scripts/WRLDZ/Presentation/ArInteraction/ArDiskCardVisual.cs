@@ -116,10 +116,12 @@ namespace WRLDZ.Presentation.ArInteraction
             }
             else
             {
-                // After Rx(−102) the bottom lip is the only part in open air — pick that strip
+                // After Rx(−102) the bottom lip is the only part in open air — pick that strip, generously: wider
+                // than the card, reaching past the lip into open air and tall enough for a ray grazing the disk.
+                // (TryFieldTap scores against this box's centre, so the monster pad above still wins its own taps.)
                 var peek = ArAnimePresentation.CardAspectY * ArZoneLayout.SlotBottomPeekFraction;
-                col.size = new Vector3(1.2f, peek * 2.2f, 0.7f);
-                col.center = new Vector3(0f, -ArAnimePresentation.CardAspectY * 0.5f + peek * 0.55f, 0f);
+                col.size = new Vector3(1.4f, peek * 2.6f, 1.1f);
+                col.center = new Vector3(0f, -ArAnimePresentation.CardAspectY * 0.5f + peek * 0.1f, 0f);
             }
 
             ApplyFace(db);

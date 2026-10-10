@@ -1,0 +1,149 @@
+{
+  "name": "Mako Tsunami · Duelist Kingdom",
+  "format": "wrldz_dk_character",
+  "character": "Mako Tsunami",
+  "era": "duelist_kingdom",
+  "erazBandId": "original",
+  "notes": "Fortress Whale + Oath, Fiend Kraken, Umi / Legendary Fisherman. Amphibious Bugroth in the extra. MK-3 still in the main as the later TCG fish-machine.",
+  "main": [
+    {
+      "id": 23771716,
+      "name": "7 Colored Fish",
+      "qty": 3
+    },
+    {
+      "id": 13429800,
+      "name": "Great White",
+      "qty": 3
+    },
+    {
+      "id": 14851496,
+      "name": "Jellyfish",
+      "qty": 3
+    },
+    {
+      "id": 3643300,
+      "name": "The Legendary Fisherman",
+      "qty": 3
+    },
+    {
+      "id": 69750536,
+      "name": "Wow Warrior",
+      "qty": 2
+    },
+    {
+      "id": 39004808,
+      "name": "Root Water",
+      "qty": 2
+    },
+    {
+      "id": 64342551,
+      "name": "Amphibious Bugroth MK-3",
+      "qty": 2
+    },
+    {
+      "id": 54579801,
+      "name": "High Tide Gyojin",
+      "qty": 1
+    },
+    {
+      "id": 58831685,
+      "name": "Giant Red Seasnake",
+      "qty": 1
+    },
+    {
+      "id": 5628232,
+      "name": "Flying Penguin",
+      "qty": 2
+    },
+    {
+      "id": 22702055,
+      "name": "Umi",
+      "qty": 3
+    },
+    {
+      "id": 295517,
+      "name": "A Legendary Ocean",
+      "qty": 1
+    },
+    {
+      "id": 72302403,
+      "name": "Swords of Revealing Light",
+      "qty": 1
+    },
+    {
+      "id": 24094653,
+      "name": "Polymerization",
+      "qty": 1
+    },
+    {
+      "id": 66788016,
+      "name": "Fissure",
+      "qty": 1
+    },
+    {
+      "id": 63102017,
+      "name": "Stop Defense",
+      "qty": 1
+    },
+    {
+      "id": 18605135,
+      "name": "Tornado Wall",
+      "qty": 3
+    },
+    {
+      "id": 4206964,
+      "name": "Trap Hole",
+      "qty": 2
+    },
+    {
+      "id": 44095762,
+      "name": "Mirror Force",
+      "qty": 1
+    },
+    {
+      "id": 14315573,
+      "name": "Negate Attack",
+      "qty": 1
+    },
+    {
+      "id": 62337487,
+      "name": "Fortress Whale",
+      "qty": 1
+    },
+    {
+      "id": 77454922,
+      "name": "Fortress Whale's Oath",
+      "qty": 1
+    },
+    {
+      "id": 77456781,
+      "name": "Fiend Kraken",
+      "qty": 1
+    }
+  ],
+  "extra": [
+    {
+      "id": 28593363,
+      "name": "Deepsea Shark",
+      "qty": 1
+    },
+    {
+      "id": 19066538,
+      "name": "Roaring Ocean Snake",
+      "qty": 1
+    },
+    {
+      "id": 40173854,
+      "name": "Amphibious Bugroth",
+      "qty": 1
+    }
+  ],
+  "side": [],
+  "counts": {
+    "main": 40,
+    "extra": 3,
+    "side": 0
+  },
+  "role": "character_dk"
+}

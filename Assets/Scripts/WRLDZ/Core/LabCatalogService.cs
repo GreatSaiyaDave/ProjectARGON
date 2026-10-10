@@ -21,6 +21,12 @@ namespace WRLDZ.Core
         public static int GrantFullCatalog(LocalAccountStore.Account acc, CardDatabase db = null)
         {
             if (acc == null || _granting) return 0;
+            if (!WrldzLab.LabDoorsEnabled)
+            {
+                Debug.LogWarning("[WRLDZ Lab] Full-catalog grant refused — Editor / development builds only.");
+                return 0;
+            }
+
             _granting = true;
             try
             {

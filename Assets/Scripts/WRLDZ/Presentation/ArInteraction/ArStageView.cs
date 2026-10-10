@@ -18,7 +18,12 @@ namespace WRLDZ.Presentation.ArInteraction
                 return _cached;
 
             Camera cam = null;
-            if (from != null)
+            var lenses = WRLDZ.Presentation.ArLensesSession.Instance;
+            if (lenses != null && lenses.XrCamera != null && lenses.XrCamera.isActiveAndEnabled &&
+                (lenses.SessionRunning || WRLDZ.Presentation.ArPresentationTarget.IsLenses))
+                cam = lenses.XrCamera;
+
+            if (cam == null && from != null)
             {
                 var t = from;
                 for (var i = 0; i < 8 && t != null; i++, t = t.parent)

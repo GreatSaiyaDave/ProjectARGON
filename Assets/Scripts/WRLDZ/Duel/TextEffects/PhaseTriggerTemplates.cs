@@ -11,6 +11,15 @@ namespace WRLDZ.Duel.TextEffects
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         /// <summary>
+        /// Archfiend upkeep family: mandatory controller LP payment during each
+        /// Standby Phase. Any unrelated die/target text remains unparsed.
+        /// </summary>
+        static readonly Regex RxStandbyPayLp = new(
+            @"The controller of this card pays (\d+) (?:Life Points|LP) during each of " +
+            @"(?:his/her|their|your) Standby Phases(?:\s*\(this is not optional\))?\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
         /// Archfiend maintenance cost: "The controller of this card pays N Life Points
         /// during each of his/her Standby Phases (this is not optional)." Mandatory,
         /// no destruction. (Vilepawn / Desrook / Darkbishop / Infernalqueen /
@@ -24,6 +33,11 @@ namespace WRLDZ.Duel.TextEffects
         /// <summary>Falling Down: During each of your opponent's Standby Phases: You take 800 damage.</summary>
         static readonly Regex RxOppStandbyYouTakeDmg = new(
             @"During each of your opponent's Standby Phases:\s*You take (\d+) damage\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>Snatch Steal family: During each of your opponent's Standby Phases: They gain N LP.</summary>
+        static readonly Regex RxOppStandbyTheyGainLp = new(
+            @"During each of your opponent's Standby Phases:\s*They gain (\d+) Life Points\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxStandbyDmgOpp = new(
@@ -62,13 +76,15 @@ namespace WRLDZ.Duel.TextEffects
             @"special summon 1 ""([^""]+)"" from your hand or deck",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        // "…of the turn it is Normal Summoned or flipped face-up" is the LOD print of the same Spirit
+        // sentence (Yata-Garasu, Hino-Kagu-Tsuchi, Yamata Dragon; SpiritsAndMisc batch).
         static readonly Regex RxSpiritBounce = new(
-            @"during the end phase of the turn (?:this card (?:is|was) |that this card (?:is|was) )?" +
+            @"during the end phase of the turn (?:this card (?:is|was) |that this card (?:is|was) |it (?:is|was) )?" +
             @"(?:normal summoned or flipped face-up|this card is normal summoned or flipped face-up)",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxReturnHand = new(
-            @"return (?:it|this card) to (?:the owner's|its owner's|the) hand",
+            @"(?:(?:return|returns) (?:it|this card )?to (?:the owner's|its owner's|the) hand|(?:this card|it) returns to (?:the owner's|its owner's|the) hand)",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         /// <summary>
@@ -108,6 +124,25 @@ namespace WRLDZ.Duel.TextEffects
             @"Special Summon this card from the (?:GY|Graveyard)\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        /// <summary>
+        /// <paramref name="m"/> matched text an earlier whole-text template already compiled (at least half of it lies
+        /// in <paramref name="spans"/>), so adding it again would double-compile the effect.
+        /// </summary>
+        static bool CoveredBySpans(System.Collections.Generic.List<(int start, int length)> spans, Match m)
+        {
+            if (spans == null || m == null || !m.Success || m.Length <= 0) return false;
+            var end = m.Index + m.Length;
+            var covered = 0;
+            foreach (var (s, n) in spans)
+            {
+                var a = m.Index > s ? m.Index : s;
+                var b = end < s + n ? end : s + n;
+                if (b > a) covered += b - a;
+            }
+
+            return covered * 2 >= m.Length;
+        }
+
         public static void Collect(string text, CardDef def,
             System.Collections.Generic.List<EffectClause> into,
             System.Collections.Generic.List<(int start, int length)> spans)
@@ -141,6 +176,21 @@ namespace WRLDZ.Duel.TextEffects
                 Amount = Parse(RxStandbyDmgSelf.Match(text), 1, 1000),
                 MakesChainLink = true
             });
+            // Local-lineage generic upkeep (PayLifePoints). The GitHub-lineage Archfiend template above
+            // (StandbyMaintenancePayLp: mandatory, no chain link, waived by Pandemonium) owns the exact
+            // Archfiend wording; this one only fires for phrasing that template does not cover, so a card
+            // never pays its upkeep twice.
+            var payUpkeep = upkeep.Success ? Match.Empty : RxStandbyPayLp.Match(text);
+            Add(payUpkeep, payUpkeep.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.StandbyPhase,
+                    Action = EffectActionKind.PayLifePoints,
+                    Amount = Parse(payUpkeep, 1, 500),
+                    Side = EffectSide.Controller,
+                    MakesChainLink = true
+                }
+                : null);
             var oppDmg = RxOppStandbyYouTakeDmg.Match(text);
             Add(oppDmg, new EffectClause
             {
@@ -150,22 +200,45 @@ namespace WRLDZ.Duel.TextEffects
                 OpponentTurnOnly = true,
                 MakesChainLink = true
             });
-            Add(RxStandbyDmgOpp.Match(text), new EffectClause
-            {
-                Timing = EffectTiming.StandbyPhase,
-                Action = EffectActionKind.InflictDamageToOpponent,
-                Amount = Parse(RxStandbyDmgOpp.Match(text), 1, 600),
-                MakesChainLink = true
-            });
+            var oppGain = RxOppStandbyTheyGainLp.Match(text);
+            Add(oppGain, oppGain.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.StandbyPhase,
+                    Action = EffectActionKind.GainLifePoints,
+                    Amount = Parse(oppGain, 1, 1000),
+                    Side = EffectSide.Opponent,
+                    OpponentTurnOnly = true,
+                    MakesChainLink = true
+                }
+                : null);
+            // StandbyBurnsAndDice batch (v162): Nightmare Wheel's whole-text atom already compiled this burn with its
+            // "that monster must be on the field" condition (AtomRegistration runs first); a second clause would burn
+            // without it.
+            var dmgOpp = RxStandbyDmgOpp.Match(text);
+            if (!CoveredBySpans(spans, dmgOpp))
+                Add(dmgOpp, new EffectClause
+                {
+                    Timing = EffectTiming.StandbyPhase,
+                    Action = EffectActionKind.InflictDamageToOpponent,
+                    Amount = Parse(dmgOpp, 1, 600),
+                    MakesChainLink = true
+                });
             var lp = RxStandbyGainLp.Match(text);
-            Add(lp, new EffectClause
+            // Darklord Marie (StandbyPhaseEffects): its whole-text atom already compiled this sentence together
+            // with its "must be in the Graveyard" range (AtomRegistration runs first); a second clause would gain twice.
+            if (!CoveredBySpans(spans, lp))
             {
-                Timing = EffectTiming.StandbyPhase,
-                Action = EffectActionKind.GainLifePoints,
-                Amount = lp.Success ? Parse(lp, 1, 200) : 200,
-                ResolvesFromGy = Regex.IsMatch(text, @"must be in the graveyard", RegexOptions.IgnoreCase),
-                MakesChainLink = true
-            });
+                Add(lp, new EffectClause
+                {
+                    Timing = EffectTiming.StandbyPhase,
+                    Action = EffectActionKind.GainLifePoints,
+                    Amount = lp.Success ? Parse(lp, 1, 200) : 200,
+                    Side = EffectSide.Controller,
+                    ResolvesFromGy = Regex.IsMatch(text, @"must be in the graveyard", RegexOptions.IgnoreCase),
+                    MakesChainLink = true
+                });
+            }
 
             var each = RxStandbyGainLpEach.Match(text);
             if (each.Success && !lp.Success)
@@ -175,6 +248,7 @@ namespace WRLDZ.Duel.TextEffects
                     Timing = EffectTiming.StandbyPhase,
                     Action = EffectActionKind.GainLifePoints,
                     Amount = Parse(each, 1, 800),
+                    Side = EffectSide.Controller,
                     RequiresThisAttackPosition = RxAsLongAsAtk.IsMatch(text),
                     RequiresThisDefensePosition = RxAsLongAsDef.IsMatch(text),
                     MakesChainLink = true
@@ -187,6 +261,7 @@ namespace WRLDZ.Duel.TextEffects
                 Timing = EffectTiming.StandbyPhase,
                 Action = EffectActionKind.GainLifePoints,
                 Amount = pik.Success ? Parse(pik, 1, 400) : 400,
+                Side = EffectSide.Controller,
                 ScaleAmountByControllerMonsters = true,
                 MakesChainLink = true
             });
@@ -221,6 +296,8 @@ namespace WRLDZ.Duel.TextEffects
                     RequiresSummonedOrFlippedThisTurn = true,
                     MakesChainLink = true
                 });
+                var hand = RxReturnHand.Match(text);
+                if (hand.Success) spans?.Add((hand.Index, hand.Length));
             }
 
             var ecto = RxEndPhaseTurnPlayerTributeHalfAtk.Match(text);
@@ -258,7 +335,10 @@ namespace WRLDZ.Duel.TextEffects
                     Zone = EffectZoneFilter.FieldSpellsOnField,
                     Side = EffectSide.Both,
                     StaysOnField = true,
-                    MakesChainLink = true
+                    MakesChainLink = true,
+                    // "When this card is activated:" destroys the Field Spells even if this card is already gone
+                    // (StandbyGrowthAndMaintenance batch, v142).
+                    ResolvesEvenIfThisLeftField = true
                 }
                 : null);
 
@@ -290,13 +370,17 @@ namespace WRLDZ.Duel.TextEffects
             if (def == null || need == null) return;
             var text = def.desc ?? "";
             if (string.IsNullOrEmpty(text)) return;
+            if (RxSpiritBounce.IsMatch(text) && RxReturnHand.IsMatch(text))
+                need.Add(EffectActionKind.ReturnToHand);
             if (RxArchfiendUpkeep.IsMatch(text))
                 need.Add(EffectActionKind.StandbyMaintenancePayLp);
             if (RxStandbyGainLp.IsMatch(text) || RxStandbyGainLpEach.IsMatch(text) ||
-                RxPikeru.IsMatch(text))
+                RxPikeru.IsMatch(text) || RxOppStandbyTheyGainLp.IsMatch(text))
                 need.Add(EffectActionKind.GainLifePoints);
             if (RxStandbyDmgSelf.IsMatch(text) || RxOppStandbyYouTakeDmg.IsMatch(text))
                 need.Add(EffectActionKind.TakeEffectDamage);
+            if (RxStandbyPayLp.IsMatch(text) && !RxArchfiendUpkeep.IsMatch(text))
+                need.Add(EffectActionKind.PayLifePoints);
             if (RxEndPhaseTurnPlayerTributeHalfAtk.IsMatch(text))
                 need.Add(EffectActionKind.InflictDamageHalfTributedAtk);
             if (RxEndPhaseTurnPlayerChangePos.IsMatch(text))

@@ -10,7 +10,7 @@ This file is authority for *how* the engine must grow. Live legality still lives
 ## 0. ocgcore / YGOPro — lab path may link; product ship later
 
 ocgcore + Project Ignis scripts are **AGPLv3** (network copyleft). Keep them in
-`ThirdParty/OcgCore/` and `StreamingAssets/OcgCore/` (separable from Konami art
+`ThirdParty/OcgCore/` and `StreamingAssets/OcgCore/` (separable from the card art
 in `StreamingAssets/Cards/`).
 
 **Lab (`OcgLabDuelHost.IsActive`):** Unity is a viewer. Rules + card effects

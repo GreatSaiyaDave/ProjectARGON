@@ -17,6 +17,8 @@ Tools/HeadlessEngine/run.sh --card "Call of the Haunted"  # inspect one card's c
 Tools/HeadlessEngine/run.sh --coverage                    # pre-Link + whole-DB effect-compile coverage
 Tools/HeadlessEngine/run.sh --gaps                        # dump unimplemented-card corpus
 Tools/HeadlessEngine/run.sh --export-seed                 # re-export the compiled-effects seed (after a compiler Version bump)
+Tools/HeadlessEngine/run.sh --prelink                     # compile eras/prelink_monsters.json (TCG/OCG monsters through 2017-05-05)
+Tools/HeadlessEngine/run.sh --prelink-card "Dark Magician"  # one monster from that catalog
 ```
 
 `--export-seed` regenerates `Assets/StreamingAssets/WRLDZ/compiled_effects_seed_v1.json`
@@ -42,6 +44,8 @@ Exit code is non-zero if any suite fails (`report.Ok == false`: any unit fail, e
 The `--card <id|name>` inspector prints how a card's official text compiles into an
 effect program (classification, timings, and each clause's action/zone/requirements) —
 useful when authoring new cards or diagnosing why one is unimplemented.
+`--prelink-card` does the same for one row of `eras/prelink_monsters.json`, including
+monsters that are not in `cards_db.json`. It does not compile the rest of the pool.
 
 ## How it works
 

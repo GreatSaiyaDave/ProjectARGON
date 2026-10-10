@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using WRLDZ.Core;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using WRLDZ.Data;
@@ -345,10 +346,9 @@ namespace WRLDZ.Presentation
 
         static Mesh LoadDiskMesh()
         {
-            var stream = System.IO.Path.Combine(Application.streamingAssetsPath,
-                SpiritDuelerDiskView.StreamingRelativePath);
-            if (System.IO.File.Exists(stream))
-                return ObjMeshLoader.LoadFromFile(stream, "BattleCityDuelDisk");
+            if (StreamingFiles.Exists(SpiritDuelerDiskView.StreamingRelativePath))
+                return ObjMeshLoader.LoadFromStreaming(SpiritDuelerDiskView.StreamingRelativePath, "BattleCityDuelDisk");
+            // Editor-only project fallback (Application.dataPath is the Assets folder there).
             var proj = System.IO.Path.Combine(Application.dataPath,
                 "Models/WRLDZ/SpiritDueler/BattleCityDuelDisk.obj");
             if (System.IO.File.Exists(proj))
@@ -358,9 +358,7 @@ namespace WRLDZ.Presentation
 
         static Material MakeDiskMaterial(Color accent)
         {
-            var shader = Shader.Find("Universal Render Pipeline/Lit")
-                         ?? Shader.Find("Standard")
-                         ?? Shader.Find("Unlit/Color");
+            var shader = ArAnimePresentation.LitShader();
             var mat = new Material(shader) { name = "DiskFieldMat" };
             var baseCol = new Color(0.1f, 0.18f, 0.28f, 1f);
             if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", baseCol);
@@ -378,9 +376,7 @@ namespace WRLDZ.Presentation
 
         static Material MakeUnlit(Color c)
         {
-            var shader = Shader.Find("Universal Render Pipeline/Unlit")
-                         ?? Shader.Find("Unlit/Color")
-                         ?? Shader.Find("UI/Default");
+            var shader = ArAnimePresentation.UnlitShader();
             var mat = new Material(shader);
             if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", c);
             if (mat.HasProperty("_Color")) mat.SetColor("_Color", c);

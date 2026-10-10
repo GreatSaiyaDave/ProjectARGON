@@ -32,7 +32,8 @@ namespace WRLDZ.UI
         {
             "Corner kid", "Night-shift clerk", "Rooftop runner", "Bus-stop duelist",
             "Alley veteran", "Park regular", "Rift-touched local", "Quiet commuter",
-            "Street magician", "Late walker"
+            "Street magician", "Late walker", "Plaza sentry", "Gate guard",
+            "Schoolyard kid", "Weekend duelist", "Cafeteria kid", "Library lurker"
         };
 
         readonly List<Agent> _agents = new();
@@ -43,6 +44,10 @@ namespace WRLDZ.UI
         Action<Agent> _onTap;
         float _retargetAt;
         float _metersPerMapWidth = 280f;
+        /// <summary>Vertical UV stretch so the NPC keeps its portrait shape on the square map.</summary>
+        float _vStretch = 1f;
+        /// <summary>Monotonic serial: ids stay unique across despawn/respawn (a count-based id could repeat).</summary>
+        int _nextId;
 
         public IReadOnlyList<Agent> Agents => _agents;
 
@@ -52,9 +57,14 @@ namespace WRLDZ.UI
             float metersPerMapWidth,
             IEnumerable<(string id, float x, float y)> tears,
             Func<float, float, float> distMeters,
-            Action<Agent> onTap)
+            Action<Agent> onTap,
+            float verticalStretch = 1f)
         {
-            var go = new GameObject("TearStreetNpcs", typeof(RectTransform));
+            // Own canvas: NPCs rewrite their anchors every frame, which would otherwise re-batch the
+            // whole static map. The raycaster keeps the NPC buttons tappable (hierarchy depth still
+            // decides pin-vs-NPC priority, so the pins above win).
+            var go = new GameObject("TearStreetNpcs", typeof(RectTransform), typeof(Canvas),
+                typeof(GraphicRaycaster));
             go.transform.SetParent(mapContent, false);
             var rt = go.GetComponent<RectTransform>();
             rt.anchorMin = Vector2.zero;
@@ -65,6 +75,7 @@ namespace WRLDZ.UI
             field._distM = distMeters;
             field._onTap = onTap;
             field._metersPerMapWidth = Mathf.Max(1f, metersPerMapWidth);
+            field._vStretch = Mathf.Max(0.5f, verticalStretch);
             foreach (var t in tears)
             {
                 field._tearIds.Add(t.id);
@@ -85,7 +96,7 @@ namespace WRLDZ.UI
         {
             var acc = AppSession.Ensure()?.Account;
             acc?.EnsureProgress();
-            var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            var now = ClockGuard.NowUnix(acc?.progress);
             var riftOk = acc?.progress != null && acc.progress.HasStreet8000Access(now);
 
             for (var t = 0; t < _tears.Count; t++)
@@ -117,7 +128,8 @@ namespace WRLDZ.UI
 
         void Spawn(string tearId, Vector2 tear, float hardShare)
         {
-            var rng = new System.Random(unchecked(tearId.GetHashCode() * 397 + _agents.Count * 17 + Time.frameCount));
+            var serial = _nextId++;
+            var rng = new System.Random(unchecked(tearId.GetHashCode() * 397 + serial * 17 + Time.frameCount));
             var ang = (float)(rng.NextDouble() * Mathf.PI * 2);
             var maxUv = RadiusForTear(tearId);
             var rad = maxUv * (0.22f + (float)rng.NextDouble() * 0.78f);
@@ -125,9 +137,12 @@ namespace WRLDZ.UI
             var sy = tear.y + Mathf.Sin(ang) * rad;
             var hard = rng.NextDouble() < hardShare;
             var band = hard ? StreetLpBand.Street8000 : StreetLpBand.Street4000;
-            var name = StreetNames[rng.Next(0, StreetNames.Length)];
+            // a named street duelist from the roster (its name decides its look and decks); the old labels stay as
+            // a fallback for a roster miss
+            var npc = Data.NpcDuelistRoster.Generate(rng.Next());
+            var name = npc != null ? npc.Name : StreetNames[rng.Next(0, StreetNames.Length)];
 
-            var go = new GameObject("Npc_" + tearId + "_" + _agents.Count,
+            var go = new GameObject("Npc_" + tearId + "_" + serial,
                 typeof(RectTransform), typeof(Image), typeof(Button));
             go.transform.SetParent(transform, false);
             var rt = go.GetComponent<RectTransform>();
@@ -141,7 +156,7 @@ namespace WRLDZ.UI
             btn.targetGraphic = img;
             var agent = new Agent
             {
-                id = tearId + ".npc." + _agents.Count,
+                id = tearId + ".npc." + serial,
                 tearId = tearId,
                 displayName = name,
                 band = band,
@@ -237,9 +252,9 @@ namespace WRLDZ.UI
             return 0.08f;
         }
 
-        static void PlaceUv(RectTransform rt, float x, float y)
+        void PlaceUv(RectTransform rt, float x, float y)
         {
-            const float h = 0.028f;
+            var h = 0.028f * _vStretch;
             const float w = 0.022f;
             rt.anchorMin = new Vector2(x - w, y - h * 0.15f);
             rt.anchorMax = new Vector2(x + w, y + h * 1.05f);

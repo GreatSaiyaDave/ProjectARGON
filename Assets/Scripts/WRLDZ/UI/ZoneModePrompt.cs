@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using WRLDZ.Core;
 using WRLDZ.Presentation;
+using WRLDZ.UI.Eldritch;
 using WRLDZ.UI.Shell;
 
 namespace WRLDZ.UI
@@ -102,7 +103,8 @@ namespace WRLDZ.UI
                     0.62f, 0.74f);
             }
 
-            var enterY0 = kind == MapZoneKind.Raid ? 0.46f : 0.52f;
+            // Tear pair lifts to leave room for ZONE MODE above the HARVEST / BOSS row.
+            var enterY0 = kind == MapZoneKind.Raid ? 0.46f : kind == MapZoneKind.Tear ? 0.64f : 0.52f;
             var enterY1 = enterY0 + 0.12f;
             var enterLabel = kind == MapZoneKind.Npc ? "ENCOUNTER" : "ENTER AR";
             var enterAr = HubChrome.Capsule(host, locked ? "LOCKED" : enterLabel, () =>
@@ -135,6 +137,25 @@ namespace WRLDZ.UI
                 enterAr.GetComponent<RectTransform>(),
                 digital.GetComponent<RectTransform>(),
                 enterY0, enterY1);
+
+            // ZONE MODE — Eldritch Solid Vision: the whole menu lives on the disk hub in AR
+            // (ELDRITCH_CONTRACT §7). Sits between the ENTER AR / DIGITAL pair and the Tear row.
+            var zoneY1 = enterY0 - 0.02f;
+            var zoneY0 = zoneY1 - 0.12f;
+            var zoneLifetime = parent;
+            var zoneMode = ArcaneButton.Create(host, "ZONE MODE", () =>
+            {
+                if (locked)
+                {
+                    FreeUiKit.PlayClick();
+                    return;
+                }
+
+                FreeUiKit.PlayConfirm();
+                EnterZoneMode(zoneLifetime, zoneId, zoneTitle, kind, onClose, startingLp);
+            }, EldritchTier.Eldritch, titleSize: 18, centerTitle: true);
+            if (zoneMode != null && zoneMode.Rect != null)
+                FloatingPanel.Grid.Full(zoneMode.Rect, zoneY0, zoneY1);
 
             if (kind == MapZoneKind.Tear)
             {
@@ -188,7 +209,20 @@ namespace WRLDZ.UI
             return panel;
         }
 
-        static void Launch(string zoneId, string zoneTitle, bool digital, Action onClose,
+        /// <summary>Close the prompt, then hand the zone to <see cref="ZoneModeSession"/>.</summary>
+        static void EnterZoneMode(Transform parent, string zoneId, string zoneTitle, MapZoneKind kind,
+            Action onClose, int startingLp)
+        {
+            // contract note: the prompt is transient — its host canvas is either destroyed
+            // ("ZoneModePromptCanvas") or DEACTIVATED (MenuShell overlay Root.SetActive(false))
+            // by onClose a frame later. Parenting the session there would freeze its coroutines,
+            // so the session always lands at scene root and cleans itself up in OnDestroy.
+            onClose?.Invoke();
+            ZoneModeSession.Enter(null, zoneId, zoneTitle, kind, onExit: null, startingLp: startingLp);
+        }
+
+        /// <summary>Shared with <see cref="ArHoloHubMenu"/> (DUEL HERE) — same config path as ENTER AR.</summary>
+        internal static void Launch(string zoneId, string zoneTitle, bool digital, Action onClose,
             MapZoneKind kind, int startingLp, bool boss, int raidSeats = 1, bool raidFillAi = false)
         {
             ArDuelMatchConfig cfg;
@@ -204,7 +238,12 @@ namespace WRLDZ.UI
             else if (kind == MapZoneKind.Raid)
                 cfg = MapZoneService.MakeRaidBoss(zoneId, zoneTitle, digital, raidSeats, raidFillAi);
             else if (kind == MapZoneKind.Story)
-                cfg = MapZoneService.MakeStoryEra(zoneId, zoneTitle, digital);
+            {
+                var acc = AppSession.Ensure()?.Account;
+                acc?.EnsureProgress();
+                var stage = StoryCampaignService.Current(acc?.progress);
+                cfg = MapZoneService.MakeStoryEra(stage, zoneId, digital);
+            }
             else if (kind == MapZoneKind.Pvp)
                 cfg = MapZoneService.MakePvpZone(zoneTitle);
             else if (kind == MapZoneKind.Tear && boss)

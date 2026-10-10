@@ -17,10 +17,14 @@ namespace WRLDZ.Duel
         EnterMainPhase2,
         Attack,
         DirectAttack,
+        SpecialSummon,
         PassResponse,
         EndTurn,
         ClearTributes,
-        CancelTarget
+        CancelTarget,
+        ConfirmLpZero,
+        /// <summary>Leave a Standby Phase held for a standby-only ignition (Blast Juggler) for Main Phase 1.</summary>
+        EnterMainPhase1
     }
 
     /// <summary>Structured command. Card names/instances optional depending on kind.</summary>

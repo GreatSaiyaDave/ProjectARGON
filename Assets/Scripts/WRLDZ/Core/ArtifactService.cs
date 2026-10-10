@@ -16,12 +16,58 @@ namespace WRLDZ.Core
         public const string DuelCoin = "currency.duel_coin";
         public const string Tome = "key.tome";
         public const string TradeTransport = "transport.trade";
+        // Restored 2026-10-09: pre-deletion API (stash e8e69e05); FormatMergeService/StoryCampaign callers need it.
+        public const string SoulFragment = "soul.fracture_piece";
+
+        public static bool IsErazPieceId(string defId) =>
+            !string.IsNullOrEmpty(defId)
+            && defId.StartsWith("eraz.", StringComparison.OrdinalIgnoreCase)
+            && defId.EndsWith(".piece", StringComparison.OrdinalIgnoreCase);
+
+        public static string FormatId(string formatId) =>
+            string.IsNullOrEmpty(formatId) ? "" : "format." + formatId.Trim();
+
+        public static string FormatPieceId(string formatId) =>
+            string.IsNullOrEmpty(formatId) ? "" : "format." + formatId.Trim() + ".piece";
+
+        public static bool IsFormatPieceId(string defId) =>
+            !string.IsNullOrEmpty(defId)
+            && defId.StartsWith("format.", StringComparison.OrdinalIgnoreCase)
+            && defId.EndsWith(".piece", StringComparison.OrdinalIgnoreCase);
 
         public static string ErazId(string bandId) =>
             string.IsNullOrEmpty(bandId) ? "" : "eraz." + bandId.Trim();
 
+        /// <summary>ERAZ band shard id (five + Set Energy fuse the whole badge at the Bazaar).</summary>
+        public static string ErazPieceId(string bandId) =>
+            string.IsNullOrEmpty(bandId) ? "" : "eraz." + bandId.Trim() + ".piece";
+
         public static string SetEnergyId(string setCode) =>
             string.IsNullOrEmpty(setCode) ? "" : "se." + setCode.Trim().ToUpperInvariant();
+
+        /// <summary>
+        /// Set Energy only of sets in an ERAZ band the player has a whole badge for.
+        /// Original is the fortune-teller grant; later bands require a merge.
+        /// Restored 2026-10-09: pre-deletion body (stash e8e69e05).
+        /// </summary>
+        public static bool CanEarnSetEnergy(PlayerProgress p, string setCode)
+        {
+            if (p == null || string.IsNullOrEmpty(setCode)) return false;
+            setCode = setCode.Trim().ToUpperInvariant();
+            if (ErazFormat.InOriginalSetList(setCode))
+                return ErazProgress.HasBadge(p, ErazFormat.Original);
+            var bands = ErazFormat.BandIdsInOrder();
+            for (var i = 0; i < bands.Count; i++)
+            {
+                var band = bands[i];
+                if (string.Equals(band, ErazFormat.Original, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (ErazFormat.InPoolBySetCode(setCode, band) && ErazProgress.HasBadge(p, band))
+                    return true;
+            }
+
+            return false;
+        }
 
         public static void Grant(LocalAccountStore.Account acc, string defId, int qty)
         {
@@ -58,6 +104,7 @@ namespace WRLDZ.Core
 
                 if (qty <= 0) return;
                 AddNew(inv, defId, stackable ? qty : 1, DefaultCharges(def));
+                TryFuseSoulFragments(p, inv);
                 SyncCaches(p, inv);
                 return;
             }
@@ -70,7 +117,26 @@ namespace WRLDZ.Core
             }
 
             inst.qty = Mathf.Max(0, inst.qty + qty);
+            TryFuseSoulFragments(p, inv);
             SyncCaches(p, inv);
+        }
+
+        // Restored 2026-10-09: pre-deletion body (stash e8e69e05). Five soul shards fuse into +1 capacity.
+        static void TryFuseSoulFragments(PlayerProgress p, PlayerInventory inv)
+        {
+            if (p == null || inv == null) return;
+            const int need = 5;
+            while (Qty(inv, SoulFragment) >= need
+                   && p.soulFractureCapacity < PlayerProgress.MaxSoulFractureCapacity)
+            {
+                var inst = Find(inv, SoulFragment);
+                if (inst == null) break;
+                inst.qty -= need;
+                if (inst.qty <= 0)
+                    Remove(inv, SoulFragment);
+                p.soulFractureCapacity++;
+                Debug.Log("[WRLDZ] Soul shards fused → capacity " + p.soulFractureCapacity);
+            }
         }
 
         public static bool TrySpend(PlayerProgress p, PlayerInventory inv, string defId, int qty, out string error)

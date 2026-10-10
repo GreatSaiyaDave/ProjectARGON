@@ -9,6 +9,8 @@ namespace WRLDZ.Duel.TextEffects
     /// Flip / battle-destroyed / delayed-GY Standby templates from official text.
     /// Shared families only — no cardId branches. Unique leftover (Charmers,
     /// Dice Jar, Penguin Soldier up-to-N, Revival Jam optional delayed pay) stays refuse.
+    /// Battle leftovers: Wall of Illusion / Hyper Hammerhead bounce and D.D. Warrior Lady /
+    /// Assailant banish-both share ReturnToHand / Banish kinds (v55).
     /// </summary>
     public static class MonsterTriggerTemplates
     {
@@ -20,7 +22,18 @@ namespace WRLDZ.Duel.TextEffects
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxFlipInflict = new(
-            @"FLIP:\s*Inflict (\d+) (?:points of )?damage to your opponent\.?",
+            // Fail-closed: do not prefix-absorb Des Koala / per-hand scale prints.
+            @"FLIP:\s*Inflict (\d+) (?:points of )?damage to your opponent(?!\s+for each)\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Des Koala family: Flip inflict N damage × opponent's hand cards at resolution.
+        /// Reuses InflictDamageToOpponent + ScaleAmountByOpponentHandCards (Energy Drain).
+        /// Exact "for each card in their hand" — rejects Secret Barrel (hand+field) and
+        /// Just Desserts (monsters they control).
+        /// </summary>
+        static readonly Regex RxFlipInflictPerOppHand = new(
+            @"FLIP:\s*Inflict (\d+) (?:points of )?damage to your opponent for each card in their hand\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxFlipDraw = new(
@@ -69,8 +82,20 @@ namespace WRLDZ.Duel.TextEffects
             @"FLIP:\s*(?:Select|Target) 1 monster on the field(?: and return it to its owner's hand|; return (?:it|that target) to (?:its owner's |the owner's )?hand)\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        /// <summary>
+        /// Penguin Soldier / Hade-Hane: Flip bounce up to N monsters on the field.
+        /// Same ReturnToHand kind as Hane-Hane; Amount is the printed cap (up-to-N).
+        /// </summary>
+        static readonly Regex RxFlipBounceFieldUpTo = new(
+            @"FLIP:\s*(?:You can )?(?:(?:Select|Target) up to (?<n1>\d+) monsters on the field;\s*" +
+            @"return those targets to (?:the |its owner's |the owner's )?hand|" +
+            @"return up to (?<n2>\d+) monsters on the field to (?:the |its owner's |the owner's )?hand)\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>Gravekeeper's Guard / Gale Lizard: any monster the opponent controls, face-down included (Lua
+        /// SelectTarget(Card.IsAbleToHand, 0, LOCATION_MZONE)); "Attack Position" limits it to face-up Attack Position.</summary>
         static readonly Regex RxFlipBounceOpp = new(
-            @"FLIP:\s*(?:Select|Target) 1 (?:Attack Position )?monster your opponent controls(?: and return it to its owner's hand|; return (?:it|that target) to (?:its owner's |the owner's |the )?hand)\.?",
+            @"FLIP:\s*(?:Select|Target) 1 (?<atkPos>Attack Position )?monster your opponent controls(?: and return it to its owner's hand|; return (?:it|that target) to (?:its owner's |the owner's |the )?hand)\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxFlipSummonInflict = new(
@@ -111,15 +136,17 @@ namespace WRLDZ.Duel.TextEffects
         /// OPT set this card face-down Defense. Colon or pre-PSCT comma; change/flip.
         /// </summary>
         static readonly Regex RxOptSetFaceDown = new(
-            @"Once per turn(?::|,)\s*You can (?:change this card to|flip this card into) face-down Defense Position\.?",
+            @"Once per turn(?::|,)\s*You can (?:change this card to|flip this card (?:to|into)) face-down Defense Position\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-        /// <summary>Medusa Worm family: Flip Summoned, destroy 1 opp monster (pre-PSCT comma).</summary>
+        /// <summary>Medusa Worm family: Flip Summoned, destroy 1 opp monster, face-down included (pre-PSCT comma;
+        /// Lua SelectTarget(aux.TRUE, 0, LOCATION_MZONE)).</summary>
         static readonly Regex RxFlipSummonDestroyOpp = new(
             @"When this card is Flip Summoned,\s*destroy 1 monster on your opponent's side of the field\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-        /// <summary>Guardian Statue family: Flip Summoned, bounce 1 opp monster (pre-PSCT comma).</summary>
+        /// <summary>Guardian Statue family: Flip Summoned, bounce 1 opp monster, face-down included (pre-PSCT comma;
+        /// Lua SelectTarget(Card.IsAbleToHand, 0, LOCATION_MZONE)).</summary>
         static readonly Regex RxFlipSummonBounceOpp = new(
             @"When this card is Flip Summoned,\s*return 1 monster on your opponent's side of the field to (?:its owner's |the owner's )?hand\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -145,9 +172,19 @@ namespace WRLDZ.Duel.TextEffects
             @"Inflict (\d+) (?:points of )?damage to your opponent\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        static readonly Regex RxBattleGyInflictBoth = new(
+            @"(?:If|When) this card is destroyed by battle and sent to the (?:GY|Graveyard)[:,]\s*" +
+            @"Inflict (\d+) (?:points of )?damage to both players\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxDestroyedFieldExceptBattleInflict = new(
+            @"When this card on the field is destroyed and sent to the (?:GY|Graveyard) except by battle,\s*" +
+            @"Inflict (\d+) (?:points of )?damage to your opponent\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         static readonly Regex RxBattleGyGainLp = new(
             @"(?:If|When) this card is destroyed by battle and sent to the (?:GY|Graveyard)[:,]\s*" +
-            @"Gain (\d+) Life Points\.?",
+            @"Gain (\d+) (?:Life Points|LP)\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxBattleGyDraw = new(
@@ -177,6 +214,14 @@ namespace WRLDZ.Duel.TextEffects
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         /// <summary>
+        /// Marauding Captain family: NS Special Summon 1 Level N or lower from hand.
+        /// AmountIsLevel is the max Level; player chooses (ControllerHandMonsters).
+        /// </summary>
+        static readonly Regex RxNormalSummonedSsLevelLeqHand = new(
+            @"(?:If|When) this card is Normal Summoned:\s*(?:You can )?Special Summon 1 Level (\d+) or lower monster from your hand\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
         /// The Thing in the Crater family: destroyed (not battle-only) and sent from
         /// the field to the GY, Special Summon 1 Race from hand. Pre-PSCT comma ok.
         /// </summary>
@@ -185,9 +230,164 @@ namespace WRLDZ.Duel.TextEffects
             @"(?:you can )?Special Summon 1 (\w+)(?:-Type)? [Mm]onster from your hand\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        /// <summary>Pinch Hopper family: sent from the field to the GY, SS a race from hand.</summary>
+        static readonly Regex RxSentToGySsRaceHand = new(
+            @"(?:If|When) this card(?: you control)? is sent to (?:your )?(?:GY|Graveyard)[:,]?\s*" +
+            @"(?:You can )?Special Summon 1 (\w+)(?:-Type)? monster from your hand\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         static readonly Regex RxNextStandbySsAfterContinuousSpell = new(
             @"During your next Standby Phase after this card was sent from the field to the Graveyard " +
             @"by the effect of a Continuous Spell Card:\s*Special Summon this card from the Graveyard\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Spirit Reaper / Decayed Commander / White Magical Hat / Toon Gemini Elf / Mefist:
+        /// this card inflicts battle damage → discard N random from opponent's hand.
+        /// Direct-attack clause is a flag, not a unique kind. Declare-a-name / ● lists stay refuse.
+        /// </summary>
+        static readonly Regex RxInflictsBattleDamageDiscardRandom = new(
+            @"(?:When|If) this card inflicts [Bb]attle [Dd]amage to your opponent(?:'s Life Points)?" +
+            @"(?<direct> by a direct attack)?" +
+            @"\s*(?::|,)\s*" +
+            @"(?:Discard (?<n1>\d+) random cards? from (?:their|your opponent's|his/her) hand" +
+            @"|(?:Make )?your opponent discards? (?<n2>\d+) (?:cards? randomly|random cards?)" +
+            @"(?: from (?:their|your opponent's|his/her) hand)?)" +
+            @"\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Reaper on the Nightmare older PSCT: successfully attacks directly → random discard.
+        /// Same kind as inflicts-battle-damage discard with RequiresDirectAttack.
+        /// </summary>
+        static readonly Regex RxDirectAttackDiscardRandom = new(
+            @"(?:When|If) this card successfully attacks your opponent(?:'s Life Points)? directly" +
+            @"\s*(?::|,)\s*" +
+            @"(?:your opponent discards? (?<n2>\d+) (?:cards? randomly|random cards?)" +
+            @"(?: from (?:their|your opponent's|his/her) hand)?" +
+            @"|Discard (?<n1>\d+) random cards? from (?:their|your opponent's|his/her) hand)" +
+            @"\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Wall of Illusion family: If this card is attacked … after damage calculation:
+        /// Return that monster to the hand.
+        /// </summary>
+        static readonly Regex RxAttackedAfterDmgReturn = new(
+            @"(?:If|When) this card is attacked(?: by a monster)?, after damage calculation:\s*" +
+            @"Return that monster to the hand\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Hyper Hammerhead family: At the end of the Damage Step, if an opponent's monster
+        /// that battled this card is not destroyed: Return that opponent's monster to the hand.
+        /// </summary>
+        static readonly Regex RxEndDmgStepBattledNotDestroyedReturn = new(
+            @"At the end of the Damage Step, if an opponent's monster that battled this card is not destroyed:\s*" +
+            @"Return that opponent's monster to the hand\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// D.D. Warrior Lady: After damage calculation, when this card battles an opponent's
+        /// monster: You can banish that monster, also banish this card.
+        /// </summary>
+        static readonly Regex RxAfterDmgBattlesBanishBoth = new(
+            @"After damage calculation, when this card battles an opponent's monster:\s*" +
+            @"(?<opt>You can )?banish that monster, also banish this card\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// D.D. Assailant: After damage calculation, when this card is destroyed by battle
+        /// with an opponent's monster: Banish that monster, also banish this card.
+        /// Shared "banish that / also banish this" kind with Warrior Lady.
+        /// </summary>
+        static readonly Regex RxAfterDmgDestroyedByBattleBanishBoth = new(
+            @"After damage calculation, when this card is destroyed by battle with an opponent's monster:\s*" +
+            @"Banish that monster, also banish this card\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Guardian Angel Joan: LP gain equal to the battle-destroyed monster's
+        /// printed original ATK. Amount comes from the clause subject, not the text.
+        /// </summary>
+        static readonly Regex RxBattleDestroyGainLpOriginalAtk = new(
+            @"When this card destroys a monster by battle and sends it to the (?:GY|Graveyard):\s*" +
+            @"Gain Life Points equal to the original ATK of that destroyed monster in the (?:GY|Graveyard)\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>Absorbing Kid from the Sky: LP gain = destroyed monster's Level × N.</summary>
+        static readonly Regex RxBattleDestroyGainLpPerLevel = new(
+            @"When this card destroys a monster and sends it to the (?:GY|Graveyard) as a result of battle,\s*" +
+            @"increase your Life Points by the Level of the destroyed monster x (\d+) points\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>KA-2 Des Scissors / Needle Burrower: damage = destroyed monster's Level × N.</summary>
+        static readonly Regex RxBattleDestroyDamagePerLevel = new(
+            @"When this card destroys a monster and sends it to the (?:GY|Graveyard) as a result of battle,\s*" +
+            @"inflict damage to your opponent's Life Points equal to the Level of the destroyed monster x (\d+) points\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Ritual searchers: Senju of the Thousand Hands / Sonic Bird / Manju of the
+        /// Ten Thousand Hands. Normal or Flip Summon only — never a Special Summon.
+        /// The captured group decides which Deck pool is offered.
+        /// </summary>
+        static readonly Regex RxNormalOrFlipAddRitual = new(
+            @"When this card is Normal or Flip Summoned:\s*(?:You can )?add 1 " +
+            @"(Ritual Monster or 1 Ritual Spell|Ritual Monster|Ritual Spell)" +
+            @"(?: Card)? from your Deck to your hand\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Sasuke Samurai / Ninja Grandmaster Sasuke / Mystic Swordsman LV2-LV4 /
+        /// Paladin of White Dragon: destroy the battled Defense Position monster at
+        /// the start of the Damage Step, before damage calculation.
+        /// The "and if you do, …" rider (Mystic Swordsman LV6) deliberately does not
+        /// match — that card keeps its leftover rather than losing the rider.
+        /// </summary>
+        static readonly Regex RxStartOfDamageStepDestroyDef = new(
+            @"At the start of the Damage Step, if this card attack(?:s|ed) a " +
+            @"face-(up|down) Defense Position monster:\s*" +
+            // The trailing period is what excludes LV6's "…monster, and if you do, …".
+            @"Destroy that (?:face-down )?monster\.",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>The Bistro Butcher: battle damage to the opponent, then THEY draw N.</summary>
+        static readonly Regex RxInflictsBattleDamageOppDraws = new(
+            @"When this card inflicts Battle Damage to your opponent(?:'s Life Points)?[,:]\s*" +
+            @"your opponent draws (\d+) cards?\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// The Unhappy Maiden: destroyed by battle and sent to the GY, that turn's
+        /// Battle Phase ends. An effect send does not match.
+        /// </summary>
+        static readonly Regex RxSentByBattleEndsBattlePhase = new(
+            @"When this card is sent to the (?:GY|Graveyard) as a result of battle,\s*" +
+            @"the Battle Phase for that turn ends immediately\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// The Immortal of Thunder: sent from the field to the GY (any reason),
+        /// the controller loses N LP. Not the "destroyed and sent … you take N damage" print.
+        /// </summary>
+        static readonly Regex RxSentFromFieldLoseLp = new(
+            @"When this card is sent from the field to the (?:GY|Graveyard), you lose (\d+) Life Points\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Robbin' Goblin: each time a monster the controller controls inflicts battle
+        /// damage, the opponent discards N random cards. Not "this card inflicts".
+        /// </summary>
+        static readonly Regex RxControllerMonsterBattleDamageDiscard = new(
+            @"Each time a monster you control inflicts Battle Damage to your opponent,\s*" +
+            @"your opponent discards (\d+) random cards?\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>Masked Sorcerer: battle damage to the opponent, then draw N.</summary>
+        static readonly Regex RxInflictsBattleDamageDraw = new(
+            @"When this card inflicts Battle Damage to your opponent(?:'s Life Points)?[,:]\s*" +
+            @"draw (\d+) cards?(?: from your Deck)?\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         public static void Collect(string text, CardDef def, List<EffectClause> into,
@@ -212,6 +412,18 @@ namespace WRLDZ.Duel.TextEffects
                     Action = EffectActionKind.ApplyLingeringAtkDef,
                     Amount = Parse(gain, 1, 500),
                     DefAmount = Parse(gain, 1, 500),
+                    MakesChainLink = true
+                }
+                : null);
+
+            var flipDmgPerHand = RxFlipInflictPerOppHand.Match(text);
+            Add(flipDmgPerHand, flipDmgPerHand.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.Flip,
+                    Action = EffectActionKind.InflictDamageToOpponent,
+                    Amount = Parse(flipDmgPerHand, 1, 400),
+                    ScaleAmountByOpponentHandCards = true,
                     MakesChainLink = true
                 }
                 : null);
@@ -317,20 +529,46 @@ namespace WRLDZ.Duel.TextEffects
                 MakesChainLink = true
             });
 
-            Add(RxFlipBounceField.Match(text), new EffectClause
+            var bounceUp = RxFlipBounceFieldUpTo.Match(text);
+            if (bounceUp.Success)
             {
-                Timing = EffectTiming.Flip,
-                Action = EffectActionKind.ReturnToHand,
-                Zone = EffectZoneFilter.FieldAnyMonster,
-                RequiresTargetChoice = true,
-                MakesChainLink = true
-            });
+                var nTxt = bounceUp.Groups["n1"].Success
+                    ? bounceUp.Groups["n1"].Value
+                    : bounceUp.Groups["n2"].Value;
+                var n = int.TryParse(nTxt, out var parsedN) ? parsedN : 2;
+                if (n < 1) n = 1;
+                Add(bounceUp, new EffectClause
+                {
+                    Timing = EffectTiming.Flip,
+                    Action = EffectActionKind.ReturnToHand,
+                    Zone = EffectZoneFilter.FieldAnyMonster,
+                    RequiresTargetChoice = true,
+                    Amount = n,
+                    IsOptional = true,
+                    MakesChainLink = true
+                });
+            }
+            else
+            {
+                Add(RxFlipBounceField.Match(text), new EffectClause
+                {
+                    Timing = EffectTiming.Flip,
+                    Action = EffectActionKind.ReturnToHand,
+                    Zone = EffectZoneFilter.FieldAnyMonster,
+                    RequiresTargetChoice = true,
+                    Amount = 1,
+                    MakesChainLink = true
+                });
+            }
 
-            Add(RxFlipBounceOpp.Match(text), new EffectClause
+            var flipBounceOpp = RxFlipBounceOpp.Match(text);
+            Add(flipBounceOpp, new EffectClause
             {
                 Timing = EffectTiming.Flip,
                 Action = EffectActionKind.ReturnToHand,
-                Zone = EffectZoneFilter.OppFaceUpMonsters,
+                Zone = flipBounceOpp.Groups["atkPos"].Success
+                    ? EffectZoneFilter.OppAttackPositionMonsters
+                    : EffectZoneFilter.OppMonsters,
                 RequiresTargetChoice = true,
                 MakesChainLink = true
             });
@@ -363,6 +601,7 @@ namespace WRLDZ.Duel.TextEffects
                     Timing = EffectTiming.Flip,
                     Action = EffectActionKind.GainLifePoints,
                     Amount = Parse(flipLp, 1, 3000),
+                    Side = EffectSide.Controller,
                     MakesChainLink = true
                 }
                 : null);
@@ -412,7 +651,7 @@ namespace WRLDZ.Duel.TextEffects
             {
                 Timing = EffectTiming.ThisCardSummoned,
                 Action = EffectActionKind.Destroy,
-                Zone = EffectZoneFilter.OppFaceUpMonsters,
+                Zone = EffectZoneFilter.OppMonsters,
                 RequiresThisFlipSummoned = true,
                 RequiresTargetChoice = true,
                 MakesChainLink = true
@@ -422,7 +661,7 @@ namespace WRLDZ.Duel.TextEffects
             {
                 Timing = EffectTiming.ThisCardSummoned,
                 Action = EffectActionKind.ReturnToHand,
-                Zone = EffectZoneFilter.OppFaceUpMonsters,
+                Zone = EffectZoneFilter.OppMonsters,
                 RequiresThisFlipSummoned = true,
                 RequiresTargetChoice = true,
                 MakesChainLink = true
@@ -486,6 +725,19 @@ namespace WRLDZ.Duel.TextEffects
                 }
                 : null);
 
+            var gyDmgBoth = RxBattleGyInflictBoth.Match(text);
+            Add(gyDmgBoth, gyDmgBoth.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.SentFromFieldToGy,
+                    Action = EffectActionKind.InflictDamageToBothPlayers,
+                    Amount = Parse(gyDmgBoth, 1, 500),
+                    Side = EffectSide.Both,
+                    RequiresThisDestroyedByBattle = true,
+                    MakesChainLink = true
+                }
+                : null);
+
             var gyLp = RxBattleGyGainLp.Match(text);
             Add(gyLp, gyLp.Success
                 ? new EffectClause
@@ -493,6 +745,7 @@ namespace WRLDZ.Duel.TextEffects
                     Timing = EffectTiming.SentFromFieldToGy,
                     Action = EffectActionKind.GainLifePoints,
                     Amount = Parse(gyLp, 1, 1000),
+                    Side = EffectSide.Controller,
                     RequiresThisDestroyedByBattle = true,
                     MakesChainLink = true
                 }
@@ -576,6 +829,23 @@ namespace WRLDZ.Duel.TextEffects
                 }
                 : null);
 
+            var nsLv = RxNormalSummonedSsLevelLeqHand.Match(text);
+            Add(nsLv, nsLv.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.ThisCardSummoned,
+                    Action = EffectActionKind.SpecialSummonFromHand,
+                    Zone = EffectZoneFilter.ControllerHandMonsters,
+                    FromHand = true,
+                    Amount = Parse(nsLv, 1, 4),
+                    AmountIsLevel = true,
+                    RequiresTargetChoice = true,
+                    RequiresThisNormalSummoned = true,
+                    IsOptional = Regex.IsMatch(nsLv.Value, @"you can", RegexOptions.IgnoreCase),
+                    MakesChainLink = true
+                }
+                : null);
+
             var crater = RxDestroyedFieldSsRaceHand.Match(text);
             Add(crater, crater.Success
                 ? new EffectClause
@@ -591,6 +861,21 @@ namespace WRLDZ.Duel.TextEffects
                 }
                 : null);
 
+            var sentGy = RxSentToGySsRaceHand.Match(text);
+            Add(sentGy, sentGy.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.SentFromFieldToGy,
+                    Action = EffectActionKind.SpecialSummonFromHand,
+                    Zone = EffectZoneFilter.ControllerHandMonsters,
+                    RaceFilter = sentGy.Groups[1].Value,
+                    FromHand = true,
+                    Amount = 1,
+                    IsOptional = Regex.IsMatch(sentGy.Value, @"you can", RegexOptions.IgnoreCase),
+                    MakesChainLink = true
+                }
+                : null);
+
             Add(RxNextStandbySsAfterContinuousSpell.Match(text), new EffectClause
             {
                 Timing = EffectTiming.StandbyPhase,
@@ -598,6 +883,218 @@ namespace WRLDZ.Duel.TextEffects
                 ResolvesFromGy = true,
                 RequiresSentByContinuousSpell = true,
                 RequiresNextControllerStandby = true,
+                MakesChainLink = true
+            });
+
+            var bdDiscard = RxInflictsBattleDamageDiscardRandom.Match(text);
+            if (!bdDiscard.Success)
+                bdDiscard = RxDirectAttackDiscardRandom.Match(text);
+            if (bdDiscard.Success)
+            {
+                var nTxt = bdDiscard.Groups["n1"].Success
+                    ? bdDiscard.Groups["n1"].Value
+                    : bdDiscard.Groups["n2"].Value;
+                var n = int.TryParse(nTxt, out var parsed) ? parsed : 1;
+                if (n < 1) n = 1;
+                var direct = bdDiscard.Groups["direct"].Success ||
+                             RxDirectAttackDiscardRandom.IsMatch(bdDiscard.Value);
+                Add(bdDiscard, new EffectClause
+                {
+                    Timing = EffectTiming.ThisCardInflictsBattleDamage,
+                    Action = EffectActionKind.DiscardRandomFromOpponentHand,
+                    Amount = n,
+                    Side = EffectSide.Opponent,
+                    RequiresDirectAttack = direct,
+                    MakesChainLink = true
+                });
+            }
+
+            Add(RxBattleDestroyGainLpOriginalAtk.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.ThisCardDestroysByBattle,
+                Action = EffectActionKind.GainLifePoints,
+                Side = EffectSide.Controller,
+                AmountFromTargetOriginalAtk = true,
+                MakesChainLink = true
+            });
+
+            var lpPerLevel = RxBattleDestroyGainLpPerLevel.Match(text);
+            Add(lpPerLevel, lpPerLevel.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.ThisCardDestroysByBattle,
+                    Action = EffectActionKind.GainLifePoints,
+                    Side = EffectSide.Controller,
+                    Amount = Parse(lpPerLevel, 1, 0),
+                    ScaleAmountByTargetLevel = true,
+                    MakesChainLink = true
+                }
+                : null);
+
+            var dmgPerLevel = RxBattleDestroyDamagePerLevel.Match(text);
+            Add(dmgPerLevel, dmgPerLevel.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.ThisCardDestroysByBattle,
+                    Action = EffectActionKind.InflictDamageToOpponent,
+                    Side = EffectSide.Opponent,
+                    Amount = Parse(dmgPerLevel, 1, 0),
+                    ScaleAmountByTargetLevel = true,
+                    MakesChainLink = true
+                }
+                : null);
+
+            var dmgStepDestroy = RxStartOfDamageStepDestroyDef.Match(text);
+            if (dmgStepDestroy.Success)
+            {
+                var faceDown = string.Equals(dmgStepDestroy.Groups[1].Value, "down",
+                    StringComparison.OrdinalIgnoreCase);
+                Add(dmgStepDestroy, new EffectClause
+                {
+                    Timing = EffectTiming.StartOfDamageStep,
+                    Action = EffectActionKind.Destroy,
+                    Side = EffectSide.Opponent,
+                    RequiresTargetFaceDownDefense = faceDown,
+                    RequiresTargetFaceUpDefense = !faceDown,
+                    MakesChainLink = false
+                });
+            }
+
+            var ritualSearch = RxNormalOrFlipAddRitual.Match(text);
+            if (ritualSearch.Success)
+            {
+                var pool = ritualSearch.Groups[1].Value;
+                var zone = pool.IndexOf("or", StringComparison.OrdinalIgnoreCase) >= 0
+                    ? EffectZoneFilter.DeckRitualMonstersOrSpells
+                    : pool.IndexOf("Spell", StringComparison.OrdinalIgnoreCase) >= 0
+                        ? EffectZoneFilter.DeckRitualSpells
+                        : EffectZoneFilter.DeckRitualMonsters;
+                Add(ritualSearch, new EffectClause
+                {
+                    Timing = EffectTiming.ThisCardSummoned,
+                    Action = EffectActionKind.AddFromDeckToHand,
+                    Zone = zone,
+                    Amount = 1,
+                    RequiresTargetChoice = true,
+                    RequiresThisNormalOrFlipSummoned = true,
+                    IsOptional = Regex.IsMatch(ritualSearch.Value, @"you can",
+                        RegexOptions.IgnoreCase),
+                    MakesChainLink = true
+                });
+            }
+
+            var oppDraw = RxInflictsBattleDamageOppDraws.Match(text);
+            Add(oppDraw, oppDraw.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.ThisCardInflictsBattleDamage,
+                    Action = EffectActionKind.Draw,
+                    Side = EffectSide.Opponent,
+                    Amount = Parse(oppDraw, 1, 1),
+                    MakesChainLink = true
+                }
+                : null);
+
+            var bdDraw = RxInflictsBattleDamageDraw.Match(text);
+            Add(bdDraw, bdDraw.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.ThisCardInflictsBattleDamage,
+                    Action = EffectActionKind.Draw,
+                    Side = EffectSide.Controller,
+                    Amount = Parse(bdDraw, 1, 1),
+                    MakesChainLink = true
+                }
+                : null);
+
+            var endBp = RxSentByBattleEndsBattlePhase.Match(text);
+            Add(endBp, endBp.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.SentFromFieldToGy,
+                    Action = EffectActionKind.EndBattlePhase,
+                    RequiresThisDestroyedByBattle = true,
+                    MakesChainLink = false
+                }
+                : null);
+
+            var loseLp = RxSentFromFieldLoseLp.Match(text);
+            Add(loseLp, loseLp.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.SentFromFieldToGy,
+                    Action = EffectActionKind.TakeEffectDamage,
+                    Amount = Parse(loseLp, 1, 5000),
+                    Side = EffectSide.Controller,
+                    MakesChainLink = false
+                }
+                : null);
+
+            var exceptBattleInflict = RxDestroyedFieldExceptBattleInflict.Match(text);
+            Add(exceptBattleInflict, exceptBattleInflict.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.SentFromFieldToGy,
+                    Action = EffectActionKind.InflictDamageToOpponent,
+                    Amount = Parse(exceptBattleInflict, 1, 500),
+                    Side = EffectSide.Opponent,
+                    RequiresDestroyed = true,
+                    RequiresNotDestroyedByBattle = true,
+                    MakesChainLink = true
+                }
+                : null);
+
+            var ctrlBd = RxControllerMonsterBattleDamageDiscard.Match(text);
+            Add(ctrlBd, ctrlBd.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.ThisCardInflictsBattleDamage,
+                    Action = EffectActionKind.DiscardRandomFromOpponentHand,
+                    Amount = Parse(ctrlBd, 1, 1),
+                    AnyControllerMonsterBattleDamage = true,
+                    MakesChainLink = false
+                }
+                : null);
+
+            Add(RxAttackedAfterDmgReturn.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.AfterDamageCalculation,
+                Action = EffectActionKind.ReturnToHand,
+                Zone = EffectZoneFilter.AttackingMonster,
+                RequiresThisIsAttackTarget = true,
+                MakesChainLink = true
+            });
+
+            Add(RxEndDmgStepBattledNotDestroyedReturn.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.EndOfDamageStep,
+                Action = EffectActionKind.ReturnToHand,
+                Zone = EffectZoneFilter.OpponentBattlingMonster,
+                RequiresBattledMonsterNotDestroyed = true,
+                MakesChainLink = true
+            });
+
+            var lady = RxAfterDmgBattlesBanishBoth.Match(text);
+            if (lady.Success)
+            {
+                Add(lady, new EffectClause
+                {
+                    Timing = EffectTiming.AfterDamageCalculation,
+                    Action = EffectActionKind.Banish,
+                    Zone = EffectZoneFilter.OpponentBattlingMonster,
+                    AlsoBanishThis = true,
+                    IsOptional = lady.Groups["opt"].Success,
+                    MakesChainLink = true
+                });
+            }
+
+            Add(RxAfterDmgDestroyedByBattleBanishBoth.Match(text), new EffectClause
+            {
+                Timing = EffectTiming.AfterDamageCalculation,
+                Action = EffectActionKind.Banish,
+                Zone = EffectZoneFilter.OpponentBattlingMonster,
+                AlsoBanishThis = true,
+                RequiresThisDestroyedByBattle = true,
                 MakesChainLink = true
             });
         }
@@ -609,22 +1106,30 @@ namespace WRLDZ.Duel.TextEffects
             if (string.IsNullOrEmpty(text)) return;
             if (RxFlipGainAtkDef.IsMatch(text) || RxBattleDestroyerLosesAtkDef.IsMatch(text))
                 need.Add(EffectActionKind.ApplyLingeringAtkDef);
-            if (RxFlipInflict.IsMatch(text) || RxFlipSummonInflict.IsMatch(text) ||
+            if (RxFlipInflict.IsMatch(text) || RxFlipInflictPerOppHand.IsMatch(text) ||
+                RxFlipSummonInflict.IsMatch(text) ||
                 RxBattleGyInflict.IsMatch(text) || RxSummonedInflict.IsMatch(text))
                 need.Add(EffectActionKind.InflictDamageToOpponent);
-            if (RxBattleGyGainLp.IsMatch(text) || RxFlipGainLp.IsMatch(text))
+            if (RxBattleGyGainLp.IsMatch(text) || RxFlipGainLp.IsMatch(text) ||
+                RxBattleDestroyGainLpOriginalAtk.IsMatch(text) ||
+                RxBattleDestroyGainLpPerLevel.IsMatch(text))
                 need.Add(EffectActionKind.GainLifePoints);
+            if (RxBattleDestroyDamagePerLevel.IsMatch(text))
+                need.Add(EffectActionKind.InflictDamageToOpponent);
             if (RxFlipBanishEitherGy.IsMatch(text))
                 need.Add(EffectActionKind.Banish);
             if (RxOptSetFaceDown.IsMatch(text))
                 need.Add(EffectActionKind.SetThisFaceDownDefense);
-            if (RxFlipSummonDestroyOpp.IsMatch(text))
+            if (RxFlipSummonDestroyOpp.IsMatch(text) ||
+                RxStartOfDamageStepDestroyDef.IsMatch(text))
                 need.Add(EffectActionKind.Destroy);
             if (RxFlipSummonBounceOpp.IsMatch(text))
                 need.Add(EffectActionKind.ReturnToHand);
-            if (RxFlipDraw.IsMatch(text) || RxBattleGyDraw.IsMatch(text))
+            if (RxFlipDraw.IsMatch(text) || RxBattleGyDraw.IsMatch(text) ||
+                RxInflictsBattleDamageDraw.IsMatch(text) ||
+                RxInflictsBattleDamageOppDraws.IsMatch(text))
                 need.Add(EffectActionKind.Draw);
-            if (RxFlipAddEquip.IsMatch(text))
+            if (RxFlipAddEquip.IsMatch(text) || RxNormalOrFlipAddRitual.IsMatch(text))
                 need.Add(EffectActionKind.AddFromDeckToHand);
             if (RxFlipMillOpp.IsMatch(text))
                 need.Add(EffectActionKind.SendFromTopOfDeckToGy);
@@ -636,13 +1141,32 @@ namespace WRLDZ.Duel.TextEffects
                 RxBattleGyFilterSsDeck.IsMatch(text) ||
                 RxFlipSsSeriesAtkLeqDeck.IsMatch(text))
                 need.Add(EffectActionKind.SpecialSummonNamed);
-            if (RxDestroyedFieldSsRaceHand.IsMatch(text))
+            if (RxBattleGyAddNamed.IsMatch(text))
+                need.Add(EffectActionKind.AddNamedFromDeckToHand);
+            if (RxDestroyedFieldSsRaceHand.IsMatch(text) ||
+                RxSentToGySsRaceHand.IsMatch(text) ||
+                RxNormalSummonedSsLevelLeqHand.IsMatch(text))
                 need.Add(EffectActionKind.SpecialSummonFromHand);
+            if (RxInflictsBattleDamageDiscardRandom.IsMatch(text) ||
+                RxDirectAttackDiscardRandom.IsMatch(text) ||
+                RxControllerMonsterBattleDamageDiscard.IsMatch(text))
+                need.Add(EffectActionKind.DiscardRandomFromOpponentHand);
+            if (RxSentByBattleEndsBattlePhase.IsMatch(text))
+                need.Add(EffectActionKind.EndBattlePhase);
+            if (RxSentFromFieldLoseLp.IsMatch(text))
+                need.Add(EffectActionKind.TakeEffectDamage);
+            if (RxAttackedAfterDmgReturn.IsMatch(text) ||
+                RxEndDmgStepBattledNotDestroyedReturn.IsMatch(text))
+                need.Add(EffectActionKind.ReturnToHand);
+            if (RxAfterDmgBattlesBanishBoth.IsMatch(text) ||
+                RxAfterDmgDestroyedByBattleBanishBoth.IsMatch(text))
+                need.Add(EffectActionKind.Banish);
             if (RxFlipChangePos.IsMatch(text) || RxSummonedChangePos.IsMatch(text))
                 need.Add(EffectActionKind.ChangeBattlePosition);
             if (RxFlipSetFdExceptNamed.IsMatch(text))
                 need.Add(EffectActionKind.SetTargetFaceDownDefense);
-            if (RxFlipBounceField.IsMatch(text) || RxFlipBounceOpp.IsMatch(text))
+            if (RxFlipBounceField.IsMatch(text) || RxFlipBounceOpp.IsMatch(text) ||
+                RxFlipBounceFieldUpTo.IsMatch(text))
                 need.Add(EffectActionKind.ReturnToHand);
             if (RxBattleDestroyTheDestroyer.IsMatch(text) || RxBattleGyTargetDestroy.IsMatch(text) ||
                 RxBattleGyDestroyAllSt.IsMatch(text) || RxFlipDestroyOppLevel.IsMatch(text))

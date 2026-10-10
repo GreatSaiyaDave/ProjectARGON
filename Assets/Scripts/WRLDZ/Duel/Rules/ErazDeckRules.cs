@@ -24,7 +24,7 @@ namespace WRLDZ.Duel.Rules
         }
 
         public static bool CanAddToDeck(CardDef def, int alreadyInDeck, string eraId, out string msg,
-            bool labOpen = false)
+            bool labOpen = false, bool advancedBanlist = false)
         {
             msg = "";
             if (def == null) { msg = "No card."; return false; }
@@ -40,7 +40,7 @@ namespace WRLDZ.Duel.Rules
             // unimplemented text. Copy cap stays (3; forbidden treated as 3 in lab).
             if (labOpen)
             {
-                var labCap = OfficialDataSources.MaxCopies(def.id, eraId);
+                var labCap = OfficialDataSources.MaxCopies(def.id, eraId, advancedBanlist);
                 if (labCap <= 0) labCap = TcgRules.MaxCopiesPerCard;
                 if (alreadyInDeck >= labCap)
                 {
@@ -82,13 +82,55 @@ namespace WRLDZ.Duel.Rules
                 }
             }
 
-            var cap = OfficialDataSources.MaxCopies(def.id, eraId);
+            var cap = OfficialDataSources.MaxCopies(def.id, eraId, advancedBanlist);
             if (alreadyInDeck >= cap)
             {
-                msg = cap <= 0 ? "Forbidden in this era." : "Copy limit.";
+                msg = cap <= 0 ? (advancedBanlist ? "Forbidden (Advanced Format)." : "Forbidden in this era.") : "Copy limit.";
                 return false;
             }
             return true;
+        }
+
+        /// <summary>
+        /// Story / street era lock: drop cards not in the match ERAZ pool.
+        /// Does not invent replacements. Starter/lab structural cards may remain.
+        /// </summary>
+        public static DeckFile FilterDeckToEra(DeckFile deck, string eraId)
+        {
+            if (deck == null || string.IsNullOrEmpty(eraId)) return deck;
+            var db = CardDatabase.Instance ?? CardDatabase.Load();
+            return new DeckFile
+            {
+                name = deck.name,
+                format = deck.format,
+                main = FilterEntries(deck.main, eraId, db),
+                extra = FilterEntries(deck.extra, eraId, db),
+                side = FilterEntries(deck.side, eraId, db)
+            };
+        }
+
+        static DeckCardEntry[] FilterEntries(DeckCardEntry[] src, string eraId, CardDatabase db)
+        {
+            if (src == null || src.Length == 0) return src;
+            var list = new List<DeckCardEntry>();
+            for (var i = 0; i < src.Length; i++)
+            {
+                var e = src[i];
+                if (e == null || e.id <= 0) continue;
+                var def = db != null ? db.Get(e.id) : null;
+                if (def == null)
+                {
+                    list.Add(e);
+                    continue;
+                }
+
+                if (string.Equals(eraId, ErazFormat.Original, StringComparison.OrdinalIgnoreCase)
+                    && ErazFormat.IsLaterThanOriginal(e.id))
+                    continue;
+                list.Add(e);
+            }
+
+            return list.ToArray();
         }
     }
 }

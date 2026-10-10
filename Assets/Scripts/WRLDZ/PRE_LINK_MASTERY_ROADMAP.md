@@ -104,7 +104,7 @@ Fixes in this pass: route **Avatar** → real customizer; **Settings** → real 
 
 ## Visual overhaul (Takahashi-inspired)
 
-Style contract (original WRLDZ art — **not** Konami scans):
+Style contract:
 
 - Bold ink outlines, dramatic speed-lines energy  
 - Saturated cyan / gold / magenta on deep navy void  

@@ -1,0 +1,104 @@
+{
+  "format": "wrldz_dk_character_roster",
+  "era": "duelist_kingdom",
+  "erazBandId": "original",
+  "notes": "Duelist Kingdom character lists. Anime-faithful 40-card TCG approximations using cards_db. Missing anime cards are noted per deck.",
+  "characters": [
+    {
+      "file": "character_dk_yugi.json",
+      "name": "Yugi Mutou · Duelist Kingdom",
+      "character": "Yugi Mutou",
+      "notes": "Grandpa's deck: Dark Magician, Gaia fusion, Kuriboh, Magical Hats. Closest TCG 40 to the island list."
+    },
+    {
+      "file": "character_dk_yugi_exodia.json",
+      "name": "Yami Yugi · Exodia",
+      "character": "Yami Yugi",
+      "notes": "Kaiba-match Exodia. Five pieces at 1. Heart of the Underdog + stall. Witch of the Black Forest omitted (forbidden)."
+    },
+    {
+      "file": "character_dk_kaiba.json",
+      "name": "Seto Kaiba · Duelist Kingdom",
+      "character": "Seto Kaiba",
+      "notes": "Three Blue-Eyes, Battle Ox, La Jinn, Lord of D. / Flute."
+    },
+    {
+      "file": "character_dk_joey.json",
+      "name": "Joey Wheeler · Duelist Kingdom",
+      "character": "Joey Wheeler",
+      "notes": "Red-Eyes, Time Wizard, Baby Dragon, Flame Swordsman / Thousand Dragon."
+    },
+    {
+      "file": "character_dk_mai.json",
+      "name": "Mai Valentine · Duelist Kingdom",
+      "character": "Mai Valentine",
+      "notes": "Harpie Ladies, Elegant Egotist, Pet Dragon, Sisters."
+    },
+    {
+      "file": "character_dk_weevil.json",
+      "name": "Weevil Underwood · Duelist Kingdom",
+      "character": "Weevil Underwood",
+      "notes": "Petit Moth + Cocoon into Great Moth / Perfectly Ultimate Great Moth."
+    },
+    {
+      "file": "character_dk_rex.json",
+      "name": "Rex Raptor · Duelist Kingdom",
+      "character": "Rex Raptor",
+      "notes": "King Rex / Uraby / Raise Body Heat carry it."
+    },
+    {
+      "file": "character_dk_mako.json",
+      "name": "Mako Tsunami · Duelist Kingdom",
+      "character": "Mako Tsunami",
+      "notes": "Umi + Legendary Fisherman; Orca Mega-Fortress stands in for the whale."
+    },
+    {
+      "file": "character_dk_pegasus.json",
+      "name": "Maximillion Pegasus · Duelist Kingdom",
+      "character": "Maximillion Pegasus",
+      "notes": "Toon World + Toon bosses, Relinquished."
+    },
+    {
+      "file": "character_dk_bakura.json",
+      "name": "Ryou Bakura · Duelist Kingdom",
+      "character": "Ryou Bakura",
+      "notes": "White Magical Hat, Man-Eater Bug, fiends. Change of Heart omitted (forbidden). Dark Energy + Goblin Fan keep the dirty-spell flavor."
+    },
+    {
+      "file": "character_dk_yami_bakura.json",
+      "name": "Yami Bakura · Duelist Kingdom",
+      "character": "Yami Bakura",
+      "notes": "Dark Master - Zorc ritual deck. Contract with the Dark Master, Zorc, Change of Heart, Brain Control."
+    },
+    {
+      "file": "character_dk_para.json",
+      "name": "Para · Duelist Kingdom",
+      "character": "Para",
+      "notes": "Labyrinth Wall Shadow strategy. Shadow Ghoul + Labyrinth Wall into the fusion."
+    },
+    {
+      "file": "character_dk_dox.json",
+      "name": "Dox · Duelist Kingdom",
+      "character": "Dox",
+      "notes": "Gate Guardian assembly. Kazejin + Suijin + Sanga of the Thunder into Gate Guardian."
+    },
+    {
+      "file": "character_dk_bonz.json",
+      "name": "Bonz · Duelist Kingdom",
+      "character": "Bonz",
+      "notes": "Pumpking and the graveyard zombies. Yaranzo and Magical Ghost fill that slot."
+    },
+    {
+      "file": "character_dk_panik.json",
+      "name": "PaniK · Duelist Kingdom",
+      "character": "PaniK",
+      "notes": "Castle of Dark Illusions. King of Yamimakai / Reaper of the Cards stand in."
+    },
+    {
+      "file": "character_dk_keith.json",
+      "name": "Bandit Keith · Duelist Kingdom",
+      "character": "Bandit Keith",
+      "notes": "Barrel Dragon, Slot Machine, Zoa / Metalzoa."
+    }
+  ]
+}

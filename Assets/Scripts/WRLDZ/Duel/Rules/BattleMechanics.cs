@@ -45,27 +45,26 @@ namespace WRLDZ.Duel.Rules
         }
 
         /// <summary>
-        /// Canonical printed DEF (with modifiers). Never fall back to ATK for defense battles.
+        /// Canonical DEF for damage calculation: printed + auras + until-EOT + lingering
+        /// (Slate Warrior Flip / destroyer-loss). Never fall back to ATK for defense battles.
         /// </summary>
         public static int DefenseValue(CardInstance defender)
         {
             if (defender?.Def == null) return 0;
             // Printed DEF may be 0; only treat "N/A" as non-stat when def &lt; 0 in DB
             if (defender.Def.def < 0) return 0;
-            // Same total as CardInstance.CurrentDef (lingering changes count in battle).
-            return Mathf.Max(0, defender.Def.def + defender.DefModifier + defender.UntilEndOfTurnDef +
-                                defender.LingeringDefModifier);
+            return defender.CurrentDef;
         }
 
+        /// <summary>
+        /// Canonical ATK for damage calculation: printed + auras + until-EOT + lingering
+        /// (Slate Warrior Flip, Adhesion Trap Hole, battle-destroyer loss).
+        /// </summary>
         public static int AttackValue(CardInstance monster)
         {
             if (monster?.Def == null) return 0;
-            if (monster.AtkBecomesZeroThisCalculation) return 0;
             if (monster.Def.atk < 0) return 0;
-            // Same total as CardInstance.CurrentAtk: lingering changes (Adhesion Trap Hole,
-            // Slate Warrior) and Damage Step-only gains (Insect Soldiers) count in battle.
-            return Mathf.Max(0, monster.Def.atk + monster.AtkModifier + monster.UntilEndOfTurnAtk +
-                                monster.LingeringAtkModifier + monster.DamageStepAtkBonus);
+            return monster.CurrentAtk;
         }
 
         public static BattleResult Calculate(

@@ -10,6 +10,18 @@ namespace WRLDZ.Presentation.ArInteraction
     /// </summary>
     public static class ArSnapRules
     {
+        /// <summary>
+        /// A Spell played from the hand that is a single activation (Normal / Quick-Play / Ritual: it goes to the GY
+        /// after resolving). The hand reveals it to the opponent instead of setting it on a zone, and the engine seats
+        /// it in the first free Spell/Trap Zone for the activation (owner 2026-10-04). Field, Continuous and Equip
+        /// Spells stay on the field and are still placed by the hand.
+        /// </summary>
+        public static bool RevealsFromHand(CardInstance card) => RevealsFromHand(card?.Def);
+
+        /// <inheritdoc cref="RevealsFromHand(CardInstance)"/>
+        public static bool RevealsFromHand(CardDef def) =>
+            def != null && def.IsSpell && !def.IsFieldSpell && !def.StaysFlatOnFieldWhenActivated;
+
         public struct SnapResult
         {
             public bool Ok;
@@ -265,7 +277,13 @@ namespace WRLDZ.Presentation.ArInteraction
                     bool ok;
                     if (!preferSet && card.Def.IsSpell && !card.Def.IsTrap &&
                         engine.CanActivateSpellTrap(who, card, fromHand: true))
+                    {
+                        // a Spell that stays on the field (Continuous / Equip) takes the zone the player put it on; a
+                        // one-shot (RevealsFromHand) is seated wherever a zone is free
+                        if (!RevealsFromHand(card)) engine.SetPreferredSpellTrapZone(who, zone.Index);
                         ok = engine.TryActivateSpellTrap(who, card, fromHand: true);
+                        if (!ok) engine.ClearPreferredSpellTrapZone(who);
+                    }
                     else
                         ok = engine.TrySetSpellTrapToZone(who, card, zone.Index);
                     v.CommittedToEngine = ok;

@@ -50,7 +50,9 @@ namespace WRLDZ.Presentation
             front.name = "Face";
             front.transform.SetParent(root.transform, false);
             front.transform.localPosition = new Vector3(0f, 0f, t * 0.52f);
-            front.transform.localRotation = Quaternion.identity;
+            // Unity's Quad reads correctly from -Z (normal -Z, u along +X). Turned 180° so the art reads from +Z,
+            // the side hands and zones show the viewer. At identity the art was seen from behind: mirrored text.
+            front.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
             front.transform.localScale = new Vector3(w * 0.96f, h * 0.96f, 1f);
             ArObjectUtil.Destroy(front.GetComponent<Collider>());
             front.layer = layer;
@@ -64,7 +66,7 @@ namespace WRLDZ.Presentation
             back.name = "Back";
             back.transform.SetParent(root.transform, false);
             back.transform.localPosition = new Vector3(0f, 0f, -t * 0.52f);
-            back.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+            back.transform.localRotation = Quaternion.identity;   // reads from -Z (see Face)
             back.transform.localScale = new Vector3(w * 0.96f, h * 0.96f, 1f);
             ArObjectUtil.Destroy(back.GetComponent<Collider>());
             back.layer = layer;

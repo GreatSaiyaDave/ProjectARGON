@@ -1,0 +1,10 @@
+{
+  "notes": "Cards some UNMERGED GitHub branch (or an older line) already compiled, with the commits to read before implementing them here (`git show <sha>` in the real checkout; never merge or check out those branches: they fork from the Sept-10 line, v50-v78, whose enum order and templates differ). Read for the approach, then re-implement on the current line. 'DO NOT PORT' entries were compiled WRONG there and are refused on purpose. Remove an entry once its card is Implemented here. Surveyed 2026-09-27 (all origin/cursor/*, origin/claude/*, origin/main, local branches and stashes).",
+  "cards": {
+    "30314994": "Element Dragon: DO NOT PORT. Implemented on the Sept-10 cursor branches as a false ignition; refused on purpose on main in 67fc2361 (v51). Needs a real 'while a monster with Attribute X is on the field' condition.",
+    "92755808": "Element Saurus: DO NOT PORT (see Element Dragon, 67fc2361).",
+    "97623219": "Element Valkyrie: DO NOT PORT (see Element Dragon, 67fc2361).",
+    "85519211": "Minefield Eruption: only a Stub on GitHub main (not better than here).",
+    "82732705": "Skill Drain: only a Stub on GitHub main (not better than here)."
+  }
+}

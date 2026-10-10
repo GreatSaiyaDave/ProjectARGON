@@ -1,0 +1,136 @@
+{
+  "name": "Hinotama Homework",
+  "format": "wrldz_street_playground_4000",
+  "flaw": "Secret Barrel is a 2-of. Wave-Motion Cannon is a 1-of. Hinotama and Final Flame stand in for Just Desserts.",
+  "main": [
+    {
+      "id": 11384280,
+      "name": "Cannon Soldier",
+      "qty": 2
+    },
+    {
+      "id": 13039848,
+      "name": "Giant Soldier of Stone",
+      "qty": 3
+    },
+    {
+      "id": 15025844,
+      "name": "Mystical Elf",
+      "qty": 3
+    },
+    {
+      "id": 54652250,
+      "name": "Man-Eater Bug",
+      "qty": 2
+    },
+    {
+      "id": 38992735,
+      "name": "Wave-Motion Cannon",
+      "qty": 1
+    },
+    {
+      "id": 27053506,
+      "name": "Secret Barrel",
+      "qty": 2
+    },
+    {
+      "id": 46130346,
+      "name": "Hinotama",
+      "qty": 2
+    },
+    {
+      "id": 73134082,
+      "name": "Final Flame",
+      "qty": 2
+    },
+    {
+      "id": 19523799,
+      "name": "Ookazi",
+      "qty": 1
+    },
+    {
+      "id": 44472639,
+      "name": "Solar Ray",
+      "qty": 1
+    },
+    {
+      "id": 72302403,
+      "name": "Swords of Revealing Light",
+      "qty": 1
+    },
+    {
+      "id": 44656491,
+      "name": "Messenger of Peace",
+      "qty": 2
+    },
+    {
+      "id": 66788016,
+      "name": "Fissure",
+      "qty": 2
+    },
+    {
+      "id": 97169186,
+      "name": "Smashing Ground",
+      "qty": 1
+    },
+    {
+      "id": 79759861,
+      "name": "Tribute to the Doomed",
+      "qty": 2
+    },
+    {
+      "id": 26412047,
+      "name": "Hammer Shot",
+      "qty": 1
+    },
+    {
+      "id": 70046172,
+      "name": "Rush Recklessly",
+      "qty": 2
+    },
+    {
+      "id": 65169794,
+      "name": "Black Pendant",
+      "qty": 1
+    },
+    {
+      "id": 4206964,
+      "name": "Trap Hole",
+      "qty": 2
+    },
+    {
+      "id": 17814387,
+      "name": "Reinforcements",
+      "qty": 2
+    },
+    {
+      "id": 44209392,
+      "name": "Castle Walls",
+      "qty": 2
+    },
+    {
+      "id": 3819470,
+      "name": "Seven Tools of the Bandit",
+      "qty": 1
+    },
+    {
+      "id": 14315573,
+      "name": "Negate Attack",
+      "qty": 1
+    },
+    {
+      "id": 12607053,
+      "name": "Waboku",
+      "qty": 1
+    }
+  ],
+  "extra": [],
+  "side": [],
+  "counts": {
+    "main": 40,
+    "extra": 0,
+    "side": 0
+  },
+  "lpBand": 4000,
+  "role": "street_npc_playground"
+}

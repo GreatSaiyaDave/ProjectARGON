@@ -286,6 +286,57 @@ namespace WRLDZ.Data
     }
 
     /// <summary>
+    /// Player collection box: unlimited bulk storage that travels with the player.
+    /// Never a backpack tile, never counted in <see cref="PlayerInventory.TotalStorageCapacity"/>.
+    /// When <see cref="infiniteCopies"/> is true, removals never deplete it — every
+    /// granted card stays at <see cref="InfiniteQtyPerCard"/> forever.
+    /// </summary>
+    [Serializable]
+    public class CollectionBoxState
+    {
+        /// <summary>Copies per card that reads as "infinite" in-game (deck needs max 3).</summary>
+        public const int InfiniteQtyPerCard = 9999;
+
+        public bool owned = true;
+        public string name = "Collection Box";
+        public CardStackEntry[] stacks = Array.Empty<CardStackEntry>();
+        /// <summary>True = capacity is unbounded; FreeSlots/UsedSlots are ignored by totals.</summary>
+        public bool unlimitedStorage = true;
+        /// <summary>True = TryRemoveCards never depletes this box.</summary>
+        public bool infiniteCopies = true;
+
+        public int CountOf(int cardId)
+        {
+            if (stacks == null) return 0;
+            var n = 0;
+            foreach (var s in stacks)
+                if (s != null && s.cardId == cardId)
+                    n += Mathf.Max(0, s.qty);
+            return n;
+        }
+
+        public bool Contains(int cardId) => CountOf(cardId) > 0;
+
+        public int UniqueCount()
+        {
+            if (stacks == null) return 0;
+            var n = 0;
+            foreach (var s in stacks)
+                if (s != null && s.cardId > 0 && s.qty > 0)
+                    n++;
+            return n;
+        }
+
+        public void EnsureValid()
+        {
+            stacks ??= Array.Empty<CardStackEntry>();
+            if (string.IsNullOrEmpty(name)) name = "Collection Box";
+            unlimitedStorage = true;
+            // infiniteCopies is preserved (tests / migration may set false for a finite box).
+        }
+    }
+
+    /// <summary>
     /// Separate raid-only Tome Deck. Pages reference real TCG S/T card IDs.
     /// </summary>
     [Serializable]
@@ -462,6 +513,13 @@ namespace WRLDZ.Data
         /// <summary>Endless always-on box for artifact cards (card form).</summary>
         public ArtifactDeckBoxState artifactDeckBox = new();
 
+        /// <summary>
+        /// Unlimited collection box that travels with the player. Never a backpack tile,
+        /// never counted in storage totals. Holds infinite copies when filled by
+        /// CollectionBoxService.
+        /// </summary>
+        public CollectionBoxState collectionBox = new();
+
         /// <summary>Carried card box used first when receiving street copies. -1 = none.</summary>
         public int preferredStorageBoxIndex;
 
@@ -529,6 +587,14 @@ namespace WRLDZ.Data
                 pockets = new AvatarPocketState(),
                 wardrobe = new ClothingWardrobe(),
                 artifactDeckBox = new ArtifactDeckBoxState { owned = false, instances = Array.Empty<ArtifactInstance>() },
+                collectionBox = new CollectionBoxState
+                {
+                    owned = false,
+                    name = "Collection Box",
+                    stacks = Array.Empty<CardStackEntry>(),
+                    unlimitedStorage = true,
+                    infiniteCopies = true
+                },
                 preferredStorageBoxIndex = 0,
                 pendingReceiveCardId = 0,
                 pendingReceiveQty = 0,
@@ -561,6 +627,19 @@ namespace WRLDZ.Data
             wardrobe.EnsureValid();
             ClothingCatalog.GrantStarter(wardrobe);
             artifactDeckBox ??= new ArtifactDeckBoxState();
+            // Owner-only box (Great SaiyaDave): migrated saves start unowned; the grant
+            // happens in StarterKitService / CollectionBoxService where the username is
+            // known. Never auto-own here — EnsureValid has no account context and must
+            // not hand the box to new characters.
+            if (collectionBox == null)
+                collectionBox = new CollectionBoxState
+                {
+                    owned = false,
+                    name = "Collection Box",
+                    stacks = Array.Empty<CardStackEntry>(),
+                    unlimitedStorage = true,
+                    infiniteCopies = true
+                };
             deckBoxSlotCount = Mathf.Clamp(deckBoxSlotCount, 0, MaxPlayDeckBoxes);
             carryDeckBoxSlots = Mathf.Clamp(carryDeckBoxSlots, 1, MaxCarryDeckBoxes);
             tradeTransportCharges = Mathf.Max(0, tradeTransportCharges);
@@ -641,6 +720,9 @@ namespace WRLDZ.Data
             artifactDeckBox.EnsureValid();
             if (hasBackpack && !artifactDeckBox.owned)
                 artifactDeckBox.owned = true;
+            // Collection box: preserve whatever the save has (owner grant / revoke flows
+            // own this). Never auto-own — it belongs to Great SaiyaDave alone.
+            collectionBox.EnsureValid();
             pendingReceiveCardId = Mathf.Max(0, pendingReceiveCardId);
             pendingReceiveQty = Mathf.Max(0, pendingReceiveQty);
             if (soulPauseStartedUnix < 0) soulPauseStartedUnix = 0;
@@ -862,7 +944,38 @@ namespace WRLDZ.Data
                         n += s.qty;
             }
 
+            // Collection box is unlimited side storage — always counted as owned.
+            // Excluded from TotalStorageCapacity/Used (unbounded), included here so
+            // deck validator + deck editor see infinite copies.
+            if (collectionBox != null && collectionBox.owned)
+                n += collectionBox.CountOf(cardId);
+
             return n;
+        }
+
+        /// <summary>Copies in the unlimited collection box only (0 when not owned).</summary>
+        public int CollectionCountOf(int cardId)
+        {
+            EnsureValid();
+            if (collectionBox == null || !collectionBox.owned) return 0;
+            return collectionBox.CountOf(cardId);
+        }
+
+        /// <summary>True when the unlimited collection box owns at least one copy.</summary>
+        public bool HasInfiniteCollection(int cardId)
+        {
+            EnsureValid();
+            return collectionBox != null && collectionBox.owned && collectionBox.Contains(cardId);
+        }
+
+        /// <summary>Ensure the unlimited collection box exists and is owned. Never a backpack tile.</summary>
+        public void EnsureCollectionBox()
+        {
+            EnsureValid();
+            collectionBox ??= new CollectionBoxState();
+            collectionBox.owned = true;
+            collectionBox.unlimitedStorage = true;
+            collectionBox.EnsureValid();
         }
 
         /// <summary>Add into first storage box with free room (overflow to next). Returns leftover qty.</summary>
@@ -898,13 +1011,37 @@ namespace WRLDZ.Data
             return left; // >0 means collection full
         }
 
-        /// <summary>Remove qty of cardId from storage boxes. Returns false if not enough.</summary>
+        /// <summary>
+        /// Remove qty of cardId from storage boxes. Returns false if not enough.
+        /// The unlimited collection box is never depleted — infinite copies persist.
+        /// </summary>
         public bool TryRemoveCards(int cardId, int qty)
         {
             if (qty <= 0) return true;
             if (CountOf(cardId) < qty) return false;
             EnsureValid();
+            // Infinite collection covers the cost without losing copies.
+            if (collectionBox != null && collectionBox.owned && collectionBox.infiniteCopies &&
+                collectionBox.CountOf(cardId) >= qty)
+                return true;
             var left = qty;
+            // Spend finite collection copies first when not infinite (rare), then storage.
+            if (collectionBox != null && collectionBox.owned && !collectionBox.infiniteCopies)
+            {
+                var list = new List<CardStackEntry>(collectionBox.stacks ?? Array.Empty<CardStackEntry>());
+                for (var i = list.Count - 1; i >= 0 && left > 0; i--)
+                {
+                    if (list[i].cardId != cardId) continue;
+                    var take = Mathf.Min(left, list[i].qty);
+                    list[i].qty -= take;
+                    left -= take;
+                    if (list[i].qty <= 0) list.RemoveAt(i);
+                }
+
+                collectionBox.stacks = list.ToArray();
+                if (left <= 0) return true;
+            }
+
             for (var bi = 0; bi < storageBoxes.Length && left > 0; bi++)
             {
                 var box = storageBoxes[bi];
@@ -985,15 +1122,21 @@ namespace WRLDZ.Data
             return n;
         }
 
-        /// <summary>Copies in storage boxes currently packed for travel (<see cref="StorageBoxState.atHome"/> false).</summary>
+        /// <summary>
+        /// Copies in storage boxes currently packed for travel (<see cref="StorageBoxState.atHome"/> false)
+        /// plus the unlimited collection box (always with the player, like the artifact box).
+        /// </summary>
         public int CountOnHand(int cardId)
         {
             EnsureValid();
             if (labCarryAllStorage) return CountOf(cardId);
-            return CountInStorageByHome(cardId, atHome: false);
+            var n = CountInStorageByHome(cardId, atHome: false);
+            if (collectionBox != null && collectionBox.owned)
+                n += collectionBox.CountOf(cardId);
+            return n;
         }
 
-        /// <summary>Copies sitting at home base only.</summary>
+        /// <summary>Copies sitting at home base only (collection box excluded — always carried).</summary>
         public int CountAtHome(int cardId)
         {
             EnsureValid();

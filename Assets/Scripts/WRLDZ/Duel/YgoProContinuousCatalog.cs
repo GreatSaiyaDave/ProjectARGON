@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using WRLDZ.Core;
 
 namespace WRLDZ.Duel
 {
@@ -71,16 +72,16 @@ namespace WRLDZ.Duel
         {
             if (_loaded) return;
             _loaded = true;
-            var path = Path.Combine(Application.streamingAssetsPath, "WRLDZ", SeedFile);
-            if (!File.Exists(path))
+            var path = "WRLDZ/" + SeedFile;
+            if (!StreamingFiles.Exists(path))
             {
-                Debug.LogWarning("[WRLDZ] YGOPro continuous seed missing: " + path);
+                Debug.LogWarning("[WRLDZ] YGOPro continuous seed missing: " + StreamingFiles.FullPathForLog(path));
                 return;
             }
 
             try
             {
-                var dto = JsonUtility.FromJson<SeedFileDto>(File.ReadAllText(path));
+                var dto = JsonUtility.FromJson<SeedFileDto>(StreamingFiles.ReadAllText(path));
                 if (dto?.auras != null)
                 {
                     foreach (var a in dto.auras)

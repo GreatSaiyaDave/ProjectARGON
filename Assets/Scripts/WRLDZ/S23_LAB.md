@@ -2,7 +2,9 @@
 
 **Your rig:** Samsung Galaxy S23 Ultra + current computer. **No headset.**
 
-Product north star is still AR lenses later. Every week of phone work uses the **same duel stage** (`ArDuelSpace`) so lenses plug in without a rewrite.
+> **Owner decision 2026-09-23:** the **shipping target is Android XR glasses** (Unity / OpenXR APK). The Galaxy S23 is the **dev testbed** only: every Android APK constraint applies (StreamingAssets inside the APK via `Core/StreamingFiles`, the `Mobile` quality level, APK size), and new features are not designed phone-first.
+
+Every week of phone work uses the **same duel stage** (`ArDuelSpace`) so the glasses plug in without a rewrite.
 
 ---
 
@@ -11,7 +13,7 @@ Product north star is still AR lenses later. Every week of phone work uses the *
 | Where | What |
 |-------|------|
 | **PC Unity Editor** | Rules, UI, map, decks. Game view **1080×2340** portrait. WASD walks map. |
-| **S23 Ultra APK** | Truth: camera AR LIVE, GPS, touch, heat/FPS |
+| **S23 Ultra APK** | Device check (testbed): camera AR LIVE, GPS, touch, heat/FPS. Not yet verified on a device with the current tree. |
 
 Auto presentation:
 
@@ -24,7 +26,7 @@ Auto presentation:
 
 ## One-time device setup
 
-1. **Unity Hub** → install **Android Build Support** (SDK + NDK + OpenJDK) for 6000.4.8f1.  
+1. **Unity Hub** → install **Android Build Support** (SDK + NDK + OpenJDK) for 6000.5.10f1.  
 2. S23: **Settings → About → Software** tap build 7× → **Developer options** → **USB debugging** on.  
 3. Cable (or wireless ADB). Accept RSA prompt.  
 4. Optional: `adb devices` shows the phone.
@@ -45,6 +47,8 @@ adb shell am start -n com.wrldz.duelmonsters/com.unity3d.player.UnityPlayerActiv
 ```
 
 ### Or File → Build Settings → Android → Build And Run
+
+**StreamingAssets on the APK:** every loader reads through `Core/StreamingFiles.cs`, which reads the APK zip directly (see `Core/STREAMING_FILES.md`). No real APK has run it on a device yet. In a Development build, first run **Desktop Lab → STREAMING FILES SELF-TEST** and check that it reports `PASS` with card and deck counts. The native `ocgcore` and `e_sqlite3` plugins are x86_64-only, so the OCG native core and the SQLite CDB are desktop-only for now.
 
 ---
 

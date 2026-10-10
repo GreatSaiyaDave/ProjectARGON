@@ -168,17 +168,61 @@ namespace WRLDZ.Core
             return TryGrantOrbs(acc, amount, out _, out toast);
         }
 
-        public static bool TearHarvestReady(string zoneId, long nowUnix)
-        {
-            var last = PlayerPrefs.GetInt(HarvestKey(zoneId), 0);
-            return nowUnix - last >= TearHarvestCooldownSec;
-        }
+        /// <summary>
+        /// Harvest cooldown for the signed-in account. Stamps live in the account save
+        /// (<see cref="PlayerProgress.tearHarvestCsv"/>) and run on the guarded clock (<see cref="ClockGuard"/>),
+        /// so switching accounts or rolling the date back does not reopen a Tear (QC F7).
+        /// </summary>
+        public static bool TearHarvestReady(string zoneId, long nowUnix) =>
+            TearHarvestRemainSec(zoneId, nowUnix) <= 0;
 
         public static long TearHarvestRemainSec(string zoneId, long nowUnix)
         {
-            var last = PlayerPrefs.GetInt(HarvestKey(zoneId), 0);
-            var left = TearHarvestCooldownSec - (nowUnix - last);
+            var p = AppSession.Instance != null ? AppSession.Instance.Account?.progress : null;
+            if (p == null) return 0;
+            var now = ClockGuard.NowUnix(p, nowUnix);
+            var last = LastHarvestUnix(p, zoneId);
+            if (last <= 0) return 0;
+            var left = TearHarvestCooldownSec - (now - last);
             return left > 0 ? left : 0;
+        }
+
+        static long LastHarvestUnix(PlayerProgress p, string zoneId)
+        {
+            if (string.IsNullOrEmpty(p?.tearHarvestCsv)) return 0;
+            var key = HarvestKey(zoneId) + "@";
+            foreach (var e in p.tearHarvestCsv.Split(','))
+            {
+                if (!e.StartsWith(key, StringComparison.Ordinal)) continue;
+                if (long.TryParse(e.Substring(key.Length), System.Globalization.NumberStyles.Integer,
+                        System.Globalization.CultureInfo.InvariantCulture, out var t))
+                    return t;
+            }
+
+            return 0;
+        }
+
+        /// <summary>Record a harvest; entries whose cooldown has fully passed are dropped.</summary>
+        static void StampHarvest(PlayerProgress p, string zoneId, long now)
+        {
+            var key = HarvestKey(zoneId);
+            var keep = new List<string>();
+            if (!string.IsNullOrEmpty(p.tearHarvestCsv))
+            {
+                foreach (var e in p.tearHarvestCsv.Split(','))
+                {
+                    var at = e.LastIndexOf('@');
+                    if (at <= 0) continue;
+                    if (string.Equals(e.Substring(0, at), key, StringComparison.Ordinal)) continue;
+                    if (!long.TryParse(e.Substring(at + 1), System.Globalization.NumberStyles.Integer,
+                            System.Globalization.CultureInfo.InvariantCulture, out var t)) continue;
+                    if (now - t >= TearHarvestCooldownSec) continue;
+                    keep.Add(e);
+                }
+            }
+
+            keep.Add(key + "@" + now.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            p.tearHarvestCsv = string.Join(",", keep);
         }
 
         /// <summary>PokéStop-style Tear spin: small SE + a set orb (through L50).</summary>
@@ -194,18 +238,20 @@ namespace WRLDZ.Core
             }
 
             acc.EnsureProgress();
-            var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            if (!TearHarvestReady(zoneId, now))
+            var now = ClockGuard.NowUnix(acc.progress);
+            var last = LastHarvestUnix(acc.progress, zoneId);
+            if (last > 0 && now - last < TearHarvestCooldownSec)
             {
-                toast = $"Rift cooling · {TearHarvestRemainSec(zoneId, now)}s";
+                toast = $"Rift cooling · {TearHarvestCooldownSec - (now - last)}s";
                 return false;
             }
 
             seGained = TearHarvestSe;
             acc.EnsureInventory();
+            // Stamp first; the stamp and the grant are written by the same Persist below.
+            StampHarvest(acc.progress, zoneId, now);
             ArtifactService.GrantUntaggedSetEnergy(acc.progress, acc.inventory, seGained);
-            PlayerPrefs.SetInt(HarvestKey(zoneId), (int)now);
-            PlayerPrefs.Save();
+            QuestService.CreditHarvest(acc.progress);
 
             var line = $"+{seGained} SE";
             if (TryGrantOrbs(acc, 1, out _, out var orbToast) && !string.IsNullOrEmpty(orbToast))
@@ -217,7 +263,7 @@ namespace WRLDZ.Core
         }
 
         static string HarvestKey(string zoneId) =>
-            "wrldz.tearHarvest." + (string.IsNullOrEmpty(zoneId) ? "tear" : zoneId);
+            MapZoneService.LockKey(string.IsNullOrEmpty(zoneId) ? "tear" : zoneId);
 
         static List<string> ParseCsv(string csv)
         {

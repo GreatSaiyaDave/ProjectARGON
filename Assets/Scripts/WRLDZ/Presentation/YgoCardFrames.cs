@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using WRLDZ.Core;
 using WRLDZ.Data;
 
 namespace WRLDZ.Presentation
@@ -29,14 +30,15 @@ namespace WRLDZ.Presentation
         public static readonly Vector2 NameplateMax = new(0.92f, 0.28f);
 
         static readonly Dictionary<string, Sprite> Cache = new();
+        static readonly HashSet<string> Misses = new();
         static bool _logged;
 
         public static void EnsureReady()
         {
             if (_logged) return;
             _logged = true;
-            var dir = Path.Combine(Application.streamingAssetsPath, Root);
-            Debug.Log(Directory.Exists(dir)
+            var dir = StreamingFiles.FullPathForLog(Root);
+            Debug.Log(StreamingFiles.DirectoryExists(Root)
                 ? $"[WRLDZ] YgoCardFrames ready — {dir}"
                 : $"[WRLDZ] YgoCardFrames missing {dir}");
         }
@@ -100,15 +102,22 @@ namespace WRLDZ.Presentation
             EnsureReady();
             var key = relativeUnderYgoFrames;
             if (Cache.TryGetValue(key, out var s) && s != null) return s;
+            // Known misses (missing file, or bytes LoadImage cannot decode, e.g. a WebP saved as .png) are not
+            // re-read and re-decoded on every FrameFor / CardBack call.
+            if (Misses.Contains(key)) return null;
 
-            var full = Path.Combine(Application.streamingAssetsPath, Root, relativeUnderYgoFrames);
-            if (!File.Exists(full)) return null;
+            if (!StreamingFiles.TryReadAllBytes(Root + "/" + relativeUnderYgoFrames, out var bytes))
+            {
+                Misses.Add(key);
+                return null;
+            }
 
-            var bytes = File.ReadAllBytes(full);
             var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
             if (!tex.LoadImage(bytes))
             {
                 UnityEngine.Object.Destroy(tex);
+                Misses.Add(key);
+                Debug.LogWarning("[WRLDZ] YgoFrames image not decodable (PNG/JPG only): " + key);
                 return null;
             }
 

@@ -13,7 +13,7 @@ Unity is the TV. **edo9300/ygopro-core** (Ignis / EDOPro, `OCG_CreateDuel`) is t
 | What | Where | License |
 |---|---|---|
 | ocgcore + Ignis scripts + `.cdb` | `ThirdParty/OcgCore/`, `StreamingAssets/OcgCore/`, `Assets/Plugins/x86_64/` | **AGPL-3.0-or-later** |
-| Card art / names / official text | `StreamingAssets/Cards/` | **Konami IP** — do not mix into the AGPL folder |
+| Card art / names / official text | `StreamingAssets/Cards/` | Kept outside the AGPL folder |
 
 Putting files in this folder is **separation, not a distribution decision**. Linking/shipping the binary likely copylefts ARGON. Lab-only until legal review. Do not store-ship this path yet.
 
@@ -46,7 +46,7 @@ StreamingAssets/OcgCore/scripts/utility.lua
 StreamingAssets/OcgCore/scripts/procedure.lua   # CreateDuel shim; proc_*.lua hold Extra procedures
 StreamingAssets/OcgCore/scripts/chain.lua
 StreamingAssets/OcgCore/scripts/proc_fusion.lua
-StreamingAssets/OcgCore/scripts/official/c########.lua
+StreamingAssets/OcgCore/scripts/official~/c########.lua   # ~ hides 13k lua from FileHasher; OcgScriptStore still indexes by basename
 StreamingAssets/OcgCore/cards.cdb                 # full official datas+texts
 StreamingAssets/OcgCore/cards_datas.json          # tiny stub/old-test fallback; native never uses it
 StreamingAssets/OcgCore/lab_card_manifest.json

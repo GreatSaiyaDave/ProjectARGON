@@ -1,0 +1,354 @@
+{
+  "format": "wrldz_street_roster",
+  "era": "original",
+  "lastCoreCode": "FET",
+  "banlist": "tcg_april_2005",
+  "notes": "Street Tear satellites. 4000 LP are theme beatdown with no limited power staples. 8000 LP are era-constructed themes. Forbidden cards (Yata, CED, BLS-Envoy, HFD, Witch, Tribe-Infecting, etc.) are not used. Defender lists are wall/stall (high DEF, Gravity Bind, Jam Defender).",
+  "street4000": [
+    {
+      "file": "wander_4000_beatdown.json",
+      "name": "Corner Kid Beatdown",
+      "npcHints": [
+        "Corner kid"
+      ]
+    },
+    {
+      "file": "wander_4000_insect.json",
+      "name": "Park Insect Swarm",
+      "npcHints": [
+        "Park regular"
+      ]
+    },
+    {
+      "file": "wander_4000_water.json",
+      "name": "Waterfront Tide",
+      "npcHints": [
+        "Quiet commuter",
+        "Bus-stop duelist"
+      ]
+    },
+    {
+      "file": "wander_4000_dino.json",
+      "name": "Rooftop Dinosaurs",
+      "npcHints": [
+        "Rooftop runner"
+      ]
+    },
+    {
+      "file": "wander_4000_zombie.json",
+      "name": "Late-Walker Zombies",
+      "npcHints": [
+        "Late walker",
+        "Alley veteran"
+      ]
+    },
+    {
+      "file": "wander_4000_machine.json",
+      "name": "Night-Shift Machines",
+      "npcHints": [
+        "Night-shift clerk"
+      ]
+    },
+    {
+      "file": "wander_4000_stonewall.json",
+      "name": "Plaza Stone Wall",
+      "npcHints": [
+        "Plaza sentry",
+        "Gate guard"
+      ]
+    },
+    {
+      "file": "wander_4000_jam.json",
+      "name": "Gate Jam Defender",
+      "npcHints": [
+        "Gate guard"
+      ]
+    }
+  ],
+  "street8000": [
+    {
+      "file": "wander_8000_harpie.json",
+      "name": "Rooftop Harpies",
+      "npcHints": [
+        "Rooftop runner"
+      ]
+    },
+    {
+      "file": "wander_8000_gravekeeper.json",
+      "name": "Rift-Touched Gravekeepers",
+      "npcHints": [
+        "Rift-touched local",
+        "Street magician"
+      ]
+    },
+    {
+      "file": "wander_8000_amazoness.json",
+      "name": "Park Amazoness",
+      "npcHints": [
+        "Park regular",
+        "Corner kid"
+      ]
+    },
+    {
+      "file": "wander_8000_toon.json",
+      "name": "Bus-Stop Toons",
+      "npcHints": [
+        "Bus-stop duelist",
+        "Quiet commuter"
+      ]
+    },
+    {
+      "file": "wander_8000_red_eyes.json",
+      "name": "Alley Red-Eyes",
+      "npcHints": [
+        "Alley veteran",
+        "Late walker"
+      ]
+    },
+    {
+      "file": "wander_8000_monarch.json",
+      "name": "Night-Shift Monarchs",
+      "npcHints": [
+        "Night-shift clerk"
+      ]
+    },
+    {
+      "file": "wander_8000_gravity.json",
+      "name": "Plaza Gravity Lock",
+      "npcHints": [
+        "Plaza sentry"
+      ]
+    },
+    {
+      "file": "wander_8000_labyrinth.json",
+      "name": "Gate Labyrinth Guard",
+      "npcHints": [
+        "Gate guard"
+      ]
+    }
+  ],
+  "playground4000": [
+    {
+      "file": "wander_4000_play_harpie.json",
+      "name": "Schoolyard Harpies",
+      "flaw": "Wants 3 Harpie Lady + 3 Elegant Egotist; opened 2 and 2. Hunting Ground never showed, so Follow Wind sits there instead. One Birdface.",
+      "npcHints": [
+        "Schoolyard kid",
+        "Weekend duelist",
+        "Cafeteria kid",
+        "Library lurker"
+      ]
+    },
+    {
+      "file": "wander_4000_play_redeyes.json",
+      "name": "Cafeteria Red-Eyes",
+      "flaw": "Only 2 Red-Eyes and 1 Inferno Fire Blast. Pulled Summoned Skull and built around that instead of a 3rd dragon. Black Dragon's Chick is a 2-of.",
+      "npcHints": [
+        "Schoolyard kid",
+        "Weekend duelist",
+        "Cafeteria kid",
+        "Library lurker"
+      ]
+    },
+    {
+      "file": "wander_4000_play_gemini.json",
+      "name": "Library Elves",
+      "flaw": "Gemini Elf is a 2-of. Never opened Dark Magician, so Dark Magician Girl is the boss. Magician of Faith and Skilled Dark Magician fill the magician slot.",
+      "npcHints": [
+        "Schoolyard kid",
+        "Weekend duelist",
+        "Cafeteria kid",
+        "Library lurker"
+      ]
+    },
+    {
+      "file": "wander_4000_play_scorpion.json",
+      "name": "Alley Scorpions (short)",
+      "flaw": "Don Zaloog is a 2-of. Never pulled Cliff the Trap Remover; Dark Scorpion Burglars is the stand-in. Mustering is a 1-of.",
+      "npcHints": [
+        "Schoolyard kid",
+        "Weekend duelist",
+        "Cafeteria kid",
+        "Library lurker"
+      ]
+    },
+    {
+      "file": "wander_4000_play_union.json",
+      "name": "Weekend Unions",
+      "flaw": "Has X-Head Cannon and Y-Dragon Head, never opened Z-Metal Tank. Cannon Soldier and Robotic Knight pad the machine slot. Extra has XY but not the full XYZ.",
+      "npcHints": [
+        "Schoolyard kid",
+        "Weekend duelist",
+        "Cafeteria kid",
+        "Library lurker"
+      ]
+    },
+    {
+      "file": "wander_4000_play_gaia.json",
+      "name": "Schoolyard Gaia",
+      "flaw": "One Gaia and one Curse of Dragon \u2014 the fusion is the dream, not the ratio. Celtic Guardian and Beaver Warrior are the rest of the knight pile.",
+      "npcHints": [
+        "Schoolyard kid",
+        "Weekend duelist",
+        "Cafeteria kid",
+        "Library lurker"
+      ]
+    },
+    {
+      "file": "wander_4000_play_ojama.json",
+      "name": "Cafeteria Ojamas",
+      "flaw": "All three colors, but Yellow is the only 3-of. Green and Black are 2. Ojama Trio is the trap they actually opened. Polymerization stands in for missing Ojama spells.",
+      "npcHints": [
+        "Schoolyard kid",
+        "Weekend duelist",
+        "Cafeteria kid",
+        "Library lurker"
+      ]
+    },
+    {
+      "file": "wander_4000_play_thunder.json",
+      "name": "Bus-stop Thunder",
+      "flaw": "Thunder Dragon is a 2-of so the search is inconsistent. Hyozanryu is the pet 2100 they wouldn't cut. Twin-Headed sits in Extra.",
+      "npcHints": [
+        "Schoolyard kid",
+        "Weekend duelist",
+        "Cafeteria kid",
+        "Library lurker"
+      ]
+    },
+    {
+      "file": "wander_4000_play_searchers.json",
+      "name": "Mixed Toolbox",
+      "flaw": "Wants a one-attribute recruiter engine. Ended up with 2 Giant Rat, 2 Flying Kamakiri, 1 UFO Turtle, 1 Mother Grizzly \u2014 a rainbow that does not search itself.",
+      "npcHints": [
+        "Schoolyard kid",
+        "Weekend duelist",
+        "Cafeteria kid",
+        "Library lurker"
+      ]
+    },
+    {
+      "file": "wander_4000_play_burn.json",
+      "name": "Hinotama Homework",
+      "flaw": "Secret Barrel is a 2-of. Wave-Motion Cannon is a 1-of. Hinotama and Final Flame stand in for Just Desserts.",
+      "npcHints": [
+        "Schoolyard kid",
+        "Weekend duelist",
+        "Cafeteria kid",
+        "Library lurker"
+      ]
+    }
+  ],
+  "playground8000": [
+    {
+      "file": "wander_8000_play_ninja.json",
+      "name": "Rooftop Ninjas (short)",
+      "flaw": "Sasuke and Strike Ninja are 2-ofs. White Ninja is a 1-of. Ninjitsu Art is 1 instead of 2. Fuhma Shuriken is the weird include.",
+      "npcHints": [
+        "Schoolyard kid",
+        "Weekend duelist",
+        "Cafeteria kid",
+        "Library lurker"
+      ]
+    },
+    {
+      "file": "wander_8000_play_horus.json",
+      "name": "Weekend Horus",
+      "flaw": "Three LV4, only two LV6, one LV8. Luster Dragon is the vanilla they liked more than a 3rd LV6.",
+      "npcHints": [
+        "Schoolyard kid",
+        "Weekend duelist",
+        "Cafeteria kid",
+        "Library lurker"
+      ]
+    },
+    {
+      "file": "wander_8000_play_armed.json",
+      "name": "Schoolyard Armed Dragon",
+      "flaw": "LV3 is a 3-of, LV5 is a 2-of, LV7 is a singleton. Masked Dragon stands in for a 3rd LV5.",
+      "npcHints": [
+        "Schoolyard kid",
+        "Weekend duelist",
+        "Cafeteria kid",
+        "Library lurker"
+      ]
+    },
+    {
+      "file": "wander_8000_play_mysticlv.json",
+      "name": "Library LV Swords",
+      "flaw": "Mystic Swordsman LV2 is maxed; LV4 is a 2-of; LV6 is a 1-of. Silent Swordsman LV3 is the other LV toy they owned.",
+      "npcHints": [
+        "Schoolyard kid",
+        "Weekend duelist",
+        "Cafeteria kid",
+        "Library lurker"
+      ]
+    },
+    {
+      "file": "wander_8000_play_archfiend.json",
+      "name": "Alley Archfiends",
+      "flaw": "Archfiend Soldier is a 2-of. Pandemonium is a 2-of. Summoned Skull is the famous card they slotted because Terrorking kept eating their own spells.",
+      "npcHints": [
+        "Schoolyard kid",
+        "Weekend duelist",
+        "Cafeteria kid",
+        "Library lurker"
+      ]
+    },
+    {
+      "file": "wander_8000_play_darkblade.json",
+      "name": "Union Dark Blade",
+      "flaw": "Dark Blade is a 3-of. Pitch-Dark Dragon is a 2-of. Kiryu is a singleton. Fusion sits in Extra even though the union count is thin.",
+      "npcHints": [
+        "Schoolyard kid",
+        "Weekend duelist",
+        "Cafeteria kid",
+        "Library lurker"
+      ]
+    },
+    {
+      "file": "wander_8000_play_buster.json",
+      "name": "Buster + a Magician",
+      "flaw": "Two Buster Blader, one Dark Magician (the foil). Skilled Dark Magician is a 2-of. Dark Paladin is in Extra. No 3rd Buster, no Sage's Stone.",
+      "npcHints": [
+        "Schoolyard kid",
+        "Weekend duelist",
+        "Cafeteria kid",
+        "Library lurker"
+      ]
+    },
+    {
+      "file": "wander_8000_play_chaoslite.json",
+      "name": "No-Envoy Chaos",
+      "flaw": "Chaos Sorcerer is a 2-of. No Envoys (banned). Thunder Dragon and recruiters are LIGHT/DARK food, but the counts are 2/2/2 instead of a dedicated engine.",
+      "npcHints": [
+        "Schoolyard kid",
+        "Weekend duelist",
+        "Cafeteria kid",
+        "Library lurker"
+      ]
+    },
+    {
+      "file": "wander_8000_play_gkbudget.json",
+      "name": "Budget Necrovalley",
+      "flaw": "Spy and Guard are 2-ofs. No Chief. Necrovalley is a 2-of. Rite of Spirit is a 1-of; Waboku is the extra trap they owned.",
+      "npcHints": [
+        "Schoolyard kid",
+        "Weekend duelist",
+        "Cafeteria kid",
+        "Library lurker"
+      ]
+    },
+    {
+      "file": "wander_8000_play_ultinsect.json",
+      "name": "Ultimate Insect (gaps)",
+      "flaw": "LV1 and LV3 are 2-ofs; LV5 and LV7 are singletons. Flying Kamakiri is the WIND recruiter they had instead of a 3rd LV3.",
+      "npcHints": [
+        "Schoolyard kid",
+        "Weekend duelist",
+        "Cafeteria kid",
+        "Library lurker"
+      ]
+    }
+  ]
+}

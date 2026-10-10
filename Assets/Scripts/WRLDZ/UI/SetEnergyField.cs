@@ -8,6 +8,13 @@ namespace WRLDZ.UI
 {
     /// <summary>
     /// Ingress-style SE motes on the map. Walk attracts/collects; ~1.8 SE/mile, daily cap 20.
+    /// Walk credit (SE, motes, pathKm) comes from real GPS only — fixes worse than
+    /// <see cref="MaxCreditAccuracyM"/> or faster than <see cref="MaxCreditSpeedMps"/> (driving,
+    /// drift bursts) are not paid — plus the keyboard walk in Editor / Development builds.
+    /// Origin re-bases (Recenter, confirmed GPS jump) reset the baseline, so a jump is never paid.
+    /// The daily cap lives in the account save on the guarded clock (<see cref="WalkEnergyLedger"/>, QC F7):
+    /// changing the device date or switching accounts on one device cannot reset it. Only the sub-SE
+    /// residual metres stay a device pref.
     /// </summary>
     public class SetEnergyField : MonoBehaviour
     {
@@ -17,9 +24,14 @@ namespace WRLDZ.UI
         const float MetersPerSe = 900f;
         const int DailySeCap = 20;
         const float MapW = 280f; // sync with OverworldUI.MetersPerMapWidth
-        const string PrefDay = "wrldz.seWalkDay";
-        const string PrefToday = "wrldz.seWalkToday";
+        /// <summary>Retired per-device cap keys (pre-ledger); deleted on load.</summary>
+        const string LegacyPrefDay = "wrldz.seWalkDay";
+        const string LegacyPrefToday = "wrldz.seWalkToday";
         const string PrefResidual = "wrldz.seWalkResidualM";
+        /// <summary>GPS fixes less accurate than this move the baseline but earn nothing.</summary>
+        public const float MaxCreditAccuracyM = 25f;
+        /// <summary>About 10.8 km/h: faster segments (vehicles, drift bursts) earn nothing.</summary>
+        public const float MaxCreditSpeedMps = 3f;
 
         struct Mote
         {
@@ -31,15 +43,23 @@ namespace WRLDZ.UI
 
         Transform _burstHost;
         readonly List<Mote> _motes = new(MoteCount);
-        float _lastEast, _lastNorth, _residualMeters, _respawnTimer;
-        bool _haveLast;
-        int _seToday;
-        string _dayKey;
+        float _lastEast, _lastNorth, _residualMeters, _respawnTimer, _lastMoveTime;
+        bool _haveLast, _prefsDirty;
+        MapEnvironment _env;
         System.Action<int, string> _onGathered;
         System.Action _onCurrencyChanged;
         Sprite _cyan, _gold, _burst;
 
-        public int SeGatheredToday => _seToday;
+        public int SeGatheredToday
+        {
+            get
+            {
+                var acc = AppSession.Ensure()?.Account;
+                acc?.EnsureProgress();
+                return WalkEnergyLedger.EarnedToday(acc?.progress);
+            }
+        }
+
         public int DailyCap => DailySeCap;
 
         public static SetEnergyField Attach(
@@ -71,39 +91,74 @@ namespace WRLDZ.UI
             field.SpawnField();
             if (env != null)
             {
-                field._lastEast = env.MetersEast;
-                field._lastNorth = env.MetersNorth;
-                field._haveLast = true;
+                field._env = env;
+                env.OnOriginRebased -= field.OnOriginRebased;
+                env.OnOriginRebased += field.OnOriginRebased;
+                field.ResetBaseline(env.MetersEast, env.MetersNorth);
             }
 
             return field;
         }
 
+        /// <summary>
+        /// Keyboard / lab walk earns only in the Editor and Development builds (the lab). Shipped
+        /// builds pay real GPS walking only.
+        /// </summary>
+        static bool SimulatedWalkEarns => Application.isEditor || Debug.isDebugBuild;
+
+        /// <summary>Move the walk baseline without crediting the distance (Recenter, GPS re-base).</summary>
+        public void ResetBaseline(float metersEast, float metersNorth)
+        {
+            _lastEast = metersEast;
+            _lastNorth = metersNorth;
+            _lastMoveTime = Time.unscaledTime;
+            _haveLast = true;
+        }
+
+        void OnOriginRebased(string reason)
+        {
+            if (_env != null)
+                ResetBaseline(_env.MetersEast, _env.MetersNorth);
+        }
+
+        void OnDestroy()
+        {
+            if (_env != null)
+                _env.OnOriginRebased -= OnOriginRebased;
+            FlushPrefs();
+        }
+
+        void OnDisable() => FlushPrefs();
+
+        void OnApplicationPause(bool paused)
+        {
+            if (paused) FlushPrefs();
+        }
+
         void LoadPrefs()
         {
-            _dayKey = System.DateTime.UtcNow.ToString("yyyy-MM-dd");
-            if (PlayerPrefs.GetString(PrefDay, "") != _dayKey)
+            // The residual never exceeds one SE's worth, so a stored value cannot pay a backlog.
+            _residualMeters = Mathf.Clamp(PlayerPrefs.GetFloat(PrefResidual, 0f), 0f, MetersPerSe);
+            if (PlayerPrefs.HasKey(LegacyPrefDay) || PlayerPrefs.HasKey(LegacyPrefToday))
             {
-                _seToday = 0;
-                _residualMeters = 0f;
-                PlayerPrefs.SetString(PrefDay, _dayKey);
-                PlayerPrefs.SetInt(PrefToday, 0);
-                PlayerPrefs.SetFloat(PrefResidual, 0f);
+                PlayerPrefs.DeleteKey(LegacyPrefDay);
+                PlayerPrefs.DeleteKey(LegacyPrefToday);
                 PlayerPrefs.Save();
-            }
-            else
-            {
-                _seToday = PlayerPrefs.GetInt(PrefToday, 0);
-                _residualMeters = PlayerPrefs.GetFloat(PrefResidual, 0f);
             }
         }
 
         void SavePrefs()
         {
-            PlayerPrefs.SetString(PrefDay, _dayKey);
-            PlayerPrefs.SetInt(PrefToday, _seToday);
             PlayerPrefs.SetFloat(PrefResidual, _residualMeters);
             PlayerPrefs.Save();
+            _prefsDirty = false;
+        }
+
+        /// <summary>Residual metres change every step; they are written on pause / disable, not per fix.</summary>
+        void FlushPrefs()
+        {
+            if (_prefsDirty)
+                SavePrefs();
         }
 
         void SpawnField()
@@ -164,22 +219,42 @@ namespace WRLDZ.UI
             rt.localScale = Vector3.one;
         }
 
-        public void NotifyMoved(float metersEast, float metersNorth)
+        /// <summary>Location moved: credit the walked segment when it is real walking (see class notes).</summary>
+        public void NotifyMoved(MapEnvironment env)
         {
+            if (env == null) return;
+            var simulated = env.LastMoveSimulated || !env.UsingRealGps;
+            NotifyMoved(env.MetersEast, env.MetersNorth, simulated, env.HorizontalAccuracyM);
+        }
+
+        public void NotifyMoved(float metersEast, float metersNorth, bool simulated, float accuracyM)
+        {
+            var now = Time.unscaledTime;
             if (!_haveLast)
             {
-                _lastEast = metersEast;
-                _lastNorth = metersNorth;
-                _haveLast = true;
+                ResetBaseline(metersEast, metersNorth);
                 return;
             }
 
             var de = metersEast - _lastEast;
             var dn = metersNorth - _lastNorth;
-            _lastEast = metersEast;
-            _lastNorth = metersNorth;
             var dist = Mathf.Sqrt(de * de + dn * dn);
             if (dist < 0.05f) return;
+            var dt = Mathf.Max(0.25f, now - _lastMoveTime);
+            // The baseline always follows the player; only the credit is gated.
+            _lastEast = metersEast;
+            _lastNorth = metersNorth;
+            _lastMoveTime = now;
+
+            if (simulated)
+            {
+                if (!SimulatedWalkEarns) return;
+            }
+            else
+            {
+                if (accuracyM > MaxCreditAccuracyM) return;
+                if (dist / dt > MaxCreditSpeedMps) return;
+            }
 
             var acc = AppSession.Ensure()?.Account;
             if (acc != null)
@@ -189,28 +264,35 @@ namespace WRLDZ.UI
             }
 
             _residualMeters += dist;
+            _prefsDirty = true;
             TryGrantWalkSe(acc);
             AttractNear(0.5f + metersEast / MapW, 0.5f + metersNorth / MapW, dist);
         }
 
         void TryGrantWalkSe(LocalAccountStore.Account acc)
         {
-            if (acc?.progress == null || _seToday >= DailySeCap) return;
-            var gained = 0;
-            while (_residualMeters >= MetersPerSe && _seToday + gained < DailySeCap)
+            if (acc?.progress == null) return;
+            var earned = (int)(_residualMeters / MetersPerSe);
+            if (earned <= 0) return; // residual is flushed on pause / disable (FlushPrefs)
+
+            var allowed = WalkEnergyLedger.Reserve(acc.progress, earned, DailySeCap);
+            if (allowed <= 0)
             {
-                _residualMeters -= MetersPerSe;
-                gained++;
+                // Capped: walking past the cap does not bank SE for tomorrow.
+                _residualMeters = Mathf.Min(_residualMeters, MetersPerSe);
+                _prefsDirty = true;
+                return;
             }
 
-            if (gained <= 0) { SavePrefs(); return; }
+            _residualMeters -= allowed * MetersPerSe;
+            if (allowed < earned) _residualMeters = Mathf.Min(_residualMeters, MetersPerSe);
             acc.EnsureInventory();
-            ArtifactService.GrantUntaggedSetEnergy(acc.progress, acc.inventory, gained);
-            _seToday += gained;
-            ProgressionService.Persist(acc);
+            ArtifactService.GrantUntaggedSetEnergy(acc.progress, acc.inventory, allowed);
+            ProgressionService.Persist(acc); // ledger + grant in the same save
             SavePrefs();
             _onCurrencyChanged?.Invoke();
-            _onGathered?.Invoke(gained, $"+{gained} SE · {_seToday}/{DailySeCap}");
+            _onGathered?.Invoke(allowed,
+                $"+{allowed} SE · {WalkEnergyLedger.EarnedToday(acc.progress)}/{DailySeCap}");
         }
 
         void AttractNear(float px, float py, float walkMeters)
@@ -243,19 +325,19 @@ namespace WRLDZ.UI
             _motes[index] = m;
 
             var acc = AppSession.Ensure()?.Account;
-            if (m.gold && acc?.progress != null && _seToday < DailySeCap)
+            acc?.EnsureProgress();
+            if (m.gold && acc?.progress != null && WalkEnergyLedger.Reserve(acc.progress, 1, DailySeCap) > 0)
             {
                 acc.EnsureInventory();
                 ArtifactService.GrantUntaggedSetEnergy(acc.progress, acc.inventory, 1);
-                _seToday++;
-                ProgressionService.Persist(acc);
-                SavePrefs();
+                ProgressionService.Persist(acc); // ledger + grant in the same save
                 _onCurrencyChanged?.Invoke();
-                _onGathered?.Invoke(1, $"+1 SE · {_seToday}/{DailySeCap}");
+                _onGathered?.Invoke(1, $"+1 SE · {WalkEnergyLedger.EarnedToday(acc.progress)}/{DailySeCap}");
             }
             else if (!m.gold)
             {
                 _residualMeters += MetersPerSe * 0.12f;
+                _prefsDirty = true;
                 TryGrantWalkSe(acc);
             }
 

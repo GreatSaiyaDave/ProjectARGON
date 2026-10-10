@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using WRLDZ.Core;
@@ -75,6 +76,7 @@ namespace WRLDZ.Presentation.ArInteraction
         ArFloatingLpCallout _youLpBox;
         ArFloatingLpCallout _oppLpBox;
         ArOppFieldGlance _oppGlance;
+        ArBanishedFloater _banishedFloater; // Backup-bot stub; Dilbot final wire
         ArFieldSpellFloor _fieldFloor;
         int _billboardFrame;
         bool _anchoredOnce;
@@ -85,6 +87,18 @@ namespace WRLDZ.Presentation.ArInteraction
         // Reused per Sync to avoid HashSet/List GC on every engine tick
         readonly HashSet<int> _liveScratch = new();
         readonly List<int> _deadScratch = new();
+
+        /// <summary>
+        /// Visuals that left their zone map but are still playing: activation reveal → hover → fade,
+        /// ghosts, and removals waiting for their Spell/Trap result beat (ActivationBeat). Not keyed by
+        /// zone, so a new occupant never cuts them short.
+        /// </summary>
+        readonly List<ArArenaCardVisual> _detached = new();
+        readonly List<ActivationBeat.Beat> _beatScratch = new();
+        int _stagedAttackerId;
+
+        /// <summary>True when a Sync skipped result visuals that must be re-synced after the gate opens.</summary>
+        public bool ResultsDeferred { get; private set; }
 
         public static ArArenaHologramManager Create(Transform parent, int layer)
         {
@@ -118,6 +132,8 @@ namespace WRLDZ.Presentation.ArInteraction
             _oppLpBox = ArFloatingLpCallout.Create(ArenaRoot, Layer, playerSide: false);
             // Public opponent field readout (face-up art, set backs) — not a second duel board.
             _oppGlance = ArOppFieldGlance.Create(ArenaRoot, Layer);
+            // Banished/RFG button by M1 — visible only when count > 0 (Backup-bot stub).
+            _banishedFloater = ArBanishedFloater.Create(ArenaRoot, Layer, playerSide: true);
             _fieldFloor = ArFieldSpellFloor.Create(ArenaRoot, Layer);
             ArArenaStartFlash.Ensure(ArenaRoot, Layer);
 #if UNITY_EDITOR
@@ -301,6 +317,9 @@ namespace WRLDZ.Presentation.ArInteraction
 
         void LateUpdate()
         {
+            TickDropPreview();
+            TickDetached();
+            TickStagedAttacker();
             JustAnchoredThisFrame = false;
             // Anchor midfield between both left-arm disks (only when arms move)
             Vector3 a, b;
@@ -380,7 +399,10 @@ namespace WRLDZ.Presentation.ArInteraction
             if (_billboardCam == null)
                 _billboardCam = FindStageCamera();
             if (_billboardCam != null)
+            {
+                ArArenaCardVisual.NoteViewerCamera(_billboardCam);
                 FaceCamera(_billboardCam);
+            }
         }
 
         Camera FindStageCamera()
@@ -400,6 +422,10 @@ namespace WRLDZ.Presentation.ArInteraction
             FaceMap(_monO, cam);
             FaceMap(_stP, cam);
             FaceMap(_stO, cam);
+            // Detached monsters waiting for their result beat keep billboarding; S/T sequences own pose.
+            for (var i = 0; i < _detached.Count; i++)
+                if (_detached[i] != null && _detached[i].IsMonster)
+                    _detached[i].FaceCamera(cam);
             _fieldP?.FaceCamera(cam);
             _fieldO?.FaceCamera(cam);
             _pendL?.FaceCamera(cam);
@@ -424,37 +450,97 @@ namespace WRLDZ.Presentation.ArInteraction
         public void SyncFromEngine(DuelEngine engine, CardDatabase db)
         {
             if (engine?.Player == null || engine.Opponent == null || db == null) return;
+            // Spell/Trap result gate (ActivationBeat): while a resolved activation's art has not been
+            // readable long enough, result visuals wait — the card is revealed first, THEN its effect.
+            var holdResults = Application.isPlaying && ActivationBeat.AnyResultPending;
+            ResultsDeferred = false;
             ArMonsterStatGauge.LivePhase = engine.Phase;
-            SyncMonsters(engine.Player, db, _monP, true);
-            SyncMonsters(engine.Opponent, db, _monO, false);
+            SyncMonsters(engine.Player, db, _monP, true, holdResults);
+            SyncMonsters(engine.Opponent, db, _monO, false, holdResults);
             SyncSpellTraps(engine.Player, db, _stP, true);
             SyncSpellTraps(engine.Opponent, db, _stO, false);
             SyncExtra(engine.Player, db, true);
             SyncExtra(engine.Opponent, db, false);
+            if (_fieldFloor != null)
+            {
+                _fieldFloor.PlayerDisk = PlayerDisk;
+                _fieldFloor.OppDisk = OppDisk;
+            }
             _fieldFloor?.Sync(
                 engine.Player.FieldSpellZone?.Occupant,
                 engine.Opponent.FieldSpellZone?.Occupant,
                 db);
             // Instant Normal Spells leave the zone same frame — ghost plays rise+fade
             ProcessSpellGhosts(db);
+            // Any activation nobody revealed yet (never reached a zone, e.g. a negated CL1 from hand)
+            ProcessUnclaimedActivations(engine, db);
+            // A monster summoned and removed by a trap inside one engine call: stage it first.
+            ProcessSummonTriggers(engine, db);
 
             // Coin tosses / die rolls (Time Wizard, Barrel Dragon, d6 effects): raise a
             // hologram above the field on the acting side and land on the actual result.
             ProcessCoinDice();
 
-            if (_oppGlance != null)
+            if (holdResults)
+            {
+                // Opponent mini-playmat shows LP + field: it updates with the result, not before.
+                ResultsDeferred = true;
+            }
+            else if (_oppGlance != null)
             {
                 _oppGlance.PlayerDisk = PlayerDisk;
                 _oppGlance.ArenaRoot = ArenaRoot;
-                _oppGlance.Sync(engine.Opponent, db);
+                // Hotseat: DuelUI points the glance at the chooser's enemy, which can be engine.Player.
+                var opp = GlanceSide == engine.Player ? engine.Player : engine.Opponent;
+                var you = opp == engine.Player ? engine.Opponent : engine.Player;
+                _oppGlance.Sync(opp, db);
+                _oppGlance.SyncChrome(
+                    you?.Name, you != null ? you.LifePoints : 0,
+                    opp?.Name, opp != null ? opp.LifePoints : 0,
+                    engine.Phase,
+                    engine.TurnPlayer != null && engine.TurnPlayer == you,
+                    engine.TurnNumber,
+                    you != null ? you.DeckCount : 0,
+                    you?.Graveyard != null ? you.Graveyard.Count : 0,
+                    you?.ExtraDeck != null ? you.ExtraDeck.Count : 0);
             }
+
+            // Presentation stub: Sync player Banished count only — Dilbot may dual-side later.
+            if (_banishedFloater != null && engine?.Player != null)
+            {
+                _banishedFloater.PlayerDisk = PlayerDisk;
+                _banishedFloater.ArenaRoot = ArenaRoot;
+                _banishedFloater.IsPlayerSide = true;
+                var n = engine.Player.Banished != null ? engine.Player.Banished.Count : 0;
+                _banishedFloater.Sync(n);
+            }
+        }
+
+        /// <summary>
+        /// Side the opponent mini-playmat paints: the enemy of the seat that is choosing (DuelUI sets it
+        /// before each sync). Null, or a side from an older engine, means engine.Opponent.
+        /// </summary>
+        public DuelistState GlanceSide { get; set; }
+
+        /// <summary>Apply the current legal target set to the opponent mini-playmat.</summary>
+        public void SetOpponentTargeting(IReadOnlyCollection<CardInstance> legalTargets)
+        {
+            _oppGlance?.SetTargeting(legalTargets);
+        }
+
+        public void ClearOpponentTargeting()
+        {
+            _oppGlance?.ClearTargeting();
         }
 
         /// <summary>Mini-playmat of the opponent's public field (human and AI).</summary>
         public ArOppFieldGlance OppGlance => _oppGlance;
 
+        /// <summary>M1-adjacent Banished/RFG floater (Backup-bot stub).</summary>
+        public ArBanishedFloater BanishedFloater => _banishedFloater;
+
         void SyncMonsters(DuelistState who, CardDatabase db,
-            Dictionary<int, ArArenaCardVisual> map, bool playerSide)
+            Dictionary<int, ArArenaCardVisual> map, bool playerSide, bool holdResults = false)
         {
             _liveScratch.Clear();
             for (var i = 0; i < who.MonsterZones.Length; i++)
@@ -463,6 +549,23 @@ namespace WRLDZ.Presentation.ArInteraction
                 if (m == null) continue;
                 _liveScratch.Add(i);
                 var localPos = MonsterLocal(i, playerSide);
+
+                if (holdResults)
+                {
+                    // Result gate: revived / summoned-by-effect monsters appear, and flips (Swords),
+                    // position and ATK changes play, when the activating card's result beat opens.
+                    // Existing holograms keep their pre-result state; a re-sync follows the gate.
+                    map.TryGetValue(i, out var held);
+                    if (held == null || held.InstanceId != m.InstanceId ||
+                        held.FaceUp != m.FaceUp ||
+                        held.Defense != (m.Position == BattlePosition.Defense))
+                    {
+                        ResultsDeferred = true;
+                        if (held == null || held.InstanceId != m.InstanceId)
+                            _liveScratch.Remove(i); // old occupant (if any) leaves on the gate too
+                        continue;
+                    }
+                }
 
                 if (!map.TryGetValue(i, out var vis) || vis == null)
                 {
@@ -498,8 +601,10 @@ namespace WRLDZ.Presentation.ArInteraction
             for (var i = 0; i < who.SpellTrapZones.Length; i++)
             {
                 var c = who.SpellTrapZones[i].Occupant;
-                // Always show face-down sets AND face-up S/T (never skip FaceUp=false)
+                // Spawn face-down sets too: the visual shows the card back, never the face, until activation
                 if (c == null) continue;
+                // Equips attach to the host monster — do not leave a second ST holo.
+                if (c.EquippedTo != null) continue;
                 _liveScratch.Add(i);
                 var localPos = SpellTrapLocal(i, playerSide);
 
@@ -649,6 +754,71 @@ namespace WRLDZ.Presentation.ArInteraction
             }
         }
 
+        // ── drop preview ────────────────────────────────────────────────
+        //
+        // The disk lights the zone you are hovering, but until now the arena — the surface the
+        // disk is supposed to be driving — said nothing back. This is that answer: a ghost of
+        // where the card is about to land, on the table, while you are still holding it.
+
+        Transform _dropGhost;
+        MeshRenderer _dropGhostMr;
+        MaterialPropertyBlock _dropMpb;
+        float _dropT;
+
+        /// <summary>Show the landing ghost for a disk zone being hovered mid-drag.</summary>
+        public void ShowDropPreview(ArDuelZoneKind kind, int zone, bool playerSide)
+        {
+            Vector3 local;
+            if (kind == ArDuelZoneKind.Monster) local = MonsterLocal(zone, playerSide);
+            else if (kind == ArDuelZoneKind.SpellTrap) local = SpellTrapLocal(zone, playerSide);
+            else { ClearDropPreview(); return; }
+
+            if (_dropGhost == null)
+            {
+                var go = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                go.name = "DropGhost";
+                go.transform.SetParent(transform, false);
+                var col = go.GetComponent<Collider>();
+                if (col != null) ArObjectUtil.Destroy(col);   // never a drop target itself
+                _dropGhostMr = go.GetComponent<MeshRenderer>();
+                ArAnimePresentation.ConfigureHoloRenderer(_dropGhostMr);
+                // CreatePrimitive ships the URP Lit (PBR, opaque) default — the art guide forbids PBR and
+                // the pulse below needs alpha. Unlit transparent glass; the MPB drives colour + alpha.
+                _dropGhostMr.sharedMaterial = ArFieldMaterials.GetTransparent(new Color(0.45f, 0.95f, 1f, 0.3f));
+                go.layer = Layer;
+                _dropGhost = go.transform;
+                _dropGhost.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            }
+
+            // Footprint of the card that will land there, at the live street scale (was a fixed
+            // 6 × 9 cm tabletop quad — invisible under ~0.6–1.3 m Solid Vision cards).
+            var st = CardArtFocus.SpellTrapArtworkScale;
+            var foot = kind == ArDuelZoneKind.Monster
+                ? new Vector3(st.x * 1.25f, st.y * 1.25f, 1f)
+                : new Vector3(st.x, st.y, 1f);
+            _dropGhost.localScale = Vector3.Scale(foot, new Vector3(ArPlaymatLayout.LiveHoloScale, ArPlaymatLayout.LiveHoloScale, 1f));
+            _dropGhost.gameObject.SetActive(true);
+            _dropGhost.localPosition = local + Vector3.up * 0.012f;
+        }
+
+        public void ClearDropPreview()
+        {
+            if (_dropGhost != null) _dropGhost.gameObject.SetActive(false);
+        }
+
+        void TickDropPreview()
+        {
+            if (_dropGhost == null || !_dropGhost.gameObject.activeSelf || _dropGhostMr == null) return;
+            _dropT += Time.unscaledDeltaTime;
+            var pulse = 0.5f + 0.5f * Mathf.Sin(_dropT * 6.2f);
+            _dropMpb ??= new MaterialPropertyBlock();
+            _dropGhostMr.GetPropertyBlock(_dropMpb);
+            var c = new Color(0.45f, 0.95f, 1f, 0.16f + 0.16f * pulse);
+            _dropMpb.SetColor("_Color", c);
+            _dropMpb.SetColor("_BaseColor", c);
+            _dropGhostMr.SetPropertyBlock(_dropMpb);
+        }
+
         Vector3 MonsterLocal(int zone, bool playerSide) =>
             ArPlaymatLayout.MonsterArenaLocal(zone, playerSide);
 
@@ -715,23 +885,151 @@ namespace WRLDZ.Presentation.ArInteraction
             {
                 var k = _deadScratch[i];
                 var vis = map[k];
-                if (vis != null)
+                map.Remove(k);
+                if (vis == null) continue;
+                vis.StillInZone = false;
+
+                // Already fading — leave the GO alive until the coroutine finishes.
+                if (vis.IsFadingOut)
                 {
-                    // Only fade when rules queued activation→GY (not MST/destroy shatter)
-                    if (vis.IsFadingOut)
-                    {
-                        // Already fading — leave GO alive until coroutine finishes
-                    }
-                    else if (SpellActivationPresentation.WantsFadeToGy(vis.InstanceId))
-                        vis.RequestFadeToGy();
-                    else if (vis.IsMonster && !vis.FaceUp)
-                        vis.PlayBattleFlipThenDestroy();
-                    else
-                        ArCardShatterFx.ConsumeQueuedOrQuietDestroy(vis.gameObject, vis.InstanceId, Layer);
+                    Detach(vis);
+                    continue;
                 }
 
-                map.Remove(k);
+                var id = vis.InstanceId;
+                if (!vis.IsMonster && SpellActivationPresentation.WantsFadeToGy(id))
+                {
+                    // Activation resolved to the GY. A Set (still its card back) that activated and resolved inside
+                    // one engine call (Trap Hole, Mirror Force, Magic Cylinder, a Set Quick-Play or chain
+                    // response) was never revealed: RequestFadeToGy now plays the full reveal first, then
+                    // the beat's result hold, then the fade. Detached, so no ghost duplicates it and a
+                    // new occupant in this zone cannot cut it short.
+                    vis.RequestFadeToGy();
+                    Detach(vis);
+                    continue;
+                }
+
+                if (!vis.IsMonster && vis.SpellActivateSequenceActive)
+                {
+                    if (CardShatterPresentation.HasQueued(id))
+                    {
+                        // Negated + destroyed mid-presentation (chain): the visual shatters itself at
+                        // its tagged result beat (ArArenaCardVisual hover loop).
+                        Detach(vis);
+                        continue;
+                    }
+
+                    if (SpellActivationPresentation.HasActivation(id))
+                    {
+                        // Left the zone but still an activation (e.g. Equip attached to its host):
+                        // finish the read, then fade.
+                        vis.RequestFadeToGy();
+                        Detach(vis);
+                        continue;
+                    }
+
+                    // Activation cancelled (returned to hand) — nothing resolved, nothing to wait for.
+                    ArObjectUtil.Destroy(vis.gameObject);
+                    continue;
+                }
+
+                // Destroyed / bounced / banished: a result. Wait for its Spell/Trap beat (if any).
+                DeferRemoval(vis);
             }
+        }
+
+        void Detach(ArArenaCardVisual vis)
+        {
+            if (vis != null && !_detached.Contains(vis))
+                _detached.Add(vis);
+        }
+
+        void DeferRemoval(ArArenaCardVisual vis)
+        {
+            if (vis == null) return;
+            if (!Application.isPlaying || ActivationBeat.IsRemovalReleased(vis.InstanceId))
+            {
+                RemoveNow(vis);
+                return;
+            }
+
+            Detach(vis);
+            StartCoroutine(RemoveWhenReleased(vis));
+        }
+
+        IEnumerator RemoveWhenReleased(ArArenaCardVisual vis)
+        {
+            var id = vis != null ? vis.InstanceId : 0;
+            var cap = Time.unscaledTime + SpellActivationPresentation.BeatHardCapSeconds;
+            while (vis != null && !ActivationBeat.IsRemovalReleased(id) && Time.unscaledTime < cap)
+                yield return null;
+            if (vis == null) yield break;
+            vis.ClearAttackCharge();
+            RemoveNow(vis);
+        }
+
+        void RemoveNow(ArArenaCardVisual vis)
+        {
+            if (vis == null) return;
+            if (vis.IsMonster && (!vis.FaceUp || vis.BattleFlipping))
+            {
+                // Face-down monster leaving (or destroyed while its in-zone battle flip still runs).
+                // Battle flip only on battle evidence: the engine revealed it (face-up) AND a BATTLE
+                // shatter is queued — an effect destroy + banish also sets FaceUp (DestroyMonster's
+                // banish branch) but must not play a battle flip. The flip takes the spec (arena shatter).
+                var queued = CardShatterPresentation.TryPeek(vis.InstanceId, out var spec);
+                if (queued && spec.IsBattle && vis.Card != null && vis.Card.FaceUp)
+                    vis.PlayBattleFlipThenDestroy();
+                else if (queued && vis.IsShown)
+                    // Destroyed while still its card back (or mid-flip): it shatters where it is; a card
+                    // back samples only the card-back texture, so nothing about the card leaks.
+                    ArCardShatterFx.ConsumeQueuedOrQuietDestroy(vis.gameObject, vis.InstanceId, Layer);
+                else
+                    // Change of Heart, bounce, face-down banish, tribute, material (or still inside its
+                    // disk-seat hold): the card back leaves quietly — no reveal flip, no face leak.
+                    // (The shatter queue is left for the disk card, which breaks as its card back.)
+                    ArObjectUtil.Destroy(vis.gameObject);
+            }
+            else
+                // Face-down Sets included: a destroyed Set still shatters at its zone (card back).
+                ArCardShatterFx.ConsumeQueuedOrQuietDestroy(vis.gameObject, vis.InstanceId, Layer);
+        }
+
+        void TickDetached()
+        {
+            for (var i = _detached.Count - 1; i >= 0; i--)
+                if (_detached[i] == null)
+                    _detached.RemoveAt(i);
+        }
+
+        /// <summary>
+        /// Mirror Force / Magic Cylinder answered inline: the declared attacker keeps its charge glow
+        /// until the trap's result is shown (the engine already cleared the attack presentation).
+        /// </summary>
+        void TickStagedAttacker()
+        {
+            var id = ActivationBeat.StagedAttackerInstance;
+            if (id != _stagedAttackerId && _stagedAttackerId != 0)
+            {
+                var old = FindMonsterByInstance(_stagedAttackerId);
+                if (old != null) old.ClearAttackCharge();
+            }
+
+            _stagedAttackerId = id;
+            if (id == 0) return;
+            var vis = FindMonsterByInstance(id);
+            if (vis != null && vis.FaceUp)
+                vis.SetAttackCharge(0.65f + 0.35f * Mathf.Abs(Mathf.Sin(Time.unscaledTime * 3.4f)));
+        }
+
+        ArArenaCardVisual FindMonsterByInstance(int instanceId)
+        {
+            if (FindMonsterVisual(_monP, instanceId, out var v)) return v;
+            if (FindMonsterVisual(_monO, instanceId, out v)) return v;
+            for (var i = 0; i < _detached.Count; i++)
+                if (_detached[i] != null && _detached[i].IsMonster && _detached[i].InstanceId == instanceId)
+                    return _detached[i];
+            return null;
         }
 
         /// <summary>
@@ -794,8 +1092,97 @@ namespace WRLDZ.Presentation.ArInteraction
                     ghostCard.Def = def;
 
                 // Create starts face-down→rise sequence because RegisterActivation is live;
-                // ResolveToGy is already set so the sequence fades after min hover.
-                SpawnArenaCard(ghostCard, db, SpellTrapPlane, local, ev.PlayerSide, false, null);
+                // the sequence holds on the beat clock, then fades.
+                var ghost = SpawnArenaCard(ghostCard, db, SpellTrapPlane, local, ev.PlayerSide, false, null);
+                if (ghost != null)
+                {
+                    ghost.MarkGhost();
+                    Detach(ghost);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Every activation is revealed in the arena. A registered activation that no visual has claimed
+        /// and whose card is on no zone (placed and removed inside one engine call without a fade — a
+        /// negated chain link from the hand, an Equip that attached at once) gets a ghost reveal.
+        /// </summary>
+        void ProcessUnclaimedActivations(DuelEngine engine, CardDatabase db)
+        {
+            if (!Application.isPlaying) return;
+            ActivationBeat.CollectLive(_beatScratch);
+            for (var i = 0; i < _beatScratch.Count; i++)
+            {
+                var b = _beatScratch[i];
+                if (b.SequenceStartedAt >= 0f || b.CardId == 0) continue;
+                if (Time.unscaledTime > ActivationBeat.ArtReadableAt(b)) continue; // stale: never late-spawn
+                if (!SpellActivationPresentation.TryGet(b.InstanceId, out var ev)) continue;
+                if (ev.ZoneIndex == -1) continue; // Field Spell: ArFieldSpellFloor owns it
+                if (FindVisualByInstance(b.InstanceId) != null)
+                {
+                    ActivationBeat.NoteSequenceStarted(b.InstanceId);
+                    continue;
+                }
+
+                // Still on a zone → that zone's Sync reveals it. Exception: an Equip already attached to
+                // its host (SyncSpellTraps never draws those) still gets its reveal as a ghost.
+                var occ = FindOnZones(engine, b.InstanceId);
+                if (occ != null && occ.EquippedTo == null) continue;
+
+                var zone = Mathf.Clamp(ev.ZoneIndex >= 0 ? ev.ZoneIndex : 2, 0, 4);
+                var ghostCard = new CardInstance
+                {
+                    InstanceId = b.InstanceId,
+                    CardId = b.CardId,
+                    FaceUp = true,
+                    Position = BattlePosition.Attack
+                };
+                if (db != null && db.TryGet(b.CardId, out var def))
+                    ghostCard.Def = def;
+                var ghost = SpawnArenaCard(ghostCard, db, SpellTrapPlane, SpellTrapLocal(zone, b.PlayerSide),
+                    b.PlayerSide, false, null);
+                if (ghost == null) continue;
+                ghost.MarkGhost();
+                Detach(ghost);
+            }
+        }
+
+        static bool IsOnAnyZone(DuelEngine engine, int instanceId) => FindOnZones(engine, instanceId) != null;
+
+        static CardInstance FindOnZones(DuelEngine engine, int instanceId) =>
+            FindOnZones(engine.Player, instanceId) ?? FindOnZones(engine.Opponent, instanceId);
+
+        static CardInstance FindOnZones(DuelistState who, int instanceId)
+        {
+            if (who == null) return null;
+            for (var i = 0; i < who.SpellTrapZones.Length; i++)
+                if (who.SpellTrapZones[i].Occupant?.InstanceId == instanceId)
+                    return who.SpellTrapZones[i].Occupant;
+            for (var i = 0; i < who.MonsterZones.Length; i++)
+                if (who.MonsterZones[i].Occupant?.InstanceId == instanceId)
+                    return who.MonsterZones[i].Occupant;
+            var f = who.FieldSpellZone?.Occupant;
+            return f != null && f.InstanceId == instanceId ? f : null;
+        }
+
+        /// <summary>
+        /// Trap Hole on a Normal Summon resolves inside the summon call, so no Sync ever saw the monster.
+        /// Stage it on its zone (seat → materialize) and let the trap's result beat shatter it.
+        /// </summary>
+        void ProcessSummonTriggers(DuelEngine engine, CardDatabase db)
+        {
+            while (ActivationBeat.TryTakeSummonTrigger(out var t))
+            {
+                if (!Application.isPlaying || t.Card == null) continue;
+                if (IsOnAnyZone(engine, t.InstanceId)) continue;          // still there: normal Sync
+                if (FindMonsterByInstance(t.InstanceId) != null) continue; // already visible
+                if (ActivationBeat.IsRemovalReleased(t.InstanceId)) continue; // nothing to stage for
+                var zone = Mathf.Clamp(t.ZoneIndex, 0, 4);
+                var staged = SpawnArenaCard(t.Card, db, MonsterPlane, MonsterLocal(zone, t.PlayerSide),
+                    t.PlayerSide, true, ResolveDiskSpawnWorld(t.PlayerSide, ArDuelZoneKind.Monster, zone));
+                if (staged == null) continue;
+                staged.StillInZone = false;
+                DeferRemoval(staged);
             }
         }
 
@@ -805,6 +1192,9 @@ namespace WRLDZ.Presentation.ArInteraction
                 if (kv.Value != null && kv.Value.InstanceId == instanceId) return kv.Value;
             foreach (var kv in _stO)
                 if (kv.Value != null && kv.Value.InstanceId == instanceId) return kv.Value;
+            for (var i = 0; i < _detached.Count; i++)
+                if (_detached[i] != null && !_detached[i].IsMonster && _detached[i].InstanceId == instanceId)
+                    return _detached[i];
             if (_fieldP != null && _fieldP.InstanceId == instanceId) return _fieldP;
             if (_fieldO != null && _fieldO.InstanceId == instanceId) return _fieldO;
             return null;

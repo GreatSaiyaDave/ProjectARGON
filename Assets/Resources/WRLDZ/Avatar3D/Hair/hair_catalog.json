@@ -1,0 +1,1078 @@
+{
+ "styles": [
+  {
+   "id": "storm_crown",
+   "name": "Storm Crown",
+   "inspiredBy": "Original (Meshy base)",
+   "series": "WRLDZ",
+   "sex": "male",
+   "length": "long",
+   "palette": {
+    "name": "Storm Crown",
+    "pattern": "tricolor",
+    "root": "#1C2470",
+    "tip": "#1C2470",
+    "fringe": "#E8E8F0",
+    "streak": "#1C2470",
+    "side": "#1C2470"
+   }
+  },
+  {
+   "id": "crimson_flame",
+   "name": "Crimson Flame",
+   "inspiredBy": "Original (Meshy base)",
+   "series": "WRLDZ",
+   "sex": "female",
+   "length": "long",
+   "palette": {
+    "name": "Crimson Flame",
+    "pattern": "tips",
+    "root": "#B01E5A",
+    "tip": "#E8487E",
+    "fringe": "#B01E5A",
+    "streak": "#B01E5A",
+    "side": "#B01E5A"
+   }
+  },
+  {
+   "id": "yugi_muto",
+   "name": "Yugi Star",
+   "inspiredBy": "Yugi Muto",
+   "series": "Duel Monsters",
+   "sex": "male",
+   "length": "medium",
+   "palette": {
+    "name": "Yugi Star",
+    "pattern": "tricolor",
+    "root": "#231F2E",
+    "tip": "#8A2F63",
+    "fringe": "#E8D57E",
+    "streak": "#231F2E",
+    "side": "#231F2E"
+   }
+  },
+  {
+   "id": "joey_wheeler",
+   "name": "Street Blond",
+   "inspiredBy": "Joey Wheeler",
+   "series": "Duel Monsters",
+   "sex": "male",
+   "length": "short",
+   "palette": {
+    "name": "Street Blond",
+    "pattern": "solid",
+    "root": "#CDAA4A",
+    "tip": "#CDAA4A",
+    "fringe": "#CDAA4A",
+    "streak": "#CDAA4A",
+    "side": "#CDAA4A"
+   }
+  },
+  {
+   "id": "seto_kaiba",
+   "name": "Kaiba Sweep",
+   "inspiredBy": "Seto Kaiba",
+   "series": "Duel Monsters",
+   "sex": "male",
+   "length": "short",
+   "palette": {
+    "name": "Kaiba Sweep",
+    "pattern": "solid",
+    "root": "#6B4526",
+    "tip": "#6B4526",
+    "fringe": "#6B4526",
+    "streak": "#6B4526",
+    "side": "#6B4526"
+   }
+  },
+  {
+   "id": "tea_gardner",
+   "name": "Dancer Bob",
+   "inspiredBy": "Tea Gardner / Anzu",
+   "series": "Duel Monsters",
+   "sex": "female",
+   "length": "medium",
+   "palette": {
+    "name": "Dancer Bob",
+    "pattern": "split",
+    "root": "#6B3727",
+    "tip": "#6B3727",
+    "fringe": "#6B3727",
+    "streak": "#6B3727",
+    "side": "#3B2119"
+   }
+  },
+  {
+   "id": "mai_valentine",
+   "name": "Harpy Mane",
+   "inspiredBy": "Mai Valentine",
+   "series": "Duel Monsters",
+   "sex": "female",
+   "length": "long",
+   "palette": {
+    "name": "Harpy Mane",
+    "pattern": "solid",
+    "root": "#D3CD85",
+    "tip": "#D3CD85",
+    "fringe": "#D3CD85",
+    "streak": "#D3CD85",
+    "side": "#D3CD85"
+   }
+  },
+  {
+   "id": "ryou_bakura",
+   "name": "Soft Ring",
+   "inspiredBy": "Ryou Bakura",
+   "series": "Duel Monsters",
+   "sex": "any",
+   "length": "long",
+   "palette": {
+    "name": "Soft Ring",
+    "pattern": "solid",
+    "root": "#E4E3EC",
+    "tip": "#E4E3EC",
+    "fringe": "#E4E3EC",
+    "streak": "#E4E3EC",
+    "side": "#E4E3EC"
+   }
+  },
+  {
+   "id": "marik_ishtar",
+   "name": "Tomb Keeper",
+   "inspiredBy": "Marik Ishtar",
+   "series": "Duel Monsters",
+   "sex": "male",
+   "length": "medium",
+   "palette": {
+    "name": "Tomb Keeper",
+    "pattern": "solid",
+    "root": "#D6D8B9",
+    "tip": "#D6D8B9",
+    "fringe": "#D6D8B9",
+    "streak": "#D6D8B9",
+    "side": "#D6D8B9"
+   }
+  },
+  {
+   "id": "jaden_yuki",
+   "name": "Hero Rock",
+   "inspiredBy": "Jaden Yuki",
+   "series": "Yu-Gi-Oh! GX",
+   "sex": "male",
+   "length": "short",
+   "palette": {
+    "name": "Hero Rock",
+    "pattern": "split",
+    "root": "#C98A55",
+    "tip": "#C98A55",
+    "fringe": "#6E4F3C",
+    "streak": "#C98A55",
+    "side": "#6E4F3C"
+   }
+  },
+  {
+   "id": "alexis_rhodes",
+   "name": "Obelisk Queen",
+   "inspiredBy": "Alexis Rhodes",
+   "series": "Yu-Gi-Oh! GX",
+   "sex": "female",
+   "length": "long",
+   "palette": {
+    "name": "Obelisk Queen",
+    "pattern": "solid",
+    "root": "#CDB67F",
+    "tip": "#CDB67F",
+    "fringe": "#CDB67F",
+    "streak": "#CDB67F",
+    "side": "#CDB67F"
+   }
+  },
+  {
+   "id": "yusei_fudo",
+   "name": "Stardust Crab",
+   "inspiredBy": "Yusei Fudo",
+   "series": "Yu-Gi-Oh! 5D's",
+   "sex": "male",
+   "length": "medium",
+   "palette": {
+    "name": "Stardust Crab",
+    "pattern": "streaks",
+    "root": "#1E2328",
+    "tip": "#1E2328",
+    "fringe": "#1E2328",
+    "streak": "#D9A441",
+    "side": "#1E2328"
+   }
+  },
+  {
+   "id": "jack_atlas",
+   "name": "King's Crown",
+   "inspiredBy": "Jack Atlas",
+   "series": "Yu-Gi-Oh! 5D's",
+   "sex": "male",
+   "length": "medium",
+   "palette": {
+    "name": "King's Crown",
+    "pattern": "solid",
+    "root": "#DDC984",
+    "tip": "#DDC984",
+    "fringe": "#DDC984",
+    "streak": "#DDC984",
+    "side": "#DDC984"
+   }
+  },
+  {
+   "id": "akiza_izinski",
+   "name": "Black Rose",
+   "inspiredBy": "Akiza Izinski / Aki",
+   "series": "Yu-Gi-Oh! 5D's",
+   "sex": "female",
+   "length": "medium",
+   "palette": {
+    "name": "Black Rose",
+    "pattern": "solid",
+    "root": "#9E2F43",
+    "tip": "#9E2F43",
+    "fringe": "#9E2F43",
+    "streak": "#9E2F43",
+    "side": "#9E2F43"
+   }
+  },
+  {
+   "id": "yuma_tsukumo",
+   "name": "Kattobingu",
+   "inspiredBy": "Yuma Tsukumo",
+   "series": "Yu-Gi-Oh! ZEXAL",
+   "sex": "male",
+   "length": "medium",
+   "palette": {
+    "name": "Kattobingu",
+    "pattern": "split",
+    "root": "#262840",
+    "tip": "#262840",
+    "fringe": "#E07C98",
+    "streak": "#262840",
+    "side": "#E07C98"
+   }
+  },
+  {
+   "id": "yuya_sakaki",
+   "name": "Tomato Showman",
+   "inspiredBy": "Yuya Sakaki",
+   "series": "Yu-Gi-Oh! ARC-V",
+   "sex": "male",
+   "length": "short",
+   "palette": {
+    "name": "Tomato Showman",
+    "pattern": "split",
+    "root": "#B7303A",
+    "tip": "#B7303A",
+    "fringe": "#46A85E",
+    "streak": "#B7303A",
+    "side": "#46A85E"
+   }
+  },
+  {
+   "id": "yusaku_fujiki",
+   "name": "Link Wisteria",
+   "inspiredBy": "Yusaku Fujiki",
+   "series": "Yu-Gi-Oh! VRAINS",
+   "sex": "male",
+   "length": "medium",
+   "palette": {
+    "name": "Link Wisteria",
+    "pattern": "tricolor",
+    "root": "#2B3F74",
+    "tip": "#CF46AD",
+    "fringe": "#3B7CC2",
+    "streak": "#CF46AD",
+    "side": "#2B3F74"
+   }
+  },
+  {
+   "id": "ptah_sunburst",
+   "name": "Ptah Sunburst",
+   "inspiredBy": "Ptah's vortex of golden light (Lore v5 l.44)",
+   "series": "WRLDZ original",
+   "sex": "any",
+   "length": "medium",
+   "palette": {
+    "name": "Ptah Sunburst",
+    "pattern": "tricolor",
+    "root": "#1B2250",
+    "tip": "#FFD647",
+    "fringe": "#F4C542",
+    "streak": "#FFE9A3",
+    "side": "#1B2250"
+   }
+  },
+  {
+   "id": "umbrax_horns",
+   "name": "Umbrax Horns",
+   "inspiredBy": "Umbrax's horned skull (Lore v5 l.42, l.60)",
+   "series": "WRLDZ original",
+   "sex": "male",
+   "length": "medium",
+   "palette": {
+    "name": "Umbrax Horns",
+    "pattern": "tips",
+    "root": "#120B18",
+    "tip": "#7B2FB5",
+    "fringe": "#120B18",
+    "streak": "#FF5A1F",
+    "side": "#120B18"
+   }
+  },
+  {
+   "id": "rift_crest",
+   "name": "Tear Rift",
+   "inspiredBy": "Tears / Seal of Bakura (Lore v5 l.64, l.90)",
+   "series": "WRLDZ original",
+   "sex": "any",
+   "length": "short",
+   "palette": {
+    "name": "Tear Rift",
+    "pattern": "split",
+    "root": "#1A0F2B",
+    "tip": "#FF4798",
+    "fringe": "#1A0F2B",
+    "streak": "#FF4798",
+    "side": "#3B1F5E"
+   }
+  }
+ ],
+ "palettes": [
+  {
+   "name": "Yugi Star",
+   "pattern": "tricolor",
+   "root": "#231F2E",
+   "tip": "#8A2F63",
+   "fringe": "#E8D57E",
+   "streak": "#231F2E",
+   "side": "#231F2E"
+  },
+  {
+   "name": "Pharaoh Atem",
+   "pattern": "tricolor",
+   "root": "#1E1A22",
+   "tip": "#A1284F",
+   "fringe": "#E3D27C",
+   "streak": "#E3D27C",
+   "side": "#1E1A22"
+  },
+  {
+   "name": "Street Blond",
+   "pattern": "solid",
+   "root": "#CDAA4A",
+   "tip": "#CDAA4A",
+   "fringe": "#CDAA4A",
+   "streak": "#CDAA4A",
+   "side": "#CDAA4A"
+  },
+  {
+   "name": "CEO Helmet",
+   "pattern": "solid",
+   "root": "#7E5433",
+   "tip": "#7E5433",
+   "fringe": "#7E5433",
+   "streak": "#7E5433",
+   "side": "#7E5433"
+  },
+  {
+   "name": "Dancer Bob",
+   "pattern": "split",
+   "root": "#6B3727",
+   "tip": "#6B3727",
+   "fringe": "#6B3727",
+   "streak": "#6B3727",
+   "side": "#3B2119"
+  },
+  {
+   "name": "Harpy Mane",
+   "pattern": "solid",
+   "root": "#D3CD85",
+   "tip": "#D3CD85",
+   "fringe": "#D3CD85",
+   "streak": "#D3CD85",
+   "side": "#D3CD85"
+  },
+  {
+   "name": "Soft Ring",
+   "pattern": "solid",
+   "root": "#E4E3EC",
+   "tip": "#E4E3EC",
+   "fringe": "#E4E3EC",
+   "streak": "#E4E3EC",
+   "side": "#E4E3EC"
+  },
+  {
+   "name": "Thief King",
+   "pattern": "solid",
+   "root": "#E3E4EC",
+   "tip": "#E3E4EC",
+   "fringe": "#E3E4EC",
+   "streak": "#E3E4EC",
+   "side": "#E3E4EC"
+  },
+  {
+   "name": "Tomb Keeper",
+   "pattern": "solid",
+   "root": "#D6D8B9",
+   "tip": "#D6D8B9",
+   "fringe": "#D6D8B9",
+   "streak": "#D6D8B9",
+   "side": "#D6D8B9"
+  },
+  {
+   "name": "Shadow Flare",
+   "pattern": "tips",
+   "root": "#D6D8B9",
+   "tip": "#9EAAA2",
+   "fringe": "#D6D8B9",
+   "streak": "#D6D8B9",
+   "side": "#D6D8B9"
+  },
+  {
+   "name": "Oracle Veil",
+   "pattern": "solid",
+   "root": "#17161D",
+   "tip": "#17161D",
+   "fringe": "#17161D",
+   "streak": "#17161D",
+   "side": "#17161D"
+  },
+  {
+   "name": "Toon Curtain",
+   "pattern": "solid",
+   "root": "#DAD7EA",
+   "tip": "#DAD7EA",
+   "fringe": "#DAD7EA",
+   "streak": "#DAD7EA",
+   "side": "#DAD7EA"
+  },
+  {
+   "name": "Prodigy Tails",
+   "pattern": "solid",
+   "root": "#D9C38A",
+   "tip": "#D9C38A",
+   "fringe": "#D9C38A",
+   "streak": "#D9C38A",
+   "side": "#D9C38A"
+  },
+  {
+   "name": "Hero Rock",
+   "pattern": "split",
+   "root": "#C98A55",
+   "tip": "#C98A55",
+   "fringe": "#6E4F3C",
+   "streak": "#C98A55",
+   "side": "#6E4F3C"
+  },
+  {
+   "name": "Obelisk Queen",
+   "pattern": "solid",
+   "root": "#CDB67F",
+   "tip": "#CDB67F",
+   "fringe": "#CDB67F",
+   "streak": "#CDB67F",
+   "side": "#CDB67F"
+  },
+  {
+   "name": "Cyber Emperor",
+   "pattern": "solid",
+   "root": "#4E7F93",
+   "tip": "#4E7F93",
+   "fringe": "#4E7F93",
+   "streak": "#4E7F93",
+   "side": "#4E7F93"
+  },
+  {
+   "name": "Chazz It Up",
+   "pattern": "solid",
+   "root": "#24222A",
+   "tip": "#24222A",
+   "fringe": "#24222A",
+   "streak": "#24222A",
+   "side": "#24222A"
+  },
+  {
+   "name": "D-Hero Sweep",
+   "pattern": "solid",
+   "root": "#ABAFAD",
+   "tip": "#ABAFAD",
+   "fringe": "#ABAFAD",
+   "streak": "#ABAFAD",
+   "side": "#ABAFAD"
+  },
+  {
+   "name": "Stardust Crab",
+   "pattern": "streaks",
+   "root": "#1E2328",
+   "tip": "#1E2328",
+   "fringe": "#1E2328",
+   "streak": "#D9A441",
+   "side": "#1E2328"
+  },
+  {
+   "name": "King's Crown",
+   "pattern": "solid",
+   "root": "#DDC984",
+   "tip": "#DDC984",
+   "fringe": "#DDC984",
+   "streak": "#DDC984",
+   "side": "#DDC984"
+  },
+  {
+   "name": "Blackwing Crest",
+   "pattern": "solid",
+   "root": "#E3834F",
+   "tip": "#E3834F",
+   "fringe": "#E3834F",
+   "streak": "#E3834F",
+   "side": "#E3834F"
+  },
+  {
+   "name": "Black Rose",
+   "pattern": "solid",
+   "root": "#9E2F43",
+   "tip": "#9E2F43",
+   "fringe": "#9E2F43",
+   "streak": "#9E2F43",
+   "side": "#9E2F43"
+  },
+  {
+   "name": "Kattobingu",
+   "pattern": "split",
+   "root": "#262840",
+   "tip": "#262840",
+   "fringe": "#E07C98",
+   "streak": "#262840",
+   "side": "#E07C98"
+  },
+  {
+   "name": "Photon Curl",
+   "pattern": "split",
+   "root": "#D8C47E",
+   "tip": "#D8C47E",
+   "fringe": "#1F3B3E",
+   "streak": "#D8C47E",
+   "side": "#1F3B3E"
+  },
+  {
+   "name": "Tentacle Tide",
+   "pattern": "streaks",
+   "root": "#4A3782",
+   "tip": "#4A3782",
+   "fringe": "#4A3782",
+   "streak": "#9A7ED0",
+   "side": "#4A3782"
+  },
+  {
+   "name": "Tomato Showman",
+   "pattern": "split",
+   "root": "#B7303A",
+   "tip": "#B7303A",
+   "fringe": "#46A85E",
+   "streak": "#B7303A",
+   "side": "#46A85E"
+  },
+  {
+   "name": "Pink Pigtails",
+   "pattern": "split",
+   "root": "#B8487F",
+   "tip": "#B8487F",
+   "fringe": "#E09BC4",
+   "streak": "#B8487F",
+   "side": "#E09BC4"
+  },
+  {
+   "name": "LDS President",
+   "pattern": "split",
+   "root": "#BEBDC2",
+   "tip": "#BEBDC2",
+   "fringe": "#BEBDC2",
+   "streak": "#BEBDC2",
+   "side": "#55525A"
+  },
+  {
+   "name": "Link Wisteria",
+   "pattern": "tricolor",
+   "root": "#2B3F74",
+   "tip": "#CF46AD",
+   "fringe": "#3B7CC2",
+   "streak": "#CF46AD",
+   "side": "#2B3F74"
+  },
+  {
+   "name": "Playmaker",
+   "pattern": "tricolor",
+   "root": "#DED84F",
+   "tip": "#C16CB9",
+   "fringe": "#C16CB9",
+   "streak": "#C16CB9",
+   "side": "#B8323C"
+  },
+  {
+   "name": "Blue Angel",
+   "pattern": "streaks",
+   "root": "#4369B5",
+   "tip": "#7797D8",
+   "fringe": "#7797D8",
+   "streak": "#71C2CB",
+   "side": "#4369B5"
+  },
+  {
+   "name": "Soulburner",
+   "pattern": "tricolor",
+   "root": "#2E2E66",
+   "tip": "#AED4E7",
+   "fringe": "#C24B3E",
+   "streak": "#D9954F",
+   "side": "#AED4E7"
+  },
+  {
+   "name": "Road Flame",
+   "pattern": "split",
+   "root": "#A83D21",
+   "tip": "#A83D21",
+   "fringe": "#F0E872",
+   "streak": "#A83D21",
+   "side": "#F0E872"
+  },
+  {
+   "name": "Rook Spikes",
+   "pattern": "solid",
+   "root": "#349FC8",
+   "tip": "#349FC8",
+   "fringe": "#349FC8",
+   "streak": "#349FC8",
+   "side": "#349FC8"
+  },
+  {
+   "name": "Velgear Ears",
+   "pattern": "split",
+   "root": "#407BBA",
+   "tip": "#407BBA",
+   "fringe": "#407BBA",
+   "streak": "#407BBA",
+   "side": "#8CC4E3"
+  },
+  {
+   "name": "White Dragon",
+   "pattern": "tips",
+   "root": "#F7F8FA",
+   "tip": "#A9C3E7",
+   "fringe": "#F7F8FA",
+   "streak": "#F7F8FA",
+   "side": "#F7F8FA"
+  },
+  {
+   "name": "Atlantean",
+   "pattern": "solid",
+   "root": "#7A9A92",
+   "tip": "#7A9A92",
+   "fringe": "#7A9A92",
+   "streak": "#7A9A92",
+   "side": "#7A9A92"
+  },
+  {
+   "name": "Virtual Heir",
+   "pattern": "solid",
+   "root": "#91D0C1",
+   "tip": "#91D0C1",
+   "fringe": "#91D0C1",
+   "streak": "#91D0C1",
+   "side": "#91D0C1"
+  },
+  {
+   "name": "Clear Wing",
+   "pattern": "split",
+   "root": "#33609A",
+   "tip": "#33609A",
+   "fringe": "#D99448",
+   "streak": "#E4DDA2",
+   "side": "#D99448"
+  },
+  {
+   "name": "Xyz Rebel",
+   "pattern": "split",
+   "root": "#1C1B2E",
+   "tip": "#1C1B2E",
+   "fringe": "#8C88DF",
+   "streak": "#1C1B2E",
+   "side": "#8C88DF"
+  },
+  {
+   "name": "Fusion Venom",
+   "pattern": "split",
+   "root": "#85659C",
+   "tip": "#85659C",
+   "fringe": "#D0509C",
+   "streak": "#85659C",
+   "side": "#D0509C"
+  },
+  {
+   "name": "Romin Idol",
+   "pattern": "solid",
+   "root": "#BB34A0",
+   "tip": "#BB34A0",
+   "fringe": "#BB34A0",
+   "streak": "#BB34A0",
+   "side": "#BB34A0"
+  },
+  {
+   "name": "Genius Tips",
+   "pattern": "streaks",
+   "root": "#AF8452",
+   "tip": "#6FCB8E",
+   "fringe": "#AF8452",
+   "streak": "#CF4F57",
+   "side": "#AF8452"
+  },
+  {
+   "name": "Hanoi Revolver",
+   "pattern": "streaks",
+   "root": "#BCBEC7",
+   "tip": "#BCBEC7",
+   "fringe": "#BCBEC7",
+   "streak": "#C0303F",
+   "side": "#BCBEC7"
+  },
+  {
+   "name": "Dice Tail",
+   "pattern": "solid",
+   "root": "#1D1E24",
+   "tip": "#1D1E24",
+   "fringe": "#1D1E24",
+   "streak": "#1D1E24",
+   "side": "#1D1E24"
+  },
+  {
+   "name": "Ptah Sunburst",
+   "pattern": "tricolor",
+   "root": "#1B2250",
+   "tip": "#FFD647",
+   "fringe": "#F4C542",
+   "streak": "#FFE9A3",
+   "side": "#1B2250"
+  },
+  {
+   "name": "Anubis Ears",
+   "pattern": "streaks",
+   "root": "#0D0C14",
+   "tip": "#4B2A7A",
+   "fringe": "#0D0C14",
+   "streak": "#C9A227",
+   "side": "#0D0C14"
+  },
+  {
+   "name": "Umbrax Horns",
+   "pattern": "tips",
+   "root": "#120B18",
+   "tip": "#7B2FB5",
+   "fringe": "#120B18",
+   "streak": "#FF5A1F",
+   "side": "#120B18"
+  },
+  {
+   "name": "Andrax Halo",
+   "pattern": "tricolor",
+   "root": "#F3EAD2",
+   "tip": "#8FD8FF",
+   "fringe": "#FFF6DF",
+   "streak": "#FFD647",
+   "side": "#F3EAD2"
+  },
+  {
+   "name": "Tear Rift",
+   "pattern": "split",
+   "root": "#1A0F2B",
+   "tip": "#FF4798",
+   "fringe": "#1A0F2B",
+   "streak": "#FF4798",
+   "side": "#3B1F5E"
+  },
+  {
+   "name": "Neon Night",
+   "pattern": "tips",
+   "root": "#0C1220",
+   "tip": "#33EBFF",
+   "fringe": "#0C1220",
+   "streak": "#FF4798",
+   "side": "#0C1220"
+  },
+  {
+   "name": "Ishtar Rings",
+   "pattern": "streaks",
+   "root": "#1A1520",
+   "tip": "#D4AF37",
+   "fringe": "#1A1520",
+   "streak": "#D4AF37",
+   "side": "#1A1520"
+  },
+  {
+   "name": "Bandit Tufts",
+   "pattern": "tips",
+   "root": "#3B2340",
+   "tip": "#B57BFF",
+   "fringe": "#3B2340",
+   "streak": "#FFE27A",
+   "side": "#3B2340"
+  },
+  {
+   "name": "Star Drift",
+   "pattern": "tricolor",
+   "root": "#0C1440",
+   "tip": "#7E5CFF",
+   "fringe": "#1E2A78",
+   "streak": "#EAF4FF",
+   "side": "#0C1440"
+  },
+  {
+   "name": "Scrap Mohawk",
+   "pattern": "streaks",
+   "root": "#5A4632",
+   "tip": "#9AA4AE",
+   "fringe": "#5A4632",
+   "streak": "#B87333",
+   "side": "#5A4632"
+  },
+  {
+   "name": "Sekhmet Mane",
+   "pattern": "tips",
+   "root": "#C9953C",
+   "tip": "#B3202A",
+   "fringe": "#E3B35A",
+   "streak": "#C9953C",
+   "side": "#C9953C"
+  },
+  {
+   "name": "Lemurian Knot",
+   "pattern": "tips",
+   "root": "#F2F0E6",
+   "tip": "#3FA66B",
+   "fringe": "#F2F0E6",
+   "streak": "#8FE3B0",
+   "side": "#F2F0E6"
+  },
+  {
+   "name": "Star Iron",
+   "pattern": "streaks",
+   "root": "#2B2F36",
+   "tip": "#8AA0B8",
+   "fringe": "#2B2F36",
+   "streak": "#D8E3F0",
+   "side": "#2B2F36"
+  },
+  {
+   "name": "Slifer Red",
+   "pattern": "tips",
+   "root": "#3A0A10",
+   "tip": "#E0242E",
+   "fringe": "#3A0A10",
+   "streak": "#FF7A3D",
+   "side": "#3A0A10"
+  },
+  {
+   "name": "Obelisk Blue",
+   "pattern": "tips",
+   "root": "#0E1A4A",
+   "tip": "#2F6BFF",
+   "fringe": "#0E1A4A",
+   "streak": "#9CC8FF",
+   "side": "#0E1A4A"
+  },
+  {
+   "name": "Ra Gold",
+   "pattern": "tips",
+   "root": "#6B4A0E",
+   "tip": "#FFD647",
+   "fringe": "#6B4A0E",
+   "streak": "#FFF3B0",
+   "side": "#6B4A0E"
+  },
+  {
+   "name": "Millennium Gold",
+   "pattern": "streaks",
+   "root": "#2A1E0A",
+   "tip": "#D4AF37",
+   "fringe": "#2A1E0A",
+   "streak": "#FFD647",
+   "side": "#2A1E0A"
+  },
+  {
+   "name": "Shadow Realm",
+   "pattern": "tips",
+   "root": "#07040D",
+   "tip": "#5B1E8A",
+   "fringe": "#07040D",
+   "streak": "#B45CFF",
+   "side": "#07040D"
+  },
+  {
+   "name": "Azathot Smoke",
+   "pattern": "tips",
+   "root": "#0A0A0C",
+   "tip": "#3A3440",
+   "fringe": "#0A0A0C",
+   "streak": "#8C86A0",
+   "side": "#0A0A0C"
+  },
+  {
+   "name": "Cthugua Ember",
+   "pattern": "tips",
+   "root": "#1A0606",
+   "tip": "#FF5A1F",
+   "fringe": "#1A0606",
+   "streak": "#FFC23D",
+   "side": "#1A0606"
+  },
+  {
+   "name": "Kuribandit Team",
+   "pattern": "tips",
+   "root": "#2A1633",
+   "tip": "#B57BFF",
+   "fringe": "#2A1633",
+   "streak": "#FFE27A",
+   "side": "#2A1633"
+  },
+  {
+   "name": "Galactik Team",
+   "pattern": "tricolor",
+   "root": "#0C1440",
+   "tip": "#7E5CFF",
+   "fringe": "#33EBFF",
+   "streak": "#EAF4FF",
+   "side": "#0C1440"
+  },
+  {
+   "name": "Junkuriboh Team",
+   "pattern": "streaks",
+   "root": "#4A3A28",
+   "tip": "#9AA4AE",
+   "fringe": "#4A3A28",
+   "streak": "#B87333",
+   "side": "#4A3A28"
+  },
+  {
+   "name": "Solid Vision",
+   "pattern": "tips",
+   "root": "#05070F",
+   "tip": "#33EBFF",
+   "fringe": "#05070F",
+   "streak": "#FAF8F4",
+   "side": "#05070F"
+  },
+  {
+   "name": "Opponent Tear",
+   "pattern": "tips",
+   "root": "#05070F",
+   "tip": "#FF4798",
+   "fringe": "#05070F",
+   "streak": "#FFD647",
+   "side": "#05070F"
+  },
+  {
+   "name": "Seal of Bakura",
+   "pattern": "streaks",
+   "root": "#10081A",
+   "tip": "#3D8C3A",
+   "fringe": "#10081A",
+   "streak": "#7CFF6B",
+   "side": "#10081A"
+  },
+  {
+   "name": "Supreme King",
+   "pattern": "tricolor",
+   "root": "#4A2A12",
+   "tip": "#D9A441",
+   "fringe": "#7A4A20",
+   "streak": "#FFD647",
+   "side": "#4A2A12"
+  },
+  {
+   "name": "Egypt Lapis",
+   "pattern": "tips",
+   "root": "#101C4A",
+   "tip": "#2E5BD8",
+   "fringe": "#101C4A",
+   "streak": "#D4AF37",
+   "side": "#101C4A"
+  },
+  {
+   "name": "Duat Night",
+   "pattern": "tips",
+   "root": "#060812",
+   "tip": "#243A7A",
+   "fringe": "#060812",
+   "streak": "#FFD647",
+   "side": "#060812"
+  },
+  {
+   "name": "Dark Magician Girl",
+   "pattern": "tips",
+   "root": "#E8D067",
+   "tip": "#F2A6C8",
+   "fringe": "#E8D067",
+   "streak": "#E8D067",
+   "side": "#E8D067"
+  },
+  {
+   "name": "Winged Kuriboh",
+   "pattern": "tips",
+   "root": "#6B4A2E",
+   "tip": "#F5E8D0",
+   "fringe": "#6B4A2E",
+   "streak": "#6B4A2E",
+   "side": "#6B4A2E"
+  }
+ ],
+ "wildSwatches": [
+  "#8A2F63",
+  "#A1284F",
+  "#E8D57E",
+  "#FFD647",
+  "#33EBFF",
+  "#FF4798",
+  "#E3834F",
+  "#46A85E",
+  "#59BD78",
+  "#B7303A",
+  "#B8487F",
+  "#E09BC4",
+  "#4A3782",
+  "#9A7ED0",
+  "#3B7CC2",
+  "#CF46AD",
+  "#DED84F",
+  "#C16CB9",
+  "#4369B5",
+  "#71C2CB",
+  "#C24B3E",
+  "#AED4E7",
+  "#F0E872",
+  "#A83D21",
+  "#349FC8",
+  "#407BBA",
+  "#8CC4E3",
+  "#BB34A0",
+  "#91D0C1",
+  "#62B7A4",
+  "#8C88DF",
+  "#85659C",
+  "#D0509C",
+  "#6FCB8E",
+  "#A9C3E7",
+  "#4E7F93",
+  "#9E2F43",
+  "#D99448",
+  "#D9A441",
+  "#7E477E",
+  "#E07C98",
+  "#7E5CFF",
+  "#7B2FB5",
+  "#FF5A1F",
+  "#3FA66B",
+  "#D4AF37"
+ ]
+}

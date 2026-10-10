@@ -278,7 +278,7 @@ namespace WRLDZ.Duel.TextEffects
             @"If you used this effect, destroy this card during the End Phase\.",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
         static readonly Regex RxNormalSummonedDestroyThis = new(
-            @"If this card is Normal Summoned, destroy this card\.",
+            @"If this (?:card|monster) is Normal Summoned, destroy this card\.",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
         static readonly Regex RxLoseAtkIfOppControlsMonster = new(
             @"If your opponent controls 1 or more monsters, decrease the ATK of this card by (\d+) points\.",
@@ -406,6 +406,16 @@ namespace WRLDZ.Duel.TextEffects
         static readonly Regex RxTimeSeal = new(
             @"Skip the Draw Phase of your opponent's next turn\.",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>True when any ClassicEra template matches <paramref name="text"/> on its own
+        /// (the compiler then also tries the ClassicEra-first template order).</summary>
+        public static bool MayMatch(string text, CardDef def)
+        {
+            if (string.IsNullOrEmpty(text)) return false;
+            var probe = new List<EffectClause>();
+            Collect(text, def, probe, new List<(int start, int length)>());
+            return probe.Count > 0;
+        }
 
         public static void Collect(string text, CardDef def, List<EffectClause> into,
             List<(int start, int length)> spans)
@@ -843,6 +853,8 @@ namespace WRLDZ.Duel.TextEffects
                             EquipAtkBonus = -n,
                             EquipDefBonus = -n,
                             StaysOnField = true,
+                            // Lua eqlimit: only a monster this card's controller controls (EquipFamily batch).
+                            EquipLimitSameController = true,
                             MakesChainLink = true
                         },
                         new EffectClause

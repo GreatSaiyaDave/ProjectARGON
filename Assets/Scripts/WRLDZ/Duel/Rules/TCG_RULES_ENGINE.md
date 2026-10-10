@@ -22,7 +22,7 @@
 | `SummonProcedures` | Normal/Tribute/Flip/Fusion/Synchro/Xyz/Link/Ritual/Pendulum/Special checks |
 | `ContinuousEffectBoard` | Continuous effects (registered only) |
 | `RulesValidator` | Pre-snap / pre-action legality for AR + UI |
-| `GameStateSnapshot` | Full rules state for multiplayer sync |
+| `RulesGameStateSnapshot` (file `GameStateSnapshot.cs`) | Full rules state for multiplayer sync |
 
 `DuelEngine` owns phase, battle steps, chain, continuous board, and commits all state changes. AR only reads state after `Notify()`.
 
@@ -56,9 +56,43 @@ Extra Deck / Ritual / Pendulum / Link / Synchro / Xyz require **registered proce
 
 - Spell Speed from card type (Counter Trap = 3, Trap/QP = 2, Normal Spell = 1)  
 - `ChainStack.CanAddLink` enforces speed rules  
-- `FastEffectTiming` tracks priority player  
+- `FastEffectTiming` tracks priority: after a new link the opponent of its controller has priority;
+  one pass hands priority to the other duelist; two passes in a row resolve the chain.
+
+Chain windows (`ResponseTiming.ChainResponse`, `DuelEngine.OpenChainResponseWindow`) offer:
+
+- Counter Traps and monster chain Quick Effects (`ChainLinkActivated` clauses) — negate etc.
+- Any other legal Spell Speed 2+ card (`TextEffectRuntime.CanActivateFreeChainOnChain`): a Set Trap, a
+  Set Quick-Play, or a Quick-Play from the hand during its controller's own turn. Its normal Activate
+  effect becomes the new link and resolves in chain order. The target is chosen at activation: the AI
+  auto-picks, a player picks while the window stays open (cancel takes the link back and re-offers the
+  window). Not offered in a timed chain window yet: costs that need a pick, multi-target activations,
+  coin calls, Magical Hats, Ritual / Fusion procedures.
+- A player chaining onto their **own** last link (after the opponent passed) is offered only chain-answer
+  effects, so they are not prompted after every own activation. The AI is offered everything and chains
+  a free-chain card only when an opponent's link would remove it ("use it or lose it"); it never negates
+  its own link.
+- A negated link does nothing, including a negated negation (checked before `NegatesActivation`).
+
+Response windows (attack declared, summon, opponent's open state, damage taken): a targeted free-chain
+card (MST, Ring of Destruction, Dust Tornado …) always gets a real target — AI auto-pick or player pick,
+with the window kept open during the pick. A targeted clause is never applied with no target (the
+Destroy action fails closed instead of destroying every match). An AI answer that makes a chain link is
+seated on the chain even when no link existed yet.
 
 Full multi-link SEGOC for every trigger is progressive; attack/summon response windows remain for registered traps.
+
+## Winning, losing, Draw, forfeit
+
+- 0 LP from damage or from a **cost / payment** (`DuelEngine.PayLifePoints`) loses the duel: at once, or
+  as soon as the open chain / response window / pick closes (`SettlePendingLpLoss`).
+- Both players at 0 LP at the same time (Ring of Destruction → `ApplyEffectDamageBoth`) is a **Draw**:
+  `GameOver`, `Winner == null`, `IsDraw`, `EndReason == DuelEndReason.Draw`.
+- `DuelEngine.Concede(who, reason)` ends the duel as a loss for `who` through the normal game-over path
+  (`OnGameOver` fires once; `EndReason == Forfeit`, `ConcededBy`). The UI decides when leaving a duel is
+  a forfeit.
+- End Phase hand size limit: until a discard-choice UI exists, the lowest-value cards
+  (`AiHeuristicPolicy.DiscardPriority`) are discarded, as real sends to the GY.
 
 ## Public vs private knowledge
 

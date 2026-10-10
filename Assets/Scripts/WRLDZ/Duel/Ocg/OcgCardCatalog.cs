@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using Microsoft.Data.Sqlite;
 using UnityEngine;
+using WRLDZ.Core;
 
 namespace WRLDZ.Duel.Ocg
 {
@@ -155,7 +156,8 @@ namespace WRLDZ.Duel.Ocg
             try
             {
                 SQLitePCL.Batteries_V2.Init();
-                _sqliteOk = File.Exists(CdbPath());
+                _cdbPath = StreamingFiles.MaterializeToFile(CdbRelative);
+                _sqliteOk = !string.IsNullOrEmpty(_cdbPath) && File.Exists(_cdbPath);
             }
             catch (Exception ex)
             {
@@ -164,8 +166,14 @@ namespace WRLDZ.Duel.Ocg
             }
         }
 
-        static string CdbPath() =>
-            Path.Combine(Application.streamingAssetsPath, "OcgCore", "cards.cdb");
+        const string CdbRelative = "OcgCore/cards.cdb";
+        static string _cdbPath;
+
+        /// <summary>
+        /// SQLite needs a real file: the StreamingAssets copy on desktop, an extracted cache copy on
+        /// Android (<see cref="StreamingFiles.MaterializeToFile"/>). Resolved once in EnsureSqliteInit.
+        /// </summary>
+        static string CdbPath() => _cdbPath ?? StreamingFiles.FullPathForLog(CdbRelative);
 
         internal static OcgCardData FromDatasRow(uint id, uint alias, ulong setcode, uint type,
             int atk, int def, uint levelPacked, ulong race, uint attribute)
@@ -210,9 +218,8 @@ namespace WRLDZ.Duel.Ocg
         {
             if (_json != null) return;
             _json = new Dictionary<uint, OcgCardData>();
-            var path = Path.Combine(Application.streamingAssetsPath, "OcgCore", "cards_datas.json");
-            if (!File.Exists(path)) return;
-            var file = JsonUtility.FromJson<JsonFile>(File.ReadAllText(path));
+            if (!StreamingFiles.TryReadAllText("OcgCore/cards_datas.json", out var json)) return;
+            var file = JsonUtility.FromJson<JsonFile>(json);
             if (file?.cards == null) return;
             foreach (var row in file.cards)
             {

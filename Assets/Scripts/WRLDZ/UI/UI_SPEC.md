@@ -73,7 +73,7 @@ Boot (entry only)
   Splash → Title
     → DOB? → Auth → Terms?
     → Prologue → Kuriboh pick → Gifts → Tutorial?
-    → Overworld ════════════════════════════════════ HOME
+    → MainMenu (Duel Disk) ── WORLD MAP ──► Overworld ═══ HOME
 
 Overworld (Home / Overmap)
   ├─ Tear / Zone pin ──► Zone Mode prompt ──► AR Duel | Digital Duel
@@ -313,6 +313,15 @@ No particle spam that covers names.
 | **Raid** | Tome Deck enabled | Level ≥ 10 |
 
 Each card shows: title, 2-line rules, LP, **LOCKED** or **PLAY**.
+
+#### Pre-duel setup sheet (DuelSlice, before the cinematic)
+
+`PreDuelSetupScreen` — the same sheet chrome. Rows (selected in gold, LOCKED in the danger colour, locked rows not
+interactive): **FIRST TURN** (coin toss with the dealt sides shown, or dice roll), **DECK** (equipped deck = skip
+selection, or a deck box), **DECK CHECK** (every card, illegal ones greyed with the reason), **ERAZ · ERA**, **FORMAT**
+(`DuelFormatCatalog`: Standard TCG and Advanced TCG open; Quick Duel, Duelist Kingdom and the badge formats LOCKED).
+**START DUEL** is disabled while the deck is not legal for the chosen format. The close chip cancels back to where the
+duel was launched from.
 
 #### ERAZ badge tray (TCG formats only)
 

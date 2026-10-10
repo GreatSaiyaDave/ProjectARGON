@@ -4,8 +4,8 @@
 
 **Primary chrome:** Grok Imagine **hub tiles** at `StreamingAssets/WRLDZ/Imagine/`  
 (`ImagineAssets` → preferred by `DuelystUi`, `WrldzPresentation`, `FlowChrome`, `GoTheme`).  
-Opaque obsidian/gold filament plates (`tile_hub`) on **Eye dest/featured tiles only**.  
-Overlays and HUD use Solid Vision slates (`HubChrome.QuietFill` + `FilamentRim`) in a compact window — map stays the hero. Not smoked `PanelMenuGlass`, not L-ticks on every well, not Kenney beige.
+Opaque KaibaCorp void plates (`HubChrome.PaintPlate`) on **Eye dest/featured tiles only** — 2 px cyan filament, millennia L-ticks, idle sheen (`MenuHoloPulse.AttachFeel`), press squash.  
+Overlays and HUD use the same slate (`QuietFill` + `FilamentRim` + L-ticks on chips/sheets) in a compact window — map stays the hero. Not `PanelMenuGlass`, not Kenney beige. Toolbar chips stay Simple + α≤0.70 (no 9-slice).
 
 **Menu atmosphere:** animated Egyptian / night / ages backdrop via  
 `EgyptianAgesAtmosphere` — each host picks a `MenuAge` (Primordial, Old Kingdom,  

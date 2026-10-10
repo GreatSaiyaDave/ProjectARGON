@@ -94,6 +94,12 @@ namespace WRLDZ.Presentation
                 c.a);
         }
 
+        /// <summary>
+        /// URP/Unlit. Player builds include it (and its opaque / alpha-clip / transparent variants) through the anchor
+        /// materials in Presentation/Resources/WRLDZ/ShaderAnchors — nothing else in a build references it, so without
+        /// them Shader.Find returned null on device and every chain fell through to Sprites/Default (no depth write).
+        /// Every chain ends in an always-included shader so <c>new Material(null)</c> cannot happen.
+        /// </summary>
         /// <summary>Live Field Spell tint on arena holos (see <c>ArFieldSpellFloor</c>).</summary>
         public static Color FieldWashTint { get; private set; } = Color.white;
 
@@ -132,6 +138,14 @@ namespace WRLDZ.Presentation
                    ?? Shader.Find("Unlit/Color")
                    ?? Shader.Find("Sprites/Default")
                    ?? Shader.Find("UI/Default");
+        }
+
+        /// <summary>URP/Lit (anchored like <see cref="UnlitShader"/>), else Standard, else the unlit chain.</summary>
+        public static Shader LitShader()
+        {
+            return Shader.Find("Universal Render Pipeline/Lit")
+                   ?? Shader.Find("Standard")
+                   ?? UnlitShader();
         }
 
         /// <summary>

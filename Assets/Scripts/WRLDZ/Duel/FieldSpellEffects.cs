@@ -36,6 +36,10 @@ namespace WRLDZ.Duel
                 if (c == null) continue;
                 if (c.Action == EffectActionKind.CannotBeTributedForSummon)
                     card.CannotBeTributedForSummon = true;
+                if (c.Action == EffectActionKind.CannotBeDestroyedByBattle)
+                    card.CannotBeDestroyedByBattle = true;
+                if (c.Action == EffectActionKind.PiercingBattleDamage)
+                    card.HasPiercing = true;
             }
             foreach (var c in prog.ClauseList)
             {
@@ -56,8 +60,32 @@ namespace WRLDZ.Duel
         public static void RefreshBoard(DuelEngine engine)
         {
             if (engine?.Player == null || engine.Opponent == null) return;
+            // World Suppression / Mystic Probe / Metal Detector: mark this turn's negated card families
+            // before anything below reads IsNegated.
+            TurnNegationTrapsRuntime.Refresh(engine);
+            // Jinzo / Royal Decree / Imperial Order: IsNegated on face-up Spells/Traps (ContinuousNegation batch).
+            // First, before any modifier is cleared: a negated Snatch Steal hands its monster back, and that
+            // control change may refresh the board again.
+            ContinuousNegationRuntime.Refresh(engine);
+            // EquipModel batch: a control Equip negated by Armored Glass / The Emperor's Holiday gives its monster back
+            // (and takes it again once the negation ends), before the auras below are computed.
+            EquipModelRuntime.SyncNegatedControlEquips(engine);
+            // Charmers (TakeControl batch): control bound to a source that left or turned face-down returns
+            // first, so the auras below are computed for each monster's real controller. After the negation
+            // refreshes above, so a negated Remove Brainwashing or control Equip is seen as negated.
+            TextEffects.TakeControlRuntime.SweepBoundControl(engine);
+            // Dimensionhole (LocksAndZones batch): a zone stays unusable only while its monster stays banished.
+            TextEffects.LocksAndZonesRuntime.Refresh(engine);
+            // NegationMonsters batch (v161): a Ha Des / Twin-Headed Wolf negation ends once its card left the GY.
+            TextEffects.NegationMonstersRuntime.Refresh(engine);
+            // Spiritual Energy Settle Machine (ContinuousTrapsAndSpiritSupport batch): a Machine that left the field
+            // returns the face-up Spirits before the auras below are computed.
+            TextEffects.ContinuousTrapsAndSpiritSupportRuntime.SweepLeftMachines(engine);
             ClearModifiers(engine.Player);
             ClearModifiers(engine.Opponent);
+            // Cost Down (SimpleTargetUtility batch v173): ClearModifiers zeroed every LevelModifier, so
+            // re-apply this turn's hand/field Level stamps before the auras below are computed.
+            TextEffects.SimpleTargetUtilityRuntime.ApplyLevelStamps(engine);
             ApplyFaceUpField(engine, engine.Player.FieldSpellZone?.Occupant);
             ApplyFaceUpField(engine, engine.Opponent.FieldSpellZone?.Occupant);
             // Only Field Spells have written ATK/DEF since the clear — snapshot
@@ -68,9 +96,33 @@ namespace WRLDZ.Duel
             ApplyFaceUpMonsterAuras(engine, engine.Opponent);
             ApplyCatalogSpellTraps(engine, engine.Player);
             ApplyCatalogSpellTraps(engine, engine.Opponent);
+            // Castle of Dark Illusions / Pumpking growth and Mirror Wall halving (StandbyGrowthAndMaintenance, v142).
+            TextEffects.StandbyGrowthAndMaintenanceRuntime.ApplyBoard(engine);
+            // Fairy Box (BattleWindows batch): "ATK becomes 0 until the end of the Battle Phase".
+            TextEffects.BattleWindowsRuntime.ApplyBoard(engine);
+            // Winged Minion's lasting gain, Twin-Headed Behemoth's "ATK/DEF become" (SpecialSummonEffects, v161).
+            TextEffects.SpecialSummonEffectsRuntime.ApplyBoard(engine);
+            // Spirit Ryu (BattleBoosts batch, v161): "+1000 ATK/DEF until the end of the Battle Phase".
+            TextEffects.BattleBoostsRuntime.ApplyBoard(engine);
             DestroyNamedLeavesContinuous(engine, engine.Player);
             DestroyNamedLeavesContinuous(engine, engine.Opponent);
+            // EquipAndSpellProtection batch: Heart of Clear Water's self-destruction; stale Magic Reflector counters.
+            TextEffects.EquipAndSpellProtectionRuntime.Refresh(engine);
+            // ContinuousLocksAndIgnitions batch (v163): Buster Rancher's equip limit (ATK 1000 or less except during damage
+            // calculation) is re-checked; a broken limit destroys the Equip Card.
+            TextEffects.ContinuousLocksAndIgnitionsRuntime.SweepEquipLimits(engine);
             TextEffects.TextEffectRuntime.SweepClassicStateChecks(engine);
+            // Kotodama (RedirectAndReplace batch, v142): face-up monsters sharing a name are destroyed.
+            TextEffects.RedirectAndReplaceRuntime.SweepSameNameDestruction(engine);
+            // SummonTriggersAndTributes batch (v163): "You can only control 1 face-up X" — a duplicate is destroyed.
+            TextEffects.SummonTriggersAndTributesRuntime.SweepUniqueOnField(engine);
+            // NegationMonsters batch (v161): Freed / Frontier Wiseman / Tyrant Dragon destroy a Continuous Spell (Trap)
+            // that keeps targeting a monster they protect (ygopro EFFECT_SELF_DESTROY).
+            TextEffects.NegationMonstersRuntime.SweepPersistentTargets(engine);
+            // Thunder Nyan Nyan (BattleRules batch): destroyed while its controller controls a non-LIGHT monster.
+            TextEffects.BattleRulesRuntime.SweepSelfDestroy(engine);
+            // Skull Invitation: cards that reached a GY since the last checkpoint (StandbyGrowthAndMaintenance, v142).
+            TextEffects.StandbyGrowthAndMaintenanceRuntime.GySendCheckpoint(engine);
         }
 
         static void ClearModifiers(DuelistState who)
@@ -107,7 +159,7 @@ namespace WRLDZ.Duel
 
         static void ApplyFaceUpField(DuelEngine engine, CardInstance field)
         {
-            if (engine == null || field?.Def == null || !field.FaceUp) return;
+            if (engine == null || field?.Def == null || !field.FaceUp || field.IsNegated) return;
 
             // Hardcoded ALO first so compiler + script never double-apply +200 / −1.
             if (field.CardId == ALegendaryOcean)
@@ -136,15 +188,21 @@ namespace WRLDZ.Duel
         static void ApplyEquipStats(DuelEngine engine, CardInstance host)
         {
             if (host?.Equips == null || host.Equips.Count == 0) return;
-            var equipped = host.Equips[0];
-            var prog = CompiledEffectCache.GetOrCompile(host.Def);
+            // Relinquished family: only the monster it equipped with its own effect sets its ATK/DEF (Ignis
+            // s.adcon / s.eqfilter). With none, any other Equip Card on it (an Equip Spell, Kiseitai) is an ordinary
+            // Equip Card below.
+            var equipped = TextEffectRuntime.AbsorbedEquipOf(host);
+            var prog = equipped != null ? CompiledEffectCache.GetOrCompile(host.Def) : null;
             if (prog != null)
             {
                 foreach (var c in prog.ClauseList)
                 {
                     if (c == null || c.Action != EffectActionKind.EquipTargetToThis) continue;
-                    var eatk = equipped.Def != null ? Math.Max(0, equipped.Def.atk) : 0;
-                    var edef = equipped.Def != null ? Math.Max(0, equipped.Def.def) : 0;
+                    // A face-down monster equipped this way stays face-down, and this card's ATK/DEF become 0 (OCG
+                    // ruling; Ignis s.atkval / s.defval: IsFacedown() → 0).
+                    var shown = equipped.Def != null && equipped.FaceUp;
+                    var eatk = shown ? Math.Max(0, equipped.Def.atk) : 0;
+                    var edef = shown ? Math.Max(0, equipped.Def.def) : 0;
                     host.AtkModifier += eatk - (host.Def != null ? host.Def.atk : 0);
                     host.DefModifier += edef - (host.Def != null ? host.Def.def : 0);
                     return;
@@ -153,6 +211,19 @@ namespace WRLDZ.Duel
 
             foreach (var eq in host.Equips)
             {
+                // BothSideAndMonsterEquip (v161): a monster Card equipped as an Equip Spell with only a granted effect
+                // (Sword Hunter) gives that effect's ATK; its own text (a Union's bonus) does not apply.
+                if (eq != null && eq.IsEquipSpellWithGrantedEffectOnly)
+                {
+                    host.AtkModifier += BothSideAndMonsterEquipRuntime.GrantedAtkOf(engine, eq, host);
+                    continue;
+                }
+                // Soft residual: The Emperor's Holiday — Equip Card effects negated while face-up.
+                if (ContinuousProtections.EquipCardEffectsAreNegated(engine, eq))
+                    continue;
+                // A negated Equip / equipped Trap (Royal Decree, Imperial Order): no stat change.
+                if (eq != null && eq.IsNegated)
+                    continue;
                 var ep = eq?.Def != null ? CompiledEffectCache.GetOrCompile(eq.Def) : null;
                 if (ep == null) continue;
                 // Germ Infection / Stim-Pack: ATK lost per Standby Phase counted on the Equip.
@@ -165,7 +236,15 @@ namespace WRLDZ.Duel
                     {
                         var atk = c.EquipAtkBonus;
                         var def = c.EquipDefBonus;
-                        if (c.ScaleAmountByControllerMonsters || c.ScaleAmountByControllerSpellTraps)
+                        if (c.ChooseAtkOrDef)
+                        {
+                            // One stat, chosen when the equip was activated. Neither, until that choice exists.
+                            var stat = PoisonMeteorCestusRuntime.ChosenStat(eq);
+                            if (stat == "DEF") atk = 0;
+                            else if (stat == "ATK") def = 0;
+                            else { atk = 0; def = 0; }
+                        }
+                        else if (c.ScaleAmountByControllerMonsters || c.ScaleAmountByControllerSpellTraps)
                         {
                             var ctrl = engine.ControllerOf(host) ?? engine.ControllerOf(eq);
                             var n = 0;
@@ -211,6 +290,30 @@ namespace WRLDZ.Duel
                         applyToHand: clause.ApplyToHand, applyToField: clause.ApplyToField || !clause.ApplyToHand);
                     any = true;
                 }
+                else if (clause.Action == EffectActionKind.ChangeBattlePosition &&
+                         clause.ForceDefensePosition)
+                {
+                    foreach (var who in new[] { engine.Player, engine.Opponent })
+                    {
+                        if (who == null) continue;
+                        foreach (var m in who.MonstersOnField())
+                        {
+                            if (!IsFaceUpMonster(m)) continue;
+                            if (!MatchesRace(m, clause.RaceFilter)) continue;
+                            if (clause.AmountIsLevel && clause.Amount > 0)
+                            {
+                                // Level Limit - Area B: "Level N or higher" (Xyz have Ranks, not Levels).
+                                if (IsXyz(m) || m.Level < clause.Amount) continue;
+                                engine.ApplyEffectPositionChange(m, BattlePosition.Defense, true);
+                                // Continuous: it cannot be changed back to Attack while this stays face-up.
+                                m.PositionLockedByEffect = true;
+                                continue;
+                            }
+                            engine.ApplyEffectPositionChange(m, BattlePosition.Defense, true);
+                        }
+                    }
+                    any = true;
+                }
                 else if (clause.Action == EffectActionKind.ContinuousForceDefenseLockPosition)
                 {
                     ApplyPositionLock(engine, clause);
@@ -221,6 +324,10 @@ namespace WRLDZ.Duel
                     ApplySelfScale(engine, field, clause);
                     any = true;
                 }
+                // ContinuousLocksAndIgnitions batch (v163): Arsenal Bug — "ATK and DEF become N" unless another face-up
+                // monster of the Type is controlled.
+                else if (ContinuousLocksAndIgnitionsRuntime.ApplySelfStatSet(engine, field, clause))
+                    any = true;
             }
 
             return any;
@@ -278,6 +385,10 @@ namespace WRLDZ.Duel
                 case "OppControlsAnyMonster":
                     n = engine.OpponentOf(who)?.MonsterCount > 0 ? 1 : 0;
                     break;
+                case TextEffects.SelfStatMonstersRuntime.OppMonsterCount:
+                    // Every monster the opponent controls, face-down included. Not the flat "any monster" count.
+                    n = engine.OpponentOf(who)?.MonsterCount ?? 0;
+                    break;
                 case "OppRaceFaceUpAndGy":
                 {
                     // Buster Blader: face-up matching monsters the opponent controls + their GY.
@@ -308,6 +419,13 @@ namespace WRLDZ.Duel
             ApplyLevelMod(engine, "WATER", -1, applyToHand: true, applyToField: true);
         }
 
+        static bool CompiledOwnsStats(CardInstance m)
+        {
+            if (m?.Def == null || !m.Def.IsMonster) return false;
+            var prog = CompiledEffectCache.GetOrCompile(m.Def);
+            return prog != null && prog.FullyCompiled;
+        }
+
         static bool HasCompiledConditionalSelfStat(CardInstance m)
         {
             var prog = CompiledEffectCache.GetOrCompile(m.Def);
@@ -323,9 +441,15 @@ namespace WRLDZ.Duel
             foreach (var m in who.MonstersOnField())
             {
                 if (m?.Def == null || !m.FaceUp || m.IsNegated) continue;
-                // The Lua-extracted catalog drops conditions (Insect Soldiers of the Sky became a
-                // permanent +1000, Boar Soldier a permanent −1000). Official text wins for those.
-                if (!HasCompiledConditionalSelfStat(m) && ApplyCatalogAuras(engine, m, "MZONE")) continue;
+                // A monster whose Summon is still in its summon-negation window is not on the field yet: its
+                // continuous effects do not apply (SummonNegation batch, v141).
+                if (engine.IsSummonPending(m)) continue;
+                // A FullyCompiled monster owns its ATK/DEF. The Lua seed stays a lint and must not add a
+                // second permanent aura on top of the printed effect. The Lua-extracted catalog also drops
+                // conditions (Insect Soldiers of the Sky became a permanent +1000, Boar Soldier a permanent
+                // -1000): official text wins for those (HasCompiledConditionalSelfStat is a subset of
+                // CompiledOwnsStats; both are kept for the two lineages' call sites).
+                if (!CompiledOwnsStats(m) && !HasCompiledConditionalSelfStat(m) && ApplyCatalogAuras(engine, m, "MZONE")) continue;
                 ApplySpellCounterAtk(engine, m);
                 ApplyEquipStats(engine, m);
                 if (ApplyCompiledContinuous(engine, m)) continue;
@@ -340,9 +464,26 @@ namespace WRLDZ.Duel
             foreach (var st in who.SpellTrapsOnField())
             {
                 if (st == null || st == field || !st.FaceUp || st.IsNegated) continue;
-                ApplyCatalogAuras(engine, st, "SZONE");
+                // Soft residual: The Emperor's Holiday — skip Equip Card effects only
+                // (Field/Continuous Spell/Trap and monster effects stay live).
+                if (ContinuousProtections.EquipCardEffectsAreNegated(engine, st))
+                    continue;
+                // A FullyCompiled stat aura (Banner of Courage) owns its ATK/DEF; the Lua
+                // catalog must not stack a second, unconditional copy on top of it.
+                if (!CompiledOwnsSpellTrapStats(st))
+                    ApplyCatalogAuras(engine, st, "SZONE");
                 ApplyCompiledContinuous(engine, st);
             }
+        }
+
+        static bool CompiledOwnsSpellTrapStats(CardInstance st)
+        {
+            if (st?.Def == null) return false;
+            var prog = CompiledEffectCache.GetOrCompile(st.Def);
+            if (prog == null || !prog.FullyCompiled) return false;
+            foreach (var c in prog.ClausesFor(EffectTiming.ContinuousWhileFaceUp))
+                if (c != null && c.Action == EffectActionKind.ContinuousGainAtkDef) return true;
+            return false;
         }
 
         static bool ApplyCatalogAuras(DuelEngine engine, CardInstance source, string zone)
@@ -431,19 +572,128 @@ namespace WRLDZ.Duel
         {
             if (engine == null || clause == null) return;
             var controller = engine.ControllerOf(source);
+
+            if (clause.ScaleThisAtkByEquippedEquipCount)
+            {
+                // Maha Vailo: this card only × Equip Cards equipped to it.
+                // Unequipped → 0. Never flat Amount. Never ExtraAttacks.
+                if (source != null && IsFaceUpMonster(source))
+                {
+                    var n = source.Equips != null ? source.Equips.Count : 0;
+                    source.AtkModifier += clause.Amount * n;
+                    source.DefModifier += clause.DefAmount * n;
+                }
+
+                return;
+            }
+
+            if (clause.ScaleThisAtkByMatchingCount)
+            {
+                var n = 0;
+                foreach (var who in new[] { engine.Player, engine.Opponent })
+                {
+                    if (who == null) continue;
+                    if (clause.Side == EffectSide.Controller && who != controller) continue;
+                    if (clause.Side == EffectSide.Opponent && who == controller) continue;
+
+                    // Muka Muka / Flash Assailant: every card in that player's hand.
+                    if (clause.ScaleCountHandCards)
+                    {
+                        n += who.Hand != null ? who.Hand.Count : 0;
+                        continue;
+                    }
+
+                    // Shadow Ghoul / Mudora: monsters in that player's GY, never the field.
+                    if (clause.ScaleCountGraveyardOnly)
+                    {
+                        if (who.Graveyard == null) continue;
+                        foreach (var g in who.Graveyard)
+                        {
+                            if (g?.Def == null || !g.Def.IsMonster) continue;
+                            if (!MatchesAttribute(g, clause.AttributeFilter)) continue;
+                            if (!MatchesRace(g, clause.RaceFilter)) continue;
+                            n++;
+                        }
+
+                        continue;
+                    }
+
+                    foreach (var m in who.MonstersOnField())
+                    {
+                        if (!IsFaceUpMonster(m)) continue;
+                        if (!MatchesAttribute(m, clause.AttributeFilter)) continue;
+                        if (!MatchesRace(m, clause.RaceFilter)) continue;
+                        if (!string.IsNullOrEmpty(clause.NamedCard) &&
+                            !CardMatchesNamed(m, clause.NamedCard, clause.NamedCardIsSeries))
+                            continue;
+                        n++;
+                    }
+
+                    if (clause.ScaleCountIncludesGraveyard && who.Graveyard != null)
+                    {
+                        foreach (var m in who.Graveyard)
+                        {
+                            if (m?.Def == null || !m.Def.IsMonster) continue;
+                            if (!MatchesAttribute(m, clause.AttributeFilter)) continue;
+                            if (!MatchesRace(m, clause.RaceFilter)) continue;
+                            if (!string.IsNullOrEmpty(clause.NamedCard) &&
+                                !CardMatchesNamed(m, clause.NamedCard, clause.NamedCardIsSeries))
+                                continue;
+                            n++;
+                        }
+                    }
+                }
+
+                if (source != null && IsFaceUpMonster(source))
+                {
+                    source.AtkModifier += clause.Amount * n;
+                    source.DefModifier += clause.DefAmount * n;
+                }
+
+                return;
+            }
+
+            // Banner of Courage: only during the controller's own Battle Phase. RefreshBoard runs
+            // on every Notify, so the aura appears and disappears with the phase.
+            if (clause.RequiresBattlePhase && engine.Phase != DuelPhase.Battle) return;
+            if (clause.ControllerTurnOnly && engine.TurnPlayer != controller) return;
+            // During the opponent's turn only (your opponent's / their Battle Phase).
+            if (clause.OpponentTurnOnly && (controller == null || engine.TurnPlayer == controller)) return;
+
+            // This card's own ATK/DEF, not every monster on its side.
+            if (clause.AffectsThisCardOnly)
+            {
+                if (source != null && IsFaceUpMonster(source) && controller != null &&
+                    controller.TryFindMonster(source, out _))
+                {
+                    source.AtkModifier += clause.Amount;
+                    source.DefModifier += clause.DefAmount;
+                }
+
+                return;
+            }
+
             var controllerOnly = clause.Side == EffectSide.Controller;
+            var opponentOnly = clause.OpponentIsSubject;
+            // SimpleSpellTraps batch: The A. Forces — Amount per face-up monster of the counted Types you control
+            // (a live count, recomputed on every refresh). 1 for every other aura.
+            var perCount = TextEffects.SimpleSpellTrapsRuntime.AuraMultiplier(engine, controller, clause);
             foreach (var who in new[] { engine.Player, engine.Opponent })
             {
                 if (who == null) continue;
                 if (controllerOnly && who != controller) continue;
+                if (opponentOnly && (controller == null || who == controller)) continue;
                 foreach (var m in who.MonstersOnField())
                 {
                     if (!IsFaceUpMonster(m)) continue;
                     if (!MatchesAttribute(m, clause.AttributeFilter)) continue;
                     if (!MatchesRace(m, clause.RaceFilter)) continue;
+                    if (!string.IsNullOrEmpty(clause.NamedCard) &&
+                        !CardMatchesNamed(m, clause.NamedCard, clause.NamedCardIsSeries))
+                        continue;
                     if (clause.AffectsDefensePositionOnly && m.Position != BattlePosition.Defense) continue;
-                    m.AtkModifier += clause.Amount;
-                    m.DefModifier += clause.DefAmount;
+                    m.AtkModifier += clause.Amount * perCount;
+                    m.DefModifier += clause.DefAmount * perCount;
                 }
             }
         }
@@ -498,27 +748,47 @@ namespace WRLDZ.Duel
         static bool IsFaceUpMonster(CardInstance m) =>
             m?.Def != null && m.Def.IsMonster && m.FaceUp;
 
+        static bool IsXyz(CardInstance m) =>
+            m?.Def?.type != null && m.Def.type.IndexOf("XYZ", StringComparison.OrdinalIgnoreCase) >= 0;
+
         static bool MatchesAttribute(CardInstance c, string attribute)
         {
             if (string.IsNullOrEmpty(attribute) || c?.Def == null) return true;
-            return c.Def.attribute != null &&
-                   c.Def.attribute.Equals(attribute, StringComparison.OrdinalIgnoreCase);
+            // Live Attribute on the field (Scroll of Bewitchment, EquipFamily batch); printed elsewhere.
+            var a = c.Attribute;
+            return a != null && a.Equals(attribute, StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>Exact Type match; the filter may list several Types ("Fish,Aqua").</summary>
         static bool MatchesRace(CardInstance c, string race)
         {
             if (string.IsNullOrEmpty(race) || c?.Def == null) return true;
-            return ClassicEraTemplates.RaceMatches(c.Def.race, race);
+            return ClassicEraTemplates.RaceMatches(c.Race, race);
         }
 
-        public static bool ControlsFaceUpNamed(DuelistState who, string name)
+        public static bool ControlsFaceUpNamed(DuelistState who, string name) =>
+            ControlsFaceUpNamed(who, name, activatedOnly: false);
+
+        /// <param name="activatedOnly">Skip a card whose own activation is still an unresolved Chain Link
+        /// (<see cref="CardInstance.ActivationUnresolvedOnChain"/>): "while X is on the field" (ygopro
+        /// IsEnvironment) needs X's activation to have resolved; "you control X" does not.</param>
+        static bool ControlsFaceUpNamed(DuelistState who, string name, bool activatedOnly)
         {
             if (who == null || string.IsNullOrEmpty(name)) return false;
-            foreach (var st in who.SpellTrapsOnField())
+            foreach (var monster in who.MonstersOnField())
             {
-                if (st != null && st.FaceUp && st.IsNamed(name)) return true;
+                if (monster != null && monster.FaceUp && CardMatchesNamed(monster, name, series: false))
+                    return true;
             }
+
+            foreach (var st in who.SpellTrapsOnField())
+                if (st != null && st.FaceUp && !(activatedOnly && st.ActivationUnresolvedOnChain) &&
+                    CardMatchesNamed(st, name, series: false)) return true;
+
+            var field = who.FieldSpellZone?.Occupant;
+            if (field != null && field.FaceUp && !(activatedOnly && field.ActivationUnresolvedOnChain) &&
+                CardMatchesNamed(field, name, series: false))
+                return true;
 
             return false;
         }
@@ -555,8 +825,8 @@ namespace WRLDZ.Duel
         public static bool NamedCardIsFaceUpOnField(DuelEngine engine, string name)
         {
             if (engine == null || string.IsNullOrEmpty(name)) return false;
-            if (ControlsFaceUpNamed(engine.Player, name) ||
-                ControlsFaceUpNamed(engine.Opponent, name))
+            if (ControlsFaceUpNamed(engine.Player, name, activatedOnly: true) ||
+                ControlsFaceUpNamed(engine.Opponent, name, activatedOnly: true))
                 return true;
             // Maiden of the Aqua / EFFECT_CHANGE_ENVIRONMENT: the field is treated as "Umi".
             if (string.Equals(name, UmiName, StringComparison.OrdinalIgnoreCase) &&
@@ -612,6 +882,13 @@ namespace WRLDZ.Duel
 
             var idx = owner.Deck.IndexOf(bestId);
             if (idx < 0) return;
+            // Cold Wave (LocksAndZones batch): Pandemonium's search is an activated Spell effect (ygopro
+            // TRIGGER_O) and cannot be activated while Spell/Trap Cards are locked.
+            if (TextEffects.LocksAndZonesRuntime.SpellTrapLockActive(engine))
+            {
+                engine.Log("Pandemonium: its effect cannot be activated (Spell and Trap Cards are locked by Cold Wave).");
+                return;
+            }
             owner.Deck.RemoveAt(idx);
             var inst = engine.CreateCardInstance(bestId);
             owner.Hand.Add(inst);
@@ -619,10 +896,11 @@ namespace WRLDZ.Duel
                        $"from the Deck to the hand ({destroyed.Name} was destroyed).");
         }
 
+        /// <summary>A face-up Field Spell with that name whose effects are not negated (Pandemonium).</summary>
         static bool NamedFieldSpellFaceUp(DuelistState who, string name)
         {
             var f = who?.FieldSpellZone?.Occupant;
-            return f != null && f.FaceUp && f.IsNamed(name);
+            return f != null && f.FaceUp && !f.IsNegated && f.IsNamed(name);
         }
 
         /// <summary>
@@ -641,14 +919,16 @@ namespace WRLDZ.Duel
         }
 
         /// <summary>
-        /// Face-up Field Spell in either Field Zone (blocks Maiden of the Aqua).
+        /// Face-up Field Spell in either Field Zone whose activation has resolved (blocks Maiden of the
+        /// Aqua; ygopro IsEnvironment only counts a Field Spell with STATUS_EFFECT_ENABLED).
         /// </summary>
         public static bool FaceUpFieldSpellExists(DuelEngine engine)
         {
             if (engine == null) return false;
             var a = engine.Player?.FieldSpellZone?.Occupant;
             var b = engine.Opponent?.FieldSpellZone?.Occupant;
-            return (a != null && a.FaceUp) || (b != null && b.FaceUp);
+            return (a != null && a.FaceUp && !a.ActivationUnresolvedOnChain) ||
+                   (b != null && b.FaceUp && !b.ActivationUnresolvedOnChain);
         }
 
         /// <summary>
@@ -674,7 +954,7 @@ namespace WRLDZ.Duel
                     string.Equals(name, UmiName, StringComparison.OrdinalIgnoreCase))
                     return true;
                 var prog = CompiledEffectCache.GetOrCompile(m.Def);
-                if (prog == null) continue;
+                if (prog == null || !prog.FullyCompiled) continue;
                 foreach (var c in prog.ClausesFor(EffectTiming.ContinuousWhileFaceUp))
                 {
                     if (c == null || c.Action != EffectActionKind.FieldTreatedAsName) continue;
@@ -687,14 +967,22 @@ namespace WRLDZ.Duel
         }
 
         /// <summary>Tornado Wall / Waboku-style: controller takes no battle damage.</summary>
-        public static bool ControllerAvoidsBattleDamage(DuelEngine engine, DuelistState who)
+        public static bool ControllerAvoidsBattleDamage(DuelEngine engine, DuelistState who) =>
+            ControllerAvoidsBattleDamage(engine, who, null, null);
+
+        /// <summary>
+        /// Same, for a specific battle: Spirit Barrier needs a monster on the field, and a
+        /// monster-borne clause (Amazoness Fighter) only covers battles that monster is in.
+        /// </summary>
+        public static bool ControllerAvoidsBattleDamage(DuelEngine engine, DuelistState who,
+            CardInstance attacker, CardInstance defender)
         {
             if (engine == null || who == null) return false;
             foreach (var st in who.SpellTrapsOnField())
             {
-                if (st == null || !st.FaceUp || st.Def == null) continue;
+                if (st == null || !st.FaceUp || st.IsNegated || st.Def == null) continue;
                 var prog = CompiledEffectCache.GetOrCompile(st.Def);
-                if (prog == null) continue;
+                if (prog == null || !prog.FullyCompiled) continue;
                 foreach (var c in prog.ClausesFor(EffectTiming.ContinuousWhileFaceUp))
                 {
                     if (c == null || c.Action != EffectActionKind.PreventControllerBattleDamage)
@@ -702,7 +990,23 @@ namespace WRLDZ.Duel
                     if (!string.IsNullOrEmpty(c.RequiresFaceUpName) &&
                         !NamedCardIsFaceUpOnField(engine, c.RequiresFaceUpName))
                         continue;
+                    if (c.RequiresControllerHasMonster && who.MonsterCount <= 0)
+                        continue;
                     return true;
+                }
+            }
+
+            foreach (var m in who.MonstersOnField())
+            {
+                if (m == null || !m.FaceUp || m.IsNegated || m.Def == null) continue;
+                var prog = CompiledEffectCache.GetOrCompile(m.Def);
+                if (prog == null || !prog.FullyCompiled) continue;
+                foreach (var c in prog.ClausesFor(EffectTiming.ContinuousWhileFaceUp))
+                {
+                    if (c == null || c.Action != EffectActionKind.PreventControllerBattleDamage ||
+                        !c.OnlyBattlesInvolvingThis)
+                        continue;
+                    if (m == attacker || m == defender) return true;
                 }
             }
 
@@ -715,9 +1019,10 @@ namespace WRLDZ.Duel
             var doomed = new System.Collections.Generic.List<CardInstance>();
             foreach (var st in who.SpellTrapsOnField())
             {
-                if (st == null || !st.FaceUp || st.Def == null) continue;
+                // "Destroy this card when X leaves the field" is this card's own effect: not while negated.
+                if (st == null || !st.FaceUp || st.IsNegated || st.Def == null) continue;
                 var prog = CompiledEffectCache.GetOrCompile(st.Def);
-                if (prog == null) continue;
+                if (prog == null || !prog.FullyCompiled) continue;
                 foreach (var c in prog.ClausesFor(EffectTiming.ContinuousWhileFaceUp))
                 {
                     if (c == null || c.Action != EffectActionKind.SelfDestroyUnlessNamedFaceUp)
@@ -734,6 +1039,8 @@ namespace WRLDZ.Duel
 
             foreach (var st in doomed)
             {
+                // EquipAndSpellProtection batch: a Magic Reflector counter is removed instead (EFFECT_SELF_DESTROY).
+                if (TextEffects.EquipAndSpellProtectionRuntime.ReplacesDestruction(engine, st)) continue;
                 engine.Log($"{st.Name} is destroyed ({st.Def?.name} required a named card that left).");
                 engine.SendCardToGrave(who, st);
             }

@@ -1,0 +1,116 @@
+{
+  "name": "Gate Jam Defender",
+  "format": "wrldz_street_4000",
+  "main": [
+    {
+      "id": 31709826,
+      "name": "Revival Jam",
+      "qty": 3
+    },
+    {
+      "id": 17214465,
+      "name": "Maiden of the Aqua",
+      "qty": 2
+    },
+    {
+      "id": 14851496,
+      "name": "Jellyfish",
+      "qty": 3
+    },
+    {
+      "id": 54579801,
+      "name": "High Tide Gyojin",
+      "qty": 2
+    },
+    {
+      "id": 24435369,
+      "name": "Mermaid Knight",
+      "qty": 2
+    },
+    {
+      "id": 5628232,
+      "name": "Flying Penguin",
+      "qty": 2
+    },
+    {
+      "id": 93920745,
+      "name": "Penguin Soldier",
+      "qty": 2
+    },
+    {
+      "id": 13039848,
+      "name": "Giant Soldier of Stone",
+      "qty": 2
+    },
+    {
+      "id": 15025844,
+      "name": "Mystical Elf",
+      "qty": 2
+    },
+    {
+      "id": 54652250,
+      "name": "Man-Eater Bug",
+      "qty": 2
+    },
+    {
+      "id": 22702055,
+      "name": "Umi",
+      "qty": 3
+    },
+    {
+      "id": 295517,
+      "name": "A Legendary Ocean",
+      "qty": 2
+    },
+    {
+      "id": 72302403,
+      "name": "Swords of Revealing Light",
+      "qty": 1
+    },
+    {
+      "id": 44656491,
+      "name": "Messenger of Peace",
+      "qty": 2
+    },
+    {
+      "id": 24094653,
+      "name": "Polymerization",
+      "qty": 2
+    },
+    {
+      "id": 21558682,
+      "name": "Jam Defender",
+      "qty": 3
+    },
+    {
+      "id": 18605135,
+      "name": "Tornado Wall",
+      "qty": 2
+    },
+    {
+      "id": 44209392,
+      "name": "Castle Walls",
+      "qty": 2
+    },
+    {
+      "id": 12607053,
+      "name": "Waboku",
+      "qty": 1
+    }
+  ],
+  "extra": [
+    {
+      "id": 19066538,
+      "name": "Roaring Ocean Snake",
+      "qty": 1
+    }
+  ],
+  "side": [],
+  "counts": {
+    "main": 40,
+    "extra": 1,
+    "side": 0
+  },
+  "lpBand": 4000,
+  "role": "street_npc_defender"
+}

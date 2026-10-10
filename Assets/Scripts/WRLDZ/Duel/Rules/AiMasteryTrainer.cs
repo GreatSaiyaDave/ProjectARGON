@@ -85,6 +85,8 @@ namespace WRLDZ.Duel.Rules
                             try
                             {
                                 var engine = new DuelEngine();
+                                // Coins / dice follow the same seed as the shuffle (DR-16).
+                                engine.Rng.Reseed(2000 + set.order * 100 + g);
                                 engine.StartDuel(db, pDeck, aDeck);
                                 // Tag session for review export
                                 engine.LogReview(DuelLogKind.Ai, "Mastery",

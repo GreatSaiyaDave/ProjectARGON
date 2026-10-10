@@ -16,10 +16,9 @@ Reported player-facing features (from public clips / community talk — may chan
 ## What we can **not** use
 
 - DMO art, models, UI packs, audio, logos, or code  
-- Konami card frames / official assets beyond our own licensed/data pipeline  
 - Copying DMO screenshots into the game as textures  
 
-**Legal / product rule:** inspiration for *features and flow* only. All pack-ins under `StreamingAssets/WRLDZ/` are original.
+**Legal / product rule:** DMO is inspiration for *features and flow* only.
 
 ## WRLDZ avatar system (implemented)
 

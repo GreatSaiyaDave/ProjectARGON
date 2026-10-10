@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: AvatarHair
+  m_Shader: {fileID: 4800000, guid: 29c7bcb9b58a44f783de1cbfe6d1ad89, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 1
+  m_CustomRenderQueue: -1
+  stringTagMap:
+    RenderPipeline: URP
+  disabledShaderPasses: []
+  _BaseMap: {fileID: 0}
+  _BaseColor: {r: 1, g: 1, b: 1, a: 1}
+  _Original: 1
+  _HairRoot: {r: 0.1, g: 0.1, b: 0.12, a: 1}
+  _HairTip: {r: 0.8, g: 0.27, b: 0.5, a: 1}
+  _HairFringe: {r: 0.9, g: 0.72, b: 0.3, a: 1}
+  _HairStreak: {r: 0.9, g: 0.72, b: 0.3, a: 1}
+  _HairSide: {r: 0.25, g: 0.8, b: 1, a: 1}
+  _Zones: {x: 0, y: 0, z: 0, w: 0}
+  _ShadowAmt: 0.1
+  _RimAmt: 0.5
+  _Sheen: 0.35
+  _OutlineWidth: 1.3
+  _OutlineDark: 0.3
+  _HatClip: {x: 0, y: 1, z: 0, w: 0}
+  _HatClipOn: 0
+  _HatTuckC: {x: 0, y: 0, z: 0, w: 0.04}
+  _HatTuckX: {x: 0, y: 0, z: 0, w: 0}

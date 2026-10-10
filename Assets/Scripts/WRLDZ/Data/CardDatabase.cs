@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using WRLDZ.Core;
+using WRLDZ.Duel;
 
 namespace WRLDZ.Data
 {
@@ -15,20 +17,91 @@ namespace WRLDZ.Data
 
         public int Count => _byId.Count;
 
+        const string DbRelative = "Cards/cards_db.json";
+
+        /// <summary>Source stamp of <see cref="Instance"/> (desktop: length + mtime; APK: immutable).</summary>
+        static string _loadedStamp;
+
+        /// <summary>Serializes (re)parses so concurrent matches never see a half-built database (R5).</summary>
+        static readonly object LoadGate = new();
+
+        /// <summary>
+        /// The shared card database. Re-parses cards_db.json (718 KB, ~1.7k cards) only when nothing is loaded
+        /// yet or the file changed on disk (Editor / desktop hot edit); otherwise returns <see cref="Instance"/>.
+        /// Screens call this on every open, and each re-parse used to replace Instance and orphan the previous
+        /// DB's decoded card art (QC PERF-09). Use <see cref="Reload"/> to force a fresh parse.
+        /// </summary>
         public static CardDatabase Load()
         {
-            var db = new CardDatabase();
-            var path = Path.Combine(Application.streamingAssetsPath, "Cards", "cards_db.json");
-            if (!File.Exists(path))
+            var stamp = SourceStamp();
+            var current = Instance;
+            if (current != null && current.Count > 0 && stamp != null && stamp == _loadedStamp)
+                return current;
+            lock (LoadGate)
             {
-                PinEditorCwd();
+                current = Instance;
+                if (current != null && current.Count > 0 && stamp != null && stamp == _loadedStamp)
+                    return current;
+                return Reload();
+            }
+        }
+
+        /// <summary>Always parse cards_db.json again and replace <see cref="Instance"/>.</summary>
+        public static CardDatabase Reload()
+        {
+            lock (LoadGate)
+                return ReloadLocked();
+        }
+
+        static CardDatabase ReloadLocked()
+        {
+            var previous = Instance;
+            var db = LoadFresh();
+            if (db.Count == 0 && previous != null && previous.Count > 0)
+            {
+                // A failed re-read (file mid-write in the Editor) keeps the database that was working.
+                Instance = previous;
+                return previous;
+            }
+
+            if (db.Count > 0)
+            {
+                _loadedStamp = SourceStamp();
+                // Nothing else holds the old DB's cache dictionaries; keep its sprites alive for UI still
+                // showing them — they are released with the next scene's unused-asset sweep.
+                if (previous != null && !ReferenceEquals(previous, db))
+                    previous.DropArtReferences();
+            }
+
+            return db;
+        }
+
+        static string SourceStamp()
+        {
+            // Through the facade so the desktop stat re-pins the Linux Editor cwd (AI-09) like every other read.
+            // Rules data source (R5): StreamingFiles in Unity (desktop: length + mtime; APK: length).
+            try
+            {
+                return DuelData.Source.Stamp(DbRelative);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        static CardDatabase LoadFresh()
+        {
+            var db = new CardDatabase();
+            const string rel = DbRelative;
+            var path = DuelData.Describe(rel);
+            if (!DuelData.TryReadText(rel, out var json))
+            {
                 Debug.LogError($"[WRLDZ] Missing card DB at {path}");
                 Instance = db;
                 return db;
             }
 
-            var json = File.ReadAllText(path);
-            PinEditorCwd();
             var file = JsonUtility.FromJson<CardDatabaseFile>(json);
             if (file?.cards == null)
             {
@@ -143,17 +216,15 @@ namespace WRLDZ.Data
             return sprite;
         }
 
+        /// <param name="path">StreamingAssets-relative (from <see cref="FindCardArtPath"/>).</param>
         static Sprite LoadSpriteFromFile(string path, string spriteName)
         {
-            if (string.IsNullOrEmpty(path) || !File.Exists(path))
-            {
-                PinEditorCwd();
+            if (string.IsNullOrEmpty(path) || !StreamingFiles.TryReadAllBytes(path, out var bytes))
                 return null;
-            }
-            var bytes = File.ReadAllBytes(path);
-            PinEditorCwd();
             var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
-            if (!tex.LoadImage(bytes))
+            // markNonReadable: drop the CPU copy after upload (halves card-art memory, QC AI-10). Nothing reads
+            // these pixels — crops are Sprite sub-rects and CardArtFocus only looks at width / height.
+            if (!tex.LoadImage(bytes, true))
             {
                 Object.Destroy(tex);
                 return null;
@@ -170,37 +241,29 @@ namespace WRLDZ.Data
         }
 
         /// <summary>
-        /// Resolve art file path under StreamingAssets.
+        /// Resolve art file path under StreamingAssets (returned StreamingAssets-relative).
         /// preferFullFace: try {id}_full.* then {id}.* (disk/UI full TCG face).
         /// artOnlyPreferred: try non-_full first (square illustration packs).
         /// </summary>
         static string FindCardArtPath(int id, bool preferFullFace, bool artOnlyPreferred = false)
         {
-            var dirs = new[]
-            {
-                Path.Combine(Application.streamingAssetsPath, "CardArt"),
-                Path.Combine(Application.streamingAssetsPath, "WRLDZ", "CardArt")
-            };
+            var dirs = new[] { "CardArt", "WRLDZ/CardArt" };
             var exts = new[] { ".jpg", ".JPG", ".png", ".jpeg", ".PNG" };
 
             string TryNames(params string[] stems)
             {
                 foreach (var dir in dirs)
                 {
-                    if (!Directory.Exists(dir)) continue;
+                    if (!StreamingFiles.DirectoryExists(dir)) continue;
                     foreach (var stem in stems)
                     foreach (var ext in exts)
                     {
-                        var candidate = Path.Combine(dir, stem + ext);
-                        if (File.Exists(candidate))
-                        {
-                            PinEditorCwd();
+                        var candidate = dir + "/" + stem + ext;
+                        if (StreamingFiles.Exists(candidate))
                             return candidate;
-                        }
                     }
                 }
 
-                PinEditorCwd();
                 return null;
             }
 
@@ -220,6 +283,13 @@ namespace WRLDZ.Data
         }
 
 
+
+        /// <summary>Forget cached sprites without destroying them (they may still be on screen).</summary>
+        void DropArtReferences()
+        {
+            _artwork.Clear();
+            _art.Clear();
+        }
 
         /// <summary>Clear cached sprites (e.g. between restarts if art files change).</summary>
         public void ClearArtCache()
@@ -251,16 +321,13 @@ namespace WRLDZ.Data
 
         public static DeckFile LoadDeck(string fileName)
         {
-            var path = Path.Combine(Application.streamingAssetsPath, "Decks", fileName);
-            if (!File.Exists(path))
+            var rel = "Decks/" + fileName;
+            if (!DuelData.TryReadText(rel, out var json))
             {
-                PinEditorCwd();
-                Debug.LogError($"[WRLDZ] Missing deck {path}");
+                Debug.LogError($"[WRLDZ] Missing deck {DuelData.Describe(rel)}");
                 return null;
             }
 
-            var json = File.ReadAllText(path);
-            PinEditorCwd();
             var deck = JsonUtility.FromJson<DeckFile>(json);
             if (deck == null)
                 Debug.LogError($"[WRLDZ] Failed to parse deck {fileName}");
@@ -269,7 +336,10 @@ namespace WRLDZ.Data
             return deck;
         }
 
-        /// <summary>Expand qty entries into a shuffled list of card ids (main deck only for slice).</summary>
+        /// <summary>
+        /// Expand qty entries into a list of card ids (main deck only for slice). Unshuffled: the engine
+        /// shuffles with its own seeded <see cref="DuelRng"/> (R1).
+        /// </summary>
         public static List<int> BuildMainPile(DeckFile deck)
         {
             var list = new List<int>();
@@ -282,30 +352,6 @@ namespace WRLDZ.Data
             }
 
             return list;
-        }
-
-        public static void Shuffle(List<int> list)
-        {
-            for (var i = list.Count - 1; i > 0; i--)
-            {
-                var j = Random.Range(0, i + 1);
-                (list[i], list[j]) = (list[j], list[i]);
-            }
-        }
-
-        static void PinEditorCwd()
-        {
-#if UNITY_EDITOR
-            try
-            {
-                var root = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
-                Directory.SetCurrentDirectory(root);
-            }
-            catch
-            {
-                // Editor guard also pins on compile.
-            }
-#endif
         }
     }
 }

@@ -1,17 +1,17 @@
 {
-    "generatedUtc": "2026-09-09T16:54:54.2445730Z",
-    "compilerVersion": 77,
+    "generatedUtc": "2026-09-23T09:43:59.0551910Z",
+    "compilerVersion": 102,
     "productPath": "B-staged",
     "invariant": "total = structural + implemented + stub + unimplemented",
     "isReleased": false,
     "original": {
         "total": 1411,
-        "structural": 305,
-        "implemented": 319,
-        "stub": 165,
-        "unimplemented": 622,
+        "structural": 309,
+        "implemented": 434,
+        "stub": 152,
+        "unimplemented": 516,
         "missing": 0,
-        "playablePct": 44.22395324707031
+        "playablePct": 52.65768814086914
     },
     "sets": [
         {
@@ -21,11 +21,11 @@
             "role": "foundation",
             "n": 126,
             "structural": 82,
-            "implemented": 34,
-            "stub": 3,
-            "unimplemented": 7,
+            "implemented": 44,
+            "stub": 0,
+            "unimplemented": 0,
             "missing": 0,
-            "playablePct": 92.06349182128906
+            "playablePct": 100.0
         },
         {
             "code": "MRD",
@@ -33,12 +33,12 @@
             "order": 2,
             "role": "next_set_1",
             "n": 144,
-            "structural": 66,
-            "implemented": 36,
-            "stub": 6,
-            "unimplemented": 36,
+            "structural": 70,
+            "implemented": 68,
+            "stub": 0,
+            "unimplemented": 6,
             "missing": 0,
-            "playablePct": 70.83333587646485
+            "playablePct": 95.83333587646485
         },
         {
             "code": "SRL",
@@ -47,11 +47,11 @@
             "role": "next_set_2",
             "n": 104,
             "structural": 23,
-            "implemented": 31,
+            "implemented": 43,
             "stub": 7,
-            "unimplemented": 43,
+            "unimplemented": 31,
             "missing": 0,
-            "playablePct": 51.92307662963867
+            "playablePct": 63.46154022216797
         },
         {
             "code": "PSV",
@@ -60,11 +60,11 @@
             "role": "unlock",
             "n": 105,
             "structural": 26,
-            "implemented": 24,
+            "implemented": 27,
             "stub": 6,
-            "unimplemented": 49,
+            "unimplemented": 46,
             "missing": 0,
-            "playablePct": 47.619049072265628
+            "playablePct": 50.47618865966797
         },
         {
             "code": "LON",
@@ -73,11 +73,11 @@
             "role": "unlock",
             "n": 105,
             "structural": 24,
-            "implemented": 22,
-            "stub": 15,
-            "unimplemented": 44,
+            "implemented": 24,
+            "stub": 16,
+            "unimplemented": 41,
             "missing": 0,
-            "playablePct": 43.80952453613281
+            "playablePct": 45.71428680419922
         },
         {
             "code": "LOD",
@@ -86,11 +86,11 @@
             "role": "unlock",
             "n": 101,
             "structural": 15,
-            "implemented": 16,
+            "implemented": 17,
             "stub": 19,
-            "unimplemented": 51,
+            "unimplemented": 50,
             "missing": 0,
-            "playablePct": 30.693069458007814
+            "playablePct": 31.683168411254884
         },
         {
             "code": "PGD",
@@ -99,11 +99,11 @@
             "role": "unlock",
             "n": 108,
             "structural": 7,
-            "implemented": 34,
+            "implemented": 37,
             "stub": 13,
-            "unimplemented": 54,
+            "unimplemented": 51,
             "missing": 0,
-            "playablePct": 37.96296310424805
+            "playablePct": 40.74074172973633
         },
         {
             "code": "MFC",
@@ -112,11 +112,11 @@
             "role": "unlock",
             "n": 108,
             "structural": 14,
-            "implemented": 19,
-            "stub": 23,
-            "unimplemented": 52,
+            "implemented": 23,
+            "stub": 22,
+            "unimplemented": 49,
             "missing": 0,
-            "playablePct": 30.55555534362793
+            "playablePct": 34.25925827026367
         },
         {
             "code": "DCR",
@@ -125,11 +125,11 @@
             "role": "unlock",
             "n": 106,
             "structural": 8,
-            "implemented": 16,
+            "implemented": 21,
             "stub": 21,
-            "unimplemented": 61,
+            "unimplemented": 56,
             "missing": 0,
-            "playablePct": 22.641510009765626
+            "playablePct": 27.358489990234376
         },
         {
             "code": "IOC",
@@ -138,11 +138,11 @@
             "role": "unlock",
             "n": 112,
             "structural": 10,
-            "implemented": 30,
-            "stub": 15,
-            "unimplemented": 57,
+            "implemented": 39,
+            "stub": 14,
+            "unimplemented": 49,
             "missing": 0,
-            "playablePct": 35.71428680419922
+            "playablePct": 43.75
         },
         {
             "code": "AST",
@@ -151,11 +151,11 @@
             "role": "unlock",
             "n": 112,
             "structural": 11,
-            "implemented": 19,
+            "implemented": 28,
             "stub": 11,
-            "unimplemented": 71,
+            "unimplemented": 62,
             "missing": 0,
-            "playablePct": 26.785715103149415
+            "playablePct": 34.82143020629883
         },
         {
             "code": "SOD",
@@ -164,11 +164,11 @@
             "role": "unlock",
             "n": 60,
             "structural": 7,
-            "implemented": 16,
-            "stub": 8,
-            "unimplemented": 29,
+            "implemented": 26,
+            "stub": 6,
+            "unimplemented": 21,
             "missing": 0,
-            "playablePct": 38.33333206176758
+            "playablePct": 55.0
         },
         {
             "code": "RDS",
@@ -177,11 +177,11 @@
             "role": "unlock",
             "n": 60,
             "structural": 6,
-            "implemented": 10,
+            "implemented": 18,
             "stub": 11,
-            "unimplemented": 33,
+            "unimplemented": 25,
             "missing": 0,
-            "playablePct": 26.66666603088379
+            "playablePct": 40.0
         },
         {
             "code": "FET",
@@ -190,11 +190,11 @@
             "role": "unlock",
             "n": 60,
             "structural": 6,
-            "implemented": 12,
-            "stub": 7,
-            "unimplemented": 35,
+            "implemented": 19,
+            "stub": 6,
+            "unimplemented": 29,
             "missing": 0,
-            "playablePct": 30.0
+            "playablePct": 41.66666793823242
         },
         {
             "code": "TLM",
@@ -223,6 +223,7 @@
         7089711,
         7902349,
         8124921,
+        9076207,
         9159938,
         9293977,
         10202894,
@@ -230,6 +231,7 @@
         12580477,
         13039848,
         15025844,
+        15052462,
         15401633,
         16353197,
         17535588,
@@ -238,6 +240,7 @@
         20060230,
         22702055,
         22910685,
+        23424603,
         24094653,
         25769732,
         28279543,
@@ -245,7 +248,9 @@
         32274490,
         32452818,
         33064647,
+        33066139,
         33178416,
+        33396948,
         34460851,
         36121917,
         36304921,
@@ -268,6 +273,8 @@
         45231177,
         46009906,
         46130346,
+        50045299,
+        50913601,
         51267887,
         51482758,
         53129443,
@@ -306,14 +313,17 @@
         77027445,
         77827521,
         80770678,
+        82542267,
         83464209,
         83764718,
+        83887306,
         84686841,
         85309439,
         85326399,
         85639257,
         85705804,
         86318356,
+        87430998,
         89091579,
         89631139,
         90357090,
@@ -333,57 +343,84 @@
         2483611,
         2504891,
         3819470,
+        4031928,
+        5758500,
         5818798,
         5901497,
+        7019529,
         7489323,
         7805359,
         8201910,
         8471389,
         9653271,
         10071456,
+        10189126,
         10538007,
         11384280,
         11901678,
+        12206212,
         12472242,
+        13215230,
+        14141448,
         14851496,
         15150365,
         15237615,
         15480588,
+        16768387,
         16972957,
         17358176,
         18246479,
         19066538,
         19613556,
         20277860,
+        20394040,
+        20436034,
         21263083,
         21347810,
+        21417692,
         21817254,
         23771716,
         24611934,
+        24668830,
+        25109950,
         25655502,
+        25833572,
         25880422,
         25955164,
         26202165,
         28470714,
         28546905,
         28593363,
+        28725004,
         28933734,
+        29380133,
+        30778711,
         31560081,
         31786629,
         32809211,
         40240595,
+        40453765,
         40640057,
+        41142615,
         41392891,
         41396436,
         41462083,
         42431843,
         43230671,
         44095762,
+        46657337,
+        46918794,
         49888191,
+        50152549,
+        51275027,
         51371017,
         51828629,
+        52097679,
         54752875,
+        55763552,
         55784832,
+        55875323,
+        56830749,
         56907389,
         58192742,
         58314394,
@@ -399,7 +436,9 @@
         68846917,
         69455834,
         69572024,
+        70138455,
         70781052,
+        71107816,
         71625222,
         73481154,
         74703140,
@@ -413,22 +452,30 @@
         80741828,
         81386177,
         81480460,
+        83225447,
+        84926738,
         86088138,
         87322377,
         87564352,
+        87756343,
         87796900,
+        88279736,
         88819587,
         88979991,
         89112729,
         89272878,
         90219263,
         93221206,
+        93889755,
+        93900406,
+        94773007,
         94905343,
         95727991,
         98049915,
         98434877,
         98495314,
         99551425,
+        596051,
         2964201,
         3797883,
         5318639,
@@ -437,10 +484,14 @@
         15023985,
         15083728,
         15259703,
+        16430187,
+        16762927,
         18161786,
         18591904,
         18807108,
+        19384334,
         20624263,
+        23401839,
         29692206,
         34442949,
         35565537,
@@ -448,14 +499,18 @@
         40619825,
         41426869,
         42578427,
+        42703248,
         43417563,
         44656491,
+        45778932,
         45986603,
         46534755,
         47879985,
         54579801,
         55998462,
+        56594520,
         56789759,
+        57617178,
         57839750,
         60806437,
         62397231,
@@ -472,14 +527,17 @@
         76806714,
         79323590,
         80811661,
+        81777047,
         82003859,
         82999629,
         83011277,
         84834865,
         91996584,
+        93013676,
         93108297,
         95051344,
         95956346,
+        96890582,
         96981563,
         97017120,
         99597615,
@@ -497,6 +555,7 @@
         16227556,
         21015833,
         21237481,
+        23471572,
         23615409,
         24128274,
         24294108,
@@ -507,6 +566,8 @@
         31447217,
         31477025,
         32269855,
+        35316708,
+        35346968,
         37580756,
         42599677,
         50122883,
@@ -542,6 +603,7 @@
         18605135,
         19230407,
         21175632,
+        21297224,
         27132350,
         27671321,
         31709826,
@@ -549,7 +611,6 @@
         32541773,
         33737664,
         40133511,
-        40916023,
         46821314,
         52121290,
         53530069,
@@ -561,6 +622,7 @@
         58696829,
         58818411,
         62279055,
+        64752646,
         66989694,
         67105242,
         67371383,
@@ -578,11 +640,11 @@
         90925163,
         91869203,
         94377247,
+        95220856,
         98456117,
         295517,
         1412158,
         2460565,
-        3682106,
         14531242,
         17658803,
         18036057,
@@ -590,9 +652,9 @@
         29401950,
         31785398,
         32807846,
+        37620434,
         38916461,
         40633297,
-        40703393,
         41925941,
         42647539,
         44203504,
@@ -600,10 +662,12 @@
         52860176,
         55013285,
         56369281,
+        63018132,
         66235877,
         74131780,
         75923050,
         75953262,
+        76075810,
         80071763,
         83764996,
         92421852,
@@ -619,8 +683,10 @@
         4035199,
         4178474,
         4335645,
+        10012614,
         14087893,
         15383415,
+        16222645,
         17192817,
         17214465,
         23205979,
@@ -631,7 +697,6 @@
         31242786,
         37101832,
         37576645,
-        38699854,
         40659562,
         41872150,
         43716289,
@@ -645,9 +710,11 @@
         65830223,
         73628505,
         77044671,
+        77561728,
         83555666,
         85562745,
         85684223,
+        90980792,
         93382620,
         97923414,
         99877698,
@@ -671,6 +738,7 @@
         47480070,
         48202661,
         53112492,
+        55821894,
         58538870,
         62325062,
         62651957,
@@ -679,9 +747,12 @@
         68334074,
         70231910,
         71413901,
+        73398797,
         84696266,
         85936485,
         91998119,
+        95451366,
+        96677818,
         98502113,
         99724761,
         7572887,
@@ -690,20 +761,25 @@
         11987744,
         12482652,
         13722870,
+        16268841,
         16435215,
+        28121403,
         29843091,
         32919136,
         33031674,
         46820049,
         47372349,
         48094997,
+        48768179,
         49003308,
         49881766,
         56120475,
         60365591,
         61587183,
+        68304813,
         69035382,
         73431236,
+        82108372,
         86498013,
         89041555,
         96420087,
@@ -713,13 +789,17 @@
         3510565,
         3773196,
         4542651,
+        4732017,
         5464695,
         13944422,
+        14618326,
         15734813,
         16556849,
         16587243,
         20522190,
+        22431243,
         26185991,
+        30914564,
         37721209,
         38670435,
         40320754,
@@ -729,13 +809,16 @@
         43793530,
         47606319,
         52090844,
+        56916805,
         57139487,
         59820352,
         62543393,
         63120904,
         64306248,
         64342551,
+        65064143,
         65287621,
+        68007326,
         69196160,
         75946257,
         77491079,
@@ -743,14 +826,18 @@
         78243409,
         79182538,
         79335209,
+        83133491,
         90337190,
         94192409,
+        95492061,
         95614612,
         97169186,
         99050989,
+        2314238,
         2468169,
         10035717,
         13409151,
+        18190572,
         24435369,
         25551951,
         26566878,
@@ -760,11 +847,15 @@
         39552864,
         39674352,
         43250041,
+        43714890,
+        44436472,
         44472639,
         45311864,
         48659020,
+        49771608,
         51945556,
         52550973,
+        52768103,
         53776525,
         53890795,
         64734921,
@@ -774,11 +865,16 @@
         78986941,
         79649195,
         81383947,
+        82828051,
         89959682,
         92924317,
+        93747864,
         98045062,
+        98162242,
         99171160,
         980973,
+        4041838,
+        4929256,
         9264485,
         12057781,
         13179332,
@@ -788,38 +884,55 @@
         28357177,
         30314994,
         36262024,
+        38479725,
         39191307,
         46384672,
+        47507260,
         48229808,
         49563947,
         51394546,
+        52417194,
+        53239672,
         53539634,
+        64751286,
         72657739,
         73879377,
+        74591968,
         74713516,
         86652646,
         90140980,
+        91862578,
+        92084010,
         93107608,
         97342942,
         1669772,
         8715625,
         13626450,
         13803864,
+        15960641,
         18891691,
         23265594,
+        26082229,
         34100324,
         35322812,
+        47453433,
+        49998907,
+        52571838,
+        53693416,
         61505339,
         62327910,
         74848038,
         75782277,
         86805855,
         88753985,
+        88975532,
+        89698120,
         91932350,
         97093037,
         8508055,
         8628798,
         13756293,
+        15090429,
         16956455,
         20939559,
         35027493,
@@ -827,106 +940,22 @@
         35149085,
         36119641,
         36361633,
+        41089128,
+        49140998,
         52323207,
         57046845,
+        59380081,
         60229110,
         62113340,
         62633180,
+        63356631,
+        69162969,
         76539047,
         87751584,
+        97623219,
         98446407
     ],
     "blocked": [
-        {
-            "id": 9076207,
-            "name": "Armed Ninja",
-            "type": "Flip Effect Monster",
-            "set": "LOB",
-            "status": "stub",
-            "leftover": "(If the target is Set, reveal it, and destroy it if it is a Spell Card.",
-            "descHead": "FLIP: Target 1 Spell Card on the field; destroy that target. (If the target is Set, reveal it, and destroy it if it is a Spell Card. Otherwise, return it to its"
-        },
-        {
-            "id": 15052462,
-            "name": "Violet Crystal",
-            "type": "Spell Card",
-            "set": "LOB",
-            "status": "stub",
-            "leftover": "(This card is not treated as a \"Crystal\" card.)",
-            "descHead": "(This card is not treated as a \"Crystal\" card.)\r\nEquip only to a Zombie monster. It gains 300 ATK/DEF."
-        },
-        {
-            "id": 23424603,
-            "name": "Wasteland",
-            "type": "Spell Card",
-            "set": "LOB",
-            "status": "unimplemented",
-            "leftover": "All Dinosaur, Zombie, and Rock monsters on the field gain 200 ATK/DEF.",
-            "descHead": "All Dinosaur, Zombie, and Rock monsters on the field gain 200 ATK/DEF."
-        },
-        {
-            "id": 33066139,
-            "name": "Reaper of the Cards",
-            "type": "Flip Effect Monster",
-            "set": "LOB",
-            "status": "stub",
-            "leftover": "If the selected card is Set, pick up and see the card.",
-            "descHead": "FLIP: Select 1 Trap Card on the field and destroy it. If the selected card is Set, pick up and see the card. If it is a Trap Card, it is destroyed. If it is a S"
-        },
-        {
-            "id": 33396948,
-            "name": "Exodia the Forbidden One",
-            "type": "Effect Monster",
-            "set": "LOB",
-            "status": "unimplemented",
-            "leftover": "If you have \"Right Leg of the Forbidden One\", \"Left Leg of the Forbidden One\", \"Right Arm of the Forbidden One\" and \"Left Arm of the Forbidden One\" in addition ",
-            "descHead": "If you have \"Right Leg of the Forbidden One\", \"Left Leg of the Forbidden One\", \"Right Arm of the Forbidden One\" and \"Left Arm of the Forbidden One\" in addition "
-        },
-        {
-            "id": 50045299,
-            "name": "Dragon Capture Jar",
-            "type": "Trap Card",
-            "set": "LOB",
-            "status": "unimplemented",
-            "leftover": "Change all face-up Dragon-Type monsters on the field to Defense Position, also they cannot change their battle positions.",
-            "descHead": "Change all face-up Dragon-Type monsters on the field to Defense Position, also they cannot change their battle positions."
-        },
-        {
-            "id": 50913601,
-            "name": "Mountain",
-            "type": "Spell Card",
-            "set": "LOB",
-            "status": "unimplemented",
-            "leftover": "All Dragon, Winged Beast, and Thunder monsters on the field gain 200 ATK/DEF.",
-            "descHead": "All Dragon, Winged Beast, and Thunder monsters on the field gain 200 ATK/DEF."
-        },
-        {
-            "id": 82542267,
-            "name": "Gravedigger Ghoul",
-            "type": "Spell Card",
-            "set": "LOB",
-            "status": "unimplemented",
-            "leftover": "Target up to 2 monsters in your opponent's Graveyard; banish them.",
-            "descHead": "Target up to 2 monsters in your opponent's Graveyard; banish them."
-        },
-        {
-            "id": 83887306,
-            "name": "Two-Pronged Attack",
-            "type": "Trap Card",
-            "set": "LOB",
-            "status": "unimplemented",
-            "leftover": "Select and destroy 2 of your monsters and 1 of your opponent's monsters.",
-            "descHead": "Select and destroy 2 of your monsters and 1 of your opponent's monsters."
-        },
-        {
-            "id": 87430998,
-            "name": "Forest",
-            "type": "Spell Card",
-            "set": "LOB",
-            "status": "unimplemented",
-            "leftover": "All Insect, Beast, Plant, and Beast-Warrior monsters on the field gain 200 ATK/DEF.",
-            "descHead": "All Insect, Beast, Plant, and Beast-Warrior monsters on the field gain 200 ATK/DEF."
-        },
         {
             "id": 62121,
             "name": "Castle of Dark Illusions",
@@ -946,60 +975,6 @@
             "descHead": "Activate only when your opponent activates a Spell, Trap, or Effect Monster's effect that would destroy a Trap Card(s) you control. Destroy this card instead. ("
         },
         {
-            "id": 4031928,
-            "name": "Change of Heart",
-            "type": "Spell Card",
-            "set": "MRD",
-            "status": "unimplemented",
-            "leftover": "Target 1 monster your opponent controls; take control of it until the End Phase.",
-            "descHead": "Target 1 monster your opponent controls; take control of it until the End Phase."
-        },
-        {
-            "id": 5758500,
-            "name": "Soul Release",
-            "type": "Spell Card",
-            "set": "MRD",
-            "status": "unimplemented",
-            "leftover": "Target up to 5 cards in any GY(s); banish them.",
-            "descHead": "Target up to 5 cards in any GY(s); banish them."
-        },
-        {
-            "id": 7019529,
-            "name": "Insect Soldiers of the Sky",
-            "type": "Effect Monster",
-            "set": "MRD",
-            "status": "unimplemented",
-            "leftover": "If this card attacks a WIND monster, it gains 1000 ATK during the Damage Step only.",
-            "descHead": "If this card attacks a WIND monster, it gains 1000 ATK during the Damage Step only."
-        },
-        {
-            "id": 10189126,
-            "name": "Masked Sorcerer",
-            "type": "Effect Monster",
-            "set": "MRD",
-            "status": "unimplemented",
-            "leftover": "When this card inflicts Battle Damage to your opponent's Life Points, draw 1 card from your Deck.",
-            "descHead": "When this card inflicts Battle Damage to your opponent's Life Points, draw 1 card from your Deck."
-        },
-        {
-            "id": 12206212,
-            "name": "Harpie Lady Sisters",
-            "type": "Effect Monster",
-            "set": "MRD",
-            "status": "unimplemented",
-            "leftover": "",
-            "descHead": "Cannot be Normal Summoned/Set. Must first be Special Summoned with \"Elegant Egotist\"."
-        },
-        {
-            "id": 13215230,
-            "name": "Dream Clown",
-            "type": "Effect Monster",
-            "set": "MRD",
-            "status": "unimplemented",
-            "leftover": "If this Attack Position card is changed to face-up Defense Position: Target 1 monster your opponent controls; destroy that target.",
-            "descHead": "If this Attack Position card is changed to face-up Defense Position: Target 1 monster your opponent controls; destroy that target."
-        },
-        {
             "id": 13599884,
             "name": "Steel Scorpion",
             "type": "Effect Monster",
@@ -1007,87 +982,6 @@
             "status": "unimplemented",
             "leftover": "A non Machine-Type Monster attacking \"Steel Scorpion\" will be destroyed at the End Phase of your opponent's 2nd turn after the attack.",
             "descHead": "A non Machine-Type Monster attacking \"Steel Scorpion\" will be destroyed at the End Phase of your opponent's 2nd turn after the attack."
-        },
-        {
-            "id": 14141448,
-            "name": "Great Moth",
-            "type": "Effect Monster",
-            "set": "MRD",
-            "status": "unimplemented",
-            "leftover": "",
-            "descHead": "This monster cannot be Normal Summoned or Set. This card can only be Special Summoned by Tributing \"Petit Moth\" during your 4th turn after \"Petit Moth\" has been"
-        },
-        {
-            "id": 16768387,
-            "name": "Big Eye",
-            "type": "Flip Effect Monster",
-            "set": "MRD",
-            "status": "unimplemented",
-            "leftover": "FLIP: Look at up to 5 cards from the top of your Deck, then place them on the top of the Deck in any order.",
-            "descHead": "FLIP: Look at up to 5 cards from the top of your Deck, then place them on the top of the Deck in any order."
-        },
-        {
-            "id": 20394040,
-            "name": "Lava Battleguard",
-            "type": "Effect Monster",
-            "set": "MRD",
-            "status": "unimplemented",
-            "leftover": "",
-            "descHead": "This card gains 500 ATK for each \"Swamp Battleguard\" you control."
-        },
-        {
-            "id": 20436034,
-            "name": "Ring of Magnetism",
-            "type": "Spell Card",
-            "set": "MRD",
-            "status": "stub",
-            "leftover": "You can only equip this card to a monster on your side of the field.",
-            "descHead": "You can only equip this card to a monster on your side of the field. Decrease the ATK and DEF of a monster equipped with this card by 500 points. In addition, a"
-        },
-        {
-            "id": 21417692,
-            "name": "Dark Elf",
-            "type": "Effect Monster",
-            "set": "MRD",
-            "status": "unimplemented",
-            "leftover": "This card requires a cost of 1000 of your own Life Points to attack.",
-            "descHead": "This card requires a cost of 1000 of your own Life Points to attack."
-        },
-        {
-            "id": 24668830,
-            "name": "Germ Infection",
-            "type": "Spell Card",
-            "set": "MRD",
-            "status": "stub",
-            "leftover": "The ATK of a non Machine-Type monster equipped with this card is decreased by 300 points at each of its Standby Phases.",
-            "descHead": "The ATK of a non Machine-Type monster equipped with this card is decreased by 300 points at each of its Standby Phases."
-        },
-        {
-            "id": 25109950,
-            "name": "The Little Swordsman of Aile",
-            "type": "Effect Monster",
-            "set": "MRD",
-            "status": "unimplemented",
-            "leftover": "Offer 1 monster on your side of the field as a Tribute to increase this monster's ATK by 700 points until the end of the turn.",
-            "descHead": "Offer 1 monster on your side of the field as a Tribute to increase this monster's ATK by 700 points until the end of the turn."
-        },
-        {
-            "id": 25833572,
-            "name": "Gate Guardian",
-            "type": "Effect Monster",
-            "set": "MRD",
-            "status": "unimplemented",
-            "leftover": "",
-            "descHead": "Cannot be Normal Summoned/Set. Must first be Special Summoned (from your hand) by Tributing 1 \"Sanga of the Thunder\", \"Kazejin\", and \"Suijin\"."
-        },
-        {
-            "id": 28725004,
-            "name": "Tainted Wisdom",
-            "type": "Effect Monster",
-            "set": "MRD",
-            "status": "unimplemented",
-            "leftover": "If this Attack Position card is changed to face-up Defense Position: Shuffle your Deck.",
-            "descHead": "If this Attack Position card is changed to face-up Defense Position: Shuffle your Deck."
         },
         {
             "id": 29155212,
@@ -1099,42 +993,6 @@
             "descHead": "Gains 100 ATK/DEF while \"Castle of Dark Illusions\" is on the field. Also, during your Standby Phase, if \"Castle of Dark Illusions\" is on the field: This card ga"
         },
         {
-            "id": 29380133,
-            "name": "Yado Karu",
-            "type": "Effect Monster",
-            "set": "MRD",
-            "status": "unimplemented",
-            "leftover": "When this card is changed from Attack Position to Defense Position, you can place any number of cards from your hand at the bottom of your Deck in any order you",
-            "descHead": "When this card is changed from Attack Position to Defense Position, you can place any number of cards from your hand at the bottom of your Deck in any order you"
-        },
-        {
-            "id": 30778711,
-            "name": "Shadow Ghoul",
-            "type": "Effect Monster",
-            "set": "MRD",
-            "status": "unimplemented",
-            "leftover": "This card gains 100 ATK for each monster in your Graveyard.",
-            "descHead": "This card gains 100 ATK for each monster in your Graveyard."
-        },
-        {
-            "id": 40453765,
-            "name": "Swamp Battleguard",
-            "type": "Effect Monster",
-            "set": "MRD",
-            "status": "unimplemented",
-            "leftover": "",
-            "descHead": "This card gains 500 ATK for each \"Lava Battleguard\" you control."
-        },
-        {
-            "id": 41142615,
-            "name": "The Cheerful Coffin",
-            "type": "Spell Card",
-            "set": "MRD",
-            "status": "unimplemented",
-            "leftover": "Discard up to 3 Monster Cards from your hand to the Graveyard.",
-            "descHead": "Discard up to 3 Monster Cards from your hand to the Graveyard."
-        },
-        {
             "id": 41420027,
             "name": "Solemn Judgment",
             "type": "Trap Card",
@@ -1142,159 +1000,6 @@
             "status": "unimplemented",
             "leftover": "When a monster(s) would be Summoned, OR a Spell/Trap Card is activated: Pay half your LP; negate the Summon or activation, and if you do, destroy that card.",
             "descHead": "When a monster(s) would be Summoned, OR a Spell/Trap Card is activated: Pay half your LP; negate the Summon or activation, and if you do, destroy that card."
-        },
-        {
-            "id": 46657337,
-            "name": "Muka Muka",
-            "type": "Effect Monster",
-            "set": "MRD",
-            "status": "unimplemented",
-            "leftover": "This card gains 300 ATK and DEF for each card in your hand.",
-            "descHead": "This card gains 300 ATK and DEF for each card in your hand."
-        },
-        {
-            "id": 46918794,
-            "name": "Tremendous Fire",
-            "type": "Spell Card",
-            "set": "MRD",
-            "status": "stub",
-            "leftover": "and 500 points of damage to your Life Points.",
-            "descHead": "Inflict 1000 points of damage to your opponent's Life Points and 500 points of damage to your Life Points."
-        },
-        {
-            "id": 50152549,
-            "name": "Paralyzing Potion",
-            "type": "Spell Card",
-            "set": "MRD",
-            "status": "stub",
-            "leftover": "A non Machine-Type monster equipped with this card cannot attack.",
-            "descHead": "A non Machine-Type monster equipped with this card cannot attack."
-        },
-        {
-            "id": 51275027,
-            "name": "The Unhappy Maiden",
-            "type": "Effect Monster",
-            "set": "MRD",
-            "status": "unimplemented",
-            "leftover": "When this card is sent to the Graveyard as a result of battle, the Battle Phase for that turn ends immediately.",
-            "descHead": "When this card is sent to the Graveyard as a result of battle, the Battle Phase for that turn ends immediately."
-        },
-        {
-            "id": 52097679,
-            "name": "Shield & Sword",
-            "type": "Spell Card",
-            "set": "MRD",
-            "status": "unimplemented",
-            "leftover": "Switch the original ATK and DEF of all face-up monsters currently on the field, until the end of this turn.",
-            "descHead": "Switch the original ATK and DEF of all face-up monsters currently on the field, until the end of this turn."
-        },
-        {
-            "id": 55763552,
-            "name": "Dragon Piper",
-            "type": "Flip Effect Monster",
-            "set": "MRD",
-            "status": "unimplemented",
-            "leftover": "FLIP: Destroy all face-up \"Dragon Capture Jar\"(s) on the field.",
-            "descHead": "FLIP: Destroy all face-up \"Dragon Capture Jar\"(s) on the field. If you destroy any, change all face-up Dragon-Type monsters on the field to Attack Position."
-        },
-        {
-            "id": 55875323,
-            "name": "Electric Lizard",
-            "type": "Effect Monster",
-            "set": "MRD",
-            "status": "unimplemented",
-            "leftover": "A non Zombie-Type monster attacking \"Electric Lizard\" cannot attack on its following turn.",
-            "descHead": "A non Zombie-Type monster attacking \"Electric Lizard\" cannot attack on its following turn."
-        },
-        {
-            "id": 56830749,
-            "name": "Share the Pain",
-            "type": "Spell Card",
-            "set": "MRD",
-            "status": "unimplemented",
-            "leftover": "Tribute 1 monster; make your opponent Tribute 1 monster (for no effect).",
-            "descHead": "Tribute 1 monster; make your opponent Tribute 1 monster (for no effect)."
-        },
-        {
-            "id": 70138455,
-            "name": "Blast Juggler",
-            "type": "Effect Monster",
-            "set": "MRD",
-            "status": "unimplemented",
-            "leftover": "You can only activate this effect during your Standby Phase.",
-            "descHead": "You can only activate this effect during your Standby Phase. Tribute this face-up card to select and destroy 2 face-up monsters with an ATK 1000 or less."
-        },
-        {
-            "id": 71107816,
-            "name": "The Bistro Butcher",
-            "type": "Effect Monster",
-            "set": "MRD",
-            "status": "unimplemented",
-            "leftover": "When this card inflicts Battle Damage to your opponent, your opponent draws 2 cards.",
-            "descHead": "When this card inflicts Battle Damage to your opponent, your opponent draws 2 cards."
-        },
-        {
-            "id": 83225447,
-            "name": "Stim-Pack",
-            "type": "Spell Card",
-            "set": "MRD",
-            "status": "stub",
-            "leftover": "During each of your Standby Phases, the equipped monster loses 200 ATK.",
-            "descHead": "The equipped monster gains 700 ATK. During each of your Standby Phases, the equipped monster loses 200 ATK."
-        },
-        {
-            "id": 84926738,
-            "name": "The Immortal of Thunder",
-            "type": "Flip Effect Monster",
-            "set": "MRD",
-            "status": "stub",
-            "leftover": "When this card is sent from the field to the Graveyard, you lose 5000 Life Points.",
-            "descHead": "FLIP: Increase your Life Points by 3000 points. When this card is sent from the field to the Graveyard, you lose 5000 Life Points."
-        },
-        {
-            "id": 87756343,
-            "name": "Larvae Moth",
-            "type": "Effect Monster",
-            "set": "MRD",
-            "status": "unimplemented",
-            "leftover": "",
-            "descHead": "This monster cannot be Normal Summoned or Set. This card can only be Special Summoned by Tributing \"Petit Moth\" during your 2nd turn after \"Petit Moth\" has been"
-        },
-        {
-            "id": 88279736,
-            "name": "Robbin' Goblin",
-            "type": "Trap Card",
-            "set": "MRD",
-            "status": "unimplemented",
-            "leftover": "Each time a monster you control inflicts Battle Damage to your opponent, your opponent discards 1 random card.",
-            "descHead": "Each time a monster you control inflicts Battle Damage to your opponent, your opponent discards 1 random card."
-        },
-        {
-            "id": 93889755,
-            "name": "Crass Clown",
-            "type": "Effect Monster",
-            "set": "MRD",
-            "status": "unimplemented",
-            "leftover": "If this Defense Position card is changed to Attack Position: Target 1 monster your opponent controls; return that target to the hand.",
-            "descHead": "If this Defense Position card is changed to Attack Position: Target 1 monster your opponent controls; return that target to the hand."
-        },
-        {
-            "id": 93900406,
-            "name": "Mushroom Man #2",
-            "type": "Effect Monster",
-            "set": "MRD",
-            "status": "unimplemented",
-            "leftover": "A player controlling this monster loses 300 Life Points during each of his/her Standby Phases when this card is face-up on the field.",
-            "descHead": "A player controlling this monster loses 300 Life Points during each of his/her Standby Phases when this card is face-up on the field. Control of this card is sh"
-        },
-        {
-            "id": 94773007,
-            "name": "Jirai Gumo",
-            "type": "Effect Monster",
-            "set": "MRD",
-            "status": "unimplemented",
-            "leftover": "When this card declares an attack: Toss a coin and call it.",
-            "descHead": "When this card declares an attack: Toss a coin and call it. If you call it wrong, lose half your Life Points."
         },
         {
             "id": 98069388,
@@ -1306,22 +1011,13 @@
             "descHead": "When a monster(s) would be Summoned: Tribute 1 monster; negate the Summon, and if you do, destroy that monster(s)."
         },
         {
-            "id": 596051,
-            "name": "Snake Fang",
-            "type": "Trap Card",
-            "set": "SRL",
-            "status": "unimplemented",
-            "leftover": "Decrease 1 selected monster's DEF by 500 points during the turn this card is activated.",
-            "descHead": "Decrease 1 selected monster's DEF by 500 points during the turn this card is activated."
-        },
-        {
             "id": 3056267,
             "name": "Invader of the Throne",
             "type": "Flip Effect Monster",
             "set": "SRL",
             "status": "unimplemented",
-            "leftover": "FLIP: Target 1 monster your opponent controls; switch control of it with this card.",
-            "descHead": "FLIP: Target 1 monster your opponent controls; switch control of it with this card. This effect cannot be activated during the Battle Phase."
+            "leftover": "FLIP: Select 1 monster on your opponent's side of the field and switch control of it with this card.",
+            "descHead": "FLIP: Select 1 monster on your opponent's side of the field and switch control of it with this card. This effect cannot be activated during the Battle Phase."
         },
         {
             "id": 4849037,
@@ -1329,7 +1025,7 @@
             "type": "Ritual Monster",
             "set": "SRL",
             "status": "unimplemented",
-            "leftover": "This monster can only be Ritual Summoned with the Ritual Spell Card, \"Commencement Dance\".",
+            "leftover": "",
             "descHead": "This monster can only be Ritual Summoned with the Ritual Spell Card, \"Commencement Dance\". You must also offer monsters whose total Level Stars equal 6 or more "
         },
         {
@@ -1351,24 +1047,6 @@
             "descHead": "Change the battle positions of all Attack Position monsters on the field to Defense Position and vice-versa. These positions cannot be changed during the turn t"
         },
         {
-            "id": 16430187,
-            "name": "The Reliable Guardian",
-            "type": "Spell Card",
-            "set": "SRL",
-            "status": "unimplemented",
-            "leftover": "Increase 1 face-up monster's DEF by 700 points until the end of this turn.",
-            "descHead": "Increase 1 face-up monster's DEF by 700 points until the end of this turn."
-        },
-        {
-            "id": 16762927,
-            "name": "Gravekeeper's Servant",
-            "type": "Spell Card",
-            "set": "SRL",
-            "status": "unimplemented",
-            "leftover": "Your opponent must send 1 card from the top of their Deck to the Graveyard to declare an attack.",
-            "descHead": "Your opponent must send 1 card from the top of their Deck to the Graveyard to declare an attack."
-        },
-        {
             "id": 17375316,
             "name": "Confiscation",
             "type": "Spell Card",
@@ -1385,15 +1063,6 @@
             "status": "unimplemented",
             "leftover": "When your opponent activates a Spell Card that targets exactly 1 monster (and no other cards) on the field: Target another card that would be an appropriate tar",
             "descHead": "When your opponent activates a Spell Card that targets exactly 1 monster (and no other cards) on the field: Target another card that would be an appropriate tar"
-        },
-        {
-            "id": 19384334,
-            "name": "Molten Destruction",
-            "type": "Spell Card",
-            "set": "SRL",
-            "status": "unimplemented",
-            "leftover": "All FIRE monsters gain 500 ATK and lose 400 DEF.",
-            "descHead": "All FIRE monsters gain 500 ATK and lose 400 DEF."
         },
         {
             "id": 19406822,
@@ -1437,8 +1106,8 @@
             "type": "Effect Monster",
             "set": "SRL",
             "status": "stub",
-            "leftover": ", then you can Special Summon any number of \"Nimble Momonga\" from your Deck in face-down Defense Position.",
-            "descHead": "If this card is destroyed by battle and sent to the GY: Gain 1000 LP, then you can Special Summon any number of \"Nimble Momonga\" from your Deck in face-down Def"
+            "leftover": ", then you can Special Summon any number of \"Nimble Momongas\" from your Deck in face-down Defense Position.",
+            "descHead": "When this card is destroyed by battle and sent to the Graveyard: Gain 1000 Life Points, then you can Special Summon any number of \"Nimble Momongas\" from your De"
         },
         {
             "id": 23289281,
@@ -1450,21 +1119,12 @@
             "descHead": "You can double the original ATK of this card once per turn. If you used this effect, destroy this card during the End Phase."
         },
         {
-            "id": 23401839,
-            "name": "Senju of the Thousand Hands",
-            "type": "Effect Monster",
-            "set": "SRL",
-            "status": "unimplemented",
-            "leftover": "When this card is Normal or Flip Summoned: You can add 1 Ritual Monster from your Deck to your hand.",
-            "descHead": "When this card is Normal or Flip Summoned: You can add 1 Ritual Monster from your Deck to your hand."
-        },
-        {
             "id": 30243636,
             "name": "Hungry Burger",
             "type": "Ritual Monster",
             "set": "SRL",
             "status": "unimplemented",
-            "leftover": "This monster can only be Ritual Summoned with the Ritual Spell Card, \"Hamburger Recipe\".",
+            "leftover": "",
             "descHead": "This monster can only be Ritual Summoned with the Ritual Spell Card, \"Hamburger Recipe\". You must also Tribute monsters whose total Level Stars equal 6 or more "
         },
         {
@@ -1504,15 +1164,6 @@
             "descHead": "(This card is always treated as a \"Toon\" card.)\nCannot be Normal Summoned/Set. Must first be Special Summoned (from your hand) by Tributing 2 monsters, while yo"
         },
         {
-            "id": 42703248,
-            "name": "Giant Trunade",
-            "type": "Spell Card",
-            "set": "SRL",
-            "status": "unimplemented",
-            "leftover": "Return all Spell and Trap Cards on the field to the hand.",
-            "descHead": "Return all Spell and Trap Cards on the field to the hand."
-        },
-        {
             "id": 42829885,
             "name": "The Forceful Sentry",
             "type": "Spell Card",
@@ -1540,15 +1191,6 @@
             "descHead": "Pay 1000 LP; your opponent discards 1 random card, and if they have any other cards in their hand, discard 1 more card of their choice."
         },
         {
-            "id": 45778932,
-            "name": "Rising Air Current",
-            "type": "Spell Card",
-            "set": "SRL",
-            "status": "unimplemented",
-            "leftover": "All WIND monsters gain 500 ATK and lose 400 DEF.",
-            "descHead": "All WIND monsters gain 500 ATK and lose 400 DEF."
-        },
-        {
             "id": 53183600,
             "name": "Blue-Eyes Toon Dragon",
             "type": "Toon Monster",
@@ -1556,24 +1198,6 @@
             "status": "unimplemented",
             "leftover": "Cannot attack the turn it is Special Summoned.",
             "descHead": "Cannot be Normal Summoned/Set. Must first be Special Summoned (from your hand) by Tributing 2 monsters, while you control \"Toon World\". Cannot attack the turn i"
-        },
-        {
-            "id": 56594520,
-            "name": "Gaia Power",
-            "type": "Spell Card",
-            "set": "SRL",
-            "status": "unimplemented",
-            "leftover": "All EARTH monsters gain 500 ATK and lose 400 DEF.",
-            "descHead": "All EARTH monsters gain 500 ATK and lose 400 DEF."
-        },
-        {
-            "id": 57617178,
-            "name": "Sonic Bird",
-            "type": "Effect Monster",
-            "set": "SRL",
-            "status": "unimplemented",
-            "leftover": "When this card is Normal or Flip Summoned: You can add 1 Ritual Spell from your Deck to your hand.",
-            "descHead": "When this card is Normal or Flip Summoned: You can add 1 Ritual Spell from your Deck to your hand."
         },
         {
             "id": 58551308,
@@ -1666,15 +1290,6 @@
             "descHead": "Increase the DEF of all Defense Position monsters by 500 points."
         },
         {
-            "id": 81777047,
-            "name": "Luminous Spark",
-            "type": "Spell Card",
-            "set": "SRL",
-            "status": "unimplemented",
-            "leftover": "All LIGHT monsters gain 500 ATK and lose 400 DEF.",
-            "descHead": "All LIGHT monsters gain 500 ATK and lose 400 DEF."
-        },
-        {
             "id": 81863068,
             "name": "Hiro's Shadow Scout",
             "type": "Flip Effect Monster",
@@ -1698,7 +1313,7 @@
             "type": "Ritual Monster",
             "set": "SRL",
             "status": "unimplemented",
-            "leftover": "This monster can only be Ritual Summoned with the Ritual Spell Card, \"Turtle Oath\".",
+            "leftover": "",
             "descHead": "This monster can only be Ritual Summoned with the Ritual Spell Card, \"Turtle Oath\". You must also offer monsters whose total Level Stars equal 8 or more as a Tr"
         },
         {
@@ -1709,15 +1324,6 @@
             "status": "stub",
             "leftover": "Cannot attack the turn it is Special Summoned.",
             "descHead": "(This card is always treated as an \"Archfiend\" card.)\nCannot be Normal Summoned/Set. Must first be Special Summoned (from your hand) by Tributing 1 monster, whi"
-        },
-        {
-            "id": 93013676,
-            "name": "Maha Vailo",
-            "type": "Effect Monster",
-            "set": "SRL",
-            "status": "unimplemented",
-            "leftover": "",
-            "descHead": "This card gains 500 ATK for each Equip Card equipped to this card."
         },
         {
             "id": 95174353,
@@ -1745,15 +1351,6 @@
             "status": "unimplemented",
             "leftover": "When the control of this face-up card on the field shifts to your opponent, increase your Life Points by 3000 points.",
             "descHead": "When the control of this face-up card on the field shifts to your opponent, increase your Life Points by 3000 points. This effect can only be used once as long "
-        },
-        {
-            "id": 96890582,
-            "name": "Flash Assailant",
-            "type": "Effect Monster",
-            "set": "SRL",
-            "status": "unimplemented",
-            "leftover": "Decrease the ATK and DEF of this card by 400 points for each card in your hand.",
-            "descHead": "Decrease the ATK and DEF of this card by 400 points for each card in your hand."
         },
         {
             "id": 296499,
@@ -1873,15 +1470,6 @@
             "descHead": "Double the ATK of all Machine monsters you currently control, until the end of this turn. During the End Phase of this turn, destroy those monsters."
         },
         {
-            "id": 23471572,
-            "name": "Solomon's Lawbook",
-            "type": "Trap Card",
-            "set": "PSV",
-            "status": "unimplemented",
-            "leftover": "Skip your next Standby Phase.",
-            "descHead": "Skip your next Standby Phase."
-        },
-        {
             "id": 27911549,
             "name": "Parasite Paracide",
             "type": "Flip Effect Monster",
@@ -1898,24 +1486,6 @@
             "status": "unimplemented",
             "leftover": "Your opponent must keep their hand revealed.",
             "descHead": "Your opponent must keep their hand revealed. Once per turn, during your opponent's Standby Phase, if they have a Spell(s) in their hand: They gain 1000 LP if th"
-        },
-        {
-            "id": 35316708,
-            "name": "Time Seal",
-            "type": "Trap Card",
-            "set": "PSV",
-            "status": "unimplemented",
-            "leftover": "Skip the Draw Phase of your opponent's next turn.",
-            "descHead": "Skip the Draw Phase of your opponent's next turn."
-        },
-        {
-            "id": 35346968,
-            "name": "Solemn Wishes",
-            "type": "Trap Card",
-            "set": "PSV",
-            "status": "unimplemented",
-            "leftover": "Increase your Life Points by 500 points each time you draw a card (or cards).",
-            "descHead": "Increase your Life Points by 500 points each time you draw a card (or cards)."
         },
         {
             "id": 36280194,
@@ -2013,8 +1583,8 @@
             "type": "Effect Monster",
             "set": "PSV",
             "status": "unimplemented",
-            "leftover": "If this card is Normal or Flip Summoned: Target 1 monster your opponent controls; this card gains the following effect.<br>●While this card is in the Monster Zo",
-            "descHead": "If this card is Normal or Flip Summoned: Target 1 monster your opponent controls; this card gains the following effect.<br>●While this card is in the Monster Zo"
+            "leftover": "When this monster is summoned (excluding Special Summon), select 1 of your opponent's monsters.",
+            "descHead": "When this monster is summoned (excluding Special Summon), select 1 of your opponent's monsters. As long as this card remains face-up on the field, the selected "
         },
         {
             "id": 54109233,
@@ -2328,8 +1898,8 @@
             "type": "Effect Monster",
             "set": "LON",
             "status": "stub",
-            "leftover": "Once per turn, during your opponent's End Phase: You can                                                                                      .",
-            "descHead": "Cannot be Normal Summoned/Set. Must first be Special Summoned (from your hand) by banishing 1 WIND monster from your GY. Once per turn, during your opponent's E"
+            "leftover": "During your opponent's End Phase, you can select 1 face-up monster your opponent controls, and change its battle position.",
+            "descHead": "This card cannot be Normal Summoned or Set. This card can only be Special Summoned by removing from play 1 WIND monster in your Graveyard. During your opponent'"
         },
         {
             "id": 12953226,
@@ -2375,15 +1945,6 @@
             "status": "unimplemented",
             "leftover": "Select 1 face-up Spell Card on the field.",
             "descHead": "Select 1 face-up Spell Card on the field. The controller of the Spell Card takes 500 points of damage during each of your Standby Phases. When the selected card"
-        },
-        {
-            "id": 21297224,
-            "name": "Hysteric Fairy",
-            "type": "Effect Monster",
-            "set": "LON",
-            "status": "unimplemented",
-            "leftover": "Tribute 2 monsters on your side of the field to increase your Life Points by 1000 points.",
-            "descHead": "Tribute 2 monsters on your side of the field to increase your Life Points by 1000 points."
         },
         {
             "id": 21558682,
@@ -2530,6 +2091,15 @@
             "descHead": "Tribute this face-up card to return 1 of your monsters destroyed as a result of battle during this turn to the top of your Deck."
         },
         {
+            "id": 40916023,
+            "name": "Aqua Spirit",
+            "type": "Effect Monster",
+            "set": "LON",
+            "status": "stub",
+            "leftover": "During each of your opponent's Standby Phases, you can change the battle position of 1 of your opponent's face-up Monster Cards.",
+            "descHead": "This card cannot be Normal Summoned or Set. This card can only be Special Summoned by removing from play 1 WATER monster in your Graveyard. During each of your "
+        },
+        {
             "id": 41855169,
             "name": "Jowgen the Spiritualist",
             "type": "Effect Monster",
@@ -2582,15 +2152,6 @@
             "status": "stub",
             "leftover": "This card must be in the Graveyard to activate and to resolve this effect.",
             "descHead": "Once per turn, during your Standby Phase: You gain 200 LP. This card must be in the Graveyard to activate and to resolve this effect."
-        },
-        {
-            "id": 64752646,
-            "name": "Fire Princess",
-            "type": "Effect Monster",
-            "set": "LON",
-            "status": "unimplemented",
-            "leftover": "Each time you gain Life Points, inflict 500 damage to your opponent.",
-            "descHead": "Each time you gain Life Points, inflict 500 damage to your opponent."
         },
         {
             "id": 65475294,
@@ -2764,15 +2325,6 @@
             "descHead": "This card can only be placed on the field by the effect of \"Destiny Board\"."
         },
         {
-            "id": 95220856,
-            "name": "Vengeful Bog Spirit",
-            "type": "Spell Card",
-            "set": "LON",
-            "status": "unimplemented",
-            "leftover": "Monsters cannot attack the turn they are Summoned.",
-            "descHead": "Monsters cannot attack the turn they are Summoned."
-        },
-        {
             "id": 95286165,
             "name": "De-Fusion",
             "type": "Spell Card",
@@ -2834,6 +2386,15 @@
             "status": "unimplemented",
             "leftover": "This card returns to its owner's hand during the End Phase of the turn it is Normal Summoned or flipped face-up.",
             "descHead": "This card cannot be Special Summoned. This card returns to its owner's hand during the End Phase of the turn it is Normal Summoned or flipped face-up. When this"
+        },
+        {
+            "id": 3682106,
+            "name": "Double Snare",
+            "type": "Spell Card",
+            "set": "LOD",
+            "status": "unimplemented",
+            "leftover": "Destroy 1 face-up card on the field that has an effect that negates Trap Cards' effects.",
+            "descHead": "Destroy 1 face-up card on the field that has an effect that negates Trap Cards' effects."
         },
         {
             "id": 6979239,
@@ -2989,15 +2550,6 @@
             "descHead": "Look at your opponent's hand. Select and discard 1 Spirit monster to the Graveyard if Spirit monsters exist in his/her hand."
         },
         {
-            "id": 37620434,
-            "name": "Shadow Tamer",
-            "type": "Flip Effect Monster",
-            "set": "LOD",
-            "status": "stub",
-            "leftover": "FLIP: Target 1 Fiend-Type monster your opponent controls; take control of that target until the End Phase.",
-            "descHead": "(This card is always treated as an \"Archfiend\" card.)\nFLIP: Target 1 Fiend-Type monster your opponent controls; take control of that target until the End Phase."
-        },
-        {
             "id": 37684215,
             "name": "Fusion Sword Murasame Blade",
             "type": "Spell Card",
@@ -3050,6 +2602,15 @@
             "status": "stub",
             "leftover": "If this card is Normal Summoned or flipped face-up, look at 1 card on the top of your Deck during your next Draw Phase (before you draw), and return the card to",
             "descHead": "This card cannot be Special Summoned. This card returns to the owner's hand during the End Phase of the turn that this card is Normal Summoned or flipped face-u"
+        },
+        {
+            "id": 40703393,
+            "name": "The Puppet Magic of Dark Ruler",
+            "type": "Spell Card",
+            "set": "LOD",
+            "status": "stub",
+            "leftover": "Select 1 Fiend-Type monster from your Graveyard.",
+            "descHead": "Select 1 Fiend-Type monster from your Graveyard. Remove from play monsters on your side of the field whose total Levels exactly equal the Level of the selected "
         },
         {
             "id": 43586926,
@@ -3151,15 +2712,6 @@
             "descHead": "As long as this card remains face-up on the field, both players must turn their respective Decks upside down and proceed with the current Duel."
         },
         {
-            "id": 63018132,
-            "name": "Dragon Manipulator",
-            "type": "Flip Effect Monster",
-            "set": "LOD",
-            "status": "unimplemented",
-            "leftover": "FLIP: Take control of 1 face-up Dragon-Type monster on your opponent's side of the field until the end of the End Phase.",
-            "descHead": "FLIP: Take control of 1 face-up Dragon-Type monster on your opponent's side of the field until the end of the End Phase."
-        },
-        {
             "id": 63789924,
             "name": "Smoke Grenade of the Thief",
             "type": "Spell Card",
@@ -3230,15 +2782,6 @@
             "status": "unimplemented",
             "leftover": "This card returns to its owner's hand during the End Phase of the turn it is Normal Summoned or flipped face-up.",
             "descHead": "This card cannot be Special Summoned. This card returns to its owner's hand during the End Phase of the turn it is Normal Summoned or flipped face-up. If this c"
-        },
-        {
-            "id": 76075810,
-            "name": "Throwstone Unit",
-            "type": "Effect Monster",
-            "set": "LOD",
-            "status": "unimplemented",
-            "leftover": "Tribute 1 Warrior-Type monster on your side of the field to destroy 1 face-up monster on the field whose DEF is equal to or less than the ATK of this card.",
-            "descHead": "Tribute 1 Warrior-Type monster on your side of the field to destroy 1 face-up monster on the field whose DEF is equal to or less than the ATK of this card."
         },
         {
             "id": 76297408,
@@ -3471,8 +3014,8 @@
             "type": "Flip Effect Monster",
             "set": "PGD",
             "status": "unimplemented",
-            "leftover": "FLIP: Target 1 monster your opponent controls; gain control of it (until the End Phase), and if you do, it can attack your opponent directly this turn.",
-            "descHead": "FLIP: Target 1 monster your opponent controls; gain control of it (until the End Phase), and if you do, it can attack your opponent directly this turn."
+            "leftover": "FLIP: Take control of 1 monster on your opponent's side of the field until the end of the turn that this card's effect is activated.",
+            "descHead": "FLIP: Take control of 1 monster on your opponent's side of the field until the end of the turn that this card's effect is activated. When the controlled monster"
         },
         {
             "id": 5990062,
@@ -3482,15 +3025,6 @@
             "status": "unimplemented",
             "leftover": "Send all cards in your hand and on your side of the field to the Graveyard.",
             "descHead": "Send all cards in your hand and on your side of the field to the Graveyard. Call the type of card (Spell, Trap, or Monster) on top of your Deck. If you call it "
-        },
-        {
-            "id": 10012614,
-            "name": "Banner of Courage",
-            "type": "Spell Card",
-            "set": "PGD",
-            "status": "unimplemented",
-            "leftover": "All monsters you control gain 200 ATK during your Battle Phase only.",
-            "descHead": "All monsters you control gain 200 ATK during your Battle Phase only."
         },
         {
             "id": 10248192,
@@ -3527,15 +3061,6 @@
             "status": "stub",
             "leftover": "When this card attacks an opponent's face-down Defense Position monster, this card's ATK becomes 2400 during damage calculation only.",
             "descHead": "Once per turn, you can flip this card into face-down Defense Position. When this card attacks an opponent's face-down Defense Position monster, this card's ATK "
-        },
-        {
-            "id": 16222645,
-            "name": "Sasuke Samurai",
-            "type": "Effect Monster",
-            "set": "PGD",
-            "status": "unimplemented",
-            "leftover": "At the start of the Damage Step, if this card attacks a face-down Defense Position monster: Destroy that face-down monster.",
-            "descHead": "At the start of the Damage Step, if this card attacks a face-down Defense Position monster: Destroy that face-down monster."
         },
         {
             "id": 16509093,
@@ -3599,6 +3124,15 @@
             "status": "unimplemented",
             "leftover": "When there are 4 or more monsters on the field: Destroy all face-up monsters.",
             "descHead": "When there are 4 or more monsters on the field: Destroy all face-up monsters."
+        },
+        {
+            "id": 38699854,
+            "name": "Book of Taiyou",
+            "type": "Spell Card",
+            "set": "PGD",
+            "status": "unimplemented",
+            "leftover": "Flip 1 face-down monster on the field into face-up Attack Position.",
+            "descHead": "Flip 1 face-down monster on the field into face-up Attack Position."
         },
         {
             "id": 38723936,
@@ -3871,15 +3405,6 @@
             "descHead": "When this card inflicts battle damage to your opponent: You can activate 1 of these effects;\r\n● Discard 1 random card from their hand.\r\n● Send the top 2 cards o"
         },
         {
-            "id": 77561728,
-            "name": "Disturbance Strategy",
-            "type": "Trap Card",
-            "set": "PGD",
-            "status": "unimplemented",
-            "leftover": "Your opponent shuffles their entire hand into the Deck, then draws the same number of cards.",
-            "descHead": "Your opponent shuffles their entire hand into the Deck, then draws the same number of cards."
-        },
-        {
             "id": 77876207,
             "name": "Secret Pass to the Treasures",
             "type": "Spell Card",
@@ -3986,15 +3511,6 @@
             "status": "stub",
             "leftover": "When this card is Normal Summoned or flipped face-up:",
             "descHead": "Cannot be Special Summoned. During the End Phase of the turn this card is Normal Summoned or flipped face-up: Return it to the hand. When this card is Normal Su"
-        },
-        {
-            "id": 90980792,
-            "name": "Dark Jeroid",
-            "type": "Effect Monster",
-            "set": "PGD",
-            "status": "unimplemented",
-            "leftover": "If this card is Summoned: Target 1 face-up monster on the field; it loses 800 ATK.",
-            "descHead": "If this card is Summoned: Target 1 face-up monster on the field; it loses 800 ATK."
         },
         {
             "id": 98745000,
@@ -4357,15 +3873,6 @@
             "descHead": "A monster that this card destroys as a result of battle is removed from play."
         },
         {
-            "id": 55821894,
-            "name": "Amazoness Fighter",
-            "type": "Effect Monster",
-            "set": "MFC",
-            "status": "unimplemented",
-            "leftover": "You take no battle damage from attacks involving this card.",
-            "descHead": "You take no battle damage from attacks involving this card."
-        },
-        {
             "id": 59364406,
             "name": "Burning Beast",
             "type": "Union Effect Monster",
@@ -4510,15 +4017,6 @@
             "descHead": "Negate the effect of a Monster Card that targets this 1 card."
         },
         {
-            "id": 73398797,
-            "name": "Paladin of White Dragon",
-            "type": "Ritual Effect Monster",
-            "set": "MFC",
-            "status": "stub",
-            "leftover": "At the start of the Damage Step, if this card attacks a face-down Defense Position monster: Destroy that face-down monster.",
-            "descHead": "You can Ritual Summon this card with \"White Dragon Ritual\". At the start of the Damage Step, if this card attacks a face-down Defense Position monster: Destroy "
-        },
-        {
             "id": 73414375,
             "name": "Dimension Jar",
             "type": "Flip Effect Monster",
@@ -4605,7 +4103,7 @@
             "type": "Spell Card",
             "set": "MFC",
             "status": "unimplemented",
-            "leftover": "(This card is not treated as a \"Fusion\" card.) If your opponent controls a monster: Pay 1000 LP, then target 1 Level 7 or higher Spellcaster monster you control",
+            "leftover": "If your opponent controls a monster: Pay 1000 LP, then target 1 Level 7 or higher Spellcaster monster you control; this turn, it must attack all monsters your o",
             "descHead": "(This card is not treated as a \"Fusion\" card.)\r\nIf your opponent controls a monster: Pay 1000 LP, then target 1 Level 7 or higher Spellcaster monster you contro"
         },
         {
@@ -4654,15 +4152,6 @@
             "descHead": "The control of all monsters on the field returns to the owners."
         },
         {
-            "id": 95451366,
-            "name": "Exhausting Spell",
-            "type": "Trap Card",
-            "set": "MFC",
-            "status": "unimplemented",
-            "leftover": "Remove all Spell Counters on both sides of the field.",
-            "descHead": "Remove all Spell Counters on both sides of the field."
-        },
-        {
             "id": 95841282,
             "name": "Cat's Ear Tribe",
             "type": "Effect Monster",
@@ -4670,15 +4159,6 @@
             "status": "unimplemented",
             "leftover": "The original ATK of your opponent's monster(s) that battles with this card during his/her turn becomes 200 points during the Damage Step.",
             "descHead": "The original ATK of your opponent's monster(s) that battles with this card during his/her turn becomes 200 points during the Damage Step."
-        },
-        {
-            "id": 96677818,
-            "name": "Spellbook Organization",
-            "type": "Spell Card",
-            "set": "MFC",
-            "status": "unimplemented",
-            "leftover": "Look at the top 3 cards of your Deck, then return them to the top of the Deck in any order.",
-            "descHead": "Look at the top 3 cards of your Deck, then return them to the top of the Deck in any order."
         },
         {
             "id": 99517131,
@@ -4794,17 +4274,8 @@
             "type": "Effect Monster",
             "set": "DCR",
             "status": "unimplemented",
-            "leftover": "If this card is destroyed by battle and sent to the GY: Roll a six-sided die, then you can Special Summon 1 Fairy monster from your GY whose Level is equal to t",
-            "descHead": "If this card is destroyed by battle and sent to the GY: Roll a six-sided die, then you can Special Summon 1 Fairy monster from your GY whose Level is equal to t"
-        },
-        {
-            "id": 16268841,
-            "name": "Zolga",
-            "type": "Effect Monster",
-            "set": "DCR",
-            "status": "unimplemented",
-            "leftover": "When a monster is Tribute Summoned by Tributing this card: The owner of this card gains 2000 Life Points.",
-            "descHead": "When a monster is Tribute Summoned by Tributing this card: The owner of this card gains 2000 Life Points."
+            "leftover": "When this card is destroyed and sent to the Graveyard as a result of battle, roll a six-sided die.",
+            "descHead": "When this card is destroyed and sent to the Graveyard as a result of battle, roll a six-sided die. You can Special Summon 1 Fairy-Type monster from your Graveya"
         },
         {
             "id": 20065549,
@@ -4877,15 +4348,6 @@
             "status": "stub",
             "leftover": "If it inflicts battle damage to your opponent: Gain LP equal to the damage inflicted.",
             "descHead": "Equip only to a Fairy-Type monster. It gains 500 ATK. If it inflicts battle damage to your opponent: Gain LP equal to the damage inflicted."
-        },
-        {
-            "id": 28121403,
-            "name": "Really Eternal Rest",
-            "type": "Trap Card",
-            "set": "DCR",
-            "status": "unimplemented",
-            "leftover": "Destroy all monsters equipped with an Equip Card(s).",
-            "descHead": "Destroy all monsters equipped with an Equip Card(s)."
         },
         {
             "id": 29228529,
@@ -5023,15 +4485,6 @@
             "descHead": "The ATK of this card becomes twice the original ATK of 1 monster that you Tributed for the Tribute Summon of this card."
         },
         {
-            "id": 48768179,
-            "name": "Dark Scorpion - Gorg the Strong",
-            "type": "Effect Monster",
-            "set": "DCR",
-            "status": "unimplemented",
-            "leftover": "When this card inflicts Battle Damage to your opponent, you can activate 1 of these effects: ● Target 1 monster your opponent controls; return that target to th",
-            "descHead": "When this card inflicts Battle Damage to your opponent, you can activate 1 of these effects:\n● Target 1 monster your opponent controls; return that target to th"
-        },
-        {
             "id": 49217579,
             "name": "Mirage Knight",
             "type": "Effect Monster",
@@ -5145,7 +4598,7 @@
             "type": "Ritual Effect Monster",
             "set": "DCR",
             "status": "stub",
-            "leftover": "This card can only be Ritual Summoned with the Ritual Spell Card, \"Incandescent Ordeal\".",
+            "leftover": "Each time you or your opponent activates 1 Spell Card, put 1 Spell Counter on this card.",
             "descHead": "This card can only be Ritual Summoned with the Ritual Spell Card, \"Incandescent Ordeal\". You must also Tribute monsters whose total Levels equal 7 or more from "
         },
         {
@@ -5165,15 +4618,6 @@
             "status": "unimplemented",
             "leftover": "If you control a face-up \"Don Zaloog\": You can Special Summon any number of \"Dark Scorpion\" monsters from your hand, but only 1 copy of each.",
             "descHead": "If you control a face-up \"Don Zaloog\": You can Special Summon any number of \"Dark Scorpion\" monsters from your hand, but only 1 copy of each."
-        },
-        {
-            "id": 68304813,
-            "name": "Precious Cards from Beyond",
-            "type": "Spell Card",
-            "set": "DCR",
-            "status": "unimplemented",
-            "leftover": "When you Tribute Summon a monster using 2 or more Tributes: Draw 2 cards.",
-            "descHead": "When you Tribute Summon a monster using 2 or more Tributes: Draw 2 cards."
         },
         {
             "id": 68427465,
@@ -5199,8 +4643,8 @@
             "type": "Spell Card",
             "set": "DCR",
             "status": "unimplemented",
-            "leftover": "Tribute 1 \"Archfiend\" monster, then target 1 \"Terrorking Archfiend\" you control; it can attack directly this turn.",
-            "descHead": "Tribute 1 \"Archfiend\" monster, then target 1 \"Terrorking Archfiend\" you control; it can attack directly this turn."
+            "leftover": "Tribute 1 Archfiend monster on your side of the field.",
+            "descHead": "Tribute 1 Archfiend monster on your side of the field. During this turn, 1 \"Terrorking Archfiend\" on your side of the field can attack your opponent's Life Poin"
         },
         {
             "id": 71200730,
@@ -5271,8 +4715,8 @@
             "type": "Effect Monster",
             "set": "DCR",
             "status": "unimplemented",
-            "leftover": "If this card is destroyed by battle and sent to the GY: Target 2 cards in your opponent's GY; shuffle them into the Deck.",
-            "descHead": "If this card is destroyed by battle and sent to the GY: Target 2 cards in your opponent's GY; shuffle them into the Deck."
+            "leftover": "When this card is destroyed and sent to the Graveyard as a result of battle, select 2 cards from your opponent's Graveyard, add them to your opponent's Deck and",
+            "descHead": "When this card is destroyed and sent to the Graveyard as a result of battle, select 2 cards from your opponent's Graveyard, add them to your opponent's Deck and"
         },
         {
             "id": 81985784,
@@ -5282,15 +4726,6 @@
             "status": "unimplemented",
             "leftover": "FLIP: Target 1 card in your Graveyard; shuffle that target into the Deck.",
             "descHead": "FLIP: Target 1 card in your Graveyard; shuffle that target into the Deck."
-        },
-        {
-            "id": 82108372,
-            "name": "Mudora",
-            "type": "Effect Monster",
-            "set": "DCR",
-            "status": "unimplemented",
-            "leftover": "This card gains 200 ATK for each Fairy-Type monster in your Graveyard.",
-            "descHead": "This card gains 200 ATK for each Fairy-Type monster in your Graveyard."
         },
         {
             "id": 82529174,
@@ -5343,7 +4778,7 @@
             "type": "Ritual Effect Monster",
             "set": "DCR",
             "status": "unimplemented",
-            "leftover": "This card can only be Ritual Summoned with the Ritual Spell Card, \"Shinato's Ark\".",
+            "leftover": "When this card destroys a Defense Position monster and sends it to the Graveyard as a result of battle, inflict damage to your opponent's Life Points equal to t",
             "descHead": "This card can only be Ritual Summoned with the Ritual Spell Card, \"Shinato's Ark\". You must also Tribute monsters whose total Levels equal 8 or more from the fi"
         },
         {
@@ -5379,8 +4814,8 @@
             "type": "Trap Card",
             "set": "DCR",
             "status": "unimplemented",
-            "leftover": "Activate this card by targeting 1 \"Archfiend\" monster you control.",
-            "descHead": "Activate this card by targeting 1 \"Archfiend\" monster you control. Your opponent also pays the same LP that you pay for that monster during the Standby Phase. W"
+            "leftover": "Select 1 Archfiend monster on your side of the field to activate this card.",
+            "descHead": "Select 1 Archfiend monster on your side of the field to activate this card. Your opponent also pays the same Life Points that you pay for the selected monster d"
         },
         {
             "id": 94585852,
@@ -5446,15 +4881,6 @@
             "descHead": "When this card is Normal Summoned or Flip Summoned, you can Special Summon any number of \"Don Turtle\"(s) from your hand."
         },
         {
-            "id": 4732017,
-            "name": "Molten Zombie",
-            "type": "Effect Monster",
-            "set": "IOC",
-            "status": "unimplemented",
-            "leftover": "When this card is Special Summoned from the Graveyard: Draw 1 card.",
-            "descHead": "When this card is Special Summoned from the Graveyard: Draw 1 card."
-        },
-        {
             "id": 4896788,
             "name": "Spirit of the Pot of Greed",
             "type": "Effect Monster",
@@ -5489,15 +4915,6 @@
             "status": "stub",
             "leftover": "This card cannot attack the turn you activate this effect.",
             "descHead": "Cannot be Normal Summoned/Set. Must first be Special Summoned (from your hand) by banishing 1 LIGHT and 1 DARK monster from your GY. Once per turn: You can targ"
-        },
-        {
-            "id": 14618326,
-            "name": "Crimson Ninja",
-            "type": "Flip Effect Monster",
-            "set": "IOC",
-            "status": "stub",
-            "leftover": "(If the target is Set, reveal it, and destroy it if it is a Trap Card.",
-            "descHead": "FLIP: Target 1 Trap Card on the field; destroy that target. (If the target is Set, reveal it, and destroy it if it is a Trap Card. Otherwise, return it to its o"
         },
         {
             "id": 19252988,
@@ -5563,15 +4980,6 @@
             "descHead": "If this card battles a Fiend or Zombie-Type monster, destroy that monster at the end of the Damage Step."
         },
         {
-            "id": 22431243,
-            "name": "Ultra Evolution Pill",
-            "type": "Spell Card",
-            "set": "IOC",
-            "status": "unimplemented",
-            "leftover": "Tribute 1 Reptile monster; Special Summon 1 Dinosaur monster from your hand.",
-            "descHead": "Tribute 1 Reptile monster; Special Summon 1 Dinosaur monster from your hand."
-        },
-        {
             "id": 22493811,
             "name": "Multiplication of Ants",
             "type": "Spell Card",
@@ -5615,15 +5023,6 @@
             "status": "unimplemented",
             "leftover": "If \"Black Luster Soldier - Envoy of the Beginning\" or \"Chaos Emperor Dragon - Envoy of the End\" is on the field: Target 2 of your banished cards; add both those",
             "descHead": "If \"Black Luster Soldier - Envoy of the Beginning\" or \"Chaos Emperor Dragon - Envoy of the End\" is on the field: Target 2 of your banished cards; add both those"
-        },
-        {
-            "id": 30914564,
-            "name": "Sacred Crane",
-            "type": "Effect Monster",
-            "set": "IOC",
-            "status": "unimplemented",
-            "leftover": "If this card is Special Summoned: Draw 1 card.",
-            "descHead": "If this card is Special Summoned: Draw 1 card."
         },
         {
             "id": 33423043,
@@ -5779,15 +5178,6 @@
             "descHead": "Activate by declaring 1 monster Attribute. All face-up monsters become that Attribute."
         },
         {
-            "id": 56916805,
-            "name": "Energy Drain",
-            "type": "Trap Card",
-            "set": "IOC",
-            "status": "unimplemented",
-            "leftover": "Target 1 face-up monster you control; it gains 200 ATK/DEF for each card your opponent currently has in their hand, until the end of this turn.",
-            "descHead": "Target 1 face-up monster you control; it gains 200 ATK/DEF for each card your opponent currently has in their hand, until the end of this turn."
-        },
-        {
             "id": 57281778,
             "name": "Ryu Kokki",
             "type": "Effect Monster",
@@ -5860,24 +5250,6 @@
             "descHead": "Target 1 Beast or Beast-Warrior-Type monster; it gains ATK equal to its current DEF until the End Phase. During the End Phase, destroy it."
         },
         {
-            "id": 65064143,
-            "name": "Anti-Aircraft Flower",
-            "type": "Effect Monster",
-            "set": "IOC",
-            "status": "unimplemented",
-            "leftover": "By Tributing 1 Insect-Type monster on your side of the field, inflict 800 points of damage to your opponent's Life Points.",
-            "descHead": "By Tributing 1 Insect-Type monster on your side of the field, inflict 800 points of damage to your opponent's Life Points."
-        },
-        {
-            "id": 68007326,
-            "name": "Guardian Angel Joan",
-            "type": "Effect Monster",
-            "set": "IOC",
-            "status": "unimplemented",
-            "leftover": "When this card destroys a monster by battle and sends it to the Graveyard: Gain Life Points equal to the original ATK of that destroyed monster in the Graveyard",
-            "descHead": "When this card destroys a monster by battle and sends it to the Graveyard: Gain Life Points equal to the original ATK of that destroyed monster in the Graveyard"
-        },
-        {
             "id": 68073522,
             "name": "Soul Absorption",
             "type": "Spell Card",
@@ -5937,8 +5309,8 @@
             "type": "Effect Monster",
             "set": "IOC",
             "status": "unimplemented",
-            "leftover": "During the End Phase, if this card is in the GY because it was sent there this turn: You can send 1 Beast, Beast-Warrior, or Winged Beast monster from your hand",
-            "descHead": "During the End Phase, if this card is in the GY because it was sent there this turn: You can send 1 Beast, Beast-Warrior, or Winged Beast monster from your hand"
+            "leftover": "During the End Phase of the turn this card was sent to the Graveyard: You can send to the Graveyard 1 Beast, Beast-Warrior, or Winged Beast-Type monster from yo",
+            "descHead": "During the End Phase of the turn this card was sent to the Graveyard: You can send to the Graveyard 1 Beast, Beast-Warrior, or Winged Beast-Type monster from yo"
         },
         {
             "id": 77379481,
@@ -5966,15 +5338,6 @@
             "status": "stub",
             "leftover": "You cannot activate other cards or effects during the turn you activate this card's effect.",
             "descHead": "Cannot be Normal Summoned/Set. Must be Special Summoned (from your hand) by banishing 1 LIGHT and 1 DARK monster from your GY. Once per turn: You can pay 1000 L"
-        },
-        {
-            "id": 83133491,
-            "name": "Zero Gravity",
-            "type": "Trap Card",
-            "set": "IOC",
-            "status": "unimplemented",
-            "leftover": "Change the battle positions of all face-up monsters on the field.",
-            "descHead": "Change the battle positions of all face-up monsters on the field."
         },
         {
             "id": 83258273,
@@ -6040,15 +5403,6 @@
             "descHead": "You can only activate this card when your opponent activates a card that targets a monster in the Graveyard. Remove from play all monsters in both players' Grav"
         },
         {
-            "id": 95492061,
-            "name": "Manju of the Ten Thousand Hands",
-            "type": "Effect Monster",
-            "set": "IOC",
-            "status": "unimplemented",
-            "leftover": "When this card is Normal or Flip Summoned: You can add 1 Ritual Monster or 1 Ritual Spell from your Deck to your hand.",
-            "descHead": "When this card is Normal or Flip Summoned: You can add 1 Ritual Monster or 1 Ritual Spell from your Deck to your hand."
-        },
-        {
             "id": 96316857,
             "name": "Recycle",
             "type": "Spell Card",
@@ -6083,15 +5437,6 @@
             "status": "stub",
             "leftover": "Equip only to \"Jinzo\".",
             "descHead": "Equip only to \"Jinzo\". While this card is equipped, the equipped monster's effect does not negate the effects of its controller's Trap Cards. When this card is "
-        },
-        {
-            "id": 2314238,
-            "name": "Dark Magic Attack",
-            "type": "Spell Card",
-            "set": "AST",
-            "status": "unimplemented",
-            "leftover": "If you control \"Dark Magician\": Destroy all Spells and Traps your opponent controls.",
-            "descHead": "If you control \"Dark Magician\": Destroy all Spells and Traps your opponent controls."
         },
         {
             "id": 3136426,
@@ -6229,15 +5574,6 @@
             "descHead": "If you control \"Blue-Eyes White Dragon\": Destroy all monsters your opponent controls. \"Blue-Eyes White Dragon\" you control cannot attack the turn you activate t"
         },
         {
-            "id": 18190572,
-            "name": "Micro Ray",
-            "type": "Trap Card",
-            "set": "AST",
-            "status": "unimplemented",
-            "leftover": "Target 1 face-up monster on the field; that target's DEF becomes 0 until the end of this turn.",
-            "descHead": "Target 1 face-up monster on the field; that target's DEF becomes 0 until the end of this turn."
-        },
-        {
             "id": 18378582,
             "name": "Archlord Zerato",
             "type": "Effect Monster",
@@ -6288,8 +5624,8 @@
             "type": "Effect Monster",
             "set": "AST",
             "status": "unimplemented",
-            "leftover": "When this card is Special Summoned: You can target up to 4 Level 2 or lower Zombie Normal Monsters in your GY; Special Summon those targets.",
-            "descHead": "Cannot be Normal Summoned/Set. Must be Special Summoned by \"The First Sarcophagus\". When this card is Special Summoned: You can target up to 4 Level 2 or lower "
+            "leftover": "When this card is Special Summoned, you can Special Summon up to 4 Level 2 or lower Zombie-Type Normal Monsters from your Graveyard.",
+            "descHead": "This card cannot be Normal Summoned or Set. This card cannot be Special Summoned except by the effect of \"The First Sarcophagus\". When this card is Special Summ"
         },
         {
             "id": 25773409,
@@ -6427,24 +5763,6 @@
             "descHead": "Tribute 1 monster; excavate cards from the top of your Deck until you excavate a monster that can be Normal Summoned/Set. Special Summon it, also send the other"
         },
         {
-            "id": 43714890,
-            "name": "Man-Thro' Tro'",
-            "type": "Effect Monster",
-            "set": "AST",
-            "status": "unimplemented",
-            "leftover": "By Tributing 1 Normal Monster (except a Token) on your side of the field, inflict 800 points of damage to your opponent's Life Points.",
-            "descHead": "By Tributing 1 Normal Monster (except a Token) on your side of the field, inflict 800 points of damage to your opponent's Life Points."
-        },
-        {
-            "id": 44436472,
-            "name": "Double Coston",
-            "type": "Effect Monster",
-            "set": "AST",
-            "status": "unimplemented",
-            "leftover": "This card can be treated as 2 Tributes for the Tribute Summon of a DARK monster.",
-            "descHead": "This card can be treated as 2 Tributes for the Tribute Summon of a DARK monster."
-        },
-        {
             "id": 44595286,
             "name": "Light of Judgment",
             "type": "Trap Card",
@@ -6470,15 +5788,6 @@
             "status": "stub",
             "leftover": "While you control another Pyro-Type monster, this card cannot be attacked.",
             "descHead": "While you control another Pyro-Type monster, this card cannot be attacked. During each of your End Phases: Inflict 500 damage to your opponent."
-        },
-        {
-            "id": 49771608,
-            "name": "Absorbing Kid from the Sky",
-            "type": "Effect Monster",
-            "set": "AST",
-            "status": "unimplemented",
-            "leftover": "When this card destroys a monster and sends it to the Graveyard as a result of battle, increase your Life Points by the Level of the destroyed monster x 300 poi",
-            "descHead": "When this card destroys a monster and sends it to the Graveyard as a result of battle, increase your Life Points by the Level of the destroyed monster x 300 poi"
         },
         {
             "id": 50593156,
@@ -6515,15 +5824,6 @@
             "status": "unimplemented",
             "leftover": "Gains 1500 ATK while you have no cards in your hand nor in your Spell & Trap Zones.",
             "descHead": "Gains 1500 ATK while you have no cards in your hand nor in your Spell & Trap Zones."
-        },
-        {
-            "id": 52768103,
-            "name": "KA-2 Des Scissors",
-            "type": "Effect Monster",
-            "set": "AST",
-            "status": "unimplemented",
-            "leftover": "When this card destroys a monster and sends it to the Graveyard as a result of battle, inflict damage to your opponent's Life Points equal to the Level of the d",
-            "descHead": "When this card destroys a monster and sends it to the Graveyard as a result of battle, inflict damage to your opponent's Life Points equal to the Level of the d"
         },
         {
             "id": 55001420,
@@ -6688,15 +5988,6 @@
             "descHead": "If a face-up FIRE monster(s) you control is destroyed and sent to the GY: Inflict 500 damage to your opponent."
         },
         {
-            "id": 82828051,
-            "name": "Earthquake",
-            "type": "Spell Card",
-            "set": "AST",
-            "status": "unimplemented",
-            "leftover": "Change all face-up monsters on the field to Defense Position.",
-            "descHead": "Change all face-up monsters on the field to Defense Position."
-        },
-        {
             "id": 83228073,
             "name": "Two Thousand Needles",
             "type": "Effect Monster",
@@ -6787,24 +6078,6 @@
             "descHead": "While your Life Points are higher than your opponent's, you can Tribute this card to inflict damage to your opponent equal to the difference. If you do not cont"
         },
         {
-            "id": 93747864,
-            "name": "Desert Sunlight",
-            "type": "Trap Card",
-            "set": "AST",
-            "status": "unimplemented",
-            "leftover": "All monsters on your side of the field are changed to face-up Defense Position.",
-            "descHead": "All monsters on your side of the field are changed to face-up Defense Position."
-        },
-        {
-            "id": 98162242,
-            "name": "Needle Burrower",
-            "type": "Effect Monster",
-            "set": "AST",
-            "status": "unimplemented",
-            "leftover": "When this card destroys a monster and sends it to the Graveyard as a result of battle, inflict damage to your opponent's Life Points equal to the Level of the d",
-            "descHead": "When this card destroys a monster and sends it to the Graveyard as a result of battle, inflict damage to your opponent's Life Points equal to the Level of the d"
-        },
-        {
             "id": 99284890,
             "name": "Avatar of The Pot",
             "type": "Effect Monster",
@@ -6821,24 +6094,6 @@
             "status": "stub",
             "leftover": ", but if this card was Special Summoned by the effect of \"Dark Mimic LV1\", draw 2 cards instead.",
             "descHead": "If this card is destroyed by battle and sent to the GY: Draw 1 card, but if this card was Special Summoned by the effect of \"Dark Mimic LV1\", draw 2 cards inste"
-        },
-        {
-            "id": 4041838,
-            "name": "Ninja Grandmaster Sasuke",
-            "type": "Effect Monster",
-            "set": "SOD",
-            "status": "unimplemented",
-            "leftover": "At the start of the Damage Step, if this card attacks a face-up Defense Position monster: Destroy that monster.",
-            "descHead": "At the start of the Damage Step, if this card attacks a face-up Defense Position monster: Destroy that monster."
-        },
-        {
-            "id": 4929256,
-            "name": "Mobius the Frost Monarch",
-            "type": "Effect Monster",
-            "set": "SOD",
-            "status": "unimplemented",
-            "leftover": "When this card is Tribute Summoned: You can target up to 2 Spell/Trap Cards on the field; destroy those targets.",
-            "descHead": "When this card is Tribute Summoned: You can target up to 2 Spell/Trap Cards on the field; destroy those targets."
         },
         {
             "id": 11224103,
@@ -6904,24 +6159,6 @@
             "descHead": "FLIP: Take control of 1 face-up monster on your opponent's side of the field until the end of this turn."
         },
         {
-            "id": 38479725,
-            "name": "The Trojan Horse",
-            "type": "Effect Monster",
-            "set": "SOD",
-            "status": "unimplemented",
-            "leftover": "When Tribute Summoning an EARTH monster, you can treat this 1 monster as 2 Tributes.",
-            "descHead": "When Tribute Summoning an EARTH monster, you can treat this 1 monster as 2 Tributes."
-        },
-        {
-            "id": 47507260,
-            "name": "Mystic Swordsman LV2",
-            "type": "Effect Monster",
-            "set": "SOD",
-            "status": "stub",
-            "leftover": "At the start of the Damage Step, if this card attacked a face-down Defense Position monster: Destroy that monster.",
-            "descHead": "At the start of the Damage Step, if this card attacked a face-down Defense Position monster: Destroy that monster. During the End Phase, if this card destroyed "
-        },
-        {
             "id": 49441499,
             "name": "Ultimate Insect LV1",
             "type": "Effect Monster",
@@ -6938,15 +6175,6 @@
             "status": "unimplemented",
             "leftover": "Destroy all face-up WATER monsters you control, then you can Special Summon WATER monsters from your hand, up to the number of monsters destroyed by this effect",
             "descHead": "Destroy all face-up WATER monsters you control, then you can Special Summon WATER monsters from your hand, up to the number of monsters destroyed by this effect"
-        },
-        {
-            "id": 52417194,
-            "name": "Heavy Slump",
-            "type": "Trap Card",
-            "set": "SOD",
-            "status": "unimplemented",
-            "leftover": "If your opponent has 8 or more cards in their hand: They shuffle their entire hand into the Deck, then draw 2 cards.",
-            "descHead": "If your opponent has 8 or more cards in their hand: They shuffle their entire hand into the Deck, then draw 2 cards."
         },
         {
             "id": 52648457,
@@ -6976,15 +6204,6 @@
             "descHead": "Activate only if your opponent has 3 or less cards in their hand. Your opponent adds their hand to the Deck and shuffles it, then draws the same number of cards"
         },
         {
-            "id": 53239672,
-            "name": "Spirit Barrier",
-            "type": "Trap Card",
-            "set": "SOD",
-            "status": "unimplemented",
-            "leftover": "While you control a monster, you take no battle damage.",
-            "descHead": "While you control a monster, you take no battle damage."
-        },
-        {
             "id": 54351224,
             "name": "Ritual Weapon",
             "type": "Spell Card",
@@ -6992,15 +6211,6 @@
             "status": "stub",
             "leftover": "Equip only to a Level 6 or lower Ritual Monster.",
             "descHead": "Equip only to a Level 6 or lower Ritual Monster. It gains 1500 ATK and DEF."
-        },
-        {
-            "id": 64751286,
-            "name": "Penumbral Soldier Lady",
-            "type": "Effect Monster",
-            "set": "SOD",
-            "status": "unimplemented",
-            "leftover": "If this card battles a LIGHT monster, this card gains 1000 ATK during the Damage Step only.",
-            "descHead": "If this card battles a LIGHT monster, this card gains 1000 ATK during the Damage Step only."
         },
         {
             "id": 65878864,
@@ -7037,15 +6247,6 @@
             "status": "stub",
             "leftover": ", except this card.",
             "descHead": "This card gains 1000 ATK for each face-up FIRE monster on the field, except this card. You can send 1 other face-up FIRE monster you control to the Graveyard; i"
-        },
-        {
-            "id": 74591968,
-            "name": "Mystic Swordsman LV4",
-            "type": "Effect Monster",
-            "set": "SOD",
-            "status": "stub",
-            "leftover": "At the start of the Damage Step, if this card attacked a face-down Defense Position monster: Destroy that monster.",
-            "descHead": "Cannot be Normal Summoned (but can be Normal Set). At the start of the Damage Step, if this card attacked a face-down Defense Position monster: Destroy that mon"
         },
         {
             "id": 75830094,
@@ -7129,24 +6330,6 @@
             "descHead": "Target 2 Normal Monsters in your GY; add them to your hand."
         },
         {
-            "id": 91862578,
-            "name": "Enraged Muka Muka",
-            "type": "Effect Monster",
-            "set": "SOD",
-            "status": "unimplemented",
-            "leftover": "This card gains 400 ATK and DEF for each card in your hand.",
-            "descHead": "This card gains 400 ATK and DEF for each card in your hand."
-        },
-        {
-            "id": 92084010,
-            "name": "Unshaven Angler",
-            "type": "Effect Monster",
-            "set": "SOD",
-            "status": "unimplemented",
-            "leftover": "When Tribute Summoning a WATER monster, you can treat this 1 monster as 2 Tributes.",
-            "descHead": "When Tribute Summoning a WATER monster, you can treat this 1 monster as 2 Tributes."
-        },
-        {
             "id": 242146,
             "name": "Ballista of Rampart Smashing",
             "type": "Spell Card",
@@ -7217,24 +6400,6 @@
             "status": "stub",
             "leftover": "If this card is Normal Summoned: Place 3 counters on it.",
             "descHead": "If this card is Normal Summoned: Place 3 counters on it. Cannot be destroyed by battle. At the end of the Damage Step, if this card battled: Remove 1 counter fr"
-        },
-        {
-            "id": 15960641,
-            "name": "Mirage Dragon",
-            "type": "Effect Monster",
-            "set": "RDS",
-            "status": "unimplemented",
-            "leftover": "Your opponent cannot activate Trap Cards during the Battle Phase.",
-            "descHead": "Your opponent cannot activate Trap Cards during the Battle Phase."
-        },
-        {
-            "id": 26082229,
-            "name": "Invasion of Flames",
-            "type": "Effect Monster",
-            "set": "RDS",
-            "status": "unimplemented",
-            "leftover": "When this card is Normal Summoned successfully, no Trap Cards can be activated.",
-            "descHead": "When this card is Normal Summoned successfully, no Trap Cards can be activated."
         },
         {
             "id": 26205777,
@@ -7309,15 +6474,6 @@
             "descHead": "Once per turn: You can change the Attribute of this card."
         },
         {
-            "id": 47453433,
-            "name": "Back to Square One",
-            "type": "Spell Card",
-            "set": "RDS",
-            "status": "unimplemented",
-            "leftover": "Discard 1 card, then target 1 monster on the field; place that target on the top of the Deck.",
-            "descHead": "Discard 1 card, then target 1 monster on the field; place that target on the top of the Deck."
-        },
-        {
             "id": 48276469,
             "name": "Chain Burst",
             "type": "Trap Card",
@@ -7354,15 +6510,6 @@
             "descHead": "Activate only when you activate one of your Normal Spell Cards. Discard all the cards in your hand to the Graveyard. The effect of this card becomes the same as"
         },
         {
-            "id": 49998907,
-            "name": "Fruits of Kozaky's Studies",
-            "type": "Trap Card",
-            "set": "RDS",
-            "status": "unimplemented",
-            "leftover": "Look at the top 3 cards of your Deck and return those cards to the top of the Deck in any order.",
-            "descHead": "Look at the top 3 cards of your Deck and return those cards to the top of the Deck in any order."
-        },
-        {
             "id": 51355346,
             "name": "Gaia Soul the Combustible Collective",
             "type": "Effect Monster",
@@ -7379,24 +6526,6 @@
             "status": "unimplemented",
             "leftover": "You can Normal Summon/Set this card without Tributing, but its original ATK and DEF become halved.",
             "descHead": "You can Normal Summon/Set this card without Tributing, but its original ATK and DEF become halved."
-        },
-        {
-            "id": 52571838,
-            "name": "Creeping Doom Manta",
-            "type": "Effect Monster",
-            "set": "RDS",
-            "status": "unimplemented",
-            "leftover": "When this card is Normal Summoned successfully, no Trap Cards can be activated.",
-            "descHead": "When this card is Normal Summoned successfully, no Trap Cards can be activated."
-        },
-        {
-            "id": 53693416,
-            "name": "Eagle Eye",
-            "type": "Effect Monster",
-            "set": "RDS",
-            "status": "unimplemented",
-            "leftover": "When this card is Normal Summoned successfully, no Trap Cards can be activated.",
-            "descHead": "When this card is Normal Summoned successfully, no Trap Cards can be activated."
         },
         {
             "id": 54415063,
@@ -7507,24 +6636,6 @@
             "descHead": "FLIP: Draw 1 card, then draw 1 additional card for each face-up \"Bokoichi the Freightening Car\" you control."
         },
         {
-            "id": 88975532,
-            "name": "Pitch-Black Warwolf",
-            "type": "Effect Monster",
-            "set": "RDS",
-            "status": "unimplemented",
-            "leftover": "Your opponent cannot activate Trap Cards during the Battle Phase.",
-            "descHead": "Your opponent cannot activate Trap Cards during the Battle Phase."
-        },
-        {
-            "id": 89698120,
-            "name": "Tactical Espionage Expert",
-            "type": "Effect Monster",
-            "set": "RDS",
-            "status": "unimplemented",
-            "leftover": "When this card is Normal Summoned successfully, no Trap Cards can be activated.",
-            "descHead": "When this card is Normal Summoned successfully, no Trap Cards can be activated."
-        },
-        {
             "id": 90810762,
             "name": "Raging Flame Sprite",
             "type": "Effect Monster",
@@ -7595,15 +6706,6 @@
             "status": "unimplemented",
             "leftover": "You can send this card to the GY; Special Summon 2 Level 3 or lower Beast monsters from your Deck, but their effects are negated, also they are destroyed during",
             "descHead": "You can send this card to the GY; Special Summon 2 Level 3 or lower Beast monsters from your Deck, but their effects are negated, also they are destroyed during"
-        },
-        {
-            "id": 15090429,
-            "name": "Whirlwind Prodigy",
-            "type": "Effect Monster",
-            "set": "FET",
-            "status": "unimplemented",
-            "leftover": "When Tribute Summoning a WIND monster, you can treat this 1 monster as 2 Tributes.",
-            "descHead": "When Tribute Summoning a WIND monster, you can treat this 1 monster as 2 Tributes."
         },
         {
             "id": 15717011,
@@ -7687,15 +6789,6 @@
             "descHead": "FLIP: Equip this card to a monster on your opponent's side of the field and treat it as an Equip Card. Take control of the equipped monster. Your opponent gains"
         },
         {
-            "id": 41089128,
-            "name": "Flame Ruler",
-            "type": "Effect Monster",
-            "set": "FET",
-            "status": "unimplemented",
-            "leftover": "This card can be treated as 2 Tributes for the Tribute Summon of a FIRE monster.",
-            "descHead": "This card can be treated as 2 Tributes for the Tribute Summon of a FIRE monster."
-        },
-        {
             "id": 48206762,
             "name": "Fulfillment of the Contract",
             "type": "Spell Card",
@@ -7703,15 +6796,6 @@
             "status": "stub",
             "leftover": "When this card is destroyed, banish the equipped monster.",
             "descHead": "Activate this card by paying 800 LP, then target 1 Ritual Monster in your GY; Special Summon it and equip it with this card. When this card is destroyed, banish"
-        },
-        {
-            "id": 49140998,
-            "name": "A Feather of the Phoenix",
-            "type": "Spell Card",
-            "set": "FET",
-            "status": "unimplemented",
-            "leftover": "Discard 1 card, then target 1 card in your GY; return that target to the top of your Deck.",
-            "descHead": "Discard 1 card, then target 1 card in your GY; return that target to the top of your Deck."
         },
         {
             "id": 49328340,
@@ -7750,15 +6834,6 @@
             "descHead": "When this card is changed from Attack Position to face-up Defense Position, destroy 1 monster on your opponent's side of the field."
         },
         {
-            "id": 59380081,
-            "name": "Big-Tusked Mammoth",
-            "type": "Effect Monster",
-            "set": "FET",
-            "status": "unimplemented",
-            "leftover": "Monsters your opponent controls cannot attack the turn they are Summoned.",
-            "descHead": "Monsters your opponent controls cannot attack the turn they are Summoned."
-        },
-        {
             "id": 60102563,
             "name": "Maji-Gire Panda",
             "type": "Effect Monster",
@@ -7784,24 +6859,6 @@
             "status": "unimplemented",
             "leftover": "Once per turn, during your next Standby Phase after this card was destroyed by a card effect and sent to the GY: Special Summon this card from the GY.",
             "descHead": "Once per turn, during your next Standby Phase after this card was destroyed by a card effect and sent to the GY: Special Summon this card from the GY. If you do"
-        },
-        {
-            "id": 63356631,
-            "name": "Phoenix Wing Wind Blast",
-            "type": "Trap Card",
-            "set": "FET",
-            "status": "unimplemented",
-            "leftover": "Discard 1 card, then target 1 card your opponent controls; place that target on the top of the Deck.",
-            "descHead": "Discard 1 card, then target 1 card your opponent controls; place that target on the top of the Deck."
-        },
-        {
-            "id": 69162969,
-            "name": "Lightning Vortex",
-            "type": "Spell Card",
-            "set": "FET",
-            "status": "unimplemented",
-            "leftover": "Discard 1 card; destroy all face-up monsters your opponent controls.",
-            "descHead": "Discard 1 card; destroy all face-up monsters your opponent controls."
         },
         {
             "id": 73578229,
@@ -7903,15 +6960,6 @@
             "descHead": "This card cannot be attacked if there is another Beast-Type monster on your side of the field. Once per turn, you can make the DEF of 1 monster on your opponent"
         },
         {
-            "id": 97623219,
-            "name": "Element Valkyrie",
-            "type": "Effect Monster",
-            "set": "FET",
-            "status": "stub",
-            "leftover": "(This card is not treated as a \"Valkyrie\" card.)                                                                                                                ",
-            "descHead": "(This card is not treated as a \"Valkyrie\" card.)\r\nThis monster gets the following effect(s) while there is a monster(s) with the following Attribute(s) on the f"
-        },
-        {
             "id": 97806240,
             "name": "Forced Ceasefire",
             "type": "Trap Card",
@@ -7921,96 +6969,5 @@
             "descHead": "Discard 1 card from your hand. No Trap Cards can be activated until the end of this turn."
         }
     ],
-    "lobGaps": [
-        {
-            "id": 9076207,
-            "name": "Armed Ninja",
-            "type": "Flip Effect Monster",
-            "set": "LOB",
-            "status": "stub",
-            "leftover": "(If the target is Set, reveal it, and destroy it if it is a Spell Card.",
-            "descHead": "FLIP: Target 1 Spell Card on the field; destroy that target. (If the target is Set, reveal it, and destroy it if it is a Spell Card. Otherwise, return it to its"
-        },
-        {
-            "id": 15052462,
-            "name": "Violet Crystal",
-            "type": "Spell Card",
-            "set": "LOB",
-            "status": "stub",
-            "leftover": "(This card is not treated as a \"Crystal\" card.)",
-            "descHead": "(This card is not treated as a \"Crystal\" card.)\r\nEquip only to a Zombie monster. It gains 300 ATK/DEF."
-        },
-        {
-            "id": 23424603,
-            "name": "Wasteland",
-            "type": "Spell Card",
-            "set": "LOB",
-            "status": "unimplemented",
-            "leftover": "All Dinosaur, Zombie, and Rock monsters on the field gain 200 ATK/DEF.",
-            "descHead": "All Dinosaur, Zombie, and Rock monsters on the field gain 200 ATK/DEF."
-        },
-        {
-            "id": 33066139,
-            "name": "Reaper of the Cards",
-            "type": "Flip Effect Monster",
-            "set": "LOB",
-            "status": "stub",
-            "leftover": "If the selected card is Set, pick up and see the card.",
-            "descHead": "FLIP: Select 1 Trap Card on the field and destroy it. If the selected card is Set, pick up and see the card. If it is a Trap Card, it is destroyed. If it is a S"
-        },
-        {
-            "id": 33396948,
-            "name": "Exodia the Forbidden One",
-            "type": "Effect Monster",
-            "set": "LOB",
-            "status": "unimplemented",
-            "leftover": "If you have \"Right Leg of the Forbidden One\", \"Left Leg of the Forbidden One\", \"Right Arm of the Forbidden One\" and \"Left Arm of the Forbidden One\" in addition ",
-            "descHead": "If you have \"Right Leg of the Forbidden One\", \"Left Leg of the Forbidden One\", \"Right Arm of the Forbidden One\" and \"Left Arm of the Forbidden One\" in addition "
-        },
-        {
-            "id": 50045299,
-            "name": "Dragon Capture Jar",
-            "type": "Trap Card",
-            "set": "LOB",
-            "status": "unimplemented",
-            "leftover": "Change all face-up Dragon-Type monsters on the field to Defense Position, also they cannot change their battle positions.",
-            "descHead": "Change all face-up Dragon-Type monsters on the field to Defense Position, also they cannot change their battle positions."
-        },
-        {
-            "id": 50913601,
-            "name": "Mountain",
-            "type": "Spell Card",
-            "set": "LOB",
-            "status": "unimplemented",
-            "leftover": "All Dragon, Winged Beast, and Thunder monsters on the field gain 200 ATK/DEF.",
-            "descHead": "All Dragon, Winged Beast, and Thunder monsters on the field gain 200 ATK/DEF."
-        },
-        {
-            "id": 82542267,
-            "name": "Gravedigger Ghoul",
-            "type": "Spell Card",
-            "set": "LOB",
-            "status": "unimplemented",
-            "leftover": "Target up to 2 monsters in your opponent's Graveyard; banish them.",
-            "descHead": "Target up to 2 monsters in your opponent's Graveyard; banish them."
-        },
-        {
-            "id": 83887306,
-            "name": "Two-Pronged Attack",
-            "type": "Trap Card",
-            "set": "LOB",
-            "status": "unimplemented",
-            "leftover": "Select and destroy 2 of your monsters and 1 of your opponent's monsters.",
-            "descHead": "Select and destroy 2 of your monsters and 1 of your opponent's monsters."
-        },
-        {
-            "id": 87430998,
-            "name": "Forest",
-            "type": "Spell Card",
-            "set": "LOB",
-            "status": "unimplemented",
-            "leftover": "All Insect, Beast, Plant, and Beast-Warrior monsters on the field gain 200 ATK/DEF.",
-            "descHead": "All Insect, Beast, Plant, and Beast-Warrior monsters on the field gain 200 ATK/DEF."
-        }
-    ]
+    "lobGaps": []
 }

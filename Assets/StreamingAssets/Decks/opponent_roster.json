@@ -1,0 +1,176 @@
+{
+  "version": 3,
+  "notes": "Selectable PvAI / lab opponents grouped by duelist (character); one duelist may own several decks (deckName). A tag team lists its members. Street duelists come from NpcDuelistRoster at runtime, not this file. Standard TCG 8000 LP. No Lab Kaiba (ai_kaiba.json).",
+  "opponents": [
+    {
+      "id": "dk_yugi",
+      "character": "yugi",
+      "name": "Yugi Muto",
+      "deckName": "Grandpa's Deck",
+      "file": "character_dk_yugi.json",
+      "erazBandId": "original",
+      "notes": "Grandpa's deck. Dark Magician, Gaia, Kuriboh.",
+      "difficulty": "Normal"
+    },
+    {
+      "id": "dk_yugi_exodia",
+      "character": "yami_yugi",
+      "name": "Yami Yugi",
+      "deckName": "Exodia",
+      "file": "character_dk_yugi_exodia.json",
+      "erazBandId": "original",
+      "notes": "Kaiba-match Exodia. Backup Soldier and Jar of Greed stall. No Heart of the Underdog.",
+      "difficulty": "Hard"
+    },
+    {
+      "id": "dk_kaiba",
+      "character": "kaiba",
+      "name": "Seto Kaiba",
+      "deckName": "Blue-Eyes",
+      "file": "character_dk_kaiba.json",
+      "erazBandId": "original",
+      "notes": "Three Blue-Eyes, Battle Ox, Lord of D.",
+      "difficulty": "Expert"
+    },
+    {
+      "id": "dk_joey",
+      "character": "joey",
+      "name": "Joey Wheeler",
+      "deckName": "Red-Eyes",
+      "file": "character_dk_joey.json",
+      "erazBandId": "original",
+      "notes": "Red-Eyes, Time Wizard, Flame Swordsman.",
+      "difficulty": "Normal"
+    },
+    {
+      "id": "dk_mai",
+      "character": "mai",
+      "name": "Mai Valentine",
+      "deckName": "Harpie Ladies",
+      "file": "character_dk_mai.json",
+      "erazBandId": "original",
+      "notes": "Harpies, Elegant Egotist, Pet Dragon.",
+      "difficulty": "Normal"
+    },
+    {
+      "id": "dk_weevil",
+      "character": "weevil",
+      "name": "Weevil Underwood",
+      "deckName": "Insects",
+      "file": "character_dk_weevil.json",
+      "erazBandId": "original",
+      "notes": "Petit Moth into Great Moth.",
+      "difficulty": "Easy"
+    },
+    {
+      "id": "dk_rex",
+      "character": "rex",
+      "name": "Rex Raptor",
+      "deckName": "Dinosaurs",
+      "file": "character_dk_rex.json",
+      "erazBandId": "original",
+      "notes": "Dinosaur beatdown.",
+      "difficulty": "Easy"
+    },
+    {
+      "id": "dk_mako",
+      "character": "mako",
+      "name": "Mako Tsunami",
+      "deckName": "Deep Sea",
+      "file": "character_dk_mako.json",
+      "erazBandId": "original",
+      "notes": "Umi and Legendary Fisherman.",
+      "difficulty": "Normal"
+    },
+    {
+      "id": "dk_pegasus",
+      "character": "pegasus",
+      "name": "Maximillion Pegasus",
+      "deckName": "Toon World",
+      "file": "character_dk_pegasus.json",
+      "erazBandId": "original",
+      "notes": "Toon World and Relinquished.",
+      "difficulty": "Hard"
+    },
+    {
+      "id": "dk_bakura",
+      "character": "bakura",
+      "name": "Ryou Bakura",
+      "deckName": "Occult",
+      "file": "character_dk_bakura.json",
+      "erazBandId": "original",
+      "notes": "White Magical Hat, Man-Eater Bug, three Headless Knight. Dark Necrofear is out.",
+      "difficulty": "Easy"
+    },
+    {
+      "id": "dk_yami_bakura",
+      "character": "yami_bakura",
+      "name": "Yami Bakura",
+      "deckName": "Dark Master Zorc",
+      "file": "character_dk_yami_bakura.json",
+      "erazBandId": "original",
+      "notes": "Dark Master - Zorc ritual. Two Contracts, Change of Heart. No Dark Necrofear, no Brain Control.",
+      "difficulty": "Hard"
+    },
+    {
+      "id": "dk_para",
+      "character": "paradox",
+      "name": "Paradox Brothers",
+      "displayName": "Para",
+      "deckName": "Labyrinth Wall Shadow",
+      "file": "character_dk_para.json",
+      "erazBandId": "original",
+      "notes": "Labyrinth Wall Shadow strategy. Shadow Ghoul + Labyrinth Wall into the fusion.",
+      "members": [
+        "Para",
+        "Dox"
+      ],
+      "difficulty": "Normal"
+    },
+    {
+      "id": "dk_dox",
+      "character": "paradox",
+      "name": "Paradox Brothers",
+      "displayName": "Dox",
+      "deckName": "Gate Guardian Assembly",
+      "file": "character_dk_dox.json",
+      "erazBandId": "original",
+      "notes": "Gate Guardian assembly. Kazejin + Suijin + Sanga of the Thunder into Gate Guardian.",
+      "members": [
+        "Para",
+        "Dox"
+      ],
+      "difficulty": "Hard"
+    },
+    {
+      "id": "dk_bonz",
+      "character": "bonz",
+      "name": "Bonz",
+      "deckName": "Zombies",
+      "file": "character_dk_bonz.json",
+      "erazBandId": "original",
+      "notes": "Pumpking and graveyard zombies. Call of the Haunted. No Vampire Lord, no Pyramid Turtle.",
+      "difficulty": "Easy"
+    },
+    {
+      "id": "dk_panik",
+      "character": "panik",
+      "name": "PaniK",
+      "deckName": "Dark Illusions",
+      "file": "character_dk_panik.json",
+      "erazBandId": "original",
+      "notes": "Castle of Dark Illusions.",
+      "difficulty": "Easy"
+    },
+    {
+      "id": "dk_keith",
+      "character": "keith",
+      "name": "Bandit Keith",
+      "deckName": "Machines",
+      "file": "character_dk_keith.json",
+      "erazBandId": "original",
+      "notes": "Barrel Dragon, Slot Machine, Zoa.",
+      "difficulty": "Normal"
+    }
+  ]
+}

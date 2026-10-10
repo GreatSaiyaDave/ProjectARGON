@@ -255,6 +255,23 @@ namespace WRLDZ.Core
             catch { return false; }
         }
 
+        /// <summary>
+        /// Timestamp (seconds since 1970) of the last location fix, or 0 when not running.
+        /// Lets pollers tell a fresh fix from the same fix read again.
+        /// </summary>
+        public static double LocationTimestamp
+        {
+            get
+            {
+                try
+                {
+                    if (Input.location.status != LocationServiceStatus.Running) return 0d;
+                    return Input.location.lastData.timestamp;
+                }
+                catch { return 0d; }
+            }
+        }
+
         /// <summary>Horizontal accuracy in meters when running; large number if unknown.</summary>
         public static float LocationAccuracyMeters
         {

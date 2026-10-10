@@ -1,12 +1,15 @@
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using WRLDZ.Core;
 
 namespace WRLDZ.Presentation
 {
     /// <summary>
     /// Free third-party UI packs vendored under StreamingAssets/WRLDZ/Vendor/.
-    /// Kenney (CC0), Free Game GUI, GDquest mobile buttons, LPC samples (credit file).
+    /// Kenney UI/RPG (CC0), GDquest mobile buttons, LPC samples (credit file).
+    /// Free Game GUI, the Kenney game icons and the Kenney Sci-Fi pack had no callers and moved off-build
+    /// (QC 2026-09-23 AI-08; tools/OFFBUILD_MANIFEST.md).
     /// Loads as 9-slice-friendly sprites for clean GO-style chrome.
     /// </summary>
     public static class VendorKit
@@ -19,9 +22,8 @@ namespace WRLDZ.Presentation
         {
             if (_logged) return;
             _logged = true;
-            var dir = Path.Combine(Application.streamingAssetsPath, Root);
-            var exists = Directory.Exists(dir);
-            PinEditorCwd();
+            var dir = StreamingFiles.FullPathForLog(Root);
+            var exists = StreamingFiles.DirectoryExists(Root);
             Debug.Log(exists
                 ? $"[WRLDZ] VendorKit ready at {dir}"
                 : $"[WRLDZ] VendorKit missing folder {dir}");
@@ -74,14 +76,6 @@ namespace WRLDZ.Presentation
             LoadSliced("KenneyRPG/panelInset_beige.png", 16)
             ?? LoadSliced("KenneyRPG/panelInset_blue.png", 16);
 
-        // ── Free Game GUI (huge source — use carefully) ───────────────────
-
-        public static Sprite Window() =>
-            LoadSliced("FreeGameGUI/Window.png", 80, 100, 80, 100);
-
-        public static Sprite CasualButton() =>
-            LoadSliced("FreeGameGUI/Button.png", 60, 80, 60, 80);
-
         // ── GDquest cartoon mobile buttons ────────────────────────────────
 
         public static Sprite MobilePlay() => Load("MobileButtons/b_Play1.png");
@@ -92,15 +86,6 @@ namespace WRLDZ.Presentation
         public static Sprite MobileLeaderboard() => Load("MobileButtons/b_Leaderboard.png");
         public static Sprite MobileForward() => Load("MobileButtons/b_Forward1.png");
         public static Sprite MobileRestart() => Load("MobileButtons/b_Restart.png");
-
-        // ── Kenney game icons (subset) ────────────────────────────────────
-
-        public static Sprite Icon(string name) => Load($"Icons/{name}.png");
-        public static Sprite IconHome() => Icon("home") ?? Icon("button1");
-        public static Sprite IconGear() => Icon("gear") ?? Icon("wrench") ?? MobileParams();
-        public static Sprite IconBag() => Icon("shoppingCart") ?? Icon("shoppingBasket") ?? MobileMore();
-        public static Sprite IconTrophy() => Icon("trophy") ?? MobileLeaderboard();
-        public static Sprite IconSingle() => Icon("singleplayer") ?? Icon("person") ?? RoundButton();
 
         // ── LPC map avatar walk (credit Liberated Pixel Cup) ──────────────
 
@@ -114,15 +99,9 @@ namespace WRLDZ.Presentation
             EnsureReady();
             var key = relativeUnderVendor;
             if (Cache.TryGetValue(key, out var s) && s != null) return s;
-            var full = Path.Combine(Application.streamingAssetsPath, Root, relativeUnderVendor);
-            if (!File.Exists(full))
-            {
-                PinEditorCwd();
+            if (!StreamingFiles.TryReadAllBytes(Root + "/" + relativeUnderVendor, out var bytes))
                 return null;
-            }
 
-            var bytes = File.ReadAllBytes(full);
-            PinEditorCwd();
             var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
             if (!tex.LoadImage(bytes))
             {
@@ -149,15 +128,9 @@ namespace WRLDZ.Presentation
             EnsureReady();
             var key = relativeUnderVendor + $"#slice{l}_{b}_{r}_{t}";
             if (Cache.TryGetValue(key, out var s) && s != null) return s;
-            var full = Path.Combine(Application.streamingAssetsPath, Root, relativeUnderVendor);
-            if (!File.Exists(full))
-            {
-                PinEditorCwd();
+            if (!StreamingFiles.TryReadAllBytes(Root + "/" + relativeUnderVendor, out var bytes))
                 return null;
-            }
 
-            var bytes = File.ReadAllBytes(full);
-            PinEditorCwd();
             var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
             if (!tex.LoadImage(bytes))
             {
@@ -179,21 +152,6 @@ namespace WRLDZ.Presentation
             spr.name = tex.name + "_sliced";
             Cache[key] = spr;
             return spr;
-        }
-
-        static void PinEditorCwd()
-        {
-#if UNITY_EDITOR
-            try
-            {
-                var root = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
-                Directory.SetCurrentDirectory(root);
-            }
-            catch
-            {
-                // Editor guard also pins on compile / update.
-            }
-#endif
         }
     }
 }

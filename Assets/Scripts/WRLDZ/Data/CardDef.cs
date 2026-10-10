@@ -81,6 +81,11 @@ namespace WRLDZ.Data
         public bool IsRitualMonster =>
             type != null && type.IndexOf("Ritual", StringComparison.OrdinalIgnoreCase) >= 0;
 
+        /// <summary>Ritual Spell (race = Ritual). Distinct from <see cref="IsRitualMonster"/>.</summary>
+        public bool IsRitualSpell =>
+            IsSpell && race != null &&
+            race.IndexOf("Ritual", StringComparison.OrdinalIgnoreCase) >= 0;
+
         /// <summary>Vanilla monster (no effect text mechanics) — Normal Monster frame.</summary>
         public bool IsNormalMonster =>
             IsMonster && !IsExtraDeck &&

@@ -42,6 +42,9 @@ namespace WRLDZ.UI
         float _inspectSuppressedUntil;
         PreDuelCinematic _preDuel;
         bool _preDuelComplete;
+        /// <summary>The match this duel plays (set by DuelBootstrap before Bind): the pre-duel setup's choices.
+        /// Restored 2026-10-09: pre-deletion member (stash e8e69e05).</summary>
+        public WRLDZ.Core.ArDuelMatchConfig Match { get; set; }
 
         /// <summary>True when phone is companion-only (AR duel / Zone AR). False = digital 2D board.</summary>
         bool _arCompanionMode;
@@ -2474,7 +2477,7 @@ namespace WRLDZ.UI
             }
 
             FreeUiKit.PlaySelect();
-            who.ShuffleHand();
+            who.ShuffleHand(_engine.Rng);
             ClearCardSelection();
             _engine.Log($"[{who.Name}] shuffles hand. Drag cards left/right to rearrange.");
             FreeUiKit.PlayConfirm();

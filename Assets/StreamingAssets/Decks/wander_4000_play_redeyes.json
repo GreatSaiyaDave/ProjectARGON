@@ -1,0 +1,147 @@
+{
+  "name": "Cafeteria Red-Eyes",
+  "format": "wrldz_street_playground_4000",
+  "flaw": "Only 2 Red-Eyes and 1 Inferno Fire Blast. Pulled Summoned Skull and built around that instead of a 3rd dragon. Black Dragon's Chick is a 2-of.",
+  "main": [
+    {
+      "id": 74677422,
+      "name": "Red-Eyes Black Dragon",
+      "qty": 2
+    },
+    {
+      "id": 36262024,
+      "name": "Black Dragon's Chick",
+      "qty": 2
+    },
+    {
+      "id": 70781052,
+      "name": "Summoned Skull",
+      "qty": 2
+    },
+    {
+      "id": 5053103,
+      "name": "Battle Ox",
+      "qty": 2
+    },
+    {
+      "id": 97590747,
+      "name": "La Jinn the Mystical Genie of the Lamp",
+      "qty": 2
+    },
+    {
+      "id": 54652250,
+      "name": "Man-Eater Bug",
+      "qty": 3
+    },
+    {
+      "id": 52684508,
+      "name": "Inferno Fire Blast",
+      "qty": 1
+    },
+    {
+      "id": 24094653,
+      "name": "Polymerization",
+      "qty": 2
+    },
+    {
+      "id": 72302403,
+      "name": "Swords of Revealing Light",
+      "qty": 1
+    },
+    {
+      "id": 66788016,
+      "name": "Fissure",
+      "qty": 2
+    },
+    {
+      "id": 97169186,
+      "name": "Smashing Ground",
+      "qty": 1
+    },
+    {
+      "id": 79759861,
+      "name": "Tribute to the Doomed",
+      "qty": 2
+    },
+    {
+      "id": 26412047,
+      "name": "Hammer Shot",
+      "qty": 1
+    },
+    {
+      "id": 70046172,
+      "name": "Rush Recklessly",
+      "qty": 2
+    },
+    {
+      "id": 65169794,
+      "name": "Black Pendant",
+      "qty": 1
+    },
+    {
+      "id": 4206964,
+      "name": "Trap Hole",
+      "qty": 2
+    },
+    {
+      "id": 17814387,
+      "name": "Reinforcements",
+      "qty": 2
+    },
+    {
+      "id": 44209392,
+      "name": "Castle Walls",
+      "qty": 2
+    },
+    {
+      "id": 3819470,
+      "name": "Seven Tools of the Bandit",
+      "qty": 1
+    },
+    {
+      "id": 14315573,
+      "name": "Negate Attack",
+      "qty": 1
+    },
+    {
+      "id": 12607053,
+      "name": "Waboku",
+      "qty": 2
+    },
+    {
+      "id": 77414722,
+      "name": "Magic Jammer",
+      "qty": 1
+    },
+    {
+      "id": 56120475,
+      "name": "Sakuretsu Armor",
+      "qty": 2
+    },
+    {
+      "id": 96355986,
+      "name": "Enchanted Javelin",
+      "qty": 1
+    }
+  ],
+  "extra": [
+    {
+      "id": 11901678,
+      "name": "Black Skull Dragon",
+      "qty": 1
+    },
+    {
+      "id": 17881964,
+      "name": "Darkfire Dragon",
+      "qty": 1
+    }
+  ],
+  "side": [],
+  "counts": {
+    "main": 40,
+    "extra": 2,
+    "side": 0
+  },
+  "lpBand": 4000,
+  "role": "street_npc_playground"
+}

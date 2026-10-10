@@ -193,11 +193,186 @@ namespace WRLDZ.Duel.Rules
             Check($"Ritual: every Ritual Spell summons its monster (tested {tested}/{ritualSpells.Count})",
                 summonFail.Count == 0, string.Join(", ", summonFail));
 
+            RunPlayerChoice(db, Check);
+
             sb.AppendLine($"--- {pass} passed, {fail} failed ---");
             return sb.ToString();
         }
 
         const int Kuriboh = 40640057; // Level 1 fodder
+        const int GiantSoldier = 13039848; // Level 3
+        const int MaskedBeast = 49064413;  // DARK Ritual Monster, Level 8
+
+        /// <summary>
+        /// The player picks the Ritual Monster and the Tributes (hand or field) whenever there is a real choice;
+        /// one legal option is used as is; the AI always auto-picks. "Equal or greater" refuses an unnecessary
+        /// Tribute, "exactly" refuses an overshoot, CANCEL restarts the Tributes then undoes the activation.
+        /// </summary>
+        static void RunPlayerChoice(CardDatabase db, Action<string, bool, string> check)
+        {
+            void Check(string name, bool ok, string detail = "") => check(name, ok, detail);
+
+            // ── Real choice: the prompt opens, the picks decide, a field monster counts ──
+            {
+                var e = Fresh(db);
+                var p = e.Player;
+                ClearSide(p);
+                InHand(e, p, HungryBurger);
+                var recipe = InHand(e, p, HamburgerRecipe);
+                var celtic = InHand(e, p, Celtic);
+                var k1 = InHand(e, p, Kuriboh);
+                var k2 = InHand(e, p, Kuriboh);
+                var beaver = PlaceMonster(e, p, Beaver, 2);
+                var opened = e.TryActivateSpellTrap(p, recipe, fromHand: true);
+                var pend = e.PendingActivation;
+                Check("Ritual choice: a real choice opens the Tribute picker",
+                    opened && pend != null && pend.AwaitingRitualTributes &&
+                    pend.TargetKind == EffectTargetKind.RitualTribute && p.Hand.Contains(recipe),
+                    $"opened={opened} pending={pend?.TargetKind}");
+                Check("Ritual choice: hand and field monsters are both offered",
+                    e.IsLegalEffectTarget(celtic) && e.IsLegalEffectTarget(k1) && e.IsLegalEffectTarget(beaver));
+                var first = e.TrySelectEffectTarget(beaver);
+                var stillPicking = e.PendingActivation != null && e.PendingActivation.AwaitingRitualTributes;
+                var second = e.TrySelectEffectTarget(celtic);
+                Check("Ritual choice: the picked Tributes (field Beaver + hand Celtic) are the ones sent",
+                    first && stillPicking && second && e.PendingActivation == null &&
+                    p.MonstersOnField().Any(m => m != null && m.CardId == HungryBurger) &&
+                    p.Graveyard.Contains(beaver) && p.Graveyard.Contains(celtic) &&
+                    p.Hand.Contains(k1) && p.Hand.Contains(k2) && p.Graveyard.Contains(recipe),
+                    $"first={first} picking={stillPicking} second={second}");
+            }
+
+            // ── "Equal or greater": no unnecessary Tribute; CANCEL restarts, then undoes ──
+            {
+                var e = Fresh(db);
+                var p = e.Player;
+                ClearSide(p);
+                var burger = InHand(e, p, HungryBurger);
+                var recipe = InHand(e, p, HamburgerRecipe);
+                var celtic = InHand(e, p, Celtic);
+                var beaver = InHand(e, p, Beaver);
+                var k1 = InHand(e, p, Kuriboh);
+                var k2 = InHand(e, p, Kuriboh);
+                e.TryActivateSpellTrap(p, recipe, fromHand: true);
+                e.TrySelectEffectTarget(k1);
+                e.TrySelectEffectTarget(celtic);
+                // {Kuriboh, Celtic} = 5: Beaver would make 9 with Kuriboh unnecessary (9 − 1 ≥ 6).
+                Check("Ritual choice: an unnecessary Tribute is refused (Beaver after Kuriboh + Celtic)",
+                    e.PendingActivation != null && !e.IsLegalEffectTarget(beaver) && e.IsLegalEffectTarget(k2));
+                var restarted = e.CancelEffectTargeting();
+                var p2 = e.PendingActivation;
+                Check("Ritual choice: CANCEL after picks starts the Tributes over",
+                    restarted && p2 != null && p2.AwaitingRitualTributes && p2.RitualPicks.Count == 0 &&
+                    e.IsLegalEffectTarget(k1) && e.IsLegalEffectTarget(celtic));
+                var undone = e.CancelEffectTargeting();
+                Check("Ritual choice: CANCEL with no picks undoes the activation (all cards stay in hand)",
+                    undone && e.PendingActivation == null && p.Hand.Contains(recipe) && p.Hand.Contains(burger) &&
+                    p.Hand.Contains(k1) && p.Hand.Contains(celtic) && p.Graveyard.Count == 0 &&
+                    !p.MonstersOnField().Any());
+            }
+
+            // ── "Exactly equal" (Contract with the Abyss): an overshoot is never offered ──
+            if (db.Get(RitualProcedures.ContractWithTheAbyss) != null)
+            {
+                var e = Fresh(db);
+                var p = e.Player;
+                ClearSide(p);
+                InHand(e, p, HungryBurger);
+                var contract = InHand(e, p, RitualProcedures.ContractWithTheAbyss);
+                var gs1 = InHand(e, p, GiantSoldier);
+                var gs2 = InHand(e, p, GiantSoldier);
+                var celtic = InHand(e, p, Celtic);
+                var k1 = InHand(e, p, Kuriboh);
+                var k2 = InHand(e, p, Kuriboh);
+                var opened = e.TryActivateSpellTrap(p, contract, fromHand: true);
+                e.TrySelectEffectTarget(celtic);
+                Check("Ritual choice (exact 6): after Celtic (4) only the Level 1s complete it — Giant Soldier (3) would overshoot",
+                    opened && e.PendingActivation != null && !e.IsLegalEffectTarget(gs1) && e.IsLegalEffectTarget(k1));
+                e.TrySelectEffectTarget(k1);
+                e.TrySelectEffectTarget(k2);
+                Check("Ritual choice (exact 6): Celtic + 2 Kuriboh Tributed, both Giant Soldiers kept",
+                    e.PendingActivation == null &&
+                    p.MonstersOnField().Any(m => m != null && m.CardId == HungryBurger) &&
+                    p.Graveyard.Contains(celtic) && p.Graveyard.Contains(k1) && p.Graveyard.Contains(k2) &&
+                    p.Hand.Contains(gs1) && p.Hand.Contains(gs2));
+            }
+
+            // ── Two different Ritual Monsters: the player picks which; one legal Tribute set is used as is ──
+            if (db.Get(RitualProcedures.ContractWithTheAbyss) != null && db.Get(MaskedBeast) != null)
+            {
+                var e = Fresh(db);
+                var p = e.Player;
+                ClearSide(p);
+                var burger = InHand(e, p, HungryBurger);   // DARK Lv6: {3,3}
+                var beast = InHand(e, p, MaskedBeast);     // DARK Lv8: {4,4} only (Burger 6 has no Level 2 partner)
+                var contract = InHand(e, p, RitualProcedures.ContractWithTheAbyss);
+                var celtic = InHand(e, p, Celtic);
+                var beaver = InHand(e, p, Beaver);
+                InHand(e, p, GiantSoldier);
+                InHand(e, p, GiantSoldier);
+                e.TryActivateSpellTrap(p, contract, fromHand: true);
+                var pend = e.PendingActivation;
+                Check("Ritual choice: two different Ritual Monsters open the monster picker",
+                    pend != null && pend.AwaitingRitualMonster &&
+                    e.IsLegalEffectTarget(burger) && e.IsLegalEffectTarget(beast));
+                e.TrySelectEffectTarget(beast);
+                Check("Ritual choice: The Masked Beast summoned with its only legal set (Celtic + Beaver), no second prompt",
+                    e.PendingActivation == null &&
+                    p.MonstersOnField().Any(m => m != null && m.CardId == MaskedBeast) &&
+                    p.Graveyard.Contains(celtic) && p.Graveyard.Contains(beaver) && p.Hand.Contains(burger));
+            }
+
+            // ── Another Ritual Monster in hand is itself a legal Tribute: Burger (6) + 2 Kuriboh = 8 for Beast ──
+            if (db.Get(RitualProcedures.ContractWithTheAbyss) != null && db.Get(MaskedBeast) != null)
+            {
+                var e = Fresh(db);
+                var p = e.Player;
+                ClearSide(p);
+                var burger = InHand(e, p, HungryBurger);
+                var beast = InHand(e, p, MaskedBeast);
+                var contract = InHand(e, p, RitualProcedures.ContractWithTheAbyss);
+                var celtic = InHand(e, p, Celtic);
+                var beaver = InHand(e, p, Beaver);
+                var k1 = InHand(e, p, Kuriboh);
+                var k2 = InHand(e, p, Kuriboh);
+                e.TryActivateSpellTrap(p, contract, fromHand: true);
+                e.TrySelectEffectTarget(beast);
+                var offered = e.PendingActivation != null && e.PendingActivation.AwaitingRitualTributes &&
+                              e.IsLegalEffectTarget(burger) && e.IsLegalEffectTarget(celtic);
+                e.TrySelectEffectTarget(burger);
+                e.TrySelectEffectTarget(k1);
+                e.TrySelectEffectTarget(k2);
+                Check("Ritual choice: a Ritual Monster in hand is offered as a Tribute (Burger + 2 Kuriboh for Beast)",
+                    offered && e.PendingActivation == null &&
+                    p.MonstersOnField().Any(m => m != null && m.CardId == MaskedBeast) &&
+                    p.Graveyard.Contains(burger) && p.Hand.Contains(celtic) && p.Hand.Contains(beaver),
+                    $"offered={offered} pending={e.PendingActivation?.TargetKind}");
+            }
+
+            // ── The AI never gets a prompt ──
+            {
+                var e = Fresh(db);
+                if (InteractionRegressionTests.ReachOpponentMain(e))
+                {
+                    var o = e.Opponent;
+                    ClearSide(o);
+                    InHand(e, o, HungryBurger);
+                    var recipe = InHand(e, o, HamburgerRecipe);
+                    InHand(e, o, Celtic);
+                    InHand(e, o, Kuriboh);
+                    InHand(e, o, Kuriboh);
+                    PlaceMonster(e, o, Beaver, 2);
+                    var ok = e.TryActivateSpellTrap(o, recipe, fromHand: true);
+                    if (e.IsAwaitingResponse) e.PassResponse();
+                    Check("Ritual choice: the AI auto-picks (no prompt) and summons",
+                        ok && e.PendingActivation == null &&
+                        o.MonstersOnField().Any(m => m != null && m.CardId == HungryBurger),
+                        $"ok={ok} pending={e.PendingActivation?.TargetKind}");
+                }
+                else
+                    Check("Ritual choice: reached the opponent's Main Phase for the AI check", false, "");
+            }
+        }
 
         static DuelEngine Fresh(CardDatabase db)
         {

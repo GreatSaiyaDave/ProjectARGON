@@ -2,12 +2,16 @@ using System;
 using UnityEngine;
 using UnityEngine.UI;
 using WRLDZ.Presentation;
+using WRLDZ.UI.Eldritch;
 
 namespace WRLDZ.UI.Shell
 {
         /// <summary>
-        /// Floating command chip: obsidian slate, left accent rail, cream type.
-        /// Never 9-slice Imagine plates here — those collapse at toolbar height.
+        /// Floating command chip, Eldritch Solid Vision tier: the face is an
+        /// <c>ArcaneEnergyFlow</c> material (carved sandstone over lapis / obsidian with a gold
+        /// energy line racing the perimeter) instead of a flat fill or a 9-slice Imagine plate.
+        /// Signature, <see cref="Kind"/> and the "Title" / "Blurb" child names + anchors are frozen:
+        /// ~35 screens call this and many re-place those children by name.
         /// </summary>
         public static class MenuCommandButton
         {
@@ -19,59 +23,64 @@ namespace WRLDZ.UI.Shell
                 Danger = 3
             }
 
-        // Slate fills — dense enough to read as a disk chip, under the 0.72 smoke-test cap.
-        public static readonly Color FillPrimary = new(0.08f, 0.20f, 0.26f, 0.70f);
-        public static readonly Color FillSecondary = new(0.10f, 0.09f, 0.16f, 0.70f);
-        public static readonly Color FillGold = new(0.24f, 0.19f, 0.07f, 0.70f);
-        public static readonly Color FillDanger = new(0.28f, 0.09f, 0.12f, 0.70f);
-        public static readonly Color TitleInk = new(0.98f, 0.97f, 0.94f, 1f);
-        public static readonly Color BlurbInk = new(0.86f, 0.90f, 0.96f, 1f);
-        public static readonly Color EdgePrimary = new(0.20f, 0.92f, 1.00f, 1f);
-        public static readonly Color EdgeSecondary = new(0.42f, 0.48f, 0.62f, 1f);
-        public static readonly Color EdgeGold = new(1.00f, 0.84f, 0.28f, 1f);
-        public static readonly Color EdgeDanger = new(1.00f, 0.32f, 0.38f, 1f);
+        /// <summary>Command chips are floating glass; the flow shader scales fill AND energy by vertex alpha.</summary>
+        const float GlassAlpha = 0.70f;
+
+        /// <summary>Hero / dest plates sit closer to stone than glass.</summary>
+        const float PlateAlpha = 0.92f;
+
+        // Kept because other files read them (FloatingPanel.FacePrimary aliases FillPrimary, etc.).
+        // Values now resolve to EldritchPalette tokens; alphas stay under the 0.72 smoke-test cap.
+        public static readonly Color FillPrimary = EldritchPalette.WithAlpha(EldritchPalette.Lapis, GlassAlpha);
+        public static readonly Color FillSecondary = EldritchPalette.WithAlpha(EldritchPalette.Obsidian, 0.58f);
+        public static readonly Color FillGold = EldritchPalette.WithAlpha(EldritchPalette.Obsidian, GlassAlpha);
+        public static readonly Color FillDanger = EldritchPalette.WithAlpha(
+            Color.Lerp(EldritchPalette.Obsidian, EldritchPalette.BloodDanger, 0.18f), GlassAlpha);
+        public static readonly Color TitleInk = EldritchPalette.TextCream;
+        public static readonly Color BlurbInk = EldritchPalette.TextMuted;
+        public static readonly Color EdgePrimary = EldritchPalette.Sandstone;
+        public static readonly Color EdgeSecondary = EldritchPalette.WithAlpha(EldritchPalette.SolidVisionCyan, 0.55f);
+        public static readonly Color EdgeGold = EldritchPalette.MillenniumGold;
+        public static readonly Color EdgeDanger = EldritchPalette.BloodDanger;
+
+        /// <summary>
+        /// Kind → tier. Secondary (cyan-on-lapis) is the workhorse for sheets, so the default
+        /// Primary kind lands there; Gold is the gold-on-obsidian hero tier.
+        /// </summary>
+        public static EldritchTier TierFor(Kind kind) => kind switch
+        {
+            Kind.Gold => EldritchTier.Primary,
+            Kind.Danger => EldritchTier.Danger,
+            Kind.Secondary => EldritchTier.Tertiary,
+            _ => EldritchTier.Secondary
+        };
 
         public static Button Create(Transform parent, string title, Action onClick,
             Kind kind = Kind.Primary, string blurb = null, bool centerTitle = false,
             bool plated = false)
         {
             FreeUiKit.EnsureLoaded();
-            var edge = EdgeFor(kind);
-            var fill = FillFor(kind);
+            var hasBlurb = !string.IsNullOrEmpty(blurb);
 
-            var go = new GameObject(string.IsNullOrEmpty(title) ? "Cmd" : title,
-                typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
-            go.transform.SetParent(parent, false);
+            var ab = ArcaneButton.Create(parent, title, onClick, TierFor(kind), blurb, null,
+                hasBlurb ? 18 : 20, centerTitle, hieroglyphBorder: false);
+            if (ab == null) return null;
+            var go = ab.gameObject;
+            go.name = string.IsNullOrEmpty(title) ? "Cmd" : title;
 
-            var face = go.GetComponent<Image>();
-            var plate = plated ? PlateFor(kind, wide: !string.IsNullOrEmpty(blurb) || !centerTitle) : null;
-            if (plate != null)
+            CarveStone(ab.Face);
+            if (EldritchMaterials.IsEldritch(ab.Mat))
+                SetFaceOpacity(ab, plated ? PlateAlpha : GlassAlpha);
+            else if (ab.Face != null)
+                ab.Face.color = FillFor(kind);   // shader stripped / not imported: flat tier fill
+
+            // Left accent rail survives as a gold inlay — the energy line owns the perimeter,
+            // but list rows still need a hard vertical to anchor left-aligned type.
+            if (!centerTitle && !plated)
             {
-                face.sprite = plate;
-                face.type = plate.border.sqrMagnitude > 0.1f ? Image.Type.Sliced : Image.Type.Simple;
-                face.color = Color.white;
-            }
-            else
-            {
-                face.sprite = UiFoundation.WhiteSprite();
-                face.type = Image.Type.Simple;
-                face.color = fill;
-                var ol = go.AddComponent<Outline>();
-                ol.effectColor = new Color(edge.r, edge.g, edge.b, 0.55f);
-                ol.effectDistance = new Vector2(1.0f, -1.0f);
-                ol.useGraphicAlpha = false;
-            }
-            face.raycastTarget = true;
-
-            var le = go.GetComponent<LayoutElement>();
-            le.minHeight = string.IsNullOrEmpty(blurb) ? 56f : 68f;
-            le.preferredHeight = le.minHeight;
-            le.flexibleWidth = 1f;
-            le.flexibleHeight = 0f;
-
-            if (!centerTitle && plate == null)
-            {
-                var rail = Solid(go.transform, "Rail", edge);
+                var rail = Solid(go.transform, "Rail",
+                    EldritchPalette.WithAlpha(EldritchPalette.MillenniumGold, 0.70f));
+                rail.transform.SetAsFirstSibling();
                 var rrt = rail.rectTransform;
                 rrt.anchorMin = new Vector2(0f, 0.18f);
                 rrt.anchorMax = new Vector2(0f, 0.82f);
@@ -81,49 +90,29 @@ namespace WRLDZ.UI.Shell
                 rail.raycastTarget = false;
             }
 
-            var hasBlurb = !string.IsNullOrEmpty(blurb);
-            var titleAlign = centerTitle && !hasBlurb ? TextAnchor.MiddleCenter : TextAnchor.MiddleLeft;
-            var titleGo = MakeText(go.transform, "Title", title, TitleInk,
-                titleAlign, maxSize: hasBlurb ? 18 : 20);
-            if (hasBlurb)
+            // Frozen anchors: screens call transform.Find("Title") and re-place from these boxes.
+            if (ab.Title != null)
             {
-                Place(titleGo.rectTransform, 0.06f, 0.48f, 0.96f, 0.92f);
-                var blurbGo = MakeText(go.transform, "Blurb", blurb, BlurbInk,
-                    TextAnchor.MiddleLeft, maxSize: 13);
-                blurbGo.fontStyle = FontStyle.Normal;
-                Place(blurbGo.rectTransform, 0.06f, 0.08f, 0.96f, 0.46f);
-            }
-            else if (centerTitle)
-            {
-                Place(titleGo.rectTransform, 0.04f, 0.10f, 0.96f, 0.90f);
-            }
-            else
-            {
-                Place(titleGo.rectTransform, 0.06f, 0.14f, 0.96f, 0.86f);
+                ab.Title.color = TitleInk;
+                ab.Title.alignment = centerTitle && !hasBlurb
+                    ? TextAnchor.MiddleCenter
+                    : TextAnchor.MiddleLeft;
+                if (hasBlurb) Place(ab.Title.rectTransform, 0.06f, 0.48f, 0.96f, 0.92f);
+                else if (centerTitle) Place(ab.Title.rectTransform, 0.04f, 0.10f, 0.96f, 0.90f);
+                else Place(ab.Title.rectTransform, 0.06f, 0.14f, 0.96f, 0.86f);
             }
 
-            var btn = go.GetComponent<Button>();
-            btn.targetGraphic = face;
-            var block = ColorBlock.defaultColorBlock;
-            block.normalColor = Color.white;
-            block.highlightedColor = new Color(1.15f, 1.15f, 1.18f, 1f);
-            block.pressedColor = new Color(0.72f, 0.78f, 0.82f, 1f);
-            block.selectedColor = Color.white;
-            block.fadeDuration = 0.08f;
-            btn.colors = block;
-            if (onClick != null)
+            if (ab.Blurb != null)
             {
-                btn.onClick.AddListener(() =>
-                {
-                    FreeUiKit.PlayClick();
-                    onClick();
-                });
+                ab.Blurb.color = BlurbInk;
+                ab.Blurb.fontStyle = FontStyle.Normal;
+                Place(ab.Blurb.rectTransform, 0.06f, 0.08f, 0.96f, 0.46f);
             }
 
-            return btn;
+            return ab.Button;
         }
 
-        static Color EdgeFor(Kind kind) => kind switch
+        public static Color EdgeFor(Kind kind) => kind switch
         {
             Kind.Gold => EdgeGold,
             Kind.Danger => EdgeDanger,
@@ -131,7 +120,7 @@ namespace WRLDZ.UI.Shell
             _ => EdgePrimary
         };
 
-        static Color FillFor(Kind kind) => kind switch
+        public static Color FillFor(Kind kind) => kind switch
         {
             Kind.Gold => FillGold,
             Kind.Danger => FillDanger,
@@ -139,32 +128,91 @@ namespace WRLDZ.UI.Shell
             _ => FillPrimary
         };
 
-        static Sprite PlateFor(Kind kind, bool wide)
+        /// <summary>
+        /// Opacity rides the Image vertex color, not the material: the flow shader multiplies both
+        /// fill and emissive by it, and the menu smoke test reads <c>Image.color.a</c> on chips.
+        /// </summary>
+        public static void SetFaceOpacity(ArcaneButton ab, float alpha)
         {
-            if (wide)
+            if (ab == null) return;
+            var m = ab.Mat;
+            if (m != null)
             {
-                return kind switch
-                {
-                    Kind.Gold => ImagineAssets.BtnGold() ?? ImagineAssets.PanelHolo(),
-                    Kind.Danger => ImagineAssets.BtnDanger(),
-                    Kind.Secondary => ImagineAssets.BtnSecondary(),
-                    _ => ImagineAssets.BtnPrimary() ?? ImagineAssets.PanelHolo()
-                };
+                // Tier fills carry MenuChromePrefs alpha; fold it into the vertex color instead so
+                // the two do not multiply into a ghost.
+                Opaque(m, EldritchMaterials.FillColorAId);
+                Opaque(m, EldritchMaterials.FillColorBId);
             }
 
-            return kind switch
-            {
-                Kind.Gold => ImagineAssets.TileHubGold() ?? ImagineAssets.BtnGold(),
-                Kind.Danger => ImagineAssets.BtnDanger(),
-                Kind.Secondary => ImagineAssets.TileHub(),
-                _ => ImagineAssets.TileHub() ?? ImagineAssets.BtnPrimary()
-            };
+            if (ab.Face != null) ab.Face.color = new Color(1f, 1f, 1f, Mathf.Clamp01(alpha));
+        }
+
+        static void Opaque(Material m, int id)
+        {
+            if (m == null || !m.HasProperty(id)) return;
+            var c = m.GetColor(id);
+            c.a = 1f;
+            m.SetColor(id, c);
+        }
+
+        /// <summary>
+        /// Carved read: sandstone grain as the shader's _MainTex (it multiplies the tier fill, so
+        /// lapis becomes carved lapis). Same idiom as <c>DuelDiskMenuUI.CarveFace</c>. No-op when
+        /// the StreamingAssets tile is missing.
+        /// </summary>
+        public static void CarveStone(Image face)
+        {
+            if (face == null) return;
+            var grain = StoneSprite();
+            if (grain != null) face.sprite = grain;
+            else if (face.sprite == null) face.sprite = UiFoundation.WhiteSprite();
+            face.type = Image.Type.Simple;   // rect-space shaders assume a full-rect quad
+        }
+
+        static Sprite _stone;
+
+        /// <summary>Sandstone grain wrapped once as a full-rect sprite (the loader returns a texture).</summary>
+        public static Sprite StoneSprite()
+        {
+            if (_stone != null && _stone.texture != null) return _stone;
+            var tex = EldritchAssets.SandstoneTile();
+            if (tex == null) return null;
+            _stone = Sprite.Create(tex, new Rect(0f, 0f, tex.width, tex.height),
+                new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect);
+            _stone.name = "sandstone_face";
+            return _stone;
+        }
+
+        /// <summary>One gold hieroglyph struck into a tile's margin. Null-safe, decorative only.</summary>
+        public static Image CarveGlyph(Transform host, float alpha,
+            float x0 = 0.05f, float y0 = 0.52f, float x1 = 0.20f, float y1 = 0.93f)
+        {
+            if (host == null) return null;
+            var pool = EldritchGlyphs.Atlas();
+            if (pool == null || pool.Length == 0) return null;
+            if (host.Find("Glyph") != null) return null;
+
+            var go = new GameObject("Glyph", typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(host, false);
+            go.transform.SetAsFirstSibling();   // under the label, over the face
+            var le = go.AddComponent<LayoutElement>();
+            le.ignoreLayout = true;
+            Place(go.GetComponent<RectTransform>(), x0, y0, x1, y1);
+            var img = go.GetComponent<Image>();
+            img.sprite = pool[Mathf.Abs((host.name ?? "g").GetHashCode()) % pool.Length];
+            img.preserveAspect = true;
+            img.raycastTarget = false;
+            var gold = EldritchPalette.MillenniumGold;
+            img.color = new Color(gold.r, gold.g, gold.b, Mathf.Clamp01(alpha));
+            return img;
         }
 
         static Image Solid(Transform parent, string name, Color color)
         {
             var go = new GameObject(name, typeof(RectTransform), typeof(Image));
             go.transform.SetParent(parent, false);
+            var le = go.AddComponent<LayoutElement>();
+            le.ignoreLayout = true;
             var img = go.GetComponent<Image>();
             img.sprite = UiFoundation.WhiteSprite();
             img.type = Image.Type.Simple;
@@ -175,7 +223,7 @@ namespace WRLDZ.UI.Shell
 
         /// <summary>
         /// Hub tiles: lock type so best-fit cannot shrink labels into the plate.
-        /// Compact toolbar chips keep MakeText best-fit.
+        /// Compact toolbar chips keep the builder's own best-fit.
         /// </summary>
         public static void ApplyHubType(Button btn, int titleSize, Color titleColor, bool displayTitle,
             int blurbSize = 16, Color? blurbColor = null)
@@ -201,24 +249,6 @@ namespace WRLDZ.UI.Shell
                 WrldzType.ApplyOutline(blurb, heavy: true, buttonContrast: true);
                 blurb.fontStyle = FontStyle.Bold;
             }
-        }
-
-        static Text MakeText(Transform parent, string name, string value,
-            Color color, TextAnchor align, int maxSize)
-        {
-            var go = new GameObject(name, typeof(RectTransform), typeof(Text));
-            go.transform.SetParent(parent, false);
-            var t = go.GetComponent<Text>();
-            WrldzType.StyleButtonLabel(t, Mathf.Clamp(maxSize, 14, 20));
-            t.alignment = align;
-            t.color = color;
-            t.text = value ?? "";
-            t.horizontalOverflow = HorizontalWrapMode.Overflow;
-            t.verticalOverflow = VerticalWrapMode.Overflow;
-            t.resizeTextForBestFit = false;
-            t.raycastTarget = false;
-            t.supportRichText = false;
-            return t;
         }
 
         static void Place(RectTransform rt, float x0, float y0, float x1, float y1)

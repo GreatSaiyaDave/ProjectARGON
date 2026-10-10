@@ -107,6 +107,14 @@ namespace WRLDZ.Duel.Rules
                             return v;
                         }
 
+                        // Dimensionhole (LocksAndZones batch): that zone cannot be used right now.
+                        if (who.MonsterZones[zoneIndex].UnusableFor != null)
+                        {
+                            v.Legal = false;
+                            v.Reason = "That Monster Zone cannot be used.";
+                            return v;
+                        }
+
                         var occ = who.MonsterZones[zoneIndex].Occupant;
                         if (occ != null && occ != card)
                         {
@@ -277,6 +285,25 @@ namespace WRLDZ.Duel.Rules
             var opp = engine.OpponentOf(who);
             if (targetOrNull == null)
             {
+                // Toon rule (Toons batch): no direct attack while the opponent controls a face-up Toon monster.
+                if (WRLDZ.Duel.TextEffects.ToonsRuntime.ForbidsDirectAttack(engine, attacker))
+                {
+                    v.Reason = "Cannot attack directly — the opponent controls a Toon monster.";
+                    return v;
+                }
+
+                if (WRLDZ.Duel.TextEffects.SelfStatMonstersRuntime.ForbidsDirectAttack(engine, attacker))
+                {
+                    v.Reason = "Cannot attack your opponent directly.";
+                    return v;
+                }
+
+                if (WRLDZ.Duel.TextEffects.SpiritMonstersRuntime.ForbidsDirectAttack(engine, attacker))
+                {
+                    v.Reason = "Only monsters it has not attacked this Battle Phase can be attacked.";
+                    return v;
+                }
+
                 if (HasFaceUpOrSetMonsters(opp) && !engine.GrantsDirectAttack(attacker) &&
                     !WRLDZ.Duel.TextEffects.ContinuousProtections.AllOpponentMonstersAllowDirect(engine, opp))
                 {
@@ -297,6 +324,16 @@ namespace WRLDZ.Duel.Rules
             else if (WRLDZ.Duel.TextEffects.ContinuousProtections.CannotBeAttackTarget(engine, targetOrNull))
             {
                 v.Reason = $"{targetOrNull.Name} cannot be targeted for attacks.";
+                return v;
+            }
+            else if (WRLDZ.Duel.TextEffects.ToonsRuntime.ForbidsAttackTarget(engine, attacker, targetOrNull))
+            {
+                v.Reason = $"{attacker.Name} must target a face-up Toon monster for its attacks.";
+                return v;
+            }
+            else if (WRLDZ.Duel.TextEffects.SpiritMonstersRuntime.ForbidsAttackTarget(engine, attacker, targetOrNull))
+            {
+                v.Reason = $"{attacker.Name} cannot attack that monster.";
                 return v;
             }
 

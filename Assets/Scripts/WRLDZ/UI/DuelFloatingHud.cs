@@ -6,7 +6,7 @@ using WRLDZ.UI.Shell;
 namespace WRLDZ.UI
 {
     /// <summary>
-    /// Live-duel HUD as small glass islands. TCG-client grammar:
+    /// Live-duel HUD as KaibaCorp LCD islands. TCG-client grammar:
     /// YOU LP (cyan, left) · gold phase + pips (center) · OPP LP (magenta, right).
     /// Deck / GY / Extra stay on the YOU island. Glanceable, mostly non-blocking.
     /// </summary>
@@ -33,6 +33,9 @@ namespace WRLDZ.UI
         public RectTransform ContextWindow;
         public RectTransform ContextRow;
         public CanvasGroup StatusGroup;
+        GameObject _youScoreGo;
+        GameObject _phaseGo;
+        GameObject _oppScoreGo;
 
         Color _youLpBase = DuelystUi.Cyan;
         Color _oppLpBase = DuelystUi.Magenta;
@@ -56,7 +59,7 @@ namespace WRLDZ.UI
             return hud;
         }
 
-        public const float IslandFillAlpha = 0.16f;
+        public const float IslandFillAlpha = 0.34f;
         public const float PipFillAlpha = 0.28f;
 
         void Build()
@@ -64,6 +67,7 @@ namespace WRLDZ.UI
             // YOU LP orb — cyan, left. Master Duel / Duel Links always show LP.
             var youIsland = Island(Root, "YouScore", 0.012f, 0.900f, 0.278f, 0.988f,
                 new Color(DuelystUi.Cyan.r, DuelystUi.Cyan.g, DuelystUi.Cyan.b, 0.50f), blockRaycasts: false);
+            _youScoreGo = youIsland;
             YouName = Label(youIsland.transform, "Who", "YOU", 11, TextAnchor.MiddleLeft, DuelystUi.TextMuted);
             Place(YouName.rectTransform, 0.07f, 0.58f, 0.42f, 0.94f);
             YouLp = Label(youIsland.transform, "LP", "8000", 22, TextAnchor.MiddleRight, DuelystUi.Cyan,
@@ -88,6 +92,7 @@ namespace WRLDZ.UI
             // Phase island — gold banner + rulebook pips (M1 / BP / M2 / EP).
             var phase = Island(Root, "Phase", 0.330f, 0.900f, 0.670f, 0.988f,
                 new Color(DuelystUi.Gold.r, DuelystUi.Gold.g, DuelystUi.Gold.b, 0.48f), blockRaycasts: false);
+            _phaseGo = phase;
             PhaseLabel = Label(phase.transform, "PhaseTxt", "MAIN PHASE 1", 17, TextAnchor.MiddleCenter,
                 DuelystUi.GoldHot, display: true);
             Place(PhaseLabel.rectTransform, 0.04f, 0.46f, 0.96f, 0.94f);
@@ -105,6 +110,7 @@ namespace WRLDZ.UI
             var oppIsland = Island(Root, "OppScore", 0.722f, 0.900f, 0.988f, 0.988f,
                 new Color(DuelystUi.Magenta.r, DuelystUi.Magenta.g, DuelystUi.Magenta.b, 0.50f),
                 blockRaycasts: false);
+            _oppScoreGo = oppIsland;
             OppName = Label(oppIsland.transform, "Who", "OPP", 11, TextAnchor.MiddleRight, DuelystUi.TextMuted);
             Place(OppName.rectTransform, 0.52f, 0.58f, 0.93f, 0.94f);
             OppLp = Label(oppIsland.transform, "LP", "8000", 22, TextAnchor.MiddleLeft, DuelystUi.Magenta,
@@ -154,13 +160,21 @@ namespace WRLDZ.UI
         {
             if (YouLp != null) YouLp.text = you.ToString();
             if (_lastYouLp != int.MinValue && you != _lastYouLp)
+            {
                 _youPulse = 1f;
+                if (YouLp != null)
+                    MenuMotion.PlayOn(YouLp.gameObject, MenuMotion.PunchScale(YouLp.rectTransform, 1.22f, 0.22f));
+            }
             _lastYouLp = you;
             _youLpBase = you <= 0 ? DuelystUi.Danger : you < 2000 ? DuelystUi.Magenta : DuelystUi.Cyan;
 
             if (OppLp != null) OppLp.text = opp.ToString();
             if (_lastOppLp != int.MinValue && opp != _lastOppLp)
+            {
                 _oppPulse = 1f;
+                if (OppLp != null)
+                    MenuMotion.PlayOn(OppLp.gameObject, MenuMotion.PunchScale(OppLp.rectTransform, 1.22f, 0.22f));
+            }
             _lastOppLp = opp;
             _oppLpBase = opp <= 0 ? DuelystUi.Danger : opp < 2000 ? new Color(1f, 0.55f, 0.35f, 1f) : DuelystUi.Magenta;
         }
@@ -199,6 +213,14 @@ namespace WRLDZ.UI
             var host = StatusLine.transform.parent;
             if (host != null)
                 host.gameObject.SetActive(!string.IsNullOrWhiteSpace(line));
+        }
+
+        /// <summary>AR cluster owns You / Opp / Phase. Overlay keeps action chips only.</summary>
+        public void SetScreenScoreVisible(bool on)
+        {
+            if (_youScoreGo != null) _youScoreGo.SetActive(on);
+            if (_phaseGo != null) _phaseGo.SetActive(on);
+            if (_oppScoreGo != null) _oppScoreGo.SetActive(on);
         }
 
         public void SetActionsVisible(bool on)
@@ -252,30 +274,9 @@ namespace WRLDZ.UI
             }
             else
             {
-                // Inner scrim so cream type reads on the stage, filament rim on top.
-                img.sprite = UiFoundation.WhiteSprite();
-                img.type = Image.Type.Simple;
-                img.color = new Color(0.04f, 0.07f, 0.11f, 0.40f);
-                var glass = ImagineAssets.HudIslandGlass() ?? ImagineAssets.HudChipCyan();
-                if (glass != null)
-                {
-                    var frame = new GameObject("Frame", typeof(RectTransform), typeof(Image));
-                    frame.transform.SetParent(go.transform, false);
-                    Place(frame.GetComponent<RectTransform>(), 0f, 0f, 1f, 1f);
-                    var fi = frame.GetComponent<Image>();
-                    fi.sprite = glass;
-                    fi.type = Image.Type.Simple;
-                    fi.color = Color.white;
-                    fi.raycastTarget = false;
-                    frame.transform.SetAsFirstSibling();
-                }
-                else
-                {
-                    var ol = go.AddComponent<Outline>();
-                    ol.effectColor = new Color(edge.r, edge.g, edge.b, Mathf.Min(0.40f, edge.a));
-                    ol.effectDistance = new Vector2(0.8f, -0.8f);
-                    ol.useGraphicAlpha = true;
-                }
+                // Same quiet slate as the menus. No second glass plate on top.
+                HubChrome.QuietFill(img, new Color(0.055f, 0.063f, 0.110f, IslandFillAlpha), edge,
+                    millennia: true);
             }
             return go;
         }
@@ -305,7 +306,9 @@ namespace WRLDZ.UI
             var img = go.GetComponent<Image>();
             var pip = ImagineAssets.HudPipIdle();
             img.sprite = pip != null ? pip : UiFoundation.WhiteSprite();
-            img.color = pip != null ? Color.white : new Color(0.14f, 0.16f, 0.20f, PipFillAlpha);
+            img.color = pip != null
+                ? new Color(1f, 1f, 1f, PipFillAlpha)
+                : new Color(0.14f, 0.16f, 0.20f, PipFillAlpha);
             img.raycastTarget = false;
             var t = Label(go.transform, "L", label, 10, TextAnchor.MiddleCenter, DuelystUi.TextCream);
             FloatingPanel.Stretch(t.rectTransform);

@@ -1,0 +1,392 @@
+{
+ "sex": "male",
+ "src": "build/meshy/argon_avatar_male.glb",
+ "parts": {
+  "ArgonBody_male": {
+   "morph_max_m": {
+    "Weight_Heavy": 0.075,
+    "Weight_Thin": 0.0174
+   },
+   "recolor": {
+    "mask": "Meshy_male_Body_mask.png",
+    "regions": [
+     {
+      "region": "skin",
+      "coverage": 0.4322,
+      "mean_hex": "#F9C494",
+      "mean_lum_linear": 0.62149
+     },
+     {
+      "region": "suit",
+      "coverage": 0.5646,
+      "mean_hex": "#818284",
+      "mean_lum_linear": 0.22228
+     },
+     {
+      "region": "other",
+      "coverage": 0.0032,
+      "mean_hex": "#383030",
+      "mean_lum_linear": 0.03775
+     }
+    ],
+    "clusters": [
+     {
+      "lab": [
+       20.3,
+       3.4,
+       1.0
+      ],
+      "area": 0.0032,
+      "region": "other"
+     },
+     {
+      "lab": [
+       55.1,
+       0.6,
+       -1.7
+      ],
+      "area": 0.2515,
+      "region": "suit"
+     },
+     {
+      "lab": [
+       83.7,
+       12.9,
+       32.0
+      ],
+      "area": 0.3933,
+      "region": "skin"
+     },
+     {
+      "lab": [
+       82.0,
+       9.7,
+       25.4
+      ],
+      "area": 0.0161,
+      "region": "skin"
+     },
+     {
+      "lab": [
+       53.6,
+       0.5,
+       -1.4
+      ],
+      "area": 0.313,
+      "region": "suit"
+     },
+     {
+      "lab": [
+       57.7,
+       7.3,
+       17.5
+      ],
+      "area": 0.0073,
+      "region": "skin"
+     },
+     {
+      "lab": [
+       72.5,
+       11.6,
+       28.1
+      ],
+      "area": 0.0155,
+      "region": "skin"
+     }
+    ]
+   }
+  },
+  "ArgonPart_Bottoms": {
+   "morph_max_m": {
+    "Weight_Heavy": 0.0702,
+    "Weight_Thin": 0.0162
+   },
+   "far_from_body": 0,
+   "recolor": {
+    "mask": "Meshy_male_Bottoms_mask.png",
+    "regions": [
+     {
+      "region": "primary",
+      "coverage": 0.7977,
+      "mean_hex": "#191627",
+      "mean_lum_linear": 0.00987
+     },
+     {
+      "region": "secondary",
+      "coverage": 0.1269,
+      "mean_hex": "#552D2E",
+      "mean_lum_linear": 0.04648
+     },
+     {
+      "region": "trim",
+      "coverage": 0.0754,
+      "mean_hex": "#A8A8A7",
+      "mean_lum_linear": 0.4049
+     }
+    ],
+    "clusters": [
+     {
+      "lab": [
+       7.6,
+       6.3,
+       -11.2
+      ],
+      "area": 0.4587,
+      "region": "primary"
+     },
+     {
+      "lab": [
+       34.9,
+       51.6,
+       19.5
+      ],
+      "area": 0.0155,
+      "region": "secondary"
+     },
+     {
+      "lab": [
+       12.3,
+       7.0,
+       -12.5
+      ],
+      "area": 0.2032,
+      "region": "primary"
+     },
+     {
+      "lab": [
+       21.3,
+       14.5,
+       10.2
+      ],
+      "area": 0.0942,
+      "region": "secondary"
+     },
+     {
+      "lab": [
+       68.9,
+       -0.5,
+       0.9
+      ],
+      "area": 0.0755,
+      "region": "trim"
+     },
+     {
+      "lab": [
+       30.5,
+       5.2,
+       -7.3
+      ],
+      "area": 0.018,
+      "region": "secondary"
+     },
+     {
+      "lab": [
+       6.3,
+       4.6,
+       -7.6
+      ],
+      "area": 0.1349,
+      "region": "primary"
+     }
+    ]
+   }
+  },
+  "ArgonPart_Hair": {
+   "morph_max_m": {
+    "Weight_Heavy": 0.0149,
+    "Weight_Thin": 0.0041
+   },
+   "far_from_body": 2089
+  },
+  "ArgonPart_Shirt": {
+   "morph_max_m": {
+    "Weight_Heavy": 0.062,
+    "Weight_Thin": 0.0154
+   },
+   "far_from_body": 427,
+   "recolor": {
+    "mask": "Meshy_male_Shirt_mask.png",
+    "regions": [
+     {
+      "region": "primary",
+      "coverage": 0.7046,
+      "mean_hex": "#1D1626",
+      "mean_lum_linear": 0.01055
+     },
+     {
+      "region": "secondary",
+      "coverage": 0.2416,
+      "mean_hex": "#6A2537",
+      "mean_lum_linear": 0.06071
+     },
+     {
+      "region": "trim",
+      "coverage": 0.0538,
+      "mean_hex": "#CBCBCA",
+      "mean_lum_linear": 0.60588
+     }
+    ],
+    "clusters": [
+     {
+      "lab": [
+       26.4,
+       41.4,
+       11.7
+      ],
+      "area": 0.1226,
+      "region": "secondary"
+     },
+     {
+      "lab": [
+       49.5,
+       1.3,
+       -0.9
+      ],
+      "area": 0.0331,
+      "region": "secondary"
+     },
+     {
+      "lab": [
+       81.5,
+       0.0,
+       0.1
+      ],
+      "area": 0.0538,
+      "region": "trim"
+     },
+     {
+      "lab": [
+       18.2,
+       29.3,
+       1.6
+      ],
+      "area": 0.087,
+      "region": "secondary"
+     },
+     {
+      "lab": [
+       6.1,
+       2.7,
+       -3.0
+      ],
+      "area": 0.0683,
+      "region": "primary"
+     },
+     {
+      "lab": [
+       8.9,
+       5.9,
+       -10.5
+      ],
+      "area": 0.5561,
+      "region": "primary"
+     },
+     {
+      "lab": [
+       12.4,
+       19.2,
+       -5.3
+      ],
+      "area": 0.079,
+      "region": "primary"
+     }
+    ]
+   }
+  },
+  "ArgonPart_Shoes": {
+   "morph_max_m": {
+    "Weight_Heavy": 0.0164,
+    "Weight_Thin": 0.0048
+   },
+   "far_from_body": 0,
+   "recolor": {
+    "mask": "Meshy_male_Shoes_mask.png",
+    "regions": [
+     {
+      "region": "primary",
+      "coverage": 0.806,
+      "mean_hex": "#161520",
+      "mean_lum_linear": 0.00894
+     },
+     {
+      "region": "secondary",
+      "coverage": 0.1719,
+      "mean_hex": "#5B1B30",
+      "mean_lum_linear": 0.04306
+     },
+     {
+      "region": "trim",
+      "coverage": 0.0221,
+      "mean_hex": "#A9A9AD",
+      "mean_lum_linear": 0.41669
+     }
+    ],
+    "clusters": [
+     {
+      "lab": [
+       37.4,
+       3.0,
+       -7.0
+      ],
+      "area": 0.0292,
+      "region": "secondary"
+     },
+     {
+      "lab": [
+       69.6,
+       0.6,
+       -1.9
+      ],
+      "area": 0.0224,
+      "region": "trim"
+     },
+     {
+      "lab": [
+       11.2,
+       24.4,
+       0.8
+      ],
+      "area": 0.0538,
+      "region": "secondary"
+     },
+     {
+      "lab": [
+       23.2,
+       41.1,
+       10.1
+      ],
+      "area": 0.0895,
+      "region": "secondary"
+     },
+     {
+      "lab": [
+       3.3,
+       2.0,
+       -2.6
+      ],
+      "area": 0.1504,
+      "region": "primary"
+     },
+     {
+      "lab": [
+       6.7,
+       3.9,
+       -8.4
+      ],
+      "area": 0.5115,
+      "region": "primary"
+     },
+     {
+      "lab": [
+       14.9,
+       4.7,
+       -8.5
+      ],
+      "area": 0.1433,
+      "region": "primary"
+     }
+    ]
+   }
+  }
+ }
+}

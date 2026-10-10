@@ -1,6 +1,7 @@
 using UnityEngine;
 using WRLDZ.Data;
 using WRLDZ.Duel;
+using WRLDZ.Duel.Rules;
 using WRLDZ.Presentation;
 using WRLDZ.UI;
 // KuribohTeamInfo · LocalAccountStore · DeckBoxState
@@ -15,7 +16,7 @@ namespace WRLDZ.Core
     {
         [Header("StreamingAssets/Decks/")]
         public string playerDeckFile = "player_starter.json";
-        public string aiDeckFile = "ai_kaiba.json";
+        public string aiDeckFile = "character_dk_kaiba.json";
 
         CardDatabase _db;
         DeckFile _playerDeck;
@@ -23,6 +24,17 @@ namespace WRLDZ.Core
         DuelEngine _engine;
         DuelUI _ui;
         GameObject _uiHost;
+        AppSession.ActiveDuelProbe _probe;
+        /// <summary>The match being set up and played: the session's pending AR match, or a local default when the
+        /// scene was opened directly (Editor). The pre-duel setup writes its choices onto it.</summary>
+        ArDuelMatchConfig _match;
+        /// <summary>The deck file the launch asked for (explicit match deck / test deck / team starter): the fallback
+        /// when the account has no legal deck box.</summary>
+        DeckFile _starterDeck;
+        bool _playerDeckForced;
+        GameObject _setupSheet;
+        bool _setupOpen;
+        bool _setupCancelled;
 
         void Start()
         {
@@ -104,63 +116,155 @@ namespace WRLDZ.Core
                     Debug.Log("[WRLDZ] AR duel · default match config");
             }
 
-            _playerDeck = CardDatabase.LoadDeck(deckFile) ?? CardDatabase.LoadDeck(playerDeckFile);
+            _starterDeck = CardDatabase.LoadDeck(deckFile) ?? CardDatabase.LoadDeck(playerDeckFile);
             _aiDeck = CardDatabase.LoadDeck(aiFile) ?? CardDatabase.LoadDeck(aiDeckFile);
+            // An explicit match deck (lab test duel / OCG lab / recordings) wins over the account's boxes.
+            _playerDeckForced = session.TestDuelMode || (arMatch != null && !string.IsNullOrEmpty(arMatch.PlayerDeckFile));
+            // the scene opened directly (Editor) still gets a match to set up; it is not the session's pending match
+            _match = arMatch ?? ArDuelMatchConfig.DefaultQuick();
 
-            // Prefer account play-deck box when legal (deck editor saves here)
-            var fromBox = TryLoadAccountPlayDeck(session.Account);
-            if (fromBox != null && fromBox.main != null && fromBox.main.Length > 0)
-            {
-                var n = 0;
-                foreach (var e in fromBox.main)
-                    if (e != null) n += Mathf.Max(0, e.qty);
-                if (n >= TcgRules.MainDeckMin)
-                {
-                    _playerDeck = fromBox;
-                    Debug.Log($"[WRLDZ] Player deck from account box '{fromBox.name}' · main={n}");
-                }
-            }
-
-            if (_playerDeck == null || _aiDeck == null)
+            if (_starterDeck == null || _aiDeck == null)
             {
                 Debug.LogError("[WRLDZ] Deck load failed.");
                 yield break;
             }
 
+            // ── Pre-duel setup: first turn, deck, ERAZ band, format — before the cinematic, with the deck checked
+            // against the chosen format. The lab's Instant Duel, test duels and already-configured matches skip it.
+            while (NeedsSetup(session))
+            {
+                _setupOpen = true;
+                _setupCancelled = false;
+                var ctx = new WRLDZ.UI.Shell.PreDuelSetupScreen.Context
+                {
+                    Match = _match,
+                    Account = session.Account,
+                    Db = _db,
+                    ResolveDeck = ResolvePlayerDeck,
+                    IsAccountDeck = d => d != null && d != _starterDeck,
+                    EquippedName = EquippedDeckName(session.Account),
+                    OnStart = _ => _setupOpen = false,
+                    OnCancel = () => { _setupCancelled = true; _setupOpen = false; }
+                };
+                _setupSheet = WRLDZ.UI.Shell.PreDuelSetupScreen.OpenOverlay(null, ctx);
+                while (_setupOpen) yield return null;
+                _setupSheet = null;
+                if (_setupCancelled)
+                {
+                    Debug.Log("[WRLDZ] Pre-duel setup cancelled — leaving the duel.");
+                    session.LeaveDuel();
+                    yield break;
+                }
+            }
+
+            // The deck the duel starts with, checked against the match (its format's list, its ERAZ band) one last
+            // time: the setup cannot be bypassed by skipping screens or by an equipped deck that stopped being legal.
+            if (!ResolveAndValidatePlayerDeck(session, out var why))
+            {
+                Debug.LogWarning($"[WRLDZ] Player deck refused at duel start ({why}) — back to the setup.");
+                _match.PreDuelSetupDone = false;
+                if (_match.SkipPreDuelCinematic || session.TestDuelMode)
+                {
+                    // nothing to configure here: the launch's own fallback (the starter deck) as before
+                    _playerDeck = _starterDeck;
+                }
+                else
+                {
+                    StartCoroutine(BootDuel());
+                    yield break;
+                }
+            }
+
             StartFreshDuel();
         }
 
-        /// <summary>Build a <see cref="DeckFile"/> from the first occupied play deck box.</summary>
-        static DeckFile TryLoadAccountPlayDeck(LocalAccountStore.Account acc)
+        /// <summary>The setup sheet runs before a cinematic duel unless the match was already configured.</summary>
+        bool NeedsSetup(AppSession session)
+        {
+            if (_match == null || session.TestDuelMode) return false;
+            if (_match.SkipPreDuelCinematic || _match.PreDuelSetupDone) return false;
+            // a launch that fixes the player's deck file (lab decks, recordings, the OCG lab) configures itself
+            if (_playerDeckForced || IsOcgLabDeckFile()) return false;
+            return true;
+        }
+
+        /// <summary>Deck for a setup choice: -1 = the equipped deck box (else the launch's starter), n = that box.</summary>
+        DeckFile ResolvePlayerDeck(int boxIndex)
+        {
+            var session = AppSession.Ensure();
+            if (_playerDeckForced) return _starterDeck;
+            var inv = session.Account?.inventory;
+            if (boxIndex >= 0 && inv?.deckBoxes != null && boxIndex < inv.deckBoxes.Length && inv.deckBoxes[boxIndex] != null)
+                return DeckBoxToDeckFile(inv.deckBoxes[boxIndex]);
+            var equipped = TryLoadAccountPlayDeck(session.Account);
+            return equipped != null && equipped.main != null && equipped.main.Length > 0 ? equipped : _starterDeck;
+        }
+
+        static string EquippedDeckName(LocalAccountStore.Account acc)
+        {
+            var box = ActivePlayDeckBox(acc);
+            return box != null && !string.IsNullOrEmpty(box.name) ? "Equipped deck · " + box.name : "Equipped deck";
+        }
+
+        /// <summary>
+        /// Pick the deck the match asks for and validate it. A chosen or equipped box that fails the check is not
+        /// used (nothing is removed from it); with no setup to return to, the starter deck plays as before.
+        /// </summary>
+        bool ResolveAndValidatePlayerDeck(AppSession session, out string why)
+        {
+            why = null;
+            var deck = ResolvePlayerDeck(_match != null ? _match.PlayerDeckBoxIndex : -1);
+            if (deck == null)
+            {
+                why = "no deck";
+                return false;
+            }
+
+            if (_playerDeckForced)
+            {
+                // a fixed lab / recording deck plays as given (as before)
+                _playerDeck = deck;
+                return true;
+            }
+
+            // a box is checked for ownership and legality; the launch's starter file for legality only
+            if (!PlayDeckValidator.Inspect(deck, session.Account, _db, _match, null, out why, ownership: deck != _starterDeck))
+                return false;
+            _playerDeck = deck;
+            var n = 0;
+            if (deck.main != null)
+                foreach (var e in deck.main)
+                    if (e != null) n += Mathf.Max(0, e.qty);
+            Debug.Log($"[WRLDZ] Player deck from account box '{deck.name}' · main={n} · " +
+                      $"{DuelFormatCatalog.Get(_match?.RulesFormatId).Title} · ERAZ {_match?.ErazBandId}");
+            return true;
+        }
+
+        static DeckBoxState ActivePlayDeckBox(LocalAccountStore.Account acc)
         {
             if (acc?.inventory?.deckBoxes == null) return null;
-            DeckBoxState box = null;
             var inv = acc.inventory;
             var active = inv.ActivePlayDeckIndex;
             if (active >= 0 && active < inv.deckBoxes.Length)
             {
                 var b = inv.deckBoxes[active];
-                if (b != null && b.main != null && b.main.Length > 0)
-                    box = b;
+                if (b != null && b.main != null && b.main.Length > 0) return b;
             }
 
-            if (box == null)
-            {
-                foreach (var b in inv.deckBoxes)
-                {
-                    if (b != null && b.occupied && b.main != null && b.main.Length > 0)
-                    {
-                        box = b;
-                        break;
-                    }
-                }
-            }
-
-            if (box == null) return null;
-            return DeckBoxToDeckFile(box);
+            foreach (var b in inv.deckBoxes)
+                if (b != null && b.occupied && b.main != null && b.main.Length > 0)
+                    return b;
+            return null;
         }
 
-        static DeckFile DeckBoxToDeckFile(DeckBoxState box)
+        /// <summary>Build a <see cref="DeckFile"/> from the equipped (else the first occupied) play deck box.</summary>
+        static DeckFile TryLoadAccountPlayDeck(LocalAccountStore.Account acc)
+        {
+            var box = ActivePlayDeckBox(acc);
+            return box == null ? null : DeckBoxToDeckFile(box);
+        }
+
+        public static DeckFile DeckBoxToDeckFile(DeckBoxState box)
         {
             var deck = new DeckFile
             {
@@ -205,7 +309,20 @@ namespace WRLDZ.Core
             if (canvas != null)
                 Destroy(canvas);
 
-            var match = AppSession.Ensure().PendingArMatch;
+            var match = _match ?? AppSession.Ensure().PendingArMatch;
+            // Every fresh duel (first start or a practice restart) is a new result that can pay once, and decides
+            // turn 1 again (the restarted cinematic tosses / rolls afresh).
+            match?.BeginNewDuel();
+            if (match != null) match.FirstPlayerDecided = false;
+            // the deck is checked against the match every time a duel starts (a practice restart included)
+            if (match != null && _playerDeck != null && _playerDeck != _starterDeck && !_playerDeckForced &&
+                !PlayDeckValidator.Validate(_playerDeck, AppSession.Ensure().Account, _db, match, out var deckWhy))
+            {
+                Debug.LogError($"[WRLDZ] Duel start refused — the player deck is not legal for this match: {deckWhy}");
+                match.PreDuelSetupDone = false;
+                StartCoroutine(BootDuel());
+                return;
+            }
             if (IsOcgLabDeckFile())
             {
                 WRLDZ.Duel.Ocg.OcgLabDuelHost.Current?.Dispose();
@@ -232,13 +349,36 @@ namespace WRLDZ.Core
             {
                 _engine = new DuelEngine();
                 _engine.HumanVsHuman = match != null && match.IsHumanOpponent;
+                // the format chosen at setup is applied through the rules it names (DuelFormatCatalog is a view over
+                // DuelRulesOverlay / starting LP / the deck list), never through rules of its own
+                if (match != null && match.DkOverlay)
+                    _engine.Overlay = DuelRulesOverlay.DuelistKingdomTable();
                 var cinematic = match == null || !match.SkipPreDuelCinematic;
-                _engine.StartDuel(_db, _playerDeck, _aiDeck, cinematicOpening: cinematic);
-                if (match != null && match.StartingLp >= 1000)
+                if (match != null && (match.Launch == ArDuelLaunchKind.StoryEra
+                                      || match.Launch == ArDuelLaunchKind.NpcStreet))
                 {
-                    _engine.Player.LifePoints = match.StartingLp;
-                    _engine.Opponent.LifePoints = match.StartingLp;
-                    Debug.Log($"[WRLDZ] Encounter LP set to {match.StartingLp}");
+                    _playerDeck = ErazDeckRules.FilterDeckToEra(_playerDeck, match.ErazBandId);
+                    _aiDeck = ErazDeckRules.FilterDeckToEra(_aiDeck, match.ErazBandId);
+                }
+
+                // turn 1: the cinematic tosses / rolls on the engine's own stream and reports it; without a cinematic
+                // the same method is decided here, silently, so the duel still starts with a real result
+                var opponentFirst = false;
+                if (!cinematic && match != null)
+                    opponentFirst = DecideFirstTurnSilently(match);
+                _engine.StartDuel(_db, _playerDeck, _aiDeck, cinematicOpening: cinematic, opponentFirst: opponentFirst);
+                if (match != null && !string.IsNullOrEmpty(match.OpponentDisplayName) && _engine.Opponent != null)
+                    _engine.Opponent.Name = match.OpponentDisplayName;
+                var lp = match != null && match.StartingLp >= 1000
+                    ? match.StartingLp
+                    : (_engine.Overlay != null && _engine.Overlay.OverrideStartingLp >= 1000
+                        ? _engine.Overlay.OverrideStartingLp
+                        : 0);
+                if (lp >= 1000)
+                {
+                    _engine.Player.LifePoints = lp;
+                    _engine.Opponent.LifePoints = lp;
+                    Debug.Log($"[WRLDZ] Encounter LP set to {lp}");
                 }
 
                 if (!cinematic)
@@ -253,13 +393,62 @@ namespace WRLDZ.Core
             WrldzAudio.PlayDuelBgm();
             WrldzAudio.PlayDuelBegin();
 
+            var session = AppSession.Ensure();
+            session.ClearActiveDuel(_probe);
+            _probe ??= ProbeDuel;
+            session.RegisterActiveDuel(_probe);
+            // A rewarded duel is on disk from its first frame: killing the app mid-duel is a forfeit next launch.
+            PendingDuelMarker.Arm(session.Account, match, session.TestDuelMode);
+
             _uiHost = new GameObject("DuelUIHost");
             _ui = _uiHost.AddComponent<DuelUI>();
+            _ui.Match = match;
             _ui.Bind(_engine, _db, RestartDuel);
             if (_engine.HumanVsHuman)
                 Debug.Log($"[WRLDZ] Hotseat PvP · sep={match?.SeparationMeters:0.0}m · {match?.SummaryLine()}");
             if (_engine.OpeningSequenceActive)
                 Debug.Log("[WRLDZ] Pre-duel cinematic armed — deploy · shuffle · draw from DECK zone");
+        }
+
+        /// <summary>
+        /// The setup's first-turn method without the cinematic (Instant Duel): coin with the dealt sides, or dice
+        /// with ties rolled again. Reported through <see cref="CoinDicePresentation"/> like every other toss.
+        /// </summary>
+        static bool DecideFirstTurnSilently(ArDuelMatchConfig match)
+        {
+            var rng = new DuelRng();
+            bool opponentFirst;
+            if (match.FirstPlayerMethod == FirstPlayerMethod.DiceRoll)
+            {
+                int a, b;
+                var tries = 0;
+                do
+                {
+                    rng.SetPresentationContext(true, "First turn");
+                    a = rng.RollDie();
+                    rng.SetPresentationContext(false, "First turn");
+                    b = rng.RollDie();
+                    tries++;
+                } while (a == b && tries < 50);
+
+                opponentFirst = b > a;
+                match.FirstPlayerPlayerRoll = a;
+                match.FirstPlayerOpponentRoll = b;
+                Debug.Log($"[WRLDZ] First turn by dice (no cinematic): you {a} · opponent {b} → {(opponentFirst ? "opponent" : "you")} first");
+            }
+            else
+            {
+                rng.SetPresentationContext(true, "First turn");
+                var heads = rng.TossCoin();
+                match.CoinLandedHeads = heads;
+                opponentFirst = heads != match.CoinHeadsIsPlayerOne;
+                Debug.Log($"[WRLDZ] First turn by coin (no cinematic): heads = {(match.CoinHeadsIsPlayerOne ? "you" : "opponent")} · " +
+                          $"landed {(heads ? "heads" : "tails")} → {(opponentFirst ? "opponent" : "you")} first");
+            }
+
+            match.FirstPlayerDecided = true;
+            match.OpponentGoesFirst = opponentFirst;
+            return opponentFirst;
         }
 
         bool IsOcgLabDeckFile()
@@ -281,14 +470,40 @@ namespace WRLDZ.Core
             !string.IsNullOrEmpty(name) &&
             name.IndexOf("ocg_lab", System.StringComparison.OrdinalIgnoreCase) >= 0;
 
+        /// <summary>
+        /// Practice / lab only (owner rule 2026-09-23 #3). A rewarded duel cannot be restarted — the player
+        /// leaves it (a forfeit loss before it ends), so a won Raid / Tear Boss / street duel cannot be replayed
+        /// for another payout.
+        /// </summary>
         public void RestartDuel()
         {
+            var session = AppSession.Ensure();
+            var match = session.PendingArMatch;
+            if (!session.TestDuelMode && match != null && !match.AllowsRestart)
+            {
+                Debug.LogWarning(
+                    $"[WRLDZ] Restart refused for {match.Launch} — only practice / lab duels restart.");
+                return;
+            }
+
             Debug.Log("[WRLDZ] Restarting duel…");
             StartFreshDuel();
         }
 
+        /// <summary>Live state for <see cref="AppSession.SettlePendingDuel"/>: over? who won? how long?</summary>
+        bool ProbeDuel(out bool playerWon, out int turnNumber)
+        {
+            var e = _engine;
+            turnNumber = e != null ? e.TurnNumber : 0;
+            playerWon = e != null && e.GameOver && e.Winner != null && e.Winner.IsPlayer;
+            return e != null && e.GameOver;
+        }
+
         void OnDestroy()
         {
+            if (_setupSheet != null) Destroy(_setupSheet);
+            if (_probe != null && AppSession.Instance != null)
+                AppSession.Instance.ClearActiveDuel(_probe);
             WRLDZ.Duel.Ocg.OcgLabDuelHost.Current?.Dispose();
         }
     }

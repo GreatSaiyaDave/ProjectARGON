@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using WRLDZ.Core;
 
 namespace WRLDZ.Presentation
 {
@@ -20,14 +21,8 @@ namespace WRLDZ.Presentation
             if (string.IsNullOrEmpty(relativePath)) return null;
             var key = relativePath + "|tex|" + wrap;
             if (TexCache.TryGetValue(key, out var cached) && cached != null) return cached;
-            var full = Path.Combine(Application.streamingAssetsPath, relativePath);
-            if (!File.Exists(full))
-            {
-                PinEditorCwd();
+            if (!StreamingFiles.TryReadAllBytes(relativePath, out var bytes))
                 return null;
-            }
-            var bytes = File.ReadAllBytes(full);
-            PinEditorCwd();
             var tex = new Texture2D(2, 2, TextureFormat.RGBA32, true);
             if (!tex.LoadImage(bytes))
             {
@@ -56,12 +51,16 @@ namespace WRLDZ.Presentation
         /// <summary>
         /// Force reload after an on-disk replace. Null clears everything.
         /// A path ending in / or \ clears every cached key under that prefix.
+        /// Editor only: in a player StreamingAssets is immutable (inside the APK on Android), so clearing only
+        /// re-decoded the same art and orphaned the old textures — the Overworld clears ~10 plates on every Build.
         /// </summary>
         public static void ClearCache(string relativePath = null)
         {
+            if (!Application.isEditor) return;
             if (string.IsNullOrEmpty(relativePath))
             {
                 Cache.Clear();
+                TexCache.Clear();
                 return;
             }
 
@@ -77,6 +76,18 @@ namespace WRLDZ.Presentation
 
             foreach (var k in doomed)
                 Cache.Remove(k);
+
+            var texDoomed = new List<string>();
+            foreach (var k in TexCache.Keys)
+            {
+                if (k == relativePath || k.StartsWith(relativePath + "|"))
+                    texDoomed.Add(k);
+                else if (folder && k.StartsWith(relativePath))
+                    texDoomed.Add(k);
+            }
+
+            foreach (var k in texDoomed)
+                TexCache.Remove(k);
         }
 
         static Sprite LoadInternal(string relativePath, Vector4 border, bool autoChromaKey)
@@ -87,15 +98,9 @@ namespace WRLDZ.Presentation
                 : relativePath;
             if (Cache.TryGetValue(cacheKey, out var s) && s != null) return s;
 
-            var full = Path.Combine(Application.streamingAssetsPath, relativePath);
-            if (!File.Exists(full))
-            {
-                PinEditorCwd();
+            if (!StreamingFiles.TryReadAllBytes(relativePath, out var bytes))
                 return null;
-            }
 
-            var bytes = File.ReadAllBytes(full);
-            PinEditorCwd();
             var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
             if (!tex.LoadImage(bytes))
             {
@@ -298,25 +303,7 @@ namespace WRLDZ.Presentation
             var spr = CardBack();
             return spr != null && spr.texture != null ? spr.texture : Texture2D.grayTexture;
         }
-        /// <summary>
-        /// Linux File.Exists can native-chdir into the file's folder. Bee then
-        /// compiles against that folder and Unity reports a compile failure with
-        /// no CS errors. Re-pin immediately after StreamingAssets IO.
-        /// </summary>
-        static void PinEditorCwd()
-        {
-#if UNITY_EDITOR
-            try
-            {
-                var root = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
-                Directory.SetCurrentDirectory(root);
-            }
-            catch
-            {
-                // Editor guard also pins on compile.
-            }
-#endif
-        }
+        // Editor cwd pin (Linux File.Exists chdir → Bee fatal) now lives in StreamingFiles.
 
         public static Sprite ReferobotPortrait() => Load("WRLDZ/Referobot/referobot_portrait.png");
 

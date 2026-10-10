@@ -1,0 +1,135 @@
+{
+  "name": "Night-Shift Monarchs",
+  "format": "wrldz_street_8000",
+  "main": [
+    {
+      "id": 4929256,
+      "name": "Mobius the Frost Monarch",
+      "qty": 3
+    },
+    {
+      "id": 51945556,
+      "name": "Zaborg the Thunder Monarch",
+      "qty": 3
+    },
+    {
+      "id": 26205777,
+      "name": "Thestalos the Firestorm Monarch",
+      "qty": 3
+    },
+    {
+      "id": 60229110,
+      "name": "Granmarg the Rock Monarch",
+      "qty": 2
+    },
+    {
+      "id": 17444133,
+      "name": "Kaiser Sea Horse",
+      "qty": 3
+    },
+    {
+      "id": 44436472,
+      "name": "Double Coston",
+      "qty": 3
+    },
+    {
+      "id": 26202165,
+      "name": "Sangan",
+      "qty": 1
+    },
+    {
+      "id": 74131780,
+      "name": "Exiled Force",
+      "qty": 1
+    },
+    {
+      "id": 54652250,
+      "name": "Man-Eater Bug",
+      "qty": 2
+    },
+    {
+      "id": 7572887,
+      "name": "D.D. Warrior Lady",
+      "qty": 1
+    },
+    {
+      "id": 68005187,
+      "name": "Soul Exchange",
+      "qty": 2
+    },
+    {
+      "id": 55144522,
+      "name": "Pot of Greed",
+      "qty": 1
+    },
+    {
+      "id": 19613556,
+      "name": "Heavy Storm",
+      "qty": 1
+    },
+    {
+      "id": 5318639,
+      "name": "Mystical Space Typhoon",
+      "qty": 1
+    },
+    {
+      "id": 98045062,
+      "name": "Enemy Controller",
+      "qty": 2
+    },
+    {
+      "id": 70828912,
+      "name": "Premature Burial",
+      "qty": 1
+    },
+    {
+      "id": 45986603,
+      "name": "Snatch Steal",
+      "qty": 1
+    },
+    {
+      "id": 79759861,
+      "name": "Tribute to the Doomed",
+      "qty": 1
+    },
+    {
+      "id": 14087893,
+      "name": "Book of Moon",
+      "qty": 1
+    },
+    {
+      "id": 44095762,
+      "name": "Mirror Force",
+      "qty": 1
+    },
+    {
+      "id": 97077563,
+      "name": "Call of the Haunted",
+      "qty": 1
+    },
+    {
+      "id": 53582587,
+      "name": "Torrential Tribute",
+      "qty": 1
+    },
+    {
+      "id": 4206964,
+      "name": "Trap Hole",
+      "qty": 2
+    },
+    {
+      "id": 56120475,
+      "name": "Sakuretsu Armor",
+      "qty": 2
+    }
+  ],
+  "extra": [],
+  "side": [],
+  "counts": {
+    "main": 40,
+    "extra": 0,
+    "side": 0
+  },
+  "lpBand": 8000,
+  "role": "street_npc"
+}

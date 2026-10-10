@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using WRLDZ.Core;
 
 namespace WRLDZ.Duel.Ocg
 {
@@ -85,11 +86,10 @@ namespace WRLDZ.Duel.Ocg
         public static StubOcgDuelCore FromStreamingTape(string relativePath)
         {
             var stub = new StubOcgDuelCore();
-            var path = System.IO.Path.Combine(Application.streamingAssetsPath, relativePath);
-            if (System.IO.File.Exists(path))
-                stub.LoadTapeJson(System.IO.File.ReadAllText(path));
+            if (StreamingFiles.TryReadAllText(relativePath, out var json))
+                stub.LoadTapeJson(json);
             else
-                Debug.LogWarning("[WRLDZ OCG] Missing tape " + path);
+                Debug.LogWarning("[WRLDZ OCG] Missing tape " + StreamingFiles.FullPathForLog(relativePath));
             return stub;
         }
     }

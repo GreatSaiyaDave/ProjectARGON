@@ -1,0 +1,136 @@
+{
+  "name": "Night-Shift Machines",
+  "format": "wrldz_street_4000",
+  "main": [
+    {
+      "id": 7359741,
+      "name": "Mechanicalchaser",
+      "qty": 3
+    },
+    {
+      "id": 62651957,
+      "name": "X-Head Cannon",
+      "qty": 3
+    },
+    {
+      "id": 44203504,
+      "name": "Robotic Knight",
+      "qty": 3
+    },
+    {
+      "id": 97923414,
+      "name": "Inpachi",
+      "qty": 3
+    },
+    {
+      "id": 2311603,
+      "name": "Overdrive",
+      "qty": 2
+    },
+    {
+      "id": 90908427,
+      "name": "Steel Ogre Grotto #2",
+      "qty": 2
+    },
+    {
+      "id": 58314394,
+      "name": "Ground Attacker Bugroth",
+      "qty": 2
+    },
+    {
+      "id": 11384280,
+      "name": "Cannon Soldier",
+      "qty": 2
+    },
+    {
+      "id": 30190809,
+      "name": "Gear Golem the Moving Fortress",
+      "qty": 2
+    },
+    {
+      "id": 46700124,
+      "name": "Machine King",
+      "qty": 1
+    },
+    {
+      "id": 3797883,
+      "name": "Slot Machine",
+      "qty": 1
+    },
+    {
+      "id": 2851070,
+      "name": "Reflect Bounder",
+      "qty": 1
+    },
+    {
+      "id": 47025270,
+      "name": "Helping Robo for Combat",
+      "qty": 2
+    },
+    {
+      "id": 24094653,
+      "name": "Polymerization",
+      "qty": 2
+    },
+    {
+      "id": 66788016,
+      "name": "Fissure",
+      "qty": 2
+    },
+    {
+      "id": 97169186,
+      "name": "Smashing Ground",
+      "qty": 1
+    },
+    {
+      "id": 72302403,
+      "name": "Swords of Revealing Light",
+      "qty": 1
+    },
+    {
+      "id": 23171610,
+      "name": "Limiter Removal",
+      "qty": 1
+    },
+    {
+      "id": 4206964,
+      "name": "Trap Hole",
+      "qty": 2
+    },
+    {
+      "id": 17814387,
+      "name": "Reinforcements",
+      "qty": 2
+    },
+    {
+      "id": 3819470,
+      "name": "Seven Tools of the Bandit",
+      "qty": 1
+    },
+    {
+      "id": 14315573,
+      "name": "Negate Attack",
+      "qty": 1
+    }
+  ],
+  "extra": [
+    {
+      "id": 99551425,
+      "name": "Labyrinth Tank",
+      "qty": 1
+    },
+    {
+      "id": 9293977,
+      "name": "Metal Dragon",
+      "qty": 1
+    }
+  ],
+  "side": [],
+  "counts": {
+    "main": 40,
+    "extra": 2,
+    "side": 0
+  },
+  "lpBand": 4000,
+  "role": "street_npc"
+}

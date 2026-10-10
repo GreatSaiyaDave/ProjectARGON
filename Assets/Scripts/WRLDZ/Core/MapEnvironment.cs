@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Globalization;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -57,6 +58,12 @@ namespace WRLDZ.Core
         public bool OriginSet { get; private set; }
         /// <summary>True when meters come from real GPS (not WASD/pad sim).</summary>
         public bool UsingRealGps { get; private set; }
+        /// <summary>
+        /// True when the most recent <see cref="OnLocationMoved"/> came from
+        /// <see cref="SimulateWalkMeters"/> (keyboard / lab walk), false for a real GPS fix.
+        /// Walk rewards read this: simulated metres never earn outside Editor / Development builds.
+        /// </summary>
+        public bool LastMoveSimulated { get; private set; }
         public float HorizontalAccuracyM { get; private set; } = 9999f;
         public string LocationStatus { get; private set; } = "Using default region";
         public string SummaryLine { get; private set; } = "Night · Clear";
@@ -64,14 +71,35 @@ namespace WRLDZ.Core
         /// <summary>Max meters from avatar to interact with a Tear (GO-style zone entry).</summary>
         public const float TearInteractRadiusM = 55f;
 
+        /// <summary>A single fix farther than this from the last accepted position is held back (tunnel / bad fix).</summary>
+        public const float MaxSingleHopM = 500f;
+        /// <summary>
+        /// Held-back fixes that agree with each other (within <see cref="RebaseAgreementM"/>) this many
+        /// times in a row mean the player really is somewhere else (bus ride, app resumed far away):
+        /// the origin is re-based there instead of freezing the map until a manual Recenter.
+        /// </summary>
+        public const int RebaseAfterConsistentFixes = 3;
+        public const float RebaseAgreementM = 25f;
+
         public event Action OnEnvironmentChanged;
         /// <summary>Fired when GPS position updates enough to move the avatar map.</summary>
         public event Action OnLocationMoved;
+        /// <summary>
+        /// Fired (before <see cref="OnLocationMoved"/>) when the origin is re-based: a manual
+        /// Recenter, or the automatic re-base after a confirmed long GPS hop. The argument is
+        /// "recenter" or "gps-jump". Anything that credits walked distance must reset its
+        /// baseline here so the jump is never paid out as walking.
+        /// </summary>
+        public event Action<string> OnOriginRebased;
 
         float _weatherTimer;
         float _dayTimer;
         float _gpsPollTimer;
         bool _fetching;
+        // Long-hop confirmation (see RebaseAfterConsistentFixes)
+        int _farFixCount;
+        float _farFixLat, _farFixLon;
+        double _lastFixTimestamp = -1d;
 
         public static MapEnvironment Ensure()
         {
@@ -132,6 +160,12 @@ namespace WRLDZ.Core
             {
                 if (!WrldzInput.TryGetLocation(out var lat, out var lon))
                     return;
+                // The poll runs every 0.5 s but the provider only delivers a new fix every few
+                // metres / seconds: only a fresh fix counts (the long-hop confirmation counts fixes).
+                var stamp = WrldzInput.LocationTimestamp;
+                if (stamp > 0d && stamp == _lastFixTimestamp)
+                    return;
+                _lastFixTimestamp = stamp;
                 if (!OriginSet)
                 {
                     OriginLatitude = lat;
@@ -156,21 +190,35 @@ namespace WRLDZ.Core
                 var north = (float)(dLat * R);
                 var east = (float)(dLon * R * Mathf.Cos(meanLat));
 
-                // Ignore huge jumps (tunnel / first bad fix)
+                // Hold back huge jumps (tunnel / first bad fix). A single bad fix is dropped, but
+                // RebaseAfterConsistentFixes fixes that agree with each other re-base the origin
+                // there, so a real long move (bus, resume far away) never freezes the map.
                 var dn = north - MetersNorth;
                 var de = east - MetersEast;
                 var jump2 = dn * dn + de * de;
-                if (OriginSet && jump2 > 250000f) // >500m single hop
+                if (OriginSet && jump2 > MaxSingleHopM * MaxSingleHopM)
                 {
-                    Debug.LogWarning("[WRLDZ] GPS jump ignored (>500m). Tap Recenter if you moved far.");
+                    if (!NoteFarFix(lat, lon))
+                    {
+                        LocationStatus = $"GPS jump · confirming position ({_farFixCount}/{RebaseAfterConsistentFixes})";
+                        Debug.LogWarning($"[WRLDZ] GPS jump held back (>{MaxSingleHopM:0}m) · " +
+                                         $"{_farFixCount}/{RebaseAfterConsistentFixes} agreeing fixes.");
+                        return;
+                    }
+
+                    Debug.Log($"[WRLDZ] GPS jump confirmed by {RebaseAfterConsistentFixes} fixes within " +
+                              $"{RebaseAgreementM:0}m — re-basing the map origin here.");
+                    RebaseOrigin(lat, lon, "gps-jump");
                     return;
                 }
 
+                _farFixCount = 0;
                 if (jump2 < 0.25f) // <0.5m noise filter
                     return;
 
                 MetersNorth = north;
                 MetersEast = east;
+                LastMoveSimulated = false;
                 OnLocationMoved?.Invoke();
             }
             catch
@@ -179,7 +227,57 @@ namespace WRLDZ.Core
             }
         }
 
-        /// <summary>Editor / indoor pad: simulate walking meters (WASD / on-screen pad).</summary>
+        /// <summary>
+        /// A far fix arrived. Returns true once <see cref="RebaseAfterConsistentFixes"/> consecutive
+        /// far fixes agree within <see cref="RebaseAgreementM"/> of each other.
+        /// </summary>
+        bool NoteFarFix(float lat, float lon)
+        {
+            if (_farFixCount > 0 && MetersBetween(_farFixLat, _farFixLon, lat, lon) <= RebaseAgreementM)
+                _farFixCount++;
+            else
+                _farFixCount = 1;
+            _farFixLat = lat;
+            _farFixLon = lon;
+            return _farFixCount >= RebaseAfterConsistentFixes;
+        }
+
+        static float MetersBetween(double lat1, double lon1, double lat2, double lon2)
+        {
+            const double R = 6371000d;
+            var dLat = (lat2 - lat1) * Math.PI / 180d;
+            var dLon = (lon2 - lon1) * Math.PI / 180d;
+            var meanLat = (lat1 + lat2) * 0.5d * Math.PI / 180d;
+            var n = dLat * R;
+            var e = dLon * R * Math.Cos(meanLat);
+            return (float)Math.Sqrt(n * n + e * e);
+        }
+
+        /// <summary>Move the origin to (lat, lon), zero the walk metres and tell listeners why.</summary>
+        void RebaseOrigin(double lat, double lon, string reason)
+        {
+            OriginLatitude = lat;
+            OriginLongitude = lon;
+            Latitude = lat;
+            Longitude = lon;
+            MetersNorth = 0f;
+            MetersEast = 0f;
+            OriginSet = true;
+            _farFixCount = 0;
+            if (UsingRealGps)
+                LocationStatus = HorizontalAccuracyM < 80f
+                    ? $"GPS ±{HorizontalAccuracyM:0}m"
+                    : $"GPS weak ±{HorizontalAccuracyM:0}m · keep outdoors";
+            OnOriginRebased?.Invoke(reason);
+            OnLocationMoved?.Invoke();
+            RaiseChanged();
+        }
+
+        /// <summary>
+        /// Keyboard walk (WASD / arrows): Editor and Development builds only — the caller
+        /// (OverworldUI) gates it. Moves the map but never claims real GPS; walk rewards check
+        /// <see cref="LastMoveSimulated"/>.
+        /// </summary>
         public void SimulateWalkMeters(float eastDelta, float northDelta)
         {
             MetersEast += eastDelta;
@@ -195,8 +293,9 @@ namespace WRLDZ.Core
             if (!UsingRealGps)
                 LocationStatus = Application.isEditor
                     ? "Editor walk (WASD) · phone GPS outdoors"
-                    : "Walk pad · enable GPS outdoors for real position";
+                    : "Dev build keyboard walk · no GPS";
 
+            LastMoveSimulated = true;
             OnLocationMoved?.Invoke();
         }
 
@@ -210,16 +309,8 @@ namespace WRLDZ.Core
             return Mathf.Sqrt(dx * dx + dy * dy) * metersPerMapWidth;
         }
 
-        public void RecenterOriginHere()
-        {
-            OriginLatitude = Latitude;
-            OriginLongitude = Longitude;
-            MetersNorth = 0f;
-            MetersEast = 0f;
-            OriginSet = true;
-            OnLocationMoved?.Invoke();
-            RaiseChanged();
-        }
+        /// <summary>Manual Recenter: the current position becomes the map origin (fires <see cref="OnOriginRebased"/>).</summary>
+        public void RecenterOriginHere() => RebaseOrigin(Latitude, Longitude, "recenter");
 
         IEnumerator StartGpsAndWeather()
         {
@@ -231,15 +322,17 @@ namespace WRLDZ.Core
             {
                 GpsActive = false;
                 UsingRealGps = false;
-                LocationStatus = "Location permission denied — walk pad / WASD";
-                Debug.LogWarning("[WRLDZ] No location permission — map uses pad/WASD only.");
+                LocationStatus = "Location permission off — the map can't follow you";
+                Debug.LogWarning("[WRLDZ] No location permission — map stays at the default region.");
             }
             else if (!WrldzInput.LocationSupported && !Application.isEditor)
             {
                 // System location toggle off (Android location services disabled)
                 GpsActive = false;
                 UsingRealGps = false;
-                LocationStatus = "Enable Location in phone Settings · pad works indoors";
+                LocationStatus = Application.isMobilePlatform
+                    ? "Location is off — turn it on in system Settings"
+                    : "No location service on this device";
                 Debug.LogWarning("[WRLDZ] System location disabled by user.");
             }
             else if (Application.isEditor)
@@ -294,7 +387,7 @@ namespace WRLDZ.Core
                     UsingRealGps = false;
                     if (string.IsNullOrEmpty(LocationStatus) || LocationStatus.StartsWith("Waiting") ||
                         LocationStatus.StartsWith("GPS acquiring"))
-                        LocationStatus = "No fix yet — walk pad works · keep trying outdoors";
+                        LocationStatus = "No GPS fix yet — step outdoors";
                 }
             }
 
@@ -367,8 +460,12 @@ namespace WRLDZ.Core
         IEnumerator FetchWeather()
         {
             _fetching = true;
+            // Invariant culture: comma-decimal locales would send "52,52" and always fall back.
+            // Two decimals (~1 km) is plenty for weather and does not ship a metre-level fix to a third party.
+            var lat = Latitude.ToString("0.##", CultureInfo.InvariantCulture);
+            var lon = Longitude.ToString("0.##", CultureInfo.InvariantCulture);
             var url =
-                $"https://api.open-meteo.com/v1/forecast?latitude={Latitude:0.#####}&longitude={Longitude:0.#####}" +
+                $"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}" +
                 "&current=temperature_2m,weather_code,precipitation,cloud_cover,is_day&timezone=auto";
 
             using var req = UnityWebRequest.Get(url);
@@ -403,6 +500,10 @@ namespace WRLDZ.Core
         {
             // Minimal parse without JSON package — look for "current":{...}
             // Open-Meteo format: "temperature_2m":21.2,"weather_code":3,...
+            // The "current_units" block comes first and repeats every key with a unit string
+            // ("temperature_2m":"°C"), so read only from the "current" object onward.
+            var ci = json.IndexOf("\"current\":{", StringComparison.Ordinal);
+            if (ci >= 0) json = json.Substring(ci);
             TemperatureC = ReadFloat(json, "temperature_2m", TemperatureC);
             WeatherCode = (int)ReadFloat(json, "weather_code", WeatherCode);
             var cloud = ReadFloat(json, "cloud_cover", 0f);

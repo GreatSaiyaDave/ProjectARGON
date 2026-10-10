@@ -1,6 +1,8 @@
 # Full AR — ARCore 6DOF on the S23
 
-This is the **phone product path**: the room is the arena. You look *through* the S23. Holograms and both Spirit Dueler disks sit on the **real floor** and stay there when you walk. Digital / decline-AR still exists. Combiner HUDs and visor attachments are a later shell, not this.
+> **Owner decision 2026-09-23:** the **shipping target is Android XR glasses** (Unity / OpenXR APK). The Galaxy S23 is the **dev testbed** only: every Android APK constraint applies (StreamingAssets inside the APK via `Core/StreamingFiles`, the `Mobile` quality level, APK size), and new features are not designed phone-first.
+
+This is the **phone testbed path**: the room is the arena. You look *through* the S23. Holograms and both Spirit Dueler disks sit on the **real floor** and stay there when you walk. Digital / decline-AR still exists. Combiner HUDs and visor attachments are a later shell, not this.
 
 ```
 real floor plane (ARCore)

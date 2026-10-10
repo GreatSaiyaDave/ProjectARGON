@@ -74,6 +74,7 @@ namespace WRLDZ.UI
             var t = 0f;
             while (t < dur)
             {
+                if (rt == null) yield break;
                 t += Time.unscaledDeltaTime;
                 var u = t / dur;
                 float s;
@@ -85,6 +86,7 @@ namespace WRLDZ.UI
                 yield return null;
             }
 
+            if (rt == null) yield break;
             rt.localScale = from;
         }
 
@@ -96,11 +98,13 @@ namespace WRLDZ.UI
             g.color = from;
             while (t < dur)
             {
+                if (g == null) yield break;
                 t += Time.unscaledDeltaTime;
                 g.color = Color.Lerp(from, to, OutCubic(t / dur));
                 yield return null;
             }
 
+            if (g == null) yield break;
             g.color = to;
         }
 
@@ -115,11 +119,15 @@ namespace WRLDZ.UI
             var t = 0f;
             while (t < dur)
             {
+                // Closing a screen mid-fade destroys the group under us; writing alpha after that
+                // throws MissingReferenceException and kills the coroutine before its tail runs.
+                if (g == null) yield break;
                 t += Time.unscaledDeltaTime;
                 g.alpha = Mathf.Lerp(from, to, OutCubic(t / dur));
                 yield return null;
             }
 
+            if (g == null) yield break;
             g.alpha = to;
             g.blocksRaycasts = to > 0.05f;
             g.interactable = to > 0.05f;
@@ -141,12 +149,14 @@ namespace WRLDZ.UI
             {
                 t += Time.unscaledDeltaTime;
                 var k = OutCubic(t / dur);
+                if (go == null || g == null) yield break;
                 g.alpha = k;
                 if (rt != null)
                     rt.anchoredPosition = Vector2.Lerp(origin + new Vector2(0f, -42f), origin, k);
                 yield return null;
             }
 
+            if (go == null || g == null) yield break;
             g.alpha = 1f;
             if (rt != null) rt.anchoredPosition = origin;
             g.blocksRaycasts = true;
@@ -165,6 +175,7 @@ namespace WRLDZ.UI
             g.interactable = false;
             while (t < dur)
             {
+                if (go == null || g == null) yield break;
                 t += Time.unscaledDeltaTime;
                 var k = OutCubic(t / dur);
                 g.alpha = Mathf.Lerp(fromA, 0f, k);
@@ -173,6 +184,7 @@ namespace WRLDZ.UI
                 yield return null;
             }
 
+            if (go == null || g == null) yield break;
             g.alpha = 0f;
             g.blocksRaycasts = false;
             if (rt != null) rt.anchoredPosition = origin;
@@ -224,6 +236,9 @@ namespace WRLDZ.UI
                 rts[i] = ch.GetComponent<RectTransform>();
                 cgs[i] = EnsureGroup(ch);
                 cgs[i].alpha = 0f;
+                // An invisible row must not be tappable: the loop below restores blocksRaycasts as
+                // each child finishes fading in (and the normalisation pass guarantees it).
+                cgs[i].blocksRaycasts = false;
                 if (rts[i] != null)
                     rts[i].localScale = new Vector3(0.82f, 0.82f, 1f);
             }
@@ -236,7 +251,11 @@ namespace WRLDZ.UI
                 for (var i = 0; i < n; i++)
                 {
                     var u = Mathf.Clamp01((t - i * delay) / dur);
-                    if (cgs[i] != null) cgs[i].alpha = OutCubic(u);
+                    if (cgs[i] != null)
+                    {
+                        cgs[i].alpha = OutCubic(u);
+                        if (u >= 1f) cgs[i].blocksRaycasts = true;
+                    }
                     if (rts[i] != null)
                     {
                         var s = Mathf.Lerp(0.82f, 1f, OutBack(u));
@@ -268,13 +287,54 @@ namespace WRLDZ.UI
             var t = 0f;
             while (t < dur)
             {
+                if (rt == null) yield break;
                 t += Time.unscaledDeltaTime;
                 var y = Mathf.Lerp(fromY1, toY1, OutCubic(t / dur));
                 GoTheme.Place(rt, x0, y0, x1, y);
                 yield return null;
             }
 
+            if (rt == null) yield break;
             GoTheme.Place(rt, x0, y0, x1, toY1);
+        }
+
+        public const float BootCross = 0.72f;
+        public const float BootFadeIn = 0.85f;
+
+        public static IEnumerator CrossFade(CanvasGroup fadeOut, CanvasGroup fadeIn, float dur)
+        {
+            dur = Mathf.Max(0.01f, dur);
+            if (fadeIn != null)
+            {
+                fadeIn.alpha = 0f;
+                fadeIn.blocksRaycasts = false;
+                fadeIn.interactable = false;
+            }
+
+            var fromOut = fadeOut != null ? fadeOut.alpha : 0f;
+            var t = 0f;
+            while (t < dur)
+            {
+                t += Time.unscaledDeltaTime;
+                var k = OutCubic(t / dur);
+                if (fadeOut != null) fadeOut.alpha = Mathf.Lerp(fromOut, 0f, k);
+                if (fadeIn != null) fadeIn.alpha = k;
+                yield return null;
+            }
+
+            if (fadeOut != null)
+            {
+                fadeOut.alpha = 0f;
+                fadeOut.blocksRaycasts = false;
+                fadeOut.interactable = false;
+            }
+
+            if (fadeIn != null)
+            {
+                fadeIn.alpha = 1f;
+                fadeIn.blocksRaycasts = false;
+                fadeIn.interactable = false;
+            }
         }
     }
 }

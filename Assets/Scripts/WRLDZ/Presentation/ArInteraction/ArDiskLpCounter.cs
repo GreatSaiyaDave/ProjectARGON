@@ -6,20 +6,27 @@ using WRLDZ.UI;
 namespace WRLDZ.Presentation.ArInteraction
 {
     /// <summary>
-    /// Hub LP window — dark LCD well + large outlined digits on the Battle City lip.
-    /// Powers on at deploy (8888 lamp test → start LP), then ticks at ~12 fps
-    /// on damage/heal — same cadence as the HUD spiral counter.
+    /// Hub LP window — a TM1637-style LCD in the counter housing: gunmetal bezel, owner-coloured
+    /// rim (cyan YOU / magenta OPP), deep glass with a faint "8888" ghost behind the lit digits and
+    /// a small LP tag. Powers on at deploy (8888 lamp test → start LP), then ticks at ~12 fps on
+    /// damage/heal — same cadence as the HUD spiral counter.
+    /// The digits read for whoever is looking: they turn 180° in the window when the viewer would
+    /// otherwise see them upside down (the opponent's disk from across the field, a raised arm).
     /// </summary>
     public class ArDiskLpCounter : MonoBehaviour
     {
         const float TickHz = 12f;
-        const int CanvasW = 512;
-        const int CanvasH = 176;
+
+        /// <summary>Canvas units across the digit glass (1 unit = 0.1 mm at the v37 window size).</summary>
+        const int CanvasW = 560;
+        const int CanvasH = 200;
 
         Text _value;
+        Text _ghost;
         Text _tag;
-        Material _wellMat;
-        Material _rimMat;
+        Image _rim;
+        Image _glow;
+        Color _accent = DuelystUi.Cyan;
 
         int _shown = int.MinValue;
         int _from;
@@ -32,10 +39,14 @@ namespace WRLDZ.Presentation.ArInteraction
         int _lastFrame = -1;
         Coroutine _bootCo;
         int _layer;
+        Transform _lcd;
+        bool _flipped;
 
-        static readonly Color Well = new(0.03f, 0.07f, 0.11f, 1f);
-        static readonly Color Rim = new(0.28f, 0.88f, 1f, 1f);
-        static readonly Color OnCyan = new(0.55f, 0.98f, 1f, 1f);
+        /// <summary>True while the digits are turned 180° for the viewer (the disk panel follows it).</summary>
+        public bool Flipped => _flipped;
+
+        static readonly Color Bezel = new(0.07f, 0.08f, 0.11f, 1f);
+        static readonly Color Glass = new(0.012f, 0.035f, 0.055f, 1f);
         static readonly Color OnGold = new(1f, 0.86f, 0.28f, 1f);
         static readonly Color OnLow = new(1f, 0.42f, 0.22f, 1f);
         static readonly Color OnZero = new(1f, 0.28f, 0.28f, 1f);
@@ -50,6 +61,9 @@ namespace WRLDZ.Presentation.ArInteraction
             go.layer = layer;
             var c = go.AddComponent<ArDiskLpCounter>();
             c._layer = layer;
+            var rig = parent != null ? parent.GetComponentInParent<ArDuelDiskRig>() : null;
+            if (rig != null && !rig.IsPlayerSide)
+                c._accent = DuelystUi.Magenta;
             try { FreeUiKit.EnsureLoaded(); } catch { /* fonts optional */ }
             c.Build();
             c.PowerOff();
@@ -59,29 +73,14 @@ namespace WRLDZ.Presentation.ArInteraction
         void Build()
         {
             var size = ArPlaymatLayout.DiskLpWindowSize;
-            _wellMat = ArAnimePresentation.MakeSolid(Well, "LpWell");
-            _rimMat = ArAnimePresentation.MakeSolid(Rim, "LpRim");
-            if (_rimMat.HasProperty("_EmissionColor"))
-            {
-                _rimMat.EnableKeyword("_EMISSION");
-                _rimMat.SetColor("_EmissionColor", Rim * 0.55f);
-            }
-
-            var rim = Quad("Rim", new Vector3(size.x * 1.12f, size.y * 1.22f, 1f),
-                new Vector3(0f, 0f, -0.0007f), _rimMat);
-            rim.transform.SetAsFirstSibling();
-
-            Quad("Well", new Vector3(size.x, size.y, 1f),
-                new Vector3(0f, 0f, -0.0002f), _wellMat);
-
             var lcd = new GameObject("Lcd", typeof(RectTransform), typeof(Canvas));
             lcd.transform.SetParent(transform, false);
+            _lcd = lcd.transform;
             lcd.layer = _layer;
             // uGUI reads on −Z; the window's +Z faces up off the hub.
             lcd.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
             lcd.transform.localPosition = new Vector3(0f, 0f, 0.0005f);
-            // Inset so outlines never spill past the well (was clipping the last 0 of 8000).
-            var scale = size.x * 0.94f / CanvasW;
+            var scale = size.x / CanvasW;
             lcd.transform.localScale = new Vector3(scale, scale, scale);
 
             var rt = lcd.GetComponent<RectTransform>();
@@ -94,16 +93,42 @@ namespace WRLDZ.Presentation.ArInteraction
             canvas.overrideSorting = true;
             canvas.sortingOrder = 40;
 
-            _tag = MakeLcdText(lcd.transform, "Tag", "", 12, TextAnchor.MiddleCenter);
-            _tag.gameObject.SetActive(false);
+            var root = lcd.transform;
+            _glow = ArHoloSprites.Layer(root, "Glow", ArHoloSprites.Glow(), Fade(_accent, 0.22f), 0f, 70f);
+            ArHoloSprites.Layer(root, "Bezel", ArHoloSprites.RoundRect(), Bezel, 34f, 22f);
+            _rim = ArHoloSprites.Layer(root, "Rim", ArHoloSprites.RoundRectRim(), Fade(_accent, 0.9f), 26f, 9f);
+            ArHoloSprites.Layer(root, "Glass", ArHoloSprites.RoundRect(), Glass, 18f);
+            var sheen = ArHoloSprites.Layer(root, "Sheen", ArHoloSprites.RoundRect(),
+                new Color(1f, 1f, 1f, 0.045f), 14f);
+            Place(sheen.rectTransform, 0.02f, 0.56f, 0.98f, 0.95f);
 
-            _value = MakeLcdText(lcd.transform, "Value", "8000", 64, TextAnchor.MiddleCenter);
-            var vrt = _value.rectTransform;
-            vrt.anchorMin = new Vector2(0.04f, 0.04f);
-            vrt.anchorMax = new Vector2(0.96f, 0.96f);
-            vrt.offsetMin = Vector2.zero;
-            vrt.offsetMax = Vector2.zero;
-            _value.color = OnCyan;
+            _tag = MakeLcdText(root, "Tag", "LP", 40, TextAnchor.MiddleLeft);
+            Place(_tag.rectTransform, 0.035f, 0.52f, 0.20f, 0.92f);
+            _tag.color = Fade(_accent, 0.75f);
+
+            _ghost = MakeLcdText(root, "Ghost", "8888", 150, TextAnchor.MiddleRight);
+            Place(_ghost.rectTransform, 0.16f, 0.02f, 0.965f, 0.98f);
+            _ghost.color = Fade(_accent, 0.08f);
+            var ghostOutline = _ghost.GetComponent<Outline>();
+            if (ghostOutline != null) ghostOutline.enabled = false;
+            foreach (var sh in _ghost.GetComponents<Shadow>())
+                sh.enabled = false;
+
+            _value = MakeLcdText(root, "Value", "8000", 150, TextAnchor.MiddleRight);
+            Place(_value.rectTransform, 0.16f, 0.02f, 0.965f, 0.98f);
+            _value.color = Healthy;
+        }
+
+        Color Healthy => Color.Lerp(_accent, Color.white, 0.28f);
+
+        static Color Fade(Color c, float a) => new(c.r, c.g, c.b, a);
+
+        static void Place(RectTransform rt, float x0, float y0, float x1, float y1)
+        {
+            rt.anchorMin = new Vector2(x0, y0);
+            rt.anchorMax = new Vector2(x1, y1);
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
         }
 
         static Text MakeLcdText(Transform parent, string name, string text, int size, TextAnchor align)
@@ -113,11 +138,11 @@ namespace WRLDZ.Presentation.ArInteraction
             go.layer = parent.gameObject.layer;
             var t = go.GetComponent<Text>();
             // Body face — Bangers (display) is too wide for a 4-digit LCD.
-            WrldzType.Style(t, size, display: false, heavyOutline: true);
+            WrldzType.Style(t, 18, display: false, heavyOutline: true);
             t.alignment = align;
             t.raycastTarget = false;
             t.text = text ?? "";
-            t.fontSize = Mathf.Max(size, 96);
+            t.fontSize = size;
             t.resizeTextForBestFit = false;
             t.horizontalOverflow = HorizontalWrapMode.Overflow;
             t.verticalOverflow = VerticalWrapMode.Overflow;
@@ -125,27 +150,11 @@ namespace WRLDZ.Presentation.ArInteraction
             var o = t.GetComponent<Outline>();
             if (o != null)
             {
-                o.effectColor = new Color(0f, 0.04f, 0.08f, 0.95f);
-                o.effectDistance = new Vector2(1.6f, -1.6f);
+                o.effectColor = new Color(0f, 0.03f, 0.06f, 0.9f);
+                o.effectDistance = new Vector2(2.4f, -2.4f);
             }
 
             return t;
-        }
-
-        MeshRenderer Quad(string name, Vector3 scale, Vector3 pos, Material mat)
-        {
-            var go = GameObject.CreatePrimitive(PrimitiveType.Quad);
-            go.name = name;
-            go.transform.SetParent(transform, false);
-            go.transform.localPosition = pos;
-            go.transform.localRotation = Quaternion.identity;
-            go.transform.localScale = scale;
-            go.layer = _layer;
-            ArObjectUtil.Destroy(go.GetComponent<Collider>());
-            var mr = go.GetComponent<MeshRenderer>();
-            mr.sharedMaterial = mat;
-            ArAnimePresentation.ConfigureHoloRenderer(mr);
-            return mr;
         }
 
         /// <summary>Engine LP → window. Dark when the blade is folded.</summary>
@@ -266,6 +275,31 @@ namespace WRLDZ.Presentation.ArInteraction
             }
         }
 
+        /// <summary>
+        /// Keep the digits upright for the viewer. The window's text-up is transform.up and its face
+        /// is transform.forward; the viewer's up is the camera's up laid onto the glass (its forward
+        /// when looking square at it). Only 0° / 180° fit the landscape window, with hysteresis so a
+        /// sideways glance does not flicker.
+        /// </summary>
+        void LateUpdate()
+        {
+            if (_lcd == null || !_powered) return;
+            var cam = ArStageView.FindCamera(transform);
+            if (cam == null) return;
+            var n = transform.forward;
+            if (Vector3.Dot(cam.transform.position - transform.position, n) <= 0f) return;
+            var ct = cam.transform;
+            var up = ct.up - n * Vector3.Dot(ct.up, n);
+            if (up.sqrMagnitude < 0.01f)
+                up = ct.forward - n * Vector3.Dot(ct.forward, n);
+            if (up.sqrMagnitude < 1e-6f) return;
+            var d = Vector3.Dot(up.normalized, transform.up);
+            var flip = _flipped ? d < 0.2f : d < -0.2f;
+            if (flip == _flipped) return;
+            _flipped = flip;
+            _lcd.localRotation = Quaternion.Euler(0f, 180f, flip ? 180f : 0f);
+        }
+
         void OnDisable() => ReleaseTick();
         void OnDestroy() => ReleaseTick();
 
@@ -283,23 +317,32 @@ namespace WRLDZ.Presentation.ArInteraction
                 if (value <= 0) _value.color = OnZero;
                 else if (value < 1000) _value.color = OnLow;
                 else if (value < 4000) _value.color = OnGold;
-                else _value.color = OnCyan;
+                else _value.color = Healthy;
             }
 
             PaintRaw(value);
         }
 
+        /// <summary>Unpowered: dark glass, no ghost segments, rim dimmed.</summary>
         void PaintBlank()
         {
             if (_value != null) _value.text = "";
-            if (_tag != null) _tag.gameObject.SetActive(false);
+            SetLit(false);
         }
 
         void PaintRaw(int value)
         {
             value = Mathf.Clamp(value, 0, 9999);
             if (_value != null) _value.text = value.ToString();
-            if (_tag != null) _tag.gameObject.SetActive(false);
+            SetLit(true);
+        }
+
+        void SetLit(bool lit)
+        {
+            if (_ghost != null) _ghost.enabled = lit;
+            if (_tag != null) _tag.enabled = lit;
+            if (_rim != null) _rim.color = Fade(_accent, lit ? 0.9f : 0.28f);
+            if (_glow != null) _glow.enabled = lit;
         }
     }
 }

@@ -79,6 +79,9 @@ __pycache__/
 # Headless engine harness build outputs (.NET)
 Tools/HeadlessEngine/bin/
 Tools/HeadlessEngine/obj/
+
+# Raw YGOPRODeck dump for Tools/CardCompile/prelink_pool.py
+Tools/CardCompile/cache/
 # ...but keep the harness project file (Unity's *.csproj ignore above would drop it)
 !Tools/HeadlessEngine/HeadlessEngine.csproj
 

@@ -123,7 +123,7 @@ namespace WRLDZ.Duel
             sb.AppendLine("- Flute of Summoning Dragon: Lord of D. on field; SS up to 2 Dragons from hand.");
             sb.AppendLine();
             sb.AppendLine("## Not yet simulated");
-            sb.AppendLine("- Full multi-link chains / SEGOC / Counter Trap sequencing beyond Speed tags;");
+            sb.AppendLine("- Full SEGOC for every trigger;");
             sb.AppendLine("- Damage Step-only effects; most monster effects; banlist construction checks;");
             sb.AppendLine("- Pendulum scales/summon; Link arrows; full Extra Deck recipes beyond registered fusions.");
             return sb.ToString();

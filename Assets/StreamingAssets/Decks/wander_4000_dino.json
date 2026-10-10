@@ -1,0 +1,121 @@
+{
+  "name": "Rooftop Dinosaurs",
+  "format": "wrldz_street_4000",
+  "main": [
+    {
+      "id": 94119974,
+      "name": "Two-Headed King Rex",
+      "qty": 3
+    },
+    {
+      "id": 38289717,
+      "name": "Crawling Dragon #2",
+      "qty": 3
+    },
+    {
+      "id": 1784619,
+      "name": "Uraby",
+      "qty": 3
+    },
+    {
+      "id": 51934376,
+      "name": "Kabazauls",
+      "qty": 3
+    },
+    {
+      "id": 2671330,
+      "name": "Hyper Hammerhead",
+      "qty": 3
+    },
+    {
+      "id": 45894482,
+      "name": "Gilasaurus",
+      "qty": 3
+    },
+    {
+      "id": 79870141,
+      "name": "Mad Sword Beast",
+      "qty": 2
+    },
+    {
+      "id": 65287621,
+      "name": "Dark Driceratops",
+      "qty": 2
+    },
+    {
+      "id": 38670435,
+      "name": "Black Tyranno",
+      "qty": 1
+    },
+    {
+      "id": 40374923,
+      "name": "Mammoth Graveyard",
+      "qty": 2
+    },
+    {
+      "id": 92755808,
+      "name": "Element Saurus",
+      "qty": 2
+    },
+    {
+      "id": 57305373,
+      "name": "Two-Mouth Darkruler",
+      "qty": 1
+    },
+    {
+      "id": 24094653,
+      "name": "Polymerization",
+      "qty": 2
+    },
+    {
+      "id": 66788016,
+      "name": "Fissure",
+      "qty": 2
+    },
+    {
+      "id": 97169186,
+      "name": "Smashing Ground",
+      "qty": 1
+    },
+    {
+      "id": 72302403,
+      "name": "Swords of Revealing Light",
+      "qty": 1
+    },
+    {
+      "id": 4206964,
+      "name": "Trap Hole",
+      "qty": 2
+    },
+    {
+      "id": 17814387,
+      "name": "Reinforcements",
+      "qty": 2
+    },
+    {
+      "id": 14315573,
+      "name": "Negate Attack",
+      "qty": 1
+    },
+    {
+      "id": 3819470,
+      "name": "Seven Tools of the Bandit",
+      "qty": 1
+    }
+  ],
+  "extra": [
+    {
+      "id": 89112729,
+      "name": "Cyber Saurus",
+      "qty": 2
+    }
+  ],
+  "side": [],
+  "counts": {
+    "main": 40,
+    "extra": 2,
+    "side": 0
+  },
+  "lpBand": 4000,
+  "role": "street_npc"
+}

@@ -1,0 +1,146 @@
+{
+  "name": "Ultimate Insect (gaps)",
+  "format": "wrldz_street_playground_8000",
+  "flaw": "LV1 and LV3 are 2-ofs; LV5 and LV7 are singletons. Flying Kamakiri is the WIND recruiter they had instead of a 3rd LV3.",
+  "main": [
+    {
+      "id": 49441499,
+      "name": "Ultimate Insect LV1",
+      "qty": 2
+    },
+    {
+      "id": 34088136,
+      "name": "Ultimate Insect LV3",
+      "qty": 2
+    },
+    {
+      "id": 34830502,
+      "name": "Ultimate Insect LV5",
+      "qty": 1
+    },
+    {
+      "id": 19877898,
+      "name": "Ultimate Insect LV7",
+      "qty": 1
+    },
+    {
+      "id": 84834865,
+      "name": "Flying Kamakiri #1",
+      "qty": 3
+    },
+    {
+      "id": 93107608,
+      "name": "Howling Insect",
+      "qty": 2
+    },
+    {
+      "id": 26185991,
+      "name": "Pinch Hopper",
+      "qty": 2
+    },
+    {
+      "id": 26202165,
+      "name": "Sangan",
+      "qty": 1
+    },
+    {
+      "id": 55144522,
+      "name": "Pot of Greed",
+      "qty": 1
+    },
+    {
+      "id": 19613556,
+      "name": "Heavy Storm",
+      "qty": 1
+    },
+    {
+      "id": 5318639,
+      "name": "Mystical Space Typhoon",
+      "qty": 1
+    },
+    {
+      "id": 72302403,
+      "name": "Swords of Revealing Light",
+      "qty": 1
+    },
+    {
+      "id": 66788016,
+      "name": "Fissure",
+      "qty": 2
+    },
+    {
+      "id": 97169186,
+      "name": "Smashing Ground",
+      "qty": 1
+    },
+    {
+      "id": 79759861,
+      "name": "Tribute to the Doomed",
+      "qty": 2
+    },
+    {
+      "id": 26412047,
+      "name": "Hammer Shot",
+      "qty": 1
+    },
+    {
+      "id": 70046172,
+      "name": "Rush Recklessly",
+      "qty": 2
+    },
+    {
+      "id": 65169794,
+      "name": "Black Pendant",
+      "qty": 1
+    },
+    {
+      "id": 4206964,
+      "name": "Trap Hole",
+      "qty": 2
+    },
+    {
+      "id": 17814387,
+      "name": "Reinforcements",
+      "qty": 2
+    },
+    {
+      "id": 44209392,
+      "name": "Castle Walls",
+      "qty": 2
+    },
+    {
+      "id": 3819470,
+      "name": "Seven Tools of the Bandit",
+      "qty": 1
+    },
+    {
+      "id": 14315573,
+      "name": "Negate Attack",
+      "qty": 1
+    },
+    {
+      "id": 12607053,
+      "name": "Waboku",
+      "qty": 2
+    },
+    {
+      "id": 77414722,
+      "name": "Magic Jammer",
+      "qty": 1
+    },
+    {
+      "id": 56120475,
+      "name": "Sakuretsu Armor",
+      "qty": 2
+    }
+  ],
+  "extra": [],
+  "side": [],
+  "counts": {
+    "main": 40,
+    "extra": 0,
+    "side": 0
+  },
+  "lpBand": 8000,
+  "role": "street_npc_playground"
+}

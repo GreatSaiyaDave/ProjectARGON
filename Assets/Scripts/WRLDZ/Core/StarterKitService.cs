@@ -14,7 +14,53 @@ namespace WRLDZ.Core
             if (acc == null) return false;
             acc.EnsureProgress();
             acc.EnsureInventory();
-            if (acc.progress.onboardingStarterGranted) return false;
+            // Owner-only box (Great SaiyaDave): top up the unlimited box once.
+            // Any other character keeps no collection box — revoke strays, never grant.
+            if (acc.progress.onboardingStarterGranted)
+            {
+                try
+                {
+                    var existing = acc.inventory;
+                    if (CollectionBoxService.IsOwnerAccount(acc))
+                    {
+                        existing.EnsureCollectionBox();
+                        var box = existing.collectionBox;
+                        if (box != null && box.owned && box.UniqueCount() == 0)
+                        {
+                            CollectionBoxService.GrantInfiniteAll(existing, CardDatabase.Load());
+                            ProgressionService.Persist(acc);
+                            return true;
+                        }
+                    }
+                    else if (existing.collectionBox != null && existing.collectionBox.owned)
+                    {
+                        existing.collectionBox.owned = false;
+                        existing.collectionBox.stacks = System.Array.Empty<CardStackEntry>();
+                        ProgressionService.Persist(acc);
+                        return true;
+                    }
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogWarning($"[WRLDZ] Collection box top-up deferred: {ex.Message}");
+                }
+
+                return false;
+            }
+
+            // Load the deck before touching the inventory. Without it the kit is NOT marked granted, so the
+            // next GrantIfNeeded (after the deck file is fixed / readable) still hands out the real starter
+            // instead of a permanent empty deck box (QC F9).
+            var team = acc.progress.Team;
+            var deckFile = KuribohTeamInfo.StarterDeckFile(team);
+            var deck = CardDatabase.LoadDeck(deckFile) ?? CardDatabase.LoadDeck("player_starter.json");
+            if (deck == null || deck.main == null || deck.main.Length == 0)
+            {
+                Debug.LogError(
+                    $"[WRLDZ] Starter kit not granted for {acc.username}: starter deck '{deckFile}' " +
+                    "(and player_starter.json) could not be loaded. Will retry on the next call.");
+                return false;
+            }
 
             var inv = acc.inventory;
             inv.hasBackpack = true;
@@ -44,6 +90,29 @@ namespace WRLDZ.Core
                 name = "Artifact Deck Box",
                 instances = System.Array.Empty<ArtifactInstance>()
             };
+            // Unlimited collection box: Great SaiyaDave alone. New characters get no box.
+            if (CollectionBoxService.IsOwnerAccount(acc))
+            {
+                inv.collectionBox = new CollectionBoxState
+                {
+                    owned = true,
+                    name = "Collection Box",
+                    stacks = System.Array.Empty<CardStackEntry>(),
+                    unlimitedStorage = true,
+                    infiniteCopies = true
+                };
+            }
+            else
+            {
+                inv.collectionBox = new CollectionBoxState
+                {
+                    owned = false,
+                    name = "Collection Box",
+                    stacks = System.Array.Empty<CardStackEntry>(),
+                    unlimitedStorage = true,
+                    infiniteCopies = true
+                };
+            }
 
             // Home bulk storage: one 1000-card cardboard box
             inv.storageBoxes = new[]
@@ -69,42 +138,43 @@ namespace WRLDZ.Core
             };
             inv.binderCount = 1;
 
-            var team = acc.progress.Team;
-            var deckFile = KuribohTeamInfo.StarterDeckFile(team);
-            var deck = CardDatabase.LoadDeck(deckFile) ?? CardDatabase.LoadDeck("player_starter.json");
-            if (deck != null)
-            {
-                var main = Expand(deck.main);
-                var extra = Expand(deck.extra);
-                var side = Expand(deck.side);
+            var main = Expand(deck.main);
+            var extra = Expand(deck.extra);
+            var side = Expand(deck.side);
 
-                // Collection copies land in the home card box
-                foreach (var id in main) inv.AddCards(id, 1);
-                foreach (var id in extra) inv.AddCards(id, 1);
-                foreach (var id in side) inv.AddCards(id, 1);
+            // Collection copies land in the home card box
+            foreach (var id in main) inv.AddCards(id, 1);
+            foreach (var id in extra) inv.AddCards(id, 1);
+            foreach (var id in side) inv.AddCards(id, 1);
 
-                inv.deckBoxes = new[]
-                {
-                    new DeckBoxState
-                    {
-                        name = KuribohTeamInfo.DisplayName(team) + " Starter",
-                        occupied = true,
-                        main = main.ToArray(),
-                        extra = extra.ToArray(),
-                        side = side.ToArray()
-                    }
-                };
-            }
-            else
+            inv.deckBoxes = new[]
             {
-                Debug.LogWarning("[WRLDZ] Starter deck missing — empty deck box granted.");
-                inv.deckBoxes = new[]
+                new DeckBoxState
                 {
-                    new DeckBoxState { name = "Main Deck Box", occupied = true }
-                };
-            }
+                    name = KuribohTeamInfo.DisplayName(team) + " Starter",
+                    occupied = true,
+                    main = main.ToArray(),
+                    extra = extra.ToArray(),
+                    side = side.ToArray()
+                }
+            };
 
             inv.EnsureValid();
+            // Great SaiyaDave starts with infinite of every card in the unlimited box.
+            // Anyone else keeps no box (see above). Failure (missing DB) is non-fatal —
+            // the session-start top-up retries later.
+            if (CollectionBoxService.IsOwnerAccount(acc))
+            {
+                try
+                {
+                    CollectionBoxService.GrantInfiniteAll(inv, CardDatabase.Load());
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogWarning($"[WRLDZ] Collection box grant deferred: {ex.Message}");
+                }
+            }
+
             acc.progress.onboardingStarterGranted = true;
             acc.progress.digizeni = Mathf.Max(acc.progress.digizeni, 500);
             ArtifactService.MigrateFromLegacy(acc.progress, inv);

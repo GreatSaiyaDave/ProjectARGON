@@ -1,0 +1,151 @@
+{
+  "name": "Rooftop Ninjas (short)",
+  "format": "wrldz_street_playground_8000",
+  "flaw": "Sasuke and Strike Ninja are 2-ofs. White Ninja is a 1-of. Ninjitsu Art is 1 instead of 2. Fuhma Shuriken is the weird include.",
+  "main": [
+    {
+      "id": 4041838,
+      "name": "Ninja Grandmaster Sasuke",
+      "qty": 2
+    },
+    {
+      "id": 41006930,
+      "name": "Strike Ninja",
+      "qty": 2
+    },
+    {
+      "id": 1571945,
+      "name": "White Ninja",
+      "qty": 1
+    },
+    {
+      "id": 9076207,
+      "name": "Armed Ninja",
+      "qty": 2
+    },
+    {
+      "id": 14618326,
+      "name": "Crimson Ninja",
+      "qty": 2
+    },
+    {
+      "id": 47507260,
+      "name": "Mystic Swordsman LV2",
+      "qty": 2
+    },
+    {
+      "id": 26202165,
+      "name": "Sangan",
+      "qty": 1
+    },
+    {
+      "id": 70861343,
+      "name": "Ninjitsu Art of Transformation",
+      "qty": 1
+    },
+    {
+      "id": 9373534,
+      "name": "Fuhma Shuriken",
+      "qty": 1
+    },
+    {
+      "id": 55144522,
+      "name": "Pot of Greed",
+      "qty": 1
+    },
+    {
+      "id": 19613556,
+      "name": "Heavy Storm",
+      "qty": 1
+    },
+    {
+      "id": 5318639,
+      "name": "Mystical Space Typhoon",
+      "qty": 1
+    },
+    {
+      "id": 95281259,
+      "name": "The Warrior Returning Alive",
+      "qty": 1
+    },
+    {
+      "id": 66788016,
+      "name": "Fissure",
+      "qty": 2
+    },
+    {
+      "id": 97169186,
+      "name": "Smashing Ground",
+      "qty": 1
+    },
+    {
+      "id": 79759861,
+      "name": "Tribute to the Doomed",
+      "qty": 2
+    },
+    {
+      "id": 26412047,
+      "name": "Hammer Shot",
+      "qty": 1
+    },
+    {
+      "id": 70046172,
+      "name": "Rush Recklessly",
+      "qty": 2
+    },
+    {
+      "id": 65169794,
+      "name": "Black Pendant",
+      "qty": 1
+    },
+    {
+      "id": 4206964,
+      "name": "Trap Hole",
+      "qty": 2
+    },
+    {
+      "id": 17814387,
+      "name": "Reinforcements",
+      "qty": 2
+    },
+    {
+      "id": 44209392,
+      "name": "Castle Walls",
+      "qty": 2
+    },
+    {
+      "id": 3819470,
+      "name": "Seven Tools of the Bandit",
+      "qty": 1
+    },
+    {
+      "id": 14315573,
+      "name": "Negate Attack",
+      "qty": 1
+    },
+    {
+      "id": 12607053,
+      "name": "Waboku",
+      "qty": 2
+    },
+    {
+      "id": 77414722,
+      "name": "Magic Jammer",
+      "qty": 1
+    },
+    {
+      "id": 56120475,
+      "name": "Sakuretsu Armor",
+      "qty": 2
+    }
+  ],
+  "extra": [],
+  "side": [],
+  "counts": {
+    "main": 40,
+    "extra": 0,
+    "side": 0
+  },
+  "lpBand": 8000,
+  "role": "street_npc_playground"
+}

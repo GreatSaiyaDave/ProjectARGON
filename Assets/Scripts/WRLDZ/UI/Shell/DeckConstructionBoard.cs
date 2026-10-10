@@ -25,7 +25,8 @@ namespace WRLDZ.UI.Shell
         const float MinCardW = 44f;
         const int MainColsMin = 8;
         const int MainColsMax = 20;
-        const float HeadBarH = 20f;
+// Tall enough for WrldzType.Readable titles. 20px clipped a ~36px count.
+        const float HeadBarH = 40f;
 
         static bool IsAr(State st) =>
             st.Presentation == UiPresentation.ArDiskHolo
@@ -275,10 +276,11 @@ namespace WRLDZ.UI.Shell
             headBar.GetComponent<LayoutElement>().preferredHeight = HeadBarH;
             headBar.GetComponent<LayoutElement>().flexibleHeight = 0f;
 
-            var head = Label(headBar.transform, PileTitle(section, 0), 13, DuelystUi.GoldHot,
+            var head = Label(headBar.transform, PileTitle(section, 0), 13, DuelystUi.TextCream,
                 TextAnchor.MiddleLeft);
-            FloatingPanel.Place(head.rectTransform, 0.00f, 0.00f, 0.62f, 1f);
+            FloatingPanel.Place(head.rectTransform, 0.00f, 0.00f, main ? 0.62f : 1f, 1f);
             head.horizontalOverflow = HorizontalWrapMode.Overflow;
+            head.verticalOverflow = VerticalWrapMode.Overflow;
             head.gameObject.name = name + "Count";
 
             if (main)
@@ -399,7 +401,10 @@ namespace WRLDZ.UI.Shell
                 if (ids != null && i < count)
                 {
                     var id = ids[i];
-                    var go = ArtChip(st, host, id, 1, id == st.SelectedId);
+                    var copies = 0;
+                    for (var j = 0; j < count; j++)
+                        if (ids[j] == id) copies++;
+                    var go = ArtChip(st, host, id, Mathf.Max(1, copies), id == st.SelectedId);
                     BindChipInteract(go, st, id, fromPool: false, section, scroll);
                 }
                 else
@@ -432,7 +437,7 @@ namespace WRLDZ.UI.Shell
             {
                 st.MainCountLab.text = PileTitle(Section.Main, mainN);
                 var legal = mainN >= TcgRules.MainDeckMin && mainN <= TcgRules.MainDeckMax;
-                st.MainCountLab.color = legal ? DuelystUi.Cyan : DuelystUi.Danger;
+                st.MainCountLab.color = legal ? DuelystUi.TextCream : DuelystUi.Danger;
             }
 
             if (st.ExtraCountLab != null)
@@ -440,7 +445,7 @@ namespace WRLDZ.UI.Shell
                 st.ExtraCountLab.text = PileTitle(Section.Extra, extraN);
                 st.ExtraCountLab.color = extraN > TcgRules.ExtraDeckMax
                     ? DuelystUi.Danger
-                    : extraN > 0 ? DuelystUi.GoldHot : DuelystUi.TextMuted;
+                    : DuelystUi.TextCream;
             }
 
             if (st.SideCountLab != null)
@@ -448,7 +453,7 @@ namespace WRLDZ.UI.Shell
                 st.SideCountLab.text = PileTitle(Section.Side, sideN);
                 st.SideCountLab.color = sideN > TcgRules.SideDeckMax
                     ? DuelystUi.Danger
-                    : sideN > 0 ? DuelystUi.GoldHot : DuelystUi.TextMuted;
+                    : DuelystUi.TextCream;
             }
 
             if (st.MainMeter != null)
@@ -474,7 +479,7 @@ namespace WRLDZ.UI.Shell
         static void GlowTray(RectTransform tray, bool on)
         {
             if (tray == null) return;
-            var ol = tray.GetComponent<Outline>() ?? tray.gameObject.AddComponent<Outline>();
+            var ol = UiFoundation.GetOrAdd<Outline>(tray.gameObject);
             ol.effectColor = on
                 ? new Color(0.55f, 0.92f, 1f, 0.70f)
                 : new Color(0.35f, 0.80f, 0.95f, 0.12f);

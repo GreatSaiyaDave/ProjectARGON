@@ -1,6 +1,7 @@
 # Lenses-first roadmap — “Yu-Gi-GO” next gen
 
 **Priority lock (2026-07):** Product **north star = AR lenses**.  
+**Target lock (owner decision 2026-09-23):** the **shipping target is Android XR glasses** (Unity / OpenXR APK). The S23 is the dev testbed only; all Android APK constraints apply; do not design new features phone-first.  
 **Your lab (now):** **Samsung Galaxy S23 Ultra + PC** — no headset.  
 **Demo path:** ship a **playable phone AR demo** on S23; keep code **OpenXR-ready** so lenses plug in when hardware arrives.
 

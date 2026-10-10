@@ -182,8 +182,7 @@ namespace WRLDZ.UI.Shell
             if (st.InspectRem != null)
                 st.InspectRem.gameObject.SetActive(!ar && inDeck > 0);
 
-            var runner = st.Inspect.GetComponent<InspectTimeout>()
-                         ?? st.Inspect.AddComponent<InspectTimeout>();
+            var runner = UiFoundation.GetOrAdd<InspectTimeout>(st.Inspect);
             if (ar) runner.Arm(st, 2.5f);
             else runner.Cancel();
         }

@@ -58,12 +58,15 @@ namespace WRLDZ.Duel
         {
             if (instanceId <= 0) return;
             ByInstance[instanceId] = ShatterSpec.Battle(overwhelmDiff, cardName);
+            // Destroyed while a Spell/Trap resolves in this frame → its shatter waits for that card's result beat.
+            Presentation.ArInteraction.ActivationBeat.NoteResult(instanceId);
         }
 
         /// <summary>Queue default effect shatter (or leave existing battle queue alone).</summary>
         public static void QueueEffect(int instanceId, string cardName = null)
         {
             if (instanceId <= 0) return;
+            Presentation.ArInteraction.ActivationBeat.NoteResult(instanceId);
             if (ByInstance.ContainsKey(instanceId)) return; // battle already set
             ByInstance[instanceId] = ShatterSpec.DefaultEffect(cardName);
         }
@@ -79,6 +82,15 @@ namespace WRLDZ.Duel
         /// <summary>True if a shatter is queued (does not consume).</summary>
         public static bool HasQueued(int instanceId) =>
             instanceId > 0 && ByInstance.ContainsKey(instanceId);
+
+        /// <summary>Read the queued spec without consuming it (false if none is queued).</summary>
+        public static bool TryPeek(int instanceId, out ShatterSpec spec)
+        {
+            if (instanceId > 0 && ByInstance.TryGetValue(instanceId, out spec))
+                return true;
+            spec = default;
+            return false;
+        }
 
         /// <summary>
         /// True only when the rules engine queued a destroy for this instance.
@@ -158,7 +170,7 @@ namespace WRLDZ.Duel
             // Base read + extra for denser shatters
             var extra = Mathf.Lerp(0f, 0.55f, Mathf.Clamp01((pieces - MinBattlePieces) /
                                                             (float)(MaxBattlePieces - MinBattlePieces)));
-            DuelPresentationPacer.Hold(DuelPresentationPacer.ReadAfterCombatResult + extra,
+            DuelPresentationPacer.HoldAfterResult(DuelPresentationPacer.ReadAfterCombatResult + extra,
                 pieces >= MaxBattlePieces * 0.75f
                     ? "Overwhelming destruction…"
                     : "Card shattered…");

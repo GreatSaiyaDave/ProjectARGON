@@ -1,0 +1,120 @@
+{
+  "name": "Corner Kid Beatdown",
+  "format": "wrldz_street_4000",
+  "main": [
+    {
+      "id": 5053103,
+      "name": "Battle Ox",
+      "qty": 3
+    },
+    {
+      "id": 97590747,
+      "name": "La Jinn the Mystical Genie of the Lamp",
+      "qty": 3
+    },
+    {
+      "id": 13039848,
+      "name": "Giant Soldier of Stone",
+      "qty": 3
+    },
+    {
+      "id": 15025844,
+      "name": "Mystical Elf",
+      "qty": 3
+    },
+    {
+      "id": 91152256,
+      "name": "Celtic Guardian",
+      "qty": 3
+    },
+    {
+      "id": 32452818,
+      "name": "Beaver Warrior",
+      "qty": 2
+    },
+    {
+      "id": 90357090,
+      "name": "Silver Fang",
+      "qty": 2
+    },
+    {
+      "id": 41392891,
+      "name": "Feral Imp",
+      "qty": 2
+    },
+    {
+      "id": 54652250,
+      "name": "Man-Eater Bug",
+      "qty": 2
+    },
+    {
+      "id": 7089711,
+      "name": "Hane-Hane",
+      "qty": 2
+    },
+    {
+      "id": 26378150,
+      "name": "Rude Kaiser",
+      "qty": 1
+    },
+    {
+      "id": 66788016,
+      "name": "Fissure",
+      "qty": 2
+    },
+    {
+      "id": 97169186,
+      "name": "Smashing Ground",
+      "qty": 1
+    },
+    {
+      "id": 79759861,
+      "name": "Tribute to the Doomed",
+      "qty": 1
+    },
+    {
+      "id": 72302403,
+      "name": "Swords of Revealing Light",
+      "qty": 1
+    },
+    {
+      "id": 24094653,
+      "name": "Polymerization",
+      "qty": 2
+    },
+    {
+      "id": 70046172,
+      "name": "Rush Recklessly",
+      "qty": 1
+    },
+    {
+      "id": 4206964,
+      "name": "Trap Hole",
+      "qty": 2
+    },
+    {
+      "id": 17814387,
+      "name": "Reinforcements",
+      "qty": 2
+    },
+    {
+      "id": 44209392,
+      "name": "Castle Walls",
+      "qty": 1
+    },
+    {
+      "id": 3819470,
+      "name": "Seven Tools of the Bandit",
+      "qty": 1
+    }
+  ],
+  "extra": [],
+  "side": [],
+  "counts": {
+    "main": 40,
+    "extra": 0,
+    "side": 0
+  },
+  "lpBand": 4000,
+  "role": "street_npc"
+}

@@ -37,6 +37,15 @@ namespace WRLDZ.Presentation.ArInteraction
         public ArArenaHologramManager Arena { get; private set; }
         public ArAnimeSequenceDirector Anime { get; private set; }
         public ArDuelSyncBridge SyncBridge { get; private set; }
+        /// <summary>Mr. Referobot on the sideline (null when neither the rig nor the OBJ is shipped).</summary>
+        public ReferobotWorldBody Referobot { get; private set; }
+        /// <summary>
+        /// The AI opponent as a person wearing <see cref="OppDisk"/> and working <see cref="OppHandVolume"/>'s cards with
+        /// its own hands (PvE). Null for Mr. Referobot's training duel and before the engine is bound.
+        /// </summary>
+        public ArOpponentDuelist OppDuelist { get; private set; }
+        /// <summary>A tag team's second duelist (the Paradox Brothers), standing beside the first; null otherwise.</summary>
+        public ArOpponentDuelist OppDuelist2 { get; private set; }
 
         /// <summary>True when disks/arena use real-world meters (Quest / lenses).</summary>
         public bool LifeSize { get; private set; }
@@ -151,12 +160,17 @@ namespace WRLDZ.Presentation.ArInteraction
             // Layer: lenses use Default (0) so HMD camera sees disks; phone keeps 28 + RT cam
             var layer = LifeSize ? 0 : DefaultLayer;
 
-            // Your Spirit Dueler (left arm)
+            // Your Spirit Dueler (left arm) — magic color from avatar accent
             PlayerDisk = ArDuelDiskRig.Create(stageRoot, playerSide: true, layer,
-                new Color(0.25f, 0.9f, 1f));
+                PlayerMagicAccent());
             PlayerDisk.Tracker = Tracker;
+            // palette swap: the disk body and the aura each take the player's chosen colour
+            SpiritDuelerPalette.ForPlayer(out var diskColor, out var auraColor);
+            PlayerDisk.SetPalette(diskColor, auraColor, 0f);
+            SpiritDuelerPalette.Changed -= OnPaletteChanged;
+            SpiritDuelerPalette.Changed += OnPaletteChanged;
 
-            // Opponent's physical Spirit Dueler on their left arm (shared stage)
+            // Opponent's Spirit Dueler — rose until PvP avatars exist
             OppDisk = ArDuelDiskRig.Create(stageRoot, playerSide: false, layer,
                 new Color(1f, 0.35f, 0.55f));
             OppDisk.Tracker = Tracker;
@@ -175,6 +189,7 @@ namespace WRLDZ.Presentation.ArInteraction
                 opponent: true);
             OppHandVolume.Tracker = Tracker;
             OppHandVolume.SourceDeck = OppDisk;
+            OppHandVolume.GestureLanded = OppGestureLanded;
             // Life-size still needs a generous pick target on phone/editor RT
             if (LifeSize)
             {
@@ -183,7 +198,7 @@ namespace WRLDZ.Presentation.ArInteraction
             }
             else
             {
-                HandVolume.CardScale = 0.24f; // EditorSim / phone viewport — easy to hit
+                HandVolume.CardScale = 0.135f; // EditorSim: held ~1 m from the eye — a touch larger on screen than before
                 OppHandVolume.CardScale = 0.20f;
             }
 
@@ -220,6 +235,13 @@ namespace WRLDZ.Presentation.ArInteraction
             Anime.Arena = Arena;
             Anime.PlayerDisk = PlayerDisk;
             Anime.OppDisk = OppDisk;
+            Referobot = ReferobotWorldBody.Ensure(Arena.ArenaRoot, layer);
+            if (Referobot != null)
+            {
+                Anime.ReferobotAnchor = Referobot.transform;
+                Referobot.Bind(_engine);
+            }
+            KuribohCompanion.EnsureDuel(this, Arena.ArenaRoot, stageRoot, _stageCam, layer);
 
             SyncBridge = gameObject.AddComponent<ArDuelSyncBridge>();
             SyncBridge.Arena = Arena;
@@ -278,6 +300,40 @@ namespace WRLDZ.Presentation.ArInteraction
             Debug.Log($"[WRLDZ AR] External tracker · lifeSize={lifeSize} · {external.GetType().Name}");
         }
 
+        /// <summary>
+        /// PvE: stand the AI duelist behind its disk. Its body is human size (the simulated stage's units per metre),
+        /// so the opponent's hand cards shrink to the size its real hand holds (still a little larger than life to
+        /// read), and its disk to a worn size, instead of the oversized ghost-hand / floating-disk readability scale.
+        /// </summary>
+        void EnsureOpponentDuelist(DuelEngine engine)
+        {
+            if (OppDuelist != null || engine == null || _stageRoot == null || OppDisk == null) return;
+            var match = AppSession.Instance != null ? AppSession.Instance.PendingArMatch : null;
+            var name = engine.Opponent != null && !string.IsNullOrEmpty(engine.Opponent.Name)
+                ? engine.Opponent.Name
+                : match?.OpponentDisplayName;
+            var units = LifeSize ? 1f : _simTracker != null ? _simTracker.StageUnitsPerMeter : 0.46f;
+            var layer = LifeSize ? 0 : DefaultLayer;
+            // a tag team ("Para|Dox"): the first member works the disk, the second stands at its side
+            var members = !string.IsNullOrEmpty(match?.OpponentMembers) ? match.OpponentMembers.Split('|') : null;
+            if (members != null && members.Length >= 2) name = members[0].Trim();
+            OppDuelist = ArOpponentDuelist.Create(_stageRoot, layer, Tracker, OppDisk, OppHandVolume, Arena, LifeSize, units, name);
+            if (OppDuelist == null) return;
+            if (members != null && members.Length >= 2)
+            {
+                OppDuelist.StandOffsetM = -0.30f;
+                OppDuelist2 = ArOpponentDuelist.Create(_stageRoot, layer, Tracker, null, null, Arena, LifeSize, units, members[1].Trim());
+                if (OppDuelist2 != null) { OppDuelist2.StandOffsetM = 0.55f; OppDuelist.Partner = OppDuelist2; OppDuelist2.Partner = null; }
+            }
+            if (!LifeSize)
+            {
+                // hand: MetreScale = 10.57 x CardScale (ArFloatingHand.MetreScale); 1.15 x life size
+                if (OppHandVolume != null) OppHandVolume.CardScale = units * 1.15f / 10.57f;
+                // disk: the full-size Battle City kit at exactly the stage's units (life size); NpcDuelDisk straps it on
+                if (OppDisk != null) OppDisk.transform.localScale = Vector3.one * units;
+            }
+        }
+
         static void ScaleDiskForLifeSize(ArDuelDiskRig rig)
         {
             if (rig?.DiskRoot == null) return;
@@ -303,13 +359,24 @@ namespace WRLDZ.Presentation.ArInteraction
 
             if (engineChanged)
             {
+                EnsureOpponentDuelist(engine);
+                OppDuelist?.Bind(engine);
+                OppDuelist2?.Bind(engine);
                 Anime?.Bind(engine, _stageCam);
                 SyncBridge?.Bind(engine, db);
+                Referobot?.Bind(engine);
                 // Opening cinematic owns deploy when engine is in pre-duel sequence
                 if (engine != null && engine.OpeningSequenceActive)
                 {
                     SetHandVolumeVisible(false);
-                    // Keep retracted until PreDuelCinematic runs
+                    PlayerDisk?.FadeInRetracted(0f);
+                    OppDisk?.FadeInRetracted(0.12f);
+                }
+                else if (AppSession.Ensure()?.PendingArMatch?.SkipPreDuelCinematic == true)
+                {
+                    PlayerDisk?.SnapVisibleDeployed();
+                    OppDisk?.SnapVisibleDeployed();
+                    SetHandVolumeVisible(true);
                 }
                 else
                     DeployDisksForDuel();
@@ -349,10 +416,21 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary>Fold both disks (leave duel / AR inactive arm).</summary>
         public void RetractDisks()
         {
-            PlayerDisk?.Retract(0f);
-            OppDisk?.Retract(0.12f);
+            PlayerDisk?.RetractThenFadeOut(0f);
+            OppDisk?.RetractThenFadeOut(0.12f);
             SetHandVolumeVisible(false);
-            Debug.Log("[WRLDZ AR] Disks retracting");
+            Debug.Log("[WRLDZ AR] Disks retracting + fade out");
+        }
+
+        static Color PlayerMagicAccent()
+        {
+            var hex = AppSession.Ensure()?.Account?.avatar?.accentHex;
+            if (string.IsNullOrEmpty(hex)) hex = AppSession.Ensure()?.Account?.avatarColor;
+            if (string.IsNullOrEmpty(hex)) return new Color(0.25f, 0.9f, 1f);
+            if (hex[0] != '#') hex = "#" + hex;
+            return ColorUtility.TryParseHtmlString(hex, out var c)
+                ? c
+                : new Color(0.25f, 0.9f, 1f);
         }
 
         IEnumerator RevealHandAfterDeploy(float delay)
@@ -372,9 +450,22 @@ namespace WRLDZ.Presentation.ArInteraction
             }
         }
 
+        /// <summary>A Sync skipped result visuals (ActivationBeat gate); re-sync once the gate opens.</summary>
+        bool _resyncOnResultGate;
+
+        void LateUpdate()
+        {
+            if (!_resyncOnResultGate || ActivationBeat.AnyResultPending) return;
+            _resyncOnResultGate = false;
+            SyncNow();
+        }
+
         public void SyncNow()
         {
             if (_engine == null || _db == null) return;
+            // Spell/Trap result gate: the activating card is revealed now; LP, deck / GY counts, drawn
+            // cards, revived monsters and flips are presented when its result beat opens.
+            var holdResults = Application.isPlaying && ActivationBeat.AnyResultPending;
             // If field cards exist but blade still folded, force deploy so pad cards are visible
             if (PlayerDisk != null && !PlayerDisk.IsDeployed && HasAnyFieldCard(_engine))
                 DeployDisksForDuel();
@@ -401,18 +492,29 @@ namespace WRLDZ.Presentation.ArInteraction
             }
             // Card Field first so disk zone transforms hold current pads for spawn origins
             CardField?.SyncFromEngine(_engine, _db);
-            // Arena: large card assets fly out from disk zones into midfield columns
-            Arena?.SyncFromEngine(_engine, _db);
+            // Arena: large card assets fly out from disk zones into midfield columns. While the opponent's hand is
+            // still carrying a card to their disk, the monster waits for it (OppGestureLanded syncs again).
+            if (OppHandVolume == null || !OppHandVolume.GestureInFlight)
+                Arena?.SyncFromEngine(_engine, _db);
+
+            if (holdResults || (HandVolume != null && HandVolume.ArrivalsDeferred) ||
+                (OppHandVolume != null && OppHandVolume.ArrivalsDeferred) ||
+                (Arena != null && Arena.ResultsDeferred))
+                _resyncOnResultGate = true;
+            if (holdResults)
+                return; // LP counters / deck / GY piles wait for the result beat
 
             if (_engine.Player != null)
             {
                 PlayerDisk?.LpCounter?.Sync(_engine.Player.LifePoints, PlayerDisk.IsDeployed);
+                PlayerDisk?.SyncDeckCount(_engine.Player.DeckCount);
                 PlayerDisk?.SyncGraveyardPile(_engine.Player.Graveyard, _db);
             }
 
             if (_engine.Opponent != null)
             {
                 OppDisk?.LpCounter?.Sync(_engine.Opponent.LifePoints, OppDisk.IsDeployed);
+                OppDisk?.SyncDeckCount(_engine.Opponent.DeckCount);
                 OppDisk?.SyncGraveyardPile(_engine.Opponent.Graveyard, _db);
             }
             if (_engine.Player != null && _engine.Opponent != null)
@@ -457,12 +559,111 @@ namespace WRLDZ.Presentation.ArInteraction
             Arena?.ClearLegalHighlights();
         }
 
+        void OnPaletteChanged()
+        {
+            if (this == null || PlayerDisk == null) return;
+            SpiritDuelerPalette.ForPlayer(out var disk, out var aura);
+            PlayerDisk.SetPalette(disk, aura);
+        }
+
+        /// <summary>The opponent's hand set a card on their disk: seat it now, and let the arena present it.</summary>
+        void OppGestureLanded()
+        {
+            if (_engine == null || _db == null) return;
+            CardField?.SyncFromEngine(_engine, _db);
+            if (OppHandVolume == null || !OppHandVolume.GestureInFlight)
+                Arena?.SyncFromEngine(_engine, _db);
+        }
+
         public void ClearLegalPlacements()
         {
             if (Drag != null) Drag.HighlightsActive = false;
             PlayerDisk?.ClearLegalHighlights();
             OppDisk?.ClearLegalHighlights();
             Arena?.ClearLegalHighlights();
+        }
+
+        /// <summary>
+        /// Card-menu zone pick (DuelUI): the floating hand carries the chosen hand card to that disk zone and
+        /// <paramref name="commit"/> runs when the card touches it, so the play looks the same as a drag.
+        /// False when the hand cannot do it now (no live hand, card not in the fan, hand busy, no such zone):
+        /// the caller commits directly, as before.
+        /// </summary>
+        public bool TryPlaceFromHandWithGesture(CardInstance card, WRLDZ.Duel.Rules.RulesZoneKind kind, int index, bool faceDown,
+            System.Func<bool> commit, System.Action<bool> done = null)
+        {
+            if (card == null || commit == null || HandVolume == null || !HandVolume.HandLive || PlayerDisk == null)
+                return false;
+            if (!HandVolume.TryGetCard(card.InstanceId, out var fc) || fc == null || fc.IsLockedToZone ||
+                fc.IsDrawArriving)
+                return false;
+            var zone = DiskZoneFor(kind, index);
+            if (zone == null) return false;
+            var orient = faceDown ? ArZoneOrientation.FaceDownSet : ArZoneOrientation.FaceUpAttack;
+            var hand = HandVolume.FloatingHand;
+            var started = hand.PlayPlace(fc, zone, orient,
+                atContact: () =>
+                {
+                    if (!commit()) return false;
+                    zone.SnapLock(fc, orient);
+                    HandVolume.RemoveCard(fc);
+                    fc.RefreshArtFace(!faceDown);
+                    return true;
+                },
+                done: ok =>
+                {
+                    Drag?.ClearGesture();
+                    done?.Invoke(ok);
+                });
+            if (!started) return false;
+            Drag?.NoteGesture(fc);
+            ClearLegalPlacements();
+            return true;
+        }
+
+        /// <summary>
+        /// Card-menu Activate of a one-shot Spell from the hand (<see cref="ArSnapRules.RevealsFromHand"/>): the
+        /// floating hand raises it, shows its face to the opponent and <paramref name="commit"/> runs at the end of
+        /// the reveal; the engine seats it in a free Spell/Trap Zone. False when the hand cannot do it now: the caller
+        /// commits directly.
+        /// </summary>
+        public bool TryRevealFromHandWithGesture(CardInstance card, System.Func<bool> commit, System.Action<bool> done = null)
+        {
+            if (card == null || commit == null || HandVolume == null || !HandVolume.HandLive) return false;
+            if (!HandVolume.TryGetCard(card.InstanceId, out var fc) || fc == null || fc.IsLockedToZone ||
+                fc.IsDrawArriving)
+                return false;
+            var hand = HandVolume.FloatingHand;
+            var started = hand.PlayReveal(fc, atReveal: commit,
+                done: ok =>
+                {
+                    Drag?.ClearGesture();
+                    done?.Invoke(ok);
+                });
+            if (!started) return false;
+            Drag?.NoteGesture(fc);
+            ClearLegalPlacements();
+            return true;
+        }
+
+        ArDiskZone DiskZoneFor(WRLDZ.Duel.Rules.RulesZoneKind kind, int index)
+        {
+            if (PlayerDisk == null) return null;
+            switch (kind)
+            {
+                case WRLDZ.Duel.Rules.RulesZoneKind.Monster:
+                    return index >= 0 && index < PlayerDisk.MonsterZones.Length ? PlayerDisk.MonsterZones[index] : null;
+                case WRLDZ.Duel.Rules.RulesZoneKind.SpellTrap:
+                    return index >= 0 && index < PlayerDisk.SpellTrapZones.Length ? PlayerDisk.SpellTrapZones[index] : null;
+                case WRLDZ.Duel.Rules.RulesZoneKind.FieldSpell:
+                    return PlayerDisk.FieldSpellZone;
+                case WRLDZ.Duel.Rules.RulesZoneKind.PendulumLeft:
+                    return PlayerDisk.PendulumLeft;
+                case WRLDZ.Duel.Rules.RulesZoneKind.PendulumRight:
+                    return PlayerDisk.PendulumRight;
+                default:
+                    return null;
+            }
         }
 
         static bool HasAnyFieldCard(DuelEngine engine)
@@ -484,6 +685,7 @@ namespace WRLDZ.Presentation.ArInteraction
 
         void OnDestroy()
         {
+            SpiritDuelerPalette.Changed -= OnPaletteChanged;
             Anime?.Unbind();
             SyncBridge?.Unbind();
         }

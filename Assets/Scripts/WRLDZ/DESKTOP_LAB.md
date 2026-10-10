@@ -4,6 +4,11 @@ No **Quest**, **S23**, **GPS**, or **camera** required.
 
 The **Desktop Lab** is a full-screen hub for PC / Unity Editor Play Mode.
 
+> **Availability (owner decision 2026-09-23 #5):** the Desktop Lab, the **TEST DUEL (LAB)** door and
+> lab admin grants exist **only in the Unity Editor and Development builds**
+> (`WrldzLab.LabDoorsEnabled` = `UNITY_EDITOR || DEVELOPMENT_BUILD`). Release builds do not show the
+> doors, and admin is never granted from a username.
+
 ---
 
 ## How to launch
@@ -47,7 +52,7 @@ Or set PlayerPrefs `WRLDZ_DesktopLab = 1`.
 ### Options
 
 - **Skip pre-duel cinematic** — ON = no deploy/shuffle/draw gesture  
-  Also: `WRLDZ → Lab → Toggle Skip Pre-Duel Cinematic`
+  Also: `WRLDZ → Lab → Clear Skip Pre-Duel Pref (force cinematic)` (clears the pref so the cinematic plays)
 
 ---
 

@@ -275,6 +275,15 @@ namespace WRLDZ.Presentation.ArInteraction
                 new[] { new GradientColorKey(c, 0f), new GradientColorKey(c, 1f) },
                 new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(0f, 1f) });
             col.color = grad;
+            // AddComponent<ParticleSystem> leaves the renderer without an explicit material (magenta /
+            // invisible in a player build) and with maxParticleSize 0.5 — one mote near the lens can fill
+            // half the screen. Unlit additive (tint comes from startColor) and a screen-size cap.
+            var rend = ps.GetComponent<ParticleSystemRenderer>();
+            rend.sharedMaterial = ArFieldMaterials.ParticleSoftAdditive();
+            rend.renderMode = ParticleSystemRenderMode.Billboard;
+            rend.maxParticleSize = 0.06f;
+            rend.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            rend.receiveShadows = false;
             return ps;
         }
 

@@ -1,0 +1,32 @@
+{
+ "outfits": [
+  {
+   "id": "kaiba",
+   "name": "Battle City Kaiba",
+   "character": "kaiba",
+   "suit": "#0B0B10",
+   "refLum": [
+    0.00173,
+    0.66066,
+    0.70878
+   ],
+   "sexes": [
+    "male"
+   ]
+  },
+  {
+   "id": "yugi",
+   "name": "Battle City Yugi",
+   "character": "yugi",
+   "suit": "skin",
+   "refLum": [
+    0.01857,
+    0.27375,
+    0.82715
+   ],
+   "sexes": [
+    "male"
+   ]
+  }
+ ]
+}

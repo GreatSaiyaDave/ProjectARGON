@@ -4,17 +4,23 @@ using UnityEngine.UI;
 using WRLDZ.Core;
 using WRLDZ.Presentation;
 using WRLDZ.UI;
+using WRLDZ.UI.Shell;
 
 namespace WRLDZ.Presentation.ArInteraction
 {
     /// <summary>
     /// Drag-time rules banner + Summon/Set (or Activate/Set) chooser.
-    /// Same inspect-style glass + chips as <see cref="CardInspectPopup"/>, with EXIT.
+    /// Same quiet menu slate as the hub, with EXIT.
     /// Engine is the only source of which play buttons appear.
     /// </summary>
     public class ArDragActionHud : MonoBehaviour
     {
         Text _banner;
+        CanvasGroup _bannerGroup;
+        /// <summary>Seconds left on a one-shot notice. Negative means the banner stays until replaced.</summary>
+        float _noticeLeft = -1f;
+        bool _noticeFading;
+        public const float NoticeSeconds = 3.2f;
         GameObject _choice;
         GameObject _dim;
         Button _optA;
@@ -54,15 +60,13 @@ namespace WRLDZ.Presentation.ArInteraction
             plate.transform.SetParent(transform, false);
             Place(plate.GetComponent<RectTransform>(), 0.24f, 0.786f, 0.76f, 0.836f);
             var bg = plate.GetComponent<Image>();
-            var glass = ImagineAssets.HudChipCyan() ?? ImagineAssets.HudIslandGlass();
-            if (glass != null)
-            {
-                bg.sprite = glass;
-                bg.color = Color.white;
-            }
-            else
-                bg.color = new Color(0.04f, 0.05f, 0.08f, 0.26f);
+            HubChrome.QuietFill(bg, new Color(0.055f, 0.063f, 0.110f, 0.34f),
+                DuelystUi.Gold);
             bg.raycastTarget = false;
+            _bannerGroup = plate.AddComponent<CanvasGroup>();
+            _bannerGroup.blocksRaycasts = false;
+            _bannerGroup.interactable = false;
+            _bannerGroup.alpha = 1f;
             _banner = MakeText(plate.transform, "Label", 15, TextAnchor.MiddleCenter);
             Place(_banner.rectTransform, 0.03f, 0.08f, 0.97f, 0.92f);
             _banner.color = new Color(0.95f, 0.92f, 0.75f, 0.95f);
@@ -82,28 +86,9 @@ namespace WRLDZ.Presentation.ArInteraction
             _choice.transform.SetParent(transform, false);
             Place(_choice.GetComponent<RectTransform>(), 0.22f, 0.28f, 0.78f, 0.66f);
             var sheet = _choice.GetComponent<Image>();
-            sheet.sprite = UiFoundation.WhiteSprite();
-            sheet.color = new Color(0.04f, 0.06f, 0.10f, 0.55f);
+            HubChrome.QuietFill(sheet, new Color(0.055f, 0.063f, 0.110f, 0.72f),
+                DuelystUi.Gold);
             sheet.raycastTarget = true;
-            var sheetGlass = ImagineAssets.HudCalloutGlass() ?? ImagineAssets.HudIslandGlass();
-            if (sheetGlass != null)
-            {
-                var frame = new GameObject("Frame", typeof(RectTransform), typeof(Image));
-                frame.transform.SetParent(_choice.transform, false);
-                Stretch(frame.GetComponent<RectTransform>());
-                var fi = frame.GetComponent<Image>();
-                fi.sprite = sheetGlass;
-                fi.color = Color.white;
-                fi.raycastTarget = false;
-            }
-
-            var edge = new GameObject("Edge", typeof(RectTransform), typeof(Image));
-            edge.transform.SetParent(_choice.transform, false);
-            Place(edge.GetComponent<RectTransform>(), 0.03f, 0.97f, 0.97f, 0.995f);
-            var eimg = edge.GetComponent<Image>();
-            eimg.sprite = UiFoundation.WhiteSprite();
-            eimg.color = new Color(DuelystUi.Gold.r, DuelystUi.Gold.g, DuelystUi.Gold.b, 0.75f);
-            eimg.raycastTarget = false;
 
             _title = MakeText(_choice.transform, "Title", 18, TextAnchor.MiddleCenter);
             Place(_title.rectTransform, 0.06f, 0.82f, 0.84f, 0.96f);
@@ -151,7 +136,15 @@ namespace WRLDZ.Presentation.ArInteraction
             _choice.SetActive(false);
         }
 
-        public void ShowHint(string text)
+        /// <summary>Drag guidance. Stays until the next hint or <see cref="HideHint"/>.</summary>
+        public void ShowHint(string text) => Present(text, notice: false);
+
+        /// <summary>
+        /// One-shot result ("Not a legal zone"). Holds for <see cref="NoticeSeconds"/>, then fades.
+        /// </summary>
+        public void ShowNotice(string text) => Present(text, notice: true);
+
+        void Present(string text, bool notice)
         {
             if (_choice != null && _choice.activeSelf) return;
             if (string.IsNullOrEmpty(text))
@@ -162,15 +155,34 @@ namespace WRLDZ.Presentation.ArInteraction
 
             if (_banner == null) return;
             _banner.text = text;
+            if (_bannerGroup != null) _bannerGroup.alpha = 1f;
+            _noticeFading = false;
+            _noticeLeft = notice ? NoticeSeconds : -1f;
             if (_banner.transform.parent != null)
                 _banner.transform.parent.gameObject.SetActive(true);
         }
 
         public void HideHint()
         {
+            _noticeLeft = -1f;
+            _noticeFading = false;
+            if (_bannerGroup != null) _bannerGroup.alpha = 1f;
             if (_banner != null && _banner.transform.parent != null)
                 _banner.transform.parent.gameObject.SetActive(false);
         }
+
+        /// <summary>Edit-mode smoke: jump the notice clock without waiting on Update.</summary>
+        public void AdvanceNotices(float seconds)
+        {
+            if (_noticeLeft < 0f || seconds <= 0f) return;
+            _noticeLeft -= seconds;
+            if (_noticeLeft > 0f) return;
+            HideHint();
+        }
+
+        public bool HintVisible =>
+            _banner != null && _banner.transform.parent != null &&
+            _banner.transform.parent.gameObject.activeSelf;
 
         public void ShowChoice(string title, string a, string b, Action onA, Action onB, Action onCancel)
         {
@@ -203,9 +215,32 @@ namespace WRLDZ.Presentation.ArInteraction
 
         void Update()
         {
-            if (!ChoiceOpen) return;
-            if (WrldzInput.KeyDown(KeyCode.Escape) || WrldzInput.KeyDown(KeyCode.Backspace))
-                _onCancel?.Invoke();
+            if (ChoiceOpen)
+            {
+                if (WrldzInput.KeyDown(KeyCode.Escape) || WrldzInput.KeyDown(KeyCode.Backspace))
+                    _onCancel?.Invoke();
+                return;
+            }
+
+            if (_noticeFading)
+            {
+                if (_bannerGroup == null)
+                {
+                    HideHint();
+                    return;
+                }
+
+                _bannerGroup.alpha = Mathf.MoveTowards(
+                    _bannerGroup.alpha, 0f, Time.unscaledDeltaTime * 2.4f);
+                if (_bannerGroup.alpha <= 0.02f)
+                    HideHint();
+                return;
+            }
+
+            if (_noticeLeft < 0f) return;
+            _noticeLeft -= Time.unscaledDeltaTime;
+            if (_noticeLeft > 0f) return;
+            _noticeFading = true;
         }
 
         static Text MakeText(Transform parent, string name, int size, TextAnchor align)

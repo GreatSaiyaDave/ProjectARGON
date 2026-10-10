@@ -14,6 +14,12 @@ internal static class Program
         var streaming = Path.Combine(root, "Assets", "StreamingAssets");
         UnityEngine.Application.streamingAssetsPath = streaming;
         UnityEngine.Application.dataPath = Path.Combine(root, "Assets");
+        // WRLDZ_PERSIST: a private compiled-program disk cache. Isolated copies of the engine (one per
+        // parallel card batch) must not share /tmp/wrldz-headless: two trees at the same compiler
+        // Version with different templates would serve each other's programs.
+        var persist = Environment.GetEnvironmentVariable("WRLDZ_PERSIST");
+        if (!string.IsNullOrEmpty(persist))
+            UnityEngine.Application.persistentDataPath = persist;
         Directory.CreateDirectory(UnityEngine.Application.persistentDataPath);
 
         bool quiet = Array.IndexOf(args, "--quiet") >= 0;
@@ -26,10 +32,34 @@ internal static class Program
             return Diag.InspectCard(args[cardArg + 1]);
         }
 
+        int prelinkCardArg = Array.IndexOf(args, "--prelink-card");
+        if (prelinkCardArg >= 0)
+        {
+            if (prelinkCardArg + 1 >= args.Length)
+            {
+                Console.Error.WriteLine("prelink-card requires a name or passcode");
+                return 2;
+            }
+            UnityEngine.Debug.Silence = true;
+            return Diag.InspectPrelinkCard(args[prelinkCardArg + 1]);
+        }
+
         if (Array.IndexOf(args, "--coverage") >= 0)
         {
             UnityEngine.Debug.Silence = true;
             return Diag.Coverage();
+        }
+
+        if (Array.IndexOf(args, "--prelink") >= 0)
+        {
+            UnityEngine.Debug.Silence = true;
+            return Diag.Prelink();
+        }
+
+        if (Array.IndexOf(args, "--status-dump") >= 0)
+        {
+            UnityEngine.Debug.Silence = true;
+            return Diag.StatusDump();
         }
 
         if (Array.IndexOf(args, "--gaps") >= 0)

@@ -16,5 +16,12 @@ namespace WRLDZ.Core
         public bool PracticeNoReward;
         public string SoulLine;
         public bool AccountDeactivated;
+        public int SetEnergyGained;
+        public string StoryStageCleared;
+        public string StoryLootLine;
+        /// <summary>This duel's result was already paid; nothing changed.</summary>
+        public bool AlreadyClaimed;
+        /// <summary>Recorded as a forfeit loss (left before the duel ended).</summary>
+        public bool Forfeit;
     }
 }

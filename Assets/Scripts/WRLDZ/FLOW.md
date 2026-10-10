@@ -13,36 +13,40 @@ Boot  (scene 0 — entry only)
          ├─ OVERWORLD (WASD)    → map without GPS
          ├─ SYSTEMS HUB         → MainMenu
          └─ ENGINE STRESS       → headless AI-vs-AI
-  Full cascade (device / when lab disabled):
-  Splash (~1s) → Title (touch to begin)
+  (Lab doors — Desktop Lab, TEST DUEL, admin grants — exist only in the Editor and Development
+   builds: WrldzLab.LabDoorsEnabled = UNITY_EDITOR || DEVELOPMENT_BUILD. Owner rule 2026-09-23 #5.)
+  Full cascade (device / release builds):
+  Splash (auto 3.5 s or tap) → Credits (auto 2.6 s or tap) → Title (touch to begin)
     → BootLoad (session / age / terms check)
     → DOB?          [if age gate not passed]
     → AuthChoice    [if not logged in]
          ├─ CREATE ACCOUNT
          ├─ LOG IN
-         ├─ DESKTOP LAB (NO EQUIPMENT) → Desktop Lab hub
-         └─ TEST DUEL (LAB) → DuelSlice (lab_tester, starter vs Kaiba; Map → Boot)
+         ├─ DESKTOP LAB (NO EQUIPMENT) → Desktop Lab hub          [Editor / Development only]
+         └─ TEST DUEL (LAB) → DuelSlice (lab_tester, starter vs Kaiba; Map → Boot)  [Editor / Development only]
          ├─ Create Account → Terms → Onboarding*
          └─ Log In         → Terms? → Onboarding* or WorldLoad
     → Terms?        [if logged in but terms not accepted]
     → Onboarding* (first-time): Prologue → Pick Kuriboh → Gifts → Tutorial ask
       (GDD v1.1: veterans may skip **only** the Referobot tutorial duel)
-    → WorldLoad → Overworld
+    → WorldLoad → MainMenu (Duel Disk — Eldritch Solid Vision) → WORLD MAP → Overworld
   * skipped when progress.onboardingComplete (see PROGRESSION_CANON.md)
 
 Overworld  (scene 1 — HOME / default)
-  VS AI        → Player vs AI create → START → DuelSlice (AR, vs AI)
+  VS AI        → Player vs AI create (STANDING / TABLE / STREET / PRACTICE) → START → DuelSlice (AR, vs AI)
   VS PVP       → distance scan (mark P1 + P2) → START → DuelSlice (AR hotseat)
-  MENU (Eye)   → Battle City hub grammar on the map (same capsules as MainMenu):
-                 DUEL: VS AI / VS PLAYER; COMMAND: DECK / BAG / STORY / BAZAAR / TOME / SET;
-                 extra row PRACTICE / TOURNEY. Destination sheets then open as HubChrome overlays
+  Dock         → BAG and STORY orbs flank the Millennium Eye; the deck orb opens DECK.
+  MENU (Eye)   → Battle City hub grammar on the map (same capsules as MainMenu), exactly 8 tiles
+                 (OverworldUI KcTile list): VS AI · VS PLAYER / DECK · BAG · STORY /
+                 BAZAAR · TOME · SET. There is no PRACTICE, TRADE or TOURNEY tile (removed 2026-09;
+                 PRACTICE is a card inside VS AI). Destination sheets open as HubChrome overlays
                  (DECK uses DualMenuPresenter). Wallet chips (Đ / ◎ / ⚡) open Artifact Deck Box.
                  Optional full hub scene: Desktop Lab SYSTEMS HUB → MainMenu.
   Tear pin     → Zone Mode prompt (in-range only)
                  ├─ ENTER AR  → DuelSlice (camera passthrough when available)
                  ├─ DIGITAL   → DuelSlice (same stage, no camera)
                  └─ CANCEL    → stay on map
-  PRACTICE     → DuelSlice (AR PvAI practice, any range)
+  PRACTICE     → via VS AI → PRACTICE card → DuelSlice (AR PvAI practice, any range, no rewards)
   Anchor pin   → toast only (stub)
   QUIT         → Logout → Boot
 
@@ -58,6 +62,10 @@ DuelSlice  (scene 3 — always AR stage)
   Requires login · PendingArMatch sets disk separation
   NearbyPeer / LocalPass → both humans (hotseat); AiLocal → SimpleAi
   Map button / exit → Overworld (home)
+  Leaving early (owner rule 2026-09-23 #3): in a rewarded duel, Map / Leave asks for confirmation and
+    then records a FORFEIT LOSS (loss rewards, streak reset, Shadow Game soul stakes apply —
+    ProgressionService.ForfeitDuel via AppSession.ForfeitUnfinishedDuel). Restart (↻) exists only in
+    practice / lab duels. A finished duel's rewards are claimed exactly once (DuelResultId).
   Lab TEST DUEL: Map → Boot
 ```
 
@@ -65,9 +73,9 @@ DuelSlice  (scene 3 — always AR stage)
 
 | # | Scene | Role |
 |---|--------|------|
-| 0 | `Boot` | Onboarding only. Never a mid-game destination except after logout. |
+| 0 | `Boot` | Onboarding only. Hands off to `MainMenu` (Duel Disk). Never a mid-game destination except after logout. |
 | 1 | `Overworld` | **Home.** Battle City map + avatar. Profile orb → avatar customizer. |
-| 2 | `MainMenu` | Systems hub (not home). |
+| 2 | `MainMenu` | Duel Disk main menu (Eldritch Solid Vision); first scene after Boot. DUEL · DECK · BAG · STORY · BAZAAR · VIEW · SET · WORLD MAP · QUIT. See `UI/MENU_MAIN.md`. |
 | 3 | `DuelSlice` | TCG vertical slice. Exit → Overworld. |
 
 ## Local accounts
@@ -99,8 +107,8 @@ DuelSlice  (scene 3 — always AR stage)
 
 1. Build Settings: **Boot** first (0), then Overworld, MainMenu, DuelSlice.
 2. Play **Boot** → splash → DOB (if needed) → Create → **Terms** → load → map.
-3. Map: **HUB** → systems grid → **MAP** back.
-4. Tear pin or **PRACTICE** → duel → **Map** → overworld.
+3. Map: **Eye (MENU)** → a destination tile (DECK, BAG, …) → close the sheet to return to the map.
+4. Tear pin, or **VS AI → PRACTICE** → duel → **Map** → overworld (a rewarded duel left early is a forfeit).
 5. **QUIT** logs out → Boot. Second launch auto-logs in if session exists.
 
 ## Reset onboarding

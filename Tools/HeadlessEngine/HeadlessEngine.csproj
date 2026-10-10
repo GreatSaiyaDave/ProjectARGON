@@ -28,6 +28,14 @@
     <Compile Remove="../../Assets/Scripts/WRLDZ/Duel/Ocg/**/*.cs" />
     <!-- Only references the excluded Ocg host; nothing else in the set uses it. -->
     <Compile Remove="../../Assets/Scripts/WRLDZ/Duel/TimedResponseClock.cs" />
+    <!-- Managed-only pieces the local-lineage engine needs: the StreamingAssets loader (Android APK
+         reader, desktop System.IO) and the Editor cwd pin (no-op outside UNITY_EDITOR).
+         OcgScriptStore (lab Lua index, next to the native core) is stubbed in Shim/WrldzStubs.cs. -->
+    <Compile Include="../../Assets/Scripts/WRLDZ/Core/StreamingFiles.cs" />
+    <Compile Include="../../Assets/Scripts/WRLDZ/Core/EditorWorkingDirectory.cs" />
+    <!-- Core enums/helpers that Data/** code references (Data/NpcDuelistRoster.cs uses StreetLpBand). Pure C# apart from
+         UnityEngine.Color, which the shim provides. -->
+    <Compile Include="../../Assets/Scripts/WRLDZ/Core/MapZoneCatalog.cs" />
   </ItemGroup>
 
 </Project>

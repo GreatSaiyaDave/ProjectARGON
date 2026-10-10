@@ -99,6 +99,10 @@ namespace WRLDZ.Presentation.ArInteraction
 
                 live.Add(z);
 
+                // A hand is still carrying this card to the pad: it seats when the card touches (the hand volume
+                // re-syncs at contact), not now.
+                if (z.IncomingGesture && Application.isPlaying) continue;
+
                 // Capture drag pose before the floating card is destroyed so insert
                 // continues from the hand instead of popping at the seat.
                 var hasHandoff = false;
@@ -130,7 +134,10 @@ namespace WRLDZ.Presentation.ArInteraction
                     _lastDefense[z] = occ.Position == BattlePosition.Defense;
                     // Mark seated only after anim — prevents false GY eject mid-insert
 
-                    if (ArZoneLayout.IsSlotKind(z.Kind) && Application.isPlaying)
+                    if (ArZoneLayout.IsSlotKind(z.Kind) && Application.isPlaying &&
+                        z.Kind == ArDuelZoneKind.SpellTrap && IsHandActivation(occ, hasHandoff))
+                        StartCoroutine(AppearActivatedFromHand(vis, z, occ, db));
+                    else if (ArZoneLayout.IsSlotKind(z.Kind) && Application.isPlaying)
                         PlaySlotSeatFx(vis, z, occ, db, hasHandoff, handoffP, handoffR, handoffS);
                     else if (Application.isPlaying)
                         PlayMonsterSeatFx(vis, z, occ);
@@ -150,6 +157,11 @@ namespace WRLDZ.Presentation.ArInteraction
                 {
                     // Do not consume FaceUp/Defense edges while a toaster/seat tween owns the card
                     if (vis.MotionBusy) continue;
+                    // Spell/Trap result gate: monster flips / position turns caused by an effect (Swords…)
+                    // wait for its result beat. ArDuelInteractionSystem re-syncs when the gate opens.
+                    if (!ArZoneLayout.IsSlotKind(z.Kind) && Application.isPlaying &&
+                        ActivationBeat.AnyResultPending)
+                        continue;
 
                     var wasFace = _lastFaceUp.TryGetValue(z, out var lf) && lf;
                     var nowFace = occ.FaceUp;
@@ -289,7 +301,13 @@ namespace WRLDZ.Presentation.ArInteraction
             var s0 = t.localScale;
             yield return ArDiskMotion.LerpLocal(t, p0, endP, r0, endR, s0, endS, ArDiskMotion.PadSnap);
             if (vis != null) vis.MotionBusy = false;
-            if (z != null) _seatedZones.Add(z);
+            if (z != null)
+            {
+                _seatedZones.Add(z);
+                var seatDisk = z.GetComponentInParent<ArDuelDiskRig>();
+                seatDisk?.PlayFx(DiskFxEvent.SummonFlash);
+                seatDisk?.NoteSeated(z);   // the slot lights
+            }
         }
 
         // ── S/T toaster insert (present → mouth → pocket) ───────────────────
@@ -359,7 +377,13 @@ namespace WRLDZ.Presentation.ArInteraction
                 ApplySlotVisibility(vis, exposeSlot: true);
             }
 
-            if (z != null) _seatedZones.Add(z);
+            if (z != null)
+            {
+                _seatedZones.Add(z);
+                var seatDisk = z.GetComponentInParent<ArDuelDiskRig>();
+                seatDisk?.PlayFx(DiskFxEvent.SummonFlash);
+                seatDisk?.NoteSeated(z);   // the slot lights
+            }
             Debug.Log(
                 $"[WRLDZ AR] S/T seated (slide-in, 10% tip) · {z?.Kind}[{z?.Index}] · {occ?.Name} · " +
                 $"seatLocal={seatP} · world={t.position}");
@@ -382,6 +406,26 @@ namespace WRLDZ.Presentation.ArInteraction
         {
             if (vis == null || z == null || occ == null) yield break;
             vis.MotionBusy = true;
+            // Same-frame chain (e.g. the AI answers with a Trap in the engine call that activated a Spell): every
+            // link's toaster used to eject and flip at once. Each link's disk turn now starts so its arena rise
+            // (which waits ArenaStartDelaySeconds after the turn begins) lands on ActivationBeat.RevealStartFloor —
+            // links turn over one after another, in the same order the arena reveals them.
+            if (Application.isPlaying)
+            {
+                var waitCap = Time.unscaledTime + SpellActivationPresentation.BeatHardCapSeconds;
+                while (vis != null && Time.unscaledTime < waitCap &&
+                       !SpellActivationPresentation.WasCancelled(occ.InstanceId))
+                {
+                    var floor = ActivationBeat.RevealStartFloor(occ.InstanceId);
+                    if (floor <= 0f ||
+                        Time.unscaledTime >= floor - SpellActivationPresentation.ArenaStartDelaySeconds)
+                        break;
+                    yield return null;
+                }
+
+                if (vis == null) yield break;
+            }
+
             ApplySlotVisibility(vis, exposeSlot: true);
             z.SeatAnimUntil = Time.unscaledTime + 4f;
             var t = vis.transform;
@@ -392,6 +436,9 @@ namespace WRLDZ.Presentation.ArInteraction
             z.RefreshFlushLock(setOrient);
             var seatP = z.LockLocalPosition;
             var seatR = z.LockLocalRotation;
+
+            // the hub button activates a Set card (anime V2): it presses as the card ejects
+            z.GetComponentInParent<ArDuelDiskRig>()?.NoteSetActivated(z);
 
             // 1) Eject almost fully out of the exterior slot
             var ejectP = ArZoneLayout.SlotEjectedOffset(z.Kind, z.transform);
@@ -407,6 +454,17 @@ namespace WRLDZ.Presentation.ArInteraction
                 vis.ForceShowArt();
             }, ArDiskMotion.ToasterFlip);
 
+            yield return ActivatedFinish(vis, z, occ, db, t, scale, ejectP, ejectR);
+        }
+
+        /// <summary>
+        /// An activated card standing out of its slot (ejected pose): Continuous / Field / Equip reseat face-up; a
+        /// one-shot is held up while its beat plays, then flies to the GY (or leaves as its activation was undone /
+        /// it was destroyed).
+        /// </summary>
+        IEnumerator ActivatedFinish(ArDiskCardVisual vis, ArDiskZone z, CardInstance occ, CardDatabase db,
+            Transform t, Vector3 scale, Vector3 ejectP, Quaternion ejectR)
+        {
             // 3) Game logic: Continuous / Field / Equip reseat face-up (still 90% in).
             //    One-shots leave for GY (engine will clear the zone).
             var stays = ArZoneLayout.StaysInSlotAfterActivate(occ);
@@ -425,6 +483,8 @@ namespace WRLDZ.Presentation.ArInteraction
                     vis.MotionBusy = false;
                     vis.Sync(occ, db);
                     ApplySlotVisibility(vis, exposeSlot: true);
+                    if (occ.EquippedTo != null)
+                        vis.transform.localPosition += new Vector3(0.018f, 0.028f, 0.012f);
                 }
 
                 _seatedZones.Add(z);
@@ -433,14 +493,199 @@ namespace WRLDZ.Presentation.ArInteraction
             }
             else
             {
-                // One-shot: rise and fade to GY (do not reseat)
+                // One-shot: hold it up, face-up, while its beat plays (was: straight to the GY, art
+                // readable ~1.2 s). Still on the field = chain window / target pick: keep holding.
+                var holdCap = Time.unscaledTime + SpellActivationPresentation.BeatHardCapSeconds;
+                while (vis != null && z != null && z.Occupant == occ && occ.FaceUp &&
+                       Time.unscaledTime < holdCap)
+                    yield return null;
+                if (vis == null || !OwnsZone(z, vis)) yield break;
+
+                // Activation undone while still Set (target pick cancelled / timed out): turn it back
+                // over and re-seat it face-down — it never went to the GY.
+                if (z.Occupant == occ && !occ.FaceUp)
+                {
+                    yield return ToasterReseatFaceDown(vis, z, occ, db, ejectP, ejectR, scale);
+                    yield break;
+                }
+
+                // Activation undone from the hand (card went back to the hand): leave quietly.
+                if (SpellActivationPresentation.WasCancelled(occ.InstanceId) &&
+                    !CardShatterPresentation.HasQueued(occ.InstanceId))
+                {
+                    ClearZone(z);
+                    _lastFaceUp.Remove(z);
+                    _lastDefense.Remove(z);
+                    _seatedZones.Remove(z);
+                    yield break;
+                }
+
+                if (CardShatterPresentation.HasQueued(occ.InstanceId))
+                {
+                    // Destroyed (negated + destroyed, or MST on a chained Trap): leave on the same gate as
+                    // the arena hologram — the destroying card's result beat, and for a link that still
+                    // resolves, after its own effect. One frame later so the arena hologram (the readable
+                    // one) takes the shatter first; the disk card then clears instead of floating to the
+                    // GY face-up long after its hologram exploded.
+                    yield return WaitShatterRelease(occ.InstanceId);
+                    yield return null;
+                    if (vis == null || !OwnsZone(z, vis)) yield break;
+                    ClearZone(z);
+                    _lastFaceUp.Remove(z);
+                    _lastDefense.Remove(z);
+                    _seatedZones.Remove(z);
+                    yield break;
+                }
+
+                yield return WaitDiskRead(occ.InstanceId);
+                if (vis == null || !OwnsZone(z, vis)) yield break;
+
                 Debug.Log($"[WRLDZ AR] Toaster activate → GY · {occ.Name}");
                 yield return ToasterFlyToGy(t, scale, z);
+                if (!OwnsZone(z, vis)) yield break;
                 ClearZone(z);
                 _lastFaceUp.Remove(z);
                 _lastDefense.Remove(z);
                 _seatedZones.Remove(z);
             }
+        }
+
+        /// <summary>
+        /// A Spell activated from the hand (owner 2026-10-04): the hand only showed it to the opponent, so the card is
+        /// not slid into the slot like a Set. It appears face-up in the free slot the engine chose, standing out of it
+        /// in the activated pose, the slot flashing; it stays there while the activation resolves, then reseats
+        /// (Continuous / Equip / a staying card) or flies to the GY (<see cref="ActivatedFinish"/>).
+        /// </summary>
+        IEnumerator AppearActivatedFromHand(ArDiskCardVisual vis, ArDiskZone z, CardInstance occ, CardDatabase db)
+        {
+            if (vis == null || z == null || occ == null) yield break;
+            vis.MotionBusy = true;
+            var t = vis.transform;
+            var scale = ArZoneLayout.LocalScaleForWorldSize(z.transform, z.Kind);
+            var ejectP = ArZoneLayout.SlotEjectedOffset(z.Kind, z.transform);
+            var ejectR = ArZoneLayout.SpellTrapEjectedRot;
+            // hidden until it appears (a chained link waits its turn, like a Set turning over)
+            t.localPosition = ejectP;
+            t.localRotation = ejectR;
+            t.localScale = Vector3.zero;
+            if (Application.isPlaying)
+            {
+                var waitCap = Time.unscaledTime + SpellActivationPresentation.BeatHardCapSeconds;
+                while (vis != null && Time.unscaledTime < waitCap &&
+                       !SpellActivationPresentation.WasCancelled(occ.InstanceId))
+                {
+                    var floor = ActivationBeat.RevealStartFloor(occ.InstanceId);
+                    if (floor <= 0f ||
+                        Time.unscaledTime >= floor - SpellActivationPresentation.ArenaStartDelaySeconds)
+                        break;
+                    yield return null;
+                }
+
+                if (vis == null) yield break;
+            }
+
+            ApplySlotVisibility(vis, exposeSlot: true);
+            z.SeatAnimUntil = Time.unscaledTime + 4f;
+            vis.Card = occ;
+            vis.FaceUp = true;
+            vis.Defense = false;
+            vis.ApplyFace(db);
+            vis.ForceShowArt();
+            var disk = z.GetComponentInParent<ArDuelDiskRig>();
+            disk?.PlayFx(DiskFxEvent.SummonFlash);
+            disk?.NoteSeated(z);   // the slot lights
+            WrldzAudio.PlayCardPlay();
+            // materialise out of the slot mouth: from a sliver to full size with a small overshoot
+            var from = Vector3.Lerp(z.LockLocalPosition, ejectP, 0.55f);
+            var u = 0f;
+            while (u < ArDiskMotion.HandActivateAppear && t != null)
+            {
+                u += Time.unscaledDeltaTime;
+                var k = Mathf.Clamp01(u / ArDiskMotion.HandActivateAppear);
+                const float c1 = 1.4f, c3 = c1 + 1f;
+                var e = 1f + c3 * Mathf.Pow(k - 1f, 3f) + c1 * Mathf.Pow(k - 1f, 2f);
+                t.localPosition = Vector3.LerpUnclamped(from, ejectP, Mathf.Clamp01(e));
+                t.localScale = scale * Mathf.Max(0f, e);
+                yield return null;
+            }
+
+            if (t == null || vis == null) yield break;
+            t.localPosition = ejectP;
+            t.localRotation = ejectR;
+            t.localScale = scale;
+            Debug.Log($"[WRLDZ AR] Activated from the hand → appears in {z.Kind}[{z.Index}] · {occ.Name}");
+            yield return ActivatedFinish(vis, z, occ, db, t, scale, ejectP, ejectR);
+        }
+
+        /// <summary>A card seated now that its activation was made from the hand (not a Set turning over).</summary>
+        static bool IsHandActivation(CardInstance occ, bool hasHandoff) =>
+            !hasHandoff && occ != null && occ.FaceUp && occ.Def != null && occ.Def.IsSpell &&
+            SpellActivationPresentation.HasActivation(occ.InstanceId);
+
+        /// <summary>Undone Set activation: flip back to the card back and slide into the slot face-down.</summary>
+        IEnumerator ToasterReseatFaceDown(ArDiskCardVisual vis, ArDiskZone z, CardInstance occ,
+            CardDatabase db, Vector3 ejectP, Quaternion ejectR, Vector3 scale)
+        {
+            var t = vis.transform;
+            yield return ArDiskMotion.FlipY(t, () =>
+            {
+                if (vis == null) return;
+                vis.Card = occ;
+                vis.FaceUp = false;
+                vis.ApplyFace(db);
+            }, ArDiskMotion.ToasterFlip);
+            if (vis == null || !OwnsZone(z, vis)) yield break;
+            z.RefreshFlushLock(ArZoneOrientation.FaceDownSet);
+            yield return ArDiskMotion.LerpLocal(t, ejectP, z.LockLocalPosition, ejectR,
+                z.LockLocalRotation, scale, z.LockLocalScale, ArDiskMotion.ToasterReseat);
+            if (vis == null || !OwnsZone(z, vis)) yield break;
+            vis.MotionBusy = false;
+            vis.Sync(occ, db);
+            ApplySlotVisibility(vis, exposeSlot: true);
+            // Next flip-up (re-activation) must be seen as a new face-down → face-up edge.
+            _lastFaceUp[z] = occ.FaceUp;
+            _seatedZones.Add(z);
+            z.SeatAnimUntil = Time.unscaledTime + 0.05f;
+            Debug.Log($"[WRLDZ AR] Toaster activate undone → reseat face-down · {occ.Name}");
+        }
+
+        /// <summary>Same gate as the arena hologram's own shatter (<see cref="ActivationBeat.IsShatterReleased"/>).</summary>
+        static IEnumerator WaitShatterRelease(int instanceId)
+        {
+            var cap = Time.unscaledTime + SpellActivationPresentation.BeatHardCapSeconds;
+            while (Application.isPlaying && Time.unscaledTime < cap &&
+                   !ActivationBeat.IsShatterReleased(instanceId))
+                yield return null;
+        }
+
+        bool OwnsZone(ArDiskZone z, ArDiskCardVisual vis) =>
+            z != null && vis != null && _visuals.TryGetValue(z, out var cur) && cur == vis;
+
+        /// <summary>Disk toaster holds a one-shot up until the arena beat fades it (same clock).</summary>
+        static IEnumerator WaitDiskRead(int instanceId)
+        {
+            var start = Time.unscaledTime;
+            var cap = start + SpellActivationPresentation.BeatHardCapSeconds;
+            while (Application.isPlaying && Time.unscaledTime < cap)
+            {
+                if (ActivationBeat.TryGetFadeAt(instanceId, false, out var fadeAt))
+                {
+                    if (Time.unscaledTime >= fadeAt) yield break;
+                }
+                else if (Time.unscaledTime - start >= SpellActivationPresentation.DiskOneShotMinReadSeconds)
+                    yield break;
+
+                yield return null;
+            }
+        }
+
+        /// <summary>A destroy / leave that is a Spell/Trap's result waits for that card's result beat.</summary>
+        static IEnumerator WaitRemovalRelease(int instanceId)
+        {
+            var cap = Time.unscaledTime + SpellActivationPresentation.BeatHardCapSeconds;
+            while (Application.isPlaying && Time.unscaledTime < cap &&
+                   !ActivationBeat.IsRemovalReleased(instanceId))
+                yield return null;
         }
 
         // ── Toaster leave field (activate / destroy / send to GY) ───────────
@@ -456,6 +701,16 @@ namespace WRLDZ.Presentation.ArInteraction
             if (vis.MotionBusy) yield break;
 
             var id = vis.InstanceId;
+            // Activation undone back to the hand before the toaster ran: nothing went to the GY.
+            if (SpellActivationPresentation.WasCancelled(id) && !CardShatterPresentation.HasQueued(id))
+            {
+                ClearZone(z);
+                _lastFaceUp.Remove(z);
+                _lastDefense.Remove(z);
+                _seatedZones.Remove(z);
+                yield break;
+            }
+
             var activated = SpellActivationPresentation.HasActivation(id) ||
                             SpellActivationPresentation.WantsFadeToGy(id);
             if (activated)
@@ -466,6 +721,9 @@ namespace WRLDZ.Presentation.ArInteraction
 
             vis.MotionBusy = true;
             ApplySlotVisibility(vis, exposeSlot: true);
+            // Destroyed by a Spell/Trap (MST, Heavy Storm): wait for that card's result beat.
+            yield return WaitRemovalRelease(id);
+            if (vis == null || !OwnsZone(z, vis)) yield break;
             z.SeatAnimUntil = Time.unscaledTime + 4f;
             var t = vis.transform;
             var scale = t.localScale;
@@ -632,11 +890,21 @@ namespace WRLDZ.Presentation.ArInteraction
 
             if (vis.MotionBusy) yield break;
             vis.MotionBusy = true;
+            // Face-down monster leaving: reveal it ONLY on battle evidence — the engine turned it face-up AND a
+            // BATTLE shatter is queued (same rule as ArArenaHologramManager.RemoveNow). Change of Heart, bounce,
+            // face-down banish, tribute, material or an effect destroy of a hidden set leave as the card back
+            // (owner rule: face-down stays hidden). Sampled now: the arena's battle flip may consume the spec.
+            var battleReveal = !vis.FaceUp && vis.Card != null && vis.Card.FaceUp &&
+                               CardShatterPresentation.TryPeek(vis.InstanceId, out var leaveSpec) &&
+                               leaveSpec.IsBattle;
+            // Destroyed by a Spell/Trap (Raigeki, Trap Hole, Mirror Force): wait for its result beat.
+            yield return WaitRemovalRelease(vis.InstanceId);
+            if (vis == null || !OwnsZone(z, vis)) yield break;
             z.SeatAnimUntil = Time.unscaledTime + 3f;
             var t = vis.transform;
 
             // Same-tick battle flip + destroy: reveal art in place before leave
-            if (!vis.FaceUp)
+            if (!vis.FaceUp && battleReveal)
             {
                 DuelPresentationPacer.HoldBattleFlip(vis.Card != null ? vis.Card.Name : null);
                 yield return ArDiskMotion.FlipInPlace(t, () =>
@@ -688,7 +956,7 @@ namespace WRLDZ.Presentation.ArInteraction
                 var zi = ev.ZoneIndex;
                 if (zi < 0 || zi >= disk.SpellTrapZones.Length) continue;
                 var z = disk.SpellTrapZones[zi];
-                if (z == null || z.Occupant != null) continue;
+                if (z == null || z.Occupant != null || z.IncomingGesture) continue;
                 if (_visuals.TryGetValue(z, out var existing) && existing != null) continue;
 
                 var ghost = new CardInstance
@@ -703,8 +971,8 @@ namespace WRLDZ.Presentation.ArInteraction
                     isMonster: false, controllerView: false);
                 _visuals[z] = vis;
                 _playedActivationGhosts.Add(ev.InstanceId);
-                PlaySlotSeatFx(vis, z, ghost, db, false, Vector3.zero, Quaternion.identity,
-                    Vector3.one);
+                // already resolved and in the GY: it appears in its slot for its beat, then flies there
+                StartCoroutine(AppearActivatedFromHand(vis, z, ghost, db));
             }
         }
 
@@ -726,25 +994,10 @@ namespace WRLDZ.Presentation.ArInteraction
                 u += Time.unscaledDeltaTime / dur;
                 var e = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(u));
                 t.position = Vector3.Lerp(start, gy, e);
-                t.localScale = Vector3.Lerp(scale, scale * 0.35f, e);
-                foreach (var mr in t.GetComponentsInChildren<MeshRenderer>(true))
-                {
-                    if (mr?.material == null) continue;
-                    if (mr.material.HasProperty("_BaseColor"))
-                    {
-                        var bc = mr.material.GetColor("_BaseColor");
-                        bc.a = 1f - e;
-                        mr.material.SetColor("_BaseColor", bc);
-                    }
-
-                    if (mr.material.HasProperty("_Color"))
-                    {
-                        var c = mr.material.color;
-                        c.a = 1f - e;
-                        mr.material.color = c;
-                    }
-                }
-
+                // Disk cards are opaque unlit (alpha never showed) and the old per-frame renderer.material fade cloned
+                // every material of the card each frame. Shrink into the GY slot over the last stretch instead.
+                var vanish = 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.7f, 1f, e));
+                t.localScale = Vector3.Lerp(scale, scale * 0.35f, e) * vanish;
                 yield return null;
             }
         }

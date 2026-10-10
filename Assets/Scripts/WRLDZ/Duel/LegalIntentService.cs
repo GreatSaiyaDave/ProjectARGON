@@ -25,7 +25,8 @@ namespace WRLDZ.Duel
             Attack,
             DirectAttack,
             ResponseActivate,
-            EffectTarget
+            EffectTarget,
+            SpecialSummon
         }
 
         public sealed class Entry
@@ -91,7 +92,11 @@ namespace WRLDZ.Duel
             if (engine.IsAwaitingEffectTarget && engine.PendingActivation != null &&
                 engine.PendingActivation.Controller == who)
             {
-                foreach (var t in engine.PendingActivation.LegalTargets)
+                var offered = engine.PendingActivation.LegalTargets;
+                if (engine.PendingActivation.TargetKind == EffectTargetKind.SpellTrapOnField)
+                    offered = SpellTrapEffects.FilterActivatingCardFromOffer(
+                        offered, engine.PendingActivation.Card);
+                foreach (var t in offered)
                 {
                     if (t == null) continue;
                     Add(snap, LegalKind.EffectTarget, t, DuelIntentKind.None, false, "Target", null);
@@ -144,10 +149,13 @@ namespace WRLDZ.Duel
                     if (c?.Def == null) continue;
                     if (c.Def.IsMonster && engine.CanNormalSummonOrSet(who, c))
                     {
-                        Add(snap, LegalKind.NormalSummonAtk, c, DuelIntentKind.NormalSummonAtk, true,
-                            "Summon", null);
-                        Add(snap, LegalKind.SetMonsterDef, c, DuelIntentKind.SetMonsterDef, true,
-                            "Set", null);
+                        // RuleLocks batch: a Summon lock (Jam Breeding Machine) leaves only the Set.
+                        if (Rules.SummonProcedures.CheckNormalOrTribute(engine, who, c, asSet: false).Legal)
+                            Add(snap, LegalKind.NormalSummonAtk, c, DuelIntentKind.NormalSummonAtk, true,
+                                "Summon", null);
+                        if (Rules.SummonProcedures.CheckNormalOrTribute(engine, who, c, asSet: true).Legal)
+                            Add(snap, LegalKind.SetMonsterDef, c, DuelIntentKind.SetMonsterDef, true,
+                                "Set", null);
                     }
 
                     if ((c.Def.IsSpell || c.Def.IsTrap) && engine.CanSetSpellTrap(who, c))
@@ -156,6 +164,9 @@ namespace WRLDZ.Duel
                     if (engine.CanActivateSpellTrap(who, c, fromHand: true))
                         Add(snap, LegalKind.ActivateFromHand, c, DuelIntentKind.Activate, true,
                             "Activate", null);
+                    if (c.Def.IsMonster && engine.CanSpecialSummonProcedure(who, c))
+                        Add(snap, LegalKind.SpecialSummon, c, DuelIntentKind.SpecialSummon, true,
+                            "Special Summon", null);
                 }
             }
 
@@ -179,9 +190,13 @@ namespace WRLDZ.Duel
                         ? new List<CardInstance>()
                         : opp.MonstersOnField()
                             .Where(t => t != null &&
-                                        !ContinuousProtections.CannotBeAttackTarget(engine, t))
+                                        !ContinuousProtections.CannotBeAttackTarget(engine, t) &&
+                                        // Toon rule (Toons batch): only face-up Toons while the opponent has one.
+                                        !ToonsRuntime.ForbidsAttackTarget(engine, m, t) &&
+                                        // SpiritMonsters batch: Inaba White Rabbit / Asura Priest.
+                                        !SpiritMonstersRuntime.ForbidsAttackTarget(engine, m, t))
                             .ToList();
-                    if (targets.Count == 0 || engine.CanAttackDirectly(who, m))
+                    if (engine.CanAttackDirectly(who, m))
                     {
                         Add(snap, LegalKind.DirectAttack, m, DuelIntentKind.DirectAttack, false,
                             "Direct", null);

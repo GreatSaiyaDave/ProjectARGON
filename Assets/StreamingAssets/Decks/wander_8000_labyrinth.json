@@ -1,0 +1,140 @@
+{
+  "name": "Gate Labyrinth Guard",
+  "format": "wrldz_street_8000",
+  "main": [
+    {
+      "id": 65240384,
+      "name": "Big Shield Gardna",
+      "qty": 3
+    },
+    {
+      "id": 13039848,
+      "name": "Giant Soldier of Stone",
+      "qty": 3
+    },
+    {
+      "id": 40659562,
+      "name": "Guardian Sphinx",
+      "qty": 2
+    },
+    {
+      "id": 67284908,
+      "name": "Labyrinth Wall",
+      "qty": 2
+    },
+    {
+      "id": 32012841,
+      "name": "Millennium Shield",
+      "qty": 2
+    },
+    {
+      "id": 75372290,
+      "name": "Total Defense Shogun",
+      "qty": 2
+    },
+    {
+      "id": 23205979,
+      "name": "Spirit Reaper",
+      "qty": 2
+    },
+    {
+      "id": 13945283,
+      "name": "Wall of Illusion",
+      "qty": 2
+    },
+    {
+      "id": 26202165,
+      "name": "Sangan",
+      "qty": 1
+    },
+    {
+      "id": 54652250,
+      "name": "Man-Eater Bug",
+      "qty": 1
+    },
+    {
+      "id": 72302403,
+      "name": "Swords of Revealing Light",
+      "qty": 1
+    },
+    {
+      "id": 44656491,
+      "name": "Messenger of Peace",
+      "qty": 2
+    },
+    {
+      "id": 16430187,
+      "name": "The Reliable Guardian",
+      "qty": 2
+    },
+    {
+      "id": 55144522,
+      "name": "Pot of Greed",
+      "qty": 1
+    },
+    {
+      "id": 19613556,
+      "name": "Heavy Storm",
+      "qty": 1
+    },
+    {
+      "id": 5318639,
+      "name": "Mystical Space Typhoon",
+      "qty": 1
+    },
+    {
+      "id": 14087893,
+      "name": "Book of Moon",
+      "qty": 1
+    },
+    {
+      "id": 44209392,
+      "name": "Castle Walls",
+      "qty": 2
+    },
+    {
+      "id": 92854392,
+      "name": "Staunch Defender",
+      "qty": 2
+    },
+    {
+      "id": 85742772,
+      "name": "Gravity Bind",
+      "qty": 2
+    },
+    {
+      "id": 3136426,
+      "name": "Level Limit - Area B",
+      "qty": 1
+    },
+    {
+      "id": 44095762,
+      "name": "Mirror Force",
+      "qty": 1
+    },
+    {
+      "id": 12607053,
+      "name": "Waboku",
+      "qty": 1
+    },
+    {
+      "id": 43250041,
+      "name": "Draining Shield",
+      "qty": 1
+    },
+    {
+      "id": 97077563,
+      "name": "Call of the Haunted",
+      "qty": 1
+    }
+  ],
+  "extra": [],
+  "side": [],
+  "counts": {
+    "main": 40,
+    "extra": 0,
+    "side": 0
+  },
+  "lpBand": 8000,
+  "role": "street_npc_defender"
+}

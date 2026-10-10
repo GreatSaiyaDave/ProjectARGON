@@ -17,18 +17,18 @@ namespace WRLDZ.Presentation
 
         // ── Full-bleed backgrounds (boot cascade + hub) ─────────────
         public static Sprite BgSplash() => L("bg/bg_splash.png");
-        /// <summary>Title screen — golden Old Kingdom dawn variant of splash world.</summary>
+        /// <summary>Title — closer capstone, cosmic Eye inside the Tear.</summary>
         public static Sprite BgTitle() => L("bg/bg_title.png") ?? BgSplash();
-        /// <summary>Credits — quieter starfield dunes.</summary>
+        /// <summary>Credits / prologue — far sealed pyramid under a dominating Tear.</summary>
         public static Sprite BgCredits() => L("bg/bg_credits.png") ?? BgSplash();
-        /// <summary>Auth / DOB / courtyard account screens.</summary>
+        /// <summary>Auth / DOB / terms — hypostyle, cosmos in the floor-crack.</summary>
         public static Sprite BgAuth() => L("bg/bg_auth.png") ?? BgTitle();
         public static Sprite BgHub() => L("bg/bg_hub.png") ?? BgTitle();
         public static Sprite BgMenuVoid() => L("bg/bg_menu_void.png");
         public static Sprite BgDeckBuilder() =>
             L("bg/bg_deck_builder.png") ?? BgMenuVoid();
         public static Sprite BgOverworldMap() => L("bg/bg_overworld_map.png");
-        /// <summary>Secondary district tile for map corners (Battle City / Ingress).</summary>
+        /// <summary>Secondary district tile for map corners.</summary>
         public static Sprite BgOverworldDistrict() => L("bg/bg_overworld_district.png");
         public static Sprite BgDuelStage() =>
             L("bg/bg_duel_stage.png") ?? L("ui/bg_duel_stage_portrait.png");
@@ -57,6 +57,9 @@ namespace WRLDZ.Presentation
         public static Sprite FxEyeRedHalo() => L("fx/fx_eye_red_halo.png") ?? FxEyePupilRed();
         public static Sprite FxEyePupilCore() => L("fx/fx_eye_pupil_core.png") ?? FxEyeWhiteGlow();
         public static Sprite FxHoloScan() => L("fx/fx_holo_scan.png") ?? FxEyeWhiteGlow();
+        /// <summary>Local 5s response warning — player-only, not a menu.</summary>
+        public static Sprite FxWarningRespond() =>
+            L("fx/warning_respond.png") ?? L("fx/fx_eye_burst_ring.png");
         public static Sprite FxEyeBurstRing() =>
             L("fx/fx_eye_burst_ring.png") ?? LevelRing() ?? FxEyeWhiteGlow();
 
@@ -171,6 +174,19 @@ namespace WRLDZ.Presentation
         public static Sprite TileStripMall() => L("map/tile_stripmall.png");
         public static Sprite IconTournament() =>
             L("icons/icon_tournament.png") ?? PinTournament() ?? IconDuel();
+
+        /// <summary>Genesis opening: Umbrax bound and burning, rim-lit silhouette.</summary>
+        public static Sprite CinematicGenesisPyre() => L("cinematic/genesis_pyre.png");
+
+        /// <summary>Genesis opening: painted deep field. NOT the seal starfield — that one
+        /// is data (R stars, G twinkle phase) and renders bright green if shown directly.</summary>
+        public static Sprite CinematicGenesisStars() => L("cinematic/genesis_stars.png");
+
+        /// <summary>Living sky: sealed pyramid silhouette, gold seam up the centre.</summary>
+        public static Sprite SkyPyramid() => L("cinematic/sky_pyramid.png");
+
+        /// <summary>Living sky: the Tear rending the sky (violet lip, void core).</summary>
+        public static Sprite SkyTear() => L("cinematic/sky_tear.png");
 
         public static Sprite CinematicPossessHuman() => L("cinematic/possess_human.png");
         public static Sprite CinematicPossessTear() => L("cinematic/possess_tear.png") ?? CinematicPossessHuman();

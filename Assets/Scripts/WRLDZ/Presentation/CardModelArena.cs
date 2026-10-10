@@ -305,9 +305,7 @@ namespace WRLDZ.Presentation
 
         static Material MakeUnlit(Color c)
         {
-            var shader = Shader.Find("Universal Render Pipeline/Unlit")
-                         ?? Shader.Find("Unlit/Color")
-                         ?? Shader.Find("UI/Default");
+            var shader = ArAnimePresentation.UnlitShader();
             var mat = new Material(shader);
             if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", c);
             if (mat.HasProperty("_Color")) mat.SetColor("_Color", c);

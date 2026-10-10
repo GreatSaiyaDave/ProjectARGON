@@ -200,7 +200,7 @@ namespace WRLDZ.UI
             var btn = HubChrome.Capsule(_list, label, onClick,
                 gold ? MenuCommandButton.Kind.Gold : MenuCommandButton.Kind.Primary,
                 centerTitle: true, titleSize: 16);
-            var le = btn.GetComponent<LayoutElement>() ?? btn.gameObject.AddComponent<LayoutElement>();
+            var le = UiFoundation.GetOrAdd<LayoutElement>(btn.gameObject);
             le.minHeight = 56f;
             le.preferredHeight = 56f;
         }

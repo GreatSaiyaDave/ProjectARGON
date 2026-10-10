@@ -417,7 +417,9 @@ namespace WRLDZ.Duel.Rules
                 var card = Hand(e, me, GravediggerGhoul);
                 var ok = e.TryActivateSpellTrap(me, card, fromHand: true);
                 var pending = e.PendingActivation;
-                var multi = pending != null && pending.MultiTarget && pending.LegalTargets.Count == 2;
+                // "Up to 2" pick: the GitHub multi-target step or the local up-to pick (either lineage).
+                var multi = pending != null && (pending.MultiTarget || pending.TargetPicksAreUpTo) &&
+                            pending.LegalTargets.Count == 2;
                 var picked = e.TrySelectEffectTarget(a);
                 var stillPicking = e.IsAwaitingEffectTarget;
                 var finished = e.CancelEffectTargeting(); // "up to": Cancel after 1 pick finishes
@@ -504,7 +506,7 @@ namespace WRLDZ.Duel.Rules
                     ok && jar.FaceUp && dragon.Position == BattlePosition.Defense &&
                     mine.Position == BattlePosition.Defense && warrior.Position == BattlePosition.Attack);
                 Check("Dragon Capture Jar: a locked Dragon cannot change position",
-                    mine.PositionLockedByEffect && !e.CanChangePosition(me, mine));
+                    e.IsBattlePositionLocked(mine) && !e.CanChangePosition(me, mine));
 
                 var piper = PlaceMonster(e, opp, DragonPiper, 1);
                 MonsterEffects.OnFlipSummoned(e, opp, piper);
@@ -2079,7 +2081,10 @@ namespace WRLDZ.Duel.Rules
             e.TryAttack(who, attacker, target);
             for (var i = 0; i < 10; i++)
             {
-                if (e.IsAwaitingEffectTarget) e.CancelEffectTargeting();
+                // Jirai Gumo (local arm): the controller calls the coin before the attack goes on —
+                // call Heads, the call the GitHub arm makes for the controller.
+                if (e.PendingActivation != null && e.PendingActivation.AwaitingCoinCall) e.TrySelectCoinCall(true);
+                else if (e.IsAwaitingEffectTarget) e.CancelEffectTargeting();
                 else if (e.IsAwaitingResponse) e.PassResponse();
                 else if (e.HasDeclaredAttack) e.ResolveDeclaredAttack();
                 else break;

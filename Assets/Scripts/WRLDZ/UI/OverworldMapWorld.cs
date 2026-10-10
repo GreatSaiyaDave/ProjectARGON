@@ -11,14 +11,23 @@ namespace WRLDZ.UI
     /// </summary>
     public static class OverworldMapWorld
     {
+        /// <summary>
+        /// OSM raster tiles under the painted map. Off: the opaque painting hides them completely,
+        /// and tile.openstreetmap.org use needs attribution, caching and an identifying User-Agent
+        /// first (OSM tile policy). OverworldOsmTiles stays in the project until a provider is chosen.
+        /// </summary>
+        const bool EnableOsmTiles = false;
+
         public static void Build(Transform mapContent)
         {
             if (mapContent == null) return;
+#if UNITY_EDITOR
+            // Editor art hot-reload only (re-decodes the map PNG on every Overworld build).
             StreamingSprite.ClearCache("WRLDZ/Imagine/bg/bg_overworld_map.png");
             StreamingSprite.ClearCache("WRLDZ/Imagine/bg/bg_overworld_district.png");
+#endif
 
-            var live = mapContent.GetComponent<OverworldAnimeCity>()
-                       ?? mapContent.gameObject.AddComponent<OverworldAnimeCity>();
+            var live = UiFoundation.GetOrAdd<OverworldAnimeCity>(mapContent.gameObject);
             live.BuildSurface();
         }
 
@@ -60,6 +69,7 @@ namespace WRLDZ.UI
                 // Wipe only our layers — pins may already exist if rebuilt
                 Wipe("NightBase");
                 Wipe("ImagineMap");
+                Wipe("ImagineMapRing");
                 Wipe("XmHaze");
                 Wipe("GoldHaze");
                 Wipe("VignetteN");
@@ -68,7 +78,26 @@ namespace WRLDZ.UI
 
                 Fill(transform, "NightBase", 0f, 0f, 1f, 1f, new Color(0.06f, 0.08f, 0.14f, 1f));
 
+#pragma warning disable CS0162 // EnableOsmTiles is a compile-time switch
+                if (EnableOsmTiles)
+                {
+                    var osm = OverworldOsmTiles.Ensure(transform);
+                    osm.BuildUnderMap(transform);
+                }
+#pragma warning restore CS0162
+
                 var art = ImagineAssets.BgOverworldMap();
+                // The painting is opaque and covers NightBase exactly: skip the extra full-rect blend.
+                if (art != null)
+                {
+                    var nightBase = transform.Find("NightBase");
+                    var nbImg = nightBase != null ? nightBase.GetComponent<Image>() : null;
+                    if (nbImg != null) nbImg.enabled = false;
+                }
+
+                // One map-width of city (MetersPerMapWidth) around the zone painting, dimmed, so
+                // walking past the painted square shows more city instead of the void.
+                BuildRing(art);
                 var mapGo = new GameObject("ImagineMap", typeof(RectTransform), typeof(Image));
                 mapGo.transform.SetParent(transform, false);
                 var rt = mapGo.GetComponent<RectTransform>();
@@ -153,6 +182,40 @@ namespace WRLDZ.UI
                 var night = new Color(0.62f, 0.70f, 0.92f, 1f);
                 var noon = new Color(1.05f, 1.00f, 0.92f, 1f);
                 _map.color = Color.Lerp(night, noon, day);
+            }
+
+            /// <summary>Eight dimmed copies of the painting around UV 0..1 (one batch: same sprite).</summary>
+            void BuildRing(Sprite art)
+            {
+                var ring = new GameObject("ImagineMapRing", typeof(RectTransform));
+                ring.transform.SetParent(transform, false);
+                var rrt = ring.GetComponent<RectTransform>();
+                rrt.anchorMin = Vector2.zero;
+                rrt.anchorMax = Vector2.one;
+                rrt.offsetMin = Vector2.zero;
+                rrt.offsetMax = Vector2.zero;
+                var nightBase = transform.Find("NightBase");
+                ring.transform.SetSiblingIndex(nightBase != null ? nightBase.GetSiblingIndex() + 1 : 0);
+                for (var gx = -1; gx <= 1; gx++)
+                for (var gy = -1; gy <= 1; gy++)
+                {
+                    if (gx == 0 && gy == 0) continue;
+                    var go = new GameObject($"Ring_{gx}_{gy}", typeof(RectTransform), typeof(Image));
+                    go.transform.SetParent(ring.transform, false);
+                    var rt = go.GetComponent<RectTransform>();
+                    rt.anchorMin = new Vector2(gx, gy);
+                    rt.anchorMax = new Vector2(gx + 1, gy + 1);
+                    rt.offsetMin = Vector2.zero;
+                    rt.offsetMax = Vector2.zero;
+                    var img = go.GetComponent<Image>();
+                    img.sprite = art ?? UiFoundation.WhiteSprite();
+                    img.type = Image.Type.Simple;
+                    img.preserveAspect = false;
+                    img.raycastTarget = false;
+                    img.color = art != null
+                        ? new Color(0.55f, 0.60f, 0.72f, 1f)
+                        : new Color(0.05f, 0.07f, 0.12f, 1f);
+                }
             }
 
             void Wipe(string name)

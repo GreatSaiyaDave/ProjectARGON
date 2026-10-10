@@ -55,20 +55,76 @@ namespace WRLDZ.Duel.TextEffects
             @"\(Quick Effect\)|\(this is a Quick Effect\)|\bduring either player's\b",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
         static readonly Regex RxYouCan = new(@"\byou can\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        static readonly Regex RxEvenDuringDamageStep = new(
+            @",?\s*even during the Damage Step\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
         static readonly Regex RxSummonRestrict = new(
-            @"cannot be normal summoned(?:/set)?|must (?:first )?be special summoned|cannot be special summoned except",
+            @"cannot be normal summoned(?:/set)?|must (?:first )?be special summoned|cannot be special summoned(?: except| from the (?:GY|Graveyard))?|cannot be summoned unless you control a face-up ""[^""]+""",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        static readonly Regex RxSummonGateNamed = new(
+            @"cannot be summoned unless you control a face-up ""([^""]+)""",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxCannotBeSpecialSummoned = new(
+            @"cannot be special summoned(?=\s*(?:\.|$))",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        static readonly Regex RxCannotBeSpecialSummonedFromGy = new(
+            @"cannot be special summoned from (?:the )?(?:GY|Graveyard)\b",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxGySummonUnlessTributeCost = new(
+            @"cannot be special summoned from (?:the )?(?:GY|Graveyard),? unless you Tribute\b",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        static readonly Regex RxCannotBeSpecialSummonedByOtherWays = new(
+            @"cannot be special summoned by other ways\b",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         /// <summary>
         /// Printed Normal Summon/Set lock (nomi / semi-nomi). Inherent SS-from-hand
-        /// (Cyber Dragon) does not match and stays Normal Summonable.
+        /// (Cyber Dragon) does not match and stays Normal Summonable. A conditional "Cannot be Normal Summoned while
+        /// you control a monster" (Cave Dragon, BattleRules batch) blocks only that Summon, never the Set
+        /// (BattleRulesRuntime.NormalSummonForbiddenByOwnText).
         /// </summary>
         static readonly Regex RxBlocksNormalSummon = new(
-            @"cannot be normal summoned(?:/set)?|must (?:first )?be special summoned",
+            @"cannot be normal summoned(?:/set)?(?!\s+while\b)|must (?:first )?be special summoned",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         public static bool BlocksNormalSummonOrSet(string officialText) =>
             !string.IsNullOrWhiteSpace(officialText) && RxBlocksNormalSummon.IsMatch(officialText);
+
+        /// <summary>Returns the exact face-up card required by Guardian-style summon text.</summary>
+        public static string SummonGateNamed(string officialText)
+        {
+            if (string.IsNullOrWhiteSpace(officialText)) return null;
+            var m = RxSummonGateNamed.Match(officialText);
+            return m.Success ? m.Groups[1].Value : null;
+        }
+
+        /// <summary>True for a hard Nomi sentence with no printed exception.</summary>
+        public static bool BlocksSpecialSummon(string officialText) =>
+            !string.IsNullOrWhiteSpace(officialText) &&
+            (RxCannotBeSpecialSummoned.IsMatch(officialText) ||
+             RxCannotBeSpecialSummonedByOtherWays.IsMatch(officialText));
+
+        /// <summary>
+        /// True when printed text explicitly forbids Special Summoning from the GY.
+        /// Conditional text with an "unless" exception remains open for its
+        /// procedure-specific implementation. Full Semi-Nomi provenance (properly
+        /// summoned once before a later GY revive) is parked until a
+        /// WasProperlySpecialSummoned flag exists; do not infer it from WasSpecialSummoned.
+        /// </summary>
+        public static bool CannotBeSpecialSummonedFromGraveyard(string officialText)
+        {
+            if (string.IsNullOrWhiteSpace(officialText) ||
+                !RxCannotBeSpecialSummonedFromGy.IsMatch(officialText))
+                return false;
+
+            var sentence = Regex.Match(officialText,
+                @"[^.]*cannot be special summoned from (?:the )?(?:GY|Graveyard)[^.]*\.?",
+                RegexOptions.IgnoreCase);
+            return !sentence.Success ||
+                   !Regex.IsMatch(sentence.Value, @"\bunless\b", RegexOptions.IgnoreCase);
+        }
 
         public static List<Sentence> Parse(string officialText, CardDef def)
         {
@@ -102,7 +158,10 @@ namespace WRLDZ.Duel.TextEffects
             var s = new Sentence { Raw = raw };
             var body = raw.Trim();
             s.IsParenthetical = body.StartsWith("(") && body.EndsWith(")");
-            s.IsSummonRestriction = RxSummonRestrict.IsMatch(body);
+            // NegationMonsters batch (v161): "cannot be Special Summoned from the GY, unless you Tribute …" (Tyrant Dragon,
+            // ygopro EFFECT_SPSUMMON_COST) is a summon cost, not a restriction to skip: it stays unparsed until the cost
+            // is implemented, so the card is not FullyCompiled with its cost silently dropped.
+            s.IsSummonRestriction = RxSummonRestrict.IsMatch(body) && !RxGySummonUnlessTributeCost.IsMatch(body);
             s.IsFlip = RxFlipLead.IsMatch(body);
             s.OncePerTurn = RxOncePerTurn.IsMatch(body);
             s.IsQuickEffect = RxQuick.IsMatch(body);
@@ -182,21 +241,64 @@ namespace WRLDZ.Duel.TextEffects
         static EffectTiming SuggestTiming(Sentence s)
         {
             var cond = ((s.Condition ?? "") + " " + (s.Raw ?? "")).Trim();
+            // "…, even during the Damage Step" only permits activation there; it is not the trigger. Read as one,
+            // it filed Michizure ("When a monster is sent from the field to your GY, even during the Damage Step")
+            // onto the damage-calculation window.
+            cond = RxEvenDuringDamageStep.Replace(cond, "");
             if (s.IsFlip) return EffectTiming.Flip;
+            if (Contains(cond, "end of the damage step"))
+                return EffectTiming.EndOfDamageStep;
+            if (Contains(cond, "after damage calculation"))
+                return EffectTiming.AfterDamageCalculation;
+            // Must precede the generic "damage step" test below, which would otherwise
+            // file Sasuke / Mystic Swordsman onto the damage-calculation window.
+            if (Contains(cond, "start of the damage step"))
+                return EffectTiming.StartOfDamageStep;
             if (Contains(cond, "damage calculation") || Contains(cond, "damage step"))
                 return EffectTiming.DamageCalculation;
             if (Contains(cond, "declares an attack") || Contains(cond, "declare an attack"))
                 return EffectTiming.AttackDeclared;
-            if (Contains(cond, "normal or flip summon") || Contains(cond, "normal summons") ||
-                Contains(cond, "flip summons"))
+            // Heart of the Underdog: "During your Draw Phase, when you draw a Normal Monster(s)" —
+            // must precede Drop Off's "normal draw" + "draw phase" substring test.
+            if (Contains(cond, "normal monster") && Contains(cond, "draw phase"))
+                return EffectTiming.ControllerNormalDrawInDrawPhase;
+            // Drop Off: "draws for their normal draw in their Draw Phase" — not Solemn Wishes / any-draw.
+            if (Contains(cond, "normal draw") && Contains(cond, "draw phase"))
+                return EffectTiming.OpponentNormalDrawInDrawPhase;
+            // Spring of Rebirth: each/every time monster(s) return field→owner's hand (continuous).
+            if ((Contains(cond, "return") || Contains(cond, "returns")) &&
+                Contains(cond, "owner") && Contains(cond, "hand") &&
+                (Contains(cond, "every time") || Contains(cond, "each time")))
+                return EffectTiming.ContinuousWhileFaceUp;
+            // Mysterious Puppeteer: each time you or your opponent / either player
+            // Normal or Flip Summons → Continuous LP gain (not Trap Hole window).
+            if ((Contains(cond, "you or your opponent") || Contains(cond, "either player") ||
+                 Contains(cond, "a player")) &&
+                (Contains(cond, "normal summon") || Contains(cond, "flip summon")) &&
+                (Contains(cond, "life points") || Contains(cond, "gain")))
+                return EffectTiming.ContinuousWhileFaceUp;
+            // "When THIS CARD is Normal or Flip Summoned" is a self-summon trigger
+            // (Senju / Sonic Bird / Manju). Only the opponent's phrasing — "your
+            // opponent Normal or Flip Summons" — belongs to the Trap Hole window.
+            // Matching the shared substring first mis-filed those onto the opponent.
+            var aboutThisCard = Contains(cond, "this card is") ||
+                                Contains(cond, "this monster is");
+            if (!aboutThisCard &&
+                (Contains(cond, "normal or flip summon") || Contains(cond, "normal summons") ||
+                 Contains(cond, "flip summons")))
                 return EffectTiming.OpponentNormalOrFlipSummon;
             if (Contains(cond, "flip summoned"))
+                return EffectTiming.ThisCardSummoned;
+            if (Contains(cond, "this card is tribute summoned") ||
+                Contains(cond, "this monster is tribute summoned"))
                 return EffectTiming.ThisCardSummoned;
             if (Contains(cond, "this card is summoned") ||
                 Contains(cond, "this card is normal summoned") ||
                 Contains(cond, "this monster is summoned") ||
                 Contains(cond, "this monster is normal summoned"))
                 return EffectTiming.ThisCardSummoned;
+            if (Contains(cond, "inflicts battle damage"))
+                return EffectTiming.ThisCardInflictsBattleDamage;
             if (Contains(cond, "destroyed by battle"))
                 return EffectTiming.SentFromFieldToGy;
             if (Contains(cond, "sent from the field to the gy") ||
@@ -222,7 +324,9 @@ namespace WRLDZ.Duel.TextEffects
                    Contains(body, "reduce the level") ||
                    Contains(body, "this card remains on the field") ||
                    Contains(body, "cannot declare an attack") ||
-                   Contains(body, "neither player can target");
+                   Contains(body, "neither player can target") ||
+                   Contains(body, "negate all equip card effects") ||
+                   Contains(body, "cannot draw cards except during");
         }
 
         static bool LooksLikeTrigger(string condition)

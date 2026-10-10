@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using WRLDZ.Core;
 using UnityEngine.UI;
 using WRLDZ.UI;
 
@@ -42,34 +43,42 @@ namespace WRLDZ.Presentation
             if (uiParent == null || string.IsNullOrEmpty(fileStem) || !CanSpawn)
                 return null;
 
-            var mesh = LoadMesh(fileStem);
-            if (mesh == null) return null;
-
-            var slot = new GameObject("HubPropSlot_" + fileStem, typeof(RectTransform), typeof(RawImage));
-            slot.transform.SetParent(uiParent, false);
-            var rect = slot.GetComponent<RectTransform>();
-            rect.anchorMin = new Vector2(x0, y0);
-            rect.anchorMax = new Vector2(x1, y1);
-            rect.offsetMin = Vector2.zero;
-            rect.offsetMax = Vector2.zero;
-            var raw = slot.GetComponent<RawImage>();
-            raw.color = Color.white;
-            raw.raycastTarget = false;
-
-            var host = new GameObject("HubPropStage_" + fileStem);
-            host.transform.SetParent(WorldRoot(), false);
-            var view = host.AddComponent<HubPropView>();
-            view.Build(raw, mesh, fileStem, accent ?? DuelystUi.Cyan, Mathf.Max(128, rtSize));
-            if (!view._ready)
+            try
             {
-                Object.Destroy(host);
-                Object.Destroy(slot);
+                var mesh = LoadMesh(fileStem);
+                if (mesh == null) return null;
+
+                var slot = new GameObject("HubPropSlot_" + fileStem, typeof(RectTransform), typeof(RawImage));
+                slot.transform.SetParent(uiParent, false);
+                var rect = slot.GetComponent<RectTransform>();
+                rect.anchorMin = new Vector2(x0, y0);
+                rect.anchorMax = new Vector2(x1, y1);
+                rect.offsetMin = Vector2.zero;
+                rect.offsetMax = Vector2.zero;
+                var raw = slot.GetComponent<RawImage>();
+                raw.color = Color.white;
+                raw.raycastTarget = false;
+
+                var host = new GameObject("HubPropStage_" + fileStem);
+                host.transform.SetParent(WorldRoot(), false);
+                var view = host.AddComponent<HubPropView>();
+                view.Build(raw, mesh, fileStem, accent ?? DuelystUi.Cyan, Mathf.Max(128, rtSize));
+                if (!view._ready)
+                {
+                    Object.Destroy(host);
+                    Object.Destroy(slot);
+                    return null;
+                }
+
+                _live++;
+                Live.Add(view);
+                return view;
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning("[WRLDZ] Hub prop '" + fileStem + "' skipped: " + ex.Message);
                 return null;
             }
-
-            _live++;
-            Live.Add(view);
-            return view;
         }
 
         public static void DestroyAll()
@@ -94,20 +103,18 @@ namespace WRLDZ.Presentation
         public static bool MeshExists(string fileStem)
         {
             if (string.IsNullOrEmpty(fileStem)) return false;
-            var path = Path.Combine(Application.streamingAssetsPath, PropsFolder + fileStem + ".obj");
-            return File.Exists(path);
+            return StreamingFiles.Exists(PropsFolder + fileStem + ".obj");
         }
 
         static Mesh LoadMesh(string stem)
         {
-            var path = Path.Combine(Application.streamingAssetsPath, PropsFolder + stem + ".obj");
-            if (!File.Exists(path)) return null;
-            return ObjMeshLoader.LoadFromFile(path, stem);
+            var path = PropsFolder + stem + ".obj";
+            if (!StreamingFiles.Exists(path)) return null;
+            return ObjMeshLoader.LoadFromStreaming(path, stem);
         }
 
         static Texture2D LoadAlbedo(string stem)
         {
-            var dir = Path.Combine(Application.streamingAssetsPath, PropsFolder);
             string[] names =
             {
                 stem + ".png",
@@ -117,11 +124,9 @@ namespace WRLDZ.Presentation
             };
             foreach (var n in names)
             {
-                var p = Path.Combine(dir, n);
-                if (!File.Exists(p)) continue;
+                if (!StreamingFiles.TryReadAllBytes(PropsFolder + n, out var bytes)) continue;
                 try
                 {
-                    var bytes = File.ReadAllBytes(p);
                     var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false)
                     {
                         name = stem + "_albedo",
@@ -182,7 +187,9 @@ namespace WRLDZ.Presentation
             var mf = body.GetComponent<MeshFilter>();
             var mr = body.GetComponent<MeshRenderer>();
             mf.sharedMesh = mesh;
-            mr.sharedMaterial = MakeMaterial(accent, LoadAlbedo(stem));
+            var mat = MakeMaterial(accent, LoadAlbedo(stem));
+            if (mat != null)
+                mr.sharedMaterial = mat;
 
             // Center + fit so framing matches the disk showcase.
             var b = mesh.bounds;
@@ -206,6 +213,7 @@ namespace WRLDZ.Presentation
                          ?? Shader.Find("Unlit/Texture")
                          ?? Shader.Find("Unlit/Color")
                          ?? Shader.Find("UI/Default");
+            if (shader == null) return null;
             var mat = new Material(shader) { name = "HubPropUnlit" };
             var tint = Color.Lerp(Color.white, accent, 0.18f);
             if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", tint);

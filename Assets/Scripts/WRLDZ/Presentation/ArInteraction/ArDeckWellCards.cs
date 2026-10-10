@@ -5,8 +5,11 @@ using WRLDZ.Presentation;
 namespace WRLDZ.Presentation.ArInteraction
 {
     /// <summary>
-    /// The one Battle City deck pack. Seated in the hub magazine
-    /// (Fusion v37 DECK FLAP / DECK SPRING HOLDER).
+    /// The one Battle City deck pack: exactly the cards left in the Main Deck, one layer per card, each the
+    /// same size and back as a card played on the disk (<see cref="ArZoneLayout.CardScaleOnDisk"/> ×
+    /// <see cref="ArAnimePresentation.CardAspectY"/>, true card thickness at that scale). The stack lies in
+    /// the hub's deck housing — the counter box from the round hub's edge (x ≈ −0.06) to the body end
+    /// (x ≈ −0.13), 62 mm deep — long side along the housing, under the DECK FLAP.
     ///
     /// Kit: benjohnson789 "Working Full Size Yu-Gi-Oh! Battle City Duel Disk"
     /// (Cults, v37). <c>deck spring holder.3mf</c> is a shallow spring tray
@@ -26,23 +29,42 @@ namespace WRLDZ.Presentation.ArInteraction
     /// </summary>
     public static class ArDeckWellCards
     {
-        /// <summary>Across the magazine (mesh +X). Inset inside the 36.7 mm holder.</summary>
-        public const float Width = 0.033f;
+        /// <summary>Card long side, along the housing (mesh X): a disk card's height (46 mm × 1.45).</summary>
+        public const float Width = ArZoneLayout.CardScaleOnDisk * ArAnimePresentation.CardAspectY;
 
-        /// <summary>Toward the wearer (mesh +Z). Inset inside the 26.0 mm holder.</summary>
-        public const float Length = 0.024f;
+        /// <summary>Card short side, across the housing (mesh Z): a disk card's width.</summary>
+        public const float Length = ArZoneLayout.CardScaleOnDisk;
 
-        /// <summary>Legacy alias — lying pack uses <see cref="Length"/> as the card's long side.</summary>
+        /// <summary>Legacy alias of <see cref="Length"/> — the card's short side (mesh Z).</summary>
         public const float Height = Length;
 
-        /// <summary>One card's thickness (stack axis = +Y).</summary>
-        public const float Thickness = 0.00095f;
+        /// <summary>
+        /// One card's thickness (stack axis = +Y): a real 0.305 mm card at the disk's card scale (46 / 59 mm), so
+        /// the stack is as thick as the deck — 40 cards ≈ 9.5 mm — and visibly thins with every draw.
+        /// </summary>
+        public const float Thickness = 0.305e-3f * ArZoneLayout.CardScaleOnDisk / 0.059f;
 
-        public const int LooseCards = 5;
-        public const float BrickCards = 10f;
+        /// <summary>
+        /// Room inside the magazine, zone-local. The zone sits on <see cref="WellOrigin"/>,
+        /// so this is the tallest stack that stays under <see cref="WellCeilingY"/>.
+        /// </summary>
+        public static float UsableHeight => WellCeilingY - WellOrigin.y - 0.0002f;
 
-        public static float BrickHeight => Thickness * BrickCards;
-        public static float PackHeight => Thickness * (BrickCards + LooseCards);
+        /// <summary>Full magazine. Live piles use <see cref="StackHeight"/>.</summary>
+        public static float PackHeight => UsableHeight;
+
+        /// <summary>Compressed so <paramref name="count"/> layers fit under the flap.</summary>
+        public static float StackHeight(int count)
+        {
+            if (count <= 0) return 0f;
+            return Mathf.Min(UsableHeight, count * Thickness);
+        }
+
+        public static float CardThickness(int count)
+        {
+            if (count <= 0) return Thickness;
+            return StackHeight(count) / count;
+        }
 
         /// <summary>
         /// Underside of the v37 DECK FLAP. Pack top must stay at or below this
@@ -56,22 +78,24 @@ namespace WRLDZ.Presentation.ArInteraction
         public const float FrontBias = 0.50f;
 
         /// <summary>
-        /// Floor-center of the v37 DECK SPRING HOLDER (Yugipedia V2 Deck Holder).
-        /// Mesh-local, same space as <see cref="ArPlaymatLayout.DiskMonsterSurface"/>.
-        /// Y is the holder floor so the stack fills the 20 mm well instead of
-        /// floating up through the COUNTER TOP.
+        /// Floor-centre of the deck housing (mesh-local, same space as
+        /// <see cref="ArPlaymatLayout.DiskMonsterSurface"/>). Y is the v37 DECK SPRING HOLDER floor; X/Z centre
+        /// the card in the counter box (x −0.0642…−0.1309, z 0.205…0.251 inside x −0.060…−0.130, z 0.194…0.256).
         /// </summary>
-        public static readonly Vector3 WellOrigin = new(-0.0826f, 0.0016f, 0.2220f);
+        public static readonly Vector3 WellOrigin = new(-0.0975f, 0.0016f, 0.2280f);
 
-        /// <summary>i = 0 is the top / draw card.</summary>
-        public static Vector3 RestLocal(int i)
+        /// <summary>i = 0 is the top / draw card. One distinct height per remaining card.</summary>
+        public static Vector3 RestLocal(int i, int count)
         {
-            i = Mathf.Clamp(i, 0, LooseCards - 1);
-            var y = PackHeight - (i + 0.5f) * Thickness;
+            count = Mathf.Max(count, 1);
+            i = Mathf.Clamp(i, 0, count - 1);
+            var t = CardThickness(count);
+            var y = StackHeight(count) - (i + 0.5f) * t;
             return new Vector3(0f, y, 0f);
         }
 
-        public static Transform Build(Transform well, int layer, out List<Transform> looseCards)
+        /// <summary>One cardboard layer per card still in the Main Deck. Zero leaves the magazine empty.</summary>
+        public static Transform Build(Transform well, int layer, int count, out List<Transform> looseCards)
         {
             looseCards = new List<Transform>();
             var root = new GameObject("DeckWellPack").transform;
@@ -79,35 +103,30 @@ namespace WRLDZ.Presentation.ArInteraction
             root.localPosition = Vector3.zero;
             root.localRotation = Quaternion.identity;
             root.localScale = Vector3.one;
+            if (count <= 0) return root;
 
-            var backMat = ResolveBackMaterial();
-            var edgeMat = ArAnimePresentation.MakeSolid(
-                new Color(0.78f, 0.62f, 0.38f, 1f), "DeckPaperEdge");
+            // Shared across every rebuild and both disks: SyncDeckCount rebuilds the pack on each draw / search /
+            // mill, and building two fresh Materials per rebuild leaked them for the whole session.
+            var backMat = SharedBackMaterial();
+            var edgeMat = SharedEdgeMaterial();
 
-            // Solid lower brick covers the sculpted brown block.
-            // Card-back is parented to the pack root (scale 1) — parenting a
-            // rotated quad to the non-uniform brick cube shears it out of the well.
-            MakeLying(root, "DeckBrick",
-                Width, BrickHeight, Length,
-                new Vector3(0f, BrickHeight * 0.5f, 0f),
-                edgeMat, layer);
-            MakeBack(root, "BrickBack", backMat, layer,
-                localPos: new Vector3(0f, BrickHeight + 0.00012f, 0f),
-                localScale: new Vector3(Width * 0.96f, Length * 0.96f, 1f));
-
-            for (var i = 0; i < LooseCards; i++)
+            var thick = CardThickness(count);
+            // Back quad is parented to the card (scale 1), not to a non-uniform cube. Quad X = the card's short side
+            // (mesh Z), quad Y = its long side (mesh X), so the portrait card-back art is not stretched.
+            var face = new Vector3(Length * 0.96f, Width * 0.96f, 1f);
+            for (var i = 0; i < count; i++)
             {
                 var card = new GameObject("DeckWellCard_" + i).transform;
                 card.SetParent(root, false);
-                card.localPosition = RestLocal(i);
-                card.localRotation = Quaternion.Euler(0f, (i - LooseCards * 0.5f) * 0.35f, 0f);
+                card.localPosition = RestLocal(i, count);
+                card.localRotation = Quaternion.identity;
                 SetLayer(card.gameObject, layer);
 
-                MakeLying(card, "Body", Width, Thickness * 0.92f, Length,
+                MakeLying(card, "Body", Width, thick * 0.92f, Length,
                     Vector3.zero, edgeMat, layer);
                 MakeBack(card, "Back", backMat, layer,
-                    localPos: new Vector3(0f, Thickness * 0.5f, 0f),
-                    localScale: new Vector3(Width * 0.96f, Length * 0.96f, 1f));
+                    localPos: new Vector3(0f, thick * 0.5f, 0f),
+                    localScale: face);
 
                 looseCards.Add(card);
             }
@@ -140,7 +159,8 @@ namespace WRLDZ.Presentation.ArInteraction
             go.name = name;
             go.transform.SetParent(parent, false);
             go.transform.localPosition = localPos;
-            go.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            // −90° X lays the quad flat; 90° Z first turns its long (Y) side onto mesh X, along the housing.
+            go.transform.localRotation = Quaternion.Euler(-90f, 0f, 90f);
             go.transform.localScale = localScale;
             ArObjectUtil.Destroy(go.GetComponent<Collider>());
             SetLayer(go, layer);
@@ -150,8 +170,44 @@ namespace WRLDZ.Presentation.ArInteraction
             mr.receiveShadows = false;
         }
 
-        static Material ResolveBackMaterial()
+        static Material _sharedBack;
+        static bool _sharedBackIsFallback;
+        static Material _sharedEdge;
+
+        /// <summary>
+        /// Cached card-back material. A flat-colour fallback (card-back art not loadable yet) is retried on the next
+        /// build so the real art takes over as soon as it resolves; the replaced fallback is left to the cards that
+        /// still use it (they are rebuilt on the next count change).
+        /// </summary>
+        static Material SharedBackMaterial()
         {
+            if (_sharedBack != null && !_sharedBackIsFallback) return _sharedBack;
+            var m = ResolveBackMaterial(out var isFallback);
+            if (_sharedBack == null || !isFallback)
+            {
+                _sharedBack = m;
+                _sharedBackIsFallback = isFallback;
+            }
+            else if (m != _sharedBack)
+                ArObjectUtil.Destroy(m);
+
+            return _sharedBack;
+        }
+
+        static Material SharedEdgeMaterial()
+        {
+            if (_sharedEdge != null) return _sharedEdge;
+            _sharedEdge = ArAnimePresentation.MakeSolid(new Color(0.78f, 0.62f, 0.38f, 1f), "DeckPaperEdge");
+            SeatReadable(_sharedEdge);
+            return _sharedEdge;
+        }
+
+        /// <summary>
+        /// Same card back as the hand and set cards (<see cref="StreamingSprite.CardBack"/>).
+        /// </summary>
+        static Material ResolveBackMaterial(out bool isFallback)
+        {
+            isFallback = false;
             try
             {
                 var spr = StreamingSprite.CardBack()
@@ -166,13 +222,35 @@ namespace WRLDZ.Presentation.ArInteraction
                         m.name = "DeckWellCardBack";
                         if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", Color.white);
                         if (m.HasProperty("_Color")) m.SetColor("_Color", Color.white);
+                        SeatReadable(m);
                         return m;
                     }
                 }
             }
             catch { /* fallback */ }
 
-            return ArFieldMaterials.Get(new Color(0.18f, 0.28f, 0.58f, 1f));
+            isFallback = true;
+            var shared = ArFieldMaterials.Get(new Color(0.18f, 0.28f, 0.58f, 1f));
+            var fallback = new Material(shared) { name = "DeckWellCardBack" };
+            SeatReadable(fallback);
+            return fallback;
+        }
+
+        /// <summary>
+        /// Ghost disk is queue 3000 and does not write depth. Cardboard has to draw after it
+        /// or the hub alpha-blends the pack away.
+        /// </summary>
+        static void SeatReadable(Material mat)
+        {
+            if (mat == null) return;
+            if (mat.HasProperty("_Cull")) mat.SetFloat("_Cull", 0f);
+            mat.SetInt("_ZWrite", 1);
+            mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.One);
+            mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.Zero);
+            mat.DisableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            mat.DisableKeyword("_ALPHABLEND_ON");
+            mat.SetOverrideTag("RenderType", "Opaque");
+            mat.renderQueue = 3100;
         }
 
         static void SetLayer(GameObject go, int layer)

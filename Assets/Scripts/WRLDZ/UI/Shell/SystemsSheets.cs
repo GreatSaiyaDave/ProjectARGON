@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using WRLDZ.Core;
 using WRLDZ.Data;
+using WRLDZ.Duel.Rules;
 using WRLDZ.Presentation;
 
 namespace WRLDZ.UI.Shell
@@ -89,31 +90,172 @@ namespace WRLDZ.UI.Shell
         public static RectTransform BuildStory(Transform modalHost, Action onClose, UiPresentation? force = null)
         {
             var frame = DualMenuPresenter.BuildFrame(
-                modalHost, "STORY ZONE", "Era missions on the map", onClose, force);
+                modalHost, "STORY", "Season 1 · Duelist Kingdom", onClose, force);
             var (list, status) = ListHost(frame.BodyHost);
-            var acc = AppSession.Ensure().Account;
-            acc?.EnsureProgress();
-            var p = acc?.progress;
-            var lvl = p?.level ?? 1;
-            SetOrbService.Ensure(p);
-            var next = SetOrbService.NextLockedSet(p);
-            var orbLine = string.IsNullOrEmpty(next)
-                ? "all L50 sets unlocked"
-                : $"{next} {SetOrbService.OrbCount(p, next)}/{SetOrbService.OrbsPerUnlock}";
-            status.text = $"Lv{lvl} · sets {p?.unlockedSetsCsv} · {orbLine}";
 
-            Head(list, "SET ORBS");
-            Row(list, "Starter unlocked: LOB · MRD · SRL", null);
-            Row(list,
-                "Orbs drop from Tear harvests, street NPC wins, and PvP wins through L50. " +
-                $"{SetOrbService.OrbsPerUnlock} orbs unlock the next set.", null);
-            if (!string.IsNullOrEmpty(next))
-                Row(list, $"Next set  {next}  ·  {SetOrbService.OrbCount(p, next)}/{SetOrbService.OrbsPerUnlock}", null);
-            else
-                Row(list, "Later sets follow story / era cadence after L50.", null);
+            void AnswerQuiz(PlayerProgress progress, LocalAccountStore.Account account, Text statusText,
+                Action refresh, bool kuribohs)
+            {
+                if (ShellLoops.TryAnswerQuiz(progress, account?.inventory, kuribohs, out var err))
+                {
+                    FreeUiKit.PlayConfirm();
+                    ProgressionService.Persist(account);
+                    refresh();
+                }
+                else
+                {
+                    FreeUiKit.PlayClick();
+                    statusText.text = err ?? "No quiz.";
+                }
+            }
 
-            Head(list, "STORY ZONE");
-            Chapter(list, "Story Zone", "Open", true, "Walk a Story Zone pin for the era mission.");
+            void ClaimQuest(PlayerProgress progress, LocalAccountStore.Account account, Text statusText,
+                Action refresh, string id)
+            {
+                if (QuestService.TryClaim(progress, account?.inventory, id, out var err))
+                {
+                    FreeUiKit.PlayConfirm();
+                    ProgressionService.Persist(account);
+                    refresh();
+                    statusText.text = "Claimed  ·  " + QuestService.RewardLine(id);
+                }
+                else
+                {
+                    FreeUiKit.PlayClick();
+                    statusText.text = err ?? "Claim failed";
+                }
+            }
+
+            void QuestRow(Transform host, PlayerProgress progress, LocalAccountStore.Account account,
+                Text statusText, Action refresh, QuestSlot slot)
+            {
+                if (slot == null) return;
+                var done = slot.progress >= slot.goal;
+                var label = slot.title + "  ·  " + slot.progress + "/" + slot.goal
+                            + (slot.claimed ? "  ·  claimed"
+                                : done ? "  ·  tap to claim  ·  " + QuestService.RewardLine(slot.id) : "");
+                var id = slot.id;
+                Row(host, label, slot.claimed || !done
+                    ? null
+                    : () => ClaimQuest(progress, account, statusText, refresh, id));
+            }
+
+            void Refresh()
+            {
+                FloatingPanel.DestroyChildrenNow(list);
+                var acc = AppSession.Ensure().Account;
+                acc?.EnsureProgress();
+                acc?.EnsureInventory();
+                var p = acc?.progress;
+                StoryCampaignService.Ensure(p);
+                var catalog = StoryCampaignService.Load();
+                var current = StoryCampaignService.Current(p);
+                status.text = current != null
+                    ? $"Lv{p?.level ?? 1} · next {current.opponentName}"
+                    : $"Lv{p?.level ?? 1} · Season 1 complete";
+
+                var quests = QuestService.Ensure(p);
+                RefereeHead(list);
+                Head(list, "TODAY");
+                if (quests?.slots != null)
+                {
+                    for (var i = 0; i < quests.slots.Length; i++)
+                        QuestRow(list, p, acc, status, Refresh, quests.slots[i]);
+                }
+
+                Head(list, "THIS WEEK");
+                if (quests != null)
+                {
+                    var weekDone = quests.weeklyProgress >= QuestService.WeeklyGoal;
+                    var weekLabel = "Win 3 duels  ·  " + quests.weeklyProgress + "/" + QuestService.WeeklyGoal
+                                    + (quests.weeklyClaimed ? "  ·  claimed"
+                                        : weekDone ? "  ·  tap to claim  ·  " + QuestService.RewardLine(QuestService.WeeklyWins)
+                                        : "");
+                    Row(list, weekLabel, quests.weeklyClaimed || !weekDone
+                        ? null
+                        : () => ClaimQuest(p, acc, status, Refresh, QuestService.WeeklyWins));
+                }
+
+                Head(list, "BREAKTHROUGH");
+                if (quests != null)
+                {
+                    var ready = quests.stamps >= QuestService.StampsToBreak;
+                    var stampLabel = "Referobot stamps  ·  " + quests.stamps + "/" + QuestService.StampsToBreak
+                                     + (ready ? "  ·  tap to claim  ·  " + QuestService.RewardLine(QuestService.Breakthrough) : "");
+                    Row(list, stampLabel, ready
+                        ? () => ClaimQuest(p, acc, status, Refresh, QuestService.Breakthrough)
+                        : null);
+                }
+
+                Head(list, "NEXT PERK");
+                Row(list, QuestService.NextPerkLine(p?.level ?? 1), null);
+
+                Head(list, "KURIBOH BOND");
+                Row(list, $"Bond  {p?.kuribohBond ?? 0}/10  ·  {p?.Team}.  A won story duel adds one. No extra prize.",
+                    null);
+
+                Head(list, "REFEROBOT QUIZ");
+                if (p != null && ShellLoops.QuizReady(p))
+                {
+                    Row(list, "Who woke Mr. Referobot?", null);
+                    Row(list, "The three Kuribohs", () => AnswerQuiz(p, acc, status, Refresh, true));
+                    Row(list, "KaibaCorp alone", () => AnswerQuiz(p, acc, status, Refresh, false));
+                }
+                else
+                {
+                    Row(list, p != null && p.level >= 10
+                        ? $"Answered through level {p.quizClaimedThrough}. Next gate is later."
+                        : "Opens at level 10.", null);
+                }
+
+                var gates = StoryCampaignService.Gates();
+                for (var g = 0; g < gates.Count; g++)
+                {
+                    var gate = gates[g];
+                    if (gate == null) continue;
+                    Head(list, gate.title.ToUpperInvariant());
+                    var ids = StoryCampaignService.StageIdsForGate(gate);
+                    for (var s = 0; s < ids.Length; s++)
+                    {
+                        var stage = StoryCampaignService.Stage(ids[s]);
+                        if (stage == null) continue;
+                        var cleared = StoryCampaignService.IsCleared(p, stage.id);
+                        var locked = StoryCampaignService.IsLocked(p, stage.id);
+                        var pip = string.IsNullOrEmpty(stage.erazBandId)
+                            ? catalog.erazBandId
+                            : stage.erazBandId;
+                        string mark;
+                        if (cleared) mark = "CLEARED";
+                        else if (locked) mark = "LOCKED";
+                        else mark = "OPEN";
+                        var line = stage.opponentName + "  ·  " + stage.startingLp + " LP  ·  " + pip
+                                   + "  ·  " + mark;
+                        if (!cleared && !locked)
+                            line += "\n" + stage.blurb;
+                        var playable = !locked;
+                        var stageId = stage.id;
+                        Row(list, line, playable
+                            ? () =>
+                            {
+                                var st = StoryCampaignService.Stage(stageId);
+                                if (st == null || !StoryCampaignService.CanPlay(p, st.id))
+                                {
+                                    FreeUiKit.PlayClick();
+                                    return;
+                                }
+
+                                FreeUiKit.PlayConfirm();
+                                var cfg = MapZoneService.MakeStoryEra(st, st.id, digital: true);
+                                cfg.PreferDigital = true;
+                                onClose?.Invoke();
+                                AppSession.Ensure().StartArDuel(cfg);
+                            }
+                            : null);
+                    }
+                }
+            }
+
+            Refresh();
             return frame.Root;
         }
 
@@ -162,8 +304,46 @@ namespace WRLDZ.UI.Shell
                 Shop(list, "Buy binder",
                     a => InventoryShopService.TryBuyBinder(a, out var e) ? null : e, Refresh, status);
 
+                Head(list, "WIN STREAK");
+                Row(list, $"Non-practice wins  {p?.pveWinStreak ?? 0}/3.  Purses banked  {p?.streakPurses ?? 0}.  "
+                          + "The pack is not minted yet — a purse is 150 Digizeni.", null);
+                if (p != null && p.streakPurses > 0)
+                {
+                    Row(list, "Claim streak purse", () =>
+                    {
+                        if (ShellLoops.TryClaimPurse(p, acc.inventory, out var err))
+                        {
+                            FreeUiKit.PlayConfirm();
+                            ProgressionService.Persist(acc);
+                            Refresh();
+                        }
+                        else
+                        {
+                            FreeUiKit.PlayClick();
+                            status.text = err ?? "No purse.";
+                        }
+                    });
+                }
+
+                Head(list, "ALTAR");
+                Row(list, "Spare cards become Set Energy of that card's set. Conversion is not live. Cards stay put.",
+                    () =>
+                    {
+                        FreeUiKit.PlayClick();
+                        status.text = "Altar is marked. Conversion is not live — your cards stay put.";
+                    });
+
                 Head(list, "TABLETS");
-                Row(list, "Walk a bazaar pin on the map to offer Set Energy.", null);
+                Row(list, "1,000 SE of a set → 10 cards of that set. Unlocked ERAZ only.", null);
+                FillTablets(list, acc, Refresh, status);
+
+                Head(list, "ERAZ BADGE FUSION");
+                Row(list, "5 shards + 2,500 SE of an unlocked era fuse the next badge.", null);
+                FillErazMerge(list, acc, Refresh, status);
+
+                Head(list, "FORMAT BADGE FUSION");
+                Row(list, "Same fuse. Unlocks the format row. Table laws stay off until that format is finalized.", null);
+                FillFormatMerge(list, acc, Refresh, status);
             }
 
             Refresh();
@@ -301,6 +481,114 @@ namespace WRLDZ.UI.Shell
             return frame.Root;
         }
 
+        static void FillTablets(Transform list, LocalAccountStore.Account acc, Action refresh, Text status)
+        {
+            var p = acc?.progress;
+            var inv = acc?.inventory;
+            var codes = new[] { "LOB", "MRD", "SRL" };
+            for (var i = 0; i < codes.Length; i++)
+            {
+                var set = codes[i];
+                var have = ArtifactService.SetEnergyOf(inv, set);
+                var legal = ArtifactService.CanEarnSetEnergy(p, set);
+                var label = legal
+                    ? $"{set}  ·  {have} SE  ·  tap to offer {StoneTabletService.PackCost}"
+                    : $"{set}  ·  locked (need ERAZ badge)";
+                var setId = set;
+                Row(list, label, !legal
+                    ? null
+                    : () =>
+                    {
+                        var a = AppSession.Ensure().Account;
+                        a?.EnsureProgress();
+                        a?.EnsureInventory();
+                        if (StoneTabletService.TryOpen(a?.progress, a?.inventory, setId, out _, out var err))
+                        {
+                            FreeUiKit.PlayConfirm();
+                            ProgressionService.Persist(a);
+                            refresh?.Invoke();
+                        }
+                        else
+                        {
+                            FreeUiKit.PlayClick();
+                            status.text = err ?? "Tablet refused";
+                        }
+                    });
+            }
+        }
+
+        static void FillErazMerge(Transform list, LocalAccountStore.Account acc, Action refresh, Text status)
+        {
+            var p = acc?.progress;
+            var inv = acc?.inventory;
+            var next = ErazProgress.NextPieceBand(p);
+            if (string.IsNullOrEmpty(next) || string.Equals(next, ErazFormat.Original, StringComparison.OrdinalIgnoreCase))
+            {
+                Row(list, "Original badge is whole. Clear Season 1 for GX shards.", null);
+                return;
+            }
+
+            var have = ErazMergeService.PieceCount(inv, next);
+            var se = ArtifactService.SetEnergyTotal(inv);
+            var label = $"{next.ToUpperInvariant()}  ·  shards {have}/{ErazMergeService.PiecesRequired}  ·  SE {se}/{ErazMergeService.SetEnergyCost}  ·  tap to fuse";
+            Row(list, label, () =>
+            {
+                var a = AppSession.Ensure().Account;
+                a?.EnsureProgress();
+                a?.EnsureInventory();
+                if (ErazMergeService.TryMerge(a?.progress, a?.inventory, next, out var err))
+                {
+                    FreeUiKit.PlayConfirm();
+                    ProgressionService.Persist(a);
+                    refresh?.Invoke();
+                }
+                else
+                {
+                    FreeUiKit.PlayClick();
+                    status.text = err ?? "Fuse failed";
+                }
+            });
+        }
+
+        static void FillFormatMerge(Transform list, LocalAccountStore.Account acc, Action refresh, Text status)
+        {
+            var p = acc?.progress;
+            var inv = acc?.inventory;
+            for (var i = 0; i < FormatProgress.Ids.Length; i++)
+            {
+                var id = FormatProgress.Ids[i];
+                var title = FormatProgress.Titles[i];
+                if (FormatProgress.HasBadge(p, id))
+                {
+                    Row(list, title + "  ·  whole", null);
+                    continue;
+                }
+
+                var have = FormatMergeService.PieceCount(inv, id);
+                var se = ArtifactService.SetEnergyTotal(inv);
+                var fid = id;
+                Row(list,
+                    $"{title}  ·  shards {have}/{FormatMergeService.PiecesRequired}  ·  SE {se}/{FormatMergeService.SetEnergyCost}  ·  tap to fuse",
+                    () =>
+                    {
+                        var a = AppSession.Ensure().Account;
+                        a?.EnsureProgress();
+                        a?.EnsureInventory();
+                        if (FormatMergeService.TryMerge(a?.progress, a?.inventory, fid, out var err))
+                        {
+                            FreeUiKit.PlayConfirm();
+                            ProgressionService.Persist(a);
+                            refresh?.Invoke();
+                        }
+                        else
+                        {
+                            FreeUiKit.PlayClick();
+                            status.text = err ?? "Fuse failed";
+                        }
+                    });
+            }
+        }
+
         static string PageLabel(CardDatabase db, int id)
         {
             var def = db?.Get(id);
@@ -334,6 +622,38 @@ namespace WRLDZ.UI.Shell
             if (last == null) return;
             var t = last.GetComponentInChildren<Text>();
             if (t != null && !open) t.color = DuelystUi.TextMuted;
+        }
+
+        static void RefereeHead(Transform host)
+        {
+            var row = new GameObject("Referobot", typeof(RectTransform), typeof(LayoutElement), typeof(Image));
+            row.transform.SetParent(host, false);
+            var le = row.GetComponent<LayoutElement>();
+            le.minHeight = 108f;
+            le.preferredHeight = 108f;
+            var plate = row.GetComponent<Image>();
+            plate.raycastTarget = false;
+            HubChrome.QuietFill(plate, new Color(0.04f, 0.06f, 0.10f, 0.72f), null, true);
+
+            var face = new GameObject("Face", typeof(RectTransform), typeof(Image));
+            face.transform.SetParent(row.transform, false);
+            var fr = face.GetComponent<RectTransform>();
+            fr.anchorMin = new Vector2(0.02f, 0.08f);
+            fr.anchorMax = new Vector2(0.28f, 0.92f);
+            fr.offsetMin = Vector2.zero;
+            fr.offsetMax = Vector2.zero;
+            var img = face.GetComponent<Image>();
+            img.sprite = StreamingSprite.ReferobotPortrait() ?? UiFoundation.WhiteSprite();
+            img.preserveAspect = true;
+            img.raycastTarget = false;
+
+            var name = FloatingPanel.Body(row.transform, "MR. REFEROBOT", 16);
+            name.color = DuelystUi.GoldHot;
+            name.alignment = TextAnchor.MiddleLeft;
+            FloatingPanel.Place(name.rectTransform, 0.30f, 0.52f, 0.98f, 0.92f);
+            var sub = FloatingPanel.Caption(row.transform, "Referee  ·  dailies  ·  quiz", 13);
+            sub.alignment = TextAnchor.UpperLeft;
+            FloatingPanel.Place(sub.rectTransform, 0.30f, 0.10f, 0.98f, 0.50f);
         }
 
         static void Head(Transform host, string text) => HubChrome.ListHead(host, text);

@@ -13,9 +13,13 @@ namespace WRLDZ.Duel
     /// </summary>
     public static class ArchfiendTargetNegation
     {
-        /// <returns>True if the targeting effect was negated (caller must skip it).</returns>
+        /// <returns>
+        /// True if the targeting effect was negated, or if its rolls wait on a player's re-roll choice (Dice Re-Roll,
+        /// <see cref="CoinDiceInterruptsRuntime"/>): the caller must skip it now. In the second case
+        /// <paramref name="resumeIfNotNegated"/> applies the effect once every roll is settled without a negation.
+        /// </returns>
         public static bool TryNegate(DuelEngine engine, DuelistState activator,
-            CardInstance source, CardInstance target)
+            CardInstance source, CardInstance target, System.Action resumeIfNotNegated = null)
         {
             if (engine == null || activator == null || target?.Def == null) return false;
             if (!target.Def.IsMonster) return false;
@@ -24,30 +28,63 @@ namespace WRLDZ.Duel
             if (controller == null || controller == activator) return false; // not an opponent's effect
             if (!target.FaceUp) return false;
 
-            foreach (var protector in controller.MonstersOnField())
+            var protectors = new System.Collections.Generic.List<CardInstance>(controller.MonstersOnField());
+            bool? settled = null;
+            var waiting = false;
+
+            void Done(bool negated)
             {
-                if (protector == null || !protector.FaceUp || protector.IsNegated) continue;
-                var clause = FindProtection(protector, target);
-                if (clause == null) continue;
-
-                engine.Rng.SetPresentationContext(controller.IsPlayer, protector.Name);
-                var roll = engine.Rng.RollDie();
-                var negates = (clause.DieNegateFacesMask & (1 << (roll - 1))) != 0;
-                engine.Log($"{protector.Name}: rolls a {roll} vs {target.Name} being targeted" +
-                           (negates ? " — negate + destroy the opponent's card." : " — no negate."));
-                if (!negates) continue;
-
-                if (source != null)
-                {
-                    var srcOwner = engine.ControllerOf(source) ?? activator;
-                    engine.SendCardToGrave(srcOwner, source);
-                    engine.Log($"{protector.Name}: {source.Name} is destroyed.");
-                }
-                return true;
+                if (!waiting) settled = negated;
+                else if (!negated) resumeIfNotNegated?.Invoke();
             }
 
-            return false;
+            void From(int start)
+            {
+                for (var i = start; i < protectors.Count; i++)
+                {
+                    var protector = protectors[i];
+                    if (protector == null || !protector.FaceUp || protector.IsNegated) continue;
+                    if (!ReferenceEquals(engine.ControllerOf(protector), controller)) continue;
+                    var clause = FindProtection(protector, target);
+                    if (clause == null) continue;
+
+                    var next = i + 1;
+                    // A die-roll event: Dice Re-Roll may have the roll re-rolled before it applies.
+                    CoinDiceInterruptsRuntime.RollDie(engine, controller, protector, roll => Negates(clause, roll),
+                        roll =>
+                        {
+                            var negates = Negates(clause, roll);
+                            engine.Log($"{protector.Name}: rolls a {roll} vs {target.Name} being targeted" +
+                                       (negates ? " — negate + destroy the opponent's card." : " — no negate."));
+                            if (!negates)
+                            {
+                                From(next);
+                                return;
+                            }
+
+                            if (source != null)
+                            {
+                                var srcOwner = engine.ControllerOf(source) ?? activator;
+                                engine.SendCardToGrave(srcOwner, source);
+                                engine.Log($"{protector.Name}: {source.Name} is destroyed.");
+                            }
+
+                            Done(true);
+                        });
+                    return;
+                }
+
+                Done(false);
+            }
+
+            From(0);
+            if (settled.HasValue) return settled.Value;
+            waiting = true;
+            return true;
         }
+
+        static bool Negates(EffectClause clause, int roll) =>
+            roll >= 1 && roll <= 6 && (clause.DieNegateFacesMask & (1 << (roll - 1))) != 0;
 
         static EffectClause FindProtection(CardInstance protector, CardInstance target)
         {

@@ -1,0 +1,146 @@
+{
+  "name": "Alley Scorpions (short)",
+  "format": "wrldz_street_playground_4000",
+  "flaw": "Don Zaloog is a 2-of. Never pulled Cliff the Trap Remover; Dark Scorpion Burglars is the stand-in. Mustering is a 1-of.",
+  "main": [
+    {
+      "id": 76922029,
+      "name": "Don Zaloog",
+      "qty": 2
+    },
+    {
+      "id": 61587183,
+      "name": "Dark Scorpion - Chick the Yellow",
+      "qty": 2
+    },
+    {
+      "id": 74153887,
+      "name": "Dark Scorpion - Meanae the Thorn",
+      "qty": 2
+    },
+    {
+      "id": 48768179,
+      "name": "Dark Scorpion - Gorg the Strong",
+      "qty": 1
+    },
+    {
+      "id": 40933924,
+      "name": "Dark Scorpion Burglars",
+      "qty": 2
+    },
+    {
+      "id": 2460565,
+      "name": "Marauding Captain",
+      "qty": 2
+    },
+    {
+      "id": 68191243,
+      "name": "Mustering of the Dark Scorpions",
+      "qty": 1
+    },
+    {
+      "id": 95281259,
+      "name": "The Warrior Returning Alive",
+      "qty": 1
+    },
+    {
+      "id": 40619825,
+      "name": "Axe of Despair",
+      "qty": 1
+    },
+    {
+      "id": 66788016,
+      "name": "Fissure",
+      "qty": 2
+    },
+    {
+      "id": 97169186,
+      "name": "Smashing Ground",
+      "qty": 1
+    },
+    {
+      "id": 79759861,
+      "name": "Tribute to the Doomed",
+      "qty": 2
+    },
+    {
+      "id": 26412047,
+      "name": "Hammer Shot",
+      "qty": 1
+    },
+    {
+      "id": 70046172,
+      "name": "Rush Recklessly",
+      "qty": 2
+    },
+    {
+      "id": 65169794,
+      "name": "Black Pendant",
+      "qty": 1
+    },
+    {
+      "id": 4206964,
+      "name": "Trap Hole",
+      "qty": 2
+    },
+    {
+      "id": 17814387,
+      "name": "Reinforcements",
+      "qty": 2
+    },
+    {
+      "id": 44209392,
+      "name": "Castle Walls",
+      "qty": 2
+    },
+    {
+      "id": 3819470,
+      "name": "Seven Tools of the Bandit",
+      "qty": 1
+    },
+    {
+      "id": 14315573,
+      "name": "Negate Attack",
+      "qty": 1
+    },
+    {
+      "id": 12607053,
+      "name": "Waboku",
+      "qty": 2
+    },
+    {
+      "id": 77414722,
+      "name": "Magic Jammer",
+      "qty": 1
+    },
+    {
+      "id": 56120475,
+      "name": "Sakuretsu Armor",
+      "qty": 2
+    },
+    {
+      "id": 96355986,
+      "name": "Enchanted Javelin",
+      "qty": 1
+    },
+    {
+      "id": 54652250,
+      "name": "Man-Eater Bug",
+      "qty": 2
+    },
+    {
+      "id": 7089711,
+      "name": "Hane-Hane",
+      "qty": 1
+    }
+  ],
+  "extra": [],
+  "side": [],
+  "counts": {
+    "main": 40,
+    "extra": 0,
+    "side": 0
+  },
+  "lpBand": 4000,
+  "role": "street_npc_playground"
+}

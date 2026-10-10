@@ -82,7 +82,6 @@ namespace WRLDZ.Presentation.ArInteraction
 
         DuelEngine _engine;
         WRLDZ.Data.CardDatabase _db;
-        int _lastHash;
 
         public void Bind(DuelEngine engine, WRLDZ.Data.CardDatabase db)
         {
@@ -111,32 +110,15 @@ namespace WRLDZ.Presentation.ArInteraction
 
         void OnDestroy() => Unbind();
 
+        /// <summary>
+        /// Publish the current field snapshot to <see cref="Sync"/> (the hook a networked transport will listen on).
+        /// Local disk + arena visuals are NOT driven from here: <see cref="ArDuelInteractionSystem.SyncNow"/> runs
+        /// right after every bind and is the single sync path, so re-syncing here only doubled the work.
+        /// </summary>
         void Push()
         {
             if (_engine?.Player == null || _engine.Opponent == null) return;
-            var snap = Capture(_engine);
-            var hash = snap.GetHashCode() ^ snap.PlayerLp ^ snap.OppLp ^ snap.TurnNumber;
-            // Always publish — engine is authority; listeners refresh holos
-            Sync?.Publish(snap);
-            ApplyLocal(snap);
-            _lastHash = hash;
-            // Full rules snapshot for multiplayer peers (identical legal state)
-            _ = _engine.CaptureRulesState();
-        }
-
-        void ApplyLocal(ArHologramSnapshot snap)
-        {
-            // Card Field (disk) + Hologram Field (arena) from live engine authority
-            if (_db != null)
-            {
-                CardField?.SyncFromEngine(_engine, _db);
-                Arena?.SyncFromEngine(_engine, _db);
-            }
-            else
-            {
-                PlayerDisk?.SyncOccupantsFrom(_engine.Player);
-                OppDisk?.SyncOccupantsFrom(_engine.Opponent);
-            }
+            Sync?.Publish(Capture(_engine));
         }
 
         public static ArHologramSnapshot Capture(DuelEngine engine)
@@ -194,7 +176,7 @@ namespace WRLDZ.Presentation.ArInteraction
                 CardId = c.CardId,
                 FaceUp = c.FaceUp,
                 Defense = c.Position == BattlePosition.Defense,
-                Counters = 0
+                Counters = c.Counters
             };
         }
     }

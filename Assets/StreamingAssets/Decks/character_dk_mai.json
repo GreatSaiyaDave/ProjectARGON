@@ -1,0 +1,133 @@
+{
+  "name": "Mai Valentine · Duelist Kingdom",
+  "format": "wrldz_dk_character",
+  "character": "Mai Valentine",
+  "era": "duelist_kingdom",
+  "erazBandId": "original",
+  "notes": "Harpie Ladies, Elegant Egotist, Pet Dragon, Sisters. Cyber Shield equips the ladies.",
+  "main": [
+    {
+      "id": 76812113,
+      "name": "Harpie Lady",
+      "qty": 3
+    },
+    {
+      "id": 91932350,
+      "name": "Harpie Lady 1",
+      "qty": 3
+    },
+    {
+      "id": 27927359,
+      "name": "Harpie Lady 2",
+      "qty": 2
+    },
+    {
+      "id": 54415063,
+      "name": "Harpie Lady 3",
+      "qty": 2
+    },
+    {
+      "id": 12206212,
+      "name": "Harpie Lady Sisters",
+      "qty": 2
+    },
+    {
+      "id": 52040216,
+      "name": "Harpie's Pet Dragon",
+      "qty": 2
+    },
+    {
+      "id": 45547649,
+      "name": "Birdface",
+      "qty": 2
+    },
+    {
+      "id": 34100324,
+      "name": "Harpie Girl",
+      "qty": 1
+    },
+    {
+      "id": 84834865,
+      "name": "Flying Kamakiri #1",
+      "qty": 2
+    },
+    {
+      "id": 90219263,
+      "name": "Elegant Egotist",
+      "qty": 3
+    },
+    {
+      "id": 12181376,
+      "name": "Triangle Ecstasy Spark",
+      "qty": 1
+    },
+    {
+      "id": 72302403,
+      "name": "Swords of Revealing Light",
+      "qty": 1
+    },
+    {
+      "id": 55144522,
+      "name": "Pot of Greed",
+      "qty": 1
+    },
+    {
+      "id": 24094653,
+      "name": "Polymerization",
+      "qty": 1
+    },
+    {
+      "id": 66788016,
+      "name": "Fissure",
+      "qty": 1
+    },
+    {
+      "id": 55608151,
+      "name": "Gryphon Wing",
+      "qty": 2
+    },
+    {
+      "id": 4206964,
+      "name": "Trap Hole",
+      "qty": 2
+    },
+    {
+      "id": 44095762,
+      "name": "Mirror Force",
+      "qty": 1
+    },
+    {
+      "id": 14315573,
+      "name": "Negate Attack",
+      "qty": 2
+    },
+    {
+      "id": 18807108,
+      "name": "Spellbinding Circle",
+      "qty": 1
+    },
+    {
+      "id": 12607053,
+      "name": "Waboku",
+      "qty": 1
+    },
+    {
+      "id": 44209392,
+      "name": "Castle Walls",
+      "qty": 2
+    },
+    {
+      "id": 63224564,
+      "name": "Cyber Shield",
+      "qty": 2
+    }
+  ],
+  "extra": [],
+  "side": [],
+  "counts": {
+    "main": 40,
+    "extra": 0,
+    "side": 0
+  },
+  "role": "character_dk"
+}

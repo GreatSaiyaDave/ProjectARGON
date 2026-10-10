@@ -17,7 +17,12 @@ namespace WRLDZ.Core
         public const string DeactivatedLoginMessage =
             "This Spirit Dueler is deactivated. Every soul fracture was spent in a Shadow Game — Umbrax holds the last fragment. One soul restores every 24 hours; then you may log in again.";
 
-        static long NowUnix() => DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        /// <summary>
+        /// Guarded per-account clock (QC F7): rolling the device date back or forward cannot restore souls,
+        /// lift a deactivation early and then undo itself — a forward jump advances the account's high-water
+        /// mark, so dailies and cooldowns then wait out the whole jump.
+        /// </summary>
+        static long NowUnix(PlayerProgress p) => ClockGuard.NowUnix(p);
 
         public static bool IsShadowGame(ArDuelMatchConfig match)
         {
@@ -55,7 +60,7 @@ namespace WRLDZ.Core
             if (p.soulFractures < p.soulFractureCapacity)
                 p.soulFractures++;
             if (wasFull || p.soulRegenUnix <= 0)
-                p.soulRegenUnix = NowUnix();
+                p.soulRegenUnix = NowUnix(p);
             if (p.SoulShattered)
                 return "Soul shattered — this Spirit Dueler is deactivated. Umbrax holds the last fragment.";
             return $"Soul fractured  {p.SoulRemaining}/{p.soulFractureCapacity} remain.";
@@ -101,7 +106,7 @@ namespace WRLDZ.Core
                 if (!deactivated)
                 {
                     deactivated = true;
-                    deactivatedUtc = DateTime.UtcNow.ToString("o");
+                    deactivatedUtc = ClockGuard.UtcNow(p).ToString("o");
                     deactivatedReason = "Soul shattered in a Shadow Game.";
                     Debug.Log("[WRLDZ] Spirit Dueler deactivated — all soul fractures spent.");
                 }
@@ -128,7 +133,7 @@ namespace WRLDZ.Core
         {
             if (p == null) return false;
             p.EnsureValid();
-            var now = NowUnix();
+            var now = NowUnix(p);
 
             if (p.soulFractures <= 0)
             {

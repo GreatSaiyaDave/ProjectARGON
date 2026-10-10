@@ -26,17 +26,48 @@ namespace WRLDZ.Core
             83764718, 55144522, 32807846
         };
 
+        /// <summary>
+        /// Admin comes only from the explicit <c>progress.labAdmin</c> flag (set by the lab door through
+        /// <see cref="GrantLabAdmin"/>), never from a username, and only in Editor / Development builds.
+        /// </summary>
         public static bool IsAdmin(LocalAccountStore.Account acc) =>
-            acc != null && (acc.progress != null && acc.progress.labAdmin
-                            || acc.username == AppSession.LabTestUsername);
+            WrldzLab.LabDoorsEnabled && acc?.progress != null && acc.progress.labAdmin;
 
         /// <summary>
-        /// Idempotent. Catalog + level 100 + story complete + currencies + soul +
-        /// sets + pack + clothes + tome. Does not persist — caller writes the file.
+        /// Lab door only: mark <paramref name="acc"/> as a lab admin and max it out. Refused in release builds.
+        /// Does not persist — caller writes the file.
+        /// </summary>
+        public static bool GrantLabAdmin(LocalAccountStore.Account acc)
+        {
+            if (acc == null) return false;
+            if (!WrldzLab.LabDoorsEnabled)
+            {
+                Debug.LogWarning("[WRLDZ Lab] Admin grant refused — lab doors are Editor / development builds only.");
+                return false;
+            }
+
+            acc.EnsureProgress();
+            acc.progress.labAdmin = true;
+            MaxOut(acc);
+            return true;
+        }
+
+        /// <summary>
+        /// Idempotent top-up of an existing lab admin: catalog + level 100 + story complete + currencies +
+        /// soul + sets + pack + clothes + tome. Only accounts already flagged <c>labAdmin</c> (see
+        /// <see cref="GrantLabAdmin"/>) are touched, and only in Editor / Development builds, so a playtest
+        /// account opened in the Editor is never turned into an admin. Does not persist — caller writes the file.
         /// </summary>
         public static void MaxOut(LocalAccountStore.Account acc)
         {
             if (acc == null) return;
+            if (!IsAdmin(acc))
+            {
+                if (WrldzLab.LabDoorsEnabled)
+                    Debug.Log($"[WRLDZ Lab] MaxOut skipped for {acc.username} — not a lab admin account.");
+                return;
+            }
+
             acc.EnsureProgress();
             acc.EnsureInventory();
             acc.deactivated = false;
@@ -85,6 +116,9 @@ namespace WRLDZ.Core
             p.onboardingTutorialDuelDone = true;
             p.onboardingComplete = true;
             ErazProgress.GrantTutorialBadge(acc);
+            var bands = ErazFormat.BandIdsInOrder();
+            for (var i = 0; i < bands.Count; i++)
+                ErazProgress.GrantBadge(acc, bands[i]);
             if (p.kuribohTeam == 0)
                 p.kuribohTeam = (int)KuribohTeam.Kuribandit;
 
@@ -92,7 +126,7 @@ namespace WRLDZ.Core
             p.soulFractures = 0;
             p.soulRegenUnix = 0;
 
-            p.lastStreet4000WinUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            p.lastStreet4000WinUnix = ClockGuard.NowUnix(p);
             p.tearStreak8000 = Mathf.Max(p.tearStreak8000, 3);
 
             var sets = new List<string>(SetOrbService.StarterSets);

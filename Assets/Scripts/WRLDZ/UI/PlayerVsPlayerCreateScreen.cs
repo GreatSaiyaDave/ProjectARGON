@@ -87,7 +87,9 @@ namespace WRLDZ.UI
         {
             FreeUiKit.PlayConfirm();
             var cfg = _scan.BuildMatchConfig();
-            cfg.EntrySource = AppSession.SceneOverworld;
+            // VS PLAYER opens from the Duel Disk (MainMenu) and from the Overworld CREATE sheet —
+            // return to whichever scene actually launched it.
+            cfg.EntrySource = AppSession.LaunchEntrySource();
             StopTick();
             _onClose?.Invoke();
             AppSession.Ensure().StartArDuel(cfg);

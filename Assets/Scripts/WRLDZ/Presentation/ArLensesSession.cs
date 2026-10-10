@@ -13,6 +13,7 @@ namespace WRLDZ.Presentation
     /// Builds XR Origin (camera + controllers), floor anchor, and 1:1 world scale.
     /// Phone AR is a fallback — this is the product path for arm-anchored disks.
     /// </summary>
+    [DefaultExecutionOrder(-20)]
     public class ArLensesSession : MonoBehaviour
     {
         public static ArLensesSession Instance { get; private set; }
@@ -160,6 +161,7 @@ namespace WRLDZ.Presentation
             // 1:1 arm tracker (controllers / head)
             _tracker = gameObject.AddComponent<XrWorldArmTracker>();
             _tracker.Bind(LeftController, RightController, Head, FloorAnchor);
+            _tracker.trackingSpace = Origin;   // OpenXR hand poses (bare hands) are tracking-space
             _tracker.ApplyPlayerSeparationMeters(SeparationMeters);
 
             Debug.Log("[WRLDZ Lenses] XR Origin built · 1:1 scale · floor + controllers");
@@ -232,34 +234,35 @@ namespace WRLDZ.Presentation
         {
             if (!_built) return;
             DriveNode(XRNode.CenterEye, Head, true);
-            DriveNode(XRNode.LeftHand, LeftController, false);
-            DriveNode(XRNode.RightHand, RightController, false);
-
-            // Floor stays under player feet (Y of origin / head projected)
-            if (FloorAnchor != null && Head != null)
-            {
-                var o = Origin.position;
-                // Keep floor at origin height (tracking origin floor mode) — only update XZ if needed
-                FloorAnchor.position = new Vector3(o.x, o.y, o.z);
-            }
+            var left = DriveNode(XRNode.LeftHand, LeftController, false);
+            var right = DriveNode(XRNode.RightHand, RightController, false);
+            _tracker?.SetTracking(left, right);
+            // FloorAnchor is parented to Origin at local zero (floor-relative tracking).
+            // Rewriting its world position every frame fought the tracking origin.
         }
 
-        static void DriveNode(XRNode node, Transform target, bool isHead)
-        {
-            if (target == null) return;
-            var devices = new List<InputDevice>();
-            InputDevices.GetDevicesAtXRNode(node, devices);
-            if (devices.Count == 0)
-                return;
+        static readonly List<InputDevice> NodeDevices = new();
 
-            var d = devices[0];
-            if (d.TryGetFeatureValue(CommonUsages.devicePosition, out var p) &&
-                d.TryGetFeatureValue(CommonUsages.deviceRotation, out var r))
-            {
-                // Poses are typically in tracking/session space — parent is Origin
-                target.localPosition = p;
-                target.localRotation = r;
-            }
+        static bool DriveNode(XRNode node, Transform target, bool isHead)
+        {
+            if (target == null) return false;
+            NodeDevices.Clear();
+            InputDevices.GetDevicesAtXRNode(node, NodeDevices);
+            if (NodeDevices.Count == 0)
+                return false;
+
+            var d = NodeDevices[0];
+            // Untracked frames still report a pose (often zero). Writing those snaps the disk.
+            if (d.TryGetFeatureValue(CommonUsages.isTracked, out var tracked) && !tracked)
+                return false;
+            if (!d.TryGetFeatureValue(CommonUsages.devicePosition, out var p) ||
+                !d.TryGetFeatureValue(CommonUsages.deviceRotation, out var r))
+                return false;
+
+            // Poses are in tracking space. Parent is Origin, so local = device pose.
+            target.localPosition = p;
+            target.localRotation = r;
+            return true;
         }
 
         public static bool IsXrDisplayRunning()

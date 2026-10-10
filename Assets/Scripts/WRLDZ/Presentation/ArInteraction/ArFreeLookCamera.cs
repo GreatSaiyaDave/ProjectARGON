@@ -52,7 +52,7 @@ namespace WRLDZ.Presentation.ArInteraction
         public static ArFreeLookCamera Attach(Camera cam)
         {
             if (cam == null) return null;
-            var fl = cam.GetComponent<ArFreeLookCamera>() ?? cam.gameObject.AddComponent<ArFreeLookCamera>();
+            var fl = ArObjectUtil.GetOrAdd<ArFreeLookCamera>(cam.gameObject);
             fl.Cam = cam;
             fl.CapturePose();
             return fl;

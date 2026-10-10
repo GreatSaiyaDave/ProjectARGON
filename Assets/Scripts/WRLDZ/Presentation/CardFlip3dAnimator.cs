@@ -17,7 +17,7 @@ namespace WRLDZ.Presentation
         public static void PlayIfNeeded(Transform root, bool faceChangedToUp, CardDatabase db = null)
         {
             if (root == null || !faceChangedToUp) return;
-            var a = root.GetComponent<CardFlip3dAnimator>() ?? root.gameObject.AddComponent<CardFlip3dAnimator>();
+            var a = ArInteraction.ArObjectUtil.GetOrAdd<CardFlip3dAnimator>(root.gameObject);
             a.Play();
         }
 

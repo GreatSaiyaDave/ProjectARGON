@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.XR;
 using WRLDZ.Core;
 
 namespace WRLDZ.Presentation.ArInteraction
@@ -42,7 +44,7 @@ namespace WRLDZ.Presentation.ArInteraction
         public Vector3 leftForearmLocalPos = new(-0.22f, 0.52f, -3.05f);
         public Vector3 leftForearmLocalEuler = new(78f, 8f, -88f);
         // Chest / upper torso — hand holos float in front of the body, above the disk
-        public Vector3 torsoLocalPos = new(0.04f, 0.88f, -1.74f);
+        public Vector3 torsoLocalPos = new(-0.04f, 1.41f, -2.69f);
         public Vector3 opponentForearmLocalPos = new(0.22f, 0.58f, 3.05f);
         public Vector3 opponentForearmLocalEuler = new(78f, 172f, 88f);
         public Vector3 opponentTorsoLocalPos = new(-0.04f, 0.94f, 1.74f);
@@ -109,12 +111,17 @@ namespace WRLDZ.Presentation.ArInteraction
             opponentForearmLocalPos = new Vector3(WristLateral, OppWristHeight, oppZ);
             opponentForearmLocalEuler = new Vector3(78f, 172f, 88f);
 
-            // Hand holos at chest, slightly toward camera from the wrist so cards
-            // float in the lower-center FOV above the disk, not on midfield.
+            // Hand holos held about a metre in front of the eye (the sim camera sits at the wrist +1.46 up,
+            // 0.28 behind), lower-right of view: the fan reads as held by the player, not floating out over
+            // their own S/T row (it used to sit ~2 m out, youZ * 0.55). ArDuelInteractionSystem sizes the sim
+            // cards down to match, so the fan is about as big on screen but clearly in the foreground.
+            // Height: owner 2026-09-29, "too high up from the spirit dueler, lower it by 20-30%": +0.89 puts the
+            // hand volume 0.64 m over the disk (was 0.85 m at +1.10). Looking straight ahead only the fan's top
+            // shows at the bottom edge; it sits over the disk when you look down at it.
             torsoLocalPos = new Vector3(
-                0.04f,
-                WristHeight + 0.36f,
-                youZ * 0.55f - 0.06f);
+                -0.04f,
+                WristHeight + 0.89f,
+                youZ + 0.36f);
 
             // Opp chest mirrors yours — cards float above their disk, facing you.
             opponentTorsoLocalPos = new Vector3(
@@ -330,60 +337,21 @@ namespace WRLDZ.Presentation.ArInteraction
     }
 
     /// <summary>
-    /// XR controller transform as forearm (manual assign). Prefer <see cref="XrWorldArmTracker"/> for Quest.
-    /// </summary>
-    public class XrControllerArmTracker : MonoBehaviour, IArTrackingSource
-    {
-        public Transform leftController;
-        public Transform headOrTorso;
-        public Transform rightControllerAsOpponent;
-
-        public Vector3 forearmOffset = new(0f, -0.04f, 0.06f);
-        public Vector3 forearmEuler = new(70f, 0f, 0f);
-
-        public bool IsTracking => leftController != null && leftController.gameObject.activeInHierarchy;
-
-        public bool TryGetLeftForearm(out Pose pose)
-        {
-            pose = default;
-            if (leftController == null) return false;
-            var p = leftController.TransformPoint(forearmOffset);
-            var r = leftController.rotation * Quaternion.Euler(forearmEuler);
-            pose = new Pose(p, r);
-            return true;
-        }
-
-        public bool TryGetTorso(out Pose pose)
-        {
-            pose = default;
-            if (headOrTorso == null) return false;
-            var p = headOrTorso.position + headOrTorso.up * -0.25f + headOrTorso.forward * 0.05f;
-            pose = new Pose(p, headOrTorso.rotation);
-            return true;
-        }
-
-        public bool TryGetOpponentLeftForearm(out Pose pose)
-        {
-            pose = default;
-            if (rightControllerAsOpponent == null) return false;
-            pose = new Pose(rightControllerAsOpponent.position, rightControllerAsOpponent.rotation);
-            return true;
-        }
-
-        public bool TryGetOpponentTorso(out Pose pose) => ArOppTorso.FromForearm(this, out pose);
-    }
-
-    /// <summary>
     /// Life-size OpenXR arm tracker for Quest / Android XR lenses.
     /// Player disk follows left controller (or left hand); opponent disk sits at real-world
     /// separation meters in front (1:1). Stage units = meters.
     /// </summary>
-    public class XrWorldArmTracker : MonoBehaviour, IArTrackingSource
+    public class XrWorldArmTracker : MonoBehaviour, IArTrackingSource, IArHandInput
     {
         public Transform leftController;
         public Transform rightController;
         public Transform head;
         public Transform floorAnchor;
+        /// <summary>XR Origin: OpenXR hand poses arrive in tracking space.</summary>
+        public Transform trackingSpace;
+
+        /// <summary>OpenXR hand tracking (Hand Interaction profile), world space.</summary>
+        public bool TryGetHand(bool left, out ArHandPose hand) => OpenXrHands.TryRead(left, trackingSpace, out hand);
 
         /// <summary>Offset from controller grip to disk wear surface (meters).</summary>
         public Vector3 leftForearmOffset = new(0f, -0.03f, 0.05f);
@@ -396,8 +364,56 @@ namespace WRLDZ.Presentation.ArInteraction
 
         bool _hasLeft;
         bool _hasHead;
+        bool _leftTracked;
+        bool _rightTracked;
         Pose _lastLeft;
         Pose _lastHead;
+        static readonly List<InputDevice> AimDevices = new();
+
+        public bool LeftTracked => _leftTracked;
+        public bool RightTracked => _rightTracked;
+
+        public void SetTracking(bool left, bool right)
+        {
+            _leftTracked = left;
+            _rightTracked = right;
+        }
+
+        /// <summary>Right-hand pointer. Trigger or a squeeze past halfway counts as held.</summary>
+        public bool AimHeld
+        {
+            get
+            {
+                AimDevices.Clear();
+                InputDevices.GetDevicesAtXRNode(XRNode.RightHand, AimDevices);
+                if (AimDevices.Count == 0) return false;
+                var d = AimDevices[0];
+                if (d.TryGetFeatureValue(CommonUsages.triggerButton, out var button) && button)
+                    return true;
+                if (d.TryGetFeatureValue(CommonUsages.trigger, out var pull) && pull > 0.55f)
+                    return true;
+                return false;
+            }
+        }
+
+        /// <summary>World ray from the tracked right controller, or the headset if the hand is lost.</summary>
+        public bool TryGetAimRay(out Ray ray)
+        {
+            ray = default;
+            if (_rightTracked && rightController != null)
+            {
+                ray = new Ray(rightController.position, rightController.forward);
+                return true;
+            }
+
+            if (head != null)
+            {
+                ray = new Ray(head.position, head.forward);
+                return true;
+            }
+
+            return false;
+        }
 
         public bool IsTracking => _hasLeft || leftController != null;
 
@@ -419,18 +435,21 @@ namespace WRLDZ.Presentation.ArInteraction
         public bool TryGetLeftForearm(out Pose pose)
         {
             pose = default;
-            if (leftController != null && leftController.gameObject.activeInHierarchy)
+            // bare hands: the disk rides the left hand's grip. The OpenXR hand grip follows the controller grip
+            // convention, so the controller offsets place the disk on the forearm the same way.
+            if (!_leftTracked && TryGetHand(true, out var lh))
             {
-                // Prefer live controller; fall back if still at origin early in session
+                pose = new Pose(lh.Grip.position + lh.Grip.rotation * leftForearmOffset,
+                    lh.Grip.rotation * Quaternion.Euler(leftForearmEuler));
+                _lastLeft = pose;
+                _hasLeft = true;
+                return true;
+            }
+
+            if (_leftTracked && leftController != null)
+            {
                 var p = leftController.TransformPoint(leftForearmOffset);
                 var r = leftController.rotation * Quaternion.Euler(leftForearmEuler);
-                // If controller not tracking yet, estimate from head
-                if (leftController.localPosition.sqrMagnitude < 1e-6f && head != null)
-                {
-                    p = head.position + head.TransformDirection(new Vector3(-0.25f, -0.35f, 0.25f));
-                    r = head.rotation * Quaternion.Euler(leftForearmEuler);
-                }
-
                 pose = new Pose(p, r);
                 _lastLeft = pose;
                 _hasLeft = true;
@@ -475,8 +494,10 @@ namespace WRLDZ.Presentation.ArInteraction
         public bool TryGetOpponentLeftForearm(out Pose pose)
         {
             pose = default;
-            // Optional: right controller as guest when present and far enough
-            if (rightController != null && rightController.localPosition.sqrMagnitude > 0.01f)
+            // Optional: right controller as guest when present and far enough. Never a tracked bare hand: holding the
+            // cards out at arm's length would otherwise move the opponent's disk into the player's own hand.
+            if (rightController != null && rightController.localPosition.sqrMagnitude > 0.01f &&
+                !TryGetHand(false, out _))
             {
                 var dist = head != null
                     ? Vector3.Distance(rightController.position, head.position)

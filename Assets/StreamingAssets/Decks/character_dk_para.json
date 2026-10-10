@@ -1,0 +1,43 @@
+{
+  "name": "Para · Labyrinth Wall Shadow",
+  "format": "wrldz_dk_character",
+  "character": "Para",
+  "era": "duelist_kingdom",
+  "erazBandId": "original",
+  "notes": "Labyrinth Wall Shadow strategy. Shadow Ghoul + Labyrinth Wall fusion, Monster Tamer, Magical Labyrinth.",
+  "main": [
+    { "id": 30778711, "name": "Shadow Ghoul", "qty": 3 },
+    { "id": 67284908, "name": "Labyrinth Wall", "qty": 3 },
+    { "id": 25955164, "name": "Sanga of the Thunder", "qty": 2 },
+    { "id": 25833572, "name": "Gate Guardian", "qty": 1 },
+    { "id": 63162310, "name": "Wall Shadow", "qty": 1 },
+    { "id": 51228280, "name": "Dungeon Worm", "qty": 2 },
+    { "id": 6285791, "name": "The Wicked Worm Beast", "qty": 2 },
+    { "id": 89272878, "name": "Guardian of the Labyrinth", "qty": 2 },
+    { "id": 56283725, "name": "Kumootoko", "qty": 2 },
+    { "id": 75499502, "name": "Master & Expert", "qty": 2 },
+    { "id": 45042329, "name": "Tripwire Beast", "qty": 2 },
+    { "id": 24094653, "name": "Polymerization", "qty": 2 },
+    { "id": 64389297, "name": "Magical Labyrinth", "qty": 2 },
+    { "id": 51482758, "name": "Remove Trap", "qty": 1 },
+    { "id": 83764719, "name": "Monster Reborn", "qty": 1 },
+    { "id": 5318639, "name": "Mystical Space Typhoon", "qty": 2 },
+    { "id": 55144522, "name": "Pot of Greed", "qty": 1 },
+    { "id": 79571449, "name": "Graceful Charity", "qty": 1 },
+    { "id": 34016756, "name": "Riryoku", "qty": 1 },
+    { "id": 2903036, "name": "Tribute Doll", "qty": 1 },
+    { "id": 73915051, "name": "Scapegoat", "qty": 1 },
+    { "id": 90357090, "name": "Silver Fang", "qty": 2 },
+    { "id": 28279543, "name": "Curse of Dragon", "qty": 2 },
+    { "id": 41392891, "name": "Feral Imp", "qty": 1 }
+  ],
+  "extra": [
+    { "id": 63162310, "name": "Wall Shadow", "qty": 1 },
+    { "id": 25833572, "name": "Gate Guardian", "qty": 1 },
+    { "id": 99551425, "name": "Labyrinth Tank", "qty": 1 },
+    { "id": 11901678, "name": "Black Skull Dragon", "qty": 1 }
+  ],
+  "side": [],
+  "counts": { "main": 40, "extra": 4, "side": 0 },
+  "role": "character_dk"
+}

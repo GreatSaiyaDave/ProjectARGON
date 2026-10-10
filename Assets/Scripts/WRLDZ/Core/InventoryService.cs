@@ -166,6 +166,14 @@ namespace WRLDZ.Core
                 }
             }
 
+            // Unlimited collection box — always with the player, never backpack/home.
+            if (inv.collectionBox != null && inv.collectionBox.owned)
+            {
+                vm.HomeItemLines.Add(
+                    $"Collection {inv.collectionBox.name} " +
+                    $"{inv.collectionBox.UniqueCount()} unique ×∞ · CARRY");
+            }
+
             // GO-style collection glance (counts only; no remote move without transport)
             var top = TopCardStacks(inv, 12);
             foreach (var line in top)
@@ -609,6 +617,17 @@ namespace WRLDZ.Core
                         map.TryGetValue(s.cardId, out var q);
                         map[s.cardId] = q + s.qty;
                     }
+                }
+            }
+
+            // Collection box counts as owned for the glance (capped per line so ∞ reads cleanly).
+            if (inv.collectionBox != null && inv.collectionBox.owned && inv.collectionBox.stacks != null)
+            {
+                foreach (var s in inv.collectionBox.stacks)
+                {
+                    if (s == null || s.cardId <= 0 || s.qty <= 0) continue;
+                    if (!map.ContainsKey(s.cardId))
+                        map[s.cardId] = s.qty;
                 }
             }
 

@@ -124,7 +124,7 @@ namespace WRLDZ.Presentation.ArInteraction
                     Aura = spawning ? 0 : p.AuraSign(),
                     PlayerSide = host.PlayerSide,
                     FaceDown = faceDown,
-                    Key = p.GetInstanceID(),
+                    Key = p.GetEntityId().GetHashCode(),
                     Scale = scale,
                     ArtHalf = CardArtFocus.MonsterArtworkScale.x * 0.5f * scale
                 };

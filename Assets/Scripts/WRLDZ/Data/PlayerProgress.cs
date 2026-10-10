@@ -60,14 +60,71 @@ namespace WRLDZ.Data
         /// <summary>Set-orb progress toward locked sets, e.g. PSV:3,LON:1.</summary>
         public string setOrbCsv = "";
 
-        /// <summary>Owned ERAZ band badges (CSV). Empty until tutorial grants original.</summary>
+        /// <summary>Owned ERAZ band badges (CSV). Empty until fortune teller grants original.</summary>
         public string erazBadgesCsv = "";
+        /// <summary>Owned format badges (CSV): dk, raid, ddm, genesys, speed, deckmaster.</summary>
+        public string formatBadgesCsv = "";
+
+        /// <summary>Cleared Story stage ids (CSV).</summary>
+        public string storyClearedCsv = "";
+        /// <summary>Next playable Story stage id. Empty when Season 1 is fully cleared.</summary>
+        public string storyCurrentId = "";
+        /// <summary>Referobot daily JSON (day + three slots).</summary>
+        public string questStateJson = "";
+
+        /// <summary>Non-practice wins toward a streak purse. Clears on a loss.</summary>
+        public int pveWinStreak;
+        /// <summary>Streak purses waiting. The real pack is not minted yet.</summary>
+        public int streakPurses;
+        /// <summary>Highest level-quiz gate already answered (10, 20, …).</summary>
+        public int quizClaimedThrough;
+        /// <summary>Story wins with the chosen Kuriboh. Caps at 10. No extra reward.</summary>
+        public int kuribohBond;
+
+        /// <summary>
+        /// Spirit companion shown on the map and in AR duels (<see cref="SpiritCompanions"/> id). Empty = the Kuriboh of
+        /// <see cref="kuribohTeam"/>. Players keep their team's companion; the lab admin may pick any of them.
+        /// </summary>
+        public string companionId = "";
 
         /// <summary>Lab account owns full catalog (3× each card) for deck editor testing.</summary>
         public bool labFullCatalogGranted;
 
         /// <summary>Lab admin: maxed currencies, unlocks, and travel catalog. Not a live player.</summary>
         public bool labAdmin;
+
+        /// <summary>
+        /// Most recent duel result ids whose rewards were paid (newest last, capped at
+        /// <see cref="ClaimedDuelIdCap"/>). A finished duel pays exactly once.
+        /// </summary>
+        public string[] claimedDuelIds = Array.Empty<string>();
+        public const int ClaimedDuelIdCap = 32;
+
+        /// <summary>
+        /// Latest UTC unix second this account has seen. Timers and daily/weekly resets never run on a
+        /// clock earlier than this (device clock rolled back). See WRLDZ.Core.ClockGuard.
+        /// </summary>
+        public long clockHighWaterUnix;
+
+        /// <summary>Per-account zone loot locks, "zoneId@yyyy-MM-dd" CSV, pruned to the last 7 days.</summary>
+        public string zoneLootCsv = "";
+
+        /// <summary>Per-account Tear harvest stamps, "zoneId@unix" CSV, pruned once the cooldown has passed.</summary>
+        public string tearHarvestCsv = "";
+
+        /// <summary>Walk Set Energy daily cap, per account on the guarded clock (see WRLDZ.Core.WalkEnergyLedger).</summary>
+        public string walkSeDayUtc = "";
+        public int walkSeToday;
+
+        /// <summary>
+        /// Rewarded duel in progress (owner rule 2026-09-23 #3): its result id and a JSON copy of its match
+        /// config, written when the duel starts and cleared when the result is claimed. A marker still here on
+        /// the next launch means the app was killed mid-duel — it is settled as a forfeit loss
+        /// (see WRLDZ.Core.PendingDuelMarker).
+        /// </summary>
+        public string pendingDuelId = "";
+        public string pendingDuelMatchJson = "";
+        public long pendingDuelStartedUnix;
 
         public KuribohTeam Team
         {
@@ -88,6 +145,10 @@ namespace WRLDZ.Data
                 unlockedSetsCsv = "LOB,MRD,SRL",
                 setOrbCsv = "",
                 erazBadgesCsv = "",
+                formatBadgesCsv = "",
+                storyClearedCsv = "",
+                storyCurrentId = "",
+                questStateJson = "",
                 soulFractureCapacity = DefaultSoulFractureCapacity,
                 soulFractures = 0,
                 soulRegenUnix = 0,
@@ -110,6 +171,8 @@ namespace WRLDZ.Data
             if (duelCoin < 0) duelCoin = 0;
             if (setEnergy < 0) setEnergy = 0;
             if (kuribohTeam < 0 || kuribohTeam > 3) kuribohTeam = 0;
+            companionId ??= "";
+            if (companionId.Length > 0 && SpiritCompanions.Find(companionId) == null) companionId = "";
             if (soulFractureCapacity < DefaultSoulFractureCapacity)
                 soulFractureCapacity = DefaultSoulFractureCapacity;
             if (soulFractureCapacity > MaxSoulFractureCapacity)
@@ -120,6 +183,46 @@ namespace WRLDZ.Data
             if (soulRegenUnix < 0) soulRegenUnix = 0;
             if (soulStoryUnlockCsv == null) soulStoryUnlockCsv = "";
             if (erazBadgesCsv == null) erazBadgesCsv = "";
+            if (formatBadgesCsv == null) formatBadgesCsv = "";
+            if (storyClearedCsv == null) storyClearedCsv = "";
+            if (storyCurrentId == null) storyCurrentId = "";
+            if (questStateJson == null) questStateJson = "";
+            if (pveWinStreak < 0) pveWinStreak = 0;
+            if (pveWinStreak > 3) pveWinStreak = 3;
+            if (streakPurses < 0) streakPurses = 0;
+            if (quizClaimedThrough < 0) quizClaimedThrough = 0;
+            if (kuribohBond < 0) kuribohBond = 0;
+            if (kuribohBond > 10) kuribohBond = 10;
+            claimedDuelIds ??= Array.Empty<string>();
+            if (clockHighWaterUnix < 0) clockHighWaterUnix = 0;
+            zoneLootCsv ??= "";
+            tearHarvestCsv ??= "";
+            walkSeDayUtc ??= "";
+            if (walkSeToday < 0) walkSeToday = 0;
+            pendingDuelId ??= "";
+            pendingDuelMatchJson ??= "";
+        }
+
+        public bool HasClaimedDuel(string duelResultId)
+        {
+            if (string.IsNullOrEmpty(duelResultId) || claimedDuelIds == null) return false;
+            for (var i = 0; i < claimedDuelIds.Length; i++)
+                if (string.Equals(claimedDuelIds[i], duelResultId, StringComparison.Ordinal))
+                    return true;
+            return false;
+        }
+
+        /// <summary>Remember <paramref name="duelResultId"/> as paid. False when it was already claimed.</summary>
+        public bool TryMarkDuelClaimed(string duelResultId)
+        {
+            if (string.IsNullOrEmpty(duelResultId) || HasClaimedDuel(duelResultId)) return false;
+            var old = claimedDuelIds ?? Array.Empty<string>();
+            var keep = Mathf.Min(old.Length, ClaimedDuelIdCap - 1);
+            var next = new string[keep + 1];
+            Array.Copy(old, old.Length - keep, next, 0, keep);
+            next[keep] = duelResultId;
+            claimedDuelIds = next;
+            return true;
         }
 
         public int SoulRemaining =>
@@ -150,7 +253,8 @@ namespace WRLDZ.Data
         public bool HasStreet8000Access(long nowUnix)
         {
             if (lastStreet4000WinUnix <= 0) return false;
-            return nowUnix - lastStreet4000WinUnix <= StreetAccessWindowSec;
+            // A clock set before the win must not read as "inside the window" forever (QC F7).
+            return nowUnix >= lastStreet4000WinUnix && nowUnix - lastStreet4000WinUnix <= StreetAccessWindowSec;
         }
 
         public bool TearBossReady(string zoneId) =>
