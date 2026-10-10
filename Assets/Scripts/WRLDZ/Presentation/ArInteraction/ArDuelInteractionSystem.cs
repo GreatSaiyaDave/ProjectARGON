@@ -307,7 +307,13 @@ namespace WRLDZ.Presentation.ArInteraction
         /// </summary>
         void EnsureOpponentDuelist(DuelEngine engine)
         {
-            if (OppDuelist != null || engine == null || _stageRoot == null || OppDisk == null) return;
+            if (OppDuelist != null || engine == null || _stageRoot == null || OppDisk == null)
+            {
+                if (engine == null) Debug.LogWarning("[WRLDZ AR] Ensure opponent duelist skipped · engine null");
+                else if (_stageRoot == null) Debug.LogWarning("[WRLDZ AR] Ensure opponent duelist skipped · stageRoot null");
+                else if (OppDisk == null) Debug.LogWarning("[WRLDZ AR] Ensure opponent duelist skipped · OppDisk null");
+                return;
+            }
             var match = AppSession.Instance != null ? AppSession.Instance.PendingArMatch : null;
             var name = engine.Opponent != null && !string.IsNullOrEmpty(engine.Opponent.Name)
                 ? engine.Opponent.Name

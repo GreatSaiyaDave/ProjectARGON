@@ -153,6 +153,18 @@ namespace WRLDZ.Presentation.ArInteraction
                         yield return null;
                     if (cut != null) cut.Close();
                 }
+                else if (_ix.OppDisk != null)
+                {
+                    // No AI duelist body was raised (rig not humanoid, or a nav duelist): the "DUEL!" beat still plays —
+                    // a cut-in over the opponent's own blade deploy instead of the body's pose.
+                    Hint("DUEL!");
+                    var diskName = _engine?.Opponent != null && !string.IsNullOrEmpty(_engine.Opponent.Name)
+                        ? _engine.Opponent.Name : null;
+                    DeployCutIn.Show(null, _stageCam != null ? _stageCam : Camera.main, 3.4f,
+                        _ix.OppDisk.AuraColorNow, _ix.OppDisk.transform, diskName);
+                    _ix.OppDisk.DeployForDuel(0.28f);
+                    yield return new WaitForSecondsRealtime(3.2f);
+                }
                 else
                     _ix.OppDisk?.DeployForDuel(0.28f);
 

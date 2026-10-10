@@ -152,14 +152,24 @@ namespace WRLDZ.Presentation.ArInteraction
         public static ArOpponentDuelist Create(Transform stageRoot, int layer, IArTrackingSource tracker, ArDuelDiskRig disk,
             ArHandVolume hand, ArArenaHologramManager arena, bool lifeSize, float unitsPerMetre, string opponentName)
         {
-            if (!AiDuelistLooks.IsHumanDuelist(opponentName) || stageRoot == null) return null;
+            if (!AiDuelistLooks.IsHumanDuelist(opponentName) || stageRoot == null)
+            {
+                Debug.LogWarning($"[WRLDZ AR] Opponent skip · name='{opponentName ?? "(null)"}' human={AiDuelistLooks.IsHumanDuelist(opponentName)} stageRoot={stageRoot != null}");
+                return null;
+            }
             var go = new GameObject("OpponentDuelist");
             go.transform.SetParent(stageRoot, false);
             go.layer = layer;
             var d = go.AddComponent<ArOpponentDuelist>();
             d.Tracker = tracker; d.Disk = disk; d.Hand = hand; d.Arena = arena;
             d.LifeSize = lifeSize; d.UnitsPerMetre = Mathf.Max(0.05f, unitsPerMetre);
-            if (!d.Build(AiDuelistLooks.For(opponentName), layer)) { Destroy(go); return null; }
+            if (!d.Build(AiDuelistLooks.For(opponentName), layer))
+            {
+                var animDbg = d._anim == null ? "null"
+                    : (d._anim.isHuman ? d._anim.name + " human" : d._anim.name + " NOT-human");
+                Debug.LogWarning($"[WRLDZ AR] Opponent build failed · {opponentName} · body={d._body != null} anim={animDbg}");
+                Destroy(go); return null;
+            }
             // its own Battle City disk: the opponent rig worn solid on the forearm, life size
             d._npcDisk = disk != null ? NpcDuelDisk.Wear(go.transform, disk, layer, d.UnitsPerMetre) : null;
             d._name = opponentName ?? "";
@@ -185,12 +195,21 @@ namespace WRLDZ.Presentation.ArInteraction
             _root.SetParent(transform, false);
             _root.localScale = Vector3.one * UnitsPerMetre;
             _body = OverworldAvatar3d.AttachWorld(_root, look, layer);
-            if (_body == null) return false;
+            if (_body == null)
+            {
+                Debug.LogWarning($"[WRLDZ AR] Opponent build · base body not attached · look={(look == null ? "null" : (look.IsFemale ? "base_female" : "base_male"))}");
+                return false;
+            }
             _body.DisableLocomotion();
             _body.IgnoreBodyHide = true;          // the PLAYER's body hides in duels; this one is the opponent
             _body.SetPresence(1f);
             _anim = _body.GetComponent<Animator>();
-            if (_anim == null || !_anim.isHuman) return false;
+            if (_anim == null || !_anim.isHuman)
+            {
+                var av = _anim != null ? (_anim.avatar != null ? _anim.avatar.name : "no-avatar") : "null";
+                Debug.LogWarning($"[WRLDZ AR] Opponent build · animator not humanoid: anim={(_anim != null ? _anim.name : "null")} isHuman={_anim != null && _anim.isHuman} avatar={av}");
+                return false;
+            }
             _anim.applyRootMotion = false;
             _anim.cullingMode = AnimatorCullingMode.AlwaysAnimate;
 

@@ -15,19 +15,28 @@ namespace WRLDZ.Presentation.ArInteraction
         const float SlideIn = 0.22f, SlideOut = 0.24f;
 
         ArOpponentDuelist _duelist;
+        Transform _fallbackTarget;
+        string _fallbackName;
         Camera _cam;
         RenderTexture _rt;
         RectTransform _band;
         CanvasGroup _group;
         float _t, _length;
 
-        /// <summary>Show the cut-in for <paramref name="seconds"/> (slides included).</summary>
-        public static DeployCutIn Show(ArOpponentDuelist duelist, Camera stageCam, float seconds, Color accent)
+        /// <summary>
+        /// Show the cut-in for <paramref name="seconds"/> (slides included). When <paramref name="duelist"/> is null a
+        /// <paramref name="fallbackTarget"/> (e.g. the opponent's disk) and <paramref name="fallbackName"/> keep the
+        /// banner and live shot up — the "DUEL!" beat must not vanish just because no AI body was raised.
+        /// </summary>
+        public static DeployCutIn Show(ArOpponentDuelist duelist, Camera stageCam, float seconds, Color accent,
+            Transform fallbackTarget = null, string fallbackName = null)
         {
-            if (duelist == null) return null;
+            if (duelist == null && fallbackTarget == null) return null;
             var go = new GameObject("DeployCutIn");
             var c = go.AddComponent<DeployCutIn>();
             c._duelist = duelist;
+            c._fallbackTarget = fallbackTarget;
+            c._fallbackName = fallbackName;
             c._length = Mathf.Max(0.8f, seconds);
             c.Build(stageCam, accent);
             return c;
@@ -94,7 +103,7 @@ namespace WRLDZ.Presentation.ArInteraction
             var plateImg = plate.gameObject.AddComponent<Image>();
             plateImg.color = new Color(0f, 0f, 0f, 0.72f);
             plateImg.raycastTarget = false;
-            Label(plate, (_duelist.DisplayName ?? "").ToUpperInvariant(), 40, TextAnchor.MiddleLeft, Color.white, new Vector2(18f, 0f));
+            Label(plate, (_duelist != null ? (_duelist.DisplayName ?? "") : (_fallbackName ?? "")).ToUpperInvariant(), 40, TextAnchor.MiddleLeft, Color.white, new Vector2(18f, 0f));
 
             var duel = NewRect("Duel", _band);
             duel.anchorMin = duel.anchorMax = new Vector2(1f, 1f);
@@ -112,14 +121,28 @@ namespace WRLDZ.Presentation.ArInteraction
         RawImage _raw;
         bool _aimed;
 
-        void AimCamera()
+void AimCamera()
         {
-            if (!_duelist.TryGetCutInShot(out var eye, out var look, out _)) return;
-            // a slow push-in while held
-            var push = Mathf.Clamp01(_t / _length) * 0.12f;
-            _cam.transform.position = Vector3.Lerp(eye, look, push);
-            _cam.transform.LookAt(look);
-            _aimed = true;
+            if (_duelist != null)
+            {
+                if (!_duelist.TryGetCutInShot(out var eye, out var look, out _)) return;
+                // a slow push-in while held
+                var push = Mathf.Clamp01(_t / _length) * 0.12f;
+                _cam.transform.position = Vector3.Slerp(eye, look, push);
+                _cam.transform.LookAt(look);
+                _aimed = true;
+                return;
+            }
+            if (_fallbackTarget != null)
+            {
+                // no AI body to pose: frame the disk/blade deploy instead
+                var t = _fallbackTarget;
+                var eye = t.position + t.up * 1.5f + t.forward * 1.1f;
+                var look = t.position + t.up * 0.5f;
+                _cam.transform.position = eye;
+                _cam.transform.LookAt(look);
+                _aimed = true;
+            }
         }
 
         static RectTransform NewRect(string name, Transform parent)
@@ -167,7 +190,7 @@ namespace WRLDZ.Presentation.ArInteraction
         void LateUpdate()
         {
             _t += Time.unscaledDeltaTime;
-            if (_t >= _length || _duelist == null) { Destroy(gameObject); return; }
+            if (_t >= _length || (_duelist == null && _fallbackTarget == null)) { Destroy(this.transform.root); return; }
             Place(_t);
             AimCamera();
             if (_raw != null && !_raw.enabled && _aimed) _raw.enabled = true;
