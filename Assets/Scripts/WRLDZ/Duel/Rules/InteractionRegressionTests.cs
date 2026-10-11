@@ -5009,6 +5009,10 @@ namespace WRLDZ.Duel.Rules
                             var host = PlaceMonster(engine, oppHost ? engine.Opponent : p, hostId, 2,
                                 BattlePosition.Attack, true);
                             var card = PutInHand(engine, p, def.id);
+                            // DcrEquipSpells batch: "Send 1 card from your hand to the GY" (Tryce, Flamberge) needs another
+                            // card in the hand to pay it.
+                            if (clause != null && clause.RequiresDiscardCost)
+                                PutInHand(engine, p, celtic);
                             if (!engine.CanActivateSpellTrap(p, card, fromHand: true))
                             {
                                 unplayable.Add(def.name ?? $"#{def.id}");
@@ -15145,7 +15149,12 @@ namespace WRLDZ.Duel.Rules
                         pr => pr.ClauseList.Exists(c => c != null && c.Timing == EffectTiming.ChainLinkActivated && c.Action == EffectActionKind.NegateActivation && c.ChainResponseOnly && c.RequiresDiscardCost && c.DiscardCostCount == 1 && c.DestroyNegatedCard && !c.FlipSelfFaceUpDefense));
                     CheckSearcher(48229808, "Horus LV8 FullyCompiled face-up negate+destroy",
                         pr => pr.ClauseList.Exists(c => c != null && c.Timing == EffectTiming.ChainLinkActivated && c.Action == EffectActionKind.NegateActivation && c.ChainResponseOnly && !c.RequiresDiscardCost && c.DestroyNegatedCard && !c.FlipSelfFaceUpDefense));
-                    CheckParked(94004268, "Amazoness Swords Woman");
+                    // DamageStepRules batch: Amazoness Swords Woman's battle-damage reflection compiles (ygopro
+                    // EFFECT_REFLECT_BATTLE_DAMAGE, DamageStepRulesRuntime.ReflectBattleDamage) — no longer parked.
+                    CheckSearcher(94004268, "Amazoness Swords Woman FullyCompiled battle-damage reflect",
+                        pr => pr.ClauseList.Count == 1 && pr.ClauseList.Exists(c =>
+                            c != null && c.Timing == EffectTiming.ContinuousWhileFaceUp &&
+                            c.Action == EffectActionKind.ReflectControllerBattleDamageFromBattlesInvolvingThis));
                     CheckParked(37390589, "Kunai with Chain");
                     CheckParked(96008713, "Magical Arm Shield");
                     CheckSearcher(2460565, "Marauding Captain FullyCompiled NS SS Lv≤4 + Warrior attack-lock",
@@ -16537,9 +16546,12 @@ namespace WRLDZ.Duel.Rules
                 // Effects after the procedure line must still be honest leftovers.
                 var lflDef = db.Get(legendaryFlameLord);
                 var lflProg = lflDef != null ? CardTextEffectCompiler.Compile(lflDef) : null;
-                Check("Legendary Flame Lord keeps its Spell Counter effects as leftover (not structural)",
-                    lflProg != null && !lflProg.FullyCompiled,
-                    lflProg == null ? "null" : $"full={lflProg.FullyCompiled}");
+                // SpellCounterSpenders batch: the procedure lines are absorbed and both Spell Counter effects compile
+                // (2 clauses) — the card is Implemented, never structural.
+                Check("Legendary Flame Lord compiles its Spell Counter effects after the procedure lines (not structural)",
+                    lflProg != null && lflProg.FullyCompiled && lflProg.ClauseList.Count == 2 &&
+                    CardEffectStatus.Classify(lflDef) == CardEffectStatusKind.Implemented,
+                    lflProg == null ? "null" : $"full={lflProg.FullyCompiled} n={lflProg.ClauseList.Count}");
             }
 
             // ── Battle damage → the OPPONENT draws (The Bistro Butcher) ──

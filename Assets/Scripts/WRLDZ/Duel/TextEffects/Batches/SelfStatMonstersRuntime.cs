@@ -28,6 +28,9 @@ namespace WRLDZ.Duel.TextEffects
         public static bool ForbidsDirectAttack(DuelEngine engine, CardInstance attacker)
         {
             if (engine == null || attacker?.Def == null || !attacker.Def.IsMonster) return false;
+            // PhaseTriggersAndIgnitionCosts batch: a Fusion Monster Magical Scientist Special Summoned (a grant from another
+            // card, so the monster's own negation does not end it).
+            if (PhaseTriggersAndIgnitionCostsRuntime.ForbidsDirectAttack(engine, attacker)) return true;
             if (!attacker.FaceUp || attacker.IsNegated) return false;
             var prog = CompiledEffectCache.GetOrCompile(attacker.Def);
             if (prog == null || !prog.FullyCompiled) return false;

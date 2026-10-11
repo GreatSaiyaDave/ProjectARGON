@@ -71,7 +71,9 @@ namespace WRLDZ.Duel.TextEffects
             /// <summary>Skull Lair at resolution: the face-up monster of that Level to destroy (no target).</summary>
             ResolveDestroy,
             /// <summary>Soul Demolition: a player's target in their opponent's GY (the activator's or the other's).</summary>
-            GyTarget
+            GyTarget,
+            /// <summary>SpellCounterSpenders batch — Pitch-Black Power Stone: the other face-up card to move a counter to.</summary>
+            MoveTarget
         }
 
         /// <summary>A player's pick this runtime opened (cost at activation, or a selection at resolution).</summary>
@@ -323,6 +325,10 @@ namespace WRLDZ.Duel.TextEffects
 
                     reason = "OK";
                     return true;
+                // SpellCounterSpenders batch: Pitch-Black Power Stone — your turn, once per turn, a counter on this card and
+                // another face-up card that can take one.
+                case EffectActionKind.MoveSpellCounterFromThisToTarget:
+                    return SpellCounterSpendersRuntime.MoveReady(engine, who, card, clause, out reason);
                 default:
                     reason = "This Quick Effect is not supported.";
                     return false;
@@ -355,13 +361,16 @@ namespace WRLDZ.Duel.TextEffects
             // control are the targets instead (Lua s.rfilter with aux.SpElimFilter(c)).
             if (SpiritEliminationRuntime.Affects(engine, gyOwner))
                 return SpiritEliminationRuntime.Substitutes(engine, gyOwner, null, false,
-                    m => !engine.IsDragonTargetProtected(m));
+                    m => !engine.IsDragonTargetProtected(m) &&
+                         !EquipLocksAndLeaveFieldRuntime.ShieldedFromTargeting(engine, activator, m));
             if (ContinuousProtections.CannotBanishFromGraveyard(engine, gyOwner)) return list;
             if (RuleLocksRuntime.BanishFromGyLocked(engine, activator)) return list;
             foreach (var g in gyOwner.Graveyard)
             {
                 if (g?.Def == null || !g.Def.IsMonster) continue;
                 if (ContinuousProtections.GyMovementLocked(engine, source, g)) continue;
+                // EquipLocksAndLeaveField batch: Metalsilver Armor — a GY monster the activator cannot target.
+                if (EquipLocksAndLeaveFieldRuntime.ShieldedFromTargeting(engine, activator, g)) continue;
                 list.Add(g);
             }
 
@@ -564,11 +573,50 @@ namespace WRLDZ.Duel.TextEffects
                     Seat(engine, who, card, link, timing, new LinkState { Clause = clause, Answered = link.TargetLink });
                     return true;
                 }
+                case EffectActionKind.MoveSpellCounterFromThisToTarget:
+                {
+                    // SpellCounterSpenders batch: Pitch-Black Power Stone targets 1 other face-up card that can take a
+                    // Spell Counter (a lone one is taken with no prompt; the AI feeds its own holder).
+                    var legal = SpellCounterSpendersRuntime.CollectHolderTargets(engine, clause, card);
+                    if (human && legal.Count > 1)
+                    {
+                        OpenPick(engine, who, card,
+                            new PickState { Step = Step.MoveTarget, Clause = clause, Link = link, Timing = timing },
+                            EffectTargetKind.AnyCardOnField, legal,
+                            "target 1 other face-up card that can take a Spell Counter, or CANCEL.");
+                        return true;
+                    }
+
+                    SeatMove(engine, who, card, link, timing, clause,
+                        legal.Count == 1 ? legal[0] : SpellCounterSpendersRuntime.AiPickHolder(engine, who, legal));
+                    return true;
+                }
                 default:
                     engine.Chain.RemoveUnresolved(link);
                     ok = false;
                     return true;
             }
+        }
+
+        /// <summary>
+        /// SpellCounterSpenders batch — Pitch-Black Power Stone: its target is chosen; the once-per-turn use is spent and
+        /// the link is seated with the target on it.
+        /// </summary>
+        static void SeatMove(DuelEngine engine, DuelistState who, CardInstance card, ChainLink link, ResponseTiming timing,
+            EffectClause clause, CardInstance target)
+        {
+            SpellCounterSpendersRuntime.NoteMoveUsed(engine, card);
+            var state = new LinkState { Clause = clause };
+            if (target != null)
+            {
+                state.Targets.Add((target, who));
+                link.Targets.Clear();
+                link.Targets.Add(target);
+                link.Target = target;
+                engine.Log($"{card?.Name}: targets {target.Name}.");
+            }
+
+            Seat(engine, who, card, link, timing, state);
         }
 
         /// <summary>
@@ -774,6 +822,12 @@ namespace WRLDZ.Duel.TextEffects
                         new LinkState { Clause = st.Clause, Answered = st.Link?.TargetLink });
                     ok = true;
                     return true;
+                case Step.MoveTarget:
+                    s_picks.Remove(p);
+                    engine.ClearPendingActivation();
+                    SeatMove(engine, who, card, st.Link, st.Timing, st.Clause, target);
+                    ok = true;
+                    return true;
                 case Step.GyTarget:
                     s_picks.Remove(p);
                     engine.ClearPendingActivation();
@@ -884,6 +938,11 @@ namespace WRLDZ.Duel.TextEffects
                     break;
                 case EffectActionKind.DestroyFaceUpMonsterWithLevelEqualToBanishedCost:
                     ResolveSkullLair(engine, who, card, state.Level);
+                    break;
+                // SpellCounterSpenders batch: Pitch-Black Power Stone moves 1 Spell Counter to its target.
+                case EffectActionKind.MoveSpellCounterFromThisToTarget:
+                    SpellCounterSpendersRuntime.ResolveMove(engine, who, card,
+                        state.Targets.Count > 0 ? state.Targets[0].card : null);
                     break;
                 case EffectActionKind.BothPlayersTargetMonsterInOpponentsGyAndBanish:
                     // Lua s.rmop: the targets still related (in the GY) are banished; each by the player who selected it.
@@ -1067,6 +1126,9 @@ namespace WRLDZ.Duel.TextEffects
                     return worth && (threatened ||
                                      (timing == ResponseTiming.None && engine.TurnPlayer == ai && engine.InMainPhase));
                 }
+                // SpellCounterSpenders batch: Pitch-Black Power Stone feeds the AI's own holder in its Main Phase.
+                case EffectActionKind.MoveSpellCounterFromThisToTarget:
+                    return SpellCounterSpendersRuntime.AiWantsMove(engine, ai, card, clause);
                 case EffectActionKind.NegateTrapEffectTargetingFaceUpRaceAndDestroyIt:
                 {
                     // Protect its own Dragon from the opponent's Trap.
@@ -1112,6 +1174,8 @@ namespace WRLDZ.Duel.TextEffects
                            GyTargets(engine, ai, card, ai).Count > 0;
                 case EffectActionKind.NegateTrapEffectTargetingFaceUpRaceAndDestroyIt:
                     return OwnFaceUp(clause.RaceFilter) && ai.Hand.Count > 0;
+                case EffectActionKind.MoveSpellCounterFromThisToTarget:
+                    return SpellCounterSpendersRuntime.AiWantsActivateSetStone(engine, ai, card);
             }
 
             return false;

@@ -17,6 +17,9 @@ namespace WRLDZ.Duel.TextEffects
         public static bool CannotBeAttackTarget(DuelEngine engine, CardInstance monster)
         {
             if (monster == null) return false;
+            // EquipLocksAndLeaveField batch: Raregold Armor — only its equipped monster can be selected as an attack
+            // target (face-down monsters of that player included).
+            if (EquipLocksAndLeaveFieldRuntime.OnlyEquippedHostMayBeAttacked(engine, monster)) return true;
             // A Feint Plan: neither player can attack face-down monsters this turn.
             // Face-down targets are otherwise never ContinuousCannotBeAttackTarget hosts.
             if (!monster.FaceUp)
@@ -24,13 +27,15 @@ namespace WRLDZ.Duel.TextEffects
                 var atk = engine?.TurnPlayer;
                 return atk != null && atk.CannotAttackFaceDownMonstersThisTurn;
             }
-            if (monster.IsNegated) return false;
-            foreach (var c in ClausesOn(monster, EffectActionKind.CannotBeAttackTarget))
-            {
-                if (c.ExceptThisCard) continue;
-                if (ConditionMet(engine, c))
-                    return true;
-            }
+            // Its own "cannot be attacked" needs its effects; another monster's field rule (Marauding Captain, Amazoness
+            // Tiger: EFFECT_CANNOT_SELECT_BATTLE_TARGET of the source) does not care whether this one is negated.
+            if (!monster.IsNegated)
+                foreach (var c in ClausesOn(monster, EffectActionKind.CannotBeAttackTarget))
+                {
+                    if (c.ExceptThisCard) continue;
+                    if (ConditionMet(engine, c))
+                        return true;
+                }
 
             foreach (var src in FaceUpMonsters(engine))
             {
@@ -49,6 +54,10 @@ namespace WRLDZ.Duel.TextEffects
                                 StringComparison.OrdinalIgnoreCase))
                             continue;
                     }
+                    // SummonLocksAndStatRules batch — Amazoness Tiger: face-up "Amazoness" monsters, except this one.
+                    if (!string.IsNullOrEmpty(c.NamedCard) && c.NamedCardIsSeries &&
+                        !SummonLocksAndStatRulesRuntime.IsSeriesMember(monster, c.NamedCard))
+                        continue;
                     return true;
                 }
             }
@@ -96,6 +105,11 @@ namespace WRLDZ.Duel.TextEffects
                 if (FilterMatches(c.UnaffectedByFilter, source.Def))
                     return true;
             }
+
+            // UnionRiders batch (v175): Metallizing Parasite - Lunatite — its equipped monster is unaffected by the
+            // opponent's Spell effects.
+            if (UnionRidersRuntime.ShieldsFromOpponentSpell(engine, victim, source))
+                return true;
 
             return false;
         }

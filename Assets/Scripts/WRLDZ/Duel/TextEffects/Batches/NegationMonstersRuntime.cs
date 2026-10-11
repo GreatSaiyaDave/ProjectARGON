@@ -121,6 +121,21 @@ namespace WRLDZ.Duel.TextEffects
                 }
             }
 
+            // DcrEquipSpells batch: Rod of Silence - Kay'est — a face-up Equip Spell covers the monster it is equipped to
+            // (Lua e5 EVENT_CHAIN_SOLVING: re:IsSpellEffect(), a card target, CHAININFO_TARGET_CARDS contain
+            // GetEquipTarget()). "Other" Spell effects: never its own.
+            foreach (var (protector, clause, host, holder) in DcrEquipSpellsRuntime.EquipTargetNegators(engine))
+            {
+                if (ReferenceEquals(card, protector) && clause.ExceptThisCard) continue;
+                if (clause.NegateRespondsToSpell && !def.IsSpell) continue;
+                if (clause.NegateRespondsToTrap && !def.IsTrap) continue;
+                if (!clause.NegateRespondsToSpell && !clause.NegateRespondsToTrap) continue;
+                var covered = targets.FirstOrDefault(t => ReferenceEquals(t, host));
+                if (covered == null) continue;
+                Negate(engine, link, holder, protector, covered);
+                return true;
+            }
+
             return false;
         }
 
@@ -210,6 +225,19 @@ namespace WRLDZ.Duel.TextEffects
                         if (!doomed.Exists(d => ReferenceEquals(d.card, st))) doomed.Add((st, protector, side));
                     }
                 }
+            }
+
+            // DcrEquipSpells batch: Rod of Silence - Kay'est (Lua e4 EFFECT_DISABLE + e6 EFFECT_SELF_DESTROY, s.distg: another
+            // Spell whose card target is the equipped monster).
+            foreach (var (protector, clause, host, holder) in DcrEquipSpellsRuntime.EquipTargetNegators(engine))
+            foreach (var other in new[] { engine.Player, engine.Opponent })
+            foreach (var st in other.SpellTrapsOnField())
+            {
+                if (st?.Def == null || !st.FaceUp || ReferenceEquals(st, protector) || !ReferenceEquals(st.EquippedTo, host) ||
+                    !IsLastingTargetCard(st))
+                    continue;
+                if (clause.NegateRespondsToSpell ? !st.Def.IsSpell : !st.Def.IsTrap) continue;
+                if (!doomed.Exists(d => ReferenceEquals(d.card, st))) doomed.Add((st, protector, holder));
             }
 
             if (doomed.Count == 0) return;
@@ -458,8 +486,7 @@ namespace WRLDZ.Duel.TextEffects
                         // Twin-Headed Wolf: this card battled; the destroyed monster is of the printed card type; while
                         // you control another face-up monster of the named Type.
                         if (!ReferenceEquals(m, battler)) continue;
-                        if (!string.IsNullOrEmpty(c.TargetCardKind) &&
-                            (other.Def.type ?? "").IndexOf(c.TargetCardKind, StringComparison.OrdinalIgnoreCase) < 0)
+                        if (!string.IsNullOrEmpty(c.TargetCardKind) && !MatchesCardKind(other, c.TargetCardKind))
                             continue;
                         if (!string.IsNullOrEmpty(c.CountRaceFilter) &&
                             !side.MonstersOnField().Any(o => o != null && o.FaceUp &&
@@ -476,7 +503,22 @@ namespace WRLDZ.Duel.TextEffects
                 }
             }
 
-            return null;
+            // DcrEquipSpells batch: Wicked-Breaking Flamberge - Baou, an Equip Card on the battling monster (EVENT_BATTLED in
+            // its SZONE: the equipped monster's battle target, an Effect Monster destroyed by that battle).
+            return DcrEquipSpellsRuntime.EquipBattleNegator(engine, battler, other);
+        }
+
+        /// <summary>
+        /// The printed card kind of a battle-negation clause: "Flip" (Twin-Headed Wolf, Harpie Lady 2) reads the card type
+        /// line; "Effect" (Ultimate Obedient Fiend, DamageStepRules batch; ygopro TYPE_EFFECT) is any monster with an effect —
+        /// Flip, Spirit, Toon, Union, Ritual and Fusion effect monsters included — never a Normal Monster or a Token.
+        /// </summary>
+        static bool MatchesCardKind(CardInstance card, string kind)
+        {
+            if (card?.Def == null) return false;
+            if (string.Equals(kind, "Effect", StringComparison.OrdinalIgnoreCase))
+                return card.Def.IsEffectMonster && !card.IsToken;
+            return (card.Def.type ?? "").IndexOf(kind, StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         /// <summary>

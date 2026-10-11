@@ -879,6 +879,20 @@ namespace WRLDZ.Duel
             CardInstance exceptCard = null,
             bool specialSummonFromGy = false)
         {
+            var list = CollectLegalTargetsUnshielded(engine, who, kind, exceptCard, specialSummonFromGy);
+            // EquipLocksAndLeaveField batch: Metalsilver Armor — monsters the opponent's card effects cannot target
+            // (mirror of TextEffectRuntime.CollectTargets).
+            TextEffects.EquipLocksAndLeaveFieldRuntime.FilterLegacyTargets(engine, who, kind, list);
+            return list;
+        }
+
+        static List<CardInstance> CollectLegalTargetsUnshielded(
+            DuelEngine engine,
+            DuelistState who,
+            EffectTargetKind kind,
+            CardInstance exceptCard,
+            bool specialSummonFromGy)
+        {
             var list = new List<CardInstance>();
             if (engine == null || who == null || kind == EffectTargetKind.None)
                 return list;
@@ -1037,7 +1051,10 @@ namespace WRLDZ.Duel
                                     // SummonPromptsAndCosts batch (v163): a summon cost the activator cannot pay (Tyrant
                                     // Dragon's Tribute; mirror of TextEffectRuntime.CollectTargets).
                                     !TextEffects.SpecialSummonLegality.CanPaySummonCosts(engine, who, c,
-                                        TextEffects.SummonOrigin.Graveyard));
+                                        TextEffects.SummonOrigin.Graveyard) ||
+                                    // SummonLocksAndStatRules batch: Rivalry of Warlords — no face-up Special Summon of
+                                    // another Type (mirror of TextEffectRuntime.CollectTargets).
+                                    TextEffects.SummonLocksAndStatRulesRuntime.BlocksFaceUpSummon(engine, who, c, out _));
             // RuleLocks batch: Kycoo the Ghost Destroyer — its controller's opponent cannot banish a card from either GY,
             // so a compiled "banish" target in a GY is not legal for them (mirror of TextEffectRuntime.CollectTargets).
             TextEffects.RuleLocksRuntime.FilterGyBanishTargets(engine, who, exceptCard, list);
@@ -1318,6 +1335,10 @@ namespace WRLDZ.Duel
                             list.Add(h);
                     }
                 }
+
+                // ChainLinkAnswers batch: a Quick-Play Spell whose chain clause answers the last link (Jar Robber, My Body
+                // as a Shield) may also be activated from the hand during its controller's turn.
+                TextEffects.ChainLinkAnswersRuntime.CollectHandAnswers(engine, who, list);
             }
             if (timing == ResponseTiming.DamageCalculation)
             {
@@ -1522,7 +1543,10 @@ namespace WRLDZ.Duel
                     if (TextEffects.RedirectAndReplaceRuntime.SummonAnswerLostItsMonster(engine, summoned, cl))
                         return false;
                     return SummonWindowClauseLegal(cl[0], summoned, engine.PendingResponse?.Summoner,
-                        who);
+                               who) &&
+                           // FlipMassAndOpponentPicks batch: Pineapple Blast answers only its controller's own Normal
+                           // Summon while the opponent controls more monsters.
+                           TextEffects.FlipMassAndOpponentPicksRuntime.SummonAnswerLegal(engine, who, cl[0], summoned);
                 }
 
                 if (timing == ResponseTiming.DamageCalculation &&
@@ -1660,6 +1684,8 @@ namespace WRLDZ.Duel
             // A Continuous Spell/Trap's effects apply only once this Chain Link resolves.
             TextEffects.TurnNegationTrapsRuntime.MarkActivationOnChain(card, fromHand);
             PlaceFaceUpForActivation(engine, who, card, fromHand);
+            // SpellCounterSpenders batch: "Activate this card by placing 3 Spell Counters on it" (Pitch-Black Power Stone).
+            TextEffects.SpellCounterSpendersRuntime.PlaceOnActivation(engine, card, engine.Chain.Last);
             var kind = GetTargetKind(card);
             if (kind == EffectTargetKind.None)
             {
@@ -1752,6 +1778,9 @@ namespace WRLDZ.Duel
                 // resolves with nothing — no cost paid, no LP gained.
                 if (c.RequiresDiscardCost || c.RequiresSendOtherYouControl || c.RequiresSecondTarget ||
                     c.RequiresTributeCount > 0 ||
+                    // SpellCounterSpenders batch: "Remove N Spell Counters on/from your side of the field" is paid as the
+                    // card is activated, through the compiled cost picks (Mega Ton Magical Cannon, Miracle Restoring).
+                    c.RemoveSpellCountersOnYourSide > 0 ||
                     c.PickLowestAtk || c.PickHighestAtk || c.PickHighestDef ||
                     c.ForceAttackPosition || c.TakeControlOfTarget ||
                     c.Action == EffectActionKind.EquipThisToTarget ||
@@ -2208,6 +2237,11 @@ namespace WRLDZ.Duel
                     if (!TextEffects.NegationsAndGySummonsRuntime.AiWorthTributeNegation(cl,
                             engine.PendingResponse.ChainTarget))
                         continue;
+                    // ChainLinkAnswers batch: My Body as a Shield / Dramatic Rescue only to save the AI's own monster;
+                    // Spell Shield Type-8's Spell-send bullet only against an activation worth a card.
+                    if (!TextEffects.ChainLinkAnswersRuntime.AiWorthAnswer(engine, who, c, cl,
+                            engine.PendingResponse.ChainTarget))
+                        continue;
                     if (cl.PayHalfLpCost &&
                         (!TextEffects.SummonNegationRuntime.AiWillPayHalfLp(who) ||
                          !TextEffects.SummonNegationRuntime.AiWorthHalfLpNegation(
@@ -2261,6 +2295,10 @@ namespace WRLDZ.Duel
                 if (summoned != null &&
                     summoned.CurrentAtk >= AiHeuristicPolicy.TrapHoleMinAtk)
                     pick = legal.FirstOrDefault(c => c.CardId == TrapHole);
+                // FlipMassAndOpponentPicks batch: Pineapple Blast after the AI's own Normal Summon (only offered while
+                // the opponent controls more monsters; it only destroys theirs).
+                pick ??= legal.FirstOrDefault(c =>
+                    TextEffects.FlipMassAndOpponentPicksRuntime.AiWantsSummonAnswer(engine, who, c));
             }
             else if (engine.PendingResponse.Timing == ResponseTiming.SummonNegation)
             {
@@ -2737,6 +2775,10 @@ namespace WRLDZ.Duel
             var monsterFx = p.IsMonsterEffect;
             var resumeDc = p.AwaitingLpCost && p.ResumeDamageCalculation;
             var lpZero = p.AwaitingLpZeroConfirm;
+            // SpellCounterSpenders batch: the activation is undone, so the Spell Counters removed for it go back (checked
+            // here, while its unresolved Chain Link is still on the Chain).
+            if (!monsterFx)
+                TextEffects.SpellCounterSpendersRuntime.RefundOnCancel(engine, p);
             engine.ClearPendingActivation();
             if (lpZero)
                 engine.Chain.Clear();

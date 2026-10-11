@@ -108,6 +108,15 @@ namespace WRLDZ.Duel.Rules
             MfcSimpleSpellsBRegressionTests.Run(db, pDeck, aDeck, check);
             LpCachePoisoningRegressionTests.Run(db, pDeck, aDeck, check);
             SimpleTargetUtilityRegressionTests.Run(db, pDeck, aDeck, check);
+            DamageStepRulesRegressionTests.Run(db, pDeck, aDeck, check);
+            EquipLocksAndLeaveFieldRegressionTests.Run(db, pDeck, aDeck, check);
+            DcrEquipSpellsRegressionTests.Run(db, pDeck, aDeck, check);
+            SpellCounterSpendersRegressionTests.Run(db, pDeck, aDeck, check);
+            ChainLinkAnswersRegressionTests.Run(db, pDeck, aDeck, check);
+            FlipMassAndOpponentPicksRegressionTests.Run(db, pDeck, aDeck, check);
+            PhaseTriggersAndIgnitionCostsRegressionTests.Run(db, pDeck, aDeck, check);
+            UnionRidersRegressionTests.Run(db, pDeck, aDeck, check);
+            SummonLocksAndStatRulesRegressionTests.Run(db, pDeck, aDeck, check);
         }
     }
 }

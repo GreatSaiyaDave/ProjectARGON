@@ -215,7 +215,8 @@ namespace WRLDZ.Duel
                     engine.NotifyPublic();
                     return true;
                 }
-                engine.ReturnCardToHand(pick, by: who);
+                if (!TextEffects.ChainLinkAnswersRuntime.NegatesRegisteredMonsterTarget(engine, card, pick))
+                    engine.ReturnCardToHand(pick, by: who);
                 card.EffectUsedThisTurn = true;
                 engine.NotifyPublic();
                 return true;
@@ -282,7 +283,9 @@ namespace WRLDZ.Duel
                 engine.NotifyPublic();
                 return true;
             }
-            engine.ReturnCardToHand(resolved, by: who);
+            // ChainLinkAnswers batch: Chaos Command Magician negates a monster effect that targets only it.
+            if (!TextEffects.ChainLinkAnswersRuntime.NegatesRegisteredMonsterTarget(engine, card, resolved))
+                engine.ReturnCardToHand(resolved, by: who);
             card.EffectUsedThisTurn = true;
             engine.NotifyPublic();
             return true;
@@ -320,6 +323,8 @@ namespace WRLDZ.Duel
                     if (source != null &&
                         TextEffects.ContinuousProtections.TargetedEffectBlocked(engine, m, source))
                         continue;
+                    // EquipLocksAndLeaveField batch: Metalsilver Armor (the source's player cannot target it).
+                    if (TextEffects.EquipLocksAndLeaveFieldRuntime.ShieldedFromSource(engine, m, source)) continue;
                     list.Add(m);
                 }
             }
@@ -516,6 +521,8 @@ namespace WRLDZ.Duel
                                .OrderByDescending(t => t.CurrentAtk)
                                .FirstOrDefault()
                            ?? targets.OrderByDescending(t => t.CurrentAtk).First();
+                // ChainLinkAnswers batch: Chaos Command Magician negates a monster effect that targets only it.
+                if (TextEffects.ChainLinkAnswersRuntime.NegatesRegisteredMonsterTarget(engine, source, pick)) return;
                 engine.Log($"Man-Eater Bug destroys {pick.Name}!");
                 DestroyFieldMonster(engine, pick, source);
                 return;
@@ -552,6 +559,9 @@ namespace WRLDZ.Duel
                     return;
                 }
                 if (TextEffects.ContinuousProtections.TargetedEffectBlocked(engine, m, source))
+                    return;
+                // EquipLocksAndLeaveField batch: Metalsilver Armor (the source's player cannot target it).
+                if (TextEffects.EquipLocksAndLeaveFieldRuntime.ShieldedFromSource(engine, m, source))
                     return;
 
                 targets.Add(m);
@@ -619,6 +629,8 @@ namespace WRLDZ.Duel
             switch (kind)
             {
                 case EffectTargetKind.AnyMonsterOnField:
+                    // ChainLinkAnswers batch: Chaos Command Magician negates a monster effect that targets only it.
+                    if (TextEffects.ChainLinkAnswersRuntime.NegatesRegisteredMonsterTarget(engine, source, target)) break;
                     engine.Log($"{source?.Name ?? "Man-Eater Bug"} destroys {target.Name}!");
                     DestroyFieldMonster(engine, target, source);
                     break;
@@ -696,6 +708,8 @@ namespace WRLDZ.Duel
             switch (kind)
             {
                 case EffectTargetKind.AnyMonsterOnField:
+                    // ChainLinkAnswers batch: Chaos Command Magician negates a monster effect that targets only it.
+                    if (TextEffects.ChainLinkAnswersRuntime.NegatesRegisteredMonsterTarget(engine, p.Card, target)) break;
                     engine.Log($"Man-Eater Bug destroys {target.Name}!");
                     DestroyFieldMonster(engine, target, p.Card);
                     break;

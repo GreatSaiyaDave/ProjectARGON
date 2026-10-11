@@ -295,7 +295,7 @@ namespace WRLDZ.Duel.TextEffects
             // EquipByEffectLimit) only stays on its own host, even when it is a Union.
             if (equip.IsEquipSpellWithGrantedEffectOnly) return false;
             if (equip.Def.IsMonster)
-                return UnionLimitAllows(equip, monster);
+                return UnionLimitAllows(engine, equip, monster);
 
             var clause = EquipClauseOf(equip);
             if (clause == null) return false;
@@ -326,11 +326,14 @@ namespace WRLDZ.Duel.TextEffects
         /// A monster acting as an Equip Card: a Union may move to another monster its Union text names; every other
         /// one (Kiseitai, an absorbed monster) only stays on its own host.
         /// </summary>
-        static bool UnionLimitAllows(CardInstance equip, CardInstance monster)
+        static bool UnionLimitAllows(DuelEngine engine, CardInstance equip, CardInstance monster)
         {
             if (equip.AbsorbedBy != null) return false;
             // Union (AdvancedEffectTemplates RxUnionEither): EquipThisToTarget naming its host (Lua UnionLimit f).
             var union = EquipClauseOf(equip);
+            // UnionRiders batch (v175): Lunatite names no host — any face-up monster its controller controls.
+            if (union != null && union.UnionEquipsAnyFaceUpMonster)
+                return UnionRidersRuntime.AnyHostAllows(engine, union, equip, monster);
             if (union == null || string.IsNullOrEmpty(union.EquipHostName)) return false;
             return monster.IsNamed(union.EquipHostName);
         }

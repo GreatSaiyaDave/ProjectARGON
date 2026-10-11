@@ -146,11 +146,23 @@ namespace WRLDZ.Duel.Rules
                     Shape(prog));
             }
 
+            // SpellCounterSpenders batch: Pitch-Black Power Stone compiles whole; its "When the last Spell Counter(s) is
+            // removed from this card, destroy it" sentence is the continuous self-destruction, never a bare Destroy.
+            {
+                var prog = CardTextEffectCompiler.Compile(db.Get(PitchBlackPowerStone));
+                Check("Pitch-Black Power Stone: its \"When …\" sentence is a continuous self-destruction, not a bare action",
+                    prog != null && prog.FullyCompiled && !HasLeadTriggerClause(prog) &&
+                    !Has(prog, EffectActionKind.Destroy) &&
+                    prog.ClauseList.Exists(c => c != null && c.Timing == EffectTiming.ContinuousWhileFaceUp &&
+                                                c.Action == EffectActionKind.DestroyThisWhenLastSpellCounterRemoved),
+                    Shape(prog));
+            }
+
             // Stubs that went through the same fallbacks: the trigger sentence no longer compiles to a bare action.
             foreach (var (id, label) in new[]
                      {
                          (Seven, "\"7\""), (TheFirstSarcophagus, "The First Sarcophagus"),
-                         (PitchBlackPowerStone, "Pitch-Black Power Stone"), (GoblinFan, "Goblin Fan"),
+                         (GoblinFan, "Goblin Fan"),
                      })
             {
                 var def = db.Get(id);

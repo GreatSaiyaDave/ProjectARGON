@@ -473,6 +473,17 @@ The notes of earlier groups are in `~/.cache/wrldz-card-compile/*/patches/<Group
 - Residual: hand-to-Deck paths (shuffle the hand into the Deck) add plain ids, so a foreign card in a hand goes to the
   holder's Deck.
 
+### v175 shared hooks (card batch v175-mfc-dcr; all under `TextEffects/Batches/<Group>Runtime.cs`)
+- `DamageStepRulesRuntime`: `BeginBattle` / `EndBattle` (from `ContinueBeforeDamageCalculation`, `FinishDamageStep`), `FireEndOfDamageStep` (from `NotifyEndOfDamageStep`), `TryApplyDestroyAttacker`, `ReflectBattleDamage` (after the halving), `ApplyBoard`; piercing OR `TurnGrantsPiercing`; `BattleIndestructible` before `BattleMechanics.Calculate`; `NegationMonstersRuntime.MatchesCardKind` ("Effect" = any non-Token effect monster).
+- `EquipLocksAndLeaveFieldRuntime`: `FilterTargets` in `CollectTargets` + `SpellTrapEffects.CollectLegalTargets` wrapper (Metalsilver: use `ShieldedFromSource(source)` in every NEW own-pick candidate list), `ApplyEquippedLevelChange` (host-scoped `ContinuousReduceLevel`), `BanishHostWhenThisLeaves` in `UnlinkCardFromHostOnLeave`.
+- `DcrEquipSpellsRuntime`: `GrantsDirectAttack` / `ExtraAttacksAllowed` / `ChangeBattleDamage` (Equip grants, valid only while the Equip is face-up, equipped, un-negated), `TryAutoPick` for `AiEquipsOwnMonster`, `DiscardCostIsSend` (a send cost on `RequiresDiscardCost`), `ReturnToHand`.
+- `SpellCounterSpendersRuntime`: holder predicate `IsSpellCounterHolder` / `CanAddSpellCounter`, side-wide cost `RemoveSpellCountersOnYourSide` (`TryPayOneIgnitionPick`, `BeginSeatCost` / `TryPaySeatPick` / `RefundOnCancel` for response seats), `PlaceOnActivation` (`PlaceSpellCountersAsActivated`), `CollectHolderTargets` (filters `ShieldedFromSource`).
+- `ChainLinkAnswersRuntime`: `TryCanAnswer` / `TryActivateAnswer` / `TryResolveLink` (answers incl. hand Quick-Play via `CollectHandAnswers`, `AiWorthAnswer`), `CanAnswerChainLinkWithClause`, `NegatesRegisteredMonsterTarget` (Chaos Command Magician: call it from any inline targeted effect), `CostSendSpellsFromHandCount`; `NegateRequiresWouldDestroyMonsterOnField`.
+- `FlipMassAndOpponentPicksRuntime`: `ActivateFlipTargets` (untargeted FLIP picks taken at activation on a SEGOC Chain), `ActivateSentToGyTargets`, `TryActivationCondition` (`YourMainPhaseWithNamedFaceUp`), `SummonAnswerLegal`; `GainLifePoints` `ScaleAmountByFaceUpEffectMonsters`.
+- `PhaseTriggersAndIgnitionCostsRuntime`: `OnEndPhase` (from `FinishEndTurnAfterTriggers`), Mass Driver branches in `PerCountBurnsRuntime` face-up ignition hooks (`RequiresTributeCount`), `OppFaceUpTargets`, `SelfStatMonstersRuntime.ForbidsDirectAttack`.
+- `UnionRidersRuntime`: `TryCanActivate` / `TryActivate` (Union-state ignitions), `InUnionState`, `SummonableUnions`, timing `EquippedMonsterInflictsBattleDamage`; `HostAlreadyHasUnion` counts only Unions in Union state; `TryDestroyEquipInsteadOfBattle` substitutes for every compiled Union in Union state.
+- `SummonLocksAndStatRulesRuntime`: `BlocksFaceUpSummon(engine, ctrl, card)` (Rivalry, unique face-up rule; call it in any NEW summon candidate filter), `FilterTargets`, `Refresh`, `EndOfTurn`; `SpecialSummonLegality.CanBeSpecialSummoned(..., faceUp)` skips face-up-only rules for `faceUp: false`; `ContinuousProtections.CannotBeAttackTarget` supports `ExceptThisCard` + NamedCard series.
+
 ## 3. Tests
 
 - Location: `Rules/Batches/<Group>RegressionTests.cs` with
@@ -522,6 +533,13 @@ The notes of earlier groups are in `~/.cache/wrldz-card-compile/*/patches/<Group
 | Face-up Deck state | Per-copy face-up flags exist (`DeckCopyInfo.FaceUp`, v163), but no whole-Deck-reversed state or top-card display | Convulsion of Nature |
 | ~~Draw result / lone-monster win / mass send / forced attack~~ | **Closed v163** (`LastTurnRuntime` + `DuelEngine`): a card effect declares the DRAW (`EndReason.CardEffect`, `DuelEngine` 2494-2499), the End Phase lone-monster check (`LastTurnRuntime.OnEndPhase`, 6501), the field+hands mass send, and the forced battle (`DuelEngine.ForceAttack` / `EndForcedBattle`, 5542-5574). Left over: no *natural* DRAW result when both players reach 0 LP in the same damage step — that is a rules question, not a card gap. | (none — Last Turn is Implemented) |
 | Card-name declaration (extends the picker row) | Also needs an information lock ("cannot check the GY") | Dark Designator, Question |
+| Phase jump ("it becomes the End Phase") | No gated transition points (Draw->Standby, Standby->Main1, post-Chain idle, end of Damage Step) and no Battle Phase termination; `EndTurn` is safe only from an idle Main/Battle Phase | Neko Mane King |
+| Second target filtered by the first (Union bullet) + Union-in-S/T zone | Spell/Trap target paths support one target or independent groups; no "Union in Union state in your S/T Zone" zone in both target mirrors | Formation Union |
+| Max-monster-zone cap (EFFECT_MAX_MZONE) | ~58 `FirstEmpty` placement/legality sites carry neither placing player nor reason; no forced-Tribute hook for EFFECT_UNRELEASABLE_SUM | Kaiser Colosseum |
+| Must-attack obligation (EFFECT_MUST_ATTACK) | Only `MustAttackDirectlyThisTurn` restricts targets; nothing stops leaving the Battle Phase (DuelUI End Battle / End Turn must refuse) and SimpleAi has no forced-attack duty | Amazoness Archers, Diffusion Wave-Motion, Staunch Defender |
+| Copy another card's effect | No path resolves another card's compiled program as the activator's own link | Double Spell |
+| Standby Phase window for a Set Normal Trap | `ResponseTiming` has no Standby window; `StandbyPause` holds only the turn player's upkeeps | Thunder of Ruler |
+| Simultaneous hidden pick + reveal (UI) | extends "Revealed-hand state" | Ante |
 
 Open residuals (fail-soft, not fixed):
 - Tribute, discard and banish cost paths still fire optional "When" GY effects of the cost card inline.
@@ -551,6 +569,7 @@ Open residuals (fail-soft, not fixed):
   multi-step (placement, LP choice, queued Inspection) — move one onto `AskCardPick` only with a test proving it unchanged.
 - Cancel at a monster ignition's target pick after a Tribute / banish / send cost (Exiled Force, Freed the Brave
   Wanderer) drops the link but keeps that cost paid (only discards and LP are refunded).
+- v175 audit residuals: Physical Double ignores Rivalry of Warlords in its target check (Token summon refused, no soft-lock); `AiEquipsOwnMonster` `|| ` arm in the FieldAnyMonster `AutoPick` case is dead (DcrEquipSpells `TryAutoPick` runs first); two send-from-hand cost primitives (`DiscardCostIsSend`, `CostSendSpellsFromHandCount`) and `PayChainDiscard` ignores the former; `ReflectBattleDamage` before `ChangeBattleDamage` not checked against ocgcore; My Body as a Shield ignores `ExceptThisCard`; Union-state ignitions resolve with no opponent chain window.
 
 
 ---------------------------------------------------------------------------------------------------------------------

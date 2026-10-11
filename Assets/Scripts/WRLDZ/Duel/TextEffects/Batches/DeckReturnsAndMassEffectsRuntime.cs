@@ -447,6 +447,8 @@ namespace WRLDZ.Duel.TextEffects
                         continue;
                     if (engine.IsDragonTargetProtected(m)) continue;
                     if (ContinuousProtections.TargetedEffectBlocked(engine, m, source)) continue;
+                    // EquipLocksAndLeaveField batch: Metalsilver Armor (the activator cannot target it).
+                    if (EquipLocksAndLeaveFieldRuntime.ShieldedFromTargeting(engine, who, m)) continue;
                     list.Add(m);
                 }
             }

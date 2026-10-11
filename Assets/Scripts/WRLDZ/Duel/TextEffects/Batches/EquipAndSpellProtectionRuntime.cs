@@ -296,6 +296,13 @@ namespace WRLDZ.Duel.TextEffects
 
         static void Fire(DuelEngine engine, DuelistState who, CardInstance card, EffectClause c)
         {
+            // DcrEquipSpells batch: Butterfly Dagger - Elma — "You can return this card to the hand".
+            if (c.Action == EffectActionKind.ReturnThisFromGyToHand)
+            {
+                DcrEquipSpellsRuntime.FireReturnThisToHand(engine, who, card, c);
+                return;
+            }
+
             List<CardInstance> candidates;
             string prompt;
             if (c.Action == EffectActionKind.DiscardChosenFromHand)

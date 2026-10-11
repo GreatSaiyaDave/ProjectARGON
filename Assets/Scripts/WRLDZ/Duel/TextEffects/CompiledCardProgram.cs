@@ -192,6 +192,21 @@ namespace WRLDZ.Duel.TextEffects
         /// and fires this timing on the equip card.
         /// </summary>
         EquippedMonsterDestroysByBattle,
+        /// <summary>
+        /// UnionRiders batch (v175): a Union in its Union state (equipped by its own Union effect, not absorbed) whose
+        /// equipped monster just inflicted battle damage to the Union controller's opponent (ygopro EVENT_BATTLE_DAMAGE,
+        /// SetRange(LOCATION_SZONE), aux.IsUnionState, eg:GetFirst()==GetEquipTarget(); Burning Beast c59364406,
+        /// Freezing Beast c85359414). Fired by <see cref="UnionRidersRuntime.FireEquippedMonsterInflictedBattleDamage"/>.
+        /// Appended — EffectTiming is serialized as an int.
+        /// </summary>
+        EquippedMonsterInflictsBattleDamage,
+        /// <summary>
+        /// UnionRiders batch (v175): an ignition effect of a Union activated from the Spell &amp; Trap Zone while it is in
+        /// its Union state (ygopro EFFECT_TYPE_IGNITION, SetRange(LOCATION_SZONE), aux.IsUnionState; Kiryu c84814897,
+        /// Second Goblin c19086954). Activated by tapping the equipped Union; when its own unequip is also usable the
+        /// player chooses (<see cref="UnionRidersRuntime.TryActivate"/>). Appended — EffectTiming is serialized as an int.
+        /// </summary>
+        UnionStateIgnition,
     }
 
     public enum EffectActionKind
@@ -2321,6 +2336,254 @@ namespace WRLDZ.Duel.TextEffects
         /// of the card, and survives this card leaving the field.
         /// </summary>
         ForbidBattlePhaseThisTurn,
+        /// <summary>
+        /// DamageStepRules batch — Ultimate Obedient Fiend (<see cref="EffectTiming.ContinuousWhileFaceUp"/>): this card
+        /// cannot attack while its controller has more than 1 card on the field or any card in hand (ygopro c32240937
+        /// EFFECT_CANNOT_ATTACK, condition GetFieldGroupCount(LOCATION_ONFIELD) &gt; 1 or LOCATION_HAND &gt; 0). Read by
+        /// <see cref="DamageStepRulesRuntime.AttackForbidden"/> (DuelEngine.ContinuousCannotAttackBlocks).
+        /// </summary>
+        CannotAttackUnlessOnlyCardOnFieldAndEmptyHand,
+        /// <summary>
+        /// DamageStepRules batch — Meteorain (<see cref="EffectTiming.Activate"/>, your turn only): for the rest of this
+        /// turn every monster its controller controls inflicts piercing battle damage (ygopro c64274292: a player
+        /// EFFECT_PIERCE, LOCATION_MZONE,0, RESET_PHASE|PHASE_END). Stamped by
+        /// <see cref="DamageStepRulesRuntime.GrantTurnPiercing"/>, read by <see cref="DamageStepRulesRuntime.TurnGrantsPiercing"/>.
+        /// </summary>
+        YourMonstersGainPiercingThisTurn,
+        /// <summary>
+        /// DamageStepRules batch — Kishido Spirit (<see cref="EffectTiming.ContinuousWhileFaceUp"/>, a Continuous Spell):
+        /// monsters its controller controls cannot be destroyed by battle with a monster whose ATK equals theirs
+        /// (ygopro c60519422 EFFECT_INDESTRUCTABLE_BATTLE, value: the battling monster's ATK equals this monster's).
+        /// Read at damage calculation by <see cref="DamageStepRulesRuntime.BattleIndestructible"/>.
+        /// </summary>
+        CannotBeDestroyedByBattleWithEqualAtkMonster,
+        /// <summary>
+        /// DamageStepRules batch — Cat's Ear Tribe (<see cref="EffectTiming.ContinuousWhileFaceUp"/>): during the
+        /// opponent's turn, while this card is the attack target, the original ATK of the opponent's monster it battles
+        /// becomes <see cref="EffectClause.Amount"/> during the Damage Step (ygopro c95841282 EFFECT_SET_BASE_ATTACK,
+        /// PHASE_DAMAGE / PHASE_DAMAGE_CAL). Applied and restored by <see cref="DamageStepRulesRuntime"/>
+        /// (CardInstance.OriginalAtkOverride, so the attacker's other modifiers still apply on top).
+        /// </summary>
+        OpponentBattlerOriginalAtkBecomesAmountDuringDamageStep,
+        /// <summary>
+        /// DamageStepRules batch — Amazoness Swords Woman (<see cref="EffectTiming.ContinuousWhileFaceUp"/>): the battle
+        /// damage its controller would take from battles involving this card is taken by the opponent instead (ygopro
+        /// c94004268 EFFECT_REFLECT_BATTLE_DAMAGE). Applied at damage calculation by
+        /// <see cref="DamageStepRulesRuntime.ReflectBattleDamage"/>.
+        /// </summary>
+        ReflectControllerBattleDamageFromBattlesInvolvingThis,
+        /// <summary>
+        /// EquipLocksAndLeaveField batch — Raregold Armor (c7625614, EFFECT_CANNOT_SELECT_BATTLE_TARGET, target range
+        /// (0, LOCATION_MZONE)): while this Equip Card's controller controls the equipped monster, the opponent's monsters
+        /// cannot select any other monster as an attack target. Direct attacks are not restricted. Continuous, read by
+        /// <see cref="ContinuousProtections.CannotBeAttackTarget"/> through
+        /// <see cref="EquipLocksAndLeaveFieldRuntime.OnlyEquippedHostMayBeAttacked"/>.
+        /// </summary>
+        OpponentCannotAttackOtherThanEquippedHost,
+        /// <summary>
+        /// EquipLocksAndLeaveField batch — Metalsilver Armor (c33114323, EFFECT_CANNOT_BE_EFFECT_TARGET with aux.tgoval,
+        /// ranges Monster Zone + GY + banished on both sides): while this Equip Card's controller controls the equipped
+        /// monster, every other monster (face-down ones in a Monster Zone too; face-up only when banished) cannot be
+        /// targeted by the opponent's card effects. Continuous, read by
+        /// <see cref="EquipLocksAndLeaveFieldRuntime.ShieldedFromTargeting"/> when targets are chosen (both target
+        /// mirrors and the other target lists).
+        /// </summary>
+        OpponentCannotTargetMonstersExceptEquippedHost,
+        /// <summary>
+        /// DcrEquipSpells batch — Shooting Star Bow - Ceal (ContinuousWhileFaceUp marker on an Equip Spell, ygopro
+        /// EFFECT_TYPE_EQUIP + EFFECT_DIRECT_ATTACK): the equipped monster can attack directly. The grant is the Equip
+        /// Card's effect, so the monster's own negation does not remove it; a negated or face-down Equip Card gives
+        /// nothing. Read by DuelEngine.GrantsDirectAttack through <see cref="DcrEquipSpellsRuntime.GrantsDirectAttack"/>.
+        /// </summary>
+        EquippedCanAttackDirectly,
+        /// <summary>
+        /// DcrEquipSpells batch — Twin Swords of Flashing Light - Tryce (ContinuousWhileFaceUp marker, ygopro
+        /// EFFECT_TYPE_EQUIP + EFFECT_EXTRA_ATTACK, value <see cref="EffectClause.Amount"/>): the equipped monster can make
+        /// that many more attacks during each Battle Phase. Read by DuelEngine.ExtraAttacksAllowed through
+        /// <see cref="DcrEquipSpellsRuntime.ExtraAttacks"/> (the Equip Card's effect: kept while the monster is negated).
+        /// </summary>
+        EquippedGainsExtraAttacks,
+        /// <summary>
+        /// DcrEquipSpells batch — Rod of the Mind's Eye (ContinuousWhileFaceUp marker, ygopro EFFECT_TYPE_EQUIP +
+        /// EFFECT_CHANGE_BATTLE_DAMAGE, aux.ChangeBattleDamage(1, N)): battle damage the equipped monster inflicts to the
+        /// opponent of this Equip Card's controller becomes <see cref="EffectClause.Amount"/>. Damage to the Equip's own
+        /// controller, and no damage at all, stay as they are. Read at the battle-damage site
+        /// (<see cref="DcrEquipSpellsRuntime.ChangeBattleDamage"/>).
+        /// </summary>
+        EquippedBattleDamageToOpponentBecomes,
+        /// <summary>
+        /// DcrEquipSpells batch — Butterfly Dagger - Elma (<see cref="EffectTiming.SentFromFieldToGy"/>, with
+        /// <see cref="EffectClause.RequiresDestroyedByEffectWhileEquipped"/> and <see cref="EffectClause.IsOptional"/>):
+        /// "You can return this card to the hand" — this card, still in the GY, is added to its owner's hand
+        /// (<see cref="DcrEquipSpellsRuntime.FireReturnThisToHand"/>).
+        /// </summary>
+        ReturnThisFromGyToHand,
+        /// <summary>
+        /// SpellCounterSpenders batch — Magical Plant Mandragola (FLIP, ygopro c7802006): place
+        /// <see cref="EffectClause.Amount"/> Spell Counter on each face-up card on the field that can hold one
+        /// (Lua IsCanAddCounter; <see cref="SpellCounterSpendersRuntime.CanAddSpellCounter"/>). No target.
+        /// </summary>
+        PlaceSpellCounterOnEachFaceUpHolder,
+        /// <summary>
+        /// SpellCounterSpenders batch — Apprentice Magician (ygopro c9156135): place <see cref="EffectClause.Amount"/>
+        /// Spell Counter on the chosen target (zone <see cref="EffectZoneFilter.FieldFaceUpSpellCounterHolders"/>), if it
+        /// is still face-up on the field and can hold it.
+        /// </summary>
+        PlaceSpellCounterOnTarget,
+        /// <summary>
+        /// SpellCounterSpenders batch — Apprentice Magician (ygopro c9156135 e4, TRIGGER_O on EVENT_BATTLE_DESTROYED):
+        /// "You can Special Summon 1 Level N or lower X monster from your Deck in face-down Defense Position"
+        /// (<see cref="EffectClause.Amount"/> = the Level cap, <see cref="EffectClause.RaceFilter"/> = the Type). The
+        /// controller picks the monster (Cancel declines); the AI takes the best one. The opponent is shown it.
+        /// </summary>
+        SpecialSummonLevelRaceFromDeckFaceDownDefense,
+        /// <summary>
+        /// SpellCounterSpenders batch — Armor Exe (ygopro c7180418 e4, FIELD+CONTINUOUS on each Standby Phase,
+        /// EFFECT_FLAG_CANNOT_DISABLE): remove 1 Spell Counter from a card on its controller's side of the field, or
+        /// destroy this card (the controller may decline). A maintenance cost, not a Chain Link; it applies while negated.
+        /// </summary>
+        RemoveSpellCounterOnYourSideOrDestroyThis,
+        /// <summary>
+        /// SpellCounterSpenders batch — Pitch-Black Power Stone (ygopro c34029630 e3, QUICK_O from the Spell &amp; Trap
+        /// Zone, once per turn, only during its controller's turn): remove 1 Spell Counter from this card and place 1
+        /// on the target (another face-up card that can hold one). <see cref="FaceUpQuickEffectsRuntime"/>.
+        /// </summary>
+        MoveSpellCounterFromThisToTarget,
+        /// <summary>
+        /// SpellCounterSpenders batch — Pitch-Black Power Stone (ygopro c34029630 e4, EFFECT_SELF_DESTROY while it has
+        /// no Spell Counter): "When the last Spell Counter(s) is removed from this card, destroy it." ContinuousWhileFaceUp,
+        /// no Chain Link; checked on every board refresh by <see cref="SpellCounterSpendersRuntime.SweepSelfDestroy"/>.
+        /// </summary>
+        DestroyThisWhenLastSpellCounterRemoved,
+        /// <summary>
+        /// ChainLinkAnswers batch — Jar Robber (<see cref="EffectTiming.ChainLinkActivated"/>, ygopro c33784505
+        /// EVENT_CHAINING): answers only the activation of the card named <see cref="EffectClause.NamedCard"/> (either
+        /// player's). Its link negates the EFFECT of that activation (Duel.NegateEffect, not NegateActivation: the card
+        /// still resolves, with no effect, and goes to the GY) and, if it did, its controller draws
+        /// <see cref="EffectClause.Amount"/> card(s). Runtime: <see cref="ChainLinkAnswersRuntime"/>.
+        /// </summary>
+        NegateEffectOfNamedActivationThenDraw,
+        /// <summary>
+        /// ChainLinkAnswers batch — Chaos Command Magician (<see cref="EffectTiming.ContinuousWhileFaceUp"/> marker, ygopro
+        /// c72630549 EVENT_CHAIN_SOLVING): while this card is face-up on the field, a monster effect whose only card target
+        /// is this card is negated as it resolves (no destroy). Read at chain resolution and when an untargeted-chain
+        /// monster effect applies its clause (<see cref="ChainLinkAnswersRuntime.NegateResolvingLinkTargetingOnlyThis"/>,
+        /// <see cref="ChainLinkAnswersRuntime.NegatesTargetingMonsterClause"/>).
+        /// </summary>
+        NegateMonsterEffectsThatTargetOnlyThis,
+        /// <summary>
+        /// ChainLinkAnswers batch — Dramatic Rescue (<see cref="EffectTiming.ChainLinkActivated"/>, ygopro c80193355
+        /// EVENT_BECOME_TARGET): answers a Spell/Trap Card activation or a monster effect that targets a face-up monster
+        /// of the series <see cref="EffectClause.NamedCard"/> on the field (either player's). Resolution: that monster
+        /// returns to its owner's hand, then its controller Special Summons 1 other monster from their hand.
+        /// </summary>
+        ReturnTargetedSeriesMonsterThenSpecialSummonFromHand,
+        /// <summary>
+        /// FlipMassAndOpponentPicks batch — Dark Cat with White Tail: FLIP, target <see cref="EffectClause.OpponentTargetCount"/>
+        /// monsters the opponent controls and <see cref="EffectClause.ControllerTargetCount"/> you control (chosen as the
+        /// effect activates; without both groups no targets and no effect); return them to their owners' hands.
+        /// </summary>
+        ReturnOpponentAndOwnTargetsToOwnersHands,
+        /// <summary>
+        /// FlipMassAndOpponentPicks batch — Huge Revolution: send every card in the opponent's hand to the GY and destroy
+        /// every card they control.
+        /// </summary>
+        SendOpponentHandToGyAndDestroyAllOpponentCards,
+        /// <summary>
+        /// FlipMassAndOpponentPicks batch — Magical Merchant: excavate from the top of your Deck until a Spell/Trap, add it
+        /// to the hand, send the cards above it to the GY (none: reveal the Deck and shuffle it).
+        /// </summary>
+        ExcavateUntilSpellTrapAddItSendRestToGy,
+        /// <summary>
+        /// FlipMassAndOpponentPicks batch — Pixie Knight: the controller's OPPONENT targets 1 Spell in the controller's GY;
+        /// it goes on top of the controller's Deck.
+        /// </summary>
+        OpponentPlacesSpellFromYourGyOnTopOfYourDeck,
+        /// <summary>
+        /// FlipMassAndOpponentPicks batch — Pineapple Blast: destroy the opponent's monsters so they control as many as you;
+        /// the opponent chooses which of their monsters are destroyed.
+        /// </summary>
+        DestroyOpponentMonstersToMatchYourCountOpponentChooses,
+        /// <summary>
+        /// FlipMassAndOpponentPicks batch — Dimension Jar: the turn player, then the other player, can each banish up to
+        /// <see cref="EffectClause.Amount"/> monsters from their opponent's GY.
+        /// </summary>
+        EachPlayerMayBanishUpToMonstersFromOpponentGy,
+        /// <summary>
+        /// PhaseTriggersAndIgnitionCosts batch — Amazoness Blowpiper: a mandatory trigger in each of its controller's own
+        /// Standby Phases (once): target 1 face-up monster the opponent controls; it loses Amount ATK until the end of
+        /// this turn (PhaseTriggersAndIgnitionCostsRuntime.ResolveStandbyAtkLoss; the pick holds the Standby Phase).
+        /// </summary>
+        TargetOppFaceUpLosesAtkAtYourStandby,
+        /// <summary>
+        /// PhaseTriggersAndIgnitionCosts batch — Helping Robo for Combat: draw Amount card(s); then (if it drew) its
+        /// controller places 1 card from the hand on the bottom of the Deck (PhaseTriggersAndIgnitionCostsRuntime.DrawThenBottom).
+        /// </summary>
+        DrawThenPlaceHandCardOnDeckBottom,
+        /// <summary>
+        /// PhaseTriggersAndIgnitionCosts batch — Senri Eye: an optional trigger in each of its controller's own Standby
+        /// Phases (once): pay Amount LP (cost) to look at the top card of the opponent's Deck; it stays where it is.
+        /// </summary>
+        PayLpLookAtOpponentTopDeckCardAtYourStandby,
+        /// <summary>
+        /// PhaseTriggersAndIgnitionCosts batch — Magical Scientist: Special Summon 1 Fusion Monster of Level Amount or
+        /// lower from the Extra Deck in face-up Attack or Defense Position (not a Fusion Summon); it cannot attack
+        /// directly, and is returned to the Extra Deck in this turn's End Phase.
+        /// </summary>
+        SpecialSummonFusionFromExtraNoDirectAttackReturnAtEndPhase,
+        /// <summary>
+        /// PhaseTriggersAndIgnitionCosts batch — Roulette Barrel: roll a six-sided die twice, choose 1 of the results
+        /// (no choice when both are equal), then destroy 1 face-up monster on the field whose Level equals it (not a target).
+        /// </summary>
+        RollTwoDiceChooseOneDestroyFaceUpMonsterWithThatLevel,
+        /// <summary>
+        /// PhaseTriggersAndIgnitionCosts batch — Physical Double: Special Summon 1 Token (<see cref="EffectClause.TokenName"/>)
+        /// whose Level, Type, Attribute, ATK and DEF are the target's current ones; it is destroyed in this turn's End Phase.
+        /// </summary>
+        SpecialSummonTokenCopyingTargetDestroyAtEndPhase,
+        /// <summary>
+        /// UnionRiders batch (v175) — Kiryu (c84814897 e3), on <see cref="EffectTiming.UnionStateIgnition"/>: cost, Tribute
+        /// this card (it is in the Spell &amp; Trap Zone); the monster it was equipped to (remembered before the cost, Lua
+        /// SetTargetCard without CARD_TARGET) can attack directly this turn if it is still a face-up monster on the field.
+        /// </summary>
+        TributeThisSoEquippedMonsterAttacksDirectly,
+        /// <summary>
+        /// UnionRiders batch (v175) — Second Goblin (c19086954 e1), on <see cref="EffectTiming.UnionStateIgnition"/>, once
+        /// per turn: change the equipped monster between face-up Attack and face-up Defense Position.
+        /// </summary>
+        ChangeEquippedMonsterBattlePosition,
+        /// <summary>
+        /// UnionRiders batch (v175) — Metallizing Parasite - Lunatite (c7369217 e1, EFFECT_IMMUNE_EFFECT with
+        /// aux.IsUnionState): while this Union is in its Union state, the equipped monster is unaffected by the effects of
+        /// Spell Cards controlled by this card's controller's opponent (<see cref="UnionRidersRuntime.ShieldsFromOpponentSpell"/>).
+        /// </summary>
+        EquippedUnaffectedByOpponentSpellEffects,
+        /// <summary>
+        /// UnionRiders batch (v175) — Union Rider (c11743119): target 1 face-up Union Monster the opponent controls; take
+        /// control of it and equip it to this card. The equipped Union is not in its Union state (it cannot use its own
+        /// unequip, its Union text does not apply) and goes to its owner's GY when it leaves the field.
+        /// </summary>
+        TakeControlOfOpponentUnionAndEquipToThis,
+        /// <summary>
+        /// UnionRiders batch (v175) — Combination Attack (c8964854): the target (a face-up monster that declared an attack
+        /// this turn, equipped with a Union in its Union state) — each such Union is Special Summoned to its controller's
+        /// field in face-up Attack or Defense Position (the activating player chooses); if any was, the target may attack
+        /// again this turn (EFFECT_EXTRA_ATTACK = its attacks declared this turn).
+        /// </summary>
+        SpecialSummonTargetsUnionsThenItAttacksAgain,
+        /// <summary>
+        /// SummonLocksAndStatRules batch — Amazoness Spellcaster: the first target (Zone) and the second target
+        /// (SecondZone) each get the other's original ATK until the End Phase (ygopro EFFECT_SET_BASE_ATTACK,
+        /// RESETS_STANDARD_PHASE_END), only if both are still face-up targets at resolution
+        /// (<see cref="SummonLocksAndStatRulesRuntime.ApplySwitchStep"/>).
+        /// </summary>
+        SwitchOriginalAtkOfTwoTargetsUntilEndOfTurn,
+        /// <summary>
+        /// SummonLocksAndStatRules batch — Rivalry of Warlords: while face-up, each player keeps the face-up monsters of
+        /// 1 Type (their choice) and sends the others to the GY (ygopro EVENT_ADJUST), and cannot Normal Summon, Flip
+        /// Summon or face-up Special Summon a monster of another Type (<see cref="SummonLocksAndStatRulesRuntime"/>).
+        /// </summary>
+        EachPlayerKeepsOneMonsterType,
     }
 
     public enum EffectSide
@@ -2500,6 +2763,20 @@ namespace WRLDZ.Duel.TextEffects
         /// SpellTrapEffects.MapCompiledTargetKind mirror leaves it None.
         /// </summary>
         ControllerDeckOrGyNamed,
+        /// <summary>
+        /// SpellCounterSpenders batch — "1 face-up card on the field that you can place a Spell Counter on" (Lua
+        /// IsFaceup + IsCanAddCounter(COUNTER_SPELL,1), LOCATION_ONFIELD on both sides; with
+        /// <see cref="EffectClause.ExceptThisCard"/>: "1 other …"). Text target path only (picker kind AnyCardOnField);
+        /// the legacy SpellTrapEffects.MapCompiledTargetKind mirror leaves it None.
+        /// </summary>
+        FieldFaceUpSpellCounterHolders,
+        /// <summary>
+        /// SummonLocksAndStatRules batch — Amazoness Spellcaster: a face-up monster the controller controls whose name
+        /// contains <see cref="EffectClause.NamedCard"/> (an archetype, <see cref="EffectClause.NamedCardIsSeries"/>).
+        /// Text target path only: CollectTargets (picker kind YourMonster); the legacy
+        /// SpellTrapEffects.MapCompiledTargetKind mirror leaves it None.
+        /// </summary>
+        ControllerFaceUpSeriesMonsters,
     }
 
     /// <summary>One parsed clause from official card text.</summary>
@@ -2997,6 +3274,8 @@ namespace WRLDZ.Duel.TextEffects
         /// <summary>
         /// ApplyLingeringAtkDef changes the monster this Equip Spell is equipped to
         /// (Stim-Pack / Germ Infection standby), not the Spell card.
+        /// EquipLocksAndLeaveField batch: on <see cref="EffectActionKind.ContinuousReduceLevel"/>, the Level change
+        /// applies only to the monster this Equip Card is equipped to (Demotion, EFFECT_TYPE_EQUIP + EFFECT_UPDATE_LEVEL).
         /// </summary>
         public bool AppliesToEquippedHost;
         /// <summary>
@@ -3696,6 +3975,80 @@ namespace WRLDZ.Duel.TextEffects
         /// monster keeps the grant if it is flipped face-up, turning it face-down ends it).
         /// </summary>
         public bool TakenMonsterCanAttackDirectlyThisTurn;
+
+        /// <summary>
+        /// EquipLocksAndLeaveField batch — Big Bang Shot (c61127349, e5 EVENT_LEAVE_FIELD single continuous): when this
+        /// Equip Card leaves the field for any reason while it is still equipped, the monster it was equipped to is
+        /// banished face-up by this card's effect (<see cref="DuelEngine"/> UnlinkCardFromHostOnLeave). Not when the
+        /// monster left first (no equip target then).
+        /// </summary>
+        public bool BanishHostWhenThisLeaves;
+
+        /// <summary>
+        /// EquipLocksAndLeaveField batch, on an <see cref="EffectActionKind.EquipThisToTarget"/> clause that may equip a
+        /// monster on either field: the AI equips its own strongest face-up monster (AutoPick), because the card only
+        /// helps its controller's monster (Big Bang Shot's ATK and piercing; Raregold / Metalsilver Armor apply only
+        /// while you control the equipped monster). AI preference only; the legal targets do not change.
+        /// </summary>
+        public bool AiEquipsOwnMonster;
+
+        // ── DcrEquipSpells batch ──
+
+        /// <summary>
+        /// DcrEquipSpells batch, with <see cref="RequiresDiscardCost"/>: the hand card is SENT to the GY as the cost, not
+        /// discarded ("Send 1 card from your hand to the Graveyard"; ygopro Duel.DiscardHand(..., REASON_COST) without
+        /// REASON_DISCARD — Twin Swords of Flashing Light - Tryce, Wicked-Breaking Flamberge - Baou). The pick and refund
+        /// are the discard cost's; no discard event is recorded (MonsterEffects.SendFromHandToGraveByInstance).
+        /// </summary>
+        public bool DiscardCostIsSend;
+
+        // ── SpellCounterSpenders batch ──
+
+        /// <summary>
+        /// Cost: "Remove N Spell Counters on/from your side of the field" (Lua Duel.RemoveCounter(tp,1,0,COUNTER_SPELL,N,
+        /// REASON_COST)): N counters from any face-up cards its controller controls, the player choosing the cards
+        /// (<see cref="SpellCounterSpendersRuntime"/>). Distinct from <see cref="RequiresRemoveSpellCounters"/> (this card only).
+        /// </summary>
+        public int RemoveSpellCountersOnYourSide;
+
+        /// <summary>
+        /// On <see cref="EffectActionKind.CannotAttackTurnSpecialSummoned"/>: the lock also follows a Normal Summon and a
+        /// Flip Summon ("cannot attack in the same turn it is Normal Summoned, Flip Summoned, or Special Summoned": Armor Exe).
+        /// </summary>
+        public bool CannotAttackAlsoTurnNormalOrFlipSummoned;
+
+        /// <summary>
+        /// On an Activate <see cref="EffectActionKind.PlaceSpellCounters"/>: "Activate this card by placing N Spell Counters
+        /// on it" (Pitch-Black Power Stone; Lua AddCounter in the target step). The counters are placed as the card is
+        /// activated, before anyone can respond, and not again when its Chain Link resolves
+        /// (<see cref="SpellCounterSpendersRuntime.PlaceOnActivation"/>).
+        /// </summary>
+        public bool PlaceSpellCountersAsActivated;
+
+        // ── ChainLinkAnswers batch ──
+
+        /// <summary>
+        /// ChainLinkAnswers batch — My Body as a Shield (ygopro c69279219 s.condition): on a
+        /// <see cref="EffectActionKind.NegateActivation"/> answer, the answered link is the opponent's Spell/Trap Card
+        /// activation or monster effect whose resolution would destroy a monster on the field (either side; Destroy family
+        /// only, fail-closed: <see cref="ChainLinkAnswersRuntime.LinkWouldDestroyMonsterOnField"/>).
+        /// </summary>
+        public bool NegateRequiresWouldDestroyMonsterOnField;
+
+        /// <summary>
+        /// ChainLinkAnswers batch — Spell Shield Type-8 bullet 2: the activation cost "Send N Spell Card(s) from your hand to
+        /// the GY" (ygopro Duel.DiscardHand(..., REASON_COST) on a Spell filter; a send, not a discard: no discard event).
+        /// </summary>
+        public int CostSendSpellsFromHandCount;
+
+        // ── UnionRiders batch (v175) ──
+
+        /// <summary>
+        /// On a Union's <see cref="EffectActionKind.EquipThisToTarget"/>: the Union names no monster and may equip to any
+        /// face-up monster its controller controls (Metallizing Parasite - Lunatite: aux.AddUnionProcedure(c,nil)).
+        /// Read by <see cref="EquipFamilyRuntime.IsCorrectEquipTarget"/> and <see cref="UnionRidersRuntime.FilterTargets"/>.
+        /// </summary>
+        public bool UnionEquipsAnyFaceUpMonster;
     }
 
     /// <summary>When the activation condition is tested (PSCT "when" vs "if").</summary>

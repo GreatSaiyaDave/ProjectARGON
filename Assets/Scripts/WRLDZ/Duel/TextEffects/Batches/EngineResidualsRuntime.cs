@@ -57,7 +57,8 @@ namespace WRLDZ.Duel.TextEffects
             !c.RequiresTributeThis && c.RequiresTributeCount <= 0 && !c.RequiresDiscardSelf &&
             !c.RequiresSendThisToGy && !c.RequiresSendHandToGy && !c.RequiresSendOtherYouControl &&
             !c.RequiresSendRaceFromDeck && !c.RequiresSendNamedToGy && !c.RequiresSendEquipSpellOnThisToGy &&
-            c.PayLpAmount <= 0 && c.BanishFromGyCount <= 0 && c.RequiresRemoveSpellCounters <= 0;
+            c.PayLpAmount <= 0 && c.BanishFromGyCount <= 0 && c.RequiresRemoveSpellCounters <= 0 &&
+            c.RemoveSpellCountersOnYourSide <= 0; // SpellCounterSpenders batch
 
         /// <summary>
         /// TextEffectRuntime.ActivateFreeChainOnChain: discard 1 card for <paramref name="card"/> before it is placed as a

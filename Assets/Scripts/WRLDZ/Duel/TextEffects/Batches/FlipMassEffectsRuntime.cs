@@ -439,9 +439,10 @@ namespace WRLDZ.Duel.TextEffects
         /// also Jowgen / Jam Breeding Machine and summon costs). Chain Energy's hand toll is asked by the callers, which
         /// know whether it was already paid.
         /// </remarks>
-        internal static bool HandOrDeckCopyCanBeSpecialSummoned(DuelistState who, CardInstance c) =>
+        internal static bool HandOrDeckCopyCanBeSpecialSummoned(DuelistState who, CardInstance c, bool faceUp = true) =>
             who != null && SpecialSummonLegality.CanBeSpecialSummoned(who.Engine, who, c, null,
-                who.Hand != null && who.Hand.Contains(c) ? SummonOrigin.Hand : SummonOrigin.Deck, checkHandToll: false);
+                who.Hand != null && who.Hand.Contains(c) ? SummonOrigin.Hand : SummonOrigin.Deck, checkHandToll: false,
+                faceUp: faceUp);
 
         static bool DeckCopyCanBeSpecialSummoned(DuelistState who, CardInstance c) =>
             who != null && SpecialSummonLegality.CanBeSpecialSummoned(who.Engine, who, c, null, SummonOrigin.Deck);
@@ -1137,7 +1138,8 @@ namespace WRLDZ.Duel.TextEffects
                 seat.Limit = n;
                 seat.Candidates.AddRange(player.Hand.Where(c =>
                     IsLevelMonster(c, levelMax) && TributeSummonsRuntime.IsNormalSummonableCard(c) &&
-                    HandOrDeckCopyCanBeSpecialSummoned(player, c)));
+                    // Face-down Defense only (Lua POS_FACEDOWN_DEFENSE): face-up-only rules (Rivalry of Warlords) allow it.
+                    HandOrDeckCopyCanBeSpecialSummoned(player, c, faceUp: false)));
                 engine.Log(seat.Candidates.Count == 0
                     ? $"{source?.Name}: {player.Name} has no monster in their hand that can be Special Summoned."
                     : $"{source?.Name}: {player.Name} Special Summons up to {n} monster(s) from their hand in " +

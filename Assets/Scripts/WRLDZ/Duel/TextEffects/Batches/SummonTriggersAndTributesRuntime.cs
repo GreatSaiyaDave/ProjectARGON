@@ -90,7 +90,7 @@ namespace WRLDZ.Duel.TextEffects
             s_flipSummoned.Add(monster, new Stamp { Turn = engine.TurnNumber, Entry = monster.FieldEntryStamp });
         }
 
-        static bool WasFlipSummoned(DuelEngine engine, CardInstance m) =>
+        internal static bool WasFlipSummoned(DuelEngine engine, CardInstance m) =>
             s_flipSummoned.TryGetValue(m, out var s) && s.Turn == engine.TurnNumber && s.Entry == m.FieldEntryStamp;
 
         static EffectClause ClauseOf(CardInstance card, EffectActionKind action)

@@ -264,9 +264,13 @@ namespace WRLDZ.Duel.Rules
                 !Has(dust, c => c.Action == EffectActionKind.DestroyAllFaceUpMonstersOnField && c.ExceptThisCard),
                 Describe(dust));
 
-            Check("Near-miss: Amazoness Tiger's \"only control 1\" (no \"face-up\") is not this batch's rule",
+            // SummonLocksAndStatRules batch: Amazoness Tiger's "You can only control 1 X" is the same ygopro rule as
+            // the "face-up" wording (both Lua c:SetUniqueOnField(1,0,id); check_unique_onfield counts face-up cards
+            // only and a Set is not checked), so it now compiles to the same clause, named after Tiger itself.
+            Check("Amazoness Tiger's \"only control 1\" (no \"face-up\") is the same unique-on-field rule",
                 db.TryGet(AmazonessTiger, out var amz) &&
-                !Has(CardTextEffectCompiler.Compile(amz), c => c.Action == EffectActionKind.YouCanOnlyControlOneFaceUpNamed),
+                Has(CardTextEffectCompiler.Compile(amz), c => c.Action == EffectActionKind.YouCanOnlyControlOneFaceUpNamed &&
+                                                              c.NamedCard == "Amazoness Tiger"),
                 Describe(amz != null ? CardTextEffectCompiler.Compile(amz) : null));
 
             var immune = CompileText(90163005, "Effect Monster", "Your GY is unaffected by \"Gravekeeper's Servant\".");

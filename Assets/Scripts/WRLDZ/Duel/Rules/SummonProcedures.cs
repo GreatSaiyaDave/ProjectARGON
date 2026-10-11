@@ -157,6 +157,13 @@ namespace WRLDZ.Duel.Rules
                 return r;
             }
 
+            // SummonLocksAndStatRules batch: Rivalry of Warlords — no Normal Summon of another Type (a Set stays legal).
+            if (!asSet && SummonLocksAndStatRulesRuntime.BlocksFaceUpSummon(engine, who, card, out var rivalryReason))
+            {
+                r.Reason = rivalryReason;
+                return r;
+            }
+
             // RuleLocks batch: Chain Energy — Normal Summoning or Setting a monster from the hand needs the LP toll.
             if (RuleLocksRuntime.HandActionUnaffordable(engine, who, card, out var tollReason))
             {

@@ -548,6 +548,12 @@ namespace WRLDZ.Duel.TextEffects
         static int s_effectDepth;
         static bool s_sweeping;
 
+        /// <summary>
+        /// SummonLocksAndStatRules batch: a clause (or one set of Tributes) is being applied right now
+        /// (<see cref="EnterEffectApplication"/>). EVENT_ADJUST sweeps wait until it is over.
+        /// </summary>
+        public static bool ApplyingEffect => s_effectDepth > 0;
+
         /// <summary>Engine of the outermost open <see cref="EnterEffectApplication"/> scope.</summary>
         static DuelEngine s_scopeEngine;
 

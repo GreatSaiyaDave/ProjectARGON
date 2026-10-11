@@ -159,9 +159,15 @@ namespace WRLDZ.Duel.Rules
             Check("Near miss: 'targets exactly 1 card' (no monster) is not Riryoku Field's template",
                 !HasClause(rirText.Replace("exactly 1 monster on the field", "exactly 1 card on the field"),
                     c => c.NegateRequiresSingleMonsterTarget, "Trap Card", "Counter", "trap"));
-            var shield = Prog(db, 38275183); // Spell Shield Type-8 shares the phrase in a longer, two-option text
-            Check("Near miss: Spell Shield Type-8 is not Riryoku Field's template",
-                shield == null || !shield.ClauseList.Exists(c => c != null && c.NegateRequiresSingleMonsterTarget));
+            // Spell Shield Type-8 shares the phrase in a longer, two-option text. Since the ChainLinkAnswers batch it compiles
+            // whole as two bullets; Riryoku's condition is only its bullet 1, never Riryoku Field's single answer.
+            var shield = Prog(db, 38275183);
+            Check("Near miss: Spell Shield Type-8 is not Riryoku Field's template (two bullets; the single-target one is bullet 1)",
+                shield != null && shield.FullyCompiled && shield.ClauseList.Count == 2 &&
+                shield.ClauseList.All(c => c != null && c.EffectChoiceIndex > 0) &&
+                shield.ClauseList.Where(c => c.NegateRequiresSingleMonsterTarget).All(c => c.EffectChoiceIndex == 1) &&
+                shield.ClauseList.Exists(c => c.EffectChoiceIndex == 2 && !c.NegateRequiresSingleMonsterTarget &&
+                                              c.CostSendSpellsFromHandCount == 1));
 
             var gilaText = db.Get(Gilasaurus)?.desc ?? "";
             Check("Near miss: Gilasaurus's text compiles (control)",

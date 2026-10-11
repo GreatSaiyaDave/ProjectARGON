@@ -924,7 +924,10 @@ namespace WRLDZ.Duel.TextEffects
                 ? new List<CardInstance>()
                 : attackingPlayer.MonstersOnField()
                     .Where(m => m != null && m.FaceUp && !ReferenceEquals(m, attacker) &&
-                                !engine.IsDragonTargetProtected(m))
+                                !engine.IsDragonTargetProtected(m) &&
+                                // EquipLocksAndLeaveField batch: Metalsilver Armor (the responder targets).
+                                !EquipLocksAndLeaveFieldRuntime.ShieldedFromTargeting(engine,
+                                    engine.OpponentOf(attackingPlayer), m))
                     .ToList();
 
         /// <summary>
@@ -942,6 +945,8 @@ namespace WRLDZ.Duel.TextEffects
             if (!attackingPlayer.TryFindMonster(attacker, out _)) return false;
             // The attacker is a target too (Lua a:IsCanBeEffectTarget(e)).
             if (engine.IsDragonTargetProtected(attacker)) return false;
+            // EquipLocksAndLeaveField batch: Metalsilver Armor.
+            if (EquipLocksAndLeaveFieldRuntime.ShieldedFromTargeting(engine, pr.Responder, attacker)) return false;
             return DarkSpiritCandidates(engine, attackingPlayer, attacker).Count > 0;
         }
 

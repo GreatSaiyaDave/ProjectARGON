@@ -349,6 +349,8 @@ namespace WRLDZ.Duel.TextEffects
                     if (m == null || !m.FaceUp || ReferenceEquals(m, ec.EquippedTo)) continue;
                     if (engine.IsDragonTargetProtected(m)) continue;
                     if (source != null && ContinuousProtections.TargetedEffectBlocked(engine, m, source)) continue;
+                    // EquipLocksAndLeaveField batch: Metalsilver Armor (the source's player cannot target it).
+                    if (EquipLocksAndLeaveFieldRuntime.ShieldedFromSource(engine, m, source)) continue;
                     if (EquipFamilyRuntime.IsCorrectEquipTarget(engine, ec, m))
                         list.Add(m);
                 }

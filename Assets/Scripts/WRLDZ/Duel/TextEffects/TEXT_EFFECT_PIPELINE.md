@@ -315,6 +315,11 @@ Seed 853 to 885 programs (added 32, removed 0, changed 11). Runtimes live in `Te
 Compiler v167; Union procedure is now playable (monster moves into a Spell/Trap Zone). 0 Implemented-count bump — this is a shell for cards whose sentences already compiled. Report `Docs/CURRICULUM_BATCH_v167-union.md`.
 Seed 887 → 895 programs (added 8 including Z-Metal Tank; removed 0). Tests `Rules/Batches/UnionEquipRegressionTests.cs`. Duel checks: S/T-zone landing, one Union per host, once-per-turn, unequip SS, battle substitute, Z-Metal alt host. Arena: generic SpellCast / SpecialSummon; gap in `FX_MAP.md`.
 
+## Pass v175 (card batch v175-mfc-dcr)
+
+Compiler v175; 57 cards Implemented (MFC 47, DCR 10), 0 losses; suite 6211/0. Report `Docs/CURRICULUM_BATCH_v175-mfc-dcr.md`.
+Groups: DamageStepRules, EquipLocksAndLeaveField, DcrEquipSpells, SpellCounterSpenders, ChainLinkAnswers, FlipMassAndOpponentPicks, PhaseTriggersAndIgnitionCosts, UnionRiders, SummonLocksAndStatRules (each `Batches/<Group>Atoms.cs` + `Runtime.cs`, tests `Rules/Batches/<Group>RegressionTests.cs`). Deferred: Neko Mane King (phase jump), Formation Union (second target), Kaiser Colosseum (EFFECT_MAX_MZONE).
+
 ## Pass v174 (card batch v174-mfc)
 
 Compiler v174; 2 cards Implemented (MFC 36 → 38 of 108), 0 losses. Report `Docs/CURRICULUM_BATCH_v174-mfc.md`.

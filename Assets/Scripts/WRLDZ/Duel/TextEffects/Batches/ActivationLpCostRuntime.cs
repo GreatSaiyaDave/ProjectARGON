@@ -93,6 +93,7 @@ namespace WRLDZ.Duel.TextEffects
             c.RequiresSendThisToGy || c.RequiresSendHandToGy || c.RequiresSendOtherYouControl ||
             c.BanishFromGyCount > 0 || c.RequiresRemoveSpellCounters > 0 || c.RequiresDiscardCost ||
             c.DiscardCostCount > 0 || c.RequiresSendNamedToGy || c.RequiresTributeEquippedMonster ||
-            c.RequiresLpCostMultiple > 0 || c.PayHalfLpCost || c.RequiresSendEquipSpellOnThisToGy;
+            c.RequiresLpCostMultiple > 0 || c.PayHalfLpCost || c.RequiresSendEquipSpellOnThisToGy ||
+            c.RemoveSpellCountersOnYourSide > 0; // SpellCounterSpenders batch
     }
 }

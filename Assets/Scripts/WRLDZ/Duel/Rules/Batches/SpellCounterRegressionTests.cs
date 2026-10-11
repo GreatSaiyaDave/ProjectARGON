@@ -89,9 +89,15 @@ namespace WRLDZ.Duel.Rules
             // partially understood card by matching its cost fragment. WholeResolutionRegressionTests
             // already asserts the same for Anti-Spell, Miracle Restoring and Blast Magician; this
             // asserts it from the Spell Counter side so widening an anchor cannot silently flip them.
+            // SpellCounterSpenders batch: Anti-Spell now compiles WHOLE through its own sentence atom (the side-wide cost
+            // field plus the Spell negation). The "this card" anchors still do not touch it: no clause spends counters
+            // from Anti-Spell itself, and nothing else compiled from its cost fragment.
             var anti = Comp(db, AntiSpell);
-            check("Anti-Spell stays fail-closed (cost fragment must not compile on its own)",
-                anti != null && !anti.FullyCompiled && anti.ClauseList.Count == 0,
+            check("Anti-Spell compiles whole, never from its cost fragment (no this-card counter spend)",
+                anti != null && anti.FullyCompiled && anti.ClauseList.Count == 1 &&
+                anti.ClauseList[0].Action == EffectActionKind.NegateActivation &&
+                anti.ClauseList[0].RemoveSpellCountersOnYourSide == 2 &&
+                anti.ClauseList[0].RequiresRemoveSpellCounters == 0,
                 anti == null ? "null" : $"full={anti.FullyCompiled} clauses={anti.ClauseList.Count}");
         }
 

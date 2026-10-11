@@ -250,6 +250,9 @@ namespace WRLDZ.Duel.Rules
                    // Pyro Clock of Destiny (PhaseTimersAndDeckTop v163): needs a running turn count (Swords of Revealing
                    // Light …); PhaseTimersAndDeckTopRegressionTests drive it.
                    c.ActivationCondition == PhaseTimersAndDeckTopRuntime.TurnCountExists ||
+                   // Huge Revolution (FlipMassAndOpponentPicks): three named monsters face-up on your field
+                   // (FlipMassAndOpponentPicksRegressionTests drive it).
+                   c.ActivationCondition == FlipMassAndOpponentPicksRuntime.YourMainPhaseWithNamedFaceUp ||
                    c.Timing == EffectTiming.PositionChanged ||
                    c.Timing == EffectTiming.ThisCardDeclaresAttack ||
                    c.Action == EffectActionKind.PayLpToDeclareAttack ||
@@ -262,6 +265,9 @@ namespace WRLDZ.Duel.Rules
                    c.PayLpAmount > 0 ||
                    c.BanishFromGyCount > 0 ||
                    c.RequiresRemoveSpellCounters > 0 ||
+                   // SpellCounterSpenders batch: Spell Counters on your side (Mega Ton Magical Cannon, Miracle Restoring,
+                   // Anti-Spell); SpellCounterSpendersRegressionTests drive them on a provisioned board.
+                   c.RemoveSpellCountersOnYourSide > 0 ||
                    c.RequiresLpCostMultiple > 0 ||
                    (c.RequiresDiscardCost &&
                     c.Action != EffectActionKind.AddFromGyToHand) ||
@@ -270,6 +276,9 @@ namespace WRLDZ.Duel.Rules
                    c.Action == EffectActionKind.RitualSummon ||
                    c.Action == EffectActionKind.SpecialSummonFromHand ||
                    c.RequiresSecondTarget ||
+                   // UnionRiders batch (v175): Combination Attack needs the Battle Phase and a monster that attacked with a
+                   // Union equipped (UnionRidersRegressionTests drive it).
+                   c.Action == EffectActionKind.SpecialSummonTargetsUnionsThenItAttacksAgain ||
                    (!string.IsNullOrEmpty(c.RaceFilter) &&
                     (c.Zone == EffectZoneFilter.ControllerGyMonsters ||
                      c.Zone == EffectZoneFilter.EitherGyMonsters ||
@@ -659,6 +668,13 @@ namespace WRLDZ.Duel.Rules
 
                 if (c.Action == EffectActionKind.ChangeBattlePosition && c.ForceAttackPosition)
                     PlaceMonster(engine, opp, Celtic, 0, BattlePosition.Defense, false);
+
+                // UnionRiders batch (v175): Lunatite equips to any other face-up monster you control; Union Rider takes a
+                // face-up Union Monster the opponent controls (Kiryu).
+                if (c.UnionEquipsAnyFaceUpMonster && p.MonsterZones[1].IsEmpty)
+                    PlaceMonster(engine, p, Celtic, 1, BattlePosition.Attack, true);
+                if (c.Action == EffectActionKind.TakeControlOfOpponentUnionAndEquipToThis && opp.MonsterZones[3].IsEmpty)
+                    PlaceMonster(engine, opp, 84814897, 3, BattlePosition.Attack, true);
             }
         }
 
@@ -785,6 +801,12 @@ namespace WRLDZ.Duel.Rules
             // Major Riot (ForcedActivationAndSubstitution batch, v163): only in the window right after an opponent's
             // effect returned your monster(s) to your hand (ForcedActivationAndSubstitutionRegressionTests drive it).
             if (MajorRiotRuntime.AnswersWindow(prog))
+                return true;
+            // Pineapple Blast (FlipMassAndOpponentPicks): answers only its controller's OWN Normal Summon while the opponent
+            // controls more monsters (FlipMassAndOpponentPicksRegressionTests drive that window); this probe summons for
+            // the opponent.
+            if (prog.ClausesFor(EffectTiming.OpponentNormalOrFlipSummon).Exists(c => c != null &&
+                    c.ActivationCondition == FlipMassAndOpponentPicksRuntime.YourNormalSummonOpponentControlsMore))
                 return true;
             if (act.Exists(NeedsHardBoard))
                 return true;

@@ -1360,6 +1360,9 @@ namespace WRLDZ.Duel
             ResetOnFieldEntry(card);
             if (!asSet)
                 card.NormalOrFlipSummonedTurn = TurnNumber;
+            // SpellCounterSpenders batch: Armor Exe cannot attack the turn it is Normal Summoned.
+            if (!asSet)
+                TextEffects.SpellCounterSpendersRuntime.OnNormalOrFlipSummoned(this, card);
             who.MonsterZones[idx].Occupant = card;
             card.WasSpecialSummoned = false;
             card.WasTributeSummoned = need > 0 && !asSet;
@@ -1453,6 +1456,8 @@ namespace WRLDZ.Duel
             if (TextEffects.RuleLocksRuntime.FlipSummonLocked(this, who, monster)) return false;
             // SummonTriggersAndTributes batch (v163): "You can only control 1 face-up X".
             if (TextEffects.SummonTriggersAndTributesRuntime.UniqueBlocksFaceUp(this, who, monster, out _)) return false;
+            // SummonLocksAndStatRules batch: Rivalry of Warlords — no Flip Summon of another Type.
+            if (TextEffects.SummonLocksAndStatRulesRuntime.BlocksFaceUpSummon(this, who, monster, out _)) return false;
             return true;
         }
 
@@ -1465,6 +1470,8 @@ namespace WRLDZ.Duel
             monster.ChangedPositionThisTurn = true;
             monster.WasTributeSummoned = false;
             monster.NormalOrFlipSummonedTurn = TurnNumber;
+            // SpellCounterSpenders batch: Armor Exe cannot attack the turn it is Flip Summoned.
+            TextEffects.SpellCounterSpendersRuntime.OnNormalOrFlipSummoned(this, monster);
             Log(who.IsPlayer
                 ? $"Flip Summon {monster.Name}!"
                 : $"Opponent Flip Summons {monster.Name}.");
@@ -2562,6 +2569,9 @@ namespace WRLDZ.Duel
                     m.DamageStepAtkBonus = 0;
                 }
             }
+
+            // SummonLocksAndStatRules batch — Amazoness Spellcaster: switched original ATK returns.
+            TextEffects.SummonLocksAndStatRulesRuntime.EndOfTurn(this);
         }
 
         static bool HasCompiledClause(CardInstance card, Func<EffectClause, bool> predicate)
@@ -2654,6 +2664,15 @@ namespace WRLDZ.Duel
                     : TextEffects.EquipAndSpellProtectionRuntime.EnterTargetedResolution(card, host);
                 if (hostOwner != null)
                     DestroyMonster(hostOwner, host, card);
+            }
+            // EquipLocksAndLeaveField batch: Big Bang Shot — "When this card leaves the field, banish the equipped
+            // monster" (Lua e5 EVENT_LEAVE_FIELD: any reason; an Equip Card's leave-field effect applies once it is off
+            // the field, negated or not, as Premature Burial's above).
+            else if (fromFieldSt && HasCompiledClause(card, c => c.BanishHostWhenThisLeaves))
+            {
+                var hostOwner = ControllerOf(host);
+                if (hostOwner != null && hostOwner.TryFindMonster(host, out _))
+                    BanishCard(hostOwner, host, destroyed: false, by: leavingOwner);
             }
         }
 
@@ -3189,6 +3208,12 @@ namespace WRLDZ.Duel
                 Log($"{card.Name} cannot be Special Summoned: {uniqueReason}");
                 return false;
             }
+            // SummonLocksAndStatRules batch: Rivalry of Warlords — another Type only face-down (FORCE_SPSUMMON_POSITION).
+            if (faceUp && TextEffects.SummonLocksAndStatRulesRuntime.BlocksFaceUpSummon(this, who, card, out var rivalryReason))
+            {
+                Log($"{card.Name} cannot be Special Summoned face-up: {rivalryReason}");
+                return false;
+            }
             var idx = preferredZone >= 0 ? preferredZone : _pendingSpecialSummonZone;
             ClearPendingSpecialSummonPlacement();
             if (idx < 0 || idx >= who.MonsterZones.Length || !who.MonsterZones[idx].IsEmpty)
@@ -3658,6 +3683,8 @@ namespace WRLDZ.Duel
             if (TextEffects.TextEffectRuntime.AttackForbiddenByEffect(this, attacker)) return true;
             // BattleRules batch: Cave Dragon — "cannot declare an attack unless you control another Dragon-Type monster".
             if (TextEffects.BattleRulesRuntime.AttackForbidden(this, attackerController, attacker)) return true;
+            // DamageStepRules batch: Ultimate Obedient Fiend — only while it is its controller's only card, with no hand.
+            if (TextEffects.DamageStepRulesRuntime.AttackForbidden(this, attackerController, attacker)) return true;
             // ContinuousLocksAndIgnitions batch (v163): Gora Turtle — a face-up monster's ATK-threshold attack lock.
             if (TextEffects.ContinuousLocksAndIgnitionsRuntime.MonsterAttackLockBlocks(this, attackerController, attacker))
                 return true;
@@ -3788,6 +3815,9 @@ namespace WRLDZ.Duel
             // BattleBoosts batch (v161): Gray Wing's "attack twice this turn" (EFFECT_FLAG_CANNOT_DISABLE: it stays if this
             // monster is negated afterwards).
             var turnExtra = TextEffects.BattleBoostsRuntime.TurnExtraAttacks(this, attacker);
+            // DcrEquipSpells batch: Twin Swords of Flashing Light - Tryce's second attack is the Equip Card's effect
+            // (EFFECT_TYPE_EQUIP + EFFECT_EXTRA_ATTACK): it stays while the monster is negated.
+            turnExtra = Math.Max(turnExtra, TextEffects.DcrEquipSpellsRuntime.ExtraAttacks(this, attacker));
             if (attacker.IsNegated) return turnExtra;
             var extra = turnExtra;
             if (attacker.CardId == MonsterEffects.MermaidKnight &&
@@ -3845,6 +3875,9 @@ namespace WRLDZ.Duel
             // PgdSpellTrapBasics batch (v162): Secret Pass to the Treasures' grant comes from the Spell — the monster's own
             // negation does not remove it.
             if (TextEffects.PgdSpellTrapBasicsRuntime.HasSpellDirectAttackGrant(this, attacker)) return true;
+            // DcrEquipSpells batch: Shooting Star Bow - Ceal's grant is the Equip Card's effect (EFFECT_TYPE_EQUIP) — the
+            // monster's own negation does not remove it.
+            if (TextEffects.DcrEquipSpellsRuntime.GrantsDirectAttack(this, attacker)) return true;
             if (attacker?.Def == null || !attacker.FaceUp || attacker.IsNegated) return false;
             if (attacker.DirectAttackThisTurn) return true;
             var ctrl = ControllerOf(attacker);
@@ -4260,6 +4293,9 @@ namespace WRLDZ.Duel
                 // applies its effects from here on (unless negated).
                 if (link.Card != null)
                     link.Card.ActivationUnresolvedOnChain = false;
+                // ChainLinkAnswers batch: Chaos Command Magician (ygopro EVENT_CHAIN_SOLVING) — a monster effect whose only
+                // target is a face-up Chaos Command Magician is negated as it starts to resolve.
+                TextEffects.ChainLinkAnswersRuntime.NegateResolvingLinkTargetingOnlyThis(this, link);
 
                 // TriggerChainResponses batch (v163): a trigger effect's link (FLIP, "sent to the GY", a phase trigger)
                 // applies the resolution recorded when it was seated (negated: nothing; its card is not sent to the GY).
@@ -4328,6 +4364,22 @@ namespace WRLDZ.Duel
                 if (TextEffects.NegationMonstersRuntime.TryNegateTargetingLink(this, link))
                 {
                     EnsureDeferredSpellTrapGrave(link);
+                    continue;
+                }
+
+                // ChainLinkAnswers batch: Jar Robber (negate the answered effect, draw), My Body as a Shield against a
+                // monster effect (negate, destroy that monster), Dramatic Rescue (return, then a Special Summon pick that
+                // may hold the Chain), and the activation whose effect Jar Robber negated (it resolves with no effect).
+                if (TextEffects.ChainLinkAnswersRuntime.TryResolveLink(this, link))
+                {
+                    EnsureDeferredSpellTrapGrave(link);
+                    if (PendingActivation != null && PendingActivation.HoldsChainResolution)
+                    {
+                        _chainHeldForChoice = true;
+                        Notify();
+                        return;
+                    }
+
                     continue;
                 }
 
@@ -4940,6 +4992,8 @@ namespace WRLDZ.Duel
             }
 
             DamageSubStep = DamageSubStep.BeforeDamageCalculation;
+            // DamageStepRules batch: the battle of this Damage Step (Cat's Ear Tribe's ATK, Thousand Needles).
+            TextEffects.DamageStepRulesRuntime.BeginBattle(this, who, attacker, targetOrNull);
             // Kiseitai (SpiritsAndMisc batch): attacked in face-down Defense Position, it becomes an Equip Spell
             // equipped to the attacker before damage calculation, and no damage calculation is conducted.
             if (!switchedBattle && targetOrNull != null && flippedByBattle == targetOrNull &&
@@ -5108,12 +5162,15 @@ namespace WRLDZ.Duel
             }
 
             DamageSubStep = DamageSubStep.DamageCalculation;
+            TextEffects.DamageStepRulesRuntime.BeginBattle(this, who, attacker, targetOrNull);
 
             var piercing = OfficialEffectRegistry.HasPiercing(attacker) ||
                            Continuous.SourceGrantsPiercing(attacker) ||
                            TextEffects.TextEffectRuntime.GrantsPiercing(attacker) ||
                            // BattleBoosts batch (v161): Dragon's Rage grants piercing to its controller's Dragons.
-                           TextEffects.BattleBoostsRuntime.FieldGrantsPiercing(this, attacker);
+                           TextEffects.BattleBoostsRuntime.FieldGrantsPiercing(this, attacker) ||
+                           // DamageStepRules batch: Meteorain — this turn, its controller's monsters.
+                           TextEffects.DamageStepRulesRuntime.TurnGrantsPiercing(this, attacker);
             var atkNoDes = OfficialEffectRegistry.CannotBeDestroyedByBattle(attacker) || who.WabokuActive ||
                            // EquipAndSpellProtection batch: Heart of Clear Water.
                            TextEffects.EquipAndSpellProtectionRuntime.EquipPreventsBattleDestruction(this, attacker) ||
@@ -5165,6 +5222,12 @@ namespace WRLDZ.Duel
             // so no battle-damage change or prevention applies to it (ygopro calculate_battle_damage skips them).
             TextEffects.EffectDamageEventsRuntime.BattleDamageAsEffect(this, attacker, targetOrNull, piercing,
                 ref noDmgAtk, ref noDmgDef, out var defDamageAsEffectBy, out var atkDamageAsEffectBy);
+            // DamageStepRules batch: Kishido Spirit — not destroyed by battle with a monster of equal ATK (this damage
+            // calculation's ATK).
+            if (!atkNoDes)
+                atkNoDes = TextEffects.DamageStepRulesRuntime.BattleIndestructible(this, who, attacker, targetOrNull);
+            if (!defNoDes && targetOrNull != null)
+                defNoDes = TextEffects.DamageStepRulesRuntime.BattleIndestructible(this, opp, targetOrNull, attacker);
             var calc = BattleMechanics.Calculate(attacker, targetOrNull, piercing, atkNoDes, defNoDes,
                 noDmgAtk, noDmgDef);
             // Pass prevention flags so ATK < DEF still deals (DEF−ATK) to the attacker
@@ -5194,6 +5257,20 @@ namespace WRLDZ.Duel
                     this, attacker, opp, calc.DamageToDefendingPlayer);
             if (calc.DamageToAttackingPlayer > 0 && targetOrNull != null)
                 calc.DamageToAttackingPlayer = TextEffects.SpiritMonstersRuntime.HalveBattleDamage(
+                    this, targetOrNull, who, calc.DamageToAttackingPlayer);
+            // DamageStepRules batch: Amazoness Swords Woman — the battle damage its controller would take from its battles
+            // is taken by the opponent instead (applied below, after the normal damage).
+            TextEffects.DamageStepRulesRuntime.ReflectBattleDamage(this, who, opp, attacker, targetOrNull,
+                atkDamageAsEffectBy == null, defDamageAsEffectBy == null, noDmgAtk, noDmgDef,
+                ref calc.DamageToAttackingPlayer, ref calc.DamageToDefendingPlayer,
+                out var reflectedToAttackingPlayer, out var reflectedToDefendingPlayer);
+            // DcrEquipSpells batch: Rod of the Mind's Eye — the battle damage its monster inflicts to the opponent of the
+            // Rod's controller becomes 1000 (EFFECT_CHANGE_BATTLE_DAMAGE). Not damage converted to effect damage.
+            if (calc.DamageToDefendingPlayer > 0 && defDamageAsEffectBy == null)
+                calc.DamageToDefendingPlayer = TextEffects.DcrEquipSpellsRuntime.ChangeBattleDamage(
+                    this, attacker, opp, calc.DamageToDefendingPlayer);
+            if (calc.DamageToAttackingPlayer > 0 && targetOrNull != null && atkDamageAsEffectBy == null)
+                calc.DamageToAttackingPlayer = TextEffects.DcrEquipSpellsRuntime.ChangeBattleDamage(
                     this, targetOrNull, who, calc.DamageToAttackingPlayer);
             if (calc.DamageToDefendingPlayer > 0 && defDamageAsEffectBy != null)
                 ApplyEffectDamage(opp, calc.DamageToDefendingPlayer, defDamageAsEffectBy.Name, defDamageAsEffectBy);
@@ -5226,6 +5303,8 @@ namespace WRLDZ.Duel
                 // Hard fail-closed: never silently skip defense-hold damage
                 var gap = BattleMechanics.DefenseValue(targetOrNull) - calcAtk;
                 if (gap > 0) gap = TextEffects.SpiritMonstersRuntime.HalveBattleDamage(this, targetOrNull, who, gap);
+                if (gap > 0 && atkDamageAsEffectBy == null)
+                    gap = TextEffects.DcrEquipSpellsRuntime.ChangeBattleDamage(this, targetOrNull, who, gap);
                 if (gap > 0)
                 {
                     Log(
@@ -5244,6 +5323,8 @@ namespace WRLDZ.Duel
                     }
                 }
             }
+            if (reflectedToDefendingPlayer > 0) ApplyDamage(opp, reflectedToDefendingPlayer);
+            if (reflectedToAttackingPlayer > 0) ApplyDamage(who, reflectedToAttackingPlayer);
             _battleDestroyPending = default;
 
             // Hard rule gate: never destroy a Defense monster when ATK ≤ DEF
@@ -5451,6 +5532,8 @@ namespace WRLDZ.Duel
         {
             BattleStep = BattleStep.BattleStep;
             DamageSubStep = DamageSubStep.None;
+            // DamageStepRules batch: Cat's Ear Tribe's Damage Step ATK ends.
+            TextEffects.DamageStepRulesRuntime.EndBattle(this);
             if (!IsAwaitingResponse && who != null && opp != null)
                 CheckLpWin(who, opp);
             Notify();
@@ -6193,6 +6276,11 @@ namespace WRLDZ.Duel
                 return TextEffects.TextEffectRuntime.ActivateFreeChainOnChain(this, who, card, fromHand, prog,
                     autoPickTarget);
             var clause = clauses[0];
+            // ChainLinkAnswers batch: Jar Robber / Spell Shield Type-8 (its bullet and send cost) / My Body as a Shield /
+            // Dramatic Rescue — every check, the bullet choice and the costs; a Quick-Play may answer from the hand.
+            if (TextEffects.ChainLinkAnswersRuntime.TryActivateAnswer(this, who, card, fromHand, autoPickTarget, clauses,
+                    out var answerSeated))
+                return answerSeated;
             // TargetNegationsAndHandQuickEffects batch (v163): a monster's Chain answer from the hand (Gravekeeper's Watcher).
             var handAnswer = fromHand && TextEffects.TargetNegationsAndHandQuickEffectsRuntime.IsHandChainAnswer(clause);
             if (fromHand && !handAnswer) return false;
@@ -6257,6 +6345,22 @@ namespace WRLDZ.Duel
                 if (discard == null) return false;
             }
 
+            // SpellCounterSpenders batch: Anti-Spell removes N Spell Counters from its controller's side as it is
+            // activated. A human with a real choice taps the cards (Cancel: not activated, the counters go back, the
+            // window stays open); otherwise they are removed at once.
+            if (clause.RemoveSpellCountersOnYourSide > 0)
+            {
+                var answeringCounters = PendingResponse;
+                var stillSet = card.Def != null && !card.Def.IsMonster;
+                return TextEffects.SpellCounterSpendersRuntime.AskChainAnswerCost(this, who, card,
+                    clause.RemoveSpellCountersOnYourSide, human: !autoPickTarget && IsHumanControlled(who),
+                    stillLegal: () => ReferenceEquals(PendingResponse, answeringCounters) &&
+                                      PendingResponse?.Responder == who &&
+                                      (!stillSet || (who.TryFindSpellTrap(card, out _) && !card.FaceUp)) &&
+                                      Chain.CanAddLink(speed, cls),
+                    seat: () => SeatChainAnswer(who, card, clause, speed, cls, skipSpellPayLp, discard, handAnswer));
+            }
+
             return SeatChainAnswer(who, card, clause, speed, cls, skipSpellPayLp, discard, handAnswer);
         }
 
@@ -6264,9 +6368,12 @@ namespace WRLDZ.Duel
         /// Every check of a Counter Trap / monster Quick Effect answering the last Chain Link passed and its discard (if
         /// any) is chosen: pay the costs, seat the link and let the other player respond (<see cref="TryActivateChainResponse"/>).
         /// </summary>
-        bool SeatChainAnswer(DuelistState who, CardInstance card, TextEffects.EffectClause clause, SpellSpeed speed,
+        internal bool SeatChainAnswer(DuelistState who, CardInstance card, TextEffects.EffectClause clause, SpellSpeed speed,
             EffectClass cls, bool skipSpellPayLp, CardInstance discard, bool handAnswer)
         {
+            // ChainLinkAnswers batch: a Quick-Play Spell answering from the hand (Jar Robber, My Body as a Shield) is
+            // placed face-up in a free Spell & Trap Zone as it activates.
+            var handQuickPlay = !handAnswer && card?.Def != null && card.Def.IsSpell && who.Hand.Contains(card);
             var costSendMark = TextEffects.BattleWindowsRuntime.SentCount(this);
             if (clause.PayLpAmount > 0 && !skipSpellPayLp)
                 PayLifePoints(who, clause.PayLpAmount, $"Cost: pay {clause.PayLpAmount} LP.");
@@ -6288,14 +6395,14 @@ namespace WRLDZ.Duel
                 return false;
 
             if (card.Def != null && (card.Def.IsTrap || card.Def.IsSpell))
-                SpellTrapEffects.PlaceFaceUpForActivation(this, who, card, fromHand: false);
+                SpellTrapEffects.PlaceFaceUpForActivation(this, who, card, fromHand: handQuickPlay);
 
             var target = PendingResponse.ChainTarget;
-            var from = handAnswer ? CardLocation.Hand
+            var from = handAnswer || handQuickPlay ? CardLocation.Hand
                 : card.Def != null && card.Def.IsMonster
                 ? CardLocation.MonsterZone
                 : CardLocation.SpellTrapZone;
-            var link = Chain.AddLink(who, card, speed, cls, from, handAnswer,
+            var link = Chain.AddLink(who, card, speed, cls, from, handAnswer || handQuickPlay,
                 wasSet: from == CardLocation.SpellTrapZone, "chain-response");
             if (link == null) return false;
             // v159 audit follow-up (EngineHygiene): the Tribute paid above is this link's cost send (Michizure).
@@ -6686,6 +6793,9 @@ namespace WRLDZ.Duel
                 }
             }
             if (GameOver) return;
+            // PhaseTriggersAndIgnitionCosts batch: Magical Scientist's Fusion Monster returns to the Extra Deck.
+            TextEffects.PhaseTriggersAndIgnitionCostsRuntime.OnEndPhase(this);
+            if (GameOver) return;
 
             // After End Phase, Set cards may be activated on following turns
             // (also clear leftover flags on both sides so a Set trap is legal next turn).
@@ -6770,6 +6880,14 @@ namespace WRLDZ.Duel
                 if (eqDef == null || !eqDef.IsMonster) continue;
                 var type = eqDef.type ?? "";
                 if (type.IndexOf("Union", System.StringComparison.OrdinalIgnoreCase) < 0) continue;
+                // UnionRiders batch (v175): every Union in its Union state whose text prints the rule (not only those
+                // with an EquippedMonsterDestroysByBattle clause); a Union another card took (Union Rider) never.
+                if (TextEffects.UnionRidersRuntime.SubstitutesForBattleDestruction(this, eq))
+                {
+                    unionEquip = eq;
+                    break;
+                }
+                if (TextEffects.UnionRidersRuntime.UnionTextOff(eq)) continue;
                 var prog = CompiledEffectCache.GetOrCompile(eqDef);
                 if (prog == null) continue;
                 foreach (var c in prog.ClauseList)

@@ -588,6 +588,9 @@ namespace WRLDZ.Duel.TextEffects
                         var e = chain.Links[chain.Next++];
                         if (e.Kind == EntryKind.Flip)
                             ActivateFlip(engine, chain, e);
+                        else if (e.Kind == EntryKind.Fused)
+                            // FlipMassAndOpponentPicks batch: Pixie Knight's opponent targets its Spell as it activates.
+                            FlipMassAndOpponentPicksRuntime.ActivateSentToGyTargets(engine, e.Controller, e.Card);
                         return false;
                     }
 
@@ -820,6 +823,8 @@ namespace WRLDZ.Duel.TextEffects
             {
                 // DeckReturnsAndMassEffects batch (v161): Mysterious Guard chooses its ordered targets now, as it activates.
                 DeckReturnsAndMassEffectsRuntime.ActivateFlipTargets(engine, who, m, flip);
+                // FlipMassAndOpponentPicks batch: Dark Cat with White Tail chooses its two groups of targets now.
+                FlipMassAndOpponentPicksRuntime.ActivateFlipTargets(engine, who, m, flip);
                 return;
             }
 

@@ -21,7 +21,7 @@ namespace WRLDZ.Duel.Rules
 
         const int YellowLusterShield = 4542651; // Continuous Spell: your monsters +300 DEF
         const int MessengerOfPeace = 44656491;  // Continuous Spell: 1500+ ATK cannot attack
-        const int MassDriver = 34906152;        // Continuous Spell (no compiled face-up ignition: not re-activatable)
+        const int MassDriver = 34906152;        // Continuous Spell: a face-up Tribute ignition (PhaseTriggersAndIgnitionCosts)
         const int GravityBind = 85742772;       // Continuous Trap: Level 4+ cannot attack
         const int CallOfTheHaunted = 97077563;  // Continuous Trap: SS from GY, linked
         const int SpiritBarrier = 53239672;     // Continuous Trap
@@ -601,10 +601,9 @@ namespace WRLDZ.Duel.Rules
             }
 
             {
-                // A face-up Continuous Spell's own effect cannot be activated while negated. Mass Driver's program has
-                // no Tribute cost (its Lua damage is a Tribute-cost ignition), so since the fuzz-audit fix its
-                // face-up card is not re-activatable at all (TextEffectRuntime.FaceUpCardCannotActivateAgain); the
-                // negated state must stay refused too.
+                // A face-up Continuous Spell's own effect cannot be activated while negated. Mass Driver's face-up
+                // ignition (PhaseTriggersAndIgnitionCosts batch: Tribute 1 monster, inflict 400) is usable while you
+                // control a monster, and refused once Mystic Probe negates Continuous Spell Cards.
                 var engine = Fresh(db, pDeck, aDeck);
                 ReachMain(engine, engine.Player, 3);
                 ClearBoard(engine);
@@ -616,9 +615,10 @@ namespace WRLDZ.Duel.Rules
                 var driver = PlaceFaceUpSpellTrap(engine, p, MassDriver, 0);
                 var canBefore = engine.CanActivateSpellTrap(p, driver, fromHand: false);
                 TurnNegationTrapsRuntime.Register(engine, opp, null, TurnNegationTrapsRuntime.ContinuousSpell);
+                var canAfter = engine.CanActivateSpellTrap(p, driver, fromHand: false);
                 Check("Mystic Probe: a negated face-up Continuous Spell cannot activate its effect",
-                    !canBefore && !engine.CanActivateSpellTrap(p, driver, fromHand: false),
-                    $"before={canBefore}");
+                    canBefore && !canAfter && driver.IsNegated,
+                    $"before={canBefore} after={canAfter} negated={driver.IsNegated}");
                 var lp = opp.LifePoints;
                 var yls = PutInHand(engine, p, YellowLusterShield);
                 var played = engine.TryActivateSpellTrap(p, yls, fromHand: true);

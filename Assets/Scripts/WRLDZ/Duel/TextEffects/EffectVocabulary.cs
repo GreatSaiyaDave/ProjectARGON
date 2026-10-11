@@ -132,6 +132,9 @@ namespace WRLDZ.Duel.TextEffects
         public static EffectCostKind CostOf(EffectClause c)
         {
             if (c == null) return EffectCostKind.None;
+            // DcrEquipSpells batch: "Send 1 card from your hand to the Graveyard" is a send, not a discard.
+            if (c.RequiresDiscardCost && c.DiscardCostIsSend)
+                return EffectCostKind.SendToGy;
             if (c.RequiresDiscardCost || c.RequiresDiscardSelf)
                 return EffectCostKind.Discard;
             if (c.RequiresTributeThis || c.RequiresTributeCount > 0)
@@ -142,14 +145,17 @@ namespace WRLDZ.Duel.TextEffects
                 // SimpleSpellTraps batch: Emergency Provisions sends other Spell/Trap Cards it controls.
                 c.Action == EffectActionKind.GainLpPerSpellTrapSentAsCost ||
                 // CallsDiceAndSetTriggers batch (v163): Reversal Quiz sends every other card in your hand and field.
-                c.CostSendAllOtherHandAndFieldCardsToGy)
+                c.CostSendAllOtherHandAndFieldCardsToGy ||
+                // ChainLinkAnswers batch: Spell Shield Type-8 sends a Spell Card from the hand.
+                c.CostSendSpellsFromHandCount > 0)
                 return EffectCostKind.SendToGy;
             // PayHalfLpCost: Solemn Judgment "Pay half your LP" (SummonNegation batch, v141).
             if (c.PayLpAmount > 0 || c.RequiresLpCostMultiple > 0 || c.PayHalfLpCost)
                 return EffectCostKind.PayLp;
             if (c.BanishFromGyCount > 0)
                 return EffectCostKind.BanishFromGy;
-            if (c.RequiresRemoveSpellCounters > 0 || c.RequiresSpellCounters > 0)
+            // SpellCounterSpenders batch: "Remove N Spell Counters on your side of the field".
+            if (c.RequiresRemoveSpellCounters > 0 || c.RequiresSpellCounters > 0 || c.RemoveSpellCountersOnYourSide > 0)
                 return EffectCostKind.RemoveCounters;
             return EffectCostKind.None;
         }
@@ -359,6 +365,16 @@ namespace WRLDZ.Duel.TextEffects
                 EffectActionKind.ShuffleGraveyardIntoDeck => EffectResolutionKind.ReturnToDeck,
                 // MfcSimpleSpellsB batch (v174): Hidden Spellbook — GY Spell targets into the Deck, shuffled.
                 EffectActionKind.ShuffleGySpellsIntoDeck => EffectResolutionKind.ReturnToDeck,
+                // UnionRiders batch (v175): Union-state riders (Kiryu, Second Goblin, Lunatite) and Union Rider's take-and-equip.
+                EffectActionKind.TributeThisSoEquippedMonsterAttacksDirectly => EffectResolutionKind.DirectAttack,
+                EffectActionKind.ChangeEquippedMonsterBattlePosition => EffectResolutionKind.ChangePosition,
+                EffectActionKind.EquippedUnaffectedByOpponentSpellEffects => EffectResolutionKind.Protection,
+                EffectActionKind.TakeControlOfOpponentUnionAndEquipToThis => EffectResolutionKind.TakeControl,
+                EffectActionKind.SpecialSummonTargetsUnionsThenItAttacksAgain => EffectResolutionKind.SpecialSummon,
+                // SummonLocksAndStatRules batch: Amazoness Spellcaster's original-ATK switch; Rivalry of Warlords' one-Type
+                // rule (a continuous lock, like the summon / attack locks above).
+                EffectActionKind.SwitchOriginalAtkOfTwoTargetsUntilEndOfTurn => EffectResolutionKind.ModifyStats,
+                EffectActionKind.EachPlayerKeepsOneMonsterType => EffectResolutionKind.Protection,
                 EffectActionKind.OpponentDiscardsRandomThenOneOfTheirChoice => EffectResolutionKind.Discard,
                 // BattlePhaseEnd (v142): end-of-Battle-Phase and battle-aftermath effects.
                 EffectActionKind.ChangeThisToDefenseAfterAttackingLockPosition => EffectResolutionKind.ChangePosition,
@@ -422,6 +438,9 @@ namespace WRLDZ.Duel.TextEffects
                 // attaches this card to its target (the Equip kind, without equipping); its leave-field
                 // self-destruction and Ekibyo Drakmord's countdown are removals.
                 EffectActionKind.EquippedCannotAttack => EffectResolutionKind.Protection,
+                // EquipLocksAndLeaveField batch: Raregold / Metalsilver Armor locks.
+                EffectActionKind.OpponentCannotAttackOtherThanEquippedHost or
+                    EffectActionKind.OpponentCannotTargetMonstersExceptEquippedHost => EffectResolutionKind.Protection,
                 EffectActionKind.InflictDamageToLinkedCardController => EffectResolutionKind.Damage,
                 EffectActionKind.LinkThisToTargetSpellTrap => EffectResolutionKind.Equip,
                 EffectActionKind.DestroyThisWhenLinkedCardLeavesField or
@@ -669,6 +688,52 @@ namespace WRLDZ.Duel.TextEffects
                 // v173: Des Feral Imp (GY card → Deck, shuffled) shares Forceful Sentry's kind — the
                 // "return the chosen card to the Deck (shuffle)" resolution, previously unmapped.
                 EffectActionKind.ReturnChosenToDeckShuffle => EffectResolutionKind.ReturnToDeck,
+                // DamageStepRules batch: Ultimate Obedient Fiend's attack condition and Kishido Spirit's equal-ATK battle
+                // protection are rule clauses; Meteorain's turn piercing reads as piercing (DirectAttack, as above);
+                // Cat's Ear Tribe sets the battler's original ATK; Amazoness Swords Woman's reflected damage is damage the
+                // controller does not take.
+                EffectActionKind.CannotAttackUnlessOnlyCardOnFieldAndEmptyHand or
+                    EffectActionKind.CannotBeDestroyedByBattleWithEqualAtkMonster => EffectResolutionKind.Protection,
+                EffectActionKind.YourMonstersGainPiercingThisTurn => EffectResolutionKind.DirectAttack,
+                EffectActionKind.OpponentBattlerOriginalAtkBecomesAmountDuringDamageStep => EffectResolutionKind.ModifyStats,
+                EffectActionKind.ReflectControllerBattleDamageFromBattlesInvolvingThis => EffectResolutionKind.PreventDamage,
+                // DcrEquipSpells batch: Equip Spell grants (direct attack, second attack, fixed battle damage) and
+                // Butterfly Dagger's return to the hand.
+                EffectActionKind.EquippedCanAttackDirectly => EffectResolutionKind.DirectAttack,
+                EffectActionKind.EquippedBattleDamageToOpponentBecomes => EffectResolutionKind.Damage,
+                EffectActionKind.EquippedGainsExtraAttacks => EffectResolutionKind.ExtraAttack,
+                EffectActionKind.ReturnThisFromGyToHand => EffectResolutionKind.ReturnToHand,
+                // SpellCounterSpenders batch: Mandragola / Apprentice Magician / Pitch-Black Power Stone's counters,
+                // Apprentice Magician's face-down Deck summon, Armor Exe's upkeep and Pitch-Black's self-destruction.
+                EffectActionKind.PlaceSpellCounterOnEachFaceUpHolder or
+                    EffectActionKind.PlaceSpellCounterOnTarget or
+                    EffectActionKind.MoveSpellCounterFromThisToTarget => EffectResolutionKind.PlaceCounters,
+                EffectActionKind.SpecialSummonLevelRaceFromDeckFaceDownDefense => EffectResolutionKind.SpecialSummon,
+                EffectActionKind.RemoveSpellCounterOnYourSideOrDestroyThis or
+                    EffectActionKind.DestroyThisWhenLastSpellCounterRemoved => EffectResolutionKind.Destroy,
+                // ChainLinkAnswers batch: Jar Robber (negate the named activation's effect, then draw), Chaos Command
+                // Magician (negate a monster effect that targets only this card), Dramatic Rescue (return the targeted
+                // series monster, then Special Summon from the hand).
+                EffectActionKind.NegateEffectOfNamedActivationThenDraw or
+                    EffectActionKind.NegateMonsterEffectsThatTargetOnlyThis => EffectResolutionKind.NegateActivation,
+                EffectActionKind.ReturnTargetedSeriesMonsterThenSpecialSummonFromHand => EffectResolutionKind.ReturnToHand,
+                // FlipMassAndOpponentPicks batch: Dark Cat with White Tail, Huge Revolution, Magical Merchant, Pixie
+                // Knight, Pineapple Blast, Dimension Jar.
+                EffectActionKind.ReturnOpponentAndOwnTargetsToOwnersHands => EffectResolutionKind.ReturnToHand,
+                EffectActionKind.SendOpponentHandToGyAndDestroyAllOpponentCards or
+                    EffectActionKind.DestroyOpponentMonstersToMatchYourCountOpponentChooses => EffectResolutionKind.Destroy,
+                EffectActionKind.ExcavateUntilSpellTrapAddItSendRestToGy => EffectResolutionKind.Search,
+                EffectActionKind.OpponentPlacesSpellFromYourGyOnTopOfYourDeck => EffectResolutionKind.ReturnToDeck,
+                EffectActionKind.EachPlayerMayBanishUpToMonstersFromOpponentGy => EffectResolutionKind.Banish,
+                // PhaseTriggersAndIgnitionCosts batch: Amazoness Blowpiper, Helping Robo for Combat, Senri Eye (a look,
+                // like Inspection), Magical Scientist, Roulette Barrel, Physical Double.
+                EffectActionKind.TargetOppFaceUpLosesAtkAtYourStandby => EffectResolutionKind.ModifyStats,
+                EffectActionKind.DrawThenPlaceHandCardOnDeckBottom => EffectResolutionKind.Draw,
+                EffectActionKind.PayLpLookAtOpponentTopDeckCardAtYourStandby => EffectResolutionKind.Randomize,
+                EffectActionKind.SpecialSummonFusionFromExtraNoDirectAttackReturnAtEndPhase =>
+                    EffectResolutionKind.SpecialSummon,
+                EffectActionKind.RollTwoDiceChooseOneDestroyFaceUpMonsterWithThatLevel => EffectResolutionKind.Destroy,
+                EffectActionKind.SpecialSummonTokenCopyingTargetDestroyAtEndPhase => EffectResolutionKind.Token,
                 EffectActionKind.None => EffectResolutionKind.None,
                 _ => EffectResolutionKind.UniqueException
             };

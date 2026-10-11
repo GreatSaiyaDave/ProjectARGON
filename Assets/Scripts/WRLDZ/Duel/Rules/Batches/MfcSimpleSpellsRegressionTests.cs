@@ -17,9 +17,9 @@ namespace WRLDZ.Duel.Rules
     /// <item>Emblem of Dragon Destroyer (6390406), Hidden Spellbook (21840375) — Implemented by the
     /// MfcSimpleSpellsB batch (v174): real-text atoms plus mini-duels in
     /// MfcSimpleSpellsBRegressionTests. Their pins moved there.</item>
-    /// <item>Anti-Spell (53112492), Mass Driver (34906152) — stay fail-closed on purpose: their
-    /// sentences are gated by WholeResolutionRegressionTests (FailClosedCorpus) and, for Anti-Spell,
-    /// SpellCounterRegressionTests — a cost fragment must never compile on its own.</item>
+    /// <item>Mass Driver (34906152) is Implemented by the PhaseTriggersAndIgnitionCosts batch (its pins live in
+    /// PhaseTriggersAndIgnitionCostsRegressionTests). Anti-Spell (53112492) is Implemented whole by the
+    /// SpellCounterSpenders batch (its cost fragment still never compiles on its own).</item>
     /// <item>Thunder of Ruler (91781589) — stays fail-closed on purpose: its only timing is the
     /// opponent's Standby Phase and the engine has no activation path for a Set Normal Trap on that
     /// timing (MfcSimpleSpellsBAtoms documents why). Queued until a Standby priority window for the
@@ -29,7 +29,6 @@ namespace WRLDZ.Duel.Rules
     public static class MfcSimpleSpellsRegressionTests
     {
         const int DarkMagicianGirl = 38033121;
-        const int MassDriver = 34906152;
         const int ThunderOfRuler = 91781589;
         const int AntiSpell = 53112492;
 
@@ -72,9 +71,18 @@ namespace WRLDZ.Duel.Rules
                     $"status={st} {Describe(p)}");
             }
 
-            StaysFailClosed("Mass Driver (Tribute 1 monster to burn 400 — gated by WholeResolutionRegressionTests)", MassDriver);
+            // Mass Driver: Implemented by the PhaseTriggersAndIgnitionCosts batch (its pins moved there).
             StaysFailClosed("Thunder of Ruler (opp Standby activation; no Battle Phase this turn)", ThunderOfRuler);
-            StaysFailClosed("Anti-Spell (2 Spell Counters, negate a Spell activation — gated by WholeResolution + SpellCounter tests)", AntiSpell);
+            {
+                // SpellCounterSpenders batch: Anti-Spell compiles whole (its own atom: the side-wide counter cost and the
+                // Spell negation together); the mini-duels are in SpellCounterSpendersRegressionTests.
+                var (p, st) = Of(AntiSpell);
+                Check("Anti-Spell: Implemented whole by SpellCounterSpenders (2 counters from your side, negate a Spell activation)",
+                    p != null && p.FullyCompiled && st == CardEffectStatusKind.Implemented && p.ClauseList.Count == 1 &&
+                    p.ClauseList[0].Action == EffectActionKind.NegateActivation &&
+                    p.ClauseList[0].RemoveSpellCountersOnYourSide == 2,
+                    $"status={st} {Describe(p)}");
+            }
         }
 
         static string Describe(CompiledCardProgram p)

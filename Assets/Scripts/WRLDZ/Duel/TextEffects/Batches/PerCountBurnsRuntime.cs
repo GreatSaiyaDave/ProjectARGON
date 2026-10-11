@@ -199,6 +199,9 @@ namespace WRLDZ.Duel.TextEffects
             // ContinuousLocksAndIgnitions batch (v163): Call of the Mummy / Frontline Base — once per turn, a hand monster.
             if (ContinuousLocksAndIgnitionsRuntime.IsHandIgnition(prog))
                 return ContinuousLocksAndIgnitionsRuntime.CanUseHandIgnition(engine, who, card, prog, out reason);
+            // PhaseTriggersAndIgnitionCosts batch: Mass Driver — Tribute 1 monster (cost), no count limit.
+            if (PhaseTriggersAndIgnitionCostsRuntime.IsTributeBurnIgnition(prog))
+                return PhaseTriggersAndIgnitionCostsRuntime.CanUseTributeBurn(engine, who, card, prog, out reason);
 
             if (ReadyIgnition(card, prog) == null)
             {
@@ -292,6 +295,15 @@ namespace WRLDZ.Duel.TextEffects
             }
 
             link.EffectKey = FaceUpFieldIgnitionLinkKey;
+            // PhaseTriggersAndIgnitionCosts batch: Mass Driver stays on the field; its Tribute is paid first (a human picks;
+            // Cancel takes the activation back), then the opponent's chain window opens (the batch runtime does both).
+            if (PhaseTriggersAndIgnitionCostsRuntime.IsTributeBurnIgnition(prog))
+            {
+                PhaseTriggersAndIgnitionCostsRuntime.ActivateTributeBurn(engine, who, card, prog, link);
+                handled = true;
+                return true;
+            }
+
             if (PgdSpellTrapBasicsRuntime.IsShuffleIgnition(prog))
             {
                 // PgdSpellTrapBasics batch (v162): Card Shuffle pays 300 LP and stays on the field; the Deck is chosen as
@@ -351,6 +363,8 @@ namespace WRLDZ.Duel.TextEffects
             if (PgdSpellTrapBasicsRuntime.TryResolveShuffleLink(engine, link)) return true;
             // ContinuousLocksAndIgnitions batch (v163): Call of the Mummy / Frontline Base's link.
             if (ContinuousLocksAndIgnitionsRuntime.TryResolveHandIgnitionLink(engine, link)) return true;
+            // PhaseTriggersAndIgnitionCosts batch: Mass Driver's link.
+            if (PhaseTriggersAndIgnitionCostsRuntime.TryResolveTributeBurnLink(engine, link)) return true;
             var name = link.Card?.Name ?? "effect";
             if (!s_fixedDamage.TryGetValue(link, out var fixedDamage))
             {
@@ -410,6 +424,9 @@ namespace WRLDZ.Duel.TextEffects
             // ContinuousLocksAndIgnitions batch (v163): Call of the Mummy / Frontline Base whenever usable.
             if (ContinuousLocksAndIgnitionsRuntime.IsHandIgnition(prog))
                 return ContinuousLocksAndIgnitionsRuntime.AiWantsHandIgnition(engine, ai, card, prog);
+            // PhaseTriggersAndIgnitionCosts batch: Mass Driver for lethal damage or a Token's Tribute.
+            if (PhaseTriggersAndIgnitionCostsRuntime.IsTributeBurnIgnition(prog))
+                return PhaseTriggersAndIgnitionCostsRuntime.AiWantsTributeBurn(engine, ai, card, prog);
             var clause = ReadyIgnition(card, prog);
             if (clause == null) return false;
             var damage = System.Math.Max(0, clause.Amount) * card.TurnCounter;

@@ -223,7 +223,6 @@ namespace WRLDZ.Duel.Rules
                 42868711, // Gora Turtle of Illusion: "… controlled by your opponent that target this face-up card …"
                 39507162, // Blade Knight: "If you control no other monsters, the effects of Flip monsters … are negated."
                 73544866, // Guardian Baou: "Negate the effects of monsters destroyed by battle with this card."
-                95515060, // Rod of Silence - Kay'est: "Negate other Spell effects that target the equipped monster …"
             };
             var leaked = nearIds.Where(id =>
             {
@@ -234,6 +233,15 @@ namespace WRLDZ.Duel.Rules
             }).ToList();
             Check("Near misses: look-alike negation sentences stay uncompiled", leaked.Count == 0,
                 string.Join(",", leaked));
+
+            // Rod of Silence - Kay'est ("Negate other Spell effects that target the equipped monster …") is compiled whole by
+            // DcrEquipSpellsAtoms with an equip-host scope; this batch's monster-scope atom must still not produce it.
+            var rod = P(95515060);
+            Check("Near miss: Rod of Silence - Kay'est is not this batch's monster-scope target negation",
+                rod == null || !rod.ClauseList.Exists(c =>
+                    (c.Action == EffectActionKind.NegateSpellTrapEffectsThatTargetAndDestroy && !c.AppliesToEquippedHost) ||
+                    c.Action == EffectActionKind.NegateEffectsOfMonstersDestroyedByBattle),
+                rod == null ? "null" : string.Join(" | ", rod.ClauseList.Select(c => $"{c.Action}/equipHost={c.AppliesToEquippedHost}")));
 
             var mismatch = new CardDef
             {

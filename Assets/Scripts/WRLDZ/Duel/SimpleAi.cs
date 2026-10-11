@@ -380,6 +380,16 @@ namespace WRLDZ.Duel
                     continue;
                 }
 
+                // FlipMassAndOpponentPicks batch: a Set Huge Revolution once its Main Phase condition holds.
+                var revolution = ai.SpellTrapsOnField().FirstOrDefault(st =>
+                    TextEffects.FlipMassAndOpponentPicksRuntime.AiWantsToActivateSetTrap(engine, ai, st) &&
+                    engine.CanActivateSpellTrap(ai, st, fromHand: false));
+                if (revolution != null && engine.TryActivateSpellTrap(ai, revolution, fromHand: false))
+                {
+                    yield return null;
+                    continue;
+                }
+
                 // Delinquent Duo (DiscardTriggers v142): 2 of the player's cards for 1 while the AI's LP allow it.
                 // Main Phase 1 only: there RunTurn waits (IsAwaitingEffectTarget) for the human victim's forced
                 // choice; its Main Phase 2 loop does not, and would try to end the turn with the choice open.

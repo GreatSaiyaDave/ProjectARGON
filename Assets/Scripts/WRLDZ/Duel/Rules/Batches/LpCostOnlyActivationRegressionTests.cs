@@ -132,16 +132,17 @@ namespace WRLDZ.Duel.Rules
                     Shape(prog));
             }
 
-            foreach (var (id, label) in new[]
-                     {
-                         (SenriEye, "Senri Eye")
-                     })
             {
-                var def = db.Get(id);
+                // PhaseTriggersAndIgnitionCosts batch: Senri Eye compiles whole — the 100 LP is the cost of its optional
+                // Standby trigger (pay, then look at the opponent's top card), never a bare payment on the activation.
+                var def = db.Get(SenriEye);
                 var prog = def != null ? CardTextEffectCompiler.Compile(def) : null;
-                Check($"{label}: the LP cost alone is no longer kept as a clause",
-                    def != null && prog != null && !prog.FullyCompiled && !HasBareLpClause(prog) &&
-                    !CardEffectStatus.MayIncludeInDeck(def),
+                Check("Senri Eye: the LP cost alone is no longer kept as a clause — it is the cost of its Standby trigger",
+                    def != null && prog != null && prog.FullyCompiled && !HasBareLpClause(prog) &&
+                    !prog.HasTiming(EffectTiming.Activate) && prog.ClauseList.Count == 1 &&
+                    prog.ClauseList[0].Timing == EffectTiming.StandbyPhase &&
+                    prog.ClauseList[0].Action == EffectActionKind.PayLpLookAtOpponentTopDeckCardAtYourStandby &&
+                    prog.ClauseList[0].Amount == 100 && prog.ClauseList[0].PayLpAmount == 0,
                     Shape(prog));
             }
 

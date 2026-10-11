@@ -127,9 +127,13 @@ namespace WRLDZ.Duel.TextEffects
         /// <paramref name="card"/> (in <paramref name="from"/>) can be Special Summoned to <paramref name="who"/>'s field
         /// by an effect of <paramref name="source"/>. <paramref name="checkHandToll"/>: also ask Chain Energy's toll for a
         /// hand card (callers that already charged it pass false). <paramref name="requireZone"/>: a Monster Zone is free.
+        /// <paramref name="faceUp"/>: false for a Special Summon in face-down Defense Position only (Lua
+        /// IsCanBeSpecialSummoned(…, POS_FACEDOWN_DEFENSE)), which the face-up-only rules (the unique rule, Rivalry of
+        /// Warlords' EFFECT_FORCE_SPSUMMON_POSITION) do not stop.
         /// </summary>
         public static bool CanBeSpecialSummoned(DuelEngine engine, DuelistState who, CardInstance card,
-            CardInstance source, SummonOrigin from, bool checkHandToll = true, bool requireZone = false)
+            CardInstance source, SummonOrigin from, bool checkHandToll = true, bool requireZone = false,
+            bool faceUp = true)
         {
             if (card?.Def == null || !card.Def.IsMonster || who == null) return false;
             engine ??= who.Engine;
@@ -173,7 +177,9 @@ namespace WRLDZ.Duel.TextEffects
             {
                 if (RuleLocksRuntime.SpecialSummonLocked(engine, who, card)) return false;
                 // SummonTriggersAndTributes batch (v163): "You can only control 1 face-up X" (a face-up Special Summon).
-                if (SummonTriggersAndTributesRuntime.UniqueBlocksFaceUp(engine, who, card, out _)) return false;
+                if (faceUp && SummonTriggersAndTributesRuntime.UniqueBlocksFaceUp(engine, who, card, out _)) return false;
+                // SummonLocksAndStatRules batch: Rivalry of Warlords (a face-up Special Summon of another Type).
+                if (faceUp && SummonLocksAndStatRulesRuntime.BlocksFaceUpSummon(engine, who, card, out _)) return false;
                 if (checkHandToll && from == SummonOrigin.Hand && RuleLocksRuntime.HandSpecialSummonUnaffordable(engine, who))
                     return false;
                 if (requireZone && engine.FirstEmpty(who.MonsterZones) < 0) return false;

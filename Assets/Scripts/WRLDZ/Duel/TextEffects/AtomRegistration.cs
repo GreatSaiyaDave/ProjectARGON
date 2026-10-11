@@ -705,6 +705,15 @@ namespace WRLDZ.Duel.TextEffects
             MfcLabCards3Atoms.Atoms,
             MfcSimpleSpellsBAtoms.Atoms,
             SimpleTargetUtilityAtoms.Atoms,
+            DamageStepRulesAtoms.Atoms,
+            EquipLocksAndLeaveFieldAtoms.Atoms,
+            DcrEquipSpellsAtoms.Atoms,
+            SpellCounterSpendersAtoms.Atoms,
+            ChainLinkAnswersAtoms.Atoms,
+            FlipMassAndOpponentPicksAtoms.Atoms,
+            PhaseTriggersAndIgnitionCostsAtoms.Atoms,
+            UnionRidersAtoms.Atoms,
+            SummonLocksAndStatRulesAtoms.Atoms,
         };
 
         /// <summary>Every whole-sentence atom: <see cref="Atoms"/>, then each batch in <see cref="BatchAtomSets"/>.</summary>

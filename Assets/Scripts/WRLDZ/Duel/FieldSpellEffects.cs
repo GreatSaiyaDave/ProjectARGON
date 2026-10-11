@@ -104,6 +104,8 @@ namespace WRLDZ.Duel
             TextEffects.SpecialSummonEffectsRuntime.ApplyBoard(engine);
             // Spirit Ryu (BattleBoosts batch, v161): "+1000 ATK/DEF until the end of the Battle Phase".
             TextEffects.BattleBoostsRuntime.ApplyBoard(engine);
+            // Cat's Ear Tribe (DamageStepRules batch): the battler's Damage Step original ATK ends with the Damage Step.
+            TextEffects.DamageStepRulesRuntime.ApplyBoard(engine);
             DestroyNamedLeavesContinuous(engine, engine.Player);
             DestroyNamedLeavesContinuous(engine, engine.Opponent);
             // EquipAndSpellProtection batch: Heart of Clear Water's self-destruction; stale Magic Reflector counters.
@@ -116,11 +118,15 @@ namespace WRLDZ.Duel
             TextEffects.RedirectAndReplaceRuntime.SweepSameNameDestruction(engine);
             // SummonTriggersAndTributes batch (v163): "You can only control 1 face-up X" — a duplicate is destroyed.
             TextEffects.SummonTriggersAndTributesRuntime.SweepUniqueOnField(engine);
+            // SummonLocksAndStatRules batch: Amazoness Spellcaster's switch resets; Rivalry of Warlords' one-Type rule.
+            TextEffects.SummonLocksAndStatRulesRuntime.Refresh(engine);
             // NegationMonsters batch (v161): Freed / Frontier Wiseman / Tyrant Dragon destroy a Continuous Spell (Trap)
             // that keeps targeting a monster they protect (ygopro EFFECT_SELF_DESTROY).
             TextEffects.NegationMonstersRuntime.SweepPersistentTargets(engine);
             // Thunder Nyan Nyan (BattleRules batch): destroyed while its controller controls a non-LIGHT monster.
             TextEffects.BattleRulesRuntime.SweepSelfDestroy(engine);
+            // SpellCounterSpenders batch: Pitch-Black Power Stone is destroyed once its last Spell Counter is removed.
+            TextEffects.SpellCounterSpendersRuntime.SweepSelfDestroy(engine);
             // Skull Invitation: cards that reached a GY since the last checkpoint (StandbyGrowthAndMaintenance, v142).
             TextEffects.StandbyGrowthAndMaintenanceRuntime.GySendCheckpoint(engine);
         }
@@ -224,6 +230,9 @@ namespace WRLDZ.Duel
                 // A negated Equip / equipped Trap (Royal Decree, Imperial Order): no stat change.
                 if (eq != null && eq.IsNegated)
                     continue;
+                // UnionRiders batch (v175): a Union not in its Union state (taken by Union Rider) gives no Union bonus.
+                if (UnionRidersRuntime.UnionTextOff(eq))
+                    continue;
                 var ep = eq?.Def != null ? CompiledEffectCache.GetOrCompile(eq.Def) : null;
                 if (ep == null) continue;
                 // Germ Infection / Stim-Pack: ATK lost per Standby Phase counted on the Equip.
@@ -286,6 +295,12 @@ namespace WRLDZ.Duel
                 }
                 else if (clause.Action == EffectActionKind.ContinuousReduceLevel)
                 {
+                    // EquipLocksAndLeaveField batch: Demotion — the Level change applies to the equipped monster only.
+                    if (TextEffects.EquipLocksAndLeaveFieldRuntime.ApplyEquippedLevelChange(engine, field, clause))
+                    {
+                        any = true;
+                        continue;
+                    }
                     ApplyLevelMod(engine, clause.AttributeFilter, -Math.Abs(clause.Amount),
                         applyToHand: clause.ApplyToHand, applyToField: clause.ApplyToField || !clause.ApplyToHand);
                     any = true;

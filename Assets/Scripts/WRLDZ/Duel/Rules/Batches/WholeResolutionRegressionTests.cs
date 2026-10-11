@@ -90,8 +90,10 @@ namespace WRLDZ.Duel.Rules
             {
                 (41356845, "Acid Trap Hole", "flip, then destroy only if DEF <= 2000, else back face-down",
                     c => c.Action == EffectActionKind.Destroy && c.Zone == EffectZoneFilter.FieldAnyMonster, false),
+                // SpellCounterSpenders batch: Implemented whole (NegateActivation + the side-wide counter cost); a Destroy
+                // clause is still the wrong shape; gate off.
                 (53112492, "Anti-Spell", "Spell Counter cost + negate a Spell activation",
-                    c => c.Action == EffectActionKind.Destroy, true),
+                    c => c.Action == EffectActionKind.Destroy, false),
                 (79649195, "Armor Break", "negate an Equip Spell activation",
                     c => c.Action == EffectActionKind.Destroy, true),
                 (57953380, "Card of Safe Return", "a draw trigger, not a draw on activation",
@@ -130,15 +132,22 @@ namespace WRLDZ.Duel.Rules
                          c.CountSource != PerCountBurnsRuntime.OppBanishedFaceUpMonsters, false),
                 (23265594, "Heavy Mech Support Platform", "Union equip / unequip, not a GY summon",
                     c => c.Action == EffectActionKind.SpecialSummonFromGy, false),
+                // PhaseTriggersAndIgnitionCosts batch: Implemented as one face-up field ignition whose cost is the Tribute;
+                // a burn on any other timing, or without the Tribute cost, is the wrong clause; gate off.
                 (34906152, "Mass Driver", "Tribute 1 monster to burn 400",
-                    c => c.Action == EffectActionKind.InflictDamageToOpponent, true),
+                    c => c.Action == EffectActionKind.InflictDamageToOpponent &&
+                         (c.Timing != EffectTiming.FaceUpFieldIgnition || c.RequiresTributeCount != 1), false),
                 // Since v159 the BattleWindows atom compiles Michizure whole; no generic (condition-less) Destroy may appear.
                 (37580756, "Michizure", "trigger: a monster sent from the field to your GY",
                     c => c.Timing == EffectTiming.DamageCalculation ||
                          (c.Action == EffectActionKind.Destroy &&
                           c.ActivationCondition != BattleWindowsRuntime.MonsterSentFromFieldToYourGy), false),
+                // SpellCounterSpenders batch: Implemented whole — a GY summon without both names or without the 2-counter
+                // cost is the wrong shape; gate off.
                 (68334074, "Miracle Restoring", "Spell Counter cost; \"Dark Magician\" or \"Buster Blader\" only",
-                    c => c.Action == EffectActionKind.SpecialSummonFromGy, true),
+                    c => c.Action == EffectActionKind.SpecialSummonFromGy &&
+                         (c.NamedCard != "Dark Magician" || c.AltNamedCard != "Buster Blader" ||
+                          c.RemoveSpellCountersOnYourSide != 2), false),
                 // TargetedClassics Soft: FullyCompiled Implemented — wrong-clause was any Destroy; gate off.
                 (71044499, "Nobleman of Crossout", "face-down; destroy+banish; purge Decks if Flip",
                     c => c.Action == EffectActionKind.Destroy &&
@@ -218,12 +227,20 @@ namespace WRLDZ.Duel.Rules
             {
                 (4149689, "Goblin Fan (destroy the Flip Summoned monster)", c => c.Action == EffectActionKind.Destroy),
                 (21051146, "Blast Magician (Spell Counter cost)", c => c.Action == EffectActionKind.Destroy),
-                (80193355, "Dramatic Rescue (return, then Special Summon)",
-                    c => c.Action == EffectActionKind.SpecialSummonFromHand),
                 (29267084, "Shadow Spell (cannot attack or change position)",
                     c => c.Action == EffectActionKind.ChangeBattlePosition),
                 (49328340, "Spiral Spear Strike (draw 2, then discard 1)", c => c.Action == EffectActionKind.Draw),
             };
+            // Dramatic Rescue left this list in the ChainLinkAnswers batch: it compiles whole (return the targeted
+            // "Amazoness" monster, then Special Summon from the hand; ChainLinkAnswersRegressionTests drive it) and still
+            // carries no generic Special Summon fragment.
+            var rescue = db.Get(80193355);
+            var rescueProg = rescue != null ? CardTextEffectCompiler.Compile(rescue) : null;
+            Check("Dramatic Rescue: compiled whole, with no partial \"Special Summon from hand\" clause",
+                rescueProg != null && rescueProg.FullyCompiled && rescueProg.ClauseList.Count == 1 &&
+                rescueProg.ClauseList[0].Action == EffectActionKind.ReturnTargetedSeriesMonsterThenSpecialSummonFromHand &&
+                !Has(rescueProg, c => c.Action == EffectActionKind.SpecialSummonFromHand),
+                Describe(rescueProg));
             foreach (var (id, label, wrong) in stubs)
             {
                 var def = db.Get(id);
