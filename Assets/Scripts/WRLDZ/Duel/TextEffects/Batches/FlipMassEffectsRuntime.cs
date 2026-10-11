@@ -225,6 +225,8 @@ namespace WRLDZ.Duel.TextEffects
 
             List<HeldTrigger> held;
             BeginHold(engine);
+            // GuardiansAndEquipEvents batch: Equip Spells that leave the field in this event leave together (Morale Boost).
+            var equipLeave = GuardiansAndEquipEventsRuntime.EnterEquipLeaveEvent(engine);
             try
             {
                 body();
@@ -232,6 +234,7 @@ namespace WRLDZ.Duel.TextEffects
             finally
             {
                 held = EndHold(engine);
+                equipLeave.Dispose();
             }
 
             ReplayHeld(engine, held);
@@ -832,6 +835,10 @@ namespace WRLDZ.Duel.TextEffects
                 if (seat.ToGrave.Count > 0)
                 {
                     seat.Who.Graveyard.AddRange(seat.ToGrave);
+                    // SimpleTriggersAndSwarm batch: every move into a GY stamps the card (GyEntryStamps), so its "sent to
+                    // the GY" (from anywhere) trigger sees the excavated / revealed cards sent here.
+                    foreach (var g in seat.ToGrave)
+                        GyEntryStamps.Entered(engine, g);
                     engine.Log($"{seat.Who.Name} sends {Names(seat.ToGrave)} to the GY.");
                 }
             }

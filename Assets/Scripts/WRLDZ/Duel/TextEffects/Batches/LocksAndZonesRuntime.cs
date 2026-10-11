@@ -229,6 +229,9 @@ namespace WRLDZ.Duel.TextEffects
             reason = null;
             if (card?.Def == null || card.Def.IsMonster) return false;
             if (!card.Def.IsSpell && !card.Def.IsTrap) return false;
+            // SpellTrapAnswersAndActivationLocks batch: Sasuke Samurai #2 — the same lock (re:IsSpellTrapEffect()) until the
+            // End Phase of this turn, without Cold Wave's Set lock.
+            if (SpellTrapAnswersAndActivationLocksRuntime.TurnSpellTrapLockActive(engine, out reason)) return true;
             if (!SpellTrapLockActive(engine)) return false;
             reason = "Spell and Trap Cards cannot be activated until the Cold Wave lock ends.";
             return true;
@@ -249,8 +252,8 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         public static bool SpellTrapTriggerLocked(DuelEngine engine, CardInstance card)
         {
-            if (!SpellTrapActivationLocked(engine, card, out _)) return false;
-            engine.Log($"{card.Name}: its effect cannot be activated (Spell and Trap Cards are locked by Cold Wave).");
+            if (!SpellTrapActivationLocked(engine, card, out var why)) return false;
+            engine.Log($"{card.Name}: its effect cannot be activated ({why})");
             return true;
         }
 
@@ -351,7 +354,11 @@ namespace WRLDZ.Duel.TextEffects
             if (returned) engine.NotifyPublic();
         }
 
-        static void ReturnToField(DuelEngine engine, TemporaryBanishment r)
+        /// <summary>
+        /// Duel.ReturnToField for one temporary banishment (also DcrSpellTrapUtility: Interdimensional Matter Transporter,
+        /// Different Dimension Gate): the zone it left, else the first free one; no zone: the GY.
+        /// </summary>
+        internal static void ReturnToField(DuelEngine engine, TemporaryBanishment r)
         {
             var zones = r.ReturnTo?.MonsterZones;
             var inRange = zones != null && r.ZoneIndex >= 0 && r.ZoneIndex < zones.Length;

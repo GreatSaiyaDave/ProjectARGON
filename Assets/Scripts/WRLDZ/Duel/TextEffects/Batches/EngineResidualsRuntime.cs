@@ -35,6 +35,10 @@ namespace WRLDZ.Duel.TextEffects
         /// <summary>A cost pick made while a card is being activated: nothing is held or resumed afterwards (the
         /// activation goes on by itself).</summary>
         public bool DuringActivation;
+        /// <summary>BattleDestroyedTriggers batch (Agido): the chosen card is Special Summoned, so the UI asks its face-up
+        /// position and zone before the tap (SpellTrapEffects.PendingTargetIsSpecialSummon; Finish reads
+        /// DuelEngine.PendingSpecialSummonPosition / PendingSpecialSummonZone).</summary>
+        public bool AsksSpecialSummonPlacement;
     }
 
     /// <summary>

@@ -143,10 +143,12 @@ namespace WRLDZ.Duel.Rules
                 CardEffectStatus.Classify(db.Get(CyberRaider)) == CardEffectStatusKind.Implemented,
                 Describe(cyberRaider));
             var dragged = prog(DraggedDown);
-            Check("Dragged Down into the Grave fails closed (no longer a bare 'draw 1')",
-                dragged != null && !dragged.FullyCompiled &&
-                !dragged.ClauseList.Exists(c => c != null && c.Action == EffectActionKind.Draw) &&
-                CardEffectStatus.Classify(db.Get(DraggedDown)) == CardEffectStatusKind.Unimplemented,
+            // DcrSpellTrapUtility batch: the whole text is one atom now (picks, discards, then both draw), never a bare
+            // 'draw 1'.
+            Check("Dragged Down into the Grave compiles whole (no bare 'draw 1')",
+                dragged != null && dragged.FullyCompiled && dragged.ClauseList.Count == 1 &&
+                dragged.ClauseList[0].Action == EffectActionKind.BothPickFromOpponentHandDiscardThenBothDraw &&
+                !dragged.ClauseList.Exists(c => c != null && c.Action == EffectActionKind.Draw),
                 Describe(dragged));
         }
 

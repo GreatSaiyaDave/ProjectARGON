@@ -300,6 +300,9 @@ namespace WRLDZ.Duel.TextEffects
         public static void NotifyFaceUpCardDestroyed(DuelEngine engine, CardInstance destroyed, bool wasFaceUp)
         {
             if (engine == null || destroyed?.Def == null || !wasFaceUp || engine.GameOver) return;
+            // DcrSpellTrapUtility batch: Different Dimension Gate destroyed and sent to the GY returns its monsters.
+            DcrSpellTrapUtilityRuntime.OnCardDestroyed(engine, destroyed);
+            if (engine.GameOver) return;
             List<(DuelistState side, CardInstance monster, string name)> doomed = null;
             foreach (var side in new[] { engine.Player, engine.Opponent })
             {

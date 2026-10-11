@@ -137,6 +137,18 @@ namespace WRLDZ.Duel.TextEffects
         public static void ScheduleBattlePhaseSkip(DuelEngine engine, DuelistState victim, CardInstance source)
         {
             if (engine == null || victim == null) return;
+            // DcrSpellTrapUtility batch — Frozen Soul (free-chain Trap): during the victim's own turn before its Battle
+            // Phase (Draw, Standby, Main Phase 1) the next Battle Phase is this turn's (Lua EFFECT_SKIP_BP applies at
+            // once, reset at the end of their Battle Phase); later in their turn, or in the other player's turn, it is
+            // the one of their next turn.
+            if (ReferenceEquals(engine.TurnPlayer, victim) &&
+                (engine.Phase == DuelPhase.Draw || engine.Phase == DuelPhase.Standby || engine.Phase == DuelPhase.Main1))
+            {
+                victim.BattlePhaseForbiddenTurn = engine.TurnNumber;
+                engine.Log($"{source?.Name ?? "Effect"}: {victim.Name} skips their Battle Phase this turn.");
+                return;
+            }
+
             victim.SkipNextBattlePhase = true;
             victim.SkipNextBattlePhaseSource = source?.Name;
             engine.Log($"{source?.Name ?? "Effect"}: {victim.Name} skips their next Battle Phase.");

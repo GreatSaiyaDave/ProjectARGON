@@ -502,6 +502,9 @@ namespace WRLDZ.Duel.TextEffects
                 });
             }
 
+            // DcrSpellTrapUtility batch: Final Countdown's player countdown (its card holds the count wherever it is).
+            list.AddRange(DcrSpellTrapUtilityRuntime.TurnCounts(engine));
+
             return list;
         }
 

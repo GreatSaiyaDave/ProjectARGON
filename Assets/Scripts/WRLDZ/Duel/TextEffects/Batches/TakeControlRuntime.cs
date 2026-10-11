@@ -174,6 +174,9 @@ namespace WRLDZ.Duel.TextEffects
                 return;
             }
 
+            // MonsterNegationAndControlLocks batch: Blindly Loyal Goblin — its control cannot switch.
+            if (MonsterNegationAndControlLocksRuntime.BlocksControlChange(engine, source, target)) return;
+
             var binding = NewBinding(engine, who, source, target, old);
             if (!engine.TryTakeControl(who, target))
             {
@@ -263,6 +266,11 @@ namespace WRLDZ.Duel.TextEffects
                 engine.Log("Target is protected at resolution.");
                 return;
             }
+
+            // MonsterNegationAndControlLocks batch: neither monster's control may be locked (ygopro Duel.SwapControl).
+            if (MonsterNegationAndControlLocksRuntime.BlocksControlChange(engine, source, target) ||
+                MonsterNegationAndControlLocksRuntime.BlocksControlChange(engine, source, source))
+                return;
 
             if (!engine.TrySwapControl(source, target))
                 engine.Log($"{source.Name}: switch control failed.");

@@ -299,7 +299,48 @@ namespace WRLDZ.Duel.TextEffects
 
             var clause = EquipClauseOf(equip);
             if (clause == null) return false;
-            var ec = engine.ControllerOf(equip);
+            return ClauseLimitAllows(engine, equip, clause, engine.ControllerOf(equip), mc, monster);
+        }
+
+        /// <summary>
+        /// GuardiansAndEquipEvents batch — Guardian Elma / Chopman the Desperate Outlaw (Lua s.filter: IsType(TYPE_EQUIP) and
+        /// CheckEquipTarget(c)): the Equip Spell Card <paramref name="equip"/> in <paramref name="equipController"/>'s GY could
+        /// be equipped by that player to <paramref name="monster"/>, a face-up monster on the field. Its equip limit is read
+        /// from its own compiled equip clause, with <paramref name="equipController"/> as its controller (a GY card's handler
+        /// player); a series limit ("Equip only to a "Ninja" monster") is honoured here. A card that is not FullyCompiled, has
+        /// no equip clause (Premature Burial: its limit exists only once activated) or an unknown limit shape fails closed.
+        /// </summary>
+        public static bool IsCorrectEquipTargetFromGy(DuelEngine engine, DuelistState equipController, CardInstance equip,
+            CardInstance monster)
+        {
+            if (engine == null || equipController == null || equip?.Def == null || monster?.Def == null) return false;
+            if (!equip.Def.IsEquipSpell || equip.Def.IsMonster) return false;
+            var mc = engine.ControllerOf(monster);
+            if (mc == null || !mc.TryFindMonster(monster, out _) || !monster.FaceUp) return false;
+            var prog = CompiledEffectCache.GetOrCompile(equip.Def);
+            if (prog == null || !prog.FullyCompiled) return false;
+            var clause = EquipClauseOf(equip);
+            if (clause == null) return false;
+            // "Equip only to a monster your opponent controls": an opponent-only equip zone never fits its own controller's
+            // monster.
+            if (equipController == mc &&
+                clause.Zone is EffectZoneFilter.OppMonsters or EffectZoneFilter.OppFaceUpMonsters or
+                    EffectZoneFilter.OppAnyMonsters or EffectZoneFilter.OppAttackPositionMonsters or
+                    EffectZoneFilter.OppDefensePositionMonsters or EffectZoneFilter.OppFaceDownMonsters)
+                return false;
+            return ClauseLimitAllows(engine, equip, clause, equipController, mc, monster);
+        }
+
+        /// <summary>
+        /// The equip limit of <paramref name="clause"/> (an Equip Card's EquipThisToTarget clause controlled by
+        /// <paramref name="ec"/>) allows <paramref name="monster"/>, controlled by <paramref name="mc"/>. On an Equip Spell Card a
+        /// <see cref="EffectClause.TargetSeriesName"/> limit ("Equip only to a "Ninja" monster", aux.AddEquipProcedure with
+        /// IsSetCard; GuardiansAndEquipEvents batch) is a series check; on any other card (Battle-Scarred, a Continuous Trap
+        /// whose series filter is its activation target, not an equip limit) it stays an unknown shape (fail closed).
+        /// </summary>
+        static bool ClauseLimitAllows(DuelEngine engine, CardInstance equip, EffectClause clause, DuelistState ec,
+            DuelistState mc, CardInstance monster)
+        {
             if (clause.EquipLimitSameController && ec != mc) return false;
             // Snatch Steal (s.eqlimit): a monster its controller does not control.
             if (clause.TakeControlOfTarget && ec == mc) return false;
@@ -319,6 +360,11 @@ namespace WRLDZ.Duel.TextEffects
             if (!string.IsNullOrEmpty(clause.EquipHostName) && !monster.IsNamed(clause.EquipHostName) &&
                 (string.IsNullOrEmpty(clause.AltNamedCard) || !monster.IsNamed(clause.AltNamedCard)))
                 return false;
+            if (!string.IsNullOrEmpty(clause.TargetSeriesName))
+            {
+                if (equip?.Def == null || !equip.Def.IsEquipSpell || equip.Def.IsMonster) return false;
+                if (!TextEffectRuntime.CardMatchesSeries(monster.Def, clause.TargetSeriesName)) return false;
+            }
             return EquipLimitShapeKnown(clause);
         }
 
@@ -340,11 +386,11 @@ namespace WRLDZ.Duel.TextEffects
 
         /// <summary>
         /// The equip clause carries only limits <see cref="IsCorrectEquipTarget"/> reads. Any other target filter
-        /// (an ATK cap, a Level, a series) is not modelled as an equip limit yet: such an Equip Card is not a correct
+        /// (an ATK cap, a Level) is not modelled as an equip limit yet: such an Equip Card is not a correct
         /// target for a new monster (fail closed: Collected Power destroys it).
         /// </summary>
         static bool EquipLimitShapeKnown(EffectClause c) =>
-            string.IsNullOrEmpty(c.TargetSeriesName) && !c.RequiresAttackPosition && !c.AmountIsLevel &&
+            !c.RequiresAttackPosition && !c.AmountIsLevel &&
             !c.AmountIsAtkMax && !c.AmountIsDefMax && !c.RequiresAtkLeqCost && string.IsNullOrEmpty(c.TargetCardKind);
 
         // ------------------------------------------------------------------ Collected Power
@@ -771,6 +817,13 @@ namespace WRLDZ.Duel.TextEffects
             {
                 engine.Log($"{source.Name}: its Equip Card effect is negated — no control change for now.");
                 EquipModelRuntime.SuspendControl(engine, source, target);
+                engine.NotifyPublic();
+                return;
+            }
+
+            // MonsterNegationAndControlLocks batch: control of a locked monster cannot switch (it stays equipped).
+            if (MonsterNegationAndControlLocksRuntime.BlocksControlChange(engine, source, target))
+            {
                 engine.NotifyPublic();
                 return;
             }

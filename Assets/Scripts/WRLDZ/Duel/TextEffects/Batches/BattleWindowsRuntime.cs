@@ -810,6 +810,30 @@ namespace WRLDZ.Duel.TextEffects
             return st.Offered.Count > 0;
         }
 
+        /// <summary>
+        /// ArchfiendRiders batch (Desrook Archfiend): the monsters sent from the field to <paramref name="who"/>'s GY that
+        /// <paramref name="who"/>'s open window answers — the idle window's offered sends, or the sends of this Damage Step
+        /// in the end-of-Damage-Step window (the same records <see cref="MonsterSentWindowOpen"/> reads; never a cost send).
+        /// </summary>
+        public static List<CardInstance> AnsweredSends(DuelEngine engine, DuelistState who)
+        {
+            var list = new List<CardInstance>();
+            var pr = engine?.PendingResponse;
+            if (pr == null || who == null || pr.Responder != who || !s_state.TryGetValue(engine, out var st))
+                return list;
+            IEnumerable<SentRecord> records = pr.Timing switch
+            {
+                ResponseTiming.MonsterSentFromFieldToYourGy =>
+                    st.Offered.Where(r => r.Owner == who).Concat(FreshSends(engine, who).Where(r => !r.ByCost)),
+                ResponseTiming.EndOfDamageStep => FreshSends(engine, who).Where(r => !r.ByCost),
+                _ => Enumerable.Empty<SentRecord>()
+            };
+            foreach (var r in records)
+                if (r.Card != null && !list.Contains(r.Card))
+                    list.Add(r.Card);
+            return list;
+        }
+
         /// <summary>The idle window closed (passed, answered or never opened): the sends it offered are gone.</summary>
         public static void EndSentWindow(DuelEngine engine)
         {

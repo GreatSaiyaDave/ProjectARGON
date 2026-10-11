@@ -55,8 +55,13 @@ namespace WRLDZ.Duel.TextEffects
                             continue;
                     }
                     // SummonLocksAndStatRules batch — Amazoness Tiger: face-up "Amazoness" monsters, except this one.
+                    // ArchfiendRiders batch — Vilepawn Archfiend: "treated as" series members count (Toon Summoned Skull).
                     if (!string.IsNullOrEmpty(c.NamedCard) && c.NamedCardIsSeries &&
-                        !SummonLocksAndStatRulesRuntime.IsSeriesMember(monster, c.NamedCard))
+                        !SummonLocksAndStatRulesRuntime.IsSeriesMember(monster, c.NamedCard) &&
+                        !TextEffectRuntime.CardMatchesSeries(monster.Def, c.NamedCard))
+                        continue;
+                    // ArchfiendRiders batch — Vilepawn Archfiend: except cards with that name (Lua: not IsCode(id)).
+                    if (!string.IsNullOrEmpty(c.ExceptNamedCard) && monster.IsNamed(c.ExceptNamedCard))
                         continue;
                     return true;
                 }
@@ -98,6 +103,8 @@ namespace WRLDZ.Duel.TextEffects
         public static bool IsUnaffectedBy(DuelEngine engine, CardInstance victim, CardInstance source)
         {
             if (victim == null || source?.Def == null) return false;
+            // MonsterNegationAndControlLocks batch: Non-Spellcasting Area (a field effect, not the victim's own effect).
+            if (MonsterNegationAndControlLocksRuntime.ShieldsFromSpell(engine, victim, source)) return true;
             if (!victim.FaceUp || victim.IsNegated) return false;
             foreach (var c in ClausesOn(victim, EffectActionKind.UnaffectedByCardEffects))
             {

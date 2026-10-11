@@ -65,6 +65,8 @@ namespace WRLDZ.Duel.TextEffects
             public bool NegatesSpells;
             public bool TrapNegationSparesThis;
             public bool SpellNegationSparesThis;
+            /// <summary>MonsterNegationAndControlLocks batch: Skill Drain negates face-up Effect Monsters on the field.</summary>
+            public bool NegatesMonsters;
         }
 
         static readonly ConditionalWeakTable<DuelEngine, State> s_state = new();
@@ -89,6 +91,9 @@ namespace WRLDZ.Duel.TextEffects
             // LocksAndZones batch (v142), Cold Wave: until its lock ends no Spell/Trap Card or Spell/Trap effect can
             // be activated at all (ygopro EFFECT_CANNOT_ACTIVATE, re:IsSpellTrapEffect — wherever the card is).
             if (LocksAndZonesRuntime.SpellTrapActivationLocked(engine, card, out reason)) return true;
+            // SpellTrapAnswersAndActivationLocks batch: Cursed Seal of the Forbidden Spell's name lock, Invader of Darkness's
+            // Quick-Play lock (the card's activation, from the hand or Set).
+            if (SpellTrapAnswersAndActivationLocksRuntime.ActivationLocked(engine, who, card, out reason)) return true;
             var onField = OnSpellTrapField(engine, card);
             var inHand = who.Hand != null && who.Hand.Contains(card);
             if (!onField && !inHand) return false;
@@ -117,7 +122,9 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         public static CardInstance NegatedBy(DuelEngine engine, CardInstance card)
         {
-            if (engine == null || card?.Def == null || card.Def.IsMonster) return null;
+            if (engine == null || card?.Def == null) return null;
+            // MonsterNegationAndControlLocks batch: Skill Drain covers a face-up Effect Monster in a Monster Zone.
+            if (card.Def.IsMonster) return MonsterNegatedBy(engine, card);
             if (!card.Def.IsSpell && !card.Def.IsTrap) return null;
             foreach (var src in ActiveSources(engine))
             {
@@ -157,11 +164,14 @@ namespace WRLDZ.Duel.TextEffects
             EffectClause clause)
         {
             if (engine == null || source?.Def == null || clause == null) return false;
-            if (source.Def.IsMonster || (!source.Def.IsSpell && !source.Def.IsTrap)) return false;
             // Upkeep is a cost (Lua EFFECT_FLAG_CANNOT_DISABLE), paid even while negated.
             if (clause.Action == EffectActionKind.PayLpOrDestroyThis ||
                 clause.Action == EffectActionKind.StandbyMaintenancePayLp)
                 return false;
+            // MonsterNegationAndControlLocks batch: Skill Drain — a monster effect resolving while its monster is face-up on
+            // the field does nothing (it could still be activated); one resolving in the GY / hand applies.
+            if (source.Def.IsMonster) return NegatesResolvingMonsterEffect(engine, source);
+            if (!source.Def.IsSpell && !source.Def.IsTrap) return false;
             var onField = OnSpellTrapField(engine, source);
             var activating = !onField && IsActivationTiming(clause.Timing) && !clause.ResolvesFromGy &&
                              !clause.ActivatesFromHand && InAnyHand(engine, source);
@@ -244,7 +254,8 @@ namespace WRLDZ.Duel.TextEffects
             {
                 foreach (var side in new[] { engine.Player, engine.Opponent })
                 {
-                    foreach (var card in side.SpellTrapsOnField())
+                    // MonsterNegationAndControlLocks batch: Skill Drain's face-up Effect Monsters, then Spells/Traps.
+                    foreach (var card in side.MonstersOnField().Concat(side.SpellTrapsOnField()))
                     {
                         if (card?.Def == null || !card.FaceUp) continue;
                         var covered = false;
@@ -339,7 +350,8 @@ namespace WRLDZ.Duel.TextEffects
             a == EffectActionKind.ContinuousCannotActivateTraps ||
             a == EffectActionKind.ContinuousNegateTrapEffectsOnField ||
             a == EffectActionKind.ContinuousCannotActivateSpells ||
-            a == EffectActionKind.ContinuousNegateSpellEffectsOnField;
+            a == EffectActionKind.ContinuousNegateSpellEffectsOnField ||
+            a == EffectActionKind.ContinuousNegateMonsterEffectsOnField;
 
         static Source ReadSource(CardInstance card)
         {
@@ -366,6 +378,9 @@ namespace WRLDZ.Duel.TextEffects
                     case EffectActionKind.ContinuousNegateSpellEffectsOnField:
                         src.NegatesSpells = true;
                         src.SpellNegationSparesThis |= c.ExceptThisCard;
+                        break;
+                    case EffectActionKind.ContinuousNegateMonsterEffectsOnField:
+                        src.NegatesMonsters = true;
                         break;
                 }
             }
@@ -458,7 +473,8 @@ namespace WRLDZ.Duel.TextEffects
         /// <summary>Would <paramref name="src"/> negate <paramref name="card"/> (a Spell/Trap)?</summary>
         static bool Covers(DuelEngine engine, Source src, CardInstance card)
         {
-            if (src?.Card == null || card?.Def == null || card.Def.IsMonster) return false;
+            if (src?.Card == null || card?.Def == null) return false;
+            if (card.Def.IsMonster) return src.NegatesMonsters && CoversMonster(engine, card);
             var trap = card.Def.IsTrap;
             var spell = card.Def.IsSpell;
             if (trap && src.NegatesTraps)
@@ -547,5 +563,56 @@ namespace WRLDZ.Duel.TextEffects
             t == EffectTiming.OpponentNormalOrFlipSummon ||
             t == EffectTiming.DamageCalculation ||
             t == EffectTiming.YouTakeLifePointDamage;
+
+        // ------------------------------------------------------------------ MonsterNegationAndControlLocks batch
+
+        /// <summary>
+        /// Skill Drain (Lua EFFECT_DISABLE, target range both Monster Zones, s.disable: an Effect Monster, or one that was
+        /// originally): the applying source that negates <paramref name="monster"/>'s effects right now — it is face-up in a
+        /// Monster Zone, has an effect, and its effects can be negated. Null otherwise.
+        /// </summary>
+        static CardInstance MonsterNegatedBy(DuelEngine engine, CardInstance monster)
+        {
+            if (!CoversMonster(engine, monster)) return null;
+            foreach (var src in ActiveSources(engine))
+                if (src.Card != monster && src.NegatesMonsters)
+                    return src.Card;
+            return null;
+        }
+
+        /// <summary>A face-up Effect Monster in a Monster Zone whose effects can be negated (Skill Drain's targets).</summary>
+        static bool CoversMonster(DuelEngine engine, CardInstance card)
+        {
+            if (card?.Def == null || !card.FaceUp || !card.Def.IsMonster || card.IsToken) return false;
+            if (!TextEffectRuntime.IsTrueEffectMonster(card.Def)) return false;
+            if (!InMonsterZone(engine, card)) return false;
+            return EffectCanBeNegated(card);
+        }
+
+        static bool InMonsterZone(DuelEngine engine, CardInstance card) =>
+            (engine.Player != null && engine.Player.TryFindMonster(card, out _)) ||
+            (engine.Opponent != null && engine.Opponent.TryFindMonster(card, out _));
+
+        /// <summary>
+        /// <see cref="NegatesResolvingClause"/> for a monster's effect: negated (and logged) while the monster is face-up in a
+        /// Monster Zone and an applying Skill Drain covers it. A monster that left the field (Tributed as a cost, sent to the
+        /// GY) or was turned face-down before resolution resolves its effect.
+        /// </summary>
+        static bool NegatesResolvingMonsterEffect(DuelEngine engine, CardInstance monster)
+        {
+            var by = MonsterNegatedBy(engine, monster);
+            if (by == null) return false;
+            engine.Log($"{monster.Name}: its effect is negated by {by.Name}.");
+            return true;
+        }
+
+        /// <summary>
+        /// Registered monster scripts that resolve outside ApplyClause (MonsterEffects: Man-Eater Bug, Magician of Faith,
+        /// Abyss Soldier): true, and logged, when <paramref name="monster"/>'s effect resolves while Skill Drain negates it
+        /// (face-up on the field). Its costs already paid stay paid.
+        /// </summary>
+        public static bool NegatesMonsterEffectOnField(DuelEngine engine, CardInstance monster) =>
+            engine != null && monster?.Def != null && monster.Def.IsMonster &&
+            NegatesResolvingMonsterEffect(engine, monster);
     }
 }

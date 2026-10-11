@@ -141,7 +141,11 @@ namespace WRLDZ.Duel.TextEffects
             switch (c.ActivationCondition)
             {
                 case EachPlayerControlsMonster:
-                    ok = who.MonstersOnField().Any() && opp != null && opp.MonstersOnField().Any();
+                    // MonsterNegationAndControlLocks batch: a monster whose control cannot switch is not one to give
+                    // (Creature Swap's Lua filter IsAbleToChangeControler).
+                    ok = who.MonstersOnField().Any(m => !MonsterNegationAndControlLocksRuntime.ControlLocked(engine, m)) &&
+                         opp != null &&
+                         opp.MonstersOnField().Any(m => !MonsterNegationAndControlLocksRuntime.ControlLocked(engine, m));
                     reason = "Each player must control a monster.";
                     return true;
                 case AnyPlayerHandAndFieldAtLeast:
@@ -719,7 +723,8 @@ namespace WRLDZ.Duel.TextEffects
             while (plan.Mine == null || plan.Theirs == null)
             {
                 var chooser = plan.Mine == null ? plan.Who : opp;
-                var options = chooser.MonstersOnField().Where(m => m != null).ToList();
+                var options = chooser.MonstersOnField()
+                    .Where(m => m != null && !MonsterNegationAndControlLocksRuntime.ControlLocked(engine, m)).ToList();
                 if (options.Count == 0)
                 {
                     engine.Log($"{plan.Source?.Name}: {chooser.Name} controls no monster — no effect.");
@@ -778,7 +783,9 @@ namespace WRLDZ.Duel.TextEffects
                 return;
             }
 
-            if (!engine.TrySwapControl(a, b))
+            if (MonsterNegationAndControlLocksRuntime.BlocksControlChange(engine, plan.Source, a) ||
+                MonsterNegationAndControlLocksRuntime.BlocksControlChange(engine, plan.Source, b) ||
+                !engine.TrySwapControl(a, b))
             {
                 engine.Log($"{plan.Source?.Name}: the control switch failed.");
                 return;

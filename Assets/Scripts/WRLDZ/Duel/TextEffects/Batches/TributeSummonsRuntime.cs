@@ -132,6 +132,12 @@ namespace WRLDZ.Duel.TextEffects
         public static void EndNamedSummon(CardInstance previous) => s_namedSummonSource = previous;
 
         /// <summary>
+        /// The card whose named Special Summon is in progress (TextEffectRuntime.TrySpecialSummonNamed), or null. Read by
+        /// NamedSummonPairsRuntime.NamedSummonerIsSummoning (the Nomi "Must be Special Summoned with "X"" lock).
+        /// </summary>
+        public static CardInstance CurrentNamedSummonSource => s_namedSummonSource;
+
+        /// <summary>
         /// DuelEngine.SpecialSummonToField gate for a named-card Semi-Nomi: the card its text names is doing the
         /// summon (<paramref name="completesProcedure"/>: it is now properly summoned), or it was properly summoned
         /// before and is coming back from the GY or banishment. Every other monster passes.

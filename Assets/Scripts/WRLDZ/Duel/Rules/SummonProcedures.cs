@@ -150,6 +150,13 @@ namespace WRLDZ.Duel.Rules
                 return r;
             }
 
+            // ArchfiendRiders batch: Terrorking Archfiend — no Normal Summon without a face-up "Archfiend" (Set stays legal).
+            if (!asSet && ArchfiendRidersRuntime.NormalOrFlipSummonForbidden(engine, who, card, out var seriesReason))
+            {
+                r.Reason = seriesReason;
+                return r;
+            }
+
             // SummonTriggersAndTributes batch (v163): "You can only control 1 face-up X" — a Set stays legal.
             if (!asSet && SummonTriggersAndTributesRuntime.UniqueBlocksFaceUp(engine, who, card, out var uniqueReason))
             {

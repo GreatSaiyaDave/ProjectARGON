@@ -26,6 +26,8 @@ namespace WRLDZ.Duel.TextEffects
             card.GyEntryReason = reason;
             card.GyEntryReasonPlayer = reasonPlayer;
             card.GyEntryStamp++;
+            // SimpleTriggersAndSwarm batch: a "When this card is sent to the GY" (from anywhere) trigger is queued here.
+            SimpleTriggersAndSwarmRuntime.NoteEnteredGy(engine, card);
         }
 
         /// <summary>

@@ -1716,8 +1716,12 @@ namespace WRLDZ.Duel.Rules
 
                     var skill = db.Get(82732705);
                     var skillProg = skill != null ? CardTextEffectCompiler.Compile(skill) : null;
-                    Check("Corpus: Skill Drain leftover unique is not FullyCompiled",
-                        skillProg == null || !skillProg.FullyCompiled);
+                    // MonsterNegationAndControlLocks batch: Skill Drain now compiles to its LP cost + field-wide monster negation.
+                    Check("Corpus: Skill Drain FullyCompiled (1000 LP activation cost + continuous monster negation)",
+                        skillProg != null && skillProg.FullyCompiled &&
+                        skillProg.ClauseList.Exists(c => c != null && c.Timing == EffectTiming.Activate && c.PayLpAmount == 1000) &&
+                        skillProg.ClauseList.Exists(c => c != null &&
+                            c.Action == EffectActionKind.ContinuousNegateMonsterEffectsOnField));
 
                     var warrior = db.Get(95281259);
                     var wProg = warrior != null ? CardTextEffectCompiler.Compile(warrior) : null;
@@ -1740,8 +1744,12 @@ namespace WRLDZ.Duel.Rules
 
                     var spellRepro = db.Get(29228529);
                     var srProg = spellRepro != null ? CardTextEffectCompiler.Compile(spellRepro) : null;
-                    Check("Corpus: Spell Reproduction leftover send-2 is not FullyCompiled",
-                        srProg != null && !srProg.FullyCompiled);
+                    // DcrSpellTrapUtility batch: the send-2-Spells cost compiles (a send, not a discard).
+                    Check("Corpus: Spell Reproduction sends 2 Spells (cost), then adds 1 targeted Spell from your GY",
+                        srProg != null && srProg.FullyCompiled && srProg.ClauseList.Count == 1 &&
+                        srProg.ClauseList[0].Action == EffectActionKind.AddFromGyToHand &&
+                        srProg.ClauseList[0].Zone == EffectZoneFilter.ControllerGySpells &&
+                        srProg.ClauseList[0].CostSendSpellsFromHandCount == 2);
 
                     var giantRat = db.Get(97017120);
                     var ratProg = giantRat != null ? CardTextEffectCompiler.Compile(giantRat) : null;

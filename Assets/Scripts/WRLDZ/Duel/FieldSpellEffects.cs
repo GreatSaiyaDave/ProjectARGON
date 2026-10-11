@@ -102,6 +102,8 @@ namespace WRLDZ.Duel
             TextEffects.BattleWindowsRuntime.ApplyBoard(engine);
             // Winged Minion's lasting gain, Twin-Headed Behemoth's "ATK/DEF become" (SpecialSummonEffects, v161).
             TextEffects.SpecialSummonEffectsRuntime.ApplyBoard(engine);
+            // DerivedAtkMonsters batch (v176): Great Maju Garzett / Maju Garzett — the Tribute-derived "ATK becomes".
+            TextEffects.DerivedAtkMonstersRuntime.ApplyBoard(engine);
             // Spirit Ryu (BattleBoosts batch, v161): "+1000 ATK/DEF until the end of the Battle Phase".
             TextEffects.BattleBoostsRuntime.ApplyBoard(engine);
             // Cat's Ear Tribe (DamageStepRules batch): the battler's Damage Step original ATK ends with the Damage Step.
@@ -125,6 +127,8 @@ namespace WRLDZ.Duel
             TextEffects.NegationMonstersRuntime.SweepPersistentTargets(engine);
             // Thunder Nyan Nyan (BattleRules batch): destroyed while its controller controls a non-LIGHT monster.
             TextEffects.BattleRulesRuntime.SweepSelfDestroy(engine);
+            // NamedSummonPairs batch: Exodia Necross is destroyed while a Forbidden One piece is missing from the GY.
+            TextEffects.NamedSummonPairsRuntime.SweepSelfDestroy(engine);
             // SpellCounterSpenders batch: Pitch-Black Power Stone is destroyed once its last Spell Counter is removed.
             TextEffects.SpellCounterSpendersRuntime.SweepSelfDestroy(engine);
             // Skull Invitation: cards that reached a GY since the last checkpoint (StandbyGrowthAndMaintenance, v142).
@@ -161,11 +165,16 @@ namespace WRLDZ.Duel
             c.DefModifier = 0;
             c.LevelModifier = 0;
             c.PositionLockedByEffect = false;
+            // DerivedAtkMonsters batch (v176): a self-set ATK/DEF is recomputed below (ApplySelfScale / grants).
+            c.SelfSetAtk = int.MinValue;
+            c.SelfSetDef = int.MinValue;
         }
 
         static void ApplyFaceUpField(DuelEngine engine, CardInstance field)
         {
             if (engine == null || field?.Def == null || !field.FaceUp || field.IsNegated) return;
+            // MonsterNegationAndControlLocks batch: Non-Spellcasting Area — a Field Spell's aura leaves shielded monsters as they were.
+            using var nsa = MonsterNegationAndControlLocksRuntime.ShieldStats(engine, field);
 
             // Hardcoded ALO first so compiler + script never double-apply +200 / −1.
             if (field.CardId == ALegendaryOcean)
@@ -229,6 +238,9 @@ namespace WRLDZ.Duel
                     continue;
                 // A negated Equip / equipped Trap (Royal Decree, Imperial Order): no stat change.
                 if (eq != null && eq.IsNegated)
+                    continue;
+                // MonsterNegationAndControlLocks batch: Non-Spellcasting Area — an Equip Spell does not affect a shielded host.
+                if (eq != null && MonsterNegationAndControlLocksRuntime.ShieldsFromSpell(engine, host, eq))
                     continue;
                 // UnionRiders batch (v175): a Union not in its Union state (taken by Union Rider) gives no Union bonus.
                 if (UnionRidersRuntime.UnionTextOff(eq))
@@ -315,6 +327,8 @@ namespace WRLDZ.Duel
                         {
                             if (!IsFaceUpMonster(m)) continue;
                             if (!MatchesRace(m, clause.RaceFilter)) continue;
+                            // MonsterNegationAndControlLocks batch: Non-Spellcasting Area shields from a Spell's change.
+                            if (MonsterNegationAndControlLocksRuntime.ShieldsFromSpell(engine, m, field)) continue;
                             if (clause.AmountIsLevel && clause.Amount > 0)
                             {
                                 // Level Limit - Area B: "Level N or higher" (Xyz have Ranks, not Levels).
@@ -342,6 +356,9 @@ namespace WRLDZ.Duel
                 // ContinuousLocksAndIgnitions batch (v163): Arsenal Bug — "ATK and DEF become N" unless another face-up
                 // monster of the Type is controlled.
                 else if (ContinuousLocksAndIgnitionsRuntime.ApplySelfStatSet(engine, field, clause))
+                    any = true;
+                // MonsterNegationAndControlLocks batch: Final Attack Orders — every face-up monster in Attack Position, locked.
+                else if (MonsterNegationAndControlLocksRuntime.ApplyContinuous(engine, field, clause))
                     any = true;
             }
 
@@ -400,6 +417,10 @@ namespace WRLDZ.Duel
                 case "OppControlsAnyMonster":
                     n = engine.OpponentOf(who)?.MonsterCount > 0 ? 1 : 0;
                     break;
+                case TextEffects.DerivedAtkMonstersRuntime.YourBanishedCards:
+                    // Gren Maju Da Eiza: every card in your banishment, face-down included (GetFieldGroupCount REMOVED).
+                    n = who.Banished?.Count ?? 0;
+                    break;
                 case TextEffects.SelfStatMonstersRuntime.OppMonsterCount:
                     // Every monster the opponent controls, face-down included. Not the flat "any monster" count.
                     n = engine.OpponentOf(who)?.MonsterCount ?? 0;
@@ -415,6 +436,16 @@ namespace WRLDZ.Duel
                         if (g?.Def != null && g.Def.IsMonster && MatchesRace(g, clause.RaceFilter)) n++;
                     break;
                 }
+            }
+
+            // DerivedAtkMonsters batch (v176): "This card's ATK (ATK/DEF) is / are each equal to … x N" (Chaos Necromancer,
+            // Gren Maju Da Eiza) sets the value every other modifier adds to (ygopro EFFECT_SET_ATTACK / _DEFENSE),
+            // a printed "?" included.
+            if (clause.SelfStatIsSet)
+            {
+                self.SelfSetAtk = Math.Max(0, clause.Amount * n);
+                if (clause.DefAmount != 0) self.SelfSetDef = Math.Max(0, clause.DefAmount * n);
+                return;
             }
 
             self.AtkModifier += clause.Amount * n;
@@ -455,7 +486,14 @@ namespace WRLDZ.Duel
             if (who == null) return;
             foreach (var m in who.MonstersOnField())
             {
-                if (m?.Def == null || !m.FaceUp || m.IsNegated) continue;
+                if (m?.Def == null || !m.FaceUp) continue;
+                // MonsterNegationAndControlLocks batch: a negated monster (Skill Drain) loses its own continuous effects, not
+                // what its Equip Cards grant it (an Equip Card's effect is the Equip Card's).
+                if (m.IsNegated)
+                {
+                    if (!engine.IsSummonPending(m)) ApplyEquipStats(engine, m);
+                    continue;
+                }
                 // A monster whose Summon is still in its summon-negation window is not on the field yet: its
                 // continuous effects do not apply (SummonNegation batch, v141).
                 if (engine.IsSummonPending(m)) continue;
@@ -483,6 +521,8 @@ namespace WRLDZ.Duel
                 // (Field/Continuous Spell/Trap and monster effects stay live).
                 if (ContinuousProtections.EquipCardEffectsAreNegated(engine, st))
                     continue;
+                // MonsterNegationAndControlLocks batch: Non-Spellcasting Area — a Spell's aura leaves shielded monsters as they were.
+                using var nsa = MonsterNegationAndControlLocksRuntime.ShieldStats(engine, st);
                 // A FullyCompiled stat aura (Banner of Courage) owns its ATK/DEF; the Lua
                 // catalog must not stack a second, unconditional copy on top of it.
                 if (!CompiledOwnsSpellTrapStats(st))
@@ -853,74 +893,10 @@ namespace WRLDZ.Duel
         public static bool UmiIsOnField(DuelEngine engine) =>
             NamedCardIsFaceUpOnField(engine, UmiName);
 
-        const string PandemoniumName = "Pandemonium";
-
         /// <summary>
-        /// Pandemonium: "Neither player has to pay Life Points during the Standby Phase
-        /// for 'Archfiend' monsters." While a face-up Pandemonium is in either Field
-        /// Zone, the Archfiend Standby-Phase maintenance cost is waived for both players.
-        /// </summary>
-        public static bool ArchfiendMaintenanceWaived(DuelEngine engine) => PandemoniumActive(engine);
-
-        /// <summary>A face-up "Pandemonium" is in either Field Zone.</summary>
-        public static bool PandemoniumActive(DuelEngine engine)
-        {
-            if (engine == null) return false;
-            return NamedFieldSpellFaceUp(engine.Player, PandemoniumName) ||
-                   NamedFieldSpellFaceUp(engine.Opponent, PandemoniumName);
-        }
-
-        /// <summary>
-        /// Pandemonium: each time a player's "Archfiend" monster is destroyed and sent to
-        /// the GY, except by battle, that player may add 1 "Archfiend" monster from their
-        /// Deck to their hand that is a lower Level than the destroyed card. Auto-takes the
-        /// highest eligible Level (deterministic) when available.
-        /// </summary>
-        public static void TryPandemoniumSearchOnDestroy(DuelEngine engine, DuelistState owner,
-            CardInstance destroyed, bool byDestruction, bool destroyedByBattle)
-        {
-            if (engine?.Database == null || owner?.Deck == null || destroyed?.Def == null) return;
-            if (!byDestruction || destroyedByBattle) return;
-            if (!IsArchfiendMonster(destroyed.Def)) return;
-            if (!PandemoniumActive(engine)) return;
-
-            var maxLevel = destroyed.Def.level;
-            var bestId = 0;
-            var bestLevel = 0;
-            foreach (var id in owner.Deck)
-            {
-                if (!engine.Database.TryGet(id, out var def) || def == null) continue;
-                if (!IsArchfiendMonster(def) || def.level <= 0 || def.level >= maxLevel) continue;
-                if (def.level > bestLevel) { bestLevel = def.level; bestId = id; }
-            }
-            if (bestId == 0) return;
-
-            var idx = owner.Deck.IndexOf(bestId);
-            if (idx < 0) return;
-            // Cold Wave (LocksAndZones batch): Pandemonium's search is an activated Spell effect (ygopro
-            // TRIGGER_O) and cannot be activated while Spell/Trap Cards are locked.
-            if (TextEffects.LocksAndZonesRuntime.SpellTrapLockActive(engine))
-            {
-                engine.Log("Pandemonium: its effect cannot be activated (Spell and Trap Cards are locked by Cold Wave).");
-                return;
-            }
-            owner.Deck.RemoveAt(idx);
-            var inst = engine.CreateCardInstance(bestId);
-            owner.Hand.Add(inst);
-            engine.Log($"Pandemonium: {owner.Name} adds {inst.Name} (Lv{bestLevel}) " +
-                       $"from the Deck to the hand ({destroyed.Name} was destroyed).");
-        }
-
-        /// <summary>A face-up Field Spell with that name whose effects are not negated (Pandemonium).</summary>
-        static bool NamedFieldSpellFaceUp(DuelistState who, string name)
-        {
-            var f = who?.FieldSpellZone?.Occupant;
-            return f != null && f.FaceUp && !f.IsNegated && f.IsNamed(name);
-        }
-
-        /// <summary>
-        /// A monster that "Pandemonium" protects from the maintenance cost: an
-        /// "Archfiend" monster (archetype match or always-treated-as-Archfiend text).
+        /// An "Archfiend" monster (archetype match or always-treated-as-Archfiend text): the shared
+        /// die-roll targeting protection's scope. Pandemonium's waiver and search read their compiled
+        /// clauses (ArchfiendRidersRuntime).
         /// </summary>
         public static bool IsArchfiendMonster(CardDef def)
         {

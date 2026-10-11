@@ -209,9 +209,15 @@ namespace WRLDZ.Duel.Rules
             }).Select(n => n.Action.ToString()).ToList();
             Check("Near misses: look-alike sentences stay uncompiled", leaked.Count == 0, string.Join(",", leaked));
 
+            // GuardiansAndEquipEvents batch: Guardian Baou's "Negate the effects of monsters destroyed by battle with this card"
+            // is its own sentence (Lua e4 checks IsType(TYPE_EFFECT)); this batch's Ultimate Obedient Fiend atom never takes it.
             var baou = P(GuardianBaou);
-            Check("Near miss: Guardian Baou's battle negation never takes the Effect-Monster kind",
-                baou == null || !baou.ClauseList.Exists(c => c.TargetCardKind == "Effect"), Describe(baou));
+            Check("Near miss: Guardian Baou's battle negation is its own sentence, not the Ultimate Obedient Fiend atom",
+                baou != null && baou.ClauseList.Exists(c =>
+                    c.Action == EffectActionKind.NegateEffectsOfMonstersDestroyedByBattle && c.AffectsThisCardOnly &&
+                    (c.SourceSnippet ?? "").StartsWith("Negate the effects of monsters destroyed by battle with this card")) &&
+                !baou.ClauseList.Exists(c => (c.SourceSnippet ?? "").Contains("Effect Monsters that this card destroys")),
+                Describe(baou));
         }
 
         // ───────────────────────────── D.D. Crazy Beast ─────────────────────────────

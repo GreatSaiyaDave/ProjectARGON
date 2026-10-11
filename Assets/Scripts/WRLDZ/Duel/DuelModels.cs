@@ -482,6 +482,27 @@ namespace WRLDZ.Duel
         public int OriginalAtkOverride = int.MinValue;
         /// <summary>int.MinValue = none. Cocoon of Evolution original DEF replace.</summary>
         public int OriginalDefOverride = int.MinValue;
+        /// <summary>
+        /// DerivedAtkMonsters batch (v176): "this card's ATK becomes / is N" set by this monster's own effect (ygopro
+        /// EFFECT_SET_ATTACK on itself, a SINGLE effect): it replaces the original ATK, a printed "?" included, as the
+        /// value every other modifier adds to. int.MinValue = none. Written on each board refresh
+        /// (FieldSpellEffects.ApplySelfScale with <see cref="TextEffects.EffectClause.SelfStatIsSet"/>,
+        /// <see cref="TextEffects.DerivedAtkMonstersRuntime.ApplyBoard"/>); cleared by the refresh and on every field entry.
+        /// </summary>
+        public int SelfSetAtk = int.MinValue;
+        /// <summary>DerivedAtkMonsters batch (v176): the DEF counterpart of <see cref="SelfSetAtk"/> (ygopro EFFECT_SET_DEFENSE).</summary>
+        public int SelfSetDef = int.MinValue;
+        /// <summary>
+        /// DerivedAtkMonsters batch (v176): the monsters Tributed for this card's Tribute Summon or Tribute Set (ygopro
+        /// GetMaterial), each with its <see cref="GyEntryStamp"/> right after the Tribute: one still counts only while it
+        /// stays in that GY (REASON_SUMMON and GetReasonCard() == this card). Recorded by
+        /// <see cref="TextEffects.DerivedAtkMonstersRuntime.NoteTributeSummon"/>; valid while
+        /// <see cref="TributeMaterialsEntryStamp"/> == <see cref="FieldEntryStamp"/> (that field presence, and the trip
+        /// to the GY that ended it); cleared on every field entry.
+        /// </summary>
+        public System.Collections.Generic.List<(CardInstance Card, int GyStamp)> TributeMaterials;
+        /// <summary>DerivedAtkMonsters batch (v176): <see cref="FieldEntryStamp"/> when <see cref="TributeMaterials"/> was recorded.</summary>
+        public int TributeMaterialsEntryStamp;
         /// <summary>Cocoon of Evolution: controller End Phases while equipped to Petit Moth.</summary>
         public int EquipTurnCounter;
 
@@ -513,8 +534,8 @@ namespace WRLDZ.Duel
 
         int PrintedAtk => OriginalAtkOverride != int.MinValue ? OriginalAtkOverride : (Def != null ? Def.atk : 0);
         int PrintedDef => OriginalDefOverride != int.MinValue ? OriginalDefOverride : (Def != null ? Def.def : 0);
-        int ShownAtk => SwapOriginalAtkDefThisTurn ? PrintedDef : PrintedAtk;
-        int ShownDef => SwapOriginalAtkDefThisTurn ? PrintedAtk : PrintedDef;
+        int ShownAtk => SelfSetAtk != int.MinValue ? SelfSetAtk : SwapOriginalAtkDefThisTurn ? PrintedDef : PrintedAtk;
+        int ShownDef => SelfSetDef != int.MinValue ? SelfSetDef : SwapOriginalAtkDefThisTurn ? PrintedAtk : PrintedDef;
 
         public int CurrentAtk =>
             AtkBecomesZeroThisCalculation || AtkZeroUntilEndOfBattlePhase

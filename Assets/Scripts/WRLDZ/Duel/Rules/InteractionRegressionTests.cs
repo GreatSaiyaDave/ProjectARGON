@@ -1791,8 +1791,11 @@ namespace WRLDZ.Duel.Rules
 
                 var srDef = db.Get(spellRepro);
                 var srProg = srDef != null ? CardTextEffectCompiler.Compile(srDef) : null;
-                Check("Spell Reproduction leftover send-2 is not FullyCompiled",
-                    srProg != null && !srProg.FullyCompiled);
+                // DcrSpellTrapUtility batch: the send-2-Spells cost compiles (a send, not a discard).
+                Check("Spell Reproduction send-2-Spells cost compiles (DcrSpellTrapUtility)",
+                    srProg != null && srProg.FullyCompiled &&
+                    srProg.ClauseList.Exists(c => c != null && c.CostSendSpellsFromHandCount == 2 &&
+                                                  c.Action == EffectActionKind.AddFromGyToHand));
             }
 
             // ── Tribute Summon Dark Magician with 2 face-down Sets ──
@@ -4955,6 +4958,10 @@ namespace WRLDZ.Duel.Rules
                                         (cand.race == null ||
                                          cand.race.IndexOf(clause.RaceFilter,
                                              System.StringComparison.OrdinalIgnoreCase) < 0))
+                                        continue;
+                                    // GuardiansAndEquipEvents batch: Fuhma Shuriken — "Equip only to a "Ninja" monster".
+                                    if (!string.IsNullOrEmpty(clause.TargetSeriesName) &&
+                                        !TextEffects.TextEffectRuntime.CardMatchesSeries(cand, clause.TargetSeriesName))
                                         continue;
                                     // ContinuousLocksAndIgnitions batch (v163): Buster Rancher — ATK 1000 or less.
                                     if (clause.EquipLimitAtkMax > 0 &&
@@ -15005,7 +15012,13 @@ namespace WRLDZ.Duel.Rules
                             c.FromHand &&
                             string.Equals(c.RaceFilter, "Insect",
                                 System.StringComparison.OrdinalIgnoreCase)));
-                    CheckParked(68191243, "Mustering of the Dark Scorpions");
+                    // SimpleTriggersAndSwarm batch: Mustering of the Dark Scorpions compiles (any number of different
+                    // "Dark Scorpion" monsters from the hand, SimpleTriggersAndSwarmRuntime) — no longer parked.
+                    CheckSearcher(68191243, "Mustering of the Dark Scorpions FullyCompiled any-number hand SS, 1 of each",
+                        pr => pr.ClauseList.Count == 1 && pr.ClauseList.Exists(c =>
+                            c != null && c.Action == EffectActionKind.SpecialSummonAnyNumberFromHand &&
+                            c.NamedCardIsSeries && c.SummonOnlyOneOfEachName &&
+                            string.Equals(c.NamedCard, "Dark Scorpion", System.StringComparison.OrdinalIgnoreCase)));
                     CheckSearcher(2204140, "Book of Life FullyCompiled dual GY SS+banish",
                         pr => pr.ClauseList.Exists(c =>
                             c != null && c.Action == EffectActionKind.SpecialSummonFromGy &&

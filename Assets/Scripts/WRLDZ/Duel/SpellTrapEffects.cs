@@ -741,6 +741,9 @@ namespace WRLDZ.Duel
             // SummonPromptsAndCosts batch (v163): Vampire Baby's picks ask a face-up position and a zone.
             if (TextEffects.SummonPromptsAndCostsRuntime.TryPickAsksPlacement(pending, out var summonPromptPlacement))
                 return summonPromptPlacement;
+            // BattleDestroyedTriggers batch: Agido's GY pick (an AskCardPick whose card is Special Summoned).
+            if (TextEffects.ContinuousTrapsAndSpiritSupportRuntime.TryPickAsksPlacement(pending, out var cardPickPlacement))
+                return cardPickPlacement;
 
             // A cost pick is not the effect's target — never place it on the field.
             if (pending.AwaitingDiscardCost || pending.AwaitingIgnitionCost ||
@@ -883,6 +886,9 @@ namespace WRLDZ.Duel
             // EquipLocksAndLeaveField batch: Metalsilver Armor — monsters the opponent's card effects cannot target
             // (mirror of TextEffectRuntime.CollectTargets).
             TextEffects.EquipLocksAndLeaveFieldRuntime.FilterLegacyTargets(engine, who, kind, list);
+            // MonsterNegationAndControlLocks batch: a take-control activation never targets a control-locked monster
+            // (Blindly Loyal Goblin; mirror of TextEffectRuntime.CollectTargets).
+            TextEffects.MonsterNegationAndControlLocksRuntime.FilterLegacyTargets(engine, exceptCard, list);
             return list;
         }
 
@@ -1365,6 +1371,9 @@ namespace WRLDZ.Duel
             if (timing == ResponseTiming.ChainResponse || timing == ResponseTiming.AttackDeclared ||
                 timing == ResponseTiming.OpponentOpenState)
                 TextEffects.TargetNegationsAndHandQuickEffectsRuntime.CollectHandResponses(engine, who, timing, list);
+            // ArchfiendRiders batch: Desrook Archfiend from the hand, right after a "Terrorking Archfiend" you controlled
+            // was destroyed (the idle "sent to your GY" window, the end of the Damage Step).
+            TextEffects.ArchfiendRidersRuntime.CollectHandResponses(engine, who, timing, list);
 
             // RuleLocks batch: Chain Energy — a card in the hand cannot be activated without the LP toll.
             list.RemoveAll(c => TextEffects.RuleLocksRuntime.HandActionUnaffordable(engine, who, c, out _));
@@ -1787,6 +1796,11 @@ namespace WRLDZ.Duel
                     c.Action == EffectActionKind.MagicalHatsStyle ||
                     c.Action == EffectActionKind.CrushCardVirusStyle ||
                     c.Action == EffectActionKind.TakeControlUntilEndPhase ||
+                    // DcrSpellTrapUtility batch: Interdimensional Matter Transporter's face-up monster you control (the
+                    // legacy map has no face-up own-monster list); Spell Reproduction's Spell send cost is paid as the
+                    // card is activated (the N-card hand cost of TryResolveActivation).
+                    c.Action == EffectActionKind.BanishTargetUntilEndPhase ||
+                    DcrSpellTrapUtilityRuntime.IsSpellSendCost(c) ||
                     // Soul Exchange targets face-up or face-down (the legacy OppFaceUpMonster list is face-up only).
                     c.Action == EffectActionKind.TributeTargetAsIfControlledThisTurn ||
                     // Acid Trap Hole: face-down monsters on either field (no legacy list has that filter).
@@ -1892,6 +1906,11 @@ namespace WRLDZ.Duel
             bool autoPickTarget)
         {
             var inResponse = engine.PendingResponse != null && engine.PendingResponse.Responder == who;
+            // ArchfiendRiders batch: Desrook Archfiend's hand Quick Effect (right after a "Terrorking Archfiend" you
+            // controlled was destroyed) seats its own Spell Speed 2 link.
+            if (TextEffects.ArchfiendRidersRuntime.TryActivate(engine, who, card, fromHand, autoPickTarget,
+                    out var handEventOk))
+                return handEventOk;
             // TargetNegationsAndHandQuickEffects batch (v163): a free-chain Quick Effect from the hand (Charm of Shabti) seats
             // its own Spell Speed 2 link: in Main Phase 1, a response window or a chain.
             if (TextEffects.TargetNegationsAndHandQuickEffectsRuntime.TryActivate(engine, who, card, fromHand, autoPickTarget,
@@ -2376,6 +2395,8 @@ namespace WRLDZ.Duel
             // TargetNegationsAndHandQuickEffects batch (v163): Charm of Shabti when an attack would destroy a Gravekeeper's.
             pick ??= legal.FirstOrDefault(c =>
                 TextEffects.TargetNegationsAndHandQuickEffectsRuntime.AiWantsHandQuick(engine, who, c));
+            // ArchfiendRiders batch: Desrook Archfiend brings the destroyed "Terrorking Archfiend" back.
+            pick ??= legal.FirstOrDefault(c => TextEffects.ArchfiendRidersRuntime.AiWantsHandEvent(engine, who, c));
 
             if (pick == null)
             {
@@ -3389,9 +3410,22 @@ case EffectTargetKind.DeclareMonsterType:
                         break;
                     }
 
+                    if (!target.FaceUp)
+                    {
+                        engine.Log("Ring of Destruction: the target is no longer face-up.");
+                        break;
+                    }
+
                     var originalAtk = target.Def != null && target.Def.atk >= 0 ? target.Def.atk : 0;
                     engine.Log($"Ring of Destruction destroys {target.Name}!");
-                    engine.DestroyMonsterPublic(opp, target);
+                    // The Trap is the destroying effect, so "not destroyed by Trap effects" (Exodia Necross) applies.
+                    engine.DestroyMonsterPublic(opp, target, card);
+                    // "... and if you do, take damage" (ygopro Duel.Destroy(tc)~=0): no damage when it survived.
+                    if (opp.TryFindMonster(target, out _))
+                    {
+                        engine.Log($"Ring of Destruction: {target.Name} was not destroyed, so no damage.");
+                        break;
+                    }
                     // Both players take the damage at the same time: both at 0 LP is a Draw (DR-06).
                     engine.ApplyEffectDamageBoth(who, originalAtk, opp, originalAtk, "Ring of Destruction");
                     break;

@@ -117,6 +117,15 @@ namespace WRLDZ.Duel.Rules
             PhaseTriggersAndIgnitionCostsRegressionTests.Run(db, pDeck, aDeck, check);
             UnionRidersRegressionTests.Run(db, pDeck, aDeck, check);
             SummonLocksAndStatRulesRegressionTests.Run(db, pDeck, aDeck, check);
+            SimpleTriggersAndSwarmRegressionTests.Run(db, pDeck, aDeck, check);
+            DcrSpellTrapUtilityRegressionTests.Run(db, pDeck, aDeck, check);
+            BattleDestroyedTriggersRegressionTests.Run(db, pDeck, aDeck, check);
+            GuardiansAndEquipEventsRegressionTests.Run(db, pDeck, aDeck, check);
+            DerivedAtkMonstersRegressionTests.Run(db, pDeck, aDeck, check);
+            NamedSummonPairsRegressionTests.Run(db, pDeck, aDeck, check);
+            ArchfiendRidersRegressionTests.Run(db, pDeck, aDeck, check);
+            SpellTrapAnswersAndActivationLocksRegressionTests.Run(db, pDeck, aDeck, check);
+            MonsterNegationAndControlLocksRegressionTests.Run(db, pDeck, aDeck, check);
         }
     }
 }

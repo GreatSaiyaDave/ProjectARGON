@@ -375,6 +375,42 @@ namespace WRLDZ.Duel.TextEffects
                 // rule (a continuous lock, like the summon / attack locks above).
                 EffectActionKind.SwitchOriginalAtkOfTwoTargetsUntilEndOfTurn => EffectResolutionKind.ModifyStats,
                 EffectActionKind.EachPlayerKeepsOneMonsterType => EffectResolutionKind.Protection,
+                // SimpleTriggersAndSwarm batch: Outstanding Dog Marron (back into the Deck), Don Turtle / Mustering of the
+                // Dark Scorpions (hand Special Summons), Dark Scorpion Combination (direct attacks).
+                EffectActionKind.ShuffleThisFromGyIntoDeck => EffectResolutionKind.ReturnToDeck,
+                EffectActionKind.SpecialSummonAnyNumberFromHand => EffectResolutionKind.SpecialSummon,
+                EffectActionKind.NamedMonstersAttackDirectlyBattleDamageBecomesThisTurn => EffectResolutionKind.DirectAttack,
+                // DcrSpellTrapUtility batch: Interdimensional Matter Transporter / Different Dimension Gate banish (they
+                // return later), Final Countdown's countdown (a lasting player effect; its Lua has no category),
+                // Dragged Down into the Grave's discards.
+                EffectActionKind.BanishTargetUntilEndPhase or
+                    EffectActionKind.BanishTargetsReturnWhenThisDestroyedToGy => EffectResolutionKind.Banish,
+                EffectActionKind.WinAfterTurnCountdown => EffectResolutionKind.Protection,
+                EffectActionKind.BothPickFromOpponentHandDiscardThenBothDraw => EffectResolutionKind.Discard,
+                // BattleDestroyedTriggers batch: Agido's die-roll revival, Keldo's GY-to-Deck, Different Dimension Dragon's
+                // two destruction protections.
+                EffectActionKind.RollDieSpecialSummonFromGyWithLevelOfRoll => EffectResolutionKind.SpecialSummon,
+                EffectActionKind.ShuffleTargetsFromOpponentGyIntoDeck => EffectResolutionKind.ReturnToDeck,
+                EffectActionKind.CannotBeDestroyedBySpellTrapEffectsThatDoNotTargetThis or
+                    EffectActionKind.CannotBeDestroyedByBattleWithMonsterAtkAtMost => EffectResolutionKind.Protection,
+                // DerivedAtkMonsters batch (v176): Tribute-derived ATK (Garzetts); Guardian Tryce's revival of its Tributes.
+                EffectActionKind.ThisAtkBecomesTributedOriginalAtk => EffectResolutionKind.ModifyStats,
+                EffectActionKind.SpecialSummonTributeMaterialsFromGy => EffectResolutionKind.SpecialSummon,
+                // ArchfiendRiders batch: Terrorking's summon lock, Pandemonium's waiver (continuous rules, like the locks
+                // above), Pandemonium's search, Pandemonium Watchbear's protection.
+                EffectActionKind.CannotBeNormalOrFlipSummonedUnlessControllerHasFaceUpSeries => EffectResolutionKind.Protection,
+                EffectActionKind.WaiveSeriesMonsterStandbyLpCosts => EffectResolutionKind.Protection,
+                EffectActionKind.SearchLowerLevelSeriesWhenSeriesDestroyedExceptByBattle => EffectResolutionKind.Search,
+                EffectActionKind.NamedSpellTrapCannotBeDestroyedByOpponentEffects => EffectResolutionKind.Protection,
+                EffectActionKind.SpecialSummonDestroyedNamedFromGyBySendingThisFromHand => EffectResolutionKind.SpecialSummon,
+                // MonsterNegationAndControlLocks batch: Skill Drain's field-wide monster negation, Blindly Loyal Goblin's
+                // control lock and Non-Spellcasting Area's Spell immunity (continuous rules, like the locks above); Final
+                // Attack Orders' Attack lock and Stumbling's summon-time change (position changes).
+                EffectActionKind.ContinuousNegateMonsterEffectsOnField or
+                    EffectActionKind.ControlOfThisCannotSwitch or
+                    EffectActionKind.NonEffectMonstersUnaffectedByOtherSpells => EffectResolutionKind.Protection,
+                EffectActionKind.ContinuousForceAttackLockPosition or
+                    EffectActionKind.ChangeSummonedMonstersToDefense => EffectResolutionKind.ChangePosition,
                 EffectActionKind.OpponentDiscardsRandomThenOneOfTheirChoice => EffectResolutionKind.Discard,
                 // BattlePhaseEnd (v142): end-of-Battle-Phase and battle-aftermath effects.
                 EffectActionKind.ChangeThisToDefenseAfterAttackingLockPosition => EffectResolutionKind.ChangePosition,
@@ -734,6 +770,25 @@ namespace WRLDZ.Duel.TextEffects
                     EffectResolutionKind.SpecialSummon,
                 EffectActionKind.RollTwoDiceChooseOneDestroyFaceUpMonsterWithThatLevel => EffectResolutionKind.Destroy,
                 EffectActionKind.SpecialSummonTokenCopyingTargetDestroyAtEndPhase => EffectResolutionKind.Token,
+                // GuardiansAndEquipEvents batch: Guardian Elma / Chopman equip a GY Equip Spell to themselves; Morale Boost's
+                // equip / leave-field triggers.
+                EffectActionKind.EquipTargetedGyEquipSpellToThis => EffectResolutionKind.Equip,
+                EffectActionKind.GainLpWhenEquipSpellEquipped => EffectResolutionKind.GainLp,
+                EffectActionKind.DamageWhenEquipSpellLeavesField => EffectResolutionKind.Damage,
+                // NamedSummonPairs batch: Exodia Necross (Spell/Trap destruction protection, its GY-piece self-destruction),
+                // Mirage Knight (damage-calculation ATK, End Phase banish).
+                EffectActionKind.CannotBeDestroyedBySpellTrapEffects => EffectResolutionKind.Protection,
+                EffectActionKind.SelfDestroyUnlessAllNamedInYourGy => EffectResolutionKind.Destroy,
+                EffectActionKind.GainBattleTargetOriginalAtkDuringDamageCalculation => EffectResolutionKind.ModifyStats,
+                EffectActionKind.BanishThisAtEndPhaseIfBattledThisTurn => EffectResolutionKind.Banish,
+                // SpellTrapAnswersAndActivationLocks batch: the riders of Counter Trap answers (Cursed Seal's name lock, Spell
+                // Vanishing's same-name send from the opponent's hand and Deck, Judgment of Anubis's destroy-and-burn),
+                // Sasuke Samurai #2's turn-long Spell/Trap lock and Invader of Darkness's Quick-Play lock.
+                EffectActionKind.LockOpponentActivatingNegatedSpellNameForDuel or
+                    EffectActionKind.NeitherPlayerActivatesSpellTrapsThisTurn or
+                    EffectActionKind.ContinuousOpponentCannotActivateQuickPlaySpells => EffectResolutionKind.Protection,
+                EffectActionKind.SendNegatedCardNameFromOpponentHandAndDeckToGy => EffectResolutionKind.Discard,
+                EffectActionKind.MayDestroyOpponentFaceUpMonsterInflictItsAtk => EffectResolutionKind.Destroy,
                 EffectActionKind.None => EffectResolutionKind.None,
                 _ => EffectResolutionKind.UniqueException
             };

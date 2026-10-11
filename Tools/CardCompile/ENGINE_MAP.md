@@ -484,6 +484,17 @@ The notes of earlier groups are in `~/.cache/wrldz-card-compile/*/patches/<Group
 - `UnionRidersRuntime`: `TryCanActivate` / `TryActivate` (Union-state ignitions), `InUnionState`, `SummonableUnions`, timing `EquippedMonsterInflictsBattleDamage`; `HostAlreadyHasUnion` counts only Unions in Union state; `TryDestroyEquipInsteadOfBattle` substitutes for every compiled Union in Union state.
 - `SummonLocksAndStatRulesRuntime`: `BlocksFaceUpSummon(engine, ctrl, card)` (Rivalry, unique face-up rule; call it in any NEW summon candidate filter), `FilterTargets`, `Refresh`, `EndOfTurn`; `SpecialSummonLegality.CanBeSpecialSummoned(..., faceUp)` skips face-up-only rules for `faceUp: false`; `ContinuousProtections.CannotBeAttackTarget` supports `ExceptThisCard` + NamedCard series.
 
+### v176 shared hooks (card batch v176-dcr-ioc; all under `TextEffects/Batches/<Group>Runtime.cs`)
+- `SimpleTriggersAndSwarmRuntime`: timing `SentToGyFromAnywhere` via `NoteEnteredGy` (from `GyEntryStamps.Entered`) queued, fired by `DuelEngine.Notify` -> `FireQueuedSentToGy`; `GrantsDirectAttack`, `ChangeBattleDamage`, `TryOfferOptionalPhaseClause` (optional End Phase yes/no via `AskCardPick`); clause fields `SummonOnlyOneOfEachName`, `TargetMayBeThisCard`.
+- `DcrSpellTrapUtilityRuntime`: `FilterTargets` (Attribute filter), `OnEndPhase` / `OnTurnEnd` (banish-until-End-Phase, win countdown); activation conditions `DcrYourLpAtLeastLowerThanOpponent`, `DcrOpponentDeckNotEmpty`, `DcrBothHandsHaveACard`; hand cost that SENDS N Spells (`CostSendSpellsFromHandCount`).
+- `BattleDestroyedTriggersRuntime`: `FireAfterDamageFor` passes `otherDestroyed`; opt-in `CardPickRequest.AsksSpecialSummonPlacement`; die-roll GY summon and 2-pick GY shuffle actions.
+- `GuardiansAndEquipEventsRuntime`: `FilterTargets` (Equip Spell from GY), `ApplyEquipFromGy`, `OwnHandProcedureAllows`, `NoteEquipped` / `CloseEvent` (EVENT_EQUIP / leave-field triggers; skip when `LocksAndZonesRuntime.SpellTrapTriggerLocked`).
+- `DerivedAtkMonstersRuntime`: `NoteTributeSummon` (from the Normal Summon path), `ApplyBoard` (each RefreshBoard); `CardInstance.SelfSetAtk/SelfSetDef/TributeMaterials`; flag `SelfStatIsSet`; count source `YourBanishedCards`.
+- `NamedSummonPairsRuntime`: `NoteMonsterSentToGy` (per-turn record from the 3 field-to-GY sites), `CannotBeDestroyedBySpellTrapEffects` (in `DestroyMonster`), `SelfDestroyUnlessAllNamedInYourGy` sweep in RefreshBoard.
+- `ArchfiendRidersRuntime`: `NormalOrFlipSummonForbidden` (`CheckNormalOrTribute`, `CanFlipSummon`), `TryStandbyTargetBoost`, `SearchesOffered`, maintenance waiver; `EffectClause.TributeSeriesName`.
+- `SpellTrapAnswersAndActivationLocksRuntime`: `NegateRequiresWouldDestroySpellTrapOnField`, answer discard payers `TryPayAnswerDiscards`, Spell/Trap activation locks (`SpellTrapActivationLocked` / `SpellTrapTriggerLocked`: call in any NEW Spell/Trap trigger queue).
+- `MonsterNegationAndControlLocksRuntime`: `ApplyContinuous` (Skill Drain `ContinuousNegateMonsterEffectsOnField`, Final Attack Orders position lock `PositionLockedByEffect`, `FlipSummonLocked`); `NegatesResolvingClause` also negates face-up monster effects under Skill Drain.
+
 ## 3. Tests
 
 - Location: `Rules/Batches/<Group>RegressionTests.cs` with
@@ -540,6 +551,8 @@ The notes of earlier groups are in `~/.cache/wrldz-card-compile/*/patches/<Group
 | Copy another card's effect | No path resolves another card's compiled program as the activator's own link | Double Spell |
 | Standby Phase window for a Set Normal Trap | `ResponseTiming` has no Standby window; `StandbyPause` holds only the turn player's upkeeps | Thunder of Ruler |
 | Simultaneous hidden pick + reveal (UI) | extends "Revealed-hand state" | Ante |
+| Cannot-discard-as-a-cost lock (per player, per effect) | One check at every discard-cost site (CanActivate, chain answer, free chain, ResponseDiscardPayable, IgnitionCostLegal, RequiresDiscardSelf, hand quick effects, PayChainDiscard, Counter Trap discard, batch payers); sending from hand is not a discard; `ActivationLocked` is per card, not per effect | Goblin of Greed |
+| Leave-field redirect (EFFECT_LEAVE_FIELD_REDIRECT) | Only GY sends have a hub (`SendsToBanishedInstead`); no funnel for hand / Deck / Extra Deck returns | Dark Magician of Chaos |
 
 Open residuals (fail-soft, not fixed):
 - Tribute, discard and banish cost paths still fire optional "When" GY effects of the cost card inline.
@@ -570,6 +583,7 @@ Open residuals (fail-soft, not fixed):
 - Cancel at a monster ignition's target pick after a Tribute / banish / send cost (Exiled Force, Freed the Brave
   Wanderer) drops the link but keeps that cost paid (only discards and LP are refunded).
 - v175 audit residuals: Physical Double ignores Rivalry of Warlords in its target check (Token summon refused, no soft-lock); `AiEquipsOwnMonster` `|| ` arm in the FieldAnyMonster `AutoPick` case is dead (DcrEquipSpells `TryAutoPick` runs first); two send-from-hand cost primitives (`DiscardCostIsSend`, `CostSendSpellsFromHandCount`) and `PayChainDiscard` ignores the former; `ReflectBattleDamage` before `ChangeBattleDamage` not checked against ocgcore; My Body as a Shield ignores `ExceptThisCard`; Union-state ignitions resolve with no opponent chain window.
+- v176 audit residuals: the Archfiend die-roll protection guard in `ApplyClause` treats Fissure's non-targeting pick as a target (`RequiresTargetChoice && !ChoiceDoesNotTarget`; align with `IsPsctTarget` after an audit); three near-duplicate "cannot be destroyed by Spell/Trap" paths; Desrook's own position pick vs `AsksSpecialSummonPlacement`; Final Attack Orders now applies before damage calculation after a battle flip (unverified vs ocgcore); Little-Winguard ignores `PositionLockedByEffect` (log only).
 
 
 ---------------------------------------------------------------------------------------------------------------------

@@ -100,6 +100,13 @@ namespace WRLDZ.Duel.TextEffects
             return targets ? EnterTargetedResolution(source, target) : s_none;
         }
 
+        /// <summary>
+        /// BattleDestroyedTriggers batch (Different Dimension Dragon): <paramref name="card"/> is a target of the effect of
+        /// <paramref name="byEffect"/> that is applying now (the scopes above).
+        /// </summary>
+        internal static bool IsTargetOfResolvingEffect(CardInstance card, CardInstance byEffect) =>
+            TargetedNow(card, byEffect);
+
         static bool TargetedNow(CardInstance card, CardInstance byEffect)
         {
             if (s_scopes == null || card == null) return false;
@@ -176,6 +183,8 @@ namespace WRLDZ.Duel.TextEffects
             if (engine == null || card?.Def == null || card.Def.IsMonster) return false;
             // ContinuousLocksAndIgnitions batch (v163): Timidity — Set Spell and Trap Cards cannot be destroyed by card effects.
             if (ContinuousLocksAndIgnitionsRuntime.SetCardProtected(engine, card)) return true;
+            // ArchfiendRiders batch: Pandemonium Watchbear — its controller's face-up "Pandemonium" vs the opponent's effects.
+            if (ArchfiendRidersRuntime.ProtectsSpellTrapFromEffectDestruction(engine, card, source)) return true;
             if (card.EquippedTo != null && EquipEffectsLive(engine, card, null) &&
                 ContinuousClause(card, EffectActionKind.ThisCannotBeDestroyedByCardEffectsWhileEquipped) != null)
             {

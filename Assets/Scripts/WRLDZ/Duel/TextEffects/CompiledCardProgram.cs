@@ -207,6 +207,24 @@ namespace WRLDZ.Duel.TextEffects
         /// player chooses (<see cref="UnionRidersRuntime.TryActivate"/>). Appended — EffectTiming is serialized as an int.
         /// </summary>
         UnionStateIgnition,
+        /// <summary>
+        /// SimpleTriggersAndSwarm batch: "When this card is sent to the GY" from ANY location — the hand, the Deck or the
+        /// field (ygopro SINGLE+TRIGGER_F on EVENT_TO_GRAVE with no previous-location check; Burning Algae c41859700,
+        /// Outstanding Dog Marron c11548522). Every GY entry stamps the card (<see cref="GyEntryStamps.Entered"/>), which
+        /// queues it; the queue fires once play is idle (<see cref="SimpleTriggersAndSwarmRuntime.FireQueuedSentToGy"/>,
+        /// DuelEngine.Notify), for the card's owner, while the card is still in that GY on the same trip. Not
+        /// <see cref="SentFromFieldToGy"/>, which only a card leaving the field fires. Appended — EffectTiming is
+        /// serialized as an int.
+        /// </summary>
+        SentToGyFromAnywhere,
+        /// <summary>
+        /// ArchfiendRiders batch: a Quick Effect (Spell Speed 2) activated from the hand right after a monster named
+        /// <see cref="EffectClause.NamedCard"/> its activator controlled was destroyed and sent to the GY (ygopro QUICK_O on
+        /// EVENT_TO_GRAVE, EFFECT_FLAG_DAMAGE_STEP; Desrook Archfiend c72192100). Offered in the windows that answer that
+        /// send (<see cref="BattleWindowsRuntime.AnsweredSends"/>); <see cref="ArchfiendRidersRuntime.TryActivate"/> seats
+        /// the link. Appended — EffectTiming is serialized as an int.
+        /// </summary>
+        HandQuickEffectWhenNamedDestroyed,
     }
 
     public enum EffectActionKind
@@ -2584,6 +2602,242 @@ namespace WRLDZ.Duel.TextEffects
         /// Summon or face-up Special Summon a monster of another Type (<see cref="SummonLocksAndStatRulesRuntime"/>).
         /// </summary>
         EachPlayerKeepsOneMonsterType,
+        /// <summary>
+        /// SimpleTriggersAndSwarm batch — Outstanding Dog Marron (c11548522): this card, while it is still in its owner's
+        /// GY, is added to its owner's Deck, which is then shuffled (ygopro SendtoDeck(c, nil, SEQ_DECKSHUFFLE, REASON_EFFECT)
+        /// after IsRelateToEffect). Necrovalley stops it (<see cref="ContinuousProtections.GyMovementLocked"/>).
+        /// <see cref="SimpleTriggersAndSwarmRuntime.ShuffleThisFromGyIntoDeck"/>.
+        /// </summary>
+        ShuffleThisFromGyIntoDeck,
+        /// <summary>
+        /// SimpleTriggersAndSwarm batch — "Special Summon any number of X from your hand" (Don Turtle c3493978:
+        /// <see cref="EffectClause.NamedCard"/> = the name; Mustering of the Dark Scorpions c68191243:
+        /// <see cref="EffectClause.NamedCardIsSeries"/>, with <see cref="EffectClause.SummonOnlyOneOfEachName"/>, Lua
+        /// aux.dncheck). The player picks 1 to (free Monster Zones) of them one at a time (CANCEL after the first = done)
+        /// and they are Special Summoned together, face-up in the Attack or Defense Position the player chose (Lua
+        /// SelectMatchingCard / SelectSubGroup 1..ft, POS_FACEUP). <see cref="SimpleTriggersAndSwarmRuntime.StartAnyNumberSummon"/>.
+        /// </summary>
+        SpecialSummonAnyNumberFromHand,
+        /// <summary>
+        /// SimpleTriggersAndSwarm batch — Dark Scorpion Combination (c20858318): the monsters its activator controls whose
+        /// names are in <see cref="EffectClause.ConditionName"/> are flagged until the End Phase; a flagged monster can
+        /// attack directly (field EFFECT_DIRECT_ATTACK) and the battle damage it inflicts to the activator's opponent by a
+        /// direct attack becomes <see cref="EffectClause.Amount"/> (field EFFECT_CHANGE_BATTLE_DAMAGE, s.rdcon). The flag
+        /// ends when the monster leaves the field or is turned face-down (RESETS_STANDARD).
+        /// <see cref="SimpleTriggersAndSwarmRuntime.ApplyCombination"/>.
+        /// </summary>
+        NamedMonstersAttackDirectlyBattleDamageBecomesThisTurn,
+        /// <summary>
+        /// DcrSpellTrapUtility batch — Interdimensional Matter Transporter (c36261276): the target (a face-up monster the
+        /// activating player still controls) is banished (REASON_TEMPORARY) and returns to the field in the position it
+        /// left during this turn's End Phase (Lua EVENT_PHASE+PHASE_END, Duel.ReturnToField;
+        /// <see cref="DcrSpellTrapUtilityRuntime.BanishUntilEndPhase"/>). Not a Summon.
+        /// </summary>
+        BanishTargetUntilEndPhase,
+        /// <summary>
+        /// DcrSpellTrapUtility batch — Different Dimension Gate (c56460688): each target (Zone, then SecondZone) is
+        /// banished (REASON_TEMPORARY) and linked to this card while it stays face-up on the field. When this card is
+        /// destroyed and sent to the GY, every linked monster still banished returns to the field in the position it left
+        /// (Lua SINGLE+CONTINUOUS EVENT_TO_GRAVE with REASON_DESTROY); if this card leaves any other way they stay banished
+        /// (<see cref="DcrSpellTrapUtilityRuntime.BanishLinkedToGate"/>).
+        /// </summary>
+        BanishTargetsReturnWhenThisDestroyedToGy,
+        /// <summary>
+        /// DcrSpellTrapUtility batch — Final Countdown (c95308449): a player effect that outlives the card. The activation
+        /// turn counts as turn 1; at the end of the <see cref="EffectClause.Amount"/>-th turn (Lua EVENT_TURN_END count)
+        /// the activating player wins. Both players' countdowns ending together is a DRAW (Duel.Win PLAYER_NONE)
+        /// (<see cref="DcrSpellTrapUtilityRuntime.StartCountdown"/>).
+        /// </summary>
+        WinAfterTurnCountdown,
+        /// <summary>
+        /// DcrSpellTrapUtility batch — Dragged Down into the Grave (c16435215): with both hands non-empty at resolution,
+        /// each player looks at the other's hand, the activating player picks 1 card of the opponent's hand, the opponent
+        /// picks 1 card of the activating player's hand, both are discarded (REASON_EFFECT+REASON_DISCARD), then each
+        /// player draws 1 (<see cref="DcrSpellTrapUtilityRuntime.ResolveDraggedDown"/>). Either hand empty: nothing.
+        /// </summary>
+        BothPickFromOpponentHandDiscardThenBothDraw,
+        /// <summary>
+        /// BattleDestroyedTriggers batch — Agido (c16135253): its controller rolls a six-sided die (CoinDiceInterrupts) if
+        /// they have a free Monster Zone, then may Special Summon 1 <see cref="EffectClause.RaceFilter"/> monster from their
+        /// GY whose Level equals the roll (Level 6 or higher on a 6), in face-up Attack or Defense Position. A select at
+        /// resolution, not a target (<see cref="BattleDestroyedTriggersRuntime.RollDieThenSummonFromGy"/>).
+        /// </summary>
+        RollDieSpecialSummonFromGyWithLevelOfRoll,
+        /// <summary>
+        /// BattleDestroyedTriggers batch — Keldo (c80441106): targets exactly <see cref="EffectClause.TargetCount"/> cards in
+        /// the opponent's GY, only if that many can be targeted (otherwise nothing), and shuffles those still there into
+        /// their owner's Deck (<see cref="BattleDestroyedTriggersRuntime.ShuffleOpponentGyTargetsIntoDeck"/>).
+        /// </summary>
+        ShuffleTargetsFromOpponentGyIntoDeck,
+        /// <summary>
+        /// BattleDestroyedTriggers batch — Different Dimension Dragon (c50939127): this card cannot be destroyed by the
+        /// effect of a Spell/Trap Card that does not target it (ygopro EFFECT_INDESTRUCTABLE_EFFECT, value: not
+        /// EFFECT_FLAG_CARD_TARGET and a Spell/Trap effect; <see cref="BattleDestroyedTriggersRuntime.PreventsUntargetedSpellTrapDestruction"/>).
+        /// </summary>
+        CannotBeDestroyedBySpellTrapEffectsThatDoNotTargetThis,
+        /// <summary>
+        /// BattleDestroyedTriggers batch — Different Dimension Dragon (c50939127): this card cannot be destroyed by battle
+        /// with a monster whose ATK (this damage calculation's) is <see cref="EffectClause.Amount"/> or less (ygopro
+        /// EFFECT_INDESTRUCTABLE_BATTLE, IsAttackBelow; <see cref="BattleDestroyedTriggersRuntime.BattleIndestructible"/>).
+        /// </summary>
+        CannotBeDestroyedByBattleWithMonsterAtkAtMost,
+        /// <summary>
+        /// GuardiansAndEquipEvents batch — Guardian Elma / Chopman the Desperate Outlaw: the summon trigger's target, an Equip
+        /// Spell in the controller's GY that can equip to this card (Lua CheckEquipTarget), is equipped to this card
+        /// (Duel.Equip from the GY: <see cref="GuardiansAndEquipEventsRuntime.ApplyEquipFromGy"/>).
+        /// </summary>
+        EquipTargetedGyEquipSpellToThis,
+        /// <summary>
+        /// GuardiansAndEquipEvents batch — Morale Boost: while face-up, each time an Equip Spell Card is equipped (EVENT_EQUIP),
+        /// the controller of that Equip Spell gains <see cref="EffectClause.Amount"/> LP (FIELD TRIGGER_F; a marker read by
+        /// <see cref="GuardiansAndEquipEventsRuntime.NoteEquipped"/>).
+        /// </summary>
+        GainLpWhenEquipSpellEquipped,
+        /// <summary>
+        /// GuardiansAndEquipEvents batch — Morale Boost: while face-up, each time Equip Spell Cards that were equipped leave the
+        /// field (EVENT_LEAVE_FIELD, GetEquipTarget or REASON_LOST_TARGET), each controller of one of them takes
+        /// <see cref="EffectClause.Amount"/> damage, once per event (<see cref="GuardiansAndEquipEventsRuntime.NoteEquipLeftField"/>).
+        /// </summary>
+        DamageWhenEquipSpellLeavesField,
+        /// <summary>
+        /// DerivedAtkMonsters batch (v176) — Great Maju Garzett / Maju Garzett (ContinuousWhileFaceUp marker): when this
+        /// card is Tribute Summoned (not Set), its ATK becomes Amount × the printed ATK ("?" = 0) of its Tributes
+        /// (<see cref="EffectClause.CountSource"/> <see cref="DerivedAtkMonstersRuntime.FirstTribute"/> or
+        /// <see cref="DerivedAtkMonstersRuntime.AllTributes"/>), for as long as it stays face-up on the field and its
+        /// effects are not negated (ygopro EFFECT_MATERIAL_CHECK + EFFECT_SUMMON_COST, SET_ATTACK with RESET_DISABLE).
+        /// Set by <see cref="DerivedAtkMonstersRuntime.NoteTributeSummon"/>, applied on each board refresh.
+        /// </summary>
+        ThisAtkBecomesTributedOriginalAtk,
+        /// <summary>
+        /// DerivedAtkMonsters batch (v176) — Guardian Tryce (SentFromFieldToGy, RequiresDestroyed, mandatory): Special
+        /// Summon the monster(s) Tributed for this card's Tribute Summon that are still in the GY they were sent to by
+        /// it, only when there are enough free Monster Zones for all of them
+        /// (<see cref="DerivedAtkMonstersRuntime.SpecialSummonTributeMaterials"/>).
+        /// </summary>
+        SpecialSummonTributeMaterialsFromGy,
+        /// <summary>
+        /// NamedSummonPairs batch — Exodia Necross (c12600382 e2): SINGLE EFFECT_INDESTRUCTABLE_EFFECT with value
+        /// re:IsSpellTrapEffect() while face-up in the Monster Zone; read by DuelEngine.DestroyMonster through
+        /// <see cref="NamedSummonPairsRuntime.PreventsSpellTrapEffectDestruction"/>.
+        /// </summary>
+        CannotBeDestroyedBySpellTrapEffects,
+        /// <summary>
+        /// NamedSummonPairs batch — Exodia Necross (c12600382 e5): SINGLE EFFECT_SELF_DESTROY while any of the
+        /// <see cref="EffectClause.NamedCard"/> names ('|'-separated) is missing from its controller's GY
+        /// (<see cref="NamedSummonPairsRuntime.SweepSelfDestroy"/> on each board refresh; not a Chain Link).
+        /// </summary>
+        SelfDestroyUnlessAllNamedInYourGy,
+        /// <summary>
+        /// NamedSummonPairs batch — Mirage Knight (c49217579 e1): EFFECT_UPDATE_ATTACK during PHASE_DAMAGE_CAL only, equal
+        /// to the battle target's original ATK (GetBaseAttack); applied by
+        /// <see cref="NamedSummonPairsRuntime.ApplyDamageCalculationAtk"/>.
+        /// </summary>
+        GainBattleTargetOriginalAtkDuringDamageCalculation,
+        /// <summary>
+        /// NamedSummonPairs batch — Mirage Knight (c49217579 e2): FIELD TRIGGER_F at either player's End Phase, banish this
+        /// card face-up if it battled this turn (GetBattledGroupCount() &gt; 0; recorded by
+        /// <see cref="NamedSummonPairsRuntime.NoteBattled"/>).
+        /// </summary>
+        BanishThisAtEndPhaseIfBattledThisTurn,
+        /// <summary>
+        /// ArchfiendRiders batch — Terrorking Archfiend (c35975813 e1/e2: SINGLE EFFECT_CANNOT_SUMMON +
+        /// EFFECT_CANNOT_FLIP_SUMMON unless its controller controls a face-up <see cref="EffectClause.NamedCard"/> series
+        /// monster). Only the Normal (Tribute) Summon and the Flip Summon are forbidden; a Set stays legal. Read by
+        /// <see cref="ArchfiendRidersRuntime.NormalOrFlipSummonForbidden"/>; never resolved as an effect.
+        /// </summary>
+        CannotBeNormalOrFlipSummonedUnlessControllerHasFaceUpSeries,
+        /// <summary>
+        /// ArchfiendRiders batch — Pandemonium (c94585852 e2: FIELD+CONTINUOUS EFFECT_LPCOST_REPLACE in the Field Zone):
+        /// neither player pays the Life Points an <see cref="EffectClause.NamedCard"/> series monster's effect costs during
+        /// the Standby Phase (<see cref="ArchfiendRidersRuntime.StandbyLpCostWaived"/>); never resolved as an effect.
+        /// </summary>
+        WaiveSeriesMonsterStandbyLpCosts,
+        /// <summary>
+        /// ArchfiendRiders batch — Pandemonium (c94585852 e4: FIELD TRIGGER_O, EFFECT_FLAG_EVENT_PLAYER + DAMAGE_STEP): each
+        /// time a player's <see cref="EffectClause.NamedCard"/> series monster(s) are destroyed and sent to the GY, except by
+        /// battle, that player may add 1 series monster with a lower Level than the highest destroyed one from their Deck
+        /// to their hand (<see cref="ArchfiendRidersRuntime.NoteSentToGy"/>); a marker, never resolved as a clause.
+        /// </summary>
+        SearchLowerLevelSeriesWhenSeriesDestroyedExceptByBattle,
+        /// <summary>
+        /// ArchfiendRiders batch — Pandemonium Watchbear (c75375465: FIELD EFFECT_INDESTRUCTABLE_EFFECT on face-up
+        /// <see cref="EffectClause.NamedCard"/> in its controller's Spell &amp; Trap / Field Zone, value: the opponent's
+        /// effects). Read by <see cref="ArchfiendRidersRuntime.ProtectsSpellTrapFromEffectDestruction"/>.
+        /// </summary>
+        NamedSpellTrapCannotBeDestroyedByOpponentEffects,
+        /// <summary>
+        /// ArchfiendRiders batch — Desrook Archfiend (c72192100 e3, timing
+        /// <see cref="EffectTiming.HandQuickEffectWhenNamedDestroyed"/>): cost — send this card from the hand to the GY
+        /// (not a discard); target the destroyed <see cref="EffectClause.NamedCard"/> in the GY; Special Summon it
+        /// face-up if it is still there (<see cref="ArchfiendRidersRuntime.TryResolveLink"/>).
+        /// </summary>
+        SpecialSummonDestroyedNamedFromGyBySendingThisFromHand,
+        /// <summary>
+        /// SpellTrapAnswersAndActivationLocks batch — Cursed Seal of the Forbidden Spell (c58851034), an
+        /// <see cref="EffectClause.AfterNegationAction"/>: once the answered Spell Card was negated and destroyed, the
+        /// answering card's controller's opponent cannot activate Spell Cards with that card's code for the rest of the Duel
+        /// (ygopro EFFECT_CANNOT_ACTIVATE, IsHasType(EFFECT_TYPE_ACTIVATE) and IsCode(label);
+        /// <see cref="SpellTrapAnswersAndActivationLocksRuntime"/>).
+        /// </summary>
+        LockOpponentActivatingNegatedSpellNameForDuel,
+        /// <summary>
+        /// SpellTrapAnswersAndActivationLocks batch — Spell Vanishing (c29735721), an
+        /// <see cref="EffectClause.AfterNegationAction"/>: look at the opponent's hand and Deck and send every card with the
+        /// answered Spell's code to the GY (ygopro ConfirmCards, SendtoGrave REASON_EFFECT), then shuffle that Deck.
+        /// </summary>
+        SendNegatedCardNameFromOpponentHandAndDeckToGy,
+        /// <summary>
+        /// SpellTrapAnswersAndActivationLocks batch — Judgment of Anubis (c55256016), an
+        /// <see cref="EffectClause.AfterNegationAction"/>: then you can select (not target) 1 face-up monster your opponent
+        /// controls and destroy it; if it was destroyed, inflict damage to your opponent equal to its ATK on the field.
+        /// </summary>
+        MayDestroyOpponentFaceUpMonsterInflictItsAtk,
+        /// <summary>
+        /// SpellTrapAnswersAndActivationLocks batch — Sasuke Samurai #2 (c11760174): until the End Phase of this turn,
+        /// neither player can activate Spell/Trap Cards or their effects (ygopro EFFECT_CANNOT_ACTIVATE, target range both
+        /// players, re:IsSpellTrapEffect(), RESET_PHASE|PHASE_END).
+        /// </summary>
+        NeitherPlayerActivatesSpellTrapsThisTurn,
+        /// <summary>
+        /// SpellTrapAnswersAndActivationLocks batch — Invader of Darkness (c56647086): while this monster is face-up, its
+        /// controller's opponent cannot activate Quick-Play Spell Cards (ygopro EFFECT_CANNOT_ACTIVATE, the card's
+        /// activation only: IsQuickPlaySpell and IsHasType(EFFECT_TYPE_ACTIVATE)).
+        /// </summary>
+        ContinuousOpponentCannotActivateQuickPlaySpells,
+        /// <summary>
+        /// MonsterNegationAndControlLocks batch — Skill Drain (c82732705, Lua EFFECT_DISABLE, target range both Monster
+        /// Zones): while face-up, every face-up Effect Monster on the field has its effects negated
+        /// (<see cref="CardInstance.IsNegated"/>, set by <see cref="ContinuousNegationRuntime.Refresh"/>); its effects can
+        /// still be activated, and one that resolves while its monster is face-up on the field does nothing
+        /// (<see cref="ContinuousNegationRuntime.NegatesResolvingClause"/>). Effects that resolve from the GY / hand apply.
+        /// </summary>
+        ContinuousNegateMonsterEffectsOnField,
+        /// <summary>
+        /// MonsterNegationAndControlLocks batch — Final Attack Orders (c52503575, Lua EFFECT_SET_POSITION POS_FACEUP_ATTACK
+        /// + EFFECT_CANNOT_CHANGE_POSITION): while face-up, every face-up monster on the field is in Attack Position and its
+        /// battle position cannot be changed (the Attack sibling of <see cref="ContinuousForceDefenseLockPosition"/>;
+        /// <see cref="MonsterNegationAndControlLocksRuntime.ApplyContinuous"/>).
+        /// </summary>
+        ContinuousForceAttackLockPosition,
+        /// <summary>
+        /// MonsterNegationAndControlLocks batch — Blindly Loyal Goblin / Mataza the Zapper (Lua EFFECT_CANNOT_CHANGE_CONTROL,
+        /// SINGLE_RANGE in the Monster Zone): while this card is face-up on the field (and not negated), no card effect can
+        /// take or switch control of it (<see cref="MonsterNegationAndControlLocksRuntime.ControlLocked"/>).
+        /// </summary>
+        ControlOfThisCannotSwitch,
+        /// <summary>
+        /// MonsterNegationAndControlLocks batch — Stumbling (c34646691, Lua FIELD TRIGGER_F on EVENT_SUMMON_SUCCESS /
+        /// EVENT_FLIP_SUMMON_SUCCESS / EVENT_SPSUMMON_SUCCESS): each monster Normal, Flip or Special Summoned while this card
+        /// is face-up is changed from face-up Attack to face-up Defense Position
+        /// (<see cref="MonsterNegationAndControlLocksRuntime.OnSummonSettled"/>).
+        /// </summary>
+        ChangeSummonedMonstersToDefense,
+        /// <summary>
+        /// MonsterNegationAndControlLocks batch — Non-Spellcasting Area (c20065549, Lua EFFECT_IMMUNE_EFFECT for
+        /// non-Effect monsters vs Spell effects): face-up monsters other than Effect Monsters are unaffected by other
+        /// Spell effects (<see cref="MonsterNegationAndControlLocksRuntime.ShieldsFromSpell"/>).
+        /// </summary>
+        NonEffectMonstersUnaffectedByOtherSpells,
     }
 
     public enum EffectSide
@@ -4049,6 +4303,90 @@ namespace WRLDZ.Duel.TextEffects
         /// Read by <see cref="EquipFamilyRuntime.IsCorrectEquipTarget"/> and <see cref="UnionRidersRuntime.FilterTargets"/>.
         /// </summary>
         public bool UnionEquipsAnyFaceUpMonster;
+
+        // ── SimpleTriggersAndSwarm batch ──
+
+        /// <summary>
+        /// On <see cref="EffectActionKind.SpecialSummonAnyNumberFromHand"/>: "but only 1 copy of each" — no two chosen
+        /// monsters share a name (Mustering of the Dark Scorpions; Lua aux.dncheck).
+        /// </summary>
+        public bool SummonOnlyOneOfEachName;
+
+        /// <summary>
+        /// SimpleTriggersAndSwarm batch: a <see cref="EffectZoneFilter.FieldAnyMonster"/> target may be this card itself
+        /// (Tsukuyomi: Lua SelectTarget(…, LOCATION_MZONE, LOCATION_MZONE, 1, 1, nil) — no exception). Read by
+        /// TextEffectRuntime.CollectTargets.
+        /// </summary>
+        public bool TargetMayBeThisCard;
+
+        // ── BattleDestroyedTriggers batch ──
+
+        /// <summary>
+        /// On a <see cref="EffectTiming.ThisCardDestroysByBattle"/> clause: the monster this card destroyed was in Defense
+        /// Position when it battled (ygopro GetBattlePosition()&amp;POS_DEFENSE) and is in the GY (Shinato, King of a Higher
+        /// Plane; <see cref="BattleDestroyedTriggersRuntime.SkipsBattleDestroying"/>).
+        /// </summary>
+        public bool RequiresDestroyedWasDefensePosition;
+
+        // ── GuardiansAndEquipEvents batch ──
+
+        /// <summary>
+        /// On a <see cref="EffectTiming.ThisCardSummoned"/> clause: "When this card is Normal or Special Summoned" (Guardian
+        /// Elma: Lua EVENT_SUMMON_SUCCESS + EVENT_SPSUMMON_SUCCESS) — a Flip Summon does not fire it.
+        /// </summary>
+        public bool RequiresThisNormalOrSpecialSummoned;
+
+        /// <summary>
+        /// On a <see cref="EffectActionKind.SpecialSummonThisFromHandByOwnProcedure"/> clause: "If this is the only card in your
+        /// hand, you can Special Summon it (from your hand)" (Guardian Grarl: Lua spcon GetFieldGroupCount(tp,LOCATION_HAND,0)==1).
+        /// </summary>
+        public bool RequiresOnlyCardInHand;
+
+        // ── DerivedAtkMonsters batch (v176) ──
+
+        /// <summary>
+        /// On <see cref="EffectActionKind.GainSelfAtkPerCount"/>: "This card's ATK (ATK/DEF) is (are each) equal to … x N"
+        /// — the ATK (and the DEF when <see cref="DefAmount"/> is not 0) becomes Amount × the count instead of gaining it
+        /// (ygopro EFFECT_SET_ATTACK / _DEFENSE on itself): a printed "?" counts too (<see cref="CardInstance.SelfSetAtk"/>).
+        /// </summary>
+        public bool SelfStatIsSet;
+
+        // ── NamedSummonPairs batch ──
+
+        /// <summary>
+        /// A Tribute cost that names one card exactly ("Tribute 1 "Dark Magician"", Dedication through Light and Darkness):
+        /// only a monster with that name may be Tributed (TextEffectRuntime.CollectTributeCost), while
+        /// <see cref="NamedCard"/> names the monster the effect Special Summons.
+        /// </summary>
+        public string TributeNamedCard;
+
+        // ── ArchfiendRiders batch ──
+
+        /// <summary>
+        /// ArchfiendRiders batch — Checkmate (c69313735 s.rfilter): the Tribute cost (<see cref="RequiresTributeCount"/>)
+        /// must be a monster of this series (<see cref="TextEffectRuntime.CardMatchesSeries"/>: archetype, name or
+        /// "treated as" text). When set, <see cref="NamedCard"/> names the target, not the Tribute, and a monster whose
+        /// Tribute would leave no legal target is not offered (Lua: IsExistingTarget(..., c)).
+        /// </summary>
+        public string TributeSeriesName;
+
+        // ── SpellTrapAnswersAndActivationLocks batch ──
+
+        /// <summary>
+        /// On a <see cref="EffectActionKind.NegateActivation"/> Chain answer: what the answer does after the generic
+        /// negation (and destruction) of the answered activation, as its link resolves
+        /// (<see cref="SpellTrapAnswersAndActivationLocksRuntime.TryResolveLink"/>): Cursed Seal's name lock, Spell
+        /// Vanishing's same-name send, Judgment of Anubis's optional destroy and burn. None: nothing more.
+        /// </summary>
+        public EffectActionKind AfterNegationAction;
+
+        /// <summary>
+        /// SpellTrapAnswersAndActivationLocks batch — Judgment of Anubis (ygopro c55256016 s.condition): on a
+        /// <see cref="EffectActionKind.NegateActivation"/> answer, the answered Spell Card activation's resolution would
+        /// destroy a Spell/Trap Card on the field (GetOperationInfo CATEGORY_DESTROY; plain Destroy family only, fail-closed:
+        /// <see cref="SpellTrapAnswersAndActivationLocksRuntime.LinkWouldDestroySpellTrapOnField"/>).
+        /// </summary>
+        public bool NegateRequiresWouldDestroySpellTrapOnField;
     }
 
     /// <summary>When the activation condition is tested (PSCT "when" vs "if").</summary>

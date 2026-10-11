@@ -75,7 +75,7 @@ namespace WRLDZ.Duel.TextEffects
         internal static bool IsMonsterEffectLink(ChainLink link) =>
             link?.Card?.Def != null && link.Card.Def.IsMonster;
 
-        static List<CardInstance> TargetsOf(ChainLink link)
+        internal static List<CardInstance> TargetsOf(ChainLink link)
         {
             var list = new List<CardInstance>();
             if (link == null) return list;
@@ -104,7 +104,7 @@ namespace WRLDZ.Duel.TextEffects
                                                IsTargetingClause(c));
         }
 
-        static bool IsTargetingClause(EffectClause c) =>
+        internal static bool IsTargetingClause(EffectClause c) =>
             (c.IsPsctTarget || c.RequiresTargetChoice) && !c.ChoiceDoesNotTarget;
 
         /// <summary>ygopro Duel.IsChainNegatable: the answered card's activation may be negated.</summary>
@@ -169,7 +169,7 @@ namespace WRLDZ.Duel.TextEffects
         /// clauses of the window it answered), one list per bullet; a monster's ignition ("manual" link) its Activate
         /// clauses; a monster's trigger link each trigger timing's clauses. Any other monster link: none (fail-closed).
         /// </summary>
-        static List<List<EffectClause>> ResolvingEffects(CompiledCardProgram prog, ChainLink link)
+        internal static List<List<EffectClause>> ResolvingEffects(CompiledCardProgram prog, ChainLink link)
         {
             var groups = new List<List<EffectClause>>();
             List<EffectClause> pool;

@@ -83,10 +83,11 @@ namespace WRLDZ.Duel.TextEffects
         /// Printed Normal Summon/Set lock (nomi / semi-nomi). Inherent SS-from-hand
         /// (Cyber Dragon) does not match and stays Normal Summonable. A conditional "Cannot be Normal Summoned while
         /// you control a monster" (Cave Dragon, BattleRules batch) blocks only that Summon, never the Set
-        /// (BattleRulesRuntime.NormalSummonForbiddenByOwnText).
+        /// (BattleRulesRuntime.NormalSummonForbiddenByOwnText). Terrorking Archfiend's "cannot be Normal Summoned or Flip
+        /// Summoned unless …" is conditional too (ArchfiendRidersRuntime.NormalOrFlipSummonForbidden, Set stays legal).
         /// </summary>
         static readonly Regex RxBlocksNormalSummon = new(
-            @"cannot be normal summoned(?:/set)?(?!\s+while\b)|must (?:first )?be special summoned",
+            @"cannot be normal summoned(?:/set)?(?!\s+while\b)(?!\s+or Flip Summoned unless\b)|must (?:first )?be special summoned",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         public static bool BlocksNormalSummonOrSet(string officialText) =>

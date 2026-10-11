@@ -222,7 +222,6 @@ namespace WRLDZ.Duel.Rules
                 1995985,  // Silent Swordsman LV3: "Negate your opponent's Spell effects that target this card."
                 42868711, // Gora Turtle of Illusion: "… controlled by your opponent that target this face-up card …"
                 39507162, // Blade Knight: "If you control no other monsters, the effects of Flip monsters … are negated."
-                73544866, // Guardian Baou: "Negate the effects of monsters destroyed by battle with this card."
             };
             var leaked = nearIds.Where(id =>
             {
@@ -233,6 +232,14 @@ namespace WRLDZ.Duel.Rules
             }).ToList();
             Check("Near misses: look-alike negation sentences stay uncompiled", leaked.Count == 0,
                 string.Join(",", leaked));
+            // GuardiansAndEquipEvents batch: Guardian Baou ("Negate the effects of monsters destroyed by battle with this card.")
+            // compiles there to the this-card-only shape, never to Ha Des's Type-scoped or Twin-Headed Wolf's conditional one.
+            var baouNeg = P(73544866)?.ClauseList.FirstOrDefault(c =>
+                c.Action == EffectActionKind.NegateEffectsOfMonstersDestroyedByBattle);
+            Check("Guardian Baou's battle negation is this card only (no Type scope, no other-monster condition)",
+                baouNeg != null && baouNeg.AffectsThisCardOnly && string.IsNullOrEmpty(baouNeg.RaceFilter) &&
+                string.IsNullOrEmpty(baouNeg.CountRaceFilter) && baouNeg.TargetCardKind == "Effect",
+                baouNeg == null ? "none" : $"race={baouNeg.RaceFilter} count={baouNeg.CountRaceFilter} kind={baouNeg.TargetCardKind}");
 
             // Rod of Silence - Kay'est ("Negate other Spell effects that target the equipped monster …") is compiled whole by
             // DcrEquipSpellsAtoms with an equip-host scope; this batch's monster-scope atom must still not produce it.

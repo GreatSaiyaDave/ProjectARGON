@@ -247,12 +247,28 @@ namespace WRLDZ.Duel.Rules
                    // Chosen One (NegationsAndGySummons v159): needs a monster and 2 other Spell/Traps in the hand
                    // (NegationsAndGySummonsRegressionTests drive it).
                    c.ActivationCondition == NegationsAndGySummonsRuntime.ChosenOneHand ||
+                   // DcrSpellTrapUtility batch: Frozen Soul's LP gap, Dragged Down into the Grave's two hands, Spell
+                   // Reproduction's 2 Spells in hand, Ray of Hope's 2 LIGHT monsters in your GY
+                   // (DcrSpellTrapUtilityRegressionTests drive them).
+                   c.ActivationCondition == DcrSpellTrapUtilityRuntime.YourLpAtLeastLowerThanOpponent ||
+                   c.ActivationCondition == DcrSpellTrapUtilityRuntime.BothHandsHaveACard ||
+                   DcrSpellTrapUtilityRuntime.IsSpellSendCost(c) ||
+                   (c.Action == EffectActionKind.ReturnChosenToDeckShuffle && !string.IsNullOrEmpty(c.AttributeFilter)) ||
                    // Pyro Clock of Destiny (PhaseTimersAndDeckTop v163): needs a running turn count (Swords of Revealing
                    // Light …); PhaseTimersAndDeckTopRegressionTests drive it.
                    c.ActivationCondition == PhaseTimersAndDeckTopRuntime.TurnCountExists ||
                    // Huge Revolution (FlipMassAndOpponentPicks): three named monsters face-up on your field
                    // (FlipMassAndOpponentPicksRegressionTests drive it).
                    c.ActivationCondition == FlipMassAndOpponentPicksRuntime.YourMainPhaseWithNamedFaceUp ||
+                   // SimpleTriggersAndSwarm batch: Mustering of the Dark Scorpions (a face-up Don Zaloog and a Dark Scorpion in
+                   // the hand), Dark Scorpion Combination (5 named monsters face-up); SimpleTriggersAndSwarmRegressionTests
+                   // drive them.
+                   c.ActivationCondition == SimpleTriggersAndSwarmRuntime.FaceUpNamedAndHandSummonable ||
+                   c.ActivationCondition == SimpleTriggersAndSwarmRuntime.AllNamedFaceUpInYourMonsterZones ||
+                   // Contract with Exodia (5 named cards in your GY) and A Deal with Dark Ruler (a Level 8+ monster of
+                   // yours sent to the GY this turn): NamedSummonPairsRegressionTests drive them.
+                   c.ActivationCondition == NamedSummonPairsRuntime.AllNamedInYourGy ||
+                   c.ActivationCondition == NamedSummonPairsRuntime.YourLevelOrHigherMonsterSentToGyThisTurn ||
                    c.Timing == EffectTiming.PositionChanged ||
                    c.Timing == EffectTiming.ThisCardDeclaresAttack ||
                    c.Action == EffectActionKind.PayLpToDeclareAttack ||

@@ -230,6 +230,13 @@ namespace WRLDZ.Duel.Rules
                 me.Deck.Insert(0, Vilepawn); // Level 2 Archfiend
                 var handBefore = me.Hand.Count;
                 engine.DestroyMonsterPublic(me, terror);
+                // ArchfiendRiders batch: the search is an optional trigger — it goes on a Chain once the action is over
+                // (the engine's Notify), and the player taps the offered Deck card (or CANCEL).
+                engine.NotifyPublic();
+                for (var i = 0; i < 6 && engine.IsAwaitingResponse && !engine.IsAwaitingEffectTarget; i++)
+                    engine.PassResponse();
+                var offered = engine.PendingActivation?.LegalTargets?.Find(c => c != null && c.CardId == Vilepawn);
+                if (offered != null) engine.TrySelectEffectTarget(offered);
                 Check("Pandemonium: destroying an Archfiend adds a lower-Level Archfiend from Deck",
                     me.Hand.Count == handBefore + 1 &&
                     me.Hand.Exists(c => c != null && c.CardId == Vilepawn) &&
@@ -242,8 +249,8 @@ namespace WRLDZ.Duel.Rules
                 ClearField(me); ClearField(engine.Opponent);
                 me.Deck.Insert(0, Vilepawn);
                 var handBefore = me.Hand.Count;
-                FieldSpellEffects.TryPandemoniumSearchOnDestroy(engine, me,
-                    engine.CreateCardInstance(Terrorking), byDestruction: true, destroyedByBattle: false);
+                WRLDZ.Duel.TextEffects.ArchfiendRidersRuntime.OnSentToGy(engine, me,
+                    engine.CreateCardInstance(Terrorking), destroyed: true, byBattle: false);
                 Check("Pandemonium: no search without a face-up Pandemonium", me.Hand.Count == handBefore);
             }
             {
@@ -254,8 +261,8 @@ namespace WRLDZ.Duel.Rules
                 PlaceFieldSpell(engine, me, Pandemonium);
                 me.Deck.Insert(0, Vilepawn);
                 var handBefore = me.Hand.Count;
-                FieldSpellEffects.TryPandemoniumSearchOnDestroy(engine, me,
-                    engine.CreateCardInstance(Terrorking), byDestruction: true, destroyedByBattle: true);
+                WRLDZ.Duel.TextEffects.ArchfiendRidersRuntime.OnSentToGy(engine, me,
+                    engine.CreateCardInstance(Terrorking), destroyed: true, byBattle: true);
                 Check("Pandemonium: battle destruction does not trigger the search",
                     me.Hand.Count == handBefore);
             }

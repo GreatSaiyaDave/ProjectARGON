@@ -91,6 +91,8 @@ namespace WRLDZ.Duel.TextEffects
             public bool AskWithOneCandidate;
             public bool HoldsChain = true;
             public bool DuringActivation;
+            /// <summary>BattleDestroyedTriggers batch: <see cref="CardPickRequest.AsksSpecialSummonPlacement"/>.</summary>
+            public bool AsksPlacement;
         }
 
         sealed class AbacusSend
@@ -783,6 +785,7 @@ namespace WRLDZ.Duel.TextEffects
                 AskWithOneCandidate = req.AskWithOneCandidate,
                 HoldsChain = req.HoldsChain && !req.DuringActivation,
                 DuringActivation = req.DuringActivation,
+                AsksPlacement = req.AsksSpecialSummonPlacement,
                 StandbyHold = !req.DuringActivation &&
                               (req.HoldsStandby ?? (engine.Phase == DuelPhase.Standby &&
                                                     ReferenceEquals(engine.TurnPlayer, who))) &&
@@ -942,6 +945,19 @@ namespace WRLDZ.Duel.TextEffects
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// SpellTrapEffects.PendingTargetIsSpecialSummon (BattleDestroyedTriggers batch): an open card pick whose card is
+        /// Special Summoned (<see cref="CardPickRequest.AsksSpecialSummonPlacement"/>) asks a face-up position and a zone.
+        /// False (not handled) for every other pending, this batch's other picks included.
+        /// </summary>
+        public static bool TryPickAsksPlacement(PendingActivation pending, out bool asksPlacement)
+        {
+            asksPlacement = false;
+            if (pending == null || !s_open.TryGetValue(pending, out var pick) || !pick.AsksPlacement) return false;
+            asksPlacement = true;
+            return true;
         }
 
         /// <summary>DuelEngine.BeginTurn / ResumeStandbyAfterUpkeep: the Standby Phase waits for this batch's open call.</summary>

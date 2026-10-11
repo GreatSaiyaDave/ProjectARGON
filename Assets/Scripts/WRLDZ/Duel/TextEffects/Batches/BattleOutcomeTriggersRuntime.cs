@@ -393,12 +393,13 @@ namespace WRLDZ.Duel.TextEffects
         /// The AI sends its least useful Spell: one it cannot play (not Implemented) first, then the one with the most copies
         /// left in its Deck.
         /// </summary>
-        static CardInstance AiSpellToSend(DuelistState owner, List<CardInstance> legal) =>
+        internal static CardInstance AiSpellToSend(DuelistState owner, List<CardInstance> legal) =>
             legal.OrderBy(c => CardEffectStatus.Classify(c.Def) == CardEffectStatusKind.Implemented ? 1 : 0)
                 .ThenByDescending(c => owner.Deck.Count(id => id == c.CardId))
                 .First();
 
-        static void SendSpell(DuelEngine engine, DuelistState who, DuelistState victim, CardInstance source,
+        /// <summary>The opponent's Spell leaves their Deck for their GY (also DcrSpellTrapUtility: Arsenal Robber).</summary>
+        internal static void SendSpell(DuelEngine engine, DuelistState who, DuelistState victim, CardInstance source,
             CardInstance pick)
         {
             if (pick == null || victim?.Deck == null) return;

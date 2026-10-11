@@ -146,6 +146,8 @@ namespace WRLDZ.Duel.TextEffects
         public static void NoteEquipped(DuelEngine engine, CardInstance equip, CardInstance host)
         {
             if (engine == null || host == null || equip?.Def == null || equip.EquippedTo != host) return;
+            // GuardiansAndEquipEvents batch: Morale Boost — an Equip Spell Card was equipped (EVENT_EQUIP).
+            GuardiansAndEquipEventsRuntime.NoteEquipped(engine, equip, host);
             if (!(equip.Def.IsEquipSpell || equip.Def.IsMonster ||
                   (equip.Def.IsTrap && !equip.Def.IsContinuousSpellOrTrap)))
                 return;

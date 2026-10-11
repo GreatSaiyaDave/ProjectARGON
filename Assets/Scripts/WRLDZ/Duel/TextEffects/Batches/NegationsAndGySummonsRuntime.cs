@@ -196,6 +196,11 @@ namespace WRLDZ.Duel.TextEffects
                 return false;
             }
 
+            // GuardiansAndEquipEvents batch: Guardian Grarl — "If this is the only card in your hand", and its summon gate.
+            if (!GuardiansAndEquipEventsRuntime.OwnHandProcedureAllows(who, card,
+                    ClauseOf(card, EffectActionKind.SpecialSummonThisFromHandByOwnProcedure), out reason))
+                return false;
+
             reason = "OK";
             return true;
         }
@@ -224,6 +229,9 @@ namespace WRLDZ.Duel.TextEffects
         public static bool AiWantsOwnHandProcedure(DuelEngine engine, DuelistState ai, CardInstance card)
         {
             if (!CanSummonByOwnHandProcedure(engine, ai, card, out _)) return false;
+            // GuardiansAndEquipEvents batch: Guardian Grarl's procedure gives the opponent nothing.
+            if (ClauseOf(card, EffectActionKind.SpecialSummonThisFromHandByOwnProcedure)?.RequiresOnlyCardInHand == true)
+                return true;
             var opp = engine.OpponentOf(ai);
             if (opp == null) return true;
             if (engine.FirstEmpty(opp.MonsterZones) < 0) return true;

@@ -714,6 +714,15 @@ namespace WRLDZ.Duel.TextEffects
             PhaseTriggersAndIgnitionCostsAtoms.Atoms,
             UnionRidersAtoms.Atoms,
             SummonLocksAndStatRulesAtoms.Atoms,
+            SimpleTriggersAndSwarmAtoms.Atoms,
+            DcrSpellTrapUtilityAtoms.Atoms,
+            BattleDestroyedTriggersAtoms.Atoms,
+            GuardiansAndEquipEventsAtoms.Atoms,
+            DerivedAtkMonstersAtoms.Atoms,
+            NamedSummonPairsAtoms.Atoms,
+            ArchfiendRidersAtoms.Atoms,
+            SpellTrapAnswersAndActivationLocksAtoms.Atoms,
+            MonsterNegationAndControlLocksAtoms.Atoms,
         };
 
         /// <summary>Every whole-sentence atom: <see cref="Atoms"/>, then each batch in <see cref="BatchAtomSets"/>.</summary>

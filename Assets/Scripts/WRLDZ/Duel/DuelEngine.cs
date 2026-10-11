@@ -705,6 +705,10 @@ namespace WRLDZ.Duel
             TextEffects.HandDisruptionRuntime.OnTurnStart(this);
             if (TextEffects.HandDisruptionRuntime.ConsumeSkippedTurn(this, who))
             {
+                // DcrSpellTrapUtility batch: a skipped turn still ends (ygopro raises EVENT_TURN_END for it), so Final
+                // Countdown counts it.
+                TextEffects.DcrSpellTrapUtilityRuntime.OnTurnEnd(this);
+                if (GameOver) return;
                 BeginTurn(OpponentOf(who));
                 return;
             }
@@ -1366,6 +1370,9 @@ namespace WRLDZ.Duel
             who.MonsterZones[idx].Occupant = card;
             card.WasSpecialSummoned = false;
             card.WasTributeSummoned = need > 0 && !asSet;
+            // DerivedAtkMonsters batch (v176): record this card's Tributes (Guardian Tryce) and set a Tribute-derived ATK
+            // (Great Maju Garzett / Maju Garzett) before the summon windows read it.
+            TextEffects.DerivedAtkMonstersRuntime.NoteTributeSummon(this, card, tributes, asSet);
             TextEffects.SummonTriggersAndTributesRuntime.NoteNormalSummon(this, card, asSet, need);
             who.NormalSummonUsed = true;
             PendingTributes.Clear();
@@ -1452,8 +1459,12 @@ namespace WRLDZ.Duel
             if (TextEffects.ContinuousProtections.OpponentCannotChangeBattlePositions(this, monster))
                 return false;
             if (TextEffects.PositionLocksRuntime.ManualPositionChangeLocked(this, monster)) return false; // Aqua Spirit / Curse of Fiend
+            // MonsterNegationAndControlLocks batch: Final Attack Orders (EFFECT_CANNOT_CHANGE_POSITION on every monster).
+            if (TextEffects.MonsterNegationAndControlLocksRuntime.FlipSummonLocked(this, monster)) return false;
             // RuleLocks batch: Jam Breeding Machine — its controller cannot Flip Summon.
             if (TextEffects.RuleLocksRuntime.FlipSummonLocked(this, who, monster)) return false;
+            // ArchfiendRiders batch: Terrorking Archfiend — no Flip Summon without a face-up "Archfiend".
+            if (TextEffects.ArchfiendRidersRuntime.NormalOrFlipSummonForbidden(this, who, monster, out _)) return false;
             // SummonTriggersAndTributes batch (v163): "You can only control 1 face-up X".
             if (TextEffects.SummonTriggersAndTributesRuntime.UniqueBlocksFaceUp(this, who, monster, out _)) return false;
             // SummonLocksAndStatRules batch: Rivalry of Warlords — no Flip Summon of another Type.
@@ -1509,7 +1520,11 @@ namespace WRLDZ.Duel
                 OpenSummonResponseOrContinue(who, monster, SummonKind.FlipSummon);
             }
             else
+            {
+                // MonsterNegationAndControlLocks batch: the FLIP's pick holds the summon window — Stumbling answers now.
+                TextEffects.MonsterNegationAndControlLocksRuntime.OnSummonSettled(this, who, monster);
                 Notify();
+            }
         }
 
         // ───────────────────── Change battle position ─────────────────────
@@ -1719,6 +1734,14 @@ namespace WRLDZ.Duel
             if (TextEffects.LocksAndZonesRuntime.SpellTrapActivationLocked(this, card, out var coldWave))
             {
                 Log($"Activation illegal: {coldWave}");
+                return false;
+            }
+
+            // SpellTrapAnswersAndActivationLocks batch: Cursed Seal of the Forbidden Spell's name lock applies to this
+            // activation too.
+            if (TextEffects.SpellTrapAnswersAndActivationLocksRuntime.ActivationLocked(this, who, card, out var nameLock))
+            {
+                Log($"Activation illegal: {nameLock}");
                 return false;
             }
 
@@ -2410,6 +2433,10 @@ namespace WRLDZ.Duel
             card.EffectsNegatedAfterBattle = false;
             // BattleDestroyedGyRecovery (v162): its GY-entry stamp ends with that stay in the GY.
             TextEffects.GyEntryStamps.Left(card);
+            // DerivedAtkMonsters batch (v176): a self-set ATK/DEF and the Tribute record belong to the old presence.
+            card.SelfSetAtk = int.MinValue;
+            card.SelfSetDef = int.MinValue;
+            card.TributeMaterials = null;
         }
 
         /// <summary>
@@ -2599,9 +2626,13 @@ namespace WRLDZ.Duel
             // Sent by rule after their monster left: a Banisher of the Light that left with it no longer applies
             // (RedirectAndReplace batch, v142).
             using var byRule = TextEffects.RedirectAndReplaceRuntime.EnterRuleSend();
+            // GuardiansAndEquipEvents batch: Morale Boost — the Equip Spells this monster loses leave together (one event).
+            using var lostTargets = TextEffects.GuardiansAndEquipEventsRuntime.EnterEquipLeaveEvent(this);
             foreach (var eq in eqs)
             {
                 if (eq == null) continue;
+                // REASON_LOST_TARGET: an Equip Spell Card that goes to the GY because its monster left (Morale Boost).
+                var lostTargetController = ControllerOf(eq) ?? fallbackOwner;
                 eq.EquippedTo = null;
                 // A linked Continuous Spell/Trap whose effects are negated (Metal Detector this turn)
                 // does not destroy itself when its monster leaves; it stays face-up with no link.
@@ -2614,6 +2645,7 @@ namespace WRLDZ.Duel
                     // unlinked (Lua: a FIELD continuous effect without EFFECT_FLAG_CANNOT_DISABLE).
                     if (eq.IsNegated && !TextEffects.TextEffectRuntime.IsRealEquipCard(eq)) continue;
                     // Banisher of the Light (v142): sent once the event that removed its monster is over.
+                    TextEffects.GuardiansAndEquipEventsRuntime.NoteEquipLeftField(this, eq, lostTargetController);
                     if (TextEffects.RedirectAndReplaceRuntime.TryDeferRuleSend(this, eq, fallbackOwner)) continue;
                     SendCardToGrave(ControllerOf(eq) ?? fallbackOwner, eq);
                     continue;
@@ -2623,6 +2655,7 @@ namespace WRLDZ.Duel
                 // way the bound monster leaves the field, not only its destruction; not while this card is negated.
                 if (!hostStaysOnField && !eq.IsNegated && HasCompiledClause(eq, c => c.DestroyThisWhenBoundHostLeaves))
                 {
+                    TextEffects.GuardiansAndEquipEventsRuntime.NoteEquipLeftField(this, eq, lostTargetController);
                     if (TextEffects.RedirectAndReplaceRuntime.TryDeferRuleSend(this, eq, fallbackOwner)) continue;
                     SendCardToGrave(ControllerOf(eq) ?? fallbackOwner, eq);
                     continue;
@@ -2630,6 +2663,7 @@ namespace WRLDZ.Duel
 
                 if (HasCompiledClause(eq, c => c.DestroyThisWhenBoundHostDestroyed)) continue;
                 if (!leavingToGy && !TextEffects.TextEffectRuntime.IsRealEquipCard(eq)) continue;
+                TextEffects.GuardiansAndEquipEventsRuntime.NoteEquipLeftField(this, eq, lostTargetController);
                 if (TextEffects.RedirectAndReplaceRuntime.TryDeferRuleSend(this, eq, fallbackOwner)) continue;
                 SendCardToGrave(ControllerOf(eq) ?? fallbackOwner, eq);
             }
@@ -2645,6 +2679,10 @@ namespace WRLDZ.Duel
         {
             if (card?.EquippedTo == null) return;
             var host = card.EquippedTo;
+            // GuardiansAndEquipEvents batch: Morale Boost — an Equip Spell Card leaves the field while equipped
+            // (Lua GetEquipTarget()~=nil on EVENT_LEAVE_FIELD), to any destination.
+            if (fromFieldSt)
+                TextEffects.GuardiansAndEquipEventsRuntime.NoteEquipLeftField(this, card, leavingOwner);
             host.Equips.Remove(card);
             card.EquippedTo = null;
             RevertEquipTakeControl(leavingOwner, card, host);
@@ -2740,7 +2778,11 @@ namespace WRLDZ.Duel
             GameEvents.Add(DuelGameEventKind.SentToGy, TurnNumber, owner, card, sentBy);
             // Michizure (BattleWindows batch): a monster sent from the field to its owner's GY.
             if (fromFieldMonster)
+            {
                 TextEffects.BattleWindowsRuntime.NoteMonsterSentFromField(this, pile, card);
+                // NamedSummonPairs batch: A Deal with Dark Ruler's record (previous controller, Level).
+                TextEffects.NamedSummonPairsRuntime.NoteMonsterSentToGy(this, owner, card);
+            }
 
             if (fromFieldMonster || fromFieldSt)
             {
@@ -3159,7 +3201,11 @@ namespace WRLDZ.Duel
             if (who == null || card?.Def == null) return false;
             var officialText = OfficialCardAuthority.OfficialText(card);
             var procedureAuthorized = OfficialEffectRegistry.HasSummonProcedure(card.CardId, summonKind);
-            if (PsctGrammar.BlocksSpecialSummon(officialText) && !procedureAuthorized) return false;
+            // NamedSummonPairs batch: "Must be Special Summoned with "X" and cannot be Special Summoned by other ways"
+            // — only X's own named Special Summon (ygopro nocheck=true) gets through.
+            if (PsctGrammar.BlocksSpecialSummon(officialText) && !procedureAuthorized &&
+                !TextEffects.NamedSummonPairsRuntime.NamedSummonerIsSummoning(card))
+                return false;
             if (OfficialEffectRegistry.HasInherentHandTribute(card.CardId) && !_inherentProcedureSummon)
                 return false;
             var summonGate = PsctGrammar.SummonGateNamed(officialText);
@@ -3482,7 +3528,10 @@ namespace WRLDZ.Duel
             // Banisher of the Light (RedirectAndReplace batch, v142): banished instead. A Banisher whose own Summon
             // is negated never applied (it has already left its zone here).
             if (TextEffects.RedirectAndReplaceRuntime.PutInGraveyard(this, pile, summoned))
+            {
                 TextEffects.BattleWindowsRuntime.NoteMonsterSentFromField(this, pile, summoned);
+                TextEffects.NamedSummonPairsRuntime.NoteMonsterSentToGy(this, s.Summoner, summoned);
+            }
             GameEvents.Add(DuelGameEventKind.Destroyed, TurnNumber, s.Summoner, summoned, byCard);
             Log($"Destroyed: {summoned.Name} (its Summon was negated).");
             DuelPresentationPacer.HoldCombatResult();
@@ -3598,7 +3647,8 @@ namespace WRLDZ.Duel
             if (!who.TryFindMonster(attacker, out _)) return false;
             if (who.CannotDeclareAttackThisTurn) return false;
             // Official continuous: Swords of Revealing Light — opponent cannot declare an attack
-            if (OpponentHasSwordsOfRevealingLight(who))
+            if (OpponentHasSwordsOfRevealingLight(who) &&
+                !TextEffects.MonsterNegationAndControlLocksRuntime.IgnoresSpellAttackLock(this, who, attacker))
                 return false;
             if (ContinuousCannotAttackBlocks(who, attacker))
                 return false;
@@ -3694,6 +3744,8 @@ namespace WRLDZ.Duel
                 foreach (var st in side.SpellTrapsOnField())
                 {
                     if (st == null || !st.FaceUp || st.IsNegated || st.Def == null) continue;
+                    // MonsterNegationAndControlLocks batch: Non-Spellcasting Area — a Spell's attack lock does not apply.
+                    if (TextEffects.MonsterNegationAndControlLocksRuntime.ShieldsFromSpell(this, attacker, st)) continue;
                     var prog = TextEffects.CompiledEffectCache.GetOrCompile(st.Def);
                     if (prog == null) continue;
                     foreach (var c in prog.ClausesFor(TextEffects.EffectTiming.ContinuousWhileFaceUp))
@@ -3878,6 +3930,9 @@ namespace WRLDZ.Duel
             // DcrEquipSpells batch: Shooting Star Bow - Ceal's grant is the Equip Card's effect (EFFECT_TYPE_EQUIP) — the
             // monster's own negation does not remove it.
             if (TextEffects.DcrEquipSpellsRuntime.GrantsDirectAttack(this, attacker)) return true;
+            // SimpleTriggersAndSwarm batch: Dark Scorpion Combination's field grant (its flag on the monster, not the
+            // monster's own effect — the monster's negation does not remove it).
+            if (TextEffects.SimpleTriggersAndSwarmRuntime.GrantsDirectAttack(this, attacker)) return true;
             if (attacker?.Def == null || !attacker.FaceUp || attacker.IsNegated) return false;
             if (attacker.DirectAttackThisTurn) return true;
             var ctrl = ControllerOf(attacker);
@@ -4017,7 +4072,8 @@ namespace WRLDZ.Duel
                 return false;
             }
 
-            if (OpponentHasSwordsOfRevealingLight(who))
+            if (OpponentHasSwordsOfRevealingLight(who) &&
+                !TextEffects.MonsterNegationAndControlLocksRuntime.IgnoresSpellAttackLock(this, who, attacker))
             {
                 Log("Cannot declare an attack — opponent controls Swords of Revealing Light.");
                 return false;
@@ -4322,6 +4378,19 @@ namespace WRLDZ.Duel
                 // negation link that is no longer right after the activation it answers (Great Dezard, Fushioh Richie).
                 if (TextEffects.TargetNegationsAndHandQuickEffectsRuntime.TryResolveLink(this, link))
                     continue;
+                // ArchfiendRiders batch: Desrook Archfiend's hand Quick Effect link (Special Summon its target); the
+                // human's face-up position pick holds the rest of the Chain.
+                if (TextEffects.ArchfiendRidersRuntime.TryResolveLink(this, link))
+                {
+                    if (PendingActivation != null && PendingActivation.HoldsChainResolution)
+                    {
+                        _chainHeldForChoice = true;
+                        Notify();
+                        return;
+                    }
+
+                    continue;
+                }
                 if (TextEffects.FaceUpQuickEffectsRuntime.TryResolveLink(this, link))
                 {
                     if (PendingActivation != null && PendingActivation.HoldsChainResolution)
@@ -4404,6 +4473,21 @@ namespace WRLDZ.Duel
                     TextEffects.ContinuousNegationRuntime.ChainLinkEffectNegated(this, link))
                 {
                     EnsureDeferredSpellTrapGrave(link);
+                    continue;
+                }
+
+                // SpellTrapAnswersAndActivationLocks batch: a negation with a rider (Cursed Seal's name lock, Spell Vanishing's
+                // same-name send, Judgment of Anubis's destroy-and-burn, whose pick may hold the Chain).
+                if (TextEffects.SpellTrapAnswersAndActivationLocksRuntime.TryResolveLink(this, link, ApplyActivationNegation))
+                {
+                    EnsureDeferredSpellTrapGrave(link);
+                    if (PendingActivation != null && PendingActivation.HoldsChainResolution)
+                    {
+                        _chainHeldForChoice = true;
+                        Notify();
+                        return;
+                    }
+
                     continue;
                 }
 
@@ -4869,7 +4953,8 @@ namespace WRLDZ.Duel
             }
 
             // Swords may have resolved mid-window — cannot complete declaration illegally
-            if (OpponentHasSwordsOfRevealingLight(who))
+            if (OpponentHasSwordsOfRevealingLight(who) &&
+                !TextEffects.MonsterNegationAndControlLocksRuntime.IgnoresSpellAttackLock(this, who, attacker))
             {
                 Log("Attack cancelled — Swords of Revealing Light prevents attacks.");
                 Notify();
@@ -4958,6 +5043,9 @@ namespace WRLDZ.Duel
                 // Face-down monsters are ALWAYS Defense Position — never resolve as ATK
                 targetOrNull.Position = BattlePosition.Defense;
                 flippedByBattle = targetOrNull;
+                // DerivedAtkMonsters batch (v176): its continuous effects apply from now on, this damage calculation
+                // included (Gren Maju Da Eiza's "?" DEF; any self-stat monster flipped by the attack).
+                if (!Ocg.OcgLabDuelHost.IsActive) FieldSpellEffects.RefreshBoard(this);
                 Log(
                     $"[Damage Step · Start] Flipped {targetOrNull.Name} face-up in Defense Position " +
                     $"(DEF {BattleMechanics.DefenseValue(targetOrNull)}).");
@@ -5218,6 +5306,9 @@ namespace WRLDZ.Duel
                 Notify();
                 return true;
             }
+            // NamedSummonPairs batch: Mirage Knight — the battle target's original ATK, during damage calculation only
+            // (applied after the "before damage calculation" effects, which do not see it).
+            TextEffects.NamedSummonPairsRuntime.ApplyDamageCalculationAtk(this, attacker, targetOrNull);
             // EffectDamageEvents batch (v162): Gravekeeper's Vassal — the battle damage it inflicts is effect damage instead,
             // so no battle-damage change or prevention applies to it (ygopro calculate_battle_damage skips them).
             TextEffects.EffectDamageEventsRuntime.BattleDamageAsEffect(this, attacker, targetOrNull, piercing,
@@ -5272,6 +5363,10 @@ namespace WRLDZ.Duel
             if (calc.DamageToAttackingPlayer > 0 && targetOrNull != null && atkDamageAsEffectBy == null)
                 calc.DamageToAttackingPlayer = TextEffects.DcrEquipSpellsRuntime.ChangeBattleDamage(
                     this, targetOrNull, who, calc.DamageToAttackingPlayer);
+            // SimpleTriggersAndSwarm batch: Dark Scorpion Combination — a flagged monster's direct attack inflicts 400.
+            if (calc.DamageToDefendingPlayer > 0 && defDamageAsEffectBy == null)
+                calc.DamageToDefendingPlayer = TextEffects.SimpleTriggersAndSwarmRuntime.ChangeBattleDamage(
+                    this, attacker, targetOrNull, opp, calc.DamageToDefendingPlayer);
             if (calc.DamageToDefendingPlayer > 0 && defDamageAsEffectBy != null)
                 ApplyEffectDamage(opp, calc.DamageToDefendingPlayer, defDamageAsEffectBy.Name, defDamageAsEffectBy);
             else if (calc.DamageToDefendingPlayer > 0)
@@ -5353,6 +5448,8 @@ namespace WRLDZ.Duel
                 calc.DestroyAttacker, calc.DestroyDefender);
             // After the Struggle (BattleRules batch): both battlers were involved in damage calculation (EVENT_BATTLED).
             TextEffects.BattleRulesRuntime.NoteBattled(this, attacker, targetOrNull);
+            // NamedSummonPairs batch: Mirage Knight's "battled this turn" (GetBattledGroupCount).
+            TextEffects.NamedSummonPairsRuntime.NoteBattled(this, attacker, targetOrNull);
             // Reflect Bounder: "If you do, after damage calculation: Destroy this card."
             TextEffects.BattlePhaseEndRuntime.DestroyAfterDamageCalculation(this, destroyAfterCalc);
 
@@ -5613,6 +5710,7 @@ namespace WRLDZ.Duel
                 targetOrNull.FaceUp = true;
                 targetOrNull.Position = BattlePosition.Defense;
                 flippedByBattle = targetOrNull;
+                if (!Ocg.OcgLabDuelHost.IsActive) FieldSpellEffects.RefreshBoard(this); // DerivedAtkMonsters (v176)
                 Log($"[Damage Step · Start] Flipped {targetOrNull.Name} face-up in Defense Position " +
                     $"(DEF {BattleMechanics.DefenseValue(targetOrNull)}).");
             }
@@ -5819,6 +5917,10 @@ namespace WRLDZ.Duel
                 // before the queued Summon's window overwrites _fieldSummonTriggerSummoned (else it is never seen).
                 if (!IsAwaitingEffectTarget)
                     TextEffects.SummonTriggersAndTributesRuntime.OnSummonSettled(
+                        this, _fieldSummonTriggerSummoner, _fieldSummonTriggerSummoned);
+                // MonsterNegationAndControlLocks batch: Stumbling answers that Summon too.
+                if (!IsAwaitingEffectTarget)
+                    TextEffects.MonsterNegationAndControlLocksRuntime.OnSummonSettled(
                         this, _fieldSummonTriggerSummoner, _fieldSummonTriggerSummoned);
                 FlushQueuedSummonResponses();
                 return;
@@ -6315,6 +6417,13 @@ namespace WRLDZ.Duel
             if (clause.RequiresTributeThis &&
                 !TextEffects.NegationsAndGySummonsRuntime.CanTributeThisForChainAnswer(this, who, card, out _))
                 return false;
+            // SpellTrapAnswersAndActivationLocks batch: a discard of N cards or of a Spell (Spell Vanishing, Cursed Seal of the
+            // Forbidden Spell), which the one-card discard below cannot pay.
+            if (TextEffects.SpellTrapAnswersAndActivationLocksRuntime.TryPayAnswerDiscards(this, who, card, clause,
+                    human: !autoPickTarget && IsHumanControlled(who),
+                    seat: () => SeatChainAnswer(who, card, clause, speed, cls, skipSpellPayLp, null, handAnswer),
+                    out var batchDiscardSeated))
+                return batchDiscardSeated;
             CardInstance discard = null;
             if (clause.RequiresDiscardCost)
             {
@@ -6625,6 +6734,10 @@ namespace WRLDZ.Duel
             // triggers (Lua EVENT_PHASE + PHASE_END, EFFECT_TYPE_CONTINUOUS).
             TextEffects.LastTurnRuntime.OnEndPhase(this);
             if (GameOver) return;
+            // DcrSpellTrapUtility batch: Interdimensional Matter Transporter — banished "until the End Phase" (Lua
+            // EVENT_PHASE + PHASE_END, EFFECT_TYPE_CONTINUOUS): back at the start of the End Phase.
+            TextEffects.DcrSpellTrapUtilityRuntime.OnEndPhase(this);
+            if (GameOver) return;
             // TriggerChainResponses (v163 review): an End Phase trigger that goes on a Chain (Spirit's Invitation) is
             // seated once the End Phase effects below have resolved, never while they resolve.
             TextEffects.TriggerChainResponsesRuntime.BeginCollect(this);
@@ -6719,6 +6832,9 @@ namespace WRLDZ.Duel
             if (who == null) return;
             // LastTurn batch (v163): a check registered during this End Phase still applies in it.
             TextEffects.LastTurnRuntime.OnEndPhase(this);
+            if (GameOver) return;
+            // DcrSpellTrapUtility batch: a monster banished until the End Phase during this End Phase returns in it.
+            TextEffects.DcrSpellTrapUtilityRuntime.OnEndPhase(this);
             if (GameOver) return;
             // Hand size limit. There is no discard-choice UI yet (DR-07), so the lowest-value card
             // (AiHeuristicPolicy.DiscardPriority) goes first — never simply the newest draw.
@@ -6830,6 +6946,9 @@ namespace WRLDZ.Duel
             // Last thing in the End Phase: what the other player holds now is "at the end of the opponent's
             // last End Phase" on their next turn (The Agent of Wisdom - Mercury).
             TextEffects.EmptyHandStandbyDrawRuntime.RecordEndOfEndPhase(this, who);
+            // DcrSpellTrapUtility batch: Final Countdown counts the turn as it ends (Lua EVENT_TURN_END) and may end the Duel.
+            TextEffects.DcrSpellTrapUtilityRuntime.OnTurnEnd(this);
+            if (GameOver) return;
             BeginTurn(OpponentOf(who));
             Notify();
         }
@@ -6964,6 +7083,15 @@ namespace WRLDZ.Duel
             if (!destroyedByBattle &&
                 TextEffects.EquipAndSpellProtectionRuntime.PreventsTargetedMonsterDestruction(this, card, byEffect))
                 return;
+            // BattleDestroyedTriggers batch: Different Dimension Dragon — not destroyed by a Spell/Trap effect that does not
+            // target it.
+            if (!destroyedByBattle &&
+                TextEffects.BattleDestroyedTriggersRuntime.PreventsUntargetedSpellTrapDestruction(this, card, byEffect))
+                return;
+            // NamedSummonPairs batch: Exodia Necross — not destroyed by a Spell/Trap effect.
+            if (!destroyedByBattle &&
+                TextEffects.NamedSummonPairsRuntime.PreventsSpellTrapEffectDestruction(this, card, byEffect))
+                return;
 
             if (owner.TryFindMonster(card, out var i))
             {
@@ -7026,6 +7154,8 @@ namespace WRLDZ.Duel
                     MarkSentFromFieldToGy(card, byEffect, destroyedByBattle, battleDestroyer);
                     // Michizure (BattleWindows batch): a monster sent from the field to its owner's GY.
                     TextEffects.BattleWindowsRuntime.NoteMonsterSentFromField(this, gyPile, card);
+                    // NamedSummonPairs batch: A Deal with Dark Ruler's record (previous controller, Level).
+                    TextEffects.NamedSummonPairsRuntime.NoteMonsterSentToGy(this, owner, card);
                     // EquipFamily batch (Dark Necrofear): destroyed in whose Monster Zone, by whose card.
                     TextEffects.EquipFamilyRuntime.NoteDestroyedToGy(this, owner, gyPile, card, byEffect,
                         destroyedByBattle, battleDestroyer);
@@ -7373,6 +7503,9 @@ namespace WRLDZ.Duel
                 // EngineHygiene batch: Forced Requisition's queued discard triggers, then its activation window.
                 if (!TextEffects.SimultaneousTriggersRuntime.Busy(this) && PlayIdleForDeferredEvents())
                     TextEffects.DiscardEvents.FireQueuedTriggers(this);
+                // SimpleTriggersAndSwarm batch: "When this card is sent to the GY" (from anywhere) once play is idle.
+                if (!GameOver && !TextEffects.SimultaneousTriggersRuntime.Busy(this) && PlayIdleForDeferredEvents())
+                    TextEffects.SimpleTriggersAndSwarmRuntime.FireQueuedSentToGy(this);
                 OfferDiscardedWindow();
                 // LastTurn batch (v163): a forced battle starts once the Chain and the triggers it left are over, and hands
                 // the duel back to the phase it interrupted once it is over.

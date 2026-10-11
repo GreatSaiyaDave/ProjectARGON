@@ -275,8 +275,10 @@ namespace WRLDZ.Duel.TextEffects
         public static void FilterTargets(EffectClause c, List<CardInstance> list)
         {
             if (c == null || list == null) return;
+            // ArchfiendRiders batch: Checkmate prints no ATK ceiling (ConditionAmount 0); its target is still face-up.
             if (c.Action == EffectActionKind.TargetCanAttackDirectlyThisTurn)
-                list.RemoveAll(t => t?.Def == null || !t.Def.IsMonster || !t.FaceUp || t.CurrentAtk > c.ConditionAmount);
+                list.RemoveAll(t => t?.Def == null || !t.Def.IsMonster || !t.FaceUp ||
+                                    (c.ConditionAmount > 0 && t.CurrentAtk > c.ConditionAmount));
         }
 
         /// <summary>

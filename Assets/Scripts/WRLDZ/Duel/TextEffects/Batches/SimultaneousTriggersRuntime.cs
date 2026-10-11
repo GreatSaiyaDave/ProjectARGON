@@ -315,6 +315,19 @@ namespace WRLDZ.Duel.TextEffects
                 });
             }
 
+            // ArchfiendRiders batch: Pandemonium's search is an optional trigger of this same event (Lua s.regop raises one
+            // event per player for the whole group): it goes on this Chain with the held triggers.
+            foreach (var (who, card, run) in ArchfiendRidersRuntime.TakeHeldSearches(engine))
+                entries.Add(new Entry
+                {
+                    Kind = EntryKind.Fused,
+                    Controller = who,
+                    Card = card,
+                    Turn = engine.TurnNumber,
+                    Optional = true,
+                    Run = run
+                });
+
             // TriggerChainResponses batch (v163): sent by a resolving Chain (Dark Hole) while play opens again after it,
             // and a player may respond — the held triggers wait for that Chain to finish and go on a new Chain then.
             if (ShouldDeferPastChain(engine, entries.Select(e => e.Controller)))
@@ -438,6 +451,14 @@ namespace WRLDZ.Duel.TextEffects
 
             return seats.Count > 0 && TriggerChainResponsesRuntime.TrySeat(engine, seats);
         }
+
+        /// <summary>
+        /// ArchfiendRiders batch: a queued or held entry of <paramref name="card"/> is running now (a held send replaying
+        /// MonsterEffects.OnSentFromFieldToGy), not a new send of it.
+        /// </summary>
+        public static bool IsReplaying(DuelEngine engine, CardInstance card) =>
+            engine != null && card != null && s_state.TryGetValue(engine, out var st) &&
+            ReferenceEquals(st.Replaying, card);
 
         /// <summary>TextEffectRuntime.TryResolveSentToGy: <paramref name="card"/>'s optional "When" effects miss the timing.</summary>
         public static bool MissesWhenTiming(DuelEngine engine, CardInstance card) =>

@@ -52,7 +52,8 @@ namespace WRLDZ.Duel.Rules
         {
             if (defender?.Def == null) return 0;
             // Printed DEF may be 0; only treat "N/A" as non-stat when def &lt; 0 in DB
-            if (defender.Def.def < 0) return 0;
+            // DerivedAtkMonsters batch (v176): a "?" DEF set by the monster's own effect (Gren Maju Da Eiza) counts.
+            if (defender.Def.def < 0 && defender.SelfSetDef == int.MinValue) return 0;
             return defender.CurrentDef;
         }
 
@@ -63,7 +64,8 @@ namespace WRLDZ.Duel.Rules
         public static int AttackValue(CardInstance monster)
         {
             if (monster?.Def == null) return 0;
-            if (monster.Def.atk < 0) return 0;
+            // DerivedAtkMonsters batch (v176): a "?" ATK set by the monster's own effect (Maju Garzett) counts.
+            if (monster.Def.atk < 0 && monster.SelfSetAtk == int.MinValue) return 0;
             return monster.CurrentAtk;
         }
 

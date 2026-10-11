@@ -575,11 +575,26 @@ namespace WRLDZ.Duel.TextEffects
                 var engine = s_scopeEngine;
                 s_scopeEngine = null;
                 s_banishersAtScopeStart.Clear();
-                // The Equip Cards its destructions / Tributes left behind are sent by rule now, after everything it
-                // sent (a Banisher that left with them no longer applies).
-                FlushDeferredRuleSends(engine);
+                var equipLeave = s_equipLeaveEvent;
+                s_equipLeaveEvent = null;
+                try
+                {
+                    // The Equip Cards its destructions / Tributes left behind are sent by rule now, after everything
+                    // it sent (a Banisher that left with them no longer applies).
+                    FlushDeferredRuleSends(engine);
+                }
+                finally
+                {
+                    equipLeave?.Dispose();
+                }
             }
         }
+
+        /// <summary>
+        /// GuardiansAndEquipEvents batch: the Equip Spell Cards that leave the field while the outermost scope is open
+        /// leave in one event (Morale Boost: 2 Tributes' Equip Spells, Collected Power's Duel.Destroy(dg)).
+        /// </summary>
+        static IDisposable s_equipLeaveEvent;
 
         public static EffectApplicationScope EnterEffectApplication(DuelEngine engine)
         {
@@ -589,6 +604,7 @@ namespace WRLDZ.Duel.TextEffects
                 s_banishersAtScopeStart.Clear();
                 if (engine != null)
                     s_banishersAtScopeStart.AddRange(ActiveBanishers(engine));
+                s_equipLeaveEvent = engine != null ? GuardiansAndEquipEventsRuntime.EnterEquipLeaveEvent(engine) : null;
             }
 
             return default;

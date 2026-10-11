@@ -215,7 +215,9 @@ namespace WRLDZ.Duel
                     engine.NotifyPublic();
                     return true;
                 }
-                if (!TextEffects.ChainLinkAnswersRuntime.NegatesRegisteredMonsterTarget(engine, card, pick))
+                // MonsterNegationAndControlLocks batch: Skill Drain negates it while Abyss Soldier is face-up on the field.
+                if (!TextEffects.ContinuousNegationRuntime.NegatesMonsterEffectOnField(engine, card) &&
+                    !TextEffects.ChainLinkAnswersRuntime.NegatesRegisteredMonsterTarget(engine, card, pick))
                     engine.ReturnCardToHand(pick, by: who);
                 card.EffectUsedThisTurn = true;
                 engine.NotifyPublic();
@@ -284,7 +286,9 @@ namespace WRLDZ.Duel
                 return true;
             }
             // ChainLinkAnswers batch: Chaos Command Magician negates a monster effect that targets only it.
-            if (!TextEffects.ChainLinkAnswersRuntime.NegatesRegisteredMonsterTarget(engine, card, resolved))
+            // MonsterNegationAndControlLocks batch: Skill Drain negates it while Abyss Soldier is face-up on the field.
+            if (!TextEffects.ContinuousNegationRuntime.NegatesMonsterEffectOnField(engine, card) &&
+                !TextEffects.ChainLinkAnswersRuntime.NegatesRegisteredMonsterTarget(engine, card, resolved))
                 engine.ReturnCardToHand(resolved, by: who);
             card.EffectUsedThisTurn = true;
             engine.NotifyPublic();
@@ -423,11 +427,16 @@ namespace WRLDZ.Duel
             // finished, then replays them here in order.
             if (TextEffects.FlipMassEffectsRuntime.TryHoldSentToGy(engine, owner, card, destroyed,
                     destroyedByBattle, battleDestroyer))
+            {
+                // ArchfiendRiders batch: Pandemonium counts the held destruction now (one search per player and event).
+                TextEffects.ArchfiendRidersRuntime.NoteHeldSend(engine, owner, card, destroyed, destroyedByBattle);
                 return;
+            }
 
-            // Pandemonium: an Archfiend destroyed (not by battle) lets its owner search a
-            // lower-Level Archfiend from the Deck. Runs alongside any other GY trigger.
-            FieldSpellEffects.TryPandemoniumSearchOnDestroy(engine, owner, card, destroyed, destroyedByBattle);
+            // Pandemonium (ArchfiendRiders batch, compiled clause): an Archfiend destroyed (not by battle) lets its
+            // owner search a lower-Level Archfiend from the Deck: an optional trigger queued for the next
+            // simultaneous-trigger Chain, beside this card's own GY trigger (a held send's search is already on its Chain).
+            TextEffects.ArchfiendRidersRuntime.OnSentToGy(engine, owner, card, destroyed, destroyedByBattle);
 
             // NegationMonsters batch (v161): negated by Dark Ruler Ha Des / Twin-Headed Wolf as it was destroyed by battle,
             // its "sent to the GY" / "destroyed by battle" effects do not apply while it stays in the GY.
@@ -521,6 +530,8 @@ namespace WRLDZ.Duel
                                .OrderByDescending(t => t.CurrentAtk)
                                .FirstOrDefault()
                            ?? targets.OrderByDescending(t => t.CurrentAtk).First();
+                // MonsterNegationAndControlLocks batch: Skill Drain negates the FLIP effect while the Bug is face-up.
+                if (TextEffects.ContinuousNegationRuntime.NegatesMonsterEffectOnField(engine, source)) return;
                 // ChainLinkAnswers batch: Chaos Command Magician negates a monster effect that targets only it.
                 if (TextEffects.ChainLinkAnswersRuntime.NegatesRegisteredMonsterTarget(engine, source, pick)) return;
                 engine.Log($"Man-Eater Bug destroys {pick.Name}!");
@@ -626,6 +637,12 @@ namespace WRLDZ.Duel
             EffectTargetKind kind, CardInstance target)
         {
             if (engine == null || who == null || target == null) return;
+            // MonsterNegationAndControlLocks batch: Skill Drain negates a FLIP effect resolving while its monster is face-up.
+            if (TextEffects.ContinuousNegationRuntime.NegatesMonsterEffectOnField(engine, source))
+            {
+                engine.NotifyPublic();
+                return;
+            }
             switch (kind)
             {
                 case EffectTargetKind.AnyMonsterOnField:
@@ -669,6 +686,8 @@ namespace WRLDZ.Duel
 
             if (!who.IsPlayer)
             {
+                // MonsterNegationAndControlLocks batch: Skill Drain negates the FLIP effect while it is face-up.
+                if (TextEffects.ContinuousNegationRuntime.NegatesMonsterEffectOnField(engine, source)) return;
                 var pick = spells[0];
                 who.Graveyard.Remove(pick);
                 who.Hand.Add(pick);
@@ -704,6 +723,13 @@ namespace WRLDZ.Duel
             var who = p.Controller;
             var kind = p.TargetKind;
             engine.ClearPendingActivation();
+            // MonsterNegationAndControlLocks batch: Skill Drain negates the effect while its monster is face-up on the field
+            // (Sangan resolves from the GY and is never covered).
+            if (TextEffects.ContinuousNegationRuntime.NegatesMonsterEffectOnField(engine, p.Card))
+            {
+                engine.NotifyPublic();
+                return true;
+            }
 
             switch (kind)
             {

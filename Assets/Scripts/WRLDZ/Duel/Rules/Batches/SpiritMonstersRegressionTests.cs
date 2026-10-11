@@ -248,10 +248,13 @@ namespace WRLDZ.Duel.Rules
                 Describe(maha));
 
             var berserk = P(BerserkDragon);
-            Check("Berserk Dragon: the same attack-all sentence compiles, the rest does not (Stub, out of decks)",
-                berserk != null && !berserk.FullyCompiled &&
+            // NamedSummonPairs batch: the End Phase -500 ATK sentence now compiles too (Implemented).
+            Check("Berserk Dragon: the same attack-all sentence compiles; with its End Phase -500 ATK it is Implemented",
+                berserk != null && berserk.FullyCompiled &&
                 Has(berserk, c => c.Action == EffectActionKind.AttackAllOpponentMonstersOnceEach) &&
-                !CardEffectStatus.MayIncludeInDeck(db.Get(BerserkDragon)),
+                Has(berserk, c => c.Timing == EffectTiming.EndPhase &&
+                                  c.Action == EffectActionKind.ChangeThisCardAtkWhileFaceUp && c.Amount == -500) &&
+                CardEffectStatus.Classify(db.Get(BerserkDragon)) == CardEffectStatusKind.Implemented,
                 Describe(berserk));
 
             var enemy = P(EnemyController);
@@ -929,9 +932,12 @@ namespace WRLDZ.Duel.Rules
                 doubled == null || !Has(doubled, c => c.Action == EffectActionKind.HalveBattleDamageThisInflictsToOpponent),
                 Describe(doubled));
             var shadowknight = CardTextEffectCompiler.Compile(db.Get(ShadowknightArchfiend));
-            Check("Shadowknight Archfiend (\"… to your opponent is halved\", not this batch) stays not FullyCompiled",
-                shadowknight != null && !shadowknight.FullyCompiled &&
-                !Has(shadowknight, c => c.Action == EffectActionKind.HalveBattleDamageThisInflictsToOpponent),
+            // ArchfiendRiders batch: Shadowknight Archfiend's "… to your opponent is halved" now compiles to the same marker
+            // (its own wording atom); the guard pins that shape.
+            Check("Shadowknight Archfiend (\"… to your opponent is halved\", ArchfiendRiders batch) compiles the halving marker",
+                shadowknight != null && shadowknight.FullyCompiled &&
+                Has(shadowknight, c => c.Action == EffectActionKind.HalveBattleDamageThisInflictsToOpponent &&
+                                       c.Timing == EffectTiming.ContinuousWhileFaceUp),
                 Describe(shadowknight));
 
             var nsOnly = Syn(90600005,
