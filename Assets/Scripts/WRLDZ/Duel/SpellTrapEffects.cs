@@ -1746,7 +1746,11 @@ namespace WRLDZ.Duel
             foreach (var c in prog.ClausesFor(EffectTiming.Activate))
             {
                 if (c == null) continue;
-                if (c.RequiresDiscardCost || c.RequiresSecondTarget ||
+                // SimpleTargetUtility batch (v173): Altar for Tribute's send-you-control cost needs the
+                // compiled flow (a human picks the monster, then GainLpEqualToCostAmount reads the recorded
+                // original ATK at resolution). Without it the untargeted seat path places the card and
+                // resolves with nothing — no cost paid, no LP gained.
+                if (c.RequiresDiscardCost || c.RequiresSendOtherYouControl || c.RequiresSecondTarget ||
                     c.RequiresTributeCount > 0 ||
                     c.PickLowestAtk || c.PickHighestAtk || c.PickHighestDef ||
                     c.ForceAttackPosition || c.TakeControlOfTarget ||

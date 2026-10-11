@@ -234,10 +234,10 @@ namespace WRLDZ.Duel.Rules
                 var offered = prompted && Legal(e).Contains(victim);
                 Drive(e, c => c == victim);
                 Settle(e);
-                // The cost is a forced single choice (the only monster you control), so the engine may
-                // auto-pay it without seating a pick — outcomes are the contract, not the prompt.
-                Check("Altar for Tribute: the picked monster is sent (printed 1300 ATK gained), trap to the GY",
-                    act && p.Graveyard.Contains(victim) &&
+                // Regression (UsesCompiledActivationPending): the send-you-control cost must seat a pick so a
+                // human can choose the monster; otherwise the untargeted seat path pays no cost and gains no LP.
+                Check("Altar for Tribute: send-you-control pick offered, monster sent (printed 1300 ATK gained), trap to the GY",
+                    act && prompted && offered && p.Graveyard.Contains(victim) &&
                     p.LifePoints == lp + 1300 && p.Graveyard.Contains(altar) && !e.Chain.HasLinks,
                     $"act={act} prompted={prompted} offered={offered} lp={lp}->{p.LifePoints} " +
                     $"victim={Where(e, victim)} altar={Where(e, altar)} chain={e.Chain.Count}");
