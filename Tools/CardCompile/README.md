@@ -73,7 +73,7 @@ sessions.
    tribute, banish, chain, LP change, Standby growth — may still have no look. Fill the row in the same change
    or note the gap in the batch report. A card that resolves with no visual is not finished.
 4. **Implement each group in its own copy.** Create it with `T=$(scratch_tree.sh <dir>/trees/<Group>)`.
-   - Read each card's printed text in cards_db and its official script,
+   - Read each card's printed text with `headless.sh <tree> --card "<name>"` (never cards_db.json) and its official script,
      `Assets/StreamingAssets/OcgCore/scripts/official~/c<id>.lua` (read-only, in the real checkout).
    - Read similar implemented cards: `headless.sh "$T" --card "<similar card>"`, and grep the templates.
    - Put new sentence atoms in `Duel/TextEffects/Batches/<Group>Atoms.cs`, as
@@ -110,18 +110,18 @@ sessions.
    `snapshot.sh save`, apply the patch (`git apply --reject` or `patch -p1 --merge`), then resolve conflicts.
    They are almost always two appends at the same enum or array tail, or two one-line registrations: keep
    both. Then:
-   - run `headless.sh . --quiet`, `tools/csc_full.sh` and `tools/csc_full.sh --release` (whole Unity project,
+   - run `headless.sh . --quiet`, `csc_overlay.sh .` and `csc_overlay.sh . --release` (whole Unity project,
      editor and Android defines), `enum_guard.py` and `status_diff.py`;
    - if the group cannot be made green, `snapshot.sh restore` it and report why.
 7. **Finalize.**
-   - Run `headless.sh . --export-seed` and `seed_diff.py`, a final `--quiet`, and `csc_full` plus `--release`.
+   - Run `headless.sh . --export-seed` and `seed_diff.py`, a final `--quiet`, and `csc_overlay.sh .` plus `--release`.
    - Write the batch report `Docs/CURRICULUM_BATCH_<tag>.md` (implemented, deferred with reasons, status
      table) and add a pass row to `Duel/TextEffects/TEXT_EFFECT_PIPELINE.md`.
    - Remove finished cards from `branch_refs.json`, and update the Engine version line in `AGENTS.md`.
 
 ## Checking a copy or a commit against the whole project
 
-`Tools/CardCompile/csc_overlay.sh <tree> [--release]` compiles the whole Unity project (as `tools/csc_full.sh` does), with
+`Tools/CardCompile/csc_overlay.sh <tree> [--release]` compiles the whole Unity project (the old untracked `tools/csc_full.sh` is gone since the 10-10 restore; pass `.` for the real checkout), with
 `Assets/Scripts/WRLDZ` taken from `<tree>`. Use it before landing a patch built in a scratch copy, or to prove a commit
 stands on its own: `scratch_tree.sh <dir> HEAD`, then `headless.sh <dir> --quiet` and `csc_overlay.sh <dir>` (+ `--release`).
 Commit only the card-engine scope (Duel/, the seed, Tools/CardCompile, the workflow, batch docs). Other sessions own
@@ -199,7 +199,7 @@ Always bump above the highest number seen anywhere, including branches and uncom
 
 - The headless harness compiles only `Data/**`, `Duel/**` and a few listed `Core/` files. When another session adds a
   `Data/` file that uses a `Core/` type, the harness stops building and the batch's baseline gate aborts, although the
-  Unity project (csc_full) is fine. Add that `Core/` file to `Tools/HeadlessEngine/HeadlessEngine.csproj` if it is
+  Unity project (`csc_overlay.sh .`) is fine. Add that `Core/` file to `Tools/HeadlessEngine/HeadlessEngine.csproj` if it is
   plain C# (the shim covers Color / Mathf / Vector). On 2026-09-30 MapZoneCatalog.cs was added for StreetLpBand.
 
 - A Spell/Trap target clause can be routed by the **legacy** `SpellTrapEffects.MapCompiledTargetKind` /
@@ -214,4 +214,4 @@ Always bump above the highest number seen anywhere, including branches and uncom
 - `TcgRegressionTests` has "leftover unique is not FullyCompiled" corpus guards. Implementing such a card
   means rewriting its guard to assert the new compiled shape.
 - The Unity Editor compiles `Assets/**` with Unity's own Roslyn. The headless harness only compiles
-  Data + Duel, so run `tools/csc_full.sh` after integrating.
+  Data + Duel, so run `csc_overlay.sh .` after integrating.
