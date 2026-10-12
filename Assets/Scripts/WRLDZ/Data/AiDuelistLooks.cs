@@ -31,13 +31,13 @@ namespace WRLDZ.Data
             else if (n.Contains("bakura")) a = Look(0, "ryou_bakura", 176, 0.35f, 0, ("Shirt.0", "#3A7BFF"), ("Shirt.1", "#F2F2F5"), ("Bottoms.0", "#2A2A33"));
             else if (n.Contains("joey")) a = Look(0, "joey_wheeler", 178, 0.50f, 0, ("Shirt.0", "#1E6A2A"), ("Shirt.1", "#F2F2F5"), ("Bottoms.0", "#1C2E7A"));
             else if (n.Contains("mai")) a = Look(1, "mai_valentine", 170, 0.45f, 0, ("Shirt.0", "#43207A"), ("Shirt.1", "#7A4CD9"), ("Bottoms.0", "#1E0E3A"));
-            else if (n.Contains("weevil")) a = Look(0, "seto_kaiba", 152, 0.30f, 1, ("Shirt.0", "#F2F2F5"), ("Shirt.1", "#1E6A2A"), ("Bottoms.0", "#2A2A33")).WithHair("#2E7A6A");
-            else if (n.Contains("rex")) a = Look(0, "jaden_yuki", 170, 0.55f, 1, ("Shirt.0", "#C87028"), ("Shirt.1", "#3A1E08"), ("Bottoms.0", "#4A3020")).WithHair("#5A2A6A");
-            else if (n.Contains("mako")) a = Look(0, "jack_atlas", 183, 0.70f, 1, ("Shirt.0", "#0F5A6A"), ("Shirt.1", "#F2F2F5"), ("Bottoms.0", "#1C2E7A")).WithHair("#1C2470");
-            else if (n.Contains("pegasus")) a = Look(0, "ryou_bakura", 190, 0.45f, 1, ("Shirt.0", "#C0303A"), ("Shirt.1", "#F2F2F5"), ("Shirt.2", "#E3B64C"), ("Bottoms.0", "#F2F2F5")).WithHair("#DAD7EA");
+            else if (n.Contains("weevil")) a = Look(0, "seto_kaiba", 152, 0.30f, 1, ("Shirt.0", "#F2F2F5"), ("Shirt.1", "#1E6A2A"), ("Bottoms.0", "#2A2A33")).WithHair("#8ABAB7");
+            else if (n.Contains("rex")) a = Look(0, "jaden_yuki", 170, 0.55f, 1, ("Shirt.0", "#C87028"), ("Shirt.1", "#3A1E08"), ("Bottoms.0", "#4A3020")).WithHair("#4D3020");
+            else if (n.Contains("mako")) a = Look(0, "jack_atlas", 183, 0.70f, 1, ("Shirt.0", "#0F5A6A"), ("Shirt.1", "#F2F2F5"), ("Bottoms.0", "#1C2E7A")).WithHair("#3C394C");
+            else if (n.Contains("pegasus")) a = Look(0, "ryou_bakura", 190, 0.45f, 1, ("Shirt.0", "#C0303A"), ("Shirt.1", "#F2F2F5"), ("Shirt.2", "#E3B64C"), ("Bottoms.0", "#F2F2F5")).WithHair("#C4BDD0");
             else if (n.Contains("marik")) { var _l = Look(0, "marik_ishtar", 177, 0.40f, 0, ("Shirt.0", "#43207A"), ("Shirt.1", "#E3B64C"), ("Bottoms.0", "#0B0B10")); _l.WithSkin("#A8704A"); a = _l; }
-            else if (n.Contains("keith")) a = Look(0, "jack_atlas", 185, 0.60f, 1, ("Shirt.0", "#2A2A33"), ("Shirt.1", "#C0303A"), ("Bottoms.0", "#1C2E7A")).WithHair("#8B4513");
-            else if (n.Contains("bonz")) a = Look(0, "marik_ishtar", 172, 0.25f, 1, ("Shirt.0", "#55565E"), ("Bottoms.0", "#2A2A33")).WithHair("#8A8C94");
+            else if (n.Contains("keith")) a = Look(0, "jack_atlas", 185, 0.60f, 1, ("Shirt.0", "#2A2A33"), ("Shirt.1", "#C0303A"), ("Bottoms.0", "#1C2E7A")).WithHair("#B3AF56");
+            else if (n.Contains("bonz")) a = Look(0, "marik_ishtar", 172, 0.25f, 1, ("Shirt.0", "#55565E"), ("Bottoms.0", "#2A2A33")).WithHair("#505E80");
             else if (n == "tea" || n.StartsWith("tea ") || n.Contains("téa") || n.Contains("gardner")) a = Look(1, "tea_gardner", 164, 0.40f, 0, ("Shirt.0", "#FF9CD8"), ("Shirt.1", "#F2F2F5"), ("Bottoms.0", "#1C2E7A"));
             // the Paradox Brothers: bald, robed; Para in red, Dox in blue
             else if (n == "para" || n.StartsWith("para ")) a = Look(0, "none", 170, 0.55f, 1, ("Shirt.0", "#C8302A"), ("Shirt.1", "#E3B64C"), ("Bottoms.0", "#0B0B10"));

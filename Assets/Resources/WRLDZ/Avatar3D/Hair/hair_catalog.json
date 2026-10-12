@@ -44,11 +44,11 @@
    "palette": {
     "name": "Yugi Star",
     "pattern": "tricolor",
-    "root": "#231F2E",
-    "tip": "#8A2F63",
-    "fringe": "#E8D57E",
-    "streak": "#231F2E",
-    "side": "#231F2E"
+    "root": "#131212",
+    "tip": "#9C1843",
+    "fringe": "#C0B84E",
+    "streak": "#131212",
+    "side": "#131212"
    }
   },
   {
@@ -61,11 +61,11 @@
    "palette": {
     "name": "Street Blond",
     "pattern": "solid",
-    "root": "#CDAA4A",
-    "tip": "#CDAA4A",
-    "fringe": "#CDAA4A",
-    "streak": "#CDAA4A",
-    "side": "#CDAA4A"
+    "root": "#B69D3D",
+    "tip": "#B69D3D",
+    "fringe": "#B69D3D",
+    "streak": "#B69D3D",
+    "side": "#B69D3D"
    }
   },
   {
@@ -78,11 +78,11 @@
    "palette": {
     "name": "Kaiba Sweep",
     "pattern": "solid",
-    "root": "#6B4526",
-    "tip": "#6B4526",
-    "fringe": "#6B4526",
-    "streak": "#6B4526",
-    "side": "#6B4526"
+    "root": "#765A3D",
+    "tip": "#765A3D",
+    "fringe": "#765A3D",
+    "streak": "#765A3D",
+    "side": "#765A3D"
    }
   },
   {
@@ -95,10 +95,10 @@
    "palette": {
     "name": "Dancer Bob",
     "pattern": "split",
-    "root": "#6B3727",
-    "tip": "#6B3727",
-    "fringe": "#6B3727",
-    "streak": "#6B3727",
+    "root": "#5D2F20",
+    "tip": "#5D2F20",
+    "fringe": "#5D2F20",
+    "streak": "#5D2F20",
     "side": "#3B2119"
    }
   },
@@ -112,11 +112,11 @@
    "palette": {
     "name": "Harpy Mane",
     "pattern": "solid",
-    "root": "#D3CD85",
-    "tip": "#D3CD85",
-    "fringe": "#D3CD85",
-    "streak": "#D3CD85",
-    "side": "#D3CD85"
+    "root": "#C2BD6A",
+    "tip": "#C2BD6A",
+    "fringe": "#C2BD6A",
+    "streak": "#C2BD6A",
+    "side": "#C2BD6A"
    }
   },
   {
@@ -129,11 +129,11 @@
    "palette": {
     "name": "Soft Ring",
     "pattern": "solid",
-    "root": "#E4E3EC",
-    "tip": "#E4E3EC",
-    "fringe": "#E4E3EC",
-    "streak": "#E4E3EC",
-    "side": "#E4E3EC"
+    "root": "#D7D8DF",
+    "tip": "#D7D8DF",
+    "fringe": "#D7D8DF",
+    "streak": "#D7D8DF",
+    "side": "#D7D8DF"
    }
   },
   {
@@ -345,11 +345,11 @@
   {
    "name": "Yugi Star",
    "pattern": "tricolor",
-   "root": "#231F2E",
-   "tip": "#8A2F63",
-   "fringe": "#E8D57E",
-   "streak": "#231F2E",
-   "side": "#231F2E"
+   "root": "#131212",
+   "tip": "#9C1843",
+   "fringe": "#C0B84E",
+   "streak": "#131212",
+   "side": "#131212"
   },
   {
    "name": "Pharaoh Atem",
@@ -363,11 +363,11 @@
   {
    "name": "Street Blond",
    "pattern": "solid",
-   "root": "#CDAA4A",
-   "tip": "#CDAA4A",
-   "fringe": "#CDAA4A",
-   "streak": "#CDAA4A",
-   "side": "#CDAA4A"
+   "root": "#B69D3D",
+   "tip": "#B69D3D",
+   "fringe": "#B69D3D",
+   "streak": "#B69D3D",
+   "side": "#B69D3D"
   },
   {
    "name": "CEO Helmet",
@@ -381,29 +381,29 @@
   {
    "name": "Dancer Bob",
    "pattern": "split",
-   "root": "#6B3727",
-   "tip": "#6B3727",
-   "fringe": "#6B3727",
-   "streak": "#6B3727",
+   "root": "#5D2F20",
+   "tip": "#5D2F20",
+   "fringe": "#5D2F20",
+   "streak": "#5D2F20",
    "side": "#3B2119"
   },
   {
    "name": "Harpy Mane",
    "pattern": "solid",
-   "root": "#D3CD85",
-   "tip": "#D3CD85",
-   "fringe": "#D3CD85",
-   "streak": "#D3CD85",
-   "side": "#D3CD85"
+   "root": "#C2BD6A",
+   "tip": "#C2BD6A",
+   "fringe": "#C2BD6A",
+   "streak": "#C2BD6A",
+   "side": "#C2BD6A"
   },
   {
    "name": "Soft Ring",
    "pattern": "solid",
-   "root": "#E4E3EC",
-   "tip": "#E4E3EC",
-   "fringe": "#E4E3EC",
-   "streak": "#E4E3EC",
-   "side": "#E4E3EC"
+   "root": "#D7D8DF",
+   "tip": "#D7D8DF",
+   "fringe": "#D7D8DF",
+   "streak": "#D7D8DF",
+   "side": "#D7D8DF"
   },
   {
    "name": "Thief King",
