@@ -86,7 +86,7 @@ namespace WRLDZ.Duel.TextEffects
         /// "Target that monster") is in CHAININFO_TARGET_CARDS as well.
         /// </summary>
         internal static IDisposable EnterTargetedClause(EffectClause clause, CardInstance source, CardInstance chosenTarget) =>
-            clause != null && chosenTarget != null && clause.IsPsctTarget && !clause.ChoiceDoesNotTarget
+            clause != null && chosenTarget != null && TargetingTruthRuntime.ClauseTargets(clause)
                 ? EnterTargetedResolution(source, chosenTarget)
                 : s_none;
 
@@ -94,10 +94,8 @@ namespace WRLDZ.Duel.TextEffects
         public static IDisposable EnterLegacyTargetedResolution(CardInstance source, CardInstance target)
         {
             if (source?.Def == null || target == null) return s_none;
-            var prog = CompiledEffectCache.GetOrCompile(source.Def);
-            var targets = prog?.ClausesFor(EffectTiming.Activate)
-                .Exists(c => c != null && c.IsPsctTarget && !c.ChoiceDoesNotTarget) == true;
-            return targets ? EnterTargetedResolution(source, target) : s_none;
+            // TargetingTruth batch (v177): the one answer (an old-text "select" whose Lua targets counts; Fissure does not).
+            return TargetingTruthRuntime.ActivationTargets(source) ? EnterTargetedResolution(source, target) : s_none;
         }
 
         /// <summary>
@@ -382,7 +380,7 @@ namespace WRLDZ.Duel.TextEffects
             if (pick == null) return;
             var d = false;
             TextEffectRuntime.ApplyClause(engine, who, card, c, pick, ref d, ref d);
-            if (c.IsPsctTarget)
+            if (TargetingTruthRuntime.ClauseTargets(c))
                 TextEffectRuntime.NotifyTargetingEffectResolved(engine, pick, true);
         }
 

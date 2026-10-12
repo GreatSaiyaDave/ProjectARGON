@@ -31,7 +31,8 @@ namespace WRLDZ.Duel.Rules
             // through the generic PSCT path and are now Implemented.
             // Cliff, Gorg, Chick and Meanae are compiled whole (both choices) by the PartialCompiles atoms (v144/v173);
             // their generic first choice must not stand alone.
-            (99050989, "Drillago: \"If the only cards your opponent controls are face-up monsters with 1600 or more ATK\""),
+            // Drillago (99050989) left this list in v177: the EndOfDamageStepRiders atom compiles its whole sentence, condition
+            // included (DroppedConditionsFailClosed checks that below).
         };
 
         const int GearGolem = 30190809;
@@ -144,6 +145,21 @@ namespace WRLDZ.Duel.Rules
                     prog != null && prog.FullyCompiled && prog.ClauseList.Count == 1 &&
                     prog.ClauseList[0].ActivationCondition ==
                     BattleDestroyedGyRecoveryRuntime.MonsterDestroyedByBattleSentToYourGy,
+                    Describe(prog));
+            }
+
+            // Drillago: "If the only cards your opponent controls are face-up monsters with 1600 or more ATK" is compiled whole
+            // by the EndOfDamageStepRiders atom (v177): the condition is the clause's own action and Amount, never an
+            // unconditional direct attack.
+            if (db.TryGet(99050989, out var drillago))
+            {
+                var prog = CardTextEffectCompiler.Compile(drillago);
+                Check("Drillago: its condition is compiled (EndOfDamageStepRiders), not dropped",
+                    prog != null && prog.FullyCompiled && prog.ClauseList.Count == 1 &&
+                    prog.ClauseList[0].Action ==
+                    EffectActionKind.CanAttackDirectlyIfOpponentControlsOnlyFaceUpMonstersWithAtkAtLeast &&
+                    prog.ClauseList[0].Amount == 1600 &&
+                    !prog.ClauseList.Exists(c => c != null && c.Action == EffectActionKind.CanAttackDirectly),
                     Describe(prog));
             }
         }

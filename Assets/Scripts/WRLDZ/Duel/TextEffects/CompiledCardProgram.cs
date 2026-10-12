@@ -225,6 +225,15 @@ namespace WRLDZ.Duel.TextEffects
         /// the link. Appended — EffectTiming is serialized as an int.
         /// </summary>
         HandQuickEffectWhenNamedDestroyed,
+        /// <summary>
+        /// SpellEventsAndHandSendTriggers batch: this card was sent from its owner's hand to the GY by an effect of a card
+        /// its owner's opponent controls — discarded, or sent / destroyed there (ygopro SINGLE TRIGGER_F on EVENT_TO_GRAVE,
+        /// IsPreviousLocation(LOCATION_HAND), rp~=tp, REASON_EFFECT: Elephant Statue of Blessing / of Disaster, Regenerating
+        /// Mummy). Queued by <see cref="DiscardTriggersRuntime"/> (NoteDiscard and NoteSentFromHand), fired once the moving
+        /// effect is over. Not <see cref="DiscardedFromHandByOpponentEffect"/>, which only a discard fires. Appended —
+        /// EffectTiming is serialized as an int.
+        /// </summary>
+        SentFromHandToGyByOpponentEffect,
     }
 
     public enum EffectActionKind
@@ -2838,6 +2847,225 @@ namespace WRLDZ.Duel.TextEffects
         /// Spell effects (<see cref="MonsterNegationAndControlLocksRuntime.ShieldsFromSpell"/>).
         /// </summary>
         NonEffectMonstersUnaffectedByOtherSpells,
+        /// <summary>
+        /// ConditionalSpellsAndTraps batch — Self-Destruct Button (c57585212, Lua Duel.SetLP(tp,0) + SetLP(1-tp,0)): both
+        /// players' LP become 0 (not damage); the Duel ends at once as a DRAW
+        /// (<see cref="ConditionalSpellsAndTrapsRuntime.ApplyBothLifePointsBecomeZero"/>).
+        /// </summary>
+        BothPlayersLifePointsBecomeZero,
+        /// <summary>
+        /// ConditionalSpellsAndTraps batch — Destruction Ring (c21219755, EFFECT_FLAG_CARD_TARGET): destroy the target face-up
+        /// monster you control; if it was destroyed, <see cref="EffectClause.Amount"/> damage to both players at once
+        /// (<see cref="ConditionalSpellsAndTrapsRuntime.ApplyDestroyTargetThenDamageBoth"/>).
+        /// </summary>
+        DestroyTargetThenDamageBothPlayers,
+        /// <summary>
+        /// ConditionalSpellsAndTraps batch — D.D. Borderline (c60912752, EFFECT_CANNOT_BP target range 1,1): while this card is
+        /// face-up and its controller's GY holds no Spell Card, neither player can conduct their Battle Phase
+        /// (<see cref="ConditionalSpellsAndTrapsRuntime.BattlePhaseLocked"/>).
+        /// </summary>
+        NoBattlePhaseWhileNoSpellInControllerGy,
+        /// <summary>
+        /// EndOfDamageStepRiders batch — Getsu Fuhma (c21887179), Ryu Kokki (c57281778): SINGLE TRIGGER_F at
+        /// EVENT_DAMAGE_STEP_END (this card related to the battle or destroyed by it, ygopro aux.dsercon): the monster it
+        /// battled, still related to the battle and of a Type in <see cref="EffectClause.BattledMonsterRaceFilter"/>, is
+        /// destroyed (<see cref="EndOfDamageStepRidersRuntime.DestroyBattledMonster"/>).
+        /// </summary>
+        DestroyBattledMonsterAtEndOfDamageStep,
+        /// <summary>
+        /// EndOfDamageStepRiders batch — Prickle Fairy (c91559748) e1: SINGLE TRIGGER_F at EVENT_DAMAGE_STEP_END: the monster
+        /// this card battled, still related to the battle and in Attack Position, is changed to face-up Defense Position
+        /// (<see cref="EndOfDamageStepRidersRuntime.ChangeBattledMonsterToDefense"/>).
+        /// </summary>
+        ChangeBattledMonsterToDefenseAtEndOfDamageStep,
+        /// <summary>
+        /// EndOfDamageStepRiders batch — Prickle Fairy (c91559748) e2: EFFECT_CANNOT_SELECT_BATTLE_TARGET for the opponent on
+        /// its controller's face-up monsters of the Type in <see cref="EffectClause.RaceFilter"/>, this card included
+        /// (<see cref="EndOfDamageStepRidersRuntime.CannotBeAttackTarget"/>, read by ContinuousProtections.CannotBeAttackTarget).
+        /// </summary>
+        OpponentCannotAttackYourFaceUpRaceMonsters,
+        /// <summary>
+        /// EndOfDamageStepRiders batch — Insect Princess (c37957847) e1: EFFECT_SET_POSITION POS_FACEUP_ATTACK on the
+        /// opponent's monsters of the Type in <see cref="EffectClause.RaceFilter"/> (face-down ones too: they are flipped
+        /// face-up and their FLIP effects activate), re-applied on each board refresh
+        /// (<see cref="EndOfDamageStepRidersRuntime.ApplyContinuous"/>).
+        /// </summary>
+        ContinuousChangeOpponentRaceMonstersToAttack,
+        /// <summary>
+        /// EndOfDamageStepRiders batch — Drillago (c99050989): EFFECT_DIRECT_ATTACK while the opponent's Spell &amp; Trap
+        /// Zones (Field Zone included) are empty and every monster they control is face-up with ATK at least
+        /// <see cref="EffectClause.Amount"/> (<see cref="EndOfDamageStepRidersRuntime.GrantsDirectAttack"/>).
+        /// </summary>
+        CanAttackDirectlyIfOpponentControlsOnlyFaceUpMonstersWithAtkAtLeast,
+        /// <summary>
+        /// EndOfDamageStepRiders batch — Legendary Jujitsu Master (c25773409): SINGLE TRIGGER_F at EVENT_DAMAGE_STEP_END,
+        /// this card was the attack target in Defense Position (related to the battle or destroyed by it): the attacker,
+        /// still related to the battle, is placed on top of its owner's Deck
+        /// (<see cref="EndOfDamageStepRidersRuntime.PlaceAttackerOnTopOfDeck"/>).
+        /// </summary>
+        PlaceAttackerOnTopOfDeckAtEndOfDamageStep,
+        /// <summary>
+        /// BattleDamageEvents batch — Piranha Army (c50823978, <see cref="EffectClause.RequiresDirectAttack"/>: this card
+        /// attacked directly) / Stone Statue of the Aztecs (c31812496, <see cref="EffectClause.RequiresThisIsAttackTarget"/>:
+        /// this card is the attack target): continuous marker, the battle damage this card's controller's opponent takes
+        /// from that battle is doubled (Lua EFFECT_CHANGE_BATTLE_DAMAGE, aux.ChangeBattleDamage(1, DOUBLE_DAMAGE); read by
+        /// <see cref="BattleDamageEventsRuntime.DoubleBattleDamage"/>).
+        /// </summary>
+        DoubleBattleDamageToOpponent,
+        /// <summary>
+        /// SpellEventsAndHandSendTriggers batch — Curse of Darkness (c84970821, Lua CONTINUOUS FIELD: aux.chainreg on
+        /// EVENT_CHAINING + EVENT_CHAIN_SOLVED of a Spell Card activation): <see cref="EffectTiming.ContinuousWhileFaceUp"/>
+        /// marker; each time the activation of a Spell Card resolves, the player who activated it takes
+        /// <see cref="EffectClause.Amount"/> damage, if this card was face-up and applying when that Spell was activated
+        /// (<see cref="SpellEventsAndHandSendTriggersRuntime.OnSpellResolved"/>). Not a Chain Link.
+        /// </summary>
+        InflictDamageToSpellActivatorAfterResolve,
+        /// <summary>
+        /// SpellEventsAndHandSendTriggers batch — Tower of Babel (c94256039 e4/e5): with the card's own
+        /// "place 1 Spell Counter when a Spell resolves" clause, when that placement makes its Spell Counters exactly
+        /// <see cref="EffectClause.ConditionAmount"/>, a mandatory trigger destroys this card and, if it does, deals
+        /// <see cref="EffectClause.Amount"/> damage to the player who activated that Spell; when another card's effect
+        /// brings its Spell Counters to ConditionAmount or more, a mandatory trigger destroys it
+        /// (<see cref="SpellEventsAndHandSendTriggersRuntime.AfterOwnSpellCounter"/> /
+        /// <see cref="SpellEventsAndHandSendTriggersRuntime.AfterSpellCounterAddedByEffect"/>).
+        /// <see cref="EffectTiming.ContinuousWhileFaceUp"/> marker.
+        /// </summary>
+        DestroyThisAtNthSpellCounterDamageActivator,
+        /// <summary>
+        /// SpellEventsAndHandSendTriggers batch — Spirit of the Pot of Greed (c4896788, Lua FIELD TRIGGER_F on
+        /// EVENT_CHAINING, range MZONE, condition IsAttackPos and the card activation of <see cref="EffectClause.NamedCard"/>):
+        /// <see cref="EffectTiming.ContinuousWhileFaceUp"/> marker; when either player activates that card while this card is
+        /// in face-up Attack Position, a trigger Chain Link forms right above it; as it resolves, if this card is still
+        /// face-up in Attack Position, that player may draw <see cref="EffectClause.Amount"/> card
+        /// (<see cref="SpellEventsAndHandSendTriggersRuntime.OnCardActivationPlaced"/>).
+        /// </summary>
+        ActivatorOfNamedCardMayDrawWhileAttackPosition,
+        /// <summary>
+        /// RecoveryAndPhaseCosts batch — Dimension Distortion (c95194279, Lua CARD_TARGET in LOCATION_REMOVED, controller tp):
+        /// Special Summon the targeted face-up monster from the controller's own banished pile to their field, face-up in
+        /// Attack or Defense Position (Lua POS_FACEUP), if it is still banished face-up and can be Special Summoned
+        /// (<see cref="RecoveryAndPhaseCostsRuntime.SummonBanishedTarget"/>).
+        /// </summary>
+        SpecialSummonBanishedTarget,
+        /// <summary>
+        /// RecoveryAndPhaseCosts batch — Dimension Fusion (c23557835): each player, the activator first, Special Summons as
+        /// many of their own face-up banished monsters as their free Monster Zones allow (exactly that many, their own
+        /// choice, face-up Attack or Defense), all at once
+        /// (<see cref="FlipMassEffectsRuntime.ResolveEachPlayerSummonsFromOwnBanished"/>).
+        /// </summary>
+        EachPlayerSpecialSummonsFaceUpBanishedMonstersAsPossible,
+        /// <summary>
+        /// RecoveryAndPhaseCosts batch — Recycle (c96316857, FIELD TRIGGER_O in the S/T Zone on EVENT_PHASE+PHASE_STANDBY,
+        /// your turn, count limit 1): pay <see cref="EffectClause.Amount"/> LP (cost) and target 1 non-Monster Card in your
+        /// GY; it goes to the bottom of your Deck while this card is still face-up on the field
+        /// (<see cref="RecoveryAndPhaseCostsRuntime.ResolveRecycle"/>).
+        /// </summary>
+        PayLpReturnGyNonMonsterToDeckBottomAtYourStandby,
+        /// <summary>
+        /// RecoveryAndPhaseCosts batch — Reload (c22589918): every card in your hand goes to the Deck (shuffled), then you
+        /// draw that many cards (<see cref="RecoveryAndPhaseCostsRuntime.ShuffleHandIntoDeckThenDraw"/>).
+        /// </summary>
+        ShuffleHandIntoDeckThenDrawSameNumber,
+        /// <summary>
+        /// RecoveryAndPhaseCosts batch — Coach Goblin (c42541548, FIELD TRIGGER_O in the Monster Zone on EVENT_PHASE+PHASE_END,
+        /// your turn, count limit 1): cost — reveal 1 Normal Monster in your hand and put it on the bottom of your Deck; draw
+        /// 1 card while this card is still face-up (<see cref="RecoveryAndPhaseCostsRuntime.ResolveCoachGoblin"/>).
+        /// </summary>
+        ReturnHandNormalMonsterToDeckBottomDrawAtYourEndPhase,
+        /// <summary>
+        /// RecoveryAndPhaseCosts batch — Manticore of Darkness (c77121851, FIELD TRIGGER_O in the GY on EVENT_PHASE+PHASE_END,
+        /// either player's, count limit 1, only in the turn it was sent to the GY — not by REASON_RETURN): cost — send 1
+        /// monster of a <see cref="EffectClause.RaceFilter"/> Type from your hand or face-up from your Monster Zone to the GY
+        /// (a field monster when no zone is free); Special Summon this card from the GY face-up
+        /// (<see cref="RecoveryAndPhaseCostsRuntime.TryFirePhaseClause"/>; the ApplyClause arm is a marker).
+        /// </summary>
+        SendRaceFromHandOrFieldSpecialSummonThisFromGyAtEndPhase,
+        /// <summary>
+        /// TokensDeclarationsAndPicks batch — DNA Transplant (Continuous Trap, Lua c56769674 s.target AnnounceAttribute
+        /// ATTRIBUTE_ALL): the Attribute is declared as the card is activated (a declaration token from
+        /// <see cref="EffectZoneFilter.DeclaredAttributes"/>, not a target) and kept on the card
+        /// (<see cref="TokensDeclarationsAndPicksRuntime.RecordDeclaredAttribute"/>), even if the resolution is negated.
+        /// </summary>
+        DeclareMonsterAttribute,
+        /// <summary>
+        /// TokensDeclarationsAndPicks batch — DNA Transplant (Lua EFFECT_CHANGE_ATTRIBUTE, LOCATION_MZONE both sides): while
+        /// this card is face-up in a Spell &amp; Trap Zone and not negated, every face-up monster on the field has the
+        /// declared Attribute (read live by <see cref="EquipFamilyRuntime.CurrentAttribute"/>; the latest change wins).
+        /// </summary>
+        AllFaceUpMonstersBecomeDeclaredAttribute,
+        /// <summary>
+        /// TokensDeclarationsAndPicks batch — Jade Insect Whistle (Lua c95214051): the activator's opponent selects 1
+        /// monster of <see cref="EffectClause.RaceFilter"/> from their own Deck (if any), shuffles that Deck and places the
+        /// card on top (revealed). Not a target; the opponent's pick goes through AskCardPick.
+        /// </summary>
+        OpponentPlacesRaceMonsterFromTheirDeckOnTop,
+        /// <summary>
+        /// TokensDeclarationsAndPicks batch — A Hero Emerges (Lua c21597117 s.activate): with a free Monster Zone, a random
+        /// card of the activator's hand is revealed; a monster that can be Special Summoned is Special Summoned face-up,
+        /// any other card is sent to the GY.
+        /// </summary>
+        RandomHandCardSpecialSummonOrSendToGy,
+        /// <summary>
+        /// TokensDeclarationsAndPicks batch — Wild Nature's Release (Lua c61166988): the targeted face-up monster gains ATK
+        /// equal to its current DEF until the End Phase and is destroyed during this turn's End Phase
+        /// (<see cref="CardInstance.TempDestroyOnEndOfTurn"/>; both end if it is flipped face-down or leaves the field).
+        /// </summary>
+        TargetGainsAtkEqualToDefDestroyAtEndPhase,
+        /// <summary>
+        /// TokensDeclarationsAndPicks batch — Balloon Lizard (Lua c39892082 e1): during its controller's Standby Phase, put
+        /// <see cref="EffectClause.Amount"/> counter(s) on this face-up card (<see cref="CardInstance.Counters"/>).
+        /// </summary>
+        PlaceCounterOnThisCard,
+        /// <summary>
+        /// TokensDeclarationsAndPicks batch — Balloon Lizard (Lua c39892082 e2/e3): destroyed with 1 or more counters on it,
+        /// inflict counters x <see cref="EffectClause.Amount"/> damage to the player whose card destroyed it (the reason
+        /// player: the other battler's controller, or the resolving player of the destroying effect).
+        /// </summary>
+        InflictCountersTimesAmountToDestroyer,
+        /// <summary>
+        /// ChaosBanishSummons batch — Chaos Sorcerer / Black Luster Soldier - Envoy of the Beginning (c9596126 / c72989439
+        /// e2, Lua EFFECT_TYPE_IGNITION + EFFECT_FLAG_CARD_TARGET): banish the targeted monster on the field, still a monster
+        /// in a Monster Zone (face-up when <see cref="EffectClause.RequiresTargetFaceUp"/>), face-up
+        /// (<see cref="ChaosBanishSummonsRuntime.BanishTargetedFieldMonster"/>). Face-down monsters and this card itself are
+        /// legal targets unless the clause says otherwise.
+        /// </summary>
+        BanishTargetedFieldMonster,
+        /// <summary>
+        /// ChaosBanishSummons batch — Black Luster Soldier - Envoy of the Beginning (c72989439 e3, EVENT_BATTLE_DESTROYING,
+        /// Duel.ChainAttack): this attacking monster may attack again next (a second attack in a row); the right lapses as
+        /// soon as another monster declares an attack (<see cref="ChaosBanishSummonsRuntime.GrantChainAttack"/>).
+        /// </summary>
+        MakeSecondAttackInARow,
+        /// <summary>
+        /// ChaosBanishSummons batch — Chaosrider Gustaph (c47829960): at resolution choose 1 to
+        /// <see cref="EffectClause.PickUpTo"/> Spells in your GY (no target) and banish them; this card gains
+        /// <see cref="EffectClause.Amount"/> ATK for each card banished until the end of the opponent's next turn
+        /// (<see cref="ChaosBanishSummonsRuntime.ResolveGustaph"/>).
+        /// </summary>
+        BanishUpToSpellsFromYourGyGainAtkEach,
+        /// <summary>
+        /// ChaosBanishSummons batch — Soul Absorption (c68073522, FIELD TRIGGER_F on EVENT_REMOVE): while face-up, each time
+        /// a card(s) is banished its controller gains <see cref="EffectClause.Amount"/> LP for each non-Token card banished in
+        /// that one event (<see cref="BanishEvents"/>).
+        /// </summary>
+        GainLpPerCardBanished,
+        /// <summary>
+        /// ChaosBanishSummons batch — Primal Seed (c23701465): each target still in your banished pile is added to your hand
+        /// (<see cref="EffectZoneFilter.ControllerBanishedCards"/>).
+        /// </summary>
+        AddBanishedTargetsToHand,
+        /// <summary>
+        /// ChaosBanishSummons batch — Strike Ninja (c41006930, QUICK_O): banish this face-up card until the End Phase
+        /// (REASON_TEMPORARY; it returns to the field in this turn's End Phase).
+        /// </summary>
+        BanishThisUntilEndPhase,
+        /// <summary>
+        /// TargetingTruth batch — Big Burn (c95472621, Lua EFFECT_TYPE_ACTIVATE on EVENT_BECOME_TARGET): a Chain answer to
+        /// an effect of the opponent (rp~=tp) whose targets include a monster in either GY
+        /// (<see cref="TargetingTruthRuntime.OpponentTargetsGyMonster"/>); banish every monster in both GYs (SpElimFilter:
+        /// Spirit Elimination banishes that player's field monsters instead) — <see cref="TargetingTruthRuntime.BanishAllGyMonsters"/>.
+        /// </summary>
+        BanishAllGyMonstersWhenOpponentTargetsGyMonster,
     }
 
     public enum EffectSide
@@ -3031,6 +3259,24 @@ namespace WRLDZ.Duel.TextEffects
         /// SpellTrapEffects.MapCompiledTargetKind mirror leaves it None.
         /// </summary>
         ControllerFaceUpSeriesMonsters,
+        /// <summary>
+        /// SpellEventsAndHandSendTriggers batch — Fiend's Hand Mirror: another Spell/Trap Card on the field that would be an
+        /// appropriate target for the answered Spell Card's Chain Link (ygopro Duel.CheckChainTarget), not its current target.
+        /// See <see cref="RedirectAndReplaceRuntime.Candidates"/>. Text target path only (picker kind SpellTrapOnField); the
+        /// legacy SpellTrapEffects.MapCompiledTargetKind mirror leaves it None.
+        /// </summary>
+        AnotherAppropriateSpellTrapTarget,
+        /// <summary>
+        /// TokensDeclarationsAndPicks batch — DNA Transplant: the monster Attributes a player may declare (one declaration
+        /// token per Attribute, DIVINE included: Lua ATTRIBUTE_ALL). Picker kind DeclareAttribute in both target mirrors.
+        /// </summary>
+        DeclaredAttributes,
+        /// <summary>
+        /// ChaosBanishSummons batch — Primal Seed: any card (face-up or face-down) in the controller's banished pile (Lua
+        /// LOCATION_REMOVED, Card.IsAbleToHand). Text target path only (picker kind CardInYourBanished); the legacy
+        /// SpellTrapEffects.MapCompiledTargetKind mirror leaves it None.
+        /// </summary>
+        ControllerBanishedCards,
     }
 
     /// <summary>One parsed clause from official card text.</summary>
@@ -4387,6 +4633,65 @@ namespace WRLDZ.Duel.TextEffects
         /// <see cref="SpellTrapAnswersAndActivationLocksRuntime.LinkWouldDestroySpellTrapOnField"/>).
         /// </summary>
         public bool NegateRequiresWouldDestroySpellTrapOnField;
+
+        // ── EndOfDamageStepRiders batch ──
+
+        /// <summary>
+        /// EndOfDamageStepRiders batch: the monster this card battled must be of one of these Types ("A|B", read with
+        /// ClassicEraTemplates.RaceMatches). On <see cref="EffectActionKind.DestroyBattledMonsterAtEndOfDamageStep"/> (Getsu
+        /// Fuhma, Ryu Kokki) its live Type at the end of the Damage Step; on a
+        /// <see cref="EffectTiming.ThisCardDestroysByBattle"/> trigger (Insect Princess) its Type when it battled
+        /// (<see cref="EndOfDamageStepRidersRuntime.SkipsBattleDestroying"/>). Null: any monster.
+        /// </summary>
+        public string BattledMonsterRaceFilter;
+
+        /// <summary>
+        /// BattleDamageEvents batch — Begone, Knave! / Des Counterblow (FIELD+TRIGGER_F EVENT_BATTLE_DAMAGE in the S/T
+        /// Zone): a <see cref="EffectTiming.ThisCardInflictsBattleDamage"/> clause of a face-up Spell/Trap that fires when
+        /// ANY monster (either player's) inflicts battle damage to either player; the clause applies to that monster (not
+        /// a target), only while it is still on the field (activated in <see cref="BattleDamageEventsRuntime.FireAnyMonsterInflicted"/>,
+        /// resolved after battle destruction in <see cref="BattleDamageEventsRuntime.ResolvePending"/>).
+        /// </summary>
+        public bool AnyMonsterBattleDamageToAnyPlayer;
+
+        // ── TokensDeclarationsAndPicks batch ──
+
+        /// <summary>
+        /// TokensDeclarationsAndPicks batch — Stray Lambs / Multiplication of Ants (Lua GetLocationCount&gt;1 in s.target and
+        /// s.activate): a <see cref="EffectActionKind.SpecialSummonToken"/> clause Summons all <see cref="TokenCount"/>
+        /// Tokens or none. The activation needs that many free Monster Zones (a Tribute cost from your Main Monster Zone
+        /// frees one); with fewer at resolution nothing is Summoned.
+        /// </summary>
+        public bool TokensNeedAllZones;
+
+        /// <summary>
+        /// TokensDeclarationsAndPicks batch — Stray Lambs (Lua s.cost: ACTIVITY_SUMMON / FLIPSUMMON / SPSUMMON == 0, then
+        /// EFFECT_CANNOT_SUMMON / CANNOT_FLIP_SUMMON / CANNOT_SPECIAL_SUMMON with EFFECT_FLAG_OATH until the End Phase): the
+        /// activator cannot have Normal, Flip or Special Summoned this turn, and after activating cannot Normal, Flip or
+        /// Special Summon for the rest of the turn, except this card's own Special Summon. Setting stays legal.
+        /// </summary>
+        public bool ForbidsOtherSummonsThisTurn;
+
+        // ── ChaosBanishSummons batch ──
+
+        /// <summary>
+        /// On a <see cref="EffectActionKind.SpecialSummonFromHandProcedure"/> banish procedure: "by banishing 1
+        /// <see cref="AttributeFilter"/> and 1 SecondAttributeFilter monster from your GY" (Chaos Sorcerer, Black Luster
+        /// Soldier - Envoy of the Beginning; Lua rescon): exactly one monster of each Attribute is banished.
+        /// </summary>
+        public string SecondAttributeFilter;
+
+        /// <summary>
+        /// "This card cannot attack the turn you activate this effect" (Lua rmcost: GetAttackAnnouncedCount()==0, then
+        /// EFFECT_CANNOT_ATTACK with EFFECT_FLAG_OATH): the activation needs a card that declared no attack this turn, and
+        /// the card cannot attack for the rest of the turn even when the effect is negated.
+        /// </summary>
+        public bool ThisCannotAttackTurnActivated;
+
+        /// <summary>
+        /// Chaosrider Gustaph: the resolution chooses 1 to this many cards (not targets).
+        /// </summary>
+        public int PickUpTo;
     }
 
     /// <summary>When the activation condition is tested (PSCT "when" vs "if").</summary>

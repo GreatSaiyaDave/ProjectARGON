@@ -269,6 +269,15 @@ namespace WRLDZ.Duel.Rules
                    // yours sent to the GY this turn): NamedSummonPairsRegressionTests drive them.
                    c.ActivationCondition == NamedSummonPairsRuntime.AllNamedInYourGy ||
                    c.ActivationCondition == NamedSummonPairsRuntime.YourLevelOrHigherMonsterSentToGyThisTurn ||
+                   // ConditionalSpellsAndTraps batch: GY / banished counts, named Ojamas, another Spell/Trap you control
+                   // (ConditionalSpellsAndTrapsRegressionTests drive them).
+                   ConditionalSpellsAndTrapsRuntime.NeedsHardBoard(c) ||
+                   // RecoveryAndPhaseCosts batch: Dimension Distortion (an empty GY), Reload (another card in the hand), Salvage
+                   // (2 monsters of one Attribute with N or less ATK in your GY); RecoveryAndPhaseCostsRegressionTests drive them.
+                   c.ActivationCondition == RecoveryAndPhaseCostsRuntime.NoCardsInYourGy ||
+                   c.ActivationCondition == RecoveryAndPhaseCostsRuntime.AnotherCardInYourHand ||
+                   (c.Action == EffectActionKind.AddFromGyToHand && c.Zone == EffectZoneFilter.ControllerGyMonsters &&
+                    !string.IsNullOrEmpty(c.AttributeFilter)) ||
                    c.Timing == EffectTiming.PositionChanged ||
                    c.Timing == EffectTiming.ThisCardDeclaresAttack ||
                    c.Action == EffectActionKind.PayLpToDeclareAttack ||
@@ -295,6 +304,11 @@ namespace WRLDZ.Duel.Rules
                    // UnionRiders batch (v175): Combination Attack needs the Battle Phase and a monster that attacked with a
                    // Union equipped (UnionRidersRegressionTests drive it).
                    c.Action == EffectActionKind.SpecialSummonTargetsUnionsThenItAttacksAgain ||
+                   // TokensDeclarationsAndPicks batch: Stray Lambs / Scapegoat need a turn with no Summon by the activator (the
+                   // shared corpus engine summons as it goes) and Wild Nature's Release a face-up Beast / Beast-Warrior with
+                   // DEF; TokensDeclarationsAndPicksRegressionTests drive them.
+                   c.ForbidsOtherSummonsThisTurn ||
+                   c.Action == EffectActionKind.TargetGainsAtkEqualToDefDestroyAtEndPhase ||
                    (!string.IsNullOrEmpty(c.RaceFilter) &&
                     (c.Zone == EffectZoneFilter.ControllerGyMonsters ||
                      c.Zone == EffectZoneFilter.EitherGyMonsters ||
@@ -462,6 +476,29 @@ namespace WRLDZ.Duel.Rules
                 {
                     var need = Math.Max(Math.Max(1, c.TargetCount), Math.Max(1, c.ConditionAmount));
                     while (TargetedClassicsRuntime.CountFaceUpBanishedMonsters(p) < need)
+                    {
+                        var ban = engine.CreateCardInstance(Celtic);
+                        ban.FaceUp = true;
+                        p.Banished.Add(ban);
+                    }
+                }
+
+                // ChaosBanishSummons batch: Chaosrider Gustaph — a Spell in your GY to banish.
+                if (c.ActivationCondition == ChaosBanishSummonsRuntime.YourGySpellBanishable &&
+                    !p.Graveyard.Exists(g => g?.Def != null && g.Def.IsSpell))
+                    p.Graveyard.Add(engine.CreateCardInstance(55144522)); // Pot of Greed
+
+                // ChaosBanishSummons batch: Primal Seed — a face-up named monster (its condition) and 2 banished cards.
+                if (c.Zone == EffectZoneFilter.ControllerBanishedCards)
+                {
+                    var namedDef = c.ActivationCondition == ChaosBanishSummonsRuntime.NamedFaceUpOnEitherField &&
+                                   !string.IsNullOrEmpty(c.ConditionName) && opp.MonsterZones[3].IsEmpty
+                        ? engine.Database?.GetAllCards().FirstOrDefault(d =>
+                            d != null && string.Equals(d.name, c.ConditionName.Split('|')[0], StringComparison.Ordinal))
+                        : null;
+                    if (namedDef != null)
+                        PlaceMonster(engine, opp, namedDef.id, 3, BattlePosition.Attack, true);
+                    while (p.Banished.Count < Math.Max(1, c.TargetCount))
                     {
                         var ban = engine.CreateCardInstance(Celtic);
                         ban.FaceUp = true;
@@ -825,6 +862,11 @@ namespace WRLDZ.Duel.Rules
                     c.ActivationCondition == FlipMassAndOpponentPicksRuntime.YourNormalSummonOpponentControlsMore))
                 return true;
             if (act.Exists(NeedsHardBoard))
+                return true;
+            // TokensDeclarationsAndPicks batch: A Hero Emerges needs a summonable monster in the hand (this probe empties
+            // it); TokensDeclarationsAndPicksRegressionTests drive its attack window.
+            if (prog.ClausesFor(EffectTiming.AttackDeclared).Exists(c => c != null &&
+                    c.ActivationCondition == TokensDeclarationsAndPicksRuntime.HandMonsterCanBeSpecialSummoned))
                 return true;
             if (prog.HasTiming(EffectTiming.DamageCalculation) ||
                 prog.HasTiming(EffectTiming.YouTakeLifePointDamage))

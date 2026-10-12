@@ -104,11 +104,14 @@ namespace WRLDZ.Duel.Rules
                      IsProcedure(p, "WIND", 1));
         }
 
+        // ChaosBanishSummons batch: the old-wording banish procedure is the card's own hand procedure (Lua
+        // EFFECT_SPSUMMON_PROC: no Chain Link, cannot be negated), the Toons procedure clause EngineHygieneRuntime pays.
         static bool IsProcedure(CompiledCardProgram p, string attr, int count) =>
-            p.ClauseList.Exists(c => c.Timing == EffectTiming.Activate &&
-                                     c.Action == EffectActionKind.SpecialSummonThisFromHand && c.ActivatesFromHand &&
-                                     c.BanishFromGyCount == count && !c.BanishFromGyUpTo &&
-                                     string.Equals(c.AttributeFilter, attr, StringComparison.OrdinalIgnoreCase));
+            p.ClauseList.Exists(c => c.Timing == EffectTiming.ContinuousWhileFaceUp &&
+                                     c.Action == EffectActionKind.SpecialSummonFromHandProcedure && !c.MakesChainLink &&
+                                     c.Amount == 0 && c.BanishFromGyCount == count && !c.BanishFromGyUpTo &&
+                                     string.Equals(c.AttributeFilter, attr, StringComparison.OrdinalIgnoreCase)) &&
+            !p.ClauseList.Exists(c => c.Action == EffectActionKind.SpecialSummonThisFromHand);
 
         static void Shape(CardDatabase db, Chk Check, int id, string name, Func<CompiledCardProgram, bool> shape)
         {
@@ -136,7 +139,7 @@ namespace WRLDZ.Duel.Rules
                 for (var i = 0; i < count - 1; i++) p.Graveyard.Add(e.CreateCardInstance(fodderId));
                 p.Graveyard.Add(e.CreateCardInstance(fodderId == GiantSoldier ? MysticalElf : GiantSoldier));
                 var ns = e.CanNormalSummonOrSet(p, spirit);
-                var can = e.CanActivateSpellTrap(p, spirit, fromHand: true);
+                var can = e.CanSpecialSummonProcedure(p, spirit) || e.CanActivateSpellTrap(p, spirit, fromHand: true);
                 Check($"{label}: cannot be Normal Summoned/Set; only {count - 1} of its Attribute in the GY (+1 other): no Special Summon",
                     !ns && !can && p.Hand.Contains(spirit),
                     $"ns={ns} can={can} {State(e)}");
@@ -156,8 +159,8 @@ namespace WRLDZ.Duel.Rules
 
                 var other = e.CreateCardInstance(fodderId == GiantSoldier ? MysticalElf : GiantSoldier);
                 p.Graveyard.Add(other);
-                var can = e.CanActivateSpellTrap(p, spirit, fromHand: true);
-                var act = can && e.TryActivateSpellTrap(p, spirit, fromHand: true);
+                var can = e.CanSpecialSummonProcedure(p, spirit);
+                var act = can && e.TrySpecialSummonProcedure(p, spirit);
                 for (var i = 0; i < 6; i++)
                 {
                     if (e.IsAwaitingEffectTarget)

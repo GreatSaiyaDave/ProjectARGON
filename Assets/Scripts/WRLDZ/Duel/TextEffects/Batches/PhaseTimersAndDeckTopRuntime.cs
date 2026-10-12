@@ -326,6 +326,8 @@ namespace WRLDZ.Duel.TextEffects
             card.FaceUp = false;
             card.BanishedTurnNumber = engine.TurnNumber;
             who.Banished.Add(card);
+            // ChaosBanishSummons batch: a face-down banish is a banish event too (Soul Absorption).
+            BanishEvents.Record(engine, card);
             StateOf(engine).Capsules.Add(new CapsuleRecord
             {
                 Capsule = source,

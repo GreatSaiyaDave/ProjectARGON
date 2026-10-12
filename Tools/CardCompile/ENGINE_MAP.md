@@ -139,6 +139,13 @@ The notes of earlier groups are in `~/.cache/wrldz-card-compile/*/patches/<Group
 - Second target: `RequiresSecondTarget`, `SecondZone`, `ApplySecondTarget`, `CollectTargetsForZone`, `TryContinueDualOrUpTo`.
 - Face-up requirement: `RequiresTargetFaceUp`. "Monster your opponent controls" includes face-down monsters (v152).
 - A lone legal target resolves with no prompt.
+- Does it TARGET? Ask `TargetingTruthRuntime` (v177), never the raw flags: `ClauseTargets(c)` (PSCT `IsPsctTarget`, or an
+  old-text "select" pick on the field / in a GY; never `ChoiceDoesNotTarget`, the lowest / highest ATK / DEF picks, or a
+  Deck / hand pick), `PicksTarget(c)` (the clause that takes the target: Archfiend die roll, Chain Link target list,
+  Metalsilver filter), `PicksWithoutTargeting(c)` (Lord of D. does not filter it; resolution re-check
+  `ProtectedAtResolution`), `LinkTargets(link)` / `LinkEffectTargets(link)` (CHAININFO_TARGET_CARDS for Freed, Gora,
+  Chaos Command Magician, Dramatic Rescue, Big Burn). A NEW pick on the field / in a GY whose Lua uses `Select` (not
+  `SelectTarget`) must set `ChoiceDoesNotTarget` (Throwstone Unit, v177).
 
 ### A player choice (picks, declarations, options)
 - **New code: `ContinuousTrapsAndSpiritSupportRuntime.AskCardPick(engine, who, source, new CardPickRequest { … })`**
@@ -495,6 +502,22 @@ The notes of earlier groups are in `~/.cache/wrldz-card-compile/*/patches/<Group
 - `SpellTrapAnswersAndActivationLocksRuntime`: `NegateRequiresWouldDestroySpellTrapOnField`, answer discard payers `TryPayAnswerDiscards`, Spell/Trap activation locks (`SpellTrapActivationLocked` / `SpellTrapTriggerLocked`: call in any NEW Spell/Trap trigger queue).
 - `MonsterNegationAndControlLocksRuntime`: `ApplyContinuous` (Skill Drain `ContinuousNegateMonsterEffectsOnField`, Final Attack Orders position lock `PositionLockedByEffect`, `FlipSummonLocked`); `NegatesResolvingClause` also negates face-up monster effects under Skill Drain.
 
+### v177 shared hooks (card batch v177-ioc-ast; all under `TextEffects/Batches/<Group>Runtime.cs`)
+- `ConditionalSpellsAndTrapsRuntime`: `TryActivationCondition` (last in the `ActivationConditionsMet` default chain), `BattlePhaseLocked` (D.D. Borderline; read by `TributeSummonsRuntime.BattlePhaseForbidden`); actions `BothPlayersLifePointsBecomeZero` (ends the Duel as a DRAW), `DestroyTargetThenDamageBothPlayers`.
+- `EndOfDamageStepRidersRuntime`: `NoteBattle` (from `DamageStepRulesRuntime.BeginBattle`: battlers, stamps, Types, positions), `MonsterGrantsPiercing` (via `BattleBoostsRuntime.FieldGrantsPiercing`), hooks in `FireEndOfDamageFor`, `NotifyDestroyedOpponentByBattle`, `ContinuousProtections.CannotBeAttackTarget`, `FieldSpellEffects.ApplyCompiledContinuous`; conditional direct attack in `DuelEngine.GrantsDirectAttack`.
+- `BattleDamageEventsRuntime`: `FireAnyMonsterInflicted` (end of `FireInflictedBattleDamage`), `TryOfferOptionalTarget`, `ResolvePending` (in `ApplyBattleDestructions`), `DoubleBattleDamage` (3 calls in the damage calculation); `TargetCardKind` "ContinuousSpell".
+- `SpellEventsAndHandSendTriggersRuntime`: `OnSpellResolved` (from `NotifySpellResolved`), `NoteLinkResolving` (in `ResolveChainStack`), `NoteSentFromHand` (+ `DiscardTriggersRuntime.NoteDiscard`), timing `SentFromHandToGyByOpponentEffect`; zone `AnotherAppropriateSpellTrapTarget` (Fiend's Hand Mirror via `RedirectAndReplaceRuntime.Candidates`).
+- `RecoveryAndPhaseCostsRuntime`: `FilterTargets` (summonable face-up banished monsters), `TryFirePhaseClause` (in `FirePhaseTriggersFor`), `GyEntryReason.Return = 64`, FlipMassEffects plan kind `OwnBanishedFaceUp`.
+- `TokensDeclarationsAndPicksRuntime`: `NoteSummon` (Normal, Flip, Special funnel; per-player summon record for the Token oath), `SummonTokens` (all-or-nothing Token summon wrapper), `FilterTargets`, condition `TdpTokenSummonLegal`; `EquipFamilyRuntime.CurrentAttribute` / `DestroyReasonPlayer`.
+- `ChaosBanishSummonsRuntime` / `BanishEvents`: every banish goes through the `BanishEvents` funnel (`Group(engine)` makes N banishes one event); zone `ControllerBanishedCards`, target kind `CardInYourBanished`; `DamageStepRulesRuntime.BattleAttacker`; chain-attack hooks `DuelEngine.MaxAttacksThisTurn` + `DeclareAttack`; pair procedure in `EngineHygieneRuntime`.
+- Targeting truth (`TargetingTruthRuntime`): `ClauseTargets` / `PicksTarget` / `PicksWithoutTargeting` / `ActivatedClauseTargets` /
+  `ProgramTargets` / `ActivationTargets` / `ActivationPicksWithoutTargeting` (legacy mirror) / `LinkCards` /
+  `LinkEffectTargets` / `LinkTargets` / `ProtectedAtResolution`; Big Burn `OpponentTargetsGyMonster`,
+  `AllGyMonstersToBanish` (SpElimFilter + GY banish locks), `BanishAllGyMonsters`.
+- `NegationMonstersRuntime` markers: both `NegateRespondsToSpell` and `NegateRespondsToTrap` = Spell OR Trap; `Side =
+  Opponent` = only the opponent's effects / cards (Gora Turtle of Illusion); Freed / Tyrant use `Side = Controller`.
+- `ArchfiendTargetNegation.TryNegate` covers only a monster on the field (not a GY Archfiend under Darkbishop).
+
 ## 3. Tests
 
 - Location: `Rules/Batches/<Group>RegressionTests.cs` with
@@ -535,9 +558,9 @@ The notes of earlier groups are in `~/.cache/wrldz-card-compile/*/patches/<Group
 
 | Gap | What is missing | Cards blocked |
 |-----|-----------------|---------------|
-| Card-name declaration picker (UI) + forbidden-card rules | No searchable name picker; no EFFECT_FORBIDDEN gate across summon/set/activate/apply paths | Prohibition |
+| Card-name declaration picker (UI) + forbidden-card rules | No searchable name picker; no EFFECT_FORBIDDEN gate across summon/set/activate/apply paths | Prohibition, Archfiend's Oath, Great Phantom Thief, D.D. Designator |
 | Empty-zone picker (UI) | `PendingActivation` picks cards, not zones; the zone picker is DuelUI-only | Ground Collapse |
-| Revealed-hand state (UI) | No hand-public state; the UI cannot show the opponent's hand face-up | Ceremonial Bell, Respect Play, The Eye of Truth |
+| Revealed-hand state (UI) | No hand-public state; the UI cannot show the opponent's hand face-up | Ceremonial Bell, Respect Play, The Eye of Truth, Great Phantom Thief, D.D. Designator |
 | Either-player (both-side) activation (EFFECT_FLAG_BOTH_SIDE) | Activating the effect of a face-up card on the OPPONENT's field. DuelUI taps only own S/T cards; `CollectLegalResponseCards`, `IsLegalResponseCard`, `LegalIntentService`, `DuelCommandService.DoActivate` and `FaceUpQuickEffectsRuntime.TryActivate` assume the activator controls the card. Needs UI coordination | Royal Oppression (also a face-up card answering the SummonNegation window), Fusion Gate (also a Fusion that banishes the materials) |
 | Relinquished damage reflect | `MarkAbsorbed(RxRelinquishedDamageReflect)` with no runtime; ATK SET hides Equip UPDATE | latent: Thousand-Eyes Restrict (Structural); Relinquished is Implemented without the reflect |
 | Forced Set-Trap activation mid-resolution | Activate a Set Trap for its controller inside another card's resolution, with no response window: `TryActivateSpellTrap` / `BeginDeferredChainActivation` seat a chainable link; the inline `TryResolveActivation` lineage misses Continuous placement-only Traps (`IsCompiledFreeChain` is false without an Activate clause, e.g. Gravity Bind) and its human cost / target picks open after the resolving card is gone with no chain hold. Also "free chain" (Lua EVENT_FREE_CHAIN) is not recorded per program (window-only Activate clauses look free-chain), and "shuffle into the Deck instead of the GY" for the resolving card itself | Bait Doll |
@@ -546,15 +569,17 @@ The notes of earlier groups are in `~/.cache/wrldz-card-compile/*/patches/<Group
 | Card-name declaration (extends the picker row) | Also needs an information lock ("cannot check the GY") | Dark Designator, Question |
 | Phase jump ("it becomes the End Phase") | No gated transition points (Draw->Standby, Standby->Main1, post-Chain idle, end of Damage Step) and no Battle Phase termination; `EndTurn` is safe only from an idle Main/Battle Phase | Neko Mane King |
 | Second target filtered by the first (Union bullet) + Union-in-S/T zone | Spell/Trap target paths support one target or independent groups; no "Union in Union state in your S/T Zone" zone in both target mirrors | Formation Union |
-| Max-monster-zone cap (EFFECT_MAX_MZONE) | ~58 `FirstEmpty` placement/legality sites carry neither placing player nor reason; no forced-Tribute hook for EFFECT_UNRELEASABLE_SUM | Kaiser Colosseum |
-| Must-attack obligation (EFFECT_MUST_ATTACK) | Only `MustAttackDirectlyThisTurn` restricts targets; nothing stops leaving the Battle Phase (DuelUI End Battle / End Turn must refuse) and SimpleAi has no forced-attack duty | Amazoness Archers, Diffusion Wave-Motion, Staunch Defender |
+| Max-monster-zone cap (EFFECT_MAX_MZONE) | ~58 `FirstEmpty` placement/legality sites carry neither placing player nor reason; no forced-Tribute hook for EFFECT_UNRELEASABLE_SUM | Kaiser Colosseum, Spatial Collapse (also EFFECT_MAX_SZONE + EVENT_ADJUST send) |
+| Must-attack obligation (EFFECT_MUST_ATTACK) | Only `MustAttackDirectlyThisTurn` restricts targets; nothing stops leaving the Battle Phase (DuelUI End Battle / End Turn must refuse) and SimpleAi has no forced-attack duty | Amazoness Archers, Diffusion Wave-Motion, Staunch Defender, Berserk Gorilla (self-destroy-in-Defense sentence alone is not enough) |
 | Copy another card's effect | No path resolves another card's compiled program as the activator's own link | Double Spell |
 | Standby Phase window for a Set Normal Trap | `ResponseTiming` has no Standby window; `StandbyPause` holds only the turn player's upkeeps | Thunder of Ruler |
 | Simultaneous hidden pick + reveal (UI) | extends "Revealed-hand state" | Ante |
 | Cannot-discard-as-a-cost lock (per player, per effect) | One check at every discard-cost site (CanActivate, chain answer, free chain, ResponseDiscardPayable, IgnitionCostLegal, RequiresDiscardSelf, hand quick effects, PayChainDiscard, Counter Trap discard, batch payers); sending from hand is not a discard; `ActivationLocked` is per card, not per effect | Goblin of Greed |
 | Leave-field redirect (EFFECT_LEAVE_FIELD_REDIRECT) | Only GY sends have a hub (`SendsToBanishedInstead`); no funnel for hand / Deck / Extra Deck returns | Dark Magician of Chaos |
+| Per-player activity record + player-wide activation lock | No "activated a card or effect this turn" counter (Lua ACTIVITY_CHAIN, checked in a cost) and no "cannot activate cards or effects" lock at every activation site (S/T, monster ignition / trigger / quick, hand traps); same scattered-site problem as the discard-cost lock | Chaos Emperor Dragon - Envoy of the End |
 
 Open residuals (fail-soft, not fixed):
+- v177 audit residuals: Exhausting Spell's `RemoveAllSpellCounters` arm also clears Balloon Lizard's counters (shared `CardInstance.Counters`; fix = skip non-`SpellCounterSpendersRuntime.IsSpellCounterHolder` cards and rewrite the Exhausting Spell test in `InteractionRegressionTests`); `DamageStepRulesRuntime.BattleAttacker` and `EndOfDamageStepRidersRuntime.NoteBattle` record the same battle state twice (cleanup only).
 - Tribute, discard and banish cost paths still fire optional "When" GY effects of the cost card inline.
 - Magic Reflector cannot target a monster Card acting as an Equip Spell (Sword Hunter, Unions); fails soft.
 - Blast with Chain (and Reinforcements, Rush Recklessly) cannot be activated in the Damage Step: no Damage Step window
@@ -601,6 +626,9 @@ Open residuals (fail-soft, not fixed):
   Level cap and coin heads.
 - "Monster your opponent controls" includes face-down monsters (v152). Printed "face-up" uses `OppFaceUpMonsters` /
   `RequiresTargetFaceUp`. The DuelUI picker hides Sets (`HiddenSetZone`).
+- Targeting had three answers until v177 (Archfiend roll: `RequiresTargetChoice && !ChoiceDoesNotTarget`, so Fissure's
+  lowest-ATK choice rolled; DDD: `IsPsctTarget`, so old-text "select" with a Lua target did not count). Every site now asks
+  `TargetingTruthRuntime`; audit a new old-text pick against its Lua (`SelectTarget` vs `Select`) before landing it.
 - Cost vs effect: the cost is paid at activation, re-checked nowhere, and refunded on Cancel. The effect re-checks its
   targets at resolution (`AllExactTargetsStillThere`).
 - Missing the timing: a card sent as a cost misses its optional "When ... you can" effect (`SendToGraveAsCost`); mandatory

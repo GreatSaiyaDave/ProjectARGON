@@ -47,6 +47,8 @@ namespace WRLDZ.Duel.TextEffects
             c != null && c.Timing == EffectTiming.ChainLinkActivated &&
             (c.Action == EffectActionKind.NegateEffectOfNamedActivationThenDraw ||
              c.Action == EffectActionKind.ReturnTargetedSeriesMonsterThenSpecialSummonFromHand ||
+             // TargetingTruth batch (v177): Big Burn.
+             c.Action == EffectActionKind.BanishAllGyMonstersWhenOpponentTargetsGyMonster ||
              c.NegateRequiresWouldDestroyMonsterOnField ||
              // Spell Shield Type-8: "Activate 1 of these effects" — each bullet is its own activation.
              (c.Action == EffectActionKind.NegateActivation && c.EffectChoiceIndex > 0));
@@ -75,37 +77,17 @@ namespace WRLDZ.Duel.TextEffects
         internal static bool IsMonsterEffectLink(ChainLink link) =>
             link?.Card?.Def != null && link.Card.Def.IsMonster;
 
-        internal static List<CardInstance> TargetsOf(ChainLink link)
-        {
-            var list = new List<CardInstance>();
-            if (link == null) return list;
-            if (link.Target != null) list.Add(link.Target);
-            foreach (var t in link.Targets)
-                if (t != null && !list.Contains(t))
-                    list.Add(t);
-            return list;
-        }
+        /// <summary>The cards the link records (TargetingTruthRuntime.LinkCards).</summary>
+        internal static List<CardInstance> TargetsOf(ChainLink link) => TargetingTruthRuntime.LinkCards(link);
 
         /// <summary>
-        /// The link's effect targets (ygopro EFFECT_FLAG_CARD_TARGET), as NegationMonstersRuntime reads it: a recorded
-        /// compiled activation, a registered staple that targets, or a compiled program with a targeting clause.
+        /// The link's effect targets (ygopro EFFECT_FLAG_CARD_TARGET): TargetingTruth batch (v177), the one answer
+        /// (<see cref="TargetingTruthRuntime.LinkEffectTargets"/>), shared with NegationMonstersRuntime.
         /// </summary>
-        static bool EffectTargets(ChainLink link)
-        {
-            if (link == null) return false;
-            if (link.DeferredEffect != null) return true;
-            var def = link.Card?.Def;
-            if (def == null) return false;
-            if (!def.IsMonster && SpellTrapEffects.GetTargetKind(def.id) != EffectTargetKind.None) return true;
-            var prog = CompiledEffectCache.GetOrCompile(def);
-            // A continuous clause ("cannot be targeted", Chaos Command Magician's own marker) is not an activated effect.
-            return prog != null && prog.FullyCompiled &&
-                   prog.ClauseList.Exists(c => c != null && c.Timing != EffectTiming.ContinuousWhileFaceUp &&
-                                               IsTargetingClause(c));
-        }
+        static bool EffectTargets(ChainLink link) => TargetingTruthRuntime.LinkEffectTargets(link);
 
-        internal static bool IsTargetingClause(EffectClause c) =>
-            (c.IsPsctTarget || c.RequiresTargetChoice) && !c.ChoiceDoesNotTarget;
+        /// <summary>The clause targets (<see cref="TargetingTruthRuntime.ClauseTargets"/>).</summary>
+        internal static bool IsTargetingClause(EffectClause c) => TargetingTruthRuntime.ClauseTargets(c);
 
         /// <summary>ygopro Duel.IsChainNegatable: the answered card's activation may be negated.</summary>
         static bool ActivationNegatable(CardInstance card)
@@ -447,6 +429,24 @@ namespace WRLDZ.Duel.TextEffects
 
                     break;
 
+                case EffectActionKind.BanishAllGyMonstersWhenOpponentTargetsGyMonster:
+                    // TargetingTruth batch (v177), Big Burn: an effect of the opponent whose targets include a monster in a
+                    // GY (TargetingTruthRuntime: an old-text "select" whose Lua targets counts, a Lua Select does not),
+                    // and at least one monster it can banish.
+                    if (!TargetingTruthRuntime.OpponentTargetsGyMonster(engine, who, target))
+                    {
+                        reason = "Only when your opponent's effect targets a monster in a GY.";
+                        return false;
+                    }
+
+                    if (TargetingTruthRuntime.AllGyMonstersToBanish(engine, who).Count == 0)
+                    {
+                        reason = "No monster in either GY can be banished.";
+                        return false;
+                    }
+
+                    break;
+
                 default:
                     if (!clause.NegateRequiresWouldDestroyMonsterOnField)
                     {
@@ -757,6 +757,9 @@ namespace WRLDZ.Duel.TextEffects
                 case EffectActionKind.ReturnTargetedSeriesMonsterThenSpecialSummonFromHand:
                     ResolveDramaticRescue(engine, link, who, answered, clause);
                     return true;
+                case EffectActionKind.BanishAllGyMonstersWhenOpponentTargetsGyMonster:
+                    TargetingTruthRuntime.BanishAllGyMonsters(engine, who, link.Card);
+                    return true;
             }
 
             return false;
@@ -957,7 +960,8 @@ namespace WRLDZ.Duel.TextEffects
         /// <summary>
         /// SpellTrapEffects.AiAutoRespond: the AI answers with this batch's cards only when it pays off — My Body as a
         /// Shield saves one of its own monsters, Dramatic Rescue saves its own targeted monster, Spell Shield Type-8's
-        /// bullet 2 spends a Spell only against an activation worth a card. Other answers: always.
+        /// bullet 2 spends a Spell only against an activation worth a card. Other answers: always (Big Burn, TargetingTruth
+        /// v177: its only use is to deny the opponent's GY target, so the AI answers whenever it is legal).
         /// </summary>
         public static bool AiWorthAnswer(DuelEngine engine, DuelistState who, CardInstance card, EffectClause clause,
             ChainLink answered)

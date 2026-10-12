@@ -27,6 +27,9 @@ namespace WRLDZ.Duel
             var controller = engine.ControllerOf(target);
             if (controller == null || controller == activator) return false; // not an opponent's effect
             if (!target.FaceUp) return false;
+            // TargetingTruth batch (v177): the protection covers a monster on the field ("this card", Darkbishop's "Archfiend
+            // monsters you control"), not an Archfiend in the GY a targeting effect picks (Gravedigger Ghoul).
+            if (!controller.TryFindMonster(target, out _)) return false;
 
             var protectors = new System.Collections.Generic.List<CardInstance>(controller.MonstersOnField());
             bool? settled = null;

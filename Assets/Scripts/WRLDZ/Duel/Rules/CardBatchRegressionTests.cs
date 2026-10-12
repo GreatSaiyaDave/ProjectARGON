@@ -126,6 +126,14 @@ namespace WRLDZ.Duel.Rules
             ArchfiendRidersRegressionTests.Run(db, pDeck, aDeck, check);
             SpellTrapAnswersAndActivationLocksRegressionTests.Run(db, pDeck, aDeck, check);
             MonsterNegationAndControlLocksRegressionTests.Run(db, pDeck, aDeck, check);
+            ConditionalSpellsAndTrapsRegressionTests.Run(db, pDeck, aDeck, check);
+            EndOfDamageStepRidersRegressionTests.Run(db, pDeck, aDeck, check);
+            BattleDamageEventsRegressionTests.Run(db, pDeck, aDeck, check);
+            SpellEventsAndHandSendTriggersRegressionTests.Run(db, pDeck, aDeck, check);
+            RecoveryAndPhaseCostsRegressionTests.Run(db, pDeck, aDeck, check);
+            TokensDeclarationsAndPicksRegressionTests.Run(db, pDeck, aDeck, check);
+            ChaosBanishSummonsRegressionTests.Run(db, pDeck, aDeck, check);
+            TargetingTruthRegressionTests.Run(db, pDeck, aDeck, check);
         }
     }
 }

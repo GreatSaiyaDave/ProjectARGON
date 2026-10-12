@@ -4284,12 +4284,14 @@ namespace WRLDZ.Duel.Rules
                 {
                     var fenDef = db.Get(fenrirId);
                     var fp = CardTextEffectCompiler.Compile(fenDef);
+                    // ChaosBanishSummons batch: the old-wording banish procedure is the card's own hand procedure (Lua
+                    // EFFECT_SPSUMMON_PROC, no Chain Link), not a hand Activate clause.
                     Check("Fenrir compiles SS-from-hand by banishing WATER + skip next Draw",
                         fp != null &&
                         fp.ClauseList.Exists(c =>
                             c != null &&
-                            c.Action == EffectActionKind.SpecialSummonThisFromHand &&
-                            c.ActivatesFromHand &&
+                            c.Action == EffectActionKind.SpecialSummonFromHandProcedure &&
+                            c.AttributeFilter == "WATER" && !c.MakesChainLink &&
                             c.BanishFromGyCount == 2) &&
                         fp.ClauseList.Exists(c =>
                             c != null &&
@@ -4311,10 +4313,10 @@ namespace WRLDZ.Duel.Rules
                     var w2 = engine.CreateCardInstance(cureId);
                     p.Graveyard.Add(w1);
                     p.Graveyard.Add(w2);
-                    Check("Fenrir: Activate from hand is legal with 2 WATER in GY",
-                        engine.CanActivateSpellTrap(p, fen, fromHand: true));
+                    Check("Fenrir: the hand Special Summon procedure is legal with 2 WATER in GY (not a hand Activate)",
+                        engine.CanSpecialSummonProcedure(p, fen) && !engine.CanActivateSpellTrap(p, fen, fromHand: true));
                     Check("Fenrir: SS procedure starts",
-                        engine.TryActivateSpellTrap(p, fen, fromHand: true));
+                        engine.TrySpecialSummonProcedure(p, fen));
                     if (engine.IsAwaitingEffectTarget)
                     {
                         Check("Fenrir: banish first WATER",

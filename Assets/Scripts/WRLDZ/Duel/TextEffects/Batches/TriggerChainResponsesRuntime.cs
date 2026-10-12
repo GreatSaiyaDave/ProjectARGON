@@ -190,6 +190,26 @@ namespace WRLDZ.Duel.TextEffects
         }
 
         /// <summary>
+        /// SpellEventsAndHandSendTriggers batch: a trigger on a card activation that is still being chained (ygopro
+        /// EVENT_CHAINING TRIGGER_F, Spirit of the Pot of Greed) goes right above it on the Chain being built, before anyone
+        /// may respond; no window is opened here (the activation's own response window follows). The link resolves through
+        /// <see cref="TryResolveLink"/>. Null (nothing added) while no Chain is being built.
+        /// </summary>
+        public static ChainLink AddOnBuildingChain(DuelEngine engine, Seat seat)
+        {
+            if (engine?.Chain == null || seat?.Controller == null || seat.Card == null || seat.Resolve == null) return null;
+            if (!engine.Chain.HasLinks || engine.Chain.IsResolving || engine.IsResolvingChain) return null;
+            var link = engine.Chain.AddLink(seat.Controller, seat.Card, SpellSpeed.Speed1, EffectClass.Trigger, seat.From,
+                fromHand: false, wasSet: false, effectKey: TriggerLinkKey, target: seat.Targets.FirstOrDefault());
+            if (link == null) return null;
+            for (var i = 1; i < seat.Targets.Count; i++)
+                if (seat.Targets[i] != null) link.Targets.Add(seat.Targets[i]);
+            s_links.Remove(link);
+            s_links.Add(link, seat);
+            return link;
+        }
+
+        /// <summary>
         /// Opens a pass in which triggers that happen at the same time are collected (a Standby / End Phase's triggers,
         /// several Spirit's Invitations on one return): <see cref="TrySeatOrCollect"/> holds each one, and the outermost
         /// <see cref="EndCollect"/> seats all of them on one Chain (Chain Link 1 … n), so no trigger resolves, or opens a
@@ -294,7 +314,7 @@ namespace WRLDZ.Duel.TextEffects
         {
             if (link == null || card?.Def == null || (link.Target != card && !link.Targets.Contains(card))) return false;
             var prog = CompiledEffectCache.GetOrCompile(link.Card?.Def);
-            var targeted = prog?.ClauseList?.Where(c => c != null && (c.RequiresTargetChoice || c.IsPsctTarget)).ToList();
+            var targeted = prog?.ClauseList?.Where(TargetingTruthRuntime.ActivatedClauseTargets).ToList();
             if (targeted == null || targeted.Count == 0) return true;
             foreach (var c in targeted)
             {

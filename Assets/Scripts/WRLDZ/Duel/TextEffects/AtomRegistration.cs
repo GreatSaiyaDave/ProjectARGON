@@ -213,6 +213,9 @@ namespace WRLDZ.Duel.TextEffects
                     RequiresTributeCount = 1,
                     TributeRaceFilter = m.Groups[1].Value,
                     RequiresTargetDefLeqSourceAtk = true,
+                    // TargetingTruth batch (v177): Lua c76075810 desop selects at resolution (SelectMatchingCard +
+                    // HintSelection) — the destroyed monster is not targeted.
+                    ChoiceDoesNotTarget = true,
                     IsOptional = true,
                     MakesChainLink = true
                 }),
@@ -723,6 +726,14 @@ namespace WRLDZ.Duel.TextEffects
             ArchfiendRidersAtoms.Atoms,
             SpellTrapAnswersAndActivationLocksAtoms.Atoms,
             MonsterNegationAndControlLocksAtoms.Atoms,
+            ConditionalSpellsAndTrapsAtoms.Atoms,
+            EndOfDamageStepRidersAtoms.Atoms,
+            BattleDamageEventsAtoms.Atoms,
+            SpellEventsAndHandSendTriggersAtoms.Atoms,
+            RecoveryAndPhaseCostsAtoms.Atoms,
+            TokensDeclarationsAndPicksAtoms.Atoms,
+            ChaosBanishSummonsAtoms.Atoms,
+            TargetingTruthAtoms.Atoms,
         };
 
         /// <summary>Every whole-sentence atom: <see cref="Atoms"/>, then each batch in <see cref="BatchAtomSets"/>.</summary>

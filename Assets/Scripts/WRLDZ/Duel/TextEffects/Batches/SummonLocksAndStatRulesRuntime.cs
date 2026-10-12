@@ -41,7 +41,7 @@ namespace WRLDZ.Duel.TextEffects
             foreach (var m in who.MonstersOnField())
             {
                 if (m == null || !m.FaceUp || !IsSeriesMember(m, c.NamedCard)) continue;
-                if (!c.ChoiceDoesNotTarget && engine.IsDragonTargetProtected(m)) continue;
+                if (!TargetingTruthRuntime.PicksWithoutTargeting(c) && engine.IsDragonTargetProtected(m)) continue;
                 list.Add(m);
             }
         }

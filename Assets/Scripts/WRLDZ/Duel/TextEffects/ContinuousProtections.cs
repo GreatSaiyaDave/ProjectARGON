@@ -27,6 +27,9 @@ namespace WRLDZ.Duel.TextEffects
                 var atk = engine?.TurnPlayer;
                 return atk != null && atk.CannotAttackFaceDownMonstersThisTurn;
             }
+            // EndOfDamageStepRiders batch: Prickle Fairy — the opponent cannot attack its controller's face-up monsters of a
+            // Type (EFFECT_CANNOT_SELECT_BATTLE_TARGET of the source: this monster's own negation does not matter).
+            if (EndOfDamageStepRidersRuntime.CannotBeAttackTarget(engine, monster)) return true;
             // Its own "cannot be attacked" needs its effects; another monster's field rule (Marauding Captain, Amazoness
             // Tiger: EFFECT_CANNOT_SELECT_BATTLE_TARGET of the source) does not care whether this one is negated.
             if (!monster.IsNegated)

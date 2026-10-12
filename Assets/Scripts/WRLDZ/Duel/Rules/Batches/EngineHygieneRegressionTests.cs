@@ -255,9 +255,15 @@ namespace WRLDZ.Duel.Rules
                     c.BanishFromGyCount == 3), Describe(necro));
 
             var chaos = Prog(db, ChaosSorcerer);
-            Check("Chaos Sorcerer (1 LIGHT and 1 DARK) is not the single-Attribute procedure",
-                chaos == null || !chaos.ClauseList.Exists(c => c != null &&
-                    c.Action == EffectActionKind.SpecialSummonFromHandProcedure), Describe(chaos));
+            // ChaosBanishSummons batch: "1 LIGHT and 1 DARK" is its own pair procedure (SecondAttributeFilter), never the
+            // single-Attribute "banishing 2 LIGHT monsters" shape.
+            Check("Chaos Sorcerer (1 LIGHT and 1 DARK) is the pair procedure, not the single-Attribute one",
+                chaos != null && chaos.ClauseList.Exists(c => c != null &&
+                    c.Action == EffectActionKind.SpecialSummonFromHandProcedure && c.BanishFromGyCount == 2 &&
+                    c.AttributeFilter == "LIGHT" && c.SecondAttributeFilter == "DARK") &&
+                !chaos.ClauseList.Exists(c => c != null &&
+                    c.Action == EffectActionKind.SpecialSummonFromHandProcedure &&
+                    string.IsNullOrEmpty(c.SecondAttributeFilter)), Describe(chaos));
 
             var sofText = db.Get(SpiritOfFlames)?.desc ?? "";
             Check("Near miss: 'from your Deck' banish is not the hand procedure",

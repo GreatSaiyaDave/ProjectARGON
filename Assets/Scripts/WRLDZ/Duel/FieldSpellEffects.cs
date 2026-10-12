@@ -360,6 +360,9 @@ namespace WRLDZ.Duel
                 // MonsterNegationAndControlLocks batch: Final Attack Orders — every face-up monster in Attack Position, locked.
                 else if (MonsterNegationAndControlLocksRuntime.ApplyContinuous(engine, field, clause))
                     any = true;
+                // EndOfDamageStepRiders batch: Insect Princess — the opponent's monsters of a Type in face-up Attack Position.
+                else if (EndOfDamageStepRidersRuntime.ApplyContinuous(engine, field, clause))
+                    any = true;
             }
 
             return any;

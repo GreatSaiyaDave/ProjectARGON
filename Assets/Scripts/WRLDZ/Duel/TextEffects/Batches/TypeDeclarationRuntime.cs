@@ -160,7 +160,11 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         public static void NoteActivationChoice(DuelEngine engine, CardInstance card, CardInstance pick)
         {
-            if (engine == null || !IsTypeToken(pick)) return;
+            if (engine == null) return;
+            // TokensDeclarationsAndPicks batch: DNA Transplant's Attribute is announced the same way.
+            if (IsAttributeToken(pick))
+                engine.Log($"{card?.Name ?? "Effect"}: declares {pick.Def.attribute}.");
+            if (!IsTypeToken(pick)) return;
             engine.Log($"{card?.Name ?? "Effect"}: declares {pick.Def.race}.");
         }
 

@@ -636,8 +636,8 @@ namespace WRLDZ.Duel.Rules
                 var tk = Up(e, e.Opponent, Terrorking, 0);
                 e.Opponent.Deck.Insert(0, Vilepawn);
                 var fis = PutInHand(e, e.Player, Fissure);
-                // Fissure's pick is treated as a target by the engine's Archfiend die roll (a pre-existing gap: Lua
-                // c66788016 selects without targeting). A roll of 1 never negates, so the test is deterministic.
+                // Fissure does not target (Lua c66788016 Select), so Terrorking rolls no die (TargetingTruth v177). The queued
+                // 1 (never a negate face) only keeps this test deterministic should that regress.
                 e.Rng.QueueDie(1);
                 var activated = e.TryActivateSpellTrap(e.Player, fis, fromHand: true);
                 Drive(e, c => c == tk); // Fissure's lowest-ATK pick

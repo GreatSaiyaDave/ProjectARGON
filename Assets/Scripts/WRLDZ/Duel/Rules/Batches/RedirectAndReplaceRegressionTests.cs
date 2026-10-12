@@ -181,10 +181,14 @@ namespace WRLDZ.Duel.Rules
                 CompilesTo(MirrorText, EffectActionKind.RedirectToAnotherAppropriateTarget));
             Check("Near miss: an extra sentence after Fairy's Hand Mirror's text is not compiled",
                 !CompilesTo(MirrorText + " Then draw 1 card.", EffectActionKind.RedirectToAnotherAppropriateTarget));
+            // SpellEventsAndHandSendTriggers batch: Fiend's Hand Mirror is now Implemented with its own Spell/Trap zone. Guard
+            // rewritten to its compiled shape: it never picks a monster (Fairy's AnotherAppropriateTarget).
             var fiend = CardTextEffectCompiler.Compile(db.Get(FiendsHandMirror));
-            Check("Near miss: Fiend's Hand Mirror (a Spell targeting a Spell/Trap) is not this template",
-                fiend == null ||
-                !fiend.ClauseList.Exists(c => c != null && c.Action == EffectActionKind.RedirectToAnotherAppropriateTarget));
+            Check("Near miss: Fiend's Hand Mirror (a Spell targeting a Spell/Trap) is not this template — it redirects to a Spell/Trap",
+                fiend != null && fiend.FullyCompiled &&
+                !fiend.ClauseList.Exists(c => c != null && c.Zone == EffectZoneFilter.AnotherAppropriateTarget) &&
+                fiend.ClauseList.Exists(c => c != null && c.Action == EffectActionKind.RedirectToAnotherAppropriateTarget &&
+                                             c.Zone == EffectZoneFilter.AnotherAppropriateSpellTrapTarget));
             Check("Near miss: a Trap-answering Mirror is not this template",
                 !CompilesTo(MirrorText.Replace("activates a Spell Card", "activates a Trap Card")
                         .Replace("that Spell now", "that Trap now"),

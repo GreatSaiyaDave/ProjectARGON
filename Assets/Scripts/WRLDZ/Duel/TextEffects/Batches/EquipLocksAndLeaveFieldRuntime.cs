@@ -175,9 +175,7 @@ namespace WRLDZ.Duel.TextEffects
         public static void FilterTargets(DuelEngine engine, DuelistState who, EffectClause c, List<CardInstance> list)
         {
             if (engine == null || who == null || c == null || list == null || list.Count == 0) return;
-            if (!c.RequiresTargetChoice || c.ChoiceDoesNotTarget || c.PickLowestAtk || c.PickHighestAtk ||
-                c.PickHighestDef)
-                return;
+            if (!TargetingTruthRuntime.PicksTarget(c)) return;
             list.RemoveAll(t => ShieldedFromTargeting(engine, who, t));
         }
 

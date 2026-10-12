@@ -2254,7 +2254,7 @@ namespace WRLDZ.Duel.TextEffects
                 stays: SpellTrapEffects.StaysOnFieldAfterActivate(card, prog));
             // Prefer AttackDeclared pick clause (Widespread Ruin) over free-chain for PSCT flag.
             var pickClause = FirstPickTargetClause(attackClauses) ?? FirstPickTargetClause(used);
-            NotifyTargetingEffectResolved(engine, target, pickClause?.IsPsctTarget ?? true);
+            NotifyTargetingEffectResolved(engine, target, pickClause == null || TargetingTruthRuntime.ClauseTargets(pickClause));
             engine.ContinueAfterResponseActivation(attackNegated, battleEnded);
             return true;
         }
@@ -2407,7 +2407,7 @@ namespace WRLDZ.Duel.TextEffects
                     FinishSpellTrap(engine, who, card,
                         stays: SpellTrapEffects.StaysOnFieldAfterActivate(card, prog));
                     if (freePick != null)
-                        NotifyTargetingEffectResolved(engine, freePick, targetedPick?.IsPsctTarget ?? false);
+                        NotifyTargetingEffectResolved(engine, freePick, TargetingTruthRuntime.ClauseTargets(targetedPick));
                     engine.ContinueAfterResponseActivation(attackNegated, battleEnded);
                     return true;
                 }
@@ -2439,7 +2439,7 @@ namespace WRLDZ.Duel.TextEffects
                     FinishSpellTrap(engine, who, card,
                         stays: SpellTrapEffects.StaysOnFieldAfterActivate(card, prog));
                     if (openPick != null)
-                        NotifyTargetingEffectResolved(engine, openPick, targetedOpen.IsPsctTarget);
+                        NotifyTargetingEffectResolved(engine, openPick, TargetingTruthRuntime.ClauseTargets(targetedOpen));
                     engine.ContinueAfterResponseActivation(false, false);
                     return true;
                 }
@@ -2843,7 +2843,7 @@ namespace WRLDZ.Duel.TextEffects
                     else
                         FinishSpellTrap(engine, who, card,
                             stays: SpellTrapEffects.StaysOnFieldAfterActivate(card, prog));
-                    NotifyTargetingEffectsResolved(engine, resolvedTargets, targeted.IsPsctTarget);
+                    NotifyTargetingEffectsResolved(engine, resolvedTargets, TargetingTruthRuntime.ClauseTargets(targeted));
                     engine.NotifyPublic();
                     return true;
                 }
@@ -3521,7 +3521,7 @@ namespace WRLDZ.Duel.TextEffects
                 FinishSpellTrap(engine, who, card,
                     stays: SpellTrapEffects.StaysOnFieldAfterActivate(card, prog));
             NotifyTargetingEffectResolved(engine, target,
-                clauseSet.Exists(c => c != null && c.IsPsctTarget));
+                clauseSet.Exists(TargetingTruthRuntime.ClauseTargets));
             engine.NotifyPublic();
             return true;
         }
@@ -3590,7 +3590,7 @@ namespace WRLDZ.Duel.TextEffects
                                 ApplyClause(engine, who, monster, c,
                                     c.RequiresTargetChoice ? pick : null, ref d, ref d);
                     }
-                    NotifyTargetingEffectsResolved(engine, picked, targeted.IsPsctTarget);
+                    NotifyTargetingEffectsResolved(engine, picked, TargetingTruthRuntime.ClauseTargets(targeted));
                     engine.NotifyPublic();
                     return true;
                 }
@@ -3744,7 +3744,7 @@ namespace WRLDZ.Duel.TextEffects
                         ApplyClause(engine, who, card, c,
                             c.RequiresTargetChoice ? pick : null, ref dAi, ref dAi);
                     NotifyTargetingEffectResolved(engine, pick,
-                        applicable.Exists(c => c != null && c.IsPsctTarget));
+                        applicable.Exists(TargetingTruthRuntime.ClauseTargets));
                     engine.NotifyPublic();
                     return true;
                 }
@@ -3937,7 +3937,7 @@ namespace WRLDZ.Duel.TextEffects
 
                     var pick = AutoPick(c, targets, who, engine);
                     ApplyClause(engine, who, card, c, pick, ref d, ref d);
-                    if (c.IsPsctTarget) NotifyTargetingEffectResolved(engine, pick, true);
+                    if (TargetingTruthRuntime.ClauseTargets(c)) NotifyTargetingEffectResolved(engine, pick, true);
                     appliedSomething = true;
                 }
                 else
@@ -4117,7 +4117,7 @@ namespace WRLDZ.Duel.TextEffects
             }
 
             NotifyTargetingEffectsResolved(engine, picks,
-                clauses.Exists(c => c != null && c.IsPsctTarget));
+                clauses.Exists(TargetingTruthRuntime.ClauseTargets));
             engine.NotifyPublic();
             return true;
         }
@@ -4243,7 +4243,7 @@ namespace WRLDZ.Duel.TextEffects
                 card.EffectUsedThisTurn = targeted.OncePerTurn || card.EffectUsedThisTurn;
             else
                 FinishSpellTrap(engine, who, card, stays: SpellTrapEffects.StaysOnFieldAfterActivate(card, prog));
-            NotifyTargetingEffectsResolved(engine, resolved, targeted.IsPsctTarget);
+            NotifyTargetingEffectsResolved(engine, resolved, TargetingTruthRuntime.ClauseTargets(targeted));
             engine.NotifyPublic();
             return true;
         }
@@ -4316,7 +4316,7 @@ namespace WRLDZ.Duel.TextEffects
                 else
                     FinishSpellTrap(engine, who, card,
                         stays: SpellTrapEffects.StaysOnFieldAfterActivate(card, null));
-                NotifyTargetingEffectResolved(engine, pick, targeted.IsPsctTarget);
+                NotifyTargetingEffectResolved(engine, pick, TargetingTruthRuntime.ClauseTargets(targeted));
                 engine.NotifyPublic();
                 return true;
             }
@@ -5046,6 +5046,8 @@ namespace WRLDZ.Duel.TextEffects
             SimpleSpellTrapsRuntime.FilterTributeCostCandidates(engine, who, c, list);
             // ArchfiendRiders batch: Checkmate's Tribute is an "Archfiend" that leaves a "Terrorking Archfiend" target.
             ArchfiendRidersRuntime.FilterTributeCostCandidates(engine, who, source, c, list);
+            // TokensDeclarationsAndPicks batch: Multiplication of Ants — with 1 free zone the Tribute frees your own zone.
+            TokensDeclarationsAndPicksRuntime.FilterTributeCostCandidates(engine, who, c, list);
             TributeSummonsRuntime.MoveForcedFirst(who, list, forced);
             return list;
         }
@@ -5588,6 +5590,8 @@ namespace WRLDZ.Duel.TextEffects
                     ? Mathf.Min(c.BanishFromGyCount, gy.Count)
                     : c.BanishFromGyCount;
                 var paid = 0;
+                // ChaosBanishSummons batch: the cost's banishes are one event (Soul Absorption).
+                using var costBanish = BanishEvents.Group(engine);
                 for (var i = 0; i < n && i < gy.Count; i++)
                 {
                     if (SpiritEliminationRuntime.InAGraveyard(engine, gy[i]) && // v163: a substitute is on the field
@@ -5860,7 +5864,7 @@ namespace WRLDZ.Duel.TextEffects
             if (isMonster && activate.Any(x => x.OncePerTurn) && card != null)
                 card.EffectUsedThisTurn = true;
             NotifyTargetingEffectResolved(engine, target,
-                activate.Exists(c => c != null && c.IsPsctTarget));
+                activate.Exists(TargetingTruthRuntime.ClauseTargets));
         }
 
         static bool HasNamedInListedOrigins(DuelEngine engine, DuelistState who, EffectClause c)
@@ -6465,8 +6469,8 @@ namespace WRLDZ.Duel.TextEffects
             CardInstance chosenTarget, int costNumeric)
         {
             Func<CardInstance, CardInstance> rechoose = null;
-            var choiceOnly = clause.ChoiceDoesNotTarget || clause.PickLowestAtk || clause.PickHighestAtk ||
-                             clause.PickHighestDef;
+            // TargetingTruth batch (v177): one answer to "does this clause target?" (TargetingTruthRuntime).
+            var choiceOnly = TargetingTruthRuntime.IsNonTargetingChoice(clause);
             if (chosenTarget != null && choiceOnly)
                 rechoose = picked =>
                 {
@@ -6475,7 +6479,7 @@ namespace WRLDZ.Duel.TextEffects
                     return now.Count > 0 ? AutoPick(clause, now, who, engine) : null;
                 };
             CompiledActivationChainRuntime.Record(engine, chosenTarget,
-                isTarget: clause.RequiresTargetChoice && !choiceOnly,
+                isTarget: TargetingTruthRuntime.PicksTarget(clause),
                 equips: clause.Action == EffectActionKind.EquipThisToTarget,
                 // Equip Spells and "face-up monster" targets do not affect a target turned face-down.
                 needsFaceUp: clause.Action == EffectActionKind.EquipThisToTarget ||
@@ -6485,7 +6489,9 @@ namespace WRLDZ.Duel.TextEffects
                              // NegationMonsters batch (v161): Double Snare destroys its target only while face-up.
                              clause.Zone == EffectZoneFilter.FieldFaceUpCardsNegatingTrapEffects ||
                              // SummonLocksAndStatRules batch: Amazoness Spellcaster's own face-up target.
-                             clause.Zone == EffectZoneFilter.ControllerFaceUpSeriesMonsters,
+                             clause.Zone == EffectZoneFilter.ControllerFaceUpSeriesMonsters ||
+                             // ConditionalSpellsAndTraps batch: Destruction Ring's face-up monster you control.
+                             clause.Action == EffectActionKind.DestroyTargetThenDamageBothPlayers,
                 rechoose,
                 target =>
                 {
@@ -6544,18 +6550,34 @@ namespace WRLDZ.Duel.TextEffects
             // EquipAndSpellProtection batch: while a targeting clause applies, its target is "targeted by that effect"
             // (Heart of Clear Water: the equipped monster is not destroyed by an effect that targets it).
             using var targeted = EquipAndSpellProtectionRuntime.EnterTargetedClause(clause, source, chosenTarget);
+            // ChaosBanishSummons batch: every card this clause banishes is banished at the same time (one EVENT_REMOVE).
+            using var banishGroup = BanishEvents.Group(engine);
+            // ChaosBanishSummons batch: "This card cannot attack the turn you activate this effect" is an oath of the
+            // activation (Chaos Sorcerer / BLS Lua rmcost, EFFECT_FLAG_OATH): it binds even when the effect is negated.
+            if (clause.ThisCannotAttackTurnActivated)
+                ChaosBanishSummonsRuntime.ApplyAttackOath(engine, source);
             // Oath (Soul Exchange: "You cannot conduct your Battle Phase the turn you activate this card"):
             // it is part of the cost (Lua s.cost registers EFFECT_CANNOT_BP with EFFECT_FLAG_OATH), so it
             // binds the activation before anything below can negate or fizzle the effect — including the
             // Imperial Order / family negation gates right below (v141 cross-group audit).
             if (clause.ForbidsBattlePhaseThisTurn)
                 TributeSummonsRuntime.ApplyBattlePhaseOath(engine, who, source);
+            // TokensDeclarationsAndPicks batch: Stray Lambs / Scapegoat — the summon oath is part of the cost (Lua s.cost,
+            // EFFECT_FLAG_OATH), bound as the card is activated.
+            if (clause.ForbidsOtherSummonsThisTurn)
+                TokensDeclarationsAndPicksRuntime.ApplySummonOath(engine, who, source);
             // TypeDeclaration batch (v142): the Type is declared when the card is activated (the Lua announces it
             // in the target step), so it stays on the card even when this resolution is negated (Royal Decree,
             // Metal Detector); the continuous effect that reads it applies once the negation ends.
             if (clause.Action == EffectActionKind.DeclareMonsterType)
             {
                 TypeDeclarationRuntime.RecordDeclaredType(engine, source, chosenTarget);
+                return;
+            }
+            // TokensDeclarationsAndPicks batch: DNA Transplant's Attribute, declared on activation likewise.
+            if (clause.Action == EffectActionKind.DeclareMonsterAttribute)
+            {
+                TokensDeclarationsAndPicksRuntime.RecordDeclaredAttribute(engine, source, chosenTarget);
                 return;
             }
             // RuleLocks batch: Royal Command — an activated effect of a Flip monster has its activation negated (ygopro
@@ -6589,7 +6611,10 @@ namespace WRLDZ.Duel.TextEffects
             // resolve against a monster, its controller's die-roll Archfiend may negate
             // it and destroy the opponent's card. Skip the effect when negated. A roll that waits on a
             // re-roll choice (CoinDiceInterrupts batch, Dice Re-Roll) applies the effect afterwards unless negated.
-            if (chosenTarget != null && clause.RequiresTargetChoice && !clause.ChoiceDoesNotTarget &&
+            // TargetingTruth batch (v177): only a clause that takes a TARGET rolls (TargetingTruthRuntime.PicksTarget) —
+            // not a choice made without targeting (Fissure's lowest ATK, Lua c66788016 Select), and once per effect: an
+            // implied target ("Target the attacking monster") does not roll here.
+            if (chosenTarget != null && TargetingTruthRuntime.PicksTarget(clause) &&
                 clause.Action != EffectActionKind.DieRollNegateWhenTargeted &&
                 !CoinDiceInterruptsRuntime.ArchfiendRollsSettled(clause, chosenTarget) &&
                 ArchfiendTargetNegation.TryNegate(engine, who, source, chosenTarget,
@@ -6601,6 +6626,24 @@ namespace WRLDZ.Duel.TextEffects
             {
                 case EffectActionKind.DieRollNegateWhenTargeted:
                     // Continuous protection — resolved reactively by ArchfiendTargetNegation.
+                    break;
+
+                // ChaosBanishSummons batch: Chaos Sorcerer / BLS - Envoy of the Beginning, Chaosrider Gustaph, Primal Seed;
+                // Soul Absorption (BanishEvents) and Strike Ninja (its own Quick Effect link) resolve elsewhere.
+                case EffectActionKind.BanishTargetedFieldMonster:
+                    ChaosBanishSummonsRuntime.BanishTargetedFieldMonster(engine, who, source, clause, chosenTarget);
+                    break;
+                case EffectActionKind.MakeSecondAttackInARow:
+                    ChaosBanishSummonsRuntime.GrantChainAttack(engine, who, source, clause);
+                    break;
+                case EffectActionKind.BanishUpToSpellsFromYourGyGainAtkEach:
+                    ChaosBanishSummonsRuntime.ResolveGustaph(engine, who, source, clause);
+                    break;
+                case EffectActionKind.AddBanishedTargetsToHand:
+                    ChaosBanishSummonsRuntime.AddBanishedToHand(engine, who, source, chosenTarget);
+                    break;
+                case EffectActionKind.GainLpPerCardBanished:
+                case EffectActionKind.BanishThisUntilEndPhase:
                     break;
 
                 case EffectActionKind.Draw:
@@ -6697,7 +6740,9 @@ namespace WRLDZ.Duel.TextEffects
                            clause.Zone == EffectZoneFilter.AttackingMonster ||
                            clause.Zone == EffectZoneFilter.OpponentBattlingMonster))))
                     {
-                        if (ContinuousProtections.TargetedEffectBlocked(engine, chosenTarget, source))
+                        // TargetingTruth batch (v177): a choice that does not target (Fissure under Lord of D.) is stopped
+                        // only by "unaffected", not by "cannot be targeted".
+                        if (TargetingTruthRuntime.ProtectedAtResolution(engine, clause, chosenTarget, source))
                         {
                             engine.Log("Target is protected at resolution.");
                             break;
@@ -7865,6 +7910,9 @@ namespace WRLDZ.Duel.TextEffects
                 case EffectActionKind.AttackAllOpponentMonstersOnceEach:
                 case EffectActionKind.CannotSelectMonsterAsAttackTarget:
                 case EffectActionKind.HalveBattleDamageThisInflictsToOpponent:
+                // BattleDamageEvents batch: Piranha Army / Stone Statue of the Aztecs — a marker read by DuelEngine's damage
+                // calculation (BattleDamageEventsRuntime.DoubleBattleDamage).
+                case EffectActionKind.DoubleBattleDamageToOpponent:
                     break;
                 // ContinuousTrapsAndSpiritSupport batch: Life Absorbing Machine / Ominous Fortunetelling (Standby
                 // triggers), Fengsheng Mirror (Activate). Fatal Abacus, Spirit's Invitation and Settle Machine's markers
@@ -8088,7 +8136,14 @@ namespace WRLDZ.Duel.TextEffects
                     {
                         if (gainWho == null) return;
                         var gained = AmountWithGyCopies(gainWho, source, clause);
-                        if (clause.AmountIsEquippedBattleDamage)
+                        if (clause.CountSource == PerCountBurnsRuntime.PreviousClauseHits)
+                        {
+                            // ConditionalSpellsAndTraps batch: Gryphon's Feather Duster — N x the cards the previous
+                            // Destroy clause actually destroyed (Duel.Destroy's return); none destroyed: no gain.
+                            if (clause.RequiresPreviousClauseHit && s_lastDestroyHits <= 0) return;
+                            gained = Mathf.Max(0, clause.Amount) * Mathf.Max(0, s_lastDestroyHits);
+                        }
+                        else if (clause.AmountIsEquippedBattleDamage)
                             gained = s_battleDamageJustInflicted;
                         else if (clause.ScaleAmountByFieldMonsters || clause.ScaleAmountByAllFieldMonsters)
                             gained = Mathf.Max(0, clause.Amount) *
@@ -8147,6 +8202,8 @@ namespace WRLDZ.Duel.TextEffects
                 case EffectActionKind.NegateAllEquipCardEffectsOnField:
                 case EffectActionKind.OpponentCannotDrawExceptDuringDrawPhases:
                 case EffectActionKind.ConvertOpponentLpGainToDamage:
+                // ConditionalSpellsAndTraps batch: D.D. Borderline (ConditionalSpellsAndTrapsRuntime.BattlePhaseLocked).
+                case EffectActionKind.NoBattlePhaseWhileNoSpellInControllerGy:
                     // Continuous — applied by FieldSpellEffects / ContinuousProtections while face-up.
                     break;
 
@@ -8767,6 +8824,17 @@ namespace WRLDZ.Duel.TextEffects
                         engine.OpponentOf(who), Mathf.Max(0, clause.Amount), source?.Name);
                     break;
 
+                case EffectActionKind.BothPlayersLifePointsBecomeZero:
+                    // ConditionalSpellsAndTraps batch: Self-Destruct Button.
+                    ConditionalSpellsAndTrapsRuntime.ApplyBothLifePointsBecomeZero(engine, who, source);
+                    break;
+
+                case EffectActionKind.DestroyTargetThenDamageBothPlayers:
+                    // ConditionalSpellsAndTraps batch: Destruction Ring.
+                    ConditionalSpellsAndTrapsRuntime.ApplyDestroyTargetThenDamageBoth(engine, who, source, clause,
+                        chosenTarget, Destroy);
+                    break;
+
                 case EffectActionKind.InflictDamageHalfTributedAtk:
                     engine.ApplyEffectDamage(opp, Mathf.Max(0, costNumeric / 2), source?.Name);
                     break;
@@ -9342,6 +9410,23 @@ namespace WRLDZ.Duel.TextEffects
                 case EffectActionKind.BattleAnotherOwnMonsterInstead:
                     break;
 
+                // EndOfDamageStepRiders batch: end-of-Damage-Step riders on the battled monster (fired by FireEndOfDamageFor with
+                // that monster); Prickle Fairy's shield, Insect Princess's Attack Position rule and Drillago's direct attack are
+                // continuous rules read by EndOfDamageStepRidersRuntime.
+                case EffectActionKind.DestroyBattledMonsterAtEndOfDamageStep:
+                    EndOfDamageStepRidersRuntime.DestroyBattledMonster(engine, who, source, clause, chosenTarget);
+                    break;
+                case EffectActionKind.ChangeBattledMonsterToDefenseAtEndOfDamageStep:
+                    EndOfDamageStepRidersRuntime.ChangeBattledMonsterToDefense(engine, who, source, clause, chosenTarget);
+                    break;
+                case EffectActionKind.PlaceAttackerOnTopOfDeckAtEndOfDamageStep:
+                    EndOfDamageStepRidersRuntime.PlaceAttackerOnTopOfDeck(engine, who, source, clause, chosenTarget);
+                    break;
+                case EffectActionKind.OpponentCannotAttackYourFaceUpRaceMonsters:
+                case EffectActionKind.ContinuousChangeOpponentRaceMonstersToAttack:
+                case EffectActionKind.CanAttackDirectlyIfOpponentControlsOnlyFaceUpMonstersWithAtkAtLeast:
+                    break;
+
                 case EffectActionKind.DestroyAttackerAtEndOfDamageStep:
                     // DamageStepRules batch: Thousand Needles' end-of-Damage-Step trigger and Continuous Destruction Punch's
                     // continuous marker; otherwise Destruction Punch answering the end-of-Damage-Step window.
@@ -9424,7 +9509,30 @@ namespace WRLDZ.Duel.TextEffects
                 }
 
                 case EffectActionKind.SpecialSummonToken:
-                    SummonTokens(engine, who, clause, source);
+                    // TokensDeclarationsAndPicks batch: all-or-nothing Tokens and the summon oath's own Special Summon
+                    // (Stray Lambs, Scapegoat, Multiplication of Ants); other Token clauses Summon as before.
+                    TokensDeclarationsAndPicksRuntime.SummonTokens(engine, who, clause, source,
+                        positions => SummonTokens(engine, who, clause, source, positions));
+                    break;
+
+                // TokensDeclarationsAndPicks batch.
+                case EffectActionKind.AllFaceUpMonstersBecomeDeclaredAttribute:
+                    // DNA Transplant: read live by EquipFamilyRuntime.CurrentAttribute; nothing to apply here.
+                    break;
+                case EffectActionKind.OpponentPlacesRaceMonsterFromTheirDeckOnTop:
+                    TokensDeclarationsAndPicksRuntime.ResolveOpponentPlacesOnTop(engine, who, source, clause);
+                    break;
+                case EffectActionKind.RandomHandCardSpecialSummonOrSendToGy:
+                    TokensDeclarationsAndPicksRuntime.ResolveRandomHandSummon(engine, who, source);
+                    break;
+                case EffectActionKind.TargetGainsAtkEqualToDefDestroyAtEndPhase:
+                    TokensDeclarationsAndPicksRuntime.ApplyDefToAtkThenDestroy(engine, source, chosenTarget);
+                    break;
+                case EffectActionKind.PlaceCounterOnThisCard:
+                    TokensDeclarationsAndPicksRuntime.PlaceCounter(engine, who, source, clause);
+                    break;
+                case EffectActionKind.InflictCountersTimesAmountToDestroyer:
+                    TokensDeclarationsAndPicksRuntime.InflictCounterBurn(engine, source, clause);
                     break;
 
                 // PhaseTriggersAndIgnitionCosts batch: Amazoness Blowpiper, Helping Robo for Combat, Senri Eye, Magical
@@ -9437,6 +9545,26 @@ namespace WRLDZ.Duel.TextEffects
                     break;
                 case EffectActionKind.PayLpLookAtOpponentTopDeckCardAtYourStandby:
                     PhaseTriggersAndIgnitionCostsRuntime.ResolveSenriEye(engine, who, source, clause);
+                    break;
+
+                // RecoveryAndPhaseCosts batch: Dimension Distortion, Dimension Fusion, Recycle, Reload, Coach Goblin; Manticore
+                // of Darkness is fired by RecoveryAndPhaseCostsRuntime.TryFirePhaseClause (FirePhaseTriggersFor), its arm is a marker.
+                case EffectActionKind.SpecialSummonBanishedTarget:
+                    RecoveryAndPhaseCostsRuntime.SummonBanishedTarget(engine, who, source, clause, chosenTarget);
+                    break;
+                case EffectActionKind.EachPlayerSpecialSummonsFaceUpBanishedMonstersAsPossible:
+                    FlipMassEffectsRuntime.ResolveEachPlayerSummonsFromOwnBanished(engine, who, source, clause);
+                    break;
+                case EffectActionKind.PayLpReturnGyNonMonsterToDeckBottomAtYourStandby:
+                    RecoveryAndPhaseCostsRuntime.ResolveRecycle(engine, who, source, clause);
+                    break;
+                case EffectActionKind.ShuffleHandIntoDeckThenDrawSameNumber:
+                    RecoveryAndPhaseCostsRuntime.ShuffleHandIntoDeckThenDraw(engine, who, source);
+                    break;
+                case EffectActionKind.ReturnHandNormalMonsterToDeckBottomDrawAtYourEndPhase:
+                    RecoveryAndPhaseCostsRuntime.ResolveCoachGoblin(engine, who, source, clause);
+                    break;
+                case EffectActionKind.SendRaceFromHandOrFieldSpecialSummonThisFromGyAtEndPhase:
                     break;
                 case EffectActionKind.SpecialSummonFusionFromExtraNoDirectAttackReturnAtEndPhase:
                     PhaseTriggersAndIgnitionCostsRuntime.ResolveMagicalScientist(engine, who, source, clause);
@@ -9627,6 +9755,12 @@ namespace WRLDZ.Duel.TextEffects
                 case EffectActionKind.EquippedCanAttackDirectly:
                 case EffectActionKind.EquippedGainsExtraAttacks:
                 case EffectActionKind.EquippedBattleDamageToOpponentBecomes:
+                    break;
+                // SpellEventsAndHandSendTriggers batch: Curse of Darkness / Tower of Babel / Spirit of the Pot of Greed are
+                // ContinuousWhileFaceUp markers read by SpellEventsAndHandSendTriggersRuntime (Spell resolved / activated).
+                case EffectActionKind.InflictDamageToSpellActivatorAfterResolve:
+                case EffectActionKind.DestroyThisAtNthSpellCounterDamageActivator:
+                case EffectActionKind.ActivatorOfNamedCardMayDrawWhileAttackPosition:
                     break;
                 case EffectActionKind.ReturnThisFromGyToHand:
                     DcrEquipSpellsRuntime.ReturnToHand(engine, who, source);
@@ -10005,6 +10139,8 @@ namespace WRLDZ.Duel.TextEffects
                 if (RedirectAndReplaceRuntime.NeedsGyButWasBanished(engine, c, destroyed)) continue;
                 // BattleDestroyedTriggers batch: Shinato — the destroyed monster battled in Defense Position.
                 if (BattleDestroyedTriggersRuntime.SkipsBattleDestroying(engine, c, attacker, destroyed)) continue;
+                // EndOfDamageStepRiders batch: Insect Princess — the destroyed monster battled it as that Type.
+                if (EndOfDamageStepRidersRuntime.SkipsBattleDestroying(engine, c, attacker, destroyed)) continue;
                 if (BattleOutcomeTriggersRuntime.TryFireBattleDestroying(engine, who, attacker, c, destroyed)) continue;
                 var subject = c != null &&
                               (c.AmountFromTargetOriginalAtk || c.ScaleAmountByTargetLevel)
@@ -10080,6 +10216,10 @@ namespace WRLDZ.Duel.TextEffects
                 // RuleLocks batch: "You can target up to N monsters in their Graveyard; banish those targets." (Kycoo).
                 if (RuleLocksRuntime.TryOfferBattleDamageTargets(engine, who, source, c))
                     continue;
+                // BattleDamageEvents batch: Aswan Apparition / Nubian Guard — "you can return 1 Trap / Continuous Spell
+                // from your GY to the top of your Deck" (an optional targeted trigger: yes/no + pick).
+                if (BattleDamageEventsRuntime.TryOfferOptionalTarget(engine, who, source, c))
+                    continue;
                 ApplyClause(engine, who, source, c, null, ref dummy, ref dummy);
             }
 
@@ -10099,6 +10239,10 @@ namespace WRLDZ.Duel.TextEffects
                     ApplyClause(engine, who, st, c, null, ref dummy, ref dummy);
                 }
             }
+
+            // BattleDamageEvents batch: Begone, Knave! / Des Counterblow — any monster's battle damage to either player
+            // (activated here; they resolve after battle destruction, BattleDamageEventsRuntime.ResolvePending).
+            BattleDamageEventsRuntime.FireAnyMonsterInflicted(engine, source, wasDirect);
         }
 
         // ── EffectChoiceRuntime: a chosen bullet uses the ordinary target and resolution paths ──
@@ -10124,7 +10268,7 @@ namespace WRLDZ.Duel.TextEffects
             var d = false;
             foreach (var pick in picks)
                 ApplyClause(engine, who, source, clause, pick, ref d, ref d);
-            NotifyTargetingEffectsResolved(engine, picks, clause.IsPsctTarget);
+            NotifyTargetingEffectsResolved(engine, picks, TargetingTruthRuntime.ClauseTargets(clause));
         }
 
         /// <summary>RuleLocks batch: the picker kind of a targeted clause.</summary>
@@ -10144,7 +10288,7 @@ namespace WRLDZ.Duel.TextEffects
             var battleEnded = false;
             ApplyClause(engine, who, source, clause, target, ref attackNegated, ref battleEnded);
             if (target != null)
-                NotifyTargetingEffectResolved(engine, target, clause.IsPsctTarget);
+                NotifyTargetingEffectResolved(engine, target, TargetingTruthRuntime.ClauseTargets(clause));
         }
 
         /// <summary>The mill step of a targeted Destroy with <see cref="EffectClause.ThenMillOpponentDeck"/>.</summary>
@@ -10228,13 +10372,18 @@ namespace WRLDZ.Duel.TextEffects
             DuelEngine engine, DuelistState who, CardInstance self, CardInstance other, bool selfIsAttacker)
         {
             if (engine == null || who == null || self?.Def == null) return;
-            if (!who.TryFindMonster(self, out _)) return;
+            // EndOfDamageStepRiders batch: a "battled" trigger of a card destroyed by this battle still activates from the
+            // GY (ygopro aux.dsercon: IsRelateToBattle or STATUS_BATTLE_DESTROYED); the GY's holder controls it.
+            var onField = who.TryFindMonster(self, out _);
+            if (!onField && !EndOfDamageStepRidersRuntime.DestroyedByThisBattle(engine, self, other)) return;
+            if (!onField) who = EndOfDamageStepRidersRuntime.HolderOffField(engine, self) ?? who;
             var prog = CompiledEffectCache.GetOrCompile(self);
             if (prog == null) return;
             var dummy = false;
             foreach (var c in prog.ClausesFor(EffectTiming.EndOfDamageStep))
             {
                 if (c == null) continue;
+                if (!onField && !EndOfDamageStepRidersRuntime.ActivatesAfterBattleDestroyed(c)) continue;
                 // BattleBoosts batch (v161): "If this card attacks" (Spear Dragon) — the attacker only.
                 if (c.DamageStepOnlyWhenAttacking && !selfIsAttacker) continue;
                 if (c.RequiresBattledMonsterNotDestroyed)
@@ -10705,6 +10854,8 @@ namespace WRLDZ.Duel.TextEffects
         static void PurgeNameFromBothDecks(DuelEngine engine, string name, CardInstance source)
         {
             if (engine?.Database == null || string.IsNullOrEmpty(name)) return;
+            // ChaosBanishSummons batch: both Decks' copies are banished at the same time (one EVENT_REMOVE).
+            using var purge = BanishEvents.Group(engine);
             foreach (var side in new[] { engine.Player, engine.Opponent })
             {
                 if (side?.Deck == null) continue;
@@ -10720,6 +10871,7 @@ namespace WRLDZ.Duel.TextEffects
                     inst.FaceUp = true;
                     inst.BanishedTurnNumber = engine.TurnNumber;
                     PerCopyDeckRuntime.OwnersPile(side, inst).Banished.Add(inst);
+                    BanishEvents.Record(engine, inst);
                     n++;
                 }
 
@@ -10855,6 +11007,7 @@ namespace WRLDZ.Duel.TextEffects
                         break;
                     case RedirectAndReplaceRuntime.OpponentSpellTargetsOneMonster:
                     case RedirectAndReplaceRuntime.OpponentTargetsOneMonsterYouControl:
+                    case RedirectAndReplaceRuntime.OpponentSpellTargetsOneSpellTrap: // SpellEventsAndHandSendTriggers batch
                         // RedirectAndReplace batch (v142): Fairy's Hand Mirror / Shift answer a targeting link (or an attack).
                         ok = RedirectAndReplaceRuntime.ActivationWindowOpen(engine, who, c, out reason);
                         break;
@@ -10973,6 +11126,24 @@ namespace WRLDZ.Duel.TextEffects
                         // SpellTrapAnswersAndActivationLocks batch: Sasuke Samurai #2's player flag (once per turn per player).
                         if (SpellTrapAnswersAndActivationLocksRuntime.TryActivationCondition(engine, who, card, c, out ok,
                                 out reason))
+                            break;
+                        // ConditionalSpellsAndTraps batch: Blasting the Ruins, Chaos End, Chaos Greed, Ojama Delta
+                        // Hurricane!!, Gryphon's Feather Duster.
+                        if (ConditionalSpellsAndTrapsRuntime.TryActivationCondition(engine, who, card, c, out ok,
+                                out reason))
+                            break;
+                        // RecoveryAndPhaseCosts batch: Dimension Distortion (empty GY), Dimension Fusion (a summonable banished
+                        // monster on either side), Reload (another card in the hand).
+                        if (RecoveryAndPhaseCostsRuntime.TryActivationCondition(engine, who, card, c, out ok, out reason))
+                            break;
+                        // TokensDeclarationsAndPicks batch: Token zones + summon record (Stray Lambs, Scapegoat, Multiplication
+                        // of Ants); A Hero Emerges' summonable hand monster.
+                        if (TokensDeclarationsAndPicksRuntime.TryActivationCondition(engine, who, card, c, out ok,
+                                out reason))
+                            break;
+                        // ChaosBanishSummons batch: no attack declared by this card (Chaos ignition), a named card face-up
+                        // on either field (Primal Seed), a banishable Spell in your GY (Chaosrider Gustaph).
+                        if (ChaosBanishSummonsRuntime.TryActivationCondition(engine, who, card, c, out ok, out reason))
                             break;
                         ok = false;
                         reason = $"Unknown activation condition {c.ActivationCondition}.";
@@ -11718,6 +11889,9 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
                             SpecialSummonEffectsRuntime.OnEndPhaseTrigger(engine, who, card, c);
                         continue;
                     }
+                    // RecoveryAndPhaseCosts batch: Manticore of Darkness — either player's End Phase, from its GY.
+                    if (RecoveryAndPhaseCostsRuntime.TryFirePhaseClause(engine, who, card, c, timing))
+                        continue;
                     var eitherTurn = c.Action == EffectActionKind.DestroySummonedThisTurnLevelLeq;
                     // "during the Standby Phase" (Imperial Order): every Standby Phase, either player's.
                     var eachStandby = c.EachStandbyPhase && timing == EffectTiming.StandbyPhase;
@@ -11977,28 +12151,36 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
             {
                 if (side == null) continue;
                 foreach (var m in side.MonstersOnField())
-                    TryPlaceSpellCounterOnSpell(engine, m);
+                    TryPlaceSpellCounterOnSpell(engine, m, who);
                 foreach (var st in side.SpellTrapsOnField())
-                    TryPlaceSpellCounterOnSpell(engine, st);
+                    TryPlaceSpellCounterOnSpell(engine, st, who);
             }
 
+            // SpellEventsAndHandSendTriggers batch: Curse of Darkness damages the Spell's activator.
+            SpellEventsAndHandSendTriggersRuntime.OnSpellResolved(engine, who, spell);
             engine.NotifyPublic();
         }
 
-        static void TryPlaceSpellCounterOnSpell(DuelEngine engine, CardInstance card)
+        static void TryPlaceSpellCounterOnSpell(DuelEngine engine, CardInstance card, DuelistState activator)
         {
             if (card?.Def == null || !card.FaceUp || card.IsNegated) return;
+            // SpellEventsAndHandSendTriggers batch (aux.chainreg): a card whose own activation resolved earlier in this
+            // Chain did not apply when the resolving Spell was activated.
+            if (!SpellEventsAndHandSendTriggersRuntime.WasApplyingWhenActivated(engine, card)) return;
             var prog = CompiledEffectCache.GetOrCompile(card.Def);
             if (prog == null) return;
             foreach (var c in prog.ClauseList)
             {
                 if (c == null || !c.PlaceCounterOnSpellActivate) continue;
+                var before = card.Counters;
                 var add = c.Amount > 0 ? c.Amount : 1;
                 var max = c.CounterMax;
                 card.Counters += add;
                 if (max > 0 && card.Counters > max) card.Counters = max;
                 if (max > 0) card.SpellCounterMax = max;
                 engine.Log($"{card.Name}: Spell Counter (spell resolve) → {card.Counters}.");
+                // SpellEventsAndHandSendTriggers batch: Tower of Babel's 4th Spell Counter.
+                SpellEventsAndHandSendTriggersRuntime.AfterOwnSpellCounter(engine, card, before, activator);
             }
         }
 
@@ -12622,7 +12804,10 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
             return list;
         }
 
-        static void SummonTokens(DuelEngine engine, DuelistState who, EffectClause clause, CardInstance source = null)
+        /// <param name="positions">TokensDeclarationsAndPicks batch: the face-up position chosen for each Token (null: the
+        /// clause's own position).</param>
+        static void SummonTokens(DuelEngine engine, DuelistState who, EffectClause clause, CardInstance source = null,
+            IReadOnlyList<BattlePosition> positions = null)
         {
             var dest = clause.TokenToOpponent ? engine.OpponentOf(who) : who;
             if (dest == null) return;
@@ -12639,8 +12824,9 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
                     clause.TokenLevel, clause.TokenAtk, clause.TokenDef);
                 tok.CannotBeTributedForSummon = clause.TokenCannotTribute;
                 tok.TokenDestroyedDamage = clause.TokenDestroyedDamage;
-                tok.Position = pos;
-                if (!engine.SpecialSummonToField(dest, tok, pos, true))
+                var tokPos = positions != null && i < positions.Count ? positions[i] : pos;
+                tok.Position = tokPos;
+                if (!engine.SpecialSummonToField(dest, tok, tokPos, true))
                     break;
                 engine.Log($"Token Special Summoned: {tok.Name} ({tok.CurrentAtk}/{tok.CurrentDef}).");
                 // CallsDiceAndSetTriggers batch (v163): Cobra Jar — destroyed by battle, the Token burns the resolving
@@ -12946,13 +13132,25 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
 
             if (opp.Hand != null)
             {
-                foreach (var h in opp.Hand.ToList())
+                // SpellEventsAndHandSendTriggers batch: a monster destroyed in the hand by this effect was sent from the
+                // hand to the GY by the opponent's card effect (Elephant Statue of Blessing, Lua EVENT_TO_GRAVE + rp~=tp);
+                // its trigger waits until every hand card is destroyed.
+                DiscardTriggersRuntime.BeginScope(engine);
+                try
                 {
-                    if (h?.Def == null || !h.Def.IsMonster) continue;
-                    if (!MatchesVirusDestroyAtk(h.Def.atk, thresh, leq)) continue;
-                    opp.Hand.Remove(h);
-                    RedirectAndReplaceRuntime.PutInGraveyard(engine, opp, h); // Banisher of the Light (v142)
-                    engine.Log($"{label} destroys {h.Name} in the hand.");
+                    foreach (var h in opp.Hand.ToList())
+                    {
+                        if (h?.Def == null || !h.Def.IsMonster) continue;
+                        if (!MatchesVirusDestroyAtk(h.Def.atk, thresh, leq)) continue;
+                        opp.Hand.Remove(h);
+                        RedirectAndReplaceRuntime.PutInGraveyard(engine, opp, h); // Banisher of the Light (v142)
+                        engine.Log($"{label} destroys {h.Name} in the hand.");
+                        DiscardTriggersRuntime.NoteSentFromHand(engine, opp, h, who);
+                    }
+                }
+                finally
+                {
+                    DiscardTriggersRuntime.EndScope(engine);
                 }
             }
 
@@ -13133,6 +13331,8 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
             who.Hand?.Remove(drawn);
             RedirectAndReplaceRuntime.PutInGraveyard(engine, who, drawn); // Banisher of the Light (v142)
             engine.Log($"Virus linger destroys drawn {drawn.Name}.");
+            // SpellEventsAndHandSendTriggers batch: destroyed in the hand by the virus player's effect (Lua rp = its owner).
+            DiscardTriggersRuntime.NoteSentFromHand(engine, who, drawn, engine.OpponentOf(who));
         }
 
         public static void TickCocoonCounters(DuelEngine engine, DuelistState who)
@@ -13587,7 +13787,7 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
                 else
                     FinishSpellTrap(engine, who, card,
                         stays: SpellTrapEffects.StaysOnFieldAfterActivate(card, prog));
-                NotifyTargetingEffectsResolved(engine, picks, dual.IsPsctTarget);
+                NotifyTargetingEffectsResolved(engine, picks, TargetingTruthRuntime.ClauseTargets(dual));
                 engine.NotifyPublic();
                 return true;
             }
@@ -13632,7 +13832,7 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
                     FinishSpellTrap(engine, who, card,
                         stays: SpellTrapEffects.StaysOnFieldAfterActivate(card, prog));
                 NotifyTargetingEffectsResolved(engine, picks,
-                    activate.Exists(c => c != null && c.IsPsctTarget));
+                    activate.Exists(TargetingTruthRuntime.ClauseTargets));
                 engine.NotifyPublic();
                 return true;
             }
@@ -13679,7 +13879,7 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
                 else
                     FinishSpellTrap(engine, who, card,
                         stays: SpellTrapEffects.StaysOnFieldAfterActivate(card, prog));
-                NotifyTargetingEffectsResolved(engine, new[] { first, target }, dual.IsPsctTarget);
+                NotifyTargetingEffectsResolved(engine, new[] { first, target }, TargetingTruthRuntime.ClauseTargets(dual));
                 engine.NotifyPublic();
                 return true;
             }
@@ -13777,6 +13977,9 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
                 return def.IsTrap;
             if (string.Equals(kind, "EffectMonster", System.StringComparison.OrdinalIgnoreCase))
                 return IsTrueEffectMonster(def);
+            // BattleDamageEvents batch: Nubian Guard's "1 Continuous Spell Card".
+            if (string.Equals(kind, BattleDamageEventsRuntime.ContinuousSpellKind, System.StringComparison.OrdinalIgnoreCase))
+                return BattleDamageEventsRuntime.IsContinuousSpell(def);
             return true;
         }
 
@@ -13807,8 +14010,14 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
             // TypeDeclaration batch (v142): declaration tokens (one per Monster Type), not cards — no card filter applies.
             if (c.Zone == EffectZoneFilter.DeclaredMonsterTypes)
                 return TypeDeclarationRuntime.MonsterTypeTokens(engine);
+            // TokensDeclarationsAndPicks batch: DNA Transplant's Attribute declaration tokens.
+            if (c.Zone == EffectZoneFilter.DeclaredAttributes)
+                return TokensDeclarationsAndPicksRuntime.AttributeDeclarationTokens();
             var list = new List<CardInstance>();
             var opp = engine.OpponentOf(who);
+            // TargetingTruth batch (v177): a choice that does not target (Fissure, Hammer Shot) ignores "cannot be targeted"
+            // protections (Lord of D.); every other list keeps filtering them.
+            var shieldable = !TargetingTruthRuntime.PicksWithoutTargeting(c);
             switch (c.Zone)
             {
                 case EffectZoneFilter.FieldSpellTraps:
@@ -13857,7 +14066,7 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
                         // Dark Spirit of the Silent (BattleWindows batch): "another" face-up monster — not the attacker.
                         if (c.Action == EffectActionKind.NegateAttackAndAnotherOpponentMonsterBattlesInstead &&
                             ReferenceEquals(m, engine.DeclaredAttacker)) continue;
-                        if (!c.ChoiceDoesNotTarget && engine.IsDragonTargetProtected(m)) continue;
+                        if (shieldable && engine.IsDragonTargetProtected(m)) continue;
                         list.Add(m);
                     }
 
@@ -13866,7 +14075,7 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
                     foreach (var m in opp.MonstersOnField())
                     {
                         if (m == null || m.Position != BattlePosition.Defense) continue;
-                        if (engine.IsDragonTargetProtected(m)) continue;
+                        if (shieldable && engine.IsDragonTargetProtected(m)) continue;
                         list.Add(m);
                     }
 
@@ -13877,7 +14086,7 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
                         // SimpleTriggersAndSwarm batch: Tsukuyomi may target itself (TargetMayBeThisCard).
                         if (m == except && c.Action != EffectActionKind.ReturnToHand && !c.TargetMayBeThisCard) continue;
                         if (c.Action == EffectActionKind.Banish && !m.FaceUp) continue;
-                        if (engine.IsDragonTargetProtected(m)) continue;
+                        if (shieldable && engine.IsDragonTargetProtected(m)) continue;
                         list.Add(m);
                     }
 
@@ -13885,7 +14094,7 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
                     {
                         if (m == except && c.Action != EffectActionKind.ReturnToHand) continue;
                         if (c.Action == EffectActionKind.Banish && !m.FaceUp) continue;
-                        if (engine.IsDragonTargetProtected(m)) continue;
+                        if (shieldable && engine.IsDragonTargetProtected(m)) continue;
                         list.Add(m);
                     }
 
@@ -13970,7 +14179,7 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
                 case EffectZoneFilter.OppAnyCardOnField:
                     foreach (var m in opp.MonstersOnField())
                     {
-                        if (engine.IsDragonTargetProtected(m)) continue;
+                        if (shieldable && engine.IsDragonTargetProtected(m)) continue;
                         list.Add(m);
                     }
 
@@ -14009,7 +14218,7 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
                     foreach (var m in opp.MonstersOnField())
                     {
                         if (m == null) continue;
-                        if (engine.IsDragonTargetProtected(m)) continue;
+                        if (shieldable && engine.IsDragonTargetProtected(m)) continue;
                         list.Add(m);
                     }
                     break;
@@ -14034,13 +14243,13 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
                 case EffectZoneFilter.AnyCardOnField:
                     foreach (var m in who.MonstersOnField())
                     {
-                        if (engine.IsDragonTargetProtected(m)) continue;
+                        if (shieldable && engine.IsDragonTargetProtected(m)) continue;
                         list.Add(m);
                     }
 
                     foreach (var m in opp.MonstersOnField())
                     {
-                        if (engine.IsDragonTargetProtected(m)) continue;
+                        if (shieldable && engine.IsDragonTargetProtected(m)) continue;
                         list.Add(m);
                     }
 
@@ -14108,6 +14317,10 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
                 case EffectZoneFilter.ControllerBanishedFaceUpMonsters:
                     TargetedClassicsRuntime.CollectFaceUpBanishedMonsters(who, list);
                     break;
+                // ChaosBanishSummons batch: Primal Seed — any card in your banished pile.
+                case EffectZoneFilter.ControllerBanishedCards:
+                    ChaosBanishSummonsRuntime.CollectBanishedCards(who, list);
+                    break;
                 case EffectZoneFilter.FaceDownSpellTraps:
                     foreach (var side in new[] { who, opp })
                         foreach (var st in side.SpellTrapsOnField())
@@ -14154,7 +14367,7 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
                     {
                         if (m == null || m == except) continue;
                         if (c.RequiresTargetOwnedByController && m.ControlOwner != null) continue; // borrowed
-                        if (engine.IsDragonTargetProtected(m)) continue;
+                        if (shieldable && engine.IsDragonTargetProtected(m)) continue;
                         list.Add(m);
                     }
 
@@ -14163,7 +14376,7 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
                     foreach (var m in opp.MonstersOnField())
                     {
                         if (m == null) continue;
-                        if (engine.IsDragonTargetProtected(m)) continue;
+                        if (shieldable && engine.IsDragonTargetProtected(m)) continue;
                         list.Add(m);
                     }
 
@@ -14172,7 +14385,7 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
                     foreach (var m in opp.MonstersOnField())
                     {
                         if (m == null || !m.FaceUp || m.Position != BattlePosition.Attack) continue;
-                        if (engine.IsDragonTargetProtected(m)) continue;
+                        if (shieldable && engine.IsDragonTargetProtected(m)) continue;
                         list.Add(m);
                     }
 
@@ -14215,6 +14428,8 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
                     });
                     break;
                 case EffectZoneFilter.AnotherAppropriateTarget:
+                // SpellEventsAndHandSendTriggers batch: Fiend's Hand Mirror (another Spell/Trap Card on the field).
+                case EffectZoneFilter.AnotherAppropriateSpellTrapTarget:
                     // RedirectAndReplace batch (v142): Fairy's Hand Mirror / Shift.
                     list.AddRange(RedirectAndReplaceRuntime.Candidates(engine, who, c, except));
                     break;
@@ -14437,6 +14652,13 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
             // monster whose control cannot switch. Mirror: SpellTrapEffects.CollectLegalTargets.
             MonsterNegationAndControlLocksRuntime.FilterTargets(engine, c, list);
 
+            // RecoveryAndPhaseCosts batch: Dimension Distortion — a face-up banished monster you can Special Summon (and a
+            // free zone); Salvage — the Attribute and ATK ceiling of a GY monster add.
+            RecoveryAndPhaseCostsRuntime.FilterTargets(engine, who, c, except, list);
+
+            // TokensDeclarationsAndPicks batch: Wild Nature's Release — a target with DEF above 0.
+            TokensDeclarationsAndPicksRuntime.FilterTargets(c, list);
+
             // Gust / Driving Snow (SpellTrapDestroyedResponse): "Destroy 1 Spell or Trap Card on the field" never
             // targets the activating card itself (Lua: IsExistingTarget(…, e:GetHandler())).
             // EngineResiduals (v163): a Spell/Trap Card being activated never targets itself with "target 1 card on the
@@ -14554,10 +14776,10 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
                 case EffectZoneFilter.OppAnyCardOnField:
                     foreach (var m in opp.MonstersOnField())
                         if (m != null) yield return m;
+                    // SpellTrapsOnField already yields the Field Zone card (ConditionalSpellsAndTraps batch: it was listed
+                    // twice, so a Field Spell was destroyed twice).
                     foreach (var st in opp.SpellTrapsOnField())
                         if (st != null) yield return st;
-                    if (opp.FieldSpellZone?.Occupant != null)
-                        yield return opp.FieldSpellZone.Occupant;
                     break;
                 case EffectZoneFilter.OppFaceUpMonsters:
                     // Lightning Vortex mass destroy: face-up opponent monsters only; Sets stay.
@@ -14617,6 +14839,9 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
             // SummonLocksAndStatRules batch: Amazoness Spellcaster's two targets.
             if (SummonLocksAndStatRulesRuntime.TryAutoPick(c, targets, out var switchPick))
                 return switchPick;
+            // ChaosBanishSummons batch: Chaos Sorcerer / BLS banish the opponent's strongest monster; Primal Seed.
+            if (ChaosBanishSummonsRuntime.TryAutoPick(engine, who, c, targets, out var chaosPick))
+                return chaosPick;
             switch (c.Zone)
             {
                 case EffectZoneFilter.EitherGyMonsters:
@@ -14726,7 +14951,10 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
                     return targets.OrderBy(t => t.CurrentAtk).First();
                 case EffectZoneFilter.DeclaredMonsterTypes:
                     return TypeDeclarationRuntime.AiPickMonsterType(engine, who, targets);
+                case EffectZoneFilter.DeclaredAttributes:
+                    return TokensDeclarationsAndPicksRuntime.AiPickAttribute(engine, who, targets);
                 case EffectZoneFilter.AnotherAppropriateTarget:
+                case EffectZoneFilter.AnotherAppropriateSpellTrapTarget: // SpellEventsAndHandSendTriggers: Fiend's Hand Mirror
                     // RedirectAndReplace batch (v142): Fairy's Hand Mirror / Shift.
                     return RedirectAndReplaceRuntime.AiPick(engine, who, c, targets) ?? targets[0];
                 case EffectZoneFilter.ControllerMonsters when c.ThenMillOpponentDeck > 0:
@@ -14745,6 +14973,8 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
             EffectZoneFilter.AnotherAppropriateTarget when c.Side == EffectSide.Controller
                 => EffectTargetKind.YourMonster,
             EffectZoneFilter.AnotherAppropriateTarget => EffectTargetKind.FaceUpMonsterOnField,
+            // SpellEventsAndHandSendTriggers batch: Fiend's Hand Mirror picks a Spell/Trap Card on either field.
+            EffectZoneFilter.AnotherAppropriateSpellTrapTarget => EffectTargetKind.SpellTrapOnField,
             EffectZoneFilter.EitherGyMonsters => EffectTargetKind.MonsterInEitherGy,
             EffectZoneFilter.EitherGyCards => EffectTargetKind.CardInEitherGy,
             EffectZoneFilter.ControllerGyCards => EffectTargetKind.CardInEitherGy,
@@ -14780,9 +15010,14 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
             EffectZoneFilter.FieldFaceUpSpells => EffectTargetKind.SpellTrapOnField,
             // TargetedClassics Soft: Miracle Dig banished picker.
             EffectZoneFilter.ControllerBanishedFaceUpMonsters => EffectTargetKind.MonsterInYourBanished,
+            // ChaosBanishSummons batch: Primal Seed's banished picker.
+            EffectZoneFilter.ControllerBanishedCards => EffectTargetKind.CardInYourBanished,
             EffectZoneFilter.FaceDownSpellTraps => EffectTargetKind.SpellTrapOnField,
             EffectZoneFilter.HandOrDeckNamed => EffectTargetKind.MonsterInHandOrDeck,
             EffectZoneFilter.FieldAnyMonster when c.Action == EffectActionKind.SetTargetFaceDownDefense
+                => EffectTargetKind.FaceUpMonsterOnField,
+            // TokensDeclarationsAndPicks batch: Wild Nature's Release's face-up Beast / Beast-Warrior on either field.
+            EffectZoneFilter.FieldAnyMonster when c.Action == EffectActionKind.TargetGainsAtkEqualToDefDestroyAtEndPhase
                 => EffectTargetKind.FaceUpMonsterOnField,
             EffectZoneFilter.FieldAnyMonster => EffectTargetKind.AnyMonsterOnField,
             EffectZoneFilter.ControllerGySpells => EffectTargetKind.SpellInYourGy,
@@ -14825,6 +15060,8 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
             EffectZoneFilter.OppAnyMonsters => EffectTargetKind.OppMonster,
             EffectZoneFilter.OppAttackPositionMonsters => EffectTargetKind.OppMonster,
             EffectZoneFilter.DeclaredMonsterTypes => EffectTargetKind.DeclareMonsterType,
+            // TokensDeclarationsAndPicks batch: DNA Transplant declares 1 Attribute (declaration tokens).
+            EffectZoneFilter.DeclaredAttributes => EffectTargetKind.DeclareAttribute,
             _ => EffectTargetKind.None
         };
 

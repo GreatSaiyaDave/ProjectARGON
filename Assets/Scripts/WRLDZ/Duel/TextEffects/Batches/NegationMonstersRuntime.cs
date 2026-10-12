@@ -97,8 +97,9 @@ namespace WRLDZ.Duel.TextEffects
             if (engine?.Player == null || engine.Opponent == null || def == null) return false;
             if (link.Negated || link.NegatesActivation) return false;
             if (!def.IsSpell && !def.IsTrap) return false;
-            var targets = TargetsOf(link);
-            if (targets.Count == 0 || !EffectTargets(link)) return false;
+            // TargetingTruth batch (v177): the one answer to "which cards does this link's effect target?".
+            var targets = TargetingTruthRuntime.LinkTargets(link);
+            if (targets.Count == 0) return false;
             // ygopro Duel.NegateEffect fails on an effect that cannot be negated.
             var prog = CompiledEffectCache.GetOrCompile(def);
             if (prog != null && prog.ClauseList.Exists(c => c != null && !c.EffectNegatable)) return false;
@@ -110,9 +111,10 @@ namespace WRLDZ.Duel.TextEffects
                     if (!Active(engine, side, protector)) continue;
                     foreach (var clause in Markers(protector, EffectActionKind.NegateSpellTrapEffectsThatTargetAndDestroy))
                     {
-                        if (clause.NegateRespondsToSpell && !def.IsSpell) continue;
-                        if (clause.NegateRespondsToTrap && !def.IsTrap) continue;
-                        if (!clause.NegateRespondsToSpell && !clause.NegateRespondsToTrap) continue;
+                        if (!RespondsTo(clause, def)) continue;
+                        // Gora Turtle of Illusion (Lua s.disop: rp==tp returns): only the opponent's effects.
+                        if (OpponentOnly(clause) && (link.Controller == null || ReferenceEquals(link.Controller, side)))
+                            continue;
                         var covered = targets.FirstOrDefault(t => Covers(engine, side, protector, clause, t));
                         if (covered == null) continue;
                         Negate(engine, link, side, protector, covered);
@@ -156,31 +158,19 @@ namespace WRLDZ.Duel.TextEffects
             }
         }
 
-        /// <summary>The cards the link's effect targets (its chosen target and target list).</summary>
-        static List<CardInstance> TargetsOf(ChainLink link)
-        {
-            var list = new List<CardInstance>();
-            if (link.Target != null) list.Add(link.Target);
-            foreach (var t in link.Targets)
-                if (t != null && !list.Contains(t))
-                    list.Add(t);
-            return list;
-        }
+        /// <summary>
+        /// The marker answers <paramref name="def"/>'s effects: a Spell (Freed, Frontier Wiseman), a Trap (Tyrant Dragon),
+        /// or either (TargetingTruth v177: Gora Turtle of Illusion sets both flags).
+        /// </summary>
+        static bool RespondsTo(EffectClause clause, WRLDZ.Data.CardDef def) =>
+            def != null && ((clause.NegateRespondsToSpell && def.IsSpell) || (clause.NegateRespondsToTrap && def.IsTrap));
 
         /// <summary>
-        /// The link's effect targets (ygopro EFFECT_FLAG_CARD_TARGET): a recorded compiled activation lists only its
-        /// targets; otherwise a registered staple that targets (Enemy Controller, Ring of Destruction …) or a compiled
-        /// program with a targeting clause.
+        /// TargetingTruth batch (v177), Gora Turtle of Illusion: a marker with <see cref="EffectSide.Opponent"/> answers only
+        /// the effects of its controller's opponent (Lua s.disop rp~=tp; s.distg IsControler(1-handler player)). Freed,
+        /// Frontier Wiseman and Tyrant Dragon set <see cref="EffectSide.Controller"/>: either player's effects.
         /// </summary>
-        static bool EffectTargets(ChainLink link)
-        {
-            if (link.DeferredEffect != null) return true;
-            var def = link.Card?.Def;
-            if (def == null) return false;
-            if (SpellTrapEffects.GetTargetKind(def.id) != EffectTargetKind.None) return true;
-            var prog = CompiledEffectCache.GetOrCompile(def);
-            return prog != null && prog.ClauseList.Exists(c => c != null && c.RequiresTargetChoice && !c.ChoiceDoesNotTarget);
-        }
+        static bool OpponentOnly(EffectClause clause) => clause.Side == EffectSide.Opponent;
 
         static bool Covers(DuelEngine engine, DuelistState side, CardInstance protector, EffectClause clause,
             CardInstance target)
@@ -220,7 +210,8 @@ namespace WRLDZ.Duel.TextEffects
                     foreach (var st in holder.SpellTrapsOnField())
                     {
                         if (st?.Def == null || !st.FaceUp || st.EquippedTo == null || !IsLastingTargetCard(st)) continue;
-                        if (clause.NegateRespondsToSpell ? !st.Def.IsSpell : !st.Def.IsTrap) continue;
+                        if (!RespondsTo(clause, st.Def)) continue;
+                        if (OpponentOnly(clause) && ReferenceEquals(holder, side)) continue;
                         if (!Covers(engine, side, protector, clause, st.EquippedTo)) continue;
                         if (!doomed.Exists(d => ReferenceEquals(d.card, st))) doomed.Add((st, protector, side));
                     }

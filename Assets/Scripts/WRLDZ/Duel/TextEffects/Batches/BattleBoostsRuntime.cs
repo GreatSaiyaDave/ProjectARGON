@@ -143,7 +143,9 @@ namespace WRLDZ.Duel.TextEffects
                 }
             }
 
-            return false;
+            // EndOfDamageStepRiders batch: Enraged Battle Ox — the same grant from a face-up monster (Lua EFFECT_PIERCE,
+            // range MZONE).
+            return EndOfDamageStepRidersRuntime.MonsterGrantsPiercing(engine, attacker);
         }
 
         // ───────────────────────────── Gray Wing ─────────────────────────────

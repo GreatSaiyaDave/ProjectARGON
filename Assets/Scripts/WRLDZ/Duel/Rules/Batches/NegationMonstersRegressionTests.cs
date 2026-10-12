@@ -220,7 +220,6 @@ namespace WRLDZ.Duel.Rules
             var nearIds = new[]
             {
                 1995985,  // Silent Swordsman LV3: "Negate your opponent's Spell effects that target this card."
-                42868711, // Gora Turtle of Illusion: "… controlled by your opponent that target this face-up card …"
                 39507162, // Blade Knight: "If you control no other monsters, the effects of Flip monsters … are negated."
             };
             var leaked = nearIds.Where(id =>
@@ -232,6 +231,15 @@ namespace WRLDZ.Duel.Rules
             }).ToList();
             Check("Near misses: look-alike negation sentences stay uncompiled", leaked.Count == 0,
                 string.Join(",", leaked));
+            // TargetingTruth batch (v177): Gora Turtle of Illusion (formerly a near miss) now compiles to Freed's marker for
+            // Spell OR Trap effects of the opponent only (Side = Opponent); its duels live in TargetingTruthRegressionTests.
+            var gora = P(42868711);
+            var g0 = gora?.ClauseList.Count == 1 ? gora.ClauseList[0] : null;
+            Check("Gora Turtle of Illusion: opponent-only Spell/Trap target negation on this card (TargetingTruth v177)",
+                gora != null && gora.FullyCompiled && g0 != null &&
+                g0.Action == EffectActionKind.NegateSpellTrapEffectsThatTargetAndDestroy && g0.Side == EffectSide.Opponent &&
+                g0.NegateRespondsToSpell && g0.NegateRespondsToTrap && g0.AffectsThisCardOnly && g0.DestroyNegatedCard,
+                Describe(gora));
             // GuardiansAndEquipEvents batch: Guardian Baou ("Negate the effects of monsters destroyed by battle with this card.")
             // compiles there to the this-card-only shape, never to Ha Des's Type-scoped or Twin-Headed Wolf's conditional one.
             var baouNeg = P(73544866)?.ClauseList.FirstOrDefault(c =>

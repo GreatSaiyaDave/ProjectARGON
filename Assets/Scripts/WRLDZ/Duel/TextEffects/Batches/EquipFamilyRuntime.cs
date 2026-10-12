@@ -150,9 +150,13 @@ namespace WRLDZ.Duel.TextEffects
         {
             var def = card?.Def;
             if (def == null) return null;
-            if (!card.FaceUp || !def.IsMonster || card.Equips.Count == 0) return def.attribute;
-            string best = null;
-            var bestStamp = long.MinValue;
+            if (!card.FaceUp || !def.IsMonster) return def.attribute;
+            // TokensDeclarationsAndPicks batch: DNA Transplant — every face-up monster on the field has its declared
+            // Attribute; with an Attribute-changing Equip too, the change applied last wins.
+            var byField = TokensDeclarationsAndPicksRuntime.AttributeOnField(card, out var fieldStamp);
+            if (card.Equips.Count == 0) return byField ?? def.attribute;
+            var best = byField;
+            var bestStamp = byField != null ? fieldStamp : long.MinValue;
             foreach (var eq in card.Equips)
             {
                 if (eq == null || eq.EquippedTo != card) continue;
@@ -589,6 +593,15 @@ namespace WRLDZ.Duel.TextEffects
         public static bool DestroyedOnFieldThisTurn(DuelEngine engine, CardInstance card) =>
             engine != null && card != null && s_destroyed.TryGetValue(card, out var r) &&
             r.Turn == engine.TurnNumber && card.SentFromFieldTurnNumber == engine.TurnNumber;
+
+        /// <summary>
+        /// TokensDeclarationsAndPicks batch (Balloon Lizard): the player whose card destroyed <paramref name="card"/> this
+        /// turn (ygopro reason player: the other battler's controller, or the destroying effect's player), or null.
+        /// </summary>
+        public static DuelistState DestroyReasonPlayer(DuelEngine engine, CardInstance card) =>
+            engine != null && card != null && s_destroyed.TryGetValue(card, out var r) && r.Turn == engine.TurnNumber
+                ? r.ReasonPlayer
+                : null;
 
         /// <summary>TextEffectRuntime.DestroyCard: the player whose card effect destroyed it (the resolving player).</summary>
         public static void NoteDestroyer(DuelEngine engine, CardInstance card, DuelistState destroyer)

@@ -113,6 +113,8 @@ namespace WRLDZ.Duel.TextEffects
 
             Arm(engine, card);
             engine?.Log($"{source?.Name ?? "Effect"}: Spell Counter on {card.Name} → {card.Counters}.");
+            // SpellEventsAndHandSendTriggers batch: Tower of Babel destroys itself at 4+ placed by another card's effect.
+            SpellEventsAndHandSendTriggersRuntime.AfterSpellCounterAddedByEffect(engine, card, source);
         }
 
         /// <summary>Face-up holders on the whole field that can take 1 more Spell Counter.</summary>

@@ -87,6 +87,20 @@ namespace WRLDZ.Duel.TextEffects
         {
             DiscardEvents.NoteCause(engine, card, byEffectOf); // EngineHygiene: the central discard event's cause
             Note(engine, owner, card, byEffectOf, EffectTiming.DiscardedFromHandByOpponentEffect);
+            // SpellEventsAndHandSendTriggers batch: a discard is also a send from the hand to the GY (Elephant Statues).
+            Note(engine, owner, card, byEffectOf, EffectTiming.SentFromHandToGyByOpponentEffect);
+        }
+
+        /// <summary>
+        /// SpellEventsAndHandSendTriggers batch: <paramref name="card"/> was just sent from <paramref name="owner"/>'s hand
+        /// to the GY — not discarded (destroyed there by Crush Card Virus, or sent) — by an effect of a card
+        /// <paramref name="byEffectOf"/> controls (ygopro EVENT_TO_GRAVE, previous location hand, REASON_EFFECT, rp). Only
+        /// <see cref="EffectTiming.SentFromHandToGyByOpponentEffect"/> triggers; never for a cost or the hand size rule.
+        /// </summary>
+        public static void NoteSentFromHand(DuelEngine engine, DuelistState owner, CardInstance card,
+            DuelistState byEffectOf)
+        {
+            Note(engine, owner, card, byEffectOf, EffectTiming.SentFromHandToGyByOpponentEffect);
         }
 
         /// <summary><see cref="NoteDiscard"/> for each card of a mass discard (Card Destruction).</summary>
@@ -159,7 +173,9 @@ namespace WRLDZ.Duel.TextEffects
             if (clauses.Count == 0) return;
             engine.Log(q.Timing == EffectTiming.SentFromDeckToGyByOpponentEffect
                 ? $"{q.Card.Name} was sent from the Deck to the GY by the opponent's card effect — its effect activates."
-                : $"{q.Card.Name} was discarded by the opponent's card effect — its effect activates.");
+                : q.Timing == EffectTiming.SentFromHandToGyByOpponentEffect
+                    ? $"{q.Card.Name} was sent from the hand to the GY by the opponent's card effect — its effect activates."
+                    : $"{q.Card.Name} was discarded by the opponent's card effect — its effect activates.");
             foreach (var c in clauses)
             {
                 if (c == null) continue;

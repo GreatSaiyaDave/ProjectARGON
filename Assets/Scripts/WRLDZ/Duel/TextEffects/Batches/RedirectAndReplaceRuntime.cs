@@ -54,6 +54,13 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         public const string OpponentTargetsOneMonsterYouControl = "OpponentTargetsOneMonsterYouControl";
 
+        /// <summary>
+        /// SpellEventsAndHandSendTriggers batch — ActivationCondition: the opponent activated a Spell Card targeting exactly 1
+        /// Spell/Trap Card on the field (Fiend's Hand Mirror, Lua c58607704 s.tgcon); the new target is another Spell/Trap on
+        /// the field (<see cref="EffectZoneFilter.AnotherAppropriateSpellTrapTarget"/>).
+        /// </summary>
+        public const string OpponentSpellTargetsOneSpellTrap = "OpponentSpellTargetsOneSpellTrap";
+
         /// <summary>ConditionName: the answered Chain Link is the activation of a Spell Card.</summary>
         public const string AnswersSpell = "Spell";
 
@@ -67,7 +74,12 @@ namespace WRLDZ.Duel.TextEffects
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         public static bool IsRedirectCondition(string condition) =>
-            condition == OpponentSpellTargetsOneMonster || condition == OpponentTargetsOneMonsterYouControl;
+            condition == OpponentSpellTargetsOneMonster || condition == OpponentTargetsOneMonsterYouControl ||
+            condition == OpponentSpellTargetsOneSpellTrap;
+
+        /// <summary>Fiend's Hand Mirror: the answered link targets a Spell/Trap Card on the field, not a monster.</summary>
+        static bool SpellTrapMode(EffectClause clause) =>
+            clause != null && clause.Zone == EffectZoneFilter.AnotherAppropriateSpellTrapTarget;
 
         static bool AnswersAttacks(EffectClause clause) =>
             clause != null && clause.ActivationCondition == OpponentTargetsOneMonsterYouControl;
@@ -84,7 +96,9 @@ namespace WRLDZ.Duel.TextEffects
         {
             reason = clause?.ActivationCondition == OpponentTargetsOneMonsterYouControl
                 ? "Only when your opponent targets exactly 1 monster you control with an attack or a Spell/Trap Card."
-                : "Only when your opponent activates a Spell Card that targets exactly 1 monster on the field.";
+                : SpellTrapMode(clause)
+                    ? "Only when your opponent activates a Spell Card that targets exactly 1 Spell/Trap Card on the field."
+                    : "Only when your opponent activates a Spell Card that targets exactly 1 monster on the field.";
             if (engine == null || who == null || clause == null) return false;
             if (engine.BattleStep == BattleStep.DamageStep)
             {
@@ -138,17 +152,18 @@ namespace WRLDZ.Duel.TextEffects
                 ? def.IsSpell || def.IsTrap
                 : clause.ConditionName == AnswersSpell && def.IsSpell && !def.IsTrap;
             if (!kindOk) return false;
-            if (!TryRedirectableTarget(engine, link, out current, out _)) return false;
+            if (!TryRedirectableTarget(engine, link, out current, out _, SpellTrapMode(clause))) return false;
             if (clause.Side == EffectSide.Controller && !who.TryFindMonster(current, out _)) return false;
             return true;
         }
 
         /// <summary>
         /// The single monster <paramref name="link"/> targets, and its targeted clause, when the link's resolution
-        /// applies its effect to <see cref="ChainLink.Target"/> (so a new target changes what it does).
+        /// applies its effect to <see cref="ChainLink.Target"/> (so a new target changes what it does). With
+        /// <paramref name="spellTrapTarget"/> (Fiend's Hand Mirror): the single Spell/Trap Card on the field it targets.
         /// </summary>
         internal static bool TryRedirectableTarget(DuelEngine engine, ChainLink link, out CardInstance current,
-            out EffectClause pick)
+            out EffectClause pick, bool spellTrapTarget = false)
         {
             current = null;
             pick = null;
@@ -158,7 +173,7 @@ namespace WRLDZ.Duel.TextEffects
             // "exactly 1 monster (and no other cards)".
             if (link.Targets.Count > 1 || (link.Targets.Count == 1 && !ReferenceEquals(link.Targets[0], target)))
                 return false;
-            if (!InMonsterZone(engine, target)) return false;
+            if (spellTrapTarget ? !OnFieldSpellTrap(engine, target) : !InMonsterZone(engine, target)) return false;
             var prog = CompiledEffectCache.GetOrCompile(link.Card.Def);
             if (prog == null || !prog.FullyCompiled) return false;
             var clauses = ResolutionClauses(link, prog);
@@ -171,7 +186,7 @@ namespace WRLDZ.Duel.TextEffects
                                            c.Zone != EffectZoneFilter.OpponentBattlingMonster).ToList();
             if (picks.Count == 0) return false;
             // The effect targets the card ("Target 1 …"), not a choice at resolution (Fissure).
-            if (picks.Exists(c => !c.IsPsctTarget || c.ChoiceDoesNotTarget)) return false;
+            if (picks.Exists(c => !TargetingTruthRuntime.ClauseTargets(c))) return false;
             current = target;
             pick = picks[0];
             return true;
@@ -294,8 +309,8 @@ namespace WRLDZ.Duel.TextEffects
                 ? AnsweredLink(engine, who)
                 : engine.Chain?.Last;
             if (!AnsweredLinkQualifies(engine, who, clause, link, out var target)) return list;
-            if (!TryRedirectableTarget(engine, link, out _, out var pick)) return list;
-            foreach (var m in AppropriateTargets(engine, link, pick))
+            if (!TryRedirectableTarget(engine, link, out _, out var pick, SpellTrapMode(clause))) return list;
+            foreach (var m in AppropriateTargets(engine, link, pick, SpellTrapMode(clause)))
             {
                 if (m == null || ReferenceEquals(m, target)) continue;
                 if (clause.Side == EffectSide.Controller && !who.TryFindMonster(m, out _)) continue;
@@ -312,7 +327,8 @@ namespace WRLDZ.Duel.TextEffects
         /// target list, narrowed to the legacy SpellTrapEffects list when that path chose the target), plus the
         /// printed face-up / face-down requirement of "Target 1 face-up monster".
         /// </summary>
-        static IEnumerable<CardInstance> AppropriateTargets(DuelEngine engine, ChainLink link, EffectClause pick)
+        static IEnumerable<CardInstance> AppropriateTargets(DuelEngine engine, ChainLink link, EffectClause pick,
+            bool spellTrapTarget = false)
         {
             var owner = link.Controller;
             var legal = TextEffectRuntime.CollectTargets(engine, owner, pick, link.Card);
@@ -331,7 +347,7 @@ namespace WRLDZ.Duel.TextEffects
             var faceDownOnly = RxTargetFaceDown.IsMatch(snippet);
             foreach (var t in legal)
             {
-                if (t == null || !InMonsterZone(engine, t)) continue;
+                if (t == null || (spellTrapTarget ? !OnFieldSpellTrap(engine, t) : !InMonsterZone(engine, t))) continue;
                 if (faceUpOnly && !t.FaceUp) continue;
                 if (faceDownOnly && t.FaceUp) continue;
                 yield return t;
@@ -360,6 +376,20 @@ namespace WRLDZ.Duel.TextEffects
             card != null && ((engine.Player?.TryFindMonster(card, out _) ?? false) ||
                              (engine.Opponent?.TryFindMonster(card, out _) ?? false));
 
+        /// <summary>SpellEventsAndHandSendTriggers batch: a card in a Spell &amp; Trap Zone or a Field Zone (Lua IsOnField + IsSpellTrap).</summary>
+        static bool OnFieldSpellTrap(DuelEngine engine, CardInstance card) =>
+            card != null && engine != null &&
+            ((engine.Player?.TryFindSpellTrap(card, out _) ?? false) ||
+             (engine.Opponent?.TryFindSpellTrap(card, out _) ?? false) ||
+             ReferenceEquals(engine.Player?.FieldSpellZone?.Occupant, card) ||
+             ReferenceEquals(engine.Opponent?.FieldSpellZone?.Occupant, card));
+
+        /// <summary><paramref name="who"/> controls <paramref name="card"/> (a monster, or a Spell/Trap on the field).</summary>
+        static bool Controls(DuelistState who, CardInstance card) =>
+            who != null && card != null &&
+            (who.TryFindMonster(card, out _) || who.TryFindSpellTrap(card, out _) ||
+             ReferenceEquals(who.FieldSpellZone?.Occupant, card));
+
         // ───────────────────────── resolution ─────────────────────────
 
         /// <summary>
@@ -383,7 +413,7 @@ namespace WRLDZ.Duel.TextEffects
             var link = engine.Chain?.Last;
             if (link != null && !link.Resolved)
             {
-                if (!InMonsterZone(engine, newTarget))
+                if (SpellTrapMode(clause) ? !OnFieldSpellTrap(engine, newTarget) : !InMonsterZone(engine, newTarget))
                 {
                     engine.Log($"{name}: {newTarget.Name} is no longer on the field — no effect.");
                     return;
@@ -476,18 +506,20 @@ namespace WRLDZ.Duel.TextEffects
             if (clause == null) return false;
             var link = AnsweredLink(engine, ai);
             if (!AnsweredLinkQualifies(engine, ai, clause, link, out var current)) return false;
-            if (!TryRedirectableTarget(engine, link, out _, out var pick)) return false;
+            if (!TryRedirectableTarget(engine, link, out _, out var pick, SpellTrapMode(clause))) return false;
             var candidates = Candidates(engine, ai, clause, card);
             if (candidates.Count == 0) return false;
-            var currentMine = ai.TryFindMonster(current, out _);
+            var currentMine = Controls(ai, current);
             if (IsHarmful(pick))
             {
                 if (!currentMine) return false;
-                return candidates.Exists(m => !ai.TryFindMonster(m, out _)) ||
-                       candidates.Exists(m => Value(m) < Value(current));
+                // Fiend's Hand Mirror may name itself (it leaves the field as it resolves, so the Spell then misses).
+                return candidates.Exists(m => !Controls(ai, m)) ||
+                       candidates.Exists(m => Value(m) < Value(current)) ||
+                       (SpellTrapMode(clause) && candidates.Contains(card));
             }
 
-            return !currentMine && candidates.Exists(m => ai.TryFindMonster(m, out _));
+            return !currentMine && candidates.Exists(m => Controls(ai, m));
         }
 
         /// <summary>
@@ -521,9 +553,20 @@ namespace WRLDZ.Duel.TextEffects
             var link = pr != null && pr.Timing == ResponseTiming.ChainResponse
                 ? AnsweredLink(engine, who, ownLinkOnTop: true)
                 : engine.Chain?.Last;
-            var harmful = !TryRedirectableTarget(engine, link, out _, out var pick) || IsHarmful(pick);
-            var theirs = targets.Where(m => !who.TryFindMonster(m, out _)).ToList();
-            var mine = targets.Where(m => who.TryFindMonster(m, out _)).ToList();
+            var stMode = SpellTrapMode(clause);
+            var harmful = !TryRedirectableTarget(engine, link, out _, out var pick, stMode) || IsHarmful(pick);
+            var theirs = targets.Where(m => !Controls(who, m)).ToList();
+            var mine = targets.Where(m => Controls(who, m)).ToList();
+            // Fiend's Hand Mirror: a card of this player whose own activation is still on the Chain (the Mirror itself)
+            // leaves the field before the redirected Spell resolves — the harmful Spell then misses.
+            if (harmful && stMode)
+            {
+                var leaving = mine.FirstOrDefault(m => engine.Chain?.Links != null &&
+                                                       engine.Chain.Links.Any(l => l != null && !l.Resolved &&
+                                                           ReferenceEquals(l.Card, m) && l.Controller == who));
+                if (leaving != null) return leaving;
+            }
+
             if (harmful)
                 return theirs.OrderByDescending(Value).FirstOrDefault() ?? mine.OrderBy(Value).First();
             return mine.OrderByDescending(Value).FirstOrDefault() ?? theirs.OrderBy(Value).First();
@@ -843,6 +886,8 @@ namespace WRLDZ.Duel.TextEffects
             // Every engine banish path stamps the turn (BanishedReturn: D.D. Scout Plane "was banished this turn").
             if (engine != null) card.BanishedTurnNumber = engine.TurnNumber;
             engine?.Log($"{card.Name} is banished instead of being sent to the GY.");
+            // ChaosBanishSummons batch: the banish event (Soul Absorption).
+            BanishEvents.Record(engine, card);
         }
 
         /// <summary>

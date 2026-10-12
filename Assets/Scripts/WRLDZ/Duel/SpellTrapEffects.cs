@@ -113,6 +113,11 @@ namespace WRLDZ.Duel
         /// (<see cref="TextEffects.EffectClause.RequiresSendRaceFromDeck"/>). Deck proxies, not a search.
         /// </summary>
         SendRaceMonsterFromDeckToGy,
+        /// <summary>
+        /// ChaosBanishSummons batch — Primal Seed: any card in your banished pile
+        /// (<see cref="TextEffects.EffectZoneFilter.ControllerBanishedCards"/>, text target path).
+        /// </summary>
+        CardInYourBanished,
     }
 
     /// <summary>In-flight activation waiting for a target choice.</summary>
@@ -612,6 +617,8 @@ namespace WRLDZ.Duel
             {
                 // TypeDeclaration batch (v142): declare 1 Monster Type (declaration tokens).
                 TextEffects.EffectZoneFilter.DeclaredMonsterTypes => EffectTargetKind.DeclareMonsterType,
+                // TokensDeclarationsAndPicks batch: DNA Transplant declares 1 Attribute (declaration tokens).
+                TextEffects.EffectZoneFilter.DeclaredAttributes => EffectTargetKind.DeclareAttribute,
                 TextEffects.EffectZoneFilter.EitherGyMonsters => EffectTargetKind.MonsterInEitherGy,
                 TextEffects.EffectZoneFilter.EitherGyCards => EffectTargetKind.CardInEitherGy,
                 TextEffects.EffectZoneFilter.ControllerGyCards => EffectTargetKind.CardInEitherGy,
@@ -744,6 +751,9 @@ namespace WRLDZ.Duel
             // BattleDestroyedTriggers batch: Agido's GY pick (an AskCardPick whose card is Special Summoned).
             if (TextEffects.ContinuousTrapsAndSpiritSupportRuntime.TryPickAsksPlacement(pending, out var cardPickPlacement))
                 return cardPickPlacement;
+            // RecoveryAndPhaseCosts batch: Dimension Distortion's banished target is Special Summoned (face-up ATK or DEF).
+            if (TextEffects.RecoveryAndPhaseCostsRuntime.TryPickAsksPlacement(pending, out var banishedPlacement))
+                return banishedPlacement;
 
             // A cost pick is not the effect's target — never place it on the field.
             if (pending.AwaitingDiscardCost || pending.AwaitingIgnitionCost ||
@@ -899,6 +909,9 @@ namespace WRLDZ.Duel
             CardInstance exceptCard,
             bool specialSummonFromGy)
         {
+            // TargetingTruth batch (v177): a choice that does not target (Fissure) ignores "cannot be targeted" protections
+            // (Lord of D.); mirror of TextEffectRuntime.CollectTargets.
+            var shieldable = !TextEffects.TargetingTruthRuntime.ActivationPicksWithoutTargeting(exceptCard);
             var list = new List<CardInstance>();
             if (engine == null || who == null || kind == EffectTargetKind.None)
                 return list;
@@ -909,6 +922,12 @@ namespace WRLDZ.Duel
                 case EffectTargetKind.DeclareMonsterType:
                     // TypeDeclaration batch (v142): one declaration token per Monster Type.
                     list.AddRange(TextEffects.TypeDeclarationRuntime.MonsterTypeTokens(engine));
+                    break;
+
+                case EffectTargetKind.DeclareAttribute:
+                    // TokensDeclarationsAndPicks batch: DNA Transplant — one declaration token per Attribute (Earthshaker
+                    // offers its own Attributes through AskCardPick and never reaches this list).
+                    list.AddRange(TextEffects.TokensDeclarationsAndPicksRuntime.AttributeDeclarationTokens());
                     break;
 
                 case EffectTargetKind.MonsterInEitherGy:
@@ -962,7 +981,7 @@ namespace WRLDZ.Duel
                     foreach (var m in who.MonstersOnField())
                     {
                         if (m == null || m == exceptCard) continue;
-                        if (engine.IsDragonTargetProtected(m)) continue;
+                        if (shieldable && engine.IsDragonTargetProtected(m)) continue;
                         list.Add(m);
                     }
                     break;
@@ -984,7 +1003,7 @@ namespace WRLDZ.Duel
                     foreach (var m in opp.MonstersOnField())
                     {
                         if (!m.FaceUp) continue;
-                        if (engine.IsDragonTargetProtected(m)) continue;
+                        if (shieldable && engine.IsDragonTargetProtected(m)) continue;
                         if (nsOnly && !TextEffects.TakeControlRuntime.IsNormalSummonableCard(m)) continue;
                         list.Add(m);
                     }
@@ -997,7 +1016,7 @@ namespace WRLDZ.Duel
                     foreach (var m in opp.MonstersOnField())
                     {
                         if (m == null) continue;
-                        if (engine.IsDragonTargetProtected(m)) continue;
+                        if (shieldable && engine.IsDragonTargetProtected(m)) continue;
                         list.Add(m);
                     }
                     break;
@@ -1008,7 +1027,7 @@ namespace WRLDZ.Duel
                     {
                         if (!m.FaceUp) continue;
                         if (m.CurrentAtk > opp.LifePoints) continue;
-                        if (engine.IsDragonTargetProtected(m)) continue;
+                        if (shieldable && engine.IsDragonTargetProtected(m)) continue;
                         list.Add(m);
                     }
                     break;
@@ -1375,6 +1394,9 @@ namespace WRLDZ.Duel
             // was destroyed (the idle "sent to your GY" window, the end of the Damage Step).
             TextEffects.ArchfiendRidersRuntime.CollectHandResponses(engine, who, timing, list);
 
+            // ChaosBanishSummons batch: Strike Ninja's Quick Effect in the opponent's open state, an attack, a Summon.
+            TextEffects.ChaosBanishSummonsRuntime.CollectResponses(engine, who, timing, list);
+
             // RuleLocks batch: Chain Energy — a card in the hand cannot be activated without the LP toll.
             list.RemoveAll(c => TextEffects.RuleLocksRuntime.HandActionUnaffordable(engine, who, c, out _));
             return list;
@@ -1454,6 +1476,9 @@ namespace WRLDZ.Duel
                 if (c.Action == TextEffects.EffectActionKind.NegateAttackAndAnotherOpponentMonsterBattlesInstead &&
                     !TextEffects.BattleWindowsRuntime.DarkSpiritAnswerLegal(engine))
                     return false;
+                // TokensDeclarationsAndPicks batch: A Hero Emerges needs a free zone and a summonable hand monster (s.target).
+                if (!TextEffects.TokensDeclarationsAndPicksRuntime.AttackAnswerLegal(engine, c))
+                    return false;
             }
 
             return true;
@@ -1481,6 +1506,9 @@ namespace WRLDZ.Duel
             var quickProg = TextEffects.CompiledEffectCache.GetOrCompile(card.Def);
             if (TextEffects.FaceUpQuickEffectsRuntime.IsFaceUpQuickCard(who, card, quickProg))
                 return TextEffects.FaceUpQuickEffectsRuntime.CanActivateQuick(engine, who, card, quickProg, out _);
+            // ChaosBanishSummons batch: Strike Ninja's free-chain Quick Effect (before the battle-only monster Quick Effects).
+            if (TextEffects.ChaosBanishSummonsRuntime.TryIsLegalResponse(engine, who, card, out var ninjaLegal))
+                return ninjaLegal;
             // BattleBoosts batch (v161): a face-up monster's battle Quick Effect answers only its own windows.
             if (TextEffects.BattleBoostsRuntime.IsMonsterQuickCard(who, card, quickProg))
                 return TextEffects.BattleBoostsRuntime.CanActivateQuick(engine, who, card, quickProg, out _);
@@ -1706,7 +1734,10 @@ namespace WRLDZ.Duel
                 // field to the GY as the cost.
                 TextEffects.CallsDiceAndSetTriggersRuntime.PayActivationCost(engine, who, card, prog);
                 if (engine.GameOver) return true;
-                var opened = engine.OpenChainResponseWindow(engine.OpponentOf(who));
+                // SpellEventsAndHandSendTriggers batch: a trigger on this card activation (Spirit of the Pot of Greed) goes
+                // right above it; the opponent of the last link's controller may respond first.
+                TextEffects.SpellEventsAndHandSendTriggersRuntime.OnCardActivationPlaced(engine, who, card);
+                var opened = engine.OpenChainResponseWindow(engine.OpponentOf(engine.Chain.Last?.Controller ?? who));
                 if (!opened)
                 {
                     engine.Chain.StartResolution();
@@ -1807,6 +1838,8 @@ namespace WRLDZ.Duel
                     c.Zone == EffectZoneFilter.FieldFaceDownMonsters ||
                     // PerCopyDeck batch (v163): Graverobber's Spell in the opponent's GY (no legacy list).
                     c.Zone == EffectZoneFilter.OppGySpells ||
+                    // ChaosBanishSummons batch: Primal Seed's cards in your banished pile (no legacy list).
+                    c.Zone == EffectZoneFilter.ControllerBanishedCards ||
                     // SimpleTargetUtility batch (v173): Fairy of the Spring's Equip Spell in your own GY (no legacy list).
                     c.Zone == EffectZoneFilter.ControllerGyEquipSpells ||
                     // NegationMonsters batch (v161): Double Snare's face-up card that negates Trap effects (no legacy list).
@@ -1817,6 +1850,9 @@ namespace WRLDZ.Duel
                     c.Zone == EffectZoneFilter.ControllerFaceUpSpellsExceptThis ||
                     // StandbyBurnsAndDice batch (v162): Mask of Dispel's face-up Spell on either field (no legacy list).
                     c.Zone == EffectZoneFilter.FieldFaceUpSpells ||
+                    // RecoveryAndPhaseCosts batch: Dimension Distortion's face-up monster in your banished pile (no legacy
+                    // list; the target is chosen as the card is activated).
+                    c.Zone == EffectZoneFilter.ControllerBanishedFaceUpMonsters ||
                     // A targeted clause with a numeric parameter (Rush Recklessly's +700 ATK, Energy Drain's 200 per
                     // card, Soul Release's "up to 5") or several targets (Backup Soldier, Dark Factory). Amount is not a
                     // target count here: TextEffectRuntime.TargetPicks decides how many picks the prompt takes. (The
@@ -1828,6 +1864,9 @@ namespace WRLDZ.Duel
                     c.Zone == EffectZoneFilter.OppGyCards ||
                     // SimpleSpellTraps batch: Emergency Provisions sends its cost as it is activated.
                     c.Action == EffectActionKind.GainLpPerSpellTrapSentAsCost ||
+                    // TokensDeclarationsAndPicks batch: Stray Lambs / Scapegoat bind their summon oath as they are
+                    // activated (the compiled flow applies the activation's clauses while the Chain Link is recorded).
+                    c.ForbidsOtherSummonsThisTurn ||
                     // BattleRules batch: The Secret of the Bandit targets 1 face-up monster on either field as it is
                     // activated (the legacy AnyMonsterOnField list includes Sets).
                     c.Action == EffectActionKind.OpponentDiscardsRandomEachTimeTargetInflictsBattleDamageThisTurn ||
@@ -1921,6 +1960,10 @@ namespace WRLDZ.Duel
             if (TextEffects.FaceUpQuickEffectsRuntime.TryActivate(engine, who, card, fromHand, autoPickTarget,
                     out var quickOk))
                 return quickOk;
+            // ChaosBanishSummons batch: Strike Ninja's free-chain Quick Effect seats its own Spell Speed 2 link.
+            if (TextEffects.ChaosBanishSummonsRuntime.TryActivateNinja(engine, who, card, fromHand, autoPickTarget,
+                    out var ninjaOk))
+                return ninjaOk;
             // BattleBoosts batch (v161): a face-up monster's battle Quick Effect (Injection Fairy Lily, Spirit Ryu) seats its
             // own Spell Speed 2 link in its window.
             if (TextEffects.BattleBoostsRuntime.TryActivate(engine, who, card, fromHand, autoPickTarget,
@@ -2392,6 +2435,8 @@ namespace WRLDZ.Duel
             pick ??= legal.FirstOrDefault(c => TextEffects.FaceUpQuickEffectsRuntime.AiWantsQuickEffect(engine, who, c));
             // BattleBoosts batch (v161): a battle Quick Effect that wins the battle or makes a direct attack lethal.
             pick ??= legal.FirstOrDefault(c => TextEffects.BattleBoostsRuntime.AiWantsQuickEffect(engine, who, c));
+            // ChaosBanishSummons batch: Strike Ninja dodges a Chain Link or an attack that would remove it.
+            pick ??= legal.FirstOrDefault(c => TextEffects.ChaosBanishSummonsRuntime.AiWantsNinja(engine, who, c));
             // TargetNegationsAndHandQuickEffects batch (v163): Charm of Shabti when an attack would destroy a Gravekeeper's.
             pick ??= legal.FirstOrDefault(c =>
                 TextEffects.TargetNegationsAndHandQuickEffectsRuntime.AiWantsHandQuick(engine, who, c));
@@ -2942,6 +2987,8 @@ namespace WRLDZ.Duel
                     return TextEffects.TargetedClassicsRuntime.AutoPickFaceDownToDestroy(engine, who, targets);
 case EffectTargetKind.DeclareMonsterType:
                     return TextEffects.TypeDeclarationRuntime.AiPickMonsterType(engine, who, targets);
+                case EffectTargetKind.DeclareAttribute:
+                    return TextEffects.TokensDeclarationsAndPicksRuntime.AiPickAttribute(engine, who, targets);
                 case EffectTargetKind.YourMonster when DestroysOwnMonsterToMill(engine.PendingActivation?.Card):
                     // Assault on GHQ destroys your own monster to mill: give up the weakest.
                     return targets.OrderBy(m => m.CurrentAtk).First();

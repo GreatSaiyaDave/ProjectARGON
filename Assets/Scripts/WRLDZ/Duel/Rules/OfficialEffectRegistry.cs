@@ -322,6 +322,9 @@ namespace WRLDZ.Duel.Rules
             if (def.IsMonster && !fromHand)
             {
                 var mProg = CompiledEffectCache.GetOrCompile(def);
+                // ChaosBanishSummons batch: Strike Ninja's free-chain Quick Effect in your own open game state.
+                if (ChaosBanishSummonsRuntime.IsNinjaCard(who, card, mProg))
+                    return ChaosBanishSummonsRuntime.CanActivateNinja(engine, who, card, mProg, out reason);
                 if (mProg != null && mProg.FullyCompiled && mProg.CanResolveAny &&
                     mProg.HasTiming(EffectTiming.Activate) &&
                     TextEffectRuntime.CanActivate(engine, who, card, fromHand, mProg, out reason))

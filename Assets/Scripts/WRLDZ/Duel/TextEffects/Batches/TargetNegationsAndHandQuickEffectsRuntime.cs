@@ -158,7 +158,7 @@ namespace WRLDZ.Duel.TextEffects
             foreach (var c in prog.ClausesFor(EffectTiming.Activate))
             {
                 if (c == null || EffectVocabulary.ResolutionOf(c) != EffectResolutionKind.Destroy) continue;
-                if (!c.RequiresTargetChoice || c.ChoiceDoesNotTarget) return false;
+                if (!TargetingTruthRuntime.PicksTarget(c)) return false;
                 if (c.TargetUpTo || c.RequiresSecondTarget || c.DistinctTargetGroup || c.TargetCount > 1 ||
                     c.ControllerTargetCount > 1 || c.OpponentTargetCount > 0)
                     return false;

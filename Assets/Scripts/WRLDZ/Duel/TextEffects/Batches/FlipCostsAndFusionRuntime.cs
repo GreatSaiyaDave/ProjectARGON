@@ -64,8 +64,9 @@ namespace WRLDZ.Duel.TextEffects
                     picked.Add(pick);
                 }
 
-                foreach (var p in picked)
-                    engine.BanishCard(who, p);
+                using (BanishEvents.Group(engine)) // ChaosBanishSummons batch: one EVENT_REMOVE
+                    foreach (var p in picked)
+                        engine.BanishCard(who, p);
                 engine.Log($"{monster?.Name}: {who.Name} banishes {string.Join(", ", picked.Select(p => p.Name))} " +
                            "from their hand at random (cost).");
             }
@@ -73,6 +74,8 @@ namespace WRLDZ.Duel.TextEffects
             if (deck > 0)
             {
                 var names = new List<string>();
+                // ChaosBanishSummons batch: the top cards are banished at the same time (one EVENT_REMOVE).
+                using var deckBanish = BanishEvents.Group(engine);
                 for (var i = 0; i < deck && who.Deck.Count > 0; i++)
                 {
                     var id = who.Deck[0];
@@ -83,6 +86,7 @@ namespace WRLDZ.Duel.TextEffects
                     inst.BanishedTurnNumber = engine.TurnNumber;
                     // PerCopyDeck batch (v163): a copy another player owns is banished to its owner's pile.
                     PerCopyDeckRuntime.OwnersPile(who, inst).Banished.Add(inst);
+                    BanishEvents.Record(engine, inst);
                     names.Add(inst.Name);
                 }
 

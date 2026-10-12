@@ -97,6 +97,8 @@ namespace WRLDZ.Duel.TextEffects
             target.FaceUp = true;
             if (!RedirectAndReplaceRuntime.PutInGraveyard(engine, owner, target))
                 return false;
+            // RecoveryAndPhaseCosts batch: a REASON_RETURN trip (Manticore of Darkness ignores it).
+            GyEntryStamps.AddReason(engine, target, GyEntryReason.Return, null);
             engine.GameEvents.Add(DuelGameEventKind.SentToGy, engine.TurnNumber, owner, target, source);
             engine.Log($"{source?.Name}: {target.Name} returns from the banished pile to {owner.Name}'s GY.");
             return true;

@@ -1364,6 +1364,9 @@ namespace WRLDZ.Duel
             ResetOnFieldEntry(card);
             if (!asSet)
                 card.NormalOrFlipSummonedTurn = TurnNumber;
+            // TokensDeclarationsAndPicks batch: this turn's summon record (Stray Lambs / Scapegoat; a Set is not a Summon).
+            if (!asSet)
+                TextEffects.TokensDeclarationsAndPicksRuntime.NoteSummon(this, who);
             // SpellCounterSpenders batch: Armor Exe cannot attack the turn it is Normal Summoned.
             if (!asSet)
                 TextEffects.SpellCounterSpendersRuntime.OnNormalOrFlipSummoned(this, card);
@@ -1481,6 +1484,8 @@ namespace WRLDZ.Duel
             monster.ChangedPositionThisTurn = true;
             monster.WasTributeSummoned = false;
             monster.NormalOrFlipSummonedTurn = TurnNumber;
+            // TokensDeclarationsAndPicks batch: this turn's summon record (Stray Lambs / Scapegoat).
+            TextEffects.TokensDeclarationsAndPicksRuntime.NoteSummon(this, who);
             // SpellCounterSpenders batch: Armor Exe cannot attack the turn it is Flip Summoned.
             TextEffects.SpellCounterSpendersRuntime.OnNormalOrFlipSummoned(this, monster);
             Log(who.IsPlayer
@@ -1958,6 +1963,11 @@ namespace WRLDZ.Duel
                 // window behind the idle link; it can open now (no-op unless one is queued).
                 if (!Ocg.OcgLabDuelHost.IsActive)
                     TextEffects.HandDisruptionRuntime.FlushDrawWindow(this);
+                // ChaosBanishSummons batch: a banish made by that inline resolution (Chaos Sorcerer's ignition, Gustaph)
+                // triggers Soul Absorption now (Notify ran while the idle link still blocked it).
+                if (!Ocg.OcgLabDuelHost.IsActive && !GameOver && !TextEffects.SimultaneousTriggersRuntime.Busy(this) &&
+                    PlayIdleForDeferredEvents())
+                    TextEffects.BanishEvents.FireQueuedTriggers(this);
             }
         }
 
@@ -2227,11 +2237,15 @@ namespace WRLDZ.Duel
                 pile.Banished.Add(card);
             card.BanishedTurnNumber = TurnNumber;
             Log($"{card.Name} is banished.");
+            // ChaosBanishSummons batch: the banish event (Lua EVENT_REMOVE; Soul Absorption).
+            TextEffects.BanishEvents.Record(this, card);
         }
 
         public int BanishCopiesFromHandAndDeck(DuelistState who, int cardId)
         {
             if (who == null || cardId <= 0) return 0;
+            // ChaosBanishSummons batch: the hand and Deck copies are banished at the same time (one EVENT_REMOVE).
+            using var banishGroup = TextEffects.BanishEvents.Group(this);
             var n = 0;
             if (who.Hand != null)
             {
@@ -2257,6 +2271,7 @@ namespace WRLDZ.Duel
                     var pile = PileOwner(who, inst);
                     if (!pile.Banished.Contains(inst))
                         pile.Banished.Add(inst);
+                    TextEffects.BanishEvents.Record(this, inst);
                     n++;
                 }
             }
@@ -3303,6 +3318,8 @@ namespace WRLDZ.Duel
             card.SentByContinuousSpellEffect = false;
             card.SentFromFieldTurnNumber = 0;
             who.MonsterZones[idx].Occupant = card;
+            // TokensDeclarationsAndPicks batch: this turn's summon record (Stray Lambs / Scapegoat).
+            TextEffects.TokensDeclarationsAndPicksRuntime.NoteSummon(this, who);
             // "Cannot attack the turn it is Special Summoned." (Toons batch).
             TextEffects.ToonsRuntime.OnSpecialSummoned(this, card, faceUp);
             // Gradius' Option: link it to the selected face-up "Gradius" (SpecialSummonEffects batch, v161).
@@ -3844,6 +3861,8 @@ namespace WRLDZ.Duel
             var max = 1 + ExtraAttacksAllowed(attacker);
             // Asura Priest (SpiritMonsters batch): one more attack while an opponent's monster was not attacked yet.
             max = TextEffects.SpiritMonstersRuntime.AdjustMaxAttacks(this, attacker, max);
+            // ChaosBanishSummons batch: Black Luster Soldier - Envoy of the Beginning's second attack in a row.
+            max = TextEffects.ChaosBanishSummonsRuntime.AdjustMaxAttacks(this, attacker, max);
             // Soft residual: The Dark Door ContinuousWhileFaceUp BP attack-count gate
             // (Mask-style Soft surgical). Only 1 monster may attack per Battle Phase —
             // if another of the controller's monsters already declared, Soft-clamp this
@@ -3943,6 +3962,9 @@ namespace WRLDZ.Duel
                 FieldSpellEffects.UmiIsOnField(this))
                 return true;
             if (YgoProContinuousCatalog.GrantsDirectAttack(this, attacker))
+                return true;
+            // EndOfDamageStepRiders batch: Drillago — while the opponent controls only face-up monsters with N or more ATK.
+            if (TextEffects.EndOfDamageStepRidersRuntime.GrantsDirectAttack(this, attacker))
                 return true;
             // Toon rule (Toons batch): direct attacks while the opponent controls no face-up Toon monster.
             if (TextEffects.ToonsRuntime.GrantsDirectAttack(this, attacker))
@@ -4137,6 +4159,8 @@ namespace WRLDZ.Duel
             DeclaredAttackingPlayer = who;
             // Asura Priest (SpiritMonsters batch): the monsters it attacked this Battle Phase.
             TextEffects.SpiritMonstersRuntime.NoteAttackDeclared(this, attacker, targetOrNull);
+            // ChaosBanishSummons batch: another monster's attack ends a second attack "in a row".
+            TextEffects.ChaosBanishSummonsRuntime.NoteAttackDeclared(this, attacker);
             GameEvents.Add(DuelGameEventKind.DeclaredAttack, TurnNumber, who, attacker, targetOrNull);
             var hadMonstersAtDeclaration = HasMonsters(OpponentOf(who));
 
@@ -4337,6 +4361,9 @@ namespace WRLDZ.Duel
 
                 var link = Chain.PopNextToResolve();
                 if (link == null) break;
+                // SpellEventsAndHandSendTriggers batch: a Continuous / Field card whose own activation this is applies only
+                // from now on — the Spells of this Chain were activated before it applied (aux.chainreg).
+                TextEffects.SpellEventsAndHandSendTriggersRuntime.NoteLinkResolving(this, link);
                 // EffectDamageEvents batch (v162): damage modifiers keyed to a Chain Link apply while it resolves.
                 TextEffects.EffectDamageEventsRuntime.NoteResolving(this, link);
                 // Skull Invitation: settle the cards the previous links sent to the GY before this one resolves; this
@@ -4373,6 +4400,9 @@ namespace WRLDZ.Duel
                 // activation (negated: nothing; its card is not sent to the GY). Skull Lair's selection may hold it.
                 // BattleBoosts batch (v161): a face-up monster's battle Quick Effect link (Injection Fairy Lily, Spirit Ryu).
                 if (TextEffects.BattleBoostsRuntime.TryResolveLink(this, link))
+                    continue;
+                // ChaosBanishSummons batch: Strike Ninja's Quick Effect link (banish itself until the End Phase).
+                if (TextEffects.ChaosBanishSummonsRuntime.TryResolveNinjaLink(this, link))
                     continue;
                 // TargetNegationsAndHandQuickEffects batch (v163): a hand Quick Effect link (Charm of Shabti); a mandatory
                 // negation link that is no longer right after the activation it answers (Great Dezard, Fushioh Richie).
@@ -5367,6 +5397,14 @@ namespace WRLDZ.Duel
             if (calc.DamageToDefendingPlayer > 0 && defDamageAsEffectBy == null)
                 calc.DamageToDefendingPlayer = TextEffects.SimpleTriggersAndSwarmRuntime.ChangeBattleDamage(
                     this, attacker, targetOrNull, opp, calc.DamageToDefendingPlayer);
+            // BattleDamageEvents batch: Piranha Army (its direct attack) / Stone Statue of the Aztecs (attacked) double the
+            // battle damage their controller's opponent takes — after the set values above (ygopro doubles a changed value).
+            if (calc.DamageToDefendingPlayer > 0 && defDamageAsEffectBy == null)
+                calc.DamageToDefendingPlayer = TextEffects.BattleDamageEventsRuntime.DoubleBattleDamage(
+                    this, attacker, targetOrNull, opp, calc.DamageToDefendingPlayer);
+            if (calc.DamageToAttackingPlayer > 0 && targetOrNull != null && atkDamageAsEffectBy == null)
+                calc.DamageToAttackingPlayer = TextEffects.BattleDamageEventsRuntime.DoubleBattleDamage(
+                    this, attacker, targetOrNull, who, calc.DamageToAttackingPlayer);
             if (calc.DamageToDefendingPlayer > 0 && defDamageAsEffectBy != null)
                 ApplyEffectDamage(opp, calc.DamageToDefendingPlayer, defDamageAsEffectBy.Name, defDamageAsEffectBy);
             else if (calc.DamageToDefendingPlayer > 0)
@@ -5400,6 +5438,8 @@ namespace WRLDZ.Duel
                 if (gap > 0) gap = TextEffects.SpiritMonstersRuntime.HalveBattleDamage(this, targetOrNull, who, gap);
                 if (gap > 0 && atkDamageAsEffectBy == null)
                     gap = TextEffects.DcrEquipSpellsRuntime.ChangeBattleDamage(this, targetOrNull, who, gap);
+                if (gap > 0 && atkDamageAsEffectBy == null)
+                    gap = TextEffects.BattleDamageEventsRuntime.DoubleBattleDamage(this, attacker, targetOrNull, who, gap);
                 if (gap > 0)
                 {
                     Log(
@@ -5546,6 +5586,9 @@ namespace WRLDZ.Duel
             if (defenderDestroyed != null && targetOrNull != null && opp.TryFindMonster(targetOrNull, out _))
                 TextEffects.TextEffectRuntime.NotifyDestroyedOpponentByBattle(this, opp, who, targetOrNull,
                     defenderDestroyed);
+            // BattleDamageEvents batch: Begone, Knave! / Des Counterblow (EVENT_BATTLE_DAMAGE) share the chain with the
+            // destroys-by-battle triggers above, so they resolve after battle destruction (the destroyer's trigger still applies).
+            TextEffects.BattleDamageEventsRuntime.ResolvePending(this, attacker, targetOrNull);
 
             void DestroyBattled()
             {
@@ -6737,6 +6780,8 @@ namespace WRLDZ.Duel
             // DcrSpellTrapUtility batch: Interdimensional Matter Transporter — banished "until the End Phase" (Lua
             // EVENT_PHASE + PHASE_END, EFFECT_TYPE_CONTINUOUS): back at the start of the End Phase.
             TextEffects.DcrSpellTrapUtilityRuntime.OnEndPhase(this);
+            // ChaosBanishSummons batch: Chaosrider Gustaph's "until the end of your opponent's next turn" ATK.
+            TextEffects.ChaosBanishSummonsRuntime.OnEndPhase(this);
             if (GameOver) return;
             // TriggerChainResponses (v163 review): an End Phase trigger that goes on a Chain (Spirit's Invitation) is
             // seated once the End Phase effects below have resolved, never while they resolve.
@@ -6835,6 +6880,8 @@ namespace WRLDZ.Duel
             if (GameOver) return;
             // DcrSpellTrapUtility batch: a monster banished until the End Phase during this End Phase returns in it.
             TextEffects.DcrSpellTrapUtilityRuntime.OnEndPhase(this);
+            // ChaosBanishSummons batch: Chaosrider Gustaph's "until the end of your opponent's next turn" ATK.
+            TextEffects.ChaosBanishSummonsRuntime.OnEndPhase(this);
             if (GameOver) return;
             // Hand size limit. There is no discard-choice UI yet (DR-07), so the lowest-value card
             // (AiHeuristicPolicy.DiscardPriority) goes first — never simply the newest draw.
@@ -7134,6 +7181,8 @@ namespace WRLDZ.Duel
                         banPile.Banished.Add(card);
                     card.BanishedTurnNumber = TurnNumber;
                     Log($"Destroyed: {card.Name} (banished).");
+                    // ChaosBanishSummons batch: the banish event (Soul Absorption).
+                    TextEffects.BanishEvents.Record(this, card);
                     // Never sent to the GY, but still destroyed: its own "if this card is destroyed (by battle)"
                     // triggers that do not need the GY still activate (Slate Warrior; RedirectAndReplace, v142).
                     TextEffects.RedirectAndReplaceRuntime.ResolveDestroyedTriggersOutsideGy(this, owner, card,
@@ -7506,6 +7555,11 @@ namespace WRLDZ.Duel
                 // SimpleTriggersAndSwarm batch: "When this card is sent to the GY" (from anywhere) once play is idle.
                 if (!GameOver && !TextEffects.SimultaneousTriggersRuntime.Busy(this) && PlayIdleForDeferredEvents())
                     TextEffects.SimpleTriggersAndSwarmRuntime.FireQueuedSentToGy(this);
+                // ChaosBanishSummons batch: Chaosrider Gustaph's ATK ends when it leaves the field or is negated; Soul
+                // Absorption's queued banish triggers activate once play is idle.
+                TextEffects.ChaosBanishSummonsRuntime.OnBoardSettled(this);
+                if (!GameOver && !TextEffects.SimultaneousTriggersRuntime.Busy(this) && PlayIdleForDeferredEvents())
+                    TextEffects.BanishEvents.FireQueuedTriggers(this);
                 OfferDiscardedWindow();
                 // LastTurn batch (v163): a forced battle starts once the Chain and the triggers it left are over, and hands
                 // the duel back to the phase it interrupted once it is over.

@@ -125,6 +125,16 @@ namespace WRLDZ.Duel.TextEffects
                 return true;
             }
 
+            // TokensDeclarationsAndPicks batch: Stray Lambs / Scapegoat's oath (except that card's own Tokens) binds the
+            // summoning player, not the receiving field (the opponent's Ojama Trio still Summons onto the oath player's field).
+            if (TokensDeclarationsAndPicksRuntime.SummonOathLocked(engine,
+                    TokensDeclarationsAndPicksRuntime.SummoningPlayer(engine, who), special: true, exceptSource: null,
+                    out var oath))
+            {
+                reason = oath;
+                return true;
+            }
+
             return false;
         }
 
@@ -170,14 +180,19 @@ namespace WRLDZ.Duel.TextEffects
             out string reason)
         {
             reason = null;
+            // TokensDeclarationsAndPicks batch: Stray Lambs / Scapegoat's oath (Setting stays legal).
+            if (TokensDeclarationsAndPicksRuntime.SummonOathLocked(engine, who, special: false, exceptSource: null,
+                    out reason))
+                return true;
             if (!ExceptNamedLock(engine, who, card, out var jam)) return false;
             reason = $"You cannot Summon monsters ({jam.Name}); you can still Set.";
             return true;
         }
 
-        /// <summary>Jam Breeding Machine: <paramref name="who"/> cannot Flip Summon.</summary>
+        /// <summary>Jam Breeding Machine / Stray Lambs' oath: <paramref name="who"/> cannot Flip Summon.</summary>
         public static bool FlipSummonLocked(DuelEngine engine, DuelistState who, CardInstance card) =>
-            ExceptNamedLock(engine, who, card, out _);
+            ExceptNamedLock(engine, who, card, out _) ||
+            TokensDeclarationsAndPicksRuntime.SummonOathLocked(engine, who, special: false, exceptSource: null, out _);
 
         /// <summary>A face-up Jam Breeding Machine <paramref name="who"/> controls forbids Summoning <paramref name="card"/>.</summary>
         static bool ExceptNamedLock(DuelEngine engine, DuelistState who, CardInstance card, out CardInstance source)
@@ -229,6 +244,11 @@ namespace WRLDZ.Duel.TextEffects
             var relevant = activate.Where(c => c != null && (fromHand || !card.Def.IsMonster || !c.ActivatesFromHand))
                 .ToList();
             if (relevant.Count == 0 || !relevant.All(c => IsSpecialSummonAction(c.Action))) return false;
+            // TokensDeclarationsAndPicks batch: an oath of another card forbids it (this card's own oath, bound while it is
+            // being activated, does not).
+            if (TokensDeclarationsAndPicksRuntime.SummonOathLocked(engine, who, special: true, exceptSource: card,
+                    out reason))
+                return true;
             foreach (var c in relevant)
             {
                 var token = c.Action == EffectActionKind.SpecialSummonToken ? c.TokenName : null;

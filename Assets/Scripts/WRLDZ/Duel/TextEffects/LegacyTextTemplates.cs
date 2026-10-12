@@ -1091,17 +1091,21 @@ namespace WRLDZ.Duel.TextEffects
                 MakesChainLink = true
             });
 
+            // ChaosBanishSummons batch: the old-wording banish procedure (Fenrir, Silpheed, Garuda / Aqua / The Rock Spirit,
+            // Soul of Purity and Light) is the card's own hand procedure — Lua EFFECT_SPSUMMON_PROC + EnableReviveLimit, the
+            // banish paid as its cost, no Chain Link — the Toons procedure clause EngineHygieneRuntime pays (it used to be a
+            // negatable hand Activate clause).
             var ssBan = RxSsByBanishAttrGy.Match(text);
             Add(ssBan, ssBan.Success
                 ? new EffectClause
                 {
-                    Timing = EffectTiming.Activate,
-                    Action = EffectActionKind.SpecialSummonThisFromHand,
-                    ActivatesFromHand = true,
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.SpecialSummonFromHandProcedure,
+                    Amount = 0, // no Tribute (DuelUI reads HandProcedureOf(...).Amount)
                     BanishFromGyCount = Parse(ssBan, 1, 2),
-                    AttributeFilter = ssBan.Groups[2].Value,
-                    MakesChainLink = true,
-                    IsOptional = true
+                    AttributeFilter = ssBan.Groups[2].Value.ToUpperInvariant(),
+                    FromHand = true,
+                    MakesChainLink = false
                 }
                 : null);
 

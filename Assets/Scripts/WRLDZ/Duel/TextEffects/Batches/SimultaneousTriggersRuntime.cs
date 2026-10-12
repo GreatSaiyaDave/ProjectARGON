@@ -1095,7 +1095,7 @@ namespace WRLDZ.Duel.TextEffects
                 }
             }
 
-            TextEffectRuntime.NotifyTargetingEffectsResolved(engine, live, e.Targeted.IsPsctTarget);
+            TextEffectRuntime.NotifyTargetingEffectsResolved(engine, live, TargetingTruthRuntime.ClauseTargets(e.Targeted));
             engine.NotifyPublic();
         }
     }

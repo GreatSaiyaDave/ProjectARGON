@@ -120,9 +120,10 @@ namespace WRLDZ.Duel.TextEffects
                 if (c.RequiresSecondTarget || c.ControllerTargetCount > 1 || c.OpponentTargetCount > 0) return false;
                 if (!c.RequiresTargetChoice) continue;
                 if (c.TargetCount > 1 || c.TargetUpTo || c.DistinctTargetGroup) return false;
-                // A choice made at resolution (Fissure) or one that does not target is no target.
-                if (c.ChoiceDoesNotTarget) return false;
-                if (c.IsPsctTarget || IsEquipSpell(def)) targeting++;
+                // A choice made at resolution (Fissure) or one that does not target is no target (TargetingTruth v177:
+                // an old-text "select" whose Lua targets — Stop Defense, Darkness Approaches — is one).
+                if (TargetingTruthRuntime.ClauseTargets(c) || (IsEquipSpell(def) && !TargetingTruthRuntime.IsNonTargetingChoice(c)))
+                    targeting++;
                 else return false;
             }
 

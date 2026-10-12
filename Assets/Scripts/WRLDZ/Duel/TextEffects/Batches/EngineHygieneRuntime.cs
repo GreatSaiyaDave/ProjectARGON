@@ -667,19 +667,25 @@ namespace WRLDZ.Duel.TextEffects
             if (engine == null || who?.Graveyard == null || proc == null) return list;
             // ForcedActivationAndSubstitution batch (v163): Spirit Elimination — face-up monsters of that Attribute
             // `who` controls stand in for the GY monsters (aux.SpElimFilter(c,true)).
+            // ChaosBanishSummons batch: "1 LIGHT and 1 DARK" — a monster of either Attribute is a candidate.
             if (SpiritEliminationRuntime.Affects(engine, who))
                 return SpiritEliminationRuntime.Substitutes(engine, who, card,
                     !string.IsNullOrEmpty(proc.AttributeFilter),
                     m => string.IsNullOrEmpty(proc.AttributeFilter) ||
                          string.Equals(EquipFamilyRuntime.CurrentAttribute(m), proc.AttributeFilter,
-                             StringComparison.OrdinalIgnoreCase));
+                             StringComparison.OrdinalIgnoreCase) ||
+                         (!string.IsNullOrEmpty(proc.SecondAttributeFilter) &&
+                          string.Equals(EquipFamilyRuntime.CurrentAttribute(m), proc.SecondAttributeFilter,
+                              StringComparison.OrdinalIgnoreCase)));
             if (ContinuousProtections.CannotBanishFromGraveyard(engine, who) || RuleLocksRuntime.BanishFromGyLocked(engine, who))
                 return list;
             foreach (var g in who.Graveyard)
             {
                 if (g?.Def == null || !g.Def.IsMonster) continue;
                 if (!string.IsNullOrEmpty(proc.AttributeFilter) &&
-                    !string.Equals(g.Def.attribute, proc.AttributeFilter, StringComparison.OrdinalIgnoreCase))
+                    !string.Equals(g.Def.attribute, proc.AttributeFilter, StringComparison.OrdinalIgnoreCase) &&
+                    !(!string.IsNullOrEmpty(proc.SecondAttributeFilter) &&
+                      string.Equals(g.Def.attribute, proc.SecondAttributeFilter, StringComparison.OrdinalIgnoreCase)))
                     continue;
                 if (ContinuousProtections.GyMovementLocked(engine, card, g)) continue;
                 list.Add(g);
@@ -694,9 +700,46 @@ namespace WRLDZ.Duel.TextEffects
         {
             reason = "OK";
             if (proc == null || proc.BanishFromGyCount <= 0) return true;
-            if (ProcedureBanishCandidates(engine, who, card, proc).Count >= proc.BanishFromGyCount) return true;
+            var cands = ProcedureBanishCandidates(engine, who, card, proc);
+            if (IsPair(proc))
+            {
+                // ChaosBanishSummons batch (Lua rescon): one monster of each Attribute.
+                if (cands.Any(m => IsAttr(engine, who, m, proc.AttributeFilter)) &&
+                    cands.Any(m => IsAttr(engine, who, m, proc.SecondAttributeFilter)))
+                    return true;
+                reason = $"Need 1 {proc.AttributeFilter} and 1 {proc.SecondAttributeFilter} monster in your GY to banish.";
+                return false;
+            }
+
+            if (cands.Count >= proc.BanishFromGyCount) return true;
             reason = $"Need {proc.BanishFromGyCount} {proc.AttributeFilter} monster(s) in your GY to banish.";
             return false;
+        }
+
+        /// <summary>ChaosBanishSummons batch: "banishing 1 X and 1 Y monster" — exactly one of each Attribute.</summary>
+        public static bool IsPair(EffectClause proc) =>
+            proc != null && !string.IsNullOrEmpty(proc.SecondAttributeFilter) && !string.IsNullOrEmpty(proc.AttributeFilter);
+
+        /// <summary>The Attribute a procedure candidate counts with: live on the field (a Spirit Elimination substitute),
+        /// printed in the GY.</summary>
+        static bool IsAttr(DuelEngine engine, DuelistState who, CardInstance m, string attribute)
+        {
+            if (m?.Def == null || string.IsNullOrEmpty(attribute)) return false;
+            var live = who != null && who.TryFindMonster(m, out _);
+            return string.Equals(live ? EquipFamilyRuntime.CurrentAttribute(m) : m.Def.attribute, attribute,
+                StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>The candidates still legal after <paramref name="chosen"/> for a pair procedure (the other Attribute).</summary>
+        static List<CardInstance> PairRemaining(DuelEngine engine, DuelistState who, EffectClause proc,
+            List<CardInstance> candidates, List<CardInstance> chosen)
+        {
+            var needFirst = !chosen.Any(c => IsAttr(engine, who, c, proc.AttributeFilter));
+            var needSecond = !chosen.Any(c => IsAttr(engine, who, c, proc.SecondAttributeFilter));
+            return candidates.Where(c => !chosen.Contains(c) &&
+                                         ((needFirst && IsAttr(engine, who, c, proc.AttributeFilter)) ||
+                                          (needSecond && IsAttr(engine, who, c, proc.SecondAttributeFilter))))
+                .ToList();
         }
 
         /// <summary>
@@ -709,7 +752,21 @@ namespace WRLDZ.Duel.TextEffects
             var need = proc.BanishFromGyCount;
             var candidates = ProcedureBanishCandidates(engine, who, card, proc);
             if (candidates.Count < need) return false;
-            if (candidates.Count == need || !engine.IsHumanControlled(who))
+            if (IsPair(proc))
+            {
+                // ChaosBanishSummons batch: 1 of each Attribute. The AI (or a player with one monster of each) banishes
+                // the weakest of each at once; a player picks the first, then only the other Attribute is offered.
+                var firsts = candidates.Where(m => IsAttr(engine, who, m, proc.AttributeFilter)).ToList();
+                var seconds = candidates.Where(m => IsAttr(engine, who, m, proc.SecondAttributeFilter)).ToList();
+                if (firsts.Count == 0 || seconds.Count == 0) return false;
+                if ((firsts.Count == 1 && seconds.Count == 1) || !engine.IsHumanControlled(who))
+                    return BanishAndSummon(engine, who, card, new List<CardInstance>
+                    {
+                        firsts.OrderBy(g => g.Def.atk).ThenBy(g => g.Level).First(),
+                        seconds.OrderBy(g => g.Def.atk).ThenBy(g => g.Level).First()
+                    });
+            }
+            else if (candidates.Count == need || !engine.IsHumanControlled(who))
             {
                 var picks = candidates.Count == need
                     ? candidates
@@ -726,8 +783,10 @@ namespace WRLDZ.Duel.TextEffects
                 IsMonsterEffect = true,
                 UsesTextProgram = true,
                 TargetPicksRemaining = need,
-                PromptOverride = $"banish {need} {proc.AttributeFilter} monster(s) from your GY to Special Summon {card.Name} " +
-                                 "(Cancel to not Summon)."
+                PromptOverride = (IsPair(proc)
+                                     ? $"banish 1 {proc.AttributeFilter} and 1 {proc.SecondAttributeFilter} monster from your GY"
+                                     : $"banish {need} {proc.AttributeFilter} monster(s) from your GY") +
+                                 $" to Special Summon {card.Name} (Cancel to not Summon)."
             };
             pending.LegalTargets.AddRange(candidates);
             s_picks.Add(pending, new ProcedurePick
@@ -743,19 +802,26 @@ namespace WRLDZ.Duel.TextEffects
 
         static bool BanishAndSummon(DuelEngine engine, DuelistState who, CardInstance card, List<CardInstance> picks)
         {
-            foreach (var g in picks)
+            // ChaosBanishSummons batch: the procedure's banishes are one event (Soul Absorption), closed before the Summon.
+            using (BanishEvents.Group(engine))
             {
-                engine.BanishCard(who, g, by: who);
-                if (!who.Banished.Contains(g) && !engine.OpponentOf(who).Banished.Contains(g))
+                foreach (var g in picks)
                 {
-                    engine.Log($"{card.Name}: {g.Name} could not be banished — no Special Summon.");
-                    return false;
+                    engine.BanishCard(who, g, by: who);
+                    if (!who.Banished.Contains(g) && !engine.OpponentOf(who).Banished.Contains(g))
+                    {
+                        engine.Log($"{card.Name}: {g.Name} could not be banished — no Special Summon.");
+                        return false;
+                    }
                 }
             }
 
             engine.Log($"{who.Name} Special Summons {card.Name} from the hand by banishing " +
                        $"{string.Join(", ", picks.Select(p => p.Name))} from the GY.");
-            return engine.SpecialSummonByOwnHandProcedure(who, card, null);
+            var summoned = engine.SpecialSummonByOwnHandProcedure(who, card, null);
+            // ChaosBanishSummons batch: the Summon is done — the banish cost's triggers (Soul Absorption) can activate.
+            engine.NotifyPublic();
+            return summoned;
         }
 
         /// <summary>SpellTrapEffects.TryResolveWithTarget hook: a procedure banish pick.</summary>
@@ -768,6 +834,13 @@ namespace WRLDZ.Duel.TextEffects
             p.LegalTargets.Remove(target);
             pick.Chosen.Add(target);
             p.TargetPicksRemaining--;
+            // ChaosBanishSummons batch: after a LIGHT, only a DARK is left to pick (and the other way round).
+            if (IsPair(pick.Proc))
+            {
+                var rest = PairRemaining(engine, p.Controller, pick.Proc, p.LegalTargets.ToList(), pick.Chosen);
+                p.LegalTargets.Clear();
+                p.LegalTargets.AddRange(rest);
+            }
             if (p.TargetPicksRemaining > 0 && p.LegalTargets.Count > 0)
             {
                 engine.Log(p.Prompt);

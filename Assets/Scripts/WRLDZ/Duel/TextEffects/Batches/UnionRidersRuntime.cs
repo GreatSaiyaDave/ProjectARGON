@@ -450,7 +450,7 @@ namespace WRLDZ.Duel.TextEffects
 
             engine.Log($"{source.Name}: destroys {(pick.FaceUp ? pick.Name : "a Set card")}.");
             TextEffectRuntime.DestroyCard(engine, pick, source, false, who);
-            TextEffectRuntime.NotifyTargetingEffectsResolved(engine, new[] { pick }, c.IsPsctTarget);
+            TextEffectRuntime.NotifyTargetingEffectsResolved(engine, new[] { pick }, TargetingTruthRuntime.ClauseTargets(c));
             engine.NotifyPublic();
         }
 

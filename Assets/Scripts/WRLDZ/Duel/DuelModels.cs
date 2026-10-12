@@ -628,6 +628,8 @@ namespace WRLDZ.Duel
         Cost = 8,
         Discard = 16,
         Rule = 32,
+        /// <summary>RecoveryAndPhaseCosts batch: returned from the banished pile to the GY (ygopro REASON_RETURN, Miracle Dig).</summary>
+        Return = 64,
     }
 
     public class FieldZone

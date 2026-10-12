@@ -310,6 +310,11 @@ namespace WRLDZ.Duel.TextEffects
             /// Defense only, at most <see cref="Seat.Limit"/>; the cards not chosen stay in the hand.
             /// </summary>
             OwnHandFaceDown,
+            /// <summary>
+            /// RecoveryAndPhaseCosts batch — Dimension Fusion: face-up monsters in the player's own banished pile, as many
+            /// as their free Monster Zones allow (exactly that many), face-up Attack or Defense; the others stay banished.
+            /// </summary>
+            OwnBanishedFaceUp,
         }
 
         sealed class Pick
@@ -510,7 +515,8 @@ namespace WRLDZ.Duel.TextEffects
         /// <summary>No more picks: the undecided revealed / excavated monsters go to the GY; GY targets stay.</summary>
         static void CloseSeat(Plan plan, Seat seat)
         {
-            if (plan.Kind != PlanKind.OwnGyTarget && plan.Kind != PlanKind.OwnHandFaceDown)
+            if (plan.Kind != PlanKind.OwnGyTarget && plan.Kind != PlanKind.OwnHandFaceDown &&
+                plan.Kind != PlanKind.OwnBanishedFaceUp)
                 seat.ToGrave.AddRange(seat.Candidates);
             seat.Candidates.Clear();
             seat.PicksLeft = 0;
@@ -535,6 +541,15 @@ namespace WRLDZ.Duel.TextEffects
                     seat.PicksLeft = seat.Candidates.Count > 0
                         ? Math.Min(FreeZones(seat.Who), seat.Limit >= 0 ? seat.Limit : int.MaxValue)
                         : 0;
+                    continue;
+                }
+
+                if (plan.Kind == PlanKind.OwnBanishedFaceUp)
+                {
+                    // Dimension Fusion: the face-up banished monsters as they are now; as many as the free zones allow.
+                    seat.Candidates.Clear();
+                    seat.Candidates.AddRange(seat.Who.Banished.Where(b => IsBanishedSummonable(engine, seat.Who, plan.Source, b)));
+                    seat.PicksLeft = seat.Candidates.Count > 0 ? FreeZones(seat.Who) : 0;
                     continue;
                 }
 
@@ -575,7 +590,7 @@ namespace WRLDZ.Duel.TextEffects
                 if (seat.Candidates.Count == 0) continue;
                 if (seat.PicksLeft <= 0)
                 {
-                    if (plan.Kind == PlanKind.OwnHandFaceDown)
+                    if (plan.Kind == PlanKind.OwnHandFaceDown || plan.Kind == PlanKind.OwnBanishedFaceUp)
                         engine.Log($"{seat.Who.Name} has no free Monster Zone — nothing is Special Summoned for them.");
                     else if (plan.Kind != PlanKind.OwnGyTarget)
                         engine.Log($"{seat.Who.Name} has no free Monster Zone — {Names(seat.Candidates)} to the GY.");
@@ -615,6 +630,10 @@ namespace WRLDZ.Duel.TextEffects
                     return "select 1 monster in your GY to Special Summon, then Summon ATK (face-up Attack " +
                            "Position) or Summon DEF (face-down Defense Position). CANCEL selects your highest-ATK " +
                            "monster in face-up Attack Position.";
+                case PlanKind.OwnBanishedFaceUp:
+                    return $"{plan.Source?.Name}: choose {Math.Min(seat.PicksLeft, seat.Candidates.Count)} of your banished " +
+                           "monsters to Special Summon: tap one, then Summon ATK (face-up Attack Position) or Summon DEF " +
+                           "(face-up Defense Position). CANCEL takes your strongest ones.";
                 case PlanKind.OwnHandFaceDown:
                     return $"choose {seat.PicksLeft} monster(s) in your hand to Special Summon in face-down Defense " +
                            "Position. CANCEL takes your strongest ones.";
@@ -646,7 +665,9 @@ namespace WRLDZ.Duel.TextEffects
                     ? EffectTargetKind.MonsterInEitherGy
                     : plan.Kind == PlanKind.OwnHandFaceDown
                         ? EffectTargetKind.MonsterInHandOrDeck
-                        : EffectTargetKind.MonsterInYourDeckToSummon,
+                        : plan.Kind == PlanKind.OwnBanishedFaceUp
+                            ? EffectTargetKind.MonsterInYourBanished
+                            : EffectTargetKind.MonsterInYourDeckToSummon,
                 IsMonsterEffect = true,
                 UsesTextProgram = true,
                 TargetPicksRemaining = Math.Min(seat.PicksLeft, seat.Candidates.Count),
@@ -702,7 +723,8 @@ namespace WRLDZ.Duel.TextEffects
             pending.LegalTargets.Remove(pick);
             if ((plan.Kind == PlanKind.OwnGyTarget &&
                  (!seat.Who.Graveyard.Contains(pick) || !IsGyTarget(engine, seat.Who, plan.Source, pick))) ||
-                (plan.Kind == PlanKind.OwnHandFaceDown && !seat.Who.Hand.Contains(pick)))
+                (plan.Kind == PlanKind.OwnHandFaceDown && !seat.Who.Hand.Contains(pick)) ||
+                (plan.Kind == PlanKind.OwnBanishedFaceUp && !IsBanishedSummonable(engine, seat.Who, plan.Source, pick)))
             {
                 // It left the GY / hand (or became unsummonable) while the choice was open: offer the others.
                 engine.Log($"{plan.Source?.Name}: {pick.Name} can no longer be selected.");
@@ -789,7 +811,8 @@ namespace WRLDZ.Duel.TextEffects
                 }
                 else
                     // Major Riot: the strongest monsters (the AI's choice); the others: in reveal / excavation order.
-                    AutoDecide(plan, seat, inOrder: plan.Kind != PlanKind.OwnHandFaceDown);
+                    AutoDecide(plan, seat,
+                        inOrder: plan.Kind != PlanKind.OwnHandFaceDown && plan.Kind != PlanKind.OwnBanishedFaceUp);
             }
 
             Finish(engine, plan);
@@ -872,6 +895,31 @@ namespace WRLDZ.Duel.TextEffects
                     engine.NextSpecialSummonFromGraveyard = false;
                     who.Graveyard.Add(card);
                     engine.Log($"{card.Name} could not be Special Summoned — it stays in the GY.");
+                }
+
+                return;
+            }
+
+            if (plan.Kind == PlanKind.OwnBanishedFaceUp)
+            {
+                // Dimension Fusion: still face-up in the player's own banished pile.
+                if (!who.Banished.Contains(card) || !card.FaceUp)
+                {
+                    engine.Log($"{plan.Source?.Name}: {card.Name} is no longer banished — it is not Special Summoned.");
+                    return;
+                }
+
+                who.Banished.Remove(card);
+                DuelEngine.RecordOwnerOnFieldEntry(card, who, who);
+                if (engine.SpecialSummonToField(who, card, s.Position, s.FaceUp, SummonKind.SpecialSummon, s.Zone))
+                    engine.Log($"{plan.Source?.Name}: {who.Name} Special Summons {card.Name} from the banished pile in " +
+                               PositionText(s));
+                else
+                {
+                    card.ControlOwner = null;
+                    who.Banished.Add(card);
+                    card.FaceUp = true;
+                    engine.Log($"{card.Name} could not be Special Summoned — it stays banished.");
                 }
 
                 return;
@@ -1154,6 +1202,40 @@ namespace WRLDZ.Duel.TextEffects
             }
 
             if (plan.Seats.Count == 0) return;
+            DecideAndRun(engine, plan);
+        }
+
+        // ───────────────────── Dimension Fusion ─────────────────────
+
+        /// <summary>
+        /// RecoveryAndPhaseCosts batch — a face-up monster in <paramref name="who"/>'s own banished pile that this effect
+        /// can Special Summon for them (Lua s.filter: IsFaceup() and IsCanBeSpecialSummoned(e,0,player,false,false)).
+        /// </summary>
+        internal static bool IsBanishedSummonable(DuelEngine engine, DuelistState who, CardInstance source, CardInstance b) =>
+            who?.Banished != null && b?.Def != null && b.FaceUp && b.Def.IsMonster && who.Banished.Contains(b) &&
+            SpecialSummonLegality.CanBeSpecialSummoned(engine, who, b, source, SummonOrigin.Banished);
+
+        /// <summary>
+        /// RecoveryAndPhaseCosts batch — Dimension Fusion (Lua c23557835 s.op): <paramref name="activator"/>, then the other
+        /// player, each select exactly as many of their own face-up banished monsters as they have free Monster Zones (all of
+        /// them when fewer; Lua SelectMatchingCard(ft, ft)) and Special Summon them face-up in Attack or Defense Position,
+        /// all at once (SpecialSummonStep / SpecialSummonComplete). Mandatory: a human chooses (CANCEL takes the strongest
+        /// ones), the AI takes its best monsters.
+        /// </summary>
+        public static void ResolveEachPlayerSummonsFromOwnBanished(DuelEngine engine, DuelistState activator,
+            CardInstance source, EffectClause clause)
+        {
+            if (engine == null || activator == null) return;
+            var plan = new Plan
+            {
+                Kind = PlanKind.OwnBanishedFaceUp,
+                Source = source,
+                PositionChoice = true,
+                FaceUpOnly = true,
+                Clause = clause
+            };
+            foreach (var player in FirstThenOther(engine, activator))
+                plan.AddSeat(player);
             DecideAndRun(engine, plan);
         }
     }

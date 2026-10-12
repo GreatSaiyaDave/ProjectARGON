@@ -409,9 +409,24 @@ namespace WRLDZ.Duel.TextEffects
                 EffectActionKind.ContinuousNegateMonsterEffectsOnField or
                     EffectActionKind.ControlOfThisCannotSwitch or
                     EffectActionKind.NonEffectMonstersUnaffectedByOtherSpells => EffectResolutionKind.Protection,
+                // SpellEventsAndHandSendTriggers batch: Curse of Darkness, Tower of Babel, Spirit of the Pot of Greed.
+                EffectActionKind.InflictDamageToSpellActivatorAfterResolve => EffectResolutionKind.Damage,
+                EffectActionKind.DestroyThisAtNthSpellCounterDamageActivator => EffectResolutionKind.Destroy,
+                EffectActionKind.ActivatorOfNamedCardMayDrawWhileAttackPosition => EffectResolutionKind.Draw,
+                    EffectActionKind.BanishAllGyMonstersWhenOpponentTargetsGyMonster => EffectResolutionKind.Banish,
                 EffectActionKind.ContinuousForceAttackLockPosition or
                     EffectActionKind.ChangeSummonedMonstersToDefense => EffectResolutionKind.ChangePosition,
                 EffectActionKind.OpponentDiscardsRandomThenOneOfTheirChoice => EffectResolutionKind.Discard,
+                // TokensDeclarationsAndPicks batch: DNA Transplant's declaration (naming, as DeclareMonsterType) and its
+                // Attribute change (a stat change, as AllFaceUpMonstersBecomeDeclaredType); Jade Insect Whistle's Deck
+                // order; A Hero Emerges' random Special Summon; Wild Nature's Release; Balloon Lizard's counters and burn.
+                EffectActionKind.DeclareMonsterAttribute => EffectResolutionKind.TreatAsName,
+                EffectActionKind.AllFaceUpMonstersBecomeDeclaredAttribute => EffectResolutionKind.ModifyStats,
+                EffectActionKind.OpponentPlacesRaceMonsterFromTheirDeckOnTop => EffectResolutionKind.ReturnToDeck,
+                EffectActionKind.RandomHandCardSpecialSummonOrSendToGy => EffectResolutionKind.SpecialSummon,
+                EffectActionKind.TargetGainsAtkEqualToDefDestroyAtEndPhase => EffectResolutionKind.ModifyStats,
+                EffectActionKind.PlaceCounterOnThisCard => EffectResolutionKind.PlaceCounters,
+                EffectActionKind.InflictCountersTimesAmountToDestroyer => EffectResolutionKind.Damage,
                 // BattlePhaseEnd (v142): end-of-Battle-Phase and battle-aftermath effects.
                 EffectActionKind.ChangeThisToDefenseAfterAttackingLockPosition => EffectResolutionKind.ChangePosition,
                 EffectActionKind.DestroyAttackerAtOpponentsLaterEndPhase => EffectResolutionKind.Destroy,
@@ -549,6 +564,8 @@ namespace WRLDZ.Duel.TextEffects
                 EffectActionKind.CannotSelectMonsterAsAttackTarget or
                     EffectActionKind.OpponentSkipsNextBattlePhase => EffectResolutionKind.Protection,
                 EffectActionKind.HalveBattleDamageThisInflictsToOpponent => EffectResolutionKind.PreventDamage,
+                // BattleDamageEvents batch: Piranha Army / Stone Statue of the Aztecs double a battle's damage (marker).
+                EffectActionKind.DoubleBattleDamageToOpponent => EffectResolutionKind.Damage,
                 EffectActionKind.LookAtTopCardAtNextDrawPhaseTopOrBottom => EffectResolutionKind.ReturnToDeck,
                 // BattleBoosts batch (v161): Spear Dragon to Defense at the end of the Damage Step; Dragon's Rage piercing for
                 // your Dragons; Gray Wing's second attack this turn; The Hunter with 7 Weapons' declaration and its
@@ -653,6 +670,11 @@ namespace WRLDZ.Duel.TextEffects
                 EffectActionKind.RollDieDestroyOppMonsterInRolledZone => EffectResolutionKind.Destroy,
                 EffectActionKind.InflictDoublingDamageToBothPlayers => EffectResolutionKind.Damage,
                 EffectActionKind.InflictDamageToBothPlayers => EffectResolutionKind.Damage,
+                // ConditionalSpellsAndTraps batch: Self-Destruct Button's LP change (as LoseLifePoints), Destruction Ring's
+                // destroy-then-burn, D.D. Borderline's Battle Phase lock (as Frozen Soul's skip).
+                EffectActionKind.BothPlayersLifePointsBecomeZero => EffectResolutionKind.Damage,
+                EffectActionKind.DestroyTargetThenDamageBothPlayers => EffectResolutionKind.Destroy,
+                EffectActionKind.NoBattlePhaseWhileNoSpellInControllerGy => EffectResolutionKind.Protection,
                 EffectActionKind.LinkThisToTargetSpell => EffectResolutionKind.Equip,
                 EffectActionKind.InflictDamageToLinkedSpellController => EffectResolutionKind.Damage,
                 EffectActionKind.DestroyThisWhenLinkedSpellLeavesField => EffectResolutionKind.Destroy,
@@ -789,6 +811,32 @@ namespace WRLDZ.Duel.TextEffects
                     EffectActionKind.ContinuousOpponentCannotActivateQuickPlaySpells => EffectResolutionKind.Protection,
                 EffectActionKind.SendNegatedCardNameFromOpponentHandAndDeckToGy => EffectResolutionKind.Discard,
                 EffectActionKind.MayDestroyOpponentFaceUpMonsterInflictItsAtk => EffectResolutionKind.Destroy,
+                // EndOfDamageStepRiders batch: end-of-Damage-Step riders on the battled monster (Getsu Fuhma / Ryu Kokki
+                // destroy, Prickle Fairy's position change, Legendary Jujitsu Master's top-of-Deck), Prickle Fairy's attack
+                // shield, Insect Princess's Attack Position rule and Drillago's conditional direct attack.
+                EffectActionKind.DestroyBattledMonsterAtEndOfDamageStep => EffectResolutionKind.Destroy,
+                EffectActionKind.ChangeBattledMonsterToDefenseAtEndOfDamageStep or
+                    EffectActionKind.ContinuousChangeOpponentRaceMonstersToAttack => EffectResolutionKind.ChangePosition,
+                EffectActionKind.OpponentCannotAttackYourFaceUpRaceMonsters => EffectResolutionKind.Protection,
+                EffectActionKind.CanAttackDirectlyIfOpponentControlsOnlyFaceUpMonstersWithAtkAtLeast =>
+                    EffectResolutionKind.DirectAttack,
+                EffectActionKind.PlaceAttackerOnTopOfDeckAtEndOfDamageStep => EffectResolutionKind.ReturnToDeck,
+                // RecoveryAndPhaseCosts batch: Dimension Distortion, Dimension Fusion, Recycle, Reload, Coach Goblin, Manticore
+                // of Darkness.
+                EffectActionKind.SpecialSummonBanishedTarget or
+                    EffectActionKind.EachPlayerSpecialSummonsFaceUpBanishedMonstersAsPossible or
+                    EffectActionKind.SendRaceFromHandOrFieldSpecialSummonThisFromGyAtEndPhase => EffectResolutionKind.SpecialSummon,
+                EffectActionKind.PayLpReturnGyNonMonsterToDeckBottomAtYourStandby => EffectResolutionKind.ReturnToDeck,
+                EffectActionKind.ShuffleHandIntoDeckThenDrawSameNumber or
+                    EffectActionKind.ReturnHandNormalMonsterToDeckBottomDrawAtYourEndPhase => EffectResolutionKind.Draw,
+                // ChaosBanishSummons batch: Chaos Sorcerer / Black Luster Soldier - Envoy of the Beginning, Chaosrider Gustaph,
+                // Soul Absorption, Primal Seed, Strike Ninja.
+                EffectActionKind.BanishTargetedFieldMonster or
+                    EffectActionKind.BanishUpToSpellsFromYourGyGainAtkEach or
+                    EffectActionKind.BanishThisUntilEndPhase => EffectResolutionKind.Banish,
+                EffectActionKind.MakeSecondAttackInARow => EffectResolutionKind.ExtraAttack,
+                EffectActionKind.GainLpPerCardBanished => EffectResolutionKind.GainLp,
+                EffectActionKind.AddBanishedTargetsToHand => EffectResolutionKind.ReturnToHand,
                 EffectActionKind.None => EffectResolutionKind.None,
                 _ => EffectResolutionKind.UniqueException
             };

@@ -653,8 +653,11 @@ namespace WRLDZ.Duel.TextEffects
 
         /// <summary>The Soul Exchange oath is in force for <paramref name="who"/> this turn.</summary>
         public static bool BattlePhaseForbidden(DuelEngine engine, DuelistState who) =>
-            engine != null && who != null && who.BattlePhaseForbiddenTurn != 0 &&
-            who.BattlePhaseForbiddenTurn == engine.TurnNumber;
+            engine != null && who != null &&
+            ((who.BattlePhaseForbiddenTurn != 0 && who.BattlePhaseForbiddenTurn == engine.TurnNumber) ||
+             // ConditionalSpellsAndTraps batch: D.D. Borderline (EFFECT_CANNOT_BP for both players while no Spell is in
+             // its controller's GY).
+             ConditionalSpellsAndTrapsRuntime.BattlePhaseLocked(engine, who));
 
         /// <summary>A new turn: every "this turn" Tribute grant ends.</summary>
         public static void ClearTurnGrants(params DuelistState[] duelists)

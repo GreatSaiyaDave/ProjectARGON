@@ -315,6 +315,11 @@ Seed 853 to 885 programs (added 32, removed 0, changed 11). Runtimes live in `Te
 Compiler v167; Union procedure is now playable (monster moves into a Spell/Trap Zone). 0 Implemented-count bump — this is a shell for cards whose sentences already compiled. Report `Docs/CURRICULUM_BATCH_v167-union.md`.
 Seed 887 → 895 programs (added 8 including Z-Metal Tank; removed 0). Tests `Rules/Batches/UnionEquipRegressionTests.cs`. Duel checks: S/T-zone landing, one Union per host, once-per-turn, unequip SS, battle substitute, Z-Metal alt host. Arena: generic SpellCast / SpecialSummon; gap in `FX_MAP.md`.
 
+## Pass v177 (card batch v177-ioc-ast)
+
+Compiler v177; 55 cards Implemented (IOC and AST; 61 cards in the batch), 0 losses; suite 6845/0. Report `Docs/CURRICULUM_BATCH_v177-ioc-ast.md`.
+Groups: ConditionalSpellsAndTraps, EndOfDamageStepRiders, BattleDamageEvents, SpellEventsAndHandSendTriggers, RecoveryAndPhaseCosts, TokensDeclarationsAndPicks, ChaosBanishSummons (`BanishEvents` funnel), TargetingTruth (one targeting answer). Skipped: engine gaps recorded in ENGINE_MAP section 4.
+
 ## Pass v176 (card batch v176-dcr-ioc)
 
 Compiler v176; 59 cards Implemented (DCR and IOC), 0 losses; suite 6536/0. Report `Docs/CURRICULUM_BATCH_v176-dcr-ioc.md`.

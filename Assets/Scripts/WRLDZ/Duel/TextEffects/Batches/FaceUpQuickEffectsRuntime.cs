@@ -391,7 +391,7 @@ namespace WRLDZ.Duel.TextEffects
             var prog = CompiledEffectCache.GetOrCompile(def);
             if (prog == null || !prog.FullyCompiled) return false;
             // EFFECT_FLAG_CARD_TARGET: one of its clauses targets; IsChainDisablable: its effect can be negated.
-            if (!prog.ClauseList.Exists(c => c != null && c.RequiresTargetChoice && !c.ChoiceDoesNotTarget)) return false;
+            if (!TargetingTruthRuntime.ProgramTargets(prog)) return false;
             if (prog.ClauseList.Exists(c => c != null && !c.EffectNegatable)) return false;
             var targets = new List<CardInstance>();
             if (link.Target != null) targets.Add(link.Target);

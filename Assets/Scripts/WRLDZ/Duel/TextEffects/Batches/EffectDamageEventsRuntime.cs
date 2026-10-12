@@ -158,6 +158,8 @@ namespace WRLDZ.Duel.TextEffects
                     yield return controller;
                     break;
                 case EffectActionKind.EffectDamageBothFromOriginalAtk:
+                // ConditionalSpellsAndTraps batch: Destruction Ring (CATEGORY_DAMAGE, PLAYER_ALL).
+                case EffectActionKind.DestroyTargetThenDamageBothPlayers:
                     yield return controller;
                     yield return opp;
                     break;

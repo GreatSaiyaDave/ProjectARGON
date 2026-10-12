@@ -103,7 +103,17 @@ namespace WRLDZ.Duel.TextEffects
             SyncCatsEar(engine, st);
             // BattleDestroyedTriggers batch: the battlers' battle positions (Shinato).
             BattleDestroyedTriggersRuntime.NoteBattle(engine, attacker, target);
+            // EndOfDamageStepRiders batch: the battlers, their stamps, Types and positions (Getsu Fuhma, Insect Princess).
+            EndOfDamageStepRidersRuntime.NoteBattle(engine, attackingPlayer, attacker, target);
         }
+
+        /// <summary>
+        /// ChaosBanishSummons batch: the attacking monster of the battle whose Damage Step is under way (still set while its
+        /// battle destructions and their EVENT_BATTLE_DESTROYING triggers apply, after DuelEngine cleared DeclaredAttacker);
+        /// null outside a Damage Step.
+        /// </summary>
+        public static CardInstance BattleAttacker(DuelEngine engine) =>
+            engine != null && s_state.TryGetValue(engine, out var st) ? st.Attacker : null;
 
         /// <summary>DuelEngine.FinishDamageStep: the Damage Step is over.</summary>
         public static void EndBattle(DuelEngine engine)
