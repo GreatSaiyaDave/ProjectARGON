@@ -367,6 +367,8 @@ ROLE: tree maker. Run folder ${RUN}.
 3. Open the integration: bump the compiler Version in the REAL checkout above every number ever used (README "Versions";
    also grep the working tree's Version line history notes for the highest vNNN mentioned) — normally current+1 — with
    python3 ${TOOLS}/version_bump.py <N> "v<N>: card batch ${TAG} (integration in progress; the finalizer rewrites this note)".
+   RESUME CHECK FIRST: if the Version line's leading note already says "card batch ${TAG} (integration in progress", an
+   earlier tree maker of this run bumped it and then died. Do NOT bump again; reuse that number (python3 ${TOOLS}/version_bump.py --show).
    The copies keep the old number and have no seed; the real checkout's old seed is now ignored until the finalizer
    re-exports it. This version bump is the ONLY edit you make to ${REPO}.
 Return the structured result.`, { label: 'make copies', phase: 'Scout', schema: TREES_SCHEMA, model: 'sonnet', effort: 'low' })
