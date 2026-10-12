@@ -6645,6 +6645,25 @@ namespace WRLDZ.Duel.TextEffects
                 case EffectActionKind.GainLpPerCardBanished:
                 case EffectActionKind.BanishThisUntilEndPhase:
                     break;
+                // BattleAndPositionRecords batch: Atomic Firefly's burn (chosenTarget = the monster that destroyed it), Judgment
+                // of the Desert's record (its activation), Curse of Anubis. Disc Fighter (battle confirm), Ghost Knight of Jackal
+                // / Legacy Hunter (NotifyDestroyedOpponentByBattle) and The Unhappy Girl's continuous clauses apply elsewhere.
+                case EffectActionKind.InflictDamageToPlayerWhoDestroyedThis:
+                    BattleAndPositionRecordsRuntime.InflictDamageToDestroyer(engine, who, source, clause, chosenTarget);
+                    break;
+                case EffectActionKind.MonstersFlippedFaceUpAfterActivationCannotChangePosition:
+                    if (clause.Timing == EffectTiming.Activate)
+                        BattleAndPositionRecordsRuntime.StartFlipRecord(engine, who, source);
+                    break;
+                case EffectActionKind.ChangeFaceUpAttackEffectMonstersToDefenseOriginalDefZeroLock:
+                    BattleAndPositionRecordsRuntime.ChangeToDefenseZeroDefLock(engine, who, source);
+                    break;
+                case EffectActionKind.DestroyAttackedDefenseMonsterWithDefAtLeastNoDamageCalculation:
+                case EffectActionKind.SpecialSummonBattleDestroyedMonsterToYourFieldInDefense:
+                case EffectActionKind.OpponentReturnsRandomHandCardToDeckShuffle:
+                case EffectActionKind.CannotBeDestroyedByBattleWhileInFaceUpAttackPosition:
+                case EffectActionKind.OpponentMonstersThatBattledThisCannotAttackOrChangePosition:
+                    break;
 
                 case EffectActionKind.Draw:
                     // Every existing Draw clause sets Side = Controller explicitly; only
@@ -10142,6 +10161,9 @@ namespace WRLDZ.Duel.TextEffects
                 // EndOfDamageStepRiders batch: Insect Princess — the destroyed monster battled it as that Type.
                 if (EndOfDamageStepRidersRuntime.SkipsBattleDestroying(engine, c, attacker, destroyed)) continue;
                 if (BattleOutcomeTriggersRuntime.TryFireBattleDestroying(engine, who, attacker, c, destroyed)) continue;
+                // BattleAndPositionRecords batch: Ghost Knight of Jackal (summon the destroyed monster), Legacy Hunter (it was
+                // in face-down Defense Position).
+                if (BattleAndPositionRecordsRuntime.TryFireBattleDestroying(engine, who, attacker, c, destroyed)) continue;
                 var subject = c != null &&
                               (c.AmountFromTargetOriginalAtk || c.ScaleAmountByTargetLevel)
                     ? destroyed
@@ -11144,6 +11166,9 @@ namespace WRLDZ.Duel.TextEffects
                         // ChaosBanishSummons batch: no attack declared by this card (Chaos ignition), a named card face-up
                         // on either field (Primal Seed), a banishable Spell in your GY (Chaosrider Gustaph).
                         if (ChaosBanishSummonsRuntime.TryActivationCondition(engine, who, card, c, out ok, out reason))
+                            break;
+                        // BattleAndPositionRecords batch: Curse of Anubis (a face-up Attack Position Effect Monster).
+                        if (BattleAndPositionRecordsRuntime.TryActivationCondition(engine, who, card, c, out ok, out reason))
                             break;
                         ok = false;
                         reason = $"Unknown activation condition {c.ActivationCondition}.";
@@ -12230,7 +12255,7 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
         }
 
         /// <summary>Gravekeeper's Servant: cards the attacker's controller must mill to declare.</summary>
-        static int AttackMillCost(DuelEngine engine, DuelistState attackerController)
+        internal static int AttackMillCost(DuelEngine engine, DuelistState attackerController)
         {
             var opp = engine?.OpponentOf(attackerController);
             if (opp == null) return 0;
@@ -12363,6 +12388,8 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
             BattlePosition from, BattlePosition to, bool destinationFaceUp, bool wasFlipSummon)
         {
             if (engine == null || card?.Def == null) return;
+            // BattleAndPositionRecords batch: The Unhappy Girl's battle record ends when its position changes (EVENT_CHANGE_POS).
+            BattleAndPositionRecordsRuntime.NotePositionChanged(engine, card);
             if (card.IsNegated) return;
             // SimultaneousTriggers batch: a mass change (Curse of Fiend) puts this trigger on the Chain with the
             // others it caused, instead of resolving it in the middle of the change.
@@ -15247,7 +15274,7 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
         /// Change a monster to face-up Attack/Defense Position by a card effect. A Set
         /// monster flipped face-up this way activates its FLIP effect.
         /// </summary>
-        static void SetFaceUpPosition(DuelEngine engine, CardInstance m, BattlePosition pos,
+        internal static void SetFaceUpPosition(DuelEngine engine, CardInstance m, BattlePosition pos,
             bool suppressFlip = false)
         {
             var controller = engine.ControllerOf(m);

@@ -108,6 +108,8 @@ namespace WRLDZ.Duel
             TextEffects.BattleBoostsRuntime.ApplyBoard(engine);
             // Cat's Ear Tribe (DamageStepRules batch): the battler's Damage Step original ATK ends with the Damage Step.
             TextEffects.DamageStepRulesRuntime.ApplyBoard(engine);
+            // BattleAndPositionRecords batch: Judgment of the Desert's flip record; Curse of Anubis' original DEF 0 ends.
+            TextEffects.BattleAndPositionRecordsRuntime.ApplyBoard(engine);
             DestroyNamedLeavesContinuous(engine, engine.Player);
             DestroyNamedLeavesContinuous(engine, engine.Opponent);
             // EquipAndSpellProtection batch: Heart of Clear Water's self-destruction; stale Magic Reflector counters.

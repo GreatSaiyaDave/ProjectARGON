@@ -204,6 +204,15 @@ namespace WRLDZ.Duel.TextEffects
         }
 
         /// <summary>
+        /// BattleAndPositionRecords batch (Legacy Hunter, ygopro GetBattlePosition()==POS_FACEDOWN_DEFENSE): the latest
+        /// damage calculation was <paramref name="attacker"/> attacking <paramref name="target"/> while it was in face-down
+        /// Defense Position (Set when the Damage Step started, flipped by the attack).
+        /// </summary>
+        internal static bool AttackedFaceDownDefense(DuelEngine engine, CardInstance attacker, CardInstance target) =>
+            engine != null && attacker != null && target != null && s_battle.TryGetValue(engine, out var note) &&
+            ReferenceEquals(note.Attacker, attacker) && ReferenceEquals(note.FaceDownTarget, target);
+
+        /// <summary>
         /// DuelEngine.FinishDeferredDamageCalculation, once this Damage Step's own ATK bonuses are set and before damage is
         /// calculated. Notes the battle (Giant Axe Mummy), then: the attacker with "its ATK becomes N" against a monster whose
         /// battle position was face-down Defense (<paramref name="flippedByBattle"/> is the target that was Set when the

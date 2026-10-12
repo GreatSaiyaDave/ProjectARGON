@@ -506,6 +506,12 @@ namespace WRLDZ.Duel.Rules
                     }
                 }
 
+                // BattleAndPositionRecords batch: Curse of Anubis — a face-up Attack Position Effect Monster (Witch of the
+                // Black Forest).
+                if (c.ActivationCondition == BattleAndPositionRecordsRuntime.FaceUpAttackEffectMonsterOnField &&
+                    opp.MonsterZones[4].IsEmpty)
+                    PlaceMonster(engine, opp, 78010363, 4, BattlePosition.Attack, true);
+
                 // TargetedClassics Soft: Remove Trap — a face-up Trap Card on the field.
                 if (c.Zone == EffectZoneFilter.FieldSpellTraps && c.RequiresTargetFaceUp &&
                     string.Equals(c.TargetCardKind, "Trap", StringComparison.OrdinalIgnoreCase))

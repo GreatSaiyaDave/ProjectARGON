@@ -234,6 +234,13 @@ namespace WRLDZ.Duel.TextEffects
         /// EffectTiming is serialized as an int.
         /// </summary>
         SentFromHandToGyByOpponentEffect,
+        /// <summary>
+        /// GyHandAndSummonEventTriggers batch: this card was sent from its owner's hand to the GY for any reason — a cost,
+        /// a discard, an effect send, either player's (ygopro SINGLE TRIGGER_F on EVENT_TO_GRAVE, IsPreviousLocation(
+        /// LOCATION_HAND): Night Assailant). Queued by <see cref="GyHandAndSummonEventTriggersRuntime.NoteEnteredGy"/> from the
+        /// GY-entry stamp of a hand trip, fired once play is idle. Appended — EffectTiming is serialized as an int.
+        /// </summary>
+        SentFromHandToGy,
     }
 
     public enum EffectActionKind
@@ -3066,6 +3073,169 @@ namespace WRLDZ.Duel.TextEffects
         /// Spirit Elimination banishes that player's field monsters instead) — <see cref="TargetingTruthRuntime.BanishAllGyMonsters"/>.
         /// </summary>
         BanishAllGyMonstersWhenOpponentTargetsGyMonster,
+        /// <summary>
+        /// AttackObligations batch — Berserk Gorilla (c39168895, SINGLE EFFECT_MUST_ATTACK; ContinuousWhileFaceUp marker): "This
+        /// card must attack if able." Read by <see cref="AttackObligationsRuntime"/> (End Battle / End Turn legality, the AI's
+        /// attack duty); never resolved as an effect.
+        /// </summary>
+        MustAttackIfAble,
+        /// <summary>
+        /// AttackObligations batch — Berserk Gorilla (c39168895, SINGLE EFFECT_SELF_DESTROY, range MZONE, condition
+        /// IsDefensePos; ContinuousWhileFaceUp marker): "If this card is in face-up Defense Position, destroy this card." Swept
+        /// on each board refresh by <see cref="AttackObligationsRuntime.SweepSelfDestroy"/>; not a Chain Link.
+        /// </summary>
+        SelfDestroyWhileFaceUpDefense,
+        /// <summary>
+        /// AttackObligations batch — Amazoness Archers (c67987611): every monster the opponent controls that is not in
+        /// face-up Attack Position is changed to it (FLIP effects do not activate); every face-up monster they control then
+        /// loses <see cref="EffectClause.Amount"/> ATK (RESETS_STANDARD) and must attack this turn, if able
+        /// (EFFECT_MUST_ATTACK, RESETS_STANDARD_PHASE_END). <see cref="AttackObligationsRuntime.ApplyAllOpponentMonstersMustAttack"/>.
+        /// </summary>
+        OpponentMonstersToFaceUpAttackLoseAtkMustAttack,
+        /// <summary>
+        /// AttackObligations batch — Diffusion Wave-Motion (c87880531): the target (a face-up Level <see cref="EffectClause.Amount"/>
+        /// or higher <see cref="EffectClause.RaceFilter"/> monster you control) must attack every monster the opponent controls
+        /// once each this turn (EFFECT_MUST_ATTACK + EFFECT_ATTACK_ALL), the controller's other monsters cannot attack this
+        /// turn, and monsters it destroys by battle have their effects negated (EVENT_BATTLED + EFFECT_CANNOT_TRIGGER).
+        /// <see cref="AttackObligationsRuntime.ApplyTargetMustAttackAll"/>.
+        /// </summary>
+        TargetMustAttackAllOthersCannotAttack,
+        /// <summary>
+        /// AttackObligations batch — Staunch Defender (c92854392): until the end of this Battle Phase the opponent can only
+        /// attack the target (EFFECT_MUST_ATTACK_MONSTER) and every monster they control must attack, if able
+        /// (EFFECT_MUST_ATTACK). <see cref="AttackObligationsRuntime.ApplyOpponentMustAttackTarget"/>.
+        /// </summary>
+        OpponentAttacksOnlyTargetAndMustAttackIt,
+        /// <summary>
+        /// GyHandAndSummonEventTriggers batch — Emissary of the Afterlife (c75043725): each player selects 1 Level Amount or
+        /// lower Normal Monster in their own Deck (none if they have none), the activator first, then both are added to the
+        /// hands together and revealed (<see cref="GyHandAndSummonEventTriggersRuntime.EachPlayerAddsFromDeck"/>).
+        /// </summary>
+        EachPlayerAddsLevelOrLowerNormalMonsterFromOwnDeck,
+        /// <summary>
+        /// GyHandAndSummonEventTriggers batch — Backfire (c82705573): FIELD TRIGGER_F marker; each time 1+ face-up monsters of
+        /// <see cref="EffectClause.AttributeFilter"/> its controller controlled are destroyed and sent to that player's GY, one
+        /// trigger inflicts Amount to the opponent (<see cref="GyHandAndSummonEventTriggersRuntime"/>).
+        /// </summary>
+        InflictDamageWhenFaceUpAttributeMonsterYouControlDestroyedToGy,
+        /// <summary>
+        /// GyHandAndSummonEventTriggers batch — Blessings of the Nile (c30653113): FIELD TRIGGER_F marker; each time 1+ cards
+        /// are discarded from its controller's hand to the GY by an effect of a card the opponent controls, one trigger gains
+        /// Amount LP (<see cref="GyHandAndSummonEventTriggersRuntime"/>).
+        /// </summary>
+        GainLpEachTimeDiscardedByOpponentEffect,
+        /// <summary>
+        /// GyHandAndSummonEventTriggers batch — "7" (c67048711): as its activation resolves, if exactly
+        /// <see cref="EffectClause.ConditionAmount"/> face-up <see cref="EffectClause.NamedCard"/> are in your Spell & Trap
+        /// Zones (this one counts), a mandatory trigger: draw Amount (if still that many), then destroy every face-up
+        /// <see cref="EffectClause.NamedCard"/> on the field (<see cref="GyHandAndSummonEventTriggersRuntime.OnSevenActivated"/>).
+        /// </summary>
+        DrawThenDestroyAllFaceUpNamedWhenCountFaceUpNamed,
+        /// <summary>
+        /// GyHandAndSummonEventTriggers batch — Beckoning Light (c16255442): discard your entire hand; then, if your GY holds at
+        /// least as many <see cref="EffectClause.AttributeFilter"/> monsters as cards discarded to the GY, add exactly that
+        /// many of your choice to the hand (otherwise none) (<see cref="GyHandAndSummonEventTriggersRuntime.DiscardHandThenAdd"/>).
+        /// </summary>
+        DiscardHandThenAddAttributeMonstersFromGyPerDiscard,
+        /// <summary>
+        /// SpellTrapSealsAndImmunity batch — Sonic Jammer (c84550200, FLIP: field EFFECT_CANNOT_ACTIVATE, target range (0,1),
+        /// value re:IsHasType(EFFECT_TYPE_ACTIVATE) and re:IsSpellEffect(), RESET_PHASE|PHASE_END, 2): until the end of the
+        /// next turn's End Phase the opponent cannot activate Spell Cards (from the hand or Set); the effects of face-up Spells
+        /// stay usable (<see cref="SpellTrapSealsAndImmunityRuntime.RegisterSpellCardLock"/>).
+        /// </summary>
+        OpponentCannotActivateSpellCardsUntilEndOfNextTurn,
+        /// <summary>
+        /// SpellTrapSealsAndImmunity batch — Dust Barrier (c31476755, field EFFECT_IMMUNE_EFFECT on both Monster Zones, target
+        /// TYPE_NORMAL, value: the effect's owner player is not this card's controller and re:IsSpellEffect()): while this card
+        /// is face-up, face-up Normal Monsters (Tokens included) on the field are unaffected by Spell effects of this card's
+        /// controller's opponent (<see cref="SpellTrapSealsAndImmunityRuntime.ShieldsFromOpponentSpell"/>).
+        /// </summary>
+        NormalMonstersUnaffectedByOpponentSpells,
+        /// <summary>
+        /// SpellTrapSealsAndImmunity batch — Dust Barrier (Lua s.target: SetTurnCounter(0) and a CANNOT_DISABLE
+        /// EVENT_PHASE+PHASE_STANDBY effect, condition tp == turn player, ct==2 -> Destroy): this face-up card counts its
+        /// controller's Standby Phases (even while negated) and is destroyed in the <see cref="EffectClause.Amount"/>th one
+        /// after its activation (<see cref="SpellTrapSealsAndImmunityRuntime.OnStandbyPhase"/>).
+        /// </summary>
+        DestroyThisOnYourNthStandbyAfterActivation,
+        /// <summary>
+        /// NormalMonsterSpells batch — Delta Attacker (c39719977): each face-up non-Token Normal Monster you control with 2
+        /// others of its name you control can attack directly this turn (Lua EFFECT_DIRECT_ATTACK per monster,
+        /// RESETS_STANDARD_PHASE_END: <see cref="CardInstance.DirectAttackThisTurn"/>;
+        /// <see cref="NormalMonsterSpellsRuntime.ResolveDeltaAttacker"/>).
+        /// </summary>
+        NormalsSharingNameAttackDirectlyThisTurn,
+        /// <summary>
+        /// NormalMonsterSpells batch — Thousand Energy (c5703682) / Triangle Power (c32298781): the original ATK and DEF of
+        /// each face-up non-Token Normal Monster you control of Level <see cref="EffectClause.MonsterLevelMin"/> become their
+        /// original value + <see cref="EffectClause.Amount"/> (EFFECT_SET_BASE_ATTACK / _DEFENSE, RESETS_STANDARD); in this
+        /// turn's End Phase every face-up Normal Monster (Tokens too) of that Level you control is destroyed
+        /// (<see cref="NormalMonsterSpellsRuntime.ResolveOriginalBoost"/>, <see cref="NormalMonsterSpellsRuntime.OnEndPhase"/>).
+        /// </summary>
+        RaiseOriginalAtkDefOfLevelNormalsDestroyThemAtEndPhase,
+        /// <summary>
+        /// NormalMonsterSpells batch — The Law of the Normal (c66926224): both players discard their whole hands (one event,
+        /// REASON_DISCARD), then every card on the field except face-up Normal Monsters of Level
+        /// <see cref="EffectClause.MonsterLevelMax"/> or lower is destroyed
+        /// (<see cref="NormalMonsterSpellsRuntime.ResolveLawOfTheNormal"/>).
+        /// </summary>
+        BothDiscardHandsDestroyAllButLowLevelNormals,
+        /// <summary>
+        /// NormalMonsterSpells batch — Order to Smash (c39019325): Tribute the targeted face-up Normal Monster by the effect;
+        /// if it was Tributed, choose 1 to <see cref="EffectClause.PickUpTo"/> Spells/Traps the opponent controls (no target)
+        /// and destroy them (<see cref="NormalMonsterSpellsRuntime.ResolveOrderToSmash"/>).
+        /// </summary>
+        TributeTargetedNormalThenDestroyUpToOppSpellTraps,
+        /// <summary>
+        /// BattleAndPositionRecords batch — Atomic Firefly (c87340664, SINGLE TRIGGER_F EVENT_BATTLE_DESTROYED): destroyed by
+        /// battle, the player who destroyed it (the reason player: the other battler's controller) takes
+        /// <see cref="EffectClause.Amount"/> effect damage (<see cref="BattleAndPositionRecordsRuntime.InflictDamageToDestroyer"/>).
+        /// </summary>
+        InflictDamageToPlayerWhoDestroyedThis,
+        /// <summary>
+        /// BattleAndPositionRecords batch — Disc Fighter (c19612721, SINGLE TRIGGER_F EVENT_BATTLE_CONFIRM): this card attacks a
+        /// Defense Position monster with <see cref="EffectClause.Amount"/> or more DEF — destroy it before damage calculation,
+        /// so no damage calculation is applied (<see cref="BattleAndPositionRecordsRuntime.FireBattleConfirm"/>).
+        /// </summary>
+        DestroyAttackedDefenseMonsterWithDefAtLeastNoDamageCalculation,
+        /// <summary>
+        /// BattleAndPositionRecords batch — Ghost Knight of Jackal (c13386503, SINGLE TRIGGER_O EVENT_BATTLE_DESTROYING,
+        /// aux.bdogcon): you can target the opponent's monster this card destroyed by battle (now in the GY) and Special Summon it
+        /// to your field in face-up Defense Position (<see cref="BattleAndPositionRecordsRuntime.TryFireBattleDestroying"/>).
+        /// </summary>
+        SpecialSummonBattleDestroyedMonsterToYourFieldInDefense,
+        /// <summary>
+        /// BattleAndPositionRecords batch — Legacy Hunter (c87010442, SINGLE TRIGGER_F EVENT_BATTLE_DESTROYING): the monster it
+        /// destroyed by battle was in face-down Defense Position at the battle — the opponent returns 1 random card from their
+        /// hand to the Deck, which is shuffled (<see cref="BattleAndPositionRecordsRuntime.TryFireBattleDestroying"/>).
+        /// </summary>
+        OpponentReturnsRandomHandCardToDeckShuffle,
+        /// <summary>
+        /// BattleAndPositionRecords batch — The Unhappy Girl (c27618634, SINGLE EFFECT_INDESTRUCTABLE_BATTLE while
+        /// POS_FACEUP_ATTACK): not destroyed by battle while in face-up Attack Position
+        /// (<see cref="BattleAndPositionRecordsRuntime.BattleIndestructible"/>).
+        /// </summary>
+        CannotBeDestroyedByBattleWhileInFaceUpAttackPosition,
+        /// <summary>
+        /// BattleAndPositionRecords batch — The Unhappy Girl (c27618634, EVENT_BATTLED record + FIELD EFFECT_CANNOT_ATTACK /
+        /// EFFECT_CANNOT_CHANGE_POSITION, target range 0,MZONE): each opponent's monster that battled it while it was in
+        /// face-up Attack Position cannot attack or change its battle position by hand while this card stays in face-up
+        /// Attack Position (<see cref="BattleAndPositionRecordsRuntime.NoteBattled"/>).
+        /// </summary>
+        OpponentMonstersThatBattledThisCannotAttackOrChangePosition,
+        /// <summary>
+        /// BattleAndPositionRecords batch — Judgment of the Desert (c4869446, Continuous Trap: EVENT_CHANGE_POS SetCardTarget +
+        /// FIELD EFFECT_CANNOT_CHANGE_POSITION on both fields): every monster flipped face-up after this card's activation
+        /// resolved is recorded and cannot change its battle position by hand while this card stays face-up
+        /// (<see cref="BattleAndPositionRecordsRuntime.StartFlipRecord"/>).
+        /// </summary>
+        MonstersFlippedFaceUpAfterActivationCannotChangePosition,
+        /// <summary>
+        /// BattleAndPositionRecords batch — Curse of Anubis (c66742250, Normal Trap): every face-up Attack Position Effect
+        /// Monster on the field becomes face-up Defense Position; until the end of the turn their original DEF becomes 0 and
+        /// they cannot change battle positions by hand (<see cref="BattleAndPositionRecordsRuntime.ChangeToDefenseZeroDefLock"/>).
+        /// </summary>
+        ChangeFaceUpAttackEffectMonstersToDefenseOriginalDefZeroLock,
     }
 
     public enum EffectSide
@@ -4692,6 +4862,51 @@ namespace WRLDZ.Duel.TextEffects
         /// Chaosrider Gustaph: the resolution chooses 1 to this many cards (not targets).
         /// </summary>
         public int PickUpTo;
+
+        // ── SpellTrapSealsAndImmunity batch ──
+
+        /// <summary>
+        /// SpellTrapSealsAndImmunity batch — on a <see cref="EffectActionKind.SelfDestroyUnlessNamedFaceUp"/> clause: the named
+        /// card must be face-up in its controller's Monster Zone (Talismans, Lua descon: LOCATION_MZONE of the handler player),
+        /// not merely anywhere on the field or in a Spell & Trap Zone.
+        /// </summary>
+        public bool NamedFaceUpInYourMonsterZone;
+
+        /// <summary>
+        /// SpellTrapSealsAndImmunity batch — Armor Break (Lua re:IsActiveType(TYPE_EQUIP) and re:IsHasType(EFFECT_TYPE_ACTIVATE)):
+        /// a <see cref="EffectTiming.ChainLinkActivated"/> answer that only answers the activation of an Equip Spell Card
+        /// (<see cref="SpellTrapSealsAndImmunityRuntime.ChainAnswerAllowed"/>).
+        /// </summary>
+        public bool NegateRespondsToEquipSpellOnly;
+
+        // ── NormalMonsterSpells batch ──
+
+        /// <summary>
+        /// NormalMonsterSpells batch: the lowest current Level (Lua GetLevel) a monster this clause picks, equips or affects
+        /// may have; 0 = no lower bound. On an <see cref="EffectActionKind.EquipThisToTarget"/> clause it is part of the
+        /// equip limit (<see cref="EquipFamilyRuntime.IsCorrectEquipTarget"/>; Opti-Camouflage Armor: Level 1).
+        /// </summary>
+        public int MonsterLevelMin;
+
+        /// <summary>
+        /// NormalMonsterSpells batch: the highest current Level such a monster may have (Lua IsLevelBelow); 0 = no upper
+        /// bound (Sword of the Soul-Eater: 3, Order to Smash and The Law of the Normal: 2).
+        /// </summary>
+        public int MonsterLevelMax;
+
+        /// <summary>
+        /// NormalMonsterSpells batch: such a monster must be a Normal Monster in the ygopro sense (IsType(TYPE_NORMAL): every
+        /// Token is TYPE_NORMAL too). On an equip clause it is part of the equip limit (Sword of the Soul-Eater).
+        /// </summary>
+        public bool RequiresNormalType;
+
+        /// <summary>
+        /// NormalMonsterSpells batch — Sword of the Soul-Eater (c5371656, Lua s.cost/s.target): as this Equip Spell is
+        /// activated (its target chosen, before anyone may respond), every other non-Token Normal Monster its controller
+        /// controls is Tributed (REASON_COST); once it resolves, the equipped monster gains this much ATK for each one
+        /// (an Equip effect; nothing when the card is equipped any other way).
+        /// </summary>
+        public int EquipAtkPerTributedOnActivation;
     }
 
     /// <summary>When the activation condition is tested (PSCT "when" vs "if").</summary>

@@ -58,51 +58,14 @@ namespace WRLDZ.Duel.TextEffects
         }
 
         /// <summary>
-        /// <see cref="EffectActionKind.MillCardOfDeclaredTypeFromOpponentDeck"/>: opponent sends 1 card of the
-        /// declared type (Monster/Spell/Trap) from their Deck to the GY.
+        /// <see cref="EffectActionKind.MillCardOfDeclaredTypeFromOpponentDeck"/>: declare 1 card type (Monster/Spell/Trap);
+        /// the opponent sends 1 card of that type from their Deck to the GY. BattleAndPositionRecords batch: the declaration was
+        /// never asked here (it read a Monster Type declaration that no clause records, so nothing was ever sent); the
+        /// declaration and the opponent's pick are now <see cref="BattleAndPositionRecordsRuntime.DeclareCardTypeThenOpponentSendsFromDeck"/>
+        /// (Vampire Lord, Vampire Lady).
         /// </summary>
-        public static void MillCardOfDeclaredTypeFromOpponentDeck(DuelEngine engine, DuelistState who, CardInstance source, EffectClause clause)
-        {
-            if (engine == null || who == null || source == null || clause == null) return;
-            var opp = engine.OpponentOf(who);
-            if (opp == null || opp.Deck == null || opp.Deck.Count == 0)
-            {
-                engine.Log($"{source.Name}: opponent has no Deck.");
-                return;
-            }
-
-            var db = CardDatabase.Instance ?? CardDatabase.Load();
-            var typeWord = TypeDeclarationRuntime.DeclaredTypeOf(source);
-            if (string.IsNullOrEmpty(typeWord))
-            {
-                engine.Log($"{source.Name}: no type declared.");
-                return;
-            }
-
-            int matchingId = 0;
-            foreach (var id in opp.Deck)
-            {
-                var def = db.Get(id);
-                if (def == null) continue;
-                if (typeWord == "Monster" && def.IsMonster ||
-                    typeWord == "Spell" && def.IsSpell ||
-                    typeWord == "Trap" && def.IsTrap)
-                {
-                    matchingId = id;
-                    break;
-                }
-            }
-            if (matchingId == 0)
-            {
-                engine.Log($"{source.Name}: no {typeWord} in opponent's Deck.");
-                return;
-            }
-
-            opp.Deck.Remove(matchingId);
-            var inst = engine.CreateCardInstance(matchingId);
-            TextEffects.RedirectAndReplaceRuntime.PutInGraveyard(engine, opp, inst);
-            engine.Log($"{source.Name}: opponent mills {inst.Name} ({typeWord}).");
-        }
+        public static void MillCardOfDeclaredTypeFromOpponentDeck(DuelEngine engine, DuelistState who, CardInstance source, EffectClause clause) =>
+            BattleAndPositionRecordsRuntime.DeclareCardTypeThenOpponentSendsFromDeck(engine, who, source, clause);
 
         /// <summary>
         /// <see cref="EffectActionKind.GyRevivalAfterStandbyWhenDestroyedByOpponent"/>: once per turn, during

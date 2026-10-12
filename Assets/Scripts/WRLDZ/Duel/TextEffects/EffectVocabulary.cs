@@ -837,6 +837,16 @@ namespace WRLDZ.Duel.TextEffects
                 EffectActionKind.MakeSecondAttackInARow => EffectResolutionKind.ExtraAttack,
                 EffectActionKind.GainLpPerCardBanished => EffectResolutionKind.GainLp,
                 EffectActionKind.AddBanishedTargetsToHand => EffectResolutionKind.ReturnToHand,
+                // BattleAndPositionRecords batch: Atomic Firefly, Disc Fighter, Ghost Knight of Jackal, Legacy Hunter, The
+                // Unhappy Girl (protection + battle-partner locks), Judgment of the Desert (lock), Curse of Anubis.
+                EffectActionKind.InflictDamageToPlayerWhoDestroyedThis => EffectResolutionKind.Damage,
+                EffectActionKind.DestroyAttackedDefenseMonsterWithDefAtLeastNoDamageCalculation => EffectResolutionKind.Destroy,
+                EffectActionKind.SpecialSummonBattleDestroyedMonsterToYourFieldInDefense => EffectResolutionKind.SpecialSummon,
+                EffectActionKind.OpponentReturnsRandomHandCardToDeckShuffle => EffectResolutionKind.ReturnToDeck,
+                EffectActionKind.CannotBeDestroyedByBattleWhileInFaceUpAttackPosition or
+                    EffectActionKind.OpponentMonstersThatBattledThisCannotAttackOrChangePosition or
+                    EffectActionKind.MonstersFlippedFaceUpAfterActivationCannotChangePosition => EffectResolutionKind.Protection,
+                EffectActionKind.ChangeFaceUpAttackEffectMonstersToDefenseOriginalDefZeroLock => EffectResolutionKind.ChangePosition,
                 EffectActionKind.None => EffectResolutionKind.None,
                 _ => EffectResolutionKind.UniqueException
             };

@@ -440,6 +440,8 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         public static bool ManualPositionChangeLocked(DuelEngine engine, CardInstance card)
         {
+            // BattleAndPositionRecords batch: The Unhappy Girl's battle partners, Judgment of the Desert's flipped monsters.
+            if (BattleAndPositionRecordsRuntime.ManualPositionChangeLocked(engine, card)) return true;
             if (engine == null || card == null || !s_state.TryGetValue(engine, out var st)) return false;
             if (engine.ControllerOf(card) == null) return false;
             if (st.FieldLockBy != null && InThisDuel(engine, st.FieldLockBy) && st.FieldLockTurn == engine.TurnNumber)

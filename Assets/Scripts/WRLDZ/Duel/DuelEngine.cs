@@ -2614,6 +2614,8 @@ namespace WRLDZ.Duel
 
             // SummonLocksAndStatRules batch — Amazoness Spellcaster: switched original ATK returns.
             TextEffects.SummonLocksAndStatRulesRuntime.EndOfTurn(this);
+            // BattleAndPositionRecords batch — Curse of Anubis: the original DEF set to 0 this turn returns.
+            TextEffects.BattleAndPositionRecordsRuntime.EndOfTurn(this);
         }
 
         static bool HasCompiledClause(CardInstance card, Func<EffectClause, bool> predicate)
@@ -3755,6 +3757,9 @@ namespace WRLDZ.Duel
             // ContinuousLocksAndIgnitions batch (v163): Gora Turtle — a face-up monster's ATK-threshold attack lock.
             if (TextEffects.ContinuousLocksAndIgnitionsRuntime.MonsterAttackLockBlocks(this, attackerController, attacker))
                 return true;
+            // BattleAndPositionRecords batch: The Unhappy Girl — a monster that battled it cannot attack while it stays in
+            // face-up Attack Position.
+            if (TextEffects.BattleAndPositionRecordsRuntime.AttackForbidden(this, attackerController, attacker)) return true;
             foreach (var side in new[] { Player, Opponent })
             {
                 if (side == null) continue;
@@ -5123,6 +5128,12 @@ namespace WRLDZ.Duel
                 return true;
             }
 
+            // BattleAndPositionRecords batch: Disc Fighter (EVENT_BATTLE_CONFIRM) — attacking a Defense Position monster with
+            // enough DEF, its effect destroys that monster; the target has left, so the attack stops below with no damage
+            // calculation.
+            if (targetOrNull != null)
+                TextEffects.BattleAndPositionRecordsRuntime.FireBattleConfirm(this, who, opp, attacker, targetOrNull);
+
             DamageSubStep = DamageSubStep.DamageCalculation;
 
             if (targetOrNull == null)
@@ -5490,6 +5501,8 @@ namespace WRLDZ.Duel
             TextEffects.BattleRulesRuntime.NoteBattled(this, attacker, targetOrNull);
             // NamedSummonPairs batch: Mirage Knight's "battled this turn" (GetBattledGroupCount).
             TextEffects.NamedSummonPairsRuntime.NoteBattled(this, attacker, targetOrNull);
+            // BattleAndPositionRecords batch: The Unhappy Girl records the monster it battled in face-up Attack Position.
+            TextEffects.BattleAndPositionRecordsRuntime.NoteBattled(this, attacker, targetOrNull);
             // Reflect Bounder: "If you do, after damage calculation: Destroy this card."
             TextEffects.BattlePhaseEndRuntime.DestroyAfterDamageCalculation(this, destroyAfterCalc);
 

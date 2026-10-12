@@ -308,6 +308,8 @@ namespace WRLDZ.Duel.TextEffects
         {
             if (engine == null || side == null || mine == null || other == null) return false;
             if (!side.TryFindMonster(mine, out _)) return false;
+            // BattleAndPositionRecords batch: The Unhappy Girl — not destroyed by battle while in face-up Attack Position.
+            if (BattleAndPositionRecordsRuntime.BattleIndestructible(engine, side, mine, other)) return true;
             // BattleDestroyedTriggers batch: the monster's own protection (Kaiser Glider's equal ATK, Different Dimension
             // Dragon's 1900 or less ATK).
             if (BattleDestroyedTriggersRuntime.BattleIndestructible(engine, side, mine, other)) return true;

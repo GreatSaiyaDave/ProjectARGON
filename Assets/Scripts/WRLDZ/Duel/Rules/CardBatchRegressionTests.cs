@@ -134,6 +134,7 @@ namespace WRLDZ.Duel.Rules
             TokensDeclarationsAndPicksRegressionTests.Run(db, pDeck, aDeck, check);
             ChaosBanishSummonsRegressionTests.Run(db, pDeck, aDeck, check);
             TargetingTruthRegressionTests.Run(db, pDeck, aDeck, check);
+            BattleAndPositionRecordsRegressionTests.Run(db, pDeck, aDeck, check);
         }
     }
 }
