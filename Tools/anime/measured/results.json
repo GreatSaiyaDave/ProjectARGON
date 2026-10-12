@@ -1,0 +1,5527 @@
+[
+ {
+  "label": "joey_hair_e06_962",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e06_962.png",
+  "box": [
+   240,
+   0,
+   940,
+   460
+  ],
+  "h": [
+   38,
+   62
+  ],
+  "s": [
+   0.3,
+   0.9
+  ],
+  "v": [
+   0.35,
+   1
+  ],
+  "kept": 177239,
+  "area": 321300,
+  "fills": [
+   {
+    "tone": "one",
+    "hex": "#B89C3C",
+    "n": 177239,
+    "iqr": [
+     "#B69B3A",
+     "#B89D3D"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#B89C3C",
+    "n": 72361
+   },
+   {
+    "hex": "#B89C3A",
+    "n": 57751
+   },
+   {
+    "hex": "#B39A3F",
+    "n": 13840
+   }
+  ],
+  "evidence": "ev/joey_hair_e06_962.png"
+ },
+ {
+  "label": "joey_hair_e17_181",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e17_181.png",
+  "box": [
+   552,
+   60,
+   872,
+   340
+  ],
+  "h": [
+   38,
+   62
+  ],
+  "s": [
+   0.3,
+   0.9
+  ],
+  "v": [
+   0.35,
+   1
+  ],
+  "kept": 27230,
+  "area": 89600,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#B6A04C",
+    "n": 21474,
+    "iqr": [
+     "#B49F4A",
+     "#B6A04D"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#806E45",
+    "n": 5756,
+    "iqr": [
+     "#7E6D42",
+     "#837148"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#B6A04B",
+    "n": 17010
+   },
+   {
+    "hex": "#806E44",
+    "n": 2796
+   },
+   {
+    "hex": "#B29F4D",
+    "n": 2317
+   }
+  ],
+  "evidence": "ev/joey_hair_e17_181.png"
+ },
+ {
+  "label": "kaiba_hair_e22_547",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e22_547.png",
+  "box": [
+   300,
+   0,
+   1120,
+   392
+  ],
+  "h": [
+   10,
+   36
+  ],
+  "s": [
+   0.4,
+   0.9
+  ],
+  "v": [
+   0.15,
+   0.82
+  ],
+  "kept": 146245,
+  "area": 320620,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#765B3D",
+    "n": 134162,
+    "iqr": [
+     "#745B3C",
+     "#775C3E"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#58452F",
+    "n": 12083,
+    "iqr": [
+     "#52402A",
+     "#5F4B33"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#765B3D",
+    "n": 109125
+   },
+   {
+    "hex": "#765B3B",
+    "n": 13501
+   },
+   {
+    "hex": "#785A3D",
+    "n": 7632
+   }
+  ],
+  "evidence": "ev/kaiba_hair_e22_547.png"
+ },
+ {
+  "label": "kaiba_hair_e22_1043",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e22_1043.png",
+  "box": [
+   292,
+   0,
+   932,
+   392
+  ],
+  "h": [
+   10,
+   36
+  ],
+  "s": [
+   0.4,
+   0.9
+  ],
+  "v": [
+   0.15,
+   0.82
+  ],
+  "kept": 111895,
+  "area": 250240,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#765A3D",
+    "n": 100784,
+    "iqr": [
+     "#74593C",
+     "#785A3F"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#5A442F",
+    "n": 11111,
+    "iqr": [
+     "#523F2B",
+     "#614A32"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#755A3E",
+    "n": 54620
+   },
+   {
+    "hex": "#795A3D",
+    "n": 35935
+   },
+   {
+    "hex": "#72593B",
+    "n": 6054
+   }
+  ],
+  "evidence": "ev/kaiba_hair_e22_1043.png"
+ },
+ {
+  "label": "kaiba_hair_e22_1123",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e22_1123.png",
+  "box": [
+   180,
+   0,
+   1000,
+   344
+  ],
+  "h": [
+   10,
+   36
+  ],
+  "s": [
+   0.4,
+   0.9
+  ],
+  "v": [
+   0.15,
+   0.82
+  ],
+  "kept": 89471,
+  "area": 281260,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#765A3E",
+    "n": 80322,
+    "iqr": [
+     "#745A3D",
+     "#785B3F"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#56412D",
+    "n": 9149,
+    "iqr": [
+     "#503E28",
+     "#5D4731"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#755B3F",
+    "n": 50498
+   },
+   {
+    "hex": "#785A3D",
+    "n": 23048
+   },
+   {
+    "hex": "#755A3B",
+    "n": 2918
+   }
+  ],
+  "evidence": "ev/kaiba_hair_e22_1123.png"
+ },
+ {
+  "label": "tea_hair_e06_247",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e06_247.png",
+  "box": [
+   152,
+   0,
+   632,
+   704
+  ],
+  "h": [
+   2,
+   36
+  ],
+  "s": [
+   0.4,
+   0.95
+  ],
+  "v": [
+   0.12,
+   0.85
+  ],
+  "kept": 140383,
+  "area": 337440,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#5A2D1C",
+    "n": 56438,
+    "iqr": [
+     "#592C1C",
+     "#5B2D1D"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#271810",
+    "n": 83945,
+    "iqr": [
+     "#26170F",
+     "#291812"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#5A2D1C",
+    "n": 52234
+   },
+   {
+    "hex": "#271810",
+    "n": 42357
+   },
+   {
+    "hex": "#26170F",
+    "n": 31724
+   }
+  ],
+  "evidence": "ev/tea_hair_e06_247.png"
+ },
+ {
+  "label": "tea_hair_e08_852",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e08_852.png",
+  "box": [
+   380,
+   0,
+   940,
+   680
+  ],
+  "h": [
+   2,
+   36
+  ],
+  "s": [
+   0.4,
+   0.95
+  ],
+  "v": [
+   0.12,
+   0.85
+  ],
+  "kept": 184155,
+  "area": 380240,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#603020",
+    "n": 87604,
+    "iqr": [
+     "#5E301F",
+     "#613121"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#2B1C14",
+    "n": 96551,
+    "iqr": [
+     "#2A1B12",
+     "#2C1D14"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#2B1C14",
+    "n": 83712
+   },
+   {
+    "hex": "#5F3020",
+    "n": 31966
+   },
+   {
+    "hex": "#613020",
+    "n": 29557
+   }
+  ],
+  "evidence": "ev/tea_hair_e08_852.png"
+ },
+ {
+  "label": "tea_hair_e22_169",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e22_169.png",
+  "box": [
+   412,
+   0,
+   1032,
+   600
+  ],
+  "h": [
+   2,
+   36
+  ],
+  "s": [
+   0.4,
+   0.95
+  ],
+  "v": [
+   0.12,
+   0.85
+  ],
+  "kept": 94367,
+  "area": 371380,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#6C4C39",
+    "n": 84615,
+    "iqr": [
+     "#6C4C38",
+     "#6D4D39"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#4F3C2B",
+    "n": 9752,
+    "iqr": [
+     "#493928",
+     "#56402F"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#6D4C39",
+    "n": 65219
+   },
+   {
+    "hex": "#6A4C38",
+    "n": 14840
+   },
+   {
+    "hex": "#4B3929",
+    "n": 2833
+   }
+  ],
+  "evidence": "ev/tea_hair_e22_169.png"
+ },
+ {
+  "label": "tristan_hair_e08_1085.2",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e08_1085.2.png",
+  "box": [
+   792,
+   0,
+   1060,
+   120
+  ],
+  "h": [
+   0,
+   40
+  ],
+  "s": [
+   0.25,
+   0.95
+  ],
+  "v": [
+   0.08,
+   0.6
+  ],
+  "kept": 12752,
+  "area": 31892,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#62432D",
+    "n": 2976,
+    "iqr": [
+     "#60422C",
+     "#62432D"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#3E2917",
+    "n": 9776,
+    "iqr": [
+     "#3E2915",
+     "#402917"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#3E2917",
+    "n": 7553
+   },
+   {
+    "hex": "#62432D",
+    "n": 2359
+   },
+   {
+    "hex": "#402A19",
+    "n": 982
+   }
+  ],
+  "evidence": "ev/tristan_hair_e08_1085.2.png"
+ },
+ {
+  "label": "tristan_hair_e08_377",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e08_377.png",
+  "box": [
+   390,
+   0,
+   660,
+   70
+  ],
+  "h": [
+   0,
+   40
+  ],
+  "s": [
+   0.25,
+   0.95
+  ],
+  "v": [
+   0.08,
+   0.6
+  ],
+  "kept": 4824,
+  "area": 18630,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#60442C",
+    "n": 2132,
+    "iqr": [
+     "#5F442B",
+     "#61452D"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#3F2A18",
+    "n": 2692,
+    "iqr": [
+     "#3E2916",
+     "#402B19"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#60442C",
+    "n": 1268
+   },
+   {
+    "hex": "#3F2A18",
+    "n": 1261
+   },
+   {
+    "hex": "#3E2916",
+    "n": 1043
+   }
+  ],
+  "evidence": "ev/tristan_hair_e08_377.png"
+ },
+ {
+  "label": "bakura_hair_e22_169",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e22_169.png",
+  "box": [
+   152,
+   0,
+   440,
+   660
+  ],
+  "h": [
+   232,
+   300
+  ],
+  "s": [
+   0.03,
+   0.3
+  ],
+  "v": [
+   0.55,
+   1
+  ],
+  "kept": 84973,
+  "area": 189792,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#D7D8DF",
+    "n": 40781,
+    "iqr": [
+     "#D7D8DF",
+     "#D8D8E0"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#AFA8B6",
+    "n": 44192,
+    "iqr": [
+     "#ADA8B5",
+     "#AFA9B6"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#AFA8B6",
+    "n": 37169
+   },
+   {
+    "hex": "#D7D8DF",
+    "n": 19338
+   },
+   {
+    "hex": "#D9D9E0",
+    "n": 13044
+   }
+  ],
+  "evidence": "ev/bakura_hair_e22_169.png"
+ },
+ {
+  "label": "bakura_hair_e16_279",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e16_279.png",
+  "box": [
+   310,
+   80,
+   600,
+   360
+  ],
+  "h": [
+   232,
+   300
+  ],
+  "s": [
+   0.03,
+   0.3
+  ],
+  "v": [
+   0.5,
+   1
+  ],
+  "kept": 32825,
+  "area": 81200,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#BBB8C8",
+    "n": 25725,
+    "iqr": [
+     "#BAB7C7",
+     "#BCB8C9"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#878191",
+    "n": 7100,
+    "iqr": [
+     "#858090",
+     "#888293"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#BBB8C8",
+    "n": 24837
+   },
+   {
+    "hex": "#878191",
+    "n": 4250
+   },
+   {
+    "hex": "#86808E",
+    "n": 1407
+   }
+  ],
+  "evidence": "ev/bakura_hair_e16_279.png"
+ },
+ {
+  "label": "bakura_hair_e22_154",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/../../dk/bakura_mokuba_yugi/cited/bakura_e22_154.png",
+  "box": [
+   0,
+   0,
+   1280,
+   720
+  ],
+  "h": [
+   232,
+   300
+  ],
+  "s": [
+   0.03,
+   0.3
+  ],
+  "v": [
+   0.55,
+   1
+  ],
+  "kept": 101252,
+  "area": 917604,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#D8D9E0",
+    "n": 72963,
+    "iqr": [
+     "#D7D8DF",
+     "#D9D9E0"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#AFA9B6",
+    "n": 28289,
+    "iqr": [
+     "#ADA8B4",
+     "#B0AAB7"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#D8D9E0",
+    "n": 48536
+   },
+   {
+    "hex": "#AFA9B6",
+    "n": 19834
+   },
+   {
+    "hex": "#D7D8DF",
+    "n": 17612
+   }
+  ],
+  "evidence": "ev/bakura_hair_e22_154.png"
+ },
+ {
+  "label": "ybakura_hair_e13_131",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e13_131.png",
+  "box": [
+   240,
+   0,
+   1040,
+   544
+  ],
+  "h": [
+   232,
+   300
+  ],
+  "s": [
+   0.03,
+   0.3
+  ],
+  "v": [
+   0.5,
+   1
+  ],
+  "kept": 213784,
+  "area": 434400,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#CCCBD4",
+    "n": 116579,
+    "iqr": [
+     "#CBCAD3",
+     "#CCCDD6"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#A39AAB",
+    "n": 97205,
+    "iqr": [
+     "#A19AAA",
+     "#A39BAC"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#A39AAB",
+    "n": 85316
+   },
+   {
+    "hex": "#CAC9D3",
+    "n": 43403
+   },
+   {
+    "hex": "#CDCDD6",
+    "n": 35811
+   }
+  ],
+  "evidence": "ev/ybakura_hair_e13_131.png"
+ },
+ {
+  "label": "ybakura_hair_e13_287",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e13_287.png",
+  "box": [
+   192,
+   0,
+   1012,
+   544
+  ],
+  "h": [
+   232,
+   300
+  ],
+  "s": [
+   0.03,
+   0.3
+  ],
+  "v": [
+   0.5,
+   1
+  ],
+  "kept": 199291,
+  "area": 445260,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#CCCBD4",
+    "n": 96202,
+    "iqr": [
+     "#CACAD3",
+     "#CCCDD6"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#A29AAB",
+    "n": 103089,
+    "iqr": [
+     "#A19AAA",
+     "#A39BAC"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#A29AAB",
+    "n": 81685
+   },
+   {
+    "hex": "#CACAD3",
+    "n": 40095
+   },
+   {
+    "hex": "#CCCDD6",
+    "n": 25560
+   }
+  ],
+  "evidence": "ev/ybakura_hair_e13_287.png"
+ },
+ {
+  "label": "mokuba_hair_e08_1083.6",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e08_1083.6.png",
+  "box": [
+   150,
+   0,
+   1120,
+   280
+  ],
+  "h": [
+   0,
+   360
+  ],
+  "s": [
+   0,
+   1
+  ],
+  "v": [
+   0,
+   0.4
+  ],
+  "kept": 182859,
+  "area": 270630,
+  "fills": [
+   {
+    "tone": "one",
+    "hex": "#1F1F1F",
+    "n": 182859,
+    "iqr": [
+     "#1F1F1C",
+     "#201F1F"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#1F1F1F",
+    "n": 163018
+   },
+   {
+    "hex": "#251F1B",
+    "n": 3588
+   },
+   {
+    "hex": "#271E14",
+    "n": 2936
+   }
+  ],
+  "evidence": "ev/mokuba_hair_e08_1083.6.png"
+ },
+ {
+  "label": "mokuba_hair_e08_1080",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/../../dk/bakura_mokuba_yugi/cited/mokuba_e08_1080.png",
+  "box": [
+   780,
+   20,
+   980,
+   180
+  ],
+  "h": [
+   0,
+   360
+  ],
+  "s": [
+   0,
+   1
+  ],
+  "v": [
+   0,
+   0.4
+  ],
+  "kept": 19137,
+  "area": 32000,
+  "fills": [
+   {
+    "tone": "one",
+    "hex": "#1E1E1E",
+    "n": 19137,
+    "iqr": [
+     "#1D1E1D",
+     "#1F1F1F"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#1E1E1E",
+    "n": 17468
+   },
+   {
+    "hex": "#1C1F25",
+    "n": 497
+   },
+   {
+    "hex": "#201B15",
+    "n": 238
+   }
+  ],
+  "evidence": "ev/mokuba_hair_e08_1080.png"
+ },
+ {
+  "label": "yugi_bangs_e07_111",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e07_111.png",
+  "box": [
+   150,
+   0,
+   1120,
+   392
+  ],
+  "h": [
+   38,
+   62
+  ],
+  "s": [
+   0.3,
+   0.95
+  ],
+  "v": [
+   0.4,
+   1
+  ],
+  "kept": 43091,
+  "area": 379270,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#C7BD59",
+    "n": 21337,
+    "iqr": [
+     "#C5BC57",
+     "#C8BE5C"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#8F743D",
+    "n": 21754,
+    "iqr": [
+     "#8D733B",
+     "#907540"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#C7BD58",
+    "n": 17094
+   },
+   {
+    "hex": "#8D733F",
+    "n": 7664
+   },
+   {
+    "hex": "#90743D",
+    "n": 5184
+   }
+  ],
+  "evidence": "ev/yugi_bangs_e07_111.png"
+ },
+ {
+  "label": "yugi_tips_e07_111",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e07_111.png",
+  "box": [
+   150,
+   0,
+   1120,
+   392
+  ],
+  "h": [
+   325,
+   360
+  ],
+  "s": [
+   0.45,
+   1
+  ],
+  "v": [
+   0.3,
+   1
+  ],
+  "kept": 17823,
+  "area": 379270,
+  "fills": [
+   {
+    "tone": "one",
+    "hex": "#A82559",
+    "n": 17823,
+    "iqr": [
+     "#A62458",
+     "#A9275A"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#A9255A",
+    "n": 8617
+   },
+   {
+    "hex": "#A62658",
+    "n": 6368
+   },
+   {
+    "hex": "#A82359",
+    "n": 1229
+   }
+  ],
+  "evidence": "ev/yugi_tips_e07_111.png"
+ },
+ {
+  "label": "yami_bangs_e05_147",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e05_147.png",
+  "box": [
+   140,
+   0,
+   1140,
+   344
+  ],
+  "h": [
+   38,
+   62
+  ],
+  "s": [
+   0.3,
+   0.95
+  ],
+  "v": [
+   0.4,
+   1
+  ],
+  "kept": 93483,
+  "area": 343000,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#D2C752",
+    "n": 85201,
+    "iqr": [
+     "#D0C54F",
+     "#D4C854"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#927233",
+    "n": 8282,
+    "iqr": [
+     "#8F702E",
+     "#957537"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#D2C750",
+    "n": 59729
+   },
+   {
+    "hex": "#D4C755",
+    "n": 18606
+   },
+   {
+    "hex": "#937334",
+    "n": 2994
+   }
+  ],
+  "evidence": "ev/yami_bangs_e05_147.png"
+ },
+ {
+  "label": "yami_tips_e05_147",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e05_147.png",
+  "box": [
+   140,
+   0,
+   1140,
+   700
+  ],
+  "h": [
+   325,
+   360
+  ],
+  "s": [
+   0.45,
+   1
+  ],
+  "v": [
+   0.3,
+   1
+  ],
+  "kept": 27282,
+  "area": 699000,
+  "fills": [
+   {
+    "tone": "one",
+    "hex": "#B0135B",
+    "n": 27282,
+    "iqr": [
+     "#AD1159",
+     "#B3155D"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#B0125B",
+    "n": 17047
+   },
+   {
+    "hex": "#B5125C",
+    "n": 4982
+   },
+   {
+    "hex": "#A41B59",
+    "n": 1086
+   }
+  ],
+  "evidence": "ev/yami_tips_e05_147.png"
+ },
+ {
+  "label": "yami_core_e05_147",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e05_147.png",
+  "box": [
+   440,
+   0,
+   900,
+   64
+  ],
+  "h": [
+   0,
+   360
+  ],
+  "s": [
+   0,
+   1
+  ],
+  "v": [
+   0,
+   0.3
+  ],
+  "kept": 8103,
+  "area": 28980,
+  "fills": [
+   {
+    "tone": "one",
+    "hex": "#161613",
+    "n": 8103,
+    "iqr": [
+     "#141411",
+     "#181715"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#161513",
+    "n": 5557
+   },
+   {
+    "hex": "#181815",
+    "n": 853
+   },
+   {
+    "hex": "#181614",
+    "n": 566
+   }
+  ],
+  "evidence": "ev/yami_core_e05_147.png"
+ },
+ {
+  "label": "yami_bangs_e07_955",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e07_955.png",
+  "box": [
+   552,
+   0,
+   1132,
+   304
+  ],
+  "h": [
+   38,
+   62
+  ],
+  "s": [
+   0.3,
+   0.95
+  ],
+  "v": [
+   0.4,
+   1
+  ],
+  "kept": 38392,
+  "area": 175740,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#C8BD5A",
+    "n": 29709,
+    "iqr": [
+     "#C6BB58",
+     "#C9BE5E"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#8E733D",
+    "n": 8683,
+    "iqr": [
+     "#8A723B",
+     "#90743F"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#C8BD59",
+    "n": 23594
+   },
+   {
+    "hex": "#C7BC62",
+    "n": 3195
+   },
+   {
+    "hex": "#8E733F",
+    "n": 2730
+   }
+  ],
+  "evidence": "ev/yami_bangs_e07_955.png"
+ },
+ {
+  "label": "yami_tips_e07_955",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e07_955.png",
+  "box": [
+   552,
+   0,
+   1132,
+   400
+  ],
+  "h": [
+   325,
+   360
+  ],
+  "s": [
+   0.45,
+   1
+  ],
+  "v": [
+   0.3,
+   1
+  ],
+  "kept": 9457,
+  "area": 231420,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#A9265A",
+    "n": 7484,
+    "iqr": [
+     "#A62558",
+     "#AB275A"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#972C56",
+    "n": 1973,
+    "iqr": [
+     "#912952",
+     "#9B305A"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#AB265A",
+    "n": 4327
+   },
+   {
+    "hex": "#A42858",
+    "n": 2870
+   },
+   {
+    "hex": "#982C57",
+    "n": 499
+   }
+  ],
+  "evidence": "ev/yami_tips_e07_955.png"
+ },
+ {
+  "label": "mako_hair_e07_329",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e07_329.png",
+  "box": [
+   152,
+   0,
+   1112,
+   312
+  ],
+  "h": [
+   225,
+   295
+  ],
+  "s": [
+   0.15,
+   0.85
+  ],
+  "v": [
+   0.06,
+   0.66
+  ],
+  "kept": 63215,
+  "area": 298560,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#3C3A4C",
+    "n": 57033,
+    "iqr": [
+     "#3C394B",
+     "#3D3A4F"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#27252F",
+    "n": 6182,
+    "iqr": [
+     "#24232A",
+     "#2D2B36"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#3C3A4D",
+    "n": 41729
+   },
+   {
+    "hex": "#3B394B",
+    "n": 8562
+   },
+   {
+    "hex": "#393744",
+    "n": 5070
+   }
+  ],
+  "evidence": "ev/mako_hair_e07_329.png"
+ },
+ {
+  "label": "mako_hair_e07_1013",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e07_1013.png",
+  "box": [
+   150,
+   0,
+   1100,
+   344
+  ],
+  "h": [
+   225,
+   295
+  ],
+  "s": [
+   0.15,
+   0.85
+  ],
+  "v": [
+   0.06,
+   0.66
+  ],
+  "kept": 129259,
+  "area": 325850,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#5E6696",
+    "n": 18363,
+    "iqr": [
+     "#5D6592",
+     "#5F6797"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#3C394C",
+    "n": 110896,
+    "iqr": [
+     "#3B384A",
+     "#3C3A4F"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#3C3A4F",
+    "n": 68651
+   },
+   {
+    "hex": "#3B394B",
+    "n": 19358
+   },
+   {
+    "hex": "#5E6696",
+    "n": 11772
+   }
+  ],
+  "evidence": "ev/mako_hair_e07_1013.png"
+ },
+ {
+  "label": "mai_hair_e06_478",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e06_478.png",
+  "box": [
+   152,
+   0,
+   1012,
+   704
+  ],
+  "h": [
+   38,
+   62
+  ],
+  "s": [
+   0.25,
+   0.9
+  ],
+  "v": [
+   0.35,
+   1
+  ],
+  "kept": 264725,
+  "area": 604580,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#C3BD68",
+    "n": 203156,
+    "iqr": [
+     "#C1BB68",
+     "#C4BE6A"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#736C3F",
+    "n": 61569,
+    "iqr": [
+     "#736C3E",
+     "#746D41"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#C3BD68",
+    "n": 145522
+   },
+   {
+    "hex": "#746D3F",
+    "n": 47880
+   },
+   {
+    "hex": "#C3BC6E",
+    "n": 25443
+   }
+  ],
+  "evidence": "ev/mai_hair_e06_478.png"
+ },
+ {
+  "label": "mai_hair_e04_487",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e04_487.png",
+  "box": [
+   600,
+   0,
+   1120,
+   660
+  ],
+  "h": [
+   38,
+   62
+  ],
+  "s": [
+   0.25,
+   0.9
+  ],
+  "v": [
+   0.35,
+   1
+  ],
+  "kept": 25541,
+  "area": 342680,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#BEBA6C",
+    "n": 12197,
+    "iqr": [
+     "#BCB869",
+     "#BFBB71"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#736D42",
+    "n": 13344,
+    "iqr": [
+     "#726C40",
+     "#756E45"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#746D42",
+    "n": 7716
+   },
+   {
+    "hex": "#BEBA68",
+    "n": 4321
+   },
+   {
+    "hex": "#BDB96F",
+    "n": 4160
+   }
+  ],
+  "evidence": "ev/mai_hair_e04_487.png"
+ },
+ {
+  "label": "mai_hair_e06_1033",
+  "frame": "/home/greatsaiyadave/argon-avatar/research/customization/evidence/dk_anime/mai_e06_1033.png",
+  "box": [
+   192,
+   0,
+   712,
+   600
+  ],
+  "h": [
+   38,
+   62
+  ],
+  "s": [
+   0.25,
+   0.9
+  ],
+  "v": [
+   0.35,
+   1
+  ],
+  "kept": 54548,
+  "area": 311480,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#C2BD6A",
+    "n": 19892,
+    "iqr": [
+     "#C1BB68",
+     "#C3BE6D"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#736C41",
+    "n": 34656,
+    "iqr": [
+     "#726B3E",
+     "#746D43"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#746D41",
+    "n": 21904
+   },
+   {
+    "hex": "#C2BD68",
+    "n": 8645
+   },
+   {
+    "hex": "#716A40",
+    "n": 8541
+   }
+  ],
+  "evidence": "ev/mai_hair_e06_1033.png"
+ },
+ {
+  "label": "bonz_hair_e17_246",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e17_246.png",
+  "box": [
+   150,
+   0,
+   1120,
+   272
+  ],
+  "h": [
+   205,
+   250
+  ],
+  "s": [
+   0.18,
+   0.75
+  ],
+  "v": [
+   0.22,
+   0.85
+  ],
+  "kept": 121532,
+  "area": 262870,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#515E81",
+    "n": 74068,
+    "iqr": [
+     "#505D81",
+     "#525E82"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#3D465A",
+    "n": 47464,
+    "iqr": [
+     "#3C4458",
+     "#3E465C"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#515E81",
+    "n": 70492
+   },
+   {
+    "hex": "#3E465A",
+    "n": 38703
+   },
+   {
+    "hex": "#37414D",
+    "n": 1803
+   }
+  ],
+  "evidence": "ev/bonz_hair_e17_246.png"
+ },
+ {
+  "label": "pegasus_hair_e04_443",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e04_443.png",
+  "box": [
+   412,
+   0,
+   1132,
+   692
+  ],
+  "h": [
+   225,
+   300
+  ],
+  "s": [
+   0.03,
+   0.3
+  ],
+  "v": [
+   0.5,
+   1
+  ],
+  "kept": 267446,
+  "area": 497520,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#C5BED3",
+    "n": 90520,
+    "iqr": [
+     "#C4BDD1",
+     "#C6BED5"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#827E96",
+    "n": 176926,
+    "iqr": [
+     "#827D95",
+     "#837E97"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#827D96",
+    "n": 151223
+   },
+   {
+    "hex": "#C5BED3",
+    "n": 81922
+   },
+   {
+    "hex": "#848096",
+    "n": 13423
+   }
+  ],
+  "evidence": "ev/pegasus_hair_e04_443.png"
+ },
+ {
+  "label": "joey_hair_e04_702",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e04_702.png",
+  "box": [
+   229,
+   0,
+   900,
+   380
+  ],
+  "h": [
+   38,
+   62
+  ],
+  "s": [
+   0.3,
+   0.9
+  ],
+  "v": [
+   0.35,
+   1
+  ],
+  "kept": 103430,
+  "area": 254309,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#B59D3D",
+    "n": 80051,
+    "iqr": [
+     "#B39B3D",
+     "#B69E3F"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#7D6538",
+    "n": 23379,
+    "iqr": [
+     "#7C6435",
+     "#7F663A"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#B69D3D",
+    "n": 50287
+   },
+   {
+    "hex": "#B29A3D",
+    "n": 19151
+   },
+   {
+    "hex": "#7D6537",
+    "n": 15793
+   }
+  ],
+  "evidence": "ev/joey_hair_e04_702.png"
+ },
+ {
+  "label": "weevil_hair_e04_900",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e04_900.png",
+  "box": [
+   168,
+   0,
+   1010,
+   260
+  ],
+  "h": [
+   150,
+   195
+  ],
+  "s": [
+   0.12,
+   0.7
+  ],
+  "v": [
+   0.3,
+   1
+  ],
+  "kept": 117763,
+  "area": 218078,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#90BEB9",
+    "n": 64891,
+    "iqr": [
+     "#8FBDB8",
+     "#91BFBB"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#527E77",
+    "n": 52872,
+    "iqr": [
+     "#507D76",
+     "#537F78"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#517E76",
+    "n": 29246
+   },
+   {
+    "hex": "#8FBEB9",
+    "n": 27059
+   },
+   {
+    "hex": "#91BDB9",
+    "n": 18960
+   }
+  ],
+  "evidence": "ev/weevil_hair_e04_900.png"
+ },
+ {
+  "label": "weevil_hair_e04_506",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e04_506.png",
+  "box": [
+   380,
+   0,
+   970,
+   290
+  ],
+  "h": [
+   150,
+   195
+  ],
+  "s": [
+   0.12,
+   0.7
+  ],
+  "v": [
+   0.3,
+   1
+  ],
+  "kept": 62378,
+  "area": 170510,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#87B6B4",
+    "n": 27437,
+    "iqr": [
+     "#87B5B2",
+     "#88B7B6"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#4E7974",
+    "n": 34941,
+    "iqr": [
+     "#4C7772",
+     "#507B76"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#4D7974",
+    "n": 17532
+   },
+   {
+    "hex": "#88B7B5",
+    "n": 16045
+   },
+   {
+    "hex": "#4E7671",
+    "n": 7098
+   }
+  ],
+  "evidence": "ev/weevil_hair_e04_506.png"
+ },
+ {
+  "label": "yugi_bangs_e04_452",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e04_452.png",
+  "box": [
+   330,
+   0,
+   1060,
+   330
+  ],
+  "h": [
+   38,
+   62
+  ],
+  "s": [
+   0.3,
+   0.95
+  ],
+  "v": [
+   0.4,
+   1
+  ],
+  "kept": 22032,
+  "area": 240170,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#C0B94D",
+    "n": 11459,
+    "iqr": [
+     "#BEB74C",
+     "#C1BA52"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#836A2D",
+    "n": 10573,
+    "iqr": [
+     "#806829",
+     "#856C30"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#C0BA4C",
+    "n": 5854
+   },
+   {
+    "hex": "#BEB94C",
+    "n": 2767
+   },
+   {
+    "hex": "#81682B",
+    "n": 2445
+   }
+  ],
+  "evidence": "ev/yugi_bangs_e04_452.png"
+ },
+ {
+  "label": "yugi_tips_e04_452",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e04_452.png",
+  "box": [
+   300,
+   0,
+   1120,
+   400
+  ],
+  "h": [
+   325,
+   360
+  ],
+  "s": [
+   0.45,
+   1
+  ],
+  "v": [
+   0.3,
+   1
+  ],
+  "kept": 4043,
+  "area": 327180,
+  "fills": [
+   {
+    "tone": "one",
+    "hex": "#991843",
+    "n": 4043,
+    "iqr": [
+     "#931541",
+     "#9E1B45"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#A01543",
+    "n": 1023
+   },
+   {
+    "hex": "#961A44",
+    "n": 966
+   },
+   {
+    "hex": "#981641",
+    "n": 731
+   }
+  ],
+  "evidence": "ev/yugi_tips_e04_452.png"
+ },
+ {
+  "label": "yugi_bangs_e04_358",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e04_358.png",
+  "box": [
+   300,
+   0,
+   1100,
+   330
+  ],
+  "h": [
+   38,
+   62
+  ],
+  "s": [
+   0.3,
+   0.95
+  ],
+  "v": [
+   0.4,
+   1
+  ],
+  "kept": 27914,
+  "area": 263200,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#BEB84D",
+    "n": 12623,
+    "iqr": [
+     "#BBB54B",
+     "#C0BA51"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#9C9A58",
+    "n": 15291,
+    "iqr": [
+     "#826B2E",
+     "#A09B5B"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#BDB84C",
+    "n": 5965
+   },
+   {
+    "hex": "#9F9B5A",
+    "n": 3933
+   },
+   {
+    "hex": "#A09C5B",
+    "n": 3697
+   }
+  ],
+  "evidence": "ev/yugi_bangs_e04_358.png"
+ },
+ {
+  "label": "tea_hair_e04_452",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e04_452.png",
+  "box": [
+   143,
+   0,
+   300,
+   230
+  ],
+  "h": [
+   8,
+   40
+  ],
+  "s": [
+   0.35,
+   0.9
+  ],
+  "v": [
+   0.2,
+   0.8
+  ],
+  "kept": 2202,
+  "area": 35953,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#B18572",
+    "n": 657,
+    "iqr": [
+     "#AF8370",
+     "#B38673"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#4E2D1D",
+    "n": 1545,
+    "iqr": [
+     "#3C2315",
+     "#582F1F"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#592E1D",
+    "n": 414
+   },
+   {
+    "hex": "#B28572",
+    "n": 340
+   },
+   {
+    "hex": "#351D10",
+    "n": 219
+   }
+  ],
+  "evidence": "ev/tea_hair_e04_452.png"
+ },
+ {
+  "label": "yugi_core_e04_452",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e04_452.png",
+  "box": [
+   440,
+   0,
+   1000,
+   150
+  ],
+  "h": [
+   0,
+   360
+  ],
+  "s": [
+   0,
+   1
+  ],
+  "v": [
+   0,
+   0.3
+  ],
+  "kept": 25032,
+  "area": 83440,
+  "fills": [
+   {
+    "tone": "one",
+    "hex": "#131313",
+    "n": 25032,
+    "iqr": [
+     "#131310",
+     "#141313"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#131313",
+    "n": 22530
+   },
+   {
+    "hex": "#1A1012",
+    "n": 527
+   },
+   {
+    "hex": "#141307",
+    "n": 401
+   }
+  ],
+  "evidence": "ev/yugi_core_e04_452.png"
+ },
+ {
+  "label": "yugi_tips_e04_358",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e04_358.png",
+  "box": [
+   450,
+   0,
+   1050,
+   300
+  ],
+  "h": [
+   325,
+   360
+  ],
+  "s": [
+   0.45,
+   1
+  ],
+  "v": [
+   0.3,
+   1
+  ],
+  "kept": 9792,
+  "area": 179400,
+  "fills": [
+   {
+    "tone": "one",
+    "hex": "#9C1743",
+    "n": 9792,
+    "iqr": [
+     "#981541",
+     "#A01F45"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#A01542",
+    "n": 4386
+   },
+   {
+    "hex": "#9A4349",
+    "n": 1334
+   },
+   {
+    "hex": "#961A43",
+    "n": 1252
+   }
+  ],
+  "evidence": "ev/yugi_tips_e04_358.png"
+ },
+ {
+  "label": "yugi_core_e04_358",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e04_358.png",
+  "box": [
+   500,
+   0,
+   1000,
+   150
+  ],
+  "h": [
+   0,
+   360
+  ],
+  "s": [
+   0,
+   1
+  ],
+  "v": [
+   0,
+   0.3
+  ],
+  "kept": 37745,
+  "area": 74500,
+  "fills": [
+   {
+    "tone": "one",
+    "hex": "#121212",
+    "n": 37745,
+    "iqr": [
+     "#121210",
+     "#131312"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#121212",
+    "n": 34526
+   },
+   {
+    "hex": "#141207",
+    "n": 1009
+   },
+   {
+    "hex": "#1A0F12",
+    "n": 597
+   }
+  ],
+  "evidence": "ev/yugi_core_e04_358.png"
+ },
+ {
+  "label": "kaiba_hair_e08_1173",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e08_1173.png",
+  "box": [
+   180,
+   0,
+   1120,
+   320
+  ],
+  "h": [
+   10,
+   36
+  ],
+  "s": [
+   0.4,
+   0.9
+  ],
+  "v": [
+   0.15,
+   0.82
+  ],
+  "kept": 20125,
+  "area": 299860,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#735539",
+    "n": 11928,
+    "iqr": [
+     "#715436",
+     "#75563C"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#30241B",
+    "n": 8197,
+    "iqr": [
+     "#2C1F19",
+     "#3F2E22"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#745538",
+    "n": 6352
+   },
+   {
+    "hex": "#2C2019",
+    "n": 2704
+   },
+   {
+    "hex": "#73583F",
+    "n": 2294
+   }
+  ],
+  "evidence": "ev/kaiba_hair_e08_1173.png"
+ },
+ {
+  "label": "kaiba_hair_e08_1178",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e08_1178.png",
+  "box": [
+   160,
+   0,
+   940,
+   330
+  ],
+  "h": [
+   10,
+   36
+  ],
+  "s": [
+   0.4,
+   0.9
+  ],
+  "v": [
+   0.15,
+   0.82
+  ],
+  "kept": 19984,
+  "area": 256620,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#725338",
+    "n": 11994,
+    "iqr": [
+     "#6F5236",
+     "#73543B"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#2F231B",
+    "n": 7990,
+    "iqr": [
+     "#2A1E18",
+     "#3E2C21"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#715236",
+    "n": 5454
+   },
+   {
+    "hex": "#735439",
+    "n": 3145
+   },
+   {
+    "hex": "#2C1F19",
+    "n": 2463
+   }
+  ],
+  "evidence": "ev/kaiba_hair_e08_1178.png"
+ },
+ {
+  "label": "tristan_hair_e07_1151",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e07_1151.png",
+  "box": [
+   150,
+   0,
+   400,
+   120
+  ],
+  "h": [
+   0,
+   40
+  ],
+  "s": [
+   0.25,
+   0.95
+  ],
+  "v": [
+   0.08,
+   0.6
+  ],
+  "kept": 9825,
+  "area": 29750,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#685039",
+    "n": 8212,
+    "iqr": [
+     "#664E38",
+     "#6A513B"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#483928",
+    "n": 1613,
+    "iqr": [
+     "#3D3123",
+     "#4A3A2C"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#685039",
+    "n": 6722
+   },
+   {
+    "hex": "#4A3A2C",
+    "n": 717
+   },
+   {
+    "hex": "#66513D",
+    "n": 466
+   }
+  ],
+  "evidence": "ev/tristan_hair_e07_1151.png"
+ },
+ {
+  "label": "tristan_hair_e07_674",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e07_674.png",
+  "box": [
+   202,
+   70,
+   372,
+   200
+  ],
+  "h": [
+   0,
+   40
+  ],
+  "s": [
+   0.25,
+   0.95
+  ],
+  "v": [
+   0.08,
+   0.6
+  ],
+  "kept": 6604,
+  "area": 22100,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#674D3A",
+    "n": 2773,
+    "iqr": [
+     "#664C3A",
+     "#694D3D"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#4C362A",
+    "n": 3831,
+    "iqr": [
+     "#49362A",
+     "#4C362C"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#4C362B",
+    "n": 2799
+   },
+   {
+    "hex": "#674D3A",
+    "n": 1585
+   },
+   {
+    "hex": "#674D3C",
+    "n": 557
+   }
+  ],
+  "evidence": "ev/tristan_hair_e07_674.png"
+ },
+ {
+  "label": "rex_brown_e04_350",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e04_350.png",
+  "box": [
+   380,
+   40,
+   1140,
+   520
+  ],
+  "h": [
+   5,
+   35
+  ],
+  "s": [
+   0.5,
+   0.95
+  ],
+  "v": [
+   0.1,
+   0.62
+  ],
+  "kept": 21895,
+  "area": 364800,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#98734A",
+    "n": 9126,
+    "iqr": [
+     "#967148",
+     "#99744B"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#512E1D",
+    "n": 12769,
+    "iqr": [
+     "#492115",
+     "#573121"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#98734A",
+    "n": 7889
+   },
+   {
+    "hex": "#503121",
+    "n": 2704
+   },
+   {
+    "hex": "#572E1D",
+    "n": 1492
+   }
+  ],
+  "evidence": "ev/rex_brown_e04_350.png"
+ },
+ {
+  "label": "rex_brown_e04_428",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e04_428.png",
+  "box": [
+   490,
+   100,
+   620,
+   240
+  ],
+  "h": [
+   5,
+   35
+  ],
+  "s": [
+   0.5,
+   0.95
+  ],
+  "v": [
+   0.1,
+   0.62
+  ],
+  "kept": 2000,
+  "area": 18200,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#87362A",
+    "n": 683,
+    "iqr": [
+     "#76281C",
+     "#92392F"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#492216",
+    "n": 1317,
+    "iqr": [
+     "#3C1D10",
+     "#5A291A"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#642014",
+    "n": 206
+   },
+   {
+    "hex": "#96362B",
+    "n": 101
+   },
+   {
+    "hex": "#8B372C",
+    "n": 95
+   }
+  ],
+  "evidence": "ev/rex_brown_e04_428.png"
+ },
+ {
+  "label": "rex_brown_e12_156",
+  "frame": "/home/greatsaiyadave/argon-avatar/research/customization/evidence/dk_anime/rex_e12_156.png",
+  "box": [
+   160,
+   0,
+   1120,
+   720
+  ],
+  "h": [
+   5,
+   35
+  ],
+  "s": [
+   0.5,
+   0.95
+  ],
+  "v": [
+   0.1,
+   0.62
+  ],
+  "kept": 19052,
+  "area": 689280,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#5D3D26",
+    "n": 16144,
+    "iqr": [
+     "#5C3C25",
+     "#5D3D27"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#452118",
+    "n": 2908,
+    "iqr": [
+     "#381E15",
+     "#4B261B"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#5D3D27",
+    "n": 12138
+   },
+   {
+    "hex": "#5A3B26",
+    "n": 1111
+   },
+   {
+    "hex": "#431E15",
+    "n": 548
+   }
+  ],
+  "evidence": "ev/rex_brown_e12_156.png"
+ },
+ {
+  "label": "rex_fringe_e12_156",
+  "frame": "/home/greatsaiyadave/argon-avatar/research/customization/evidence/dk_anime/rex_e12_156.png",
+  "box": [
+   160,
+   0,
+   1120,
+   720
+  ],
+  "h": [
+   240,
+   300
+  ],
+  "s": [
+   0.12,
+   0.6
+  ],
+  "v": [
+   0.45,
+   1
+  ],
+  "kept": 12220,
+  "area": 689280,
+  "fills": [
+   {
+    "tone": "one",
+    "hex": "#9388B7",
+    "n": 12220,
+    "iqr": [
+     "#9287B5",
+     "#9389B8"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#9388B7",
+    "n": 9962
+   },
+   {
+    "hex": "#9286B0",
+    "n": 1379
+   },
+   {
+    "hex": "#8F86AE",
+    "n": 335
+   }
+  ],
+  "evidence": "ev/rex_fringe_e12_156.png"
+ },
+ {
+  "label": "mokuba_hilite_e08_1083.6",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e08_1083.6.png",
+  "box": [
+   150,
+   0,
+   1120,
+   280
+  ],
+  "h": [
+   215,
+   275
+  ],
+  "s": [
+   0.25,
+   0.9
+  ],
+  "v": [
+   0.2,
+   0.9
+  ],
+  "kept": 5047,
+  "area": 270630,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#4D5682",
+    "n": 2917,
+    "iqr": [
+     "#4C567F",
+     "#4E5682"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#312B3F",
+    "n": 2130,
+    "iqr": [
+     "#2E293B",
+     "#423E55"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#4D5682",
+    "n": 2294
+   },
+   {
+    "hex": "#443F59",
+    "n": 578
+   },
+   {
+    "hex": "#312A3F",
+    "n": 540
+   }
+  ],
+  "evidence": "ev/mokuba_hilite_e08_1083.6.png"
+ },
+ {
+  "label": "pegasus_hair_e04_352",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e04_352.png",
+  "box": [
+   400,
+   20,
+   580,
+   240
+  ],
+  "h": [
+   225,
+   300
+  ],
+  "s": [
+   0.03,
+   0.3
+  ],
+  "v": [
+   0.5,
+   1
+  ],
+  "kept": 4045,
+  "area": 39600,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#C4BCCE",
+    "n": 3161,
+    "iqr": [
+     "#C2BACC",
+     "#C6BED1"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#837E90",
+    "n": 884,
+    "iqr": [
+     "#7F7B8C",
+     "#878194"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#C4BCCF",
+    "n": 1761
+   },
+   {
+    "hex": "#C3BACA",
+    "n": 490
+   },
+   {
+    "hex": "#C8C1D1",
+    "n": 272
+   }
+  ],
+  "evidence": "ev/pegasus_hair_e04_352.png"
+ },
+ {
+  "label": "pegasus_hair_e16_1101",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e16_1101.png",
+  "box": [
+   160,
+   0,
+   1120,
+   720
+  ],
+  "h": [
+   225,
+   300
+  ],
+  "s": [
+   0.03,
+   0.3
+  ],
+  "v": [
+   0.5,
+   1
+  ],
+  "kept": 316015,
+  "area": 689280,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#CAC4DA",
+    "n": 157498,
+    "iqr": [
+     "#B9B7D2",
+     "#D6CEE5"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#8E8C9F",
+    "n": 158517,
+    "iqr": [
+     "#8A889D",
+     "#9F9EAE"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#8A889D",
+    "n": 64253
+   },
+   {
+    "hex": "#B7B7C3",
+    "n": 24325
+   },
+   {
+    "hex": "#ADACBA",
+    "n": 20836
+   }
+  ],
+  "evidence": "ev/pegasus_hair_e16_1101.png"
+ },
+ {
+  "label": "pegasus_hair_e36_755",
+  "frame": "/home/greatsaiyadave/argon-avatar/research/customization/evidence/dk_anime/pegasus_e36_755.png",
+  "box": [
+   260,
+   0,
+   1120,
+   664
+  ],
+  "h": [
+   225,
+   300
+  ],
+  "s": [
+   0.03,
+   0.3
+  ],
+  "v": [
+   0.5,
+   1
+  ],
+  "kept": 152563,
+  "area": 570180,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#C9C5D6",
+    "n": 74165,
+    "iqr": [
+     "#C8C5D5",
+     "#C9C6D7"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#8B899B",
+    "n": 78398,
+    "iqr": [
+     "#8B899A",
+     "#8C8A9C"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#C8C5D6",
+    "n": 56263
+   },
+   {
+    "hex": "#8B899B",
+    "n": 44727
+   },
+   {
+    "hex": "#8C8A9C",
+    "n": 23375
+   }
+  ],
+  "evidence": "ev/pegasus_hair_e36_755.png"
+ },
+ {
+  "label": "keith_hair_e32_1020",
+  "frame": "/home/greatsaiyadave/argon-avatar/research/customization/evidence/dk_anime/keith_e32_1020.png",
+  "box": [
+   300,
+   20,
+   680,
+   200
+  ],
+  "h": [
+   38,
+   65
+  ],
+  "s": [
+   0.25,
+   0.9
+  ],
+  "v": [
+   0.3,
+   1
+  ],
+  "kept": 12378,
+  "area": 68400,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#B3AF59",
+    "n": 1167,
+    "iqr": [
+     "#B1AE55",
+     "#B6B15F"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#747045",
+    "n": 11211,
+    "iqr": [
+     "#736F43",
+     "#767148"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#747044",
+    "n": 6918
+   },
+   {
+    "hex": "#74704A",
+    "n": 2722
+   },
+   {
+    "hex": "#797344",
+    "n": 359
+   }
+  ],
+  "evidence": "ev/keith_hair_e32_1020.png"
+ },
+ {
+  "label": "keith_hair_e32_708",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/../../dk/keith_bonz_misc/frames/keith_e32_708.png",
+  "box": [
+   392,
+   100,
+   872,
+   300
+  ],
+  "h": [
+   38,
+   65
+  ],
+  "s": [
+   0.25,
+   0.9
+  ],
+  "v": [
+   0.3,
+   1
+  ],
+  "kept": 27583,
+  "area": 96000,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#B5AF56",
+    "n": 6371,
+    "iqr": [
+     "#B3AE53",
+     "#B7B05A"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#767045",
+    "n": 21212,
+    "iqr": [
+     "#746F42",
+     "#777147"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#767044",
+    "n": 12553
+   },
+   {
+    "hex": "#756F4A",
+    "n": 3718
+   },
+   {
+    "hex": "#B6AF57",
+    "n": 3010
+   }
+  ],
+  "evidence": "ev/keith_hair_e32_708.png"
+ },
+ {
+  "label": "keith_hair_e18_1086",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/../../dk/keith_bonz_misc/frames/e18_1086.png",
+  "box": [
+   660,
+   60,
+   880,
+   220
+  ],
+  "h": [
+   38,
+   65
+  ],
+  "s": [
+   0.25,
+   0.9
+  ],
+  "v": [
+   0.3,
+   1
+  ],
+  "kept": 3961,
+  "area": 35200,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#A8A352",
+    "n": 1210,
+    "iqr": [
+     "#A5A14E",
+     "#AAA559"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#69653F",
+    "n": 2751,
+    "iqr": [
+     "#625F3B",
+     "#6B6742"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#696640",
+    "n": 1347
+   },
+   {
+    "hex": "#6C6841",
+    "n": 433
+   },
+   {
+    "hex": "#A6A34E",
+    "n": 367
+   }
+  ],
+  "evidence": "ev/keith_hair_e18_1086.png"
+ },
+ {
+  "label": "panik_hair_e15_275",
+  "frame": "/home/greatsaiyadave/argon-avatar/research/customization/evidence/dk_anime/panik_e15_275.png",
+  "box": [
+   192,
+   100,
+   460,
+   330
+  ],
+  "h": [
+   0,
+   360
+  ],
+  "s": [
+   0,
+   1
+  ],
+  "v": [
+   0,
+   0.42
+  ],
+  "kept": 43974,
+  "area": 61640,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#333C49",
+    "n": 27796,
+    "iqr": [
+     "#323B45",
+     "#54504E"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#202324",
+    "n": 16178,
+    "iqr": [
+     "#192222",
+     "#242528"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#333B4E",
+    "n": 9256
+   },
+   {
+    "hex": "#585246",
+    "n": 6347
+   },
+   {
+    "hex": "#1B2221",
+    "n": 4725
+   }
+  ],
+  "evidence": "ev/panik_hair_e15_275.png"
+ },
+ {
+  "label": "bonz_hair_e17_428",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e17_428.png",
+  "box": [
+   540,
+   180,
+   720,
+   330
+  ],
+  "h": [
+   205,
+   250
+  ],
+  "s": [
+   0.18,
+   0.75
+  ],
+  "v": [
+   0.22,
+   0.85
+  ],
+  "kept": 5971,
+  "area": 27000,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#505F7F",
+    "n": 3431,
+    "iqr": [
+     "#4F5E7D",
+     "#505F80"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#3D4859",
+    "n": 2540,
+    "iqr": [
+     "#3C4757",
+     "#3F495C"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#505F7F",
+    "n": 2682
+   },
+   {
+    "hex": "#3D4959",
+    "n": 1208
+   },
+   {
+    "hex": "#3E4757",
+    "n": 559
+   }
+  ],
+  "evidence": "ev/bonz_hair_e17_428.png"
+ },
+ {
+  "label": "weevil_hair_e04_637",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e04_637.png",
+  "box": [
+   280,
+   35,
+   852,
+   330
+  ],
+  "h": [
+   160,
+   192
+  ],
+  "s": [
+   0.12,
+   0.7
+  ],
+  "v": [
+   0.3,
+   1
+  ],
+  "kept": 62320,
+  "area": 168740,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#87B7B5",
+    "n": 41903,
+    "iqr": [
+     "#87B5B3",
+     "#88B7B5"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#4F7A76",
+    "n": 20417,
+    "iqr": [
+     "#4D7974",
+     "#517C78"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#87B7B5",
+    "n": 26180
+   },
+   {
+    "hex": "#4E7A76",
+    "n": 10881
+   },
+   {
+    "hex": "#87B5B2",
+    "n": 8946
+   }
+  ],
+  "evidence": "ev/weevil_hair_e04_637.png"
+ },
+ {
+  "label": "weevil_hair_e05_287",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e05_287.png",
+  "box": [
+   160,
+   0,
+   1120,
+   250
+  ],
+  "h": [
+   160,
+   192
+  ],
+  "s": [
+   0.12,
+   0.7
+  ],
+  "v": [
+   0.3,
+   1
+  ],
+  "kept": 44247,
+  "area": 239040,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#8EC6C1",
+    "n": 22780,
+    "iqr": [
+     "#8DC4BE",
+     "#94C7C3"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#52877D",
+    "n": 21467,
+    "iqr": [
+     "#50857B",
+     "#54887F"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#51877D",
+    "n": 12156
+   },
+   {
+    "hex": "#8EC6C1",
+    "n": 7538
+   },
+   {
+    "hex": "#8CC2BD",
+    "n": 5306
+   }
+  ],
+  "evidence": "ev/weevil_hair_e05_287.png"
+ },
+ {
+  "label": "tea_hair_e04_502",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/a69659a5-e142-4e17-b0c8-a9f5b9d69935/scratchpad/anime/dkframes/mako_e04_502.png",
+  "box": [
+   300,
+   100,
+   560,
+   400
+  ],
+  "h": [
+   2,
+   36
+  ],
+  "s": [
+   0.4,
+   0.95
+  ],
+  "v": [
+   0.12,
+   0.85
+  ],
+  "kept": 31159,
+  "area": 78000,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#5A2E1F",
+    "n": 15232,
+    "iqr": [
+     "#572E1D",
+     "#5B3020"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#281A12",
+    "n": 15927,
+    "iqr": [
+     "#251810",
+     "#2C1C14"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#291B13",
+    "n": 9029
+   },
+   {
+    "hex": "#5A2E1D",
+    "n": 7839
+   },
+   {
+    "hex": "#5C301F",
+    "n": 4318
+   }
+  ],
+  "evidence": "ev/tea_hair_e04_502.png"
+ },
+ {
+  "label": "tea_hair_e07_1151",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e07_1151.png",
+  "box": [
+   760,
+   40,
+   1120,
+   560
+  ],
+  "h": [
+   2,
+   36
+  ],
+  "s": [
+   0.4,
+   0.95
+  ],
+  "v": [
+   0.12,
+   0.85
+  ],
+  "kept": 49557,
+  "area": 187200,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#674032",
+    "n": 38827,
+    "iqr": [
+     "#663F31",
+     "#684032"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#3E2D22",
+    "n": 10730,
+    "iqr": [
+     "#3A2B1F",
+     "#412F24"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#674032",
+    "n": 34971
+   },
+   {
+    "hex": "#3E2D21",
+    "n": 4019
+   },
+   {
+    "hex": "#392B20",
+    "n": 3131
+   }
+  ],
+  "evidence": "ev/tea_hair_e07_1151.png"
+ },
+ {
+  "label": "tristan_hair_e04_502",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/a69659a5-e142-4e17-b0c8-a9f5b9d69935/scratchpad/anime/dkframes/mako_e04_502.png",
+  "box": [
+   100,
+   0,
+   280,
+   100
+  ],
+  "h": [
+   0,
+   40
+  ],
+  "s": [
+   0.25,
+   0.95
+  ],
+  "v": [
+   0.08,
+   0.6
+  ],
+  "kept": 4615,
+  "area": 17820,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#583E29",
+    "n": 3631,
+    "iqr": [
+     "#563D27",
+     "#593E2B"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#2B2014",
+    "n": 984,
+    "iqr": [
+     "#271E11",
+     "#362218"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#583E29",
+    "n": 3120
+   },
+   {
+    "hex": "#271D13",
+    "n": 274
+   },
+   {
+    "hex": "#352111",
+    "n": 263
+   }
+  ],
+  "evidence": "ev/tristan_hair_e04_502.png"
+ },
+ {
+  "label": "joey_hair_e08_1145",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/a69659a5-e142-4e17-b0c8-a9f5b9d69935/scratchpad/anime/dkframes/mokuba_e08_1145.png",
+  "box": [
+   740,
+   190,
+   920,
+   330
+  ],
+  "h": [
+   38,
+   62
+  ],
+  "s": [
+   0.3,
+   0.9
+  ],
+  "v": [
+   0.35,
+   1
+  ],
+  "kept": 930,
+  "area": 25200,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#BFA34A",
+    "n": 324,
+    "iqr": [
+     "#BCA046",
+     "#C9BE51"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#856B38",
+    "n": 606,
+    "iqr": [
+     "#816934",
+     "#876D3C"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#866A36",
+    "n": 136
+   },
+   {
+    "hex": "#826837",
+    "n": 102
+   },
+   {
+    "hex": "#886D38",
+    "n": 98
+   }
+  ],
+  "evidence": "ev/joey_hair_e08_1145.png"
+ },
+ {
+  "label": "yugi_bangs_e04_502",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/a69659a5-e142-4e17-b0c8-a9f5b9d69935/scratchpad/anime/dkframes/mako_e04_502.png",
+  "box": [
+   560,
+   0,
+   1100,
+   380
+  ],
+  "h": [
+   38,
+   62
+  ],
+  "s": [
+   0.3,
+   0.95
+  ],
+  "v": [
+   0.4,
+   1
+  ],
+  "kept": 15046,
+  "area": 204660,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#BFB74F",
+    "n": 9720,
+    "iqr": [
+     "#BDB44D",
+     "#C1B954"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#816A2E",
+    "n": 5326,
+    "iqr": [
+     "#7C672A",
+     "#856C32"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#C1B84E",
+    "n": 3038
+   },
+   {
+    "hex": "#BEB84D",
+    "n": 2957
+   },
+   {
+    "hex": "#C2B858",
+    "n": 1282
+   }
+  ],
+  "evidence": "ev/yugi_bangs_e04_502.png"
+ },
+ {
+  "label": "yugi_tips_e04_502",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/a69659a5-e142-4e17-b0c8-a9f5b9d69935/scratchpad/anime/dkframes/mako_e04_502.png",
+  "box": [
+   560,
+   0,
+   1100,
+   380
+  ],
+  "h": [
+   325,
+   360
+  ],
+  "s": [
+   0.45,
+   1
+  ],
+  "v": [
+   0.3,
+   1
+  ],
+  "kept": 7866,
+  "area": 204660,
+  "fills": [
+   {
+    "tone": "one",
+    "hex": "#9B1743",
+    "n": 7866,
+    "iqr": [
+     "#941441",
+     "#9F1A45"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#A01442",
+    "n": 2667
+   },
+   {
+    "hex": "#981641",
+    "n": 1350
+   },
+   {
+    "hex": "#961B44",
+    "n": 1325
+   }
+  ],
+  "evidence": "ev/yugi_tips_e04_502.png"
+ },
+ {
+  "label": "yugi_core_e04_502",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/a69659a5-e142-4e17-b0c8-a9f5b9d69935/scratchpad/anime/dkframes/mako_e04_502.png",
+  "box": [
+   640,
+   0,
+   1000,
+   60
+  ],
+  "h": [
+   0,
+   360
+  ],
+  "s": [
+   0,
+   1
+  ],
+  "v": [
+   0,
+   0.3
+  ],
+  "kept": 4919,
+  "area": 21240,
+  "fills": [
+   {
+    "tone": "one",
+    "hex": "#131111",
+    "n": 4919,
+    "iqr": [
+     "#12110F",
+     "#141213"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#131111",
+    "n": 4443
+   },
+   {
+    "hex": "#1A0F13",
+    "n": 193
+   },
+   {
+    "hex": "#1D1319",
+    "n": 81
+   }
+  ],
+  "evidence": "ev/yugi_core_e04_502.png"
+ },
+ {
+  "label": "ybakura_hair_e40_275",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/../../dk/bakura_mokuba_yugi/cited/yamibakura_e40_275.png",
+  "box": [
+   160,
+   0,
+   620,
+   380
+  ],
+  "h": [
+   232,
+   300
+  ],
+  "s": [
+   0.03,
+   0.3
+  ],
+  "v": [
+   0.5,
+   1
+  ],
+  "kept": 39581,
+  "area": 174340,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#DADAE4",
+    "n": 6547,
+    "iqr": [
+     "#D9D8E2",
+     "#DCDBE6"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#AFABBA",
+    "n": 33034,
+    "iqr": [
+     "#AFABBA",
+     "#B0ACBA"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#AFABBA",
+    "n": 32123
+   },
+   {
+    "hex": "#DCDBE6",
+    "n": 4074
+   },
+   {
+    "hex": "#D9D9E2",
+    "n": 1053
+   }
+  ],
+  "evidence": "ev/ybakura_hair_e40_275.png"
+ },
+ {
+  "label": "bakura_hair_e22_150",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/../../dk/bakura_mokuba_yugi/cited/bakura_e22_150.png",
+  "box": [
+   0,
+   0,
+   1280,
+   720
+  ],
+  "h": [
+   232,
+   300
+  ],
+  "s": [
+   0.03,
+   0.3
+  ],
+  "v": [
+   0.55,
+   1
+  ],
+  "kept": 1140,
+  "area": 917604,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#D6D7DE",
+    "n": 846,
+    "iqr": [
+     "#CECFD7",
+     "#D7D8DF"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#A5A2AD",
+    "n": 294,
+    "iqr": [
+     "#A29FA9",
+     "#A7A5B0"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#D7D8DF",
+    "n": 258
+   },
+   {
+    "hex": "#D5D6DD",
+    "n": 237
+   },
+   {
+    "hex": "#CECED6",
+    "n": 195
+   }
+  ],
+  "evidence": "ev/bakura_hair_e22_150.png"
+ },
+ {
+  "label": "mako_hair_e04_270",
+  "frame": "/home/greatsaiyadave/argon-avatar/research/customization/evidence/dk_anime/mako_e04_270.png",
+  "box": [
+   560,
+   0,
+   820,
+   160
+  ],
+  "h": [
+   225,
+   295
+  ],
+  "s": [
+   0.15,
+   0.85
+  ],
+  "v": [
+   0.06,
+   0.66
+  ],
+  "kept": 23350,
+  "area": 41340,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#545788",
+    "n": 2688,
+    "iqr": [
+     "#50537F",
+     "#555A8D"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#2D2740",
+    "n": 20662,
+    "iqr": [
+     "#2C263E",
+     "#2F2842"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#2D2740",
+    "n": 12990
+   },
+   {
+    "hex": "#302842",
+    "n": 1626
+   },
+   {
+    "hex": "#2C2539",
+    "n": 1076
+   }
+  ],
+  "evidence": "ev/mako_hair_e04_270.png"
+ },
+ {
+  "label": "mokuba_hair_e08_924",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/a69659a5-e142-4e17-b0c8-a9f5b9d69935/scratchpad/anime/dkframes/mokuba_e08_924.png",
+  "box": [
+   780,
+   360,
+   1000,
+   560
+  ],
+  "h": [
+   0,
+   360
+  ],
+  "s": [
+   0,
+   1
+  ],
+  "v": [
+   0,
+   0.4
+  ],
+  "kept": 27756,
+  "area": 44000,
+  "fills": [
+   {
+    "tone": "one",
+    "hex": "#1E1E1E",
+    "n": 27756,
+    "iqr": [
+     "#1E1D1E",
+     "#1E1E1E"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#1E1E1E",
+    "n": 26918
+   },
+   {
+    "hex": "#1D1E26",
+    "n": 359
+   },
+   {
+    "hex": "#151F29",
+    "n": 103
+   }
+  ],
+  "evidence": "ev/mokuba_hair_e08_924.png"
+ },
+ {
+  "label": "mokuba_hilite_e08_924",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/a69659a5-e142-4e17-b0c8-a9f5b9d69935/scratchpad/anime/dkframes/mokuba_e08_924.png",
+  "box": [
+   780,
+   360,
+   1000,
+   560
+  ],
+  "h": [
+   215,
+   275
+  ],
+  "s": [
+   0.25,
+   0.9
+  ],
+  "v": [
+   0.2,
+   0.9
+  ],
+  "kept": 479,
+  "area": 44000,
+  "fills": [
+   {
+    "tone": "one",
+    "hex": "#4B5479",
+    "n": 479,
+    "iqr": [
+     "#4A5274",
+     "#4D547F"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#4B547C",
+    "n": 153
+   },
+   {
+    "hex": "#4A537F",
+    "n": 98
+   },
+   {
+    "hex": "#4B5274",
+    "n": 92
+   }
+  ],
+  "evidence": "ev/mokuba_hilite_e08_924.png"
+ },
+ {
+  "label": "panik_hair_e15_443_L",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/a69659a5-e142-4e17-b0c8-a9f5b9d69935/scratchpad/anime/dkframes/panik_e15_443.png",
+  "box": [
+   150,
+   30,
+   330,
+   300
+  ],
+  "h": [
+   180,
+   240
+  ],
+  "s": [
+   0.15,
+   0.9
+  ],
+  "v": [
+   0.1,
+   0.8
+  ],
+  "kept": 24006,
+  "area": 48600,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#2E475C",
+    "n": 18115,
+    "iqr": [
+     "#2C4659",
+     "#2E475D"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#172424",
+    "n": 5891,
+    "iqr": [
+     "#172424",
+     "#19272B"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#2D475D",
+    "n": 14147
+   },
+   {
+    "hex": "#172424",
+    "n": 3024
+   },
+   {
+    "hex": "#354242",
+    "n": 1608
+   }
+  ],
+  "evidence": "ev/panik_hair_e15_443_L.png"
+ },
+ {
+  "label": "panik_hair_e15_443_R",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/a69659a5-e142-4e17-b0c8-a9f5b9d69935/scratchpad/anime/dkframes/panik_e15_443.png",
+  "box": [
+   880,
+   30,
+   1130,
+   240
+  ],
+  "h": [
+   180,
+   240
+  ],
+  "s": [
+   0.15,
+   0.9
+  ],
+  "v": [
+   0.1,
+   0.8
+  ],
+  "kept": 38214,
+  "area": 52500,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#3C4C58",
+    "n": 29360,
+    "iqr": [
+     "#384751",
+     "#3F515C"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#313D42",
+    "n": 8854,
+    "iqr": [
+     "#1E282D",
+     "#354146"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#3F505B",
+    "n": 7912
+   },
+   {
+    "hex": "#3A4E58",
+    "n": 5693
+   },
+   {
+    "hex": "#37444B",
+    "n": 4340
+   }
+  ],
+  "evidence": "ev/panik_hair_e15_443_R.png"
+ },
+ {
+  "label": "rex_brown_e04_350_L",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e04_350.png",
+  "box": [
+   380,
+   60,
+   480,
+   520
+  ],
+  "h": [
+   5,
+   35
+  ],
+  "s": [
+   0.4,
+   0.95
+  ],
+  "v": [
+   0.1,
+   0.75
+  ],
+  "kept": 1325,
+  "area": 46000,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#4E3222",
+    "n": 1155,
+    "iqr": [
+     "#4A3020",
+     "#513526"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#2E2318",
+    "n": 170,
+    "iqr": [
+     "#2A1F17",
+     "#39291D"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#4F3121",
+    "n": 446
+   },
+   {
+    "hex": "#4D3627",
+    "n": 302
+   },
+   {
+    "hex": "#512F20",
+    "n": 100
+   }
+  ],
+  "evidence": "ev/rex_brown_e04_350_L.png"
+ },
+ {
+  "label": "rex_brown_e04_350_R",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e04_350.png",
+  "box": [
+   1010,
+   60,
+   1140,
+   520
+  ],
+  "h": [
+   5,
+   35
+  ],
+  "s": [
+   0.4,
+   0.95
+  ],
+  "v": [
+   0.1,
+   0.75
+  ],
+  "kept": 6011,
+  "area": 59800,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#97764E",
+    "n": 1264,
+    "iqr": [
+     "#94744C",
+     "#997751"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#4C2F1E",
+    "n": 4747,
+    "iqr": [
+     "#392519",
+     "#533121"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#503120",
+    "n": 1091
+   },
+   {
+    "hex": "#97754E",
+    "n": 914
+   },
+   {
+    "hex": "#271C14",
+    "n": 807
+   }
+  ],
+  "evidence": "ev/rex_brown_e04_350_R.png"
+ },
+ {
+  "label": "rex_fringe_e04_350",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e04_350.png",
+  "box": [
+   680,
+   40,
+   920,
+   240
+  ],
+  "h": [
+   240,
+   300
+  ],
+  "s": [
+   0.12,
+   0.6
+  ],
+  "v": [
+   0.45,
+   1
+  ],
+  "kept": 3376,
+  "area": 48000,
+  "fills": [
+   {
+    "tone": "one",
+    "hex": "#8D7DB3",
+    "n": 3376,
+    "iqr": [
+     "#8C7CAC",
+     "#8F7FB7"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#8C7DAF",
+    "n": 1316
+   },
+   {
+    "hex": "#8D7DB7",
+    "n": 1192
+   },
+   {
+    "hex": "#907FBA",
+    "n": 315
+   }
+  ],
+  "evidence": "ev/rex_fringe_e04_350.png"
+ },
+ {
+  "label": "panik_glove_e15_764",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e15_764.png",
+  "box": [
+   300,
+   0,
+   760,
+   460
+  ],
+  "h": [
+   320,
+   15
+  ],
+  "s": [
+   0.35,
+   1
+  ],
+  "v": [
+   0.15,
+   0.9
+  ],
+  "kept": 24084,
+  "area": 211140,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#74263F",
+    "n": 15597,
+    "iqr": [
+     "#6C253D",
+     "#772840"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#2C1A21",
+    "n": 8487,
+    "iqr": [
+     "#291920",
+     "#311B22"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#74263F",
+    "n": 7216
+   },
+   {
+    "hex": "#2A1A21",
+    "n": 5047
+   },
+   {
+    "hex": "#782640",
+    "n": 3178
+   }
+  ],
+  "evidence": "ev/panik_glove_e15_764.png"
+ },
+ {
+  "label": "panik_drum_e15_764",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e15_764.png",
+  "box": [
+   150,
+   0,
+   420,
+   620
+  ],
+  "h": [
+   0,
+   360
+  ],
+  "s": [
+   0,
+   0.22
+  ],
+  "v": [
+   0.45,
+   1
+  ],
+  "kept": 43900,
+  "area": 167130,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#D2D6D6",
+    "n": 4855,
+    "iqr": [
+     "#CFD6D4",
+     "#D4D7D7"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#AAB9BF",
+    "n": 39045,
+    "iqr": [
+     "#A9B9BF",
+     "#ACBBC1"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#AAB9BF",
+    "n": 26604
+   },
+   {
+    "hex": "#ACBBC1",
+    "n": 11500
+   },
+   {
+    "hex": "#D3D6D6",
+    "n": 3060
+   }
+  ],
+  "evidence": "ev/panik_drum_e15_764.png"
+ },
+ {
+  "label": "panik_stars_e15_764",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e15_764.png",
+  "box": [
+   150,
+   0,
+   420,
+   620
+  ],
+  "h": [
+   30,
+   62
+  ],
+  "s": [
+   0.3,
+   1
+  ],
+  "v": [
+   0.25,
+   1
+  ],
+  "kept": 2165,
+  "area": 167130,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#887D3D",
+    "n": 2027,
+    "iqr": [
+     "#857C39",
+     "#8A7E41"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#413A27",
+    "n": 138,
+    "iqr": [
+     "#403925",
+     "#423C2A"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#887E40",
+    "n": 817
+   },
+   {
+    "hex": "#8A7D38",
+    "n": 745
+   },
+   {
+    "hex": "#827C42",
+    "n": 224
+   }
+  ],
+  "evidence": "ev/panik_stars_e15_764.png"
+ },
+ {
+  "label": "panik_spikes_e15_764",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e15_764.png",
+  "box": [
+   440,
+   40,
+   560,
+   420
+  ],
+  "h": [
+   30,
+   62
+  ],
+  "s": [
+   0.3,
+   1
+  ],
+  "v": [
+   0.25,
+   1
+  ],
+  "kept": 834,
+  "area": 45600,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#BEA857",
+    "n": 611,
+    "iqr": [
+     "#B19550",
+     "#C3AA65"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#605A39",
+    "n": 223,
+    "iqr": [
+     "#5F5834",
+     "#625B3C"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#AF9366",
+    "n": 137
+   },
+   {
+    "hex": "#C4AA4F",
+    "n": 103
+   },
+   {
+    "hex": "#C4AB57",
+    "n": 79
+   }
+  ],
+  "evidence": "ev/panik_spikes_e15_764.png"
+ },
+ {
+  "label": "panik_glove_e15_338",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e15_338.png",
+  "box": [
+   700,
+   200,
+   1130,
+   720
+  ],
+  "h": [
+   320,
+   15
+  ],
+  "s": [
+   0.35,
+   1
+  ],
+  "v": [
+   0.15,
+   0.9
+  ],
+  "kept": 68752,
+  "area": 223170,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#792542",
+    "n": 45837,
+    "iqr": [
+     "#772540",
+     "#7A2642"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#291A21",
+    "n": 22915,
+    "iqr": [
+     "#291A21",
+     "#2B1A21"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#7A2542",
+    "n": 32791
+   },
+   {
+    "hex": "#291A21",
+    "n": 19380
+   },
+   {
+    "hex": "#742740",
+    "n": 10103
+   }
+  ],
+  "evidence": "ev/panik_glove_e15_338.png"
+ },
+ {
+  "label": "panik_drum_e15_338",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e15_338.png",
+  "box": [
+   300,
+   180,
+   900,
+   720
+  ],
+  "h": [
+   0,
+   360
+  ],
+  "s": [
+   0,
+   0.22
+  ],
+  "v": [
+   0.45,
+   1
+  ],
+  "kept": 106550,
+  "area": 323400,
+  "fills": [
+   {
+    "tone": "one",
+    "hex": "#ACBBC1",
+    "n": 106550,
+    "iqr": [
+     "#AABAC1",
+     "#ACBBC1"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#ACBBC1",
+    "n": 83597
+   },
+   {
+    "hex": "#AAB9BF",
+    "n": 18956
+   },
+   {
+    "hex": "#DBD1B0",
+    "n": 2321
+   }
+  ],
+  "evidence": "ev/panik_drum_e15_338.png"
+ },
+ {
+  "label": "panik_spikes_e15_338",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e15_338.png",
+  "box": [
+   760,
+   220,
+   1000,
+   720
+  ],
+  "h": [
+   30,
+   62
+  ],
+  "s": [
+   0.3,
+   1
+  ],
+  "v": [
+   0.25,
+   1
+  ],
+  "kept": 19456,
+  "area": 119760,
+  "fills": [
+   {
+    "tone": "one",
+    "hex": "#B29166",
+    "n": 19456,
+    "iqr": [
+     "#B09165",
+     "#B29267"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#B29167",
+    "n": 17866
+   },
+   {
+    "hex": "#B49065",
+    "n": 300
+   },
+   {
+    "hex": "#AD8E64",
+    "n": 262
+   }
+  ],
+  "evidence": "ev/panik_spikes_e15_338.png"
+ },
+ {
+  "label": "panik_glove_e15_323",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e15_323.png",
+  "box": [
+   160,
+   0,
+   900,
+   720
+  ],
+  "h": [
+   320,
+   15
+  ],
+  "s": [
+   0.35,
+   1
+  ],
+  "v": [
+   0.15,
+   0.9
+  ],
+  "kept": 183558,
+  "area": 531320,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#792541",
+    "n": 155469,
+    "iqr": [
+     "#77253F",
+     "#7A2642"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#2B1A21",
+    "n": 28089,
+    "iqr": [
+     "#291A21",
+     "#2F1B22"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#7A2541",
+    "n": 110877
+   },
+   {
+    "hex": "#752640",
+    "n": 31945
+   },
+   {
+    "hex": "#2A1A21",
+    "n": 20383
+   }
+  ],
+  "evidence": "ev/panik_glove_e15_323.png"
+ },
+ {
+  "label": "panik_spikes_e15_323",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e15_323.png",
+  "box": [
+   160,
+   0,
+   700,
+   720
+  ],
+  "h": [
+   30,
+   62
+  ],
+  "s": [
+   0.3,
+   1
+  ],
+  "v": [
+   0.25,
+   1
+  ],
+  "kept": 41555,
+  "area": 387720,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#C6AA4F",
+    "n": 26778,
+    "iqr": [
+     "#B3944C",
+     "#C8AC66"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#605D3F",
+    "n": 14777,
+    "iqr": [
+     "#605D3F",
+     "#605D41"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#C8AB4E",
+    "n": 15355
+   },
+   {
+    "hex": "#605D3F",
+    "n": 12371
+   },
+   {
+    "hex": "#B29367",
+    "n": 7878
+   }
+  ],
+  "evidence": "ev/panik_spikes_e15_323.png"
+ },
+ {
+  "label": "yugiglove_night_e15_565",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e15_565.png",
+  "box": [
+   350,
+   150,
+   850,
+   700
+  ],
+  "h": [
+   320,
+   15
+  ],
+  "s": [
+   0.35,
+   1
+  ],
+  "v": [
+   0.15,
+   0.9
+  ],
+  "kept": 79988,
+  "area": 275000,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#792441",
+    "n": 68694,
+    "iqr": [
+     "#772440",
+     "#792541"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#2B1A21",
+    "n": 11294,
+    "iqr": [
+     "#291921",
+     "#2E1B23"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#792441",
+    "n": 49885
+   },
+   {
+    "hex": "#752640",
+    "n": 14025
+   },
+   {
+    "hex": "#2A1A21",
+    "n": 8077
+   }
+  ],
+  "evidence": "ev/yugiglove_night_e15_565.png"
+ },
+ {
+  "label": "yugicuff_night_e15_565",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e15_565.png",
+  "box": [
+   160,
+   250,
+   460,
+   720
+  ],
+  "h": [
+   0,
+   360
+  ],
+  "s": [
+   0,
+   0.22
+  ],
+  "v": [
+   0.45,
+   1
+  ],
+  "kept": 56816,
+  "area": 140700,
+  "fills": [
+   {
+    "tone": "one",
+    "hex": "#ACBCC1",
+    "n": 56816,
+    "iqr": [
+     "#AABBC1",
+     "#ADBCC2"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#ACBCC1",
+    "n": 51292
+   },
+   {
+    "hex": "#AAB9BF",
+    "n": 5078
+   },
+   {
+    "hex": "#B6C4C9",
+    "n": 154
+   }
+  ],
+  "evidence": "ev/yugicuff_night_e15_565.png"
+ },
+ {
+  "label": "yugistuds_night_e15_565",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e15_565.png",
+  "box": [
+   500,
+   200,
+   760,
+   620
+  ],
+  "h": [
+   30,
+   62
+  ],
+  "s": [
+   0.3,
+   1
+  ],
+  "v": [
+   0.25,
+   1
+  ],
+  "kept": 1801,
+  "area": 109200,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#BFAB54",
+    "n": 336,
+    "iqr": [
+     "#BBA94E",
+     "#C3AD5A"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#605B41",
+    "n": 1465,
+    "iqr": [
+     "#605B3F",
+     "#625C41"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#605B41",
+    "n": 1140
+   },
+   {
+    "hex": "#5E5A40",
+    "n": 236
+   },
+   {
+    "hex": "#C4AC59",
+    "n": 66
+   }
+  ],
+  "evidence": "ev/yugistuds_night_e15_565.png"
+ },
+ {
+  "label": "yugistar_night_e15_565",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e15_565.png",
+  "box": [
+   160,
+   250,
+   460,
+   720
+  ],
+  "h": [
+   30,
+   62
+  ],
+  "s": [
+   0.3,
+   1
+  ],
+  "v": [
+   0.25,
+   1
+  ],
+  "kept": 4147,
+  "area": 140700,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#8B7E3A",
+    "n": 3812,
+    "iqr": [
+     "#887C37",
+     "#8D7E3D"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#413C27",
+    "n": 335,
+    "iqr": [
+     "#403A24",
+     "#433E2B"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#8C7E39",
+    "n": 1888
+   },
+   {
+    "hex": "#8B7E3E",
+    "n": 1249
+   },
+   {
+    "hex": "#704B21",
+    "n": 149
+   }
+  ],
+  "evidence": "ev/yugistar_night_e15_565.png"
+ },
+ {
+  "label": "yami_bangs_e08_880",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/../../dk/bakura_mokuba_yugi/cited/yami_e08_880.png",
+  "box": [
+   200,
+   0,
+   900,
+   420
+  ],
+  "h": [
+   38,
+   62
+  ],
+  "s": [
+   0.3,
+   0.95
+  ],
+  "v": [
+   0.4,
+   1
+  ],
+  "kept": 17945,
+  "area": 293300,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#CEC44E",
+    "n": 7764,
+    "iqr": [
+     "#CCC34D",
+     "#D0C653"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#8D6E30",
+    "n": 10181,
+    "iqr": [
+     "#8A6C2C",
+     "#8F7032"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#CEC64D",
+    "n": 5031
+   },
+   {
+    "hex": "#8C6D2C",
+    "n": 3195
+   },
+   {
+    "hex": "#8C6F32",
+    "n": 3040
+   }
+  ],
+  "evidence": "ev/yami_bangs_e08_880.png"
+ },
+ {
+  "label": "yami_tips_e08_880",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/../../dk/bakura_mokuba_yugi/cited/yami_e08_880.png",
+  "box": [
+   200,
+   0,
+   900,
+   420
+  ],
+  "h": [
+   325,
+   360
+  ],
+  "s": [
+   0.45,
+   1
+  ],
+  "v": [
+   0.3,
+   1
+  ],
+  "kept": 19292,
+  "area": 293300,
+  "fills": [
+   {
+    "tone": "one",
+    "hex": "#AB144F",
+    "n": 19292,
+    "iqr": [
+     "#A8144E",
+     "#AD1651"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#AC144F",
+    "n": 14261
+   },
+   {
+    "hex": "#A5164E",
+    "n": 1692
+   },
+   {
+    "hex": "#A1194F",
+    "n": 1540
+   }
+  ],
+  "evidence": "ev/yami_tips_e08_880.png"
+ },
+ {
+  "label": "yami_core_e08_880",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/../../dk/bakura_mokuba_yugi/cited/yami_e08_880.png",
+  "box": [
+   380,
+   0,
+   700,
+   90
+  ],
+  "h": [
+   0,
+   360
+  ],
+  "s": [
+   0,
+   1
+  ],
+  "v": [
+   0,
+   0.3
+  ],
+  "kept": 7411,
+  "area": 28480,
+  "fills": [
+   {
+    "tone": "one",
+    "hex": "#12120F",
+    "n": 7411,
+    "iqr": [
+     "#11110E",
+     "#131312"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#121210",
+    "n": 6131
+   },
+   {
+    "hex": "#131207",
+    "n": 546
+   },
+   {
+    "hex": "#191011",
+    "n": 232
+   }
+  ],
+  "evidence": "ev/yami_core_e08_880.png"
+ },
+ {
+  "label": "yami_bangs_e06_733",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/a69659a5-e142-4e17-b0c8-a9f5b9d69935/scratchpad/anime/dkframes/yugi_e06_733.png",
+  "box": [
+   300,
+   0,
+   800,
+   300
+  ],
+  "h": [
+   38,
+   62
+  ],
+  "s": [
+   0.3,
+   0.95
+  ],
+  "v": [
+   0.4,
+   1
+  ],
+  "kept": 19265,
+  "area": 149500,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#C2B84E",
+    "n": 5967,
+    "iqr": [
+     "#BEB54B",
+     "#C4BA54"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#AB9461",
+    "n": 13298,
+    "iqr": [
+     "#A99460",
+     "#AD9562"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#AB9461",
+    "n": 9654
+   },
+   {
+    "hex": "#C3B94C",
+    "n": 3045
+   },
+   {
+    "hex": "#AA945F",
+    "n": 1160
+   }
+  ],
+  "evidence": "ev/yami_bangs_e06_733.png"
+ },
+ {
+  "label": "yami_tips_e06_733",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/a69659a5-e142-4e17-b0c8-a9f5b9d69935/scratchpad/anime/dkframes/yugi_e06_733.png",
+  "box": [
+   300,
+   0,
+   800,
+   300
+  ],
+  "h": [
+   325,
+   360
+  ],
+  "s": [
+   0.45,
+   1
+  ],
+  "v": [
+   0.3,
+   1
+  ],
+  "kept": 5983,
+  "area": 149500,
+  "fills": [
+   {
+    "tone": "one",
+    "hex": "#9A1544",
+    "n": 5983,
+    "iqr": [
+     "#931242",
+     "#A01847"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#A11244",
+    "n": 1657
+   },
+   {
+    "hex": "#971543",
+    "n": 1521
+   },
+   {
+    "hex": "#941A45",
+    "n": 543
+   }
+  ],
+  "evidence": "ev/yami_tips_e06_733.png"
+ },
+ {
+  "label": "panik_hair_e15_477_L",
+  "frame": "/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/a69659a5-e142-4e17-b0c8-a9f5b9d69935/scratchpad/anime/dkframes/panik_e15_477.png",
+  "box": [
+   150,
+   30,
+   330,
+   300
+  ],
+  "h": [
+   180,
+   240
+  ],
+  "s": [
+   0.15,
+   0.9
+  ],
+  "v": [
+   0.1,
+   0.8
+  ],
+  "kept": 22950,
+  "area": 48600,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#2D465C",
+    "n": 17862,
+    "iqr": [
+     "#2D4659",
+     "#2E465C"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#182425",
+    "n": 5088,
+    "iqr": [
+     "#162324",
+     "#1B292F"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#2D465C",
+    "n": 14351
+   },
+   {
+    "hex": "#172424",
+    "n": 1581
+   },
+   {
+    "hex": "#344242",
+    "n": 1372
+   }
+  ],
+  "evidence": "ev/panik_hair_e15_477_L.png"
+ },
+ {
+  "label": "panik_hair_e15_275_tight",
+  "frame": "/home/greatsaiyadave/argon-avatar/research/customization/evidence/dk_anime/panik_e15_275.png",
+  "box": [
+   240,
+   30,
+   380,
+   215
+  ],
+  "h": [
+   180,
+   240
+  ],
+  "s": [
+   0.15,
+   0.9
+  ],
+  "v": [
+   0.1,
+   0.8
+  ],
+  "kept": 14803,
+  "area": 25900,
+  "fills": [
+   {
+    "tone": "lit",
+    "hex": "#365A8F",
+    "n": 7464,
+    "iqr": [
+     "#34568C",
+     "#395E93"
+    ]
+   },
+   {
+    "tone": "shade",
+    "hex": "#26353F",
+    "n": 7339,
+    "iqr": [
+     "#1A2528",
+     "#303E4E"
+    ]
+   }
+  ],
+  "modes": [
+   {
+    "hex": "#35568C",
+    "n": 3242
+   },
+   {
+    "hex": "#365B91",
+    "n": 2104
+   },
+   {
+    "hex": "#1B2629",
+    "n": 821
+   }
+  ],
+  "evidence": "ev/panik_hair_e15_275_tight.png"
+ }
+]

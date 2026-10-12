@@ -76,6 +76,10 @@ wrldz_stress*.log
 __pycache__/
 *.pyc
 
+# Tools/anime measuring toolchain: local venv + generated frames/sheets
+Tools/anime/.venv/
+Tools/anime/out/
+
 # Headless engine harness build outputs (.NET)
 Tools/HeadlessEngine/bin/
 Tools/HeadlessEngine/obj/

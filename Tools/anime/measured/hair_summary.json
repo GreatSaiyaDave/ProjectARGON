@@ -1,0 +1,1755 @@
+{
+ "summary": {
+  "Joey": {
+   "lit": {
+    "value": "#B69D3D",
+    "spread_max_channel": 16,
+    "frames": [
+     {
+      "label": "joey_hair_e04_702",
+      "hex": "#B59D3D",
+      "n": 80051,
+      "frame": "e04_702.png",
+      "box": [
+       229,
+       0,
+       900,
+       380
+      ]
+     },
+     {
+      "label": "joey_hair_e06_962",
+      "hex": "#B89C3C",
+      "n": 177239,
+      "frame": "e06_962.png",
+      "box": [
+       240,
+       0,
+       940,
+       460
+      ]
+     },
+     {
+      "label": "joey_hair_e17_181",
+      "hex": "#B6A04C",
+      "n": 21474,
+      "frame": "e17_181.png",
+      "box": [
+       552,
+       60,
+       872,
+       340
+      ]
+     }
+    ]
+   },
+   "shade": {
+    "value": "#7E6A3E",
+    "spread_max_channel": 13,
+    "frames": [
+     {
+      "label": "joey_hair_e04_702",
+      "hex": "#7D6538",
+      "n": 23379,
+      "frame": "e04_702.png",
+      "box": [
+       229,
+       0,
+       900,
+       380
+      ]
+     },
+     {
+      "label": "joey_hair_e17_181",
+      "hex": "#806E45",
+      "n": 5756,
+      "frame": "e17_181.png",
+      "box": [
+       552,
+       60,
+       872,
+       340
+      ]
+     }
+    ]
+   }
+  },
+  "Kaiba": {
+   "lit": {
+    "value": "#765A3D",
+    "spread_max_channel": 8,
+    "frames": [
+     {
+      "label": "kaiba_hair_e22_547",
+      "hex": "#765B3D",
+      "n": 134162,
+      "frame": "e22_547.png",
+      "box": [
+       300,
+       0,
+       1120,
+       392
+      ]
+     },
+     {
+      "label": "kaiba_hair_e22_1043",
+      "hex": "#765A3D",
+      "n": 100784,
+      "frame": "e22_1043.png",
+      "box": [
+       292,
+       0,
+       932,
+       392
+      ]
+     },
+     {
+      "label": "kaiba_hair_e22_1123",
+      "hex": "#765A3E",
+      "n": 80322,
+      "frame": "e22_1123.png",
+      "box": [
+       180,
+       0,
+       1000,
+       344
+      ]
+     },
+     {
+      "label": "kaiba_hair_e08_1173",
+      "hex": "#735539",
+      "n": 11928,
+      "frame": "e08_1173.png",
+      "box": [
+       180,
+       0,
+       1120,
+       320
+      ]
+     },
+     {
+      "label": "kaiba_hair_e08_1178",
+      "hex": "#725338",
+      "n": 11994,
+      "frame": "e08_1178.png",
+      "box": [
+       160,
+       0,
+       940,
+       330
+      ]
+     }
+    ]
+   },
+   "shade": {
+    "value": "#58442F",
+    "spread_max_channel": 4,
+    "frames": [
+     {
+      "label": "kaiba_hair_e22_547",
+      "hex": "#58452F",
+      "n": 12083,
+      "frame": "e22_547.png",
+      "box": [
+       300,
+       0,
+       1120,
+       392
+      ]
+     },
+     {
+      "label": "kaiba_hair_e22_1043",
+      "hex": "#5A442F",
+      "n": 11111,
+      "frame": "e22_1043.png",
+      "box": [
+       292,
+       0,
+       932,
+       392
+      ]
+     },
+     {
+      "label": "kaiba_hair_e22_1123",
+      "hex": "#56412D",
+      "n": 9149,
+      "frame": "e22_1123.png",
+      "box": [
+       180,
+       0,
+       1000,
+       344
+      ]
+     }
+    ]
+   }
+  },
+  "Tea": {
+   "lit": {
+    "value": "#5D2F20",
+    "spread_max_channel": 22,
+    "frames": [
+     {
+      "label": "tea_hair_e04_502",
+      "hex": "#5A2E1F",
+      "n": 15232,
+      "frame": "mako_e04_502.png",
+      "box": [
+       300,
+       100,
+       560,
+       400
+      ]
+     },
+     {
+      "label": "tea_hair_e06_247",
+      "hex": "#5A2D1C",
+      "n": 56438,
+      "frame": "e06_247.png",
+      "box": [
+       152,
+       0,
+       632,
+       704
+      ]
+     },
+     {
+      "label": "tea_hair_e07_1151",
+      "hex": "#674032",
+      "n": 38827,
+      "frame": "e07_1151.png",
+      "box": [
+       760,
+       40,
+       1120,
+       560
+      ]
+     },
+     {
+      "label": "tea_hair_e08_852",
+      "hex": "#603020",
+      "n": 87604,
+      "frame": "e08_852.png",
+      "box": [
+       380,
+       0,
+       940,
+       680
+      ]
+     }
+    ]
+   },
+   "shade": {
+    "value": "#2A1B13",
+    "spread_max_channel": 23,
+    "frames": [
+     {
+      "label": "tea_hair_e04_502",
+      "hex": "#281A12",
+      "n": 15927,
+      "frame": "mako_e04_502.png",
+      "box": [
+       300,
+       100,
+       560,
+       400
+      ]
+     },
+     {
+      "label": "tea_hair_e06_247",
+      "hex": "#271810",
+      "n": 83945,
+      "frame": "e06_247.png",
+      "box": [
+       152,
+       0,
+       632,
+       704
+      ]
+     },
+     {
+      "label": "tea_hair_e08_852",
+      "hex": "#2B1C14",
+      "n": 96551,
+      "frame": "e08_852.png",
+      "box": [
+       380,
+       0,
+       940,
+       680
+      ]
+     },
+     {
+      "label": "tea_hair_e07_1151",
+      "hex": "#3E2D22",
+      "n": 10730,
+      "frame": "e07_1151.png",
+      "box": [
+       760,
+       40,
+       1120,
+       560
+      ]
+     }
+    ]
+   }
+  },
+  "Tristan": {
+   "lit": {
+    "value": "#62442D",
+    "spread_max_channel": 18,
+    "frames": [
+     {
+      "label": "tristan_hair_e04_502",
+      "hex": "#583E29",
+      "n": 3631,
+      "frame": "mako_e04_502.png",
+      "box": [
+       100,
+       0,
+       280,
+       100
+      ]
+     },
+     {
+      "label": "tristan_hair_e07_1151",
+      "hex": "#685039",
+      "n": 8212,
+      "frame": "e07_1151.png",
+      "box": [
+       150,
+       0,
+       400,
+       120
+      ]
+     },
+     {
+      "label": "tristan_hair_e07_674",
+      "hex": "#674D3A",
+      "n": 2773,
+      "frame": "e07_674.png",
+      "box": [
+       202,
+       70,
+       372,
+       200
+      ]
+     },
+     {
+      "label": "tristan_hair_e08_377",
+      "hex": "#60442C",
+      "n": 2132,
+      "frame": "e08_377.png",
+      "box": [
+       390,
+       0,
+       660,
+       70
+      ]
+     },
+     {
+      "label": "tristan_hair_e08_1085.2",
+      "hex": "#62432D",
+      "n": 2976,
+      "frame": "e08_1085.2.png",
+      "box": [
+       792,
+       0,
+       1060,
+       120
+      ]
+     }
+    ]
+   },
+   "shade": {
+    "value": "#3F2A18",
+    "spread_max_channel": 33,
+    "frames": [
+     {
+      "label": "tristan_hair_e07_1151",
+      "hex": "#483928",
+      "n": 1613,
+      "frame": "e07_1151.png",
+      "box": [
+       150,
+       0,
+       400,
+       120
+      ]
+     },
+     {
+      "label": "tristan_hair_e07_674",
+      "hex": "#4C362A",
+      "n": 3831,
+      "frame": "e07_674.png",
+      "box": [
+       202,
+       70,
+       372,
+       200
+      ]
+     },
+     {
+      "label": "tristan_hair_e08_377",
+      "hex": "#3F2A18",
+      "n": 2692,
+      "frame": "e08_377.png",
+      "box": [
+       390,
+       0,
+       660,
+       70
+      ]
+     },
+     {
+      "label": "tristan_hair_e08_1085.2",
+      "hex": "#3E2917",
+      "n": 9776,
+      "frame": "e08_1085.2.png",
+      "box": [
+       792,
+       0,
+       1060,
+       120
+      ]
+     },
+     {
+      "label": "tristan_hair_e04_502",
+      "hex": "#2B2014",
+      "n": 984,
+      "frame": "mako_e04_502.png",
+      "box": [
+       100,
+       0,
+       280,
+       100
+      ]
+     }
+    ]
+   }
+  },
+  "Bakura": {
+   "lit": {
+    "value": "#D7D8DF",
+    "spread_max_channel": 2,
+    "frames": [
+     {
+      "label": "bakura_hair_e22_150",
+      "hex": "#D6D7DE",
+      "n": 846,
+      "frame": "bakura_e22_150.png",
+      "box": [
+       0,
+       0,
+       1280,
+       720
+      ]
+     },
+     {
+      "label": "bakura_hair_e22_154",
+      "hex": "#D8D9E0",
+      "n": 72963,
+      "frame": "bakura_e22_154.png",
+      "box": [
+       0,
+       0,
+       1280,
+       720
+      ]
+     },
+     {
+      "label": "bakura_hair_e22_169",
+      "hex": "#D7D8DF",
+      "n": 40781,
+      "frame": "e22_169.png",
+      "box": [
+       152,
+       0,
+       440,
+       660
+      ]
+     }
+    ]
+   },
+   "shade": {
+    "value": "#AFA8B6",
+    "spread_max_channel": 10,
+    "frames": [
+     {
+      "label": "bakura_hair_e22_154",
+      "hex": "#AFA9B6",
+      "n": 28289,
+      "frame": "bakura_e22_154.png",
+      "box": [
+       0,
+       0,
+       1280,
+       720
+      ]
+     },
+     {
+      "label": "bakura_hair_e22_169",
+      "hex": "#AFA8B6",
+      "n": 44192,
+      "frame": "e22_169.png",
+      "box": [
+       152,
+       0,
+       440,
+       660
+      ]
+     },
+     {
+      "label": "bakura_hair_e22_150",
+      "hex": "#A5A2AD",
+      "n": 294,
+      "frame": "bakura_e22_150.png",
+      "box": [
+       0,
+       0,
+       1280,
+       720
+      ]
+     }
+    ]
+   }
+  },
+  "Yami Bakura (castle e40)": {
+   "lit": {
+    "value": "#DADAE4",
+    "spread_max_channel": 0,
+    "frames": [
+     {
+      "label": "ybakura_hair_e40_275",
+      "hex": "#DADAE4",
+      "n": 6547,
+      "frame": "yamibakura_e40_275.png",
+      "box": [
+       160,
+       0,
+       620,
+       380
+      ]
+     }
+    ]
+   },
+   "shade": {
+    "value": "#AFABBA",
+    "spread_max_channel": 0,
+    "frames": [
+     {
+      "label": "ybakura_hair_e40_275",
+      "hex": "#AFABBA",
+      "n": 33034,
+      "frame": "yamibakura_e40_275.png",
+      "box": [
+       160,
+       0,
+       620,
+       380
+      ]
+     }
+    ]
+   }
+  },
+  "Yami Bakura (Shadow Realm e13, excluded)": {
+   "lit": {
+    "value": "#CCCBD4",
+    "spread_max_channel": 0,
+    "frames": [
+     {
+      "label": "ybakura_hair_e13_131",
+      "hex": "#CCCBD4",
+      "n": 116579,
+      "frame": "e13_131.png",
+      "box": [
+       240,
+       0,
+       1040,
+       544
+      ]
+     },
+     {
+      "label": "ybakura_hair_e13_287",
+      "hex": "#CCCBD4",
+      "n": 96202,
+      "frame": "e13_287.png",
+      "box": [
+       192,
+       0,
+       1012,
+       544
+      ]
+     }
+    ]
+   },
+   "shade": {
+    "value": "#A29AAB",
+    "spread_max_channel": 1,
+    "frames": [
+     {
+      "label": "ybakura_hair_e13_131",
+      "hex": "#A39AAB",
+      "n": 97205,
+      "frame": "e13_131.png",
+      "box": [
+       240,
+       0,
+       1040,
+       544
+      ]
+     },
+     {
+      "label": "ybakura_hair_e13_287",
+      "hex": "#A29AAB",
+      "n": 103089,
+      "frame": "e13_287.png",
+      "box": [
+       192,
+       0,
+       1012,
+       544
+      ]
+     }
+    ]
+   }
+  },
+  "Mokuba": {
+   "lit": {
+    "value": "#1E1E1E",
+    "spread_max_channel": 1,
+    "frames": [
+     {
+      "label": "mokuba_hair_e08_1080",
+      "hex": "#1E1E1E",
+      "n": 19137,
+      "frame": "mokuba_e08_1080.png",
+      "box": [
+       780,
+       20,
+       980,
+       180
+      ]
+     },
+     {
+      "label": "mokuba_hair_e08_1083.6",
+      "hex": "#1F1F1F",
+      "n": 182859,
+      "frame": "e08_1083.6.png",
+      "box": [
+       150,
+       0,
+       1120,
+       280
+      ]
+     },
+     {
+      "label": "mokuba_hair_e08_924",
+      "hex": "#1E1E1E",
+      "n": 27756,
+      "frame": "mokuba_e08_924.png",
+      "box": [
+       780,
+       360,
+       1000,
+       560
+      ]
+     }
+    ]
+   },
+   "highlight": {
+    "value": "#4C557E",
+    "spread_max_channel": 9,
+    "frames": [
+     {
+      "label": "mokuba_hilite_e08_1083.6",
+      "hex": "#4D5682",
+      "n": 2917,
+      "frame": "e08_1083.6.png",
+      "box": [
+       150,
+       0,
+       1120,
+       280
+      ]
+     },
+     {
+      "label": "mokuba_hilite_e08_924",
+      "hex": "#4B5479",
+      "n": 479,
+      "frame": "mokuba_e08_924.png",
+      "box": [
+       780,
+       360,
+       1000,
+       560
+      ]
+     }
+    ]
+   }
+  },
+  "Yugi": {
+   "bangs_lit": {
+    "value": "#C0B84E",
+    "spread_max_channel": 12,
+    "frames": [
+     {
+      "label": "yugi_bangs_e04_358",
+      "hex": "#BEB84D",
+      "n": 12623,
+      "frame": "e04_358.png",
+      "box": [
+       300,
+       0,
+       1100,
+       330
+      ]
+     },
+     {
+      "label": "yugi_bangs_e04_452",
+      "hex": "#C0B94D",
+      "n": 11459,
+      "frame": "e04_452.png",
+      "box": [
+       330,
+       0,
+       1060,
+       330
+      ]
+     },
+     {
+      "label": "yugi_bangs_e04_502",
+      "hex": "#BFB74F",
+      "n": 9720,
+      "frame": "mako_e04_502.png",
+      "box": [
+       560,
+       0,
+       1100,
+       380
+      ]
+     },
+     {
+      "label": "yugi_bangs_e07_111",
+      "hex": "#C7BD59",
+      "n": 21337,
+      "frame": "e07_111.png",
+      "box": [
+       150,
+       0,
+       1120,
+       392
+      ]
+     }
+    ]
+   },
+   "bangs_shade": {
+    "value": "#836A2E",
+    "spread_max_channel": 16,
+    "frames": [
+     {
+      "label": "yugi_bangs_e04_452",
+      "hex": "#836A2D",
+      "n": 10573,
+      "frame": "e04_452.png",
+      "box": [
+       330,
+       0,
+       1060,
+       330
+      ]
+     },
+     {
+      "label": "yugi_bangs_e04_502",
+      "hex": "#816A2E",
+      "n": 5326,
+      "frame": "mako_e04_502.png",
+      "box": [
+       560,
+       0,
+       1100,
+       380
+      ]
+     },
+     {
+      "label": "yugi_bangs_e07_111",
+      "hex": "#8F743D",
+      "n": 21754,
+      "frame": "e07_111.png",
+      "box": [
+       150,
+       0,
+       1120,
+       392
+      ]
+     }
+    ]
+   },
+   "tips": {
+    "value": "#9C1843",
+    "spread_max_channel": 22,
+    "frames": [
+     {
+      "label": "yugi_tips_e04_358",
+      "hex": "#9C1743",
+      "n": 9792,
+      "frame": "e04_358.png",
+      "box": [
+       450,
+       0,
+       1050,
+       300
+      ]
+     },
+     {
+      "label": "yugi_tips_e04_452",
+      "hex": "#991843",
+      "n": 4043,
+      "frame": "e04_452.png",
+      "box": [
+       300,
+       0,
+       1120,
+       400
+      ]
+     },
+     {
+      "label": "yugi_tips_e04_502",
+      "hex": "#9B1743",
+      "n": 7866,
+      "frame": "mako_e04_502.png",
+      "box": [
+       560,
+       0,
+       1100,
+       380
+      ]
+     },
+     {
+      "label": "yugi_tips_e07_111",
+      "hex": "#A82559",
+      "n": 17823,
+      "frame": "e07_111.png",
+      "box": [
+       150,
+       0,
+       1120,
+       392
+      ]
+     }
+    ]
+   },
+   "core": {
+    "value": "#131212",
+    "spread_max_channel": 2,
+    "frames": [
+     {
+      "label": "yugi_core_e04_358",
+      "hex": "#121212",
+      "n": 37745,
+      "frame": "e04_358.png",
+      "box": [
+       500,
+       0,
+       1000,
+       150
+      ]
+     },
+     {
+      "label": "yugi_core_e04_452",
+      "hex": "#131313",
+      "n": 25032,
+      "frame": "e04_452.png",
+      "box": [
+       440,
+       0,
+       1000,
+       150
+      ]
+     },
+     {
+      "label": "yugi_core_e04_502",
+      "hex": "#131111",
+      "n": 4919,
+      "frame": "mako_e04_502.png",
+      "box": [
+       640,
+       0,
+       1000,
+       60
+      ]
+     }
+    ]
+   }
+  },
+  "Yami Yugi": {
+   "bangs_lit": {
+    "value": "#CBC050",
+    "spread_max_channel": 16,
+    "frames": [
+     {
+      "label": "yami_bangs_e05_147",
+      "hex": "#D2C752",
+      "n": 85201,
+      "frame": "e05_147.png",
+      "box": [
+       140,
+       0,
+       1140,
+       344
+      ]
+     },
+     {
+      "label": "yami_bangs_e06_733",
+      "hex": "#C2B84E",
+      "n": 5967,
+      "frame": "yugi_e06_733.png",
+      "box": [
+       300,
+       0,
+       800,
+       300
+      ]
+     },
+     {
+      "label": "yami_bangs_e07_955",
+      "hex": "#C8BD5A",
+      "n": 29709,
+      "frame": "e07_955.png",
+      "box": [
+       552,
+       0,
+       1132,
+       304
+      ]
+     },
+     {
+      "label": "yami_bangs_e08_880",
+      "hex": "#CEC44E",
+      "n": 7764,
+      "frame": "yami_e08_880.png",
+      "box": [
+       200,
+       0,
+       900,
+       420
+      ]
+     }
+    ]
+   },
+   "bangs_shade": {
+    "value": "#8E7233",
+    "spread_max_channel": 13,
+    "frames": [
+     {
+      "label": "yami_bangs_e05_147",
+      "hex": "#927233",
+      "n": 8282,
+      "frame": "e05_147.png",
+      "box": [
+       140,
+       0,
+       1140,
+       344
+      ]
+     },
+     {
+      "label": "yami_bangs_e07_955",
+      "hex": "#8E733D",
+      "n": 8683,
+      "frame": "e07_955.png",
+      "box": [
+       552,
+       0,
+       1132,
+       304
+      ]
+     },
+     {
+      "label": "yami_bangs_e08_880",
+      "hex": "#8D6E30",
+      "n": 10181,
+      "frame": "yami_e08_880.png",
+      "box": [
+       200,
+       0,
+       900,
+       420
+      ]
+     }
+    ]
+   },
+   "tips": {
+    "value": "#AA1454",
+    "spread_max_channel": 23,
+    "frames": [
+     {
+      "label": "yami_tips_e05_147",
+      "hex": "#B0135B",
+      "n": 27282,
+      "frame": "e05_147.png",
+      "box": [
+       140,
+       0,
+       1140,
+       700
+      ]
+     },
+     {
+      "label": "yami_tips_e06_733",
+      "hex": "#9A1544",
+      "n": 5983,
+      "frame": "yugi_e06_733.png",
+      "box": [
+       300,
+       0,
+       800,
+       300
+      ]
+     },
+     {
+      "label": "yami_tips_e07_955",
+      "hex": "#A9265A",
+      "n": 7484,
+      "frame": "e07_955.png",
+      "box": [
+       552,
+       0,
+       1132,
+       400
+      ]
+     },
+     {
+      "label": "yami_tips_e08_880",
+      "hex": "#AB144F",
+      "n": 19292,
+      "frame": "yami_e08_880.png",
+      "box": [
+       200,
+       0,
+       900,
+       420
+      ]
+     }
+    ]
+   },
+   "core": {
+    "value": "#141411",
+    "spread_max_channel": 4,
+    "frames": [
+     {
+      "label": "yami_core_e05_147",
+      "hex": "#161613",
+      "n": 8103,
+      "frame": "e05_147.png",
+      "box": [
+       440,
+       0,
+       900,
+       64
+      ]
+     },
+     {
+      "label": "yami_core_e08_880",
+      "hex": "#12120F",
+      "n": 7411,
+      "frame": "yami_e08_880.png",
+      "box": [
+       380,
+       0,
+       700,
+       90
+      ]
+     }
+    ]
+   }
+  },
+  "Weevil": {
+   "lit": {
+    "value": "#8ABAB7",
+    "spread_max_channel": 16,
+    "frames": [
+     {
+      "label": "weevil_hair_e04_506",
+      "hex": "#87B6B4",
+      "n": 27437,
+      "frame": "e04_506.png",
+      "box": [
+       380,
+       0,
+       970,
+       290
+      ]
+     },
+     {
+      "label": "weevil_hair_e04_637",
+      "hex": "#87B7B5",
+      "n": 41903,
+      "frame": "e04_637.png",
+      "box": [
+       280,
+       35,
+       852,
+       330
+      ]
+     },
+     {
+      "label": "weevil_hair_e04_900",
+      "hex": "#90BEB9",
+      "n": 64891,
+      "frame": "e04_900.png",
+      "box": [
+       168,
+       0,
+       1010,
+       260
+      ]
+     },
+     {
+      "label": "weevil_hair_e05_287",
+      "hex": "#8EC6C1",
+      "n": 22780,
+      "frame": "e05_287.png",
+      "box": [
+       160,
+       0,
+       1120,
+       250
+      ]
+     }
+    ]
+   },
+   "shade": {
+    "value": "#507C76",
+    "spread_max_channel": 14,
+    "frames": [
+     {
+      "label": "weevil_hair_e04_506",
+      "hex": "#4E7974",
+      "n": 34941,
+      "frame": "e04_506.png",
+      "box": [
+       380,
+       0,
+       970,
+       290
+      ]
+     },
+     {
+      "label": "weevil_hair_e04_637",
+      "hex": "#4F7A76",
+      "n": 20417,
+      "frame": "e04_637.png",
+      "box": [
+       280,
+       35,
+       852,
+       330
+      ]
+     },
+     {
+      "label": "weevil_hair_e04_900",
+      "hex": "#527E77",
+      "n": 52872,
+      "frame": "e04_900.png",
+      "box": [
+       168,
+       0,
+       1010,
+       260
+      ]
+     },
+     {
+      "label": "weevil_hair_e05_287",
+      "hex": "#52877D",
+      "n": 21467,
+      "frame": "e05_287.png",
+      "box": [
+       160,
+       0,
+       1120,
+       250
+      ]
+     }
+    ]
+   }
+  },
+  "Rex": {
+   "brown_lit": {
+    "value": "#4D3020",
+    "spread_max_channel": 4,
+    "frames": [
+     {
+      "label": "rex_brown_e04_350_L",
+      "hex": "#4E3222",
+      "n": 1155,
+      "frame": "e04_350.png",
+      "box": [
+       380,
+       60,
+       480,
+       520
+      ]
+     },
+     {
+      "label": "rex_brown_e04_350_R",
+      "hex": "#4C2F1E",
+      "n": 4747,
+      "frame": "e04_350.png",
+      "box": [
+       1010,
+       60,
+       1140,
+       520
+      ]
+     }
+    ]
+   },
+   "fringe": {
+    "value": "#8D7DB3",
+    "spread_max_channel": 0,
+    "frames": [
+     {
+      "label": "rex_fringe_e04_350",
+      "hex": "#8D7DB3",
+      "n": 3376,
+      "frame": "e04_350.png",
+      "box": [
+       680,
+       40,
+       920,
+       240
+      ]
+     }
+    ]
+   },
+   "fringe_sunset_e12": {
+    "value": "#9388B7",
+    "spread_max_channel": 0,
+    "frames": [
+     {
+      "label": "rex_fringe_e12_156",
+      "hex": "#9388B7",
+      "n": 12220,
+      "frame": "rex_e12_156.png",
+      "box": [
+       160,
+       0,
+       1120,
+       720
+      ]
+     }
+    ]
+   },
+   "brown_sunset_e12": {
+    "value": "#5D3D26",
+    "spread_max_channel": 0,
+    "frames": [
+     {
+      "label": "rex_brown_e12_156",
+      "hex": "#5D3D26",
+      "n": 16144,
+      "frame": "rex_e12_156.png",
+      "box": [
+       160,
+       0,
+       1120,
+       720
+      ]
+     }
+    ]
+   }
+  },
+  "Mako": {
+   "base": {
+    "value": "#3C394C",
+    "spread_max_channel": 19,
+    "frames": [
+     {
+      "label": "mako_hair_e07_329",
+      "hex": "#3C3A4C",
+      "n": 57033,
+      "frame": "e07_329.png",
+      "box": [
+       152,
+       0,
+       1112,
+       312
+      ]
+     },
+     {
+      "label": "mako_hair_e07_1013",
+      "hex": "#3C394C",
+      "n": 110896,
+      "frame": "e07_1013.png",
+      "box": [
+       150,
+       0,
+       1100,
+       344
+      ]
+     },
+     {
+      "label": "mako_hair_e04_270",
+      "hex": "#2D2740",
+      "n": 20662,
+      "frame": "mako_e04_270.png",
+      "box": [
+       560,
+       0,
+       820,
+       160
+      ]
+     }
+    ]
+   },
+   "highlight": {
+    "value": "#595E8F",
+    "spread_max_channel": 15,
+    "frames": [
+     {
+      "label": "mako_hair_e07_1013",
+      "hex": "#5E6696",
+      "n": 18363,
+      "frame": "e07_1013.png",
+      "box": [
+       150,
+       0,
+       1100,
+       344
+      ]
+     },
+     {
+      "label": "mako_hair_e04_270",
+      "hex": "#545788",
+      "n": 2688,
+      "frame": "mako_e04_270.png",
+      "box": [
+       560,
+       0,
+       820,
+       160
+      ]
+     }
+    ]
+   },
+   "shadow": {
+    "value": "#27252F",
+    "spread_max_channel": 0,
+    "frames": [
+     {
+      "label": "mako_hair_e07_329",
+      "hex": "#27252F",
+      "n": 6182,
+      "frame": "e07_329.png",
+      "box": [
+       152,
+       0,
+       1112,
+       312
+      ]
+     }
+    ]
+   }
+  },
+  "Mai": {
+   "lit": {
+    "value": "#C2BD6A",
+    "spread_max_channel": 5,
+    "frames": [
+     {
+      "label": "mai_hair_e04_487",
+      "hex": "#BEBA6C",
+      "n": 12197,
+      "frame": "e04_487.png",
+      "box": [
+       600,
+       0,
+       1120,
+       660
+      ]
+     },
+     {
+      "label": "mai_hair_e06_478",
+      "hex": "#C3BD68",
+      "n": 203156,
+      "frame": "e06_478.png",
+      "box": [
+       152,
+       0,
+       1012,
+       704
+      ]
+     },
+     {
+      "label": "mai_hair_e06_1033",
+      "hex": "#C2BD6A",
+      "n": 19892,
+      "frame": "mai_e06_1033.png",
+      "box": [
+       192,
+       0,
+       712,
+       600
+      ]
+     }
+    ]
+   },
+   "shade": {
+    "value": "#736C41",
+    "spread_max_channel": 3,
+    "frames": [
+     {
+      "label": "mai_hair_e04_487",
+      "hex": "#736D42",
+      "n": 13344,
+      "frame": "e04_487.png",
+      "box": [
+       600,
+       0,
+       1120,
+       660
+      ]
+     },
+     {
+      "label": "mai_hair_e06_478",
+      "hex": "#736C3F",
+      "n": 61569,
+      "frame": "e06_478.png",
+      "box": [
+       152,
+       0,
+       1012,
+       704
+      ]
+     },
+     {
+      "label": "mai_hair_e06_1033",
+      "hex": "#736C41",
+      "n": 34656,
+      "frame": "mai_e06_1033.png",
+      "box": [
+       192,
+       0,
+       712,
+       600
+      ]
+     }
+    ]
+   }
+  },
+  "Keith": {
+   "lit": {
+    "value": "#B3AF56",
+    "spread_max_channel": 13,
+    "frames": [
+     {
+      "label": "keith_hair_e32_708",
+      "hex": "#B5AF56",
+      "n": 6371,
+      "frame": "keith_e32_708.png",
+      "box": [
+       392,
+       100,
+       872,
+       300
+      ]
+     },
+     {
+      "label": "keith_hair_e32_1020",
+      "hex": "#B3AF59",
+      "n": 1167,
+      "frame": "keith_e32_1020.png",
+      "box": [
+       300,
+       20,
+       680,
+       200
+      ]
+     },
+     {
+      "label": "keith_hair_e18_1086",
+      "hex": "#A8A352",
+      "n": 1210,
+      "frame": "e18_1086.png",
+      "box": [
+       660,
+       60,
+       880,
+       220
+      ]
+     }
+    ]
+   },
+   "shade": {
+    "value": "#747045",
+    "spread_max_channel": 13,
+    "frames": [
+     {
+      "label": "keith_hair_e32_708",
+      "hex": "#767045",
+      "n": 21212,
+      "frame": "keith_e32_708.png",
+      "box": [
+       392,
+       100,
+       872,
+       300
+      ]
+     },
+     {
+      "label": "keith_hair_e32_1020",
+      "hex": "#747045",
+      "n": 11211,
+      "frame": "keith_e32_1020.png",
+      "box": [
+       300,
+       20,
+       680,
+       200
+      ]
+     },
+     {
+      "label": "keith_hair_e18_1086",
+      "hex": "#69653F",
+      "n": 2751,
+      "frame": "e18_1086.png",
+      "box": [
+       660,
+       60,
+       880,
+       220
+      ]
+     }
+    ]
+   }
+  },
+  "Bonz": {
+   "lit": {
+    "value": "#505E80",
+    "spread_max_channel": 2,
+    "frames": [
+     {
+      "label": "bonz_hair_e17_246",
+      "hex": "#515E81",
+      "n": 74068,
+      "frame": "e17_246.png",
+      "box": [
+       150,
+       0,
+       1120,
+       272
+      ]
+     },
+     {
+      "label": "bonz_hair_e17_428",
+      "hex": "#505F7F",
+      "n": 3431,
+      "frame": "e17_428.png",
+      "box": [
+       540,
+       180,
+       720,
+       330
+      ]
+     }
+    ]
+   },
+   "shade": {
+    "value": "#3D475A",
+    "spread_max_channel": 2,
+    "frames": [
+     {
+      "label": "bonz_hair_e17_246",
+      "hex": "#3D465A",
+      "n": 47464,
+      "frame": "e17_246.png",
+      "box": [
+       150,
+       0,
+       1120,
+       272
+      ]
+     },
+     {
+      "label": "bonz_hair_e17_428",
+      "hex": "#3D4859",
+      "n": 2540,
+      "frame": "e17_428.png",
+      "box": [
+       540,
+       180,
+       720,
+       330
+      ]
+     }
+    ]
+   }
+  },
+  "Pegasus": {
+   "lit": {
+    "value": "#C4BDD0",
+    "spread_max_channel": 5,
+    "frames": [
+     {
+      "label": "pegasus_hair_e04_352",
+      "hex": "#C4BCCE",
+      "n": 3161,
+      "frame": "e04_352.png",
+      "box": [
+       400,
+       20,
+       580,
+       240
+      ]
+     },
+     {
+      "label": "pegasus_hair_e04_443",
+      "hex": "#C5BED3",
+      "n": 90520,
+      "frame": "e04_443.png",
+      "box": [
+       412,
+       0,
+       1132,
+       692
+      ]
+     }
+    ]
+   },
+   "shade": {
+    "value": "#827E93",
+    "spread_max_channel": 6,
+    "frames": [
+     {
+      "label": "pegasus_hair_e04_352",
+      "hex": "#837E90",
+      "n": 884,
+      "frame": "e04_352.png",
+      "box": [
+       400,
+       20,
+       580,
+       240
+      ]
+     },
+     {
+      "label": "pegasus_hair_e04_443",
+      "hex": "#827E96",
+      "n": 176926,
+      "frame": "e04_443.png",
+      "box": [
+       412,
+       0,
+       1132,
+       692
+      ]
+     }
+    ]
+   },
+   "indoor_e36_lit": {
+    "value": "#C9C5D6",
+    "spread_max_channel": 0,
+    "frames": [
+     {
+      "label": "pegasus_hair_e36_755",
+      "hex": "#C9C5D6",
+      "n": 74165,
+      "frame": "pegasus_e36_755.png",
+      "box": [
+       260,
+       0,
+       1120,
+       664
+      ]
+     }
+    ]
+   }
+  },
+  "PaniK (night only)": {
+   "lit": {
+    "value": "#2E465C",
+    "spread_max_channel": 1,
+    "frames": [
+     {
+      "label": "panik_hair_e15_443_L",
+      "hex": "#2E475C",
+      "n": 18115,
+      "frame": "panik_e15_443.png",
+      "box": [
+       150,
+       30,
+       330,
+       300
+      ]
+     },
+     {
+      "label": "panik_hair_e15_477_L",
+      "hex": "#2D465C",
+      "n": 17862,
+      "frame": "panik_e15_477.png",
+      "box": [
+       150,
+       30,
+       330,
+       300
+      ]
+     }
+    ]
+   },
+   "shade": {
+    "value": "#182424",
+    "spread_max_channel": 1,
+    "frames": [
+     {
+      "label": "panik_hair_e15_443_L",
+      "hex": "#172424",
+      "n": 5891,
+      "frame": "panik_e15_443.png",
+      "box": [
+       150,
+       30,
+       330,
+       300
+      ]
+     },
+     {
+      "label": "panik_hair_e15_477_L",
+      "hex": "#182425",
+      "n": 5088,
+      "frame": "panik_e15_477.png",
+      "box": [
+       150,
+       30,
+       330,
+       300
+      ]
+     }
+    ]
+   },
+   "mid_shot_e15_275": {
+    "value": "#26353F",
+    "spread_max_channel": 0,
+    "frames": [
+     {
+      "label": "panik_hair_e15_275_tight",
+      "hex": "#26353F",
+      "n": 7339,
+      "frame": "panik_e15_275.png",
+      "box": [
+       240,
+       30,
+       380,
+       215
+      ]
+     }
+    ]
+   }
+  }
+ },
+ "dropped": {
+  "rex_fringe_e03_873": "grab landed on a different shot (cards)",
+  "rex_brown_e03_873": "grab landed on a different shot (cards)",
+  "tea_hair_e08_1145": "no kept pixels (box missed)"
+ }
+}

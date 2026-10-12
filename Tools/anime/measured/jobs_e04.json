@@ -1,0 +1,13 @@
+[
+{"label":"joey_hair_e04_702","frame":"/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e04_702.png","box":[229,0,900,380],"h":[38,62],"s":[0.3,0.9],"v":[0.35,1]},
+{"label":"weevil_hair_e04_637","frame":"/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e04_637.png","box":[280,35,852,330],"h":[150,195],"s":[0.12,0.7],"v":[0.3,1]},
+{"label":"weevil_hair_e04_900","frame":"/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e04_900.png","box":[168,0,1010,260],"h":[150,195],"s":[0.12,0.7],"v":[0.3,1]},
+{"label":"weevil_hair_e04_506","frame":"/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e04_506.png","box":[380,0,970,290],"h":[150,195],"s":[0.12,0.7],"v":[0.3,1]},
+{"label":"yugi_bangs_e04_452","frame":"/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e04_452.png","box":[330,0,1060,330],"h":[38,62],"s":[0.3,0.95],"v":[0.4,1]},
+{"label":"yugi_tips_e04_452","frame":"/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e04_452.png","box":[300,0,1120,400],"h":[325,360],"s":[0.45,1],"v":[0.3,1]},
+{"label":"yugi_core_e04_452","frame":"/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e04_452.png","box":[330,0,1060,200],"h":[0,360],"s":[0,1],"v":[0,0.3]},
+{"label":"yugi_bangs_e04_358","frame":"/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e04_358.png","box":[300,0,1100,330],"h":[38,62],"s":[0.3,0.95],"v":[0.4,1]},
+{"label":"yugi_tips_e04_358","frame":"/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e04_358.png","box":[300,0,1120,400],"h":[325,360],"s":[0.45,1],"v":[0.3,1]},
+{"label":"yugi_core_e04_358","frame":"/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e04_358.png","box":[300,0,1100,220],"h":[0,360],"s":[0,1],"v":[0,0.3]},
+{"label":"tea_hair_e04_452","frame":"/tmp/claude-1000/-home-greatsaiyadave-DMWRLDZUnityProject-ProjectARGON/138746c4-81e1-4dbe-b842-1cdaa6db0c59/scratchpad/dkb/meas/frames/e04_452.png","box":[143,0,300,230],"h":[8,40],"s":[0.35,0.9],"v":[0.2,0.8]}
+]

@@ -1,0 +1,5 @@
+# Tools/anime — measuring toolchain deps (Python 3.10+).
+# The sampler (meas.py) needs only numpy + pillow; face/hair detection adds opencv.
+numpy
+pillow
+opencv-python-headless
