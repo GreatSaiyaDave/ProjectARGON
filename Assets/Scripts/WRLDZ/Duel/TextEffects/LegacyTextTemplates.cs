@@ -197,9 +197,13 @@ namespace WRLDZ.Duel.TextEffects
 
         /// <summary>
         /// Orca Mega-Fortress family (pre-PSCT): tribute a named monster you control, destroy 1 card.
+        /// AttackShieldsAndDamageZero batch: or "1 X-Type monster" (Arcane Archer of the Forest, c55001420: the Tribute is
+        /// any monster of that Type you control, this card included — Lua SelectReleaseGroupCost with no exclusion).
         /// </summary>
         static readonly Regex RxTributeNamedDestroy = new(
-            @"By Tributing 1 ""([^""]+)"" on your side of the field, destroy 1 (monster on the field|Spell or Trap Card on the field)\.?",
+            @"By Tributing 1 (?:""([^""]+)""|(Aqua|Beast-Warrior|Winged Beast|Beast|Dinosaur|Dragon|Fairy|Fiend|Fish|Insect|" +
+            @"Machine|Plant|Psychic|Pyro|Reptile|Rock|Sea Serpent|Spellcaster|Thunder|Warrior|Wyrm|Zombie)-Type monster) " +
+            @"on your side of the field, destroy 1 (monster on the field|Spell or Trap Card on the field)\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         /// <summary>Suijin / Kazejin / Sanga: DC Quick Effect, ATK 0 this calculation.</summary>
@@ -1063,14 +1067,17 @@ namespace WRLDZ.Duel.TextEffects
 
             foreach (Match m in RxTributeNamedDestroy.Matches(text))
             {
-                var st = m.Groups[2].Value.IndexOf("Spell", System.StringComparison.OrdinalIgnoreCase) >= 0;
+                var st = m.Groups[3].Value.IndexOf("Spell", System.StringComparison.OrdinalIgnoreCase) >= 0;
+                var byType = m.Groups[2].Success;
                 Add(m, new EffectClause
                 {
                     Timing = EffectTiming.Activate,
                     Action = EffectActionKind.Destroy,
-                    NamedCard = m.Groups[1].Value,
+                    NamedCard = byType ? null : m.Groups[1].Value,
+                    TributeRaceFilter = byType ? m.Groups[2].Value : null,
+                    TributeRaceStrict = byType,
                     RequiresTributeCount = 1,
-                    TributeExceptThis = true,
+                    TributeExceptThis = !byType,
                     RequiresTargetChoice = true,
                     Zone = st ? EffectZoneFilter.FieldSpellTraps : EffectZoneFilter.FieldAnyMonster,
                     MakesChainLink = true,

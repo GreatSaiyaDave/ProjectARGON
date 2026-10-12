@@ -36,7 +36,11 @@ namespace WRLDZ.Duel.TextEffects
                 foreach (var c in ClausesOn(monster, EffectActionKind.CannotBeAttackTarget))
                 {
                     if (c.ExceptThisCard) continue;
-                    if (ConditionMet(engine, c))
+                    // AttackShieldsAndDamageZero batch: "while you control another face-up <Type> monster" (Solar Flare
+                    // Dragon, Goblin King, Soul-Absorbing Bone Tower), a face-up Plant (Arcane Archer of the Forest) or a
+                    // face-up Level 3 or lower Normal Monster (Emissary of the Oasis) — read live on each check.
+                    if (ConditionMet(engine, c) &&
+                        AttackShieldsAndDamageZeroRuntime.WhileConditionMet(engine, monster, c))
                         return true;
                 }
 

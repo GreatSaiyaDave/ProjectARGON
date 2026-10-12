@@ -5085,6 +5085,8 @@ namespace WRLDZ.Duel.TextEffects
             TokensDeclarationsAndPicksRuntime.FilterTributeCostCandidates(engine, who, c, list);
             // IgnitionCostsAndSimpleSpells batch: Mystik Wok Tributes a monster whose ATK or DEF is above 0.
             IgnitionCostsAndSimpleSpellsRuntime.FilterTributeCostCandidates(c, list);
+            // AttackShieldsAndDamageZero batch: Arcane Archer's "Tribute 1 Plant-Type monster" reads the Type only.
+            AttackShieldsAndDamageZeroRuntime.FilterTributeCostCandidates(c, list);
             TributeSummonsRuntime.MoveForcedFirst(who, list, forced);
             return list;
         }
@@ -9291,6 +9293,10 @@ namespace WRLDZ.Duel.TextEffects
                 // Card of Safe Return's draw (DuelEngine.CompleteSpecialSummon) are hooks, never resolved here.
                 case EffectActionKind.SpecialSummonThisFromHandByOwnProcedure:
                 case EffectActionKind.DrawWhenMonsterSpecialSummonedFromYourGy:
+                // AttackShieldsAndDamageZero batch: the damage calculation (AvoidsBattleDamage) and the Special Summon funnel
+                // (DuelEngine.CompleteSpecialSummon -> OnSpecialSummoned) read these; never resolved here.
+                case EffectActionKind.AvoidBattleDamageFromBattlesInvolving:
+                case EffectActionKind.MillOpponentWhenRaceSpecialSummoned:
                 // GuardiansAndEquipEvents batch: Morale Boost's equip / leave-field triggers are engine hooks
                 // (GuardiansAndEquipEventsRuntime.NoteEquipped / NoteEquipLeftField), never resolved here.
                 case EffectActionKind.GainLpWhenEquipSpellEquipped:

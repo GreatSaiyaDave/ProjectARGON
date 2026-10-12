@@ -3512,6 +3512,9 @@ namespace WRLDZ.Duel
             // ControlOwner); face-down Special Summons count too.
             if (fromGraveyard)
                 TextEffects.NegationsAndGySummonsRuntime.OnSpecialSummoned(this, card.ControlOwner ?? who, card);
+            // AttackShieldsAndDamageZero batch: Soul-Absorbing Bone Tower — "each time a Zombie-Type monster(s) is Special
+            // Summoned" (one event per group Special Summon; held while a Chain resolves).
+            TextEffects.AttackShieldsAndDamageZeroRuntime.OnSpecialSummoned(this, card, faceUp);
             if (faceUp)
                 TextEffects.TextEffectRuntime.TryResolveThisCardSummoned(
                     this, who, card, specialSummon: true, fromGraveyard: fromGraveyard);
@@ -4802,6 +4805,8 @@ namespace WRLDZ.Duel
             // DiscardTriggers batch (v142): discard / Deck-send triggers held while the chain resolved (Electric
             // Snake, Minar, Penguin Knight) activate now, before the game moves on.
             TextEffects.DiscardTriggersRuntime.Flush(this);
+            // AttackShieldsAndDamageZero batch: Special Summon triggers held while the Chain resolved (Soul-Absorbing Bone Tower).
+            TextEffects.AttackShieldsAndDamageZeroRuntime.FlushHeld(this);
             // EngineHygiene batch: Super Rejuvenation resolved during the End Phase draws now.
             TextEffects.EngineHygieneRuntime.AfterChainResolved(this);
             if (ResumeAfterChain != ResponseTiming.None)

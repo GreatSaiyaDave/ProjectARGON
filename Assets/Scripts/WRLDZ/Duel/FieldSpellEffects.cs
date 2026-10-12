@@ -511,6 +511,10 @@ namespace WRLDZ.Duel
                     // Gren Maju Da Eiza: every card in your banishment, face-down included (GetFieldGroupCount REMOVED).
                     n = who.Banished?.Count ?? 0;
                     break;
+                case TextEffects.AttackShieldsAndDamageZeroRuntime.FaceUpRaceOnFieldExceptThis:
+                    // Goblin King: face-up monsters of the Type on the whole field, this card excluded.
+                    n = TextEffects.AttackShieldsAndDamageZeroRuntime.CountFaceUpRaceExcept(engine, self, clause.RaceFilter);
+                    break;
                 case TextEffects.SelfStatMonstersRuntime.OppMonsterCount:
                     // Every monster the opponent controls, face-down included. Not the flat "any monster" count.
                     n = engine.OpponentOf(who)?.MonsterCount ?? 0;
@@ -716,6 +720,9 @@ namespace WRLDZ.Duel
         static void ApplyStatClause(DuelEngine engine, CardInstance source, EffectClause clause)
         {
             if (engine == null || clause == null) return;
+            // AttackShieldsAndDamageZero batch: Theban Nightmare — only while its controller has no cards in hand nor in the
+            // Spell & Trap Zones (no condition on every other aura).
+            if (!TextEffects.AttackShieldsAndDamageZeroRuntime.WhileConditionMet(engine, source, clause)) return;
             var controller = engine.ControllerOf(source);
 
             if (clause.ScaleThisAtkByEquippedEquipCount)
@@ -1091,7 +1098,9 @@ namespace WRLDZ.Duel
                 }
             }
 
-            return false;
+            // AttackShieldsAndDamageZero batch: Emissary of the Oasis, The Sanctuary in the Sky (battles involving a
+            // matching monster).
+            return TextEffects.AttackShieldsAndDamageZeroRuntime.AvoidsBattleDamage(engine, who, attacker, defender);
         }
 
         static void DestroyNamedLeavesContinuous(DuelEngine engine, DuelistState who)

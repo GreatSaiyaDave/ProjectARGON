@@ -3297,7 +3297,23 @@ namespace WRLDZ.Duel.TextEffects
         /// monster Tributed as the cost, chosen as the card is activated (Lua SelectEffect in s.target; automatic when one
         /// of them is 0) — <see cref="IgnitionCostsAndSimpleSpellsRuntime.ResolveTributedStatGain"/>.
         /// </summary>
-        GainLpEqualToTributedAtkOrDef,    }
+        GainLpEqualToTributedAtkOrDef,
+        /// <summary>
+        /// AttackShieldsAndDamageZero batch — Lua EFFECT_AVOID_BATTLE_DAMAGE / EFFECT_NO_BATTLE_DAMAGE on the matching monsters
+        /// (<see cref="EffectClause.RaceFilter"/>, <see cref="EffectClause.NormalMonsterMaxLevel"/>): battle damage from a battle
+        /// involving one becomes 0. <see cref="EffectSide.Controller"/> = only this card's controller, whichever side the
+        /// matching monster is on (Emissary of the Oasis); <see cref="EffectSide.Both"/> = the controller of each matching
+        /// battler (The Sanctuary in the Sky). Read by <see cref="AttackShieldsAndDamageZeroRuntime.AvoidsBattleDamage"/>.
+        /// </summary>
+        AvoidBattleDamageFromBattlesInvolving,
+        /// <summary>
+        /// AttackShieldsAndDamageZero batch — Soul-Absorbing Bone Tower (c63012333, FIELD TRIGGER_F on EVENT_SPSUMMON_SUCCESS):
+        /// each time 1+ face-up <see cref="EffectClause.RaceFilter"/> monster(s) are Special Summoned (not with this card),
+        /// send the top <see cref="EffectClause.Amount"/> cards of the opponent's Deck to the GY. An engine hook
+        /// (<see cref="AttackShieldsAndDamageZeroRuntime.OnSpecialSummoned"/>), never resolved by ApplyClause.
+        /// </summary>
+        MillOpponentWhenRaceSpecialSummoned,
+    }
 
     public enum EffectSide
     {
@@ -4968,6 +4984,27 @@ namespace WRLDZ.Duel.TextEffects
         /// (an Equip effect; nothing when the card is equipped any other way).
         /// </summary>
         public int EquipAtkPerTributedOnActivation;
+        // ── AttackShieldsAndDamageZero batch ──
+
+        /// <summary>
+        /// A condition on a continuous effect of this card, read where the effect applies
+        /// (<see cref="AttackShieldsAndDamageZeroRuntime.WhileConditionMet"/>): "YouControlAnotherFaceUpRace" /
+        /// "YouControlFaceUpRace" (<see cref="ConditionName"/> = the Type), "YouControlFaceUpLowLevelNormal"
+        /// (<see cref="ConditionAmount"/> = the highest Level), "NoCardsInHandOrSpellTrapZones". Null = no condition.
+        /// </summary>
+        public string WhileCondition;
+
+        /// <summary>
+        /// <see cref="EffectActionKind.AvoidBattleDamageFromBattlesInvolving"/>: the matching monster is a Normal Monster of this
+        /// Level or lower (Emissary of the Oasis). 0 = no Level filter.
+        /// </summary>
+        public int NormalMonsterMaxLevel;
+
+        /// <summary>
+        /// <see cref="TributeRaceFilter"/> matches the monster's current Type only, never a name that contains the word
+        /// (Arcane Archer of the Forest: "Magical Plant Mandragola" is a Spellcaster, not a Plant).
+        /// </summary>
+        public bool TributeRaceStrict;
     }
 
     /// <summary>When the activation condition is tested (PSCT "when" vs "if").</summary>

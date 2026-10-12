@@ -307,12 +307,15 @@ namespace WRLDZ.Duel.TextEffects
         {
             if (engine == null) return;
             s_group.GetOrCreateValue(engine).Depth++;
+            // AttackShieldsAndDamageZero batch: the same group is one "Special Summoned" event for Soul-Absorbing Bone Tower.
+            AttackShieldsAndDamageZeroRuntime.BeginGroup(engine);
         }
 
         /// <summary>Ends the group opened by <see cref="BeginGroupSpecialSummon"/> and answers its one event.</summary>
         public static void EndGroupSpecialSummon(DuelEngine engine)
         {
             if (engine == null || !s_group.TryGetValue(engine, out var group) || group.Depth <= 0) return;
+            AttackShieldsAndDamageZeroRuntime.EndGroup(engine);
             if (--group.Depth > 0) return;
             var events = group.FromGy.ToList();
             group.FromGy.Clear();

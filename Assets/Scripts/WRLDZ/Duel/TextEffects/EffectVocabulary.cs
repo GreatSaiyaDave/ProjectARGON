@@ -418,7 +418,9 @@ namespace WRLDZ.Duel.TextEffects
                 // Mystik Wok's LP gain from the Tributed monster's ATK or DEF.
                 EffectActionKind.CoinTossAllHeadsDestroyOppMonstersAllTailsDestroyYours => EffectResolutionKind.Randomize,
                 EffectActionKind.GainLpEqualToTributedAtkOrDef => EffectResolutionKind.GainLp,
-                EffectActionKind.ContinuousForceAttackLockPosition or
+                // AttackShieldsAndDamageZero batch: Emissary of the Oasis / The Sanctuary in the Sky; Soul-Absorbing Bone Tower.
+                EffectActionKind.AvoidBattleDamageFromBattlesInvolving => EffectResolutionKind.PreventDamage,
+                EffectActionKind.MillOpponentWhenRaceSpecialSummoned => EffectResolutionKind.ReturnToDeck,                EffectActionKind.ContinuousForceAttackLockPosition or
                     EffectActionKind.ChangeSummonedMonstersToDefense => EffectResolutionKind.ChangePosition,
                 EffectActionKind.OpponentDiscardsRandomThenOneOfTheirChoice => EffectResolutionKind.Discard,
                 // TokensDeclarationsAndPicks batch: DNA Transplant's declaration (naming, as DeclareMonsterType) and its
