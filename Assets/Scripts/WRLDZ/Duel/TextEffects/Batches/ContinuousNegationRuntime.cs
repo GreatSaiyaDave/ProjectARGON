@@ -94,6 +94,13 @@ namespace WRLDZ.Duel.TextEffects
             // SpellTrapAnswersAndActivationLocks batch: Cursed Seal of the Forbidden Spell's name lock, Invader of Darkness's
             // Quick-Play lock (the card's activation, from the hand or Set).
             if (SpellTrapAnswersAndActivationLocksRuntime.ActivationLocked(engine, who, card, out reason)) return true;
+            // LocksRedirectsAndActivity batch: "you cannot activate cards or effects" — the player-wide
+            // activation lock (Chaos Emperor Dragon - Envoy of the End), the same hub every activation site asks.
+            if (LocksRedirectsAndActivityRuntime.ActivationLocked(engine, who, card))
+            {
+                reason = "You cannot activate cards or effects.";
+                return true;
+            }
             var onField = OnSpellTrapField(engine, card);
             var inHand = who.Hand != null && who.Hand.Contains(card);
             if (!onField && !inHand) return false;

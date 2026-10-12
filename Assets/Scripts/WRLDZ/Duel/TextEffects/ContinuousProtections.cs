@@ -185,7 +185,7 @@ namespace WRLDZ.Duel.TextEffects
         }
 
 
-        static bool ConditionMet(DuelEngine engine, EffectClause c)
+        public static bool ConditionMet(DuelEngine engine, EffectClause c)
         {
             if (c == null) return false;
             if (!string.IsNullOrEmpty(c.RequiresFaceUpName) &&

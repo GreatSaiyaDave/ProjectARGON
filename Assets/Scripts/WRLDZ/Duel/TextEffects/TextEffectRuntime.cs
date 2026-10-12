@@ -396,7 +396,7 @@ namespace WRLDZ.Duel.TextEffects
                               timing == ResponseTiming.SpellTrapDestroyedByOpponent
                                 ? activate
                                 : null;
-                if (!ResponseDiscardPayable(who, card, answer))
+                if (!ResponseDiscardPayable(engine, who, card, answer))
                 {
                     reason = "No card in hand to discard.";
                     return false;
@@ -1029,6 +1029,10 @@ namespace WRLDZ.Duel.TextEffects
             }
 
             reason = "OK";
+            // LocksRedirectsAndActivity: record this activation for the ACTIVITY_CHAIN counter (a cost may
+            // require "you have not activated any other cards or effects this turn"). ActivationCount
+            // excludes this card's own in-progress check.
+            LocksRedirectsAndActivityRuntime.NoteActivation(engine, who, card);
             return true;
         }
 
@@ -1895,7 +1899,7 @@ namespace WRLDZ.Duel.TextEffects
             var human = !(autoPickTarget || !who.IsPlayer);
             // SummonNegationRuntime pays the costs of its Counter Traps before it seats them.
             var discard = timing == ResponseTiming.SummonNegation ? null : pickClauses?.Find(HasDiscardCost);
-            if (discard != null && !ResponseDiscardPayable(who, card, pickClauses))
+            if (discard != null && !ResponseDiscardPayable(engine, who, card, pickClauses))
             {
                 engine.Log($"{card.Name}: no card in hand to discard — cannot activate.");
                 return false;
@@ -2210,9 +2214,12 @@ namespace WRLDZ.Duel.TextEffects
         /// The discard cost of a response answered with <paramref name="clauses"/> (the first clause with one) can be
         /// paid from <paramref name="who"/>'s hand, <paramref name="card"/> itself excluded; true when there is none.
         /// </summary>
-        static bool ResponseDiscardPayable(DuelistState who, CardInstance card, List<EffectClause> clauses)
+        static bool ResponseDiscardPayable(DuelEngine engine, DuelistState who, CardInstance card, List<EffectClause> clauses)
         {
             var discard = clauses?.Find(HasDiscardCost);
+            // LocksRedirectsAndActivity: a live cannot-discard-as-a-cost lock refuses the activation outright.
+            if (discard != null && LocksRedirectsAndActivityRuntime.DiscardAsCostLocked(engine, who))
+                return false;
             return discard == null ||
                    CollectDiscardCost(who, DiscardCostAttributeOf(discard), card).Count >= DiscardNeed(discard);
         }
@@ -4871,6 +4878,24 @@ namespace WRLDZ.Duel.TextEffects
                 CollectDiscardCost(who, c.DiscardCostAttribute, card).Count < DiscardNeed(c))
             {
                 reason = "Not enough cards in hand to discard.";
+                return false;
+            }
+
+            // LocksRedirectsAndActivity: "You cannot discard cards as a cost to activate cards or effects"
+            // (ygopro EFFECT_CANNOT_DISCARD_AS_COST, per player, per effect). Sends are not discards.
+            if ((c.RequiresDiscardCost || c.RequiresDiscardSelf) && !c.DiscardCostIsSend &&
+                LocksRedirectsAndActivityRuntime.DiscardAsCostLocked(engine, who))
+            {
+                reason = "You cannot discard cards as a cost (card effect).";
+                return false;
+            }
+
+            // LocksRedirectsAndActivity: a cost that requires "you have not activated any other cards or
+            // effects this turn" (Lua ACTIVITY_CHAIN counter).
+            if (c.Action == EffectActionKind.RequiresNoOtherActivationThisTurn &&
+                !LocksRedirectsAndActivityRuntime.ActivityCostLegal(engine, who, card))
+            {
+                reason = "You have already activated a card or effect this turn.";
                 return false;
             }
 

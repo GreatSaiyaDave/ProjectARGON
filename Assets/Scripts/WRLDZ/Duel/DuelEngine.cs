@@ -666,6 +666,8 @@ namespace WRLDZ.Duel
             who.CannotDeclareAttackThisTurn = false;
             // Soul Exchange: "this turn" Tribute grants end with the turn.
             TextEffects.TributeSummonsRuntime.ClearTurnGrants(Player, Opponent);
+            // LocksRedirectsAndActivity: the ACTIVITY_CHAIN counters restart each turn.
+            TextEffects.LocksRedirectsAndActivityRuntime.ResetTurn(this);
             PendingTributes.Clear();
             foreach (var m in who.MonstersOnField())
             {
@@ -2818,6 +2820,17 @@ namespace WRLDZ.Duel
         public void SendCardToGrave(DuelistState owner, CardInstance card, CardInstance sentBy = null)
         {
             if (owner == null || card == null) return;
+            // LocksRedirectsAndActivity: the one funnel every field exit goes through — "if this card would leave
+            // the field, return it to its owner's hand instead" (ygopro EFFECT_LEAVE_FIELD_REDIRECT, Dark Magician
+            // of Chaos). Unlike the GY-send hub (SendsToBanishedInstead) it covers banish / Deck / hand returns,
+            // and the card never actually leaves: no "sent to the GY" trigger fires.
+            if (owner.TryFindMonster(card, out _) || owner.TryFindSpellTrap(card, out _) ||
+                owner.FieldSpellZone?.Occupant == card)
+            {
+                if (TextEffects.LocksRedirectsAndActivityRuntime.RedirectFieldExit(this, card,
+                        sentBy != null ? sentBy.Name : "a card effect"))
+                    return;
+            }
             // Banisher of the Light (RedirectAndReplace batch, v142): decided while the card is still where it is,
             // so a face-up Banisher sent to the GY is banished by its own effect.
             var banishInstead = TextEffects.RedirectAndReplaceRuntime.SendsToBanishedInstead(this, card);

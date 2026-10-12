@@ -3254,6 +3254,39 @@ namespace WRLDZ.Duel.TextEffects
         /// Does NOT jump from Draw/Standby/Main1 directly; waits for a safe gate. See DuelEngine.SkipToEndPhase.
         /// </summary>
         PhaseJumpToEndPhase,
+        /// <summary>
+        /// LocksRedirectsAndActivity batch — Continuous: "You cannot discard cards as a cost to activate cards or
+        /// effects" (Goblin of Greed's per-player, per-effect variant; ygopro EFFECT_CANNOT_DISCARD_AS_COST).
+        /// Read by every discard-cost site through <see cref="LocksRedirectsAndActivityRuntime.DiscardAsCostLocked"/>.
+        /// Side picks whose discards the lock covers (Controller = yours only, Opponent, Both).
+        /// </summary>
+        ContinuousCannotDiscardAsCost,
+        /// <summary>
+        /// LocksRedirectsAndActivity batch — Continuous: "Neither player can activate cards or effects"
+        /// (EFFECT_CANNOT_ACTIVATE, every activation site — S/T, monster ignition / trigger / quick, hand traps).
+        /// Chaos Emperor Dragon - Envoy of the End's share of this row. The per-player half is
+        /// <see cref="ContinuousThisPlayerCannotActivate"/>.
+        /// </summary>
+        ContinuousNeitherPlayerCanActivate,
+        /// <summary>
+        /// LocksRedirectsAndActivity batch — Continuous: "You cannot activate cards or effects" — the per-player share
+        /// of the activation lock (Side picks which duelist is locked). Same sites as
+        /// <see cref="ContinuousNeitherPlayerCanActivate"/>.
+        /// </summary>
+        ContinuousThisPlayerCannotActivate,
+        /// <summary>
+        /// LocksRedirectsAndActivity batch — "If this card would leave the field, return it to its owner's hand instead"
+        /// (EFFECT_LEAVE_FIELD_REDIRECT: Dark Magician of Chaos). One funnel every field exit goes through
+        /// (<see cref="LocksRedirectsAndActivityRuntime.RedirectFieldExit"/>), unlike the GY-send hub.
+        /// </summary>
+        LeaveFieldReturnsToOwnerHandInstead,
+        /// <summary>
+        /// LocksRedirectsAndActivity batch — a cost that requires "you have not activated any other cards or effects this
+        /// turn" (Lua ACTIVITY_CHAIN counter check). Honored by
+        /// <see cref="LocksRedirectsAndActivityRuntime.ActivityCostLegal"/> against
+        /// <see cref="LocksRedirectsAndActivityRuntime.NoteActivation"/>.
+        /// </summary>
+        RequiresNoOtherActivationThisTurn,
     }
 
     public enum EffectSide
