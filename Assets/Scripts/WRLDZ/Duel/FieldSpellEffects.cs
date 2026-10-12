@@ -515,6 +515,10 @@ namespace WRLDZ.Duel
                     // Goblin King: face-up monsters of the Type on the whole field, this card excluded.
                     n = TextEffects.AttackShieldsAndDamageZeroRuntime.CountFaceUpRaceExcept(engine, self, clause.RaceFilter);
                     break;
+                case TextEffects.SanctuaryAndZeraRuntime.LpLeadWhileNamedYouControl:
+                    // SanctuaryAndZera batch: The Agent of Force - Mars — your LP lead while you control the named card.
+                    n = TextEffects.SanctuaryAndZeraRuntime.LpLeadCount(engine, who, clause);
+                    break;
                 case TextEffects.SelfStatMonstersRuntime.OppMonsterCount:
                     // Every monster the opponent controls, face-down included. Not the flat "any monster" count.
                     n = engine.OpponentOf(who)?.MonsterCount ?? 0;

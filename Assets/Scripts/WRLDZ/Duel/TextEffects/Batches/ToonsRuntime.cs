@@ -98,6 +98,11 @@ namespace WRLDZ.Duel.TextEffects
                 return false;
             }
 
+            // SanctuaryAndZera batch: "… except by Tributing 1 face-up "X" on your side of the field while "Y" is on the field"
+            // (Archlord Zerato, Mazera DeVille).
+            if (SanctuaryAndZeraRuntime.IsNamedTributeProcedure(proc))
+                return SanctuaryAndZeraRuntime.CanSummonByNamedTribute(engine, who, card, proc, out reason);
+
             if (!string.IsNullOrEmpty(proc.RequiresFaceUpName) &&
                 !FieldSpellEffects.ControlsFaceUpNamed(who, proc.RequiresFaceUpName))
             {
@@ -163,6 +168,9 @@ namespace WRLDZ.Duel.TextEffects
             }
 
             var proc = HandProcedureOf(card);
+            // SanctuaryAndZera batch: the named face-up Tribute (Archlord Zerato, Mazera DeVille).
+            if (SanctuaryAndZeraRuntime.IsNamedTributeProcedure(proc))
+                return SanctuaryAndZeraRuntime.SummonByNamedTribute(engine, who, card, proc);
             // EngineHygiene batch: the banish-from-GY procedure (no Tribute) pays and Summons there.
             if (proc.BanishFromGyCount > 0)
                 return EngineHygieneRuntime.SummonByBanishProcedure(engine, who, card, proc);

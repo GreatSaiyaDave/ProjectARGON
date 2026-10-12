@@ -6664,6 +6664,9 @@ namespace WRLDZ.Duel.TextEffects
             // ChainLinkAnswers batch: Chaos Command Magician — a monster effect whose single target is a face-up copy is
             // negated (a Chain Link is negated as it resolves; this covers an effect that resolved with no Chain Link).
             if (ChainLinkAnswersRuntime.NegatesTargetingMonsterClause(engine, source, clause, chosenTarget)) return;
+            // SanctuaryAndZera batch: "If "X" is not on (your side of) the field, this effect is not applied." (Archlord
+            // Zerato, Saturn, Mazera DeVille) — after the oaths above, which bind anyway.
+            if (SanctuaryAndZeraRuntime.NotApplied(engine, who, source, clause)) return;
             var opp = engine.OpponentOf(who);
             // The destroying effect's controller is recorded for Gust / Driving Snow (SpellTrapDestroyedResponse).
             void Destroy(CardInstance c) => DestroyCard(engine, c, source, clause.BanishIfDestroyed, who);
@@ -8743,6 +8746,14 @@ namespace WRLDZ.Duel.TextEffects
 
                 case EffectActionKind.DiscardRandomFromOpponentHand:
                     DiscardRandomFromOpponentHand(engine, opp, source, clause);
+                    break;
+
+                // SanctuaryAndZera batch: The Agent of Judgment - Saturn; Light of Judgment.
+                case EffectActionKind.InflictLpLeadAsDamageToOpponent:
+                    SanctuaryAndZeraRuntime.ApplyLpLeadDamage(engine, who, source, clause);
+                    break;
+                case EffectActionKind.SendOppFieldCardToGyOrDiscardFromOppHand:
+                    SanctuaryAndZeraRuntime.ResolveSendOrDiscard(engine, who, source, clause);
                     break;
 
                 // DiscardTriggers batch (v142): Delinquent Duo; Penguin Knight.
@@ -11247,6 +11258,10 @@ namespace WRLDZ.Duel.TextEffects
                         // Spell/Trap, Solar Ray's face-up LIGHT monster.
                         if (IgnitionCostsAndSimpleSpellsRuntime.TryActivationCondition(engine, who, card, c, out ok,
                                 out reason))
+                            break;
+                        // SanctuaryAndZera batch: an opponent's monster (Archlord Zerato), your LP lead (Saturn), a card in
+                        // the opponent's hand or on their field (Light of Judgment).
+                        if (SanctuaryAndZeraRuntime.TryActivationCondition(engine, who, card, c, out ok, out reason))
                             break;
                         ok = false;
                         reason = $"Unknown activation condition {c.ActivationCondition}.";

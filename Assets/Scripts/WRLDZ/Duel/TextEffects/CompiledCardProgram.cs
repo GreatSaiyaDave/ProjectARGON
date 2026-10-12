@@ -3313,7 +3313,19 @@ namespace WRLDZ.Duel.TextEffects
         /// (<see cref="AttackShieldsAndDamageZeroRuntime.OnSpecialSummoned"/>), never resolved by ApplyClause.
         /// </summary>
         MillOpponentWhenRaceSpecialSummoned,
+        /// SanctuaryAndZera batch — The Agent of Judgment - Saturn (c91345518 s.damop): inflict damage to the opponent equal
+        /// to your LP minus theirs, read at resolution (nothing when that is not positive).
+        /// </summary>
+        InflictLpLeadAsDamageToOpponent,
+        /// <summary>
+        /// SanctuaryAndZera batch — Light of Judgment (c44595286 s.activate): at resolution the activator chooses
+        /// (Duel.SelectOption over the options that still have cards) to send 1 card the opponent controls to the GY
+        /// (selected, not targeted) or to look at the opponent's hand and discard 1 card from it
+        /// (<see cref="SanctuaryAndZeraRuntime.ResolveSendOrDiscard"/>).
+        /// </summary>
+        SendOppFieldCardToGyOrDiscardFromOppHand,
     }
+
 
     public enum EffectSide
     {
@@ -5005,6 +5017,16 @@ namespace WRLDZ.Duel.TextEffects
         /// (Arcane Archer of the Forest: "Magical Plant Mandragola" is a Spellcaster, not a Plant).
         /// </summary>
         public bool TributeRaceStrict;
+        // ── SanctuaryAndZera batch ──
+
+        /// <summary>
+        /// SanctuaryAndZera batch — "If "X" is not on (your side of) the field, this effect is not applied." (Archlord
+        /// Zerato, The Agent of Judgment - Saturn, Mazera DeVille; ygopro: the operation re-checks IsExistingMatchingCard /
+        /// IsEnvironment): at resolution the clause does nothing unless a face-up card with this name is on the field — on
+        /// its controller's side when <see cref="RequiresControllerNamedCard"/> is set
+        /// (<see cref="SanctuaryAndZeraRuntime.NotApplied"/>, asked by TextEffectRuntime.ApplyClause).
+        /// </summary>
+        public string NotAppliedUnlessNamedFaceUp;
     }
 
     /// <summary>When the activation condition is tested (PSCT "when" vs "if").</summary>

@@ -420,7 +420,11 @@ namespace WRLDZ.Duel.TextEffects
                 EffectActionKind.GainLpEqualToTributedAtkOrDef => EffectResolutionKind.GainLp,
                 // AttackShieldsAndDamageZero batch: Emissary of the Oasis / The Sanctuary in the Sky; Soul-Absorbing Bone Tower.
                 EffectActionKind.AvoidBattleDamageFromBattlesInvolving => EffectResolutionKind.PreventDamage,
-                EffectActionKind.MillOpponentWhenRaceSpecialSummoned => EffectResolutionKind.ReturnToDeck,                EffectActionKind.ContinuousForceAttackLockPosition or
+                EffectActionKind.MillOpponentWhenRaceSpecialSummoned => EffectResolutionKind.ReturnToDeck,
+                // SanctuaryAndZera batch: Saturn's LP-lead damage; Light of Judgment's send-to-GY-or-discard choice.
+                EffectActionKind.InflictLpLeadAsDamageToOpponent => EffectResolutionKind.Damage,
+                EffectActionKind.SendOppFieldCardToGyOrDiscardFromOppHand => EffectResolutionKind.Discard,
+                EffectActionKind.ContinuousForceAttackLockPosition or
                     EffectActionKind.ChangeSummonedMonstersToDefense => EffectResolutionKind.ChangePosition,
                 EffectActionKind.OpponentDiscardsRandomThenOneOfTheirChoice => EffectResolutionKind.Discard,
                 // TokensDeclarationsAndPicks batch: DNA Transplant's declaration (naming, as DeclareMonsterType) and its
