@@ -79,7 +79,8 @@ namespace WRLDZ.Duel.TextEffects
                 case OppBanishedFaceUpMonsters:
                     return TargetedClassicsRuntime.CountFaceUpBanishedMonsters(opp);
                 default:
-                    return -1;
+                    // IgnitionCostsAndSimpleSpells batch: Solar Ray's face-up LIGHT monsters you control.
+                    return IgnitionCostsAndSimpleSpellsRuntime.BurnCount(engine, who, clause);
             }
         }
 

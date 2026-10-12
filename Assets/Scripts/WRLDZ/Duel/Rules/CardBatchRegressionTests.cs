@@ -135,6 +135,7 @@ namespace WRLDZ.Duel.Rules
             ChaosBanishSummonsRegressionTests.Run(db, pDeck, aDeck, check);
             TargetingTruthRegressionTests.Run(db, pDeck, aDeck, check);
             BattleAndPositionRecordsRegressionTests.Run(db, pDeck, aDeck, check);
+            IgnitionCostsAndSimpleSpellsRegressionTests.Run(db, pDeck, aDeck, check);
         }
     }
 }

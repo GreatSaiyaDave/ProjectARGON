@@ -801,6 +801,8 @@ namespace WRLDZ.Duel.TextEffects
                 {
                     reason = c.DiscardCostAttribute == "*"
                         ? "No card in hand to discard."
+                        : IgnitionCostsAndSimpleSpellsRuntime.NamedHandCardName(c.DiscardCostAttribute) is { } costName
+                        ? $"No \"{costName}\" in hand to send to the GY."
                         : string.IsNullOrEmpty(c.DiscardCostAttribute)
                             ? "No monster in hand to discard."
                             : $"No {c.DiscardCostAttribute} monster in hand to discard.";
@@ -4628,6 +4630,14 @@ namespace WRLDZ.Duel.TextEffects
                     continue;
                 }
 
+                // IgnitionCostsAndSimpleSpells batch: "1 "Pot of Greed" from your hand" — that name only, any card kind.
+                var namedCost = IgnitionCostsAndSimpleSpellsRuntime.NamedHandCardName(attribute);
+                if (namedCost != null)
+                {
+                    if (IgnitionCostsAndSimpleSpellsRuntime.MatchesNamedHandCard(c, namedCost)) list.Add(c);
+                    continue;
+                }
+
                 if (!c.Def.IsMonster) continue;
                 if (!string.IsNullOrEmpty(attribute) &&
                     (c.Def.attribute == null ||
@@ -5073,6 +5083,8 @@ namespace WRLDZ.Duel.TextEffects
             ArchfiendRidersRuntime.FilterTributeCostCandidates(engine, who, source, c, list);
             // TokensDeclarationsAndPicks batch: Multiplication of Ants — with 1 free zone the Tribute frees your own zone.
             TokensDeclarationsAndPicksRuntime.FilterTributeCostCandidates(engine, who, c, list);
+            // IgnitionCostsAndSimpleSpells batch: Mystik Wok Tributes a monster whose ATK or DEF is above 0.
+            IgnitionCostsAndSimpleSpellsRuntime.FilterTributeCostCandidates(c, list);
             TributeSummonsRuntime.MoveForcedFirst(who, list, forced);
             return list;
         }
@@ -5481,7 +5493,10 @@ namespace WRLDZ.Duel.TextEffects
             {
                 // EngineHygiene batch: "send 1 card from your hand to the GY" is not a discard (no discard event).
                 var sendsNotDiscards = CompiledEffectCache.GetOrCompile(source)?.ClauseList
-                    .Exists(c => c != null && c.RequiresSendHandToGy && !c.RequiresDiscardCost) == true;
+                    .Exists(c => c != null && ((c.RequiresSendHandToGy && !c.RequiresDiscardCost) ||
+                                               // IgnitionCostsAndSimpleSpells batch: Avatar of The Pot sends its cost.
+                                               (c.RequiresDiscardCost && c.DiscardCostIsSend &&
+                                                !c.RequiresTargetChoice))) == true;
                 var discarded = sendsNotDiscards
                     ? MonsterEffects.SendFromHandToGraveByInstance(who, resolved)
                     : MonsterEffects.DiscardFromHandByInstance(who, resolved, DiscardCause.Cost);
@@ -5526,7 +5541,11 @@ namespace WRLDZ.Duel.TextEffects
             // Insect Imitation records the Tributed monster's Level (before it leaves), not its ATK.
             var atk = TributeSummonsRuntime.TributeCostNumeric(source, resolved, resolved.CurrentAtk);
             if (pending?.TargetKind == EffectTargetKind.TributeMonsterYouControl)
+            {
                 ReleaseEvents.Record(engine, resolved, who); // EngineHygiene: EVENT_RELEASE
+                // IgnitionCostsAndSimpleSpells batch: Mystik Wok reads the Tributed monster's ATK and DEF.
+                IgnitionCostsAndSimpleSpellsRuntime.NoteTributeCost(source, resolved);
+            }
             engine.SendCardToGrave(owner, resolved);
             engine.Log($"Cost: Tribute/send {resolved.Name} to the GY.");
             pending.CostNumeric = atk;
@@ -5650,6 +5669,8 @@ namespace WRLDZ.Duel.TextEffects
                     for (var i = 0; i < n && i < trib.Count; i++)
                     {
                         atk = TributeSummonsRuntime.TributeCostNumeric(c, trib[i], trib[i].CurrentAtk);
+                        // IgnitionCostsAndSimpleSpells batch: Mystik Wok reads the Tributed monster's ATK and DEF.
+                        IgnitionCostsAndSimpleSpellsRuntime.NoteTributeCost(card, trib[i]);
                         // Soul Exchange: the forced Tribute leaves the opponent's field.
                         ReleaseEvents.Record(engine, trib[i], who); // EngineHygiene: EVENT_RELEASE
                         engine.SendCardToGrave(engine.ControllerOf(trib[i]) ?? who, trib[i]);
@@ -5714,6 +5735,14 @@ namespace WRLDZ.Duel.TextEffects
                         continue;
                     }
                     var pick = hand[i];
+                    // IgnitionCostsAndSimpleSpells batch: Avatar of The Pot SENDS its cost (no discard event).
+                    if (c.DiscardCostIsSend)
+                    {
+                        var sent = MonsterEffects.SendFromHandToGraveByInstance(who, pick);
+                        if (sent == null) return false;
+                        engine.Log($"Cost: send {sent.Name} from hand to the GY.");
+                        continue;
+                    }
                     var discarded = MonsterEffects.DiscardFromHandByInstance(who, pick);
                     if (discarded == null) return false;
                     engine.Log($"Cost: discard {discarded.Name}.");
@@ -5781,11 +5810,13 @@ namespace WRLDZ.Duel.TextEffects
                 // The prompt names the discard ("discard 1 card from your hand (cost)").
                 DiscardCostAttribute = clause.RequiresDiscardCost ? clause.DiscardCostAttribute : null,
                 // EquipAndSpellProtection batch: Woodland Sprite sends any Equip Card, not only an Equip Spell.
-                PromptOverride = clause.RequiresSendEquipSpellOnThisToGy && clause.EquipCostAnyEquipCard
+                // IgnitionCostsAndSimpleSpells batch: Avatar of The Pot's send cost names its card.
+                PromptOverride = IgnitionCostsAndSimpleSpellsRuntime.SendCostPrompt(clause) ??
+                                 (clause.RequiresSendEquipSpellOnThisToGy && clause.EquipCostAnyEquipCard
                     ? "send 1 Equip Card equipped to this card to the GY (cost)."
                     : clause.RemoveSpellCountersOnYourSide > 0
                         ? SpellCounterSpendersRuntime.SidePickPrompt(clause.RemoveSpellCountersOnYourSide - 1)
-                        : null
+                        : null)
             };
             pending.LegalTargets.AddRange(chosen);
             engine.SetPendingActivation(pending);
@@ -6608,6 +6639,9 @@ namespace WRLDZ.Duel.TextEffects
             // RuleLocks batch: Royal Command — an activated effect of a Flip monster has its activation negated (ygopro
             // EVENT_CHAIN_ACTIVATING + NegateActivation on re:IsActiveType(TYPE_FLIP)); its continuous effects still apply.
             if (RuleLocksRuntime.SkipsFlipMonsterClause(engine, source, clause)) return;
+            // IgnitionCostsAndSimpleSpells batch: Mystik Wok chooses ATK or DEF as it is activated (Lua SelectEffect in
+            // s.target); the gain itself waits for the Chain Link below.
+            IgnitionCostsAndSimpleSpellsRuntime.ChooseOnActivation(engine, who, source, clause);
             // A compiled activation seated as a Chain Link: the effect applies when the link resolves.
             if (clause.Timing == EffectTiming.Activate && CompiledActivationChainRuntime.IsRecording(source))
             {
@@ -9344,6 +9378,14 @@ namespace WRLDZ.Duel.TextEffects
 
                 case EffectActionKind.CoinCallDestroyOppOrSelf:
                     break;
+
+                // IgnitionCostsAndSimpleSpells batch: Sand Gambler's 3 coins; Mystik Wok's LP gain.
+                case EffectActionKind.CoinTossAllHeadsDestroyOppMonstersAllTailsDestroyYours:
+                    IgnitionCostsAndSimpleSpellsRuntime.ResolveCoinGamble(engine, who, source, clause);
+                    break;
+                case EffectActionKind.GainLpEqualToTributedAtkOrDef:
+                    IgnitionCostsAndSimpleSpellsRuntime.ResolveTributedStatGain(engine, who, source);
+                    break;
                 case EffectActionKind.CoinCallDoubleOrHalveAtk:
                     break;
 
@@ -11194,6 +11236,11 @@ namespace WRLDZ.Duel.TextEffects
                             break;
                         // BattleAndPositionRecords batch: Curse of Anubis (a face-up Attack Position Effect Monster).
                         if (BattleAndPositionRecordsRuntime.TryActivationCondition(engine, who, card, c, out ok, out reason))
+                            break;
+                        // IgnitionCostsAndSimpleSpells batch: 3-Hump Lacooda's face-up copies, Lady Ninja Yae's opponent
+                        // Spell/Trap, Solar Ray's face-up LIGHT monster.
+                        if (IgnitionCostsAndSimpleSpellsRuntime.TryActivationCondition(engine, who, card, c, out ok,
+                                out reason))
                             break;
                         ok = false;
                         reason = $"Unknown activation condition {c.ActivationCondition}.";

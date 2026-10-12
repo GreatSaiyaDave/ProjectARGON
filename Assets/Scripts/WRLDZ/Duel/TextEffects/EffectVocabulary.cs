@@ -414,6 +414,10 @@ namespace WRLDZ.Duel.TextEffects
                 EffectActionKind.DestroyThisAtNthSpellCounterDamageActivator => EffectResolutionKind.Destroy,
                 EffectActionKind.ActivatorOfNamedCardMayDrawWhileAttackPosition => EffectResolutionKind.Draw,
                     EffectActionKind.BanishAllGyMonstersWhenOpponentTargetsGyMonster => EffectResolutionKind.Banish,
+                // IgnitionCostsAndSimpleSpells batch: Sand Gambler's 3 coins then a destroy (Randomize, like Barrel Dragon);
+                // Mystik Wok's LP gain from the Tributed monster's ATK or DEF.
+                EffectActionKind.CoinTossAllHeadsDestroyOppMonstersAllTailsDestroyYours => EffectResolutionKind.Randomize,
+                EffectActionKind.GainLpEqualToTributedAtkOrDef => EffectResolutionKind.GainLp,
                 EffectActionKind.ContinuousForceAttackLockPosition or
                     EffectActionKind.ChangeSummonedMonstersToDefense => EffectResolutionKind.ChangePosition,
                 EffectActionKind.OpponentDiscardsRandomThenOneOfTheirChoice => EffectResolutionKind.Discard,

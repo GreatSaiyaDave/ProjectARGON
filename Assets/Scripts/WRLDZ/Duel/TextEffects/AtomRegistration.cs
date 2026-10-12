@@ -735,6 +735,7 @@ namespace WRLDZ.Duel.TextEffects
             ChaosBanishSummonsAtoms.Atoms,
             TargetingTruthAtoms.Atoms,
             BattleAndPositionRecordsAtoms.Atoms,
+            IgnitionCostsAndSimpleSpellsAtoms.Atoms,
         };
 
         /// <summary>Every whole-sentence atom: <see cref="Atoms"/>, then each batch in <see cref="BatchAtomSets"/>.</summary>

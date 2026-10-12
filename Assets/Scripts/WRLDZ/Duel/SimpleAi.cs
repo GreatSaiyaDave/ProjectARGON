@@ -336,6 +336,8 @@ namespace WRLDZ.Duel
                     if (TextEffects.BattleDestroyedGyRecoveryRuntime.AiSkipsIgnition(engine, ai, m)) continue;
                     // ChaosBanishSummons batch: Chaos Sorcerer / BLS only on an opponent's monster; Strike Ninja never here.
                     if (TextEffects.ChaosBanishSummonsRuntime.AiSkipsIgnition(engine, ai, m)) continue;
+                    // IgnitionCostsAndSimpleSpells batch: Sand Gambler only while the opponent controls a monster.
+                    if (TextEffects.IgnitionCostsAndSimpleSpellsRuntime.AiSkipsIgnition(engine, ai, m)) continue;
                     if (!engine.TryActivateSpellTrap(ai, m, fromHand: false)) continue;
                     // Only the AI's own pick: a choice the effect gives the player (Spear Cretin's GY
                     // selection, FlipMassEffects v142) waits for the player below.

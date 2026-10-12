@@ -169,8 +169,11 @@ namespace WRLDZ.Duel.Rules
                     c => c.Action == EffectActionKind.SpecialSummonFromGy, false),
                 (93382620, "Rope of Life", "one of those monsters, and it gains 800 ATK",
                     c => c.Action == EffectActionKind.SpecialSummonFromGy, false),
+                // IgnitionCostsAndSimpleSpells batch: Implemented whole — 600 x the face-up LIGHT monsters you control at
+                // resolution (CountSource); a flat burn is still the wrong clause; gate off.
                 (44472639, "Solar Ray", "600 for each face-up LIGHT monster, not a flat 600",
-                    c => c.Action == EffectActionKind.InflictDamageToOpponent, true),
+                    c => c.Action == EffectActionKind.InflictDamageToOpponent &&
+                         c.CountSource != IgnitionCostsAndSimpleSpellsRuntime.YourFaceUpMonstersOfConditionAttribute, false),
                 // FlipCostsAndFusion batch: Implemented as one whole-sentence clause (no Destroy fragment).
                 (14644902, "Summoner of Illusions", "Tribute, Fusion from the Extra Deck, destroy it in the End Phase",
                     c => c.Action == EffectActionKind.Destroy ||
@@ -450,20 +453,22 @@ namespace WRLDZ.Duel.Rules
 
             foreach (var (id, label) in new[] { (SolarRay, "Solar Ray") })
             {
-                // Both used to burn a flat amount the moment they were activated.
+                // It used to burn a flat amount the moment it was activated. Since the IgnitionCostsAndSimpleSpells batch it
+                // counts: 2 face-up LIGHT monsters you control burn 1200, not a flat 600.
                 var engine = Fresh(db, pDeck, aDeck);
                 ClearBoard(engine);
                 var p = engine.Player;
                 var o = engine.Opponent;
                 p.Hand.Clear();
                 PlaceMonster(engine, p, Bewd, 0, BattlePosition.Attack, true); // a face-up LIGHT monster
+                PlaceMonster(engine, p, Bewd, 1, BattlePosition.Attack, true); // a second one
                 var set = PlaceSetTrap(engine, p, id, 0);
                 var lp = o.LifePoints;
                 var can = engine.CanActivateSpellTrap(p, set, fromHand: false);
                 var tried = engine.TryActivateSpellTrap(p, set, fromHand: false);
                 DrainCombat(engine);
-                Check($"{label}: a Set copy cannot be activated and burns nothing",
-                    !can && !tried && !set.FaceUp && o.LifePoints == lp,
+                Check($"{label}: a Set copy burns 600 for each face-up LIGHT monster you control (2 → 1200)",
+                    can && tried && o.LifePoints == lp - 1200,
                     $"can={can} tried={tried} faceUp={set.FaceUp} oppLp={o.LifePoints} was {lp}");
             }
 

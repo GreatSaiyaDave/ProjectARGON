@@ -3287,7 +3287,17 @@ namespace WRLDZ.Duel.TextEffects
         /// <see cref="LocksRedirectsAndActivityRuntime.NoteActivation"/>.
         /// </summary>
         RequiresNoOtherActivationThisTurn,
-    }
+        /// IgnitionCostsAndSimpleSpells batch — Sand Gambler (c50593156): toss <see cref="EffectClause.CoinCount"/> coins
+        /// through the coin bus; all Heads destroys every monster the opponent controls, all Tails every monster you control,
+        /// anything else does nothing (<see cref="IgnitionCostsAndSimpleSpellsRuntime.ResolveCoinGamble"/>).
+        /// </summary>
+        CoinTossAllHeadsDestroyOppMonstersAllTailsDestroyYours,
+        /// <summary>
+        /// IgnitionCostsAndSimpleSpells batch — Mystik Wok (c80161395): gain LP equal to the current ATK or DEF of the
+        /// monster Tributed as the cost, chosen as the card is activated (Lua SelectEffect in s.target; automatic when one
+        /// of them is 0) — <see cref="IgnitionCostsAndSimpleSpellsRuntime.ResolveTributedStatGain"/>.
+        /// </summary>
+        GainLpEqualToTributedAtkOrDef,    }
 
     public enum EffectSide
     {
