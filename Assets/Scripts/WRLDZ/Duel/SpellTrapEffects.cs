@@ -1627,6 +1627,13 @@ namespace WRLDZ.Duel
                     TextEffects.MajorRiotRuntime.AnswersWindow(prog))
                     return TextEffects.TextEffectRuntime.CanActivate(engine, who, card, fromHand: false, prog,
                         out _);
+                // ZoneCapsAndPhaseWindows batch: Standby Phase response window for Set Normal Traps
+                // (e.g., Thunder of Ruler). Only Set Traps with StandbyPhase timing can activate.
+                if (timing == ResponseTiming.StandbyResponse &&
+                    prog.HasTiming(TextEffects.EffectTiming.StandbyPhase) &&
+                    TextEffects.TextEffectRuntime.CanActivate(engine, who, card, fromHand: false, prog,
+                        out _))
+                    return true;
             }
 
             if (prog != null && prog.FullyCompiled)
@@ -1673,6 +1680,11 @@ namespace WRLDZ.Duel
                     return false;
 
                 case ResponseTiming.DamageCalculation:
+                    return false;
+
+                case ResponseTiming.StandbyResponse:
+                    // ZoneCapsAndPhaseWindows batch: Standby Phase response window for Set Normal Traps
+                    // (e.g., Thunder of Ruler). Lua catalog doesn't have Standby-only Traps yet.
                     return false;
 
                 default:

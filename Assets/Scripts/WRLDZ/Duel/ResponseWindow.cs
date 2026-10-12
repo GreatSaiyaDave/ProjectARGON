@@ -105,6 +105,13 @@ namespace WRLDZ.Duel
         /// continues. Appended — never insert above.
         /// </summary>
         MonstersReturnedToHandByOpponent,
+
+        /// <summary>
+        /// Standby Phase response window (ZoneCapsAndPhaseWindows batch): opened during Standby Phase when a player
+        /// has a legal Standby-only Trap activation (e.g. Thunder of Ruler). Both players may respond; opens only when
+        /// someone has a legal response, like the v161/v163 windows. Appended — never insert above.
+        /// </summary>
+        StandbyResponse,
     }
 
     /// <summary>

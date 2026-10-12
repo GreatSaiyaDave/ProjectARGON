@@ -777,6 +777,10 @@ namespace WRLDZ.Duel
 
             if (GameOver) return;
 
+            // ZoneCapsAndPhaseWindows: execute pending phase jump at this safe transition point
+            ExecutePendingPhaseJump(who);
+            if (_pendingPhaseJumpToEnd) return; // Jump executed, turn may be over
+
             // —— Standby Phase ——
             Phase = DuelPhase.Standby;
             BattleStep = BattleStep.None;
@@ -850,7 +854,42 @@ namespace WRLDZ.Duel
                 return;
             }
 
+            // ZoneCapsAndPhaseWindows batch: Standby Phase response window (Thunder of Ruler)
+            // Opens for both players when someone has a legal Standby-only Trap activation
+            if (OpenStandbyResponseWindow(who))
+            {
+                return; // Window opened, will continue after response
+            }
+
             EnterMain1(who, firstPlayerFirstTurn);
+        }
+
+        /// <summary>
+        /// ZoneCapsAndPhaseWindows batch: Open the Standby Phase response window for Set Normal Traps
+        /// (e.g., Thunder of Ruler). Opens for both players (turn player first, then opponent) when
+        /// someone has a legal Standby-only Trap activation. Like v161/v163 windows, opens only when
+        /// someone has a legal response.
+        /// </summary>
+        bool OpenStandbyResponseWindow(DuelistState turnPlayer)
+        {
+            if (Phase != DuelPhase.Standby) return false;
+
+            // Check turn player first
+            if (OpenResponseWindow(turnPlayer, ResponseTiming.StandbyResponse, null, null, turnPlayer, null, null))
+            {
+                Log($"[{turnPlayer.Name}] Standby Phase — response window opened.");
+                return true;
+            }
+
+            // Check opponent
+            var opponent = OpponentOf(turnPlayer);
+            if (OpenResponseWindow(opponent, ResponseTiming.StandbyResponse, null, null, turnPlayer, null, null))
+            {
+                Log($"[{opponent.Name}] Standby Phase — response window opened.");
+                return true;
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -887,6 +926,10 @@ namespace WRLDZ.Duel
                 SkipMainPhase1(who);
                 return;
             }
+
+            // ZoneCapsAndPhaseWindows: execute pending phase jump at this safe transition point
+            ExecutePendingPhaseJump(who);
+            if (_pendingPhaseJumpToEnd) return; // Jump executed, turn may be over
 
             // —— Main Phase 1 ——
             Phase = DuelPhase.Main1;
@@ -1272,9 +1315,19 @@ namespace WRLDZ.Duel
                 }
 
                 // Soul Exchange: Tributing only the opponent's monster frees none of your zones.
-                if (FirstEmpty(who.MonsterZones) < 0 && !tributes.Any(t => who.TryFindMonster(t, out _)))
+                // ZoneCapsAndPhaseWindows: respect EFFECT_MAX_MZONE cap
+                int occupiedZones = 0;
+                for (int i = 0; i < who.MonsterZones.Length; i++)
+                    if (who.MonsterZones[i] != null && !who.MonsterZones[i].IsEmpty) occupiedZones++;
+                int usableZones = GetUsableMonsterZoneCount(who);
+                // Tributes that are on the field will free up zones
+                int tributesOnField = 0;
+                if (tributes != null)
+                    foreach (var t in tributes)
+                        if (who.TryFindMonster(t, out _)) tributesOnField++;
+                if (occupiedZones - tributesOnField >= usableZones)
                 {
-                    Log("No free Monster Zone.");
+                    Log("No free Monster Zone (zone cap).");
                     return false;
                 }
             }
@@ -1314,6 +1367,9 @@ namespace WRLDZ.Duel
             var idx = preferredZone;
             if (idx < 0 || idx >= who.MonsterZones.Length || !who.MonsterZones[idx].IsEmpty)
                 idx = FirstEmpty(who.MonsterZones);
+            // ZoneCapsAndPhaseWindows: ensure the found zone index is within the usable cap
+            if (idx >= GetUsableMonsterZoneCount(who))
+                idx = -1;
             if (idx < 0)
             {
                 Log("No free Monster Zone.");
@@ -1688,7 +1744,12 @@ namespace WRLDZ.Duel
             if (TextEffects.LocksAndZonesRuntime.SpellTrapSetLocked(this)) return false;
             // RuleLocks batch: Chain Energy — Setting from the hand needs the LP toll.
             if (TextEffects.RuleLocksRuntime.HandActionUnaffordable(this, who, card, out _)) return false;
-            return FirstEmpty(who.SpellTrapZones) >= 0;
+            // ZoneCapsAndPhaseWindows: respect EFFECT_MAX_SZONE cap
+            int occupiedStZones = 0;
+            for (int i = 0; i < who.SpellTrapZones.Length; i++)
+                if (who.SpellTrapZones[i] != null && !who.SpellTrapZones[i].IsEmpty) occupiedStZones++;
+            int usableStZones = GetUsableSpellTrapZoneCount(who);
+            return occupiedStZones < usableStZones;
         }
 
         public bool TrySetSpellTrap(DuelistState who, CardInstance card) =>
@@ -1701,9 +1762,12 @@ namespace WRLDZ.Duel
             var idx = preferredZone;
             if (idx < 0 || idx >= who.SpellTrapZones.Length || !who.SpellTrapZones[idx].IsEmpty)
                 idx = FirstEmpty(who.SpellTrapZones);
+            // ZoneCapsAndPhaseWindows: ensure the found zone index is within the usable cap
+            if (idx >= GetUsableSpellTrapZoneCount(who))
+                idx = -1;
             if (idx < 0)
             {
-                Log("No free Spell & Trap Zone.");
+                Log("No free Spell & Trap Zone (zone cap).");
                 return false;
             }
 
@@ -2122,7 +2186,11 @@ namespace WRLDZ.Duel
                 _preferredSpellTrapZone[side] = -1;   // taken or unusable: spent
             }
 
-            return FirstEmpty(who.SpellTrapZones);
+            var idx = FirstEmpty(who.SpellTrapZones);
+            // ZoneCapsAndPhaseWindows: ensure the found zone index is within the usable cap
+            if (idx >= GetUsableSpellTrapZoneCount(who))
+                return -1;
+            return idx;
         }
 
         /// <summary>
@@ -2153,6 +2221,22 @@ namespace WRLDZ.Duel
 
             return -1;
         }
+
+        /// <summary>
+        /// ZoneCapsAndPhaseWindows batch: Get the number of usable Monster Zones for a duelist,
+        /// respecting EFFECT_MAX_MZONE continuous effects (Kaiser Colosseum, Spatial Collapse).
+        /// Returns the minimum of physical zones (5) and the lowest cap from active effects.
+        /// </summary>
+        public int GetUsableMonsterZoneCount(DuelistState who) =>
+            TextEffects.ContinuousProtections.MaxMonsterZoneCount(this);
+
+        /// <summary>
+        /// ZoneCapsAndPhaseWindows batch: Get the number of usable Spell/Trap Zones for a duelist,
+        /// respecting EFFECT_MAX_SZONE continuous effects (Spatial Collapse).
+        /// Returns the minimum of physical zones (5) and the lowest cap from active effects.
+        /// </summary>
+        public int GetUsableSpellTrapZoneCount(DuelistState who) =>
+            TextEffects.ContinuousProtections.MaxSpellTrapZoneCount(this);
 
         public void NotifyPublic() => Notify();
 
@@ -3585,6 +3669,72 @@ namespace WRLDZ.Duel
             TextEffects.BattleRulesRuntime.EndBattlePhase(this);
             BattleStep = BattleStep.None;
             DamageSubStep = DamageSubStep.None;
+        }
+
+        /// <summary>
+        /// ZoneCapsAndPhaseWindows batch: Safe "skip to End Phase" (Neko Mane King — "it becomes the End Phase").
+        /// Does NOT jump from Draw/Standby/Main1 directly; waits for a safe gate:
+        /// - If in Battle Phase: ends Battle Phase, then proceeds to End Phase via Main2
+        /// - If in Main Phase 2: proceeds to End Phase
+        /// - If in Main Phase 1: proceeds to End Phase via Main2 (skipping Battle Phase)
+        /// - If in Draw/Standby: sets a flag to skip to End Phase at the next legal transition (after Standby triggers)
+        /// The jump executes at the next legal transition point (post-Chain idle, end of Damage Step, or end of Battle Phase).
+        /// </summary>
+        public void SkipToEndPhase(DuelistState who)
+        {
+            if (GameOver || TurnPlayer != who) return;
+            Log($"[{who.Name}] Phase jump to End Phase queued (Neko Mane King).");
+            _pendingPhaseJumpToEnd = true;
+            // If we're in a safe transition point now, execute immediately
+            if (Phase == DuelPhase.Battle || Phase == DuelPhase.Main2)
+            {
+                ExecutePendingPhaseJump(who);
+            }
+        }
+
+        /// <summary>
+        /// Internal flag for the safe phase jump.
+        /// </summary>
+        bool _pendingPhaseJumpToEnd = false;
+
+        /// <summary>
+        /// Execute the pending phase jump at a safe transition point.
+        /// </summary>
+        void ExecutePendingPhaseJump(DuelistState who)
+        {
+            if (!_pendingPhaseJumpToEnd) return;
+            _pendingPhaseJumpToEnd = false;
+            if (GameOver || TurnPlayer != who) return;
+
+            if (Phase == DuelPhase.Battle)
+            {
+                // End Battle Phase first (its End Step work runs), then fall through to Main 2.
+                EndBattlePhase();
+                Phase = DuelPhase.Main2;
+                Log($"[{who.Name}] Main Phase 2 (phase jump)");
+                Notify();
+                return;
+            }
+            if (Phase == DuelPhase.Main2 || Phase == DuelPhase.Main1)
+            {
+                // From a Main Phase the ordinary End Turn handles the End Phase, its triggers, the hand size
+                // limit and the turn switch. A response window or pick still open defers the jump (EndTurn
+                // refuses and the flag is re-set by the caller's next safe point).
+                var jumpPhase = Phase;
+                Phase = DuelPhase.Main1;
+                if (!TryEnterMainPhase2(who))
+                {
+                    Phase = jumpPhase;
+                    _pendingPhaseJumpToEnd = true;
+                    return;
+                }
+                Log($"[{who.Name}] End Phase (phase jump — \"it becomes the End Phase\")");
+                EndTurn(who);
+                return;
+            }
+            // Draw / Standby: no jump yet — the flag stays set until a Main Phase or the Battle Phase is
+            // reached, which is the earliest legal transition point.
+            _pendingPhaseJumpToEnd = true;
         }
 
         // ───────────────────── Phase transitions ─────────────────────
@@ -6630,6 +6780,7 @@ namespace WRLDZ.Duel
                 ResponseTiming.SpellTrapDestroyedByOpponent => CombatAnimTimings.ForOpenGameState(),
                 ResponseTiming.MonsterEquipped => CombatAnimTimings.ForOpenGameState(),
                 ResponseTiming.MonstersReturnedToHandByOpponent => CombatAnimTimings.ForOpenGameState(),
+                ResponseTiming.StandbyResponse => CombatAnimTimings.ForOpenGameState(),
                 _ => CombatAnimTimings.ForSummon(summoned)
             });
 
@@ -6680,6 +6831,8 @@ namespace WRLDZ.Duel
                         $"Your monster returned to your hand ({win:0.0}s) — tap a blinking zone to activate {legalNames} ({legal.Count} legal).",
                     ResponseTiming.MonsterEquipped =>
                         $"A monster was equipped ({win:0.0}s) — tap a blinking zone to activate {legalNames} ({legal.Count} legal).",
+                    ResponseTiming.StandbyResponse =>
+                        $"Standby Phase ({win:0.0}s) — tap a blinking zone to activate {legalNames} ({legal.Count} legal).",
                     _ =>
                         $"Summon ({win:0.0}s) — tap a blinking zone to activate {legalNames} ({legal.Count} legal)."
                 };

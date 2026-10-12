@@ -3236,6 +3236,24 @@ namespace WRLDZ.Duel.TextEffects
         /// they cannot change battle positions by hand (<see cref="BattleAndPositionRecordsRuntime.ChangeToDefenseZeroDefLock"/>).
         /// </summary>
         ChangeFaceUpAttackEffectMonstersToDefenseOriginalDefZeroLock,
+        /// <summary>
+        /// ZoneCapsAndPhaseWindows batch — Continuous: limit the number of Monster Zones the controller can use
+        /// (EFFECT_MAX_MZONE). Cards like Kaiser Colosseum, Spatial Collapse. Honored by every placement/legality
+        /// path through DuelEngine.GetUsableMonsterZoneCount.
+        /// </summary>
+        ContinuousMaxMonsterZoneCap,
+        /// <summary>
+        /// ZoneCapsAndPhaseWindows batch — Continuous: limit the number of Spell/Trap Zones the controller can use
+        /// (EFFECT_MAX_SZONE). Cards like Spatial Collapse. Honored by every placement/legality path through
+        /// DuelEngine.GetUsableSpellTrapZoneCount.
+        /// </summary>
+        ContinuousMaxSpellTrapZoneCap,
+        /// <summary>
+        /// ZoneCapsAndPhaseWindows batch — "It becomes the End Phase" (Neko Mane King). Queues a safe phase jump
+        /// that executes at the next legal transition point (post-Chain idle, end of Damage Step, or end of Battle Phase).
+        /// Does NOT jump from Draw/Standby/Main1 directly; waits for a safe gate. See DuelEngine.SkipToEndPhase.
+        /// </summary>
+        PhaseJumpToEndPhase,
     }
 
     public enum EffectSide

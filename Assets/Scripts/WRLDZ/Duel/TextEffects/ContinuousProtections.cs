@@ -225,6 +225,55 @@ namespace WRLDZ.Duel.TextEffects
         }
 
         /// <summary>
+        /// ZoneCapsAndPhaseWindows batch: the usable Monster Zone count for <paramref name="who"/> — 5, or the lowest
+        /// live ContinuousMaxMonsterZoneCap (EFFECT_MAX_MZONE: Kaiser Colosseum, Spatial Collapse) on either field.
+        /// A cap whose source is turned face-down or negated no longer applies.
+        /// </summary>
+        public static int MaxMonsterZoneCount(DuelEngine engine)
+        {
+            int cap = 5;
+            if (engine == null) return cap;
+            foreach (var src in ZoneCapSources(engine))
+                foreach (var c in ClausesOn(src, EffectActionKind.ContinuousMaxMonsterZoneCap))
+                    if (ConditionMet(engine, c) && c.Amount > 0 && c.Amount < cap)
+                        cap = c.Amount;
+            return cap;
+        }
+
+        /// <summary>
+        /// ZoneCapsAndPhaseWindows batch: the usable Spell/Trap Zone count for <paramref name="who"/> — 5, or the lowest
+        /// live ContinuousMaxSpellTrapZoneCap (EFFECT_MAX_SZONE: Spatial Collapse) on either field.
+        /// </summary>
+        public static int MaxSpellTrapZoneCount(DuelEngine engine)
+        {
+            int cap = 5;
+            if (engine == null) return cap;
+            foreach (var src in ZoneCapSources(engine))
+                foreach (var c in ClausesOn(src, EffectActionKind.ContinuousMaxSpellTrapZoneCap))
+                    if (ConditionMet(engine, c) && c.Amount > 0 && c.Amount < cap)
+                        cap = c.Amount;
+            return cap;
+        }
+
+        /// <summary>
+        /// ZoneCapsAndPhaseWindows batch: every face-up, non-negated monster or Spell/Trap on either field that can carry
+        /// a zone-cap clause. A monster whose Summon is still in its summon-negation window is not on the field yet.
+        /// </summary>
+        static IEnumerable<CardInstance> ZoneCapSources(DuelEngine engine)
+        {
+            foreach (var p in new[] { engine.Player, engine.Opponent })
+            {
+                if (p == null) continue;
+                foreach (var m in p.MonstersOnField())
+                    if (m != null && m.FaceUp && !m.IsNegated && !engine.IsSummonPending(m))
+                        yield return m;
+                foreach (var st in p.SpellTrapsOnField())
+                    if (st != null && st.FaceUp && !st.IsNegated)
+                        yield return st;
+            }
+        }
+
+        /// <summary>
         /// Face-up monsters whose continuous effects apply. A monster whose Summon is still in its
         /// summon-negation window is skipped: it is not on the field until that Summon succeeds.
         /// </summary>

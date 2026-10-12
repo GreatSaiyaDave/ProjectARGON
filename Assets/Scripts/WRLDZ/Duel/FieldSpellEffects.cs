@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using WRLDZ.Data;
 using WRLDZ.Duel.TextEffects;
@@ -135,6 +136,9 @@ namespace WRLDZ.Duel
             TextEffects.SpellCounterSpendersRuntime.SweepSelfDestroy(engine);
             // Skull Invitation: cards that reached a GY since the last checkpoint (StandbyGrowthAndMaintenance, v142).
             TextEffects.StandbyGrowthAndMaintenanceRuntime.GySendCheckpoint(engine);
+
+            // ZoneCapsAndPhaseWindows batch: Spatial Collapse / Kaiser Colosseum adjust step (EVENT_ADJUST).
+            EnforceZoneCaps(engine);
         }
 
         static void ClearModifiers(DuelistState who)
@@ -170,6 +174,87 @@ namespace WRLDZ.Duel
             // DerivedAtkMonsters batch (v176): a self-set ATK/DEF is recomputed below (ApplySelfScale / grants).
             c.SelfSetAtk = int.MinValue;
             c.SelfSetDef = int.MinValue;
+        }
+
+                /// <summary>
+        /// ZoneCapsAndPhaseWindows batch: Spatial Collapse / Kaiser Colosseum adjust step.
+        /// If a player has more cards in their zones than the cap allows, send excess to GY.
+        /// Called during RefreshBoard (EVENT_ADJUST equivalent).
+        /// </summary>
+        public static void EnforceZoneCaps(DuelEngine engine)
+        {
+            if (engine == null || _enforcingZoneCaps) return;
+            _enforcingZoneCaps = true;
+            try
+            {
+                EnforceZoneCapsForPlayer(engine, engine.Player);
+                EnforceZoneCapsForPlayer(engine, engine.Opponent);
+            }
+            finally
+            {
+                _enforcingZoneCaps = false;
+            }
+        }
+
+        /// <summary>Re-entrancy guard: a zone-cap send refreshes the board, which runs this again.</summary>
+        static bool _enforcingZoneCaps;
+
+        static void EnforceZoneCapsForPlayer(DuelEngine engine, DuelistState who)
+        {
+            if (who == null) return;
+
+            int maxMZone = engine.GetUsableMonsterZoneCount(who);
+            int maxSZone = engine.GetUsableSpellTrapZoneCount(who);
+
+            // Count occupied Monster Zones
+            var occupiedMZones = new List<CardInstance>();
+            for (int i = 0; i < who.MonsterZones.Length; i++)
+            {
+                var m = who.MonsterZones[i]?.Occupant;
+                if (m != null) occupiedMZones.Add(m);
+            }
+
+            // Count occupied Spell/Trap Zones
+            var occupiedSZones = new List<CardInstance>();
+            for (int i = 0; i < who.SpellTrapZones.Length; i++)
+            {
+                var st = who.SpellTrapZones[i]?.Occupant;
+                if (st != null) occupiedSZones.Add(st);
+            }
+
+            // Also check Field Spell Zone
+            var fieldSpell = who.FieldSpellZone?.Occupant;
+            if (fieldSpell != null) occupiedSZones.Add(fieldSpell);
+
+            // If over Monster Zone cap, send excess to GY (owner chooses, here we send lowest index)
+            if (occupiedMZones.Count > maxMZone)
+            {
+                int excess = occupiedMZones.Count - maxMZone;
+                for (int i = 0; i < excess; i++)
+                {
+                    var card = occupiedMZones[i];
+                                        if (card != null)
+                    {
+                        engine.Log($"Spatial Collapse / Kaiser Colosseum: {who.Name} sends {card.Name} to GY (Monster Zone cap {maxMZone}).");
+                        engine.SendCardToGrave(who, card);
+                    }
+                }
+            }
+
+            // If over Spell/Trap Zone cap, send excess to GY
+            if (occupiedSZones.Count > maxSZone)
+            {
+                int excess = occupiedSZones.Count - maxSZone;
+                for (int i = 0; i < excess; i++)
+                {
+                    var card = occupiedSZones[i];
+                                        if (card != null)
+                    {
+                        engine.Log($"Spatial Collapse: {who.Name} sends {card.Name} to GY (Spell/Trap Zone cap {maxSZone}).");
+                        engine.SendCardToGrave(who, card);
+                    }
+                }
+            }
         }
 
         static void ApplyFaceUpField(DuelEngine engine, CardInstance field)
