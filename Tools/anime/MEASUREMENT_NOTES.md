@@ -400,6 +400,10 @@ region-painted body; `ApplyPaints` falls back to `look.skinHex` for `Body.0` so 
 to the white `_BaseMap`; `AiDuelistLooks` yami bakura `WithSkin("#CFAC8D")` replaces the stale `#404858` so the name route
 and the catalogue row agree.
 
+**These edits were inert on screen** ("I am not seeing a change", 2026-10-13): the paint manifest still never parsed, so
+the mask, the paint key and the ref-luminances all stayed empty and the body kept falling through to the flat tint. See
+§9.4 — the mask has to bind before any of the above can matter.
+
 ### 9.2 Second defect, 2D full-body paper-doll (duel HUD face, opponent select, customizer preview, companion/HUD/map)
 
 `StreamingAssets/WRLDZ/Avatar/clothes/` ships sprites for the **base wardrobe only** (`shirt_plain`, `bottoms_cargo`,
@@ -423,3 +427,54 @@ Overlay area also drops from a 720×720 square (519k px) onto a 157k px figure.
 - `appearance.portraitIndex` is still never set, so every duelist's `look_<n>.png` (face + hair) is `look_0.png`.
 - `Textures/` ships the `*_mask.png` set but no `Meshy_<sex>_<Part>.png` albedo. Parts render the right colour flat,
   with no fold detail, and `_textured` stays empty (so `_BaseMap` is the white default).
+
+### 9.4 Why §9.1 changed nothing: the paint manifest never parsed (2026-10-13)
+
+§9.1 pointed `LoadManifest` at the right **file** but not at the right **fields**. `BuildMaterials` read it with
+`JsonUtility.FromJson<PaintFile>` — the schema `{"parts":[{"part":"…","key":"…","mask":"…","refLum":[…]}]}` — while
+`argon_avatar_<sex>.paint.json` is keyed by part:
+
+```json
+{"sex":"male","src":"build/meshy/argon_avatar_male.glb",
+ "parts":{"ArgonBody_male":{"morph_max_m":{…},
+   "recolor":{"mask":"Meshy_male_Body_mask.png",
+     "regions":[{"region":"skin","coverage":0.4322,"mean_hex":"#F9C494","mean_lum_linear":0.62149},
+                {"region":"suit","coverage":0.5646,"mean_hex":"#818284","mean_lum_linear":0.22228},
+                {"region":"other","coverage":0.0032,"mean_hex":"#383030","mean_lum_linear":0.03775}],
+     "clusters":[…]}}}}
+```
+
+The part name is a JSON **key**, and the file contains **no `"part"`, no `"key"` and no `"refLum"` string at all**
+(`grep` of the male manifest: `"mask"` ×4, nothing else). `JsonUtility` therefore yielded an empty `parts` list,
+`paintInfo` stayed empty, `mask` was null for every part, and no material ever took the recolor shader — so the body
+stayed `URP/Unlit` with the white default `_BaseMap`, `bodyMasked` was false, and `Apply` kept flat-tinting the whole body
+with `skinHex`. §9.1's other edits were correct but unreachable.
+
+A second miss of the same kind: the manifest's `mask` carries the `.png` extension, and `Resources.Load` wants the asset
+name without it (the `.parts` reader already stripped it at L1103; the mask load did not).
+
+**Fix.** `MiniPaints()` — a hand reader in the same style as `MiniParts()`, replacing the `JsonUtility` call:
+part name → paint-key prefix by name (`Body` / `Shirt` / `Bottoms` / `Shoes`), `mask` with `.png` stripped, and the
+`mean_lum_linear` values **in file order**, which is the mask's own channel order (body: R skin / G undersuit / B other;
+garments: R main / G accent / B trim) → `_RefLum.x/y/z`, the order `_ColorA/B/C` wants.
+Verified against both shipped manifests: 4 parts each, mask names `Meshy_<sex>_{Body,Shirt,Bottoms,Shoes}_mask` — all
+present on disk (only the four `Meshy_*` albedos are missing).
+
+**RefLum when there is no albedo.** `Paint()` keeps a region's shading as `detail = (lum / refLum)^0.75`; the shipped
+`_BaseMap` is the white default, so `lum = 1` and the manifest's source-albedo means would *scale every paint up*
+(coat primary 0.011 → 8×, suit 0.222 → 2.8×, skin 0.621 → 1.4×). A masked part that loaded no albedo therefore takes
+`_RefLum (1,1,1)` and each paint lands exactly on its own hex; the manifest values apply again the moment an albedo
+texture exists.
+
+**Renderer names match the manifest keys** (so the lookup hits): inside `argon_base_<sex>.fbx` the nodes are
+`ArgonBody_<sex>`, `ArgonPart_{Shirt,Bottoms,Shoes,Hair,Eyes,Eyelashes,Eyebrows}`. The FBX's own three garment parts are
+set inactive whenever a wardrobe piece is worn (L561 / L600-602), so binding masks to them cannot double-dress the body.
+
+**Effect once the mask binds:** the body takes `WRLDZ/AvatarRecolor` with `_paintKey[body] = "Body"`, `Body.0` =
+`look.GetPaint("Body.0")` else `look.skinHex`, `Body.1` = the worn shirt's `Suit` (`shirt_bakura_bc` → `#4F6595`), the
+scalp region takes `ApplyScalpColour`'s hair root colour, and the material finally has `_HideOn` — so `SetBodyHide`
+actually discards the covered body texels (12.0% / 15.2% / 12.1%).
+
+**Not changed:** the masks are imported `sRGBTexture: 1`, but they are 97.6-99.6% hard 0/255 (measured both sexes, all
+four parts), so the sRGB→linear weight error is confined to the thin antialiased edge.
+

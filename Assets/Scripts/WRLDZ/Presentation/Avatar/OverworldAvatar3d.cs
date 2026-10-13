@@ -1042,8 +1042,9 @@ namespace WRLDZ.Presentation
         /// <summary>Renderer -> paint key prefix ("Shirt", "Bottoms", "Shoes", "Body") for parts built with the recolor shader.</summary>
         readonly Dictionary<Renderer, string> _paintKey = new();
 
-        [System.Serializable] class PaintFile { public List<PaintPart> parts = new(); }
-        [System.Serializable] class PaintPart { public string part; public string key; public string mask; public float[] refLum; }
+        /// <summary>One part's region mask, the paint-key prefix it drives (<c>Body</c> / <c>Shirt</c> ...) and the
+        /// mask's per-channel mean luminance in the source albedo (see <see cref="MiniPaints"/>).</summary>
+        class PaintPart { public string part; public string key; public string mask; public float[] refLum; }
 
         // ---------------------------------------------------------------- materials
         // The FBX is imported with materials OFF (import rule), so nothing PBR ever reaches the screen
@@ -1067,15 +1068,7 @@ namespace WRLDZ.Presentation
             _paintKey.Clear();
             var paintInfo = new Dictionary<string, PaintPart>();
             var pj = LoadManifest(".paint", sex);
-            if (pj != null)
-            {
-                try
-                {
-                    var pf = JsonUtility.FromJson<PaintFile>(pj.text);
-                    if (pf?.parts != null) foreach (var pp in pf.parts) if (pp != null && !string.IsNullOrEmpty(pp.part)) paintInfo[pp.part] = pp;
-                }
-                catch (System.Exception e) { Debug.LogWarning("[OverworldAvatar3d] paint manifest: " + e.Message); }
-            }
+            if (pj != null) foreach (var pp in MiniPaints(pj.text)) paintInfo[pp.part] = pp;
             var recolorTpl = Resources.Load<Material>("WRLDZ/Avatar3D/Materials/AvatarRecolor");
             var json = LoadManifest(".parts", sex);
             var lookup = new Dictionary<string, List<PartMat>>();
@@ -1092,7 +1085,7 @@ namespace WRLDZ.Presentation
                 var count = r.sharedMesh != null ? r.sharedMesh.subMeshCount : 1;
                 var arr = new Material[count];
                 paintInfo.TryGetValue(r.name, out var paint);
-                var mask = paint != null && recolorTpl != null ? Resources.Load<Texture2D>("WRLDZ/Avatar3D/Textures/" + paint.mask) : null;
+                var mask = paint != null && recolorTpl != null && !string.IsNullOrEmpty(paint.mask) ? Resources.Load<Texture2D>("WRLDZ/Avatar3D/Textures/" + paint.mask) : null;
                 for (var i = 0; i < count; i++)
                 {
                     var m = Own(mask != null ? new Material(recolorTpl) : new Material(sh));
@@ -1105,11 +1098,18 @@ namespace WRLDZ.Presentation
                     }
                     var pm = mats != null && i < mats.Count ? mats[i] : null;
                     var isEye = r.name.StartsWith("ArgonPart_Eye") && !r.name.Contains("brow") && !r.name.Contains("lash");
+                    var albedo = false;
                     if (pm != null && !string.IsNullOrEmpty(pm.texture))
                     {
                         var tex = Resources.Load<Texture2D>("WRLDZ/Avatar3D/Textures/" + pm.texture.Replace(".png", ""));
-                        if (tex != null) { if (m.HasProperty("_BaseMap")) m.SetTexture("_BaseMap", tex); if (m.HasProperty("_MainTex")) m.SetTexture("_MainTex", tex); _textured.Add(r); }
+                        if (tex != null) { if (m.HasProperty("_BaseMap")) m.SetTexture("_BaseMap", tex); if (m.HasProperty("_MainTex")) m.SetTexture("_MainTex", tex); _textured.Add(r); albedo = true; }
                     }
+                    // No part albedo ships yet - Textures/ holds only the region masks - so a masked part keeps the
+                    // white default _BaseMap. Paint keeps a region's shading through detail = (lum / refLum)^0.75, and
+                    // a white base has lum = 1, so the manifest's source-albedo means would scale every paint up
+                    // (a coat's primary 0.011 -> 8x, a suit 0.22 -> 2.8x). RefLum 1 lands each paint on its own
+                    // colour; the manifest values stand in again as soon as an albedo texture exists.
+                    if (mask != null && !albedo) m.SetVector("_RefLum", new Vector4(1f, 1f, 1f, 0f));
                     var isDecal = r.name == "ArgonPart_Mouth" || r.name == "ArgonPart_Nose";   // drawn mouth line / nose tick cards
                     if (isEye || isDecal || r.name.Contains("Eyelash") || r.name.Contains("Eyebrow"))
                     {
@@ -1155,6 +1155,47 @@ namespace WRLDZ.Presentation
                 }
                 yield return new KeyValuePair<string, List<PartMat>>(name, list);
                 i = a1 + 1;
+            }
+        }
+
+        /// <summary>Tiny reader for the paint manifest:
+        /// <c>{"parts":{"&lt;PartName&gt;":{"recolor":{"mask":"&lt;file&gt;.png","regions":[{"region":..,"mean_lum_linear":..},..]}}}}</c>.
+        /// JsonUtility cannot read this file at all - the part name is a JSON key rather than a "part" field and the
+        /// per-region mean luminances are not a "refLum" array - so every part came back null. The miss is not
+        /// cosmetic: with no mask a part renders flat unlit, the body never gets its region paints and the whole
+        /// body falls to the flat skin tint, which reads as a naked avatar under its clothes. The region order in
+        /// the file is the mask's channel order (body R skin / G undersuit, garments R main / G accent / B trim),
+        /// which is the order _ColorA/B/C wants.</summary>
+        static IEnumerable<PaintPart> MiniPaints(string text)
+        {
+            var i = 0;
+            while (true)
+            {
+                var k0 = text.IndexOf("\"Argon", i); if (k0 < 0) yield break;
+                var k1 = text.IndexOf('"', k0 + 1); var name = text.Substring(k0 + 1, k1 - k0 - 1);
+                var next = text.IndexOf("\"Argon", k1); var end = next < 0 ? text.Length : next;
+                i = end;
+                var key = name.Contains("Body") ? "Body"
+                        : name.Contains("Shirt") ? "Shirt"
+                        : name.Contains("Bottoms") ? "Bottoms"
+                        : name.Contains("Shoes") ? "Shoes" : null;
+                if (key == null) continue;
+                var recolor = text.IndexOf("\"recolor\"", k1); if (recolor < 0 || recolor > end) continue;
+                var block = text.Substring(k1, end - k1);
+                var mask = Field(block, "mask"); if (mask != null) mask = mask.Replace(".png", "");
+                var rl = new List<float>();
+                var rq = block.IndexOf("\"regions\"");
+                for (var s = rq < 0 ? -1 : rq; s >= 0;)
+                {
+                    var l0 = block.IndexOf("\"mean_lum_linear\"", s); if (l0 < 0) break;
+                    var e = block.IndexOf(':', l0) + 1;
+                    while (e < block.Length && char.IsWhiteSpace(block[e])) e++;
+                    var f = e;
+                    while (f < block.Length && (char.IsDigit(block[f]) || block[f] is '-' or '+' or '.' or 'e' or 'E')) f++;
+                    if (float.TryParse(block.Substring(e, f - e), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var v)) rl.Add(v);
+                    s = f;
+                }
+                yield return new PaintPart { part = name, key = key, mask = mask, refLum = rl.ToArray() };
             }
         }
         static int MatchBracket(string t, int open) { var d = 0; for (var i = open; i < t.Length; i++) { if (t[i] == '[') d++; else if (t[i] == ']') { d--; if (d == 0) return i; } } return t.Length - 1; }
