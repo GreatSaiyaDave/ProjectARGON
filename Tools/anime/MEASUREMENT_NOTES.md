@@ -576,8 +576,10 @@ visible on the legs:
 
 **Control.** `bottoms_mako_dk` is the same short shape (ends at the knee) and Mako's `Suit` is `"skin"` — his bare
 shins render skin. Same mask, same hide path, same mesh length; the only difference is the value in the shirt row.
-So under the design's own convention (a short-bottomed look takes `"skin"` — mako, mai, tea, joey) the rows that
-carry a *bottoms* hex as their `Suit` are the stale values, and the fix is that one field.
+So the `Suit` value decides what an *uncovered* leg renders, and `"skin"` is right exactly when the character's legs
+are actually bare in canon (mako, mai, joey). A hex there is the project's way of colouring an uncovered leg to look
+like the worn garment — an approximation that holds only while the garment is short. The honest fix is a garment that
+covers the leg for real, which is what Weevil needed.
 
 **Frame check (`leg_probe.py`, top-colour palette per band; the model cannot view images, so this is pixel
 statistics).** `weevil_e04_1052.png` is a head-and-shoulders close-up (olive-green jacket `#78A03C` at y270-450,
@@ -586,9 +588,38 @@ per the colour rule. `bonz_e18_1106.png` does show the lower body, and it is **c
 from y270 to the feet at 14-32% of each band, with skin `#C8A078` no more than 3.1% (hands). So Bonz's canon lower
 half is *long*, and his shipped `bottoms_bonz_dk` (ending at z=0.600) is short of it.
 
-**Fix applied.** `ClothingCatalog.cs`, `shirt_weevil_bc`: `Suit` `"#45454C"` → `"skin"` (commented in place). His
-"Closed jacket" hides the whole torso and both upper arms (the render probe shows 0.0% G-region visible there), so the
-only visible `G` area on him is the shins — the change is exactly those 0.20 m² of bare leg and nothing else.
+**Owner correction (same day): Weevil wears long black trousers in DK, not shorts.** So his legs are clothed, and the
+`Suit` hex was never the defect — the **mesh length** was: a shorts cut at z=0.603 with the rest of the leg only
+*coloured*, not covered. Two wrong turns were tried first and are recorded so they are not repeated — setting the
+shirt's `Suit` to `"skin"` (renders bare skin, wrong) and leaving the shorts' hex on a shorts mesh (a trouser sliced
+at the knee, which is what "the clothing is clipping all over the skin" actually looks like).
+
+**Fix.** Gave him the real garment.
+
+| file | change |
+|---|---|
+| `Clothes/argon_bottoms_weevil_bc_male.fbx` | replaced with the long base trouser silhouette (`bottoms_plain_male.fbx`, z **0.186..1.218**); the `.fbx.meta` GUID is untouched, so Unity reimports in place |
+| `Clothes/hide_bottoms_weevil_bc_male.png` | rebuilt with `rebuild_hide_maps.py` (`--only bottoms_weevil_bc`), 2048 px hard 0/255; cover **0.105 → 0.152**, `piece_z` now `[0.186, 1.218]` |
+| `Clothes/albedo_bottoms_weevil_bc.png` | flat `#45454C` → flat **`#222324`** (the project's dark-trouser black, as `bottoms_duke_bc`) |
+| `ClothingCatalog.cs` | `shirt_weevil_bc` `Suit` → `#222324` (under the trousers it is invisible and only shows if a hide texel misses); `bottoms_weevil_bc` Name/Blurb "Weevil's shorts / Dark shorts." → "Black trousers / Black trousers."; its fallback `(0.27,0.27,0.30)` → `(0.133,0.137,0.141)` |
+
+A mesh swap is safe here because an FBX's own materials are ignored — the runtime assigns the recolor material and the
+per-`id` albedo (which is why `bottoms_bakura_bc` renders its own `#B3ADC2` from the same base trouser mesh) — and
+the base trouser is already a known-good graft on this body. Precedent for one silhouette under several `id`s:
+`bottoms_bakura_bc` / `bottoms_cargo` / `bottoms_plain` are the same mesh.
+
+**Acceptance (same probes).**
+
+| measure | before (shorts mesh) | after (trouser mesh) |
+|---|---|---|
+| `render_probe.py`: body drawn | 32.7% | **17.5%** |
+| shin zone drawn + undersuit-coloured | **14.1%** | 0.0% (gone) |
+| thigh zone drawn + undersuit-coloured | 0.8% | 0.0% (gone) |
+| whole visible profile | — | identical to `pegasus_dk` (17.5 / 9.6 / 7.9%) |
+| new `hide_bottoms_weevil_bc_male.png` vs the `bottoms_plain` / `bottoms_cargo` / `bottoms_bakura_bc` hides | — | **byte-identical** (frac 0.1519) |
+
+The last row is the strongest: his leg hide is now exactly the accepted base trouser's, so his legs are hidden under
+the trousers by the same map the default wardrobe already uses.
 
 **Still open (all measured, none fixed).**
 

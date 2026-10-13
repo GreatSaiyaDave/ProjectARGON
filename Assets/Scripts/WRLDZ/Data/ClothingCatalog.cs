@@ -197,12 +197,12 @@ namespace WRLDZ.Data
             C(ClothingSlot.Bottoms, "pegasus", "dk", 0, "Crimson trousers", "Crimson suit trousers.", 1, null, new Color(0.66f, 0.30f, 0.31f)),
             C(ClothingSlot.Shoes, "pegasus", "dk", 0, "Dress shoes", "Silver dress shoes.", 0, null, new Color(0.72f, 0.74f, 0.77f)),
 
-            // Suit "skin", not a hex: Weevil's bottoms are shorts (argon_bottoms_weevil_bc_male.fbx ends at
-            // z=0.603, above the knee) so the shins are bare. The body mask's undersuit region covers the
-            // source figure's trousers too, so a hex here is painted straight onto those bare shins - the
-            // shorts' colour, all down the leg. Skin is also what the other short-bottomed rows use (mako, mai).
-            C(ClothingSlot.Shirt, "weevil", "bc", 0, "Closed jacket", "Green jacket closed to the neck.", 3, "skin", new Color(0.53f, 0.69f, 0.35f)),
-            C(ClothingSlot.Bottoms, "weevil", "bc", 0, "Weevil's shorts", "Dark shorts.", 1, null, new Color(0.27f, 0.27f, 0.30f)),
+            // Weevil wears long black trousers in DK. argon_bottoms_weevil_bc_male.fbx is the long base trouser
+            // silhouette (z 0.186..1.218, albedo #222324) and its rebuilt hide covers both legs, so the shins are
+            // hidden by the trousers themselves - no undersuit trick needed. The Suit hex stays the trousers' own
+            // colour so that a missed hide texel is invisible instead of showing skin or a foreign colour.
+            C(ClothingSlot.Shirt, "weevil", "bc", 0, "Closed jacket", "Green jacket closed to the neck.", 3, "#222324", new Color(0.53f, 0.69f, 0.35f)),
+            C(ClothingSlot.Bottoms, "weevil", "bc", 0, "Black trousers", "Black trousers.", 1, null, new Color(0.133f, 0.137f, 0.141f)),
             C(ClothingSlot.Shoes, "weevil", "bc", 0, "Weevil's sneakers", "Dark sneakers.", 0, null, new Color(0.25f, 0.26f, 0.24f)),
             C(ClothingSlot.Facial, "weevil", "bc", 0, "Round glasses", "Round glasses.", 0, null, new Color(0.890f, 0.784f, 0.290f)),
 
