@@ -27,7 +27,7 @@ namespace WRLDZ.Data
             AvatarAppearance a = null;
             if (n.Contains("yami yugi")) a = Look(0, "yugi_muto", 158, 0.38f, 0, ("Shirt.0", "#1C2E7A"), ("Shirt.1", "#2A2A33"), ("Bottoms.0", "#1C2E7A"));
             else if (n.Contains("yugi")) a = Look(0, "yugi_muto", 153, 0.40f, 0, ("Shirt.0", "#1C2E7A"), ("Shirt.1", "#2A2A33"), ("Bottoms.0", "#1C2E7A"));
-            else if (n.Contains("yami bakura")) { var _l = Look(0, "ryou_bakura", 176, 0.35f, 0, ("Shirt.0", "#3A7BFF"), ("Shirt.1", "#F2F2F5"), ("Bottoms.0", "#2A2A33")); _l.WithSkin("#404858"); a = _l; }
+            else if (n.Contains("yami bakura")) { var _l = Look(0, "ryou_bakura", 176, 0.35f, 0, ("Shirt.0", "#3A7BFF"), ("Shirt.1", "#F2F2F5"), ("Bottoms.0", "#2A2A33")); _l.WithSkin("#CFAC8D"); a = _l; }
             else if (n.Contains("bakura")) a = Look(0, "ryou_bakura", 176, 0.35f, 0, ("Shirt.0", "#3A7BFF"), ("Shirt.1", "#F2F2F5"), ("Bottoms.0", "#2A2A33"));
             else if (n.Contains("joey")) a = Look(0, "joey_wheeler", 178, 0.50f, 0, ("Shirt.0", "#1E6A2A"), ("Shirt.1", "#F2F2F5"), ("Bottoms.0", "#1C2E7A"));
             else if (n.Contains("mai")) a = Look(1, "mai_valentine", 170, 0.45f, 0, ("Shirt.0", "#43207A"), ("Shirt.1", "#7A4CD9"), ("Bottoms.0", "#1E0E3A"));

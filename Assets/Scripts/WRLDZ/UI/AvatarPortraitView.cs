@@ -297,13 +297,56 @@ namespace WRLDZ.UI
             {
                 img.sprite = spr;
                 img.color = Color.white;
+                return;
             }
-            else
+
+            // A canon signature piece (the duelists' DK / Battle City sets) ships no paper-doll sprite of its own.
+            // A full-canvas wash of its colour leaves the bare mannequin showing through - a nude figure wearing a
+            // tint of the outfit. Borrow the same slot's own base silhouette (same pose, same canvas) and paint it
+            // with the piece's colour instead, so the portrait reads as a dressed duelist.
+            if (item.Slot == ClothingSlot.Hat || item.Slot == ClothingSlot.Facial)
             {
-                img.sprite = UiFoundation.WhiteSprite();
-                var c = item.Fallback;
-                img.color = new Color(c.r, c.g, c.b, 0.42f);
+                // an accessory draws only over the face and hair: there is no silhouette to borrow and a wash
+                // would tint the whole figure, so the layer stays empty.
+                img.enabled = false;
+                return;
             }
+
+            var shape = SlotShape(item);
+            if (shape != null)
+            {
+                img.sprite = shape;
+                var sc = item.Fallback;
+                img.color = new Color(sc.r, sc.g, sc.b, 0.94f);
+                return;
+            }
+
+            img.sprite = UiFoundation.WhiteSprite();
+            var c = item.Fallback;
+            img.color = new Color(c.r, c.g, c.b, 0.42f);
+        }
+
+        /// <summary>The paper-doll silhouette that stands in for a piece with no sprite of its own: the same
+        /// slot's base garment nearest in pockets (the starter pieces are the plain-cut shapes).</summary>
+        static Sprite SlotShape(ClothingItem item)
+        {
+            Sprite best = null;
+            var bestScore = int.MaxValue;
+            foreach (var cand in ClothingCatalog.InSlot(item.Slot))
+            {
+                if (cand == null || cand.EmptySlot || cand.Id == item.Id) continue;
+                var spr = StreamingSprite.Load(cand.ArtPath);
+                if (spr == null) continue;
+                var score = Mathf.Abs(cand.BasePockets - item.BasePockets) * 10;
+                if (cand.Id == ClothingCatalog.DefaultId(item.Slot)) score = Mathf.Max(0, score - 1);
+                if (score < bestScore)
+                {
+                    bestScore = score;
+                    best = spr;
+                }
+            }
+
+            return best;
         }
 
         void SetLayer(Image img, string path, Color tint)

@@ -368,11 +368,58 @@ wrong "fix"). The genuinely stale rows, each now corroborated by the design reco
 - **No `argon_*_bakura_dk` garment mesh** — Yami Bakura still wears Ryou's Battle City garment *shapes* (see §7 gap). Only a
   commissioned `_dk` mesh set changes the silhouette.
 - **No `yami_bakura` hair mesh** (only `ryou_bakura`) — he borrows Ryou's hair. Canon: the same body, so this is defensible.
-- **Paint-manifest name mismatch (observed, untouched).** `OverworldAvatar3d.BuildMaterials` loads
+- **Paint-manifest name mismatch — RESOLVED, see §9.1.** `OverworldAvatar3d.BuildMaterials` loaded
   `Resources.Load<TextAsset>("WRLDZ/Avatar3D/argon_base_" + sex + ".paint")` / `.parts`, but disk ships
-  `argon_avatar_male.paint.json` / `argon_avatar_male.parts.json` (`Assets/Resources/WRLDZ/Avatar3D/`). If that load returns
-  null the region paints (`Body.0` skin, garment `.0`/`.1`) never register and the parts fall back to the flat `Tint` path.
-  Whether it matters is decided by `Body.0` reaching the body: worth one Unity check before trusting any skin/suit hex.
+  `argon_avatar_male.paint.json` / `argon_avatar_male.parts.json`. The load returned null, so the region paints never
+  registered and the parts fell back to the flat `Tint` path — which is exactly what painted the body one flat
+  `skinHex`. It mattered: see §9.1 for the measurement.
 - **Decal quad shape.** `Faces/*.png` content shapes differ (only marik, pegasus, seto_kaiba, tristan, weevil, yami_bakura are
   band-like; `yugi_muto` bbox y 33..494, `bakura` 66..434) while `ApplyFace` maps the whole 1024×540 texture onto one fixed
   13.2×7 cm quad — possible squash/float for the newly-wired rows. Needs a Unity visual check.
+
+## 9. "He looks naked now" — the flat-body diagnosis (avatar session, 2026-10-12)
+
+### 9.1 Root cause, 3D (the skin hex was never the bug)
+
+`BuildMaterials` loaded `argon_base_<sex>.paint` / `.parts` while disk ships `argon_avatar_<sex>.*.json` (§8.5). The load
+returned null, so no part mask bound and `_paintKey` stayed empty. Two consequences:
+
+1. `Apply` fell through to `Tint(_smr, skinHex)`, which sets `_BaseColor` on the **whole** body. The Meshy body's own
+   mask is **45.1% skin / 54.3% undersuit** (`Meshy_male_Body_mask.png`) — the body mesh carries its undersuit geometry —
+   so a flat tint paints that undersuit region skin. With `#404858` that read as dark clothing; with `#CFAC8D` it read as
+   bare skin. **Same defect, both reports.** The skin reading in §8.3 was correct; the surface it landed on was not.
+2. A `Universal Render Pipeline/Unlit` material has no `_HideOn`, so `SetBodyHide` (L896) was a no-op — the body was
+   never discarded under the clothes it wore. `hide_shirt_bakura_bc_male.png` / `_bottoms_` / `_shoes_` discard 12.0% /
+   15.2% / 12.1% of the body texels; all of that was live skin-toned surface before the fix.
+
+**Measured:** body surface skin-toned **100.0% → 45.1%**; the undersuit region takes `#4F6595`, the authored
+`shirt_bakura_bc` suit hex, on 54.3%.
+
+Fixes: `LoadManifest` accepts `argon_avatar_*` then `argon_base_*` (`.paint` and `.parts`); `Apply` no longer flat-tints a
+region-painted body; `ApplyPaints` falls back to `look.skinHex` for `Body.0` so a region-painted body can never fall back
+to the white `_BaseMap`; `AiDuelistLooks` yami bakura `WithSkin("#CFAC8D")` replaces the stale `#404858` so the name route
+and the catalogue row agree.
+
+### 9.2 Second defect, 2D full-body paper-doll (duel HUD face, opponent select, customizer preview, companion/HUD/map)
+
+`StreamingAssets/WRLDZ/Avatar/clothes/` ships sprites for the **base wardrobe only** (`shirt_plain`, `bottoms_cargo`,
+`shoes_boots`, …). No canon signature id has one — not `shirt_bakura_bc`, not any `_dk` piece. `ApplyClothing` then drew
+`WhiteSprite()` at `item.Fallback` with **0.42 alpha**: a translucent centred square, not a garment, over `body_full.png`,
+which is a **nude mannequin** (55.4% skin-toned). A canon duelist's portrait was therefore a bare mannequin under a wash
+of its outfit colour, and the §8.4 `bottoms_bakura_bc` repair (dark navy → pale lavender) is what turned the dark wash
+pale and made the mannequin read as naked.
+
+Fix: a piece with no sprite of its own borrows the **same slot's base silhouette nearest in pockets** and is painted with
+its own colour at 0.94 alpha; `hat`/`facial` layers stay empty (no honest silhouette to borrow, and a wash would tint the
+whole figure).
+
+**Measured**, distance from the bare skin tone (`#CDA382`) over the garment area of the mannequin silhouette
+(0 = identical to bare skin): **81/255 before → 164/255 after**; the base wardrobe's own art reads 141/255.
+Overlay area also drops from a 720×720 square (519k px) onto a 157k px figure.
+
+### 9.3 Still open
+
+- No per-`id` paper-doll sprite for any canon piece — a borrowed silhouette approximates the cut, it is not it.
+- `appearance.portraitIndex` is still never set, so every duelist's `look_<n>.png` (face + hair) is `look_0.png`.
+- `Textures/` ships the `*_mask.png` set but no `Meshy_<sex>_<Part>.png` albedo. Parts render the right colour flat,
+  with no fold detail, and `_textured` stays empty (so `_BaseMap` is the white default).

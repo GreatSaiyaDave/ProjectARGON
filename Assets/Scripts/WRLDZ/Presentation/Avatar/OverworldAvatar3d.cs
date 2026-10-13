@@ -280,7 +280,11 @@ namespace WRLDZ.Presentation
                 // A TEXTURED body / hair (the Meshy base paints face, skin and hair colour into its albedo) is
                 // never tinted: _BaseColor multiplies _BaseMap, so a skin tint would dye the painted eyes and
                 // clothes. Tints apply only to untextured (flat) parts.
-                if (!_fullCharacter && !_textured.Contains(_smr) && ColorUtility.TryParseHtmlString(look.skinHex, out var skin)) Tint(_smr, skin);
+                // A region-painted body (the paint manifest's Body mask) takes its skin from the Body.0 paint, and
+                // its undersuit region from the worn shirt's Suit; a flat _BaseColor tint would wash the whole part
+                // - the undersuit included - in skin, which reads as a naked body under the clothes.
+                var bodyMasked = _paintKey.TryGetValue(_smr, out var bodyKey) && bodyKey == "Body";
+                if (!_fullCharacter && !_textured.Contains(_smr) && !bodyMasked && ColorUtility.TryParseHtmlString(look.skinHex, out var skin)) Tint(_smr, skin);
                 if (ColorUtility.TryParseHtmlString(look.hairHex, out var hair))
                     foreach (var r in GetComponentsInChildren<SkinnedMeshRenderer>(true))
                         if (r.name == "ArgonPart_Hair" && !_textured.Contains(r)) Tint(r, hair);
@@ -1007,6 +1011,11 @@ namespace WRLDZ.Presentation
                     for (var k = 0; k < RegionProps.Length; k++)
                     {
                         var hex = look.GetPaint(kv.Value + "." + k);
+                        // The body's skin region is never left unpainted: a look with no Body.0 paint of its own
+                        // still gets its skinHex (else the region-painted body would fall back to the white
+                        // _BaseMap and read as a white body under the clothes).
+                        if (string.IsNullOrEmpty(hex) && kv.Value == "Body" && k == 0)
+                            hex = string.IsNullOrEmpty(look.skinHex) ? SkinHexFor(look) : look.skinHex;
                         if (string.IsNullOrEmpty(hex) && kv.Value == "Body" && k == 1)
                         {
                             var suit = _outfit != null ? _outfit.suit : ClothingCatalog.Get(look.shirtId)?.Suit;
@@ -1057,7 +1066,7 @@ namespace WRLDZ.Presentation
             _sex = sex;
             _paintKey.Clear();
             var paintInfo = new Dictionary<string, PaintPart>();
-            var pj = Resources.Load<TextAsset>("WRLDZ/Avatar3D/argon_base_" + sex + ".paint");
+            var pj = LoadManifest(".paint", sex);
             if (pj != null)
             {
                 try
@@ -1068,7 +1077,7 @@ namespace WRLDZ.Presentation
                 catch (System.Exception e) { Debug.LogWarning("[OverworldAvatar3d] paint manifest: " + e.Message); }
             }
             var recolorTpl = Resources.Load<Material>("WRLDZ/Avatar3D/Materials/AvatarRecolor");
-            var json = Resources.Load<TextAsset>("WRLDZ/Avatar3D/argon_base_" + sex + ".parts");
+            var json = LoadManifest(".parts", sex);
             var lookup = new Dictionary<string, List<PartMat>>();
             if (json != null)
             {
@@ -1118,6 +1127,14 @@ namespace WRLDZ.Presentation
                 r.sharedMaterials = arr;
             }
         }
+
+        /// <summary>The Meshy avatar build renamed the part manifests from argon_base_* to argon_avatar_*; accept
+        /// either name so a renamed (or older) manifest still binds. A miss here is not cosmetic: without the part
+        /// masks every part renders flat and the whole body takes the skin tint, and without the recolor material
+        /// the body has no _HideOn, so it is never discarded under the clothes it wears.</summary>
+        static TextAsset LoadManifest(string stem, string sex) =>
+            Resources.Load<TextAsset>("WRLDZ/Avatar3D/argon_avatar_" + sex + stem)
+            ?? Resources.Load<TextAsset>("WRLDZ/Avatar3D/argon_base_" + sex + stem);
 
         /// <summary>Tiny reader for the parts manifest: {"Part": {"materials":[{"material":..,"texture":..},..]}}.</summary>
         static IEnumerable<KeyValuePair<string, List<PartMat>>> MiniParts(string text)
