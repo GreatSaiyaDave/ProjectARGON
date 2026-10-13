@@ -401,24 +401,35 @@ def main():
         report["hair"].append(entry)
 
     # --- face decals
+    # The look row's own FaceId is what the runtime actually draws; FACE_BY_LOOK is only the expectation it
+    # must meet. Reading the parsed code value (not the table) is what stops a blank row from being reported
+    # as wired just because a decal png exists.
     face_ids = set()
+    unwired = []
     for row in rows:
-        fid = FACE_BY_LOOK.get(row["id"], row["faceId"] or "")
+        code_face = row["faceId"] or ""
+        expect = FACE_BY_LOOK.get(row["id"], "")
+        if not code_face and expect:
+            unwired.append(row["id"])
+        fid = code_face or expect
         if not fid:
             continue
         if fid in face_ids:
             continue
         face_ids.add(fid)
         report["faces"].append({"faceId": fid, "forLooks": [row["id"]],
+                                "wired": bool(code_face),
                                 "file": fid in face_files,
                                 "mouth": (fid + "_mouth") in face_files,
                                 "body": (fid + "_body") in face_files})
-    # faceId declared by AiDuelistLooks.FaceFor but with no canon look row here (e.g. face_weevil_bc vs weevil)
+    report["face_unwired"] = unwired
+    # a decal png with no canon look row here (e.g. face_weevil_bc, yami_marik): inventory it, flag it unwired
     for fid in sorted(face_files):
         if (fid.endswith(("_body", "_mouth", "_forehead")) or
                 any(e["faceId"] == fid for e in report["faces"])):
             continue
         report["faces"].append({"faceId": fid, "forLooks": [],
+                                "wired": False,
                                 "file": True,
                                 "mouth": (fid + "_mouth") in face_files,
                                 "body": (fid + "_body") in face_files})
@@ -507,12 +518,20 @@ def main():
         L.append(f"- `{u['look']}` — {u['note']}")
 
     L.append("\n## 3. Face decals\n")
-    L.append("| faceId | for looks | png | mouth | body |")
-    L.append("|---|---|---|---|---|")
+    L.append("`wired` = the look row sets FaceId (what the runtime draws). `no` = the decal png exists but the "
+             "row leaves the face blank, so the blank base face is drawn instead.\n")
+    L.append("| faceId | for looks | wired | png | mouth | body |")
+    L.append("|---|---|---|---|---|---|")
     for f in report["faces"]:
         L.append(f"| {f['faceId']} | {', '.join(f['forLooks']) or '—'} | "
+                 f"{'yes' if f.get('wired') else 'no'} | "
                  f"{'yes' if f['file'] else 'MISSING'} | "
                  f"{'yes' if f['mouth'] else '—'} | {'yes' if f['body'] else '—'} |")
+    if report.get("face_unwired"):
+        L.append(f"\n**Unwired ({len(report['face_unwired'])})** — decal exists, row has `FaceId` blank: "
+                 + ", ".join(f"`{x}`" for x in report["face_unwired"]))
+    else:
+        L.append("\nEvery canon look row wires its face decal.")
 
     L.append("\n## 4. Garment albedos (per canon look)\n")
     L.append("`placeholder` = the png is under 500 bytes (an 8×8 stub, not a real albedo).\n")
@@ -537,6 +556,7 @@ def main():
     gaps = [e["look"] for e in report["hair"] if e.get("verdict") in ("GAP", "close")]
     print(f"hair rows: {len(report['hair'])}  (GAP/close: {len(gaps)}: {' '.join(gaps)})")
     print(f"no measurement: {len(report['unmeasured'])}  faces: {len(report['faces'])}  looks: {len(report['clothes'])}")
+    print(f"face decals not wired: {len(report.get('face_unwired', []))}  {report.get('face_unwired')}")
     print(f"wrote {OUT}/canon_texture_audit.md + .json")
 
 

@@ -299,3 +299,80 @@ the same `C()` + look-row pattern wires them with no further code.
 
 Audit after the change: `Tools/anime/audit.py` reports the new looks with unchanged hair verdicts — `yugi_dk` / `kaiba_dk` /
 `mako_dk` `exact`, and `yami_yugi_dk` `close` (the pre-existing Yami-Yugi hair gap, now reported on both Yami rows).
+
+## 8. Yami Bakura + the all-canon face pass (avatar session, 2026-10-12)
+
+Owner: "Yami Bakura needs to look 1000x better", and the face pass applied to **every** canon duelist, not just him.
+
+### 8.1 The two defects
+
+The `yami_bakura` row (`CharacterLooks.cs`) was `L("yami_bakura", "Yami Bakura", "yami bakura", 0, "ryou_bakura", "", …,
+skin: "#404858")`:
+
+1. **`FaceId = ""`** — nothing passed to `OverworldAvatar3d.ApplyFace` (line 342: `ApplyFace(look.silhouette ? "" :
+   look.faceId)`), so his authored HD `Faces/yami_bakura.png` (+ `_mouth`, + `_body`) was **dead art** and the blank base
+   face was drawn. Only Kaiba was wired (`seto_kaiba`).
+2. **`skin: "#404858"`** — a near-black blue-grey. `ApplyTo` sets `a.skinHex` + `SetPaint("Body.0", SkinHex)`, so the whole
+   body *including the head* rendered that colour: a white-haired figure with a near-black face.
+
+### 8.2 Face wiring (all 25 canon looks)
+
+Each canon row now passes its decal id as the 6th positional `face` argument — the id map is the one the audit already
+carried (`FACE_BY_LOOK`): `yugi_muto` (yugi_dk/bc), `joey_wheeler`, `mai_valentine`, `tea`, `bakura`, `marik`, `pegasus`,
+`weevil`, `rex_raptor`, `mako` (dk/bc), `bandit_keith`, `bonz`, `ishizu`, `odion`, `duke`, `tristan`, `mokuba_kaiba`,
+`yami_yugi` (dk/bc), `yami_bakura`, `panik`, `para`, `dox`. All 25 decal pngs exist on disk (checked); 20 also have a
+`_mouth`, 3 have no mouth (`marik`, `bonz`, `panik`, `para`, `dox`), and `para`/`dox` additionally ship `_forehead`.
+
+`Tools/anime/audit.py` used `FACE_BY_LOOK.get(id, row["faceId"])` — it **preferred its own expectation table**, so a row with
+a blank `FaceId` was reported as wired. It now reads the parsed code value (`code_face = row["faceId"] or ""`), keeps
+`FACE_BY_LOOK` only as the expectation, adds a `wired` column, lists unwired rows, and prints the count. Result: **0 unwired**
+(the two remaining `no` rows, `face_weevil_bc` / `yami_marik`, are decal files with no look row — inventory only).
+
+### 8.3 Yami Bakura's skin (measured, then chosen)
+
+Measured with a tight HSV skin window (H 8–42°, S 0.12–0.55, V 0.45–0.97) so that brown hair/leather is not counted:
+
+| source | reading |
+|---|---|
+| DK frame `bakura_e16_276.png` (ep16 possession duel, dim night scene) | `#B99B87` 17% · `#B9AF9B` 15% · `#C3AF9B` 9% · `#B9A591` 8% (loose mask: `#BAAE96` 43%, `#BAA28A` 20%) |
+| DK frame control `weevil_e04_1052.png` | `#CDAF87` 36% |
+| DK frame control `joey_e06_268.png` | `#D7B99B` 19% · `#D7A591` 13% |
+| lit Bakura game art `cmc_dialogue_bakura_52_448x424.png` | `#F5C39B` 14% · `#F5B991` 13% |
+| lit Bakura game art `cmc_cutin_bakura_15_224x352.png` | `#F5B991` 23% |
+
+The DK frame reads **greyer/darker** than the same-era lit controls, but *both* skin clusters inside that frame are grey-tan,
+so part of that is scene lighting — the absolute value is not trustworthy. Chosen: **`#CFAC8D`** = Ryou's default `#F9C494`
+greyed 35% toward neutral grey (128,128,128). That lands inside the DK-era measured band (`#B99B87` dim … `#CDAF87`/`#D7B99B`
+lit), is greyer than Ryou's default (so the possession still reads), and matches the design intent ("a grey skin") without the
+near-black of the old `#404858`. If it reads too dusty in the lit customizer, the lit-art reading `#F5C39B` is the next
+candidate.
+
+### 8.4 Stale `C()` fallbacks aligned (fallback must approximate the shipped albedo)
+
+QC rule: the fallback must appear in `albedo_<Id>.png` within 12/channel. 8 rows failed; 2 (`shoes_kaiba_dk` `#333535`,
+`bottoms_mako_dk` `#4E4A4F`) were **deliberate averages** of a 2-tone swatch and were kept. `shoes_bakura_bc`'s `#EDEDF2`
+is the **left/main** half of its 2-tone swatch — correct, not stale (an earlier flat average, `#B7B7BB`, would have been a
+wrong "fix"). The genuinely stale rows, each now corroborated by the design record:
+
+| item | old fallback | new | source |
+|---|---|---|---|
+| `bottoms_bakura_bc` | `#3A4259` | `#B3ADC2` | albedo is single-colour `#B3ADC2` |
+| `bottoms_mokuba_bc` | `#3B4254` | `#4F5A86` | record "Jeans `#4F5A86`" |
+| `shoes_mokuba_bc` | `#4F5987` | `#4E78B8` | record "Sneakers `#4E78B8`" (old value was the jeans colour) |
+| `shoes_marik_bc` | `#C9A84F` | `#1E1E1E` | record "Shoes `#1E1E1E`" (old value was the neck-ring gold) |
+| `shoes_tea_bc` | `#F0E8A8` | `#44718D` | record "Platform sandals `#44718D`" (old value was the collar cream) |
+| `face_weevil_bc` | `#21262B` | `#E3C84A` | record "Round glasses `#E3C84A`" |
+
+### 8.5 Open (not changed here)
+
+- **No `argon_*_bakura_dk` garment mesh** — Yami Bakura still wears Ryou's Battle City garment *shapes* (see §7 gap). Only a
+  commissioned `_dk` mesh set changes the silhouette.
+- **No `yami_bakura` hair mesh** (only `ryou_bakura`) — he borrows Ryou's hair. Canon: the same body, so this is defensible.
+- **Paint-manifest name mismatch (observed, untouched).** `OverworldAvatar3d.BuildMaterials` loads
+  `Resources.Load<TextAsset>("WRLDZ/Avatar3D/argon_base_" + sex + ".paint")` / `.parts`, but disk ships
+  `argon_avatar_male.paint.json` / `argon_avatar_male.parts.json` (`Assets/Resources/WRLDZ/Avatar3D/`). If that load returns
+  null the region paints (`Body.0` skin, garment `.0`/`.1`) never register and the parts fall back to the flat `Tint` path.
+  Whether it matters is decided by `Body.0` reaching the body: worth one Unity check before trusting any skin/suit hex.
+- **Decal quad shape.** `Faces/*.png` content shapes differ (only marik, pegasus, seto_kaiba, tristan, weevil, yami_bakura are
+  band-like; `yugi_muto` bbox y 33..494, `bakura` 66..434) while `ApplyFace` maps the whole 1024×540 texture onto one fixed
+  13.2×7 cm quad — possible squash/float for the newly-wired rows. Needs a Unity visual check.

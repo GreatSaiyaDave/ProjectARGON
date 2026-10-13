@@ -7,7 +7,8 @@ namespace WRLDZ.Data
     /// Yugi and Kaiba use the sculpted outfits split into slots. The other looks are shells
     /// built on the same bodies (no Meshy spend). Para and Dox reuse generic plain clothes
     /// with the measured robe colour (Para red, Dox blue — DK anime frames) plus the robe's gold trim. Yami Yugi wears Yugi's Domino cape (the black tank and blazer),
-    /// not a flat navy wash. Yami Bakura reuses Ryou's clothes with a grey skin.
+    /// not a flat navy wash. Yami Bakura reuses Ryou's clothes (the design record: both personalities wear the
+    /// same clothes) but draws his own face decal and a DK-frame-measured skin — not the old near-black blue.
     /// Borrowed hair meshes, until those heads exist: Weevil and Odion use Kaiba; Rex uses Jaden;
     /// Mako and Keith use Jack; Bonz uses Marik; Pegasus uses Ryou, tinted silver; Ishizu uses Mai;
     /// Duke and Tristan use Joey; Mokuba uses Yugi. PaniK wears Odion's hood so that borrowed hair is hidden.
