@@ -115,6 +115,10 @@ namespace WRLDZ.Presentation.ArInteraction
             hv.RevealFaces = !opponent;
             hv.VolumeRoot = new GameObject("Cards").transform;
             hv.VolumeRoot.SetParent(go.transform, false);
+#if UNITY_EDITOR
+            if (opponent)
+                Debug.Log($"[OppHandVolume] Created at {go.transform.position}, VolumeRoot parent={hv.VolumeRoot.parent.name}");
+#endif
             // No volume guide cube — it read as a messy cyan box in the AR stage
             // Opponent hand volumes use the free-floating fan (no FloatingHand).
             // Their right hand physically reaches to the disk via ArOpponentDuelist.ReachDisk/SolveReach.
@@ -246,6 +250,14 @@ namespace WRLDZ.Presentation.ArInteraction
                     _cards.Add(fc);
                     _slotIndex[fc] = handSlot;
                     LayoutCard(fc, handSlot, SlotCount);
+                        #if UNITY_EDITOR
+                                                if (IsOpponent)
+                                                {
+                                                    var wp = fc.transform.position;
+                                                    var lp = fc.transform.localPosition;
+                                                    Debug.Log($"[OppHandVolume] SPAWNED {card.Name} slot={handSlot} local=({lp.x:0.000},{lp.y:0.000},{lp.z:0.000}) world=({wp.x:0.000},{wp.y:0.000},{wp.z:0.000}) vol={transform.position}");
+                                                }
+                        #endif
                     fc.RefreshArtFace(showFace: RevealFaces);
                     if (Application.isPlaying && gameObject.activeInHierarchy)
                     {
@@ -475,6 +487,27 @@ namespace WRLDZ.Presentation.ArInteraction
             if (fc != null) ArObjectUtil.Destroy(fc.gameObject);
             GestureLanded?.Invoke();
         }
+
+#if UNITY_EDITOR
+        void OnDrawGizmosSelected()
+        {
+            if (IsOpponent)
+            {
+                Gizmos.color = Color.magenta;
+                Gizmos.DrawWireSphere(transform.position, 0.08f);
+                UnityEditor.Handles.Label(transform.position + Vector3.up * 0.1f, $"OppHandVolume (Cards: {_cards.Count})");
+                foreach (var fc in _cards)
+                {
+                    if (fc != null && fc.transform != null)
+                    {
+                        Gizmos.color = fc.IsLockedToZone ? Color.red : Color.green;
+                        Gizmos.DrawWireSphere(fc.transform.position, 0.03f);
+                        UnityEditor.Handles.Label(fc.transform.position + Vector3.up * 0.05f, fc.Card?.Name ?? "?");
+                    }
+                }
+            }
+        }
+#endif
 
         void OnDisable()
         {
