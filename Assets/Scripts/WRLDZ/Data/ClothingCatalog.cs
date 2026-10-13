@@ -199,9 +199,10 @@ namespace WRLDZ.Data
 
             // Weevil wears long black trousers in DK. argon_bottoms_weevil_bc_male.fbx is the long base trouser
             // silhouette (z 0.186..1.218, albedo #222324) and its rebuilt hide covers both legs, so the shins are
-            // hidden by the trousers themselves - no undersuit trick needed. The Suit hex stays the trousers' own
-            // colour so that a missed hide texel is invisible instead of showing skin or a foreign colour.
-            C(ClothingSlot.Shirt, "weevil", "bc", 0, "Closed jacket", "Green jacket closed to the neck.", 3, "#222324", new Color(0.53f, 0.69f, 0.35f)),
+            // hidden by the trousers themselves - no undersuit trick needed. With the legs covered, the only Suit
+            // area still visible is the neck/collar (plus a sliver at the sleeve hem), so the hex is the jacket's
+            // own rendered green - the blurb says it is closed to the neck - and not the trousers' black.
+            C(ClothingSlot.Shirt, "weevil", "bc", 0, "Closed jacket", "Green jacket closed to the neck.", 3, "#86B05A", new Color(0.53f, 0.69f, 0.35f)),
             C(ClothingSlot.Bottoms, "weevil", "bc", 0, "Black trousers", "Black trousers.", 1, null, new Color(0.133f, 0.137f, 0.141f)),
             C(ClothingSlot.Shoes, "weevil", "bc", 0, "Weevil's sneakers", "Dark sneakers.", 0, null, new Color(0.25f, 0.26f, 0.24f)),
             C(ClothingSlot.Facial, "weevil", "bc", 0, "Round glasses", "Round glasses.", 0, null, new Color(0.890f, 0.784f, 0.290f)),

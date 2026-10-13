@@ -605,7 +605,7 @@ at the knee, which is what "the clothing is clipping all over the skin" actually
 | `Clothes/argon_bottoms_weevil_bc_male.fbx` | replaced with the long base trouser silhouette (`bottoms_plain_male.fbx`, z **0.186..1.218**); the `.fbx.meta` GUID is untouched, so Unity reimports in place |
 | `Clothes/hide_bottoms_weevil_bc_male.png` | rebuilt with `rebuild_hide_maps.py` (`--only bottoms_weevil_bc`), 2048 px hard 0/255; cover **0.105 → 0.152**, `piece_z` now `[0.186, 1.218]` |
 | `Clothes/albedo_bottoms_weevil_bc.png` | flat `#45454C` → flat **`#222324`** (the project's dark-trouser black, as `bottoms_duke_bc`) |
-| `ClothingCatalog.cs` | `shirt_weevil_bc` `Suit` → `#222324` (under the trousers it is invisible and only shows if a hide texel misses); `bottoms_weevil_bc` Name/Blurb "Weevil's shorts / Dark shorts." → "Black trousers / Black trousers."; its fallback `(0.27,0.27,0.30)` → `(0.133,0.137,0.141)` |
+| `ClothingCatalog.cs` | `shirt_weevil_bc` `Suit` → `#86B05A` — with the legs covered by the real trouser the only visible `Suit` area is the neck/collar, and his blurb says the jacket is closed to the neck, so the hex is the jacket's own rendered green (its albedo measures `#86B05A`), not the trousers' black; `bottoms_weevil_bc` Name/Blurb "Weevil's shorts / Dark shorts." → "Black trousers / Black trousers."; its fallback `(0.27f,0.27f,0.30f)` → `(0.133f,0.137f,0.141f)` |
 
 A mesh swap is safe here because an FBX's own materials are ignored — the runtime assigns the recolor material and the
 per-`id` albedo (which is why `bottoms_bakura_bc` renders its own `#B3ADC2` from the same base trouser mesh) — and
@@ -656,4 +656,55 @@ to the `bottoms_plain` / `bottoms_weevil_bc` hides (frac 0.1519).
   body's *forearm* (and the *legs*) out of `G` into `R` in the mask, keeping `G` for the torso, which leaves every
   long-garment look unchanged (hidden) and makes every bare arm/leg skin. It is a mask-island edit whose boundary
   needs visual confirmation, so it was not attempted blind.
+
+---
+
+## 12. The undersuit region also covers the neck — measured, and it is load-bearing
+
+Same root as §11, found while checking Bakura: the mask's `G` (undersuit) region is the **source figure's t-shirt**,
+and a t-shirt's *collar* sits on the neck. `ArgonBody_male` is 10455 tris, z 0.000-1.750. Sampled per body zone by
+per-face UVs against `Textures/Meshy_male_Body_mask.png` (Blender pixel rows are bottom-up, so `v*height` addresses
+the same texel the hide npys address under `(1-v)*height`):
+
+| zone (body coords) | texels | R (skin) | G (undersuit) |
+|---|---|---|---|
+| head-top, z > 1.55 | 4269 | 0.419 | 0.552 |
+| **NECK, 1.40 < z <= 1.55, r < 0.11** | 1506 | 0.169 | **0.831** |
+| shoulder, 1.30-1.45, r > 0.13 | 1842 | 0.014 | 0.983 |
+| torso, 0.95-1.40, r < 0.16 | 4848 | 0.007 | 0.993 |
+| arm, 0.95-1.40, r > 0.16 | 3060 | 0.241 | 0.741 |
+| *control* hand/wrist, 0.85-1.00, r > 0.16 | 3777 | **0.959** | 0.040 |
+
+The control matches the shipped zone probe (hand/wrist R 0.905), so the sampling is right. **The neck is 83% the
+undersuit region.** Its 465 texels are almost cleanly separable: 2.8% shared with the torso, 8.0% with the head-top
+(scalp, already repainted by `_ScalpMap`), and 0% with the shoulder, the arm and the hand.
+
+**It is visible.** Intersecting the neck's texels with each of the 22 male `shirt_*` hide maps — which is exactly what
+`SetBodyHide` discards — the neck is **77-93% visible under every shirt**, median **0.802**. Control: the hand/wrist
+texels are 0.856 visible under the same hides. So no shipped shirt mesh covers the neck, and every male look renders
+the `Suit` hex across it.
+
+**Canon says skin where the collar is low.** `bakura_e16_276.png` (Bakura, his own duel; the left figure of the
+two-shot, x330-655): skin runs from the face (40.0% at y305) continuously through chin and neck (13.1% at y355) and
+stops at y380; the torso below is a pale *garment* (`#B4B4A8`, 17-41% of the strip) and the lower body stays a pale
+garment to the feet with no skin except the hands. So his neck is bare skin and his chest is clothed.
+
+**Why the shared mask was not edited.** `Suit` is one value for the whole `G` region — neck, the chest visible under
+an open top, the upper arm, and (until §11) the legs — so it cannot be both "skin" at the neck and "undershirt" on a
+visible chest. Repainting the neck texels `G -> R` would fix the bare-necked looks but break the high-collared ones,
+where that band is doing the work: `shirt_kaiba_dk` `#26272B` is "over a black **high-neck** shirt",
+`shirt_kaiba_bc` `#0B0B10` is "over a black **turtleneck**", `shirt_weevil_bc` is "**closed to the neck**",
+`shirt_yugi_dk` / `shirt_yami_dk` `#1F1E2A` is "over the black tank". Those rows read correctly today *because* the
+neck band is garment-coloured. Per the colour rule, unread canon keeps the current value, and here the current value
+is provably load-bearing, so nothing was changed.
+
+**What the right fix looks like.** The `Suit` values already encode the design intent and are right wherever the
+visible `G` is one kind of surface: the sleeveless tops are `"skin"` (`shirt_mako_bc`, `shirt_marik_bc`,
+`shirt_duke_bc`) because their only visible `G` is bare arms, and the closed/high collars carry the collar's own hex
+(`shirt_weevil_bc` is now the jacket's `#86B05A`). Only looks whose visible `G` spans *both* a garment and bare skin
+are compromises — `bakura_bc` (chest `#4F6595` + bare neck/forearm), `keith_dk` (`#82302A` chest + bare forearm),
+`rex_bc`, `yugi_dk` / `yami_dk`. They need the neck and forearm separable from the chest, i.e. a *third* region: the
+mask's `B` channel is only 0.3% used ("other"), so the honest fix is neck+forearm+legs → their own channel with a
+per-look colour (`"skin"` by default, the collar hex where the blurb says high-neck / turtleneck / closed). That is
+shader + `OverworldAvatar3d` work, not a texture edit, so it is recorded here measured and unfixed.
 
