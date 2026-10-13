@@ -792,3 +792,77 @@ body's painted hairline when a look sets no `hairHex` (most rows set `hairPatter
 colours"), so pale-haired looks get a dark scalp line under the hair. Setting `hairHex` on a pattern-0 row is
 unprecedented and the shader's `_Original` path may then override the style's own texture colours, so it was
 not changed blind — a pale-haired look would need its hairline measured against a rendered frame first.
+
+## 15. "The clothing is clipping all over the skin" (third report) — the hide maps were rasterised on a body the game does not draw (2026-10-13)
+
+**Report.** Same words as §10 and §11, on Yami Bakura after the §14 undersuit fix and after the
+`ApplyScalpColour` catalogue-root fallback (also landed this day): the pale coat `#8ABED0` and the
+lavender jeans `#B3ADC2` still show the body through them in jagged tan plates, and the hairline
+still read near-black. The owner's screenshot is the reference (`bakura_hide_before.png`).
+
+**Root cause — two bodies.** The game draws `Assets/Resources/WRLDZ/Avatar3D/argon_base_male.fbx`;
+every hide map and every colour-region mask was rasterised on the pipeline body
+`build/custom/argon_avatar_male.glb` / `.fbx`. They are different meshes:
+
+| | game body (`argon_base_male.fbx`) | pipeline body (`argon_avatar_male.glb`) |
+|---|---|---|
+| verts / distinct UVs | 13,380 / 14,517 | 9,238 / 9,237 |
+| rest pose | arms out | arms down |
+| height / head-bone z | 1.741 m / 1.489 | 1.750 m / 1.582 |
+| provenance | committed 2026-10-10, `f93fcb1ed` "Merge restored project into live"; **no tool in `argon-avatar` produces it** | `meshy_rig_body.py` → `custom_body.py` |
+
+The two unwraps are disjoint: **2 of 14,517** UV coordinates coincide. Sampled on the game body the
+shipped maps discard the wrong texels — they hide 61% of the torso by accident and still leave
+24–46% of the torso / arms / legs drawn, and the old shoe map alone hides 0.0368 m² of neck and
+0.0041 m² of hand skin. The garment shells were also modelled and fitted on the pipeline body:
+grafted onto the game body with the runtime formula (`v' = Σ w · W_host · inv(W_piece)`, 0 verts
+flew) they sit 1–3 cm inside it, so the body pokes through in plates. That is what the screenshot
+shows, and why the §11 numbers (measured on the glb) never matched the game.
+
+**Validation of the port.** Running the same coverage test on the *pipeline* body reproduces the
+shipped maps almost exactly (torso drawn 0.0341 vs 0.0359; legs 0.0029 vs 0.0031). The test is
+faithful; only the body basis was wrong.
+
+**Fix.** `rebuild_hide_unity.py` (kept at `/tmp/rebuild_hide_unity.py`, this run) rebuilds the three
+bakura maps against `argon_base_male.fbx`: the pipeline's coverage test (garment within 3 cm above
+or 3 cm below the skin point along its normal, 8 mm tangent erosion so the hidden region stops
+short of every hem, per-texel resolution where a hem crosses the face, head/neck/hands never
+hidden, closed shoes hide the foot wholesale, bottoms/shoes never hide arm skin) **unioned with**
+the 5 mm near-shell fill — a drawn face whose centroid sits within 5 mm of the shell is discarded
+(the boundary bands the erosion leaves on this body; 96% of the still-drawn leg area sits inside
+5 mm of the jeans). Rasterised at 2048 px into the game body's own UV space, written in place as
+plain 0/255 grey PNG (the `.meta` GUIDs stay). Body surface still drawn (m², of 1.6687 m²):
+
+| region | no map | shipped maps (wrong basis) | rebuilt maps |
+|---|---|---|---|
+| torso | 0.3948 | 0.2418 | 0.2713 |
+| arms | 0.2981 | 0.1663 | 0.1044 |
+| legs | 0.7210 | 0.3892 | **0.0157** |
+| feet | 0.0281 | 0.0191 | **0.0000** |
+| neck | 0.1772 | 0.1059 | 0.1772 (kept visible) |
+| hands | 0.0493 | 0.0380 | 0.0493 (kept visible) |
+
+The torso figure *rises* against the shipped map because the shipped map over-hid by accident
+(61% of torso texels discarded on the wrong basis, faces the garment does not cover included). The
+rebuilt number is the honest one: 39% of the still-drawn torso lies more than 12 cm from any
+shell — that is the coat's open front, which the body mask paints mostly undersuit `#8ABED0`
+(§14) and which the frame shows as a pale garment. The forearms stay bare because the coat's
+sleeves end at the elbow **on this body** (mesh fit, see below). `bakura_bc` shares the three
+pieces and is fixed by the same maps; no other look's map changed. Stills:
+`Tools/anime/out/bakura_hide_before.png` / `bakura_hide_after.png`.
+
+**Known and deliberately left alone.**
+- **The shared `Meshy_<sex>_Body_mask.png`, the scalp masks and every other look's hide map have
+  the same orphan-body problem** — they are all keyed to the pipeline body. The in-game placement
+  of the mask still reads correct (face, hairline, hands), so they were left; the root fix is a
+  decision for the owner: either reinstall the current pipeline body into Unity (the game then
+  draws the body the whole pipeline authors on — every look's silhouette changes) or re-key every
+  body-space map to the orphan body. This pass fixes Bakura's maps only.
+- The coat's sleeves and the body's forearms are a **mesh-fit** problem, not a hide-map problem:
+  hiding the forearms would float the cuffs. Refitting `argon_shirt_bakura_bc_male.fbx` (and the
+  other pieces) to the game body is the real fix and belongs with the decision above.
+- `argon_base_female.fbx` is presumably the same orphan; no female bakura pieces exist, so nothing
+  was rebuilt for female.
+- `Tools/anime/audit.py` verdicts are unchanged (`pegasus_dk` exact; the two `close` rows are the
+  pre-existing Yami Yugi pair). No `hairHex` was written; Yami's scalp now resolves to
+  `ryou_bakura`'s catalogue root `#D7D8DF` at runtime, Yugi's stays his dark root `#131212`.
