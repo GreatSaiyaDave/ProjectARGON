@@ -121,7 +121,7 @@ namespace WRLDZ.Presentation.ArInteraction
         RawImage _raw;
         bool _aimed;
 
-void AimCamera()
+        void AimCamera()
         {
             if (_duelist != null)
             {
@@ -190,7 +190,7 @@ void AimCamera()
         void LateUpdate()
         {
             _t += Time.unscaledDeltaTime;
-            if (_t >= _length || (_duelist == null && _fallbackTarget == null)) { Destroy(this.transform.root); return; }
+            if (_t >= _length || (_duelist == null && _fallbackTarget == null)) { Destroy(gameObject); }
             Place(_t);
             AimCamera();
             if (_raw != null && !_raw.enabled && _aimed) _raw.enabled = true;
