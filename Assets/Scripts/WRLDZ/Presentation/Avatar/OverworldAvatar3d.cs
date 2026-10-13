@@ -951,13 +951,37 @@ namespace WRLDZ.Presentation
         static readonly int ScalpMapId = Shader.PropertyToID("_ScalpMap");
         static readonly int ScalpColorId = Shader.PropertyToID("_ScalpColor");
 
+        /// <summary>
+        /// True when the look never picked a hair colour. <see cref="AvatarAppearance.hairHex"/> is born as
+        /// #2A2A35, and <see cref="AvatarAppearance.ClampToCatalog"/> writes that same default back into an
+        /// empty string, so a pattern-Original row that leaves <c>HairHex</c> unset still arrives here near-black.
+        /// #2A2A30 is the old scalp fallback. An explicit hex (Pegasus, Yugi's streaks, a customizer pick) is kept.
+        /// </summary>
+        static bool HairHexUnset(AvatarAppearance look)
+        {
+            var hex = look.hairHex;
+            if (string.IsNullOrEmpty(hex)) return true;
+            if ((HairPattern)look.hairPattern != HairPattern.Original) return false;
+            return string.Equals(hex, "#2A2A35", System.StringComparison.OrdinalIgnoreCase)
+                || string.Equals(hex, "#2A2A30", System.StringComparison.OrdinalIgnoreCase);
+        }
+
         /// <summary>The body's painted hairline takes the look's hair root colour (seen under hats and at partings).</summary>
         void ApplyScalpColour(AvatarAppearance look)
         {
             if (_smr == null || _fullCharacter) return;
             var map = Resources.Load<Texture2D>("WRLDZ/Avatar3D/Textures/scalp_" + _sex + "_mask");
+            var hex = look.hairHex;
+            // Do not write hairHex. On a pattern-Original style the mesh keeps its painted texture
+            // (_Original skips _HairRoot); only the scalp was stuck on the near-black default.
+            if (HairHexUnset(look))
+            {
+                var style = AvatarCatalog.FindHair(look.hairStyleId);
+                var root = style != null && style.palette != null ? style.palette.root : null;
+                hex = string.IsNullOrEmpty(root) ? "#2A2A30" : root;
+            }
             var c = Color.clear;
-            var on = map != null && ColorUtility.TryParseHtmlString(string.IsNullOrEmpty(look.hairHex) ? "#2A2A30" : look.hairHex, out c);
+            var on = map != null && ColorUtility.TryParseHtmlString(hex, out c);
             foreach (var m in _smr.sharedMaterials)
             {
                 if (m == null || !m.HasProperty(ScalpColorId)) continue;
