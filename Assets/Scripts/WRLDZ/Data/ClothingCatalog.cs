@@ -197,7 +197,11 @@ namespace WRLDZ.Data
             C(ClothingSlot.Bottoms, "pegasus", "dk", 0, "Crimson trousers", "Crimson suit trousers.", 1, null, new Color(0.66f, 0.30f, 0.31f)),
             C(ClothingSlot.Shoes, "pegasus", "dk", 0, "Dress shoes", "Silver dress shoes.", 0, null, new Color(0.72f, 0.74f, 0.77f)),
 
-            C(ClothingSlot.Shirt, "weevil", "bc", 0, "Closed jacket", "Green jacket closed to the neck.", 3, "#45454C", new Color(0.53f, 0.69f, 0.35f)),
+            // Suit "skin", not a hex: Weevil's bottoms are shorts (argon_bottoms_weevil_bc_male.fbx ends at
+            // z=0.603, above the knee) so the shins are bare. The body mask's undersuit region covers the
+            // source figure's trousers too, so a hex here is painted straight onto those bare shins - the
+            // shorts' colour, all down the leg. Skin is also what the other short-bottomed rows use (mako, mai).
+            C(ClothingSlot.Shirt, "weevil", "bc", 0, "Closed jacket", "Green jacket closed to the neck.", 3, "skin", new Color(0.53f, 0.69f, 0.35f)),
             C(ClothingSlot.Bottoms, "weevil", "bc", 0, "Weevil's shorts", "Dark shorts.", 1, null, new Color(0.27f, 0.27f, 0.30f)),
             C(ClothingSlot.Shoes, "weevil", "bc", 0, "Weevil's sneakers", "Dark sneakers.", 0, null, new Color(0.25f, 0.26f, 0.24f)),
             C(ClothingSlot.Facial, "weevil", "bc", 0, "Round glasses", "Round glasses.", 0, null, new Color(0.890f, 0.784f, 0.290f)),

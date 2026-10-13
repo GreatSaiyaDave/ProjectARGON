@@ -538,3 +538,70 @@ tile in the customizer is the path that shows these two assets.
 for a hard 0/255 map but should be linear if a partial value ever matters; `isReadable: 0` is fine there because
 `ApplyOutfit` samples the texture on the GPU instead of compositing it through `CombineHides`.
 
+## 11. "The clothing is clipping all over the skin" — body mask undersuit region covers the bare legs (2026-10-13)
+
+**Report.** Same words as §10, still on a duel opponent's 3D avatar after the §10 outfit-hide fix.
+
+**What is actually painted where (measured, `render_probe.py`, Blender + the shipped body glb, body mask and hides).**
+For every body face the shipped hide maps leave *drawn*, the body mask's `R` (skin) region is painted with
+`look.skinHex` and its `G` (undersuit) region with `Body.1` — set by `OverworldAvatar3d.ApplyPaints` (L1021-1023)
+from `_outfit.suit` else `ClothingCatalog.Get(look.shirtId)?.Suit`, where the `"skin"` sentinel means the skin tone.
+Per look, visible body area by rendered region (% of 1.4227 m²):
+
+| look | drawn | skin (R) | undersuit (G) | where the G colour shows |
+|---|---|---|---|---|
+| `bakura_bc` / `yami_bakura` | 24.2% | 9.6% | 14.5% | head 5.3 (scalp), neck 3.4, chest 4.3, forearm/waist 1.4 |
+| `weevil_bc` | 32.7% | 9.8% | **22.9%** | head 5.3, neck 1.4, forearm 1.2, thigh 0.8, **shin 14.1** |
+| `bonz_dk` | 35.2% | 9.8% | **25.4%** | head 5.3, neck 1.4, forearm 1.2, **thigh 3.4, shin 14.1** |
+| `mako_dk` | 58.9% | 17.6% | 41.3% | head 5.3, neck 6.1, arm/torso 7.4, thigh 6.7, **shin 14.1** |
+| `keith_dk` | 27.3% | 9.5% | 17.8% | head 5.3, neck 4.1, arm/torso 7.9 |
+| `rex_bc` / `mokuba_bc` / `yugi_dk` / `kaiba_dk` | 20.1 / 20.1 / 20.1 / 19.7% | 9.6% | 10.5 / 10.5 / 10.5 / 10.1% | head 5.3, neck 3.4, forearm 1.2 |
+| `pegasus_dk` | 17.5% | 9.6% | 7.9% | head 5.3, neck 1.4, forearm 1.2 |
+
+The `head 5.3%` line is the same in every look: that is the scalp band inside `G`, which the shader takes to the hair
+colour (`_ScalpColor` / `_ScalpMap`), not `Suit`. The `forearm/waist ~1.2-1.4%` line is the waist/front (source
+trousers region, normally covered by the worn bottoms) plus the forearm under a short-sleeve garment.
+
+**The cause is the mask's region, not a stale colour.** `Meshy_<sex>_Body_mask.png` was classified from the source
+figure, and that source wears a **tee, full-length trousers and shoes** — all three are the `G` region. `Suit` is a
+single value on the *shirt* row, so it paints the *whole* `G` region: torso, arms *and* legs. Whenever the worn
+garment leaves `G` exposed, the clothing colour is painted straight onto bare skin. Two bottoms rows make that
+visible on the legs:
+
+| look | worn bottoms | mesh z-extent (measured, Blender) | `shirt.*.Suit` | bare shin render |
+|---|---|---|---|---|
+| `weevil_bc` | "Weevil's shorts" | `argon_bottoms_weevil_bc_male.fbx` **0.603 – 1.218** (ends above the knee) | `#45454C` = **exactly the shorts' fallback colour** | the shorts' dark grey |
+| `bonz_dk` | "Wide shorts" | `argon_bottoms_bonz_dk_male.fbx` **0.600 – 1.218** | `#605A9D` = **exactly the measured shorts colour** | the shorts' violet |
+| `mako_dk` | "Fisherman spats" | `argon_bottoms_mako_dk_male.fbx` **0.679 – 1.218** | `"skin"` | **skin** |
+
+**Control.** `bottoms_mako_dk` is the same short shape (ends at the knee) and Mako's `Suit` is `"skin"` — his bare
+shins render skin. Same mask, same hide path, same mesh length; the only difference is the value in the shirt row.
+So under the design's own convention (a short-bottomed look takes `"skin"` — mako, mai, tea, joey) the rows that
+carry a *bottoms* hex as their `Suit` are the stale values, and the fix is that one field.
+
+**Frame check (`leg_probe.py`, top-colour palette per band; the model cannot view images, so this is pixel
+statistics).** `weevil_e04_1052.png` is a head-and-shoulders close-up (olive-green jacket `#78A03C` at y270-450,
+face at y180-270, background sky `#2864A0`) — the legs are not in the frame, so the design record's "shorts" stands
+per the colour rule. `bonz_e18_1106.png` does show the lower body, and it is **clothed**: `#78788C` (grey-violet) runs
+from y270 to the feet at 14-32% of each band, with skin `#C8A078` no more than 3.1% (hands). So Bonz's canon lower
+half is *long*, and his shipped `bottoms_bonz_dk` (ending at z=0.600) is short of it.
+
+**Fix applied.** `ClothingCatalog.cs`, `shirt_weevil_bc`: `Suit` `"#45454C"` → `"skin"` (commented in place). His
+"Closed jacket" hides the whole torso and both upper arms (the render probe shows 0.0% G-region visible there), so the
+only visible `G` area on him is the shins — the change is exactly those 0.20 m² of bare leg and nothing else.
+
+**Still open (all measured, none fixed).**
+
+* **Bonz** needs a *long* `bottoms_bonz_dk` mesh (`#78788C`-ish): his frame shows clothed legs. Until then his
+  `Suit` (`#605A9D`, the shorts' hex) accidentally approximates a covered leg, so it was left alone — changing it to
+  `"skin"` now would render his legs bare, which the frame contradicts. Once the mesh is long the legs are hidden and
+  the field should become the undersuit value (`"skin"`).
+* **`bottoms_tea_bc`** is `argon_bottoms_tea_bc_female.fbx` z **-0.004 – 1.137** (4831 faces, a full-length
+  legging+boot, it even reaches the sole) while the row reads "Short shorts / Dark shorts". Name and mesh disagree;
+  which is canon was not read from a frame, so nothing was renamed.
+* **The forearm**: under a short-sleeve garment (`bakura_bc`, `joey_bc`) the forearm sits in the source tee's `G`
+  region, so a hex `Suit` paints it (`bakura_bc` `#4F6595` on ~1.4% of body area). The general fix is to move the
+  body's *forearm* (and the *legs*) out of `G` into `R` in the mask, keeping `G` for the torso, which leaves every
+  long-garment look unchanged (hidden) and makes every bare arm/leg skin. It is a mask-island edit whose boundary
+  needs visual confirmation, so it was not attempted blind.
+
