@@ -574,14 +574,18 @@ namespace WRLDZ.Presentation.ArInteraction
             var scale = cardScale * Mathf.Lerp(1f, 0.86f, Mathf.InverseLerp(5f, 10f, total));
             var yawSpan = Mathf.Lerp(8f, 16f, Mathf.InverseLerp(1f, 7f, total));
             var t = total == 1 ? 0.5f : index / (float)(total - 1);
-            var yaw = Mathf.Lerp(yawSpan, -yawSpan, t);
             var spacing = RestCenterSpacing(total, scale, yawSpan);
+            float yaw;
             if (isLeftHand)
             {
-                // Left hand: wrist at index 0 (inner edge), fan opens toward +X (away from body)
-                var x = index * spacing;
+                // Left hand: wrist at index 0 (inner edge), fan opens toward -X (opponent's left, away from body)
+                // Volume faces player: forward=+Z (toward player), right=+X (opponent's right).
+                // Opponent's left = -X. Cards fan toward -X and slightly +Z (toward fingertips/player).
+                var x = -index * spacing;
                 var z = index * RestDepthSpacing(scale, yawSpan);
                 localPos = new Vector3(x, 0f, z);
+                // Yaw: index 0 points forward (0), outer cards fan toward -X (negative yaw)
+                yaw = -yawSpan * t;
             }
             else
             {
@@ -589,8 +593,13 @@ namespace WRLDZ.Presentation.ArInteraction
                 var x = (index - (total - 1) * 0.5f) * spacing;
                 var z = (index - (total - 1) * 0.5f) * RestDepthSpacing(scale, yawSpan);
                 localPos = new Vector3(x, 0f, z);
+                // Centered fan: yaw from +yawSpan to -yawSpan
+                yaw = Mathf.Lerp(yawSpan, -yawSpan, t);
             }
             // Art normal is local +Z. Volume faces torso.forward; flip 180° so art faces the camera.
+            // For opponent (isLeftHand), volume faces player: forward=+Z toward player.
+            // Camera is behind player looking toward opponent = -volume forward.
+            // Card +Z should face camera = -volume forward. +180 yaw achieves this.
             localRot = Quaternion.Euler(-8f, yaw + 180f, 0f);
             localScale = Vector3.one * scale;
         }
