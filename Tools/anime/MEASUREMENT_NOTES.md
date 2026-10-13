@@ -478,3 +478,63 @@ actually discards the covered body texels (12.0% / 15.2% / 12.1%).
 **Not changed:** the masks are imported `sRGBTexture: 1`, but they are 97.6-99.6% hard 0/255 (measured both sexes, all
 four parts), so the sRGB→linear weight error is confined to the thin antialiased edge.
 
+## 10. "The clothing is clipping all over the skin" — the one-mesh outfit hide maps were empty (2026-10-13)
+
+**Report.** "The clothing is clipping all over the skin" after the §9.4 build, on the 3D avatar.
+
+**Localising it (measured, Blender + the same body/garment sources the hide tool uses).** The worn set of the duelist
+whose look was being reworked — `shirt_bakura_bc` / `bottoms_bakura_bc` / `shoes_bakura_bc` on `ArgonBody_male`
+(1.4227 m² of body surface, 10 455 faces) — is **clean**:
+
+| outcome | area | % body |
+|---|---|---|
+| hidden by the shipped union of the three hides | 1.0791 m² | 75.8% |
+| drawn: no garment within the normal ±3 cm (head/neck/hands, legitimately bare) | 0.3113 m² | 21.9% |
+| drawn: garment straight above (hide-map hole) | 0.0322 m² | 2.3% |
+| drawn: body outside the garment (poke-through) | 0.0000 m² | 0.0% |
+
+and 0.0% of each of the three garments is buried inside the body. The 2.3% "map hole" sits at z ≈ 1.44 (chest/collar),
+which is the tool's own documented per-item `EXCLUDE` case (the +normal ray hits the *far* collar wall; the body between
+the collar and the neckline is meant to stay visible). So his set was not the cause.
+
+**The cause: the two one-mesh outfits ship a hide map that hides nothing.**
+
+* `Outfits/Outfit_kaiba_male_hide.png` and `Outfit_yugi_male_hide.png` shipped as **1024 px, all zero**
+  (`coverage 0.0000`, every byte 0), while `build/custom/hide_maps_rebuild_report.json` records `cover 0.3012`
+  (kaiba, 4904 faces) and `0.3144` (yugi, 5080 faces) for those same two jobs — the tool's output never reached the repo,
+  and the 1024 px files are the ones `outfit_build.py` writes through Blender's colour management (the "wrote 76/255"
+  bug in the tool's own header).
+* `ApplyOutfit` still calls `SetBodyHide(outfit_hide)`, so `_HideOn` turns on with a map that discards nothing and the
+  body — skin *and* its own baked base outfit — is drawn straight through the outfit.
+* Geometry, body vs `argon_outfit_yugi_male.fbx`: **28.1% of the body surface (0.3992 m²) lies within 5 mm of the outfit
+  surface** (kaiba 22.7% / 0.3234 m²), 9.2% / 8.6% at 5 mm–1 cm, 26.4% / 25.8% at 1–3 cm, and 7.4% / 5.7% of the outfit
+  surface is buried inside the body. A quarter of the avatar in a ±5 mm shell pair z-fights — dense speckle, which is
+  what "clipping all over the skin" looks like.
+
+**Why it reads as clipping now.** The map was empty before this session too, but the body was one flat skin tone (§9.1),
+so the same interpenetration read as a skin-coloured figure ("naked"). With the real mask bound (§9.4) the identical
+geometry shows the body's own base cloth and skin in patches over the outfit.
+
+**Fix.** Rebuilt both maps in place with the tool's own coverage pass (`rebuild_hide_maps.py`; `GENEROUS` already applies
+to `kind == 'outfit'`, which is why the report's 0.30/0.31 exist): 2048 px, plain 0/255, `coverage 0.3012 / 0.3144` —
+byte-for-byte the report's numbers. The run was restricted to the outfit jobs (`--only` is a substring test that would
+also catch every `*_kaiba*` garment, so a copy with `if kind != 'outfit': continue` was used) and to the male body, so no
+garment map and no shared report entry was touched.
+
+**Acceptance (same probe, map swapped).**
+
+| outfit | body drawn, old map | body drawn, new map | drawn within 5 mm of the outfit, old → new |
+|---|---|---|---|
+| kaiba | 1.4227 m² (100%) | 0.7301 m² (51.3%) | 0.3234 m² (22.7%) → 0.0079 m² (0.6%) |
+| yugi | 1.4227 m² (100%) | 0.6176 m² (43.4%) | 0.3992 m² (28.1%) → 0.0061 m² (0.4%) |
+
+The residual 0.6% / 0.4% is the deliberate half-texel erosion at the map's edges, the same order as the garment sets.
+
+**Who wears a one-mesh outfit.** `CharacterLooks.ApplyTo` clears `outfitId` for every canon duelist (the split pieces are
+the DK/BC sets), and `AiDuelistLooks` only reaches the outfit loop for names with no look row, so in practice the outfit
+tile in the customizer is the path that shows these two assets.
+
+**Still open.** The outfit hides import `sRGBTexture: 1` (the `Clothes/` hides are `sRGBTexture: 0`), which is harmless
+for a hard 0/255 map but should be linear if a partial value ever matters; `isReadable: 0` is fine there because
+`ApplyOutfit` samples the texture on the GPU instead of compositing it through `CombineHides`.
+
