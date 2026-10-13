@@ -101,6 +101,11 @@ namespace WRLDZ.Data
     {
         public static readonly CharacterLook[] All =
         {
+            // Duelist Kingdom first. The DK story (season1_dk) is the live campaign, so the *_dk rows sit
+            // ahead of their Battle City counterparts: Match() keeps the first row on an equal-length match,
+            // so a plain "yugi"/"kaiba" resolves to the DK set while the BC set stays equippable.
+            L("yugi_dk", "Duelist Kingdom Yugi", "yugi", 0, "yugi_muto", "", 153f, 0.40f, "shirt_yugi_dk", "bottoms_yugi_dk", "shoes_yugi_dk", null),
+            L("kaiba_dk", "Duelist Kingdom Kaiba", "kaiba", 0, "seto_kaiba", "seto_kaiba", 186f, 0.35f, "shirt_kaiba_dk", "bottoms_kaiba_dk", "shoes_kaiba_dk", null),
             L("yugi_bc", "Battle City Yugi", "yugi", 0, "yugi_muto", "", 153f, 0.40f, "shirt_yugi_bc", "bottoms_yugi_bc", "shoes_yugi_bc", null),
             L("kaiba_bc", "Battle City Kaiba", "kaiba", 0, "seto_kaiba", "seto_kaiba", 186f, 0.35f, "shirt_kaiba_bc", "bottoms_kaiba_bc", "shoes_kaiba_bc", null),
             L("joey_bc", "Battle City Joey", "joey", 0, "joey_wheeler", "", 178f, 0.50f, "shirt_joey_bc", "bottoms_joey_bc", "shoes_joey_bc", null),
@@ -111,6 +116,7 @@ namespace WRLDZ.Data
             L("pegasus_dk", "Duelist Kingdom Pegasus", "pegasus", 0, "ryou_bakura", "", 190f, 0.45f, "shirt_pegasus_dk", "bottoms_pegasus_dk", "shoes_pegasus_dk", null, hairPattern: 1, hairHex: "#C4BDD0"),
             L("weevil_bc", "Battle City Weevil", "weevil", 0, "seto_kaiba", "", 152f, 0.30f, "shirt_weevil_bc", "bottoms_weevil_bc", "shoes_weevil_bc", null, "face_weevil_bc", hairPattern: 1, hairHex: "#8ABAB7"),
             L("rex_bc", "Battle City Rex", "rex", 0, "jaden_yuki", "", 170f, 0.55f, "shirt_rex_bc", "bottoms_rex_bc", "shoes_rex_bc", null, hat: "hat_rex_bc", hairPattern: 2, hairHex: "#4D3020", hairTip: "#8D7DB3"),
+            L("mako_dk", "Duelist Kingdom Mako", "mako", 0, "jack_atlas", "", 183f, 0.70f, "shirt_mako_bc", "bottoms_mako_dk", "shoes_mako_bc", null, hat: "hat_mako_bc", hairPattern: 4, hairHex: "#3C394C", hairStreak: "#595E8F"),
             L("mako_bc", "Battle City Mako", "mako", 0, "jack_atlas", "", 183f, 0.70f, "shirt_mako_bc", "bottoms_mako_bc", "shoes_mako_bc", null, hat: "hat_mako_bc", hairPattern: 4, hairHex: "#3C394C", hairStreak: "#595E8F"),
             L("keith_dk", "Duelist Kingdom Keith", "keith", 0, "jack_atlas", "", 185f, 0.60f, "shirt_keith_dk", "bottoms_keith_dk", "shoes_keith_dk", "hands_keith_dk", hat: "hat_keith_dk", hairPattern: 1, hairHex: "#B3AF56"),
             L("bonz_dk", "Duelist Kingdom Bonz", "bonz", 0, "marik_ishtar", "", 172f, 0.25f, "shirt_bonz_dk", "bottoms_bonz_dk", "shoes_bonz_dk", null, hat: "hat_bonz_dk", hairPattern: 1, hairHex: "#505E80"),
@@ -119,6 +125,7 @@ namespace WRLDZ.Data
             L("duke_bc", "Battle City Duke", "duke", 0, "joey_wheeler", "", 180f, 0.45f, "shirt_duke_bc", "bottoms_duke_bc", "shoes_duke_bc", null, hairPattern: 1, hairHex: "#333333"),
             L("tristan_bc", "Battle City Tristan", "tristan", 0, "joey_wheeler", "", 180f, 0.60f, "shirt_tristan_bc", "bottoms_tristan_bc", "shoes_tristan_bc", null, hairPattern: 1, hairHex: "#62442D"),
             L("mokuba_bc", "Battle City Mokuba", "mokuba", 0, "ryou_bakura", "", 155f, 0.35f, "shirt_mokuba_bc", "bottoms_mokuba_bc", "shoes_mokuba_bc", null, hairPattern: 4, hairHex: "#1E1E1E", hairStreak: "#4C557E"),
+            L("yami_yugi_dk", "Duelist Kingdom Yami Yugi", "yami yugi", 0, "yugi_muto", "", 158f, 0.38f, "shirt_yami_dk", "bottoms_yami_dk", "shoes_yugi_dk", null),
             // The Domino cape albedo is the black tank and blue blazer. A shirt hex flattened it to navy.
             L("yami_yugi", "Yami Yugi", "yami yugi", 0, "yugi_muto", "", 158f, 0.38f, "shirt_yugi_bc", "bottoms_yugi_bc", "shoes_yugi_bc", null),
             L("yami_bakura", "Yami Bakura", "yami bakura", 0, "ryou_bakura", "", 176f, 0.35f, "shirt_bakura_bc", "bottoms_bakura_bc", "shoes_bakura_bc", null, skin: "#404858"),

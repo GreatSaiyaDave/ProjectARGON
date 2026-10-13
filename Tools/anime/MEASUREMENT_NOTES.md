@@ -220,3 +220,82 @@ the forearm to exactly the hand bone.
 `ProjectARGON/Assets/StreamingAssets/WRLDZ/Avatar/clothes`: 1,399 lines each, **identical** (md5 9a21c32a0c081c4429a8c9dff11171ec both).
 Also unchanged: `argon_avatar_male.glb` (2026-09-29 13:34:57), `argon_avatar_female.glb` (2026-09-29 13:35:11),
 `BattleCityDuelDisk.obj` (2026-10-08 12:05:09). Blender was run `-b --factory-startup` and imported only; nothing was saved.
+
+## 7. Duelist Kingdom outfit albedos — Phase 3 + Phase 4 (avatar session, 2026-10-12)
+
+Owner scope: **every canon DK duelist who dueled Yugi or Joey**. Colour rule: anime-frame measurement > sourced design
+record (`argon-avatar/research/customization/outfit_catalog.json`) > `ClothingCatalog.C()` fallback; where a frame can't be
+read, keep the authored/design value. Frames: `…/evidence/dk_anime/` (1280×704 dub S1 stills), read with `Tools/anime/meas.py`
+(flat filter → HSV window → V 2-means → per-channel median) plus flat-colour grid scans.
+
+**Why the albedo is the lever.** A DK garment is a `ClothingCatalog.C(...)` signature piece (`BodyType = 0`, `albedo = null`,
+`mask = null`). In `OverworldAvatar3d.GraftCloth` that gives `flatPaint = false` and no `_MaskMap`, so no paint key is
+registered and the shader's `col = the BaseMap` (`AvatarRecolor.shader` `Paint()`) — i.e. **the 8×8 albedo swatch IS the
+rendered outfit colour**. Repainting the swatch is exactly right; `C()`'s fallback only feeds the wardrobe/portrait swatch
+(`AvatarPortraitView.cs`) and the `tex == null` branch.
+
+### Own `_dk` albedo swatch (22 files on disk, current values)
+
+| character | slot : hex |
+|---|---|
+| Pegasus | shirt `#BA5858` · bottoms `#A84C4E` · shoes `#B8BCC4` · hands `#D7DBDB` |
+| Bandit Keith | shirt `#30334A` · bottoms `#D8CBA8` · shoes `#3E2321` · hands `#AEAEC0` · hat `#B23A3A` |
+| Bonz | shirt `#8A8B8E` · bottoms `#605A9D` · shoes `#5B8DAF` · hat `#8A8B8E` |
+| Kaiba *(Phase 4)* | shirt `#443D7A` · bottoms `#36515E` · shoes `#333535` |
+| Yugi *(Phase 4)* | shirt `#404D96` · bottoms `#404D96` · shoes `#D7D9D4` |
+| Yami Yugi *(Phase 4)* | shirt `#212275` · bottoms `#212275` |
+| Mako *(Phase 4)* | bottoms `#4E4A4F` |
+
+The Phase-4 values are the **authored** swatches (the art shipped with the meshes) and are the per-slot DK design record;
+the DK frames corroborate them by quantised-cluster match — Kaiba e16:562 + e26:785 give dark navy/teal clusters plus a
+blue-violet bucket that contains `#443D7A`; Yugi e06:733 gives a dark-indigo bucket and a light-grey shoes bucket containing
+`#D7D9D4`. Mako e04:270 is a wide beach shot (blue top + dark values only), so the authored value is kept.
+
+### Shared shells + look hexes (no own albedo)
+
+| character | shells | colour |
+|---|---|---|
+| PaniK | `shirt_duelcoat` / `bottoms_plain` / `shoes_boots` | painted via the `panik_dk` look |
+| Para | `shirt_plain` / `bottoms_plain` / `shoes_plain` | `ShirtHex #96473E` (e20:602 `#97423F` + e21:614 `#944C3C`), `ShirtTrimHex #E3B64C` |
+| Dox | ″ | `ShirtHex #576EAF` (e20:623 `#546BAF`, 141k px + e21:248 `#5A71B0`, 101k px), same trim |
+
+Para/Dox are floor-length robes in the frames (no separated legs) and split red=Para / blue=Dox per the independent
+`AiDuelistLooks` assignment. The gold collar/cuff/hem trim is not isolable in any frame, so the design value is kept.
+`CharacterLook.ShirtTrimHex` was added because `ApplyTo` used to set all three shirt channels to `ShirtHex`, flattening the
+trim that `AiDuelistLooks` sets on `Shirt.1`.
+
+### Phase-4 wiring (the four orphans)
+
+The `kaiba_dk` / `yugi_dk` / `yami_yugi_dk` / `mako_dk` meshes + albedos shipped with **no `C()` row**, so `GraftCloth`
+(`Clothes/argon_<item.Id>_<sex>.fbx` + `albedo_<Id>`) could never load them. Rows added to `ClothingCatalog`
+(`shirt/bottoms/shoes_kaiba_dk`, `…_yugi_dk`, `shirt/bottoms_yami_dk`, `bottoms_mako_dk`) and look rows added to
+`CharacterLooks.All` **ahead of** the Battle City rows, so `Match()` (the first row wins an equal-length match) resolves a
+plain `yugi` / `kaiba` / `mako` to the DK set while the BC set stays equippable in the customizer. Replaying `Match()` over
+the table: `Yugi Muto → yugi_dk`, `Yami Yugi → yami_yugi_dk`, `Seto Kaiba → kaiba_dk`, `Mako Tsunami → mako_dk`.
+
+`yami_dk` is **Yami Yugi's** uniform, not Yami Bakura's: `hide_shirt_yami_dk_male.png` and `hide_bottoms_yami_dk_male.png` are
+**byte-identical** (same md5) to Yugi's, while every other garment's mask differs (Yugi dk vs bc = 28,212 differing bytes;
+Pegasus vs Yugi = 35,199) — identical body coverage means the same garment re-coloured, not a different outfit.
+
+### Gap — DK duelists with no `_dk` garment mesh
+
+`GraftCloth` resolves the mesh as `Clothes/argon_<item.Id>_<sex>` with no override, and the `_dk` meshes are distinct authored
+FBXes (Meshy; no mesh-build tooling in the repo). These DK duelists therefore cannot be repainted as signature pieces and still
+render on their Battle City (`*_bc`) garments:
+
+| duelist | DK story stage | reason |
+|---|---|---|
+| Weevil Underwood | `season1_dk` stage 1 | no `argon_*_weevil_dk_male.fbx` |
+| Rex Raptor | stage 2 | no `…_rex_dk…` |
+| Mai Valentine | stage 4 | no `…_mai_dk…` |
+| Joey Wheeler | stage 5 | no `…_joey_dk…` |
+| Yami Bakura | stage 9 | no `…_bakura_dk…` (the `yami_dk` art is Yami Yugi's — above) |
+| Téa Gardner | — | no `…_tea_dk…` |
+| Mokuba | — | no `…_mokuba_dk…` |
+
+(Tristan also has no `_dk` mesh but is not a DK-roster opponent.) Closing the gap needs those garment sets authored
+externally; once an `argon_<slot>_<name>_dk_male.fbx` + `albedo_<slot>_<name>_dk.png` (8×8 swatch) + `hide_…` exist per slot,
+the same `C()` + look-row pattern wires them with no further code.
+
+Audit after the change: `Tools/anime/audit.py` reports the new looks with unchanged hair verdicts — `yugi_dk` / `kaiba_dk` /
+`mako_dk` `exact`, and `yami_yugi_dk` `close` (the pre-existing Yami-Yugi hair gap, now reported on both Yami rows).

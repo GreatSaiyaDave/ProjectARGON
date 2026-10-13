@@ -223,6 +223,21 @@ namespace WRLDZ.Data
             C(ClothingSlot.Shoes, "bonz", "dk", 0, "Bonz's sneakers", "Blue sneakers.", 0, null, new Color(0.36f, 0.55f, 0.69f)),
             C(ClothingSlot.Hat, "bonz", "dk", 0, "Tunic hood", "Hood up.", 0, null, new Color(0.54f, 0.55f, 0.56f)),
 
+            // Duelist Kingdom protagonists' set — the meshes + albedos shipped but had no catalogue row,
+            // so GraftCloth could not load them. Fallbacks match the authored albedo swatches.
+            C(ClothingSlot.Shirt, "kaiba", "dk", 0, "Blue-violet tunic", "Blue-violet Duelist Kingdom top over a black high-neck shirt.", 4, "#26272B", new Color(0.267f, 0.239f, 0.478f)),
+            C(ClothingSlot.Bottoms, "kaiba", "dk", 0, "Teal trousers", "Teal Duelist Kingdom trousers.", 1, null, new Color(0.212f, 0.318f, 0.369f)),
+            C(ClothingSlot.Shoes, "kaiba", "dk", 0, "Kaiba's boots", "Black Duelist Kingdom boots.", 0, null, new Color(0.200f, 0.208f, 0.208f)),
+
+            C(ClothingSlot.Shirt, "yugi", "dk", 0, "School blazer", "Domino High blazer over the black tank.", 4, "#1F1E2A", new Color(0.251f, 0.302f, 0.588f)),
+            C(ClothingSlot.Bottoms, "yugi", "dk", 0, "School trousers", "Domino High trousers.", 1, null, new Color(0.251f, 0.302f, 0.588f)),
+            C(ClothingSlot.Shoes, "yugi", "dk", 0, "School shoes", "Pale Domino High shoes.", 0, null, new Color(0.843f, 0.851f, 0.831f)),
+
+            C(ClothingSlot.Shirt, "yami", "dk", 0, "Dark school blazer", "Domino High blazer in Yami shading.", 4, "#1F1E2A", new Color(0.129f, 0.133f, 0.459f)),
+            C(ClothingSlot.Bottoms, "yami", "dk", 0, "Dark school trousers", "Domino High trousers in Yami shading.", 1, null, new Color(0.129f, 0.133f, 0.459f)),
+
+            C(ClothingSlot.Bottoms, "mako", "dk", 0, "Fisherman spats", "Dark spats under the wrap top.", 1, null, new Color(0.306f, 0.290f, 0.310f)),
+
             C(ClothingSlot.Shirt, "ishizu", "bc", 1, "White dress", "Sleeveless Battle City dress.", 2, "skin", new Color(0.92f, 0.90f, 0.83f)),
             C(ClothingSlot.Bottoms, "ishizu", "bc", 1, "Dress skirt", "Long pale skirt.", 1, null, new Color(0.89f, 0.88f, 0.80f)),
             C(ClothingSlot.Shoes, "ishizu", "bc", 1, "Ishizu's sandals", "Gold sandals.", 0, null, new Color(0.77f, 0.64f, 0.37f)),
