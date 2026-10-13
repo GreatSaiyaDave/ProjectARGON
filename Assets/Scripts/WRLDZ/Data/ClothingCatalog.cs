@@ -185,7 +185,13 @@ namespace WRLDZ.Data
             C(ClothingSlot.Bottoms, "tea", "bc", 1, "Short shorts", "Dark shorts.", 1, null, new Color(0.31f, 0.37f, 0.45f)),
             C(ClothingSlot.Shoes, "tea", "bc", 1, "Platform sandals", "Grey-blue platform sandals.", 0, null, new Color(0.267f, 0.443f, 0.553f)),
 
-            C(ClothingSlot.Shirt, "bakura", "bc", 0, "Open overshirt", "Short-sleeve blue overshirt.", 2, "#4F6595", new Color(0.54f, 0.75f, 0.82f)),
+            // Bakura's undersuit was a dark blue-grey #4F6595 while the coat itself is pale (#8ABED0 from
+            // its albedo, and this row's own fallback is #8ABFD1). His canon outfit is pale throughout: his
+            // frame measures #BAB4C6 hair, #B4B4A8 torso and #B3ADC2 trousers, and #4F6595 appears in none of
+            // it, so the dark band across his exposed neck, chest and scalp read as a foreign garment. The
+            // mesh is also a long coat (grafts to z 0.904..1.496, covering the thighs, sleeves and neck),
+            // not the short-sleeve overshirt the row described - hence the rename.
+            C(ClothingSlot.Shirt, "bakura", "bc", 0, "Bakura's long coat", "Long pale coat over a pale undersuit.", 2, "#8ABED0", new Color(0.54f, 0.75f, 0.82f)),
             C(ClothingSlot.Bottoms, "bakura", "bc", 0, "Bakura's jeans", "Pale lavender jeans.", 1, null, new Color(0.702f, 0.678f, 0.761f)),
             C(ClothingSlot.Shoes, "bakura", "bc", 0, "Bakura's white sneakers", "White sneakers.", 0, null, new Color(0.93f, 0.93f, 0.95f)),
 

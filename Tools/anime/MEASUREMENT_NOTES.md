@@ -744,3 +744,51 @@ still the §12 undersuit region — clothing colour painted on the neck and scal
 `neck 1.4-6.1%`) — with `render_probe.py` (23 Oct) per-look totals: Keith 17.8% of body area in clothing colour,
 Bakura 14.5%, Weevil / Bonz / Pegasus / Tristan 7.9% after the §11 fixes.
 
+
+---
+
+## 14. Yami Bakura: the dark undersuit band over an all-pale outfit (2026-10-13)
+
+Owner narrowed the report to Yami Bakura. His look row builds him from the base body (no `Characters/`
+model ships, so `AttachWorld`'s `characterId` path falls through with a warning):
+
+| field | value |
+|---|---|
+| slot set | `shirt_bakura_bc` + `bottoms_bakura_bc` + `shoes_bakura_bc` (shared with `bakura_bc`) |
+| hair / face | `ryou_bakura` (his own mesh does not ship; Ryou's is borrowed) / `yami_bakura` + `_mouth` |
+| skin | `#CFAC8D` |
+| hat / facial / hands | none, so `ApplyTo` substitutes `DefaultHat` `hat_none` and `DefaultHands` `hands_none`, both empty shells with **no FBX** — nothing extraneous is grafted |
+
+**Measurement 1 — what the coat actually is.** Grafting onto the base rig
+(`v_graft = Σ w · W_host · inv(W_piece)`), `argon_shirt_bakura_bc_male.fbx` lands at **z 0.904 – 1.496**:
+852 verts in the arm/torso band, 335 in the forearm band, **627 in the neck band**. That is a long,
+long-sleeved coat reaching mid-thigh and closing at the throat — while the row read "*Short-sleeve* blue
+overshirt".
+
+**Measurement 2 — the colour that was painting him.** `albedo_shirt_bakura_bc.png` is flat **`#8ABED0`**
+(a pale blue) and the row's own fallback is `(0.54, 0.75, 0.82)` = `#8ABFD1`, so the row said the coat was
+pale twice. But `Suit` — the colour the body's undersuit region takes wherever the coat leaves him
+exposed — was **`#4F6595`**, a dark blue-grey: the same row contradicted itself, and exposed skin rendered
+dark.
+
+**Measurement 3 — his own frame says pale everywhere.** `bakura_e16_276.png` (he is the left figure of the
+two-shot, x 330-655): hair `#BAB4C6`, torso a pale garment `#B4B4A8` (41% of the band at y455), neck **bare
+skin** (13.1% at y355, 0.0% at y380-505), lower body a pale garment to the feet. `#4F6595` appears in none
+of it — his palette is `#BAB4C6` / `#B4B4A8` / `#B3ADC2` (his trousers, already correct).
+
+The dark band was therefore smeared across the neck, chest, sleeve edges and scalp of an outfit that is pale
+from head to foot: a foreign garment-coloured patch on all-pale clothes — the "bits of clothing all over the
+model" — reaching the jaw (face unreadable) and into the hairline (hair reads as misplaced).
+
+**Fix.** `shirt_bakura_bc` `Suit` `#4F6595` → **`#8ABED0`**, the coat's own rendered colour, and the row is
+renamed from "Open overshirt / Short-sleeve blue overshirt." to "**Bakura's long coat / Long pale coat over a
+pale undersuit.**" so name, blurb, fallback, albedo and `Suit` finally agree. `Id` is built from
+`SlotPrefix + character + arc`, so a rename cannot break item resolution, and both look rows that use the
+piece (`bakura_bc`, `yami_bakura`) pick it up. No geometry, mask, albedo or hide was touched, so the change
+is a colour constant on the body's undersuit region only.
+
+**Known and deliberately left alone.** `ApplyScalpColour` falls back to a hard-coded `#2A2A30` for the
+body's painted hairline when a look sets no `hairHex` (most rows set `hairPattern: 0`, "the style's own canon
+colours"), so pale-haired looks get a dark scalp line under the hair. Setting `hairHex` on a pattern-0 row is
+unprecedented and the shader's `_Original` path may then override the style's own texture colours, so it was
+not changed blind — a pale-haired look would need its hairline measured against a rendered frame first.
