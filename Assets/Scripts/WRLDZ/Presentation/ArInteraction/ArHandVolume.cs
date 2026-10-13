@@ -113,10 +113,15 @@ namespace WRLDZ.Presentation.ArInteraction
             hv.VolumeRoot = new GameObject("Cards").transform;
             hv.VolumeRoot.SetParent(go.transform, false);
             // No volume guide cube — it read as a messy cyan box in the AR stage
-            try { hv.FloatingHand = ArFloatingHand.Attach(hv); }
-            catch (System.Exception ex)
+            // Opponent hand volumes use the free-floating fan (no FloatingHand).
+            // Their right hand physically reaches to the disk via ArOpponentDuelist.ReachDisk/SolveReach.
+            if (!opponent)
             {
-                Debug.LogWarning("[WRLDZ AR] Floating hand skipped: " + ex.Message);
+                try { hv.FloatingHand = ArFloatingHand.Attach(hv); }
+                catch (System.Exception ex)
+                {
+                    Debug.LogWarning("[WRLDZ AR] Floating hand skipped: " + ex.Message);
+                }
             }
 
             return hv;
@@ -277,8 +282,7 @@ namespace WRLDZ.Presentation.ArInteraction
             }
 
             // the AI waits for its own drawing hand too, so the engine never runs ahead of the gesture
-            if (arrivedThisSync > 0 && (!IsOpponent || HandLive))
-                DuelPresentationPacer.HoldDraw(arrivedThisSync);
+            if (arrivedThisSync > 0) DuelPresentationPacer.HoldDraw(arrivedThisSync);
         }
 
         /// <summary>
@@ -288,7 +292,7 @@ namespace WRLDZ.Presentation.ArInteraction
         /// </summary>
         bool TryQueueGeneratedPlace(DuelistState who, ArFloatingCard fc)
         {
-            if (!IsOpponent || !HandLive || !Application.isPlaying || SourceDeck == null || who == null) return false;
+            if (!IsOpponent || !Application.isPlaying || SourceDeck == null || who == null) return false;
             if (!gameObject.activeInHierarchy) return false;
             var card = fc != null ? fc.Card : null;
             if (card == null) return false;
@@ -360,7 +364,12 @@ namespace WRLDZ.Presentation.ArInteraction
 
             if (hand == null || !hand.IsLive)
             {
-                AbandonPlace();
+                // Opponent without floating hand: animate card to zone directly
+                if (!_animatingPlace)
+                {
+                    _animatingPlace = true;
+                    StartCoroutine(AnimatePlaceToZone(fc, zone, orient, reveal));
+                }
                 return;
             }
 
@@ -393,6 +402,57 @@ namespace WRLDZ.Presentation.ArInteraction
                 });
             if (started) _places.Dequeue();
             else AbandonPlace();
+        }
+
+        bool _animatingPlace;
+
+        IEnumerator AnimatePlaceToZone(ArFloatingCard fc, ArDiskZone zone, ArZoneOrientation orient, bool reveal)
+        {
+            if (fc == null) { _animatingPlace = false; yield break; }
+
+            // Disable spring physics during animation
+            fc.IsDragging = true;
+            fc.HeldByHand = false;
+
+            Vector3 startPos = fc.transform.position;
+            Quaternion startRot = fc.transform.rotation;
+            Vector3 targetPos = zone != null ? zone.transform.position : transform.position;
+            Quaternion targetRot = zone != null ? zone.transform.rotation : Quaternion.identity;
+
+            // For reveal, show card face-up at the zone
+            if (reveal && fc.Card != null)
+                fc.RefreshArtFace(showFace: true);
+
+            float duration = GeneratedPlaceSeconds;
+            float elapsed = 0f;
+
+            while (elapsed < duration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                float t = Mathf.Clamp01(elapsed / duration);
+                // Smoothstep for natural motion
+                t = t * t * (3f - 2f * t);
+
+                fc.transform.position = Vector3.Lerp(startPos, targetPos, t);
+                fc.transform.rotation = Quaternion.Slerp(startRot, targetRot, t);
+
+                yield return null;
+            }
+
+            // Snap to final position
+            fc.transform.position = targetPos;
+            fc.transform.rotation = targetRot;
+
+            if (zone != null)
+            {
+                zone.IncomingGestureUntil = 0f;
+                zone.SnapLock(fc, orient);
+            }
+
+            if (fc.Card != null) _revealing.Remove(fc.Card.InstanceId);
+            _places.Dequeue();
+            GestureLanded?.Invoke();
+            _animatingPlace = false;
         }
 
         /// <summary>The hand cannot carry it (hidden, busy for good): the card is shown on its zone at once.</summary>
