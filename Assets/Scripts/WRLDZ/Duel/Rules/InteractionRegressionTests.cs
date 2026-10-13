@@ -6519,11 +6519,14 @@ namespace WRLDZ.Duel.Rules
                 const int darkMimic3 = 1102515;
                 var dm3Def = db.Get(darkMimic3);
                 var dm3Prog = dm3Def != null ? CardTextEffectCompiler.Compile(dm3Def) : null;
-                Check("Dark Mimic LV3 battle-GY draw 1 compiles; LV1 rider leftover",
-                    dm3Prog != null && !dm3Prog.FullyCompiled &&
+                Check("Dark Mimic LV3 battle-GY draw 1, or 2 when \"Dark Mimic LV1\" Summoned it",
+                    dm3Prog != null && dm3Prog.FullyCompiled &&
                     dm3Prog.ClauseList.Exists(c =>
                         c != null && c.RequiresThisDestroyedByBattle &&
-                        c.Action == EffectActionKind.Draw && c.Amount == 1),
+                        c.Action == EffectActionKind.DrawAmountWhenSpecialSummonedByNamed &&
+                        c.Amount == 1 && c.AmountIfSpecialSummonedByNamed == 2 &&
+                        string.Equals(c.SpecialSummonedByNamedCard, "Dark Mimic LV1",
+                            System.StringComparison.OrdinalIgnoreCase)),
                     dm3Prog == null
                         ? "null"
                         : $"full={dm3Prog.FullyCompiled} n={dm3Prog.ClauseList.Count} " +

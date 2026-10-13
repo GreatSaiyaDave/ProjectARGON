@@ -53,10 +53,11 @@ namespace WRLDZ.Duel.TextEffects
                     MakesChainLink = false
                 }),
             // Blindly Loyal Goblin ("As long as this card remains face-up on the field, control of this card cannot
-            // switch") and Mataza the Zapper ("Control of this face-up card on the field cannot switch").
+            // switch") and Mataza the Zapper / Horus the Black Flame Dragon LV4 ("Control of this face-up card [on
+            // the field] cannot switch" — the "on the field" phrase is optional; Horus prints the short form).
             new AtomRegistration.Atom(
                 Start + @"(?:As long as this card remains face-up on the field, control of this card|" +
-                @"Control of this face-up card on the field) cannot switch" + End,
+                @"Control of this face-up card(?: on the field)?) cannot switch" + End,
                 m => new EffectClause
                 {
                     Timing = EffectTiming.ContinuousWhileFaceUp,

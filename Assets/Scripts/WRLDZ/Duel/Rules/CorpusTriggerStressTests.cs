@@ -249,11 +249,13 @@ namespace WRLDZ.Duel.Rules
                    c.ActivationCondition == NegationsAndGySummonsRuntime.ChosenOneHand ||
                    // DcrSpellTrapUtility batch: Frozen Soul's LP gap, Dragged Down into the Grave's two hands, Spell
                    // Reproduction's 2 Spells in hand, Ray of Hope's 2 LIGHT monsters in your GY
-                   // (DcrSpellTrapUtilityRegressionTests drive them).
+                   // (DcrSpellTrapUtilityRegressionTests drive them). LvChain batch: The Graveyard in the Fourth
+                   // Dimension's 2 "LV" monsters in your GY (LvChainRegressionTests drives it).
                    c.ActivationCondition == DcrSpellTrapUtilityRuntime.YourLpAtLeastLowerThanOpponent ||
                    c.ActivationCondition == DcrSpellTrapUtilityRuntime.BothHandsHaveACard ||
                    DcrSpellTrapUtilityRuntime.IsSpellSendCost(c) ||
-                   (c.Action == EffectActionKind.ReturnChosenToDeckShuffle && !string.IsNullOrEmpty(c.AttributeFilter)) ||
+                   (c.Action == EffectActionKind.ReturnChosenToDeckShuffle &&
+                    (!string.IsNullOrEmpty(c.AttributeFilter) || !string.IsNullOrEmpty(c.TargetSeriesName))) ||
                    // Pyro Clock of Destiny (PhaseTimersAndDeckTop v163): needs a running turn count (Swords of Revealing
                    // Light …); PhaseTimersAndDeckTopRegressionTests drive it.
                    c.ActivationCondition == PhaseTimersAndDeckTopRuntime.TurnCountExists ||

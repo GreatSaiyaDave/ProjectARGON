@@ -139,6 +139,7 @@ namespace WRLDZ.Duel.Rules
             IgnitionCostsAndSimpleSpellsRegressionTests.Run(db, pDeck, aDeck, check);
             AttackShieldsAndDamageZeroRegressionTests.Run(db, pDeck, aDeck, check);
             SanctuaryAndZeraRegressionTests.Run(db, pDeck, aDeck, check);
+            LvChainRegressionTests.Run(db, pDeck, aDeck, check);
         }
     }
 }

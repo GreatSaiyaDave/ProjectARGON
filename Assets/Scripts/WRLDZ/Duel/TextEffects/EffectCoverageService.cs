@@ -595,6 +595,12 @@ namespace WRLDZ.Duel.TextEffects
                 foreach (var action in need)
                 {
                     var hit = prog != null && prog.ClauseList.Exists(c => c != null && c.Action == action);
+                    // LvChain batch: Dark Mimic LV3's "Draw 1 card, but ... draw 2 instead" is the battle-GY draw
+                    // shape carrying its conditional rider, so it compiles to DrawAmountWhenSpecialSummonedByNamed
+                    // rather than a bare Draw — which is still the Draw the shape promises.
+                    if (!hit && action == EffectActionKind.Draw && prog != null)
+                        hit = prog.ClauseList.Exists(c => c != null &&
+                            c.Action == EffectActionKind.DrawAmountWhenSpecialSummonedByNamed);
                     if (!hit)
                         gaps.Add($"{def.id} «{def.name}» missing {action}");
                 }

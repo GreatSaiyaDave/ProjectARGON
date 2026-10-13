@@ -6760,6 +6760,11 @@ namespace WRLDZ.Duel.TextEffects
                     GyHandAndSummonEventTriggersRuntime.DiscardHandThenAdd(engine, who, source, clause);
                     break;
 
+                // LvChain: Dark Mimic LV3 — draw 1, or 2 when this card was Special Summoned by "Dark Mimic LV1".
+                case EffectActionKind.DrawAmountWhenSpecialSummonedByNamed:
+                    LvChainRuntime.ResolveDraw(engine, who, source, clause);
+                    break;
+
                 case EffectActionKind.Destroy:
                     s_lastDestroyHits = 0;
                     if (clause.Zone == EffectZoneFilter.FaceUpNamedSpellTraps)
@@ -9073,13 +9078,20 @@ namespace WRLDZ.Duel.TextEffects
                 }
 
                 case EffectActionKind.SpecialSummonNamed:
+                {
                     // Magical Labyrinth: only after its cost (Tribute the equipped monster) was paid by
                     // TryResolveActivation — never as a rider of the Equip activation's other clause.
                     if (clause.RequiresTributeEquippedMonster &&
                         !TributeSummonsRuntime.TributeEquippedCostPaid(source))
                         break;
+                    // LvChain batch: the copy of the named monster this summon actually placed carries a
+                    // "Special Summoned by the effect of" record, so a later clause of that card can read it
+                    // (Dark Mimic LV3 draws 2 when "Dark Mimic LV1" Summoned it).
+                    var lvBefore = LvChainRuntime.SnapshotNamed(who, clause);
                     TrySpecialSummonNamed(engine, who, clause, source);
+                    LvChainRuntime.NoteSpecialSummoned(who, clause, source, lvBefore);
                     break;
+                }
 
                 case EffectActionKind.TributeTargetAsIfControlledThisTurn:
                     TributeSummonsRuntime.ResolveTributeTargetAsIfControlled(engine, who, source, clause,
@@ -11200,6 +11212,9 @@ namespace WRLDZ.Duel.TextEffects
                         if (GyHandAndSummonEventTriggersRuntime.TryActivationCondition(engine, who, card, c, out ok,
                                 out reason))
                             break;
+                        // LvChain batch: the LV progression clause's "not the turn this card was summoned" rider.
+                        if (LvChainRuntime.TryActivationCondition(engine, who, card, c, out ok, out reason))
+                            break;
                         // PgdSpellTrapBasics batch (v162): D. Tribe / Pyramid Energy, Curse of Aging, Needle Ceiling.
                         if (PgdSpellTrapBasicsRuntime.TryActivationCondition(engine, who, c, out ok, out reason))
                             break;
@@ -12179,6 +12194,13 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
                     if (eachEndPhase && !NamedSummonPairsRuntime.BattledThisTurn(engine, card))
                         continue;
                     if (!spiritReturn && c.RequiresSummonedOrFlippedThisTurn && !card.SummonedThisTurn)
+                        continue;
+                    // LvChain batch: an activation-condition rider ("You cannot activate this effect the
+                    // turn this card was Normal Summoned, Special Summoned, or flipped face-up.") gates the
+                    // phase trigger just as it gates any other activation (ActivationConditionsMet, the same
+                    // list the ignition path uses — e.g. LvChain.NotTurnSummoned for Ultimate Insect LV1).
+                    if (!string.IsNullOrEmpty(c.ActivationCondition) &&
+                        !ActivationConditionsMet(engine, who, card, prog, out _))
                         continue;
                     if (c.RequiresSendThisToGy &&
                         (who.TryFindMonster(card, out _) || who.TryFindSpellTrap(card, out _)))

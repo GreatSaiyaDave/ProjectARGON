@@ -416,6 +416,8 @@ namespace WRLDZ.Duel.TextEffects
                     EffectActionKind.BanishAllGyMonstersWhenOpponentTargetsGyMonster => EffectResolutionKind.Banish,
                 // GyHandAndSummonEventTriggers batch: Emissary of the Afterlife (each player adds from their own Deck),
                 // "7" (draw, then destroy every face-up copy) and Beckoning Light (discard the hand, then add).
+                // LvChain batch: Dark Mimic LV3's conditional draw (1, or 2 when "Dark Mimic LV1" Summoned it).
+                EffectActionKind.DrawAmountWhenSpecialSummonedByNamed => EffectResolutionKind.Draw,
                 EffectActionKind.EachPlayerAddsLevelOrLowerNormalMonsterFromOwnDeck => EffectResolutionKind.Draw,
                 EffectActionKind.DrawThenDestroyAllFaceUpNamedWhenCountFaceUpNamed => EffectResolutionKind.Draw,
                 EffectActionKind.DiscardHandThenAddAttributeMonstersFromGyPerDiscard => EffectResolutionKind.Discard,

@@ -3324,6 +3324,14 @@ namespace WRLDZ.Duel.TextEffects
         /// (<see cref="SanctuaryAndZeraRuntime.ResolveSendOrDiscard"/>).
         /// </summary>
         SendOppFieldCardToGyOrDiscardFromOppHand,
+        /// <summary>
+        /// LvChain batch — Dark Mimic LV3 (c1102515 s.activate/TRIGGER_F): destroyed by battle and sent to the GY,
+        /// draw <see cref="EffectClause.Amount"/> cards — or
+        /// <see cref="EffectClause.AmountIfSpecialSummonedByNamed"/> when this card was Special Summoned by the
+        /// effect of <see cref="EffectClause.SpecialSummonedByNamedCard"/> (Dark Mimic LV1). Read at resolution
+        /// through <see cref="LvChainRuntime.ResolveDraw"/>.
+        /// </summary>
+        DrawAmountWhenSpecialSummonedByNamed,
     }
 
 
@@ -3790,6 +3798,14 @@ namespace WRLDZ.Duel.TextEffects
         public int ExtraAmountPerCopyInGy;
         /// <summary>Phase trigger only if this card destroyed a monster by battle this turn.</summary>
         public bool RequiresDestroyedByBattleThisTurn;
+        /// <summary>
+        /// LvChain batch — <see cref="DrawAmountWhenSpecialSummonedByNamed"/>: the draw count when this card was
+        /// Special Summoned by the effect of <see cref="SpecialSummonedByNamedCard"/> (Dark Mimic LV3: 1, or 2
+        /// when it was Special Summoned by "Dark Mimic LV1").
+        /// </summary>
+        public int AmountIfSpecialSummonedByNamed;
+        /// <summary>LvChain batch — the card whose effect may have Special Summoned this one (Dark Mimic LV1).</summary>
+        public string SpecialSummonedByNamedCard;
         /// <summary>Phase trigger only if this copy is in the GY (Darklord Marie).</summary>
         public bool ResolvesFromGy;
         /// <summary>Cure Mermaid family: this copy must be face-up Attack Position.</summary>
