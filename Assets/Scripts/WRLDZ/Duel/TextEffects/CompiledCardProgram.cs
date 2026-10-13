@@ -3332,6 +3332,14 @@ namespace WRLDZ.Duel.TextEffects
         /// through <see cref="LvChainRuntime.ResolveDraw"/>.
         /// </summary>
         DrawAmountWhenSpecialSummonedByNamed,
+        /// <summary>
+        /// FusionSubstitutes batch (v180, coverage family F2) — Mystical Sheep #1, Versago the Destroyer, Goddess with
+        /// the Third Eye, Beastking of the Swamps, The Light / Dark / Earth - Hex-Sealed Fusion: "You can substitute
+        /// this card for any 1 Fusion Material Monster." A static (CONTINUOUS) ability on the monster itself. Read by
+        /// <see cref="FusionSubstitutesRuntime.IsFusionSubstitute"/> from the fusion material search in
+        /// SpellTrapEffects.TryCollectMaterials, which may satisfy at most one named material with such a card.
+        /// </summary>
+        FusionSubstitute,
     }
 
 

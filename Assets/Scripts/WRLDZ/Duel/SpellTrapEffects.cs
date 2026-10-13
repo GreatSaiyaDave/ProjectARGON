@@ -3162,6 +3162,10 @@ case EffectTargetKind.DeclareMonsterType:
             var pool = new List<CardInstance>();
             pool.AddRange(who.Hand);
             pool.AddRange(who.MonstersOnField());
+            // FusionSubstitutes batch (v180, coverage family F2): at most one named material may be satisfied by a card
+            // whose text is "You can substitute this card for any 1 Fusion Material Monster." (Mystical Sheep #1 etc.);
+            // every other material must be the correct printed one.
+            var substituteUsed = false;
             foreach (var need in requiredNames)
             {
                 CardInstance pick = null;
@@ -3173,6 +3177,19 @@ case EffectTargetKind.DeclareMonsterType:
                         continue;
                     pick = c;
                     break;
+                }
+
+                if (pick == null && !substituteUsed)
+                {
+                    foreach (var c in pool)
+                    {
+                        if (c?.Def == null || collected.Contains(c)) continue;
+                        if (!TextEffects.FusionSubstitutesRuntime.IsFusionSubstitute(c)) continue;
+                        pick = c;
+                        break;
+                    }
+
+                    if (pick != null) substituteUsed = true;
                 }
 
                 if (pick == null)

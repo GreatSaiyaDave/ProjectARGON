@@ -409,6 +409,8 @@ namespace WRLDZ.Duel.TextEffects
                 EffectActionKind.ContinuousNegateMonsterEffectsOnField or
                     EffectActionKind.ControlOfThisCannotSwitch or
                     EffectActionKind.NonEffectMonstersUnaffectedByOtherSpells => EffectResolutionKind.Protection,
+                // FusionSubstitutes batch (v180, coverage family F2): the substitute ability is a passive continuous rule.
+                EffectActionKind.FusionSubstitute => EffectResolutionKind.Protection,
                 // SpellEventsAndHandSendTriggers batch: Curse of Darkness, Tower of Babel, Spirit of the Pot of Greed.
                 EffectActionKind.InflictDamageToSpellActivatorAfterResolve => EffectResolutionKind.Damage,
                 EffectActionKind.DestroyThisAtNthSpellCounterDamageActivator => EffectResolutionKind.Destroy,
