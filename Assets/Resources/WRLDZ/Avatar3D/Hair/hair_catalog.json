@@ -339,6 +339,23 @@
     "streak": "#FF4798",
     "side": "#3B1F5E"
    }
+  },
+  {
+   "id": "pegasus_mane",
+   "name": "Pegasus Mane",
+   "inspiredBy": "Maximillion Pegasus",
+   "series": "Duel Monsters",
+   "sex": "male",
+   "length": "long",
+   "palette": {
+    "name": "Pegasus Mane",
+    "pattern": "solid",
+    "root": "#C4BDD0",
+    "tip": "#C4BDD0",
+    "fringe": "#C4BDD0",
+    "streak": "#C4BDD0",
+    "side": "#C4BDD0"
+   }
   }
  ],
  "palettes": [

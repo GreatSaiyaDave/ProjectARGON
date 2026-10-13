@@ -9,9 +9,10 @@ namespace WRLDZ.Data
     /// with the measured robe colour (Para red, Dox blue — DK anime frames) plus the robe's gold trim. Yami Yugi wears Yugi's Domino cape (the black tank and blazer),
     /// not a flat navy wash. Yami Bakura reuses Ryou's clothes (the design record: both personalities wear the
     /// same clothes) but draws his own face decal and a DK-frame-measured skin — not the old near-black blue.
-    /// Borrowed hair meshes, until those heads exist: Weevil and Odion use Kaiba; Rex uses Jaden;
-    /// Mako and Keith use Jack; Bonz uses Marik; Pegasus uses Ryou, tinted silver; Ishizu uses Mai;
-    /// Duke and Tristan use Joey; Mokuba uses Yugi. PaniK wears Odion's hood so that borrowed hair is hidden.
+    /// Borrowed hair meshes, until those heads exist: Odion and PaniK use Kaiba; Rex uses Jaden;
+    /// Mako and Keith use Jack; Bonz uses Marik; Ishizu uses Mai; Duke uses Joey.
+    /// Weevil, Tristan, Mokuba, and Pegasus wear their own meshes
+    /// (weevil_bowl, tristan_quiff, mokuba_kaiba, pegasus_mane). PaniK wears Odion's hood so the borrowed Kaiba hair is hidden.
     /// </summary>
     public sealed class CharacterLook
     {
@@ -114,11 +115,11 @@ namespace WRLDZ.Data
             L("tea_bc", "Battle City Téa", "tea", 1, "tea_gardner", "tea", 164f, 0.40f, "shirt_tea_bc", "bottoms_tea_bc", "shoes_tea_bc", null),
             L("bakura_bc", "Battle City Bakura", "bakura", 0, "ryou_bakura", "bakura", 176f, 0.35f, "shirt_bakura_bc", "bottoms_bakura_bc", "shoes_bakura_bc", null),
             L("marik_bc", "Battle City Marik", "marik", 0, "marik_ishtar", "marik", 177f, 0.40f, "shirt_marik_bc", "bottoms_marik_bc", "shoes_marik_bc", null, skin: "#A8704A"),
-            L("pegasus_dk", "Duelist Kingdom Pegasus", "pegasus", 0, "ryou_bakura", "pegasus", 190f, 0.45f, "shirt_pegasus_dk", "bottoms_pegasus_dk", "shoes_pegasus_dk", null, hairPattern: 1, hairHex: "#C4BDD0"),
+            L("pegasus_dk", "Duelist Kingdom Pegasus", "pegasus", 0, "pegasus_mane", "pegasus", 190f, 0.45f, "shirt_pegasus_dk", "bottoms_pegasus_dk", "shoes_pegasus_dk", null, hairPattern: 1, hairHex: "#C4BDD0"),
             // face is the 6th arg (the decal). facial is the 13th and belongs to the glasses slot:
             // a decal filename there is a Clothes/argon_<id>_<sex> lookup, so "face_weevil_bc" resolved
             // to nothing and silently fell back to face_none. Weevil gets no facial piece.
-            L("weevil_bc", "Battle City Weevil", "weevil", 0, "seto_kaiba", "weevil", 152f, 0.30f, "shirt_weevil_bc", "bottoms_weevil_bc", "shoes_weevil_bc", null, hairPattern: 1, hairHex: "#8ABAB7"),
+            L("weevil_bc", "Battle City Weevil", "weevil", 0, "weevil_bowl", "weevil", 152f, 0.30f, "shirt_weevil_bc", "bottoms_weevil_bc", "shoes_weevil_bc", null, hairPattern: 1, hairHex: "#8ABAB7"),
             L("rex_bc", "Battle City Rex", "rex", 0, "jaden_yuki", "rex_raptor", 170f, 0.55f, "shirt_rex_bc", "bottoms_rex_bc", "shoes_rex_bc", null, hat: "hat_rex_bc", hairPattern: 2, hairHex: "#4D3020", hairTip: "#8D7DB3"),
             L("mako_dk", "Duelist Kingdom Mako", "mako", 0, "jack_atlas", "mako", 183f, 0.70f, "shirt_mako_bc", "bottoms_mako_dk", "shoes_mako_bc", null, hat: "hat_mako_bc", hairPattern: 4, hairHex: "#3C394C", hairStreak: "#595E8F"),
             L("mako_bc", "Battle City Mako", "mako", 0, "jack_atlas", "mako", 183f, 0.70f, "shirt_mako_bc", "bottoms_mako_bc", "shoes_mako_bc", null, hat: "hat_mako_bc", hairPattern: 4, hairHex: "#3C394C", hairStreak: "#595E8F"),
@@ -127,8 +128,8 @@ namespace WRLDZ.Data
             L("ishizu_bc", "Battle City Ishizu", "ishizu", 1, "mai_valentine", "ishizu", 172f, 0.40f, "shirt_ishizu_bc", "bottoms_ishizu_bc", "shoes_ishizu_bc", null, hat: "hat_ishizu_bc", hairPattern: 1, hairHex: "#1A1A1C"),
             L("odion_bc", "Battle City Odion", "odion", 0, "seto_kaiba", "odion", 188f, 0.70f, "shirt_odion_bc", "bottoms_odion_bc", "shoes_odion_bc", null, hat: "hat_odion_bc", hairPattern: 1, hairHex: "#1A1A1C"),
             L("duke_bc", "Battle City Duke", "duke", 0, "joey_wheeler", "duke", 180f, 0.45f, "shirt_duke_bc", "bottoms_duke_bc", "shoes_duke_bc", null, hairPattern: 1, hairHex: "#333333"),
-            L("tristan_bc", "Battle City Tristan", "tristan", 0, "joey_wheeler", "tristan", 180f, 0.60f, "shirt_tristan_bc", "bottoms_tristan_bc", "shoes_tristan_bc", null, hairPattern: 1, hairHex: "#62442D"),
-            L("mokuba_bc", "Battle City Mokuba", "mokuba", 0, "ryou_bakura", "mokuba_kaiba", 155f, 0.35f, "shirt_mokuba_bc", "bottoms_mokuba_bc", "shoes_mokuba_bc", null, hairPattern: 4, hairHex: "#1E1E1E", hairStreak: "#4C557E"),
+            L("tristan_bc", "Battle City Tristan", "tristan", 0, "tristan_quiff", "tristan", 180f, 0.60f, "shirt_tristan_bc", "bottoms_tristan_bc", "shoes_tristan_bc", null, hairPattern: 1, hairHex: "#62442D"),
+            L("mokuba_bc", "Battle City Mokuba", "mokuba", 0, "mokuba_kaiba", "mokuba_kaiba", 155f, 0.35f, "shirt_mokuba_bc", "bottoms_mokuba_bc", "shoes_mokuba_bc", null, hairPattern: 4, hairHex: "#1E1E1E", hairStreak: "#4C557E"),
             L("yami_yugi_dk", "Duelist Kingdom Yami Yugi", "yami yugi", 0, "yugi_muto", "yami_yugi", 158f, 0.38f, "shirt_yami_dk", "bottoms_yami_dk", "shoes_yugi_dk", null),
             // The Domino cape albedo is the black tank and blue blazer. A shirt hex flattened it to navy.
             L("yami_yugi", "Yami Yugi", "yami yugi", 0, "yugi_muto", "yami_yugi", 158f, 0.38f, "shirt_yugi_bc", "bottoms_yugi_bc", "shoes_yugi_bc", null),
