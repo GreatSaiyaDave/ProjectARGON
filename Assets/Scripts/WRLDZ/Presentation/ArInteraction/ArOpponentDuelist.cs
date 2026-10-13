@@ -1621,5 +1621,32 @@ namespace WRLDZ.Presentation.ArInteraction
             if (Disk != null) Disk.ExternalPose = false;
             if (_npcDisk != null) Destroy(_npcDisk.gameObject);
         }
+
+#if UNITY_EDITOR
+        void OnDrawGizmosSelected()
+        {
+            if (_fanAnchor != null)
+            {
+                Gizmos.color = Color.cyan;
+                Gizmos.DrawWireSphere(_fanAnchor.position, 0.05f);
+                Gizmos.DrawLine(_fanAnchor.position, _fanAnchor.position + _fanAnchor.forward * 0.2f);
+                Gizmos.DrawLine(_fanAnchor.position, _fanAnchor.position + _fanAnchor.right * 0.1f);
+                Gizmos.DrawLine(_fanAnchor.position, _fanAnchor.position + _fanAnchor.up * 0.1f);
+                UnityEditor.Handles.Label(_fanAnchor.position + Vector3.up * 0.1f, "FanAnchor (Left Wrist)");
+            }
+            if (_lHand != null)
+            {
+                Gizmos.color = Color.green;
+                Gizmos.DrawWireSphere(_lHand.position, 0.04f);
+                UnityEditor.Handles.Label(_lHand.position + Vector3.up * 0.08f, "Left Hand (Disk)");
+            }
+            if (_lFore != null)
+            {
+                Gizmos.color = Color.yellow;
+                Gizmos.DrawWireSphere(_lFore.position, 0.03f);
+                UnityEditor.Handles.Label(_lFore.position + Vector3.up * 0.06f, "Left Forearm");
+            }
+        }
+#endif
     }
 }

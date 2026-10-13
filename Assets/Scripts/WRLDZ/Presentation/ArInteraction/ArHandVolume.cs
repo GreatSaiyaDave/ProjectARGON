@@ -138,6 +138,10 @@ namespace WRLDZ.Presentation.ArInteraction
             if (AnchorOverride != null)
             {
                 transform.SetPositionAndRotation(AnchorOverride.position, AnchorOverride.rotation);
+#if UNITY_EDITOR
+                if (IsOpponent)
+                    Debug.Log($"[OppHandVolume] PlaceVolume at AnchorOverride: pos={AnchorOverride.position} fwd={AnchorOverride.forward}");
+#endif
                 return true;
             }
 
@@ -539,6 +543,13 @@ namespace WRLDZ.Presentation.ArInteraction
                 ComputeFanSlot(index, total, CardScale, out local, out rot, out scale, IsLeftHand);
             fc.HeldByHand = HandLive;
             fc.SetHandRest(local, rot, scale);
+#if UNITY_EDITOR
+            if (IsOpponent && !HandLive)
+            {
+                var worldPos = fc.transform.parent != null ? fc.transform.parent.TransformPoint(local) : local;
+                Debug.Log($"[OppHandVolume] Card {fc.Card?.Name ?? "?"} idx={index}/{total} local=({local.x:0.000},{local.y:0.000},{local.z:0.000}) world=({worldPos.x:0.000},{worldPos.y:0.000},{worldPos.z:0.000}) volPos={transform.position} volFwd={transform.forward}");
+            }
+#endif
         }
 
         /// <summary>
