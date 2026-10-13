@@ -6,7 +6,7 @@ namespace WRLDZ.Data
     /// One signature Duel Monsters look: hair plus the six clothing slots.
     /// Yugi and Kaiba use the sculpted outfits split into slots. The other looks are shells
     /// built on the same bodies (no Meshy spend). Para and Dox reuse generic plain clothes
-    /// with a solid robe colour. Yami Yugi wears Yugi's Domino cape (the black tank and blazer),
+    /// with the measured robe colour (Para red, Dox blue — DK anime frames) plus the robe's gold trim. Yami Yugi wears Yugi's Domino cape (the black tank and blazer),
     /// not a flat navy wash. Yami Bakura reuses Ryou's clothes with a grey skin.
     /// Borrowed hair meshes, until those heads exist: Weevil and Odion use Kaiba; Rex uses Jaden;
     /// Mako and Keith use Jack; Bonz uses Marik; Pegasus uses Ryou, tinted silver; Ishizu uses Mai;
@@ -35,6 +35,8 @@ namespace WRLDZ.Data
         public string BottomsId;
         public string ShoesId;
         public string ShirtHex;
+        /// <summary>Paint for the shirt's trim half (mask .1 = collar, cuffs, hem bands). Empty = same as ShirtHex.</summary>
+        public string ShirtTrimHex;
         public string BottomsHex;
         public string ShoesHex;
 
@@ -53,6 +55,8 @@ namespace WRLDZ.Data
                 for (var k = 0; k < 3; k++) a.SetPaint(slot + "." + k, "");
             if (!string.IsNullOrEmpty(ShirtHex))
                 for (int k = 0; k < 3; k++) a.SetPaint("Shirt." + k, ShirtHex);
+            // the flat shells split into a main half (.0) and a trim half (.1); a robe's gold collar/cuff/hem bands
+            if (!string.IsNullOrEmpty(ShirtTrimHex)) a.SetPaint("Shirt.1", ShirtTrimHex);
             if (!string.IsNullOrEmpty(BottomsHex))
                 for (int k = 0; k < 3; k++) a.SetPaint("Bottoms." + k, BottomsHex);
             if (!string.IsNullOrEmpty(ShoesHex))
@@ -120,8 +124,8 @@ namespace WRLDZ.Data
             L("yami_bakura", "Yami Bakura", "yami bakura", 0, "ryou_bakura", "", 176f, 0.35f, "shirt_bakura_bc", "bottoms_bakura_bc", "shoes_bakura_bc", null, skin: "#404858"),
             // Hood hides the borrowed Kaiba hair. The coat is the generic duel coat, painted near-black.
             L("panik_dk", "Duelist Kingdom PaniK", "panik", 0, "seto_kaiba", "", 185f, 0.55f, "shirt_duelcoat", "bottoms_plain", "shoes_boots", null, hat: "hat_odion_bc", hairPattern: 1, hairHex: "#2E465C", skin: "#C4B8A8", shirtHex: "#141018"),
-            L("para", "Para — Paradox Brother", "para", 0, "none", null, 170f, 0.55f, "shirt_plain", "bottoms_plain", "shoes_plain", null, hairPattern: 1, shirtHex: "#C8302A"),
-            L("dox", "Dox — Paradox Brother", "dox", 0, "none", null, 170f, 0.55f, "shirt_plain", "bottoms_plain", "shoes_plain", null, hairPattern: 1, shirtHex: "#2F5FD0"),
+            L("para", "Para — Paradox Brother", "para", 0, "none", null, 170f, 0.55f, "shirt_plain", "bottoms_plain", "shoes_plain", null, hairPattern: 1, shirtHex: "#96473E", shirtTrimHex: "#E3B64C"),
+            L("dox", "Dox — Paradox Brother", "dox", 0, "none", null, 170f, 0.55f, "shirt_plain", "bottoms_plain", "shoes_plain", null, hairPattern: 1, shirtHex: "#576EAF", shirtTrimHex: "#E3B64C"),
         };
 
         public static CharacterLook Match(string name)
@@ -174,7 +178,7 @@ namespace WRLDZ.Data
             float height, float weight, string shirt, string bottoms, string shoes, string hands,
             string facial = null, string hat = null, int hairPattern = 0, string hairHex = null, string skin = null,
             string shirtHex = null, string bottomsHex = null, string shoesHex = null,
-            string hairTip = null, string hairFringe = null, string hairStreak = null) =>
+            string hairTip = null, string hairFringe = null, string hairStreak = null, string shirtTrimHex = null) =>
             new()
             {
                 Id = id,
@@ -198,6 +202,7 @@ namespace WRLDZ.Data
                 BottomsId = bottoms,
                 ShoesId = shoes,
                 ShirtHex = shirtHex,
+                ShirtTrimHex = shirtTrimHex,
                 BottomsHex = bottomsHex,
                 ShoesHex = shoesHex
             };

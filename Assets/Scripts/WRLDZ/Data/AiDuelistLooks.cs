@@ -40,9 +40,9 @@ namespace WRLDZ.Data
             else if (n.Contains("bonz")) a = Look(0, "marik_ishtar", 172, 0.25f, 1, ("Shirt.0", "#55565E"), ("Bottoms.0", "#2A2A33")).WithHair("#505E80");
             else if (n == "tea" || n.StartsWith("tea ") || n.Contains("téa") || n.Contains("gardner")) a = Look(1, "tea_gardner", 164, 0.40f, 0, ("Shirt.0", "#FF9CD8"), ("Shirt.1", "#F2F2F5"), ("Bottoms.0", "#1C2E7A"));
             // the Paradox Brothers: bald, robed; Para in red, Dox in blue
-            else if (n == "para" || n.StartsWith("para ")) a = Look(0, "none", 170, 0.55f, 1, ("Shirt.0", "#C8302A"), ("Shirt.1", "#E3B64C"), ("Bottoms.0", "#0B0B10"));
-            else if (n == "dox" || n.StartsWith("dox ")) a = Look(0, "none", 170, 0.55f, 1, ("Shirt.0", "#2F5FD0"), ("Shirt.1", "#E3B64C"), ("Bottoms.0", "#0B0B10"));
-            else if (n.Contains("paradox")) a = Look(0, "none", 170, 0.55f, 1, ("Shirt.0", "#C8302A"), ("Shirt.1", "#E3B64C"), ("Bottoms.0", "#0B0B10"));
+            else if (n == "para" || n.StartsWith("para ")) a = Look(0, "none", 170, 0.55f, 1, ("Shirt.0", "#96473E"), ("Shirt.1", "#E3B64C"), ("Bottoms.0", "#0B0B10"));
+            else if (n == "dox" || n.StartsWith("dox ")) a = Look(0, "none", 170, 0.55f, 1, ("Shirt.0", "#576EAF"), ("Shirt.1", "#E3B64C"), ("Bottoms.0", "#0B0B10"));
+            else if (n.Contains("paradox")) a = Look(0, "none", 170, 0.55f, 1, ("Shirt.0", "#96473E"), ("Shirt.1", "#E3B64C"), ("Bottoms.0", "#0B0B10"));
             var canon = a != null;
             a ??= Seeded(opponentName);
             var slots = CharacterLooks.Match(opponentName);

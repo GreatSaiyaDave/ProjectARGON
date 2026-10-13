@@ -194,8 +194,8 @@ namespace WRLDZ.Data
             C(ClothingSlot.Shoes, "marik", "bc", 0, "Gold-trim shoes", "Light shoes.", 0, null, new Color(0.79f, 0.66f, 0.31f)),
 
             C(ClothingSlot.Shirt, "pegasus", "dk", 0, "Red frock coat", "Duelist Kingdom red suit coat.", 4, "#E8ECEF", new Color(0.73f, 0.35f, 0.35f)),
-            C(ClothingSlot.Bottoms, "pegasus", "dk", 0, "White trousers", "Suit trousers.", 1, null, new Color(0.91f, 0.93f, 0.94f)),
-            C(ClothingSlot.Shoes, "pegasus", "dk", 0, "Dress shoes", "Black dress shoes.", 0, null, new Color(0.16f, 0.14f, 0.14f)),
+            C(ClothingSlot.Bottoms, "pegasus", "dk", 0, "Crimson trousers", "Crimson suit trousers.", 1, null, new Color(0.66f, 0.30f, 0.31f)),
+            C(ClothingSlot.Shoes, "pegasus", "dk", 0, "Dress shoes", "Silver dress shoes.", 0, null, new Color(0.72f, 0.74f, 0.77f)),
 
             C(ClothingSlot.Shirt, "weevil", "bc", 0, "Closed jacket", "Green jacket closed to the neck.", 3, "#45454C", new Color(0.53f, 0.69f, 0.35f)),
             C(ClothingSlot.Bottoms, "weevil", "bc", 0, "Weevil's shorts", "Dark shorts.", 1, null, new Color(0.27f, 0.27f, 0.30f)),
@@ -213,15 +213,15 @@ namespace WRLDZ.Data
             C(ClothingSlot.Hat, "mako", "bc", 0, "Wave headband", "Dark blue headband.", 0, null, new Color(0.11f, 0.14f, 0.44f)),
 
             C(ClothingSlot.Shirt, "keith", "dk", 0, "Biker vest", "Dark vest over a short-sleeve shirt.", 2, "#82302A", new Color(0.19f, 0.20f, 0.29f)),
-            C(ClothingSlot.Bottoms, "keith", "dk", 0, "Keith's trousers", "Dark trousers.", 1, null, new Color(0.16f, 0.17f, 0.20f)),
-            C(ClothingSlot.Shoes, "keith", "dk", 0, "Tall boots", "Black tall boots.", 0, null, new Color(0.10f, 0.10f, 0.11f)),
-            C(ClothingSlot.Hands, "keith", "dk", 0, "Wristbands", "Dark wristbands.", 0, null, new Color(0.19f, 0.20f, 0.29f)),
-            C(ClothingSlot.Hat, "keith", "dk", 0, "Keith's bandana", "Red bandana.", 0, null, new Color(0.51f, 0.19f, 0.16f)),
+            C(ClothingSlot.Bottoms, "keith", "dk", 0, "Keith's trousers", "Tan trousers.", 1, null, new Color(0.85f, 0.80f, 0.66f)),
+            C(ClothingSlot.Shoes, "keith", "dk", 0, "Tall boots", "Dark brown boots.", 0, null, new Color(0.24f, 0.14f, 0.13f)),
+            C(ClothingSlot.Hands, "keith", "dk", 0, "Studded wristbands", "Silver studded wristbands.", 0, null, new Color(0.68f, 0.68f, 0.75f)),
+            C(ClothingSlot.Hat, "keith", "dk", 0, "Keith's bandana", "Red bandana.", 0, null, new Color(0.70f, 0.23f, 0.23f)),
 
-            C(ClothingSlot.Shirt, "bonz", "dk", 0, "Hooded tunic", "Graveyard tunic.", 2, "#605A9D", new Color(0.75f, 0.76f, 0.47f)),
-            C(ClothingSlot.Bottoms, "bonz", "dk", 0, "Wide shorts", "Dark shorts.", 1, null, new Color(0.38f, 0.35f, 0.62f)),
+            C(ClothingSlot.Shirt, "bonz", "dk", 0, "Hooded tunic", "Graveyard tunic.", 2, "#605A9D", new Color(0.54f, 0.55f, 0.56f)),
+            C(ClothingSlot.Bottoms, "bonz", "dk", 0, "Wide shorts", "Violet shorts.", 1, null, new Color(0.38f, 0.35f, 0.62f)),
             C(ClothingSlot.Shoes, "bonz", "dk", 0, "Bonz's sneakers", "Blue sneakers.", 0, null, new Color(0.36f, 0.55f, 0.69f)),
-            C(ClothingSlot.Hat, "bonz", "dk", 0, "Tunic hood", "Hood up.", 0, null, new Color(0.54f, 0.53f, 0.28f)),
+            C(ClothingSlot.Hat, "bonz", "dk", 0, "Tunic hood", "Hood up.", 0, null, new Color(0.54f, 0.55f, 0.56f)),
 
             C(ClothingSlot.Shirt, "ishizu", "bc", 1, "White dress", "Sleeveless Battle City dress.", 2, "skin", new Color(0.92f, 0.90f, 0.83f)),
             C(ClothingSlot.Bottoms, "ishizu", "bc", 1, "Dress skirt", "Long pale skirt.", 1, null, new Color(0.89f, 0.88f, 0.80f)),
