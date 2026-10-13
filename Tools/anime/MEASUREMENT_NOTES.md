@@ -574,6 +574,8 @@ visible on the legs:
 | `bonz_dk` | "Wide shorts" | `argon_bottoms_bonz_dk_male.fbx` **0.600 – 1.218** | `#605A9D` = **exactly the measured shorts colour** | the shorts' violet |
 | `mako_dk` | "Fisherman spats" | `argon_bottoms_mako_dk_male.fbx` **0.679 – 1.218** | `"skin"` | **skin** |
 
+(The mesh extents and `Suit` values in this table are the **pre-fix** state on 13 Oct; the fixes are below.)
+
 **Control.** `bottoms_mako_dk` is the same short shape (ends at the knee) and Mako's `Suit` is `"skin"` — his bare
 shins render skin. Same mask, same hide path, same mesh length; the only difference is the value in the shirt row.
 So the `Suit` value decides what an *uncovered* leg renders, and `"skin"` is right exactly when the character's legs
@@ -584,9 +586,11 @@ covers the leg for real, which is what Weevil needed.
 **Frame check (`leg_probe.py`, top-colour palette per band; the model cannot view images, so this is pixel
 statistics).** `weevil_e04_1052.png` is a head-and-shoulders close-up (olive-green jacket `#78A03C` at y270-450,
 face at y180-270, background sky `#2864A0`) — the legs are not in the frame, so the design record's "shorts" stands
-per the colour rule. `bonz_e18_1106.png` does show the lower body, and it is **clothed**: `#78788C` (grey-violet) runs
-from y270 to the feet at 14-32% of each band, with skin `#C8A078` no more than 3.1% (hands). So Bonz's canon lower
-half is *long*, and his shipped `bottoms_bonz_dk` (ending at z=0.600) is short of it.
+so his own frame cannot settle it — the owner's word supersedes the design record there: he wears black trousers.
+`bonz_e18_1106.png`
+does show the lower body, and it is **clothed and grey**: a grey median of `#8A8B8D` over the legs (y560-700, 38 015
+grey pixels) and `#8A8B8E` over the tunic (y360-480), with skin `#C8A078` no more than 3.1% (hands). So Bonz's canon
+lower half is *long and grey*, while his shipped `bottoms_bonz_dk` ended at z=0.600 and rendered violet.
 
 **Owner correction (same day): Weevil wears long black trousers in DK, not shorts.** So his legs are clothed, and the
 `Suit` hex was never the defect — the **mesh length** was: a shorts cut at z=0.603 with the rest of the leg only
@@ -621,12 +625,29 @@ the base trouser is already a known-good graft on this body. Precedent for one s
 The last row is the strongest: his leg hide is now exactly the accepted base trouser's, so his legs are hidden under
 the trousers by the same map the default wardrobe already uses.
 
+**Same defect on Bonz — fixed with the same method.** Bonz is the one case a frame settles outright, and it settles two
+things at once: his lower half is *long*, and it is *grey*, not the "Violet shorts" the row claimed.
+
+| measure | reading |
+|---|---|
+| `bonz_e18_1106.png`, tunic band y360-480: median of grey pixels (max-min channel < 14, mean > 60) | **`#8A8B8E`** — exactly his shipped `shirt_bonz_dk` albedo, so the tunic colour was already right |
+| the same frame, leg band y560-700 | **`#8A8B8D`** over 38 015 grey pixels; the same grey, and no `#C8A078` skin anywhere down there |
+| the old `bottoms_bonz_dk` albedo | `#605A9D` violet — the stale "Violet shorts" value |
+| band width down the frame | wide through the torso, narrowing to a ~150-230 px band at y600-690 with a blue `#608090` element at the feet — legs, ankle-length, blue shoes, **not** a bare or short leg |
+
+| file | change |
+|---|---|
+| `Clothes/argon_bottoms_bonz_dk_male.fbx` | replaced with the long base trouser silhouette (as Weevil's; `.fbx.meta` untouched) |
+| `Clothes/hide_bottoms_bonz_dk_male.png` | rebuilt (`--only bottoms_bonz_dk`); cover **0.105 → 0.152**, `piece_z` `[0.186, 1.218]` |
+| `Clothes/albedo_bottoms_bonz_dk.png` | flat `#605A9D` → flat **`#8A8B8D`** (frame-measured) |
+| `ClothingCatalog.cs` | `shirt_bonz_dk` `Suit` → `#8A8B8D`; `bottoms_bonz_dk` Name/Blurb "Wide shorts / Violet shorts." → "Grey trousers / Grey trousers."; its fallback `(0.38,0.35,0.62)` → `(0.541,0.545,0.553)` |
+
+Acceptance is identical to Weevil's: `bonz_dk` body drawn **35.2% → 17.5%** (the 14.1% shin and 3.4% thigh gone), the
+visible profile now identical to `pegasus_dk` (17.5 / 9.6 / 7.9%), and `hide_bottoms_bonz_dk_male.png` **byte-identical**
+to the `bottoms_plain` / `bottoms_weevil_bc` hides (frac 0.1519).
+
 **Still open (all measured, none fixed).**
 
-* **Bonz** needs a *long* `bottoms_bonz_dk` mesh (`#78788C`-ish): his frame shows clothed legs. Until then his
-  `Suit` (`#605A9D`, the shorts' hex) accidentally approximates a covered leg, so it was left alone — changing it to
-  `"skin"` now would render his legs bare, which the frame contradicts. Once the mesh is long the legs are hidden and
-  the field should become the undersuit value (`"skin"`).
 * **`bottoms_tea_bc`** is `argon_bottoms_tea_bc_female.fbx` z **-0.004 – 1.137** (4831 faces, a full-length
   legging+boot, it even reaches the sole) while the row reads "Short shorts / Dark shorts". Name and mesh disagree;
   which is canon was not read from a frame, so nothing was renamed.

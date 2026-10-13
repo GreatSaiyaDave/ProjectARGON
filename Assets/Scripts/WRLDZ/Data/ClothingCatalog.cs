@@ -222,8 +222,12 @@ namespace WRLDZ.Data
             C(ClothingSlot.Hands, "keith", "dk", 0, "Studded wristbands", "Silver studded wristbands.", 0, null, new Color(0.68f, 0.68f, 0.75f)),
             C(ClothingSlot.Hat, "keith", "dk", 0, "Keith's bandana", "Red bandana.", 0, null, new Color(0.70f, 0.23f, 0.23f)),
 
-            C(ClothingSlot.Shirt, "bonz", "dk", 0, "Hooded tunic", "Graveyard tunic.", 2, "#605A9D", new Color(0.54f, 0.55f, 0.56f)),
-            C(ClothingSlot.Bottoms, "bonz", "dk", 0, "Wide shorts", "Violet shorts.", 1, null, new Color(0.38f, 0.35f, 0.62f)),
+            // Bonz wears grey, not violet: bonz_e18_1106.png (his Joey duel) measures #8A8B8E across the tunic and
+            // #8A8B8D across the legs - the same grey - while this row read "Violet shorts" #605A9D. That frame also
+            // shows full-length legs (a narrow grey band down to the ankles, blue shoes below it, no skin), so the
+            // undersuit hex and the bottoms are the tunic's own grey. The bottoms mesh is now the long base trouser.
+            C(ClothingSlot.Shirt, "bonz", "dk", 0, "Hooded tunic", "Graveyard tunic.", 2, "#8A8B8D", new Color(0.54f, 0.55f, 0.56f)),
+            C(ClothingSlot.Bottoms, "bonz", "dk", 0, "Grey trousers", "Grey trousers.", 1, null, new Color(0.541f, 0.545f, 0.553f)),
             C(ClothingSlot.Shoes, "bonz", "dk", 0, "Bonz's sneakers", "Blue sneakers.", 0, null, new Color(0.36f, 0.55f, 0.69f)),
             C(ClothingSlot.Hat, "bonz", "dk", 0, "Tunic hood", "Hood up.", 0, null, new Color(0.54f, 0.55f, 0.56f)),
 
