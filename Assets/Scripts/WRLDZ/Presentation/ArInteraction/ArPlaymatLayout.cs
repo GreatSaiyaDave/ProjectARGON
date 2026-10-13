@@ -692,15 +692,24 @@ namespace WRLDZ.Presentation.ArInteraction
                     Mathf.Abs(DiskMonsterEdgeYawDeg[4]) < 0.05f,
                     $"M3={DiskMonsterEdgeYawDeg[2]:0.00}");
 
-                Check("Hand fan: 2-card rest bodies do not overlap",
-                    !ArHandVolume.RestBodiesOverlap(0, 1, 2, 0.22f));
-                Check("Hand fan: 6-card rest bodies do not overlap",
-                    !ArHandVolume.RestBodiesOverlap(0, 1, 6, 0.22f) &&
-                    !ArHandVolume.RestBodiesOverlap(2, 3, 6, 0.22f) &&
-                    !ArHandVolume.RestBodiesOverlap(4, 5, 6, 0.22f));
-                Check("Hand fan: 8-card rest bodies do not overlap",
-                    !ArHandVolume.RestBodiesOverlap(0, 1, 8, 0.22f) &&
-                    !ArHandVolume.RestBodiesOverlap(3, 4, 8, 0.22f));
+                Check("Hand fan: 2-card rest bodies do not overlap (right)",
+                    !ArHandVolume.RestBodiesOverlap(0, 1, 2, 0.22f, false));
+                Check("Hand fan: 2-card rest bodies do not overlap (left)",
+                    !ArHandVolume.RestBodiesOverlap(0, 1, 2, 0.22f, true));
+                Check("Hand fan: 6-card rest bodies do not overlap (right)",
+                    !ArHandVolume.RestBodiesOverlap(0, 1, 6, 0.22f, false) &&
+                    !ArHandVolume.RestBodiesOverlap(2, 3, 6, 0.22f, false) &&
+                    !ArHandVolume.RestBodiesOverlap(4, 5, 6, 0.22f, false));
+                Check("Hand fan: 6-card rest bodies do not overlap (left)",
+                    !ArHandVolume.RestBodiesOverlap(0, 1, 6, 0.22f, true) &&
+                    !ArHandVolume.RestBodiesOverlap(2, 3, 6, 0.22f, true) &&
+                    !ArHandVolume.RestBodiesOverlap(4, 5, 6, 0.22f, true));
+                Check("Hand fan: 8-card rest bodies do not overlap (right)",
+                    !ArHandVolume.RestBodiesOverlap(0, 1, 8, 0.22f, false) &&
+                    !ArHandVolume.RestBodiesOverlap(3, 4, 8, 0.22f, false));
+                Check("Hand fan: 8-card rest bodies do not overlap (left)",
+                    !ArHandVolume.RestBodiesOverlap(0, 1, 8, 0.22f, true) &&
+                    !ArHandVolume.RestBodiesOverlap(3, 4, 8, 0.22f, true));
                 Check("Hand fan: spacing exceeds projected body width",
                     ArHandVolume.RestCenterSpacing(6, 0.22f) >
                     ArHandVolume.ProjectedWidth(0.22f, 16f) + 0.001f);

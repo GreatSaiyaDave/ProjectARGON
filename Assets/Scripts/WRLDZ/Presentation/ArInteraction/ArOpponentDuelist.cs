@@ -1033,10 +1033,14 @@ namespace WRLDZ.Presentation.ArInteraction
             _rootRot = Quaternion.Slerp(_rootRot, rot, k);
             _root.SetPositionAndRotation(_rootPos, _rootRot);
 
-            // ---- fan anchor for the hand volume: in front of the chest, a little to the right
-            var chestY = floorY + 1.18f * s * hs;
+            // ---- fan anchor for the hand volume: at the left hand (holding the disk), cards fan outward from the wrist
+            // left hand is at the wrist: forearm pos + forearm forward * ~0.18m (forearm length) + small offset
+            var forearmForward = arm.rot * Vector3.forward;
+            var forearmUp = arm.rot * Vector3.up;
+            var wristPos = arm.pos + forearmForward * (0.18f * s * hs) + forearmUp * (0.02f * s * hs);
+            // fan opens toward the opponent (facing) and slightly up, centered on the wrist
             _fanAnchor.SetPositionAndRotation(
-                new Vector3(_rootPos.x, chestY, _rootPos.z) + facing * (0.34f * s * hs) - right * (0.10f * s * hs),
+                wristPos + facing * (0.06f * s * hs) + Vector3.up * (0.04f * s * hs),
                 Quaternion.LookRotation(facing, Vector3.up));
 
             // ---- a disk reach leans the chest toward the disk a little: before either arm is solved (applied after, it

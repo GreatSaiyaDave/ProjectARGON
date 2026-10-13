@@ -30,6 +30,8 @@ namespace WRLDZ.Presentation.ArInteraction
         public ArDuelDiskRig SourceDeck;
         /// <summary>Far-side AI / P2 hand — backs toward the local camera, not tappable.</summary>
         public bool IsOpponent;
+        /// <summary>Cards fan from left hand (wrist at inner edge, fan opens away from body). Defaults to IsOpponent.</summary>
+        public bool IsLeftHand = true;
         /// <summary>
         /// When set, the volume sits on this transform instead of the tracker's torso pose (the AI opponent duelist
         /// hangs its fan in front of its own chest; the simulated opponent torso is not where a body would stand).
@@ -109,6 +111,7 @@ namespace WRLDZ.Presentation.ArInteraction
             hv.Layer = layer;
             hv.Tint = tint;
             hv.IsOpponent = opponent;
+            hv.IsLeftHand = opponent;
             hv.RevealFaces = !opponent;
             hv.VolumeRoot = new GameObject("Cards").transform;
             hv.VolumeRoot.SetParent(go.transform, false);
@@ -533,7 +536,7 @@ namespace WRLDZ.Presentation.ArInteraction
             if (HandLive)
                 FloatingHand.SlotFor(index, total, out local, out rot, out scale);
             else
-                ComputeFanSlot(index, total, CardScale, out local, out rot, out scale);
+                ComputeFanSlot(index, total, CardScale, out local, out rot, out scale, IsLeftHand);
             fc.HeldByHand = HandLive;
             fc.SetHandRest(local, rot, scale);
         }
@@ -563,7 +566,8 @@ namespace WRLDZ.Presentation.ArInteraction
         /// the PhysicalCard boxes do not occupy the same volume (yaw included).
         /// </summary>
         public static void ComputeFanSlot(int index, int total, float cardScale,
-            out Vector3 localPos, out Quaternion localRot, out Vector3 localScale)
+            out Vector3 localPos, out Quaternion localRot, out Vector3 localScale,
+            bool isLeftHand = false)
         {
             total = Mathf.Max(1, total);
             index = Mathf.Clamp(index, 0, total - 1);
@@ -572,9 +576,20 @@ namespace WRLDZ.Presentation.ArInteraction
             var t = total == 1 ? 0.5f : index / (float)(total - 1);
             var yaw = Mathf.Lerp(yawSpan, -yawSpan, t);
             var spacing = RestCenterSpacing(total, scale, yawSpan);
-            var x = (index - (total - 1) * 0.5f) * spacing;
-            var z = (index - (total - 1) * 0.5f) * RestDepthSpacing(scale, yawSpan);
-            localPos = new Vector3(x, 0f, z);
+            if (isLeftHand)
+            {
+                // Left hand: wrist at index 0 (inner edge), fan opens toward +X (away from body)
+                var x = index * spacing;
+                var z = index * RestDepthSpacing(scale, yawSpan);
+                localPos = new Vector3(x, 0f, z);
+            }
+            else
+            {
+                // Right hand / centered: fan centered at origin
+                var x = (index - (total - 1) * 0.5f) * spacing;
+                var z = (index - (total - 1) * 0.5f) * RestDepthSpacing(scale, yawSpan);
+                localPos = new Vector3(x, 0f, z);
+            }
             // Art normal is local +Z. Volume faces torso.forward; flip 180° so art faces the camera.
             localRot = Quaternion.Euler(-8f, yaw + 180f, 0f);
             localScale = Vector3.one * scale;
@@ -607,11 +622,11 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary>
         /// True when two rest poses' body boxes would interpenetrate (no scene required).
         /// </summary>
-        public static bool RestBodiesOverlap(int i, int j, int total, float cardScale)
+        public static bool RestBodiesOverlap(int i, int j, int total, float cardScale, bool isLeftHand = false)
         {
             if (i == j) return false;
-            ComputeFanSlot(i, total, cardScale, out var pa, out var ra, out var sa);
-            ComputeFanSlot(j, total, cardScale, out var pb, out var rb, out var sb);
+            ComputeFanSlot(i, total, cardScale, out var pa, out var ra, out var sa, isLeftHand);
+            ComputeFanSlot(j, total, cardScale, out var pb, out var rb, out var sb, isLeftHand);
             var half = ArFloatingCard.BodyLocalSize * 0.5f;
             var ea = Vector3.Scale(half, sa);
             var eb = Vector3.Scale(half, sb);
