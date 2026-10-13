@@ -48,6 +48,16 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary>Air gap between card bodies, as a fraction of scaled width.</summary>
         public const float BodyGapFrac = 0.08f;
 
+        /// <summary>Volume-local units per real metre (1 on real device; card-matched in EditorSim).</summary>
+        public float MetreScale
+        {
+            get
+            {
+                var ls = transform.lossyScale.y;
+                return 1f / Mathf.Max(0.01f, ls);
+            }
+        }
+
         public Transform VolumeRoot { get; private set; }
         readonly List<ArFloatingCard> _cards = new();
         readonly Dictionary<int, ArFloatingCard> _byInstance = new();
@@ -573,7 +583,7 @@ namespace WRLDZ.Presentation.ArInteraction
             if (HandLive)
                 FloatingHand.SlotFor(index, total, out local, out rot, out scale);
             else
-                ComputeFanSlot(index, total, CardScale, out local, out rot, out scale, IsLeftHand);
+                ComputeFanSlot(index, total, CardScale, MetreScale, out local, out rot, out scale, IsLeftHand);
             fc.HeldByHand = HandLive;
             fc.SetHandRest(local, rot, scale);
 #if UNITY_EDITOR
@@ -609,13 +619,14 @@ namespace WRLDZ.Presentation.ArInteraction
         /// Rest pose for one card in a physical fan. Centers are far enough apart that
         /// the PhysicalCard boxes do not occupy the same volume (yaw included).
         /// </summary>
-        public static void ComputeFanSlot(int index, int total, float cardScale,
+        public static void ComputeFanSlot(int index, int total, float cardScale, float metreScale,
             out Vector3 localPos, out Quaternion localRot, out Vector3 localScale,
             bool isLeftHand = false)
         {
             total = Mathf.Max(1, total);
             index = Mathf.Clamp(index, 0, total - 1);
-            var scale = cardScale * Mathf.Lerp(1f, 0.86f, Mathf.InverseLerp(5f, 10f, total));
+            // cardScale is in unit mesh scale; metreScale converts to volume-local metres
+            var scale = cardScale * metreScale * Mathf.Lerp(1f, 0.86f, Mathf.InverseLerp(5f, 10f, total));
             var yawSpan = Mathf.Lerp(8f, 16f, Mathf.InverseLerp(1f, 7f, total));
             var t = total == 1 ? 0.5f : index / (float)(total - 1);
             var spacing = RestCenterSpacing(total, scale, yawSpan);
@@ -675,11 +686,11 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary>
         /// True when two rest poses' body boxes would interpenetrate (no scene required).
         /// </summary>
-        public static bool RestBodiesOverlap(int i, int j, int total, float cardScale, bool isLeftHand = false)
+        public static bool RestBodiesOverlap(int i, int j, int total, float cardScale, float metreScale = 1f, bool isLeftHand = false)
         {
             if (i == j) return false;
-            ComputeFanSlot(i, total, cardScale, out var pa, out var ra, out var sa, isLeftHand);
-            ComputeFanSlot(j, total, cardScale, out var pb, out var rb, out var sb, isLeftHand);
+            ComputeFanSlot(i, total, cardScale, metreScale, out var pa, out var ra, out var sa, isLeftHand);
+            ComputeFanSlot(j, total, cardScale, metreScale, out var pb, out var rb, out var sb, isLeftHand);
             var half = ArFloatingCard.BodyLocalSize * 0.5f;
             var ea = Vector3.Scale(half, sa);
             var eb = Vector3.Scale(half, sb);
