@@ -137,7 +137,24 @@
    }
   },
   {
-   "id": "marik_ishtar",
+   "id": "yami_bakura",
+   "name": "Yami White",
+   "inspiredBy": "Yami Bakura",
+   "series": "Duel Monsters",
+   "sex": "any",
+   "length": "long",
+   "palette": {
+    "name": "Yami White",
+    "pattern": "solid",
+    "root": "#DADAE4",
+    "tip": "#DADAE4",
+    "fringe": "#DADAE4",
+    "streak": "#DADAE4",
+    "side": "#DADAE4"
+   }
+  },
+     {
+"id": "marik_ishtar",
    "name": "Tomb Keeper",
    "inspiredBy": "Marik Ishtar",
    "series": "Duel Monsters",
