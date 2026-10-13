@@ -5634,8 +5634,13 @@ namespace WRLDZ.Duel.Rules
                 // PhaseTimersAndDeckTop batch (v163): Pyro Clock of Destiny (AdvanceTurnCountByOne) is the 41st.
                 // DiscardTriggersSelfSs batch (v173): SpecialSummonThisFromGy (Fear from the Dark / Despair from the
                 // Dark, a 2-card family) is the 42nd kind, 43rd unique card.
+                // GyHandAndSummonEventTriggers batch (v178): Emissary of the Afterlife's
+                // EachPlayerAddsLevelOrLowerNormalMonsterFromOwnDeck, "7"'s
+                // DrawThenDestroyAllFaceUpNamedWhenCountFaceUpNamed and Beckoning Light's
+                // DiscardHandThenAddAttributeMonstersFromGyPerDiscard are each the only card in their family;
+                // "7"'s UniqueException was replaced by the real Draw clause, so the count is 45.
                 Check("Vocabulary: unique exceptions stay a short named list",
-                    unique <= 43,
+                    unique <= 45,
                     $"unique={unique}");
                 Check("Vocabulary: Exiled Force compiles as shared Tribute→Destroy",
                     db.Get(74131780) is { } exd &&

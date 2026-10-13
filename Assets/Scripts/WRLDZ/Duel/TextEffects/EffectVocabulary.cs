@@ -414,6 +414,11 @@ namespace WRLDZ.Duel.TextEffects
                 EffectActionKind.DestroyThisAtNthSpellCounterDamageActivator => EffectResolutionKind.Destroy,
                 EffectActionKind.ActivatorOfNamedCardMayDrawWhileAttackPosition => EffectResolutionKind.Draw,
                     EffectActionKind.BanishAllGyMonstersWhenOpponentTargetsGyMonster => EffectResolutionKind.Banish,
+                // GyHandAndSummonEventTriggers batch: Emissary of the Afterlife (each player adds from their own Deck),
+                // "7" (draw, then destroy every face-up copy) and Beckoning Light (discard the hand, then add).
+                EffectActionKind.EachPlayerAddsLevelOrLowerNormalMonsterFromOwnDeck => EffectResolutionKind.Draw,
+                EffectActionKind.DrawThenDestroyAllFaceUpNamedWhenCountFaceUpNamed => EffectResolutionKind.Draw,
+                EffectActionKind.DiscardHandThenAddAttributeMonstersFromGyPerDiscard => EffectResolutionKind.Discard,
                 // IgnitionCostsAndSimpleSpells batch: Sand Gambler's 3 coins then a destroy (Randomize, like Barrel Dragon);
                 // Mystik Wok's LP gain from the Tributed monster's ATK or DEF.
                 EffectActionKind.CoinTossAllHeadsDestroyOppMonstersAllTailsDestroyYours => EffectResolutionKind.Randomize,

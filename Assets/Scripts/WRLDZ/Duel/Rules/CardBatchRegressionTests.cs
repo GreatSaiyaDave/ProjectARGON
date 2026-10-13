@@ -133,6 +133,7 @@ namespace WRLDZ.Duel.Rules
             RecoveryAndPhaseCostsRegressionTests.Run(db, pDeck, aDeck, check);
             TokensDeclarationsAndPicksRegressionTests.Run(db, pDeck, aDeck, check);
             ChaosBanishSummonsRegressionTests.Run(db, pDeck, aDeck, check);
+            GyHandAndSummonEventTriggersRegressionTests.Run(db, pDeck, aDeck, check);
             TargetingTruthRegressionTests.Run(db, pDeck, aDeck, check);
             BattleAndPositionRecordsRegressionTests.Run(db, pDeck, aDeck, check);
             IgnitionCostsAndSimpleSpellsRegressionTests.Run(db, pDeck, aDeck, check);

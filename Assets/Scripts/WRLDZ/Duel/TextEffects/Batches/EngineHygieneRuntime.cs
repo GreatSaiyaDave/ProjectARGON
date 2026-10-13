@@ -287,6 +287,11 @@ namespace WRLDZ.Duel.TextEffects
             GyEntryStamps.AddReason(engine, card,
                 GyEntryReason.Discard | (cause == DiscardCause.Cost ? GyEntryReason.Cost
                     : cause == DiscardCause.Effect ? GyEntryReason.Effect : GyEntryReason.None), by);
+            // GyHandAndSummonEventTriggers batch: every hand → GY trip is recorded here, the one place all the
+            // discard paths funnel through (Card Destruction, Morphing Jar, costs, the hand size rule). Night
+            // Assailant's "when this card is sent from the hand to the GY" trigger queues from this (ygopro
+            // IsPreviousLocation(LOCATION_HAND), any reason).
+            GyHandAndSummonEventTriggersRuntime.NoteEnteredGy(engine, card, fromHand: true);
             var st = StateOf(engine);
             st.Open.Add(new Rec { Owner = owner, Card = card, Cause = cause, By = by });
             if (st.Depth == 0) Close(engine, st);

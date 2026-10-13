@@ -730,6 +730,7 @@ namespace WRLDZ.Duel.TextEffects
             EndOfDamageStepRidersAtoms.Atoms,
             BattleDamageEventsAtoms.Atoms,
             SpellEventsAndHandSendTriggersAtoms.Atoms,
+            GyHandAndSummonEventTriggersAtoms.Atoms,
             RecoveryAndPhaseCostsAtoms.Atoms,
             TokensDeclarationsAndPicksAtoms.Atoms,
             ChaosBanishSummonsAtoms.Atoms,

@@ -665,6 +665,9 @@ namespace WRLDZ.Duel.TextEffects
             ContinuousTrapsAndSpiritSupportRuntime.FlushAbacus(engine);
             // Coffin Seller (EffectDamageEvents batch, v162): monsters sent to its controller's opponent's GY since then.
             EffectDamageEventsRuntime.GySendCheckpoint(engine);
+            // GyHandAndSummonEventTriggers batch: Backfire / Blessings of the Nile — the sends recorded since the
+            // last checkpoint were one event, so each watching copy queues one trigger.
+            TextEffects.GyHandAndSummonEventTriggersRuntime.FlushEventTriggers(engine);
             var state = State(engine);
             if (!engine.IsResolvingChain)
                 state.HeldUntilChainEnds.Clear();

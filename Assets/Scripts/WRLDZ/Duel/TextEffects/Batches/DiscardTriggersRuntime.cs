@@ -89,6 +89,9 @@ namespace WRLDZ.Duel.TextEffects
             Note(engine, owner, card, byEffectOf, EffectTiming.DiscardedFromHandByOpponentEffect);
             // SpellEventsAndHandSendTriggers batch: a discard is also a send from the hand to the GY (Elephant Statues).
             Note(engine, owner, card, byEffectOf, EffectTiming.SentFromHandToGyByOpponentEffect);
+            // GyHandAndSummonEventTriggers batch (Blessings of the Nile): each discard by the opponent's card effect
+            // is one recorded send; consumed at the next GY-send checkpoint.
+            GyHandAndSummonEventTriggersRuntime.NoteDiscardedByEffect(engine, owner, card, byEffectOf);
         }
 
         /// <summary>

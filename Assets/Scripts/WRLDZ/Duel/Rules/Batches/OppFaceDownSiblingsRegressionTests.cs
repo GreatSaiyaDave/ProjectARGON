@@ -79,7 +79,7 @@ namespace WRLDZ.Duel.Rules
                      c.Action == EffectActionKind.ReturnToHand);
             Shape(OldVindictiveMagician, "Old Vindictive Magician (FLIP: destroy)", CardEffectStatusKind.Implemented,
                 c => c.Timing == EffectTiming.Flip && c.Action == EffectActionKind.Destroy);
-            Shape(NightAssailant, "Night Assailant (FLIP: destroy)", CardEffectStatusKind.Stub,
+            Shape(NightAssailant, "Night Assailant (FLIP: destroy)", CardEffectStatusKind.Implemented,
                 c => c.Timing == EffectTiming.Flip && c.Action == EffectActionKind.Destroy);
             Shape(GravekeepersGuard, "Gravekeeper's Guard (FLIP: return to hand)", CardEffectStatusKind.Implemented,
                 c => c.Timing == EffectTiming.Flip && c.Action == EffectActionKind.ReturnToHand);

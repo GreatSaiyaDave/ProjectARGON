@@ -159,9 +159,11 @@ namespace WRLDZ.Duel.Rules
             }
 
             // Stubs that went through the same fallbacks: the trigger sentence no longer compiles to a bare action.
+            // "7" (GyHandAndSummonEventTriggers batch, v178) left this list: its batch atom now compiles the whole
+            // "When there are N face-up "7" cards" sentence to DrawThenDestroyAllFaceUpNamedWhenCountFaceUpNamed.
             foreach (var (id, label) in new[]
                      {
-                         (Seven, "\"7\""), (TheFirstSarcophagus, "The First Sarcophagus"),
+                         (TheFirstSarcophagus, "The First Sarcophagus"),
                          (GoblinFan, "Goblin Fan"),
                      })
             {

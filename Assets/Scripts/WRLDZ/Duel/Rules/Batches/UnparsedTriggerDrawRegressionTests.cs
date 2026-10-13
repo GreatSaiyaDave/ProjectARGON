@@ -72,15 +72,20 @@ namespace WRLDZ.Duel.Rules
 
             foreach (var (id, label) in new[] { (Seven, "\"7\"") })
             {
+                // GyHandAndSummonEventTriggers batch (v178): "7"'s sentence 1-2 compiles whole by its batch atom to
+                // DrawThenDestroyAllFaceUpNamedWhenCountFaceUpNamed (draw only while N face-up copies, then destroy
+                // them), so it is FullyCompiled, Implemented and deck-legal; it never falls back to a bare Draw.
                 var def = db.Get(id);
                 var prog = def != null ? CardTextEffectCompiler.Compile(def) : null;
-                Check($"{label}: not FullyCompiled and no bare Draw clause",
-                    def != null && prog != null && !prog.FullyCompiled && !HasDraw(prog),
+                var drawClause = prog?.ClauseList.Find(c => c != null && c.Action ==
+                    EffectActionKind.DrawThenDestroyAllFaceUpNamedWhenCountFaceUpNamed);
+                Check($"{label}: FullyCompiled by its batch atom, with no bare Draw clause",
+                    def != null && prog != null && prog.FullyCompiled && !HasDraw(prog) && drawClause != null,
                     Shape(prog));
                 var status = def != null ? CardEffectStatus.Classify(def) : CardEffectStatusKind.Unimplemented;
-                Check($"{label}: fails closed (not Implemented) and the deck gate keeps it out",
-                    def != null && status != CardEffectStatusKind.Implemented &&
-                    status != CardEffectStatusKind.Structural && !CardEffectStatus.MayIncludeInDeck(def),
+                Check($"{label}: Implemented and the deck gate keeps it in",
+                    def != null && status == CardEffectStatusKind.Implemented &&
+                    CardEffectStatus.MayIncludeInDeck(def),
                     status.ToString());
             }
 

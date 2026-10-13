@@ -183,15 +183,15 @@ namespace WRLDZ.Data
 
             C(ClothingSlot.Shirt, "tea", "bc", 1, "Sleeveless blouse", "Pale green sleeveless blouse.", 0, "skin", new Color(0.79f, 0.90f, 0.84f)),
             C(ClothingSlot.Bottoms, "tea", "bc", 1, "Short shorts", "Dark shorts.", 1, null, new Color(0.31f, 0.37f, 0.45f)),
-            C(ClothingSlot.Shoes, "tea", "bc", 1, "Platform sandals", "Light platform sandals.", 0, null, new Color(0.94f, 0.91f, 0.66f)),
+            C(ClothingSlot.Shoes, "tea", "bc", 1, "Platform sandals", "Grey-blue platform sandals.", 0, null, new Color(0.267f, 0.443f, 0.553f)),
 
             C(ClothingSlot.Shirt, "bakura", "bc", 0, "Open overshirt", "Short-sleeve blue overshirt.", 2, "#4F6595", new Color(0.54f, 0.75f, 0.82f)),
-            C(ClothingSlot.Bottoms, "bakura", "bc", 0, "Bakura's jeans", "Blue jeans.", 1, null, new Color(0.23f, 0.26f, 0.35f)),
+            C(ClothingSlot.Bottoms, "bakura", "bc", 0, "Bakura's jeans", "Pale lavender jeans.", 1, null, new Color(0.702f, 0.678f, 0.761f)),
             C(ClothingSlot.Shoes, "bakura", "bc", 0, "Bakura's white sneakers", "White sneakers.", 0, null, new Color(0.93f, 0.93f, 0.95f)),
 
             C(ClothingSlot.Shirt, "marik", "bc", 0, "Sleeveless hoodie", "Lavender sleeveless hoodie.", 2, "skin", new Color(0.82f, 0.80f, 0.91f)),
             C(ClothingSlot.Bottoms, "marik", "bc", 0, "Light trousers", "Beige trousers.", 1, null, new Color(0.90f, 0.86f, 0.76f)),
-            C(ClothingSlot.Shoes, "marik", "bc", 0, "Gold-trim shoes", "Light shoes.", 0, null, new Color(0.79f, 0.66f, 0.31f)),
+            C(ClothingSlot.Shoes, "marik", "bc", 0, "Black shoes", "Black shoes.", 0, null, new Color(0.118f, 0.118f, 0.118f)),
 
             C(ClothingSlot.Shirt, "pegasus", "dk", 0, "Red frock coat", "Duelist Kingdom red suit coat.", 4, "#E8ECEF", new Color(0.73f, 0.35f, 0.35f)),
             C(ClothingSlot.Bottoms, "pegasus", "dk", 0, "Crimson trousers", "Crimson suit trousers.", 1, null, new Color(0.66f, 0.30f, 0.31f)),
@@ -200,7 +200,7 @@ namespace WRLDZ.Data
             C(ClothingSlot.Shirt, "weevil", "bc", 0, "Closed jacket", "Green jacket closed to the neck.", 3, "#45454C", new Color(0.53f, 0.69f, 0.35f)),
             C(ClothingSlot.Bottoms, "weevil", "bc", 0, "Weevil's shorts", "Dark shorts.", 1, null, new Color(0.27f, 0.27f, 0.30f)),
             C(ClothingSlot.Shoes, "weevil", "bc", 0, "Weevil's sneakers", "Dark sneakers.", 0, null, new Color(0.25f, 0.26f, 0.24f)),
-            C(ClothingSlot.Facial, "weevil", "bc", 0, "Round glasses", "Round glasses.", 0, null, new Color(0.13f, 0.15f, 0.17f)),
+            C(ClothingSlot.Facial, "weevil", "bc", 0, "Round glasses", "Round glasses.", 0, null, new Color(0.890f, 0.784f, 0.290f)),
 
             C(ClothingSlot.Shirt, "rex", "bc", 0, "Open jacket", "Green open jacket.", 2, "#D7D09F", new Color(0.23f, 0.49f, 0.38f)),
             C(ClothingSlot.Bottoms, "rex", "bc", 0, "Brown trousers", "Tan trousers.", 1, null, new Color(0.59f, 0.48f, 0.33f)),
@@ -257,8 +257,8 @@ namespace WRLDZ.Data
             C(ClothingSlot.Shoes, "tristan", "bc", 0, "Tristan's white sneakers", "White sneakers.", 0, null, new Color(0.90f, 0.93f, 0.94f)),
 
             C(ClothingSlot.Shirt, "mokuba", "bc", 0, "Puffer vest", "Gold vest over a striped shirt.", 2, "#AFCFEE", new Color(0.89f, 0.76f, 0.50f)),
-            C(ClothingSlot.Bottoms, "mokuba", "bc", 0, "Mokuba's jeans", "Blue jeans.", 1, null, new Color(0.23f, 0.26f, 0.33f)),
-            C(ClothingSlot.Shoes, "mokuba", "bc", 0, "Mokuba's sneakers", "Blue sneakers.", 0, null, new Color(0.31f, 0.35f, 0.53f)),
+            C(ClothingSlot.Bottoms, "mokuba", "bc", 0, "Mokuba's jeans", "Blue jeans.", 1, null, new Color(0.310f, 0.353f, 0.525f)),
+            C(ClothingSlot.Shoes, "mokuba", "bc", 0, "Mokuba's sneakers", "Blue sneakers.", 0, null, new Color(0.306f, 0.471f, 0.722f)),
         };
 
         static ClothingItem N(string id, ClothingSlot slot, string name, string blurb,

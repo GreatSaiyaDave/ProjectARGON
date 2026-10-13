@@ -6742,6 +6742,24 @@ namespace WRLDZ.Duel.TextEffects
                     DrawThenDiscardRuntime.Resolve(engine, who, source, clause);
                     break;
 
+                // GyHandAndSummonEventTriggers: Emissary of the Afterlife — each player adds 1 Level N or lower
+                // Normal Monster from their own Deck to their hand (selected, not targeted).
+                case EffectActionKind.EachPlayerAddsLevelOrLowerNormalMonsterFromOwnDeck:
+                    GyHandAndSummonEventTriggersRuntime.EachPlayerAddsFromDeck(engine, who, source, clause);
+                    break;
+
+                // GyHandAndSummonEventTriggers: "7" — draw only while exactly N face-up copies are in your
+                // Spell & Trap Zones, then destroy every face-up copy on the field together.
+                case EffectActionKind.DrawThenDestroyAllFaceUpNamedWhenCountFaceUpNamed:
+                    GyHandAndSummonEventTriggersRuntime.OnSevenActivated(engine, who, source, clause);
+                    break;
+
+                // GyHandAndSummonEventTriggers: Beckoning Light — discard the whole hand as one event, then add
+                // that many of the Attribute from the GY when the GY holds enough (otherwise none).
+                case EffectActionKind.DiscardHandThenAddAttributeMonstersFromGyPerDiscard:
+                    GyHandAndSummonEventTriggersRuntime.DiscardHandThenAdd(engine, who, source, clause);
+                    break;
+
                 case EffectActionKind.Destroy:
                     s_lastDestroyHits = 0;
                     if (clause.Zone == EffectZoneFilter.FaceUpNamedSpellTraps)
@@ -11177,6 +11195,11 @@ namespace WRLDZ.Duel.TextEffects
                         // BattleBoosts batch (v161): Gray Wing — Main Phase 1 of a turn with a Battle Phase, no extra attack yet.
                         if (BattleBoostsRuntime.TryActivationCondition(engine, who, card, c, out ok, out reason))
                             break;
+                        // GyHandAndSummonEventTriggers batch: Beckoning Light — a card in your hand (not this card)
+                        // and at least that many of the Attribute in your GY.
+                        if (GyHandAndSummonEventTriggersRuntime.TryActivationCondition(engine, who, card, c, out ok,
+                                out reason))
+                            break;
                         // PgdSpellTrapBasics batch (v162): D. Tribe / Pyramid Energy, Curse of Aging, Needle Ceiling.
                         if (PgdSpellTrapBasicsRuntime.TryActivationCondition(engine, who, c, out ok, out reason))
                             break;
@@ -14775,6 +14798,11 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
             // RecoveryAndPhaseCosts batch: Dimension Distortion — a face-up banished monster you can Special Summon (and a
             // free zone); Salvage — the Attribute and ATK ceiling of a GY monster add.
             RecoveryAndPhaseCostsRuntime.FilterTargets(engine, who, c, except, list);
+
+            // GyHandAndSummonEventTriggers batch: a Flip-monster pick (Night Assailant's GY target, Soul Reversal)
+            // keeps Flip monsters only, and "except this card" excludes every card of the source's name. The generic
+            // face-up kind filter never looks inside a GY. Mirror: SpellTrapEffects.CollectLegalTargets.
+            GyHandAndSummonEventTriggersRuntime.FilterTargets(c, except, list);
 
             // TokensDeclarationsAndPicks batch: Wild Nature's Release — a target with DEF above 0.
             TokensDeclarationsAndPicksRuntime.FilterTargets(c, list);

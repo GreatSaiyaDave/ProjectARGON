@@ -1874,6 +1874,15 @@ namespace WRLDZ.Duel
                     c.Zone == EffectZoneFilter.OppGyMonsters ||
                     c.Zone == EffectZoneFilter.EitherGyCards ||
                     c.Zone == EffectZoneFilter.OppGyCards ||
+                    // GyHandAndSummonEventTriggers batch: Soul Reversal / Night Assailant pick 1 Flip monster in
+                    // their controller's GY — the legacy MonsterInEitherGy list carries both players' Graveyards
+                    // and no Flip filter, so the compiled flow asks the pick (FilterTargets narrows it). Only the
+                    // Flip-kind pick: an ordinary GY monster pick (Premature Burial's equip target) keeps the
+                    // legacy list, which already knows how to equip to it.
+                    (c.Zone == EffectZoneFilter.ControllerGyMonsters &&
+                     string.Equals(c.TargetCardKind,
+                         TextEffects.GyHandAndSummonEventTriggersRuntime.FlipKind,
+                         System.StringComparison.Ordinal)) ||
                     // SimpleSpellTraps batch: Emergency Provisions sends its cost as it is activated.
                     c.Action == EffectActionKind.GainLpPerSpellTrapSentAsCost ||
                     // TokensDeclarationsAndPicks batch: Stray Lambs / Scapegoat bind their summon oath as they are

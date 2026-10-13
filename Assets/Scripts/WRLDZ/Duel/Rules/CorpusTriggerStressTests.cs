@@ -309,10 +309,18 @@ namespace WRLDZ.Duel.Rules
                    // DEF; TokensDeclarationsAndPicksRegressionTests drive them.
                    c.ForbidsOtherSummonsThisTurn ||
                    c.Action == EffectActionKind.TargetGainsAtkEqualToDefDestroyAtEndPhase ||
-                   (!string.IsNullOrEmpty(c.RaceFilter) &&
-                    (c.Zone == EffectZoneFilter.ControllerGyMonsters ||
-                     c.Zone == EffectZoneFilter.EitherGyMonsters ||
-                     c.Zone == EffectZoneFilter.OppGyMonsters));
+                    // GyHandAndSummonEventTriggers batch: Soul Reversal needs 1 Flip monster in your GY (targeted)
+                    // and Beckoning Light a card in the hand plus that many of the Attribute in your GY;
+                    // GyHandAndSummonEventTriggersRegressionTests drive both boards.
+                    string.Equals(c.TargetCardKind,
+                        TextEffects.GyHandAndSummonEventTriggersRuntime.FlipKind,
+                        System.StringComparison.Ordinal) ||
+                    c.ActivationCondition ==
+                        TextEffects.GyHandAndSummonEventTriggersRuntime.HandAndAttributeMonstersInGy ||
+                    (!string.IsNullOrEmpty(c.RaceFilter) &&
+                     (c.Zone == EffectZoneFilter.ControllerGyMonsters ||
+                      c.Zone == EffectZoneFilter.EitherGyMonsters ||
+                      c.Zone == EffectZoneFilter.OppGyMonsters));
         }
 
         static void Provision(DuelEngine engine, CompiledCardProgram prog)

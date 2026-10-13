@@ -2862,6 +2862,7 @@ namespace WRLDZ.Duel
             }
 
             // A Semi-Nomi that went through the hand must be properly summoned again (TributeSummons batch).
+            var fromHand = owner.Hand.Contains(card);
             if (owner.Hand.Remove(card)) card.ProcedureCompleted = false;
             var pile = PileOwner(owner, card);
             if (banishInstead)
@@ -2884,6 +2885,9 @@ namespace WRLDZ.Duel
             TextEffects.GyEntryStamps.Entered(this, card,
                 sentBy != null ? GyEntryReason.Effect : GyEntryReason.None,
                 TextEffects.GyEntryStamps.HolderOf(this, sentBy));
+            // GyHandAndSummonEventTriggers: Night Assailant — a hand → GY trip queues its
+            // "when this card is sent from the hand to the GY" trigger (ygopro IsPreviousLocation(LOCATION_HAND)).
+            TextEffects.GyHandAndSummonEventTriggersRuntime.NoteEnteredGy(this, card, fromHand);
             PendingTributes.Remove(card);
             UnlinkCardFromHostOnLeave(owner, card, fromFieldSt);
             if (fromFieldMonster)
@@ -7392,6 +7396,12 @@ namespace WRLDZ.Duel
                     // EquipFamily batch (Dark Necrofear): destroyed in whose Monster Zone, by whose card.
                     TextEffects.EquipFamilyRuntime.NoteDestroyedToGy(this, owner, gyPile, card, byEffect,
                         destroyedByBattle, battleDestroyer);
+                    // GyHandAndSummonEventTriggers batch (Backfire): a face-up monster destroyed and sent to its
+                    // controller's GY keeps the Attribute it had on the field, so each Attribute-scoped FIELD
+                    // TRIGGER_F sees one event (destroyed by battle, or by an effect that is not its source).
+                    if (!card.IsToken)
+                        TextEffects.GyHandAndSummonEventTriggersRuntime.NoteDestroyedToGy(this, owner, gyPile,
+                            card, card.Def?.attribute, wasFaceUp);
                     MonsterEffects.OnSentFromFieldToGy(this, owner, card, destroyed: true,
                         destroyedByBattle, battleDestroyer);
                 }
@@ -7739,6 +7749,9 @@ namespace WRLDZ.Duel
                 // SimpleTriggersAndSwarm batch: "When this card is sent to the GY" (from anywhere) once play is idle.
                 if (!GameOver && !TextEffects.SimultaneousTriggersRuntime.Busy(this) && PlayIdleForDeferredEvents())
                     TextEffects.SimpleTriggersAndSwarmRuntime.FireQueuedSentToGy(this);
+                // GyHandAndSummonEventTriggers batch: Night Assailant's "sent from the hand to the GY" trigger, once idle.
+                if (!GameOver && !TextEffects.SimultaneousTriggersRuntime.Busy(this) && PlayIdleForDeferredEvents())
+                    TextEffects.GyHandAndSummonEventTriggersRuntime.FireQueuedHandSends(this);
                 // ChaosBanishSummons batch: Chaosrider Gustaph's ATK ends when it leaves the field or is negated; Soul
                 // Absorption's queued banish triggers activate once play is idle.
                 TextEffects.ChaosBanishSummonsRuntime.OnBoardSettled(this);

@@ -136,7 +136,6 @@ namespace WRLDZ.Duel.TextEffects
             var st = StateOf(engine);
             st.HandSends.RemoveAll(q => ReferenceEquals(q.Card, card));
             st.HandSends.Add(new HandSend { Card = card, Owner = holder, Stamp = card.GyEntryStamp });
-            Console.WriteLine($"[GyHandAndSummonEventTriggers] NoteEnteredGy: {card.Name} queued, HandSends={st.HandSends.Count}, holder={holder.Name}, stamp={card.GyEntryStamp}, clause={HandSendClause(card)?.Action}");
         }
 
         /// <summary>The card is in a GY on a trip that came from a hand.</summary>
@@ -150,19 +149,16 @@ namespace WRLDZ.Duel.TextEffects
         public static void FireQueuedHandSends(DuelEngine engine)
         {
             if (engine == null) return;
-            Console.WriteLine("[GyHandAndSummonEventTriggers] FireQueuedHandSends called");
             if (engine.GameOver || !s_state.TryGetValue(engine, out var st) || st.Firing ||
                 st.HandSends.Count == 0)
             {
                 var hasState = s_state.TryGetValue(engine, out var st2);
                 var firing = st2?.Firing ?? false;
                 var count = st2?.HandSends.Count ?? -1;
-                Console.WriteLine("[GyHandAndSummonEventTriggers] FireQueuedHandSends early return: GameOver=" + engine.GameOver + " HasState=" + hasState + " Firing=" + firing + " Count=" + count);
                 return;
             }
             if (engine.PendingActivation != null || engine.PendingResponse != null)
             {
-                Console.WriteLine("[GyHandAndSummonEventTriggers] FireQueuedHandSends early return: PendingActivation=" + (engine.PendingActivation != null) + " PendingResponse=" + (engine.PendingResponse != null));
                 return;
             }
             var due = st.HandSends.ToList();
@@ -173,7 +169,6 @@ namespace WRLDZ.Duel.TextEffects
                                       !NegationMonstersRuntime.NegatedInGy(engine, q.Card))
                 .OrderBy(q => ReferenceEquals(q.Owner, engine.TurnPlayer) ? 0 : 1)
                 .ToList();
-            Console.WriteLine("[GyHandAndSummonEventTriggers] FireQueuedHandSends: due=" + due.Count + " live=" + live.Count);
             if (live.Count == 0) return;
             st.Firing = true;
             ActivateHandSends(engine, st, live, 0, new List<TriggerChainResponsesRuntime.Seat>());
@@ -394,9 +389,12 @@ namespace WRLDZ.Duel.TextEffects
         /// needs its own controller's monster in its own GY (Lua IsPreviousControler(tp) and IsControler(tp)).
         /// </summary>
         public static void NoteDestroyedToGy(DuelEngine engine, DuelistState controller, DuelistState gyOwner,
-            CardInstance card, string attributeOnField)
+            CardInstance card, string attributeOnField, bool wasFaceUp)
         {
             if (engine == null || controller == null || card?.Def == null || card.IsToken) return;
+            // Backfire: "a face-up FIRE monster you control" — face-down on the field or destroyed in the
+            // opponent's Monster Zone is not this card's event.
+            if (!wasFaceUp) return;
             if (!ReferenceEquals(controller, gyOwner) || gyOwner.Graveyard == null || !gyOwner.Graveyard.Contains(card)) return;
             Note(engine, controller, EffectActionKind.InflictDamageWhenFaceUpAttributeMonsterYouControlDestroyedToGy,
                 clause => !string.IsNullOrEmpty(clause.AttributeFilter) &&
