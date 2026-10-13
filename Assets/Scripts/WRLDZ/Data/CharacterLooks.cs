@@ -115,7 +115,10 @@ namespace WRLDZ.Data
             L("bakura_bc", "Battle City Bakura", "bakura", 0, "ryou_bakura", "bakura", 176f, 0.35f, "shirt_bakura_bc", "bottoms_bakura_bc", "shoes_bakura_bc", null),
             L("marik_bc", "Battle City Marik", "marik", 0, "marik_ishtar", "marik", 177f, 0.40f, "shirt_marik_bc", "bottoms_marik_bc", "shoes_marik_bc", null, skin: "#A8704A"),
             L("pegasus_dk", "Duelist Kingdom Pegasus", "pegasus", 0, "ryou_bakura", "pegasus", 190f, 0.45f, "shirt_pegasus_dk", "bottoms_pegasus_dk", "shoes_pegasus_dk", null, hairPattern: 1, hairHex: "#C4BDD0"),
-            L("weevil_bc", "Battle City Weevil", "weevil", 0, "seto_kaiba", "weevil", 152f, 0.30f, "shirt_weevil_bc", "bottoms_weevil_bc", "shoes_weevil_bc", null, "face_weevil_bc", hairPattern: 1, hairHex: "#8ABAB7"),
+            // face is the 6th arg (the decal). facial is the 13th and belongs to the glasses slot:
+            // a decal filename there is a Clothes/argon_<id>_<sex> lookup, so "face_weevil_bc" resolved
+            // to nothing and silently fell back to face_none. Weevil gets no facial piece.
+            L("weevil_bc", "Battle City Weevil", "weevil", 0, "seto_kaiba", "weevil", 152f, 0.30f, "shirt_weevil_bc", "bottoms_weevil_bc", "shoes_weevil_bc", null, hairPattern: 1, hairHex: "#8ABAB7"),
             L("rex_bc", "Battle City Rex", "rex", 0, "jaden_yuki", "rex_raptor", 170f, 0.55f, "shirt_rex_bc", "bottoms_rex_bc", "shoes_rex_bc", null, hat: "hat_rex_bc", hairPattern: 2, hairHex: "#4D3020", hairTip: "#8D7DB3"),
             L("mako_dk", "Duelist Kingdom Mako", "mako", 0, "jack_atlas", "mako", 183f, 0.70f, "shirt_mako_bc", "bottoms_mako_dk", "shoes_mako_bc", null, hat: "hat_mako_bc", hairPattern: 4, hairHex: "#3C394C", hairStreak: "#595E8F"),
             L("mako_bc", "Battle City Mako", "mako", 0, "jack_atlas", "mako", 183f, 0.70f, "shirt_mako_bc", "bottoms_mako_bc", "shoes_mako_bc", null, hat: "hat_mako_bc", hairPattern: 4, hairHex: "#3C394C", hairStreak: "#595E8F"),

@@ -708,3 +708,39 @@ mask's `B` channel is only 0.3% used ("other"), so the honest fix is neck+forear
 per-look colour (`"skin"` by default, the collar hex where the blurb says high-neck / turtleneck / closed). That is
 shader + `OverworldAvatar3d` work, not a texture edit, so it is recorded here measured and unfixed.
 
+---
+
+## 13. Wiring audit, and the one defect it found (2026-10-13)
+
+Owner report: "bits of clothing all over the model, the face is unreadable, and the hair isn't placed right."
+That reads as grafted pieces (hair / hats / clothes) landing wrong, so the lookup chain was measured rather than
+guessed. `Tools/anime/look_assets_audit.py` (new, run from the repo root, exits non-zero on a miss) checks every
+`CharacterLooks` row against what actually ships: hair → `Hair/argon_hair_<id>_<sex>.fbx`, face → `Faces/<id>.png`,
+and the six clothing ids → `Clothes/argon_<id>_<sex>.fbx`.
+
+**Result: 27 rows, 0 missing** — every look resolves, so nothing falls back to a default generic shell.
+
+| what was checked | how | result |
+|---|---|---|
+| face decals | size + alpha coverage | the 22 named decals are all **1024×540, aspect 1.90**, matching `FaceQuad`'s 0.132 × 0.070 quad; alpha 10-46% (a feathered eyes/brows patch) |
+| grafted rigs | per-bone rest transforms, base vs each piece | 52/52 shared bone names; every piece's rig is a **uniform +0.176 m** translation of the base's (Hips z 0.920 → 1.096) |
+| graft placement | apply `W_host · inv(W_piece)` to the piece's vertices | hair ryou_bakura raw z 1.179-1.889 → **1.003-1.713** (jaw to crown on a 1.707-tall body); trousers raw 0.186-1.218 → **0.010-1.042** (ankles to natural waist) |
+| body hides | `SetBodyHide` / `CombineHides` | unconditional, applied to the body renderer only — the one-mesh outfit maps rebuilt in §10 cover that path |
+| silhouette path | `ApplySilhouette` vs `ApplyClothes` | swaps *every* material to a flat silhouette and hides the decal; it never runs for a canon duelist |
+
+The rig translation is the designed compensation, not damage: the pieces are authored on a rig whose origin sits
+17.6 cm higher and the graft's own bindpose maths lowers them exactly that far. So the grafts are correct.
+
+**The defect found.** The `weevil_bc` row passed the string `"face_weevil_bc"` into the **`facial`** parameter (the
+13th argument, the glasses slot) instead of leaving it empty, so a *decal* filename was resolved as a
+`Clothes/argon_<id>_<sex>` garment lookup. It silently fell back to `face_none`, so nothing visibly broke — but
+`Faces/face_weevil_bc.png` is the one odd asset in that folder: a **720×1280, 100%-opaque raw screencap**, not a
+1024×540 feathered patch. Anything that ever did load it as a decal would paint an opaque rectangle over the face.
+The stray argument is removed (Weevil wears no facial piece) and the reason is recorded in the row, because the
+positional `L(...)` signature puts `facial` immediately after `hands`, where a decal name looks like it belongs.
+
+**Not yet explained by measurement:** which of the three symptoms the owner means. The closest measured match is
+still the §12 undersuit region — clothing colour painted on the neck and scalp of *every* look (`head 5.3%`,
+`neck 1.4-6.1%`) — with `render_probe.py` (23 Oct) per-look totals: Keith 17.8% of body area in clothing colour,
+Bakura 14.5%, Weevil / Bonz / Pegasus / Tristan 7.9% after the §11 fixes.
+
