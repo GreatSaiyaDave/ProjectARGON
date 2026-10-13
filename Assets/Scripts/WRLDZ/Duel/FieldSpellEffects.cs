@@ -727,6 +727,9 @@ namespace WRLDZ.Duel
             // AttackShieldsAndDamageZero batch: Theban Nightmare — only while its controller has no cards in hand nor in the
             // Spell & Trap Zones (no condition on every other aura).
             if (!TextEffects.AttackShieldsAndDamageZeroRuntime.WhileConditionMet(engine, source, clause)) return;
+            // Coverage family F1 (v180, AttributeBullets): an Element bullet's stat gain is live only while a monster
+            // with its Attribute is face-up on the field.
+            if (!TextEffects.AttributeBulletsRuntime.FieldAttributePresent(engine, clause.RequiresFieldAttribute)) return;
             var controller = engine.ControllerOf(source);
 
             if (clause.ScaleThisAtkByEquippedEquipCount)

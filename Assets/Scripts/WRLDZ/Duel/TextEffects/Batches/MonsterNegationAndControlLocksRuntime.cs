@@ -96,7 +96,10 @@ namespace WRLDZ.Duel.TextEffects
         {
             if (engine == null || card?.Def == null || !card.FaceUp || card.IsNegated) return false;
             if (!InMonsterZone(engine, card) || engine.IsSummonPending(card)) return false;
-            return ClauseOf(card, EffectActionKind.ControlOfThisCannotSwitch) != null;
+            var clause = ClauseOf(card, EffectActionKind.ControlOfThisCannotSwitch);
+            // Coverage family F1 (v180, AttributeBullets): the Element WATER bullet's lock is live only while a monster
+            // with its Attribute is face-up on the field.
+            return clause != null && AttributeBulletsRuntime.FieldAttributePresent(engine, clause.RequiresFieldAttribute);
         }
 
         /// <summary>A clause whose resolution takes or switches control of its target(s).</summary>

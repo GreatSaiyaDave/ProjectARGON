@@ -140,6 +140,7 @@ namespace WRLDZ.Duel.Rules
             AttackShieldsAndDamageZeroRegressionTests.Run(db, pDeck, aDeck, check);
             SanctuaryAndZeraRegressionTests.Run(db, pDeck, aDeck, check);
             LvChainRegressionTests.Run(db, pDeck, aDeck, check);
+            ElementMonstersRegressionTests.Run(db, pDeck, aDeck, check);
         }
     }
 }

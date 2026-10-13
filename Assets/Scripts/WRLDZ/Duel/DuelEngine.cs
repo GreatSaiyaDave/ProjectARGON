@@ -4079,6 +4079,10 @@ namespace WRLDZ.Duel
                 {
                     if (clause == null || clause.Action != EffectActionKind.ExtraAttacks)
                         continue;
+                    // Coverage family F1 (v180, AttributeBullets): the Element WIND bullet's extra attack is live only
+                    // while a monster with its Attribute is on the field.
+                    if (!TextEffects.AttributeBulletsRuntime.FieldAttributePresent(this, clause.RequiresFieldAttribute))
+                        continue;
                     if (!string.IsNullOrEmpty(clause.RequiresFaceUpName) &&
                         !FieldSpellEffects.NamedCardIsFaceUpOnField(this, clause.RequiresFaceUpName))
                         continue;

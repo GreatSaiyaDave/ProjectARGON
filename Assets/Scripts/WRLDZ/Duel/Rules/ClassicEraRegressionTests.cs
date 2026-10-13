@@ -151,17 +151,19 @@ namespace WRLDZ.Duel.Rules
                     bad.Count == 0, string.Join(", ", bad));
             }
 
-            // Element monsters: conditional Attribute bullets are continuous effects keyed on
-            // the field — never an unconditional ignition. Refuse (fail closed) until modeled.
+            // Element monsters: conditional Attribute bullets are continuous effects keyed on the field (coverage family
+            // F1, v180). They now compile, but never as an unconditional ignition — every clause must carry the field
+            // Attribute its bullet was gated on. (ElementMonstersRegressionTests exercises the runtime.)
             {
                 var bad = new[] { 30314994, 97623219, 92755808, 23118924, 65260293, 66712593 }
                     .Where(id =>
                     {
                         var d = db.Get(id);
                         var pr = d != null ? CardTextEffectCompiler.Compile(d) : null;
-                        return pr == null || pr.FullyCompiled || pr.ClauseList.Count > 0;
+                        return pr == null || !pr.FullyCompiled || pr.ClauseList.Count == 0 ||
+                               pr.ClauseList.Exists(c => c == null || string.IsNullOrEmpty(c.RequiresFieldAttribute));
                     }).Select(id => db.Get(id)?.name ?? id.ToString()).ToList();
-                Check("Compile: Element monsters' conditional Attribute bullets refuse (no false ignition)",
+                Check("Compile: Element monsters' conditional Attribute bullets compile only with a field-Attribute gate",
                     bad.Count == 0, string.Join(", ", bad));
             }
 

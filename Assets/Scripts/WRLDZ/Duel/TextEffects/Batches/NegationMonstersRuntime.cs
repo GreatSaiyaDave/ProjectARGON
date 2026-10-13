@@ -269,7 +269,12 @@ namespace WRLDZ.Duel.TextEffects
         /// <summary>DuelEngine.ExtraAttacksAllowed: an extra attack whose condition does not hold now counts for nothing.</summary>
         public static bool ExtraAttackConditionMet(DuelEngine engine, CardInstance attacker, EffectClause clause)
         {
-            if (clause == null || clause.ActivationCondition != OpponentControlsMonster) return true;
+            if (clause == null) return true;
+            // Coverage family F1 (v180, AttributeBullets): the Element WIND bullet — only after this card destroyed a
+            // monster by battle this turn.
+            if (clause.ActivationCondition == AttributeBulletsRuntime.DestroyedMonsterByBattleThisTurn)
+                return attacker != null && attacker.DestroyedByBattleThisTurn;
+            if (clause.ActivationCondition != OpponentControlsMonster) return true;
             var controller = engine?.ControllerOf(attacker);
             var opp = controller != null ? engine.OpponentOf(controller) : null;
             return opp != null && opp.MonstersOnField().Any(m => m != null);
@@ -472,6 +477,9 @@ namespace WRLDZ.Duel.TextEffects
                 if (!Active(engine, side, m)) continue;
                 foreach (var c in Markers(m, EffectActionKind.NegateEffectsOfMonstersDestroyedByBattle))
                 {
+                    // Coverage family F1 (v180, AttributeBullets): the Element EARTH bullet is live only while a monster
+                    // with its Attribute is face-up on the field.
+                    if (!AttributeBulletsRuntime.FieldAttributePresent(engine, c.RequiresFieldAttribute)) continue;
                     if (c.AffectsThisCardOnly)
                     {
                         // Twin-Headed Wolf: this card battled; the destroyed monster is of the printed card type; while

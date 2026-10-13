@@ -4443,6 +4443,14 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         public bool AffectsThisCardOnly;
 
+        /// <summary>
+        /// Coverage family F1 (v180, AttributeBullets): a continuous clause that is live only while a face-up monster
+        /// with this printed Attribute is on the field (either player's Monster Zone) — the Element monsters'
+        /// "● FIRE: …" bullets. Empty on every other clause. Honored through
+        /// <see cref="AttributeBulletsRuntime.FieldAttributePresent"/> at every site that applies a continuous clause.
+        /// </summary>
+        public string RequiresFieldAttribute;
+
         // ── FlipCostsAndFusion batch ──
 
         /// <summary>
