@@ -3858,6 +3858,12 @@ namespace WRLDZ.Duel.TextEffects
         /// Guardian Angel Joan: the amount is the target's printed original ATK, not Amount.
         /// </summary>
         public bool AmountFromTargetOriginalAtk;
+        /// <summary>
+        /// Inferno Fire Blast: on an <see cref="EffectActionKind.InflictDamageToOpponent"/> that damages the
+        /// opponent, the clause target cannot attack for the rest of this turn
+        /// (<see cref="CardInstance.CannotAttackDuringTurnNumber"/>).
+        /// </summary>
+        public bool TargetCannotAttackThisTurn;
         /// <summary>Mage Power: Equip ATK/DEF is per Spell/Trap you control (including this card).</summary>
         public bool ScaleAmountByControllerSpellTraps;
         /// <summary>Spirit: return to hand if Normal Summoned or flipped this turn.</summary>

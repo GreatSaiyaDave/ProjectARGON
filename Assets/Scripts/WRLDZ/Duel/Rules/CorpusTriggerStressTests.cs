@@ -428,6 +428,14 @@ namespace WRLDZ.Duel.Rules
                         opp.Hand.Add(engine.CreateCardInstance(Celtic));
                 }
 
+                // Mind Wipe (RecoveryAndPhaseCosts batch): "Activate only if your opponent has 3 or less
+                // cards in their hand" — the shared corpus engine's opponent hand is grown by other probes
+                // (Heavy Slump, Bubble Crash, …), so trim it to 3 for a legal activation.
+                if (c.ActivationCondition == RecoveryAndPhaseCostsRuntime.OpponentHasAtMostThreeInHand)
+                {
+                    while (opp.Hand.Count > 3) opp.Hand.RemoveAt(opp.Hand.Count - 1);
+                }
+
                 if (!string.IsNullOrEmpty(c.RequiresFaceUpName) &&
                     c.RequiresFaceUpName.IndexOf("Umi", StringComparison.OrdinalIgnoreCase) >= 0)
                 {
@@ -469,6 +477,11 @@ namespace WRLDZ.Duel.Rules
                     c.TargetSeriesName.IndexOf("Archfiend", StringComparison.OrdinalIgnoreCase) >= 0 &&
                     c.Zone == EffectZoneFilter.ControllerMonsters)
                     PlaceMonster(engine, p, ArchfiendSoldier, 1, BattlePosition.Attack, true);
+
+                // Inferno Fire Blast: target 1 "Red-Eyes B. Dragon" in your Monster Zone.
+                if (c.TargetCannotAttackThisTurn && c.Zone == EffectZoneFilter.ControllerMonsters &&
+                    p.MonsterZones[1].IsEmpty)
+                    PlaceMonster(engine, p, 74677422, 1, BattlePosition.Attack, true); // Red-Eyes B. Dragon
 
                 if (c.Zone == EffectZoneFilter.DeckFieldSpells)
                     p.Deck.Insert(0, Alo);

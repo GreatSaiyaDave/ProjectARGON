@@ -40,6 +40,10 @@ namespace WRLDZ.Duel.TextEffects
         /// IsAbleToDeck, tp, LOCATION_HAND, 0, 1, e:GetHandler())).</summary>
         public const string AnotherCardInYourHand = "RecoveryAnotherCardInYourHand";
 
+        /// <summary>ActivationCondition (Mind Wipe, c52817046): "Activate only if your opponent has 3 or less
+        /// cards in their hand" (Lua chk: GetHandcount(1-tp) &lt;= 3).</summary>
+        public const string OpponentHasAtMostThreeInHand = "RecoveryOpponentHasAtMostThreeInHand";
+
         /// <summary>The AI pays Recycle's LP only while it keeps at least this many LP afterwards.</summary>
         public const int AiRecycleFloorLp = 3000;
 
@@ -78,6 +82,13 @@ namespace WRLDZ.Duel.TextEffects
                     ok = who.Hand != null && who.Hand.Any(h => h != null && !ReferenceEquals(h, card));
                     reason = "Needs another card in your hand.";
                     return true;
+                case OpponentHasAtMostThreeInHand:
+                {
+                    var opp = engine.OpponentOf(who);
+                    ok = opp?.Hand != null && opp.Hand.Count <= 3;
+                    reason = "Activate only if your opponent has 3 or less cards in their hand.";
+                    return true;
+                }
                 default:
                     return false;
             }

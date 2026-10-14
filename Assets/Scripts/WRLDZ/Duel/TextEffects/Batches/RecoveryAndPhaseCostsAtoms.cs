@@ -128,6 +128,22 @@ namespace WRLDZ.Duel.TextEffects
                     MakesChainLink = true
                 }),
 
+            // Mind Wipe (c52817046): Quick-Play; chk GetHandcount(1-tp) <= 3, then the OPPONENT's hand is added to
+            // its owners' Decks (SEQ_DECKSHUFFLE), shuffled, and they draw #g. Same runtime as Reload
+            // (ShuffleHandIntoDeckThenDraw), with Side = Opponent selecting the shuffled player.
+            new AtomRegistration.Atom(
+                Start + @"Activate only if your opponent has 3 or less cards in their hand\.\s*" +
+                @"Your opponent adds their hand to the Deck and shuffles it, then draws the same number of cards " +
+                @"they added to the Deck" + End,
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.ShuffleHandIntoDeckThenDrawSameNumber,
+                    Side = EffectSide.Opponent,
+                    ActivationCondition = RecoveryAndPhaseCostsRuntime.OpponentHasAtMostThreeInHand,
+                    MakesChainLink = true
+                }),
+
             // Coach Goblin (c42541548): FIELD TRIGGER_O in the Monster Zone on EVENT_PHASE+PHASE_END, condition IsTurnPlayer,
             // count limit 1; cost: 1 Normal Monster in the hand, ConfirmCards, SendtoDeck(SEQ_DECKBOTTOM, REASON_COST); draw 1
             // if this card still relates and is face-up.

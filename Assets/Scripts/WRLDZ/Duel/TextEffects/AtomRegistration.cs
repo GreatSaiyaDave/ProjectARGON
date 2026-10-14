@@ -640,6 +640,28 @@ namespace WRLDZ.Duel.TextEffects
                     DiscardCostCount = 1,
                     MakesChainLink = true
                 }),
+            // Inferno Fire Blast (c52684508), its whole text. Normal Spell: target 1 "Red-Eyes B. Dragon" in your
+            // Monster Zone; inflict damage to the opponent equal to its original ATK, and that monster cannot attack
+            // this turn. Reuses InflictDamageToOpponent with AmountFromTargetOriginalAtk (the target, not the source)
+            // and TargetCannotAttackThisTurn (sets CardInstance.CannotAttackDuringTurnNumber at resolution).
+            new Atom(
+                @"Target 1 ""Red-Eyes B\. Dragon"" in your Monster Zone; inflict damage to your opponent equal to " +
+                @"its original ATK\.\s*""Red-Eyes B\. Dragon"" cannot attack the turn you activate this card\.?",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.InflictDamageToOpponent,
+                    Side = EffectSide.Opponent,
+                    Zone = EffectZoneFilter.ControllerMonsters,
+                    // The DB stores the full name "Red-Eyes Black Dragon"; the printed text abbreviates it as
+                    // "Red-Eyes B. Dragon". Target filtering compares against Def.name, so use the DB name here.
+                    NamedCard = "Red-Eyes Black Dragon",
+                    RequiresTargetChoice = true,
+                    RequiresTargetFaceUp = true,
+                    AmountFromTargetOriginalAtk = true,
+                    TargetCannotAttackThisTurn = true,
+                    MakesChainLink = true
+                }),
         };
 
         /// <summary>

@@ -23,6 +23,9 @@ namespace WRLDZ.Duel.Rules
         const int RitualWeapon = 54351224;      // Equip Spell: +1500 ATK/DEF to a Ritual Monster Level 6 or lower
         const int Rafflesia = 31440542;         // Plant Lv2 300/900, FLIP take control until the end of the turn
         const int Hallowed = 88789641;          // Normal Trap: discard 1; no damage this turn
+        const int MindWipe = 52817046;          // Quick-Play: opponent adds hand to Deck, shuffles, redraws same count
+        const int InfernoFireBlast = 52684508;  // Normal Spell: damage = target "Red-Eyes B. Dragon" original ATK + attack lock
+        const int RedEyes = 74677422;           // Red-Eyes B. Dragon, 2400 ATK
 
         const int MetalDragon = 9293977;        // Fusion Lv6 1850/1700 — legal Fusion Weapon target
         const int SkullKnight = 2504891;        // Fusion Lv7 2650/2250 — too high
@@ -42,6 +45,8 @@ namespace WRLDZ.Duel.Rules
             WeaponEquipLimits(db, pDeck, aDeck, Check);
             RafflesiaDuel(db, pDeck, aDeck, Check);
             HallowedDuel(db, pDeck, aDeck, Check);
+            MindWipeDuel(db, pDeck, aDeck, Check);
+            InfernoFireBlastDuel(db, pDeck, aDeck, Check);
         }
 
         // ───────────────────────────── compile shapes ─────────────────────────────
@@ -216,6 +221,122 @@ namespace WRLDZ.Duel.Rules
             Check("Hallowed Life Barrier: the protection is over on the next turn",
                 p.LifePoints == lp2 - 1000,
                 $"flag={p.NoDamageThroughTurnNumber} turn={e.TurnNumber} lp={lp2}->{p.LifePoints}");
+        }
+
+        // ───────────────────────────── Mind Wipe ─────────────────────────────
+
+        static void MindWipeDuel(CardDatabase db, DeckFile pDeck, DeckFile aDeck, Chk Check)
+        {
+            {
+                var def = db.Get(MindWipe);
+                var prog = def != null ? CardTextEffectCompiler.Compile(def) : null;
+                var clause = prog?.ClausesFor(EffectTiming.Activate)
+                    .Find(c => c != null && c.Action == EffectActionKind.ShuffleHandIntoDeckThenDrawSameNumber);
+                Check("Mind Wipe: Implemented, quick-play opponent-hand shuffle+redraw with the ≤ 3 condition",
+                    prog != null && prog.FullyCompiled && CardEffectStatus.Classify(def) == CardEffectStatusKind.Implemented &&
+                    clause != null && clause.Side == EffectSide.Opponent &&
+                    clause.ActivationCondition == RecoveryAndPhaseCostsRuntime.OpponentHasAtMostThreeInHand,
+                    clause == null
+                        ? $"full={prog?.FullyCompiled}"
+                        : $"action={clause.Action} side={clause.Side} cond={clause.ActivationCondition}");
+            }
+
+            // The opponent has 4 cards in hand: the activation condition fails.
+            {
+                var e = Fresh(db, pDeck, aDeck);
+                ClearBoard(e);
+                var p = e.Player;
+                var opp = e.Opponent;
+                p.Hand.Clear();
+                opp.Hand.Clear();
+                var wipe = PutInHand(e, p, MindWipe);
+                for (var i = 0; i < 4; i++) PutInHand(e, opp, Kuriboh);
+                var legal = e.CanActivateSpellTrap(p, wipe, fromHand: true);
+                var act = e.TryActivateSpellTrap(p, wipe, fromHand: true);
+                Check("Mind Wipe: cannot be activated while the opponent holds 4 cards",
+                    !legal && !act && p.Hand.Contains(wipe) && !e.Chain.HasLinks && !e.IsAwaitingEffectTarget,
+                    $"legal={legal} act={act} oppHand={opp.Hand.Count}");
+            }
+
+            // The opponent has 3 cards: the hand is shuffled into the Deck and 3 fresh cards are drawn.
+            {
+                var e = Fresh(db, pDeck, aDeck);
+                ClearBoard(e);
+                var p = e.Player;
+                var opp = e.Opponent;
+                p.Hand.Clear();
+                opp.Hand.Clear();
+                var wipe = PutInHand(e, p, MindWipe);
+                var a = PutInHand(e, opp, Kuriboh);
+                var b = PutInHand(e, opp, PotOfGreed);
+                var c = PutInHand(e, opp, Celtic);
+                opp.Deck.Clear();
+                for (var i = 0; i < 5; i++) opp.Deck.Add(GiantSoldier);
+
+                var act = e.TryActivateSpellTrap(p, wipe, fromHand: true);
+                Settle(e);
+                Check("Mind Wipe: the opponent's 3-card hand is shuffled into the Deck and 3 cards are drawn",
+                    act && opp.Hand.Count == 3 && !opp.Hand.Contains(a) && !opp.Hand.Contains(b) &&
+                    !opp.Hand.Contains(c) && p.Graveyard.Contains(wipe) && !opp.Graveyard.Contains(a),
+                    $"act={act} hand={opp.Hand.Count} keptOld={opp.Hand.Contains(a) || opp.Hand.Contains(b) || opp.Hand.Contains(c)} " +
+                    $"wipeGy={p.Graveyard.Contains(wipe)}");
+            }
+        }
+
+        // ───────────────────────────── Inferno Fire Blast ─────────────────────────────
+
+        static void InfernoFireBlastDuel(CardDatabase db, DeckFile pDeck, DeckFile aDeck, Chk Check)
+        {
+            {
+                var def = db.Get(InfernoFireBlast);
+                var prog = def != null ? CardTextEffectCompiler.Compile(def) : null;
+                var clause = prog?.ClausesFor(EffectTiming.Activate)
+                    .Find(c => c != null && c.Action == EffectActionKind.InflictDamageToOpponent);
+                Check("Inferno Fire Blast: Implemented, damage = target original ATK and an attack lock",
+                    prog != null && prog.FullyCompiled && CardEffectStatus.Classify(def) == CardEffectStatusKind.Implemented &&
+                    clause != null && clause.Zone == EffectZoneFilter.ControllerMonsters &&
+                    clause.NamedCard == "Red-Eyes Black Dragon" && clause.AmountFromTargetOriginalAtk &&
+                    clause.TargetCannotAttackThisTurn && clause.Side == EffectSide.Opponent,
+                    clause == null
+                        ? $"full={prog?.FullyCompiled}"
+                        : $"zone={clause.Zone} name={clause.NamedCard} orig={clause.AmountFromTargetOriginalAtk} " +
+                          $"lock={clause.TargetCannotAttackThisTurn} side={clause.Side}");
+            }
+
+            // No "Red-Eyes B. Dragon" on the field: there is no legal target, so no activation.
+            {
+                var e = Fresh(db, pDeck, aDeck);
+                ClearBoard(e);
+                var p = e.Player;
+                var opp = e.Opponent;
+                p.Hand.Clear();
+                opp.Hand.Clear();
+                var blast = PutInHand(e, p, InfernoFireBlast);
+                PlaceMonster(e, p, Celtic, 0, BattlePosition.Attack, true);
+                var legal = e.CanActivateSpellTrap(p, blast, fromHand: true);
+                Check("Inferno Fire Blast: only a face-up \"Red-Eyes B. Dragon\" you control is a legal target",
+                    !legal, $"legal={legal}");
+            }
+
+            // With Red-Eyes: 2400 damage (its original ATK) and the Dragon cannot attack this turn.
+            {
+                var e = Fresh(db, pDeck, aDeck);
+                ClearBoard(e);
+                var p = e.Player;
+                var opp = e.Opponent;
+                p.Hand.Clear();
+                opp.Hand.Clear();
+                var blast = PutInHand(e, p, InfernoFireBlast);
+                var red = PlaceMonster(e, p, RedEyes, 0, BattlePosition.Attack, true);
+                var lp = opp.LifePoints;
+                var act = e.TryActivateSpellTrap(p, blast, fromHand: true);
+                if (e.IsAwaitingEffectTarget) e.TrySelectEffectTarget(red);
+                Settle(e);
+                Check("Inferno Fire Blast: 2400 to the opponent and the Dragon cannot attack this turn",
+                    act && opp.LifePoints == lp - 2400 && red.CannotAttackDuringTurnNumber == e.TurnNumber &&
+                    p.Graveyard.Contains(blast),
+                    $"act={act} lp={lp}->{opp.LifePoints} lock={red.CannotAttackDuringTurnNumber}/turn={e.TurnNumber}");
+            }
         }
 
         // ───────────────────────────── helpers ─────────────────────────────

@@ -8940,6 +8940,12 @@ namespace WRLDZ.Duel.TextEffects
                     else if (clause.ScaleAmountByOpponentMonsterCount)
                         baseAmt = Mathf.Max(0, clause.Amount) * (opp?.MonsterCount ?? 0);
                      engine.ApplyEffectDamage(opp, baseAmt, source?.Name);
+                    // Inferno Fire Blast: the targeted "Red-Eyes B. Dragon" cannot attack this turn.
+                    if (clause.TargetCannotAttackThisTurn && chosenTarget != null)
+                    {
+                        chosenTarget.CannotAttackDuringTurnNumber = engine.TurnNumber;
+                        engine.Log($"{chosenTarget.Name} cannot attack this turn.");
+                    }
                     break;
                 }
 
@@ -9702,7 +9708,10 @@ namespace WRLDZ.Duel.TextEffects
                     RecoveryAndPhaseCostsRuntime.ResolveRecycle(engine, who, source, clause);
                     break;
                 case EffectActionKind.ShuffleHandIntoDeckThenDrawSameNumber:
-                    RecoveryAndPhaseCostsRuntime.ShuffleHandIntoDeckThenDraw(engine, who, source);
+                    // Reload is the activator's own hand (Side=Controller); Mind Wipe is the opponent's
+                    // (Side=Opponent), whose hand is added to the Deck and redrawn.
+                    RecoveryAndPhaseCostsRuntime.ShuffleHandIntoDeckThenDraw(engine,
+                        clause?.Side == EffectSide.Opponent ? engine.OpponentOf(who) : who, source);
                     break;
                 case EffectActionKind.ReturnHandNormalMonsterToDeckBottomDrawAtYourEndPhase:
                     RecoveryAndPhaseCostsRuntime.ResolveCoachGoblin(engine, who, source, clause);
