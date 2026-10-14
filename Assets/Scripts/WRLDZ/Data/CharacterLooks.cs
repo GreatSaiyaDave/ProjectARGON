@@ -139,9 +139,9 @@ namespace WRLDZ.Data
             L("tristan_bc", "Battle City Tristan", "tristan", 0, "tristan_quiff", "tristan", 180f, 0.60f, "shirt_tristan_bc", "bottoms_tristan_bc", "shoes_tristan_bc", null, hairPattern: 1, hairHex: "#62442D"),
             L("mokuba_bc", "Battle City Mokuba", "mokuba", 0, "mokuba_kaiba", "mokuba_kaiba", 155f, 0.35f, "shirt_mokuba_bc", "bottoms_mokuba_bc", "shoes_mokuba_bc", null, hairPattern: 4, hairHex: "#1E1E1E", hairStreak: "#4C557E"),
             L("yami_yugi_dk", "Duelist Kingdom Yami Yugi", "yami yugi", 0, "yugi_muto", "yami_yugi",
-                158f, 0.38f, "shirt_yami_dk", "bottoms_yami_dk", "shoes_yugi_dk", "hands_yugi_dk", characterId: "yami_yugi"),
+                158f, 0.38f, "shirt_yami_dk", "bottoms_yami_dk", "shoes_yugi_dk", "hands_yugi_dk"),
             // The Domino cape albedo is the black tank and blue blazer. A shirt hex flattened it to navy.
-            L("yami_yugi", "Yami Yugi", "yami yugi", 0, "yugi_muto", "yami_yugi", 158f, 0.38f, "shirt_yugi_bc", "bottoms_yugi_bc", "shoes_yugi_bc", null, characterId: "yami_yugi"),
+            L("yami_yugi", "Yami Yugi", "yami yugi", 0, "yugi_muto", "yami_yugi", 158f, 0.38f, "shirt_yugi_bc", "bottoms_yugi_bc", "shoes_yugi_bc", null),
             L("yami_bakura", "Yami Bakura", "yami bakura", 0, "yami_bakura", "yami_bakura", 176f, 0.35f, "shirt_bakura_bc", "bottoms_bakura_bc", "shoes_bakura_bc", null, skin: "#CFAC8D"),
             // Hood hides the borrowed Kaiba hair. The coat is the generic duel coat, painted near-black.
             L("panik_dk", "Duelist Kingdom PaniK", "panik", 0, "seto_kaiba", "panik", 185f, 0.55f, "shirt_duelcoat", "bottoms_plain", "shoes_boots", "hands_panik_dk", hat: "hat_odion_bc", hairPattern: 1, hairHex: "#2E465C", skin: "#C4B8A8", shirtHex: "#141018"),
