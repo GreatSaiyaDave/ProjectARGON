@@ -138,6 +138,30 @@ namespace WRLDZ.Duel.TextEffects
                         MakesChainLink = true
                     };
                 }),
+
+            // Nobleman-Eater Bug (c65878864): FLIP, EFFECT_FLAG_CARD_TARGET — "FLIP: Destroy 2 monsters on the
+            // field." The old PSCT names no target, but the engine models it as an exact-count targeted destroy
+            // (like Tornado Bird): pick exactly 2 monsters on either field, Set or face-up, and destroy each while
+            // it is still there. With fewer than 2 legal targets the FLIP activates with none and does nothing.
+            new AtomRegistration.Atom(
+                Start + @"FLIP:\s*Destroy (\d+) monsters? on the field" + End,
+                m =>
+                {
+                    var n = Parse(m, 1, 2);
+                    if (n < 2) return null; // "monsters" is plural: a single monster is another sentence
+                    return new EffectClause
+                    {
+                        Timing = EffectTiming.Flip,
+                        Action = EffectActionKind.Destroy,
+                        Zone = EffectZoneFilter.FieldAnyMonster,
+                        Side = EffectSide.Both,
+                        RequiresTargetChoice = true,
+                        IsPsctTarget = true,
+                        TargetCount = n,
+                        TargetUpTo = false,
+                        MakesChainLink = true
+                    };
+                }),
         };
 
         static int Parse(Match m, int group, int fallback)

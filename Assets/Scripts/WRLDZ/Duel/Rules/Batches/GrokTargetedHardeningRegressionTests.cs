@@ -18,6 +18,10 @@ namespace WRLDZ.Duel.Rules
     /// controller choose the discard and the Type, then destroys every face-up monster of that Type, even after the Virus
     /// itself has left the field (the Lua keeps the announced Type in the effect's label).
     /// </summary>
+    /// <remarks>
+    /// Extended by the SOD-completion batch (v186): Nobleman-Eater Bug — old-PSCT "FLIP: Destroy 2 monsters on the
+    /// field." modeled as an exact-count targeted Flip destroy (the same machinery as Tornado Bird).
+    /// </remarks>
     public static class GrokTargetedHardeningRegressionTests
     {
         delegate void Chk(string name, bool ok, string detail = "");
@@ -28,6 +32,7 @@ namespace WRLDZ.Duel.Rules
         const int MiracleDig = 6343408;
         const int TornadoBird = 71283180;
         const int TribeInfectingVirus = 33184167;
+        const int NoblemanEaterBug = 65878864;  // SOD Flip Effect Insect: FLIP destroy 2 monsters on the field
 
         const int CallOfTheHaunted = 97077563;  // Continuous Trap
         const int MagicCylinder = 62279055;     // Normal Trap (needs an attack: never chained here)
@@ -53,6 +58,7 @@ namespace WRLDZ.Duel.Rules
             DealOfPhantomDuels(db, pDeck, aDeck, Check);
             MiracleDigDuels(db, pDeck, aDeck, Check);
             TornadoBirdDuels(db, pDeck, aDeck, Check);
+            NoblemanEaterBugDuels(db, pDeck, aDeck, Check);
             TribeInfectingVirusDuels(db, pDeck, aDeck, Check);
         }
 
@@ -352,6 +358,84 @@ namespace WRLDZ.Duel.Rules
                 Check("Tornado Bird: with only 1 Spell/Trap Card on the field nothing returns",
                     flipped && Where(e, lone) == "O.stz" && !e.IsAwaitingEffectTarget && !e.Chain.HasLinks,
                     $"flipped={flipped} lone={Where(e, lone)}");
+            }
+        }
+
+        // ───────────────────────────── Nobleman-Eater Bug ─────────────────────────────
+
+        /// <summary>
+        /// SOD Nobleman-Eater Bug (c65878864): old-PSCT FLIP "Destroy 2 monsters on the field." modeled as an
+        /// exact-count targeted destroy (TargetedClassicsAtoms, TargetedClassicsRuntime.ExactTargetCount) — like
+        /// Tornado Bird but on <see cref="EffectZoneFilter.FieldAnyMonster"/>. Fewer than 2 legal monsters and the
+        /// FLIP activates with no targets.
+        /// </summary>
+        static void NoblemanEaterBugDuels(CardDatabase db, DeckFile pDeck, DeckFile aDeck, Chk Check)
+        {
+            Shape(db, Check, NoblemanEaterBug, "Nobleman-Eater Bug: FLIP, exactly 2 monsters on either field destroyed", c =>
+                c.Timing == EffectTiming.Flip && c.Action == EffectActionKind.Destroy &&
+                c.Zone == EffectZoneFilter.FieldAnyMonster && c.Side == EffectSide.Both && c.RequiresTargetChoice &&
+                c.IsPsctTarget && c.TargetCount == 2 && !c.TargetUpTo &&
+                TargetedClassicsRuntime.ExactTargetCount(c) == 2);
+
+            // Exactly 2 of the 3 offered monsters are destroyed; the rest stay.
+            {
+                var e = FreshCleared(db, pDeck, aDeck);
+                var p = e.Player;
+                var o = e.Opponent;
+                var bug = PlaceMonster(e, p, NoblemanEaterBug, 3, BattlePosition.Defense, false);
+                bug.SummonedThisTurn = false;
+                var mine = PlaceMonster(e, p, Celtic, 0, BattlePosition.Attack, true);
+                var theirs = PlaceMonster(e, o, GiantSoldier, 0, BattlePosition.Attack, true);
+                var spared = PlaceMonster(e, o, Gaia, 1, BattlePosition.Attack, true);
+
+                var flipped = e.TryFlipSummon(p, bug) && bug.FaceUp;
+                var pa = e.PendingActivation;
+                var legal = Legal(e);
+                Check("Nobleman-Eater Bug: the FLIP prompt takes exactly 2 monsters (both fields)",
+                    flipped && pa != null && pa.TargetPicksRemaining == 2 && !pa.TargetPicksAreUpTo &&
+                    legal.Contains(mine) && legal.Contains(theirs) && legal.Contains(spared),
+                    pa == null
+                        ? $"flipped={flipped} no prompt"
+                        : $"left={pa.TargetPicksRemaining} upTo={pa.TargetPicksAreUpTo} legal={Names(legal)}");
+
+                var picks = new List<CardInstance> { mine, theirs };
+                for (var i = 0; i < 20; i++)
+                {
+                    if (e.IsAwaitingEffectTarget)
+                    {
+                        var next = picks.FirstOrDefault(c => Legal(e).Contains(c));
+                        if (next == null || !e.TrySelectEffectTarget(next)) { e.CancelEffectTargeting(); continue; }
+                        picks.Remove(next);
+                        continue;
+                    }
+
+                    if (e.IsAwaitingResponse) { e.PassResponse(); continue; }
+                    break;
+                }
+
+                Check("Nobleman-Eater Bug: both chosen monsters are destroyed; the rest stay",
+                    picks.Count == 0 && Where(e, mine) == "P.gy" && Where(e, theirs) == "O.gy" &&
+                    Where(e, spared) == "O.mz" && Where(e, bug) == "P.mz" && !e.IsAwaitingEffectTarget && !e.Chain.HasLinks,
+                    $"left={picks.Count} mine={Where(e, mine)} theirs={Where(e, theirs)} spared={Where(e, spared)} " +
+                    $"bug={Where(e, bug)}");
+            }
+
+            // Fewer than 2 monsters on the field (the Bug can target itself): nothing is destroyed.
+            {
+                var e = FreshCleared(db, pDeck, aDeck);
+                var p = e.Player;
+                var bug = PlaceMonster(e, p, NoblemanEaterBug, 3, BattlePosition.Defense, false);
+                bug.SummonedThisTurn = false;
+                var flipped = e.TryFlipSummon(p, bug) && bug.FaceUp;
+                for (var i = 0; i < 10 && (e.IsAwaitingEffectTarget || e.IsAwaitingResponse); i++)
+                {
+                    if (e.IsAwaitingEffectTarget) e.CancelEffectTargeting();
+                    else e.PassResponse();
+                }
+
+                Check("Nobleman-Eater Bug: with fewer than 2 monsters on the field nothing is destroyed",
+                    flipped && Where(e, bug) == "P.mz" && !e.IsAwaitingEffectTarget && !e.Chain.HasLinks,
+                    $"flipped={flipped} bug={Where(e, bug)} awaiting={e.IsAwaitingEffectTarget}");
             }
         }
 
