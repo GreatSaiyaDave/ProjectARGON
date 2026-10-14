@@ -8621,6 +8621,16 @@ namespace WRLDZ.Duel.TextEffects
                         $"{who.Name}: no battle damage this turn; monsters cannot be destroyed by battle.");
                     break;
 
+                case EffectActionKind.NoDamageThisTurn:
+                    // Hallowed Life Barrier: "any damage you take from your opponent's cards and effects becomes 0"
+                    // this turn. The same per-duelist flag Crush Card Virus sets, read by battle and effect damage.
+                    if (who != null)
+                    {
+                        who.NoDamageThroughTurnNumber = engine.TurnNumber;
+                        engine.Log($"{who.Name}: any damage this turn becomes 0.");
+                    }
+                    break;
+
                 case EffectActionKind.PreventOpponentAttacksThisTurn:
                     if (opp != null)
                     {

@@ -283,7 +283,8 @@ namespace WRLDZ.Duel.TextEffects
                     // SummonNegation batch (v141): negate a Summon (Horn of Heaven / Solemn Judgment).
                     EffectActionKind.NegateSummon =>
                     EffectResolutionKind.NegateActivation,
-                EffectActionKind.PreventControllerBattleDamage =>
+                EffectActionKind.PreventControllerBattleDamage or
+                    EffectActionKind.NoDamageThisTurn =>
                     EffectResolutionKind.PreventDamage,
                 EffectActionKind.AlwaysTreatedAsName or
                     EffectActionKind.FieldTreatedAsName =>

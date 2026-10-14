@@ -142,6 +142,7 @@ namespace WRLDZ.Duel.Rules
             LvChainRegressionTests.Run(db, pDeck, aDeck, check);
             ElementMonstersRegressionTests.Run(db, pDeck, aDeck, check);
             FusionSubstitutesRegressionTests.Run(db, pDeck, aDeck, check);
+            SodCompletionRegressionTests.Run(db, pDeck, aDeck, check);
         }
     }
 }

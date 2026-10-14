@@ -623,6 +623,23 @@ namespace WRLDZ.Duel.TextEffects
                              Parse(m, 3, 100),
                     MakesChainLink = true
                 }),
+            // Hallowed Life Barrier (c88789641), its whole text. Normal Trap: discard 1 card from the hand as the
+            // activation cost, then this turn any damage the controller takes from the opponent's cards and effects
+            // becomes 0 (battle and effect damage both read the flag). Two printed sentences, so one whole-text atom
+            // keeps the discard sentence from surviving as residue.
+            new Atom(
+                @"Discard 1 card from your hand\.\s*This turn, any damage you take from your opponent['’]s cards and " +
+                @"effects becomes 0\.?",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.NoDamageThisTurn,
+                    Side = EffectSide.Controller,
+                    RequiresDiscardCost = true,
+                    DiscardCostAttribute = "*",
+                    DiscardCostCount = 1,
+                    MakesChainLink = true
+                }),
         };
 
         /// <summary>

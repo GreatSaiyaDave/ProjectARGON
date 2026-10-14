@@ -3340,6 +3340,13 @@ namespace WRLDZ.Duel.TextEffects
         /// SpellTrapEffects.TryCollectMaterials, which may satisfy at most one named material with such a card.
         /// </summary>
         FusionSubstitute,
+        /// <summary>
+        /// Hallowed Life Barrier (c88789641): "Discard 1 card from your hand. This turn, any damage you take from your
+        /// opponent's cards and effects becomes 0." Sets the activator's <see cref="DuelistState.NoDamageThroughTurnNumber"/>
+        /// for the current turn; the same flag Crush Card Virus reads, checked by both battle (ApplyDamage) and effect
+        /// (ApplyEffectDamage / simultaneous) damage. Runtime: TextEffectRuntime.
+        /// </summary>
+        NoDamageThisTurn,
     }
 
 

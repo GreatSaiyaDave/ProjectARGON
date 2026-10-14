@@ -7131,7 +7131,7 @@ namespace WRLDZ.Duel
             if (dmg <= 0 || target == null) return;
             if (target.NoDamageThroughTurnNumber > 0 && TurnNumber <= target.NoDamageThroughTurnNumber)
             {
-                Log($"{target.Name} takes no damage (Crush Card Virus).");
+                Log($"{target.Name} takes no damage (damage prevention).");
                 return;
             }
             target.LifePoints = Mathf.Max(0, target.LifePoints - dmg);
@@ -7768,7 +7768,7 @@ namespace WRLDZ.Duel
             if (dmg <= 0 || target == null) return;
             if (target.NoDamageThroughTurnNumber > 0 && TurnNumber <= target.NoDamageThroughTurnNumber)
             {
-                Log($"{target.Name} takes no effect damage (Crush Card Virus).");
+                Log($"{target.Name} takes no effect damage (damage prevention).");
                 return;
             }
             target.LifePoints = Mathf.Max(0, target.LifePoints - dmg);
@@ -7818,7 +7818,7 @@ namespace WRLDZ.Duel
             if (dmg <= 0 || target == null) return false;
             if (target.NoDamageThroughTurnNumber > 0 && TurnNumber <= target.NoDamageThroughTurnNumber)
             {
-                Log($"{target.Name} takes no effect damage (Crush Card Virus).");
+                Log($"{target.Name} takes no effect damage (damage prevention).");
                 return false;
             }
 
