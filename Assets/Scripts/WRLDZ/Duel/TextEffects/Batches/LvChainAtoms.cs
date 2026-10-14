@@ -31,6 +31,29 @@ namespace WRLDZ.Duel.TextEffects
 
         public static readonly AtomRegistration.Atom[] Atoms =
         {
+            // Level Up! (c25290459): whole text is one sentence. The target is any face-up "LV" monster you control
+            // (Lua IsSetCard(SET_LV); the engine has no setcode field on CardDef, so the series name matches the
+            // 29 cards whose printed name contains " LV" — Armed Dragon, Dark Mimic, Silent Swordsman, Horus,
+            // Ultimate Insect, Mystic Swordsman, Winged Kuriboh LV10). The monster to Special Summon is listed in
+            // THAT monster's text, which is its own LV-progression clause — read at resolution, so no table.
+            new AtomRegistration.Atom(
+                Start + @"Send 1 face-up ""LV"" monster you control to the (?:GY|Graveyard);\s*Special Summon 1 " +
+                @"monster from your hand or Deck that is listed in the sent monster's text, ignoring its Summoning " +
+                @"conditions" + End,
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.SpecialSummonLvProgressionFromSentMonster,
+                    Zone = EffectZoneFilter.ControllerAnyMonsters,
+                    TargetSeriesName = "LV",
+                    RequiresTargetChoice = true,
+                    RequiresTargetFaceUp = true,
+                    IsPsctTarget = true,
+                    TargetCount = 1,
+                    FromHand = true,
+                    FromDeck = true,
+                    MakesChainLink = true
+                }),
             // Horus the Black Flame Dragon LV6 ("This card is unaffected by Spell effects.") and
             // Ultimate Insect LV1 ("While this card is on the field, it is unaffected by the effects of
             // Spell Cards."). ProtectionTemplates.UnaffectedClause always carries a named requirement

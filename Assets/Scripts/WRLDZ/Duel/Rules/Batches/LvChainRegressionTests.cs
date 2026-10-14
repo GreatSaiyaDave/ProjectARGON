@@ -26,6 +26,7 @@ namespace WRLDZ.Duel.Rules
         const int DarkMimicLv1 = 74713516;
         const int DarkMimicLv3 = 1102515;
         const int GraveyardFourth = 88089103;
+        const int LevelUp = 25290459;
 
         const int Celtic = 91152256;      // Normal Lv4 EARTH 1400/1200 (not an "LV" monster)
         const int GeminiElf = 69140098;   // Normal Lv4 EARTH 1900/900
@@ -41,6 +42,7 @@ namespace WRLDZ.Duel.Rules
             InsectProgressionDuels(db, pDeck, aDeck, Check);
             DarkMimicDuels(db, pDeck, aDeck, Check);
             GraveyardFourthDuels(db, pDeck, aDeck, Check);
+            LevelUpDuels(db, pDeck, aDeck, Check);
         }
 
         // ───────────────────────────── helpers ─────────────────────────────
@@ -400,6 +402,90 @@ namespace WRLDZ.Duel.Rules
                     p.Deck.Contains(UltimateInsectLv1) && p.Deck.Contains(DarkMimicLv3) && p.Deck.Count == 2,
                     $"act={act} offered=[{Names(offered)}] pick={pick1}/{pick2} gy=[{Names(p.Graveyard)}] " +
                     $"deck={p.Deck.Count}");
+            }
+        }
+        static void LevelUpDuels(CardDatabase db, DeckFile pDeck, DeckFile aDeck, Chk Check)
+        {
+            var lvName = "LV";
+            {
+                var prog = Compile(LevelUp, db);
+                Check("Level Up!: FullyCompiled - send 1 face-up LV you control, Special Summon the listed monster; " +
+                      "Implemented",
+                    prog != null && prog.FullyCompiled &&
+                    CardEffectStatus.Classify(db.Get(LevelUp)) == CardEffectStatusKind.Implemented &&
+                    prog.ClauseList.Count == 1 &&
+                    prog.ClauseList[0].Action ==
+                        EffectActionKind.SpecialSummonLvProgressionFromSentMonster &&
+                    prog.ClauseList[0].Timing == EffectTiming.Activate &&
+                    prog.ClauseList[0].TargetSeriesName == lvName && prog.ClauseList[0].RequiresTargetChoice &&
+                    prog.ClauseList[0].RequiresTargetFaceUp && prog.ClauseList[0].FromHand &&
+                    prog.ClauseList[0].FromDeck && prog.ClauseList[0].TargetCount == 1,
+                    Describe(prog));
+            }
+
+            {
+                // The LV monster goes to the GY and the monster it names comes from the hand.
+                var e = PlayerMain1(db, pDeck, aDeck, out var reached);
+                var p = e.Player;
+                var lv4 = PlaceMonster(e, p, HorusLv4, 0, BattlePosition.Attack, true);
+                var lv6 = PutInHand(e, p, HorusLv6);
+                var spell = PutInHand(e, p, LevelUp);
+                var lap = e.CanActivateSpellTrap(p, spell, true);
+                var used = e.TryActivateSpellTrap(p, spell, true);
+                // One legal target: the engine selects it itself, so the prompt may already be gone.
+                var waited = e.IsAwaitingEffectTarget && !e.TrySelectEffectTarget(lv4);
+                DrainCombat(e);
+                Check("Level Up!: sends the LV monster to the GY and Special Summons the monster it lists from the hand",
+                    reached && lap && used && !waited && p.Graveyard.Contains(lv4) &&
+                    !p.Hand.Contains(spell) && (p.TryFindMonster(lv6, out _) || p.Hand.Contains(lv6)),
+                    $"reached={reached} lap={lap} used={used} waited={waited} lv4Gy={p.Graveyard.Contains(lv4)} " +
+                    $"lv6Field={p.TryFindMonster(lv6, out _)} lv6Hand={p.Hand.Contains(lv6)}");
+            }
+
+            {
+                // From the Deck when the hand holds nothing.
+                var e = PlayerMain1(db, pDeck, aDeck, out var reached);
+                var p = e.Player;
+                var lv1 = PlaceMonster(e, p, UltimateInsectLv1, 0, BattlePosition.Attack, true);
+                p.Deck.Clear();
+                p.Deck.Add(UltimateInsectLv3);
+                var spell = PutInHand(e, p, LevelUp);
+                var used = e.TryActivateSpellTrap(p, spell, true);
+                var waited = e.IsAwaitingEffectTarget && !e.TrySelectEffectTarget(lv1);
+                DrainCombat(e);
+                Check("Level Up!: the listed monster comes from the Deck when the hand holds none",
+                    reached && used && !waited && p.Graveyard.Contains(lv1) &&
+                    !p.TryFindMonster(lv1, out _),
+                    $"reached={reached} used={used} waited={waited} lv1Gy={p.Graveyard.Contains(lv1)} " +
+                    $"lv1Moved={!p.TryFindMonster(lv1, out _)}");
+            }
+
+            {
+                // Only LV monsters are legal targets.
+                var e = PlayerMain1(db, pDeck, aDeck, out var reached);
+                var p = e.Player;
+                var celtic = PlaceMonster(e, p, Celtic, 0, BattlePosition.Attack, true);
+                var lv4 = PlaceMonster(e, p, HorusLv4, 1, BattlePosition.Attack, true);
+                var spell = PutInHand(e, p, LevelUp);
+                // One legal target (the LV monster), so the engine selects it outright: what is sent to the GY is
+                // what the target filter accepted.
+                var used = e.TryActivateSpellTrap(p, spell, true);
+                DrainCombat(e);
+                Check("Level Up!: a monster that is not an LV is not a legal target",
+                    reached && used && p.Graveyard.Contains(lv4) && !p.Graveyard.Contains(celtic) &&
+                    p.TryFindMonster(celtic, out _),
+                    $"used={used} lv4Gy={p.Graveyard.Contains(lv4)} celticGy={p.Graveyard.Contains(celtic)} " +
+                    $"celticField={p.TryFindMonster(celtic, out _)}");
+            }
+
+            {
+                // No LV monster you control: the Spell cannot be activated (no legal target).
+                var e = PlayerMain1(db, pDeck, aDeck, out var reached);
+                var p = e.Player;
+                PlaceMonster(e, p, Celtic, 0, BattlePosition.Attack, true);
+                var spell = PutInHand(e, p, LevelUp);
+                Check("Level Up!: cannot be activated while you control no face-up LV monster",
+                    reached && !e.CanActivateSpellTrap(p, spell, true));
             }
         }
     }

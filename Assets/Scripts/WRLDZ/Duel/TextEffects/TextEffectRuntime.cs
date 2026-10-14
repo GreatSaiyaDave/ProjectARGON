@@ -9172,6 +9172,11 @@ namespace WRLDZ.Duel.TextEffects
                     break;
                 }
 
+                case EffectActionKind.SpecialSummonLvProgressionFromSentMonster:
+                    // Level Up! (LvChain batch): the LV monster the activator sent to the GY names what comes next.
+                    LvChainRuntime.ResolveProgression(engine, who, source, chosenTarget);
+                    break;
+
                 case EffectActionKind.TributeTargetAsIfControlledThisTurn:
                     TributeSummonsRuntime.ResolveTributeTargetAsIfControlled(engine, who, source, clause,
                         chosenTarget);
@@ -13815,7 +13820,12 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
                 engine.Log($"Special Summoned {inst.Name} from Deck.");
         }
 
-        static void TrySpecialSummonNamed(DuelEngine engine, DuelistState who, EffectClause clause, CardInstance source = null)
+        /// <summary>
+        /// Special Summon the clause's named card from the hand / Deck (Magical Labyrinth, the LV progression
+        /// clauses). Internal so the LvChain batch can reuse it for Level Up!, where the name comes from the sent
+        /// monster's own text rather than from Level Up!'s own clause.
+        /// </summary>
+        internal static void TrySpecialSummonNamed(DuelEngine engine, DuelistState who, EffectClause clause, CardInstance source = null)
         {
             // The named card's own effect completes a "Must first be Special Summoned with "X"" procedure
             // (Magical Labyrinth → Wall Shadow, Elegant Egotist → Harpie Lady Sisters; TributeSummons batch).

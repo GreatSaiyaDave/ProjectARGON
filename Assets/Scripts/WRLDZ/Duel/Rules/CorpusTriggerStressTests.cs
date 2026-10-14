@@ -480,6 +480,13 @@ namespace WRLDZ.Duel.Rules
 
                 // Ninjitsu Art of Decoy (ContinuousCannotBeDestroyedByBattle): shadows the "Archfiend" case —
                 // target 1 face-up "Ninja" monster you control (Ninja Grandmaster Sasuke, SOD).
+                // Level Up! (LvChain batch, v194): "Send 1 face-up "LV" monster you control to the GY; Special
+                // Summon 1 monster from your hand or Deck that is listed in the sent monster's text." The shared board's
+                // Bewd and Celtic are not LV monsters, so seat one (Horus the Black Flame Dragon LV4 lists LV6).
+                if (c.Action == EffectActionKind.SpecialSummonLvProgressionFromSentMonster &&
+                    p.MonsterZones[2].IsEmpty)
+                    PlaceMonster(engine, p, 75830094, 2, BattlePosition.Attack, true); // Horus LV4
+
                 if (c.Action == EffectActionKind.ContinuousCannotBeDestroyedByBattle &&
                     c.Zone == EffectZoneFilter.ControllerMonsters && p.MonsterZones[1].IsEmpty)
                     PlaceMonster(engine, p, 4041838, 1, BattlePosition.Attack, true); // Ninja Grandmaster Sasuke

@@ -5649,8 +5649,11 @@ namespace WRLDZ.Duel.Rules
                 // Archers' compound (mass position change + ATK loss + must-attack), Diffusion Wave-Motion's
                 // "attack every monster once, others cannot attack" and Staunch Defender's "only the selected
                 // monster, and must attack it" are each the only card in their family — 4 more, so 49.
+                // LvChain batch (v194): Level Up! — "Special Summon 1 monster from your hand or Deck that is
+                // listed in the sent monster's text" is a summon whose name is only known at resolution, so it is
+                // the only card in its family — 1 more, so 50.
                 Check("Vocabulary: unique exceptions stay a short named list",
-                    unique <= 49,
+                    unique <= 50,
                     $"unique={unique}");
                 Check("Vocabulary: Exiled Force compiles as shared Tribute→Destroy",
                     db.Get(74131780) is { } exd &&

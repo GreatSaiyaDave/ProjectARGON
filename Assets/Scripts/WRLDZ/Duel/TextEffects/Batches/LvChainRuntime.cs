@@ -108,5 +108,59 @@ namespace WRLDZ.Duel.TextEffects
                 n = clause.AmountIfSpecialSummonedByNamed;
             engine.Draw(who, n, silent: false);
         }
+
+        // ───────────────────────────── Level Up! ─────────────────────────────
+
+        /// <summary>
+        /// Level Up! (c25290459) at resolution: <paramref name="chosenTarget"/> (the face-up "LV" monster the
+        /// activator sent to the GY) is sent there, then 1 monster is Special Summoned from the hand or Deck.
+        /// The monster to Summon is "listed in the sent monster's text" (Lua <c>class.listed_names</c>) — which for
+        /// this engine is that monster's own LV-progression clause, the sentence that names the next LV form
+        /// ("… Special Summon 1 Horus the Black Flame Dragon LV6 from your hand or Deck"). Reading it from the
+        /// sent card's compiled program means no LV table is hardcoded and a new LV monster works automatically.
+        /// </summary>
+        public static void ResolveProgression(DuelEngine engine, DuelistState who, CardInstance source,
+            CardInstance chosenTarget)
+        {
+            if (engine == null || who == null || source == null || chosenTarget?.Def == null) return;
+
+            // The sent monster must still be a monster we control (the target the activation selected), and it has
+            // to leave the field as this card's cost.
+            var owner = engine.ControllerOf(chosenTarget);
+            if (owner == null || !owner.TryFindMonster(chosenTarget, out _))
+            {
+                engine.Log($"{source.Name}: the selected monster is no longer on your field — no effect.");
+                return;
+            }
+
+            var prog = WRLDZ.Duel.TextEffects.CompiledEffectCache.GetOrCompile(chosenTarget.Def);
+            var next = prog?.ClauseList.Find(c => c != null &&
+                c.Action == WRLDZ.Duel.TextEffects.EffectActionKind.SpecialSummonNamed &&
+                !string.IsNullOrEmpty(c.NamedCard) && (c.FromHand || c.FromDeck));
+            if (next == null)
+            {
+                engine.Log($"{source.Name}: {chosenTarget.Name} lists no LV monster it can Special Summon.");
+                return;
+            }
+
+            var named = next.NamedCard;
+            engine.SendCardToGrave(owner, chosenTarget);
+            engine.Log($"{source.Name}: {who.Name} sends {chosenTarget.Name} to the GY and Special Summons {named} " +
+                       "from the hand or Deck.");
+
+            var clause = new WRLDZ.Duel.TextEffects.EffectClause
+            {
+                Timing = WRLDZ.Duel.TextEffects.EffectTiming.Activate,
+                Action = WRLDZ.Duel.TextEffects.EffectActionKind.SpecialSummonNamed,
+                Side = WRLDZ.Duel.TextEffects.EffectSide.Controller,
+                NamedCard = named,
+                FromHand = true,
+                FromDeck = true,
+                IsOptional = true,
+                TargetCount = 1,
+                MakesChainLink = false
+            };
+            WRLDZ.Duel.TextEffects.TextEffectRuntime.TrySpecialSummonNamed(engine, who, clause, source);
+        }
     }
 }

@@ -3388,6 +3388,14 @@ namespace WRLDZ.Duel.TextEffects
         /// <see cref="ContinuousTrapsAndSpiritSupportRuntime.HandRevealed"/>.
         /// </summary>
         OpponentMustPlayWithHandRevealed,
+        /// <summary>
+        /// Level Up! (c25290459): a Normal Spell — "Send 1 face-up "LV" monster you control to the GY;
+        /// Special Summon 1 monster from your hand or Deck that is listed in the sent monster's text, ignoring its
+        /// Summoning conditions." The target is the LV monster (<see cref="EffectClause.TargetSeriesName"/>); the
+        /// monster to Special Summon is whatever that monster's own LV-progression clause names, so no LV table is
+        /// hardcoded. Resolved by <see cref="LvChainRuntime.ResolveProgression"/>.
+        /// </summary>
+        SpecialSummonLvProgressionFromSentMonster,
     }
 
 
