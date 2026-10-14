@@ -29,6 +29,8 @@ namespace WRLDZ.Duel.Rules
         const int Celtic = 91152256;
         const int Kuriboh = 40640057;
         const int Necrovalley = 47355498;
+        const int TwoManCellBattle = 25578802;
+        const int DarkMagician = 46986414;   // Lv7 Effect — not a Level 4 Normal Monster
 
         public static void Run(CardDatabase db, DeckFile pDeck, DeckFile aDeck, Action<string, bool, string> check)
         {
@@ -43,6 +45,7 @@ namespace WRLDZ.Duel.Rules
             DonTurtleSwarm(db, pDeck, aDeck, Check);
             MusteringOneOfEach(db, pDeck, aDeck, Check);
             CombinationDirectFor400(db, pDeck, aDeck, Check);
+            TwoManCellBattleDuels(db, pDeck, aDeck, Check);
         }
 
         // ───────────────────────── helpers ─────────────────────────
@@ -573,6 +576,95 @@ namespace WRLDZ.Duel.Rules
             ClearPicks(e);
             Check("Dark Scorpion Combination: an attack on a monster inflicts its normal battle damage",
                 hit && afterHit == lp - 1100, $"hit={hit} lp {lp}->{afterHit} wall={InMz(o, wall)}");
+        }
+
+        // ───────────── Two-Man Cell Battle ─────────────
+
+        static void TwoManCellBattleDuels(CardDatabase db, DeckFile pDeck, DeckFile aDeck,
+            Action<string, bool, string> Check)
+        {
+            // Compile shape: one End Phase clause, each player's phase, exact Level, optional, the turn player acts.
+            {
+                var prog = CardTextEffectCompiler.Compile(db.Get(TwoManCellBattle));
+                Check("Two-Man Cell Battle compiles: each player's End Phase — the turn player Special Summons 1 " +
+                      "Level 4 Normal Monster from their hand (both-side trigger)",
+                    prog != null && prog.FullyCompiled &&
+                    CardEffectStatus.Classify(db.Get(TwoManCellBattle)) == CardEffectStatusKind.Implemented &&
+                    Has(prog, c => c.Timing == EffectTiming.EndPhase &&
+                                   c.Action == EffectActionKind
+                                       .SpecialSummonLevelNormalFromHandAtEachPlayersEndPhase &&
+                                   c.FiresAtEachPlayersPhase && c.ExactLevel == 4 &&
+                                   c.Zone == EffectZoneFilter.ControllerHandMonsters && c.IsOptional &&
+                                   c.MakesChainLink && !c.OpponentTurnOnly),
+                    Frags(prog));
+            }
+
+            // The controller's own End Phase: the Level 4 Normal in hand is offered (the Level 7 Effect is not).
+            {
+                var e = PlayerMain1(db, pDeck, aDeck, out var reached);
+                var p = e.Player;
+                var spell = PutInHand(e, p, TwoManCellBattle);
+                var celtic = PutInHand(e, p, Celtic);       // Lv4 Normal
+                var dm = PutInHand(e, p, DarkMagician);     // Lv7 Effect Monster
+                var played = e.TryActivateSpellTrap(p, spell, true);
+                Settle(e);
+                var onField = p.TryFindSpellTrap(spell, out _) && spell.FaceUp;
+                e.TryEndTurnSafe(p);
+                var asked = e.IsAwaitingEffectTarget && e.IsLegalEffectTarget(celtic) &&
+                            !e.IsLegalEffectTarget(dm);
+                var summoned = asked && e.TrySelectEffectTarget(celtic);
+                Settle(e);
+                Check("Two-Man Cell Battle: the controller's End Phase offers the Level 4 Normal in hand and it is " +
+                      "Special Summoned",
+                    reached && played && onField && asked && summoned && InMz(p, celtic) &&
+                    !p.Hand.Contains(celtic) && p.Hand.Contains(dm) && !e.IsAwaitingEffectTarget,
+                    $"reached={reached} played={played} onField={onField} asked={asked} summoned={summoned} " +
+                    $"celtic={InMz(p, celtic)} handCeltic={p.Hand.Contains(celtic)} dmHand={p.Hand.Contains(dm)}");
+            }
+
+            // The opponent's End Phase: BOTH_SIDE — the opponent is the actor and sums from its OWN hand.
+            {
+                var e = PlayerMain1(db, pDeck, aDeck, out var reached);
+                var p = e.Player;
+                var o = e.Opponent;
+                var spell = PutInHand(e, p, TwoManCellBattle);
+                var mine = PutInHand(e, p, Celtic);
+                var dm = PutInHand(e, o, DarkMagician);
+                var theirs = PutInHand(e, o, Celtic);
+                var played = e.TryActivateSpellTrap(p, spell, true);
+                Settle(e);
+                e.TryEndTurnSafe(p);                       // the player's End Phase
+                var askedPlayer = e.IsAwaitingEffectTarget && e.IsLegalEffectTarget(mine) &&
+                                  !e.IsLegalEffectTarget(theirs);
+                var declined = askedPlayer && e.CancelEffectTargeting();
+                Settle(e);
+                EndTurn(e);                                 // the opponent's End Phase
+                Settle(e);
+                Check("Two-Man Cell Battle: each player's End Phase — the opponent is the actor and Special Summons " +
+                      "from its own hand, while the controller's copy stays put",
+                    reached && played && askedPlayer && declined &&
+                    InMz(o, theirs) && theirs.FaceUp && !o.Hand.Contains(theirs) && o.Hand.Contains(dm) &&
+                    !InMz(p, mine) && p.Hand.Contains(mine) && !e.IsAwaitingEffectTarget,
+                    $"reached={reached} played={played} askedPlayer={askedPlayer} declined={declined} " +
+                    $"theirs={InMz(o, theirs)} oppHand={o.Hand.Contains(theirs)} dmHand={o.Hand.Contains(dm)} " +
+                    $"mineMz={InMz(p, mine)} pHand={p.Hand.Contains(mine)}");
+            }
+
+            // No Level 4 Normal Monster in the turn player's hand: the effect resolves without summoning.
+            {
+                var e = PlayerMain1(db, pDeck, aDeck, out var reached);
+                var p = e.Player;
+                var spell = PutInHand(e, p, TwoManCellBattle);
+                var dm = PutInHand(e, p, DarkMagician);
+                var played = e.TryActivateSpellTrap(p, spell, true);
+                Settle(e);
+                e.TryEndTurnSafe(p);
+                var asked = e.IsAwaitingEffectTarget;
+                Settle(e);
+                Check("Two-Man Cell Battle: no Level 4 Normal Monster in hand — nothing is asked or Summoned",
+                    reached && played && !asked && p.Hand.Contains(dm) && !e.IsAwaitingEffectTarget,
+                    $"reached={reached} played={played} asked={asked} dmHand={p.Hand.Contains(dm)}");
+            }
         }
     }
 }

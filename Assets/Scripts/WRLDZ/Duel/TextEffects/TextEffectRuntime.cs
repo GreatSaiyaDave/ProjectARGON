@@ -12098,6 +12098,7 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
                     // NamedSummonPairs batch: Mirage Knight — "During the End Phase of a turn …" (either player's).
                     var eachEndPhase = NamedSummonPairsRuntime.FiresAtEachEndPhase(c, timing);
                     if (!c.TurnPlayerTributes && !eitherTurn && !eachStandby && !spiritReturn && !eachEndPhase &&
+                        !c.FiresAtEachPlayersPhase &&
                         (opponentTurnClauses ? !c.OpponentTurnOnly : c.OpponentTurnOnly))
                         continue;
                     if (c.RequiresOnlyMonsterYouControl &&
@@ -12172,6 +12173,15 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
                     {
                         if (!card.FaceUp || !who.TryFindSpellTrap(card, out _)) continue;
                         ContinuousTrapsAndSpiritSupportRuntime.ResolveEndPhaseUpkeep(engine, who, card, c);
+                        continue;
+                    }
+                    // SimpleTriggersAndSwarm batch: Two-Man Cell Battle — during each player's End Phase the turn player
+                    // may Special Summon 1 Level 4 Normal Monster from that player's hand (EFFECT_FLAG_BOTH_SIDE, so the
+                    // actor is engine.TurnPlayer even when this card's controller is not the turn player).
+                    if (c.Action == EffectActionKind.SpecialSummonLevelNormalFromHandAtEachPlayersEndPhase)
+                    {
+                        if (!card.FaceUp || !who.TryFindSpellTrap(card, out _)) continue;
+                        SimpleTriggersAndSwarmRuntime.TryOfferEndPhaseNormalLevelFromHand(engine, who, card, c);
                         continue;
                     }
 

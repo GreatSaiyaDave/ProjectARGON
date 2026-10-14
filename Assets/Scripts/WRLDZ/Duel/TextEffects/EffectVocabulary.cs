@@ -384,6 +384,10 @@ namespace WRLDZ.Duel.TextEffects
                 // Dark Scorpions (hand Special Summons), Dark Scorpion Combination (direct attacks).
                 EffectActionKind.ShuffleThisFromGyIntoDeck => EffectResolutionKind.ReturnToDeck,
                 EffectActionKind.SpecialSummonAnyNumberFromHand => EffectResolutionKind.SpecialSummon,
+                // SimpleTriggersAndSwarm batch: Two-Man Cell Battle — the same Special Summon from the hand, only
+                // during each player's End Phase and only of a Level 4 Normal Monster.
+                EffectActionKind.SpecialSummonLevelNormalFromHandAtEachPlayersEndPhase =>
+                    EffectResolutionKind.SpecialSummon,
                 EffectActionKind.NamedMonstersAttackDirectlyBattleDamageBecomesThisTurn => EffectResolutionKind.DirectAttack,
                 // DcrSpellTrapUtility batch: Interdimensional Matter Transporter / Different Dimension Gate banish (they
                 // return later), Final Countdown's countdown (a lasting player effect; its Lua has no category),

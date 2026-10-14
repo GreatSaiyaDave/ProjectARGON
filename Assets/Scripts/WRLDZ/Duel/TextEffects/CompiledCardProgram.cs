@@ -3364,6 +3364,14 @@ namespace WRLDZ.Duel.TextEffects
         /// resolution by <see cref="BattleRulesRuntime.ArmOpponentAttackLock"/>.
         /// </summary>
         OpponentAttacksOnlySelectedMonsterThisTurn,
+        /// <summary>
+        /// Two-Man Cell Battle (c25578802): a Continuous Spell's field trigger (ygopro EFFECT_TYPE_TRIGGER_O with
+        /// EFFECT_FLAG_BOTH_SIDE) — "During each player's End Phase, the turn player can Special Summon 1 Level 4
+        /// Normal Monster from their hand." Fired by FirePhaseTriggersFor through
+        /// <see cref="SimpleTriggersAndSwarmRuntime.TryOfferEndPhaseNormalLevelFromHand"/>; the acting player is the
+        /// turn player, not this card's controller (that is what BOTH_SIDE buys).
+        /// </summary>
+        SpecialSummonLevelNormalFromHandAtEachPlayersEndPhase,
     }
 
 
@@ -4127,6 +4135,20 @@ namespace WRLDZ.Duel.TextEffects
         public bool OnlyDuringMainPhase1;
         /// <summary>Mass position change also turns face-down monsters face-up (Desert Sunlight).</summary>
         public bool AlsoFlipFaceDown;
+
+        /// <summary>
+        /// Standby / End Phase trigger fires during <b>either</b> player's phase (ygopro EFFECT_FLAG_BOTH_SIDE) —
+        /// "During each player's End Phase …" (Two-Man Cell Battle). The ordinary rule is
+        /// <see cref="OpponentTurnOnly"/> (only the other player's phase); this one clears the check in
+        /// <see cref="TextEffectRuntime"/>'s FirePhaseTriggersFor for both passes.
+        /// </summary>
+        public bool FiresAtEachPlayersPhase;
+
+        /// <summary>
+        /// An exact monster Level for this clause's filter (0: unused). <see cref="AmountIsLevel"/> is a maximum;
+        /// this is the printed "Level N" of Two-Man Cell Battle.
+        /// </summary>
+        public int ExactLevel;
 
         /// <summary>ThisCardSummoned: fires only when this card was Special Summoned (Sacred Crane).</summary>
         public bool RequiresThisSpecialSummoned;

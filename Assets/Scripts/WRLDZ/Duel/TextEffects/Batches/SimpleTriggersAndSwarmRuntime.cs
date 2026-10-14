@@ -247,6 +247,76 @@ namespace WRLDZ.Duel.TextEffects
             return true;
         }
 
+        // ───────────── "During each player's End Phase, the turn player can Special Summon 1 Level 4 Normal Monster" ─────────────
+
+        /// <summary>
+        /// Two-Man Cell Battle (c25578802): an optional field trigger with EFFECT_FLAG_BOTH_SIDE. <paramref name="who"/>
+        /// is the card's controller (FirePhaseTriggersFor's pass player), but the acting player is the <b>turn player</b>
+        /// — the Lua's <c>Duel.IsTurnPlayer(tp)</c> over the both-side registration — and the Level 4 Normal Monster
+        /// comes from that player's hand. A human is asked with a yes/no tap over that hand (declining is legal).
+        /// </summary>
+        public static bool TryOfferEndPhaseNormalLevelFromHand(DuelEngine engine, DuelistState who,
+            CardInstance source, EffectClause c)
+        {
+            if (engine == null || who == null || source == null || c == null) return false;
+            var actor = engine.TurnPlayer ?? who;
+            var level = c.ExactLevel > 0 ? c.ExactLevel : 4;
+
+            List<CardInstance> Candidates() =>
+                actor?.Hand == null
+                    ? new List<CardInstance>()
+                    : actor.Hand
+                        .Where(x => x?.Def != null && x.Def.IsMonster && !x.Def.IsExtraDeck &&
+                                    x.Def.IsNormalMonster && x.Level == level)
+                        .ToList();
+
+            // The pick is the ACTOR's (the turn player): during the opponent's End Phase the AI decides for itself,
+            // not this card's controller.
+            ContinuousTrapsAndSpiritSupportRuntime.AskCardPick(engine, actor, source, new CardPickRequest
+            {
+                Candidates = Candidates,
+                Kind = EffectTargetKind.MonsterInYourHand,
+                Prompt = $"{source.Name}: Special Summon 1 Level {level} Normal Monster from " +
+                         $"{actor?.Name ?? "the turn player"}'s hand (CANCEL = do not)?",
+                // Optional: a human is asked even when only one card qualifies.
+                AskWithOneCandidate = true,
+                AiChoose = list => list.Count > 0 ? list[0] : null,
+                Cancel = () => engine.Log($"{source.Name}: no monster is Special Summoned."),
+                Finish = chosen =>
+                {
+                    if (chosen == null || actor == null) return;
+                    SummonChosenFromHand(engine, actor, source, chosen, level);
+                }
+            });
+            return true;
+        }
+
+        static void SummonChosenFromHand(DuelEngine engine, DuelistState actor, CardInstance source,
+            CardInstance chosen, int level)
+        {
+            if (source == null || chosen?.Def == null) return;
+            var controller = engine.ControllerOf(source);
+            if (controller == null || !controller.TryFindSpellTrap(source, out _) || !source.FaceUp) return;
+            if (actor.Hand == null || !actor.Hand.Contains(chosen)) return;
+            if (!chosen.Def.IsNormalMonster || chosen.Level != level) return;
+            if (engine.FirstEmpty(actor.MonsterZones) < 0)
+            {
+                engine.Log($"{source.Name}: {actor.Name} has no free Monster Zone — nothing is Special Summoned.");
+                return;
+            }
+
+            actor.Hand.Remove(chosen);
+            engine.MarkSpecialSummonFromHand(chosen);
+            if (!engine.SpecialSummonToField(actor, chosen, BattlePosition.Attack, true))
+            {
+                actor.Hand.Add(chosen);
+                engine.Log($"{source.Name}: the Special Summon of {chosen.Name} failed.");
+                return;
+            }
+
+            engine.Log($"{source.Name}: {actor.Name} Special Summons {chosen.Name} from the hand.");
+        }
+
         // ───────────────────────────── "Special Summon any number of X from your hand" ─────────────────────────────
 
         sealed class SwarmPick

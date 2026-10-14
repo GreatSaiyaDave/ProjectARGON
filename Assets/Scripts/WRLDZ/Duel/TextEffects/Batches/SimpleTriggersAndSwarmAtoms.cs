@@ -163,6 +163,31 @@ namespace WRLDZ.Duel.TextEffects
                         MakesChainLink = true
                     };
                 }),
+
+            // Two-Man Cell Battle (c25578802): SOD Continuous Spell. ygopro: a free-chain EFFECT_TYPE_ACTIVATE that
+            // only places the card, plus a FIELD+TRIGGER_O effect on EVENT_PHASE+PHASE_END with EFFECT_FLAG_BOTH_SIDE
+            // and CountLimit(1) whose condition is Duel.IsTurnPlayer(tp) — so this is a both-side phase trigger whose
+            // actor is the TURN player, not this card's controller (the engine's FiresAtEachPlayersPhase). The
+            // printed sentence is only the trigger, so the atom emits exactly one clause.
+            new AtomRegistration.Atom(
+                SentenceStart + @"During each player" + Apos + @"s End Phase, the turn player can Special Summon " +
+                @"(\d+) Level (\d+) Normal Monsters? from their hand" + SentenceEnd,
+                m =>
+                {
+                    var count = int.Parse(m.Groups[1].Value);
+                    if (count != 1) return null; // the effect is exactly one monster
+                    var level = int.Parse(m.Groups[2].Value);
+                    return new EffectClause
+                    {
+                        Timing = EffectTiming.EndPhase,
+                        Action = EffectActionKind.SpecialSummonLevelNormalFromHandAtEachPlayersEndPhase,
+                        Zone = EffectZoneFilter.ControllerHandMonsters,
+                        FiresAtEachPlayersPhase = true,
+                        ExactLevel = level,
+                        IsOptional = true,
+                        MakesChainLink = true
+                    };
+                }),
         };
     }
 }
