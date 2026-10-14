@@ -351,6 +351,9 @@ namespace WRLDZ.Duel.TextEffects
                     EffectActionKind.SetAllOppMonstersFaceDownDefense => EffectResolutionKind.ChangePosition,
                 EffectActionKind.DoubleAtkOfYourMatchingThenDestroyAtEnd => EffectResolutionKind.ModifyStats,
                 EffectActionKind.LockTargetCannotAttackWhileFaceUp => EffectResolutionKind.Protection,
+                // Taunt (BattleRules batch): the opponent may attack only the selected monster this turn — the same
+                // attack-target restriction family (Staunch Defender's EFFECT_MUST_ATTACK_MONSTER shape).
+                EffectActionKind.OpponentAttacksOnlySelectedMonsterThisTurn => EffectResolutionKind.Protection,
                 // Piercing: battle damage reaches the player, like a direct-attack grant.
                 EffectActionKind.ContinuousPiercing or
                     EffectActionKind.EquippedGainsPiercing =>

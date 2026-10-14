@@ -3356,6 +3356,14 @@ namespace WRLDZ.Duel.TextEffects
         /// for this action's <see cref="EffectTiming.ContinuousWhileFaceUp"/> clause.
         /// </summary>
         ContinuousCannotBeDestroyedByBattle,
+        /// <summary>
+        /// Taunt (c90740329): a Normal Trap the controller activates during the opponent's Main Phase 1, selecting 1
+        /// monster on their own field. Until the end of that turn the opponent may attack only that monster — and is
+        /// never obliged to attack at all. Read by
+        /// <see cref="BattleRulesRuntime.ForbidsAttackTarget"/> from DuelEngine.TryAttack and CanBeAttacked; armed at
+        /// resolution by <see cref="BattleRulesRuntime.ArmOpponentAttackLock"/>.
+        /// </summary>
+        OpponentAttacksOnlySelectedMonsterThisTurn,
     }
 
 

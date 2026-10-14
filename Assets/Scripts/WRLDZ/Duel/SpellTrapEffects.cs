@@ -1846,6 +1846,10 @@ namespace WRLDZ.Duel
                     DcrSpellTrapUtilityRuntime.IsSpellSendCost(c) ||
                     // Soul Exchange targets face-up or face-down (the legacy OppFaceUpMonster list is face-up only).
                     c.Action == EffectActionKind.TributeTargetAsIfControlledThisTurn ||
+                    // BattleRules batch: Taunt's "1 monster on your side of the field" — the legacy map has no
+                    // face-up own-monster list (MapCompiledTargetKind returns None for ControllerAnyMonsters),
+                    // so the compiled flow must ask the pick as the card is activated.
+                    c.Action == EffectActionKind.OpponentAttacksOnlySelectedMonsterThisTurn ||
                     // Acid Trap Hole: face-down monsters on either field (no legacy list has that filter).
                     c.Zone == EffectZoneFilter.FieldFaceDownMonsters ||
                     // PerCopyDeck batch (v163): Graverobber's Spell in the opponent's GY (no legacy list).

@@ -4102,6 +4102,9 @@ namespace WRLDZ.UI
                 // A Toon must target a Toon monster while the opponent controls one.
                 if (WRLDZ.Duel.TextEffects.ToonsRuntime.ForbidsAttackTarget(_engine, attacker, target))
                     continue;
+                // Taunt: only the selected monster this turn.
+                if (WRLDZ.Duel.TextEffects.BattleRulesRuntime.ForbidsAttackTarget(_engine, attacker, target))
+                    continue;
                 if (!legal.Exists(c => c.InstanceId == target.InstanceId))
                     legal.Add(target);
             }

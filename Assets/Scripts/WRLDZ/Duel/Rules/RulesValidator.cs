@@ -336,6 +336,12 @@ namespace WRLDZ.Duel.Rules
                 v.Reason = $"{attacker.Name} cannot attack that monster.";
                 return v;
             }
+            else if (WRLDZ.Duel.TextEffects.BattleRulesRuntime.ForbidsAttackTarget(engine, attacker, targetOrNull))
+            {
+                // Taunt: only the selected monster may be attacked this turn.
+                v.Reason = $"{attacker.Name} may only attack the selected monster this turn (Taunt).";
+                return v;
+            }
 
             var forced = WRLDZ.Duel.TextEffects.TextEffectRuntime.ForcedAttackTargets(opp);
             if (forced.Count > 0 && (targetOrNull == null || !forced.Contains(targetOrNull)))

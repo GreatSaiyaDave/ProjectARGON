@@ -21,6 +21,7 @@ namespace WRLDZ.Duel.Rules
         const int AfterTheStruggle = 25345186;
         const int SecretOfTheBandit = 99351431;
         const int PatricianOfDarkness = 19153634;
+        const int Taunt = 90740329;
 
         const int Bewd = 89631139;          // Dragon LIGHT 3000/2500
         const int WingedDragon = 87796900;  // Dragon WIND 1400/1200
@@ -42,6 +43,7 @@ namespace WRLDZ.Duel.Rules
             AfterTheStruggleDuels(db, pDeck, aDeck, Check);
             BanditDuels(db, pDeck, aDeck, Check);
             PatricianDuels(db, pDeck, aDeck, Check);
+            TauntDuels(db, pDeck, aDeck, Check);
         }
 
         // ───────────────────────── compile shape ─────────────────────────
@@ -240,6 +242,18 @@ namespace WRLDZ.Duel.Rules
             var engine = Fresh(db, pDeck, aDeck);
             ClearBoard(engine);
             reached = ReachOpponentBattle(engine);
+            ClearBoard(engine);
+            engine.Player.Hand.Clear();
+            engine.Opponent.Hand.Clear();
+            return engine;
+        }
+
+        /// <summary>A fresh duel at the opponent's Main Phase 1 (turn 2+), empty board, both hands empty.</summary>
+        static DuelEngine OpponentMain(CardDatabase db, DeckFile pDeck, DeckFile aDeck, out bool reached)
+        {
+            var engine = Fresh(db, pDeck, aDeck);
+            ClearBoard(engine);
+            reached = ReachOpponentMain(engine);
             ClearBoard(engine);
             engine.Player.Hand.Clear();
             engine.Opponent.Hand.Clear();
@@ -741,6 +755,159 @@ namespace WRLDZ.Duel.Rules
                 Check("Patrician of Darkness: face-down, the attacker keeps its target",
                     reached && ok && !waiting && target == celtic && p.Graveyard.Contains(celtic),
                     $"reached={reached} ok={ok} waiting={waiting} target={target?.Name}");
+            }
+        }
+
+        // ───────────────────────── Taunt ─────────────────────────
+
+        static void TauntDuels(CardDatabase db, DeckFile pDeck, DeckFile aDeck, CheckFn Check)
+        {
+            {
+                var prog = CardTextEffectCompiler.Compile(db.Get(Taunt));
+                var cl = prog?.ClauseList ?? new List<EffectClause>();
+                Check("Taunt: FullyCompiled — opponent's Main Phase 1 Trap, 1 monster you control, attack-target lock",
+                    prog != null && prog.FullyCompiled && cl.Count == 1 &&
+                    cl[0].Action == EffectActionKind.OpponentAttacksOnlySelectedMonsterThisTurn &&
+                    cl[0].Timing == EffectTiming.Activate && cl[0].Side == EffectSide.Controller &&
+                    cl[0].Zone == EffectZoneFilter.ControllerAnyMonsters && cl[0].OpponentTurnOnly &&
+                    cl[0].OnlyDuringMainPhase1 && cl[0].RequiresTargetChoice && cl[0].IsPsctTarget &&
+                    cl[0].RequiresTargetFaceUp && cl[0].TargetCount == 1 && cl[0].MakesChainLink,
+                    Dump(prog));
+            }
+
+            {
+                // The controller's own Main Phase 1: "Activate only during your opponent's Main Phase 1" refuses it.
+                var engine = PlayerMain(db, pDeck, aDeck, out var reached);
+                var p = engine.Player;
+                PlaceMonster(engine, p, Celtic, 0, BattlePosition.Attack, true);
+                var taunt = PlaceSetTrap(engine, p, Taunt, 0);
+                var can = engine.CanActivateSpellTrap(p, taunt, false);
+                Check("Taunt: cannot be activated during the controller's own Main Phase 1",
+                    reached && !can, $"reached={reached} can={can}");
+            }
+
+            {
+                // Main Phase 2 of the opponent's turn: OnlyDuringMainPhase1 refuses it there as well.
+                var engine = OpponentMain(db, pDeck, aDeck, out var reached);
+                var o = engine.Opponent;
+                var p = engine.Player;
+                PlaceMonster(engine, p, Celtic, 0, BattlePosition.Attack, true);
+                var taunt = PlaceSetTrap(engine, p, Taunt, 0);
+                var toM2 = engine.TryEnterMainPhase2(o);
+                var can = engine.CanActivateSpellTrap(p, taunt, false);
+                Check("Taunt: cannot be activated in the opponent's Main Phase 2",
+                    reached && toM2 && !can && engine.Phase == DuelPhase.Main2,
+                    $"reached={reached} m2={toM2} can={can} phase={engine.Phase}");
+            }
+
+            {
+                // The opponent's Main Phase 1: the Trap resolves and binds the selected monster.
+                var engine = OpponentMain(db, pDeck, aDeck, out var reached);
+                var p = engine.Player;
+                var taunted = PlaceMonster(engine, p, Celtic, 0, BattlePosition.Attack, true);
+                var taunt = PlaceSetTrap(engine, p, Taunt, 0);
+                var can = engine.CanActivateSpellTrap(p, taunt, false);
+                var activated = can && engine.TryActivateSpellTrap(p, taunt, false);
+                var picked = activated && engine.IsAwaitingEffectTarget &&
+                             engine.TrySelectEffectTarget(taunted);
+                PassAll(engine);
+                Check("Taunt: activated in the opponent's Main Phase 1, binding the selected monster",
+                    reached && can && activated && picked && !engine.IsAwaitingEffectTarget &&
+                    !engine.Chain.HasLinks && p.Graveyard.Contains(taunt) &&
+                    !p.SpellTrapsOnField().Contains(taunt),
+                    $"reached={reached} can={can} act={activated} picked={picked} chain={engine.Chain?.HasLinks} " +
+                    $"tauntGy={p.Graveyard.Contains(taunt)}");
+            }
+
+            {
+                // Full Battle Phase: the attacker must attack the selected monster, never another one.
+                var engine = OpponentMain(db, pDeck, aDeck, out var reached);
+                var p = engine.Player;
+                var o = engine.Opponent;
+                var taunted = PlaceMonster(engine, p, Celtic, 0, BattlePosition.Attack, true);
+                var other = PlaceMonster(engine, p, MysticalElf, 1, BattlePosition.Attack, true);
+                var taunt = PlaceSetTrap(engine, p, Taunt, 0);
+                var activated = engine.TryActivateSpellTrap(p, taunt, false);
+                var picked = activated && engine.IsAwaitingEffectTarget &&
+                             engine.TrySelectEffectTarget(taunted);
+                PassAll(engine);
+                var battle = engine.TryEnterBattlePhase(o);
+                PassAll(engine);
+                var attacker1 = PlaceMonster(engine, o, Bewd, 0, BattlePosition.Attack, true);
+                var attacker2 = PlaceMonster(engine, o, Celtic, 1, BattlePosition.Attack, true);
+
+                // A direct attack is refused too (the selected monster is on the field, so the generic
+                // "opponent controls a monster" rule catches it as well — Taunt's own gate is belt-and-braces).
+                var hitOther = Attack(engine, o, attacker1, other);
+                var direct = Attack(engine, o, attacker1, null);
+                var guarded = engine.Phase == DuelPhase.Battle && !engine.GameOver;
+
+                // Bewd (3000) destroys the selected Celtic (1400): the selected card has now left the field.
+                var onTaunted = Attack(engine, o, attacker1, taunted);
+                var selectedGone = p.Graveyard.Contains(taunted) && !OnField(p, taunted);
+
+                // With the selected monster gone the lock no longer binds anyone.
+                var afterRelease = Attack(engine, o, attacker2, other);
+
+                Check("Taunt: only the selected monster may be attacked, and the lock ends when it leaves the field",
+                    reached && activated && picked && battle &&
+                    !hitOther && !direct && guarded && onTaunted && selectedGone && afterRelease &&
+                    p.Graveyard.Contains(other) && p.Graveyard.Contains(taunted),
+                    $"reached={reached} act={activated} picked={picked} battle={battle} hitOther={hitOther} " +
+                    $"direct={direct} guarded={guarded} onTaunted={onTaunted} selectedGone={selectedGone} " +
+                    $"afterRelease={afterRelease} otherGy={p.Graveyard.Contains(other)} " +
+                    $"tauntedGy={p.Graveyard.Contains(taunted)}");
+            }
+
+            {
+                // While the selected monster is still on the field the lock holds; it is not a duty to attack.
+                var engine = OpponentMain(db, pDeck, aDeck, out var reached);
+                var p = engine.Player;
+                var o = engine.Opponent;
+                var taunted = PlaceMonster(engine, p, Celtic, 0, BattlePosition.Attack, true);
+                var other = PlaceMonster(engine, p, MysticalElf, 1, BattlePosition.Defense, true);
+                var taunt = PlaceSetTrap(engine, p, Taunt, 0);
+                var activated = engine.TryActivateSpellTrap(p, taunt, false);
+                var picked = activated && engine.IsAwaitingEffectTarget &&
+                             engine.TrySelectEffectTarget(taunted);
+                PassAll(engine);
+                var battle = engine.TryEnterBattlePhase(o);
+                PassAll(engine);
+                var attacker = PlaceMonster(engine, o, Bewd, 0, BattlePosition.Attack, true);
+                var locked = !engine.TryAttack(o, attacker, other);
+                // Taunt never compels the attack: the Battle Phase can simply be left.
+                var toM2 = engine.TryEnterMainPhase2(o);
+                PassAll(engine);
+                var directAfter = engine.CanAttackDirectly(o, attacker);
+                Check("Taunt: the lock holds while the selected monster stays on the field, but forces no attack",
+                    reached && activated && picked && battle && locked && toM2 &&
+                    engine.Phase == DuelPhase.Main2 && !directAfter &&
+                    OnField(p, taunted) && OnField(p, other),
+                    $"reached={reached} act={activated} picked={picked} battle={battle} locked={locked} " +
+                    $"toM2={toM2} phase={engine.Phase} directAfter={directAfter}");
+            }
+
+            {
+                // No attack at all: the Battle Phase may be skipped without anything being forced.
+                var engine = OpponentMain(db, pDeck, aDeck, out var reached);
+                var p = engine.Player;
+                var o = engine.Opponent;
+                var taunted = PlaceMonster(engine, p, Celtic, 0, BattlePosition.Attack, true);
+                var taunt = PlaceSetTrap(engine, p, Taunt, 0);
+                var activated = engine.TryActivateSpellTrap(p, taunt, false);
+                var picked = activated && engine.IsAwaitingEffectTarget &&
+                             engine.TrySelectEffectTarget(taunted);
+                PassAll(engine);
+                var battle = engine.TryEnterBattlePhase(o);
+                PassAll(engine);
+                var attacker = PlaceMonster(engine, o, Bewd, 0, BattlePosition.Attack, true);
+                var ended = engine.TryEnterMainPhase2(o);
+                PassAll(engine);
+                Check("Taunt: the opponent is never forced to declare an attack — the Battle Phase may be left at once",
+                    reached && activated && picked && battle && ended &&
+                    engine.Phase == DuelPhase.Main2 && OnField(p, taunted) && OnField(o, attacker),
+                    $"reached={reached} act={activated} picked={picked} battle={battle} ended={ended} " +
+                    $"phase={engine.Phase}");
             }
         }
     }

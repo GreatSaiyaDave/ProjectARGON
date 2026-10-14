@@ -770,7 +770,9 @@ namespace WRLDZ.Duel
                             !TextEffects.ToonsRuntime.ForbidsAttackTarget(engine, attacker, m) &&
                             // SpiritMonsters batch: Inaba White Rabbit attacks directly only; Asura Priest attacks
                             // each monster once per Battle Phase.
-                            !TextEffects.SpiritMonstersRuntime.ForbidsAttackTarget(engine, attacker, m))
+                            !TextEffects.SpiritMonstersRuntime.ForbidsAttackTarget(engine, attacker, m) &&
+                            // Taunt (BattleRules batch): only the selected monster this turn.
+                            !TextEffects.BattleRulesRuntime.ForbidsAttackTarget(engine, attacker, m))
                 .ToList();
             var magnetHosts = engine.MagnetismHosts(ai);
             if (magnetHosts.Count == 1)

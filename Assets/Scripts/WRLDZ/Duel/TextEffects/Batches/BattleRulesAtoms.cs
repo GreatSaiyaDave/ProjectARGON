@@ -126,6 +126,31 @@ namespace WRLDZ.Duel.TextEffects
                     Side = EffectSide.Opponent,
                     MakesChainLink = false
                 }),
+
+            // Taunt (c90740329): SOD Normal Trap. No attack-declaration window — the controller activates it during
+            // the opponent's Main Phase 1, selecting 1 face-up monster on their own field. The two clause flags
+            // together are exactly the printed "your opponent's Main Phase 1": OpponentTurnOnly gates on whose turn it
+            // is (TextEffectRuntime 652-661), OnlyDuringMainPhase1 on the phase (TextEffectRuntime 1019).
+            // While the selected card remains on the field the opponent may attack only that monster, and is never
+            // obliged to attack — BattleRulesRuntime.ArmOpponentAttackLock / ForbidsAttackTarget.
+            new AtomRegistration.Atom(
+                WholeStart + @"Activate only during your opponent['’]s Main Phase 1;\s*select 1 monster on your side " +
+                @"of the field\.\s*While the selected card remains on the field, if your opponent attacks with a " +
+                @"monster\(s\) this turn, they must select the selected monster as the attack target" + WholeEnd,
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.OpponentAttacksOnlySelectedMonsterThisTurn,
+                    Side = EffectSide.Controller,
+                    Zone = EffectZoneFilter.ControllerAnyMonsters,
+                    OpponentTurnOnly = true,
+                    OnlyDuringMainPhase1 = true,
+                    RequiresTargetChoice = true,
+                    IsPsctTarget = true,
+                    RequiresTargetFaceUp = true,
+                    TargetCount = 1,
+                    MakesChainLink = true
+                }),
         };
     }
 }

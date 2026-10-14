@@ -8794,6 +8794,11 @@ namespace WRLDZ.Duel.TextEffects
                     }
                     break;
 
+                case EffectActionKind.OpponentAttacksOnlySelectedMonsterThisTurn:
+                    // Taunt (BattleRules batch): the opponent may attack only this monster for the rest of the turn.
+                    BattleRulesRuntime.ArmOpponentAttackLock(engine, who, source, chosenTarget);
+                    break;
+
                 case EffectActionKind.DiscardRandomFromOpponentHand:
                     DiscardRandomFromOpponentHand(engine, opp, source, clause);
                     break;

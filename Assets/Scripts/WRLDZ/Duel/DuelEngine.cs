@@ -4165,6 +4165,8 @@ namespace WRLDZ.Duel
             if (ContinuousProtections.CannotBeAttackTarget(this, target)) return false;
             // Toon rule (Toons batch): only a face-up Toon while the opponent controls one.
             if (TextEffects.ToonsRuntime.ForbidsAttackTarget(this, attacker, target)) return false;
+            // Taunt (BattleRules batch): the attacker is locked onto one selected monster this turn.
+            if (TextEffects.BattleRulesRuntime.ForbidsAttackTarget(this, attacker, target)) return false;
             return true;
         }
 
@@ -4491,6 +4493,12 @@ namespace WRLDZ.Duel
                     return false;
                 }
 
+                if (TextEffects.BattleRulesRuntime.ForbidsDirectAttack(this, attacker))
+                {
+                    // Taunt: only the selected monster may be attacked — a direct attack is not one.
+                    Log($"{attacker.Name} may only attack the selected monster this turn (Taunt).");
+                    return false;
+                }
                 if (HasMonsters(opp) && !GrantsDirectAttack(attacker) &&
                     !ContinuousProtections.AllOpponentMonstersAllowDirect(this, opp))
                 {
@@ -4522,6 +4530,12 @@ namespace WRLDZ.Duel
             {
                 // Inaba White Rabbit attacks directly only; Asura Priest attacks each monster once per Battle Phase.
                 Log($"{attacker.Name} cannot attack {(targetOrNull.FaceUp ? targetOrNull.Name : "that monster")}.");
+                return false;
+            }
+            else if (TextEffects.BattleRulesRuntime.ForbidsAttackTarget(this, attacker, targetOrNull))
+            {
+                // Taunt: the attacker may only attack the selected monster this turn.
+                Log($"{attacker.Name} may only attack the selected monster this turn (Taunt).");
                 return false;
             }
 

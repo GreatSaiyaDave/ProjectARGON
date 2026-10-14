@@ -79,6 +79,21 @@ namespace WRLDZ.Duel.TextEffects
             public readonly List<Mark> Battled = new();
             public readonly List<BanditWatch> Bandits = new();
             public PatricianChoice Chosen;
+            /// <summary>Taunt: for the rest of this turn each attacker may attack only its selected monster.</summary>
+            public readonly List<AttackLock> AttackLocks = new();
+        }
+
+        /// <summary>
+        /// Taunt: until the end of the turn it was armed, <see cref="Attacker"/> may attack only <see cref="Selected"/>
+        /// — and is never forced to declare an attack at all, unlike Staunch Defender's duty.
+        /// </summary>
+        sealed class AttackLock
+        {
+            public DuelistState Attacker;
+            public CardInstance Selected;
+            public int SelectedEntry;
+            public int Turn;
+            public CardInstance Source;
         }
 
         static readonly ConditionalWeakTable<DuelEngine, State> s_state = new();
@@ -149,6 +164,76 @@ namespace WRLDZ.Duel.TextEffects
             return !side.MonstersOnField().Any(m =>
                 m != null && !ReferenceEquals(m, attacker) && m.FaceUp &&
                 ClassicEraTemplates.RaceMatches(m.Race, c.RaceFilter));
+        }
+
+        /// <summary>
+        /// The Taunt lock is live while it was armed this turn and <see cref="AttackLock.Selected"/> is still the same
+        /// face-up card on its owner's Monster Zone (ygopro RESET_LEAVE / RESET_TURN_SET).
+        /// </summary>
+        static bool LockLive(DuelEngine engine, AttackLock l)
+        {
+            if (engine == null || l == null || engine.GameOver || l.Turn != engine.TurnNumber) return false;
+            var m = l.Selected;
+            if (m == null || !m.FaceUp || m.FieldEntryStamp != l.SelectedEntry) return false;
+            return engine.ControllerOf(m)?.TryFindMonster(m, out _) ?? false;
+        }
+
+        /// <summary>
+        /// Taunt (c90740329), at resolution: <paramref name="who"/>'s opponent may attack only <paramref name="target"/>
+        /// for the rest of this turn. There is no obligation to attack — Taunt never forces the opponent's hand.
+        /// </summary>
+        public static void ArmOpponentAttackLock(DuelEngine engine, DuelistState who, CardInstance source,
+            CardInstance target)
+        {
+            if (engine == null || who == null) return;
+            if (target == null || !who.TryFindMonster(target, out _))
+            {
+                engine.Log($"{source?.Name ?? "Card"}: the selected monster is no longer on your field — no effect.");
+                return;
+            }
+
+            var attacker = engine.OpponentOf(who);
+            StateOf(engine).AttackLocks.Add(new AttackLock
+            {
+                Attacker = attacker,
+                Selected = target,
+                SelectedEntry = target.FieldEntryStamp,
+                Turn = engine.TurnNumber,
+                Source = source
+            });
+            engine.NotifyPublic();
+            engine.Log($"{source?.Name ?? "Card"}: this turn {attacker?.Name ?? "the opponent"} may attack only " +
+                       $"{target.Name} (if it attacks at all).");
+        }
+
+        /// <summary>
+        /// DuelEngine.CanBeAttacked / TryAttack: Taunt. While a live lock binds this attacker, it may attack only the
+        /// selected monster — a direct attack (<paramref name="target"/> == null) is refused as well. A legal target of
+        /// the attacker's own (Spirit Monsters, Toon) is asked first by the caller.
+        /// </summary>
+        public static bool ForbidsAttackTarget(DuelEngine engine, CardInstance attacker, CardInstance target)
+        {
+            if (engine == null || attacker == null) return false;
+            if (!s_state.TryGetValue(engine, out var st) || st.AttackLocks.Count == 0) return false;
+            var who = engine.ControllerOf(attacker);
+            if (who == null) return false;
+            foreach (var l in st.AttackLocks)
+            {
+                if (!LockLive(engine, l) || !ReferenceEquals(l.Attacker, who)) continue;
+                if (!ReferenceEquals(target, l.Selected)) return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>DuelEngine.TryAttack's direct-attack branch: Taunt forbids attacking the player directly.</summary>
+        public static bool ForbidsDirectAttack(DuelEngine engine, CardInstance attacker)
+        {
+            if (engine == null || attacker == null) return false;
+            if (!s_state.TryGetValue(engine, out var st) || st.AttackLocks.Count == 0) return false;
+            var who = engine.ControllerOf(attacker);
+            return who != null && st.AttackLocks.Exists(l =>
+                LockLive(engine, l) && ReferenceEquals(l.Attacker, who));
         }
 
         // ───────────────────────── Thunder Nyan Nyan ─────────────────────────
@@ -517,7 +602,8 @@ namespace WRLDZ.Duel.TextEffects
                     m != null &&
                     RedirectAndReplaceRuntime.AttackerCouldAttack(engine, attackingPlayer, attacker, m) &&
                     !ToonsRuntime.ForbidsAttackTarget(engine, attacker, m) &&
-                    !SpiritMonstersRuntime.ForbidsAttackTarget(engine, attacker, m))
+                    !SpiritMonstersRuntime.ForbidsAttackTarget(engine, attacker, m) &&
+                    !ForbidsAttackTarget(engine, attacker, m))
                 .ToList();
         }
 

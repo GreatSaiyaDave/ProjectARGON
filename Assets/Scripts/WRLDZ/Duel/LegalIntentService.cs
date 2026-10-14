@@ -198,7 +198,9 @@ namespace WRLDZ.Duel
                                         // Toon rule (Toons batch): only face-up Toons while the opponent has one.
                                         !ToonsRuntime.ForbidsAttackTarget(engine, m, t) &&
                                         // SpiritMonsters batch: Inaba White Rabbit / Asura Priest.
-                                        !SpiritMonstersRuntime.ForbidsAttackTarget(engine, m, t))
+                                        !SpiritMonstersRuntime.ForbidsAttackTarget(engine, m, t) &&
+                                        // Taunt (BattleRules batch): only the selected monster this turn.
+                                        !WRLDZ.Duel.TextEffects.BattleRulesRuntime.ForbidsAttackTarget(engine, m, t))
                             .ToList();
                     if (engine.CanAttackDirectly(who, m))
                     {
