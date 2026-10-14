@@ -437,6 +437,13 @@ namespace WRLDZ.Presentation.ArInteraction
                 {
                     _shellRig = rig;
                     _body = rig.transform;
+                    // Monster projections are translucent; the shell materials are per-instance
+                    // (ShellModelOwner), so switching them to alpha blend is safe.
+                    if (IsMonster)
+                        foreach (var shellR in rig.GetComponentsInChildren<Renderer>(true))
+                            if (shellR != null)
+                                ArAnimePresentation.MakeTransparent(shellR.sharedMaterial,
+                                    ArAnimePresentation.MonsterHoloAlpha);
                     var bodyR = rig.BodyShell != null ? rig.BodyShell.GetComponent<Renderer>() : rig.GetComponentInChildren<Renderer>();
                     _faceMr = bodyR as MeshRenderer;
                     _faceMat = bodyR != null ? bodyR.sharedMaterial : null;
@@ -458,6 +465,8 @@ namespace WRLDZ.Presentation.ArInteraction
                 var mat = ArAnimePresentation.MakeFaceMaterial(Texture2D.whiteTexture, tint, "MonsterMeshArt");
                 // Cropped illustration window on mesh (not full card face)
                 CardArtFocus.ApplyMonsterArtwork(mat, db, CardId);
+                if (IsMonster)
+                    ArAnimePresentation.MakeTransparent(mat, ArAnimePresentation.MonsterHoloAlpha);
                 body.GetComponent<MeshRenderer>().sharedMaterial = mat;
                 ArAnimePresentation.ConfigureHoloRenderer(body.GetComponent<MeshRenderer>());
                 _body = body.transform;
@@ -504,32 +513,25 @@ namespace WRLDZ.Presentation.ArInteraction
             _faceMr = cardGo.GetComponent<MeshRenderer>();
             _faceMat = ArAnimePresentation.MakeFaceMaterial(Texture2D.whiteTexture, accent, "ArenaArtworkMat");
             if (IsMonster)
+            {
                 ArFieldMaterials.ForceDoubleSided(_faceMat);
+                // Solid Vision monsters project at half transparency; S/T stay opaque.
+                ArAnimePresentation.MakeTransparent(_faceMat, ArAnimePresentation.MonsterHoloAlpha);
+            }
             else
                 ArFieldMaterials.ForceFrontFacesOnly(_faceMat);
             _faceMr.sharedMaterial = _faceMat;
             ArAnimePresentation.ConfigureHoloRenderer(_faceMr);
             ApplyFaceTexture(db);
 
-            // Reverse face: monsters duplicate art; S/T show the card back to the
-            // controller (Yugipedia Activate / Duel Disk — Set card stands up).
-            var backGo = GameObject.CreatePrimitive(PrimitiveType.Quad);
-            backGo.name = cardGo.name + "Back";
-            backGo.transform.SetParent(transform, false);
-            backGo.transform.localPosition = new Vector3(0f, lift, -thick * 0.5f);
-            backGo.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
-            backGo.transform.localScale = faceScale;
-            ArObjectUtil.Destroy(backGo.GetComponent<Collider>());
-            backGo.layer = _layer;
-            _backMr = backGo.GetComponent<MeshRenderer>();
+            // Braced Defense pose / art rise re-lay the monster art (ApplyArtPose). The art quad is
+            // double-sided and translucent, so a duplicate reverse quad would composite two 50% faces
+            // to ~75% — monsters keep the single art quad. S/T still get a card back to the controller.
             if (IsMonster)
             {
-                _backMr.sharedMaterial = _faceMat;
-                _backMat = _faceMat;
-                // Braced Defense pose / art rise re-lay these two quads (ApplyArtPose).
                 _art2D = true;
                 _artFront = cardGo.transform;
-                _artBack = backGo.transform;
+                _artBack = null;
                 _artScale = faceScale;
                 _artLift = lift;
                 _artThick = thick;
@@ -538,10 +540,20 @@ namespace WRLDZ.Presentation.ArInteraction
             }
             else
             {
+                // Reverse face: the S/T card back shows to the controller (Yugipedia Activate /
+                // Duel Disk — Set card stands up).
+                var backGo = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                backGo.name = cardGo.name + "Back";
+                backGo.transform.SetParent(transform, false);
+                backGo.transform.localPosition = new Vector3(0f, lift, -thick * 0.5f);
+                backGo.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+                backGo.transform.localScale = faceScale;
+                ArObjectUtil.Destroy(backGo.GetComponent<Collider>());
+                backGo.layer = _layer;
+                _backMr = backGo.GetComponent<MeshRenderer>();
                 ApplySpellTrapCardBack();
+                ArAnimePresentation.ConfigureHoloRenderer(_backMr);
             }
-
-            ArAnimePresentation.ConfigureHoloRenderer(_backMr);
         }
 
         void ApplySpellTrapCardBack()
@@ -1044,6 +1056,12 @@ namespace WRLDZ.Presentation.ArInteraction
             ? new Color(0.45f, 0.95f, 1f, 1f)
             : new Color(1f, 0.55f, 0.7f, 1f);
 
+        /// <summary>
+        /// Face alpha for this holo: face-up monster projections are translucent
+        /// (<see cref="ArAnimePresentation.MonsterHoloAlpha"/>); Spell/Trap and set cards stay opaque.
+        /// </summary>
+        float FaceAlpha => IsMonster && FaceUp ? ArAnimePresentation.MonsterHoloAlpha : 1f;
+
         // ── Card plate + braced pose ─────────────────────────────────────────────
 
         /// <summary>
@@ -1399,8 +1417,10 @@ namespace WRLDZ.Presentation.ArInteraction
                 {
                     _lastTintBrace = b;
                     var cool = Color.Lerp(Accent, new Color(0.5f, 0.7f, 1f, 1f), 0.5f);
-                    SetMatColor(_faceMat, ArAnimePresentation.Expose(
-                        Color.Lerp(Color.white, cool, DefenseTintBlend * b)));
+                    var braceTint = ArAnimePresentation.Expose(
+                        Color.Lerp(Color.white, cool, DefenseTintBlend * b));
+                    braceTint.a = FaceAlpha; // keep the monster holo transparency
+                    SetMatColor(_faceMat, braceTint);
                 }
             }
             else if (_body != null && (_shellRig != null || _body.name == "MonsterModel"))
@@ -1681,7 +1701,9 @@ namespace WRLDZ.Presentation.ArInteraction
 
             CardArtFocus.ApplyToMaterial(_faceMat, tex, cropToArtwork: false);
             ArFieldMaterials.ForceDoubleSided(_faceMat);
-            var col = ArAnimePresentation.HoloFaceColor();
+            if (IsMonster)
+                ArAnimePresentation.MakeTransparent(_faceMat, ArAnimePresentation.MonsterHoloAlpha);
+            var col = ArAnimePresentation.HoloFaceColor(FaceAlpha);
             if (_faceMat.HasProperty("_BaseColor")) _faceMat.SetColor("_BaseColor", col);
             if (_faceMat.HasProperty("_Color")) _faceMat.SetColor("_Color", col);
             if (_faceMr != null)
@@ -2318,7 +2340,7 @@ namespace WRLDZ.Presentation.ArInteraction
                     ArFieldMaterials.ForceDoubleSided(_faceMat);
                 else
                     ArFieldMaterials.ForceFrontFacesOnly(_faceMat);
-                var col = ArAnimePresentation.HoloFaceColor();
+                var col = ArAnimePresentation.HoloFaceColor(FaceAlpha);
                 if (_faceMat.HasProperty("_BaseColor")) _faceMat.SetColor("_BaseColor", col);
                 if (_faceMat.HasProperty("_Color")) _faceMat.SetColor("_Color", col);
 

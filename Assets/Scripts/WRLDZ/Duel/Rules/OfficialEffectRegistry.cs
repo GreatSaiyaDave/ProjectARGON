@@ -658,7 +658,12 @@ namespace WRLDZ.Duel.Rules
 
         public static bool CannotBeDestroyedByBattle(CardInstance card)
         {
-            if (card == null || !card.FaceUp || card.IsNegated) return false;
+            if (card == null || !card.FaceUp) return false;
+            // Ninjitsu Art of Decoy: a face-up Continuous Trap bound to this monster grants it battle immunity.
+            // This is the Trap's effect, not the monster's, so it is checked before the monster's own negation
+            // gate (Skill Drain does not remove it).
+            if (BoundCannotBeDestroyedByBattle(card)) return true;
+            if (card.IsNegated) return false;
             if (card.CannotBeDestroyedByBattle) return true;
             var prog = card.Def != null ? CompiledEffectCache.GetOrCompile(card.Def) : null;
             if (prog == null) return false;
@@ -666,6 +671,28 @@ namespace WRLDZ.Duel.Rules
             {
                 if (c != null && c.Action == EffectActionKind.CannotBeDestroyedByBattle)
                     return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// A bound card (e.g. Ninjitsu Art of Decoy) whose face-up program carries the continuous
+        /// <see cref="EffectActionKind.ContinuousCannotBeDestroyedByBattle"/> clause grants its host
+        /// immunity to battle destruction.
+        /// </summary>
+        static bool BoundCannotBeDestroyedByBattle(CardInstance card)
+        {
+            if (card.Equips == null || card.Equips.Count == 0) return false;
+            foreach (var eq in card.Equips)
+            {
+                if (eq == null || !eq.FaceUp || eq.IsNegated || !ReferenceEquals(eq.EquippedTo, card)) continue;
+                var eqProg = eq.Def != null ? CompiledEffectCache.GetOrCompile(eq.Def) : null;
+                if (eqProg == null) continue;
+                foreach (var c in eqProg.ClausesFor(EffectTiming.ContinuousWhileFaceUp))
+                {
+                    if (c != null && c.Action == EffectActionKind.ContinuousCannotBeDestroyedByBattle)
+                        return true;
+                }
             }
             return false;
         }

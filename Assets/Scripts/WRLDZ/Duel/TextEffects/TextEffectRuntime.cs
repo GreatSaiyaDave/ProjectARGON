@@ -8777,6 +8777,23 @@ namespace WRLDZ.Duel.TextEffects
                     }
                     break;
 
+                // Ninjitsu Art of Decoy: bind the Continuous Trap to its target. The bound host's battle immunity
+                // is read through OfficialEffectRegistry.CannotBeDestroyedByBattle.
+                case EffectActionKind.ContinuousCannotBeDestroyedByBattle:
+                    if (chosenTarget != null && source != null)
+                    {
+                        if (ContinuousProtections.TargetedEffectBlocked(engine, chosenTarget, source))
+                        {
+                            engine.Log("Target is protected at resolution.");
+                            break;
+                        }
+                        source.EquippedTo = chosenTarget;
+                        if (!chosenTarget.Equips.Contains(source))
+                            chosenTarget.Equips.Add(source);
+                        engine.Log($"{source.Name} binds {chosenTarget.Name} (cannot be destroyed by battle).");
+                    }
+                    break;
+
                 case EffectActionKind.DiscardRandomFromOpponentHand:
                     DiscardRandomFromOpponentHand(engine, opp, source, clause);
                     break;

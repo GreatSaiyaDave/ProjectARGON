@@ -313,6 +313,7 @@ namespace WRLDZ.Duel.TextEffects
                     EffectActionKind.OpponentCannotDrawExceptDuringDrawPhases or
                     EffectActionKind.OpponentCannotChangeBattlePositions or
                     EffectActionKind.CannotBeDestroyedByBattle or
+                    EffectActionKind.ContinuousCannotBeDestroyedByBattle or
                     EffectActionKind.PiercingBattleDamage or
                     EffectActionKind.CannotBanishFromGraveyard or
                     EffectActionKind.CannotTargetCardsInGraveyard or

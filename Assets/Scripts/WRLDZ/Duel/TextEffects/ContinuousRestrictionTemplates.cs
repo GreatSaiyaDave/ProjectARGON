@@ -117,6 +117,15 @@ namespace WRLDZ.Duel.TextEffects
             @"When that monster is destroyed, destroy this card\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        /// <summary>
+        /// Ninjitsu Art of Decoy (c89628781): Continuous Trap — "Target 1 face-up "Ninja" monster you
+        /// control; it cannot be destroyed by battle." Unlike Spellbinding Circle, it prints no self-destruct
+        /// clause: the effect simply stops applying when the Trap (or the target) leaves.
+        /// </summary>
+        static readonly Regex RxNinjitsuArtOfDecoy = new(
+            @"^Target 1 face-up ""([^""]+)"" monster you control;\s*it cannot be destroyed by battle\.?$",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         public static void Collect(string text, CardDef def, List<EffectClause> into,
             List<(int start, int length)> spans)
         {
@@ -283,6 +292,33 @@ namespace WRLDZ.Duel.TextEffects
                     SourceSnippet = "bound monster cannot attack or change battle position"
                 });
             }
+
+            var decoy = RxNinjitsuArtOfDecoy.Match(text);
+            if (decoy.Success)
+            {
+                var series = decoy.Groups[1].Value.Trim();
+                Add(decoy, new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.ContinuousCannotBeDestroyedByBattle,
+                    Zone = EffectZoneFilter.ControllerMonsters,
+                    TargetSeriesName = series,
+                    RequiresTargetChoice = true,
+                    RequiresTargetFaceUp = true,
+                    StaysOnField = true,
+                    MakesChainLink = true
+                });
+                // The bound-host immunity while the Trap is face-up. No self-destruct clause: the effect
+                // simply stops applying if either card leaves the field.
+                into.Add(new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.ContinuousCannotBeDestroyedByBattle,
+                    StaysOnField = true,
+                    MakesChainLink = false,
+                    SourceSnippet = "bound monster cannot be destroyed by battle"
+                });
+            }
         }
 
         public static void ExpectedActions(CardDef def, List<EffectActionKind> need)
@@ -293,6 +329,8 @@ namespace WRLDZ.Duel.TextEffects
             if (RxGravityBind.IsMatch(text) || RxInsectBarrier.IsMatch(text) ||
                 RxCannotAttackAtk.IsMatch(text) || RxSpellbindingCircle.IsMatch(text))
                 need.Add(EffectActionKind.ContinuousCannotAttack);
+            if (RxNinjitsuArtOfDecoy.IsMatch(text))
+                need.Add(EffectActionKind.ContinuousCannotBeDestroyedByBattle);
             if (RxPayOrDestroyStandby.IsMatch(text) || RxPayThenDestroyStandby.IsMatch(text))
                 need.Add(EffectActionKind.PayLpOrDestroyThis);
             if (RxCallOfTheHaunted.IsMatch(text) || RxSoulResurrection.IsMatch(text) ||

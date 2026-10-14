@@ -3347,6 +3347,15 @@ namespace WRLDZ.Duel.TextEffects
         /// (ApplyEffectDamage / simultaneous) damage. Runtime: TextEffectRuntime.
         /// </summary>
         NoDamageThisTurn,
+        /// <summary>
+        /// Ninjitsu Art of Decoy (c89628781): a bound Continuous Trap ("Target 1 face-up "Ninja" monster you
+        /// control; it cannot be destroyed by battle."). The Activate clause binds this card to the target
+        /// (like <see cref="ContinuousCannotAttack"/> / Spellbinding Circle); the bound host is then immune to
+        /// battle destruction while the Trap stays face-up.
+        /// <see cref="WRLDZ.Duel.Rules.OfficialEffectRegistry.CannotBeDestroyedByBattle"/> scans the host's bound cards
+        /// for this action's <see cref="EffectTiming.ContinuousWhileFaceUp"/> clause.
+        /// </summary>
+        ContinuousCannotBeDestroyedByBattle,
     }
 
 

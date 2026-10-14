@@ -28,6 +28,13 @@ namespace WRLDZ.Presentation
         public const float RimInflate = 1.06f;
 
         /// <summary>
+        /// Face alpha for a face-up monster hologram (canon: self-lit, slightly translucent
+        /// figures — see <c>SOLID_VISION_BEHAVIOR.md</c> §5). Spells, Traps and face-down cards
+        /// stay fully opaque; only the monster projections project at half transparency.
+        /// </summary>
+        public const float MonsterHoloAlpha = 0.5f;
+
+        /// <summary>
         /// Multiplier applied to unlit base colors. 1 = authoring default.
         /// Outdoor bright passthrough → slightly higher so cards stay visible.
         /// Dark rooms → slightly lower so they don't blow out the camera.
@@ -131,6 +138,14 @@ namespace WRLDZ.Presentation
             return new Color(c.r * w.r, c.g * w.g, c.b * w.b, c.a);
         }
 
+        /// <summary>Holo face colour at an explicit alpha (monster holos use <see cref="MonsterHoloAlpha"/>).</summary>
+        public static Color HoloFaceColor(float alpha)
+        {
+            var c = HoloFaceColor();
+            c.a = Mathf.Clamp01(alpha);
+            return c;
+        }
+
         public static Shader UnlitShader()
         {
             return Shader.Find("Universal Render Pipeline/Unlit")
@@ -176,6 +191,49 @@ namespace WRLDZ.Presentation
             // URP Unlit sometimes needs explicit keyword / render queue for both faces
             mat.EnableKeyword("_DOUBLESIDED_ON");
             return mat;
+        }
+
+        /// <summary>
+        /// Switch a face material to alpha-blended transparency at <paramref name="alpha"/>.
+        /// URP/Unlit only blends when the surface mode, blend factors, ZWrite and the transparent
+        /// keyword agree; a plain texture shader (Sprites/Default) merely honours the colour alpha.
+        /// Idempotent, so callers can re-apply it after a texture/tint change.
+        /// </summary>
+        public static void MakeTransparent(Material mat, float alpha)
+        {
+            if (mat == null) return;
+            if (mat.HasProperty("_Surface")) mat.SetFloat("_Surface", 1f); // 0 opaque, 1 transparent
+            if (mat.HasProperty("_Blend")) mat.SetFloat("_Blend", 0f);     // 0 alpha, 1 premultiply, 2 additive
+            if (mat.HasProperty("_AlphaClip")) mat.SetFloat("_AlphaClip", 0f);
+            if (mat.HasProperty("_SrcBlend")) mat.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
+            if (mat.HasProperty("_DstBlend")) mat.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+            if (mat.HasProperty("_ZWrite")) mat.SetFloat("_ZWrite", 0f);
+            mat.SetOverrideTag("RenderType", "Transparent");
+            mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            mat.DisableKeyword("_ALPHATEST_ON");
+            mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+            mat.renderQueue = (int)RenderQueue.Transparent;
+            SetFaceAlpha(mat, alpha);
+        }
+
+        /// <summary>Set only the face alpha of a material, keeping its current RGB tint.</summary>
+        public static void SetFaceAlpha(Material mat, float alpha)
+        {
+            if (mat == null) return;
+            alpha = Mathf.Clamp01(alpha);
+            if (mat.HasProperty("_BaseColor"))
+            {
+                var c = mat.GetColor("_BaseColor");
+                c.a = alpha;
+                mat.SetColor("_BaseColor", c);
+            }
+
+            if (mat.HasProperty("_Color"))
+            {
+                var c = mat.GetColor("_Color");
+                c.a = alpha;
+                mat.SetColor("_Color", c);
+            }
         }
 
         /// <summary>Solid unlit accent (edge chrome, rings) with exposure.</summary>
