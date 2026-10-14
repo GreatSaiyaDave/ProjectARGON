@@ -8804,6 +8804,24 @@ namespace WRLDZ.Duel.TextEffects
                     ContinuousNegationRuntime.ArmGorgonEyes(engine, who, source);
                     break;
 
+                // Staunch Defender (AttackObligations batch): until the end of this Battle Phase the opponent may
+                // attack only the target, and every monster it controls must attack it, if able.
+                case EffectActionKind.OpponentAttacksOnlyTargetAndMustAttackIt:
+                    AttackObligationsRuntime.ApplyOpponentMustAttackTarget(engine, who, source, chosenTarget);
+                    break;
+
+                // Diffusion Wave-Motion (AttackObligations batch): the target attacks every opponent's monster once
+                // each this turn; the controller's other monsters cannot attack.
+                case EffectActionKind.TargetMustAttackAllOthersCannotAttack:
+                    AttackObligationsRuntime.ApplyTargetMustAttackAll(engine, who, source, chosenTarget);
+                    break;
+
+                // Amazoness Archers (AttackObligations batch): every opposing monster to face-up Attack Position, then
+                // they lose ATK and must attack this turn.
+                case EffectActionKind.OpponentMonstersToFaceUpAttackLoseAtkMustAttack:
+                    AttackObligationsRuntime.ApplyAllOpponentMonstersMustAttack(engine, who, source, clause);
+                    break;
+
                 case EffectActionKind.DiscardRandomFromOpponentHand:
                     DiscardRandomFromOpponentHand(engine, opp, source, clause);
                     break;
@@ -11253,6 +11271,10 @@ namespace WRLDZ.Duel.TextEffects
                         // BattleBoosts batch (v161): Gray Wing — Main Phase 1 of a turn with a Battle Phase, no extra attack yet.
                         if (BattleBoostsRuntime.TryActivationCondition(engine, who, card, c, out ok, out reason))
                             break;
+                        // AttackObligations batch: Diffusion Wave-Motion — the opponent controls a monster, this is
+                        // your turn, and a Battle Phase you can still conduct is ahead.
+                        if (AttackObligationsRuntime.TryActivationCondition(engine, who, card, c, out ok, out reason))
+                            break;
                         // GyHandAndSummonEventTriggers batch: Beckoning Light — a card in your hand (not this card)
                         // and at least that many of the Attribute in your GY.
                         if (GyHandAndSummonEventTriggersRuntime.TryActivationCondition(engine, who, card, c, out ok,
@@ -11813,11 +11835,11 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
             }
             // BattlePhaseEnd (v142): Steel Scorpion countdowns count this End Phase.
             if (timing == EffectTiming.EndPhase)
-            {
-                BattlePhaseEndRuntime.TickDelayedDestroys(engine);
-                // Gorgon's Eye (ContinuousNegation batch): its turn has ended (RESET_PHASE|PHASE_END).
-                ContinuousNegationRuntime.EndTurn(engine);
-            }
+                {
+                    BattlePhaseEndRuntime.TickDelayedDestroys(engine);
+                    // Gorgon's Eye (ContinuousNegation batch): its turn has ended (RESET_PHASE|PHASE_END).
+                    ContinuousNegationRuntime.EndTurn(engine);
+                }
             // BanishedReturn: D.D. Scout Plane comes back from the banished pile (both players' piles).
             if (timing == EffectTiming.EndPhase)
                 BanishedReturnRuntime.FireEndPhase(engine, who);
@@ -14850,6 +14872,8 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
 
             // PgdSpellTrapBasics batch (v162): Secret Pass to the Treasures — a face-up monster with N or less ATK.
             PgdSpellTrapBasicsRuntime.FilterTargets(c, list);
+            // AttackObligations batch: Diffusion Wave-Motion — a face-up Level 7+ Spellcaster you control.
+            AttackObligationsRuntime.FilterTargets(c, list);
 
             // SummonLocksAndStatRules batch: Amazoness Spellcaster's targets (both zones) are targetable face-up monsters.
             SummonLocksAndStatRulesRuntime.FilterTargets(engine, c, except, list);

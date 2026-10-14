@@ -60,6 +60,7 @@ namespace WRLDZ.Duel.Rules
             OppFaceDownSiblingsRegressionTests.Run(db, pDeck, aDeck, check);
             EquipSpellCostRegressionTests.Run(db, pDeck, aDeck, check);
             GrokTargetedHardeningRegressionTests.Run(db, pDeck, aDeck, check);
+            AttackObligationsRegressionTests.Run(db, pDeck, aDeck, check);
             GrokSpiritsLocksHardeningRegressionTests.Run(db, pDeck, aDeck, check);
             GrokEquipStandbyHardeningRegressionTests.Run(db, pDeck, aDeck, check);
             GrokPoisonMeteorRockHardeningRegressionTests.Run(db, pDeck, aDeck, check);

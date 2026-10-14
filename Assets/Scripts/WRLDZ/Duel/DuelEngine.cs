@@ -3945,6 +3945,8 @@ namespace WRLDZ.Duel
             TextEffects.BattleBoostsRuntime.EndBattlePhase(this);
             // After the Struggle (BattleRules batch): the monsters that battled this turn are destroyed.
             TextEffects.BattleRulesRuntime.EndBattlePhase(this);
+            // Staunch Defender (AttackObligations batch): its Battle-Phase-scoped attack-target lock ends.
+            TextEffects.AttackObligationsRuntime.EndBattlePhase(this);
             BattleStep = BattleStep.None;
             DamageSubStep = DamageSubStep.None;
         }
@@ -4067,6 +4069,12 @@ namespace WRLDZ.Duel
                 return false;
             }
 
+            // AttackObligations batch: a monster that must attack if able keeps its controller in the Battle Phase
+            // (ygopro core.to_m2 = FALSE while it can still declare an attack), and Main Phase 1 cannot skip the
+            // Battle Phase while one could attack.
+            if (TextEffects.AttackObligationsRuntime.RefuseLeavingPhase(this, who))
+                return false;
+
             var from = Phase;
             EndBattlePhase();
 
@@ -4098,6 +4106,10 @@ namespace WRLDZ.Duel
                 !TextEffects.MonsterNegationAndControlLocksRuntime.IgnoresSpellAttackLock(this, who, attacker))
                 return false;
             if (ContinuousCannotAttackBlocks(who, attacker))
+                return false;
+            // AttackObligations batch: this duty gates the AI's and the UI's attack offers (DuelEngine.CanAttack is
+            // the one legality question every caller asks).
+            if (TextEffects.AttackObligationsRuntime.AttackForbidden(this, who, attacker))
                 return false;
             if (attacker.CannotAttackDuringTurnNumber > 0 &&
                 TurnNumber == attacker.CannotAttackDuringTurnNumber)
@@ -4298,6 +4310,9 @@ namespace WRLDZ.Duel
             max = TextEffects.SpiritMonstersRuntime.AdjustMaxAttacks(this, attacker, max);
             // ChaosBanishSummons batch: Black Luster Soldier - Envoy of the Beginning's second attack in a row.
             max = TextEffects.ChaosBanishSummonsRuntime.AdjustMaxAttacks(this, attacker, max);
+            // AttackObligations batch: Diffusion Wave-Motion — the target must attack every monster the opponent
+            // controls once each this turn (EFFECT_ATTACK_ALL), so its cap is that many.
+            max = Math.Max(max, TextEffects.AttackObligationsRuntime.RequiredAttackCount(this, attacker));
             // Soft residual: The Dark Door ContinuousWhileFaceUp BP attack-count gate
             // (Mask-style Soft surgical). Only 1 monster may attack per Battle Phase —
             // if another of the controller's monsters already declared, Soft-clamp this
@@ -4493,6 +4508,13 @@ namespace WRLDZ.Duel
                     return false;
                 }
 
+                if (TextEffects.AttackObligationsRuntime.ForbidsDirectAttack(this, who))
+                {
+                    // Staunch Defender: the opponent may attack only the selected monster this Battle Phase.
+                    Log($"{attacker.Name} may only attack the selected monster this Battle Phase.");
+                    return false;
+                }
+
                 if (TextEffects.BattleRulesRuntime.ForbidsDirectAttack(this, attacker))
                 {
                     // Taunt: only the selected monster may be attacked — a direct attack is not one.
@@ -4530,6 +4552,12 @@ namespace WRLDZ.Duel
             {
                 // Inaba White Rabbit attacks directly only; Asura Priest attacks each monster once per Battle Phase.
                 Log($"{attacker.Name} cannot attack {(targetOrNull.FaceUp ? targetOrNull.Name : "that monster")}.");
+                return false;
+            }
+            else if (TextEffects.AttackObligationsRuntime.ForbidsAttackTarget(this, attacker, targetOrNull))
+            {
+                // Staunch Defender: only the selected monster may be attacked this Battle Phase.
+                Log($"{attacker.Name} may only attack the selected monster this Battle Phase.");
                 return false;
             }
             else if (TextEffects.BattleRulesRuntime.ForbidsAttackTarget(this, attacker, targetOrNull))
@@ -5940,6 +5968,12 @@ namespace WRLDZ.Duel
             // Ha Des / Twin-Headed Wolf negate the monsters this battle destroys, before any of their effects can apply.
             TextEffects.NegationMonstersRuntime.OnBattled(this, who, opp, attacker, targetOrNull,
                 calc.DestroyAttacker, calc.DestroyDefender);
+
+            // AttackObligations batch: Diffusion Wave-Motion — "The effects of monsters destroyed by these attacks
+            // cannot activate and are negated." Its grant (s_attackAll) is read by its own BattleNegator, since the
+            // Spell itself resolves to the GY and NegationMonstersRuntime's marker path does not apply.
+            TextEffects.AttackObligationsRuntime.NoteBattled(this, who, opp, attacker, targetOrNull,
+                calc.DestroyDefender);
 
             // —— After-damage-calc monster triggers (Wall of Illusion / D.D. Lady & Assailant) ——
             TextEffects.TextEffectRuntime.NotifyAfterDamageCalculation(
@@ -7765,6 +7799,12 @@ namespace WRLDZ.Duel
                 if (IsAwaitingResponse || IsAwaitingEffectTarget || HasDeclaredAttack)
                     return false;
             }
+
+            // AttackObligations batch: the End Phase cannot be reached while an obligated monster can still attack
+            // (ygopro core.to_ep = FALSE). BlockingMonster honours NoteRefused, so a monster whose every
+            // declaration the engine refused no longer blocks and the turn always ends.
+            if (TextEffects.AttackObligationsRuntime.RefuseLeavingPhase(this, who))
+                return false;
 
             EndTurn(who);
             return true;

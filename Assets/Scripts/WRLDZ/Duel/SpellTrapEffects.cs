@@ -1479,6 +1479,10 @@ namespace WRLDZ.Duel
                 // TokensDeclarationsAndPicks batch: A Hero Emerges needs a free zone and a summonable hand monster (s.target).
                 if (!TextEffects.TokensDeclarationsAndPicksRuntime.AttackAnswerLegal(engine, c))
                     return false;
+                // AttackObligations batch: Amazoness Archers needs a face-up series monster; Staunch Defender needs
+                // a face-up monster of the responder's to select.
+                if (!TextEffects.AttackObligationsRuntime.AttackAnswerLegal(engine, c))
+                    return false;
             }
 
             return true;
@@ -2295,6 +2299,10 @@ namespace WRLDZ.Duel
                 pick ??= legal.FirstOrDefault(c => TextEffects.BattleWindowsRuntime.AiWantsDarkSpirit(engine, who, c));
                 // LastTurn batch (v163): Last Turn against an attack that would take the AI's last LP.
                 pick ??= legal.FirstOrDefault(c => TextEffects.LastTurnRuntime.AiWantsLastTurn(engine, who, c));
+                // AttackObligations batch: Amazoness Archers (always) and Staunch Defender (when a face-up
+                // monster of the AI's beats every face-up Attack Position monster of the attacker's).
+                pick ??= legal.FirstOrDefault(c =>
+                    TextEffects.AttackObligationsRuntime.AiWantsAttackResponse(engine, who, c));
             }
             else if (engine.PendingResponse.Timing == ResponseTiming.ChainResponse)
             {

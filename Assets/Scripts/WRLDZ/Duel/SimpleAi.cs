@@ -663,6 +663,28 @@ namespace WRLDZ.Duel
                     .Where(m => !refused.Contains(m) && engine.CanAttack(ai, m) && !AttackCostIsLethal(engine, ai, m))
                     .ToList();
 
+                // AttackObligations batch: a monster that "must attack if able" (Berserk Gorilla, Amazoness Archers,
+                // Diffusion Wave-Motion, Staunch Defender's lock) is met before the AI's own preference, so the duty is
+                // satisfied and the Battle Phase / turn can end (ygopro is_capable_attack).
+                if (TextEffects.AttackObligationsRuntime.TryChooseObligedAttack(engine, ai, out var obligedAttacker,
+                        out var obligedTarget))
+                {
+                    if (obligedTarget == null)
+                    {
+                        if (!engine.TryAttack(ai, obligedAttacker, null))
+                            TextEffects.AttackObligationsRuntime.NoteRefused(engine, obligedAttacker, null);
+                    }
+                    else if (!engine.TryAttack(ai, obligedAttacker, obligedTarget))
+                    {
+                        TextEffects.AttackObligationsRuntime.NoteRefused(engine, obligedAttacker, obligedTarget);
+                    }
+
+                    while (engine.IsAwaitingPlayerResponse || engine.IsAwaitingEffectTarget)
+                        yield return null;
+                    yield return null;
+                    continue;
+                }
+
                 CardInstance attacker = null;
 
                 // BaitTraps (Hard+): lead with the weakest attacker to soak Mirror Force / Waboku

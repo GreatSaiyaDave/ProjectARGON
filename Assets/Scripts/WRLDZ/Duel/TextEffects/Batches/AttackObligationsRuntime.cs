@@ -113,6 +113,14 @@ namespace WRLDZ.Duel.TextEffects
         static bool LockLive(DuelEngine engine, TargetLock l) =>
             l != null && !engine.GameOver && l.Turn == engine.TurnNumber && engine.Phase == DuelPhase.Battle;
 
+        /// <summary>
+        /// Staunch Defender's selected monster is still on the field as the same card (ygopro RELATE_TO_EFFECT): the
+        /// lock then both forbids every other target and obliges an attack onto it.
+        /// </summary>
+        static bool SelectedStillAttackable(DuelEngine engine, TargetLock l) =>
+            l?.Selected != null && l.Selected.FaceUp && l.Selected.FieldEntryStamp == l.SelectedEntry &&
+            (engine.ControllerOf(l.Selected)?.TryFindMonster(l.Selected, out _) ?? false);
+
         /// <summary>A face-up, non-negated monster whose fully compiled program has this continuous marker.</summary>
         static EffectClause LiveClause(DuelEngine engine, CardInstance m, EffectActionKind action)
         {
@@ -137,7 +145,11 @@ namespace WRLDZ.Duel.TextEffects
             if (LiveClause(engine, m, EffectActionKind.MustAttackIfAble) != null) return true;
             if (!s_state.TryGetValue(engine, out var st)) return false;
             if (st.MustAttack.Exists(k => ReferenceEquals(k.Card, m) && Live(k))) return true;
-            return st.TargetLocks.Exists(l => LockLive(engine, l) && ReferenceEquals(l.Attacker, who));
+            // Staunch Defender's lock is a duty only while the selected monster is still on the field to attack:
+            // once it left, every target is forbidden (EFFECT_MUST_ATTACK_MONSTER), so the obligation is over and
+            // the Battle Phase may end — otherwise the duty could never be met and the turn would stall.
+            return st.TargetLocks.Exists(l => LockLive(engine, l) && ReferenceEquals(l.Attacker, who) &&
+                                             SelectedStillAttackable(engine, l));
         }
 
         /// <summary>
@@ -331,6 +343,29 @@ namespace WRLDZ.Duel.TextEffects
             if (engine == null || who == null) return false;
             return s_state.TryGetValue(engine, out var st) &&
                    st.TargetLocks.Exists(l => LockLive(engine, l) && ReferenceEquals(l.Attacker, who));
+        }
+
+        /// <summary>
+        /// DuelEngine.MaxAttacksThisTurn: how many attacks <paramref name="attacker"/> is granted this turn by
+        /// Diffusion Wave-Motion (EFFECT_ATTACK_ALL — every monster its opponent controls once each), or 1 when that
+        /// grant does not apply (so the caller's ordinary cap stands).
+        /// </summary>
+        public static int RequiredAttackCount(DuelEngine engine, CardInstance attacker)
+        {
+            if (engine == null || attacker == null || !GrantsAttackAll(attacker)) return 1;
+            var who = engine.ControllerOf(attacker);
+            var opp = who != null ? engine.OpponentOf(who) : null;
+            if (opp == null) return 1;
+
+            // "must attack all monsters your opponent controls once each": the monsters this turn's declarations
+            // already covered (a monster destroyed by such an attack leaves the field, so it must still count), plus
+            // the ones still on the field. Read from the append-only history, never from live board crumbs.
+            var onField = opp.MonstersOnField().Where(m => m != null).ToList();
+            var covered = engine.GameEvents.Events
+                .Where(e => e.Kind == DuelGameEventKind.DeclaredAttack && e.TurnNumber == engine.TurnNumber &&
+                            ReferenceEquals(e.Card, attacker) && e.Related != null)
+                .Select(e => e.Related).Distinct().ToList();
+            return Math.Max(1, covered.Count + onField.Count(m => !covered.Contains(m)));
         }
 
         /// <summary>SpiritMonstersRuntime.AttacksAllOpponentMonsters: Diffusion Wave-Motion's attack-all grant (EFFECT_ATTACK_ALL).</summary>
@@ -602,6 +637,25 @@ namespace WRLDZ.Duel.TextEffects
                                      (t.Race == null || !ClassicEraTemplates.RaceMatches(t.Race, c.RaceFilter))));
             else if (c.Action == EffectActionKind.OpponentAttacksOnlyTargetAndMustAttackIt)
                 list.RemoveAll(t => t?.Def == null || !t.FaceUp);
+        }
+
+        // ───────────────────────── Battle negated effects ─────────────────────────
+
+        /// <summary>
+        /// DuelEngine's EVENT_BATTLED: Diffusion Wave-Motion. A monster it destroys by battle with its granted
+        /// attacker cannot activate its effects ("The effects of monsters destroyed by these attacks cannot
+        /// activate and are negated"). The grant lives in <see cref="s_attackAll"/>, so the Spell being in the
+        /// Graveyard does not matter — <see cref="Live"/> keeps it for the turn.
+        /// </summary>
+        public static void NoteBattled(DuelEngine engine, DuelistState who, DuelistState opp,
+            CardInstance attacker, CardInstance targetOrNull, bool destroyDefender)
+        {
+            if (engine == null || !destroyDefender || targetOrNull?.Def == null || attacker == null) return;
+            var negator = BattleNegator(engine, attacker, targetOrNull);
+            if (negator == null) return;
+            targetOrNull.EffectsNegatedAfterBattle = true;
+            engine.Log($"{negator.Name}: the effects of {targetOrNull.Name} are negated (destroyed by battle with " +
+                       $"{attacker.Name}).");
         }
     }
 }

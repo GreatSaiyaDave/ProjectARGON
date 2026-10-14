@@ -137,6 +137,8 @@ namespace WRLDZ.Duel
             TextEffects.NamedSummonPairsRuntime.SweepSelfDestroy(engine);
             // SpellCounterSpenders batch: Pitch-Black Power Stone is destroyed once its last Spell Counter is removed.
             TextEffects.SpellCounterSpendersRuntime.SweepSelfDestroy(engine);
+            // Berserk Gorilla (AttackObligations batch): destroyed while it is in face-up Defense Position.
+            TextEffects.AttackObligationsRuntime.SweepSelfDestroy(engine);
             // Skull Invitation: cards that reached a GY since the last checkpoint (StandbyGrowthAndMaintenance, v142).
             TextEffects.StandbyGrowthAndMaintenanceRuntime.GySendCheckpoint(engine);
 

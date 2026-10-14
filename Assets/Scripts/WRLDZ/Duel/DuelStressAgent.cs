@@ -255,6 +255,20 @@ namespace WRLDZ.Duel
                    safety++ < 12)
             {
                 DrainWindows(engine);
+                // AttackObligations batch: a monster that must attack if able (Berserk Gorilla, Amazoness Archers /
+                // Diffusion Wave-Motion's grant, Staunch Defender's lock) is met before this agent's own preference,
+                // exactly as SimpleAi does — otherwise the must-attack duty holds the turn forever.
+                if (TextEffects.AttackObligationsRuntime.TryChooseObligedAttack(engine, me, out var obligedAttacker,
+                        out var obligedTarget))
+                {
+                    if (obligedTarget == null)
+                        engine.TryAttack(me, obligedAttacker, null);
+                    else
+                        engine.TryAttack(me, obligedAttacker, obligedTarget);
+                    DrainWindows(engine);
+                    continue;
+                }
+
                 var attacker = me.MonstersOnField()
                     .Where(m => engine.CanAttack(me, m))
                     .OrderByDescending(m => m.CurrentAtk)

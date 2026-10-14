@@ -212,6 +212,11 @@ namespace WRLDZ.Duel
             {
                 if (engine.IsAwaitingResponse || engine.IsAwaitingEffectTarget || engine.HasDeclaredAttack)
                     return DuelCommandResult.Fail(intent, "Finish the response or target first.");
+                // AttackObligations batch: a monster that must attack if able holds the turn (RefuseLeavingPhase
+                // already logged the reason).
+                if (WRLDZ.Duel.TextEffects.AttackObligationsRuntime.BlockingMonster(engine, who) != null)
+                    return DuelCommandResult.Fail(intent,
+                        "A monster you control must attack if able — the Battle Phase cannot be skipped.");
                 return DuelCommandResult.Fail(intent, "Cannot end turn right now.");
             }
 
@@ -246,7 +251,12 @@ namespace WRLDZ.Duel
             if (engine.TurnPlayer != who)
                 return DuelCommandResult.Fail(intent, "Not your turn.");
             if (!engine.TryEnterMainPhase2(who))
+            {
+                if (WRLDZ.Duel.TextEffects.AttackObligationsRuntime.BlockingMonster(engine, who) != null)
+                    return DuelCommandResult.Fail(intent,
+                        "A monster you control must attack if able — the Battle Phase cannot be skipped.");
                 return DuelCommandResult.Fail(intent, "Cannot enter Main Phase 2 now.");
+            }
             return DuelCommandResult.Success(intent, "Main Phase 2.");
         }
 

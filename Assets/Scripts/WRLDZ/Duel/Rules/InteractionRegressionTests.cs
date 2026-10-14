@@ -5645,8 +5645,12 @@ namespace WRLDZ.Duel.Rules
                 // DrawThenDestroyAllFaceUpNamedWhenCountFaceUpNamed and Beckoning Light's
                 // DiscardHandThenAddAttributeMonstersFromGyPerDiscard are each the only card in their family;
                 // "7"'s UniqueException was replaced by the real Draw clause, so the count is 45.
+                // AttackObligations batch (activated v191): Berserk Gorilla's MustAttackIfAble duty, Amazoness
+                // Archers' compound (mass position change + ATK loss + must-attack), Diffusion Wave-Motion's
+                // "attack every monster once, others cannot attack" and Staunch Defender's "only the selected
+                // monster, and must attack it" are each the only card in their family — 4 more, so 49.
                 Check("Vocabulary: unique exceptions stay a short named list",
-                    unique <= 45,
+                    unique <= 49,
                     $"unique={unique}");
                 Check("Vocabulary: Exiled Force compiles as shared Tribute→Destroy",
                     db.Get(74131780) is { } exd &&
