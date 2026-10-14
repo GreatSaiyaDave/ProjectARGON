@@ -967,6 +967,7 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary>Advance and evaluate the clip graph by <paramref name="dt"/> (edit-mode previews call this, then <see cref="Solve"/>).</summary>
         public void Step(float dt)
         {
+            if (_usingAnime) return;
             TickGestures(dt);
             _graph.Evaluate(dt);
         }
