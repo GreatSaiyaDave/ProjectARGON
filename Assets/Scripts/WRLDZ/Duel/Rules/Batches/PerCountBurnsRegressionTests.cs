@@ -30,6 +30,11 @@ namespace WRLDZ.Duel.Rules
         const int MagicJammer = 77414722; // Counter Trap: "When a Spell Card is activated: … negate the activation"
         const int Healer = 2130625;       // Numinous Healer: opens a "you take damage" window
         const int PotOfGreed = 55144522;
+        const int BigWaveSmallWave = 51562916;
+        const int IslandTurtle = 4042268;   // WATER Normal Lv4 — the card's own Attribute
+        const int SkullMariner = 5265750;    // WATER Normal Lv4 — a second distinct copy
+        const int Hyosube = 2118022;        // WATER Normal Lv4, a third distinct copy
+        const int CelticGuardian = 91152256; // EARTH — never destroyed by this card
 
         public static void Run(CardDatabase db, DeckFile pDeck, DeckFile aDeck, Action<string, bool, string> check)
         {
@@ -41,6 +46,7 @@ namespace WRLDZ.Duel.Rules
             DdDynamiteDuels(db, pDeck, aDeck, Check);
             CemetaryBombDuels(db, pDeck, aDeck, Check);
             ThunderCrashDuels(db, pDeck, aDeck, Check);
+            BigWaveSmallWaveDuels(db, pDeck, aDeck, Check);
             WaveMotionDuels(db, pDeck, aDeck, Check);
             WaveMotionChainDuels(db, pDeck, aDeck, Check);
         }
@@ -381,6 +387,86 @@ namespace WRLDZ.Duel.Rules
                 var spell = PutInHand(engine, p, ThunderCrash);
                 Check("Thunder Crash: cannot be activated while you control no monster",
                     !engine.CanActivateSpellTrap(p, spell, true));
+            }
+        }
+
+        static void BigWaveSmallWaveDuels(CardDatabase db, DeckFile pDeck, DeckFile aDeck, Chk Check)
+        {
+            // Two WATER monsters are destroyed, then exactly two WATER monsters from the hand are Special Summoned.
+            {
+                var engine = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine);
+                var p = engine.Player;
+                var o = engine.Opponent;
+                var mine1 = PlaceMonster(engine, p, IslandTurtle, 0, BattlePosition.Attack, true);
+                var mine2 = PlaceMonster(engine, p, SkullMariner, 1, BattlePosition.Attack, true);
+                var mineEarth = PlaceMonster(engine, p, CelticGuardian, 2, BattlePosition.Attack, true);
+                var hand1 = PutInHand(engine, p, Hyosube);
+                var hand2 = PutInHand(engine, p, IslandTurtle);
+                var hand3 = PutInHand(engine, p, SkullMariner);
+                var handEarth = PutInHand(engine, p, CelticGuardian);
+                engine.NotifyPublic();
+                var cast = engine.TryActivateSpellTrap(p, PutInHand(engine, p, BigWaveSmallWave), true);
+                DrainCombat(engine);
+                Check("Big Wave Small Wave: destroys every face-up WATER you control and Special Summons that many " +
+                      "WATER monsters from the hand",
+                    cast && p.Graveyard.Contains(mine1) && p.Graveyard.Contains(mine2) &&
+                    p.TryFindMonster(mineEarth, out _) &&
+                    (p.TryFindMonster(hand1, out _) || p.TryFindMonster(hand2, out _) ||
+                     p.TryFindMonster(hand3, out _)) &&
+                    p.Hand.Contains(handEarth) && p.MonsterCount <= 3,
+                    $"cast={cast} handWater={p.Hand.Count(c => c?.Def != null && c.Def.attribute == "WATER")} " +
+                    $"earthOn={p.TryFindMonster(mineEarth, out _)} earthHand={p.Hand.Contains(handEarth)} " +
+                    $"monsters={p.MonsterCount}");
+            }
+
+            // Only one WATER monster is destroyed, so only one WATER monster can come from the hand.
+            {
+                var engine = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine);
+                var p = engine.Player;
+                var mine = PlaceMonster(engine, p, IslandTurtle, 0, BattlePosition.Attack, true);
+                var hand1 = PutInHand(engine, p, Hyosube);
+                var hand2 = PutInHand(engine, p, SkullMariner);
+                engine.NotifyPublic();
+                var cast = engine.TryActivateSpellTrap(p, PutInHand(engine, p, BigWaveSmallWave), true);
+                DrainCombat(engine);
+                Check("Big Wave Small Wave: the Special Summon is capped by the number actually destroyed",
+                    cast && p.Graveyard.Contains(mine) &&
+                    ((p.TryFindMonster(hand1, out _) && !p.TryFindMonster(hand2, out _) && p.Hand.Contains(hand2)) ||
+                     (!p.TryFindMonster(hand1, out _) && p.TryFindMonster(hand2, out _) && p.Hand.Contains(hand1))),
+                    $"cast={cast} gy={p.Graveyard.Contains(mine)} h1={p.TryFindMonster(hand1, out _)} " +
+                    $"h2={p.TryFindMonster(hand2, out _)}");
+            }
+
+            // No face-up WATER monster you control: the Spell cannot be activated (Lua s.target chk).
+            {
+                var engine = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine);
+                var p = engine.Player;
+                PlaceMonster(engine, p, CelticGuardian, 0, BattlePosition.Attack, true);
+                engine.NotifyPublic();
+                Check("Big Wave Small Wave: cannot be activated while you control no face-up WATER monster",
+                    !engine.CanActivateSpellTrap(p, PutInHand(engine, p, BigWaveSmallWave), true));
+            }
+
+            // Destroyed WATER monsters that survive (unaffected by Spell effects) are not counted.
+            {
+                var engine = Fresh(db, pDeck, aDeck);
+                ClearBoard(engine);
+                var p = engine.Player;
+                var guard = PlaceMonster(engine, p, Kayest, 0, BattlePosition.Attack, true);
+                var mine = PlaceMonster(engine, p, IslandTurtle, 1, BattlePosition.Attack, true);
+                var hand1 = PutInHand(engine, p, Hyosube);
+                var hand2 = PutInHand(engine, p, SkullMariner);
+                engine.NotifyPublic();
+                var cast = engine.TryActivateSpellTrap(p, PutInHand(engine, p, BigWaveSmallWave), true);
+                DrainCombat(engine);
+                Check("Big Wave Small Wave: counts only the monsters actually destroyed (Spell-unaffected Kay'est stays)",
+                    cast && p.TryFindMonster(guard, out _) && p.Graveyard.Contains(mine) &&
+                    ((p.TryFindMonster(hand1, out _) && !p.TryFindMonster(hand2, out _)) ||
+                     (!p.TryFindMonster(hand1, out _) && p.TryFindMonster(hand2, out _))),
+                    $"cast={cast} guardOn={p.TryFindMonster(guard, out _)} mineGy={p.Graveyard.Contains(mine)}");
             }
         }
 

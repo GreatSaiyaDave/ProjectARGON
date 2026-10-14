@@ -24,6 +24,42 @@ namespace WRLDZ.Duel.TextEffects
 
         public static readonly AtomRegistration.Atom[] Atoms =
         {
+            // Big Wave Small Wave (c51562916): one sentence, two clauses in resolution order. Destroy every face-up
+            // WATER monster the controller controls (Lua dfilter IsFaceup + IsAttribute(ATTRIBUTE_WATER)), then the
+            // controller may Special Summon WATER monsters from the hand, up to Duel.Destroy's return — the monsters
+            // actually destroyed, so an indestructible one is not counted. Activation needs a face-up WATER monster
+            // the controller controls (Lua s.target chk).
+            AtomRegistration.Atom.Sequence(
+                S + @"Destroy all face-up (\w+) monsters you control, then you can Special Summon \1 monsters " +
+                @"from your hand, up to the number of monsters destroyed by this effect" + E,
+                m => new[]
+                {
+                    new EffectClause
+                    {
+                        Timing = EffectTiming.Activate,
+                        Action = EffectActionKind.Destroy,
+                        Zone = EffectZoneFilter.ControllerFaceUpAttributeMonsters,
+                        AttributeFilter = m.Groups[1].Value.ToUpperInvariant(),
+                        Side = EffectSide.Controller,
+                        ActivationCondition =
+                            PerCountBurnsRuntime.YouControlFaceUpAttributeMonsterAtLeast,
+                        MakesChainLink = true
+                    },
+                    new EffectClause
+                    {
+                        Timing = EffectTiming.Activate,
+                        Action = EffectActionKind.SpecialSummonFromHand,
+                        Zone = EffectZoneFilter.ControllerHandMonsters,
+                        AttributeFilter = m.Groups[1].Value.ToUpperInvariant(),
+                        Side = EffectSide.Controller,
+                        CountSource = PerCountBurnsRuntime.PreviousClauseHits,
+                        RequiresPreviousClauseHit = true,
+                        SpecialSummonUpTo = true,
+                        IsOptional = true,
+                        MakesChainLink = true
+                    }
+                }),
+
             // Princess of Tsurugi (c51371017): FLIP, 500 x every card in the opponent's Spell & Trap Zones
             // (LOCATION_SZONE: face-down Sets, the Field Zone and Pendulum Zones included), counted at
             // resolution. No activation condition (target chk is always true).

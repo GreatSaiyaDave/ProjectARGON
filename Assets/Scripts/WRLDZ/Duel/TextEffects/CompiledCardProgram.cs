@@ -3575,6 +3575,12 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         ControllerFaceUpSeriesMonsters,
         /// <summary>
+        /// Big Wave Small Wave: every face-up monster the controller controls whose live Attribute is
+        /// <see cref="EffectClause.AttributeFilter"/> (the printed "all face-up WATER monsters you control"). A mass
+        /// destroy only — no target, so the legacy MapCompiledTargetKind mirror leaves it None.
+        /// </summary>
+        ControllerFaceUpAttributeMonsters,
+        /// <summary>
         /// SpellEventsAndHandSendTriggers batch — Fiend's Hand Mirror: another Spell/Trap Card on the field that would be an
         /// appropriate target for the answered Spell Card's Chain Link (ygopro Duel.CheckChainTarget), not its current target.
         /// See <see cref="RedirectAndReplaceRuntime.Candidates"/>. Text target path only (picker kind SpellTrapOnField); the

@@ -16,7 +16,17 @@ namespace WRLDZ.Duel.TextEffects
     /// </summary>
     public static class CardTextEffectCompiler
     {
-        public const int Version = 191;
+        public const int Version = 192; /*
+        v192: SOD completion — Big Wave Small Wave (51562916, Normal Spell: "Destroy all face-up WATER monsters you
+        control, then you can Special Summon WATER monsters from your hand, up to the number of monsters destroyed by
+        this effect."). One whole-sentence atom on the PerCountBurns batch (Atom.Sequence, two clauses in resolution
+        order, exactly the Thunder Crash shape): a mass Destroy over the new EffectZoneFilter.
+        ControllerFaceUpAttributeMonsters, then an optional SpecialSummonFromHand whose take count reads
+        CountSource = PerCountBurnsRuntime.PreviousClauseHits (Duel.Destroy's return — an indestructible monster is not
+        counted) through the new SpecialSummonFromHand take path, capped by the free Monster Zones. New zone filter and
+        CollectAllMatching arm; the legacy MapCompiledTargetKind mirror leaves it None (no target). Activation needs a
+        face-up WATER monster the controller controls. tests Rules/Batches/PerCountBurnsRegressionTests.cs
+        (BigWaveSmallWaveDuels). */
       /* v191: SOD + batch activation — two batches landed together.
       (a) AttackObligations batch ACTIVATED (v189-v190 work): the atoms were never in AtomRegistration.BatchAtomSets
       and its tests never in CardBatchRegressionTests, and AttackObligationsRuntime had no call site at all

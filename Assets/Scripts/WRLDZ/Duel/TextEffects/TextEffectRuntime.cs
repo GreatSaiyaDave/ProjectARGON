@@ -7079,7 +7079,20 @@ namespace WRLDZ.Duel.TextEffects
                         pool = pool.Where(c => c.Race != null &&
                                                ClassicEraTemplates.RaceMatches(c.Race, clause.RaceFilter));
 
-                    var take = clause.AmountIsLevel ? 1 : (clause.SpecialSummonUpTo ? Mathf.Max(1, clause.Amount) : Mathf.Max(1, clause.Amount));
+                    var take = clause.AmountIsLevel
+                        ? 1
+                        // PerCountBurns batch: Big Wave Small Wave — "up to the number of monsters destroyed by this
+                        // effect" (Duel.Destroy's return from the previous Destroy clause); none destroyed: no summon.
+                        : clause.CountSource == PerCountBurnsRuntime.PreviousClauseHits
+                            ? (clause.RequiresPreviousClauseHit && s_lastDestroyHits <= 0
+                                ? 0
+                                : Mathf.Max(0, s_lastDestroyHits))
+                            : Mathf.Max(1, clause.Amount);
+                    if (take <= 0)
+                    {
+                        engine.Log($"{source?.Name ?? "Effect"}: nothing was destroyed — nothing is Special Summoned.");
+                        break;
+                    }
                     foreach (var d in pool.Take(take).ToList())
                     {
                         if (engine.FirstEmpty(who.MonsterZones) < 0) break;
@@ -15008,6 +15021,15 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
                         foreach (var st in opp.SpellTrapsOnField()) yield return st;
                     if (c.Side == EffectSide.Controller || c.Side == EffectSide.Both)
                         foreach (var st in who.SpellTrapsOnField()) yield return st;
+                    break;
+                // Big Wave Small Wave: every face-up monster the controller controls of the printed Attribute.
+                // Face-down monsters stay (Lua dfilter IsFaceup), and the live Attribute is read so an effect that
+                // changed it (e.g. DNA Surgery) is honoured.
+                case EffectZoneFilter.ControllerFaceUpAttributeMonsters:
+                    foreach (var m in who.MonstersOnField())
+                        if (m != null && m.FaceUp &&
+                            string.Equals(m.Attribute, c.AttributeFilter, System.StringComparison.OrdinalIgnoreCase))
+                            yield return m;
                     break;
                 case EffectZoneFilter.FieldSpellsOnField:
                     if (who?.FieldSpellZone?.Occupant != null)

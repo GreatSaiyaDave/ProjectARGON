@@ -55,6 +55,14 @@ namespace WRLDZ.Duel.TextEffects
         public const string YouControlMonstersAtLeast = "YouControlMonstersAtLeast";
 
         /// <summary>
+        /// Big Wave Small Wave's activation gate: you control at least one face-up monster whose live Attribute is
+        /// <see cref="EffectClause.AttributeFilter"/> (Lua <c>s.target</c> <c>IsExistingMatchingCard(s.dfilter,…)</c>,
+        /// where dfilter is <c>IsFaceup() and IsAttribute(ATTRIBUTE_WATER)</c>).
+        /// </summary>
+        public const string YouControlFaceUpAttributeMonsterAtLeast =
+            "YouControlFaceUpAttributeMonsterAtLeast";
+
+        /// <summary>
         /// The count for a per-count burn, or -1 when <paramref name="clause"/> has no CountSource this batch
         /// owns (the caller then keeps its other scale flags / flat amount). <paramref name="source"/> is the
         /// card whose effect resolves (its own turn counter).
@@ -120,6 +128,12 @@ namespace WRLDZ.Duel.TextEffects
                 case YouControlMonstersAtLeast:
                     ok = who.MonsterCount >= min;
                     reason = $"You must control at least {min} monster(s).";
+                    return true;
+                case YouControlFaceUpAttributeMonsterAtLeast:
+                    ok = who.MonstersOnField().Any(m => m != null && m.FaceUp &&
+                            string.Equals(m.Attribute, clause.AttributeFilter,
+                                System.StringComparison.OrdinalIgnoreCase));
+                    reason = $"You must control a face-up {clause.AttributeFilter} monster.";
                     return true;
                 default:
                     return false;
