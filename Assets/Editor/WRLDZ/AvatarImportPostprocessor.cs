@@ -18,8 +18,7 @@ namespace WRLDZ.EditorTools
             "Assets/Resources/WRLDZ/Avatar3D/argon_base_female.fbx",
             "Assets/Resources/WRLDZ/Avatar3D/ArgonClips_Duel.fbx",
             // Full character models (Meshy AI character output, yugi300274_work):
-            "Assets/Resources/WRLDZ/Avatar3D/Characters/yugi.glb",
-        };
+            "Assets/Resources/WRLDZ/Avatar3D/Characters/yugi.fbx",        };
 
         void OnPreprocessModel()
         {
