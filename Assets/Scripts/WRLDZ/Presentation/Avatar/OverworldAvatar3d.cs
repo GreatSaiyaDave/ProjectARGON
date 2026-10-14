@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
 using WRLDZ.Data;
+using WRLDZ.Presentation.Avatar;
 
 namespace WRLDZ.Presentation
 {
@@ -94,6 +95,18 @@ namespace WRLDZ.Presentation
             {
                 var full = AttachCharacterWorld(parent, look, layer);
                 if (full != null) return full;
+
+                // 2D anime billboard fallback for characters with sprite catalogs (no FBX model)
+                if (AnimeCharacterCatalog.Find(look.characterId) != null)
+                {
+                    var animeActor = AnimeCharacterActor.Attach(parent, look.characterId, layer);
+                    if (animeActor != null)
+                    {
+                        Debug.Log($"[WRLDZ] 2D anime sprite for '{look.characterId}' (no FBX model found)");
+                        return null;
+                    }
+                }
+
                 Debug.LogWarning($"[WRLDZ] character model '{look.characterId}' missing under Resources/{CharacterRes}; using the base body");
             }
             var female = look != null && look.IsFemale;

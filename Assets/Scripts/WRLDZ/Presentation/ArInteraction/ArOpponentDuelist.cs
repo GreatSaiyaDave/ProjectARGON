@@ -4,6 +4,7 @@ using UnityEngine.Animations;
 using UnityEngine.Playables;
 using WRLDZ.Data;
 using WRLDZ.Duel;
+using WRLDZ.Presentation.Avatar;
 
 namespace WRLDZ.Presentation.ArInteraction
 {
@@ -47,6 +48,10 @@ namespace WRLDZ.Presentation.ArInteraction
         Transform _fanAnchor;        // the hand volume's anchor: in front of the chest
         AvatarAppearance _look;
         DuelEngine _engine;
+
+        // 2D anime billboard fallback when no FBX character model exists
+        AnimeCharacterActor _animeActor;
+        bool _usingAnime;
 
         // ---- bones + hand frames (canonical: +Y fingers, +X thumb for the RIGHT hand, back of hand +Z)
         Transform _lUpper, _lFore, _lHand, _rUpper, _rFore, _rHand, _head, _neck, _chest, _hips;
@@ -197,6 +202,14 @@ namespace WRLDZ.Presentation.ArInteraction
             _body = OverworldAvatar3d.AttachWorld(_root, look, layer);
             if (_body == null)
             {
+                // Check if a 2D anime billboard sprite was created as fallback
+                _animeActor = _root.GetComponentInChildren<AnimeCharacterActor>();
+                if (_animeActor != null)
+                {
+                    _usingAnime = true;
+                    Debug.Log($"[WRLDZ AR] Opponent build · 2D anime sprite for '{look?.characterId ?? "unknown"}'");
+                    return true;
+                }
                 Debug.LogWarning($"[WRLDZ AR] Opponent build · base body not attached · look={(look == null ? "null" : (look.IsFemale ? "base_female" : "base_male"))}");
                 return false;
             }
@@ -354,10 +367,30 @@ namespace WRLDZ.Presentation.ArInteraction
             if (beat == "defeat" && _npcDisk != null) _npcDisk.Override = false;
             else if (beat == "victory" && _npcDisk != null) _npcDisk.Override = null;
             if (Partner != null && (beat == "defeat" || beat == "victory" || beat == "start")) Partner.Play(beat);
+
+            // 2D anime billboard: route the beat to a gesture overlay instead of 3D animation clips
+            if (_usingAnime && _animeActor != null)
+            {
+                var gesture = BeatToAnimeGesture(beat);
+                var duration = g.Hold ? 4f : (g.Hold_Pacer > 0f ? g.Hold_Pacer * 3f : 1.5f);
+                _animeActor.PlayGesture(gesture, duration);
+                return;
+            }
+
             if (g.Hold) _queue.Clear();   // the end of the duel overrides everything
             g.QueuedAt = Time.unscaledTime;
             if (_queue.Count < 3) _queue.Enqueue(g);
         }
+
+        /// <summary>Map duel beats to 2D anime gesture overlay names (used when _usingAnime is true).</summary>
+        static string BeatToAnimeGesture(string beat) => beat switch
+        {
+            "attack" => "attack", "defeat" => "defeat", "hit_big" => "defeat",
+            "activate" => "draw", "reveal" => "summon", "summon_big" => "summon",
+            "start" => "idle", "turn" => "idle", "hit" => "idle", "good" => "attack",
+            "wait" => "idle", "victory" => "idle",
+            _ => "idle"
+        };
 
         static Gesture Beat(string name) => name switch
         {
@@ -869,16 +902,21 @@ namespace WRLDZ.Presentation.ArInteraction
                 {
                     // the cast waits for the reveal: started now, the clip took the arm (and the fan with it) away
                     // before the card was shown
-                    _castAfterReveal.Add((a.InstanceId, Time.unscaledTime, false));
+                    if (!_usingAnime) _castAfterReveal.Add((a.InstanceId, Time.unscaledTime, false));
+                    else Play("activate");
                     continue;
                 }
-                ReachDisk(wasSet ? "tap" : "place", zi, wasSet ? "reveal" : "activate");
+                if (!_usingAnime) ReachDisk(wasSet ? "tap" : "place", zi, wasSet ? "reveal" : "activate");
             }
 
             // the field and the hand: flips, position changes, cards arriving without a carry; a draw with no card hand
-            SnapshotZones(e.Opponent, OnZoneChanged);
+            SnapshotZones(e.Opponent, _usingAnime ? null : OnZoneChanged);
             var hand = e.Opponent.Hand.Count;
-            if (hand > _oppHand && (Hand == null || Hand.FloatingHand == null || !Hand.FloatingHand.IsLive)) ReachDisk("draw");
+            if (hand > _oppHand)
+            {
+                if (!_usingAnime && (Hand == null || Hand.FloatingHand == null || !Hand.FloatingHand.IsLive)) ReachDisk("draw");
+                else if (_usingAnime) Play("draw");
+            }
             _oppHand = hand;
 
             // attack declared by the opponent
@@ -912,6 +950,12 @@ namespace WRLDZ.Presentation.ArInteraction
 
         void Update()
         {
+            if (_usingAnime)
+            {
+                // Anime characters: poll the engine for duel beats but skip 3D animation graph
+                if (Application.isPlaying) PollEngine();
+                return;
+            }
             if (!_graph.IsValid() || _anim == null) return;
             var dt = Application.isPlaying ? Time.deltaTime : 1f / 30f;
             PollEngine();
