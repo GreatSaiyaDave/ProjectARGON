@@ -5015,6 +5015,12 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         public int MonsterLevelMax;
 
+        /// <summary>SOD simple weapon unique extras: the equip target must be a Fusion Monster.</summary>
+        public bool RequiresFusionMonsterTarget;
+
+        /// <summary>SOD simple weapon unique extras: the equip target must be a Ritual Monster.</summary>
+        public bool RequiresRitualMonsterTarget;
+
         /// <summary>
         /// NormalMonsterSpells batch: such a monster must be a Normal Monster in the ygopro sense (IsType(TYPE_NORMAL): every
         /// Token is TYPE_NORMAL too). On an equip clause it is part of the equip limit (Sword of the Soul-Eater).

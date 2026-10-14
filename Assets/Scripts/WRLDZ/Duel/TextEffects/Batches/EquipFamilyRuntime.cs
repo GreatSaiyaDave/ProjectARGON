@@ -357,6 +357,12 @@ namespace WRLDZ.Duel.TextEffects
             if (!string.IsNullOrEmpty(clause.AttributeFilter) &&
                 !string.Equals(monster.Attribute, clause.AttributeFilter, StringComparison.OrdinalIgnoreCase))
                 return false;
+            if (clause.RequiresFusionMonsterTarget && (monster?.Def == null || !monster.Def.IsFusionMonster))
+                return false;
+            if (clause.RequiresRitualMonsterTarget && (monster?.Def == null || !monster.Def.IsRitualMonster))
+                return false;
+            if (clause.MonsterLevelMax > 0 && (monster == null || monster.Level > clause.MonsterLevelMax))
+                return false;
             if (!string.IsNullOrEmpty(clause.NamedCard) && !monster.IsNamed(clause.NamedCard)) return false;
             // ContinuousLocksAndIgnitions batch (v163): Buster Rancher — ATK 1000 or less (except during damage calculation).
             if (ContinuousLocksAndIgnitionsRuntime.BreaksAtkEquipLimit(engine, clause, monster)) return false;

@@ -417,6 +417,9 @@ namespace WRLDZ.Duel.TextEffects
             if (def != null && (def.id == 27967615 || def.id == 54351224))
             {
                 var ec = EquipClause("", 1500, 1500);
+                ec.MonsterLevelMax = 6;
+                ec.RequiresFusionMonsterTarget = (def.id == 27967615);
+                ec.RequiresRitualMonsterTarget = (def.id == 54351224);
                 ec.SourceSnippet = text.Trim();
                 into.Add(ec);
                 spans?.Add((0, text.Length));
