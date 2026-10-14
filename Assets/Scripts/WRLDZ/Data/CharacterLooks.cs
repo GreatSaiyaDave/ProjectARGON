@@ -114,9 +114,9 @@ namespace WRLDZ.Data
             // Duelist Kingdom first. The DK story (season1_dk) is the live campaign, so the *_dk rows sit
             // ahead of their Battle City counterparts: Match() keeps the first row on an equal-length match,
             // so a plain "yugi"/"kaiba" resolves to the DK set while the BC set stays equippable.
-            L("yugi_dk", "Duelist Kingdom Yugi", "yugi", 0, "yugi_muto", "yugi_muto", 153f, 0.40f, "shirt_yugi_dk", "bottoms_yugi_dk", "shoes_yugi_dk", "hands_yugi_dk", characterId: "yugi"),
+            L("yugi_dk", "Duelist Kingdom Yugi", "yugi", 0, "yugi_muto", "yugi_muto", 153f, 0.40f, "shirt_yugi_dk", "bottoms_yugi_dk", "shoes_yugi_dk", "hands_yugi_dk", characterId: ""),
             L("kaiba_dk", "Duelist Kingdom Kaiba", "kaiba", 0, "seto_kaiba", "seto_kaiba", 186f, 0.35f, "shirt_kaiba_dk", "bottoms_kaiba_dk", "shoes_kaiba_dk", "hands_kaiba_dk"),
-            L("yugi_bc", "Battle City Yugi", "yugi", 0, "yugi_muto", "yugi_muto", 153f, 0.40f, "shirt_yugi_bc", "bottoms_yugi_bc", "shoes_yugi_bc", null, characterId: "yugi"),
+            L("yugi_bc", "Battle City Yugi", "yugi", 0, "yugi_muto", "yugi_muto", 153f, 0.40f, "shirt_yugi_bc", "bottoms_yugi_bc", "shoes_yugi_bc", null, characterId: ""),
             L("kaiba_bc", "Battle City Kaiba", "kaiba", 0, "seto_kaiba", "seto_kaiba", 186f, 0.35f, "shirt_kaiba_bc", "bottoms_kaiba_bc", "shoes_kaiba_bc", null),
             L("joey_bc", "Battle City Joey", "joey", 0, "joey_wheeler", "joey_wheeler", 178f, 0.50f, "shirt_joey_bc", "bottoms_joey_bc", "shoes_joey_bc", null),
             L("mai_bc", "Battle City Mai", "mai", 1, "mai_valentine", "mai_valentine", 170f, 0.45f, "shirt_mai_bc", "bottoms_mai_bc", "shoes_mai_bc", "hands_mai_bc"),
@@ -147,6 +147,20 @@ namespace WRLDZ.Data
             L("panik_dk", "Duelist Kingdom PaniK", "panik", 0, "seto_kaiba", "panik", 185f, 0.55f, "shirt_duelcoat", "bottoms_plain", "shoes_boots", "hands_panik_dk", hat: "hat_odion_bc", hairPattern: 1, hairHex: "#2E465C", skin: "#C4B8A8", shirtHex: "#141018"),
             L("para", "Para — Paradox Brother", "para", 0, "none", "para", 170f, 0.55f, "shirt_plain", "bottoms_plain", "shoes_plain", null, hairPattern: 1, shirtHex: "#96473E", shirtTrimHex: "#E3B64C"),
             L("dox", "Dox — Paradox Brother", "dox", 0, "none", "dox", 170f, 0.55f, "shirt_plain", "bottoms_plain", "shoes_plain", null, hairPattern: 1, shirtHex: "#576EAF", shirtTrimHex: "#E3B64C"),
+            // ---- Variant looks: selectable outfit variants for NPC opponents. ----
+            // These rows set Match to their own Id (e.g. "yugi_school"), so name-based Match() never
+            // picks them — they're only used when a roster entry sets characterLookId explicitly.
+            // School uniforms drop the star-chip glove; the unbuttoned variant uses a plain tee for
+            // Joey's sleeveless-vest look; the glowing-mark variant uses Yami's face decal.
+            L("yugi_school", "School Uniform Yugi", "yugi_school", 0, "yugi_muto", "yugi_muto", 153f, 0.40f, "shirt_yugi_dk", "bottoms_yugi_dk", "shoes_yugi_dk", null, characterId: ""),
+            L("kaiba_school", "School Uniform Kaiba", "kaiba_school", 0, "seto_kaiba", "seto_kaiba", 186f, 0.35f, "shirt_kaiba_dk", "bottoms_kaiba_dk", "shoes_kaiba_dk", null),
+            L("joey_school", "School Uniform Joey", "joey_school", 0, "joey_wheeler", "joey_wheeler", 178f, 0.50f, "shirt_yugi_dk", "bottoms_yugi_dk", "shoes_yugi_dk", null, shirtHex: "#C46430"),
+            L("joey_unbuttoned", "Joey Wheeler — Unbuttoned", "joey_unbuttoned", 0, "joey_wheeler", "joey_wheeler", 178f, 0.50f, "shirt_plain", "bottoms_joey_bc", "shoes_joey_bc", null, shirtHex: "#FF8C1A", shirtTrimHex: "#8B0000"),
+            L("yami_yugi_glowing", "Yami Yugi — Glowing Mark", "yami_yugi_glowing", 0, "yugi_muto", "yami_yugi", 158f, 0.38f, "shirt_yugi_bc", "bottoms_yugi_bc", "shoes_yugi_bc", null, characterId: ""),
+            L("bakura_dk", "Duelist Kingdom Bakura", "bakura_dk", 0, "ryou_bakura", "bakura", 176f, 0.35f, "shirt_plain", "bottoms_plain", "shoes_plain", null, hairPattern: 1, hairHex: "#BAB4C6", shirtHex: "#8A8B8D", shirtTrimHex: "#C4A35A"),
+            L("yami_bakura_dk", "Duelist Kingdom Yami Bakura", "yami_bakura_dk", 0, "yami_bakura", "yami_bakura", 176f, 0.35f, "shirt_plain", "bottoms_plain", "shoes_plain", null, hairPattern: 1, hairHex: "#1A1A1C", skin: "#CFAC8D"),
+            L("tristan_dk", "Duelist Kingdom Tristan", "tristan_dk", 0, "tristan_quiff", "tristan", 180f, 0.60f, "shirt_plain", "bottoms_plain", "shoes_plain", null, hairPattern: 1, hairHex: "#62442D", shirtHex: "#2F7A2F", shirtTrimHex: "#E8C880"),
+            L("tea_dk", "Duelist Kingdom Téa", "tea_dk", 1, "tea_gardner", "tea", 164f, 0.40f, "shirt_plain", "bottoms_plain", "shoes_plain", null, hairPattern: 1, shirtHex: "#4A6FA0", shirtTrimHex: "#FFFFFF"),
         };
 
         public static CharacterLook Match(string name)
