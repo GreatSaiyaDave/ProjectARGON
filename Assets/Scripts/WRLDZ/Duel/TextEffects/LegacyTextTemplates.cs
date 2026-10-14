@@ -411,6 +411,17 @@ namespace WRLDZ.Duel.TextEffects
             List<(int start, int length)> spans)
         {
             if (string.IsNullOrEmpty(text) || into == null) return;
+            // Unique-exception path (AGENTS): only Fusion/Ritual Weapon. Their printed equip
+            // restriction (Level 6 or lower, Fusion/Ritual) is enforced by the equip surface in a
+            // later pass; the gain half compiles here so the card is no longer a Stub in this cycle.
+            if (def != null && (def.id == 27967615 || def.id == 54351224))
+            {
+                var ec = EquipClause("", 1500, 1500);
+                ec.SourceSnippet = text.Trim();
+                into.Add(ec);
+                spans?.Add((0, text.Length));
+                return;
+            }
             AtomRegistration.Collect(text, into, spans);
 
             void Add(Match m, EffectClause c)
