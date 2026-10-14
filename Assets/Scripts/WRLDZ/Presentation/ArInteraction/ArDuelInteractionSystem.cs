@@ -190,6 +190,11 @@ namespace WRLDZ.Presentation.ArInteraction
             OppHandVolume.Tracker = Tracker;
             OppHandVolume.SourceDeck = OppDisk;
             OppHandVolume.GestureLanded = OppGestureLanded;
+            // Mind on Air: the opponent's hand is public only while that Trap is face-up on the field. The volume
+            // asks on every sync, so the whole fan flips when the rule starts or ends.
+            OppHandVolume.FaceVisibleNow = () =>
+                _engine != null && _engine.Opponent != null &&
+                WRLDZ.Duel.TextEffects.ContinuousTrapsAndSpiritSupportRuntime.HandRevealed(_engine, _engine.Opponent);
             // Life-size still needs a generous pick target on phone/editor RT
             if (LifeSize)
             {

@@ -6,7 +6,8 @@ namespace WRLDZ.Duel.TextEffects
     /// Card batch "ContinuousTrapsAndSpiritSupport" (v161): LOD Continuous Spells/Traps with Standby / End Phase effects,
     /// field-to-GY burns and Spirit support — Fatal Abacus, Life Absorbing Machine, Ominous Fortunetelling, Fengsheng
     /// Mirror, Spirit's Invitation (its trigger sentence; the 500 LP upkeep is the shared ContinuousRestrictionTemplates
-    /// pay-or-destroy clause) and Spiritual Energy Settle Machine. Every atom is a whole sentence (or the whole text where
+    /// pay-or-destroy clause), Spiritual Energy Settle Machine and Mind on Air (the hand-reveal rule). Every atom is a
+    /// whole sentence (or the whole text where
     /// the sentences refer to each other), anchored at a sentence start and a sentence end, so a longer or reworded card
     /// stays uncompiled. Runtime: <see cref="ContinuousTrapsAndSpiritSupportRuntime"/>.
     /// </summary>
@@ -130,6 +131,20 @@ namespace WRLDZ.Duel.TextEffects
                     Side = EffectSide.Both,
                     StaysOnField = true,
                     MakesChainLink = false
+                }),
+
+            // Mind on Air (c66690411): SOD Continuous Trap whose whole text is one sentence. ygopro registers a
+            // player-target field effect (EFFECT_FLAG_PLAYER_TARGET with player 1-tp) — "Your opponent must play
+            // with their hand revealed." No cost, no target, no chain bullet: a continuous rule only.
+            new AtomRegistration.Atom(
+                S + @"Your opponent must play with their hand revealed" + E,
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.OpponentMustPlayWithHandRevealed,
+                    Side = EffectSide.Controller,
+                    StaysOnField = true,
+                    MakesChainLink = true
                 }),
         };
 

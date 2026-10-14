@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using WRLDZ.Data;
+using WRLDZ.Duel;
 using WRLDZ.Duel.TextEffects;
 using static WRLDZ.Duel.Rules.InteractionRegressionTests;
 
@@ -33,6 +34,7 @@ namespace WRLDZ.Duel.Rules
         const int PrematureBurial = 70828912; // pay 800 LP (cost)
         const int PotOfGreed = 55144522;
         const int SkullInvitation = 98139712;
+        const int MindOnAir = 66690411;
 
         public static void Run(CardDatabase db, DeckFile pDeck, DeckFile aDeck, Action<string, bool, string> check)
         {
@@ -46,6 +48,7 @@ namespace WRLDZ.Duel.Rules
             InvitationDuels(db, pDeck, aDeck, Check);
             SettleDuels(db, pDeck, aDeck, Check);
             NearMisses(db, Check);
+            MindOnAirDuels(db, pDeck, aDeck, Check);
         }
 
         // ───────────────────────────── helpers ─────────────────────────────
@@ -93,6 +96,82 @@ namespace WRLDZ.Duel.Rules
         {
             for (var i = 0; i < 8 && engine.IsAwaitingResponse; i++)
                 engine.PassResponse();
+        }
+
+        static void MindOnAirDuels(CardDatabase db, DeckFile pDeck, DeckFile aDeck, Chk Check)
+        {
+
+            // Compile shape: the whole text is one continuous rule — no cost, no target.
+            {
+                var prog = CardTextEffectCompiler.Compile(db.Get(MindOnAir));
+                Check("Mind on Air: FullyCompiled — a Continuous Trap, opponent plays with their hand revealed; Implemented",
+                    prog != null && prog.FullyCompiled &&
+                    CardEffectStatus.Classify(db.Get(MindOnAir)) == CardEffectStatusKind.Implemented &&
+                    prog.ClauseList.Count == 1 &&
+                    prog.ClauseList[0].Action == EffectActionKind.OpponentMustPlayWithHandRevealed &&
+                    prog.ClauseList[0].Timing == EffectTiming.Activate &&
+                    prog.ClauseList[0].Side == EffectSide.Controller &&
+                    prog.ClauseList[0].StaysOnField && !prog.ClauseList[0].RequiresTargetChoice &&
+                    prog.ClauseList[0].PayLpAmount == 0 && prog.ClauseList[0].RequiresDiscardCost == false,
+                    prog == null ? "null" : string.Join(" | ", prog.UnparsedFragments ?? Array.Empty<string>()));
+            }
+
+            // Face-up on the field: the controller's opponent has their hand revealed.
+            {
+                var engine = PlayerMain1(db, pDeck, aDeck, out var reached);
+                var p = engine.Player;
+                var o = engine.Opponent;
+                PutInHand(engine, p, Celtic);
+                PutInHand(engine, p, PotOfGreed);
+                PutInHand(engine, o, Celtic);
+                PutInHand(engine, o, PotOfGreed);
+                var air = PlaceFaceUpSpellTrap(engine, p, MindOnAir, 0);
+                engine.NotifyPublic();
+                var oppRevealed = WRLDZ.Duel.TextEffects.ContinuousTrapsAndSpiritSupportRuntime
+                    .HandRevealed(engine, o);
+                var mineHidden = !WRLDZ.Duel.TextEffects.ContinuousTrapsAndSpiritSupportRuntime
+                    .HandRevealed(engine, p);
+                Check("Mind on Air: while it is face-up the controller's opponent plays with their hand revealed",
+                    reached && oppRevealed && mineHidden,
+                    $"reached={reached} oppRevealed={oppRevealed} mineRevealed={!mineHidden}");
+
+                // The owner of the hand is the reflected state, not the reader.
+                Check("Mind on Air: DuelistState.HandRevealed is set on the opponent, not on the viewer",
+                    o.HandRevealed && !p.HandRevealed, $"opp={o.HandRevealed} me={p.HandRevealed}");
+
+                // The Trap leaves the field: the reveal ends (a continuous rule, not a turn-scoped one).
+                engine.SendCardToGrave(p, air);
+                FieldSpellEffects.RefreshBoard(engine);
+                Check("Mind on Air: once the Trap leaves the field the hand is hidden again",
+                    !o.HandRevealed && !p.HandRevealed && !WRLDZ.Duel.TextEffects.ContinuousTrapsAndSpiritSupportRuntime
+                        .HandRevealed(engine, o),
+                    $"opp={o.HandRevealed} me={p.HandRevealed}");
+            }
+
+            // A negated Mind on Air reveals nothing.
+            {
+                var engine = PlayerMain1(db, pDeck, aDeck, out var reached);
+                var p = engine.Player;
+                var o = engine.Opponent;
+                var air = PlaceFaceUpSpellTrap(engine, p, MindOnAir, 0);
+                air.IsNegated = true;
+                engine.NotifyPublic();
+                FieldSpellEffects.RefreshBoard(engine);
+                Check("Mind on Air: a negated Trap reveals nothing",
+                    reached && !o.HandRevealed, $"opp={o.HandRevealed}");
+            }
+
+            // The opponent's own Mind on Air reveals the controller's hand.
+            {
+                var engine = PlayerMain1(db, pDeck, aDeck, out var reached);
+                var p = engine.Player;
+                var o = engine.Opponent;
+                PlaceFaceUpSpellTrap(engine, o, MindOnAir, 0);
+                engine.NotifyPublic();
+                Check("Mind on Air: the opponent's copy reveals the player's hand",
+                    reached && p.HandRevealed && !o.HandRevealed,
+                    $"me={p.HandRevealed} opp={o.HandRevealed}");
+            }
         }
 
         static CardInstance PlaceFaceUpSpellTrap(DuelEngine engine, DuelistState who, int id, int zone)

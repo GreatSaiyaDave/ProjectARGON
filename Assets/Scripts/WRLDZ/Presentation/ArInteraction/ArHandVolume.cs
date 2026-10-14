@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -39,6 +40,14 @@ namespace WRLDZ.Presentation.ArInteraction
         public Transform AnchorOverride;
         /// <summary>Local player sees faces; the opposite hand is public backs only.</summary>
         public bool RevealFaces = true;
+
+        /// <summary>
+        /// Live "are this volume's faces public right now?", read on every sync ( Mind on Air makes an opponent's hand
+        /// public for as long as that Trap is face-up). Null falls back to the static <see cref="RevealFaces"/>.
+        /// </summary>
+        public Func<bool> FaceVisibleNow;
+
+        bool _facesNow;
         public int Layer = 28;
         public Color Tint = new(0.55f, 0.95f, 1f);
         public float FanWidth = 0.72f;
@@ -212,6 +221,29 @@ namespace WRLDZ.Presentation.ArInteraction
 
         public void SyncHand(DuelistState who, CardDatabase db)
         {
+            EvaluateFaceVisibility();
+            SyncHandCore(who, db);
+        }
+
+        /// <summary>
+        /// Re-read the reveal rule and re-face the cards already in the volume when the answer changed, so a Mind on
+        /// Air flipping up (or a negation ending) turns the whole opponent fan face-up (or back down) at once.
+        /// </summary>
+        void EvaluateFaceVisibility()
+        {
+            var now = FaceVisibleNow != null ? FaceVisibleNow() : RevealFaces;
+            if (now == _facesNow) return;
+            _facesNow = now;
+            foreach (var fc in _cards)
+            {
+                if (fc == null) continue;
+                fc.KeepFaceHidden = !now;
+                fc.RefreshArtFace(showFace: now);
+            }
+        }
+
+        void SyncHandCore(DuelistState who, CardDatabase db)
+        {
             if (who == null || db == null) return;
             // Spell/Trap result gate (Pot of Greed…): cards that ARRIVE in the hand are results and wait
             // until the activating card has been readable (ActivationBeat). Cards leaving still leave now.
@@ -255,7 +287,7 @@ namespace WRLDZ.Presentation.ArInteraction
                 if (!_byInstance.TryGetValue(card.InstanceId, out var fc) || fc == null)
                 {
                     fc = ArFloatingCard.Spawn(VolumeRoot, card, db, Layer, Tint);
-                    fc.KeepFaceHidden = !RevealFaces;
+                    fc.KeepFaceHidden = !_facesNow;
                     _byInstance[card.InstanceId] = fc;
                     _cards.Add(fc);
                     _slotIndex[fc] = handSlot;
@@ -268,7 +300,7 @@ namespace WRLDZ.Presentation.ArInteraction
                                                     Debug.Log($"[OppHandVolume] SPAWNED {card.Name} slot={handSlot} local=({lp.x:0.000},{lp.y:0.000},{lp.z:0.000}) world=({wp.x:0.000},{wp.y:0.000},{wp.z:0.000}) vol={transform.position}");
                                                 }
                         #endif
-                    fc.RefreshArtFace(showFace: RevealFaces);
+                    fc.RefreshArtFace(showFace: _facesNow);
                     if (Application.isPlaying && gameObject.activeInHierarchy)
                     {
                         if (HandLive)

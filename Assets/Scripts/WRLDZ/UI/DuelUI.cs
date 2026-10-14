@@ -50,6 +50,7 @@ namespace WRLDZ.UI
         MrReferobot _referobot;
         CardInspectPopup _inspect;
         GraveyardBrowser _gyBrowser;
+        HandBrowser _handBrowser;
         BanishedBrowser _banishedBrowser; // Backup-bot stub — Dilbot wire OpenBanished
         CardInstance _inspectCard;
         bool _inspectFromHand;
@@ -1056,6 +1057,8 @@ namespace WRLDZ.UI
             catch (Exception ex) { Debug.LogWarning("[WRLDZ] CardInspectPopup: " + ex.Message); }
             try { _gyBrowser = GraveyardBrowser.Create(root); }
             catch (Exception ex) { Debug.LogWarning("[WRLDZ] GraveyardBrowser: " + ex.Message); }
+            try { _handBrowser = HandBrowser.Create(root); }
+            catch (Exception ex) { Debug.LogWarning("[WRLDZ] HandBrowser: " + ex.Message); }
 
             BuildGameOverOverlay(root);
         }
@@ -2323,6 +2326,7 @@ namespace WRLDZ.UI
             // One overlay: hide inspect / GY so they cannot sit on this picker.
             DismissInspectQuiet();
             _gyBrowser?.Hide();
+            _handBrowser?.Hide();
 
             if (_targetDim != null)
             {
@@ -3170,6 +3174,12 @@ namespace WRLDZ.UI
                     _gyBrowser.Refresh(side?.Graveyard);
                 }
 
+                if (_handBrowser != null && _handBrowser.IsOpen)
+                {
+                    var handSide = _handBrowser.ShowingPlayerSide ? who : (_engine?.Opponent);
+                    _handBrowser.Refresh(handSide?.Hand);
+                }
+
                 return;
             }
 
@@ -3420,6 +3430,52 @@ namespace WRLDZ.UI
         {
             if (_engine == null) return;
             OpenGraveyard(playerSide ? (CommandWho() ?? _engine.Player) : _engine.Opponent, playerSide);
+        }
+
+        /// <summary>
+        /// Open the hand browser for one side. The opponent's side is only ever shown with faces where the engine says
+        /// the hand is public (Mind on Air); otherwise it opens as backs with the count, which is public information.
+        /// </summary>
+        void OpenHand(bool playerSide)
+        {
+            if (_engine == null) return;
+            var who = playerSide ? (CommandWho() ?? _engine.Player) : _engine.Opponent;
+            if (who == null) return;
+            if (_handBrowser == null)
+            {
+                var attach = transform.childCount > 0 ? transform.GetChild(0) : transform;
+                try { _handBrowser = HandBrowser.Create(attach); }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning("[WRLDZ] HandBrowser: " + ex.Message);
+                    return;
+                }
+            }
+
+            DismissInspectQuiet();
+            HideTargetPicker();
+            WrldzAudio.PlayCardTap();
+            _handBrowser.Show(who.Hand, _db, playerSide,
+                WRLDZ.Duel.TextEffects.ContinuousTrapsAndSpiritSupportRuntime.HandRevealed(_engine, who),
+                card =>
+                {
+                    if (card == null) return;
+                    if (_engine.IsAwaitingEffectTarget)
+                    {
+                        if (_engine.TrySelectEffectTarget(card))
+                        {
+                            _handBrowser?.Hide();
+                            ClearCardSelection();
+                            Refresh();
+                            return;
+                        }
+
+                        ShowFlashStatus($"Not a legal target: {card.Name}");
+                        return;
+                    }
+
+                    OpenInspect(card, showFace: card.FaceUp, null);
+                }, _engine);
         }
 
         void OpenGraveyard(DuelistState who, bool playerSide)

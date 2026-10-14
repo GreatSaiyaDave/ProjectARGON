@@ -71,6 +71,8 @@ namespace WRLDZ.Duel
             // Gorgon's Eye (ContinuousNegation batch): recompute the Defense Position negation after the family
             // negation above, so a monster negated both ways reads as negated either way.
             ContinuousNegationRuntime.RefreshGorgonEyes(engine);
+            // Mind on Air (ContinuousTrapsAndSpiritSupport batch): whose hand is public right now.
+            ContinuousTrapsAndSpiritSupportRuntime.RefreshHandReveal(engine);
             // EquipModel batch: a control Equip negated by Armored Glass / The Emperor's Holiday gives its monster back
             // (and takes it again once the negation ends), before the auras below are computed.
             EquipModelRuntime.SyncNegatedControlEquips(engine);

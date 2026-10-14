@@ -369,6 +369,9 @@ namespace WRLDZ.Duel.TextEffects
                 // ContinuousNegation batch: Gorgon's Eye — the same turn-scoped negation family (a field
                 // EFFECT_DISABLE with RESET_PHASE|PHASE_END over the Defense Position monsters).
                 EffectActionKind.NegateEffectsOfDefensePositionMonstersThisTurn => EffectResolutionKind.Protection,
+                // ContinuousTrapsAndSpiritSupport batch: Mind on Air — a Continuous Trap that imposes one continuous
+                // rule on the opponent (their hand is public), the same family as NegateCardFamilyOnFieldThisTurn.
+                EffectActionKind.OpponentMustPlayWithHandRevealed => EffectResolutionKind.Protection,
                 // DiscardTriggers (v142): GY → Deck, shuffled (Penguin Knight); hand → GY discards (Delinquent Duo).
                 EffectActionKind.ShuffleGraveyardIntoDeck => EffectResolutionKind.ReturnToDeck,
                 // MfcSimpleSpellsB batch (v174): Hidden Spellbook — GY Spell targets into the Deck, shuffled.

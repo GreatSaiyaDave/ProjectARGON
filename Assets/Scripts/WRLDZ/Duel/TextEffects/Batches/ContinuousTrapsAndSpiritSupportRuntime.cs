@@ -1089,5 +1089,65 @@ namespace WRLDZ.Duel.TextEffects
                 engine.ResumeStandbyAfterUpkeep();
             engine.NotifyPublic();
         }
+
+        // ───────────────────────────── Mind on Air: hand reveal ─────────────────────────────
+
+        /// <summary>
+        /// Mind on Air (c66690411) at resolution: register this Trap as a hand revealer. It is a continuous field
+        /// rule (ygopro EFFECT_FLAG_PLAYER_TARGET with player 1-tp, RESETS_STANDARD), so nothing here is one-shot —
+        /// <see cref="RefreshHandReveal"/> recomputes it from the live sources on every board change.
+        /// </summary>
+        public static void ArmHandReveal(DuelEngine engine, DuelistState who, CardInstance source)
+        {
+            // Nothing to arm: RefreshHandReveal scans the board, so a card placed directly on the field applies its
+            // rule at once and one that leaves the field stops applying.
+            RefreshHandReveal(engine);
+            engine?.NotifyPublic();
+        }
+
+        /// <summary>
+        /// Recompute <see cref="DuelistState.HandRevealed"/> from the Mind on Air sources that are applying right now.
+        /// A source applies while it is face-up in a Spell &amp; Trap Zone, its activation has resolved and its own
+        /// effects are not negated (a negated Mind on Air reveals nothing). The player whose hand is revealed is the
+        /// source's controller's opponent.
+        /// </summary>
+        public static void RefreshHandReveal(DuelEngine engine)
+        {
+            if (engine == null) return;
+            if (engine.Player != null) engine.Player.HandRevealed = false;
+            if (engine.Opponent != null) engine.Opponent.HandRevealed = false;
+
+            // Scanned from the board, never from an armed list: a card placed directly on the field (a test, the
+            // corpus, the Editor) applies its rule at once, and a card that leaves the field stops applying.
+            foreach (var side in new[] { engine.Player, engine.Opponent })
+            {
+                if (side == null) continue;
+                foreach (var st in side.SpellTrapsOnField())
+                {
+                    if (st?.Def == null || !st.FaceUp || st.IsNegated) continue;
+                    // A card whose activation is still on the Chain does not apply its continuous effects yet.
+                    if (!ActivationResolved(engine, st)) continue;
+                    if (!AppliesHandReveal(st)) continue;
+                    var opp = engine.OpponentOf(side);
+                    if (opp != null) opp.HandRevealed = true;
+                }
+            }
+        }
+
+        /// <summary>True when <paramref name="card"/>'s compiled program has the hand-reveal rule.</summary>
+        static bool AppliesHandReveal(CardInstance card)
+        {
+            var prog = WRLDZ.Duel.TextEffects.CompiledEffectCache.GetOrCompile(card.Def);
+            return prog != null && prog.FullyCompiled && prog.ClauseList.Exists(c => c != null &&
+                c.Action == EffectActionKind.OpponentMustPlayWithHandRevealed);
+        }
+
+        /// <summary>
+        /// True when <paramref name="who"/> currently plays with their hand revealed — the player whose hand the UI
+        /// and the AR hand volume may show with faces. A player's own hand is always visible to itself; this is the
+        /// only thing that ever makes an <b>opponent's</b> hand public.
+        /// </summary>
+        public static bool HandRevealed(DuelEngine engine, DuelistState who) =>
+            engine != null && who != null && who.HandRevealed;
     }
 }

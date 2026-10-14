@@ -16,8 +16,9 @@ namespace WRLDZ.Duel.TextEffects
     /// </summary>
     public static class CardTextEffectCompiler
     {
-        public const int Version = 192; /*
-        v192: SOD completion — Big Wave Small Wave (51562916, Normal Spell: "Destroy all face-up WATER monsters you
+        public const int Version = 193; /* v193: Mind on Air (66690411) + Thousand-Eyes Jellyfish (81434470) — both print "Your opponent must play with their hand revealed." New EffectActionKind.OpponentMustPlayWithHandRevealed on the ContinuousTrapsAndSpiritSupport batch. The Lua (c66690411) registers a player-target FIELD effect (EFFECT_FLAG_PLAYER_TARGET with player 1-tp) — a continuous rule, not a one-shot — so it is scanned from the board on every refresh like the negations: ContinuousTrapsAndSpiritSupportRuntime.RefreshHandReveal sets DuelistState.HandRevealed for the source controller's opponent while a source is face-up in a Spell & Trap Zone, its activation resolved and its own effects not negated. HandRevealed(engine, who) is the single reader. EffectVocabulary maps the action to Protection (the NegateCardFamilyOnFieldThisTurn family). UI: Presentation.HandBrowser — the GraveyardBrowser shape applied to a hand (feature card, ATK/DEF · Type line, thumbnail strip), wired into DuelUI as OpenHand(playerSide); the opponent side opens as card backs with only the count (public information) unless HandRevealed, so private information is never exposed. ArHandVolume.FaceVisibleNow lets the AR opponent fan flip face-up when the rule starts or ends. tests Rules/Batches/ContinuousTrapsAndSpiritSupportRegressionTests.cs (MindOnAirDuels). */
+
+        /* v192: SOD completion — Big Wave Small Wave (51562916, Normal Spell: "Destroy all face-up WATER monsters you control, then you can Special Summon WATER monsters from your hand, up to the number of monsters destroyed by this effect.
         control, then you can Special Summon WATER monsters from your hand, up to the number of monsters destroyed by
         this effect."). One whole-sentence atom on the PerCountBurns batch (Atom.Sequence, two clauses in resolution
         order, exactly the Thunder Crash shape): a mass Destroy over the new EffectZoneFilter.

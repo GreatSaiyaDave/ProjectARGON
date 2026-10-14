@@ -722,6 +722,18 @@ namespace WRLDZ.Duel
         /// <summary>Waboku: no battle damage; cannot be destroyed by battle this turn (registered trap).</summary>
         public bool WabokuActive;
 
+        /// <summary>
+        /// Mind on Air: this player's hand is revealed for as long as the effect that revealed it stays face-up on
+        /// the field. Unlike the turn-scoped flags below it is <b>not</b> cleared at the End Phase — it is a
+        /// continuous rule recomputed from the applying source(s) on every board refresh
+        /// (<see cref="TextEffects.ContinuousTrapsAndSpiritSupportRuntime.RefreshHandReveal"/>, from
+        /// FieldSpellEffects.RefreshBoard), exactly like the negations and the take-control Equips. Read through
+        /// <see cref="TextEffects.ContinuousTrapsAndSpiritSupportRuntime.HandRevealed"/> by the UI
+        /// (Presentation.GraveyardBrowser / HandBrowser) and the AR hand volume, so the opponent's hand is only
+        /// shown with faces where the rules actually make it public.
+        /// </summary>
+        public bool HandRevealed;
+
         /// <summary>Threatening Roar family: this player cannot declare an attack this turn.</summary>
         public bool CannotDeclareAttackThisTurn;
 

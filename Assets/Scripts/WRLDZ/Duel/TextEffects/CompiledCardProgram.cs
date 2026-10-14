@@ -3380,6 +3380,14 @@ namespace WRLDZ.Duel.TextEffects
         /// <see cref="CardInstance.GorgonEyeNegated"/>.
         /// </summary>
         NegateEffectsOfDefensePositionMonstersThisTurn,
+        /// <summary>
+        /// Mind on Air (c66690411): a Continuous Trap — "Your opponent must play with their hand revealed." While it
+        /// is face-up on the field, its controller's opponent has <see cref="DuelistState.HandRevealed"/> set (a
+        /// continuous field rule, not a one-shot, and not turn-scoped). Recomputed by
+        /// <see cref="ContinuousTrapsAndSpiritSupportRuntime.RefreshHandReveal"/>; read by
+        /// <see cref="ContinuousTrapsAndSpiritSupportRuntime.HandRevealed"/>.
+        /// </summary>
+        OpponentMustPlayWithHandRevealed,
     }
 
 
