@@ -1,0 +1,8 @@
+fileFormatVersion: 2
+guid: af33a6e22c84ef6f495610cc0e8d5e24
+TextureImporter:
+  serializedVersion: 12
+  mipmapEnabled: 0
+  maxTextureSize: 1024
+  filterMode: Bilinear
+  wrapMode: Clamp
