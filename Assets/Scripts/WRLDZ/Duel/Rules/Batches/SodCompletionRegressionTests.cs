@@ -26,6 +26,8 @@ namespace WRLDZ.Duel.Rules
         const int MindWipe = 52817046;          // Quick-Play: opponent adds hand to Deck, shuffles, redraws same count
         const int InfernoFireBlast = 52684508;  // Normal Spell: damage = target "Red-Eyes B. Dragon" original ATK + attack lock
         const int RedEyes = 74677422;           // Red-Eyes B. Dragon, 2400 ATK
+        const int Ninjitsu = 89628781;          // Continuous Trap: target 1 face-up "Ninja" you control; cannot be destroyed by battle
+        const int NinjaSasuke = 4041838;        // Ninja Grandmaster Sasuke, LIGHT Warrior Lv4 1800/1000 (matches "Ninja")
 
         const int MetalDragon = 9293977;        // Fusion Lv6 1850/1700 — legal Fusion Weapon target
         const int SkullKnight = 2504891;        // Fusion Lv7 2650/2250 — too high
@@ -47,6 +49,7 @@ namespace WRLDZ.Duel.Rules
             HallowedDuel(db, pDeck, aDeck, Check);
             MindWipeDuel(db, pDeck, aDeck, Check);
             InfernoFireBlastDuel(db, pDeck, aDeck, Check);
+            NinjitsuDuel(db, pDeck, aDeck, Check);
         }
 
         // ───────────────────────────── compile shapes ─────────────────────────────
@@ -336,6 +339,84 @@ namespace WRLDZ.Duel.Rules
                     act && opp.LifePoints == lp - 2400 && red.CannotAttackDuringTurnNumber == e.TurnNumber &&
                     p.Graveyard.Contains(blast),
                     $"act={act} lp={lp}->{opp.LifePoints} lock={red.CannotAttackDuringTurnNumber}/turn={e.TurnNumber}");
+            }
+        }
+
+        // ───────────────────────────── Ninjitsu Art of Decoy ─────────────────────────────
+
+        static void NinjitsuDuel(CardDatabase db, DeckFile pDeck, DeckFile aDeck, Chk Check)
+        {
+            {
+                var def = db.Get(Ninjitsu);
+                var prog = def != null ? CardTextEffectCompiler.Compile(def) : null;
+                var act = prog?.ClausesFor(EffectTiming.Activate)
+                    .Find(c => c != null && c.Action == EffectActionKind.ContinuousCannotBeDestroyedByBattle);
+                var cont = prog?.ClausesFor(EffectTiming.ContinuousWhileFaceUp)
+                    .Find(c => c != null && c.Action == EffectActionKind.ContinuousCannotBeDestroyedByBattle);
+                Check("Ninjitsu Art of Decoy: Implemented, binds a face-up \"Ninja\" you control for battle immunity",
+                    prog != null && prog.FullyCompiled && CardEffectStatus.Classify(def) == CardEffectStatusKind.Implemented &&
+                    act != null && act.Zone == EffectZoneFilter.ControllerMonsters &&
+                    act.TargetSeriesName == "Ninja" && act.RequiresTargetFaceUp && cont != null,
+                    act == null
+                        ? $"full={prog?.FullyCompiled}"
+                        : $"zone={act.Zone} series={act.TargetSeriesName} faceup={act.RequiresTargetFaceUp} cont={cont != null}");
+            }
+
+            // Only a "Ninja" (a monster whose name/archetype matches) is a legal target.
+            {
+                var e = Fresh(db, pDeck, aDeck);
+                ClearBoard(e);
+                var p = e.Player;
+                var opp = e.Opponent;
+                p.Hand.Clear();
+                opp.Hand.Clear();
+                var trap = PlaceSetTrap(e, p, Ninjitsu, 2);
+                trap.SetThisTurn = false;
+                PlaceMonster(e, p, Celtic, 0, BattlePosition.Attack, true); // not a "Ninja"
+                var legal = e.CanActivateSpellTrap(p, trap, fromHand: false);
+                Check("Ninjitsu Art of Decoy: a non-\"Ninja\" monster is not a legal target",
+                    !legal, $"legal={legal}");
+            }
+
+            // The bound Ninja cannot be destroyed by battle.
+            {
+                var e = Fresh(db, pDeck, aDeck);
+                ClearBoard(e);
+                var p = e.Player;
+                var opp = e.Opponent;
+                p.Hand.Clear();
+                opp.Hand.Clear();
+                var trap = PlaceSetTrap(e, p, Ninjitsu, 2);
+                trap.SetThisTurn = false;
+                var ninja = PlaceMonster(e, p, NinjaSasuke, 0, BattlePosition.Defense, true); // 1000 DEF
+                var attacker = PlaceMonster(e, opp, RedEyes, 2, BattlePosition.Attack, true); // 2400 ATK
+                attacker.SummonedThisTurn = false;
+
+                var act = e.TryActivateSpellTrap(p, trap, fromHand: false);
+                // The engine auto-picks when there is exactly one legal target; otherwise the pick is explicit.
+                var picked = e.IsAwaitingEffectTarget ? e.TrySelectEffectTarget(ninja) : true;
+                Settle(e);
+                Check("Ninjitsu Art of Decoy: the Trap binds the selected Ninja and grants battle immunity",
+                    act && picked && ninja.Equips.Contains(trap) && ReferenceEquals(trap.EquippedTo, ninja) &&
+                    OfficialEffectRegistry.CannotBeDestroyedByBattle(ninja),
+                    $"act={act} picked={picked} bound={ninja.Equips.Contains(trap)} " +
+                    $"flag={OfficialEffectRegistry.CannotBeDestroyedByBattle(ninja)}");
+
+                // The opponent's stronger monster attacks the Defense-Position Ninja: it survives.
+                if (e.IsAwaitingResponse) e.PassResponse();
+                e.TryEndTurnSafe(e.TurnPlayer);
+                if (e.IsAwaitingResponse) e.PassResponse();
+                if (e.TurnPlayer == opp && e.Phase == DuelPhase.Main1) e.TryEnterBattlePhase(opp);
+                if (e.IsAwaitingResponse) e.PassResponse();
+                var lp = p.LifePoints;
+                var declared = e.TryAttack(opp, attacker, ninja);
+                if (e.IsAwaitingResponse && e.PendingResponse?.Timing == ResponseTiming.AttackDeclared) e.PassResponse();
+                for (var i = 0; i < 6 && e.IsAwaitingResponse; i++) e.PassResponse();
+                Check("Ninjitsu Art of Decoy: the bound Ninja is not destroyed by battle",
+                    declared && p.TryFindMonster(ninja, out _) && !p.Graveyard.Contains(ninja) &&
+                    !ninja.CannotBeDestroyedByBattle,
+                    $"declared={declared} alive={p.TryFindMonster(ninja, out _)} " +
+                    $"inGy={p.Graveyard.Contains(ninja)} lp={lp}->{p.LifePoints}");
             }
         }
 

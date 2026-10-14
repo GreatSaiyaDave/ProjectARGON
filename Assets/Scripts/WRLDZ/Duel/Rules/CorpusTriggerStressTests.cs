@@ -478,6 +478,12 @@ namespace WRLDZ.Duel.Rules
                     c.Zone == EffectZoneFilter.ControllerMonsters)
                     PlaceMonster(engine, p, ArchfiendSoldier, 1, BattlePosition.Attack, true);
 
+                // Ninjitsu Art of Decoy (ContinuousCannotBeDestroyedByBattle): shadows the "Archfiend" case —
+                // target 1 face-up "Ninja" monster you control (Ninja Grandmaster Sasuke, SOD).
+                if (c.Action == EffectActionKind.ContinuousCannotBeDestroyedByBattle &&
+                    c.Zone == EffectZoneFilter.ControllerMonsters && p.MonsterZones[1].IsEmpty)
+                    PlaceMonster(engine, p, 4041838, 1, BattlePosition.Attack, true); // Ninja Grandmaster Sasuke
+
                 // Inferno Fire Blast: target 1 "Red-Eyes B. Dragon" in your Monster Zone.
                 if (c.TargetCannotAttackThisTurn && c.Zone == EffectZoneFilter.ControllerMonsters &&
                     p.MonsterZones[1].IsEmpty)
