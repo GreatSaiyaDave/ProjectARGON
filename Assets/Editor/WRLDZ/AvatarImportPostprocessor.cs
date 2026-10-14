@@ -17,6 +17,9 @@ namespace WRLDZ.EditorTools
             "Assets/Resources/WRLDZ/Avatar3D/argon_base_male.fbx",
             "Assets/Resources/WRLDZ/Avatar3D/argon_base_female.fbx",
             "Assets/Resources/WRLDZ/Avatar3D/ArgonClips_Duel.fbx",
+            // Life-size full character models (yugi300274_work, kaiba300265_work):
+            "Assets/Resources/WRLDZ/Avatar3D/Characters/yugi.fbx",
+            "Assets/Resources/WRLDZ/Avatar3D/Characters/yami_yugi.fbx",
         };
 
         void OnPreprocessModel()
