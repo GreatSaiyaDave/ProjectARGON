@@ -202,12 +202,23 @@ namespace WRLDZ.UI.Shell
             t.horizontalOverflow = HorizontalWrapMode.Wrap;
             t.verticalOverflow = VerticalWrapMode.Truncate;
 
-            // difficulty badge (right)
-            var badge = FloatingPanel.Body(go.transform, DifficultyLabel(opp.difficulty), 11);
+            // difficulty badge (right) — tap to cycle the tier for THIS duelist
+            var eff = OpponentDifficultyPrefs.Get(opp);
+            var badge = FloatingPanel.Body(go.transform, DifficultyLabel(eff), 11);
             FloatingPanel.Place(badge.rectTransform, 0.805f, 0.26f, 0.988f, 0.74f);
             badge.alignment = TextAnchor.MiddleCenter;
             badge.fontStyle = FontStyle.Bold;
-            badge.color = DifficultyColor(opp.difficulty);
+            badge.color = DifficultyColor(eff);
+            var badgeBtn = badge.gameObject.AddComponent<Button>();
+            badgeBtn.targetGraphic = go.GetComponent<Image>();
+            badgeBtn.onClick.AddListener(() =>
+            {
+                var nx = OpponentDifficultyPrefs.Cycle(opp);
+                badge.text = DifficultyLabel(nx);
+                badge.color = DifficultyColor(nx);
+
+            });
+            badge.gameObject.AddComponent<LayoutElement>().minWidth = 60;
 
             var btn = go.GetComponent<Button>();
             if (onClick != null)

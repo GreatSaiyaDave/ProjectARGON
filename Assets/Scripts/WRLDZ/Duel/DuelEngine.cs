@@ -148,6 +148,13 @@ namespace WRLDZ.Duel
         public bool HumanVsHuman { get; set; }
 
         /// <summary>
+        /// AI difficulty for the AI opponent driving this duel. Set by DuelBootstrap from the
+        /// selected opponent's <see cref="OpponentDef.difficulty"/> (per-character). Defaults to
+        /// Normal when no opponent is set. Combined with the global preference at play time.
+        /// </summary>
+        public WRLDZ.Duel.AiDifficulty AiDifficulty { get; set; } = WRLDZ.Duel.AiDifficulty.Normal;
+
+        /// <summary>
         /// Pre-duel cinematic: decks shuffled, hands empty, turn not started.
         /// UI/AR run deploy + shuffle + draw-from-deck gesture before play.
         /// </summary>

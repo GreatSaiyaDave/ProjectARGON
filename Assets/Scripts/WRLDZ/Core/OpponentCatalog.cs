@@ -181,7 +181,9 @@ namespace WRLDZ.Core
                 if (opp.startingLp >= 1000) c.StartingLp = opp.startingLp;
             }
             c.EntrySource = labTest ? AppSession.SceneBoot : AppSession.SceneMainMenu;
-            c.Difficulty = opp != null ? opp.difficulty : AiDifficulty.Normal;
+            c.Difficulty = opp != null
+                ? OpponentDifficultyPrefs.Get(opp)
+                : AiDifficulty.Normal;
             c.SkipPreDuelCinematic = labTest;
             c.ClampSeparation();
             return c;

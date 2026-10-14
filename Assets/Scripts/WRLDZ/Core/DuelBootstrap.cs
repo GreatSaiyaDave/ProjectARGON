@@ -349,6 +349,8 @@ namespace WRLDZ.Core
             {
                 _engine = new DuelEngine();
                 _engine.HumanVsHuman = match != null && match.IsHumanOpponent;
+                if (match != null)
+                    _engine.AiDifficulty = match.Difficulty;
                 // the format chosen at setup is applied through the rules it names (DuelFormatCatalog is a view over
                 // DuelRulesOverlay / starting LP / the deck list), never through rules of its own
                 if (match != null && match.DkOverlay)

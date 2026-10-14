@@ -37,7 +37,17 @@ namespace WRLDZ.Duel
             }
 
             AiHeuristicPolicy.EnsureLoaded();
-            AiHeuristicPolicy.ApplyDifficulty(AiDifficultyPrefs.Current);
+            var effDiff = (WRLDZ.Duel.AiDifficulty)Math.Max((int)engine.AiDifficulty,
+                                                           (int)WRLDZ.Duel.AiDifficultyPrefs.Current);
+            AiHeuristicPolicy.ApplyDifficulty(effDiff);
+
+            if (engine.TurnNumber <= 1) WRLDZ.Duel.AiArchetypeDetector.Reset();
+            foreach (var m in engine.Player.MonstersOnField())
+                if (m != null && m.FaceUp) WRLDZ.Duel.AiArchetypeDetector.RevealCard(m.CardId);
+            foreach (var m in engine.Opponent.MonstersOnField())
+                if (m != null) WRLDZ.Duel.AiArchetypeDetector.RevealCard(m.CardId);
+            foreach (var s in engine.Player.SpellTrapsOnField())
+                if (s != null && s.FaceUp) WRLDZ.Duel.AiArchetypeDetector.RevealCard(s.CardId);
             // Phase banner already logged by BeginTurn — no ">>> takes their turn" / policy spam.
             engine.LogReview(DuelLogKind.Ai, "AI",
                 $"Turn start — LP you={engine.Player.LifePoints} ai={ai.LifePoints} " +
