@@ -8799,6 +8799,11 @@ namespace WRLDZ.Duel.TextEffects
                     BattleRulesRuntime.ArmOpponentAttackLock(engine, who, source, chosenTarget);
                     break;
 
+                case EffectActionKind.NegateEffectsOfDefensePositionMonstersThisTurn:
+                    // Gorgon's Eye (ContinuousNegation batch): a turn-scoped field rule, not a one-shot.
+                    ContinuousNegationRuntime.ArmGorgonEyes(engine, who, source);
+                    break;
+
                 case EffectActionKind.DiscardRandomFromOpponentHand:
                     DiscardRandomFromOpponentHand(engine, opp, source, clause);
                     break;
@@ -11808,7 +11813,11 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
             }
             // BattlePhaseEnd (v142): Steel Scorpion countdowns count this End Phase.
             if (timing == EffectTiming.EndPhase)
+            {
                 BattlePhaseEndRuntime.TickDelayedDestroys(engine);
+                // Gorgon's Eye (ContinuousNegation batch): its turn has ended (RESET_PHASE|PHASE_END).
+                ContinuousNegationRuntime.EndTurn(engine);
+            }
             // BanishedReturn: D.D. Scout Plane comes back from the banished pile (both players' piles).
             if (timing == EffectTiming.EndPhase)
                 BanishedReturnRuntime.FireEndPhase(engine, who);

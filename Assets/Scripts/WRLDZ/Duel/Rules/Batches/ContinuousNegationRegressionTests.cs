@@ -47,6 +47,7 @@ namespace WRLDZ.Duel.Rules
         const int BurningLand = 24294108;
         const int LabyrinthOfNightmare = 66526672;
         const int Ectoplasmer = 97342942;
+        const int GorgonsEye = 52648457;
 
         public static void Run(CardDatabase db, DeckFile pDeck, DeckFile aDeck,
             Action<string, bool, string> check)
@@ -1253,6 +1254,62 @@ namespace WRLDZ.Duel.Rules
                 Check("Imperial Order: Ectoplasmer makes no Tribute and deals no damage",
                     noTribute && tributeControl, $"io[{de1}] control[{de2}]");
             });
+
+            Guard("gorgon's eye", () =>
+            {
+                var prog = CardTextEffectCompiler.Compile(db.Get(GorgonsEye));
+                Check("Gorgon's Eye: FullyCompiled — a Normal Trap negating every Defense Position monster's " +
+                      "effects until the end of the turn; Implemented",
+                    prog != null && prog.FullyCompiled &&
+                    CardEffectStatus.Classify(db.Get(GorgonsEye)) == CardEffectStatusKind.Implemented &&
+                    prog.ClauseList.Count == 1 &&
+                    prog.ClauseList[0].Action ==
+                        EffectActionKind.NegateEffectsOfDefensePositionMonstersThisTurn &&
+                    prog.ClauseList[0].Timing == EffectTiming.Activate &&
+                    prog.ClauseList[0].Side == EffectSide.Both &&
+                    prog.ClauseList[0].MakesChainLink && !prog.ClauseList[0].RequiresTargetChoice,
+                    prog == null ? "null" : string.Join(" | ", prog.UnparsedFragments ?? Array.Empty<string>()));
+
+                var e = FreshHvh(db, pDeck, aDeck);
+                var p = e.Player;
+                var o = e.Opponent;
+                ReachMain(e, p);
+                ClearAll(e);
+                var mineDef = PlaceMonster(e, p, Celtic, 0, BattlePosition.Defense, true);
+                var mineAtk = PlaceMonster(e, p, DarkMagician, 1, BattlePosition.Attack, true);
+                var theirsDef = PlaceMonster(e, o, Celtic, 2, BattlePosition.Defense, true);
+                var theirsAtk = PlaceMonster(e, o, DarkMagician, 3, BattlePosition.Attack, true);
+                // Gorgon's Eye is a Normal Trap: it must be Set for a turn before it can be activated.
+                var gorgon = PlaceSetTrap(e, p, GorgonsEye, 0);
+                gorgon.SetThisTurn = false;
+                e.NotifyPublic();
+                var activated = e.TryActivateSpellTrap(p, gorgon, false);
+                PassAll(e);
+                FieldSpellEffects.RefreshBoard(e);
+                Check("Gorgon's Eye: every face-up Defense Position monster on the field is negated (both sides)",
+                    activated && p.Graveyard.Contains(gorgon) &&
+                    mineDef.GorgonEyeNegated && theirsDef.GorgonEyeNegated &&
+                    !mineAtk.GorgonEyeNegated && !theirsAtk.GorgonEyeNegated &&
+                    mineDef.IsNegated && theirsDef.IsNegated && !mineAtk.IsNegated && !theirsAtk.IsNegated,
+                    $"activated={activated} mineDef={mineDef.GorgonEyeNegated} theirsDef={theirsDef.GorgonEyeNegated} " +
+                    $"mineAtk={mineAtk.GorgonEyeNegated} theirsAtk={theirsAtk.GorgonEyeNegated} " +
+                    $"negDef={mineDef.IsNegated} negAtk={mineAtk.IsNegated}");
+
+                var flipped = e.TryChangePosition(p, mineDef);
+                FieldSpellEffects.RefreshBoard(e);
+                Check("Gorgon's Eye: a monster changed to Attack Position is no longer negated (the rule follows " +
+                      "the position)",
+                    flipped && !mineDef.GorgonEyeNegated && mineDef.Position == BattlePosition.Attack &&
+                    !mineDef.IsNegated && theirsDef.GorgonEyeNegated,
+                    $"flipped={flipped} pos={mineDef.Position} neg={mineDef.GorgonEyeNegated} " +
+                    $"theirs={theirsDef.GorgonEyeNegated}");
+
+                e.EndTurn(p);
+                PassAll(e);
+                Check("Gorgon's Eye: after the End Phase the negation is over",
+                    !theirsDef.GorgonEyeNegated && !theirsDef.IsNegated,
+                    $"theirsDef={theirsDef.GorgonEyeNegated} neg={theirsDef.IsNegated}");
+            });
         }
 
         // ───────────────────────────── helpers ─────────────────────────────
@@ -1340,5 +1397,6 @@ namespace WRLDZ.Duel.Rules
                 else e.RecoverStuckCombat();
             }
         }
+
     }
 }

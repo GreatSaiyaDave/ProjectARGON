@@ -366,6 +366,9 @@ namespace WRLDZ.Duel.TextEffects
                     EffectResolutionKind.Protection,
                 // TurnNegationTraps (v141): same kind as The Emperor's Holiday's field-wide negation.
                 EffectActionKind.NegateCardFamilyOnFieldThisTurn => EffectResolutionKind.Protection,
+                // ContinuousNegation batch: Gorgon's Eye — the same turn-scoped negation family (a field
+                // EFFECT_DISABLE with RESET_PHASE|PHASE_END over the Defense Position monsters).
+                EffectActionKind.NegateEffectsOfDefensePositionMonstersThisTurn => EffectResolutionKind.Protection,
                 // DiscardTriggers (v142): GY → Deck, shuffled (Penguin Knight); hand → GY discards (Delinquent Duo).
                 EffectActionKind.ShuffleGraveyardIntoDeck => EffectResolutionKind.ReturnToDeck,
                 // MfcSimpleSpellsB batch (v174): Hidden Spellbook — GY Spell targets into the Deck, shuffled.

@@ -3372,6 +3372,14 @@ namespace WRLDZ.Duel.TextEffects
         /// turn player, not this card's controller (that is what BOTH_SIDE buys).
         /// </summary>
         SpecialSummonLevelNormalFromHandAtEachPlayersEndPhase,
+        /// <summary>
+        /// Gorgon's Eye (c52648457): a Normal Trap. Until the end of this turn the effects of every face-up
+        /// monster in face-up Defense Position on the field are negated (ygopro a field EFFECT_DISABLE with
+        /// RESET_PHASE|PHASE_END over both Monster Zones). Recomputed on each board refresh by
+        /// <see cref="ContinuousNegationRuntime.Refresh"/>; read through
+        /// <see cref="CardInstance.GorgonEyeNegated"/>.
+        /// </summary>
+        NegateEffectsOfDefensePositionMonstersThisTurn,
     }
 
 

@@ -422,6 +422,13 @@ namespace WRLDZ.Duel
         /// </summary>
         public List<TextEffects.AttackerHalvingMark> AttackerHalvingMarks;
 
+        /// <summary>
+        /// Gorgon's Eye (ContinuousNegation batch): this face-up monster's effects are negated until the end of
+        /// the turn, because it is in face-up Defense Position while that Trap is on the field. Recomputed on
+        /// every board refresh (ContinuousNegationRuntime.Refresh), so it never outlives its condition.
+        /// </summary>
+        public bool GorgonEyeNegated;
+
         /// <summary>Set only by official continuous effect scripts — never inferred from free text.</summary>
         public bool HasPiercing;
         public bool CannotBeDestroyedByBattle;
@@ -445,7 +452,8 @@ namespace WRLDZ.Duel
         /// with only a granted effect (BothSideAndMonsterEquip, v161): whether this card's effects, the granted one
         /// included, are negated (the stored flag, <see cref="NegatedByTurnFamily"/>, <see cref="ActivationUnresolvedOnChain"/>).
         /// </summary>
-        public bool IsEffectNegatedAsCard => _isNegated || NegatedByTurnFamily || ActivationUnresolvedOnChain || EffectsNegatedAfterBattle;
+        public bool IsEffectNegatedAsCard => _isNegated || NegatedByTurnFamily || ActivationUnresolvedOnChain ||
+                                            EffectsNegatedAfterBattle || GorgonEyeNegated;
 
         bool _isNegated;
 

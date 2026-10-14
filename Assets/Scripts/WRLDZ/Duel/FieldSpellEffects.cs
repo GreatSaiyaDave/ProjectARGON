@@ -68,6 +68,9 @@ namespace WRLDZ.Duel
             // First, before any modifier is cleared: a negated Snatch Steal hands its monster back, and that
             // control change may refresh the board again.
             ContinuousNegationRuntime.Refresh(engine);
+            // Gorgon's Eye (ContinuousNegation batch): recompute the Defense Position negation after the family
+            // negation above, so a monster negated both ways reads as negated either way.
+            ContinuousNegationRuntime.RefreshGorgonEyes(engine);
             // EquipModel batch: a control Equip negated by Armored Glass / The Emperor's Holiday gives its monster back
             // (and takes it again once the negation ends), before the auras below are computed.
             EquipModelRuntime.SyncNegatedControlEquips(engine);

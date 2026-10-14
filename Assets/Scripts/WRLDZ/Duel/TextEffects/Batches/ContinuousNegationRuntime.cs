@@ -54,6 +54,8 @@ namespace WRLDZ.Duel.TextEffects
             public readonly Dictionary<CardInstance, CardInstance> ControlSuspended = new();
             /// <summary>Re-entrancy guard: a control change notifies, which can refresh the board again.</summary>
             public bool SyncingControl;
+            /// <summary>Gorgon's Eye traps that are applying this turn (face-up on the field, still armed).</summary>
+            public readonly List<CardInstance> GorgonEyes = new();
         }
 
         sealed class Source
@@ -621,5 +623,57 @@ namespace WRLDZ.Duel.TextEffects
         public static bool NegatesMonsterEffectOnField(DuelEngine engine, CardInstance monster) =>
             engine != null && monster?.Def != null && monster.Def.IsMonster &&
             NegatesResolvingMonsterEffect(engine, monster);
+
+        // ───────────────────────── Gorgon's Eye ─────────────────────────
+
+        /// <summary>
+        /// Gorgon's Eye (c52648457) at resolution: arm this turn's negation of every face-up monster in face-up
+        /// Defense Position on both Monster Zones. It is a field rule (ygopro EFFECT_DISABLE with
+        /// RESET_PHASE|PHASE_END), so <see cref="Refresh"/> recomputes it on every board change and
+        /// <see cref="EndTurn"/> clears it.
+        /// </summary>
+        public static void ArmGorgonEyes(DuelEngine engine, DuelistState who, CardInstance source)
+        {
+            if (engine == null || source == null) return;
+            var st = StateOf(engine);
+            if (!st.GorgonEyes.Contains(source)) st.GorgonEyes.Add(source);
+            engine.Log($"{source.Name}: until the end of this turn the effects of Defense Position monsters are negated.");
+            Refresh(engine);
+        }
+
+        /// <summary>
+        /// Gorgon's Eye: recompute <see cref="CardInstance.GorgonEyeNegated"/> on every monster both players
+        /// control. The negation ends when no armed Trap is face-up on the field, when the monster is no longer
+        /// face-up in Defense Position, and at the end of the turn (<see cref="EndTurn"/>).
+        /// </summary>
+        public static void RefreshGorgonEyes(DuelEngine engine)
+        {
+            if (engine == null) return;
+            var st = StateOf(engine);
+            // Gorgon's Eye is a Normal Trap and goes to the GY, but ygopro registers its field EFFECT_DISABLE on the
+            // card itself, so the negation lasts the turn wherever the card ended up. Only the turn ends it
+            // (EndTurn) — do not drop it while it is off the field or negated.
+            if (st.GorgonEyes.Count == 0) return;
+            foreach (var who in new[] { engine.Player, engine.Opponent })
+            {
+                if (who == null) continue;
+                foreach (var m in who.MonstersOnField())
+                    if (m != null) m.GorgonEyeNegated = m.FaceUp && m.Position == BattlePosition.Defense;
+            }
+        }
+
+        /// <summary>End Phase: Gorgon's Eye's turn has ended (RESET_PHASE|PHASE_END).</summary>
+        public static void EndTurn(DuelEngine engine)
+        {
+            if (engine == null) return;
+            if (!s_state.TryGetValue(engine, out var st)) return;
+            st.GorgonEyes.Clear();
+            foreach (var who in new[] { engine.Player, engine.Opponent })
+            {
+                if (who == null) continue;
+                foreach (var m in who.MonstersOnField())
+                    if (m != null) m.GorgonEyeNegated = false;
+            }
+        }
     }
 }

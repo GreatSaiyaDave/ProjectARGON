@@ -71,6 +71,19 @@ namespace WRLDZ.Duel.TextEffects
                     StaysOnField = true,
                     MakesChainLink = true
                 }),
+
+            // Gorgon's Eye (c52648457): a Normal Trap whose whole text is one sentence. ygopro registers a
+            // field EFFECT_DISABLE (target range MZONE, both sides, target face-up Defense Position) reset at
+            // the End Phase — a continuous rule recomputed on every board refresh, not a one-shot negation.
+            new AtomRegistration.Atom(
+                Start + @"Until the end of this turn, all effects of Defense Position monsters are negated" + End,
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.NegateEffectsOfDefensePositionMonstersThisTurn,
+                    Side = EffectSide.Both,
+                    MakesChainLink = true
+                }),
         };
 
         static bool IsTrap(Match m, int group) =>
