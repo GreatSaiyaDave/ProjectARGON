@@ -186,6 +186,12 @@ namespace WRLDZ.Duel.TextEffects
             @"on your opponent's side of the field until the end of the End Phase\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        /// <summary>Rafflesia Seduction (c31440542): Flip take 1 face-up monster until the end of this turn.</summary>
+        static readonly Regex RxFlipTakeControlFaceUpUntilEndOfTurn = new(
+            @"FLIP:\s*Take control of 1 face-up monster " +
+            @"on your opponent's side of the field until the end of this turn\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         /// <summary>Soul Release family: banish up to N cards from either GY.</summary>
         static readonly Regex RxBanishUpToCardsAnyGy = new(
             @"Target up to (\d+) cards in any GY(?:\(s\))?;\s*banish them\.?",
@@ -1817,6 +1823,20 @@ namespace WRLDZ.Duel.TextEffects
                     Action = EffectActionKind.TakeControlUntilEndPhase,
                     Zone = EffectZoneFilter.OppFaceUpMonsters,
                     RaceFilter = flipCtrlFace.Groups[1].Value,
+                    RequiresTargetChoice = true,
+                    Amount = 1
+                }
+                : null);
+
+            // Rafflesia Seduction (c31440542): the unraced "until the end of this turn" print. Same
+            // TakeControlUntilEndPhase runtime; control reverts at the End Phase.
+            var flipCtrlTurn = RxFlipTakeControlFaceUpUntilEndOfTurn.Match(text);
+            Take(flipCtrlTurn, flipCtrlTurn.Success
+                ? new EffectClause
+                {
+                    Timing = EffectTiming.Flip,
+                    Action = EffectActionKind.TakeControlUntilEndPhase,
+                    Zone = EffectZoneFilter.OppFaceUpMonsters,
                     RequiresTargetChoice = true,
                     Amount = 1
                 }

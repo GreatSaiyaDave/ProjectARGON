@@ -42,13 +42,21 @@ namespace WRLDZ.Data
         public string BottomsHex;
         public string ShoesHex;
 
+        /// <summary>
+        /// If set, loads a full character FBX from Resources/WRLDZ/Avatar3D/Characters/{characterId}
+        /// instead of building the modular avatar from grafted parts. The model's own textures and
+        /// mesh are used; animation retargets via the Humanoid avatar. Falls back to modular if the
+        /// asset is missing.
+        /// </summary>
+        public string CharacterId;
+
         public bool FitsBody(bool female) => BodyType < 0 || BodyType == (female ? 1 : 0);
 
         public void ApplyTo(AvatarAppearance a)
         {
             if (a == null) return;
             a.outfitId = "";
-            a.characterId = "";
+            a.characterId = CharacterId; // full character model takes precedence over modular parts when present
             a.silhouette = false;
             // A signature set is its own painted albedo: drop any garment paints carried over from the previous look
             // (AiDuelistLooks sets generic coat colours before this runs; while the Clothes/ masks imported broken they
@@ -106,9 +114,9 @@ namespace WRLDZ.Data
             // Duelist Kingdom first. The DK story (season1_dk) is the live campaign, so the *_dk rows sit
             // ahead of their Battle City counterparts: Match() keeps the first row on an equal-length match,
             // so a plain "yugi"/"kaiba" resolves to the DK set while the BC set stays equippable.
-            L("yugi_dk", "Duelist Kingdom Yugi", "yugi", 0, "yugi_muto", "yugi_muto", 153f, 0.40f, "shirt_yugi_dk", "bottoms_yugi_dk", "shoes_yugi_dk", "hands_yugi_dk"),
+            L("yugi_dk", "Duelist Kingdom Yugi", "yugi", 0, "yugi_muto", "yugi_muto", 153f, 0.40f, "shirt_yugi_dk", "bottoms_yugi_dk", "shoes_yugi_dk", "hands_yugi_dk", characterId: "yugi"),
             L("kaiba_dk", "Duelist Kingdom Kaiba", "kaiba", 0, "seto_kaiba", "seto_kaiba", 186f, 0.35f, "shirt_kaiba_dk", "bottoms_kaiba_dk", "shoes_kaiba_dk", "hands_kaiba_dk"),
-            L("yugi_bc", "Battle City Yugi", "yugi", 0, "yugi_muto", "yugi_muto", 153f, 0.40f, "shirt_yugi_bc", "bottoms_yugi_bc", "shoes_yugi_bc", null),
+            L("yugi_bc", "Battle City Yugi", "yugi", 0, "yugi_muto", "yugi_muto", 153f, 0.40f, "shirt_yugi_bc", "bottoms_yugi_bc", "shoes_yugi_bc", null, characterId: "yugi"),
             L("kaiba_bc", "Battle City Kaiba", "kaiba", 0, "seto_kaiba", "seto_kaiba", 186f, 0.35f, "shirt_kaiba_bc", "bottoms_kaiba_bc", "shoes_kaiba_bc", null),
             L("joey_bc", "Battle City Joey", "joey", 0, "joey_wheeler", "joey_wheeler", 178f, 0.50f, "shirt_joey_bc", "bottoms_joey_bc", "shoes_joey_bc", null),
             L("mai_bc", "Battle City Mai", "mai", 1, "mai_valentine", "mai_valentine", 170f, 0.45f, "shirt_mai_bc", "bottoms_mai_bc", "shoes_mai_bc", "hands_mai_bc"),
@@ -130,9 +138,10 @@ namespace WRLDZ.Data
             L("duke_bc", "Battle City Duke", "duke", 0, "joey_wheeler", "duke", 180f, 0.45f, "shirt_duke_bc", "bottoms_duke_bc", "shoes_duke_bc", null, hairPattern: 1, hairHex: "#333333"),
             L("tristan_bc", "Battle City Tristan", "tristan", 0, "tristan_quiff", "tristan", 180f, 0.60f, "shirt_tristan_bc", "bottoms_tristan_bc", "shoes_tristan_bc", null, hairPattern: 1, hairHex: "#62442D"),
             L("mokuba_bc", "Battle City Mokuba", "mokuba", 0, "mokuba_kaiba", "mokuba_kaiba", 155f, 0.35f, "shirt_mokuba_bc", "bottoms_mokuba_bc", "shoes_mokuba_bc", null, hairPattern: 4, hairHex: "#1E1E1E", hairStreak: "#4C557E"),
-            L("yami_yugi_dk", "Duelist Kingdom Yami Yugi", "yami yugi", 0, "yugi_muto", "yami_yugi", 158f, 0.38f, "shirt_yami_dk", "bottoms_yami_dk", "shoes_yugi_dk", "hands_yugi_dk"),
+            L("yami_yugi_dk", "Duelist Kingdom Yami Yugi", "yami yugi", 0, "yugi_muto", "yami_yugi",
+                158f, 0.38f, "shirt_yami_dk", "bottoms_yami_dk", "shoes_yugi_dk", "hands_yugi_dk", characterId: "yami_yugi"),
             // The Domino cape albedo is the black tank and blue blazer. A shirt hex flattened it to navy.
-            L("yami_yugi", "Yami Yugi", "yami yugi", 0, "yugi_muto", "yami_yugi", 158f, 0.38f, "shirt_yugi_bc", "bottoms_yugi_bc", "shoes_yugi_bc", null),
+            L("yami_yugi", "Yami Yugi", "yami yugi", 0, "yugi_muto", "yami_yugi", 158f, 0.38f, "shirt_yugi_bc", "bottoms_yugi_bc", "shoes_yugi_bc", null, characterId: "yami_yugi"),
             L("yami_bakura", "Yami Bakura", "yami bakura", 0, "yami_bakura", "yami_bakura", 176f, 0.35f, "shirt_bakura_bc", "bottoms_bakura_bc", "shoes_bakura_bc", null, skin: "#CFAC8D"),
             // Hood hides the borrowed Kaiba hair. The coat is the generic duel coat, painted near-black.
             L("panik_dk", "Duelist Kingdom PaniK", "panik", 0, "seto_kaiba", "panik", 185f, 0.55f, "shirt_duelcoat", "bottoms_plain", "shoes_boots", "hands_panik_dk", hat: "hat_odion_bc", hairPattern: 1, hairHex: "#2E465C", skin: "#C4B8A8", shirtHex: "#141018"),
@@ -190,7 +199,8 @@ namespace WRLDZ.Data
             float height, float weight, string shirt, string bottoms, string shoes, string hands,
             string facial = null, string hat = null, int hairPattern = 0, string hairHex = null, string skin = null,
             string shirtHex = null, string bottomsHex = null, string shoesHex = null,
-            string hairTip = null, string hairFringe = null, string hairStreak = null, string shirtTrimHex = null) =>
+            string hairTip = null, string hairFringe = null, string hairStreak = null, string shirtTrimHex = null,
+            string characterId = null) =>
             new()
             {
                 Id = id,
@@ -216,7 +226,8 @@ namespace WRLDZ.Data
                 ShirtHex = shirtHex,
                 ShirtTrimHex = shirtTrimHex,
                 BottomsHex = bottomsHex,
-                ShoesHex = shoesHex
+                ShoesHex = shoesHex,
+                CharacterId = characterId
             };
     }
 }
