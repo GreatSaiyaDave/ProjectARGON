@@ -326,6 +326,8 @@ namespace WRLDZ.Presentation
                 return;
             }
             transform.localScale = Vector3.one * (_baseScale * Mathf.Clamp(look.HeightScale, 0.75f, 1.25f));
+            // suppress any base shell that has a grafted counterpart (stops two meshes colliding on AR duelists)
+            ReconcileGraftedShells();
             // the hair first: a freshly grafted style must take the weight morph below too
             ApplyHairStyle(string.IsNullOrEmpty(look.hairStyleId) ? DefaultHairId(_sex == "female") : look.hairStyleId);
             ApplyOutfit(look.outfitId ?? "");
@@ -607,6 +609,36 @@ namespace WRLDZ.Presentation
                 else if (r.name == "ArgonPart_Shoes") r.gameObject.SetActive(!shoes);
             }
             SetBodyHide(CombineHides(hides));
+        }
+
+        /// <summary>
+        /// If a grafted shell (ArgonHair/Cloth/Outfit) exists, hide the built-in counterpart so only one surface draws;
+        /// prevents the two-mesh collision / z-fighting seen before fix-up (AR duelist case).
+        /// </summary>
+        void ReconcileGraftedShells()
+        {
+            if (_fullCharacter) return;
+            var hasGraftedHair = _hairSmr != null;
+            var hasGraftedShirt = false; var hasGraftedBottoms = false; var hasGraftedShoes = false;
+            foreach (var r in GetComponentsInChildren<SkinnedMeshRenderer>(true))
+            {
+                if (r.name == null) continue;
+                if (r.name.StartsWith("ArgonHair_")) hasGraftedHair = true;
+                if (r.name.StartsWith("ArgonCloth_") || r.name.StartsWith("ArgonOutfit_"))
+                {
+                    if (r.name.Contains("shirt") || r.name.Contains("top")) hasGraftedShirt = true;
+                    if (r.name.Contains("bottom") || r.name.Contains("pant")) hasGraftedBottoms = true;
+                    if (r.name.Contains("shoe")) hasGraftedShoes = true;
+                }
+            }
+            foreach (var r in GetComponentsInChildren<SkinnedMeshRenderer>(true))
+            {
+                if (r.name == "ArgonPart_Hair") r.gameObject.SetActive(!hasGraftedHair && (_hairSmr == null));
+                if (r.name == "ArgonPart_Shirt") r.gameObject.SetActive(!hasGraftedShirt);
+                if (r.name == "ArgonPart_Bottoms") r.gameObject.SetActive(!hasGraftedBottoms);
+                if (r.name == "ArgonPart_Shoes") r.gameObject.SetActive(!hasGraftedShoes);
+            }
+            if (hasGraftedHair && _hairSmr != null) _hairSmr.gameObject.SetActive(true);
         }
 
         /// <summary>
