@@ -172,7 +172,12 @@ namespace WRLDZ.Presentation
                 r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                 if (r is SkinnedMeshRenderer smr) smr.updateWhenOffscreen = true;
             }
-            var modelHeight = any ? Mathf.Max(0.2f, bounds.size.y) : 1.75f;
+            // Bounds auto-computed from skinned meshes can come out too small (e.g. loose fitting parts
+            // lifted off the ground, or origin-offset meshes), which inflates the scale and makes
+            // Yugi (153 cm) render too tall. Use the manual model height as authored when the measured
+            // bounds are outside a sane character range.
+            var measuredHeight = any ? Mathf.Max(0.2f, bounds.size.y) : 1.75f;
+            var modelHeight = (measuredHeight < 1.0f || measuredHeight > 3.0f) ? 1.75f : measuredHeight;
             av._characterHeightM = modelHeight;
             av.IndexShapes();
             av.Apply(look);
