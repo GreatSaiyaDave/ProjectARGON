@@ -25,6 +25,17 @@ namespace WRLDZ.Duel
         public bool GameOver { get; private set; }
         public DuelistState Winner { get; private set; }
 
+        /// <summary>
+        /// Regression-test hook: fast-forward the duel into <paramref name="who"/>'s
+        /// <see cref="DuelPhase.Main1"/> so summon procedures can be exercised directly.
+        /// </summary>
+        internal void Test_SetMainPhase(DuelistState who)
+        {
+            if (who == null) return;
+            TurnPlayer = who;
+            Phase = DuelPhase.Main1;
+        }
+
         /// <summary>How the duel ended (<see cref="DuelEndReason.None"/> while it is running).</summary>
         public DuelEndReason EndReason { get; private set; }
 
@@ -2836,6 +2847,8 @@ namespace WRLDZ.Duel
             var banishInstead = TextEffects.RedirectAndReplaceRuntime.SendsToBanishedInstead(this, card);
             var fromFieldMonster = owner.TryFindMonster(card, out var mi);
             var fromFieldSt = owner.TryFindSpellTrap(card, out var si);
+            var fromPendulumZone = owner.PendulumZones != null &&
+                                   (owner.PendulumZones[0]?.Occupant == card || owner.PendulumZones[1]?.Occupant == card);
             // S/T leaving field:
             // · Activation resolve → fade hologram (SpellActivationPresentation)
             // · Destroyed by effect (MST / Heavy Storm) → shatter
@@ -2874,6 +2887,27 @@ namespace WRLDZ.Duel
                 UnlinkCardFromHostOnLeave(owner, card, fromFieldSt);
                 if (fromFieldMonster)
                     UnlinkEquips(card, hostDestroyed: false, fallbackOwner: owner, leavingToGy: false);
+                return;
+            }
+
+            // Pendulum Monsters (Rulebook): a card that would be sent from the field to the Graveyard is placed
+            // face-up in the Extra Deck instead. This covers destruction, being Tributed, and use as Tribute /
+            // Synchro / Fusion Material — from a Monster Zone or a Pendulum Zone. It is NOT a "sent to the GY"
+            // event, so no field-to-GY trigger fires. A banish-instead (Banisher of the Light) is resolved above
+            // and wins; an Xyz Material is attached by TryXyzSummon and never passes through here while on the field.
+            if ((fromFieldMonster || fromPendulumZone) && card.Def != null && card.Def.IsPendulumMonster)
+            {
+                card.SentAsFusionMaterialFor = null;
+                card.FaceUp = true;
+                pile.ExtraDeckFaceUp ??= new System.Collections.Generic.List<CardInstance>();
+                if (!pile.ExtraDeckFaceUp.Contains(card))
+                    pile.ExtraDeckFaceUp.Add(card);
+                PendingTributes.Remove(card);
+                UnlinkCardFromHostOnLeave(owner, card, fromFieldSt);
+                if (fromFieldMonster)
+                    UnlinkEquips(card, hostDestroyed: false, fallbackOwner: owner, leavingToGy: false);
+                Log($"{card.Name} is placed face-up in the Extra Deck (Pendulum Monster).");
+                Notify();
                 return;
             }
 
@@ -3261,6 +3295,220 @@ namespace WRLDZ.Duel
             return summoned;
         }
 
+        // ────────────────── Pre-Link Extra Deck procedures (Synchro / Xyz) ──────────────────
+
+        /// <summary>A side-effect-free view of a card definition (no instance id / deck bookkeeping).</summary>
+        CardInstance PeekCard(int cardId) =>
+            new CardInstance
+            {
+                CardId = cardId,
+                Def = _db != null && _db.TryGet(cardId, out var d) ? d : null
+            };
+
+        /// <summary>
+        /// Legality of a Synchro Summon of <paramref name="synchroCardId"/> using <paramref name="materials"/>
+        /// (face-up monsters <paramref name="who"/> controls). Structural rules only — Tuner math and Level total
+        /// read from the printed material line (<see cref="Rules.ExtraDeckProcedures"/>).
+        /// </summary>
+        public bool CanSynchroSummon(DuelistState who, int synchroCardId, List<CardInstance> materials, out string reason) =>
+            Rules.ExtraDeckProcedures.ValidateSynchro(this, who, PeekCard(synchroCardId), materials, out reason);
+
+        /// <summary>Every Extra Deck monster that can be Synchro Summoned right now, with its legal material set.</summary>
+        public List<(int cardId, List<CardInstance> materials)> LegalSynchroSummons(DuelistState who)
+        {
+            var result = new List<(int, List<CardInstance>)>();
+            if (who == null) return result;
+            foreach (var id in who.ExtraDeck.Distinct())
+            {
+                var def = PeekCard(id).Def;
+                if (def is not { IsSynchroMonster: true }) continue;
+                if (!Rules.ExtraDeckProcedures.SummonWindowOpen(this, who, "Synchro Summon", out _)) continue;
+                var mats = Rules.ExtraDeckProcedures.FindSynchroMaterials(who, def);
+                if (mats != null && mats.Count > 0) result.Add((id, mats));
+            }
+
+            return result;
+        }
+
+        /// <summary>Every Extra Deck monster that can be Xyz Summoned right now, with its legal material set.</summary>
+        public List<(int cardId, List<CardInstance> materials)> LegalXyzSummons(DuelistState who)
+        {
+            var result = new List<(int, List<CardInstance>)>();
+            if (who == null) return result;
+            foreach (var id in who.ExtraDeck.Distinct())
+            {
+                var def = PeekCard(id).Def;
+                if (def is not { IsXyzMonster: true }) continue;
+                if (!Rules.ExtraDeckProcedures.SummonWindowOpen(this, who, "Xyz Summon", out _)) continue;
+                var mats = Rules.ExtraDeckProcedures.FindXyzMaterials(who, def);
+                if (mats != null && mats.Count > 0) result.Add((id, mats));
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Perform a Synchro Summon: the materials go to the Graveyard (a Pendulum Material goes face-up to the
+        /// Extra Deck instead), the Synchro Monster leaves the Extra Deck, and it is Special Summoned with a
+        /// summon-negation window. Legal only when <see cref="CanSynchroSummon"/> says so.
+        /// </summary>
+        public bool TrySynchroSummon(DuelistState who, int synchroCardId, List<CardInstance> materials, int preferredZone = -1)
+        {
+            if (!CanSynchroSummon(who, synchroCardId, materials, out var reason))
+            {
+                Log($"Illegal Synchro Summon: {reason}");
+                return false;
+            }
+
+            var synchro = CreateCardInstance(synchroCardId);
+            if (synchro?.Def == null) return false;
+
+            who.ExtraDeck.Remove(synchroCardId);
+            foreach (var m in materials)
+            {
+                Log($"Synchro Material: {m.Name}");
+                SendCardToGrave(who, m, synchro);
+            }
+
+            _inherentProcedureSummon = true;
+            _procedureSummonNegatable = true;
+            bool summoned;
+            try
+            {
+                summoned = SpecialSummonToField(who, synchro, BattlePosition.Attack, true, SummonKind.SynchroSummon, preferredZone);
+            }
+            finally
+            {
+                _inherentProcedureSummon = false;
+                _procedureSummonNegatable = false;
+            }
+
+            if (!summoned)
+            {
+                if (!who.ExtraDeck.Contains(synchroCardId)) who.ExtraDeck.Add(synchroCardId);
+                return false;
+            }
+
+            Log($"{who.Name} Synchro Summons {synchro.Name}!");
+            return true;
+        }
+
+        /// <summary>Legality of an Xyz Summon of <paramref name="xyzCardId"/> using <paramref name="materials"/>.</summary>
+        public bool CanXyzSummon(DuelistState who, int xyzCardId, List<CardInstance> materials, out string reason) =>
+            Rules.ExtraDeckProcedures.ValidateXyz(this, who, PeekCard(xyzCardId), materials, out reason);
+
+        /// <summary>
+        /// Perform an Xyz Summon: the materials are NOT sent to the Graveyard — they are detached from their
+        /// Monster Zones and become Xyz Material under the new Xyz Monster, which leaves the Extra Deck and is
+        /// Special Summoned with a summon-negation window. Legal only when <see cref="CanXyzSummon"/> says so.
+        /// </summary>
+        public bool TryXyzSummon(DuelistState who, int xyzCardId, List<CardInstance> materials, int preferredZone = -1)
+        {
+            if (!CanXyzSummon(who, xyzCardId, materials, out var reason))
+            {
+                Log($"Illegal Xyz Summon: {reason}");
+                return false;
+            }
+
+            var xyz = CreateCardInstance(xyzCardId);
+            if (xyz?.Def == null) return false;
+
+            who.ExtraDeck.Remove(xyzCardId);
+
+            // Detach the materials from their zones; keep the zone indexes so a failed Summon can restore them.
+            var detached = new List<(CardInstance card, int zone)>();
+            foreach (var m in materials)
+            {
+                if (who.TryFindMonster(m, out var zi) && zi >= 0 && zi < who.MonsterZones.Length)
+                {
+                    detached.Add((m, zi));
+                    who.MonsterZones[zi].Occupant = null;
+                }
+            }
+
+            _inherentProcedureSummon = true;
+            _procedureSummonNegatable = true;
+            bool summoned;
+            try
+            {
+                summoned = SpecialSummonToField(who, xyz, BattlePosition.Attack, true, SummonKind.XyzSummon, preferredZone);
+            }
+            finally
+            {
+                _inherentProcedureSummon = false;
+                _procedureSummonNegatable = false;
+            }
+
+            if (!summoned)
+            {
+                foreach (var (card, zone) in detached)
+                    if (who.MonsterZones[zone].Occupant == null)
+                        who.MonsterZones[zone].Occupant = card;
+                if (!who.ExtraDeck.Contains(xyzCardId)) who.ExtraDeck.Add(xyzCardId);
+                return false;
+            }
+
+            xyz.OverlayMaterials = new List<CardInstance>(materials);
+            Log($"{who.Name} Xyz Summons {xyz.Name}!");
+            return true;
+        }
+
+        // ───────────────────────────────── Pendulum Summon ─────────────────────────────────
+
+        public bool CanPendulumSummon(DuelistState who, List<CardInstance> monsters, out string reason) =>
+            Rules.ExtraDeckProcedures.ValidatePendulumSummon(this, who, monsters, out reason);
+
+        /// <summary>All monsters selectable for a Pendulum Summon right now (hand + face-up Extra Deck, in range).</summary>
+        public List<CardInstance> PendulumSummonCandidates(DuelistState who) =>
+            Rules.ExtraDeckProcedures.PendulumSummonCandidates(who);
+
+        /// <summary>
+        /// Perform a Pendulum Summon of <paramref name="monsters"/> — any number of hand monsters and/or face-up
+        /// Extra Deck Pendulum Monsters whose Levels are strictly between the two Scales — all at once, face-up.
+        /// Once per turn (the flag is consumed even if a summon fails, per the Rulebook).
+        /// </summary>
+        public bool TryPendulumSummon(DuelistState who, List<CardInstance> monsters, BattlePosition pos = BattlePosition.Attack)
+        {
+            if (!CanPendulumSummon(who, monsters, out var reason))
+            {
+                Log($"Illegal Pendulum Summon: {reason}");
+                return false;
+            }
+
+            who.PendulumSummonedThisTurn = true;
+
+            bool all = true;
+            foreach (var c in monsters)
+            {
+                var fromHand = who.Hand.Contains(c);
+                if (fromHand) who.Hand.Remove(c);
+                else if (who.ExtraDeckFaceUp.Contains(c)) who.ExtraDeckFaceUp.Remove(c);
+                else { all = false; continue; }
+
+                if (fromHand) MarkSpecialSummonFromHand(c); // Chain Energy toll (RuleLocks batch)
+
+                // A Pendulum Summon is a game mechanic, not a card's own procedure; the whole group is one
+                // Special Summon. Simultaneous negation is not modelled yet, so no per-card negation window.
+                _inherentProcedureSummon = true;
+                _procedureSummonNegatable = false;
+                bool ok;
+                try
+                {
+                    ok = SpecialSummonToField(who, c, pos, true, SummonKind.PendulumSummon);
+                }
+                finally
+                {
+                    _inherentProcedureSummon = false;
+                    _procedureSummonNegatable = false;
+                }
+
+                if (ok) Log($"Pendulum Summoned: {c.Name}");
+                else all = false;
+            }
+
+            return all;
+        }
+
         /// <summary>
         /// Special Summon with an explicit procedure kind. A printed hard-Nomi gate
         /// can only be opened by a procedure registered for this card and kind;
@@ -3396,9 +3644,12 @@ namespace WRLDZ.Duel
                 TextEffects.RuleLocksRuntime.PayHandActionCost(this, who, card, "Special Summon");
             if (!TextEffects.SpecialSummonLegality.PaySummonCosts(this, who, card, summonOrigin))
                 return false;
-            // FlipMassEffects (v142): a Ritual / Fusion Summon is a proper Summon — that copy may later be Special
-            // Summoned from the GY or banishment (ygopro STATUS_PROC_COMPLETE; Spear Cretin's GY targets).
-            if (summonKind == SummonKind.RitualSummon || summonKind == SummonKind.FusionSummon)
+            // FlipMassEffects (v142): a Ritual / Fusion / Synchro / Xyz Summon is a proper Summon — that copy may
+            // later be Special Summoned from the GY or banishment (ygopro STATUS_PROC_COMPLETE; Spear Cretin's
+            // GY targets). Pendulum Summon is a game mechanic, not a proper Summon of an Extra Deck Monster, so
+            // it is deliberately absent here.
+            if (summonKind == SummonKind.RitualSummon || summonKind == SummonKind.FusionSummon ||
+                summonKind == SummonKind.SynchroSummon || summonKind == SummonKind.XyzSummon)
                 card.ProcedureCompleted = true;
             // FlipMassEffects (v142): Special Summoned face-down, like a Set monster, it cannot be Flip Summoned this turn.
             if (!faceUp) card.SetThisTurn = true;

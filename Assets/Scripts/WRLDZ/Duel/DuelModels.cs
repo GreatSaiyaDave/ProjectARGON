@@ -683,6 +683,14 @@ namespace WRLDZ.Duel
         public List<CardInstance> Banished = new();
         /// <summary>Extra Deck card IDs (face-down private knowledge).</summary>
         public List<int> ExtraDeck = new();
+
+        /// <summary>
+        /// Face-up Pendulum Monsters in the Extra Deck. A Pendulum Monster sent from the field to the
+        /// Graveyard is placed here face-up instead (Rulebook: Pendulum Monsters). These — and only these
+        /// Extra Deck cards — may be chosen for a Pendulum Summon. The regular <see cref="ExtraDeck"/> stays
+        /// the face-down pile of card IDs.
+        /// </summary>
+        public List<CardInstance> ExtraDeckFaceUp = new();
         public FieldZone[] MonsterZones = new FieldZone[TcgRules.MonsterZones];
         public FieldZone[] SpellTrapZones = new FieldZone[TcgRules.SpellTrapZones];
 

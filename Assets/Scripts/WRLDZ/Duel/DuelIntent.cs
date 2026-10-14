@@ -18,6 +18,18 @@ namespace WRLDZ.Duel
         Attack,
         DirectAttack,
         SpecialSummon,
+        /// <summary>Place a hand Pendulum Monster into a Pendulum Zone as a Scale.</summary>
+        PlacePendulumScale,
+        /// <summary>
+        /// Pendulum Summon — <see cref="DuelIntent.Card"/> is the Extra Deck Synchro/Xyz Monster,
+        /// <see cref="DuelIntent.Target"/> the first material (the UI adds the rest), or a hand monster
+        /// selected from the candidate set.
+        /// </summary>
+        PendulumSummon,
+        /// <summary>Synchro Summon <see cref="DuelIntent.Card"/> (materials highlighted / auto-found).</summary>
+        SynchroSummon,
+        /// <summary>Xyz Summon <see cref="DuelIntent.Card"/> (materials highlighted / auto-found).</summary>
+        XyzSummon,
         PassResponse,
         EndTurn,
         ClearTributes,

@@ -128,6 +128,17 @@ namespace WRLDZ.Data
         /// <summary>Snapshot of all loaded card defs (bulk compile / tooling).</summary>
         public List<CardDef> GetAllCards() => new List<CardDef>(_byId.Values);
 
+        /// <summary>
+        /// Register (or replace) a card definition on this already-loaded database. Used by tests and
+        /// tooling to exercise a mechanic that has no production printing in <c>cards_db.json</c> yet
+        /// (Synchro / Xyz / Pendulum summoning). It does not touch the JSON on disk.
+        /// </summary>
+        public void Register(CardDef def)
+        {
+            if (def == null || def.id <= 0) return;
+            _byId[def.id] = def;
+        }
+
         /// <summary>Full card face (frame, name, text, art) for disk / hand / inspect UI.</summary>
         public Sprite GetArt(int id)
         {

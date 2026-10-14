@@ -148,6 +148,15 @@ namespace WRLDZ.Duel.Rules
             report.UnitPass += cePass;
             report.UnitFail += ceFail;
 
+            // ── 1k) Pre-Link Extra Deck mechanics (Synchro / Xyz / Pendulum) ──
+            sb.AppendLine();
+            sb.AppendLine("── Unit: ExtraDeckMechanicsRegressionTests ──");
+            var extraDeck = ExtraDeckMechanicsRegressionTests.RunAll();
+            sb.AppendLine(extraDeck.TrimEnd());
+            ParseUnitCounts(extraDeck, out var edPass, out var edFail);
+            report.UnitPass += edPass;
+            report.UnitFail += edFail;
+
             // ── 2) Text effect compile (lab unique cards) ──
             sb.AppendLine();
             sb.AppendLine("── Text: lab deck compile (regex, no AI) ──");

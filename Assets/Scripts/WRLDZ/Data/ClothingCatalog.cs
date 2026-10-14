@@ -152,6 +152,16 @@ namespace WRLDZ.Data
             N("hands_gloves", ClothingSlot.Hands, "Fingerless gloves", "Street fingerless pair.", 0, 0, 240, false, false, new Color(0.16f, 0.16f, 0.18f)),
             N("hands_gauntlets", ClothingSlot.Hands, "Disk gauntlets", "Hard-knuckle duel gloves.", 0, 0, 400, false, false, new Color(0.55f, 0.55f, 0.62f)),
 
+            // Duelist Kingdom star chip gloves (fingerless glove + pouch)
+            N("hands_yugi_dk", ClothingSlot.Hands, "Yugi's star glove", "Brown fingerless glove with star chip pouch.", 0, 0, 0, false, false, new Color(0.55f, 0.35f, 0.20f), bodyType: 0),
+            N("hands_kaiba_dk", ClothingSlot.Hands, "Kaiba's star glove", "Blue-grey fingerless glove with star chip pouch.", 0, 0, 0, false, false, new Color(0.35f, 0.45f, 0.55f), bodyType: 0),
+            N("hands_joey_dk", ClothingSlot.Hands, "Joey's star glove", "Red-brown fingerless glove with star chip pouch.", 0, 0, 0, false, false, new Color(0.60f, 0.30f, 0.20f), bodyType: 0),
+            N("hands_mai_dk", ClothingSlot.Hands, "Mai's star glove", "Purple fingerless glove with star chip pouch.", 0, 0, 0, false, false, new Color(0.45f, 0.30f, 0.55f), bodyType: 1),
+            N("hands_pegasus_dk", ClothingSlot.Hands, "Pegasus's star glove (R)", "White fingerless glove with star chip pouch — right hand.", 0, 0, 0, false, false, new Color(0.90f, 0.88f, 0.85f), bodyType: 0),
+            N("hands_panik_dk", ClothingSlot.Hands, "Panik's star glove", "Dark fingerless glove with star chip pouch.", 0, 0, 0, false, false, new Color(0.20f, 0.20f, 0.25f), bodyType: 0),
+            N("hands_bonz_dk", ClothingSlot.Hands, "Bonz's star glove", "Grey fingerless glove with star chip pouch.", 0, 0, 0, false, false, new Color(0.50f, 0.50f, 0.52f), bodyType: 0),
+            N("hands_mako_dk", ClothingSlot.Hands, "Mako's star glove", "Blue-grey fingerless glove with star chip pouch.", 0, 0, 0, false, false, new Color(0.30f, 0.40f, 0.55f), bodyType: 0),
+
             // Bottoms — extra pockets
             N("bottoms_plain", ClothingSlot.Bottoms, "Plain pants", "Default pants. One hip pocket for a single deck box.", 1, 2, 0, true, false, new Color(0.22f, 0.24f, 0.32f)),
             N("bottoms_duel", ClothingSlot.Bottoms, "Duel slacks", "One cargo pocket on the thigh.", 1, 2, 600, false, false, new Color(0.14f, 0.16f, 0.28f)),
@@ -277,7 +287,7 @@ namespace WRLDZ.Data
         };
 
         static ClothingItem N(string id, ClothingSlot slot, string name, string blurb,
-            int pockets, int maxSewn, int price, bool starter, bool empty, Color fallback, string suit = null) =>
+            int pockets, int maxSewn, int price, bool starter, bool empty, Color fallback, string suit = null, int bodyType = -1) =>
             new()
             {
                 Suit = suit,
@@ -290,7 +300,8 @@ namespace WRLDZ.Data
                 PriceDigi = price,
                 StarterOwned = starter,
                 EmptySlot = empty,
-                Fallback = fallback
+                Fallback = fallback,
+                BodyType = bodyType
             };
 
         /// <summary>A signature piece. Id is {slot}_{character}_{arc}, for example shirt_yugi_bc.</summary>

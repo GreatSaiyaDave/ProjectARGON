@@ -684,6 +684,13 @@ namespace WRLDZ.Presentation.ArInteraction
         }
 
         /// <summary>
+        /// Convenience overload that predates the <paramref name="metreScale"/> argument:
+        /// treats the 5th argument as <paramref name="isLeftHand"/> (metreScale defaults to 1).
+        /// </summary>
+        public static bool RestBodiesOverlap(int i, int j, int total, float cardScale, bool isLeftHand)
+            => RestBodiesOverlap(i, j, total, cardScale, 1f, isLeftHand);
+
+        /// <summary>
         /// True when two rest poses' body boxes would interpenetrate (no scene required).
         /// </summary>
         public static bool RestBodiesOverlap(int i, int j, int total, float cardScale, float metreScale = 1f, bool isLeftHand = false)

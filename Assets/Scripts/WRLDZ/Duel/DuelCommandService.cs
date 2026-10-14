@@ -140,6 +140,10 @@ namespace WRLDZ.Duel
                 DuelIntentKind.Attack => DoAttack(engine, who, intent, forceDirect: false),
                 DuelIntentKind.DirectAttack => DoAttack(engine, who, intent, forceDirect: true),
                 DuelIntentKind.SpecialSummon => DoSpecialSummon(engine, who, intent),
+                DuelIntentKind.PlacePendulumScale => DoPlacePendulumScale(engine, who, intent),
+                DuelIntentKind.PendulumSummon => DoPendulumSummon(engine, who, intent),
+                DuelIntentKind.SynchroSummon => DoSynchroSummon(engine, who, intent),
+                DuelIntentKind.XyzSummon => DoXyzSummon(engine, who, intent),
                 _ => DuelCommandResult.Fail(intent, "Unknown declaration.")
             };
         }
@@ -278,6 +282,63 @@ namespace WRLDZ.Duel
             if (!engine.TrySpecialSummonProcedure(who, intent.Card))
                 return DuelCommandResult.Fail(intent, $"Special Summon failed for {intent.Card.Name}.");
             return DuelCommandResult.Success(intent, $"Special Summon {intent.Card.Name}!");
+        }
+
+        static DuelCommandResult DoPlacePendulumScale(DuelEngine engine, DuelistState who, DuelIntent intent)
+        {
+            if (engine.TurnPlayer != who)
+                return DuelCommandResult.Fail(intent, "Not your turn.");
+            if (intent.Card == null)
+                return DuelCommandResult.Fail(intent, "Name a Pendulum Monster to place as a Scale.");
+            var left = intent.ZoneIndex < 0 ? true : intent.ZoneIndex == 0; // default left
+            if (!engine.TryPlacePendulum(who, intent.Card, left))
+                return DuelCommandResult.Fail(intent, $"Cannot place {intent.Card.Name} as a Pendulum Scale.");
+            return DuelCommandResult.Success(intent, $"Place {intent.Card.Name} as a Scale ({(left ? "Left" : "Right")})!");
+        }
+
+        static DuelCommandResult DoPendulumSummon(DuelEngine engine, DuelistState who, DuelIntent intent)
+        {
+            if (engine.TurnPlayer != who)
+                return DuelCommandResult.Fail(intent, "Not your turn.");
+            if (intent.Card == null)
+                return DuelCommandResult.Fail(intent, "Name a monster to Pendulum Summon.");
+            var candidates = engine.PendulumSummonCandidates(who);
+            var targets = candidates.Where(c => c.CardId == intent.Card.CardId).ToList();
+            if (targets.Count == 0)
+                return DuelCommandResult.Fail(intent, $"{intent.Card.Name} is not a legal Pendulum Summon target.");
+            if (!engine.TryPendulumSummon(who, targets))
+                return DuelCommandResult.Fail(intent, $"Pendulum Summon failed for {intent.Card.Name}.");
+            return DuelCommandResult.Success(intent, $"Pendulum Summon {targets.Count} monster(s)!");
+        }
+
+        static DuelCommandResult DoSynchroSummon(DuelEngine engine, DuelistState who, DuelIntent intent)
+        {
+            if (engine.TurnPlayer != who)
+                return DuelCommandResult.Fail(intent, "Not your turn.");
+            if (intent.Card == null)
+                return DuelCommandResult.Fail(intent, "Name a Synchro Monster to Synchro Summon.");
+            var legal = engine.LegalSynchroSummons(who);
+            var match = legal.FirstOrDefault(l => l.cardId == intent.Card.CardId);
+            if (match.materials == null || match.materials.Count == 0)
+                return DuelCommandResult.Fail(intent, $"Cannot Synchro Summon {intent.Card.Name} right now.");
+            if (!engine.TrySynchroSummon(who, intent.Card.CardId, match.materials))
+                return DuelCommandResult.Fail(intent, $"Synchro Summon failed for {intent.Card.Name}.");
+            return DuelCommandResult.Success(intent, $"Synchro Summon {intent.Card.Name}!");
+        }
+
+        static DuelCommandResult DoXyzSummon(DuelEngine engine, DuelistState who, DuelIntent intent)
+        {
+            if (engine.TurnPlayer != who)
+                return DuelCommandResult.Fail(intent, "Not your turn.");
+            if (intent.Card == null)
+                return DuelCommandResult.Fail(intent, "Name an Xyz Monster to Xyz Summon.");
+            var legal = engine.LegalXyzSummons(who);
+            var match = legal.FirstOrDefault(l => l.cardId == intent.Card.CardId);
+            if (match.materials == null || match.materials.Count == 0)
+                return DuelCommandResult.Fail(intent, $"Cannot Xyz Summon {intent.Card.Name} right now.");
+            if (!engine.TryXyzSummon(who, intent.Card.CardId, match.materials))
+                return DuelCommandResult.Fail(intent, $"Xyz Summon failed for {intent.Card.Name}.");
+            return DuelCommandResult.Success(intent, $"Xyz Summon {intent.Card.Name}!");
         }
 
         static DuelCommandResult DoSetSt(DuelEngine engine, DuelistState who, DuelIntent intent)

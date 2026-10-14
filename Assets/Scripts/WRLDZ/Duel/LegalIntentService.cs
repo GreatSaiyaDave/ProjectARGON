@@ -26,7 +26,11 @@ namespace WRLDZ.Duel
             DirectAttack,
             ResponseActivate,
             EffectTarget,
-            SpecialSummon
+            SpecialSummon,
+            PlacePendulumScale,
+            PendulumSummon,
+            SynchroSummon,
+            XyzSummon
         }
 
         public sealed class Entry
@@ -217,6 +221,44 @@ namespace WRLDZ.Duel
                         Add(snap, LegalKind.ActivateFromField, st, DuelIntentKind.Activate, false,
                             "Activate", null);
                 }
+            }
+
+            // ─── Pre-Link Extra Deck mechanics ───
+            if (engine.InMainPhase)
+            {
+                // Pendulum Scale placement from hand
+                foreach (var c in who.Hand.Where(c => c?.Def?.IsPendulumMonster == true))
+                {
+                    if (engine.TryPlacePendulum(who, c, true) || engine.TryPlacePendulum(who, c, false))
+                        Add(snap, LegalKind.PlacePendulumScale, c, DuelIntentKind.PlacePendulumScale, true,
+                            "Place Scale", null);
+                }
+
+                // Synchro Summons from Extra Deck
+                var synchros = engine.LegalSynchroSummons(who);
+                foreach (var (id, mats) in synchros)
+                {
+                    var proxy = engine.CreateCardInstance(id);
+                    if (proxy?.Def != null)
+                        Add(snap, LegalKind.SynchroSummon, proxy, DuelIntentKind.SynchroSummon, false,
+                            "Synchro Summon", null);
+                }
+
+                // Xyz Summons from Extra Deck
+                var xyzs = engine.LegalXyzSummons(who);
+                foreach (var (id, mats) in xyzs)
+                {
+                    var proxy = engine.CreateCardInstance(id);
+                    if (proxy?.Def != null)
+                        Add(snap, LegalKind.XyzSummon, proxy, DuelIntentKind.XyzSummon, false,
+                            "Xyz Summon", null);
+                }
+
+                // Pendulum Summon candidates (hand + face-up Extra Deck)
+                var pCandidates = engine.PendulumSummonCandidates(who);
+                foreach (var c in pCandidates)
+                    Add(snap, LegalKind.PendulumSummon, c, DuelIntentKind.PendulumSummon,
+                        who.Hand.Contains(c), "Pendulum Summon", null);
             }
 
             return snap;

@@ -113,13 +113,26 @@ namespace WRLDZ.Duel.Rules
                 return SummonProcedureScripts.Contains(cardId);
             if (kind == SummonKind.RitualSummon)
                 return RitualProcedures.MonsterHasOfficialSpell(cardId);
+            // Pre-Link Extra Deck procedures are structural, not per-card scripts: any Synchro / Xyz
+            // Monster can be Synchro / Xyz Summoned by the generic rules (tuner math / same-Level math).
+            if (kind == SummonKind.SynchroSummon || kind == SummonKind.XyzSummon)
+            {
+                var def = CardDatabase.Load()?.Get(cardId);
+                if (def == null) return false;
+                return kind == SummonKind.SynchroSummon ? def.IsSynchroMonster : def.IsXyzMonster;
+            }
+
             return false;
         }
 
         public static bool HasSpecialSummonProcedure(string key) =>
             !string.IsNullOrEmpty(key) && SpecialSummonKeys.Contains(key);
 
-        public static bool HasPendulumSummonSupport() => false; // needs scale fields in CardDef
+        /// <summary>
+        /// Pendulum Summon is a structural game mechanic (Scales + Level range), not a per-card script.
+        /// Enabled once a card carries printed Scale values (<see cref="CardDef.scaleLeft"/> / <see cref="CardDef.scaleRight"/>).
+        /// </summary>
+        public static bool HasPendulumSummonSupport() => true;
 
         /// <summary>
         /// Spell Speed of an activated card type (structural, Rulebook).
@@ -489,15 +502,13 @@ namespace WRLDZ.Duel.Rules
         public static bool ValidateSynchroMaterials(DuelEngine engine, DuelistState who, CardInstance synchro,
             List<CardInstance> materials, out string reason)
         {
-            reason = "Synchro materials not registered.";
-            return false;
+            return ExtraDeckProcedures.ValidateSynchro(engine, who, synchro, materials, out reason);
         }
 
         public static bool ValidateXyzMaterials(DuelEngine engine, DuelistState who, CardInstance xyz,
             List<CardInstance> materials, out string reason)
         {
-            reason = "Xyz materials not registered.";
-            return false;
+            return ExtraDeckProcedures.ValidateXyz(engine, who, xyz, materials, out reason);
         }
 
         public static bool ValidateLinkMaterials(DuelEngine engine, DuelistState who, CardInstance link,
@@ -516,8 +527,7 @@ namespace WRLDZ.Duel.Rules
         public static bool ValidatePendulumSummon(DuelEngine engine, DuelistState who,
             List<CardInstance> toSummon, out string reason)
         {
-            reason = "Pendulum Summon not enabled (scale data missing).";
-            return false;
+            return ExtraDeckProcedures.ValidatePendulumSummon(engine, who, toSummon, out reason);
         }
 
         public static bool ValidateSpecialSummon(DuelEngine engine, DuelistState who, CardInstance card,

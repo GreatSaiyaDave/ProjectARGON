@@ -149,6 +149,13 @@ namespace WRLDZ.Core
                     return;
                 }
 
+                // Lab admin accounts (lab_tester) never lose the full catalog: as new cards land
+                // in cards_db (e.g. pre-link pool), top them up automatically through MaxOut.
+                if (LabAdminService.IsAdmin(Account))
+                {
+                    LabAdminService.MaxOut(Account);
+                }
+
                 LocalAccountStore.UpdateAccount(Account);
                 Debug.Log($"[WRLDZ] Session restored: {Account.username} ({Account.displayName})");
             }
