@@ -1,0 +1,938 @@
+{
+ "dm_s1e001": {
+  "title": "The Heart of the Cards",
+  "cast": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "kaiba",
+   "mokuba",
+   "bakura",
+   "pegasus"
+  ],
+  "cast_strong": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "kaiba",
+   "mokuba"
+  ]
+ },
+ "dm_s1e002": {
+  "title": "The Gauntlet Is Thrown",
+  "cast": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "kaiba",
+   "pegasus",
+   "weevil",
+   "rex",
+   "bakura"
+  ],
+  "cast_strong": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "kaiba",
+   "pegasus",
+   "weevil",
+   "rex"
+  ]
+ },
+ "dm_s1e003": {
+  "title": "Journey to the Duelist Kingdom",
+  "cast": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "weevil",
+   "mai",
+   "rex",
+   "pegasus",
+   "kaiba",
+   "bakura"
+  ],
+  "cast_strong": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "weevil",
+   "mai",
+   "rex"
+  ]
+ },
+ "dm_s1e004": {
+  "title": "Into the Hornet's Nest",
+  "cast": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "pegasus",
+   "weevil",
+   "bakura"
+  ],
+  "cast_strong": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "pegasus",
+   "weevil"
+  ]
+ },
+ "dm_s1e005": {
+  "title": "The Ultimate Great Moth",
+  "cast": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "weevil",
+   "mai",
+   "pegasus"
+  ],
+  "cast_strong": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "weevil",
+   "mai"
+  ]
+ },
+ "dm_s1e006": {
+  "title": "First Duel",
+  "cast": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "pegasus",
+   "mai",
+   "weevil"
+  ],
+  "cast_strong": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "pegasus",
+   "mai"
+  ]
+ },
+ "dm_s1e007": {
+  "title": "Attack from the Deep",
+  "cast": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "mako",
+   "mai",
+   "kaiba"
+  ],
+  "cast_strong": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "mako"
+  ]
+ },
+ "dm_s1e008": {
+  "title": "Everything's Relative",
+  "cast": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "kaiba",
+   "pegasus",
+   "mokuba",
+   "weevil",
+   "mako"
+  ],
+  "cast_strong": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "kaiba",
+   "pegasus",
+   "mokuba",
+   "weevil"
+  ]
+ },
+ "dm_s1e009": {
+  "title": "Duel With a Ghoul",
+  "cast": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "kaiba",
+   "pegasus",
+   "mokuba"
+  ],
+  "cast_strong": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "kaiba",
+   "pegasus",
+   "mokuba"
+  ]
+ },
+ "dm_s1e010": {
+  "title": "Give up the Ghost",
+  "cast": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "kaiba",
+   "pegasus",
+   "mokuba"
+  ],
+  "cast_strong": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "kaiba",
+   "pegasus",
+   "mokuba"
+  ]
+ },
+ "dm_s1e011": {
+  "title": "The Dueling Monkey",
+  "cast": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "mai",
+   "rex",
+   "mokuba",
+   "pegasus"
+  ],
+  "cast_strong": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "mai",
+   "rex"
+  ]
+ },
+ "dm_s1e012": {
+  "title": "Trial by Red Eyes",
+  "cast": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "bakura",
+   "mai",
+   "rex"
+  ],
+  "cast_strong": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "bakura",
+   "mai",
+   "rex"
+  ]
+ },
+ "dm_s1e013": {
+  "title": "Evil Spirit of the Ring",
+  "cast": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "bakura"
+  ],
+  "cast_strong": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "bakura"
+  ]
+ },
+ "dm_s1e014": {
+  "title": "The Light at the End of the Tunnel",
+  "cast": [
+   "mai",
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "bakura",
+   "kaiba",
+   "pegasus"
+  ],
+  "cast_strong": []
+ },
+ "dm_s1e015": {
+  "title": "Winning Through Intimidation",
+  "cast": [
+   "yami_yugi",
+   "tea",
+   "mai",
+   "joey"
+  ],
+  "cast_strong": []
+ },
+ "dm_s1e016": {
+  "title": "The Scars of Defeat",
+  "cast": [
+   "pegasus",
+   "kaiba",
+   "yami_yugi",
+   "mokuba",
+   "tea",
+   "joey",
+   "tristan",
+   "bakura",
+   "bandit_keith"
+  ],
+  "cast_strong": []
+ },
+ "dm_s1e017": {
+  "title": "Arena of Lost Souls, Part 1",
+  "cast": [
+   "joey",
+   "kaiba",
+   "pegasus",
+   "tea",
+   "yami_yugi",
+   "mai",
+   "tristan",
+   "bandit_keith",
+   "bakura"
+  ],
+  "cast_strong": []
+ },
+ "dm_s1e018": {
+  "title": "Arena of Lost Souls, Part 2",
+  "cast": [
+   "joey",
+   "tristan",
+   "bakura",
+   "tea",
+   "yami_yugi",
+   "bandit_keith",
+   "kaiba",
+   "pegasus"
+  ],
+  "cast_strong": []
+ },
+ "dm_s1e019": {
+  "title": "Double Trouble Duel, Part 1",
+  "cast": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "bakura",
+   "kaiba",
+   "pegasus",
+   "mokuba",
+   "bandit_keith"
+  ],
+  "cast_strong": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "bakura",
+   "kaiba",
+   "pegasus",
+   "mokuba"
+  ]
+ },
+ "dm_s1e020": {
+  "title": "Double Trouble Duel, Part 2",
+  "cast": [
+   "kaiba",
+   "pegasus",
+   "mokuba",
+   "yami_yugi",
+   "joey",
+   "tristan",
+   "tea",
+   "bakura"
+  ],
+  "cast_strong": []
+ },
+ "dm_s1e021": {
+  "title": "Double Trouble Duel, Part 3",
+  "cast": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "bakura",
+   "kaiba",
+   "pegasus",
+   "mokuba"
+  ],
+  "cast_strong": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "bakura",
+   "kaiba",
+   "pegasus",
+   "mokuba"
+  ]
+ },
+ "dm_s1e022": {
+  "title": "Face Off, Part 1",
+  "cast": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "bakura",
+   "kaiba",
+   "pegasus",
+   "bandit_keith",
+   "mokuba"
+  ],
+  "cast_strong": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "bakura",
+   "kaiba",
+   "pegasus",
+   "bandit_keith"
+  ]
+ },
+ "dm_s1e023": {
+  "title": "Face Off, Part 2",
+  "cast": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "bakura",
+   "kaiba",
+   "bandit_keith",
+   "pegasus"
+  ],
+  "cast_strong": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "bakura",
+   "kaiba",
+   "bandit_keith"
+  ]
+ },
+ "dm_s1e024": {
+  "title": "Face Off, Part 3",
+  "cast": [
+   "yami_yugi",
+   "kaiba",
+   "joey",
+   "tristan",
+   "tea",
+   "bandit_keith",
+   "mokuba",
+   "bakura",
+   "pegasus"
+  ],
+  "cast_strong": []
+ },
+ "dm_s1e025": {
+  "title": "Shining Friendship",
+  "cast": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "bakura",
+   "kaiba",
+   "pegasus",
+   "mai",
+   "mokuba"
+  ],
+  "cast_strong": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "bakura",
+   "kaiba",
+   "pegasus",
+   "mai"
+  ]
+ },
+ "dm_s1e026": {
+  "title": "Champion vs. Creator, Part 1",
+  "cast": [
+   "kaiba",
+   "yami_yugi",
+   "pegasus",
+   "mokuba",
+   "joey",
+   "mai",
+   "bakura",
+   "tristan",
+   "tea",
+   "bandit_keith"
+  ],
+  "cast_strong": []
+ },
+ "dm_s1e027": {
+  "title": "Champion vs. Creator, Part 2",
+  "cast": [
+   "kaiba",
+   "pegasus",
+   "yami_yugi",
+   "mai",
+   "joey",
+   "bakura",
+   "tea",
+   "tristan",
+   "mokuba"
+  ],
+  "cast_strong": []
+ },
+ "dm_s1e028": {
+  "title": "The Night Before",
+  "cast": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "bakura",
+   "kaiba",
+   "pegasus",
+   "mokuba",
+   "mai",
+   "bandit_keith"
+  ],
+  "cast_strong": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "bakura",
+   "kaiba",
+   "pegasus",
+   "mokuba",
+   "mai",
+   "bandit_keith"
+  ]
+ },
+ "dm_s1e029": {
+  "title": "Duel Identity, Part 1",
+  "cast": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "bakura",
+   "pegasus",
+   "mai",
+   "bandit_keith",
+   "kaiba",
+   "mokuba"
+  ],
+  "cast_strong": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "bakura",
+   "pegasus",
+   "mai",
+   "bandit_keith"
+  ]
+ },
+ "dm_s1e030": {
+  "title": "Duel Identity, Part 2",
+  "cast": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "bakura",
+   "pegasus",
+   "mai",
+   "kaiba"
+  ],
+  "cast_strong": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "bakura",
+   "pegasus",
+   "mai"
+  ]
+ },
+ "dm_s1e031": {
+  "title": "Keith's Machinations, Part 1",
+  "cast": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "bakura",
+   "pegasus",
+   "mai",
+   "bandit_keith",
+   "kaiba",
+   "mokuba"
+  ],
+  "cast_strong": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "bakura",
+   "pegasus",
+   "mai",
+   "bandit_keith"
+  ]
+ },
+ "dm_s1e032": {
+  "title": "Keith's Machinations, Part 2",
+  "cast": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "bakura",
+   "pegasus",
+   "bandit_keith",
+   "mai"
+  ],
+  "cast_strong": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "bakura",
+   "pegasus",
+   "bandit_keith"
+  ]
+ },
+ "dm_s1e033": {
+  "title": "Best of Friends, Best of Duelists, Part 1",
+  "cast": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "bakura",
+   "pegasus",
+   "kaiba",
+   "mokuba",
+   "mai"
+  ],
+  "cast_strong": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "bakura",
+   "pegasus"
+  ]
+ },
+ "dm_s1e034": {
+  "title": "Best of Friends, Best of Duelists, Part 2",
+  "cast": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "bakura",
+   "pegasus",
+   "kaiba"
+  ],
+  "cast_strong": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "bakura",
+   "pegasus"
+  ]
+ },
+ "dm_s1e035": {
+  "title": "Yugi vs. Pegasus: Match of the Millennium, Part 1",
+  "cast": [
+   "yami_yugi",
+   "pegasus",
+   "joey",
+   "tea",
+   "mokuba",
+   "kaiba",
+   "tristan",
+   "bakura"
+  ],
+  "cast_strong": []
+ },
+ "dm_s1e036": {
+  "title": "Yugi vs. Pegasus: Match of the Millennium, Part 2",
+  "cast": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "bakura",
+   "pegasus",
+   "mokuba",
+   "kaiba"
+  ],
+  "cast_strong": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "bakura",
+   "pegasus"
+  ]
+ },
+ "dm_s1e037": {
+  "title": "Yugi vs. Pegasus: Match of the Millennium, Part 3",
+  "cast": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "bakura",
+   "pegasus",
+   "mokuba"
+  ],
+  "cast_strong": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "bakura",
+   "pegasus"
+  ]
+ },
+ "dm_s1e038": {
+  "title": "Yugi vs. Pegasus: Match of the Millennium, Part 4",
+  "cast": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "bakura",
+   "pegasus",
+   "mokuba",
+   "kaiba"
+  ],
+  "cast_strong": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "bakura",
+   "pegasus"
+  ]
+ },
+ "dm_s1e039": {
+  "title": "Yugi vs. Pegasus: Match of the Millennium, Part 5",
+  "cast": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "bakura",
+   "pegasus",
+   "kaiba",
+   "mokuba"
+  ],
+  "cast_strong": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "bakura",
+   "pegasus"
+  ]
+ },
+ "dm_s1e040": {
+  "title": "Aftermath",
+  "cast": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "bakura",
+   "pegasus",
+   "mokuba"
+  ],
+  "cast_strong": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "bakura",
+   "pegasus"
+  ]
+ },
+ "dm_s1e041": {
+  "title": "The Wrath of Rebecca",
+  "cast": [
+   "pegasus",
+   "mokuba",
+   "bakura",
+   "joey",
+   "tristan",
+   "tea",
+   "yami_yugi",
+   "bandit_keith",
+   "kaiba"
+  ],
+  "cast_strong": []
+ },
+ "dm_s1e042": {
+  "title": "The Ties of Friendship",
+  "cast": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "kaiba"
+  ],
+  "cast_strong": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan"
+  ]
+ },
+ "dm_s1e043": {
+  "title": "Legendary Heroes, Part 1",
+  "cast": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "kaiba",
+   "mokuba",
+   "pegasus",
+   "rex"
+  ],
+  "cast_strong": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "kaiba",
+   "mokuba"
+  ]
+ },
+ "dm_s1e044": {
+  "title": "Legendary Heroes, Part 2",
+  "cast": [
+   "tea",
+   "tristan",
+   "kaiba",
+   "yami_yugi",
+   "joey",
+   "mokuba",
+   "mai"
+  ],
+  "cast_strong": []
+ },
+ "dm_s1e045": {
+  "title": "Legendary Heroes, Part 3",
+  "cast": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "kaiba",
+   "mokuba",
+   "mai"
+  ],
+  "cast_strong": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "kaiba",
+   "mokuba",
+   "mai"
+  ]
+ },
+ "dm_s1e046": {
+  "title": "Dungeon Dice Monsters, Part 1",
+  "cast": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan",
+   "pegasus",
+   "bandit_keith",
+   "kaiba"
+  ],
+  "cast_strong": [
+   "yami_yugi",
+   "tea",
+   "joey",
+   "tristan"
+  ]
+ },
+ "dm_s1e047": {
+  "title": "Dungeon Dice Monsters, Part 2",
+  "cast": [
+   "yami_yugi",
+   "joey",
+   "tea",
+   "tristan",
+   "pegasus"
+  ],
+  "cast_strong": []
+ },
+ "dm_s1e048": {
+  "title": "Dungeon Dice Monsters, Part 3",
+  "cast": [
+   "yami_yugi",
+   "joey",
+   "tristan",
+   "pegasus",
+   "tea"
+  ],
+  "cast_strong": []
+ },
+ "dm_s1e049": {
+  "title": "Dungeon Dice Monsters, Part 4",
+  "cast": [
+   "yami_yugi",
+   "joey",
+   "tristan",
+   "tea",
+   "pegasus",
+   "weevil",
+   "mako",
+   "mai"
+  ],
+  "cast_strong": []
+ }
+}

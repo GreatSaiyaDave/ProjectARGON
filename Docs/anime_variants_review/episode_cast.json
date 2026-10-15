@@ -1,0 +1,483 @@
+{
+ "dm_s1e001": [
+  "yami_yugi",
+  "tea",
+  "joey",
+  "tristan",
+  "kaiba",
+  "mokuba",
+  "bakura",
+  "pegasus"
+ ],
+ "dm_s1e002": [
+  "yami_yugi",
+  "tea",
+  "joey",
+  "tristan",
+  "kaiba",
+  "pegasus",
+  "weevil",
+  "rex",
+  "bakura"
+ ],
+ "dm_s1e003": [
+  "yami_yugi",
+  "tea",
+  "joey",
+  "tristan",
+  "weevil",
+  "mai",
+  "rex",
+  "pegasus",
+  "kaiba",
+  "bakura"
+ ],
+ "dm_s1e004": [
+  "yami_yugi",
+  "tea",
+  "joey",
+  "tristan",
+  "pegasus",
+  "weevil",
+  "bakura"
+ ],
+ "dm_s1e005": [
+  "yami_yugi",
+  "tea",
+  "joey",
+  "tristan",
+  "weevil",
+  "mai",
+  "pegasus"
+ ],
+ "dm_s1e006": [
+  "yami_yugi",
+  "tea",
+  "joey",
+  "tristan",
+  "pegasus",
+  "mai",
+  "weevil"
+ ],
+ "dm_s1e007": [
+  "yami_yugi",
+  "tea",
+  "joey",
+  "tristan",
+  "mako",
+  "mai",
+  "kaiba"
+ ],
+ "dm_s1e008": [
+  "yami_yugi",
+  "tea",
+  "joey",
+  "tristan",
+  "kaiba",
+  "pegasus",
+  "mokuba",
+  "weevil",
+  "mako"
+ ],
+ "dm_s1e009": [
+  "yami_yugi",
+  "tea",
+  "joey",
+  "kaiba",
+  "pegasus",
+  "mokuba"
+ ],
+ "dm_s1e010": [
+  "yami_yugi",
+  "tea",
+  "joey",
+  "tristan",
+  "kaiba",
+  "pegasus",
+  "mokuba"
+ ],
+ "dm_s1e011": [
+  "yami_yugi",
+  "tea",
+  "joey",
+  "tristan",
+  "mai",
+  "rex",
+  "mokuba",
+  "pegasus"
+ ],
+ "dm_s1e012": [
+  "yami_yugi",
+  "tea",
+  "joey",
+  "tristan",
+  "bakura",
+  "mai",
+  "rex"
+ ],
+ "dm_s1e013": [
+  "yami_yugi",
+  "tea",
+  "joey",
+  "tristan",
+  "bakura"
+ ],
+ "dm_s1e014": [
+  "mai",
+  "yami_yugi",
+  "tea",
+  "joey",
+  "tristan",
+  "bakura",
+  "kaiba",
+  "pegasus"
+ ],
+ "dm_s1e015": [
+  "yami_yugi",
+  "tea",
+  "mai",
+  "joey"
+ ],
+ "dm_s1e016": [
+  "pegasus",
+  "kaiba",
+  "yami_yugi",
+  "mokuba",
+  "tea",
+  "joey",
+  "tristan",
+  "bakura",
+  "bandit_keith"
+ ],
+ "dm_s1e017": [
+  "joey",
+  "kaiba",
+  "pegasus",
+  "tea",
+  "yami_yugi",
+  "mai",
+  "tristan",
+  "bandit_keith",
+  "bakura"
+ ],
+ "dm_s1e018": [
+  "joey",
+  "tristan",
+  "bakura",
+  "tea",
+  "yami_yugi",
+  "bandit_keith",
+  "kaiba",
+  "pegasus"
+ ],
+ "dm_s1e019": [
+  "yami_yugi",
+  "tea",
+  "joey",
+  "tristan",
+  "bakura",
+  "kaiba",
+  "pegasus",
+  "mokuba",
+  "bandit_keith"
+ ],
+ "dm_s1e020": [
+  "kaiba",
+  "pegasus",
+  "mokuba",
+  "yami_yugi",
+  "joey",
+  "tristan",
+  "tea",
+  "bakura"
+ ],
+ "dm_s1e021": [
+  "yami_yugi",
+  "tea",
+  "joey",
+  "tristan",
+  "bakura",
+  "kaiba",
+  "pegasus",
+  "mokuba"
+ ],
+ "dm_s1e022": [
+  "yami_yugi",
+  "tea",
+  "joey",
+  "tristan",
+  "bakura",
+  "kaiba",
+  "pegasus",
+  "bandit_keith",
+  "mokuba"
+ ],
+ "dm_s1e023": [
+  "yami_yugi",
+  "tea",
+  "joey",
+  "tristan",
+  "bakura",
+  "kaiba",
+  "bandit_keith",
+  "pegasus"
+ ],
+ "dm_s1e024": [
+  "yami_yugi",
+  "kaiba",
+  "joey",
+  "tristan",
+  "tea",
+  "bandit_keith",
+  "mokuba",
+  "bakura",
+  "pegasus"
+ ],
+ "dm_s1e025": [
+  "yami_yugi",
+  "tea",
+  "joey",
+  "tristan",
+  "bakura",
+  "kaiba",
+  "pegasus",
+  "mai",
+  "mokuba"
+ ],
+ "dm_s1e026": [
+  "kaiba",
+  "yami_yugi",
+  "pegasus",
+  "mokuba",
+  "joey",
+  "mai",
+  "bakura",
+  "tristan",
+  "tea",
+  "bandit_keith"
+ ],
+ "dm_s1e027": [
+  "kaiba",
+  "pegasus",
+  "yami_yugi",
+  "mai",
+  "joey",
+  "bakura",
+  "tea",
+  "tristan",
+  "mokuba"
+ ],
+ "dm_s1e028": [
+  "yami_yugi",
+  "tea",
+  "joey",
+  "tristan",
+  "bakura",
+  "kaiba",
+  "pegasus",
+  "mokuba",
+  "mai",
+  "bandit_keith"
+ ],
+ "dm_s1e029": [
+  "yami_yugi",
+  "tea",
+  "joey",
+  "tristan",
+  "bakura",
+  "pegasus",
+  "mai",
+  "bandit_keith",
+  "kaiba",
+  "mokuba"
+ ],
+ "dm_s1e030": [
+  "yami_yugi",
+  "tea",
+  "joey",
+  "tristan",
+  "bakura",
+  "pegasus",
+  "mai",
+  "kaiba"
+ ],
+ "dm_s1e031": [
+  "yami_yugi",
+  "tea",
+  "joey",
+  "tristan",
+  "bakura",
+  "pegasus",
+  "mai",
+  "bandit_keith",
+  "kaiba",
+  "mokuba"
+ ],
+ "dm_s1e032": [
+  "yami_yugi",
+  "tea",
+  "joey",
+  "tristan",
+  "bakura",
+  "pegasus",
+  "bandit_keith",
+  "mai"
+ ],
+ "dm_s1e033": [
+  "yami_yugi",
+  "tea",
+  "joey",
+  "tristan",
+  "bakura",
+  "pegasus",
+  "kaiba",
+  "mokuba",
+  "mai"
+ ],
+ "dm_s1e034": [
+  "yami_yugi",
+  "tea",
+  "joey",
+  "tristan",
+  "bakura",
+  "pegasus",
+  "kaiba"
+ ],
+ "dm_s1e035": [
+  "yami_yugi",
+  "pegasus",
+  "joey",
+  "tea",
+  "mokuba",
+  "kaiba",
+  "tristan",
+  "bakura"
+ ],
+ "dm_s1e036": [
+  "yami_yugi",
+  "tea",
+  "joey",
+  "tristan",
+  "bakura",
+  "pegasus",
+  "mokuba",
+  "kaiba"
+ ],
+ "dm_s1e037": [
+  "yami_yugi",
+  "tea",
+  "joey",
+  "tristan",
+  "bakura",
+  "pegasus",
+  "mokuba"
+ ],
+ "dm_s1e038": [
+  "yami_yugi",
+  "tea",
+  "joey",
+  "tristan",
+  "bakura",
+  "pegasus",
+  "mokuba",
+  "kaiba"
+ ],
+ "dm_s1e039": [
+  "yami_yugi",
+  "tea",
+  "joey",
+  "tristan",
+  "bakura",
+  "pegasus",
+  "kaiba",
+  "mokuba"
+ ],
+ "dm_s1e040": [
+  "yami_yugi",
+  "tea",
+  "joey",
+  "tristan",
+  "bakura",
+  "pegasus",
+  "mokuba"
+ ],
+ "dm_s1e041": [
+  "pegasus",
+  "mokuba",
+  "bakura",
+  "joey",
+  "tristan",
+  "tea",
+  "yami_yugi",
+  "bandit_keith",
+  "kaiba"
+ ],
+ "dm_s1e042": [
+  "yami_yugi",
+  "tea",
+  "joey",
+  "tristan",
+  "kaiba"
+ ],
+ "dm_s1e043": [
+  "yami_yugi",
+  "tea",
+  "joey",
+  "tristan",
+  "kaiba",
+  "mokuba",
+  "pegasus",
+  "rex"
+ ],
+ "dm_s1e044": [
+  "tea",
+  "tristan",
+  "kaiba",
+  "yami_yugi",
+  "joey",
+  "mokuba",
+  "mai"
+ ],
+ "dm_s1e045": [
+  "yami_yugi",
+  "tea",
+  "joey",
+  "tristan",
+  "kaiba",
+  "mokuba",
+  "mai"
+ ],
+ "dm_s1e046": [
+  "yami_yugi",
+  "tea",
+  "joey",
+  "tristan",
+  "pegasus",
+  "bandit_keith",
+  "kaiba"
+ ],
+ "dm_s1e047": [
+  "yami_yugi",
+  "joey",
+  "tea",
+  "tristan",
+  "pegasus"
+ ],
+ "dm_s1e048": [
+  "yami_yugi",
+  "joey",
+  "tristan",
+  "pegasus",
+  "tea"
+ ],
+ "dm_s1e049": [
+  "yami_yugi",
+  "joey",
+  "tristan",
+  "tea",
+  "pegasus",
+  "weevil",
+  "mako",
+  "mai"
+ ]
+}
