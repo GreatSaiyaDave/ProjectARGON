@@ -116,6 +116,19 @@ pre-existing set is unchanged**). The DK sets set it to `0.15` in
 `AnimeCharacterActor.ApplyFormMap()` along with `SetFormLighting(1f, 0.03f)`, which keeps the
 world light influencing the shot without letting it collapse back to frontal.
 
+**Billboard fix (required before any of this could show).** The sprite quad is Unity's
+built-in `Quad`, which faces **-Z**, and `AnimeCharacterActor.Billboard()` turns it toward the
+camera — so the game was rendering the quad's **back**: the art was mirror-flipped in world
+*and* the mesh normal pointed away from the viewer, inverting the sign of every form-map
+pixel. Replaying the shader maths against the shipped maps (`scripts/qc_keyframe.py`) that put
+**53% of a DK figure in the shadow band (83% of its right third)**, and every one of the
+original 16 characters at **100% shadow under a frontal sun and 0% under a backlight** — lit
+backwards. The quad is now turned 180° (`localRotation = Euler(0, 180, 0)`), which un-mirrors
+the art, points `normalWS` at the camera and leaves the parallax (and every number below) as
+measured. `AnimeSpriteKeyDir` also now forms its side vector as `cross(up, v)`, which is
+genuinely camera-left — the earlier `cross(v, up)` was camera-right and would have dropped the
+terminator on the mirrored side of the sheets.
+
 Measured across five scene lights, share of the figure in the shadow band:
 
 | configuration | frontal | overhead | light from right | backlight | sunset |
@@ -156,4 +169,11 @@ for them; their variants arrive with later seasons.
 - `build_formmap_v2.py` (parent folder) – form map v2 for the `*_da` sets (local-cylinder normals),
   regenerates `<id>_normal.png`, the `normals/<cid>_da.jpg` sheets and `formmap_v2_report.json`,
   and re-checks the shading maths offline. Pass ids to rebuild only those.
+- `qc_keyframe.py` (parent folder) – replays `AnimeCelShader`'s exact key geometry against the
+  shipped 512px maps: validates `span_u` against an independent implementation, checks the stored
+  `nx` sign at both silhouette edges, and scores the three candidate key geometries (post-fix,
+  pre-fix, quad-flip-without-the-key-flip). Writes `normals/qc_keyframe.json`. This is the check
+  that found the billboard bug.
+- `qc_base.py` (parent folder) – the same replay for the original 16 base sets (v1 maps, strength
+  0.8, pure scene key), before vs after the billboard fix. Writes `normals/qc_base.json`.
 - `assemble_variant.py` (parent folder) – turns one picked cutout into the 12-file sprite set.

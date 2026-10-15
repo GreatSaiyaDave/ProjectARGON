@@ -78,7 +78,13 @@ namespace WRLDZ.Presentation.Avatar
             _quad.name = "SpriteQuad";
             _quad.transform.SetParent(transform, false);
             _quad.transform.localPosition = new Vector3(0f, HeightM * 0.5f, 0f);
-            _quad.transform.localRotation = Quaternion.identity;
+            // Unity's Quad faces -Z: at identity the billboard shows the camera its BACK, which
+            // mirror-flips the art (ArPhysicalCardBuilder.cs hit the same thing) and points the
+            // mesh normal AWAY from the viewer — so every form-map pixel lit backwards: replayed
+            // against the shader maths, 53% of the figure sat in the shadow band with 83% of the
+            // right third dark. Turned 180° so the art reads correctly and normalWS faces the
+            // camera, which is the frame build_formmap_v2.py authors the maps in.
+            _quad.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
             _quad.transform.localScale = new Vector3(HeightM * 0.6f, HeightM, 1f);
             Destroy(_quad.GetComponent<Collider>());
 

@@ -29,7 +29,7 @@ float3 AnimeKeyDir(float3 viewDirWS)
 float3 AnimeSpriteKeyDir(float3 viewDirWS, half keyBias)
 {
     float3 v = normalize(viewDirWS);
-    float3 side = cross(v, float3(0, 1, 0));              // camera-left for a level view
+    float3 side = cross(float3(0, 1, 0), v);               // camera-left for a level view
     float3 camLeft = dot(side, side) > 1e-6 ? normalize(side) : float3(-1, 0, 0);
     float3 portrait = normalize(camLeft * 0.88 + float3(0, 1, 0) * 0.40 + v * 0.30);
     return normalize(lerp(portrait, AnimeKeyDir(v), saturate(keyBias)));

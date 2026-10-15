@@ -49,7 +49,7 @@ Shader "WRLDZ/AnimeCel"
         {
             half depth = SAMPLE_TEXTURE2D(_NormalMap, sampler_NormalMap, uv).a;
             float3 vOS = normalize(TransformWorldToObjectDir(GetWorldSpaceViewDir(positionWS)));
-            vOS.xy /= max(abs(vOS.z), 0.25);          // into the surface; yaw billboard keeps z ~ 1
+            vOS.xy /= max(abs(vOS.z), 0.25);          // into the surface; yaw billboard keeps |z| ~ 1
             return uv - vOS.xy * (depth * _Parallax);
         }
 

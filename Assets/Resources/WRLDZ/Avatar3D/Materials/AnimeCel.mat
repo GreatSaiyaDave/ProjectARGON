@@ -34,6 +34,7 @@ Material:
     m_Ints: []
     m_Floats:
     - _Cull: 0
+    - _KeyBias: 1
     - _NormalStrength: 0.8
     - _Parallax: 0.015
     - _RimAmt: 0.6
