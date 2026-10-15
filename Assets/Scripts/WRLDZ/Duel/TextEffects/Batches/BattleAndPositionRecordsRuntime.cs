@@ -318,6 +318,118 @@ namespace WRLDZ.Duel.TextEffects
         // ───────────────────────────── Vampire Lady / Vampire Lord ─────────────────────────────
 
         /// <summary>
+        /// <summary>
+        /// Abyssal Designator (c89801755) at resolution. The Lua declares in its target step — AnnounceAttribute first,
+        /// then AnnounceRace — and at resolution the opponent selects 1 monster with both from hand or Deck and sends it
+        /// to the GY. Both declarations are made by the activator, so they go through AskCardPick one after the other;
+        /// the final pick is the only one in the engine that may come from either pile.
+        /// </summary>
+        public static void DeclareTypeAndAttributeThenOpponentSends(DuelEngine engine, DuelistState who,
+            CardInstance source, EffectClause clause)
+        {
+            if (engine == null || who == null || source == null || engine.GameOver) return;
+            var victim = engine.OpponentOf(who);
+            if (victim == null) return;
+
+            // 1. the Attribute (any of the seven — Lua ATTRIBUTE_ALL).
+            ContinuousTrapsAndSpiritSupportRuntime.AskCardPick(engine, who, source, new CardPickRequest
+            {
+                Candidates = () =>
+                    TypeDeclarationRuntime.AttributeTokens(TypeDeclarationRuntime.AllAttributes).ToList(),
+                Kind = EffectTargetKind.DeclareAttribute,
+                Prompt = $"{source.Name}: declare 1 Attribute (DARK, DIVINE, EARTH, FIRE, LIGHT, WATER or WIND).",
+                AiChoose = list => list.FirstOrDefault(),
+                Finish = attrToken => DeclareTypeThenSend(engine, who, source, attrToken?.Def?.name ?? "", victim)
+            });
+        }
+
+        /// <summary>The Monster Type declaration and the opponent's send, once the Attribute is known.</summary>
+        static void DeclareTypeThenSend(DuelEngine engine, DuelistState who, CardInstance source, string attribute,
+            DuelistState victim)
+        {
+            if (string.IsNullOrEmpty(attribute))
+            {
+                engine.Log($"{source.Name}: no Attribute declared — no effect.");
+                return;
+            }
+
+            engine.Log($"{source.Name}: {who.Name} declares {attribute}.");
+
+            ContinuousTrapsAndSpiritSupportRuntime.AskCardPick(engine, who, source, new CardPickRequest
+            {
+                Candidates = () => TypeDeclarationRuntime.MonsterTypeTokens(engine),
+                Kind = EffectTargetKind.None,
+                Prompt = $"{source.Name}: declare 1 Monster Type. Your opponent then sends 1 monster with both the " +
+                         "declared Type and Attribute from their hand or Deck to the GY.",
+                AiChoose = list => list.FirstOrDefault(),
+                Finish = typeToken => OpponentSendsOfTypeAndAttribute(engine, source, victim,
+                    typeToken?.Def?.name ?? "", attribute)
+            });
+        }
+
+        /// <summary>
+        /// The opponent's pick: 1 monster with both the declared Type and Attribute, from hand OR Deck — the engine's
+        /// only pick that spans both piles. A hidden hand card is still a legal candidate: the declaration is exactly
+        /// what makes it a legal guess.
+        /// </summary>
+        static void OpponentSendsOfTypeAndAttribute(DuelEngine engine, CardInstance source, DuelistState victim,
+            string type, string attribute)
+        {
+            if (string.IsNullOrEmpty(type))
+            {
+                engine.Log($"{source.Name}: no Monster Type declared — no effect.");
+                return;
+            }
+
+            var activator = engine.OpponentOf(victim);
+            engine.Log($"{source.Name}: {activator?.Name ?? "The activator"} declared {type}/{attribute}.");
+
+            List<CardInstance> Matching()
+            {
+                var list = new List<CardInstance>();
+                var seen = new HashSet<int>();
+                if (victim?.Hand != null)
+                    foreach (var c in victim.Hand)
+                    {
+                        if (c?.Def == null) continue;
+                        if (!string.Equals(c.Def.race, type, System.StringComparison.OrdinalIgnoreCase)) continue;
+                        if (!string.Equals(c.Def.attribute, attribute, System.StringComparison.OrdinalIgnoreCase)) continue;
+                        if (seen.Add(c.CardId)) list.Add(c);
+                    }
+
+                if (victim?.Deck != null && engine.Database != null)
+                    foreach (var id in victim.Deck)
+                    {
+                        if (!seen.Add(id) || !engine.Database.TryGet(id, out var def) || def == null) continue;
+                        if (!string.Equals(def.race, type, System.StringComparison.OrdinalIgnoreCase)) continue;
+                        if (!string.Equals(def.attribute, attribute, System.StringComparison.OrdinalIgnoreCase)) continue;
+                        list.Add(engine.CreateCardInstance(id));
+                    }
+
+                return list;
+            }
+
+            ContinuousTrapsAndSpiritSupportRuntime.AskCardPick(engine, victim, source, new CardPickRequest
+            {
+                Candidates = Matching,
+                Kind = EffectTargetKind.CardInOppHand,
+                Prompt = $"{source.Name}: your opponent declared {type}/{attribute}. Select 1 monster of that Type and " +
+                         "Attribute in your hand or Deck to send to the GY.",
+                AiChoose = list => list.Count > 0 ? list[0] : null,
+                Finish = pick =>
+                {
+                    if (pick == null)
+                    {
+                        engine.Log($"{source.Name}: {victim.Name} controls no {type}/{attribute} monster in hand or Deck.");
+                        return;
+                    }
+
+                    engine.SendCardToGrave(victim, pick);
+                    engine.Log($"{source.Name}: {victim.Name} sends {pick.Name} to the GY.");
+                }
+            });
+        }
+
         /// <see cref="EffectActionKind.MillCardOfDeclaredTypeFromOpponentDeck"/> (MfcLabCards3Runtime delegates here):
         /// <paramref name="who"/> declares Monster, Spell or Trap (Lua SelectOption; the AI declares the type most common in
         /// the opponent's Deck), then the opponent selects 1 card of that type in their Deck (a human through the Deck

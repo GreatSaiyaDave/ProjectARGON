@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using WRLDZ.Data;
 using WRLDZ.Duel.TextEffects;
@@ -36,6 +37,7 @@ namespace WRLDZ.Duel.Rules
         const int Witch = 78010363;               // Witch of the Black Forest, Effect 1100/1200
         const int ManEaterBug = 54652250;         // FLIP Effect 450/600
         const int PotOfGreed = 55144522;          // Normal Spell
+        const int AbyssalDesignator = 89801755;  // Normal Spell: declare Type + Attribute
         const int Raigeki = 12580477;             // Normal Spell
         const int TrapHole = 4206964;             // Normal Trap
         const int Mst = 5318639;                  // Quick-Play: target 1 Spell/Trap; destroy it
@@ -53,6 +55,7 @@ namespace WRLDZ.Duel.Rules
             UnhappyGirlDuels(db, pDeck, aDeck, Check);
             JudgmentOfTheDesertDuels(db, pDeck, aDeck, Check);
             CurseOfAnubisDuels(db, pDeck, aDeck, Check);
+            AbyssalDesignatorDuels(db, pDeck, aDeck, Check);
         }
 
         // ───────────────────────────── helpers ─────────────────────────────
@@ -661,6 +664,96 @@ namespace WRLDZ.Duel.Rules
                 PassAll(engine);
                 Check("Curse of Anubis (near miss): no face-up Attack Position Effect Monster — it cannot be activated",
                     reached && !act && !curse.FaceUp, $"act={act} up={curse.FaceUp}");
+            }
+        }
+
+        static void AbyssalDesignatorDuels(CardDatabase db, DeckFile pDeck, DeckFile aDeck, Chk Check)
+        {
+            {
+                var prog = CardTextEffectCompiler.Compile(db.Get(AbyssalDesignator));
+                Check("Abyssal Designator: FullyCompiled - 1000 LP, declare Type + Attribute, the opponent sends 1 " +
+                      "matching monster from hand or Deck; Implemented",
+                    prog != null && prog.FullyCompiled &&
+                    CardEffectStatus.Classify(db.Get(AbyssalDesignator)) == CardEffectStatusKind.Implemented &&
+                    prog.ClauseList.Count == 1 &&
+                    prog.ClauseList[0].Action ==
+                        EffectActionKind.DeclareTypeAndAttributeThenOpponentSendsFromHandOrDeck &&
+                    prog.ClauseList[0].Timing == EffectTiming.Activate && prog.ClauseList[0].PayLpAmount == 1000 &&
+                    prog.ClauseList[0].Amount == 1000 && prog.ClauseList[0].MakesChainLink,
+                    prog == null ? "null" : string.Join(" | ", prog.UnparsedFragments ?? Array.Empty<string>()));
+            }
+
+            {
+                // Declares EARTH / Warrior: the opponent's hand holds a Warrior, so that is the legal set.
+                var e = PlayerMain1(db, pDeck, aDeck, out var reached);
+                var p = e.Player;
+                var o = e.Opponent;
+                var handCard = PutInHand(e, o, CelticGuardian); // EARTH Warrior in the hidden hand
+                PutInHand(e, p, GiantSoldier);                   // EARTH Warrior in the declarer's own hand (not it)
+                var spell = PutInHand(e, p, AbyssalDesignator);
+                var lp = p.LifePoints;
+                e.NotifyPublic();
+                var lap = e.CanActivateSpellTrap(p, spell, true);
+                var used = e.TryActivateSpellTrap(p, spell, true);
+                DrainCombat(e);
+                // The LP cost is paid on activation, so both declarations can only follow a paid activation.
+                Check("Abyssal Designator: pays 1000 LP and opens the Type + Attribute declaration on the opponent's hand",
+                    reached && lap && used && p.LifePoints == lp - 1000 && p.Graveyard.Contains(spell) &&
+                    e.PendingActivation != null,
+                    $"reached={reached} lap={lap} used={used} lp={lp}->{p.LifePoints} " +
+                    $"pending={e.PendingActivation?.Prompt}");
+            }
+
+            {
+                // The declaration and the send resolve: the opponent's matching monster goes to the GY.
+                var e = PlayerMain1(db, pDeck, aDeck, out var reached);
+                var p = e.Player;
+                var o = e.Opponent;
+                var theirGy = o.Graveyard.Count;
+                var card = PutInHand(e, o, GiantSoldier); // EARTH Warrior, in the Deck pick's reach too
+                o.Deck.Clear();
+                o.Deck.Add(CelticGuardian);
+                var spell = PutInHand(e, p, AbyssalDesignator);
+                e.TryActivateSpellTrap(p, spell, true);
+                DrainCombat(e);
+                // 1. the Attribute (any of the seven), 2. the Monster Type, 3. the opponent's pick.
+                var attr = e.PendingActivation?.LegalTargets.Select(t => t.Name).ToList();
+                var aTok = e.PendingActivation?.LegalTargets.FirstOrDefault(t => t.Name == "EARTH");
+                var attrPicked = aTok != null && e.TrySelectEffectTarget(aTok);
+                DrainCombat(e);
+                var typeTok = e.PendingActivation?.LegalTargets.FirstOrDefault(t => t.Name == "Warrior");
+                var typePicked = typeTok != null && e.TrySelectEffectTarget(typeTok);
+                DrainCombat(e);
+                // One matching monster: the engine selects it outright (the AI answers its own pick with one candidate).
+                DrainCombat(e);
+                Check("Abyssal Designator: declare EARTH + Warrior, the opponent sends a matching monster from hand or Deck",
+                    reached && attrPicked && typePicked && o.Graveyard.Count > theirGy &&
+                    (o.Graveyard.Contains(card) || o.Graveyard.Any(c => c != null && c.CardId == CelticGuardian)),
+                    $"reached={reached} attrs=[{string.Join(",", attr ?? new List<string>())}] attrPicked={attrPicked} " +
+                    $"typePicked={typePicked} gy={theirGy}->{o.Graveyard.Count}");
+            }
+
+            {
+                // A monster that matches neither declaration is never offered.
+                var e = PlayerMain1(db, pDeck, aDeck, out var reached);
+                var p = e.Player;
+                var o = e.Opponent;
+                PutInHand(e, o, MysticalElf);          // LIGHT Spellcaster
+                o.Deck.Clear();
+                o.Deck.Add(MysticalElf);
+                var spell = PutInHand(e, p, AbyssalDesignator);
+                e.TryActivateSpellTrap(p, spell, true);
+                DrainCombat(e);
+                var aTok = e.PendingActivation?.LegalTargets.FirstOrDefault(t => t.Name == "DARK");
+                var ok1 = aTok != null && e.TrySelectEffectTarget(aTok);
+                DrainCombat(e);
+                var tTok = e.PendingActivation?.LegalTargets.FirstOrDefault(t => t.Name == "Spellcaster");
+                var ok2 = tTok != null && e.TrySelectEffectTarget(tTok);
+                DrainCombat(e);
+                var gyBefore = o.Graveyard.Count;
+                Check("Abyssal Designator: a declaration the opponent cannot match sends nothing to the GY",
+                    reached && ok1 && ok2 && o.Graveyard.Count == gyBefore,
+                    $"reached={reached} ok1={ok1} ok2={ok2} gy={gyBefore}->{o.Graveyard.Count}");
             }
         }
     }

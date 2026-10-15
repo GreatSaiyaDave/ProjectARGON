@@ -8431,6 +8431,12 @@ namespace WRLDZ.Duel.TextEffects
                 case EffectActionKind.MillCardOfDeclaredTypeFromOpponentDeck:
                     MfcLabCards3Runtime.MillCardOfDeclaredTypeFromOpponentDeck(engine, who, source, clause);
                     break;
+
+                case EffectActionKind.DeclareTypeAndAttributeThenOpponentSendsFromHandOrDeck:
+                    // Abyssal Designator: two declarations, then the opponent's pick over hand or Deck.
+                    BattleAndPositionRecordsRuntime.DeclareTypeAndAttributeThenOpponentSends(engine, who, source,
+                        clause);
+                    break;
                 case EffectActionKind.GainThisCardAtkAtNextStandbyWhileFaceUp:
                     BattleOutcomeTriggersRuntime.FlagNextStandbyGain(engine, who, source, clause);
                     break;

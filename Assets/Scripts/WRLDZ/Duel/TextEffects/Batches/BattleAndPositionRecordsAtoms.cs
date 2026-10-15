@@ -34,6 +34,22 @@ namespace WRLDZ.Duel.TextEffects
 
         public static readonly AtomRegistration.Atom[] Atoms =
         {
+            // Abyssal Designator (c89801755), its whole text. Lua: Cost.PayLP(1000), then in the target step
+            // AnnounceAttribute(ATTRIBUTE_ALL) and AnnounceRace(RACE_ALL) — the Attribute first — and at resolution
+            // the opponent selects 1 monster of both from LOCATION_HAND|LOCATION_DECK and sends it to the GY.
+            new AtomRegistration.Atom(
+                @"^\s*Pay (\d+) Life Points\.\s*Declare a Type and an Attribute\.\s*Your opponent must send 1 " +
+                @"monster with both the declared Type and Attribute from their hand or Deck to the " + Gy + @"\.\s*$",
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.DeclareTypeAndAttributeThenOpponentSendsFromHandOrDeck,
+                    Side = EffectSide.Opponent,
+                    Amount = int.TryParse(m.Groups[1].Value, out var lp) ? lp : 1000,
+                    PayLpAmount = int.TryParse(m.Groups[1].Value, out var lp2) ? lp2 : 1000,
+                    TargetCount = 1,
+                    MakesChainLink = true
+                }),
             // Atomic Firefly (c87340664), its whole text. Lua: SINGLE TRIGGER_F EVENT_BATTLE_DESTROYED, condition
             // IsReason(REASON_BATTLE) and IsPreviousPosition(POS_FACEUP) (attacking or attacked, a battle-flipped one is face-up
             // when destroyed); label = GetReasonPlayer(); Damage(that player, 1000). No GY needed (a banished Firefly still burns).

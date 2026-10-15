@@ -3396,6 +3396,14 @@ namespace WRLDZ.Duel.TextEffects
         /// hardcoded. Resolved by <see cref="LvChainRuntime.ResolveProgression"/>.
         /// </summary>
         SpecialSummonLvProgressionFromSentMonster,
+        /// <summary>
+        /// Abyssal Designator (c89801755): a Normal Spell — "Pay 1000 Life Points. Declare a Type and an Attribute.
+        /// Your opponent must send 1 monster with both the declared Type and Attribute from their hand or Deck to the
+        /// Graveyard." Two declarations in the Lua's order (Attribute, then Monster Type) followed by the opponent's
+        /// pick over hand AND Deck — the engine's only monster that may come from either pile. Resolved by
+        /// <see cref="BattleAndPositionRecordsRuntime.DeclareTypeAndAttributeThenOpponentSends"/>.
+        /// </summary>
+        DeclareTypeAndAttributeThenOpponentSendsFromHandOrDeck,
     }
 
 

@@ -689,6 +689,11 @@ namespace WRLDZ.Duel.TextEffects
                 EffectActionKind.CoinCallRightDestroyOneOppMonster => EffectResolutionKind.Destroy,
                 EffectActionKind.OpponentSendsSpellFromDeckToGy => EffectResolutionKind.Discard,
                 EffectActionKind.MillCardOfDeclaredTypeFromOpponentDeck => EffectResolutionKind.Discard,
+                // BattleAndPositionRecords batch: Abyssal Designator — declare Type + Attribute, the opponent sends 1
+                // matching monster from hand or Deck to the GY. Same "declare and the opponent sends" family as
+                // MillCardOfDeclaredTypeFromOpponentDeck.
+                EffectActionKind.DeclareTypeAndAttributeThenOpponentSendsFromHandOrDeck =>
+                    EffectResolutionKind.Discard,
                 // FlipDownAndPeek batch (v162): 8-Claws Scorpion's damage-calculation ATK; Giant Axe Mummy destroys the
                 // attacker; Cobraman Sakuzy / A Man with Wdjat look at Set cards that return to their original position;
                 // Trap Dustshoot returns a monster from the opponent's hand to the Deck.

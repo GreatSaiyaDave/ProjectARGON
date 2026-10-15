@@ -121,6 +121,15 @@ namespace WRLDZ.Duel.TextEffects
         public static List<CardInstance> MonsterTypeTokens(DuelEngine engine) =>
             MonsterTypesOf(engine).Select(t => Token(TypeTokenKind, t)).ToList();
 
+        /// <summary>
+        /// Every Attribute a card can have, A–Z (Lua ATTRIBUTE_ALL). Earthshaker only ever offers the Attributes the
+        /// face-up monsters show; Abyssal Designator lets its controller declare any of the seven.
+        /// </summary>
+        public static readonly string[] AllAttributes =
+        {
+            "DARK", "DIVINE", "EARTH", "FIRE", "LIGHT", "WATER", "WIND"
+        };
+
         /// <summary>One declaration token per Attribute given (fresh instances).</summary>
         public static List<CardInstance> AttributeTokens(IEnumerable<string> attributes) =>
             attributes.Select(a => Token(AttributeTokenKind, a)).ToList();
