@@ -1,6 +1,11 @@
 // 2D anime character sprites that EXIST IN 3D: the painted sprite is lit and parallaxed by a
-// per-pixel DEPTH + NORMAL map (see build_normal_depth.py), so the flat art gains real form —
-// the cel terminator follows the body, not the whole billboard. No ink outline.
+// per-pixel DEPTH + NORMAL map (build_formmap_v2.py for the DK sets, build_normal_depth.py for
+// the originals), so the flat art gains real form — the cel terminator follows the body, not the
+// whole billboard. No ink outline.
+//
+// _KeyBias: a camera-facing plane lit by a frontal key is uniformly lit, so form alone is not
+// enough — sets that need form pull the key sideways with AnimeSpriteKeyDir (0 = fixed lateral
+// portrait key, 1 = plain scene key, the default, unchanged for every pre-existing set).
 //
 // _NormalMap:  RGB = tangent-space normal (normal*0.5+0.5),  A = depth (0..1).
 // The billboard is yaw-only, so the depth parallax shows as the camera looks from above/below.
@@ -14,6 +19,7 @@ Shader "WRLDZ/AnimeCel"
         _NormalMap ("Normal (RGB) + depth (A)", 2D) = "bump" {}
         _NormalStrength ("Form-light strength", Range(0, 1)) = 0.8
         _Parallax ("Depth parallax", Range(0, 0.05)) = 0.015
+        _KeyBias ("Scene-key influence (0 = fixed portrait key)", Range(0, 1)) = 1
         _ShadowAmt ("Anime shadow band depth", Range(0, 0.5)) = 0.08
         _RimAmt ("Rim light", Range(0, 1)) = 0.6
         [Enum(UnityEngine.Rendering.CullMode)] _Cull ("Cull", Float) = 0
@@ -34,7 +40,7 @@ Shader "WRLDZ/AnimeCel"
             float4 _BaseMap_ST;
             half4 _BaseColor;
             half _NormalStrength, _Parallax;
-            half _ShadowAmt, _RimAmt;
+            half _ShadowAmt, _RimAmt, _KeyBias;
             half _Surface, _SrcBlend, _DstBlend, _ZWrite;
         CBUFFER_END
 
@@ -117,7 +123,8 @@ Shader "WRLDZ/AnimeCel"
                 half3 nT = normalize(half3((nSample.rgb * 2.0h - 1.0h).xy * _NormalStrength, 1.0h));
                 float3 nWS = normalize(i.tangentWS * nT.x + i.bitangentWS * nT.y + i.normalWS * nT.z);
 
-                half3 col = AnimeShade(tex.rgb, nWS, viewDir, _ShadowAmt, _RimAmt);
+                half3 col = AnimeShadeKey(tex.rgb, nWS, viewDir, _ShadowAmt, _RimAmt,
+                                          AnimeSpriteKeyDir(viewDir, _KeyBias));
                 return half4(col * _BaseColor.rgb, _BaseColor.a);
             }
             ENDHLSL

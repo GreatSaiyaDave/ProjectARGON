@@ -110,10 +110,23 @@ namespace WRLDZ.Presentation.Avatar
             {
                 if (_material.HasProperty("_NormalStrength")) _material.SetFloat("_NormalStrength", 0f);
                 if (_material.HasProperty("_Parallax")) _material.SetFloat("_Parallax", 0f);
+                if (_material.HasProperty("_KeyBias")) _material.SetFloat("_KeyBias", 1f);
                 return;
             }
             _normalMap = tex;
             if (_material.HasProperty("_NormalMap")) _material.SetTexture("_NormalMap", tex);
+
+            // Duelist Kingdom renders: form maps authored by build_formmap_v2.py, which models the
+            // body as local cylinders instead of a silhouette pillow, so they are meant to be lit at
+            // full strength. They also need the lateral portrait key — a camera-facing plane under a
+            // frontal scene key measures 0% of the body in shadow (totally flat), and 78% under a
+            // backlight; at 0.15 bias the split stays in a healthy 15-37% in every scene while still
+            // following the world light. Every other set keeps the material defaults unchanged.
+            if (_set.id.EndsWith("_da"))
+            {
+                SetFormLighting(1f, 0.03f);
+                if (_material.HasProperty("_KeyBias")) _material.SetFloat("_KeyBias", 0.15f);
+            }
         }
 
         /// <summary>Tune the 3D form: how strongly the normal map lights the body (0 = flat

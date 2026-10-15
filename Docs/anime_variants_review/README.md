@@ -88,16 +88,53 @@ lists cross-contaminate, so confirm the character by eye.
 
 Every character sprite now has a matching **form map** at
 `Assets/Resources/WRLDZ/AnimeCharacters/<id>/<id>_normal.png`: `RGB` = a tangent-space
-normal, `A` = depth. It is derived from the flat art (distance transform of the silhouette
-→ depth, gradient → normal; `build_normal_depth.py`), so it is deterministic and offline.
+normal, `A` = depth. It is derived from the flat art, so it is deterministic and offline.
 
 `AnimeCelShader` samples it so the cel terminator follows the **body** instead of the whole
 billboard, and the depth channel parallaxes the sprite with the camera. `AnimeCharacterActor`
 loads it automatically per set; `SetFormLighting(strength, parallax)` tunes it. With no form
 map the sprite stays flat (the old behaviour) instead of breaking.
 
-`normals/<cid>.jpg` shows the effect: the original, the normal map, and relights from three
-directions — the round of the head, shoulders and limbs is what you will see in the game.
+### Form map v2 (the Duelist Kingdom sets)
+
+The original `build_normal_depth.py` takes the distance transform of the silhouette. Measured
+against the shader's maths, that field is almost **flat across the body** — its gradient only
+spikes within a few pixels of the edge — so the sprite was *always* uniform: **0% of the figure
+in shadow under a frontal or sunset key, 78% under a backlight** (uniformly flat either way,
+never a terminator crossing the body).
+
+`build_formmap_v2.py` (default: every `*_da` set) rebuilds it from the body's **local run
+lengths**, so each blob — torso, arm, leg — is its own cylinder and the curvature keeps growing
+across the whole body instead of dying at a ridge. `PHI = 1.40` caps the silhouette tilt at
+~49°, deliberately short of 90° so the edge never darkens into an ink outline.
+
+The form map alone was still not enough: a camera-facing plane under a frontal key is lit
+uniformly no matter what the normals say. `AnimeToon.hlsl` therefore gained
+`AnimeSpriteKeyDir()` — a fixed lateral portrait key from camera-left — and `AnimeCelShader` a
+`_KeyBias` property (`0` = portrait key, `1` = the plain scene key, the default, so **every
+pre-existing set is unchanged**). The DK sets set it to `0.15` in
+`AnimeCharacterActor.ApplyFormMap()` along with `SetFormLighting(1f, 0.03f)`, which keeps the
+world light influencing the shot without letting it collapse back to frontal.
+
+Measured across five scene lights, share of the figure in the shadow band:
+
+| configuration | frontal | overhead | light from right | backlight | sunset |
+|---|---|---|---|---|---|
+| **shipped** (v2 map + `_KeyBias` 0.15) | 14–19% | 21–24% | 16–20% | 34–38% | 24–27% |
+| portrait key only | 29–33% | | | | |
+| old scene key only | **0%** | 18% | 18% | 78% | **0%** |
+
+Full per-character numbers: `normals/formmap_v2_report.json`.
+
+Also fixed for the DK sets: their texture importer settings had fallen back to Unity defaults
+(mipmaps **on**, `alphaIsTransparency` **off**, wrap **repeat**). Mipmapped alpha makes a
+`clip(a-0.5)` cutout dissolve and shimmer at distance, and without de-fringing the edge keyed
+from black leaves a dark fringe that reads as an ink outline. All 180 DK colour sprite `.meta`
+files now match the base sets exactly (mip off, clamp, `alphaIsTransparency` on, max 1024).
+
+`normals/<cid>_da.jpg` shows it: **original · normal map · OLD scene key · shipped key** — the
+last two tiles are the same art under the old and the new key, so the difference is visible in
+one row.
 
 ## Not in Season 1
 
@@ -114,5 +151,9 @@ for them; their variants arrive with later seasons.
 - `hero_sheets.py` – per-hero ranked contact sheets (`heroes/`).
 - `export_fullframes.py` – full-frame reference sets (`fullframes/`) from the candidates.
 - `yami_extra.py` – expands Yami Bakura by scanning all e013/e014 keyframes.
-- `build_normal_depth.py` (parent folder) – generates the per-character depth+normal form maps.
+- `build_normal_depth.py` (parent folder) – generates the per-character depth+normal form maps
+  for the original 16 sets. Superseded for the DK sets by the next line.
+- `build_formmap_v2.py` (parent folder) – form map v2 for the `*_da` sets (local-cylinder normals),
+  regenerates `<id>_normal.png`, the `normals/<cid>_da.jpg` sheets and `formmap_v2_report.json`,
+  and re-checks the shading maths offline. Pass ids to rebuild only those.
 - `assemble_variant.py` (parent folder) – turns one picked cutout into the 12-file sprite set.
