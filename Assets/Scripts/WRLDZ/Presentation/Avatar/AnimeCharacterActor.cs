@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using WRLDZ.Data;
 
 namespace WRLDZ.Presentation.Avatar
 {
@@ -30,7 +31,7 @@ namespace WRLDZ.Presentation.Avatar
         /// <summary>True while a gesture overlay is playing.</summary>
         public bool IsGesturing { get; private set; }
 
-        AnimeCharacterCatalog.AnimeCharacterSet _set;
+        AnimeCharacterSet _set;
         GameObject _quad;
         MeshRenderer _renderer;
         Material _material;
