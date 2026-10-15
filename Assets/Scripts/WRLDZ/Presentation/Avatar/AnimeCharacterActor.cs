@@ -12,12 +12,18 @@ namespace WRLDZ.Presentation.Avatar
     /// idle breathing animation, expression swapping, and gesture overlays.
     ///
     /// Sprites are loaded from Resources/WRLDZ/AnimeCharacters/{id}/{angle}.png.
-    /// The AnimeCelShader applies stepped lighting + rim light + transparent cutout.
+    /// A per-set depth+normal map ({id}_normal.png: RGB normal, A depth) makes the flat
+    /// art EXIST IN 3D — the cel terminator follows the body (not the whole quad) and the
+    /// sprite parallaxes with the camera. The AnimeCelShader applies stepped lighting +
+    /// rim light + transparent cutout; no ink outline.
     /// </summary>
     public sealed class AnimeCharacterActor : MonoBehaviour
     {
         const string CelMatRes = "WRLDZ/Avatar3D/Materials/AnimeCel";
         const string QuadPref = "WRLDZ/AnimeCharacters/";
+
+        /// <summary>Per-set form map: RGB = normal, A = depth (build_normal_depth.py).</summary>
+        const string NormalSuffix = "_normal";
 
         /// <summary>World-space height of the character in metres (Yami Yugi 1.58, Kaiba 1.86, etc.).</summary>
         public float HeightM = 1.75f;
@@ -36,6 +42,7 @@ namespace WRLDZ.Presentation.Avatar
         MeshRenderer _renderer;
         Material _material;
         Texture2D _currentSprite;
+        Texture2D _normalMap;
         Camera _camera;
         float _baseY;
         float _idleTime;
@@ -89,7 +96,33 @@ namespace WRLDZ.Presentation.Avatar
             _lastCameraPos = Camera.main != null ? Camera.main.transform.position : Vector3.zero;
 
             LoadAngleSprite(AnimeCharacterCatalog.CameraAngle.Front);
+            ApplyFormMap();
             BuildShadow();
+        }
+
+        /// <summary>Load this set's depth+normal map so the 2D art is lit as 3D form. When the map
+        /// is missing the sprite stays flat (no form light, no parallax) rather than break.</summary>
+        void ApplyFormMap()
+        {
+            if (_material == null || _set == null) return;
+            var tex = Resources.Load<Texture2D>(QuadPref + _set.id + "/" + _set.id + NormalSuffix);
+            if (tex == null)
+            {
+                if (_material.HasProperty("_NormalStrength")) _material.SetFloat("_NormalStrength", 0f);
+                if (_material.HasProperty("_Parallax")) _material.SetFloat("_Parallax", 0f);
+                return;
+            }
+            _normalMap = tex;
+            if (_material.HasProperty("_NormalMap")) _material.SetTexture("_NormalMap", tex);
+        }
+
+        /// <summary>Tune the 3D form: how strongly the normal map lights the body (0 = flat
+        /// billboard, 1 = full form) and how far the depth map parallaxes with the camera.</summary>
+        public void SetFormLighting(float normalStrength, float parallax)
+        {
+            if (_material == null || _normalMap == null) return;
+            if (_material.HasProperty("_NormalStrength")) _material.SetFloat("_NormalStrength", Mathf.Clamp01(normalStrength));
+            if (_material.HasProperty("_Parallax")) _material.SetFloat("_Parallax", Mathf.Clamp(parallax, 0f, 0.05f));
         }
 
         void BuildShadow()
@@ -249,6 +282,7 @@ namespace WRLDZ.Presentation.Avatar
         {
             if (_material != null) Destroy(_material);
             if (_currentSprite != null) Resources.UnloadAsset(_currentSprite);
+            if (_normalMap != null && _normalMap != _currentSprite) Resources.UnloadAsset(_normalMap);
         }
 
         static void SetLayerRecursive(GameObject go, int layer)

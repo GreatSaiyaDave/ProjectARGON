@@ -18,6 +18,7 @@ This folder is the human-review stage. The assistant cannot see images, so the w
 | `by_character/<cid>.jpg` | **Start here.** One sheet per character: every tile the matcher labelled as that character, best confidence first. `slug:fFRAME` + `m<margin>` captions. |
 | `heroes/<cid>.jpg` | **Hero focus** (Yami Yugi, Joey, Tea, Tristan, Yami Bakura). Every candidate ranked by similarity to that hero — a *superset* to scan and pick from, not an argmax label. Best first. |
 | `fullframes/<cid>.jpg` | **Full-frame references.** Contact sheet of whole 1280×720 source frames per character (`fullframes/<cid>/` holds the individual frames + `index.csv`). |
+| `normals/<cid>.jpg` | **2D-in-3D check.** Left→right: original sprite · the generated normal map · the same sprite relit from the left / right / top, using the normal map. This is the form the cel shader now lights in-game. |
 | `by_episode/<slug>.jpg` | Per-episode sheet. Header = episode title + cast (from the wiki). Each tile shows the anime frame + the cutout + label. |
 | `CHARACTER_INDEX.md` | Character → episodes it appears in + the tiles labelled for it. |
 | `OUTFITS.md` | Each character's Season-1 (Duelist Kingdom) outfit, scraped from the wiki. |
@@ -83,6 +84,21 @@ e013 "Evil Spirit of the Ring" / e014 are the possessed (spirit) appearance, eve
 Bakura is treated as Ryo. As everywhere in this folder, ranking is a **navigation aid** — the
 lists cross-contaminate, so confirm the character by eye.
 
+## 2D art that exists in 3D (form map)
+
+Every character sprite now has a matching **form map** at
+`Assets/Resources/WRLDZ/AnimeCharacters/<id>/<id>_normal.png`: `RGB` = a tangent-space
+normal, `A` = depth. It is derived from the flat art (distance transform of the silhouette
+→ depth, gradient → normal; `build_normal_depth.py`), so it is deterministic and offline.
+
+`AnimeCelShader` samples it so the cel terminator follows the **body** instead of the whole
+billboard, and the depth channel parallaxes the sprite with the camera. `AnimeCharacterActor`
+loads it automatically per set; `SetFormLighting(strength, parallax)` tunes it. With no form
+map the sprite stays flat (the old behaviour) instead of breaking.
+
+`normals/<cid>.jpg` shows the effect: the original, the normal map, and relights from three
+directions — the round of the head, shoulders and limbs is what you will see in the game.
+
 ## Not in Season 1
 
 Marik, Ishizu and Odion debut in later arcs (Battle City onward), so there are no S1 frames
@@ -98,4 +114,5 @@ for them; their variants arrive with later seasons.
 - `hero_sheets.py` – per-hero ranked contact sheets (`heroes/`).
 - `export_fullframes.py` – full-frame reference sets (`fullframes/`) from the candidates.
 - `yami_extra.py` – expands Yami Bakura by scanning all e013/e014 keyframes.
+- `build_normal_depth.py` (parent folder) – generates the per-character depth+normal form maps.
 - `assemble_variant.py` (parent folder) – turns one picked cutout into the 12-file sprite set.
