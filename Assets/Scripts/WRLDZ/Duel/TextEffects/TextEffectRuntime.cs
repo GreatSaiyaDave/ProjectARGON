@@ -9855,6 +9855,12 @@ namespace WRLDZ.Duel.TextEffects
                 case EffectActionKind.ReturnHandNormalMonsterToDeckBottomDrawAtYourEndPhase:
                     RecoveryAndPhaseCostsRuntime.ResolveCoachGoblin(engine, who, source, clause);
                     break;
+
+                case EffectActionKind.ReturnHandLevelMonsterToDeckShuffleThenDraw:
+                    // Lighten the Load: the pick and the shuffle are this effect's own; Coach Goblin places on the
+                    // bottom instead, so they cannot share a runtime.
+                    RecoveryAndPhaseCostsRuntime.ResolveLightenTheLoad(engine, who, source, clause);
+                    break;
                 case EffectActionKind.SendRaceFromHandOrFieldSpecialSummonThisFromGyAtEndPhase:
                     break;
                 case EffectActionKind.SpecialSummonFusionFromExtraNoDirectAttackReturnAtEndPhase:

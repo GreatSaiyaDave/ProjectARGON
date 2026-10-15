@@ -389,7 +389,13 @@ namespace WRLDZ.Duel.TextEffects
             var union = EquipClauseOf(equip);
             // UnionRiders batch (v175): Lunatite names no host — any face-up monster its controller controls.
             if (union != null && union.UnionEquipsAnyFaceUpMonster)
+            {
+                // Heavy Mech Support Platform: the typed Union carries a Type filter instead of a host name, so the
+                // "any face-up monster" shape is narrowed here. An empty filter stays Lunatite's any-monster rule.
+                if (!string.IsNullOrEmpty(union.RaceFilter))
+                    return ClassicEraTemplates.RaceMatches(monster.Race, union.RaceFilter);
                 return UnionRidersRuntime.AnyHostAllows(engine, union, equip, monster);
+            }
             if (union == null || string.IsNullOrEmpty(union.EquipHostName)) return false;
             return monster.IsNamed(union.EquipHostName);
         }

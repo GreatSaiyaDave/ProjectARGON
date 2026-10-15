@@ -22,6 +22,11 @@ namespace WRLDZ.Duel.Rules
         const int UltimateInsectLv3 = 34088136;
         const int RocFromTheValleyOfHaze = 28143906;
         const int PikerusCircleOfEnchantment = 74270067;
+        const int HeavyMechSupportPlatform = 23265594;
+        const int LightenTheLoad = 37231841;
+        const int MachineKing = 46700124;    // Machine 1750/1800 — the typed Union's host
+        const int SummonedSkull = 54652250; // Non-Machine, must not be a legal host
+        const int GaiaFierceKnight = 6368038; // Normal Lv7 — a legal Lighten the Load cost
         const int MindHaxorz = 75392615;
         const int MysticalElf = 15025844;    // Normal Lv4 LIGHT 800/2000
         const int Celtic = 91152256;         // Normal Lv4 EARTH 1400/1200
@@ -47,7 +52,8 @@ namespace WRLDZ.Duel.Rules
 
             // ── compile shapes: no unparsed residue, Implemented ──
             foreach (var id in new[] { PerfectMachineKing, UltimateInsectLv3, RocFromTheValleyOfHaze,
-                                       PikerusCircleOfEnchantment, MindHaxorz })
+                                       PikerusCircleOfEnchantment, MindHaxorz, HeavyMechSupportPlatform,
+                                       LightenTheLoad })
             {
                 Check($"{db.Get(id)?.name ?? id.ToString()}: FullyCompiled and Implemented",
                     Implemented(id), Shape(id));
@@ -117,6 +123,54 @@ namespace WRLDZ.Duel.Rules
                 Check("Pikeru's Circle of Enchantment: the other duelist is not protected by it",
                     p.LifePoints == myLp - 800,
                     $"lp {myLp}->{p.LifePoints}");
+            }
+
+            // ── Heavy Mech Support Platform: a typed Union — only a Machine is a legal host ──
+            {
+                var eng = Fresh(db, pDeck, aDeck);
+                ClearBoard(eng);
+                var pp = eng.Player;
+                var mach = PlaceMonster(eng, pp, MachineKing, 1, BattlePosition.Attack, true);
+                var non = PlaceMonster(eng, pp, SummonedSkull, 2, BattlePosition.Attack, true);
+                var hm = PlaceMonster(eng, pp, HeavyMechSupportPlatform, 0, BattlePosition.Attack, true);
+                hm.SummonedThisTurn = false;
+                var correct = WRLDZ.Duel.TextEffects.EquipFamilyRuntime.IsCorrectEquipTarget(eng, hm, mach);
+                var wrong = WRLDZ.Duel.TextEffects.EquipFamilyRuntime.IsCorrectEquipTarget(eng, hm, non);
+                var clause = WRLDZ.Duel.TextEffects.CardTextEffectCompiler.Compile(db.Get(HeavyMechSupportPlatform))
+                    ?.ClauseList.Find(c => c?.Action == EffectActionKind.EquipThisToTarget);
+                Check("Heavy Mech Support Platform: the typed Union equips to a Machine, and only to a Machine",
+                    correct && !wrong && clause != null && clause.UnionEquipsAnyFaceUpMonster &&
+                    string.Equals(clause.RaceFilter, "Machine", StringComparison.OrdinalIgnoreCase) &&
+                    string.IsNullOrEmpty(clause.EquipHostName),
+                    $"machine={correct} nonMachine={wrong} race={clause?.RaceFilter} host={clause?.EquipHostName ?? "null"}");
+                Check("Heavy Mech Support Platform: it can be activated once it is on the field",
+                    eng.CanActivateSpellTrap(pp, hm, fromHand: false),
+                    "cannot activate");
+            }
+
+            // ── Lighten the Load: the Level 7+ floor, and it cannot be used without such a monster ──
+            {
+                var eng = Fresh(db, pDeck, aDeck);
+                var reached = ReachOpponentMain(eng);
+                ClearBoard(eng);
+                var pp = eng.Player;
+                var oo = eng.Opponent;
+                pp.Hand.Clear();
+                oo.Hand.Clear();
+                var clause = WRLDZ.Duel.TextEffects.CardTextEffectCompiler.Compile(db.Get(LightenTheLoad))
+                    ?.ClauseList[0];
+                var lighten = PutInHand(eng, oo, LightenTheLoad);
+                var withoutHigh = eng.CanActivateSpellTrap(oo, lighten, fromHand: true);
+                // Level 7 Summoned Skull in the hand makes the effect usable.
+                PutInHand(eng, oo, GaiaFierceKnight);
+                var withHigh = eng.CanActivateSpellTrap(oo, lighten, fromHand: true);
+                Check("Lighten the Load: the Level floor is a clause parameter, not a hard-coded number",
+                    clause != null && clause.MinLevelOrHigher == 7 &&
+                    clause.Action == EffectActionKind.ReturnHandLevelMonsterToDeckShuffleThenDraw,
+                    $"min={clause?.MinLevelOrHigher} action={clause?.Action}");
+                Check("Lighten the Load: usable only with a Level 7 or higher monster in hand",
+                    reached && !withoutHigh && withHigh,
+                    $"reached={reached} without={withoutHigh} with={withHigh}");
             }
 
             // ── Mind Haxorz: paying the LP is the whole cost; a look changes nothing ──

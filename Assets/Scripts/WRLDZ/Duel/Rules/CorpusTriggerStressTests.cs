@@ -352,6 +352,16 @@ namespace WRLDZ.Duel.Rules
                     bewd.Equips.Add(axe);
                 }
 
+                // Lighten the Load (RecoveryAndPhaseCosts batch): its activation condition wants a Level 7 or higher
+                // monster in the hand, so the probe board gets one. Without it the card would be offered with nothing
+                // it could ever pick.
+                if (c.ActivationCondition == RecoveryAndPhaseCostsRuntime.HandHasLevelOrHigherMonster)
+                {
+                    var floor = System.Math.Max(1, c.MinLevelOrHigher);
+                    if (!p.Hand.Any(h => h != null && h.Def != null && h.Def.IsMonster && h.Def.level >= floor))
+                        PutInHand(engine, p, FirstMonsterId(engine, d => d.IsMonster && d.level >= floor));
+                }
+
                 // Double Snare (NegationMonsters batch, v161): a face-up card that negates Trap effects (Jinzo).
                 if (c.Zone == EffectZoneFilter.FieldFaceUpCardsNegatingTrapEffects && opp.MonsterZones[3].IsEmpty)
                     PlaceMonster(engine, opp, 77585513, 3, BattlePosition.Attack, true);
@@ -778,8 +788,15 @@ namespace WRLDZ.Duel.Rules
 
                 // UnionRiders batch (v175): Lunatite equips to any other face-up monster you control; Union Rider takes a
                 // face-up Union Monster the opponent controls (Kiryu).
+                // Heavy Mech Support Platform (RDS): the typed Union carries a Type filter instead of a host name, so the
+                // "any face-up monster" it wants must be one of that Type.
                 if (c.UnionEquipsAnyFaceUpMonster && p.MonsterZones[1].IsEmpty)
-                    PlaceMonster(engine, p, Celtic, 1, BattlePosition.Attack, true);
+                {
+                    var wanted = string.IsNullOrEmpty(c.RaceFilter)
+                        ? Celtic
+                        : FirstMonsterId(engine, d => ClassicEraTemplates.RaceMatches(d.race, c.RaceFilter));
+                    PlaceMonster(engine, p, wanted > 0 ? wanted : Celtic, 1, BattlePosition.Attack, true);
+                }
                 if (c.Action == EffectActionKind.TakeControlOfOpponentUnionAndEquipToThis && opp.MonsterZones[3].IsEmpty)
                     PlaceMonster(engine, opp, 84814897, 3, BattlePosition.Attack, true);
             }

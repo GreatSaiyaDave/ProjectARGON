@@ -44,6 +44,11 @@ namespace WRLDZ.Duel.TextEffects
         /// cards in their hand" (Lua chk: GetHandcount(1-tp) &lt;= 3).</summary>
         public const string OpponentHasAtMostThreeInHand = "RecoveryOpponentHasAtMostThreeInHand";
 
+        /// <summary>ActivationCondition (Lighten the Load, c37231841): a monster in your hand whose Level is at least
+        /// the clause's <see cref="EffectClause.MinLevelOrHigher"/> (Lua chk: IsExistingMatchingCard over the hand).
+        /// Without it the card would be offered with no card it could ever pick.</summary>
+        public const string HandHasLevelOrHigherMonster = "RecoveryHandHasLevelOrHigherMonster";
+
         /// <summary>The AI pays Recycle's LP only while it keeps at least this many LP afterwards.</summary>
         public const int AiRecycleFloorLp = 3000;
 
@@ -82,6 +87,14 @@ namespace WRLDZ.Duel.TextEffects
                     ok = who.Hand != null && who.Hand.Any(h => h != null && !ReferenceEquals(h, card));
                     reason = "Needs another card in your hand.";
                     return true;
+                case HandHasLevelOrHigherMonster:
+                {
+                    var floor = System.Math.Max(1, c.MinLevelOrHigher);
+                    ok = who.Hand != null && who.Hand.Any(h =>
+                        h != null && h.Def != null && h.Def.IsMonster && h.Def.level >= floor);
+                    reason = $"Needs a Level {floor} or higher monster in your hand.";
+                    return true;
+                }
                 case OpponentHasAtMostThreeInHand:
                 {
                     var opp = engine.OpponentOf(who);
@@ -517,6 +530,57 @@ namespace WRLDZ.Duel.TextEffects
             engine.NextSpecialSummonFromGraveyard = false;
             who.Graveyard.Add(card);
             engine.Log($"{card.Name} could not be Special Summoned — it stays in the GY.");
+        }
+
+        /// <summary>
+        /// Lighten the Load (c37231541): once per turn, add 1 Level 7 or higher monster from your hand to your Deck,
+        /// shuffle it, then draw 1 card. The pick is the Lua's SelectMatchingCard over the hand, and the draw is
+        /// gated on the Deck not being empty, so an empty Deck leaves the shuffle made and nothing drawn.
+        /// </summary>
+        public static void ResolveLightenTheLoad(DuelEngine engine, DuelistState who, CardInstance source,
+            EffectClause clause)
+        {
+            if (engine == null || who == null || source == null || clause == null) return;
+            var minLevel = System.Math.Max(1, clause.MinLevelOrHigher);
+            if (!who.Hand.Any(h => h != null && h.Def != null && h.Def.IsMonster && h.Def.level >= minLevel))
+            {
+                engine.Log($"{source.Name}: there is no Level {minLevel} or higher monster in your hand.");
+                return;
+            }
+
+            ContinuousTrapsAndSpiritSupportRuntime.AskCardPick(engine, who, source, new CardPickRequest
+            {
+                Candidates = () => who.Hand
+                    .Where(h => h != null && h.Def != null && h.Def.IsMonster && h.Def.level >= minLevel)
+                    .ToList(),
+                Kind = EffectTargetKind.DiscardFromHand,
+                Prompt = $"{source.Name}: tap 1 Level {minLevel} or higher monster to add to your Deck and shuffle.",
+                AskWithOneCandidate = true,
+                AiChoose = list => list.OrderBy(h => h.Def.level).FirstOrDefault(),
+                Cancel = () => engine.Log($"{source.Name}: {who.Name} does not use its effect."),
+                Finish = chosen =>
+                {
+                    if (chosen == null || !who.Hand.Contains(chosen))
+                    {
+                        engine.Log($"{source.Name}: there is nothing left to add to the Deck.");
+                        return;
+                    }
+
+                    var pile = PerCopyDeckRuntime.OwnersPile(who, chosen) ?? who;
+                    who.Hand.Remove(chosen);
+                    pile.Deck.Add(chosen.CardId);
+                    engine.Rng.Shuffle(pile.Deck);
+                    engine.Log($"{source.Name}: {chosen.Name} is added to the Deck and shuffled.");
+                    if (pile.Deck == null || pile.Deck.Count == 0)
+                    {
+                        engine.Log($"{who.Name} cannot draw — the Deck is empty.");
+                        return;
+                    }
+
+                    engine.Draw(who, 1);
+                    engine.NotifyPublic();
+                }
+            });
         }
     }
 }

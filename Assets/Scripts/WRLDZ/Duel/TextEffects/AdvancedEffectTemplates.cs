@@ -105,6 +105,15 @@ namespace WRLDZ.Duel.TextEffects
             @"and Special Summon this card in face-up Attack Position\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        // Union procedure, typed host (Heavy Mech Support Platform): "Target 1 Machine monster you control" in place
+        // of a quoted name. The host filter is a Type/Race, so it is carried as RaceFilter and the clause takes the
+        // "any face-up monster of its controller" Union shape (UnionEquipsAnyFaceUpMonster), which
+        // EquipFamilyRuntime.UnionLimitAllows then narrows by RaceFilter.
+        static readonly Regex RxUnionEitherTyped = new(
+            @"Once per turn,\s*you can either:\s*Target 1 ([A-Za-z]+(?:[- ][A-Za-z]+)*) monster you control;\s*" +
+            @"equip this card to that target,\s*OR:\s*Unequip this card and Special Summon it\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         // Union battle-discard rider (Zombie Tiger).
         static readonly Regex RxUnionBattleDiscard = new(
             @"If the equipped monster destroys an opponent's monster by battle:\s*" +
@@ -486,6 +495,7 @@ namespace WRLDZ.Duel.TextEffects
             }
 
             AddUnionProcedure(RxUnionEither.Match(text), text, into, spans);
+            AddUnionProcedure(RxUnionEitherTyped.Match(text), text, into, spans, typed: true);
             AddUnionProcedure(RxUnionClassic.Match(text), text, into, spans);
             var battleDiscard = RxUnionBattleDiscard.Match(text);
             if (battleDiscard.Success)
@@ -607,18 +617,39 @@ namespace WRLDZ.Duel.TextEffects
             }
         }
 
+        /// <summary>
+        /// The word after "Target 1 " in a typed Union ("Machine", "Machine-Type"), normalized to a printed Type, or
+        /// null when it names no Type at all ("face-up"). A "-Type" suffix is dropped because RaceMatches drops it too.
+        /// </summary>
+        static string NormalizeTypeWord(string word)
+        {
+            if (string.IsNullOrEmpty(word)) return null;
+            var t = Regex.Replace(word.Trim(), @"-Type$", "", RegexOptions.IgnoreCase);
+            return ClassicEraTemplates.MonsterTypes.Contains(t) ? t : null;
+        }
+
         static void AddUnionProcedure(Match uni, string text,
             System.Collections.Generic.List<EffectClause> into,
-            System.Collections.Generic.List<(int start, int length)> spans)
+            System.Collections.Generic.List<(int start, int length)> spans, bool typed = false)
         {
             if (!uni.Success || into == null) return;
-            var host = uni.Groups[1].Value;
+            // Heavy Mech Support Platform: the host is "1 Machine monster you control" rather than a quoted name, and
+            // that regex puts the Type word in group 1. The clause then reads as the any-face-up-monster Union shape
+            // plus that filter, which EquipFamilyRuntime.UnionLimitAllows honours.
+            var typeWord = typed ? NormalizeTypeWord(uni.Groups[1].Value) : null;
+            // "1 face-up monster" is not a Type: a filter that names no printed Type matches nothing, which is the
+            // silent-nothing class the compiler's RaceFilter validator exists for. Leave the sentence unparsed
+            // (fail closed) rather than carry a filter that can never match.
+            if (typed && typeWord == null) return;
+            var host = typed ? null : uni.Groups[1].Value;
             var alt = uni.Groups.Count > 2 && uni.Groups[2].Success ? uni.Groups[2].Value : null;
             into.Add(new EffectClause
             {
                 Timing = EffectTiming.Activate,
                 Action = EffectActionKind.EquipThisToTarget,
                 EquipHostName = host,
+                UnionEquipsAnyFaceUpMonster = typed,
+                RaceFilter = typeWord,
                 RequiresTargetChoice = true,
                 Zone = EffectZoneFilter.ControllerMonsters,
                 NamedCard = host,

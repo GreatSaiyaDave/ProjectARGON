@@ -883,7 +883,8 @@ namespace WRLDZ.Duel.TextEffects
                     EffectActionKind.SendRaceFromHandOrFieldSpecialSummonThisFromGyAtEndPhase => EffectResolutionKind.SpecialSummon,
                 EffectActionKind.PayLpReturnGyNonMonsterToDeckBottomAtYourStandby => EffectResolutionKind.ReturnToDeck,
                 EffectActionKind.ShuffleHandIntoDeckThenDrawSameNumber or
-                    EffectActionKind.ReturnHandNormalMonsterToDeckBottomDrawAtYourEndPhase => EffectResolutionKind.Draw,
+                    EffectActionKind.ReturnHandNormalMonsterToDeckBottomDrawAtYourEndPhase or
+                    EffectActionKind.ReturnHandLevelMonsterToDeckShuffleThenDraw => EffectResolutionKind.Draw,
                 // ChaosBanishSummons batch: Chaos Sorcerer / Black Luster Soldier - Envoy of the Beginning, Chaosrider Gustaph,
                 // Soul Absorption, Primal Seed, Strike Ninja.
                 EffectActionKind.BanishTargetedFieldMonster or

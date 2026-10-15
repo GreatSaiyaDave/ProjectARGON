@@ -164,6 +164,27 @@ namespace WRLDZ.Duel.TextEffects
                     MakesChainLink = true
                 }),
 
+            // Lighten the Load (c37231541), its whole text. Spell: once per turn, add 1 Level 7 or higher monster from
+            // your hand to your Deck, shuffle it, then draw 1 card (Lua Duel.SelectMatchingCard + SEQ_DECKSHUFFLE,
+            // gated on Duel.IsPlayerCanDraw). Coach Goblin places on the bottom at the End Phase, so this shuffles in
+            // and carries its own Level floor rather than the Normal-Monster filter.
+            new AtomRegistration.Atom(
+                @"^Once per turn, you can add 1 Level (\d+) or higher monster from your hand to your Deck and " +
+                @"shuffle it, then draw 1 card\.?\s*$",
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.ReturnHandLevelMonsterToDeckShuffleThenDraw,
+                    Side = EffectSide.Controller,
+                    MinLevelOrHigher = int.Parse(m.Groups[1].Value),
+                    Amount = 1,
+                    ActivationCondition = RecoveryAndPhaseCostsRuntime.HandHasLevelOrHigherMonster,
+                    CheckedAt = ConditionCheckedAt.Activation,
+                    OncePerTurn = true,
+                    IsOptional = true,
+                    MakesChainLink = true
+                }),
+
             // Manticore of Darkness (c77121851): EVENT_TO_GRAVE (not REASON_RETURN / REASON_ADJUST) flags it until the end of
             // the turn; FIELD TRIGGER_O in the GY on EVENT_PHASE+PHASE_END (either player's), count limit 1; cost: send 1
             // Beast / Beast-Warrior / Winged Beast from the hand or face-up Monster Zone (a zone must be free after it); chk

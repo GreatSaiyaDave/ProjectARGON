@@ -3443,6 +3443,11 @@ namespace WRLDZ.Duel.TextEffects
         /// <see cref="FlipDownAndPeekRuntime.LogLook"/> — nothing about looking changes any card's state.
         /// </summary>
         PayLpLookAtOpponentHandAndSetCards,
+        /// <summary>
+        /// Lighten the Load (c37231841): once per turn, add 1 Level 7 or higher monster from your hand to your Deck,
+        /// shuffle it, then draw 1 card. Distinct from Coach Goblin's bottom-of-Deck placement: this shuffles in.
+        /// </summary>
+        ReturnHandLevelMonsterToDeckShuffleThenDraw,
     }
 
 
@@ -3930,6 +3935,11 @@ namespace WRLDZ.Duel.TextEffects
         /// the field any other way.
         /// </summary>
         public bool RequiresThisSpecialSummonedByNamed;
+        /// <summary>
+        /// Lighten the Load: the hand monster picked must have a Level of at least this (7 or higher). Read by the
+        /// effect's own runtime, so a Level 7+ minimum is a clause parameter rather than a hard-coded number.
+        /// </summary>
+        public int MinLevelOrHigher;
         /// <summary>Phase trigger only if this copy is in the GY (Darklord Marie).</summary>
         public bool ResolvesFromGy;
         /// <summary>Cure Mermaid family: this copy must be face-up Attack Position.</summary>
