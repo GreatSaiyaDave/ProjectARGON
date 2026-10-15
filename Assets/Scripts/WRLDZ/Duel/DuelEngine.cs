@@ -4950,6 +4950,13 @@ namespace WRLDZ.Duel
                     continue;
                 }
 
+                // Muko: the link it answered resolves by discarding instead of drawing (ChangeChainOperation).
+                if (TextEffects.MukoRuntime.TryResolveLink(this, link))
+                {
+                    EnsureDeferredSpellTrapGrave(link);
+                    continue;
+                }
+
                 // ChainLinkAnswers batch: Jar Robber (negate the answered effect, draw), My Body as a Shield against a
                 // monster effect (negate, destroy that monster), Dramatic Rescue (return, then a Special Summon pick that
                 // may hold the Chain), and the activation whose effect Jar Robber negated (it resolves with no effect).
@@ -5115,6 +5122,8 @@ namespace WRLDZ.Duel
             Chain.Clear();
             // EffectDamageEvents batch (v162): per-link damage modifiers end with the Chain (RESET_CHAIN).
             TextEffects.EffectDamageEventsRuntime.OnChainEnded(this);
+            // Muko: the answered link is resolved or gone, so its record dies with the Chain.
+            TextEffects.MukoRuntime.OnChainEnded(this);
             // DiscardTriggers batch (v142): discard / Deck-send triggers held while the chain resolved (Electric
             // Snake, Minar, Penguin Knight) activate now, before the game moves on.
             TextEffects.DiscardTriggersRuntime.Flush(this);
@@ -6944,6 +6953,19 @@ namespace WRLDZ.Duel
             {
                 Log($"Activation illegal: {damageAnswerReason}");
                 return false;
+            }
+            // Muko: it answers only a link whose whole operation is a draw (Lua s.condition), and it replaces that
+            // draw when THAT link resolves, so the link it answered is recorded now.
+            if (clause.Action == TextEffects.EffectActionKind.ReplaceDrawLinkWithDiscard)
+            {
+                TextEffects.MukoRuntime.TryCanAnswer(PendingResponse?.ChainTarget, out var drawOk, out var drawWhy);
+                if (!drawOk)
+                {
+                    Log($"Activation illegal: {drawWhy}");
+                    return false;
+                }
+
+                TextEffects.MukoRuntime.NoteReplaced(this, PendingResponse.ChainTarget);
             }
             var speed = OfficialEffectRegistry.SpeedOf(card.Def);
             var cls = OfficialEffectRegistry.ClassOfActivation(card.Def, false);

@@ -375,6 +375,8 @@ namespace WRLDZ.Duel.TextEffects
                 // ContinuousTrapsAndSpiritSupport batch: Greed — 500 per card drawn by a card effect, at the End
                 // Phase. Its tracker clause records; the damage clause is the readable one.
                 EffectActionKind.InflictDamagePerEffectDrawThisTurn => EffectResolutionKind.Damage,
+                // Muko: the answered draw is replaced by a discard, so the effect's outcome is a hand/Graveyard send.
+                EffectActionKind.ReplaceDrawLinkWithDiscard => EffectResolutionKind.Discard,
                 // TypeDeclaration batch: Mind Crush — declare a card name, and a hand goes to the GY either way.
                 EffectActionKind.DeclareCardNameThenOpponentDiscardsAllOrSelfDiscardsRandom =>
                     EffectResolutionKind.Discard,

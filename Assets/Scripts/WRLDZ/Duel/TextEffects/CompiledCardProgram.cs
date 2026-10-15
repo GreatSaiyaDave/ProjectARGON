@@ -3424,6 +3424,13 @@ namespace WRLDZ.Duel.TextEffects
         /// Resolved by <see cref="TypeDeclarationRuntime.DeclareCardNameThenResolveMindCrush"/>.
         /// </summary>
         DeclareCardNameThenOpponentDiscardsAllOrSelfDiscardsRandom,
+        /// <summary>
+        /// Muko (c80863132): a Normal Trap that answers a chain link whose only operation is a draw, and replaces that
+        /// draw with "discard the cards the effect would have drawn". Resolved by <see cref="MukoRuntime"/>: the
+        /// answered link records itself at Muko's resolution and the hook
+        /// <see cref="MukoRuntime.TryResolveLink"/> claims it when it comes up to resolve.
+        /// </summary>
+        ReplaceDrawLinkWithDiscard,
     }
 
 

@@ -781,6 +781,7 @@ namespace WRLDZ.Duel.TextEffects
             LvChainAtoms.Atoms,
             FusionSubstitutesAtoms.Atoms,
             AttackObligationsAtoms.Atoms,
+            MukoAtoms.Atoms,
         };
         /// <summary>Every whole-sentence atom: <see cref="Atoms"/>, then each batch in <see cref="BatchAtomSets"/>.</summary>
         public static IEnumerable<Atom> AllAtoms()

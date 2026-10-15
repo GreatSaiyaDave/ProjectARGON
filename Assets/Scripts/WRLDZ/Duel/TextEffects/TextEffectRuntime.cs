@@ -1097,6 +1097,14 @@ namespace WRLDZ.Duel.TextEffects
             if (EffectDamageEventsRuntime.IsDamageAnswer(clauses[0]))
                 return EffectDamageEventsRuntime.CanAnswerDamageLink(engine, who, card, clauses[0], target, out reason);
 
+            // Muko: it answers only a link whose whole operation is a draw (Lua s.condition), so the legal-card set
+            // the engine builds never offers it against anything else.
+            if (clauses[0].Action == EffectActionKind.ReplaceDrawLinkWithDiscard)
+            {
+                MukoRuntime.TryCanAnswer(target, out var mukoOk, out reason);
+                return mukoOk;
+            }
+
             // TargetNegationsAndHandQuickEffects batch (v163): a Chain answer activated from the hand (Gravekeeper's Watcher).
             if (TargetNegationsAndHandQuickEffectsRuntime.TryCanAnswerFromHand(engine, who, card, clauses[0], target,
                     out var handAnswerOk, out var handAnswerReason))
@@ -9398,6 +9406,11 @@ namespace WRLDZ.Duel.TextEffects
                     // Mind Crush: the declaration is over the whole declarable card pool, then the opponent's hand is
                     // read by name.
                     TypeDeclarationRuntime.DeclareCardNameThenResolveMindCrush(engine, who, source, clause);
+                    break;
+
+                case EffectActionKind.ReplaceDrawLinkWithDiscard:
+                    // Muko resolves as a chain answer: the draw it answers discards instead (MukoRuntime), so this
+                    // link's own effect is only the announcement. Nothing more to apply here.
                     break;
 
                 case EffectActionKind.TrackEffectDrawForEndPhaseDamage:

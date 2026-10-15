@@ -27,6 +27,8 @@ namespace WRLDZ.Duel.Rules
         const int ManEaterBug = 54652250;          // FLIP: target 1 monster on the field; destroy it
         const int AmazonessFighter = 55821894;     // Warrior Lv4 1500/1300
         const int Celtic = 91152256;               // Warrior Lv4 1400/1200
+        const int Muko = 80863132;
+        const int GracefulCharity = 79571449;      // draw 3 then discard 2 — a draw with a rider, not a pure draw
         const int MysticalElf = 15025844;          // Spellcaster Lv4 800/2000
 
         delegate void CheckFn(string name, bool ok, string detail = null);
@@ -38,6 +40,7 @@ namespace WRLDZ.Duel.Rules
             CompileShapes(db, Check);
             NearMisses(db, Check);
             JarRobberDuels(db, pDeck, aDeck, Check);
+            MukoDuels(db, pDeck, aDeck, Check);
             SpellShieldDuels(db, pDeck, aDeck, Check);
             MyBodyAsAShieldDuels(db, pDeck, aDeck, Check);
             ChaosCommandMagicianDuels(db, pDeck, aDeck, Check);
@@ -254,6 +257,58 @@ namespace WRLDZ.Duel.Rules
         static bool OnField(DuelistState who, CardInstance c) => who.TryFindMonster(c, out _);
 
         // ───────────────────────── Jar Robber ─────────────────────────
+
+        static void MukoDuels(CardDatabase db, DeckFile pDeck, DeckFile aDeck, CheckFn Check)
+        {
+            {
+                var prog = CardTextEffectCompiler.Compile(db.Get(Muko));
+                Check("Muko: FullyCompiled — a chain answer that replaces the answered draw; Implemented",
+                    prog != null && prog.FullyCompiled &&
+                    CardEffectStatus.Classify(db.Get(Muko)) == CardEffectStatusKind.Implemented &&
+                    prog.ClauseList.Count == 1 &&
+                    prog.ClauseList[0].Action == EffectActionKind.ReplaceDrawLinkWithDiscard &&
+                    prog.ClauseList[0].Timing == EffectTiming.ChainLinkActivated && prog.ClauseList[0].ChainResponseOnly,
+                    prog == null ? "null" : string.Join(" | ", prog.UnparsedFragments ?? Array.Empty<string>()));
+            }
+
+            {
+                // The opponent's Pot of Greed resolves by discarding 2 instead of drawing 2.
+                var e = OpponentMain(db, pDeck, aDeck, out var reached);
+                var p = e.Player;
+                var o = e.Opponent;
+                var muko = PlaceSetTrap(e, p, Muko, 0);
+                var pot = PutInHand(e, o, PotOfGreed);
+                PutInHand(e, o, Celtic);
+                var deckBefore = o.Deck.Count;
+                var oppHandBefore = o.Hand.Count;
+                e.NotifyPublic();
+                var act = reached && e.TryActivateSpellTrap(o, pot, fromHand: true);
+                var offered = Offers(e, p, muko);
+                var answered = offered && e.TryActivateChainResponse(p, muko);
+                PassAll(e);
+                Check("Muko: the answered draw is replaced — the cards are discarded, not drawn",
+                    act && offered && answered && o.Graveyard.Contains(pot) && p.Graveyard.Contains(muko) &&
+                    o.Deck.Count == deckBefore - 2 && o.Hand.Count == oppHandBefore - 1,
+                    $"offered={offered} answered={answered} deck {deckBefore}->{o.Deck.Count} " +
+                    $"oppHand {oppHandBefore}->{o.Hand.Count} potGY={o.Graveyard.Contains(pot)} " +
+                    $"mukoGY={p.Graveyard.Contains(muko)} {State(e)}");
+            }
+
+            {
+                // A draw with a rider (Graceful Charity) is not a pure draw, so Muko cannot answer it.
+                var e = OpponentMain(db, pDeck, aDeck, out var reached);
+                var p = e.Player;
+                var o = e.Opponent;
+                var muko = PlaceSetTrap(e, p, Muko, 0);
+                var charity = PutInHand(e, o, GracefulCharity);
+                e.NotifyPublic();
+                var act = reached && e.TryActivateSpellTrap(o, charity, fromHand: true);
+                Check("Muko: not offered against a draw whose operation is not only a draw",
+                    act && !Offers(e, p, muko),
+                    $"charity={charity?.Name} {State(e)}");
+                PassAll(e);
+            }
+        }
 
         static void JarRobberDuels(CardDatabase db, DeckFile pDeck, DeckFile aDeck, CheckFn Check)
         {
