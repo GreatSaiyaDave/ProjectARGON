@@ -234,6 +234,66 @@ namespace WRLDZ.Data
                 heightM = 1.85f,
                 shadowDiameter = 0.7f,
             },
+            new AnimeCharacterSet
+            {
+                id = "yami_yugi_da",
+                displayName = "Yami Yugi (DA)",
+                angles = new AnimeCharacterSet.AngleSprites { front = "yami_yugi_da_front", threeQuarter = "yami_yugi_da_34", side = "yami_yugi_da_side", back = "yami_yugi_da_back" },
+                expressions = new AnimeCharacterSet.Expressions { neutral = "neutral", serious = "serious", smiling = "smiling" },
+                gestures = new AnimeCharacterSet.Gestures { idle = "idle", draw = "draw", summon = "summon", attack = "attack", defeat = "defeat" },
+                heightM = 1.58f,
+                shadowDiameter = 0.6f,
+            },
+            new AnimeCharacterSet
+            {
+                id = "joey_da",
+                displayName = "Joey (DA)",
+                angles = new AnimeCharacterSet.AngleSprites { front = "joey_da_front", threeQuarter = "joey_da_34", side = "joey_da_side", back = "joey_da_back" },
+                expressions = new AnimeCharacterSet.Expressions { neutral = "neutral", serious = "serious", smiling = "smiling" },
+                gestures = new AnimeCharacterSet.Gestures { idle = "idle", draw = "draw", summon = "summon", attack = "attack", defeat = "defeat" },
+                heightM = 1.68f,
+                shadowDiameter = 0.6f,
+            },
+            new AnimeCharacterSet
+            {
+                id = "tea_da",
+                displayName = "Tea (DA)",
+                angles = new AnimeCharacterSet.AngleSprites { front = "tea_da_front", threeQuarter = "tea_da_34", side = "tea_da_side", back = "tea_da_back" },
+                expressions = new AnimeCharacterSet.Expressions { neutral = "neutral", serious = "serious", smiling = "smiling" },
+                gestures = new AnimeCharacterSet.Gestures { idle = "idle", draw = "draw", summon = "summon", attack = "attack", defeat = "defeat" },
+                heightM = 1.62f,
+                shadowDiameter = 0.55f,
+            },
+            new AnimeCharacterSet
+            {
+                id = "tristan_da",
+                displayName = "Tristan (DA)",
+                angles = new AnimeCharacterSet.AngleSprites { front = "tristan_da_front", threeQuarter = "tristan_da_34", side = "tristan_da_side", back = "tristan_da_back" },
+                expressions = new AnimeCharacterSet.Expressions { neutral = "neutral", serious = "serious", smiling = "smiling" },
+                gestures = new AnimeCharacterSet.Gestures { idle = "idle", draw = "draw", summon = "summon", attack = "attack", defeat = "defeat" },
+                heightM = 1.80f,
+                shadowDiameter = 0.65f,
+            },
+            new AnimeCharacterSet
+            {
+                id = "bakura_da",
+                displayName = "Ryo Bakura (DA)",
+                angles = new AnimeCharacterSet.AngleSprites { front = "bakura_da_front", threeQuarter = "bakura_da_34", side = "bakura_da_side", back = "bakura_da_back" },
+                expressions = new AnimeCharacterSet.Expressions { neutral = "neutral", serious = "serious", smiling = "smiling" },
+                gestures = new AnimeCharacterSet.Gestures { idle = "idle", draw = "draw", summon = "summon", attack = "attack", defeat = "defeat" },
+                heightM = 1.70f,
+                shadowDiameter = 0.6f,
+            },
+            new AnimeCharacterSet
+            {
+                id = "yami_bakura_da",
+                displayName = "Yami Bakura (DA)",
+                angles = new AnimeCharacterSet.AngleSprites { front = "yami_bakura_da_front", threeQuarter = "yami_bakura_da_34", side = "yami_bakura_da_side", back = "yami_bakura_da_back" },
+                expressions = new AnimeCharacterSet.Expressions { neutral = "neutral", serious = "serious", smiling = "smiling" },
+                gestures = new AnimeCharacterSet.Gestures { idle = "idle", draw = "draw", summon = "summon", attack = "attack", defeat = "defeat" },
+                heightM = 1.70f,
+                shadowDiameter = 0.6f,
+            },
         };
 
         public static AnimeCharacterSet Find(string id)
