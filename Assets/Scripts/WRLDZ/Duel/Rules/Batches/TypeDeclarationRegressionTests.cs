@@ -31,6 +31,7 @@ namespace WRLDZ.Duel.Rules
         const int RoyalDecree = 51452091;    // Continuous Trap: negate all other Trap effects on the field
         const int MaskOfRestrict = 29549364; // Continuous Trap: neither player can Tribute
         const int LordOfD = 17985575;        // Dragons on the field cannot be targeted by card effects
+        const int MindCrush = 15800838;
         const int CallOfTheHaunted = 97077563;
         const int Mst = 5318639;             // Mystical Space Typhoon
         const int SolemnJudgment = 41420027; // Counter Trap: pay half your LP; negate a Summon or a Spell/Trap activation
@@ -55,6 +56,7 @@ namespace WRLDZ.Duel.Rules
             RegulationDuels(db, pDeck, aDeck, Check);
             EarthshakerDuels(db, pDeck, aDeck, Check);
             AutopilotDrains(db, pDeck, aDeck, Check);
+            MindCrushDuels(db, pDeck, aDeck, Check);
         }
 
         // ───────────────────────── compile shape ─────────────────────────
@@ -1174,6 +1176,102 @@ namespace WRLDZ.Duel.Rules
                 regOk && esOk && engine.TurnPlayer == p && engine.Phase == DuelPhase.Main1 &&
                 !engine.IsAwaitingEffectTarget,
                 $"reg={regOk} es={esOk} turn={engine.TurnPlayer?.Name} phase={engine.Phase} {PendingNames(engine)}");
+        }
+
+        static void MindCrushDuels(CardDatabase db, DeckFile pDeck, DeckFile aDeck, Action<string, bool, string> Check)
+        {
+            var prog = CardTextEffectCompiler.Compile(db.Get(MindCrush));
+            Check("Mind Crush: FullyCompiled - declare 1 card name, hand vs self-discard; Implemented",
+                prog != null && prog.FullyCompiled &&
+                CardEffectStatus.Classify(db.Get(MindCrush)) == CardEffectStatusKind.Implemented &&
+                prog.ClauseList.Count == 1 &&
+                prog.ClauseList[0].Action ==
+                    EffectActionKind.DeclareCardNameThenOpponentDiscardsAllOrSelfDiscardsRandom &&
+                prog.ClauseList[0].Timing == EffectTiming.Activate &&
+                prog.ClauseList[0].Side == EffectSide.Controller &&
+                prog.ClauseList[0].MakesChainLink,
+                prog == null ? "null" : string.Join(" | ", prog.UnparsedFragments ?? Array.Empty<string>()));
+
+            // The declaration pool is every non-Extra-Deck monster name, and the declared card comes back.
+            {
+                var poolEngine = new DuelEngine();
+                poolEngine.StartDuel(db, pDeck, aDeck, cinematicOpening: false);
+                var pool = WRLDZ.Duel.TextEffects.TypeDeclarationRuntime.DeclarableCardNames(poolEngine);
+                Check("Mind Crush: the declaration pool is the duel's non-Extra-Deck monster card names",
+                    pool.Length > 1000 && pool.Select(d => d.name).Distinct().Count() == pool.Length,
+                    $"pool={pool.Length}");
+            }
+
+            {
+                // A hit: the opponent's copies of the declared name are discarded (a hand card is read by name).
+                var engine = new DuelEngine();
+                engine.StartDuel(db, pDeck, aDeck, cinematicOpening: false);
+                var p = engine.Player;
+                var o = engine.Opponent;
+                if (!ReachMain(engine, p, 1)) { Check("Mind Crush: setup", false, "no main"); return; }
+                ClearBoard(engine);
+                p.Hand.Clear();
+                o.Hand.Clear();
+                var mine = PutInHand(engine, p, Celtic);
+                var theirs = PutInHand(engine, o, Celtic);      // the declared name
+                var decoy = PutInHand(engine, o, MysticalElf);
+                var crush = PlaceSetTrap(engine, p, MindCrush, 0);
+                engine.NotifyPublic();
+                var used = engine.CanActivateSpellTrap(p, crush, fromHand: false) &&
+                           engine.TryActivateSpellTrap(p, crush, fromHand: false);
+                var token = Pending(engine, "Celtic Guardian");
+                var declared = token != null && engine.TrySelectEffectTarget(token);
+                PassAll(engine);
+                Check("Mind Crush: declaring a name the opponent holds discards every copy; the declarer keeps theirs",
+                    used && declared && o.Graveyard.Contains(theirs) && !o.Hand.Contains(theirs) &&
+                    o.Hand.Contains(decoy) && p.Hand.Contains(mine) && !engine.IsAwaitingEffectTarget,
+                    $"used={used} declared={declared} theirsGy={o.Graveyard.Contains(theirs)} " +
+                    $"decoyHand={o.Hand.Contains(decoy)} mineHand={p.Hand.Contains(mine)} " +
+                    $"names={PendingNames(engine)}");
+            }
+
+            {
+                // A miss: the declarer discards 1 of their own cards at random.
+                var engine = new DuelEngine();
+                engine.StartDuel(db, pDeck, aDeck, cinematicOpening: false);
+                var p = engine.Player;
+                var o = engine.Opponent;
+                if (!ReachMain(engine, p, 1)) { Check("Mind Crush: setup (miss)", false, "no main"); return; }
+                ClearBoard(engine);
+                p.Hand.Clear();
+                o.Hand.Clear();
+                var theirs = PutInHand(engine, o, Celtic);
+                var mine = PutInHand(engine, p, MysticalElf);
+                var crush = PlaceSetTrap(engine, p, MindCrush, 0);
+                engine.NotifyPublic();
+                var used = engine.CanActivateSpellTrap(p, crush, fromHand: false) &&
+                           engine.TryActivateSpellTrap(p, crush, fromHand: false);
+                var token = Pending(engine, "Gem-Knight Lapis");
+                var declared = token != null && engine.TrySelectEffectTarget(token);
+                PassAll(engine);
+                Check("Mind Crush: a name the opponent does not hold costs the declarer 1 card at random",
+                    used && declared && o.Hand.Contains(theirs) && p.Hand.Count == 0 &&
+                    p.Graveyard.Contains(mine) && p.Graveyard.Contains(crush),
+                    $"used={used} declared={declared} theirsHand={o.Hand.Contains(theirs)} " +
+                    $"hand={p.Hand.Count} gy={p.Graveyard.Count} mineGy={p.Graveyard.Contains(mine)}");
+            }
+
+            {
+                // An empty opposing hand: the card cannot be activated (Lua target chk).
+                var engine = new DuelEngine();
+                engine.StartDuel(db, pDeck, aDeck, cinematicOpening: false);
+                var p = engine.Player;
+                var o = engine.Opponent;
+                if (!ReachMain(engine, p, 1)) { Check("Mind Crush: setup (empty)", false, "no main"); return; }
+                ClearBoard(engine);
+                p.Hand.Clear();
+                o.Hand.Clear();
+                var crush = PlaceSetTrap(engine, p, MindCrush, 0);
+                engine.NotifyPublic();
+                Check("Mind Crush: cannot be activated while the opponent holds no card",
+                    !engine.CanActivateSpellTrap(p, crush, fromHand: false),
+                    $"oppHand={o.Hand.Count}");
+            }
         }
     }
 }

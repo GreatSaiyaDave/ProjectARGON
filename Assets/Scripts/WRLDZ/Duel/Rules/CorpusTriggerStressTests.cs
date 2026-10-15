@@ -487,6 +487,18 @@ namespace WRLDZ.Duel.Rules
                     p.MonsterZones[2].IsEmpty)
                     PlaceMonster(engine, p, 75830094, 2, BattlePosition.Attack, true); // Horus LV4
 
+                // Mind Crush (TypeDeclaration batch, v197): "Declare 1 card name; if that card is in your opponent's
+                // hand, they must discard all copies of it, otherwise you discard 1 random card." The activation needs
+                // a card in the opponent's hand (Their BothHandsHaveACard target chk), so seat one.
+                if (c.ActivationCondition ==
+                        WRLDZ.Duel.TextEffects.TypeDeclarationRuntime.BothHandsHaveACard)
+                {
+                    if (engine.Player.Hand.Count == 0)
+                        engine.Player.Hand.Add(engine.CreateCardInstance(Celtic));
+                    if (engine.Opponent.Hand.Count == 0)
+                        engine.Opponent.Hand.Add(engine.CreateCardInstance(Celtic));
+                }
+
                 if (c.Action == EffectActionKind.ContinuousCannotBeDestroyedByBattle &&
                     c.Zone == EffectZoneFilter.ControllerMonsters && p.MonsterZones[1].IsEmpty)
                     PlaceMonster(engine, p, 4041838, 1, BattlePosition.Attack, true); // Ninja Grandmaster Sasuke

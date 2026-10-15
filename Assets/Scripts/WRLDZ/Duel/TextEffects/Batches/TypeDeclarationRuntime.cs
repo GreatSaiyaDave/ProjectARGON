@@ -64,6 +64,9 @@ namespace WRLDZ.Duel.TextEffects
 
         static readonly ConditionalWeakTable<CardDatabase, string[]> s_poolTypes = new();
 
+        /// <summary>The declarable card names of a card database (Mind Crush's declaration pool), computed once.</summary>
+        static readonly ConditionalWeakTable<CardDatabase, CardDef[]> s_poolNames = new();
+
         sealed class Declaration
         {
             public string Type;
@@ -96,6 +99,106 @@ namespace WRLDZ.Duel.TextEffects
         static readonly List<WeakReference<DuelEngine>> s_typeChangeEngines = new();
 
         static EngineState StateOf(DuelEngine engine) => s_state.GetValue(engine, _ => new EngineState());
+
+
+        /// <summary>
+        /// Mind Crush (c15800838) at resolution: the activator declares 1 card name (over the whole declarable pool),
+        /// then the opponent's hand is read by that name — every copy in it is discarded, or the activator discards 1 of
+        /// their own hand cards at random. The hand is never shown to the declarer's view: the Lua reads
+        /// Card.IsCode over the opponent's hand, so a face-down card is exactly as legal a guess as any other.
+        /// </summary>
+        public static void DeclareCardNameThenResolveMindCrush(DuelEngine engine, DuelistState who,
+            CardInstance source, EffectClause clause)
+        {
+            if (engine == null || who == null || source == null || engine.GameOver) return;
+            var victim = engine.OpponentOf(who);
+            var pool = DeclarableCardNames(engine);
+            if (pool.Length == 0 || victim == null) return;
+
+            // Lua target chk: the opponent must hold at least one card, and the declarer must have something to
+            // lose on a miss.
+            if (victim?.Hand == null || victim.Hand.Count == 0 || who.Hand.Count == 0)
+            {
+                engine.Log($"{source.Name}: Mind Crush cannot be activated — the opponent's hand is empty.");
+                return;
+            }
+
+            ContinuousTrapsAndSpiritSupportRuntime.AskCardPick(engine, who, source, new CardPickRequest
+            {
+                Candidates = () => CardNameTokens(engine),
+                Kind = EffectTargetKind.CardInOppHand,
+                Prompt = $"{source.Name}: declare 1 card name. If your opponent holds it they discard every copy; " +
+                         "otherwise you discard 1 card from your hand at random.",
+                // The AI declares a name the opponent is most likely to hold, falling back to the dial's own names.
+                AiChoose = list => AiDeclaredName(engine, victim, list),
+                Cancel = () => engine.Log($"{source.Name}: no card name declared — Mind Crush resolves with no effect."),
+                Finish = token => ResolveMindCrush(engine, who, victim, source, token)
+            });
+        }
+
+        /// <summary>The AI's declaration: the pool name the opponent's hand or Deck most often holds.</summary>
+        static CardInstance AiDeclaredName(DuelEngine engine, DuelistState victim, List<CardInstance> tokens)
+        {
+            if (tokens == null || tokens.Count == 0) return null;
+            var counts = new Dictionary<int, int>();
+            if (victim?.Hand != null)
+                foreach (var c in victim.Hand)
+                    if (c?.Def != null) counts[c.CardId] = counts.TryGetValue(c.CardId, out var n) ? n + 1 : 1;
+
+            if (victim?.Deck != null)
+                foreach (var id in victim.Deck)
+                    counts[id] = counts.TryGetValue(id, out var n) ? n + 1 : 1;
+
+            var best = 0;
+            var bestCard = 0;
+            foreach (var kv in counts)
+                if (kv.Value > best) { best = kv.Value; bestCard = kv.Key; }
+
+            if (bestCard != 0)
+            {
+                var hit = tokens.FirstOrDefault(t => t != null && t.CardId == bestCard);
+                if (hit != null) return hit;
+            }
+
+            return tokens[engine.Rng.PickIndex(tokens.Count)];
+        }
+
+        static void ResolveMindCrush(DuelEngine engine, DuelistState who, DuelistState victim, CardInstance source,
+            CardInstance token)
+        {
+            var name = token?.Def?.name;
+            var id = token?.CardId ?? 0;
+            if (string.IsNullOrEmpty(name) || id <= 0)
+            {
+                engine.Log($"{source.Name}: no card name declared — Mind Crush resolves with no effect.");
+                return;
+            }
+
+            var copies = victim?.Hand?.Where(c => c != null && c.CardId == id).ToList() ?? new List<CardInstance>();
+            if (copies.Count > 0)
+            {
+                foreach (var c in copies)
+                {
+                    if (victim.Hand.Remove(c)) engine.SendCardToGrave(victim, c);
+                }
+
+                engine.Log($"{source.Name}: {who.Name} declared {name}; {victim.Name} discards {copies.Count} copy(ies).");
+                return;
+            }
+
+            var own = who?.Hand;
+            if (own == null || own.Count == 0)
+            {
+                engine.Log($"{source.Name}: {who.Name} declared {name}; {victim.Name} does not hold it, and you have " +
+                           "no card to discard.");
+                return;
+            }
+
+            var unlucky = own[engine.Rng.PickIndex(own.Count)];
+            if (own.Remove(unlucky)) engine.SendCardToGrave(who, unlucky);
+            engine.Log($"{source.Name}: {who.Name} declared {name}; {victim.Name} does not hold it, so {who.Name} " +
+                       $"discards {unlucky.Name} at random.");
+        }
 
         // ------------------------------------------------------------------ declaration tokens
 
@@ -130,14 +233,48 @@ namespace WRLDZ.Duel.TextEffects
             "DARK", "DIVINE", "EARTH", "FIRE", "LIGHT", "WATER", "WIND"
         };
 
+        /// <summary>
+        /// <see cref="CardDef.type"/> of a card-name declaration token. These are the only tokens that carry a real
+        /// <see cref="CardDef.id"/> in <see cref="EffectClause.NamedCard"/>.
+        /// </summary>
+        public const string CardNameTokenKind = "Declaration (Card Name)";
+
+        /// <summary>
+        /// The card names Mind Crush's Lua offers for Duel.AnnounceCard: every card of the duel's own card pool that
+        /// is a monster but not an Extra Deck monster (the filter is TYPE_EXTRA / OPCODE_ISTYPE / TYPE_MONSTER / AND),
+        /// one token each, A–Z. The same pool the corpus declares against, so a declared name is always reachable.
+        /// </summary>
+        public static CardDef[] DeclarableCardNames(DuelEngine engine)
+        {
+            var db = engine?.Database;
+            if (db == null) return Array.Empty<CardDef>();
+            return s_poolNames.GetValue(db, d =>
+            {
+                var byName = new SortedDictionary<string, CardDef>(StringComparer.Ordinal);
+                foreach (var def in d.GetAllCards())
+                {
+                    if (def == null || !def.IsMonster || def.IsExtraDeck) continue;
+                    if (string.IsNullOrWhiteSpace(def.name)) continue;
+                    if (!byName.ContainsKey(def.name)) byName.Add(def.name, def);
+                }
+
+                var list = new List<CardDef>(byName.Values);
+                return list.Count > 0 ? list.ToArray() : Array.Empty<CardDef>();
+            });
+        }
+
+        /// <summary>One declaration token per declarable card name (fresh instances).</summary>
+        public static List<CardInstance> CardNameTokens(DuelEngine engine) =>
+            DeclarableCardNames(engine).Select(def => Token(CardNameTokenKind, def.name, def.id)).ToList();
+
         /// <summary>One declaration token per Attribute given (fresh instances).</summary>
         public static List<CardInstance> AttributeTokens(IEnumerable<string> attributes) =>
             attributes.Select(a => Token(AttributeTokenKind, a)).ToList();
 
-        static CardInstance Token(string kind, string value) => new()
+        static CardInstance Token(string kind, string value, int cardId = 0) => new()
         {
             InstanceId = 0,
-            CardId = 0,
+            CardId = cardId,
             FaceUp = true,
             Def = new CardDef
             {
@@ -616,15 +753,28 @@ namespace WRLDZ.Duel.TextEffects
             return set.ToList();
         }
 
-        /// <summary><see cref="TwoAttributesFaceUp"/>; false when <paramref name="c"/> is not this batch's condition.</summary>
+        /// <summary>Mind Crush: the opponent must hold at least one card, and the declarer at least 1 (the miss cost).</summary>
+        public const string BothHandsHaveACard = "BothHandsHaveACard";
+
+        /// <summary><see cref="TwoAttributesFaceUp"/> / <see cref="BothHandsHaveACard"/>; false when <paramref name="c"/> is not one of this batch's conditions.</summary>
         public static bool TryActivationCondition(DuelEngine engine, EffectClause c, out bool ok, out string reason)
         {
             ok = true;
             reason = null;
-            if (c?.ActivationCondition != TwoAttributesFaceUp) return false;
-            ok = FaceUpAttributes(engine).Count >= 2;
-            reason = "Needs face-up monsters with at least 2 different Attributes on the field.";
-            return true;
+            switch (c?.ActivationCondition)
+            {
+                case TwoAttributesFaceUp:
+                    ok = FaceUpAttributes(engine).Count >= 2;
+                    reason = "Needs face-up monsters with at least 2 different Attributes on the field.";
+                    return true;
+                case BothHandsHaveACard:
+                    // Lua target chk: the opponent must hold a card to guess, and the declarer must hold one to lose.
+                    ok = engine != null && engine.Player?.Hand.Count > 0 && engine.Opponent?.Hand.Count > 0;
+                    reason = "Both players must hold at least one card.";
+                    return true;
+            }
+
+            return false;
         }
 
         /// <summary>

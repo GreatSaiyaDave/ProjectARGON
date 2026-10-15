@@ -16,6 +16,8 @@ namespace WRLDZ.Duel.TextEffects
         const string Start = @"(?<=^|[.!?]\s+)";
         /// <summary>Sentence end: a period followed by whitespace or the end of the text, or the end of the text.</summary>
         const string End = @"(?:\.(?=\s|$)|$)";
+        /// <summary>An apostrophe, however the card prints it.</summary>
+        const string Apos = @"['’]";
 
         public static readonly AtomRegistration.Atom[] Atoms =
         {
@@ -81,6 +83,22 @@ namespace WRLDZ.Duel.TextEffects
                     Action = EffectActionKind.DestroyAllFaceUpOfAttributeOpponentPicksFromTwo,
                     Side = EffectSide.Both,
                     ActivationCondition = TypeDeclarationRuntime.TwoAttributesFaceUp,
+                    MakesChainLink = true
+                }),
+            // Mind Crush (c15800838), its whole text. The declaration is a card NAME over the whole declarable
+            // pool (Lua Duel.AnnounceCard with TYPE_EXTRA/TYPE_MONSTER filters), so the name is only known at
+            // resolution and cannot be a NamedCard on the clause: "Declare 1 card name; if that card is in your
+            // opponent's hand, they must discard all copies of it, otherwise you discard 1 random card."
+            new AtomRegistration.Atom(
+                Start + @"Declare 1 card name;\s*if that card is in your opponent" + Apos + @"s hand, they must discard " +
+                @"all copies of it, otherwise you discard 1 random card" + End,
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.DeclareCardNameThenOpponentDiscardsAllOrSelfDiscardsRandom,
+                    Side = EffectSide.Controller,
+                    Amount = 1,
+                    ActivationCondition = TypeDeclarationRuntime.BothHandsHaveACard,
                     MakesChainLink = true
                 }),
         };

@@ -9394,6 +9394,12 @@ namespace WRLDZ.Duel.TextEffects
                 case EffectActionKind.CountsAsTwoTributesForAttribute:
                 case EffectActionKind.MillToDeclareAttack:
                 case EffectActionKind.InflictDamageWhenControllerGainsLp:
+                case EffectActionKind.DeclareCardNameThenOpponentDiscardsAllOrSelfDiscardsRandom:
+                    // Mind Crush: the declaration is over the whole declarable card pool, then the opponent's hand is
+                    // read by name.
+                    TypeDeclarationRuntime.DeclareCardNameThenResolveMindCrush(engine, who, source, clause);
+                    break;
+
                 case EffectActionKind.TrackEffectDrawForEndPhaseDamage:
                     // Greed: the recording half is DuelEngine.Draw's by-effect hook, so there is nothing to
                     // resolve here — this clause only makes the card a Greed.

@@ -375,6 +375,9 @@ namespace WRLDZ.Duel.TextEffects
                 // ContinuousTrapsAndSpiritSupport batch: Greed — 500 per card drawn by a card effect, at the End
                 // Phase. Its tracker clause records; the damage clause is the readable one.
                 EffectActionKind.InflictDamagePerEffectDrawThisTurn => EffectResolutionKind.Damage,
+                // TypeDeclaration batch: Mind Crush — declare a card name, and a hand goes to the GY either way.
+                EffectActionKind.DeclareCardNameThenOpponentDiscardsAllOrSelfDiscardsRandom =>
+                    EffectResolutionKind.Discard,
                 // The tracker clause is a ContinuousWhileFaceUp marker, not a resolution, so it maps to None like
                 // the other markers (it exists to make the card a Greed for NoteEffectDraw).
                 EffectActionKind.TrackEffectDrawForEndPhaseDamage => EffectResolutionKind.None,

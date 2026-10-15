@@ -3416,6 +3416,14 @@ namespace WRLDZ.Duel.TextEffects
         /// turn. The count is per player, so the clause is read once for each side.
         /// </summary>
         InflictDamagePerEffectDrawThisTurn,
+        /// <summary>
+        /// Mind Crush (c15800838): a Normal Trap — "Declare 1 card name; if that card is in your opponent's hand, they
+        /// must discard all copies of it, otherwise you discard 1 random card." The declaration is over the duel's
+        /// whole non-Extra-Deck monster pool (Lua Duel.AnnounceCard with TYPE_EXTRA/TYPE_MONSTER filters), and the
+        /// resolution reads a face-down hand by name — which is the only thing that makes the guess legal.
+        /// Resolved by <see cref="TypeDeclarationRuntime.DeclareCardNameThenResolveMindCrush"/>.
+        /// </summary>
+        DeclareCardNameThenOpponentDiscardsAllOrSelfDiscardsRandom,
     }
 
 
