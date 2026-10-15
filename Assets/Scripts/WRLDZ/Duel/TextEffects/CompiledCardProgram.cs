@@ -3404,6 +3404,18 @@ namespace WRLDZ.Duel.TextEffects
         /// <see cref="BattleAndPositionRecordsRuntime.DeclareTypeAndAttributeThenOpponentSends"/>.
         /// </summary>
         DeclareTypeAndAttributeThenOpponentSendsFromHandOrDeck,
+        /// <summary>
+        /// Greed (c89405199): a Continuous Trap — "Each time a player draws cards because of a card effect, they take
+        /// 500 damage during the End Phase for each card drawn by the card effect." A field trigger on EVENT_DRAW
+        /// (re:IsReason(REASON_EFFECT)) that records the count per player, plus an End Phase trigger that inflicts
+        /// it. Runtime: <see cref="ContinuousTrapsAndSpiritSupportRuntime"/>.
+        /// </summary>
+        TrackEffectDrawForEndPhaseDamage,
+        /// <summary>
+        /// Greed's End Phase payoff: inflict EffectClause.Amount x the cards the player drew by a card effect this
+        /// turn. The count is per player, so the clause is read once for each side.
+        /// </summary>
+        InflictDamagePerEffectDrawThisTurn,
     }
 
 

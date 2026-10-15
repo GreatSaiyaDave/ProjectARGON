@@ -23,6 +23,37 @@ namespace WRLDZ.Duel.TextEffects
 
         public static readonly AtomRegistration.Atom[] Atoms =
         {
+            // Greed (c89405199), its whole text — one sentence carrying both of the Trap's rules.
+            // Lua: e2 a FIELD+CONTINUOUS effect on EVENT_DRAW with (r&REASON_EFFECT)~=0 that adds the drawn count to
+            // a per-player flag (id for its controller, id+1 for the opponent, RESETS_STANDARD_PHASE_END); e3 a
+            // FIELD+TRIGGER_F on EVENT_PHASE+PHASE_END (count 1) that inflicts 500 x each player's flag.
+            AtomRegistration.Atom.Sequence(
+                S + @"Each time a player draws cards because of a card effect, they take (\d+)(?: points of)? damage " +
+                @"during the End Phase for each card drawn by the card effect" + E,
+                m => new[]
+                {
+                    new EffectClause
+                    {
+                        Timing = EffectTiming.ContinuousWhileFaceUp,
+                        Action = EffectActionKind.TrackEffectDrawForEndPhaseDamage,
+                        Side = EffectSide.Both,
+                        Amount = Parse(m, 1, 500),
+                        StaysOnField = true,
+                        MakesChainLink = false
+                    },
+                    new EffectClause
+                    {
+                        Timing = EffectTiming.EndPhase,
+                        Action = EffectActionKind.InflictDamagePerEffectDrawThisTurn,
+                        Side = EffectSide.Both,
+                        Amount = Parse(m, 1, 500),
+                        StaysOnField = true,
+                        // The Lua's e3 is EVENT_PHASE+PHASE_END with no player condition: the Trap pays out at either
+                        // player's End Phase, so it fires on each player's phase like Two-Man Cell Battle.
+                        FiresAtEachPlayersPhase = true,
+                        MakesChainLink = true
+                    }
+                }),
             // Fatal Abacus (c77910045): continuous EVENT_TO_GRAVE (range SZONE, no Chain Link); every monster that left a
             // Monster Zone for a GY in that event costs its owner (the GY's controller) 500, both players together.
             new AtomRegistration.Atom(

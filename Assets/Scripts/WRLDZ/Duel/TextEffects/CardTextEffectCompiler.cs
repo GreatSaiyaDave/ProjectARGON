@@ -16,52 +16,16 @@ namespace WRLDZ.Duel.TextEffects
     /// </summary>
     public static class CardTextEffectCompiler
     {
-        public const int Version = 195; /* v195: SOD completion — Abyssal Designator (89801755, Normal Spell: "Pay 1000 Life Points. Declare a Type and an Attribute. Your opponent must send 1 monster with both the declared Type and Attribute from their hand or Deck to the Graveyard."). New EffectActionKind.DeclareTypeAndAttributeThenOpponentSendsFromHandOrDeck on the BattleAndPositionRecords batch, extending DeclareCardTypeThenOpponentSendsFromDeck. Declarations happen in the Lua's order — Attribute (any of the seven, new TypeDeclarationRuntime.AllAttributes) then Monster Type — through the shared CardPickRequest path, so a human is prompted and the AI answers. The final pick is the engine's only one that spans hand AND Deck, so a hidden hand card is a legal candidate: the declaration is exactly what makes it a legal guess. EffectVocabulary maps the action to Discard (the same family as MillCardOfDeclaredTypeFromOpponentDeck). tests Rules/Batches/BattleAndPositionRecordsRegressionTests.cs (AbyssalDesignatorDuels). */
-        /* v194: SOD completion — Level Up! (25290459, Normal Spell: "Send 1 face-up ""LV"" monster you control to the GY; Special Summon 1 monster from your hand or Deck that is listed in the sent monster's text, ignoring its Summoning conditions."). New EffectActionKind.SpecialSummonLvProgressionFromSentMonster on the LvChain batch (the batch already documented Level Up! as in scope). The target is the LV monster, filtered by TargetSeriesName ""LV"" through CardMatchesSeries — CardDef has no setcode field, so the series name matches the 29 monsters whose printed name contains "" LV"" (Armed Dragon, Dark Mimic, Silent Swordsman, Horus, Ultimate Insect, Mystic Swordsman, Winged Kuriboh LV10). The monster to Special Summon is read from the sent monster's own compiled LV-progression clause (Lua class.listed_names), so no LV table is hardcoded and a new LV monster works automatically; LvChainRuntime.ResolveProgression then reuses TrySpecialSummonNamed. corpus Provision seats Horus the Black Flame Dragon LV4 (75830094). tests Rules/Batches/LvChainRegressionTests.cs (LevelUpDuels).
-        v193: Mind on Air (66690411) + Thousand-Eyes Jellyfish (81434470) — both print "Your opponent must play with their hand revealed." New EffectActionKind.OpponentMustPlayWithHandRevealed on the ContinuousTrapsAndSpiritSupport batch. The Lua (c66690411) registers a player-target FIELD effect (EFFECT_FLAG_PLAYER_TARGET with player 1-tp) — a continuous rule, not a one-shot — so it is scanned from the board on every refresh like the negations: ContinuousTrapsAndSpiritSupportRuntime.RefreshHandReveal sets DuelistState.HandRevealed for the source controller's opponent while a source is face-up in a Spell & Trap Zone, its activation resolved and its own effects not negated. HandRevealed(engine, who) is the single reader. EffectVocabulary maps the action to Protection (the NegateCardFamilyOnFieldThisTurn family). UI: Presentation.HandBrowser — the GraveyardBrowser shape applied to a hand (feature card, ATK/DEF · Type line, thumbnail strip), wired into DuelUI as OpenHand(playerSide); the opponent side opens as card backs with only the count (public information) unless HandRevealed, so private information is never exposed. ArHandVolume.FaceVisibleNow lets the AR opponent fan flip face-up when the rule starts or ends. tests Rules/Batches/ContinuousTrapsAndSpiritSupportRegressionTests.cs (MindOnAirDuels). */
+        public const int Version = 196; /* v196: SOD completion — Greed (89405199, Continuous Trap: "Each time a player draws cards because of a card effect, they take 500 damage during the End Phase for each card drawn by the card effect."). Two clause members on the ContinuousTrapsAndSpiritSupport batch: TrackEffectDrawForEndPhaseDamage (a ContinuousWhileFaceUp marker that makes the card a Greed for the draw hook) and InflictDamagePerEffectDrawThisTurn (the End Phase trigger). The draw half is a new DuelEngine.Draw parameter byCardEffect — the Draw Phase draw in ContinueDrawPhase is the engine's only draw that is not one, so it passes false and the other 16 draw calls are all card-effect draws by construction. The count is per player, so the End Phase trigger reads both sides and the record resets with the End Phase (the Lua RESETS_STANDARD_PHASE_END). EffectVocabulary maps the damage clause to Damage and the tracker clause to None. tests ContinuousTrapsAndSpiritSupportRegressionTests.cs (GreedDuels).
 
-        /* v192: SOD completion — Big Wave Small Wave (51562916, Normal Spell: "Destroy all face-up WATER monsters you control, then you can Special Summon WATER monsters from your hand, up to the number of monsters destroyed by this effect.
-        control, then you can Special Summon WATER monsters from your hand, up to the number of monsters destroyed by
-        this effect."). One whole-sentence atom on the PerCountBurns batch (Atom.Sequence, two clauses in resolution
-        order, exactly the Thunder Crash shape): a mass Destroy over the new EffectZoneFilter.
-        ControllerFaceUpAttributeMonsters, then an optional SpecialSummonFromHand whose take count reads
-        CountSource = PerCountBurnsRuntime.PreviousClauseHits (Duel.Destroy's return — an indestructible monster is not
-        counted) through the new SpecialSummonFromHand take path, capped by the free Monster Zones. New zone filter and
-        CollectAllMatching arm; the legacy MapCompiledTargetKind mirror leaves it None (no target). Activation needs a
-        face-up WATER monster the controller controls. tests Rules/Batches/PerCountBurnsRegressionTests.cs
-        (BigWaveSmallWaveDuels). */
-      /* v191: SOD + batch activation — two batches landed together.
-      (a) AttackObligations batch ACTIVATED (v189-v190 work): the atoms were never in AtomRegistration.BatchAtomSets
-      and its tests never in CardBatchRegressionTests, and AttackObligationsRuntime had no call site at all
-      (no TryEnterMainPhase2 / TryEndTurnSafe / CanAttack / TryAttack / EndBattlePhase hook, no RefreshBoard
-      sweep), so Berserk Gorilla, Amazoness Archers, Diffusion Wave-Motion and Staunch Defender were Unimplemented
-      on main. Wiring: BatchAtomSets + CardBatchRegressionTests registration; DuelEngine.TryEnterMainPhase2 and
-      TryEndTurnSafe ask RefuseLeavingPhase (BlockingMonster honours NoteRefused, so a monster whose
-      declarations were all refused never soft-locks a turn); CanAttack asks AttackForbidden; TryAttack asks
-      ForbidsAttackTarget / ForbidsDirectAttack; EndBattlePhase clears the Battle-Phase-scoped TargetLock;
-      FieldSpellEffects.RefreshBoard sweeps the face-up Defense self-destruction; MaxAttacksThisTurn asks
-      RequiredAttackCount (EFFECT_ATTACK_ALL "every monster once each", counted from the append-only history);
-      TextEffectRuntime.ApplyClause resolves OpponentAttacksOnlyTargetAndMustAttackIt /
-      TargetMustAttackAllOthersCannotAttack / OpponentMonstersToFaceUpAttackLoseAtkMustAttack; NoteBattled
-      applies Diffusion-s negated-destroyed-by-battle rule from its own s_attackAll grant; FilterTargets is in
-      the CollectTargets default chain; the activation-condition, attack-answer and AiAutoRespond hooks are
-      wired; SimpleAi and DuelStressAgent meet the duty via TryChooseObligedAttack and record NoteRefused;
-      the corpus seats a Level 7 Spellcaster (Dark Magician) for Diffusion-s target. BattleObligationsRuntime
-      fixes made while activating: AttackOptions filters by ForbidsAttackTarget and requires
-      !ForbidsDirectAttack for the direct option (a Staunch Defender lock with no legal declaration no longer
-      blocks the Battle Phase forever); LockLive stays Battle-Phase scoped, so "no attack at all once the
-      selected monster left" is the rule.
-      (b) SOD Gorgon-s Eye (52648457, Normal Trap: "Until the end of this turn, all effects of Defense Position
-      monsters are negated."): new EffectActionKind.NegateEffectsOfDefensePositionMonstersThisTurn on the
-      ContinuousNegation batch; the Lua (c52648457) registers a field EFFECT_DISABLE over both Monster Zones
-      with RESET_PHASE|PHASE_END, a turn-scoped field rule, so ContinuousNegationRuntime.RefreshGorgonEyes
-      recomputes CardInstance.GorgonEyeNegated on every board refresh (FieldSpellEffects.RefreshBoard, after
-      the family negation) and ContinuousNegationRuntime.EndTurn clears it at the End Phase. The flag is not
-      dropped when the Trap leaves the field, because the ygopro field effect outlives it for the turn.
-      NegatedByTurnFamily is untouched (TurnNegationTrapsRuntime owns it). EffectVocabulary maps the action to
-      Protection. tests Rules/Batches/ContinuousNegationRegressionTests.cs.
-      Batch docs: v189 (AttackObligations activation) + v190 (Diffusion filter, battle negated effects, AI
-      response, stress-agent duty) + v189 SOD (Gorgon-s Eye). */
+        v195: SOD completion — Abyssal Designator (89801755, Normal Spell: "Pay 1000 Life Points. Declare a Type and an Attribute. Your opponent must send 1 monster with both the declared Type and Attribute from their hand or Deck to the Graveyard."). New EffectActionKind.DeclareTypeAndAttributeThenOpponentSendsFromHandOrDeck on the BattleAndPositionRecords batch, extending DeclareCardTypeThenOpponentSendsFromDeck rather than duplicating it; the two declarations go through the shared CardPickRequest path in the Lua's order (AnnounceAttribute first, then AnnounceRace), and TypeDeclarationRuntime.AllAttributes supplies the attribute tokens — Earthshaker's list is the Attributes the face-up monsters show, a different set. The final pick is the engine's only one that spans hand AND Deck: a hidden hand card is a legal candidate, which is exactly what the declaration makes a legal guess. EffectVocabulary maps the action to Discard. tests BattleAndPositionRecordsRegressionTests.cs.
+
+        v194: SOD completion — Level Up! (25290459, Normal Spell: "Send 1 face-up ""LV"" monster you control to the GY; Special Summon 1 monster from your hand or Deck that is listed in the sent monster's text, ignoring its Summoning conditions."). New EffectActionKind.SpecialSummonLvProgressionFromSentMonster on the LvChain batch (which already documented Level Up! as in scope). The target is the LV monster, filtered by TargetSeriesName through CardMatchesSeries; the monster to summon is read from the sent monster's own compiled progression clause, so no LV table is hardcoded. tests LvChainRegressionTests.cs.
+
+        v193: Mind on Air (66690411) and Thousand-Eyes Jellyfish (81434470) — both print "Your opponent must play with their hand revealed." New EffectActionKind.OpponentMustPlayWithHandRevealed on the ContinuousTrapsAndSpiritSupport batch; the Lua registers a player-target FIELD effect, a continuous rule, so it is scanned from the board on every refresh like the negations. DuelistState.HandRevealed, read by HandRevealed(engine, who) — the single reader. UI: Presentation.HandBrowser (the GraveyardBrowser shape applied to a hand), wired into DuelUI as OpenHand(playerSide); the opponent side opens as card backs with only the count unless HandRevealed. ArHandVolume.FaceVisibleNow flips the AR fan when the rule starts or ends. tests ContinuousTrapsAndSpiritSupportRegressionTests.cs.
+
+        v192: SOD completion — Big Wave Small Wave (51562916, Normal Spell: "Destroy all face-up WATER monsters you control, then you can Special Summon WATER monsters from your hand, up to the number of monsters destroyed by this effect."). One whole-sentence atom on the PerCountBurns batch as an Atom.Sequence (the Thunder Crash shape); SpecialSummonFromHand's non-targeted path now honours a CountSource = PreviousClauseHits take count. New EffectZoneFilter.ControllerFaceUpAttributeMonsters; EffectVocabulary maps the action to Protection. tests PerCountBurnsRegressionTests.cs.
+         */
 
         static readonly Regex RxDraw = new(
             @"(?:^|[.!?]\s+)Draw (\d+) cards?\.",

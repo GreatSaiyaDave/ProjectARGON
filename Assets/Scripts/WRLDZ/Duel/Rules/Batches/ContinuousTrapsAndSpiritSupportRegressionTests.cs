@@ -35,6 +35,7 @@ namespace WRLDZ.Duel.Rules
         const int PotOfGreed = 55144522;
         const int SkullInvitation = 98139712;
         const int MindOnAir = 66690411;
+        const int Greed = 89405199;
 
         public static void Run(CardDatabase db, DeckFile pDeck, DeckFile aDeck, Action<string, bool, string> check)
         {
@@ -49,6 +50,7 @@ namespace WRLDZ.Duel.Rules
             SettleDuels(db, pDeck, aDeck, Check);
             NearMisses(db, Check);
             MindOnAirDuels(db, pDeck, aDeck, Check);
+            GreedDuels(db, pDeck, aDeck, Check);
         }
 
         // ───────────────────────────── helpers ─────────────────────────────
@@ -769,6 +771,87 @@ namespace WRLDZ.Duel.Rules
             Check("Near miss: a Standby discard upkeep is not Settle Machine's End Phase upkeep",
                 !Has(settleStandby, EffectActionKind.EndPhaseDiscardOrDestroyThis),
                 Describe(settleStandby));
+        }
+
+        static void GreedDuels(CardDatabase db, DeckFile pDeck, DeckFile aDeck, Chk Check)
+        {
+            {
+                var prog = CardTextEffectCompiler.Compile(db.Get(Greed));
+                Check("Greed: FullyCompiled - a draw tracker plus the End Phase damage; Implemented",
+                    prog != null && prog.FullyCompiled &&
+                    CardEffectStatus.Classify(db.Get(Greed)) == CardEffectStatusKind.Implemented &&
+                    prog.ClauseList.Count == 2 &&
+                    prog.ClauseList.Exists(c => c.Action == EffectActionKind.TrackEffectDrawForEndPhaseDamage &&
+                        c.Timing == EffectTiming.ContinuousWhileFaceUp && c.Amount == 500) &&
+                    prog.ClauseList.Exists(c => c.Action == EffectActionKind.InflictDamagePerEffectDrawThisTurn &&
+                        c.Timing == EffectTiming.EndPhase && c.Amount == 500),
+                    prog == null ? "null" : string.Join(" | ", prog.UnparsedFragments ?? Array.Empty<string>()));
+            }
+
+            {
+                // The controller draws 2 by an effect: 2 x 500 at the End Phase.
+                var engine = PlayerMain1(db, pDeck, aDeck, out var reached);
+                var p = engine.Player;
+                var greedy = PlaceFaceUpSpellTrap(engine, p, Greed, 0);
+                var pot = PutInHand(engine, p, PotOfGreed);
+                var lp = p.LifePoints;
+                engine.NotifyPublic();
+                var used = engine.TryActivateSpellTrap(p, pot, true);
+                DrainCombat(engine);
+                Check("Greed: recording the draw costs nothing yet (the damage lands at the End Phase)",
+                    reached && used && p.Hand.Count >= 2 && p.LifePoints == lp &&
+                    engine.PendingActivation == null,
+                    $"reached={reached} used={used} hand={p.Hand.Count} lp={lp}->{p.LifePoints}");
+
+                var beforeEnd = p.LifePoints;
+                EndTurn(engine); // the player's End Phase
+                Check("Greed: 2 cards drawn by an effect costs 1000 LP at the End Phase",
+                    p.LifePoints == beforeEnd - 1000 && engine.Opponent.LifePoints == 8000,
+                    $"lp={beforeEnd}->{p.LifePoints} oppLp={engine.Opponent.LifePoints}");
+            }
+
+            {
+                // A normal Draw Phase draw is not a card effect: no damage.
+                var engine = PlayerMain1(db, pDeck, aDeck, out var reached);
+                var p = engine.Player;
+                PlaceFaceUpSpellTrap(engine, p, Greed, 0);
+                PutInHand(engine, p, 40640057);
+                engine.NotifyPublic();
+                var lp = p.LifePoints;
+                EndTurn(engine); // the opponent's turn
+                EndTurn(engine); // back to the player: Draw Phase draw, then the End Phase
+                Check("Greed: the normal Draw Phase draw costs nothing",
+                    reached && p.LifePoints == lp, $"lp={lp}->{p.LifePoints}");
+            }
+
+            {
+                // Each player pays only for the cards they themselves drew by an effect.
+                var engine = PlayerMain1(db, pDeck, aDeck, out var reached);
+                var p = engine.Player;
+                var o = engine.Opponent;
+                PlaceFaceUpSpellTrap(engine, p, Greed, 0);
+                var myPot = PutInHand(engine, p, PotOfGreed);
+                var theirPot = PutInHand(engine, o, PotOfGreed);
+                var pLp = p.LifePoints;
+                var oLp = o.LifePoints;
+                engine.NotifyPublic();
+                // The player's turn: draw 2 by an effect, then reach the End Phase.
+                engine.TryActivateSpellTrap(p, myPot, true);
+                DrainCombat(engine);
+                EndTurn(engine); // the player's End Phase pays for their own 2
+                var afterMine = p.LifePoints;
+                // The opponent's turn: they draw 2 by an effect, then their End Phase pays.
+                engine.TryActivateSpellTrap(o, theirPot, true);
+                DrainCombat(engine);
+                EndTurn(engine); // the opponent's End Phase pays for their own 2
+                Check("Greed: each player pays only for the cards they drew",
+                    p.LifePoints == afterMine && o.LifePoints == oLp - 1000,
+                    $"pLp={pLp}->{p.LifePoints} oLp={oLp}->{o.LifePoints}");
+                EndTurn(engine); // the player's turn: the record was spent, nothing more is paid
+                Check("Greed: the damage is paid once, and the record does not survive the turn",
+                    p.LifePoints == afterMine && o.LifePoints == oLp - 1000,
+                    $"pLp={pLp}->{p.LifePoints} oLp={oLp}->{o.LifePoints}");
+            }
         }
     }
 }

@@ -793,7 +793,7 @@ namespace WRLDZ.Duel
             else if (TextEffects.NegationMonstersRuntime.ConsumeDrawReplaced(this, who))
                 Log($"[{who.Name}] No normal draw this turn (a card was added from the Deck instead).");
             else
-                Draw(who, 1, silent: false);
+                Draw(who, 1, silent: false, byCardEffect: false);
 
             if (GameOver) return;
 
@@ -1082,7 +1082,7 @@ namespace WRLDZ.Duel
             return true;
         }
 
-        public void Draw(DuelistState who, int n, bool silent = false)
+        public void Draw(DuelistState who, int n, bool silent = false, bool byCardEffect = true)
         {
             // Soft residual: Protector of the Sanctuary ContinuousWhileFaceUp
             // OpponentCannotDrawExceptDuringDrawPhases (Soft ContinuousProtections + Soft DE
@@ -1132,6 +1132,11 @@ namespace WRLDZ.Duel
             // Local lineage (GainLpWhenControllerDraws) and GitHub lineage (ControllerDraws timing)
             // each dispatch only their own clauses, so both hooks run.
             TextEffects.TextEffectRuntime.NotifyDrew(this, who, drawn);
+            // Concerning Greed: "each time a player draws cards because of a card effect". The Draw Phase draw is
+            // the only draw in the engine that is not one, so the caller says so; every other draw (a Spell, an
+            // effect on a card, a replacement) is.
+            if (byCardEffect)
+                TextEffects.TextEffectRuntime.NotifyDrewByEffect(this, who, drawn);
             if (drawn > 0 && TurnNumber > 0)
                 TextEffects.TextEffectRuntime.NotifyDraw(this, who);
             // HandDisruption batch (v142): Appropriate — a draw outside either Draw Phase (the opponent's face-up

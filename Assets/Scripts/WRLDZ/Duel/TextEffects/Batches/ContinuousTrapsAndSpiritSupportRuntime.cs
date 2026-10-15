@@ -111,12 +111,67 @@ namespace WRLDZ.Duel.TextEffects
             public List<(CardInstance machine, int entry, DuelistState side)> LiveMachines = new();
             public bool SweepBusy;
             public readonly List<Pick> Queue = new();
+            /// <summary>Greed: the cards each player drew by a card effect this turn, per source Trap.</summary>
+            public readonly Dictionary<CardInstance, Dictionary<DuelistState, int>> GreedDrawn = new();
         }
 
         static readonly ConditionalWeakTable<DuelEngine, EngineState> s_state = new();
         static readonly ConditionalWeakTable<PendingActivation, Pick> s_open = new();
 
         static EngineState State(DuelEngine engine) => s_state.GetValue(engine, _ => new EngineState());
+
+        // ───────────────────────────── Greed ─────────────────────────────
+
+        /// <summary>
+        /// DuelEngine.Draw, for a draw by a card effect (Greed's EVENT_DRAW with REASON_EFFECT). Every face-up,
+        /// non-negated Greed on the field records the count for the player who drew.
+        /// </summary>
+        public static void NoteEffectDraw(DuelEngine engine, DuelistState who, int drawn)
+        {
+            if (engine == null || who == null || drawn <= 0 || engine.GameOver) return;
+            var st = State(engine);
+            foreach (var side in new[] { engine.Player, engine.Opponent })
+            {
+                if (side == null) continue;
+                foreach (var greedy in side.SpellTrapsOnField().ToList())
+                {
+                    if (greedy?.Def == null || !greedy.FaceUp || greedy.IsNegated) continue;
+                    var prog = CompiledEffectCache.GetOrCompile(greedy);
+                    if (prog == null || !prog.FullyCompiled) continue;
+                    if (!prog.ClauseList.Exists(c => c != null &&
+                            c.Action == EffectActionKind.TrackEffectDrawForEndPhaseDamage))
+                        continue;
+                    if (!st.GreedDrawn.TryGetValue(greedy, out var per))
+                        st.GreedDrawn[greedy] = per = new Dictionary<DuelistState, int>();
+                    per.TryGetValue(who, out var had);
+                    per[who] = had + drawn;
+                }
+            }
+        }
+
+        /// <summary>Greed's recorded count for <paramref name="who"/> this turn, or 0.</summary>
+        public static int EffectDrawsThisTurn(DuelEngine engine, CardInstance source, DuelistState who)
+        {
+            if (engine == null || who == null ||
+                !s_state.TryGetValue(engine, out var st) || !st.GreedDrawn.TryGetValue(source, out var per))
+                return 0;
+            return per.TryGetValue(who, out var n) ? n : 0;
+        }
+
+        /// <summary>
+        /// Greed's tracker for the End Phase trigger: the player whose draws the clause is being read for. The
+        /// source stays on the field, so the record is cleared when it leaves or the turn ends
+        /// (<see cref="ClearTurnScopedState"/>) — the Lua flags reset with RESETS_STANDARD_PHASE_END.
+        /// </summary>
+        public static DuelistState GreedWhoseDraws(EffectClause clause, DuelistState controller) =>
+            clause?.Side == EffectSide.Opponent ? controller?.Engine?.OpponentOf(controller) : controller;
+
+        /// <summary>End Phase: Greed's turn-scoped draw records end (RESETS_STANDARD_PHASE_END).</summary>
+        public static void ClearTurnScopedState(DuelEngine engine)
+        {
+            if (engine == null) return;
+            if (s_state.TryGetValue(engine, out var st)) st.GreedDrawn.Clear();
+        }
 
         // ───────────────────────────── helpers ─────────────────────────────
 

@@ -6252,6 +6252,10 @@ namespace WRLDZ.Duel.TextEffects
         }
 
         /// <summary>Solemn Wishes: after a draw of one or more cards, each face-up copy gains LP once.</summary>
+        /// <summary>DuelEngine.Draw for a draw by a card effect (Greed's EVENT_DRAW with REASON_EFFECT).</summary>
+        public static void NotifyDrewByEffect(DuelEngine engine, DuelistState who, int drawn) =>
+            ContinuousTrapsAndSpiritSupportRuntime.NoteEffectDraw(engine, who, drawn);
+
         public static void NotifyDrew(DuelEngine engine, DuelistState who, int drawn)
         {
             if (engine == null || who == null || drawn <= 0 || engine.GameOver) return;
@@ -9390,6 +9394,32 @@ namespace WRLDZ.Duel.TextEffects
                 case EffectActionKind.CountsAsTwoTributesForAttribute:
                 case EffectActionKind.MillToDeclareAttack:
                 case EffectActionKind.InflictDamageWhenControllerGainsLp:
+                case EffectActionKind.TrackEffectDrawForEndPhaseDamage:
+                    // Greed: the recording half is DuelEngine.Draw's by-effect hook, so there is nothing to
+                    // resolve here — this clause only makes the card a Greed.
+                    break;
+
+                case EffectActionKind.InflictDamagePerEffectDrawThisTurn:
+                {
+                    // Greed's End Phase payoff: 500 x the cards this player drew by a card effect this turn.
+                    // Both sides are checked, because the count is per player and the clause is Side=Both.
+                    foreach (var side in new[] { who, opp })
+                    {
+                        if (side == null) continue;
+                        var n = ContinuousTrapsAndSpiritSupportRuntime.EffectDrawsThisTurn(engine, source, side);
+                        if (n <= 0) continue;
+                        var dmg = (clause.Amount > 0 ? clause.Amount : 500) * n;
+                        engine.Log($"{source.Name}: {side.Name} drew {n} card(s) by a card effect — {dmg} damage.");
+                        engine.ApplyEffectDamage(side, dmg, source?.Name);
+                        if (engine.GameOver) break;
+                    }
+
+                    // RESETS_STANDARD_PHASE_END: the record ends with the End Phase that pays it, so the next
+                    // turn's draws start from zero.
+                    ContinuousTrapsAndSpiritSupportRuntime.ClearTurnScopedState(engine);
+                    break;
+                }
+
                 case EffectActionKind.GainLpWhenControllerDraws:
                 case EffectActionKind.GainLpWhenMonsterReturnsToOwnerHand:
                 case EffectActionKind.GainLpWhenEitherPlayerNormalOrFlipSummons:

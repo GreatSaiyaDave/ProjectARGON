@@ -372,6 +372,12 @@ namespace WRLDZ.Duel.TextEffects
                 // ContinuousTrapsAndSpiritSupport batch: Mind on Air — a Continuous Trap that imposes one continuous
                 // rule on the opponent (their hand is public), the same family as NegateCardFamilyOnFieldThisTurn.
                 EffectActionKind.OpponentMustPlayWithHandRevealed => EffectResolutionKind.Protection,
+                // ContinuousTrapsAndSpiritSupport batch: Greed — 500 per card drawn by a card effect, at the End
+                // Phase. Its tracker clause records; the damage clause is the readable one.
+                EffectActionKind.InflictDamagePerEffectDrawThisTurn => EffectResolutionKind.Damage,
+                // The tracker clause is a ContinuousWhileFaceUp marker, not a resolution, so it maps to None like
+                // the other markers (it exists to make the card a Greed for NoteEffectDraw).
+                EffectActionKind.TrackEffectDrawForEndPhaseDamage => EffectResolutionKind.None,
                 // DiscardTriggers (v142): GY → Deck, shuffled (Penguin Knight); hand → GY discards (Delinquent Duo).
                 EffectActionKind.ShuffleGraveyardIntoDeck => EffectResolutionKind.ReturnToDeck,
                 // MfcSimpleSpellsB batch (v174): Hidden Spellbook — GY Spell targets into the Deck, shuffled.
