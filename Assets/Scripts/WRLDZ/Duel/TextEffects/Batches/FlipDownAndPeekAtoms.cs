@@ -60,6 +60,25 @@ namespace WRLDZ.Duel.TextEffects
                     Amount = Parse(m, 1, 2400),
                     MakesChainLink = false
                 }),
+            // Nightmare Penguin (c81306586) e2: SINGLE TRIGGER_F on EVENT_FLIP (Flip Summon, flipped by an attack, or
+            // by a card effect) — target 1 card the opponent controls and return it to the hand. The card's other
+            // sentence, the face-up WATER aura, is in SelfStatMonstersAtoms.
+            new AtomRegistration.Atom(
+                S + @"When this card is flipped face-up: Target 1 card your opponent controls;\s*" +
+                @"return that target to the hand" + E,
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.ThisCardSummoned,
+                    Action = EffectActionKind.ReturnToHand,
+                    Side = EffectSide.Opponent,
+                    Zone = EffectZoneFilter.OppAnyCardOnField,
+                    RequiresTargetChoice = true,
+                    IsPsctTarget = true,
+                    TargetCount = 1,
+                    RequiresThisFlipSummoned = true,
+                    AlsoWhenFlippedFaceUp = true,
+                    MakesChainLink = true
+                }),
             // Royal Keeper (16509093). ygopro c16509093: SINGLE TRIGGER_F on EVENT_FLIP (Flip Summon, flipped by an attack —
             // after damage calculation — or by a card effect); +300 ATK and DEF, RESETS_STANDARD_DISABLE_PHASE_END.
             new AtomRegistration.Atom(

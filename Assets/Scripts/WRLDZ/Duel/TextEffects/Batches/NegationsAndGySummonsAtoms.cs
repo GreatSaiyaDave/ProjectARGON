@@ -36,6 +36,28 @@ namespace WRLDZ.Duel.TextEffects
                     DestroyNegatedCard = true,
                     MakesChainLink = true
                 }),
+            // A-Team: Trap Disposal Unit (c13026402): QUICK_O on EVENT_CHAINING from the Monster Zone
+            // (aux.DoubleSnareValidity — the answer is still a monster's own effect); rp~=tp, re:IsTrapEffect() with
+            // EFFECT_TYPE_ACTIVATE, and not battle-destroyed. Cost: Cost.SelfTribute (the tribute is the track's own
+            // "Tribute this face-up card"). NegateActivation, then destroy it if it is still related. Every clause
+            // field this needs already exists; the monster answers through SeatChainAnswer's monster branch.
+            new AtomRegistration.Atom(
+                S + @"(?:This effect can be used during either player's turn\.\s*)?" +
+                @"When your opponent activates a Trap Card, Tribute this face-up card to negate the " +
+                @"activation of the Trap Card and destroy it" + E,
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.ChainLinkActivated,
+                    Action = EffectActionKind.NegateActivation,
+                    ChainResponseOnly = true,
+                    IsOptional = true,
+                    RequiresTributeThis = true,
+                    NegateOpponentActivationOnly = true,
+                    NegateCardActivationOnly = true,
+                    NegateRespondsToTrap = true,
+                    DestroyNegatedCard = true,
+                    MakesChainLink = true
+                }),
             // Riryoku Field (c70344351): Counter Trap on EVENT_CHAINING, either player's Spell Card activation
             // (re:IsHasType(EFFECT_TYPE_ACTIVATE)) with EFFECT_FLAG_CARD_TARGET whose CHAININFO_TARGET_CARDS is exactly
             // 1 card in LOCATION_MZONE. NegateActivation, then destroy it if it is still related (Magic Jammer's answer).

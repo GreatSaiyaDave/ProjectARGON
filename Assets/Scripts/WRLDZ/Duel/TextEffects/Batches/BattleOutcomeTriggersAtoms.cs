@@ -111,6 +111,22 @@ namespace WRLDZ.Duel.TextEffects
                     Amount = Parse(m, 1, 0),
                     MakesChainLink = false
                 }),
+            // Raging Flame Sprite (c90810762) e2: SINGLE TRIGGER_F EVENT_BATTLE_DAMAGE on a DIRECT attack only
+            // (the battle has no target); EFFECT_UPDATE_ATTACK +1000 on itself with RESETS_STANDARD_DISABLE, so it
+            // is permanent while the card stays face-up. Its first sentence ("can attack your opponent directly")
+            // is already compiled by the generic direct-attack pass.
+            new AtomRegistration.Atom(
+                Start + @"If this card inflicts battle damage to your opponent by a direct attack:\s*" +
+                @"This card gains (\d+) ATK" + End,
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.ThisCardInflictsBattleDamage,
+                    Action = EffectActionKind.ChangeThisCardAtkWhileFaceUp,
+                    Side = EffectSide.Controller,
+                    Amount = Parse(m, 1, 1000),
+                    RequiresDirectAttack = true,
+                    MakesChainLink = true
+                }),
         };
 
         static int Parse(System.Text.RegularExpressions.Match m, int group, int fallback)

@@ -24,6 +24,21 @@ namespace WRLDZ.Duel.TextEffects
 
         public static readonly AtomRegistration.Atom[] Atoms =
         {
+            // Gaia Soul the Combustible Collective (c51355346): "During the End Phase: Destroy this card." — a
+            // maintenance self-destruction (Lua e4 TRIGGER_F EVENT_PHASE+PHASE_END, SetCountLimit(1)). No atom
+            // emitted EffectActionKind.DestroyThisCard at EndPhase before this; the phase-trigger driver fires any
+            // EndPhase clause, so only the clause was missing. It must stay sentence-anchored: Gaia Soul's other two
+            // sentences (piercing, the Pyro tribute) are compiled by other batches.
+            new AtomRegistration.Atom(
+                S + @"During the End Phase: Destroy this card" + E,
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.EndPhase,
+                    Action = EffectActionKind.DestroyThisCard,
+                    Side = EffectSide.Controller,
+                    OncePerTurn = true,
+                    MakesChainLink = true
+                }),
             // Castle of Dark Illusions (c62121): the whole text. FLIP (Lua EFFECT_TYPE_FLIP): every monster on the
             // field when it resolves (GetFieldID ≤ the highest at resolution, both sides) that is a Zombie gains
             // 200 ATK/DEF; a mandatory trigger on each of the controller's next 4 Standby Phases raises it by 200

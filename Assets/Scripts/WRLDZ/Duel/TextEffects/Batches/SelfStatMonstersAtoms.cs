@@ -18,8 +18,29 @@ namespace WRLDZ.Duel.TextEffects
         const string Start = @"(?:^|(?<=[.!?)]\s))";
         const string End = @"\.(?=\s|$)";
 
+        /// <summary>The seven printed Attributes. A clause filter for one of these words is an ATTRIBUTE filter, not
+        /// a monster Type — "WATER" in a RaceFilter matches no card.</summary>
+        const string Attr = @"(DARK|LIGHT|WATER|FIRE|EARTH|WIND|DIVINE)";
+
         public static readonly AtomRegistration.Atom[] Atoms =
         {
+            // Nightmare Penguin (c81306586) e1: SINGLE RANGE EFFECT_UPDATE_ATTACK on every face-up WATER monster the
+            // controller controls (aux.Stringid 0 is the FLIP effect). "face-up" is explicit here, and the word is
+            // an ATTRIBUTE, so it goes in AttributeFilter — a RaceFilter of "WATER" matches nothing. The compiler's
+            // RxAllYouControlGainAtk only accepts a single word ("All Machines you control gain…"), so this
+            // "face-up <ATTRIBUTE>" phrasing is not covered there.
+            new AtomRegistration.Atom(
+                Start + @"All face-up " + Attr + @" monsters you control gain (\d+) ATK" + End,
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.ContinuousGainAtkDef,
+                    Side = EffectSide.Controller,
+                    AttributeFilter = m.Groups[1].Value,
+                    Amount = Parse(m, 2, 0),
+                    DefAmount = 0,
+                    MakesChainLink = false
+                }),
             // This card only, opponent's Battle Phase (The Rock Spirit). Banner of Courage is every monster you
             // control during your Battle Phase; AffectsThisCardOnly keeps those apart.
             new AtomRegistration.Atom(

@@ -817,7 +817,7 @@ namespace WRLDZ.Duel.Rules
             foreach (var (id, name) in new[]
                      {
                          (ShiftingShadows, "Shifting Shadows"),
-                         (NightmarePenguin, "Nightmare Penguin"), (MindHaxorz, "Mind Haxorz")
+                         (MindHaxorz, "Mind Haxorz")
                      })
             {
                 var prog = CardTextEffectCompiler.Compile(db.Get(id));
@@ -825,6 +825,22 @@ namespace WRLDZ.Duel.Rules
                     prog != null && !prog.FullyCompiled && !Implemented(db, id) &&
                     !prog.ClauseList.Exists(c => c != null && batchActions.Contains(c.Action)),
                     Shape(prog));
+            }
+
+            {
+                // Nightmare Penguin (c81306586) is a batch card now, not a near miss: its FLIP effect returns a card
+                // the opponent controls to the hand. The face-up WATER aura is a different batch's clause and must not
+                // leak into this one's near-miss set.
+                var penguin = CardTextEffectCompiler.Compile(db.Get(NightmarePenguin));
+                Check("Nightmare Penguin: FullyCompiled with the flip-return clause (no near miss)",
+                    penguin != null && penguin.FullyCompiled && Implemented(db, NightmarePenguin) &&
+                    penguin.ClauseList.Exists(c =>
+                        c?.Action == EffectActionKind.ReturnToHand &&
+                        c.Timing == EffectTiming.ThisCardSummoned &&
+                        c.RequiresThisFlipSummoned && c.AlsoWhenFlippedFaceUp &&
+                        c.Zone == EffectZoneFilter.OppAnyCardOnField && c.TargetCount == 1) &&
+                    !penguin.ClauseList.Exists(c => c != null && batchActions.Contains(c.Action)),
+                    Shape(penguin));
             }
 
             {

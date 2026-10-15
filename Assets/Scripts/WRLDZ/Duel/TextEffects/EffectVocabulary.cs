@@ -335,6 +335,9 @@ namespace WRLDZ.Duel.TextEffects
                 EffectActionKind.GainSelfAtkPerCount => EffectResolutionKind.ModifyStats,
                 // Random discard is a hand → GY send (Destroy family of removals).
                 EffectActionKind.DiscardRandomFromHand => EffectResolutionKind.Destroy,
+                // A card that destroys itself (Gaia Soul's End Phase upkeep, Toon World's ignition) is still a
+                // removal, so it shares the Destroy kind rather than being a unique exception.
+                EffectActionKind.DestroyThisCard => EffectResolutionKind.Destroy,
                 EffectActionKind.EndBattlePhase => EffectResolutionKind.NegateAttack,
                 // PSV tranche 1: shared shapes, not new kinds.
                 EffectActionKind.DestroySummonedThisTurnLevelLeq or
