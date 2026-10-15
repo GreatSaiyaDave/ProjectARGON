@@ -145,6 +145,22 @@ Also fixed for the DK sets: their texture importer settings had fallen back to U
 from black leaves a dark fringe that reads as an ink outline. All 180 DK colour sprite `.meta`
 files now match the base sets exactly (mip off, clamp, `alphaIsTransparency` on, max 1024).
 
+**The first attempt at that broke every sprite in the game (2026-10-15).** Those regenerated metas
+came from a template whose `bumpmap:` block — with `isReadable`, `streamingMipmaps` and
+`streamingMipmapsPriority` — sat one level too deep, nesting under `mipmaps:`; the Android/iOS
+platform entries and the trailing newline were missing too. Unity refuses such a file outright
+(`The contents of '…yugi_da_front.png.meta' could not be parsed`), so the texture was never
+imported, `Resources.Load<Texture2D>` returned null, `LoadAngleSprite` bailed before assigning
+`_BaseMap` and the AnimeCel material fell back to its default **white** texture — whose alpha is 1
+everywhere, so the cutout never clipped either. The duelist rendered as a flat white rectangle (the
+owner's "white spot"); the form map failed the same way and lost all shading with it. Not DK-only:
+**367 of the 403 metas** under `AnimeCharacters/` were malformed, base sets included, so every anime
+sprite in the game was a white rectangle. `scripts/fix_sprite_metas.py` rewrites each one from a
+canonical sibling Unity accepts (`joey` / `kaiba` / `yami_yugi` are healthy), **keeping every GUID**
+so nothing that references an asset breaks — the repaired files are byte-identical to the canonical
+meta apart from the GUID. The indentation bug is fixed in `build_normal_depth.py`'s template, which
+is where the colour metas copied it from.
+
 `normals/<cid>_da.jpg` shows it: **original · normal map · OLD scene key · shipped key** — the
 last two tiles are the same art under the old and the new key, so the difference is visible in
 one row.
@@ -177,3 +193,5 @@ for them; their variants arrive with later seasons.
 - `qc_base.py` (parent folder) – the same replay for the original 16 base sets (v1 maps, strength
   0.8, pure scene key), before vs after the billboard fix. Writes `normals/qc_base.json`.
 - `assemble_variant.py` (parent folder) – turns one picked cutout into the 12-file sprite set.
+- `fix_sprite_metas.py` (parent folder) – repairs the 367 malformed sprite `.meta` files from a
+  canonical sibling, keeping every GUID (see the "white spot" note above). `--check` reports only.

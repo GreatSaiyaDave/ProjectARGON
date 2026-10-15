@@ -50,15 +50,15 @@ TextureImporter:
     alphaTestReferenceValue: 0.5
     mipMapFadeDistanceStart: 1
     mipMapFadeDistanceEnd: 3
-    bumpmap:
-      convertToNormalMap: 0
-      externalNormalMap: 0
-      heightScale: 0.25
-      normalMapFilter: 0
-      flipGreenChannel: 0
-    isReadable: 0
-    streamingMipmaps: 0
-    streamingMipmapsPriority: 0
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
   vTOnly: 0
   ignoreMipmapLimit: 0
   grayScaleToAlpha: 0
@@ -136,7 +136,8 @@ TextureImporter:
   pSDRemoveMatte: 0
   userData:
   assetBundleName:
-  assetBundleVariant:"""
+  assetBundleVariant:
+"""
 
 
 def guid_for(name):
