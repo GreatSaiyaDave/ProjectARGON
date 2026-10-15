@@ -75,26 +75,43 @@ Gesture overlays are composited on top of the base angle sprite to convey action
 
 ## Character Catalog
 
-The following 16 characters are registered in `AnimeCharacterCatalog.cs`, each with a complete 12-file sprite set:
+The following 16 characters are registered in `AnimeCharacterCatalog.cs`, each with a complete 12-file sprite set.
+Every sprite is the character's **official Duel Links `T_chara002` standing art** (500×960), scaled and
+placed on a 1024×1024 canvas with the feet on the ground line.
 
-| ID | Display Name | Height (m) | Front Source | Angle Sprites | Expressions | Gestures |
-|----|-------------|------------|--------------|--------------|-------------|----------|
-| yami_yugi | Yami Yugi | 1.58 | Blender (Atem GLB) | Atem GLB render | DL cutin 001-003 | DL chara007/chara050 |
-| kaiba | Seto Kaiba | 1.86 | Blender (Atem color-shift) | Atem GLB rendered, color-shifted blonde/white | DL cutin 001-003 | DL chara007/chara050 |
-| joey | Joey Wheeler | 1.78 | Blender (Duelist_Ready GLB) | Duelist_Ready GLB render | DL cutin 001-003 | DL chara007/chara050 |
-| mai | Mai Valentine | 1.70 | DL `T_chara002` (sn0004) | Color-shifted Atem | Face texture crop | Color-shifted Atem |
-| marik | Marik Ishtar | 1.77 | DL `T_chara002` (sn0010) | Color-shifted Atem | Face texture crop | Color-shifted Atem |
-| bakura | Yami Bakura | 1.76 | DL `T_chara002` (sn0012) | Color-shifted Atem | Face texture crop | Color-shifted Atem |
-| pegasus | Maximillion Pegasus | 1.90 | Face texture composite (sn0016 missing from DL) | Color-shifted Atem | Face texture crop | Color-shifted Atem |
-| tea | Téa Gardner | 1.64 | DL `T_chara002` (sn0009) | Color-shifted Atem | Face texture crop | Color-shifted Atem |
-| weevil | Weevil Underwood | 1.52 | DL `T_chara002` (sn0007) | Color-shifted Atem | Face texture crop | Color-shifted Atem |
-| rex | Rex Raptor | 1.70 | DL `T_chara002` (sn0008) | Color-shifted Atem | Face texture crop | Color-shifted Atem |
-| mako | Mako Tsunami | 1.83 | DL `T_chara002` (sn0005) | Color-shifted Atem | Face texture crop | Color-shifted Atem |
-| tristan | Tristan Taylor | 1.83 | DL `T_chara002` (sn0006) | Color-shifted Atem | Face texture crop | Color-shifted Atem |
-| mokuba | Mokuba Kaiba | 1.45 | DL `T_chara002` (sn0011) | Color-shifted Atem | Face texture crop | Color-shifted Atem |
-| ishizu | Ishizu Ishtar | 1.67 | DL `T_chara002` (sn0014) | Color-shifted Atem | Face texture crop | Color-shifted Atem |
-| odion | Odion | 1.75 | DL `T_chara002` (sn0013) | Color-shifted Atem | Face texture crop | Color-shifted Atem |
-| bandit_keith | Bandit Keith | 1.85 | DL `T_chara002` (sn0015) | Color-shifted Atem | Face texture crop | Color-shifted Atem |
+The `sn####` source is verified against the DL `charaname` plates (hair colour + body height). Earlier
+builds of this folder used a rendered 3D Atem base plus colour transfer and, worse, mapped several
+characters to the **wrong** DL source (Tristan showed Yugi, Keith showed Pegasus, Mokuba showed Yami
+Bakura, Téa showed Mako, Mako showed Téa, Bakura showed Keith, Ishizu showed Odion, Odion showed Ishizu).
+That is fixed here.
+
+| ID | Display Name | Height (m) | Source (Duel Links) |
+|----|-------------|------------|---------------------|
+| yami_yugi | Yami Yugi | 1.58 | sn0001 `T_chara002` |
+| kaiba | Seto Kaiba | 1.86 | sn0002 `T_chara002` |
+| joey | Joey Wheeler | 1.78 | sn0003 `T_chara002` |
+| mai | Mai Valentine | 1.70 | sn0004 `T_chara002` |
+| tea | Téa Gardner | 1.64 | sn0005 `T_chara002` |
+| weevil | Weevil Underwood | 1.52 | sn0007 `T_chara002` |
+| rex | Rex Raptor | 1.70 | sn0008 `T_chara002` |
+| mako | Mako Tsunami | 1.83 | sn0009 `T_chara002` |
+| marik | Marik Ishtar | 1.77 | sn0010 `T_chara002` |
+| bakura | Yami Bakura | 1.76 | sn0011 `T_chara002` |
+| bandit_keith | Bandit Keith | 1.85 | sn0012 `T_chara002` |
+| ishizu | Ishizu Ishtar | 1.67 | sn0013 `T_chara002` |
+| odion | Odion | 1.75 | sn0014 `T_chara002` |
+| pegasus | Maximillion Pegasus | 1.90 | sn0015 `T_chara002` |
+| mokuba | Mokuba Kaiba | 1.45 | sn0017 `T_chara002` |
+| tristan | Tristan Taylor | 1.83 | sn0029 `T_chara002` |
+
+> **Note on the angle / expression / gesture slots.** `AnimeCharacterActor` keeps its billboard facing the
+> camera, so the camera always resolves to the *front* angle — the `_34`/`_side`/`_back` slots are never
+> displayed and reuse the front art. `SetExpression` and `PlayGesture` swap the whole base texture, so the
+> `expr_*` and `gesture_*` slots also reuse the standing art until per-expression / per-pose art exists
+> (the DL character packs only ship one full-body pose each for these characters). This keeps the correct
+> character on screen in every state instead of falling back to a blank or a floating face.
+
+Rebuild: `python3 ~/argon-avatar/research/build_dl_sprites.py`.
 
 ## Integration
 
