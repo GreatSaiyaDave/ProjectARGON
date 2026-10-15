@@ -16563,6 +16563,60 @@ namespace WRLDZ.Duel.Rules
                         earthling.CurrentAtk == earthAtk,
                         $"atk={earthling.CurrentAtk} base={earthAtk}");
                 }
+
+                // ── "for each OTHER X monster" must exclude this card; without "other" it must not ──
+                {
+                    // Machine King counts every Machine including itself (Lua passes nil as the exception);
+                    // Perfect Machine King counts only the OTHER Machines (Lua passes the handler). Same
+                    // template, opposite answers, so both are pinned together.
+                    var mkEngine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(mkEngine);
+                    var mkWho = mkEngine.Player;
+                    var mk = PlaceMonster(mkEngine, mkWho, 46700124, 0, BattlePosition.Attack, faceUp: true);
+                    PlaceMonster(mkEngine, mkWho, 46700124, 1, BattlePosition.Attack, faceUp: true);
+                    FieldSpellEffects.RefreshBoard(mkEngine);
+                    Check("Machine King: two Machines on the field → +200 ATK (itself counted)",
+                        mk.CurrentAtk == mk.Def.atk + 200,
+                        $"atk={mk.CurrentAtk} base={mk.Def.atk}");
+
+                    var mkDef = db.Get(46700124);
+                    var mkProg = mkDef != null ? CardTextEffectCompiler.Compile(mkDef) : null;
+                    Check("Machine King: compiles without ExceptThisCard (no \"other\" in its text)",
+                        mkProg != null && mkProg.FullyCompiled &&
+                        string.Equals(mkProg.ClauseList.Find(c => c?.ScaleThisAtkByMatchingCount == true)
+                            ?.RaceFilter, "Machine", System.StringComparison.OrdinalIgnoreCase) &&
+                        !mkProg.ClauseList.Exists(c => c != null && c.ExceptThisCard),
+                        mkProg == null ? "null" : $"full={mkProg.FullyCompiled}");
+                }
+
+                {
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var pmk = PlaceMonster(engine, p, 18891691, 0, BattlePosition.Attack, faceUp: true);
+                    var pmkBase = pmk.Def.atk;
+                    PlaceMonster(engine, p, 18891691, 1, BattlePosition.Attack, faceUp: true);
+                    // A non-Machine monster must not be counted at all.
+                    var elf = PlaceMonster(engine, p, 15025844, 2, BattlePosition.Attack, faceUp: true);
+                    FieldSpellEffects.RefreshBoard(engine);
+                    Check("Perfect Machine King: one OTHER Machine → +500 ATK (itself excluded)",
+                        pmk.CurrentAtk == pmkBase + 500,
+                        $"atk={pmk.CurrentAtk} base={pmkBase}");
+                    Check("Perfect Machine King: a Spellcaster on the field is not counted",
+                        elf.CurrentAtk == elf.Def.atk,
+                        $"atk={elf.CurrentAtk} base={elf.Def.atk}");
+
+                    var pmkDef = db.Get(18891691);
+                    var pmkProg = pmkDef != null ? CardTextEffectCompiler.Compile(pmkDef) : null;
+                    Check("Perfect Machine King: \"other\" is consumed — RaceFilter is a clean Type + ExceptThisCard",
+                        pmkProg != null && pmkProg.FullyCompiled &&
+                        string.Equals(pmkProg.ClauseList.Find(c => c?.ScaleThisAtkByMatchingCount == true)
+                            ?.RaceFilter, "Machine", System.StringComparison.OrdinalIgnoreCase) &&
+                        pmkProg.ClauseList.Exists(c => c != null && c.ExceptThisCard),
+                        pmkProg == null
+                            ? "null"
+                            : $"full={pmkProg.FullyCompiled} unparsed={string.Join("|", pmkProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+                }
             }
 
             // ── Ritual Monsters whose whole text is the summon procedure ──

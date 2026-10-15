@@ -284,7 +284,7 @@ namespace WRLDZ.Duel.TextEffects
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxGainsAtkEachRaceOnField = new(
-            @"(?:This card )?gains (\d+) ATK(?:/DEF)? for each (?:face-up )?" + TypedMonster +
+            @"(?:This card )?gains (\d+) ATK(?:/DEF)? for each (?:face-up )?(other )?" + TypedMonster +
             @" monster(?:s)? on the field(?:,? except this card)?(?: and in the (?:GY|Graveyard))?\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
@@ -1266,7 +1266,12 @@ var namedYou = RxGainsAtkEachNamedYouControl.Match(text);
                 // The captured word is a race ("Machine") or an attribute ("FIRE", Ultimate Baseball Kid). It must
                 // land in the matching filter: a race filter that never matches reads 0 for every card on the
                 // field, which is a silent wrong result rather than a fail-closed one.
-                var kind = raceField.Groups[2].Value;
+                var kind = raceField.Groups[3].Value;
+                // "for each OTHER Machine-Type monster" (Perfect Machine King): the count excludes this card
+                // (Lua passes the handler as the exception to GetMatchingGroupCount). The "other" is consumed
+                // here so the captured word is a clean printed Type — leaving it in would fail the RaceFilter
+                // validator and close the whole card.
+                var otherOnly = raceField.Groups[2].Success;
                 Add(raceField, new EffectClause
                 {
                     Timing = EffectTiming.ContinuousWhileFaceUp,
@@ -1278,7 +1283,7 @@ var namedYou = RxGainsAtkEachNamedYouControl.Match(text);
                     Side = EffectSide.Both,
                     ScaleThisAtkByMatchingCount = true,
                     // Ultimate Baseball Kid: "except this card" — the scaling card is itself a match.
-                    ExceptThisCard = Regex.IsMatch(raceField.Value, @"except this card",
+                    ExceptThisCard = otherOnly || Regex.IsMatch(raceField.Value, @"except this card",
                         RegexOptions.IgnoreCase),
                     ScaleCountIncludesGraveyard = Regex.IsMatch(raceField.Value,
                         @"and in the (?:GY|Graveyard)", RegexOptions.IgnoreCase),
