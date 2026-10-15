@@ -763,6 +763,14 @@ namespace WRLDZ.Presentation.ArInteraction
             return true;
         }
 
+        // Collision feel: penetration depth turns into speed, a card that is already moving adds its closing
+        // speed, and a fast hit corrects only a fraction of the depth positionally (the velocity finishes the
+        // job over the next frames) while a resting overlap still separates fully.
+        const float RestitutionPerMetre = 6f;   // m/s of knock per metre of penetration
+        const float Restitution = 0.35f;        // share of the closing speed handed to the struck card
+        const float SoftHitSpeed = 0.05f;       // closing speed above which the correction goes soft
+        const float SoftCorrection = 0.3f;      // fraction of the depth corrected on a soft hit
+
         void SeparateOverlappingCards()
         {
             var n = _cards.Count;
@@ -785,15 +793,37 @@ namespace WRLDZ.Presentation.ArInteraction
                             out var dir, out var dist))
                         continue;
                     if (dist < 1e-5f) continue;
+
+                    // Resolve like cards, not like a layout. The closing speed of the two cards becomes
+                    // velocity and spin (so a card swept through the fan throws its neighbours and they
+                    // tumble), and only the leftover depth is corrected positionally — which is what keeps
+                    // them from clipping. Correcting the whole depth every frame, as before, is what made a
+                    // hit look like an avoid: the card arrived somewhere new with no momentum at all.
                     var push = dir * dist;
+                    var closing = Mathf.Max(0f, -Vector3.Dot(a.WorldVelocity - b.WorldVelocity, dir));
+                    var speed = dist * RestitutionPerMetre + closing * (1f + Restitution);
+                    // which side of each card was struck decides which way it spins
+                    var lever = Vector3.Cross(dir, b.transform.position - a.transform.position);
+                    var spinA = -Mathf.Sign(Vector3.Dot(lever, a.transform.forward));
+                    var spinB = Mathf.Sign(Vector3.Dot(lever, b.transform.forward));
+                    var soft = closing > SoftHitSpeed ? SoftCorrection : 1f;
+
                     if (a.IsDragging && !b.IsDragging)
-                        b.AddWorldSeparation(push);
+                    {
+                        b.AddWorldSeparation(push * soft);
+                        b.ApplyKnock(push.normalized, speed, spinB);
+                    }
                     else if (b.IsDragging && !a.IsDragging)
-                        a.AddWorldSeparation(-push);
+                    {
+                        a.AddWorldSeparation(-push * soft);
+                        a.ApplyKnock(-push.normalized, speed, spinA);
+                    }
                     else
                     {
-                        a.AddWorldSeparation(-push * 0.5f);
-                        b.AddWorldSeparation(push * 0.5f);
+                        a.AddWorldSeparation(-push * 0.5f * soft);
+                        b.AddWorldSeparation(push * 0.5f * soft);
+                        a.ApplyKnock(-push.normalized, speed * 0.5f, spinA);
+                        b.ApplyKnock(push.normalized, speed * 0.5f, spinB);
                     }
                 }
             }

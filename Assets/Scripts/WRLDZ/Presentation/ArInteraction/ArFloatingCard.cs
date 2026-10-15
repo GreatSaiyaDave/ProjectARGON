@@ -64,6 +64,17 @@ namespace WRLDZ.Presentation.ArInteraction
             ArAnimePresentation.CardThickness);
         /// <summary>World-space push from card-card depenetration (consumed by the idle spring).</summary>
         Vector3 _physSepLocal;
+        // Collision response. An overlap used to be resolved by teleporting the card apart — a positional
+        // "avoid": a card shoved by a dragged neighbour slid away with no momentum and no spin, and how hard
+        // it was hit made no difference. These carry the hit instead: velocity and in-plane spin, integrated
+        // per frame and settled by the same springs as the rest offset.
+        Vector3 _knockLocal;                 // parent-space offset the velocity has carried the card to
+        Vector3 _knockVel;                   // parent-space velocity picked up from impacts
+        float _spinDeg, _spinVel;            // in-plane spin, about the card's own face normal
+        Vector3 _motionLocal, _prevLocal;    // frame-to-frame motion (layout, hand and drag all move it)
+        bool _hasPrevLocal;
+        const float MaxKnockSpeed = 2.5f;    // m/s cap, so a bad frame cannot fling a card
+        const float SpinPerSpeedDeg = 70f;   // degrees/s of spin per m/s of impact
 
         public static ArFloatingCard Spawn(Transform parent, CardInstance card, CardDatabase db,
             int layer, Color tint)
@@ -465,6 +476,21 @@ namespace WRLDZ.Presentation.ArInteraction
 
         void Update()
         {
+            var dt = Time.deltaTime;
+            // Measure how fast this card is really moving (the layout, the hand and the drag all move it).
+            // That velocity is what a collision has to carry: a fast card throws its neighbours, a slow one
+            // only nudges them. Tracked before the guards, because a dragged card returns early below.
+            var now = transform.localPosition;
+            if (_hasPrevLocal && dt > 1e-5f)
+            {
+                var v = (now - _prevLocal) / dt;
+                // a re-slot (draw, snap, layout rebuild) teleports the card: not a velocity
+                if (v.magnitude > MaxKnockSpeed * 2f) _motionLocal = Vector3.zero;
+                else _motionLocal = Vector3.Lerp(_motionLocal, v, 0.35f);
+            }
+            _prevLocal = now;
+            _hasPrevLocal = true;
+
             if (IsLockedToZone || IsDragging || !_hasRest || IsDrawArriving) return;
             if (_snapCo != null) return;
             // in the hand's fan the hand places this card rigidly every LateUpdate (ArFloatingHand.Tick): a spring
@@ -476,10 +502,22 @@ namespace WRLDZ.Presentation.ArInteraction
             _freeOffsetLocal = Vector3.Lerp(_freeOffsetLocal, Vector3.zero, Time.deltaTime * 1.8f);
             var bob = Mathf.Sin(Time.time * 2.0f + _bobPhase) * 0.006f;
             _physSepLocal = Vector3.Lerp(_physSepLocal, Vector3.zero, Time.deltaTime * 6f);
-            var target = _handRestLocal + _freeOffsetLocal + _physSepLocal + new Vector3(0f, bob, 0f);
+            // a hit carries the card away, then drag and the spring bring it home
+            _knockLocal += _knockVel * Time.deltaTime;
+            _knockVel *= Mathf.Exp(-6.5f * Time.deltaTime);
+            _knockLocal *= Mathf.Exp(-4.5f * Time.deltaTime);
+            _spinDeg += _spinVel * Time.deltaTime;
+            _spinVel *= Mathf.Exp(-5.0f * Time.deltaTime);
+            _spinDeg *= Mathf.Exp(-3.0f * Time.deltaTime);
+            if (_knockLocal.sqrMagnitude < 1e-10f) _knockLocal = Vector3.zero;
+            if (Mathf.Abs(_spinDeg) < 0.05f) _spinDeg = 0f;
+            var target = _handRestLocal + _freeOffsetLocal + _physSepLocal + _knockLocal + new Vector3(0f, bob, 0f);
             var k = 1f - Mathf.Exp(-IdleSpring * Time.deltaTime);
             transform.localPosition = Vector3.Lerp(transform.localPosition, target, k);
-            transform.localRotation = Quaternion.Slerp(transform.localRotation, _handRestRot, k);
+            var restRot = _spinDeg != 0f
+                ? _handRestRot * Quaternion.AngleAxis(_spinDeg, Vector3.forward)
+                : _handRestRot;
+            transform.localRotation = Quaternion.Slerp(transform.localRotation, restRot, k);
             transform.localScale = Vector3.Lerp(transform.localScale, _handRestScale, k);
         }
 
@@ -516,6 +554,29 @@ namespace WRLDZ.Presentation.ArInteraction
                 _physSepLocal += transform.parent.InverseTransformVector(worldDelta);
             else
                 _physSepLocal += worldDelta;
+        }
+
+        /// <summary>How fast this card is moving right now, parent space (own motion plus impact).</summary>
+        public Vector3 LocalVelocity => _motionLocal + _knockVel;
+
+        /// <summary>World-space velocity, for the collision pass.</summary>
+        public Vector3 WorldVelocity =>
+            transform.parent != null ? transform.parent.TransformVector(LocalVelocity) : LocalVelocity;
+
+        /// <summary>
+        /// Take a hit: a push along <paramref name="worldDir"/> of magnitude <paramref name="speed"/>, plus a
+        /// spin about the card's own normal whose sign comes from which side of the card was struck. Nothing
+        /// is teleported — the card travels, tumbles and settles back into the fan.
+        /// </summary>
+        public void ApplyKnock(Vector3 worldDir, float speed, float spinSign)
+        {
+            if (!_hasRest || IsLockedToZone || IsDrawArriving) return;
+            var local = transform.parent != null
+                ? transform.parent.InverseTransformVector(worldDir)
+                : worldDir;
+            var v = Mathf.Clamp(speed, 0f, MaxKnockSpeed);
+            _knockVel += local * v;
+            _spinVel += Mathf.Clamp(spinSign, -1f, 1f) * v * SpinPerSpeedDeg;
         }
     }
 }
