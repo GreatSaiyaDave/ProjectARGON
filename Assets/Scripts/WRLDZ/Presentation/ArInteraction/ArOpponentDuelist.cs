@@ -52,6 +52,7 @@ namespace WRLDZ.Presentation.ArInteraction
         // 2D anime billboard fallback when no FBX character model exists
         AnimeCharacterActor _animeActor;
         bool _usingAnime;
+        bool _loggedCamera;
 
         // ---- bones + hand frames (canonical: +Y fingers, +X thumb for the RIGHT hand, back of hand +Z)
         Transform _lUpper, _lFore, _lHand, _rUpper, _rFore, _rHand, _head, _neck, _chest, _hips;
@@ -1332,6 +1333,22 @@ namespace WRLDZ.Presentation.ArInteraction
         void SolveSprite(float dt, (Vector3 pos, Quaternion rot) arm, Vector3 facing, Vector3 right, float scale)
         {
             DeployTarget(dt, scale, facing, right, out _, out _);
+
+            // Hand the sprite the camera that actually renders the stage. Camera.main is DuelSlice's here, far to
+            // the side, so the billboard turned the sprite away from the viewer (and IdleBreath/SwitchAngle never
+            // ran at all): the sprite read as a flat cutout pinned to one direction instead of a body in the room.
+            if (_animeActor != null)
+            {
+                var cam = ArStageView.FindCamera(_root);
+                _animeActor.SetCamera(cam);
+                if (!_loggedCamera)
+                {
+                    _loggedCamera = true;
+                    var main = Camera.main;
+                    Debug.Log($"[WRLDZ AR] Opponent sprite camera · stage={(cam != null ? cam.name : "null")} · " +
+                              $"Camera.main={(main != null ? main.name : "null")}");
+                }
+            }
 
             // No forearm bone to strap the kit to (NpcDuelDisk.Tick needs one), so the rig rides the tracker's
             // opponent-wrist pose — the same pose the player's own disk is placed from, and the one the stage framed

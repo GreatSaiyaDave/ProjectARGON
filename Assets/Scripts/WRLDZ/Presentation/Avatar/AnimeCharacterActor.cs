@@ -44,6 +44,7 @@ namespace WRLDZ.Presentation.Avatar
         Texture2D _currentSprite;
         Texture2D _normalMap;
         Camera _camera;
+        Camera _cameraOverride;
         float _baseY;
         float _idleTime;
         float _angleSwitchCooldown;
@@ -77,7 +78,10 @@ namespace WRLDZ.Presentation.Avatar
             _quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
             _quad.name = "SpriteQuad";
             _quad.transform.SetParent(transform, false);
-            _quad.transform.localPosition = new Vector3(0f, HeightM * 0.5f, 0f);
+            // Art whose canvas keeps a margin under the feet (the DK renders are top-aligned: 7.91%) is dropped by
+            // that fraction of its height so the feet meet the street and the contact shadow sits under them
+            // instead of 12 cm behind.
+            _quad.transform.localPosition = new Vector3(0f, HeightM * (0.5f - _set.footMargin), 0f);
             // Unity's Quad faces -Z: at identity the billboard shows the camera its BACK, which
             // mirror-flips the art (ArPhysicalCardBuilder.cs hit the same thing) and points the
             // mesh normal AWAY from the viewer — so every form-map pixel lit backwards: replayed
@@ -104,6 +108,13 @@ namespace WRLDZ.Presentation.Avatar
             LoadAngleSprite(AnimeCharacterCatalog.CameraAngle.Front);
             ApplyFormMap();
             BuildShadow();
+
+            // one line per actor: proves at runtime which base/form textures came back and what the cel
+            // lighting was left at (a null form map silently drops the whole 3D read)
+            Debug.Log($"[WRLDZ Anime] '{_set.id}' · base '{(_currentSprite != null ? _currentSprite.name : "MISSING")}' · " +
+                      $"form '{(_normalMap != null ? _normalMap.name : "MISSING")}' · " +
+                      $"strength {_material.GetFloat("_NormalStrength"):0.00} · parallax {_material.GetFloat("_Parallax"):0.000} · " +
+                      $"keyBias {_material.GetFloat("_KeyBias"):0.00} · {HeightM:0.00} m");
         }
 
         /// <summary>Load this set's depth+normal map so the 2D art is lit as 3D form. When the map
@@ -241,6 +252,14 @@ namespace WRLDZ.Presentation.Avatar
             if (_quad != null) _quad.SetActive(visible);
         }
 
+        /// <summary>
+        /// Camera the billboard and the angle switch follow. Defaults to <see cref="Camera.main"/>, which is the
+        /// wrong camera in an AR duel: the stage renders through the untagged `ArCam` while DuelSlice's
+        /// MainCamera sits far to the side (the same trap <c>SpiritDuelerSkin.TickAura</c> documents), so
+        /// <c>ArOpponentDuelist</c> hands over <c>ArStageView.FindCamera</c> every frame instead.
+        /// </summary>
+        public void SetCamera(Camera cam) => _cameraOverride = cam;
+
         /// <summary>Set the cel-shading shadow band depth and rim light intensity.</summary>
         public void SetShading(float shadowAmt, float rimAmt)
         {
@@ -252,7 +271,7 @@ namespace WRLDZ.Presentation.Avatar
         void Update()
         {
             if (!_visible || _quad == null) return;
-            _camera = Camera.main;
+            _camera = _cameraOverride != null ? _cameraOverride : Camera.main;
             if (_camera == null) return;
 
             Billboard();

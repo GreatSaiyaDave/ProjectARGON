@@ -59,6 +59,14 @@ namespace WRLDZ.Data
 
         /// <summary>Shadow blob diameter in metres.</summary>
         public float shadowDiameter = 0.9f;
+
+        /// <summary>
+        /// Fraction of the canvas that sits BELOW the figure's feet. Art aligned to the top of the canvas (the
+        /// Duelist Kingdom renders: 7.91% of 1024) would otherwise hover that fraction of its height above the
+        /// street, leaving its contact shadow on the ground behind it. 0 = feet on the canvas bottom, which is
+        /// what the base sets are drawn to (1.76%, under 3 cm — left at the default).
+        /// </summary>
+        public float footMargin;
     }
 
     /// <summary>
@@ -247,6 +255,7 @@ namespace WRLDZ.Data
                 gestures = new AnimeCharacterSet.Gestures { idle = "idle", draw = "draw", summon = "summon", attack = "attack", defeat = "defeat" },
                 heightM = 1.53f,
                 shadowDiameter = 0.55f,
+                footMargin = 0.0791f,
             },
             new AnimeCharacterSet
             {
@@ -257,6 +266,7 @@ namespace WRLDZ.Data
                 gestures = new AnimeCharacterSet.Gestures { idle = "idle", draw = "draw", summon = "summon", attack = "attack", defeat = "defeat" },
                 heightM = 1.58f,
                 shadowDiameter = 0.60f,
+                footMargin = 0.0791f,
             },
             new AnimeCharacterSet
             {
@@ -267,6 +277,7 @@ namespace WRLDZ.Data
                 gestures = new AnimeCharacterSet.Gestures { idle = "idle", draw = "draw", summon = "summon", attack = "attack", defeat = "defeat" },
                 heightM = 1.86f,
                 shadowDiameter = 0.70f,
+                footMargin = 0.0791f,
             },
             new AnimeCharacterSet
             {
@@ -277,6 +288,7 @@ namespace WRLDZ.Data
                 gestures = new AnimeCharacterSet.Gestures { idle = "idle", draw = "draw", summon = "summon", attack = "attack", defeat = "defeat" },
                 heightM = 1.78f,
                 shadowDiameter = 0.65f,
+                footMargin = 0.0791f,
             },
             new AnimeCharacterSet
             {
@@ -287,6 +299,7 @@ namespace WRLDZ.Data
                 gestures = new AnimeCharacterSet.Gestures { idle = "idle", draw = "draw", summon = "summon", attack = "attack", defeat = "defeat" },
                 heightM = 1.70f,
                 shadowDiameter = 0.60f,
+                footMargin = 0.0791f,
             },
             new AnimeCharacterSet
             {
@@ -297,6 +310,7 @@ namespace WRLDZ.Data
                 gestures = new AnimeCharacterSet.Gestures { idle = "idle", draw = "draw", summon = "summon", attack = "attack", defeat = "defeat" },
                 heightM = 1.64f,
                 shadowDiameter = 0.55f,
+                footMargin = 0.0791f,
             },
             new AnimeCharacterSet
             {
@@ -307,6 +321,7 @@ namespace WRLDZ.Data
                 gestures = new AnimeCharacterSet.Gestures { idle = "idle", draw = "draw", summon = "summon", attack = "attack", defeat = "defeat" },
                 heightM = 1.83f,
                 shadowDiameter = 0.70f,
+                footMargin = 0.0791f,
             },
             new AnimeCharacterSet
             {
@@ -317,6 +332,7 @@ namespace WRLDZ.Data
                 gestures = new AnimeCharacterSet.Gestures { idle = "idle", draw = "draw", summon = "summon", attack = "attack", defeat = "defeat" },
                 heightM = 1.76f,
                 shadowDiameter = 0.65f,
+                footMargin = 0.0791f,
             },
             new AnimeCharacterSet
             {
@@ -327,6 +343,7 @@ namespace WRLDZ.Data
                 gestures = new AnimeCharacterSet.Gestures { idle = "idle", draw = "draw", summon = "summon", attack = "attack", defeat = "defeat" },
                 heightM = 1.76f,
                 shadowDiameter = 0.65f,
+                footMargin = 0.0791f,
             },
             new AnimeCharacterSet
             {
@@ -337,6 +354,7 @@ namespace WRLDZ.Data
                 gestures = new AnimeCharacterSet.Gestures { idle = "idle", draw = "draw", summon = "summon", attack = "attack", defeat = "defeat" },
                 heightM = 1.90f,
                 shadowDiameter = 0.80f,
+                footMargin = 0.0791f,
             },
             new AnimeCharacterSet
             {
@@ -347,6 +365,7 @@ namespace WRLDZ.Data
                 gestures = new AnimeCharacterSet.Gestures { idle = "idle", draw = "draw", summon = "summon", attack = "attack", defeat = "defeat" },
                 heightM = 1.52f,
                 shadowDiameter = 0.50f,
+                footMargin = 0.0791f,
             },
             new AnimeCharacterSet
             {
@@ -357,6 +376,7 @@ namespace WRLDZ.Data
                 gestures = new AnimeCharacterSet.Gestures { idle = "idle", draw = "draw", summon = "summon", attack = "attack", defeat = "defeat" },
                 heightM = 1.70f,
                 shadowDiameter = 0.60f,
+                footMargin = 0.0791f,
             },
             new AnimeCharacterSet
             {
@@ -367,6 +387,7 @@ namespace WRLDZ.Data
                 gestures = new AnimeCharacterSet.Gestures { idle = "idle", draw = "draw", summon = "summon", attack = "attack", defeat = "defeat" },
                 heightM = 1.83f,
                 shadowDiameter = 0.70f,
+                footMargin = 0.0791f,
             },
             new AnimeCharacterSet
             {
@@ -377,6 +398,7 @@ namespace WRLDZ.Data
                 gestures = new AnimeCharacterSet.Gestures { idle = "idle", draw = "draw", summon = "summon", attack = "attack", defeat = "defeat" },
                 heightM = 1.85f,
                 shadowDiameter = 0.70f,
+                footMargin = 0.0791f,
             },
             new AnimeCharacterSet
             {
@@ -387,6 +409,7 @@ namespace WRLDZ.Data
                 gestures = new AnimeCharacterSet.Gestures { idle = "idle", draw = "draw", summon = "summon", attack = "attack", defeat = "defeat" },
                 heightM = 1.45f,
                 shadowDiameter = 0.50f,
+                footMargin = 0.0791f,
             },
         };
 
