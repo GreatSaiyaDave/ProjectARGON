@@ -700,15 +700,15 @@ namespace WRLDZ.Presentation.ArInteraction
         {
             pos = default; rot = Quaternion.identity;
             var r = _deployRun;
-            if (r == null || _lUpper == null) return 0f;
+            if (r == null) return 0f;
             r.T += dt;
             var st = r.Style;
             if (!r.Gestured && r.T >= r.SnapAt - 0.05f)
             {
                 r.Gestured = true;
                 // while the halves sweep the free arm stays out of the plate's plane (the activation clip); the character's
-                // own gesture plays once the plate has locked
-                EnqueueGesture(new Gesture { Name = "deploy", Clips = st.ActClips, Arms = Arms.Right, MaxWait = 0.2f });
+                // own gesture plays once the plate has locked. A 2D sprite duelist has no clip graph to queue into.
+                if (_lUpper != null) EnqueueGesture(new Gesture { Name = "deploy", Clips = st.ActClips, Arms = Arms.Right, MaxWait = 0.2f });
             }
             if (!r.Opened && r.T >= r.OpenAt)
             {
@@ -724,7 +724,7 @@ namespace WRLDZ.Presentation.ArInteraction
             if (r.LockT >= 0f && !r.LockGestured)
             {
                 r.LockGestured = true;
-                if (st.Clips != null && st.Clips.Length > 0) EnqueueGesture(new Gesture { Name = "deploy_lock", Clips = st.Clips, Arms = Arms.Right, MaxWait = 0.2f });
+                if (st.Clips != null && st.Clips.Length > 0 && _lUpper != null) EnqueueGesture(new Gesture { Name = "deploy_lock", Clips = st.Clips, Arms = Arms.Right, MaxWait = 0.2f });
             }
             if (r.T >= r.End)
             {
@@ -732,6 +732,10 @@ namespace WRLDZ.Presentation.ArInteraction
                 if (_npcDisk != null) _npcDisk.Override = null;
                 return 0f;
             }
+
+            // The beats above are the whole cinematic for a bone-less duelist (a 2D sprite): the arm targeting below
+            // is rig work.
+            if (_lUpper == null) return 0f;
 
             Vector3 W(Vector3 v) => right * v.x + Vector3.up * v.y + facing * v.z;
             var shoulder = _lUpper.position;
@@ -1036,7 +1040,9 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary>Place the body, IK both arms, fingers, head, and hang the disk + fan on it (after the clip pose).</summary>
         public void Solve(float dt)
         {
-            if (_body == null || Tracker == null || !Tracker.TryGetOpponentLeftForearm(out var armBone)) return;
+            // a 2D anime-sprite duelist has no body either: it still needs placing, and its disk still needs to ride
+            // its wrist and to be driven through the deploy cinematic (see SolveSprite below)
+            if (Tracker == null || !Tracker.TryGetOpponentLeftForearm(out var armBone)) return;
             // a tag-team partner stands beside the seat's arm (no disk of its own): the same pose, shifted sideways
             var arm = (pos: armBone.position, rot: armBone.rotation);
             if (Mathf.Abs(StandOffsetM) > 1e-4f)
@@ -1052,7 +1058,9 @@ namespace WRLDZ.Presentation.ArInteraction
             var vis = show ? 1f : 0f;
             if (!Mathf.Approximately(vis, _visible))
             {
-                _visible = vis; _body.SetPresence(vis);
+                _visible = vis;
+                if (_body != null) _body.SetPresence(vis);
+                else if (_animeActor != null) _animeActor.SetVisible(show);   // the sprite has no body to fade
                 if (_npcDisk != null) _npcDisk.gameObject.SetActive(show);
             }
             if (!show) return;
@@ -1077,6 +1085,18 @@ namespace WRLDZ.Presentation.ArInteraction
             _rootPos = Vector3.Lerp(_rootPos, pos, k);
             _rootRot = Quaternion.Slerp(_rootRot, rot, k);
             _root.SetPositionAndRotation(_rootPos, _rootRot);
+
+            // Everything below solves humanoid bones (arm IK, fingers, head, the worn disk's forearm strap), so a
+            // 2D anime-sprite duelist — _body is null because Build() took the billboard branch — stops here and runs
+            // the beats a billboard can honour. Without this the sprite was never placed (it sat on the stage origin,
+            // half a stage away from its own disk) and the deploy cinematic never advanced: DeployTarget needs _lUpper,
+            // so _npcDisk.Override stayed false and the opponent's disk stayed folded in standby while
+            // PreDuelCinematic waited on IsDeploying until its cut-in cap.
+            if (_body == null)
+            {
+                SolveSprite(dt, arm, facing, right, s * hs);
+                return;
+            }
 
             // ---- fan anchor for the hand volume: at the left hand (holding the disk), cards fan outward from the wrist
             // left hand is at the wrist: forearm pos + forearm forward * ~0.18m (forearm length) + small offset
@@ -1303,6 +1323,20 @@ namespace WRLDZ.Presentation.ArInteraction
                 if (Disk.IsDeployed && !_wasDeployed) ReachDisk("activate_disk");
                 _wasDeployed = Disk.IsDeployed;
             }
+        }
+
+        /// <summary>
+        /// The beats a 2D anime-sprite duelist can honour, having no bones to solve: the deploy cinematic's own clock
+        /// (so its disk opens on the snap and <see cref="IsDeploying"/> finishes) and the worn disk's ride.
+        /// </summary>
+        void SolveSprite(float dt, (Vector3 pos, Quaternion rot) arm, Vector3 facing, Vector3 right, float scale)
+        {
+            DeployTarget(dt, scale, facing, right, out _, out _);
+
+            // No forearm bone to strap the kit to (NpcDuelDisk.Tick needs one), so the rig rides the tracker's
+            // opponent-wrist pose — the same pose the player's own disk is placed from, and the one the stage framed
+            // the opponent side with — which puts the kit on the sprite's disk arm.
+            if (Disk != null) Disk.transform.SetPositionAndRotation(arm.pos, arm.rot);
         }
 
         /// <summary>The worn disk's mechanism now: 0 folded (standby) .. 1 locked open (previews: the debug pose).</summary>

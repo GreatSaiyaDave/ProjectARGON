@@ -176,6 +176,22 @@ small blade's tip). The owner's rule: an accurate disk, reskinned and anchored t
   `SpiritDuelerMechanics.DebugPose` set (1 = locked open; the deploy shots use 0 / 0.5 / 1), so the mechanism renders.
 - The earlier procedural / Blender disk models (`disk_default.py`, `disk_academy.py` in tools/custom) are not used.
 
+### 2D anime-sprite duelist (2026-10-15) — no humanoid rig
+A character whose look resolves to a sprite catalog and has no FBX (every Duelist Kingdom `*_da` set) comes back from
+`OverworldAvatar3d.AttachWorld` as an `AnimeCharacterActor` billboard, so `ArOpponentDuelist.Build` sets `_usingAnime`,
+leaves `_body` null and returns before `ReadBones()` / `Disk.ExternalPose`.
+- `Solve()` used to bail on `_body == null`, so the sprite was never placed (it sat on the stage origin, half a stage
+  from its own disk) and, because `DeployTarget` bailed on `_lUpper == null` *before* `r.T += dt`, the deploy cinematic
+  never advanced: the blade-open beat never fired (`NpcDuelDisk.Override` stayed false, the kit stayed folded in
+  standby) and `PreDuelCinematic` waited on `IsDeploying` until its cut-in cap.
+- `SolveSprite()` is the bone-less path: the shared placement block runs as for a body (behind the tracker's opponent
+  wrist, facing you, feet on the street); `DeployTarget` now ticks its clock and fires the blade open / `Override` /
+  run end without `_lUpper` (the arm targeting below that point is rig work and is skipped); and the worn rig rides the
+  tracker's opponent-wrist pose instead of `NpcDuelDisk.Tick` (which needs the forearm bone) — the same pose the rig's
+  own `LateUpdate` and the stage framing use.
+- The opponent's card fan needs nothing: `ArHandVolume.PlaceVolume` falls back to the tracker's opponent torso when
+  `AnchorOverride` is unset.
+
 ### Pre-duel deploy cinematic (2026-09-29) — `PreDuelCinematic` step 1, ~5 s
 Replaces the old "both disks swing open together" step. The opponent goes first (a disk hanging in front of your face
 would hide its pose), then yours. After it come the shuffle and the draw.
