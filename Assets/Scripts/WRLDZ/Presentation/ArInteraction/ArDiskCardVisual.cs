@@ -62,7 +62,7 @@ namespace WRLDZ.Presentation.ArInteraction
             Texture faceTex = backTex;
             if (ShouldShowArtToViewer() && card != null && db != null)
             {
-                var art = db.GetArt(card.CardId);
+                var art = db.GetArt(TokenArtCatalog.ResolveArtId(card));
                 if (art != null && art.texture != null)
                     faceTex = art.texture;
             }
@@ -168,7 +168,7 @@ namespace WRLDZ.Presentation.ArInteraction
             var backTex = ResolveCardBackTexture();
             if (ShouldShowArtToViewer() && Card != null && _db != null)
             {
-                var art = _db.GetArt(Card.CardId);
+                var art = _db.GetArt(TokenArtCatalog.ResolveArtId(Card));
                 var tex = art != null && art.texture != null ? art.texture : Texture2D.whiteTexture;
                 _parts.SetFaceTexture(tex, _accent);
                 _parts.SetBackTexture(backTex);
@@ -185,7 +185,7 @@ namespace WRLDZ.Presentation.ArInteraction
         public void ForceShowArt()
         {
             if (_parts.FaceMaterial == null || Card == null || _db == null) return;
-            var art = _db.GetArt(Card.CardId);
+            var art = _db.GetArt(TokenArtCatalog.ResolveArtId(Card));
             var tex = art != null && art.texture != null ? art.texture : Texture2D.whiteTexture;
             _parts.SetFaceTexture(tex, _accent);
         }

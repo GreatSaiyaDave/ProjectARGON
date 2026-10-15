@@ -226,7 +226,7 @@ namespace WRLDZ.Presentation
                 typeof(MeshFilter), typeof(MeshRenderer));
             body.transform.SetParent(root.transform, false);
             body.GetComponent<MeshFilter>().sharedMesh = mesh;
-            var art = db.GetArt(card.CardId);
+            var art = db.GetArt(TokenArtCatalog.ResolveArtId(card));
             var tint = playerSide ? new Color(0.3f, 0.9f, 1f) : new Color(1f, 0.35f, 0.55f);
             if (!card.FaceUp)
                 tint = new Color(0.15f, 0.15f, 0.25f);

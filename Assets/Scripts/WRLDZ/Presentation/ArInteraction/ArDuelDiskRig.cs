@@ -597,7 +597,7 @@ namespace WRLDZ.Presentation.ArInteraction
                 var tex = Texture2D.whiteTexture;
                 if (db != null)
                 {
-                    var art = db.GetArt(card.CardId);
+                    var art = db.GetArt(TokenArtCatalog.ResolveArtId(card));
                     if (art != null && art.texture != null) tex = art.texture;
                 }
 

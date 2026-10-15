@@ -473,7 +473,7 @@ namespace WRLDZ.Presentation.ArInteraction
 
             if (card.FaceUp && db != null)
             {
-                var art = db.GetArt(card.CardId);
+                var art = db.GetArt(TokenArtCatalog.ResolveArtId(card));
                 img.sprite = art != null ? art : (YgoCardFrames.CardBack() ?? UiFoundation.WhiteSprite());
             }
             else

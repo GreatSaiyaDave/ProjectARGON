@@ -208,7 +208,7 @@ namespace WRLDZ.Presentation
             {
                 if (face)
                 {
-                    var fullFace = db?.GetArt(card.CardId);
+                    var fullFace = db?.GetArt(TokenArtCatalog.ResolveArtId(card));
                     _cardFrame.sprite = fullFace
                                         ?? YgoCardFrames.FrameFor(def)
                                         ?? UiFoundation.WhiteSprite();
@@ -227,7 +227,7 @@ namespace WRLDZ.Presentation
             // Secondary art layer only needed for blank-template + crop path (no full face).
             if (_art != null)
             {
-                var fullFace = face ? db?.GetArt(card.CardId) : null;
+                var fullFace = face ? db?.GetArt(TokenArtCatalog.ResolveArtId(card)) : null;
                 if (face && fullFace == null)
                 {
                     _art.enabled = true;

@@ -87,7 +87,7 @@ namespace WRLDZ.Presentation.ArInteraction
         void BuildVisual(Color tint)
         {
             // Anime physical card (2D art on 3D body) — default until per-monster meshes ship
-            var art = Db != null && Card != null ? Db.GetArt(Card.CardId) : null;
+            var art = Db != null && Card != null ? Db.GetArt(TokenArtCatalog.ResolveArtId(Card)) : null;
             var faceTex = art != null && art.texture != null ? art.texture : Texture2D.whiteTexture;
             var backSpr = StreamingSprite.CardBack()
                           ?? ImagineAssets.CardBackWrldz()
@@ -489,7 +489,7 @@ namespace WRLDZ.Presentation.ArInteraction
             Texture tex;
             if (showFace && Card != null && Db != null)
             {
-                var art = Db.GetArt(Card.CardId);
+                var art = Db.GetArt(TokenArtCatalog.ResolveArtId(Card));
                 tex = art != null ? art.texture : Texture2D.whiteTexture;
             }
             else

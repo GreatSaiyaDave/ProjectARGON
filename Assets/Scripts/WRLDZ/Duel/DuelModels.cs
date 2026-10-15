@@ -203,6 +203,15 @@ namespace WRLDZ.Duel
         public int FieldAtkDelta;
         public int FieldDefDelta;
 
+        /// <summary>
+        /// Presentation receipt: this copy's position (0-based) within a batch of
+        /// Tokens summoned together, so a single source like Ojama Trio can paint its
+        /// three Tokens as distinct art variants (Yellow, Green, Black). Never read by
+        /// rules; drives <see cref="WRLDZ.Presentation.TokenArtCatalog"/>. Default 0 for
+        /// single-Token summons and Tokens created outside the summon loop.
+        /// </summary>
+        public int TokenArtIndex;
+
         /// <summary>Until End Phase (Bark of Dark Ruler, Mask of Weakness). Not cleared by aura refresh.</summary>
         public int UntilEndOfTurnAtk;
         public int UntilEndOfTurnDef;

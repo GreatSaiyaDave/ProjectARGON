@@ -282,7 +282,7 @@ namespace WRLDZ.Presentation
             if (mr == null) return;
             var showFace = card.FaceUp || IsPlayerSide;
             Sprite art = null;
-            if (showFace) art = db.GetArt(card.CardId);
+            if (showFace) art = db.GetArt(TokenArtCatalog.ResolveArtId(card));
             var tint = showFace
                 ? (isMonster ? Color.white : new Color(0.85f, 0.95f, 1f))
                 : new Color(0.12f, 0.14f, 0.28f);

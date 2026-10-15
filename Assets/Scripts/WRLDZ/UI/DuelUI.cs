@@ -4467,7 +4467,7 @@ namespace WRLDZ.UI
             {
                 // Back for a Set on a side the viewer does not command; the viewer's own Set shows its
                 // face with the field's face-down tint (RebuildSpellTraps), so MST can pick among them.
-                var art = HiddenSetZone(card) == null && _db != null ? _db.GetArt(card.CardId) : null;
+                var art = HiddenSetZone(card) == null && _db != null ? _db.GetArt(TokenArtCatalog.ResolveArtId(card)) : null;
                 img.sprite = art ?? YgoCardFrames.CardBack() ?? UiFoundation.WhiteSprite();
                 img.color = card.FaceUp
                     ? Color.white
@@ -4757,7 +4757,7 @@ namespace WRLDZ.UI
             }
             else
             {
-                var fullFace = _db != null ? _db.GetArt(card.CardId) : null;
+                var fullFace = _db != null ? _db.GetArt(TokenArtCatalog.ResolveArtId(card)) : null;
                 if (fullFace != null)
                 {
                     // Preferred: scanned full card face
@@ -4792,7 +4792,7 @@ namespace WRLDZ.UI
             // Target picker always shows a bold strip so zone tags (GY / DECK) stay readable.
             // Field pads stay small — keep ATK/DEF strip for battle readability.
             var hasFullFace = showFace && !forceCardBack && _db != null &&
-                              _db.GetArt(card.CardId) != null;
+                              _db.GetArt(TokenArtCatalog.ResolveArtId(card)) != null;
             if (showFace && (targetPickerSize || !(handSize && hasFullFace)))
             {
                 var bg = new GameObject("LabelBg", typeof(RectTransform), typeof(Image));

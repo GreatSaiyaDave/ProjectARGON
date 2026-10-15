@@ -53,9 +53,45 @@ namespace WRLDZ.Duel.Rules
             HeroEmergesDuels(db, pDeck, aDeck, Check);
             WildNatureDuels(db, pDeck, aDeck, Check);
             BalloonLizardDuels(db, pDeck, aDeck, Check);
+            OjamaTrioTokenArtVariants(db, pDeck, aDeck, Check);
         }
 
         // ───────────────────────────── helpers ─────────────────────────────
+
+        // ────────────────── Token hologram artwork variants ─────────────────
+        /// <summary>
+        /// Ojama Trio (29843091) Special Summons 3 "Ojama Tokens" to its opponent's field
+        /// (Beast/LIGHT/Lv2 0/1000, Defense Position; cannot be Tributed for a Tribute
+        /// Summon; 300 damage when each is destroyed). The three share one printed name and
+        /// one hashed CardId, so they must be told apart for artwork by summon order.
+        /// SummonTokens now records that order on <see cref="CardInstance.TokenArtIndex"/>
+        /// (set in the summon loop), which WRLDZ.Presentation.TokenArtCatalog maps to
+        /// Ojama Yellow (42941100), Green (12482652), Black (79335209). This test pins the
+        /// engine half (the variant index); the catalog mapping is presentation-only and is
+        /// guarded by Tools/token_art_catalog_check.py and a source listing instead.
+        /// </summary>
+        static void OjamaTrioTokenArtVariants(CardDatabase db, DeckFile pDeck, DeckFile aDeck, Chk Check)
+        {
+            {
+                var e = PlayerMain(db, pDeck, aDeck, out var reached);
+                var p = e.Player;
+                var oppTrio = e.CreateCardInstance(OjamaTrio);
+                var clause = CompiledEffectCache.GetOrCompile(oppTrio.Def).ClauseList
+                    .FirstOrDefault(c => c.Action == EffectActionKind.SpecialSummonToken);
+                bool applied = false, broken = false;
+                if (clause != null) TextEffectRuntime.ApplyClause(e, e.Opponent, oppTrio, clause, null, ref applied, ref broken);
+                var t = p.MonstersOnField()
+                    .Where(m => m != null && m.IsToken && m.Name.Contains("Ojama"))
+                    .OrderBy(m => m.TokenArtIndex).ToList();
+                Check("Ojama Trio: three Ojama Tokens summoned with distinct art variant indices",
+                    reached && applied && t.Count == 3 &&
+                    t[0].TokenArtIndex == 0 && t[1].TokenArtIndex == 1 && t[2].TokenArtIndex == 2 &&
+                    t.All(x => x.Name == "Ojama Tokens" && x.FaceUp && x.Position == BattlePosition.Defense &&
+                               x.CurrentAtk == 0 && x.CurrentDef == 1000 && x.CannotBeTributedForSummon &&
+                               x.TokenDestroyedDamage == 300 && x.CardId == t[0].CardId),
+                    $"applied={applied} n={t.Count} idx=[{string.Join(",", t.Select(x => x.TokenArtIndex))}] {Tail(e, 3)}");
+            }
+        }
 
         static DuelEngine PlayerMain(CardDatabase db, DeckFile pDeck, DeckFile aDeck, out bool reached)
         {

@@ -13149,6 +13149,7 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
                     clause.TokenLevel, clause.TokenAtk, clause.TokenDef);
                 tok.CannotBeTributedForSummon = clause.TokenCannotTribute;
                 tok.TokenDestroyedDamage = clause.TokenDestroyedDamage;
+                tok.TokenArtIndex = i; // cosmetic variant index for the arena art catalog
                 var tokPos = positions != null && i < positions.Count ? positions[i] : pos;
                 tok.Position = tokPos;
                 if (!engine.SpecialSummonToField(dest, tok, tokPos, true))

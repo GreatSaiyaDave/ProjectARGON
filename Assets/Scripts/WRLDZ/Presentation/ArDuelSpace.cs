@@ -873,7 +873,7 @@ namespace WRLDZ.Presentation
             var body = new GameObject(isBb ? "Billboard" : "Model", typeof(MeshFilter), typeof(MeshRenderer));
             body.transform.SetParent(root.transform, false);
             body.GetComponent<MeshFilter>().sharedMesh = mesh;
-            var art = db.GetArt(card.CardId);
+            var art = db.GetArt(TokenArtCatalog.ResolveArtId(card));
             var tint = playerSide ? new Color(0.5f, 0.95f, 1f) : new Color(1f, 0.55f, 0.7f);
             body.GetComponent<MeshRenderer>().sharedMaterial =
                 CardModelCatalog.MakeArtMaterial(art, tint);

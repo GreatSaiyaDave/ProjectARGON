@@ -1694,7 +1694,7 @@ namespace WRLDZ.Presentation.ArInteraction
             Texture tex = Texture2D.whiteTexture;
             if (db != null && CardId != 0)
             {
-                var full = db.GetArt(CardId);
+                var full = db.GetArt(TokenArtCatalog.ResolveArtId(Card));
                 if (full != null && full.texture != null)
                     tex = full.texture;
             }
@@ -2315,12 +2315,15 @@ namespace WRLDZ.Presentation.ArInteraction
 
             if (FaceUp && CardId != 0 && db != null)
             {
-                // Illustration crop for arena holos (player + opponent — same path)
+                // Token illustrations resolve through the catalog; real cards are unchanged.
+                var artId = TokenArtCatalog.ResolveArtId(Card);
+
+                // Illustration crop for arena holos (player + opponent: same path)
                 if (IsMonster)
-                    CardArtFocus.ApplyMonsterArtwork(_faceMat, db, CardId);
+                    CardArtFocus.ApplyMonsterArtwork(_faceMat, db, artId);
                 else
                 {
-                    var full = db.GetArt(CardId);
+                    var full = db.GetArt(artId);
                     var tex = full != null ? full.texture : Texture2D.whiteTexture;
                     CardArtFocus.ApplyToMaterial(_faceMat, tex, cropToArtwork: false);
                 }
@@ -2331,7 +2334,7 @@ namespace WRLDZ.Presentation.ArInteraction
                     : (_faceMat.HasProperty("_MainTex") ? _faceMat.GetTexture("_MainTex") : null);
                 if (map == null || map == Texture2D.whiteTexture)
                 {
-                    var full = db.GetArt(CardId);
+                    var full = db.GetArt(artId);
                     if (full != null && full.texture != null)
                         CardArtFocus.ApplyToMaterial(_faceMat, full.texture, cropToArtwork: IsMonster);
                 }

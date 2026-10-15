@@ -345,7 +345,7 @@ namespace WRLDZ.Presentation
         void ApplyFace(Image img, CardInstance card)
         {
             if (img == null || card == null) return;
-            var art = _db != null ? _db.GetArt(card.CardId) : null;
+            var art = _db != null ? _db.GetArt(TokenArtCatalog.ResolveArtId(card)) : null;
             if (art != null)
             {
                 img.sprite = art;
