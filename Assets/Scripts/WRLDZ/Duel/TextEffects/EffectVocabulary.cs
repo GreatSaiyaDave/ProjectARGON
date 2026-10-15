@@ -287,6 +287,8 @@ namespace WRLDZ.Duel.TextEffects
                     EffectActionKind.NoDamageThisTurn or
                     EffectActionKind.NoEffectDamageThisTurn =>
                     EffectResolutionKind.PreventDamage,
+                EffectActionKind.MakeDeclaredAttackDirect => EffectResolutionKind.NegateAttack,
+                EffectActionKind.NegateMonsterEffectActivationAndDestroy => EffectResolutionKind.NegateActivation,
                 EffectActionKind.AlwaysTreatedAsName or
                     EffectActionKind.FieldTreatedAsName =>
                     EffectResolutionKind.TreatAsName,

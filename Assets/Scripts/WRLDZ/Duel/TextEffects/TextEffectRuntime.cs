@@ -1160,9 +1160,23 @@ namespace WRLDZ.Duel.TextEffects
                 return false;
             }
 
+            // Divine Wrath (RDS): "When a monster effect is activated" answers a monster's own EFFECT (an ignition or
+            // a Quick Effect on the field), which is neither a Spell nor a Trap Card activation. The ladder is
+            // otherwise built entirely around card activations, so this is the one door into it.
             if (!last.IsSpell && !last.IsTrap)
             {
-                reason = "Last link is not a Spell or Trap activation.";
+                if (!clause.NegateRespondsToMonsterEffect ||
+                    !ChainLinkAnswersRuntime.IsMonsterEffectLink(target))
+                {
+                    reason = "Last link is not a Spell or Trap activation.";
+                    return false;
+                }
+            }
+            else if (clause.NegateRespondsToMonsterEffect &&
+                     !ChainLinkAnswersRuntime.IsMonsterEffectLink(target))
+            {
+                // It answers monster effects only, so a card activation is not its business either.
+                reason = "That is not a monster effect.";
                 return false;
             }
 
@@ -8668,6 +8682,12 @@ namespace WRLDZ.Duel.TextEffects
                     }
                     break;
 
+                case EffectActionKind.MakeDeclaredAttackDirect:
+                    // Astral Barrier: the attack already declared now has no target, so it goes straight at the
+                    // defending player. No replay — DuelEngine.ConvertDeclaredAttackToDirect clears the target only.
+                    engine.ConvertDeclaredAttackToDirect();
+                    break;
+
                 case EffectActionKind.NoEffectDamageThisTurn:
                     // Pikeru's Circle of Enchantment: effect damage only. Its own flag, so a battle still hurts —
                     // Hallowed Life Barrier's NoDamageThroughTurnNumber is read by both paths.
@@ -11310,6 +11330,11 @@ namespace WRLDZ.Duel.TextEffects
                     case RedirectAndReplaceRuntime.OpponentSpellTargetsOneSpellTrap: // SpellEventsAndHandSendTriggers batch
                         // RedirectAndReplace batch (v142): Fairy's Hand Mirror / Shift answer a targeting link (or an attack).
                         ok = RedirectAndReplaceRuntime.ActivationWindowOpen(engine, who, c, out reason);
+                        break;
+                    case RedirectAndReplaceRuntime.OpponentAttacksYourMonster:
+                        // Astral Barrier: an opponent's monster is attacking one of yours. The window is the declared
+                        // attack itself, so it is only checked there — never at a later point in the Battle Phase.
+                        ok = RedirectAndReplaceRuntime.OpponentAttacksYourMonsterOpen(engine, who, out reason);
                         break;
                     case BattleWindowsRuntime.MonsterSentFromFieldToYourGy:
                         // BattleWindows batch: Michizure — a monster was just sent from the field to your GY.

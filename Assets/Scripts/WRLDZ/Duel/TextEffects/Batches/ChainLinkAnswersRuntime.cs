@@ -731,6 +731,22 @@ namespace WRLDZ.Duel.TextEffects
             var answered = link.TargetLink;
             if (who == null) return false;
 
+            if (clause.NegateRespondsToMonsterEffect)
+            {
+                // Divine Wrath: the answered link is a monster effect. It is not a card activation, so the generic
+                // ApplyActivationNegation never runs for it — this is the whole resolution.
+                if (!IsMonsterEffectLink(answered))
+                {
+                    NotifyResolvedSpell(engine, who, link);
+                    return false;
+                }
+
+                if (ContinuousNegationRuntime.ChainLinkEffectNegated(engine, link)) return true;
+                NegateMonsterActivationAndDestroy(engine, link, who, answered);
+                NotifyResolvedSpell(engine, who, link);
+                return true;
+            }
+
             if (clause.NegateRequiresWouldDestroyMonsterOnField)
             {
                 // A Spell/Trap Card's activation: the generic negation (DuelEngine.ApplyActivationNegation) applies it; this

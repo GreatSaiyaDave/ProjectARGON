@@ -77,6 +77,27 @@ namespace WRLDZ.Duel.TextEffects
                         MakesChainLink = true
                     }
                 }),
+            // Divine Wrath (c49010598): EFFECT_TYPE_ACTIVATE on EVENT_CHAINING; s.condition re:IsMonsterEffect() and
+            // IsChainNegatable(ev) — the answered link is a monster's own EFFECT (an ignition or a field Quick Effect),
+            // NOT a Spell/Trap Card activation, which is what every other answer here reads. Cost: DiscardHand 1
+            // (REASON_COST|REASON_DISCARD). NegateActivation, then Destroy(eg) while it still relates. My Body as a
+            // Shield reaches the same place from the other direction: it answers a card activation OR a monster effect
+            // that would destroy a monster, so it keeps NegateRespondsToSpell/Trap and its own gate.
+            new AtomRegistration.Atom(
+                @"^When a monster effect is activated: Discard 1 card; negate the activation, and if you do, " +
+                @"destroy that monster\.$",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.ChainLinkActivated,
+                    Action = EffectActionKind.NegateMonsterEffectActivationAndDestroy,
+                    ChainResponseOnly = true,
+                    RequiresDiscardCost = true,
+                    DiscardCostAttribute = "*",
+                    DiscardCostCount = 1,
+                    NegateRespondsToMonsterEffect = true,
+                    DestroyNegatedCard = true,
+                    MakesChainLink = true
+                }),
             // My Body as a Shield (c69279219): EFFECT_TYPE_ACTIVATE on EVENT_CHAINING, EFFECT_FLAG_DAMAGE_STEP; s.condition:
             // tp~=ep (the opponent's), IsChainNegatable(ev), re:IsMonsterEffect() or IsHasType(EFFECT_TYPE_ACTIVATE), and
             // GetOperationInfo(ev, CATEGORY_DESTROY) holds a monster on the field. Cost.PayLP(1500); NegateActivation, then

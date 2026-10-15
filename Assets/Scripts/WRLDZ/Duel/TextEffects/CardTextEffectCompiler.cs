@@ -16,9 +16,10 @@ namespace WRLDZ.Duel.TextEffects
     /// </summary>
     public static class CardTextEffectCompiler
     {
-        public const int Version = 203; /* v203: RDS batch 4 — the typed Union and a hand-shuffle draw. Heavy Mech Support Platform (23265594) is the first Union whose host is a TYPE rather than a quoted name ("equip this card to that target" over "1 Machine monster you control"). A new RxUnionEitherTyped template feeds the same AddUnionProcedure with a Type word, which becomes UnionEquipsAnyFaceUpMonster + RaceFilter, and EquipFamilyRuntime.UnionLimitAllows narrows the any-face-up-monster shape by that filter. Before the race filter reached it the clause carried "Machine" as a host NAME, which matched nothing — the same silent-nothing class of bug as v199. Lighten the Load (37231841): new verb ReturnHandLevelMonsterToDeckShuffleThenDraw with MinLevelOrHigher, resolved through the same AskCardPick pick Coach Goblin uses, and gated by a new ActivationCondition (RecoveryHandHasLevelOrHigherMonster) so the card is not offered with nothing it could ever pick. The corpus provisions a qualifying hand monster for that condition. tests Rules/Batches/RdsRegressionTests.cs — the Union host filter (a Machine is legal, a non-Machine is not) and the hand-level floor (unusable without, usable with).
+        public const int Version = 204; /* v204: RDS batch 5 - Divine Wrath (49010598). Its legality reads a monster EFFECT, so the chain-answer ladder now admits it through NegateRespondsToMonsterEffect, paying the discard cost before resolution. NegateMonsterActivationAndDestroy already existed for My Body as a Shield's monster gate; the new flag just routes Divine Wrath to it. Verified by compile shape and a near-miss: a Spell Card activation does not open a window for it. The honest outcome is that a monster EFFECT on the chain still needs a fresh mini-duel harness exercise, which the current stress duels do not provide in this environment.
 
 
+        
         
         
         

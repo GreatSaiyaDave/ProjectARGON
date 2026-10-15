@@ -41,6 +41,24 @@ namespace WRLDZ.Duel.TextEffects
                 @"target; that attack/Spell/Trap now targets the new target\.?\s*$",
                 _ => Redirect(RedirectAndReplaceRuntime.OpponentTargetsOneMonsterYouControl,
                     RedirectAndReplaceRuntime.AnswersSpellOrTrap, EffectSide.Controller)),
+            // Astral Barrier (37053871). Continuous Trap: e2 is EFFECT_TYPE_FIELD TRIGGER_O on EVENT_ATTACK_ANNOUNCE
+            // with s.atkcon (the attacker is the opponent's, the attack target is yours) and Duel.ChangeAttackTarget(nil)
+            // — the attack becomes a direct attack with no replay. StaysOnField because it is a Continuous Trap that
+            // answers any number of declared attacks.
+            new AtomRegistration.Atom(
+                @"^\s*If your opponent's monster attacks a monster you control: You can make the attack a " +
+                @"direct attack instead\.?\s*$",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.AttackDeclared,
+                    Action = EffectActionKind.MakeDeclaredAttackDirect,
+                    Side = EffectSide.Controller,
+                    IsOptional = true,
+                    ActivationCondition = RedirectAndReplaceRuntime.OpponentAttacksYourMonster,
+                    CheckedAt = ConditionCheckedAt.Activation,
+                    StaysOnField = true,
+                    MakesChainLink = true
+                }),
             // Kotodama (19406822): the reminder text in parentheses is part of the card's text.
             new AtomRegistration.Atom(
                 @"^\s*If there are face-up monsters with the same name on the field, destroy those monsters\. " +

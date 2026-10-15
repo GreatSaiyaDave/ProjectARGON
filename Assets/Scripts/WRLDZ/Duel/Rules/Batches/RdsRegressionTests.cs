@@ -28,8 +28,29 @@ namespace WRLDZ.Duel.Rules
         const int SummonedSkull = 54652250; // Non-Machine, must not be a legal host
         const int GaiaFierceKnight = 6368038; // Normal Lv7 — a legal Lighten the Load cost
         const int MindHaxorz = 75392615;
+        const int DivineWrath = 49010598;      // Counter Trap: answers a monster EFFECT
+        const int PotOfGreed = 55144522;       // a Spell activation — Divine Wrath must not answer it
+        const int ManEaterBug = 54652250;      // FLIP effect: a chain link that IS a monster effect
         const int MysticalElf = 15025844;    // Normal Lv4 LIGHT 800/2000
         const int Celtic = 91152256;         // Normal Lv4 EARTH 1400/1200
+
+        static bool OnField(DuelistState who, CardInstance c) => who != null && c != null && who.TryFindMonster(c, out _);
+
+        static string State(DuelEngine e) =>
+            (e?.PendingResponse == null
+                ? "no window"
+                : $"timing={e.PendingResponse.Timing} responder={e.PendingResponse.Responder?.Name} " +
+                  $"legal=[{string.Join(",", e.PendingResponse.LegalCards.Select(c => c?.Name))}]") +
+            $" chain={e?.Chain?.Count ?? 0}";
+
+        static void PassAll(DuelEngine e)
+        {
+            for (var i = 0; i < 8 && e != null && e.IsAwaitingResponse; i++) e.PassResponse();
+        }
+
+        static bool Offers(DuelEngine e, DuelistState who, CardInstance card) =>
+            e?.PendingResponse != null && e.PendingResponse.Timing == ResponseTiming.ChainResponse &&
+            e.PendingResponse.Responder == who && e.PendingResponse.LegalCards.Contains(card);
 
         public static void Run(CardDatabase db, DeckFile pDeck, DeckFile aDeck, Action<string, bool, string> check)
         {
@@ -171,6 +192,41 @@ namespace WRLDZ.Duel.Rules
                 Check("Lighten the Load: usable only with a Level 7 or higher monster in hand",
                     reached && !withoutHigh && withHigh,
                     $"reached={reached} without={withoutHigh} with={withHigh}");
+            }
+
+            // ── Divine Wrath: the one answer whose legality reads a monster EFFECT ──
+            {
+                var prog = CardTextEffectCompiler.Compile(db.Get(DivineWrath));
+                var c = prog?.ClauseList.Count == 1 ? prog.ClauseList[0] : null;
+                Check("Divine Wrath: answers a monster effect, pays a discard, negates and destroys",
+                    prog != null && prog.FullyCompiled && Implemented(DivineWrath) && c != null &&
+                    c.Timing == EffectTiming.ChainLinkActivated &&
+                    c.NegateRespondsToMonsterEffect && !c.NegateRespondsToSpell && !c.NegateRespondsToTrap &&
+                    c.RequiresDiscardCost && c.DiscardCostCount == 1 && c.DestroyNegatedCard,
+                    c == null ? $"full={prog?.FullyCompiled}"
+                        : $"monster={c.NegateRespondsToMonsterEffect} spell={c.NegateRespondsToSpell} " +
+                          $"trap={c.NegateRespondsToTrap} discard={c.RequiresDiscardCost}/{c.DiscardCostCount}");
+            }
+
+            {
+                // A Spell activation is NOT a monster effect: Divine Wrath must not be offered for it. Solemn
+                // Judgment-style answers are, which is what keeps the two families apart.
+                var eng = Fresh(db, pDeck, aDeck);
+                var reached = ReachOpponentMain(eng);
+                ClearBoard(eng);
+                var p = eng.Player;
+                var o = eng.Opponent;
+                p.Hand.Clear();
+                o.Hand.Clear();
+                var wrath = PlaceSetTrap(eng, p, DivineWrath, 0);
+                wrath.SetThisTurn = false;
+                var pot = PutInHand(eng, o, PotOfGreed);
+                eng.NotifyPublic();
+                var act = reached && eng.TryActivateSpellTrap(o, pot, fromHand: true);
+                Check("Divine Wrath: not offered against a Spell Card activation",
+                    act && !Offers(eng, p, wrath),
+                    $"act={act} offered={Offers(eng, p, wrath)} {State(eng)}");
+                PassAll(eng);
             }
 
             // ── Mind Haxorz: paying the LP is the whole cost; a look changes nothing ──

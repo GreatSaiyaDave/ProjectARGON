@@ -59,6 +59,8 @@ namespace WRLDZ.Duel.TextEffects
         /// Spell/Trap Card on the field (Fiend's Hand Mirror, Lua c58607704 s.tgcon); the new target is another Spell/Trap on
         /// the field (<see cref="EffectZoneFilter.AnotherAppropriateSpellTrapTarget"/>).
         /// </summary>
+        public const string OpponentAttacksYourMonster = "OpponentAttacksYourMonster";
+
         public const string OpponentSpellTargetsOneSpellTrap = "OpponentSpellTargetsOneSpellTrap";
 
         /// <summary>ConditionName: the answered Chain Link is the activation of a Spell Card.</summary>
@@ -261,6 +263,23 @@ namespace WRLDZ.Duel.TextEffects
         /// Shift's attack window: an opponent's monster attacks a monster <paramref name="who"/> controls
         /// (ygopro EVENT_BE_BATTLE_TARGET with <c>a:IsControler(1-tp) and d:IsControler(tp)</c>).
         /// </summary>
+        /// <summary>
+        /// ActivationCondition <see cref="OpponentAttacksYourMonster"/> (Astral Barrier): the declared attack is the
+        /// opponent's monster attacking one of <paramref name="who"/>'s. Checked at AttackDeclared, so the "cannot
+        /// be checked later" shape of a window is not needed here.
+        /// </summary>
+        public static bool OpponentAttacksYourMonsterOpen(DuelEngine engine, DuelistState who, out string reason)
+        {
+            if (AttackOnYourMonster(engine, who, out _, out _, out _))
+            {
+                reason = "OK";
+                return true;
+            }
+
+            reason = "Only while an opponent's monster is attacking your monster.";
+            return false;
+        }
+
         static bool AttackOnYourMonster(DuelEngine engine, DuelistState who, out CardInstance attacker,
             out DuelistState attackingPlayer, out CardInstance current)
         {

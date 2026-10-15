@@ -3448,6 +3448,21 @@ namespace WRLDZ.Duel.TextEffects
         /// shuffle it, then draw 1 card. Distinct from Coach Goblin's bottom-of-Deck placement: this shuffles in.
         /// </summary>
         ReturnHandLevelMonsterToDeckShuffleThenDraw,
+        /// <summary>
+        /// Astral Barrier (c37053871): a Continuous Trap whose field trigger turns the in-flight attack into a direct
+        /// attack (ygopro Duel.ChangeAttackTarget(nil) — no replay, the attack continues). Distinct from
+        /// <see cref="EffectActionKind.ForceOpponentDirectAttacksThisTurn"/>, which changes how a monster attacks for
+        /// the rest of the turn; this changes one declared attack, right now.
+        /// </summary>
+        MakeDeclaredAttackDirect,
+        /// <summary>
+        /// Divine Wrath (c49010598): a Counter Trap that answers a chain link whose operation is a monster EFFECT,
+        /// pays a discard, negates that activation and destroys the monster. The engine's other
+        /// <see cref="NegateActivation"/> answers respond to Spell/Trap CARD activations, so this one carries
+        /// <see cref="EffectClause.NegateRespondsToMonsterEffect"/> to pass the ladder and resolves through the
+        /// monster activation path.
+        /// </summary>
+        NegateMonsterEffectActivationAndDestroy,
     }
 
 
@@ -4182,6 +4197,13 @@ namespace WRLDZ.Duel.TextEffects
         public bool NegateRespondsToSpell;
         /// Answers a Trap Card activation (Seven Tools of the Bandit).
         public bool NegateRespondsToTrap;
+        /// <summary>
+        /// Divine Wrath / Royal Decree style "when a monster effect is activated": the answered link is a monster
+        /// EFFECT (an ignition or a Quick Effect on the field), not a Spell/Trap Card's activation. The engine's
+        /// chain-answer ladder is otherwise built entirely around card activations, so without this flag a
+        /// monster-effect link is refused before any answer can be considered.
+        /// </summary>
+        public bool NegateRespondsToMonsterEffect;
         /// Big Shield Gardna: flip this monster face-up Defense on resolution.
         public bool FlipSelfFaceUpDefense;
         public bool ActivationNegatable = true;
