@@ -16522,6 +16522,47 @@ namespace WRLDZ.Duel.Rules
                         sg.CurrentAtk == baseAtk + 200,
                         $"atk={sg.CurrentAtk} base={baseAtk}");
                 }
+
+                // ── Ultimate Baseball Kid: "FIRE" is an ATTRIBUTE, and the card excludes itself ──
+                {
+                    var ubkDef = db.Get(67934141);
+                    var ubkProg = ubkDef != null ? CardTextEffectCompiler.Compile(ubkDef) : null;
+                    Check("Ultimate Baseball Kid FullyCompiled +1000 ATK per face-up FIRE monster, except this card",
+                        ubkProg != null && ubkProg.FullyCompiled &&
+                        ubkProg.ClauseList.Exists(c =>
+                            c != null &&
+                            c.Action == EffectActionKind.ContinuousGainAtkDef &&
+                            c.Amount == 1000 &&
+                            c.ScaleThisAtkByMatchingCount && c.ExceptThisCard &&
+                            c.Side == EffectSide.Both &&
+                            // "FIRE" must land in the attribute filter. A race filter never matches
+                            // "FIRE", so a race-typed clause reads 0 for every card on the field.
+                            string.Equals(c.AttributeFilter, "FIRE",
+                                System.StringComparison.OrdinalIgnoreCase) &&
+                            string.IsNullOrEmpty(c.RaceFilter)),
+                        ubkProg == null
+                            ? "null"
+                            : $"full={ubkProg.FullyCompiled} unparsed={string.Join("|", ubkProg.UnparsedFragments ?? System.Array.Empty<string>())}");
+
+                    var engine = Fresh(db, pDeck, aDeck);
+                    ClearBoard(engine);
+                    var p = engine.Player;
+                    var ubk = PlaceMonster(engine, p, 67934141, 0, BattlePosition.Attack, faceUp: true);
+                    var baseAtk = ubk.Def.atk;
+                    // Two more face-up FIRE monsters count; this card does not count itself.
+                    PlaceMonster(engine, p, 67934141, 1, BattlePosition.Attack, faceUp: true);
+                    PlaceMonster(engine, p, 67934141, 2, BattlePosition.Attack, faceUp: true);
+                    // A non-FIRE monster must not be counted at all.
+                    var earthling = PlaceMonster(engine, p, celtic, 3, BattlePosition.Attack, faceUp: true);
+                    var earthAtk = earthling.Def.atk;
+                    FieldSpellEffects.RefreshBoard(engine);
+                    Check("Ultimate Baseball Kid: 2 other face-up FIRE monsters → +2000 ATK (itself excluded)",
+                        ubk.CurrentAtk == baseAtk + 2000,
+                        $"atk={ubk.CurrentAtk} base={baseAtk}");
+                    Check("Ultimate Baseball Kid: an EARTH monster on the field is not counted",
+                        earthling.CurrentAtk == earthAtk,
+                        $"atk={earthling.CurrentAtk} base={earthAtk}");
+                }
             }
 
             // ── Ritual Monsters whose whole text is the summon procedure ──

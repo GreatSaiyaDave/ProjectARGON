@@ -792,6 +792,9 @@ namespace WRLDZ.Duel
                         if (!string.IsNullOrEmpty(clause.NamedCard) &&
                             !CardMatchesNamed(m, clause.NamedCard, clause.NamedCardIsSeries))
                             continue;
+                        // "…for each face-up FIRE monster on the field, except this card" (Ultimate
+                        // Baseball Kid): the scaling card is itself a match and must not count itself.
+                        if (clause.ExceptThisCard && m == source) continue;
                         n++;
                     }
 

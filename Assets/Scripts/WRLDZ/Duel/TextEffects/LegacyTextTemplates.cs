@@ -285,7 +285,7 @@ namespace WRLDZ.Duel.TextEffects
 
         static readonly Regex RxGainsAtkEachRaceOnField = new(
             @"(?:This card )?gains (\d+) ATK(?:/DEF)? for each (?:face-up )?" + TypedMonster +
-            @" monster(?:s)? on the field(?: and in the (?:GY|Graveyard))?\.?",
+            @" monster(?:s)? on the field(?:,? except this card)?(?: and in the (?:GY|Graveyard))?\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxDestroyAllRace = new(
@@ -1201,13 +1201,17 @@ namespace WRLDZ.Duel.TextEffects
             if (perGy.Success)
             {
                 var n = Parse(perGy, 1, 100);
+                // "for each FIRE monster in your Graveyard" (Thermal Genex): the captured word may be an
+                // attribute, and a race filter that never matches reads 0 — a silent wrong result.
+                var gyKind = perGy.Groups[2].Success ? perGy.Groups[2].Value : null;
                 Add(perGy, new EffectClause
                 {
                     Timing = EffectTiming.ContinuousWhileFaceUp,
                     Action = EffectActionKind.ContinuousGainAtkDef,
                     Amount = n,
                     DefAmount = 0,
-                    RaceFilter = perGy.Groups[2].Success ? perGy.Groups[2].Value : null,
+                    AttributeFilter = IsAttribute(gyKind) ? gyKind : null,
+                    RaceFilter = IsAttribute(gyKind) ? null : gyKind,
                     Side = EffectSide.Controller,
                     ScaleThisAtkByMatchingCount = true,
                     ScaleCountGraveyardOnly = true,
@@ -1259,15 +1263,23 @@ var namedYou = RxGainsAtkEachNamedYouControl.Match(text);
             {
                 var slash = raceField.Value.IndexOf("ATK/DEF", StringComparison.OrdinalIgnoreCase) >= 0;
                 var n = Parse(raceField, 1, 100);
+                // The captured word is a race ("Machine") or an attribute ("FIRE", Ultimate Baseball Kid). It must
+                // land in the matching filter: a race filter that never matches reads 0 for every card on the
+                // field, which is a silent wrong result rather than a fail-closed one.
+                var kind = raceField.Groups[2].Value;
                 Add(raceField, new EffectClause
                 {
                     Timing = EffectTiming.ContinuousWhileFaceUp,
                     Action = EffectActionKind.ContinuousGainAtkDef,
                     Amount = n,
                     DefAmount = slash ? n : 0,
-                    RaceFilter = raceField.Groups[2].Value,
+                    AttributeFilter = IsAttribute(kind) ? kind : null,
+                    RaceFilter = IsAttribute(kind) ? null : kind,
                     Side = EffectSide.Both,
                     ScaleThisAtkByMatchingCount = true,
+                    // Ultimate Baseball Kid: "except this card" — the scaling card is itself a match.
+                    ExceptThisCard = Regex.IsMatch(raceField.Value, @"except this card",
+                        RegexOptions.IgnoreCase),
                     ScaleCountIncludesGraveyard = Regex.IsMatch(raceField.Value,
                         @"and in the (?:GY|Graveyard)", RegexOptions.IgnoreCase),
                     MakesChainLink = false
