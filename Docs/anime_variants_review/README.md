@@ -16,6 +16,7 @@ This folder is the human-review stage. The assistant cannot see images, so the w
 | File | What it is |
 |---|---|
 | `by_character/<cid>.jpg` | **Start here.** One sheet per character: every tile the matcher labelled as that character, best confidence first. `slug:fFRAME` + `m<margin>` captions. |
+| `heroes/<cid>.jpg` | **Hero focus** (Yami Yugi, Joey, Tea, Tristan, Yami Bakura). Every candidate ranked by similarity to that hero — a *superset* to scan and pick from, not an argmax label. Best first. |
 | `by_episode/<slug>.jpg` | Per-episode sheet. Header = episode title + cast (from the wiki). Each tile shows the anime frame + the cutout + label. |
 | `CHARACTER_INDEX.md` | Character → episodes it appears in + the tiles labelled for it. |
 | `OUTFITS.md` | Each character's Season-1 (Duelist Kingdom) outfit, scraped from the wiki. |
@@ -50,6 +51,19 @@ usable full-body standing frame becomes the outfit variant.
 - So labels are a **navigation aid, not ground truth**. The `by_character` sheets are the
   fastest way to find a character's best frames, especially for characters who appear in
   only a few episodes (Weevil, Rex, Mako, Keith, Mai).
+
+## Hero focus (Yami Yugi, Joey, Tea, Tristan, Yami Bakura)
+
+`heroes/<cid>.jpg` ranks **all 412 candidates** by similarity to that hero (CLIP gallery =
+Duel Links art + anime portrait + solo anime refs). Because the hero set is small and the
+five looks are distinct, this is the fastest way to find each hero's frames — but the
+ranking cross-contaminates (a hero's list can contain another hero), so treat it as a
+**superset to scan**, not a verdict.
+
+Validated accuracy for these five (leave-one-out over independent anime images):
+~73% hero-to-hero. Hair colour is very discriminative for this group (Yami black+magenta,
+Joey blonde, Tea warm brown, Tristan neutral brown, Bakura white) — useful when you are
+eyeballing the sheets, but it did not improve the automatic matcher.
 
 ## Not in Season 1
 
