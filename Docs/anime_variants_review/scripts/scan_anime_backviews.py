@@ -240,7 +240,8 @@ def funnel(rows: list[dict], g: dict) -> str:
     return "  funnel: " + " -> ".join(f"{n} {len(v)}" for n, v in steps)
 
 
-def sheet(rows: list[dict], out: Path, name: str, cols: int = 5, cell: int = 250) -> None:
+def sheet(rows: list[dict], out: Path, name: str, cols: int = 5, cell: int = 250,
+          frame_first: bool = False) -> None:
     rows = rows[:cols * 4]
     if not rows:
         return
@@ -252,20 +253,27 @@ def sheet(rows: list[dict], out: Path, name: str, cols: int = 5, cell: int = 250
         font = ImageFont.load_default()
     for i, r in enumerate(rows):
         cx, cy = (i % cols) * cell, (i // cols) * (cell + 26)
-        cut = Image.open(out / r["cutout"]).convert("RGBA")
-        cut.thumbnail((cell - 8, cell - 8))
         bg = Image.new("RGB", (cell - 8, cell - 8), (58, 58, 66))
-        bg.paste(cut, ((cell - 8 - cut.width) // 2, (cell - 8 - cut.height) // 2), cut)
-        # the source frame, so the pose can be judged and not just the silhouette
         src = out / r["ep"] / "frames" / f"{int(r['t'] * FPS):06d}.jpg"
-        if src.exists():
-            thumb = Image.open(src).convert("RGB")
-            thumb.thumbnail((cell // 2 - 8, cell // 2 - 8))
-            bg.paste(thumb, (cell - 12 - thumb.width, cell - 12 - thumb.height))
+        cut = Image.open(out / r["cutout"]).convert("RGBA")
+        if frame_first and src.exists():
+            # the whole shot, so the pose and the context can be judged; the cutout rides in the corner
+            shot = Image.open(src).convert("RGB")
+            shot.thumbnail((cell - 8, cell - 8))
+            bg.paste(shot, ((cell - 8 - shot.width) // 2, (cell - 8 - shot.height) // 2))
+            cut.thumbnail(((cell - 8) // 3, (cell - 8) // 3))
+            bg.paste(cut, (cell - 12 - cut.width, cell - 12 - cut.height), cut)
+        else:
+            cut.thumbnail((cell - 8, cell - 8))
+            bg.paste(cut, ((cell - 8 - cut.width) // 2, (cell - 8 - cut.height) // 2), cut)
+            if src.exists():
+                shot = Image.open(src).convert("RGB")
+                shot.thumbnail((cell // 2 - 8, cell // 2 - 8))
+                bg.paste(shot, (cell - 12 - shot.width, cell - 12 - shot.height))
         im.paste(bg, (cx + 4, cy + 4))
         t = f"{r['t']//60}:{r['t']%60:02d}"
         d.text((cx + 6, cy + cell - 4),
-               f"{r['ep'][-3:]} {t} sim{r['sim']:.2f} m{r['margin']:+.2f} skin{r['skin']*100:.0f}%",
+               f"#{i+1} {r['ep'][-3:]} {t} skin{r['skin']*100:.0f}% h{r['h']*100:.0f}%",
                fill=(235, 235, 245), font=font)
     im.save(out / name, quality=88)
 
@@ -287,6 +295,10 @@ def main() -> int:
     ap.add_argument("--skip-tail", type=float, default=45.0)
     ap.add_argument("--max-frames", type=int, default=0)
     ap.add_argument("--top", type=int, default=20)
+    ap.add_argument("--order", choices=("score", "skin"), default="score")
+    ap.add_argument("--no-identity", action="store_true",
+                    help="skip the sim/margin gates — CLIP cannot tell these characters apart in cutouts")
+    ap.add_argument("--frame-first", action="store_true", help="sheet shows the shot, cutout as an inset")
     ap.add_argument("--ref", action="append", default=[])
     args = ap.parse_args()
     g = dict(min_sim=args.min_sim, min_margin=args.min_margin, min_height=args.min_height,
@@ -324,16 +336,18 @@ def main() -> int:
     score(rows, args.character, pools)
     print(funnel(rows, g))
     keep = [r for r in rows if r["h"] >= g["min_height"] and r["aspect"] >= g["min_aspect"]
-            and r["fill"] <= g["max_fill"] and r["sim"] >= g["min_sim"] and r["margin"] >= g["min_margin"]]
+            and r["fill"] <= g["max_fill"]]
+    if not args.no_identity:
+        keep = [r for r in keep if r["sim"] >= g["min_sim"] and r["margin"] >= g["min_margin"]]
     for r in keep:
         r["score"] = round(r["sim"] * (1 - r["skin"]) * min(1.0, r["h"] / 0.6), 3)
-    keep.sort(key=lambda r: -r["score"])
+    keep.sort(key=(lambda r: (r["skin"], -r["h"])) if args.order == "skin" else (lambda r: -r["score"]))
     for r in keep:
         r.pop("vec", None)
     (out / f"index_{args.character}.json").write_text(json.dumps(
         dict(character=args.character, episodes=eps, gates=g, candidates=len(keep), scanned=len(rows),
              frames=keep), indent=1))
-    sheet(keep, out, f"{args.character}_backview_candidates.jpg")
+    sheet(keep, out, f"{args.character}_backview_candidates.jpg", frame_first=args.frame_first)
     print(f"candidates {len(keep)} of {len(rows)} · sheet {out / (args.character + '_backview_candidates.jpg')}")
     for r in keep[:args.top]:
         print(f"  {r['score']:.3f}  {r['ep'][-3:]} {r['t']//60:3d}:{r['t']%60:02d}  sim {r['sim']:.2f} m {r['margin']:+.2f} "
