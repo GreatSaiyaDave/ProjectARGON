@@ -3431,6 +3431,18 @@ namespace WRLDZ.Duel.TextEffects
         /// <see cref="MukoRuntime.TryResolveLink"/> claims it when it comes up to resolve.
         /// </summary>
         ReplaceDrawLinkWithDiscard,
+        /// <summary>
+        /// Pikeru's Circle of Enchantment (c74270067): for the rest of this turn, effect damage to the controller
+        /// becomes 0. Distinct from <see cref="EffectActionKind.NoDamageThisTurn"/> (Hallowed Life Barrier), which
+        /// also cancels battle damage — this reads only the effect-damage paths.
+        /// </summary>
+        NoEffectDamageThisTurn,
+        /// <summary>
+        /// Mind Haxorz (c75392615): pay 500 Life Points and look at the opponent's hand and every Set card on their
+        /// side of the field (Lua <c>Duel.ConfirmCards</c> over a merged group). Reuses
+        /// <see cref="FlipDownAndPeekRuntime.LogLook"/> — nothing about looking changes any card's state.
+        /// </summary>
+        PayLpLookAtOpponentHandAndSetCards,
     }
 
 
@@ -3911,6 +3923,13 @@ namespace WRLDZ.Duel.TextEffects
         public int AmountIfSpecialSummonedByNamed;
         /// <summary>LvChain batch — the card whose effect may have Special Summoned this one (Dark Mimic LV1).</summary>
         public string SpecialSummonedByNamedCard;
+        /// <summary>
+        /// With <see cref="SpecialSummonedByNamedCard"/>: this clause is live only while this copy really was
+        /// Special Summoned by that card's effect (Ultimate Insect LV3's −300 ATK aura, which exists only when
+        /// Ultimate Insect LV1 put it on the field). Without the gate the aura would apply to a copy that reached
+        /// the field any other way.
+        /// </summary>
+        public bool RequiresThisSpecialSummonedByNamed;
         /// <summary>Phase trigger only if this copy is in the GY (Darklord Marie).</summary>
         public bool ResolvesFromGy;
         /// <summary>Cure Mermaid family: this copy must be face-up Attack Position.</summary>

@@ -50,6 +50,22 @@ namespace WRLDZ.Duel.TextEffects
                        (names.Count == 0 ? "none" : string.Join(", ", names)) + ".");
         }
 
+        /// <summary>
+        /// Mind Haxorz (c75392615): look at the opponent's hand AND every Set card on their side of the field, as one
+        /// group (Lua builds the merged group, then Duel.ConfirmCards). Reuses LogLook, so nothing on the board
+        /// changes — only the looking player's log sees the names.
+        /// </summary>
+        public static void ResolveLookAtOpponentHandAndSetCards(DuelEngine engine, DuelistState who,
+            CardInstance source)
+        {
+            var opp = engine?.OpponentOf(who);
+            if (opp == null) return;
+            var look = new List<CardInstance>();
+            if (opp.Hand != null) look.AddRange(opp.Hand.Where(c => c != null));
+            look.AddRange(opp.SpellTrapsOnField().Where(c => c != null && !c.FaceUp));
+            LogLook(engine, who, source, "the opponent's hand and Set cards", look);
+        }
+
         /// <summary>Cobraman Sakuzy: look at every Set card in the opponent's Spell &amp; Trap Zones (Field Zone included); they stay Set.</summary>
         public static void LookAtOpponentSetSpellTraps(DuelEngine engine, DuelistState who, CardInstance source)
         {

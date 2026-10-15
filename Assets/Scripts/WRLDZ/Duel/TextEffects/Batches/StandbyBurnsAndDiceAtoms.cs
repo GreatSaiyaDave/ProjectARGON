@@ -195,6 +195,22 @@ namespace WRLDZ.Duel.TextEffects
                     StaysOnField = true,
                     MakesChainLink = true
                 }),
+
+            // Mind Haxorz (c75392615), its whole text. Normal Spell: Cost.PayLP(500), then Duel.ConfirmCards over
+            // one merged group — the opponent's whole hand plus every card Set on their side of the field. Unlike
+            // Inspection (one random hand card) this is the whole group, so it gets its own verb and runtime; a look
+            // changes nothing, so only the log sees the names.
+            new AtomRegistration.Atom(
+                @"^Pay 500 Life Points\.\s*Look at your opponent's hand and all Set cards on their side of the " +
+                @"field\.?\s*$",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.PayLpLookAtOpponentHandAndSetCards,
+                    Side = EffectSide.Opponent,
+                    PayLpAmount = 500,
+                    MakesChainLink = true
+                }),
         };
 
         /// <summary>

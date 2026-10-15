@@ -816,8 +816,7 @@ namespace WRLDZ.Duel.Rules
 
             foreach (var (id, name) in new[]
                      {
-                         (ShiftingShadows, "Shifting Shadows"),
-                         (MindHaxorz, "Mind Haxorz")
+                         (ShiftingShadows, "Shifting Shadows")
                      })
             {
                 var prog = CardTextEffectCompiler.Compile(db.Get(id));

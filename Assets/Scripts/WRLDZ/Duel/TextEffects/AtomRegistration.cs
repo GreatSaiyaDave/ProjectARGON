@@ -640,6 +640,18 @@ namespace WRLDZ.Duel.TextEffects
                     DiscardCostCount = 1,
                     MakesChainLink = true
                 }),
+            // Pikeru's Circle of Enchantment (c74270067), its whole text. Normal Spell: effect damage to the
+            // controller becomes 0 until the end of this turn. Hallowed Life Barrier's NoDamageThisTurn cancels battle
+            // damage too, so this needs its own verb and its own flag — the one read only in the effect paths.
+            new Atom(
+                @"Damage to you from card effects becomes 0 until the end of this turn\.?",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.NoEffectDamageThisTurn,
+                    Side = EffectSide.Controller,
+                    MakesChainLink = true
+                }),
             // Inferno Fire Blast (c52684508), its whole text. Normal Spell: target 1 "Red-Eyes B. Dragon" in your
             // Monster Zone; inflict damage to the opponent equal to its original ATK, and that monster cannot attack
             // this turn. Reuses InflictDamageToOpponent with AmountFromTargetOriginalAtk (the target, not the source)

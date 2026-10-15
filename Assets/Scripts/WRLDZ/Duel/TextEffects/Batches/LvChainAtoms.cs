@@ -101,6 +101,27 @@ namespace WRLDZ.Duel.TextEffects
                     MakesChainLink = true
                 }),
 
+            // Ultimate Insect LV3 (c34088136) e3: SINGLE RANGE EFFECT_UPDATE_ATTACK on every monster the opponent
+            // controls, live only when this copy was Special Summoned by the named card's effect (Lua s.vfilter checks
+            // the summon stamp). The gate is RequiresThisSpecialSummonedByNamed, read in FieldSpellEffects.ApplyStatClause;
+            // LvChainRuntime already records the summon, so this is the first card to use it as an aura condition.
+            new AtomRegistration.Atom(
+                Start + @"If this card was Special Summoned by the effect of ""([^""]+)"", while it remains on the " +
+                @"field all of your opponent's monsters lose (\d+) ATK" + End,
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.ContinuousGainAtkDef,
+                    Side = EffectSide.Opponent,
+                    AttributeFilter = null,
+                    Amount = -int.Parse(m.Groups[2].Value),
+                    DefAmount = 0,
+                    SpecialSummonedByNamedCard = m.Groups[1].Value,
+                    RequiresThisSpecialSummonedByNamed = true,
+                    StaysOnField = true,
+                    MakesChainLink = false
+                }),
+
             // Dark Mimic LV3: destroyed by battle and sent to the GY → draw 1, but 2 when this card was
             // Special Summoned by the named card's effect (Lua RaiseSingleEvent, Duel.Draw(tp, 1 or 2)).
             new AtomRegistration.Atom(

@@ -8075,6 +8075,12 @@ namespace WRLDZ.Duel.TextEffects
                 case EffectActionKind.PayLpLookAtRandomOppHandCard:
                     StandbyBurnsAndDiceRuntime.ResolveInspection(engine, who, source, clause);
                     break;
+
+                case EffectActionKind.PayLpLookAtOpponentHandAndSetCards:
+                    // Mind Haxorz: the whole hand plus every Set card on the opponent's field, as one group.
+                    // The LP cost is paid generically before resolution (clause.PayLpAmount).
+                    FlipDownAndPeekRuntime.ResolveLookAtOpponentHandAndSetCards(engine, who, source);
+                    break;
                 case EffectActionKind.CallTypeOfRandomOpponentHandCardBurn:
                     ContinuousTrapsAndSpiritSupportRuntime.ResolveFortunetelling(engine, who, source, clause);
                     break;
@@ -8659,6 +8665,16 @@ namespace WRLDZ.Duel.TextEffects
                     {
                         who.NoDamageThroughTurnNumber = engine.TurnNumber;
                         engine.Log($"{who.Name}: any damage this turn becomes 0.");
+                    }
+                    break;
+
+                case EffectActionKind.NoEffectDamageThisTurn:
+                    // Pikeru's Circle of Enchantment: effect damage only. Its own flag, so a battle still hurts —
+                    // Hallowed Life Barrier's NoDamageThroughTurnNumber is read by both paths.
+                    if (who != null)
+                    {
+                        who.NoEffectDamageThroughTurnNumber = engine.TurnNumber;
+                        engine.Log($"{who.Name}: effect damage this turn becomes 0.");
                     }
                     break;
 

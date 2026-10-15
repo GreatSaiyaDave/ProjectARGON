@@ -163,8 +163,12 @@ namespace WRLDZ.Duel.TextEffects
         public static void ShuffleThisFromGyIntoDeck(DuelEngine engine, DuelistState who, CardInstance source)
         {
             if (engine == null || who?.Graveyard == null || who.Deck == null || source == null) return;
+            // Outstanding Dog Marron's trip (SentToGyFromAnywhere) stamps the card that activated it. Roc from the
+            // Valley of Haze fires on SentFromHandToGy instead, so it has no stamp — GyHandAndSummonEventTriggers
+            // records the hand trip for that timing, and it is an equally strong claim on the card.
+            var onThisTrip = s_activatedTrip.TryGetValue(source, out var trip) && trip.Value == source.GyEntryStamp;
             if (!who.Graveyard.Contains(source) ||
-                (s_activatedTrip.TryGetValue(source, out var trip) && trip.Value != source.GyEntryStamp))
+                (!onThisTrip && !GyHandAndSummonEventTriggersRuntime.CameFromHand(source)))
             {
                 engine.Log($"{source.Name} is no longer in the GY — it is not shuffled into the Deck.");
                 return;

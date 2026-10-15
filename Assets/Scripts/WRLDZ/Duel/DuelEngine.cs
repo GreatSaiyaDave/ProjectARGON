@@ -7852,6 +7852,12 @@ namespace WRLDZ.Duel
                 Log($"{target.Name} takes no effect damage (damage prevention).");
                 return;
             }
+            // Pikeru's Circle of Enchantment: effect damage only — battle damage still goes through.
+            if (target.NoEffectDamageThroughTurnNumber > 0 && TurnNumber <= target.NoEffectDamageThroughTurnNumber)
+            {
+                Log($"{target.Name} takes no effect damage (Pikeru's Circle of Enchantment).");
+                return;
+            }
             target.LifePoints = Mathf.Max(0, target.LifePoints - dmg);
             var src = string.IsNullOrEmpty(sourceName) ? "effect" : sourceName;
             var you = target.IsPlayer ? "You took" : $"{target.Name} took";
@@ -7900,6 +7906,12 @@ namespace WRLDZ.Duel
             if (target.NoDamageThroughTurnNumber > 0 && TurnNumber <= target.NoDamageThroughTurnNumber)
             {
                 Log($"{target.Name} takes no effect damage (damage prevention).");
+                return false;
+            }
+            // Pikeru's Circle of Enchantment: effect damage only — battle damage still goes through.
+            if (target.NoEffectDamageThroughTurnNumber > 0 && TurnNumber <= target.NoEffectDamageThroughTurnNumber)
+            {
+                Log($"{target.Name} takes no effect damage (Pikeru's Circle of Enchantment).");
                 return false;
             }
 

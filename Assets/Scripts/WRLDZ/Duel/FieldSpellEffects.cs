@@ -731,6 +731,13 @@ namespace WRLDZ.Duel
         static void ApplyStatClause(DuelEngine engine, CardInstance source, EffectClause clause)
         {
             if (engine == null || clause == null) return;
+            // LvChain batch: this clause is only live while this copy was Special Summoned by the named card's
+            // effect (Ultimate Insect LV3's −300 ATK aura), so a copy that reached the field any other way gets
+            // nothing. LvChainRuntime already records the summon; this only reads it.
+            if (clause.RequiresThisSpecialSummonedByNamed &&
+                !string.IsNullOrEmpty(clause.SpecialSummonedByNamedCard) &&
+                !TextEffects.LvChainRuntime.SpecialSummonedByNamed(source, clause.SpecialSummonedByNamedCard))
+                return;
             // AttackShieldsAndDamageZero batch: Theban Nightmare — only while its controller has no cards in hand nor in the
             // Spell & Trap Zones (no condition on every other aura).
             if (!TextEffects.AttackShieldsAndDamageZeroRuntime.WhileConditionMet(engine, source, clause)) return;

@@ -52,6 +52,20 @@ namespace WRLDZ.Duel.TextEffects
                     MakesChainLink = true
                 }),
 
+            // Roc from the Valley of Haze (c28143906) e2: SINGLE TRIGGER_O EVENT_TO_HAND... the Lua is
+            // EVENT_TO_GRAVE with IsPreviousLocation(LOCATION_HAND) and no REASON filter, so "sent directly from your
+            // hand" is the wide wording: this card returns itself to the Deck and shuffles (SEQ_DECKSHUFFLE).
+            new AtomRegistration.Atom(
+                Start + @"When this card is sent directly from your hand to the " + Gy + @", " +
+                @"add this card to the Deck and shuffle it" + End,
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.SentFromHandToGy,
+                    Action = EffectActionKind.ShuffleThisFromGyIntoDeck,
+                    Side = EffectSide.Controller,
+                    MakesChainLink = true
+                }),
+
             // Soul Reversal.
             new AtomRegistration.Atom(
                 @"^\s*Return 1 Flip Effect Monster from your " + Gy + @" to the top of your Deck\.?\s*$",

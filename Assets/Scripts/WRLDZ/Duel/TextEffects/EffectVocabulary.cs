@@ -284,7 +284,8 @@ namespace WRLDZ.Duel.TextEffects
                     EffectActionKind.NegateSummon =>
                     EffectResolutionKind.NegateActivation,
                 EffectActionKind.PreventControllerBattleDamage or
-                    EffectActionKind.NoDamageThisTurn =>
+                    EffectActionKind.NoDamageThisTurn or
+                    EffectActionKind.NoEffectDamageThisTurn =>
                     EffectResolutionKind.PreventDamage,
                 EffectActionKind.AlwaysTreatedAsName or
                     EffectActionKind.FieldTreatedAsName =>
@@ -732,7 +733,8 @@ namespace WRLDZ.Duel.TextEffects
                 EffectActionKind.InflictDamageToLinkedSpellController => EffectResolutionKind.Damage,
                 EffectActionKind.DestroyThisWhenLinkedSpellLeavesField => EffectResolutionKind.Destroy,
                 EffectActionKind.InflictDamageToOpponentWhileBoundMonsterOnField => EffectResolutionKind.Damage,
-                EffectActionKind.PayLpLookAtRandomOppHandCard => EffectResolutionKind.Randomize,
+                EffectActionKind.PayLpLookAtRandomOppHandCard or
+                    EffectActionKind.PayLpLookAtOpponentHandAndSetCards => EffectResolutionKind.Randomize,
                 // BattleDestroyedGyRecovery batch (v162): Crimson Sentry / Fairy Guardian, Return of the Doomed, Revival
                 // Jam's flag and Standby Summon, Rope of Life.
                 EffectActionKind.PlaceGyTargetOnBottomOfDeck => EffectResolutionKind.ReturnToDeck,

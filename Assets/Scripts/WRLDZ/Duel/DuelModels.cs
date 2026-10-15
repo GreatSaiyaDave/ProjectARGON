@@ -768,6 +768,13 @@ namespace WRLDZ.Duel
         /// <summary>Crush Card Virus: no battle or effect damage while TurnNumber ≤ this (0 = off).</summary>
         public int NoDamageThroughTurnNumber;
 
+        /// <summary>
+        /// Pikeru's Circle of Enchantment: no EFFECT damage while TurnNumber ≤ this (0 = off). Battle damage still
+        /// applies, so this is read only in the effect-damage paths — never beside
+        /// <see cref="NoDamageThroughTurnNumber"/>.
+        /// </summary>
+        public int NoEffectDamageThroughTurnNumber;
+
         /// <summary>Virus linger: remaining opponent End Phases to check draws (0 = off).</summary>
         public int CrushCardLingerEndsRemaining;
         /// <summary>Virus linger destroy ATK threshold (1500 for Crush / DDV).</summary>
