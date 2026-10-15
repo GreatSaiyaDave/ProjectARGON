@@ -234,65 +234,159 @@ namespace WRLDZ.Data
                 heightM = 1.85f,
                 shadowDiameter = 0.7f,
             },
+            // Duelist Kingdom (Season 1) renders by GravekeepersBrewer (deviantart.com/gravekeepersbrewer),
+            // used as the *_da sprite sets. Each source is a front-facing, full-body character render on a
+            // solid black background; the black is keyed to alpha and the figure is re-placed on the 1024
+            // canvas. Attribution + pipeline: Docs/anime_variants_review/DA_RENDERS_FINDINGS.md.
+            new AnimeCharacterSet
+            {
+                id = "yugi_da",
+                displayName = "Yugi Muto (DK)",
+                angles = new AnimeCharacterSet.AngleSprites { front = "yugi_da_front", threeQuarter = "yugi_da_34", side = "yugi_da_side", back = "yugi_da_back" },
+                expressions = new AnimeCharacterSet.Expressions { neutral = "neutral", serious = "serious", smiling = "smiling" },
+                gestures = new AnimeCharacterSet.Gestures { idle = "idle", draw = "draw", summon = "summon", attack = "attack", defeat = "defeat" },
+                heightM = 1.53f,
+                shadowDiameter = 0.55f,
+            },
             new AnimeCharacterSet
             {
                 id = "yami_yugi_da",
-                displayName = "Yami Yugi (DA)",
+                displayName = "Yami Yugi (DK)",
                 angles = new AnimeCharacterSet.AngleSprites { front = "yami_yugi_da_front", threeQuarter = "yami_yugi_da_34", side = "yami_yugi_da_side", back = "yami_yugi_da_back" },
                 expressions = new AnimeCharacterSet.Expressions { neutral = "neutral", serious = "serious", smiling = "smiling" },
                 gestures = new AnimeCharacterSet.Gestures { idle = "idle", draw = "draw", summon = "summon", attack = "attack", defeat = "defeat" },
                 heightM = 1.58f,
-                shadowDiameter = 0.6f,
+                shadowDiameter = 0.60f,
+            },
+            new AnimeCharacterSet
+            {
+                id = "kaiba_da",
+                displayName = "Seto Kaiba (DK)",
+                angles = new AnimeCharacterSet.AngleSprites { front = "kaiba_da_front", threeQuarter = "kaiba_da_34", side = "kaiba_da_side", back = "kaiba_da_back" },
+                expressions = new AnimeCharacterSet.Expressions { neutral = "neutral", serious = "serious", smiling = "smiling" },
+                gestures = new AnimeCharacterSet.Gestures { idle = "idle", draw = "draw", summon = "summon", attack = "attack", defeat = "defeat" },
+                heightM = 1.86f,
+                shadowDiameter = 0.70f,
             },
             new AnimeCharacterSet
             {
                 id = "joey_da",
-                displayName = "Joey (DA)",
+                displayName = "Joey Wheeler (DK)",
                 angles = new AnimeCharacterSet.AngleSprites { front = "joey_da_front", threeQuarter = "joey_da_34", side = "joey_da_side", back = "joey_da_back" },
                 expressions = new AnimeCharacterSet.Expressions { neutral = "neutral", serious = "serious", smiling = "smiling" },
                 gestures = new AnimeCharacterSet.Gestures { idle = "idle", draw = "draw", summon = "summon", attack = "attack", defeat = "defeat" },
-                heightM = 1.68f,
-                shadowDiameter = 0.6f,
+                heightM = 1.78f,
+                shadowDiameter = 0.65f,
+            },
+            new AnimeCharacterSet
+            {
+                id = "mai_da",
+                displayName = "Mai Valentine (DK)",
+                angles = new AnimeCharacterSet.AngleSprites { front = "mai_da_front", threeQuarter = "mai_da_34", side = "mai_da_side", back = "mai_da_back" },
+                expressions = new AnimeCharacterSet.Expressions { neutral = "neutral", serious = "serious", smiling = "smiling" },
+                gestures = new AnimeCharacterSet.Gestures { idle = "idle", draw = "draw", summon = "summon", attack = "attack", defeat = "defeat" },
+                heightM = 1.70f,
+                shadowDiameter = 0.60f,
             },
             new AnimeCharacterSet
             {
                 id = "tea_da",
-                displayName = "Tea (DA)",
+                displayName = "Téa Gardner (DK)",
                 angles = new AnimeCharacterSet.AngleSprites { front = "tea_da_front", threeQuarter = "tea_da_34", side = "tea_da_side", back = "tea_da_back" },
                 expressions = new AnimeCharacterSet.Expressions { neutral = "neutral", serious = "serious", smiling = "smiling" },
                 gestures = new AnimeCharacterSet.Gestures { idle = "idle", draw = "draw", summon = "summon", attack = "attack", defeat = "defeat" },
-                heightM = 1.62f,
+                heightM = 1.64f,
                 shadowDiameter = 0.55f,
             },
             new AnimeCharacterSet
             {
                 id = "tristan_da",
-                displayName = "Tristan (DA)",
+                displayName = "Tristan Taylor (DK)",
                 angles = new AnimeCharacterSet.AngleSprites { front = "tristan_da_front", threeQuarter = "tristan_da_34", side = "tristan_da_side", back = "tristan_da_back" },
                 expressions = new AnimeCharacterSet.Expressions { neutral = "neutral", serious = "serious", smiling = "smiling" },
                 gestures = new AnimeCharacterSet.Gestures { idle = "idle", draw = "draw", summon = "summon", attack = "attack", defeat = "defeat" },
-                heightM = 1.80f,
-                shadowDiameter = 0.65f,
+                heightM = 1.83f,
+                shadowDiameter = 0.70f,
             },
             new AnimeCharacterSet
             {
                 id = "bakura_da",
-                displayName = "Ryo Bakura (DA)",
+                displayName = "Ryo Bakura (DK)",
                 angles = new AnimeCharacterSet.AngleSprites { front = "bakura_da_front", threeQuarter = "bakura_da_34", side = "bakura_da_side", back = "bakura_da_back" },
                 expressions = new AnimeCharacterSet.Expressions { neutral = "neutral", serious = "serious", smiling = "smiling" },
                 gestures = new AnimeCharacterSet.Gestures { idle = "idle", draw = "draw", summon = "summon", attack = "attack", defeat = "defeat" },
-                heightM = 1.70f,
-                shadowDiameter = 0.6f,
+                heightM = 1.76f,
+                shadowDiameter = 0.65f,
             },
             new AnimeCharacterSet
             {
                 id = "yami_bakura_da",
-                displayName = "Yami Bakura (DA)",
+                displayName = "Yami Bakura (DK)",
                 angles = new AnimeCharacterSet.AngleSprites { front = "yami_bakura_da_front", threeQuarter = "yami_bakura_da_34", side = "yami_bakura_da_side", back = "yami_bakura_da_back" },
                 expressions = new AnimeCharacterSet.Expressions { neutral = "neutral", serious = "serious", smiling = "smiling" },
                 gestures = new AnimeCharacterSet.Gestures { idle = "idle", draw = "draw", summon = "summon", attack = "attack", defeat = "defeat" },
+                heightM = 1.76f,
+                shadowDiameter = 0.65f,
+            },
+            new AnimeCharacterSet
+            {
+                id = "pegasus_da",
+                displayName = "Maximillion Pegasus (DK)",
+                angles = new AnimeCharacterSet.AngleSprites { front = "pegasus_da_front", threeQuarter = "pegasus_da_34", side = "pegasus_da_side", back = "pegasus_da_back" },
+                expressions = new AnimeCharacterSet.Expressions { neutral = "neutral", serious = "serious", smiling = "smiling" },
+                gestures = new AnimeCharacterSet.Gestures { idle = "idle", draw = "draw", summon = "summon", attack = "attack", defeat = "defeat" },
+                heightM = 1.90f,
+                shadowDiameter = 0.80f,
+            },
+            new AnimeCharacterSet
+            {
+                id = "weevil_da",
+                displayName = "Weevil Underwood (DK)",
+                angles = new AnimeCharacterSet.AngleSprites { front = "weevil_da_front", threeQuarter = "weevil_da_34", side = "weevil_da_side", back = "weevil_da_back" },
+                expressions = new AnimeCharacterSet.Expressions { neutral = "neutral", serious = "serious", smiling = "smiling" },
+                gestures = new AnimeCharacterSet.Gestures { idle = "idle", draw = "draw", summon = "summon", attack = "attack", defeat = "defeat" },
+                heightM = 1.52f,
+                shadowDiameter = 0.50f,
+            },
+            new AnimeCharacterSet
+            {
+                id = "rex_da",
+                displayName = "Rex Raptor (DK)",
+                angles = new AnimeCharacterSet.AngleSprites { front = "rex_da_front", threeQuarter = "rex_da_34", side = "rex_da_side", back = "rex_da_back" },
+                expressions = new AnimeCharacterSet.Expressions { neutral = "neutral", serious = "serious", smiling = "smiling" },
+                gestures = new AnimeCharacterSet.Gestures { idle = "idle", draw = "draw", summon = "summon", attack = "attack", defeat = "defeat" },
                 heightM = 1.70f,
-                shadowDiameter = 0.6f,
+                shadowDiameter = 0.60f,
+            },
+            new AnimeCharacterSet
+            {
+                id = "mako_da",
+                displayName = "Mako Tsunami (DK)",
+                angles = new AnimeCharacterSet.AngleSprites { front = "mako_da_front", threeQuarter = "mako_da_34", side = "mako_da_side", back = "mako_da_back" },
+                expressions = new AnimeCharacterSet.Expressions { neutral = "neutral", serious = "serious", smiling = "smiling" },
+                gestures = new AnimeCharacterSet.Gestures { idle = "idle", draw = "draw", summon = "summon", attack = "attack", defeat = "defeat" },
+                heightM = 1.83f,
+                shadowDiameter = 0.70f,
+            },
+            new AnimeCharacterSet
+            {
+                id = "bandit_keith_da",
+                displayName = "Bandit Keith (DK)",
+                angles = new AnimeCharacterSet.AngleSprites { front = "bandit_keith_da_front", threeQuarter = "bandit_keith_da_34", side = "bandit_keith_da_side", back = "bandit_keith_da_back" },
+                expressions = new AnimeCharacterSet.Expressions { neutral = "neutral", serious = "serious", smiling = "smiling" },
+                gestures = new AnimeCharacterSet.Gestures { idle = "idle", draw = "draw", summon = "summon", attack = "attack", defeat = "defeat" },
+                heightM = 1.85f,
+                shadowDiameter = 0.70f,
+            },
+            new AnimeCharacterSet
+            {
+                id = "mokuba_da",
+                displayName = "Mokuba Kaiba (DK)",
+                angles = new AnimeCharacterSet.AngleSprites { front = "mokuba_da_front", threeQuarter = "mokuba_da_34", side = "mokuba_da_side", back = "mokuba_da_back" },
+                expressions = new AnimeCharacterSet.Expressions { neutral = "neutral", serious = "serious", smiling = "smiling" },
+                gestures = new AnimeCharacterSet.Gestures { idle = "idle", draw = "draw", summon = "summon", attack = "attack", defeat = "defeat" },
+                heightM = 1.45f,
+                shadowDiameter = 0.50f,
             },
         };
 

@@ -1,0 +1,459 @@
+{
+ "artist": "gravekeepersbrewer",
+ "artist_url": "https://www.deviantart.com/gravekeepersbrewer",
+ "gallery": "Duelist Kingdom Yu-Gi-Oh Character Renders",
+ "gallery_url": "https://www.deviantart.com/gravekeepersbrewer/gallery/102195510",
+ "note": "Attribution record for the *_da sprite sets. Tokens/image URLs omitted (they expire).",
+ "items": [
+  {
+   "slug": "yugi_muto",
+   "title": "Yugi Muto",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Yugi-Muto-1347114762",
+   "size": [
+    1024,
+    1536
+   ],
+   "era_label": "Duelist Kingdom"
+  },
+  {
+   "slug": "yugi_muto_dark_magician",
+   "title": "Yugi Muto (Dark Magician)",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Yugi-Muto-%28Dark-Magician%29-1347120293",
+   "size": [
+    1024,
+    1536
+   ],
+   "era_label": "Duelist Kingdom"
+  },
+  {
+   "slug": "yami_yugi",
+   "title": "Yami Yugi",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Yami-Yugi-1345109914",
+   "size": [
+    929,
+    1693
+   ],
+   "era_label": "Duelist Kingdom"
+  },
+  {
+   "slug": "grandpa_muto_solomon_muto",
+   "title": "Grandpa Muto (Solomon Muto)",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Grandpa-Muto-%28Solomon-Muto%29-1345104380",
+   "size": [
+    1023,
+    1537
+   ],
+   "era_label": "Duelist Kingdom & Battle City"
+  },
+  {
+   "slug": "joey_wheeler",
+   "title": "Joey Wheeler",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Joey-Wheeler-1345123124",
+   "size": [
+    987,
+    1594
+   ],
+   "era_label": "Duelist Kingdom"
+  },
+  {
+   "slug": "joey_wheeler_flame_swordsman",
+   "title": "Joey Wheeler (Flame Swordsman)",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Joey-Wheeler-%28Flame-Swordsman%29-1346056336",
+   "size": [
+    1002,
+    1570
+   ],
+   "era_label": "Duelist Kingdom"
+  },
+  {
+   "slug": "tristan_taylor",
+   "title": "Tristan Taylor",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Tristan-Taylor-1347577645",
+   "size": [
+    1023,
+    1537
+   ],
+   "era_label": "Pre-Duelist Kingdom"
+  },
+  {
+   "slug": "tristan_taylor_1",
+   "title": "Tristan Taylor",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Tristan-Taylor-1347577770",
+   "size": [
+    1023,
+    1537
+   ],
+   "era_label": "Duelist Kingdom"
+  },
+  {
+   "slug": "tristan_taylor_cyber_commander",
+   "title": "Tristan Taylor (Cyber Commander)",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Tristan-Taylor-%28Cyber-Commander%29-1347584019",
+   "size": [
+    1023,
+    1537
+   ],
+   "era_label": "Duelist Kingdom"
+  },
+  {
+   "slug": "tea_gardner",
+   "title": "Tea Gardner",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Tea-Gardner-1345770006",
+   "size": [
+    1023,
+    1537
+   ],
+   "era_label": "Flashback/Work Uniform"
+  },
+  {
+   "slug": "tea_gardner_1",
+   "title": "Tea Gardner",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Tea-Gardner-1345767554",
+   "size": [
+    1023,
+    1537
+   ],
+   "era_label": "Pre-Duelist Kingdom - Pyramid of Light"
+  },
+  {
+   "slug": "tea_gardner_2",
+   "title": "Tea Gardner",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Tea-Gardner-1345769887",
+   "size": [
+    1023,
+    1537
+   ],
+   "era_label": "Duelist Kingdom"
+  },
+  {
+   "slug": "tea_gardner_magician_of_faith",
+   "title": "Tea Gardner (Magician of Faith)",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Tea-Gardner-%28Magician-of-Faith%29-1346057788",
+   "size": [
+    1023,
+    1537
+   ],
+   "era_label": "Duelist Kingdom"
+  },
+  {
+   "slug": "seto_kaiba",
+   "title": "Seto Kaiba",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Seto-Kaiba-1345721407",
+   "size": [
+    1023,
+    1537
+   ],
+   "era_label": "Pre-Duelist Kingdom/Episode 1"
+  },
+  {
+   "slug": "seto_kaiba_1",
+   "title": "Seto Kaiba",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Seto-Kaiba-1345091112",
+   "size": [
+    1023,
+    1537
+   ],
+   "era_label": "Duelist Kingdom"
+  },
+  {
+   "slug": "hobson_daimon",
+   "title": "Hobson (Daimon)",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Hobson-%28Daimon%29-1349332067",
+   "size": [
+    1023,
+    1537
+   ],
+   "era_label": "Duelist Kingdom - Virtual World"
+  },
+  {
+   "slug": "mokuba_kaiba",
+   "title": "Mokuba Kaiba",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Mokuba-Kaiba-1346450362",
+   "size": [
+    1122,
+    1402
+   ],
+   "era_label": "Duelist Kingdom"
+  },
+  {
+   "slug": "serenity_wheeler",
+   "title": "Serenity Wheeler",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Serenity-Wheeler-1346265282",
+   "size": [
+    929,
+    1694
+   ],
+   "era_label": "Duelist Kingdom - Battle City"
+  },
+  {
+   "slug": "bakura_ryou",
+   "title": "Bakura Ryou",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Bakura-Ryou-1349601936",
+   "size": [
+    934,
+    1683
+   ],
+   "era_label": "Duelist Kingdom"
+  },
+  {
+   "slug": "bakura_ryou_change_of_heart",
+   "title": "Bakura Ryou (Change of Heart)",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Bakura-Ryou-%28Change-of-Heart%29-1349602047",
+   "size": [
+    1024,
+    1536
+   ],
+   "era_label": "Duelist Kingdom"
+  },
+  {
+   "slug": "bakura_ryou_lady_of_faith",
+   "title": "Bakura Ryou (Lady of Faith)",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Bakura-Ryou-%28Lady-of-Faith%29-1349602116",
+   "size": [
+    953,
+    1651
+   ],
+   "era_label": "Duelist Kingdom"
+  },
+  {
+   "slug": "yami_bakura",
+   "title": "Yami Bakura",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Yami-Bakura-1345709311",
+   "size": [
+    941,
+    1672
+   ],
+   "era_label": "Duelist Kingdom"
+  },
+  {
+   "slug": "yami_bakura_lady_of_faith",
+   "title": "Yami Bakura (Lady of Faith)",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Yami-Bakura-%28Lady-of-Faith%29-1346462270",
+   "size": [
+    1024,
+    1536
+   ],
+   "era_label": "Duelist Kingdom"
+  },
+  {
+   "slug": "rex_raptor",
+   "title": "Rex Raptor",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Rex-Raptor-1345506188",
+   "size": [
+    1024,
+    1537
+   ],
+   "era_label": "Duelist Kingdom"
+  },
+  {
+   "slug": "weevil_underwood",
+   "title": "Weevil Underwood",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Weevil-Underwood-1345505057",
+   "size": [
+    1024,
+    1536
+   ],
+   "era_label": "Duelist Kingdom"
+  },
+  {
+   "slug": "mai_valentine",
+   "title": "Mai Valentine",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Mai-Valentine-1345494816",
+   "size": [
+    925,
+    1701
+   ],
+   "era_label": "Duelist Kingdom"
+  },
+  {
+   "slug": "mako_tsunami",
+   "title": "Mako Tsunami",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Mako-Tsunami-1345707389",
+   "size": [
+    936,
+    1680
+   ],
+   "era_label": "Duelist Kingdom"
+  },
+  {
+   "slug": "ghost_kaiba_imitator_of_death",
+   "title": "Ghost Kaiba (Imitator of Death)",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Ghost-Kaiba-%28Imitator-of-Death%29-1345723696",
+   "size": [
+    1023,
+    1537
+   ],
+   "era_label": "Duelist Kingdom"
+  },
+  {
+   "slug": "eliminator_imitator_of_death",
+   "title": "Eliminator Imitator of Death",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Eliminator-Imitator-of-Death-1345720433",
+   "size": [
+    962,
+    1635
+   ],
+   "era_label": "Duelist Kingdom"
+  },
+  {
+   "slug": "zygor",
+   "title": "Zygor",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Zygor-1348935710",
+   "size": [
+    925,
+    1700
+   ],
+   "era_label": "Duelist Kingdom"
+  },
+  {
+   "slug": "sid",
+   "title": "Sid",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Sid-1348935600",
+   "size": [
+    867,
+    1815
+   ],
+   "era_label": "Duelist Kingdom"
+  },
+  {
+   "slug": "bonz",
+   "title": "Bonz",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Bonz-1345718201",
+   "size": [
+    1024,
+    1536
+   ],
+   "era_label": "Duelist Kingdom - Battle City"
+  },
+  {
+   "slug": "bandit_keith",
+   "title": "Bandit Keith",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Bandit-Keith-1345503434",
+   "size": [
+    930,
+    1691
+   ],
+   "era_label": "Duelist Kingdom"
+  },
+  {
+   "slug": "sam",
+   "title": "Sam",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Sam-1349759136",
+   "size": [
+    986,
+    1594
+   ],
+   "era_label": "Duelist Kingdom"
+  },
+  {
+   "slug": "eliminator_panik",
+   "title": "Eliminator PaniK",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Eliminator-PaniK-1345725899",
+   "size": [
+    900,
+    1748
+   ],
+   "era_label": "Duelist Kingdom"
+  },
+  {
+   "slug": "eliminator_para",
+   "title": "Eliminator Para",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Eliminator-Para-1345730667",
+   "size": [
+    1024,
+    1536
+   ],
+   "era_label": ""
+  },
+  {
+   "slug": "eliminator_dox",
+   "title": "Eliminator Dox",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Eliminator-Dox-1345730056",
+   "size": [
+    1024,
+    1536
+   ],
+   "era_label": "Duelist Kingdom"
+  },
+  {
+   "slug": "maximillion_pegasus",
+   "title": "Maximillion Pegasus",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Maximillion-Pegasus-1345132332",
+   "size": [
+    1024,
+    1536
+   ],
+   "era_label": "Duelist Kingdom"
+  },
+  {
+   "slug": "cecelia_pegasus",
+   "title": "Cecelia Pegasus",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Cecelia-Pegasus-1345500314",
+   "size": [
+    830,
+    1895
+   ],
+   "era_label": "Duelist Kingdom"
+  },
+  {
+   "slug": "shadi_shin",
+   "title": "Shadi Shin",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Shadi-Shin-1345116060",
+   "size": [
+    1024,
+    1536
+   ],
+   "era_label": "Duelist Kingdom - Battle City"
+  },
+  {
+   "slug": "yugi_s_mother",
+   "title": "Yugi's Mother",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Yugi%27s-Mother-1346059072",
+   "size": [
+    882,
+    1783
+   ],
+   "era_label": "Duelist Kingdom"
+  },
+  {
+   "slug": "rebecca_hawkins",
+   "title": "Rebecca Hawkins",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Rebecca-Hawkins-1346039018",
+   "size": [
+    951,
+    1654
+   ],
+   "era_label": "Duelist Kingdom"
+  },
+  {
+   "slug": "arthur_hawkins",
+   "title": "Arthur Hawkins",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Arthur-Hawkins-1346047202",
+   "size": [
+    907,
+    1733
+   ],
+   "era_label": "Duelist Kingdom - Grand Championship"
+  },
+  {
+   "slug": "duke_devlin",
+   "title": "Duke Devlin",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Duke-Devlin-1346044191",
+   "size": [
+    1023,
+    1537
+   ],
+   "era_label": "Dungeon Dice Monsters"
+  },
+  {
+   "slug": "duke_devlin_1",
+   "title": "Duke Devlin",
+   "deviation": "https://www.deviantart.com/gravekeepersbrewer/art/Duke-Devlin-1346045365",
+   "size": [
+    1022,
+    1538
+   ],
+   "era_label": "Dungeon Dice Monsters - Battle City  - Virtual World"
+  }
+ ]
+}
