@@ -16,9 +16,10 @@ namespace WRLDZ.Duel.TextEffects
     /// </summary>
     public static class CardTextEffectCompiler
     {
-        public const int Version = 204; /* v204: RDS batch 5 - Divine Wrath (49010598). Its legality reads a monster EFFECT, so the chain-answer ladder now admits it through NegateRespondsToMonsterEffect, paying the discard cost before resolution. NegateMonsterActivationAndDestroy already existed for My Body as a Shield's monster gate; the new flag just routes Divine Wrath to it. Verified by compile shape and a near-miss: a Spell Card activation does not open a window for it. The honest outcome is that a monster EFFECT on the chain still needs a fresh mini-duel harness exercise, which the current stress duels do not provide in this environment.
+        public const int Version = 205; /* v205: RDS batch 6 - Machine Duplication (63995093, a 1-shot Spell: target 1 Machine monster you control with 500 or less ATK; Special Summon up to 2 monsters from your Deck with the same name as that face-up monster). New clause fields SummonUpTo and SummonSameNameAsTarget on EffectClause, producing a multi-copy loop in TrySpecialSummonFromDeck, capped by a free zone. Hint<rfl:parameter name=" (no named host) for the target monster - the same typed-Union-style fictive filter, here on a Special-Summon verb.
 
 
+        
         
         
         
