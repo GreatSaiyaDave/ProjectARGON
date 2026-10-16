@@ -339,6 +339,43 @@ namespace WRLDZ.Duel.TextEffects
         public static List<CardInstance> AttributeDeclarationTokens() => TypeDeclarationRuntime.AttributeTokens(Attributes);
 
         /// <summary>
+        /// Homunculus the Alchemic Being (c40410110): ignition ignition - the controller ANNOUNCES ANOTHER Attribute
+        /// (one the card is not). The pick is the Declare Monster Attribute tokens minus the current one; when the
+        /// card is later "targeted by a Spell" the live attribute flows through EquipFamilyRuntime.CurrentAttribute.
+        /// </summary>
+        public static void ChangeSelfAttribute(DuelEngine engine, DuelistState who, CardInstance source)
+        {
+            if (engine == null || who == null || source == null) return;
+            var current = TextEffects.EquipFamilyRuntime.CurrentAttribute(source);
+            var tokens = TypeDeclarationRuntime.AttributeTokens(Attributes)
+                .Where(t => !string.Equals(t.Def?.attribute, current, System.StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            if (tokens.Count == 0)
+            {
+                engine.Log(source.Name + ": there is no other Attribute to declare.");
+                return;
+            }
+
+            ContinuousTrapsAndSpiritSupportRuntime.AskCardPick(engine, who, source, new CardPickRequest
+            {
+                Candidates = () => tokens,
+                Kind = EffectTargetKind.DiscardFromHand,   // any pick works; this just labels the prompt
+                Prompt = source.Name + ": choose the new Attribute for this card (" + current + " is excluded).",
+                AskWithOneCandidate = true,
+                AiChoose = list => list.OrderBy(t => t.Def?.attribute).FirstOrDefault(),
+                Finish = chosen =>
+                {
+                    if (chosen == null) return;
+                    var attr = chosen.Def?.attribute;
+                    if (string.IsNullOrEmpty(attr)) return;
+                    TextEffects.EquipFamilyRuntime.SetSelfAttribute(source, attr);
+                    engine.Log(source.Name + " is now " + attr + " until it leaves the field.");
+                    engine.NotifyPublic();
+                }
+            });
+        }
+
+        /// <summary>
         /// AI declaration: the Attribute most of its own face-up monsters already have (keeps its Attribute-based effects
         /// working); else the first Attribute.
         /// </summary>

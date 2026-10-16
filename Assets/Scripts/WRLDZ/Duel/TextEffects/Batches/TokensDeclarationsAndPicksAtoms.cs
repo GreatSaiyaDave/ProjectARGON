@@ -49,6 +49,21 @@ namespace WRLDZ.Duel.TextEffects
                     c.TokenCannotTribute = true;
                     return c;
                 }),
+            // Homunculus the Alchemic Being (c40410110): ignite, LZ[_MZONE], count limit 1: AnnounceAnotherAttribute
+            // (one the card is not), register EFFECT_CHANGE_ATTRIBUTE on itself (RESET_EVENT|RESETS_STANDARD_DISABLE).
+            new AtomRegistration.Atom(
+                @"^Once per turn: You can change the Attribute of this card\.?\s*$",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.ChangeThisCardAttribute,
+                    Side = EffectSide.Controller,
+                    IsOptional = true,
+                    OncePerTurn = true,
+                    StaysOnField = true,
+                    MakesChainLink = false
+                }),
+
             // DNA Transplant (c56769674): the Attribute is announced in the activation's target step (not a target);
             // while the card is face-up every face-up monster on the field has it (EFFECT_CHANGE_ATTRIBUTE).
             AtomRegistration.Atom.Sequence(

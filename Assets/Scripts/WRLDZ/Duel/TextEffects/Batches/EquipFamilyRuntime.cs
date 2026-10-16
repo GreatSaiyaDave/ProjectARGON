@@ -146,10 +146,26 @@ namespace WRLDZ.Duel.TextEffects
         /// monster equipped with an Equip Card that changes its Attribute (Scroll of Bewitchment) whose effects apply;
         /// the latest equipped one wins.
         /// </summary>
-        public static string CurrentAttribute(CardInstance card)
+        static readonly System.Runtime.CompilerServices.ConditionalWeakTable<CardInstance,
+            System.Runtime.CompilerServices.StrongBox<string>> s_selfAttribute = new();
+
+        /// <summary>Record that <paramref name="card"/> is now of <paramref name="attribute"/> until it leaves the field.</summary>
+        public static void SetSelfAttribute(CardInstance card, string attribute)
+        {
+            if (card == null || string.IsNullOrEmpty(attribute)) return;
+            if (string.Equals(card.Def?.attribute, attribute, System.StringComparison.OrdinalIgnoreCase)) return;
+            s_selfAttribute.Remove(card);
+            s_selfAttribute.Add(card, new System.Runtime.CompilerServices.StrongBox<string>(attribute));
+        }
+
+                public static string CurrentAttribute(CardInstance card)
         {
             var def = card?.Def;
             if (def == null) return null;
+            // Homunculus the Alchemic Being (v206): a self-attribute override beats both the field-wide DNA
+            // Transplant and any later Scroll of Bewitchment - the ignitions is the card's statement of its Attribute.
+            if (s_selfAttribute.TryGetValue(card, out var sb) && !string.IsNullOrEmpty(sb?.Value))
+                return sb.Value;
             if (!card.FaceUp || !def.IsMonster) return def.attribute;
             // TokensDeclarationsAndPicks batch: DNA Transplant — every face-up monster on the field has its declared
             // Attribute; with an Attribute-changing Equip too, the change applied last wins.

@@ -3432,6 +3432,13 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         ReplaceDrawLinkWithDiscard,
         /// <summary>
+        /// Homunculus the Alchemic Being (c40410110): an ignition that lets its controller ANNOUNCE ANOTHER
+        /// Attribute (one the card currently is not), which that copy then has. It records the change on the card -
+        /// <see cref="TokensDeclarationsAndPicksRuntime.DeclaredAttribute"/> is field-wide (DNA Transplant), so the
+        /// override lives on EquipFamilyRuntime where Attribute is read.
+        /// </summary>
+        ChangeThisCardAttribute,
+        /// <summary>
         /// Pikeru's Circle of Enchantment (c74270067): for the rest of this turn, effect damage to the controller
         /// becomes 0. Distinct from <see cref="EffectActionKind.NoDamageThisTurn"/> (Hallowed Life Barrier), which
         /// also cancels battle damage — this reads only the effect-damage paths.

@@ -473,6 +473,7 @@ namespace WRLDZ.Duel.TextEffects
                 // order; A Hero Emerges' random Special Summon; Wild Nature's Release; Balloon Lizard's counters and burn.
                 EffectActionKind.DeclareMonsterAttribute => EffectResolutionKind.TreatAsName,
                 EffectActionKind.AllFaceUpMonstersBecomeDeclaredAttribute => EffectResolutionKind.ModifyStats,
+                EffectActionKind.ChangeThisCardAttribute => EffectResolutionKind.ModifyStats,
                 EffectActionKind.OpponentPlacesRaceMonsterFromTheirDeckOnTop => EffectResolutionKind.ReturnToDeck,
                 EffectActionKind.RandomHandCardSpecialSummonOrSendToGy => EffectResolutionKind.SpecialSummon,
                 EffectActionKind.TargetGainsAtkEqualToDefDestroyAtEndPhase => EffectResolutionKind.ModifyStats,

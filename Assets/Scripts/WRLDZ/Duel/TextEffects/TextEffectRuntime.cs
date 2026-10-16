@@ -6659,6 +6659,12 @@ namespace WRLDZ.Duel.TextEffects
                 return;
             }
             // TokensDeclarationsAndPicks batch: DNA Transplant's Attribute, declared on activation likewise.
+            if (clause.Action == EffectActionKind.ChangeThisCardAttribute)
+            {
+                // Homunculus the Alchemic Being: the change is recorded on the card; the live attribute reads it.
+                TextEffects.TokensDeclarationsAndPicksRuntime.ChangeSelfAttribute(engine, who, source);
+                return;
+            }
             if (clause.Action == EffectActionKind.DeclareMonsterAttribute)
             {
                 TokensDeclarationsAndPicksRuntime.RecordDeclaredAttribute(engine, source, chosenTarget);
