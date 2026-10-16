@@ -306,6 +306,9 @@ namespace WRLDZ.Duel.Rules
                    // UnionRiders batch (v175): Combination Attack needs the Battle Phase and a monster that attacked with a
                    // Union equipped (UnionRidersRegressionTests drive it).
                    c.Action == EffectActionKind.SpecialSummonTargetsUnionsThenItAttacksAgain ||
+                   // Machine Duplication (DeckReturnsAndMassEffects batch, v204): needs the same-named card
+                   // in the Deck, which the corpus cannot seed (TargetCount=1 is then the activation gate).
+                   (c.Action == EffectActionKind.SpecialSummonFromDeck && c.SummonSameNameAsTarget) ||
                    // TokensDeclarationsAndPicks batch: Stray Lambs / Scapegoat need a turn with no Summon by the activator (the
                    // shared corpus engine summons as it goes) and Wild Nature's Release a face-up Beast / Beast-Warrior with
                    // DEF; TokensDeclarationsAndPicksRegressionTests drive them.
@@ -797,6 +800,22 @@ namespace WRLDZ.Duel.Rules
                         : FirstMonsterId(engine, d => ClassicEraTemplates.RaceMatches(d.race, c.RaceFilter));
                     PlaceMonster(engine, p, wanted > 0 ? wanted : Celtic, 1, BattlePosition.Attack, true);
                 }
+
+                // Machine Duplication (DeckReturnsAndMassEffects): needs 1 Machine monster you control with 500 or less
+                // ATK on the field so the clause passes IsCorrectEquipTarget + TryActivateSpellTrap. The deck is not
+                // needed on the probe board — TargetCount=1 is the gate.
+                if (c.Action == EffectActionKind.SpecialSummonFromDeck && c.RaceFilter == "Machine" &&
+                    c.AmountIsAtkMax && c.SummonUpTo > 0)
+                {
+                    var smallMachine = FirstMonsterId(engine, d =>
+                        d != null && d.IsMonster && !d.IsExtraDeck &&
+                        ClassicEraTemplates.RaceMatches(d.race, "Machine") && d.atk <= 500);
+                    if (smallMachine > 0 && p.MonsterZones[1].IsEmpty)
+                        PlaceMonster(engine, p, smallMachine, 1, BattlePosition.Attack, true);
+                    if (smallMachine > 0 && p.MonsterZones[0].IsEmpty)
+                        PlaceMonster(engine, p, smallMachine, 0, BattlePosition.Attack, true);
+                }
+
                 if (c.Action == EffectActionKind.TakeControlOfOpponentUnionAndEquipToThis && opp.MonsterZones[3].IsEmpty)
                     PlaceMonster(engine, opp, 84814897, 3, BattlePosition.Attack, true);
             }

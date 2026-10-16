@@ -4048,6 +4048,16 @@ namespace WRLDZ.Duel.TextEffects
         public bool ExceptThisCard;
         /// <summary>Special Summon in Defense Position (Soul Resurrection).</summary>
         public bool SummonInDefense;
+        /// <summary>
+        /// From the clause's resolver (engine.TrySpecialSummonFromDeck): summon N copies instead of 1 (up to 2, capped
+        /// by free zones and by ContinuousMaxMonsterZoneCap). Machine Duplication: "Special Summon up to 2 monsters
+        /// from your Deck with the same name as that face-up monster."
+        /// </summary>
+        public int SummonUpTo;
+        /// <summary>
+        /// With <see cref="SummonUpTo"/>: every copy must have the chosen target's card ID.
+        /// </summary>
+        public bool SummonSameNameAsTarget;
         /// <summary>Special Summon in Attack Position (Call of the Haunted / Premature Burial).</summary>
         public bool SummonInAttack;
         /// <summary>

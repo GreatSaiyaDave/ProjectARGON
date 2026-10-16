@@ -13897,30 +13897,47 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
         static void TrySpecialSummonFromDeck(DuelEngine engine, DuelistState who, EffectClause clause, CardInstance chosenTarget)
         {
             if (engine == null || who == null || clause == null || who.Deck == null || engine.Database == null) return;
-            if (engine.FirstEmpty(who.MonsterZones) < 0) return;
-            var index = -1;
-            var id = 0;
-            if (chosenTarget != null)
+            var wantId = chosenTarget != null ? chosenTarget.CardId : -1;
+            // Machine Duplication: with the target known, its copy can be summoned more than once, "up to 2", with
+            // the field cap (and a ContinuousMaxMonsterZoneCap, which the Lua applies as ft = ft > 2 ? 2 : ft).
+            var cap = clause.SummonUpTo > 0 ? clause.SummonUpTo : 1;
+            if (who.MonsterZones != null && who.MonsterZones.Length < cap)
+                cap = who.MonsterZones.Length;
+            var summoned = 0;
+            while (summoned < cap && engine.FirstEmpty(who.MonsterZones) >= 0)
             {
-                for (var i = 0; i < who.Deck.Count; i++)
-                    if (who.Deck[i] == chosenTarget.CardId) { index = i; id = who.Deck[i]; break; }
-            }
-            else
-            {
-                for (var i = 0; i < who.Deck.Count; i++)
+                int index = -1, id = 0;
+                if (wantId > 0)
                 {
-                    if (!engine.Database.TryGet(who.Deck[i], out var def) || !DefMatchesSummonFilter(def, clause)) continue;
-                    index = i; id = who.Deck[i]; break;
+                    for (var i = 0; i < who.Deck.Count; i++)
+                    {
+                        if (who.Deck[i] == wantId) { index = i; id = wantId; break; }
+                    }
+                }
+                else
+                {
+                    for (var i = 0; i < who.Deck.Count; i++)
+                    {
+                        if (!engine.Database.TryGet(who.Deck[i], out var d) || !DefMatchesSummonFilter(d, clause)) continue;
+                        index = i; id = who.Deck[i]; break;
+                    }
+                }
+                if (index < 0 || !engine.Database.TryGet(id, out var selected) ||
+                    !DefMatchesSummonFilter(selected, clause)) break;
+                var inst = chosenTarget != null ? engine.CreateCardInstance(id) : engine.CreateCardInstance(id);
+                var copy = PerCopyDeckRuntime.TakeFromDeck(who, index, inst);
+                if (!engine.SpecialSummonToField(who, inst,
+                        clause.SummonInDefense ? BattlePosition.Defense : BattlePosition.Attack, true))
+                {
+                    who.Deck.Insert(index, id, copy);
+                    break;
+                }
+                else
+                {
+                    engine.Log($"Special Summoned {inst.Name} from Deck.");
+                    summoned++;
                 }
             }
-            if (index < 0 || !engine.Database.TryGet(id, out var selected) || !DefMatchesSummonFilter(selected, clause)) return;
-            var inst = chosenTarget ?? engine.CreateCardInstance(id);
-            // PerCopyDeck batch (v163): the instance takes the copy's owner; a failed Summon puts the same copy back.
-            var copy = PerCopyDeckRuntime.TakeFromDeck(who, index, inst);
-            if (!engine.SpecialSummonToField(who, inst, clause.SummonInDefense ? BattlePosition.Defense : BattlePosition.Attack, true))
-                who.Deck.Insert(index, id, copy);
-            else
-                engine.Log($"Special Summoned {inst.Name} from Deck.");
         }
 
         /// <summary>

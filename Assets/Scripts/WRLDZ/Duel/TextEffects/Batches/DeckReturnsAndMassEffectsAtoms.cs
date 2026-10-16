@@ -115,6 +115,27 @@ namespace WRLDZ.Duel.TextEffects
                     CheckedAt = ConditionCheckedAt.Activation,
                     MakesChainLink = true
                 }),
+            // Machine Duplication (c63995093), its whole text.
+            new AtomRegistration.Atom(
+                @"^Target 1 Machine monster you control with (\d+) or less ATK; Special Summon up to 2 monsters from " +
+                @"your Deck with the same name as that face-up monster\.?\s*$",
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.SpecialSummonFromDeck,
+                    Zone = EffectZoneFilter.ControllerDeckMonsters,
+                    Side = EffectSide.Controller,
+                    RequiresTargetChoice = true,
+                    IsPsctTarget = true,
+                    RequiresTargetFaceUp = true,
+                    RaceFilter = "Machine",
+                    Amount = int.Parse(m.Groups[1].Value),
+                    AmountIsAtkMax = true,
+                    TargetCount = 1,
+                    SummonUpTo = 2,
+                    SummonSameNameAsTarget = true,
+                    MakesChainLink = true
+                }),
         };
 
         static int Pos(Match m, int group, int fallback) =>
