@@ -29,11 +29,13 @@ namespace WRLDZ.Duel
         // —— Summon (Rulebook: How to Summon Monsters) ——
         // Normal Summon/Set: once per turn (shared).
         // Level 1–4: no Tribute. Level 5–6: 1 Tribute. Level 7+: 2 Tributes.
-        public static int TributesRequired(int level)
+        public static int TributesRequired(int level, int cardId = 0)
         {
             if (level <= 0) return 0;
             if (level <= 4) return 0;
             if (level <= 6) return 1;
+            // Fusilier Dragon, the Dual-Mode Beast (c51632798): can be Normal Summoned/Set without Tributing
+            if (cardId == 51632798) return 0;
             return 2;
         }
 

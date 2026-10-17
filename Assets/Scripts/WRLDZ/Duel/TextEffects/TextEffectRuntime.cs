@@ -146,9 +146,9 @@ namespace WRLDZ.Duel.TextEffects
                 engine.NotifyPublic();
                 return true;
             }
-
             return false;
         }
+
 
         /// <summary>
         /// Sangan / Witch name-lock: record added name for the rest of this turn.
@@ -2720,7 +2720,8 @@ namespace WRLDZ.Duel.TextEffects
 
             var coin = activate.FirstOrDefault(c =>
                 c.Action == EffectActionKind.CoinCallDestroyOppOrSelf ||
-                c.Action == EffectActionKind.CoinCallDoubleOrHalveAtk);
+                c.Action == EffectActionKind.CoinCallDoubleOrHalveAtk ||
+                c.Action == EffectActionKind.CoinCallDestroyBattledMonsterOnCorrect);
             if (coin != null)
                 return StartCoinCall(engine, who, card, fromHand, coin, autoPickTarget, isMonster);
 
@@ -5983,9 +5984,9 @@ namespace WRLDZ.Duel.TextEffects
                 if (NameMatchesQuoted(def, name, series))
                     return true;
             }
-
             return false;
         }
+
 
         /// <summary>
         /// Exact quoted name, or series ("Toon" card) via name/archetype contains.
@@ -6768,6 +6769,22 @@ namespace WRLDZ.Duel.TextEffects
                     engine.Draw((clause.Side == EffectSide.Opponent || clause.OpponentIsSubject) && opp != null ? opp : who,
                         Mathf.Max(1, clause.Amount), silent: false);
                     break;
+                case EffectActionKind.DrawOnePlusPerFaceUpNamed:
+                    {
+                        var drawer = (clause.Side == EffectSide.Opponent || clause.OpponentIsSubject) && opp != null ? opp : who;
+                        var n = 1;
+                        if (!string.IsNullOrEmpty(clause.NamedCard))
+                        {
+                            n += drawer.MonstersOnField().Count(m => m != null && m.FaceUp && m.IsNamed(clause.NamedCard));
+                        }
+                        else if (clause.Amount > 0)
+                        {
+                            n = clause.Amount;
+                        }
+                        if (n < 1) n = 1;
+                        engine.Draw(drawer, n, silent: false);
+                        break;
+                    }
 
                 case EffectActionKind.DrawThenDiscard:
                     // Graceful Charity: draw, then (only if every card was drawn) discard of the drawer's choice.
@@ -10437,9 +10454,24 @@ namespace WRLDZ.Duel.TextEffects
                 engine.DestroyMonsterPublic(owner, defender, attacker);
                 return true;
             }
-
+            foreach (var c in clauses)
+            {
+                if (c == null || c.Action != EffectActionKind.DestroyAttackedFaceDownDefenseReturnToOwnerDeckTopOrGy) continue;
+                if (!isFaceDownDefense) continue;
+                var owner = engine.OpponentOf(who);
+                if (owner == null || !owner.TryFindMonster(defender, out _)) continue;
+                engine.Log($"{attacker.Name}: destroys the face-down Defense Position monster at the start of the Damage Step and may return it to the owner's Deck top instead of GY.");
+                // For Mystic Swordsman LV6: always destroy; the "instead of sending to GY, place on top of owner's Deck" is the replacement.
+                // The original choice in Lua (owner choice?) - but card text says "you can place it on top of your opponent's Deck instead of sending it to the Graveyard"
+                // For the attacker controller (player who controls this card) vs owner of destroyed card - "your opponent's Deck" means the owner of the destroyed monster.
+                var destroyedBy = who;
+                var destOwner = owner;
+                TextEffectRuntime.DestroyCard(engine, defender, attacker, byPlayer: destroyedBy, placeOnOwnerDeckTopInsteadOfGy: true);
+                return true;
+            }
             return false;
         }
+
 
         /// <param name="destroyed">
         /// The monster this card just destroyed, already in the GY. Handed to the clause
@@ -13071,6 +13103,29 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
                 {
                     if (c.Action == EffectActionKind.CoinCallDestroyOppOrSelf)
                         ResolveTimeWizard(engine, who, card, right);
+                    else if (c.Action == EffectActionKind.CoinCallDestroyBattledMonsterOnCorrect)
+                    {
+                        if (right)
+                        {
+                            // Destroy the opponent's monster that battled this card
+                            var opp = engine.OpponentOf(who);
+                            if (opp != null && card != null)
+                            {
+                                // Find the monster that battled this card
+                                var battled = opp.MonstersOnField().FirstOrDefault(m =>
+                                    m != null && ((m == engine.DeclaredAttackTarget && card == engine.DeclaredAttacker) ||
+                                                  (m == engine.DeclaredAttacker && card == engine.DeclaredAttackTarget)));
+                                if (battled != null)
+                                    DestroyCard(engine, battled, card);
+                                else
+                                {
+                                    // Fallback: any opponent monster in attack position that might be the target
+                                    battled = opp.MonstersOnField().FirstOrDefault(m => m != null && m.FaceUp);
+                                    if (battled != null) DestroyCard(engine, battled, card);
+                                }
+                            }
+                        }
+                    }
                     else if (c.Action == EffectActionKind.CoinCallDoubleOrHalveAtk)
                         ResolveGoddessCoin(engine, card, right);
                 }
@@ -14284,11 +14339,10 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
                 engine.NotifyPublic();
                 return true;
             }
-
             return false;
         }
 
-        static EffectClause SecondTargetClause(EffectClause c)
+static EffectClause SecondTargetClause(EffectClause c)
         {
             return new EffectClause
             {
@@ -15747,7 +15801,7 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
         /// <paramref name="source"/>); a Spell/Trap destroyed by the other player's effect is recorded for the Gust /
         /// Driving Snow window (<see cref="SpellTrapDestroyedResponseRuntime.NoteDestroyedByEffect"/>).</param>
         internal static void DestroyCard(DuelEngine engine, CardInstance card, CardInstance source = null,
-            bool banishIfDestroyed = false, DuelistState byPlayer = null)
+            bool banishIfDestroyed = false, DuelistState byPlayer = null, bool placeOnOwnerDeckTopInsteadOfGy = false)
         {
             if (card == null) return;
             if (ContinuousProtections.IsUnaffectedBy(engine, card, source))
@@ -15785,7 +15839,7 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
             }
             var wasFaceUp = card.FaceUp;
             if (destroyedMonster)
-                engine.DestroyMonsterPublic(owner, card, source, banishIfDestroyed);
+                engine.DestroyMonsterPublic(owner, card, source, banishIfDestroyed, false, placeOnOwnerDeckTopInsteadOfGy);
             else if (banishIfDestroyed)
                 engine.BanishCard(owner, card, destroyed: true);
             else

@@ -356,6 +356,8 @@ namespace WRLDZ.Duel.TextEffects
         DestroyOppMonstersAtkLeq,
         /// <summary>Call a coin; right = destroy all opp monsters, wrong = destroy yours + half ATK damage (Time Wizard).</summary>
         CoinCallDestroyOppOrSelf,
+        /// <summary>Coin call at battle; if correct, destroy the opponent's monster that battled this card (Sasuke Samurai #4).</summary>
+        CoinCallDestroyBattledMonsterOnCorrect,
         /// <summary>Call a coin; right = double this ATK this turn, wrong = halve (Goddess of Whim).</summary>
         CoinCallDoubleOrHalveAtk,
         /// <summary>Toss CoinCount coins; destroy the target if heads ≥ Amount.</summary>
@@ -3199,6 +3201,12 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         DestroyAttackedDefenseMonsterWithDefAtLeastNoDamageCalculation,
         /// <summary>
+        /// BattleAndPositionRecords batch — Mystic Swordsman LV6 (c60482781): at StartOfDamageStep, if this card
+        /// attacked a face-down Defense Position monster, destroy that monster and optionally (you can) place it
+        /// on top of the owner's Deck instead of sending it to the Graveyard.
+        /// </summary>
+        DestroyAttackedFaceDownDefenseReturnToOwnerDeckTopOrGy,
+        /// <summary>
         /// BattleAndPositionRecords batch — Ghost Knight of Jackal (c13386503, SINGLE TRIGGER_O EVENT_BATTLE_DESTROYING,
         /// aux.bdogcon): you can target the opponent's monster this card destroyed by battle (now in the GY) and Special Summon it
         /// to your field in face-up Defense Position (<see cref="BattleAndPositionRecordsRuntime.TryFireBattleDestroying"/>).
@@ -3431,6 +3439,11 @@ namespace WRLDZ.Duel.TextEffects
         /// <see cref="MukoRuntime.TryResolveLink"/> claims it when it comes up to resolve.
         /// </summary>
         ReplaceDrawLinkWithDiscard,
+        /// <summary>
+        /// Dekoichi the Battlechanted Locomotive (c87621407): FLIP - Draw 1, then draw 1 additional for each
+        /// face-up named monster you control (counted at resolution).
+        /// </summary>
+        DrawOnePlusPerFaceUpNamed,
         /// <summary>
         /// Homunculus the Alchemic Being (c40410110): an ignition that lets its controller ANNOUNCE ANOTHER
         /// Attribute (one the card currently is not), which that copy then has. It records the change on the card -

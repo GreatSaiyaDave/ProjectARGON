@@ -116,6 +116,17 @@ namespace WRLDZ.Duel.TextEffects
                     RequiresTargetFaceUp = true,
                     MakesChainLink = true
                 }),
+            // Dekoichi the Battlechanted Locomotive (c87621407): FLIP - draw 1, then draw 1 additional for each face-up named
+            new AtomRegistration.Atom(
+                Start + @"FLIP:\s*Draw 1 card, then draw 1 additional card for each face-up ['""]([^'""]+)['""] you control\.?" + End,
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.Flip,
+                    Action = EffectActionKind.DrawOnePlusPerFaceUpNamed,
+                    Side = EffectSide.Controller,
+                    NamedCard = m.Groups[1].Value.Trim(),
+                    MakesChainLink = true
+                }),
         };
 
         static int Parse(Match m, int group, int fallback)

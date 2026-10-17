@@ -127,6 +127,18 @@ namespace WRLDZ.Duel.TextEffects
                     RequiresDirectAttack = true,
                     MakesChainLink = true
                 }),
+            // Sasuke Samurai #4 (c64538655): If this card battles a monster, toss a coin and call heads or tails before damage
+            // calculation. If you call it right, destroy the opponent's monster with this effect.
+            new AtomRegistration.Atom(
+                Start + @"If this card battles a monster, toss a coin and call heads or tails before damage calculation\. " +
+                @"If you call it right, destroy the opponent's monster with this effect\." + End,
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.StartOfDamageStep,
+                    Action = EffectActionKind.CoinCallDestroyBattledMonsterOnCorrect,
+                    Side = EffectSide.Controller,
+                    MakesChainLink = true
+                }),
         };
 
         static int Parse(System.Text.RegularExpressions.Match m, int group, int fallback)

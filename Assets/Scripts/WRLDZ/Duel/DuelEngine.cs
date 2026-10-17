@@ -1314,7 +1314,7 @@ namespace WRLDZ.Duel
                 return false;
             }
 
-            var need = TcgRules.TributesRequired(card.Level);
+            var need = TcgRules.TributesRequired(card.Level, card.CardId);
             List<CardInstance> tributes = null;
             if (need > 0)
             {
@@ -1462,6 +1462,18 @@ namespace WRLDZ.Duel
             PendingTributes.Clear();
             if (!who.IsPlayer)
                 DuelPresentationPacer.HoldOpponentSummon(card.Name, asSet);
+            // Fusilier Dragon, the Dual-Mode Beast (51632798): when Summoned/Set without Tribute,
+            // its original ATK and DEF become halved (2800/2000 -> 1400/1000).
+            if (card.CardId == 51632798 && (tributes == null || tributes.Count == 0))
+            {
+                if (card.Def != null)
+                {
+                    card.Def.atk = 1400;
+                    card.Def.def = 1000;
+                }
+                Log($"{card.Name}: Summoned/Set without Tribute — base ATK/DEF become 1400/1000.");
+            }
+
             Notify();
 
             // A Summon (not a Set) first waits on its summon-negation window (Solemn Judgment / Horn of
@@ -3139,8 +3151,8 @@ namespace WRLDZ.Duel
             DestroyMonster(owner, card, byEffect);
 
         public void DestroyMonsterPublic(DuelistState owner, CardInstance card, CardInstance byEffect,
-            bool banishIfDestroyed) =>
-            DestroyMonster(owner, card, byEffect, banishIfDestroyed);
+            bool banishIfDestroyed, bool destroyedByBattle = false, bool returnToOwnerDeckTopInsteadOfGy = false) =>
+            DestroyMonster(owner, card, byEffect, banishIfDestroyed, destroyedByBattle, null, returnToOwnerDeckTopInsteadOfGy);
 
         public void DestroyMonsterByBattle(DuelistState owner, CardInstance card, CardInstance attacker) =>
             DestroyMonster(owner, card, null, false, true, attacker);
@@ -7640,7 +7652,7 @@ namespace WRLDZ.Duel
 
         void DestroyMonster(DuelistState owner, CardInstance card, CardInstance byEffect = null,
             bool banishIfDestroyed = false, bool destroyedByBattle = false,
-            CardInstance battleDestroyer = null)
+            CardInstance battleDestroyer = null, bool returnToOwnerDeckTopInsteadOfGy = false)
         {
             if (owner == null || card == null) return;
             if (destroyedByBattle && TryDestroyEquipInsteadOfBattle(owner, card))
@@ -7712,6 +7724,17 @@ namespace WRLDZ.Duel
                     // triggers that do not need the GY still activate (Slate Warrior; RedirectAndReplace, v142).
                     TextEffects.RedirectAndReplaceRuntime.ResolveDestroyedTriggersOutsideGy(this, owner, card,
                         destroyedByBattle, battleDestroyer);
+                }
+                else if (returnToOwnerDeckTopInsteadOfGy)
+                {
+                    var deckOwner = owner; // owner of the monster
+                    // Return to top of owner's deck
+                    ReturnCardToDeck(card, onTop: true, intoDeckOf: deckOwner);
+                    Log($"{card.Name} destroyed and placed on top of {deckOwner.Name}'s Deck instead of GY.");
+                    // Some triggers still fire? But the destination is deck, not GY. Most "sent to GY" triggers don't apply.
+                    // Mark as destroyed but not sent to GY.
+                    MarkSentFromFieldToGy(card, byEffect, destroyedByBattle, battleDestroyer); // keep for compatibility?
+                    TextEffects.ToonsRuntime.NotifyFaceUpCardDestroyed(this, card, wasFaceUp);
                 }
                 else
                 {

@@ -193,7 +193,7 @@ namespace WRLDZ.Duel
                     {
                         engine.ClearTributes();
                         // Auto-pick tributes if needed
-                        var need = TcgRules.TributesRequired(pick.Level);
+                        var need = TcgRules.TributesRequired(pick.Level, pick.CardId);
                         if (need > 0)
                         {
                             var tributes = me.MonstersOnField()

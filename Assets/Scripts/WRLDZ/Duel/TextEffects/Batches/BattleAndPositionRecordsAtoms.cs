@@ -199,6 +199,16 @@ namespace WRLDZ.Duel.TextEffects
                     ActivationCondition = BattleAndPositionRecordsRuntime.FaceUpAttackEffectMonsterOnField,
                     MakesChainLink = true
                 }),
+            // Mystic Swordsman LV6 (c60482781)
+            new AtomRegistration.Atom(
+                @"At the start of the Damage Step, if this card attacked a face-down Defense Position monster.*Destroy that monster.*place it on top of your opponent's Deck instead of sending it to the Graveyard",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.StartOfDamageStep,
+                    Action = EffectActionKind.DestroyAttackedFaceDownDefenseReturnToOwnerDeckTopOrGy,
+                    Side = EffectSide.Controller,
+                    MakesChainLink = true
+                }),
         };
     }
 }

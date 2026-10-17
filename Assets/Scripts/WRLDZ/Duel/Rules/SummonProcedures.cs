@@ -178,7 +178,7 @@ namespace WRLDZ.Duel.Rules
                 return r;
             }
 
-            r.TributesNeeded = TcgRules.TributesRequired(card.Level);
+            r.TributesNeeded = TcgRules.TributesRequired(card.Level, card.CardId);
             if (r.TributesNeeded > 0)
                 r.Kind = asSet ? SummonKind.TributeSet : SummonKind.TributeSummon;
 
