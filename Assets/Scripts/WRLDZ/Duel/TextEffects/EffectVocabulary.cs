@@ -906,7 +906,11 @@ namespace WRLDZ.Duel.TextEffects
                 EffectActionKind.OpponentReturnsRandomHandCardToDeckShuffle => EffectResolutionKind.ReturnToDeck,
                 EffectActionKind.CannotBeDestroyedByBattleWhileInFaceUpAttackPosition or
                     EffectActionKind.OpponentMonstersThatBattledThisCannotAttackOrChangePosition or
-                    EffectActionKind.MonstersFlippedFaceUpAfterActivationCannotChangePosition => EffectResolutionKind.Protection,
+                    EffectActionKind.OpponentMonsterThatBattledThisCannotAttackForTwoTurns or
+                    EffectActionKind.MonstersFlippedFaceUpAfterActivationCannotChangePosition or
+                    EffectActionKind.TargetTwoFaceDownSpellTrapsLockActivation or
+                    EffectActionKind.BoostHarpieLadySistersAtkAndLockTraps or
+                    EffectActionKind.NegateFlipMonsterEffectsThisDestroysByBattle => EffectResolutionKind.Protection,
                 EffectActionKind.ChangeFaceUpAttackEffectMonstersToDefenseOriginalDefZeroLock => EffectResolutionKind.ChangePosition,
                 EffectActionKind.None => EffectResolutionKind.None,
                 _ => EffectResolutionKind.UniqueException

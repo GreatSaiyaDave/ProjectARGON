@@ -209,6 +209,29 @@ namespace WRLDZ.Duel.TextEffects
                     Side = EffectSide.Controller,
                     MakesChainLink = true
                 }),
+            // Harpie Lady 3 (c54415063): An opponent's monster that battles this card cannot declare an attack during
+            // your opponent's next 2 turns.
+            new AtomRegistration.Atom(
+                @"An opponent's monster that battles this card cannot declare an attack during your opponent's next 2 turns\.?\s*$",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.OpponentMonsterThatBattledThisCannotAttackForTwoTurns,
+                    Side = EffectSide.Opponent,
+                    StaysOnField = true,
+                    MakesChainLink = false
+                }),
+            // Harpie Lady 2 (c27927359): Negate the effects of Flip monsters this card destroys by battle.
+            new AtomRegistration.Atom(
+                @"Negate the effects of Flip monsters this card destroys by battle\.?\s*$",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.NegateFlipMonsterEffectsThisDestroysByBattle,
+                    Side = EffectSide.Opponent,
+                    StaysOnField = true,
+                    MakesChainLink = false
+                }),
         };
     }
 }

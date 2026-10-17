@@ -164,6 +164,18 @@ namespace WRLDZ.Duel.TextEffects
                     StaysOnField = true,
                     MakesChainLink = false
                 }),
+            // Triangle Ecstasy Spark (c12181376): Until the end of this turn, the ATK of all "Harpie Lady Sisters"
+            // currently on the field becomes 2700, your opponent cannot activate any Trap Cards, also negate all your
+            // opponent's Trap effects on the field.
+            new AtomRegistration.Atom(
+                @"Until the end of this turn, the ATK of all ""Harpie Lady Sisters"" currently on the field becomes 2700, your opponent cannot activate any Trap Cards, also negate all your opponent's Trap effects on the field\.?\s*$",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.BoostHarpieLadySistersAtkAndLockTraps,
+                    Side = EffectSide.Controller,
+                    MakesChainLink = true
+                }),
         };
 
         /// <summary>The whole text is one of this batch's atoms (an earlier phrase template must leave it alone).</summary>

@@ -3166,6 +3166,10 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         TargetTwoFaceDownSpellTrapsLockActivation,
         /// <summary>
+        /// Triangle Ecstasy Spark (c12181376): boost Harpie Lady Sisters ATK to 2700, lock opponent traps.
+        /// </summary>
+        BoostHarpieLadySistersAtkAndLockTraps,
+        /// <summary>
         /// NormalMonsterSpells batch — Delta Attacker (c39719977): each face-up non-Token Normal Monster you control with 2
         /// others of its name you control can attack directly this turn (Lua EFFECT_DIRECT_ATTACK per monster,
         /// RESETS_STANDARD_PHASE_END: <see cref="CardInstance.DirectAttackThisTurn"/>;
@@ -3236,6 +3240,15 @@ namespace WRLDZ.Duel.TextEffects
         /// Attack Position (<see cref="BattleAndPositionRecordsRuntime.NoteBattled"/>).
         /// </summary>
         OpponentMonstersThatBattledThisCannotAttackOrChangePosition,
+        /// <summary>
+        /// BattleAndPositionRecords batch — Harpie Lady 3 (c54415063): an opponent's monster that battles this card
+        /// cannot declare an attack during your opponent's next 2 turns.
+        /// </summary>
+        OpponentMonsterThatBattledThisCannotAttackForTwoTurns,
+        /// <summary>
+        /// Battle destroy trigger: negate effects of Flip monsters this card destroys by battle (Harpie Lady 2).
+        /// </summary>
+        NegateFlipMonsterEffectsThisDestroysByBattle,
         /// <summary>
         /// BattleAndPositionRecords batch — Judgment of the Desert (c4869446, Continuous Trap: EVENT_CHANGE_POS SetCardTarget +
         /// FIELD EFFECT_CANNOT_CHANGE_POSITION on both fields): every monster flipped face-up after this card's activation
