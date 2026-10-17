@@ -176,6 +176,17 @@ namespace WRLDZ.Duel.TextEffects
                     Side = EffectSide.Controller,
                     MakesChainLink = true
                 }),
+            // Fuh-Rin-Ka-Zan (c1781310): choice — Discard 2 random cards from your opponent's hand.
+            new AtomRegistration.Atom(
+                @"Discard (\d+) random cards? from your opponent's hand",
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.DiscardRandomFromOpponentHand,
+                    Side = EffectSide.Opponent,
+                    Amount = Pos(m, 1),
+                    MakesChainLink = true
+                }),
         };
 
         /// <summary>The whole text is one of this batch's atoms (an earlier phrase template must leave it alone).</summary>
