@@ -202,6 +202,7 @@ namespace WRLDZ.Duel.TextEffects
                     EffectActionKind.OpponentShufflesHandThenDraws or
                     EffectActionKind.DrawWhenTributeSummonedWithTwoPlus => EffectResolutionKind.Draw,
                 EffectActionKind.DiscardRandomFromOpponentHand => EffectResolutionKind.Discard,
+                EffectActionKind.DrawOrDiscardRandomFromOpponentHand => EffectResolutionKind.Draw,
                 EffectActionKind.AddFromGyToHand or
                     EffectActionKind.AddFromDeckToHand or
                     EffectActionKind.AddNamedFromDeckToHand or

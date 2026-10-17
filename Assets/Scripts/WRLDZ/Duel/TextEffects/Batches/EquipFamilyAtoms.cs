@@ -128,6 +128,19 @@ namespace WRLDZ.Duel.TextEffects
                     TakeControlOfTarget = true,
                     MakesChainLink = true
                 }),
+            // Necklace of Command (c48576971): When a monster you control that's equipped with this card is destroyed by battle,
+            // and this card is sent to the Graveyard, you can either draw 1 card or discard 1 random card from your opponent's hand.
+            new AtomRegistration.Atom(
+                @"When a monster you control that's equipped with this card is destroyed by battle, and this card is sent to the Graveyard.*Draw 1 card.*Discard 1 random card",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.SentFromFieldToGy,
+                    Action = EffectActionKind.DrawOrDiscardRandomFromOpponentHand,
+                    Side = EffectSide.Controller,
+                    Amount = 1,
+                    MakesChainLink = true,
+                    IsOptional = true
+                }),
         };
 
         static int Pos(Match m, int group) =>

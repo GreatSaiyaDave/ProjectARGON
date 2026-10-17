@@ -274,6 +274,8 @@ namespace WRLDZ.Duel.TextEffects
         DiscardSelfNoBattleDamageThisBattle,
         /// <summary>Discard Amount random cards from the opponent's hand (empty hand = no-op).</summary>
         DiscardRandomFromOpponentHand,
+        /// <summary>Draw 1 or discard 1 random card from opponent's hand (Necklace of Command trigger).</summary>
+        DrawOrDiscardRandomFromOpponentHand,
         /// <summary>While face-up: matching monsters gain Amount ATK and DefAmount DEF.</summary>
         ContinuousGainAtkDef,
         /// <summary>While face-up: matching monsters lose Amount Levels (hand and/or field).</summary>
