@@ -3263,6 +3263,8 @@ namespace WRLDZ.Duel.TextEffects
         /// Battle destroy trigger: negate effects of Flip monsters this card destroys by battle (Harpie Lady 2).
         /// </summary>
         NegateFlipMonsterEffectsThisDestroysByBattle,
+        /// <summary>Tragedy: destroy all opponent Defense Position monsters when their Attack Position monsters change to Defense Position.</summary>
+        DestroyAllOppDefenseWhenOppAttackBecomesDefense,
         /// <summary>
         /// BattleAndPositionRecords batch — Judgment of the Desert (c4869446, Continuous Trap: EVENT_CHANGE_POS SetCardTarget +
         /// FIELD EFFECT_CANNOT_CHANGE_POSITION on both fields): every monster flipped face-up after this card's activation

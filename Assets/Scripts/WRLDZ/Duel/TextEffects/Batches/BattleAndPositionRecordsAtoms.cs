@@ -232,6 +232,17 @@ namespace WRLDZ.Duel.TextEffects
                     StaysOnField = true,
                     MakesChainLink = false
                 }),
+            // Tragedy (c35686188): When a face-up Attack Position monster(s) your opponent controls is changed to face-up Defense Position:
+            // Destroy all Defense Position monsters your opponent controls.
+            new AtomRegistration.Atom(
+                @"When a face-up Attack Position monster.*your opponent controls.*changed to face-up Defense Position: Destroy all Defense Position monsters your opponent controls\.?\s*$",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.OpponentNormalOrFlipSummon,
+                    Action = EffectActionKind.DestroyAllOppDefenseWhenOppAttackBecomesDefense,
+                    Side = EffectSide.Opponent,
+                    MakesChainLink = true
+                }),
         };
     }
 }

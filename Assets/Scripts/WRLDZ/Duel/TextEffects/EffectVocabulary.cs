@@ -917,6 +917,7 @@ namespace WRLDZ.Duel.TextEffects
                     EffectActionKind.TargetTwoFaceDownSpellTrapsLockActivation or
                     EffectActionKind.BoostHarpieLadySistersAtkAndLockTraps or
                     EffectActionKind.NegateFlipMonsterEffectsThisDestroysByBattle => EffectResolutionKind.Protection,
+                EffectActionKind.DestroyAllOppDefenseWhenOppAttackBecomesDefense => EffectResolutionKind.Destroy,
                 EffectActionKind.ChangeFaceUpAttackEffectMonstersToDefenseOriginalDefZeroLock => EffectResolutionKind.ChangePosition,
                 EffectActionKind.None => EffectResolutionKind.None,
                 _ => EffectResolutionKind.UniqueException
