@@ -141,6 +141,16 @@ namespace WRLDZ.Duel.TextEffects
                     MakesChainLink = true,
                     IsOptional = true
                 }),
+            // Flint (c75560629): The equipped monster loses 300 ATK and cannot change its battle position or declare an attack.
+            new AtomRegistration.Atom(
+                @"The equipped monster loses 300 ATK and cannot change its battle position or declare an attack\.?\s*$",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.EquippedLosesAtkAndCannotAttackChangePos,
+                    Amount = -300,
+                    MakesChainLink = false
+                }),
             // Ballista of Rampart Smashing (c242146): If the equipped monster attacks a face-down Defense Position monster,
             // it gains 1500 ATK during damage calculation only.
             new AtomRegistration.Atom(

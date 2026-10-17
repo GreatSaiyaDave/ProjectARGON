@@ -278,6 +278,8 @@ namespace WRLDZ.Duel.TextEffects
         DrawOrDiscardRandomFromOpponentHand,
         /// <summary>Ballista of Rampart Smashing: equipped monster gains 1500 ATK during damage calculation only when attacking face-down defense.</summary>
         EquippedGainsAtkWhenAttackingFaceDownDefense,
+        /// <summary>Flint: equipped monster loses 300 ATK and cannot change position or attack.</summary>
+        EquippedLosesAtkAndCannotAttackChangePos,
         /// <summary>While face-up: matching monsters gain Amount ATK and DefAmount DEF.</summary>
         ContinuousGainAtkDef,
         /// <summary>While face-up: matching monsters lose Amount Levels (hand and/or field).</summary>
