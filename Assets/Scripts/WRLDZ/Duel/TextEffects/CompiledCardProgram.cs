@@ -3161,6 +3161,11 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         DestroyThisOnYourNthStandbyAfterActivation,
         /// <summary>
+        /// SpellTrapSealsAndImmunity batch — Xing Zhen Hu (c76515293): target 2 face-down Spell/Trap Cards on the field;
+        /// those cards cannot be activated while this card remains face-up and they remain targeted (continuous lock).
+        /// </summary>
+        TargetTwoFaceDownSpellTrapsLockActivation,
+        /// <summary>
         /// NormalMonsterSpells batch — Delta Attacker (c39719977): each face-up non-Token Normal Monster you control with 2
         /// others of its name you control can attack directly this turn (Lua EFFECT_DIRECT_ATTACK per monster,
         /// RESETS_STANDARD_PHASE_END: <see cref="CardInstance.DirectAttackThisTurn"/>;

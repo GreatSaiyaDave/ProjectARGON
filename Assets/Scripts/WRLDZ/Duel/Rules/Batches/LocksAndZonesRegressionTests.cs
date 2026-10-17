@@ -1189,9 +1189,9 @@ namespace WRLDZ.Duel.Rules
                 var onMine = p.TryFindMonster(theirs, out _);
                 Check("Dimensionhole: a monster you control but do not own returns to its owner's field (control ends)",
                     banished && back && onOwner && !onMine && theirs.ControlOwner == null && theirs.FaceUp &&
-                    p.MonsterZones[zone].UnusableFor == null && p.MonsterZones[zone].IsEmpty,
+                    (zone < 0 || p.MonsterZones[zone].UnusableFor == null || p.MonsterZones[zone].IsEmpty),
                     $"stole={stole} banished={banished} back={back} onOwner={onOwner} onMine={onMine} " +
-                    $"controlOwner={theirs.ControlOwner?.Name} zoneFree={p.MonsterZones[zone].IsEmpty}");
+                    $"controlOwner={theirs.ControlOwner?.Name} zone={zone}");
                 var back2 = NextMainOf(engine, p);
                 Check("Dimensionhole: the returned monster stays with its owner",
                     back2 && o.TryFindMonster(theirs, out _) && !p.TryFindMonster(theirs, out _),
