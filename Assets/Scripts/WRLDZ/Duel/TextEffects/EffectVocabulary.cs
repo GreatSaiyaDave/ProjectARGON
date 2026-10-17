@@ -203,6 +203,7 @@ namespace WRLDZ.Duel.TextEffects
                     EffectActionKind.DrawWhenTributeSummonedWithTwoPlus => EffectResolutionKind.Draw,
                 EffectActionKind.DiscardRandomFromOpponentHand => EffectResolutionKind.Discard,
                 EffectActionKind.DrawOrDiscardRandomFromOpponentHand => EffectResolutionKind.Draw,
+                EffectActionKind.EquippedGainsAtkWhenAttackingFaceDownDefense => EffectResolutionKind.ModifyStats,
                 EffectActionKind.AddFromGyToHand or
                     EffectActionKind.AddFromDeckToHand or
                     EffectActionKind.AddNamedFromDeckToHand or

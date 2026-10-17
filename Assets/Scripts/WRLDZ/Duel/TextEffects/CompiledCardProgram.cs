@@ -276,6 +276,8 @@ namespace WRLDZ.Duel.TextEffects
         DiscardRandomFromOpponentHand,
         /// <summary>Draw 1 or discard 1 random card from opponent's hand (Necklace of Command trigger).</summary>
         DrawOrDiscardRandomFromOpponentHand,
+        /// <summary>Ballista of Rampart Smashing: equipped monster gains 1500 ATK during damage calculation only when attacking face-down defense.</summary>
+        EquippedGainsAtkWhenAttackingFaceDownDefense,
         /// <summary>While face-up: matching monsters gain Amount ATK and DefAmount DEF.</summary>
         ContinuousGainAtkDef,
         /// <summary>While face-up: matching monsters lose Amount Levels (hand and/or field).</summary>

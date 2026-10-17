@@ -141,9 +141,21 @@ namespace WRLDZ.Duel.TextEffects
                     MakesChainLink = true,
                     IsOptional = true
                 }),
+            // Ballista of Rampart Smashing (c242146): If the equipped monster attacks a face-down Defense Position monster,
+            // it gains 1500 ATK during damage calculation only.
+            new AtomRegistration.Atom(
+                @"If the equipped monster attacks a face-down Defense Position monster, it gains 1500 ATK during damage calculation only\.?\s*$",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.EquippedGainsAtkWhenAttackingFaceDownDefense,
+                    Amount = 1500,
+                    MakesChainLink = false
+                }),
         };
 
         static int Pos(Match m, int group) =>
             int.TryParse(m.Groups[group].Value, out var n) && n > 0 ? n : 0;
+
     }
 }
