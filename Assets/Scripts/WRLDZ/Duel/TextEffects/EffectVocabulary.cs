@@ -206,6 +206,7 @@ namespace WRLDZ.Duel.TextEffects
                 EffectActionKind.DiscardRandomThenDamageByLevelIfMonster => EffectResolutionKind.Damage,
                 EffectActionKind.EquippedGainsAtkWhenAttackingFaceDownDefense => EffectResolutionKind.ModifyStats,
                 EffectActionKind.EquippedLosesAtkAndCannotAttackChangePos => EffectResolutionKind.ModifyStats,
+                EffectActionKind.ReEquipWhenEquippedMonsterDestroyed => EffectResolutionKind.Equip,
                 EffectActionKind.AddFromGyToHand or
                     EffectActionKind.AddFromDeckToHand or
                     EffectActionKind.AddNamedFromDeckToHand or
