@@ -276,6 +276,8 @@ namespace WRLDZ.Duel.TextEffects
         DiscardRandomFromOpponentHand,
         /// <summary>Draw 1 or discard 1 random card from opponent's hand (Necklace of Command trigger).</summary>
         DrawOrDiscardRandomFromOpponentHand,
+        /// <summary>Thestalos: if the discarded card was a Monster Card, inflict damage equal to its original Level x 100.</summary>
+        DiscardRandomThenDamageByLevelIfMonster,
         /// <summary>Ballista of Rampart Smashing: equipped monster gains 1500 ATK during damage calculation only when attacking face-down defense.</summary>
         EquippedGainsAtkWhenAttackingFaceDownDefense,
         /// <summary>Flint: equipped monster loses 300 ATK and cannot change position or attack.</summary>

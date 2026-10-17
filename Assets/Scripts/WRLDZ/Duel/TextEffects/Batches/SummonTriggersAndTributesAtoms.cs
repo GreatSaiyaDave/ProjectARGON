@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace WRLDZ.Duel.TextEffects
 {
     /// <summary>
@@ -144,6 +146,21 @@ namespace WRLDZ.Duel.TextEffects
                     TributedLevelOffset = 0,
                     MakesChainLink = true
                 }),
+            // Thestalos the Firestorm Monarch (c26205777): If this card is Tribute Summoned: Discard 1 random card from
+            // your opponent's hand, then, if it was a Monster Card, inflict damage to your opponent equal to its original Level x 100.
+            new AtomRegistration.Atom(
+                Start + @"If this card is Tribute Summoned: Discard (\d+) random cards? from your opponent's hand, then, if it was a Monster Card, inflict damage to your opponent equal to its original Level x (\d+)\.?" + End,
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.ThisCardSummoned,
+                    Action = EffectActionKind.DiscardRandomThenDamageByLevelIfMonster,
+                    Side = EffectSide.Opponent,
+                    Amount = Pos(m, 1),
+                    MakesChainLink = true
+                }),
         };
+
+        static int Pos(Match m, int group) =>
+            int.TryParse(m.Groups[group].Value, out var n) && n > 0 ? n : 0;
     }
 }
