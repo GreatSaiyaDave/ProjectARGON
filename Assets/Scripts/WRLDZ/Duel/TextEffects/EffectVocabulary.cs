@@ -681,6 +681,7 @@ namespace WRLDZ.Duel.TextEffects
                 // effect (and destroy that card); Freed searches instead of the draw; Ha Des / Twin-Headed Wolf negate
                 // monsters destroyed by battle; Lesser Fiend banishes them.
                 EffectActionKind.NegateSpellTrapEffectsThatTargetAndDestroy => EffectResolutionKind.NegateActivation,
+                EffectActionKind.NegateOpponentSpellEffectsThatTargetThis => EffectResolutionKind.NegateActivation,
                 EffectActionKind.AddFromDeckInsteadOfNormalDraw => EffectResolutionKind.Search,
                 EffectActionKind.NegateEffectsOfMonstersDestroyedByBattle => EffectResolutionKind.Protection,
                 EffectActionKind.BanishMonstersDestroyedByBattleWithThis => EffectResolutionKind.Banish,

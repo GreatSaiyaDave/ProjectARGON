@@ -1790,6 +1790,10 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         NegateSpellTrapEffectsThatTargetAndDestroy,
         /// <summary>
+        /// Negate opponent's Spell effects that target this card (Silent Swordsman LV3).
+        /// </summary>
+        NegateOpponentSpellEffectsThatTargetThis,
+        /// <summary>
         /// NegationMonsters batch (v161) — Freed the Matchless General (ContinuousWhileFaceUp marker): "During your Draw
         /// Phase, instead of conducting your normal draw: You can add 1 Level N or lower X-Type monster from your Deck to
         /// your hand. This card must be face-up on the field to activate and to resolve this effect." (ygopro EVENT_PREDRAW

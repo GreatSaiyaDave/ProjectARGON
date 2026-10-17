@@ -153,6 +153,17 @@ namespace WRLDZ.Duel.TextEffects
                     TargetCount = 1,
                     MakesChainLink = true
                 }),
+            // Silent Swordsman LV3 (c1995985): Negate your opponent's Spell effects that target this card.
+            new AtomRegistration.Atom(
+                @"Negate your opponent's Spell effects that target this card",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.NegateOpponentSpellEffectsThatTargetThis,
+                    Side = EffectSide.Opponent,
+                    AffectsThisCardOnly = true,
+                    MakesChainLink = false
+                }),
         };
     }
 }
