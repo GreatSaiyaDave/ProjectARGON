@@ -627,5 +627,10 @@ shrunk their 4096² textures to 1024–2048, dropped the normal maps and pushed 
   keep their baked keys and are left alone.
 - **Verified unchanged:** the morph bases match the build-tree bodies (`argon_avatar_<sex>.fbx`) to 0.0000 mm in
   every vertex, normal, UV and bone; the 161 shells the bake re-exported match their originals to 0.0003 mm.
-- **Sizes:** full-density FBX 3–40 MB each (~1.6 GB for the set), ~15 MB of JPEG per piece. Beyond what the GitHub
-  workflow can carry in one push, so the binaries live in the working tree uncommitted until the owner decides.
+- **Textures per body:** a sculpt that exists for both bodies shares `albedo_<id>` / `normal_<id>`; a body-specific
+  sculpt (Yugi's buttoned jacket on the female body shares `shirt_yugi_3d` with the male jacket but is another mesh)
+  gets `albedo_<id>_<sex>` / `normal_<id>_<sex>`, which `GraftCloth` prefers. One Meshy shoe sculpt is usually a single
+  shoe: the tool mirrors it for the other foot; shoes are placed, bound and hide-mapped with the feet posed flat (the
+  GLB rest pose stands on tiptoe) and un-posed through the rig.
+- **Sizes:** full-density FBX 3–63 MB each (1.9 GB for the set), 716 MB of JPEG. Beyond what the GitHub workflow can
+  carry in one push, so the binaries live in the Editor project's working tree uncommitted until the owner decides.
