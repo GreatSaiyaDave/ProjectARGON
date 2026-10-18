@@ -165,11 +165,13 @@ namespace WRLDZ.Duel.TextEffects
                 {
                     Timing = EffectTiming.ThisCardSummoned,
                     Action = EffectActionKind.PlaceCounterOnThisCard,
+                    Side = EffectSide.Controller,
                     Amount = Pos(m, 1),
                     MakesChainLink = true
                 }),
 
         };
+
 
         static int Pos(Match m, int group) =>
             int.TryParse(m.Groups[group].Value, out var n) && n > 0 ? n : 0;

@@ -238,6 +238,17 @@ namespace WRLDZ.Duel.TextEffects
                     IsPsctTarget = true,
                     MakesChainLink = true
                 }),
+            // B.E.S. Big Core (c14148099): If this card is Normal Summoned: Place 3 counters on it.
+            new AtomRegistration.Atom(
+                @".*Place (\d+) counters.*this card",
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.ThisCardSummoned,
+                    Action = EffectActionKind.PlaceCounterOnThisCard,
+                    Side = EffectSide.Controller,
+                    Amount = int.Parse(m.Groups[1].Value),
+                    MakesChainLink = true
+                }),
         };
 
         /// <summary>The whole text is one of this batch's atoms (an earlier phrase template must leave it alone).</summary>
