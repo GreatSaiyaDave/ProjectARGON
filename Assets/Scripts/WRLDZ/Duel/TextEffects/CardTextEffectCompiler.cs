@@ -16,7 +16,7 @@ namespace WRLDZ.Duel.TextEffects
     /// </summary>
     public static class CardTextEffectCompiler
     {
-        public const int Version = 207; /* v207: seed freshness - EffectActionKind (16 members) and EffectZoneFilter (1) had been inserted mid-enum since v192 without a matching re-export, and --export-seed wrote the stale same-Version entries back, so the shipped v205 seed decoded e.g. Magical Labyrinth's Special Summon as InflictDamageHalfTributedAtk (Wall Shadow, Harpie Lady Sisters and Spirit Message A/I/L/N fell to Unimplemented). Those members moved to the enum tails (every v177..v205 int is back), the seed and disk cache now carry SeedEnumLayout (a file written under another layout is skipped), --export-seed compiles fresh, and SeedFreshnessRegressionTests fails when a same-Version seed differs from a fresh compile. */ /* v205: RDS batch 6 - Machine Duplication (63995093, a 1-shot Spell: target 1 Machine monster you control with 500 or less ATK; Special Summon up to 2 monsters from your Deck with the same name as that face-up monster). New clause fields SummonUpTo and SummonSameNameAsTarget on EffectClause, producing a multi-copy loop in TrySpecialSummonFromDeck, capped by a free zone. Hint<rfl:parameter name=" (no named host) for the target monster - the same typed-Union-style fictive filter, here on a Special-Summon verb.
+        public const int Version = 208; /* v208: QC of the 10-16..10-18 opencode RDS atoms - Fuh-Rin-Ka-Zan bullet atoms and the B.E.S. counter atom anchored (they had added bare draws/discards/counters to 3-Hump Lacooda, Bee List Soldier, Wattberyx, X-Saber Airbellum, Miracle Jurassic Egg and 20 more); hollow actions given exact runtime arms (Xing Zhen Hu, Harpie Lady 2/3, Ballista of Rampart Smashing, Thestalos, Riryoku, Homunculus) or failed closed (Cursed Fig, Tragedy, Covering Fire, Chain Burst, Sasuke Samurai #4, Necklace of Command, Flint, Triangle Ecstasy Spark via EffectVocabulary.HasNoRuntime); Silent Swordsman LV3 duplicate Standby clause removed (CoveredBySpans) and its negate failed closed; Mystic Swordsman LV6 failed closed; Dekoichi counts S/T-zone Bokoichi; Ojama Trio test fixed. Tools/CardCompile/handler_guard.py. */ /* v207: seed freshness - EffectActionKind (16 members) and EffectZoneFilter (1) had been inserted mid-enum since v192 without a matching re-export, and --export-seed wrote the stale same-Version entries back, so the shipped v205 seed decoded e.g. Magical Labyrinth's Special Summon as InflictDamageHalfTributedAtk (Wall Shadow, Harpie Lady Sisters and Spirit Message A/I/L/N fell to Unimplemented). Those members moved to the enum tails (every v177..v205 int is back), the seed and disk cache now carry SeedEnumLayout (a file written under another layout is skipped), --export-seed compiles fresh, and SeedFreshnessRegressionTests fails when a same-Version seed differs from a fresh compile. */ /* v205: RDS batch 6 - Machine Duplication (63995093, a 1-shot Spell: target 1 Machine monster you control with 500 or less ATK; Special Summon up to 2 monsters from your Deck with the same name as that face-up monster). New clause fields SummonUpTo and SummonSameNameAsTarget on EffectClause, producing a multi-copy loop in TrySpecialSummonFromDeck, capped by a free zone. Hint<rfl:parameter name=" (no named host) for the target monster - the same typed-Union-style fictive filter, here on a Special-Summon verb.
 
 
         
@@ -2800,6 +2800,19 @@ namespace WRLDZ.Duel.TextEffects
                 unparsed.Add("(a face-up Quick Effect needs a Continuous Spell/Trap Card)");
                 prog.SetUnparsed(unparsed);
                 prog.FullyCompiled = false;
+            }
+
+            // v208 QC "HollowActions": a clause whose action no runtime reads would make the card Implemented and inert
+            // (EffectVocabulary.HasNoRuntime); the program fails closed.
+            if (prog.FullyCompiled)
+            {
+                var hollow = clauses.Find(c => c != null && EffectVocabulary.HasNoRuntime(c.Action));
+                if (hollow != null)
+                {
+                    unparsed.Add($"({hollow.Action} has no runtime)");
+                    prog.SetUnparsed(unparsed);
+                    prog.FullyCompiled = false;
+                }
             }
 
             return prog;

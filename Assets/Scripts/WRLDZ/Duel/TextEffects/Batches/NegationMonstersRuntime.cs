@@ -109,8 +109,7 @@ namespace WRLDZ.Duel.TextEffects
                 foreach (var protector in side.MonstersOnField().ToList())
                 {
                     if (!Active(engine, side, protector)) continue;
-                    foreach (var clause in Markers(protector, EffectActionKind.NegateSpellTrapEffectsThatTargetAndDestroy).Concat(
-                        Markers(protector, EffectActionKind.NegateOpponentSpellEffectsThatTargetThis)))
+                    foreach (var clause in Markers(protector, EffectActionKind.NegateSpellTrapEffectsThatTargetAndDestroy))
                     {
                         if (!RespondsTo(clause, def)) continue;
                         // Gora Turtle of Illusion (Lua s.disop: rp==tp returns): only the opponent's effects.
@@ -206,8 +205,7 @@ namespace WRLDZ.Duel.TextEffects
                 foreach (var protector in side.MonstersOnField())
                 {
                     if (!Active(engine, side, protector)) continue;
-                    foreach (var clause in Markers(protector, EffectActionKind.NegateSpellTrapEffectsThatTargetAndDestroy).Concat(
-                        Markers(protector, EffectActionKind.NegateOpponentSpellEffectsThatTargetThis)))
+                    foreach (var clause in Markers(protector, EffectActionKind.NegateSpellTrapEffectsThatTargetAndDestroy))
                     foreach (var holder in new[] { engine.Player, engine.Opponent })
                     foreach (var st in holder.SpellTrapsOnField())
                     {

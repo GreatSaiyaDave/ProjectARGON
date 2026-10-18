@@ -34,6 +34,8 @@ export const meta = {
 //   extraGroups — [{id,title,cards,notes}] ENGINE-SUBSYSTEM groups built in the same batch (forward-looking engine work:
 //                 the cards they unblock are the acceptance tests). The planner keeps them and adds worklist cards that
 //                 need those subsystems to them instead of skipping those cards.
+//   foreignFails — substrings of suite check names that fail in the real checkout because of OTHER sessions' uncommitted
+//                 work (e.g. ['SeedFreshness', 'Toons: AI']); the baseline and integration gates accept exactly those.
 //   prefilled   — {groupId: <implementer result>} finished implementer results to reuse on a resume (from journal.jsonl
 //                 'result' lines). Without this, a finished implementer that comes after a failed one in the call order
 //                 is re-run, because the resume cache only replays the unbroken prefix of calls (~0.5–1M tokens each).
@@ -50,6 +52,7 @@ const STRESS = A.stressDuels || 250
 const HELD = new Set(A.holdGroups || [])
 const PRIOR = A.priorTrees || {}
 const PRE = A.prefilled || {}
+const FOREIGN = A.foreignFails || []
 
 const CONTEXT = `
 You are working on Project ARGON (Unity 6 Yu-Gi-Oh! TCG rules engine, C#) at ${REPO}.
@@ -98,8 +101,12 @@ Hard rules:
   (other sessions share that Editor). Do not edit UI, Presentation or Editor files (other sessions own them): a card that
   needs a UI flow the engine does not already drive through PendingActivation / TargetKind must be deferred.
 - Tools: bash ${TOOLS}/headless.sh <tree> --quiet | --card "<name>" | --status-dump ; python3 ${TOOLS}/status_diff.py ;
-  python3 ${TOOLS}/enum_guard.py --repo <tree> ; python3 ${TOOLS}/worklist.py <status.tsv> --cards "A;B" --md .
-`
+  python3 ${TOOLS}/enum_guard.py --repo <tree> ; python3 ${TOOLS}/handler_guard.py --repo <tree> (every emitted action has a
+  runtime reader, every batch Atoms / RegressionTests file is registered) ; python3 ${TOOLS}/worklist.py <status.tsv> --cards "A;B" --md .
+${FOREIGN.length ? `- KNOWN FOREIGN FAILURES: the real checkout's suite fails these checks because of OTHER sessions' uncommitted work (never
+  fix their files): ${FOREIGN.map(x => JSON.stringify(x)).join(', ')}. Wherever a gate says "→ PASS" / "result=PASS", read it as:
+  every FAIL line contains one of those strings and nothing else fails (copies made from the working tree may show them too).
+` : ''}`
 
 const PREP_SCHEMA = {
   type: 'object',
@@ -305,7 +312,7 @@ ROLE: batch preparer (run "${TAG}"). You set up the run; you edit nothing in ${R
    must never start on a red engine. Also run bash ${TOOLS}/csc_overlay.sh ${REPO} (whole Unity project compile): report
    cscOk and, if it fails, which files (another session may be mid-edit outside Duel/ — that is not an abort).
 3. bash ${TOOLS}/headless.sh ${REPO} --status-dump > <runDir>/status_before.tsv ; python3 ${TOOLS}/version_bump.py --show.
-   python3 ${TOOLS}/enum_guard.py (report).
+   python3 ${TOOLS}/enum_guard.py and python3 ${TOOLS}/handler_guard.py --repo ${REPO} (report both).
 4. Worklist → <runDir>/worklist.json and worklist.md (python3 ${TOOLS}/worklist.py <runDir>/status_before.tsv …):
    ${cardsArg ? `--cards "${cardsArg.join(';')}" (explicit cards; report any name not found)` :
      A.sets ? `--sets ${A.sets.join(',')}` :
@@ -415,7 +422,8 @@ Steps:
    - bash ${TOOLS}/headless.sh $T --status-dump > $T/../${g.id}.status.tsv &&
      python3 ${TOOLS}/status_diff.py ${RUN}/status_before.tsv $T/../${g.id}.status.tsv → no losses; any card outside this
      group whose status changed must be listed with why it is correct (otherwise tighten your regex);
-   - python3 ${TOOLS}/enum_guard.py --repo $T → 0 errors.
+   - python3 ${TOOLS}/enum_guard.py --repo $T → 0 errors; python3 ${TOOLS}/handler_guard.py --repo $T → no HOLLOW action and no
+     UNREGISTERED file of this group (a hollow action = a card Implemented that does nothing).
 6. A card that cannot be made right without a whole missing subsystem stays exactly as it was (fail closed), with a precise
    reason. Deferring beats a wrong card — but try: most cards need one modest action + runtime arm.
 7. Patch and notes (do NOT commit): cd $T && git add -A && git diff --cached --binary > ${RUN}/patches/${g.id}.patch ;
@@ -519,7 +527,8 @@ and the new one is the correct rule, update the test and say why. List every ada
    touch CardTextEffectCompiler.Version; if it does, discard that hunk.
 3. Verify in ${REPO}: bash ${TOOLS}/headless.sh ${REPO} --quiet → PASS; bash ${TOOLS}/csc_overlay.sh ${REPO} → OK and
    bash ${TOOLS}/csc_overlay.sh ${REPO} --release → OK (if either fails ONLY in files this patch does not touch, another session is
-   mid-edit: note it, do not fix their files); python3 ${TOOLS}/enum_guard.py → 0 errors;
+   mid-edit: note it, do not fix their files); python3 ${TOOLS}/enum_guard.py → 0 errors; python3 ${TOOLS}/handler_guard.py
+   --repo ${REPO} → nothing new for this group (no HOLLOW action, its Atoms in BatchAtomSets, its tests in CardBatchRegressionTests.Run);
    bash ${TOOLS}/headless.sh ${REPO} --status-dump > ${RUN}/status_after_${g.id}.tsv &&
    python3 ${TOOLS}/status_diff.py ${prevStatus} ${RUN}/status_after_${g.id}.tsv → no losses, and this group's cards Implemented
    (pass --allow with the ids PEER_LANDINGS.md lists for landings made since ${prevStatus} was written).
@@ -650,7 +659,8 @@ Compiler: opened at v${trees.newVersion} (was v${trees.oldVersion || prep.compil
    "/* v${trees.newVersion}: card batch ${TAG} — <group>: <cards>; … */". ${landed.length ? '' : 'Nothing landed: set the Version back to the old number instead (python3 edit), since compiler output did not change, and restore the seed from ' + RUN + '/seed_before.json.'}
 2. ${landed.length ? `bash ${TOOLS}/headless.sh ${REPO} --export-seed ; python3 ${TOOLS}/seed_diff.py ${RUN}/seed_before.json ${REPO}/Assets/StreamingAssets/WRLDZ/compiled_effects_seed_v1.json > ${RUN}/seed_diff.txt` : 'skip the seed export'}
 3. Final gate: bash ${TOOLS}/headless.sh ${REPO} --quiet → PASS; bash ${TOOLS}/csc_overlay.sh ${REPO} and --release → OK;
-   python3 ${TOOLS}/enum_guard.py → 0 errors; bash ${TOOLS}/headless.sh ${REPO} --status-dump > ${RUN}/status_after.tsv ;
+   python3 ${TOOLS}/enum_guard.py → 0 errors; python3 ${TOOLS}/handler_guard.py --repo ${REPO} → nothing from this batch;
+   bash ${TOOLS}/headless.sh ${REPO} --status-dump > ${RUN}/status_after.tsv ;
    python3 ${TOOLS}/status_diff.py ${RUN}/status_before.tsv ${RUN}/status_after.tsv (put its table in statusTable; peer
    landings listed in ${RUN}/PEER_LANDINGS.md, if it exists, go in --allow and in the report as "landed by other sessions").
 4. Docs:

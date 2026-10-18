@@ -6569,8 +6569,14 @@ namespace WRLDZ.Duel.Rules
 
                 var dekoichiDef = db.Get(87621407);
                 var dekoichiProg = dekoichiDef != null ? CardTextEffectCompiler.Compile(dekoichiDef) : null;
-                Check("Dekoichi scaled extra-draw stays leftover (not invented)",
-                    dekoichiProg != null && !dekoichiProg.FullyCompiled);
+                // QC LvAndPins (2026-10-18): Dekoichi now compiles (4d0c17c4b): draw 1 + 1 per face-up "Bokoichi the
+                // Freightening Car" its controller controls, counted at resolution (duels: QcLvAndPinsRegressionTests).
+                Check("Dekoichi scaled extra-draw compiles per face-up Bokoichi (not a flat number)",
+                    dekoichiProg != null && dekoichiProg.FullyCompiled && dekoichiProg.ClauseList.Count == 1 &&
+                    dekoichiProg.ClauseList.TrueForAll(c => c != null && c.Timing == EffectTiming.Flip &&
+                        c.Action == EffectActionKind.DrawOnePlusPerFaceUpNamed &&
+                        c.NamedCard == "Bokoichi the Freightening Car" && c.Side == EffectSide.Controller),
+                    dekoichiProg == null ? "null" : $"full={dekoichiProg.FullyCompiled} n={dekoichiProg.ClauseList.Count}");
 
                 var ladyDef = db.Get(90147755);
                 var ladyProg = ladyDef != null ? CardTextEffectCompiler.Compile(ladyDef) : null;

@@ -5824,6 +5824,10 @@ namespace WRLDZ.Duel
             // Insect Soldiers of the Sky (GitHub lineage): ATK gain during the Damage Step only.
             // Assign first; the local-lineage attribute bonus below accumulates onto it.
             attacker.DamageStepAtkBonus = TextEffects.TextEffectRuntime.DamageStepAtkBonus(attacker, targetOrNull);
+            // v208 QC (QcHollowActionsRuntime): Ballista of Rampart Smashing — attacking a monster that was Set when the
+            // Damage Step started.
+            attacker.DamageStepAtkBonus += TextEffects.QcHollowActionsRuntime.EquipFaceDownDefenseBonus(
+                this, attacker, targetOrNull, flippedByBattle);
             if (attacker.DamageStepAtkBonus > 0)
                 Log($"{attacker.Name} gains {attacker.DamageStepAtkBonus} ATK during this Damage Step.");
             if (targetOrNull != null)
@@ -6000,6 +6004,8 @@ namespace WRLDZ.Duel
             // Spell itself resolves to the GY and NegationMonstersRuntime's marker path does not apply.
             TextEffects.AttackObligationsRuntime.NoteBattled(this, who, opp, attacker, targetOrNull,
                 calc.DestroyDefender);
+            // v208 QC (QcHollowActionsRuntime): Harpie Lady 3 — the monster that battled her cannot attack (EVENT_BATTLED).
+            TextEffects.QcHollowActionsRuntime.OnBattled(this, who, opp, attacker, targetOrNull);
 
             // —— After-damage-calc monster triggers (Wall of Illusion / D.D. Lady & Assailant) ——
             TextEffects.TextEffectRuntime.NotifyAfterDamageCalculation(

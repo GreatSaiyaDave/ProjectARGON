@@ -127,18 +127,10 @@ namespace WRLDZ.Duel.TextEffects
                     RequiresDirectAttack = true,
                     MakesChainLink = true
                 }),
-            // Sasuke Samurai #4 (c64538655): If this card battles a monster, toss a coin and call heads or tails before damage
-            // calculation. If you call it right, destroy the opponent's monster with this effect.
-            new AtomRegistration.Atom(
-                Start + @"If this card battles a monster, toss a coin and call heads or tails before damage calculation\. " +
-                @"If you call it right, destroy the opponent's monster with this effect\." + End,
-                _ => new EffectClause
-                {
-                    Timing = EffectTiming.StartOfDamageStep,
-                    Action = EffectActionKind.CoinCallDestroyBattledMonsterOnCorrect,
-                    Side = EffectSide.Controller,
-                    MakesChainLink = true
-                }),
+            // v208 QC: Sasuke Samurai #4's atom (StartOfDamageStep CoinCallDestroyBattledMonsterOnCorrect) was removed — no Damage
+            // Step site tossed its coin (TryStartOfDamageStepDestroy reads only Destroy clauses), and the coin-call branch it
+            // pointed at read Activate clauses and fell back to destroying any face-up opponent's monster. The card is
+            // uncompiled again, as in v206 (a Start of Damage Step coin call with a human call needs a battle pause).
         };
 
         static int Parse(System.Text.RegularExpressions.Match m, int group, int fallback)

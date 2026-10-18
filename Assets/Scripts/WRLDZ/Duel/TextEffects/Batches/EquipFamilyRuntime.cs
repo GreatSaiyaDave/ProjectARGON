@@ -141,38 +141,84 @@ namespace WRLDZ.Duel.TextEffects
             return best;
         }
 
-        /// <summary>
-        /// <see cref="CardInstance.Attribute"/>: the printed Attribute, unless <paramref name="card"/> is a face-up
-        /// monster equipped with an Equip Card that changes its Attribute (Scroll of Bewitchment) whose effects apply;
-        /// the latest equipped one wins.
-        /// </summary>
-        static readonly System.Runtime.CompilerServices.ConditionalWeakTable<CardInstance,
-            System.Runtime.CompilerServices.StrongBox<string>> s_selfAttribute = new();
-
-        /// <summary>Record that <paramref name="card"/> is now of <paramref name="attribute"/> until it leaves the field.</summary>
-        public static void SetSelfAttribute(CardInstance card, string attribute)
+        sealed class SelfAttribute
         {
-            if (card == null || string.IsNullOrEmpty(attribute)) return;
-            if (string.Equals(card.Def?.attribute, attribute, System.StringComparison.OrdinalIgnoreCase)) return;
-            s_selfAttribute.Remove(card);
-            s_selfAttribute.Add(card, new System.Runtime.CompilerServices.StrongBox<string>(attribute));
+            public string Attribute;
+            public long Stamp;
+            public int Entry;
+            public int FaceUp;
+            public WeakReference<DuelEngine> Engine;
         }
 
-                public static string CurrentAttribute(CardInstance card)
+        static readonly System.Runtime.CompilerServices.ConditionalWeakTable<CardInstance, SelfAttribute> s_selfAttribute =
+            new();
+
+        /// <summary>
+        /// Homunculus the Alchemic Being (v206; v208 QC): <paramref name="card"/>, face-up on <paramref name="engine"/>'s field,
+        /// is now of <paramref name="attribute"/> (Lua EFFECT_CHANGE_ATTRIBUTE on itself, RESET_EVENT|RESETS_STANDARD_DISABLE):
+        /// for this field presence while it stays face-up and its effects are not negated, with this change's timestamp.
+        /// </summary>
+        public static void SetSelfAttribute(DuelEngine engine, CardInstance card, string attribute)
+        {
+            if (engine == null || card == null || string.IsNullOrEmpty(attribute)) return;
+            s_selfAttribute.Remove(card);
+            s_selfAttribute.Add(card, new SelfAttribute
+            {
+                Attribute = attribute,
+                Stamp = TypeDeclarationRuntime.NextStamp(),
+                Entry = card.FieldEntryStamp,
+                FaceUp = card.FaceUpStamp,
+                Engine = new WeakReference<DuelEngine>(engine)
+            });
+        }
+
+        /// <summary>
+        /// The live self-change of <paramref name="card"/>, or null. It ends for good when the card leaves the field, is
+        /// turned face-down (RESETS_STANDARD) or has its effects negated (RESET_DISABLE).
+        /// </summary>
+        static string LiveSelfAttribute(CardInstance card, out long stamp)
+        {
+            stamp = long.MinValue;
+            if (card == null || !s_selfAttribute.TryGetValue(card, out var r) || r == null) return null;
+            var onField = r.Engine != null && r.Engine.TryGetTarget(out var engine) && engine != null &&
+                          ((engine.Player?.TryFindMonster(card, out _) ?? false) ||
+                           (engine.Opponent?.TryFindMonster(card, out _) ?? false));
+            if (!onField || !card.FaceUp || card.FieldEntryStamp != r.Entry || card.FaceUpStamp != r.FaceUp ||
+                card.IsNegated)
+            {
+                s_selfAttribute.Remove(card);
+                return null;
+            }
+
+            stamp = r.Stamp;
+            return r.Attribute;
+        }
+
+        /// <summary>
+        /// <see cref="CardInstance.Attribute"/>: the printed Attribute, unless <paramref name="card"/> is a face-up monster
+        /// on the field whose Attribute an applying effect changes — DNA Transplant, an Attribute-changing Equip Card
+        /// (Scroll of Bewitchment) or its own change (Homunculus the Alchemic Being); the latest change wins.
+        /// </summary>
+        public static string CurrentAttribute(CardInstance card)
         {
             var def = card?.Def;
             if (def == null) return null;
-            // Homunculus the Alchemic Being (v206): a self-attribute override beats both the field-wide DNA
-            // Transplant and any later Scroll of Bewitchment - the ignitions is the card's statement of its Attribute.
-            if (s_selfAttribute.TryGetValue(card, out var sb) && !string.IsNullOrEmpty(sb?.Value))
-                return sb.Value;
             if (!card.FaceUp || !def.IsMonster) return def.attribute;
             // TokensDeclarationsAndPicks batch: DNA Transplant — every face-up monster on the field has its declared
             // Attribute; with an Attribute-changing Equip too, the change applied last wins.
             var byField = TokensDeclarationsAndPicksRuntime.AttributeOnField(card, out var fieldStamp);
-            if (card.Equips.Count == 0) return byField ?? def.attribute;
             var best = byField;
             var bestStamp = byField != null ? fieldStamp : long.MinValue;
+            // Homunculus the Alchemic Being: its own change competes by timestamp too (ygopro applies
+            // EFFECT_CHANGE_ATTRIBUTE effects in timestamp order; the latest wins).
+            var self = LiveSelfAttribute(card, out var selfStamp);
+            if (self != null && selfStamp > bestStamp)
+            {
+                best = self;
+                bestStamp = selfStamp;
+            }
+
+            if (card.Equips.Count == 0) return best ?? def.attribute;
             foreach (var eq in card.Equips)
             {
                 if (eq == null || eq.EquippedTo != card) continue;

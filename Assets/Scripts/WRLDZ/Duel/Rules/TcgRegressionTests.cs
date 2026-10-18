@@ -2310,8 +2310,15 @@ namespace WRLDZ.Duel.Rules
 
                     var dekoichi = db.Get(87621407);
                     var dekProg = dekoichi != null ? CardTextEffectCompiler.Compile(dekoichi) : null;
-                    Check("Corpus: Dekoichi scaled extra-draw leftover (not invented)",
-                        dekProg != null && !dekProg.FullyCompiled);
+                    // QC LvAndPins (2026-10-18): Dekoichi now compiles (4d0c17c4b) to a per-count draw read at resolution,
+                    // never a flat number; the duels are in QcLvAndPinsRegressionTests.
+                    Check("Corpus: Dekoichi scaled extra-draw is 1 + 1 per face-up Bokoichi (not a flat number)",
+                        dekProg != null && dekProg.FullyCompiled && dekProg.ClauseList.Count == 1 &&
+                        dekProg.ClauseList[0].Timing == EffectTiming.Flip &&
+                        dekProg.ClauseList[0].Action == EffectActionKind.DrawOnePlusPerFaceUpNamed &&
+                        dekProg.ClauseList[0].NamedCard == "Bokoichi the Freightening Car" &&
+                        dekProg.ClauseList[0].Amount == 0,
+                        dekProg == null ? "null" : $"full={dekProg.FullyCompiled} n={dekProg.ClauseList.Count}");
 
                     var lady = db.Get(90147755);
                     var ladyProg = lady != null ? CardTextEffectCompiler.Compile(lady) : null;

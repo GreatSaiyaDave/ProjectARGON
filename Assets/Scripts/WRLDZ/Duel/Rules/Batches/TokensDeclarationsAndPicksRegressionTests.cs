@@ -73,23 +73,31 @@ namespace WRLDZ.Duel.Rules
         static void OjamaTrioTokenArtVariants(CardDatabase db, DeckFile pDeck, DeckFile aDeck, Chk Check)
         {
             {
+                // QC LvAndPins (2026-10-18): this check never passed. It called ApplyClause with its "applied" flag in
+                // the ref attackNegated slot (ApplyClause(…, ref attackNegated, ref battleEnded)), which a Token summon
+                // never sets — it read applied=False with all 3 Tokens on the field (it landed 10-15 without a headless
+                // run). It now activates a Set Ojama Trio through the engine entry point, and "applied" is the Trap's
+                // activation succeeding with the opponent's field empty before.
                 var e = PlayerMain(db, pDeck, aDeck, out var reached);
                 var p = e.Player;
-                var oppTrio = e.CreateCardInstance(OjamaTrio);
-                var clause = CompiledEffectCache.GetOrCompile(oppTrio.Def).ClauseList
-                    .FirstOrDefault(c => c.Action == EffectActionKind.SpecialSummonToken);
-                bool applied = false, broken = false;
-                if (clause != null) TextEffectRuntime.ApplyClause(e, e.Opponent, oppTrio, clause, null, ref applied, ref broken);
-                var t = p.MonstersOnField()
+                var o = e.Opponent;
+                var trio = PlaceSetTrap(e, p, OjamaTrio, 0);
+                var before = o.MonstersOnField().Count();
+                var applied = reached && before == 0 && e.TryActivateSpellTrap(p, trio, fromHand: false);
+                Drive(e);
+                var t = o.MonstersOnField()
                     .Where(m => m != null && m.IsToken && m.Name.Contains("Ojama"))
                     .OrderBy(m => m.TokenArtIndex).ToList();
+                var tokens = string.Join(";", t.Select(x =>
+                    $"{x.FaceUp}/{x.Position}/{x.CurrentAtk}/{x.CurrentDef}/{x.CannotBeTributedForSummon}/{x.TokenDestroyedDamage}"));
                 Check("Ojama Trio: three Ojama Tokens summoned with distinct art variant indices",
                     reached && applied && t.Count == 3 &&
                     t[0].TokenArtIndex == 0 && t[1].TokenArtIndex == 1 && t[2].TokenArtIndex == 2 &&
                     t.All(x => x.Name == "Ojama Tokens" && x.FaceUp && x.Position == BattlePosition.Defense &&
                                x.CurrentAtk == 0 && x.CurrentDef == 1000 && x.CannotBeTributedForSummon &&
                                x.TokenDestroyedDamage == 300 && x.CardId == t[0].CardId),
-                    $"applied={applied} n={t.Count} idx=[{string.Join(",", t.Select(x => x.TokenArtIndex))}] {Tail(e, 3)}");
+                    $"applied={applied} n={t.Count} idx=[{string.Join(",", t.Select(x => x.TokenArtIndex))}] " +
+                    $"[{tokens}] {Tail(e, 3)}");
             }
         }
 

@@ -128,38 +128,21 @@ namespace WRLDZ.Duel.TextEffects
                     TakeControlOfTarget = true,
                     MakesChainLink = true
                 }),
-            // Necklace of Command (c48576971): When a monster you control that's equipped with this card is destroyed by battle,
-            // and this card is sent to the Graveyard, you can either draw 1 card or discard 1 random card from your opponent's hand.
-            new AtomRegistration.Atom(
-                @"When a monster you control that's equipped with this card is destroyed by battle, and this card is sent to the Graveyard.*Draw 1 card.*Discard 1 random card",
-                _ => new EffectClause
-                {
-                    Timing = EffectTiming.SentFromFieldToGy,
-                    Action = EffectActionKind.DrawOrDiscardRandomFromOpponentHand,
-                    Side = EffectSide.Controller,
-                    Amount = 1,
-                    MakesChainLink = true,
-                    IsOptional = true
-                }),
-            // Flint (c75560629): The equipped monster loses 300 ATK and cannot change its battle position or declare an attack.
-            new AtomRegistration.Atom(
-                @"The equipped monster loses 300 ATK and cannot change its battle position or declare an attack\.?\s*$",
-                _ => new EffectClause
-                {
-                    Timing = EffectTiming.ContinuousWhileFaceUp,
-                    Action = EffectActionKind.EquippedLosesAtkAndCannotAttackChangePos,
-                    Amount = -300,
-                    MakesChainLink = false
-                }),
+            // v208 QC: Necklace of Command's loose ".*Draw 1 card.*Discard 1 random card" atom (an optional trigger with no
+            // "equipped monster destroyed by battle" gate; Lua TRIGGER_F on REASON_LOST_TARGET) and Flint's first-sentence
+            // atom (anchored to the text end, so it never matched Flint) were removed: their actions had no runtime.
             // Ballista of Rampart Smashing (c242146): If the equipped monster attacks a face-down Defense Position monster,
             // it gains 1500 ATK during damage calculation only.
+            // Lua e2 EFFECT_TYPE_EQUIP UPDATE_ATTACK, condition PHASE_DAMAGE_CAL, attacker == equipped monster, attack target's
+            // battle position POS_FACEDOWN_DEFENSE (QcHollowActionsRuntime.EquipFaceDownDefenseBonus, v208 QC).
             new AtomRegistration.Atom(
-                @"If the equipped monster attacks a face-down Defense Position monster, it gains 1500 ATK during damage calculation only\.?\s*$",
-                _ => new EffectClause
+                @"^\s*If the equipped monster attacks a face-down Defense Position monster, it gains (\d+) ATK during " +
+                @"damage calculation only\.?\s*$",
+                m => new EffectClause
                 {
                     Timing = EffectTiming.ContinuousWhileFaceUp,
                     Action = EffectActionKind.EquippedGainsAtkWhenAttackingFaceDownDefense,
-                    Amount = 1500,
+                    Amount = Pos(m, 1),
                     MakesChainLink = false
                 }),
         };

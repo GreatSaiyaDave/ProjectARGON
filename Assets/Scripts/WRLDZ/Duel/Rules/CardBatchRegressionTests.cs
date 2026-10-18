@@ -146,6 +146,9 @@ namespace WRLDZ.Duel.Rules
             SodCompletionRegressionTests.Run(db, pDeck, aDeck, check);
             RdsRegressionTests.Run(db, pDeck, aDeck, check);
             SeedFreshnessRegressionTests.Run(db, pDeck, aDeck, check);
+            QcBulletAtomsRegressionTests.Run(db, pDeck, aDeck, check);
+            QcLvAndPinsRegressionTests.Run(db, pDeck, aDeck, check);
+            QcHollowActionsRegressionTests.Run(db, pDeck, aDeck, check);
         }
     }
 }

@@ -267,7 +267,11 @@ namespace WRLDZ.Duel.TextEffects
             });
 
             var lv = RxLvSendSs.Match(text);
-            if (lv.Success)
+            // QC LvAndPins (2026-10-18): an earlier whole-sentence atom that already compiled this LV progression
+            // (LvChainAtoms' Silent Swordsman LV3 sentence with its "You cannot activate this effect the turn this card
+            // is Summoned or flipped face-up" rider) owns it. Without this gate the generic copy was added as a second,
+            // ungated Standby clause next to the atom's (no own-Standby gate, no NotTurnSummoned condition).
+            if (lv.Success && !CoveredBySpans(spans, lv))
             {
                 var end = Regex.IsMatch(lv.Value, @"end phase", RegexOptions.IgnoreCase);
                 Add(lv, new EffectClause

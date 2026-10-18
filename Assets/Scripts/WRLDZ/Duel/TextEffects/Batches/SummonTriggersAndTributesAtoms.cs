@@ -148,19 +148,25 @@ namespace WRLDZ.Duel.TextEffects
                 }),
             // Thestalos the Firestorm Monarch (c26205777): If this card is Tribute Summoned: Discard 1 random card from
             // your opponent's hand, then, if it was a Monster Card, inflict damage to your opponent equal to its original Level x 100.
+            // Lua: SINGLE TRIGGER_F EVENT_SUMMON_SUCCESS, IsTributeSummoned; RandomSelect 1 of the opponent's hand, discard it,
+            // a Monster Card → GetLevel()*100 damage. v208 QC: Amount is the damage per Level (QcHollowActionsRuntime
+            // .ResolveDiscardRandomThenDamageByLevel), and only a Tribute Summon fires it.
             new AtomRegistration.Atom(
-                Start + @"If this card is Tribute Summoned: Discard (\d+) random cards? from your opponent's hand, then, if it was a Monster Card, inflict damage to your opponent equal to its original Level x (\d+)\.?" + End,
+                Start + @"If this card is Tribute Summoned: Discard 1 random card from your opponent's hand, then, if it " +
+                @"was a Monster Card, inflict damage to your opponent equal to its original Level x (\d+)" + End,
                 m => new EffectClause
                 {
                     Timing = EffectTiming.ThisCardSummoned,
                     Action = EffectActionKind.DiscardRandomThenDamageByLevelIfMonster,
                     Side = EffectSide.Opponent,
+                    RequiresThisTributeSummoned = true,
                     Amount = Pos(m, 1),
                     MakesChainLink = true
                 }),
             // B.E.S. Big Core (c14148099): If this card is Normal Summoned: Place 3 counters on it.
             new AtomRegistration.Atom(
-                @"If this card is Normal Summoned: Place (\d+) counters? on it\.?\s*$",
+                // v208 QC: one whole sentence (Start/End), not the tail of a longer one.
+                Start + @"If this card is Normal Summoned: Place (\d+) counters? on it" + End,
                 m => new EffectClause
                 {
                     Timing = EffectTiming.ThisCardSummoned,

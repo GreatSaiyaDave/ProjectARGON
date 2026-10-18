@@ -93,6 +93,20 @@ namespace WRLDZ.Duel.TextEffects
         };
 
         /// <summary>
+        /// v208 QC "HollowActions": members that no runtime reads (an atom emitted them, so the card was Implemented and did
+        /// nothing). The compiler fails such a program closed (CardTextEffectCompiler.Compile), so a re-added atom cannot put
+        /// the card back into decks. Remove a member from this list only together with its runtime arm and a mini-duel.
+        /// </summary>
+        public static bool HasNoRuntime(EffectActionKind action) =>
+            action == EffectActionKind.BoostHarpieLadySistersAtkAndLockTraps ||
+            action == EffectActionKind.NegateFlipMonsterEffectsThisDestroysByBattle ||
+            action == EffectActionKind.EquippedLosesAtkAndCannotAttackChangePos ||
+            action == EffectActionKind.DrawOrDiscardRandomFromOpponentHand ||
+            action == EffectActionKind.DestroyAllOppDefenseWhenOppAttackBecomesDefense ||
+            action == EffectActionKind.TargetGainsAtkEqualToAnotherTargetDuringDamageStep ||
+            action == EffectActionKind.CoinCallDestroyBattledMonsterOnCorrect;
+
+        /// <summary>
         /// Actions that are unique (or a 1–3 card family). Adding a 4th card
         /// with the same text means promote it to a shared kind instead.
         /// </summary>
@@ -202,10 +216,8 @@ namespace WRLDZ.Duel.TextEffects
                     EffectActionKind.OpponentShufflesHandThenDraws or
                     EffectActionKind.DrawWhenTributeSummonedWithTwoPlus => EffectResolutionKind.Draw,
                 EffectActionKind.DiscardRandomFromOpponentHand => EffectResolutionKind.Discard,
-                EffectActionKind.DrawOrDiscardRandomFromOpponentHand => EffectResolutionKind.Draw,
                 EffectActionKind.DiscardRandomThenDamageByLevelIfMonster => EffectResolutionKind.Damage,
                 EffectActionKind.EquippedGainsAtkWhenAttackingFaceDownDefense => EffectResolutionKind.ModifyStats,
-                EffectActionKind.EquippedLosesAtkAndCannotAttackChangePos => EffectResolutionKind.ModifyStats,
                 EffectActionKind.ReEquipWhenEquippedMonsterDestroyed => EffectResolutionKind.Equip,
                 EffectActionKind.AddFromGyToHand or
                     EffectActionKind.AddFromDeckToHand or
@@ -483,7 +495,6 @@ namespace WRLDZ.Duel.TextEffects
                 EffectActionKind.OpponentPlacesRaceMonsterFromTheirDeckOnTop => EffectResolutionKind.ReturnToDeck,
                 EffectActionKind.RandomHandCardSpecialSummonOrSendToGy => EffectResolutionKind.SpecialSummon,
                 EffectActionKind.TargetGainsAtkEqualToDefDestroyAtEndPhase => EffectResolutionKind.ModifyStats,
-                EffectActionKind.TargetGainsAtkEqualToAnotherTargetDuringDamageStep => EffectResolutionKind.ModifyStats,
                 EffectActionKind.PlaceCounterOnThisCard => EffectResolutionKind.PlaceCounters,
                 EffectActionKind.InflictCountersTimesAmountToDestroyer => EffectResolutionKind.Damage,
                 // BattlePhaseEnd (v142): end-of-Battle-Phase and battle-aftermath effects.
@@ -713,7 +724,6 @@ namespace WRLDZ.Duel.TextEffects
                     EffectActionKind.GainThisCardAtkAtNextStandbyWhileFaceUp => EffectResolutionKind.ModifyStats,
                 EffectActionKind.OpponentSkipsNextMainPhase1 => EffectResolutionKind.Protection,
                 EffectActionKind.CoinCallRightDestroyOneOppMonster => EffectResolutionKind.Destroy,
-                EffectActionKind.CoinCallDestroyBattledMonsterOnCorrect => EffectResolutionKind.Destroy,
                 EffectActionKind.OpponentSendsSpellFromDeckToGy => EffectResolutionKind.Discard,
                 EffectActionKind.MillCardOfDeclaredTypeFromOpponentDeck => EffectResolutionKind.Discard,
                 // BattleAndPositionRecords batch: Abyssal Designator — declare Type + Attribute, the opponent sends 1
@@ -915,10 +925,7 @@ namespace WRLDZ.Duel.TextEffects
                     EffectActionKind.OpponentMonstersThatBattledThisCannotAttackOrChangePosition or
                     EffectActionKind.OpponentMonsterThatBattledThisCannotAttackForTwoTurns or
                     EffectActionKind.MonstersFlippedFaceUpAfterActivationCannotChangePosition or
-                    EffectActionKind.TargetTwoFaceDownSpellTrapsLockActivation or
-                    EffectActionKind.BoostHarpieLadySistersAtkAndLockTraps or
-                    EffectActionKind.NegateFlipMonsterEffectsThisDestroysByBattle => EffectResolutionKind.Protection,
-                EffectActionKind.DestroyAllOppDefenseWhenOppAttackBecomesDefense => EffectResolutionKind.Destroy,
+                    EffectActionKind.TargetTwoFaceDownSpellTrapsLockActivation => EffectResolutionKind.Protection,
                 EffectActionKind.ChangeFaceUpAttackEffectMonstersToDefenseOriginalDefZeroLock => EffectResolutionKind.ChangePosition,
                 EffectActionKind.None => EffectResolutionKind.None,
                 _ => EffectResolutionKind.UniqueException

@@ -86,8 +86,11 @@ namespace WRLDZ.Duel.TextEffects
                     Timing = EffectTiming.Activate,
                     Action = EffectActionKind.HalfAtkAddToOtherUntilEndOfTurn,
                     Zone = EffectZoneFilter.FieldAnyMonster,
+                    Side = EffectSide.Both,
                     TargetCount = 2,
                     RequiresTargetChoice = true,
+                    // v208 QC: Lua SelectTarget(Card.IsFaceup …, 2, 2); resolution QcHollowActionsRuntime.ResolveRiryoku.
+                    RequiresTargetFaceUp = true,
                     IsPsctTarget = true,
                     MakesChainLink = true
                 }),

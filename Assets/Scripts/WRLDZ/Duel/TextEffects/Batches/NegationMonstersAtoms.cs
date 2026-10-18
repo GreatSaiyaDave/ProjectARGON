@@ -153,17 +153,12 @@ namespace WRLDZ.Duel.TextEffects
                     TargetCount = 1,
                     MakesChainLink = true
                 }),
-            // Silent Swordsman LV3 (c1995985): Negate your opponent's Spell effects that target this card.
-            new AtomRegistration.Atom(
-                @"Negate your opponent's Spell effects that target this card",
-                _ => new EffectClause
-                {
-                    Timing = EffectTiming.ContinuousWhileFaceUp,
-                    Action = EffectActionKind.NegateOpponentSpellEffectsThatTargetThis,
-                    Side = EffectSide.Opponent,
-                    AffectsThisCardOnly = true,
-                    MakesChainLink = false
-                }),
+            // QC LvAndPins (2026-10-18): Silent Swordsman LV3's "Negate your opponent's Spell effects that target this
+            // card." atom (cc5a4dd9d) was removed — the sentence stays leftover, so LV3 is not FullyCompiled. Its marker
+            // never applied: TryNegateTargetingLink's RespondsTo needs NegateRespondsToSpell, which the atom did not set,
+            // so an opponent's targeting Spell still resolved on it; and the shared answer is Freed's "negate AND destroy"
+            // (plus the SweepPersistentTargets self-destroy), while LV3's Lua (c1995985 s.disop, EVENT_CHAIN_SOLVING) only
+            // calls Duel.NegateEffect. Compiling it needs a negate-only arm first.
         };
     }
 }

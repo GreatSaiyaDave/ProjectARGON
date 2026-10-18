@@ -3471,6 +3471,8 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         ChangeThisCardAttribute,
         /// <summary>Coin call at battle; if correct, destroy the opponent's monster that battled this card (Sasuke Samurai #4).</summary>
+        /// unused since v208 (hollow): no Damage Step site ever tossed its coin; Sasuke Samurai #4 is uncompiled again
+        /// (EffectVocabulary.HasNoRuntime fails a re-added clause closed).
         CoinCallDestroyBattledMonsterOnCorrect,
         /// <summary>
         /// BattleAndPositionRecords batch — Mystic Swordsman LV6 (c60482781): at StartOfDamageStep, if this card
@@ -3486,41 +3488,54 @@ namespace WRLDZ.Duel.TextEffects
         /// <summary>
         /// SpellTrapSealsAndImmunity batch — Xing Zhen Hu (c76515293): target 2 face-down Spell/Trap Cards on the field;
         /// those cards cannot be activated while this card remains face-up and they remain targeted (continuous lock).
+        /// Runtime since v208: QcHollowActionsRuntime.LockTargetedSetCard / SetCardActivationLocked.
         /// </summary>
         TargetTwoFaceDownSpellTrapsLockActivation,
         /// <summary>
         /// Triangle Ecstasy Spark (c12181376): boost Harpie Lady Sisters ATK to 2700, lock opponent traps.
         /// </summary>
+        /// unused since v208 (hollow): no runtime; its atom still emits it, so EffectVocabulary.HasNoRuntime keeps the card
+        /// a Stub (needs ATK-becomes-2700 until the End Phase, an opponent-only Trap activation lock, and an opponent-only
+        /// Trap negation for the turn).
         BoostHarpieLadySistersAtkAndLockTraps,
         /// <summary>
         /// BattleAndPositionRecords batch — Harpie Lady 3 (c54415063): an opponent's monster that battles this card
-        /// cannot declare an attack during your opponent's next 2 turns.
+        /// cannot declare an attack during your opponent's next 2 turns. Runtime since v208: QcHollowActionsRuntime.OnBattled /
+        /// AttackLocked.
         /// </summary>
         OpponentMonsterThatBattledThisCannotAttackForTwoTurns,
         /// <summary>
         /// Battle destroy trigger: negate effects of Flip monsters this card destroys by battle (Harpie Lady 2).
         /// </summary>
+        /// unused since v208 (hollow): Harpie Lady 2 compiles to NegateEffectsOfMonstersDestroyedByBattle (Twin-Headed Wolf).
         NegateFlipMonsterEffectsThisDestroysByBattle,
         /// <summary>
         /// Negate opponent's Spell effects that target this card (Silent Swordsman LV3).
         /// </summary>
         NegateOpponentSpellEffectsThatTargetThis,
         /// <summary>Draw 1 or discard 1 random card from opponent's hand (Necklace of Command trigger).</summary>
+        /// unused since v208 (hollow): no runtime; Necklace of Command is a Stub again.
         DrawOrDiscardRandomFromOpponentHand,
-        /// <summary>Ballista of Rampart Smashing: equipped monster gains 1500 ATK during damage calculation only when attacking face-down defense.</summary>
+        /// <summary>Ballista of Rampart Smashing: equipped monster gains 1500 ATK during damage calculation only when attacking face-down defense.
+        /// Runtime since v208: QcHollowActionsRuntime.EquipFaceDownDefenseBonus.</summary>
         EquippedGainsAtkWhenAttackingFaceDownDefense,
         /// <summary>Flint: equipped monster loses 300 ATK and cannot change position or attack.</summary>
+        /// unused since v208 (hollow): no runtime, and its atom never matched Flint (removed).
         EquippedLosesAtkAndCannotAttackChangePos,
-        /// <summary>Thestalos: if the discarded card was a Monster Card, inflict damage equal to its original Level x 100.</summary>
+        /// <summary>Thestalos: if the discarded card was a Monster Card, inflict damage equal to its original Level x 100.
+        /// Runtime since v208: QcHollowActionsRuntime.ResolveDiscardRandomThenDamageByLevel (Amount = damage per Level).</summary>
         DiscardRandomThenDamageByLevelIfMonster,
         /// <summary>Flint: if this card is destroyed because equipped monster was destroyed, re-equip to target.</summary>
         ReEquipWhenEquippedMonsterDestroyed,
         /// <summary>Tragedy: destroy all opponent Defense Position monsters when their Attack Position monsters change to Defense Position.</summary>
+        /// unused since v208 (hollow): no runtime and no position-change window; Tragedy is uncompiled again.
         DestroyAllOppDefenseWhenOppAttackBecomesDefense,
         /// <summary>
         /// Covering Fire (c74458486): during Damage Step, target another face-up monster you control; your attacked
         /// monster gains ATK equal to that target's ATK during the Damage Step only.
         /// </summary>
+        /// unused since v208 (hollow): its arm gave the ATK until the end of the turn and no Damage Step window was compiled;
+        /// arm and atoms removed, Covering Fire is uncompiled again.
         TargetGainsAtkEqualToAnotherTargetDuringDamageStep,
     }
 

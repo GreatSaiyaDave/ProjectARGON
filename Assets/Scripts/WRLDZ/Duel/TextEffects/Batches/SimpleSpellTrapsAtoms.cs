@@ -176,9 +176,15 @@ namespace WRLDZ.Duel.TextEffects
                     Side = EffectSide.Controller,
                     MakesChainLink = true
                 }),
-            // Fuh-Rin-Ka-Zan (c1781310): choice — Discard 2 random cards from your opponent's hand.
+            // Fuh-Rin-Ka-Zan (c1781310) prints "Apply 1 of these effects. ● … ● … ● … ● …": a CHOICE, so its bullets are
+            // not always-applied clauses and the card stays a Stub. These four bullet atoms are anchored to the WHOLE
+            // text (a standalone bullet fragment, optional "●"): unanchored they matched the tail of other cards'
+            // sentences (case-insensitive) and added a bogus Activate clause (3-Hump Lacooda, Bee List Soldier,
+            // Wattberyx, X-Saber Airbellum, …; v208 QC). A card whose whole text is one such sentence (Raigeki, Harpie's
+            // Feather Duster, Pot of Greed) compiles exactly as it did before these atoms existed (v206).
+            // ● Discard 2 random cards from your opponent's hand.
             new AtomRegistration.Atom(
-                @"Discard (\d+) random cards? from your opponent's hand",
+                @"^\s*(?:●\s*)?Discard (\d+) random cards? from your opponent's hand\.?\s*$",
                 m => new EffectClause
                 {
                     Timing = EffectTiming.Activate,
@@ -187,11 +193,9 @@ namespace WRLDZ.Duel.TextEffects
                     Amount = Pos(m, 1),
                     MakesChainLink = true
                 }),
-            // Fuh-Rin-Ka-Zan (c1781310): When there are face-up WIND, WATER, FIRE and EARTH monster(s) on the field:
-            // Apply 1 of these effects.
             // ● Destroy all monsters your opponent controls.
             new AtomRegistration.Atom(
-                @"Destroy all monsters your opponent controls\.?\s*$",
+                @"^\s*(?:●\s*)?Destroy all monsters your opponent controls\.?\s*$",
                 _ => new EffectClause
                 {
                     Timing = EffectTiming.Activate,
@@ -203,7 +207,7 @@ namespace WRLDZ.Duel.TextEffects
                 }),
             // ● Destroy all Spell and Trap Cards your opponent controls.
             new AtomRegistration.Atom(
-                @"Destroy all Spell and Trap Cards your opponent controls\.?\s*$",
+                @"^\s*(?:●\s*)?Destroy all Spell and Trap Cards your opponent controls\.?\s*$",
                 _ => new EffectClause
                 {
                     Timing = EffectTiming.Activate,
@@ -215,7 +219,7 @@ namespace WRLDZ.Duel.TextEffects
                 }),
             // ● Draw 2 cards.
             new AtomRegistration.Atom(
-                @"Draw (\d+) cards\.?\s*$",
+                @"^\s*(?:●\s*)?Draw (\d+) cards\.?\s*$",
                 m => new EffectClause
                 {
                     Timing = EffectTiming.Activate,
@@ -225,22 +229,31 @@ namespace WRLDZ.Duel.TextEffects
                     MakesChainLink = true
                 }),
 
-            // Xing Zhen Hu (c76515293): Select 2 Set Spell or Trap Cards on the field; they cannot be activated.
+            // Xing Zhen Hu (c76515293), its whole text (v208 QC: the loose ".*2 Set Spell.*Trap.*cannot be activated" also
+            // compiled Cursed Fig's GY trigger as an ignition). Lua: ACTIVATE free chain, SelectTarget exactly 2 face-down
+            // cards in either Spell & Trap Zone except itself; e2 makes those still Set its card targets as it resolves; e3
+            // EFFECT_CANNOT_TRIGGER on them while it applies (QcHollowActionsRuntime.LockTargetedSetCard / SetCardActivationLocked).
             new AtomRegistration.Atom(
-                @".*2 Set Spell.*Trap.*cannot be activated",
+                @"^\s*Activate by selecting 2 Set Spell or Trap Cards on the field\.\s*The selected Spell or Trap Cards " +
+                @"cannot be activated\.?\s*$",
                 _ => new EffectClause
                 {
                     Timing = EffectTiming.Activate,
                     Action = EffectActionKind.TargetTwoFaceDownSpellTrapsLockActivation,
-                    Zone = EffectZoneFilter.FieldSpellTraps,
+                    Side = EffectSide.Both,
+                    Zone = EffectZoneFilter.FaceDownSpellTraps,
                     RequiresTargetChoice = true,
                     TargetCount = 2,
                     IsPsctTarget = true,
                     MakesChainLink = true
                 }),
             // B.E.S. Big Core (c14148099): If this card is Normal Summoned: Place 3 counters on it.
+            // v208 QC: fenced to the B.E.S. shape (the text also prints "cannot be destroyed by battle" and "remove 1
+            // counter from this card"). Unfenced it matched any "place N counters … this card" text and compiled the
+            // placement alone: Des Mosquito, Metal Shooter, Miracle Jurassic Egg (which became FullyCompiled with only
+            // a Summon counter clause). The match itself (and so the B.E.S. family's clause and span) is unchanged.
             new AtomRegistration.Atom(
-                @".*Place (\d+) counters.*this card",
+                @"^(?=.*\bcannot be destroyed by battle\b)(?=.*\bremove 1 counter from this card\b).*Place (\d+) counters.*this card",
                 m => new EffectClause
                 {
                     Timing = EffectTiming.ThisCardSummoned,
@@ -249,46 +262,10 @@ namespace WRLDZ.Duel.TextEffects
                     Amount = int.Parse(m.Groups[1].Value),
                     MakesChainLink = true
                 }),
-            // Chain Burst (c48276469): Each time a player activates a Trap Card, they take 1000 damage immediately after it resolves.
-            new AtomRegistration.Atom(
-                @".*activates a Trap Card.*take 1000 damage",
-                _ => new EffectClause
-                {
-                    Timing = EffectTiming.Activate,
-                    Action = EffectActionKind.InflictDamageToOpponent,
-                    Amount = 1000,
-                    MakesChainLink = false
-                }),
-            // Covering Fire (c74458486): During Damage Step, target another face-up monster you control;
-            // your attacked monster gains ATK equal to that target's ATK during Damage Step only.
-            new AtomRegistration.Atom(
-                @".*target 1 other face-up monster you control.*gains ATK equal to that target.*ATK",
-                _ => new EffectClause
-                {
-                    Timing = EffectTiming.Activate,
-                    Action = EffectActionKind.TargetGainsAtkEqualToAnotherTargetDuringDamageStep,
-                    Zone = EffectZoneFilter.ControllerMonsters,
-                    RequiresTargetChoice = true,
-                    RequiresTargetFaceUp = true,
-                    TargetCount = 1,
-                    IsPsctTarget = true,
-                    MakesChainLink = true
-                }),
-            // Covering Fire (c74458486): During Damage Step, while opponent monster attacks your monster, target another
-            // face-up monster you control; your attacked monster gains ATK equal to that target's ATK during Damage Step only.
-            new AtomRegistration.Atom(
-                @".*target 1 other face-up monster you control.*gains ATK equal to that target.*ATK",
-                _ => new EffectClause
-                {
-                    Timing = EffectTiming.Activate,
-                    Action = EffectActionKind.TargetGainsAtkEqualToAnotherTargetDuringDamageStep,
-                    Zone = EffectZoneFilter.ControllerMonsters,
-                    RequiresTargetChoice = true,
-                    RequiresTargetFaceUp = true,
-                    TargetCount = 1,
-                    IsPsctTarget = true,
-                    MakesChainLink = true
-                }),
+            // v208 QC: Chain Burst's ".*activates a Trap Card.*take 1000 damage" (compiled as a one-shot Activate burn to the
+            // opponent; it is a Continuous Trap that damages the player who activates each Trap) and Covering Fire's two
+            // copies of ".*target 1 other face-up monster you control.*gains ATK equal to that target.*ATK" (no Damage Step
+            // window; the gain lasted the turn) were removed: both cards are uncompiled again, as in v206.
         };
 
         /// <summary>The whole text is one of this batch's atoms (an earlier phrase template must leave it alone).</summary>

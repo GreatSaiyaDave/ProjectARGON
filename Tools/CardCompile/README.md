@@ -153,7 +153,15 @@ For landed-but-unreviewed work (e.g. other bots editing the checkout), use one l
   (`EffectVocabulary.IsUniqueException`). Write the template for the *sentence* so every card with that
   sentence works.
 - **Whole-sentence atoms only.** A regex that matches part of a longer card's text turns that card into a
-  Stub. After adding an atom, the status diff must show no other card changed that shouldn't.
+  Stub. After adding an atom, the status diff must show no other card changed that shouldn't. Anchor it
+  (`^…$`, or the `Start`/`End` helpers): matching is case-insensitive, so an unanchored `Draw (\d+) cards\.?$`
+  added a bare Activate draw to every text ending "…draw 3 cards." (3-Hump Lacooda, 2026-10-18).
+- **Every emitted action has a reader.** An action that only an atom writes and only `EffectVocabulary` names
+  makes the card Implemented and inert. `python3 Tools/CardCompile/handler_guard.py` lists such HOLLOW actions
+  and the batch Atoms / RegressionTests files nobody registered (a half-landed batch). Both must be empty.
+- **The seed must equal a fresh compile.** `--export-seed` recompiles every card (v207), and
+  `SeedFreshnessRegressionTests` fails when a same-Version seed differs from the compiler. Any change to
+  compiler output therefore needs a Version bump and a re-export.
 - **Git.** No git stash, reset, checkout, clean or commit in the real checkout. Other sessions keep uncommitted
   work in it, and the owner decides what gets committed or pushed.
 

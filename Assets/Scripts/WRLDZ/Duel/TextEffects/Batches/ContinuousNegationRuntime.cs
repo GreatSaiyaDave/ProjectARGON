@@ -93,6 +93,8 @@ namespace WRLDZ.Duel.TextEffects
             // LocksAndZones batch (v142), Cold Wave: until its lock ends no Spell/Trap Card or Spell/Trap effect can
             // be activated at all (ygopro EFFECT_CANNOT_ACTIVATE, re:IsSpellTrapEffect — wherever the card is).
             if (LocksAndZonesRuntime.SpellTrapActivationLocked(engine, card, out reason)) return true;
+            // v208 QC (QcHollowActionsRuntime): Xing Zhen Hu — its Set card targets cannot be activated.
+            if (QcHollowActionsRuntime.SetCardActivationLocked(engine, card, out reason)) return true;
             // SpellTrapAnswersAndActivationLocks batch: Cursed Seal of the Forbidden Spell's name lock, Invader of Darkness's
             // Quick-Play lock (the card's activation, from the hand or Set).
             if (SpellTrapAnswersAndActivationLocksRuntime.ActivationLocked(engine, who, card, out reason)) return true;

@@ -2720,8 +2720,7 @@ namespace WRLDZ.Duel.TextEffects
 
             var coin = activate.FirstOrDefault(c =>
                 c.Action == EffectActionKind.CoinCallDestroyOppOrSelf ||
-                c.Action == EffectActionKind.CoinCallDoubleOrHalveAtk ||
-                c.Action == EffectActionKind.CoinCallDestroyBattledMonsterOnCorrect);
+                c.Action == EffectActionKind.CoinCallDoubleOrHalveAtk);
             if (coin != null)
                 return StartCoinCall(engine, who, card, fromHand, coin, autoPickTarget, isMonster);
 
@@ -6780,7 +6779,11 @@ namespace WRLDZ.Duel.TextEffects
                         var n = 1;
                         if (!string.IsNullOrEmpty(clause.NamedCard))
                         {
-                            n += drawer.MonstersOnField().Count(m => m != null && m.FaceUp && m.IsNamed(clause.NamedCard));
+                            // Dekoichi (c87621407): "for each face-up 'X' you control" counts face-up cards, not only
+                            // monsters (Lua s.filter over LOCATION_ONFIELD: a Bokoichi equipped as an Equip Card counts).
+                            // Counted as the effect resolves, the "for each" rule (QC LvAndPins, 2026-10-18).
+                            n += drawer.MonstersOnField().Concat(drawer.SpellTrapsOnField())
+                                .Count(m => m != null && m.FaceUp && m.IsNamed(clause.NamedCard));
                         }
                         else if (clause.Amount > 0)
                         {
@@ -9864,14 +9867,17 @@ namespace WRLDZ.Duel.TextEffects
                 case EffectActionKind.TargetGainsAtkEqualToDefDestroyAtEndPhase:
                     TokensDeclarationsAndPicksRuntime.ApplyDefToAtkThenDestroy(engine, source, chosenTarget);
                     break;
-                case EffectActionKind.TargetGainsAtkEqualToAnotherTargetDuringDamageStep:
-                    {
-                        if (chosenTarget == null || source == null) break;
-                        if (!engine.TryGetBattlingPair(out _, out var defendingMon) || defendingMon == null) break;
-                        var boost = chosenTarget.CurrentAtk;
-                        defendingMon.UntilEndOfTurnAtk += boost;
-                        engine.Log($"{defendingMon.Name} gains {boost} ATK during Damage Step (now {defendingMon.CurrentAtk}/{defendingMon.CurrentDef}).");
-                    }
+                // v208 QC "HollowActions" (QcHollowActionsRuntime): Xing Zhen Hu, Thestalos the Firestorm Monarch, Riryoku.
+                // (Covering Fire's TargetGainsAtkEqualToAnotherTargetDuringDamageStep arm was removed: it added the ATK until
+                // the end of the turn and its Damage Step window was never compiled; the card is uncompiled again.)
+                case EffectActionKind.TargetTwoFaceDownSpellTrapsLockActivation:
+                    QcHollowActionsRuntime.LockTargetedSetCard(engine, who, source, chosenTarget);
+                    break;
+                case EffectActionKind.DiscardRandomThenDamageByLevelIfMonster:
+                    QcHollowActionsRuntime.ResolveDiscardRandomThenDamageByLevel(engine, who, source, clause);
+                    break;
+                case EffectActionKind.HalfAtkAddToOtherUntilEndOfTurn:
+                    QcHollowActionsRuntime.ResolveRiryoku(engine, who, source, clause, chosenTarget);
                     break;
 
                 case EffectActionKind.PlaceCounterOnThisCard:
@@ -11822,6 +11828,8 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
         {
             if (attacker == null) return false;
             if (attacker.CannotAttackThroughTurn >= engine.TurnNumber) return true;
+            // v208 QC (QcHollowActionsRuntime): Harpie Lady 3 — it battled her; its controller's next 2 turns.
+            if (QcHollowActionsRuntime.AttackLocked(engine, attacker)) return true;
             var locker = attacker.AttackLockedBy;
             if (locker != null)
             {
@@ -13134,29 +13142,6 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
                 {
                     if (c.Action == EffectActionKind.CoinCallDestroyOppOrSelf)
                         ResolveTimeWizard(engine, who, card, right);
-                    else if (c.Action == EffectActionKind.CoinCallDestroyBattledMonsterOnCorrect)
-                    {
-                        if (right)
-                        {
-                            // Destroy the opponent's monster that battled this card
-                            var opp = engine.OpponentOf(who);
-                            if (opp != null && card != null)
-                            {
-                                // Find the monster that battled this card
-                                var battled = opp.MonstersOnField().FirstOrDefault(m =>
-                                    m != null && ((m == engine.DeclaredAttackTarget && card == engine.DeclaredAttacker) ||
-                                                  (m == engine.DeclaredAttacker && card == engine.DeclaredAttackTarget)));
-                                if (battled != null)
-                                    DestroyCard(engine, battled, card);
-                                else
-                                {
-                                    // Fallback: any opponent monster in attack position that might be the target
-                                    battled = opp.MonstersOnField().FirstOrDefault(m => m != null && m.FaceUp);
-                                    if (battled != null) DestroyCard(engine, battled, card);
-                                }
-                            }
-                        }
-                    }
                     else if (c.Action == EffectActionKind.CoinCallDoubleOrHalveAtk)
                         ResolveGoddessCoin(engine, card, right);
                 }
@@ -15344,6 +15329,9 @@ static EffectClause SecondTargetClause(EffectClause c)
             // ChaosBanishSummons batch: Chaos Sorcerer / BLS banish the opponent's strongest monster; Primal Seed.
             if (ChaosBanishSummonsRuntime.TryAutoPick(engine, who, c, targets, out var chaosPick))
                 return chaosPick;
+            // v208 QC (QcHollowActionsRuntime): Xing Zhen Hu locks the opponent's Set cards before its own.
+            if (c.Action == EffectActionKind.TargetTwoFaceDownSpellTrapsLockActivation)
+                return targets.FirstOrDefault(t => opp != null && opp.SpellTrapsOnField().Contains(t)) ?? targets[0];
             switch (c.Zone)
             {
                 case EffectZoneFilter.EitherGyMonsters:

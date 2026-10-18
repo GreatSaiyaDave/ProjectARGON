@@ -369,6 +369,10 @@ namespace WRLDZ.Duel.Rules
                 if (c.Zone == EffectZoneFilter.FieldFaceUpCardsNegatingTrapEffects && opp.MonsterZones[3].IsEmpty)
                     PlaceMonster(engine, opp, 77585513, 3, BattlePosition.Attack, true);
 
+                // Xing Zhen Hu (v208 QC): exactly 2 Set Spell/Trap Cards on the field other than itself.
+                if (c.Zone == EffectZoneFilter.FaceDownSpellTraps && c.TargetCount > 1 && opp.SpellTrapZones[2].IsEmpty)
+                    PlaceSetTrap(engine, opp, 4206964, 2); // Trap Hole
+
                 // Emergency Provisions (SimpleSpellTraps batch): another Spell/Trap you control to send as the cost.
                 if (c.ActivationCondition == SimpleSpellTrapsRuntime.OtherSpellTrapYouControl && p.SpellTrapZones[1].IsEmpty)
                     PlaceSetTrap(engine, p, 4206964, 1); // Trap Hole

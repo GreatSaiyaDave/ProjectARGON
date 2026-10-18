@@ -199,20 +199,21 @@ namespace WRLDZ.Duel.TextEffects
                     ActivationCondition = BattleAndPositionRecordsRuntime.FaceUpAttackEffectMonsterOnField,
                     MakesChainLink = true
                 }),
-            // Mystic Swordsman LV6 (c60482781)
-            new AtomRegistration.Atom(
-                @"At the start of the Damage Step, if this card attacked a face-down Defense Position monster.*Destroy that monster.*place it on top of your opponent's Deck instead of sending it to the Graveyard",
-                _ => new EffectClause
-                {
-                    Timing = EffectTiming.StartOfDamageStep,
-                    Action = EffectActionKind.DestroyAttackedFaceDownDefenseReturnToOwnerDeckTopOrGy,
-                    Side = EffectSide.Controller,
-                    MakesChainLink = true
-                }),
+            // QC LvAndPins (2026-10-18): the Mystic Swordsman LV6 (c60482781) atom from 4d0c17c4b was removed, so the card
+            // keeps its leftover (InteractionRegressionTests "Mystic Swordsman LV6 keeps its top-of-Deck rider as
+            // leftover"). Its runtime (TryStartOfDamageStepDestroy → DestroyMonster returnToOwnerDeckTopInsteadOfGy) lost the
+            // monster: DestroyMonster empties the zone first, so ReturnCardToDeck finds no controller and returns false —
+            // the card reached neither the Deck nor the GY while the log said "placed on top". It also never offered the
+            // printed "you can" choice, skipped Lua's d:GetOwner()~=tp check ("your opponent's Deck"; a monster you own goes
+            // to the GY), and called MarkSentFromFieldToGy for a card that was not sent there. The pattern was not
+            // whole-sentence (".*"). Fix that path before compiling the rider again.
             // Harpie Lady 3 (c54415063): An opponent's monster that battles this card cannot declare an attack during
             // your opponent's next 2 turns.
             new AtomRegistration.Atom(
-                @"An opponent's monster that battles this card cannot declare an attack during your opponent's next 2 turns\.?\s*$",
+                // v208 QC: one whole sentence; runtime QcHollowActionsRuntime.OnBattled / AttackLocked (Lua EVENT_BATTLED,
+                // EFFECT_CANNOT_ATTACK_ANNOUNCE, RESETS_STANDARD_PHASE_END|RESET_SELF_TURN, 2).
+                @"(?:^|(?<=[.!?)]\s))An opponent's monster that battles this card cannot declare an attack during your " +
+                @"opponent's next 2 turns\.?\s*$",
                 _ => new EffectClause
                 {
                     Timing = EffectTiming.ContinuousWhileFaceUp,
@@ -221,28 +222,25 @@ namespace WRLDZ.Duel.TextEffects
                     StaysOnField = true,
                     MakesChainLink = false
                 }),
-            // Harpie Lady 2 (c27927359): Negate the effects of Flip monsters this card destroys by battle.
+            // Harpie Lady 2 (c27927359), one whole sentence. Lua e1 SINGLE+CONTINUOUS EVENT_BATTLED: the battle target is
+            // battle-destroyed and IsType(TYPE_FLIP) → EFFECT_DISABLE + EFFECT_DISABLE_EFFECT, RESETS_STANDARD_EXC_GRAVE — the
+            // Twin-Headed Wolf runtime (NegationMonstersRuntime.OnBattled) with no other condition. v208 QC: it used to emit
+            // NegateFlipMonsterEffectsThisDestroysByBattle, which nothing read.
             new AtomRegistration.Atom(
-                @"Negate the effects of Flip monsters this card destroys by battle\.?\s*$",
+                @"(?:^|(?<=[.!?)]\s))Negate the effects of Flip monsters this card destroys by battle\.?\s*$",
                 _ => new EffectClause
                 {
                     Timing = EffectTiming.ContinuousWhileFaceUp,
-                    Action = EffectActionKind.NegateFlipMonsterEffectsThisDestroysByBattle,
-                    Side = EffectSide.Opponent,
+                    Action = EffectActionKind.NegateEffectsOfMonstersDestroyedByBattle,
+                    Side = EffectSide.Controller,
+                    AffectsThisCardOnly = true,
+                    TargetCardKind = "Flip",
                     StaysOnField = true,
                     MakesChainLink = false
                 }),
-            // Tragedy (c35686188): When a face-up Attack Position monster(s) your opponent controls is changed to face-up Defense Position:
-            // Destroy all Defense Position monsters your opponent controls.
-            new AtomRegistration.Atom(
-                @"When a face-up Attack Position monster.*your opponent controls.*changed to face-up Defense Position: Destroy all Defense Position monsters your opponent controls\.?\s*$",
-                _ => new EffectClause
-                {
-                    Timing = EffectTiming.OpponentNormalOrFlipSummon,
-                    Action = EffectActionKind.DestroyAllOppDefenseWhenOppAttackBecomesDefense,
-                    Side = EffectSide.Opponent,
-                    MakesChainLink = true
-                }),
+            // v208 QC: Tragedy's "When a face-up Attack Position monster.*… changed to face-up Defense Position: …" atom was
+            // removed — it was seated on the opponent's Normal / Flip Summon window (not a position change) and its action
+            // had no runtime. The card is uncompiled again, as in v206.
         };
     }
 }

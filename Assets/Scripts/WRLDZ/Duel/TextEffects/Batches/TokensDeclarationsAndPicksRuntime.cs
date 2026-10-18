@@ -346,6 +346,13 @@ namespace WRLDZ.Duel.TextEffects
         public static void ChangeSelfAttribute(DuelEngine engine, DuelistState who, CardInstance source)
         {
             if (engine == null || who == null || source == null) return;
+            // Lua s.attop: c:IsFaceup() and c:IsRelateToEffect(e) — still face-up on its controller's field (v208 QC).
+            if (!source.FaceUp || !who.TryFindMonster(source, out _))
+            {
+                engine.Log(source.Name + " is no longer face-up on the field — its Attribute does not change.");
+                return;
+            }
+
             var current = TextEffects.EquipFamilyRuntime.CurrentAttribute(source);
             var tokens = TypeDeclarationRuntime.AttributeTokens(Attributes)
                 .Where(t => !string.Equals(t.Def?.attribute, current, System.StringComparison.OrdinalIgnoreCase))
@@ -365,10 +372,10 @@ namespace WRLDZ.Duel.TextEffects
                 AiChoose = list => list.OrderBy(t => t.Def?.attribute).FirstOrDefault(),
                 Finish = chosen =>
                 {
-                    if (chosen == null) return;
+                    if (chosen == null || !source.FaceUp || !who.TryFindMonster(source, out _)) return;
                     var attr = chosen.Def?.attribute;
                     if (string.IsNullOrEmpty(attr)) return;
-                    TextEffects.EquipFamilyRuntime.SetSelfAttribute(source, attr);
+                    TextEffects.EquipFamilyRuntime.SetSelfAttribute(engine, source, attr);
                     engine.Log(source.Name + " is now " + attr + " until it leaves the field.");
                     engine.NotifyPublic();
                 }

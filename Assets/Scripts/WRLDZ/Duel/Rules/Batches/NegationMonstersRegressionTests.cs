@@ -219,6 +219,8 @@ namespace WRLDZ.Duel.Rules
             // Near misses: look-alike sentences that must not compile to these templates.
             var nearIds = new[]
             {
+                // QC LvAndPins (2026-10-18): stays a near miss — the cc5a4dd9d atom for it was removed (its marker never
+                // negated anything, and the shared answer destroys the Spell; LV3's Lua only negates).
                 1995985,  // Silent Swordsman LV3: "Negate your opponent's Spell effects that target this card."
                 39507162, // Blade Knight: "If you control no other monsters, the effects of Flip monsters … are negated."
             };

@@ -211,11 +211,27 @@ namespace WRLDZ.Duel.TextEffects
                 targets[i] = t;
             }
 
+            // v208 QC (Riryoku): a step may need every target of its link that is still legal (ResolvingTargetsOf).
+            var prevCard = s_resolvingCard;
+            var prevTargets = s_resolvingTargets;
+            s_resolvingCard = card;
+            s_resolvingTargets = new List<CardInstance>();
             for (var i = 0; i < d.Steps.Count; i++)
+                if (d.Steps[i].IsTarget && targets[i] != null && !s_resolvingTargets.Contains(targets[i]))
+                    s_resolvingTargets.Add(targets[i]);
+            try
             {
-                var s = d.Steps[i];
-                if (s.Target != null && targets[i] == null) continue;
-                s.Apply(targets[i]);
+                for (var i = 0; i < d.Steps.Count; i++)
+                {
+                    var s = d.Steps[i];
+                    if (s.Target != null && targets[i] == null) continue;
+                    s.Apply(targets[i]);
+                }
+            }
+            finally
+            {
+                s_resolvingCard = prevCard;
+                s_resolvingTargets = prevTargets;
             }
 
             // An Equip Spell that equipped nothing does not stay on the field. (A Continuous Trap that links to its
@@ -232,6 +248,24 @@ namespace WRLDZ.Duel.TextEffects
                 engine.SendCardToGrave(who, card);
             }
 
+            return true;
+        }
+
+        static CardInstance s_resolvingCard;
+        static List<CardInstance> s_resolvingTargets;
+
+        /// <summary>
+        /// v208 QC (Riryoku): while <paramref name="card"/>'s recorded link resolves, its targets that are still legal
+        /// (checked once, as the link started resolving). <paramref name="token"/> is the same object for every step of
+        /// that resolution. False outside such a resolution.
+        /// </summary>
+        internal static bool ResolvingTargetsOf(CardInstance card, out List<CardInstance> targets, out object token)
+        {
+            targets = null;
+            token = null;
+            if (card == null || s_resolvingTargets == null || !ReferenceEquals(s_resolvingCard, card)) return false;
+            targets = s_resolvingTargets;
+            token = s_resolvingTargets;
             return true;
         }
 
