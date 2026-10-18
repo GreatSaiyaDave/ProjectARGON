@@ -1,0 +1,4841 @@
+{
+ "version": 1,
+ "page": "landscape.html",
+ "hash": "portrait&demo=0&",
+ "t": 2.8,
+ "units": "stage px, origin top-left, y down; stage 1080x2340 = the 1080x2340 phone Game view. RectTransform: anchorMin = (x/W, 1-(y+h)/H), anchorMax = ((x+w)/W, 1-y/H) on a stage-sized root. ppu = sprite px per 100 stage px x 100 (100 = 1x, 200 = 2x).",
+ "stage": {
+  "W": 1080,
+  "H": 2340,
+  "k": 1.4,
+  "cx": 540,
+  "cy": 1098,
+  "floorY": 1691.6,
+  "nut": {
+   "top": 250,
+   "side": 22
+  },
+  "frieze": [
+   250,
+   300
+  ],
+  "torch": {
+   "x": 50,
+   "y": 560,
+   "sconce": true
+  },
+  "pylons": [],
+  "panels": []
+ },
+ "state": {
+  "flick": 0.3218589787225627,
+  "sg": 0,
+  "DS": {
+   "tier": 2,
+   "omenU": 99,
+   "whisperU": 99,
+   "apparU": 99,
+   "omen": 0,
+   "whisper": 0,
+   "appar": 0,
+   "still": 0,
+   "lid": 0,
+   "surf": 0,
+   "bind": 0,
+   "kin": 0,
+   "push": 0,
+   "relief": 0,
+   "sg": 0,
+   "drop": 0,
+   "bindDraw": 0,
+   "bindA": 0,
+   "bindCool": 0
+  },
+  "SH": false,
+  "dimOp": "0"
+ },
+ "groups": [
+  "bg (#bg)",
+  "crkU (#crkU)",
+  "fx (#fx canvas)",
+  "ui (#ui DOM: chrome, media; text = Unity Text)",
+  "fx2 (#fx2 canvas)",
+  "ph5 (placeholder strip)"
+ ],
+ "blendNote": "blend = the canvas op inside its group: 'alpha' source-over, 'additive' plus-lighter. In the browser an additive op adds onto the group's own pixels and is source-over onto what lies under the group, so an additive layer is pure add over an opaque layer of its group (the Stone) and premultiplied over elsewhere; check.py measures both Unity choices per layer (out/check/E7_report.json 'unity').",
+ "layers": [
+  {
+   "id": "room",
+   "z": 0,
+   "group": "bg",
+   "file": "WRLDZ/MenuV6/Main/Port/room",
+   "local": "WRLDZ/MenuV6Local/Main/Port/room",
+   "rect": [
+    0,
+    0,
+    1080,
+    2340
+   ],
+   "ppu": 100,
+   "blend": "opaque",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "menu.js:315 bakeBackground with paintNut stubbed (menu.js:326); pixels outside Nut = the shipped #bg (menu.js:319-325)"
+  },
+  {
+   "id": "nut",
+   "z": 1,
+   "group": "bg",
+   "file": "WRLDZ/MenuV6/Main/Port/nut",
+   "local": null,
+   "rect": [
+    0,
+    0,
+    1080.0,
+    1696.0
+   ],
+   "ppu": 100,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "core.js:462 paintNut"
+  },
+  {
+   "id": "crack_plate",
+   "z": 2,
+   "group": "crkU",
+   "file": "WRLDZ/MenuV6/Main/Port/crack_plate",
+   "local": null,
+   "rect": [
+    0,
+    0,
+    1080.0,
+    2252.0
+   ],
+   "ppu": 100,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "anime_v61_cracks.js crackDraw -> CRK.drawNets(#crkU) at t (15 nets at rest)"
+  },
+  {
+   "id": "stone_A",
+   "z": 3,
+   "group": "fx",
+   "file": "WRLDZ/MenuV6/Main/Port/stone_A",
+   "local": "WRLDZ/MenuV6Local/Main/Port/stone_A",
+   "rect": [
+    34,
+    519,
+    1012.0,
+    1212.0
+   ],
+   "ppu": 100,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "stone.js:217 bakeStone('menu') + anime_menu_v6.js:59; drawn at menu.js:654"
+  },
+  {
+   "id": "stone_B",
+   "z": 4,
+   "group": "fx",
+   "file": "WRLDZ/MenuV6/Main/Port/stone_B",
+   "local": "WRLDZ/MenuV6Local/Main/Port/stone_B",
+   "rect": [
+    34,
+    519,
+    1012.0,
+    1212.0
+   ],
+   "ppu": 100,
+   "blend": "alpha",
+   "alphaAtRest": 0.321859,
+   "alphaRule": "torch.flick (schedules.json): Stone B over A at alpha flick (menu.js:654)",
+   "src": "stone.js:217 bakeStone('menu') + anime_menu_v6.js:59; drawn at menu.js:654"
+  },
+  {
+   "id": "torch_pool_b0",
+   "z": 5,
+   "group": "fx",
+   "file": "WRLDZ/MenuV6/Main/Port/torch_pool_b0",
+   "local": null,
+   "rect": [
+    0,
+    348,
+    264.0,
+    424.0
+   ],
+   "ppu": 100,
+   "blend": "additive",
+   "alphaAtRest": 0.179312,
+   "alphaRule": "a0 = .2 * (.8 + .3 * flick) * (1 - .6 * sg)",
+   "src": "menu.js:658 (unit basis, units.mjs)"
+  },
+  {
+   "id": "torch_pool_b1",
+   "z": 6,
+   "group": "fx",
+   "file": "WRLDZ/MenuV6/Main/Port/torch_pool_b1",
+   "local": null,
+   "rect": [
+    0,
+    29,
+    584.0,
+    1064.0
+   ],
+   "ppu": 100,
+   "blend": "additive",
+   "alphaAtRest": 0.055,
+   "alphaRule": "a1 = .055 * (1 - .5 * sg)",
+   "src": "menu.js:658 (unit basis, units.mjs)"
+  },
+  {
+   "id": "stone_emiBlur",
+   "z": 7,
+   "group": "fx",
+   "file": "WRLDZ/MenuV6/Main/Port/stone_emiBlur",
+   "local": null,
+   "rect": [
+    34,
+    519,
+    1012.0,
+    1212.0
+   ],
+   "ppu": 100,
+   "blend": "additive",
+   "alphaAtRest": 0.39116,
+   "alphaRule": ".55 * bre, bre = .55 + .25 sin(.9 t) + .1 sin(2.3 t) (menu.js:659-660)",
+   "src": "stone.js:217 bakeStone('menu') + anime_menu_v6.js:59; drawn at menu.js:660"
+  },
+  {
+   "id": "stone_emi",
+   "z": 8,
+   "group": "fx",
+   "file": "WRLDZ/MenuV6/Main/Port/stone_emi",
+   "local": null,
+   "rect": [
+    34,
+    519,
+    1012.0,
+    1212.0
+   ],
+   "ppu": 100,
+   "blend": "additive",
+   "alphaAtRest": 0.5,
+   "alphaRule": ".5 (menu.js:660)",
+   "src": "stone.js:217 bakeStone('menu') + anime_menu_v6.js:59; drawn at menu.js:660"
+  },
+  {
+   "id": "recess_bazaar_picto",
+   "z": 9,
+   "group": "fx",
+   "file": "WRLDZ/MenuV6/Main/Port/recess/bazaar_picto",
+   "local": null,
+   "rect": [
+    838,
+    1126,
+    52.0,
+    96.0
+   ],
+   "ppu": 100,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "drawRecesses op 8",
+   "recess": "bazaar"
+  },
+  {
+   "id": "recess_story_picto",
+   "z": 10,
+   "group": "fx",
+   "file": "WRLDZ/MenuV6/Main/Port/recess/story_picto",
+   "local": null,
+   "rect": [
+    190,
+    1126,
+    60.0,
+    96.0
+   ],
+   "ppu": 100,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "drawRecesses op 9",
+   "recess": "story"
+  },
+  {
+   "id": "recess_view_picto",
+   "z": 11,
+   "group": "fx",
+   "file": "WRLDZ/MenuV6/Main/Port/recess/view_picto",
+   "local": null,
+   "rect": [
+    251,
+    860,
+    68.0,
+    64.0
+   ],
+   "ppu": 100,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "drawRecesses op 10",
+   "recess": "view"
+  },
+  {
+   "id": "ring_refract",
+   "z": 12,
+   "group": "fx",
+   "file": "WRLDZ/MenuV6/Main/Port/ring_refract",
+   "local": null,
+   "rect": [
+    468,
+    662,
+    144,
+    144
+   ],
+   "ppu": 100,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "relics.js:337-338 refraction of the fx stack below the Ring, rebuilt on a copy of that stack (layers.mjs)"
+  },
+  {
+   "id": "ring_echo_add",
+   "z": 13,
+   "group": "fx",
+   "file": "WRLDZ/MenuV6/Main/Port/ring_echo_add",
+   "local": null,
+   "rect": [
+    392,
+    586,
+    296,
+    296
+   ],
+   "ppu": 100,
+   "blend": "additive",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "menu.js:768 drawRingEcho (33 lighter ops: pointers, glints)"
+  },
+  {
+   "id": "breach_under",
+   "z": 14,
+   "group": "fx",
+   "file": "WRLDZ/MenuV6/Main/Port/breach_under",
+   "local": null,
+   "rect": [
+    666,
+    466,
+    348.0,
+    424.0
+   ],
+   "ppu": 100,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "menu_v41.js:42 drawBreach: occlusion shadow, hole, wall bands, void (ops 45-143)"
+  },
+  {
+   "id": "eye_13",
+   "z": 15,
+   "group": "fx",
+   "file": "WRLDZ/MenuV6/Eye/Port/breach_eye_13",
+   "local": null,
+   "rect": [
+    736,
+    683,
+    25,
+    20
+   ],
+   "ppu": 100,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "drawBreach>eye:13",
+   "flipbook": 13,
+   "note": "frame 0 == the frame at t (bit-exact)"
+  },
+  {
+   "id": "eye_11",
+   "z": 16,
+   "group": "fx",
+   "file": "WRLDZ/MenuV6/Eye/Port/breach_eye_11",
+   "local": null,
+   "rect": [
+    731,
+    595,
+    212,
+    154
+   ],
+   "ppu": 100,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "drawBreach>eye:11",
+   "flipbook": 11,
+   "note": "frame 0 == the frame at t (bit-exact)"
+  },
+  {
+   "id": "breach_over",
+   "z": 17,
+   "group": "fx",
+   "file": "WRLDZ/MenuV6/Main/Port/breach_over",
+   "local": null,
+   "rect": [
+    706,
+    495,
+    332.0,
+    368.0
+   ],
+   "ppu": 100,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "menu_v41.js:42 drawBreach after the eyes: tendrils, rim ink, hairlines (ops 150-241)"
+  },
+  {
+   "id": "breach_glow_add",
+   "z": 18,
+   "group": "fx",
+   "file": "WRLDZ/MenuV6/Main/Port/breach_glow_add",
+   "local": null,
+   "rect": [
+    86,
+    526,
+    924.0,
+    1248.0
+   ],
+   "ppu": 100,
+   "blend": "additive",
+   "alphaAtRest": 1.0,
+   "alphaRule": "at rest; P1b animates fl = .62 + .25 sin(5.1 t) sin(1.7 t + 2) + .13 sin(13.3 t)",
+   "src": "menu_v41.js:57-59 crackGlow + fis.glow at the frame alphas (fl at t)"
+  },
+  {
+   "id": "breach_fissure",
+   "z": 19,
+   "group": "fx",
+   "file": "WRLDZ/MenuV6/Main/Port/breach_fissure",
+   "local": null,
+   "rect": [
+    19,
+    1700,
+    1044.0,
+    44.0
+   ],
+   "ppu": 100,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "menu_v41.js:60 drawVoidIn on the floor fissure + its ink (ops 244-337)"
+  },
+  {
+   "id": "door_ring_add",
+   "z": 20,
+   "group": "fx",
+   "file": "WRLDZ/MenuV6/Main/Port/door_ring_add",
+   "local": null,
+   "rect": [
+    332,
+    890,
+    416,
+    416
+   ],
+   "ppu": 100,
+   "blend": "additive",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "anime_menu_v6.js:131 drawDoor (the Solid Vision ring overlay at t)"
+  },
+  {
+   "id": "smoke",
+   "z": 21,
+   "group": "fx",
+   "file": "WRLDZ/MenuV6/Main/Port/smoke_plate",
+   "local": null,
+   "rect": [
+    0,
+    274,
+    1080.0,
+    1532.0
+   ],
+   "ppu": 100,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "anime_menu_v6.js:155 drawSmoke + anime_v61_fixup.js:41 at t (215 ops: the floor bank and the breach seep at rest)"
+  },
+  {
+   "id": "motes_add",
+   "z": 22,
+   "group": "fx",
+   "file": "WRLDZ/MenuV6/Main/Port/motes_add",
+   "local": null,
+   "rect": [
+    4,
+    474,
+    380.0,
+    748.0
+   ],
+   "ppu": 100,
+   "blend": "additive",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "menu.js:669 the 30 gold motes at t (static in P1a)"
+  },
+  {
+   "id": "flame_glow_add",
+   "z": 23,
+   "group": "fx",
+   "file": "WRLDZ/MenuV6/Main/Port/flame_glow_add",
+   "local": null,
+   "rect": [
+    0,
+    430,
+    160.0,
+    216.0
+   ],
+   "ppu": 100,
+   "blend": "additive",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "anime_menu_v6.js:289 drawFlame glow at t (static in P1a; P1b = the M20 mesh)"
+  },
+  {
+   "id": "flame_tongues",
+   "z": 24,
+   "group": "fx",
+   "file": "WRLDZ/MenuV6/Main/Port/flame_tongues",
+   "local": null,
+   "rect": [
+    25,
+    475,
+    52.0,
+    92.0
+   ],
+   "ppu": 100,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "anime_menu_v6.js:289-297 drawFlame tongues at t (static in P1a; P1b = the M20 mesh)"
+  },
+  {
+   "id": "nut_twinkle_add",
+   "z": 25,
+   "group": "fx",
+   "file": "WRLDZ/MenuV6/Main/Port/nut_twinkle_add",
+   "local": null,
+   "rect": [
+    0,
+    35,
+    1080.0,
+    1512.0
+   ],
+   "ppu": 100,
+   "blend": "additive",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "core.js:476 drawNutTwinkle at t (static in P1a)"
+  },
+  {
+   "id": "nut_crack",
+   "z": 26,
+   "group": "fx",
+   "file": "WRLDZ/MenuV6/Main/Port/nut_crack",
+   "local": null,
+   "rect": [
+    487,
+    156,
+    332.0,
+    100.0
+   ],
+   "ppu": 100,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "menu.js drawNutCracks (anime_v61_cracks.js:592 crk.nut + skyL / skyR) at rest"
+  },
+  {
+   "id": "vignette_top",
+   "z": 27,
+   "group": "fx",
+   "file": "WRLDZ/MenuV6/Main/Port/vignette_top",
+   "local": null,
+   "rect": [
+    0,
+    0,
+    1080.0,
+    900.0
+   ],
+   "ppu": 100,
+   "blend": "alpha",
+   "alphaAtRest": 0.629343,
+   "alphaRule": "pr = .55 + .12 sin(.37 t) + .05 sin(1.3 t) + .3 sg (menu.js:675)",
+   "src": "menu.js:676 unit vignette"
+  },
+  {
+   "id": "vignette_bottom",
+   "z": 28,
+   "group": "fx",
+   "file": "WRLDZ/MenuV6/Main/Port/vignette_bottom",
+   "local": null,
+   "rect": [
+    0,
+    1443,
+    1080.0,
+    900.0
+   ],
+   "ppu": 100,
+   "blend": "alpha",
+   "alphaAtRest": 0.629343,
+   "alphaRule": "pr = .55 + .12 sin(.37 t) + .05 sin(1.3 t) + .3 sg (menu.js:675)",
+   "src": "menu.js:676 unit vignette"
+  },
+  {
+   "id": "vignette_left",
+   "z": 29,
+   "group": "fx",
+   "file": "WRLDZ/MenuV6/Main/Port/vignette_left",
+   "local": null,
+   "rect": [
+    0,
+    897,
+    268.0,
+    548.0
+   ],
+   "ppu": 100,
+   "blend": "alpha",
+   "alphaAtRest": 0.629343,
+   "alphaRule": "pr = .55 + .12 sin(.37 t) + .05 sin(1.3 t) + .3 sg (menu.js:675)",
+   "src": "menu.js:676 unit vignette"
+  },
+  {
+   "id": "vignette_right",
+   "z": 30,
+   "group": "fx",
+   "file": "WRLDZ/MenuV6/Main/Port/vignette_right",
+   "local": null,
+   "rect": [
+    813,
+    897,
+    268.0,
+    548.0
+   ],
+   "ppu": 100,
+   "blend": "alpha",
+   "alphaAtRest": 0.629343,
+   "alphaRule": "pr = .55 + .12 sin(.37 t) + .05 sin(1.3 t) + .3 sg (menu.js:675)",
+   "src": "menu.js:676 unit vignette"
+  },
+  {
+   "id": "rl_plate_0",
+   "z": 31,
+   "group": "ui",
+   "file": "WRLDZ/MenuV6/Main/Port/chrome9/rl_plate",
+   "local": null,
+   "rect": [
+    695.0,
+    966.5,
+    207.0,
+    73.0
+   ],
+   "ppu": 200,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "dom9.mjs .rl",
+   "border": [
+    17,
+    17,
+    15,
+    19
+   ],
+   "nine": true,
+   "chrome": "rl_plate"
+  },
+  {
+   "id": "rl_plate_1",
+   "z": 32,
+   "group": "ui",
+   "file": "WRLDZ/MenuV6/Main/Port/chrome9/rl_plate",
+   "local": null,
+   "rect": [
+    766.5,
+    1257.0,
+    192.0,
+    80.0
+   ],
+   "ppu": 200,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "dom9.mjs .rl",
+   "border": [
+    17,
+    17,
+    15,
+    19
+   ],
+   "nine": true,
+   "chrome": "rl_plate"
+  },
+  {
+   "id": "rl_plate_2",
+   "z": 33,
+   "group": "ui",
+   "file": "WRLDZ/MenuV6/Main/Port/chrome9/rl_plate",
+   "local": null,
+   "rect": [
+    612.0,
+    1482.0,
+    143.0,
+    80.0
+   ],
+   "ppu": 200,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "dom9.mjs .rl",
+   "border": [
+    17,
+    17,
+    15,
+    19
+   ],
+   "nine": true,
+   "chrome": "rl_plate"
+  },
+  {
+   "id": "rl_plate_3",
+   "z": 34,
+   "group": "ui",
+   "file": "WRLDZ/MenuV6/Main/Port/chrome9/rl_plate",
+   "local": null,
+   "rect": [
+    299.5,
+    1482.0,
+    196.0,
+    80.0
+   ],
+   "ppu": 200,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "dom9.mjs .rl",
+   "border": [
+    17,
+    17,
+    15,
+    19
+   ],
+   "nine": true,
+   "chrome": "rl_plate"
+  },
+  {
+   "id": "rl_plate_4",
+   "z": 35,
+   "group": "ui",
+   "file": "WRLDZ/MenuV6/Main/Port/chrome9/rl_plate",
+   "local": null,
+   "rect": [
+    138.0,
+    1257.0,
+    161.0,
+    80.0
+   ],
+   "ppu": 200,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "dom9.mjs .rl",
+   "border": [
+    17,
+    17,
+    15,
+    19
+   ],
+   "nine": true,
+   "chrome": "rl_plate"
+  },
+  {
+   "id": "rl_plate_5",
+   "z": 36,
+   "group": "ui",
+   "file": "WRLDZ/MenuV6/Main/Port/chrome9/rl_plate",
+   "local": null,
+   "rect": [
+    180.5,
+    966.5,
+    203.0,
+    73.0
+   ],
+   "ppu": 200,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "dom9.mjs .rl",
+   "border": [
+    17,
+    17,
+    15,
+    19
+   ],
+   "nine": true,
+   "chrome": "rl_plate"
+  },
+  {
+   "id": "ava_ring_0",
+   "z": 37,
+   "group": "ui",
+   "file": "WRLDZ/MenuV6/Main/Port/chrome9/ava_ring",
+   "local": null,
+   "rect": [
+    49.5,
+    68.5,
+    122.0,
+    130.0
+   ],
+   "ppu": 200,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "dom9.mjs .ava, .ava img",
+   "border": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "nine": false,
+   "chrome": "ava_ring"
+  },
+  {
+   "id": "medal_ring_0",
+   "z": 38,
+   "group": "ui",
+   "file": "WRLDZ/MenuV6/Main/Port/chrome9/medal_ring",
+   "local": null,
+   "rect": [
+    799.5,
+    65.5,
+    90.0,
+    92.0
+   ],
+   "ppu": 200,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "dom9.mjs .medal > .mi:not(.pz), .medal > .mi:not(.pz) img",
+   "border": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "nine": false,
+   "chrome": "medal_ring"
+  },
+  {
+   "id": "medal_ring_pz_0",
+   "z": 39,
+   "group": "ui",
+   "file": "WRLDZ/MenuV6/Main/Port/chrome9/medal_ring_pz",
+   "local": null,
+   "rect": [
+    941.5,
+    75.5,
+    90.0,
+    92.0
+   ],
+   "ppu": 200,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "dom9.mjs .mi.pz",
+   "border": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "nine": false,
+   "chrome": "medal_ring_pz"
+  },
+  {
+   "id": "xp_track_0",
+   "z": 40,
+   "group": "ui",
+   "file": "WRLDZ/MenuV6/Main/Port/chrome9/xp_track",
+   "local": null,
+   "rect": [
+    186.0,
+    185.0,
+    300.0,
+    8.0
+   ],
+   "ppu": 200,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "dom9.mjs .xp",
+   "border": [
+    8,
+    0,
+    8,
+    0
+   ],
+   "nine": true,
+   "chrome": "xp_track"
+  },
+  {
+   "id": "xp_fill_0",
+   "z": 41,
+   "group": "ui",
+   "file": "WRLDZ/MenuV6/Main/Port/chrome9/xp_fill",
+   "local": null,
+   "rect": [
+    187.0,
+    186.0,
+    186.0,
+    6.0
+   ],
+   "ppu": 200,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "dom9.mjs .xp > i",
+   "border": [
+    6,
+    0,
+    2,
+    0
+   ],
+   "nine": true,
+   "chrome": "xp_fill"
+  },
+  {
+   "id": "pip_0",
+   "z": 42,
+   "group": "ui",
+   "file": "WRLDZ/MenuV6/Main/Port/chrome9/pip",
+   "local": null,
+   "rect": [
+    963.5,
+    171.5,
+    14.0,
+    10.0
+   ],
+   "ppu": 200,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "dom9.mjs .pips > i",
+   "border": [
+    7,
+    9,
+    7,
+    7
+   ],
+   "nine": true,
+   "chrome": "pip"
+  },
+  {
+   "id": "pip_1",
+   "z": 43,
+   "group": "ui",
+   "file": "WRLDZ/MenuV6/Main/Port/chrome9/pip",
+   "local": null,
+   "rect": [
+    979.5,
+    171.5,
+    14.0,
+    10.0
+   ],
+   "ppu": 200,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "dom9.mjs .pips > i",
+   "border": [
+    7,
+    9,
+    7,
+    7
+   ],
+   "nine": true,
+   "chrome": "pip"
+  },
+  {
+   "id": "pip_2",
+   "z": 44,
+   "group": "ui",
+   "file": "WRLDZ/MenuV6/Main/Port/chrome9/pip",
+   "local": null,
+   "rect": [
+    995.5,
+    171.5,
+    14.0,
+    10.0
+   ],
+   "ppu": 200,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "dom9.mjs .pips > i",
+   "border": [
+    7,
+    9,
+    7,
+    7
+   ],
+   "nine": true,
+   "chrome": "pip"
+  },
+  {
+   "id": "niche_frame_0",
+   "z": 45,
+   "group": "ui",
+   "file": "WRLDZ/MenuV6/Main/Port/chrome9/niche_frame",
+   "local": null,
+   "rect": [
+    588.5,
+    1807.5,
+    222.0,
+    182.0
+   ],
+   "ppu": 200,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "dom9.mjs .niche",
+   "border": [
+    15,
+    17,
+    17,
+    15
+   ],
+   "nine": true,
+   "chrome": "niche_frame"
+  },
+  {
+   "id": "quit_plate_0",
+   "z": 46,
+   "group": "ui",
+   "file": "WRLDZ/MenuV6/Main/Port/chrome9/quit_plate",
+   "local": null,
+   "rect": [
+    841.0,
+    2185.0,
+    198.0,
+    80.0
+   ],
+   "ppu": 200,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "dom9.mjs #quit",
+   "border": [
+    14,
+    20,
+    18,
+    16
+   ],
+   "nine": true,
+   "chrome": "quit_plate"
+  },
+  {
+   "id": "site_dot_0",
+   "z": 47,
+   "group": "ui",
+   "file": "WRLDZ/MenuV6/Main/Port/chrome9/site_dot",
+   "local": null,
+   "rect": [
+    818.5,
+    1963.5,
+    12.0,
+    12.0
+   ],
+   "ppu": 200,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "dom9.mjs .wmap .s2 > i",
+   "border": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "nine": false,
+   "chrome": "site_dot"
+  },
+  {
+   "id": "news_band_0",
+   "z": 48,
+   "group": "ui",
+   "file": "WRLDZ/MenuV6/Main/Port/chrome9/news_band",
+   "local": null,
+   "rect": [
+    37.5,
+    2043.5,
+    1006.0,
+    114.0
+   ],
+   "ppu": 200,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "dom9.mjs .pomen.news.om1",
+   "border": [
+    28,
+    30,
+    30,
+    28
+   ],
+   "nine": true,
+   "chrome": "news_band"
+  },
+  {
+   "id": "medal_puzzle",
+   "z": 49,
+   "group": "ui",
+   "file": "WRLDZ/MenuV6/Main/Port/slate/medal_puzzle",
+   "local": null,
+   "rect": [
+    944.0,
+    78.0,
+    84.0,
+    84.0
+   ],
+   "ppu": 200,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "menu.js:492 paintMedallion + PuzzleRelic (built once) — as displayed: border-radius 50% clip (anime_v6.css:40), media2x.mjs dsf-2 shot",
+   "cssRect": [
+    944,
+    78,
+    84,
+    84
+   ],
+   "media": true
+  },
+  {
+   "id": "meter",
+   "z": 50,
+   "group": "ui",
+   "file": "WRLDZ/MenuV6/Main/Port/slate/meter/meter_n8",
+   "local": null,
+   "rect": [
+    70.0,
+    396.0,
+    132.0,
+    120.0
+   ],
+   "ppu": 200,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "menu.js:990 drawPuzzleMeter; the mockup draws n = 8 (== meter_n8, bit-exact)",
+   "cssRect": [
+    70,
+    396,
+    132,
+    120
+   ],
+   "media": true,
+   "variants": [
+    "WRLDZ/MenuV6/Main/Port/slate/meter/meter_n0",
+    "WRLDZ/MenuV6/Main/Port/slate/meter/meter_n1",
+    "WRLDZ/MenuV6/Main/Port/slate/meter/meter_n2",
+    "WRLDZ/MenuV6/Main/Port/slate/meter/meter_n3",
+    "WRLDZ/MenuV6/Main/Port/slate/meter/meter_n4",
+    "WRLDZ/MenuV6/Main/Port/slate/meter/meter_n5",
+    "WRLDZ/MenuV6/Main/Port/slate/meter/meter_n6",
+    "WRLDZ/MenuV6/Main/Port/slate/meter/meter_n7",
+    "WRLDZ/MenuV6/Main/Port/slate/meter/meter_n8"
+   ],
+   "pick": "n = round(8 * cleared stages / 10) (BUILD_PLAN §7 F19)"
+  },
+  {
+   "id": "box_rest",
+   "z": 51,
+   "group": "ui",
+   "file": "WRLDZ/MenuV6/Main/Port/slate/box_fallback",
+   "local": "WRLDZ/MenuV6Local/Main/Port/box_rest",
+   "rect": [
+    50.0,
+    1735.0,
+    200.0,
+    256.0
+   ],
+   "ppu": 200,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "menu.js:1003 BOX.draw at boxState(T) (box6 L104 set)",
+   "cssRect": [
+    50,
+    1734.59375,
+    200,
+    256
+   ],
+   "media": true
+  },
+  {
+   "id": "niche_still",
+   "z": 52,
+   "group": "ui",
+   "file": "WRLDZ/MenuV6/Main/Port/niche/niche_still",
+   "local": null,
+   "rect": [
+    596.0,
+    1815.0,
+    206.0,
+    166.0
+   ],
+   "ppu": 200,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "menu.js:138 makeCityDoor draw at T (WORLD MAP niche)",
+   "cssRect": [
+    596,
+    1814.59375,
+    206,
+    166
+   ],
+   "media": true
+  },
+  {
+   "id": "disk_glyph",
+   "z": 53,
+   "group": "ui",
+   "file": "WRLDZ/MenuV6/Main/Port/slate/disk_glyph",
+   "local": null,
+   "rect": [
+    268.0,
+    1791.0,
+    30.0,
+    30.0
+   ],
+   "ppu": 200,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "anime_menu_v6.js:225 ico(disk) = AN_DISP.disk (slots/disk_34_canon.png)",
+   "cssRect": [
+    268,
+    1790.59375,
+    30,
+    30
+   ],
+   "media": true
+  },
+  {
+   "id": "icon_tear",
+   "z": 54,
+   "group": "ui",
+   "file": "WRLDZ/MenuV6/Main/Port/icons/tear",
+   "local": null,
+   "rect": [
+    65.0,
+    2078.0,
+    44.0,
+    44.0
+   ],
+   "ppu": 200,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "menu.js:72 ico() + anime_menu_v6.js:226 anInkCanvas",
+   "cssRect": [
+    65,
+    2077.59375,
+    44,
+    44
+   ],
+   "media": true
+  },
+  {
+   "id": "icon_tower",
+   "z": 55,
+   "group": "ui",
+   "file": "WRLDZ/MenuV6/Main/Port/icons/tower",
+   "local": null,
+   "rect": [
+    44.0,
+    2198.0,
+    40.0,
+    40.0
+   ],
+   "ppu": 200,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "menu.js:72 ico() + anime_menu_v6.js:226 anInkCanvas",
+   "cssRect": [
+    44,
+    2198.09375,
+    40,
+    40
+   ],
+   "media": true
+  },
+  {
+   "id": "icon_door",
+   "z": 56,
+   "group": "ui",
+   "file": "WRLDZ/MenuV6/Main/Port/icons/door",
+   "local": null,
+   "rect": [
+    875.0,
+    2206.0,
+    34.0,
+    34.0
+   ],
+   "ppu": 200,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "menu.js:72 ico() + anime_menu_v6.js:226 anInkCanvas",
+   "cssRect": [
+    875,
+    2205.59375,
+    34,
+    34
+   ],
+   "media": true
+  },
+  {
+   "id": "kuriboh_medal",
+   "z": 57,
+   "group": "ui",
+   "file": "WRLDZ/MenuV6/Main/Port/slate/kuriboh_medal",
+   "local": null,
+   "rect": [
+    804.5,
+    70.5,
+    78.0,
+    78.0
+   ],
+   "ppu": 200,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "DOM img (companion medal)",
+   "cssRect": [
+    804.5,
+    70.5,
+    78,
+    78
+   ],
+   "media": true
+  },
+  {
+   "id": "keystone_over_f0",
+   "z": 58,
+   "group": "fx2",
+   "file": "WRLDZ/MenuV6/Main/Port/keystone/over_f0",
+   "local": null,
+   "rect": [
+    456,
+    965,
+    176.0,
+    160.0
+   ],
+   "ppu": 100,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "drawKeystone"
+  },
+  {
+   "id": "keystone_over_f1",
+   "z": 59,
+   "group": "fx2",
+   "file": "WRLDZ/MenuV6/Main/Port/keystone/over_f1",
+   "local": null,
+   "rect": [
+    456,
+    965,
+    176.0,
+    160.0
+   ],
+   "ppu": 100,
+   "blend": "alpha",
+   "alphaAtRest": 0.321859,
+   "alphaRule": "torch.flick: f1 over f0 at alpha flick (near-exact: relics.js:207 draws B over A at flick)",
+   "src": "drawKeystone"
+  },
+  {
+   "id": "keystone_add_flick0",
+   "z": 60,
+   "group": "fx2",
+   "file": "WRLDZ/MenuV6/Main/Port/keystone/add",
+   "local": null,
+   "rect": [
+    485,
+    984,
+    96.0,
+    96.0
+   ],
+   "ppu": 100,
+   "blend": "additive",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "menu.js:832 drawKeystone add run (identical at flick 0 and 1)"
+  },
+  {
+   "id": "ph5_plate_0",
+   "z": 61,
+   "group": "ph5",
+   "file": "WRLDZ/MenuV6/Main/Port/chrome9/ph5_plate",
+   "local": null,
+   "rect": [
+    24.0,
+    2284.0,
+    934.0,
+    38.0
+   ],
+   "ppu": 200,
+   "blend": "alpha",
+   "alphaAtRest": 1.0,
+   "alphaRule": null,
+   "src": "dom9.mjs .ph5",
+   "border": [
+    6,
+    6,
+    6,
+    6
+   ],
+   "nine": true,
+   "chrome": "ph5_plate"
+  }
+ ],
+ "flipbooks": {
+  "13": {
+   "file": "WRLDZ/MenuV6/Eye/Port/breach_eye_13",
+   "rect": [
+    736,
+    683,
+    25,
+    20
+   ],
+   "cell": [
+    25,
+    20
+   ],
+   "grid": [
+    8,
+    6
+   ],
+   "pitch": [
+    32,
+    24
+   ],
+   "fps": 60,
+   "frames": [
+    {
+     "i": 0,
+     "x": 0,
+     "y": 0,
+     "ph": "rest",
+     "dt": 0,
+     "S": {
+      "p": 1,
+      "sy": 1,
+      "sx": 1
+     }
+    },
+    {
+     "i": 1,
+     "x": 32,
+     "y": 0,
+     "ph": "close",
+     "dt": 0.016667,
+     "S": {
+      "p": 0.9835634451019066,
+      "sy": 0.9855358316896778,
+      "sx": 1.0013149243918475
+     }
+    },
+    {
+     "i": 2,
+     "x": 64,
+     "y": 0,
+     "ph": "close",
+     "dt": 0.033333,
+     "S": {
+      "p": 0.9342537804076265,
+      "sy": 0.9421433267587114,
+      "sx": 1.00525969756739
+     }
+    },
+    {
+     "i": 3,
+     "x": 96,
+     "y": 0,
+     "ph": "close",
+     "dt": 0.05,
+     "S": {
+      "p": 0.8520710059171598,
+      "sy": 0.8698224852071006,
+      "sx": 1.0118343195266273
+     }
+    },
+    {
+     "i": 4,
+     "x": 128,
+     "y": 0,
+     "ph": "close",
+     "dt": 0.066667,
+     "S": {
+      "p": 0.7370151216305063,
+      "sy": 0.7685733070348455,
+      "sx": 1.0210387902695595
+     }
+    },
+    {
+     "i": 5,
+     "x": 160,
+     "y": 0,
+     "ph": "close",
+     "dt": 0.083333,
+     "S": {
+      "p": 0.5890861275476661,
+      "sy": 0.6383957922419461,
+      "sx": 1.0328731097961867
+     }
+    },
+    {
+     "i": 6,
+     "x": 192,
+     "y": 0,
+     "ph": "close",
+     "dt": 0.1,
+     "S": {
+      "p": 0.40828402366863903,
+      "sy": 0.47928994082840237,
+      "sx": 1.047337278106509
+     }
+    },
+    {
+     "i": 7,
+     "x": 224,
+     "y": 0,
+     "ph": "close",
+     "dt": 0.116667,
+     "S": {
+      "p": 0.19460880999342534,
+      "sy": 0.29125575279421434,
+      "sx": 1.064431295200526
+     }
+    },
+    {
+     "i": 8,
+     "x": 0,
+     "y": 24,
+     "ph": "shut",
+     "dt": 0,
+     "S": {
+      "p": 0,
+      "sy": 0.12,
+      "sx": 1.08
+     }
+    },
+    {
+     "i": 9,
+     "x": 32,
+     "y": 24,
+     "ph": "open",
+     "dt": 0.016667,
+     "S": {
+      "p": 0.12185185185185185,
+      "sy": 0.19259259259259257,
+      "sx": 1.074814814814815
+     }
+    },
+    {
+     "i": 10,
+     "x": 64,
+     "y": 24,
+     "ph": "open",
+     "dt": 0.033333,
+     "S": {
+      "p": 0.24370370370370364,
+      "sy": 0.2651851851851852,
+      "sx": 1.0696296296296297
+     }
+    },
+    {
+     "i": 11,
+     "x": 96,
+     "y": 24,
+     "ph": "open",
+     "dt": 0.05,
+     "S": {
+      "p": 0.47,
+      "sy": 0.4,
+      "sx": 1.06
+     }
+    },
+    {
+     "i": 12,
+     "x": 128,
+     "y": 24,
+     "ph": "open",
+     "dt": 0.066667,
+     "S": {
+      "p": 0.631335040316241,
+      "sy": 0.4962828282828283,
+      "sx": 1.0515032679738563
+     }
+    },
+    {
+     "i": 13,
+     "x": 160,
+     "y": 24,
+     "ph": "open",
+     "dt": 0.083333,
+     "S": {
+      "p": 0.6193367472991488,
+      "sy": 0.49034343434343436,
+      "sx": 1.047450980392157
+     }
+    },
+    {
+     "i": 14,
+     "x": 192,
+     "y": 24,
+     "ph": "open",
+     "dt": 0.1,
+     "S": {
+      "p": 0.63,
+      "sy": 0.5,
+      "sx": 1.04
+     }
+    },
+    {
+     "i": 15,
+     "x": 224,
+     "y": 24,
+     "ph": "open",
+     "dt": 0.116667,
+     "S": {
+      "p": 0.6849511240516045,
+      "sy": 0.5375828234379912,
+      "sx": 1.0329147044771376
+     }
+    },
+    {
+     "i": 16,
+     "x": 0,
+     "y": 48,
+     "ph": "open",
+     "dt": 0.133333,
+     "S": {
+      "p": 0.7002608265556658,
+      "sy": 0.5531362111664944,
+      "sx": 1.030005900163936
+     }
+    },
+    {
+     "i": 17,
+     "x": 32,
+     "y": 48,
+     "ph": "open",
+     "dt": 0.15,
+     "S": {
+      "p": 0.7135905587668006,
+      "sy": 0.5710493574891204,
+      "sx": 1.0235000927964142
+     }
+    },
+    {
+     "i": 18,
+     "x": 64,
+     "y": 48,
+     "ph": "open",
+     "dt": 0.166667,
+     "S": {
+      "p": 0.7626017719396256,
+      "sy": 0.6157114567094816,
+      "sx": 1.0056237881105912
+     }
+    },
+    {
+     "i": 19,
+     "x": 96,
+     "y": 48,
+     "ph": "open",
+     "dt": 0.183333,
+     "S": {
+      "p": 0.8248275862068967,
+      "sy": 0.6717801672640382,
+      "sx": 0.9876179604261796
+     }
+    },
+    {
+     "i": 20,
+     "x": 128,
+     "y": 48,
+     "ph": "open",
+     "dt": 0.2,
+     "S": {
+      "p": 0.846918103448276,
+      "sy": 0.7117741935483872,
+      "sx": 0.9881720890410959
+     }
+    },
+    {
+     "i": 21,
+     "x": 160,
+     "y": 48,
+     "ph": "open",
+     "dt": 0.216667,
+     "S": {
+      "p": 0.907037037037037,
+      "sy": 0.7950925925925927,
+      "sx": 0.980972222222222
+     }
+    },
+    {
+     "i": 22,
+     "x": 192,
+     "y": 48,
+     "ph": "open",
+     "dt": 0.233333,
+     "S": {
+      "p": 0.9478935185185184,
+      "sy": 0.8475810185185185,
+      "sx": 0.9751562500000001
+     }
+    },
+    {
+     "i": 23,
+     "x": 224,
+     "y": 48,
+     "ph": "open",
+     "dt": 0.25,
+     "S": {
+      "p": 1.02,
+      "sy": 0.94,
+      "sx": 0.965
+     }
+    },
+    {
+     "i": 24,
+     "x": 0,
+     "y": 72,
+     "ph": "open",
+     "dt": 0.266667,
+     "S": {
+      "p": 1.1161226851851853,
+      "sy": 1.0737962962962964,
+      "sx": 0.9461631944444444
+     }
+    },
+    {
+     "i": 25,
+     "x": 32,
+     "y": 72,
+     "ph": "open",
+     "dt": 0.283333,
+     "S": {
+      "p": 1.1653703703703704,
+      "sy": 1.152037037037037,
+      "sx": 0.9316666666666668
+     }
+    },
+    {
+     "i": 26,
+     "x": 64,
+     "y": 72,
+     "ph": "open",
+     "dt": 0.3,
+     "S": {
+      "p": 1.1696875,
+      "sy": 1.1593749999999998,
+      "sx": 0.9303125000000001
+     }
+    },
+    {
+     "i": 27,
+     "x": 96,
+     "y": 72,
+     "ph": "open",
+     "dt": 0.316667,
+     "S": {
+      "p": 1.1677777777777778,
+      "sy": 1.1555555555555557,
+      "sx": 0.9322222222222222
+     }
+    },
+    {
+     "i": 28,
+     "x": 128,
+     "y": 72,
+     "ph": "open",
+     "dt": 0.333333,
+     "S": {
+      "p": 1.1641261574074073,
+      "sy": 1.1483912037037036,
+      "sx": 0.9358043981481482
+     }
+    },
+    {
+     "i": 29,
+     "x": 160,
+     "y": 72,
+     "ph": "open",
+     "dt": 0.35,
+     "S": {
+      "p": 1.1575000000000002,
+      "sy": 1.1399999999999997,
+      "sx": 0.9400000000000002
+     }
+    },
+    {
+     "i": 30,
+     "x": 192,
+     "y": 72,
+     "ph": "open",
+     "dt": 0.366667,
+     "S": {
+      "p": 1.1439293981481482,
+      "sy": 1.124664351851852,
+      "sx": 0.947667824074074
+     }
+    },
+    {
+     "i": 31,
+     "x": 224,
+     "y": 72,
+     "ph": "open",
+     "dt": 0.383333,
+     "S": {
+      "p": 1.128148148148148,
+      "sy": 1.1061111111111113,
+      "sx": 0.9566666666666667
+     }
+    },
+    {
+     "i": 32,
+     "x": 0,
+     "y": 96,
+     "ph": "open",
+     "dt": 0.4,
+     "S": {
+      "p": 1.11515625,
+      "sy": 1.091875,
+      "sx": 0.96265625
+     }
+    },
+    {
+     "i": 33,
+     "x": 32,
+     "y": 96,
+     "ph": "open",
+     "dt": 0.416667,
+     "S": {
+      "p": 1.0896296296296295,
+      "sy": 1.063472222222222,
+      "sx": 0.9751851851851853
+     }
+    },
+    {
+     "i": 34,
+     "x": 64,
+     "y": 96,
+     "ph": "open",
+     "dt": 0.433333,
+     "S": {
+      "p": 1.078287037037037,
+      "sy": 1.0522743055555555,
+      "sx": 0.9808564814814815
+     }
+    },
+    {
+     "i": 35,
+     "x": 96,
+     "y": 96,
+     "ph": "open",
+     "dt": 0.45,
+     "S": {
+      "p": 1.06,
+      "sy": 1.035,
+      "sx": 0.99
+     }
+    },
+    {
+     "i": 36,
+     "x": 128,
+     "y": 96,
+     "ph": "open",
+     "dt": 0.466667,
+     "S": {
+      "p": 1.0402398989898989,
+      "sy": 1.0182452605433903,
+      "sx": 0.9975292397660819
+     }
+    },
+    {
+     "i": 37,
+     "x": 160,
+     "y": 96,
+     "ph": "open",
+     "dt": 0.483333,
+     "S": {
+      "p": 1.0286868686868686,
+      "sy": 1.0145620437956204,
+      "sx": 0.9970175438596491
+     }
+    },
+    {
+     "i": 38,
+     "x": 192,
+     "y": 96,
+     "ph": "open",
+     "dt": 0.5,
+     "S": {
+      "p": 1.0080872727272727,
+      "sy": 1.0029734306569345,
+      "sx": 0.9999629473684212
+     }
+    },
+    {
+     "i": 39,
+     "x": 224,
+     "y": 96,
+     "ph": "open",
+     "dt": 0.516667,
+     "S": {
+      "p": 1.002153265993266,
+      "sy": 1.000105520410922,
+      "sx": 1.0004848966861597
+     }
+    },
+    {
+     "i": 40,
+     "x": 0,
+     "y": 120,
+     "ph": "open",
+     "dt": 0.533333,
+     "S": {
+      "p": 1.0017142087542088,
+      "sy": 1.0007282833198161,
+      "sx": 0.9999214658869396
+     }
+    }
+   ],
+   "pick": "wide outside a blink -> frame 0; close phase (t - tc) in [0, CLOSE): k = floor((t - tc) * 60) -> frame k (k = 0 is frame 0); hold [tc + CLOSE, to): frame 8 (shut); open (t - to) in [0, OPEN): k = floor((t - to) * 60) -> frame 8 + k (k = 0 = shut); after to + OPEN -> frame 0. Frame j sits at (x, y) in the sheet, size cell."
+  },
+  "11": {
+   "file": "WRLDZ/MenuV6/Eye/Port/breach_eye_11",
+   "rect": [
+    731,
+    595,
+    212,
+    154
+   ],
+   "cell": [
+    212,
+    154
+   ],
+   "grid": [
+    8,
+    6
+   ],
+   "pitch": [
+    216,
+    160
+   ],
+   "fps": 60,
+   "frames": [
+    {
+     "i": 0,
+     "x": 0,
+     "y": 0,
+     "ph": "rest",
+     "dt": 0,
+     "S": {
+      "p": 1,
+      "sy": 1,
+      "sx": 1
+     }
+    },
+    {
+     "i": 1,
+     "x": 216,
+     "y": 0,
+     "ph": "close",
+     "dt": 0.016667,
+     "S": {
+      "p": 0.9835634451019066,
+      "sy": 0.9855358316896778,
+      "sx": 1.0013149243918475
+     }
+    },
+    {
+     "i": 2,
+     "x": 432,
+     "y": 0,
+     "ph": "close",
+     "dt": 0.033333,
+     "S": {
+      "p": 0.9342537804076265,
+      "sy": 0.9421433267587114,
+      "sx": 1.00525969756739
+     }
+    },
+    {
+     "i": 3,
+     "x": 648,
+     "y": 0,
+     "ph": "close",
+     "dt": 0.05,
+     "S": {
+      "p": 0.8520710059171598,
+      "sy": 0.8698224852071006,
+      "sx": 1.0118343195266273
+     }
+    },
+    {
+     "i": 4,
+     "x": 864,
+     "y": 0,
+     "ph": "close",
+     "dt": 0.066667,
+     "S": {
+      "p": 0.7370151216305063,
+      "sy": 0.7685733070348455,
+      "sx": 1.0210387902695595
+     }
+    },
+    {
+     "i": 5,
+     "x": 1080,
+     "y": 0,
+     "ph": "close",
+     "dt": 0.083333,
+     "S": {
+      "p": 0.5890861275476661,
+      "sy": 0.6383957922419461,
+      "sx": 1.0328731097961867
+     }
+    },
+    {
+     "i": 6,
+     "x": 1296,
+     "y": 0,
+     "ph": "close",
+     "dt": 0.1,
+     "S": {
+      "p": 0.40828402366863903,
+      "sy": 0.47928994082840237,
+      "sx": 1.047337278106509
+     }
+    },
+    {
+     "i": 7,
+     "x": 1512,
+     "y": 0,
+     "ph": "close",
+     "dt": 0.116667,
+     "S": {
+      "p": 0.19460880999342534,
+      "sy": 0.29125575279421434,
+      "sx": 1.064431295200526
+     }
+    },
+    {
+     "i": 8,
+     "x": 0,
+     "y": 160,
+     "ph": "shut",
+     "dt": 0,
+     "S": {
+      "p": 0,
+      "sy": 0.12,
+      "sx": 1.08
+     }
+    },
+    {
+     "i": 9,
+     "x": 216,
+     "y": 160,
+     "ph": "open",
+     "dt": 0.016667,
+     "S": {
+      "p": 0.12185185185185185,
+      "sy": 0.19259259259259257,
+      "sx": 1.074814814814815
+     }
+    },
+    {
+     "i": 10,
+     "x": 432,
+     "y": 160,
+     "ph": "open",
+     "dt": 0.033333,
+     "S": {
+      "p": 0.24370370370370364,
+      "sy": 0.2651851851851852,
+      "sx": 1.0696296296296297
+     }
+    },
+    {
+     "i": 11,
+     "x": 648,
+     "y": 160,
+     "ph": "open",
+     "dt": 0.05,
+     "S": {
+      "p": 0.47,
+      "sy": 0.4,
+      "sx": 1.06
+     }
+    },
+    {
+     "i": 12,
+     "x": 864,
+     "y": 160,
+     "ph": "open",
+     "dt": 0.066667,
+     "S": {
+      "p": 0.631335040316241,
+      "sy": 0.4962828282828283,
+      "sx": 1.0515032679738563
+     }
+    },
+    {
+     "i": 13,
+     "x": 1080,
+     "y": 160,
+     "ph": "open",
+     "dt": 0.083333,
+     "S": {
+      "p": 0.6193367472991488,
+      "sy": 0.49034343434343436,
+      "sx": 1.047450980392157
+     }
+    },
+    {
+     "i": 14,
+     "x": 1296,
+     "y": 160,
+     "ph": "open",
+     "dt": 0.1,
+     "S": {
+      "p": 0.63,
+      "sy": 0.5,
+      "sx": 1.04
+     }
+    },
+    {
+     "i": 15,
+     "x": 1512,
+     "y": 160,
+     "ph": "open",
+     "dt": 0.116667,
+     "S": {
+      "p": 0.6849511240516045,
+      "sy": 0.5375828234379912,
+      "sx": 1.0329147044771376
+     }
+    },
+    {
+     "i": 16,
+     "x": 0,
+     "y": 320,
+     "ph": "open",
+     "dt": 0.133333,
+     "S": {
+      "p": 0.7002608265556658,
+      "sy": 0.5531362111664944,
+      "sx": 1.030005900163936
+     }
+    },
+    {
+     "i": 17,
+     "x": 216,
+     "y": 320,
+     "ph": "open",
+     "dt": 0.15,
+     "S": {
+      "p": 0.7135905587668006,
+      "sy": 0.5710493574891204,
+      "sx": 1.0235000927964142
+     }
+    },
+    {
+     "i": 18,
+     "x": 432,
+     "y": 320,
+     "ph": "open",
+     "dt": 0.166667,
+     "S": {
+      "p": 0.7626017719396256,
+      "sy": 0.6157114567094816,
+      "sx": 1.0056237881105912
+     }
+    },
+    {
+     "i": 19,
+     "x": 648,
+     "y": 320,
+     "ph": "open",
+     "dt": 0.183333,
+     "S": {
+      "p": 0.8248275862068967,
+      "sy": 0.6717801672640382,
+      "sx": 0.9876179604261796
+     }
+    },
+    {
+     "i": 20,
+     "x": 864,
+     "y": 320,
+     "ph": "open",
+     "dt": 0.2,
+     "S": {
+      "p": 0.846918103448276,
+      "sy": 0.7117741935483872,
+      "sx": 0.9881720890410959
+     }
+    },
+    {
+     "i": 21,
+     "x": 1080,
+     "y": 320,
+     "ph": "open",
+     "dt": 0.216667,
+     "S": {
+      "p": 0.907037037037037,
+      "sy": 0.7950925925925927,
+      "sx": 0.980972222222222
+     }
+    },
+    {
+     "i": 22,
+     "x": 1296,
+     "y": 320,
+     "ph": "open",
+     "dt": 0.233333,
+     "S": {
+      "p": 0.9478935185185184,
+      "sy": 0.8475810185185185,
+      "sx": 0.9751562500000001
+     }
+    },
+    {
+     "i": 23,
+     "x": 1512,
+     "y": 320,
+     "ph": "open",
+     "dt": 0.25,
+     "S": {
+      "p": 1.02,
+      "sy": 0.94,
+      "sx": 0.965
+     }
+    },
+    {
+     "i": 24,
+     "x": 0,
+     "y": 480,
+     "ph": "open",
+     "dt": 0.266667,
+     "S": {
+      "p": 1.1161226851851853,
+      "sy": 1.0737962962962964,
+      "sx": 0.9461631944444444
+     }
+    },
+    {
+     "i": 25,
+     "x": 216,
+     "y": 480,
+     "ph": "open",
+     "dt": 0.283333,
+     "S": {
+      "p": 1.1653703703703704,
+      "sy": 1.152037037037037,
+      "sx": 0.9316666666666668
+     }
+    },
+    {
+     "i": 26,
+     "x": 432,
+     "y": 480,
+     "ph": "open",
+     "dt": 0.3,
+     "S": {
+      "p": 1.1696875,
+      "sy": 1.1593749999999998,
+      "sx": 0.9303125000000001
+     }
+    },
+    {
+     "i": 27,
+     "x": 648,
+     "y": 480,
+     "ph": "open",
+     "dt": 0.316667,
+     "S": {
+      "p": 1.1677777777777778,
+      "sy": 1.1555555555555557,
+      "sx": 0.9322222222222222
+     }
+    },
+    {
+     "i": 28,
+     "x": 864,
+     "y": 480,
+     "ph": "open",
+     "dt": 0.333333,
+     "S": {
+      "p": 1.1641261574074073,
+      "sy": 1.1483912037037036,
+      "sx": 0.9358043981481482
+     }
+    },
+    {
+     "i": 29,
+     "x": 1080,
+     "y": 480,
+     "ph": "open",
+     "dt": 0.35,
+     "S": {
+      "p": 1.1575000000000002,
+      "sy": 1.1399999999999997,
+      "sx": 0.9400000000000002
+     }
+    },
+    {
+     "i": 30,
+     "x": 1296,
+     "y": 480,
+     "ph": "open",
+     "dt": 0.366667,
+     "S": {
+      "p": 1.1439293981481482,
+      "sy": 1.124664351851852,
+      "sx": 0.947667824074074
+     }
+    },
+    {
+     "i": 31,
+     "x": 1512,
+     "y": 480,
+     "ph": "open",
+     "dt": 0.383333,
+     "S": {
+      "p": 1.128148148148148,
+      "sy": 1.1061111111111113,
+      "sx": 0.9566666666666667
+     }
+    },
+    {
+     "i": 32,
+     "x": 0,
+     "y": 640,
+     "ph": "open",
+     "dt": 0.4,
+     "S": {
+      "p": 1.11515625,
+      "sy": 1.091875,
+      "sx": 0.96265625
+     }
+    },
+    {
+     "i": 33,
+     "x": 216,
+     "y": 640,
+     "ph": "open",
+     "dt": 0.416667,
+     "S": {
+      "p": 1.0896296296296295,
+      "sy": 1.063472222222222,
+      "sx": 0.9751851851851853
+     }
+    },
+    {
+     "i": 34,
+     "x": 432,
+     "y": 640,
+     "ph": "open",
+     "dt": 0.433333,
+     "S": {
+      "p": 1.078287037037037,
+      "sy": 1.0522743055555555,
+      "sx": 0.9808564814814815
+     }
+    },
+    {
+     "i": 35,
+     "x": 648,
+     "y": 640,
+     "ph": "open",
+     "dt": 0.45,
+     "S": {
+      "p": 1.06,
+      "sy": 1.035,
+      "sx": 0.99
+     }
+    },
+    {
+     "i": 36,
+     "x": 864,
+     "y": 640,
+     "ph": "open",
+     "dt": 0.466667,
+     "S": {
+      "p": 1.0402398989898989,
+      "sy": 1.0182452605433903,
+      "sx": 0.9975292397660819
+     }
+    },
+    {
+     "i": 37,
+     "x": 1080,
+     "y": 640,
+     "ph": "open",
+     "dt": 0.483333,
+     "S": {
+      "p": 1.0286868686868686,
+      "sy": 1.0145620437956204,
+      "sx": 0.9970175438596491
+     }
+    },
+    {
+     "i": 38,
+     "x": 1296,
+     "y": 640,
+     "ph": "open",
+     "dt": 0.5,
+     "S": {
+      "p": 1.0080872727272727,
+      "sy": 1.0029734306569345,
+      "sx": 0.9999629473684212
+     }
+    },
+    {
+     "i": 39,
+     "x": 1512,
+     "y": 640,
+     "ph": "open",
+     "dt": 0.516667,
+     "S": {
+      "p": 1.002153265993266,
+      "sy": 1.000105520410922,
+      "sx": 1.0004848966861597
+     }
+    },
+    {
+     "i": 40,
+     "x": 0,
+     "y": 800,
+     "ph": "open",
+     "dt": 0.533333,
+     "S": {
+      "p": 1.0017142087542088,
+      "sy": 1.0007282833198161,
+      "sx": 0.9999214658869396
+     }
+    }
+   ],
+   "pick": "wide outside a blink -> frame 0; close phase (t - tc) in [0, CLOSE): k = floor((t - tc) * 60) -> frame k (k = 0 is frame 0); hold [tc + CLOSE, to): frame 8 (shut); open (t - to) in [0, OPEN): k = floor((t - to) * 60) -> frame 8 + k (k = 0 = shut); after to + OPEN -> frame 0. Frame j sits at (x, y) in the sheet, size cell."
+  }
+ },
+ "chrome9": {
+  "rl_plate": {
+   "sprite": "WRLDZ/MenuV6/Main/Port/chrome9/rl_plate",
+   "size": [
+    392,
+    160
+   ],
+   "pad": [
+    0,
+    1
+   ],
+   "ppu": 200,
+   "border": [
+    17,
+    17,
+    15,
+    19
+   ],
+   "nine": true,
+   "instances": [
+    "rl_plate_0",
+    "rl_plate_1",
+    "rl_plate_2",
+    "rl_plate_3",
+    "rl_plate_4",
+    "rl_plate_5"
+   ],
+   "rebuildErr": [
+    {
+     "max": 182,
+     "p99": 19.0,
+     "mean": 0.827936031984008
+    },
+    {
+     "max": 100,
+     "p99": 25.0,
+     "mean": 0.6049855870020965
+    },
+    {
+     "max": 58,
+     "p99": 22.0,
+     "mean": 0.46916919558428993
+    },
+    {
+     "max": 0,
+     "p99": 0.0,
+     "mean": 0.0
+    },
+    {
+     "max": 49,
+     "p99": 18.0,
+     "mean": 0.34630258994491975
+    },
+    {
+     "max": 216,
+     "p99": 40.0,
+     "mean": 1.2494819092916596
+    }
+   ]
+  },
+  "ava_ring": {
+   "sprite": "WRLDZ/MenuV6/Main/Port/chrome9/ava_ring",
+   "size": [
+    244,
+    260
+   ],
+   "pad": [
+    1,
+    1
+   ],
+   "ppu": 200,
+   "border": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "nine": false,
+   "instances": [
+    "ava_ring_0"
+   ],
+   "rebuildErr": [
+    {
+     "max": 0,
+     "p99": 0.0,
+     "mean": 0.0
+    }
+   ]
+  },
+  "medal_ring": {
+   "sprite": "WRLDZ/MenuV6/Main/Port/chrome9/medal_ring",
+   "size": [
+    180,
+    184
+   ],
+   "pad": [
+    1,
+    3
+   ],
+   "ppu": 200,
+   "border": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "nine": false,
+   "instances": [
+    "medal_ring_0"
+   ],
+   "rebuildErr": [
+    {
+     "max": 0,
+     "p99": 0.0,
+     "mean": 0.0
+    }
+   ]
+  },
+  "medal_ring_pz": {
+   "sprite": "WRLDZ/MenuV6/Main/Port/chrome9/medal_ring_pz",
+   "size": [
+    180,
+    184
+   ],
+   "pad": [
+    1,
+    3
+   ],
+   "ppu": 200,
+   "border": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "nine": false,
+   "instances": [
+    "medal_ring_pz_0"
+   ],
+   "rebuildErr": [
+    {
+     "max": 0,
+     "p99": 0.0,
+     "mean": 0.0
+    }
+   ]
+  },
+  "xp_track": {
+   "sprite": "WRLDZ/MenuV6/Main/Port/chrome9/xp_track",
+   "size": [
+    600,
+    16
+   ],
+   "pad": [
+    0,
+    0
+   ],
+   "ppu": 200,
+   "border": [
+    8,
+    0,
+    8,
+    0
+   ],
+   "nine": true,
+   "instances": [
+    "xp_track_0"
+   ],
+   "rebuildErr": [
+    {
+     "max": 0,
+     "p99": 0.0,
+     "mean": 0.0
+    }
+   ]
+  },
+  "xp_fill": {
+   "sprite": "WRLDZ/MenuV6/Main/Port/chrome9/xp_fill",
+   "size": [
+    372,
+    12
+   ],
+   "pad": [
+    2,
+    0
+   ],
+   "ppu": 200,
+   "border": [
+    6,
+    0,
+    2,
+    0
+   ],
+   "nine": true,
+   "instances": [
+    "xp_fill_0"
+   ],
+   "rebuildErr": [
+    {
+     "max": 0,
+     "p99": 0.0,
+     "mean": 0.0
+    }
+   ]
+  },
+  "pip": {
+   "sprite": "WRLDZ/MenuV6/Main/Port/chrome9/pip",
+   "size": [
+    28,
+    20
+   ],
+   "pad": [
+    1,
+    2
+   ],
+   "ppu": 200,
+   "border": [
+    7,
+    9,
+    7,
+    7
+   ],
+   "nine": true,
+   "instances": [
+    "pip_0",
+    "pip_1",
+    "pip_2"
+   ],
+   "rebuildErr": [
+    {
+     "max": 0,
+     "p99": 0.0,
+     "mean": 0.0
+    },
+    {
+     "max": 0,
+     "p99": 0.0,
+     "mean": 0.0
+    },
+    {
+     "max": 0,
+     "p99": 0.0,
+     "mean": 0.0
+    }
+   ]
+  },
+  "niche_frame": {
+   "sprite": "WRLDZ/MenuV6/Main/Port/chrome9/niche_frame",
+   "size": [
+    444,
+    364
+   ],
+   "pad": [
+    2,
+    2
+   ],
+   "ppu": 200,
+   "border": [
+    15,
+    17,
+    17,
+    15
+   ],
+   "nine": true,
+   "instances": [
+    "niche_frame_0"
+   ],
+   "rebuildErr": [
+    {
+     "max": 0,
+     "p99": 0.0,
+     "mean": 0.0
+    }
+   ]
+  },
+  "quit_plate": {
+   "sprite": "WRLDZ/MenuV6/Main/Port/chrome9/quit_plate",
+   "size": [
+    396,
+    160
+   ],
+   "pad": [
+    0,
+    0
+   ],
+   "ppu": 200,
+   "border": [
+    14,
+    20,
+    18,
+    16
+   ],
+   "nine": true,
+   "instances": [
+    "quit_plate_0"
+   ],
+   "rebuildErr": [
+    {
+     "max": 0,
+     "p99": 0.0,
+     "mean": 0.0
+    }
+   ]
+  },
+  "site_dot": {
+   "sprite": "WRLDZ/MenuV6/Main/Port/chrome9/site_dot",
+   "size": [
+    24,
+    24
+   ],
+   "pad": [
+    2,
+    2
+   ],
+   "ppu": 200,
+   "border": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "nine": false,
+   "instances": [
+    "site_dot_0"
+   ],
+   "rebuildErr": [
+    {
+     "max": 0,
+     "p99": 0.0,
+     "mean": 0.0
+    }
+   ]
+  },
+  "news_band": {
+   "sprite": "WRLDZ/MenuV6/Main/Port/chrome9/news_band",
+   "size": [
+    2012,
+    228
+   ],
+   "pad": [
+    2,
+    2
+   ],
+   "ppu": 200,
+   "border": [
+    28,
+    30,
+    30,
+    28
+   ],
+   "nine": true,
+   "instances": [
+    "news_band_0"
+   ],
+   "rebuildErr": [
+    {
+     "max": 0,
+     "p99": 0.0,
+     "mean": 0.0
+    }
+   ]
+  },
+  "ph5_plate": {
+   "sprite": "WRLDZ/MenuV6/Main/Port/chrome9/ph5_plate",
+   "size": [
+    1868,
+    76
+   ],
+   "pad": [
+    0,
+    0
+   ],
+   "ppu": 200,
+   "border": [
+    6,
+    6,
+    6,
+    6
+   ],
+   "nine": true,
+   "instances": [
+    "ph5_plate_0"
+   ],
+   "rebuildErr": [
+    {
+     "max": 0,
+     "p99": 0.0,
+     "mean": 0.0
+    }
+   ]
+  }
+ },
+ "interactive": {
+  "recesses": [
+   {
+    "id": "ring",
+    "i": 0,
+    "label": null,
+    "sub": null,
+    "picto": null,
+    "item": "ring",
+    "dead": true,
+    "echo": true,
+    "minor": false,
+    "inlay": true,
+    "centre": [
+     540,
+     745.2
+    ],
+    "r": 84,
+    "angle": -90,
+    "labelRect": null,
+    "buttonRect": null
+   },
+   {
+    "id": "set",
+    "i": 1,
+    "label": "SETTINGS",
+    "sub": "options",
+    "picto": "ankhGear",
+    "item": null,
+    "dead": false,
+    "echo": false,
+    "minor": true,
+    "inlay": true,
+    "centre": [
+     798.32,
+     892.01
+    ],
+    "r": 58.8,
+    "angle": -38.57,
+    "labelRect": [
+     710.21,
+     973.2,
+     176.2,
+     58.08
+    ],
+    "buttonRect": [
+     731.52,
+     825.2,
+     133.59,
+     133.59
+    ]
+   },
+   {
+    "id": "bazaar",
+    "i": 2,
+    "label": "BAZAAR",
+    "sub": "tablet packs",
+    "picto": "offering",
+    "item": "rod",
+    "dead": false,
+    "echo": false,
+    "minor": false,
+    "inlay": true,
+    "centre": [
+     862.11,
+     1171.54
+    ],
+    "r": 70,
+    "angle": 12.86,
+    "labelRect": [
+     780.71,
+     1263.92,
+     162.8,
+     64.98
+    ],
+    "buttonRect": [
+     784.11,
+     1093.53,
+     156,
+     156
+    ]
+   },
+   {
+    "id": "bag",
+    "i": 3,
+    "label": "BAG",
+    "sub": "backpack",
+    "picto": "satchel",
+    "item": "key",
+    "dead": false,
+    "echo": false,
+    "minor": false,
+    "inlay": true,
+    "centre": [
+     683.33,
+     1395.69
+    ],
+    "r": 70,
+    "angle": 64.29,
+    "labelRect": [
+     626.64,
+     1488.08,
+     113.38,
+     64.98
+    ],
+    "buttonRect": [
+     605.33,
+     1317.69,
+     156,
+     156
+    ]
+   },
+   {
+    "id": "deck",
+    "i": 4,
+    "label": "DECK",
+    "sub": "play deck box",
+    "picto": "naos",
+    "item": "scale",
+    "dead": false,
+    "echo": false,
+    "minor": false,
+    "inlay": true,
+    "centre": [
+     396.67,
+     1395.69
+    ],
+    "r": 70,
+    "angle": 115.71,
+    "labelRect": [
+     313.67,
+     1488.08,
+     165.97,
+     64.98
+    ],
+    "buttonRect": [
+     318.66,
+     1317.69,
+     156,
+     156
+    ]
+   },
+   {
+    "id": "story",
+    "i": 5,
+    "label": "STORY",
+    "sub": "Season 1",
+    "picto": "stela",
+    "item": "necklace",
+    "dead": false,
+    "echo": false,
+    "minor": false,
+    "inlay": true,
+    "centre": [
+     217.89,
+     1171.54
+    ],
+    "r": 70,
+    "angle": 167.14,
+    "labelRect": [
+     152.18,
+     1263.92,
+     131.39,
+     64.98
+    ],
+    "buttonRect": [
+     139.88,
+     1093.53,
+     156,
+     156
+    ]
+   },
+   {
+    "id": "view",
+    "i": 6,
+    "label": "VIEW",
+    "sub": "Solid Vision · AR",
+    "picto": "wedjat",
+    "item": "eye",
+    "dead": false,
+    "echo": false,
+    "minor": true,
+    "inlay": false,
+    "centre": [
+     281.68,
+     892.01
+    ],
+    "r": 58.8,
+    "angle": 218.57,
+    "labelRect": [
+     195.39,
+     973.2,
+     172.56,
+     58.08
+    ],
+    "buttonRect": [
+     214.88,
+     825.2,
+     133.59,
+     133.59
+    ]
+   }
+  ],
+  "door": {
+   "centre": [
+    540,
+    1098
+   ],
+   "R0": 196,
+   "ringR": 205.8,
+   "buttonRect": [
+    344,
+    902,
+    392,
+    392
+   ],
+   "textRect": [
+    409.7,
+    1142.8,
+    260.59,
+    82
+   ],
+   "lpRect": [
+    502.9,
+    1249.19,
+    74.2,
+    25
+   ],
+   "deckRect": [
+    504.8,
+    918.8,
+    70.41,
+    25
+   ],
+   "src": "menu.js:423-429, anime_menu_v6.js:131"
+  },
+  "keystone": {
+   "centre": [
+    540,
+    1044.8
+   ],
+   "w": 134.4,
+   "relic": {
+    "S": 2
+   },
+   "src": "menu.js:292-293"
+  },
+  "ringEcho": {
+   "centre": [
+    540,
+    734
+   ],
+   "s": 1.4,
+   "pivots": [
+    [
+     611.68,
+     738.2
+    ],
+    [
+     577.98,
+     798.99
+    ],
+    [
+     540,
+     809.88
+    ],
+    [
+     502.02,
+     798.99
+    ],
+    [
+     468.32,
+     738.2
+    ]
+   ],
+   "src": "menu.js:295"
+  },
+  "breach": {
+   "path": [
+    [
+     755.6,
+     571.6
+    ],
+    [
+     762.17,
+     542.39
+    ],
+    [
+     766.8,
+     512.8
+    ],
+    [
+     783.12,
+     521.15
+    ],
+    [
+     797.6,
+     532.4
+    ],
+    [
+     814.59,
+     517.06
+    ],
+    [
+     828.4,
+     498.8
+    ],
+    [
+     850.99,
+     512.5
+    ],
+    [
+     873.2,
+     526.8
+    ],
+    [
+     892.51,
+     518.98
+    ],
+    [
+     912.4,
+     512.8
+    ],
+    [
+     934.87,
+     537.93
+    ],
+    [
+     960,
+     560.4
+    ],
+    [
+     953.17,
+     588.44
+    ],
+    [
+     946,
+     616.4
+    ],
+    [
+     963.09,
+     640.57
+    ],
+    [
+     976.8,
+     666.8
+    ],
+    [
+     966.13,
+     695.01
+    ],
+    [
+     954.4,
+     722.8
+    ],
+    [
+     940.88,
+     734.6
+    ],
+    [
+     926.4,
+     745.2
+    ],
+    [
+     913.54,
+     775.03
+    ],
+    [
+     906.8,
+     806.8
+    ],
+    [
+     890.93,
+     799.27
+    ],
+    [
+     876,
+     790
+    ],
+    [
+     862.06,
+     816.63
+    ],
+    [
+     848,
+     843.2
+    ],
+    [
+     833.37,
+     820.47
+    ],
+    [
+     822.8,
+     795.6
+    ],
+    [
+     808.99,
+     775.87
+    ],
+    [
+     794.8,
+     756.4
+    ],
+    [
+     777.21,
+     745.47
+    ],
+    [
+     758.4,
+     736.8
+    ],
+    [
+     739.56,
+     731.48
+    ],
+    [
+     722,
+     722.8
+    ],
+    [
+     715.84,
+     703.36
+    ],
+    [
+     710.8,
+     683.6
+    ],
+    [
+     727.23,
+     670.73
+    ],
+    [
+     741.6,
+     655.6
+    ],
+    [
+     747.2,
+     633.46
+    ],
+    [
+     750,
+     610.8
+    ]
+   ],
+   "centre": [
+    841.62,
+    662.17
+   ],
+   "depth": [
+    -15.93,
+    23.02
+   ],
+   "eyes": [
+    {
+     "seed": 11,
+     "role": "his eye (breach)",
+     "centre": [
+      850.93,
+      684.05
+     ],
+     "px": 284.2,
+     "drawnScale": 0.8,
+     "rot": -0.08
+    },
+    {
+     "seed": 12,
+     "role": "his eye, small, deeper in the breach",
+     "centre": [
+      937.6,
+      546.4
+     ],
+     "px": 42,
+     "drawnScale": 0.8,
+     "rot": 0.3,
+     "alpha": 0.8
+    },
+    {
+     "seed": 13,
+     "role": "his eye, small, deeper in the breach",
+     "centre": [
+      750,
+      694.8
+     ],
+     "px": 33.6,
+     "drawnScale": 0.8,
+     "rot": -0.5,
+     "alpha": 0.8
+    }
+   ],
+   "note": "menu_v41.js:42 drawBreach (overrides menu.js:775, whose 4 cel eyes bEyes are never drawn in v6.3); the eyes are drawn at 0.8 size about the ball centre (anime_v61_eye.js:204)"
+  },
+  "niche": {
+   "rect": [
+    596,
+    1814.59,
+    206,
+    166
+   ],
+   "wmapRect": [
+    596,
+    1810.59,
+    472.84,
+    174
+   ],
+   "canvas": [
+    412,
+    332
+   ]
+  },
+  "quit": {
+   "rect": [
+    841,
+    2184.59,
+    195,
+    76
+   ]
+  },
+  "placeholder": {
+   "rect": [
+    24,
+    2284,
+    934.09,
+    38
+   ],
+   "text": "◇ placeholder art · the Stone · Puzzle body + pieces · Ring · Rod · awaiting existing models"
+  },
+  "stone": {
+   "rect": [
+    34,
+    519,
+    1012,
+    1211
+   ],
+   "src": "stone.js:217 bakeStone"
+  }
+ },
+ "formulas": {
+  "torchPool": {
+   "centre": [
+    50,
+    560
+   ],
+   "r": 532,
+   "stops": "0: rgba(255,170,80,.2*bg*(.8+.3*flick)*(1-.6*sg)), .4: rgba(255,140,60,.055*bg*(1-.5*sg)), 1: 0",
+   "blend": "additive",
+   "src": "menu.js:658"
+  },
+  "vignette": {
+   "cx": 540,
+   "cy": 1170,
+   "r0": 388.8,
+   "r1": 1731.6,
+   "stops": [
+    [
+     0,
+     "rgba(0,0,0,0)"
+    ],
+    [
+     0.72,
+     "rgba(14,6,24,.28*pr)"
+    ],
+    [
+     1,
+     "rgba(8,3,14,.7*pr)"
+    ]
+   ],
+   "pr": "pr = .55 + .12 sin(.37 t) + .05 sin(1.3 t) + .3 sg",
+   "prAtT": 0.63,
+   "src": "menu.js:675-676"
+  },
+  "emissive": {
+   "blur": "alpha .55 * bre, bre = .55 + .25 sin(.9 t) + .1 sin(2.3 t)",
+   "emi": "alpha .5",
+   "blend": "additive",
+   "src": "menu.js:659-660",
+   "breAtT": 0.71
+  },
+  "breachGlow": {
+   "fl": "fl = .62 + .25 sin(5.1 t) sin(1.7 t + 2) + .13 sin(13.3 t)",
+   "crackGlowAlpha": "clamp(fl (1 + .7 sg), 0, 1.6) * .6",
+   "fissureGlowAlpha": "clamp((.25 + .12 fl)(1 + .6 sg), 0, 1)",
+   "src": "menu_v41.js:57-59"
+  }
+ },
+ "texts": [
+  {
+   "sel": "t > div.t",
+   "text": "SETTINGS",
+   "rect": [
+    710.21,
+    973.2,
+    176.2,
+    31.89
+   ],
+   "opacity": 1,
+   "font": {
+    "family": "Cairo",
+    "weight": "700",
+    "size": "29px",
+    "style": "normal",
+    "color": "rgb(221, 211, 187)",
+    "letterSpacing": "5.8px",
+    "transform": "none",
+    "align": "center",
+    "lineHeight": "31.9px",
+    "shadow": "rgba(0, 0, 0, 0.85) 0px 2px 0px",
+    "fill": "rgb(221, 211, 187)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "nowrap"
+   }
+  },
+  {
+   "sel": "s > div.s",
+   "text": "options",
+   "rect": [
+    710.21,
+    1006.09,
+    176.2,
+    25.19
+   ],
+   "opacity": 0.82,
+   "font": {
+    "family": "\"El Messiri\"",
+    "weight": "500",
+    "size": "21px",
+    "style": "normal",
+    "color": "rgb(217, 198, 142)",
+    "letterSpacing": "1.68px",
+    "transform": "none",
+    "align": "center",
+    "lineHeight": "25.2px",
+    "shadow": "rgba(0, 0, 0, 0.9) 0px 1px 0px",
+    "fill": "rgb(217, 198, 142)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "nowrap"
+   }
+  },
+  {
+   "sel": "t > div.t",
+   "text": "BAZAAR",
+   "rect": [
+    780.71,
+    1263.92,
+    162.8,
+    35.19
+   ],
+   "opacity": 1,
+   "font": {
+    "family": "Cairo",
+    "weight": "700",
+    "size": "32px",
+    "style": "normal",
+    "color": "rgb(239, 230, 208)",
+    "letterSpacing": "6.4px",
+    "transform": "none",
+    "align": "center",
+    "lineHeight": "35.2px",
+    "shadow": "rgba(0, 0, 0, 0.85) 0px 2px 0px",
+    "fill": "rgb(239, 230, 208)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "nowrap"
+   }
+  },
+  {
+   "sel": "s > div.s",
+   "text": "tablet packs",
+   "rect": [
+    780.71,
+    1300.11,
+    162.8,
+    28.8
+   ],
+   "opacity": 0.82,
+   "font": {
+    "family": "\"El Messiri\"",
+    "weight": "500",
+    "size": "24px",
+    "style": "normal",
+    "color": "rgb(217, 198, 142)",
+    "letterSpacing": "1.92px",
+    "transform": "none",
+    "align": "center",
+    "lineHeight": "28.8px",
+    "shadow": "rgba(0, 0, 0, 0.9) 0px 1px 0px",
+    "fill": "rgb(217, 198, 142)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "nowrap"
+   }
+  },
+  {
+   "sel": "t > div.t",
+   "text": "BAG",
+   "rect": [
+    626.64,
+    1488.08,
+    113.38,
+    35.19
+   ],
+   "opacity": 1,
+   "font": {
+    "family": "Cairo",
+    "weight": "700",
+    "size": "32px",
+    "style": "normal",
+    "color": "rgb(239, 230, 208)",
+    "letterSpacing": "6.4px",
+    "transform": "none",
+    "align": "center",
+    "lineHeight": "35.2px",
+    "shadow": "rgba(0, 0, 0, 0.85) 0px 2px 0px",
+    "fill": "rgb(239, 230, 208)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "nowrap"
+   }
+  },
+  {
+   "sel": "s > div.s",
+   "text": "backpack",
+   "rect": [
+    626.64,
+    1524.27,
+    113.38,
+    28.8
+   ],
+   "opacity": 0.82,
+   "font": {
+    "family": "\"El Messiri\"",
+    "weight": "500",
+    "size": "24px",
+    "style": "normal",
+    "color": "rgb(217, 198, 142)",
+    "letterSpacing": "1.92px",
+    "transform": "none",
+    "align": "center",
+    "lineHeight": "28.8px",
+    "shadow": "rgba(0, 0, 0, 0.9) 0px 1px 0px",
+    "fill": "rgb(217, 198, 142)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "nowrap"
+   }
+  },
+  {
+   "sel": "t > div.t",
+   "text": "DECK",
+   "rect": [
+    313.67,
+    1488.08,
+    165.97,
+    35.19
+   ],
+   "opacity": 1,
+   "font": {
+    "family": "Cairo",
+    "weight": "700",
+    "size": "32px",
+    "style": "normal",
+    "color": "rgb(239, 230, 208)",
+    "letterSpacing": "6.4px",
+    "transform": "none",
+    "align": "center",
+    "lineHeight": "35.2px",
+    "shadow": "rgba(0, 0, 0, 0.85) 0px 2px 0px",
+    "fill": "rgb(239, 230, 208)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "nowrap"
+   }
+  },
+  {
+   "sel": "s > div.s",
+   "text": "play deck box",
+   "rect": [
+    313.67,
+    1524.27,
+    165.97,
+    28.8
+   ],
+   "opacity": 0.82,
+   "font": {
+    "family": "\"El Messiri\"",
+    "weight": "500",
+    "size": "24px",
+    "style": "normal",
+    "color": "rgb(217, 198, 142)",
+    "letterSpacing": "1.92px",
+    "transform": "none",
+    "align": "center",
+    "lineHeight": "28.8px",
+    "shadow": "rgba(0, 0, 0, 0.9) 0px 1px 0px",
+    "fill": "rgb(217, 198, 142)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "nowrap"
+   }
+  },
+  {
+   "sel": "t > div.t",
+   "text": "STORY",
+   "rect": [
+    152.18,
+    1263.92,
+    131.39,
+    35.19
+   ],
+   "opacity": 1,
+   "font": {
+    "family": "Cairo",
+    "weight": "700",
+    "size": "32px",
+    "style": "normal",
+    "color": "rgb(239, 230, 208)",
+    "letterSpacing": "6.4px",
+    "transform": "none",
+    "align": "center",
+    "lineHeight": "35.2px",
+    "shadow": "rgba(0, 0, 0, 0.85) 0px 2px 0px",
+    "fill": "rgb(239, 230, 208)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "nowrap"
+   }
+  },
+  {
+   "sel": "s > div.s",
+   "text": "Season 1",
+   "rect": [
+    152.18,
+    1300.11,
+    131.39,
+    28.8
+   ],
+   "opacity": 0.82,
+   "font": {
+    "family": "\"El Messiri\"",
+    "weight": "500",
+    "size": "24px",
+    "style": "normal",
+    "color": "rgb(217, 198, 142)",
+    "letterSpacing": "1.92px",
+    "transform": "none",
+    "align": "center",
+    "lineHeight": "28.8px",
+    "shadow": "rgba(0, 0, 0, 0.9) 0px 1px 0px",
+    "fill": "rgb(217, 198, 142)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "nowrap"
+   }
+  },
+  {
+   "sel": "t > div.t",
+   "text": "VIEW",
+   "rect": [
+    195.39,
+    973.2,
+    172.56,
+    31.89
+   ],
+   "opacity": 1,
+   "font": {
+    "family": "Cairo",
+    "weight": "700",
+    "size": "29px",
+    "style": "normal",
+    "color": "rgb(221, 211, 187)",
+    "letterSpacing": "5.8px",
+    "transform": "none",
+    "align": "center",
+    "lineHeight": "31.9px",
+    "shadow": "rgba(0, 0, 0, 0.85) 0px 2px 0px",
+    "fill": "rgb(221, 211, 187)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "nowrap"
+   }
+  },
+  {
+   "sel": "s > div.s",
+   "text": "Solid Vision · AR",
+   "rect": [
+    195.39,
+    1006.09,
+    172.56,
+    25.19
+   ],
+   "opacity": 0.82,
+   "font": {
+    "family": "\"El Messiri\"",
+    "weight": "500",
+    "size": "21px",
+    "style": "normal",
+    "color": "rgb(217, 198, 142)",
+    "letterSpacing": "1.68px",
+    "transform": "none",
+    "align": "center",
+    "lineHeight": "25.2px",
+    "shadow": "rgba(0, 0, 0, 0.9) 0px 1px 0px",
+    "fill": "rgb(217, 198, 142)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "nowrap"
+   }
+  },
+  {
+   "sel": "t > div.t",
+   "text": "DUEL",
+   "rect": [
+    409.7,
+    1142.8,
+    260.59,
+    82
+   ],
+   "opacity": 1,
+   "font": {
+    "family": "\"Marcellus SC\"",
+    "weight": "400",
+    "size": "82px",
+    "style": "normal",
+    "color": "rgba(0, 0, 0, 0)",
+    "letterSpacing": "13.12px",
+    "transform": "none",
+    "align": "center",
+    "lineHeight": "82px",
+    "shadow": "none",
+    "fill": "rgba(0, 0, 0, 0)",
+    "bgImage": "linear-gradient(rgb(237, 228, 158) 0px, rgb(237, 228, 158) 34%, rgb(202, 169, 91) 34%, rgb(202, 169, 91) 72%, rgb(145, 118, 73) 72%, rgb(145, 118, 73) 100%)",
+    "filter": "drop-shadow(rgba(0, 0, 0, 0.92) 0px 3px 0px)",
+    "whiteSpace": "normal"
+   }
+  },
+  {
+   "sel": "bez lp > b",
+   "text": "8000",
+   "rect": [
+    502.9,
+    1249.19,
+    50,
+    25
+   ],
+   "opacity": 1,
+   "font": {
+    "family": "\"Barlow Condensed\"",
+    "weight": "600",
+    "size": "25px",
+    "style": "normal",
+    "color": "rgb(232, 251, 255)",
+    "letterSpacing": "1.5px",
+    "transform": "none",
+    "align": "start",
+    "lineHeight": "25px",
+    "shadow": "rgb(0, 0, 0) 0px 1px 0px",
+    "fill": "rgb(232, 251, 255)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "nowrap"
+   }
+  },
+  {
+   "sel": "bez lp > i",
+   "text": "LP",
+   "rect": [
+    557.9,
+    1260.19,
+    19.2,
+    13
+   ],
+   "opacity": 1,
+   "font": {
+    "family": "Cairo",
+    "weight": "700",
+    "size": "13px",
+    "style": "normal",
+    "color": "rgb(159, 198, 232)",
+    "letterSpacing": "2.6px",
+    "transform": "none",
+    "align": "start",
+    "lineHeight": "13px",
+    "shadow": "none",
+    "fill": "rgb(159, 198, 232)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "nowrap"
+   }
+  },
+  {
+   "sel": "bez dk > i",
+   "text": "DECK",
+   "rect": [
+    504.8,
+    929.8,
+    40.41,
+    13
+   ],
+   "opacity": 1,
+   "font": {
+    "family": "Cairo",
+    "weight": "700",
+    "size": "13px",
+    "style": "normal",
+    "color": "rgb(159, 198, 232)",
+    "letterSpacing": "2.6px",
+    "transform": "none",
+    "align": "start",
+    "lineHeight": "13px",
+    "shadow": "none",
+    "fill": "rgb(159, 198, 232)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "nowrap"
+   }
+  },
+  {
+   "sel": "bez dk > b",
+   "text": "40",
+   "rect": [
+    550.2,
+    918.8,
+    25,
+    25
+   ],
+   "opacity": 1,
+   "font": {
+    "family": "\"Barlow Condensed\"",
+    "weight": "600",
+    "size": "25px",
+    "style": "normal",
+    "color": "rgb(232, 251, 255)",
+    "letterSpacing": "1.5px",
+    "transform": "none",
+    "align": "start",
+    "lineHeight": "25px",
+    "shadow": "rgb(0, 0, 0) 0px 1px 0px",
+    "fill": "rgb(232, 251, 255)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "nowrap"
+   }
+  },
+  {
+   "sel": "n > span.n",
+   "text": "DUELIST",
+   "rect": [
+    186,
+    64,
+    280.09,
+    62
+   ],
+   "opacity": 1,
+   "font": {
+    "family": "Marcellus",
+    "weight": "400",
+    "size": "62px",
+    "style": "normal",
+    "color": "rgb(236, 229, 211)",
+    "letterSpacing": "7.44px",
+    "transform": "none",
+    "align": "start",
+    "lineHeight": "62px",
+    "shadow": "rgba(0, 0, 0, 0.85) 0px 3px 0px",
+    "fill": "rgb(236, 229, 211)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "normal"
+   }
+  },
+  {
+   "sel": "meta > div.meta",
+   "text": "·",
+   "rect": [
+    186,
+    130,
+    300,
+    49
+   ],
+   "opacity": 1,
+   "font": {
+    "family": "Cairo",
+    "weight": "600",
+    "size": "26px",
+    "style": "normal",
+    "color": "rgb(195, 184, 158)",
+    "letterSpacing": "0.78px",
+    "transform": "none",
+    "align": "start",
+    "lineHeight": "normal",
+    "shadow": "none",
+    "fill": "rgb(195, 184, 158)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "nowrap"
+   }
+  },
+  {
+   "sel": "meta > b",
+   "text": "Lv 21",
+   "rect": [
+    186,
+    130,
+    62.91,
+    49
+   ],
+   "opacity": 1,
+   "font": {
+    "family": "Cairo",
+    "weight": "700",
+    "size": "26px",
+    "style": "normal",
+    "color": "rgb(236, 229, 211)",
+    "letterSpacing": "0.78px",
+    "transform": "none",
+    "align": "start",
+    "lineHeight": "normal",
+    "shadow": "none",
+    "fill": "rgb(236, 229, 211)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "nowrap"
+   }
+  },
+  {
+   "sel": "smp > i.smp",
+   "text": "sample profile",
+   "rect": [
+    269.25,
+    130,
+    167.92,
+    49
+   ],
+   "opacity": 1,
+   "font": {
+    "family": "Cairo",
+    "weight": "600",
+    "size": "26px",
+    "style": "italic",
+    "color": "rgb(195, 184, 158)",
+    "letterSpacing": "0.78px",
+    "transform": "none",
+    "align": "start",
+    "lineHeight": "normal",
+    "shadow": "none",
+    "fill": "rgb(195, 184, 158)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "nowrap"
+   }
+  },
+  {
+   "sel": "v > div.v",
+   "text": "COMPANION ·",
+   "rect": [
+    761,
+    157.5,
+    165,
+    32
+   ],
+   "opacity": 1,
+   "font": {
+    "family": "Cairo",
+    "weight": "600",
+    "size": "17px",
+    "style": "normal",
+    "color": "rgb(236, 229, 211)",
+    "letterSpacing": "normal",
+    "transform": "none",
+    "align": "start",
+    "lineHeight": "normal",
+    "shadow": "none",
+    "fill": "rgb(236, 229, 211)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "normal"
+   }
+  },
+  {
+   "sel": "v > i",
+   "text": "stand-in",
+   "rect": [
+    865,
+    157.5,
+    61,
+    32
+   ],
+   "opacity": 0.8,
+   "font": {
+    "family": "Cairo",
+    "weight": "600",
+    "size": "17px",
+    "style": "italic",
+    "color": "rgb(236, 229, 211)",
+    "letterSpacing": "normal",
+    "transform": "none",
+    "align": "start",
+    "lineHeight": "normal",
+    "shadow": "none",
+    "fill": "rgb(236, 229, 211)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "normal"
+   }
+  },
+  {
+   "sel": "pcap > span",
+   "text": "✦ Season 1 · Duelist Kingdom ✦",
+   "rect": [
+    159,
+    300,
+    762,
+    47
+   ],
+   "opacity": 1,
+   "font": {
+    "family": "\"El Messiri\"",
+    "weight": "600",
+    "size": "30px",
+    "style": "normal",
+    "color": "rgb(216, 187, 124)",
+    "letterSpacing": "9px",
+    "transform": "uppercase",
+    "align": "center",
+    "lineHeight": "normal",
+    "shadow": "rgb(0, 0, 0) 0px 2px 6px",
+    "fill": "rgb(216, 187, 124)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "normal"
+   }
+  },
+  {
+   "sel": "pcap > em",
+   "text": "Chapter",
+   "rect": [
+    491.5,
+    353,
+    97,
+    45
+   ],
+   "opacity": 1,
+   "font": {
+    "family": "Cairo",
+    "weight": "600",
+    "size": "24px",
+    "style": "normal",
+    "color": "rgb(169, 159, 136)",
+    "letterSpacing": "normal",
+    "transform": "none",
+    "align": "center",
+    "lineHeight": "normal",
+    "shadow": "none",
+    "fill": "rgb(169, 159, 136)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "normal"
+   }
+  },
+  {
+   "sel": "pn > b.pn",
+   "text": "3",
+   "rect": [
+    575.5,
+    353,
+    13,
+    45
+   ],
+   "opacity": 1,
+   "font": {
+    "family": "Cairo",
+    "weight": "700",
+    "size": "24px",
+    "style": "normal",
+    "color": "rgb(169, 159, 136)",
+    "letterSpacing": "normal",
+    "transform": "none",
+    "align": "center",
+    "lineHeight": "normal",
+    "shadow": "none",
+    "fill": "rgb(169, 159, 136)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "normal"
+   }
+  },
+  {
+   "sel": "q > span",
+   "text": "“Duelist from beyond—interrupt this shadow!”",
+   "rect": [
+    222,
+    436.13,
+    506,
+    39
+   ],
+   "opacity": 1,
+   "font": {
+    "family": "\"El Messiri\"",
+    "weight": "500",
+    "size": "25px",
+    "style": "normal",
+    "color": "rgb(232, 220, 192)",
+    "letterSpacing": "0.25px",
+    "transform": "none",
+    "align": "left",
+    "lineHeight": "33.75px",
+    "shadow": "rgb(0, 0, 0) 0px 2px 6px",
+    "fill": "rgb(232, 220, 192)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "normal"
+   }
+  },
+  {
+   "sel": "k > div.k",
+   "text": "SPIRIT DUELER",
+   "rect": [
+    268,
+    1790.59,
+    300,
+    41
+   ],
+   "opacity": 1,
+   "font": {
+    "family": "Cairo",
+    "weight": "700",
+    "size": "19px",
+    "style": "normal",
+    "color": "rgb(159, 198, 232)",
+    "letterSpacing": "4.56px",
+    "transform": "none",
+    "align": "start",
+    "lineHeight": "normal",
+    "shadow": "none",
+    "fill": "rgb(159, 198, 232)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "normal"
+   }
+  },
+  {
+   "sel": "t > div.t",
+   "text": "Junkuriboh Starter",
+   "rect": [
+    268,
+    1831.59,
+    300,
+    90
+   ],
+   "opacity": 1,
+   "font": {
+    "family": "Marcellus",
+    "weight": "400",
+    "size": "36px",
+    "style": "normal",
+    "color": "rgb(236, 229, 211)",
+    "letterSpacing": "1.44px",
+    "transform": "none",
+    "align": "start",
+    "lineHeight": "normal",
+    "shadow": "none",
+    "fill": "rgb(236, 229, 211)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "normal"
+   }
+  },
+  {
+   "sel": "s > div.s",
+   "text": "· LP",
+   "rect": [
+    268,
+    1921.59,
+    300,
+    43
+   ],
+   "opacity": 1,
+   "font": {
+    "family": "Cairo",
+    "weight": "600",
+    "size": "23px",
+    "style": "normal",
+    "color": "rgb(169, 159, 136)",
+    "letterSpacing": "normal",
+    "transform": "none",
+    "align": "start",
+    "lineHeight": "normal",
+    "shadow": "none",
+    "fill": "rgb(169, 159, 136)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "normal"
+   }
+  },
+  {
+   "sel": "s > b",
+   "text": "40/40",
+   "rect": [
+    268,
+    1923.59,
+    63,
+    34
+   ],
+   "opacity": 1,
+   "font": {
+    "family": "\"Barlow Condensed\"",
+    "weight": "600",
+    "size": "28px",
+    "style": "normal",
+    "color": "rgb(159, 224, 168)",
+    "letterSpacing": "normal",
+    "transform": "none",
+    "align": "start",
+    "lineHeight": "normal",
+    "shadow": "none",
+    "fill": "rgb(159, 224, 168)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "normal"
+   }
+  },
+  {
+   "sel": "s > b",
+   "text": "8000",
+   "rect": [
+    346,
+    1923.59,
+    51,
+    34
+   ],
+   "opacity": 1,
+   "font": {
+    "family": "\"Barlow Condensed\"",
+    "weight": "600",
+    "size": "28px",
+    "style": "normal",
+    "color": "rgb(159, 224, 168)",
+    "letterSpacing": "normal",
+    "transform": "none",
+    "align": "start",
+    "lineHeight": "normal",
+    "shadow": "none",
+    "fill": "rgb(159, 224, 168)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "normal"
+   }
+  },
+  {
+   "sel": "rw > div.rw",
+   "text": "+1 PACK",
+   "rect": [
+    268,
+    1968.59,
+    300,
+    36
+   ],
+   "opacity": 0,
+   "font": {
+    "family": "Cairo",
+    "weight": "700",
+    "size": "19px",
+    "style": "normal",
+    "color": "rgb(255, 226, 160)",
+    "letterSpacing": "3.8px",
+    "transform": "none",
+    "align": "start",
+    "lineHeight": "normal",
+    "shadow": "rgb(0, 0, 0) 0px 1px 0px",
+    "fill": "rgb(255, 226, 160)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "nowrap"
+   }
+  },
+  {
+   "sel": "k > div.k",
+   "text": "SUGOROKU’S READING",
+   "rect": [
+    268,
+    1833.55,
+    300,
+    32
+   ],
+   "opacity": 0,
+   "font": {
+    "family": "Cairo",
+    "weight": "700",
+    "size": "17px",
+    "style": "normal",
+    "color": "rgb(214, 183, 116)",
+    "letterSpacing": "3.4px",
+    "transform": "none",
+    "align": "start",
+    "lineHeight": "normal",
+    "shadow": "none",
+    "fill": "rgb(214, 183, 116)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "normal"
+   }
+  },
+  {
+   "sel": "q > div.q",
+   "text": "“The one who solves me shall gain the powers and knowledge of darkness.”",
+   "rect": [
+    268,
+    1870.55,
+    300,
+    91.08
+   ],
+   "opacity": 0,
+   "font": {
+    "family": "\"El Messiri\"",
+    "weight": "500",
+    "size": "23px",
+    "style": "normal",
+    "color": "rgb(241, 223, 178)",
+    "letterSpacing": "normal",
+    "transform": "none",
+    "align": "start",
+    "lineHeight": "30.36px",
+    "shadow": "rgb(0, 0, 0) 0px 1px 3px",
+    "fill": "rgb(241, 223, 178)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "normal"
+   }
+  },
+  {
+   "sel": "t > div.t",
+   "text": "WORLD MAP",
+   "rect": [
+    820,
+    1810.59,
+    248.84,
+    49
+   ],
+   "opacity": 1,
+   "font": {
+    "family": "Cairo",
+    "weight": "700",
+    "size": "26px",
+    "style": "normal",
+    "color": "rgb(236, 229, 211)",
+    "letterSpacing": "3.64px",
+    "transform": "none",
+    "align": "start",
+    "lineHeight": "normal",
+    "shadow": "none",
+    "fill": "rgb(236, 229, 211)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "nowrap"
+   }
+  },
+  {
+   "sel": "s > div.s",
+   "text": "Battle City · night near",
+   "rect": [
+    820,
+    1859.59,
+    248.84,
+    84
+   ],
+   "opacity": 1,
+   "font": {
+    "family": "Cairo",
+    "weight": "600",
+    "size": "22px",
+    "style": "normal",
+    "color": "rgb(143, 233, 244)",
+    "letterSpacing": "0.88px",
+    "transform": "none",
+    "align": "start",
+    "lineHeight": "normal",
+    "shadow": "rgb(0, 0, 0) 0px 1px 0px",
+    "fill": "rgb(143, 233, 244)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "normal"
+   }
+  },
+  {
+   "sel": "s > b",
+   "text": "3 Tears",
+   "rect": [
+    820,
+    1901.59,
+    76.17,
+    42
+   ],
+   "opacity": 1,
+   "font": {
+    "family": "Cairo",
+    "weight": "700",
+    "size": "22px",
+    "style": "normal",
+    "color": "rgb(255, 157, 196)",
+    "letterSpacing": "0.88px",
+    "transform": "none",
+    "align": "start",
+    "lineHeight": "normal",
+    "shadow": "rgb(0, 0, 0) 0px 1px 0px",
+    "fill": "rgb(255, 157, 196)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "normal"
+   }
+  },
+  {
+   "sel": "s2 > div.s2",
+   "text": "site · 1.2 mi ·",
+   "rect": [
+    820,
+    1947.59,
+    248.84,
+    37
+   ],
+   "opacity": 1,
+   "font": {
+    "family": "Cairo",
+    "weight": "600",
+    "size": "20px",
+    "style": "normal",
+    "color": "rgb(217, 192, 138)",
+    "letterSpacing": "0.6px",
+    "transform": "none",
+    "align": "start",
+    "lineHeight": "normal",
+    "shadow": "rgba(95, 182, 255, 0.9) 0px 0px 0px",
+    "fill": "rgb(217, 192, 138)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "nowrap"
+   }
+  },
+  {
+   "sel": "s2 > span",
+   "text": "(sample)",
+   "rect": [
+    944.41,
+    1947.59,
+    76.81,
+    37
+   ],
+   "opacity": 1,
+   "font": {
+    "family": "Cairo",
+    "weight": "600",
+    "size": "20px",
+    "style": "italic",
+    "color": "rgb(217, 192, 138)",
+    "letterSpacing": "0.6px",
+    "transform": "none",
+    "align": "start",
+    "lineHeight": "normal",
+    "shadow": "rgba(95, 182, 255, 0.9) 0px 0px 0px",
+    "fill": "rgb(217, 192, 138)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "nowrap"
+   }
+  },
+  {
+   "sel": "s2 > b",
+   "text": "2/6",
+   "rect": [
+    1036.03,
+    1947.59,
+    32.81,
+    37
+   ],
+   "opacity": 1,
+   "font": {
+    "family": "Cairo",
+    "weight": "700",
+    "size": "20px",
+    "style": "normal",
+    "color": "rgb(191, 230, 255)",
+    "letterSpacing": "0.6px",
+    "transform": "none",
+    "align": "start",
+    "lineHeight": "normal",
+    "shadow": "rgba(95, 182, 255, 0.9) 0px 0px 0px",
+    "fill": "rgb(191, 230, 255)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "nowrap"
+   }
+  },
+  {
+   "sel": "k > span.k",
+   "text": "NEWS",
+   "rect": [
+    126,
+    2081.09,
+    74.81,
+    37
+   ],
+   "opacity": 1,
+   "font": {
+    "family": "Cairo",
+    "weight": "700",
+    "size": "20px",
+    "style": "normal",
+    "color": "rgb(199, 169, 238)",
+    "letterSpacing": "5.2px",
+    "transform": "none",
+    "align": "start",
+    "lineHeight": "normal",
+    "shadow": "none",
+    "fill": "rgb(199, 169, 238)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "normal"
+   }
+  },
+  {
+   "sel": "v > span.v",
+   "text": "A Tear stirs over · 3 spirits · 1 boss",
+   "rect": [
+    216.81,
+    2076.09,
+    503,
+    47
+   ],
+   "opacity": 1,
+   "font": {
+    "family": "Cairo",
+    "weight": "600",
+    "size": "25px",
+    "style": "normal",
+    "color": "rgb(231, 221, 200)",
+    "letterSpacing": "normal",
+    "transform": "none",
+    "align": "start",
+    "lineHeight": "normal",
+    "shadow": "none",
+    "fill": "rgb(231, 221, 200)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "nowrap"
+   }
+  },
+  {
+   "sel": "v > b",
+   "text": "Domino Park",
+   "rect": [
+    392.81,
+    2076.09,
+    140,
+    47
+   ],
+   "opacity": 1,
+   "font": {
+    "family": "Cairo",
+    "weight": "700",
+    "size": "25px",
+    "style": "normal",
+    "color": "rgb(255, 157, 196)",
+    "letterSpacing": "normal",
+    "transform": "none",
+    "align": "start",
+    "lineHeight": "normal",
+    "shadow": "none",
+    "fill": "rgb(255, 157, 196)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "nowrap"
+   }
+  },
+  {
+   "sel": "go > span.go",
+   "text": "›",
+   "rect": [
+    1000,
+    2068.09,
+    10,
+    63
+   ],
+   "opacity": 1,
+   "font": {
+    "family": "Cairo, sans-serif",
+    "weight": "400",
+    "size": "34px",
+    "style": "normal",
+    "color": "rgb(157, 139, 184)",
+    "letterSpacing": "normal",
+    "transform": "none",
+    "align": "start",
+    "lineHeight": "normal",
+    "shadow": "none",
+    "fill": "rgb(157, 139, 184)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "normal"
+   }
+  },
+  {
+   "sel": "t > div.t",
+   "text": "Kaiba Corp tower · Season 1",
+   "rect": [
+    100,
+    2179.59,
+    301,
+    47
+   ],
+   "opacity": 1,
+   "font": {
+    "family": "Cairo",
+    "weight": "700",
+    "size": "25px",
+    "style": "normal",
+    "color": "rgb(236, 229, 211)",
+    "letterSpacing": "normal",
+    "transform": "none",
+    "align": "start",
+    "lineHeight": "normal",
+    "shadow": "none",
+    "fill": "rgb(236, 229, 211)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "normal"
+   }
+  },
+  {
+   "sel": "s > div.s",
+   "text": "Level 20+ · starchips",
+   "rect": [
+    100,
+    2226.59,
+    301,
+    39
+   ],
+   "opacity": 1,
+   "font": {
+    "family": "Cairo",
+    "weight": "600",
+    "size": "21px",
+    "style": "normal",
+    "color": "rgb(169, 159, 136)",
+    "letterSpacing": "normal",
+    "transform": "none",
+    "align": "start",
+    "lineHeight": "normal",
+    "shadow": "none",
+    "fill": "rgb(169, 159, 136)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "normal"
+   }
+  },
+  {
+   "sel": "t > div.t",
+   "text": "QUIT",
+   "rect": [
+    929,
+    2199.09,
+    79,
+    47
+   ],
+   "opacity": 1,
+   "font": {
+    "family": "Cairo",
+    "weight": "700",
+    "size": "25px",
+    "style": "normal",
+    "color": "rgb(231, 154, 125)",
+    "letterSpacing": "6.5px",
+    "transform": "none",
+    "align": "start",
+    "lineHeight": "normal",
+    "shadow": "none",
+    "fill": "rgb(231, 154, 125)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "normal"
+   }
+  },
+  {
+   "sel": "ph5 > div.ph5",
+   "text": "◇ placeholder art · the Stone · Puzzle body + pieces · Ring · Rod · awaiting existing models",
+   "rect": [
+    24,
+    2284,
+    934.09,
+    38
+   ],
+   "opacity": 1,
+   "font": {
+    "family": "Cairo, sans-serif",
+    "weight": "700",
+    "size": "16px",
+    "style": "normal",
+    "color": "rgba(214, 204, 186, 0.62)",
+    "letterSpacing": "2.24px",
+    "transform": "uppercase",
+    "align": "start",
+    "lineHeight": "normal",
+    "shadow": "none",
+    "fill": "rgba(214, 204, 186, 0.62)",
+    "bgImage": null,
+    "filter": null,
+    "whiteSpace": "nowrap"
+   }
+  }
+ ],
+ "textsNote": "texts[].text are the MOCKUP strings at t (sample data included). Unity shows real data per BUILD_PLAN §7; no sample string is baked into any exported texture (DOM text is excluded from every texture).",
+ "omitted": [
+  {
+   "id": "crack_dim",
+   "why": "empty at the idle (only while a sheet dims / frames the room)"
+  },
+  {
+   "id": "crack_sheet",
+   "why": "empty at the idle (only while a sheet dims / frames the room)"
+  },
+  {
+   "id": "fxs_full",
+   "why": "empty at the idle (only while a sheet dims / frames the room)"
+  },
+  {
+   "id": "rake",
+   "why": "one blank canvas by design: anime_menu_v6.js:59 sets this.rake = {w: e, c: e} (the v5 warm / cool wash is dropped in v6); both drawImage ops draw nothing"
+  },
+  {
+   "id": "eye_12",
+   "why": "his small eye seed 12 (24 px drawn at .8, menu_v41.js:49) lies wholly outside the hole clip at every blink frame: never visible in v6.3"
+  },
+  {
+   "id": "ptop_band_0",
+   "why": "no chrome pixels (transparent box: text / layout only)"
+  },
+  {
+   "id": "pcap_band_0",
+   "why": "no chrome pixels (transparent box: text / layout only)"
+  },
+  {
+   "id": "pvoice_band_0",
+   "why": "no chrome pixels (transparent box: text / layout only)"
+  },
+  {
+   "id": "prow_band_0",
+   "why": "no chrome pixels (transparent box: text / layout only)"
+  },
+  {
+   "id": "dueler_band_0",
+   "why": "no chrome pixels (transparent box: text / layout only)"
+  },
+  {
+   "id": "wmap_band_0",
+   "why": "no chrome pixels (transparent box: text / layout only)"
+  },
+  {
+   "id": "pfoot_band_0",
+   "why": "no chrome pixels (transparent box: text / layout only)"
+  },
+  {
+   "id": "ev_band_0",
+   "why": "no chrome pixels (transparent box: text / layout only)"
+  },
+  {
+   "id": "duel_band_0",
+   "why": "no chrome pixels (transparent box: text / layout only)"
+  },
+  {
+   "id": "bez_band_0",
+   "why": "no chrome pixels (transparent box: text / layout only)"
+  },
+  {
+   "id": "bez_band_1",
+   "why": "no chrome pixels (transparent box: text / layout only)"
+  },
+  {
+   "id": "img_avatar",
+   "why": "the avatar is the game's live AvatarPortraitView (BUILD_PLAN §7); assets/img/avatar.png = GoChrome/avatar_default.png, not exported"
+  }
+ ],
+ "notes": [
+  "room is opaque everywhere: bakeBackground fills #07060a first (menu.js:319) and Nut is painted over it (menu.js:326); the page has no room alpha \"where the sky shows\" (BUILD_PLAN §4). Nut is the upper of the pair, so the P2 handoff can raise the room under it unchanged.",
+  "the other 3 recess pictograms (SETTINGS ankh-gear, DECK naos, BAG satchel) are inlaid in stone_A / stone_B (no separate layer at rest); the 6 label plates are chrome9 rl_plate",
+  "DOM text (every label, readout and sample string) is not in any texture: Unity draws it with Text (D2) from real data (§7); geometry.texts lists each mockup string, rect and computed font"
+ ],
+ "sharedFromLand": {
+  "realmTile": {
+   "file": "WRLDZ/MenuV6/Common/realm_tile",
+   "note": "layout-independent: drawVoidIn on a 512 px torus"
+  },
+  "schedules": {
+   "file": "WRLDZ/MenuV6/Data/schedules",
+   "note": "eye + torch: seed / clock formulas, layout-independent; out_p1b/port/check/sched_same.json proves the played blink lists are identical"
+  }
+ }
+}

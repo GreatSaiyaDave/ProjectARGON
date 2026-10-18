@@ -11,10 +11,10 @@ using WRLDZ.UI.Shell;
 namespace WRLDZ.UI
 {
     /// <summary>
-    /// Main menu (MainMenu scene). Landscape: "The Stone Beneath Nut" v6.3 (<see cref="MenuV6Stage"/>, BUILD_PLAN P1a).
-    /// Portrait, the kill switch <c>WRLDZ_MenuV6Off</c> = 1, missing v6 art or any v6 build error: the legacy Eldritch
-    /// Solid Vision hierarchy (ELDRITCH_CONTRACT §6) — Identity slate → DUEL hero (Solid Vision disk) → COMMAND 2×2 →
-    /// VIEW/SET → WORLD MAP | QUIT. Both paths use the same handlers and routes.
+    /// Main menu (MainMenu scene): "The Stone Beneath Nut" v6.3 (<see cref="MenuV6Stage"/>, BUILD_PLAN P1a landscape,
+    /// P1b the idle rigs and the portrait first cut). The kill switch <c>WRLDZ_MenuV6Off</c> = 1, missing v6 art or any v6
+    /// build error: the legacy Eldritch Solid Vision hierarchy (ELDRITCH_CONTRACT §6) — Identity slate → DUEL hero (Solid
+    /// Vision disk) → COMMAND 2×2 → VIEW/SET → WORLD MAP | QUIT. Both paths use the same handlers and routes.
     /// Boot lands here; WORLD MAP leaves for the Overworld.
     /// </summary>
     public class DuelDiskMenuUI : MonoBehaviour
@@ -35,6 +35,9 @@ namespace WRLDZ.UI
 
         /// <summary>True when the last <see cref="Build"/> took the v6.3 path.</summary>
         public bool IsMenuV6 => _v6 != null;
+
+        /// <summary>The v6.3 Stone of the last <see cref="Build"/> (null on the legacy path), for tests and captures.</summary>
+        public MenuV6Stage Stone => _v6;
 
         /// <summary>The canvas the last <see cref="Build"/> made (DiskMenuCanvas), for tests and captures.</summary>
         public RectTransform MenuCanvas { get; private set; }
@@ -132,7 +135,7 @@ namespace WRLDZ.UI
             AppSession.Ensure().GoOverworld();
         }
 
-        /// <summary>Today's menu, unchanged: the portrait plan, the kill switch and the v6 fallback.</summary>
+        /// <summary>Today's menu, unchanged: the kill switch and the v6 fallback.</summary>
         void BuildVisualsLegacy()
         {
             var canvas = WrldzTheme.Canvas("DiskMenuCanvas", 50);

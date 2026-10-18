@@ -89,6 +89,12 @@ def main() -> int:
             fail(f"{cs.relative_to(ROOT)} loads menu art through StreamingSprite (RGBA32, keyed corners)")
         if re.search(r"\bSystem\.IO\b", src):
             fail(f"{cs.relative_to(ROOT)} reads files directly (v6 art goes through Resources.Load)")
+        # P1b (D3): the idle rigs draw on UI/Default; no shader or material of their own before P5's one shader
+        if re.search(r"\bShader\.Find\b|\bnew\s+Material\s*\(", src):
+            fail(f"{cs.relative_to(ROOT)} makes its own shader / material (D3: UI/Default until P5)")
+    # P1b: the portrait plan builds the Stone, and a rig that cannot build keeps its layer's P1a still
+    must_contain(stage, "MenuLayoutKind.Portrait", "the Stone lost its portrait plan (P1b)")
+    must_contain(stage, "RigsKept", "a rig that cannot build no longer keeps its P1a still")
     for folder in (ROOT / "Assets/Scripts", ROOT / "Assets/Editor"):
         for cs in sorted(folder.rglob("*.cs")):
             if cs == MENU_V6 / "MenuV6Art.cs":
@@ -246,6 +252,7 @@ def main() -> int:
     print("  DualMenuPresenter compact Solid Vision slates (map visible)")
     print("  BAG / ARTIFACTS / scan / lab / avatar use quiet wells")
     print("  main menu: v6.3 Stone labels + legacy fallback; MenuV6Local only via MenuV6Art, gitignored")
+    print("  main menu: portrait plan, rigs on UI/Default (no own shader), P1a stills kept as the rigs' fallback")
     print("PASS")
     return 0
 

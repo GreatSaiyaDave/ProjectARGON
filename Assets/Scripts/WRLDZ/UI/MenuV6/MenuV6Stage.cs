@@ -10,20 +10,25 @@ using WRLDZ.UI.Shell;
 namespace WRLDZ.UI.MenuV6
 {
     /// <summary>
-    /// "The Stone Beneath Nut" v6.3 main menu, P1a (BUILD_PLAN §6 P1a): the approved landscape still rebuilt from the
-    /// exported layers (layout_land.json, back to front as the page draws them), the slates with real data (§7),
-    /// his eye blinking (flipbooks, D20) and the torch flicker. Only the painting changes: every control keeps the old
-    /// hub's name and handler (DuelDiskMenuUI passes its own), all of them under <c>Tiles</c> with the old stagger.
+    /// "The Stone Beneath Nut" v6.3 main menu (BUILD_PLAN §6 P1a, P1b): the approved stills rebuilt from the exported
+    /// layers (layout_land.json / layout_port.json, back to front as the page draws them), the slates with real data (§7),
+    /// his eye blinking (flipbooks, D20), the torch flicker, and from P1b the idle life (<see cref="MenuV6Life"/>: the
+    /// recesses' hover and press, the door, the keystone, Nut, the Ring echo, the box, the live niche, the voice, the
+    /// flame, the motes, the breach glow) and the portrait first cut. Only the painting changes: every control keeps the
+    /// old hub's name and handler (DuelDiskMenuUI passes its own), all of them under <c>Tiles</c> with the old stagger.
     /// <para>
-    /// Null-safe by construction: a missing sprite is skipped (never a white box), a missing text slot is skipped, and
-    /// DuelDiskMenuUI falls back to the legacy menu when <see cref="Supports"/> / <see cref="HasArt"/> say no, when the
-    /// kill switch is set, or when this throws.
+    /// Null-safe by construction: a missing sprite is skipped (never a white box), a missing text slot is skipped, a rig
+    /// that cannot build leaves the P1a still of its layer in place, and DuelDiskMenuUI falls back to the legacy menu
+    /// when <see cref="Supports"/> / <see cref="HasArt"/> say no, when the kill switch is set, or when this throws.
     /// </para>
     /// </summary>
     public sealed class MenuV6Stage : MonoBehaviour
     {
         /// <summary>PlayerPrefs kill switch: 1 = always the legacy menu (rollback without a recompile).</summary>
         public const string KillSwitchPref = "WRLDZ_MenuV6Off";
+
+        /// <summary>Tests: build the legacy menu as if the kill switch were set (no PlayerPrefs write).</summary>
+        public static bool ForceLegacy;
 
         public sealed class Handlers
         {
@@ -48,12 +53,20 @@ namespace WRLDZ.UI.MenuV6
         static readonly Rect SlateRRect = new(1394f, 214f, 426f, 752f);
 
         // Placed from the approved still (stage px): the avatar disc inside ava_ring (its opaque inner disc, measured
-        // from the sprite), the soul gem on the ring (D15), the placeholder strip's ◇, the status line.
-        static readonly Rect AvatarDisc = new(127f, 235f, 74f, 74f);
-        static readonly Rect SoulGem = new(178f, 286f, 24f, 24f);
-        static readonly Rect DeckPlaqueRect = new(122f, 531f, 382f, 150f);
-        static readonly Rect Diamond = new(23f, 1054f, 9f, 9f);
-        static readonly Rect StatusRect = new(660f, 1004f, 600f, 30f);
+        // from the sprite), the soul gem on the ring (D15), the status line. Portrait derives them from its own ring.
+        static readonly Rect AvatarDiscLand = new(127f, 235f, 74f, 74f);
+        static readonly Rect SoulGemLand = new(178f, 286f, 24f, 24f);
+        static readonly Rect AvaRingLand = new(119.5f, 227.5f, 90f, 98f);
+        static readonly Rect DeckPlaqueLand = new(122f, 531f, 382f, 150f);
+        static readonly Rect StatusLand = new(660f, 1004f, 600f, 30f);
+
+        // Portrait (layout_port.json): the deck row (box + its lines), the status line between that row and NEWS.
+        static readonly Rect DeckPlaquePort = new(40f, 1730f, 534f, 266f);
+        static readonly Rect StatusPort = new(240f, 2004f, 600f, 34f);
+
+        // The box inscription block on hover: the page's own line breaks (out_p1b/rigs/*/shots/hov_box_t2.800.png)
+        const string BoxReadingLand = "THE BOX’S HIEROGLYPHS ·\nSUGOROKU’S READING";
+        const string BoxQuote = "“The one who solves me shall\ngain the powers and\nknowledge of darkness.”";
 
         public RectTransform Root { get; private set; }
         public RectTransform Stage { get; private set; }
@@ -66,9 +79,16 @@ namespace WRLDZ.UI.MenuV6
         public readonly List<EyeFlipbook> Eyes = new();
         public TorchFlicker Torch { get; private set; }
 
+        /// <summary>The idle rigs (P1b); empty when rigs_&lt;layout&gt;.json is missing (the P1a stills then show).</summary>
+        public MenuV6Life Life { get; private set; }
+
+        /// <summary>The rigs that could not build (their layers keep the P1a still).</summary>
+        public readonly List<string> RigsKept = new();
+
         Handlers _h;
         Rect _stageRect;
         Vector2 _lastRootSize;
+        bool Land => Kind == MenuLayoutKind.Landscape;
 
         // ------------------------------------------------------------------ gates
 
@@ -81,8 +101,8 @@ namespace WRLDZ.UI.MenuV6
             }
         }
 
-        /// <summary>The plans that exist: landscape in P1a; portrait from P1b.</summary>
-        public static bool Supports(MenuLayoutKind kind) => kind == MenuLayoutKind.Landscape;
+        /// <summary>The plans that exist: landscape (P1a) and the portrait first cut (P1b).</summary>
+        public static bool Supports(MenuLayoutKind kind) => kind == MenuLayoutKind.Landscape || kind == MenuLayoutKind.Portrait;
 
         /// <summary>The plan's JSON and the two base layers (room, Stone A) are importable.</summary>
         public static bool HasArt(MenuLayoutKind kind)
@@ -98,6 +118,7 @@ namespace WRLDZ.UI.MenuV6
         /// <summary>Null when the v6 menu can be built for <paramref name="kind"/>; else why not (for the log).</summary>
         public static string WhyNot(MenuLayoutKind kind)
         {
+            if (ForceLegacy) return "legacy forced (test)";
             if (KillSwitchOn) return "kill switch " + KillSwitchPref + " = 1";
             if (!Supports(kind)) return kind + " has no v6 plan yet";
             if (!HasArt(kind)) return "v6 art missing (Resources/" + MenuV6Art.DataRoot + MenuV6Layout.FileFor(kind) + ")";
@@ -154,16 +175,28 @@ namespace WRLDZ.UI.MenuV6
             var cracks = Group("CracksU");
             var fx = Group("Fx");
             var slates = Group("Slates");
-            var slateL = Node(slates, "SlateL", SlateLRect, _stageRect);
-            var slateR = Node(slates, "SlateR", SlateRRect, _stageRect);
+            RectTransform slateL, slateR;
+            if (Land)
+            {
+                slateL = Node(slates, "SlateL", SlateLRect, _stageRect);
+                slateR = Node(slates, "SlateR", SlateRRect, _stageRect);
+            }
+            else
+            {
+                // the portrait has no slates: the identity sits in the sky register, the rows under the Stone
+                slateL = slateR = Node(slates, "Chrome", _stageRect, _stageRect);
+            }
+
             Tiles = Group("Tiles");
             var fx2 = Group("Fx2");
             var ph5 = Group("Placeholder");
 
             // controls first, so their own chrome can be parented to them
             var controls = BuildControls();
+            _ctx = NewRigContext(controls);
 
-            Torch = TorchFlicker.Attach(gameObject, LoadNoiseRow());
+            _noise = LoadNoiseRow();
+            Torch = TorchFlicker.Attach(gameObject, _noise);
             foreach (var L in Layout.Layers)
             {
                 switch (L.Group)
@@ -175,36 +208,41 @@ namespace WRLDZ.UI.MenuV6
                         StaticLayer(cracks, _stageRect, L);
                         break;
                     case "fx":
-                        StaticLayer(fx, _stageRect, L);
+                        FxLayer(fx, L);
                         break;
                     case "fx2":
-                        StaticLayer(fx2, _stageRect, L);
+                        FxLayer(fx2, L);
                         break;
                     case "ph5":
                         StaticLayer(ph5, _stageRect, L);
                         break;
                     case "ui":
-                        UiLayer(L, slateL, slateR, controls);
+                        if (Land) UiLayer(L, slateL, slateR, controls);
+                        else UiLayerPort(L, slateL, controls);
                         break;
                 }
             }
 
-            BuildSlateTexts(slateL, slateR, controls);
+            if (Land) BuildSlateTexts(slateL, slateR, controls);
+            else BuildPortraitTexts(slateL, controls);
             BuildControlTexts(controls);
             BuildPlaceholder(ph5);
 
-            Status = TextFx.Label(Stage, "Status", StatusSlot(), "", _stageRect);
+            var statusRect = Land ? StatusLand : StatusPort;
+            Status = TextFx.Label(Stage, "Status", StatusSlot(statusRect), "", _stageRect);
             if (Status == null)
             {
                 Status = GoTheme.Label(Stage, "Status", "", 16, WrldzAnimePalette.Calc, TextAnchor.MiddleCenter, bold: false);
-                MenuV6Layout.Place(Status.rectTransform, StatusRect, _stageRect);
+                MenuV6Layout.Place(Status.rectTransform, statusRect, _stageRect);
             }
+
             Status.alignment = TextAnchor.MiddleCenter;
 
             // quiet hover motes (ArcaneButton quiet: ≤ 3 per hover) need a field on the canvas; no ambient motes
             UiEmberField.Attach(canvas, 12, false);
 
             if (Torch != null) Torch.Apply(MenuV6Clock.Now);
+            BuildRigs(controls);
             if (Application.isPlaying)
                 MenuMotion.PlayOn(Tiles.gameObject, MenuMotion.StaggerChildren(Tiles, 0.26f, 0.045f));
         }
@@ -231,6 +269,7 @@ namespace WRLDZ.UI.MenuV6
         {
             public ArcaneButton Hero, MapBack, Quit, DeckPlaque;
             public Rect HeroRect, MapRect, QuitRect, PlaqueRect;
+            public RectTransform RingZone;
             public readonly Dictionary<string, (ArcaneButton btn, Rect rect, MenuV6Layout.Recess rec)> Recess = new();
         }
 
@@ -255,15 +294,33 @@ namespace WRLDZ.UI.MenuV6
             c.MapBack = Control(Tiles, "MapBack", "WORLD MAP", _h.GoOverworld, EldritchTier.Primary,
                 "Battle City · night", c.MapRect, round: false);
 
-            // QUIT → OpenQuitConfirm (sub-line per D14)
+            // QUIT → OpenQuitConfirm (sub-line per D14; the portrait plate has no sub-line)
             c.QuitRect = Layout.HasQuit ? Layout.Quit : new Rect(1416f, 757.5f, 250f, 64f);
-            c.Quit = Control(Tiles, "Quit", "QUIT", _h.OpenQuitConfirm, EldritchTier.Danger, "fold the disk",
+            c.Quit = Control(Tiles, "Quit", "QUIT", _h.OpenQuitConfirm, EldritchTier.Danger, Land ? "fold the disk" : null,
                 c.QuitRect, round: false);
 
             // the Spirit Dueler plaque in the Puzzle's box → the DECK screen (D16: an existing route)
-            c.PlaqueRect = DeckPlaqueRect;
+            c.PlaqueRect = Land ? DeckPlaqueLand : DeckPlaquePort;
             c.DeckPlaque = Control(Tiles, "DeckPlaque", null, _h.OpenDeckHub, EldritchTier.Secondary, null,
                 c.PlaqueRect, round: false);
+
+            // the Ring echo hovers (its glow and sway, menu.js hovR) but is not a control (D12): no Button, no route
+            var ring = Layout.RecessById("ring");
+            if (ring != null && ring.R > 0f)
+            {
+                var d = ring.R * 2f + 16f;
+                var zr = new Rect(ring.Centre.x - d * .5f, ring.Centre.y - d * .5f, d, d);
+                var zone = new GameObject("RingEcho", typeof(RectTransform), typeof(Image));
+                zone.transform.SetParent(Tiles, false);
+                var zi = zone.GetComponent<Image>();
+                zi.sprite = UiFoundation.WhiteSprite();
+                zi.color = new Color(1f, 1f, 1f, 0f);
+                zi.raycastTarget = true;
+                MenuV6Layout.Place(zi.rectTransform, zr, _stageRect);
+                zone.AddComponent<CircleHit>();
+                c.RingZone = zi.rectTransform;
+            }
+
             return c;
         }
 
@@ -287,10 +344,13 @@ namespace WRLDZ.UI.MenuV6
             MenuV6Layout.Place(btn.Rect, rect, _stageRect);
             if (round) btn.gameObject.AddComponent<CircleHit>();
             if (string.IsNullOrEmpty(title) && btn.Title != null) btn.Title.gameObject.SetActive(false);
+            if (string.IsNullOrEmpty(blurb) && btn.Blurb != null) btn.Blurb.gameObject.SetActive(false);
             return btn;
         }
 
         // ------------------------------------------------------------------ layers
+
+        readonly Dictionary<string, Image> _static = new();
 
         Image StaticLayer(Transform parent, Rect parentRect, MenuV6Layout.Layer L, string name = null)
         {
@@ -311,14 +371,17 @@ namespace WRLDZ.UI.MenuV6
             img.preserveAspect = false;
             img.type = L.Nine ? Image.Type.Sliced : Image.Type.Simple;
             img.fillCenter = true;
-            // every layer is drawn straight-alpha "over" in P1a (UI/Default; no new shader before P5, D3). E7 measured
-            // this choice at p99 8 against the page (the per-layer add / over split is p99 6; P1b).
-            img.color = new Color(1f, 1f, 1f, Mathf.Clamp01(L.AlphaAtRest));
+            // every layer is drawn straight-alpha "over" (UI/Default; no new shader before P5, D3). P1b: the layers that
+            // stay static take the Linear-space gain measured against the approved still (MenuV6Linear.LayerGain).
+            var gain = MenuV6Linear.LayerGain(L.Id);
+            img.color = new Color(1f, 1f, 1f, Mathf.Clamp01(L.AlphaAtRest * gain));
             if (Torch != null)
             {
-                if (L.Id == "stone_B" || L.Id == "keystone_over_f1") Torch.DriveAlpha(img);
-                else if (L.Id == "torch_pool_b0") Torch.DrivePool(img);
+                if (L.Id == "stone_B" || L.Id == "keystone_over_f1") Torch.DriveAlpha(img, gain);
+                else if (L.Id == "torch_pool_b0") Torch.DrivePool(img, gain);
             }
+
+            if (!string.IsNullOrEmpty(L.Id)) _static[L.Id] = img;
             return img;
         }
 
@@ -349,6 +412,53 @@ namespace WRLDZ.UI.MenuV6
             return null;
         }
 
+        // P1b: where each rig sits in the page's z order, and the P1a stills it replaces (they stay if the rig fails)
+        static readonly Dictionary<string, (string rig, bool host)> FxHooks = new()
+        {
+            { "ring_echo_add", ("ringEcho", true) },
+            { "breach_glow_add", ("breachGlow", true) },
+            { "door_ring_add", ("door", true) },
+            { "motes_add", ("motes", true) },
+            { "flame_glow_add", ("flame", false) },
+            { "flame_tongues", ("flame", true) },
+            { "nut_twinkle_add", ("nut", true) },
+            { "keystone_over_f0", ("keystone", false) },
+            { "keystone_over_f1", ("keystone", false) },
+            { "keystone_add_flick0", ("keystone", true) },
+        };
+
+        readonly Dictionary<string, RectTransform> _hosts = new();
+        readonly Dictionary<string, List<GameObject>> _replaced = new();
+        readonly Dictionary<string, Rect> _hostFrames = new();
+
+        void FxLayer(RectTransform group, MenuV6Layout.Layer L)
+        {
+            // the recesses' hover / press draw after the live pictos, before the Ring echo (anime_menu_v6.js:97)
+            if (L.Id == "ring_refract" && !_hosts.ContainsKey("recess")) Host(group, "recess", _stageRect);
+            var img = StaticLayer(group, _stageRect, L);
+            if (!FxHooks.TryGetValue(L.Id ?? "", out var hook)) return;
+            if (img != null) Replaced(hook.rig, img.gameObject);
+            if (hook.host) Host(group, hook.rig, _stageRect);
+        }
+
+        RectTransform Host(Transform parent, string rig, Rect frame, int sibling = -1)
+        {
+            var h = new GameObject("Rig_" + rig, typeof(RectTransform)).GetComponent<RectTransform>();
+            h.SetParent(parent, false);
+            UiTheme.Stretch(h);
+            if (sibling >= 0) h.SetSiblingIndex(sibling);
+            _hosts[rig] = h;
+            _hostFrames[rig] = frame;
+            return h;
+        }
+
+        void Replaced(string rig, GameObject still)
+        {
+            if (still == null) return;
+            if (!_replaced.TryGetValue(rig, out var list)) _replaced[rig] = list = new List<GameObject>();
+            list.Add(still);
+        }
+
         void UiLayer(MenuV6Layout.Layer L, RectTransform slateL, RectTransform slateR, Controls c)
         {
             var id = L.Id ?? "";
@@ -363,37 +473,29 @@ namespace WRLDZ.UI.MenuV6
             }
 
             if (id.StartsWith("ava_ring")) { StaticLayer(slateL, SlateLRect, L); return; }
-            if (id.StartsWith("niche_")) { ControlArt(c.MapBack, c.MapRect, L); return; }
-            if (id.StartsWith("quit_plate") || id == "icon_door") { ControlArt(c.Quit, c.QuitRect, L); return; }
-            if (id == "box_rest" || id == "disk_glyph") { ControlArt(c.DeckPlaque, c.PlaqueRect, L); return; }
+            if (id.StartsWith("niche_")) { NicheArt(c, L); return; }
+            if (id.StartsWith("quit_plate") || id == "icon_door") { QuitArt(c, L); return; }
+            if (id == "box_rest" || id == "disk_glyph") { PlaqueArt(c, L); return; }
 
             if (id == "meter")
             {
-                var pick = MeterFile(L);
-                var m = new MenuV6Layout.Layer
-                {
-                    Id = L.Id, Z = L.Z, Group = L.Group, File = pick, Rect = L.Rect, Ppu = L.Ppu, Blend = L.Blend,
-                    AlphaAtRest = L.AlphaAtRest
-                };
-                if (Data.ChapterIndex > 0) StaticLayer(slateL, SlateLRect, m);
+                MeterLayer(slateL, SlateLRect, L);
                 return;
             }
 
-            if (id == "kuriboh_medal") { CompanionMedal(slateL, L); return; }
+            if (id == "kuriboh_medal") { CompanionMedal(slateL, SlateLRect, L); return; }
 
             if (id.StartsWith("xp_fill"))
             {
-                var img = StaticLayer(slateL, SlateLRect, L);
-                if (img != null)
-                {
-                    // the page's fill is a sample (62 %); the bar math is the Overworld's (XpProgress01, min 2 %)
-                    var track = Layout.LayerById("xp_track_0");
-                    var inner = track != null ? track.Rect.width - 2f : L.Rect.width;
-                    var r = L.Rect;
-                    r.width = Mathf.Max(inner * Mathf.Clamp(Data.Xp01, 0.02f, 1f), 3f);
-                    MenuV6Layout.Place(img.rectTransform, r, SlateLRect);
-                }
+                XpFill(slateL, SlateLRect, L);
+                return;
+            }
 
+            if (id == "voice_puzzle")
+            {
+                var img = StaticLayer(slateR, SlateRRect, L);
+                if (img != null) Replaced("voice", img.gameObject);
+                Host(slateR, "voice", SlateRRect);
                 return;
             }
 
@@ -401,17 +503,120 @@ namespace WRLDZ.UI.MenuV6
             StaticLayer(left ? slateL : slateR, left ? SlateLRect : SlateRRect, L);
         }
 
+        /// <summary>Portrait: every chrome layer sits on the stage (no slates); the controls keep their own art.</summary>
+        void UiLayerPort(MenuV6Layout.Layer L, RectTransform chrome, Controls c)
+        {
+            var id = L.Id ?? "";
+            if (id.StartsWith("pip_") || id.StartsWith("site_dot")) return;
+            if (id.StartsWith("rl_plate_"))
+            {
+                var owner = RecessForPlate(L.Rect, c);
+                if (owner.btn != null) ControlArt(owner.btn, owner.rect, L, "Plate");
+                return;
+            }
+
+            if (id.StartsWith("niche_")) { NicheArt(c, L); return; }
+            if (id.StartsWith("quit_plate") || id == "icon_door") { QuitArt(c, L); return; }
+            if (id == "box_rest" || id == "disk_glyph") { PlaqueArt(c, L); return; }
+            if (id == "meter")
+            {
+                // the season meter is the voice in portrait (menu.js:488): its rays go under it
+                Host(chrome, "voice", _stageRect);
+                MeterLayer(chrome, _stageRect, L);
+                return;
+            }
+
+            if (id == "kuriboh_medal") { CompanionMedal(chrome, _stageRect, L); return; }
+            if (id.StartsWith("xp_fill")) { XpFill(chrome, _stageRect, L); return; }
+            StaticLayer(chrome, _stageRect, L);
+        }
+
+        void NicheArt(Controls c, MenuV6Layout.Layer L)
+        {
+            var img = ControlArt(c.MapBack, c.MapRect, L);
+            if (L.Id == "niche_still")
+            {
+                if (img != null) Replaced("niche", img.gameObject);
+                ArtHost(c.MapBack, c.MapRect, "niche");
+            }
+            else if (L.Id != null && L.Id.StartsWith("niche_frame"))
+            {
+                _nicheFrame = img;
+                ArtHost(c.MapBack, c.MapRect, "nicheFrameHover");
+            }
+        }
+
+        void QuitArt(Controls c, MenuV6Layout.Layer L)
+        {
+            var img = ControlArt(c.Quit, c.QuitRect, L);
+            if (L.Id != null && L.Id.StartsWith("quit_plate"))
+            {
+                _quitPlate = img;
+                ArtHost(c.Quit, c.QuitRect, "quitHover");
+            }
+        }
+
+        void PlaqueArt(Controls c, MenuV6Layout.Layer L)
+        {
+            var img = ControlArt(c.DeckPlaque, c.PlaqueRect, L);
+            if (L.Id == "box_rest")
+            {
+                if (img != null) Replaced("box", img.gameObject);
+                ArtHost(c.DeckPlaque, c.PlaqueRect, "box");
+            }
+            else if (L.Id == "disk_glyph" && img != null)
+            {
+                _plaqueNormal.Add(img);
+            }
+        }
+
+        Image _nicheFrame, _quitPlate;
+        readonly List<Graphic> _plaqueNormal = new();
+
+        void MeterLayer(RectTransform parent, Rect parentRect, MenuV6Layout.Layer L)
+        {
+            var pick = MeterFile(L);
+            var m = new MenuV6Layout.Layer
+            {
+                Id = L.Id, Z = L.Z, Group = L.Group, File = pick, Rect = L.Rect, Ppu = L.Ppu, Blend = L.Blend,
+                AlphaAtRest = L.AlphaAtRest
+            };
+            if (Data.ChapterIndex > 0) StaticLayer(parent, parentRect, m);
+        }
+
+        void XpFill(RectTransform parent, Rect parentRect, MenuV6Layout.Layer L)
+        {
+            var img = StaticLayer(parent, parentRect, L);
+            if (img == null) return;
+            // the page's fill is a sample (62 %); the bar math is the Overworld's (XpProgress01, min 2 %)
+            var track = Layout.LayerById("xp_track_0");
+            var inner = track != null ? track.Rect.width - 2f : L.Rect.width;
+            var r = L.Rect;
+            r.width = Mathf.Max(inner * Mathf.Clamp(Data.Xp01, 0.02f, 1f), 3f);
+            MenuV6Layout.Place(img.rectTransform, r, parentRect);
+        }
+
         readonly Dictionary<Transform, int> _artCount = new();
 
         /// <summary>A control's own chrome (label plate, QUIT plate, niche, box): drawn under the control's labels, in
         /// the page's z order.</summary>
-        void ControlArt(ArcaneButton owner, Rect ownerRect, MenuV6Layout.Layer L, string name = null)
+        Image ControlArt(ArcaneButton owner, Rect ownerRect, MenuV6Layout.Layer L, string name = null)
         {
-            if (owner == null) return;
+            if (owner == null) return null;
             var img = StaticLayer(owner.transform, ownerRect, L, name);
-            if (img == null) return;
+            if (img == null) return null;
             _artCount.TryGetValue(owner.transform, out var k);
             img.transform.SetSiblingIndex(k);
+            _artCount[owner.transform] = k + 1;
+            return img;
+        }
+
+        /// <summary>A rig host inside a control, at the next chrome index (so the control's labels stay on top).</summary>
+        void ArtHost(ArcaneButton owner, Rect ownerRect, string rig)
+        {
+            if (owner == null) return;
+            _artCount.TryGetValue(owner.transform, out var k);
+            Host(owner.transform, rig, ownerRect, k);
             _artCount[owner.transform] = k + 1;
         }
 
@@ -437,7 +642,7 @@ namespace WRLDZ.UI.MenuV6
             return L.File;
         }
 
-        void CompanionMedal(RectTransform slateL, MenuV6Layout.Layer L)
+        void CompanionMedal(RectTransform parent, Rect parentRect, MenuV6Layout.Layer L)
         {
             // §7: the team's own project icon when the player has a team, else his Kuriboh render + "· stand-in"
             Sprite team = null;
@@ -449,14 +654,14 @@ namespace WRLDZ.UI.MenuV6
 
             if (team == null)
             {
-                StaticLayer(slateL, SlateLRect, L);
+                StaticLayer(parent, parentRect, L);
                 return;
             }
 
             var mask = new GameObject("TeamMedal", typeof(RectTransform), typeof(Image), typeof(Mask));
-            mask.transform.SetParent(slateL, false);
+            mask.transform.SetParent(parent, false);
             var mimg = mask.GetComponent<Image>();
-            MenuV6Layout.Place(mimg.rectTransform, L.Rect, SlateLRect);
+            MenuV6Layout.Place(mimg.rectTransform, L.Rect, parentRect);
             mimg.sprite = Disc();
             mimg.raycastTarget = false;
             mask.GetComponent<Mask>().showMaskGraphic = false;
@@ -492,8 +697,9 @@ namespace WRLDZ.UI.MenuV6
 
         /// <summary>A run of texts on one line, each in its own recorded style, placed left to right by measured width
         /// (the page's inline spans).</summary>
-        void Run(Transform parent, Rect parentRect, string name, Rect line, params (string sel, string key, string shown, float gapBefore)[] parts)
+        List<Text> Run(Transform parent, Rect parentRect, string name, Rect line, params (string sel, string key, string shown, float gapBefore)[] parts)
         {
+            var made = new List<Text>();
             var x = line.x;
             for (var i = 0; i < parts.Length; i++)
             {
@@ -515,6 +721,27 @@ namespace WRLDZ.UI.MenuV6
                 var w = t.preferredWidth + (ls != null ? ls.Spacing * t.text.Length : 0f);
                 MenuV6Layout.Place(t.rectTransform, new Rect(x, line.y, w + 2f, line.height), parentRect);
                 x += w;
+                made.Add(t);
+            }
+
+            return made;
+        }
+
+        /// <summary>A single line kept inside its column: shrunk to <paramref name="minSize"/>, then cut with an ellipsis
+        /// (P1a capture: a long player name ran into the crack art at the slate's right edge).</summary>
+        static void KeepInColumn(Text t, float maxWidth, int minSize)
+        {
+            if (t == null) return;
+            t.horizontalOverflow = HorizontalWrapMode.Overflow;
+            TextFx.FitWidth(t, maxWidth, minSize);
+            var ls = t.GetComponent<LetterSpacingEffect>();
+            float W() => t.preferredWidth + (ls != null ? ls.Spacing * t.text.Length : 0f);
+            if (W() <= maxWidth) return;
+            var s = t.text;
+            for (var n = s.Length - 1; n > 1; n--)
+            {
+                t.text = s.Substring(0, n).TrimEnd() + "…";
+                if (W() <= maxWidth) return;
             }
         }
 
@@ -524,17 +751,15 @@ namespace WRLDZ.UI.MenuV6
             var L = SlateLRect;
             var R = SlateRRect;
 
-            // DUELIST: the player's name (Marcellus 50, tracked), fitted to the slate
+            // DUELIST: the player's name (Marcellus 50, tracked), on one line inside the page's own column (the slot,
+            // x 224-452: the crack chunk at the slate's top-right corner starts at x ~470 on this row)
             var name = T(slateL, L, "Name", "n > span.n", "DUELIST", d.Name);
             if (name != null)
             {
-                // one line, up to the slate's inner edge (the rule under it ends at x 511), shrunk to fit
                 var slot = Layout.Text("n > span.n", "DUELIST");
                 var r = slot.Rect;
-                r.width = 511f - r.x;
-                name.horizontalOverflow = HorizontalWrapMode.Overflow;
                 MenuV6Layout.Place(name.rectTransform, r, L);
-                TextFx.FitWidth(name, r.width, 24);
+                KeepInColumn(name, r.width, 24);
             }
 
             // Lv n · title (the page's "sample profile" marks sample data; the real line is the avatar's title)
@@ -558,7 +783,7 @@ namespace WRLDZ.UI.MenuV6
             T(slateL, L, "ArtifactCap", "k > div.k", "MILLENNIUM PUZZLE", "MILLENNIUM PUZZLE");
 
             // season caption through the shared SectionCap (hub_overlay_chrome_check), restyled here (§3 row)
-            SeasonCap(slateL, L);
+            SeasonCap(slateL, L, "cap > div.cap", "Season 1 · Duelist Kingdom", new Rect(122f, 408f, 382f, 17f));
 
             // chapter n of the current gate, its title, cleared stages n / total (§7, §11 F19)
             if (d.ChapterIndex > 0)
@@ -573,55 +798,8 @@ namespace WRLDZ.UI.MenuV6
                     sub + d.StagesCleared + " / " + d.StagesTotal);
             }
 
-            // WORLD MAP niche: name, place, the real Tear pin count (the Millennium site and locators have no source)
-            var map = c.MapBack;
-            if (map != null)
-            {
-                var title = map.Title;
-                var blurb = map.Blurb;
-                ApplyTo(title, c.MapRect, "t > div.t", "WORLD MAP", "WORLD MAP");
-                var s = Layout.Text("s > div.s", "Battle City · night near");
-                if (blurb != null && s != null)
-                {
-                    TextFx.Apply(blurb, s, "Battle City · night");
-                    var line1 = s.Rect;
-                    line1.height = s.LineHeight > 0f ? s.LineHeight : line1.height * 0.5f;
-                    MenuV6Layout.Place(blurb.rectTransform, line1, c.MapRect);
-                    blurb.alignment = TextAnchor.MiddleLeft;
-                    var line2 = line1;
-                    line2.y += line1.height;
-                    Run(map.transform, c.MapRect, "Tears", line2,
-                        ("s > b", "3 Tears", d.TearPins + " Tears", 0f),
-                        ("s > div.s", "Battle City · night near", "near", 5f));
-                }
-            }
-
-            // the Spirit Dueler plaque: deck name, main count / 40, the format's LP
-            var plaque = c.DeckPlaque;
-            if (plaque != null)
-            {
-                var pr = c.PlaqueRect;
-                var k = Layout.Text("k > div.k", "SPIRIT DUELER");
-                if (k != null)
-                {
-                    // the disk glyph sits at the start of this line (22 px + its gap, read off the still)
-                    var t = TextFx.Label(plaque.transform, "Kicker", k, "SPIRIT DUELER", pr);
-                    var kr = k.Rect;
-                    kr.x += 30f;
-                    kr.width -= 30f;
-                    if (t != null) MenuV6Layout.Place(t.rectTransform, kr, pr);
-                }
-
-                if (!string.IsNullOrEmpty(d.DeckName))
-                    T(plaque.transform, pr, "DeckName", "t > div.t", "Junkuriboh Starter", d.DeckName);
-                var sline = Layout.Text("s > div.s", "· LP");
-                var sRect = sline != null ? sline.Rect : new Rect(284f, 631f, 220f, 32f);
-                Run(plaque.transform, pr, "DeckLine", sRect,
-                    ("s > b", "40/40", MenuV6Data.DeckCountLine(d), 0f),
-                    ("s > div.s", "· LP", MenuV6Data.DeckCountLine(d) != null && d.StartingLp > 0 ? "·" : null, 5f),
-                    ("s > b", "8000", d.StartingLp > 0 ? d.StartingLp.ToString() : null, 5f),
-                    ("s > div.s", "· LP", d.StartingLp > 0 ? "LP" : null, 4f));
-            }
+            MapTexts(c, "s > div.s", "Battle City · night near");
+            PlaqueTexts(c, "k > div.k", "THE BOX’S HIEROGLYPHS · SUGOROKU’S READING", BoxReadingLand);
 
             // NEWS: Tears from the pin count; the Bazaar's tablet packs (SystemsSheets rows)
             T(slateR, R, "NewsCap", "cap > div.cap", "News", "News");
@@ -630,10 +808,10 @@ namespace WRLDZ.UI.MenuV6
             T(slateR, R, "News2", "t > div.t", "Tablet packs at the Bazaar", "Tablet packs at the Bazaar");
             T(slateR, R, "News2Sub", "s > div.s", "LOB · MRD · SRL · 1,000 SE of a set · one 10-card pack", d.BazaarLine);
 
-            // THE PHARAOH'S VOICE: the one sourced line (Blueprint l.29; menu.js:61), shown whole until P1b types it
+            // THE PHARAOH'S VOICE: the one sourced line (Blueprint l.29; menu.js:61), broken where the page breaks it
+            // (rigs_land.json voice.pageLines: 2 lines in the .q box; P1a's wrap in the 254 px span box made 3)
             T(slateR, R, "VoiceCap", "cap > div.cap", "The Pharaoh's voice", "The Pharaoh's voice");
-            T(slateR, R, "Voice", "q > span", "“Duelist from beyond—interrupt this shadow!”",
-                "“Duelist from beyond—interrupt this shadow!”");
+            VoiceLine(slateR, R);
 
             // EVENTS: the first unclaimed daily quest and what it pays
             T(slateR, R, "EventsCap", "cap > div.cap", "Events", "Events");
@@ -651,7 +829,157 @@ namespace WRLDZ.UI.MenuV6
             }
 
             // the avatar in the gold ring: the live portrait, the old tap, the shared LiftPlate, the soul gem
-            Avatar(slateL, L);
+            Avatar(slateL, L, AvatarDiscLand, SoulGemLand);
+        }
+
+        /// <summary>WORLD MAP niche: name, place, the real Tear pin count (the Millennium site and locators have no source).</summary>
+        void MapTexts(Controls c, string placeSel, string placeKey)
+        {
+            var map = c.MapBack;
+            if (map == null) return;
+            ApplyTo(map.Title, c.MapRect, "t > div.t", "WORLD MAP", "WORLD MAP");
+            var blurb = map.Blurb;
+            var s = Layout.Text(placeSel, placeKey);
+            if (blurb == null || s == null) return;
+            TextFx.Apply(blurb, s, "Battle City · night");
+            var line1 = s.Rect;
+            line1.height = s.LineHeight > 0f ? s.LineHeight : line1.height * 0.5f;
+            MenuV6Layout.Place(blurb.rectTransform, line1, c.MapRect);
+            blurb.alignment = TextAnchor.MiddleLeft;
+            var line2 = line1;
+            line2.y += line1.height;
+            Run(map.transform, c.MapRect, "Tears", line2,
+                ("s > b", "3 Tears", Data.TearPins + " Tears", 0f),
+                (placeSel, placeKey, "near", 5f));
+        }
+
+        /// <summary>The Spirit Dueler plaque: deck name, main count / 40, the format's LP; on hover Sugoroku's reading
+        /// of the box replaces them (PlaqueTextRig).</summary>
+        void PlaqueTexts(Controls c, string readingSel, string readingKey, string readingShown)
+        {
+            var plaque = c.DeckPlaque;
+            if (plaque == null) return;
+            var d = Data;
+            var pr = c.PlaqueRect;
+            var k = Layout.Text("k > div.k", "SPIRIT DUELER");
+            if (k != null)
+            {
+                // the disk glyph sits at the start of this line (its size + the page's gap)
+                var t = TextFx.Label(plaque.transform, "Kicker", k, "SPIRIT DUELER", pr);
+                var glyph = Layout.LayerById("disk_glyph");
+                var shift = glyph != null ? glyph.Rect.xMax - k.Rect.x + 8f : 30f;
+                var kr = k.Rect;
+                kr.x += shift;
+                kr.width -= shift;
+                if (t != null)
+                {
+                    MenuV6Layout.Place(t.rectTransform, kr, pr);
+                    _plaqueNormal.Add(t);
+                }
+            }
+
+            if (!string.IsNullOrEmpty(d.DeckName))
+            {
+                var dn = T(plaque.transform, pr, "DeckName", "t > div.t", "Junkuriboh Starter", d.DeckName);
+                if (dn != null) _plaqueNormal.Add(dn);
+            }
+
+            var sline = Layout.Text("s > div.s", "· LP");
+            var sRect = sline != null ? sline.Rect : new Rect(284f, 631f, 220f, 32f);
+            foreach (var t in Run(plaque.transform, pr, "DeckLine", sRect,
+                         ("s > b", "40/40", MenuV6Data.DeckCountLine(d), 0f),
+                         ("s > div.s", "· LP", MenuV6Data.DeckCountLine(d) != null && d.StartingLp > 0 ? "·" : null, 5f),
+                         ("s > b", "8000", d.StartingLp > 0 ? d.StartingLp.ToString() : null, 5f),
+                         ("s > div.s", "· LP", d.StartingLp > 0 ? "LP" : null, 4f)))
+                _plaqueNormal.Add(t);
+
+            // the approved lore line (relics.js:428 BOX_INSCRIPTION; §7 "shown"), at the page's own line breaks
+            var rd = Layout.Text(readingSel, readingKey);
+            if (rd != null)
+            {
+                var t = TextFx.Label(plaque.transform, "BoxReading", Opaque(rd), readingShown, pr);
+                if (t != null)
+                {
+                    t.horizontalOverflow = HorizontalWrapMode.Overflow;
+                    t.alignment = TextAnchor.UpperLeft;
+                    _plaqueIns.Add(t);
+                }
+            }
+
+            var q = Layout.Text("q > div.q", "“The one who solves me shall gain the powers and knowledge of darkness.”");
+            if (q != null)
+            {
+                var t = TextFx.Label(plaque.transform, "BoxInscription", Opaque(q), BoxQuote, pr);
+                if (t != null)
+                {
+                    t.horizontalOverflow = HorizontalWrapMode.Overflow;
+                    t.alignment = TextAnchor.UpperLeft;
+                    _plaqueIns.Add(t);
+                }
+            }
+        }
+
+        readonly List<Graphic> _plaqueIns = new();
+
+        /// <summary>A copy of a slot recorded at opacity 0 (shown on hover only) at its lit opacity 1.</summary>
+        static MenuV6Layout.TextSlot Opaque(MenuV6Layout.TextSlot s) => new()
+        {
+            Sel = s.Sel, Text = s.Text, Rect = s.Rect, Opacity = 1f, Family = s.Family, Weight = s.Weight, Size = s.Size,
+            Italic = s.Italic, Color = s.Color, LetterSpacing = s.LetterSpacing, Upper = s.Upper, Align = s.Align,
+            LineHeight = s.LineHeight, Shadow = s.Shadow, ShadowColor = s.ShadowColor, ShadowOffset = s.ShadowOffset,
+            ShadowBlur = s.ShadowBlur, NoWrap = false, BgImage = s.BgImage, Filter = s.Filter
+        };
+
+        Text _voiceLine;
+
+        /// <summary>THE PHARAOH'S VOICE line at the page's own breaks: one Text, no wrap, the page's line height.</summary>
+        void VoiceLine(RectTransform parent, Rect parentRect)
+        {
+            const string line = "“Duelist from beyond—interrupt this shadow!”";
+            var slot = Layout.Text("q > span", line);
+            if (slot == null)
+            {
+                Missing.Add("text:voice");
+                return;
+            }
+
+            var shown = line;
+            var box = slot.Rect;
+            var rig = RigsJson(Kind);
+            var voice = RJ.D(RJ.D(rig, "rigs"), "voice");
+            var pl = RJ.D(voice, "pageLines");
+            var lines = RJ.L(pl, "lines");
+            if (lines != null && lines.Count > 0)
+            {
+                var parts = new List<string>();
+                foreach (var o in lines)
+                {
+                    var s = RJ.S(o, "text");
+                    if (!string.IsNullOrEmpty(s)) parts.Add(s);
+                }
+
+                if (parts.Count > 0 && string.Concat(parts) == line) shown = string.Join("\n", parts);
+                var b = RJ.D(pl, "box");
+                if (b != null)
+                {
+                    // the line boxes start (39 - 33.75) / 2 above the .q box; the Text's lines are the .q's line height
+                    box = new Rect((float)RJ.N(b, "x"), (float)RJ.N(b, "y"), (float)RJ.N(b, "w"), (float)RJ.N(b, "h"));
+                }
+            }
+
+            var t = TextFx.Label(parent, "Voice", slot, shown, parentRect);
+            if (t == null) return;
+            MenuV6Layout.Place(t.rectTransform, box, parentRect);
+            t.horizontalOverflow = HorizontalWrapMode.Overflow;
+            t.verticalOverflow = VerticalWrapMode.Overflow;
+            t.alignment = TextAnchor.UpperLeft;
+            if (t.font != null && t.font.lineHeight > 0 && slot.LineHeight > 0f)
+            {
+                var natural = t.font.lineHeight * t.fontSize / (float)Mathf.Max(1, t.font.fontSize);
+                t.lineSpacing = natural > 0f ? Mathf.Clamp(slot.LineHeight / natural, .5f, 2f) : 1f;
+            }
+
+            _voiceLine = t;
         }
 
         void ApplyTo(Text t, Rect parentRect, string sel, string key, string shown)
@@ -668,11 +996,11 @@ namespace WRLDZ.UI.MenuV6
             MenuV6Layout.Place(t.rectTransform, slot.Rect, parentRect);
         }
 
-        void SeasonCap(RectTransform slateL, Rect L)
+        void SeasonCap(RectTransform parent, Rect parentRect, string sel, string key, Rect fallback)
         {
-            var slot = Layout.Text("cap > div.cap", "Season 1 · Duelist Kingdom");
-            var r = slot != null ? slot.Rect : new Rect(122f, 408f, 382f, 17f);
-            var host = Node(slateL, "SeasonCap", r, L);
+            var slot = Layout.Text(sel, key);
+            var r = slot != null ? slot.Rect : fallback;
+            var host = Node(parent, "SeasonCap", r, parentRect);
             // full-width anchors: SectionCap adds its glyph strip only when the gutter is real, so none is made here
             var cap = HubChrome.SectionCap(host, "SysCap", Data.SeasonCaption, WrldzAnimePalette.Ochre, 0f, 0f, 1f, 1f);
             var tick = host.Find("SysCapTick");
@@ -684,12 +1012,12 @@ namespace WRLDZ.UI.MenuV6
             }
         }
 
-        void Avatar(RectTransform slateL, Rect L)
+        void Avatar(RectTransform parent, Rect parentRect, Rect disc, Rect gem)
         {
             var face = new GameObject("FaceHost", typeof(RectTransform), typeof(Image), typeof(Mask), typeof(Button));
-            face.transform.SetParent(slateL, false);
+            face.transform.SetParent(parent, false);
             var fimg = face.GetComponent<Image>();
-            MenuV6Layout.Place(fimg.rectTransform, AvatarDisc, L);
+            MenuV6Layout.Place(fimg.rectTransform, disc, parentRect);
             fimg.sprite = Disc();
             fimg.color = Color.white;
             fimg.raycastTarget = true;
@@ -712,17 +1040,172 @@ namespace WRLDZ.UI.MenuV6
             btn.transition = Selectable.Transition.None;
             if (_h.OpenAvatarMenus != null) btn.onClick.AddListener(() => _h.OpenAvatarMenus());
 
-            var soul = SoulBadgeView.Create(slateL);
-            MenuV6Layout.Place(soul.GetComponent<RectTransform>(), SoulGem, L);
+            var soul = SoulBadgeView.Create(parent);
+            MenuV6Layout.Place(soul.GetComponent<RectTransform>(), gem, parentRect);
             soul.Bind(Data.Progress);
             var count = soul.transform.Find("Count");
             var ct = count != null ? count.GetComponent<Text>() : null;
             if (ct != null)
             {
                 ct.font = TextFx.FontFor("Cairo", 700, out _);
-                ct.fontSize = 11;
+                ct.fontSize = Land ? 11 : 15;
                 ct.fontStyle = FontStyle.Normal;
             }
+        }
+
+        // ------------------------------------------------------------------ portrait (P1b first cut, SPEC §9.4)
+
+        /// <summary>
+        /// The phone plan's texts (layout_port.json), real data as in landscape (§7): the identity in the sky register,
+        /// the season and chapter on the Stone's header with the voice line, the deck row and WORLD MAP under the Stone,
+        /// NEWS as one band, EVENTS and QUIT at the bottom. The first cut is checked for "nothing off-screen, nothing
+        /// overlapping"; parity is P5. Every text stays inside its slot's column.
+        /// </summary>
+        void BuildPortraitTexts(RectTransform chrome, Controls c)
+        {
+            var d = Data;
+            var S = _stageRect;
+
+            var name = T(chrome, S, "Name", "n > span.n", "DUELIST", d.Name);
+            if (name != null)
+            {
+                var slot = Layout.Text("n > span.n", "DUELIST");
+                // the column runs to the companion medal (x 799); the slot is the mockup word's own width
+                var r = slot.Rect;
+                var medal = Layout.LayerById("medal_ring_0");
+                r.width = (medal != null ? medal.Rect.x - 24f : r.xMax) - r.x;
+                MenuV6Layout.Place(name.rectTransform, r, S);
+                KeepInColumn(name, r.width, 30);
+            }
+
+            var meta = Layout.Text("meta > div.meta", "·");
+            var lineRect = meta != null ? meta.Rect : new Rect(186f, 130f, 300f, 49f);
+            Run(chrome, S, "Meta", lineRect,
+                ("meta > b", "Lv 21", "Lv " + d.Level, 0f),
+                ("meta > div.meta", "·", string.IsNullOrEmpty(d.Title) ? null : "·  " + d.Title, 6f));
+
+            // COMPANION · stand-in under the medal; with the team's own icon: COMPANION · the team's name, kept in its column
+            var cv = Layout.Text("v > div.v", "COMPANION ·");
+            if (cv != null)
+            {
+                var col = cv.Rect;
+                var gem = Layout.LayerById("medal_ring_pz_0");
+                var maxW = (gem != null ? gem.Rect.x - 8f : col.xMax) - col.x;
+                List<Text> made;
+                if (_teamIcon)
+                    made = Run(chrome, S, "Companion", col, ("v > div.v", "COMPANION ·", "COMPANION · " + d.TeamName, 0f));
+                else
+                    made = Run(chrome, S, "Companion", col, ("v > div.v", "COMPANION ·", "COMPANION ·", 0f),
+                        ("v > i", "stand-in", "stand-in", 4f));
+                if (made.Count == 1) KeepInColumn(made[0], maxW, 12);
+            }
+
+            // ✦ SEASON 1 · DUELIST KINGDOM ✦ (the ✦ drawn as the page's cel sparkle: the faces have no U+2726)
+            var pcap = Layout.Text("pcap > span", "✦ Season 1 · Duelist Kingdom ✦");
+            if (pcap != null)
+            {
+                var host = Node(chrome, "SeasonCap", pcap.Rect, S);
+                var cap = HubChrome.SectionCap(host, "SysCap", d.SeasonCaption, WrldzAnimePalette.Ochre, 0f, 0f, 1f, 1f);
+                var tick = host.Find("SysCapTick");
+                if (tick != null) DestroyImmediate(tick.gameObject);
+                if (cap != null)
+                {
+                    TextFx.Apply(cap, pcap, d.SeasonCaption);
+                    UiTheme.Stretch(cap.rectTransform);
+                    cap.alignment = TextAnchor.MiddleCenter;
+                    cap.horizontalOverflow = HorizontalWrapMode.Overflow;
+                    var ls = cap.GetComponent<LetterSpacingEffect>();
+                    var w = cap.preferredWidth + (ls != null ? ls.Spacing * cap.text.Length : 0f);
+                    var marks = RigShapes.Create(host, "SeasonMarks", pcap.Rect).Layer;
+                    marks.Clear();
+                    var cy = pcap.Rect.center.y;
+                    var half = w * .5f;
+                    var sz = pcap.Size * .3f;
+                    marks.Sparkle(pcap.Rect.center.x - half - sz * 2.2f, cy, sz, cap.color, 0);
+                    marks.Sparkle(pcap.Rect.center.x + half + sz * 1.6f, cy, sz, cap.color, 0);
+                    marks.Commit();
+                }
+            }
+
+            if (d.ChapterIndex > 0)
+            {
+                var em = Layout.Text("pcap > em", "Chapter");
+                var pn = Layout.Text("pn > b.pn", "3");
+                if (em != null)
+                {
+                    var made = Run(chrome, S, "Chapter", em.Rect, ("pcap > em", "Chapter", "Chapter", 0f),
+                        ("pn > b.pn", "3", d.ChapterIndex.ToString(), 6f));
+                    // centred as the page centres the line
+                    var total = 0f;
+                    foreach (var t in made)
+                    {
+                        var ls = t.GetComponent<LetterSpacingEffect>();
+                        total += t.preferredWidth + (ls != null ? ls.Spacing * t.text.Length : 0f);
+                    }
+
+                    total += made.Count > 1 ? 6f : 0f;
+                    var x0 = (pn != null ? (em.Rect.x + pn.Rect.xMax) * .5f : em.Rect.center.x) - total * .5f;
+                    var x = x0;
+                    for (var i = 0; i < made.Count; i++)
+                    {
+                        var t = made[i];
+                        var ls = t.GetComponent<LetterSpacingEffect>();
+                        var tw = t.preferredWidth + (ls != null ? ls.Spacing * t.text.Length : 0f);
+                        if (i > 0) x += 6f;
+                        MenuV6Layout.Place(t.rectTransform, new Rect(x, em.Rect.y, tw + 2f, em.Rect.height), S);
+                        x += tw;
+                    }
+                }
+            }
+
+            VoiceLine(chrome, S);
+            MapTexts(c, "s > div.s", "Battle City · night near");
+            PlaqueTexts(c, "k > div.k", "SUGOROKU’S READING", "SUGOROKU’S READING");
+
+            // NEWS: one band — the Tear pin count (the mockup's Domino Park line is a sample, §7)
+            T(chrome, S, "NewsCap", "k > span.k", "NEWS", "NEWS");
+            var nv = T(chrome, S, "News1", "v > span.v", "A Tear stirs over · 3 spirits · 1 boss",
+                "Tears open in Battle City · " + d.TearPins + " on the map");
+            if (nv != null)
+            {
+                var go = Layout.Text("go > span.go", "›");
+                var nr = Layout.Text("v > span.v", "A Tear stirs over · 3 spirits · 1 boss").Rect;
+                if (go != null) nr.width = go.Rect.x - 16f - nr.x;
+                MenuV6Layout.Place(nv.rectTransform, nr, S);
+                KeepInColumn(nv, nr.width, 18);
+            }
+
+            T(chrome, S, "NewsGo", "go > span.go", "›", "›");
+
+            // EVENTS: the first unclaimed daily quest and what it pays, left of QUIT
+            if (!string.IsNullOrEmpty(d.QuestTitle))
+            {
+                var limit = c.QuitRect.x - 24f;
+                var e1 = T(chrome, S, "Event", "t > div.t", "Kaiba Corp tower · Season 1", d.QuestTitle);
+                var e2 = T(chrome, S, "EventSub", "s > div.s", "Level 20+ · starchips", d.QuestReward);
+                foreach (var e in new[] { e1, e2 })
+                {
+                    if (e == null) continue;
+                    var r = e.rectTransform;
+                    var slot = e == e1 ? Layout.Text("t > div.t", "Kaiba Corp tower · Season 1") : Layout.Text("s > div.s", "Level 20+ · starchips");
+                    var rr = slot.Rect;
+                    rr.width = limit - rr.x;
+                    MenuV6Layout.Place(r, rr, S);
+                    KeepInColumn(e, rr.width, 16);
+                }
+            }
+
+            if (c.Quit != null) ApplyTo(c.Quit.Title, c.QuitRect, "t > div.t", "QUIT", "QUIT");
+
+            // the avatar: the disc and the soul gem scale with the portrait's own ring (measured on the landscape ring)
+            var ring = Layout.LayerById("ava_ring_0");
+            var rr0 = ring != null ? ring.Rect : new Rect(49.5f, 68.5f, 122f, 130f);
+            var k = rr0.width / AvaRingLand.width;
+            var disc = new Rect(rr0.x + (AvatarDiscLand.x - AvaRingLand.x) * k, rr0.y + (AvatarDiscLand.y - AvaRingLand.y) * k,
+                AvatarDiscLand.width * k, AvatarDiscLand.height * k);
+            var gem2 = new Rect(rr0.x + (SoulGemLand.x - AvaRingLand.x) * k, rr0.y + (SoulGemLand.y - AvaRingLand.y) * k,
+                SoulGemLand.width * k, SoulGemLand.height * k);
+            Avatar(chrome, S, disc, gem2);
         }
 
         // ------------------------------------------------------------------ control texts
@@ -769,13 +1252,17 @@ namespace WRLDZ.UI.MenuV6
             var slot = Layout.Text("ph5 > div.ph5",
                 "◇ placeholder art · the Stone · Puzzle body + pieces · Ring · Rod · awaiting existing models");
             if (slot == null) return;
+            // the ◇ (Cairo has no U+25C7): 9 px at the landscape's 11 px caption, 9 px in from the strip, centred on it
+            var f = slot.Size > 0f ? slot.Size / 11f : 1f;
+            var dsz = 9f * f;
+            var diamond = new Rect(slot.Rect.x + 9f * f, slot.Rect.center.y - dsz * .5f + .5f * f, dsz, dsz);
             var t = TextFx.Label(ph5, "PlaceholderNote", slot,
                 "placeholder art · the Stone · Puzzle body + pieces · Ring · Rod · awaiting existing models", _stageRect);
             if (t != null)
             {
                 var r = slot.Rect;
-                r.width -= Diamond.xMax + 4f - r.x;
-                r.x = Diamond.xMax + 4f;
+                r.width -= diamond.xMax + 4f * f - r.x;
+                r.x = diamond.xMax + 4f * f;
                 MenuV6Layout.Place(t.rectTransform, r, _stageRect);
             }
 
@@ -784,19 +1271,193 @@ namespace WRLDZ.UI.MenuV6
             var g = dia.GetComponent<HollowDiamond>();
             g.color = t != null ? t.color : slot.Color;
             g.raycastTarget = false;
-            MenuV6Layout.Place(g.rectTransform, Diamond, _stageRect);
+            MenuV6Layout.Place(g.rectTransform, diamond, _stageRect);
         }
 
-        MenuV6Layout.TextSlot StatusSlot()
+        MenuV6Layout.TextSlot StatusSlot(Rect rect)
         {
-            // the old hub's status line (toasts), in the slate's sub-line face; not part of the approved still (empty)
-            var src = Layout.Text("s > div.s", "LOB · MRD · SRL · 1,000 SE of a set · one 10-card pack");
+            // the old hub's status line (toasts), in the slates' sub-line face; not part of the approved stills (empty)
+            var src = Layout.Text("s > div.s", "LOB · MRD · SRL · 1,000 SE of a set · one 10-card pack") ??
+                      Layout.Text("s > div.s", "Level 20+ · starchips");
             if (src == null) return null;
             return new MenuV6Layout.TextSlot
             {
-                Sel = src.Sel, Text = "", Rect = StatusRect, Opacity = 1f, Family = src.Family, Weight = src.Weight,
+                Sel = src.Sel, Text = "", Rect = rect, Opacity = 1f, Family = src.Family, Weight = src.Weight,
                 Size = src.Size, Color = src.Color, Align = "center", NoWrap = true
             };
+        }
+
+        // ------------------------------------------------------------------ the idle rigs (P1b)
+
+        RigContext _ctx;
+        double[] _noise;
+
+        RigContext NewRigContext(Controls c)
+        {
+            var root = RigsJson(Kind);
+            var ctx = new RigContext
+            {
+                Kind = Kind, Rigs = RJ.D(root, "rigs"), K = RJ.N(RJ.D(root, "stage"), "k", Land ? 1 : 1.4), Data = Data,
+                Gfx = new UguiGfx(), RealTime = () => Time.unscaledTimeAsDouble
+            };
+            ctx.Door = RigPointer.On(c.Hero);
+            ctx.Map = RigPointer.On(c.MapBack);
+            ctx.Quit = RigPointer.On(c.Quit);
+            ctx.Plaque = RigPointer.On(c.DeckPlaque);
+            if (c.RingZone != null) ctx.Ring = RigPointer.On(c.RingZone);
+            foreach (var kv in c.Recess)
+                if (kv.Value.btn != null)
+                    ctx.Recess[kv.Key] = RigPointer.On(kv.Value.btn);
+            return ctx;
+        }
+
+        Dictionary<string, object> _rigsJson;
+        bool _rigsRead;
+
+        /// <summary>Data/rigs_land.json or rigs_port.json, read once per build (null when the P1b art is not installed).</summary>
+        Dictionary<string, object> RigsJson(MenuLayoutKind kind)
+        {
+            if (_rigsRead) return _rigsJson;
+            _rigsRead = true;
+            try
+            {
+                var ta = MenuV6Art.Data(kind == MenuLayoutKind.Landscape ? "rigs_land" : "rigs_port");
+                _rigsJson = ta != null ? MenuV6Json.Parse(ta.text) as Dictionary<string, object> : null;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning("[WRLDZ MenuV6] rigs json: " + ex.Message);
+                _rigsJson = null;
+            }
+
+            return _rigsJson;
+        }
+
+        void BuildRigs(Controls c)
+        {
+            var ctx = _ctx;
+            ctx.Torch = Torch;
+            ctx.Noise = _noise;
+            ctx.VoiceLine = _voiceLine;
+            ctx.QuitTitle = c.Quit != null ? c.Quit.Title : null;
+            foreach (var kv in c.Recess)
+                if (kv.Value.btn != null)
+                    ctx.RecessLabels[kv.Key] = (kv.Value.btn.Title, kv.Value.btn.Blurb);
+            Life = gameObject.AddComponent<MenuV6Life>();
+
+            // the room at rest: the emissive breath and the vignette (their Linear gains included)
+            var breath = new BreathRig();
+            breath.Build(ctx, Root, _stageRect);
+            if (_static.TryGetValue("stone_emiBlur", out var blur)) breath.Blur(blur, MenuV6Linear.LayerGain("stone_emiBlur"));
+            foreach (var v in new[] { "vignette_top", "vignette_bottom", "vignette_left", "vignette_right" })
+                if (_static.TryGetValue(v, out var img))
+                    breath.Vignette(img, MenuV6Linear.LayerGain(v));
+            Life.Add(breath);
+
+            // the plaque's text swap needs neither the rig JSON nor the box renders: it is set up first, so the hidden
+            // box inscription can never show over the deck lines (a clone swaps the text over the P1a box still; with no
+            // rigs_<layout>.json the inscription stays hidden until the plaque is hovered)
+            var plaque = PlaqueTextRig.For(ctx);
+            foreach (var g in _plaqueNormal) plaque.Normal(g);
+            foreach (var g in _plaqueIns) plaque.Inscription(g);
+            Life.Add(plaque);
+
+            if (ctx.Rigs == null)
+            {
+                RigsKept.Add("all (no rigs_" + (Land ? "land" : "port") + ".json)");
+                foreach (var h in _hosts.Values)
+                    if (h != null)
+                        DestroyNow(h.gameObject);
+                return;
+            }
+
+            Rig(new RecessRig(), "recess");
+            var labels = new RecessLabelsRig();
+            if (labels.Build(ctx, Root, _stageRect)) Life.Add(labels);
+            var ring = new RingEchoRig();
+            if (Rig(ring, "ringEcho") && _static.TryGetValue("ring_refract", out var refr)) ring.Refraction(refr);
+            Rig(new BreachGlowRig(), "breachGlow");
+            Rig(new DoorRig(), "door");
+            Rig(new MotesRig(), "motes");
+            Rig(new FlameRig(), "flame");
+            Rig(new NutRig(), "nut");
+            Rig(new KeystoneRig(), "keystone");
+            Rig(new VoiceRig(), "voice");
+            Rig(new NicheRig(), "niche");
+            Rig(new BoxRig(), "box");
+
+            // DOM hover chrome: the QUIT plate (+ its label colour) and the niche frame
+            var dom = RJ.D(RJ.D(ctx.Rigs, "domHover"), "parts");
+            HoverChrome(ctx, "quitHover", RJ.D(RJ.D(dom, "quit_plate"), "hover"), _quitPlate, ctx.Quit, c.QuitRect, .2, ctx.QuitTitle);
+            HoverChrome(ctx, "nicheFrameHover", RJ.D(RJ.D(dom, "niche_frame"), "hover"), _nicheFrame, ctx.Map, c.MapRect, 0, null);
+
+            Life.TickNow();
+        }
+
+        bool Rig(MenuV6Rig rig, string id)
+        {
+            if (!_hosts.TryGetValue(id, out var host) || host == null)
+            {
+                RigsKept.Add(id + " (no host)");
+                return false;
+            }
+
+            var frame = _hostFrames.TryGetValue(id, out var f) ? f : _stageRect;
+            bool ok;
+            try
+            {
+                ok = rig.Build(_ctx, host, frame);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning("[WRLDZ MenuV6] rig " + id + " kept the P1a still: " + ex.Message);
+                ok = false;
+            }
+
+            if (!ok)
+            {
+                RigsKept.Add(id);
+                DestroyNow(host.gameObject);
+                return false;
+            }
+
+            if (_replaced.TryGetValue(id, out var stills))
+                foreach (var s in stills)
+                    if (s != null)
+                        s.SetActive(false);
+            Life.Add(rig);
+            return true;
+        }
+
+        void HoverChrome(RigContext ctx, string id, Dictionary<string, object> hover, Image rest, IRigPointer p, Rect ownerRect,
+            double fade, Text label)
+        {
+            if (!_hosts.TryGetValue(id, out var host) || host == null) return;
+            var sp = hover != null ? MenuV6Art.Sprite(RJ.S(hover, "file")) : null;
+            if (sp == null || p == null)
+            {
+                DestroyNow(host.gameObject);
+                return;
+            }
+
+            var go = new GameObject(id, typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(host, false);
+            var img = go.GetComponent<Image>();
+            img.sprite = sp;
+            img.raycastTarget = false;
+            img.type = RJ.B(hover, "nine") ? Image.Type.Sliced : Image.Type.Simple;
+            MenuV6Layout.Place(img.rectTransform, RJ.R(hover, "rect"), ownerRect);
+            var tc = RJ.S(hover, "textColor");
+            var rig = DomHoverRig.For(id, ctx, p, rest, img, fade, label,
+                string.IsNullOrEmpty(tc) ? null : RJ.Css(tc, Color.white));
+            if (rig != null) Life.Add(rig);
+        }
+
+        static void DestroyNow(GameObject go)
+        {
+            if (go == null) return;
+            if (Application.isPlaying) Destroy(go);
+            else DestroyImmediate(go);
         }
 
         // ------------------------------------------------------------------ data files
@@ -851,8 +1512,8 @@ namespace WRLDZ.UI.MenuV6
 
         // ------------------------------------------------------------------ fit + helpers
 
-        /// <summary>Fit the 16:9 stage into the canvas (uniform "contain"); a resize only rescales, so no sheet,
-        /// popover or overlay shell is ever rebuilt (§11 F14).</summary>
+        /// <summary>Fit the stage into the canvas (uniform "contain"); a resize only rescales, so no sheet, popover or
+        /// overlay shell is ever rebuilt (§11 F14).</summary>
         public void Fit()
         {
             if (Stage == null || Root == null) return;
@@ -875,6 +1536,28 @@ namespace WRLDZ.UI.MenuV6
         public void SetStatus(string msg)
         {
             if (Status != null) Status.text = msg ?? "";
+        }
+
+        /// <summary>Captures and tests: put a control in a hover / press state at the (frozen) menu time.</summary>
+        public bool ForceState(string control, double since, double pressAge)
+        {
+            IRigPointer p = control switch
+            {
+                "Hero" => _ctx?.Door,
+                "MapBack" => _ctx?.Map,
+                "Quit" => _ctx?.Quit,
+                "DeckPlaque" => _ctx?.Plaque,
+                "RingEcho" => _ctx?.Ring,
+                _ => null
+            };
+            if (p == null && _ctx != null)
+                foreach (var r in RecessTable)
+                    if (r.unity == control && _ctx.Recess.TryGetValue(r.id, out var rp))
+                        p = rp;
+            if (p == null) return false;
+            p.Force(MenuV6Clock.Now, 0, 1, since, pressAge);
+            if (Life != null) Life.TickNow();
+            return true;
         }
 
         static Sprite _disc;

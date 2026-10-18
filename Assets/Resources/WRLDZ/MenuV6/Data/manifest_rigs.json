@@ -1,0 +1,5749 @@
+{
+ "version": 1,
+ "what": "P1b rig parts (BUILD_PLAN §6 P1b)",
+ "rule": "File-level provenance of every image the v6.3 landscape page can draw (SPEC §12, survey_assets §5, assets/PROVENANCE.txt, assets/v6/PROVENANCE_v6.md). 'block' = the URL patterns blocked in the provenance run (CDP Network.setBlockedURLs), so the page falls back to its own drawing. A layer whose pixels change between the full and the blocked run contains blocked pixels: the full layer goes to MenuV6Local/, the blocked-run layer is its tracked fallback (BUILD_PLAN D7). First match wins in 'files'.",
+ "pairs": [],
+ "omitted": [],
+ "files": [
+  {
+   "path": "MenuV6/Rigs/Common/spr_gold.png",
+   "guid": "a6d2a326dd47bf07f879ee1b88c9fb32",
+   "kind": "sprite",
+   "imp": "soft",
+   "ppu": 100,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "core.js:115 SPR.gold = glowSprite(...) (radial gradient, 64 px)",
+   "layout": "land",
+   "size": [
+    64,
+    64
+   ],
+   "sha256": "3a1507814812a96276d1a2d5b0513b22ffcf1bb536787deffd2a3fcb9fead4d4",
+   "file": "WRLDZ/MenuV6/Rigs/Common/spr_gold",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Common/spr_goldHot.png",
+   "guid": "8a60123285ca5e1175e7f47e451c3dbb",
+   "kind": "sprite",
+   "imp": "soft",
+   "ppu": 100,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "core.js:115 SPR.goldHot = glowSprite(...) (radial gradient, 64 px)",
+   "layout": "land",
+   "size": [
+    64,
+    64
+   ],
+   "sha256": "637225c5c92a4b84d8c3264266c03a98b41fb9080e4c911f153f85e63964dd94",
+   "file": "WRLDZ/MenuV6/Rigs/Common/spr_goldHot",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Common/spr_blue.png",
+   "guid": "1d56b79256d07d1dd489db7fd409022c",
+   "kind": "sprite",
+   "imp": "soft",
+   "ppu": 100,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "core.js:115 SPR.blue = glowSprite(...) (radial gradient, 64 px)",
+   "layout": "land",
+   "size": [
+    64,
+    64
+   ],
+   "sha256": "1eb446cb7d5645252ddbd340f9e0b8be3dd19b6abbcbb6534fc9aa2570ec778b",
+   "file": "WRLDZ/MenuV6/Rigs/Common/spr_blue",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Common/spr_blueHot.png",
+   "guid": "61a3820a820843474f2d831469ca9beb",
+   "kind": "sprite",
+   "imp": "soft",
+   "ppu": 100,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "core.js:115 SPR.blueHot = glowSprite(...) (radial gradient, 64 px)",
+   "layout": "land",
+   "size": [
+    64,
+    64
+   ],
+   "sha256": "2af9468343816bcb515c177dbd306064cb8419499f3c4c891e40f12c68f1da6a",
+   "file": "WRLDZ/MenuV6/Rigs/Common/spr_blueHot",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Common/spr_ame.png",
+   "guid": "476abe5f1a319b63c4ee8dbebe3dfb5f",
+   "kind": "sprite",
+   "imp": "soft",
+   "ppu": 100,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "core.js:115 SPR.ame = glowSprite(...) (radial gradient, 64 px)",
+   "layout": "land",
+   "size": [
+    64,
+    64
+   ],
+   "sha256": "cfe1102c49a1956bf0b25bcace7bc30270a4e8d643bd557959abd41897a8afd6",
+   "file": "WRLDZ/MenuV6/Rigs/Common/spr_ame",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Common/spr_ember.png",
+   "guid": "9ac32155c4fa19cb82a054913632de39",
+   "kind": "sprite",
+   "imp": "soft",
+   "ppu": 100,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "core.js:115 SPR.ember = glowSprite(...) (radial gradient, 64 px)",
+   "layout": "land",
+   "size": [
+    32,
+    32
+   ],
+   "sha256": "6d7e201e37bf614816083534dd28711594652e06520f6ebd2af220a148a9a933",
+   "file": "WRLDZ/MenuV6/Rigs/Common/spr_ember",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Common/spr_fire.png",
+   "guid": "348a6df4a93ea73ee78daea6503e8483",
+   "kind": "sprite",
+   "imp": "soft",
+   "ppu": 100,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "core.js:115 SPR.fire = glowSprite(...) (radial gradient, 64 px)",
+   "layout": "land",
+   "size": [
+    64,
+    64
+   ],
+   "sha256": "3f474392d0c4350b4d25ad959d1681a6ad14cccfeb70cfd900db7e0834a49799",
+   "file": "WRLDZ/MenuV6/Rigs/Common/spr_fire",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Common/spr_fireDeep.png",
+   "guid": "66d9ce34031d5ac94d20fc6f9420a308",
+   "kind": "sprite",
+   "imp": "soft",
+   "ppu": 100,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "core.js:115 SPR.fireDeep = glowSprite(...) (radial gradient, 64 px)",
+   "layout": "land",
+   "size": [
+    64,
+    64
+   ],
+   "sha256": "245898afe82cf8daef1bf7e3fb8043f9eab844f07a5a2f1c53a207fc9b336d90",
+   "file": "WRLDZ/MenuV6/Rigs/Common/spr_fireDeep",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Common/spr_white.png",
+   "guid": "bbc1a785d24ef04ffa7b70c9e7f6dd5e",
+   "kind": "sprite",
+   "imp": "soft",
+   "ppu": 100,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "core.js:115 SPR.white = glowSprite(...) (radial gradient, 64 px)",
+   "layout": "land",
+   "size": [
+    64,
+    64
+   ],
+   "sha256": "4c765a3d5be43b2dfb6e2b701897b60b2a8eab381ece9cf1e09859e0b5819d8f",
+   "file": "WRLDZ/MenuV6/Rigs/Common/spr_white",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Common/spr_red.png",
+   "guid": "95031712c7151570bdeaa0fbee3321fa",
+   "kind": "sprite",
+   "imp": "soft",
+   "ppu": 100,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "core.js:115 SPR.red = glowSprite(...) (radial gradient, 64 px)",
+   "layout": "land",
+   "size": [
+    64,
+    64
+   ],
+   "sha256": "2280992821274e706b659947f2a2c3e6f85a3ebb1b605b73b91e371312bf2cdf",
+   "file": "WRLDZ/MenuV6/Rigs/Common/spr_red",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Common/spr_violet.png",
+   "guid": "db3c15da025e0b22c1d355eaf228f076",
+   "kind": "sprite",
+   "imp": "soft",
+   "ppu": 100,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "core.js:115 SPR.violet = glowSprite(...) (radial gradient, 64 px)",
+   "layout": "land",
+   "size": [
+    64,
+    64
+   ],
+   "sha256": "e55b10ab4ada6c62da012d0923b5a21b1ce2d08476ef56ade0c6026f107bc013",
+   "file": "WRLDZ/MenuV6/Rigs/Common/spr_violet",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Common/sparkle.png",
+   "guid": "cdf691043a1f567c4b283f12aa7ecf01",
+   "kind": "sprite",
+   "imp": "soft",
+   "ppu": 100,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "anime_v6.js:220 anSparkle(g, 36, 36, 32, #FFFFFF, 0)",
+   "layout": "land",
+   "size": [
+    72,
+    72
+   ],
+   "sha256": "18e9b1a659b0b925470041c28a3e238a1a17773fb50e91025bc6a2352e2e0789",
+   "file": "WRLDZ/MenuV6/Rigs/Common/sparkle",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/set_glow.png",
+   "guid": "043310e6d3bd34074f8310b16eeca51f",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    1073.0,
+    338.0,
+    144.0,
+    144.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (glow), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    1,
+    2
+   ],
+   "content": [
+    143,
+    142
+   ],
+   "size": [
+    144,
+    144
+   ],
+   "sha256": "ca093191a66459352cb529362680ffe08fd762e06064e7394899f1115a3cd65d",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/set_glow",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/set_hot1.png",
+   "guid": "f775b0c1078c366dec8b61a605b5943c",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    1116.0,
+    378.0,
+    60.0,
+    60.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (hot1), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    3,
+    3
+   ],
+   "content": [
+    57,
+    57
+   ],
+   "size": [
+    60,
+    60
+   ],
+   "sha256": "be88dd4e09e0532c511dd744dc7925642880e947551bc459528f789348127048",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/set_hot1",
+   "provenanceRun": "no clean twin (copied file / generated in both)"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/set_ring_base.png",
+   "guid": "0842280b1cab6fcdb95791ec97b3fc6a",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    1094.0,
+    359.0,
+    104.0,
+    100.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_base), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    3,
+    0
+   ],
+   "content": [
+    101,
+    100
+   ],
+   "size": [
+    104,
+    100
+   ],
+   "sha256": "1d6f27d0f6025c0d1f510b2066d9662b3758c56b93769660a9d3cbf6da76420c",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/set_ring_base",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/set_ring_sh.png",
+   "guid": "6e1f0883403ce353ea364ad16dc09b8f",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    1102.0,
+    381.0,
+    96.0,
+    80.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_sh), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    3,
+    2
+   ],
+   "content": [
+    93,
+    78
+   ],
+   "size": [
+    96,
+    80
+   ],
+   "sha256": "c7b94f217bf93eee0a0de80bf80c26cd3a5fca2a9ff81f8b2a69bcfe6084a529",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/set_ring_sh",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/set_ring_hi.png",
+   "guid": "daf136fad48ec576df786cb114963f07",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    1095.0,
+    359.0,
+    68.0,
+    44.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_hi), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    0,
+    2
+   ],
+   "content": [
+    68,
+    42
+   ],
+   "size": [
+    68,
+    44
+   ],
+   "sha256": "2f7e64bd1bafd6ccefb6e9accc2e2c8177b562c1447254ecdb57cc93077222a9",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/set_ring_hi",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/set_ring_ink1.png",
+   "guid": "e73af24db6fa13bb202f9aa27dcab7a3",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    1093.0,
+    358.0,
+    104.0,
+    104.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_ink1), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    1,
+    2
+   ],
+   "content": [
+    103,
+    102
+   ],
+   "size": [
+    104,
+    104
+   ],
+   "sha256": "f77447f409897abaac62bfdfa5611d7cb35ac3de85d93f307b98192849877152",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/set_ring_ink1",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/set_ring_ink0.png",
+   "guid": "d1ea57eadf4ed0a1a156a344f313ff0f",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    1097.0,
+    362.0,
+    96.0,
+    96.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_ink0), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    1,
+    2
+   ],
+   "content": [
+    95,
+    94
+   ],
+   "size": [
+    96,
+    96
+   ],
+   "sha256": "89d47cd2a1bc576176928816edf0ddbb3cc972c34bfe95c0b1700edc39b0c836",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/set_ring_ink0",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/set_crescent.png",
+   "guid": "e55769f4e69002b22ea8ee2f31203158",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    1102.0,
+    366.0,
+    88.0,
+    88.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (crescent), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    3,
+    3
+   ],
+   "content": [
+    85,
+    85
+   ],
+   "size": [
+    88,
+    88
+   ],
+   "sha256": "ba981e27ae0d554166311a90c3ae47a0d64def423f062e6e8959b38197e92a02",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/set_crescent",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/set_holo.png",
+   "guid": "7685cdff72a9ee40d4fd9a36b40b67f4",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:290 pictoSprite(picto, 128, '#9fd8ff')",
+   "layout": "land",
+   "size": [
+    128,
+    128
+   ],
+   "sha256": "af87267afd712099da73d5e5175782d07585e49d6f2a9292d39beb7d6cbe24eb",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/set_holo",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/bazaar_glow.png",
+   "guid": "407da86e2e4033ea7de05bf07a6c6a58",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    1105.0,
+    524.0,
+    172.0,
+    172.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (glow), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    2,
+    3
+   ],
+   "content": [
+    170,
+    169
+   ],
+   "size": [
+    172,
+    172
+   ],
+   "sha256": "044eef5c96322e6da2ce9088f5e8815106e80925e036772ad89ffee273aee2a1",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/bazaar_glow",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/bazaar_hot1.png",
+   "guid": "2101506d60baab7ba08646ee722ea14b",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    1171.0,
+    575.0,
+    40.0,
+    68.0
+   ],
+   "tag": "OWNER",
+   "dest": "tracked",
+   "files": [
+    "assets/v6/slots/tablet_34_384.png"
+   ],
+   "why": [
+    {
+     "file": "assets/v6/slots/tablet_34_384.png",
+     "tag": "OWNER",
+     "src": "toon renders of his Meshy stone tablet — PROVENANCE_v6.md l.14-17"
+    }
+   ],
+   "src": "the page's own op alone (hot1), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    2,
+    1
+   ],
+   "content": [
+    38,
+    67
+   ],
+   "size": [
+    40,
+    68
+   ],
+   "sha256": "bda79050f36d930f434dd3c513a6c67d9b47d929cec5b6bff6dea18aa85ce237",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/bazaar_hot1",
+   "provenanceRun": "no clean twin (copied file / generated in both)"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/bazaar_ring_base.png",
+   "guid": "82aef71ef5382255527b0f3b95ba3346",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    1132.0,
+    550.0,
+    116.0,
+    120.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_base), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    0,
+    3
+   ],
+   "content": [
+    116,
+    117
+   ],
+   "size": [
+    116,
+    120
+   ],
+   "sha256": "849f2ea793e6372b8f256560a0a16e9aeeb80dd8f9634858672d43b6b010e9b2",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/bazaar_ring_base",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/bazaar_ring_sh.png",
+   "guid": "3f941c3fb6a000a43f9788fca8887fe3",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    1141.0,
+    577.0,
+    108.0,
+    92.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_sh), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    1,
+    2
+   ],
+   "content": [
+    107,
+    90
+   ],
+   "size": [
+    108,
+    92
+   ],
+   "sha256": "5fef5286e48eb588d99d0b136da58a0f558d4f77717a468f0d557755c0c7e66b",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/bazaar_ring_sh",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/bazaar_ring_hi.png",
+   "guid": "8ba27e5a3e544392fa0fa10aea00ff57",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    1133.0,
+    551.0,
+    80.0,
+    48.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_hi), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    2,
+    0
+   ],
+   "content": [
+    78,
+    48
+   ],
+   "size": [
+    80,
+    48
+   ],
+   "sha256": "2725899ca0f5adc0ea654ba0d99229db4c2cd2744edaadbb6c48fadc08440910",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/bazaar_ring_hi",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/bazaar_ring_ink1.png",
+   "guid": "3eca385673ec573896502f7d882c0316",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    1131.0,
+    549.0,
+    120.0,
+    120.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_ink1), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    2,
+    1
+   ],
+   "content": [
+    118,
+    119
+   ],
+   "size": [
+    120,
+    120
+   ],
+   "sha256": "a44515fcbfa18d3efec4509973b89f524c7438c853c57d60f0ae673ddf6cf912",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/bazaar_ring_ink1",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/bazaar_ring_ink0.png",
+   "guid": "37314b6c1e7c63290dadde264786ca87",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    1135.0,
+    554.0,
+    112.0,
+    112.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_ink0), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    2,
+    2
+   ],
+   "content": [
+    110,
+    110
+   ],
+   "size": [
+    112,
+    112
+   ],
+   "sha256": "55b07dabaf01dee0c84e42d75222c93b106a5dafa7029e9f4a14f654e607e07e",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/bazaar_ring_ink0",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/bazaar_crescent.png",
+   "guid": "95fb8cf599359a00b0270010836491b3",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    1140.0,
+    558.0,
+    104.0,
+    104.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (crescent), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    3,
+    3
+   ],
+   "content": [
+    101,
+    101
+   ],
+   "size": [
+    104,
+    104
+   ],
+   "sha256": "a195b97fed636cd3493228833b598ad4561896f59d37cd1760fe4055723f0aa5",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/bazaar_crescent",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/bazaar_holo.png",
+   "guid": "7710fa76be8a3b9d61e5731852d998e3",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": null,
+   "tag": "OWNER",
+   "dest": "tracked",
+   "files": [
+    "assets/v6/slots/tablet_34_384.png"
+   ],
+   "why": [
+    {
+     "file": "assets/v6/slots/tablet_34_384.png",
+     "tag": "OWNER",
+     "src": "toon renders of his Meshy stone tablet — PROVENANCE_v6.md l.14-17"
+    }
+   ],
+   "src": "menu.js:290 pictoSprite(picto, 128, '#9fd8ff')",
+   "layout": "land",
+   "size": [
+    128,
+    128
+   ],
+   "sha256": "b91335a5144a60ba7054a6545069c59672264283814b8b1e1504841f33f7ef78",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/bazaar_holo",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/bag_glow.png",
+   "guid": "ce7bff9ae9890551f19737148e11e6bd",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    978.0,
+    684.0,
+    172.0,
+    172.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (glow), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    3,
+    3
+   ],
+   "content": [
+    169,
+    169
+   ],
+   "size": [
+    172,
+    172
+   ],
+   "sha256": "a9bf20b94cf947a2542904c9ed32e2fb6a3406c67365b40b8ded7955c6e109c5",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/bag_glow",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/bag_hot1.png",
+   "guid": "bbbe9809089cbcfc8a7ffdca21049b9d",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    1034.0,
+    737.0,
+    60.0,
+    60.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (hot1), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    3,
+    0
+   ],
+   "content": [
+    57,
+    60
+   ],
+   "size": [
+    60,
+    60
+   ],
+   "sha256": "b8ab57cc3c67bd18b2ea07162f6399c8dfcdd4227c61272f5fffdaca561007d3",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/bag_hot1",
+   "provenanceRun": "no clean twin (copied file / generated in both)"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/bag_ring_base.png",
+   "guid": "8dd11646b070a08afbdca9db607522d5",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    1004.0,
+    710.0,
+    120.0,
+    120.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_base), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    3,
+    3
+   ],
+   "content": [
+    117,
+    117
+   ],
+   "size": [
+    120,
+    120
+   ],
+   "sha256": "ddd3573229044fd111d3ad694518abddc10b8022ddf5ac79bb8e16399a32a3b6",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/bag_ring_base",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/bag_ring_sh.png",
+   "guid": "a72dd4e7e1f2c062cb27aa19553dd089",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    1013.0,
+    737.0,
+    108.0,
+    92.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_sh), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    0,
+    2
+   ],
+   "content": [
+    108,
+    90
+   ],
+   "size": [
+    108,
+    92
+   ],
+   "sha256": "1b742b1feacd7435949d47ffe586eb41d3e76989182c9cb01a76b045be933cb3",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/bag_ring_sh",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/bag_ring_hi.png",
+   "guid": "b36d956ab044cd57af6a7665e3dc35c5",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    1005.0,
+    711.0,
+    80.0,
+    48.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_hi), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    2,
+    0
+   ],
+   "content": [
+    78,
+    48
+   ],
+   "size": [
+    80,
+    48
+   ],
+   "sha256": "124eeac1e54e1ad425587d47085c74170c0cb80385d7f1e365f07e927a67c679",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/bag_ring_hi",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/bag_ring_ink1.png",
+   "guid": "5a2f95b1cfaaa64820ec68253346ff05",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    1003.0,
+    709.0,
+    120.0,
+    120.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_ink1), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    1,
+    1
+   ],
+   "content": [
+    119,
+    119
+   ],
+   "size": [
+    120,
+    120
+   ],
+   "sha256": "0dbf23a4f7597c960c2aa57a995bea973a2fbceb095a68029f1b227b6d108201",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/bag_ring_ink1",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/bag_ring_ink0.png",
+   "guid": "b12c2cebe009d6dec1fccecda4261ca6",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    1007.0,
+    714.0,
+    112.0,
+    112.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_ink0), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    2,
+    2
+   ],
+   "content": [
+    110,
+    110
+   ],
+   "size": [
+    112,
+    112
+   ],
+   "sha256": "31996935e101b44cd6e74c3ef6e40fd676288ce3946281fe33f4296e1d645972",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/bag_ring_ink0",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/bag_crescent.png",
+   "guid": "214bbcb0110915a35f18f07872eabdb8",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    1012.0,
+    718.0,
+    104.0,
+    104.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (crescent), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    3,
+    3
+   ],
+   "content": [
+    101,
+    101
+   ],
+   "size": [
+    104,
+    104
+   ],
+   "sha256": "53e6c8689ab8092d3443b0ed2b5eb3d62b374c6d1030141932977e3a34ec32b3",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/bag_crescent",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/bag_holo.png",
+   "guid": "88e2e08d95149493e8c1f821fe15a90b",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:290 pictoSprite(picto, 128, '#9fd8ff')",
+   "layout": "land",
+   "size": [
+    128,
+    128
+   ],
+   "sha256": "4feb80d8657ebacc0557d468c4109e1c623ee7fef4a857e42309822253afa7d9",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/bag_holo",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/deck_glow.png",
+   "guid": "60773e09231c1fa592637aa242c066b4",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    773.0,
+    684.0,
+    172.0,
+    172.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (glow), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    3,
+    3
+   ],
+   "content": [
+    169,
+    169
+   ],
+   "size": [
+    172,
+    172
+   ],
+   "sha256": "936cb481e9c78e795cad29d0caf03b203a3ec6375b5c3fb3113c6a257750fc46",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/deck_glow",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/deck_hot1.png",
+   "guid": "6719a703ae3dd234923cffa8808b7cb9",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    828.0,
+    736.0,
+    60.0,
+    64.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (hot1), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "size": [
+    60,
+    64
+   ],
+   "sha256": "82d07144183a14e6b3a40139eb8a146f541d28f6222031dad2789a5f7e1ac24a",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/deck_hot1",
+   "provenanceRun": "no clean twin (copied file / generated in both)"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/deck_ring_base.png",
+   "guid": "31a471ffb37df0effbbaca498a12dcfa",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    799.0,
+    710.0,
+    120.0,
+    120.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_base), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    3,
+    3
+   ],
+   "content": [
+    117,
+    117
+   ],
+   "size": [
+    120,
+    120
+   ],
+   "sha256": "9425dde097116f0639ef723477ebc033245b9b25ae452220ff53a3b579fd607c",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/deck_ring_base",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/deck_ring_sh.png",
+   "guid": "db6151605b8796cfcaaea27d77c89cc2",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    808.0,
+    737.0,
+    108.0,
+    92.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_sh), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    0,
+    2
+   ],
+   "content": [
+    108,
+    90
+   ],
+   "size": [
+    108,
+    92
+   ],
+   "sha256": "cdaece42dda57abd30b52c84f77be0f8f2a0548d8085f07d563469b4ff5394b1",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/deck_ring_sh",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/deck_ring_hi.png",
+   "guid": "95bc8cabece33233fff3fd0637106724",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    801.0,
+    711.0,
+    80.0,
+    48.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_hi), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    2,
+    0
+   ],
+   "content": [
+    78,
+    48
+   ],
+   "size": [
+    80,
+    48
+   ],
+   "sha256": "aa5de227de16fd9bd64903e9c00f77ad7dac1613b28d803f27d159ce1bc022b0",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/deck_ring_hi",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/deck_ring_ink1.png",
+   "guid": "19377bdfca9750140e7857e1ee2adf96",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    798.0,
+    709.0,
+    120.0,
+    120.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_ink1), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    1,
+    1
+   ],
+   "content": [
+    119,
+    119
+   ],
+   "size": [
+    120,
+    120
+   ],
+   "sha256": "4f27d2f10a2adf5b0803d31ee236f5068889c985cd29f6d9b21e37e605000c41",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/deck_ring_ink1",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/deck_ring_ink0.png",
+   "guid": "aa9394a38dc5d7d353cb55a97c9f678b",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    803.0,
+    714.0,
+    112.0,
+    112.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_ink0), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    2,
+    2
+   ],
+   "content": [
+    110,
+    110
+   ],
+   "size": [
+    112,
+    112
+   ],
+   "sha256": "bd6bb65da50b66f24f159455b5583c66b34042f6aa9494ba27a6a0c1137fc773",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/deck_ring_ink0",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/deck_crescent.png",
+   "guid": "1b32703ebe422f4628c8f065e4596f3f",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    807.0,
+    718.0,
+    104.0,
+    104.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (crescent), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    3,
+    3
+   ],
+   "content": [
+    101,
+    101
+   ],
+   "size": [
+    104,
+    104
+   ],
+   "sha256": "b1662c94534ce4faee9d2c07514c43b112ca6527fd1db66d65313241b1f3647c",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/deck_crescent",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/deck_holo.png",
+   "guid": "7ec72a87adf9951190aabf4ddf2721f1",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:290 pictoSprite(picto, 128, '#9fd8ff')",
+   "layout": "land",
+   "size": [
+    128,
+    128
+   ],
+   "sha256": "f104c980ec9fc7d212ef6cec4f54ecccdb5acc8511b33eba10754896783b5386",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/deck_holo",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/story_glow.png",
+   "guid": "dc8337cd8207338e76389cb0088b8b15",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    645.0,
+    524.0,
+    172.0,
+    172.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (glow), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    2,
+    3
+   ],
+   "content": [
+    170,
+    169
+   ],
+   "size": [
+    172,
+    172
+   ],
+   "sha256": "5f97f41bfd8054b6096b43c2bf26832f43f3fb89719f1b1c945090a96a7582aa",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/story_glow",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/story_hot1.png",
+   "guid": "90a7895772fc4afada4f56b158eb220d",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    708.0,
+    574.0,
+    44.0,
+    68.0
+   ],
+   "tag": "OWNER",
+   "dest": "tracked",
+   "files": [
+    "assets/v6/slots/tablet_front_384.png"
+   ],
+   "why": [
+    {
+     "file": "assets/v6/slots/tablet_front_384.png",
+     "tag": "OWNER",
+     "src": "toon renders of his Meshy stone tablet — PROVENANCE_v6.md l.14-17"
+    }
+   ],
+   "src": "the page's own op alone (hot1), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "size": [
+    44,
+    68
+   ],
+   "sha256": "63c3f3183ac14c892b463ef67e22bf24f7672bf6dd1af93d482209e21dd62e81",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/story_hot1",
+   "provenanceRun": "no clean twin (copied file / generated in both)"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/story_ring_base.png",
+   "guid": "ba6d86d92858410781e864a7ab3ba001",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    672.0,
+    550.0,
+    116.0,
+    120.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_base), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    0,
+    3
+   ],
+   "content": [
+    116,
+    117
+   ],
+   "size": [
+    116,
+    120
+   ],
+   "sha256": "62626a0e157d19422d728a42eae72f3275fa3731eecf0d7dce275a835f0f12f6",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/story_ring_base",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/story_ring_sh.png",
+   "guid": "2870750f3509da0c6d3c1dccc90536bb",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    680.0,
+    577.0,
+    108.0,
+    92.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_sh), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    0,
+    2
+   ],
+   "content": [
+    108,
+    90
+   ],
+   "size": [
+    108,
+    92
+   ],
+   "sha256": "47fb84ae6de16dcd5f687070670dc34b3ab53764cf8d730671827a9a9f28aec3",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/story_ring_sh",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/story_ring_hi.png",
+   "guid": "8ffee4e142cfa1b12ccefa889e45d8c0",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    673.0,
+    551.0,
+    80.0,
+    48.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_hi), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    2,
+    0
+   ],
+   "content": [
+    78,
+    48
+   ],
+   "size": [
+    80,
+    48
+   ],
+   "sha256": "bc98aff5fe47fb37faa1961a7cc5cbab6ba1ef95168a5b3d46f859b44a3671dc",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/story_ring_hi",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/story_ring_ink1.png",
+   "guid": "cda2dd8d2d5b4e5019942bac98a41023",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    671.0,
+    549.0,
+    120.0,
+    120.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_ink1), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    2,
+    1
+   ],
+   "content": [
+    118,
+    119
+   ],
+   "size": [
+    120,
+    120
+   ],
+   "sha256": "d18887f6022d1bb2bb3a9aca914db8a4e8f2bf60c6fb94c8f01d995f340b23d6",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/story_ring_ink1",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/story_ring_ink0.png",
+   "guid": "2846b072aba94707b0b79cd4bcd0d3f5",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    675.0,
+    554.0,
+    112.0,
+    112.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_ink0), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    2,
+    2
+   ],
+   "content": [
+    110,
+    110
+   ],
+   "size": [
+    112,
+    112
+   ],
+   "sha256": "241e3d636fb9439b39f75661acca0e289ee317139b828ab9076dc92cb561fbfa",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/story_ring_ink0",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/story_crescent.png",
+   "guid": "fe2ba6989bc431c85e3dc12699106826",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    679.0,
+    558.0,
+    104.0,
+    104.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (crescent), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    3,
+    3
+   ],
+   "content": [
+    101,
+    101
+   ],
+   "size": [
+    104,
+    104
+   ],
+   "sha256": "10f6db23dfc850bf96d1b5c0f42ba316cacd237cb6b755c9fb9b19633499cf2a",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/story_crescent",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/story_holo.png",
+   "guid": "01251fbc83d537082633e7fbca2b6416",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": null,
+   "tag": "OWNER",
+   "dest": "tracked",
+   "files": [
+    "assets/v6/slots/tablet_front_384.png"
+   ],
+   "why": [
+    {
+     "file": "assets/v6/slots/tablet_front_384.png",
+     "tag": "OWNER",
+     "src": "toon renders of his Meshy stone tablet — PROVENANCE_v6.md l.14-17"
+    }
+   ],
+   "src": "menu.js:290 pictoSprite(picto, 128, '#9fd8ff')",
+   "layout": "land",
+   "size": [
+    128,
+    128
+   ],
+   "sha256": "ca8f574e6cee9844db73d4adbd418df165b3bd1e49a32ceb6d3a555c178ea40e",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/story_holo",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/view_glow.png",
+   "guid": "ad81017e3435c0d862c30d1d20bf8622",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    704.0,
+    338.0,
+    144.0,
+    144.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (glow), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    1,
+    2
+   ],
+   "content": [
+    143,
+    142
+   ],
+   "size": [
+    144,
+    144
+   ],
+   "sha256": "e79b8eff7a0fd26fd471270e3aa92e2c603d55e67f029512b320c925429d0806",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/view_glow",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/view_hot1.png",
+   "guid": "9389b35575aab85154e521518d58c461",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    751.0,
+    384.0,
+    48.0,
+    48.0
+   ],
+   "tag": "OWNER",
+   "dest": "tracked",
+   "files": [
+    "assets/v5/items/millennium_eye_ref_512.png"
+   ],
+   "why": [
+    {
+     "file": "assets/v5/items/millennium_eye_ref_512.png",
+     "tag": "OWNER",
+     "src": "his Millennium Eye image (~/Pictures/MillenniumEye.png) — PROVENANCE.txt l.95"
+    }
+   ],
+   "src": "the page's own op alone (hot1), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    0,
+    2
+   ],
+   "content": [
+    48,
+    46
+   ],
+   "size": [
+    48,
+    48
+   ],
+   "sha256": "cf9d9a6e806bc806ef56443173b4b4b7df93fde34e926e4f845386ce6e4b969c",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/view_hot1",
+   "provenanceRun": "no clean twin (copied file / generated in both)"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/view_ring_base.png",
+   "guid": "6fc59671179f8398c99b0cca87ff53c1",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    725.0,
+    359.0,
+    104.0,
+    100.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_base), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    3,
+    0
+   ],
+   "content": [
+    101,
+    100
+   ],
+   "size": [
+    104,
+    100
+   ],
+   "sha256": "9aade7e389aaa34a8a5e19c7400c34d3ac266a81a52dc4e736343d1ebb18143b",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/view_ring_base",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/view_ring_sh.png",
+   "guid": "449e0a470aae31707dcff2281ce4237b",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    733.0,
+    382.0,
+    96.0,
+    80.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_sh), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    3,
+    3
+   ],
+   "content": [
+    93,
+    77
+   ],
+   "size": [
+    96,
+    80
+   ],
+   "sha256": "cda08cc2058c0b3b1f4489497a06b05a404b656e0aeeb7f8cacee9043e0ff667",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/view_ring_sh",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/view_ring_hi.png",
+   "guid": "52909ae5d11282af3edd783bf6a9a9c2",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    726.0,
+    359.0,
+    68.0,
+    44.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_hi), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    0,
+    2
+   ],
+   "content": [
+    68,
+    42
+   ],
+   "size": [
+    68,
+    44
+   ],
+   "sha256": "8222fc742c89bbb38329e6eb264a3564cb725df61baddba73990b4b73d05158d",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/view_ring_hi",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/view_ring_ink1.png",
+   "guid": "12b1e07d60ed9cd46ce98bb6a5eb373d",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    724.0,
+    358.0,
+    104.0,
+    104.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_ink1), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    1,
+    2
+   ],
+   "content": [
+    103,
+    102
+   ],
+   "size": [
+    104,
+    104
+   ],
+   "sha256": "931857105bbef585420f18ec99a38327f41df96725a96863ae521966e4d4f711",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/view_ring_ink1",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/view_ring_ink0.png",
+   "guid": "d1f303dc04ab189e6bc890f4ef29fb00",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    728.0,
+    362.0,
+    96.0,
+    96.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_ink0), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    1,
+    2
+   ],
+   "content": [
+    95,
+    94
+   ],
+   "size": [
+    96,
+    96
+   ],
+   "sha256": "c1a8e45955f2f6329d21e6f271ba81454ae4377d5b927e85789f68181e8c036e",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/view_ring_ink0",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/view_crescent.png",
+   "guid": "a46938b9c2dbc1107cf280cd542e8c36",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    733.0,
+    366.0,
+    88.0,
+    88.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (crescent), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    3,
+    3
+   ],
+   "content": [
+    85,
+    85
+   ],
+   "size": [
+    88,
+    88
+   ],
+   "sha256": "08f102843c0590575ac9c2813441b683feefdaa4e1e6c176bb8c7dc3ad46e754",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/view_crescent",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/recess/view_holo.png",
+   "guid": "69ed09d50a920e954384712f4370909d",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": null,
+   "tag": "OWNER",
+   "dest": "tracked",
+   "files": [
+    "assets/v5/items/millennium_eye_ref_512.png"
+   ],
+   "why": [
+    {
+     "file": "assets/v5/items/millennium_eye_ref_512.png",
+     "tag": "OWNER",
+     "src": "his Millennium Eye image (~/Pictures/MillenniumEye.png) — PROVENANCE.txt l.95"
+    }
+   ],
+   "src": "menu.js:290 pictoSprite(picto, 128, '#9fd8ff')",
+   "layout": "land",
+   "size": [
+    128,
+    128
+   ],
+   "sha256": "06688a1658871db054e6d534bb133338e1bf4107e2ba17ba66ee5c8f8a62f794",
+   "file": "WRLDZ/MenuV6/Rigs/Land/recess/view_holo",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/keystone/A.png",
+   "guid": "e4966a79c598f7fad00c8b9b927291c9",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:293 PK PuzzleRelic.A (bakeRelief + polishPuzzle)",
+   "layout": "land",
+   "pad": [
+    3,
+    2
+   ],
+   "content": [
+    257,
+    242
+   ],
+   "size": [
+    260,
+    244
+   ],
+   "sha256": "785c8bb6c48190de4860086a802844d54d807fb6568b00bce28638fd7e219a15",
+   "file": "WRLDZ/MenuV6/Rigs/Land/keystone/A",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/keystone/B.png",
+   "guid": "fa30f3a555d2d3c4df5b19d50c76213e",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:293 PK PuzzleRelic.B (the torch-flicker lighting)",
+   "layout": "land",
+   "pad": [
+    3,
+    2
+   ],
+   "content": [
+    257,
+    242
+   ],
+   "size": [
+    260,
+    244
+   ],
+   "sha256": "934944f79d464b30b9df1caac53a226e668c590bc001abc9a16a766aaca34b13",
+   "file": "WRLDZ/MenuV6/Rigs/Land/keystone/B",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/keystone/emiB.png",
+   "guid": "6e153e599cc738907ccd36a0970aaca6",
+   "kind": "sprite",
+   "imp": "soft",
+   "ppu": 200,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:293 PK PuzzleRelic.emiB (blurred emissive + emissive)",
+   "layout": "land",
+   "pad": [
+    3,
+    2
+   ],
+   "content": [
+    257,
+    242
+   ],
+   "size": [
+    260,
+    244
+   ],
+   "sha256": "447fe8d6c8eabed0fb11bc716c5489c25427fa8aa5d0f922163fc324212e7232",
+   "file": "WRLDZ/MenuV6/Rigs/Land/keystone/emiB",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/keystone/shadow.png",
+   "guid": "d10749429b0e0e36484a6d7a6182a913",
+   "kind": "sprite",
+   "imp": "soft",
+   "ppu": 200,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:293 PK PuzzleRelic.shadow (blurred silhouette)",
+   "layout": "land",
+   "pad": [
+    3,
+    2
+   ],
+   "content": [
+    337,
+    322
+   ],
+   "size": [
+    340,
+    324
+   ],
+   "sha256": "034f9fa42eb2865a307094d882e4fb62a26258ec69b9bfd81c8511731d1f703d",
+   "file": "WRLDZ/MenuV6/Rigs/Land/keystone/shadow",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/keystone/glint.png",
+   "guid": "92e6a6fd13c8f197eabb9c1ae292b59a",
+   "kind": "sheet",
+   "imp": "soft",
+   "ppu": 100,
+   "rect": [
+    905.0,
+    472.0,
+    110.0,
+    91.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "src": "menu.js:837 + relics.js:209-210: the glint op alone per phase (rig_extra.mjs)",
+   "layout": "land",
+   "size": [
+    1044,
+    576
+   ],
+   "sha256": "cb720568beb3a27cd027da57d1804d8cc1245d87fd9b1d65a57bbf2920b5e3dd",
+   "file": "WRLDZ/MenuV6/Rigs/Land/keystone/glint"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/voice/A.png",
+   "guid": "a09ec13071b55899dc7cfeeb81a76901",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:489 pv.PR PuzzleRelic.A (bakeRelief + polishPuzzle)",
+   "layout": "land",
+   "pad": [
+    2,
+    2
+   ],
+   "content": [
+    134,
+    126
+   ],
+   "size": [
+    136,
+    128
+   ],
+   "sha256": "28c0e92731cd579b7b64d4148e5973601a605cfc2f9cded9fc33e168063b9def",
+   "file": "WRLDZ/MenuV6/Rigs/Land/voice/A",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/voice/emiB.png",
+   "guid": "8a554bf40a35d2ec184a679f4037b955",
+   "kind": "sprite",
+   "imp": "soft",
+   "ppu": 200,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:489 pv.PR PuzzleRelic.emiB (blurred emissive + emissive)",
+   "layout": "land",
+   "pad": [
+    2,
+    2
+   ],
+   "content": [
+    134,
+    126
+   ],
+   "size": [
+    136,
+    128
+   ],
+   "sha256": "e0a1886c4404aabf7fc37374d5d4b7f7fecb35af25532ab5f398b980198f3a0b",
+   "file": "WRLDZ/MenuV6/Rigs/Land/voice/emiB",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/voice/cord.png",
+   "guid": "268d55eda9826f3a9f702c92d082472c",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "relics.js:197 drawCord(g, a, 1, 1, 22) on a fresh 2x canvas of the voice canvas size",
+   "layout": "land",
+   "size": [
+    192,
+    192
+   ],
+   "sha256": "04ae5e8394516f1cd8b7df3be49e3cbac3d4cef848b8f62a8c90998601457c07",
+   "file": "WRLDZ/MenuV6/Rigs/Land/voice/cord",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/voice/glint.png",
+   "guid": "3636b970747cc00fc0dfed25ec9cdaef",
+   "kind": "sheet",
+   "imp": "soft",
+   "ppu": 200,
+   "rect": [
+    19.5,
+    30.0,
+    57.0,
+    47.5
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "src": "menu.js:1003: the voice glint op alone per phase (rig_extra.mjs)",
+   "layout": "land",
+   "size": [
+    1200,
+    600
+   ],
+   "sha256": "dc543a0b97911b9fda81c7b45371117f5e6fa02b932436e5d1ecbbf143648ff7",
+   "file": "WRLDZ/MenuV6/Rigs/Land/voice/glint"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/ring/ring.png",
+   "guid": "9e48b7efada218db14827056583c7a9b",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:295 ringSprite(s) (anime_relics_v6.js:35, 2x)",
+   "layout": "land",
+   "size": [
+    288,
+    288
+   ],
+   "sha256": "e5da3f12b78077592d243ab3afe2b03d91e6e90d96eabb5b538cf6ef2f3826e6",
+   "file": "WRLDZ/MenuV6/Rigs/Land/ring/ring",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/ring/pointer.png",
+   "guid": "bc10f25b0ff59971dd77bd6e4e78a3ba",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 300,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:295 pointerSpriteSpectral(s) (relics.js:325, 3x)",
+   "layout": "land",
+   "pad": [
+    3,
+    0
+   ],
+   "content": [
+    81,
+    168
+   ],
+   "size": [
+    84,
+    168
+   ],
+   "sha256": "12e8cecb617207b6a480d3582e9bb87a26ef9bf716a726bcc03926f937770b8b",
+   "file": "WRLDZ/MenuV6/Rigs/Land/ring/pointer",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/ring/membrane.png",
+   "guid": "3666a0d5c7260653bdb5fa6cc0673ad4",
+   "kind": "sprite",
+   "imp": "soft",
+   "ppu": 200,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "relics.js:345 the membrane gradient at I = 1, 2x",
+   "layout": "land",
+   "size": [
+    200,
+    200
+   ],
+   "sha256": "5ba431c1d28d79622201e9c9910961c2e30de7db0ebd3f0c35711f4395c2cdc5",
+   "file": "WRLDZ/MenuV6/Rigs/Land/ring/membrane",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/ring/rim_arc.png",
+   "guid": "41c709370ca405a5133adf28f6d180ca",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "relics.js:349 the rim highlight arc(0 -> .7) at alpha 1, 2x",
+   "layout": "land",
+   "size": [
+    208,
+    208
+   ],
+   "sha256": "492a212d967ff58f334eb3fd7e7193529a03d009d7e4f399c5698f25571e87c6",
+   "file": "WRLDZ/MenuV6/Rigs/Land/ring/rim_arc",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6Local/Rigs/Land/box/full.png",
+   "guid": "596023e778b2a3773220a0a92d14ed60",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": null,
+   "tag": "OWNER-licence-unknown",
+   "dest": "local",
+   "files": [
+    "assets/v6/box6/L104_full.png"
+   ],
+   "why": [
+    {
+     "file": "assets/v6/box6/L104_full.png",
+     "tag": "OWNER-licence-unknown",
+     "src": "toon / Cycles renders of the owner's golden Puzzle-box STL print kit (uploader / licence unknown) — PROVENANCE_v6.md l.23-35; local per BUILD_PLAN D7"
+    }
+   ],
+   "src": "hybrid/v6/assets/v6/box6/L104_full.png (the box6 L104 set, anime_box_v6.js:22; copied)",
+   "layout": "land",
+   "pad": [
+    0,
+    2
+   ],
+   "content": [
+    296,
+    222
+   ],
+   "size": [
+    296,
+    224
+   ],
+   "sha256": "df214cf5e17f75084bb3b76bf1316171d610593363a47a1500f2315389a32594",
+   "file": "WRLDZ/MenuV6Local/Rigs/Land/box/full"
+  },
+  {
+   "path": "MenuV6Local/Rigs/Land/box/body.png",
+   "guid": "101c3bcea0e41799f58dffd3f7e6f27d",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": null,
+   "tag": "OWNER-licence-unknown",
+   "dest": "local",
+   "files": [
+    "assets/v6/box6/L104_body.png"
+   ],
+   "why": [
+    {
+     "file": "assets/v6/box6/L104_body.png",
+     "tag": "OWNER-licence-unknown",
+     "src": "toon / Cycles renders of the owner's golden Puzzle-box STL print kit (uploader / licence unknown) — PROVENANCE_v6.md l.23-35; local per BUILD_PLAN D7"
+    }
+   ],
+   "src": "hybrid/v6/assets/v6/box6/L104_body.png (the box6 L104 set, anime_box_v6.js:22; copied)",
+   "layout": "land",
+   "pad": [
+    0,
+    2
+   ],
+   "content": [
+    296,
+    222
+   ],
+   "size": [
+    296,
+    224
+   ],
+   "sha256": "438d356edf18410d9345013fc48e62b33c541216e55068f502feed5a7b33421c",
+   "file": "WRLDZ/MenuV6Local/Rigs/Land/box/body"
+  },
+  {
+   "path": "MenuV6Local/Rigs/Land/box/lid.png",
+   "guid": "9c90e8daa2ec9f1033fefeaea1a3de34",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": null,
+   "tag": "OWNER-licence-unknown",
+   "dest": "local",
+   "files": [
+    "assets/v6/box6/L104_lid.png"
+   ],
+   "why": [
+    {
+     "file": "assets/v6/box6/L104_lid.png",
+     "tag": "OWNER-licence-unknown",
+     "src": "toon / Cycles renders of the owner's golden Puzzle-box STL print kit (uploader / licence unknown) — PROVENANCE_v6.md l.23-35; local per BUILD_PLAN D7"
+    }
+   ],
+   "src": "hybrid/v6/assets/v6/box6/L104_lid.png (the box6 L104 set, anime_box_v6.js:22; copied)",
+   "layout": "land",
+   "pad": [
+    0,
+    2
+   ],
+   "content": [
+    296,
+    222
+   ],
+   "size": [
+    296,
+    224
+   ],
+   "sha256": "194d9dc548ae1a098dc4cf33393bf4d21764c5f1749340c64e986fcc8955a8d6",
+   "file": "WRLDZ/MenuV6Local/Rigs/Land/box/lid"
+  },
+  {
+   "path": "MenuV6Local/Rigs/Land/box/eye.png",
+   "guid": "b8cb0b6829b22ce30865e20de7992929",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": null,
+   "tag": "OWNER-licence-unknown",
+   "dest": "local",
+   "files": [
+    "assets/v6/box6/L104_eye.png"
+   ],
+   "why": [
+    {
+     "file": "assets/v6/box6/L104_eye.png",
+     "tag": "OWNER-licence-unknown",
+     "src": "toon / Cycles renders of the owner's golden Puzzle-box STL print kit (uploader / licence unknown) — PROVENANCE_v6.md l.23-35; local per BUILD_PLAN D7"
+    }
+   ],
+   "src": "hybrid/v6/assets/v6/box6/L104_eye.png (the box6 L104 set, anime_box_v6.js:22; copied)",
+   "layout": "land",
+   "pad": [
+    0,
+    2
+   ],
+   "content": [
+    296,
+    222
+   ],
+   "size": [
+    296,
+    224
+   ],
+   "sha256": "caaae91f0e2dcd37534d9963a386a46af2a2dae097c4f77459395a7f9a25aa7f",
+   "file": "WRLDZ/MenuV6Local/Rigs/Land/box/eye"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/niche/sky.png",
+   "guid": "cce55b4e8f8e39fc1a25910dd9d79d25",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:143-163 the skyline (layer 0) + drawKCTower + the front buildings (layer 1), 2x",
+   "layout": "land",
+   "pad": [
+    0,
+    2
+   ],
+   "content": [
+    256,
+    198
+   ],
+   "size": [
+    256,
+    200
+   ],
+   "sha256": "1f4a77a21299a0c583c552a611dd23c8b37a7f354d3ef945f2ccfa63ee7ef9ec",
+   "file": "WRLDZ/MenuV6/Rigs/Land/niche/sky",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/niche/frame.png",
+   "guid": "971277873bb56200c30f0c859a83cf7c",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:164-174 the false-door frame (jambs, drum, gold rules, hieroglyph columns), 2x, with the niche cut out",
+   "layout": "land",
+   "size": [
+    344,
+    268
+   ],
+   "sha256": "757bfcf9e93df2177f510895207accb318fe28e303eeb83fea8671a027a55826",
+   "file": "WRLDZ/MenuV6/Rigs/Land/niche/frame",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/niche/skygrad.png",
+   "guid": "cdcff29db028f382ffcebbb8f3d45f8b",
+   "kind": "sprite",
+   "imp": "soft",
+   "ppu": 200,
+   "rect": [
+    22.0,
+    33.0,
+    128.0,
+    100.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:186-219 cityDoor.draw, segment skygrad alone (labelled twin of makeCityDoor), 2x",
+   "layout": "land",
+   "pad": [
+    0,
+    2
+   ],
+   "content": [
+    256,
+    198
+   ],
+   "size": [
+    256,
+    200
+   ],
+   "sha256": "c886d164c94e5f1f6a0c7ad55b9d75e584b4ff30c4f046035f5dc8aed5fb9ba5",
+   "file": "WRLDZ/MenuV6/Rigs/Land/niche/skygrad",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/niche/horizon.png",
+   "guid": "ac2f77e010accaf95d6c4ce0a5abd1e7",
+   "kind": "sprite",
+   "imp": "soft",
+   "ppu": 200,
+   "rect": [
+    22.0,
+    87.5,
+    128.0,
+    26.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:186-219 cityDoor.draw, segment horizon alone (labelled twin of makeCityDoor), 2x",
+   "layout": "land",
+   "pad": [
+    0,
+    2
+   ],
+   "content": [
+    256,
+    50
+   ],
+   "size": [
+    256,
+    52
+   ],
+   "sha256": "21f6f9e1e382d19c97a0c0162e857966d25cded5a0442b8ca7b10bcc031bb873",
+   "file": "WRLDZ/MenuV6/Rigs/Land/niche/horizon",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/niche/shadow.png",
+   "guid": "50d566a2775bd580a994b312e950cd0a",
+   "kind": "sprite",
+   "imp": "soft",
+   "ppu": 200,
+   "rect": [
+    22.0,
+    33.0,
+    128.0,
+    8.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:186-219 cityDoor.draw, segment shadow alone (labelled twin of makeCityDoor), 2x",
+   "layout": "land",
+   "size": [
+    256,
+    16
+   ],
+   "sha256": "43cdeeee7d9c1d98b5122d5f5b5689bd07ce877aa2a0c696590d0ce7b03d8d96",
+   "file": "WRLDZ/MenuV6/Rigs/Land/niche/shadow",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/niche/blimp.png",
+   "guid": "ff043a53f34ec317df68f48f9dd3a148",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    77.5,
+    49.0,
+    16.0,
+    8.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:201-208 the blimp segment without its drawImage (the SPR.red nose light) at t = (nw / 2 + 15) / 3.2 (mid-niche, unclipped), 2x canvas",
+   "layout": "land",
+   "pad": [
+    0,
+    2
+   ],
+   "content": [
+    32,
+    14
+   ],
+   "size": [
+    32,
+    16
+   ],
+   "sha256": "080e13b88565eb12c9f2e57216f612d99d24966f9b8cb5eeed0fc80c7e6a894e",
+   "file": "WRLDZ/MenuV6/Rigs/Land/niche/blimp",
+   "provenanceRun": "no clean twin (copied file / generated in both)"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/niche/sliver.png",
+   "guid": "e7bbc9f2c7082f5b0fa8a78c8db34fa5",
+   "kind": "sheet",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    33.0,
+    71.0,
+    15.5,
+    23.0
+   ],
+   "tag": "OWNER",
+   "dest": "tracked",
+   "files": [
+    "assets/v6/eye_owner/lid_up.png",
+    "assets/v6/eye_owner/lid_lo.png",
+    "assets/v6/eye_owner/socket.png",
+    "assets/v6/eye_owner/ball.png"
+   ],
+   "src": "umbrax.js:371-372 drawTearSliver over Tear 0 (his eye in the rip), 34 phases of its .55 s window, 60 Hz (rigs_lib.sliverFrame)",
+   "layout": "land",
+   "size": [
+    396,
+    208
+   ],
+   "sha256": "a80db49270f759bdce80b0287358bd09250c4aa76f7e9a7e5bb9ac02a595306c",
+   "file": "WRLDZ/MenuV6/Rigs/Land/niche/sliver"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/niche/ring.png",
+   "guid": "ae631a3d00393037341eefc04660f314",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:175 niche ringSprite(s) (anime_relics_v6.js:35, 2x)",
+   "layout": "land",
+   "pad": [
+    1,
+    1
+   ],
+   "content": [
+    167,
+    167
+   ],
+   "size": [
+    168,
+    168
+   ],
+   "sha256": "93d9030e7faae7001ec230181ad7d738b4d0d056000ac32d025f2cba4d28c1cb",
+   "file": "WRLDZ/MenuV6/Rigs/Land/niche/ring",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/niche/pointer.png",
+   "guid": "bf7a22fde1c909903089c9df1feb4156",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 300,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:175 niche pointerSpriteSpectral(s) (relics.js:325, 3x)",
+   "layout": "land",
+   "pad": [
+    1,
+    1
+   ],
+   "content": [
+    67,
+    103
+   ],
+   "size": [
+    68,
+    104
+   ],
+   "sha256": "ea40e0295de2b0a1e55253f296ffda5476a4054d0f2d04f2e91afcdc868d4857",
+   "file": "WRLDZ/MenuV6/Rigs/Land/niche/pointer",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/niche/membrane.png",
+   "guid": "fd7b4eb7279f1f6548df61147720ea16",
+   "kind": "sprite",
+   "imp": "soft",
+   "ppu": 200,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "relics.js:345 the membrane gradient at I = 1, 2x",
+   "layout": "land",
+   "size": [
+    100,
+    100
+   ],
+   "sha256": "e5e7087050cf38ab8396a687f5bfc84927bdfd7e5e6c69f4f9a362df4b754f19",
+   "file": "WRLDZ/MenuV6/Rigs/Land/niche/membrane",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/niche/rim_arc.png",
+   "guid": "ee7068dcb0340f9a7838130b1d04c14e",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "relics.js:349 the rim highlight arc(0 -> .7) at alpha 1, 2x",
+   "layout": "land",
+   "size": [
+    104,
+    104
+   ],
+   "sha256": "9acab941281ad7121d8787fe5e3d4f163c1b46e6cc001e2bd5904eaf6017224b",
+   "file": "WRLDZ/MenuV6/Rigs/Land/niche/rim_arc",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/breach/crack_glow.png",
+   "guid": "39b00458e4442538600738594f17b924",
+   "kind": "sprite",
+   "imp": "soft",
+   "ppu": 100,
+   "rect": [
+    636,
+    148,
+    660.0,
+    808.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "src": "anime_menu_v6.js:67 the full-strength canvas (P0 / P1b bakes.mjs dump)",
+   "layout": "land",
+   "pad": [
+    1,
+    0
+   ],
+   "content": [
+    659,
+    808
+   ],
+   "size": [
+    660,
+    808
+   ],
+   "sha256": "039e6831c17c0176cc7104546b5f83a991a77953834b17f21a76a591e11419d6",
+   "file": "WRLDZ/MenuV6/Rigs/Land/breach/crack_glow"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/breach/fissure_glow.png",
+   "guid": "f275481d2067dcc0695ad59fa052ebb6",
+   "kind": "sprite",
+   "imp": "soft",
+   "ppu": 100,
+   "rect": [
+    748,
+    983,
+    416.0,
+    72.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "src": "anime_menu_v6.js:78 the full-strength canvas (P0 / P1b bakes.mjs dump)",
+   "layout": "land",
+   "pad": [
+    2,
+    1
+   ],
+   "content": [
+    414,
+    71
+   ],
+   "size": [
+    416,
+    72
+   ],
+   "sha256": "bb045db967b8a6bbc7686fb80a83b30f3097ad2d53cd0778440d70e25f84203e",
+   "file": "WRLDZ/MenuV6/Rigs/Land/breach/fissure_glow"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/dom/quit_plate_rest.png",
+   "guid": "7fa8a7cd32a7a603bfdff3b8a36b0c5e",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    1416.0,
+    758.0,
+    254.0,
+    68.0
+   ],
+   "border": [
+    14,
+    20,
+    20,
+    16
+   ],
+   "nine": true,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "src": "anime_v6.css:64-65 .quit:hover (rest), CDP CSS.forcePseudoState, isolated at dsf 2 (rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    2,
+    0
+   ],
+   "content": [
+    506,
+    136
+   ],
+   "size": [
+    508,
+    136
+   ],
+   "sha256": "1b3079b5748f305ed0f99f656d354d473fcba762327aeca37738de3c4e8d40f9",
+   "file": "WRLDZ/MenuV6/Rigs/Land/dom/quit_plate_rest"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/dom/quit_plate_hover.png",
+   "guid": "3e7af7141f65f3060df7cded4421cb3b",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    1416.0,
+    758.0,
+    254.0,
+    68.0
+   ],
+   "border": [
+    14,
+    20,
+    20,
+    16
+   ],
+   "nine": true,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "src": "anime_v6.css:64-65 .quit:hover (hover), CDP CSS.forcePseudoState, isolated at dsf 2 (rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    2,
+    0
+   ],
+   "content": [
+    506,
+    136
+   ],
+   "size": [
+    508,
+    136
+   ],
+   "sha256": "437437db9e32ba43e92d112e6248175639aea0b1c0b2e37b459897edf44f5845",
+   "file": "WRLDZ/MenuV6/Rigs/Land/dom/quit_plate_hover"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/dom/niche_frame_rest.png",
+   "guid": "ff3a17ba76369c290c865b5d18ca1a3c",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    114.5,
+    705.5,
+    188.0,
+    150.0
+   ],
+   "border": [
+    15,
+    17,
+    17,
+    15
+   ],
+   "nine": true,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "src": "anime_v6.css:59 .wmap:hover .niche (rest), CDP CSS.forcePseudoState, isolated at dsf 2 (rig_extra.mjs)",
+   "layout": "land",
+   "pad": [
+    2,
+    2
+   ],
+   "content": [
+    374,
+    298
+   ],
+   "size": [
+    376,
+    300
+   ],
+   "sha256": "1042a70efc44f1267e96cfa76069013ec022474595dbc0ca0c44bcf8d902b7ce",
+   "file": "WRLDZ/MenuV6/Rigs/Land/dom/niche_frame_rest"
+  },
+  {
+   "path": "MenuV6/Rigs/Land/dom/niche_frame_hover.png",
+   "guid": "bd9599d6b4692143a619d05b6eeac72f",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    96.0,
+    687.0,
+    224.0,
+    186.0
+   ],
+   "border": [
+    85,
+    85,
+    85,
+    85
+   ],
+   "nine": true,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "src": "anime_v6.css:59 .wmap:hover .niche (hover), CDP CSS.forcePseudoState, isolated at dsf 2 (rig_extra.mjs)",
+   "layout": "land",
+   "size": [
+    448,
+    372
+   ],
+   "sha256": "5816c5c57ad80c6847876b1e7c450d4b01587fc59125110633c9583b0030f127",
+   "file": "WRLDZ/MenuV6/Rigs/Land/dom/niche_frame_hover"
+  },
+  {
+   "path": "MenuV6/Data/rigs_land.json",
+   "guid": "08d3f5601a17f59a7ff2bba418e770d8",
+   "kind": "json",
+   "imp": "json",
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "p1b/rigs_assemble.py from rigs.mjs + rig_extra.mjs dumps",
+   "layout": "land",
+   "sha256": "47f992bb8abf5c3613e9a5796e65242f60411a480fd648c63ba1505444a0b1f4"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/set_glow.png",
+   "guid": "b4fb42d2d5cb359ca0b6e77d50e18d52",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    699.0,
+    792.0,
+    200.0,
+    200.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (glow), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    1,
+    0
+   ],
+   "content": [
+    199,
+    200
+   ],
+   "size": [
+    200,
+    200
+   ],
+   "sha256": "f8bf3925d48577c6a6e8d51ac2b323b86e08f2e9f64b59ab5d1449a70b5a0054",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/set_glow",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/set_hot1.png",
+   "guid": "526450c434811b118e7ab9e89d6ace33",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    758.0,
+    849.0,
+    80.0,
+    80.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (hot1), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "size": [
+    80,
+    80
+   ],
+   "sha256": "c23ff4d8dc0f8f9cd95bec4629a921c4bd96ff63a294fd84dea6e62dbf77c368",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/set_hot1",
+   "provenanceRun": "no clean twin (copied file / generated in both)"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/set_ring_base.png",
+   "guid": "22898ba688c126a09ccef081bd07a893",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    728.0,
+    822.0,
+    144.0,
+    140.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_base), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    3,
+    0
+   ],
+   "content": [
+    141,
+    140
+   ],
+   "size": [
+    144,
+    140
+   ],
+   "sha256": "bf18e7e990fdf635dce5ad0d6288b35c95151cc855551ec4a0aff9aa22bd7a23",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/set_ring_base",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/set_ring_sh.png",
+   "guid": "cf2c5906dec29375b19cf2af702940df",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    739.0,
+    854.0,
+    132.0,
+    108.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_sh), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    2,
+    0
+   ],
+   "content": [
+    130,
+    108
+   ],
+   "size": [
+    132,
+    108
+   ],
+   "sha256": "f7f29fdcd9f22684ff93cb480d593cdc4c881057d2785d88f8415c5befb10cb1",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/set_ring_sh",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/set_ring_hi.png",
+   "guid": "a0f6f9411f1813fc74bf6a46628b9235",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    730.0,
+    822.0,
+    96.0,
+    60.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_hi), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    2,
+    1
+   ],
+   "content": [
+    94,
+    59
+   ],
+   "size": [
+    96,
+    60
+   ],
+   "sha256": "4e499845ba387779537d101304fba0b2427def1217b553b632e4e2c6105991de",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/set_ring_hi",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/set_ring_ink1.png",
+   "guid": "69ab26d4ae4f480c284a99cf190a4c2a",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    727.0,
+    820.0,
+    144.0,
+    144.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_ink1), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    1,
+    0
+   ],
+   "content": [
+    143,
+    144
+   ],
+   "size": [
+    144,
+    144
+   ],
+   "sha256": "d6766dbcfdba522ed3c2ee6423eea4ae4c8f634f1d9911f6819d0602dc54f6a2",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/set_ring_ink1",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/set_ring_ink0.png",
+   "guid": "54a666a36325cd81ba35a226e2e6382a",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    733.0,
+    826.0,
+    132.0,
+    132.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_ink0), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    1,
+    0
+   ],
+   "content": [
+    131,
+    132
+   ],
+   "size": [
+    132,
+    132
+   ],
+   "sha256": "5c05f54e81379bcf0fe4a871d38f28bb2a2ce190f02c32cc10554ed2c06b5307",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/set_ring_ink0",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/set_crescent.png",
+   "guid": "f3c3f376909e7d9ea861acdda1cd5edb",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    739.0,
+    833.0,
+    120.0,
+    120.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (crescent), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    1,
+    2
+   ],
+   "content": [
+    119,
+    118
+   ],
+   "size": [
+    120,
+    120
+   ],
+   "sha256": "fe1bffbcb716baef715d133faa9be823e69e0904199f5a2fb5c94967190777b6",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/set_crescent",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/set_holo.png",
+   "guid": "d35c72b9190e1c3d3b9f923c24007320",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:290 pictoSprite(picto, 128, '#9fd8ff')",
+   "layout": "port",
+   "size": [
+    128,
+    128
+   ],
+   "sha256": "af87267afd712099da73d5e5175782d07585e49d6f2a9292d39beb7d6cbe24eb",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/set_holo",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/bazaar_glow.png",
+   "guid": "16b2cae8916e4be2af385505838911a1",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    743.0,
+    1053.0,
+    240.0,
+    240.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (glow), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    2,
+    3
+   ],
+   "content": [
+    238,
+    237
+   ],
+   "size": [
+    240,
+    240
+   ],
+   "sha256": "34cf26d2be86c9bc4be1bedb2e0b5790fa920f6c22209daf2716f1576e83ff74",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/bazaar_glow",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/bazaar_hot1.png",
+   "guid": "9cbc786896b64d07a5af863b0e588588",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    836.0,
+    1124.0,
+    52.0,
+    96.0
+   ],
+   "tag": "OWNER",
+   "dest": "tracked",
+   "files": [
+    "assets/v6/slots/tablet_34_384.png"
+   ],
+   "why": [
+    {
+     "file": "assets/v6/slots/tablet_34_384.png",
+     "tag": "OWNER",
+     "src": "toon renders of his Meshy stone tablet — PROVENANCE_v6.md l.14-17"
+    }
+   ],
+   "src": "the page's own op alone (hot1), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    0,
+    1
+   ],
+   "content": [
+    52,
+    95
+   ],
+   "size": [
+    52,
+    96
+   ],
+   "sha256": "5568b2941d2484a177fa425c72dd447c1a86784642e92e80886fe4ab58ae4b2c",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/bazaar_hot1",
+   "provenanceRun": "no clean twin (copied file / generated in both)"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/bazaar_ring_base.png",
+   "guid": "f108d58bbf1e42a57e50318939245c9f",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    781.0,
+    1090.0,
+    164.0,
+    164.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_base), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    1,
+    1
+   ],
+   "content": [
+    163,
+    163
+   ],
+   "size": [
+    164,
+    164
+   ],
+   "sha256": "6e3e2ab70e6f34bec4115bf24b6df7cb3f165a59ebab5eaf2ee3a21e6318eda1",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/bazaar_ring_base",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/bazaar_ring_sh.png",
+   "guid": "5e6acb37caabb110a8887536ec2884b0",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    793.0,
+    1127.0,
+    152.0,
+    128.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_sh), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    1,
+    2
+   ],
+   "content": [
+    151,
+    126
+   ],
+   "size": [
+    152,
+    128
+   ],
+   "sha256": "d5d3084ec1cbe6e6c202c7249140a4e84b5aa159eddfce18e93f71210c6968be",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/bazaar_ring_sh",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/bazaar_ring_hi.png",
+   "guid": "9f7e60efa1886525b7ff1c570c193937",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    782.0,
+    1091.0,
+    112.0,
+    68.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_hi), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    2,
+    0
+   ],
+   "content": [
+    110,
+    68
+   ],
+   "size": [
+    112,
+    68
+   ],
+   "sha256": "f479327405cb79443f8a29f9b64ab69708d95934baf12b82f24410e9686f5a8c",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/bazaar_ring_hi",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/bazaar_ring_ink1.png",
+   "guid": "a384e2f369f752965d8bc707bfa11155",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    779.0,
+    1089.0,
+    168.0,
+    168.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_ink1), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    2,
+    3
+   ],
+   "content": [
+    166,
+    165
+   ],
+   "size": [
+    168,
+    168
+   ],
+   "sha256": "8bcc697bad093295765ff72606a2acbb8a21b0115396a508cc03611f9cfddc21",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/bazaar_ring_ink1",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/bazaar_ring_ink0.png",
+   "guid": "dfa75836f8b61459cfd21fcbdb6f07c2",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    785.0,
+    1095.0,
+    156.0,
+    156.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_ink0), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    2,
+    3
+   ],
+   "content": [
+    154,
+    153
+   ],
+   "size": [
+    156,
+    156
+   ],
+   "sha256": "64f58c43169eac38220ded7a723a61456a01ee27ec6d646456c80fe68754cc1b",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/bazaar_ring_ink0",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/bazaar_crescent.png",
+   "guid": "59cf0e1157473c8d103187173bb185e9",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    792.0,
+    1101.0,
+    144.0,
+    144.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (crescent), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    3,
+    3
+   ],
+   "content": [
+    141,
+    141
+   ],
+   "size": [
+    144,
+    144
+   ],
+   "sha256": "e574b393bce07b11b2898ced9f76ff19628dcc6baff7c496e83549fd5770f73d",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/bazaar_crescent",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/bazaar_holo.png",
+   "guid": "bfee94be1154c3b3727cfad70e5ee777",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": null,
+   "tag": "OWNER",
+   "dest": "tracked",
+   "files": [
+    "assets/v6/slots/tablet_34_384.png"
+   ],
+   "why": [
+    {
+     "file": "assets/v6/slots/tablet_34_384.png",
+     "tag": "OWNER",
+     "src": "toon renders of his Meshy stone tablet — PROVENANCE_v6.md l.14-17"
+    }
+   ],
+   "src": "menu.js:290 pictoSprite(picto, 128, '#9fd8ff')",
+   "layout": "port",
+   "size": [
+    128,
+    128
+   ],
+   "sha256": "b91335a5144a60ba7054a6545069c59672264283814b8b1e1504841f33f7ef78",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/bazaar_holo",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/bag_glow.png",
+   "guid": "855a7049b1ec755e603f3a285ccd5a39",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    565.0,
+    1277.0,
+    240.0,
+    240.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (glow), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    3,
+    3
+   ],
+   "content": [
+    237,
+    237
+   ],
+   "size": [
+    240,
+    240
+   ],
+   "sha256": "d1d7e99a09aac1fb560d2b83e62bc60b46ef36e4edb5e561ba79b98fdc27b36b",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/bag_glow",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/bag_hot1.png",
+   "guid": "091eada9ea365a448fc63588efc364ff",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    643.0,
+    1352.0,
+    84.0,
+    84.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (hot1), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    3,
+    1
+   ],
+   "content": [
+    81,
+    83
+   ],
+   "size": [
+    84,
+    84
+   ],
+   "sha256": "fde5286db4e4fe9e74a351069875db37c44d1dda4a3dec79c79718deb7b03975",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/bag_hot1",
+   "provenanceRun": "no clean twin (copied file / generated in both)"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/bag_ring_base.png",
+   "guid": "84c71c9d4e61698a35ddd5a695591922",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    602.0,
+    1314.0,
+    164.0,
+    164.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_base), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    1,
+    1
+   ],
+   "content": [
+    163,
+    163
+   ],
+   "size": [
+    164,
+    164
+   ],
+   "sha256": "3e1b04aaf6cde60bf8ec78ae3ea1ab6380c47a289b979a7ef34924e9f3b3f821",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/bag_ring_base",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/bag_ring_sh.png",
+   "guid": "4c1def19e65b550a54e46de3d76cb698",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    615.0,
+    1352.0,
+    152.0,
+    128.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_sh), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    2,
+    3
+   ],
+   "content": [
+    150,
+    125
+   ],
+   "size": [
+    152,
+    128
+   ],
+   "sha256": "ea82a60e175deaf1aea5418b3a0bc5d998cd3926a3437fe58d263ad6a5e08ebb",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/bag_ring_sh",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/bag_ring_hi.png",
+   "guid": "b7f84971d55fb96b48a30c7bfc16f000",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    604.0,
+    1315.0,
+    108.0,
+    68.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_hi), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "size": [
+    108,
+    68
+   ],
+   "sha256": "6edde7efdea671df3afa873570b08e8a1de51bbf7ba3a4c833653320fcc331b7",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/bag_ring_hi",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/bag_ring_ink1.png",
+   "guid": "a427a770e4bf26ff07674fe41b6131ac",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    600.0,
+    1313.0,
+    168.0,
+    168.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_ink1), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    2,
+    3
+   ],
+   "content": [
+    166,
+    165
+   ],
+   "size": [
+    168,
+    168
+   ],
+   "sha256": "94ebab4279f9ab21f8febef3860aff847a1853cf62c51602ef4fa487f2fedcc7",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/bag_ring_ink1",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/bag_ring_ink0.png",
+   "guid": "f5fb7b8734182d4d7f0c2506e7ea1e70",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    606.0,
+    1319.0,
+    156.0,
+    156.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_ink0), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    2,
+    2
+   ],
+   "content": [
+    154,
+    154
+   ],
+   "size": [
+    156,
+    156
+   ],
+   "sha256": "3f9cc635d825bb71c22df81f912edcb2b4471ca0c25f812cc1d3da3562e8a939",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/bag_ring_ink0",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/bag_crescent.png",
+   "guid": "43be0ac19262175199e3895615ce5879",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    613.0,
+    1325.0,
+    144.0,
+    144.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (crescent), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    3,
+    3
+   ],
+   "content": [
+    141,
+    141
+   ],
+   "size": [
+    144,
+    144
+   ],
+   "sha256": "31d2ac95f0e112901adbbc092a359b1f5cf5f63f743cc194d4a844494ae096ed",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/bag_crescent",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/bag_holo.png",
+   "guid": "2fe4e10d09f2f780b89019e3e21a3f1c",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:290 pictoSprite(picto, 128, '#9fd8ff')",
+   "layout": "port",
+   "size": [
+    128,
+    128
+   ],
+   "sha256": "4feb80d8657ebacc0557d468c4109e1c623ee7fef4a857e42309822253afa7d9",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/bag_holo",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/deck_glow.png",
+   "guid": "a5cfe79e864b57d425542d6ef1d944a3",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    278.0,
+    1277.0,
+    240.0,
+    240.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (glow), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    3,
+    3
+   ],
+   "content": [
+    237,
+    237
+   ],
+   "size": [
+    240,
+    240
+   ],
+   "sha256": "51f940821f21f251dadf51dc2850614dad9e08583428b4109f75d3a7a390f7a8",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/deck_glow",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/deck_hot1.png",
+   "guid": "05f541a50fddfe6112e68fbf34c9823f",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    354.0,
+    1351.0,
+    88.0,
+    92.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (hot1), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    3,
+    3
+   ],
+   "content": [
+    85,
+    89
+   ],
+   "size": [
+    88,
+    92
+   ],
+   "sha256": "2144c74f0b4676f8d804e98d777aa2a29541fd14f4fc85b5bd922d5df1e7a324",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/deck_hot1",
+   "provenanceRun": "no clean twin (copied file / generated in both)"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/deck_ring_base.png",
+   "guid": "fde677e920147d99889df03db8f7a5e0",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    315.0,
+    1314.0,
+    164.0,
+    164.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_base), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    1,
+    1
+   ],
+   "content": [
+    163,
+    163
+   ],
+   "size": [
+    164,
+    164
+   ],
+   "sha256": "344f74f089a5ab346226d42f6518d383af8da13929b50f4be706fe0af7cc7505",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/deck_ring_base",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/deck_ring_sh.png",
+   "guid": "f08982d253d04203f2815d85bb9a85a4",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    328.0,
+    1352.0,
+    152.0,
+    128.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_sh), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    2,
+    3
+   ],
+   "content": [
+    150,
+    125
+   ],
+   "size": [
+    152,
+    128
+   ],
+   "sha256": "8c4c6b3b6b7d3e95ca2fb184c1aac6f152ff0df5c0a13ecee4b404f85ffcfcd1",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/deck_ring_sh",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/deck_ring_hi.png",
+   "guid": "54c7e72cf3e00963021d48a8339651c4",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    317.0,
+    1315.0,
+    112.0,
+    68.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_hi), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    3,
+    0
+   ],
+   "content": [
+    109,
+    68
+   ],
+   "size": [
+    112,
+    68
+   ],
+   "sha256": "5dcc80241036d953218f05d4d1b9fe37d19ca4aef040ece0202ed34dbdde3dd9",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/deck_ring_hi",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/deck_ring_ink1.png",
+   "guid": "ff8b141648c229b9a49dca0c1fab9014",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    314.0,
+    1313.0,
+    168.0,
+    168.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_ink1), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    2,
+    3
+   ],
+   "content": [
+    166,
+    165
+   ],
+   "size": [
+    168,
+    168
+   ],
+   "sha256": "8efa6eb6e08df65667096595b6ab040260caeb7809eb9b637e8c71b5a01e0878",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/deck_ring_ink1",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/deck_ring_ink0.png",
+   "guid": "91dec3686ef3cf5aebc64fd568bc6f81",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    320.0,
+    1319.0,
+    156.0,
+    156.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_ink0), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    2,
+    2
+   ],
+   "content": [
+    154,
+    154
+   ],
+   "size": [
+    156,
+    156
+   ],
+   "sha256": "86fa053c7e61010237e0647abf26af9bd9d7ba2622a76605917c990315815056",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/deck_ring_ink0",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/deck_crescent.png",
+   "guid": "44f86e34cb63bd8b8a23db733f5857a5",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    326.0,
+    1325.0,
+    144.0,
+    144.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (crescent), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    3,
+    3
+   ],
+   "content": [
+    141,
+    141
+   ],
+   "size": [
+    144,
+    144
+   ],
+   "sha256": "3d78dc2b2e5a3755aa602627e793af73d0835e05c4c56c7ced6efcf594054666",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/deck_crescent",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/deck_holo.png",
+   "guid": "75b12deec530d55cde19a056d83f4781",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:290 pictoSprite(picto, 128, '#9fd8ff')",
+   "layout": "port",
+   "size": [
+    128,
+    128
+   ],
+   "sha256": "f104c980ec9fc7d212ef6cec4f54ecccdb5acc8511b33eba10754896783b5386",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/deck_holo",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/story_glow.png",
+   "guid": "7b2bdb7402569d6c4a20952673511350",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    99.0,
+    1053.0,
+    240.0,
+    240.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (glow), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    2,
+    3
+   ],
+   "content": [
+    238,
+    237
+   ],
+   "size": [
+    240,
+    240
+   ],
+   "sha256": "b7d9978da27d0d6b20352cc73854eb61179e9875a42bd6c1051525e3e41b8177",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/story_glow",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/story_hot1.png",
+   "guid": "a3e6862d264c8d2eb2a164f23dee21c2",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    187.0,
+    1124.0,
+    64.0,
+    96.0
+   ],
+   "tag": "OWNER",
+   "dest": "tracked",
+   "files": [
+    "assets/v6/slots/tablet_front_384.png"
+   ],
+   "why": [
+    {
+     "file": "assets/v6/slots/tablet_front_384.png",
+     "tag": "OWNER",
+     "src": "toon renders of his Meshy stone tablet — PROVENANCE_v6.md l.14-17"
+    }
+   ],
+   "src": "the page's own op alone (hot1), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    2,
+    1
+   ],
+   "content": [
+    62,
+    95
+   ],
+   "size": [
+    64,
+    96
+   ],
+   "sha256": "81ad361ef726b42b82cf541d848ec5b91430afbfbad275ac27490e4f314efcf0",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/story_hot1",
+   "provenanceRun": "no clean twin (copied file / generated in both)"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/story_ring_base.png",
+   "guid": "7ba0104315e8732e724c837b2696bb94",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    136.0,
+    1090.0,
+    164.0,
+    164.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_base), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    1,
+    1
+   ],
+   "content": [
+    163,
+    163
+   ],
+   "size": [
+    164,
+    164
+   ],
+   "sha256": "5f6bdf3faa343fdde95e8c3c06f341dbfe787ca299d51a354dbd0d4b613421b5",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/story_ring_base",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/story_ring_sh.png",
+   "guid": "b34ce4de9dbc982000ca29bc6cf53db8",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    149.0,
+    1127.0,
+    152.0,
+    128.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_sh), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    2,
+    2
+   ],
+   "content": [
+    150,
+    126
+   ],
+   "size": [
+    152,
+    128
+   ],
+   "sha256": "ce8b0b358cca54b560cd99d73adc4bce8c9306449efaeb5e31ad6bf63fd37314",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/story_ring_sh",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/story_ring_hi.png",
+   "guid": "689e54bebe55e99bea269defd09dd166",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    138.0,
+    1091.0,
+    112.0,
+    68.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_hi), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    3,
+    1
+   ],
+   "content": [
+    109,
+    67
+   ],
+   "size": [
+    112,
+    68
+   ],
+   "sha256": "8ae820e233226e8471806b41292d7093d32bd416e7c8d1d88b155cf52232765e",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/story_ring_hi",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/story_ring_ink1.png",
+   "guid": "b45e84e12d3b07a90cbaa5d80b52c798",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    135.0,
+    1089.0,
+    168.0,
+    168.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_ink1), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    2,
+    3
+   ],
+   "content": [
+    166,
+    165
+   ],
+   "size": [
+    168,
+    168
+   ],
+   "sha256": "90485bdc5bf116fdfee1c9636cafbcc1c14c95dec59cc1e8b8fe16c7cfb6db8b",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/story_ring_ink1",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/story_ring_ink0.png",
+   "guid": "5301db61610b120e7d75ee432675df10",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    141.0,
+    1095.0,
+    156.0,
+    156.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_ink0), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    2,
+    3
+   ],
+   "content": [
+    154,
+    153
+   ],
+   "size": [
+    156,
+    156
+   ],
+   "sha256": "28e47e4c8033736f1e3f2a77e6a250f03b0bfbe3e416984fa9d325bec8bac5b0",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/story_ring_ink0",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/story_crescent.png",
+   "guid": "f91166a3ef8ee446767e1082880049ec",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    147.0,
+    1101.0,
+    144.0,
+    144.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (crescent), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    3,
+    3
+   ],
+   "content": [
+    141,
+    141
+   ],
+   "size": [
+    144,
+    144
+   ],
+   "sha256": "1d2912ec4590bfbd6191a70b50af05618aec719aff2c5ee9548881e47255012f",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/story_crescent",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/story_holo.png",
+   "guid": "294160c8586cf09bd39a99aad0837a8c",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": null,
+   "tag": "OWNER",
+   "dest": "tracked",
+   "files": [
+    "assets/v6/slots/tablet_front_384.png"
+   ],
+   "why": [
+    {
+     "file": "assets/v6/slots/tablet_front_384.png",
+     "tag": "OWNER",
+     "src": "toon renders of his Meshy stone tablet — PROVENANCE_v6.md l.14-17"
+    }
+   ],
+   "src": "menu.js:290 pictoSprite(picto, 128, '#9fd8ff')",
+   "layout": "port",
+   "size": [
+    128,
+    128
+   ],
+   "sha256": "ca8f574e6cee9844db73d4adbd418df165b3bd1e49a32ceb6d3a555c178ea40e",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/story_holo",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/view_glow.png",
+   "guid": "287ab23c3892019407b799276ae3b497",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    182.0,
+    792.0,
+    200.0,
+    200.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (glow), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    1,
+    0
+   ],
+   "content": [
+    199,
+    200
+   ],
+   "size": [
+    200,
+    200
+   ],
+   "sha256": "cba4e3ff51d01fd74cc9fd5c53a19017a2d43fad7ca8621109e111362c550650",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/view_glow",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/view_hot1.png",
+   "guid": "95ae1d5b9619fb3f0f6b945c61bfc855",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    248.0,
+    857.0,
+    68.0,
+    68.0
+   ],
+   "tag": "OWNER",
+   "dest": "tracked",
+   "files": [
+    "assets/v5/items/millennium_eye_ref_512.png"
+   ],
+   "why": [
+    {
+     "file": "assets/v5/items/millennium_eye_ref_512.png",
+     "tag": "OWNER",
+     "src": "his Millennium Eye image (~/Pictures/MillenniumEye.png) — PROVENANCE.txt l.95"
+    }
+   ],
+   "src": "the page's own op alone (hot1), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    1,
+    3
+   ],
+   "content": [
+    67,
+    65
+   ],
+   "size": [
+    68,
+    68
+   ],
+   "sha256": "6b4002f8455cb8b2bd1fe0cc1d18da175d698dc1b667bd3cb8e656bb07006be2",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/view_hot1",
+   "provenanceRun": "no clean twin (copied file / generated in both)"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/view_ring_base.png",
+   "guid": "aa96c8c1cb7891b84a2adbb79e2c807c",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    211.0,
+    822.0,
+    144.0,
+    140.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_base), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    3,
+    0
+   ],
+   "content": [
+    141,
+    140
+   ],
+   "size": [
+    144,
+    140
+   ],
+   "sha256": "81c6e20a30b6c7b81c89f57e8717a35945058d67e4b7361bd8d42ccdfb932e50",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/view_ring_base",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/view_ring_sh.png",
+   "guid": "593f36323345dc3ad4d93493b2c67c2d",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    222.0,
+    854.0,
+    132.0,
+    108.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_sh), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    2,
+    0
+   ],
+   "content": [
+    130,
+    108
+   ],
+   "size": [
+    132,
+    108
+   ],
+   "sha256": "4995afcc2ef59e2207a833bc02ffee6d947fb405939365f66253ab788ab18a20",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/view_ring_sh",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/view_ring_hi.png",
+   "guid": "ae1f7f2fd9179c2a2c078c434ce40c07",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    213.0,
+    822.0,
+    96.0,
+    60.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_hi), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    2,
+    1
+   ],
+   "content": [
+    94,
+    59
+   ],
+   "size": [
+    96,
+    60
+   ],
+   "sha256": "970e128b9604c34ab370df5f5c55029e844293098f0d21b2c4b539c3b176d77b",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/view_ring_hi",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/view_ring_ink1.png",
+   "guid": "991b4584eaf1842e4b4d350906f651d8",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    210.0,
+    820.0,
+    144.0,
+    144.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_ink1), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    1,
+    0
+   ],
+   "content": [
+    143,
+    144
+   ],
+   "size": [
+    144,
+    144
+   ],
+   "sha256": "e99f64235eac645f266f1103d79a8712bdad8f2b355cc11f79e823c16aa3f815",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/view_ring_ink1",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/view_ring_ink0.png",
+   "guid": "9ab8881871eb24c1b4e367578ed319a5",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    216.0,
+    826.0,
+    132.0,
+    132.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (ring_ink0), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    1,
+    0
+   ],
+   "content": [
+    131,
+    132
+   ],
+   "size": [
+    132,
+    132
+   ],
+   "sha256": "4c48d96fcb4509cde2624716725f6dae191fd609a498bb56a79fd7a3fa55a114",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/view_ring_ink0",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/view_crescent.png",
+   "guid": "d74a0e11a699e6156dff5077ce6edb1c",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    222.0,
+    833.0,
+    120.0,
+    120.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "the page's own op alone (crescent), stage px (rigs.mjs / rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    1,
+    2
+   ],
+   "content": [
+    119,
+    118
+   ],
+   "size": [
+    120,
+    120
+   ],
+   "sha256": "23f059b1004390ad010cccc047c6bb4f4954d6ce9f5a6a33ff6b3be4c038c006",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/view_crescent",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/recess/view_holo.png",
+   "guid": "02f1391e77aabf9ab2b47ec7f65c66a5",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": null,
+   "tag": "OWNER",
+   "dest": "tracked",
+   "files": [
+    "assets/v5/items/millennium_eye_ref_512.png"
+   ],
+   "why": [
+    {
+     "file": "assets/v5/items/millennium_eye_ref_512.png",
+     "tag": "OWNER",
+     "src": "his Millennium Eye image (~/Pictures/MillenniumEye.png) — PROVENANCE.txt l.95"
+    }
+   ],
+   "src": "menu.js:290 pictoSprite(picto, 128, '#9fd8ff')",
+   "layout": "port",
+   "size": [
+    128,
+    128
+   ],
+   "sha256": "06688a1658871db054e6d534bb133338e1bf4107e2ba17ba66ee5c8f8a62f794",
+   "file": "WRLDZ/MenuV6/Rigs/Port/recess/view_holo",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/keystone/A.png",
+   "guid": "ba14af88944aee874b80d34229e3039b",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:293 PK PuzzleRelic.A (bakeRelief + polishPuzzle)",
+   "layout": "port",
+   "pad": [
+    0,
+    1
+   ],
+   "content": [
+    360,
+    339
+   ],
+   "size": [
+    360,
+    340
+   ],
+   "sha256": "4588ed5bd57566e29f3846e06f66725cdee8b60abc3bb0770a7bf03f8331f3ca",
+   "file": "WRLDZ/MenuV6/Rigs/Port/keystone/A",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/keystone/B.png",
+   "guid": "397f11f840cda386957cde9127bdfd92",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:293 PK PuzzleRelic.B (the torch-flicker lighting)",
+   "layout": "port",
+   "pad": [
+    0,
+    1
+   ],
+   "content": [
+    360,
+    339
+   ],
+   "size": [
+    360,
+    340
+   ],
+   "sha256": "9d79f111073db122d103331ff0f96a8e4e8473e542496c49730d701973b571bb",
+   "file": "WRLDZ/MenuV6/Rigs/Port/keystone/B",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/keystone/emiB.png",
+   "guid": "538ea4eef14d271a406305decf42d0cb",
+   "kind": "sprite",
+   "imp": "soft",
+   "ppu": 200,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:293 PK PuzzleRelic.emiB (blurred emissive + emissive)",
+   "layout": "port",
+   "pad": [
+    0,
+    1
+   ],
+   "content": [
+    360,
+    339
+   ],
+   "size": [
+    360,
+    340
+   ],
+   "sha256": "e659bbc55fe6656831ab2860c780b632257268728cefd984728ec2693ea749df",
+   "file": "WRLDZ/MenuV6/Rigs/Port/keystone/emiB",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/keystone/shadow.png",
+   "guid": "a19f25bd34deeb18518d31eefd2e011b",
+   "kind": "sprite",
+   "imp": "soft",
+   "ppu": 200,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:293 PK PuzzleRelic.shadow (blurred silhouette)",
+   "layout": "port",
+   "pad": [
+    0,
+    1
+   ],
+   "content": [
+    440,
+    419
+   ],
+   "size": [
+    440,
+    420
+   ],
+   "sha256": "ba4b05a86b2bad3af4dbc7e34bb32246795c5cb023f58782f1e8c27241451181",
+   "file": "WRLDZ/MenuV6/Rigs/Port/keystone/shadow",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/keystone/glint.png",
+   "guid": "1b974cade6eb2de6de6302633e0a463b",
+   "kind": "sheet",
+   "imp": "soft",
+   "ppu": 100,
+   "rect": [
+    464.0,
+    981.0,
+    152.0,
+    127.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "src": "menu.js:837 + relics.js:209-210: the glint op alone per phase (rig_extra.mjs)",
+   "layout": "port",
+   "size": [
+    1560,
+    792
+   ],
+   "sha256": "ecf05276d28133e4c6ae4b139a496abce3c1340b0fc0a5ec7d941db3724df273",
+   "file": "WRLDZ/MenuV6/Rigs/Port/keystone/glint"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/ring/ring.png",
+   "guid": "58b651bd3f817f3b265a36f2d4385107",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:295 ringSprite(s) (anime_relics_v6.js:35, 2x)",
+   "layout": "port",
+   "pad": [
+    1,
+    1
+   ],
+   "content": [
+    403,
+    403
+   ],
+   "size": [
+    404,
+    404
+   ],
+   "sha256": "c3825898ed3cf4ac31479f5f81800794fe4f5e1bb04578bca30c80644fbb742a",
+   "file": "WRLDZ/MenuV6/Rigs/Port/ring/ring",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/ring/pointer.png",
+   "guid": "fd877b2778583705cf87c6260f5374a3",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 300,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:295 pointerSpriteSpectral(s) (relics.js:325, 3x)",
+   "layout": "port",
+   "pad": [
+    2,
+    1
+   ],
+   "content": [
+    114,
+    235
+   ],
+   "size": [
+    116,
+    236
+   ],
+   "sha256": "92713490b927205b9f2d3bbcf566defd6d0b3f88537433efbcc17e75b2ecfda7",
+   "file": "WRLDZ/MenuV6/Rigs/Port/ring/pointer",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/ring/membrane.png",
+   "guid": "2cf117055b0dd2ed102d62d66ea05dfd",
+   "kind": "sprite",
+   "imp": "soft",
+   "ppu": 200,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "relics.js:345 the membrane gradient at I = 1, 2x",
+   "layout": "port",
+   "size": [
+    280,
+    280
+   ],
+   "sha256": "14b0615d39e2e5bb3f55c9c56aaf9c5ca689f425f6815d99325d4f43f7e60357",
+   "file": "WRLDZ/MenuV6/Rigs/Port/ring/membrane",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/ring/rim_arc.png",
+   "guid": "7467edf4e17cabeb16c45bd5b20fc1bb",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "relics.js:349 the rim highlight arc(0 -> .7) at alpha 1, 2x",
+   "layout": "port",
+   "size": [
+    288,
+    288
+   ],
+   "sha256": "e293dfcbab473bdc0d822be9fafe2785c122852e89bf747b737928f36335f240",
+   "file": "WRLDZ/MenuV6/Rigs/Port/ring/rim_arc",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6Local/Rigs/Port/box/full.png",
+   "guid": "c2efd7c4edda69fbf4b330bf129ed429",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": null,
+   "tag": "OWNER-licence-unknown",
+   "dest": "local",
+   "files": [
+    "assets/v6/box6/P150_full.png"
+   ],
+   "why": [
+    {
+     "file": "assets/v6/box6/P150_full.png",
+     "tag": "OWNER-licence-unknown",
+     "src": "toon / Cycles renders of the owner's golden Puzzle-box STL print kit (uploader / licence unknown) — PROVENANCE_v6.md l.23-35; local per BUILD_PLAN D7"
+    }
+   ],
+   "src": "hybrid/v6/assets/v6/box6/P150_full.png (the box6 P150 set, anime_box_v6.js:22; copied)",
+   "layout": "port",
+   "pad": [
+    1,
+    3
+   ],
+   "content": [
+    427,
+    321
+   ],
+   "size": [
+    428,
+    324
+   ],
+   "sha256": "cdee8030e1867b2913cf2880c427fd74bd08fe1fd33d6b69c672d8c26195ac80",
+   "file": "WRLDZ/MenuV6Local/Rigs/Port/box/full"
+  },
+  {
+   "path": "MenuV6Local/Rigs/Port/box/body.png",
+   "guid": "1f5993df2ea53d894b00c2c529424cf2",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": null,
+   "tag": "OWNER-licence-unknown",
+   "dest": "local",
+   "files": [
+    "assets/v6/box6/P150_body.png"
+   ],
+   "why": [
+    {
+     "file": "assets/v6/box6/P150_body.png",
+     "tag": "OWNER-licence-unknown",
+     "src": "toon / Cycles renders of the owner's golden Puzzle-box STL print kit (uploader / licence unknown) — PROVENANCE_v6.md l.23-35; local per BUILD_PLAN D7"
+    }
+   ],
+   "src": "hybrid/v6/assets/v6/box6/P150_body.png (the box6 P150 set, anime_box_v6.js:22; copied)",
+   "layout": "port",
+   "pad": [
+    1,
+    3
+   ],
+   "content": [
+    427,
+    321
+   ],
+   "size": [
+    428,
+    324
+   ],
+   "sha256": "fd83c782b4f467622373eacd768fcb23cb49e3d4b2eb6fd0b6683d09efaa18f6",
+   "file": "WRLDZ/MenuV6Local/Rigs/Port/box/body"
+  },
+  {
+   "path": "MenuV6Local/Rigs/Port/box/lid.png",
+   "guid": "f97e521be403cc2d829eb92b0fdd24f7",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": null,
+   "tag": "OWNER-licence-unknown",
+   "dest": "local",
+   "files": [
+    "assets/v6/box6/P150_lid.png"
+   ],
+   "why": [
+    {
+     "file": "assets/v6/box6/P150_lid.png",
+     "tag": "OWNER-licence-unknown",
+     "src": "toon / Cycles renders of the owner's golden Puzzle-box STL print kit (uploader / licence unknown) — PROVENANCE_v6.md l.23-35; local per BUILD_PLAN D7"
+    }
+   ],
+   "src": "hybrid/v6/assets/v6/box6/P150_lid.png (the box6 P150 set, anime_box_v6.js:22; copied)",
+   "layout": "port",
+   "pad": [
+    1,
+    3
+   ],
+   "content": [
+    427,
+    321
+   ],
+   "size": [
+    428,
+    324
+   ],
+   "sha256": "4b79ad96d5e061c8e31d8c2f0a78aa830a8f8f350cb53279e74a74e591198da7",
+   "file": "WRLDZ/MenuV6Local/Rigs/Port/box/lid"
+  },
+  {
+   "path": "MenuV6Local/Rigs/Port/box/eye.png",
+   "guid": "6885034ad269cff459a4cac23a557b39",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": null,
+   "tag": "OWNER-licence-unknown",
+   "dest": "local",
+   "files": [
+    "assets/v6/box6/P150_eye.png"
+   ],
+   "why": [
+    {
+     "file": "assets/v6/box6/P150_eye.png",
+     "tag": "OWNER-licence-unknown",
+     "src": "toon / Cycles renders of the owner's golden Puzzle-box STL print kit (uploader / licence unknown) — PROVENANCE_v6.md l.23-35; local per BUILD_PLAN D7"
+    }
+   ],
+   "src": "hybrid/v6/assets/v6/box6/P150_eye.png (the box6 P150 set, anime_box_v6.js:22; copied)",
+   "layout": "port",
+   "pad": [
+    1,
+    0
+   ],
+   "content": [
+    427,
+    320
+   ],
+   "size": [
+    428,
+    320
+   ],
+   "sha256": "d59b2297dfef947ff6b1ea3eb51968c3d6ab3373345e56b4ff6b327c8aea8382",
+   "file": "WRLDZ/MenuV6Local/Rigs/Port/box/eye"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/niche/sky.png",
+   "guid": "50c1d6b474bd091a0338037c11708ba1",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:143-163 the skyline (layer 0) + drawKCTower + the front buildings (layer 1), 2x",
+   "layout": "port",
+   "pad": [
+    0,
+    2
+   ],
+   "content": [
+    304,
+    246
+   ],
+   "size": [
+    304,
+    248
+   ],
+   "sha256": "ca760262ee50a4e050dc2e94bef809bda751fb24253ff302abb835228d1658a4",
+   "file": "WRLDZ/MenuV6/Rigs/Port/niche/sky",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/niche/frame.png",
+   "guid": "9c14cefd541d479f56327982af4ea5eb",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:164-174 the false-door frame (jambs, drum, gold rules, hieroglyph columns), 2x, with the niche cut out",
+   "layout": "port",
+   "size": [
+    412,
+    332
+   ],
+   "sha256": "8bd21884015ee095b5ac86f8d02962a2c0863dd9fe195c435ce7869121c24143",
+   "file": "WRLDZ/MenuV6/Rigs/Port/niche/frame",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/niche/skygrad.png",
+   "guid": "daefe3579d40882061fc56f53d0a99c8",
+   "kind": "sprite",
+   "imp": "soft",
+   "ppu": 200,
+   "rect": [
+    27.0,
+    41.0,
+    152.0,
+    124.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:186-219 cityDoor.draw, segment skygrad alone (labelled twin of makeCityDoor), 2x",
+   "layout": "port",
+   "pad": [
+    0,
+    2
+   ],
+   "content": [
+    304,
+    246
+   ],
+   "size": [
+    304,
+    248
+   ],
+   "sha256": "f8f93048fb70ec19ce1f0bc5007d0fe93bc429de9ed7182ebf52b63be2a667ea",
+   "file": "WRLDZ/MenuV6/Rigs/Port/niche/skygrad",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/niche/horizon.png",
+   "guid": "f10674fe4724e4d21403992725239248",
+   "kind": "sprite",
+   "imp": "soft",
+   "ppu": 200,
+   "rect": [
+    27.0,
+    109.0,
+    152.0,
+    32.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:186-219 cityDoor.draw, segment horizon alone (labelled twin of makeCityDoor), 2x",
+   "layout": "port",
+   "pad": [
+    0,
+    3
+   ],
+   "content": [
+    304,
+    61
+   ],
+   "size": [
+    304,
+    64
+   ],
+   "sha256": "9256834dee30acc125bf9b380236b0b616a823c06ad823d261e8044a30fe3184",
+   "file": "WRLDZ/MenuV6/Rigs/Port/niche/horizon",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/niche/shadow.png",
+   "guid": "cb0494ceed5df349994c9c5a32e579cf",
+   "kind": "sprite",
+   "imp": "soft",
+   "ppu": 200,
+   "rect": [
+    27.0,
+    41.0,
+    152.0,
+    8.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:186-219 cityDoor.draw, segment shadow alone (labelled twin of makeCityDoor), 2x",
+   "layout": "port",
+   "size": [
+    304,
+    16
+   ],
+   "sha256": "85ae078c413090b5eefad9908b56f7042c3f0c2a0df25963539371475507f1b0",
+   "file": "WRLDZ/MenuV6/Rigs/Port/niche/shadow",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/niche/blimp.png",
+   "guid": "5c5ee24816e9e06a1a1ca88a2dc48b95",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    94.5,
+    61.0,
+    16.0,
+    8.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:201-208 the blimp segment without its drawImage (the SPR.red nose light) at t = (nw / 2 + 15) / 3.2 (mid-niche, unclipped), 2x canvas",
+   "layout": "port",
+   "pad": [
+    0,
+    2
+   ],
+   "content": [
+    32,
+    14
+   ],
+   "size": [
+    32,
+    16
+   ],
+   "sha256": "378c70b5c76e529ffb8578dd0eb47a94791617ee2f05100c6abec90136b0010e",
+   "file": "WRLDZ/MenuV6/Rigs/Port/niche/blimp",
+   "provenanceRun": "no clean twin (copied file / generated in both)"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/niche/sliver.png",
+   "guid": "68187d9e11d8e65ab686cd498b0df8cf",
+   "kind": "sheet",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    39.5,
+    88.0,
+    19.5,
+    29.0
+   ],
+   "tag": "OWNER",
+   "dest": "tracked",
+   "files": [
+    "assets/v6/eye_owner/lid_up.png",
+    "assets/v6/eye_owner/lid_lo.png",
+    "assets/v6/eye_owner/socket.png",
+    "assets/v6/eye_owner/ball.png"
+   ],
+   "src": "umbrax.js:371-372 drawTearSliver over Tear 0 (his eye in the rip), 34 phases of its .55 s window, 60 Hz (rigs_lib.sliverFrame)",
+   "layout": "port",
+   "size": [
+    484,
+    256
+   ],
+   "sha256": "fdfa2d78a44c0469d05fd61e441a66bc670fcfae3da3c31f9f96478acbdd243c",
+   "file": "WRLDZ/MenuV6/Rigs/Port/niche/sliver"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/niche/ring.png",
+   "guid": "a43b2b8a2c1d6d4d2cb58dc854db0358",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:175 niche ringSprite(s) (anime_relics_v6.js:35, 2x)",
+   "layout": "port",
+   "pad": [
+    1,
+    1
+   ],
+   "content": [
+    187,
+    187
+   ],
+   "size": [
+    188,
+    188
+   ],
+   "sha256": "6b351ab84224cdaffbfce67c32fd7dfa6c8a3cd2f6e0f084d1681d59d855f7f9",
+   "file": "WRLDZ/MenuV6/Rigs/Port/niche/ring",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/niche/pointer.png",
+   "guid": "715e0031c7aaded32405f7d7b5cd5671",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 300,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:175 niche pointerSpriteSpectral(s) (relics.js:325, 3x)",
+   "layout": "port",
+   "pad": [
+    1,
+    2
+   ],
+   "content": [
+    71,
+    114
+   ],
+   "size": [
+    72,
+    116
+   ],
+   "sha256": "d12c6212f37e14573c69219129c2da6f13459881c360c0b7e573d3a437a86183",
+   "file": "WRLDZ/MenuV6/Rigs/Port/niche/pointer",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/niche/membrane.png",
+   "guid": "b90a89db5d3bceae8d27ed158e3f5962",
+   "kind": "sprite",
+   "imp": "soft",
+   "ppu": 200,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "relics.js:345 the membrane gradient at I = 1, 2x",
+   "layout": "port",
+   "size": [
+    116,
+    116
+   ],
+   "sha256": "ae79bf7614bb588c66f56dcf3c3bffbd91dbc3d447e2799900255d3ab78ede3f",
+   "file": "WRLDZ/MenuV6/Rigs/Port/niche/membrane",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/niche/rim_arc.png",
+   "guid": "23ec1a69df35be7fec5c676e0278947d",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "relics.js:349 the rim highlight arc(0 -> .7) at alpha 1, 2x",
+   "layout": "port",
+   "size": [
+    120,
+    120
+   ],
+   "sha256": "3c652ecb9b0d13bdeeea26e7d0aee1bd3e2f74dcd4a7c73e41685408de739468",
+   "file": "WRLDZ/MenuV6/Rigs/Port/niche/rim_arc",
+   "provenanceRun": "full == clean"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/breach/crack_glow.png",
+   "guid": "df1ad2141d9bc9c2870becf7dff2842c",
+   "kind": "sprite",
+   "imp": "soft",
+   "ppu": 100,
+   "rect": [
+    86,
+    526,
+    924.0,
+    1132.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "src": "anime_menu_v6.js:67 the full-strength canvas (P0 / P1b bakes.mjs dump)",
+   "layout": "port",
+   "pad": [
+    1,
+    0
+   ],
+   "content": [
+    923,
+    1132
+   ],
+   "size": [
+    924,
+    1132
+   ],
+   "sha256": "1ff70705166c6c0989fa85add3c2de2a02fb9b5a359caf296a7de1d37a21dbce",
+   "file": "WRLDZ/MenuV6/Rigs/Port/breach/crack_glow"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/breach/fissure_glow.png",
+   "guid": "9ca22b5539cba4b937a8437b41d74aa2",
+   "kind": "sprite",
+   "imp": "soft",
+   "ppu": 100,
+   "rect": [
+    288,
+    1675,
+    484,
+    96
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "src": "anime_menu_v6.js:78 the full-strength canvas (P0 / P1b bakes.mjs dump)",
+   "layout": "port",
+   "size": [
+    484,
+    96
+   ],
+   "sha256": "8f078586dba5560c6eda4f2e1b679036fd36ff5cebcc208e3f0b7cad06d187bb",
+   "file": "WRLDZ/MenuV6/Rigs/Port/breach/fissure_glow"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/dom/quit_plate_rest.png",
+   "guid": "81a3c258cf14d70805a153b617805858",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    841.0,
+    2185.0,
+    198.0,
+    80.0
+   ],
+   "border": [
+    14,
+    20,
+    18,
+    16
+   ],
+   "nine": true,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "src": "anime_v6.css:64-65 .quit:hover (rest), CDP CSS.forcePseudoState, isolated at dsf 2 (rig_extra.mjs)",
+   "layout": "port",
+   "size": [
+    396,
+    160
+   ],
+   "sha256": "cd55a8880cf7792ad9e5e764ea154e7e7e49f8935ed58e630a67d5c978d4b6cb",
+   "file": "WRLDZ/MenuV6/Rigs/Port/dom/quit_plate_rest"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/dom/quit_plate_hover.png",
+   "guid": "8518c973f34d401f4bc7a91f60d1e4dd",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    841.0,
+    2185.0,
+    198.0,
+    80.0
+   ],
+   "border": [
+    14,
+    20,
+    18,
+    16
+   ],
+   "nine": true,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "src": "anime_v6.css:64-65 .quit:hover (hover), CDP CSS.forcePseudoState, isolated at dsf 2 (rig_extra.mjs)",
+   "layout": "port",
+   "size": [
+    396,
+    160
+   ],
+   "sha256": "d1f6dc4af6e0e583b4c13663edfecff45a87275ada07f36b12c3e7abb41757d9",
+   "file": "WRLDZ/MenuV6/Rigs/Port/dom/quit_plate_hover"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/dom/niche_frame_rest.png",
+   "guid": "35088e5160442c3c912a62805dd103e5",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    588.5,
+    1807.5,
+    222.0,
+    182.0
+   ],
+   "border": [
+    15,
+    17,
+    17,
+    15
+   ],
+   "nine": true,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "src": "anime_v6.css:59 .wmap:hover .niche (rest), CDP CSS.forcePseudoState, isolated at dsf 2 (rig_extra.mjs)",
+   "layout": "port",
+   "pad": [
+    2,
+    2
+   ],
+   "content": [
+    442,
+    362
+   ],
+   "size": [
+    444,
+    364
+   ],
+   "sha256": "28c6f1fc9395db6d820c2e1bf8f67e35eb728a9d9623f67e8f370185d38a4dc6",
+   "file": "WRLDZ/MenuV6/Rigs/Port/dom/niche_frame_rest"
+  },
+  {
+   "path": "MenuV6/Rigs/Port/dom/niche_frame_hover.png",
+   "guid": "6b030a297ee035759db419dd43877191",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    570.0,
+    1789.0,
+    258.0,
+    218.0
+   ],
+   "border": [
+    85,
+    85,
+    85,
+    85
+   ],
+   "nine": true,
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "src": "anime_v6.css:59 .wmap:hover .niche (hover), CDP CSS.forcePseudoState, isolated at dsf 2 (rig_extra.mjs)",
+   "layout": "port",
+   "size": [
+    516,
+    436
+   ],
+   "sha256": "d957d1c27da433e65b5067c44f6d5b146de9b90c8a71820c393eb658e9b6105f",
+   "file": "WRLDZ/MenuV6/Rigs/Port/dom/niche_frame_hover"
+  },
+  {
+   "path": "MenuV6/Data/rigs_port.json",
+   "guid": "97a8b11f0db60e25c172a2f6c8f0f559",
+   "kind": "json",
+   "imp": "json",
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "p1b/rigs_assemble.py from rigs.mjs + rig_extra.mjs dumps",
+   "layout": "port",
+   "sha256": "76aa2c5ee823ef50a3311a42654f4198e6a144c9d492cc0bf91cd50310a636a0"
+  },
+  {
+   "path": "MenuV6/Data/manifest_rigs.json",
+   "guid": "efe6e719d7ec921fcd4502cdd13348bd",
+   "kind": "json",
+   "imp": "json",
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "p1b/rigs_assemble.py"
+  }
+ ]
+}

@@ -37,6 +37,7 @@ namespace WRLDZ.UI.MenuV6
 
         public string DeckName;              // null = no deck box
         public int DeckMain = -1;
+        public int[] DeckCards;              // the first 3 main-deck cards (the box's hover cards, P1b)
         public int DeckMin = TcgRules.MainDeckMin;
         public int StartingLp;
 
@@ -150,6 +151,12 @@ namespace WRLDZ.UI.MenuV6
                 var box = inv.deckBoxes[i];
                 s.DeckName = box.name;
                 s.DeckMain = box.main?.Length ?? 0;
+                if (box.main != null && box.main.Length > 0)
+                {
+                    var n = Math.Min(3, box.main.Length);
+                    s.DeckCards = new int[n];
+                    for (var k = 0; k < n; k++) s.DeckCards[k] = box.main[k];
+                }
             }
             catch (Exception ex)
             {

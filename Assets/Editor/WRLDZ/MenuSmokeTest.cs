@@ -140,6 +140,13 @@ namespace WRLDZ.EditorTools
                             throw new Exception("v6 path not taken: " + MenuV6Stage.WhyNot(MenuLayoutKind.Landscape));
                         RequireMainMenu(menu.MenuCanvas, MainMenuV6Labels);
                     });
+                    if (MenuV6Stage.HasArt(MenuLayoutKind.Portrait))
+                        WithHub("HubSmokeV6LocalPort", 1080, 2340, menu =>
+                        {
+                            if (!menu.IsMenuV6)
+                                throw new Exception("portrait v6 path not taken: " + MenuV6Stage.WhyNot(MenuLayoutKind.Portrait));
+                            RequireMainMenu(menu.MenuCanvas, MainMenuV6Labels);
+                        });
                 }
                 finally
                 {
@@ -149,13 +156,16 @@ namespace WRLDZ.EditorTools
             });
             Check("Main menu v6 builder with no art does not throw; the hub falls back", () =>
             {
-                RectTransform canvas = null;
+                RectTransform canvas = null, canvasPort = null;
                 try
                 {
                     MenuV6Art.ForceNoArt = true;
                     canvas = WrldzTheme.Canvas("MenuV6NoArtCanvas", 50, aspect: true);
                     MenuV6Stage.Build(canvas, new MenuV6Stage.Handlers(), MenuLayoutKind.Landscape);
                     RequireMainMenu(canvas, MainMenuV6Labels);
+                    canvasPort = WrldzTheme.Canvas("MenuV6NoArtCanvasPort", 50, aspect: true);
+                    MenuV6Stage.Build(canvasPort, new MenuV6Stage.Handlers(), MenuLayoutKind.Portrait);
+                    RequireMainMenu(canvasPort, MainMenuV6Labels);
                     WithHub("HubSmokeV6NoArt", 1920, 1080, menu =>
                     {
                         if (menu.IsMenuV6) throw new Exception("v6 path taken with no art");
@@ -167,15 +177,71 @@ namespace WRLDZ.EditorTools
                     MenuV6Art.ForceNoArt = false;
                     MenuV6Art.ClearCache();
                     if (canvas != null) UnityEngine.Object.DestroyImmediate(canvas.gameObject);
+                    if (canvasPort != null) UnityEngine.Object.DestroyImmediate(canvasPort.gameObject);
                 }
             });
+            // P1b: the portrait plan builds the Stone too (its first cut); the legacy portrait menu stays the fallback.
+            Check("Main menu v6 portrait Stone: labels, Tiles, control names (1080x2340)", () =>
+            {
+                if (!MenuV6Stage.HasArt(MenuLayoutKind.Portrait))
+                    throw new Exception("portrait v6 art missing under Resources/" + MenuV6Art.Root + " (the P1b art set is not installed)");
+                WithHub("HubSmokeV6Port", 1080, 2340, menu =>
+                {
+                    if (!menu.IsMenuV6)
+                        throw new Exception("portrait v6 path not taken: " + MenuV6Stage.WhyNot(MenuLayoutKind.Portrait));
+                    RequireMainMenu(menu.MenuCanvas, MainMenuV6Labels);
+                    foreach (var n in MainMenuControls)
+                        if (FindNamed(menu.MenuCanvas, n) == null)
+                            throw new Exception("control " + n + " missing");
+                });
+            });
+            // P1b: every idle rig builds in both plans (none keeps its P1a still; the box needs the local renders), and every
+            // control's hover / press state draws without throwing.
+            Check("Main menu v6 rigs build and every hover / press state draws (1920x1080, 1080x2340)", () =>
+            {
+                foreach (var (w, h, kind) in new[] { (1920, 1080, MenuLayoutKind.Landscape), (1080, 2340, MenuLayoutKind.Portrait) })
+                {
+                    if (!MenuV6Stage.HasArt(kind)) throw new Exception(kind + " v6 art missing");
+                    WithHub("HubSmokeV6Rigs", w, h, menu =>
+                    {
+                        var stone = menu.Stone;
+                        if (stone == null) throw new Exception(kind + ": v6 path not taken");
+                        if (stone.Life == null) throw new Exception(kind + ": no MenuV6Life");
+                        var kept = new System.Collections.Generic.List<string>(stone.RigsKept);
+                        var boxLocal = MenuV6Art.HasLocal(kind == MenuLayoutKind.Landscape
+                            ? MenuV6Art.LocalRoot + "Rigs/Land/box/full" : MenuV6Art.LocalRoot + "Rigs/Port/box/full");
+                        if (!boxLocal) kept.Remove("box");
+                        if (kept.Count > 0) throw new Exception(kind + ": rigs kept the P1a still: " + string.Join(", ", kept));
+                        foreach (var n in new[] { "Hero", "Dest_DECK", "Dest_BAG", "Dest_STORY", "Dest_BAZAAR", "Tert_VIEW", "Tert_SET", "MapBack", "Quit", "DeckPlaque", "RingEcho" })
+                        {
+                            if (!stone.ForceState(n, 0.12, double.NaN)) throw new Exception(kind + ": no hover state for " + n);
+                            stone.ForceState(n, 1.0, 0.05);
+                            stone.ForceState(n, double.NaN, double.NaN);
+                        }
+
+                        if (stone.Life.Dropped.Count > 0)
+                            throw new Exception(kind + ": rigs threw while drawing: " + string.Join(", ", stone.Life.Dropped));
+                    });
+                }
+            });
+            // The legacy portrait menu (the fallback when the v6 path is off: kill switch, no art, a build error) is today's
+            // menu unchanged. The check keeps its P1a name (the landing compares names with a baseline run); since P1b the
+            // portrait default is the v6 Stone, so the fallback is reached with the test-only MenuV6Stage.ForceLegacy.
             Check("Main menu portrait (1080x2340) is today's legacy menu", () =>
             {
-                WithHub("HubSmokeLegacy", 1080, 2340, menu =>
+                try
                 {
-                    if (menu.IsMenuV6) throw new Exception("portrait took the v6 path");
-                    RequireMainMenu(menu.MenuCanvas, MainMenuLegacyLabels);
-                });
+                    MenuV6Stage.ForceLegacy = true;
+                    WithHub("HubSmokeLegacy", 1080, 2340, menu =>
+                    {
+                        if (menu.IsMenuV6) throw new Exception("portrait took the v6 path with the v6 path off");
+                        RequireMainMenu(menu.MenuCanvas, MainMenuLegacyLabels);
+                    });
+                }
+                finally
+                {
+                    MenuV6Stage.ForceLegacy = false;
+                }
             });
 
             Check("DesktopLabApp.Open", () =>
@@ -704,7 +770,8 @@ namespace WRLDZ.EditorTools
                              "ZoneModePromptCanvas", "AvatarCustomizerUI",
                              "OwSmoke", "OverworldHudCanvas", "OverworldMapCanvas",
                              "HubSmokeV6", "HubSmokeV6Local", "HubSmokeV6NoArt", "HubSmokeLegacy",
-                             "MenuV6NoArtCanvas", "HubPropWorld"
+                             "MenuV6NoArtCanvas", "HubPropWorld", "HubSmokeV6LocalPort", "MenuV6NoArtCanvasPort",
+                             "HubSmokeV6Port", "HubSmokeV6Rigs"
                          })
                     DestroyNamed(n);
             }

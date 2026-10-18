@@ -23,9 +23,10 @@ namespace WRLDZ.EditorTools
     /// <item><b>WRLDZ → Menus → Play Main Menu</b>: one Play straight into <c>Assets/Scenes/MainMenu.unity</c>
     /// (EditorSceneManager.playModeStartScene, cleared again when Play ends), so nobody sits through the boot.</item>
     /// <item><see cref="StartSession"/>: ONE scripted Play session (every Play entry reloads the domain here): the
-    /// 1920×1080 still at a frozen 2.8 s with a rect dump, the route table of every control (v6 and legacy), a 10 s
-    /// frame sequence of the idle (30 fps, written by this tool), the 1080×2340 legacy fallback, then WORLD MAP → the
-    /// Overworld. It restores the owner's Game view size and leaves Play. It writes <c>outDir/session.done</c> or
+    /// 1920×1080 still at a frozen 2.8 s with a rect dump, P1b's hover / press / voice stills (the page's own state
+    /// shots), the route table of every control, a 10 s frame sequence of the idle (30 fps, written by this tool), the
+    /// 1080×2340 v6 first cut with its stills and routes, the 1080×2340 legacy fallback (MenuV6Stage.ForceLegacy) and its
+    /// routes (v6 == legacy on every shared control, both plans), then WORLD MAP → the Overworld. It restores the owner's Game view size and leaves Play. It writes <c>outDir/session.done</c> or
     /// <c>outDir/session.failed</c> when Play has ended (ueval.py capture polls for them).</item>
     /// </list>
     /// Every file is written synchronously on the main thread to an absolute path outside the project (never under
@@ -46,7 +47,7 @@ namespace WRLDZ.EditorTools
         const string KResult = K + "Result";
         const string KPrevSize = K + "PrevSizeIndex";
         const string KAdded = K + "AddedSizes";
-        const double WatchdogSeconds = 240.0;
+        const double WatchdogSeconds = 480.0;
         const string RunnerName = "MenuV6CaptureRunner";
 
         static MenuV6Capture()
@@ -335,8 +336,10 @@ namespace WRLDZ.EditorTools
             }
 
             var screen0 = Screen.width + "x" + Screen.height;
+            var routesPort = new SortedDictionary<string, string>();
 
-            // 2. landscape 1920×1080: still at a frozen 2.8 s, rects, routes, the 10 s idle sequence
+            // 2. landscape 1920×1080: still at a frozen 2.8 s, rects, the hover / press / voice stills (P1b), routes, the
+            //    10 s idle sequence
             yield return SetSize(1920, 1080);
             menu = Rebuild();
             yield return Wait(1.4f);
@@ -351,6 +354,8 @@ namespace WRLDZ.EditorTools
             yield return new WaitForEndOfFrame();
             Shot("land_1920x1080_t2.8", 1);
             Rects("land_1920x1080_t2.8", menu);
+            Rigs("land", menu);
+            yield return States("land", menu);
             yield return Routes(menu, routesV6);
 
             menu = Rebuild();   // routes may leave a sheet behind: start the recording from a clean build
@@ -368,14 +373,42 @@ namespace WRLDZ.EditorTools
 
             MenuV6Clock.Unfreeze();
 
-            // 3. portrait 1080×2340: today's menu (the fallback), its rects and its route table
+            // 3. portrait 1080×2340: the v6 first cut (P1b) at a frozen 2.8 s, its rects, states and routes; then today's
+            //    legacy menu (the fallback, reached with the test-only ForceLegacy) and its routes
             yield return SetSize(1080, 2340);
             menu = Rebuild();
+            yield return Wait(1.4f);
+            if (!menu.IsMenuV6)
+            {
+                ok = false;
+                fail = (fail == null ? "" : fail + "; ") + "1080x2340 built the legacy menu: " + MenuV6Stage.WhyNot(MenuAspect.Current);
+            }
+
+            MenuV6Clock.Freeze(2.8f);
+            yield return null;
+            yield return new WaitForEndOfFrame();
+            Shot("port_1080x2340_t2.8", 1);
+            Rects("port_1080x2340_t2.8", menu);
+            Rigs("port", menu);
+            yield return States("port", menu);
+            yield return Routes(menu, routesPort);
+            MenuV6Clock.Unfreeze();
+
+            MenuV6Stage.ForceLegacy = true;
+            try
+            {
+                menu = Rebuild();
+            }
+            finally
+            {
+                MenuV6Stage.ForceLegacy = false;
+            }
+
             yield return Wait(1.4f);
             if (menu.IsMenuV6)
             {
                 ok = false;
-                fail = (fail == null ? "" : fail + "; ") + "1080x2340 took the v6 path (expected the legacy menu)";
+                fail = (fail == null ? "" : fail + "; ") + "the forced legacy build took the v6 path";
             }
 
             yield return null;
@@ -386,11 +419,13 @@ namespace WRLDZ.EditorTools
 
             var same = new List<string>();
             var differ = new List<string>();
-            foreach (var kv in routesV6)
-            {
-                if (!routesLegacy.TryGetValue(kv.Key, out var leg)) continue;
-                (leg == kv.Value ? same : differ).Add(kv.Key + ": " + kv.Value + (leg == kv.Value ? "" : " vs legacy " + leg));
-            }
+            foreach (var (label, table) in new[] { ("land", routesV6), ("port", routesPort) })
+                foreach (var kv in table)
+                {
+                    if (!routesLegacy.TryGetValue(kv.Key, out var leg)) continue;
+                    if (leg == kv.Value) same.Add(label + " " + kv.Key + ": " + kv.Value);
+                    else differ.Add(label + " " + kv.Key + ": " + kv.Value + " vs legacy " + leg);
+                }
 
             if (differ.Count > 0)
             {
@@ -428,6 +463,8 @@ namespace WRLDZ.EditorTools
             j.Append(",\n  \"recording\": {\"dir\": ").Append(Q(seq)).Append(", \"fps\": ").Append(fps)
                 .Append(", \"t0\": 0, \"t1\": 10, \"scale\": 0.5, \"format\": \"jpg\"}");
             j.Append(",\n  \"routesV6\": ").Append(Map(routesV6));
+            j.Append(",\n  \"routesV6Port\": ").Append(Map(routesPort));
+            j.Append(",\n  \"rigs\": ").Append(Map(_rigs));
             j.Append(",\n  \"routesLegacy\": ").Append(Map(routesLegacy));
             j.Append(",\n  \"routesSame\": [").Append(string.Join(", ", same.ConvertAll(Q))).Append("]");
             j.Append(",\n  \"notes\": [").Append(string.Join(", ", _notes.ConvertAll(Q))).Append("]");
@@ -479,6 +516,75 @@ namespace WRLDZ.EditorTools
             var menu = host.AddComponent<DuelDiskMenuUI>();
             menu.Build();
             return menu;
+        }
+
+        readonly SortedDictionary<string, string> _rigs = new();
+
+        /// <summary>Which rigs run and which kept their P1a still (session.json "rigs").</summary>
+        void Rigs(string layout, DuelDiskMenuUI menu)
+        {
+            var stone = menu != null ? menu.Stone : null;
+            if (stone == null || stone.Life == null)
+            {
+                _rigs[layout] = "no v6 stage";
+                return;
+            }
+
+            var names = new List<string>();
+            foreach (var r in stone.Life.Rigs) names.Add(r.Name);
+            _rigs[layout] = "running: " + string.Join(" ", names) + (stone.RigsKept.Count > 0 ? "; kept the P1a still: " + string.Join(" ", stone.RigsKept) : "");
+        }
+
+        // the page's full-page state shots (out_p1b/rigs/<layout>/shots): every control hovered (settled), two presses
+        // (one recess, the door) 0.1 s old, and THE PHARAOH'S VOICE at u .2 / .9 / 1.5 / 2.0 of its typing cycle.
+        // QUIT (the DOM hover plate) and the Ring echo (glow + sway) have no page shot: they are shot too, so every hover
+        // state the owner can reach has a still (checked by eye against the page's hover rules).
+        static readonly (string control, string id)[] HoverShots =
+        {
+            ("Dest_DECK", "deck"), ("Dest_BAG", "bag"), ("Dest_STORY", "story"), ("Dest_BAZAAR", "bazaar"), ("Tert_VIEW", "view"),
+            ("Tert_SET", "set"), ("Hero", "door"), ("DeckPlaque", "box"), ("MapBack", "map"), ("Quit", "quit"),
+            ("RingEcho", "ring")
+        };
+
+        IEnumerator States(string layout, DuelDiskMenuUI menu)
+        {
+            var stone = menu != null ? menu.Stone : null;
+            if (stone == null) yield break;
+            MenuV6Clock.Freeze(2.8f);
+            foreach (var (control, id) in HoverShots)
+            {
+                if (!stone.ForceState(control, 9, double.NaN))
+                {
+                    _notes.Add(layout + " hover " + control + ": no state");
+                    continue;
+                }
+
+                yield return Wait(0.5f);   // the CSS transitions run on wall-clock time (the page's shots wait 450 ms)
+                yield return new WaitForEndOfFrame();
+                Shot(layout + "_hov_" + id + "_t2.8", 1);
+                stone.ForceState(control, double.NaN, double.NaN);
+            }
+
+            foreach (var (control, id) in new[] { ("Dest_DECK", "deck"), ("Hero", "door") })
+            {
+                if (!stone.ForceState(control, 9, 0.1)) continue;
+                yield return Wait(0.5f);
+                yield return new WaitForEndOfFrame();
+                Shot(layout + "_press_" + id + "_a0.10_t2.8", 1);
+                stone.ForceState(control, double.NaN, double.NaN);
+            }
+
+            yield return Wait(0.5f);
+            foreach (var u in new[] { 0.2f, 0.9f, 1.5f, 2.0f })
+            {
+                MenuV6Clock.Freeze(28f + u);
+                yield return null;
+                yield return new WaitForEndOfFrame();
+                Shot(layout + "_voice_u" + u.ToString("0.000", CultureInfo.InvariantCulture), 1);
+            }
+
+            MenuV6Clock.Freeze(2.8f);
+            yield return null;
         }
 
         IEnumerator Routes(DuelDiskMenuUI menu, IDictionary<string, string> table)

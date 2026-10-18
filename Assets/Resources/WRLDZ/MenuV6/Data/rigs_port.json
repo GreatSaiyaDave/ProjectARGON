@@ -1,0 +1,7998 @@
+{
+ "version": 1,
+ "layout": "port",
+ "page": "landscape.html",
+ "hash": "portrait&demo=0&",
+ "t": 2.8,
+ "stage": {
+  "W": 1080,
+  "H": 2340,
+  "k": 1.4,
+  "cx": 540,
+  "cy": 1098,
+  "torch": {
+   "x": 50,
+   "y": 560,
+   "sconce": true
+  }
+ },
+ "units": "stage px (origin top-left, y down) unless a part says canvas px; a part with ppu 200 is a 2x sprite (100 px per 100 stage px x 2)",
+ "conventions": {
+  "drawSpr": "core.js:121 drawSpr(g, spr, x, y, size, a): a size x size quad centred on (x, y), alpha clamp(a, 0, 1), skipped at a <= .003",
+  "additive": "'lighter' = additive (UI additive material, or premultiplied One-One); every other part is straight alpha over",
+  "carries": "a part exported from the page at its rest alpha carries that alpha in its pixels: Unity alpha = formula alpha / carries",
+  "hovVal": "menu.js:547-548: pointerenter / pointerleave set {from: current value, to: 1 | 0, t0: now}; v(t) = lerp(from, to, eOut((t - t0) / .2))",
+  "easings": "core.js:11-18 (ported in P1a MenuV6Clock: clamp, lerp, sstep, seg, eOut, eIn, eIO, eBack, win); hash2 core.js:20",
+  "pythonPort": "unity_build/export/p1b/rigs_check.py is the executable reference of every formula below (it redraws the page from these parts)"
+ },
+ "common": {
+  "spr_gold": {
+   "file": "WRLDZ/MenuV6/Rigs/Common/spr_gold",
+   "size": [
+    64,
+    64
+   ],
+   "src": "core.js:115 SPR.gold = glowSprite(...) (radial gradient, 64 px)"
+  },
+  "spr_goldHot": {
+   "file": "WRLDZ/MenuV6/Rigs/Common/spr_goldHot",
+   "size": [
+    64,
+    64
+   ],
+   "src": "core.js:115 SPR.goldHot = glowSprite(...) (radial gradient, 64 px)"
+  },
+  "spr_blue": {
+   "file": "WRLDZ/MenuV6/Rigs/Common/spr_blue",
+   "size": [
+    64,
+    64
+   ],
+   "src": "core.js:115 SPR.blue = glowSprite(...) (radial gradient, 64 px)"
+  },
+  "spr_blueHot": {
+   "file": "WRLDZ/MenuV6/Rigs/Common/spr_blueHot",
+   "size": [
+    64,
+    64
+   ],
+   "src": "core.js:115 SPR.blueHot = glowSprite(...) (radial gradient, 64 px)"
+  },
+  "spr_ame": {
+   "file": "WRLDZ/MenuV6/Rigs/Common/spr_ame",
+   "size": [
+    64,
+    64
+   ],
+   "src": "core.js:115 SPR.ame = glowSprite(...) (radial gradient, 64 px)"
+  },
+  "spr_ember": {
+   "file": "WRLDZ/MenuV6/Rigs/Common/spr_ember",
+   "size": [
+    32,
+    32
+   ],
+   "src": "core.js:115 SPR.ember = glowSprite(...) (radial gradient, 64 px)"
+  },
+  "spr_fire": {
+   "file": "WRLDZ/MenuV6/Rigs/Common/spr_fire",
+   "size": [
+    64,
+    64
+   ],
+   "src": "core.js:115 SPR.fire = glowSprite(...) (radial gradient, 64 px)"
+  },
+  "spr_fireDeep": {
+   "file": "WRLDZ/MenuV6/Rigs/Common/spr_fireDeep",
+   "size": [
+    64,
+    64
+   ],
+   "src": "core.js:115 SPR.fireDeep = glowSprite(...) (radial gradient, 64 px)"
+  },
+  "spr_white": {
+   "file": "WRLDZ/MenuV6/Rigs/Common/spr_white",
+   "size": [
+    64,
+    64
+   ],
+   "src": "core.js:115 SPR.white = glowSprite(...) (radial gradient, 64 px)"
+  },
+  "spr_red": {
+   "file": "WRLDZ/MenuV6/Rigs/Common/spr_red",
+   "size": [
+    64,
+    64
+   ],
+   "src": "core.js:115 SPR.red = glowSprite(...) (radial gradient, 64 px)"
+  },
+  "spr_violet": {
+   "file": "WRLDZ/MenuV6/Rigs/Common/spr_violet",
+   "size": [
+    64,
+    64
+   ],
+   "src": "core.js:115 SPR.violet = glowSprite(...) (radial gradient, 64 px)"
+  },
+  "sparkle": {
+   "file": "WRLDZ/MenuV6/Rigs/Common/sparkle",
+   "size": [
+    72,
+    72
+   ],
+   "src": "anime_v6.js:220 anSparkle(g, 36, 36, 32, #FFFFFF, 0)",
+   "s": 32,
+   "centre": [
+    36,
+    36
+   ],
+   "tint": "white unit: multiply by the colour (premultiplied)"
+  }
+ },
+ "rigs": {
+  "recess": {
+   "src": "anime_menu_v6.js:97-127 drawRecesses; menu.js:739-745 recLit; :1037 the label .lit",
+   "ids": {
+    "set": {
+     "centre": [
+      798.3222580074932,
+      892.0054102217485
+     ],
+     "rr": 58.8,
+     "picto": "ankhGear",
+     "minor": true,
+     "parts": {
+      "glow": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/set_glow",
+       "rect": [
+        699.0,
+        792.0,
+        200.0,
+        200.0
+       ],
+       "carries": 0.3,
+       "blend": "additive",
+       "scaleAbout": [
+        798.3222580074932,
+        892.0054102217485
+       ],
+       "tag": "OWN"
+      },
+      "hot1": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/set_hot1",
+       "rect": [
+        758.0,
+        849.0,
+        80.0,
+        80.0
+       ],
+       "carries": 1.0,
+       "blend": "alpha",
+       "scaleAbout": [
+        798.3222580074932,
+        889.2054102217486
+       ],
+       "tag": "OWN"
+      },
+      "ring_base": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/set_ring_base",
+       "rect": [
+        728.0,
+        822.0,
+        144.0,
+        140.0
+       ],
+       "carries": 1,
+       "blend": "alpha",
+       "scaleAbout": [
+        798.3222580074932,
+        892.0054102217485
+       ],
+       "tag": "OWN"
+      },
+      "ring_sh": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/set_ring_sh",
+       "rect": [
+        739.0,
+        854.0,
+        132.0,
+        108.0
+       ],
+       "carries": 1,
+       "blend": "alpha",
+       "scaleAbout": [
+        798.3222580074932,
+        892.0054102217485
+       ],
+       "tag": "OWN"
+      },
+      "ring_hi": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/set_ring_hi",
+       "rect": [
+        730.0,
+        822.0,
+        96.0,
+        60.0
+       ],
+       "carries": 1,
+       "blend": "alpha",
+       "scaleAbout": [
+        798.3222580074932,
+        892.0054102217485
+       ],
+       "tag": "OWN"
+      },
+      "ring_ink1": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/set_ring_ink1",
+       "rect": [
+        727.0,
+        820.0,
+        144.0,
+        144.0
+       ],
+       "carries": 1,
+       "blend": "alpha",
+       "scaleAbout": [
+        798.3222580074932,
+        892.0054102217485
+       ],
+       "tag": "OWN"
+      },
+      "ring_ink0": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/set_ring_ink0",
+       "rect": [
+        733.0,
+        826.0,
+        132.0,
+        132.0
+       ],
+       "carries": 1,
+       "blend": "alpha",
+       "scaleAbout": [
+        798.3222580074932,
+        892.0054102217485
+       ],
+       "tag": "OWN"
+      },
+      "crescent": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/set_crescent",
+       "rect": [
+        739.0,
+        833.0,
+        120.0,
+        120.0
+       ],
+       "carries": 0.55,
+       "blend": "alpha",
+       "scaleAbout": [
+        798.3222580074932,
+        892.0054102217485
+       ],
+       "tag": "OWN"
+      },
+      "holo": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/set_holo",
+       "size": [
+        128,
+        128
+       ],
+       "blend": "additive",
+       "tag": "OWN"
+      }
+     }
+    },
+    "bazaar": {
+     "centre": [
+      862.1125155499104,
+      1171.5369793104715
+     ],
+     "rr": 70,
+     "picto": "offering",
+     "minor": false,
+     "parts": {
+      "glow": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/bazaar_glow",
+       "rect": [
+        743.0,
+        1053.0,
+        240.0,
+        240.0
+       ],
+       "carries": 0.3,
+       "blend": "additive",
+       "scaleAbout": [
+        862.1125155499104,
+        1171.5369793104715
+       ],
+       "tag": "OWN"
+      },
+      "hot1": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/bazaar_hot1",
+       "rect": [
+        836.0,
+        1124.0,
+        52.0,
+        96.0
+       ],
+       "carries": 1.0,
+       "blend": "alpha",
+       "scaleAbout": [
+        862.1125155499104,
+        1168.7369793104715
+       ],
+       "tag": "OWNER"
+      },
+      "ring_base": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/bazaar_ring_base",
+       "rect": [
+        781.0,
+        1090.0,
+        164.0,
+        164.0
+       ],
+       "carries": 1,
+       "blend": "alpha",
+       "scaleAbout": [
+        862.1125155499104,
+        1171.5369793104715
+       ],
+       "tag": "OWN"
+      },
+      "ring_sh": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/bazaar_ring_sh",
+       "rect": [
+        793.0,
+        1127.0,
+        152.0,
+        128.0
+       ],
+       "carries": 1,
+       "blend": "alpha",
+       "scaleAbout": [
+        862.1125155499104,
+        1171.5369793104715
+       ],
+       "tag": "OWN"
+      },
+      "ring_hi": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/bazaar_ring_hi",
+       "rect": [
+        782.0,
+        1091.0,
+        112.0,
+        68.0
+       ],
+       "carries": 1,
+       "blend": "alpha",
+       "scaleAbout": [
+        862.1125155499104,
+        1171.5369793104715
+       ],
+       "tag": "OWN"
+      },
+      "ring_ink1": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/bazaar_ring_ink1",
+       "rect": [
+        779.0,
+        1089.0,
+        168.0,
+        168.0
+       ],
+       "carries": 1,
+       "blend": "alpha",
+       "scaleAbout": [
+        862.1125155499104,
+        1171.5369793104715
+       ],
+       "tag": "OWN"
+      },
+      "ring_ink0": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/bazaar_ring_ink0",
+       "rect": [
+        785.0,
+        1095.0,
+        156.0,
+        156.0
+       ],
+       "carries": 1,
+       "blend": "alpha",
+       "scaleAbout": [
+        862.1125155499104,
+        1171.5369793104715
+       ],
+       "tag": "OWN"
+      },
+      "crescent": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/bazaar_crescent",
+       "rect": [
+        792.0,
+        1101.0,
+        144.0,
+        144.0
+       ],
+       "carries": 0.55,
+       "blend": "alpha",
+       "scaleAbout": [
+        862.1125155499104,
+        1171.5369793104715
+       ],
+       "tag": "OWN"
+      },
+      "holo": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/bazaar_holo",
+       "size": [
+        128,
+        128
+       ],
+       "blend": "additive",
+       "tag": "OWNER"
+      }
+     }
+    },
+    "bag": {
+     "centre": [
+      683.3329205829696,
+      1395.69083606513
+     ],
+     "rr": 70,
+     "picto": "satchel",
+     "minor": false,
+     "parts": {
+      "glow": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/bag_glow",
+       "rect": [
+        565.0,
+        1277.0,
+        240.0,
+        240.0
+       ],
+       "carries": 0.3,
+       "blend": "additive",
+       "scaleAbout": [
+        683.3329205829696,
+        1395.69083606513
+       ],
+       "tag": "OWN"
+      },
+      "hot1": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/bag_hot1",
+       "rect": [
+        643.0,
+        1352.0,
+        84.0,
+        84.0
+       ],
+       "carries": 1.0,
+       "blend": "alpha",
+       "scaleAbout": [
+        683.3329205829696,
+        1392.89083606513
+       ],
+       "tag": "OWN"
+      },
+      "ring_base": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/bag_ring_base",
+       "rect": [
+        602.0,
+        1314.0,
+        164.0,
+        164.0
+       ],
+       "carries": 1,
+       "blend": "alpha",
+       "scaleAbout": [
+        683.3329205829696,
+        1395.69083606513
+       ],
+       "tag": "OWN"
+      },
+      "ring_sh": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/bag_ring_sh",
+       "rect": [
+        615.0,
+        1352.0,
+        152.0,
+        128.0
+       ],
+       "carries": 1,
+       "blend": "alpha",
+       "scaleAbout": [
+        683.3329205829696,
+        1395.69083606513
+       ],
+       "tag": "OWN"
+      },
+      "ring_hi": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/bag_ring_hi",
+       "rect": [
+        604.0,
+        1315.0,
+        108.0,
+        68.0
+       ],
+       "carries": 1,
+       "blend": "alpha",
+       "scaleAbout": [
+        683.3329205829696,
+        1395.69083606513
+       ],
+       "tag": "OWN"
+      },
+      "ring_ink1": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/bag_ring_ink1",
+       "rect": [
+        600.0,
+        1313.0,
+        168.0,
+        168.0
+       ],
+       "carries": 1,
+       "blend": "alpha",
+       "scaleAbout": [
+        683.3329205829696,
+        1395.69083606513
+       ],
+       "tag": "OWN"
+      },
+      "ring_ink0": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/bag_ring_ink0",
+       "rect": [
+        606.0,
+        1319.0,
+        156.0,
+        156.0
+       ],
+       "carries": 1,
+       "blend": "alpha",
+       "scaleAbout": [
+        683.3329205829696,
+        1395.69083606513
+       ],
+       "tag": "OWN"
+      },
+      "crescent": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/bag_crescent",
+       "rect": [
+        613.0,
+        1325.0,
+        144.0,
+        144.0
+       ],
+       "carries": 0.55,
+       "blend": "alpha",
+       "scaleAbout": [
+        683.3329205829696,
+        1395.69083606513
+       ],
+       "tag": "OWN"
+      },
+      "holo": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/bag_holo",
+       "size": [
+        128,
+        128
+       ],
+       "blend": "additive",
+       "tag": "OWN"
+      }
+     }
+    },
+    "deck": {
+     "centre": [
+      396.66707941703044,
+      1395.69083606513
+     ],
+     "rr": 70,
+     "picto": "naos",
+     "minor": false,
+     "parts": {
+      "glow": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/deck_glow",
+       "rect": [
+        278.0,
+        1277.0,
+        240.0,
+        240.0
+       ],
+       "carries": 0.3,
+       "blend": "additive",
+       "scaleAbout": [
+        396.66707941703044,
+        1395.69083606513
+       ],
+       "tag": "OWN"
+      },
+      "hot1": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/deck_hot1",
+       "rect": [
+        354.0,
+        1351.0,
+        88.0,
+        92.0
+       ],
+       "carries": 1.0,
+       "blend": "alpha",
+       "scaleAbout": [
+        396.66707941703044,
+        1392.89083606513
+       ],
+       "tag": "OWN"
+      },
+      "ring_base": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/deck_ring_base",
+       "rect": [
+        315.0,
+        1314.0,
+        164.0,
+        164.0
+       ],
+       "carries": 1,
+       "blend": "alpha",
+       "scaleAbout": [
+        396.66707941703044,
+        1395.69083606513
+       ],
+       "tag": "OWN"
+      },
+      "ring_sh": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/deck_ring_sh",
+       "rect": [
+        328.0,
+        1352.0,
+        152.0,
+        128.0
+       ],
+       "carries": 1,
+       "blend": "alpha",
+       "scaleAbout": [
+        396.66707941703044,
+        1395.69083606513
+       ],
+       "tag": "OWN"
+      },
+      "ring_hi": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/deck_ring_hi",
+       "rect": [
+        317.0,
+        1315.0,
+        112.0,
+        68.0
+       ],
+       "carries": 1,
+       "blend": "alpha",
+       "scaleAbout": [
+        396.66707941703044,
+        1395.69083606513
+       ],
+       "tag": "OWN"
+      },
+      "ring_ink1": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/deck_ring_ink1",
+       "rect": [
+        314.0,
+        1313.0,
+        168.0,
+        168.0
+       ],
+       "carries": 1,
+       "blend": "alpha",
+       "scaleAbout": [
+        396.66707941703044,
+        1395.69083606513
+       ],
+       "tag": "OWN"
+      },
+      "ring_ink0": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/deck_ring_ink0",
+       "rect": [
+        320.0,
+        1319.0,
+        156.0,
+        156.0
+       ],
+       "carries": 1,
+       "blend": "alpha",
+       "scaleAbout": [
+        396.66707941703044,
+        1395.69083606513
+       ],
+       "tag": "OWN"
+      },
+      "crescent": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/deck_crescent",
+       "rect": [
+        326.0,
+        1325.0,
+        144.0,
+        144.0
+       ],
+       "carries": 0.55,
+       "blend": "alpha",
+       "scaleAbout": [
+        396.66707941703044,
+        1395.69083606513
+       ],
+       "tag": "OWN"
+      },
+      "holo": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/deck_holo",
+       "size": [
+        128,
+        128
+       ],
+       "blend": "additive",
+       "tag": "OWN"
+      }
+     }
+    },
+    "story": {
+     "centre": [
+      217.88748445008963,
+      1171.5369793104717
+     ],
+     "rr": 70,
+     "picto": "stela",
+     "minor": false,
+     "parts": {
+      "glow": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/story_glow",
+       "rect": [
+        99.0,
+        1053.0,
+        240.0,
+        240.0
+       ],
+       "carries": 0.3,
+       "blend": "additive",
+       "scaleAbout": [
+        217.88748445008963,
+        1171.5369793104717
+       ],
+       "tag": "OWN"
+      },
+      "hot1": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/story_hot1",
+       "rect": [
+        187.0,
+        1124.0,
+        64.0,
+        96.0
+       ],
+       "carries": 1.0,
+       "blend": "alpha",
+       "scaleAbout": [
+        217.88748445008963,
+        1168.7369793104717
+       ],
+       "tag": "OWNER"
+      },
+      "ring_base": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/story_ring_base",
+       "rect": [
+        136.0,
+        1090.0,
+        164.0,
+        164.0
+       ],
+       "carries": 1,
+       "blend": "alpha",
+       "scaleAbout": [
+        217.88748445008963,
+        1171.5369793104717
+       ],
+       "tag": "OWN"
+      },
+      "ring_sh": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/story_ring_sh",
+       "rect": [
+        149.0,
+        1127.0,
+        152.0,
+        128.0
+       ],
+       "carries": 1,
+       "blend": "alpha",
+       "scaleAbout": [
+        217.88748445008963,
+        1171.5369793104717
+       ],
+       "tag": "OWN"
+      },
+      "ring_hi": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/story_ring_hi",
+       "rect": [
+        138.0,
+        1091.0,
+        112.0,
+        68.0
+       ],
+       "carries": 1,
+       "blend": "alpha",
+       "scaleAbout": [
+        217.88748445008963,
+        1171.5369793104717
+       ],
+       "tag": "OWN"
+      },
+      "ring_ink1": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/story_ring_ink1",
+       "rect": [
+        135.0,
+        1089.0,
+        168.0,
+        168.0
+       ],
+       "carries": 1,
+       "blend": "alpha",
+       "scaleAbout": [
+        217.88748445008963,
+        1171.5369793104717
+       ],
+       "tag": "OWN"
+      },
+      "ring_ink0": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/story_ring_ink0",
+       "rect": [
+        141.0,
+        1095.0,
+        156.0,
+        156.0
+       ],
+       "carries": 1,
+       "blend": "alpha",
+       "scaleAbout": [
+        217.88748445008963,
+        1171.5369793104717
+       ],
+       "tag": "OWN"
+      },
+      "crescent": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/story_crescent",
+       "rect": [
+        147.0,
+        1101.0,
+        144.0,
+        144.0
+       ],
+       "carries": 0.55,
+       "blend": "alpha",
+       "scaleAbout": [
+        217.88748445008963,
+        1171.5369793104717
+       ],
+       "tag": "OWN"
+      },
+      "holo": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/story_holo",
+       "size": [
+        128,
+        128
+       ],
+       "blend": "additive",
+       "tag": "OWNER"
+      }
+     }
+    },
+    "view": {
+     "centre": [
+      281.67774199250675,
+      892.0054102217485
+     ],
+     "rr": 58.8,
+     "picto": "wedjat",
+     "minor": true,
+     "parts": {
+      "glow": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/view_glow",
+       "rect": [
+        182.0,
+        792.0,
+        200.0,
+        200.0
+       ],
+       "carries": 0.3,
+       "blend": "additive",
+       "scaleAbout": [
+        281.67774199250675,
+        892.0054102217485
+       ],
+       "tag": "OWN"
+      },
+      "hot1": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/view_hot1",
+       "rect": [
+        248.0,
+        857.0,
+        68.0,
+        68.0
+       ],
+       "carries": 1.0,
+       "blend": "alpha",
+       "scaleAbout": [
+        281.67774199250675,
+        889.2054102217486
+       ],
+       "tag": "OWNER"
+      },
+      "ring_base": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/view_ring_base",
+       "rect": [
+        211.0,
+        822.0,
+        144.0,
+        140.0
+       ],
+       "carries": 1,
+       "blend": "alpha",
+       "scaleAbout": [
+        281.67774199250675,
+        892.0054102217485
+       ],
+       "tag": "OWN"
+      },
+      "ring_sh": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/view_ring_sh",
+       "rect": [
+        222.0,
+        854.0,
+        132.0,
+        108.0
+       ],
+       "carries": 1,
+       "blend": "alpha",
+       "scaleAbout": [
+        281.67774199250675,
+        892.0054102217485
+       ],
+       "tag": "OWN"
+      },
+      "ring_hi": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/view_ring_hi",
+       "rect": [
+        213.0,
+        822.0,
+        96.0,
+        60.0
+       ],
+       "carries": 1,
+       "blend": "alpha",
+       "scaleAbout": [
+        281.67774199250675,
+        892.0054102217485
+       ],
+       "tag": "OWN"
+      },
+      "ring_ink1": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/view_ring_ink1",
+       "rect": [
+        210.0,
+        820.0,
+        144.0,
+        144.0
+       ],
+       "carries": 1,
+       "blend": "alpha",
+       "scaleAbout": [
+        281.67774199250675,
+        892.0054102217485
+       ],
+       "tag": "OWN"
+      },
+      "ring_ink0": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/view_ring_ink0",
+       "rect": [
+        216.0,
+        826.0,
+        132.0,
+        132.0
+       ],
+       "carries": 1,
+       "blend": "alpha",
+       "scaleAbout": [
+        281.67774199250675,
+        892.0054102217485
+       ],
+       "tag": "OWN"
+      },
+      "crescent": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/view_crescent",
+       "rect": [
+        222.0,
+        833.0,
+        120.0,
+        120.0
+       ],
+       "carries": 0.55,
+       "blend": "alpha",
+       "scaleAbout": [
+        281.67774199250675,
+        892.0054102217485
+       ],
+       "tag": "OWN"
+      },
+      "holo": {
+       "file": "WRLDZ/MenuV6/Rigs/Port/recess/view_holo",
+       "size": [
+        128,
+        128
+       ],
+       "blend": "additive",
+       "tag": "OWNER"
+      }
+     }
+    }
+   },
+   "label": {
+    "off": {
+     "t": {
+      "color": "rgb(239, 230, 208)",
+      "letterSpacing": "6.4px",
+      "textShadow": "rgba(0, 0, 0, 0.85) 0px 2px 0px",
+      "fontSize": "32px"
+     },
+     "s": {
+      "color": "rgb(217, 198, 142)",
+      "opacity": "0.82",
+      "fontSize": "24px"
+     }
+    },
+    "on": {
+     "t": {
+      "color": "rgb(255, 243, 196)",
+      "letterSpacing": "8px",
+      "textShadow": "rgba(0, 0, 0, 0.85) 0px 2px 0px",
+      "fontSize": "32px"
+     },
+     "s": {
+      "color": "rgb(159, 230, 255)",
+      "opacity": "1",
+      "fontSize": "24px"
+     }
+    },
+    "transitions": {
+     "t": "color 0.2s, letter-spacing 0.25s cubic-bezier(0.16, 1, 0.3, 1), text-shadow 0.2s",
+     "s": "opacity 0.2s, color 0.2s"
+    },
+    "rule": "menu.js:1037: .lit while v > .45 (v = the hover value, menu.js:739); the CSS transitions above ease the switch"
+   },
+   "state": {
+    "v": "hovVal(id, t) (conventions.hovVal)",
+    "pk": "press: pk = max(0, 1 - (t - tDown) / .45) (menu.js:741; pointerdown sets tDown)",
+    "k": "clamp(v + .6 pk, 0, 1.6) (the entrance term ent is 0 after t 2.35 s)",
+    "pop": "1 + .06 eBack(clamp(k, 0, 1)) - .02 win(k, 0, .05, .1, .2)",
+    "ea": "1 (E.stone after 1.1 s)"
+   },
+   "draw": [
+    {
+     "when": "k > .01",
+     "part": "glow",
+     "alpha": "min(1, k)",
+     "scale": "pop / 1.06 about scaleAbout",
+     "blend": "additive",
+     "page": "drawSpr(SPR.goldHot, x, y, rr 3.2 pop, .3 min(1, k))"
+    },
+    {
+     "when": "k > .01",
+     "part": "hot1",
+     "alpha": "clamp(.85 k, 0, 1)",
+     "scale": "pop / 1.06 about (x, y - 2k)",
+     "page": "drawImage(spr6[id], x - sz/2, y - 2k - sz/2, sz, sz), sz = rr 1.32 / .86 pop"
+    },
+    {
+     "when": "k > .01",
+     "part": [
+      "ring_base",
+      "ring_sh",
+      "ring_hi",
+      "ring_ink1",
+      "ring_ink0"
+     ],
+     "alpha": "clamp(k, 0, 1) EACH (five ops; one sprite at alpha k would be wrong while k < 1)",
+     "scale": "(rr + 5.5 K pop) / (rr + 5.5 K 1.06) about the centre (anRing radii rr + 3.5 K pop / rr + 7.5 K pop)",
+     "page": "anRing(g, x, y, rr + 3.5k pop, rr + 7.5k pop, AN.gold, 1.8k)"
+    },
+    {
+     "when": "k > .01",
+     "sparkles": 3,
+     "for": "s2 in 0..2",
+     "an": "-2.3 + 1.9 s2 + .35 t",
+     "size": "sp = (4 + 3 sin(2.6 t + 2 s2)) K min(1, k) (drawn when sp > .5)",
+     "pos": "(x, y) + (rr + 12 K)(cos an, sin an)",
+     "colour": "s2 == 1 ? '#FFF1B8' : AN.gold.hi '#EDE49E'",
+     "rot": 0.3,
+     "alpha": "clamp(k, 0, 1)",
+     "sprite": "common.sparkle (unit s 32: scale sp / 32)"
+    },
+    {
+     "when": "hv = clamp(v, 0, 1) > .02",
+     "beam": "two additive quads: (x -/+ w0 f, y - .2 rr) and (x +/- w1 f, top), top = y - .55 rr - 26 K hv, w0 = .6 rr, w1 = .95 rr; f 1 rgba(51,184,232,.16 hv), f .55 rgba(159,230,255,.14 hv)"
+    },
+    {
+     "when": "hv > .02",
+     "part": "holo",
+     "rect": "(x - hs/2, top - hs/2 + 2 K sin(2.2 t), hs, hs), hs = 1.05 rr",
+     "alpha": ".7 hv",
+     "blend": "additive"
+    },
+    {
+     "when": "hv > .02",
+     "scanlines": "6 additive rects (x - hs/2, top - .55 hs + ((30 t + k2 hs / 6) mod hs), hs, 1), #9FE6FF, alpha .35 hv, k2 = 0..5"
+    },
+    {
+     "when": "pk > .01",
+     "part": "crescent",
+     "alpha": "inv = min(1, 1.6 pk)",
+     "page": "the bands invert (AN.basalt.deep at .55 inv, clipped to the recess)"
+    },
+    {
+     "when": "pk > .01",
+     "rays": "12 gold triangles AN.gold.hi: an = q/12 TAU + .13, r0 = rr (1.15 + .1 (q mod 3)), r1 = r0 + rr (.5 + .25 ((7q) mod 3)) (age < .05 ? 1 : 1 + 2 age) sh, ww = .07 rr; tip (r1, an), base (r0, an +/- ww / r0); alpha bk",
+     "age": "(1 - pk) .45",
+     "bk": "age < .05 ? 1 : 1 - clamp((age - .05) / .12, 0, 1)",
+     "sh": "eOut(clamp(age / .15, 0, 1))"
+    },
+    {
+     "when": "pk > .01",
+     "flash": "additive circle stroke, radius rr + (6 + 26 (1 - pk)) K, width 2.5 K, AN.holo.hi #9FE6FF, alpha .8 pk"
+    },
+    {
+     "label": "the .rl label: .lit while v > .45 (menu.js:1037): see label.off / label.on (+ CSS transitions)"
+    }
+   ]
+  },
+  "door": {
+   "src": "anime_menu_v6.js:131-139 drawDoor (rest / hover / press; the opening is P3)",
+   "centre": [
+    540,
+    1098
+   ],
+   "R0": 196,
+   "k": 1.4,
+   "note": "v6.3 at rest = the dashed crawl + the 5-slot sweep; the old rim breath / 6.2 s glint (menu.js:804-813) are replaced (anime_menu_v6.js:131 computes sw, unused)",
+   "draw": [
+    {
+     "dash": "additive circle stroke, radius R0 + 7 K, width 2 K, rgba(95,182,255,.75), dash [3 K, 7 K], dash offset -6 t (canvas: the pattern restarts at angle 0, clockwise): a ring mesh with u = arclength, dashes where ((s + 6 t) mod 10 K) < 3 K"
+    },
+    {
+     "when": "hov + press > .01",
+     "spr": "goldHot",
+     "at": "centre",
+     "size": "(R0 + 40 K) 2.3",
+     "alpha": ".22 hov + .35 press",
+     "blend": "additive"
+    },
+    {
+     "sweep": "zs = (t mod 5.2) / 1.6; slot k = 0..4: kk = win(zs, .16k, .16k + .12, .16k + .3, .16k + .5); when kk > .02: SPR.blue at centre + 118 K (cos an, sin an), an = (126 - 18k) deg, size 22 K, alpha .8 kk, additive"
+    },
+    {
+     "when": "hov > .01",
+     "sparkles": 4,
+     "an": "-2.4 + 1.6 s2 + .25 t",
+     "pos": "centre + (R0 + 16 K)(cos an, sin an)",
+     "size": "(5 + 3 sin(3 t + s2)) K",
+     "colour": "s2 odd ? '#FFF1B8' : '#EDE49E'",
+     "rot": 0,
+     "alpha": "hov"
+    },
+    {
+     "when": "press > .01",
+     "rays": "14 gold triangles AN.gold.hi: an = q/14 TAU, r0 = 1.12 R0, r1 = r0 + (R0 (1.5 + .12 (q mod 3)) - r0) sh, ww = .045 R0; alpha bk",
+     "age": "(1 - press) .4",
+     "press": "max(0, 1 - (t - tClick) / .4)",
+     "bk": "age < .05 ? 1 : 1 - clamp((age - .05) / .12, 0, 1)",
+     "sh": "eOut(clamp(age / .15, 0, 1))"
+    }
+   ],
+   "keystoneLink": "the door hover also lifts the keystone eye (+ .45 hovD) and recoils the breach tendrils (menu_v41.js:54: not exported, the breach stays the P1a still)"
+  },
+  "keystone": {
+   "src": "menu.js:832-841 drawKeystone (idle), relics.js:196-215 PuzzleRelic",
+   "K": [
+    540,
+    1044.8
+   ],
+   "origin": [
+    447.93600000000004,
+    949.376
+   ],
+   "drawWH": [
+    180,
+    169.5
+   ],
+   "shadowRect": [
+    430.93600000000004,
+    935.376,
+    220,
+    209.5
+   ],
+   "eyeC": [
+    532.0704000000001,
+    1031.36
+   ],
+   "iris": [
+    526.47936,
+    1026.1184
+   ],
+   "seamPts": [
+    [
+     486.85824,
+     1031.1987199999999
+    ],
+    [
+     578.2502400000001,
+     1031.1987199999999
+    ],
+    [
+     590.1312,
+     1021.60256
+    ]
+   ],
+   "wpx": 134.39999999999998,
+   "parts": {
+    "A": {
+     "file": "WRLDZ/MenuV6/Rigs/Port/keystone/A",
+     "size": [
+      360,
+      339
+     ],
+     "tag": "OWN"
+    },
+    "B": {
+     "file": "WRLDZ/MenuV6/Rigs/Port/keystone/B",
+     "size": [
+      360,
+      339
+     ],
+     "tag": "OWN"
+    },
+    "emiB": {
+     "file": "WRLDZ/MenuV6/Rigs/Port/keystone/emiB",
+     "size": [
+      360,
+      339
+     ],
+     "tag": "OWN"
+    },
+    "shadow": {
+     "file": "WRLDZ/MenuV6/Rigs/Port/keystone/shadow",
+     "size": [
+      440,
+      419
+     ],
+     "tag": "OWN"
+    }
+   },
+   "glint": {
+    "file": "WRLDZ/MenuV6/Rigs/Port/keystone/glint",
+    "rect": [
+     464.0,
+     981.0,
+     152.0,
+     127.0
+    ],
+    "cell": [
+     152,
+     127
+    ],
+    "pitch": [
+     156,
+     132
+    ],
+    "grid": [
+     10,
+     6
+    ],
+    "n": 54,
+    "frames": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "j": 0,
+      "phase": 0.009259259259259259,
+      "t": 5.008333333333334
+     },
+     {
+      "i": 1,
+      "x": 156,
+      "y": 0,
+      "j": 1,
+      "phase": 0.027777777777777776,
+      "t": 5.025
+     },
+     {
+      "i": 2,
+      "x": 312,
+      "y": 0,
+      "j": 2,
+      "phase": 0.046296296296296294,
+      "t": 5.041666666666667
+     },
+     {
+      "i": 3,
+      "x": 468,
+      "y": 0,
+      "j": 3,
+      "phase": 0.06481481481481481,
+      "t": 5.058333333333334
+     },
+     {
+      "i": 4,
+      "x": 624,
+      "y": 0,
+      "j": 4,
+      "phase": 0.08333333333333333,
+      "t": 5.075
+     },
+     {
+      "i": 5,
+      "x": 780,
+      "y": 0,
+      "j": 5,
+      "phase": 0.10185185185185185,
+      "t": 5.091666666666667
+     },
+     {
+      "i": 6,
+      "x": 936,
+      "y": 0,
+      "j": 6,
+      "phase": 0.12037037037037036,
+      "t": 5.108333333333333
+     },
+     {
+      "i": 7,
+      "x": 1092,
+      "y": 0,
+      "j": 7,
+      "phase": 0.1388888888888889,
+      "t": 5.125
+     },
+     {
+      "i": 8,
+      "x": 1248,
+      "y": 0,
+      "j": 8,
+      "phase": 0.1574074074074074,
+      "t": 5.141666666666667
+     },
+     {
+      "i": 9,
+      "x": 1404,
+      "y": 0,
+      "j": 9,
+      "phase": 0.17592592592592593,
+      "t": 5.158333333333333
+     },
+     {
+      "i": 10,
+      "x": 0,
+      "y": 132,
+      "j": 10,
+      "phase": 0.19444444444444445,
+      "t": 5.175
+     },
+     {
+      "i": 11,
+      "x": 156,
+      "y": 132,
+      "j": 11,
+      "phase": 0.21296296296296297,
+      "t": 5.191666666666666
+     },
+     {
+      "i": 12,
+      "x": 312,
+      "y": 132,
+      "j": 12,
+      "phase": 0.23148148148148148,
+      "t": 5.208333333333333
+     },
+     {
+      "i": 13,
+      "x": 468,
+      "y": 132,
+      "j": 13,
+      "phase": 0.25,
+      "t": 5.225
+     },
+     {
+      "i": 14,
+      "x": 624,
+      "y": 132,
+      "j": 14,
+      "phase": 0.26851851851851855,
+      "t": 5.241666666666667
+     },
+     {
+      "i": 15,
+      "x": 780,
+      "y": 132,
+      "j": 15,
+      "phase": 0.28703703703703703,
+      "t": 5.258333333333334
+     },
+     {
+      "i": 16,
+      "x": 936,
+      "y": 132,
+      "j": 16,
+      "phase": 0.3055555555555556,
+      "t": 5.275
+     },
+     {
+      "i": 17,
+      "x": 1092,
+      "y": 132,
+      "j": 17,
+      "phase": 0.32407407407407407,
+      "t": 5.291666666666667
+     },
+     {
+      "i": 18,
+      "x": 1248,
+      "y": 132,
+      "j": 18,
+      "phase": 0.3425925925925926,
+      "t": 5.308333333333334
+     },
+     {
+      "i": 19,
+      "x": 1404,
+      "y": 132,
+      "j": 19,
+      "phase": 0.3611111111111111,
+      "t": 5.325
+     },
+     {
+      "i": 20,
+      "x": 0,
+      "y": 264,
+      "j": 20,
+      "phase": 0.37962962962962965,
+      "t": 5.341666666666667
+     },
+     {
+      "i": 21,
+      "x": 156,
+      "y": 264,
+      "j": 21,
+      "phase": 0.39814814814814814,
+      "t": 5.358333333333333
+     },
+     {
+      "i": 22,
+      "x": 312,
+      "y": 264,
+      "j": 22,
+      "phase": 0.4166666666666667,
+      "t": 5.375
+     },
+     {
+      "i": 23,
+      "x": 468,
+      "y": 264,
+      "j": 23,
+      "phase": 0.4351851851851852,
+      "t": 5.391666666666667
+     },
+     {
+      "i": 24,
+      "x": 624,
+      "y": 264,
+      "j": 24,
+      "phase": 0.4537037037037037,
+      "t": 5.408333333333333
+     },
+     {
+      "i": 25,
+      "x": 780,
+      "y": 264,
+      "j": 25,
+      "phase": 0.4722222222222222,
+      "t": 5.425
+     },
+     {
+      "i": 26,
+      "x": 936,
+      "y": 264,
+      "j": 26,
+      "phase": 0.49074074074074076,
+      "t": 5.441666666666666
+     },
+     {
+      "i": 27,
+      "x": 1092,
+      "y": 264,
+      "j": 27,
+      "phase": 0.5092592592592593,
+      "t": 5.458333333333333
+     },
+     {
+      "i": 28,
+      "x": 1248,
+      "y": 264,
+      "j": 28,
+      "phase": 0.5277777777777778,
+      "t": 5.475
+     },
+     {
+      "i": 29,
+      "x": 1404,
+      "y": 264,
+      "j": 29,
+      "phase": 0.5462962962962963,
+      "t": 5.491666666666666
+     },
+     {
+      "i": 30,
+      "x": 0,
+      "y": 396,
+      "j": 30,
+      "phase": 0.5648148148148148,
+      "t": 5.508333333333333
+     },
+     {
+      "i": 31,
+      "x": 156,
+      "y": 396,
+      "j": 31,
+      "phase": 0.5833333333333334,
+      "t": 5.525
+     },
+     {
+      "i": 32,
+      "x": 312,
+      "y": 396,
+      "j": 32,
+      "phase": 0.6018518518518519,
+      "t": 5.541666666666667
+     },
+     {
+      "i": 33,
+      "x": 468,
+      "y": 396,
+      "j": 33,
+      "phase": 0.6203703703703703,
+      "t": 5.558333333333334
+     },
+     {
+      "i": 34,
+      "x": 624,
+      "y": 396,
+      "j": 34,
+      "phase": 0.6388888888888888,
+      "t": 5.575
+     },
+     {
+      "i": 35,
+      "x": 780,
+      "y": 396,
+      "j": 35,
+      "phase": 0.6574074074074074,
+      "t": 5.591666666666667
+     },
+     {
+      "i": 36,
+      "x": 936,
+      "y": 396,
+      "j": 36,
+      "phase": 0.6759259259259259,
+      "t": 5.608333333333333
+     },
+     {
+      "i": 37,
+      "x": 1092,
+      "y": 396,
+      "j": 37,
+      "phase": 0.6944444444444444,
+      "t": 5.625
+     },
+     {
+      "i": 38,
+      "x": 1248,
+      "y": 396,
+      "j": 38,
+      "phase": 0.7129629629629629,
+      "t": 5.641666666666667
+     },
+     {
+      "i": 39,
+      "x": 1404,
+      "y": 396,
+      "j": 39,
+      "phase": 0.7314814814814815,
+      "t": 5.658333333333333
+     },
+     {
+      "i": 40,
+      "x": 0,
+      "y": 528,
+      "j": 40,
+      "phase": 0.75,
+      "t": 5.675
+     },
+     {
+      "i": 41,
+      "x": 156,
+      "y": 528,
+      "j": 41,
+      "phase": 0.7685185185185185,
+      "t": 5.691666666666666
+     },
+     {
+      "i": 42,
+      "x": 312,
+      "y": 528,
+      "j": 42,
+      "phase": 0.7870370370370371,
+      "t": 5.708333333333333
+     },
+     {
+      "i": 43,
+      "x": 468,
+      "y": 528,
+      "j": 43,
+      "phase": 0.8055555555555556,
+      "t": 5.725
+     },
+     {
+      "i": 44,
+      "x": 624,
+      "y": 528,
+      "j": 44,
+      "phase": 0.8240740740740741,
+      "t": 5.741666666666667
+     },
+     {
+      "i": 45,
+      "x": 780,
+      "y": 528,
+      "j": 45,
+      "phase": 0.8425925925925926,
+      "t": 5.758333333333333
+     },
+     {
+      "i": 46,
+      "x": 936,
+      "y": 528,
+      "j": 46,
+      "phase": 0.8611111111111112,
+      "t": 5.775
+     },
+     {
+      "i": 47,
+      "x": 1092,
+      "y": 528,
+      "j": 47,
+      "phase": 0.8796296296296297,
+      "t": 5.791666666666667
+     },
+     {
+      "i": 48,
+      "x": 1248,
+      "y": 528,
+      "j": 48,
+      "phase": 0.8981481481481481,
+      "t": 5.808333333333334
+     },
+     {
+      "i": 49,
+      "x": 1404,
+      "y": 528,
+      "j": 49,
+      "phase": 0.9166666666666666,
+      "t": 5.825
+     },
+     {
+      "i": 50,
+      "x": 0,
+      "y": 660,
+      "j": 50,
+      "phase": 0.9351851851851852,
+      "t": 5.841666666666667
+     },
+     {
+      "i": 51,
+      "x": 156,
+      "y": 660,
+      "j": 51,
+      "phase": 0.9537037037037037,
+      "t": 5.858333333333333
+     },
+     {
+      "i": 52,
+      "x": 312,
+      "y": 660,
+      "j": 52,
+      "phase": 0.9722222222222222,
+      "t": 5.875
+     },
+     {
+      "i": 53,
+      "x": 468,
+      "y": 660,
+      "j": 53,
+      "phase": 0.9907407407407407,
+      "t": 5.891666666666667
+     }
+    ],
+    "ppu": 100,
+    "pick": "glint = ((t + 1.2) % 6.2) / .9; while glint in [0, 1): frame floor(glint * 54), additive, alpha 1 (menu.js:837, relics.js:209-210)"
+   },
+   "draw": [
+    {
+     "part": "shadow",
+     "rect": "shadowRect",
+     "alpha": 0.5
+    },
+    {
+     "part": "A",
+     "rect": "origin + drawWH",
+     "alpha": 1
+    },
+    {
+     "part": "B",
+     "alpha": "flick (torch.flick, schedules.json)"
+    },
+    {
+     "part": "emiB",
+     "blend": "additive",
+     "alpha": "min(1, ek), ek = clamp(eye, 0, 2), eye = .68 + .14 sin(1.1 t) + .45 hovDoor (+ a second pass at ek - 1 when ek > 1)"
+    },
+    {
+     "spr": "blue",
+     "at": "eyeC",
+     "size": "wpx .7",
+     "alpha": "ga x .22 ek",
+     "blend": "additive",
+     "ga": "relics.js never resets globalAlpha after the emissive passes and drawSpr multiplies it (core.js:121): ga = the last pass alpha = (ek > 1 ? ek - 1 : min(1, ek)) (a = 1); it also multiplies the hot point and the iris glint below"
+    },
+    {
+     "glint": "g = ((t + 1.2) mod 6.2) / .9; while g < 1: glint.frames[floor(54 g)] additive at glint.rect"
+    },
+    {
+     "hot": "h = ((t + 3.1) mod 7.5) / 1.3; while h < 1: SPR.goldHot at the polyline seamPts at u = h (len - 1), size 16, alpha ga x .8 sin(h pi), additive"
+    },
+    {
+     "iris": "i = (t mod 4.3) / .5; while i < 1: SPR.white at iris + (2, -1), size 12, alpha ga x .95 sin(i pi), additive"
+    }
+   ],
+   "replaces": "P1a keystone/over_f0, over_f1, add (the rest composites) once the rig runs"
+  },
+  "voice": {
+   "src": "menu.js:601-607 voiceState (no demo); :1000-1003 the line + its Puzzle; portrait :988-992 (the meter is the voice)",
+   "line": "“Duelist from beyond—interrupt this shadow!”",
+   "sel": ".voice .q",
+   "font": {
+    "family": "\"El Messiri\"",
+    "size": "25px",
+    "weight": "500",
+    "lineHeight": "33.75px",
+    "color": "rgb(232, 220, 192)",
+    "letterSpacing": "0.25px"
+   },
+   "qRect": {
+    "x": 222,
+    "y": 439.125,
+    "w": 506,
+    "h": 33.75
+   },
+   "typing": {
+    "rule": "u = (t - 6) mod 22 (t > 6): u < .36: the old line fades, opacity 1 - eIO(u / .32); u >= .36: the new line (the same text), chars shown = round(len typed), typed = clamp((u - .42) / 1.3, 0, 1); the hidden rest keeps its layout (opacity 0, wrldz.css:237); before t = 6 the whole line, opacity 1",
+    "glow": "k = win(u, 0, .4, 2.3, 2.8)",
+    "table": {
+     "t0": 28,
+     "rule": "u = (t - 6) mod 22 for t > 6 (n = floor((t - 6) / 22)); before t = 6 the line shows whole, opacity 1, k 0",
+     "table": "[u, chars shown, opacity of .q, k (Puzzle glow)] at every change, 60 Hz",
+     "rows": [
+      [
+       0,
+       44,
+       1,
+       0
+      ],
+      [
+       0.01667,
+       44,
+       0.999435,
+       0.005064
+      ],
+      [
+       0.03333,
+       44,
+       0.995479,
+       0.019676
+      ],
+      [
+       0.05,
+       44,
+       0.984741,
+       0.042969
+      ],
+      [
+       0.06667,
+       44,
+       0.963831,
+       0.074074
+      ],
+      [
+       0.08333,
+       44,
+       0.929357,
+       0.112124
+      ],
+      [
+       0.1,
+       44,
+       0.87793,
+       0.15625
+      ],
+      [
+       0.11667,
+       44,
+       0.806157,
+       0.205584
+      ],
+      [
+       0.13333,
+       44,
+       0.710648,
+       0.259259
+      ],
+      [
+       0.15,
+       44,
+       0.588013,
+       0.316406
+      ],
+      [
+       0.16667,
+       44,
+       0.440068,
+       0.376157
+      ],
+      [
+       0.18333,
+       44,
+       0.3116,
+       0.437645
+      ],
+      [
+       0.2,
+       44,
+       0.210938,
+       0.5
+      ],
+      [
+       0.21667,
+       44,
+       0.134689,
+       0.562355
+      ],
+      [
+       0.23333,
+       44,
+       0.079463,
+       0.623843
+      ],
+      [
+       0.25,
+       44,
+       0.04187,
+       0.683594
+      ],
+      [
+       0.26667,
+       44,
+       0.018519,
+       0.740741
+      ],
+      [
+       0.28333,
+       44,
+       0.006018,
+       0.794416
+      ],
+      [
+       0.3,
+       44,
+       0.000977,
+       0.84375
+      ],
+      [
+       0.31667,
+       44,
+       5e-06,
+       0.887876
+      ],
+      [
+       0.33333,
+       44,
+       0,
+       0.925926
+      ],
+      [
+       0.35,
+       44,
+       0,
+       0.957031
+      ],
+      [
+       0.36667,
+       0,
+       1,
+       0.980324
+      ],
+      [
+       0.38333,
+       0,
+       1,
+       0.994936
+      ],
+      [
+       0.4,
+       0,
+       1,
+       1
+      ],
+      [
+       0.45,
+       1,
+       1,
+       1
+      ],
+      [
+       0.46667,
+       2,
+       1,
+       1
+      ],
+      [
+       0.5,
+       3,
+       1,
+       1
+      ],
+      [
+       0.53333,
+       4,
+       1,
+       1
+      ],
+      [
+       0.56667,
+       5,
+       1,
+       1
+      ],
+      [
+       0.58333,
+       6,
+       1,
+       1
+      ],
+      [
+       0.61667,
+       7,
+       1,
+       1
+      ],
+      [
+       0.65,
+       8,
+       1,
+       1
+      ],
+      [
+       0.68333,
+       9,
+       1,
+       1
+      ],
+      [
+       0.71667,
+       10,
+       1,
+       1
+      ],
+      [
+       0.73333,
+       11,
+       1,
+       1
+      ],
+      [
+       0.76667,
+       12,
+       1,
+       1
+      ],
+      [
+       0.8,
+       13,
+       1,
+       1
+      ],
+      [
+       0.83333,
+       14,
+       1,
+       1
+      ],
+      [
+       0.85,
+       15,
+       1,
+       1
+      ],
+      [
+       0.88333,
+       16,
+       1,
+       1
+      ],
+      [
+       0.91667,
+       17,
+       1,
+       1
+      ],
+      [
+       0.95,
+       18,
+       1,
+       1
+      ],
+      [
+       0.96667,
+       19,
+       1,
+       1
+      ],
+      [
+       1,
+       20,
+       1,
+       1
+      ],
+      [
+       1.03333,
+       21,
+       1,
+       1
+      ],
+      [
+       1.06667,
+       22,
+       1,
+       1
+      ],
+      [
+       1.1,
+       23,
+       1,
+       1
+      ],
+      [
+       1.11667,
+       24,
+       1,
+       1
+      ],
+      [
+       1.15,
+       25,
+       1,
+       1
+      ],
+      [
+       1.18333,
+       26,
+       1,
+       1
+      ],
+      [
+       1.21667,
+       27,
+       1,
+       1
+      ],
+      [
+       1.23333,
+       28,
+       1,
+       1
+      ],
+      [
+       1.26667,
+       29,
+       1,
+       1
+      ],
+      [
+       1.3,
+       30,
+       1,
+       1
+      ],
+      [
+       1.33333,
+       31,
+       1,
+       1
+      ],
+      [
+       1.36667,
+       32,
+       1,
+       1
+      ],
+      [
+       1.38333,
+       33,
+       1,
+       1
+      ],
+      [
+       1.41667,
+       34,
+       1,
+       1
+      ],
+      [
+       1.45,
+       35,
+       1,
+       1
+      ],
+      [
+       1.48333,
+       36,
+       1,
+       1
+      ],
+      [
+       1.5,
+       37,
+       1,
+       1
+      ],
+      [
+       1.53333,
+       38,
+       1,
+       1
+      ],
+      [
+       1.56667,
+       39,
+       1,
+       1
+      ],
+      [
+       1.6,
+       40,
+       1,
+       1
+      ],
+      [
+       1.61667,
+       41,
+       1,
+       1
+      ],
+      [
+       1.65,
+       42,
+       1,
+       1
+      ],
+      [
+       1.68333,
+       43,
+       1,
+       1
+      ],
+      [
+       1.71667,
+       44,
+       1,
+       1
+      ],
+      [
+       2.31667,
+       44,
+       1,
+       0.996741
+      ],
+      [
+       2.33333,
+       44,
+       1,
+       0.987259
+      ],
+      [
+       2.35,
+       44,
+       1,
+       0.972
+      ],
+      [
+       2.36667,
+       44,
+       1,
+       0.951407
+      ],
+      [
+       2.38333,
+       44,
+       1,
+       0.925926
+      ],
+      [
+       2.4,
+       44,
+       1,
+       0.896
+      ],
+      [
+       2.41667,
+       44,
+       1,
+       0.862074
+      ],
+      [
+       2.43333,
+       44,
+       1,
+       0.824593
+      ],
+      [
+       2.45,
+       44,
+       1,
+       0.784
+      ],
+      [
+       2.46667,
+       44,
+       1,
+       0.740741
+      ],
+      [
+       2.48333,
+       44,
+       1,
+       0.695259
+      ],
+      [
+       2.5,
+       44,
+       1,
+       0.648
+      ],
+      [
+       2.51667,
+       44,
+       1,
+       0.599407
+      ],
+      [
+       2.53333,
+       44,
+       1,
+       0.549926
+      ],
+      [
+       2.55,
+       44,
+       1,
+       0.5
+      ],
+      [
+       2.56667,
+       44,
+       1,
+       0.450074
+      ],
+      [
+       2.58333,
+       44,
+       1,
+       0.400593
+      ],
+      [
+       2.6,
+       44,
+       1,
+       0.352
+      ],
+      [
+       2.61667,
+       44,
+       1,
+       0.304741
+      ],
+      [
+       2.63333,
+       44,
+       1,
+       0.259259
+      ],
+      [
+       2.65,
+       44,
+       1,
+       0.216
+      ],
+      [
+       2.66667,
+       44,
+       1,
+       0.175407
+      ],
+      [
+       2.68333,
+       44,
+       1,
+       0.137926
+      ],
+      [
+       2.7,
+       44,
+       1,
+       0.104
+      ],
+      [
+       2.71667,
+       44,
+       1,
+       0.074074
+      ],
+      [
+       2.73333,
+       44,
+       1,
+       0.048593
+      ],
+      [
+       2.75,
+       44,
+       1,
+       0.028
+      ],
+      [
+       2.76667,
+       44,
+       1,
+       0.012741
+      ],
+      [
+       2.78333,
+       44,
+       1,
+       0.003259
+      ],
+      [
+       2.8,
+       44,
+       1,
+       0
+      ]
+     ]
+    }
+   },
+   "note": "the page has ONE sourced line (Blueprint l.29); LINES[0] == LINES[1], so each 22 s cycle re-types the same line",
+   "pageLines": {
+    "t": 40,
+    "lines": [
+     {
+      "text": "“Duelist from beyond—interrupt this shadow!”",
+      "rect": [
+       222,
+       436.125,
+       506,
+       39
+      ]
+     }
+    ],
+    "box": {
+     "x": 222,
+     "y": 439.125,
+     "w": 506,
+     "h": 33.75
+    }
+   },
+   "pageLinesNote": "the page breaks the quote into these lines (stage px): P1a's Unity Text wrapped it to 3 (PROGRESS_p1aland, attempt 4): break where the page breaks",
+   "meter": {
+    "canvasRect": {
+     "x": 70,
+     "y": 396,
+     "w": 132,
+     "h": 120
+    },
+    "canvas": [
+     132,
+     120
+    ],
+    "a": [
+     69,
+     63
+    ],
+    "note": "portrait: the season meter is also the voice (menu.js:488): drawRays + SPR.gold under the meter while k > .01 (menu.js:991-992)",
+    "draw": [
+     "k > .01: drawRays(a.x + 2, a.y + 2, r .62 w, .55 k, t) + SPR.gold at a, size 1.2 w, alpha .35 k (additive), UNDER the meter",
+     "the meter sprite (layout_port meter variants)"
+    ],
+    "approx": "for n < 8 seated pieces the page also lifts their emissive by 1.2 k (relics.js:291 drawPieceAbs e = st.eye); not exported (n = 8 is exact; the lift is a small glow on a phone-size meter)"
+   }
+  },
+  "nut": {
+   "src": "core.js:476-489 drawNutTwinkle (all additive)",
+   "stars": [
+    [
+     27.176206303574144,
+     27.521707474440337,
+     4.329086541035212,
+     0.5693561427760869,
+     0
+    ],
+    [
+     200.07151929736136,
+     30.149979014135898,
+     4.671584238228388,
+     0.034512488869950175,
+     3
+    ],
+    [
+     430.32483314611017,
+     30.34788050260395,
+     9.58859653263353,
+     0.49770710547454655,
+     6
+    ],
+    [
+     579.4623678511009,
+     18.574869584012777,
+     5.5271574798971415,
+     0.8371098130010068,
+     9
+    ],
+    [
+     805.419158246182,
+     25.987593370117246,
+     6.780837076390163,
+     0.21693678735755384,
+     12
+    ],
+    [
+     986.5174970168621,
+     26.237625017296523,
+     6.375982751185075,
+     0.8949038852006197,
+     15
+    ],
+    [
+     209.57078463006764,
+     68.1188353742473,
+     10.395674718660302,
+     0.5713950172066689,
+     18
+    ],
+    [
+     377.0587440466508,
+     76.45347320856527,
+     10.35888387747109,
+     0.09283760190010071,
+     21
+    ],
+    [
+     568.4545721847564,
+     67.80217962535099,
+     8.33879104172811,
+     0.1450356573332101,
+     24
+    ],
+    [
+     784.3503509590403,
+     76.050690762233,
+     9.427528659836389,
+     0.6821133350022137,
+     27
+    ],
+    [
+     951.3140961470083,
+     68.28463178630919,
+     9.545237111812458,
+     0.9186446093954146,
+     30
+    ],
+    [
+     34.19920782353729,
+     125.25699379714209,
+     4.973228676617146,
+     0.47997037041932344,
+     33
+    ],
+    [
+     189.11172360442578,
+     114.87058044122534,
+     6.8663027248112485,
+     0.25198167911730707,
+     36
+    ],
+    [
+     411.69460210185497,
+     120.57967156730595,
+     6.993908189842478,
+     0.29187609045766294,
+     39
+    ],
+    [
+     580.7381115768105,
+     111.0311272531748,
+     7.592786694201641,
+     0.2528839590959251,
+     42
+    ],
+    [
+     867.6396931808442,
+     121.04276345837863,
+     7.5761922695674,
+     0.8676718529313803,
+     45
+    ],
+    [
+     1043.9945188116283,
+     121.45673368815335,
+     7.4744720793329185,
+     0.08628164418041706,
+     48
+    ],
+    [
+     167.40781274326145,
+     153.57713598785926,
+     6.196466747880914,
+     0.1061814387794584,
+     51
+    ],
+    [
+     382.6419198222458,
+     155.86569425892088,
+     9.598092877306044,
+     0.256106793647632,
+     54
+    ],
+    [
+     549.2848308550194,
+     171.13540225932377,
+     8.276159640681,
+     0.8508337812963873,
+     57
+    ],
+    [
+     726.6461099505425,
+     161.3967415766791,
+     7.681640383740888,
+     0.30847233906388283,
+     60
+    ],
+    [
+     194.2630767084658,
+     211.60698873437946,
+     8.918408379354515,
+     0.8227476684842259,
+     63
+    ],
+    [
+     477.3544937836006,
+     210.18940260102977,
+     8.96480245627463,
+     0.73172099981457,
+     66
+    ],
+    [
+     920.3050486648456,
+     213.3246368519031,
+     9.584308920940385,
+     0.2623442078474909,
+     69
+    ],
+    [
+     11,
+     408.2,
+     5.926086477354168,
+     0.958225667476654,
+     72
+    ],
+    [
+     1069,
+     486.59999999999997,
+     5.526379758283495,
+     0.7654894122388214,
+     75
+    ],
+    [
+     11,
+     567.8000000000001,
+     5.162796861246227,
+     0.5433712389785796,
+     78
+    ],
+    [
+     1069,
+     646.2000000000002,
+     5.5369613816365595,
+     0.827784838154912,
+     81
+    ],
+    [
+     11,
+     727.4000000000002,
+     6.289064056590199,
+     0.6853209079708904,
+     84
+    ],
+    [
+     1069,
+     805.8000000000003,
+     6.8208148940429085,
+     0.36898528900928795,
+     87
+    ],
+    [
+     11,
+     887.0000000000003,
+     6.744380375683307,
+     0.7635938657913357,
+     90
+    ],
+    [
+     1069,
+     965.4000000000004,
+     6.5223312253653996,
+     0.21328270551748574,
+     93
+    ],
+    [
+     11,
+     1046.6000000000004,
+     5.502763380758464,
+     0.26682668668217957,
+     96
+    ],
+    [
+     1069,
+     1125.0000000000005,
+     6.572891707509756,
+     0.4428180786781013,
+     99
+    ],
+    [
+     11,
+     1206.2000000000005,
+     6.3198452713117,
+     0.10683022416196764,
+     102
+    ],
+    [
+     1069,
+     1284.6000000000006,
+     6.181963067404926,
+     0.4278079788200557,
+     105
+    ],
+    [
+     11,
+     1365.8000000000006,
+     5.426214416563511,
+     0.2458988856524229,
+     108
+    ],
+    [
+     1069,
+     1444.2000000000007,
+     7.562610332608222,
+     0.7745168344117701,
+     111
+    ],
+    [
+     11,
+     1525.4000000000008,
+     5.78113527560234,
+     0.9247781992889941,
+     114
+    ],
+    [
+     1069,
+     1603.8000000000009,
+     4.8697343368604775,
+     0.9602962781209499,
+     117
+    ]
+   ],
+   "starsNote": "[x, y, r, tw, i]: every 3rd of the 120 stars (i mod 3 == 0)",
+   "sunIn": [
+    102.64,
+    315.52
+   ],
+   "sunOut": [
+    995,
+    284.56
+   ],
+   "top": 250,
+   "side": 22,
+   "R": 150,
+   "W": 1080,
+   "hs": 84,
+   "draw": [
+    "twinkle: f = max(0, sin(t (.35 + .5 tw) + 40 tw))^12; f > .02: SPR.goldHot at (x, y), size 7 r, alpha .8 f",
+    "sun journey: ph = (t mod 30) / 30; (x, y) = path(eIO(ph)); path(k): k < .12 lerp(sunIn, (side + .3 R, top / 2), k / .12); k < .88 lerp((side + .3 R, top / 2), (W - side - .3 R, top / 2), (k - .12) / .76); else lerp(.., sunOut, (k - .88) / .12)",
+    "vis = sstep(0, .05, ph)(1 - sstep(.95, 1, ph)); SPR.fire size 2.2 top alpha .22 vis; SPR.goldHot size .7 top alpha .28 vis",
+    "br = .5 + .5 sin(.8 t); hs: SPR.fireDeep at sunIn size .9 hs alpha (.25 + .15 br)(1 - .5 vis); SPR.fire at sunOut size 1.1 (hs || 70) alpha .2 + .2 sstep(.85, 1, ph) + .1 br"
+   ],
+   "replaces": "P1a nut_twinkle_add (the frame at 2.8 s)"
+  },
+  "ringEcho": {
+   "src": "menu.js:768-773 drawRingEcho, relics.js:333-374 drawRingSpectral, menu.js:625-640 ringRot",
+   "centre": [
+    540,
+    734
+   ],
+   "s": 1.4,
+   "R": 67.19999999999999,
+   "r": 53.199999999999996,
+   "notch": [
+    -165,
+    -135,
+    -105,
+    -75,
+    -45,
+    -15
+   ],
+   "piv": [
+    [
+     611.68,
+     738.2
+    ],
+    [
+     577.9846128602361,
+     798.9880875324926
+    ],
+    [
+     540,
+     809.88
+    ],
+    [
+     502.0153871397639,
+     798.9880875324927
+    ],
+    [
+     468.32,
+     738.2
+    ]
+   ],
+   "parts": {
+    "ring": {
+     "file": "WRLDZ/MenuV6/Rigs/Port/ring/ring",
+     "size": [
+      403,
+      403
+     ],
+     "tag": "OWN",
+     "half": 100.79999999999998
+    },
+    "pointer": {
+     "file": "WRLDZ/MenuV6/Rigs/Port/ring/pointer",
+     "size": [
+      114,
+      235
+     ],
+     "tag": "OWN",
+     "S": 3,
+     "pad": 11.2,
+     "len": 56,
+     "wid": 15.435
+    },
+    "membrane": {
+     "file": "WRLDZ/MenuV6/Rigs/Port/ring/membrane",
+     "size": [
+      280,
+      280
+     ],
+     "tag": "OWN",
+     "centre": [
+      70,
+      70
+     ],
+     "scale": 2
+    },
+    "rim_arc": {
+     "file": "WRLDZ/MenuV6/Rigs/Port/ring/rim_arc",
+     "size": [
+      288,
+      288
+     ],
+     "tag": "OWN",
+     "centre": [
+      72,
+      72
+     ],
+     "lw": 2.8,
+     "scale": 2
+    }
+   },
+   "rot": "idle: rot_i = .025 sin(.9 t + 1.3 i) + .012 sin(2.3 t + i) (+ .12 hovR sin(5 t + i) on hover); the omen / locator / dread springs are P5",
+   "rotSamples": [
+    [
+     2.8,
+     [
+      0.016432339616620578,
+      -0.00470252828700927,
+      -0.012953970115707283,
+      0.00322704933190276,
+      0.014580774791296883
+     ]
+    ],
+    [
+     3.4,
+     [
+      0.014030625952021062,
+      -0.016640818208042862,
+      -0.019210773984288575,
+      0.003842309097388863,
+      0.014819772288908517
+     ]
+    ],
+    [
+     4.6,
+     [
+      -0.03199385056042022,
+      -0.028677484157209412,
+      0.011190838992923472,
+      0.03475378948946225,
+      0.01295940694664685
+     ]
+    ],
+    [
+     6.3,
+     [
+      -0.0031261145687734217,
+      0.01844683090491741,
+      0.01441092047930922,
+      -0.015351062433523235,
+      -0.029025450654881893
+     ]
+    ],
+    [
+     8,
+     [
+      0.014626909131366068,
+      0.026238966997479615,
+      0.0028355365704138217,
+      -0.01817603406288779,
+      -0.00891077258366493
+     ]
+    ],
+    [
+     11.1,
+     [
+      -0.008747378843193872,
+      -0.012104462509177835,
+      0.008720463730256808,
+      0.02120555689675471,
+      0.0009687174740997742
+     ]
+    ],
+    [
+     14.7,
+     [
+      0.02355735764538576,
+      0.020098023731469274,
+      -0.01444051850933987,
+      -0.0340420411203269,
+      -0.008855940686426101
+     ]
+    ]
+   ],
+   "state": {
+    "a": 1,
+    "i": ".72 + .2 hovR",
+    "glow": [
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "found": 2,
+    "seed": 1.3,
+    "sweep": 0,
+    "aura": "clamp(.4 hovR, 0, 1.4)",
+    "motes": 14
+   },
+   "draw": [
+    "shim = .84 + .1 sin(3.1 t + seed) + .06 sin(7.3 t + 1.7 seed); I = i a shim",
+    "refraction: P1a ring_refract (the stack below seen through the annulus, alpha .55) offset by (dx(t) - dx(2.8), dy(t) - dy(2.8)), dx = 1.3 s sin(2.3 t + seed), dy = .9 s cos(1.9 t + seed) (a sampled copy of the live stack is not possible in UGUI without a shader: the P1a still moved; recorded approximation)",
+    "additive: SPR.blue at centre size R (4.4 + .6 aura) alpha (.14 + .12 aura) I; SPR.goldHot at centre + (0, .1 r) size 1.7 r alpha .1 I; membrane alpha I; ring alpha clamp(I) (+ clamp(I - 1))",
+    "rim: an = .55 t + 2 seed: rim_arc rotated by an about the centre, alpha .55 I; SPR.blueHot at centre + R (cos(an + .7), sin(an + .7)) size 14 max(.6, s) alpha .7 (.55) I",
+    "notches i < found: at centre + (R + r)/2 s (cos, sin)(notch_i deg): SPR.blue size 20 max(.5, s) alpha .55 + .2 sin(2 t + i); SPR.blueHot size 7 max(.5, s) alpha .8",
+    "motes k < 14: ph = (t (.22 + .05 (k mod 3)) + k / 14 + .13 seed) mod 1; an = 2.39996 k + seed; rr = R (.9 + .55 ph); at centre + (cos an rr, .9 sin an rr - .55 R ph); k mod 3 ? blueHot : goldHot, size (5 + 4 (k mod 2)) max(.5, s), alpha .7 sin(pi ph) I",
+    "pointers (additive): pointer sprite pivot (pad + wid/2, pad) at piv_i rotated rot_i, alpha clamp(.95 I); tip = piv + len (-sin rot, cos rot): SPR.blueHot size 9 max(.6, s) alpha .35 + .65 glow_i"
+   ],
+   "replaces": "P1a ring_echo_add (the frame at 2.8 s)"
+  },
+  "flame": {
+   "src": "anime_menu_v6.js:289-297 drawFlame",
+   "torch": {
+    "x": 50,
+    "y": 560,
+    "stand": false
+   },
+   "sc": 2.2399999999999998,
+   "e": 1,
+   "glow": "SPR.fire at (x, y - 10 sc), size 96 sc, alpha .34 e, additive",
+   "tongues": "4 filled polygons, back to front [k, colour, ph] = [1, #C8461E, 0], [.74, #F08A2A, 1.3], [.5, #FFC94A, 2.1], [.26, #FFF3C4, 3.0]; w = 9 sc k + 2 sc, h = 34 sc k + 4 sc",
+   "path": "sw = .18 sin(7.1 t + ph) + .08 sin(11.3 t + 2 ph), n = 3: M(x - w, y) Q(x - 1.05 w, y - .35 h; x - .55 w, y - .55 h); i = 0..2, u = (i + .5)/3: L(x + (u - .5) 1.3 w + sw w (1.6 - u), y - h (i == 1 ? 1 : .72 + .12 sin(9 t + 2 i + ph))) L(x + (u - .5 + 1/6) 1.25 w + sw w, y - h (.5 + .08 sin(6 t + i))); Q(x + 1.05 w, y - .35 h; x + w, y) Q(x, y + .55 w; x - w, y) Z (flatten the Q segments; fill nonzero)",
+   "testVectors": [
+    {
+     "t": 2.8,
+     "cmds": [
+      [
+       "moveTo",
+       25.36,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       24.128,
+       530.208,
+       36.448,
+       513.184
+      ],
+      [
+       "lineTo",
+       45.40188,
+       498.02711
+      ],
+      [
+       "lineTo",
+       49.10798,
+       523.48398
+      ],
+      [
+       "lineTo",
+       54.66544,
+       474.88
+      ],
+      [
+       "lineTo",
+       59.37465,
+       523.3453
+      ],
+      [
+       "lineTo",
+       63.92901,
+       506.87512
+      ],
+      [
+       "lineTo",
+       69.64131,
+       517.77732
+      ],
+      [
+       "quadraticCurveTo",
+       75.872,
+       530.208,
+       74.64,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       50,
+       573.552,
+       25.36,
+       560
+      ],
+      [
+       "closePath"
+      ],
+      [
+       "moveTo",
+       30.6016,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       29.63168,
+       537.13856,
+       39.33088,
+       524.07488
+      ],
+      [
+       "lineTo",
+       45.91736,
+       505.29434
+      ],
+      [
+       "lineTo",
+       48.97494,
+       531.97876
+      ],
+      [
+       "lineTo",
+       53.3179,
+       494.6816
+      ],
+      [
+       "lineTo",
+       57.05761,
+       531.87234
+      ],
+      [
+       "lineTo",
+       60.71845,
+       519.18745
+      ],
+      [
+       "lineTo",
+       65.14028,
+       527.59965
+      ],
+      [
+       "quadraticCurveTo",
+       70.36832,
+       537.13856,
+       69.3984,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       50,
+       570.66912,
+       30.6016,
+       560
+      ],
+      [
+       "closePath"
+      ],
+      [
+       "moveTo",
+       35.44,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       34.712,
+       543.536,
+       41.992,
+       534.128
+      ],
+      [
+       "lineTo",
+       42.13191,
+       521.4611
+      ],
+      [
+       "lineTo",
+       45.87916,
+       539.82009
+      ],
+      [
+       "lineTo",
+       48.80375,
+       512.96
+      ],
+      [
+       "lineTo",
+       51.94583,
+       539.74346
+      ],
+      [
+       "lineTo",
+       55.47558,
+       526.78412
+      ],
+      [
+       "lineTo",
+       58.0125,
+       536.66641
+      ],
+      [
+       "quadraticCurveTo",
+       65.288,
+       543.536,
+       64.56,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       50,
+       568.008,
+       35.44,
+       560
+      ],
+      [
+       "closePath"
+      ],
+      [
+       "moveTo",
+       40.2784,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       39.79232,
+       549.93344,
+       44.65312,
+       544.18112
+      ],
+      [
+       "lineTo",
+       43.77423,
+       539.03533
+      ],
+      [
+       "lineTo",
+       46.5702,
+       547.66143
+      ],
+      [
+       "lineTo",
+       48.45508,
+       531.2384
+      ],
+      [
+       "lineTo",
+       50.62086,
+       547.61457
+      ],
+      [
+       "lineTo",
+       53.13593,
+       536.85438
+      ],
+      [
+       "lineTo",
+       54.67153,
+       545.73318
+      ],
+      [
+       "quadraticCurveTo",
+       60.20768,
+       549.93344,
+       59.7216,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       50,
+       565.34688,
+       40.2784,
+       560
+      ],
+      [
+       "closePath"
+      ]
+     ]
+    },
+    {
+     "t": 2.817,
+     "cmds": [
+      [
+       "moveTo",
+       25.36,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       24.128,
+       530.208,
+       36.448,
+       513.184
+      ],
+      [
+       "lineTo",
+       46.27038,
+       496.48194
+      ],
+      [
+       "lineTo",
+       49.71391,
+       523.77199
+      ],
+      [
+       "lineTo",
+       55.33197,
+       474.88
+      ],
+      [
+       "lineTo",
+       59.98058,
+       522.96934
+      ],
+      [
+       "lineTo",
+       64.39355,
+       507.71584
+      ],
+      [
+       "lineTo",
+       70.24724,
+       517.08304
+      ],
+      [
+       "quadraticCurveTo",
+       75.872,
+       530.208,
+       74.64,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       50,
+       573.552,
+       25.36,
+       560
+      ],
+      [
+       "closePath"
+      ],
+      [
+       "moveTo",
+       30.6016,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       29.63168,
+       537.13856,
+       39.33088,
+       524.07488
+      ],
+      [
+       "lineTo",
+       45.05974,
+       505.14255
+      ],
+      [
+       "lineTo",
+       48.3766,
+       532.19977
+      ],
+      [
+       "lineTo",
+       52.65973,
+       494.6816
+      ],
+      [
+       "lineTo",
+       56.45927,
+       531.58384
+      ],
+      [
+       "lineTo",
+       60.25972,
+       518.38727
+      ],
+      [
+       "lineTo",
+       64.54194,
+       527.06688
+      ],
+      [
+       "quadraticCurveTo",
+       70.36832,
+       537.13856,
+       69.3984,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       50,
+       570.66912,
+       30.6016,
+       560
+      ],
+      [
+       "closePath"
+      ],
+      [
+       "moveTo",
+       35.44,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       34.712,
+       543.536,
+       41.992,
+       534.128
+      ],
+      [
+       "lineTo",
+       41.61814,
+       521.99889
+      ],
+      [
+       "lineTo",
+       45.52072,
+       539.97926
+      ],
+      [
+       "lineTo",
+       48.40945,
+       512.96
+      ],
+      [
+       "lineTo",
+       51.58738,
+       539.53569
+      ],
+      [
+       "lineTo",
+       55.20077,
+       525.92198
+      ],
+      [
+       "lineTo",
+       57.65405,
+       536.28273
+      ],
+      [
+       "quadraticCurveTo",
+       65.288,
+       543.536,
+       64.56,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       50,
+       568.008,
+       35.44,
+       560
+      ],
+      [
+       "closePath"
+      ],
+      [
+       "moveTo",
+       40.2784,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       39.79232,
+       549.93344,
+       44.65312,
+       544.18112
+      ],
+      [
+       "lineTo",
+       43.81172,
+       539.56288
+      ],
+      [
+       "lineTo",
+       46.59635,
+       547.75874
+      ],
+      [
+       "lineTo",
+       48.48385,
+       531.2384
+      ],
+      [
+       "lineTo",
+       50.64701,
+       547.48753
+      ],
+      [
+       "lineTo",
+       53.15598,
+       536.51042
+      ],
+      [
+       "lineTo",
+       54.69768,
+       545.49859
+      ],
+      [
+       "quadraticCurveTo",
+       60.20768,
+       549.93344,
+       59.7216,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       50,
+       565.34688,
+       40.2784,
+       560
+      ],
+      [
+       "closePath"
+      ]
+     ]
+    },
+    {
+     "t": 2.833,
+     "cmds": [
+      [
+       "moveTo",
+       25.36,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       24.128,
+       530.208,
+       36.448,
+       513.184
+      ],
+      [
+       "lineTo",
+       46.97264,
+       495.07465
+      ],
+      [
+       "lineTo",
+       50.20386,
+       523.98297
+      ],
+      [
+       "lineTo",
+       55.87091,
+       474.88
+      ],
+      [
+       "lineTo",
+       60.47053,
+       522.56291
+      ],
+      [
+       "lineTo",
+       64.76918,
+       508.31526
+      ],
+      [
+       "lineTo",
+       70.73719,
+       516.43286
+      ],
+      [
+       "quadraticCurveTo",
+       75.872,
+       530.208,
+       74.64,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       50,
+       573.552,
+       25.36,
+       560
+      ],
+      [
+       "closePath"
+      ],
+      [
+       "moveTo",
+       30.6016,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       29.63168,
+       537.13856,
+       39.33088,
+       524.07488
+      ],
+      [
+       "lineTo",
+       44.20044,
+       505.16675
+      ],
+      [
+       "lineTo",
+       47.77709,
+       532.36167
+      ],
+      [
+       "lineTo",
+       52.00027,
+       494.6816
+      ],
+      [
+       "lineTo",
+       55.85976,
+       531.27196
+      ],
+      [
+       "lineTo",
+       59.8001,
+       517.51818
+      ],
+      [
+       "lineTo",
+       63.94243,
+       526.56796
+      ],
+      [
+       "quadraticCurveTo",
+       70.36832,
+       537.13856,
+       69.3984,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       50,
+       570.66912,
+       30.6016,
+       560
+      ],
+      [
+       "closePath"
+      ],
+      [
+       "moveTo",
+       35.44,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       34.712,
+       543.536,
+       41.992,
+       534.128
+      ],
+      [
+       "lineTo",
+       41.19576,
+       522.5935
+      ],
+      [
+       "lineTo",
+       45.22604,
+       540.09585
+      ],
+      [
+       "lineTo",
+       48.08531,
+       512.96
+      ],
+      [
+       "lineTo",
+       51.2927,
+       539.31108
+      ],
+      [
+       "lineTo",
+       54.97485,
+       525.11465
+      ],
+      [
+       "lineTo",
+       57.35937,
+       535.92342
+      ],
+      [
+       "quadraticCurveTo",
+       65.288,
+       543.536,
+       64.56,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       50,
+       568.008,
+       35.44,
+       560
+      ],
+      [
+       "closePath"
+      ],
+      [
+       "moveTo",
+       40.2784,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       39.79232,
+       549.93344,
+       44.65312,
+       544.18112
+      ],
+      [
+       "lineTo",
+       43.87035,
+       540.05382
+      ],
+      [
+       "lineTo",
+       46.63725,
+       547.83004
+      ],
+      [
+       "lineTo",
+       48.52885,
+       531.2384
+      ],
+      [
+       "lineTo",
+       50.68792,
+       547.3502
+      ],
+      [
+       "lineTo",
+       53.18734,
+       536.24592
+      ],
+      [
+       "lineTo",
+       54.73859,
+       545.27889
+      ],
+      [
+       "quadraticCurveTo",
+       60.20768,
+       549.93344,
+       59.7216,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       50,
+       565.34688,
+       40.2784,
+       560
+      ],
+      [
+       "closePath"
+      ]
+     ]
+    },
+    {
+     "t": 2.867,
+     "cmds": [
+      [
+       "moveTo",
+       25.36,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       24.128,
+       530.208,
+       36.448,
+       513.184
+      ],
+      [
+       "lineTo",
+       48.01483,
+       492.36853
+      ],
+      [
+       "lineTo",
+       50.93096,
+       524.22955
+      ],
+      [
+       "lineTo",
+       56.67073,
+       474.88
+      ],
+      [
+       "lineTo",
+       61.19763,
+       521.54782
+      ],
+      [
+       "lineTo",
+       65.32663,
+       508.91894
+      ],
+      [
+       "lineTo",
+       71.4643,
+       515.08938
+      ],
+      [
+       "quadraticCurveTo",
+       75.872,
+       530.208,
+       74.64,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       50,
+       573.552,
+       25.36,
+       560
+      ],
+      [
+       "closePath"
+      ],
+      [
+       "moveTo",
+       30.6016,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       29.63168,
+       537.13856,
+       39.33088,
+       524.07488
+      ],
+      [
+       "lineTo",
+       42.29497,
+       505.74964
+      ],
+      [
+       "lineTo",
+       46.4477,
+       532.55089
+      ],
+      [
+       "lineTo",
+       50.53793,
+       494.6816
+      ],
+      [
+       "lineTo",
+       54.53036,
+       530.49301
+      ],
+      [
+       "lineTo",
+       58.7809,
+       515.3837
+      ],
+      [
+       "lineTo",
+       62.61303,
+       525.53701
+      ],
+      [
+       "quadraticCurveTo",
+       70.36832,
+       537.13856,
+       69.3984,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       50,
+       570.66912,
+       30.6016,
+       560
+      ],
+      [
+       "closePath"
+      ],
+      [
+       "moveTo",
+       35.44,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       34.712,
+       543.536,
+       41.992,
+       534.128
+      ],
+      [
+       "lineTo",
+       40.51825,
+       524.08294
+      ],
+      [
+       "lineTo",
+       44.75335,
+       540.23212
+      ],
+      [
+       "lineTo",
+       47.56535,
+       512.96
+      ],
+      [
+       "lineTo",
+       50.82002,
+       538.75011
+      ],
+      [
+       "lineTo",
+       54.61246,
+       523.4892
+      ],
+      [
+       "lineTo",
+       56.88669,
+       535.18097
+      ],
+      [
+       "quadraticCurveTo",
+       65.288,
+       543.536,
+       64.56,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       50,
+       568.008,
+       35.44,
+       560
+      ],
+      [
+       "closePath"
+      ],
+      [
+       "moveTo",
+       40.2784,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       39.79232,
+       549.93344,
+       44.65312,
+       544.18112
+      ],
+      [
+       "lineTo",
+       44.04871,
+       541.03247
+      ],
+      [
+       "lineTo",
+       46.76169,
+       547.91335
+      ],
+      [
+       "lineTo",
+       48.66573,
+       531.2384
+      ],
+      [
+       "lineTo",
+       50.81236,
+       547.00721
+      ],
+      [
+       "lineTo",
+       53.28275,
+       535.89834
+      ],
+      [
+       "lineTo",
+       54.86303,
+       544.82494
+      ],
+      [
+       "quadraticCurveTo",
+       60.20768,
+       549.93344,
+       59.7216,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       50,
+       565.34688,
+       40.2784,
+       560
+      ],
+      [
+       "closePath"
+      ]
+     ]
+    },
+    {
+     "t": 2.9,
+     "cmds": [
+      [
+       "moveTo",
+       25.36,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       24.128,
+       530.208,
+       36.448,
+       513.184
+      ],
+      [
+       "lineTo",
+       48.34782,
+       490.30375
+      ],
+      [
+       "lineTo",
+       51.16328,
+       524.19961
+      ],
+      [
+       "lineTo",
+       56.92628,
+       474.88
+      ],
+      [
+       "lineTo",
+       61.42995,
+       520.39922
+      ],
+      [
+       "lineTo",
+       65.50474,
+       508.59804
+      ],
+      [
+       "lineTo",
+       71.69662,
+       513.87813
+      ],
+      [
+       "quadraticCurveTo",
+       75.872,
+       530.208,
+       74.64,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       50,
+       573.552,
+       25.36,
+       560
+      ],
+      [
+       "closePath"
+      ],
+      [
+       "moveTo",
+       30.6016,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       29.63168,
+       537.13856,
+       39.33088,
+       524.07488
+      ],
+      [
+       "lineTo",
+       40.48452,
+       506.95793
+      ],
+      [
+       "lineTo",
+       45.18459,
+       532.52791
+      ],
+      [
+       "lineTo",
+       49.14852,
+       494.6816
+      ],
+      [
+       "lineTo",
+       53.26726,
+       529.61161
+      ],
+      [
+       "lineTo",
+       57.81252,
+       513.09558
+      ],
+      [
+       "lineTo",
+       61.34993,
+       524.60753
+      ],
+      [
+       "quadraticCurveTo",
+       70.36832,
+       537.13856,
+       69.3984,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       50,
+       570.66912,
+       30.6016,
+       560
+      ],
+      [
+       "closePath"
+      ],
+      [
+       "moveTo",
+       35.44,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       34.712,
+       543.536,
+       41.992,
+       534.128
+      ],
+      [
+       "lineTo",
+       40.16171,
+       525.71199
+      ],
+      [
+       "lineTo",
+       44.50461,
+       540.21558
+      ],
+      [
+       "lineTo",
+       47.29173,
+       512.96
+      ],
+      [
+       "lineTo",
+       50.57127,
+       538.11536
+      ],
+      [
+       "lineTo",
+       54.42175,
+       522.14501
+      ],
+      [
+       "lineTo",
+       56.63794,
+       534.5116
+      ],
+      [
+       "quadraticCurveTo",
+       65.288,
+       543.536,
+       64.56,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       50,
+       568.008,
+       35.44,
+       560
+      ],
+      [
+       "closePath"
+      ],
+      [
+       "moveTo",
+       40.2784,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       39.79232,
+       549.93344,
+       44.65312,
+       544.18112
+      ],
+      [
+       "lineTo",
+       44.25845,
+       541.82842
+      ],
+      [
+       "lineTo",
+       46.90802,
+       547.90324
+      ],
+      [
+       "lineTo",
+       48.82669,
+       531.2384
+      ],
+      [
+       "lineTo",
+       50.95869,
+       546.6191
+      ],
+      [
+       "lineTo",
+       53.39493,
+       535.86238
+      ],
+      [
+       "lineTo",
+       55.00936,
+       544.41566
+      ],
+      [
+       "quadraticCurveTo",
+       60.20768,
+       549.93344,
+       59.7216,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       50,
+       565.34688,
+       40.2784,
+       560
+      ],
+      [
+       "closePath"
+      ]
+     ]
+    },
+    {
+     "t": 3.1,
+     "cmds": [
+      [
+       "moveTo",
+       25.36,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       24.128,
+       530.208,
+       36.448,
+       513.184
+      ],
+      [
+       "lineTo",
+       37.91701,
+       494.97868
+      ],
+      [
+       "lineTo",
+       43.88598,
+       519.12179
+      ],
+      [
+       "lineTo",
+       48.92124,
+       474.88
+      ],
+      [
+       "lineTo",
+       54.15264,
+       512.7961
+      ],
+      [
+       "lineTo",
+       59.92547,
+       493.95994
+      ],
+      [
+       "lineTo",
+       64.41931,
+       510.73999
+      ],
+      [
+       "quadraticCurveTo",
+       75.872,
+       530.208,
+       74.64,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       50,
+       573.552,
+       25.36,
+       560
+      ],
+      [
+       "closePath"
+      ],
+      [
+       "moveTo",
+       30.6016,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       29.63168,
+       537.13856,
+       39.33088,
+       524.07488
+      ],
+      [
+       "lineTo",
+       36.59364,
+       519.23365
+      ],
+      [
+       "lineTo",
+       42.47002,
+       528.63135
+      ],
+      [
+       "lineTo",
+       46.16249,
+       494.6816
+      ],
+      [
+       "lineTo",
+       50.55269,
+       523.77722
+      ],
+      [
+       "lineTo",
+       55.73135,
+       505.31014
+      ],
+      [
+       "lineTo",
+       58.63536,
+       522.19942
+      ],
+      [
+       "quadraticCurveTo",
+       70.36832,
+       537.13856,
+       69.3984,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       50,
+       570.66912,
+       30.6016,
+       560
+      ],
+      [
+       "closePath"
+      ],
+      [
+       "moveTo",
+       35.44,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       34.712,
+       543.536,
+       41.992,
+       534.128
+      ],
+      [
+       "lineTo",
+       42.15258,
+       531.70844
+      ],
+      [
+       "lineTo",
+       45.89358,
+       537.40941
+      ],
+      [
+       "lineTo",
+       48.81961,
+       512.96
+      ],
+      [
+       "lineTo",
+       51.96025,
+       533.91363
+      ],
+      [
+       "lineTo",
+       55.48664,
+       523.14463
+      ],
+      [
+       "lineTo",
+       58.02692,
+       532.77736
+      ],
+      [
+       "quadraticCurveTo",
+       65.288,
+       543.536,
+       64.56,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       50,
+       568.008,
+       35.44,
+       560
+      ],
+      [
+       "closePath"
+      ],
+      [
+       "moveTo",
+       40.2784,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       39.79232,
+       549.93344,
+       44.65312,
+       544.18112
+      ],
+      [
+       "lineTo",
+       45.27046,
+       540.99436
+      ],
+      [
+       "lineTo",
+       47.61408,
+       546.18747
+      ],
+      [
+       "lineTo",
+       49.60335,
+       531.2384
+      ],
+      [
+       "lineTo",
+       51.66475,
+       544.05005
+      ],
+      [
+       "lineTo",
+       53.93624,
+       540.45071
+      ],
+      [
+       "lineTo",
+       55.71541,
+       543.3553
+      ],
+      [
+       "quadraticCurveTo",
+       60.20768,
+       549.93344,
+       59.7216,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       50,
+       565.34688,
+       40.2784,
+       560
+      ],
+      [
+       "closePath"
+      ]
+     ]
+    },
+    {
+     "t": 3.6,
+     "cmds": [
+      [
+       "moveTo",
+       25.36,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       24.128,
+       530.208,
+       36.448,
+       513.184
+      ],
+      [
+       "lineTo",
+       42.40901,
+       490.20746
+      ],
+      [
+       "lineTo",
+       47.01993,
+       514.84384
+      ],
+      [
+       "lineTo",
+       52.36859,
+       474.88
+      ],
+      [
+       "lineTo",
+       57.2866,
+       521.33458
+      ],
+      [
+       "lineTo",
+       62.32817,
+       508.55334
+      ],
+      [
+       "lineTo",
+       67.55327,
+       524.24467
+      ],
+      [
+       "quadraticCurveTo",
+       75.872,
+       530.208,
+       74.64,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       50,
+       573.552,
+       25.36,
+       560
+      ],
+      [
+       "closePath"
+      ],
+      [
+       "moveTo",
+       30.6016,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       29.63168,
+       537.13856,
+       39.33088,
+       524.07488
+      ],
+      [
+       "lineTo",
+       45.10081,
+       507.04333
+      ],
+      [
+       "lineTo",
+       48.40526,
+       525.34859
+      ],
+      [
+       "lineTo",
+       52.69125,
+       494.6816
+      ],
+      [
+       "lineTo",
+       56.48793,
+       530.32938
+      ],
+      [
+       "lineTo",
+       60.28169,
+       512.96379
+      ],
+      [
+       "lineTo",
+       64.57059,
+       532.56249
+      ],
+      [
+       "quadraticCurveTo",
+       70.36832,
+       537.13856,
+       69.3984,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       50,
+       570.66912,
+       30.6016,
+       560
+      ],
+      [
+       "closePath"
+      ],
+      [
+       "moveTo",
+       35.44,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       34.712,
+       543.536,
+       41.992,
+       534.128
+      ],
+      [
+       "lineTo",
+       47.16137,
+       525.80669
+      ],
+      [
+       "lineTo",
+       49.38809,
+       535.04528
+      ],
+      [
+       "lineTo",
+       52.66356,
+       512.96
+      ],
+      [
+       "lineTo",
+       55.45475,
+       538.63227
+      ],
+      [
+       "lineTo",
+       58.16576,
+       522.07838
+      ],
+      [
+       "lineTo",
+       61.52142,
+       540.24048
+      ],
+      [
+       "quadraticCurveTo",
+       65.288,
+       543.536,
+       64.56,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       50,
+       568.008,
+       35.44,
+       560
+      ],
+      [
+       "closePath"
+      ],
+      [
+       "moveTo",
+       40.2784,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       39.79232,
+       549.93344,
+       44.65312,
+       544.18112
+      ],
+      [
+       "lineTo",
+       45.55924,
+       541.86741
+      ],
+      [
+       "lineTo",
+       47.81555,
+       544.74197
+      ],
+      [
+       "lineTo",
+       49.82498,
+       531.2384
+      ],
+      [
+       "lineTo",
+       51.86622,
+       546.93516
+      ],
+      [
+       "lineTo",
+       54.09071,
+       535.86942
+      ],
+      [
+       "lineTo",
+       55.91689,
+       547.91846
+      ],
+      [
+       "quadraticCurveTo",
+       60.20768,
+       549.93344,
+       59.7216,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       50,
+       565.34688,
+       40.2784,
+       560
+      ],
+      [
+       "closePath"
+      ]
+     ]
+    },
+    {
+     "t": 4.4,
+     "cmds": [
+      [
+       "moveTo",
+       25.36,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       24.128,
+       530.208,
+       36.448,
+       513.184
+      ],
+      [
+       "lineTo",
+       36.74414,
+       489.05065
+      ],
+      [
+       "lineTo",
+       43.0677,
+       510.9417
+      ],
+      [
+       "lineTo",
+       48.02113,
+       474.88
+      ],
+      [
+       "lineTo",
+       53.33436,
+       512.21624
+      ],
+      [
+       "lineTo",
+       59.29812,
+       502.52411
+      ],
+      [
+       "lineTo",
+       63.60103,
+       518.29349
+      ],
+      [
+       "quadraticCurveTo",
+       75.872,
+       530.208,
+       74.64,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       50,
+       573.552,
+       25.36,
+       560
+      ],
+      [
+       "closePath"
+      ],
+      [
+       "moveTo",
+       30.6016,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       29.63168,
+       537.13856,
+       39.33088,
+       524.07488
+      ],
+      [
+       "lineTo",
+       48.07683,
+       513.43525
+      ],
+      [
+       "lineTo",
+       50.48156,
+       522.35421
+      ],
+      [
+       "lineTo",
+       54.97518,
+       494.6816
+      ],
+      [
+       "lineTo",
+       58.56422,
+       523.33225
+      ],
+      [
+       "lineTo",
+       61.87352,
+       506.74559
+      ],
+      [
+       "lineTo",
+       66.64689,
+       527.99574
+      ],
+      [
+       "quadraticCurveTo",
+       70.36832,
+       537.13856,
+       69.3984,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       50,
+       570.66912,
+       30.6016,
+       560
+      ],
+      [
+       "closePath"
+      ],
+      [
+       "moveTo",
+       35.44,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       34.712,
+       543.536,
+       41.992,
+       534.128
+      ],
+      [
+       "lineTo",
+       46.39587,
+       530.40647
+      ],
+      [
+       "lineTo",
+       48.85402,
+       532.88883
+      ],
+      [
+       "lineTo",
+       52.07608,
+       512.96
+      ],
+      [
+       "lineTo",
+       54.92068,
+       533.59319
+      ],
+      [
+       "lineTo",
+       57.7563,
+       520.5472
+      ],
+      [
+       "lineTo",
+       60.98735,
+       536.95166
+      ],
+      [
+       "quadraticCurveTo",
+       65.288,
+       543.536,
+       64.56,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       50,
+       568.008,
+       35.44,
+       560
+      ],
+      [
+       "closePath"
+      ],
+      [
+       "moveTo",
+       40.2784,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       39.79232,
+       549.93344,
+       44.65312,
+       544.18112
+      ],
+      [
+       "lineTo",
+       45.74878,
+       542.6819
+      ],
+      [
+       "lineTo",
+       47.94779,
+       543.42346
+      ],
+      [
+       "lineTo",
+       49.97044,
+       531.2384
+      ],
+      [
+       "lineTo",
+       51.99846,
+       543.85412
+      ],
+      [
+       "lineTo",
+       54.19209,
+       537.56508
+      ],
+      [
+       "lineTo",
+       56.04912,
+       545.90759
+      ],
+      [
+       "quadraticCurveTo",
+       60.20768,
+       549.93344,
+       59.7216,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       50,
+       565.34688,
+       40.2784,
+       560
+      ],
+      [
+       "closePath"
+      ]
+     ]
+    },
+    {
+     "t": 7.77,
+     "cmds": [
+      [
+       "moveTo",
+       25.36,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       24.128,
+       530.208,
+       36.448,
+       513.184
+      ],
+      [
+       "lineTo",
+       32.61875,
+       491.28059
+      ],
+      [
+       "lineTo",
+       40.18951,
+       514.15208
+      ],
+      [
+       "lineTo",
+       44.85513,
+       474.88
+      ],
+      [
+       "lineTo",
+       50.45618,
+       520.68143
+      ],
+      [
+       "lineTo",
+       57.09152,
+       508.87431
+      ],
+      [
+       "lineTo",
+       60.72285,
+       524.23062
+      ],
+      [
+       "quadraticCurveTo",
+       75.872,
+       530.208,
+       74.64,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       50,
+       573.552,
+       25.36,
+       560
+      ],
+      [
+       "closePath"
+      ],
+      [
+       "moveTo",
+       30.6016,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       29.63168,
+       537.13856,
+       39.33088,
+       524.07488
+      ],
+      [
+       "lineTo",
+       42.62752,
+       506.2647
+      ],
+      [
+       "lineTo",
+       46.67971,
+       524.81776
+      ],
+      [
+       "lineTo",
+       50.79315,
+       494.6816
+      ],
+      [
+       "lineTo",
+       54.76238,
+       529.82817
+      ],
+      [
+       "lineTo",
+       58.95877,
+       514.28311
+      ],
+      [
+       "lineTo",
+       62.84504,
+       532.5517
+      ],
+      [
+       "quadraticCurveTo",
+       70.36832,
+       537.13856,
+       69.3984,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       50,
+       570.66912,
+       30.6016,
+       560
+      ],
+      [
+       "closePath"
+      ],
+      [
+       "moveTo",
+       35.44,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       34.712,
+       543.536,
+       41.992,
+       534.128
+      ],
+      [
+       "lineTo",
+       44.86052,
+       524.86284
+      ],
+      [
+       "lineTo",
+       47.78284,
+       534.66299
+      ],
+      [
+       "lineTo",
+       50.89779,
+       512.96
+      ],
+      [
+       "lineTo",
+       53.84951,
+       538.27131
+      ],
+      [
+       "lineTo",
+       56.93507,
+       522.7975
+      ],
+      [
+       "lineTo",
+       59.91618,
+       540.23271
+      ],
+      [
+       "quadraticCurveTo",
+       65.288,
+       543.536,
+       64.56,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       50,
+       568.008,
+       35.44,
+       560
+      ],
+      [
+       "closePath"
+      ],
+      [
+       "moveTo",
+       40.2784,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       39.79232,
+       549.93344,
+       44.65312,
+       544.18112
+      ],
+      [
+       "lineTo",
+       47.81101,
+       541.44402
+      ],
+      [
+       "lineTo",
+       49.38655,
+       544.50823
+      ],
+      [
+       "lineTo",
+       51.55307,
+       531.2384
+      ],
+      [
+       "lineTo",
+       53.43722,
+       546.71446
+      ],
+      [
+       "lineTo",
+       55.29514,
+       535.84288
+      ],
+      [
+       "lineTo",
+       57.48788,
+       547.91371
+      ],
+      [
+       "quadraticCurveTo",
+       60.20768,
+       549.93344,
+       59.7216,
+       560
+      ],
+      [
+       "quadraticCurveTo",
+       50,
+       565.34688,
+       40.2784,
+       560
+      ],
+      [
+       "closePath"
+      ]
+     ]
+    }
+   ],
+   "replaces": "P1a flame_glow_add + flame_tongues (the frame at 2.8 s)"
+  },
+  "motes": {
+   "src": "menu.js:305 (table), :669 (draw)",
+   "motes": [
+    {
+     "x": 262.9955773938447,
+     "y": 627.2618718724698,
+     "v": 9.212349345209077,
+     "sw": 5.921598393930417,
+     "s": 0.7924681469332426,
+     "life": 9.704719298519194,
+     "off": 4.764219953212887
+    },
+    {
+     "x": 176.74181484691798,
+     "y": 978.6844963915646,
+     "v": 4.7486121656838804,
+     "sw": 2.1467325190890594,
+     "s": 1.181590497586876,
+     "life": 7.893967508338392,
+     "off": 1.7731914180330932
+    },
+    {
+     "x": 217.98884986136107,
+     "y": 505.2342864628881,
+     "v": 5.793585823616013,
+     "sw": 1.0313824914606415,
+     "s": 2.034730137558654,
+     "life": 5.4550872393883765,
+     "off": 1.1168142990209162
+    },
+    {
+     "x": 99.27542310561986,
+     "y": 1088.422473775223,
+     "v": 4.763195438776165,
+     "sw": 5.7191162814748315,
+     "s": 0.7172126492951065,
+     "life": 9.291292774956673,
+     "off": 2.6058893906883895
+    },
+    {
+     "x": 157.84991102740167,
+     "y": 778.7012546434999,
+     "v": 10.350617589894682,
+     "sw": 1.7317856776761282,
+     "s": 1.6101019245572386,
+     "life": 6.42391325160861,
+     "off": 2.100906439591199
+    },
+    {
+     "x": -13.726164521835727,
+     "y": 865.7706528790295,
+     "v": 7.044484699843451,
+     "sw": 2.4255566940579776,
+     "s": 1.4448619588743894,
+     "life": 8.522255190182477,
+     "off": 0.9841372701339424
+    },
+    {
+     "x": 128.06394964624195,
+     "y": 772.3662356641144,
+     "v": 11.303297313628718,
+     "sw": 4.9349605290516445,
+     "s": 1.4412289954256265,
+     "life": 8.751258058007807,
+     "off": 0.17452589701861143
+    },
+    {
+     "x": 96.54393620863559,
+     "y": 717.7437600735575,
+     "v": 9.916849040193483,
+     "sw": 4.310573563754024,
+     "s": 1.8394813606049865,
+     "life": 9.063092350028455,
+     "off": 1.8686787551268935
+    },
+    {
+     "x": 91.41850251406431,
+     "y": 986.6430938411504,
+     "v": 8.404221832286566,
+     "sw": 4.605199901860751,
+     "s": 1.7021435868460684,
+     "life": 5.635924755129963,
+     "off": 6.843649393413216
+    },
+    {
+     "x": 297.89691211357706,
+     "y": 677.1172556336969,
+     "v": 7.886351665481925,
+     "sw": 3.9347191352455746,
+     "s": 1.6332918986678122,
+     "life": 6.372870362829417,
+     "off": 8.187123788520694
+    },
+    {
+     "x": 168.0087226403877,
+     "y": 586.6501565389335,
+     "v": 5.294634626479819,
+     "sw": 5.026028171344483,
+     "s": 0.7052469746209681,
+     "life": 6.191991662606597,
+     "off": 8.414653008803725
+    },
+    {
+     "x": 280.60431774407624,
+     "y": 626.5387860871851,
+     "v": 10.919766073580831,
+     "sw": 2.630010011090717,
+     "s": 1.4674125880468636,
+     "life": 8.378633870743215,
+     "off": 6.544337826780975
+    },
+    {
+     "x": -9.995411361753924,
+     "y": 591.7625791113824,
+     "v": 4.737835739273578,
+     "sw": 2.535625858903358,
+     "s": 1.8964654260315,
+     "life": 6.091454149689525,
+     "off": 8.960707788355649
+    },
+    {
+     "x": 234.98638504445552,
+     "y": 1150.1019967850298,
+     "v": 8.62672229972668,
+     "sw": 0.3217427623346392,
+     "s": 1.199181239074096,
+     "life": 9.773887467570603,
+     "off": 3.726147480774671
+    },
+    {
+     "x": -80.8472878795117,
+     "y": 813.3185387719423,
+     "v": 5.690495197661221,
+     "sw": 1.2103042292520525,
+     "s": 1.661252213688567,
+     "life": 5.8986243810504675,
+     "off": 5.48381983069703
+    },
+    {
+     "x": 373.79596034791314,
+     "y": 1061.4894122313708,
+     "v": 7.207630999851972,
+     "sw": 5.642978748075242,
+     "s": 0.778935514157638,
+     "life": 7.521431653760374,
+     "off": 3.4560626628808677
+    },
+    {
+     "x": -86.73162107933311,
+     "y": 682.3667334280908,
+     "v": 11.408754138275981,
+     "sw": 5.451742436532404,
+     "s": 1.4408919246867298,
+     "life": 10.377445838879794,
+     "off": 4.289475693367422
+    },
+    {
+     "x": 379.1828888224437,
+     "y": 1226.3239293638617,
+     "v": 9.21275016781874,
+     "sw": 3.3313030230795904,
+     "s": 1.7729718726594,
+     "life": 6.521640186663717,
+     "off": 4.970653073396534
+    },
+    {
+     "x": 253.33699959684162,
+     "y": 1082.9898021575063,
+     "v": 8.104884741362184,
+     "sw": 2.144509136693401,
+     "s": 1.0017292094416916,
+     "life": 5.5257324213162065,
+     "off": 4.959640107117593
+    },
+    {
+     "x": 273.8425784230232,
+     "y": 1219.0896592922509,
+     "v": 7.745602604933083,
+     "sw": 4.761451222424002,
+     "s": 1.319662841130048,
+     "life": 7.937951749190688,
+     "off": 3.0624908837489784
+    },
+    {
+     "x": 369.98048663306975,
+     "y": 1132.7733969446272,
+     "v": 6.793422865914181,
+     "sw": 3.0518988127955873,
+     "s": 1.085775568941608,
+     "life": 10.039824068546295,
+     "off": 6.483190241269767
+    },
+    {
+     "x": 24.39880871288479,
+     "y": 720.6070157065988,
+     "v": 7.742274714866653,
+     "sw": 5.635218225138312,
+     "s": 0.796645630756393,
+     "life": 7.867561891209334,
+     "off": 7.4647332122549415
+    },
+    {
+     "x": 224.25113669950514,
+     "y": 871.1693053655326,
+     "v": 10.154796389164403,
+     "sw": 2.0033592532113342,
+     "s": 1.3419679772108792,
+     "life": 9.84168650303036,
+     "off": 1.7751032998785377
+    },
+    {
+     "x": 255.43707306105642,
+     "y": 627.5892080813646,
+     "v": 6.940218461677432,
+     "sw": 5.613336262238153,
+     "s": 1.9861137572210281,
+     "life": 9.97038609161973,
+     "off": 0.0036732200533151627
+    },
+    {
+     "x": 353.5613275503739,
+     "y": 909.2856051642448,
+     "v": 7.3197300573810935,
+     "sw": 4.758131467777181,
+     "s": 1.6794755073729901,
+     "life": 5.2076858300715685,
+     "off": 9.299199362285435
+    },
+    {
+     "x": 7.024516162276278,
+     "y": 812.3108375668526,
+     "v": 11.614852771861479,
+     "sw": 5.2120087741373835,
+     "s": 1.4252398263663053,
+     "life": 8.094622216653079,
+     "off": 9.353740843944252
+    },
+    {
+     "x": 336.0686842070892,
+     "y": 655.2608987949789,
+     "v": 10.118442040402442,
+     "sw": 0.718791732926553,
+     "s": 1.9094001682009547,
+     "life": 10.693169130012393,
+     "off": 7.7332708006724715
+    },
+    {
+     "x": -26.29325934145598,
+     "y": 1097.3333406131715,
+     "v": 7.0069949007593095,
+     "sw": 5.815526718567948,
+     "s": 1.4630806046538054,
+     "life": 9.500226125586778,
+     "off": 4.04714904492721
+    },
+    {
+     "x": 41.36471686307341,
+     "y": 992.7923764865845,
+     "v": 6.604835731675848,
+     "sw": 0.2953779576204113,
+     "s": 1.1371525867842136,
+     "life": 8.292603917885572,
+     "off": 3.3665610593743622
+    },
+    {
+     "x": 376.7141535988077,
+     "y": 873.0297814160585,
+     "v": 6.645052668871358,
+     "sw": 3.292476085918953,
+     "s": 0.9455933311022817,
+     "life": 8.882903335150331,
+     "off": 3.6575765442103148
+    }
+   ],
+   "torch": {
+    "x": 50,
+    "y": 560,
+    "sconce": true
+   },
+   "k": 1.4,
+   "draw": "additive, per mote: age = (t + off) mod life; y = y0 - v age; x = x0 + 5 sin(.6 t + sw); a = win(age, 0, .8, life - 1.2, life) .55 clamp(1.3 - |(x, y) - torch| / (420 k), 0, 1); SPR.gold at (x, y) size 6 s k alpha a",
+   "replaces": "P1a motes_add (the frame at 2.8 s)"
+  },
+  "box": {
+   "src": "menu.js:608-623 boxState, anime_box_v6.js:33-86 draw (box6 toon sprites)",
+   "canvasRect": {
+    "x": 50,
+    "y": 1734.59375,
+    "w": 200,
+    "h": 256
+   },
+   "canvas": [
+    200,
+    256
+   ],
+   "cx": 94,
+   "cy": 198,
+   "s": 150,
+   "set": "P150",
+   "bbox": [
+    96,
+    69,
+    1952,
+    1456
+   ],
+   "open": [
+    [
+     331,
+     467
+    ],
+    [
+     1347,
+     687
+    ],
+    [
+     1713,
+     453
+    ]
+   ],
+   "BOXG": {
+    "w": 1,
+    "hb": 0.492,
+    "hl": 0.098,
+    "d": 0.779,
+    "yaw": 0.5235987755982988,
+    "pitch": 0.3665191429188092
+   },
+   "Y1": 0.21047555,
+   "W1": 1.2887741,
+   "parts": {
+    "full": {
+     "file": "WRLDZ/MenuV6Local/Rigs/Port/box/full",
+     "size": [
+      428,
+      324
+     ],
+     "tag": "OWNER-licence-unknown"
+    },
+    "body": {
+     "file": "WRLDZ/MenuV6Local/Rigs/Port/box/body",
+     "size": [
+      428,
+      324
+     ],
+     "tag": "OWNER-licence-unknown"
+    },
+    "lid": {
+     "file": "WRLDZ/MenuV6Local/Rigs/Port/box/lid",
+     "size": [
+      428,
+      324
+     ],
+     "tag": "OWNER-licence-unknown"
+    },
+    "eye": {
+     "file": "WRLDZ/MenuV6Local/Rigs/Port/box/eye",
+     "size": [
+      428,
+      320
+     ],
+     "tag": "OWNER-licence-unknown"
+    }
+   },
+   "partsAreLocal": true,
+   "fallback": "a clone has no box6 renders (licence unknown, D7): the box stays the P1a static box_fallback, no lid lift (recorded decision)",
+   "cards": "the 3 cards standing in the box on hover: the page shows starter card art (assets/cards/*.jpg, Konami: never shipped); Unity shows the equipped deck's first 3 cards through the game's CardArt (real data, §7); the mockup files: assets/cards/46986414.jpg, assets/cards/40640057.jpg, assets/cards/91152256.jpg",
+   "state": "idle (no demo): hv = hovVal(box) (the .dueler row, menu.js:434); lid = .25 eBack(hv), rise = .25 hv, fan = 0, light = .45 hv, eye = .62 + .1 sin(1.3 t), ins = sstep(.2, .8, hv)",
+   "click": "menu.js:434 + :620 openSeq(u, 1.8) (lid to 1.9, cards rise + fan, Wdjat lights after the shut): reference frames only (out_p1b/ref_index), P1b routes the plaque to the DECK ledger (D16)",
+   "draw": [
+    "k = W1 s / (bbox[2] - bbox[0]); ox = cx - (bbox[0] + bbox[2]) / 2 k; oy = cy + Y1 s - bbox[3] k; RW = 2048 k, RH = 1536 k (canvas px; the sprites span RW x RH at (ox, oy))",
+    "kk = clamp(lid / 1.9, 0, 1.1); k1 = sstep(0, .22, kk); k2 = eIO(seg(kk, .16, 1)); lift = hb (.14 k1 + .56 k2); back = -.66 d k2; (ldx, ldy) = s boxProj(0, lift, back); soft top limit anime_box_v6.js:42",
+    "contact shadow: the plinth footprint boxProj((+/-w/2, 0, +/-d/2)) x s + (cx, cy), shifted (.05 s, .035 s), fill rgba(6,4,9,.42)",
+    "closed (lid < .004): full; else lidBehind (k2 > .28) ? lid first : -, body, the lid's cast shadow while k1 > .02 && k2 < .5 (body ∩ lid shifted by (.55, .45) |ld|, colour rgb(183,178,204), multiply, alpha 1 - clamp(2 k2)), beam + cards above the rim, eye, lid",
+    "beam (light > .01 && k1 > .05): a = clamp(light, 0, 1.2) k1, hgt = s (.22 + .42 k2): two flat hexagons over the opening (anime_box_v6.js:62-64): #FFE7A6 alpha .13 a, #FFF3C4 (shift .1 s) alpha .17 a; SPR.goldHot at the opening centre - (0, .05 s) size .9 s alpha .26 a",
+    "cards: anime_box_v6.js:67-77 (3 cards, width .34, aspect 614/421, rise / fan geometry, boxProj, hard drop rgba(6,4,9,.45) +(1.6, 1.8), ink .9)",
+    "eye: alpha clamp((eye - .6) / .9, 0, 1) (the idle breath peaks at .13)"
+   ],
+   "text": "the plaque text swaps with the hover: .ins (SUGOROKU'S READING + the inscription) opacity clamp(2 ins - 1, 0, 1), .nrm opacity clamp(1 - 2 ins, 0, 1) (menu.js drawDomRelics, the deck-box block)",
+   "boxProj": "relics.js:431: [x cos yaw - z sin yaw, -((-sin p sin yaw) x + cos p y + (-sin p cos yaw) z)]"
+  },
+  "niche": {
+   "src": "menu.js:138-219 makeCityDoor / draw (a labelled twin re-ran the page's own function: bit-exact, [0, 0, 0, 0] px differ)",
+   "canvasRect": {
+    "x": 596,
+    "y": 1814.59375,
+    "w": 206,
+    "h": 166
+   },
+   "canvas": [
+    206,
+    166
+   ],
+   "S": 2,
+   "nx0": 27,
+   "ny0": 41,
+   "nw": 152,
+   "nh": 123,
+   "hz": 139.4,
+   "kc": {
+    "x": 126.16,
+    "H": 86.1
+   },
+   "tears": [
+    [
+     22.8,
+     61.50000000000001,
+     1
+    ],
+    [
+     71.44,
+     73.80000000000001,
+     0.7
+    ],
+    [
+     92.72,
+     54.120000000000005,
+     0.8
+    ]
+   ],
+   "site": [
+    51.68000000000001,
+    92.25
+   ],
+   "ringC": [
+    60.800000000000004,
+    30.75
+   ],
+   "ringS": 0.5509302325581396,
+   "aims": [
+    [
+     92.72,
+     54.120000000000005
+    ],
+    null,
+    [
+     51.68000000000001,
+     92.25
+    ],
+    null,
+    [
+     22.8,
+     61.50000000000001
+    ]
+   ],
+   "wins": [
+    [
+     -3,
+     70.71073742773385,
+     0,
+     0.9130892283283174
+    ],
+    [
+     -0.7999999999999998,
+     70.71073742773385,
+     0,
+     0.14638835052028298
+    ],
+    [
+     -3,
+     75.91073742773384,
+     0,
+     0.9737410610541701
+    ],
+    [
+     -0.7999999999999998,
+     83.71073742773382,
+     0,
+     0.5909265209920704
+    ],
+    [
+     -0.7999999999999998,
+     86.31073742773381,
+     0,
+     0.044265900272876024
+    ],
+    [
+     -0.7999999999999998,
+     88.9107374277338,
+     0,
+     0.9526879983022809
+    ],
+    [
+     -0.7999999999999998,
+     96.71073742773379,
+     0,
+     0.698480226797983
+    ],
+    [
+     5.890906618256122,
+     61.60793816633057,
+     0,
+     0.6579172983765602
+    ],
+    [
+     3.690906618256122,
+     64.20793816633056,
+     0,
+     0.5933679717127234
+    ],
+    [
+     5.890906618256122,
+     64.20793816633056,
+     0,
+     0.897411129437387
+    ],
+    [
+     8.090906618256122,
+     64.20793816633056,
+     0,
+     0.6212843637913465
+    ],
+    [
+     5.890906618256122,
+     69.40793816633055,
+     0,
+     0.6678345177788287
+    ],
+    [
+     8.090906618256122,
+     69.40793816633055,
+     0,
+     0.7357684930320829
+    ],
+    [
+     8.090906618256122,
+     77.20793816633054,
+     0,
+     0.8341776221059263
+    ],
+    [
+     8.090906618256122,
+     82.40793816633052,
+     0,
+     0.11441058153286576
+    ],
+    [
+     11.740928771207109,
+     73.84216015561019,
+     0,
+     0.4479076948482543
+    ],
+    [
+     13.940928771207108,
+     76.44216015561018,
+     0,
+     0.684853502549231
+    ],
+    [
+     11.740928771207109,
+     79.04216015561018,
+     0,
+     0.06831555184908211
+    ],
+    [
+     13.940928771207108,
+     81.64216015561017,
+     0,
+     0.09233644534833729
+    ],
+    [
+     28.804302717885,
+     73.88229174994399,
+     0,
+     0.7437212583608925
+    ],
+    [
+     31.004302717885,
+     73.88229174994399,
+     0,
+     0.5661440631374717
+    ],
+    [
+     28.804302717885,
+     76.48229174994398,
+     0,
+     0.4015541346743703
+    ],
+    [
+     28.804302717885,
+     81.68229174994397,
+     0,
+     0.5773824930656701
+    ],
+    [
+     31.004302717885,
+     81.68229174994397,
+     1,
+     0.08181421062909067
+    ],
+    [
+     33.8303804602474,
+     62.934425964937546,
+     0,
+     0.6712052370421588
+    ],
+    [
+     36.0303804602474,
+     62.934425964937546,
+     0,
+     0.015955985290929675
+    ],
+    [
+     33.8303804602474,
+     65.53442596493754,
+     0,
+     0.2525636120699346
+    ],
+    [
+     33.8303804602474,
+     68.13442596493753,
+     1,
+     0.4652773146517575
+    ],
+    [
+     36.0303804602474,
+     68.13442596493753,
+     1,
+     0.6459611721802503
+    ],
+    [
+     33.8303804602474,
+     70.73442596493753,
+     0,
+     0.7712229217868298
+    ],
+    [
+     36.0303804602474,
+     73.33442596493752,
+     0,
+     0.992070848820731
+    ],
+    [
+     36.0303804602474,
+     75.93442596493752,
+     0,
+     0.9748219707980752
+    ],
+    [
+     38.2303804602474,
+     75.93442596493752,
+     0,
+     0.027077468810603023
+    ],
+    [
+     36.0303804602474,
+     78.53442596493751,
+     0,
+     0.16995397070422769
+    ],
+    [
+     38.2303804602474,
+     78.53442596493751,
+     0,
+     0.578539771027863
+    ],
+    [
+     36.0303804602474,
+     81.1344259649375,
+     1,
+     0.14024633634835482
+    ],
+    [
+     38.2303804602474,
+     81.1344259649375,
+     0,
+     0.40352289425209165
+    ],
+    [
+     38.2303804602474,
+     83.7344259649375,
+     1,
+     0.37258845823816955
+    ],
+    [
+     43.01019577658735,
+     70.54552272436209,
+     0,
+     0.42849544738419354
+    ],
+    [
+     45.210195776587355,
+     70.54552272436209,
+     1,
+     0.3019122411496937
+    ],
+    [
+     45.210195776587355,
+     75.74552272436208,
+     0,
+     0.4814595044590533
+    ],
+    [
+     45.210195776587355,
+     78.34552272436207,
+     0,
+     0.8428351110778749
+    ],
+    [
+     45.210195776587355,
+     80.94552272436206,
+     0,
+     0.5970883348491043
+    ],
+    [
+     45.210195776587355,
+     83.54552272436206,
+     0,
+     0.9519900782033801
+    ],
+    [
+     45.210195776587355,
+     86.14552272436205,
+     1,
+     0.269564377842471
+    ],
+    [
+     45.210195776587355,
+     88.74552272436205,
+     0,
+     0.12658697296865284
+    ],
+    [
+     48.67944056564011,
+     73.62966819080525,
+     1,
+     0.3028139758389443
+    ],
+    [
+     55.279440565640115,
+     73.62966819080525,
+     0,
+     0.894973787246272
+    ],
+    [
+     55.279440565640115,
+     76.22966819080524,
+     0,
+     0.24887123005464673
+    ],
+    [
+     57.47944056564012,
+     76.22966819080524,
+     0,
+     0.08345974888652563
+    ],
+    [
+     50.87944056564011,
+     78.82966819080524,
+     0,
+     0.49276944529265165
+    ],
+    [
+     53.07944056564011,
+     78.82966819080524,
+     1,
+     0.6731383905280381
+    ],
+    [
+     55.279440565640115,
+     78.82966819080524,
+     0,
+     0.9912593078333884
+    ],
+    [
+     57.47944056564012,
+     78.82966819080524,
+     0,
+     0.15929560945369303
+    ],
+    [
+     48.67944056564011,
+     81.42966819080523,
+     0,
+     0.14406588370911777
+    ],
+    [
+     50.87944056564011,
+     81.42966819080523,
+     0,
+     0.17522048112004995
+    ],
+    [
+     53.07944056564011,
+     81.42966819080523,
+     0,
+     0.6384391039609909
+    ],
+    [
+     48.67944056564011,
+     84.02966819080522,
+     0,
+     0.5593240666203201
+    ],
+    [
+     50.87944056564011,
+     84.02966819080522,
+     1,
+     0.9870053958147764
+    ],
+    [
+     53.07944056564011,
+     84.02966819080522,
+     0,
+     0.47226556530222297
+    ],
+    [
+     55.279440565640115,
+     84.02966819080522,
+     0,
+     0.3972251866944134
+    ],
+    [
+     48.67944056564011,
+     86.62966819080522,
+     0,
+     0.38205041317269206
+    ],
+    [
+     53.07944056564011,
+     86.62966819080522,
+     0,
+     0.04926299722865224
+    ],
+    [
+     55.279440565640115,
+     86.62966819080522,
+     1,
+     0.1989263880532235
+    ],
+    [
+     50.87944056564011,
+     89.22966819080521,
+     0,
+     0.372921590693295
+    ],
+    [
+     53.07944056564011,
+     89.22966819080521,
+     0,
+     0.6187456522602588
+    ],
+    [
+     61.031615377170965,
+     62.78718827601523,
+     0,
+     0.7830150162335485
+    ],
+    [
+     63.23161537717097,
+     62.78718827601523,
+     0,
+     0.8336375344078988
+    ],
+    [
+     65.43161537717097,
+     62.78718827601523,
+     0,
+     0.8810510691255331
+    ],
+    [
+     67.63161537717097,
+     62.78718827601523,
+     1,
+     0.4966081657912582
+    ],
+    [
+     61.031615377170965,
+     65.38718827601522,
+     1,
+     0.8144220570102334
+    ],
+    [
+     65.43161537717097,
+     65.38718827601522,
+     0,
+     0.5611096087377518
+    ],
+    [
+     61.031615377170965,
+     67.98718827601522,
+     0,
+     0.5333018924575299
+    ],
+    [
+     63.23161537717097,
+     67.98718827601522,
+     0,
+     0.20300816814415157
+    ],
+    [
+     65.43161537717097,
+     67.98718827601522,
+     0,
+     0.9125620434060693
+    ],
+    [
+     61.031615377170965,
+     70.58718827601521,
+     0,
+     0.9134149211458862
+    ],
+    [
+     63.23161537717097,
+     70.58718827601521,
+     0,
+     0.06824551336467266
+    ],
+    [
+     65.43161537717097,
+     70.58718827601521,
+     0,
+     0.9721289784647524
+    ],
+    [
+     67.63161537717097,
+     70.58718827601521,
+     1,
+     0.7158772035036236
+    ],
+    [
+     63.23161537717097,
+     73.1871882760152,
+     1,
+     0.5289450748823583
+    ],
+    [
+     67.63161537717097,
+     73.1871882760152,
+     0,
+     0.8561917052138597
+    ],
+    [
+     61.031615377170965,
+     75.7871882760152,
+     0,
+     0.37688384437933564
+    ],
+    [
+     63.23161537717097,
+     75.7871882760152,
+     0,
+     0.5988977965898812
+    ],
+    [
+     65.43161537717097,
+     75.7871882760152,
+     0,
+     0.2608203636482358
+    ],
+    [
+     67.63161537717097,
+     75.7871882760152,
+     0,
+     0.9331728015094995
+    ],
+    [
+     61.031615377170965,
+     78.3871882760152,
+     0,
+     0.7352682047057897
+    ],
+    [
+     65.43161537717097,
+     78.3871882760152,
+     0,
+     0.5809805470053107
+    ],
+    [
+     65.43161537717097,
+     80.98718827601519,
+     0,
+     0.9597848248668015
+    ],
+    [
+     67.63161537717097,
+     80.98718827601519,
+     1,
+     0.60567677160725
+    ],
+    [
+     61.031615377170965,
+     83.58718827601518,
+     1,
+     0.14679017011076212
+    ],
+    [
+     63.23161537717097,
+     83.58718827601518,
+     0,
+     0.2102229951415211
+    ],
+    [
+     67.63161537717097,
+     83.58718827601518,
+     0,
+     0.9148373284842819
+    ],
+    [
+     63.23161537717097,
+     86.18718827601518,
+     0,
+     0.2635942760389298
+    ],
+    [
+     65.43161537717097,
+     86.18718827601518,
+     0,
+     0.5682593542151153
+    ],
+    [
+     65.43161537717097,
+     88.78718827601517,
+     0,
+     0.41200657514855266
+    ],
+    [
+     67.63161537717097,
+     88.78718827601517,
+     0,
+     0.3162935364525765
+    ],
+    [
+     63.23161537717097,
+     91.38718827601517,
+     0,
+     0.1711919957306236
+    ],
+    [
+     63.23161537717097,
+     93.98718827601516,
+     0,
+     0.8161544557660818
+    ],
+    [
+     72.9083955835551,
+     51.65507790464443,
+     1,
+     0.507305775070563
+    ],
+    [
+     70.7083955835551,
+     59.45507790464443,
+     0,
+     0.11487136571668088
+    ],
+    [
+     70.7083955835551,
+     62.055077904644435,
+     1,
+     0.4833019431680441
+    ],
+    [
+     70.7083955835551,
+     64.65507790464443,
+     0,
+     0.014604321913793683
+    ],
+    [
+     72.9083955835551,
+     64.65507790464443,
+     1,
+     0.8396888566203415
+    ],
+    [
+     72.9083955835551,
+     67.25507790464442,
+     0,
+     0.9991459897719324
+    ],
+    [
+     70.7083955835551,
+     69.85507790464442,
+     1,
+     0.5783152098301798
+    ],
+    [
+     70.7083955835551,
+     72.45507790464441,
+     1,
+     0.3321435903199017
+    ],
+    [
+     72.9083955835551,
+     72.45507790464441,
+     0,
+     0.7145178706850857
+    ],
+    [
+     72.9083955835551,
+     75.0550779046444,
+     0,
+     0.5377455602865666
+    ],
+    [
+     70.7083955835551,
+     80.2550779046444,
+     0,
+     0.583055762341246
+    ],
+    [
+     72.9083955835551,
+     80.2550779046444,
+     1,
+     0.7828155916649848
+    ],
+    [
+     70.7083955835551,
+     82.85507790464439,
+     1,
+     0.4275525857228786
+    ],
+    [
+     72.9083955835551,
+     82.85507790464439,
+     0,
+     0.44586430327035487
+    ],
+    [
+     72.9083955835551,
+     85.45507790464438,
+     0,
+     0.4952934058383107
+    ],
+    [
+     78.17678724653088,
+     55.02107300091535,
+     1,
+     0.25029896409250796
+    ],
+    [
+     80.37678724653088,
+     55.02107300091535,
+     0,
+     0.5214121956378222
+    ],
+    [
+     75.97678724653088,
+     62.821073000915355,
+     0,
+     0.3542665303684771
+    ],
+    [
+     78.17678724653088,
+     62.821073000915355,
+     1,
+     0.6910763022024184
+    ],
+    [
+     80.37678724653088,
+     62.821073000915355,
+     0,
+     0.5089649497531354
+    ],
+    [
+     80.37678724653088,
+     65.42107300091536,
+     0,
+     0.8847949311602861
+    ],
+    [
+     78.17678724653088,
+     70.62107300091535,
+     0,
+     0.18430447881110013
+    ],
+    [
+     75.97678724653088,
+     73.22107300091534,
+     0,
+     0.03192464308813214
+    ],
+    [
+     80.37678724653088,
+     73.22107300091534,
+     1,
+     0.7469348313752562
+    ],
+    [
+     80.37678724653088,
+     75.82107300091533,
+     0,
+     0.4918064121156931
+    ],
+    [
+     75.97678724653088,
+     78.42107300091533,
+     0,
+     0.2891017459332943
+    ],
+    [
+     78.17678724653088,
+     78.42107300091533,
+     1,
+     0.5077456787694246
+    ],
+    [
+     80.37678724653088,
+     78.42107300091533,
+     0,
+     0.7637781559024006
+    ],
+    [
+     78.17678724653088,
+     81.02107300091532,
+     0,
+     0.5715360164176673
+    ],
+    [
+     75.97678724653088,
+     86.22107300091531,
+     0,
+     0.662875511450693
+    ],
+    [
+     78.17678724653088,
+     86.22107300091531,
+     0,
+     0.04590844735503197
+    ],
+    [
+     80.37678724653088,
+     86.22107300091531,
+     0,
+     0.8160321502946317
+    ],
+    [
+     80.37678724653088,
+     88.8210730009153,
+     0,
+     0.8561630733311176
+    ],
+    [
+     80.37678724653088,
+     91.4210730009153,
+     0,
+     0.2564114963170141
+    ],
+    [
+     84.06512344977818,
+     74.68784139645285,
+     0,
+     0.486180649837479
+    ],
+    [
+     86.26512344977819,
+     74.68784139645285,
+     0,
+     0.3642133278772235
+    ],
+    [
+     84.06512344977818,
+     79.88784139645284,
+     0,
+     0.8032522376161069
+    ],
+    [
+     90.13212008308619,
+     81.79479870063719,
+     0,
+     0.3180754438508302
+    ],
+    [
+     92.3321200830862,
+     81.79479870063719,
+     0,
+     0.10272780549712479
+    ],
+    [
+     92.3321200830862,
+     84.39479870063718,
+     1,
+     0.12802588427439332
+    ],
+    [
+     92.3321200830862,
+     86.99479870063718,
+     1,
+     0.0662682387046516
+    ],
+    [
+     94.5321200830862,
+     86.99479870063718,
+     0,
+     0.8237160115968436
+    ],
+    [
+     96.7321200830862,
+     86.99479870063718,
+     0,
+     0.7423083416651934
+    ],
+    [
+     126.3252347110305,
+     63.935370476362294,
+     0,
+     0.5982864815741777
+    ],
+    [
+     126.3252347110305,
+     66.53537047636229,
+     0,
+     0.11906857369467616
+    ],
+    [
+     126.3252347110305,
+     69.13537047636228,
+     0,
+     0.8275230478029698
+    ],
+    [
+     126.3252347110305,
+     71.73537047636228,
+     0,
+     0.8738980614580214
+    ],
+    [
+     139.09032735601068,
+     52.04431119076908,
+     0,
+     0.856027262751013
+    ],
+    [
+     141.29032735601066,
+     57.24431119076908,
+     0,
+     0.9921171262394637
+    ],
+    [
+     143.49032735601065,
+     57.24431119076908,
+     1,
+     0.4752140883356333
+    ],
+    [
+     143.49032735601065,
+     67.64431119076907,
+     0,
+     0.4667340354062617
+    ],
+    [
+     143.49032735601065,
+     75.44431119076906,
+     0,
+     0.038699964294210076
+    ],
+    [
+     143.49032735601065,
+     78.04431119076905,
+     1,
+     0.9563242350704968
+    ],
+    [
+     147.8032466974575,
+     62.02353398459033,
+     0,
+     0.33416164433583617
+    ],
+    [
+     150.00324669745748,
+     62.02353398459033,
+     0,
+     0.2976560101378709
+    ],
+    [
+     152.20324669745747,
+     62.02353398459033,
+     0,
+     0.15751688298769295
+    ],
+    [
+     147.8032466974575,
+     64.62353398459032,
+     0,
+     0.9988398205023259
+    ],
+    [
+     150.00324669745748,
+     64.62353398459032,
+     0,
+     0.6959048167336732
+    ],
+    [
+     152.20324669745747,
+     64.62353398459032,
+     0,
+     0.7280344732571393
+    ],
+    [
+     145.6032466974575,
+     67.22353398459032,
+     0,
+     0.7154646578710526
+    ],
+    [
+     147.8032466974575,
+     67.22353398459032,
+     0,
+     0.8099622449371964
+    ],
+    [
+     152.20324669745747,
+     67.22353398459032,
+     0,
+     0.4153749677352607
+    ],
+    [
+     154.40324669745746,
+     67.22353398459032,
+     0,
+     0.5927921440452337
+    ],
+    [
+     145.6032466974575,
+     69.82353398459031,
+     0,
+     0.06993364007212222
+    ],
+    [
+     150.00324669745748,
+     69.82353398459031,
+     0,
+     0.10994715546257794
+    ],
+    [
+     154.40324669745746,
+     69.82353398459031,
+     0,
+     0.20039529376663268
+    ],
+    [
+     145.6032466974575,
+     72.4235339845903,
+     0,
+     0.3408889612182975
+    ],
+    [
+     147.8032466974575,
+     72.4235339845903,
+     0,
+     0.581480911700055
+    ],
+    [
+     152.20324669745747,
+     72.4235339845903,
+     0,
+     0.059116501826792955
+    ],
+    [
+     154.40324669745746,
+     72.4235339845903,
+     0,
+     0.9119129253085703
+    ],
+    [
+     147.8032466974575,
+     75.0235339845903,
+     0,
+     0.9981800287496299
+    ],
+    [
+     152.20324669745747,
+     75.0235339845903,
+     0,
+     0.5361605500802398
+    ],
+    [
+     154.40324669745746,
+     75.0235339845903,
+     0,
+     0.5584033841732889
+    ],
+    [
+     145.6032466974575,
+     77.6235339845903,
+     0,
+     0.5011632135137916
+    ],
+    [
+     147.8032466974575,
+     77.6235339845903,
+     1,
+     0.8443069066852331
+    ],
+    [
+     150.00324669745748,
+     77.6235339845903,
+     0,
+     0.9079710019286722
+    ],
+    [
+     150.00324669745748,
+     80.22353398459029,
+     1,
+     0.7907812956254929
+    ],
+    [
+     152.20324669745747,
+     80.22353398459029,
+     0,
+     0.8935233126394451
+    ],
+    [
+     154.40324669745746,
+     80.22353398459029,
+     0,
+     0.07757199183106422
+    ],
+    [
+     152.20324669745747,
+     82.82353398459028,
+     0,
+     0.5341552416794002
+    ],
+    [
+     154.40324669745746,
+     82.82353398459028,
+     0,
+     0.7547073201276362
+    ],
+    [
+     154.40324669745746,
+     85.42353398459028,
+     0,
+     0.10638052527792752
+    ],
+    [
+     152.20324669745747,
+     90.62353398459027,
+     0,
+     0.42382414918392897
+    ],
+    [
+     154.40324669745746,
+     90.62353398459027,
+     0,
+     0.24405624228529632
+    ],
+    [
+     154.40324669745746,
+     93.22353398459026,
+     0,
+     0.4069354005623609
+    ],
+    [
+     -3,
+     72.6936853436241,
+     1,
+     0.25157480128109455
+    ],
+    [
+     -3,
+     80.49368534362408,
+     0,
+     0.27155273663811386
+    ],
+    [
+     -0.7999999999999998,
+     80.49368534362408,
+     1,
+     0.562526463298127
+    ],
+    [
+     -3,
+     83.09368534362407,
+     1,
+     0.9656151030212641
+    ],
+    [
+     -3,
+     88.29368534362406,
+     0,
+     0.5807492518797517
+    ],
+    [
+     -3,
+     90.89368534362406,
+     0,
+     0.6285748158115894
+    ],
+    [
+     -0.7999999999999998,
+     90.89368534362406,
+     0,
+     0.812109800055623
+    ],
+    [
+     -3,
+     96.09368534362405,
+     0,
+     0.13830041023902595
+    ],
+    [
+     71.43830524981023,
+     92.32052265548148,
+     0,
+     0.20891680684871972
+    ],
+    [
+     71.43830524981023,
+     94.92052265548148,
+     0,
+     0.12066581659018993
+    ],
+    [
+     79.24255628585816,
+     88.55948170474265,
+     1,
+     0.8763183271512389
+    ],
+    [
+     77.04255628585815,
+     93.75948170474264,
+     0,
+     0.7071916949935257
+    ],
+    [
+     77.04255628585815,
+     96.35948170474263,
+     0,
+     0.8014020579867065
+    ],
+    [
+     79.24255628585816,
+     96.35948170474263,
+     0,
+     0.2097448161803186
+    ],
+    [
+     82.97702224762179,
+     86.58808459637686,
+     0,
+     0.14530491642653942
+    ],
+    [
+     85.17702224762179,
+     86.58808459637686,
+     0,
+     0.2567916561383754
+    ],
+    [
+     85.17702224762179,
+     89.18808459637685,
+     0,
+     0.35700767347589135
+    ],
+    [
+     85.17702224762179,
+     91.78808459637685,
+     0,
+     0.4070439347997308
+    ],
+    [
+     82.97702224762179,
+     94.38808459637684,
+     0,
+     0.06585692684166133
+    ],
+    [
+     82.97702224762179,
+     96.98808459637684,
+     1,
+     0.6328491468448192
+    ],
+    [
+     89.09751017601229,
+     89.5252295929566,
+     0,
+     0.05931772547774017
+    ],
+    [
+     91.2975101760123,
+     89.5252295929566,
+     0,
+     0.22405089624226093
+    ],
+    [
+     97.8975101760123,
+     89.5252295929566,
+     0,
+     0.3512096053455025
+    ],
+    [
+     89.09751017601229,
+     92.1252295929566,
+     0,
+     0.26078989868983626
+    ],
+    [
+     89.09751017601229,
+     94.7252295929566,
+     1,
+     0.08683943329378963
+    ],
+    [
+     95.6975101760123,
+     94.7252295929566,
+     1,
+     0.10205765976570547
+    ],
+    [
+     97.8975101760123,
+     94.7252295929566,
+     0,
+     0.3023326063994318
+    ],
+    [
+     91.2975101760123,
+     97.32522959295659,
+     1,
+     0.36990613397210836
+    ],
+    [
+     100.32676902413368,
+     79.00436239610426,
+     1,
+     0.7224729692097753
+    ],
+    [
+     102.52676902413369,
+     79.00436239610426,
+     0,
+     0.7692029108293355
+    ],
+    [
+     104.72676902413369,
+     79.00436239610426,
+     0,
+     0.16540992027148604
+    ],
+    [
+     100.32676902413368,
+     81.60436239610425,
+     0,
+     0.9494112678803504
+    ],
+    [
+     104.72676902413369,
+     81.60436239610425,
+     0,
+     0.637949108146131
+    ],
+    [
+     100.32676902413368,
+     84.20436239610424,
+     0,
+     0.6467463029548526
+    ],
+    [
+     100.32676902413368,
+     86.80436239610424,
+     1,
+     0.769428625004366
+    ],
+    [
+     102.52676902413369,
+     89.40436239610423,
+     0,
+     0.12942282110452652
+    ],
+    [
+     100.32676902413368,
+     92.00436239610423,
+     0,
+     0.2054899747017771
+    ],
+    [
+     102.52676902413369,
+     92.00436239610423,
+     0,
+     0.5361175280995667
+    ],
+    [
+     100.32676902413368,
+     94.60436239610422,
+     0,
+     0.8091785660944879
+    ],
+    [
+     104.72676902413369,
+     94.60436239610422,
+     0,
+     0.06599061819724739
+    ],
+    [
+     110.1140525531955,
+     67.38442590340506,
+     0,
+     0.8771820997353643
+    ],
+    [
+     112.31405255319551,
+     67.38442590340506,
+     1,
+     0.9048156768549234
+    ],
+    [
+     114.51405255319551,
+     67.38442590340506,
+     0,
+     0.1515260071028024
+    ],
+    [
+     112.31405255319551,
+     69.98442590340505,
+     0,
+     0.47686555585823953
+    ],
+    [
+     110.1140525531955,
+     72.58442590340505,
+     0,
+     0.38292561238631606
+    ],
+    [
+     112.31405255319551,
+     72.58442590340505,
+     1,
+     0.03166888374835253
+    ],
+    [
+     114.51405255319551,
+     72.58442590340505,
+     1,
+     0.8995724942069501
+    ],
+    [
+     112.31405255319551,
+     75.18442590340504,
+     0,
+     0.0710133973043412
+    ],
+    [
+     114.51405255319551,
+     75.18442590340504,
+     1,
+     0.237405052408576
+    ],
+    [
+     112.31405255319551,
+     77.78442590340504,
+     0,
+     0.8684984452556819
+    ],
+    [
+     110.1140525531955,
+     80.38442590340503,
+     1,
+     0.6246430613100529
+    ],
+    [
+     112.31405255319551,
+     80.38442590340503,
+     0,
+     0.8770462248940021
+    ],
+    [
+     114.51405255319551,
+     80.38442590340503,
+     0,
+     0.8589980856049806
+    ],
+    [
+     110.1140525531955,
+     82.98442590340503,
+     0,
+     0.3767984800506383
+    ],
+    [
+     112.31405255319551,
+     82.98442590340503,
+     0,
+     0.015115344198420644
+    ],
+    [
+     112.31405255319551,
+     85.58442590340502,
+     0,
+     0.5161055815406144
+    ],
+    [
+     110.1140525531955,
+     88.18442590340501,
+     0,
+     0.1576911094598472
+    ],
+    [
+     110.1140525531955,
+     90.78442590340501,
+     0,
+     0.25540434336289763
+    ],
+    [
+     112.31405255319551,
+     90.78442590340501,
+     0,
+     0.062040623277425766
+    ],
+    [
+     110.1140525531955,
+     93.384425903405,
+     0,
+     0.3892432057764381
+    ],
+    [
+     114.51405255319551,
+     93.384425903405,
+     0,
+     0.9261352131143212
+    ],
+    [
+     114.51405255319551,
+     95.984425903405,
+     1,
+     0.1462336895056069
+    ],
+    [
+     117.25051039922982,
+     68.54406722439919,
+     0,
+     0.7806234688032418
+    ],
+    [
+     117.25051039922982,
+     71.14406722439918,
+     0,
+     0.36764392349869013
+    ],
+    [
+     117.25051039922982,
+     76.34406722439917,
+     0,
+     0.4082357310689986
+    ],
+    [
+     117.25051039922982,
+     78.94406722439916,
+     0,
+     0.05268755299039185
+    ],
+    [
+     117.25051039922982,
+     81.54406722439916,
+     0,
+     0.9879831161815673
+    ],
+    [
+     117.25051039922982,
+     84.14406722439915,
+     1,
+     0.31220877263695
+    ],
+    [
+     117.25051039922982,
+     91.94406722439913,
+     0,
+     0.18681590678170323
+    ],
+    [
+     117.25051039922982,
+     97.14406722439912,
+     0,
+     0.9365544978063554
+    ],
+    [
+     123.59981963345781,
+     79.79468836870045,
+     0,
+     0.08910229546017945
+    ],
+    [
+     121.39981963345781,
+     84.99468836870044,
+     0,
+     0.9363746547605842
+    ],
+    [
+     123.59981963345781,
+     87.59468836870043,
+     0,
+     0.17040659138001502
+    ],
+    [
+     121.39981963345781,
+     90.19468836870043,
+     0,
+     0.6331773675046861
+    ],
+    [
+     123.59981963345781,
+     92.79468836870042,
+     0,
+     0.33668085979297757
+    ],
+    [
+     121.39981963345781,
+     95.39468836870041,
+     1,
+     0.96675931266509
+    ],
+    [
+     123.59981963345781,
+     95.39468836870041,
+     1,
+     0.8524401041213423
+    ],
+    [
+     126.45699298381805,
+     77.58786302243826,
+     1,
+     0.715556182898581
+    ],
+    [
+     126.45699298381805,
+     80.18786302243825,
+     0,
+     0.8862887248396873
+    ],
+    [
+     128.65699298381804,
+     80.18786302243825,
+     1,
+     0.18237404990941286
+    ],
+    [
+     126.45699298381805,
+     82.78786302243824,
+     0,
+     0.7787810605950654
+    ],
+    [
+     128.65699298381804,
+     82.78786302243824,
+     1,
+     0.6883603550959378
+    ],
+    [
+     130.85699298381803,
+     82.78786302243824,
+     0,
+     0.22063377196900547
+    ],
+    [
+     126.45699298381805,
+     85.38786302243824,
+     0,
+     0.8742296108976007
+    ],
+    [
+     128.65699298381804,
+     85.38786302243824,
+     0,
+     0.7002065249253064
+    ],
+    [
+     126.45699298381805,
+     87.98786302243823,
+     1,
+     0.3971208776347339
+    ],
+    [
+     128.65699298381804,
+     87.98786302243823,
+     0,
+     0.6757807682733983
+    ],
+    [
+     130.85699298381803,
+     93.18786302243822,
+     0,
+     0.7376162952277809
+    ],
+    [
+     126.45699298381805,
+     95.78786302243822,
+     0,
+     0.23034832533448935
+    ],
+    [
+     128.65699298381804,
+     95.78786302243822,
+     0,
+     0.2491163699887693
+    ],
+    [
+     130.85699298381803,
+     95.78786302243822,
+     1,
+     0.174164904281497
+    ],
+    [
+     133.01126739708707,
+     93.77728431153577,
+     0,
+     0.39955196366645396
+    ],
+    [
+     135.21126739708706,
+     93.77728431153577,
+     1,
+     0.9230855144560337
+    ],
+    [
+     133.01126739708707,
+     96.37728431153576,
+     1,
+     0.09063335065729916
+    ],
+    [
+     137.609968572855,
+     80.90935517991427,
+     0,
+     0.7390105109661818
+    ],
+    [
+     142.00996857285497,
+     80.90935517991427,
+     0,
+     0.02113575697876513
+    ],
+    [
+     144.20996857285496,
+     80.90935517991427,
+     0,
+     0.4033900338690728
+    ],
+    [
+     139.80996857285498,
+     83.50935517991427,
+     0,
+     0.7269529947079718
+    ],
+    [
+     142.00996857285497,
+     83.50935517991427,
+     0,
+     0.42556429211981595
+    ],
+    [
+     144.20996857285496,
+     83.50935517991427,
+     1,
+     0.955254782224074
+    ],
+    [
+     146.40996857285495,
+     83.50935517991427,
+     1,
+     0.17907756613567472
+    ],
+    [
+     137.609968572855,
+     86.10935517991426,
+     0,
+     0.717633671592921
+    ],
+    [
+     142.00996857285497,
+     86.10935517991426,
+     0,
+     0.19504226674325764
+    ],
+    [
+     137.609968572855,
+     88.70935517991425,
+     0,
+     0.03899142239242792
+    ],
+    [
+     139.80996857285498,
+     88.70935517991425,
+     0,
+     0.5065469632390887
+    ],
+    [
+     137.609968572855,
+     91.30935517991425,
+     1,
+     0.25509072304703295
+    ],
+    [
+     142.00996857285497,
+     91.30935517991425,
+     0,
+     0.9589371206238866
+    ],
+    [
+     144.20996857285496,
+     91.30935517991425,
+     0,
+     0.990465285256505
+    ],
+    [
+     137.609968572855,
+     93.90935517991424,
+     0,
+     0.9753735028207302
+    ],
+    [
+     139.80996857285498,
+     93.90935517991424,
+     0,
+     0.5761309931986034
+    ],
+    [
+     146.40996857285495,
+     93.90935517991424,
+     0,
+     0.5233509337995201
+    ],
+    [
+     142.00996857285497,
+     96.50935517991424,
+     0,
+     0.9797557746060193
+    ],
+    [
+     144.20996857285496,
+     96.50935517991424,
+     0,
+     0.20605840045027435
+    ],
+    [
+     149.95229789195582,
+     82.97381154022645,
+     1,
+     0.9496360805351287
+    ],
+    [
+     149.95229789195582,
+     85.57381154022644,
+     1,
+     0.011297666002064943
+    ],
+    [
+     152.1522978919558,
+     85.57381154022644,
+     0,
+     0.03649219521321356
+    ],
+    [
+     152.1522978919558,
+     90.77381154022643,
+     0,
+     0.8744278596714139
+    ],
+    [
+     149.95229789195582,
+     93.37381154022643,
+     0,
+     0.18086411152034998
+    ],
+    [
+     149.95229789195582,
+     95.97381154022642,
+     0,
+     0.800330591853708
+    ],
+    [
+     152.1522978919558,
+     95.97381154022642,
+     0,
+     0.6978570900391787
+    ],
+    [
+     154.79205082007684,
+     91.86560547339731,
+     1,
+     0.7350522698834538
+    ],
+    [
+     159.19205082007682,
+     91.86560547339731,
+     0,
+     0.17083979351446033
+    ],
+    [
+     161.3920508200768,
+     91.86560547339731,
+     0,
+     0.8209281179588288
+    ],
+    [
+     159.19205082007682,
+     94.4656054733973,
+     0,
+     0.060230225790292025
+    ],
+    [
+     163.5920508200768,
+     94.4656054733973,
+     1,
+     0.03547842847183347
+    ],
+    [
+     154.79205082007684,
+     97.0656054733973,
+     0,
+     0.9557582591660321
+    ],
+    [
+     159.19205082007682,
+     97.0656054733973,
+     0,
+     0.524687458993867
+    ]
+   ],
+   "winsNote": "[x, y, kind, ph] niche-local; kind 1 = cyan",
+   "parts": {
+    "sky": {
+     "file": "WRLDZ/MenuV6/Rigs/Port/niche/sky",
+     "rect": [
+      27,
+      41,
+      152,
+      123
+     ],
+     "tag": "OWN"
+    },
+    "frame": {
+     "file": "WRLDZ/MenuV6/Rigs/Port/niche/frame",
+     "rect": [
+      0,
+      0,
+      206,
+      166
+     ],
+     "tag": "OWN"
+    },
+    "skygrad": {
+     "file": "WRLDZ/MenuV6/Rigs/Port/niche/skygrad",
+     "rect": [
+      27.0,
+      41.0,
+      152.0,
+      124.0
+     ],
+     "tag": "OWN"
+    },
+    "horizon": {
+     "file": "WRLDZ/MenuV6/Rigs/Port/niche/horizon",
+     "rect": [
+      27.0,
+      109.0,
+      152.0,
+      32.0
+     ],
+     "tag": "OWN"
+    },
+    "shadow": {
+     "file": "WRLDZ/MenuV6/Rigs/Port/niche/shadow",
+     "rect": [
+      27.0,
+      41.0,
+      152.0,
+      8.0
+     ],
+     "tag": "OWN"
+    },
+    "blimp": {
+     "file": "WRLDZ/MenuV6/Rigs/Port/niche/blimp",
+     "rect": [
+      94.5,
+      61.0,
+      16.0,
+      8.0
+     ],
+     "atT": 28.4375,
+     "bx": 76,
+     "by": 23.48534700307435,
+     "rule": "translate by (bx(t) - bx, by(t) - by) (niche-local)"
+    }
+   },
+   "sliver": {
+    "file": "WRLDZ/MenuV6/Rigs/Port/niche/sliver",
+    "rect": [
+     39.5,
+     88.0,
+     19.5,
+     29.0
+    ],
+    "cell": [
+     39,
+     58
+    ],
+    "pitch": [
+     44,
+     64
+    ],
+    "grid": [
+     11,
+     4
+    ],
+    "n": 34,
+    "frames": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "f": 0,
+      "t": 7.4,
+      "p": 0,
+      "ks": 0
+     },
+     {
+      "i": 1,
+      "x": 44,
+      "y": 0,
+      "f": 1,
+      "t": 7.416666666666667,
+      "p": 0.016667,
+      "ks": 0.09505604330418735
+     },
+     {
+      "i": 2,
+      "x": 88,
+      "y": 0,
+      "f": 2,
+      "t": 7.433333333333334,
+      "p": 0.033333,
+      "ks": 0.18925124436041946
+     },
+     {
+      "i": 3,
+      "x": 132,
+      "y": 0,
+      "f": 3,
+      "t": 7.45,
+      "p": 0.05,
+      "ks": 0.2817325568414335
+     },
+     {
+      "i": 4,
+      "x": 176,
+      "y": 0,
+      "f": 4,
+      "t": 7.466666666666667,
+      "p": 0.066667,
+      "ks": 0.3716624556603262
+     },
+     {
+      "i": 5,
+      "x": 220,
+      "y": 0,
+      "f": 5,
+      "t": 7.483333333333333,
+      "p": 0.083333,
+      "ks": 0.4582265217274133
+     },
+     {
+      "i": 6,
+      "x": 264,
+      "y": 0,
+      "f": 6,
+      "t": 7.5,
+      "p": 0.1,
+      "ks": 0.5406408174556043
+     },
+     {
+      "i": 7,
+      "x": 308,
+      "y": 0,
+      "f": 7,
+      "t": 7.516666666666667,
+      "p": 0.116667,
+      "ks": 0.6181589862206073
+     },
+     {
+      "i": 8,
+      "x": 352,
+      "y": 0,
+      "f": 8,
+      "t": 7.533333333333334,
+      "p": 0.133333,
+      "ks": 0.6900790114821173
+     },
+     {
+      "i": 9,
+      "x": 396,
+      "y": 0,
+      "f": 9,
+      "t": 7.550000000000001,
+      "p": 0.15,
+      "ks": 0.7557495743542663
+     },
+     {
+      "i": 10,
+      "x": 440,
+      "y": 0,
+      "f": 10,
+      "t": 7.566666666666667,
+      "p": 0.166667,
+      "ks": 0.8145759520503395
+     },
+     {
+      "i": 11,
+      "x": 0,
+      "y": 64,
+      "f": 11,
+      "t": 7.583333333333334,
+      "p": 0.183333,
+      "ks": 0.8660254037844393
+     },
+     {
+      "i": 12,
+      "x": 44,
+      "y": 64,
+      "f": 12,
+      "t": 7.6000000000000005,
+      "p": 0.2,
+      "ks": 0.9096319953545209
+     },
+     {
+      "i": 13,
+      "x": 88,
+      "y": 64,
+      "f": 13,
+      "t": 7.616666666666667,
+      "p": 0.216667,
+      "ks": 0.945000818714672
+     },
+     {
+      "i": 14,
+      "x": 132,
+      "y": 64,
+      "f": 14,
+      "t": 7.633333333333334,
+      "p": 0.233333,
+      "ks": 0.9718115683235429
+     },
+     {
+      "i": 15,
+      "x": 176,
+      "y": 64,
+      "f": 15,
+      "t": 7.65,
+      "p": 0.25,
+      "ks": 0.9898214418809327
+     },
+     {
+      "i": 16,
+      "x": 220,
+      "y": 64,
+      "f": 16,
+      "t": 7.666666666666667,
+      "p": 0.266667,
+      "ks": 0.9988673391830082
+     },
+     {
+      "i": 17,
+      "x": 264,
+      "y": 64,
+      "f": 17,
+      "t": 7.683333333333334,
+      "p": 0.283333,
+      "ks": 0.9988673391830075
+     },
+     {
+      "i": 18,
+      "x": 308,
+      "y": 64,
+      "f": 18,
+      "t": 7.7,
+      "p": 0.3,
+      "ks": 0.9898214418809321
+     },
+     {
+      "i": 19,
+      "x": 352,
+      "y": 64,
+      "f": 19,
+      "t": 7.716666666666667,
+      "p": 0.316667,
+      "ks": 0.9718115683235421
+     },
+     {
+      "i": 20,
+      "x": 396,
+      "y": 64,
+      "f": 20,
+      "t": 7.733333333333333,
+      "p": 0.333333,
+      "ks": 0.9450008187146675
+     },
+     {
+      "i": 21,
+      "x": 440,
+      "y": 64,
+      "f": 21,
+      "t": 7.75,
+      "p": 0.35,
+      "ks": 0.9096319953545151
+     },
+     {
+      "i": 22,
+      "x": 0,
+      "y": 128,
+      "f": 22,
+      "t": 7.766666666666667,
+      "p": 0.366667,
+      "ks": 0.8660254037844374
+     },
+     {
+      "i": 23,
+      "x": 44,
+      "y": 128,
+      "f": 23,
+      "t": 7.783333333333334,
+      "p": 0.383333,
+      "ks": 0.8145759520503316
+     },
+     {
+      "i": 24,
+      "x": 88,
+      "y": 128,
+      "f": 24,
+      "t": 7.800000000000001,
+      "p": 0.4,
+      "ks": 0.7557495743542505
+     },
+     {
+      "i": 25,
+      "x": 132,
+      "y": 128,
+      "f": 25,
+      "t": 7.816666666666667,
+      "p": 0.416667,
+      "ks": 0.6900790114821072
+     },
+     {
+      "i": 26,
+      "x": 176,
+      "y": 128,
+      "f": 26,
+      "t": 7.833333333333334,
+      "p": 0.433333,
+      "ks": 0.6181589862206044
+     },
+     {
+      "i": 27,
+      "x": 220,
+      "y": 128,
+      "f": 27,
+      "t": 7.8500000000000005,
+      "p": 0.45,
+      "ks": 0.5406408174555929
+     },
+     {
+      "i": 28,
+      "x": 264,
+      "y": 128,
+      "f": 28,
+      "t": 7.866666666666667,
+      "p": 0.466667,
+      "ks": 0.458226521727401
+     },
+     {
+      "i": 29,
+      "x": 308,
+      "y": 128,
+      "f": 29,
+      "t": 7.883333333333334,
+      "p": 0.483333,
+      "ks": 0.37166245566032263
+     },
+     {
+      "i": 30,
+      "x": 352,
+      "y": 128,
+      "f": 30,
+      "t": 7.9,
+      "p": 0.5,
+      "ks": 0.28173255684143006
+     },
+     {
+      "i": 31,
+      "x": 396,
+      "y": 128,
+      "f": 31,
+      "t": 7.916666666666667,
+      "p": 0.516667,
+      "ks": 0.18925124436040613
+     },
+     {
+      "i": 32,
+      "x": 440,
+      "y": 128,
+      "f": 32,
+      "t": 7.933333333333334,
+      "p": 0.533333,
+      "ks": 0.0950560433041736
+     },
+     {
+      "i": 33,
+      "x": 0,
+      "y": 192,
+      "f": 33,
+      "t": 7.95,
+      "p": 0.55,
+      "ks": 0
+     }
+    ],
+    "ppu": 200,
+    "pick": "p = (t + 2.3) mod 9.7; while p < .55: frame floor(60 p) (k = sin(pi p / .55))",
+    "units": "canvas px"
+   },
+   "ring": {
+    "ring": {
+     "file": "WRLDZ/MenuV6/Rigs/Port/niche/ring",
+     "size": [
+      187,
+      187
+     ],
+     "tag": "OWN",
+     "half": 46.85209302325582
+    },
+    "pointer": {
+     "file": "WRLDZ/MenuV6/Rigs/Port/niche/pointer",
+     "size": [
+      71,
+      114
+     ],
+     "tag": "OWN",
+     "S": 3,
+     "pad": 8,
+     "len": 22.037209302325582,
+     "wid": 7.520197674418605
+    },
+    "membrane": {
+     "file": "WRLDZ/MenuV6/Rigs/Port/niche/membrane",
+     "size": [
+      116,
+      116
+     ],
+     "tag": "OWN",
+     "centre": [
+      29,
+      29
+     ],
+     "scale": 2
+    },
+    "rim_arc": {
+     "file": "WRLDZ/MenuV6/Rigs/Port/niche/rim_arc",
+     "size": [
+      120,
+      120
+     ],
+     "tag": "OWN",
+     "centre": [
+      30,
+      30
+     ],
+     "lw": 1.101860465116279,
+     "scale": 2
+    }
+   },
+   "units": "canvas px of the niche canvas (172 x 134 land / 206 x 166 port at 2x); \"niche-local\" = after translate(nx0, ny0); everything inside the clip rect (nx0, ny0, nw, nh + 6)",
+   "draw": [
+    "skygrad (static)",
+    "stars i < 16: (hash2(i,1,3) nw, hash2(i,2,3) .5 nh), .8 x .8, #e8ecff, alpha .3 + .5 max(0, sin(t (.6 + hash2(i,3,3)) + 2 i))^6",
+    "additive searchlights [(.3 nw, .55, 0), (.82 nw, .42, 2.1)]: an = -pi/2 + .5 sin(sp t + ph), L = 1.3 nh, half-angle .075: triangle from (bx, hz - ny0), linear gradient rgba(190,230,255,.34) -> 0 along an",
+    "additive tears i: tp = .6 + .4 sin(1.3 t + 2 i); SPR.violet size .9 nh sz alpha .5 tp; SPR.ame size .45 nh sz alpha .55 tp; stroke rgba(255,120,200,.55 + .35 tp) 1.1: M(tx, ty - .12 nh sz) Q(tx - 2.2, ty; tx, ty + .1 nh sz)",
+    "the sliver (over Tear 0, source-over): sliver flipbook",
+    "horizon (static, additive)",
+    "the blimp: bx = ((3.2 t) mod (nw + 30)) - 15, by = .2 nh + 1.2 sin(.4 t); its nose light SPR.red at (bx + 6.5, by + .5) size 6 alpha .9 while (1.1 t) mod 1 < .5 (additive)",
+    "sky (the skyline + KC tower + front buildings, static)",
+    "windows i: on while hash2(i, floor(.35 t + 9 ph), 7) > .12: rect (x, y, 1.1, 1.2), kind ? rgba(130,230,255,.95) : rgba(255,210,130,.92)",
+    "additive site: b = .6 + .4 sin(1.7 t); SPR.gold size 26 alpha .5 b; SPR.goldHot size 9 alpha .9; triangle (0,-5) (4.5,1) (-4.5,1) rgba(255,230,160,.95)",
+    "scanlines: y = (6 t) mod 2.4 + 2.4 j < nh: rect (0, y, nw, .8) rgba(0,0,0,.16)",
+    "pings [(tear 0, 4), (tear 2, 0)] j: ph = (t - 1.3 j) mod 2.6 < 1.3: k = ph / 1.3; additive circle radius 3 + k (j ? 9 : 17): stroke rgba(191,230,255,.9 (1 - k)) 1.6 and rgba(95,182,255,.45 (1 - k)) 4; SPR.blueHot size 16 alpha .7 (1 - k)",
+    "the Ring: from_i = .05 sin(t (1 + .2 i) + 1.7 i); ringBearings(ringC, ringS, aims, from, [1, 0, 1, 0, 1], t) (relics.js:381-392); drawRingSpectral {a 1, i .95, rays [i2 -> site gold .75, i0 -> tear 2 blue .6, i4 -> tear 0 blue .6], glow [.5, 0, .7, 0, .5], found 2, seed 4.1, sweep 0, aura .4, motes 8} (as rigs.ringEcho.draw + rays: relics.js:358-364 a blurred stroke (CSS blur max(1.5, 2.4 s)) + a dashed line [max(3, 5 s), max(3, 4 s)] offset -40 t max(.5, s), a travelling glint, the end glow; refraction of the niche itself)",
+    "hover: additive rect over the niche rgba(95,182,255,.1 hov + .12 press) (press = max(0, 1 - (t - tClick) / .4))",
+    "frame (static)",
+    "shadow (static)"
+   ],
+   "dom": "the .wmap :hover ring (CSS) = dom.niche_frame hover sprite; .wmap:active scale(.97) (wrldz.css:87)",
+   "replaces": "P1a niche/niche_still (the canvas at 2.8 s)"
+  },
+  "breachGlow": {
+   "src": "menu_v41.js:57-59",
+   "parts": {
+    "crack_glow": {
+     "file": "WRLDZ/MenuV6/Rigs/Port/breach/crack_glow",
+     "rect": [
+      86,
+      526,
+      924.0,
+      1132.0
+     ]
+    },
+    "fissure_glow": {
+     "file": "WRLDZ/MenuV6/Rigs/Port/breach/fissure_glow",
+     "rect": [
+      288,
+      1675,
+      484,
+      96
+     ]
+    }
+   },
+   "fl": "fl = .62 + .25 sin(5.1 t) sin(1.7 t + 2) + .13 sin(13.3 t)",
+   "draw": [
+    "crack_glow additive alpha clamp(fl (1 + .7 sg), 0, 1.6) .6 (sg = 0 at the idle)",
+    "fissure_glow additive alpha clamp((.25 + .12 fl)(1 + .6 sg), 0, 1)"
+   ],
+   "replaces": "P1a breach_glow_add (both at the frame alphas of 2.8 s)",
+   "notExported": "the rest of the breach idle (hole breath ~1 %, tendril sway, void sparkles, the 13 s fissure teeth, door-hover recoil) stays the P1a still"
+  },
+  "domHover": {
+   "src": "anime_v6.css:59 (.wmap:hover .niche), :64-65 (.quit:hover); wrldz.css:87, :102 (:active scale .97)",
+   "parts": {
+    "quit_plate": {
+     "rest": {
+      "file": "WRLDZ/MenuV6/Rigs/Port/dom/quit_plate_rest",
+      "rect": [
+       841.0,
+       2185.0,
+       198.0,
+       80.0
+      ],
+      "border": [
+       14,
+       20,
+       18,
+       16
+      ],
+      "nine": true,
+      "textColor": "rgb(231, 154, 125)"
+     },
+     "hover": {
+      "file": "WRLDZ/MenuV6/Rigs/Port/dom/quit_plate_hover",
+      "rect": [
+       841.0,
+       2185.0,
+       198.0,
+       80.0
+      ],
+      "border": [
+       14,
+       20,
+       18,
+       16
+      ],
+      "nine": true,
+      "textColor": "rgb(255, 243, 196)"
+     }
+    },
+    "niche_frame": {
+     "rest": {
+      "file": "WRLDZ/MenuV6/Rigs/Port/dom/niche_frame_rest",
+      "rect": [
+       588.5,
+       1807.5,
+       222.0,
+       182.0
+      ],
+      "border": [
+       15,
+       17,
+       17,
+       15
+      ],
+      "nine": true,
+      "textColor": null
+     },
+     "hover": {
+      "file": "WRLDZ/MenuV6/Rigs/Port/dom/niche_frame_hover",
+      "rect": [
+       570.0,
+       1789.0,
+       258.0,
+       218.0
+      ],
+      "border": [
+       85,
+       85,
+       85,
+       85
+      ],
+      "nine": true,
+      "textColor": null
+     }
+    }
+   },
+   "rule": "pointer over #wmap: niche_frame hover replaces the P1a niche_frame; over #quit: quit_plate hover replaces quit_plate and the QUIT label colour becomes parts.quit_plate.hover.textColor; pressed: the row scales to .97 about its centre (wrldz.css transition .16 s)"
+  },
+  "shots": "out_p1b/rigs/port/shots/*.png: full-page page renders of the hover / voice states (research side, for the landing compare)"
+ }
+}

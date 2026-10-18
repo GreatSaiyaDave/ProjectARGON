@@ -8,13 +8,15 @@ namespace WRLDZ.UI.MenuV6
     /// The torch flicker of P1a (BUILD_PLAN §6 P1a step 3): the page's <c>flick</c> curve (menu.js:653, with the noise
     /// row of core.js NZF exported in schedules.json torch.NZF_row7) drives what schedules.json torch.drives lists:
     /// Stone B over Stone A at alpha flick, the keystone's lit state f1 over f0 at alpha flick, and the torch pool's b0
-    /// weight a0 = .2 (.8 + .3 flick). sg (the dread ladder) is 0 until P5. The flame itself stays the baked frame
-    /// until P1b's mesh.
+    /// weight a0 = .2 (.8 + .3 flick). sg (the dread ladder) is 0 until P5. P1b: the flame's tongues are the FlameRig
+    /// (the page's visible flicker is mostly their sway), and each driven layer carries its Linear-space gain
+    /// (MenuV6Linear.LayerGain: the pool's warm light was too strong in the P1a capture).
     /// </summary>
     public sealed class TorchFlicker : MonoBehaviour
     {
-        readonly List<Graphic> _flickAlpha = new();
+        readonly List<(Graphic g, float gain)> _flickAlpha = new();
         Graphic _poolB0;
+        float _poolGain = 1f;
         double[] _noise;
         float _last = -1f;
 
@@ -29,22 +31,26 @@ namespace WRLDZ.UI.MenuV6
             return f;
         }
 
-        /// <summary>A layer whose alpha is the flick (Stone B, keystone f1).</summary>
-        public void DriveAlpha(Graphic g)
+        /// <summary>A layer whose alpha is the flick (Stone B, keystone f1), times its gain.</summary>
+        public void DriveAlpha(Graphic g, float gain = 1f)
         {
-            if (g != null) _flickAlpha.Add(g);
+            if (g != null) _flickAlpha.Add((g, gain));
         }
 
-        /// <summary>The torch pool's b0 basis layer (its alpha is the weight a0).</summary>
-        public void DrivePool(Graphic g) => _poolB0 = g;
+        /// <summary>The torch pool's b0 basis layer (its alpha is the weight a0), times its gain.</summary>
+        public void DrivePool(Graphic g, float gain = 1f)
+        {
+            _poolB0 = g;
+            _poolGain = gain;
+        }
 
         public void Apply(float t)
         {
             var flick = (float)MenuV6Math.Flick(t, _noise);
             Flick = flick;
             for (var i = 0; i < _flickAlpha.Count; i++)
-                SetAlpha(_flickAlpha[i], flick);
-            if (_poolB0 != null) SetAlpha(_poolB0, (float)MenuV6Math.TorchPoolA0(flick));
+                SetAlpha(_flickAlpha[i].g, Mathf.Clamp01(flick * _flickAlpha[i].gain));
+            if (_poolB0 != null) SetAlpha(_poolB0, Mathf.Clamp01((float)MenuV6Math.TorchPoolA0(flick) * _poolGain));
         }
 
         static void SetAlpha(Graphic g, float a)
