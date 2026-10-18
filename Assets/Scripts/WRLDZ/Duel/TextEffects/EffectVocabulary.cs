@@ -483,6 +483,7 @@ namespace WRLDZ.Duel.TextEffects
                 EffectActionKind.OpponentPlacesRaceMonsterFromTheirDeckOnTop => EffectResolutionKind.ReturnToDeck,
                 EffectActionKind.RandomHandCardSpecialSummonOrSendToGy => EffectResolutionKind.SpecialSummon,
                 EffectActionKind.TargetGainsAtkEqualToDefDestroyAtEndPhase => EffectResolutionKind.ModifyStats,
+                EffectActionKind.TargetGainsAtkEqualToAnotherTargetDuringDamageStep => EffectResolutionKind.ModifyStats,
                 EffectActionKind.PlaceCounterOnThisCard => EffectResolutionKind.PlaceCounters,
                 EffectActionKind.InflictCountersTimesAmountToDestroyer => EffectResolutionKind.Damage,
                 // BattlePhaseEnd (v142): end-of-Battle-Phase and battle-aftermath effects.

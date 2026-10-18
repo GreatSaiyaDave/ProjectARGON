@@ -3035,6 +3035,11 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         TargetGainsAtkEqualToDefDestroyAtEndPhase,
         /// <summary>
+        /// Covering Fire (c74458486): during Damage Step, target another face-up monster you control; your attacked
+        /// monster gains ATK equal to that target's ATK during the Damage Step only.
+        /// </summary>
+        TargetGainsAtkEqualToAnotherTargetDuringDamageStep,
+        /// <summary>
         /// TokensDeclarationsAndPicks batch — Balloon Lizard (Lua c39892082 e1): during its controller's Standby Phase, put
         /// <see cref="EffectClause.Amount"/> counter(s) on this face-up card (<see cref="CardInstance.Counters"/>).
         /// </summary>

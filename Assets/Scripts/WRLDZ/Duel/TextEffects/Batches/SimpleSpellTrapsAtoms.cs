@@ -259,6 +259,36 @@ namespace WRLDZ.Duel.TextEffects
                     Amount = 1000,
                     MakesChainLink = false
                 }),
+            // Covering Fire (c74458486): During Damage Step, target another face-up monster you control;
+            // your attacked monster gains ATK equal to that target's ATK during Damage Step only.
+            new AtomRegistration.Atom(
+                @".*target 1 other face-up monster you control.*gains ATK equal to that target.*ATK",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.TargetGainsAtkEqualToAnotherTargetDuringDamageStep,
+                    Zone = EffectZoneFilter.ControllerMonsters,
+                    RequiresTargetChoice = true,
+                    RequiresTargetFaceUp = true,
+                    TargetCount = 1,
+                    IsPsctTarget = true,
+                    MakesChainLink = true
+                }),
+            // Covering Fire (c74458486): During Damage Step, while opponent monster attacks your monster, target another
+            // face-up monster you control; your attacked monster gains ATK equal to that target's ATK during Damage Step only.
+            new AtomRegistration.Atom(
+                @".*target 1 other face-up monster you control.*gains ATK equal to that target.*ATK",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.TargetGainsAtkEqualToAnotherTargetDuringDamageStep,
+                    Zone = EffectZoneFilter.ControllerMonsters,
+                    RequiresTargetChoice = true,
+                    RequiresTargetFaceUp = true,
+                    TargetCount = 1,
+                    IsPsctTarget = true,
+                    MakesChainLink = true
+                }),
         };
 
         /// <summary>The whole text is one of this batch's atoms (an earlier phrase template must leave it alone).</summary>

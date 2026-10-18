@@ -3871,7 +3871,12 @@ namespace WRLDZ.Duel.TextEffects
                                "effect misses the timing.");
                     continue;
                 }
-                if (c.Action == EffectActionKind.PlaceThisOnTopOfDeck)
+                if (c.Action == EffectActionKind.ReEquipWhenEquippedMonsterDestroyed)
+                {
+                    if (card?.EquippedTo == null)
+                        continue;
+                }
+                                if (c.Action == EffectActionKind.PlaceThisOnTopOfDeck)
                 {
                     if (c.PayLpAmount > 0)
                     {
@@ -9859,6 +9864,16 @@ namespace WRLDZ.Duel.TextEffects
                 case EffectActionKind.TargetGainsAtkEqualToDefDestroyAtEndPhase:
                     TokensDeclarationsAndPicksRuntime.ApplyDefToAtkThenDestroy(engine, source, chosenTarget);
                     break;
+                case EffectActionKind.TargetGainsAtkEqualToAnotherTargetDuringDamageStep:
+                    {
+                        if (chosenTarget == null || source == null) break;
+                        if (!engine.TryGetBattlingPair(out _, out var defendingMon) || defendingMon == null) break;
+                        var boost = chosenTarget.CurrentAtk;
+                        defendingMon.UntilEndOfTurnAtk += boost;
+                        engine.Log($"{defendingMon.Name} gains {boost} ATK during Damage Step (now {defendingMon.CurrentAtk}/{defendingMon.CurrentDef}).");
+                    }
+                    break;
+
                 case EffectActionKind.PlaceCounterOnThisCard:
                     TokensDeclarationsAndPicksRuntime.PlaceCounter(engine, who, source, clause);
                     break;
@@ -10016,6 +10031,22 @@ namespace WRLDZ.Duel.TextEffects
                     break;
 
                 case EffectActionKind.MagicalHatsStyle:
+                    break;
+
+                case EffectActionKind.ReEquipWhenEquippedMonsterDestroyed:
+                    if (chosenTarget == null || source == null) break;
+                    if (ContinuousProtections.TargetedEffectBlocked(engine, chosenTarget, source))
+                    {
+                        engine.Log("Target is protected at resolution.");
+                        break;
+                    }
+                    if (ContinuousLocksAndIgnitionsRuntime.BreaksAtkEquipLimit(engine, clause, chosenTarget))
+                    {
+                        engine.Log($"{source.Name}: {chosenTarget.Name} has more than {clause.EquipLimitAtkMax} ATK — " +
+                                   "it cannot be equipped.");
+                        break;
+                    }
+                    EquipCardTo(engine, who, source, chosenTarget, clause.EquipAtkBonus, clause);
                     break;
 
                 case EffectActionKind.EquipThisToTarget:
