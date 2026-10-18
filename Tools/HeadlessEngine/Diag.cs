@@ -235,7 +235,9 @@ internal static class Diag
         foreach (var def in db.GetAllCards())
         {
             if (def == null) continue;
-            CompiledEffectCache.GetOrCompile(def);
+            // Fresh compile, never the seed being replaced: a same-Version seed entry would be written back unchanged,
+            // so a template or enum change made without a Version bump stayed in the shipped seed (2026-10-18).
+            CompiledEffectCache.ForceRecompile(def);
             n++;
         }
 

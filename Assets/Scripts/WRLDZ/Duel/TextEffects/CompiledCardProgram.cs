@@ -274,16 +274,6 @@ namespace WRLDZ.Duel.TextEffects
         DiscardSelfNoBattleDamageThisBattle,
         /// <summary>Discard Amount random cards from the opponent's hand (empty hand = no-op).</summary>
         DiscardRandomFromOpponentHand,
-        /// <summary>Draw 1 or discard 1 random card from opponent's hand (Necklace of Command trigger).</summary>
-        DrawOrDiscardRandomFromOpponentHand,
-        /// <summary>Thestalos: if the discarded card was a Monster Card, inflict damage equal to its original Level x 100.</summary>
-        DiscardRandomThenDamageByLevelIfMonster,
-        /// <summary>Ballista of Rampart Smashing: equipped monster gains 1500 ATK during damage calculation only when attacking face-down defense.</summary>
-        EquippedGainsAtkWhenAttackingFaceDownDefense,
-        /// <summary>Flint: equipped monster loses 300 ATK and cannot change position or attack.</summary>
-        EquippedLosesAtkAndCannotAttackChangePos,
-        /// <summary>Flint: if this card is destroyed because equipped monster was destroyed, re-equip to target.</summary>
-        ReEquipWhenEquippedMonsterDestroyed,
         /// <summary>While face-up: matching monsters gain Amount ATK and DefAmount DEF.</summary>
         ContinuousGainAtkDef,
         /// <summary>While face-up: matching monsters lose Amount Levels (hand and/or field).</summary>
@@ -366,8 +356,6 @@ namespace WRLDZ.Duel.TextEffects
         DestroyOppMonstersAtkLeq,
         /// <summary>Call a coin; right = destroy all opp monsters, wrong = destroy yours + half ATK damage (Time Wizard).</summary>
         CoinCallDestroyOppOrSelf,
-        /// <summary>Coin call at battle; if correct, destroy the opponent's monster that battled this card (Sasuke Samurai #4).</summary>
-        CoinCallDestroyBattledMonsterOnCorrect,
         /// <summary>Call a coin; right = double this ATK this turn, wrong = halve (Goddess of Whim).</summary>
         CoinCallDoubleOrHalveAtk,
         /// <summary>Toss CoinCount coins; destroy the target if heads ≥ Amount.</summary>
@@ -1800,10 +1788,6 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         NegateSpellTrapEffectsThatTargetAndDestroy,
         /// <summary>
-        /// Negate opponent's Spell effects that target this card (Silent Swordsman LV3).
-        /// </summary>
-        NegateOpponentSpellEffectsThatTargetThis,
-        /// <summary>
         /// NegationMonsters batch (v161) — Freed the Matchless General (ContinuousWhileFaceUp marker): "During your Draw
         /// Phase, instead of conducting your normal draw: You can add 1 Level N or lower X-Type monster from your Deck to
         /// your hand. This card must be face-up on the field to activate and to resolve this effect." (ygopro EVENT_PREDRAW
@@ -3035,11 +3019,6 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         TargetGainsAtkEqualToDefDestroyAtEndPhase,
         /// <summary>
-        /// Covering Fire (c74458486): during Damage Step, target another face-up monster you control; your attacked
-        /// monster gains ATK equal to that target's ATK during the Damage Step only.
-        /// </summary>
-        TargetGainsAtkEqualToAnotherTargetDuringDamageStep,
-        /// <summary>
         /// TokensDeclarationsAndPicks batch — Balloon Lizard (Lua c39892082 e1): during its controller's Standby Phase, put
         /// <see cref="EffectClause.Amount"/> counter(s) on this face-up card (<see cref="CardInstance.Counters"/>).
         /// </summary>
@@ -3180,15 +3159,6 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         DestroyThisOnYourNthStandbyAfterActivation,
         /// <summary>
-        /// SpellTrapSealsAndImmunity batch — Xing Zhen Hu (c76515293): target 2 face-down Spell/Trap Cards on the field;
-        /// those cards cannot be activated while this card remains face-up and they remain targeted (continuous lock).
-        /// </summary>
-        TargetTwoFaceDownSpellTrapsLockActivation,
-        /// <summary>
-        /// Triangle Ecstasy Spark (c12181376): boost Harpie Lady Sisters ATK to 2700, lock opponent traps.
-        /// </summary>
-        BoostHarpieLadySistersAtkAndLockTraps,
-        /// <summary>
         /// NormalMonsterSpells batch — Delta Attacker (c39719977): each face-up non-Token Normal Monster you control with 2
         /// others of its name you control can attack directly this turn (Lua EFFECT_DIRECT_ATTACK per monster,
         /// RESETS_STANDARD_PHASE_END: <see cref="CardInstance.DirectAttackThisTurn"/>;
@@ -3229,12 +3199,6 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         DestroyAttackedDefenseMonsterWithDefAtLeastNoDamageCalculation,
         /// <summary>
-        /// BattleAndPositionRecords batch — Mystic Swordsman LV6 (c60482781): at StartOfDamageStep, if this card
-        /// attacked a face-down Defense Position monster, destroy that monster and optionally (you can) place it
-        /// on top of the owner's Deck instead of sending it to the Graveyard.
-        /// </summary>
-        DestroyAttackedFaceDownDefenseReturnToOwnerDeckTopOrGy,
-        /// <summary>
         /// BattleAndPositionRecords batch — Ghost Knight of Jackal (c13386503, SINGLE TRIGGER_O EVENT_BATTLE_DESTROYING,
         /// aux.bdogcon): you can target the opponent's monster this card destroyed by battle (now in the GY) and Special Summon it
         /// to your field in face-up Defense Position (<see cref="BattleAndPositionRecordsRuntime.TryFireBattleDestroying"/>).
@@ -3259,17 +3223,6 @@ namespace WRLDZ.Duel.TextEffects
         /// Attack Position (<see cref="BattleAndPositionRecordsRuntime.NoteBattled"/>).
         /// </summary>
         OpponentMonstersThatBattledThisCannotAttackOrChangePosition,
-        /// <summary>
-        /// BattleAndPositionRecords batch — Harpie Lady 3 (c54415063): an opponent's monster that battles this card
-        /// cannot declare an attack during your opponent's next 2 turns.
-        /// </summary>
-        OpponentMonsterThatBattledThisCannotAttackForTwoTurns,
-        /// <summary>
-        /// Battle destroy trigger: negate effects of Flip monsters this card destroys by battle (Harpie Lady 2).
-        /// </summary>
-        NegateFlipMonsterEffectsThisDestroysByBattle,
-        /// <summary>Tragedy: destroy all opponent Defense Position monsters when their Attack Position monsters change to Defense Position.</summary>
-        DestroyAllOppDefenseWhenOppAttackBecomesDefense,
         /// <summary>
         /// BattleAndPositionRecords batch — Judgment of the Desert (c4869446, Continuous Trap: EVENT_CHANGE_POS SetCardTarget +
         /// FIELD EFFECT_CANNOT_CHANGE_POSITION on both fields): every monster flipped face-up after this card's activation
@@ -3479,18 +3432,6 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         ReplaceDrawLinkWithDiscard,
         /// <summary>
-        /// Dekoichi the Battlechanted Locomotive (c87621407): FLIP - Draw 1, then draw 1 additional for each
-        /// face-up named monster you control (counted at resolution).
-        /// </summary>
-        DrawOnePlusPerFaceUpNamed,
-        /// <summary>
-        /// Homunculus the Alchemic Being (c40410110): an ignition that lets its controller ANNOUNCE ANOTHER
-        /// Attribute (one the card currently is not), which that copy then has. It records the change on the card -
-        /// <see cref="TokensDeclarationsAndPicksRuntime.DeclaredAttribute"/> is field-wide (DNA Transplant), so the
-        /// override lives on EquipFamilyRuntime where Attribute is read.
-        /// </summary>
-        ChangeThisCardAttribute,
-        /// <summary>
         /// Pikeru's Circle of Enchantment (c74270067): for the rest of this turn, effect damage to the controller
         /// becomes 0. Distinct from <see cref="EffectActionKind.NoDamageThisTurn"/> (Hallowed Life Barrier), which
         /// also cancels battle damage — this reads only the effect-damage paths.
@@ -3522,6 +3463,65 @@ namespace WRLDZ.Duel.TextEffects
         /// monster activation path.
         /// </summary>
         NegateMonsterEffectActivationAndDestroy,
+        /// <summary>
+        /// Homunculus the Alchemic Being (c40410110): an ignition that lets its controller ANNOUNCE ANOTHER
+        /// Attribute (one the card currently is not), which that copy then has. It records the change on the card -
+        /// <see cref="TokensDeclarationsAndPicksRuntime.DeclaredAttribute"/> is field-wide (DNA Transplant), so the
+        /// override lives on EquipFamilyRuntime where Attribute is read.
+        /// </summary>
+        ChangeThisCardAttribute,
+        /// <summary>Coin call at battle; if correct, destroy the opponent's monster that battled this card (Sasuke Samurai #4).</summary>
+        CoinCallDestroyBattledMonsterOnCorrect,
+        /// <summary>
+        /// BattleAndPositionRecords batch — Mystic Swordsman LV6 (c60482781): at StartOfDamageStep, if this card
+        /// attacked a face-down Defense Position monster, destroy that monster and optionally (you can) place it
+        /// on top of the owner's Deck instead of sending it to the Graveyard.
+        /// </summary>
+        DestroyAttackedFaceDownDefenseReturnToOwnerDeckTopOrGy,
+        /// <summary>
+        /// Dekoichi the Battlechanted Locomotive (c87621407): FLIP - Draw 1, then draw 1 additional for each
+        /// face-up named monster you control (counted at resolution).
+        /// </summary>
+        DrawOnePlusPerFaceUpNamed,
+        /// <summary>
+        /// SpellTrapSealsAndImmunity batch — Xing Zhen Hu (c76515293): target 2 face-down Spell/Trap Cards on the field;
+        /// those cards cannot be activated while this card remains face-up and they remain targeted (continuous lock).
+        /// </summary>
+        TargetTwoFaceDownSpellTrapsLockActivation,
+        /// <summary>
+        /// Triangle Ecstasy Spark (c12181376): boost Harpie Lady Sisters ATK to 2700, lock opponent traps.
+        /// </summary>
+        BoostHarpieLadySistersAtkAndLockTraps,
+        /// <summary>
+        /// BattleAndPositionRecords batch — Harpie Lady 3 (c54415063): an opponent's monster that battles this card
+        /// cannot declare an attack during your opponent's next 2 turns.
+        /// </summary>
+        OpponentMonsterThatBattledThisCannotAttackForTwoTurns,
+        /// <summary>
+        /// Battle destroy trigger: negate effects of Flip monsters this card destroys by battle (Harpie Lady 2).
+        /// </summary>
+        NegateFlipMonsterEffectsThisDestroysByBattle,
+        /// <summary>
+        /// Negate opponent's Spell effects that target this card (Silent Swordsman LV3).
+        /// </summary>
+        NegateOpponentSpellEffectsThatTargetThis,
+        /// <summary>Draw 1 or discard 1 random card from opponent's hand (Necklace of Command trigger).</summary>
+        DrawOrDiscardRandomFromOpponentHand,
+        /// <summary>Ballista of Rampart Smashing: equipped monster gains 1500 ATK during damage calculation only when attacking face-down defense.</summary>
+        EquippedGainsAtkWhenAttackingFaceDownDefense,
+        /// <summary>Flint: equipped monster loses 300 ATK and cannot change position or attack.</summary>
+        EquippedLosesAtkAndCannotAttackChangePos,
+        /// <summary>Thestalos: if the discarded card was a Monster Card, inflict damage equal to its original Level x 100.</summary>
+        DiscardRandomThenDamageByLevelIfMonster,
+        /// <summary>Flint: if this card is destroyed because equipped monster was destroyed, re-equip to target.</summary>
+        ReEquipWhenEquippedMonsterDestroyed,
+        /// <summary>Tragedy: destroy all opponent Defense Position monsters when their Attack Position monsters change to Defense Position.</summary>
+        DestroyAllOppDefenseWhenOppAttackBecomesDefense,
+        /// <summary>
+        /// Covering Fire (c74458486): during Damage Step, target another face-up monster you control; your attacked
+        /// monster gains ATK equal to that target's ATK during the Damage Step only.
+        /// </summary>
+        TargetGainsAtkEqualToAnotherTargetDuringDamageStep,
     }
 
 
@@ -3717,12 +3717,6 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         ControllerFaceUpSeriesMonsters,
         /// <summary>
-        /// Big Wave Small Wave: every face-up monster the controller controls whose live Attribute is
-        /// <see cref="EffectClause.AttributeFilter"/> (the printed "all face-up WATER monsters you control"). A mass
-        /// destroy only — no target, so the legacy MapCompiledTargetKind mirror leaves it None.
-        /// </summary>
-        ControllerFaceUpAttributeMonsters,
-        /// <summary>
         /// SpellEventsAndHandSendTriggers batch — Fiend's Hand Mirror: another Spell/Trap Card on the field that would be an
         /// appropriate target for the answered Spell Card's Chain Link (ygopro Duel.CheckChainTarget), not its current target.
         /// See <see cref="RedirectAndReplaceRuntime.Candidates"/>. Text target path only (picker kind SpellTrapOnField); the
@@ -3740,6 +3734,12 @@ namespace WRLDZ.Duel.TextEffects
         /// SpellTrapEffects.MapCompiledTargetKind mirror leaves it None.
         /// </summary>
         ControllerBanishedCards,
+        /// <summary>
+        /// Big Wave Small Wave: every face-up monster the controller controls whose live Attribute is
+        /// <see cref="EffectClause.AttributeFilter"/> (the printed "all face-up WATER monsters you control"). A mass
+        /// destroy only — no target, so the legacy MapCompiledTargetKind mirror leaves it None.
+        /// </summary>
+        ControllerFaceUpAttributeMonsters,
     }
 
     /// <summary>One parsed clause from official card text.</summary>

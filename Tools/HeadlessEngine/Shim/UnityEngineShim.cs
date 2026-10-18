@@ -245,6 +245,15 @@ namespace UnityEngine
 
     public enum TextureFormat { RGBA32 = 4, RGB24 = 3, ARGB32 = 5 }
 
+    // Data/AdornmentCatalog.cs keys adornments by bone. Unity's own values, so serialized ints mean the same here.
+    public enum HumanBodyBones
+    {
+        Hips = 0, LeftUpperLeg = 1, RightUpperLeg = 2, LeftLowerLeg = 3, RightLowerLeg = 4, LeftFoot = 5, RightFoot = 6,
+        Spine = 7, Chest = 8, Neck = 9, Head = 10, LeftShoulder = 11, RightShoulder = 12, LeftUpperArm = 13,
+        RightUpperArm = 14, LeftLowerArm = 15, RightLowerArm = 16, LeftHand = 17, RightHand = 18, LeftToes = 19,
+        RightToes = 20, LeftEye = 21, RightEye = 22, Jaw = 23, UpperChest = 54, LastBone = 55,
+    }
+
     // Inert graphics stand-ins. Only referenced by CardDatabase art helpers,
     // which the rules engine + tests never call in headless mode.
     public class Object

@@ -298,6 +298,15 @@ namespace WRLDZ.Duel.TextEffects
                 return;
             }
 
+            // Enums are written as ints: a file written under another enum layout would decode as other actions.
+            if (!SeedEnumLayout.Compatible(wrapper.enumLayout, out var layoutWhy))
+            {
+                Debug.LogWarning(
+                    $"[WRLDZ TextFX] {label} cache enum layout differs ({layoutWhy}); skipping. Add enum members " +
+                    "at the end, bump CardTextEffectCompiler.Version and re-export the seed.");
+                return;
+            }
+
             var n = 0;
             foreach (var p in wrapper.programs)
             {
@@ -409,6 +418,7 @@ namespace WRLDZ.Duel.TextEffects
             var wrapper = new CacheWrapper
             {
                 version = CardTextEffectCompiler.Version,
+                enumLayout = SeedEnumLayout.Current,
                 programs = list.ToArray()
             };
             File.WriteAllText(path, JsonUtility.ToJson(wrapper, prettyPrint));
@@ -419,7 +429,135 @@ namespace WRLDZ.Duel.TextEffects
         class CacheWrapper
         {
             public int version;
+            /// <summary>The enum layout <see cref="programs"/> was written under (<see cref="SeedEnumLayout"/>).</summary>
+            public string[] enumLayout;
             public CompiledCardProgram[] programs;
+        }
+    }
+
+    /// <summary>
+    /// The enum layout a cached program's ints mean something under. JsonUtility writes enums as ints, so a member
+    /// inserted mid-list instead of appended shifts every later value. On 2026-10-18 the v205 seed read Magical
+    /// Labyrinth's "Special Summon "Wall Shadow"" as InflictDamageHalfTributedAtk after EffectActionKind members
+    /// were inserted mid-enum without a Version bump. Each entry is "Type|count|hash" over the type's members in value
+    /// order. A file is compatible when every recorded type's first <c>count</c> members still hash the same, so
+    /// appending a member keeps the seed, while inserting, renaming or removing one skips it.
+    /// </summary>
+    public static class SeedEnumLayout
+    {
+        static Dictionary<string, Type> _types;
+        static string[] _current;
+
+        /// <summary>Every enum a <see cref="CompiledCardProgram"/> serializes, by full name.</summary>
+        static Dictionary<string, Type> Types
+        {
+            get
+            {
+                if (_types != null) return _types;
+                var found = new Dictionary<string, Type>(StringComparer.Ordinal);
+                Collect(typeof(CompiledCardProgram), found, new HashSet<Type>());
+                return _types = found;
+            }
+        }
+
+        public static string[] Current
+        {
+            get
+            {
+                if (_current != null) return _current;
+                var names = new List<string>(Types.Keys);
+                names.Sort(StringComparer.Ordinal);
+                var list = new List<string>();
+                foreach (var name in names)
+                {
+                    var members = Members(Types[name]);
+                    list.Add($"{name}|{members.Count}|{Hash(members, members.Count)}");
+                }
+
+                return _current = list.ToArray();
+            }
+        }
+
+        public static bool Compatible(string[] recorded, out string why)
+        {
+            why = null;
+            if (recorded == null || recorded.Length == 0)
+            {
+                why = "no enum layout recorded";
+                return false;
+            }
+
+            foreach (var entry in recorded)
+            {
+                var parts = (entry ?? "").Split('|');
+                if (parts.Length != 3 || !int.TryParse(parts[1], out var count))
+                {
+                    why = $"bad entry '{entry}'";
+                    return false;
+                }
+
+                if (!Types.TryGetValue(parts[0], out var type))
+                {
+                    why = $"{parts[0]} is no longer serialized";
+                    return false;
+                }
+
+                var members = Members(type);
+                if (members.Count < count || Hash(members, count) != parts[2])
+                {
+                    why = $"{type.Name} changed within its first {count} members";
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        static void Collect(Type type, Dictionary<string, Type> found, HashSet<Type> seen)
+        {
+            if (type == null || !seen.Add(type)) return;
+            foreach (var f in type.GetFields(System.Reflection.BindingFlags.Instance |
+                                             System.Reflection.BindingFlags.Public))
+            {
+                if (f.IsNotSerialized || f.IsInitOnly) continue;
+                var ft = f.FieldType;
+                if (ft.IsArray) ft = ft.GetElementType();
+                else if (ft.IsGenericType && ft.GetGenericTypeDefinition() == typeof(List<>))
+                    ft = ft.GetGenericArguments()[0];
+                if (ft == null) continue;
+                if (ft.IsEnum)
+                    found[ft.FullName ?? ft.Name] = ft;
+                else if (!ft.IsPrimitive && ft != typeof(string) && ft.IsSerializable &&
+                         (ft.Namespace ?? "").StartsWith("WRLDZ", StringComparison.Ordinal))
+                    Collect(ft, found, seen);
+            }
+        }
+
+        /// <summary>"Name=value" in value order (Enum.GetValues / GetNames are parallel, value-sorted).</summary>
+        static List<string> Members(Type enumType)
+        {
+            var names = Enum.GetNames(enumType);
+            var values = Enum.GetValues(enumType);
+            var list = new List<string>(names.Length);
+            for (var i = 0; i < names.Length; i++)
+                list.Add(names[i] + "=" + Convert.ToInt64(values.GetValue(i)));
+            return list;
+        }
+
+        /// <summary>FNV-1a 64 over the first <paramref name="count"/> members (string.GetHashCode is per-process).</summary>
+        static string Hash(List<string> members, int count)
+        {
+            var h = 14695981039346656037UL;
+            for (var i = 0; i < count && i < members.Count; i++)
+            {
+                foreach (var ch in members[i] + ";")
+                {
+                    h ^= ch;
+                    h *= 1099511628211UL;
+                }
+            }
+
+            return h.ToString("x16");
         }
     }
 }

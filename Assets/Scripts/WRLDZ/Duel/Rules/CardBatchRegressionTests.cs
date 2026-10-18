@@ -145,6 +145,7 @@ namespace WRLDZ.Duel.Rules
             FusionSubstitutesRegressionTests.Run(db, pDeck, aDeck, check);
             SodCompletionRegressionTests.Run(db, pDeck, aDeck, check);
             RdsRegressionTests.Run(db, pDeck, aDeck, check);
+            SeedFreshnessRegressionTests.Run(db, pDeck, aDeck, check);
         }
     }
 }
