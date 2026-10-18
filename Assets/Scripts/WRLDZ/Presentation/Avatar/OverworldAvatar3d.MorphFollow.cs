@@ -84,52 +84,82 @@ namespace WRLDZ.Presentation
             return d;
         }
 
-        /// <summary>Nearest body vertex per piece vertex through a uniform grid (2 cm cells); once per piece and body.</summary>
+        /// <summary>Nearest body vertex per piece vertex through a k-d tree over the body's vertices; once per piece and body.</summary>
         static FollowMap FollowMapFor(Mesh piece, Mesh body)
         {
             var key = (piece, body);
             if (_followMaps.TryGetValue(key, out var map)) return map;
             var bv = body.vertices; var pv = piece.vertices;
             if (bv.Length == 0 || pv.Length == 0) return null;
-            const float cell = 0.02f;
-            var grid = new Dictionary<long, List<int>>(bv.Length);
-            static long Key(int x, int y, int z) => ((long)(x + 32768) << 40) | ((long)(y + 32768) << 20) | (uint)(z + 32768);
-            for (var i = 0; i < bv.Length; i++)
-            {
-                var p = bv[i];
-                var k = Key(Mathf.FloorToInt(p.x / cell), Mathf.FloorToInt(p.y / cell), Mathf.FloorToInt(p.z / cell));
-                if (!grid.TryGetValue(k, out var list)) grid[k] = list = new List<int>(4);
-                list.Add(i);
-            }
+            var tree = BodyTree.For(body, bv);
             var nearest = new int[pv.Length];
-            for (var i = 0; i < pv.Length; i++)
-            {
-                var p = pv[i];
-                var cx = Mathf.FloorToInt(p.x / cell); var cy = Mathf.FloorToInt(p.y / cell); var cz = Mathf.FloorToInt(p.z / cell);
-                var best = -1; var bestD = float.MaxValue;
-                // rings outward until one ring past the first hit (the true nearest can sit one ring further out)
-                for (var r = 0; r <= 24; r++)
-                {
-                    var found = best >= 0;
-                    for (var dx = -r; dx <= r; dx++)
-                        for (var dy = -r; dy <= r; dy++)
-                            for (var dz = -r; dz <= r; dz++)
-                            {
-                                if (Mathf.Max(Mathf.Abs(dx), Mathf.Abs(dy), Mathf.Abs(dz)) != r) continue;
-                                if (!grid.TryGetValue(Key(cx + dx, cy + dy, cz + dz), out var list)) continue;
-                                for (var j = 0; j < list.Count; j++)
-                                {
-                                    var d = (bv[list[j]] - p).sqrMagnitude;
-                                    if (d < bestD) { bestD = d; best = list[j]; }
-                                }
-                            }
-                    if (found) break;
-                }
-                nearest[i] = best < 0 ? 0 : best;
-            }
+            for (var i = 0; i < pv.Length; i++) nearest[i] = tree.Nearest(pv[i]);
             map = new FollowMap { Nearest = nearest, Base = pv };
             _followMaps[key] = map;
             return map;
+        }
+
+        /// <summary>
+        /// A static k-d tree over one body mesh's vertices (a 2 cm grid walked ring by ring took minutes for a bandana
+        /// tail 30 cm off the skin; the tree answers a nearest-vertex query in a few dozen visits whatever the distance).
+        /// </summary>
+        sealed class BodyTree
+        {
+            static readonly Dictionary<Mesh, BodyTree> _trees = new();
+            Vector3[] _p; int[] _idx; // vertices and the index permutation the tree is built over
+            public static BodyTree For(Mesh body, Vector3[] verts)
+            {
+                if (_trees.TryGetValue(body, out var t)) return t;
+                t = new BodyTree { _p = verts, _idx = new int[verts.Length] };
+                for (var i = 0; i < verts.Length; i++) t._idx[i] = i;
+                t.Build(0, verts.Length, 0);
+                _trees[body] = t;
+                return t;
+            }
+            // in-place build: the index range [lo, hi) is partitioned around the median along axis (depth % 3)
+            void Build(int lo, int hi, int depth)
+            {
+                if (hi - lo <= 8) return;
+                var axis = depth % 3; var mid = (lo + hi) >> 1;
+                Select(lo, hi - 1, mid, axis);
+                Build(lo, mid, depth + 1); Build(mid + 1, hi, depth + 1);
+            }
+            float C(int i, int axis) { var v = _p[_idx[i]]; return axis == 0 ? v.x : axis == 1 ? v.y : v.z; }
+            void Select(int lo, int hi, int k, int axis)   // quickselect: the k-th smallest along axis lands at k
+            {
+                while (hi > lo)
+                {
+                    var pivot = C((lo + hi) >> 1, axis); var i = lo; var j = hi;
+                    while (i <= j)
+                    {
+                        while (C(i, axis) < pivot) i++;
+                        while (C(j, axis) > pivot) j--;
+                        if (i <= j) { (_idx[i], _idx[j]) = (_idx[j], _idx[i]); i++; j--; }
+                    }
+                    if (k <= j) hi = j; else if (k >= i) lo = i; else return;
+                }
+            }
+            int _best; float _bestD;
+            public int Nearest(Vector3 q)
+            {
+                _best = _idx[0]; _bestD = float.MaxValue;
+                Search(0, _p.Length, 0, q);
+                return _best;
+            }
+            void Search(int lo, int hi, int depth, Vector3 q)
+            {
+                if (hi - lo <= 8)
+                {
+                    for (var i = lo; i < hi; i++) { var d = (_p[_idx[i]] - q).sqrMagnitude; if (d < _bestD) { _bestD = d; _best = _idx[i]; } }
+                    return;
+                }
+                var axis = depth % 3; var mid = (lo + hi) >> 1;
+                var split = C(mid, axis); var qa = axis == 0 ? q.x : axis == 1 ? q.y : q.z;
+                var dm = (_p[_idx[mid]] - q).sqrMagnitude; if (dm < _bestD) { _bestD = dm; _best = _idx[mid]; }
+                var diff = qa - split;
+                if (diff < 0) { Search(lo, mid, depth + 1, q); if (diff * diff < _bestD) Search(mid + 1, hi, depth + 1, q); }
+                else { Search(mid + 1, hi, depth + 1, q); if (diff * diff < _bestD) Search(lo, mid, depth + 1, q); }
+            }
         }
 
         /// <summary>A grafted piece is about to be destroyed: its mesh copy goes with it.</summary>
