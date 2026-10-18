@@ -10,6 +10,7 @@ export const meta = {
     { title: 'Integrate', detail: 'apply groups one at a time to the real checkout, suite green after each' },
     { title: 'Audit', detail: 'cross-group review + long AI-duel stress on the integrated engine' },
     { title: 'Finalize', detail: 'compiler version note, seed export, full verification, batch report + docs' },
+    { title: 'Land', detail: 'apply the gated integration tree to the real checkout as one patch (rebased if main moved)' },
   ],
 }
 
@@ -34,6 +35,10 @@ export const meta = {
 //   extraGroups — [{id,title,cards,notes}] ENGINE-SUBSYSTEM groups built in the same batch (forward-looking engine work:
 //                 the cards they unblock are the acceptance tests). The planner keeps them and adds worklist cards that
 //                 need those subsystems to them instead of skipping those cards.
+//   integrateIn — 'tree' (default): copies come from HEAD, and integration, audit and finalize run in a HEAD-based
+//                 integration tree (<runDir>/trees/_integration); one lander then applies the combined patch to the real
+//                 checkout. Peers' uncommitted work (e.g. random-choice AI edits) and commits landing during the run never
+//                 reach a gate. 'real': integrate group by group in the real checkout (the pre-2026-10-18 behaviour).
 //   foreignFails — substrings of suite check names that fail in the real checkout because of OTHER sessions' uncommitted
 //                 work (e.g. ['SeedFreshness', 'Toons: AI']); the baseline and integration gates accept exactly those.
 //   prefilled   — {groupId: <implementer result>} finished implementer results to reuse on a resume (from journal.jsonl
@@ -53,6 +58,7 @@ const HELD = new Set(A.holdGroups || [])
 const PRIOR = A.priorTrees || {}
 const PRE = A.prefilled || {}
 const FOREIGN = A.foreignFails || []
+const TREE_MODE = A.integrateIn !== 'real'
 
 const CONTEXT = `
 You are working on Project ARGON (Unity 6 Yu-Gi-Oh! TCG rules engine, C#) at ${REPO}.
@@ -122,6 +128,8 @@ const PREP_SCHEMA = {
     sets: { type: 'array', items: { type: 'string' } },
     abort: { type: 'boolean' },
     abortReason: { type: 'string' },
+    baseSha: { type: 'string' },
+    realFails: { type: 'string' },
   },
   required: ['runDir', 'compilerVersion', 'suitePass', 'worklistPath', 'worklistCount', 'abort'],
 }
@@ -259,6 +267,23 @@ const INTEGRATE_SCHEMA = {
   },
   required: ['group', 'applied', 'integratedCards', 'suitePass', 'rolledBack', 'notes'],
 }
+const LAND_SCHEMA = {
+  type: 'object',
+  properties: {
+    landed: { type: 'boolean' },
+    landingPatch: { type: 'string' },
+    rebased: { type: 'boolean' },
+    version: { type: 'integer' },
+    files: { type: 'array', items: { type: 'string' } },
+    mergedWithPeerWip: { type: 'array', items: { type: 'string' } },
+    realSuite: { type: 'string' },
+    foreignFails: { type: 'array', items: { type: 'string' } },
+    cscOk: { type: 'boolean' },
+    cscReleaseOk: { type: 'boolean' },
+    notes: { type: 'string' },
+  },
+  required: ['landed', 'landingPatch', 'notes'],
+}
 const AUDIT_SCHEMA = {
   type: 'object',
   properties: {
@@ -307,12 +332,22 @@ const prep = await agent(`${CONTEXT}
 ROLE: batch preparer (run "${TAG}"). You set up the run; you edit nothing in ${REPO}.
 1. Run folder: use ${RUN_HINT}. If it already exists and is non-empty, use ${RUN_HINT}-2, -3, … (first free one).
    Create <runDir>/{trees,patches,snapshots,logs}.
-2. Baseline gate in the real checkout: bash ${TOOLS}/headless.sh ${REPO} --quiet > <runDir>/logs/baseline_suite.log 2>&1.
+${TREE_MODE ? `2. Integration tree: baseSha = git -C ${REPO} rev-parse HEAD; bash ${TOOLS}/scratch_tree.sh <runDir>/trees/_integration HEAD
+   (a copy of HEAD only: no other session's uncommitted work). Baseline gate THERE:
+   bash ${TOOLS}/headless.sh <runDir>/trees/_integration --quiet > <runDir>/logs/baseline_suite.log 2>&1 must end with
+   result=PASS; if it FAILS, abort=true with the failing check names in abortReason (a batch never starts on a red HEAD).
+   bash ${TOOLS}/csc_overlay.sh <runDir>/trees/_integration → report cscOk / cscDetail.
+   For information only (never an abort): bash ${TOOLS}/headless.sh ${REPO} --quiet 2>&1 | grep -E '^FAIL|SUMMARY' and put
+   those FAIL names in realFails (they come from other sessions' uncommitted work in the real checkout).
+3. bash ${TOOLS}/headless.sh <runDir>/trees/_integration --status-dump > <runDir>/status_before.tsv ;
+   python3 ${TOOLS}/version_bump.py --show. python3 ${TOOLS}/enum_guard.py --repo <runDir>/trees/_integration and
+   python3 ${TOOLS}/handler_guard.py --repo <runDir>/trees/_integration (report both).` : `2. Baseline gate in the real checkout: bash ${TOOLS}/headless.sh ${REPO} --quiet > <runDir>/logs/baseline_suite.log 2>&1.
    It must end with result=PASS. If it FAILS, set abort=true and put the failing check names in abortReason: a batch
    must never start on a red engine. Also run bash ${TOOLS}/csc_overlay.sh ${REPO} (whole Unity project compile): report
    cscOk and, if it fails, which files (another session may be mid-edit outside Duel/ — that is not an abort).
+   baseSha = git -C ${REPO} rev-parse HEAD.
 3. bash ${TOOLS}/headless.sh ${REPO} --status-dump > <runDir>/status_before.tsv ; python3 ${TOOLS}/version_bump.py --show.
-   python3 ${TOOLS}/enum_guard.py and python3 ${TOOLS}/handler_guard.py --repo ${REPO} (report both).
+   python3 ${TOOLS}/enum_guard.py and python3 ${TOOLS}/handler_guard.py --repo ${REPO} (report both).`}
 4. Worklist → <runDir>/worklist.json and worklist.md (python3 ${TOOLS}/worklist.py <runDir>/status_before.tsv …):
    ${cardsArg ? `--cards "${cardsArg.join(';')}" (explicit cards; report any name not found)` :
      A.sets ? `--sets ${A.sets.join(',')}` :
@@ -325,6 +360,9 @@ if (!prep || prep.abort) {
   return { stopped: 'baseline', prep }
 }
 const RUN = prep.runDir
+// Where integration happens: a HEAD-based tree (default) or the real checkout (integrateIn: 'real').
+const RT = TREE_MODE ? `${RUN}/trees/_integration` : REPO
+const RT_TOOLS = `${RT}/Tools/CardCompile`
 log(`Run ${RUN}: compiler v${prep.compilerVersion}, baseline suite ${prep.suitePass ? 'PASS' : 'FAIL'}, ${prep.worklistCount} cards on the worklist`)
 
 let groups = A.groups
@@ -365,7 +403,21 @@ if (A.dryRun) {
 }
 
 const trees = await agent(`${CONTEXT}
-ROLE: tree maker. Run folder ${RUN}.
+ROLE: tree maker. Run folder ${RUN}.${TREE_MODE ? `
+1. For each group id below, create its isolated engine copy from the run's baseline commit ${prep.baseSha || 'HEAD'} (the
+   same commit the integration tree ${RT} was made from), before anything is integrated:
+   bash ${TOOLS}/scratch_tree.sh ${RUN}/trees/<id> ${prep.baseSha || 'HEAD'}
+   Group ids: ${groups.map(g => g.id).join(', ')}
+   Check each copy builds: bash ${TOOLS}/headless.sh ${RUN}/trees/<first id> --card "Pot of Greed" (one is enough).
+2. Save the baseline seed: git -C ${REPO} show ${prep.baseSha || 'HEAD'}:Assets/StreamingAssets/WRLDZ/compiled_effects_seed_v1.json > ${RUN}/seed_before.json
+3. Open the integration IN THE INTEGRATION TREE ${RT} (not the real checkout): bump its compiler Version above every
+   number ever used (README "Versions": also grep git -C ${REPO} log --all --format=%s for vNNN, and the real checkout's
+   own Version line, which a peer may have bumped without committing) — normally current+1 — with
+   python3 ${RT_TOOLS}/version_bump.py <N> "v<N>: card batch ${TAG} (integration in progress; the finalizer rewrites this note)".
+   RESUME CHECK FIRST: if ${RT}'s Version note already says "card batch ${TAG} (integration in progress", an earlier tree
+   maker of this run bumped it and then died. Do NOT bump again; reuse that number (python3 ${RT_TOOLS}/version_bump.py --show).
+   You make NO edit to ${REPO}.
+` : `
 1. For each group id below, create its isolated engine copy FROM THE CURRENT WORKING TREE, all from the same baseline, before
    anything is integrated: bash ${TOOLS}/scratch_tree.sh ${RUN}/trees/<id>
    Group ids: ${groups.map(g => g.id).join(', ')}
@@ -378,6 +430,7 @@ ROLE: tree maker. Run folder ${RUN}.
    earlier tree maker of this run bumped it and then died. Do NOT bump again; reuse that number (python3 ${TOOLS}/version_bump.py --show).
    The copies keep the old number and have no seed; the real checkout's old seed is now ignored until the finalizer
    re-exports it. This version bump is the ONLY edit you make to ${REPO}.
+`}
 Return the structured result.`, { label: 'make copies', phase: 'Scout', schema: TREES_SCHEMA, model: 'sonnet', effort: 'low' })
 if (!trees) return { stopped: 'tree creation failed', prep, groups }
 log(`copies ready; compiler v${trees.oldVersion || prep.compilerVersion} → v${trees.newVersion} (integration open)`)
@@ -504,8 +557,8 @@ const integrate = (res, g) => {
     }
     const prevStatus = lastStatus
     const r = await agent(`${CONTEXT}
-ROLE: integrator for card group "${g.id}" into the REAL checkout ${REPO}. Groups are integrated one at a time: you are the
-only agent editing ${REPO} now. This is the one role allowed to edit ${REPO} (only the files in the patch).
+ROLE: integrator for card group "${g.id}" into ${TREE_MODE ? 'the integration tree' : 'the REAL checkout'} ${RT}. Groups are integrated one at a time:
+you are the only agent editing ${RT} now (only the files in the patch).${TREE_MODE ? ` Never touch the real checkout ${REPO}.` : ''}
 Patch: ${res.patchPath} (made against the batch baseline; earlier groups may already be in, so expect small conflicts).
 Notes: ${res.notesPath}. Cards it implements: ${res.implemented.map(c => c.name).join('; ')}.${isEngine(g) ? `
 ENGINE GROUP: this patch changes shared engine semantics, and the groups integrated before you were built on the OLD
@@ -513,27 +566,27 @@ engine. After applying, find their new code that the subsystem now covers (grep 
 say changed) and adapt it so it uses the new subsystem, keeping their tests' intent; if a test encoded the old behaviour
 and the new one is the correct rule, update the test and say why. List every adaptation in the notes file.` : ''}
 0. Interrupted earlier integration? If any ${RUN}/snapshots/*.INTEGRATING marker exists, an integrator died mid-apply:
-   restore that snapshot first (bash ${TOOLS}/snapshot.sh restore ${RUN}/snapshots/<that id>), delete its marker, and
-   confirm headless.sh ${REPO} --quiet is green before you start.
-0b. Other sessions may have landed changes in ${REPO} after the copies were made. If ${RUN}/PEER_LANDINGS.md exists,
+   restore that snapshot first (bash ${RT_TOOLS}/snapshot.sh restore ${RUN}/snapshots/<that id>), delete its marker, and
+   confirm headless.sh ${RT} --quiet is green before you start.
+0b. ${TREE_MODE ? '(Integration tree: private to this run, so skip this step.) ' : ''}Other sessions may have landed changes in ${RT} after the copies were made. If ${RUN}/PEER_LANDINGS.md exists,
    read it first: merge on top of those changes and keep every line they added (registrations, enum members, fields);
    their intended status changes (the --allow ids listed there) are not losses of this group.
-1. bash ${TOOLS}/snapshot.sh save ${RUN}/snapshots/${g.id} ${res.patchPath} && touch ${RUN}/snapshots/${g.id}.INTEGRATING
-2. cd ${REPO} && git apply --reject --whitespace=nowarn ${res.patchPath} ; python3 ${TOOLS}/tail_merge.py ${REPO} --partial
+1. bash ${RT_TOOLS}/snapshot.sh save ${RUN}/snapshots/${g.id} ${res.patchPath} && touch ${RUN}/snapshots/${g.id}.INTEGRATING
+2. cd ${RT} && git apply --reject --whitespace=nowarn ${res.patchPath} ; python3 ${TOOLS}/tail_merge.py ${RT} --partial
    tail_merge.py merges the tail-append conflicts itself (an enum, the Atoms / BatchAtomSets arrays,
    CardBatchRegressionTests.Run, the ApplyClause switch, an EffectVocabulary list: both kept, earlier group first; it
    prints one MERGED / OPEN line per hunk). Resolve only the OPEN hunks left in *.rej by hand (real edits of the same
    lines: keep both intents), then delete the .rej files. Never drop or rewrite another group's code. The patch must not
    touch CardTextEffectCompiler.Version; if it does, discard that hunk.
-3. Verify in ${REPO}: bash ${TOOLS}/headless.sh ${REPO} --quiet → PASS; bash ${TOOLS}/csc_overlay.sh ${REPO} → OK and
-   bash ${TOOLS}/csc_overlay.sh ${REPO} --release → OK (if either fails ONLY in files this patch does not touch, another session is
-   mid-edit: note it, do not fix their files); python3 ${TOOLS}/enum_guard.py → 0 errors; python3 ${TOOLS}/handler_guard.py
-   --repo ${REPO} → nothing new for this group (no HOLLOW action, its Atoms in BatchAtomSets, its tests in CardBatchRegressionTests.Run);
-   bash ${TOOLS}/headless.sh ${REPO} --status-dump > ${RUN}/status_after_${g.id}.tsv &&
+3. Verify in ${RT}: bash ${TOOLS}/headless.sh ${RT} --quiet → PASS; bash ${TOOLS}/csc_overlay.sh ${RT} → OK and
+   bash ${TOOLS}/csc_overlay.sh ${RT} --release → OK (if either fails ONLY in files this patch does not touch, another session is
+   mid-edit: note it, do not fix their files); python3 ${TOOLS}/enum_guard.py --repo ${RT} → 0 errors; python3 ${TOOLS}/handler_guard.py
+   --repo ${RT} → nothing new for this group (no HOLLOW action, its Atoms in BatchAtomSets, its tests in CardBatchRegressionTests.Run);
+   bash ${TOOLS}/headless.sh ${RT} --status-dump > ${RUN}/status_after_${g.id}.tsv &&
    python3 ${TOOLS}/status_diff.py ${prevStatus} ${RUN}/status_after_${g.id}.tsv → no losses, and this group's cards Implemented
    (pass --allow with the ids PEER_LANDINGS.md lists for landings made since ${prevStatus} was written).
 4. A small fix inside this group's own code is fine. If it cannot be made green without rewriting other groups' code:
-   bash ${TOOLS}/snapshot.sh restore ${RUN}/snapshots/${g.id}, re-run the suite to confirm it is green again, and report
+   bash ${RT_TOOLS}/snapshot.sh restore ${RUN}/snapshots/${g.id}, re-run the suite to confirm it is green again, and report
    applied=false with the reason. Dropping one card (reverting just its parts) is better than dropping the group.
 5. Last step either way (applied or restored): rm -f ${RUN}/snapshots/${g.id}.INTEGRATING
 Return the structured result (statusPath = the status file you wrote when applied).`,
@@ -542,9 +595,9 @@ Return the structured result (statusPath = the status file you wrote when applie
     if (r && r.applied && r.statusPath) lastStatus = r.statusPath
     if (!r) {
       integrationHalted = g.id
-      log(`INTEGRATOR FOR ${g.id} DIED — halting integration. Restore with: bash ${TOOLS}/snapshot.sh restore ${RUN}/snapshots/${g.id} (marker ${RUN}/snapshots/${g.id}.INTEGRATING)`)
+      log(`INTEGRATOR FOR ${g.id} DIED — halting integration. Restore with: bash ${RT_TOOLS}/snapshot.sh restore ${RUN}/snapshots/${g.id} (marker ${RUN}/snapshots/${g.id}.INTEGRATING)`)
       const dead = { group: g.id, applied: false, integratedCards: [], suitePass: false, rolledBack: false,
-        notes: `integrator died; the real checkout may be half-applied — restore ${RUN}/snapshots/${g.id}` }
+        notes: `integrator died; ${RT} may be half-applied — restore ${RUN}/snapshots/${g.id}` }
       integrated.push(dead)
       return dead
     }
@@ -630,16 +683,16 @@ let audit = null
 if (landed.length) {
   phase('Audit')
   audit = await agent(`${CONTEXT}
-ROLE: cross-group auditor of the integrated batch in the REAL checkout ${REPO} (integration is finished; you are the only
-agent editing ${REPO}). Integrated: ${JSON.stringify(landed.map(r => ({ group: r.group, cards: r.integratedCards })))}.
+ROLE: cross-group auditor of the integrated batch in ${TREE_MODE ? 'the integration tree' : 'the REAL checkout'} ${RT} (integration is finished; you are the only
+agent editing it). Integrated: ${JSON.stringify(landed.map(r => ({ group: r.group, cards: r.integratedCards })))}.
 Patches: ${RUN}/patches/*.patch; per-group notes: ${RUN}/patches/*.md.
 1. Look for cross-group interference: two groups changing the same shared path in different ways, duplicate primitives
    that should be one, a later group's regex or runtime change altering an earlier group's card, test-helper misuse.
-2. Stress: bash ${TOOLS}/headless.sh ${REPO} --quiet --duels ${STRESS} → PASS with no soft-locks or exceptions.
+2. Stress: bash ${TOOLS}/headless.sh ${RT} --quiet --duels ${STRESS} → PASS with no soft-locks or exceptions.
 3. python3 ${TOOLS}/status_diff.py ${RUN}/status_before.tsv <a fresh --status-dump> → no losses, except the intended
    status changes of peer landings listed in ${RUN}/PEER_LANDINGS.md (if it exists): pass them with --allow and never
    revert a peer's change.
-Fix real high/medium issues directly in ${REPO} (smallest change, suite green after), or revert the offending card so it
+Fix real high/medium issues directly in ${RT} (smallest change, suite green after), or revert the offending card so it
 fails closed. Report every issue (fixed or not) and the stress numbers.`,
     { label: 'audit batch', phase: 'Audit', schema: AUDIT_SCHEMA })
 }
@@ -648,7 +701,7 @@ fails closed. Report every issue (fixed or not) and the stress numbers.`,
 phase('Finalize')
 const deferredAll = results.filter(Boolean).flatMap(st => ((st.final && st.final.deferred) || []).map(d => ({ group: st.group, ...d })))
 const final = await agent(`${CONTEXT}
-ROLE: finalizer of card batch "${TAG}" in the REAL checkout ${REPO} (you are the only agent editing it now).
+ROLE: finalizer of card batch "${TAG}" in ${TREE_MODE ? 'the integration tree' : 'the REAL checkout'} ${RT} (you are the only agent editing it now).${TREE_MODE ? ` The lander applies\nyour result to the real checkout ${REPO} afterwards; do not edit ${REPO}.` : ''}
 Integrated groups: ${JSON.stringify(landed.map(r => ({ group: r.group, cards: r.integratedCards, dropped: r.droppedCards })))}
 Not integrated: ${JSON.stringify(results.filter(Boolean).filter(st => !(st.integration && st.integration.applied)).map(st => ({ group: st.group, why: (st.integration && st.integration.notes) || st.failed || 'nothing implemented' })))}
 Deferred cards: ${JSON.stringify(deferredAll)}
@@ -657,33 +710,77 @@ Audit: ${JSON.stringify(audit)}
 Compiler: opened at v${trees.newVersion} (was v${trees.oldVersion || prep.compilerVersion}).
 1. Rewrite the Version line's leading note (keep the older notes after it) so it lists what v${trees.newVersion} added, e.g.
    "/* v${trees.newVersion}: card batch ${TAG} — <group>: <cards>; … */". ${landed.length ? '' : 'Nothing landed: set the Version back to the old number instead (python3 edit), since compiler output did not change, and restore the seed from ' + RUN + '/seed_before.json.'}
-2. ${landed.length ? `bash ${TOOLS}/headless.sh ${REPO} --export-seed ; python3 ${TOOLS}/seed_diff.py ${RUN}/seed_before.json ${REPO}/Assets/StreamingAssets/WRLDZ/compiled_effects_seed_v1.json > ${RUN}/seed_diff.txt` : 'skip the seed export'}
-3. Final gate: bash ${TOOLS}/headless.sh ${REPO} --quiet → PASS; bash ${TOOLS}/csc_overlay.sh ${REPO} and --release → OK;
-   python3 ${TOOLS}/enum_guard.py → 0 errors; python3 ${TOOLS}/handler_guard.py --repo ${REPO} → nothing from this batch;
-   bash ${TOOLS}/headless.sh ${REPO} --status-dump > ${RUN}/status_after.tsv ;
+2. ${landed.length ? `bash ${TOOLS}/headless.sh ${RT} --export-seed ; python3 ${TOOLS}/seed_diff.py ${RUN}/seed_before.json ${RT}/Assets/StreamingAssets/WRLDZ/compiled_effects_seed_v1.json > ${RUN}/seed_diff.txt` : 'skip the seed export'}
+3. Final gate: bash ${TOOLS}/headless.sh ${RT} --quiet → PASS; bash ${TOOLS}/csc_overlay.sh ${RT} and --release → OK;
+   python3 ${TOOLS}/enum_guard.py --repo ${RT} → 0 errors; python3 ${TOOLS}/handler_guard.py --repo ${RT} → nothing from this batch;
+   bash ${TOOLS}/headless.sh ${RT} --status-dump > ${RUN}/status_after.tsv ;
    python3 ${TOOLS}/status_diff.py ${RUN}/status_before.tsv ${RUN}/status_after.tsv (put its table in statusTable; peer
    landings listed in ${RUN}/PEER_LANDINGS.md, if it exists, go in --allow and in the report as "landed by other sessions").
 4. Docs:
-   - Docs/CURRICULUM_BATCH_${TAG}.md: what landed (card, set, how it works in one line), what was deferred or skipped and
+   - Docs/CURRICULUM_BATCH_${TAG}.md (inside ${RT}; create Docs/ if missing): what landed (card, set, how it works in one line), what was deferred or skipped and
      exactly why (so the next batch can pick it up), the status table, the compiler version, how to verify.
-   - Assets/Scripts/WRLDZ/Duel/TextEffects/TEXT_EFFECT_PIPELINE.md: add this pass (find the existing pass / batch table or
+   - ${RT}/Assets/Scripts/WRLDZ/Duel/TextEffects/TEXT_EFFECT_PIPELINE.md: add this pass (find the existing pass / batch table or
      list and follow its format; if none, add a "Passes" section at the end).
-   - ${TOOLS}/branch_refs.json: remove entries whose card is now Implemented.
-   - ${TOOLS}/ENGINE_MAP.md (the map the next batch reads first; keep it short and exact): in section 2 add a recipe or
+   - ${RT_TOOLS}/branch_refs.json: remove entries whose card is now Implemented.
+   - ${RT_TOOLS}/ENGINE_MAP.md (the map the next batch reads first; keep it short and exact): in section 2 add a recipe or
      one line per NEW shared subsystem or hook this batch added (its runtime class and entry points, as in the existing
      entries); in section 4 delete gaps this batch closed, add the gaps that blocked this batch's deferred / Stub cards
      (what is missing + the cards), and add audit issues left unfixed to "Open residuals".
-   - AGENTS.md, the "Engine" section: the CardTextEffectCompiler.Version sentence → the new number and today's batch doc;
+   - ${TREE_MODE ? `AGENTS.md is not in the integration tree: write the exact replacement sentences for the two items below into
+     ${RUN}/AGENTS_update.md (old text → new text) for the lander. ` : ''}AGENTS.md, the "Engine" section: the CardTextEffectCompiler.Version sentence → the new number and today's batch doc;
      make sure it mentions the playbook Tools/CardCompile/README.md and the workflow .claude/workflows/compile-card-batch.js.
      Its "last card batch" and "Last batch:" pointers → this batch doc, with "previous"/"before it" → the prior batch doc.
    Touch nothing else. Do not commit.
 Return the structured result.`, { label: 'finalize', phase: 'Finalize', schema: FINAL_SCHEMA, model: 'sonnet', effort: 'medium' })
+
+// ── Land (tree mode) ───────────────────────────────────────────────────────────────────────────────
+// One short window in the shared checkout: the batch was integrated and gated in ${RT}; the lander applies it as one patch,
+// rebasing first if main moved during the run, and merges around other sessions' uncommitted edits. The hub commits.
+let land = null
+if (TREE_MODE && landed.length && final && final.suitePass) {
+  phase('Land')
+  land = await agent(`${CONTEXT}
+ROLE: lander of card batch "${TAG}". The batch is integrated, finalized and gated in the integration tree ${RT}, whose git
+baseline commit is the real checkout's ${prep.baseSha || '(HEAD at prep time)'}. Finalizer result: ${JSON.stringify(final)}
+You are the only agent that edits the real checkout ${REPO}, and only this batch's files. Never git stash / reset /
+checkout / clean / commit there: other sessions keep uncommitted work in it (the hub commits after you).
+1. Landing patch: cd ${RT} && git add -A && git diff --cached --binary -- . ':!Assets/StreamingAssets' > ${RUN}/landing.patch
+   (the seed travels as a file: ${RT}/Assets/StreamingAssets/WRLDZ/compiled_effects_seed_v1.json).
+2. Did main move? git -C ${REPO} log --oneline ${prep.baseSha || 'HEAD'}..HEAD. If any of those commits touch
+   Assets/Scripts/WRLDZ/Duel, Tools/HeadlessEngine, Tools/CardCompile or the seed, REBASE first:
+   bash ${TOOLS}/scratch_tree.sh ${RUN}/trees/_landing HEAD; in it: git apply --reject --whitespace=nowarn ${RUN}/landing.patch;
+   python3 ${TOOLS}/tail_merge.py . --partial; resolve OPEN .rej hunks by hand, keeping both sides' intent; if HEAD's Version is
+   >= this batch's, bump again above every number used (python3 Tools/CardCompile/version_bump.py, keep this batch's note);
+   bash ${TOOLS}/headless.sh . --export-seed; gate there (--quiet PASS, csc_overlay + --release OK, enum_guard --repo .,
+   handler_guard --repo ., status_diff of a fresh --status-dump against one of HEAD: no losses except this batch's intended
+   ones). Then regenerate ${RUN}/landing.patch from _landing (same command as step 1) and use _landing's seed. rebased=true.
+3. Apply to ${REPO}. List its uncommitted files (git -C ${REPO} status --porcelain).
+   - Landing files with NO uncommitted change: git -C ${REPO} apply with --exclude=<each file that has one>.
+   - Each landing file that HAS uncommitted changes (a peer's work in progress): build the merged file in a scratch dir.
+     Start from git -C ${REPO} show HEAD:<file>, apply the landing hunks for that file (--include=<file>), then apply the
+     peer's diff (git -C ${REPO} diff -- <file>) with --reject + python3 ${TOOLS}/tail_merge.py <dir> --partial. Place by
+     hand any insertion whose anchor the batch removed, keeping every peer line. Write the merged file into ${REPO}, and
+     list it in mergedWithPeerWip.
+   - Copy the seed into ${REPO}/Assets/StreamingAssets/WRLDZ/.
+   - Copy ${RT}/Docs/CURRICULUM_BATCH_${TAG}.md into ${REPO}/Docs/.
+   - If ${RUN}/AGENTS_update.md exists, apply it to ${REPO}/AGENTS.md (only those sentences).
+4. Gate in ${REPO}:
+   - bash ${TOOLS}/csc_overlay.sh ${REPO} and --release → OK. A failure only in files outside this batch is a peer mid-edit:
+     note it.
+   - bash ${TOOLS}/headless.sh ${REPO} --quiet 2>&1 | grep -E '^FAIL|SUMMARY' (put the SUMMARY line in realSuite). FAILs
+     that do not occur in the integration tree come from peers' uncommitted work: list them in foreignFails and confirm
+     each is unrelated to this batch's cards and files. If a FAIL names a card or path this batch changed, investigate and
+     fix it: it may be a real merge problem.
+5. Do not commit. Return the structured result. landingPatch = the patch whose hunks apply to HEAD; the hub stages it with
+   git apply --cached, plus the seed, the batch doc and AGENTS.md.`, { label: 'land', phase: 'Land', schema: LAND_SCHEMA, effort: 'high' })
+}
 
 return {
   runDir: RUN,
   integrationHalted,
   version: final && final.version,
   final,
+  land,
   audit,
   groups: results.filter(Boolean).map(st => ({
     group: st.group,

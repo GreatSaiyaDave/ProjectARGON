@@ -61,6 +61,12 @@ sessions.
 
 ## The loop (one batch)
 
+**Where it happens (2026-10-18).** The workflow's default `integrateIn: 'tree'` makes every copy from HEAD, and runs
+integration, audit and finalize in `<runDir>/trees/_integration`. A lander then applies one combined patch to the real
+checkout (rebased first if main moved) and merges around peers' uncommitted edits; the hub commits it with
+`git apply --cached`. The shared checkout usually holds other sessions' work in progress, and in October 2026 that
+included random-choice AI edits that made the suite flaky, so it is no place to gate a batch.
+
 1. **Baseline.** Run `headless.sh . --quiet`; it must PASS. Then save
    `headless.sh . --status-dump > before.tsv` and `version_bump.py --show`.
 2. **Worklist.** Run `worklist.py before.tsv --sets <next sets> --md`. Curriculum order is LOB → MRD → SRL →
