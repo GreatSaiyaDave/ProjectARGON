@@ -25,6 +25,16 @@ internal static class Program
         bool quiet = Array.IndexOf(args, "--quiet") >= 0;
         if (quiet) UnityEngine.Debug.Silence = true;
 
+        // Reproducible runs: every engine a test builds without an explicit seed draws one from this sequence.
+        // `--seed N` picks another sequence; sweeping a few values finds checks that depend on luck.
+        int seedBase = ReadIntArg(args, "--seed", 20261018);
+        uint seedState = (uint)seedBase;
+        WRLDZ.Duel.DuelRng.SeedSource = () =>
+        {
+            seedState = unchecked(seedState * 1664525u + 1013904223u);
+            return (int)seedState;
+        };
+
         int cardArg = Array.IndexOf(args, "--card");
         if (cardArg >= 0 && cardArg + 1 < args.Length)
         {
@@ -76,6 +86,7 @@ internal static class Program
         Console.WriteLine("== WRLDZ headless engine test harness ==");
         Console.WriteLine("streamingAssetsPath = " + streaming);
         Console.WriteLine($"stress duels = {duels}");
+        Console.WriteLine($"engine seed base = {seedBase} (--seed N to change)");
         Console.WriteLine();
 
         // The comprehensive stress suite runs the unit regressions

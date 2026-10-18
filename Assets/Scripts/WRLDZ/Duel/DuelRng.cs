@@ -80,7 +80,15 @@ namespace WRLDZ.Duel
         /// A fresh seed from process entropy for a duel that was not given one (Unity: every new duel and
         /// every restart shuffles differently, as before R1). Never used by rules code mid-duel.
         /// </summary>
-        public static int NewSeed() => Guid.NewGuid().GetHashCode();
+        public static int NewSeed() => SeedSource != null ? SeedSource() : Guid.NewGuid().GetHashCode();
+
+        /// <summary>
+        /// Test harnesses only: when set, every unseeded <see cref="DuelRng"/> takes its seed from this sequence
+        /// instead of process entropy, so a whole suite run is reproducible (headless.sh --seed N). With entropy
+        /// seeds, a check whose outcome depends on a shuffle or a random pick passed or failed at random (Timeater,
+        /// Curse of Fiend, 2026-10-18). The game never sets it.
+        /// </summary>
+        public static Func<int> SeedSource;
 
         /// <summary>
         /// One-shot presentation context for the next toss/roll (which side, source name).
