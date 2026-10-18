@@ -940,7 +940,9 @@ namespace WRLDZ.Presentation
             _clothSmr.Add(smr);
             var tpl = Resources.Load<Material>("WRLDZ/Avatar3D/Materials/AvatarRecolor");
             var mat = Own(tpl != null ? new Material(tpl) : new Material(UnlitShader()));
-            var tex = Resources.Load<Texture2D>(ClothRes + item.AlbedoStem);
+            // a body-specific sculpt keeps its own texture under albedo_<id>_<sex> (Yugi's buttoned jacket on the female
+            // body is another mesh than the male one under the same id); shared pieces use albedo_<id>
+            var tex = (item.Sculpt ? Resources.Load<Texture2D>(ClothRes + item.AlbedoStem + "_" + _sex) : null) ?? Resources.Load<Texture2D>(ClothRes + item.AlbedoStem);
             var mask = string.IsNullOrEmpty(item.Mask) ? null : Resources.Load<Texture2D>(ClothRes + item.Mask);
             // the base wardrobe shirts / bottoms / shoes are flat-colour shells without an authored mask: the whole piece is
             // paint region A, so "Shirt.0" / "Bottoms.0" / "Shoes.0" recolour it (street NPC looks, the player's paint tab).
@@ -953,7 +955,7 @@ namespace WRLDZ.Presentation
             if (flatPaint) mask = SplitMask();
             if (tex != null && mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", tex);
             if (mask != null && mat.HasProperty("_MaskMap")) mat.SetTexture("_MaskMap", mask);
-            if (item.Sculpt) ApplySculptNormalMap(mat, ClothRes + "normal_" + item.Id);
+            if (item.Sculpt && !ApplySculptNormalMap(mat, ClothRes + "normal_" + item.Id + "_" + _sex)) ApplySculptNormalMap(mat, ClothRes + "normal_" + item.Id);
             if (mat.HasProperty("_RefLum"))
             {
                 if (flatPaint)
@@ -992,13 +994,14 @@ namespace WRLDZ.Presentation
         /// A Meshy sculpt's tangent-space normal map (Tools/avatar/meshy_wardrobe.py writes normal_&lt;id&gt; next to the
         /// albedo; AvatarRecolor / AvatarHair _NormalMap, 2026-10-18). Nothing happens for pieces that ship none.
         /// </summary>
-        static void ApplySculptNormalMap(Material mat, string res)
+        static bool ApplySculptNormalMap(Material mat, string res)
         {
-            if (mat == null || !mat.HasProperty("_NormalMap")) return;
+            if (mat == null || !mat.HasProperty("_NormalMap")) return false;
             var nm = Resources.Load<Texture2D>(res);
-            if (nm == null) return;
+            if (nm == null) return false;
             mat.SetTexture("_NormalMap", nm);
             mat.SetFloat("_NormalOn", 1f);
+            return true;
         }
 
         void DestroySlotGrafts()

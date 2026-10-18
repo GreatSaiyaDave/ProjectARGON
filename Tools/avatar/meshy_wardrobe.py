@@ -1413,14 +1413,18 @@ def process(body, piece, path, out, render=True, hides=True):
     imgs = piece_images(ob)
     # textures: the packed JPEG / PNG bytes, untouched (base colour and normal map; the metallic / roughness map is
     # not used by the cel shader; an emission map is kept only when it is not black)
-    stem_base = f'{out}/{"Hair_" if is_hair else "albedo_"}{piece["id"]}'
+    # one sculpt for both bodies shares its textures (albedo_<id>); a body-specific sculpt (Yugi's buttoned jacket on the
+    # female body shares the id of the male one but is another mesh with another texture) gets albedo_<id>_<sex>, which
+    # GraftCloth prefers when it exists
+    suffix = '' if piece['sex'] == 'both' else f'_{sex}'
+    stem_base = f'{out}/{"Hair_" if is_hair else "albedo_"}{piece["id"]}{suffix}'
     first = sex == 'male' or piece['sex'] == 'female'
     if first or not glob.glob(stem_base + '.*'):
         rep['albedo'] = os.path.basename(save_packed(imgs.get('base'), stem_base) or '')
-        if imgs.get('normal'): rep['normal'] = os.path.basename(save_packed(imgs['normal'], f'{out}/normal_{piece["id"]}') or '')
+        if imgs.get('normal'): rep['normal'] = os.path.basename(save_packed(imgs['normal'], f'{out}/normal_{piece["id"]}{suffix}') or '')
         if imgs.get('emission'):
             em = image_pixels(imgs['emission']); rep['emission_mean'] = round(float(em.mean()), 4)
-            if em.mean() > 0.02: rep['emission'] = os.path.basename(save_packed(imgs['emission'], f'{out}/emission_{piece["id"]}') or '')
+            if em.mean() > 0.02: rep['emission'] = os.path.basename(save_packed(imgs['emission'], f'{out}/emission_{piece["id"]}{suffix}') or '')
     rep['texture'] = list(imgs['base'].size) if imgs.get('base') else None
     px = image_pixels(imgs['base']) if (imgs.get('base') and kind in ('hair', 'hat', 'top', 'bottoms', 'shoes', 'head')) else None
     cols = face_colours(ob, px) if px is not None else None
