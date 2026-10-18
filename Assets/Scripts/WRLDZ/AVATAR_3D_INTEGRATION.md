@@ -589,3 +589,43 @@ Tattoos. Accessories. The customization should fit without clipping or spacing i
 - **Accessories** (`AdornmentCatalog.Accessories`, `AvatarAppearance.accessoryIds`, ACCESSORIES tab): a prefab / FBX
   under Resources parented to a bone with a local pose; flat colour for untextured print models. The Millennium Puzzle
   print under Assets/Models/MillenniumPuzzle is a 3.5-cm-thick plate set, not a hanging pyramid, so it is not wired.
+
+### Addendum, 2026-10-18 (later) — the Meshy sculpts integrated as they are
+The owner's verdict on the first wardrobe pass: "You changed the model appearances. Don't ever do that without my
+permission. They were perfect. I wanted you to perfect them as they are and integrate them into the game." and "Do not
+keep the mannequin parts on the assets provided." The first pass had decimated the sculpts (160k–1.9M tris → 5–14k),
+shrunk their 4096² textures to 1024–2048, dropped the normal maps and pushed / subdivided / cut the geometry to fit.
+`Tools/avatar/meshy_wardrobe.py` was rewritten (v2) and every `*_3d` piece regenerated:
+- **What the tool may do to a sculpt:** place it (one uniform scale + translation, a yaw for shoes), articulate it
+  (sleeves / legs: the body's arm or leg is posed along the sculpted limb, the piece bound there and un-posed through
+  the rig), skin it (nearest body surface, the slot's bones), remove the Meshy mannequin, hide the body underneath. It
+  exports the mesh at full density with its own smooth normals (the Meshy custom normals are those normals to 0.04°)
+  and writes the packed JPEGs byte for byte: `albedo_<id>.jpg` + `normal_<id>.jpg` (hair: `Hair_<id>.jpg`), 4096².
+- **Mannequin removal** is colour-cluster based: a sculpt has a mannequin only when its geometry covers ≥ 60 % of our
+  face after the ICP fit (Keith's bandana, Weevil's bowl and Shadi's turban have none — nothing is removed). The
+  mannequin clusters are the neutral / skin-toned ones that own the faces lying on our face and do not reach into the
+  hat volume; a face is deleted when it is painted nearer the mannequin than any hair colour and lies on / in our head,
+  neck or bust (a short style has nothing below the neck base), plus the face column and anything 1.5 cm inside our
+  face; the mask is majority-smoothed and leftover islands dropped. Same-colour cases (white hair on a white bust) fall
+  back to geometry inside those zones. `--clusters` renders a false-colour tile per piece for review.
+- **Hiding instead of pushing:** a sculpt keeps its mannequin's proportions, so where it is slimmer than our body its
+  surface sits inside the skin (Yugi's inner shirt 9 cm inside the chest, trouser legs inside the thighs). The hide
+  map (now written by the tool, 2048², per-texel on hem faces) therefore hides the torso under a top between hem and
+  collar, the legs and hips under trousers, the feet and the leg below a shoe's top, and the generous 3 cm rule
+  (8 cm out for loose sleeves) everywhere else. Hair and hats hide the scalp they cover (`Hair/hide_<id>_<sex>.png`,
+  inward reach 7 cm because a Meshy mannequin head is smaller than ours); `OverworldAvatar3d` adds that map to the
+  clothes' composite (`_hairHide`, part of the clothes key).
+- **Shading:** `ClothingItem.Sculpt` (every `*_3d` id, set in the catalogue's static constructor) shows the texture as
+  painted — no flat paint regions — and `AvatarRecolor` / `AvatarHair` gained `_NormalMap` / `_NormalOn` (tangent-space,
+  Mikk tangents from the importer) so Meshy's folds and strands shape the cel band and rim as in the owner's Blender
+  view. `AvatarImportPostprocessor`: sculpt textures at 4096 (`normal_*` as NormalMap), sculpt FBX readable,
+  uncompressed, own normals, calculated tangents, no imported materials.
+- **Body range without baking:** a 900k-vertex sculpt cannot carry 13 blend-shape frames, so sculpts ship none.
+  `OverworldAvatar3d.MorphFollow.cs` ties each sculpt vertex to its nearest body vertex (rest pose, same rig space;
+  cached per piece and body) and, whenever the body wears a shape the piece lacks (Weight_*, Build_*, Face_*), applies
+  the body's delta on a per-avatar mesh copy — the nearest-skin transfer the bake used, done at run time. Built shells
+  keep their baked keys and are left alone.
+- **Verified unchanged:** the morph bases match the build-tree bodies (`argon_avatar_<sex>.fbx`) to 0.0000 mm in
+  every vertex, normal, UV and bone; the 161 shells the bake re-exported match their originals to 0.0003 mm.
+- **Sizes:** full-density FBX 3–40 MB each (~1.6 GB for the set), ~15 MB of JPEG per piece. Beyond what the GitHub
+  workflow can carry in one push, so the binaries live in the working tree uncommitted until the owner decides.

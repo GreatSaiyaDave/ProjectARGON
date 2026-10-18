@@ -41,6 +41,11 @@ namespace WRLDZ.Data
         /// <summary>Recolor mask stem in that same folder. Empty = the texture is shown as painted.</summary>
         public string Mask;
         public float RefR = 0.2f, RefG = 0.2f, RefB = 0.2f;
+        /// <summary>
+        /// A Meshy sculpt (Tools/avatar/meshy_wardrobe.py, ids ending in _3d): shown exactly as painted — never the
+        /// flat paint regions of the base shells — with its own normal map (Clothes/normal_{Id}) when one shipped.
+        /// </summary>
+        public bool Sculpt;
 
         public bool CanHoldPockets => MaxSewn > 0 || BasePockets > 0;
 
@@ -348,6 +353,13 @@ namespace WRLDZ.Data
             N("neck_mring_3d", ClothingSlot.Neck, "Millennium Ring", "The Millennium Ring on its cord.", 0, 0, 0, false, false, new Color(0.86f, 0.70f, 0.22f)),
             N("neck_mkey_3d", ClothingSlot.Neck, "Millennium Key", "The Millennium Key, worn at the chest.", 0, 0, 0, false, false, new Color(0.86f, 0.70f, 0.22f), null, 0),
         };
+
+        static ClothingCatalog()
+        {
+            // every *_3d row is a Meshy sculpt integrated by Tools/avatar/meshy_wardrobe.py: shown as painted
+            for (var i = 0; i < All.Length; i++)
+                if (All[i].Id != null && All[i].Id.EndsWith("_3d")) All[i].Sculpt = true;
+        }
 
         static ClothingItem N(string id, ClothingSlot slot, string name, string blurb,
             int pockets, int maxSewn, int price, bool starter, bool empty, Color fallback, string suit = null, int bodyType = -1) =>

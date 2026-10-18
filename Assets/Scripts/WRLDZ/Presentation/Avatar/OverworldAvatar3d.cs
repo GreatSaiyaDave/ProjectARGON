@@ -376,6 +376,7 @@ namespace WRLDZ.Presentation
             ApplyPaints(look);
             ApplyFace(look.silhouette ? "" : look.faceId ?? "");
             ApplyAdornments(look);   // accessories on bones, tattoos as skinned skin patches (OverworldAvatar3d.Adornments.cs)
+            FollowBodyShapes();      // sculpted pieces without shape keys follow the body's active shapes (OverworldAvatar3d.MorphFollow.cs)
             ApplySilhouette(look);
             if (_appliedAlpha < 0.999f) ApplyAlpha(_appliedAlpha);
             if (_renderersOff) foreach (var r in GetComponentsInChildren<Renderer>(true)) r.enabled = false;
@@ -518,7 +519,8 @@ namespace WRLDZ.Presentation
         {
             if (id == _hairId) return;
             _hairId = id;
-            if (_hairSmr != null) { KillMaterials(_hairSmr); Kill(_hairSmr.gameObject); _hairSmr = null; }
+            if (_hairSmr != null) { KillMaterials(_hairSmr); ForgetFollowed(_hairSmr); Kill(_hairSmr.gameObject); _hairSmr = null; }
+            _hairHide = null;
             SkinnedMeshRenderer baseHair = null;
             foreach (var r in GetComponentsInChildren<SkinnedMeshRenderer>(true))
                 if (r.name == "ArgonPart_Hair") baseHair = r;
@@ -541,12 +543,19 @@ namespace WRLDZ.Presentation
             var tpl = Resources.Load<Material>("WRLDZ/Avatar3D/Materials/AvatarHair");
             var mat = Own(tpl != null ? new Material(tpl) : new Material(Shader.Find("WRLDZ/AvatarHair") ?? UnlitShader()));
             if (tex != null) { if (mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", tex); if (mat.HasProperty("_MainTex")) mat.SetTexture("_MainTex", tex); }
+            ApplySculptNormalMap(mat, HairRes + "normal_" + id);   // Meshy hair sculpts ship one; built styles do not
             var mats = new Material[Mathf.Max(1, src.sharedMesh != null ? src.sharedMesh.subMeshCount : 1)];
             for (var i = 0; i < mats.Length; i++) mats[i] = i == 0 ? mat : Own(new Material(mat));
             src.sharedMaterials = mats;
             _textured.Add(src);
+            // a sculpted style's inner shell may sit inside our skull (its mannequin's head was smaller): the scalp under
+            // it is hidden through the body hide map like skin under a garment (Hair/hide_<id>_<sex>.png, 2026-10-18)
+            _hairHide = Resources.Load<Texture2D>(HairRes + "hide_" + id + "_" + _sex);
             return src;
         }
+
+        /// <summary>Scalp hide map of the grafted sculpted hairstyle (null for built styles); joins the clothes' maps.</summary>
+        Texture2D _hairHide;
 
         /// <summary>
         /// Instantiate a part FBX built on the same ArgonAvatarRig rest pose (hair, outfits), move its skinned mesh under
@@ -646,11 +655,15 @@ namespace WRLDZ.Presentation
                 return;
             }
             var key = _sex + "|" + look.hatId + "|" + look.facialId + "|" + look.shirtId + "|"
-                      + look.handsId + "|" + look.bottomsId + "|" + look.shoesId + "|" + look.neckId;
+                      + look.handsId + "|" + look.bottomsId + "|" + look.shoesId + "|" + look.neckId + "|" + _hairId;
             if (key == _clothesKey) return;
             _clothesKey = key;
             DestroySlotGrafts();
             var hides = new List<Texture2D>(4);
+            // the sculpted hairstyle's scalp map rides with the clothes' maps (it is part of the same composite), unless
+            // a hat hides the hair — then the hat's own map covers the head
+            if (_hairHide != null && !(ClothingCatalog.HatHidesHair(look.hatId) && ClothingCatalog.Get(look.hatId) is { } hatItem && hatItem.FitsBody(_sex == "female")))
+                hides.Add(_hairHide);
             // a piece that does not fit this body (or is missing) falls back to the default shell of its slot; the Meshy
             // body's own garments (2-3 cm off the skin) only show if even that is missing
             var shirt = GraftCloth(look.shirtId, hides) || GraftCloth(ClothingCatalog.DefaultShirt, hides);
@@ -932,13 +945,15 @@ namespace WRLDZ.Presentation
             // the base wardrobe shirts / bottoms / shoes are flat-colour shells without an authored mask: the whole piece is
             // paint region A, so "Shirt.0" / "Bottoms.0" / "Shoes.0" recolour it (street NPC looks, the player's paint tab).
             // Signature pieces keep their own colours.
-            var flatPaint = mask == null && item.BodyType < 0
+            // a Meshy sculpt (item.Sculpt, 2026-10-18) is shown exactly as painted: no paint regions, its own normal map
+            var flatPaint = !item.Sculpt && mask == null && item.BodyType < 0
                             && item.Slot is ClothingSlot.Shirt or ClothingSlot.Bottoms or ClothingSlot.Shoes;
             // two regions: the swatch's left half is the main colour (paint key .0), the right half the trim (.1: collar,
             // cuffs and hem bands, a waistband, a shoe's sole); the shell's UVs pick one half per face
             if (flatPaint) mask = SplitMask();
             if (tex != null && mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", tex);
             if (mask != null && mat.HasProperty("_MaskMap")) mat.SetTexture("_MaskMap", mask);
+            if (item.Sculpt) ApplySculptNormalMap(mat, ClothRes + "normal_" + item.Id);
             if (mat.HasProperty("_RefLum"))
             {
                 if (flatPaint)
@@ -973,6 +988,19 @@ namespace WRLDZ.Presentation
             return true;
         }
 
+        /// <summary>
+        /// A Meshy sculpt's tangent-space normal map (Tools/avatar/meshy_wardrobe.py writes normal_&lt;id&gt; next to the
+        /// albedo; AvatarRecolor / AvatarHair _NormalMap, 2026-10-18). Nothing happens for pieces that ship none.
+        /// </summary>
+        static void ApplySculptNormalMap(Material mat, string res)
+        {
+            if (mat == null || !mat.HasProperty("_NormalMap")) return;
+            var nm = Resources.Load<Texture2D>(res);
+            if (nm == null) return;
+            mat.SetTexture("_NormalMap", nm);
+            mat.SetFloat("_NormalOn", 1f);
+        }
+
         void DestroySlotGrafts()
         {
             for (var i = 0; i < _clothSmr.Count; i++)
@@ -981,6 +1009,7 @@ namespace WRLDZ.Presentation
                 if (r == null) continue;
                 _paintKey.Remove(r);
                 _textured.Remove(r);
+                ForgetFollowed(r);
                 Kill(r.gameObject);
             }
             _clothSmr.Clear();
@@ -1780,6 +1809,7 @@ namespace WRLDZ.Presentation
         void OnDestroy()
         {
             if (_graph.IsValid()) _graph.Destroy();
+            ReleaseFollowedMeshes();
             if (_blinkTex != null) Kill(_blinkTex);
             for (var i = 0; i < _clothMats.Count; i++) if (_clothMats[i] != null) Kill(_clothMats[i]);
             _clothMats.Clear();

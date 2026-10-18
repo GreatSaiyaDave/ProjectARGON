@@ -515,7 +515,7 @@
    "name": "Tristan Taylor (sculpt)",
    "inspiredBy": "Tristan Taylor — Meshy image-to-3D sculpt, 2026-10-17",
    "series": "DM",
-   "sex": "male",
+   "sex": "any",
    "length": "medium",
    "palette": {
     "name": "Tristan Taylor (sculpt)",
@@ -559,6 +559,40 @@
     "fringe": "#C6BAE8",
     "streak": "#C6BAE8",
     "side": "#C6BAE8"
+   }
+  },
+  {
+   "id": "seto_kaiba_3d",
+   "name": "Seto Kaiba (sculpt)",
+   "inspiredBy": "Seto Kaiba — Meshy image-to-3D sculpt, 2026-10-17",
+   "series": "DM",
+   "sex": "any",
+   "length": "medium",
+   "palette": {
+    "name": "Seto Kaiba (sculpt)",
+    "pattern": "original",
+    "root": "#543018",
+    "tip": "#543018",
+    "fringe": "#543018",
+    "streak": "#543018",
+    "side": "#543018"
+   }
+  },
+  {
+   "id": "yugi_muto_3d",
+   "name": "Yugi Muto (sculpt)",
+   "inspiredBy": "Yugi Muto — Meshy image-to-3D sculpt, 2026-10-17",
+   "series": "DM",
+   "sex": "any",
+   "length": "medium",
+   "palette": {
+    "name": "Yugi Muto (sculpt)",
+    "pattern": "original",
+    "root": "#F9005A",
+    "tip": "#F9005A",
+    "fringe": "#F9005A",
+    "streak": "#F9005A",
+    "side": "#F9005A"
    }
   }
  ],

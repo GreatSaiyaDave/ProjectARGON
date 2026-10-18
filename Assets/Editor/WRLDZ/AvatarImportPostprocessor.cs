@@ -17,6 +17,11 @@ namespace WRLDZ.EditorTools
     /// shows through every garment; painted albedos (`albedo_*`) are sRGB and readable (GraftCloth samples the swatch
     /// halves of the flat shells) and capped at 2048. Existing .meta files already carried these flags; new pieces
     /// dropped in by the wardrobe tools get them here instead of by hand.
+    ///
+    /// Meshy sculpts (ids ending in _3d, Tools/avatar/meshy_wardrobe.py, owner 2026-10-18 "perfect them as they are"):
+    /// their textures keep Meshy's 4096 px (`albedo_*_3d`, `Hair_*_3d`, `emission_*_3d`; `normal_*_3d` imports as a
+    /// normal map) and their meshes import at full density, uncompressed, readable (OverworldAvatar3d.MorphFollow
+    /// ties their vertices to the body's), with the sculpt's own normals and calculated tangents (the normal map).
     /// </summary>
     public sealed class AvatarImportPostprocessor : AssetPostprocessor
     {
@@ -31,6 +36,8 @@ namespace WRLDZ.EditorTools
 
         const string AvatarRoot = "Assets/Resources/WRLDZ/Avatar3D/";
 
+        static bool IsSculpt(string stem) => stem.Contains("_3d");
+
         void OnPreprocessModel()
         {
             foreach (var p in HumanoidSet)
@@ -42,9 +49,22 @@ namespace WRLDZ.EditorTools
                     imp.animationType = ModelImporterAnimationType.Human;
                     imp.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
                 }
-                // the two bases stay readable: tattoo patches are cut from the body mesh at runtime (Adornments)
+                // the two bases stay readable: tattoo patches are cut from the body mesh at runtime (Adornments) and the
+                // sculpted pieces read the body's shape deltas (MorphFollow)
                 if (p.Contains("argon_base_") && !imp.isReadable) imp.isReadable = true;
                 return;
+            }
+            if (!assetPath.StartsWith(AvatarRoot)) return;
+            var stem = Path.GetFileNameWithoutExtension(assetPath);
+            if (stem.StartsWith("argon_") && IsSculpt(stem))
+            {
+                var imp = (ModelImporter)assetImporter;
+                imp.isReadable = true;
+                imp.meshCompression = ModelImporterMeshCompression.Off;
+                imp.importNormals = ModelImporterNormals.Import;
+                imp.importTangents = ModelImporterTangents.CalculateMikk;
+                imp.importBlendShapes = true;
+                imp.materialImportMode = ModelImporterMaterialImportMode.None;   // OverworldAvatar3d builds the material (AvatarRecolor / AvatarHair)
             }
         }
 
@@ -63,6 +83,18 @@ namespace WRLDZ.EditorTools
                 var s = imp.GetDefaultPlatformTextureSettings();
                 s.maxTextureSize = 2048;
                 s.textureCompression = TextureImporterCompression.Uncompressed;
+                imp.SetPlatformTextureSettings(s);
+                return;
+            }
+            if (IsSculpt(name) && (name.StartsWith("albedo_") || name.StartsWith("Hair_") || name.StartsWith("normal_") || name.StartsWith("emission_")))
+            {
+                // a sculpt's texture at Meshy's own resolution; the normal map as a normal map
+                var normal = name.StartsWith("normal_");
+                imp.textureType = normal ? TextureImporterType.NormalMap : TextureImporterType.Default;
+                imp.sRGBTexture = !normal;
+                imp.isReadable = false;
+                var s = imp.GetDefaultPlatformTextureSettings();
+                s.maxTextureSize = 4096;
                 imp.SetPlatformTextureSettings(s);
                 return;
             }

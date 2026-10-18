@@ -156,8 +156,8 @@ namespace WRLDZ.Data
             // 2026-10-18: the DK rows wear the Meshy sculpts (ids *_3d, Tools/avatar/meshy_wardrobe.py) where one exists;
             // *_3d hair is painted, so those rows use HairPattern.Original (0) and keep hairHex only for the scalp strip.
             // The 2D sprite (characterId) still wins while it is set; clear it to see the 3D body in these pieces.
-            L("yugi_dk", "Duelist Kingdom Yugi", "yugi", 0, "yugi_muto", "yugi_muto", 153f, 0.40f, "shirt_yugi_3d", "bottoms_yugi_3d", "shoes_yugi_3d", "hands_yugi_dk", characterId: "yugi_da", neck: "neck_yugi_3d"),
-            L("kaiba_dk", "Duelist Kingdom Kaiba", "kaiba", 0, "seto_kaiba", "seto_kaiba", 186f, 0.35f, "shirt_kaiba_3d", "bottoms_kaiba_dk", "shoes_kaiba_3d", "hands_kaiba_dk", characterId: "kaiba_da"),
+            L("yugi_dk", "Duelist Kingdom Yugi", "yugi", 0, "yugi_muto_3d", "yugi_muto", 153f, 0.40f, "shirt_yugi_3d", "bottoms_yugi_3d", "shoes_yugi_3d", "hands_yugi_dk", characterId: "yugi_da", neck: "neck_yugi_3d"),
+            L("kaiba_dk", "Duelist Kingdom Kaiba", "kaiba", 0, "seto_kaiba_3d", "seto_kaiba", 186f, 0.35f, "shirt_kaiba_3d", "bottoms_kaiba_dk", "shoes_kaiba_3d", "hands_kaiba_dk", characterId: "kaiba_da"),
             L("yugi_bc", "Battle City Yugi", "yugi", 0, "yugi_muto", "yugi_muto", 153f, 0.40f, "shirt_yugi_bc", "bottoms_yugi_bc", "shoes_yugi_bc", null, characterId: ""),
             L("kaiba_bc", "Battle City Kaiba", "kaiba", 0, "seto_kaiba", "seto_kaiba", 186f, 0.35f, "shirt_kaiba_bc", "bottoms_kaiba_bc", "shoes_kaiba_bc", null, characterId: "kaiba"),
             L("joey_dk", "Duelist Kingdom Joey", "joey", 0, "joey_wheeler_3d", "joey_wheeler", 178f, 0.50f, "shirt_joey_3d", "bottoms_joey_bc", "shoes_joey_3d", "hands_joey_dk", characterId: "joey_da"),
@@ -186,7 +186,7 @@ namespace WRLDZ.Data
             L("tristan_bc", "Battle City Tristan", "tristan", 0, "tristan_quiff", "tristan", 180f, 0.60f, "shirt_tristan_bc", "bottoms_tristan_bc", "shoes_tristan_bc", null, hairPattern: 1, hairHex: "#62442D", characterId: "tristan_da"),
             L("mokuba_dk", "Duelist Kingdom Mokuba", "mokuba", 0, "mokuba_kaiba_3d", "mokuba_kaiba", 155f, 0.35f, "shirt_mokuba_3d", "bottoms_mokuba_3d", "shoes_mokuba_3d", null, hairHex: "#1E1E1E", characterId: "mokuba_da"),
             L("mokuba_bc", "Battle City Mokuba", "mokuba", 0, "mokuba_kaiba", "mokuba_kaiba", 155f, 0.35f, "shirt_mokuba_bc", "bottoms_mokuba_bc", "shoes_mokuba_bc", null, hairPattern: 4, hairHex: "#1E1E1E", hairStreak: "#4C557E", characterId: "mokuba_da"),
-            L("yami_yugi_dk", "Duelist Kingdom Yami Yugi", "yami yugi", 0, "yugi_muto", "yami_yugi",
+            L("yami_yugi_dk", "Duelist Kingdom Yami Yugi", "yami yugi", 0, "yugi_muto_3d", "yami_yugi",
                 158f, 0.38f, "shirt_yugi_3d", "bottoms_yugi_3d", "shoes_yugi_3d", "hands_yugi_dk", characterId: "yami_yugi_da", neck: "neck_yugi_3d"),
             // The Domino cape albedo is the black tank and blue blazer. A shirt hex flattened it to navy.
             L("yami_yugi", "Yami Yugi", "yami yugi", 0, "yugi_muto", "yami_yugi", 158f, 0.38f, "shirt_yugi_bc", "bottoms_yugi_bc", "shoes_yugi_bc", null, characterId: "yami_yugi"),
@@ -203,8 +203,8 @@ namespace WRLDZ.Data
             // picks them — they're only used when a roster entry sets characterLookId explicitly.
             // School uniforms drop the star-chip glove; the unbuttoned variant uses a plain tee for
             // Joey's sleeveless-vest look; the glowing-mark variant uses Yami's face decal.
-            L("yugi_school", "School Uniform Yugi", "yugi_school", 0, "yugi_muto", "yugi_muto", 153f, 0.40f, "shirt_yugi_3d", "bottoms_yugi_3d", "shoes_yugi_3d", null, characterId: ""),
-            L("kaiba_school", "School Uniform Kaiba", "kaiba_school", 0, "seto_kaiba", "seto_kaiba", 186f, 0.35f, "shirt_kaiba_dk", "bottoms_kaiba_dk", "shoes_kaiba_dk", null),
+            L("yugi_school", "School Uniform Yugi", "yugi_school", 0, "yugi_muto_3d", "yugi_muto", 153f, 0.40f, "shirt_yugi_3d", "bottoms_yugi_3d", "shoes_yugi_3d", null, characterId: ""),
+            L("kaiba_school", "School Uniform Kaiba", "kaiba_school", 0, "seto_kaiba_3d", "seto_kaiba", 186f, 0.35f, "shirt_kaiba_dk", "bottoms_kaiba_dk", "shoes_kaiba_dk", null),
             L("joey_school", "School Uniform Joey", "joey_school", 0, "joey_wheeler_3d", "joey_wheeler", 178f, 0.50f, "shirt_yugi_3d", "bottoms_yugi_3d", "shoes_yugi_3d", null),
             L("joey_unbuttoned", "Joey Wheeler — Unbuttoned", "joey_unbuttoned", 0, "joey_wheeler", "joey_wheeler", 178f, 0.50f, "shirt_plain", "bottoms_joey_bc", "shoes_joey_bc", null, shirtHex: "#FF8C1A", shirtTrimHex: "#8B0000"),
             L("yami_yugi_glowing", "Yami Yugi — Glowing Mark", "yami_yugi_glowing", 0, "yugi_muto", "yami_yugi", 158f, 0.38f, "shirt_yugi_bc", "bottoms_yugi_bc", "shoes_yugi_bc", null, characterId: "yami_yugi"),

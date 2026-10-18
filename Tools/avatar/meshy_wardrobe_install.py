@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
-"""Install the output of meshy_wardrobe.py into the Unity project.
+"""Install the output of meshy_wardrobe.py into the Unity project (v2, 2026-10-18: full-density sculpts).
 
-  python3 Tools/avatar/meshy_wardrobe_install.py <out_dir> [--project <repo root>] [--only <substr>]
-                                                 [--skip-hides] [--skip-thumbs] [--tools <dir with rebuild_hide_maps.py, clothes_thumbs.py>]
+  python3 Tools/avatar/meshy_wardrobe_install.py <out_dir> [--project <repo root>] [--only <substr>] [--catalogue-only]
 
-- clothes pieces -> Assets/Resources/WRLDZ/Avatar3D/Clothes/argon_<id>_<sex>.fbx + albedo_<id>.png
-- hair           -> Assets/Resources/WRLDZ/Avatar3D/Hair/argon_hair_<id>_<sex>.fbx + Hair_<id>.png + thumb_<id>.png,
-                    and a style entry (pattern "original": the texture shows as painted) in Hair/hair_catalog.json
-- hide maps      -> rebuild_hide_maps.py --only _3d (shirts / bottoms / shoes: the 3 cm coverage rule), then the
-                    head presets' and gloves' maps are rasterised here from the body UV triangles in the fit report
-                    (the whole head / the hands), 2048 px, 255 = hidden
-- thumbnails     -> clothes_thumbs.py both --only _3d (Clothes/thumb_<id>_<sex>.png)
-The Unity Editor picks the files up on its next refresh (AvatarImportPostprocessor sets the texture flags).
+- clothes pieces -> Assets/Resources/WRLDZ/Avatar3D/Clothes/argon_<id>_<sex>.fbx, albedo_<id>.<jpg|png>, normal_<id>.*,
+                    emission_<id>.* (when the sculpt had one), hide_<id>_<sex>.png (body-UV hide map), thumb_<id>_<sex>.png
+- hair           -> Assets/Resources/WRLDZ/Avatar3D/Hair/argon_hair_<id>_<sex>.fbx, Hair_<id>.*, normal_<id>.*, hide_<id>_<sex>.png
+                    (the scalp under the hair), thumb_<id>.png, and a style entry (pattern "original": the texture shows
+                    as painted) in Hair/hair_catalog.json
+- a texture that changes extension (the first pass wrote downscaled PNGs; the sculpt's own data is JPEG) has its old
+  file and .meta removed so Resources.Load("albedo_<id>") stays unambiguous.
+The Unity Editor picks the files up on its next refresh (AvatarImportPostprocessor: 4096 px, normal maps, readable
+full-density meshes).
 """
-import glob, json, os, shutil, subprocess, sys
-from PIL import Image, ImageDraw
+import glob, json, os, shutil, sys
+from PIL import Image
 
 argv = sys.argv[1:]
 OUT = argv[0]
@@ -22,19 +22,20 @@ def opt(name, default=None):
     return argv[argv.index(name) + 1] if name in argv else default
 PROJ = opt('--project', os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 ONLY = opt('--only')
-TOOLS = opt('--tools', os.path.expanduser('~/argon-avatar/tools/custom'))
 RES = f'{PROJ}/Assets/Resources/WRLDZ/Avatar3D'
 CLOTHES, HAIR = f'{RES}/Clothes', f'{RES}/Hair'
-HR = 2048
 
 def log(*a): print('[install]', *a, flush=True)
 
-def hide_png(tris, path):
-    img = Image.new('L', (HR, HR), 0); d = ImageDraw.Draw(img)
-    for tri in tris:
-        pts = [(u * HR, (1 - v) * HR) for u, v in tri]
-        d.polygon(pts, fill=255, outline=255)
-    img.save(path)
+def put(src, dst):
+    """Copy src over dst; any sibling of dst with the same stem but another extension (and its .meta) goes."""
+    stem, ext = os.path.splitext(dst)
+    for old in glob.glob(stem + '.*'):
+        if old.endswith('.meta'): continue
+        if os.path.splitext(old)[1] != ext:
+            os.remove(old); log('removed stale', os.path.basename(old))
+            if os.path.exists(old + '.meta'): os.remove(old + '.meta')
+    shutil.copy(src, dst)
 
 reports = []
 for j in sorted(glob.glob(f'{OUT}/*_male.json') + glob.glob(f'{OUT}/*_female.json')):
@@ -45,38 +46,27 @@ for j in sorted(glob.glob(f'{OUT}/*_male.json') + glob.glob(f'{OUT}/*_female.jso
 log(len(reports), 'fitted pieces')
 
 hair_ids = {}
+CAT_ONLY = '--catalogue-only' in argv     # only hair_catalog.json (a code checkout that never holds the binaries)
 for r in reports:
     pid, sex, kind = r['id'], r['sex'], r['kind']
-    if kind == 'hair':
-        shutil.copy(f'{OUT}/{r["fbx"]}', f'{HAIR}/argon_hair_{pid}_{sex}.fbx')
-        if os.path.exists(f'{OUT}/Hair_{pid}.png'): shutil.copy(f'{OUT}/Hair_{pid}.png', f'{HAIR}/Hair_{pid}.png')
-        if os.path.exists(f'{OUT}/thumb_{pid}.png'): shutil.copy(f'{OUT}/thumb_{pid}.png', f'{HAIR}/thumb_{pid}.png')
-        hair_ids[pid] = r['name']
+    dest = HAIR if kind == 'hair' else CLOTHES
+    if CAT_ONLY:
+        if kind == 'hair': hair_ids[pid] = r['name']
+        continue
+    put(f'{OUT}/{r["fbx"]}', f'{dest}/{r["fbx"]}')
+    for key in ('albedo', 'normal', 'emission'):
+        if r.get(key): put(f'{OUT}/{r[key]}', f'{dest}/{r[key]}')
+    if r.get('hide'): put(f'{OUT}/{r["hide"]}', f'{dest}/{r["hide"]}')
     else:
-        shutil.copy(f'{OUT}/{r["fbx"]}', f'{CLOTHES}/argon_{pid}_{sex}.fbx')
-        if os.path.exists(f'{OUT}/albedo_{pid}.png'): shutil.copy(f'{OUT}/albedo_{pid}.png', f'{CLOTHES}/albedo_{pid}.png')
-log('copied FBX + textures')
-
-if '--skip-hides' not in argv:
-    # the coverage-rule maps for the garments (skirts / robes included), never for hats, eyewear or neck pieces
-    cmd = ['blender', '-b', '--python', f'{TOOLS}/rebuild_hide_maps.py', '--', '--only', ONLY or '_3d']
-    log('hide maps:', ' '.join(cmd))
-    subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=1800)
-    for r in reports:
-        pid, sex, kind = r['id'], r['sex'], r['kind']
-        p = f'{CLOTHES}/hide_{pid}_{sex}.png'
-        if kind in ('hat', 'glasses', 'neck') and os.path.exists(p): os.remove(p)
-        if kind in ('head', 'glove') and r.get('hide_uv_tris'):
-            hide_png(r['hide_uv_tris'], p); log('wrote', os.path.basename(p), len(r['hide_uv_tris']), 'tris')
-    n = len([r for r in reports if os.path.exists(f'{CLOTHES}/hide_{r["id"]}_{r["sex"]}.png')])
-    log(n, 'hide maps present for the fitted pieces')
-
-if '--skip-thumbs' not in argv:
-    cmd = ['blender', '-b', '--python', f'{TOOLS}/clothes_thumbs.py', '--', 'both', '--only', ONLY or '_3d']
-    log('thumbs:', ' '.join(cmd))
-    subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=1800)
-    n = len([r for r in reports if r['kind'] != 'hair' and os.path.exists(f'{CLOTHES}/thumb_{r["id"]}_{r["sex"]}.png')])
-    log(n, 'clothes thumbnails present')
+        for stale in (f'{dest}/hide_{pid}_{sex}.png',):
+            if os.path.exists(stale): os.remove(stale); log('removed stale', os.path.basename(stale))
+            if os.path.exists(stale + '.meta'): os.remove(stale + '.meta')
+    if kind == 'hair':
+        if os.path.exists(f'{OUT}/thumb_{pid}.png'): put(f'{OUT}/thumb_{pid}.png', f'{HAIR}/thumb_{pid}.png')
+        hair_ids[pid] = r['name']
+    elif os.path.exists(f'{OUT}/thumb_{pid}_{sex}.png'):
+        put(f'{OUT}/thumb_{pid}_{sex}.png', f'{CLOTHES}/thumb_{pid}_{sex}.png')
+log('copied FBX, textures, hide maps, thumbnails')
 
 if hair_ids:
     cat_path = f'{HAIR}/hair_catalog.json'
@@ -85,9 +75,10 @@ if hair_ids:
     for hid, name in hair_ids.items():
         # the painted root colour for the scalp strip: the median of the texture's mid-bright pixels
         root = '#3A3A3A'
-        tex = f'{HAIR}/Hair_{hid}.png'
-        if os.path.exists(tex):
-            im = Image.open(tex).convert('RGB').resize((128, 128))
+        tex = sorted(glob.glob(f'{HAIR}/Hair_{hid}.*')) + sorted(glob.glob(f'{OUT}/Hair_{hid}.*'))
+        tex = [t for t in tex if not t.endswith('.meta')]
+        if tex:
+            im = Image.open(tex[0]).convert('RGB').resize((128, 128))
             px = [p for p in im.getdata() if 25 < sum(p) / 3 < 235]
             if px:
                 px.sort(key=lambda p: sum(p)); p = px[len(px) // 2]; root = '#%02X%02X%02X' % p
@@ -95,7 +86,7 @@ if hair_ids:
                      series='DM', sex='any', length='medium',
                      palette=dict(name=name + ' (sculpt)', pattern='original', root=root, tip=root, fringe=root, streak=root, side=root))
         if hid in have:
-            cat['styles'] = [entry if s['id'] == hid else s for s in cat['styles']]
+            cat['styles'] = [dict(s, **entry) if s['id'] == hid else s for s in cat['styles']]
         else:
             cat['styles'].append(entry)
     json.dump(cat, open(cat_path, 'w'), indent=1, ensure_ascii=False)

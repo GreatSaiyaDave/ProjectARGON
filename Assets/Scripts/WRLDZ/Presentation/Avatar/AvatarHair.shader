@@ -30,6 +30,10 @@ Shader "WRLDZ/AvatarHair"
         _HatTuckY ("Tuck axis Y / radius", Vector) = (0, 0, 0, 0)
         _HatTuckZ ("Tuck axis Z / radius", Vector) = (0, 0, 0, 0)
         _HatTuckOn ("Tuck the hair under a crowned hat's rim", Float) = 0
+        // Meshy hair sculpts (2026-10-18) ship a tangent-space normal map: the strand detail Meshy painted shapes the
+        // cel band and sheen as in the owner's Blender view
+        _NormalMap ("Normal map (tangent space)", 2D) = "bump" {}
+        _NormalOn ("Use the normal map", Float) = 0
         [HideInInspector] _Surface ("Surface", Float) = 0
         [HideInInspector] _SrcBlend ("Src", Float) = 1
         [HideInInspector] _DstBlend ("Dst", Float) = 0
@@ -41,6 +45,7 @@ Shader "WRLDZ/AvatarHair"
         HLSLINCLUDE
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
         TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
+        TEXTURE2D(_NormalMap); SAMPLER(sampler_NormalMap);
         CBUFFER_START(UnityPerMaterial)
             float4 _BaseMap_ST;
             half4 _BaseColor, _HairRoot, _HairTip, _HairFringe, _HairStreak, _HairSide;
@@ -50,6 +55,7 @@ Shader "WRLDZ/AvatarHair"
             float4 _HatTuckC, _HatTuckX, _HatTuckY, _HatTuckZ;
             half _HatTuckOn;
             half _Original, _ShadowAmt, _RimAmt, _Sheen, _OutlineWidth, _OutlineDark;
+            half _NormalOn;
             half _Surface, _SrcBlend, _DstBlend, _ZWrite;
         CBUFFER_END
 
@@ -57,11 +63,23 @@ Shader "WRLDZ/AvatarHair"
         {
             float4 positionOS : POSITION;
             float3 normalOS : NORMAL;
+            float4 tangentOS : TANGENT;
             float2 uv : TEXCOORD0;
             float2 uv1 : TEXCOORD1;
             half4 color : COLOR;
             UNITY_VERTEX_INPUT_INSTANCE_ID
         };
+
+        // the shading normal: the sculpt's normal map (when the material carries one) over the vertex normal
+        float3 ShadingNormal(float3 normalWS, float4 tangentWS, float2 uv)
+        {
+            float3 n = normalize(normalWS);
+            if (_NormalOn < 0.5h) return n;
+            half3 tn = UnpackNormal(SAMPLE_TEXTURE2D(_NormalMap, sampler_NormalMap, uv));
+            float3 t = normalize(tangentWS.xyz - n * dot(n, tangentWS.xyz));
+            float3 b = cross(n, t) * tangentWS.w;
+            return normalize(tn.x * t + tn.y * b + tn.z * n);
+        }
 
         half3 HairColour(float2 uv, half4 zones, float refLum)
         {
@@ -139,6 +157,7 @@ Shader "WRLDZ/AvatarHair"
                 float refLum : TEXCOORD2;
                 float3 normalWS : TEXCOORD3;
                 float3 positionWS : TEXCOORD4;
+                float4 tangentWS : TEXCOORD5;
                 UNITY_VERTEX_OUTPUT_STEREO
             };
 
@@ -150,6 +169,7 @@ Shader "WRLDZ/AvatarHair"
                 o.positionWS = TuckUnderHat(TransformObjectToWorld(v.positionOS.xyz));
                 o.positionCS = TransformWorldToHClip(o.positionWS);
                 o.normalWS = TransformObjectToWorldNormal(v.normalOS);
+                o.tangentWS = float4(TransformObjectToWorldDir(v.tangentOS.xyz), v.tangentOS.w * GetOddNegativeScale());
                 o.uv = TRANSFORM_TEX(v.uv, _BaseMap);
                 o.zones = v.color;
                 o.refLum = v.uv1.x;
@@ -162,8 +182,9 @@ Shader "WRLDZ/AvatarHair"
                 ClipUnderHat(i.positionWS);
                 half3 col = HairColour(i.uv, i.zones, i.refLum);
                 float3 view = GetWorldSpaceViewDir(i.positionWS);
-                half3 shaded = AnimeShade(col, i.normalWS, view, _ShadowAmt, _RimAmt);
-                shaded += (col * 0.6h + 0.25h) * AnimeHairSheen(i.normalWS, view) * _Sheen;
+                float3 n = ShadingNormal(i.normalWS, i.tangentWS, i.uv);
+                half3 shaded = AnimeShade(col, n, view, _ShadowAmt, _RimAmt);
+                shaded += (col * 0.6h + 0.25h) * AnimeHairSheen(n, view) * _Sheen;
                 return half4(shaded * _BaseColor.rgb, _BaseColor.a);
             }
             ENDHLSL

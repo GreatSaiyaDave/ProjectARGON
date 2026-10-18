@@ -27,6 +27,10 @@ Shader "WRLDZ/AvatarRecolor"
         _OutlineDark ("Ink = base colour x", Range(0, 1)) = 0.28
         _UseTexAlpha ("Alpha from the base map (decals)", Float) = 0
         _RimColor ("Silhouette edge light (a = strength)", Color) = (0, 0, 0, 0)
+        // Meshy sculpts (2026-10-18) ship their own tangent-space normal map: the fine folds and seams Meshy painted
+        // bend the cel shadow band and rim exactly as they do in the owner's Blender view
+        _NormalMap ("Normal map (tangent space)", 2D) = "bump" {}
+        _NormalOn ("Use the normal map", Float) = 0
         [Enum(UnityEngine.Rendering.CullMode)] _Cull ("Cull (cloth shells render both sides)", Float) = 2
         [HideInInspector] _Surface ("Surface", Float) = 0
         [HideInInspector] _SrcBlend ("Src", Float) = 1
@@ -43,14 +47,27 @@ Shader "WRLDZ/AvatarRecolor"
         TEXTURE2D(_MaskMap); SAMPLER(sampler_MaskMap);
         TEXTURE2D(_HideMap); SAMPLER(sampler_HideMap);
         TEXTURE2D(_ScalpMap); SAMPLER(sampler_ScalpMap);
+        TEXTURE2D(_NormalMap); SAMPLER(sampler_NormalMap);
         CBUFFER_START(UnityPerMaterial)
             float4 _BaseMap_ST;
             half4 _BaseColor, _ColorA, _ColorB, _ColorC, _ScalpColor;
             float4 _RefLum;
             half _HideOn, _ShadowAmt, _RimAmt, _OutlineWidth, _OutlineDark, _UseTexAlpha;
             half4 _RimColor;
+            half _NormalOn;
             half _Surface, _SrcBlend, _DstBlend, _ZWrite;
         CBUFFER_END
+
+        // the shading normal: the sculpt's normal map (when the material carries one) over the vertex normal
+        float3 ShadingNormal(float3 normalWS, float4 tangentWS, float2 uv)
+        {
+            float3 n = normalize(normalWS);
+            if (_NormalOn < 0.5h) return n;
+            half3 tn = UnpackNormal(SAMPLE_TEXTURE2D(_NormalMap, sampler_NormalMap, uv));
+            float3 t = normalize(tangentWS.xyz - n * dot(n, tangentWS.xyz));
+            float3 b = cross(n, t) * tangentWS.w;
+            return normalize(tn.x * t + tn.y * b + tn.z * n);
+        }
 
         half3 Paint(half3 col, half lum, half weight, half4 paint, float refLum)
         {
@@ -118,8 +135,8 @@ Shader "WRLDZ/AvatarRecolor"
             #pragma multi_compile_instancing
             #include "AnimeToon.hlsl"
 
-            struct Attributes { float4 positionOS : POSITION; float3 normalOS : NORMAL; float2 uv : TEXCOORD0; UNITY_VERTEX_INPUT_INSTANCE_ID };
-            struct Varyings { float4 positionCS : SV_POSITION; float2 uv : TEXCOORD0; float3 normalWS : TEXCOORD1; float3 positionWS : TEXCOORD2; UNITY_VERTEX_OUTPUT_STEREO };
+            struct Attributes { float4 positionOS : POSITION; float3 normalOS : NORMAL; float4 tangentOS : TANGENT; float2 uv : TEXCOORD0; UNITY_VERTEX_INPUT_INSTANCE_ID };
+            struct Varyings { float4 positionCS : SV_POSITION; float2 uv : TEXCOORD0; float3 normalWS : TEXCOORD1; float3 positionWS : TEXCOORD2; float4 tangentWS : TEXCOORD3; UNITY_VERTEX_OUTPUT_STEREO };
 
             Varyings vert(Attributes v)
             {
@@ -129,6 +146,7 @@ Shader "WRLDZ/AvatarRecolor"
                 o.positionWS = TransformObjectToWorld(v.positionOS.xyz);
                 o.positionCS = TransformWorldToHClip(o.positionWS);
                 o.normalWS = TransformObjectToWorldNormal(v.normalOS);
+                o.tangentWS = float4(TransformObjectToWorldDir(v.tangentOS.xyz), v.tangentOS.w * GetOddNegativeScale());
                 o.uv = TRANSFORM_TEX(v.uv, _BaseMap);
                 return o;
             }
@@ -140,7 +158,8 @@ Shader "WRLDZ/AvatarRecolor"
                 float3 viewDir = GetWorldSpaceViewDir(i.positionWS);
                 // two-sided cloth (_Cull Off): the inside of a coat or skirt is shaded with the flipped normal and a
                 // little darker, so it reads as lining instead of piecewise shadow blotches
-                float3 n = front ? i.normalWS : -i.normalWS;
+                float3 nShade = ShadingNormal(i.normalWS, i.tangentWS, i.uv);
+                float3 n = front ? nShade : -nShade;
                 col = AnimeShade(col, n, viewDir, _ShadowAmt, _RimAmt);
                 if (!front) col *= 0.78h;
                 col = col * _BaseColor.rgb + _RimColor.rgb * (AnimeEdgeLight(n, viewDir) * _RimColor.a);
