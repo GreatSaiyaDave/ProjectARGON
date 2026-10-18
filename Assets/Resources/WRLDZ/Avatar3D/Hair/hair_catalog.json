@@ -153,8 +153,8 @@
     "side": "#DADAE4"
    }
   },
-     {
-"id": "marik_ishtar",
+  {
+   "id": "marik_ishtar",
    "name": "Tomb Keeper",
    "inspiredBy": "Marik Ishtar",
    "series": "Duel Monsters",
@@ -372,6 +372,193 @@
     "fringe": "#C4BDD0",
     "streak": "#C4BDD0",
     "side": "#C4BDD0"
+   }
+  },
+  {
+   "id": "bonz_3d",
+   "name": "Bonz (sculpt)",
+   "inspiredBy": "Bonz — Meshy image-to-3D sculpt, 2026-10-17",
+   "series": "DM",
+   "sex": "any",
+   "length": "medium",
+   "palette": {
+    "name": "Bonz (sculpt)",
+    "pattern": "original",
+    "root": "#062286",
+    "tip": "#062286",
+    "fringe": "#062286",
+    "streak": "#062286",
+    "side": "#062286"
+   }
+  },
+  {
+   "id": "joey_wheeler_3d",
+   "name": "Joey Wheeler (sculpt)",
+   "inspiredBy": "Joey Wheeler — Meshy image-to-3D sculpt, 2026-10-17",
+   "series": "DM",
+   "sex": "any",
+   "length": "medium",
+   "palette": {
+    "name": "Joey Wheeler (sculpt)",
+    "pattern": "original",
+    "root": "#CAA026",
+    "tip": "#CAA026",
+    "fringe": "#CAA026",
+    "streak": "#CAA026",
+    "side": "#CAA026"
+   }
+  },
+  {
+   "id": "mai_valentine_3d",
+   "name": "Mai Valentine (sculpt)",
+   "inspiredBy": "Mai Valentine — Meshy image-to-3D sculpt, 2026-10-17",
+   "series": "DM",
+   "sex": "any",
+   "length": "medium",
+   "palette": {
+    "name": "Mai Valentine (sculpt)",
+    "pattern": "original",
+    "root": "#D7D465",
+    "tip": "#D7D465",
+    "fringe": "#D7D465",
+    "streak": "#D7D465",
+    "side": "#D7D465"
+   }
+  },
+  {
+   "id": "mako_3d",
+   "name": "Mako Tsunami (sculpt)",
+   "inspiredBy": "Mako Tsunami — Meshy image-to-3D sculpt, 2026-10-17",
+   "series": "DM",
+   "sex": "any",
+   "length": "medium",
+   "palette": {
+    "name": "Mako Tsunami (sculpt)",
+    "pattern": "original",
+    "root": "#30304F",
+    "tip": "#30304F",
+    "fringe": "#30304F",
+    "streak": "#30304F",
+    "side": "#30304F"
+   }
+  },
+  {
+   "id": "mokuba_kaiba_3d",
+   "name": "Mokuba Kaiba (sculpt)",
+   "inspiredBy": "Mokuba Kaiba — Meshy image-to-3D sculpt, 2026-10-17",
+   "series": "DM",
+   "sex": "any",
+   "length": "medium",
+   "palette": {
+    "name": "Mokuba Kaiba (sculpt)",
+    "pattern": "original",
+    "root": "#191E32",
+    "tip": "#191E32",
+    "fringe": "#191E32",
+    "streak": "#191E32",
+    "side": "#191E32"
+   }
+  },
+  {
+   "id": "pegasus_mane_3d",
+   "name": "Maximillion Pegasus (sculpt)",
+   "inspiredBy": "Maximillion Pegasus — Meshy image-to-3D sculpt, 2026-10-17",
+   "series": "DM",
+   "sex": "any",
+   "length": "medium",
+   "palette": {
+    "name": "Maximillion Pegasus (sculpt)",
+    "pattern": "original",
+    "root": "#C6BFDE",
+    "tip": "#C6BFDE",
+    "fringe": "#C6BFDE",
+    "streak": "#C6BFDE",
+    "side": "#C6BFDE"
+   }
+  },
+  {
+   "id": "ryou_bakura_3d",
+   "name": "Ryou Bakura (sculpt)",
+   "inspiredBy": "Ryou Bakura — Meshy image-to-3D sculpt, 2026-10-17",
+   "series": "DM",
+   "sex": "any",
+   "length": "medium",
+   "palette": {
+    "name": "Ryou Bakura (sculpt)",
+    "pattern": "original",
+    "root": "#C9C1F2",
+    "tip": "#C9C1F2",
+    "fringe": "#C9C1F2",
+    "streak": "#C9C1F2",
+    "side": "#C9C1F2"
+   }
+  },
+  {
+   "id": "tea_gardner_3d",
+   "name": "Téa Gardner (sculpt)",
+   "inspiredBy": "Téa Gardner — Meshy image-to-3D sculpt, 2026-10-17",
+   "series": "DM",
+   "sex": "any",
+   "length": "medium",
+   "palette": {
+    "name": "Téa Gardner (sculpt)",
+    "pattern": "original",
+    "root": "#451906",
+    "tip": "#451906",
+    "fringe": "#451906",
+    "streak": "#451906",
+    "side": "#451906"
+   }
+  },
+  {
+   "id": "tristan_quiff_3d",
+   "name": "Tristan Taylor (sculpt)",
+   "inspiredBy": "Tristan Taylor — Meshy image-to-3D sculpt, 2026-10-17",
+   "series": "DM",
+   "sex": "male",
+   "length": "medium",
+   "palette": {
+    "name": "Tristan Taylor (sculpt)",
+    "pattern": "original",
+    "root": "#372710",
+    "tip": "#372710",
+    "fringe": "#372710",
+    "streak": "#372710",
+    "side": "#372710"
+   }
+  },
+  {
+   "id": "weevil_bowl_3d",
+   "name": "Weevil Underwood (sculpt)",
+   "inspiredBy": "Weevil Underwood — Meshy image-to-3D sculpt, 2026-10-17",
+   "series": "DM",
+   "sex": "any",
+   "length": "medium",
+   "palette": {
+    "name": "Weevil Underwood (sculpt)",
+    "pattern": "original",
+    "root": "#57BBA7",
+    "tip": "#57BBA7",
+    "fringe": "#57BBA7",
+    "streak": "#57BBA7",
+    "side": "#57BBA7"
+   }
+  },
+  {
+   "id": "yami_bakura_3d",
+   "name": "Yami Bakura (sculpt)",
+   "inspiredBy": "Yami Bakura — Meshy image-to-3D sculpt, 2026-10-17",
+   "series": "DM",
+   "sex": "any",
+   "length": "medium",
+   "palette": {
+    "name": "Yami Bakura (sculpt)",
+    "pattern": "original",
+    "root": "#C6BAE8",
+    "tip": "#C6BAE8",
+    "fringe": "#C6BAE8",
+    "streak": "#C6BAE8",
+    "side": "#C6BAE8"
    }
   }
  ],

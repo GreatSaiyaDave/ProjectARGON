@@ -33,6 +33,7 @@ namespace WRLDZ.Core
             GrantIfMissing(inv, avatar.handsId);
             GrantIfMissing(inv, avatar.bottomsId);
             GrantIfMissing(inv, avatar.shoesId);
+            GrantIfMissing(inv, avatar.neckId);
             SyncPockets(avatar, inv);
         }
 
@@ -199,7 +200,7 @@ namespace WRLDZ.Core
         {
             if (look == null || string.IsNullOrEmpty(id)) return false;
             return look.hatId == id || look.facialId == id || look.shirtId == id
-                   || look.handsId == id || look.bottomsId == id || look.shoesId == id;
+                   || look.handsId == id || look.bottomsId == id || look.shoesId == id || look.neckId == id;
         }
 
         public static IEnumerable<ClothingItem> SewTargets(ClothingWardrobe wardrobe)

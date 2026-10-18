@@ -38,6 +38,11 @@ namespace WRLDZ.Data
         public string handsId = ClothingCatalog.DefaultHands;
         public string bottomsId = ClothingCatalog.DefaultBottoms;
         public string shoesId = ClothingCatalog.DefaultShoes;
+        /// <summary>Neck slot: cords, pendants, Millennium items (2026-10-18).</summary>
+        public string neckId = ClothingCatalog.DefaultNeck;
+        /// <summary>Worn accessories and tattoos (AdornmentCatalog ids), any number of each (2026-10-18).</summary>
+        public List<string> accessoryIds = new();
+        public List<string> tattooIds = new();
 
         /// <summary>
         /// Optional 3D avatar stem under StreamingAssets/WRLDZ/Avatar3D/{vrmId}.vrm
@@ -164,7 +169,10 @@ namespace WRLDZ.Data
                 handsId = handsId,
                 bottomsId = bottomsId,
                 shoesId = shoesId,
+                neckId = neckId,
                 morphs = morphs != null ? morphs.ConvertAll(m => new MorphWeight { name = m.name, weight = m.weight }) : new List<MorphWeight>(),
+                accessoryIds = accessoryIds != null ? new List<string>(accessoryIds) : new List<string>(),
+                tattooIds = tattooIds != null ? new List<string>(tattooIds) : new List<string>(),
                 bodyType = bodyType,
                 heightCm = heightCm,
                 weight = weight,
@@ -220,6 +228,10 @@ namespace WRLDZ.Data
             if (string.IsNullOrEmpty(hairSideHex)) hairSideHex = "#3ECFFF";
             paints ??= new List<PaintSlot>();
             paints.RemoveAll(p => p == null || string.IsNullOrEmpty(p.key) || string.IsNullOrEmpty(p.hex));
+            accessoryIds ??= new List<string>();
+            accessoryIds.RemoveAll(id => AdornmentCatalog.Accessory(id) == null);
+            tattooIds ??= new List<string>();
+            tattooIds.RemoveAll(id => AdornmentCatalog.Tattoo(id) == null);
             EnsureClothingDefaults();
         }
 
@@ -231,6 +243,7 @@ namespace WRLDZ.Data
             handsId = SanitizeSlot(ClothingSlot.Hands, handsId);
             bottomsId = SanitizeSlot(ClothingSlot.Bottoms, bottomsId);
             shoesId = SanitizeSlot(ClothingSlot.Shoes, shoesId);
+            neckId = SanitizeSlot(ClothingSlot.Neck, neckId);
         }
 
         static string SanitizeSlot(ClothingSlot slot, string id)
@@ -248,6 +261,7 @@ namespace WRLDZ.Data
             ClothingSlot.Hands => handsId,
             ClothingSlot.Bottoms => bottomsId,
             ClothingSlot.Shoes => shoesId,
+            ClothingSlot.Neck => neckId,
             _ => ClothingCatalog.DefaultId(slot)
         };
 
@@ -262,6 +276,7 @@ namespace WRLDZ.Data
                 case ClothingSlot.Hands: handsId = id; break;
                 case ClothingSlot.Bottoms: bottomsId = id; break;
                 case ClothingSlot.Shoes: shoesId = id; break;
+                case ClothingSlot.Neck: neckId = id; break;
             }
         }
 
@@ -280,8 +295,19 @@ namespace WRLDZ.Data
     /// <summary>Named options for the customizer UI.</summary>
     public static class AvatarCatalog
     {
-        public static float HeightMinCm(bool female) => female ? 145f : 152f;
-        public static float HeightMaxCm(bool female) => female ? 190f : 203f;
+        // 3 ft (Bonz) to 6 ft 8 on either body; OverworldAvatar3d.ApplyStature keeps short bodies big-headed (2026-10-18)
+        public static float HeightMinCm(bool female) => 91f;
+        public static float HeightMaxCm(bool female) => 203f;
+
+        /// <summary>Build and face shapes the bodies carry (Tools/avatar/body_morphs.py), as customizer sliders.</summary>
+        public static readonly (string key, string label, string group)[] BodyMorphs =
+        {
+            ("Build_Gaunt", "Gaunt", "build"), ("Build_Plump", "Plump", "build"), ("Build_Big", "Big", "build"),
+            ("Face_NoseLong", "Nose length", "face"), ("Face_NoseWide", "Nose width", "face"),
+            ("Face_MouthWide", "Mouth width", "face"), ("Face_LipsFull", "Lips", "face"),
+            ("Face_JawWide", "Jaw", "face"), ("Face_ChinLong", "Chin", "face"),
+            ("Face_CheeksFull", "Cheeks", "face"), ("Face_BrowHeavy", "Brow", "face"),
+        };
 
         public static readonly string[] HairPatternNames = { "Original", "Solid", "Ombré tips", "Tri-color", "Streaks", "Split" };
 

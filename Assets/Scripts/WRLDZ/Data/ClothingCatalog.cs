@@ -11,7 +11,9 @@ namespace WRLDZ.Data
         Shirt = 2,
         Hands = 3,
         Bottoms = 4,
-        Shoes = 5
+        Shoes = 5,
+        /// <summary>Cords, pendants and the Millennium items worn at the chest (2026-10-18, Meshy wardrobe).</summary>
+        Neck = 6
     }
 
     /// <summary>Static clothing catalog. IDs persist on the account; stats live here.</summary>
@@ -124,6 +126,7 @@ namespace WRLDZ.Data
         public const string DefaultHands = "hands_none";
         public const string DefaultBottoms = "bottoms_plain";
         public const string DefaultShoes = "shoes_plain";
+        public const string DefaultNeck = "neck_none";
 
         public const string BodyArtPath = "WRLDZ/Avatar/clothes/body_full.png";
         public const int MaxOutfitPockets = 6;
@@ -284,6 +287,66 @@ namespace WRLDZ.Data
             C(ClothingSlot.Shirt, "mokuba", "bc", 0, "Puffer vest", "Gold vest over a striped shirt.", 2, "#AFCFEE", new Color(0.89f, 0.76f, 0.50f)),
             C(ClothingSlot.Bottoms, "mokuba", "bc", 0, "Mokuba's jeans", "Blue jeans.", 1, null, new Color(0.310f, 0.353f, 0.525f)),
             C(ClothingSlot.Shoes, "mokuba", "bc", 0, "Mokuba's sneakers", "Blue sneakers.", 0, null, new Color(0.306f, 0.471f, 0.722f)),
+
+            // ---- Meshy image-to-3D sculpts (Assets/Models/Characters, 2026-10-17), fitted onto the bodies by
+            // Tools/avatar/meshy_wardrobe.py. Painted pieces: no recolour mask, the texture shows as painted. Ids end
+            // in _3d; the shell versions above stay in the catalogue. Signature pieces are granted with their look.
+            N("shirt_kaiba_3d", ClothingSlot.Shirt, "Kaiba's trench coat", "Indigo Duelist Kingdom trench coat over the teal shirt.", 4, 2, 0, false, false, new Color(0.16f, 0.17f, 0.42f), "#2B6068", 0),
+            N("shoes_kaiba_3d", ClothingSlot.Shoes, "Kaiba's shoes", "Black dress shoes.", 0, 0, 0, false, false, new Color(0.08f, 0.08f, 0.09f), null, 0),
+            N("shirt_yugi_3d", ClothingSlot.Shirt, "Domino High jacket", "Blue Domino High jacket over the black shirt (buttoned on the female body).", 2, 2, 0, false, false, new Color(0.15f, 0.30f, 0.62f), "#0B0B10"),
+            N("bottoms_yugi_3d", ClothingSlot.Bottoms, "Domino High trousers", "Blue Domino High trousers.", 1, 2, 0, false, false, new Color(0.13f, 0.26f, 0.58f), null, 0),
+            N("shoes_yugi_3d", ClothingSlot.Shoes, "Yugi's sneakers", "Navy-and-white sneakers.", 0, 0, 0, false, false, new Color(0.18f, 0.22f, 0.40f), null, 0),
+            N("shirt_joey_3d", ClothingSlot.Shirt, "Joey's jacket", "Green Duelist Kingdom jacket over a white tee.", 2, 2, 0, false, false, new Color(0.13f, 0.52f, 0.33f), "#F2F2F5", 0),
+            N("shoes_joey_3d", ClothingSlot.Shoes, "Joey's loafers", "Black loafers.", 0, 0, 0, false, false, new Color(0.10f, 0.10f, 0.11f), null, 0),
+            N("shirt_bakura_3d", ClothingSlot.Shirt, "Bakura's sweater", "Cream V-neck sweater over a green collared shirt.", 0, 0, 0, false, false, new Color(0.88f, 0.86f, 0.78f), "#2E7D4F", 0),
+            N("bottoms_bakura_3d", ClothingSlot.Bottoms, "Bakura's jeans", "Blue denim jeans.", 1, 2, 0, false, false, new Color(0.20f, 0.36f, 0.58f), null, 0),
+            N("shoes_bakura_3d", ClothingSlot.Shoes, "Bakura's sneakers", "Blue-and-white canvas sneakers.", 0, 0, 0, false, false, new Color(0.22f, 0.40f, 0.68f), null, 0),
+            N("hat_keith_3d", ClothingSlot.Hat, "Keith's bandana", "Stars-and-stripes bandana over his hair.", 0, 0, 0, false, false, new Color(0.70f, 0.20f, 0.22f), null, 0),
+            N("shirt_keith_3d", ClothingSlot.Shirt, "Keith's vest", "Studded navy vest over a red tee.", 2, 2, 0, false, false, new Color(0.16f, 0.18f, 0.36f), "#B32424", 0),
+            N("bottoms_keith_3d", ClothingSlot.Bottoms, "Keith's cargo pants", "Khaki cargo trousers.", 2, 2, 0, false, false, new Color(0.72f, 0.66f, 0.50f), null, 0),
+            N("shoes_keith_3d", ClothingSlot.Shoes, "Keith's combat boots", "Black combat boots.", 0, 0, 0, false, false, new Color(0.09f, 0.09f, 0.10f), null, 0),
+            N("shirt_bonz_3d", ClothingSlot.Shirt, "Bonz's hoodie", "Olive hoodie, hood down.", 2, 2, 0, false, false, new Color(0.62f, 0.62f, 0.33f), null, 0),
+            N("bottoms_bonz_3d", ClothingSlot.Bottoms, "Bonz's shorts", "Violet shorts.", 1, 2, 0, false, false, new Color(0.36f, 0.30f, 0.62f), null, 0),
+            N("shoes_bonz_3d", ClothingSlot.Shoes, "Bonz's sneakers", "Blue padded high-tops.", 0, 0, 0, false, false, new Color(0.16f, 0.36f, 0.62f), null, 0),
+            N("shirt_mokuba_3d", ClothingSlot.Shirt, "Mokuba's top", "Red top with striped sleeves and a blue bandana.", 0, 0, 0, false, false, new Color(0.78f, 0.18f, 0.16f), null, 0),
+            N("bottoms_mokuba_3d", ClothingSlot.Bottoms, "Mokuba's trousers", "Teal trousers.", 1, 2, 0, false, false, new Color(0.55f, 0.78f, 0.72f), null, 0),
+            N("shoes_mokuba_3d", ClothingSlot.Shoes, "Mokuba's skate sneakers", "Blue-and-black skate sneakers.", 0, 0, 0, false, false, new Color(0.14f, 0.26f, 0.60f), null, 0),
+            N("hat_panik_3d", ClothingSlot.Hat, "PaniK's cap", "Navy cap with his winged hair.", 0, 0, 0, false, false, new Color(0.12f, 0.16f, 0.30f), null, 0),
+            N("shirt_panik_3d", ClothingSlot.Shirt, "PaniK's coat", "Dark trench coat with silver trim.", 4, 2, 0, false, false, new Color(0.10f, 0.11f, 0.18f), "#141018", 0),
+            N("bottoms_panik_3d", ClothingSlot.Bottoms, "PaniK's trousers", "Black trousers.", 1, 2, 0, false, false, new Color(0.08f, 0.08f, 0.09f), null, 0),
+            N("shoes_panik_3d", ClothingSlot.Shoes, "PaniK's boots", "Black ankle-strap boots.", 0, 0, 0, false, false, new Color(0.08f, 0.08f, 0.09f), null, 0),
+            N("shirt_pegasus_3d", ClothingSlot.Shirt, "Pegasus's suit", "Red suit jacket with a ruffled cravat.", 2, 2, 0, false, false, new Color(0.70f, 0.12f, 0.14f), "#F2F2F5", 0),
+            N("bottoms_pegasus_3d", ClothingSlot.Bottoms, "Pegasus's slacks", "Red suit trousers.", 1, 2, 0, false, false, new Color(0.66f, 0.11f, 0.13f), null, 0),
+            N("shoes_pegasus_3d", ClothingSlot.Shoes, "Pegasus's shoes", "White dress shoes.", 0, 0, 0, false, false, new Color(0.92f, 0.92f, 0.90f), null, 0),
+            N("shoes_rex_3d", ClothingSlot.Shoes, "Rex's sneakers", "Blue-and-white sneakers.", 0, 0, 0, false, false, new Color(0.20f, 0.36f, 0.72f), null, 0),
+            N("bottoms_mako_3d", ClothingSlot.Bottoms, "Mako's jeans", "Cropped navy jeans.", 1, 2, 0, false, false, new Color(0.16f, 0.20f, 0.34f), null, 0),
+            N("shoes_mako_3d", ClothingSlot.Shoes, "Mako's boots", "Brown cuffed fisherman boots.", 0, 0, 0, false, false, new Color(0.42f, 0.28f, 0.18f), null, 0),
+            N("hat_shadi_3d", ClothingSlot.Hat, "Shadi's turban", "White turban.", 0, 0, 0, false, false, new Color(0.90f, 0.90f, 0.92f), null, 0),
+            N("shirt_shadi_3d", ClothingSlot.Shirt, "Shadi's robe", "White hooded robe, full length.", 0, 0, 0, false, false, new Color(0.92f, 0.92f, 0.90f), "#F2F0EA", 0),
+            N("shoes_shadi_3d", ClothingSlot.Shoes, "Shadi's shoes", "White ankle shoes.", 0, 0, 0, false, false, new Color(0.90f, 0.90f, 0.88f), null, 0),
+            N("hat_para_head_3d", ClothingSlot.Hat, "Para's head", "Para: the bald head with 迷 on the brow (replaces the head).", 0, 0, 0, false, false, new Color(0.80f, 0.60f, 0.44f), null, 0),
+            N("shirt_para_3d", ClothingSlot.Shirt, "Para's tunic", "Orange tunic with black sleeves.", 0, 0, 0, false, false, new Color(0.78f, 0.36f, 0.14f), "#B9541F", 0),
+            N("hat_dox_head_3d", ClothingSlot.Hat, "Dox's head", "Dox: the bald head with 宮 on the brow (replaces the head).", 0, 0, 0, false, false, new Color(0.80f, 0.60f, 0.44f), null, 0),
+            N("shirt_dox_3d", ClothingSlot.Shirt, "Dox's tunic", "Green tunic with black sleeves.", 0, 0, 0, false, false, new Color(0.18f, 0.52f, 0.34f), "#2A7A50", 0),
+            N("face_weevil_3d", ClothingSlot.Facial, "Weevil's glasses", "Round gold glasses with the horned bridge.", 0, 0, 0, false, false, new Color(0.84f, 0.70f, 0.24f), null, 0),
+            N("shirt_weevil_3d", ClothingSlot.Shirt, "Weevil's tailcoat", "Green tailcoat with a red bow tie.", 2, 2, 0, false, false, new Color(0.48f, 0.62f, 0.22f), "#F2F2F5", 0),
+            N("bottoms_weevil_3d", ClothingSlot.Bottoms, "Weevil's trousers", "Black trousers.", 1, 2, 0, false, false, new Color(0.10f, 0.10f, 0.11f), null, 0),
+            N("shirt_mai_3d", ClothingSlot.Shirt, "Mai's jacket", "Purple jacket over the white corset top.", 2, 2, 0, false, false, new Color(0.46f, 0.26f, 0.60f), "#F2F2F5", 1),
+            N("bottoms_mai_3d", ClothingSlot.Bottoms, "Mai's skirt", "Purple mini skirt with belt.", 0, 0, 0, false, false, new Color(0.40f, 0.22f, 0.56f), null, 1),
+            N("shoes_mai_3d", ClothingSlot.Shoes, "Mai's boots", "Purple thigh-high boots.", 0, 0, 0, false, false, new Color(0.38f, 0.22f, 0.54f), null, 1),
+            N("shirt_tea_3d", ClothingSlot.Shirt, "Domino High blazer", "Pink Domino High blazer with a blue bow.", 2, 2, 0, false, false, new Color(0.86f, 0.36f, 0.52f), "#F2F2F5", 1),
+            N("bottoms_tea_3d", ClothingSlot.Bottoms, "Domino High skirt", "Blue pleated uniform skirt.", 0, 0, 0, false, false, new Color(0.18f, 0.36f, 0.68f), null, 1),
+            N("shoes_tea_3d", ClothingSlot.Shoes, "Uniform loafers", "Brown loafers with white socks.", 0, 0, 0, false, false, new Color(0.40f, 0.24f, 0.14f), null, 1),
+            // player shop pieces (both bodies)
+            N("shirt_crimson_3d", ClothingSlot.Shirt, "Crimson tech jacket", "Black jacket with crimson panels.", 2, 2, 1400, false, false, new Color(0.55f, 0.10f, 0.12f), "#0B0B10"),
+            N("bottoms_techwear_3d", ClothingSlot.Bottoms, "Techwear cargo pants", "Black cargo trousers with red trim.", 2, 2, 900, false, false, new Color(0.10f, 0.10f, 0.11f)),
+            N("shoes_techwear_3d", ClothingSlot.Shoes, "Techwear sneakers", "Black-and-red high-top sneakers.", 0, 0, 380, false, false, new Color(0.14f, 0.12f, 0.12f)),
+
+            // Neck
+            N("neck_none", ClothingSlot.Neck, "Bare neck", "Nothing worn at the neck.", 0, 0, 0, true, true, Color.white),
+            N("neck_yugi_3d", ClothingSlot.Neck, "Puzzle cord", "Leather cord for the Millennium Puzzle.", 0, 0, 0, false, false, new Color(0.45f, 0.26f, 0.14f)),
+            N("neck_mring_3d", ClothingSlot.Neck, "Millennium Ring", "The Millennium Ring on its cord.", 0, 0, 0, false, false, new Color(0.86f, 0.70f, 0.22f)),
+            N("neck_mkey_3d", ClothingSlot.Neck, "Millennium Key", "The Millennium Key, worn at the chest.", 0, 0, 0, false, false, new Color(0.86f, 0.70f, 0.22f), null, 0),
         };
 
         static ClothingItem N(string id, ClothingSlot slot, string name, string blurb,
@@ -336,6 +399,7 @@ namespace WRLDZ.Data
             ClothingSlot.Shirt => "shirt",
             ClothingSlot.Hands => "hands",
             ClothingSlot.Bottoms => "bottoms",
+            ClothingSlot.Neck => "neck",
             _ => "shoes"
         };
 
@@ -355,6 +419,7 @@ namespace WRLDZ.Data
             ClothingSlot.Hands => DefaultHands,
             ClothingSlot.Bottoms => DefaultBottoms,
             ClothingSlot.Shoes => DefaultShoes,
+            ClothingSlot.Neck => DefaultNeck,
             _ => DefaultHat
         };
 
@@ -379,12 +444,15 @@ namespace WRLDZ.Data
         {
             "hat_cap" or "hat_beanie" or "hat_rex_bc" => HairClip.Rim,
             "hat_bonz_dk" or "hat_odion_bc" or "hat_ishizu_bc" => HairClip.Hood,
+            // the Meshy headwear carries its own hair (Keith, PaniK) or replaces the whole head (Para, Dox)
+            "hat_keith_3d" or "hat_panik_3d" or "hat_shadi_3d" or "hat_para_head_3d" or "hat_dox_head_3d" => HairClip.Hood,
             _ => HairClip.None
         };
 
         public static bool HatHidesHair(string hatId) => hatId switch
         {
             "hat_cap" or "hat_beanie" or "hat_rex_bc" or "hat_bonz_dk" or "hat_odion_bc" or "hat_ishizu_bc" => true,
+            "hat_keith_3d" or "hat_panik_3d" or "hat_shadi_3d" or "hat_para_head_3d" or "hat_dox_head_3d" => true,
             _ => false
         };
 
@@ -434,6 +502,7 @@ namespace WRLDZ.Data
             ClothingSlot.Hands => "Hands",
             ClothingSlot.Bottoms => "Bottoms",
             ClothingSlot.Shoes => "Shoes",
+            ClothingSlot.Neck => "Neck",
             _ => "Slot"
         };
 

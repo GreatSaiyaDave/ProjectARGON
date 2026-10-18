@@ -21,7 +21,7 @@ namespace WRLDZ.Presentation
     /// Animation Library, retargeted through Humanoid) weighted by <see cref="Speed"/>, which the
     /// map sets from its pan velocity. No AnimatorController asset is needed.
     /// </summary>
-    public sealed class OverworldAvatar3d : MonoBehaviour
+    public sealed partial class OverworldAvatar3d : MonoBehaviour
     {
         const string BaseRes = "WRLDZ/Avatar3D/argon_base_";
         const string ClipsRes = "WRLDZ/Avatar3D/ArgonClips_UAL";
@@ -338,7 +338,7 @@ namespace WRLDZ.Presentation
                 if (_renderersOff) foreach (var r in GetComponentsInChildren<Renderer>(true)) r.enabled = false;
                 return;
             }
-            transform.localScale = Vector3.one * (_baseScale * Mathf.Clamp(look.HeightScale, 0.75f, 1.25f));
+            ApplyStature(look);
             // suppress any base shell that has a grafted counterpart (stops two meshes colliding on AR duelists)
             ReconcileGraftedShells();
             // the hair first: a freshly grafted style must take the weight morph below too
@@ -347,7 +347,11 @@ namespace WRLDZ.Presentation
             ApplyClothes(look);
             SyncHairUnderHat(look);
 
-            // weight: 0.5 = as built; below blends in Weight_Thin, above Weight_Heavy (0..100 each)
+            // weight: 0.5 = as built; below blends in Weight_Thin, above Weight_Heavy (0..100 each). The build and face
+            // shapes (Build_Plump / Build_Big / Build_Gaunt, Face_*; Tools/avatar/body_morphs.py) ride in look.morphs.
+            // Every shape is set on EVERY skinned renderer that carries it: the garments and hair carry the same keys
+            // (Tools/avatar/bake_body_morphs.py transfers the body's displacement onto each piece), so a plump body
+            // wears its coat plump and nothing clips more than at rest.
             var w = Mathf.Clamp01(look.weight);
             var thin = w < 0.5f ? (0.5f - w) * 200f : 0f;
             var heavy = w > 0.5f ? (w - 0.5f) * 200f : 0f;
@@ -359,14 +363,54 @@ namespace WRLDZ.Presentation
                 var hi = m.GetBlendShapeIndex("Weight_Heavy");
                 if (ti >= 0) r.SetBlendShapeWeight(ti, thin);
                 if (hi >= 0) r.SetBlendShapeWeight(hi, heavy);
+                if (r == _smr) continue;   // the body took look.morphs in Apply
+                for (var i = 0; i < m.blendShapeCount; i++)
+                {
+                    var name = m.GetBlendShapeName(i);
+                    if (!name.StartsWith("Build_") && !name.StartsWith("Face_")) continue;
+                    r.SetBlendShapeWeight(i, Mathf.Clamp01(look.GetMorph(name)) * 100f);
+                }
             }
 
             ApplyHairColour(look);
             ApplyPaints(look);
             ApplyFace(look.silhouette ? "" : look.faceId ?? "");
+            ApplyAdornments(look);   // accessories on bones, tattoos as skinned skin patches (OverworldAvatar3d.Adornments.cs)
             ApplySilhouette(look);
             if (_appliedAlpha < 0.999f) ApplyAlpha(_appliedAlpha);
             if (_renderersOff) foreach (var r in GetComponentsInChildren<Renderer>(true)) r.enabled = false;
+        }
+
+        // ---- stature (2026-10-18): heights from 3 ft to 6 ft 8 on the same bodies.
+        // Down to 85 % of the base height the whole body scales as one. Below that (a 3-ft Bonz on a 175-cm base) a
+        // uniformly shrunk adult reads wrong, so the head keeps more of its size than the body (anime children are
+        // big-headed): the head's world scale follows height^0.45 while the body closes the rest of the gap. The head
+        // scale sits on the Head bone, so the hair, hats, glasses and face decals (all under or skinned to it) follow.
+        Transform _statureHead;
+        Vector3 _statureHeadBaseScale = Vector3.one;
+
+        public void ApplyStature(AvatarAppearance look)
+        {
+            var baseM = look.BaseHeightCm / 100f;
+            var h = Mathf.Clamp(look.EffectiveHeightCm, 60f, 230f) / 100f;
+            var k = h / baseM;
+            float bodyScale, headScale;
+            if (k >= 0.85f) { bodyScale = k; headScale = k; }
+            else
+            {
+                var headM = baseM * 0.135f;                       // chin-to-crown share of the base height
+                headScale = Mathf.Max(0.70f, Mathf.Pow(k, 0.45f));
+                bodyScale = Mathf.Max(0.35f, (h - headScale * headM) / (baseM - headM));
+            }
+            transform.localScale = Vector3.one * (_baseScale * bodyScale);
+            if (_statureHead == null)
+            {
+                var anim = GetComponent<Animator>();
+                _statureHead = anim != null && anim.isHuman ? anim.GetBoneTransform(HumanBodyBones.Head) : null;
+                if (_statureHead != null) _statureHeadBaseScale = _statureHead.localScale;
+            }
+            if (_statureHead != null)
+                _statureHead.localScale = _statureHeadBaseScale * (headScale / Mathf.Max(bodyScale, 1e-3f));
         }
 
         // ---- silhouette: every renderer in one flat colour with the ink outline (a canon duelist before its real model
@@ -602,7 +646,7 @@ namespace WRLDZ.Presentation
                 return;
             }
             var key = _sex + "|" + look.hatId + "|" + look.facialId + "|" + look.shirtId + "|"
-                      + look.handsId + "|" + look.bottomsId + "|" + look.shoesId;
+                      + look.handsId + "|" + look.bottomsId + "|" + look.shoesId + "|" + look.neckId;
             if (key == _clothesKey) return;
             _clothesKey = key;
             DestroySlotGrafts();
@@ -615,6 +659,7 @@ namespace WRLDZ.Presentation
             GraftCloth(look.handsId, hides);
             _hatWorn = GraftCloth(look.hatId, hides);     // the id alone is not enough: a hat that does not fit this body is not worn
             GraftCloth(look.facialId, hides);
+            GraftCloth(look.neckId, hides);               // cords / pendants / Millennium items (Meshy wardrobe, 2026-10-18)
             foreach (var r in GetComponentsInChildren<SkinnedMeshRenderer>(true))
             {
                 if (r.name == "ArgonPart_Shirt") r.gameObject.SetActive(!shirt);
