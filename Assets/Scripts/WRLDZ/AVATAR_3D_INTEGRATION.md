@@ -634,3 +634,35 @@ shrunk their 4096² textures to 1024–2048, dropped the normal maps and pushed 
   GLB rest pose stands on tiptoe) and un-posed through the rig.
 - **Sizes:** full-density FBX 3–63 MB each (1.9 GB for the set), 716 MB of JPEG. Beyond what the GitHub workflow can
   carry in one push, so the binaries live in the Editor project's working tree uncommitted until the owner decides.
+
+## 2026-10-18 addendum — PROFILE / CUSTOMIZE rebuilt ("This needs a AAA upgrade")
+
+- **Screens:** `AvatarCustomizerUI` (+ `.Body3d.cs` editors) stands in the v6.3 sanctuary of the main menu (`room.png`,
+  MenuV6 fonts and chrome9 plates, `WrldzAnimePalette`, the style guide's measured gold), opaque: the menu underneath no
+  longer bleeds through. Landscape (1920x1080 plan): categories on the left pylon (BODY, FACE, HAIR, OUTFITS, WARDROBE,
+  COLOURS, ADORNMENTS, DUELIST), the duelist on a gold-ringed plinth in the middle, tabs + card grid + detail strip on
+  the right pylon, BACK / RESET / SAVE LOOK over the ceiling, the name on a cartouche under the plinth (tap to edit).
+  Portrait phone plan: stage on top, a sideways category strip, 4-column grid. Leaving with unsaved changes asks
+  KEEP EDITING / DISCARD / SAVE. Widgets: `UI/CustomizerKit.cs` (`CzKit`, `CzFlow`, `CzHover`, `CzReveal`, `CzStageFit`).
+- **3D stage:** `AvatarPreview3d` is one body shared by both screens (perspective camera, transparent background). It
+  frames from the live bones and renderer tops, so no height / build / hair can be cut off, and eases between FULL,
+  BUST, FACE, LEGS and FEET as the tab changes (FACE SHAPE / hats / eyewear → face, shoes → feet ...). Drag turns with
+  inertia, the arrows turn 45°, the wheel zooms, a double click resets. The player is always the 3D body: a look's
+  `characterId` (2D sprite set) is cleared when it is worn.
+- **Outfits:** tapping a signature look wears its seven slots and garment paints only; FULL COSPLAY also takes the
+  character's hair, face decal, height and build (`CharacterLook.ApplyTo`).
+- **Card pictures:** `Assets/Editor/WRLDZ/WardrobeThumbs.cs` films every piece, hairstyle, look and body with the game's
+  own body and cel shaders (Play mode = idle pose), framed by bones per slot, into `Resources/WRLDZ/Avatar3D/Thumbs/`
+  (`item_<id>_<sex>`, `hair_<id>_<sex>`, `look_<id>`, `body_<sex>`; ~290 PNGs, uncommitted like the sculpts):
+  `WRLDZ.EditorTools.WardrobeThumbs.Start()` / `.Start("_3d")` / `.Status()`. The Blender thumbs stay as the fallback
+  (the 13 sculpted hairs' Blender thumbs were empty). Once the renders exist, a piece without one (no model for that
+  body: the seven DK star-chip gloves) is not offered.
+- **Idle fix:** the committed `ArgonClips_UAL.fbx` (10-10 restore) has empty takes (`…|Idle_Loop|baselayer`, zero
+  curves), so the idle mixer fed the humanoid default pose: hips at the root, every standing body ~1 m into the floor
+  (the old customizer's tiny, cut-off figure). `OverworldAvatar3d.BuildGraph` now skips empty takes and falls back to
+  `Resources/WRLDZ/Avatar3D/UAL_Standard.fbx` — the CC0 Universal Animation Library pack itself
+  (`~/argon-avatar/packs/ual/.../AnimationLibrary_Unity_Standard.fbx`), imported Humanoid. Measured: hips 1.05 m,
+  head 1.53 m on the 175 cm base.
+- **Open:** in every humanoid clip the bases stand on tiptoe (their rest pose has the ankle ~15 cm up, so the avatar's
+  neutral foot is pointed): shoes read like heels in close-ups. A flat-foot avatar definition or a foot settle is a
+  rig change for the owner to approve.

@@ -25,6 +25,7 @@ namespace WRLDZ.Presentation
     {
         const string BaseRes = "WRLDZ/Avatar3D/argon_base_";
         const string ClipsRes = "WRLDZ/Avatar3D/ArgonClips_UAL";
+        const string ClipsFallbackRes = "WRLDZ/Avatar3D/UAL_Standard";
         const float WalkSpeed = 1.2f;   // m/s at which the walk clip is fully weighted
 
         /// <summary>Metres per second the token is moving across the map; 0 = idle.</summary>
@@ -1769,16 +1770,18 @@ namespace WRLDZ.Presentation
             // on the Animator rewriting every bone first. With CullUpdateTransforms a body no camera sees (edit-mode
             // previews, a token scrolled off) stops being rewritten and the additions would pile up. 52 bones: cheap.
             animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
-            var clips = Resources.LoadAll<AnimationClip>(ClipsRes);
-            AnimationClip idle = null, walk = null;
-            foreach (var c in clips)
+            var idle = PickTake(Resources.LoadAll<AnimationClip>(ClipsRes), "Idle_Loop");
+            var walk = PickTake(Resources.LoadAll<AnimationClip>(ClipsRes), "Walk_Loop");
+            // The ArgonClips_UAL.fbx the 10-10 restore committed has EMPTY takes ("…|Idle_Loop|baselayer", no curves):
+            // the mixer then fed the humanoid default pose, hips at the feet's origin (every standing body sank ~1 m).
+            // The CC0 Universal Animation Library itself is the fallback (UAL_Standard.fbx, imported Humanoid). Idle and
+            // walk then both come from it: one humanoid pair blends cleanly, a humanoid idle with that file's generic
+            // walk would hand the hips back to the default pose as the walk weight rises.
+            if (idle == null)
             {
-                // FBX takes arrive as "Rig|Idle_Loop" or "Rig|Rig|Idle_Loop" depending on the importer. Match the
-                // take name exactly: the UAL also holds Swim_/Pistol_/Spell_Simple_/Crouch_/Sitting_Idle_Loop, and a
-                // suffix match picked whichever came last (the token idled with its arms raised).
-                var take = c.name.Substring(c.name.LastIndexOf('|') + 1);
-                if (take == "Idle_Loop") idle = c;
-                else if (take == "Walk_Loop") walk = c;
+                var pack = Resources.LoadAll<AnimationClip>(ClipsFallbackRes);
+                idle = PickTake(pack, "Idle_Loop");
+                walk = PickTake(pack, "Walk_Loop") ?? walk;
             }
             if (idle == null && walk == null) return;   // stays in bind pose; still shows the look
 
@@ -1791,6 +1794,19 @@ namespace WRLDZ.Presentation
             var output = AnimationPlayableOutput.Create(_graph, "anim", animator);
             output.SetSourcePlayable(_mixer);
             _graph.Play();
+        }
+
+        /// <summary>
+        /// The clip whose take is exactly <paramref name="take"/> and that has curves. FBX takes arrive as "Rig|Idle_Loop" or
+        /// "Rig|Rig|Idle_Loop" depending on the importer; the UAL also holds Swim_/Pistol_/Spell_Simple_/Crouch_/
+        /// Sitting_Idle_Loop, and a suffix match picked whichever came last (the token idled with its arms raised).
+        /// </summary>
+        static AnimationClip PickTake(AnimationClip[] clips, string take)
+        {
+            if (clips == null) return null;
+            foreach (var c in clips)
+                if (c != null && !c.empty && c.name.Substring(c.name.LastIndexOf('|') + 1) == take) return c;
+            return null;
         }
 
         void Update()

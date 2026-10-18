@@ -6,51 +6,74 @@ using UnityEngine.UI;
 using WRLDZ.Core;
 using WRLDZ.Data;
 using WRLDZ.Presentation;
+using WRLDZ.UI.MenuV6;
 using WRLDZ.UI.Shell;
 
 namespace WRLDZ.UI
 {
     /// <summary>
-    /// Avatar / profile menus (Pokémon GO profile + DMO-style character create energy):
-    /// · Profile sheet (stats + open customize)
-    /// · Full customizer (body, hair, eyes, outfit, accessory, colors, title, display name)
-    /// Saves to local account DB and refreshes map/hub portraits.
+    /// The duelist PROFILE and CUSTOMIZE screens (rebuilt 2026-10-18; owner: "This needs a AAA upgrade").
+    /// Both stand in the v6.3 sanctuary of the main menu (room.png: the torch-lit wall between two pylons): the live 3D
+    /// duelist on a gold-ringed plinth in the middle (<see cref="AvatarPreview3d"/>, one body shared by both screens),
+    /// the left pylon holds the categories (customizer) or the duelist's identity (profile), the right pylon holds the
+    /// wardrobe grid and its editors (customizer) or stats and the spirit companion (profile).
+    /// The screens are opaque: the menu underneath no longer bleeds through. The camera follows the category (face for
+    /// FACE SHAPE, feet for SHOES ...). Landscape (the 1920x1080 plan the owner judges in) and the portrait phone plan
+    /// share the editors; only the frame differs. Saves to the local account and refreshes the map / hub portraits.
     /// </summary>
     public partial class AvatarCustomizerUI : MonoBehaviour
     {
         Transform _canvasRoot;
-        GameObject _profileSheet;
-        GameObject _customizerSheet;
-        AvatarPortraitView _preview;
-        AvatarPortraitView _profilePortrait;
-        AvatarAppearance _draft;
-        Text _status;
-        Text _profileName, _profileTitle, _profileHandle, _profileLevel, _profileXp;
-        Text _profileWallet;
-        Image _profileTeamIcon;
-        Text _statDuels, _statCards, _statPath, _statSe;
-        Image _profileXpFill;
-        SoulBadgeView _soulBadge;
-        Text _optionLabel;
-        RectTransform _companionHost;
-        InputField _nameField;
-        Action _onSaved;
-        ClothingWardrobe _wardrobe;
-        Transform _optionHost;
-        readonly List<Image> _slotImgs = new();
-        readonly List<Outline> _slotRings = new();
-        readonly List<Part> _slotParts = new();
-
-        // Cycle indices shown as current option labels
-        enum Part { Look, Hat, Facial, Shirt, Hands, Bottoms, Shoes, Accent, Title, Skin, HairColor, OutfitTint, Disk, Aura, Body, Hair, Paint, Outfit, Neck, FaceShape, Accessories, Tattoos }
-        Part _focus = Part.Body;
-
-        // 3D customization (Customization v1): live 3D preview, body / hair / colour editors
+        CanvasScaler _scaler;
+        bool _landscape = true;
+        GameObject _profileSheet, _customizerSheet;
         AvatarPreview3d _preview3d;
-        RectTransform _chipsHost, _stripRt, _controlsHost, _previewRt, _nameRt, _labelRt, _statusRt, _saveRt, _backRt;
+        AvatarPortraitView _fallback2d;
+        RectTransform _profileStage, _customizerStage;
+
+        AvatarAppearance _draft;
+        string _savedJson;
+        ClothingWardrobe _wardrobe;
+        Action _onSaved;
+
+        enum Part { Look, Hat, Facial, Shirt, Hands, Bottoms, Shoes, Accent, Title, Skin, HairColor, OutfitTint, Disk, Aura, Body, Hair, Paint, Outfit, Neck, FaceShape, Accessories, Tattoos }
+        enum Cat { Body, Face, Hair, Outfits, Wardrobe, Colours, Adorn, Duelist }
+
+        Cat _cat = Cat.Body;
+        Part _focus = Part.Body;
         string _hairZone = "root";
         string _paintKey = "Shirt.0";
-        bool _wide;
+
+        static readonly (Cat cat, string name, string caption, Part[] tabs)[] Cats =
+        {
+            (Cat.Body, "Body", "Base · height · build · skin", new[] { Part.Body, Part.Skin }),
+            (Cat.Face, "Face", "Nose · mouth · jaw · brow", new[] { Part.FaceShape }),
+            (Cat.Hair, "Hair", "Anime sculpts · styles · dye", new[] { Part.Hair, Part.HairColor }),
+            (Cat.Outfits, "Outfits", "The cast's signature looks", new[] { Part.Outfit }),
+            (Cat.Wardrobe, "Wardrobe", "Hats · tops · bottoms · shoes", new[] { Part.Hat, Part.Facial, Part.Neck, Part.Shirt, Part.Hands, Part.Bottoms, Part.Shoes }),
+            (Cat.Colours, "Colours", "Paint the standard pieces", new[] { Part.Paint }),
+            (Cat.Adorn, "Adornments", "Accessories · tattoos", new[] { Part.Accessories, Part.Tattoos }),
+            (Cat.Duelist, "Duelist", "Title · spirit · disk · aura", new[] { Part.Title, Part.Accent, Part.Disk, Part.Aura, Part.Look }),
+        };
+
+        static string TabLabel(Part p) => p switch
+        {
+            Part.Body => "Build", Part.Skin => "Skin", Part.FaceShape => "Features", Part.Hair => "Style", Part.HairColor => "Dye",
+            Part.Outfit => "Signature looks", Part.Hat => "Hats", Part.Facial => "Eyewear", Part.Neck => "Neck", Part.Shirt => "Tops",
+            Part.Hands => "Gloves", Part.Bottoms => "Bottoms", Part.Shoes => "Shoes", Part.Paint => "Clothes", Part.Accessories => "Accessories",
+            Part.Tattoos => "Tattoos", Part.Title => "Title", Part.Accent => "Spirit", Part.Disk => "Duel Disk", Part.Aura => "Aura",
+            Part.Look => "Portrait", _ => p.ToString()
+        };
+
+        /// <summary>Where the camera looks while a tab is open.</summary>
+        static AvatarPreview3d.Focus FocusFor(Part p) => p switch
+        {
+            Part.FaceShape or Part.Hat or Part.Facial => AvatarPreview3d.Focus.Face,
+            Part.Hair or Part.HairColor or Part.Neck or Part.Tattoos or Part.Accessories => AvatarPreview3d.Focus.Bust,
+            Part.Bottoms => AvatarPreview3d.Focus.Legs,
+            Part.Shoes => AvatarPreview3d.Focus.Feet,
+            _ => AvatarPreview3d.Focus.Full
+        };
 
         public static AvatarCustomizerUI Ensure(Transform parent = null)
         {
@@ -64,28 +87,64 @@ namespace WRLDZ.UI
 
         void Awake()
         {
-            // Dedicated overlay canvas
             var canvasGo = new GameObject("AvatarCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
             canvasGo.transform.SetParent(transform, false);
             var canvas = canvasGo.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 200;
-            UiTheme.ApplyPortraitPhone(canvasGo.GetComponent<CanvasScaler>());
+            _scaler = canvasGo.GetComponent<CanvasScaler>();
+            _landscape = UiTheme.ApplyForAspect(_scaler, MenuAspect.Surface);
             _canvasRoot = canvasGo.transform;
-            BuildProfileSheet();
-            BuildCustomizerSheet();
+            BuildSheets();
             HideAllNow();
         }
+
+        /// <summary>Rebuild both screens for the current aspect (also when the window flips between landscape and portrait).</summary>
+        void BuildSheets()
+        {
+            if (_preview3d != null) _preview3d.transform.SetParent(_canvasRoot, false);   // keep the body while the sheets go
+            if (_profileSheet != null) Destroy(_profileSheet);
+            if (_customizerSheet != null) Destroy(_customizerSheet);
+            BuildProfileSheet();
+            BuildCustomizerSheet();
+            if (_preview3d == null)
+            {
+                _preview3d = AvatarPreview3d.Create(_canvasRoot);
+                _preview3d.gameObject.SetActive(false);
+            }
+        }
+
+        bool _applyPending;
+        float _nextApplyAt;
+
+        void Update()
+        {
+            // slider drags: the body follows at most ~16 times a second (a sculpt re-follows the body's shapes on each apply)
+            if (_applyPending && Time.unscaledTime >= _nextApplyAt)
+            {
+                _applyPending = false;
+                _nextApplyAt = Time.unscaledTime + 0.06f;
+                ApplyPreview();
+            }
+            var land = UiTheme.IsLandscapeSurface(MenuAspect.Surface);
+            if (land == _landscape) return;
+            var profileOpen = _profileSheet != null && _profileSheet.activeSelf;
+            var customOpen = _customizerSheet != null && _customizerSheet.activeSelf;
+            _landscape = UiTheme.ApplyForAspect(_scaler, MenuAspect.Surface);
+            BuildSheets();
+            HideAllNow();
+            if (customOpen) ShowCustomizer(false);
+            else if (profileOpen) ShowProfile(false);
+        }
+
+        // ------------------------------------------------------------------ open / close
 
         public void OpenProfile(Action onSaved = null)
         {
             StopAllCoroutines();
             _onSaved = onSaved;
             LoadDraftFromSession();
-            RefreshProfile();
-            HideAllNow();
-            if (_profileSheet != null)
-                MenuMotion.Play(this, MenuMotion.SheetIn(_profileSheet));
+            ShowProfile(true);
         }
 
         public void OpenCustomizer(Action onSaved = null)
@@ -94,36 +153,78 @@ namespace WRLDZ.UI
             _onSaved = onSaved;
             StreamingSprite.ClearCache("WRLDZ/Avatar/clothes/");
             LoadDraftFromSession();
+            ShowCustomizer(true);
+        }
+
+        void ShowProfile(bool animate)
+        {
             HideAllNow();
-            if (_customizerSheet != null)
-                MenuMotion.Play(this, MenuMotion.SheetIn(_customizerSheet));
+            RefreshProfile();
+            AttachPreview(_profileStage);
             ApplyPreview();
-            UpdateOptionLabel();
-            RebuildOptionStrip();
+            _preview3d?.SetFocus(AvatarPreview3d.Focus.Full);
+            _preview3d?.ResetView();
+            SheetIn(_profileSheet, animate);
+        }
+
+        void ShowCustomizer(bool animate)
+        {
+            HideAllNow();
             if (_nameField != null)
             {
                 var acc = AppSession.Ensure().Account;
-                _nameField.text = acc?.displayName ?? "";
+                _nameField.SetTextWithoutNotify(acc?.displayName ?? "");
             }
+            AttachPreview(_customizerStage);
+            ApplyPreview();
+            RebuildRail();
+            SelectTab(_focus, true);
+            SheetIn(_customizerSheet, animate);
         }
 
         public void HideAll()
         {
-            if (_profileSheet != null && _profileSheet.activeSelf)
-                MenuMotion.Play(this, MenuMotion.SheetOut(_profileSheet));
-            else if (_profileSheet != null)
-                _profileSheet.SetActive(false);
-
-            if (_customizerSheet != null && _customizerSheet.activeSelf)
-                MenuMotion.Play(this, MenuMotion.SheetOut(_customizerSheet));
-            else if (_customizerSheet != null)
-                _customizerSheet.SetActive(false);
+            CloseConfirm();
+            foreach (var s in new[] { _profileSheet, _customizerSheet })
+            {
+                if (s == null) continue;
+                if (s.activeSelf && isActiveAndEnabled) StartCoroutine(SheetOut(s));
+                else s.SetActive(false);
+            }
         }
 
         void HideAllNow()
         {
+            CloseConfirm();
             if (_profileSheet != null) _profileSheet.SetActive(false);
             if (_customizerSheet != null) _customizerSheet.SetActive(false);
+            if (_preview3d != null) _preview3d.gameObject.SetActive(false);
+        }
+
+        void SheetIn(GameObject sheet, bool animate)
+        {
+            if (sheet == null) return;
+            sheet.SetActive(true);
+            if (_preview3d != null) _preview3d.gameObject.SetActive(true);
+            var g = MenuMotion.EnsureGroup(sheet);
+            if (!animate || !isActiveAndEnabled) { g.alpha = 1f; g.blocksRaycasts = g.interactable = true; return; }
+            StartCoroutine(MenuMotion.Fade(g, 0f, 1f, 0.28f));
+        }
+
+        IEnumerator SheetOut(GameObject sheet)
+        {
+            var g = MenuMotion.EnsureGroup(sheet);
+            yield return MenuMotion.Fade(g, g.alpha, 0f, 0.18f);
+            if (sheet != null) sheet.SetActive(false);
+            var anyOpen = (_profileSheet != null && _profileSheet.activeSelf) || (_customizerSheet != null && _customizerSheet.activeSelf);
+            if (!anyOpen && _preview3d != null) _preview3d.gameObject.SetActive(false);
+        }
+
+        void AttachPreview(RectTransform host)
+        {
+            if (_preview3d == null || host == null) return;
+            _preview3d.gameObject.SetActive(true);
+            _preview3d.AttachTo(host);
         }
 
         void LoadDraftFromSession()
@@ -133,7 +234,6 @@ namespace WRLDZ.UI
             _draft = AvatarAppearance.Default();
             if (acc != null)
             {
-                // Prefer structured appearance; migrate from avatarColor if empty
                 if (acc.avatar != null)
                     _draft = acc.avatar.Clone();
                 else
@@ -141,6 +241,10 @@ namespace WRLDZ.UI
             }
 
             _draft.ClampToCatalog();
+            // the player is always the 3D body: a sprite id from an old signature equip would turn the map token 2D
+            _draft.characterId = "";
+            _draft.silhouette = false;
+            _savedJson = JsonUtility.ToJson(_draft);
             if (acc != null)
             {
                 acc.EnsureInventory();
@@ -154,979 +258,452 @@ namespace WRLDZ.UI
             }
         }
 
-        void BuildProfileSheet()
+        bool Dirty => _draft != null && JsonUtility.ToJson(_draft) != _savedJson;
+
+        // ------------------------------------------------------------------ the sanctuary frame shared by both screens
+
+        /// <summary>
+        /// An opaque sheet with the sanctuary behind it: the room art fitted to the stage plan (landscape: the whole room,
+        /// pylons where the main menu has them; portrait: the torch-lit wall), the dark ceiling and the floor vignette.
+        /// Returns the stage container (units = plan pixels).
+        /// </summary>
+        RectTransform Sanctuary(GameObject sheet)
         {
-            _profileSheet = new GameObject("ProfileSheet", typeof(RectTransform));
-            _profileSheet.transform.SetParent(_canvasRoot, false);
-            GoTheme.Stretch(_profileSheet.GetComponent<RectTransform>());
-
-            var frame = DualMenuPresenter.BuildFrame(
-                _profileSheet.transform, "PROFILE", "Spirit Dueler", HideAll);
-            _profileName = frame.Title;
-            _profileHandle = frame.Subtitle;
-            if (_profileName != null)
+            var bg = CzKit.Img(sheet.transform, "Backdrop", UiFoundation.WhiteSprite(), WrldzAnimePalette.RoomBase, true);
+            CzKit.Fill(bg.rectTransform);
+            var stage = CzKit.Node(sheet.transform, "Stage");
+            var fit = stage.gameObject.AddComponent<CzStageFit>();
+            fit.Reference = _landscape ? new Vector2(1920f, 1080f) : new Vector2(1080f, 2340f);
+            fit.FitNow();
+            var room = CzKit.Room;
+            if (room != null)
             {
-                _profileName.resizeTextForBestFit = false;
-                _profileName.horizontalOverflow = HorizontalWrapMode.Overflow;
-                _profileName.verticalOverflow = VerticalWrapMode.Overflow;
+                var r = CzKit.Img(stage, "Room", room, Color.white);
+                if (_landscape) CzKit.Place(r, 0f, 0f, 1920f, 1080f);
+                else CzKit.Place(r, -1540f, 0f, 2340f * 16f / 9f, 2340f);   // scaled to the phone's height, the wall's middle (x 960) at its centre
             }
-
-            if (_profileHandle != null)
-            {
-                WrldzType.StyleButtonLabel(_profileHandle, 14);
-                _profileHandle.color = new Color(0.90f, 0.94f, 1f, 0.96f);
-                _profileHandle.alignment = TextAnchor.MiddleLeft;
-                _profileHandle.resizeTextForBestFit = false;
-                _profileHandle.horizontalOverflow = HorizontalWrapMode.Overflow;
-                _profileHandle.verticalOverflow = VerticalWrapMode.Overflow;
-            }
-
-            var body = frame.BodyHost;
-
-            var host = new GameObject("PortraitHost", typeof(RectTransform), typeof(Image), typeof(Button));
-            host.transform.SetParent(body, false);
-            FloatingPanel.Place(host.GetComponent<RectTransform>(), 0.22f, 0.50f, 0.78f, 0.98f);
-            var hostHit = host.GetComponent<Image>();
-            hostHit.sprite = UiFoundation.WhiteSprite();
-            hostHit.color = Color.clear;
-            hostHit.raycastTarget = true;
-            _profilePortrait = AvatarPortraitView.CreateFullBodyFill(host.transform, hideBackground: true,
-                badgeCrop: false);
-            host.GetComponent<Button>().onClick.AddListener(() =>
-            {
-                FreeUiKit.PlaySelect();
-                OpenCustomizer(_onSaved);
-            });
-
-            var pip = new GameObject("LevelPip", typeof(RectTransform));
-            pip.transform.SetParent(host.transform, false);
-            FloatingPanel.Place(pip.GetComponent<RectTransform>(), 0.70f, 0.02f, 0.98f, 0.22f);
-            _profileLevel = StyleLevelPip(pip.transform);
-
-            _companionHost = new GameObject("Companions", typeof(RectTransform)).GetComponent<RectTransform>();
-            _companionHost.SetParent(body, false);
-            FloatingPanel.Place(_companionHost, 0.01f, 0.50f, 0.21f, 0.98f);
-
-            _soulBadge = SoulBadgeView.Create(body);
-            FloatingPanel.Place(_soulBadge.GetComponent<RectTransform>(), 0.84f, 0.82f, 0.98f, 0.98f);
-
-            var teamIconGo = new GameObject("TeamIcon", typeof(RectTransform), typeof(Image));
-            teamIconGo.transform.SetParent(body, false);
-            FloatingPanel.Place(teamIconGo.GetComponent<RectTransform>(), 0.04f, 0.40f, 0.14f, 0.48f);
-            _profileTeamIcon = teamIconGo.GetComponent<Image>();
-            _profileTeamIcon.sprite = ImagineAssets.IconSlotLook();
-            _profileTeamIcon.preserveAspect = true;
-            _profileTeamIcon.raycastTarget = false;
-            _profileTeamIcon.color = Color.white;
-
-            _profileTitle = FloatingPanel.Body(body, "", 15);
-            FloatingPanel.Place(_profileTitle.rectTransform, 0.16f, 0.40f, 0.96f, 0.48f);
-            StyleReadable(_profileTitle, 16, DuelystUi.TextCream, TextAnchor.MiddleLeft);
-
-            _profileWallet = FloatingPanel.Body(body, "", 14);
-            FloatingPanel.Place(_profileWallet.rectTransform, 0.04f, 0.34f, 0.96f, 0.40f);
-            StyleReadable(_profileWallet, 15, DuelystUi.Cyan, TextAnchor.MiddleCenter);
-
-            var xpHost = new GameObject("XpBar", typeof(RectTransform), typeof(Image));
-            xpHost.transform.SetParent(body, false);
-            FloatingPanel.Grid.Full(xpHost.GetComponent<RectTransform>(), 0.28f, 0.34f);
-            var xpBg = xpHost.GetComponent<Image>();
-            xpBg.sprite = UiFoundation.WhiteSprite();
-            xpBg.color = new Color(0.04f, 0.06f, 0.10f, 0.88f);
-            xpBg.raycastTarget = false;
-            var fillGo = new GameObject("Fill", typeof(RectTransform), typeof(Image));
-            fillGo.transform.SetParent(xpHost.transform, false);
-            var frt = fillGo.GetComponent<RectTransform>();
-            frt.anchorMin = Vector2.zero;
-            frt.anchorMax = new Vector2(0.01f, 1f);
-            frt.offsetMin = new Vector2(2f, 2f);
-            frt.offsetMax = new Vector2(-2f, -2f);
-            _profileXpFill = fillGo.GetComponent<Image>();
-            _profileXpFill.sprite = UiFoundation.WhiteSprite();
-            _profileXpFill.color = GoTheme.LevelGold;
-            _profileXpFill.raycastTarget = false;
-            _profileXp = FloatingPanel.Body(xpHost.transform, "", 13);
-            FloatingPanel.Stretch(_profileXp.rectTransform, 4f);
-            StyleReadable(_profileXp, 14, Color.white, TextAnchor.MiddleCenter);
-
-            _statDuels = StatChip(body, "DUELS", ImagineAssets.IconDuel());
-            _statCards = StatChip(body, "CARDS", ImagineAssets.IconDeck());
-            _statPath = StatChip(body, "KM", ImagineAssets.IconCompass());
-            _statSe = StatChip(body, "SE", ImagineAssets.IconSetEnergy());
-            FloatingPanel.Grid.Quad(
-                _statDuels.transform.parent.GetComponent<RectTransform>(),
-                _statCards.transform.parent.GetComponent<RectTransform>(),
-                _statPath.transform.parent.GetComponent<RectTransform>(),
-                _statSe.transform.parent.GetComponent<RectTransform>(),
-                0.12f, 0.26f);
-
-            var customize = HubChrome.Capsule(body, "CUSTOMIZE LOOK", () =>
-            {
-                FreeUiKit.PlaySelect();
-                OpenCustomizer(_onSaved);
-            }, MenuCommandButton.Kind.Gold, centerTitle: true, titleSize: 18);
-            FloatingPanel.Grid.Full(customize.GetComponent<RectTransform>(), 0.02f, 0.10f);
+            // the room's top is unpainted night: deepen it under the title, and pool the floor
+            var top = CzKit.Img(stage, "CeilingShade", CzKit.VFade(), new Color(0f, 0f, 0f, 0.55f));
+            top.rectTransform.localScale = new Vector3(1f, -1f, 1f);
+            CzKit.Place(top, 0f, 0f, fit.Reference.x, _landscape ? 150f : 260f);
+            var floor = CzKit.Img(stage, "FloorShade", CzKit.VFade(), new Color(0f, 0f, 0f, 0.62f));
+            CzKit.Place(floor, 0f, fit.Reference.y - (_landscape ? 150f : 260f), fit.Reference.x, _landscape ? 150f : 260f);
+            // a torch-warm light pool behind the duelist (the room's own torch is at the left of the wall)
+            var pool = CzKit.Img(stage, "LightPool", CzKit.Soft(), new Color(0.95f, 0.68f, 0.38f, 0.16f));
+            if (_landscape) CzKit.Place(pool, 610f, 170f, 700f, 900f);
+            else CzKit.Place(pool, 90f, 140f, 900f, 1120f);
+            return stage;
         }
 
-        static Text StatChip(Transform parent, string caption, Sprite icon)
+        /// <summary>The stage slot the 3D body is filmed into, with the 2D portrait as the fallback when the 3D base is missing.</summary>
+        RectTransform StageSlot(RectTransform stage, float x, float y, float w, float h)
         {
-            var btn = MenuCommandButton.Create(parent, "0", null,
-                MenuCommandButton.Kind.Secondary, blurb: caption, centerTitle: false);
-            btn.name = "Stat_" + caption;
-            MenuCommandButton.ApplyHubType(btn, 16, DuelystUi.GoldHot, displayTitle: false,
-                blurbSize: 13, blurbColor: DuelystUi.TextCream);
-            var title = btn.transform.Find("Title")?.GetComponent<Text>();
-            if (title != null)
-            {
-                title.resizeTextForBestFit = false;
-                title.horizontalOverflow = HorizontalWrapMode.Overflow;
-                title.verticalOverflow = VerticalWrapMode.Overflow;
-            }
-
-            var blurbT = btn.transform.Find("Blurb")?.GetComponent<Text>();
-            if (blurbT != null)
-            {
-                blurbT.resizeTextForBestFit = false;
-                blurbT.horizontalOverflow = HorizontalWrapMode.Overflow;
-                blurbT.verticalOverflow = VerticalWrapMode.Overflow;
-            }
-
-            if (icon != null)
-            {
-                var ico = new GameObject("Ico", typeof(RectTransform), typeof(Image));
-                ico.transform.SetParent(btn.transform, false);
-                var ir = ico.GetComponent<RectTransform>();
-                ir.anchorMin = new Vector2(0.06f, 0.38f);
-                ir.anchorMax = new Vector2(0.28f, 0.90f);
-                ir.offsetMin = Vector2.zero;
-                ir.offsetMax = Vector2.zero;
-                var ii = ico.GetComponent<Image>();
-                ii.sprite = icon;
-                ii.preserveAspect = true;
-                ii.raycastTarget = false;
-                if (title != null)
-                    FloatingPanel.Place(title.rectTransform, 0.30f, 0.42f, 0.96f, 0.94f);
-            }
-
-            return title;
+            var slot = CzKit.Node(stage, "DuelistSlot");
+            CzKit.Place(slot, x, y, w, h);
+            return slot;
         }
 
-        static void StyleReadable(Text t, int size, Color color, TextAnchor align, bool display = false)
-        {
-            if (t == null) return;
-            if (display) WrldzType.StyleGoldTitle(t, size);
-            else WrldzType.StyleButtonLabel(t, size);
-            t.color = color;
-            t.alignment = align;
-            t.resizeTextForBestFit = false;
-            t.horizontalOverflow = HorizontalWrapMode.Overflow;
-            t.verticalOverflow = VerticalWrapMode.Overflow;
-        }
+        // ------------------------------------------------------------------ CUSTOMIZE
 
-        static Text StyleLevelPip(Transform pip)
-        {
-            var disc = DuelystUi.BtnCircle() ?? UiFoundation.WhiteSprite();
-            var ring = new GameObject("Ring", typeof(RectTransform), typeof(Image));
-            ring.transform.SetParent(pip, false);
-            GoTheme.Stretch(ring.GetComponent<RectTransform>());
-            var ringImg = ring.GetComponent<Image>();
-            ringImg.sprite = disc;
-            ringImg.preserveAspect = true;
-            ringImg.color = DuelystUi.Cyan;
-            ringImg.raycastTarget = false;
+        RectTransform _railHost, _rightHost;
+        Text _catTitle, _catCaption, _subTitle, _detailName, _detailBlurb, _detailMeta, _toast;
+        InputField _nameField;
+        Text _nameTitle;
+        RectTransform _optionHost;          // the current tab's scroll content (editors build into it)
+        ScrollRect _optionScroll;
+        CzFlow _flow;
+        readonly List<(Button b, AvatarPreview3d.Focus f)> _viewChips = new();
+        GameObject _confirm;
+        float _railY0;
 
-            var fill = new GameObject("Fill", typeof(RectTransform), typeof(Image));
-            fill.transform.SetParent(pip, false);
-            GoTheme.Place(fill.GetComponent<RectTransform>(), 0.12f, 0.12f, 0.88f, 0.88f);
-            var fillImg = fill.GetComponent<Image>();
-            fillImg.sprite = disc;
-            fillImg.preserveAspect = true;
-            fillImg.color = new Color(0.08f, 0.14f, 0.24f, 1f);
-            fillImg.raycastTarget = false;
-
-            var t = GoTheme.Label(pip, "Lv", "1", 16, Color.white, TextAnchor.MiddleCenter, bold: true);
-            StyleReadable(t, 16, Color.white, TextAnchor.MiddleCenter);
-            GoTheme.Place(t.rectTransform, 0.12f, 0.12f, 0.88f, 0.88f);
-            return t;
-        }
+        // plan rects (stage px), set per aspect in BuildCustomizerSheet
+        Rect _rRight, _rDetail;
+        int _cols;
+        float _k;
 
         void BuildCustomizerSheet()
         {
             _customizerSheet = new GameObject("CustomizerSheet", typeof(RectTransform));
             _customizerSheet.transform.SetParent(_canvasRoot, false);
-            GoTheme.Stretch(_customizerSheet.GetComponent<RectTransform>());
+            CzKit.Fill((RectTransform)_customizerSheet.transform);
+            var stage = Sanctuary(_customizerSheet);
+            _k = _landscape ? 1f : 1.5f;
+            _cols = _landscape ? 3 : 4;
 
-            var frame = DualMenuPresenter.BuildFrame(
-                _customizerSheet.transform, "CUSTOMIZE", "Body · hair · colours · wardrobe", () =>
-                {
-                    FreeUiKit.PlayClick();
-                    OpenProfile(_onSaved);
-                }, dense: true);
-            var body = frame.BodyHost;
-
-            _nameField = MakeInput(body, "NameField", 0.02f, 0.90f, 0.98f, 0.99f);
-            _nameRt = _nameField.GetComponent<RectTransform>();
-
-            // 2D portrait stays as the fallback when the 3D base is not in the build
-            _preview = AvatarPortraitView.CreateFullBody(body, 0.22f, 0.48f, 0.78f, 0.88f,
-                hideBackground: true, badgeCrop: false);
-            _preview3d = AvatarPreview3d.Create(body);
-            _previewRt = _preview3d.GetComponent<RectTransform>();
-
-            _chipsHost = new GameObject("Chips", typeof(RectTransform)).GetComponent<RectTransform>();
-            _chipsHost.SetParent(body, false);
-            BuildPartChips(_chipsHost);
-
-            _optionLabel = FloatingPanel.Body(body, "", 14);
-            _labelRt = _optionLabel.rectTransform;
-            StyleReadable(_optionLabel, 15, DuelystUi.GoldHot, TextAnchor.MiddleCenter);
-
-            BuildOptionStrip(body);
-
-            _controlsHost = new GameObject("Controls", typeof(RectTransform)).GetComponent<RectTransform>();
-            _controlsHost.SetParent(body, false);
-
-            _status = FloatingPanel.Body(body, "", 13);
-            _statusRt = _status.rectTransform;
-            StyleReadable(_status, 14, DuelystUi.TextMuted, TextAnchor.MiddleCenter);
-
-            var save = HubChrome.Capsule(body, "SAVE LOOK", Save, MenuCommandButton.Kind.Gold,
-                centerTitle: true, titleSize: 16);
-            var back = HubChrome.Capsule(body, "BACK", () =>
+            if (_landscape)
             {
-                FreeUiKit.PlayClick();
-                OpenProfile(_onSaved);
-            }, MenuCommandButton.Kind.Secondary, centerTitle: true, titleSize: 16);
-            _saveRt = save.GetComponent<RectTransform>();
-            _backRt = back.GetComponent<RectTransform>();
+                // top bar over the ceiling: BACK · title · RESET · SAVE (the buttons line up with the pylons' gold edges)
+                CzKit.Btn(stage, "Back", 98f, 34f, 200f, 58f, "‹  BACK", CzKit.Kind.Plain, OnBack);
+                var title = CzKit.Title(stage, "SPIRIT DUELER", 46);
+                CzKit.Place(title, 560f, 18f, 800f, 66f);
+                _subTitle = CzKit.Txt(stage, "Sub", "", CzKit.Caps, 18, CzKit.Muted, TextAnchor.MiddleCenter, 4f);
+                CzKit.Place(_subTitle, 560f, 82f, 800f, 26f);
+                CzKit.Btn(stage, "Reset", 1424f, 34f, 190f, 58f, "RESET", CzKit.Kind.Plain, ResetDraft, 22);
+                CzKit.Btn(stage, "Save", 1631f, 34f, 190f, 58f, "SAVE LOOK", CzKit.Kind.Gold, Save, 24);
 
-            body.gameObject.AddComponent<RectChangeRelay>().Changed = () => Relayout(false);
-            Relayout(true);
-        }
+                // left pylon: the categories
+                _railHost = CzKit.Node(stage, "Rail");
+                CzKit.Place(_railHost, 112f, 228f, 401f, 640f);
+                _railY0 = 0f;
 
-        /// <summary>
-        /// Landscape (the Editor's 1920x1080 Game view, tablets): 3D body on the left third, editors on the right.
-        /// Portrait phone: stacked. Re-run whenever the body well changes size.
-        /// </summary>
-        void Relayout(bool force)
-        {
-            if (_nameRt == null) return;
-            var host = (RectTransform)_nameRt.parent;
-            var r = host.rect;
-            var wide = r.width > r.height * 1.15f;
-            if (!force && wide == _wide) return;
-            _wide = wide;
-            if (wide)
-            {
-                GoTheme.Place(_previewRt, 0.01f, 0.13f, 0.37f, 0.99f);
-                GoTheme.Place(_preview.GetComponent<RectTransform>(), 0.01f, 0.13f, 0.37f, 0.99f);
-                GoTheme.Place(_saveRt, 0.01f, 0.01f, 0.185f, 0.11f);
-                GoTheme.Place(_backRt, 0.195f, 0.01f, 0.37f, 0.11f);
-                GoTheme.Place(_nameRt, 0.39f, 0.915f, 0.99f, 0.99f);
-                GoTheme.Place(_chipsHost, 0.39f, 0.70f, 0.99f, 0.905f);
-                GoTheme.Place(_labelRt, 0.39f, 0.645f, 0.99f, 0.695f);
-                GoTheme.Place(_stripRt, 0.39f, 0.495f, 0.99f, 0.64f);
-                GoTheme.Place(_controlsHost, 0.39f, 0.07f, 0.99f, 0.485f);
-                GoTheme.Place(_statusRt, 0.39f, 0.005f, 0.99f, 0.06f);
+                // centre: the duelist
+                _customizerStage = StageSlot(stage, 538f, 124f, 844f, 870f);
+                BuildStageControls(stage, 612f, 900f, 1308f, 900f, 56f, 1300f, 142f, 82f, 38f);
+                BuildNameplate(stage, 700f, 990f, 520f, 1f);
+
+                // right pylon: tabs, the grid and the detail strip
+                _rRight = new Rect(1410f, 226f, 393f, 620f);
+                _rDetail = new Rect(1402f, 852f, 409f, 106f);
             }
             else
             {
-                GoTheme.Place(_nameRt, 0.02f, 0.925f, 0.98f, 0.99f);
-                GoTheme.Place(_previewRt, 0.12f, 0.585f, 0.88f, 0.92f);
-                GoTheme.Place(_preview.GetComponent<RectTransform>(), 0.22f, 0.585f, 0.78f, 0.92f);
-                GoTheme.Place(_chipsHost, 0.02f, 0.425f, 0.98f, 0.58f);
-                GoTheme.Place(_labelRt, 0.02f, 0.39f, 0.98f, 0.42f);
-                GoTheme.Place(_stripRt, 0.02f, 0.30f, 0.98f, 0.385f);
-                GoTheme.Place(_controlsHost, 0.02f, 0.125f, 0.98f, 0.295f);
-                GoTheme.Place(_statusRt, 0.02f, 0.10f, 0.98f, 0.123f);
-                FloatingPanel.Grid.Pair(_saveRt, _backRt, 0.01f, 0.095f);
+                CzKit.Btn(stage, "Back", 36f, 54f, 196f, 70f, "‹  BACK", CzKit.Kind.Plain, OnBack, 28);
+                var title = CzKit.Title(stage, "SPIRIT DUELER", 46);
+                CzKit.Place(title, 240f, 40f, 600f, 70f);
+                _subTitle = CzKit.Txt(stage, "Sub", "", CzKit.Caps, 22, CzKit.Muted, TextAnchor.MiddleCenter, 4f);
+                CzKit.Place(_subTitle, 240f, 108f, 600f, 32f);
+                CzKit.Btn(stage, "Save", 848f, 54f, 196f, 70f, "SAVE", CzKit.Kind.Gold, Save, 28);
+                CzKit.Btn(stage, "Reset", 848f, 128f, 196f, 44f, "RESET", CzKit.Kind.Ghost, ResetDraft, 22);
+
+                _customizerStage = StageSlot(stage, 0f, 150f, 1080f, 1000f);
+                BuildStageControls(stage, 84f, 1060f, 996f, 1060f, 80f, 940f, 190f, 116f, 54f);
+                BuildNameplate(stage, 200f, 1150f, 680f, 1.3f);
+
+                // the lower slate: categories (a sideways strip), tabs, grid, detail
+                var slate = CzKit.Img(stage, "LowerSlate", UiFoundation.WhiteSprite(), new Color(0.07f, 0.065f, 0.085f, 0.97f), true);
+                CzKit.Place(slate, 20f, 1252f, 1040f, 1068f);
+                CzKit.GoldFrame(slate.transform, 2f, 2.2f);
+                _railHost = CzKit.Node(stage, "Rail");
+                CzKit.Place(_railHost, 44f, 1270f, 992f, 96f);
+                _rRight = new Rect(44f, 1376f, 992f, 760f);
+                _rDetail = new Rect(36f, 2146f, 1008f, 162f);
             }
-            if (_customizerSheet != null && _customizerSheet.activeInHierarchy) RebuildOptionStrip();
+
+            // the right-hand panel host (rebuilt per category) and the detail strip
+            _rightHost = CzKit.Node(stage, "RightPanel");
+            CzKit.Place(_rightHost, _rRight.x, _rRight.y, _rRight.width, _rRight.height);
+            BuildDetailStrip(stage);
+
+            // the 2D portrait only when the 3D base is missing from the build (a quiet well behind it)
+            var well = CzKit.Img(_customizerStage, "FallbackWell", UiFoundation.WhiteSprite(), Color.clear);
+            CzKit.Fill(well.rectTransform, 40f);
+            HubChrome.PaintWell(well);
+            well.gameObject.SetActive(false);
+            _fallback2d = AvatarPortraitView.CreateFullBody(well.transform, 0.05f, 0.05f, 0.95f, 0.95f, hideBackground: true, badgeCrop: false);
+
+            _toast = CzKit.Txt(stage, "Toast", "", CzKit.Display, _landscape ? 26 : 34, CzKit.GoldHi, TextAnchor.MiddleCenter, 3f);
+            if (_landscape) CzKit.Place(_toast, 700f, 940f, 520f, 40f); else CzKit.Place(_toast, 200f, 1090f, 680f, 52f);
+            TextFx.HardDrop(_toast, new Color(0f, 0f, 0f, 0.9f), new Vector2(0f, 2f));
+            _toast.color = new Color(1f, 1f, 1f, 0f);
         }
 
-        static readonly Part[] ChipOrder =
+        void BuildStageControls(RectTransform stage, float lx, float ly, float rx, float ry, float d, float chipX, float chipY, float chipW, float chipH)
         {
-            Part.Body, Part.FaceShape, Part.Hair, Part.HairColor, Part.Skin, Part.Outfit, Part.Paint, Part.Look, Part.Title, Part.Accent,
-            Part.Hat, Part.Facial, Part.Neck, Part.Shirt, Part.Hands, Part.Bottoms, Part.Shoes, Part.Accessories, Part.Tattoos, Part.Disk, Part.Aura
-        };
-
-        static string ChipLabel(Part p) => p switch
-        {
-            Part.Body => "BODY", Part.FaceShape => "FACE SHAPE", Part.Hair => "HAIR", Part.HairColor => "HAIR DYE", Part.Skin => "SKIN",
-            Part.Paint => "CLOTHES", Part.Outfit => "OUTFIT", Part.Look => "PORTRAIT", Part.Title => "TITLE", Part.Accent => "SPIRIT",
-            Part.Hat => "HAT", Part.Facial => "FACE", Part.Shirt => "SHIRT", Part.Hands => "HANDS",
-            Part.Bottoms => "BOTTOMS", Part.Shoes => "SHOES", Part.Neck => "NECK", Part.Accessories => "ACCESSORIES", Part.Tattoos => "TATTOOS",
-            Part.Disk => "DISK", Part.Aura => "AURA", _ => ""
-        };
-
-        void BuildPartChips(Transform sheet)
-        {
-            _slotImgs.Clear();
-            _slotRings.Clear();
-            _slotParts.Clear();
-            const int cols = 9;
-            const float gap = 0.010f, rowGap = 0.06f;
-            var cellW = (1f - gap * (cols - 1)) / cols;
-            var rows = (ChipOrder.Length + cols - 1) / cols;
-            var rowH = (1f - rowGap * (rows - 1)) / rows;
-            for (var i = 0; i < ChipOrder.Length; i++)
+            CzKit.Round(stage, "TurnLeft", lx, ly, d, "‹", () => { FreeUiKit.PlaySelect(); _preview3d?.Turn(45f); });
+            CzKit.Round(stage, "TurnRight", rx, ry, d, "›", () => { FreeUiKit.PlaySelect(); _preview3d?.Turn(-45f); });
+            _viewChips.Clear();
+            var views = new[] { (AvatarPreview3d.Focus.Full, "FULL"), (AvatarPreview3d.Focus.Bust, "BUST"), (AvatarPreview3d.Focus.Face, "FACE") };
+            for (var i = 0; i < views.Length; i++)
             {
-                var p = ChipOrder[i];
-                var col = i % cols;
-                var row = i / cols;
-                var xx0 = col * (cellW + gap);
-                var yy1 = 1f - row * (rowH + rowGap);
-                var chip = new GameObject("Slot_" + p, typeof(RectTransform), typeof(Image), typeof(Button));
-                chip.transform.SetParent(sheet, false);
-                GoTheme.Place(chip.GetComponent<RectTransform>(), xx0, yy1 - rowH, xx0 + cellW, yy1);
-                var bg = chip.GetComponent<Image>();
-                bg.sprite = UiFoundation.WhiteSprite();
-                bg.color = new Color(0.04f, 0.06f, 0.10f, 0.55f);
-
-                var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(Image), typeof(Outline));
-                iconGo.transform.SetParent(chip.transform, false);
-                GoTheme.Place(iconGo.GetComponent<RectTransform>(), 0.12f, 0.30f, 0.88f, 0.97f);
-                var img = iconGo.GetComponent<Image>();
-                img.sprite = SlotIcon(p);
-                img.preserveAspect = true;
-                img.raycastTarget = false;
-                var ring = chip.AddComponent<Outline>();
-                ring.effectColor = new Color(DuelystUi.Gold.r, DuelystUi.Gold.g, DuelystUi.Gold.b, 0.95f);
-                ring.effectDistance = new Vector2(2f, -2f);
-                ring.useGraphicAlpha = false;
-                ring.enabled = false;
-                Destroy(iconGo.GetComponent<Outline>());
-
-                var lbl = FloatingPanel.Body(chip.transform, ChipLabel(p), 10);
-                GoTheme.Place(lbl.rectTransform, 0f, 0f, 1f, 0.30f);
-                StyleReadable(lbl, 10, DuelystUi.TextCream, TextAnchor.MiddleCenter);
-                lbl.resizeTextForBestFit = true; lbl.resizeTextMinSize = 7; lbl.resizeTextMaxSize = 12;
-                lbl.horizontalOverflow = HorizontalWrapMode.Wrap;
-                lbl.raycastTarget = false;
-
-                var captured = p;
-                chip.GetComponent<Button>().onClick.AddListener(() =>
+                var (f, label) = views[i];
+                var chip = CzKit.Chip(stage, chipX, chipY + i * (chipH + 6f), chipH, label, false, () =>
                 {
                     FreeUiKit.PlaySelect();
-                    _focus = captured;
-                    UpdateOptionLabel();
-                    RebuildOptionStrip();
-                    RefreshSlotRings();
-                });
-                _slotImgs.Add(img);
-                _slotRings.Add(ring);
-                _slotParts.Add(p);
+                    _preview3d?.SetFocus(f);
+                    RefreshViewChips();
+                }, Mathf.RoundToInt(chipH * 0.5f), out _);
+                CzKit.Place((RectTransform)chip.transform, chipX, chipY + i * (chipH + 6f), chipW, chipH);
+                _viewChips.Add((chip, f));
             }
         }
 
-        void BuildOptionStrip(Transform sheet)
+        void RefreshViewChips()
         {
-            var strip = new GameObject("OptionStrip", typeof(RectTransform), typeof(Image), typeof(ScrollRect),
-                typeof(RectMask2D));
-            strip.transform.SetParent(sheet, false);
-            _stripRt = strip.GetComponent<RectTransform>();
-            _optionHost = MakeScrollStrip(strip);
-            _stripHost = _optionHost;
-            // wardrobe tabs in the wide layout: a two-row scrolling grid over the strip + the (unused) controls area, so a
-            // slot's pieces are visible at once with legible names (the single strip showed 10 of 19 shirts at 720p)
-            var grid = new GameObject("WardrobeGrid", typeof(RectTransform), typeof(Image), typeof(ScrollRect), typeof(RectMask2D));
-            grid.transform.SetParent(sheet, false);
-            _gridRt = grid.GetComponent<RectTransform>();
-            _gridHost = MakeScrollStrip(grid);
-            var hl = _gridHost.GetComponent<HorizontalLayoutGroup>();
-            if (hl != null) DestroyImmediate(hl);
-            var gl = _gridHost.gameObject.AddComponent<GridLayoutGroup>();
-            gl.startAxis = GridLayoutGroup.Axis.Vertical;
-            gl.constraint = GridLayoutGroup.Constraint.FixedRowCount;
-            gl.constraintCount = 2;
-            gl.spacing = new Vector2(10f, 10f);
-            gl.padding = new RectOffset(8, 8, 6, 6);
-            gl.childAlignment = TextAnchor.UpperLeft;
-            // "more" cue at the right edge while tiles lie past it (a dark fade strip + chevron, never a raycast target)
-            var cue = new GameObject("MoreCue", typeof(RectTransform), typeof(Image));
-            cue.transform.SetParent(grid.transform, false);
-            var cueRt = cue.GetComponent<RectTransform>();
-            cueRt.anchorMin = new Vector2(1f, 0f); cueRt.anchorMax = new Vector2(1f, 1f); cueRt.pivot = new Vector2(1f, 0.5f);
-            cueRt.sizeDelta = new Vector2(34f, 0f); cueRt.anchoredPosition = Vector2.zero;
-            var cueImg = cue.GetComponent<Image>(); cueImg.sprite = UiFoundation.WhiteSprite();
-            cueImg.color = new Color(0.03f, 0.04f, 0.08f, 0.72f); cueImg.raycastTarget = false;
-            var chev = FloatingPanel.Body(cue.transform, "\u203A", 34);
-            chev.alignment = TextAnchor.MiddleCenter;
-            var chevRt = chev.GetComponent<RectTransform>(); chevRt.anchorMin = Vector2.zero; chevRt.anchorMax = Vector2.one;
-            chevRt.offsetMin = chevRt.offsetMax = Vector2.zero;
-            cue.SetActive(false);
-            var fit = grid.AddComponent<WholeColumnGrid>();
-            fit.Grid = gl; fit.Viewport = _gridRt; fit.Scroll = grid.GetComponent<ScrollRect>(); fit.Cue = cue;
-            grid.SetActive(false);
-        }
-
-        Transform _stripHost, _gridHost;
-        RectTransform _gridRt;
-
-        /// <summary>Horizontal scrolling tile row on an existing GameObject (Image + ScrollRect + RectMask2D).</summary>
-        static Transform MakeScrollStrip(GameObject strip)
-        {
-            var bg = strip.GetComponent<Image>();
-            bg.sprite = UiFoundation.WhiteSprite();
-            bg.color = new Color(0.04f, 0.06f, 0.10f, 0.42f);
-            bg.raycastTarget = true;
-
-            var content = new GameObject("Content", typeof(RectTransform), typeof(HorizontalLayoutGroup),
-                typeof(ContentSizeFitter));
-            content.transform.SetParent(strip.transform, false);
-            var crt = content.GetComponent<RectTransform>();
-            crt.anchorMin = new Vector2(0f, 0f);
-            crt.anchorMax = new Vector2(0f, 1f);
-            crt.pivot = new Vector2(0f, 0.5f);
-            crt.anchoredPosition = Vector2.zero;
-            crt.sizeDelta = new Vector2(0f, 0f);
-            var h = content.GetComponent<HorizontalLayoutGroup>();
-            h.spacing = 8f;
-            h.padding = new RectOffset(6, 6, 4, 4);
-            h.childAlignment = TextAnchor.MiddleLeft;
-            h.childControlWidth = false;
-            h.childControlHeight = true;
-            h.childForceExpandWidth = false;
-            h.childForceExpandHeight = true;
-            content.GetComponent<ContentSizeFitter>().horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-            var sr = strip.GetComponent<ScrollRect>();
-            sr.horizontal = true;
-            sr.vertical = false;
-            sr.movementType = ScrollRect.MovementType.Clamped;
-            sr.viewport = strip.GetComponent<RectTransform>();
-            sr.content = crt;
-            return content.transform;
-        }
-
-        void ApplySwatch(int idx)
-        {
-            FreeUiKit.PlayClick();
-            string hex = null;
-            switch (_focus)
+            var cur = _preview3d != null ? _preview3d.CurrentFocus : AvatarPreview3d.Focus.Full;
+            foreach (var (b, f) in _viewChips)
             {
-                case Part.Skin:
-                    hex = AvatarCatalog.SkinPresets[Mathf.Clamp(idx, 0, AvatarCatalog.SkinPresets.Length - 1)];
-                    _draft.skinHex = hex;
-                    break;
-                case Part.HairColor:
-                    hex = AvatarCatalog.HairPresets[Mathf.Clamp(idx, 0, AvatarCatalog.HairPresets.Length - 1)];
-                    _draft.hairHex = hex;
-                    break;
-                case Part.Accent:
-                    hex = AvatarCatalog.AccentPresets[Mathf.Clamp(idx, 0, AvatarCatalog.AccentPresets.Length - 1)];
-                    _draft.accentHex = hex;
-                    break;
-                case Part.OutfitTint:
-                    hex = AvatarCatalog.AccentPresets[Mathf.Clamp(idx, 0, AvatarCatalog.AccentPresets.Length - 1)];
-                    _draft.outfitTintHex = hex;
-                    break;
-                case Part.Disk:
-                    _draft.diskHex = AvatarCatalog.DiskPalettes[Mathf.Clamp(idx, 0, AvatarCatalog.DiskPalettes.Length - 1)];
-                    break;
-                case Part.Aura:
-                    _draft.auraHex = AvatarCatalog.AuraPalettes[Mathf.Clamp(idx, 0, AvatarCatalog.AuraPalettes.Length - 1)];
-                    break;
-                default:
-                    // If not on a color part, treat as accent
-                    hex = AvatarCatalog.AccentPresets[Mathf.Clamp(idx, 0, AvatarCatalog.AccentPresets.Length - 1)];
-                    _draft.accentHex = hex;
-                    break;
-            }
-
-            ApplyPreview();
-            UpdateOptionLabel();
-            RebuildOptionStrip();
-        }
-
-        static readonly Dictionary<string, Sprite> s_clothThumbs = new();
-
-        /// <summary>Wardrobe tile picture: the piece rendered on this body (thumb_&lt;id&gt;_&lt;sex&gt;.png), else null.</summary>
-        static Sprite ClothThumb(string id, bool female)
-        {
-            if (string.IsNullOrEmpty(id)) return null;
-            var key = id + (female ? "_female" : "_male");
-            if (s_clothThumbs.TryGetValue(key, out var sp)) return sp;
-            var tex = Resources.Load<Texture2D>(OverworldAvatar3d.ClothRes + "thumb_" + key)
-                      ?? Resources.Load<Texture2D>(OverworldAvatar3d.ClothRes + "thumb_" + id + (female ? "_male" : "_female"));
-            sp = tex != null ? Sprite.Create(tex, new Rect(0f, 0f, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f) : null;
-            s_clothThumbs[key] = sp;
-            return sp;
-        }
-
-        static Sprite SlotIcon(Part part) => part switch
-        {
-            Part.Look => ImagineAssets.IconSlotLook(),
-            Part.Hat => ImagineAssets.IconSlotHat(),
-            Part.Facial => ImagineAssets.IconSlotFacial(),
-            Part.Shirt => ImagineAssets.IconSlotShirt(),
-            Part.Hands => ImagineAssets.IconSlotHands(),
-            Part.Bottoms => ImagineAssets.IconSlotBottoms(),
-            Part.Shoes => ImagineAssets.IconSlotShoes(),
-            Part.Neck => ImagineAssets.IconSlotAccent(),
-            Part.Accessories => ImagineAssets.IconSlotHands(),
-            Part.Tattoos => ImagineAssets.IconSlotFacial(),
-            Part.Accent => ImagineAssets.IconSlotAccent(),
-            Part.Title => ImagineAssets.IconSlotTitle(),
-            Part.Disk => ImagineAssets.IconDuel(),
-            Part.Aura => ImagineAssets.IconSoul(),
-            Part.Body => ImagineAssets.IconSlotLook(),
-            Part.Hair => ImagineAssets.IconSlotHat(),
-            Part.HairColor => ImagineAssets.IconSlotAccent(),
-            Part.Skin => ImagineAssets.IconSlotFacial(),
-            Part.FaceShape => ImagineAssets.IconSlotFacial(),
-            Part.Paint => ImagineAssets.IconSlotShirt(),
-            Part.Outfit => ImagineAssets.IconSlotShirt(),
-            _ => ImagineAssets.IconSlotLook()
-        };
-
-        void RefreshSlotRings()
-        {
-            for (var i = 0; i < _slotRings.Count; i++)
-            {
-                if (_slotRings[i] == null) continue;
-                var on = i < _slotParts.Count && _slotParts[i] == _focus;
-                _slotRings[i].enabled = on;
-                if (_slotImgs[i] != null)
-                    _slotImgs[i].color = on ? Color.white : new Color(0.78f, 0.80f, 0.84f, 0.92f);
+                if (b == null) continue;
+                var on = f == cur;
+                var bg = b.GetComponent<Image>();
+                if (bg != null) bg.color = on ? new Color(CzKit.Gold.r, CzKit.Gold.g, CzKit.Gold.b, 0.16f) : new Color(0f, 0f, 0f, 0.35f);
+                var hv = b.GetComponent<CzHover>();
+                if (hv != null) { hv.LabelRest = on ? CzKit.GoldHi : CzKit.Muted; hv.LabelHover = on ? CzKit.GoldHi : CzKit.Text; }
             }
         }
 
-        void RebuildOptionStrip()
+        /// <summary>The cartouche under the plinth: the duelist's name (tap to edit) and title.</summary>
+        void BuildNameplate(RectTransform stage, float x, float y, float w, float k)
         {
-            if (_optionHost == null || _draft == null) return;
-            FloatingPanel.DestroyChildrenNow(_optionHost);
-            if (_controlsHost != null) FloatingPanel.DestroyChildrenNow(_controlsHost);
-            // wardrobe tabs have no slider block under the strip: in the wide layout they use the two-row grid
-            var wardrobe = _focus is Part.Hat or Part.Facial or Part.Shirt or Part.Hands or Part.Bottoms or Part.Shoes or Part.Neck;
-            var useGrid = wardrobe && _wide && _gridHost != null;
-            if (_gridHost != null) FloatingPanel.DestroyChildrenNow(_gridHost);
-            if (_stripHost != null) FloatingPanel.DestroyChildrenNow(_stripHost);
-            if (_gridRt != null)
-            {
-                _gridRt.gameObject.SetActive(useGrid);
-                if (useGrid)
-                {
-                    GoTheme.Place(_gridRt, 0.39f, 0.07f, 0.99f, 0.64f);
-                    Canvas.ForceUpdateCanvases();
-                    var h = Mathf.Max(120f, _gridRt.rect.height);
-                    var cellH = (h - 12f - 10f) * 0.5f;
-                    var g = _gridHost.GetComponent<GridLayoutGroup>();
-                    g.cellSize = new Vector2(Mathf.Round(cellH * 0.80f), Mathf.Round(cellH));
-                    var sr = _gridRt.GetComponent<ScrollRect>(); if (sr != null) sr.horizontalNormalizedPosition = 0f;
-                }
-            }
-            if (_stripRt != null) _stripRt.gameObject.SetActive(!useGrid);
-            if (_stripHost != null) _optionHost = useGrid ? _gridHost : _stripHost;
-
-            if (_focus is Part.Body or Part.Hair or Part.HairColor or Part.Paint or Part.Skin or Part.Outfit or Part.FaceShape or Part.Accessories or Part.Tattoos)
-            {
-                BuildEditor3d();
-                RefreshSlotRings();
-                return;
-            }
-
-            if (_focus == Part.Look)
-            {
-                for (var i = 0; i < AvatarCatalog.PortraitCount; i++)
-                {
-                    var idx = i;
-                    var spr = StreamingSprite.Load($"WRLDZ/Avatar/portraits/portrait_{i}.png");
-                    OptionTile(spr, idx == _draft.portraitIndex, Color.white, () =>
-                    {
-                        _draft.portraitIndex = idx;
-                        ApplyPreview();
-                        UpdateOptionLabel();
-                        RebuildOptionStrip();
-                    });
-                }
-            }
-            else if (_focus is Part.Hat or Part.Facial or Part.Shirt or Part.Hands or Part.Bottoms or Part.Shoes or Part.Neck)
-            {
-                var slot = _focus switch
-                {
-                    Part.Hat => ClothingSlot.Hat,
-                    Part.Facial => ClothingSlot.Facial,
-                    Part.Shirt => ClothingSlot.Shirt,
-                    Part.Hands => ClothingSlot.Hands,
-                    Part.Bottoms => ClothingSlot.Bottoms,
-                    Part.Neck => ClothingSlot.Neck,
-                    _ => ClothingSlot.Shoes
-                };
-                var owned = ClothingCatalog.OwnedInSlot(_wardrobe, slot, _draft.IsFemale);
-                var cur = _draft.SlotId(slot);
-                for (var i = 0; i < owned.Count; i++)
-                {
-                    var item = owned[i];
-                    // a thumbnail of the 3D piece on the current body (Clothes/thumb_<id>_<sex>.png, tools/custom/clothes_thumbs.py);
-                    // the empty slots keep the slot glyph; anything without a thumb falls back to its paper-doll art
-                    // empty slots show the bare body part (thumb_hat_none_* ...), not a glyph of the item they remove
-                    var spr = item.EmptySlot ? (ClothThumb(item.Id, _draft.IsFemale) ?? SlotIcon(_focus))
-                        : ClothThumb(item.Id, _draft.IsFemale)
-                          ?? (!string.IsNullOrEmpty(item.ArtPath) ? StreamingSprite.Load(item.ArtPath) : null)
-                          ?? SlotIcon(_focus);
-                    OptionTile(_optionHost, spr, item.Id == cur, Color.white, () =>
-                    {
-                        _draft.SetSlot(slot, item.Id);
-                        ApplyPreview();
-                        UpdateOptionLabel();
-                        RebuildOptionStrip();
-                    }, item.Name, 128f);
-                }
-            }
-            else if (_focus == Part.Accent)
-            {
-                for (var i = 0; i < AvatarCatalog.AccentPresets.Length; i++)
-                {
-                    var idx = i;
-                    var hex = AvatarCatalog.AccentPresets[i];
-                    var on = string.Equals(_draft.accentHex, hex, StringComparison.OrdinalIgnoreCase);
-                    OptionTile(UiFoundation.WhiteSprite(), on, AvatarPortraitView.Parse(hex, Color.gray), () =>
-                    {
-                        _draft.accentHex = hex;
-                        ApplyPreview();
-                        UpdateOptionLabel();
-                        RebuildOptionStrip();
-                    });
-                }
-            }
-            else if (_focus == Part.Disk || _focus == Part.Aura)
-            {
-                // Spirit Dueler palettes. Swatch 0 ("") follows the Spirit magic colour, as disks did before palettes.
-                var disk = _focus == Part.Disk;
-                var hexes = disk ? AvatarCatalog.DiskPalettes : AvatarCatalog.AuraPalettes;
-                var cur = (disk ? _draft.diskHex : _draft.auraHex) ?? "";
-                var spirit = AvatarPortraitView.Parse(_draft.accentHex, Color.cyan);
-                for (var i = 0; i < hexes.Length; i++)
-                {
-                    var hex = hexes[i];
-                    var on = string.Equals(cur, hex, StringComparison.OrdinalIgnoreCase);
-                    var tint = hex.Length == 0 ? spirit : AvatarPortraitView.Parse(hex, Color.gray);
-                    OptionTile(hex.Length == 0 ? SlotIcon(_focus) : UiFoundation.WhiteSprite(), on, tint, () =>
-                    {
-                        if (disk) _draft.diskHex = hex;
-                        else _draft.auraHex = hex;
-                        ApplyPreview();
-                        UpdateOptionLabel();
-                        RebuildOptionStrip();
-                    });
-                }
-            }
-            else if (_focus == Part.Title)
-            {
-                for (var i = 0; i < AvatarCatalog.PresetTitles.Length; i++)
-                {
-                    var idx = i;
-                    var on = _draft.title == AvatarCatalog.PresetTitles[i];
-                    OptionTile(ImagineAssets.IconSlotTitle(), on, Color.white, () =>
-                    {
-                        _draft.title = AvatarCatalog.PresetTitles[idx];
-                        ApplyPreview();
-                        UpdateOptionLabel();
-                        RebuildOptionStrip();
-                    });
-                }
-            }
-
-            RefreshSlotRings();
-        }
-
-        void OptionTile(Sprite spr, bool on, Color tint, Action click) => OptionTile(_optionHost, spr, on, tint, click);
-
-        GameObject OptionTile(Transform host, Sprite spr, bool on, Color tint, Action click, string label = null, float width = 84f)
-        {
-            var go = new GameObject("Opt", typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement),
-                typeof(Outline));
-            go.transform.SetParent(host, false);
-            var le = go.GetComponent<LayoutElement>();
-            le.preferredWidth = width;
-            le.minWidth = width;
-            // the strip's HorizontalLayoutGroup does not control child width: size the rect itself
-            ((RectTransform)go.transform).sizeDelta = new Vector2(width, 0f);
-            le.flexibleWidth = 0f;
+            var go = new GameObject("NameField", typeof(RectTransform), typeof(Image), typeof(InputField));
+            go.transform.SetParent(stage, false);
             var img = go.GetComponent<Image>();
-            img.sprite = spr ?? UiFoundation.WhiteSprite();
-            img.preserveAspect = img.sprite != UiFoundation.WhiteSprite();   // colour swatches fill the tile
-            img.color = tint;
-            img.raycastTarget = true;
-            var ring = go.GetComponent<Outline>();
-            ring.effectColor = new Color(DuelystUi.Gold.r, DuelystUi.Gold.g, DuelystUi.Gold.b, 0.95f);
-            ring.effectDistance = new Vector2(1.8f, -1.8f);
-            ring.useGraphicAlpha = false;
-            ring.enabled = on;
-            var b = go.GetComponent<Button>();
-            b.targetGraphic = img;
-            b.transition = Selectable.Transition.None;
-            b.onClick.AddListener(() =>
-            {
-                FreeUiKit.PlaySelect();
-                click?.Invoke();
-            });
-            if (!string.IsNullOrEmpty(label))
-            {
-                // wardrobe tile: the tile's own Image becomes a plain backing, the picture moves into a child drawn after the
-                // selection wash (UGUI draws children over their parent, so a wash child of the picture covered it)
-                ring.enabled = false;                                   // the Outline only echoed the sprite's silhouette
-                img.sprite = UiFoundation.WhiteSprite(); img.preserveAspect = false;
-                img.color = on ? new Color(DuelystUi.Gold.r, DuelystUi.Gold.g, DuelystUi.Gold.b, 0.85f) : new Color(0.06f, 0.08f, 0.14f, 0.55f);
-                var inner = new GameObject("Backing", typeof(RectTransform), typeof(Image));
-                inner.transform.SetParent(go.transform, false);
-                var irt = inner.GetComponent<RectTransform>(); irt.anchorMin = Vector2.zero; irt.anchorMax = Vector2.one;
-                var bw = on ? 3f : 1f; irt.offsetMin = new Vector2(bw, bw); irt.offsetMax = new Vector2(-bw, -bw);
-                var ii = inner.GetComponent<Image>(); ii.sprite = UiFoundation.WhiteSprite(); ii.raycastTarget = false;
-                ii.color = on ? new Color(0.20f, 0.17f, 0.10f, 1f) : new Color(0.07f, 0.09f, 0.16f, 1f);
-                var pic = new GameObject("Picture", typeof(RectTransform), typeof(Image));
-                pic.transform.SetParent(go.transform, false);
-                GoTheme.Place(pic.GetComponent<RectTransform>(), 0.03f, 0.30f, 0.97f, 0.98f);
-                var pi = pic.GetComponent<Image>(); pi.sprite = spr ?? UiFoundation.WhiteSprite(); pi.preserveAspect = true;
-                pi.color = tint; pi.raycastTarget = false;
-                var t = FloatingPanel.Body(go.transform, label, 12);
-                GoTheme.Place(t.rectTransform, 0.02f, 0f, 0.98f, 0.32f);
-                StyleReadable(t, 14, DuelystUi.TextCream, TextAnchor.MiddleCenter);
-                t.resizeTextForBestFit = true; t.resizeTextMinSize = 12; t.resizeTextMaxSize = 18;
-                t.horizontalOverflow = HorizontalWrapMode.Wrap;
-                t.raycastTarget = false;
-                // (no shade: the opaque backing already sits under the label)
-                t.transform.SetAsLastSibling();
-            }
-            return go;
+            CzKit.Place(img, x, y, w, 48f * k);
+            img.sprite = UiFoundation.WhiteSprite();
+            img.color = new Color(0f, 0f, 0f, 0.001f);
+            var text = CzKit.Txt(go.transform, "Text", "", CzKit.Display, Mathf.RoundToInt(34 * k), CzKit.Text, TextAnchor.MiddleCenter, 1.5f);
+            CzKit.Fill(text.rectTransform);
+            text.supportRichText = false;
+            TextFx.HardDrop(text, new Color(0f, 0f, 0f, 0.85f), new Vector2(0f, 2.5f));
+            var ph = CzKit.Txt(go.transform, "Placeholder", "Name your duelist", CzKit.Display, Mathf.RoundToInt(30 * k), new Color(CzKit.Muted.r, CzKit.Muted.g, CzKit.Muted.b, 0.7f), TextAnchor.MiddleCenter, 1.5f);
+            CzKit.Fill(ph.rectTransform);
+            _nameField = go.GetComponent<InputField>();
+            _nameField.textComponent = text;
+            _nameField.placeholder = ph;
+            _nameField.characterLimit = 24;
+            _nameField.caretColor = CzKit.GoldHi;
+            _nameField.selectionColor = new Color(CzKit.Gold.r, CzKit.Gold.g, CzKit.Gold.b, 0.35f);
+            CzKit.GoldRule(stage, x + w * 0.15f, y + 48f * k, w * 0.7f, 0.85f);
+            _nameTitle = CzKit.Txt(stage, "NameTitle", "", CzKit.Caps, Mathf.RoundToInt(17 * k), CzKit.Label, TextAnchor.MiddleCenter, 4f * k);
+            CzKit.Place(_nameTitle, x, y + 52f * k, w, 26f * k);
         }
 
-        void Cycle(int dir)
+        void BuildDetailStrip(RectTransform stage)
+        {
+            var d = _rDetail;
+            var back = CzKit.Img(stage, "DetailBacking", UiFoundation.WhiteSprite(), CzKit.Pylon);
+            CzKit.Place(back, d.x, d.y, d.width, d.height);
+            CzKit.GoldRule(stage, d.x + 8f, d.y, d.width - 16f, 0.9f);
+            var pad = 10f * _k;
+            _detailName = CzKit.Txt(stage, "DetailName", "", CzKit.Display, Mathf.RoundToInt(24 * _k), CzKit.Text, TextAnchor.MiddleLeft, 1f);
+            CzKit.Place(_detailName, d.x + pad, d.y + 8f * _k, d.width - pad * 2f, 32f * _k);
+            _detailBlurb = CzKit.Txt(stage, "DetailBlurb", "", CzKit.Body(500), Mathf.RoundToInt(15 * _k), CzKit.Muted, TextAnchor.UpperLeft, 0f, true);
+            CzKit.Place(_detailBlurb, d.x + pad, d.y + 40f * _k, d.width - pad * 2f, 40f * _k);
+            _detailBlurb.verticalOverflow = VerticalWrapMode.Truncate;
+            _detailMeta = CzKit.Txt(stage, "DetailMeta", "", CzKit.Caps, Mathf.RoundToInt(16 * _k), CzKit.Label, TextAnchor.MiddleLeft, 2.5f);
+            CzKit.Place(_detailMeta, d.x + pad, d.y + d.height - 30f * _k, d.width - pad * 2f, 24f * _k);
+        }
+
+        // ---- the category rail (left pylon / portrait strip)
+
+        void RebuildRail()
+        {
+            if (_railHost == null) return;
+            CzKit.Clear(_railHost);
+            if (_landscape)
+            {
+                var head = CzKit.Txt(_railHost, "Head", "THE WARDROBE", CzKit.Caps, 17, CzKit.Muted, TextAnchor.MiddleLeft, 4f);
+                CzKit.Place(head, 6f, 0f, 380f, 26f);
+                CzKit.GoldRule(_railHost, 0f, 30f, 401f, 0.7f);
+                var y = 44f;
+                foreach (var (cat, name, caption, _) in Cats)
+                {
+                    RailRow(cat, name, caption, y);
+                    y += 72f;
+                }
+            }
+            else
+            {
+                var sr = default(ScrollRect);
+                var vp = CzKit.Img(_railHost, "Strip", UiFoundation.WhiteSprite(), new Color(0f, 0f, 0f, 0.001f), true);
+                CzKit.Fill(vp.rectTransform);
+                vp.gameObject.AddComponent<RectMask2D>();
+                var content = CzKit.Node(vp.transform, "Content");
+                content.anchorMin = new Vector2(0f, 0f); content.anchorMax = new Vector2(0f, 1f); content.pivot = new Vector2(0f, 0.5f);
+                sr = vp.gameObject.AddComponent<ScrollRect>();
+                sr.viewport = vp.rectTransform; sr.content = content; sr.horizontal = true; sr.vertical = false;
+                sr.movementType = ScrollRect.MovementType.Elastic; sr.elasticity = 0.08f;
+                var x = 0f;
+                foreach (var (cat, name, _, _) in Cats)
+                {
+                    var c = cat;
+                    var chip = CzKit.Chip(content, x, 6f, 84f, name, c == _cat, () => SelectCategory(c), 30, out var w);
+                    x += w + 10f;
+                }
+                content.sizeDelta = new Vector2(x, 0f);
+            }
+        }
+
+        void RailRow(Cat cat, string name, string caption, float y)
+        {
+            var on = cat == _cat;
+            var go = new GameObject("Cat_" + cat, typeof(RectTransform), typeof(Image), typeof(Button));
+            go.transform.SetParent(_railHost, false);
+            var bg = go.GetComponent<Image>();
+            CzKit.Place(bg, 0f, y, 401f, 64f);
+            bg.sprite = CzKit.Plate ?? UiFoundation.WhiteSprite();
+            if (CzKit.Plate != null) bg.type = Image.Type.Sliced;
+            bg.color = CzKit.Plate != null ? (on ? new Color(1f, 0.92f, 0.78f) : new Color(0.86f, 0.86f, 0.9f)) : new Color(0.12f, 0.11f, 0.14f);
+            bg.raycastTarget = true;
+            if (on)
+            {
+                var wash = CzKit.Img(go.transform, "Chosen", UiFoundation.WhiteSprite(), new Color(CzKit.Gold.r, CzKit.Gold.g, CzKit.Gold.b, 0.12f));
+                CzKit.Fill(wash.rectTransform, 3f);
+                var bar = CzKit.Img(go.transform, "Bar", UiFoundation.WhiteSprite(), CzKit.GoldHi);
+                CzKit.Place(bar, 4f, 10f, 5f, 44f);
+                CzKit.GoldFrame(go.transform, 2f, 2.8f);
+            }
+            var mark = CzKit.Img(go.transform, "Mark", CzKit.Diamond(), on ? CzKit.GoldHi : CzKit.GoldLo);
+            CzKit.Place(mark, 20f, 24f, 14f, 14f);
+            var t = CzKit.Txt(go.transform, "Name", name.ToUpperInvariant(), CzKit.Display, 25, on ? CzKit.GoldHi : CzKit.Text, TextAnchor.MiddleLeft, 2f);
+            CzKit.Place(t, 46f, 6f, 330f, 32f);
+            var c = CzKit.Txt(go.transform, "Caption", caption, CzKit.Body(500), 14, CzKit.Muted, TextAnchor.MiddleLeft);
+            CzKit.Place(c, 46f, 36f, 340f, 22f);
+            var chev = CzKit.Txt(go.transform, "Chevron", "›", CzKit.Body(700), 30, on ? CzKit.GoldHi : CzKit.GoldLo, TextAnchor.MiddleCenter);
+            CzKit.Place(chev, 360f, 12f, 32f, 40f);
+            var b = go.GetComponent<Button>();
+            b.targetGraphic = bg; b.transition = Selectable.Transition.None;
+            var cc = cat;
+            b.onClick.AddListener(() => SelectCategory(cc));
+            var hv = go.AddComponent<CzHover>();
+            hv.HoverScale = 1.015f;
+            hv.Label = t; hv.LabelRest = t.color; hv.LabelHover = on ? CzKit.GoldHi : Color.white;
+        }
+
+        void SelectCategory(Cat cat)
         {
             FreeUiKit.PlaySelect();
-            switch (_focus)
-            {
-                case Part.Look:
-                    _draft.portraitIndex = Wrap(_draft.portraitIndex + dir, AvatarCatalog.PortraitCount);
-                    break;
-                case Part.Hat:
-                    CycleClothing(ClothingSlot.Hat, dir);
-                    break;
-                case Part.Facial:
-                    CycleClothing(ClothingSlot.Facial, dir);
-                    break;
-                case Part.Shirt:
-                    CycleClothing(ClothingSlot.Shirt, dir);
-                    break;
-                case Part.Hands:
-                    CycleClothing(ClothingSlot.Hands, dir);
-                    break;
-                case Part.Bottoms:
-                    CycleClothing(ClothingSlot.Bottoms, dir);
-                    break;
-                case Part.Shoes:
-                    CycleClothing(ClothingSlot.Shoes, dir);
-                    break;
-                case Part.Neck:
-                    CycleClothing(ClothingSlot.Neck, dir);
-                    break;
-                case Part.Title:
-                    var ti = Array.IndexOf(AvatarCatalog.PresetTitles, _draft.title);
-                    if (ti < 0) ti = 0;
-                    ti = Wrap(ti + dir, AvatarCatalog.PresetTitles.Length);
-                    _draft.title = AvatarCatalog.PresetTitles[ti];
-                    break;
-                case Part.Skin:
-                    CycleHex(ref _draft.skinHex, AvatarCatalog.SkinPresets, dir);
-                    break;
-                case Part.HairColor:
-                    CycleHex(ref _draft.hairHex, AvatarCatalog.HairPresets, dir);
-                    break;
-                case Part.OutfitTint:
-                    CycleHex(ref _draft.outfitTintHex, AvatarCatalog.AccentPresets, dir);
-                    break;
-                case Part.Disk:
-                    CycleHex(ref _draft.diskHex, AvatarCatalog.DiskPalettes, dir);
-                    break;
-                case Part.Aura:
-                    CycleHex(ref _draft.auraHex, AvatarCatalog.AuraPalettes, dir);
-                    break;
-                case Part.Accent:
-                    CycleHex(ref _draft.accentHex, AvatarCatalog.AccentPresets, dir);
-                    break;
-            }
-
-            ApplyPreview();
-            UpdateOptionLabel();
-            RebuildOptionStrip();
+            var tabs = TabsOf(cat);
+            var keep = cat == _cat ? _focus : tabs[0];
+            _cat = cat;
+            RebuildRail();
+            SelectTab(Array.IndexOf(tabs, keep) >= 0 ? keep : tabs[0], false);
         }
 
-        void CycleClothing(ClothingSlot slot, int dir)
+        static Part[] TabsOf(Cat cat)
         {
-            var owned = ClothingCatalog.OwnedInSlot(_wardrobe, slot, _draft.IsFemale);
-            if (owned == null || owned.Count == 0) return;
-            var cur = _draft.SlotId(slot);
-            var i = 0;
-            for (var k = 0; k < owned.Count; k++)
-            {
-                if (owned[k].Id != cur) continue;
-                i = k;
-                break;
-            }
-
-            i = Wrap(i + dir, owned.Count);
-            _draft.SetSlot(slot, owned[i].Id);
+            foreach (var c in Cats) if (c.cat == cat) return c.tabs;
+            return Cats[0].tabs;
         }
 
-        static void CycleHex(ref string hex, string[] presets, int dir)
+        static Cat CatOf(Part p)
         {
-            var i = 0;
-            for (var k = 0; k < presets.Length; k++)
-                if (string.Equals(presets[k], hex, StringComparison.OrdinalIgnoreCase))
+            foreach (var c in Cats) if (Array.IndexOf(c.tabs, p) >= 0) return c.cat;
+            return Cat.Body;
+        }
+
+        /// <summary>Open a tab: the camera eases to its focus, the right panel is rebuilt.</summary>
+        void SelectTab(Part part, bool instant)
+        {
+            _focus = part;
+            var cat = CatOf(part);
+            if (cat != _cat) { _cat = cat; RebuildRail(); }
+            _preview3d?.SetFocus(FocusFor(part), instant);
+            RefreshViewChips();
+            RebuildRight();
+        }
+
+        // ---- the right panel: category title, tabs, the tab's editor, then the detail strip
+
+        void RebuildRight()
+        {
+            if (_rightHost == null || _draft == null) return;
+            CzKit.Clear(_rightHost);
+            var w = _rRight.width;
+            var y = 0f;
+            (Cat cat, string name, string caption, Part[] tabs) def = Cats[0];
+            foreach (var c in Cats) if (c.cat == _cat) def = c;
+            if (_landscape)
+            {
+                _catTitle = CzKit.Txt(_rightHost, "CatTitle", def.name.ToUpperInvariant(), CzKit.Display, 32, CzKit.GoldHi, TextAnchor.MiddleLeft, 2.5f);
+                CzKit.Place(_catTitle, 0f, 0f, w, 42f);
+                TextFx.HardDrop(_catTitle, new Color(0f, 0f, 0f, 0.85f), new Vector2(0f, 2f));
+                _catCaption = CzKit.Txt(_rightHost, "CatCaption", def.caption, CzKit.Body(500), 15, CzKit.Muted, TextAnchor.MiddleLeft);
+                CzKit.Place(_catCaption, 0f, 42f, w, 22f);
+                y = 72f;
+            }
+            // tabs (wrap to more rows when they do not fit)
+            if (def.tabs.Length > 1)
+            {
+                var th = 36f * _k; var tx = 0f; var size = Mathf.RoundToInt(19 * _k);
+                foreach (var p in def.tabs)
                 {
-                    i = k;
-                    break;
+                    var pp = p;
+                    var chip = CzKit.Chip(_rightHost, tx, y, th, TabLabel(p), p == _focus, () => { FreeUiKit.PlaySelect(); SelectTab(pp, false); }, size, out var cw);
+                    if (tx > 0f && tx + cw > w)
+                    {
+                        tx = 0f; y += th + 6f * _k;
+                        CzKit.Place((RectTransform)chip.transform, tx, y, cw, th);
+                    }
+                    tx += cw + 6f * _k;
                 }
-
-            i = Wrap(i + dir, presets.Length);
-            hex = presets[i];
+                y += th + 8f * _k;
+            }
+            CzKit.GoldRule(_rightHost, 0f, y, w, 0.6f);
+            y += 12f * _k;
+            var content = CzKit.Scroll(_rightHost, "Options", 0f, y, w, _rRight.height - y, out _optionScroll, new Color(CzKit.Pylon.r, CzKit.Pylon.g, CzKit.Pylon.b, 1f));
+            _optionHost = content;
+            _flow = new CzFlow(content, w - 6f, _k);
+            BuildEditor();
+            _flow.Finish();
+            _optionScroll.verticalNormalizedPosition = 1f;
+            UpdateLabels();
         }
 
-        static int Wrap(int v, int count)
+        /// <summary>Redraw only the current tab's options (after a click that changes what is chosen), keeping the scroll.</summary>
+        void RebuildOptions()
         {
-            if (count <= 0) return 0;
-            v %= count;
-            if (v < 0) v += count;
-            return v;
+            if (_optionHost == null) { RebuildRight(); return; }
+            var keep = _optionScroll != null ? _optionScroll.verticalNormalizedPosition : 1f;
+            CzKit.Clear(_optionHost);
+            _flow = new CzFlow(_optionHost, _rRight.width - 6f, _k) { NoReveal = true };
+            BuildEditor();
+            _flow.Finish();
+            Canvas.ForceUpdateCanvases();
+            if (_optionScroll != null) _optionScroll.verticalNormalizedPosition = keep;
+            UpdateLabels();
         }
 
-        void UpdateOptionLabel()
+        // ------------------------------------------------------------------ labels, preview, save
+
+        void UpdateLabels()
         {
-            if (_optionLabel == null || _draft == null) return;
-            var pi = Mathf.Clamp(_draft.portraitIndex, 0, AvatarCatalog.PortraitCount - 1);
-            _optionLabel.text = _focus switch
+            if (_draft == null) return;
+            if (_subTitle != null)
             {
-                Part.Look => $"Look: {AvatarCatalog.PortraitNames[pi]}",
-                Part.Hat => ClothingLabel(ClothingSlot.Hat),
-                Part.Facial => ClothingLabel(ClothingSlot.Facial),
-                Part.Shirt => ClothingLabel(ClothingSlot.Shirt),
-                Part.Hands => ClothingLabel(ClothingSlot.Hands),
-                Part.Bottoms => ClothingLabel(ClothingSlot.Bottoms),
-                Part.Shoes => ClothingLabel(ClothingSlot.Shoes),
-                Part.Neck => ClothingLabel(ClothingSlot.Neck),
-                Part.Skin => "Skin: " + (string.IsNullOrEmpty(_draft.GetPaint("Body.0")) ? "original" : _draft.GetPaint("Body.0")),
-                Part.FaceShape => "Face shape: " + FaceShapeWord(),
-                Part.Accessories => "Accessories: " + ((_draft.accessoryIds?.Count ?? 0) == 0 ? "none" : _draft.accessoryIds.Count.ToString()),
-                Part.Tattoos => "Tattoos: " + ((_draft.tattooIds?.Count ?? 0) == 0 ? "none" : _draft.tattooIds.Count.ToString()),
-                Part.HairColor => "Hair color: " + AvatarCatalog.HairPatternNames[Mathf.Clamp(_draft.hairPattern, 0, AvatarCatalog.HairPatternNames.Length - 1)]
-                                  + (_draft.hairPattern == 0 ? "" : "  ·  " + _hairZone.ToUpperInvariant()),
-                Part.Body => $"{(_draft.IsFemale ? "Female" : "Male")} base  ·  {_draft.EffectiveHeightCm:0} cm  ·  weight {Mathf.RoundToInt(_draft.weight * 100f)}",
-                Part.Hair => "Hair: " + HairName(_draft.hairStyleId),
-                Part.Outfit => OutfitOptionLabel(),
-                Part.Paint => "Clothes color: " + PaintLabel(_paintKey) + "  ·  " + (string.IsNullOrEmpty(_draft.GetPaint(_paintKey)) ? "original" : _draft.GetPaint(_paintKey)),
-                Part.OutfitTint => $"Outfit tint: {_draft.outfitTintHex}",
-                Part.Accent => $"Spirit magic: {_draft.accentHex}",
-                Part.Disk => "Duel Disk: " + AvatarCatalog.PaletteName(AvatarCatalog.DiskPalettes,
-                    AvatarCatalog.DiskPaletteNames, _draft.diskHex),
-                Part.Aura => "Aura: " + AvatarCatalog.PaletteName(AvatarCatalog.AuraPalettes,
-                    AvatarCatalog.AuraPaletteNames, _draft.auraHex),
-                Part.Title => $"Title: {_draft.title}",
-                _ => ""
-            };
+                var catName = "";
+                foreach (var c in Cats) if (c.cat == _cat) catName = c.name;
+                _subTitle.text = ("CUSTOMIZE  ·  " + catName + "  ·  " + TabLabel(_focus)).ToUpperInvariant() + (Dirty ? "  ·  UNSAVED" : "");
+            }
+            if (_nameTitle != null) _nameTitle.text = (string.IsNullOrEmpty(_draft.title) ? "Spirit Dueler" : _draft.title).ToUpperInvariant();
+            var (name, blurb, meta) = DetailFor(_focus);
             var pockets = ClothingService.PreviewPockets(_draft, _wardrobe);
-            if (_status != null)
-                _status.text = pockets == 1
-                    ? "1 on-hand deck"
-                    : pockets + " on-hand decks";
-            RefreshSlotRings();
-        }
-
-        string ClothingLabel(ClothingSlot slot)
-        {
-            var item = ClothingCatalog.Get(_draft.SlotId(slot));
-            if (item == null) return ClothingCatalog.SlotLabel(slot);
-            var n = ClothingCatalog.PocketsOnItem(item, _wardrobe);
-            if (item.CanHoldPockets)
-                return $"{item.Name}  ·  {n} pocket{(n == 1 ? "" : "s")}";
-            return item.Name;
+            var decks = pockets == 1 ? "1 ON-HAND DECK" : pockets + " ON-HAND DECKS";
+            if (_detailName != null) _detailName.text = name;
+            if (_detailBlurb != null) _detailBlurb.text = blurb;
+            if (_detailMeta != null) _detailMeta.text = string.IsNullOrEmpty(meta) ? decks : meta + "   ·   " + decks;
         }
 
         void ApplyPreview()
         {
             _draft?.ClampToCatalog();
-            _preview?.Apply(_draft);
+            if (_draft != null) { _draft.characterId = ""; _draft.silhouette = false; }
             var has3d = _preview3d != null && _preview3d.Apply(_draft);
-            if (_preview != null) _preview.gameObject.SetActive(!has3d);
+            if (_fallback2d != null)
+            {
+                _fallback2d.transform.parent.gameObject.SetActive(!has3d && _customizerSheet != null && _customizerSheet.activeSelf);
+                if (!has3d) _fallback2d.Apply(_draft);
+            }
+            if (_profileFallback != null)
+            {
+                _profileFallback.gameObject.SetActive(!has3d);
+                if (!has3d) _profileFallback.Apply(_draft);
+            }
         }
 
-        void RefreshProfile()
+        /// <summary>Every edit goes through here: refresh the body, the labels and (when the choice moved) the options.</summary>
+        void Changed(bool rebuild)
         {
-            _profilePortrait?.Apply(_draft);
-            RefreshCompanions();
-            var acc = AppSession.Ensure().Account;
-            if (acc == null)
-            {
-                if (_profileName != null) _profileName.text = "Not signed in";
-                if (_profileTitle != null) _profileTitle.text = "";
-                if (_profileHandle != null) _profileHandle.text = "";
-                if (_profileWallet != null) _profileWallet.text = "";
-                if (_profileTeamIcon != null) _profileTeamIcon.enabled = false;
-                return;
-            }
+            if (rebuild) { _applyPending = false; ApplyPreview(); }
+            else _applyPending = true;
+            UpdateLabels();
+            if (rebuild) RebuildOptions();
+        }
 
-            acc.EnsureProgress();
-            acc.EnsureInventory();
-            var p = acc.progress;
-            var lv = p != null ? Mathf.Max(1, p.level) : Mathf.Max(1, acc.spiritRank);
-            if (_profileName != null)
-                _profileName.text = string.IsNullOrEmpty(acc.displayName) ? acc.username : acc.displayName;
-            if (_profileHandle != null)
-            {
-                var title = string.IsNullOrEmpty(_draft?.title) ? "Spirit Dueler" : _draft.title;
-                var handle = string.IsNullOrEmpty(acc.username) ? "" : "@" + acc.username;
-                _profileHandle.text = string.IsNullOrEmpty(handle) ? title : handle + "  ·  " + title;
-            }
+        void ResetDraft()
+        {
+            FreeUiKit.PlayClick();
+            if (string.IsNullOrEmpty(_savedJson)) return;
+            _draft = JsonUtility.FromJson<AvatarAppearance>(_savedJson);
+            _draft.ClampToCatalog();
+            Changed(true);
+            Toast("RESTORED THE SAVED LOOK");
+        }
 
-            if (_profileTitle != null)
-            {
-                var team = p != null ? p.Team : KuribohTeam.None;
-                _profileTitle.text = KuribohTeamInfo.DisplayName(team);
-            }
-
-            if (_profileWallet != null)
-                _profileWallet.text =
-                    $"Đ {(p?.digizeni ?? 0):N0}   ·   DC {(p?.duelCoin ?? 0):N0}   ·   SE {(p?.setEnergy ?? 0):N0}";
-
-            _soulBadge?.Bind(p);
-
-            if (_profileTeamIcon != null)
-            {
-                var team = p != null ? p.Team : KuribohTeam.None;
-                var spr = ImagineAssets.IconTeam(team);
-                _profileTeamIcon.enabled = spr != null;
-                if (spr != null)
-                    _profileTeamIcon.sprite = spr;
-            }
-
-            if (_profileLevel != null)
-                _profileLevel.text = lv.ToString();
-
-            if (p != null && _profileXpFill != null)
-            {
-                var t = Mathf.Clamp(p.XpProgress01(), 0.02f, 1f);
-                var frt = _profileXpFill.rectTransform;
-                frt.anchorMin = Vector2.zero;
-                frt.anchorMax = new Vector2(t, 1f);
-                frt.offsetMin = new Vector2(2f, 2f);
-                frt.offsetMax = new Vector2(-2f, -2f);
-            }
-
-            if (_profileXp != null && p != null)
-            {
-                var need = p.XpToNextLevel();
-                _profileXp.text = need <= 0
-                    ? $"Lv{lv}  MAX"
-                    : $"Lv{lv}  {p.xp:N0}/{need:N0}";
-            }
-
-            if (_statDuels != null) _statDuels.text = acc.duelsCompleted.ToString("N0");
-            if (_statCards != null) _statCards.text = acc.cardsCollected.ToString("N0");
-            if (_statPath != null)
-                _statPath.text = acc.pathKm < 10f
-                    ? acc.pathKm.ToString("0.0")
-                    : acc.pathKm.ToString("N0");
-            if (_statSe != null) _statSe.text = (p != null ? p.setEnergy : 0).ToString("N0");
+        void OnBack()
+        {
+            FreeUiKit.PlayClick();
+            if (Dirty) { OpenConfirm(); return; }
+            ShowProfile(true);
         }
 
         void Save()
@@ -1136,11 +713,12 @@ namespace WRLDZ.UI
             var acc = session.Account;
             if (acc == null)
             {
-                if (_status != null) _status.text = "No account session.";
+                Toast("NO ACCOUNT SESSION");
                 return;
             }
 
             _draft.ClampToCatalog();
+            _draft.characterId = "";
             if (_nameField != null && !string.IsNullOrWhiteSpace(_nameField.text))
                 acc.displayName = _nameField.text.Trim();
 
@@ -1150,135 +728,327 @@ namespace WRLDZ.UI
 
             if (!LocalAccountStore.TrySaveAccount(acc, out var err))
             {
-                if (_status != null) _status.text = err ?? "Save failed.";
+                Toast((err ?? "SAVE FAILED").ToUpperInvariant());
                 return;
             }
 
             session.SetAccount(acc);
             WRLDZ.Presentation.ArInteraction.SpiritDuelerPalette.NotifyChanged();
-            if (_status != null) _status.text = "Saved! Look applied.";
+            _savedJson = JsonUtility.ToJson(_draft);
+            Toast("LOOK SAVED");
+            UpdateLabels();
             _onSaved?.Invoke();
             RefreshProfile();
         }
 
-        GameObject MakeSheet(string name)
+        Coroutine _toastCo;
+
+        void Toast(string s)
         {
-            GoTheme.EnsureAssets();
-            var root = new GameObject(name, typeof(RectTransform));
-            root.transform.SetParent(_canvasRoot, false);
-            GoTheme.Stretch(root.GetComponent<RectTransform>());
-
-            var dim = new GameObject("Dim", typeof(RectTransform), typeof(Image), typeof(Button));
-            dim.transform.SetParent(root.transform, false);
-            GoTheme.Stretch(dim.GetComponent<RectTransform>());
-            var dImg = dim.GetComponent<Image>();
-            dImg.sprite = UiFoundation.WhiteSprite();
-            dImg.color = new Color(0.01f, 0.02f, 0.05f, 0.48f);
-            dim.GetComponent<Button>().onClick.AddListener(HideAll);
-
-            var sheetGo = new GameObject("Sheet", typeof(RectTransform), typeof(Image));
-            sheetGo.transform.SetParent(root.transform, false);
-            GoTheme.Place(sheetGo.GetComponent<RectTransform>(), 0.06f, 0.10f, 0.94f, 0.88f);
-            var sheetImg = sheetGo.GetComponent<Image>();
-            sheetImg.raycastTarget = true;
-            HubChrome.PaintWell(sheetImg);
-            return root;
+            if (_toast == null || !isActiveAndEnabled) return;
+            if (_toastCo != null) StopCoroutine(_toastCo);
+            _toastCo = StartCoroutine(ToastCo(s));
         }
 
-        static void RowButton(Transform sheet, string name, string label, float x0, float y0, float x1, float y1,
-            Action onClick)
+        IEnumerator ToastCo(string s)
         {
-            var primary = name is not ("Back" or "Close");
-            GoTheme.RectAction(sheet, name, label, x0, y0, x1, y1, primary, onClick);
-        }
-
-        static void CircleNav(Transform sheet, string name, string glyph, float x0, float y0, float x1, float y1,
-            Action onClick)
-        {
-            var spr = name == "Prev"
-                ? (VendorKit.Arrow("w") ?? VendorKit.MobileNo() ?? GoTheme.OrbItems())
-                : (VendorKit.Arrow("e") ?? VendorKit.MobileYes() ?? GoTheme.OrbItems());
-            var btn = GoTheme.CircleButton(sheet, name, spr, Color.white, x0, y0, x1, y1, onClick);
-            // fallback glyph if sprite is plain circle
-            if (spr == null || spr.name.Contains("button_round"))
-                GoTheme.IconLabel(btn.transform, glyph, GoTheme.Ink, 0.6f);
-        }
-
-        static InputField MakeInput(Transform sheet, string name, float x0, float y0, float x1, float y1)
-        {
-            var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(InputField));
-            go.transform.SetParent(sheet, false);
-            GoTheme.Place(go.GetComponent<RectTransform>(), x0, y0, x1, y1);
-            var img = go.GetComponent<Image>();
-            img.sprite = DuelystUi.Bar() ?? UiFoundation.WhiteSprite();
-            img.type = Image.Type.Sliced;
-            img.color = Color.white;
-            img.raycastTarget = true;
-
-            var textGo = new GameObject("Text", typeof(RectTransform), typeof(Text));
-            textGo.transform.SetParent(go.transform, false);
-            GoTheme.Stretch(textGo.GetComponent<RectTransform>());
-            var text = textGo.GetComponent<Text>();
-            WrldzType.Style(text, 16, display: false);
-            text.color = DuelystUi.TextCream;
-            text.alignment = TextAnchor.MiddleLeft;
-            text.supportRichText = false;
-            var trt = textGo.GetComponent<RectTransform>();
-            trt.offsetMin = new Vector2(10, 2);
-            trt.offsetMax = new Vector2(-10, -2);
-
-            var phGo = new GameObject("Placeholder", typeof(RectTransform), typeof(Text));
-            phGo.transform.SetParent(go.transform, false);
-            GoTheme.Stretch(phGo.GetComponent<RectTransform>());
-            var ph = phGo.GetComponent<Text>();
-            WrldzType.Style(ph, 15, display: false);
-            ph.fontStyle = FontStyle.Italic;
-            ph.color = new Color(0.5f, 0.52f, 0.56f, 0.8f);
-            ph.text = "Display name";
-            ph.alignment = TextAnchor.MiddleLeft;
-            var prt = phGo.GetComponent<RectTransform>();
-            prt.offsetMin = new Vector2(10, 2);
-            prt.offsetMax = new Vector2(-10, -2);
-
-            var field = go.GetComponent<InputField>();
-            field.textComponent = text;
-            field.placeholder = ph;
-            field.characterLimit = 24;
-            return field;
-        }
-    }
-
-    /// <summary>
-    /// The wardrobe grid scrolls sideways in two rows. At rest its right edge used to cut a column in half with nothing
-    /// saying more tiles followed (review 2026-10-04). This keeps whole columns at the edge (the column spacing absorbs
-    /// the leftover width, at least 6 px) and shows a "more" chevron while tiles lie past the right edge.
-    /// </summary>
-    sealed class WholeColumnGrid : MonoBehaviour
-    {
-        public GridLayoutGroup Grid;
-        public RectTransform Viewport;
-        public ScrollRect Scroll;
-        public GameObject Cue;
-        float _w = -1f, _cell = -1f;
-        int _n = -1;
-
-        void LateUpdate()
-        {
-            if (Grid == null || Viewport == null) return;
-            var w = Viewport.rect.width; var n = Grid.transform.childCount; var cell = Grid.cellSize.x;
-            if (!Mathf.Approximately(w, _w) || n != _n || !Mathf.Approximately(cell, _cell))
+            _toast.text = s;
+            var t = 0f;
+            while (t < 2.2f)
             {
-                _w = w; _n = n; _cell = cell;
-                var inner = w - Grid.padding.left - Grid.padding.right;
-                var cols = Mathf.Max(1, Mathf.FloorToInt((inner + 6f) / (cell + 6f)));
-                var sx = cols > 1 ? (inner - cols * cell) / (cols - 1) : 6f;
-                Grid.spacing = new Vector2(Mathf.Max(6f, Mathf.Floor(sx)), Grid.spacing.y);
+                t += Time.unscaledDeltaTime;
+                var a = t < 0.2f ? t / 0.2f : t > 1.7f ? 1f - (t - 1.7f) / 0.5f : 1f;
+                if (_toast == null) yield break;
+                _toast.color = new Color(CzKit.GoldHi.r, CzKit.GoldHi.g, CzKit.GoldHi.b, Mathf.Clamp01(a));
+                yield return null;
             }
-            if (Cue == null) return;
-            var content = Scroll != null ? Scroll.content : null;
-            var overflow = content != null && content.rect.width > w + 1f;
-            var atEnd = Scroll != null && Scroll.horizontalNormalizedPosition > 0.98f;
-            if (Cue.activeSelf != (overflow && !atEnd)) Cue.SetActive(overflow && !atEnd);
+            if (_toast != null) _toast.color = new Color(CzKit.GoldHi.r, CzKit.GoldHi.g, CzKit.GoldHi.b, 0f);
+        }
+
+        // ---- leaving with unsaved changes
+
+        void OpenConfirm()
+        {
+            CloseConfirm();
+            if (_customizerSheet == null) return;
+            _confirm = new GameObject("ConfirmLeave", typeof(RectTransform), typeof(Image));
+            _confirm.transform.SetParent(_customizerSheet.transform, false);
+            var dim = _confirm.GetComponent<Image>();
+            dim.sprite = UiFoundation.WhiteSprite(); dim.color = new Color(0.01f, 0.01f, 0.02f, 0.72f); dim.raycastTarget = true;
+            CzKit.Fill(dim.rectTransform);
+            var stage = CzKit.Node(_confirm.transform, "Stage");
+            var fit = stage.gameObject.AddComponent<CzStageFit>();
+            fit.Reference = _landscape ? new Vector2(1920f, 1080f) : new Vector2(1080f, 2340f);
+            fit.FitNow();
+            var cx = fit.Reference.x * 0.5f; var cy = fit.Reference.y * 0.5f;
+            var k = _landscape ? 1f : 1.4f;
+            var pw = 640f * k; var ph = 270f * k;
+            var panel = CzKit.Slate(stage, "Panel", Color.white, true);
+            CzKit.Place(panel, cx - pw * 0.5f, cy - ph * 0.5f, pw, ph);
+            CzKit.GoldFrame(panel.transform, 3f, 2.4f);
+            var t = CzKit.Txt(panel.transform, "Q", "LEAVE WITHOUT SAVING?", CzKit.Display, Mathf.RoundToInt(30 * k), CzKit.GoldHi, TextAnchor.MiddleCenter, 2f);
+            CzKit.Place(t, 20f, 30f * k, pw - 40f, 44f * k);
+            var s = CzKit.Txt(panel.transform, "Sub", "The changes to this look have not been saved.", CzKit.Body(500), Mathf.RoundToInt(18 * k), CzKit.Muted, TextAnchor.MiddleCenter);
+            CzKit.Place(s, 20f, 80f * k, pw - 40f, 30f * k);
+            var bw = (pw - 80f) / 3f; var by = ph - 88f * k;
+            CzKit.Btn(panel.transform, "Keep", 20f, by, bw, 60f * k, "KEEP EDITING", CzKit.Kind.Plain, () => { FreeUiKit.PlayClick(); CloseConfirm(); }, Mathf.RoundToInt(19 * k));
+            CzKit.Btn(panel.transform, "Discard", 40f + bw, by, bw, 60f * k, "DISCARD", CzKit.Kind.Danger, () =>
+            {
+                FreeUiKit.PlayClick();
+                CloseConfirm();
+                LoadDraftFromSession();
+                ShowProfile(true);
+            }, Mathf.RoundToInt(19 * k));
+            CzKit.Btn(panel.transform, "SaveLeave", 60f + bw * 2f, by, bw, 60f * k, "SAVE", CzKit.Kind.Gold, () =>
+            {
+                CloseConfirm();
+                Save();
+                if (!Dirty) ShowProfile(true);
+            }, Mathf.RoundToInt(20 * k));
+            var g = MenuMotion.EnsureGroup(_confirm);
+            StartCoroutine(MenuMotion.Fade(g, 0f, 1f, 0.18f));
+        }
+
+        void CloseConfirm()
+        {
+            if (_confirm != null) Destroy(_confirm);
+            _confirm = null;
+        }
+
+        // ------------------------------------------------------------------ PROFILE
+
+        Text _prName, _prTitle, _prHandle, _prLevel, _prXp, _prTeam, _prWallet0, _prWallet1, _prWallet2;
+        Text _statDuels, _statCards, _statPath, _statSe;
+        Image _prXpFill, _prTeamIcon;
+        SoulBadgeView _soulBadge;
+        RectTransform _companionHost;
+        AvatarPortraitView _profileFallback;
+        Text _prNameplate, _prNameTitle;
+
+        void BuildProfileSheet()
+        {
+            _profileSheet = new GameObject("ProfileSheet", typeof(RectTransform));
+            _profileSheet.transform.SetParent(_canvasRoot, false);
+            CzKit.Fill((RectTransform)_profileSheet.transform);
+            var stage = Sanctuary(_profileSheet);
+            var k = _landscape ? 1f : 1.45f;
+            RectTransform left, right;
+            if (_landscape)
+            {
+                CzKit.Btn(stage, "Close", 98f, 34f, 200f, 58f, "‹  BACK", CzKit.Kind.Plain, () => { FreeUiKit.PlayClick(); HideAll(); });
+                var title = CzKit.Title(stage, "DUELIST PROFILE", 46);
+                CzKit.Place(title, 560f, 18f, 800f, 66f);
+                _prHandle = CzKit.Txt(stage, "Handle", "", CzKit.Caps, 18, CzKit.Muted, TextAnchor.MiddleCenter, 4f);
+                CzKit.Place(_prHandle, 560f, 82f, 800f, 26f);
+                CzKit.Btn(stage, "Customize", 1571f, 34f, 250f, 58f, "CUSTOMIZE", CzKit.Kind.Gold, OpenCustomizerFromProfile, 24);
+                _profileStage = StageSlot(stage, 538f, 124f, 844f, 870f);
+                left = CzKit.Node(stage, "Identity"); CzKit.Place(left, 112f, 228f, 401f, 640f);
+                right = CzKit.Node(stage, "Record"); CzKit.Place(right, 1410f, 228f, 393f, 720f);
+                _prNameplate = CzKit.Txt(stage, "Nameplate", "", CzKit.Display, 34, CzKit.Text, TextAnchor.MiddleCenter, 1.5f);
+                CzKit.Place(_prNameplate, 700f, 990f, 520f, 48f);
+                CzKit.GoldRule(stage, 778f, 1038f, 364f, 0.85f);
+                _prNameTitle = CzKit.Txt(stage, "NameTitle", "", CzKit.Caps, 17, CzKit.Label, TextAnchor.MiddleCenter, 4f);
+                CzKit.Place(_prNameTitle, 700f, 1042f, 520f, 26f);
+                CzKit.Round(stage, "TurnLeft", 612f, 900f, 56f, "‹", () => { FreeUiKit.PlaySelect(); _preview3d?.Turn(45f); });
+                CzKit.Round(stage, "TurnRight", 1308f, 900f, 56f, "›", () => { FreeUiKit.PlaySelect(); _preview3d?.Turn(-45f); });
+            }
+            else
+            {
+                CzKit.Btn(stage, "Close", 36f, 54f, 196f, 70f, "‹  BACK", CzKit.Kind.Plain, () => { FreeUiKit.PlayClick(); HideAll(); }, 28);
+                var title = CzKit.Title(stage, "PROFILE", 46);
+                CzKit.Place(title, 240f, 40f, 600f, 70f);
+                _prHandle = CzKit.Txt(stage, "Handle", "", CzKit.Caps, 22, CzKit.Muted, TextAnchor.MiddleCenter, 3f);
+                CzKit.Place(_prHandle, 240f, 108f, 600f, 32f);
+                _profileStage = StageSlot(stage, 0f, 150f, 1080f, 940f);
+                _prNameplate = CzKit.Txt(stage, "Nameplate", "", CzKit.Display, 44, CzKit.Text, TextAnchor.MiddleCenter, 1.5f);
+                CzKit.Place(_prNameplate, 160f, 1080f, 760f, 60f);
+                _prNameTitle = CzKit.Txt(stage, "NameTitle", "", CzKit.Caps, 22, CzKit.Label, TextAnchor.MiddleCenter, 4f);
+                CzKit.Place(_prNameTitle, 160f, 1142f, 760f, 32f);
+                var slate = CzKit.Img(stage, "LowerSlate", UiFoundation.WhiteSprite(), new Color(0.07f, 0.065f, 0.085f, 0.97f), true);
+                CzKit.Place(slate, 20f, 1188f, 1040f, 1128f);
+                CzKit.GoldFrame(slate.transform, 2f, 2.2f);
+                left = CzKit.Node(stage, "Identity"); CzKit.Place(left, 48f, 1210f, 480f, 900f);
+                right = CzKit.Node(stage, "Record"); CzKit.Place(right, 556f, 1210f, 480f, 900f);
+                CzKit.Btn(stage, "Customize", 140f, 2196f, 800f, 96f, "CUSTOMIZE LOOK", CzKit.Kind.Gold, OpenCustomizerFromProfile, 36);
+            }
+
+            var pfWell = CzKit.Node(_profileStage, "Fallback2d");
+            CzKit.Fill(pfWell, 60f);
+            _profileFallback = AvatarPortraitView.CreateFullBodyFill(pfWell, hideBackground: true, badgeCrop: false);
+            _profileFallback.gameObject.SetActive(false);
+
+            BuildIdentity(left, k);
+            BuildRecord(right, k);
+        }
+
+        void OpenCustomizerFromProfile()
+        {
+            FreeUiKit.PlaySelect();
+            StreamingSprite.ClearCache("WRLDZ/Avatar/clothes/");
+            _savedJson = JsonUtility.ToJson(_draft);
+            ShowCustomizer(true);
+        }
+
+        void BuildIdentity(RectTransform host, float k)
+        {
+            var w = host.sizeDelta.x;
+            var y = 0f;
+            _prName = CzKit.Txt(host, "Name", "", CzKit.Display, Mathf.RoundToInt(38 * k), CzKit.Text, TextAnchor.MiddleLeft, 1f);
+            CzKit.Place(_prName, 4f, y, w - 8f, 50f * k);
+            TextFx.HardDrop(_prName, new Color(0f, 0f, 0f, 0.85f), new Vector2(0f, 2f));
+            y += 52f * k;
+            _prTitle = CzKit.Txt(host, "Title", "", CzKit.Caps, Mathf.RoundToInt(19 * k), CzKit.Label, TextAnchor.MiddleLeft, 3.5f);
+            CzKit.Place(_prTitle, 4f, y, w - 8f, 26f * k);
+            y += 40f * k;
+
+            // level medallion + experience
+            var d = 96f * k;
+            var medal = CzKit.Img(host, "LevelMedal", CzKit.Circle(), new Color(0.11f, 0.17f, 0.40f));
+            CzKit.Place(medal, 4f, y, d, d);
+            var ring = CzKit.Img(medal.transform, "Ring", CzKit.Ring(), CzKit.Gold);
+            CzKit.Fill(ring.rectTransform, -2f);
+            var lvCap = CzKit.Txt(medal.transform, "Cap", "LV", CzKit.Caps, Mathf.RoundToInt(15 * k), CzKit.Label, TextAnchor.MiddleCenter, 2f);
+            CzKit.Place(lvCap, 0f, d * 0.16f, d, d * 0.2f);
+            _prLevel = CzKit.Txt(medal.transform, "Level", "1", CzKit.Display, Mathf.RoundToInt(38 * k), CzKit.Text, TextAnchor.MiddleCenter);
+            CzKit.Place(_prLevel, 0f, d * 0.30f, d, d * 0.5f);
+            var xpCap = CzKit.Txt(host, "XpCap", "EXPERIENCE", CzKit.Caps, Mathf.RoundToInt(16 * k), CzKit.Muted, TextAnchor.MiddleLeft, 3f);
+            CzKit.Place(xpCap, d + 22f, y + 6f * k, w - d - 26f, 24f * k);
+            _prXp = CzKit.Txt(host, "Xp", "", CzKit.Body(600), Mathf.RoundToInt(19 * k), CzKit.Text, TextAnchor.MiddleLeft);
+            CzKit.Place(_prXp, d + 22f, y + 32f * k, w - d - 26f, 28f * k);
+            var track = CzKit.Img(host, "XpTrack", CzKit.Track, CzKit.Track != null ? Color.white : new Color(0.05f, 0.05f, 0.07f));
+            CzKit.Place(track, d + 22f, y + 66f * k, w - d - 28f, 14f * k);
+            _prXpFill = CzKit.Img(track.transform, "Fill", CzKit.HGrad(), CzKit.Gold);
+            var frt = _prXpFill.rectTransform; frt.anchorMin = Vector2.zero; frt.anchorMax = new Vector2(0.01f, 1f);
+            frt.offsetMin = new Vector2(3f, 3f); frt.offsetMax = new Vector2(-3f, -3f);
+            y += d + 22f * k;
+
+            CzKit.GoldRule(host, 0f, y, w, 0.6f);
+            y += 16f * k;
+            var wh = CzKit.Txt(host, "WalletHead", "WALLET", CzKit.Caps, Mathf.RoundToInt(16 * k), CzKit.Muted, TextAnchor.MiddleLeft, 4f);
+            CzKit.Place(wh, 4f, y, w, 24f * k);
+            y += 30f * k;
+            _prWallet0 = WalletRow(host, ImagineAssets.IconDigizeni(), "DIGIZENI", ref y, w, k);
+            _prWallet1 = WalletRow(host, ImagineAssets.IconDuelCoin(), "DUEL COIN", ref y, w, k);
+            _prWallet2 = WalletRow(host, ImagineAssets.IconSetEnergy(), "SET ENERGY", ref y, w, k);
+            y += 8f * k;
+            CzKit.GoldRule(host, 0f, y, w, 0.6f);
+            y += 16f * k;
+            var th = CzKit.Txt(host, "TeamHead", "KURIBOH TEAM", CzKit.Caps, Mathf.RoundToInt(16 * k), CzKit.Muted, TextAnchor.MiddleLeft, 4f);
+            CzKit.Place(th, 4f, y, w, 24f * k);
+            y += 30f * k;
+            _prTeamIcon = CzKit.Img(host, "TeamIcon", null, Color.white);
+            _prTeamIcon.preserveAspect = true;
+            CzKit.Place(_prTeamIcon, 4f, y, 56f * k, 56f * k);
+            _prTeam = CzKit.Txt(host, "Team", "", CzKit.Display, Mathf.RoundToInt(24 * k), CzKit.Text, TextAnchor.MiddleLeft, 1f);
+            CzKit.Place(_prTeam, 72f * k, y, w - 160f * k, 56f * k);
+            _soulBadge = SoulBadgeView.Create(host);
+            CzKit.Place((RectTransform)_soulBadge.transform, w - 76f * k, y - 6f * k, 70f * k, 70f * k);
+        }
+
+        Text WalletRow(RectTransform host, Sprite icon, string caption, ref float y, float w, float k)
+        {
+            var ic = CzKit.Img(host, "Icon_" + caption, icon, Color.white);
+            ic.preserveAspect = true;
+            CzKit.Place(ic, 4f, y + 2f * k, 30f * k, 30f * k);
+            var c = CzKit.Txt(host, "Cap_" + caption, caption, CzKit.Caps, Mathf.RoundToInt(17 * k), CzKit.Label, TextAnchor.MiddleLeft, 2.5f);
+            CzKit.Place(c, 44f * k, y, w * 0.5f, 34f * k);
+            var v = CzKit.Txt(host, "Val_" + caption, "0", CzKit.Body(700), Mathf.RoundToInt(21 * k), CzKit.Text, TextAnchor.MiddleRight);
+            CzKit.Place(v, w * 0.4f, y, w * 0.6f - 4f, 34f * k);
+            y += 40f * k;
+            return v;
+        }
+
+        void BuildRecord(RectTransform host, float k)
+        {
+            var w = host.sizeDelta.x;
+            var y = 0f;
+            var sh = CzKit.Txt(host, "StatsHead", "DUELIST RECORD", CzKit.Caps, Mathf.RoundToInt(16 * k), CzKit.Muted, TextAnchor.MiddleLeft, 4f);
+            CzKit.Place(sh, 4f, y, w, 24f * k);
+            y += 32f * k;
+            _statDuels = StatRow(host, ImagineAssets.IconDuel(), "DUELS", ref y, w, k);
+            _statCards = StatRow(host, ImagineAssets.IconDeck(), "CARDS", ref y, w, k);
+            _statPath = StatRow(host, ImagineAssets.IconCompass(), "KM WALKED", ref y, w, k);
+            _statSe = StatRow(host, ImagineAssets.IconSetEnergy(), "SET ENERGY", ref y, w, k);
+            y += 6f * k;
+            CzKit.GoldRule(host, 0f, y, w, 0.6f);
+            y += 16f * k;
+            var ch = CzKit.Txt(host, "SpiritHead", "SPIRIT COMPANION", CzKit.Caps, Mathf.RoundToInt(16 * k), CzKit.Muted, TextAnchor.MiddleLeft, 4f);
+            CzKit.Place(ch, 4f, y, w, 24f * k);
+            y += 32f * k;
+            _companionHost = CzKit.Node(host, "Companions");
+            CzKit.Place(_companionHost, 0f, y, w, (_landscape ? 310f : 520f));
+            _companionK = k;
+        }
+
+        float _companionK = 1f;
+
+        Text StatRow(RectTransform host, Sprite icon, string caption, ref float y, float w, float k)
+        {
+            var row = CzKit.Slate(host, "Stat_" + caption, Color.white);
+            CzKit.Place(row, 0f, y, w, 56f * k);
+            var ic = CzKit.Img(row.transform, "Icon", icon, Color.white);
+            ic.preserveAspect = true;
+            CzKit.Place(ic, 12f * k, 10f * k, 36f * k, 36f * k);
+            var c = CzKit.Txt(row.transform, "Cap", caption, CzKit.Caps, Mathf.RoundToInt(17 * k), CzKit.Label, TextAnchor.MiddleLeft, 2.5f);
+            CzKit.Place(c, 60f * k, 0f, w * 0.5f, 56f * k);
+            var v = CzKit.Txt(row.transform, "Val", "0", CzKit.Display, Mathf.RoundToInt(28 * k), CzKit.Text, TextAnchor.MiddleRight, 1f);
+            CzKit.Place(v, w * 0.4f, 0f, w * 0.6f - 14f * k, 56f * k);
+            y += 64f * k;
+            return v;
+        }
+
+        void RefreshProfile()
+        {
+            RefreshCompanions();
+            var acc = AppSession.Ensure().Account;
+            var title = string.IsNullOrEmpty(_draft?.title) ? "Spirit Dueler" : _draft.title;
+            if (acc == null)
+            {
+                if (_prName != null) _prName.text = "Not signed in";
+                if (_prNameplate != null) _prNameplate.text = "Not signed in";
+                if (_prHandle != null) _prHandle.text = "";
+                if (_prTeamIcon != null) _prTeamIcon.enabled = false;
+                return;
+            }
+
+            acc.EnsureProgress();
+            acc.EnsureInventory();
+            var p = acc.progress;
+            var lv = p != null ? Mathf.Max(1, p.level) : Mathf.Max(1, acc.spiritRank);
+            var name = string.IsNullOrEmpty(acc.displayName) ? acc.username : acc.displayName;
+            if (_prName != null) { _prName.text = name; TextFx.FitWidth(_prName, ((RectTransform)_prName.transform).sizeDelta.x, 18); }
+            if (_prNameplate != null) _prNameplate.text = name;
+            if (_prTitle != null) _prTitle.text = title.ToUpperInvariant();
+            if (_prNameTitle != null) _prNameTitle.text = title.ToUpperInvariant();
+            if (_prHandle != null)
+                _prHandle.text = (string.IsNullOrEmpty(acc.username) ? title : "@" + acc.username + "  ·  " + title).ToUpperInvariant();
+            var team = p != null ? p.Team : KuribohTeam.None;
+            if (_prTeam != null) _prTeam.text = KuribohTeamInfo.DisplayName(team);
+            if (_prTeamIcon != null)
+            {
+                var spr = ImagineAssets.IconTeam(team);
+                _prTeamIcon.enabled = spr != null;
+                if (spr != null) _prTeamIcon.sprite = spr;
+            }
+            if (_prWallet0 != null) _prWallet0.text = (p?.digizeni ?? 0).ToString("N0");
+            if (_prWallet1 != null) _prWallet1.text = (p?.duelCoin ?? 0).ToString("N0");
+            if (_prWallet2 != null) _prWallet2.text = (p?.setEnergy ?? 0).ToString("N0");
+            _soulBadge?.Bind(p);
+            if (_prLevel != null) _prLevel.text = lv.ToString();
+            if (p != null && _prXpFill != null)
+            {
+                var t = Mathf.Clamp(p.XpProgress01(), 0.02f, 1f);
+                _prXpFill.rectTransform.anchorMax = new Vector2(t, 1f);
+            }
+            if (_prXp != null && p != null)
+            {
+                var need = p.XpToNextLevel();
+                _prXp.text = need <= 0 ? "MAX LEVEL" : $"{p.xp:N0} / {need:N0}";
+            }
+            if (_statDuels != null) _statDuels.text = acc.duelsCompleted.ToString("N0");
+            if (_statCards != null) _statCards.text = acc.cardsCollected.ToString("N0");
+            if (_statPath != null) _statPath.text = acc.pathKm < 10f ? acc.pathKm.ToString("0.0") : acc.pathKm.ToString("N0");
+            if (_statSe != null) _statSe.text = (p != null ? p.setEnergy : 0).ToString("N0");
         }
     }
 }

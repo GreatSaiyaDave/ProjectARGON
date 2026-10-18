@@ -5,174 +5,202 @@ using UnityEngine.UI;
 using WRLDZ.Core;
 using WRLDZ.Data;
 using WRLDZ.Presentation;
-using WRLDZ.UI.Shell;
 
 namespace WRLDZ.UI
 {
     /// <summary>
-    /// Customization v1 editors for the 3D body (AVATAR_3D_INTEGRATION.md): BODY (base, height, weight),
-    /// HAIR (style + named anime / lore palettes), HAIR COLOR (pattern + per-zone colour), SKIN and
-    /// CLOTHES COLOR (per garment region). The strip row holds the choices; the controls area below holds
-    /// sliders or the colour picker (swatches + hue / saturation / value). Every change goes to the live
-    /// 3D preview through <see cref="ApplyPreview"/>; slider drags only refresh the preview and the label,
-    /// never rebuild the rows (a rebuild would drop the drag).
+    /// The CUSTOMIZE editors (AVATAR_3D_INTEGRATION.md), one per tab, built top-down into the right panel's scroll list
+    /// by <see cref="CzFlow"/>: card grids for anything with a picture (bodies, hairstyles, outfits, wardrobe pieces,
+    /// portraits), sliders for height / weight / builds / face shapes, colour gems plus hue-saturation-brightness for
+    /// paints. A click that changes the choice redraws the list in place (same scroll); a slider drag only refreshes
+    /// the body and the labels, never the rows under the finger.
+    /// Pictures are the in-engine renders under Resources/WRLDZ/Avatar3D/Thumbs/ (Assets/Editor/WRLDZ/WardrobeThumbs.cs)
+    /// when they exist, else the older Blender thumbs next to the pieces.
     /// </summary>
     public partial class AvatarCustomizerUI
     {
+        // ------------------------------------------------------------------ pictures
+
+        const string ThumbRes = "WRLDZ/Avatar3D/Thumbs/";
         static readonly Dictionary<string, Sprite> s_thumbs = new();
 
-        static Sprite HairThumb(string id)
+        static Sprite Thumb(string res)
         {
-            if (string.IsNullOrEmpty(id)) return null;
-            if (s_thumbs.TryGetValue(id, out var sp)) return sp;
-            var tex = Resources.Load<Texture2D>(OverworldAvatar3d.HairRes + "thumb_" + id);
-            sp = tex != null ? Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f)) : null;
-            s_thumbs[id] = sp;
+            if (string.IsNullOrEmpty(res)) return null;
+            if (s_thumbs.TryGetValue(res, out var sp)) return sp;
+            var tex = Resources.Load<Texture2D>(res);
+            sp = tex != null ? Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f) : null;
+            s_thumbs[res] = sp;
             return sp;
         }
 
-        string HairName(string id)
-        {
-            if (string.IsNullOrEmpty(id))
-            {
-                var def = AvatarCatalog.FindHair(OverworldAvatar3d.DefaultHairId(_draft != null && _draft.IsFemale));
-                return def != null ? def.name + " (base)" : "Base";
-            }
-            var h = AvatarCatalog.FindHair(id);
-            return h != null ? h.name + (string.IsNullOrEmpty(h.inspiredBy) ? "" : "  ·  " + h.inspiredBy) : id;
-        }
+        static string Sex(bool female) => female ? "female" : "male";
 
-        static string PaintLabel(string key)
-        {
-            var dot = key.IndexOf('.');
-            var part = dot > 0 ? key.Substring(0, dot) : key;
-            int.TryParse(dot > 0 ? key.Substring(dot + 1) : "0", out var region);
-            foreach (var set in new[] { AvatarCatalog.PaintParts, AvatarCatalog.OutfitPaintParts })
-                foreach (var pp in set)
-                    if (pp.key == part)
-                        return pp.label + " " + (region < pp.regions.Length ? pp.regions[region] : region.ToString());
-            return key;
-        }
+        static Sprite ItemThumb(string id, bool female) =>
+            Thumb(ThumbRes + "item_" + id + "_" + Sex(female))
+            ?? Thumb(OverworldAvatar3d.ClothRes + "thumb_" + id + "_" + Sex(female))
+            ?? Thumb(OverworldAvatar3d.ClothRes + "thumb_" + id + "_" + Sex(!female));
+
+        /// <summary>The sculpted (_3d) hairs' Blender thumbs came out empty, so those wait for the in-engine render.</summary>
+        static Sprite HairThumb(string id, bool female) =>
+            Thumb(ThumbRes + "hair_" + id + "_" + Sex(female))
+            ?? (id != null && id.EndsWith("_3d") ? null : Thumb(OverworldAvatar3d.HairRes + "thumb_" + id));
+
+        static Sprite LookThumb(CharacterLook look, bool female) =>
+            Thumb(ThumbRes + "look_" + look.Id) ?? ItemThumb(look.ShirtId, female);
 
         static Color Hex(string hex, Color fallback) => AvatarPortraitView.Parse(hex, fallback);
 
-        void Changed(bool rebuild)
-        {
-            ApplyPreview();
-            UpdateOptionLabel();
-            if (rebuild) RebuildOptionStrip();
-        }
+        // ------------------------------------------------------------------ dispatch
 
-        void BuildEditor3d()
+        void BuildEditor()
         {
             switch (_focus)
             {
                 case Part.Body: BuildBodyEditor(); break;
-                case Part.Hair: BuildHairEditor(); break;
-                case Part.HairColor: BuildHairColorEditor(); break;
                 case Part.Skin: BuildSkinEditor(); break;
                 case Part.FaceShape: BuildFaceShapeEditor(); break;
+                case Part.Hair: BuildHairEditor(); break;
+                case Part.HairColor: BuildHairColorEditor(); break;
+                case Part.Outfit: BuildOutfitEditor(); break;
+                case Part.Hat: BuildWardrobeEditor(ClothingSlot.Hat); break;
+                case Part.Facial: BuildWardrobeEditor(ClothingSlot.Facial); break;
+                case Part.Neck: BuildWardrobeEditor(ClothingSlot.Neck); break;
+                case Part.Shirt: BuildWardrobeEditor(ClothingSlot.Shirt); break;
+                case Part.Hands: BuildWardrobeEditor(ClothingSlot.Hands); break;
+                case Part.Bottoms: BuildWardrobeEditor(ClothingSlot.Bottoms); break;
+                case Part.Shoes: BuildWardrobeEditor(ClothingSlot.Shoes); break;
+                case Part.Paint: BuildPaintEditor(); break;
                 case Part.Accessories: BuildAdornmentEditor(false); break;
                 case Part.Tattoos: BuildAdornmentEditor(true); break;
-                case Part.Paint: BuildPaintEditor(); break;
-                case Part.Outfit: BuildOutfitEditor(); break;
+                case Part.Title: BuildTitleEditor(); break;
+                case Part.Accent: BuildSpiritEditor(); break;
+                case Part.Disk: BuildPaletteEditor(true); break;
+                case Part.Aura: BuildPaletteEditor(false); break;
+                case Part.Look: BuildPortraitEditor(); break;
             }
         }
 
-        // ---------------------------------------------------------------- BODY
-        void BuildBodyEditor()
-        {
-            var baseIcon = ImagineAssets.IconSlotLook();
-            OptionTile(_optionHost, baseIcon, !_draft.IsFemale, Color.white, () =>
-            {
-                if (_draft.IsFemale) { _draft.bodyType = 0; _draft.heightCm = 0f; }
-                Changed(true);
-            }, "MALE", 110f);
-            OptionTile(_optionHost, baseIcon, _draft.IsFemale, new Color(1f, 0.82f, 0.92f), () =>
-            {
-                if (!_draft.IsFemale) { _draft.bodyType = 1; _draft.heightCm = 0f; }
-                Changed(true);
-            }, "FEMALE", 110f);
+        // ------------------------------------------------------------------ flow helpers
 
-            var fem = _draft.IsFemale;
-            var minH = AvatarCatalog.HeightMinCm(fem);
-            var maxH = AvatarCatalog.HeightMaxCm(fem);
-            SliderRow(_controlsHost, 0.55f, 0.95f, "HEIGHT", minH, maxH, _draft.EffectiveHeightCm, true,
-                v => $"{v:0} cm  ·  {Feet(v)}",
-                v => { _draft.heightCm = Mathf.Round(v); Changed(false); });
-            SliderRow(_controlsHost, 0.05f, 0.45f, "WEIGHT", 0f, 100f, _draft.weight * 100f, true,
-                v => $"{v:0}  ·  {WeightWord(v)}",
-                v => { _draft.weight = Mathf.Round(v) / 100f; Changed(false); });
-            // build shapes (Build_Gaunt / Build_Plump / Build_Big): tiles cycle 0 → 50 → 100 → 0 so the strip stays short
-            foreach (var (key, label, group) in AvatarCatalog.BodyMorphs)
+        float CardH(float w) => Mathf.Round(w * 1.26f);
+        float Gap => 10f * _k;
+
+        void Cards(int count, Func<int, (Sprite pic, string label, bool on, Action click, string tag, Color? tint)> cell)
+        {
+            var f = _flow;
+            f.Grid(count, _cols, CardH((f.Width - Gap * (_cols - 1)) / _cols), Gap, (i, x, y, w, h) =>
             {
-                if (group != "build") continue;
-                var k = key; var pct = Mathf.RoundToInt(_draft.GetMorph(k) * 100f);
-                OptionTile(_optionHost, baseIcon, pct > 0, pct > 0 ? new Color(1f, 0.85f, 0.55f) : Color.white, () =>
+                var c = cell(i);
+                var b = CzKit.Card(f.Content, "Card", x, y, w, h, c.pic, c.label, c.on, () =>
                 {
-                    var cur = Mathf.RoundToInt(_draft.GetMorph(k) * 100f);
-                    _draft.SetMorph(k, cur >= 100 ? 0f : cur >= 50 ? 1f : 0.5f);
-                    Changed(false);
-                }, $"{label.ToUpperInvariant()} {pct}%", 110f);
-            }
+                    FreeUiKit.PlaySelect();
+                    c.click?.Invoke();
+                }, c.tint, c.tag, f.S(16));
+                f.Reveal(b);
+            });
         }
 
-        // ---------------------------------------------------------------- ACCESSORIES / TATTOOS (toggle any number)
-        void BuildAdornmentEditor(bool tattoos)
+        Slider Row(string label, float min, float max, float value, Func<float, string> fmt, Action<float> set, bool whole = false)
         {
-            var fem = _draft.IsFemale;
-            var icon = tattoos ? ImagineAssets.IconSlotFacial() : ImagineAssets.IconSlotHands();
-            var shown = 0;
-            if (tattoos)
+            var f = _flow;
+            var s = CzKit.SliderRow(f.Content, 0f, f.Y, f.Width, label, min, max, value, fmt, set, f.S(19), whole);
+            f.Reveal(s.transform.parent as RectTransform);
+            f.Y += f.S(19) * 3.4f + f.S(6);
+            return s;
+        }
+
+        void Gems(IReadOnlyList<string> hexes, Func<string> get, Action<string> set, bool allowOriginal)
+        {
+            var f = _flow;
+            var d = f.S(46);
+            var gap = f.S(12);
+            var perRow = Mathf.Max(1, Mathf.FloorToInt((f.Width + gap) / (d + gap)));
+            var cur = get() ?? "";
+            var items = new List<string>();
+            if (allowOriginal) items.Add("");
+            items.AddRange(hexes);
+            for (var i = 0; i < items.Count; i++)
             {
-                _draft.tattooIds ??= new System.Collections.Generic.List<string>();
-                foreach (var it in AdornmentCatalog.Tattoos)
+                var hex = items[i];
+                var x = (i % perRow) * (d + gap);
+                var y = f.Y + (i / perRow) * (d + gap);
+                var on = string.Equals(cur, hex, StringComparison.OrdinalIgnoreCase);
+                var col = hex.Length == 0 ? new Color(0.16f, 0.16f, 0.2f) : Hex(hex, Color.gray);
+                var h = hex;
+                var b = CzKit.Swatch(f.Content, x, y, d, col, on, () =>
                 {
-                    if (!it.FitsBody(fem)) continue;
-                    var id = it.Id; var on = _draft.tattooIds.Contains(id); shown++;
-                    OptionTile(_optionHost, icon, on, Color.white, () =>
-                    {
-                        if (_draft.tattooIds.Contains(id)) _draft.tattooIds.Remove(id); else _draft.tattooIds.Add(id);
-                        Changed(true);
-                    }, it.Name, 110f);
+                    FreeUiKit.PlaySelect();
+                    set(h);
+                    Changed(true);
+                }, hex.Length == 0 ? "AUTO" : null);
+                f.Reveal(b);
+            }
+            var rows = (items.Count + perRow - 1) / perRow;
+            f.Y += rows * (d + gap) + f.S(4);
+        }
+
+        /// <summary>Hue / saturation / brightness sliders tuning one hex (a drag only repaints; the gems update on release of the tab).</summary>
+        void FineTune(Func<string> get, Action<string> set)
+        {
+            var cur = get() ?? "";
+            var start = Hex(string.IsNullOrEmpty(cur) ? "#808080" : cur, Color.gray);
+            Color.RGBToHSV(start, out var hh, out var ss, out var vv);
+            _flow.Header("Fine tune", string.IsNullOrEmpty(cur) ? "original" : cur.ToUpperInvariant());
+            void Push()
+            {
+                set("#" + ColorUtility.ToHtmlStringRGB(Color.HSVToRGB(hh, ss, vv)));
+                Changed(false);
+            }
+            Row("Hue", 0f, 360f, hh * 360f, v => $"{v:0}°", v => { hh = v / 360f; Push(); }, true);
+            Row("Saturation", 0f, 100f, ss * 100f, v => $"{v:0}%", v => { ss = v / 100f; Push(); }, true);
+            Row("Brightness", 0f, 100f, vv * 100f, v => $"{v:0}%", v => { vv = v / 100f; Push(); }, true);
+        }
+
+        void ListRows(int count, Func<int, (string label, Color? gem, bool on, Action click)> row)
+        {
+            var f = _flow;
+            var h = f.S(54);
+            for (var i = 0; i < count; i++)
+            {
+                var r = row(i);
+                var go = new GameObject("Row", typeof(RectTransform), typeof(Image), typeof(Button));
+                go.transform.SetParent(f.Content, false);
+                var bg = go.GetComponent<Image>();
+                CzKit.Place(bg, 0f, f.Y, f.Width, h);
+                bg.sprite = CzKit.Plate ?? UiFoundation.WhiteSprite();
+                if (CzKit.Plate != null) bg.type = Image.Type.Sliced;
+                bg.color = CzKit.Plate != null ? (r.on ? new Color(1f, 0.92f, 0.78f) : Color.white) : new Color(0.12f, 0.11f, 0.14f);
+                bg.raycastTarget = true;
+                var x0 = f.S(16);
+                if (r.gem.HasValue)
+                {
+                    var ink = CzKit.Img(go.transform, "Ink", CzKit.Circle(), Color.black);
+                    CzKit.Place(ink, x0, h * 0.5f - f.S(15), f.S(30), f.S(30));
+                    var gem = CzKit.Img(ink.transform, "Gem", CzKit.Circle(), r.gem.Value);
+                    CzKit.Fill(gem.rectTransform, f.S(3));
+                    x0 += f.S(42);
                 }
-            }
-            else
-            {
-                _draft.accessoryIds ??= new System.Collections.Generic.List<string>();
-                foreach (var it in AdornmentCatalog.Accessories)
+                var t = CzKit.Txt(go.transform, "Label", r.label, CzKit.Body(600), f.S(18), r.on ? CzKit.GoldHi : CzKit.Text, TextAnchor.MiddleLeft);
+                CzKit.Place(t, x0, 0f, f.Width - x0 - f.S(40), h);
+                if (r.on)
                 {
-                    if (!it.FitsBody(fem)) continue;
-                    var id = it.Id; var on = _draft.accessoryIds.Contains(id); shown++;
-                    OptionTile(_optionHost, icon, on, Color.white, () =>
-                    {
-                        if (_draft.accessoryIds.Contains(id)) _draft.accessoryIds.Remove(id); else _draft.accessoryIds.Add(id);
-                        Changed(true);
-                    }, it.Name, 110f);
+                    CzKit.GoldFrame(go.transform, 2f, 2.8f);
+                    var m = CzKit.Img(go.transform, "Mark", CzKit.Diamond(), CzKit.GoldHi);
+                    CzKit.Place(m, f.Width - f.S(34), h * 0.5f - f.S(8), f.S(16), f.S(16));
                 }
+                var b = go.GetComponent<Button>();
+                b.targetGraphic = bg; b.transition = Selectable.Transition.None;
+                var click = r.click;
+                b.onClick.AddListener(() => { FreeUiKit.PlaySelect(); click?.Invoke(); });
+                var hv = go.AddComponent<CzHover>();
+                hv.HoverScale = 1.012f; hv.Label = t; hv.LabelRest = t.color; hv.LabelHover = r.on ? CzKit.GoldHi : Color.white;
+                f.Reveal(bg);
+                f.Y += h + f.S(8);
             }
-            if (shown == 0)
-                Hint(_controlsHost, tattoos ? "No tattoo art is in the catalogue yet (AdornmentCatalog.Tattoos)."
-                                            : "No accessories are in the catalogue yet (AdornmentCatalog.Accessories).");
         }
 
-        // ---------------------------------------------------------------- FACE SHAPE (nose, mouth, jaw, chin, cheeks, brow)
-        void BuildFaceShapeEditor()
-        {
-            var icon = ImagineAssets.IconSlotFacial();
-            foreach (var (key, label, group) in AvatarCatalog.BodyMorphs)
-            {
-                if (group != "face") continue;
-                var k = key; var pct = Mathf.RoundToInt(_draft.GetMorph(k) * 100f);
-                OptionTile(_optionHost, icon, pct > 0, pct > 0 ? new Color(0.75f, 0.9f, 1f) : Color.white, () =>
-                {
-                    var cur = Mathf.RoundToInt(_draft.GetMorph(k) * 100f);
-                    _draft.SetMorph(k, cur >= 100 ? 0f : cur >= 50 ? 1f : 0.5f);
-                    Changed(false);
-                }, $"{label.ToUpperInvariant()} {pct}%", 110f);
-            }
-            Hint(_controlsHost, "Tap a feature to step it: off, half, full. Shapes add up.");
-        }
+        // ------------------------------------------------------------------ BODY
 
         static string Feet(float cm)
         {
@@ -182,75 +210,130 @@ namespace WRLDZ.UI
 
         static string WeightWord(float v) => v < 20 ? "Slim" : v < 40 ? "Lean" : v <= 60 ? "Average" : v <= 80 ? "Sturdy" : "Heavy";
 
-        string FaceShapeWord()
+        void BuildBodyEditor()
         {
-            var on = new System.Collections.Generic.List<string>();
+            var f = _flow;
+            f.Header("Base body");
+            var fem = _draft.IsFemale;
+            var w = (f.Width - Gap) * 0.5f;
+            f.Grid(2, 2, Mathf.Round(w * 1.12f), Gap, (i, x, y, cw, ch) =>
+            {
+                var female = i == 1;
+                var b = CzKit.Card(f.Content, female ? "Female" : "Male", x, y, cw, ch,
+                    Thumb(ThumbRes + "body_" + Sex(female)) ?? ImagineAssets.IconSlotLook(), female ? "Female" : "Male", fem == female, () =>
+                    {
+                        FreeUiKit.PlaySelect();
+                        if (_draft.IsFemale == female) return;
+                        _draft.bodyType = female ? 1 : 0;
+                        _draft.heightCm = 0f;
+                        Changed(true);
+                    }, null, null, f.S(18));
+                f.Reveal(b);
+            });
+            f.Header("Stature");
+            Row("Height", AvatarCatalog.HeightMinCm(fem), AvatarCatalog.HeightMaxCm(fem), _draft.EffectiveHeightCm,
+                v => $"{v:0} cm  ·  {Feet(v)}", v => { _draft.heightCm = Mathf.Round(v); Changed(false); }, true);
+            Row("Weight", 0f, 100f, _draft.weight * 100f, v => $"{v:0}  ·  {WeightWord(v)}",
+                v => { _draft.weight = Mathf.Round(v) / 100f; Changed(false); }, true);
+            f.Header("Build");
             foreach (var (key, label, group) in AvatarCatalog.BodyMorphs)
-                if (group == "face" && _draft.GetMorph(key) > 0.01f) on.Add(label.ToLowerInvariant());
-            return on.Count == 0 ? "as built" : string.Join(", ", on);
+            {
+                if (group != "build") continue;
+                var k = key;
+                Row(label, 0f, 100f, _draft.GetMorph(k) * 100f, v => $"{v:0}%", v => { _draft.SetMorph(k, v / 100f); Changed(false); }, true);
+            }
+            f.Hint("From 3 ft (Bonz) to 6 ft 8. Builds stack on top of weight; the clothes and sculpts follow the body.");
         }
 
-        // ---------------------------------------------------------------- HAIR (style + palettes)
+        void BuildSkinEditor()
+        {
+            _flow.Header("Skin tone");
+            Gems(AvatarCatalog.SkinPresets, () => _draft.GetPaint("Body.0"), hex =>
+            {
+                _draft.SetPaint("Body.0", hex);
+                if (!string.IsNullOrEmpty(hex)) _draft.skinHex = hex;
+            }, true);
+            FineTune(() => _draft.GetPaint("Body.0"), hex => { _draft.SetPaint("Body.0", hex); _draft.skinHex = hex; });
+        }
+
+        // ------------------------------------------------------------------ FACE
+
+        void BuildFaceShapeEditor()
+        {
+            _flow.Header("Features");
+            foreach (var (key, label, group) in AvatarCatalog.BodyMorphs)
+            {
+                if (group != "face") continue;
+                var k = key;
+                Row(label, 0f, 100f, _draft.GetMorph(k) * 100f, v => $"{v:0}%", v => { _draft.SetMorph(k, v / 100f); Changed(false); }, true);
+            }
+            var f = _flow;
+            f.Gap(4f);
+            var b = CzKit.Btn(f.Content, "ResetFace", 0f, f.Y, f.Width, f.S(50), "RESET FEATURES", CzKit.Kind.Plain, () =>
+            {
+                FreeUiKit.PlayClick();
+                foreach (var (key, _, group) in AvatarCatalog.BodyMorphs) if (group == "face") _draft.SetMorph(key, 0f);
+                Changed(true);
+            }, f.S(20));
+            f.Reveal(b);
+            f.Y += f.S(60);
+        }
+
+        string FaceShapeWord()
+        {
+            var on = new List<string>();
+            foreach (var (key, label, group) in AvatarCatalog.BodyMorphs)
+                if (group == "face" && _draft.GetMorph(key) > 0.01f) on.Add(label.ToLowerInvariant());
+            return on.Count == 0 ? "As built" : string.Join(", ", on);
+        }
+
+        // ------------------------------------------------------------------ HAIR
+
+        string HairName(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                var def = AvatarCatalog.FindHair(OverworldAvatar3d.DefaultHairId(_draft != null && _draft.IsFemale));
+                return def != null ? def.name + " (base)" : "Base";
+            }
+            var h = AvatarCatalog.FindHair(id);
+            return h != null ? h.name : id;
+        }
+
         void BuildHairEditor()
         {
+            var fem = _draft.IsFemale;
             var cur = _draft.hairStyleId ?? "";
-            var defId = OverworldAvatar3d.DefaultHairId(_draft.IsFemale);
-            OptionTile(_optionHost, HairThumb(defId) ?? ImagineAssets.IconSlotHat(), cur.Length == 0, Color.white, () =>
-            {
-                _draft.hairStyleId = "";
-                Changed(true);
-            }, "BASE", 96f);
+            var defId = OverworldAvatar3d.DefaultHairId(fem);
+            var sculpts = new List<AvatarCatalog.HairStyle>();
+            var styles = new List<AvatarCatalog.HairStyle>();
             foreach (var h in AvatarCatalog.HairStyles)
             {
                 if (h.id == defId) continue;
-                var id = h.id;
-                OptionTile(_optionHost, HairThumb(id) ?? ImagineAssets.IconSlotHat(), cur == id, Color.white, () =>
+                (h.id.EndsWith("_3d") ? sculpts : styles).Add(h);
+            }
+            if (sculpts.Count > 0)
+            {
+                _flow.Header("Anime sculpts", sculpts.Count.ToString());
+                Cards(sculpts.Count, i =>
                 {
-                    _draft.hairStyleId = id;
-                    // a style arrives in its own colours unless the player already chose a pattern
-                    Changed(true);
-                }, h.name, 96f);
+                    var h = sculpts[i];
+                    return (HairThumb(h.id, fem), h.name.Replace(" (sculpt)", ""), cur == h.id, () => { _draft.hairStyleId = h.id; _draft.hairPattern = (int)HairPattern.Original; Changed(true); }, null, null);
+                });
             }
-
-            // palettes: "the style's own colours" first, then every named anime / lore palette
-            var strip = ControlsStrip(0.02f, 0.98f);
-            OptionTile(strip, UiFoundation.WhiteSprite(), _draft.hairPattern == 0, new Color(0.3f, 0.32f, 0.38f), () =>
+            _flow.Header("Styles", (styles.Count + 1).ToString());
+            Cards(styles.Count + 1, i =>
             {
-                _draft.hairPattern = (int)HairPattern.Original;
-                Changed(true);
-            }, "STYLE COLORS", 104f);
-            var style = AvatarCatalog.FindHair(string.IsNullOrEmpty(cur) ? defId : cur);
-            if (style?.palette != null)
-                PaletteTile(strip, style.palette, "CANON");
-            foreach (var pal in AvatarCatalog.HairPalettes) PaletteTile(strip, pal, pal.name);
+                if (i == 0)
+                    return (HairThumb(defId, fem), HairName(""), cur.Length == 0, () => { _draft.hairStyleId = ""; Changed(true); }, "BASE", null);
+                var h = styles[i - 1];
+                return (HairThumb(h.id, fem), h.name, cur == h.id, () => { _draft.hairStyleId = h.id; Changed(true); }, null, null);
+            });
         }
 
-        void PaletteTile(Transform host, AvatarCatalog.HairPaletteEntry pal, string label)
-        {
-            var go = OptionTile(host, UiFoundation.WhiteSprite(), false, Hex(pal.root, Color.gray), () =>
-            {
-                pal.ApplyTo(_draft);
-                Changed(true);
-            }, label, 104f);
-            // stripes for the zones the pattern uses
-            var zones = new List<string>();
-            foreach (var z in new[] { "tip", "fringe", "streak", "side" })
-                if (AvatarCatalog.PatternUses(pal.Pattern, z)) zones.Add(z);
-            for (var i = 0; i < zones.Count; i++)
-            {
-                var hex = zones[i] switch { "tip" => pal.tip, "fringe" => pal.fringe, "streak" => pal.streak, _ => pal.side };
-                var st = new GameObject("Zone", typeof(RectTransform), typeof(Image));
-                st.transform.SetParent(go.transform, false);
-                var x0 = 0.55f + i * 0.14f;
-                GoTheme.Place(st.GetComponent<RectTransform>(), x0, 0.45f, x0 + 0.12f, 0.95f);
-                var im = st.GetComponent<Image>(); im.sprite = UiFoundation.WhiteSprite(); im.color = Hex(hex, Color.gray); im.raycastTarget = false;
-            }
-        }
-
-        // ---------------------------------------------------------------- HAIR COLOR (pattern + zones)
         static readonly (string zone, string label)[] HairZones =
         {
-            ("root", "ROOT"), ("tip", "TIPS"), ("fringe", "BANGS"), ("streak", "STREAKS"), ("side", "SPLIT")
+            ("root", "Root"), ("tip", "Tips"), ("fringe", "Bangs"), ("streak", "Streaks"), ("side", "Split")
         };
 
         string ZoneHex(string zone) => zone switch
@@ -273,85 +356,89 @@ namespace WRLDZ.UI
 
         void BuildHairColorEditor()
         {
+            var f = _flow;
+            var cur = string.IsNullOrEmpty(_draft.hairStyleId) ? OverworldAvatar3d.DefaultHairId(_draft.IsFemale) : _draft.hairStyleId;
+            var style = AvatarCatalog.FindHair(cur);
+
+            // named palettes first: the style's own colours, its canon palette, then every anime / lore palette
+            var pals = new List<(string name, AvatarCatalog.HairPaletteEntry pal)> { ("Style colours", null) };
+            if (style?.palette != null) pals.Add(("Canon", style.palette));
+            foreach (var p in AvatarCatalog.HairPalettes) pals.Add((p.name, p));
+            f.Header("Palettes");
+            f.Grid(pals.Count, _cols, f.S(64), Gap, (i, x, y, w, h) =>
+            {
+                var (name, pal) = pals[i];
+                var on = pal == null ? _draft.hairPattern == (int)HairPattern.Original : false;
+                var b = CzKit.Btn(f.Content, "Pal", x, y, w, h, "", CzKit.Kind.Plain, () =>
+                {
+                    FreeUiKit.PlaySelect();
+                    if (pal == null) _draft.hairPattern = (int)HairPattern.Original; else pal.ApplyTo(_draft);
+                    Changed(true);
+                });
+                var lab = b.transform.Find("Label")?.GetComponent<Text>();
+                if (lab != null)
+                {
+                    lab.text = name; lab.font = CzKit.Body(600); lab.fontSize = f.S(15);
+                    lab.alignment = TextAnchor.LowerCenter; lab.rectTransform.offsetMin = new Vector2(4f, 4f);
+                    lab.color = on ? CzKit.GoldHi : CzKit.Text;
+                    var hv = b.GetComponent<CzHover>();
+                    if (hv != null) { hv.LabelRest = lab.color; hv.LabelHover = on ? CzKit.GoldHi : Color.white; }
+                }
+                // the palette's colours as flat stripes along the top
+                var hexes = pal == null ? new List<string>() : new List<string> { pal.root, pal.tip, pal.fringe, pal.streak, pal.side };
+                hexes.RemoveAll(string.IsNullOrEmpty);
+                if (hexes.Count == 0) hexes.Add(_draft.hairHex);
+                var sw = (w - 16f) / hexes.Count;
+                for (var k = 0; k < hexes.Count; k++)
+                {
+                    var st = CzKit.Img(b.transform, "Stripe", UiFoundation.WhiteSprite(), Hex(hexes[k], Color.gray));
+                    CzKit.Place(st, 8f + k * sw, 8f, sw - 2f, h * 0.38f);
+                }
+                if (on) CzKit.GoldFrame(b.transform, 2f, 2.8f);
+                f.Reveal(b);
+            });
+
+            f.Header("Pattern");
             var pat = (HairPattern)_draft.hairPattern;
+            var px = 0f; var py = f.Y; var th = f.S(38);
             for (var i = 0; i < AvatarCatalog.HairPatternNames.Length; i++)
             {
                 var p = (HairPattern)i;
-                OptionTile(_optionHost, ImagineAssets.IconSlotAccent(), p == pat, Color.white, () =>
+                var chip = CzKit.Chip(f.Content, px, py, th, AvatarCatalog.HairPatternNames[i], p == pat, () =>
                 {
+                    FreeUiKit.PlaySelect();
                     _draft.hairPattern = (int)p;
                     if (!AvatarCatalog.PatternUses(p, _hairZone)) _hairZone = "root";
                     Changed(true);
-                }, AvatarCatalog.HairPatternNames[i].ToUpperInvariant(), 96f);
+                }, f.S(18), out var cw);
+                if (px > 0f && px + cw > f.Width) { px = 0f; py += th + f.S(6); CzKit.Place((RectTransform)chip.transform, px, py, cw, th); }
+                px += cw + f.S(6);
             }
+            f.Y = py + th + f.S(10);
             if (pat == HairPattern.Original)
             {
-                Hint(_controlsHost, "Original shows the hairstyle's own painted colours. Pick SOLID, OMBRÉ TIPS, TRI-COLOR, STREAKS or SPLIT to recolour it, or choose a named palette under HAIR.");
+                f.Hint("Original shows the hairstyle as painted (the anime sculpts' own colours). Pick a pattern or a palette to dye it.");
                 return;
             }
-            // zone chips: the zones this pattern paints
+            f.Header("Zone");
+            px = 0f; py = f.Y;
             foreach (var (zone, label) in HairZones)
             {
                 if (!AvatarCatalog.PatternUses(pat, zone)) continue;
                 var z = zone;
-                OptionTile(_optionHost, UiFoundation.WhiteSprite(), _hairZone == z, Hex(ZoneHex(z), Color.gray), () =>
-                {
-                    _hairZone = z;
-                    Changed(true);
-                }, label, 84f);
+                var chip = CzKit.Chip(f.Content, px, py, th, label, _hairZone == z, () => { FreeUiKit.PlaySelect(); _hairZone = z; Changed(true); }, f.S(18), out var cw);
+                var dot = CzKit.Img(chip.transform, "Dot", CzKit.Circle(), Hex(ZoneHex(z), Color.gray));
+                dot.rectTransform.anchorMin = dot.rectTransform.anchorMax = new Vector2(0f, 0.5f);
+                dot.rectTransform.sizeDelta = new Vector2(f.S(10), f.S(10)); dot.rectTransform.anchoredPosition = new Vector2(f.S(8), 0f);
+                px += cw + f.S(6);
             }
             if (!AvatarCatalog.PatternUses(pat, _hairZone)) _hairZone = "root";
-            ColorPicker(_controlsHost, AvatarCatalog.HairSwatches, () => ZoneHex(_hairZone), hex => SetZoneHex(_hairZone, hex), allowOriginal: false);
+            f.Y = py + th + f.S(10);
+            Gems(AvatarCatalog.HairSwatches, () => ZoneHex(_hairZone), hex => SetZoneHex(_hairZone, hex), false);
+            FineTune(() => ZoneHex(_hairZone), hex => SetZoneHex(_hairZone, hex));
         }
 
-        // ---------------------------------------------------------------- SKIN
-        void BuildSkinEditor()
-        {
-            var cur = _draft.GetPaint("Body.0");
-            OptionTile(_optionHost, ImagineAssets.IconSlotFacial(), string.IsNullOrEmpty(cur), Color.white, () =>
-            {
-                _draft.SetPaint("Body.0", "");
-                Changed(true);
-            }, "ORIGINAL", 96f);
-            foreach (var hex in AvatarCatalog.SkinPresets)
-            {
-                var h = hex;
-                OptionTile(_optionHost, UiFoundation.WhiteSprite(), string.Equals(cur, h, StringComparison.OrdinalIgnoreCase), Hex(h, Color.gray), () =>
-                {
-                    _draft.SetPaint("Body.0", h);
-                    _draft.skinHex = h;
-                    Changed(true);
-                });
-            }
-            ColorPicker(_controlsHost, AvatarCatalog.SkinPresets, () => _draft.GetPaint("Body.0"),
-                hex => { _draft.SetPaint("Body.0", hex); if (!string.IsNullOrEmpty(hex)) _draft.skinHex = hex; }, allowOriginal: true);
-        }
-
-        // ---------------------------------------------------------------- OUTFIT (signature slot sets)
-        void BuildOutfitEditor()
-        {
-            var fem = _draft.IsFemale;
-            OptionTile(_optionHost, ImagineAssets.IconSlotShirt(), WearingSignature() == null && string.IsNullOrEmpty(_draft.outfitId), Color.white, () =>
-            {
-                ClearSignatureSlots();
-                Changed(true);
-            }, "BASE CLOTHES", 96f);
-            var any = false;
-            foreach (var look in CharacterLooks.All)
-            {
-                if (!look.FitsBody(fem)) continue;
-                any = true;
-                var pick = look;
-                OptionTile(_optionHost, ImagineAssets.IconSlotShirt(), CharacterLooks.Wearing(_draft, pick), Color.white, () =>
-                {
-                    EquipSignature(pick);
-                    Changed(true);
-                }, pick.Name, 96f);
-            }
-            Hint(_controlsHost, any
-                ? "A signature look is hat, shirt, pants, and shoes on this body. Yugi and Kaiba keep the sculpted clothes. The other looks are solid-colour shells."
-                : "No signature looks are built for this body yet.");
-        }
+        // ------------------------------------------------------------------ OUTFITS
 
         CharacterLook WearingSignature()
         {
@@ -359,6 +446,62 @@ namespace WRLDZ.UI
             for (var i = 0; i < CharacterLooks.All.Length; i++)
                 if (CharacterLooks.Wearing(_draft, CharacterLooks.All[i])) return CharacterLooks.All[i];
             return null;
+        }
+
+        void BuildOutfitEditor()
+        {
+            var fem = _draft.IsFemale;
+            var looks = new List<CharacterLook>();
+            foreach (var l in CharacterLooks.All) if (l.FitsBody(fem)) looks.Add(l);
+            var worn = WearingSignature();
+            _flow.Header("Signature looks", looks.Count.ToString());
+            Cards(looks.Count + 1, i =>
+            {
+                if (i == 0)
+                    return (ItemThumb(ClothingCatalog.DefaultShirt, fem), "Base clothes", worn == null && string.IsNullOrEmpty(_draft.outfitId),
+                        () => { ClearSignatureSlots(); Changed(true); }, null, null);
+                var look = looks[i - 1];
+                var era = look.Id.EndsWith("_dk") ? "DK" : look.Id.EndsWith("_bc") ? "BC" : null;
+                return (LookThumb(look, fem), look.Name.Replace("Duelist Kingdom ", "").Replace("Battle City ", ""), worn == look,
+                    () => { WearOutfit(look); Changed(true); }, era, null);
+            });
+            var f = _flow;
+            if (worn != null)
+            {
+                f.Gap(2f);
+                var b = CzKit.Btn(f.Content, "Cosplay", 0f, f.Y, f.Width, f.S(54), "FULL COSPLAY: " + worn.Name.ToUpperInvariant(), CzKit.Kind.Gold, () =>
+                {
+                    FreeUiKit.PlayConfirm();
+                    worn.ApplyTo(_draft);
+                    _draft.characterId = "";
+                    GrantLook(worn);
+                    Changed(true);
+                }, f.S(17));
+                f.Reveal(b);
+                f.Y += f.S(62);
+                f.Hint("A look dresses your duelist in its pieces. FULL COSPLAY also takes the character's hair, face and height.");
+            }
+            else f.Hint("A look dresses your duelist in its pieces; your body, face and hair stay yours.");
+        }
+
+        /// <summary>The look's seven slots and its garment paints only: body, face, hair and height stay the player's.</summary>
+        void WearOutfit(CharacterLook look)
+        {
+            var tmp = _draft.Clone();
+            look.ApplyTo(tmp);
+            foreach (ClothingSlot slot in Enum.GetValues(typeof(ClothingSlot))) _draft.SetSlot(slot, tmp.SlotId(slot));
+            foreach (var part in new[] { "Shirt", "Bottoms", "Shoes", "Outfit" })
+                for (var k = 0; k < 3; k++) _draft.SetPaint(part + "." + k, tmp.GetPaint(part + "." + k));
+            _draft.outfitId = "";
+            _draft.characterId = "";
+            GrantLook(look);
+            if (_paintKey.StartsWith("Outfit")) _paintKey = "Shirt.0";
+        }
+
+        void GrantLook(CharacterLook look)
+        {
+            foreach (var id in new[] { look.HatId, look.FacialId, look.ShirtId, look.HandsId, look.BottomsId, look.ShoesId, look.NeckId })
+                if (!string.IsNullOrEmpty(id)) _wardrobe?.Grant(id);
         }
 
         void ClearSignatureSlots()
@@ -374,73 +517,253 @@ namespace WRLDZ.UI
             if (_paintKey.StartsWith("Outfit")) _paintKey = "Shirt.0";
         }
 
-        void EquipSignature(CharacterLook look)
-        {
-            look.ApplyTo(_draft);
-            GrantPiece(look.HatId);
-            GrantPiece(look.FacialId);
-            GrantPiece(look.ShirtId);
-            GrantPiece(look.HandsId);
-            GrantPiece(look.BottomsId);
-            GrantPiece(look.ShoesId);
-            GrantPiece(look.NeckId);
-            if (_paintKey.StartsWith("Outfit")) _paintKey = "Shirt.0";
-        }
+        // ------------------------------------------------------------------ WARDROBE
 
-        void GrantPiece(string id)
-        {
-            if (string.IsNullOrEmpty(id) || _wardrobe == null) return;
-            _wardrobe.Grant(id);
-        }
+        static bool IsSignatureShell(ClothingItem it) => it.Id.EndsWith("_bc") || it.Id.EndsWith("_dk");
 
-        string OutfitOptionLabel()
+        void BuildWardrobeEditor(ClothingSlot slot)
         {
-            if (!string.IsNullOrEmpty(_draft.outfitId))
+            var fem = _draft.IsFemale;
+            var owned = ClothingCatalog.OwnedInSlot(_wardrobe, slot, fem);
+            // once the card renders exist (WardrobeThumbs), a piece without one has no model for this body (the
+            // Duelist Kingdom star-chip gloves, 2026-10-18): it would change nothing on the duelist, so it is not offered
+            if (Thumb(ThumbRes + "body_" + Sex(fem)) != null)
+                owned.RemoveAll(it => !it.EmptySlot && Thumb(ThumbRes + "item_" + it.Id + "_" + Sex(fem)) == null);
+            var cur = _draft.SlotId(slot);
+            var sculpts = owned.FindAll(it => it.Sculpt);
+            var shells = owned.FindAll(it => !it.Sculpt && IsSignatureShell(it));
+            var basics = owned.FindAll(it => !it.Sculpt && !IsSignatureShell(it));
+            basics.Sort((a, b) => (b.EmptySlot ? 1 : 0).CompareTo(a.EmptySlot ? 1 : 0));   // "No hat" first
+            void Section(string title, List<ClothingItem> items)
             {
-                var old = AvatarCatalog.FindOutfit(_draft.outfitId);
-                if (old != null) return "Outfit: " + old.name;
+                if (items.Count == 0) return;
+                _flow.Header(title, items.Count.ToString());
+                Cards(items.Count, i =>
+                {
+                    var it = items[i];
+                    var n = ClothingCatalog.PocketsOnItem(it, _wardrobe);
+                    return (ItemThumb(it.Id, fem), it.Name, it.Id == cur, () =>
+                    {
+                        _draft.SetSlot(slot, it.Id);
+                        Changed(true);
+                    }, it.CanHoldPockets && n > 0 ? n + (n == 1 ? " pocket" : " pockets") : null, null);
+                });
             }
-            var worn = WearingSignature();
-            return worn != null ? "Outfit: " + worn.Name : "Outfit: Base clothes";
+            Section("Anime sculpts", sculpts);
+            Section("Signature pieces", shells);
+            Section("Basics", basics);
+            if (owned.Count <= 1) _flow.Hint("More pieces come from the Bazaar and the story.");
         }
 
-        // ---------------------------------------------------------------- CLOTHES COLOR
+        // ------------------------------------------------------------------ COLOURS
+
+        static string PaintLabel(string key)
+        {
+            var dot = key.IndexOf('.');
+            var part = dot > 0 ? key.Substring(0, dot) : key;
+            int.TryParse(dot > 0 ? key.Substring(dot + 1) : "0", out var region);
+            foreach (var set in new[] { AvatarCatalog.PaintParts, AvatarCatalog.OutfitPaintParts })
+                foreach (var pp in set)
+                    if (pp.key == part)
+                        return pp.label + " " + (region < pp.regions.Length ? pp.regions[region] : region.ToString());
+            return key;
+        }
+
         void BuildPaintEditor()
         {
             var outfit = AvatarCatalog.FindOutfit(_draft.outfitId);
             var parts = outfit != null && outfit.FitsBody(_draft.IsFemale) ? AvatarCatalog.OutfitPaintParts : AvatarCatalog.PaintParts;
             if (outfit != null && !_paintKey.StartsWith("Outfit") && !_paintKey.StartsWith("Body")) _paintKey = "Outfit.0";
             if (outfit == null && _paintKey.StartsWith("Outfit")) _paintKey = "Shirt.0";
+            var keys = new List<(string key, string label)>();
             foreach (var pp in parts)
-            {
                 for (var r = 0; r < pp.regions.Length; r++)
                 {
                     if (pp.key == "Body" && r == 0) continue;   // skin has its own tab
-                    var key = pp.key + "." + r;
-                    var hex = _draft.GetPaint(key);
-                    var label = (pp.key == "Body" ? pp.label : pp.label + " " + pp.regions[r]).ToUpperInvariant();
-                    OptionTile(_optionHost, UiFoundation.WhiteSprite(), _paintKey == key,
-                        string.IsNullOrEmpty(hex) ? new Color(0.22f, 0.24f, 0.30f) : Hex(hex, Color.gray), () =>
-                        {
-                            _paintKey = key;
-                            Changed(true);
-                        }, label, 96f);
+                    keys.Add((pp.key + "." + r, pp.key == "Body" ? pp.label : pp.label + " " + pp.regions[r]));
                 }
+            var sculpted = new List<string>();
+            foreach (var slot in new[] { ClothingSlot.Shirt, ClothingSlot.Bottoms, ClothingSlot.Shoes })
+            {
+                var it = ClothingCatalog.Get(_draft.SlotId(slot));
+                if (it != null && it.Sculpt) sculpted.Add(it.Name);
             }
-            ColorPicker(_controlsHost, AvatarCatalog.ClothingSwatches, () => _draft.GetPaint(_paintKey),
-                hex => _draft.SetPaint(_paintKey, hex), allowOriginal: true);
+            if (sculpted.Count > 0)
+                _flow.Hint("Anime sculpts keep their painted colours (" + string.Join(", ", sculpted) + "). Paint applies to the standard pieces.");
+            _flow.Header("Region");
+            ListRows(keys.Count, i =>
+            {
+                var (key, label) = keys[i];
+                var hex = _draft.GetPaint(key);
+                return (label + (string.IsNullOrEmpty(hex) ? "  ·  original" : ""), string.IsNullOrEmpty(hex) ? new Color(0.16f, 0.16f, 0.2f) : Hex(hex, Color.gray),
+                    _paintKey == key, () => { _paintKey = key; Changed(true); });
+            });
+            _flow.Header(PaintLabel(_paintKey));
+            Gems(AvatarCatalog.ClothingSwatches, () => _draft.GetPaint(_paintKey), hex => _draft.SetPaint(_paintKey, hex), true);
+            FineTune(() => _draft.GetPaint(_paintKey), hex => _draft.SetPaint(_paintKey, hex));
         }
 
-        // ---------------------------------------------------------------- spirit companion (profile sheet)
+        // ------------------------------------------------------------------ ADORNMENTS
+
+        void BuildAdornmentEditor(bool tattoos)
+        {
+            var fem = _draft.IsFemale;
+            if (tattoos)
+            {
+                _draft.tattooIds ??= new List<string>();
+                var list = new List<TattooItem>();
+                foreach (var it in AdornmentCatalog.Tattoos) if (it.FitsBody(fem)) list.Add(it);
+                _flow.Header("Tattoos", list.Count.ToString());
+                Cards(list.Count, i =>
+                {
+                    var it = list[i];
+                    return (Thumb(it.Resource), it.Name, _draft.tattooIds.Contains(it.Id), () =>
+                    {
+                        if (_draft.tattooIds.Contains(it.Id)) _draft.tattooIds.Remove(it.Id); else _draft.tattooIds.Add(it.Id);
+                        Changed(true);
+                    }, null, null);
+                });
+                if (list.Count == 0) _flow.Hint("No tattoo art is in the catalogue yet. Canon marks (Odion's face, Marik's back) arrive with their sourced art.");
+            }
+            else
+            {
+                _draft.accessoryIds ??= new List<string>();
+                var list = new List<AccessoryItem>();
+                foreach (var it in AdornmentCatalog.Accessories) if (it.FitsBody(fem)) list.Add(it);
+                _flow.Header("Accessories", list.Count.ToString());
+                Cards(list.Count, i =>
+                {
+                    var it = list[i];
+                    return (null, it.Name, _draft.accessoryIds.Contains(it.Id), () =>
+                    {
+                        if (_draft.accessoryIds.Contains(it.Id)) _draft.accessoryIds.Remove(it.Id); else _draft.accessoryIds.Add(it.Id);
+                        Changed(true);
+                    }, null, null);
+                });
+                if (list.Count == 0) _flow.Hint("No accessories are in the catalogue yet. The Millennium items are worn from WARDROBE · NECK.");
+            }
+        }
+
+        // ------------------------------------------------------------------ DUELIST
+
+        void BuildTitleEditor()
+        {
+            _flow.Header("Title");
+            var titles = AvatarCatalog.PresetTitles;
+            ListRows(titles.Length, i => (titles[i], null, _draft.title == titles[i], () => { _draft.title = titles[i]; Changed(true); }));
+        }
+
+        void BuildSpiritEditor()
+        {
+            _flow.Header("Spirit magic");
+            Gems(AvatarCatalog.AccentPresets, () => _draft.accentHex, hex => _draft.accentHex = hex, false);
+            _flow.Hint("The colour of your Spirit Dueler's magic. The Duel Disk and the aura follow it unless they have their own palette.");
+        }
+
+        void BuildPaletteEditor(bool disk)
+        {
+            var hexes = disk ? AvatarCatalog.DiskPalettes : AvatarCatalog.AuraPalettes;
+            var names = disk ? AvatarCatalog.DiskPaletteNames : AvatarCatalog.AuraPaletteNames;
+            var cur = (disk ? _draft.diskHex : _draft.auraHex) ?? "";
+            var spirit = Hex(_draft.accentHex, Color.cyan);
+            _flow.Header(disk ? "Duel Disk" : "Aura");
+            ListRows(hexes.Length, i =>
+            {
+                var hex = hexes[i];
+                return (i < names.Length ? names[i] : hex, hex.Length == 0 ? spirit : Hex(hex, Color.gray),
+                    string.Equals(cur, hex, StringComparison.OrdinalIgnoreCase), () =>
+                    {
+                        if (disk) _draft.diskHex = hex; else _draft.auraHex = hex;
+                        Changed(true);
+                    });
+            });
+        }
+
+        void BuildPortraitEditor()
+        {
+            _flow.Header("Map portrait");
+            Cards(AvatarCatalog.PortraitCount, i =>
+            {
+                var idx = i;
+                return (StreamingSprite.Load($"WRLDZ/Avatar/portraits/portrait_{i}.png"), AvatarCatalog.PortraitNames[i], idx == _draft.portraitIndex,
+                    () => { _draft.portraitIndex = idx; Changed(true); }, null, null);
+            });
+            _flow.Hint("The 2D face shown where the 3D body is not drawn (menus, chat, friend lists).");
+        }
+
+        // ------------------------------------------------------------------ the detail strip
+
+        (string name, string blurb, string meta) DetailFor(Part p)
+        {
+            switch (p)
+            {
+                case Part.Body:
+                {
+                    var builds = new List<string>();
+                    foreach (var (key, label, group) in AvatarCatalog.BodyMorphs)
+                        if (group == "build" && _draft.GetMorph(key) > 0.01f) builds.Add(label + " " + Mathf.RoundToInt(_draft.GetMorph(key) * 100f) + "%");
+                    return ((_draft.IsFemale ? "Female" : "Male") + " duelist",
+                        $"{_draft.EffectiveHeightCm:0} cm  ·  {Feet(_draft.EffectiveHeightCm)}  ·  {WeightWord(_draft.weight * 100f)}",
+                        builds.Count == 0 ? "" : string.Join(" · ", builds).ToUpperInvariant());
+                }
+                case Part.Skin:
+                {
+                    var hex = _draft.GetPaint("Body.0");
+                    return ("Skin tone", string.IsNullOrEmpty(hex) ? "The body's own painted tone." : hex.ToUpperInvariant(), "");
+                }
+                case Part.FaceShape: return ("Face shape", FaceShapeWord(), "");
+                case Part.Hair:
+                {
+                    var h = AvatarCatalog.FindHair(string.IsNullOrEmpty(_draft.hairStyleId) ? OverworldAvatar3d.DefaultHairId(_draft.IsFemale) : _draft.hairStyleId);
+                    return (HairName(_draft.hairStyleId), h != null && !string.IsNullOrEmpty(h.inspiredBy) ? h.inspiredBy : "", "");
+                }
+                case Part.HairColor:
+                    return ("Hair dye", AvatarCatalog.HairPatternNames[Mathf.Clamp(_draft.hairPattern, 0, AvatarCatalog.HairPatternNames.Length - 1)]
+                                        + (_draft.hairPattern == 0 ? "" : "  ·  " + _hairZone), "");
+                case Part.Outfit:
+                {
+                    var worn = WearingSignature();
+                    return (worn != null ? worn.Name : "Base clothes", worn != null ? "Every piece of this look is worn." : "Your own pieces from the wardrobe.", "");
+                }
+                case Part.Hat: case Part.Facial: case Part.Neck: case Part.Shirt: case Part.Hands: case Part.Bottoms: case Part.Shoes:
+                {
+                    var slot = p switch
+                    {
+                        Part.Hat => ClothingSlot.Hat, Part.Facial => ClothingSlot.Facial, Part.Neck => ClothingSlot.Neck, Part.Shirt => ClothingSlot.Shirt,
+                        Part.Hands => ClothingSlot.Hands, Part.Bottoms => ClothingSlot.Bottoms, _ => ClothingSlot.Shoes
+                    };
+                    var it = ClothingCatalog.Get(_draft.SlotId(slot));
+                    if (it == null) return (ClothingCatalog.SlotLabel(slot), "", "");
+                    var n = ClothingCatalog.PocketsOnItem(it, _wardrobe);
+                    return (it.Name, it.Blurb ?? "", it.CanHoldPockets ? (n + (n == 1 ? " POCKET" : " POCKETS")) + (it.Sculpt ? "  ·  ANIME SCULPT" : "") : it.Sculpt ? "ANIME SCULPT" : "");
+                }
+                case Part.Paint:
+                {
+                    var hex = _draft.GetPaint(_paintKey);
+                    return (PaintLabel(_paintKey), string.IsNullOrEmpty(hex) ? "Original colour." : hex.ToUpperInvariant(), "");
+                }
+                case Part.Accessories: return ("Accessories", (_draft.accessoryIds?.Count ?? 0) == 0 ? "None worn." : _draft.accessoryIds.Count + " worn.", "");
+                case Part.Tattoos: return ("Tattoos", (_draft.tattooIds?.Count ?? 0) == 0 ? "None." : _draft.tattooIds.Count + " applied.", "");
+                case Part.Title: return (string.IsNullOrEmpty(_draft.title) ? "Spirit Dueler" : _draft.title, "Shown under your name to other duelists.", "");
+                case Part.Accent: return ("Spirit magic", (_draft.accentHex ?? "").ToUpperInvariant(), "");
+                case Part.Disk: return ("Duel Disk", AvatarCatalog.PaletteName(AvatarCatalog.DiskPalettes, AvatarCatalog.DiskPaletteNames, _draft.diskHex), "");
+                case Part.Aura: return ("Aura", AvatarCatalog.PaletteName(AvatarCatalog.AuraPalettes, AvatarCatalog.AuraPaletteNames, _draft.auraHex), "");
+                case Part.Look:
+                    return ("Map portrait", AvatarCatalog.PortraitNames[Mathf.Clamp(_draft.portraitIndex, 0, AvatarCatalog.PortraitCount - 1)], "");
+            }
+            return ("", "", "");
+        }
+
+        // ------------------------------------------------------------------ spirit companion (profile)
 
         /// <summary>
-        /// The spirit companion column left of the portrait: players see their Kuriboh; the lab admin account
+        /// The spirit companion cards on the profile: players see their Kuriboh; the lab admin account
         /// (<see cref="LabAdminService.IsAdmin"/>) sees all six and taps one to switch (saved on the account, map refreshed).
         /// </summary>
         void RefreshCompanions()
         {
             if (_companionHost == null) return;
-            FloatingPanel.DestroyChildrenNow(_companionHost);
+            CzKit.Clear(_companionHost);
             var acc = AppSession.Ensure().Account;
             if (acc?.progress == null) return;
             var admin = LabAdminService.IsAdmin(acc);
@@ -449,58 +772,28 @@ namespace WRLDZ.UI
             if (admin) list.AddRange(SpiritCompanions.All);
             else if (SpiritCompanions.Find(current) != null) list.Add(SpiritCompanions.Find(current));
             if (list.Count == 0) return;
-
-            var head = FloatingPanel.Body(_companionHost, admin ? "SPIRIT · ADMIN" : "SPIRIT", 12);
-            GoTheme.Place(head.rectTransform, 0f, 0.93f, 1f, 1f);
-            StyleReadable(head, 12, DuelystUi.GoldHot, TextAnchor.MiddleCenter);
-            head.resizeTextForBestFit = true; head.resizeTextMinSize = 8; head.resizeTextMaxSize = 13;
-
-            var cols = list.Count > 1 ? 2 : 1;
-            var rows = (list.Count + cols - 1) / cols;
-            const float gap = 0.03f;
-            var cellW = (1f - gap * (cols - 1)) / cols;
-            var cellH = Mathf.Min(0.42f, (0.92f - gap * (rows - 1)) / rows);
+            var k = _companionK;
+            var w = _companionHost.sizeDelta.x;
+            const int cols = 3;
+            var gap = 10f * k;
+            var cw = (w - gap * (cols - 1)) / cols;
+            var ch = Mathf.Round(cw * 1.08f);
             for (var i = 0; i < list.Count; i++)
             {
                 var d = list[i];
-                var c = i % cols; var r = i / cols;
-                var x0 = c * (cellW + gap); var y1 = 0.92f - r * (cellH + gap);
-                var tile = new GameObject("Spirit_" + d.Id, typeof(RectTransform), typeof(Image), typeof(Button), typeof(Outline));
-                tile.transform.SetParent(_companionHost, false);
-                GoTheme.Place(tile.GetComponent<RectTransform>(), x0, y1 - cellH, x0 + cellW, y1);
-                var bg = tile.GetComponent<Image>();
-                bg.sprite = UiFoundation.WhiteSprite();
-                bg.color = new Color(0.04f, 0.06f, 0.10f, 0.55f);
-                var ring = tile.GetComponent<Outline>();
-                ring.effectColor = DuelystUi.Gold; ring.effectDistance = new Vector2(2f, -2f); ring.useGraphicAlpha = false;
-                ring.enabled = d.Id == current;
-
-                var icon = new GameObject("Icon", typeof(RectTransform), typeof(Image));
-                icon.transform.SetParent(tile.transform, false);
-                GoTheme.Place(icon.GetComponent<RectTransform>(), 0.06f, 0.24f, 0.94f, 0.98f);
-                var ii = icon.GetComponent<Image>();
-                ii.sprite = CompanionThumb(d.Id) ?? ImagineAssets.IconSoul();
-                ii.preserveAspect = true; ii.raycastTarget = false;
-
-                var lbl = FloatingPanel.Body(tile.transform, d.Name.ToUpperInvariant(), 10);
-                GoTheme.Place(lbl.rectTransform, 0.02f, 0f, 0.98f, 0.24f);
-                StyleReadable(lbl, 10, DuelystUi.TextCream, TextAnchor.MiddleCenter);
-                lbl.resizeTextForBestFit = true; lbl.resizeTextMinSize = 6; lbl.resizeTextMaxSize = 11;
-                lbl.horizontalOverflow = HorizontalWrapMode.Wrap;
-                lbl.raycastTarget = false;
-
-                var btn = tile.GetComponent<Button>();
-                btn.targetGraphic = bg;
-                btn.interactable = admin;
+                var x = (i % cols) * (cw + gap);
+                var y = (i / cols) * (ch + gap);
                 var id = d.Id;
-                btn.onClick.AddListener(() =>
+                var b = CzKit.Card(_companionHost, "Spirit_" + d.Id, x, y, cw, ch, CompanionThumb(d.Id) ?? ImagineAssets.IconSoul(), d.Name, d.Id == current, () =>
                 {
+                    if (!admin) return;
                     FreeUiKit.PlaySelect();
                     acc.progress.companionId = id;
                     ProgressionService.Persist(acc);
                     RefreshCompanions();
                     _onSaved?.Invoke();   // the map re-attaches its companion
-                });
+                }, null, null, Mathf.RoundToInt(14 * k));
+                b.interactable = admin;
             }
         }
 
@@ -514,177 +807,5 @@ namespace WRLDZ.UI
             s_companionThumbs[id] = sp;
             return sp;
         }
-
-        // ---------------------------------------------------------------- widgets
-        Transform ControlsStrip(float y0, float y1)
-        {
-            var strip = new GameObject("Strip", typeof(RectTransform), typeof(Image), typeof(ScrollRect), typeof(RectMask2D));
-            strip.transform.SetParent(_controlsHost, false);
-            GoTheme.Place(strip.GetComponent<RectTransform>(), 0f, y0, 1f, y1);
-            return MakeScrollStrip(strip);
-        }
-
-        static void Hint(Transform host, string text)
-        {
-            var t = FloatingPanel.Body(host, text, 14);
-            GoTheme.Place(t.rectTransform, 0.02f, 0.05f, 0.98f, 0.95f);
-            StyleReadable(t, 14, DuelystUi.TextMuted, TextAnchor.MiddleCenter);
-        }
-
-        /// <summary>Swatch row + hue / saturation / value sliders editing one hex. allowOriginal adds a reset swatch (empty hex).</summary>
-        void ColorPicker(Transform host, IReadOnlyList<string> swatches, Func<string> get, Action<string> set, bool allowOriginal)
-        {
-            var strip = ControlsStrip(0.60f, 1f);
-            var cur = get() ?? "";
-            if (allowOriginal)
-                OptionTile(strip, UiFoundation.WhiteSprite(), string.IsNullOrEmpty(cur), new Color(0.22f, 0.24f, 0.30f), () =>
-                {
-                    set("");
-                    Changed(true);
-                }, "ORIGINAL", 84f);
-            foreach (var hex in swatches)
-            {
-                var h = hex;
-                OptionTile(strip, UiFoundation.WhiteSprite(), string.Equals(cur, h, StringComparison.OrdinalIgnoreCase), Hex(h, Color.gray), () =>
-                {
-                    set(h);
-                    Changed(true);
-                }, null, 56f);
-            }
-
-            var start = Hex(string.IsNullOrEmpty(cur) ? "#808080" : cur, Color.gray);
-            Color.RGBToHSV(start, out var hh, out var ss, out var vv);
-            Image satTrack = null, valTrack = null, well = null;
-            void Push()
-            {
-                var c = Color.HSVToRGB(hh, ss, vv);
-                set("#" + ColorUtility.ToHtmlStringRGB(c));
-                if (well != null) well.color = c;
-                PaintTrack(satTrack, Color.HSVToRGB(hh, 0f, vv), Color.HSVToRGB(hh, 1f, vv));
-                PaintTrack(valTrack, Color.black, Color.HSVToRGB(hh, ss, 1f));
-                Changed(false);
-            }
-            var hueTrack = SliderRow(host, 0.40f, 0.57f, "HUE", 0f, 1f, hh, false, null, v => { hh = v; Push(); }, gradient: true);
-            satTrack = SliderRow(host, 0.21f, 0.38f, "SAT", 0f, 1f, ss, false, null, v => { ss = v; Push(); }, gradient: true);
-            valTrack = SliderRow(host, 0.02f, 0.19f, "BRIGHT", 0f, 1f, vv, false, null, v => { vv = v; Push(); }, gradient: true);
-            if (hueTrack != null) { hueTrack.sprite = HueSprite(); hueTrack.color = Color.white; }
-            PaintTrack(satTrack, Color.HSVToRGB(hh, 0f, vv), Color.HSVToRGB(hh, 1f, vv));
-            PaintTrack(valTrack, Color.black, Color.HSVToRGB(hh, ss, 1f));
-
-            var wellGo = new GameObject("Current", typeof(RectTransform), typeof(Image), typeof(Outline));
-            wellGo.transform.SetParent(host, false);
-            GoTheme.Place(wellGo.GetComponent<RectTransform>(), 0.90f, 0.04f, 1f, 0.55f);
-            well = wellGo.GetComponent<Image>();
-            well.sprite = UiFoundation.WhiteSprite();
-            well.color = string.IsNullOrEmpty(cur) ? new Color(0.22f, 0.24f, 0.30f) : start;
-            var o = wellGo.GetComponent<Outline>(); o.effectColor = DuelystUi.Gold; o.effectDistance = new Vector2(1.5f, -1.5f);
-        }
-
-        static Sprite s_hue;
-        static Sprite HueSprite()
-        {
-            if (s_hue != null) return s_hue;
-            var t = new Texture2D(128, 1, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
-            for (var x = 0; x < 128; x++) t.SetPixel(x, 0, Color.HSVToRGB(x / 127f, 1f, 1f));
-            t.Apply();
-            s_hue = Sprite.Create(t, new Rect(0, 0, 128, 1), new Vector2(0.5f, 0.5f));
-            return s_hue;
-        }
-
-        /// <summary>Two-stop gradient track: a 2x1 texture per track, rewritten in place while dragging.</summary>
-        static void PaintTrack(Image track, Color a, Color b)
-        {
-            if (track == null) return;
-            var tex = track.sprite != null ? track.sprite.texture : null;
-            if (tex == null || tex.width != 2 || tex.name != "GradTrack")
-            {
-                tex = new Texture2D(2, 1, TextureFormat.RGBA32, false) { name = "GradTrack", wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
-                track.sprite = Sprite.Create(tex, new Rect(0, 0, 2, 1), new Vector2(0.5f, 0.5f));
-            }
-            tex.SetPixel(0, 0, a); tex.SetPixel(1, 0, b); tex.Apply();
-            track.color = Color.white;
-        }
-
-        /// <summary>
-        /// Label + slider (+ value text) in rows [y0, y1] of <paramref name="host"/>. Returns the track Image so the
-        /// caller can paint a gradient on it (gradient = no fill bar).
-        /// </summary>
-        Image SliderRow(Transform host, float y0, float y1, string label, float min, float max, float value, bool showValue,
-            Func<float, string> fmt, Action<float> onChange, bool gradient = false)
-        {
-            var row = new GameObject("Row_" + label, typeof(RectTransform));
-            row.transform.SetParent(host, false);
-            GoTheme.Place(row.GetComponent<RectTransform>(), 0f, y0, gradient ? 0.88f : 1f, y1);
-
-            var lbl = FloatingPanel.Body(row.transform, label, 13);
-            GoTheme.Place(lbl.rectTransform, 0f, 0f, 0.16f, 1f);
-            StyleReadable(lbl, 13, DuelystUi.GoldHot, TextAnchor.MiddleLeft);
-            lbl.resizeTextForBestFit = true; lbl.resizeTextMinSize = 8; lbl.resizeTextMaxSize = 15;
-
-            Text val = null;
-            if (showValue)
-            {
-                val = FloatingPanel.Body(row.transform, "", 13);
-                GoTheme.Place(val.rectTransform, 0.70f, 0f, 1f, 1f);
-                StyleReadable(val, 13, DuelystUi.TextCream, TextAnchor.MiddleRight);
-                val.resizeTextForBestFit = true; val.resizeTextMinSize = 8; val.resizeTextMaxSize = 15;
-            }
-
-            var sgo = new GameObject("Slider", typeof(RectTransform), typeof(Slider));
-            sgo.transform.SetParent(row.transform, false);
-            GoTheme.Place(sgo.GetComponent<RectTransform>(), 0.17f, 0.05f, showValue ? 0.68f : 1f, 0.95f);
-
-            var trackGo = new GameObject("Track", typeof(RectTransform), typeof(Image));
-            trackGo.transform.SetParent(sgo.transform, false);
-            GoTheme.Place(trackGo.GetComponent<RectTransform>(), 0f, 0.30f, 1f, 0.70f);
-            var track = trackGo.GetComponent<Image>();
-            track.sprite = UiFoundation.WhiteSprite();
-            track.color = new Color(0.10f, 0.12f, 0.18f, 0.9f);
-
-            var slider = sgo.GetComponent<Slider>();
-            if (!gradient)
-            {
-                var fillArea = new GameObject("Fill Area", typeof(RectTransform));
-                fillArea.transform.SetParent(sgo.transform, false);
-                GoTheme.Place(fillArea.GetComponent<RectTransform>(), 0f, 0.30f, 1f, 0.70f);
-                var fill = new GameObject("Fill", typeof(RectTransform), typeof(Image));
-                fill.transform.SetParent(fillArea.transform, false);
-                var frt = fill.GetComponent<RectTransform>(); frt.anchorMin = Vector2.zero; frt.anchorMax = new Vector2(0f, 1f); frt.offsetMin = frt.offsetMax = Vector2.zero;
-                var fi = fill.GetComponent<Image>(); fi.sprite = UiFoundation.WhiteSprite(); fi.color = DuelystUi.Gold;
-                slider.fillRect = frt;
-            }
-
-            var handleArea = new GameObject("Handle Slide Area", typeof(RectTransform));
-            handleArea.transform.SetParent(sgo.transform, false);
-            var hart = handleArea.GetComponent<RectTransform>(); hart.anchorMin = Vector2.zero; hart.anchorMax = Vector2.one;
-            hart.offsetMin = new Vector2(8f, 0f); hart.offsetMax = new Vector2(-8f, 0f);
-            var handle = new GameObject("Handle", typeof(RectTransform), typeof(Image), typeof(Outline));
-            handle.transform.SetParent(handleArea.transform, false);
-            var hrt = handle.GetComponent<RectTransform>(); hrt.anchorMin = new Vector2(0f, 0.08f); hrt.anchorMax = new Vector2(0f, 0.92f);
-            hrt.sizeDelta = new Vector2(16f, 0f);
-            var hi = handle.GetComponent<Image>(); hi.sprite = UiFoundation.WhiteSprite(); hi.color = DuelystUi.TextCream;
-            var ho = handle.GetComponent<Outline>(); ho.effectColor = new Color(0f, 0f, 0f, 0.8f); ho.effectDistance = new Vector2(1.5f, -1.5f);
-
-            slider.handleRect = hrt;
-            slider.targetGraphic = hi;
-            slider.direction = Slider.Direction.LeftToRight;
-            slider.minValue = min;
-            slider.maxValue = max;
-            slider.SetValueWithoutNotify(Mathf.Clamp(value, min, max));
-            if (val != null && fmt != null) val.text = fmt(slider.value);
-            slider.onValueChanged.AddListener(v =>
-            {
-                if (val != null && fmt != null) val.text = fmt(v);
-                onChange?.Invoke(v);
-            });
-            return track;
-        }
-    }
-
-    /// <summary>Calls <see cref="Changed"/> when its RectTransform changes size (orientation / window resize).</summary>
-    public sealed class RectChangeRelay : MonoBehaviour
-    {
-        public Action Changed;
-        void OnRectTransformDimensionsChange() => Changed?.Invoke();
     }
 }
