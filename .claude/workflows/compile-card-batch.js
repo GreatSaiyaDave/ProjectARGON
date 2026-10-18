@@ -754,7 +754,9 @@ checkout / clean / commit there: other sessions keep uncommitted work in it (the
    bash ${TOOLS}/headless.sh . --export-seed; gate there (--quiet PASS, csc_overlay + --release OK, enum_guard --repo .,
    handler_guard --repo ., status_diff of a fresh --status-dump against one of HEAD: no losses except this batch's intended
    ones). Then regenerate ${RUN}/landing.patch from _landing (same command as step 1) and use _landing's seed. rebased=true.
-3. Apply to ${REPO}. List its uncommitted files (git -C ${REPO} status --porcelain).
+3. Apply to ${REPO}. First, if ~/.cache/argon-menu/LANDING exists, another session is landing in the owner's open Editor:
+   wait (poll every 60 s, up to 45 min) until it is gone before writing anything to ${REPO}.
+   List its uncommitted files (git -C ${REPO} status --porcelain).
    - Landing files with NO uncommitted change: git -C ${REPO} apply with --exclude=<each file that has one>.
    - Each landing file that HAS uncommitted changes (a peer's work in progress): build the merged file in a scratch dir.
      Start from git -C ${REPO} show HEAD:<file>, apply the landing hunks for that file (--include=<file>), then apply the
