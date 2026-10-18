@@ -115,7 +115,7 @@ namespace WRLDZ.Duel.TextEffects
         }
 
         static int FreeZones(DuelistState who) =>
-            who?.MonsterZones == null ? 0 : who.MonsterZones.Count(z => z != null && z.IsEmpty);
+            ZoneCapsRuntime.UsableMonsterZones(who); // ZoneCapsAndPhaseWindows: caps
 
         /// <summary>
         /// Play is idle for a new choice: the Battle Phase is over (its End Step work is done: Main Phase 2, or the held

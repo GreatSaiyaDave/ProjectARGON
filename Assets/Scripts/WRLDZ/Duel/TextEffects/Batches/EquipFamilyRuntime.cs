@@ -428,6 +428,8 @@ namespace WRLDZ.Duel.TextEffects
             if (!string.IsNullOrEmpty(clause.NamedCard) && !monster.IsNamed(clause.NamedCard)) return false;
             // ContinuousLocksAndIgnitions batch (v163): Buster Rancher — ATK 1000 or less (except during damage calculation).
             if (ContinuousLocksAndIgnitionsRuntime.BreaksAtkEquipLimit(engine, clause, monster)) return false;
+            // NormalMonsterSpells batch: a Level / Normal Monster limit (Sword of the Soul-Eater, Opti-Camouflage Armor).
+            if (!NormalMonsterSpellsRuntime.EquipLimitAllows(clause, monster)) return false;
             // Cyber Shield: "Harpie Lady" or "Harpie Lady Sisters" (EquipHostName / AltNamedCard).
             if (!string.IsNullOrEmpty(clause.EquipHostName) && !monster.IsNamed(clause.EquipHostName) &&
                 (string.IsNullOrEmpty(clause.AltNamedCard) || !monster.IsNamed(clause.AltNamedCard)))

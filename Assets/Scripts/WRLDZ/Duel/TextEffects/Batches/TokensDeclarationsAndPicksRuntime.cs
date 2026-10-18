@@ -169,7 +169,7 @@ namespace WRLDZ.Duel.TextEffects
         {
             var dest = clause.TokenToOpponent ? engine.OpponentOf(who) : who;
             var need = Math.Max(1, clause.TokenCount);
-            if (dest != null && FreeZones(dest) >= need) return true;
+            if (dest != null && FreeZonesPlacedBy(engine, who, dest) >= need) return true;
             engine.Log($"{source?.Name ?? "Effect"}: {need} free Monster Zones are needed — no Token is Summoned.");
             return false;
         }
@@ -258,7 +258,14 @@ namespace WRLDZ.Duel.TextEffects
             }
         };
 
-        static int FreeZones(DuelistState side) => side.MonsterZones.Count(z => z != null && z.IsEmpty);
+        static int FreeZones(DuelistState side) => ZoneCapsRuntime.UsableMonsterZones(side); // ZoneCapsAndPhaseWindows: caps
+
+        /// <summary>ZoneCapsAndPhaseWindows batch: <see cref="FreeZones"/> for Tokens <paramref name="who"/>'s effect places.</summary>
+        static int FreeZonesPlacedBy(DuelEngine engine, DuelistState who, DuelistState dest)
+        {
+            using (ZoneCapsRuntime.PlacedBy(engine, who))
+                return FreeZones(dest);
+        }
 
         // ───────────────────────────── activation conditions ─────────────────────────────
 
@@ -310,7 +317,7 @@ namespace WRLDZ.Duel.TextEffects
             if (!c.TokensNeedAllZones) return true;
             var dest = c.TokenToOpponent ? engine.OpponentOf(who) : who;
             var need = Math.Max(1, c.TokenCount);
-            var free = dest == null ? 0 : FreeZones(dest);
+            var free = dest == null ? 0 : FreeZonesPlacedBy(engine, who, dest);
             // Multiplication of Ants (s.cfilter: ft>1, or a Tribute in your own Main Monster Zone): the Tribute frees a zone.
             if (free < need && c.RequiresTributeCount > 0 && ReferenceEquals(dest, who) && free >= need - 1 &&
                 TextEffectRuntime.CollectTributeCost(who, card, c, engine).Exists(m => who.TryFindMonster(m, out _)))

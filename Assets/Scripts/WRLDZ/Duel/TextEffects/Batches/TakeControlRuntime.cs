@@ -109,7 +109,7 @@ namespace WRLDZ.Duel.TextEffects
             if (!string.IsNullOrEmpty(c.AttributeFilter))
                 list.RemoveAll(t => t == null || !t.FaceUp || !HasAttribute(t, c.AttributeFilter));
             // IsControlerCanBeChanged: the Charmer's controller needs a free Monster Zone.
-            if (engine != null && who != null && engine.FirstEmpty(who.MonsterZones) < 0)
+            if (engine != null && who != null && engine.FirstEmptyForControl(who) < 0)
                 list.Clear();
             // STATUS_BATTLE_DESTROYED: a Charmer flipped by an attack that destroys it selects no target.
             if (engine != null && source != null && engine.FlipSourceBattleDestroyPending == source)

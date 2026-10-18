@@ -43,7 +43,13 @@ namespace WRLDZ.Duel
 
             var prog = CompiledEffectCache.GetOrCompile(def);
             if (prog != null && prog.FullyCompiled && prog.CanResolveAny)
+            {
+                // DeckSummonsAndSarcophagi batch: "This card cannot be Special Summoned except by the effect of "X"."
+                // (Spirit of the Pharaoh) — a card nothing can summon is not Implemented until X compiles to that summon.
+                if (!TextEffects.DeckSummonsAndSarcophagiRuntime.NamedEffectSummonIsLive(def))
+                    return CardEffectStatusKind.Stub;
                 return CardEffectStatusKind.Implemented;
+            }
             // Summon-lock text with no effect, and a procedure the engine can already
             // perform (Cocoon moths, Elegant Egotist → Harpie Lady Sisters,
             // Gate Guardian's three face-up tributes).

@@ -274,6 +274,8 @@ namespace WRLDZ.Duel.Rules
                    // ConditionalSpellsAndTraps batch: GY / banished counts, named Ojamas, another Spell/Trap you control
                    // (ConditionalSpellsAndTrapsRegressionTests drive them).
                    ConditionalSpellsAndTrapsRuntime.NeedsHardBoard(c) ||
+                   // NormalMonsterSpells batch: Normal Monster boards (NormalMonsterSpellsRegressionTests drive them).
+                   NormalMonsterSpellsRuntime.NeedsHardBoard(c) ||
                    // RecoveryAndPhaseCosts batch: Dimension Distortion (an empty GY), Reload (another card in the hand), Salvage
                    // (2 monsters of one Attribute with N or less ATK in your GY); RecoveryAndPhaseCostsRegressionTests drive them.
                    c.ActivationCondition == RecoveryAndPhaseCostsRuntime.NoCardsInYourGy ||
@@ -864,6 +866,11 @@ namespace WRLDZ.Duel.Rules
             // when the printed effect is only End Phase / Standby / while-face-up.
             if (def.IsContinuousSpellOrTrap && !prog.HasTiming(EffectTiming.Activate))
             {
+                // SpellTrapSealsAndImmunity batch: an activation condition this board does not provision (Talisman of Trap
+                // Sealing's face-up "Sealmaster Meisei"); the batch tests drive it.
+                if (prog.ClauseList.Exists(c => c != null && !string.IsNullOrEmpty(c.ActivationCondition) &&
+                                                NeedsHardBoard(c)))
+                    return true;
                 var st = PutInHand(engine, engine.Player, def.id);
                 if (!engine.CanActivateSpellTrap(engine.Player, st, fromHand: true))
                 {
@@ -948,6 +955,10 @@ namespace WRLDZ.Duel.Rules
             // Major Riot (ForcedActivationAndSubstitution batch, v163): only in the window right after an opponent's
             // effect returned your monster(s) to your hand (ForcedActivationAndSubstitutionRegressionTests drive it).
             if (MajorRiotRuntime.AnswersWindow(prog))
+                return true;
+            // Thunder of Ruler (ZoneCapsAndPhaseWindows batch): only in the opponent's Standby Phase
+            // (ZoneCapsAndPhaseWindowsRegressionTests drive that window).
+            if (StandbyWindowRuntime.AnswersWindow(prog))
                 return true;
             // Pineapple Blast (FlipMassAndOpponentPicks): answers only its controller's OWN Normal Summon while the opponent
             // controls more monsters (FlipMassAndOpponentPicksRegressionTests drive that window); this probe summons for

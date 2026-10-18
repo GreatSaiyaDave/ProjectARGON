@@ -553,7 +553,7 @@ namespace WRLDZ.Duel.TextEffects
             {
                 if (side == null) continue;
                 var need = unions.Count(u => engine.ControllerOf(u) == side);
-                if (need > 0 && side.MonsterZones.Count(z => z.Occupant == null) < need) return false;
+                if (need > 0 && ZoneCapsRuntime.UsableMonsterZones(side) < need) return false; // ZoneCapsAndPhaseWindows: caps
             }
 
             return true;

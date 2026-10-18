@@ -345,6 +345,10 @@ namespace WRLDZ.Duel.TextEffects
                 return false;
             }
 
+            // LocksRedirectsAndActivity batch: Goblin of Greed — no discard cost (bullets are checked one by one below).
+            if (!IsBullets(clauses) && LocksRedirectsAndActivityRuntime.DiscardCostLocked(engine, who, clauses, out reason))
+                return false;
+
             if (IsBullets(clauses))
             {
                 // Spell Shield Type-8: two separate activations; each bullet only when its own condition holds.

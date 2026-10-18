@@ -245,8 +245,17 @@ namespace WRLDZ.Duel.Rules
                               c.RequiresTributeCount == 1 && c.TributeNamedCard == "Dark Magician"),
                 Describe(ded));
 
-            Check("Dark Magician of Chaos itself stays not Implemented (skipped; Dedication does not need it)",
-                !Implemented(db, DarkMagicianOfChaos), "");
+            // LocksRedirectsAndActivity batch: Dark Magician of Chaos is compiled now (End Phase GY Spell, battle banish,
+            // leave-field redirect); this guard pins that compiled shape.
+            var dmoc = Prog(db, DarkMagicianOfChaos);
+            Check("Dark Magician of Chaos (LocksRedirectsAndActivity batch): End Phase GY Spell, battle banish, leave-field " +
+                  "redirect",
+                dmoc != null && dmoc.FullyCompiled && Implemented(db, DarkMagicianOfChaos) && dmoc.ClauseList.Count == 3 &&
+                Has(dmoc, c => c.Action == EffectActionKind.AddGySpellToHandAtEndPhaseIfSummonedThisTurn) &&
+                Has(dmoc, c => c.Timing == EffectTiming.AfterDamageCalculation && c.Action == EffectActionKind.Banish &&
+                               c.RequiresBattledMonsterDestroyed) &&
+                Has(dmoc, c => c.Action == EffectActionKind.BanishThisInsteadOfLeavingField),
+                Describe(dmoc));
         }
 
         static void NearMisses(Chk Check)

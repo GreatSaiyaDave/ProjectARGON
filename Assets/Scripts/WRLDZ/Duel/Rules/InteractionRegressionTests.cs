@@ -4975,6 +4975,12 @@ namespace WRLDZ.Duel.Rules
                                     if (clause.EquipLimitAtkMax > 0 &&
                                         (cand.atk < 0 || cand.atk > clause.EquipLimitAtkMax))
                                         continue;
+                                    // NormalMonsterSpells batch: a Level / Normal Monster equip limit (Sword of the
+                                    // Soul-Eater, Opti-Camouflage Armor).
+                                    if (clause.MonsterLevelMin > 0 && cand.level < clause.MonsterLevelMin) continue;
+                                    if (clause.MonsterLevelMax > 0 && (cand.level <= 0 || cand.level > clause.MonsterLevelMax))
+                                        continue;
+                                    if (clause.RequiresNormalType && !cand.IsNormalMonster) continue;
                                     // Gearfried the Iron Knight destroys any Equip Card attached to it.
                                     if (CardTextEffectCompiler.Compile(cand)?.ClauseList.Exists(c =>
                                             c != null && c.Action ==

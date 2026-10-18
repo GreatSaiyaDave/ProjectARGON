@@ -111,7 +111,8 @@ namespace WRLDZ.Duel.TextEffects
                 st.SentToGy.Clear();
                 var live = due.Where(q => q.Owner?.Graveyard != null && q.Owner.Graveyard.Contains(q.Card) &&
                                           q.Card.GyEntryStamp == q.Stamp && SentToGyClauses(q.Card) != null &&
-                                          !NegationMonstersRuntime.NegatedInGy(engine, q.Card))
+                                          !NegationMonstersRuntime.NegatedInGy(engine, q.Card) &&
+                                          SendConditionMet(engine, q.Owner, q.Card))
                     .OrderBy(q => ReferenceEquals(q.Owner, engine.TurnPlayer) ? 0 : 1)
                     .ToList();
                 if (live.Count == 0) return;
@@ -142,6 +143,20 @@ namespace WRLDZ.Duel.TextEffects
             {
                 st.Firing = false;
             }
+        }
+
+        /// <summary>
+        /// ZoneCapsAndPhaseWindows batch: a trigger whose clauses carry a condition on how the card was sent (Neko Mane King:
+        /// <see cref="EffectClause.RequiresSentByOpponentEffectOnTheirTurn"/>) activates only when that trip met it.
+        /// </summary>
+        static bool SendConditionMet(DuelEngine engine, DuelistState owner, CardInstance card)
+        {
+            var clauses = SentToGyClauses(card);
+            if (clauses == null) return false;
+            if (clauses.Exists(c => c != null && c.RequiresSentByOpponentEffectOnTheirTurn) &&
+                !PhaseJumpRuntime.SentByOpponentEffectOnTheirTurn(engine, owner, card))
+                return false;
+            return true;
         }
 
         static void ResolveSentToGy(DuelEngine engine, DuelistState owner, CardInstance card)
@@ -340,7 +355,7 @@ namespace WRLDZ.Duel.TextEffects
         }
 
         static int FreeMonsterZones(DuelistState who) =>
-            who?.MonsterZones == null ? 0 : who.MonsterZones.Count(z => z != null && z.IsEmpty);
+            ZoneCapsRuntime.UsableMonsterZones(who); // ZoneCapsAndPhaseWindows: caps
 
         /// <summary>The hand monsters <paramref name="clause"/> can Special Summon now (Lua s.filter).</summary>
         static List<CardInstance> SwarmCandidates(DuelEngine engine, DuelistState who, CardInstance source,

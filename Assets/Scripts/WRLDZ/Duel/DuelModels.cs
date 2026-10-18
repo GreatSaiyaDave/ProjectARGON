@@ -629,6 +629,13 @@ namespace WRLDZ.Duel
 
         /// <summary>Bumped at every GY entry: one stay in the GY is told from a later one (Revival Jam's flag).</summary>
         public int GyEntryStamp;
+
+        /// <summary>
+        /// ZoneCapsAndPhaseWindows batch: the player who held this copy right before its last GY entry — its controller on
+        /// the field, else the holder of the hand / Deck it left (ygopro GetPreviousControler); null when the moving path
+        /// does not say. Neko Mane King's "in your possession" reads it.
+        /// </summary>
+        public DuelistState GyEntryPreviousHolder;
     }
 
     /// <summary>

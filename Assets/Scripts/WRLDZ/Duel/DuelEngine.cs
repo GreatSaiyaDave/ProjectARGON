@@ -684,8 +684,6 @@ namespace WRLDZ.Duel
             who.CannotDeclareAttackThisTurn = false;
             // Soul Exchange: "this turn" Tribute grants end with the turn.
             TextEffects.TributeSummonsRuntime.ClearTurnGrants(Player, Opponent);
-            // LocksRedirectsAndActivity: the ACTIVITY_CHAIN counters restart each turn.
-            TextEffects.LocksRedirectsAndActivityRuntime.ResetTurn(this);
             PendingTributes.Clear();
             foreach (var m in who.MonstersOnField())
             {
@@ -797,14 +795,17 @@ namespace WRLDZ.Duel
 
             if (GameOver) return;
 
-            // ZoneCapsAndPhaseWindows: execute pending phase jump at this safe transition point
-            ExecutePendingPhaseJump(who);
-            if (_pendingPhaseJumpToEnd) return; // Jump executed, turn may be over
-
             // —— Standby Phase ——
             Phase = DuelPhase.Standby;
             BattleStep = BattleStep.None;
             DamageSubStep = DamageSubStep.None;
+            // ZoneCapsAndPhaseWindows batch: "It becomes the End Phase" during the Draw Phase (Neko Mane King) — the Standby
+            // Phase and Main Phases are skipped.
+            if (TextEffects.PhaseJumpRuntime.Take(this, who))
+            {
+                EndTurn(who);
+                return;
+            }
             if (who.SkipNextStandbyPhase)
             {
                 // Solomon's Lawbook: nothing that happens "during your Standby Phase" happens.
@@ -874,42 +875,60 @@ namespace WRLDZ.Duel
                 return;
             }
 
-            // ZoneCapsAndPhaseWindows batch: Standby Phase response window (Thunder of Ruler)
-            // Opens for both players when someone has a legal Standby-only Trap activation
-            if (OpenStandbyResponseWindow(who))
-            {
-                return; // Window opened, will continue after response
-            }
-
-            EnterMain1(who, firstPlayerFirstTurn);
+            LeaveStandbyForMain1(who, firstPlayerFirstTurn);
         }
 
         /// <summary>
-        /// ZoneCapsAndPhaseWindows batch: Open the Standby Phase response window for Set Normal Traps
-        /// (e.g., Thunder of Ruler). Opens for both players (turn player first, then opponent) when
-        /// someone has a legal Standby-only Trap activation. Like v161/v163 windows, opens only when
-        /// someone has a legal response.
+        /// ZoneCapsAndPhaseWindows batch: the turn player leaves the Standby Phase for Main Phase 1 — the other duelist
+        /// first gets the <see cref="ResponseTiming.StandbyResponse"/> window (once per turn, only with a legal answer:
+        /// Thunder of Ruler); the turn goes on once it is passed or its answer has resolved (<see cref="FinishStandbyWindow"/>).
         /// </summary>
-        bool OpenStandbyResponseWindow(DuelistState turnPlayer)
+        void LeaveStandbyForMain1(DuelistState who, bool firstPlayerFirstTurn)
         {
-            if (Phase != DuelPhase.Standby) return false;
+            if (OfferStandbyWindow(who)) return;
+            EnterMain1(who, firstPlayerFirstTurn);
+        }
 
-            // Check turn player first
-            if (OpenResponseWindow(turnPlayer, ResponseTiming.StandbyResponse, null, null, turnPlayer, null, null))
+        bool OfferStandbyWindow(DuelistState who)
+        {
+            var responder = OpponentOf(who);
+            if (responder == null || GameOver || IsAwaitingResponse || IsAwaitingEffectTarget || Chain.HasLinks) return false;
+            if (!TextEffects.StandbyWindowRuntime.BeginWindow(this, who)) return false;
+            if (!OpenResponseWindow(responder, ResponseTiming.StandbyResponse,
+                    null, null, null, null, null, CombatAnimTimings.ForOpenGameState()))
+                return false;
+            if (!IsHumanControlled(responder))
+                SpellTrapEffects.AiAutoRespond(this);
+            return true;
+        }
+
+        /// <summary>
+        /// The opponent's Standby window was passed or its answer resolved: the turn goes on to Main Phase 1. When a
+        /// prompt, response window or Chain is still open (a trigger of the resolved Chain), the Standby Phase holds
+        /// (<see cref="StandbyPausedFor"/>) and <see cref="Notify"/> moves it on once that is done
+        /// (<see cref="TextEffects.StandbyWindowRuntime.HoldFinish"/>; v178 review fix: the turn was stuck in the Standby Phase).
+        /// </summary>
+        void FinishStandbyWindow()
+        {
+            var who = TurnPlayer;
+            if (GameOver || who == null || Phase != DuelPhase.Standby)
             {
-                Log($"[{turnPlayer.Name}] Standby Phase — response window opened.");
-                return true;
+                Notify();
+                return;
             }
 
-            // Check opponent
-            var opponent = OpponentOf(turnPlayer);
-            if (OpenResponseWindow(opponent, ResponseTiming.StandbyResponse, null, null, turnPlayer, null, null))
+            if (IsAwaitingResponse || IsAwaitingEffectTarget || Chain.HasLinks || Chain.IsResolving || IsResolvingChain ||
+                TextEffects.SimultaneousTriggersRuntime.Busy(this))
             {
-                Log($"[{opponent.Name}] Standby Phase — response window opened.");
-                return true;
+                _standbyPausedFor = who;
+                TextEffects.StandbyWindowRuntime.HoldFinish(this, who);
+                Notify();
+                return;
             }
 
-            return false;
+            _standbyPausedFor = null;
+            EnterMain1(who, TurnNumber == 1 && who == FirstPlayer);
+            Notify();
         }
 
         /// <summary>
@@ -940,16 +959,21 @@ namespace WRLDZ.Duel
 
         void EnterMain1(DuelistState who, bool firstPlayerFirstTurn)
         {
+            // ZoneCapsAndPhaseWindows batch: the Standby Phase is over, so a held Standby-window finish is spent.
+            TextEffects.StandbyWindowRuntime.ReleaseFinish(this);
+            // ZoneCapsAndPhaseWindows batch: "It becomes the End Phase" before Main Phase 1 (Neko Mane King).
+            if (TextEffects.PhaseJumpRuntime.Take(this, who))
+            {
+                EndTurn(who);
+                return;
+            }
+
             // BattleOutcomeTriggers batch (v162): Timeater — "Your opponent skips their next Main Phase 1" (EFFECT_SKIP_M1).
             if (TextEffects.BattleOutcomeTriggersRuntime.MainPhase1SkipPending(this, who))
             {
                 SkipMainPhase1(who);
                 return;
             }
-
-            // ZoneCapsAndPhaseWindows: execute pending phase jump at this safe transition point
-            ExecutePendingPhaseJump(who);
-            if (_pendingPhaseJumpToEnd) return; // Jump executed, turn may be over
 
             // —— Main Phase 1 ——
             Phase = DuelPhase.Main1;
@@ -1040,7 +1064,7 @@ namespace WRLDZ.Duel
             }
 
             _standbyPausedFor = null;
-            EnterMain1(who, TurnNumber == 1 && who == FirstPlayer);
+            LeaveStandbyForMain1(who, TurnNumber == 1 && who == FirstPlayer);
             Notify();
         }
 
@@ -1077,7 +1101,8 @@ namespace WRLDZ.Duel
             var who = _standbyPausedFor;
             if (!CanContinueAfterStandby(who)) return false;
             _standbyPausedFor = null;
-            EnterMain1(who, TurnNumber == 1 && who == FirstPlayer);
+            TextEffects.StandbyWindowRuntime.ReleaseFinish(this);
+            LeaveStandbyForMain1(who, TurnNumber == 1 && who == FirstPlayer);
             Notify();
             return true;
         }
@@ -1340,19 +1365,17 @@ namespace WRLDZ.Duel
                 }
 
                 // Soul Exchange: Tributing only the opponent's monster frees none of your zones.
-                // ZoneCapsAndPhaseWindows: respect EFFECT_MAX_MZONE cap
-                int occupiedZones = 0;
-                for (int i = 0; i < who.MonsterZones.Length; i++)
-                    if (who.MonsterZones[i] != null && !who.MonsterZones[i].IsEmpty) occupiedZones++;
-                int usableZones = GetUsableMonsterZoneCount(who);
-                // Tributes that are on the field will free up zones
-                int tributesOnField = 0;
-                if (tributes != null)
-                    foreach (var t in tributes)
-                        if (who.TryFindMonster(t, out _)) tributesOnField++;
-                if (occupiedZones - tributesOnField >= usableZones)
+                if (FirstEmpty(who.MonsterZones) < 0 && !tributes.Any(t => who.TryFindMonster(t, out _)))
                 {
-                    Log("No free Monster Zone (zone cap).");
+                    Log("No free Monster Zone.");
+                    return false;
+                }
+
+                // ZoneCapsAndPhaseWindows batch: a usable-zone cap (Kaiser Colosseum) must still leave room once these
+                // Tributes are gone (Lua EFFECT_UNRELEASABLE_SUM) — checked before any Tribute leaves.
+                if (!MonsterZoneAfterLeaving(who, tributes))
+                {
+                    Log("No usable Monster Zone after these Tributes (a card limits the monsters you can control).");
                     return false;
                 }
             }
@@ -1390,11 +1413,9 @@ namespace WRLDZ.Duel
             }
 
             var idx = preferredZone;
-            if (idx < 0 || idx >= who.MonsterZones.Length || !who.MonsterZones[idx].IsEmpty)
+            if (idx < 0 || idx >= who.MonsterZones.Length || !who.MonsterZones[idx].IsEmpty ||
+                TextEffects.ZoneCapsRuntime.CapReached(this, who.MonsterZones))
                 idx = FirstEmpty(who.MonsterZones);
-            // ZoneCapsAndPhaseWindows: ensure the found zone index is within the usable cap
-            if (idx >= GetUsableMonsterZoneCount(who))
-                idx = -1;
             if (idx < 0)
             {
                 Log("No free Monster Zone.");
@@ -1448,6 +1469,9 @@ namespace WRLDZ.Duel
             // TokensDeclarationsAndPicks batch: this turn's summon record (Stray Lambs / Scapegoat; a Set is not a Summon).
             if (!asSet)
                 TextEffects.TokensDeclarationsAndPicksRuntime.NoteSummon(this, who);
+            // LocksRedirectsAndActivity batch: Dark Magician of Chaos's summon flag (aux.sumreg, EVENT_SUMMON_SUCCESS).
+            if (!asSet)
+                TextEffects.LocksRedirectsAndActivityRuntime.NoteNormalOrSpecialSummoned(this, card);
             // SpellCounterSpenders batch: Armor Exe cannot attack the turn it is Normal Summoned.
             if (!asSet)
                 TextEffects.SpellCounterSpendersRuntime.OnNormalOrFlipSummoned(this, card);
@@ -1520,6 +1544,10 @@ namespace WRLDZ.Duel
                 if (GameOver) return;
             }
 
+            // LpLocksDelayedBurnAndGyNegation batch: Dora of Fate's delayed burn (EVENT_SUMMON_SUCCESS, no Chain Link).
+            if (!asSet)
+                TextEffects.LpLocksDelayedBurnAndGyNegationRuntime.OnNormalSummonSuccess(this, who, card);
+            if (GameOver) return;
             if (!asSet)
                 TextEffects.TextEffectRuntime.TryResolveThisCardSummoned(this, who, card);
 
@@ -1781,12 +1809,8 @@ namespace WRLDZ.Duel
             if (TextEffects.LocksAndZonesRuntime.SpellTrapSetLocked(this)) return false;
             // RuleLocks batch: Chain Energy — Setting from the hand needs the LP toll.
             if (TextEffects.RuleLocksRuntime.HandActionUnaffordable(this, who, card, out _)) return false;
-            // ZoneCapsAndPhaseWindows: respect EFFECT_MAX_SZONE cap
-            int occupiedStZones = 0;
-            for (int i = 0; i < who.SpellTrapZones.Length; i++)
-                if (who.SpellTrapZones[i] != null && !who.SpellTrapZones[i].IsEmpty) occupiedStZones++;
-            int usableStZones = GetUsableSpellTrapZoneCount(who);
-            return occupiedStZones < usableStZones;
+            // ZoneCapsAndPhaseWindows batch: FirstEmpty honours the usable-zone caps (Spatial Collapse).
+            return FirstEmpty(who.SpellTrapZones) >= 0;
         }
 
         public bool TrySetSpellTrap(DuelistState who, CardInstance card) =>
@@ -1797,11 +1821,9 @@ namespace WRLDZ.Duel
         {
             if (!CanSetSpellTrap(who, card)) return false;
             var idx = preferredZone;
-            if (idx < 0 || idx >= who.SpellTrapZones.Length || !who.SpellTrapZones[idx].IsEmpty)
+            if (idx < 0 || idx >= who.SpellTrapZones.Length || !who.SpellTrapZones[idx].IsEmpty ||
+                TextEffects.ZoneCapsRuntime.CapReached(this, who.SpellTrapZones))
                 idx = FirstEmpty(who.SpellTrapZones);
-            // ZoneCapsAndPhaseWindows: ensure the found zone index is within the usable cap
-            if (idx >= GetUsableSpellTrapZoneCount(who))
-                idx = -1;
             if (idx < 0)
             {
                 Log("No free Spell & Trap Zone (zone cap).");
@@ -1835,6 +1857,12 @@ namespace WRLDZ.Duel
             }
 
             if (!who.Hand.Contains(card)) return false;
+            // ZoneCapsAndPhaseWindows batch: Spatial Collapse — no 6th card into an empty Field Zone.
+            if (TextEffects.ZoneCapsRuntime.FieldSpellBlocked(this, who, out var capWhy))
+            {
+                Log($"Activation illegal: {capWhy}");
+                return false;
+            }
             // Cold Wave (LocksAndZones batch): placing a Field Spell is its activation (the AR disk path comes
             // here without the activation gate).
             if (TextEffects.LocksAndZonesRuntime.SpellTrapActivationLocked(this, card, out var coldWave))
@@ -1848,6 +1876,14 @@ namespace WRLDZ.Duel
             if (TextEffects.SpellTrapAnswersAndActivationLocksRuntime.ActivationLocked(this, who, card, out var nameLock))
             {
                 Log($"Activation illegal: {nameLock}");
+                return false;
+            }
+
+            // SpellTrapSealsAndImmunity batch: Sonic Jammer's Spell Card lock and the continuous Spell locks (Talisman of
+            // Spell Sealing, Spell Canceller) apply to this activation too.
+            if (TextEffects.ContinuousNegationRuntime.ActivationLocked(this, who, card, out var spellLock))
+            {
+                Log($"Activation illegal: {spellLock}");
                 return false;
             }
 
@@ -1902,6 +1938,13 @@ namespace WRLDZ.Duel
                 return false;
             }
 
+            // ZoneCapsAndPhaseWindows batch: Spatial Collapse — no Pendulum Scale as a 6th card on the field.
+            if (TextEffects.ZoneCapsRuntime.PendulumScaleBlocked(this, who, out var scaleCap))
+            {
+                Log($"Activation illegal: {scaleCap}");
+                return false;
+            }
+
             // RuleLocks batch: Chain Energy — placing a Pendulum Scale is activating the card from the hand.
             if (TextEffects.RuleLocksRuntime.HandActionUnaffordable(this, who, card, out var scaleToll))
             {
@@ -1953,6 +1996,9 @@ namespace WRLDZ.Duel
                 return false;
             }
 
+            // LpLocksDelayedBurnAndGyNegation batch: Wall of Revealing Light — a human chooses the multiple of 1000 LP before
+            // the card is placed (PAY re-enters this activation; CANCEL leaves it Set).
+            if (TextEffects.LpLocksDelayedBurnAndGyNegationRuntime.BeginPaidLpChoice(this, who, card, fromHand)) return true;
             if (PendingResponse != null && PendingResponse.Timing == ResponseTiming.ChainResponse) return SpellTrapEffects.BeginOrResolveManual(this, who, card, fromHand, who == null || !who.IsPlayer);
             // BattleRules batch: Array of Revealing Light — a human declares the Type before the Field Spell is
             // activated (the pick re-enters this activation); the AI declares as the card is placed.
@@ -2218,16 +2264,13 @@ namespace WRLDZ.Duel
             if (pref >= 0)
             {
                 // IsEmpty, as FirstEmpty: a zone a card made unusable (UnusableFor) is not free either.
-                if (pref < who.SpellTrapZones.Length && who.SpellTrapZones[pref] != null && who.SpellTrapZones[pref].IsEmpty)
+                if (pref < who.SpellTrapZones.Length && who.SpellTrapZones[pref] != null && who.SpellTrapZones[pref].IsEmpty &&
+                    !TextEffects.ZoneCapsRuntime.CapReached(this, who.SpellTrapZones))
                     return pref;
                 _preferredSpellTrapZone[side] = -1;   // taken or unusable: spent
             }
 
-            var idx = FirstEmpty(who.SpellTrapZones);
-            // ZoneCapsAndPhaseWindows: ensure the found zone index is within the usable cap
-            if (idx >= GetUsableSpellTrapZoneCount(who))
-                return -1;
-            return idx;
+            return FirstEmpty(who.SpellTrapZones);
         }
 
         /// <summary>
@@ -2235,6 +2278,55 @@ namespace WRLDZ.Duel
         /// 5 zones → order 2, 1, 3, 0, 4 (classic first placement when user does not specify).
         /// </summary>
         public int FirstEmpty(FieldZone[] zones)
+        {
+            var idx = FirstEmptyIgnoringCaps(zones);
+            // ZoneCapsAndPhaseWindows batch: a usable-zone cap (Kaiser Colosseum, Spatial Collapse) leaves no zone.
+            return idx >= 0 && TextEffects.ZoneCapsRuntime.CapReached(this, zones) ? -1 : idx;
+        }
+
+        /// <summary>
+        /// ZoneCapsAndPhaseWindows batch: how many monsters <paramref name="who"/> can still place now — free Monster Zones,
+        /// at most the usable-zone caps' room (Scapegoat, swarms).
+        /// </summary>
+        public int UsableMonsterZoneCount(DuelistState who) => TextEffects.ZoneCapsRuntime.UsableMonsterZones(who);
+
+        /// <summary>ZoneCapsAndPhaseWindows batch: <see cref="UsableMonsterZoneCount"/> for the Spell &amp; Trap Zones.</summary>
+        public int UsableSpellTrapZoneCount(DuelistState who) => TextEffects.ZoneCapsRuntime.UsableSpellTrapZones(who);
+
+        /// <summary>
+        /// ZoneCapsAndPhaseWindows batch: a monster can be placed on <paramref name="who"/>'s field once
+        /// <paramref name="leavingFromField"/> of their monsters have left it (Tributes, field materials) — a zone is free
+        /// then, and the usable-zone caps still leave room (Kaiser Colosseum's Tribute limit).
+        /// </summary>
+        public bool MonsterZoneAfterLeaving(DuelistState who, int leavingFromField)
+        {
+            if (who == null) return false;
+            if (leavingFromField <= 0) return FirstEmpty(who.MonsterZones) >= 0;
+            return TextEffects.ZoneCapsRuntime.MonsterRoom(this, who) + leavingFromField > 0;
+        }
+
+        /// <summary>
+        /// ZoneCapsAndPhaseWindows batch: <see cref="MonsterZoneAfterLeaving(DuelistState,int)"/> for these exact Tributes, from
+        /// either field — a Tribute the Kaiser Colosseum controller loses (Soul Exchange) lowers the cap too.
+        /// </summary>
+        public bool MonsterZoneAfterLeaving(DuelistState who, List<CardInstance> leaving)
+        {
+            if (who == null) return false;
+            var own = leaving?.Count(t => t != null && who.TryFindMonster(t, out _)) ?? 0;
+            if (own <= 0 && FirstEmptyIgnoringCaps(who.MonsterZones) < 0) return false;
+            return TextEffects.ZoneCapsRuntime.MonsterRoom(this, who, leaving) > 0;
+        }
+
+        /// <summary>ZoneCapsAndPhaseWindows batch: <see cref="FirstEmpty"/> for a monster changing control (ygopro
+        /// LOCATION_REASON_CONTROL: Kaiser Colosseum does not limit it).</summary>
+        public int FirstEmptyForControl(DuelistState newController)
+        {
+            if (newController == null) return -1;
+            using (TextEffects.ZoneCapsRuntime.ControlChange(this))
+                return FirstEmpty(newController.MonsterZones);
+        }
+
+        int FirstEmptyIgnoringCaps(FieldZone[] zones)
         {
             if (zones == null || zones.Length == 0) return -1;
             var n = zones.Length;
@@ -2258,22 +2350,6 @@ namespace WRLDZ.Duel
 
             return -1;
         }
-
-        /// <summary>
-        /// ZoneCapsAndPhaseWindows batch: Get the number of usable Monster Zones for a duelist,
-        /// respecting EFFECT_MAX_MZONE continuous effects (Kaiser Colosseum, Spatial Collapse).
-        /// Returns the minimum of physical zones (5) and the lowest cap from active effects.
-        /// </summary>
-        public int GetUsableMonsterZoneCount(DuelistState who) =>
-            TextEffects.ContinuousProtections.MaxMonsterZoneCount(this);
-
-        /// <summary>
-        /// ZoneCapsAndPhaseWindows batch: Get the number of usable Spell/Trap Zones for a duelist,
-        /// respecting EFFECT_MAX_SZONE continuous effects (Spatial Collapse).
-        /// Returns the minimum of physical zones (5) and the lowest cap from active effects.
-        /// </summary>
-        public int GetUsableSpellTrapZoneCount(DuelistState who) =>
-            TextEffects.ContinuousProtections.MaxSpellTrapZoneCount(this);
 
         public void NotifyPublic() => Notify();
 
@@ -2452,7 +2528,7 @@ namespace WRLDZ.Duel
             if (newController == null || card == null) return false;
             var old = ControllerOf(card);
             if (old == null || old == newController) return false;
-            var dest = FirstEmpty(newController.MonsterZones);
+            var dest = FirstEmptyForControl(newController); // ZoneCapsAndPhaseWindows: a control change
             if (dest < 0) return false;
             DetachFromField(old, card);
             newController.MonsterZones[dest].Occupant = card;
@@ -2598,6 +2674,8 @@ namespace WRLDZ.Duel
         {
             var controller = ControllerOf(card);
             if (controller == null) return false;
+            // LocksRedirectsAndActivity batch: Dark Magician of Chaos — banished instead of returning to the Deck.
+            if (TextEffects.LocksRedirectsAndActivityRuntime.TryBanishInsteadOfLeaving(this, card, null)) return false;
             var wasFaceUp = card.FaceUp;
             DetachFromField(controller, card);
             PendingTributes.Remove(card);
@@ -2772,6 +2850,9 @@ namespace WRLDZ.Duel
                 // REASON_LOST_TARGET: an Equip Spell Card that goes to the GY because its monster left (Morale Boost).
                 var lostTargetController = ControllerOf(eq) ?? fallbackOwner;
                 eq.EquippedTo = null;
+                // DeckSummonsAndSarcophagi batch: Ninjitsu Art of Transformation only destroys its monster when it leaves
+                // first (Lua e2 on itself); the monster leaving first leaves it on the field, unlinked.
+                if (TextEffects.DeckSummonsAndSarcophagiRuntime.StaysWhenLinkedMonsterLeaves(eq)) continue;
                 // A linked Continuous Spell/Trap whose effects are negated (Metal Detector this turn)
                 // does not destroy itself when its monster leaves; it stays face-up with no link.
                 if (TextEffects.TurnNegationTrapsRuntime.NegatedLinkStaysWhenHostLeaves(eq)) continue;
@@ -2855,20 +2936,11 @@ namespace WRLDZ.Duel
         public void SendCardToGrave(DuelistState owner, CardInstance card, CardInstance sentBy = null)
         {
             if (owner == null || card == null) return;
-            // LocksRedirectsAndActivity: the one funnel every field exit goes through — "if this card would leave
-            // the field, return it to its owner's hand instead" (ygopro EFFECT_LEAVE_FIELD_REDIRECT, Dark Magician
-            // of Chaos). Unlike the GY-send hub (SendsToBanishedInstead) it covers banish / Deck / hand returns,
-            // and the card never actually leaves: no "sent to the GY" trigger fires.
-            if (owner.TryFindMonster(card, out _) || owner.TryFindSpellTrap(card, out _) ||
-                owner.FieldSpellZone?.Occupant == card)
-            {
-                if (TextEffects.LocksRedirectsAndActivityRuntime.RedirectFieldExit(this, card,
-                        sentBy != null ? sentBy.Name : "a card effect"))
-                    return;
-            }
             // Banisher of the Light (RedirectAndReplace batch, v142): decided while the card is still where it is,
             // so a face-up Banisher sent to the GY is banished by its own effect.
-            var banishInstead = TextEffects.RedirectAndReplaceRuntime.SendsToBanishedInstead(this, card);
+            var banishInstead = TextEffects.RedirectAndReplaceRuntime.SendsToBanishedInstead(this, card) ||
+                                // LocksRedirectsAndActivity batch: Dark Magician of Chaos's leave-field redirect.
+                                TextEffects.LocksRedirectsAndActivityRuntime.LeavesFieldBanishedInstead(this, card);
             var fromFieldMonster = owner.TryFindMonster(card, out var mi);
             var fromFieldSt = owner.TryFindSpellTrap(card, out var si);
             var fromPendulumZone = owner.PendulumZones != null &&
@@ -2942,7 +3014,7 @@ namespace WRLDZ.Duel
             // BattleDestroyedGyRecovery (v162): GY-entry stamp — sent by a card's effect, or for an unknown reason.
             TextEffects.GyEntryStamps.Entered(this, card,
                 sentBy != null ? GyEntryReason.Effect : GyEntryReason.None,
-                TextEffects.GyEntryStamps.HolderOf(this, sentBy));
+                TextEffects.GyEntryStamps.HolderOf(this, sentBy), previousHolder: owner);
             // GyHandAndSummonEventTriggers: Night Assailant — a hand → GY trip queues its
             // "when this card is sent from the hand to the GY" trigger (ygopro IsPreviousLocation(LOCATION_HAND)).
             TextEffects.GyHandAndSummonEventTriggersRuntime.NoteEnteredGy(this, card, fromHand);
@@ -3049,6 +3121,8 @@ namespace WRLDZ.Duel
             var owner = ControllerOf(card);
             if (owner == null) return false;
 
+            // LocksRedirectsAndActivity batch: Dark Magician of Chaos — banished instead of returning to the hand.
+            if (TextEffects.LocksRedirectsAndActivityRuntime.TryBanishInsteadOfLeaving(this, card, by)) return false;
             var fromFieldMonster = owner.TryFindMonster(card, out _);
             var fromFieldSt = owner.TryFindSpellTrap(card, out _);
             var wasFaceUp = card.FaceUp; // Spirit's Invitation (ContinuousTrapsAndSpiritSupport): IsPreviousPosition(FACEUP)
@@ -3596,6 +3670,13 @@ namespace WRLDZ.Duel
             if (PsctGrammar.BlocksSpecialSummon(officialText) && !procedureAuthorized &&
                 !TextEffects.NamedSummonPairsRuntime.NamedSummonerIsSummoning(card))
                 return false;
+            // DeckSummonsAndSarcophagi batch: "This card cannot be Special Summoned except by the effect of "X"." (Spirit of
+            // the Pharaoh) — only X's named Special Summon, never another one.
+            if (TextEffects.DeckSummonsAndSarcophagiRuntime.NomiBlocksSpecialSummon(card))
+            {
+                Log($"{card.Name} cannot be Special Summoned except by the effect of its named card.");
+                return false;
+            }
             if (OfficialEffectRegistry.HasInherentHandTribute(card.CardId) && !_inherentProcedureSummon)
                 return false;
             var summonGate = PsctGrammar.SummonGateNamed(officialText);
@@ -3652,7 +3733,8 @@ namespace WRLDZ.Duel
             }
             var idx = preferredZone >= 0 ? preferredZone : _pendingSpecialSummonZone;
             ClearPendingSpecialSummonPlacement();
-            if (idx < 0 || idx >= who.MonsterZones.Length || !who.MonsterZones[idx].IsEmpty)
+            if (idx < 0 || idx >= who.MonsterZones.Length || !who.MonsterZones[idx].IsEmpty ||
+                TextEffects.ZoneCapsRuntime.CapReached(this, who.MonsterZones))
                 idx = FirstEmpty(who.MonsterZones);
             if (idx < 0) return false;
             // EngineHygiene batch: a per-card summon cost (ygopro EFFECT_SPSUMMON_COST, e.g. Tyrant Dragon from the GY).
@@ -3698,6 +3780,8 @@ namespace WRLDZ.Duel
             who.MonsterZones[idx].Occupant = card;
             // TokensDeclarationsAndPicks batch: this turn's summon record (Stray Lambs / Scapegoat).
             TextEffects.TokensDeclarationsAndPicksRuntime.NoteSummon(this, who);
+            // LocksRedirectsAndActivity batch: Dark Magician of Chaos's summon flag (aux.sumreg, EVENT_SPSUMMON_SUCCESS).
+            TextEffects.LocksRedirectsAndActivityRuntime.NoteNormalOrSpecialSummoned(this, card);
             // "Cannot attack the turn it is Special Summoned." (Toons batch).
             TextEffects.ToonsRuntime.OnSpecialSummoned(this, card, faceUp);
             // Gradius' Option: link it to the selected face-up "Gradius" (SpecialSummonEffects batch, v161).
@@ -3748,7 +3832,8 @@ namespace WRLDZ.Duel
         {
             if (controller == null || card == null) return;
             if (zoneIndex < 0 || zoneIndex >= controller.MonsterZones.Length ||
-                !controller.MonsterZones[zoneIndex].IsEmpty)
+                !controller.MonsterZones[zoneIndex].IsEmpty ||
+                TextEffects.ZoneCapsRuntime.CapReached(this, controller.MonsterZones))
                 zoneIndex = FirstEmpty(controller.MonsterZones);
             if (zoneIndex < 0) return;
             ResetOnFieldEntry(card);
@@ -3968,72 +4053,6 @@ namespace WRLDZ.Duel
             DamageSubStep = DamageSubStep.None;
         }
 
-        /// <summary>
-        /// ZoneCapsAndPhaseWindows batch: Safe "skip to End Phase" (Neko Mane King — "it becomes the End Phase").
-        /// Does NOT jump from Draw/Standby/Main1 directly; waits for a safe gate:
-        /// - If in Battle Phase: ends Battle Phase, then proceeds to End Phase via Main2
-        /// - If in Main Phase 2: proceeds to End Phase
-        /// - If in Main Phase 1: proceeds to End Phase via Main2 (skipping Battle Phase)
-        /// - If in Draw/Standby: sets a flag to skip to End Phase at the next legal transition (after Standby triggers)
-        /// The jump executes at the next legal transition point (post-Chain idle, end of Damage Step, or end of Battle Phase).
-        /// </summary>
-        public void SkipToEndPhase(DuelistState who)
-        {
-            if (GameOver || TurnPlayer != who) return;
-            Log($"[{who.Name}] Phase jump to End Phase queued (Neko Mane King).");
-            _pendingPhaseJumpToEnd = true;
-            // If we're in a safe transition point now, execute immediately
-            if (Phase == DuelPhase.Battle || Phase == DuelPhase.Main2)
-            {
-                ExecutePendingPhaseJump(who);
-            }
-        }
-
-        /// <summary>
-        /// Internal flag for the safe phase jump.
-        /// </summary>
-        bool _pendingPhaseJumpToEnd = false;
-
-        /// <summary>
-        /// Execute the pending phase jump at a safe transition point.
-        /// </summary>
-        void ExecutePendingPhaseJump(DuelistState who)
-        {
-            if (!_pendingPhaseJumpToEnd) return;
-            _pendingPhaseJumpToEnd = false;
-            if (GameOver || TurnPlayer != who) return;
-
-            if (Phase == DuelPhase.Battle)
-            {
-                // End Battle Phase first (its End Step work runs), then fall through to Main 2.
-                EndBattlePhase();
-                Phase = DuelPhase.Main2;
-                Log($"[{who.Name}] Main Phase 2 (phase jump)");
-                Notify();
-                return;
-            }
-            if (Phase == DuelPhase.Main2 || Phase == DuelPhase.Main1)
-            {
-                // From a Main Phase the ordinary End Turn handles the End Phase, its triggers, the hand size
-                // limit and the turn switch. A response window or pick still open defers the jump (EndTurn
-                // refuses and the flag is re-set by the caller's next safe point).
-                var jumpPhase = Phase;
-                Phase = DuelPhase.Main1;
-                if (!TryEnterMainPhase2(who))
-                {
-                    Phase = jumpPhase;
-                    _pendingPhaseJumpToEnd = true;
-                    return;
-                }
-                Log($"[{who.Name}] End Phase (phase jump — \"it becomes the End Phase\")");
-                EndTurn(who);
-                return;
-            }
-            // Draw / Standby: no jump yet — the flag stays set until a Main Phase or the Battle Phase is
-            // reached, which is the earliest legal transition point.
-            _pendingPhaseJumpToEnd = true;
-        }
-
         // ───────────────────── Phase transitions ─────────────────────
 
         public bool TryEnterBattlePhase(DuelistState who)
@@ -4216,6 +4235,8 @@ namespace WRLDZ.Duel
             // ContinuousLocksAndIgnitions batch (v163): Gora Turtle — a face-up monster's ATK-threshold attack lock.
             if (TextEffects.ContinuousLocksAndIgnitionsRuntime.MonsterAttackLockBlocks(this, attackerController, attacker))
                 return true;
+            // LocksRedirectsAndActivity batch: Burst Stream of Destruction's oath — the named monster cannot attack this turn.
+            if (TextEffects.LocksRedirectsAndActivityRuntime.AttackForbidden(this, attackerController, attacker)) return true;
             // BattleAndPositionRecords batch: The Unhappy Girl — a monster that battled it cannot attack while it stays in
             // face-up Attack Position.
             if (TextEffects.BattleAndPositionRecordsRuntime.AttackForbidden(this, attackerController, attacker)) return true;
@@ -4240,6 +4261,14 @@ namespace WRLDZ.Duel
                             continue;
                         if (c.Side == TextEffects.EffectSide.Controller && side != attackerController)
                             continue;
+                        // LpLocksDelayedBurnAndGyNegation batch: Wall of Revealing Light — ATK less than or equal to the
+                        // LP this copy paid (current ATK, asked each time).
+                        if (c.CannotAttackIfAtkAtMostPaidLp)
+                        {
+                            if (TextEffects.LpLocksDelayedBurnAndGyNegationRuntime.PaidLpLockBlocks(st, attacker))
+                                return true;
+                            continue;
+                        }
                         // Vengeful Bog Spirit: only monsters Summoned (incl. Flip) this turn.
                         if (c.RequiresSummonedOrFlippedThisTurn)
                         {
@@ -4657,6 +4686,8 @@ namespace WRLDZ.Duel
             TextEffects.SpiritMonstersRuntime.NoteAttackDeclared(this, attacker, targetOrNull);
             // ChaosBanishSummons batch: another monster's attack ends a second attack "in a row".
             TextEffects.ChaosBanishSummonsRuntime.NoteAttackDeclared(this, attacker);
+            // LocksRedirectsAndActivity batch: the per-player attack activity record (ACTIVITY_ATTACK; Burst Stream).
+            TextEffects.LocksRedirectsAndActivityRuntime.NoteAttackDeclared(this, who, attacker);
             GameEvents.Add(DuelGameEventKind.DeclaredAttack, TurnNumber, who, attacker, targetOrNull);
             var hadMonstersAtDeclaration = HasMonsters(OpponentOf(who));
 
@@ -5307,6 +5338,13 @@ namespace WRLDZ.Duel
                 return true;
             }
 
+            // ZoneCapsAndPhaseWindows batch: the opponent's Standby window was passed — Main Phase 1.
+            if (timing == ResponseTiming.StandbyResponse)
+            {
+                FinishStandbyWindow();
+                return true;
+            }
+
             // Summon appear finished
             ClearPresentation();
             Notify();
@@ -5387,6 +5425,14 @@ namespace WRLDZ.Duel
             {
                 ClearIdleChain();
                 FinishMonstersReturnedWindow();
+                return;
+            }
+
+            // ZoneCapsAndPhaseWindows batch: Thunder of Ruler resolved in the opponent's Standby window — Main Phase 1.
+            if (timing == ResponseTiming.StandbyResponse)
+            {
+                ClearIdleChain();
+                FinishStandbyWindow();
                 return;
             }
 
@@ -6089,6 +6135,14 @@ namespace WRLDZ.Duel
             int dmgDefAlreadyApplied = -1,
             int dmgAtkAlreadyApplied = -1)
         {
+            // DeckSummonsAndSarcophagi batch: Human-Wave Tactics' per-turn record (Lua EVENT_BATTLED + STATUS_BATTLE_DESTROYED,
+            // a continuous effect: applied before the EVENT_BATTLED triggers below resolve — v209 cross-group audit: a Normal
+            // Monster that Dark Magician of Chaos destroys and banishes still counts).
+            TextEffects.DeckSummonsAndSarcophagiRuntime.NoteBattle(this,
+                destroyAttacker ? attacker : null, destroyDefender ? targetOrNull : null);
+            // LocksRedirectsAndActivity batch: EVENT_BATTLED triggers queued after damage calculation (Dark Magician of
+            // Chaos's banish) resolve now, after the FLIP effect of a monster this battle flipped (or its paused target pick).
+            TextEffects.LocksRedirectsAndActivityRuntime.ResolveQueuedBattledTriggers(this, attacker, targetOrNull);
             DamageSubStep = DamageSubStep.End;
             // Banisher of the Light (RedirectAndReplace batch, v142): a monster this battle destroys has no continuous
             // effect while its destruction is applied.
@@ -6956,6 +7010,12 @@ namespace WRLDZ.Duel
             // TargetNegationsAndHandQuickEffects batch (v163): a monster's Chain answer from the hand (Gravekeeper's Watcher).
             var handAnswer = fromHand && TextEffects.TargetNegationsAndHandQuickEffectsRuntime.IsHandChainAnswer(clause);
             if (fromHand && !handAnswer) return false;
+            // LocksRedirectsAndActivity batch: Goblin of Greed — no discard cost (Magic Jammer, Spell Vanishing …).
+            if (TextEffects.LocksRedirectsAndActivityRuntime.DiscardCostLocked(this, who, clause, out var discardLock))
+            {
+                Log($"Activation illegal: {discardLock}");
+                return false;
+            }
             if (handAnswer &&
                 (!TextEffects.TargetNegationsAndHandQuickEffectsRuntime.TryCanAnswerFromHand(this, who, card, clause,
                      PendingResponse.ChainTarget, out var handOk, out var handWhy) || !handOk))
@@ -7320,6 +7380,10 @@ namespace WRLDZ.Duel
             // triggers (Lua EVENT_PHASE + PHASE_END, EFFECT_TYPE_CONTINUOUS).
             TextEffects.LastTurnRuntime.OnEndPhase(this);
             if (GameOver) return;
+            // NormalMonsterSpells batch: Thousand Energy / Triangle Power — "during the End Phase" of the turn they resolved
+            // (Lua EVENT_PHASE + PHASE_END, EFFECT_TYPE_CONTINUOUS, count limit 1).
+            TextEffects.NormalMonsterSpellsRuntime.OnEndPhase(this);
+            if (GameOver) return;
             // DcrSpellTrapUtility batch: Interdimensional Matter Transporter — banished "until the End Phase" (Lua
             // EVENT_PHASE + PHASE_END, EFFECT_TYPE_CONTINUOUS): back at the start of the End Phase.
             TextEffects.DcrSpellTrapUtilityRuntime.OnEndPhase(this);
@@ -7421,6 +7485,10 @@ namespace WRLDZ.Duel
             // LastTurn batch (v163): a check registered during this End Phase still applies in it.
             TextEffects.LastTurnRuntime.OnEndPhase(this);
             if (GameOver) return;
+            // NormalMonsterSpells batch: Thousand Energy / Triangle Power — "during the End Phase" of the turn they resolved
+            // (Lua EVENT_PHASE + PHASE_END, EFFECT_TYPE_CONTINUOUS, count limit 1).
+            TextEffects.NormalMonsterSpellsRuntime.OnEndPhase(this);
+            if (GameOver) return;
             // DcrSpellTrapUtility batch: a monster banished until the End Phase during this End Phase returns in it.
             TextEffects.DcrSpellTrapUtilityRuntime.OnEndPhase(this);
             // ChaosBanishSummons batch: Chaosrider Gustaph's "until the end of your opponent's next turn" ATK.
@@ -7502,6 +7570,8 @@ namespace WRLDZ.Duel
             // PhaseTriggersAndIgnitionCosts batch: Magical Scientist's Fusion Monster returns to the Extra Deck.
             TextEffects.PhaseTriggersAndIgnitionCostsRuntime.OnEndPhase(this);
             if (GameOver) return;
+            // LpLocksDelayedBurnAndGyNegation batch: Weapon Change's switch and Dora of Fate's record end (PHASE_END, 2).
+            TextEffects.LpLocksDelayedBurnAndGyNegationRuntime.OnEndPhase(this);
 
             // After End Phase, Set cards may be activated on following turns
             // (also clear leftover flags on both sides so a Set trap is legal next turn).
@@ -7691,6 +7761,10 @@ namespace WRLDZ.Duel
                 if (destroyedByBattle && !banishIfDestroyed && !card.IsToken &&
                     TextEffects.NegationMonstersRuntime.BanishesBattleDestroyed(this, card, battleDestroyer))
                     banishIfDestroyed = true;
+                // LocksRedirectsAndActivity batch: Dark Magician of Chaos — a face-up card that would leave the field is
+                // banished instead (EFFECT_LEAVE_FIELD_REDIRECT; the funnel every field exit asks).
+                if (!banishIfDestroyed && TextEffects.LocksRedirectsAndActivityRuntime.LeavesFieldBanishedInstead(this, card))
+                    banishIfDestroyed = true;
                 // Banisher of the Light (RedirectAndReplace batch, v142): destroyed and banished instead of sent to
                 // the GY — read while the monster is still on the field (a destroyed Banisher banishes itself). A
                 // Token is banished instead too: it leaves play without reaching the GY.
@@ -7701,6 +7775,10 @@ namespace WRLDZ.Duel
                     else
                         banishIfDestroyed = true;
                 }
+                // LocksRedirectsAndActivity batch: Grave Protector — destroyed by battle, shuffled into the Deck instead of
+                // going to the GY (EFFECT_TO_GRAVE_REDIRECT, LOCATION_DECKSHF), decided while the monster is on the field.
+                var shuffleIntoDeck = !banishIfDestroyed && !returnToOwnerDeckTopInsteadOfGy && destroyedByBattle &&
+                                      TextEffects.LocksRedirectsAndActivityRuntime.ShufflesBattleDestroyedIntoDeck(this, card);
                 // Effect / non-battle destroy → default shatter (battle already queued)
                 CardShatterPresentation.QueueEffect(card.InstanceId, card.Name);
                 owner.MonsterZones[i].Occupant = null;
@@ -7742,6 +7820,16 @@ namespace WRLDZ.Duel
                     MarkSentFromFieldToGy(card, byEffect, destroyedByBattle, battleDestroyer); // keep for compatibility?
                     TextEffects.ToonsRuntime.NotifyFaceUpCardDestroyed(this, card, wasFaceUp);
                 }
+                else if (shuffleIntoDeck)
+                {
+                    // LocksRedirectsAndActivity batch: never sent to the GY (no "sent to the GY" event or trigger), but
+                    // destroyed by battle: its own "if this card is destroyed by battle" triggers that do not need the GY
+                    // still activate.
+                    TextEffects.LocksRedirectsAndActivityRuntime.ShuffleIntoDeckInstead(this, PileOwner(owner, card), card,
+                        wasFaceUp);
+                    TextEffects.RedirectAndReplaceRuntime.ResolveDestroyedTriggersOutsideGy(this, owner, card,
+                        destroyedByBattle, battleDestroyer);
+                }
                 else
                 {
                     var gyPile = PileOwner(owner, card);
@@ -7752,7 +7840,8 @@ namespace WRLDZ.Duel
                     TextEffects.GyEntryStamps.Entered(this, card,
                         GyEntryReason.Destroyed | (destroyedByBattle ? GyEntryReason.Battle
                             : byEffect != null ? GyEntryReason.Effect : GyEntryReason.None),
-                        destroyedByBattle ? null : TextEffects.GyEntryStamps.HolderOf(this, byEffect));
+                        destroyedByBattle ? null : TextEffects.GyEntryStamps.HolderOf(this, byEffect),
+                        previousHolder: owner);
                     Log($"Destroyed: {card.Name}");
                     MarkSentFromFieldToGy(card, byEffect, destroyedByBattle, battleDestroyer);
                     // Michizure (BattleWindows batch): a monster sent from the field to its owner's GY.
@@ -8151,6 +8240,18 @@ namespace WRLDZ.Duel
                 TextEffects.SummonPromptsAndCostsRuntime.OnNotify(this);
                 // Major Riot (ForcedActivationAndSubstitution, v163): monsters an opponent's effect returned to a hand.
                 OfferMonstersReturnedWindow();
+                // ZoneCapsAndPhaseWindows batch: Spatial Collapse's adjust — a player above 5 cards sends the excess to the GY.
+                if (!GameOver && !Chain.IsResolving && !IsResolvingChain && PendingActivation == null &&
+                    PendingResponse == null)
+                    TextEffects.ZoneCapsRuntime.Adjust(this);
+                // ZoneCapsAndPhaseWindows batch: the opponent's Standby window closed while a prompt, window or Chain was
+                // still open (FinishStandbyWindow held the Standby Phase) — Main Phase 1 once that is done.
+                if (!GameOver && TextEffects.StandbyWindowRuntime.FinishHeld(this) &&
+                    CanContinueAfterStandby(_standbyPausedFor))
+                    ContinueAfterStandby();
+                // ZoneCapsAndPhaseWindows batch: "It becomes the End Phase of this turn" (Neko Mane King) once play is idle.
+                if (!GameOver && !TextEffects.SimultaneousTriggersRuntime.Busy(this) && PlayIdleForDeferredEvents())
+                    TextEffects.PhaseJumpRuntime.OnPlayIdle(this);
             }
             LastRulesSnapshot = GameStateSnapshotBuilder.Capture(this);
             OnStateChanged?.Invoke();

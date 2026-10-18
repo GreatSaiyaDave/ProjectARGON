@@ -203,9 +203,15 @@ namespace WRLDZ.Duel.Rules
                 i.Action == EffectActionKind.ContinuousOpponentCannotActivateQuickPlaySpells && !i.MakesChainLink,
                 Describe(inv));
 
+            // LocksRedirectsAndActivity batch: Goblin of Greed is compiled now (the discard-cost lock every activation site
+            // asks); this guard pins that compiled shape.
             var gob = Prog(db, GoblinOfGreed);
-            Check("Goblin of Greed (deferred): not FullyCompiled, not Implemented",
-                gob != null && !gob.FullyCompiled && !Implemented(db, GoblinOfGreed), Describe(gob));
+            var g = Only(gob);
+            Check("Goblin of Greed (LocksRedirectsAndActivity batch): a continuous both-player discard-cost lock",
+                gob != null && gob.FullyCompiled && Implemented(db, GoblinOfGreed) && g != null &&
+                g.Timing == EffectTiming.ContinuousWhileFaceUp &&
+                g.Action == EffectActionKind.ContinuousCannotDiscardAsCost && g.Side == EffectSide.Both,
+                Describe(gob));
         }
 
         static void NearMisses(CardDatabase db, CheckFn Check)

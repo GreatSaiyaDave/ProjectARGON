@@ -259,6 +259,12 @@ namespace WRLDZ.Duel.Rules
                     reason = reason ?? "[" + card.Name + "] learned text is not legal now.";
                     return false;
                 }
+                // ZoneCapsAndPhaseWindows batch: Spatial Collapse — no 6th card into an empty Field Zone.
+                if (fromHand && TextEffects.ZoneCapsRuntime.FieldSpellBlocked(engine, who, out var capWhy))
+                {
+                    reason = capWhy;
+                    return false;
+                }
                 return CanActivateFieldSpell(engine, who, card, fromHand, out reason);
             }
 
@@ -489,7 +495,8 @@ namespace WRLDZ.Duel.Rules
             }
 
             var fieldMaterials = used.Count(m => who.TryFindMonster(m, out _));
-            if (engine.FirstEmpty(who.MonsterZones) < 0 && fieldMaterials == 0)
+            // ZoneCapsAndPhaseWindows batch: the usable-zone caps count too (MonsterZoneAfterLeaving).
+            if (!engine.MonsterZoneAfterLeaving(who, fieldMaterials))
             {
                 reason = "No Monster Zone will be free after sending field materials.";
                 return false;

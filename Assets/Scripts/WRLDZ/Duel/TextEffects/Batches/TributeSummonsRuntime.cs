@@ -327,13 +327,18 @@ namespace WRLDZ.Duel.TextEffects
         /// e:SetLabel(rg:GetFirst():GetLevel()) before the release), otherwise the caller's ATK value.
         /// </summary>
         public static int TributeCostNumeric(EffectClause c, CardInstance tributed, int atkValue) =>
-            c != null && c.MatchTributedLevel && tributed != null ? tributed.Level : atkValue;
+            c != null && (c.MatchTributedLevel ||
+                          // DeckSummonsAndSarcophagi batch: Ninjitsu Art of Transformation (e:SetLabel(lv+3)).
+                          DeckSummonsAndSarcophagiRuntime.RecordsTributedLevel(c)) && tributed != null
+                ? tributed.Level
+                : atkValue;
 
         /// <summary><see cref="TributeCostNumeric"/> for a pick whose clause is found from the paying card.</summary>
         public static int TributeCostNumeric(CardInstance source, CardInstance tributed, int atkValue)
         {
             var prog = source?.Def != null ? CompiledEffectCache.GetOrCompile(source) : null;
-            var c = prog?.ClausesFor(EffectTiming.Activate).FirstOrDefault(x => x != null && x.MatchTributedLevel);
+            var c = prog?.ClausesFor(EffectTiming.Activate).FirstOrDefault(x => x != null &&
+                (x.MatchTributedLevel || DeckSummonsAndSarcophagiRuntime.RecordsTributedLevel(x)));
             return TributeCostNumeric(c, tributed, atkValue);
         }
 

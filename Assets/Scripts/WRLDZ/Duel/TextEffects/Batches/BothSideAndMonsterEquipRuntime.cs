@@ -78,7 +78,7 @@ namespace WRLDZ.Duel.TextEffects
             if (st.UsedTurn.TryGetValue(hunter, out var used) && used == engine.TurnNumber) return false;
             st.UsedTurn[hunter] = engine.TurnNumber;
 
-            var free = who.SpellTrapZones.Count(z => z != null && z.IsEmpty);
+            var free = ZoneCapsRuntime.UsableSpellTrapZones(who); // ZoneCapsAndPhaseWindows: caps
             if (free <= 0 || kills.Count > free)
             {
                 engine.Log($"{hunter.Name}: {kills.Count} monster(s) to equip but {free} free Spell & Trap Zone(s) — " +

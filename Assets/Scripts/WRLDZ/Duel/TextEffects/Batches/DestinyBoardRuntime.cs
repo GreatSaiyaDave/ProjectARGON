@@ -261,6 +261,8 @@ namespace WRLDZ.Duel.TextEffects
             rec.Placed++;
             engine.Log($"{board.Name}: {who.Name} places {card.Name} face-up from the {from} " +
                        $"({rec.Placed}/{Names(q.Clause.NamedCard).Count}).");
+            // DeckSummonsAndSarcophagi batch: The First Sarcophagus's "all 3 on your field" send and summon (Lua plop).
+            DeckSummonsAndSarcophagiRuntime.AfterNamedPlacement(engine, who, board, q.Clause);
             engine.NotifyPublic();
         }
 
@@ -426,10 +428,13 @@ namespace WRLDZ.Duel.TextEffects
             return null;
         }
 
-        static bool IsMember(CardInstance card, EffectClause send) =>
+        // DeckSummonsAndSarcophagi batch: NamedCard may list several names ('|'), and the applying card itself is always a
+        // member (The First Sarcophagus: "all of them", Lua e3 / e4 Merge(e:GetHandler())).
+        static bool IsMember(CardInstance card, EffectClause send, CardInstance board) =>
             card?.Def != null && send != null &&
-            (TextEffectRuntime.CardMatchesSeries(card.Def, send.TargetSeriesName) ||
-             (!string.IsNullOrEmpty(send.NamedCard) && card.IsNamed(send.NamedCard)));
+            (ReferenceEquals(card, board) ||
+             TextEffectRuntime.CardMatchesSeries(card.Def, send.TargetSeriesName) ||
+             Names(send.NamedCard).Exists(card.IsNamed));
 
         static SideSnapshot Snapshot(DuelEngine engine, DuelistState side)
         {
@@ -446,7 +451,7 @@ namespace WRLDZ.Duel.TextEffects
 
             if (snap.SendClause == null) return snap;
             foreach (var c in FieldCards(side))
-                if (IsMember(c, snap.SendClause))
+                if (IsMember(c, snap.SendClause, snap.ApplyingBoard))
                     snap.Members.Add(c);
             return snap;
         }
@@ -467,7 +472,7 @@ namespace WRLDZ.Duel.TextEffects
                 {
                     var send = new List<CardInstance>();
                     foreach (var c in FieldCards(side))
-                        if (c.FaceUp && IsMember(c, last.SendClause))
+                        if (c.FaceUp && IsMember(c, last.SendClause, last.ApplyingBoard))
                             send.Add(c);
                     if (send.Count > 0)
                     {

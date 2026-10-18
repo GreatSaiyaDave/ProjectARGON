@@ -794,6 +794,12 @@ namespace WRLDZ.Duel.TextEffects
             FusionSubstitutesAtoms.Atoms,
             AttackObligationsAtoms.Atoms,
             MukoAtoms.Atoms,
+            SpellTrapSealsAndImmunityAtoms.Atoms,
+            NormalMonsterSpellsAtoms.Atoms,
+            LpLocksDelayedBurnAndGyNegationAtoms.Atoms,
+            DeckSummonsAndSarcophagiAtoms.Atoms,
+            ZoneCapsAndPhaseWindowsAtoms.Atoms,
+            LocksRedirectsAndActivityAtoms.Atoms,
         };
         /// <summary>Every whole-sentence atom: <see cref="Atoms"/>, then each batch in <see cref="BatchAtomSets"/>.</summary>
         public static IEnumerable<Atom> AllAtoms()

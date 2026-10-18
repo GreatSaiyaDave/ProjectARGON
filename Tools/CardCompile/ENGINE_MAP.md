@@ -518,6 +518,86 @@ The notes of earlier groups are in `~/.cache/wrldz-card-compile/*/patches/<Group
   Opponent` = only the opponent's effects / cards (Gora Turtle of Illusion); Freed / Tyrant use `Side = Controller`.
 - `ArchfiendTargetNegation.TryNegate` covers only a monster on the field (not a GY Archfiend under Darkbishop).
 
+### v209 shared hooks (card batch v209-ast-finish; `TextEffects/Batches/<Group>Runtime.cs`)
+- Paid-LP choice (`LpLocksDelayedBurnAndGyNegationRuntime`): `BeginPaidLpChoice` (from `DuelEngine.TryActivateSpellTrapCore`) opens `PendingActivation.AwaitingLpCost`; `TryAnswerLpChoice` / `TryCancelPick` / `PayOnActivation` finish it; `CannotAttackIfAtkAtMostPaidLp` is read in `ContinuousCannotAttackBlocks`. Reuse for any "pay a multiple of N LP" placement.
+- Own-Standby optional trigger with a pick: `TryFirePhaseClause` (Weapon Change); delayed Normal Summon burn: `OnNormalSummonSuccess` from `CompleteNormalSummon` (Dora of Fate).
+- Spell/Trap seals (`SpellTrapSealsAndImmunityRuntime`): `ActivationLocked` (Spell Card lock, asked by `ContinuousNegationRuntime` and `TryPlaceFieldSpell`), `ShieldsFromOpponentSpell`, `OnStandbyPhase`, `ChainAnswerAllowed` (Equip-only negation).
+- Normal Monster spells (`NormalMonsterSpellsRuntime`): `TryActivationCondition`, `FilterTargets`, `EquipLimitAllows` (Level/Normal equip limit, also Fusion/Ritual Weapon), `OnEndPhase`, `Refresh`, `OnActivationSeated` (cost paid after the target is seated), `EquipAtkOf`.
+- Deck Summons (`DeckSummonsAndSarcophagiRuntime`): `TryActivationCondition`, `FilterTributeCostCandidates`, `NoteBattle` (must run BEFORE any queued battle banish in `ApplyBattleDestructions`).
+
+### Zone caps, the End Phase jump and the opponent's Standby window (ZoneCapsAndPhaseWindows, v178 group ported in v209)
+All in `TextEffects/Batches/ZoneCapsAndPhaseWindowsRuntime.cs`.
+- **Usable-zone caps** (ygopro EFFECT_MAX_MZONE / EFFECT_MAX_SZONE): `ZoneCapsRuntime`. `DuelEngine.FirstEmpty(zones)` returns -1
+  once the row's cap is reached (`CapReached`), so every placement / legality path that asks it is capped; the
+  preferred-zone paths (Normal Summon/Set, Special Summon, S/T Set, `FirstEmptySpellTrap`, `PlaceReturnedMonster`, the
+  Dimensionhole return) also test `CapReached`. Multi-placement counts: `DuelEngine.UsableMonsterZoneCount` /
+  `UsableSpellTrapZoneCount` (`ZoneCapsRuntime.UsableMonsterZones`) — never count `z.IsEmpty` yourself. Tributes / field
+  materials: `DuelEngine.MonsterZoneAfterLeaving(who, n)` (own monsters leaving) or `(who, List<CardInstance>)` (exact
+  Tributes from either field: a Tribute the cap holder loses lowers its cap — Kaiser's EFFECT_UNRELEASABLE_SUM). Placement
+  context (Lua `rp` / `r`): default = the zone's owner places it; wrap with `ZoneCapsRuntime.PlacedBy(engine, player)` when
+  another player's effect places it (Tokens on the opponent's field) and use `DuelEngine.FirstEmptyForControl` for a control
+  change (LOCATION_REASON_CONTROL). A new cap card = one `EffectActionKind` read in `MonsterCap` / `SpellTrapCap`
+  (`ContinuousMaxMonsterZoneCap` / `ContinuousMaxSpellTrapZoneCap` are unused leftovers of the first v178 hooks).
+  Spatial Collapse also blocks a Field Spell into an empty Field Zone / a Pendulum Scale at 5+ cards
+  (`FieldSpellBlocked`, `PendulumScaleBlocked`) and sends the excess from `Notify` (`Adjust`, EVENT_ADJUST).
+- **"It becomes the End Phase"**: `PhaseJumpRuntime.Request` (action `PhaseJumpToEndPhase`) stamps the turn player's Battle
+  Phase ban and a pending jump; it is taken at the next safe point — `Notify` when play is idle in Main 1 / Battle (no
+  declared attack, not in the Damage Step) / Main 2 (`OnPlayIdle` → `EndTurn`), or as Draw → Standby / → Main 1 would move
+  on (`Take` in `DuelEngine`). SimpleAi stops on its `TurnPlayer != ai` guards.
+- **Opponent's Standby window**: `ResponseTiming.StandbyResponse`, opened by `DuelEngine.LeaveStandbyForMain1` once per turn
+  (keyed by the turn player), only when the non-turn player has a legal answer (`StandbyWindowRuntime.BeginWindow`); a pass
+  or a resolved Chain goes on to Main Phase 1 (`FinishStandbyWindow`). When a prompt / window / Chain is still open then,
+  the Standby Phase holds (`StandbyPausedFor` + `StandbyWindowRuntime.HoldFinish`) and `Notify` continues it once idle
+  (`FinishHeld` → `ContinueAfterStandby`); SimpleAi waits on `FinishHeld`. An answer = an Activate clause with
+  `ActivationCondition = StandbyWindowRuntime.OpponentStandbyPhase` (also legal when chaining in that phase); AI choice in
+  `AiWantsToAnswer` (`SpellTrapEffects.AiAutoRespond`).
+- Sent-to-GY condition "during your opponent's turn … in your possession … by an opponent's card effect":
+  `EffectClause.RequiresSentByOpponentEffectOnTheirTurn`, read from the GY-entry stamp
+  (`CardInstance.GyEntryPreviousHolder`, set by `GyEntryStamps.Entered(previousHolder:)`) in
+  `SimpleTriggersAndSwarmRuntime.FireQueuedSentToGy`. Paths that do not pass a previous holder (an excavation-style mass
+  send in FlipMassEffectsRuntime) never meet it.
+
+### Locks, redirects and the activity record (LocksRedirectsAndActivity, v178 port; `TextEffects/Batches/LocksRedirectsAndActivityRuntime.cs`)
+- **Discard-cost lock** (Goblin of Greed, EFFECT_CANNOT_DISCARD_HAND): action `ContinuousCannotDiscardAsCost` (Side = whose costs;
+  Goblin = Both). ONE check, `DiscardCostLocked(engine, who, clause | clauses, out reason)` (or `DiscardCostLocked(engine, who, out
+  reason)` for a cost that always discards), true while a face-up un-negated lock source covers `who` and the clause discards as its
+  cost (`DiscardsAsCost`: `RequiresDiscardCost` unless `DiscardCostIsSend`, multi-discard `DiscardCostCount` unless a Spell send,
+  `RequiresDiscardSelf`, `DiscardEntireHandCost`, Kuriboh's `DiscardSelfNoBattleDamageThisBattle`; exempt only when the clause's own
+  `SourceSnippet` prints "send … from your hand to the GY" — a positive match, because a standalone "Discard 1 card." sentence is merged
+  into the next clause and leaves only that effect sentence in the snippet: Spell Purification, Malice Dispersion). Sites that ask it: `TextEffectRuntime.CanActivate` (each Activate clause, and its response-window
+  block for the window's clauses: the battle windows return before the Activate loop, Rope of Life), `IgnitionCostLegal`,
+  `CanAnswerChainLinkWithClause` (each Spell Shield bullet), the chain-answer path before `EffectDamageEventsRuntime.IsDamageAnswer`,
+  `CanActivateFreeChainOnChain`, `ResponseDiscardPayable` (response windows + `SeatResponseOnChain`),
+  `DuelEngine.TryActivateChainResponse` (Counter Traps), `ChainLinkAnswersRuntime.CanAnswer`,
+  `TargetNegationsAndHandQuickEffectsRuntime.CanActivateHandQuick` / `TryCanAnswerFromHand`, `FaceUpQuickEffectsRuntime` /
+  `BattleBoostsRuntime.CanActivateQuick`, `ArchfiendRidersRuntime.CanActivateHandEvent`,
+  `PerCountBurnsRuntime.CanActivateFaceUpFieldIgnition`, `ChaosBanishSummonsRuntime.CanActivateNinja`,
+  `MonsterEffects.IsLegalHandDamageCalculationEffect` (Kuriboh) / `CanActivateIgnition` (Abyss Soldier). A NEW activation-legality
+  site with a discard cost must ask it. Discards made by a resolution and maintenance costs are not locked.
+- **Leave-field redirect funnel** (Dark Magician of Chaos, EFFECT_LEAVE_FIELD_REDIRECT): `LeavesFieldBanishedInstead(engine, card)`
+  (face-up in a Monster Zone, Summon done; CANNOT_DISABLE, so negation does not stop it) is asked by every monster field exit:
+  `DuelEngine.DestroyMonster` (before Banisher), `SendCardToGrave` (with Banisher's `SendsToBanishedInstead`),
+  `ReturnCardToHand` / `ReturnCardToDeck` (`TryBanishInsteadOfLeaving`: banished, the call returns false). A NEW field exit must ask
+  it. Order in `DestroyMonster`: Lesser Fiend battle-destroy redirect, leave-field redirect, Banisher of the Light, top-of-Deck
+  return, then Grave Protector's battle GY-to-Deck redirect (`ShufflesBattleDestroyedIntoDeck` / `ShuffleIntoDeckInstead`: owner's
+  Deck shuffled, Extra Deck monsters to the Extra Deck, `NoteReturnedToDeck` event; its own destroyed-by-battle triggers still run;
+  `RedirectAndReplaceRuntime.DestroyedByCurrentBattle` is internal: a battle-destroyed source has no continuous effect).
+- **EVENT_BATTLED trigger after the FLIP**: an `AfterDamageCalculation` clause with `RequiresBattledMonsterDestroyed` is queued by
+  `FireAfterDamageFor` (`QueueBattledTrigger`, queue cleared at each `NotifyAfterDamageCalculation`) and resolved at the top of
+  `DuelEngine.ApplyBattleDestructions` (`ResolveQueuedBattledTriggers`, also after a paused FLIP target pick resumes), on the battle
+  target only while it is still on the field. Other `AfterDamageCalculation` clauses (D.D. Warrior Lady) still resolve inline.
+- **Attack activity record** (ygopro ACTIVITY_ATTACK): `NoteAttackDeclared` (from `DuelEngine.DeclareAttack`) keeps per player and
+  turn the attackers' names; `DeclaredAttackWithNamedThisTurn(engine, who, name)` reads it (it survives the attacker leaving).
+  Named attack oath: clause field `NamedCannotAttackTurnActivated` (applied at the top of `ApplyClause`, like the other oaths) +
+  `AttackForbidden` in `DuelEngine.ContinuousCannotAttackBlocks`; activation condition `NoNamedAttackThisTurn`. Inferno Fire Blast
+  can reuse all three.
+- Summon flag (aux.sumreg): `NoteNormalOrSpecialSummoned` (Normal/Tribute Summon and `SpecialSummonToField` success; not Flip, not
+  Set) with the field presence; an End Phase hook `TryFirePhaseClause` in `FirePhaseTriggersFor` (either player's End Phase).
+- Reserved members with no (or a partial) reader, listed in `EffectVocabulary.HasNoRuntime` so no atom can emit them:
+  `ContinuousNeitherPlayerCanActivate` / `ContinuousThisPlayerCannotActivate` (only `ContinuousNegationRuntime.ActivationLocked`
+  asks `LocksRedirectsAndActivityRuntime.ActivationLocked`), `RequiresNoOtherActivationThisTurn` (no ACTIVITY_CHAIN record),
+  `LeaveFieldReturnsToOwnerHandInstead` (no arm in the funnel).
+
 ## 3. Tests
 
 - Location: `Rules/Batches/<Group>RegressionTests.cs` with
@@ -571,8 +651,12 @@ The notes of earlier groups are in `~/.cache/wrldz-card-compile/*/patches/<Group
 | Must-attack obligation (EFFECT_MUST_ATTACK) | Only `MustAttackDirectlyThisTurn` restricts targets; nothing stops leaving the Battle Phase (DuelUI End Battle / End Turn must refuse) and SimpleAi has no forced-attack duty | Amazoness Archers, Diffusion Wave-Motion, Staunch Defender, Berserk Gorilla (self-destroy-in-Defense sentence alone is not enough) |
 | Copy another card's effect | No path resolves another card's compiled program as the activator's own link | Double Spell |
 | Simultaneous hidden pick + reveal (UI) | extends "Revealed-hand state" | Ante |
+| Per-player activity record + player-wide activation lock | An attack activity record exists (v178, `LocksRedirectsAndActivityRuntime`), but no "activated a card or effect this turn" record (Lua ACTIVITY_CHAIN, checked in a cost): activations have no single choke point (Spell/Trap cards, monster ignitions, Quick Effects, hand traps and ~20 inline trigger sites that make no Chain Link), and the "cannot activate cards or effects" lock is read only by the Spell/Trap hub (`ContinuousNegationRuntime.ActivationLocked`), not by the trigger, FLIP and End Phase sites; also no Nomi "Must be Special Summoned … by banishing 1 LIGHT and 1 DARK" template | Chaos Emperor Dragon - Envoy of the End |
+| Negation of effects activated in the GY / targeting a GY card (EVENT_CHAIN_SOLVING) | One hook at every resolution site: chain links, `ApplyClause`, legacy S/T paths, and the inline GY triggers batch runtimes resolve themselves (Manticore of Darkness, Revival Jam, Twin-Headed Behemoth, Dark Necrofear, DiscardTriggers, GyHandAndSummonEventTriggers, SimpleTriggersAndSwarm, BattleDestroyedTriggers, AskCardPick Finish lambdas), none of which records the activation location | The End of Anubis |
 
 Open residuals (fail-soft, not fixed):
+- v209 audit residuals: Neko Mane King misses a hand/Deck discard by an opponent effect (e.g. The Law of the Normal): `MonsterEffects.DiscardFromHandByInstance` / `SendFromHandToGraveByInstance` and excavation mills never call `GyEntryStamps.Entered` (stamping them would start every "sent to the GY from anywhere" trigger, so audit first). Human-Wave Tactics is recorded after a battle-flipped FLIP effect resolves (a FLIP that removes the battle-destroyed low Normal first is not counted). Weapon Change uses lasting deltas, not SET_ATTACK_FINAL. Wall of Revealing Light is placement-only, so it is not activatable in non-chain response windows. Dust Barrier: Gemini Normals are not shielded. Hand/Deck picks of Sarcophagus / Ninjitsu / Human-Wave show one instance per name. Cockadoodledoo and Fusion Parasite are Stubs (shared sentences) and stay out of decks.
+- v178 LocksRedirectsAndActivity residuals: Dark Magician of Chaos's End Phase GY Spell effect resolves inline (no Chain window, like every End Phase trigger but Life Absorbing Machine); its summon flag is lost when a face-down Special Summoned copy is flipped face-up the same turn (ocgcore keeps it); its queued battle banish resolves even if Dark Magician of Chaos was negated on the field in between; the Goblin of Greed lock does not touch maintenance discards (Spiritual Energy Settle Machine) or effect discards; Banisher of the Light and Grave Protector both applying: Banisher wins (ocgcore order is registration order); Burst Stream's BEWD attack oath is bound in `ApplyClause` like Soul Exchange's, so an activation negated before resolution does not bind it; Man-Eater Bug's registered FLIP cannot target itself.
 - v177 audit residuals: Exhausting Spell's `RemoveAllSpellCounters` arm also clears Balloon Lizard's counters (shared `CardInstance.Counters`; fix = skip non-`SpellCounterSpendersRuntime.IsSpellCounterHolder` cards and rewrite the Exhausting Spell test in `InteractionRegressionTests`); `DamageStepRulesRuntime.BattleAttacker` and `EndOfDamageStepRidersRuntime.NoteBattle` record the same battle state twice (cleanup only).
 - Tribute, discard and banish cost paths still fire optional "When" GY effects of the cost card inline.
 - Magic Reflector cannot target a monster Card acting as an Equip Spell (Sword Hunter, Unions); fails soft.

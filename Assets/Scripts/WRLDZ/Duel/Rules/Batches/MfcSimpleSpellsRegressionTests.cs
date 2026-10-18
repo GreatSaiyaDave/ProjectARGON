@@ -20,16 +20,13 @@ namespace WRLDZ.Duel.Rules
     /// <item>Mass Driver (34906152) is Implemented by the PhaseTriggersAndIgnitionCosts batch (its pins live in
     /// PhaseTriggersAndIgnitionCostsRegressionTests). Anti-Spell (53112492) is Implemented whole by the
     /// SpellCounterSpenders batch (its cost fragment still never compiles on its own).</item>
-    /// <item>Thunder of Ruler (91781589) — stays fail-closed on purpose: its only timing is the
-    /// opponent's Standby Phase and the engine has no activation path for a Set Normal Trap on that
-    /// timing (MfcSimpleSpellsBAtoms documents why). Queued until a Standby priority window for the
-    /// non-turn player exists.</item>
+    /// <item>Thunder of Ruler (91781589) is Implemented by the ZoneCapsAndPhaseWindows batch (the opponent's
+    /// Standby window; its pins live in ZoneCapsAndPhaseWindowsRegressionTests).</item>
     /// </list>
     /// </summary>
     public static class MfcSimpleSpellsRegressionTests
     {
         const int DarkMagicianGirl = 38033121;
-        const int ThunderOfRuler = 91781589;
         const int AntiSpell = 53112492;
 
         public static void Run(CardDatabase db, DeckFile pDeck, DeckFile aDeck, Action<string, bool, string> check)
@@ -72,7 +69,8 @@ namespace WRLDZ.Duel.Rules
             }
 
             // Mass Driver: Implemented by the PhaseTriggersAndIgnitionCosts batch (its pins moved there).
-            StaysFailClosed("Thunder of Ruler (opp Standby activation; no Battle Phase this turn)", ThunderOfRuler);
+            // Thunder of Ruler: Implemented by the ZoneCapsAndPhaseWindows batch (the opponent's Standby window); its pins moved
+            // there (ZoneCapsAndPhaseWindowsRegressionTests).
             {
                 // SpellCounterSpenders batch: Anti-Spell compiles whole (its own atom: the side-wide counter cost and the
                 // Spell negation together); the mini-duels are in SpellCounterSpendersRegressionTests.

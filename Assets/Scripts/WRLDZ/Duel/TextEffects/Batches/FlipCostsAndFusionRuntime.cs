@@ -418,7 +418,7 @@ namespace WRLDZ.Duel.TextEffects
             if (!engine.ReturnCardToHand(target, by: who)) return; // an Extra Deck monster goes to the Extra Deck
             if (materials == null || materials.Count == 0 || engine.GameOver) return; // not Fusion Summoned
 
-            var free = who.MonsterZones.Count(z => z != null && z.IsEmpty);
+            var free = ZoneCapsRuntime.UsableMonsterZones(who); // ZoneCapsAndPhaseWindows: caps
             var ready = materials.All(m => m != null && who.Graveyard.Contains(m) &&
                                            m.SentAsFusionMaterialFor == target &&
                                            TextEffectRuntime.CanSpecialSummonFromGyTarget(m) &&

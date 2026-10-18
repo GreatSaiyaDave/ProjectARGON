@@ -341,6 +341,11 @@ namespace WRLDZ.Duel.TextEffects
             if (link.Targets.Count > 0)
                 link.Target = link.Targets[0];
 
+            // NormalMonsterSpells batch: Sword of the Soul-Eater Tributes its other Normal Monsters now (a cost paid after
+            // its target is chosen, before anyone may respond).
+            NormalMonsterSpellsRuntime.OnActivationSeated(engine, link);
+            if (engine.GameOver) return;
+
             if (engine.OpenChainResponseWindow(engine.OpponentOf(who)))
             {
                 engine.NotifyPublic();

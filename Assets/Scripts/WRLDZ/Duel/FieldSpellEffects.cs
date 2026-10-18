@@ -116,6 +116,8 @@ namespace WRLDZ.Duel
             TextEffects.DamageStepRulesRuntime.ApplyBoard(engine);
             // BattleAndPositionRecords batch: Judgment of the Desert's flip record; Curse of Anubis' original DEF 0 ends.
             TextEffects.BattleAndPositionRecordsRuntime.ApplyBoard(engine);
+            // LpLocksDelayedBurnAndGyNegation batch: Weapon Change's switch ends on a face-down / departed monster.
+            TextEffects.LpLocksDelayedBurnAndGyNegationRuntime.Refresh(engine);
             DestroyNamedLeavesContinuous(engine, engine.Player);
             DestroyNamedLeavesContinuous(engine, engine.Opponent);
             // EquipAndSpellProtection batch: Heart of Clear Water's self-destruction; stale Magic Reflector counters.
@@ -123,6 +125,9 @@ namespace WRLDZ.Duel
             // ContinuousLocksAndIgnitions batch (v163): Buster Rancher's equip limit (ATK 1000 or less except during damage
             // calculation) is re-checked; a broken limit destroys the Equip Card.
             TextEffects.ContinuousLocksAndIgnitionsRuntime.SweepEquipLimits(engine);
+            // NormalMonsterSpells batch: Thousand Energy's original ATK/DEF end with the monster's stay face-up on the field;
+            // a Level / Normal Monster equip limit (Sword of the Soul-Eater, Opti-Camouflage Armor) is re-checked.
+            TextEffects.NormalMonsterSpellsRuntime.Refresh(engine);
             TextEffects.TextEffectRuntime.SweepClassicStateChecks(engine);
             // Kotodama (RedirectAndReplace batch, v142): face-up monsters sharing a name are destroyed.
             TextEffects.RedirectAndReplaceRuntime.SweepSameNameDestruction(engine);
@@ -143,9 +148,8 @@ namespace WRLDZ.Duel
             TextEffects.AttackObligationsRuntime.SweepSelfDestroy(engine);
             // Skull Invitation: cards that reached a GY since the last checkpoint (StandbyGrowthAndMaintenance, v142).
             TextEffects.StandbyGrowthAndMaintenanceRuntime.GySendCheckpoint(engine);
-
-            // ZoneCapsAndPhaseWindows batch: Spatial Collapse / Kaiser Colosseum adjust step (EVENT_ADJUST).
-            EnforceZoneCaps(engine);
+            // ZoneCapsAndPhaseWindows batch: Spatial Collapse's adjust step (EVENT_ADJUST) runs from DuelEngine.Notify once
+            // nothing resolves (TextEffects.ZoneCapsRuntime.Adjust), not on every refresh.
         }
 
         static void ClearModifiers(DuelistState who)
@@ -181,87 +185,6 @@ namespace WRLDZ.Duel
             // DerivedAtkMonsters batch (v176): a self-set ATK/DEF is recomputed below (ApplySelfScale / grants).
             c.SelfSetAtk = int.MinValue;
             c.SelfSetDef = int.MinValue;
-        }
-
-                /// <summary>
-        /// ZoneCapsAndPhaseWindows batch: Spatial Collapse / Kaiser Colosseum adjust step.
-        /// If a player has more cards in their zones than the cap allows, send excess to GY.
-        /// Called during RefreshBoard (EVENT_ADJUST equivalent).
-        /// </summary>
-        public static void EnforceZoneCaps(DuelEngine engine)
-        {
-            if (engine == null || _enforcingZoneCaps) return;
-            _enforcingZoneCaps = true;
-            try
-            {
-                EnforceZoneCapsForPlayer(engine, engine.Player);
-                EnforceZoneCapsForPlayer(engine, engine.Opponent);
-            }
-            finally
-            {
-                _enforcingZoneCaps = false;
-            }
-        }
-
-        /// <summary>Re-entrancy guard: a zone-cap send refreshes the board, which runs this again.</summary>
-        static bool _enforcingZoneCaps;
-
-        static void EnforceZoneCapsForPlayer(DuelEngine engine, DuelistState who)
-        {
-            if (who == null) return;
-
-            int maxMZone = engine.GetUsableMonsterZoneCount(who);
-            int maxSZone = engine.GetUsableSpellTrapZoneCount(who);
-
-            // Count occupied Monster Zones
-            var occupiedMZones = new List<CardInstance>();
-            for (int i = 0; i < who.MonsterZones.Length; i++)
-            {
-                var m = who.MonsterZones[i]?.Occupant;
-                if (m != null) occupiedMZones.Add(m);
-            }
-
-            // Count occupied Spell/Trap Zones
-            var occupiedSZones = new List<CardInstance>();
-            for (int i = 0; i < who.SpellTrapZones.Length; i++)
-            {
-                var st = who.SpellTrapZones[i]?.Occupant;
-                if (st != null) occupiedSZones.Add(st);
-            }
-
-            // Also check Field Spell Zone
-            var fieldSpell = who.FieldSpellZone?.Occupant;
-            if (fieldSpell != null) occupiedSZones.Add(fieldSpell);
-
-            // If over Monster Zone cap, send excess to GY (owner chooses, here we send lowest index)
-            if (occupiedMZones.Count > maxMZone)
-            {
-                int excess = occupiedMZones.Count - maxMZone;
-                for (int i = 0; i < excess; i++)
-                {
-                    var card = occupiedMZones[i];
-                                        if (card != null)
-                    {
-                        engine.Log($"Spatial Collapse / Kaiser Colosseum: {who.Name} sends {card.Name} to GY (Monster Zone cap {maxMZone}).");
-                        engine.SendCardToGrave(who, card);
-                    }
-                }
-            }
-
-            // If over Spell/Trap Zone cap, send excess to GY
-            if (occupiedSZones.Count > maxSZone)
-            {
-                int excess = occupiedSZones.Count - maxSZone;
-                for (int i = 0; i < excess; i++)
-                {
-                    var card = occupiedSZones[i];
-                                        if (card != null)
-                    {
-                        engine.Log($"Spatial Collapse: {who.Name} sends {card.Name} to GY (Spell/Trap Zone cap {maxSZone}).");
-                        engine.SendCardToGrave(who, card);
-                    }
-                }
-            }
         }
 
         static void ApplyFaceUpField(DuelEngine engine, CardInstance field)
@@ -339,6 +262,8 @@ namespace WRLDZ.Duel
                 // UnionRiders batch (v175): a Union not in its Union state (taken by Union Rider) gives no Union bonus.
                 if (UnionRidersRuntime.UnionTextOff(eq))
                     continue;
+                // NormalMonsterSpells batch: Sword of the Soul-Eater's ATK for the monsters Tributed as it was activated.
+                host.AtkModifier += NormalMonsterSpellsRuntime.EquipAtkOf(eq, host);
                 var ep = eq?.Def != null ? CompiledEffectCache.GetOrCompile(eq.Def) : null;
                 if (ep == null) continue;
                 // Germ Infection / Stim-Pack: ATK lost per Standby Phase counted on the Equip.
@@ -985,6 +910,15 @@ namespace WRLDZ.Duel
             return false;
         }
 
+        /// <summary>SpellTrapSealsAndImmunity batch: a face-up monster named <paramref name="name"/> in <paramref name="who"/>'s Monster Zone.</summary>
+        public static bool ControllerHasNamedFaceUpMonster(DuelistState who, string name, bool series)
+        {
+            if (who == null || string.IsNullOrEmpty(name)) return false;
+            foreach (var m in who.MonstersOnField())
+                if (m != null && m.FaceUp && CardMatchesNamed(m, name, series)) return true;
+            return false;
+        }
+
         static bool CardMatchesNamed(CardInstance c, string name, bool series)
         {
             if (c == null || string.IsNullOrEmpty(name)) return false;
@@ -1142,7 +1076,10 @@ namespace WRLDZ.Duel
                     if (c == null || c.Action != EffectActionKind.SelfDestroyUnlessNamedFaceUp)
                         continue;
                     if (string.IsNullOrEmpty(c.RequiresFaceUpName)) continue;
-                    var ok = c.RequiresControllerNamedCard
+                    // SpellTrapSealsAndImmunity batch: the Talismans need the named monster face-up in your Monster Zone.
+                    var ok = c.NamedFaceUpInYourMonsterZone
+                        ? ControllerHasNamedFaceUpMonster(who, c.RequiresFaceUpName, c.NamedCardIsSeries)
+                        : c.RequiresControllerNamedCard
                         ? ControllerHasNamedCard(who, c.RequiresFaceUpName, c.NamedCardIsSeries)
                         : NamedCardIsFaceUpOnField(engine, c.RequiresFaceUpName);
                     if (ok) continue;

@@ -18,13 +18,16 @@ namespace WRLDZ.Duel.TextEffects
     public static class GyEntryStamps
     {
         /// <summary><paramref name="card"/> just entered a GY: a new stamp for this turn.</summary>
+        /// <param name="previousHolder">ZoneCapsAndPhaseWindows batch: who held the card right before (its controller on
+        /// the field, the holder of the hand / Deck it left); null when the path does not say.</param>
         public static void Entered(DuelEngine engine, CardInstance card, GyEntryReason reason = GyEntryReason.None,
-            DuelistState reasonPlayer = null)
+            DuelistState reasonPlayer = null, DuelistState previousHolder = null)
         {
             if (card == null) return;
             card.GyEntryTurn = engine?.TurnNumber ?? 0;
             card.GyEntryReason = reason;
             card.GyEntryReasonPlayer = reasonPlayer;
+            card.GyEntryPreviousHolder = previousHolder;
             card.GyEntryStamp++;
             // SimpleTriggersAndSwarm batch: a "When this card is sent to the GY" (from anywhere) trigger is queued here.
             SimpleTriggersAndSwarmRuntime.NoteEnteredGy(engine, card);
@@ -51,6 +54,7 @@ namespace WRLDZ.Duel.TextEffects
             card.GyEntryTurn = 0;
             card.GyEntryReason = GyEntryReason.None;
             card.GyEntryReasonPlayer = null;
+            card.GyEntryPreviousHolder = null;
         }
 
         /// <summary>The player who holds <paramref name="card"/> (field controller, else the pile it is in); null if none.</summary>

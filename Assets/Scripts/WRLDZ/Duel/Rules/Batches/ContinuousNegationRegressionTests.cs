@@ -159,9 +159,14 @@ namespace WRLDZ.Duel.Rules
                     "Trap Cards cannot be activated.");
                 Check("Near miss: a bare \"Trap Cards cannot be activated\" is not Jinzo's sentence",
                     shortLock == null || !HasAnySource(shortLock));
+                // SpellTrapSealsAndImmunity batch: Talisman of Trap Sealing is Implemented — Jinzo's lock and negation as
+                // sources, bound to a face-up "Sealmaster Meisei" in your Monster Zone (SpellTrapSealsAndImmunityRegressionTests).
                 var talisman = Prog(TalismanOfTrapSealing);
-                Check("Near miss: Talisman of Trap Sealing (Sealmaster-bound wording) stays uncompiled",
-                    talisman == null || (!talisman.FullyCompiled && !HasAnySource(talisman)));
+                Check("Talisman of Trap Sealing: Jinzo's lock and negation, bound to a face-up \"Sealmaster Meisei\" in your " +
+                      "Monster Zone",
+                    talisman != null && talisman.FullyCompiled && HasAnySource(talisman) &&
+                    talisman.ClauseList.Exists(c => c != null && c.Action == EffectActionKind.SelfDestroyUnlessNamedFaceUp &&
+                                                    c.NamedFaceUpInYourMonsterZone));
                 var sasuke = Prog(SasukeSamurai2);
                 Check("Near miss: Sasuke Samurai #2 (pay to seal until the End Phase) gets no continuous lock",
                     sasuke == null || !HasAnySource(sasuke));

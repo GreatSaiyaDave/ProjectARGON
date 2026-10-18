@@ -210,6 +210,14 @@ namespace WRLDZ.Duel.Rules
                     r.Reason = "No free Monster Zone (the Tribute you must use is your opponent's monster).";
                     return r;
                 }
+                // ZoneCapsAndPhaseWindows batch: a usable-zone cap (Kaiser Colosseum's Tribute limit, Spatial Collapse) must
+                // leave room once the Tributes are gone (at best one of your monsters per Tribute).
+                if (!engine.MonsterZoneAfterLeaving(who,
+                        System.Math.Min(r.TributesNeeded, who.MonstersOnField().Count(m => m != null))))
+                {
+                    r.Reason = "No usable Monster Zone after the Tributes (a card limits the monsters you can control).";
+                    return r;
+                }
             }
 
             r.Legal = true;

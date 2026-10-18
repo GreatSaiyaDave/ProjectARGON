@@ -484,7 +484,8 @@ namespace WRLDZ.Duel.Rules
             foreach (var t in chosen)
                 if (who.TryFindMonster(t, out _))
                     fieldTributes++;
-            if (engine.FirstEmpty(who.MonsterZones) < 0 && fieldTributes == 0)
+            // ZoneCapsAndPhaseWindows batch: the usable-zone caps count too (MonsterZoneAfterLeaving).
+            if (!engine.MonsterZoneAfterLeaving(who, fieldTributes))
             {
                 reason = "No free Monster Zone.";
                 return false;
@@ -564,7 +565,8 @@ namespace WRLDZ.Duel.Rules
             foreach (var t in tributes)
                 if (who.TryFindMonster(t, out _))
                     fieldTributes++;
-            if (engine.FirstEmpty(who.MonsterZones) < 0 && fieldTributes == 0)
+            // ZoneCapsAndPhaseWindows batch: the usable-zone caps count too (MonsterZoneAfterLeaving).
+            if (!engine.MonsterZoneAfterLeaving(who, fieldTributes))
             {
                 engine.Log("Ritual Summon failed — no Monster Zone.");
                 return false;

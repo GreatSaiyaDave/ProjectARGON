@@ -899,6 +899,8 @@ namespace WRLDZ.Duel
             // MonsterNegationAndControlLocks batch: a take-control activation never targets a control-locked monster
             // (Blindly Loyal Goblin; mirror of TextEffectRuntime.CollectTargets).
             TextEffects.MonsterNegationAndControlLocksRuntime.FilterLegacyTargets(engine, exceptCard, list);
+            // LpLocksDelayedBurnAndGyNegation batch: Dora of Fate's target is above Level 1 (mirror of CollectTargets).
+            TextEffects.LpLocksDelayedBurnAndGyNegationRuntime.FilterLegacyTargets(exceptCard, list);
             return list;
         }
 
@@ -1631,13 +1633,11 @@ namespace WRLDZ.Duel
                     TextEffects.MajorRiotRuntime.AnswersWindow(prog))
                     return TextEffects.TextEffectRuntime.CanActivate(engine, who, card, fromHand: false, prog,
                         out _);
-                // ZoneCapsAndPhaseWindows batch: Standby Phase response window for Set Normal Traps
-                // (e.g., Thunder of Ruler). Only Set Traps with StandbyPhase timing can activate.
+                // ZoneCapsAndPhaseWindows batch: Thunder of Ruler in the opponent's Standby Phase.
                 if (timing == ResponseTiming.StandbyResponse &&
-                    prog.HasTiming(TextEffects.EffectTiming.StandbyPhase) &&
-                    TextEffects.TextEffectRuntime.CanActivate(engine, who, card, fromHand: false, prog,
-                        out _))
-                    return true;
+                    TextEffects.StandbyWindowRuntime.AnswersWindow(prog))
+                    return TextEffects.TextEffectRuntime.CanActivate(engine, who, card, fromHand: false, prog,
+                        out _);
             }
 
             if (prog != null && prog.FullyCompiled)
@@ -1745,6 +1745,9 @@ namespace WRLDZ.Duel
                 // The LP cost is paid as the card is activated, before the opponent may respond (Toon World,
                 // Delinquent Duo).
                 TextEffects.ActivationLpCostRuntime.PayOnActivation(engine, who, card, engine.Chain.Last, prog);
+                if (engine.GameOver) return true;
+                // LpLocksDelayedBurnAndGyNegation batch: Wall of Revealing Light's chosen multiple of 1000 LP.
+                TextEffects.LpLocksDelayedBurnAndGyNegationRuntime.PayOnActivation(engine, who, card, engine.Chain.Last);
                 if (engine.GameOver) return true;
                 // CallsDiceAndSetTriggers batch (v163): Reversal Quiz sends every other card in its controller's hand and
                 // field to the GY as the cost.
@@ -1902,6 +1905,9 @@ namespace WRLDZ.Duel
                     // PgdSpellTrapBasics batch (v162): Secret Pass to the Treasures' face-up monster with 1000 or less ATK
                     // (no legacy list has the ATK ceiling).
                     c.Action == EffectActionKind.TargetCanAttackDirectlyThisTurn ||
+                    // NormalMonsterSpells batch: Order to Smash's face-up Level 2 or lower non-Token Normal Monster (no
+                    // legacy list has the filter).
+                    TextEffects.NormalMonsterSpellsRuntime.UsesCompiledActivationPending(c) ||
                     // EngineResiduals (v163): "Target 1 face-up monster on the field" (Offerings to the Doomed, Micro Ray,
                     // Collected Power). The legacy list includes Sets, and the untargeted seat picked the target only at
                     // resolution, for the player too; the compiled flow asks it as the card is activated.
@@ -2427,6 +2433,11 @@ namespace WRLDZ.Duel
                 // ForcedActivationAndSubstitution batch (v163): Major Riot when the opponent's field is the stronger one.
                 pick = legal.FirstOrDefault(c => TextEffects.MajorRiotRuntime.AiWantsToAnswer(engine, who, c));
             }
+            else if (engine.PendingResponse.Timing == ResponseTiming.StandbyResponse)
+            {
+                // ZoneCapsAndPhaseWindows batch: Thunder of Ruler when the turn player has something to attack with.
+                pick = legal.FirstOrDefault(c => TextEffects.StandbyWindowRuntime.AiWantsToAnswer(engine, who, c));
+            }
             else if (engine.PendingResponse.Timing == ResponseTiming.MonsterEquipped)
             {
                 // EquipModel batch: Armored Glass when the opponent just equipped a monster and has more live Equip
@@ -2742,6 +2753,9 @@ namespace WRLDZ.Duel
 
             // StandbyBurnsAndDice batch (v162): Cancel = Inspection is not used.
             if (TextEffects.StandbyBurnsAndDiceRuntime.TryCancelPick(engine))
+                return true;
+            // LpLocksDelayedBurnAndGyNegation batch: CANCEL at Wall of Revealing Light's amount = not activated.
+            if (TextEffects.LpLocksDelayedBurnAndGyNegationRuntime.TryCancelPick(engine))
                 return true;
             // BattleDestroyedGyRecovery batch (v162): Revival Jam declines its LP cost; Return of the Doomed's mandatory
             // pick is made automatically.
@@ -3113,7 +3127,8 @@ case EffectTargetKind.DeclareMonsterType:
                 if (!TryCollectMaterials(who, matNames, out var found)) continue;
                 // After sending materials, need a free Monster Zone (tributes free zones if from field)
                 var fieldMats = found.Count(m => who.TryFindMonster(m, out _));
-                var freeAfter = engine.FirstEmpty(who.MonsterZones) >= 0 || fieldMats > 0;
+                // ZoneCapsAndPhaseWindows batch: the usable-zone caps count too (MonsterZoneAfterLeaving).
+                var freeAfter = engine.MonsterZoneAfterLeaving(who, fieldMats);
                 if (!freeAfter) continue;
                 fusionId = fusion;
                 materials = found;

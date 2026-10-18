@@ -94,8 +94,11 @@ namespace WRLDZ.Duel.Rules
                 // clause is still the wrong shape; gate off.
                 (53112492, "Anti-Spell", "Spell Counter cost + negate a Spell activation",
                     c => c.Action == EffectActionKind.Destroy, false),
+                // SpellTrapSealsAndImmunity batch: Implemented whole (NegateActivation answering only an Equip Spell Card's
+                // activation); a Destroy clause, or a negation not limited to Equip Spells, is the wrong shape; gate off.
                 (79649195, "Armor Break", "negate an Equip Spell activation",
-                    c => c.Action == EffectActionKind.Destroy, true),
+                    c => c.Action == EffectActionKind.Destroy ||
+                         (c.Action == EffectActionKind.NegateActivation && !c.NegateRespondsToEquipSpellOnly), false),
                 (57953380, "Card of Safe Return", "a draw trigger, not a draw on activation",
                     c => c.Timing == EffectTiming.Activate && c.Action == EffectActionKind.Draw, false),
                 (79853073, "Cipher Soldier", "vs a Warrior-Type, during that damage calculation only",

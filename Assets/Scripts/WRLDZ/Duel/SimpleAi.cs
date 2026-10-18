@@ -56,7 +56,10 @@ namespace WRLDZ.Duel
             yield return Wait();
             // TriggerChainResponses batch (v163): a trigger Chain of this turn's Draw / Standby / End Phase (Freed's search,
             // Life Absorbing Machine, Spirit's Invitation) may wait on the player's Chain response; the turn goes on after it.
-            while (engine.IsAwaitingPlayerResponse && engine.TurnPlayer == ai &&
+            // ZoneCapsAndPhaseWindows batch: the player's Standby window answer (Thunder of Ruler) left a pick or a Chain
+            // open; DuelEngine moves this Standby Phase on to Main Phase 1 once it is done (StandbyWindowRuntime.FinishHeld).
+            while ((engine.IsAwaitingPlayerResponse || TextEffects.StandbyWindowRuntime.FinishHeld(engine)) &&
+                   engine.TurnPlayer == ai &&
                    (engine.Phase == DuelPhase.Draw || engine.Phase == DuelPhase.Standby || engine.Phase == DuelPhase.End))
                 yield return null;
             if (engine.GameOver || engine.TurnPlayer != ai) yield break;

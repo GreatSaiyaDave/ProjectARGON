@@ -89,10 +89,23 @@ namespace WRLDZ.Duel.Rules
                     Shape(prog));
             }
 
+            {
+                // LpLocksDelayedBurnAndGyNegation batch: Weapon Change's 700 LP is the cost of its Standby trigger; the
+                // activation itself only places the card (no bare LP-payment clause).
+                var def = db.Get(WeaponChange);
+                var prog = def != null ? CardTextEffectCompiler.Compile(def) : null;
+                Check("Weapon Change: no bare LP-payment clause; the 700 LP is its Standby trigger's cost",
+                    def != null && prog != null && prog.FullyCompiled && !HasBareLpClause(prog) &&
+                    prog.ClausesFor(EffectTiming.Activate).Count == 0 &&
+                    prog.ClauseList.Exists(c =>
+                        c.Action == EffectActionKind.SwitchTargetCurrentAtkDefUntilOpponentsNextEndPhase &&
+                        c.Timing == EffectTiming.StandbyPhase && c.PayLpAmount == 700),
+                    Shape(prog));
+            }
+
             foreach (var (id, label) in new[]
                      {
-                         (RoyalOppression, "Royal Oppression"),
-                         (WeaponChange, "Weapon Change")
+                         (RoyalOppression, "Royal Oppression")
                      })
             {
                 var def = db.Get(id);
@@ -215,23 +228,21 @@ namespace WRLDZ.Duel.Rules
                     $"can={can} tried={tried} lp={p.LifePoints} was {lp}");
             }
 
-            foreach (var (id, label) in new[]
-                     {
-                         (WeaponChange, "Weapon Change")
-                     })
             {
+                // LpLocksDelayedBurnAndGyNegation batch: Weapon Change's activation is legal and costs nothing (the 700
+                // LP belongs to its Standby trigger).
                 var engine = Fresh(db, pDeck, aDeck);
                 ClearBoard(engine);
                 var p = engine.Player;
                 p.Hand.Clear();
                 var lp = p.LifePoints;
-                var card = PutInHand(engine, p, id);
+                var card = PutInHand(engine, p, WeaponChange);
                 var can = engine.CanActivateSpellTrap(p, card, fromHand: true);
                 var tried = engine.TryActivateSpellTrap(p, card, fromHand: true);
-                Check($"{label}: activation from the hand is refused and costs no LP",
-                    !can && !tried && p.Hand.Contains(card) && !p.TryFindSpellTrap(card, out _) &&
-                    p.LifePoints == lp,
-                    $"can={can} tried={tried} inHand={p.Hand.Contains(card)} lp={p.LifePoints} was {lp}");
+                for (var i = 0; i < 8 && engine.IsAwaitingResponse; i++) engine.PassResponse();
+                Check("Weapon Change: activation from the hand places it face-up and costs no LP",
+                    can && tried && p.TryFindSpellTrap(card, out _) && card.FaceUp && p.LifePoints == lp,
+                    $"can={can} tried={tried} lp={p.LifePoints} was {lp}");
             }
 
             {

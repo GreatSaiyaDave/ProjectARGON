@@ -184,7 +184,7 @@ namespace WRLDZ.Duel.TextEffects
                 return;
             }
 
-            var free = who.MonsterZones.Count(z => z.IsEmpty);
+            var free = ZoneCapsRuntime.UsableMonsterZones(who); // ZoneCapsAndPhaseWindows: caps
             if (free < eligible.Count)
             {
                 engine.Log($"{source.Name}: not enough free Monster Zones — nothing is Special Summoned.");

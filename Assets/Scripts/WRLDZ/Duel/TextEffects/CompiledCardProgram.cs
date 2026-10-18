@@ -2360,11 +2360,9 @@ namespace WRLDZ.Duel.TextEffects
         ShuffleGySpellsIntoDeck,
         /// <summary>
         /// MfcSimpleSpellsB batch (v174) — Thunder of Ruler: activate during the opponent's Standby
-        /// Phase; there is no Battle Phase this turn. RESERVED, no card compiles to it yet: Thunder
-        /// stays fail-closed because the engine has no activation path for a Set Normal Trap on a
-        /// pure StandbyPhase timing (FirePhaseTriggersFor skips face-down cards; CanActivateOfficial
-        /// refuses programs with no Activate timing). Queued until a Standby priority window for the
-        /// non-turn player exists. The ban is read by
+        /// Phase; there is no Battle Phase this turn. Reserved in v174; the ZoneCapsAndPhaseWindows batch
+        /// compiles Thunder to it, answering the opponent's Standby window
+        /// (<see cref="StandbyWindowRuntime"/>): the activator's opponent is banned. The ban is read by
         /// <see cref="TributeSummonsRuntime.BattlePhaseForbidden"/> (it stamps
         /// <see cref="DuelistState.BattlePhaseForbiddenTurn"/>), so it is a property of the turn, not
         /// of the card, and survives this card leaving the field.
@@ -3237,54 +3235,59 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         ChangeFaceUpAttackEffectMonstersToDefenseOriginalDefZeroLock,
         /// <summary>
-        /// ZoneCapsAndPhaseWindows batch — Continuous: limit the number of Monster Zones the controller can use
-        /// (EFFECT_MAX_MZONE). Cards like Kaiser Colosseum, Spatial Collapse. Honored by every placement/legality
-        /// path through DuelEngine.GetUsableMonsterZoneCount.
+        /// ZoneCapsAndPhaseWindows batch (v178 engine hooks) — a fixed Monster Zone cap. Unused: no card compiles to it
+        /// and nothing reads it (v209 port: its reader applied one cap to both players). Kaiser Colosseum and Spatial
+        /// Collapse are <see cref="OpponentMonstersCappedByYourMonsterCount"/> / <see cref="EachPlayerFieldCardsCappedAtFive"/>,
+        /// read by <see cref="ZoneCapsRuntime"/>.
         /// </summary>
         ContinuousMaxMonsterZoneCap,
         /// <summary>
-        /// ZoneCapsAndPhaseWindows batch — Continuous: limit the number of Spell/Trap Zones the controller can use
-        /// (EFFECT_MAX_SZONE). Cards like Spatial Collapse. Honored by every placement/legality path through
-        /// DuelEngine.GetUsableSpellTrapZoneCount.
+        /// ZoneCapsAndPhaseWindows batch (v178 engine hooks) — a fixed Spell &amp; Trap Zone cap. Unused: no card compiles
+        /// to it and nothing reads it (see <see cref="ContinuousMaxMonsterZoneCap"/>).
         /// </summary>
         ContinuousMaxSpellTrapZoneCap,
         /// <summary>
-        /// ZoneCapsAndPhaseWindows batch — "It becomes the End Phase" (Neko Mane King). Queues a safe phase jump
-        /// that executes at the next legal transition point (post-Chain idle, end of Damage Step, or end of Battle Phase).
-        /// Does NOT jump from Draw/Standby/Main1 directly; waits for a safe gate. See DuelEngine.SkipToEndPhase.
+        /// ZoneCapsAndPhaseWindows batch — Neko Mane King (c11021521, Lua SINGLE+TRIGGER_F on EVENT_TO_GRAVE): "It becomes
+        /// the End Phase of this turn." The turn player (the opponent of this card's controller) skips the rest of this turn's
+        /// phases up to the End Phase (Lua SkipPhase DRAW … MAIN2) and cannot conduct a Battle Phase (EFFECT_CANNOT_BP). The
+        /// jump happens at the next safe point (<see cref="PhaseJumpRuntime"/>): once play is idle in Main Phase 1, the Battle
+        /// Phase (outside the Damage Step) or Main Phase 2, or as the Draw / Standby Phase would move on.
         /// </summary>
         PhaseJumpToEndPhase,
         /// <summary>
-        /// LocksRedirectsAndActivity batch — Continuous: "You cannot discard cards as a cost to activate cards or
-        /// effects" (Goblin of Greed's per-player, per-effect variant; ygopro EFFECT_CANNOT_DISCARD_AS_COST).
-        /// Read by every discard-cost site through <see cref="LocksRedirectsAndActivityRuntime.DiscardAsCostLocked"/>.
-        /// Side picks whose discards the lock covers (Controller = yours only, Opponent, Both).
+        /// LocksRedirectsAndActivity batch — Continuous: a discard-cost lock (ygopro EFFECT_CANNOT_DISCARD_HAND as a cost).
+        /// Goblin of Greed (c425934, target range 1,1) compiles to it with Side = Both: "neither player can activate an
+        /// effect by discarding from his/her hand". A card or effect whose cost discards from the hand cannot be activated
+        /// by a covered player; discards made by a resolution and "send from your hand to the GY" costs are not locked.
+        /// One check every activation-legality site asks:
+        /// <see cref="LocksRedirectsAndActivityRuntime.DiscardCostLocked(DuelEngine, DuelistState, EffectClause, out string)"/>.
+        /// Side picks whose costs the lock covers (Controller = its controller's, Opponent, Both).
         /// </summary>
         ContinuousCannotDiscardAsCost,
         /// <summary>
-        /// LocksRedirectsAndActivity batch — Continuous: "Neither player can activate cards or effects"
-        /// (EFFECT_CANNOT_ACTIVATE, every activation site — S/T, monster ignition / trigger / quick, hand traps).
-        /// Chaos Emperor Dragon - Envoy of the End's share of this row. The per-player half is
-        /// <see cref="ContinuousThisPlayerCannotActivate"/>.
+        /// LocksRedirectsAndActivity batch — Continuous: "Neither player can activate cards or effects" (EFFECT_CANNOT_ACTIVATE).
+        /// NOT EMITTED by any atom: only the Spell/Trap and response hub
+        /// (<see cref="ContinuousNegationRuntime.ActivationLocked"/>) reads it, not the inline trigger, FLIP and End Phase
+        /// sites (ENGINE_MAP §4, Chaos Emperor Dragon - Envoy of the End). Do not compile a card to it until every
+        /// activation site asks <see cref="LocksRedirectsAndActivityRuntime.ActivationLocked"/>.
         /// </summary>
         ContinuousNeitherPlayerCanActivate,
         /// <summary>
-        /// LocksRedirectsAndActivity batch — Continuous: "You cannot activate cards or effects" — the per-player share
-        /// of the activation lock (Side picks which duelist is locked). Same sites as
-        /// <see cref="ContinuousNeitherPlayerCanActivate"/>.
+        /// LocksRedirectsAndActivity batch — Continuous: "You cannot activate cards or effects" (Side picks who is locked).
+        /// NOT EMITTED, same partial reader as <see cref="ContinuousNeitherPlayerCanActivate"/>.
         /// </summary>
         ContinuousThisPlayerCannotActivate,
         /// <summary>
-        /// LocksRedirectsAndActivity batch — "If this card would leave the field, return it to its owner's hand instead"
-        /// (EFFECT_LEAVE_FIELD_REDIRECT: Dark Magician of Chaos). One funnel every field exit goes through
-        /// (<see cref="LocksRedirectsAndActivityRuntime.RedirectFieldExit"/>), unlike the GY-send hub.
+        /// Reserved, NO READER: "If this card would leave the field, return it to its owner's hand instead". No card emits it
+        /// (Dark Magician of Chaos is a banish redirect: <see cref="BanishThisInsteadOfLeavingField"/>). A card with this
+        /// sentence needs an arm in the leave-field funnel
+        /// (<see cref="LocksRedirectsAndActivityRuntime.LeavesFieldBanishedInstead"/>'s sites) first.
         /// </summary>
         LeaveFieldReturnsToOwnerHandInstead,
         /// <summary>
-        /// LocksRedirectsAndActivity batch — a cost that requires "you have not activated any other cards or effects this
-        /// turn" (Lua ACTIVITY_CHAIN counter check). Honored by
-        /// <see cref="LocksRedirectsAndActivityRuntime.ActivityCostLegal"/> against
-        /// <see cref="LocksRedirectsAndActivityRuntime.NoteActivation"/>.
+        /// Reserved, NO READER: a cost that requires "you have not activated any other cards or effects this turn" (Lua
+        /// ACTIVITY_CHAIN). The engine has no per-player record of activations yet (ENGINE_MAP §4, Chaos Emperor Dragon -
+        /// Envoy of the End); never emit it.
         /// </summary>
         RequiresNoOtherActivationThisTurn,
         /// IgnitionCostsAndSimpleSpells batch — Sand Gambler (c50593156): toss <see cref="EffectClause.CoinCount"/> coins
@@ -3537,6 +3540,103 @@ namespace WRLDZ.Duel.TextEffects
         /// unused since v208 (hollow): its arm gave the ATK until the end of the turn and no Damage Step window was compiled;
         /// arm and atoms removed, Covering Fire is uncompiled again.
         TargetGainsAtkEqualToAnotherTargetDuringDamageStep,
+        /// <summary>
+        /// LpLocksDelayedBurnAndGyNegation batch — Weapon Change (c10035717): at your Standby Phase, optionally pay
+        /// <see cref="EffectClause.PayLpAmount"/> LP and target 1 face-up monster of <see cref="EffectClause.RaceFilter"/> you
+        /// control; its ATK becomes its current DEF and its DEF its current ATK (values at resolution) until the end of your
+        /// opponent's next turn. Fired by LpLocksDelayedBurnAndGyNegationRuntime.TryFirePhaseClause (the ApplyClause arm is a
+        /// marker).
+        /// </summary>
+        SwitchTargetCurrentAtkDefUntilOpponentsNextEndPhase,
+        /// <summary>
+        /// LpLocksDelayedBurnAndGyNegation batch — Dora of Fate (c67464807): resolution records the targeted face-up opponent's
+        /// monster's Level L (Level &gt; 1); during your next turn, the first time you Normal Summon a Level L-1 monster, your
+        /// opponent takes L x <see cref="EffectClause.Amount"/> damage (LpLocksDelayedBurnAndGyNegationRuntime.ArmDora /
+        /// OnNormalSummonSuccess).
+        /// </summary>
+        BurnWhenYouNormalSummonOneLevelLowerThanTargetNextTurn,
+        /// <summary>
+        /// DeckSummonsAndSarcophagi batch — Enchanting Fitting Room (c30531525): excavate the top
+        /// <see cref="EffectClause.Amount"/> cards of your Deck and Special Summon every excavated Normal Monster of Level
+        /// <see cref="EffectClause.SummonLevelMax"/> or lower face-up (too few free zones: you choose that many, the other
+        /// qualifying ones go to the GY); then the rest is shuffled back (DeckSummonsAndSarcophagiRuntime.ResolveFittingRoom).
+        /// </summary>
+        ExcavateTopSpecialSummonLowLevelNormalsShuffleRest,
+        /// <summary>
+        /// DeckSummonsAndSarcophagi batch — Monster Gate (c43040603): excavate from the top until the first monster that can
+        /// be Normal Summoned/Set, Special Summon it face-up (no zone or it cannot be Special Summoned: it goes to the GY too),
+        /// the other excavated cards go to the GY; none in the Deck: reveal it and shuffle
+        /// (DeckSummonsAndSarcophagiRuntime.ResolveMonsterGate).
+        /// </summary>
+        ExcavateUntilNormalSummonableSpecialSummonItSendRestToGy,
+        /// <summary>
+        /// DeckSummonsAndSarcophagi batch — Ninjitsu Art of Transformation (c70861343): the cost Tributes 1 face-up
+        /// <see cref="EffectClause.TributeSeriesName"/> monster and records the Level it had on the field; at resolution, if
+        /// this card is still on the field, Special Summon 1 <see cref="EffectClause.RaceFilter"/> monster of Level &lt;= that
+        /// Level + <see cref="EffectClause.TributedLevelOffset"/> from the hand or Deck and link it
+        /// (<see cref="EffectClause.DestroyHostWhenThisLeaves"/>); the monster leaving first leaves this card on the field.
+        /// </summary>
+        SpecialSummonRaceLevelUpToTributedPlusFromHandOrDeckLinked,
+        /// <summary>
+        /// DeckSummonsAndSarcophagi batch — Human-Wave Tactics (c30353551): during each End Phase, Special Summon from your
+        /// Deck as many Level <see cref="EffectClause.SummonLevelMax"/> or lower Normal Monsters as your Level that-or-lower
+        /// Normal Monsters destroyed by battle this turn (chosen; too few zones: the others chosen go to the GY), then
+        /// shuffle (DeckSummonsAndSarcophagiRuntime.ResolveHumanWave).
+        /// </summary>
+        SpecialSummonLowLevelNormalsFromDeckPerOwnBattleDestroyedAtEndPhase,
+        /// <summary>
+        /// DeckSummonsAndSarcophagi batch — The First Sarcophagus (c31076103): after each placement
+        /// (<see cref="PlaceNextNamedInOrderFromHandOrDeck"/>), when this card and every card it places are face-up on your
+        /// field (<see cref="EffectClause.Amount"/> cards), send them all to the GY; only if all were sent and a zone is free,
+        /// Special Summon 1 <see cref="EffectClause.NamedCard"/> from the hand or Deck ignoring its Summoning conditions
+        /// (DeckSummonsAndSarcophagiRuntime.AfterNamedPlacement).
+        /// </summary>
+        SendThisAndPlacedToGyThenSpecialSummonNamedFromHandOrDeck,
+        /// <summary>
+        /// DeckSummonsAndSarcophagi batch — Spirit of the Pharaoh (c25343280): "When this card is Special Summoned, you can
+        /// Special Summon up to <see cref="EffectClause.Amount"/> Level <see cref="EffectClause.SummonLevelMax"/> or lower
+        /// <see cref="EffectClause.RaceFilter"/> Normal Monsters from your GY" — 1 to min(Amount, free zones) targets in your
+        /// GY, all Special Summoned face-up, or none if fewer zones than targets remain
+        /// (DeckSummonsAndSarcophagiRuntime.ResolvePharaohRevival).
+        /// </summary>
+        SpecialSummonUpToTargetedLowLevelRaceNormalsFromGy,
+        /// <summary>
+        /// ZoneCapsAndPhaseWindows batch — Kaiser Colosseum (c35059553, Lua EFFECT_MAX_MZONE target range (0,1) +
+        /// EFFECT_UNRELEASABLE_SUM; <see cref="EffectTiming.ContinuousWhileFaceUp"/>): while its controller controls 1+
+        /// monsters, their opponent cannot place a monster on their field (a Summon, a Set, a monster an effect of theirs
+        /// places) if their number of monsters would exceed the controller's. Control changes and monsters the controller's
+        /// own effects place there are not limited (Lua s.value: rp == handler player or r ~= LOCATION_REASON_TOFIELD).
+        /// Read by <see cref="ZoneCapsRuntime"/> (every placement path asks it).
+        /// </summary>
+        OpponentMonstersCappedByYourMonsterCount,
+        /// <summary>
+        /// ZoneCapsAndPhaseWindows batch — Spatial Collapse (c20644748, Lua EFFECT_MAX_MZONE / EFFECT_MAX_SZONE target range
+        /// (1,1), EFFECT_CANNOT_ACTIVATE / EFFECT_CANNOT_SSET for Field Spells, EVENT_ADJUST send;
+        /// <see cref="EffectTiming.ContinuousWhileFaceUp"/>): each player can have at most 5 cards on their field. Read by
+        /// <see cref="ZoneCapsRuntime"/>; a player above 5 sends the excess to the GY (<see cref="ZoneCapsRuntime.Adjust"/>).
+        /// </summary>
+        EachPlayerFieldCardsCappedAtFive,
+        /// <summary>
+        /// LocksRedirectsAndActivity batch — Grave Protector (c11448373, EFFECT_TO_GRAVE_REDIRECT, value LOCATION_DECKSHF,
+        /// IGNORE_IMMUNE, monsters on both fields with REASON_BATTLE): while this card is face-up in a Monster Zone, a monster
+        /// destroyed by battle is shuffled into its owner's Deck (an Extra Deck monster goes to the Extra Deck) instead of
+        /// going to the GY (<see cref="LocksRedirectsAndActivityRuntime.ShufflesBattleDestroyedIntoDeck"/>).
+        /// </summary>
+        BattleDestroyedMonstersShuffleIntoDeckInstead,
+        /// <summary>
+        /// LocksRedirectsAndActivity batch — Dark Magician of Chaos (c40737112, EFFECT_LEAVE_FIELD_REDIRECT, value
+        /// LOCATION_REMOVED, EFFECT_FLAG_CANNOT_DISABLE, condition IsFaceup): this face-up card is banished instead of going
+        /// to the GY, the hand or the Deck when it leaves the field — the one funnel every field exit asks
+        /// (<see cref="LocksRedirectsAndActivityRuntime.LeavesFieldBanishedInstead"/>). Applies while negated too.
+        /// </summary>
+        BanishThisInsteadOfLeavingField,
+        /// <summary>
+        /// LocksRedirectsAndActivity batch — Dark Magician of Chaos (c40737112, FIELD TRIGGER_O on EVENT_PHASE+PHASE_END,
+        /// CARD_TARGET, SetCountLimit(1,id)): during the End Phase of a turn this card was Normal or Special Summoned
+        /// (aux.sumreg flag, spent by the cost), its controller can target 1 Spell in their GY and add it to their hand
+        /// (<see cref="LocksRedirectsAndActivityRuntime.TryFirePhaseClause"/>).
+        /// </summary>
+        AddGySpellToHandAtEndPhaseIfSummonedThisTurn,
     }
 
 
@@ -5317,6 +5417,44 @@ namespace WRLDZ.Duel.TextEffects
         /// (<see cref="SanctuaryAndZeraRuntime.NotApplied"/>, asked by TextEffectRuntime.ApplyClause).
         /// </summary>
         public string NotAppliedUnlessNamedFaceUp;
+
+        /// <summary>
+        /// LpLocksDelayedBurnAndGyNegation batch — Wall of Revealing Light (c17078030): this
+        /// <see cref="EffectActionKind.ContinuousCannotAttack"/> forbids an attack only by a monster whose current ATK is less
+        /// than or equal to the LP this copy paid as it was activated (a multiple of <see cref="RequiresLpCostMultiple"/>;
+        /// LpLocksDelayedBurnAndGyNegationRuntime.PaidLpLockBlocks). Never reads <see cref="Amount"/>.
+        /// </summary>
+        public bool CannotAttackIfAtkAtMostPaidLp;
+
+        // ── ZoneCapsAndPhaseWindows batch ──
+
+        /// <summary>
+        /// ZoneCapsAndPhaseWindows batch: on a <see cref="EffectTiming.SentToGyFromAnywhere"/> trigger, "During your
+        /// opponent's turn, when this card in your possession is sent to your Graveyard by an opponent's card effect"
+        /// (Neko Mane King, Lua s.condition: IsTurnPlayer(1-tp), IsPreviousControler(tp), REASON_EFFECT, reason player
+        /// 1-tp). Read from the card's GY-entry stamp when the queued trigger fires
+        /// (<see cref="PhaseJumpRuntime.SentByOpponentEffectOnTheirTurn"/>).
+        /// </summary>
+        public bool RequiresSentByOpponentEffectOnTheirTurn;
+
+        // ── LocksRedirectsAndActivity batch ──
+
+        /// <summary>
+        /// "\"X\" you control cannot attack the turn you activate this card" (Burst Stream of Destruction, Lua s.cost:
+        /// GetCustomActivityCount(id,tp,ACTIVITY_ATTACK)==0, then EFFECT_CANNOT_ATTACK_ANNOUNCE with EFFECT_FLAG_OATH on
+        /// every monster named X): the activation needs that no X its activator controlled declared an attack this turn
+        /// (<see cref="LocksRedirectsAndActivityRuntime.NoNamedAttackThisTurn"/>), and X cannot declare an attack for the
+        /// rest of the turn (<see cref="LocksRedirectsAndActivityRuntime.ApplyNamedAttackOath"/>).
+        /// </summary>
+        public string NamedCannotAttackTurnActivated;
+
+        /// <summary>
+        /// AfterDamageCalculation: only when the monster this card battled is destroyed by that battle (Dark Magician of
+        /// Chaos, Lua rmcon: bc:IsStatus(STATUS_BATTLE_DESTROYED)). The opposite of <see cref="RequiresBattledMonsterNotDestroyed"/>.
+        /// It resolves after the FLIP effect of a monster flipped by that battle
+        /// (<see cref="LocksRedirectsAndActivityRuntime.QueueBattledTrigger"/>), on that monster if it is still on the field.
+        /// </summary>
+        public bool RequiresBattledMonsterDestroyed;
     }
 
     /// <summary>When the activation condition is tested (PSCT "when" vs "if").</summary>

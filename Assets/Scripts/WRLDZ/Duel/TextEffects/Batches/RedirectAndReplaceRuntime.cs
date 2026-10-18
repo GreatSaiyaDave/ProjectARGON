@@ -694,7 +694,9 @@ namespace WRLDZ.Duel.TextEffects
         }
 
         /// <summary><paramref name="m"/> is destroyed by the battle whose destructions are being applied now.</summary>
-        static bool DestroyedByCurrentBattle(DuelEngine engine, CardInstance m) =>
+        // LocksRedirectsAndActivity batch: internal for Grave Protector (a battle-destroyed source has no continuous effect,
+        // ygopro STATUS_BATTLE_DESTROYED).
+        internal static bool DestroyedByCurrentBattle(DuelEngine engine, CardInstance m) =>
             m != null && ReferenceEquals(s_battleEngine, engine) && engine.DamageSubStep == DamageSubStep.End &&
             s_battleDestroyed.Contains(m);
 
@@ -917,6 +919,7 @@ namespace WRLDZ.Duel.TextEffects
         public static bool PutInGraveyard(DuelEngine engine, DuelistState pile, CardInstance card)
         {
             if (pile == null || card == null) return false;
+            var holder = pile; // ZoneCapsAndPhaseWindows batch: the GY-entry stamp's previous holder
             // PerCopyDeck batch (v163): a card its holder does not own (a drawn Parasite Paracide, a Spell Graverobber
             // took) goes to its owner's GY.
             pile = PerCopyDeckRuntime.OwnersPile(pile, card);
@@ -932,7 +935,7 @@ namespace WRLDZ.Duel.TextEffects
             if (!pile.Graveyard.Contains(card))
                 pile.Graveyard.Add(card);
             // BattleDestroyedGyRecovery (v162): GY-entry stamp; the caller's discard / destroy record adds the reason.
-            GyEntryStamps.Entered(engine, card);
+            GyEntryStamps.Entered(engine, card, previousHolder: holder);
             return true;
         }
 

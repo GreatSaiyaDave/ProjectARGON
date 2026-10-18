@@ -138,6 +138,9 @@ namespace WRLDZ.Duel.TextEffects
                 return false;
             }
 
+            // LocksRedirectsAndActivity batch: Goblin of Greed — no discard cost (Type Zero Magic Crusher's Spell discard).
+            if (LocksRedirectsAndActivityRuntime.DiscardCostLocked(engine, who, clause, out reason)) return false;
+
             if (engine.GameOver)
             {
                 reason = "The Duel is over.";

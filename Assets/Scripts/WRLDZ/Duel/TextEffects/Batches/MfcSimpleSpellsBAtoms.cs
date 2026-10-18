@@ -9,11 +9,8 @@ namespace WRLDZ.Duel.TextEffects
     /// <item>Emblem of Dragon Destroyer (6390406): add 1 "Buster Blader" from the Deck or the GY to the hand.</item>
     /// <item>Hidden Spellbook (21840375): target 2 Spell Cards in the GY, shuffle those targets into the Deck.</item>
     /// </list>
-    /// Thunder of Ruler (91781589) stays fail-closed on purpose: its only timing is the opponent's
-    /// Standby Phase, and the engine has no activation path for a Set Normal Trap on that timing —
-    /// FirePhaseTriggersFor skips face-down cards, and CanActivateOfficial refuses manual activation
-    /// of a program with no Activate timing. Compiling it Implemented would put a dead card into
-    /// decks. Queued until a Standby priority window for the non-turn player exists.
+    /// Thunder of Ruler (91781589) is compiled by the ZoneCapsAndPhaseWindows batch (its atom answers the opponent's
+    /// Standby window, StandbyWindowRuntime), not here.
     /// Each atom consumes the whole sentence (or the whole card, for the two-sentence ones) so the
     /// generic sentence loop never re-parses a fragment. Runtime: <see cref="MfcSimpleSpellsBRuntime"/>.
     /// </summary>

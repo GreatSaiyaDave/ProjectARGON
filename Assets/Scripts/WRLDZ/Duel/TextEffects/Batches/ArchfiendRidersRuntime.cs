@@ -457,6 +457,12 @@ namespace WRLDZ.Duel.TextEffects
             reason = "Not this kind of Quick Effect.";
             var c = HandEventClause(prog);
             if (engine == null || engine.GameOver || c == null || !IsHandEventCard(who, card, true, prog)) return false;
+            // LocksRedirectsAndActivity batch: Goblin of Greed — no discard cost.
+            if (LocksRedirectsAndActivityRuntime.DiscardCostLocked(engine, who, c, out var discardLock))
+            {
+                reason = discardLock;
+                return false;
+            }
             if (engine.PendingActivation != null)
             {
                 reason = "Finish the current choice first.";

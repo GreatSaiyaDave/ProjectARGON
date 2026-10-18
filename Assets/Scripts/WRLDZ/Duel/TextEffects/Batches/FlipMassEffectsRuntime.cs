@@ -45,7 +45,7 @@ namespace WRLDZ.Duel.TextEffects
     /// a Summon's Tributes hold the "sent to the GY" triggers of the cards they send until the whole event has
     /// happened (Spear Cretin sees every monster destroyed with it in the GY).</para>
     /// </summary>
-    public static class FlipMassEffectsRuntime
+    public static partial class FlipMassEffectsRuntime
     {
         // ───────────────────── Flip record ─────────────────────
 
@@ -364,6 +364,13 @@ namespace WRLDZ.Duel.TextEffects
             /// </summary>
             public readonly List<Action> After = new List<Action>();
             public EffectClause Clause;
+            /// <summary>
+            /// DeckSummonsAndSarcophagi batch: a human pick of this plan holds the resolving Chain, and once the plan is done
+            /// the held Chain and a paused End Phase go on (Spell resolutions, Human-Wave Tactics' End Phase summon).
+            /// </summary>
+            public bool ResumesHeldPlay;
+            /// <summary>DeckSummonsAndSarcophagi batch: a human pick of this plan was opened.</summary>
+            public bool Asked;
 
             public Seat AddSeat(DuelistState who)
             {
@@ -393,7 +400,7 @@ namespace WRLDZ.Duel.TextEffects
         }
 
         static int FreeZones(DuelistState who) =>
-            who?.MonsterZones == null ? 0 : who.MonsterZones.Count(z => z != null && z.IsEmpty);
+            ZoneCapsRuntime.UsableMonsterZones(who); // ZoneCapsAndPhaseWindows: caps
 
         static List<CardInstance> TakeTop(DuelEngine engine, DuelistState who, int n)
         {
@@ -646,6 +653,17 @@ namespace WRLDZ.Duel.TextEffects
                            $"Summon ATK (face-up Attack Position) or Summon DEF (face-down Defense Position).{room} " +
                            "CANCEL summons the rest in face-up Attack Position.";
                 }
+                // DeckSummonsAndSarcophagi batch: a face-up Deck summon (Enchanting Fitting Room, Monster Gate, Human-Wave
+                // Tactics) — Attack or Defense; too few zones: the others go to the GY.
+                case PlanKind.ExcavateToGrave when plan.FaceUpOnly:
+                {
+                    var room = seat.PicksLeft < seat.Candidates.Count
+                        ? $" You have room for {seat.PicksLeft}; the others are sent to the GY."
+                        : "";
+                    return $"{plan.Source?.Name}: Special Summon {Names(seat.Candidates)}: tap one, then Summon ATK " +
+                           $"(face-up Attack Position) or Summon DEF (face-up Defense Position).{room} CANCEL summons " +
+                           "them in order in face-up Attack Position.";
+                }
                 default:
                     return $"choose {seat.PicksLeft} of the excavated monsters to Special Summon in face-down " +
                            "Defense Position; the others are sent to the GY. CANCEL takes them in excavation order.";
@@ -671,8 +689,11 @@ namespace WRLDZ.Duel.TextEffects
                 IsMonsterEffect = true,
                 UsesTextProgram = true,
                 TargetPicksRemaining = Math.Min(seat.PicksLeft, seat.Candidates.Count),
-                PromptOverride = PromptFor(plan, seat)
+                PromptOverride = PromptFor(plan, seat),
+                // DeckSummonsAndSarcophagi batch: the choice is part of the resolving Chain Link.
+                HoldsChainResolution = plan.ResumesHeldPlay && engine.IsResolvingChain
             };
+            plan.Asked = true;
             pending.LegalTargets.AddRange(seat.Candidates);
             s_picks.Add(pending, plan);
             engine.SetPendingActivation(pending);
@@ -870,6 +891,12 @@ namespace WRLDZ.Duel.TextEffects
             plan.After.Clear();
             RunInOrder(engine, after);
             engine.FlushQueuedSummonResponses();
+            // DeckSummonsAndSarcophagi batch: the Chain / End Phase the human's choice held goes on.
+            if (plan.ResumesHeldPlay && plan.Asked && !engine.GameOver)
+            {
+                engine.ResumeChainAfterChoice();
+                engine.ResumeEndTurnAfterTrigger();
+            }
             engine.NotifyPublic();
         }
 

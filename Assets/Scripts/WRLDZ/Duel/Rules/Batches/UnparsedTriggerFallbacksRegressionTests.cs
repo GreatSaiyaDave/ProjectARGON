@@ -161,9 +161,20 @@ namespace WRLDZ.Duel.Rules
             // Stubs that went through the same fallbacks: the trigger sentence no longer compiles to a bare action.
             // "7" (GyHandAndSummonEventTriggers batch, v178) left this list: its batch atom now compiles the whole
             // "When there are N face-up "7" cards" sentence to DrawThenDestroyAllFaceUpNamedWhenCountFaceUpNamed.
+            // The First Sarcophagus (DeckSummonsAndSarcophagi batch) left it too: its whole-card atom compiles the
+            // "When you have all 3 Sarcophagus cards" sentence to the placement rider below, never to a bare action.
+            {
+                var prog = CardTextEffectCompiler.Compile(db.Get(TheFirstSarcophagus));
+                Check("The First Sarcophagus: its \"When you have all 3\" sentence is the placement rider, not a bare action",
+                    prog != null && prog.FullyCompiled && prog.ClauseList.Count == 3 &&
+                    prog.ClauseList.Exists(c => c != null && c.Timing == EffectTiming.EndPhase &&
+                                                c.Action == EffectActionKind.SendThisAndPlacedToGyThenSpecialSummonNamedFromHandOrDeck &&
+                                                c.NamedCard == "Spirit of the Pharaoh") &&
+                    !Has(prog, EffectActionKind.SpecialSummonNamed) && !Has(prog, EffectActionKind.SpecialSummonFromDeck),
+                    Shape(prog));
+            }
             foreach (var (id, label) in new[]
                      {
-                         (TheFirstSarcophagus, "The First Sarcophagus"),
                          (GoblinFan, "Goblin Fan"),
                      })
             {

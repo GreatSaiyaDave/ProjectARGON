@@ -241,6 +241,8 @@ namespace WRLDZ.Duel.TextEffects
         public static bool ShieldsFromSpell(DuelEngine engine, CardInstance victim, CardInstance source)
         {
             if (source?.Def == null || !source.Def.IsSpell) return false;
+            // SpellTrapSealsAndImmunity batch: Dust Barrier — face-up Normal Monsters are unaffected by the opponent's Spells.
+            if (SpellTrapSealsAndImmunityRuntime.ShieldsFromOpponentSpell(engine, victim, source)) return true;
             if (!Shieldable(engine, victim)) return false;
             foreach (var nsa in ActiveSpellTraps(engine, EffectActionKind.NonEffectMonstersUnaffectedByOtherSpells))
                 if (!ReferenceEquals(nsa, source))

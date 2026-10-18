@@ -149,6 +149,12 @@ namespace WRLDZ.Duel.Rules
             QcBulletAtomsRegressionTests.Run(db, pDeck, aDeck, check);
             QcLvAndPinsRegressionTests.Run(db, pDeck, aDeck, check);
             QcHollowActionsRegressionTests.Run(db, pDeck, aDeck, check);
+            SpellTrapSealsAndImmunityRegressionTests.Run(db, pDeck, aDeck, check);
+            NormalMonsterSpellsRegressionTests.Run(db, pDeck, aDeck, check);
+            LpLocksDelayedBurnAndGyNegationRegressionTests.Run(db, pDeck, aDeck, check);
+            DeckSummonsAndSarcophagiRegressionTests.Run(db, pDeck, aDeck, check);
+            ZoneCapsAndPhaseWindowsRegressionTests.Run(db, pDeck, aDeck, check);
+            LocksRedirectsAndActivityRegressionTests.Run(db, pDeck, aDeck, check);
         }
     }
 }

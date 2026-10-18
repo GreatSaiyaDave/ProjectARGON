@@ -227,6 +227,8 @@ namespace WRLDZ.Duel.TextEffects
             ok = false;
             reason = null;
             if (!IsHandChainAnswer(clause)) return false;
+            // LocksRedirectsAndActivity batch: Goblin of Greed — no discard cost.
+            if (LocksRedirectsAndActivityRuntime.DiscardCostLocked(engine, who, clause, out reason)) return true;
             if (engine == null || who?.Hand == null || card?.Def == null || !card.Def.IsMonster || !who.Hand.Contains(card))
             {
                 reason = "Only from your hand.";
@@ -434,6 +436,9 @@ namespace WRLDZ.Duel.TextEffects
                 reason = "Not a hand Quick Effect.";
                 return false;
             }
+
+            // LocksRedirectsAndActivity batch: Goblin of Greed — no "discard this card" cost.
+            if (LocksRedirectsAndActivityRuntime.DiscardCostLocked(engine, who, clause, out reason)) return false;
 
             if (engine.PendingActivation != null)
             {

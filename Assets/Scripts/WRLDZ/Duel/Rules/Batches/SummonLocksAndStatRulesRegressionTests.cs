@@ -9,7 +9,7 @@ namespace WRLDZ.Duel.Rules
 {
     /// <summary>
     /// SummonLocksAndStatRules batch: Gyaku-Gire Panda, Amazoness Tiger, Amazoness Spellcaster, Rivalry of Warlords
-    /// (Kaiser Colosseum stays fail-closed). Compile shapes through the real compiler plus mini-duels through the
+    /// (Kaiser Colosseum: Implemented later by ZoneCapsAndPhaseWindows). Compile shapes through the real compiler plus mini-duels through the
     /// engine entry points (TryActivateSpellTrap, TryNormalSummon, TryFlipSummon, TryAttack, TrySelectEffectTarget,
     /// response windows). Turn 1 is the Player's, turn 2 the AI's. Runtime: <see cref="SummonLocksAndStatRulesRuntime"/>.
     /// </summary>
@@ -20,7 +20,7 @@ namespace WRLDZ.Duel.Rules
         const int GyakuGirePanda = 9817927;       // Beast 800/1600
         const int AmazonessTiger = 10979723;      // Beast 1100/1500
         const int AmazonessSpellcaster = 81325903; // Normal Spell
-        const int KaiserColosseum = 35059553;     // Continuous Spell (fail-closed)
+        const int KaiserColosseum = 35059553;     // Continuous Spell (Implemented by ZoneCapsAndPhaseWindows)
         const int RivalryOfWarlords = 90846359;   // Continuous Trap
 
         const int AmazonessFighter = 55821894;    // Warrior 1500/1300
@@ -151,8 +151,12 @@ namespace WRLDZ.Duel.Rules
                 Describe(rivalry));
 
             var kaiser = Prog(db, KaiserColosseum);
-            Check("Kaiser Colosseum stays fail-closed (no placement cap with the Lua's reason/player exemptions)",
-                kaiser != null && !kaiser.FullyCompiled && !Implemented(db, KaiserColosseum), Describe(kaiser));
+            // Kaiser Colosseum: Implemented by the ZoneCapsAndPhaseWindows batch (ZoneCapsRuntime: the usable-zone cap with
+            // the Lua's reason / player exemptions); its pins moved to ZoneCapsAndPhaseWindowsRegressionTests.
+            Check("Kaiser Colosseum: compiled by ZoneCapsAndPhaseWindows to its zone-cap clause (not a summon lock)",
+                kaiser != null && kaiser.FullyCompiled && Implemented(db, KaiserColosseum) &&
+                kaiser.ClauseList.TrueForAll(c => c.Action == EffectActionKind.OpponentMonstersCappedByYourMonsterCount),
+                Describe(kaiser));
 
             // Near-misses: look-alike sentences do not compile to this batch's clauses.
             var ownSide = CompileText(90175001, "Effect Monster",

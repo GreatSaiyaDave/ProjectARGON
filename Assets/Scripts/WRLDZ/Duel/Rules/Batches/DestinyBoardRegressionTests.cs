@@ -22,7 +22,7 @@ namespace WRLDZ.Duel.Rules
         const int MsgA = 94772232;
         const int MsgL = 30170981;
         const int Mst = 5318639;              // Target 1 Spell/Trap on the field; destroy that target.
-        const int SecondSarcophagus = 4081094; // placed only by "The First Sarcophagus" (not a live placement)
+        const int SecondSarcophagus = 4081094; // placed only by "The First Sarcophagus" (live since DeckSummonsAndSarcophagi)
         const int Celtic = 91152256;          // filler
 
         static readonly string Named =
@@ -114,14 +114,26 @@ namespace WRLDZ.Duel.Rules
                 Check($"near miss — {what}: not compiled", desc != printed && !hit, Describe(prog));
             }
 
-            // The same placement lock whose placer does not compile to a placement naming it stays out of decks.
+            // The same placement lock: Structural while its placer compiles to a placement naming it (The Second
+            // Sarcophagus since the DeckSummonsAndSarcophagi batch), out of decks while it does not (a placer that places
+            // nothing: Pot of Greed).
             var sarc = db.Get(SecondSarcophagus);
-            Check("The Second Sarcophagus (placer The First Sarcophagus is not a live placement) stays Unimplemented",
+            Check("The Second Sarcophagus: placer The First Sarcophagus is a live placement — Structural",
                 sarc != null && DestinyBoardRuntime.PlacerOf(sarc) == "The First Sarcophagus" &&
-                !DestinyBoardRuntime.HasLivePlacementPath(sarc) &&
-                CardEffectStatus.Classify(sarc) == CardEffectStatusKind.Unimplemented &&
-                !CardEffectStatus.MayIncludeInDeck(sarc),
+                DestinyBoardRuntime.HasLivePlacementPath(sarc) &&
+                CardEffectStatus.Classify(sarc) == CardEffectStatusKind.Structural,
                 $"status={CardEffectStatus.Classify(sarc)}");
+            var dead = new CardDef
+            {
+                id = 990000311, name = "Near-miss placed card 990000311", type = sarc?.type ?? "Spell Card",
+                race = sarc?.race ?? "Continuous",
+                desc = "This card can only be placed on the field by the effect of \"Pot of Greed\"."
+            };
+            Check("A placement lock whose placer does not compile to a placement naming it stays Unimplemented",
+                DestinyBoardRuntime.PlacerOf(dead) == "Pot of Greed" && !DestinyBoardRuntime.HasLivePlacementPath(dead) &&
+                CardEffectStatus.Classify(dead) == CardEffectStatusKind.Unimplemented &&
+                !CardEffectStatus.MayIncludeInDeck(dead),
+                $"status={CardEffectStatus.Classify(dead)}");
         }
 
         // ───────────────────────────── the Spirit Messages ─────────────────────────────

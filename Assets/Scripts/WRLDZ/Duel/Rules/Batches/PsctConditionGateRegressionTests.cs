@@ -25,7 +25,8 @@ namespace WRLDZ.Duel.Rules
             // included (DroppedConditionsFailClosed checks that below).
             // Rope of Life (93382620) left this list in v162: the BattleDestroyedGyRecovery atom compiles its whole
             // sentence, condition included (DroppedConditionsFailClosed checks that below).
-            (10035717, "Weapon Change: \"Once during each of your Standby Phases\""),
+            // Weapon Change (10035717) left this list in the LpLocksDelayedBurnAndGyNegation batch: its whole sentence,
+            // the Standby condition included, is compiled by that batch's atom (DroppedConditionsFailClosed checks that).
             // Z-Metal Tank and Heavy Mech Support Platform are Union monsters whose whole text is compiled by the
             // Union whole-text atom (v167); their "Once per turn, you can either" condition is no longer tested
             // through the generic PSCT path and are now Implemented.
@@ -121,6 +122,18 @@ namespace WRLDZ.Duel.Rules
                     prog != null && prog.FullyCompiled && prog.ClauseList.Count == 1 &&
                     prog.ClauseList[0].Action == EffectActionKind.InflictDamageEachTimeMonsterSentToOpponentGy &&
                     !prog.ClauseList.Exists(c => c != null && c.Action == EffectActionKind.InflictDamageToOpponent),
+                    Describe(prog));
+            }
+
+            // Weapon Change: "Once during each of your Standby Phases" is compiled whole by the LpLocksDelayedBurnAndGyNegation
+            // atom: its condition is the clause's own timing (your Standby Phase, once), never dropped.
+            if (db.TryGet(10035717, out var weaponChange))
+            {
+                var prog = CardTextEffectCompiler.Compile(weaponChange);
+                Check("Weapon Change: its condition is compiled (your Standby Phase), not dropped",
+                    prog != null && prog.FullyCompiled && prog.ClauseList.Count == 1 &&
+                    prog.ClauseList[0].Timing == EffectTiming.StandbyPhase && !prog.ClauseList[0].OpponentTurnOnly &&
+                    prog.ClauseList[0].Action == EffectActionKind.SwitchTargetCurrentAtkDefUntilOpponentsNextEndPhase,
                     Describe(prog));
             }
 

@@ -718,6 +718,9 @@ namespace WRLDZ.Duel.TextEffects
                 return false;
             }
 
+            // LocksRedirectsAndActivity batch: Goblin of Greed — no discard cost.
+            if (LocksRedirectsAndActivityRuntime.DiscardCostLocked(engine, who, clause, out reason)) return false;
+
             if (engine.PendingActivation != null)
             {
                 reason = "Finish the current choice first.";

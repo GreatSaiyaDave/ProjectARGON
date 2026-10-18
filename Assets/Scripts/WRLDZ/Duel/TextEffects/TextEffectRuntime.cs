@@ -396,6 +396,17 @@ namespace WRLDZ.Duel.TextEffects
                               timing == ResponseTiming.SpellTrapDestroyedByOpponent
                                 ? activate
                                 : null;
+                // LocksRedirectsAndActivity batch: Goblin of Greed — the clauses this window activates (every window's,
+                // including the battle windows that return early below: Rope of Life's "Discard your entire hand").
+                var lockClauses = answer ?? (timing == ResponseTiming.DamageCalculation ? dmg
+                    : timing == ResponseTiming.SummonNegation ? summonNeg
+                    : activate);
+                if (LocksRedirectsAndActivityRuntime.DiscardCostLocked(engine, who, lockClauses, out var windowLock))
+                {
+                    reason = windowLock;
+                    return false;
+                }
+
                 if (!ResponseDiscardPayable(engine, who, card, answer))
                 {
                     reason = "No card in hand to discard.";
@@ -607,6 +618,20 @@ namespace WRLDZ.Duel.TextEffects
                     return true;
                 }
 
+                // ZoneCapsAndPhaseWindows batch: Thunder of Ruler answers only the opponent's Standby window (its
+                // activation condition above checked the phase).
+                if (engine.PendingResponse.Timing == ResponseTiming.StandbyResponse)
+                {
+                    if (!StandbyWindowRuntime.AnswersWindow(prog))
+                    {
+                        reason = "Not legal for this response timing.";
+                        return false;
+                    }
+
+                    reason = "OK";
+                    return true;
+                }
+
                 if (engine.PendingResponse.Timing == ResponseTiming.SummonNegation && summonNeg.Count > 0)
                     return SummonNegationRuntime.CanNegatePendingSummon(engine, who, card, summonNeg[0],
                         out reason);
@@ -774,6 +799,13 @@ namespace WRLDZ.Duel.TextEffects
                 if (altIgnitions.Count > 1 && HasStructuredIgnitionCost(c))
                     continue;
 
+                // LocksRedirectsAndActivity batch: Goblin of Greed — a card or effect whose cost discards cannot be activated.
+                if (LocksRedirectsAndActivityRuntime.DiscardCostLocked(engine, who, c, out var discardLock))
+                {
+                    reason = discardLock;
+                    return false;
+                }
+
                 if (c.RequiresLordOfDOnField && !LordOfDOnField(engine))
                 {
                     reason = "Lord of D. must be on the field.";
@@ -920,13 +952,13 @@ namespace WRLDZ.Duel.TextEffects
                 }
 
                 if (c.Action == EffectActionKind.TakeControlUntilEndPhase &&
-                    engine.FirstEmpty(who.MonsterZones) < 0)
+                    engine.FirstEmptyForControl(who) < 0)
                 {
                     reason = "No Monster Zone to take control.";
                     return false;
                 }
 
-                if (c.TakeControlOfTarget && engine.FirstEmpty(who.MonsterZones) < 0)
+                if (c.TakeControlOfTarget && engine.FirstEmptyForControl(who) < 0)
                 {
                     reason = "No Monster Zone to take control.";
                     return false;
@@ -1031,10 +1063,6 @@ namespace WRLDZ.Duel.TextEffects
             }
 
             reason = "OK";
-            // LocksRedirectsAndActivity: record this activation for the ACTIVITY_CHAIN counter (a cost may
-            // require "you have not activated any other cards or effects this turn"). ActivationCount
-            // excludes this card's own in-progress check.
-            LocksRedirectsAndActivityRuntime.NoteActivation(engine, who, card);
             return true;
         }
 
@@ -1092,6 +1120,9 @@ namespace WRLDZ.Duel.TextEffects
                 return answerOk;
             }
 
+            // LocksRedirectsAndActivity batch: Goblin of Greed — no discard cost (Magic Jammer …).
+            if (LocksRedirectsAndActivityRuntime.DiscardCostLocked(engine, who, clauses[0], out reason))
+                return false;
             // EffectDamageEvents batch (v162): Barrel Behind the Door / Trap of Board Eraser answer a link (a card activation or
             // a monster effect) that would inflict effect damage to their controller.
             if (EffectDamageEventsRuntime.IsDamageAnswer(clauses[0]))
@@ -1141,6 +1172,13 @@ namespace WRLDZ.Duel.TextEffects
             if (clause == null || target?.Card?.Def == null)
             {
                 reason = "Not a chain-activation response.";
+                return false;
+            }
+
+            // LocksRedirectsAndActivity batch: Goblin of Greed (each Spell Shield Type-8 bullet on its own cost).
+            if (LocksRedirectsAndActivityRuntime.DiscardCostLocked(engine, who, clause, out var discardLock))
+            {
+                reason = discardLock;
                 return false;
             }
 
@@ -1194,6 +1232,10 @@ namespace WRLDZ.Duel.TextEffects
             // Card activation that would destroy a Spell/Trap Card on the field), Spell Vanishing (the opponent has a card in
             // their hand or Deck).
             if (!SpellTrapAnswersAndActivationLocksRuntime.ChainAnswerAllowed(engine, who, card, clause, target, out reason))
+                return false;
+
+            // SpellTrapSealsAndImmunity batch: Armor Break answers only the activation of an Equip Spell Card.
+            if (!SpellTrapSealsAndImmunityRuntime.ChainAnswerAllowed(clause, target, out reason))
                 return false;
 
             // "This card's activation … cannot be negated" (Amplifier, Spiritualism): no negate-activation
@@ -1444,6 +1486,9 @@ namespace WRLDZ.Duel.TextEffects
                 if (c.Action == EffectActionKind.UnequipThisSpecialSummon &&
                     (card.EquippedTo == null || UnionRidersRuntime.UnionTextOff(card))) continue;
                 if (c.Action == EffectActionKind.EquipThisToTarget && card.EquippedTo != null) continue;
+                // LocksRedirectsAndActivity batch: Goblin of Greed — no discard cost (Raigeki Break, Spell Purification …).
+                if (LocksRedirectsAndActivityRuntime.DiscardCostLocked(engine, who, c, out reason))
+                    return false;
                 if (c.OpponentTurnOnly && engine.TurnPlayer == who)
                 {
                     reason = "Only during opponent's turn.";
@@ -1529,11 +1574,14 @@ namespace WRLDZ.Duel.TextEffects
                     }
                 }
 
-                if ((c.TakeControlOfTarget || c.Action == EffectActionKind.TakeControlUntilEndPhase ||
+                // ZoneCapsAndPhaseWindows batch: a control change asks for a zone as a control change (Kaiser Colosseum does
+                // not limit it).
+                var takesControl = c.TakeControlOfTarget || c.Action == EffectActionKind.TakeControlUntilEndPhase;
+                if ((takesControl ||
                      c.Action == EffectActionKind.SpecialSummonFromGy ||
                      c.Action == EffectActionKind.SpecialSummonFromHand ||
                      c.Action == EffectActionKind.SpecialSummonFromDeck) &&
-                    engine.FirstEmpty(who.MonsterZones) < 0)
+                    (takesControl ? engine.FirstEmptyForControl(who) : engine.FirstEmpty(who.MonsterZones)) < 0)
                 {
                     reason = "No free Monster Zone.";
                     return false;
@@ -1645,6 +1693,9 @@ namespace WRLDZ.Duel.TextEffects
             PlaceFaceUp(engine, who, card, fromHand);
             SpellCounterSpendersRuntime.PlaceOnActivation(engine, card, link); // Pitch-Black Power Stone
             engine.Log($"Chain {engine.Chain.Describe()} — {card.Name}");
+            // LpLocksDelayedBurnAndGyNegation batch: Wall of Revealing Light's multiple of 1000 LP is paid as it is chained.
+            LpLocksDelayedBurnAndGyNegationRuntime.PayOnActivation(engine, who, card, link);
+            if (engine.GameOver) return true;
             engine.GameEvents.Add(DuelGameEventKind.Activated, engine.TurnNumber, who, card, answered?.Card);
 
             // SimpleSpellTraps batch: Emergency Provisions sends / Burst Breath Tributes its cost now (a human picks while
@@ -1990,6 +2041,10 @@ namespace WRLDZ.Duel.TextEffects
             var paidLp = ActivationLpCostRuntime.PayOnActivation(engine, who, card, link,
                 CompiledEffectCache.GetOrCompile(card), pickClauses);
             if (engine.GameOver) return true;
+            // LpLocksDelayedBurnAndGyNegation batch: Wall of Revealing Light's multiple of 1000 LP (not refunded by a target
+            // Cancel: the card has no target).
+            LpLocksDelayedBurnAndGyNegationRuntime.PayOnActivation(engine, who, card, link);
+            if (engine.GameOver) return true;
 
             // SimpleSpellTraps batch: Burst Breath's Tribute / Emergency Provisions' sends are paid now (a human picks;
             // the window opens once they are paid).
@@ -2240,10 +2295,9 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         static bool ResponseDiscardPayable(DuelEngine engine, DuelistState who, CardInstance card, List<EffectClause> clauses)
         {
+            // LocksRedirectsAndActivity batch: Goblin of Greed — a discard cost cannot be paid at all.
+            if (LocksRedirectsAndActivityRuntime.DiscardCostLocked(engine, who, clauses, out _)) return false;
             var discard = clauses?.Find(HasDiscardCost);
-            // LocksRedirectsAndActivity: a live cannot-discard-as-a-cost lock refuses the activation outright.
-            if (discard != null && LocksRedirectsAndActivityRuntime.DiscardAsCostLocked(engine, who))
-                return false;
             return discard == null ||
                    CollectDiscardCost(who, DiscardCostAttributeOf(discard), card).Count >= DiscardNeed(discard);
         }
@@ -2581,6 +2635,16 @@ namespace WRLDZ.Duel.TextEffects
                         return false;
                     return SeatResponseOnChain(engine, who, card, fromHand,
                         ResponseTiming.MonstersReturnedToHandByOpponent, null, activateClauses, autoPickTarget);
+                }
+
+                // ZoneCapsAndPhaseWindows batch: Thunder of Ruler becomes a Chain Link in the opponent's Standby Phase; the
+                // turn player may chain, and the turn goes on to Main Phase 1 once the Chain has resolved.
+                if (engine.PendingResponse.Timing == ResponseTiming.StandbyResponse)
+                {
+                    if (activateClauses.Count == 0 || !StandbyWindowRuntime.AnswersWindow(prog))
+                        return false;
+                    return SeatResponseOnChain(engine, who, card, fromHand, ResponseTiming.StandbyResponse, null,
+                        activateClauses, autoPickTarget);
                 }
             }
 
@@ -4918,21 +4982,10 @@ namespace WRLDZ.Duel.TextEffects
                 return false;
             }
 
-            // LocksRedirectsAndActivity: "You cannot discard cards as a cost to activate cards or effects"
-            // (ygopro EFFECT_CANNOT_DISCARD_AS_COST, per player, per effect). Sends are not discards.
-            if ((c.RequiresDiscardCost || c.RequiresDiscardSelf) && !c.DiscardCostIsSend &&
-                LocksRedirectsAndActivityRuntime.DiscardAsCostLocked(engine, who))
+            // LocksRedirectsAndActivity batch: Goblin of Greed — no discard cost can be paid (sends are not discards).
+            if (LocksRedirectsAndActivityRuntime.DiscardCostLocked(engine, who, c, out var discardLock))
             {
-                reason = "You cannot discard cards as a cost (card effect).";
-                return false;
-            }
-
-            // LocksRedirectsAndActivity: a cost that requires "you have not activated any other cards or
-            // effects this turn" (Lua ACTIVITY_CHAIN counter).
-            if (c.Action == EffectActionKind.RequiresNoOtherActivationThisTurn &&
-                !LocksRedirectsAndActivityRuntime.ActivityCostLegal(engine, who, card))
-            {
-                reason = "You have already activated a card or effect this turn.";
+                reason = discardLock;
                 return false;
             }
 
@@ -5035,7 +5088,7 @@ namespace WRLDZ.Duel.TextEffects
             }
 
             if (c.Action == EffectActionKind.TakeControlUntilEndPhase &&
-                engine.FirstEmpty(who.MonsterZones) < 0)
+                engine.FirstEmptyForControl(who) < 0) // ZoneCapsAndPhaseWindows: a control change
             {
                 reason = "No Monster Zone to take control.";
                 return false;
@@ -5114,6 +5167,8 @@ namespace WRLDZ.Duel.TextEffects
             IgnitionCostsAndSimpleSpellsRuntime.FilterTributeCostCandidates(c, list);
             // AttackShieldsAndDamageZero batch: Arcane Archer's "Tribute 1 Plant-Type monster" reads the Type only.
             AttackShieldsAndDamageZeroRuntime.FilterTributeCostCandidates(c, list);
+            // DeckSummonsAndSarcophagi batch: Monster Gate / Ninjitsu Art free a zone; Ninjitsu Art's Level match.
+            DeckSummonsAndSarcophagiRuntime.FilterTributeCostCandidates(engine, who, source, c, list);
             TributeSummonsRuntime.MoveForcedFirst(who, list, forced);
             return list;
         }
@@ -6041,6 +6096,9 @@ namespace WRLDZ.Duel.TextEffects
             // BattleDestroyedGyRecovery batch (v162): Revival Jam's optional LP cost (PAY = flag it).
             if (BattleDestroyedGyRecoveryRuntime.TryFinishLpCost(engine, amount, out var revivalOk))
                 return revivalOk;
+            // LpLocksDelayedBurnAndGyNegation batch: Wall of Revealing Light's chosen activation cost.
+            if (LpLocksDelayedBurnAndGyNegationRuntime.TryAnswerLpChoice(engine, amount, out var paidLockOk))
+                return paidLockOk;
             var p = engine?.PendingActivation;
             // StandbyBurnsAndDice batch (v162): PAY N for Inspection in the opponent's Standby Phase.
             if (StandbyBurnsAndDiceRuntime.TryAnswerLpChoice(engine, amount)) return true;
@@ -6655,6 +6713,11 @@ namespace WRLDZ.Duel.TextEffects
             // EFFECT_FLAG_OATH), bound as the card is activated.
             if (clause.ForbidsOtherSummonsThisTurn)
                 TokensDeclarationsAndPicksRuntime.ApplySummonOath(engine, who, source);
+            // LocksRedirectsAndActivity batch: Burst Stream of Destruction — "X you control cannot attack the turn you
+            // activate this card" (Lua s.cost, EFFECT_CANNOT_ATTACK_ANNOUNCE with EFFECT_FLAG_OATH).
+            if (!string.IsNullOrEmpty(clause.NamedCannotAttackTurnActivated))
+                LocksRedirectsAndActivityRuntime.ApplyNamedAttackOath(engine, who, clause.NamedCannotAttackTurnActivated,
+                    source);
             // TypeDeclaration batch (v142): the Type is declared when the card is activated (the Lua announces it
             // in the target step), so it stays on the card even when this resolution is negated (Royal Decree,
             // Metal Detector); the continuous effect that reads it applies once the negation ends.
@@ -6729,6 +6792,14 @@ namespace WRLDZ.Duel.TextEffects
                     // Continuous protection — resolved reactively by ArchfiendTargetNegation.
                     break;
 
+                // LpLocksDelayedBurnAndGyNegation batch: Weapon Change's Standby trigger is fired and resolved by
+                // LpLocksDelayedBurnAndGyNegationRuntime.TryFirePhaseClause (marker); Dora of Fate records its delayed burn.
+                case EffectActionKind.SwitchTargetCurrentAtkDefUntilOpponentsNextEndPhase:
+                    break;
+                case EffectActionKind.BurnWhenYouNormalSummonOneLevelLowerThanTargetNextTurn:
+                    LpLocksDelayedBurnAndGyNegationRuntime.ArmDora(engine, who, source, clause, chosenTarget);
+                    break;
+
                 // ChaosBanishSummons batch: Chaos Sorcerer / BLS - Envoy of the Beginning, Chaosrider Gustaph, Primal Seed;
                 // Soul Absorption (BanishEvents) and Strike Ninja (its own Quick Effect link) resolve elsewhere.
                 case EffectActionKind.BanishTargetedFieldMonster:
@@ -6745,6 +6816,30 @@ namespace WRLDZ.Duel.TextEffects
                     break;
                 case EffectActionKind.GainLpPerCardBanished:
                 case EffectActionKind.BanishThisUntilEndPhase:
+                    break;
+
+                // NormalMonsterSpells batch: Delta Attacker, Thousand Energy / Triangle Power, The Law of the Normal, Order
+                // to Smash (NormalMonsterSpellsRuntime).
+                case EffectActionKind.NormalsSharingNameAttackDirectlyThisTurn:
+                    NormalMonsterSpellsRuntime.ResolveDeltaAttacker(engine, who, source, clause);
+                    break;
+                case EffectActionKind.RaiseOriginalAtkDefOfLevelNormalsDestroyThemAtEndPhase:
+                    NormalMonsterSpellsRuntime.ResolveOriginalBoost(engine, who, source, clause);
+                    break;
+                case EffectActionKind.BothDiscardHandsDestroyAllButLowLevelNormals:
+                    NormalMonsterSpellsRuntime.ResolveLawOfTheNormal(engine, who, source, clause);
+                    break;
+                case EffectActionKind.TributeTargetedNormalThenDestroyUpToOppSpellTraps:
+                    NormalMonsterSpellsRuntime.ResolveOrderToSmash(engine, who, source, clause, chosenTarget);
+                    break;
+
+                // LocksRedirectsAndActivity batch: continuous rules read where they apply (DiscardCostLocked at the
+                // activation-legality sites, the field-exit funnel, DestroyMonster) and Dark Magician of Chaos's End Phase
+                // trigger (LocksRedirectsAndActivityRuntime.TryFirePhaseClause).
+                case EffectActionKind.ContinuousCannotDiscardAsCost:
+                case EffectActionKind.BattleDestroyedMonstersShuffleIntoDeckInstead:
+                case EffectActionKind.BanishThisInsteadOfLeavingField:
+                case EffectActionKind.AddGySpellToHandAtEndPhaseIfSummonedThisTurn:
                     break;
                 // BattleAndPositionRecords batch: Atomic Firefly's burn (chosenTarget = the monster that destroyed it), Judgment
                 // of the Desert's record (its activation), Curse of Anubis. Disc Fighter (battle confirm), Ghost Knight of Jackal
@@ -7440,14 +7535,17 @@ namespace WRLDZ.Duel.TextEffects
                 }
 
                 case EffectActionKind.ForbidBattlePhaseThisTurn:
-                    // MfcSimpleSpellsB batch (v174) — RESERVED, no card compiles to it yet (Thunder of
-                    // Ruler stays fail-closed: no activation path for a Set Normal Trap on a pure
-                    // StandbyPhase timing). Reuses the same turn stamp as Soul Exchange's Battle Phase
-                    // oath (TributeSummonsRuntime.ApplyBattlePhaseOath): DuelistState.
-                    // BattlePhaseForbiddenTurn, read by TributeSummonsRuntime.BattlePhaseForbidden in
-                    // TryEnterBattlePhase, so the ban is a property of the turn and survives this card
-                    // leaving the field.
-                    TributeSummonsRuntime.ApplyBattlePhaseOath(engine, who, source);
+                    // MfcSimpleSpellsB batch (v174); ZoneCapsAndPhaseWindows batch: Thunder of Ruler, answering the
+                    // opponent's Standby window (Lua EFFECT_CANNOT_BP, target range (0,1)) — the activator's opponent
+                    // cannot conduct a Battle Phase this turn. The same turn stamp as Soul Exchange's Battle Phase oath
+                    // (DuelistState.BattlePhaseForbiddenTurn, read by TributeSummonsRuntime.BattlePhaseForbidden), so the ban
+                    // is a property of the turn and survives this card leaving the field.
+                    StandbyWindowRuntime.ForbidOpponentBattlePhase(engine, who, source);
+                    break;
+
+                case EffectActionKind.PhaseJumpToEndPhase:
+                    // ZoneCapsAndPhaseWindows batch: Neko Mane King — the turn player's turn jumps to its End Phase.
+                    PhaseJumpRuntime.Request(engine, who, source);
                     break;
 
                 case EffectActionKind.DiscardChosenFromHand:
@@ -8218,6 +8316,14 @@ namespace WRLDZ.Duel.TextEffects
                     break;
                 case EffectActionKind.ContinuousOpponentCannotActivateQuickPlaySpells:
                     break;
+                // SpellTrapSealsAndImmunity batch: Sonic Jammer's FLIP lock; Dust Barrier's shield and Standby countdown are
+                // read by ShieldsFromSpell / OnStandbyPhase.
+                case EffectActionKind.OpponentCannotActivateSpellCardsUntilEndOfNextTurn:
+                    SpellTrapSealsAndImmunityRuntime.RegisterSpellCardLock(engine, who, source);
+                    break;
+                case EffectActionKind.NormalMonstersUnaffectedByOpponentSpells:
+                case EffectActionKind.DestroyThisOnYourNthStandbyAfterActivation:
+                    break;
 
                 case EffectActionKind.GainLpEqualToAtk:
                 {
@@ -8386,6 +8492,10 @@ namespace WRLDZ.Duel.TextEffects
                 case EffectActionKind.ConvertOpponentLpGainToDamage:
                 // ConditionalSpellsAndTraps batch: D.D. Borderline (ConditionalSpellsAndTrapsRuntime.BattlePhaseLocked).
                 case EffectActionKind.NoBattlePhaseWhileNoSpellInControllerGy:
+                // ZoneCapsAndPhaseWindows batch: Kaiser Colosseum / Spatial Collapse (ZoneCapsRuntime, read by every
+                // placement path).
+                case EffectActionKind.OpponentMonstersCappedByYourMonsterCount:
+                case EffectActionKind.EachPlayerFieldCardsCappedAtFive:
                     // Continuous — applied by FieldSpellEffects / ContinuousProtections while face-up.
                     break;
 
@@ -9008,6 +9118,25 @@ namespace WRLDZ.Duel.TextEffects
                     break;
                 case EffectActionKind.ShuffleFieldMonstersIntoDeckExcavateSummon:
                     FlipMassEffectsRuntime.ResolveShuffleExcavateSummon(engine, who, source, clause);
+                    break;
+                // DeckSummonsAndSarcophagi batch.
+                case EffectActionKind.ExcavateTopSpecialSummonLowLevelNormalsShuffleRest:
+                    DeckSummonsAndSarcophagiRuntime.ResolveFittingRoom(engine, who, source, clause);
+                    break;
+                case EffectActionKind.ExcavateUntilNormalSummonableSpecialSummonItSendRestToGy:
+                    DeckSummonsAndSarcophagiRuntime.ResolveMonsterGate(engine, who, source, clause);
+                    break;
+                case EffectActionKind.SpecialSummonRaceLevelUpToTributedPlusFromHandOrDeckLinked:
+                    DeckSummonsAndSarcophagiRuntime.ResolveNinjitsu(engine, who, source, clause, costNumeric);
+                    break;
+                case EffectActionKind.SpecialSummonLowLevelNormalsFromDeckPerOwnBattleDestroyedAtEndPhase:
+                    DeckSummonsAndSarcophagiRuntime.ResolveHumanWave(engine, who, source, clause);
+                    break;
+                case EffectActionKind.SpecialSummonUpToTargetedLowLevelRaceNormalsFromGy:
+                    DeckSummonsAndSarcophagiRuntime.ResolvePharaohRevival(engine, who, source, clause);
+                    break;
+                // The First Sarcophagus: read after each placement (DeckSummonsAndSarcophagiRuntime.AfterNamedPlacement).
+                case EffectActionKind.SendThisAndPlacedToGyThenSpecialSummonNamedFromHandOrDeck:
                     break;
 
                 // TargetedClassics Soft: Miracle Dig — return face-up banished monsters to the GY.
@@ -10069,7 +10198,15 @@ namespace WRLDZ.Duel.TextEffects
                                    "it cannot be equipped.");
                         break;
                     }
+                    // NormalMonsterSpells batch: a Level / Normal Monster equip limit (Duel.Equip checks it).
+                    if (!NormalMonsterSpellsRuntime.EquipLimitAllows(clause, chosenTarget))
+                    {
+                        engine.Log($"{source.Name}: {chosenTarget.Name} does not fit its equip limit — it cannot be equipped.");
+                        break;
+                    }
                     EquipCardTo(engine, who, source, chosenTarget, clause.EquipAtkBonus, clause);
+                    // NormalMonsterSpells batch: Sword of the Soul-Eater's ATK for the monsters Tributed as it was activated.
+                    NormalMonsterSpellsRuntime.NoteEquipResolved(engine, who, source, clause, chosenTarget);
                     if (clause.TakeControlOfTarget)
                     {
                         // Soft residual: The Emperor's Holiday — Equip Card effects negated
@@ -10706,6 +10843,8 @@ namespace WRLDZ.Duel.TextEffects
             bool destroyAttacker, bool destroyDefender)
         {
             if (engine == null) return;
+            // LocksRedirectsAndActivity batch: this battle's EVENT_BATTLED queue starts empty.
+            LocksRedirectsAndActivityRuntime.ClearBattledQueue(engine);
             FireAfterDamageFor(engine, atkPlayer, attacker, defender, attacker,
                 destroyAttacker, isAttackTarget: false, otherDestroyed: destroyDefender);
             FireAfterDamageFor(engine, defPlayer, defender, attacker, attacker,
@@ -10732,6 +10871,15 @@ namespace WRLDZ.Duel.TextEffects
                 // BattleDestroyedTriggers batch (Kelbek, ygopro EVENT_BATTLED): the battled monster is not destroyed by this
                 // battle (not STATUS_BATTLE_DESTROYED).
                 if (c.RequiresBattledMonsterNotDestroyed && otherDestroyed) continue;
+                // LocksRedirectsAndActivity batch (Dark Magician of Chaos, Lua rmcon): the battled monster is destroyed by
+                // this battle (STATUS_BATTLE_DESTROYED). It resolves after the FLIP effect of a monster this battle flipped
+                // (ocgcore Chain Link 1 under the FLIP's Chain Link 2), from DuelEngine.ApplyBattleDestructions.
+                if (c.RequiresBattledMonsterDestroyed)
+                {
+                    if (otherDestroyed && other != null)
+                        LocksRedirectsAndActivityRuntime.QueueBattledTrigger(engine, who, self, c, other);
+                    continue;
+                }
                 // Optional "You can" auto-resolves (same as other monster battle triggers).
                 CardInstance tgt = null;
                 if (c.Zone == EffectZoneFilter.AttackingMonster)
@@ -11423,6 +11571,14 @@ namespace WRLDZ.Duel.TextEffects
                         // EquipModel batch: Armored Glass — a monster was just equipped with an Equip Card.
                         ok = EquipModelRuntime.EquipWindowOpen(engine, who, out reason);
                         break;
+                    case ZoneCapsRuntime.BothPlayersFiveOrFewerFieldCards:
+                        // ZoneCapsAndPhaseWindows batch: Spatial Collapse — both players have 5 or fewer cards on the field.
+                        ok = ZoneCapsRuntime.BothFiveOrFewer(engine, who, out reason);
+                        break;
+                    case StandbyWindowRuntime.OpponentStandbyPhase:
+                        // ZoneCapsAndPhaseWindows batch: Thunder of Ruler — during the opponent's Standby Phase.
+                        ok = StandbyWindowRuntime.WindowOpen(engine, who, out reason);
+                        break;
                     case MajorRiotRuntime.YourMonstersReturnedToHandByOpponent:
                         // ForcedActivationAndSubstitution batch (v163): Major Riot — your monster(s) were just returned
                         // to your hand by your opponent's effect, and a monster is on the field.
@@ -11544,6 +11700,10 @@ namespace WRLDZ.Duel.TextEffects
                         if (ConditionalSpellsAndTrapsRuntime.TryActivationCondition(engine, who, card, c, out ok,
                                 out reason))
                             break;
+                        // LpLocksDelayedBurnAndGyNegation batch: Wall of Revealing Light can pay its first multiple of LP.
+                        if (LpLocksDelayedBurnAndGyNegationRuntime.TryActivationCondition(engine, who, card, c, out ok,
+                                out reason))
+                            break;
                         // RecoveryAndPhaseCosts batch: Dimension Distortion (empty GY), Dimension Fusion (a summonable banished
                         // monster on either side), Reload (another card in the hand).
                         if (RecoveryAndPhaseCostsRuntime.TryActivationCondition(engine, who, card, c, out ok, out reason))
@@ -11557,6 +11717,9 @@ namespace WRLDZ.Duel.TextEffects
                         // on either field (Primal Seed), a banishable Spell in your GY (Chaosrider Gustaph).
                         if (ChaosBanishSummonsRuntime.TryActivationCondition(engine, who, card, c, out ok, out reason))
                             break;
+                        // LocksRedirectsAndActivity batch: no named monster declared an attack this turn (Burst Stream).
+                        if (LocksRedirectsAndActivityRuntime.TryActivationCondition(engine, who, card, c, out ok, out reason))
+                            break;
                         // BattleAndPositionRecords batch: Curse of Anubis (a face-up Attack Position Effect Monster).
                         if (BattleAndPositionRecordsRuntime.TryActivationCondition(engine, who, card, c, out ok, out reason))
                             break;
@@ -11568,6 +11731,14 @@ namespace WRLDZ.Duel.TextEffects
                         // SanctuaryAndZera batch: an opponent's monster (Archlord Zerato), your LP lead (Saturn), a card in
                         // the opponent's hand or on their field (Light of Judgment).
                         if (SanctuaryAndZeraRuntime.TryActivationCondition(engine, who, card, c, out ok, out reason))
+                            break;
+                        // NormalMonsterSpells batch: Delta Attacker, Thousand Energy / Triangle Power, The Law of the Normal,
+                        // Order to Smash.
+                        if (NormalMonsterSpellsRuntime.TryActivationCondition(engine, who, card, c, out ok, out reason))
+                            break;
+                        // DeckSummonsAndSarcophagi batch: Enchanting Fitting Room (zone + Deck size), Monster Gate (a Deck
+                        // monster that can be Normal Summoned/Set).
+                        if (DeckSummonsAndSarcophagiRuntime.TryActivationCondition(engine, who, card, c, out ok, out reason))
                             break;
                         ok = false;
                         reason = $"Unknown activation condition {c.ActivationCondition}.";
@@ -12034,6 +12205,8 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
                 // PhaseTimersAndDeckTop (v163): Bottomless Shifting Sand's hand check and Different Dimension Capsule's
                 // count (continuous effects, before the Standby triggers).
                 PhaseTimersAndDeckTopRuntime.OnStandbyPhase(engine, who);
+                // SpellTrapSealsAndImmunity batch: Dust Barrier counts its controller's Standby Phases (destroyed on the 2nd).
+                SpellTrapSealsAndImmunityRuntime.OnStandbyPhase(engine, who);
             }
             // BattlePhaseEnd (v142): Steel Scorpion countdowns count this End Phase.
             if (timing == EffectTiming.EndPhase)
@@ -12322,6 +12495,10 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
                     // RecoveryAndPhaseCosts batch: Manticore of Darkness — either player's End Phase, from its GY.
                     if (RecoveryAndPhaseCostsRuntime.TryFirePhaseClause(engine, who, card, c, timing))
                         continue;
+                    // LocksRedirectsAndActivity batch: Dark Magician of Chaos — either player's End Phase of the turn it was
+                    // Normal or Special Summoned (target 1 Spell in your GY).
+                    if (LocksRedirectsAndActivityRuntime.TryFirePhaseClause(engine, who, card, c, timing))
+                        continue;
                     var eitherTurn = c.Action == EffectActionKind.DestroySummonedThisTurnLevelLeq;
                     // "during the Standby Phase" (Imperial Order): every Standby Phase, either player's.
                     var eachStandby = c.EachStandbyPhase && timing == EffectTiming.StandbyPhase;
@@ -12387,6 +12564,9 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
                     // ArchfiendRiders batch: Infernalqueen Archfiend — every Standby Phase, its controller targets 1 face-up
                     // "Archfiend" monster they control (+1000 ATK until the End Phase).
                     if (ArchfiendRidersRuntime.TryStandbyTargetBoost(engine, who, card, c))
+                        continue;
+                    // LpLocksDelayedBurnAndGyNegation batch: Weapon Change — your Standby Phase, pay LP, target, switch.
+                    if (LpLocksDelayedBurnAndGyNegationRuntime.TryFirePhaseClause(engine, who, card, c, timing))
                         continue;
 
                     // The Regulation of Tribe (TypeDeclaration batch, v142): queued here, run once every Standby
@@ -13258,10 +13438,19 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
         static void SummonTokens(DuelEngine engine, DuelistState who, EffectClause clause, CardInstance source = null,
             IReadOnlyList<BattlePosition> positions = null)
         {
+            // ZoneCapsAndPhaseWindows batch: the Tokens are placed by who's effect, on either field (Ojama Trio: Kaiser
+            // Colosseum does not limit the Tokens its controller's effect puts on the opponent's field).
+            using (ZoneCapsRuntime.PlacedBy(engine, who))
+                SummonTokensPlaced(engine, who, clause, source, positions);
+        }
+
+        static void SummonTokensPlaced(DuelEngine engine, DuelistState who, EffectClause clause, CardInstance source,
+            IReadOnlyList<BattlePosition> positions)
+        {
             var dest = clause.TokenToOpponent ? engine.OpponentOf(who) : who;
             if (dest == null) return;
             var n = clause.TokenFillRemainingZones
-                ? dest.MonsterZones.Count(z => z != null && z.IsEmpty)
+                ? ZoneCapsRuntime.UsableMonsterZones(dest)
                 : (clause.TokenCount > 0 ? clause.TokenCount : 1);
             var pos = clause.SummonInDefense || clause.TokenToOpponent
                 ? BattlePosition.Defense
@@ -13313,6 +13502,9 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
                 if (z.IsEmpty) empty++;
                 else if (z.Occupant != null) monsters++;
             }
+
+            // ZoneCapsAndPhaseWindows batch: the usable-zone caps limit the Hats too.
+            empty = Math.Min(empty, Math.Max(0, ZoneCapsRuntime.MonsterRoom(engine, who)));
 
             if (monsters < 1)
             {
@@ -15137,6 +15329,12 @@ static EffectClause SecondTargetClause(EffectClause c)
             // TokensDeclarationsAndPicks batch: Wild Nature's Release — a target with DEF above 0.
             TokensDeclarationsAndPicksRuntime.FilterTargets(c, list);
 
+            // NormalMonsterSpells batch: Level / Normal Monster equip limits (Sword of the Soul-Eater, Opti-Camouflage Armor)
+            // and Order to Smash's face-up Level 2 or lower non-Token Normal Monster.
+            NormalMonsterSpellsRuntime.FilterTargets(engine, who, c, except, list);
+            // LpLocksDelayedBurnAndGyNegation batch: Dora of Fate — a target above Level 1.
+            LpLocksDelayedBurnAndGyNegationRuntime.FilterTargets(c, list);
+
             // Gust / Driving Snow (SpellTrapDestroyedResponse): "Destroy 1 Spell or Trap Card on the field" never
             // targets the activating card itself (Lua: IsExistingTarget(…, e:GetHandler())).
             // EngineResiduals (v163): a Spell/Trap Card being activated never targets itself with "target 1 card on the
@@ -15532,6 +15730,10 @@ static EffectClause SecondTargetClause(EffectClause c)
                 => EffectTargetKind.EquipMonsterYouControl,
             // Two-Pronged Attack: destroying your own monsters is a pick, not a Tribute cost.
             EffectZoneFilter.ControllerMonsters when c.Action == EffectActionKind.Destroy
+                => EffectTargetKind.YourMonster,
+            // NormalMonsterSpells batch: Order to Smash's target is Tributed by the effect, not as a cost.
+            EffectZoneFilter.ControllerMonsters when
+                c.Action == EffectActionKind.TributeTargetedNormalThenDestroyUpToOppSpellTraps
                 => EffectTargetKind.YourMonster,
             EffectZoneFilter.ControllerMonsters => EffectTargetKind.TributeMonsterYouControl,
             EffectZoneFilter.OppAnyCardOnField => EffectTargetKind.AnyCardOnField,

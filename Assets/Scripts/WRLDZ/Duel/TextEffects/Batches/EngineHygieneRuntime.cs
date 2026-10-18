@@ -139,6 +139,8 @@ namespace WRLDZ.Duel.TextEffects
             engine ??= who.Engine;
             var text = card.OfficialText ?? "";
             if (!FlipMassEffectsRuntime.CanBeSpecialSummonedByThis(who, card)) return false;
+            // DeckSummonsAndSarcophagi batch: "cannot be Special Summoned except by the effect of "X"" (Spirit of the Pharaoh).
+            if (DeckSummonsAndSarcophagiRuntime.NomiBlocksSpecialSummon(card)) return false;
             // TargetNegationsAndHandQuickEffects batch (v163): a named-card procedure ("by Tributing 1 "Great Dezard"",
             // Fushioh Richie) is a Semi-Nomi: only that card summons it from the hand or Deck, a properly summoned copy
             // may come back (SemiNomiMayBeRevived below).

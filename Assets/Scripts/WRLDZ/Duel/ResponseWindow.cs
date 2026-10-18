@@ -107,9 +107,11 @@ namespace WRLDZ.Duel
         MonstersReturnedToHandByOpponent,
 
         /// <summary>
-        /// Standby Phase response window (ZoneCapsAndPhaseWindows batch): opened during Standby Phase when a player
-        /// has a legal Standby-only Trap activation (e.g. Thunder of Ruler). Both players may respond; opens only when
-        /// someone has a legal response, like the v161/v163 windows. Appended — never insert above.
+        /// ZoneCapsAndPhaseWindows batch: the turn player is leaving their Standby Phase for Main Phase 1 and the other
+        /// duelist (the responder) gets priority in that Standby Phase first (TextEffects.StandbyWindowRuntime). Offered
+        /// once per turn, only when the responder has a legal answer (a "During your opponent's Standby Phase" Trap: Thunder
+        /// of Ruler); the turn player may chain to it. Pass or answer: the turn goes on to Main Phase 1. Appended — never
+        /// insert above.
         /// </summary>
         StandbyResponse,
     }

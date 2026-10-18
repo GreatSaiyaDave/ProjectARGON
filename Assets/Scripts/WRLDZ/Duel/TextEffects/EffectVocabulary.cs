@@ -104,7 +104,14 @@ namespace WRLDZ.Duel.TextEffects
             action == EffectActionKind.DrawOrDiscardRandomFromOpponentHand ||
             action == EffectActionKind.DestroyAllOppDefenseWhenOppAttackBecomesDefense ||
             action == EffectActionKind.TargetGainsAtkEqualToAnotherTargetDuringDamageStep ||
-            action == EffectActionKind.CoinCallDestroyBattledMonsterOnCorrect;
+            action == EffectActionKind.CoinCallDestroyBattledMonsterOnCorrect ||
+            // LocksRedirectsAndActivity batch: reserved members of the 46269f39d draft with no (or only a partial) reader —
+            // the player-wide activation lock is read only by the Spell/Trap hub, the ACTIVITY_CHAIN cost and the
+            // return-to-hand redirect by nothing (Chaos Emperor Dragon - Envoy of the End stays fail-closed, ENGINE_MAP §4).
+            action == EffectActionKind.ContinuousNeitherPlayerCanActivate ||
+            action == EffectActionKind.ContinuousThisPlayerCannotActivate ||
+            action == EffectActionKind.LeaveFieldReturnsToOwnerHandInstead ||
+            action == EffectActionKind.RequiresNoOtherActivationThisTurn;
 
         /// <summary>
         /// Actions that are unique (or a 1–3 card family). Adding a 4th card
@@ -465,6 +472,12 @@ namespace WRLDZ.Duel.TextEffects
                 EffectActionKind.DestroyThisAtNthSpellCounterDamageActivator => EffectResolutionKind.Destroy,
                 EffectActionKind.ActivatorOfNamedCardMayDrawWhileAttackPosition => EffectResolutionKind.Draw,
                     EffectActionKind.BanishAllGyMonstersWhenOpponentTargetsGyMonster => EffectResolutionKind.Banish,
+                // NormalMonsterSpells batch: Delta Attacker, Thousand Energy / Triangle Power, The Law of the Normal, Order to
+                // Smash.
+                EffectActionKind.NormalsSharingNameAttackDirectlyThisTurn => EffectResolutionKind.DirectAttack,
+                EffectActionKind.RaiseOriginalAtkDefOfLevelNormalsDestroyThemAtEndPhase => EffectResolutionKind.ModifyStats,
+                EffectActionKind.BothDiscardHandsDestroyAllButLowLevelNormals => EffectResolutionKind.Destroy,
+                EffectActionKind.TributeTargetedNormalThenDestroyUpToOppSpellTraps => EffectResolutionKind.Destroy,
                 // GyHandAndSummonEventTriggers batch: Emissary of the Afterlife (each player adds from their own Deck),
                 // "7" (draw, then destroy every face-up copy) and Beckoning Light (discard the hand, then add).
                 // LvChain batch: Dark Mimic LV3's conditional draw (1, or 2 when "Dark Mimic LV1" Summoned it).
@@ -751,6 +764,11 @@ namespace WRLDZ.Duel.TextEffects
                 EffectActionKind.BothPlayersLifePointsBecomeZero => EffectResolutionKind.Damage,
                 EffectActionKind.DestroyTargetThenDamageBothPlayers => EffectResolutionKind.Destroy,
                 EffectActionKind.NoBattlePhaseWhileNoSpellInControllerGy => EffectResolutionKind.Protection,
+                // ZoneCapsAndPhaseWindows batch (Thunder of Ruler's ForbidBattlePhaseThisTurn was reserved in v174).
+                EffectActionKind.ForbidBattlePhaseThisTurn => EffectResolutionKind.Protection,
+                EffectActionKind.PhaseJumpToEndPhase => EffectResolutionKind.Protection,
+                EffectActionKind.OpponentMonstersCappedByYourMonsterCount => EffectResolutionKind.Protection,
+                EffectActionKind.EachPlayerFieldCardsCappedAtFive => EffectResolutionKind.Protection,
                 EffectActionKind.LinkThisToTargetSpell => EffectResolutionKind.Equip,
                 EffectActionKind.InflictDamageToLinkedSpellController => EffectResolutionKind.Damage,
                 EffectActionKind.DestroyThisWhenLinkedSpellLeavesField => EffectResolutionKind.Destroy,
@@ -927,6 +945,26 @@ namespace WRLDZ.Duel.TextEffects
                     EffectActionKind.MonstersFlippedFaceUpAfterActivationCannotChangePosition or
                     EffectActionKind.TargetTwoFaceDownSpellTrapsLockActivation => EffectResolutionKind.Protection,
                 EffectActionKind.ChangeFaceUpAttackEffectMonstersToDefenseOriginalDefZeroLock => EffectResolutionKind.ChangePosition,
+                // SpellTrapSealsAndImmunity batch: Sonic Jammer's Spell Card lock, Dust Barrier's Normal Monster shield and its
+                // 2nd-Standby self-destruction.
+                EffectActionKind.OpponentCannotActivateSpellCardsUntilEndOfNextTurn or
+                    EffectActionKind.NormalMonstersUnaffectedByOpponentSpells => EffectResolutionKind.Protection,
+                EffectActionKind.DestroyThisOnYourNthStandbyAfterActivation => EffectResolutionKind.Destroy,
+                // LpLocksDelayedBurnAndGyNegation batch: Weapon Change (ATK/DEF switch), Dora of Fate (delayed burn).
+                EffectActionKind.SwitchTargetCurrentAtkDefUntilOpponentsNextEndPhase => EffectResolutionKind.ModifyStats,
+                EffectActionKind.BurnWhenYouNormalSummonOneLevelLowerThanTargetNextTurn => EffectResolutionKind.Damage,
+                // DeckSummonsAndSarcophagi batch: Deck / hand / GY Special Summons (DeckSummonsAndSarcophagiRuntime).
+                EffectActionKind.ExcavateTopSpecialSummonLowLevelNormalsShuffleRest or
+                    EffectActionKind.ExcavateUntilNormalSummonableSpecialSummonItSendRestToGy or
+                    EffectActionKind.SpecialSummonRaceLevelUpToTributedPlusFromHandOrDeckLinked or
+                    EffectActionKind.SpecialSummonLowLevelNormalsFromDeckPerOwnBattleDestroyedAtEndPhase or
+                    EffectActionKind.SendThisAndPlacedToGyThenSpecialSummonNamedFromHandOrDeck or
+                    EffectActionKind.SpecialSummonUpToTargetedLowLevelRaceNormalsFromGy => EffectResolutionKind.SpecialSummon,
+                // LocksRedirectsAndActivity batch: Goblin of Greed, Grave Protector, Dark Magician of Chaos.
+                EffectActionKind.ContinuousCannotDiscardAsCost => EffectResolutionKind.Protection,
+                EffectActionKind.BattleDestroyedMonstersShuffleIntoDeckInstead => EffectResolutionKind.ReturnToDeck,
+                EffectActionKind.BanishThisInsteadOfLeavingField => EffectResolutionKind.Banish,
+                EffectActionKind.AddGySpellToHandAtEndPhaseIfSummonedThisTurn => EffectResolutionKind.Search,
                 EffectActionKind.None => EffectResolutionKind.None,
                 _ => EffectResolutionKind.UniqueException
             };

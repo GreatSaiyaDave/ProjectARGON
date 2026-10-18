@@ -492,7 +492,11 @@ namespace WRLDZ.Duel.TextEffects
         /// (<see cref="BeginChainAnswerCost"/>), so a chain window does not refuse it as a cost needing a pick.
         /// </summary>
         public static bool PaysTributeWhenChained(EffectClause c) =>
-            c != null && c.Action == EffectActionKind.DestroyFaceUpMonstersDefLeqTributedAtk && c.RequiresTributeCount == 1;
+            c != null && c.RequiresTributeCount == 1 &&
+            (c.Action == EffectActionKind.DestroyFaceUpMonstersDefLeqTributedAtk ||
+             // DeckSummonsAndSarcophagi batch: Ninjitsu Art of Transformation (a free-chain Continuous Trap) records the
+             // Tributed Level the same way (TributeSummonsRuntime.TributeCostNumeric).
+             DeckSummonsAndSarcophagiRuntime.RecordsTributedLevel(c));
 
         /// <summary>
         /// TryResolveActivation, as the card is activated: pay Emergency Provisions' send cost. Returns true when a human
@@ -757,7 +761,8 @@ namespace WRLDZ.Duel.TextEffects
                 ChainActivation = true,
                 SeatTiming = seat ?? ResponseTiming.None,
                 TargetKind = EffectTargetKind.TributeMonsterYouControl,
-                PromptOverride = $"Tribute 1 {c.TributeRaceFilter} monster (cost). CANCEL cancels the activation."
+                PromptOverride = $"Tribute 1 {(string.IsNullOrEmpty(c.TributeRaceFilter) ? (c.TributeFaceUpOnly ? "face-up " : "") + c.TributeSeriesName : c.TributeRaceFilter)} " +
+                                 "monster (cost). CANCEL cancels the activation."
             };
             pending.LegalTargets.AddRange(candidates);
             s_picks.Add(pending, new Pick { Kind = PickKind.BurstTributeCost, Clause = c, ChainAnswer = chainAnswer, Seat = seat });

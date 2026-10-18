@@ -81,6 +81,8 @@ namespace WRLDZ.Duel
             if (!who.Hand.Contains(card)) return false;
             if (timing != ResponseTiming.DamageCalculation) return false;
             if (!HasDamageCalcHandTrap(card)) return false;
+            // LocksRedirectsAndActivity batch: Goblin of Greed — "You can discard this card" is a discard cost.
+            if (TextEffects.LocksRedirectsAndActivityRuntime.DiscardCostLocked(who.Engine, who, out _)) return false;
 
             // "if your opponent's monster attacks" — attacker controller ≠ who
             if (attackingPlayer == null || attackingPlayer == who) return false;
@@ -173,6 +175,8 @@ namespace WRLDZ.Duel
             {
                 case AbyssSoldier:
                     if (!HandHasAttributeMonster(who, "WATER")) return false;
+                    // LocksRedirectsAndActivity batch: Goblin of Greed — Abyss Soldier's cost discards a WATER monster.
+                    if (TextEffects.LocksRedirectsAndActivityRuntime.DiscardCostLocked(engine, who, out _)) return false;
                     return CollectBounceTargets(engine, who, card).Count > 0;
                 default:
                     return false;

@@ -11,8 +11,8 @@ namespace WRLDZ.Duel.Rules
     /// MfcSimpleSpellsB batch (v174): Emblem of Dragon Destroyer (Deck-or-GY named search) and Hidden
     /// Spellbook (target-2 GY Spells shuffled into the Deck). Compile shapes through the real compiler
     /// plus mini-duels through the engine entry points (TryActivateSpellTrap, TrySelectEffectTarget).
-    /// Thunder of Ruler stays fail-closed (see MfcSimpleSpellsBAtoms); its pin lives in
-    /// MfcSimpleSpellsRegressionTests.
+    /// Thunder of Ruler: Implemented later by the ZoneCapsAndPhaseWindows batch (its pins live in
+    /// ZoneCapsAndPhaseWindowsRegressionTests).
     /// </summary>
     public static class MfcSimpleSpellsBRegressionTests
     {

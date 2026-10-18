@@ -374,7 +374,9 @@ namespace WRLDZ.Duel.TextEffects
             var destZones = dest.MonsterZones;
             if (destZones == null) return;
             var idx = dest == r.ReturnTo
-                ? (inRange && zones[r.ZoneIndex].IsEmpty ? r.ZoneIndex : engine.FirstEmpty(zones))
+                ? (inRange && zones[r.ZoneIndex].IsEmpty && !ZoneCapsRuntime.CapReached(engine, zones) // ZoneCaps: caps
+                    ? r.ZoneIndex
+                    : engine.FirstEmpty(zones))
                 : engine.FirstEmpty(destZones);
             r.Pile.Banished.Remove(r.Card);
             if (idx < 0)
