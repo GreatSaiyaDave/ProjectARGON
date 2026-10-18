@@ -666,3 +666,37 @@ shrunk their 4096² textures to 1024–2048, dropped the normal maps and pushed 
 - **Open:** in every humanoid clip the bases stand on tiptoe (their rest pose has the ankle ~15 cm up, so the avatar's
   neutral foot is pointed): shoes read like heels in close-ups. A flat-foot avatar definition or a foot settle is a
   rig change for the owner to approve.
+
+## 2026-10-18 addendum — terrain-aware standing (`AvatarFootGrounding`)
+
+Owner: "The models should be realistic. Create a standing animation that adjusts appropriately to the terrain it is on.
+This will be important during duels. This is not a simple phone game. It is a phone and AR lens game."
+
+- **What it does** (`Presentation/Avatar/AvatarFootGrounding.cs`, `[DefaultExecutionOrder(-60)]`, so it runs after the
+  Animator and before the duelist's arm / disk IK at 650): once per outfit it measures each foot's SOLE from the meshes
+  worn on it (body foot, shoe / boot graft, one-piece outfit; heel + inner / outer toe contacts and the sole plane in
+  foot-bone space, refined to its own normal). Every frame each foot is cast onto what is under it; a planted foot turns
+  its sole onto that surface (pitch + roll follow the slope, heading stays the clip's), a swinging foot keeps the clip's
+  lift above it, the hips drop (≤ 45 cm) or rise (≤ 20 cm) so the lower foot can reach, the pelvis rolls a little toward
+  the lower foot (≤ 6°), and each leg is solved with two-bone IK in the clip's knee plane. Nothing about a mesh changes.
+- **Tiptoe fixed:** the bases' rest pose holds the ankle ~15 cm up with the foot pointed, so every humanoid clip stood
+  them on their toes. Planted soles put the ankle at 7.5–9.5 cm (shoe dependent); the hips drop 6.7 cm.
+  `OverworldAvatar3d.ApplyStature` scales the body up by that measured drop (`StandingDrop`), so the height slider is the
+  STANDING height (175 cm base → hips 1.01 m, head bone 1.52 m).
+- **Measured (owner's Editor, Play):** level floor: sole 2 mm into the floor, both feet; 14° ramp: lower foot 7.7 cm
+  down, upper 12.5 cm up, hips −4.4 cm, body upright; 12 cm step: the step foot +12.1 cm, the floor foot and hips
+  unchanged; walking: no sinking; AR sim (Paradox Brothers at 0.447 scale): grounded, arm + disk IK intact.
+- **Ground sources:** any collider under the foot except UI / Ignore Raycast, never the body's own. AR: every detected
+  plane now carries an invisible `MeshCollider` (`ArFoundationSession.BuildPlanePrefab`: ARPlane + mesh visualizer +
+  collider, no renderer; the template must stay ACTIVE under an inactive holder — the spawner copies its active flag).
+  With nothing under a foot (EditorSim, Lenses, the plinth) the body's own floor plane is used. The overworld map token
+  lives in a UI canvas: `Raycast = false` there (its floor is its plane).
+- **Imports:** `AvatarImportPostprocessor` keeps `Clothes/argon_shoes_*` and `Outfits/*` readable (the sole measurement
+  reads vertices; the bases and sculpts already were). The 10-18 reimport flipped 29 shoe + outfit metas.
+- **Gotchas:** bind-space units on this rig are tiny (the rig root is scaled ×100: a foot is ~0.0025 units long), so
+  any degenerate test must be relative, never an absolute epsilon (the first fit silently failed on `1e-10`). A standing
+  clip's toe contact is 1–2 cm off, so the first 2 cm of "lift" are not a lift. The smoothing is on the ground height
+  and normal only, never the horizontal (feet would drag behind a walking body).
+- **Still 2D in duels:** the DK rows' `characterId` (the 10-15 DA sprite sets) makes `ArOpponentDuelist` seat Yugi /
+  Kaiba / Joey … as flat drawings; Bonz, PaniK, Para / Dox, Shadi are 3D bodies. Flipping the cast to 3D is the owner's
+  call (it reverts the 10-15 decision).

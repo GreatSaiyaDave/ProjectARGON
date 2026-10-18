@@ -189,6 +189,10 @@ namespace WRLDZ.Presentation
 
             _planes = originGo.AddComponent<ARPlaneManager>();
             _planes.requestedDetectionMode = PlaneDetectionMode.Horizontal;
+            // every detected plane carries an invisible MeshCollider (ARPlaneMeshVisualizer keeps it in step with the
+            // plane's boundary): the duelists' feet stand on the real floor, table or step under them
+            // (AvatarFootGrounding casts down onto it), not on one flat height. Nothing is drawn: no MeshRenderer.
+            _planes.planePrefab = BuildPlanePrefab();
             _planes.planesChanged += OnPlanesChanged;
             originGo.AddComponent<ARRaycastManager>();
             originGo.AddComponent<ARAnchorManager>();
@@ -206,6 +210,23 @@ namespace WRLDZ.Presentation
 
             _status = "hierarchy";
             Debug.Log("[WRLDZ ARCore] XR Origin + AR Session built (6DOF · horizontal planes)");
+        }
+
+        /// <summary>An inactive template: ARPlane + mesh visualizer + MeshCollider, no renderer (owner 2026-10-18:
+        /// "a standing animation that adjusts appropriately to the terrain it is on").</summary>
+        static GameObject BuildPlanePrefab()
+        {
+            // the spawner copies the template's own active flag onto every plane it makes (TrackableSpawner), so the
+            // template itself stays active and sleeps under an inactive holder
+            var holder = new GameObject("ArPlaneTemplate") { hideFlags = HideFlags.HideInHierarchy };
+            holder.SetActive(false);
+            var go = new GameObject("ArPlaneCollider");
+            go.transform.SetParent(holder.transform, false);
+            go.AddComponent<ARPlane>();
+            go.AddComponent<MeshFilter>();
+            go.AddComponent<MeshCollider>();
+            go.AddComponent<ARPlaneMeshVisualizer>();
+            return go;
         }
 
         void PlaceArenaAnchor()

@@ -378,6 +378,18 @@ namespace WRLDZ.Presentation
             ApplyFace(look.silhouette ? "" : look.faceId ?? "");
             ApplyAdornments(look);   // accessories on bones, tattoos as skinned skin patches (OverworldAvatar3d.Adornments.cs)
             FollowBodyShapes();      // sculpted pieces without shape keys follow the body's active shapes (OverworldAvatar3d.MorphFollow.cs)
+            // terrain-aware standing (AvatarFootGrounding): the soles are measured from the meshes now worn, then every
+            // frame the feet are planted on what is under them and the hips follow (takes the bases off tiptoe too)
+            if (_solesDirty)
+            {
+                _solesDirty = false;
+                var grounding = AvatarFootGrounding.Ensure(gameObject);
+                grounding.Weight = GroundFeet ? 1f : 0f;
+                grounding.Raycast = _baseScale <= 1.5f;   // the map token lives in a UI canvas: its floor is its own plane
+                grounding.RebuildSoles();
+                _standingDrop = grounding.StandingDrop;
+                ApplyStature(look);   // re-apply with the measured drop: the slider's height is the standing height
+            }
             ApplySilhouette(look);
             if (_appliedAlpha < 0.999f) ApplyAlpha(_appliedAlpha);
             if (_renderersOff) foreach (var r in GetComponentsInChildren<Renderer>(true)) r.enabled = false;
@@ -391,11 +403,15 @@ namespace WRLDZ.Presentation
         Transform _statureHead;
         Vector3 _statureHeadBaseScale = Vector3.one;
 
+        float _standingDrop;   // metres per unit: the flat-footed stance is this much lower than the rest pose (AvatarFootGrounding)
+
         public void ApplyStature(AvatarAppearance look)
         {
+            // the bodies were calibrated in their tiptoe rest pose; standing on their soles they are _standingDrop lower,
+            // so the whole body is scaled up by that share and the slider's centimetres are the standing height
             var baseM = look.BaseHeightCm / 100f;
             var h = Mathf.Clamp(look.EffectiveHeightCm, 60f, 230f) / 100f;
-            var k = h / baseM;
+            var k = h / Mathf.Max(0.5f, baseM - _standingDrop * (GroundFeet ? 1f : 0f));
             float bodyScale, headScale;
             if (k >= 0.85f) { bodyScale = k; headScale = k; }
             else
@@ -640,6 +656,9 @@ namespace WRLDZ.Presentation
         // ---- clothing slots (Resources/WRLDZ/Avatar3D/Clothes, tools/custom/slot_clothes.py)
         public const string ClothRes = "WRLDZ/Avatar3D/Clothes/";
         string _clothesKey;
+        bool _solesDirty;
+        /// <summary>Plant the feet on the ground under them (AvatarFootGrounding). Off for bodies another system poses whole.</summary>
+        public bool GroundFeet = true;
         bool _hatWorn;
         readonly List<SkinnedMeshRenderer> _clothSmr = new();
         readonly List<Material> _clothMats = new();
@@ -651,6 +670,7 @@ namespace WRLDZ.Presentation
             if (_outfitSmr != null)
             {
                 DestroySlotGrafts();
+                if (_clothesKey != "outfit") _solesDirty = true;
                 _clothesKey = "outfit";
                 _hatWorn = false;
                 return;
@@ -659,6 +679,7 @@ namespace WRLDZ.Presentation
                       + look.handsId + "|" + look.bottomsId + "|" + look.shoesId + "|" + look.neckId + "|" + _hairId;
             if (key == _clothesKey) return;
             _clothesKey = key;
+            _solesDirty = true;   // the shoes may have changed: AvatarFootGrounding measures the new soles below
             DestroySlotGrafts();
             var hides = new List<Texture2D>(4);
             // the sculpted hairstyle's scalp map rides with the clothes' maps (it is part of the same composite), unless
@@ -1542,6 +1563,9 @@ namespace WRLDZ.Presentation
                 _mixer.SetInputWeight(1, _walkWeight);
                 _graph.Evaluate(dt);
             }
+            // no Player loop here: plant the feet the way LateUpdate would (edit-mode renders, the wardrobe thumbnails)
+            var grounding = GetComponent<AvatarFootGrounding>();
+            if (grounding != null) grounding.Ground(dt);
             ProceduralTick(dt);
         }
 
