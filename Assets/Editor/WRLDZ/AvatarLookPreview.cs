@@ -38,16 +38,22 @@ namespace WRLDZ.EditorTools
                 cam.clearFlags = CameraClearFlags.SolidColor;
                 cam.backgroundColor = new Color(0.16f, 0.17f, 0.20f);
                 cam.orthographic = true;
-                var height = look.EffectiveHeightCm / 100f;
+                // frame the renderers' bounds (the body faces +Z after FaceToward(Vector3.back))
+                var bounds = new Bounds(root.transform.position, Vector3.zero); var first = true;
+                foreach (var r in root.GetComponentsInChildren<Renderer>())
+                {
+                    if (first) { bounds = r.bounds; first = false; } else bounds.Encapsulate(r.bounds);
+                }
+                var height = Mathf.Max(bounds.size.y, 0.5f);
                 cam.orthographicSize = height * 0.56f;
                 cam.nearClipPlane = 0.05f; cam.farClipPlane = 20f;
                 rt = new RenderTexture(w, h, 24);
                 cam.targetTexture = rt;
-                var centre = root.transform.position + Vector3.up * height * 0.5f;
+                var centre = bounds.center;
                 var sb = new StringBuilder();
-                foreach (var (tag, yaw) in new[] { ("front", 0f), ("q", 40f), ("side", 90f) })
+                foreach (var (tag, yaw) in new[] { ("front", 0f), ("q", -40f), ("side", -90f) })
                 {
-                    var dir = Quaternion.Euler(0f, yaw, 0f) * Vector3.back;
+                    var dir = Quaternion.Euler(0f, yaw, 0f) * Vector3.forward;
                     cam.transform.position = centre + dir * 4f;
                     cam.transform.LookAt(centre);
                     cam.Render();
