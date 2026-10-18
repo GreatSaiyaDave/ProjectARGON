@@ -126,6 +126,24 @@ namespace WRLDZ.UI
             return go.GetComponent<RectTransform>();
         }
 
+        /// <summary>
+        /// BUILD_PLAN D1: the same canvas, opting in to the aspect plan when <paramref name="aspect"/> is true
+        /// (landscape surface → the 1920×1080 reference, else today's portrait phone scaler). Every other caller keeps
+        /// the portrait default, so the Overworld and the duel are untouched.
+        /// </summary>
+        public static RectTransform Canvas(string name, int sort, bool aspect)
+        {
+            if (!aspect) return Canvas(name, sort);
+            UiFoundation.EnsureEventSystem();
+            FreeUiKit.EnsureLoaded();
+            var go = new GameObject(name, typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+            var c = go.GetComponent<Canvas>();
+            c.renderMode = RenderMode.ScreenSpaceOverlay;
+            c.sortingOrder = sort;
+            UiTheme.ApplyForAspect(go.GetComponent<CanvasScaler>(), WRLDZ.UI.MenuV6.MenuAspect.Surface);
+            return go.GetComponent<RectTransform>();
+        }
+
         public static RectTransform StretchFill(Transform parent, string name, Color color, Sprite sp = null)
         {
             var go = new GameObject(name, typeof(RectTransform), typeof(Image));

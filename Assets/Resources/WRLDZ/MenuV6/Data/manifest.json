@@ -1,0 +1,2325 @@
+{
+ "version": 1,
+ "page": "landscape.html",
+ "url": "file:///home/greatsaiyadave/argon-avatar/research/menu_overhaul/hybrid/v6/landscape.html#freeze&t=2.8",
+ "t": 2.8,
+ "exporter": "unity_build/export/ (cdp_base, recorder, page_lib, bakes, layers, units, sched_probe, dom9, geometry, assemble, check, metas, install.sh)",
+ "runs": {
+  "full": {
+   "blocked": 0
+  },
+  "clean": {
+   "blockedRequests": 47,
+   "block": [
+    "*/assets/v5/items/fm_*",
+    "*/assets/v6/items/fm_*",
+    "*/assets/v6/items/hiero_band*",
+    "*/assets/art/hiero_band*",
+    "*/assets/img/kuriboh_pack.png",
+    "*/assets/art/pharaoh_silhouette.png",
+    "*/assets/v6/vs/vs_player_*",
+    "*/assets/r2/g_skull*",
+    "*/assets/v6/r2/g_skull*",
+    "*/assets/cards/*",
+    "*/assets/art/46986414.jpg",
+    "*/assets/art/47355498.jpg",
+    "*/assets/img/frame_*",
+    "*/assets/img/card_back.jpg",
+    "*/assets/v6/box6/*.png",
+    "*/assets/v5/box/*",
+    "*/assets/v6/box/*",
+    "*/assets/v6/slots/box_*"
+   ],
+   "imagesNotLoaded": [
+    "assets/img/card_back.jpg",
+    "assets/img/frame_effect.png",
+    "assets/img/card_back.jpg",
+    "assets/img/frame_normal.png",
+    "assets/img/card_back.jpg",
+    "assets/img/frame_spell.png",
+    "assets/v6/items/fm_key_cel.png",
+    "assets/v6/items/fm_necklace_centrepiece_cel.png",
+    "assets/v6/items/fm_scale_medal_cel.png",
+    "assets/v6/items/fm_ring_medal_cel.png",
+    "assets/v6/box6/L104_full.png",
+    "assets/v6/box6/L104_body.png",
+    "assets/v6/box6/L104_lid.png",
+    "assets/v6/box6/L104_eye.png",
+    "assets/v6/box6/P150_full.png",
+    "assets/v6/box6/P150_body.png",
+    "assets/v6/box6/P150_lid.png",
+    "assets/v6/box6/P150_eye.png",
+    "assets/v6/box6/D70_full.png",
+    "assets/v6/box6/D70_body.png",
+    "assets/v6/box6/D70_lid.png",
+    "assets/v6/box6/D70_eye.png",
+    "assets/v6/box6/D88_full.png",
+    "assets/v6/box6/D88_body.png",
+    "assets/v6/box6/D88_lid.png",
+    "assets/v6/box6/D88_eye.png",
+    "assets/v6/box6/I26_full.png",
+    "assets/v6/box6/I26_eye.png",
+    "assets/v6/vs/vs_player_yami_vs_kaiba.jpg",
+    "assets/v6/slots/box_front.png",
+    "assets/v6/slots/box_side.png",
+    "assets/v6/slots/box_lid_top.png",
+    "assets/v6/slots/box_lid_front.png",
+    "assets/v6/slots/box_lid_side.png",
+    "assets/v6/slots/box_front_eyeglow.png"
+   ]
+  }
+ },
+ "rule": "File-level provenance of every image the v6.3 landscape page can draw (SPEC §12, survey_assets §5, assets/PROVENANCE.txt, assets/v6/PROVENANCE_v6.md). 'block' = the URL patterns blocked in the provenance run (CDP Network.setBlockedURLs), so the page falls back to its own drawing. A layer whose pixels change between the full and the blocked run contains blocked pixels: the full layer goes to MenuV6Local/, the blocked-run layer is its tracked fallback (BUILD_PLAN D7). First match wins in 'files'.",
+ "pairs": [
+  {
+   "id": "room",
+   "diffBox": [
+    175,
+    878,
+    1747,
+    1030
+   ],
+   "cause": "FM item cels on the slate bearers (fm_key / fm_necklace_centrepiece / fm_scale_medal)"
+  },
+  {
+   "id": "stone_A",
+   "diffBox": [
+    89,
+    507,
+    659,
+    823
+   ],
+   "cause": "FM item cels in the recess inlays"
+  },
+  {
+   "id": "stone_B",
+   "diffBox": [
+    89,
+    507,
+    659,
+    823
+   ],
+   "cause": "FM item cels in the recess inlays"
+  },
+  {
+   "id": "box_rest",
+   "cause": "box6 L104 renders of the golden-box STL kit (licence unknown)"
+  }
+ ],
+ "omitted": [
+  {
+   "id": "crack_dim",
+   "why": "empty at the idle (only while a sheet dims / frames the room)"
+  },
+  {
+   "id": "crack_sheet",
+   "why": "empty at the idle (only while a sheet dims / frames the room)"
+  },
+  {
+   "id": "fxs_full",
+   "why": "empty at the idle (only while a sheet dims / frames the room)"
+  },
+  {
+   "id": "rake",
+   "why": "one blank canvas by design: anime_menu_v6.js:59 sets this.rake = {w: e, c: e} (the v5 warm / cool wash is dropped in v6); both drawImage ops draw nothing"
+  },
+  {
+   "id": "eye_12",
+   "why": "his small eye seed 12 (24 px drawn at .8, menu_v41.js:49) lies wholly outside the hole clip at every blink frame: never visible in v6.3"
+  },
+  {
+   "id": "season_band_0",
+   "why": "no chrome pixels (transparent box: text / layout only)"
+  },
+  {
+   "id": "news_band_0",
+   "why": "no chrome pixels (transparent box: text / layout only)"
+  },
+  {
+   "id": "img_avatar",
+   "why": "the avatar is the game's live AvatarPortraitView (BUILD_PLAN §7); assets/img/avatar.png = GoChrome/avatar_default.png, not exported"
+  }
+ ],
+ "files": [
+  {
+   "path": "MenuV6Local/Main/Land/room.png",
+   "guid": "ab315b7604f87f32815630627e01c3d0",
+   "kind": "sprite",
+   "imp": "painted",
+   "ppu": 100,
+   "rect": [
+    0,
+    0,
+    1920,
+    1080
+   ],
+   "tag": "RIP",
+   "dest": "local",
+   "files": [
+    "assets/v5/items/millennium_eye_ref_160.png",
+    "assets/v6/items/fm_key_cel.png",
+    "assets/v6/items/fm_necklace_centrepiece_cel.png",
+    "assets/v6/items/fm_scale_medal_cel.png",
+    "assets/v6/items/puzzle_face_canon.png"
+   ],
+   "why": [
+    {
+     "file": "assets/v5/items/millennium_eye_ref_160.png",
+     "tag": "OWNER",
+     "src": "his Millennium Eye image (~/Pictures/MillenniumEye.png) — PROVENANCE.txt l.95"
+    },
+    {
+     "file": "assets/v6/items/fm_key_cel.png",
+     "tag": "RIP",
+     "src": "Konami, Yu-Gi-Oh! Forbidden Memories story art / duel texture (owner's disc; owner cleared local use) — PROVENANCE.txt v5 l.96-100, v6 PROVENANCE_v6.md l.67"
+    },
+    {
+     "file": "assets/v6/items/fm_necklace_centrepiece_cel.png",
+     "tag": "RIP",
+     "src": "Konami, Yu-Gi-Oh! Forbidden Memories story art / duel texture (owner's disc; owner cleared local use) — PROVENANCE.txt v5 l.96-100, v6 PROVENANCE_v6.md l.67"
+    },
+    {
+     "file": "assets/v6/items/fm_scale_medal_cel.png",
+     "tag": "RIP",
+     "src": "Konami, Yu-Gi-Oh! Forbidden Memories story art / duel texture (owner's disc; owner cleared local use) — PROVENANCE.txt v5 l.96-100, v6 PROVENANCE_v6.md l.67"
+    },
+    {
+     "file": "assets/v6/items/puzzle_face_canon.png",
+     "tag": "OWN",
+     "src": "our drawing of the Puzzle's front face from the owner's series frames (make_face_a3.py) — PROVENANCE_v6.md l.81"
+    }
+   ],
+   "src": "menu.js:315 bakeBackground with paintNut stubbed (menu.js:326); pixels outside Nut = the shipped #bg (menu.js:319-325)",
+   "diffBox": [
+    175,
+    878,
+    1747,
+    1030
+   ],
+   "fallback": "MenuV6/Main/Land/room.png",
+   "size": [
+    1920,
+    1080
+   ],
+   "sha256": "05d521ce105599e794db41f43d7234c6b58dd4c4544b7c8366ae33aac14ecb90"
+  },
+  {
+   "path": "MenuV6/Main/Land/room.png",
+   "guid": "040058ab4e447f9c6f11759f88492587",
+   "kind": "sprite",
+   "imp": "painted",
+   "ppu": 100,
+   "rect": [
+    0,
+    0,
+    1920,
+    1080
+   ],
+   "tag": "OWNER",
+   "dest": "tracked",
+   "files": [
+    "assets/v5/items/millennium_eye_ref_160.png",
+    "assets/v6/items/puzzle_face_canon.png"
+   ],
+   "why": [
+    {
+     "file": "assets/v5/items/millennium_eye_ref_160.png",
+     "tag": "OWNER",
+     "src": "his Millennium Eye image (~/Pictures/MillenniumEye.png) — PROVENANCE.txt l.95"
+    },
+    {
+     "file": "assets/v6/items/puzzle_face_canon.png",
+     "tag": "OWN",
+     "src": "our drawing of the Puzzle's front face from the owner's series frames (make_face_a3.py) — PROVENANCE_v6.md l.81"
+    }
+   ],
+   "src": "menu.js:315 bakeBackground with paintNut stubbed (menu.js:326); pixels outside Nut = the shipped #bg (menu.js:319-325) — blocked run: the slate friezes draw the page's own offering pictograms",
+   "localOf": "MenuV6Local/Main/Land/room.png",
+   "size": [
+    1920,
+    1080
+   ],
+   "sha256": "2b7dce60e6362d92c083d32f2d43c77c25d7f8c634b74d6becd5953db2150b77"
+  },
+  {
+   "path": "MenuV6/Main/Land/nut.png",
+   "guid": "46fff896323911ac8d576ac88efc3e59",
+   "kind": "sprite",
+   "imp": "painted",
+   "ppu": 100,
+   "rect": [
+    0,
+    0,
+    1920.0,
+    984.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "core.js:462 paintNut(g, MENU.N, {edge: 3}), the last step of bakeBackground (menu.js:326)",
+   "pad": [
+    0,
+    2
+   ],
+   "content": [
+    1920,
+    982
+   ],
+   "size": [
+    1920,
+    984
+   ],
+   "sha256": "bdf3c11d020880450e06affc2b7f56c338bd057fcd36b52982faa75fe43b7391"
+  },
+  {
+   "path": "MenuV6/Main/Land/crack_plate.png",
+   "guid": "5430b136d6f9b17c9334100c0a7a0df7",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    41,
+    0,
+    1836.0,
+    1080.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "anime_v61_cracks.js crackDraw -> CRK.drawNets(#crkU) at t (15 nets at rest)",
+   "layout": "land",
+   "page": "landscape.html",
+   "t": 2.8,
+   "pad": [
+    3,
+    0
+   ],
+   "content": [
+    1833,
+    1080
+   ],
+   "size": [
+    1836,
+    1080
+   ],
+   "sha256": "39b123bbbad38fbbd2d069da8682989ac8d8f3b4c9d0b79f3266917cf11c4acc"
+  },
+  {
+   "path": "MenuV6Local/Main/Land/stone_A.png",
+   "guid": "072672a4040e8970a93c2e05866c1fe3",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    590,
+    134,
+    740.0,
+    884.0
+   ],
+   "tag": "RIP",
+   "dest": "local",
+   "src": "stone.js:217 bakeStone('menu') + anime_menu_v6.js:59; drawn at menu.js:654",
+   "diffBox": [
+    89,
+    507,
+    659,
+    823
+   ],
+   "fallback": "MenuV6/Main/Land/stone_A.png",
+   "why": [
+    {
+     "evidence": "pixels change only when assets/*/items/fm_* are blocked (the other blocked files are never drawn into the Stone); the recess inlays under BAG / DECK / STORY carry recess.item key / scale / necklace (geometry.recesses), drawn by stone.js:126 drawItem(h | a | m, r.item, ...) through canon_v5.js:24-36, which paints the FM item cels when they load (the page's own pictograms when blocked). The recorder lists no file for this canvas: the relief bake goes through getImageData / putImageData, which breaks the drawImage chain."
+    }
+   ],
+   "pad": [
+    0,
+    2
+   ],
+   "content": [
+    740,
+    882
+   ],
+   "size": [
+    740,
+    884
+   ],
+   "sha256": "e31179c774c3e9aa7463ab3309b0af4e79f684fb165c06616356bb5449aab705"
+  },
+  {
+   "path": "MenuV6/Main/Land/stone_A.png",
+   "guid": "4e11fb103162ff69d8c4187b3b11c371",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    590,
+    134,
+    740.0,
+    884.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "stone.js:217 bakeStone('menu') + anime_menu_v6.js:59; drawn at menu.js:654 — blocked run: the page's own item pictograms in the inlays",
+   "localOf": "MenuV6Local/Main/Land/stone_A.png",
+   "why": [
+    {
+     "evidence": "no file reaches it in the blocked run as far as the recorder sees; the relief bake breaks the drawImage chain (getImageData / putImageData), so OWN rests on the page source: bakeStone paints the slab itself"
+    }
+   ],
+   "pad": [
+    0,
+    2
+   ],
+   "content": [
+    740,
+    882
+   ],
+   "size": [
+    740,
+    884
+   ],
+   "sha256": "a14c4798d38327fe65ac37f6aed3b48631b8e52964135c79e74bfaf7860ffd1d"
+  },
+  {
+   "path": "MenuV6Local/Main/Land/stone_B.png",
+   "guid": "00349767d325bebcdae3f82111206420",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    590,
+    134,
+    740.0,
+    884.0
+   ],
+   "tag": "RIP",
+   "dest": "local",
+   "src": "stone.js:217 bakeStone('menu') + anime_menu_v6.js:59; drawn at menu.js:654",
+   "diffBox": [
+    89,
+    507,
+    659,
+    823
+   ],
+   "fallback": "MenuV6/Main/Land/stone_B.png",
+   "why": [
+    {
+     "evidence": "pixels change only when assets/*/items/fm_* are blocked (the other blocked files are never drawn into the Stone); the recess inlays under BAG / DECK / STORY carry recess.item key / scale / necklace (geometry.recesses), drawn by stone.js:126 drawItem(h | a | m, r.item, ...) through canon_v5.js:24-36, which paints the FM item cels when they load (the page's own pictograms when blocked). The recorder lists no file for this canvas: the relief bake goes through getImageData / putImageData, which breaks the drawImage chain."
+    }
+   ],
+   "pad": [
+    0,
+    2
+   ],
+   "content": [
+    740,
+    882
+   ],
+   "size": [
+    740,
+    884
+   ],
+   "sha256": "7a4cf60d324a360b0cc9b2e26ba301dfa2500a7200139c06b5407a0eca41c9eb"
+  },
+  {
+   "path": "MenuV6/Main/Land/stone_B.png",
+   "guid": "5dfcfd39ff5a3de2ba553a5a83bf95dc",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    590,
+    134,
+    740.0,
+    884.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "stone.js:217 bakeStone('menu') + anime_menu_v6.js:59; drawn at menu.js:654 — blocked run: the page's own item pictograms in the inlays",
+   "localOf": "MenuV6Local/Main/Land/stone_B.png",
+   "why": [
+    {
+     "evidence": "no file reaches it in the blocked run as far as the recorder sees; the relief bake breaks the drawImage chain (getImageData / putImageData), so OWN rests on the page source: bakeStone paints the slab itself"
+    }
+   ],
+   "pad": [
+    0,
+    2
+   ],
+   "content": [
+    740,
+    882
+   ],
+   "size": [
+    740,
+    884
+   ],
+   "sha256": "72f094abd47a6fb5abd9be089094ce4063fec13df431f68f9f7d17bf4030d135"
+  },
+  {
+   "path": "MenuV6/Main/Land/torch_pool_b0.png",
+   "guid": "8a63785ac66397112acb24356e974687",
+   "kind": "sprite",
+   "imp": "soft",
+   "ppu": 100,
+   "rect": [
+    446,
+    288,
+    304,
+    304
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "menu.js:658 radial gradient with unit stop alphas (b0); units.mjs proves the frame layer = a0 * b0 + a1 * b1 (max 1.08 / 255)",
+   "size": [
+    304,
+    304
+   ],
+   "sha256": "ca1e582339f44f35f6903080fa0fd50d563f562327fdf5c9497ea0e0c31f990f"
+  },
+  {
+   "path": "MenuV6/Main/Land/torch_pool_b1.png",
+   "guid": "cbd948f6adc235451d2a23de0ffcdd3d",
+   "kind": "sprite",
+   "imp": "soft",
+   "ppu": 100,
+   "rect": [
+    218,
+    60,
+    760,
+    760
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "menu.js:658 radial gradient with unit stop alphas (b1); units.mjs proves the frame layer = a0 * b0 + a1 * b1 (max 1.08 / 255)",
+   "size": [
+    760,
+    760
+   ],
+   "sha256": "8c8cbaed08a560bdc8078110ad5ff7e197d40c50716c9f453fb92b592a9c0e6c"
+  },
+  {
+   "path": "MenuV6/Main/Land/stone_emiBlur.png",
+   "guid": "589535e8c93e6bee23f570790f761085",
+   "kind": "sprite",
+   "imp": "soft",
+   "ppu": 100,
+   "rect": [
+    590,
+    134,
+    740.0,
+    884.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "stone.js:217 bakeStone('menu') + anime_menu_v6.js:59; drawn at menu.js:660",
+   "pad": [
+    0,
+    2
+   ],
+   "content": [
+    740,
+    882
+   ],
+   "size": [
+    740,
+    884
+   ],
+   "sha256": "04ed91b1c9243c755bf9958e0258983eab0bd0788c3092c46a4f99a45e4b4f91"
+  },
+  {
+   "path": "MenuV6/Main/Land/stone_emi.png",
+   "guid": "c7190921e7103808af9a943c7e50393a",
+   "kind": "sprite",
+   "imp": "soft",
+   "ppu": 100,
+   "rect": [
+    590,
+    134,
+    740.0,
+    884.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "stone.js:217 bakeStone('menu') + anime_menu_v6.js:59; drawn at menu.js:660",
+   "pad": [
+    0,
+    2
+   ],
+   "content": [
+    740,
+    882
+   ],
+   "size": [
+    740,
+    884
+   ],
+   "sha256": "1e42d6dc2b93f7604d899581dbe7a9b70072ef05bdacfefb6b70524cbb974e2e"
+  },
+  {
+   "path": "MenuV6/Main/Land/recess/bazaar_picto.png",
+   "guid": "45d8c0e4c88dafaa881eaf2950f109a9",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    1173,
+    576,
+    40.0,
+    68.0
+   ],
+   "tag": "OWNER",
+   "dest": "tracked",
+   "files": [
+    "assets/v6/slots/tablet_34_h192.png"
+   ],
+   "why": [
+    {
+     "file": "assets/v6/slots/tablet_34_h192.png",
+     "tag": "OWNER",
+     "src": "toon renders of his Meshy stone tablet — PROVENANCE_v6.md l.14-17"
+    }
+   ],
+   "src": "anime_menu_v6.js:97 drawRecesses op 8 at t (assets/v6/slots/tablet_34_h192.png)",
+   "pad": [
+    3,
+    0
+   ],
+   "content": [
+    37,
+    68
+   ],
+   "size": [
+    40,
+    68
+   ],
+   "sha256": "871f8d488ac60955260cb24d9d27e8d6488baedadc29c163df06221dd8cb42ce"
+  },
+  {
+   "path": "MenuV6/Main/Land/recess/story_picto.png",
+   "guid": "0e087b35f58b9c249b485ca9fc75de1f",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    710,
+    576,
+    44.0,
+    68.0
+   ],
+   "tag": "OWNER",
+   "dest": "tracked",
+   "files": [
+    "assets/v6/slots/tablet_front_h192.png"
+   ],
+   "why": [
+    {
+     "file": "assets/v6/slots/tablet_front_h192.png",
+     "tag": "OWNER",
+     "src": "toon renders of his Meshy stone tablet — PROVENANCE_v6.md l.14-17"
+    }
+   ],
+   "src": "anime_menu_v6.js:97 drawRecesses op 9 at t (assets/v6/slots/tablet_front_h192.png)",
+   "pad": [
+    1,
+    0
+   ],
+   "content": [
+    43,
+    68
+   ],
+   "size": [
+    44,
+    68
+   ],
+   "sha256": "94bfc25343fe5a7c188d016645b6d38e84e3f2c14b5c09e0b62e1aba0f25eae1"
+  },
+  {
+   "path": "MenuV6/Main/Land/recess/view_picto.png",
+   "guid": "1b7501c132377bed46ff8aec1d5a8adf",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    753,
+    386,
+    48.0,
+    48.0
+   ],
+   "tag": "OWNER",
+   "dest": "tracked",
+   "files": [
+    "assets/v5/items/millennium_eye_ref_160.png"
+   ],
+   "why": [
+    {
+     "file": "assets/v5/items/millennium_eye_ref_160.png",
+     "tag": "OWNER",
+     "src": "his Millennium Eye image (~/Pictures/MillenniumEye.png) — PROVENANCE.txt l.95"
+    }
+   ],
+   "src": "anime_menu_v6.js:97 drawRecesses op 10 at t (assets/v5/items/millennium_eye_ref_160.png)",
+   "pad": [
+    1,
+    2
+   ],
+   "content": [
+    47,
+    46
+   ],
+   "size": [
+    48,
+    48
+   ],
+   "sha256": "ebb07b5f31b0f1234680f1708149ed954359b4156e2b338f87663ce6cff74950"
+  },
+  {
+   "path": "MenuV6/Main/Land/ring_refract.png",
+   "guid": "a886314502b5ec4ed945ce64d7c1392a",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    909,
+    245,
+    104.0,
+    104.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "relics.js:337-338 refraction of the fx stack below the Ring, rebuilt on a copy of that stack (layers.mjs)",
+   "layout": "land",
+   "page": "landscape.html",
+   "t": 2.8,
+   "pad": [
+    2,
+    2
+   ],
+   "content": [
+    102,
+    102
+   ],
+   "size": [
+    104,
+    104
+   ],
+   "sha256": "e7fbdebc2c925867f5aeecdeb59607963a909a40c9acadd31872c79d3e6a0075"
+  },
+  {
+   "path": "MenuV6/Main/Land/ring_echo_add.png",
+   "guid": "6e50030eb8dfc67d9a03b5f98d848854",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    854,
+    190,
+    212,
+    212
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:768 drawRingEcho (33 lighter ops: pointers, glints)",
+   "layout": "land",
+   "page": "landscape.html",
+   "t": 2.8,
+   "size": [
+    212,
+    212
+   ],
+   "sha256": "c67d46a2a1004a68d14809301a14a2f563686b197812ed2442edfbc475fafe17"
+  },
+  {
+   "path": "MenuV6/Main/Land/breach_under.png",
+   "guid": "9d0ce5eb1f79c40803fc7707f5a8367e",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    1138,
+    74,
+    248.0,
+    304.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu_v41.js:42 drawBreach: occlusion shadow, hole, wall bands, void (ops 45-143)",
+   "layout": "land",
+   "page": "landscape.html",
+   "t": 2.8,
+   "pad": [
+    0,
+    1
+   ],
+   "content": [
+    248,
+    303
+   ],
+   "size": [
+    248,
+    304
+   ],
+   "sha256": "32b8c7fc5c994850f71e35244b39503ae681af7e169dfa398ba2a9b27dd3eb7e"
+  },
+  {
+   "path": "MenuV6/Eye/breach_eye_13.png",
+   "guid": "56eb47b268af62446912c3424002accf",
+   "kind": "sheet",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    1188,
+    229,
+    18,
+    15
+   ],
+   "tag": "OWNER",
+   "dest": "tracked",
+   "files": [
+    "assets/v6/eye_owner/lid_up.png",
+    "assets/v6/eye_owner/lid_lo.png",
+    "assets/v6/eye_owner/socket.png",
+    "assets/v6/eye_owner/ball.png"
+   ],
+   "why": [
+    {
+     "tag": "OWNER",
+     "src": "his eye: ~/Pictures/UmbraxEye.jpeg cut into 4 layers by work/v6/fix2/cut_owner_eye.py (his pixels, no recolour)"
+    }
+   ],
+   "src": "anime_v61_eye.js drawUmbraxEye seed 13 inside menu_v41.js:42 drawBreach (hole clip, .8 size); one blink cycle EYE61.close / shut / EYE61.open at 60 fps, gaze 0 (GQ45)",
+   "size": [
+    192,
+    120
+   ],
+   "sha256": "fa18482f94ed4ca3a32aeee367e5c58a22cbc9740f9603547300657fcf756832"
+  },
+  {
+   "path": "MenuV6/Eye/breach_eye_11.png",
+   "guid": "e44612ec54deed250bc3e64b9ca502ec",
+   "kind": "sheet",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    1184,
+    167,
+    152,
+    110
+   ],
+   "tag": "OWNER",
+   "dest": "tracked",
+   "files": [
+    "assets/v6/eye_owner/lid_up.png",
+    "assets/v6/eye_owner/lid_lo.png",
+    "assets/v6/eye_owner/socket.png",
+    "assets/v6/eye_owner/ball.png"
+   ],
+   "why": [
+    {
+     "tag": "OWNER",
+     "src": "his eye: ~/Pictures/UmbraxEye.jpeg cut into 4 layers by work/v6/fix2/cut_owner_eye.py (his pixels, no recolour)"
+    }
+   ],
+   "src": "anime_v61_eye.js drawUmbraxEye seed 11 inside menu_v41.js:42 drawBreach (hole clip, .8 size); one blink cycle EYE61.close / shut / EYE61.open at 60 fps, gaze 0 (GQ45)",
+   "size": [
+    1248,
+    696
+   ],
+   "sha256": "5061c62d60e3fb8324bf59c4c6ea3f81a88e0d84bfb2ec89c0a130a7cfa55e5c"
+  },
+  {
+   "path": "MenuV6/Main/Land/breach_over.png",
+   "guid": "13b0d28fa96073c9b77cb952edc0956d",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    1167,
+    95,
+    236.0,
+    264.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu_v41.js:42 drawBreach after the eyes: tendrils, rim ink, hairlines (ops 150-241)",
+   "layout": "land",
+   "page": "landscape.html",
+   "t": 2.8,
+   "pad": [
+    0,
+    3
+   ],
+   "content": [
+    236,
+    261
+   ],
+   "size": [
+    236,
+    264
+   ],
+   "sha256": "748bb8bc80a5c62abf65b961ce0454d6e6963b913decf259dd4fec00da6f9f7f"
+  },
+  {
+   "path": "MenuV6/Main/Land/breach_glow_add.png",
+   "guid": "0c4fe6ced98fbd7f9181ecf9ee856c38",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    636,
+    148,
+    660.0,
+    908.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu_v41.js:57-59 crackGlow + fis.glow at the frame alphas (fl at t)",
+   "layout": "land",
+   "page": "landscape.html",
+   "t": 2.8,
+   "pad": [
+    1,
+    2
+   ],
+   "content": [
+    659,
+    906
+   ],
+   "size": [
+    660,
+    908
+   ],
+   "sha256": "a7b195f9b56c18986b364d085b703b8931b36cf59587acc09134169a8d5f3c21"
+  },
+  {
+   "path": "MenuV6/Main/Land/breach_fissure.png",
+   "guid": "1196c11d73cbff1791cb7186fa98f256",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    19,
+    1000,
+    1884.0,
+    36.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu_v41.js:60 drawVoidIn on the floor fissure + its ink (ops 244-337)",
+   "layout": "land",
+   "page": "landscape.html",
+   "t": 2.8,
+   "pad": [
+    2,
+    1
+   ],
+   "content": [
+    1882,
+    35
+   ],
+   "size": [
+    1884,
+    36
+   ],
+   "sha256": "cac47f586b9d897b5e6edbbf86ae775781e5aef6fb4f1f1c318fbcb714ac550a"
+  },
+  {
+   "path": "MenuV6/Main/Land/door_ring_add.png",
+   "guid": "15ba050b974d2ae573b225ed80ad0493",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    812,
+    408,
+    296,
+    296
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "anime_menu_v6.js:131 drawDoor (the Solid Vision ring overlay at t)",
+   "layout": "land",
+   "page": "landscape.html",
+   "t": 2.8,
+   "size": [
+    296,
+    296
+   ],
+   "sha256": "bd61ab3d4bd26b332d904b2a2985bef0a3073173dac6347076c6d7e8d6af1e31"
+  },
+  {
+   "path": "MenuV6/Main/Land/smoke_plate.png",
+   "guid": "2d026a52bbb3a6306740cbf378701c17",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    0,
+    291,
+    1920.0,
+    788.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "anime_menu_v6.js:155 drawSmoke + anime_v61_fixup.js:41 at t (215 ops: the floor bank and the breach seep at rest)",
+   "layout": "land",
+   "page": "landscape.html",
+   "t": 2.8,
+   "pad": [
+    0,
+    3
+   ],
+   "content": [
+    1920,
+    785
+   ],
+   "size": [
+    1920,
+    788
+   ],
+   "sha256": "72db220018f86880fb248e06d7cd59ec27c2ebfc260f5e545f09ec4b5ddac9c2"
+  },
+  {
+   "path": "MenuV6/Main/Land/motes_add.png",
+   "guid": "eebc5b71f3ccf9c67a1d0b8ff1aa6a1e",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    491,
+    358,
+    356.0,
+    512.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:669 the 30 gold motes at t (static in P1a)",
+   "layout": "land",
+   "page": "landscape.html",
+   "t": 2.8,
+   "pad": [
+    3,
+    0
+   ],
+   "content": [
+    353,
+    512
+   ],
+   "size": [
+    356,
+    512
+   ],
+   "sha256": "a1d5e63e40835ded329d7871edb29293fdcb40ba27588eee230a180e196ad3c9"
+  },
+  {
+   "path": "MenuV6/Main/Land/flame_glow_add.png",
+   "guid": "382e1138402985081bd57eb03416cc4e",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    507,
+    330,
+    184.0,
+    184.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "anime_menu_v6.js:289 drawFlame glow at t (static in P1a; P1b = the M20 mesh)",
+   "layout": "land",
+   "page": "landscape.html",
+   "t": 2.8,
+   "pad": [
+    2,
+    2
+   ],
+   "content": [
+    182,
+    182
+   ],
+   "size": [
+    184,
+    184
+   ],
+   "sha256": "f41c91d85f3a81a61cdafc70ce27ed5080b0aeee5026e3346c9c663d786d1d07"
+  },
+  {
+   "path": "MenuV6/Main/Land/flame_tongues.png",
+   "guid": "2cb2b94d5db37e8e65ffc70e037dd651",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    577,
+    368,
+    44.0,
+    80.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "anime_menu_v6.js:289-297 drawFlame tongues at t (static in P1a; P1b = the M20 mesh)",
+   "layout": "land",
+   "page": "landscape.html",
+   "t": 2.8,
+   "pad": [
+    1,
+    2
+   ],
+   "content": [
+    43,
+    78
+   ],
+   "size": [
+    44,
+    80
+   ],
+   "sha256": "2c6fbd576b565dae9740aa206a91a80a55aeb2355f2ac9646cebd58767663577"
+  },
+  {
+   "path": "MenuV6/Main/Land/nut_twinkle_add.png",
+   "guid": "4839760f75ec83d91ce385890c7940b7",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    4,
+    3,
+    1916.0,
+    928.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "core.js:476 drawNutTwinkle at t (static in P1a)",
+   "layout": "land",
+   "page": "landscape.html",
+   "t": 2.8,
+   "pad": [
+    0,
+    3
+   ],
+   "content": [
+    1916,
+    925
+   ],
+   "size": [
+    1916,
+    928
+   ],
+   "sha256": "f292864fc1624abe4f9c73a5433fb115df59419bb4a00c00b45471b617834cb4"
+  },
+  {
+   "path": "MenuV6/Main/Land/nut_crack.png",
+   "guid": "b6ece118ff99aeadba50b7512cbedccd",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    641,
+    0,
+    584.0,
+    120.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js drawNutCracks (anime_v61_cracks.js:592 crk.nut + skyL / skyR) at rest",
+   "layout": "land",
+   "page": "landscape.html",
+   "t": 2.8,
+   "pad": [
+    3,
+    2
+   ],
+   "content": [
+    581,
+    118
+   ],
+   "size": [
+    584,
+    120
+   ],
+   "sha256": "aba3f8fc220432eebb3287df9a0d4311c700ab6c334d25304fbb6765461487bb"
+  },
+  {
+   "path": "MenuV6/Main/Land/vignette_top.png",
+   "guid": "a8abcc81bfeb7a8cee940bed46b4cdef",
+   "kind": "sprite",
+   "imp": "soft",
+   "ppu": 100,
+   "rect": [
+    0,
+    0,
+    1920.0,
+    268.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "menu.js:675-676 at pr = 1 (units.mjs), strip top",
+   "pad": [
+    0,
+    1
+   ],
+   "content": [
+    1920,
+    267
+   ],
+   "size": [
+    1920,
+    268
+   ],
+   "sha256": "03713123cb1690b7b9fc78825ec24e419e33f04d76ed9ae101ca76cf750388f4"
+  },
+  {
+   "path": "MenuV6/Main/Land/vignette_bottom.png",
+   "guid": "9e341381573b35d0649fc908fdf5e882",
+   "kind": "sprite",
+   "imp": "soft",
+   "ppu": 100,
+   "rect": [
+    0,
+    813,
+    1920.0,
+    268.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "menu.js:675-676 at pr = 1 (units.mjs), strip bottom",
+   "pad": [
+    0,
+    1
+   ],
+   "content": [
+    1920,
+    267
+   ],
+   "size": [
+    1920,
+    268
+   ],
+   "sha256": "5a10ac27e54d08cfcbcdc7584b375821ba2825325cd35bbb8c3bd9c8c1603d7e"
+  },
+  {
+   "path": "MenuV6/Main/Land/vignette_left.png",
+   "guid": "b16d0629d1d0e99aee97db07f076c862",
+   "kind": "sprite",
+   "imp": "soft",
+   "ppu": 100,
+   "rect": [
+    0,
+    267,
+    688.0,
+    548.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "menu.js:675-676 at pr = 1 (units.mjs), strip left",
+   "pad": [
+    1,
+    2
+   ],
+   "content": [
+    687,
+    546
+   ],
+   "size": [
+    688,
+    548
+   ],
+   "sha256": "21600a11f59dd2b629d27547c1679dfccc4731fc7ec098b8fac6e7a3715100fe"
+  },
+  {
+   "path": "MenuV6/Main/Land/vignette_right.png",
+   "guid": "ee1087c058c93791fc23aabf6ecef7ec",
+   "kind": "sprite",
+   "imp": "soft",
+   "ppu": 100,
+   "rect": [
+    1233,
+    267,
+    688.0,
+    548.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "menu.js:675-676 at pr = 1 (units.mjs), strip right",
+   "pad": [
+    1,
+    2
+   ],
+   "content": [
+    687,
+    546
+   ],
+   "size": [
+    688,
+    548
+   ],
+   "sha256": "83a9b74e4e515d93d867ab7a20e0cbb8fe49bd0a0bf34546bd63f96ba5043d66"
+  },
+  {
+   "path": "MenuV6/Common/chrome9/rl_plate.png",
+   "guid": "532cbec88ac25cf9ffc90f3ba1f41470",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    1118.0,
+    668.0,
+    146.0,
+    62.0
+   ],
+   "border": [
+    17,
+    16,
+    16,
+    20
+   ],
+   "nine": true,
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "dom9.mjs isolated .rl #1 at dsf 2 (CSS chrome, glyphs transparent)",
+   "pad": [
+    2,
+    0
+   ],
+   "content": [
+    290,
+    124
+   ],
+   "size": [
+    292,
+    124
+   ],
+   "sha256": "effb24050eee1d373647a4c242ce195f001c1423659defc75893040694274025"
+  },
+  {
+   "path": "MenuV6/Common/chrome9/ava_ring.png",
+   "guid": "995b1ee966d0eeebea09bfbaad23f0fc",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    119.5,
+    227.5,
+    90.0,
+    98.0
+   ],
+   "border": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "nine": false,
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "dom9.mjs isolated .ava, .ava img #0 at dsf 2 (CSS chrome, glyphs transparent)",
+   "pad": [
+    1,
+    1
+   ],
+   "content": [
+    179,
+    195
+   ],
+   "size": [
+    180,
+    196
+   ],
+   "sha256": "abec0e5dbc64f8e057d346cef2e864780e2607f533cc23326dd6fd7f2334826e"
+  },
+  {
+   "path": "MenuV6/Common/chrome9/medal_ring.png",
+   "guid": "e69da3681efc36bd4da3ae487c6f1b54",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    119.5,
+    323.5,
+    56.0,
+    58.0
+   ],
+   "border": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "nine": false,
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "dom9.mjs isolated .medal > .mi:not(.pz), .medal > .mi:not(.pz) img #0 at dsf 2 (CSS chrome, glyphs transparent)",
+   "pad": [
+    1,
+    3
+   ],
+   "content": [
+    111,
+    113
+   ],
+   "size": [
+    112,
+    116
+   ],
+   "sha256": "cdfa097c170a4e580a837f9bd1c15c3962eceaddfe7bde7d3202291731024381"
+  },
+  {
+   "path": "MenuV6/Common/chrome9/medal_ring_pz.png",
+   "guid": "5c74202ed947d18c89e1a112e7549b95",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    308.5,
+    319.5,
+    64.0,
+    66.0
+   ],
+   "border": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "nine": false,
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "dom9.mjs isolated .mi.pz #0 at dsf 2 (CSS chrome, glyphs transparent)",
+   "pad": [
+    1,
+    3
+   ],
+   "content": [
+    127,
+    129
+   ],
+   "size": [
+    128,
+    132
+   ],
+   "sha256": "2cc4256c3c1dce3280a220c4690c8baabc5140897d8aab8b86da474fc52f5249"
+  },
+  {
+   "path": "MenuV6/Common/chrome9/xp_track.png",
+   "guid": "6ddbce414af62d033e7a9c022ffdb618",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    224.0,
+    316.0,
+    196.0,
+    8.0
+   ],
+   "border": [
+    8,
+    0,
+    8,
+    0
+   ],
+   "nine": true,
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "dom9.mjs isolated .xp #0 at dsf 2 (CSS chrome, glyphs transparent)",
+   "size": [
+    392,
+    16
+   ],
+   "sha256": "8f8f9770852fe912d86f6ea164d7bb5bd4bd96e12117c8614231c5711de44ae2"
+  },
+  {
+   "path": "MenuV6/Common/chrome9/xp_fill.png",
+   "guid": "a043e82a1baf56e534467a532c49f31f",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    225.0,
+    317.0,
+    120.0,
+    6.0
+   ],
+   "border": [
+    6,
+    0,
+    0,
+    0
+   ],
+   "nine": true,
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "dom9.mjs isolated .xp > i #0 at dsf 2 (CSS chrome, glyphs transparent)",
+   "size": [
+    240,
+    12
+   ],
+   "sha256": "8ee75c10d046b681d6a77b2ba876352d10b342af85bc911ef150b77d9bf32ecd"
+  },
+  {
+   "path": "MenuV6/Common/chrome9/pip.png",
+   "guid": "668e933b58742b3014487ec106f1ed71",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    412.5,
+    356.5,
+    14.0,
+    10.0
+   ],
+   "border": [
+    7,
+    9,
+    7,
+    7
+   ],
+   "nine": true,
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "dom9.mjs isolated .pips > i #0 at dsf 2 (CSS chrome, glyphs transparent)",
+   "pad": [
+    0,
+    2
+   ],
+   "content": [
+    28,
+    18
+   ],
+   "size": [
+    28,
+    20
+   ],
+   "sha256": "02208f61cf6034a80a422c3397044caae564a7903bf9350ebe1edcfa273ca651"
+  },
+  {
+   "path": "MenuV6/Common/chrome9/cap_rule.png",
+   "guid": "195b3575a385c2fa025fea3d69835c29",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    1493.0,
+    241.0,
+    306.0,
+    4.0
+   ],
+   "border": [
+    2,
+    2,
+    2,
+    2
+   ],
+   "nine": true,
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "dom9.mjs isolated .pyl .cap #1 at dsf 2 (CSS chrome, glyphs transparent)",
+   "size": [
+    612,
+    8
+   ],
+   "sha256": "5c3ffdfa4f3be514e023ab037c898d77612d0625317276dfedc7616afa5d3393"
+  },
+  {
+   "path": "MenuV6/Common/chrome9/reg_rule.png",
+   "guid": "d426bc09422355866c63fa93951865d6",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    115.0,
+    389.0,
+    396.0,
+    4.0
+   ],
+   "border": [
+    2,
+    2,
+    2,
+    2
+   ],
+   "nine": true,
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "dom9.mjs isolated .pyl .reg #0 at dsf 2 (CSS chrome, glyphs transparent)",
+   "size": [
+    792,
+    8
+   ],
+   "sha256": "7b1d2cf7aece11acbe6663fc17ae331d22ce3b0f03208c10a48144f64b359a18"
+  },
+  {
+   "path": "MenuV6/Common/chrome9/niche_frame.png",
+   "guid": "d4b1501d0929ed125c8c043729ca64a4",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    114.5,
+    705.5,
+    188.0,
+    150.0
+   ],
+   "border": [
+    15,
+    17,
+    17,
+    15
+   ],
+   "nine": true,
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "dom9.mjs isolated .niche #0 at dsf 2 (CSS chrome, glyphs transparent)",
+   "pad": [
+    2,
+    2
+   ],
+   "content": [
+    374,
+    298
+   ],
+   "size": [
+    376,
+    300
+   ],
+   "sha256": "1042a70efc44f1267e96cfa76069013ec022474595dbc0ca0c44bcf8d902b7ce"
+  },
+  {
+   "path": "MenuV6/Common/chrome9/quit_plate.png",
+   "guid": "f405e7af9fe87e5624ebb746cc57d33b",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    1416.0,
+    758.0,
+    254.0,
+    68.0
+   ],
+   "border": [
+    14,
+    20,
+    20,
+    16
+   ],
+   "nine": true,
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "dom9.mjs isolated #quit #0 at dsf 2 (CSS chrome, glyphs transparent)",
+   "pad": [
+    2,
+    0
+   ],
+   "content": [
+    506,
+    136
+   ],
+   "size": [
+    508,
+    136
+   ],
+   "sha256": "1b3079b5748f305ed0f99f656d354d473fcba762327aeca37738de3c4e8d40f9"
+  },
+  {
+   "path": "MenuV6/Common/chrome9/site_dot.png",
+   "guid": "d5ddb193918d998d366cab16082fc662",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    308.5,
+    804.5,
+    12.0,
+    12.0
+   ],
+   "border": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "nine": false,
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "dom9.mjs isolated .wmap .s2 > i #0 at dsf 2 (CSS chrome, glyphs transparent)",
+   "pad": [
+    2,
+    2
+   ],
+   "content": [
+    22,
+    22
+   ],
+   "size": [
+    24,
+    24
+   ],
+   "sha256": "dec16380d6c7b875e43d08d5a0fc8c64f7b41ae8d4c4712185f1312cf0699146"
+  },
+  {
+   "path": "MenuV6/Common/chrome9/ph5_plate.png",
+   "guid": "2277ca002447e7ef2f3ea98f4e0ed57e",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    14.0,
+    1044.0,
+    642.0,
+    28.0
+   ],
+   "border": [
+    6,
+    6,
+    6,
+    6
+   ],
+   "nine": true,
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "dom9.mjs isolated .ph5 #0 at dsf 2 (CSS chrome, glyphs transparent)",
+   "size": [
+    1284,
+    56
+   ],
+   "sha256": "1dd9b236310708d84967e0d1eafe9e3056e58ad448d67769c56d4d949be7e303"
+  },
+  {
+   "path": "MenuV6/Main/Land/slate/medal_puzzle.png",
+   "guid": "f9c7deabcf6b53991a23da339b680d51",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    311.0,
+    322.0,
+    58.0,
+    58.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:492 paintMedallion + PuzzleRelic (built once) — as displayed: border-radius 50% clip (anime_v6.css:40), media2x.mjs dsf-2 shot",
+   "size": [
+    116,
+    116
+   ],
+   "sha256": "c319bac67b04f9dc6b15bf2e86438dd27437417027d54cc8b3280ccf2445dbc3"
+  },
+  {
+   "path": "MenuV6/Main/Land/slate/voice_puzzle.png",
+   "guid": "7a9ce018b6c7d72e65114d6e6976c2ea",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    1394.0,
+    465.0,
+    96.0,
+    96.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:1001 drawDomRelics (voice, at rest: vs.k = 0)",
+   "size": [
+    192,
+    192
+   ],
+   "sha256": "358c0894429414144e7550369375a5f102f9368e07237c610485fcaf54097574"
+  },
+  {
+   "path": "MenuV6/Main/Land/slate/meter/meter_n0.png",
+   "guid": "2d411544563e50483953bd64a9695ec2",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    122.0,
+    433.0,
+    100.0,
+    92.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "relics.js drawPuzzleMeter(g, pm.PR, a, 1, {n: 0}) — same call as menu.js:990 with n set",
+   "size": [
+    200,
+    184
+   ],
+   "sha256": "93e2b993a7a60baa63a0a3e9582a52c82df949b200981bb873778631a2553c09"
+  },
+  {
+   "path": "MenuV6/Main/Land/slate/meter/meter_n1.png",
+   "guid": "0e49a48e547f1ebdf59b3db07b3394a5",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    122.0,
+    433.0,
+    100.0,
+    92.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "relics.js drawPuzzleMeter(g, pm.PR, a, 1, {n: 1}) — same call as menu.js:990 with n set",
+   "size": [
+    200,
+    184
+   ],
+   "sha256": "07cb089277c7a1a75e5d716bb23bc1b5782f117a0ab77b96f4efc887587b4863"
+  },
+  {
+   "path": "MenuV6/Main/Land/slate/meter/meter_n2.png",
+   "guid": "6caaaccbc610aef924b9723feeca8376",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    122.0,
+    433.0,
+    100.0,
+    92.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "relics.js drawPuzzleMeter(g, pm.PR, a, 1, {n: 2}) — same call as menu.js:990 with n set",
+   "size": [
+    200,
+    184
+   ],
+   "sha256": "eb97e0c54f031d2162d9e43d9d68f7c6f0996fd5650aa8e83bdf31cee66b623a"
+  },
+  {
+   "path": "MenuV6/Main/Land/slate/meter/meter_n3.png",
+   "guid": "1857b20afb159e29b08bd7dcd5ce2205",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    122.0,
+    433.0,
+    100.0,
+    92.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "relics.js drawPuzzleMeter(g, pm.PR, a, 1, {n: 3}) — same call as menu.js:990 with n set",
+   "size": [
+    200,
+    184
+   ],
+   "sha256": "1734942c17e593c081ab8274e455836eabc0ce191f55ae2858cef1b1fb0fcffb"
+  },
+  {
+   "path": "MenuV6/Main/Land/slate/meter/meter_n4.png",
+   "guid": "3b1692d846e06085c452941f167f5e6e",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    122.0,
+    433.0,
+    100.0,
+    92.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "relics.js drawPuzzleMeter(g, pm.PR, a, 1, {n: 4}) — same call as menu.js:990 with n set",
+   "size": [
+    200,
+    184
+   ],
+   "sha256": "18d7f35389eb17b373a7a24fe025a9fe42495e06d52ea24ab229c72253a300c5"
+  },
+  {
+   "path": "MenuV6/Main/Land/slate/meter/meter_n5.png",
+   "guid": "a2160dddb2a015d4dd95bcd8ab058476",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    122.0,
+    433.0,
+    100.0,
+    92.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "relics.js drawPuzzleMeter(g, pm.PR, a, 1, {n: 5}) — same call as menu.js:990 with n set",
+   "size": [
+    200,
+    184
+   ],
+   "sha256": "5eccb816555e1991a04719cb5e8108b11ce9ec0d48e1140441ca99083c985775"
+  },
+  {
+   "path": "MenuV6/Main/Land/slate/meter/meter_n6.png",
+   "guid": "67fec628867aea52a94698eea4469bfc",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    122.0,
+    433.0,
+    100.0,
+    92.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "relics.js drawPuzzleMeter(g, pm.PR, a, 1, {n: 6}) — same call as menu.js:990 with n set",
+   "size": [
+    200,
+    184
+   ],
+   "sha256": "654ca0b95eb8557077203d07530ea05885d148a5056399857f2c7cbaf9767278"
+  },
+  {
+   "path": "MenuV6/Main/Land/slate/meter/meter_n7.png",
+   "guid": "264d7dfdbe877b09fb322f1f8eac0944",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    122.0,
+    433.0,
+    100.0,
+    92.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "relics.js drawPuzzleMeter(g, pm.PR, a, 1, {n: 7}) — same call as menu.js:990 with n set",
+   "size": [
+    200,
+    184
+   ],
+   "sha256": "25932cb7d6c3cd3bb581e0923e75ad4987e54de6410ea5cad6c4836df87d3647"
+  },
+  {
+   "path": "MenuV6/Main/Land/slate/meter/meter_n8.png",
+   "guid": "6ceb6c6f4bd1bdf4f6c5a092e81a578f",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    122.0,
+    433.0,
+    100.0,
+    92.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "relics.js drawPuzzleMeter(g, pm.PR, a, 1, {n: 8}) — same call as menu.js:990 with n set",
+   "size": [
+    200,
+    184
+   ],
+   "sha256": "0c3e96afab873a806f7e555d4f775a50a189aaca0bca9cf433a5855ae0cc5103"
+  },
+  {
+   "path": "MenuV6Local/Box/box_rest.png",
+   "guid": "1b1a4735706998e06f9ee6eb1525b89b",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    122.0,
+    547.0,
+    150.0,
+    128.0
+   ],
+   "tag": "OWNER-licence-unknown",
+   "dest": "local",
+   "files": [
+    "assets/v6/box6/L104_full.png"
+   ],
+   "why": [
+    {
+     "file": "assets/v6/box6/L104_full.png",
+     "tag": "OWNER-licence-unknown",
+     "src": "toon / Cycles renders of the owner's golden Puzzle-box STL print kit (uploader / licence unknown) — PROVENANCE_v6.md l.23-35; local per BUILD_PLAN D7"
+    }
+   ],
+   "src": "menu.js:1003 BOX.draw at boxState(T) (box6 L104 set)",
+   "fallback": "MenuV6/Main/Land/slate/box_fallback.png",
+   "size": [
+    300,
+    256
+   ],
+   "sha256": "d30dca9d46b4c6f7cb368604a99125dbcbacc90e456302d47c6170e34dd76e93"
+  },
+  {
+   "path": "MenuV6/Main/Land/slate/box_fallback.png",
+   "guid": "fcd809329a853c449fc8c0676d683b34",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    122.0,
+    547.0,
+    150.0,
+    128.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "src": "menu.js:1003 BOX.draw at boxState(T) (box6 L104 set) — blocked run: the page's own fallback box rig",
+   "localOf": "MenuV6Local/Box/box_rest.png",
+   "size": [
+    300,
+    256
+   ],
+   "sha256": "e37349fd2026fed5625f47754b37148c9d03ff3e556c55d8d7a6e9552b50a0b1"
+  },
+  {
+   "path": "MenuV6/Main/Land/niche/niche_still.png",
+   "guid": "62711e25110d69dbfd5e2b2d36711cfc",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    122.0,
+    713.0,
+    172.0,
+    134.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:138 makeCityDoor draw at T (WORLD MAP niche)",
+   "size": [
+    344,
+    268
+   ],
+   "sha256": "a3381d0a67ef22a1e7ca50d41640dc445b90fe49cb1423807fdbf6246f76f2fe"
+  },
+  {
+   "path": "MenuV6/Main/Land/slate/disk_glyph.png",
+   "guid": "035513c4bbae38f1a282c67f66a3d29d",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    284.0,
+    531.0,
+    22.0,
+    22.0
+   ],
+   "tag": "OWNER",
+   "dest": "tracked",
+   "files": [
+    "assets/v6/slots/disk_34_canon.png"
+   ],
+   "why": [
+    {
+     "file": "assets/v6/slots/disk_34_canon.png",
+     "tag": "OWNER",
+     "src": "toon render of the Cults3D Battle City disk kit, recoloured toward canon (the kit the game's SpiritDuelerMechanics uses; model tracked at Assets/Models/WRLDZ/SpiritDueler/) — PROVENANCE_v6.md l.25, l.83"
+    }
+   ],
+   "src": "anime_menu_v6.js:225 ico(disk) = AN_DISP.disk (slots/disk_34_canon.png)",
+   "size": [
+    44,
+    44
+   ],
+   "sha256": "af62aa94425d32ac6c48889e79e580553e3c16061fb6dd7ec51f8482cb55998d"
+  },
+  {
+   "path": "MenuV6/Common/icons/tear.png",
+   "guid": "c451fa6b0377a09e42d9beacc7bd3c83",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    1420.0,
+    277.0,
+    38.0,
+    38.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:72 ico() + anime_menu_v6.js:226 anInkCanvas",
+   "size": [
+    76,
+    76
+   ],
+   "sha256": "324c22476c31879297f8bd75b0b4e5a90bda043e51fc916503f7e0a7ba5f15c4"
+  },
+  {
+   "path": "MenuV6/Common/icons/tablet.png",
+   "guid": "1c8f56e485bfad62455210f0ee772aaf",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    1420.0,
+    364.0,
+    38.0,
+    38.0
+   ],
+   "tag": "OWNER",
+   "dest": "tracked",
+   "files": [
+    "assets/v6/slots/tablet_34_384.png"
+   ],
+   "why": [
+    {
+     "file": "assets/v6/slots/tablet_34_384.png",
+     "tag": "OWNER",
+     "src": "toon renders of his Meshy stone tablet — PROVENANCE_v6.md l.14-17"
+    }
+   ],
+   "src": "menu.js:72 ico() + anime_menu_v6.js:226 anInkCanvas",
+   "size": [
+    76,
+    76
+   ],
+   "sha256": "0ebe2c6570f587bd0a502a4a0346aa7fb61f5a5b68dc0900b3bb2fdb9c6f1673"
+  },
+  {
+   "path": "MenuV6/Common/icons/tower.png",
+   "guid": "c42f778f91e56115369ddf232bfbd68d",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    1420.0,
+    651.0,
+    38.0,
+    38.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:72 ico() + anime_menu_v6.js:226 anInkCanvas",
+   "size": [
+    76,
+    76
+   ],
+   "sha256": "45984bfaadaf5bba26b00d0815367b273ce17f29410f3a3e9a91e054f9d8021f"
+  },
+  {
+   "path": "MenuV6/Common/icons/door.png",
+   "guid": "893034c4cfb6100b2252142a56131375",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    1438.0,
+    771.0,
+    38.0,
+    38.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:72 ico() + anime_menu_v6.js:226 anInkCanvas",
+   "size": [
+    76,
+    76
+   ],
+   "sha256": "e224e24f56a0ffd44b84e21642923a14a2ce2dc6fe3f99d1579552bfcc4ac551"
+  },
+  {
+   "path": "MenuV6/Main/Land/slate/kuriboh_medal.png",
+   "guid": "c7435eea14e125cbec730b08108b0bb7",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 200,
+   "rect": [
+    125.0,
+    329.0,
+    44.0,
+    44.0
+   ],
+   "tag": "OWNER",
+   "dest": "tracked",
+   "files": [
+    "assets/v6/slots/kuriboh_medal_256.png"
+   ],
+   "why": [
+    {
+     "file": "assets/v6/slots/kuriboh_medal_256.png",
+     "tag": "OWNER",
+     "src": "toon render of his Meshy Kuriboh (repo Assets/Resources/WRLDZ/Companions/kuriboh.fbx) — PROVENANCE_v6.md l.13"
+    }
+   ],
+   "src": "DOM <img> assets/v6/slots/kuriboh_medal_256.png [256, 256] as the browser draws it at dsf 2 in its 44x44 box (border-radius 50%), media2x.mjs",
+   "size": [
+    88,
+    88
+   ],
+   "sha256": "d158dd4ec834d3e622b7b2dc9fc6a466efac4a5385b9e8a512d1a4291349b0c1"
+  },
+  {
+   "path": "MenuV6/Main/Land/keystone/over_f0.png",
+   "guid": "f32771d33d5d65cf3193937532fdb378",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    900,
+    461,
+    128.0,
+    116.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "menu.js:832 drawKeystone over run with PuzzleRelic st.flick = 0 (relics.js:207: A, then B at a * flick)",
+   "pad": [
+    3,
+    0
+   ],
+   "content": [
+    125,
+    116
+   ],
+   "size": [
+    128,
+    116
+   ],
+   "sha256": "4daeedf232227344195b99390e2ba79cdc293fcaf8ca31e5feda16b6be5743a8"
+  },
+  {
+   "path": "MenuV6/Main/Land/keystone/over_f1.png",
+   "guid": "7e374279f52d7df80cf01667083ad485",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    900,
+    461,
+    128.0,
+    116.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "menu.js:832 drawKeystone over run with PuzzleRelic st.flick = 1 (relics.js:207: A, then B at a * flick)",
+   "pad": [
+    3,
+    0
+   ],
+   "content": [
+    125,
+    116
+   ],
+   "size": [
+    128,
+    116
+   ],
+   "sha256": "a5438cea5fb97862c57e1a588606442d1afd91bbcb94cdfbedd268e6470e4a1d"
+  },
+  {
+   "path": "MenuV6/Main/Land/keystone/add.png",
+   "guid": "300dcf013c4deb56c68915bf7a4beaa5",
+   "kind": "sprite",
+   "imp": "cel",
+   "ppu": 100,
+   "rect": [
+    921,
+    475,
+    68.0,
+    68.0
+   ],
+   "tag": "OWN",
+   "dest": "tracked",
+   "files": [],
+   "why": [],
+   "src": "menu.js:832 drawKeystone add run (identical at flick 0 and 1)",
+   "layout": "land",
+   "page": "landscape.html",
+   "t": 2.8,
+   "pad": [
+    1,
+    1
+   ],
+   "content": [
+    67,
+    67
+   ],
+   "size": [
+    68,
+    68
+   ],
+   "sha256": "d2e3797bd3e74fabb98dcad11c2e4b94ddfa0ad359e0c3635e2ef4b02a8edb2a"
+  },
+  {
+   "path": "MenuV6/Common/realm_tile.png",
+   "guid": "aee19552b93fd789b138e25dce66735a",
+   "kind": "tile",
+   "imp": "tile",
+   "ppu": 100,
+   "rect": null,
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "anime_fx_v6.js:20 drawVoidIn run on a 512 px torus (9 offset passes; base fill once). Not a pixel dump of the still: a tiling texture of the same primitives (clouds #3A1F5E on AN.violet.deep, 70 sparkles)",
+   "size": [
+    512,
+    512
+   ],
+   "sha256": "fc5b26190b13a3a8ddcf5fa39e86841e51ef3d0be41d846cc037d45359b0e197"
+  },
+  {
+   "path": "MenuV6/Data/layout_land.json",
+   "guid": "90bbdf364ef2e69eb63bb0e0fbf55b0c",
+   "kind": "json",
+   "imp": "json",
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "assemble.py from geometry.mjs (E5) + the layer list",
+   "sha256": "1707200fd18cb4043147ca8f6b6a444414df70651f738fae26ebffa61cf43be9"
+  },
+  {
+   "path": "MenuV6/Data/schedules.json",
+   "guid": "da7fc9e1d3e2780f3b3103f716f55384",
+   "kind": "json",
+   "imp": "json",
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "geometry.mjs (E5) + sched_probe.mjs",
+   "sha256": "6c04cd876094e7b0598d5c54cb47b0dbeedf38fd2a8979008de0801a673c0f78"
+  },
+  {
+   "path": "MenuV6/Data/manifest.json",
+   "guid": "de64442c775d0cc74eed23b1c37c8036",
+   "kind": "json",
+   "imp": "json",
+   "tag": "OWN",
+   "dest": "tracked",
+   "src": "assemble.py"
+  }
+ ]
+}

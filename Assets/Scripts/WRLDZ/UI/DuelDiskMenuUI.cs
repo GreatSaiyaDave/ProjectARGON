@@ -5,13 +5,16 @@ using WRLDZ.Core;
 using WRLDZ.Data;
 using WRLDZ.Presentation;
 using WRLDZ.UI.Eldritch;
+using WRLDZ.UI.MenuV6;
 using WRLDZ.UI.Shell;
 
 namespace WRLDZ.UI
 {
     /// <summary>
-    /// Main menu (MainMenu scene) — Eldritch Solid Vision hierarchy (ELDRITCH_CONTRACT §6).
-    /// Identity slate → DUEL hero (Solid Vision disk) → COMMAND 2×2 → VIEW/SET → WORLD MAP | QUIT.
+    /// Main menu (MainMenu scene). Landscape: "The Stone Beneath Nut" v6.3 (<see cref="MenuV6Stage"/>, BUILD_PLAN P1a).
+    /// Portrait, the kill switch <c>WRLDZ_MenuV6Off</c> = 1, missing v6 art or any v6 build error: the legacy Eldritch
+    /// Solid Vision hierarchy (ELDRITCH_CONTRACT §6) — Identity slate → DUEL hero (Solid Vision disk) → COMMAND 2×2 →
+    /// VIEW/SET → WORLD MAP | QUIT. Both paths use the same handlers and routes.
     /// Boot lands here; WORLD MAP leaves for the Overworld.
     /// </summary>
     public class DuelDiskMenuUI : MonoBehaviour
@@ -26,6 +29,15 @@ namespace WRLDZ.UI
         // Only one popover (DuelChoice / QuitConfirm) lives at a time.
         GameObject _popoverHost;
         HieroglyphPanel _popover;
+        // The v6.3 Stone when it was built (null on the legacy path).
+        MenuV6Stage _v6;
+        GameObject _v6Canvas;
+
+        /// <summary>True when the last <see cref="Build"/> took the v6.3 path.</summary>
+        public bool IsMenuV6 => _v6 != null;
+
+        /// <summary>The canvas the last <see cref="Build"/> made (DiskMenuCanvas), for tests and captures.</summary>
+        public RectTransform MenuCanvas { get; private set; }
 
         public void Build()
         {
@@ -45,9 +57,86 @@ namespace WRLDZ.UI
 
         // ── Build ───────────────────────────────────────────────────────────
 
+        /// <summary>
+        /// The v6.3 Stone when this aspect has a plan and its art is in, else the legacy menu. A v6 build error never
+        /// leaves a blank home: the partial canvas is destroyed and the legacy menu is built instead.
+        /// </summary>
         void BuildVisuals()
         {
+            var kind = MenuAspect.Current;
+            var why = MenuV6Stage.WhyNot(kind);
+            if (why == null)
+            {
+                try
+                {
+                    BuildVisualsV6(kind);
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError("[WRLDZ] Main menu v6 build failed; showing the legacy menu. " + ex);
+                    DestroyPartialV6();
+                }
+            }
+            else
+            {
+                Debug.Log("[WRLDZ] Main menu: legacy layout (" + why + ").");
+            }
+
+            BuildVisualsLegacy();
+        }
+
+        void BuildVisualsV6(MenuLayoutKind kind)
+        {
+            var canvas = WrldzTheme.Canvas("DiskMenuCanvas", 50, aspect: true);
+            _v6Canvas = canvas.gameObject;
+            MenuCanvas = canvas;
+            var handlers = new MenuV6Stage.Handlers
+            {
+                OpenDeckHub = OpenDeckHub,
+                ShowInventory = ShowInventory,
+                OpenStory = OpenStory,
+                OpenBazaar = OpenBazaar,
+                OpenFreeView = OpenFreeView,
+                OpenSettings = OpenSettings,
+                OpenDuelChoice = OpenDuelChoice,
+                GoOverworld = GoOverworld,
+                OpenQuitConfirm = OpenQuitConfirm,
+                OpenAvatarMenus = OpenAvatarMenus
+            };
+            var stage = MenuV6Stage.Build(canvas, handlers, kind);
+            _v6 = stage;
+            _root = stage.Root;
+            _status = stage.Status;
+            if (stage.Missing.Count > 0)
+                Debug.LogWarning("[WRLDZ] Main menu v6: " + stage.Missing.Count + " layer(s) / text(s) not found: " +
+                                 string.Join(", ", stage.Missing));
+        }
+
+        void DestroyPartialV6()
+        {
+            var go = _v6Canvas;
+            _v6 = null;
+            _v6Canvas = null;
+            _root = null;
+            _status = null;
+            MenuCanvas = null;
+            if (go == null) return;
+            if (Application.isPlaying) Destroy(go);
+            else DestroyImmediate(go);
+        }
+
+        void GoOverworld()
+        {
+            FreeUiKit.PlayConfirm();
+            AppSession.Ensure().GoOverworld();
+        }
+
+        /// <summary>Today's menu, unchanged: the portrait plan, the kill switch and the v6 fallback.</summary>
+        void BuildVisualsLegacy()
+        {
             var canvas = WrldzTheme.Canvas("DiskMenuCanvas", 50);
+            MenuCanvas = canvas;
 
             var bg = WrldzTheme.StretchFill(canvas, "HubBg", Color.white, ImagineAssets.BgHub());
             var bgImg = bg.GetComponent<Image>();
@@ -118,11 +207,8 @@ namespace WRLDZ.UI
 
             // WORLD MAP | QUIT (QUIT = right 28% of the width).
             // contract note: "Primary-outline" has no tier of its own; Primary tier carries the gold line.
-            var mapBtn = ArcaneButton.Create(tiles, "WORLD MAP", () =>
-            {
-                FreeUiKit.PlayConfirm();
-                AppSession.Ensure().GoOverworld();
-            }, EldritchTier.Primary, "Return to the Battle City streets",
+            var mapBtn = ArcaneButton.Create(tiles, "WORLD MAP", GoOverworld, EldritchTier.Primary,
+                "Return to the Battle City streets",
                 ImagineAssets.IconCompass() ?? WrldzPresentation.SpiritEye() ?? DuelystUi.IconDeck(),
                 24, false, false);
             mapBtn.name = "MapBack";
@@ -378,10 +464,12 @@ namespace WRLDZ.UI
             panel.Open();
         }
 
+        /// <summary>QUIT folds the disk (BUILD_PLAN D14): "Fold your Spirit Dueler?" STAY / FOLD. FOLD signs out and
+        /// returns to Boot, so the body keeps the accurate line (§11 F15).</summary>
         void OpenQuitConfirm()
         {
             FreeUiKit.PlaySelect();
-            var panel = OpenPopover("QuitConfirm", EldritchTier.Danger, "LEAVE THE SHADOW REALM?", 0.38f, 0.62f);
+            var panel = OpenPopover("QuitConfirm", EldritchTier.Danger, "Fold your Spirit Dueler?", 0.38f, 0.62f);
             if (panel == null) return;
             var body = panel.Body;
 
@@ -393,7 +481,7 @@ namespace WRLDZ.UI
             copy.horizontalOverflow = HorizontalWrapMode.Wrap;
             GoTheme.Place(copy.rectTransform, 0.06f, 0.52f, 0.94f, 0.96f);
 
-            var quit = ArcaneButton.Create(body, "QUIT", () =>
+            var quit = ArcaneButton.Create(body, "FOLD", () =>
             {
                 FreeUiKit.PlayConfirm();
                 ClosePopover();
@@ -432,7 +520,9 @@ namespace WRLDZ.UI
                 return null;
             }
 
-            GoTheme.Place(panel.Root, 0.06f, y0, 0.94f, y1);
+            // over the Stone the old slate takes the false door's place (frame x 548-1372 of the 1920 stage, P3)
+            if (_v6 != null) GoTheme.Place(panel.Root, 0.285f, y0, 0.715f, y1);
+            else GoTheme.Place(panel.Root, 0.06f, y0, 0.94f, y1);
             _popover = panel;
             return panel;
         }

@@ -95,3 +95,6 @@ Assets/Screenshots/
 Assets/_Recovery/
 Tools/WRLDZ/edopro-ref/
 Tools/WRLDZ/kaibapro-ref/
+# Menu v6.3: local-only art (ripped / unlicensed pixels; BUILD_PLAN D7, §11 F12) — the folder and its own .meta
+Assets/Resources/WRLDZ/MenuV6Local/
+Assets/Resources/WRLDZ/MenuV6Local.meta

@@ -10,6 +10,8 @@ namespace WRLDZ.UI.Eldritch
     /// Command tile with an arcane energy line racing its perimeter ("WRLDZ/UI/ArcaneEnergyFlow").
     /// Child names "Title" / "Blurb" / "Ico" match HubChrome so GoTheme.Place(...Find("Title"))
     /// tweaks keep working. Hover → _Hover + ember burst, press → _Pressed + 0.97 scale.
+    /// <para><c>quiet</c> (the v6.3 Stone, BUILD_PLAN §6 P1a): no tier material and an invisible face, so the art under
+    /// the control is what shows; hover keeps at most <see cref="QuietMotes"/> motes (SPEC §10.5 cuts the bursts).</para>
     /// </summary>
     // ExecuteAlways: rect sync must also run in edit mode (previews, prefab baking); guarded bodies.
     [ExecuteAlways]
@@ -25,6 +27,8 @@ namespace WRLDZ.UI.Eldritch
         const float HoverRate = 8f;
         const float PressRate = 16f;
         const float PressScale = 0.97f;
+        /// <summary>Hover / release motes of a quiet control.</summary>
+        public const int QuietMotes = 3;
 
         public Button Button { get; private set; }
         public Image Face { get; private set; }
@@ -36,7 +40,9 @@ namespace WRLDZ.UI.Eldritch
         public RectTransform Rect => transform as RectTransform;
         // Serialized so a BAKED PREFAB instance can rebuild its per-instance material in Awake.
         [SerializeField] EldritchTier _tier = EldritchTier.Primary;
+        [SerializeField] bool _quiet;
         public EldritchTier Tier => _tier;
+        public bool Quiet => _quiet;
         public bool Interactable => _interactable;
 
         float _hover, _hoverTarget;
@@ -50,7 +56,7 @@ namespace WRLDZ.UI.Eldritch
 
         public static ArcaneButton Create(Transform parent, string title, Action onClick,
             EldritchTier tier = EldritchTier.Primary, string blurb = null, Sprite icon = null,
-            int titleSize = 22, bool centerTitle = false, bool hieroglyphBorder = false)
+            int titleSize = 22, bool centerTitle = false, bool hieroglyphBorder = false, bool quiet = false)
         {
             FreeUiKit.EnsureLoaded();
             var go = new GameObject(string.IsNullOrEmpty(title) ? "Arcane" : title,
@@ -64,10 +70,18 @@ namespace WRLDZ.UI.Eldritch
             face.type = Image.Type.Simple;
             face.raycastTarget = true;
             ab.Face = face;
-            ab.ApplyTierMaterial(tier);
-            // Stagger the energy comet so a grid of tiles never fires in lockstep.
-            if (ab.Mat != null && ab.Mat.HasProperty(EldritchMaterials.PhaseId))
-                ab.Mat.SetFloat(EldritchMaterials.PhaseId, (_phaseCounter++ * 0.381966f) % 1f);
+            ab._quiet = quiet;
+            if (quiet)
+            {
+                ab.ApplyQuietFace(tier);
+            }
+            else
+            {
+                ab.ApplyTierMaterial(tier);
+                // Stagger the energy comet so a grid of tiles never fires in lockstep.
+                if (ab.Mat != null && ab.Mat.HasProperty(EldritchMaterials.PhaseId))
+                    ab.Mat.SetFloat(EldritchMaterials.PhaseId, (_phaseCounter++ * 0.381966f) % 1f);
+            }
 
             var hasBlurb = !string.IsNullOrEmpty(blurb);
             var hasIcon = icon != null;
@@ -170,10 +184,35 @@ namespace WRLDZ.UI.Eldritch
             if (!Application.isPlaying) SyncRect();
         }
 
+        /// <summary>Quiet face: no material (Awake may have made one), transparent, still the raycast target.</summary>
+        void ApplyQuietFace(EldritchTier tier)
+        {
+            _tier = tier;
+            if (Mat != null)
+            {
+                ArObjectUtil.Destroy(Mat);
+                Mat = null;
+            }
+
+            if (Face != null)
+            {
+                Face.material = null;
+                Face.type = Image.Type.Simple;
+                Face.color = new Color(1f, 1f, 1f, 0f);
+                Face.raycastTarget = true;
+            }
+
+            _baseBloom = 1f;
+            _baseLine = EldritchPalette.LineFor(tier);
+            _baseLine2 = EldritchPalette.Line2For(tier);
+            _rectDirty = false;
+        }
+
         public void SetTier(EldritchTier tier)
         {
             if (Face == null) return;
-            ApplyTierMaterial(tier);
+            if (_quiet) ApplyQuietFace(tier);
+            else ApplyTierMaterial(tier);
             if (Title != null) Title.color = TitleColorFor(tier);
             if (Border != null) Border.SetGlow(GlyphGlowFor(tier));
             SetInteractable(_interactable);
@@ -241,7 +280,8 @@ namespace WRLDZ.UI.Eldritch
 
             var field = UiEmberField.Field(transform);
             if (field != null)
-                field.BurstFromRect(Rect, 12, UiEmberField.Kind.Ember, WithAlpha(_baseLine, 1f), 0.35f, 1f);
+                field.BurstFromRect(Rect, _quiet ? QuietMotes : 12, UiEmberField.Kind.Ember, WithAlpha(_baseLine, 1f),
+                    0.35f, 1f);
             // Touch has no true hover: UGUI raises pointerEnter on touch-down, so playing the
             // select blip here would double up with the click blip on every tap. Mouse only.
             if (eventData != null && eventData.pointerId < 0) FreeUiKit.PlaySelect();
@@ -289,7 +329,8 @@ namespace WRLDZ.UI.Eldritch
             if (!wasPressed || !_interactable) return;
             var field = UiEmberField.Field(transform);
             if (field != null)
-                field.BurstFromRect(Rect, 6, UiEmberField.Kind.Spark, EldritchPalette.GoldHot, 0.3f, 0.7f);
+                field.BurstFromRect(Rect, _quiet ? QuietMotes : 6, UiEmberField.Kind.Spark, EldritchPalette.GoldHot,
+                    0.3f, 0.7f);
         }
 
         // ------------------------------------------------------------------ frame
@@ -312,7 +353,7 @@ namespace WRLDZ.UI.Eldritch
 
             if (Button == null) Button = GetComponent<Button>();
             if (Border == null) Border = GetComponentInChildren<HieroglyphBorder>(true);
-            if (Face != null && Mat == null)
+            if (Face != null && Mat == null && !_quiet)
             {
                 ApplyTierMaterial(_tier);
                 if (Mat != null && Mat.HasProperty(EldritchMaterials.PhaseId))

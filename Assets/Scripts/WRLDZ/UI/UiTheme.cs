@@ -28,6 +28,36 @@ namespace WRLDZ.UI
             scaler.referencePixelsPerUnit = 100f;
         }
 
+        /// <summary>The landscape plan of the v6.3 menus (BUILD_PLAN D1): the 1920×1080 stage, match 0.5.</summary>
+        public static readonly Vector2 LandscapeReference = new(1920f, 1080f);
+        public const float LandscapeMatch = 0.5f;
+
+        /// <summary>Wider than 1.15 × tall: the same rule as DeckConstructionBoard.IsWideLayout.</summary>
+        public static bool IsLandscapeSurface(Vector2 surfacePx) =>
+            surfacePx.y > 0f && surfacePx.x > surfacePx.y * 1.15f;
+
+        /// <summary>
+        /// D1, opt-in per canvas: the landscape reference on a landscape surface, else exactly
+        /// <see cref="ApplyPortraitPhone"/>. The landscape branch leaves the orientation lock alone (AppSession keeps
+        /// phones portrait). Returns true when the landscape plan was applied.
+        /// </summary>
+        public static bool ApplyForAspect(CanvasScaler scaler, Vector2 surfacePx)
+        {
+            if (!IsLandscapeSurface(surfacePx))
+            {
+                ApplyPortraitPhone(scaler);
+                return false;
+            }
+
+            if (scaler == null) return true;
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = LandscapeReference;
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            scaler.matchWidthOrHeight = LandscapeMatch;
+            scaler.referencePixelsPerUnit = 100f;
+            return true;
+        }
+
         public static readonly Color BgDeep = new(0.02f, 0.05f, 0.14f, 1f);
         public static readonly Color BgMid = new(0.04f, 0.10f, 0.22f, 1f);
         public static readonly Color HexLine = new(0.12f, 0.35f, 0.65f, 0.35f);

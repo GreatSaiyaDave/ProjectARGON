@@ -6,6 +6,7 @@ Hub tiles are dest buttons only. Phone overlays are compact quiet sheets
 """
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
@@ -17,6 +18,7 @@ FORMATS = ROOT / "Assets/Scripts/WRLDZ/UI/Shell/FormatSelectScreen.cs"
 SCAN = ROOT / "Assets/Scripts/WRLDZ/UI/Shell/SurfaceScanSheet.cs"
 SYSTEMS = ROOT / "Assets/Scripts/WRLDZ/UI/Shell/SystemsSheets.cs"
 MENU_UI = ROOT / "Assets/Scripts/WRLDZ/UI/DuelDiskMenuUI.cs"
+MENU_V6 = ROOT / "Assets/Scripts/WRLDZ/UI/MenuV6"
 
 
 def fail(msg: str) -> None:
@@ -71,6 +73,32 @@ def main() -> int:
 
     must_contain(MENU_UI, "HubChrome.SectionCap", "hub no longer shares SectionCap")
     must_contain(MENU_UI, "HubChrome.LiftPlate", "hub no longer shares LiftPlate")
+
+    # The v6.3 Stone main menu (BUILD_PLAN P1a §3 rows): its labels live in the file that builds them, the legacy
+    # menu stays the fallback, local-only art is reached only through MenuV6Art, and that folder is never committed.
+    stage = MENU_V6 / "MenuV6Stage.cs"
+    for label in ("DUEL", "DECK", "BAG", "STORY", "BAZAAR", "WORLD MAP", "QUIT", "SETTINGS", "VIEW"):
+        must_contain(stage, f'"{label}"', f"lost the main-menu label {label}")
+    must_contain(stage, "HubChrome.SectionCap", "Stone season caption is not the shared SectionCap")
+    must_contain(stage, "HubChrome.LiftPlate", "Stone avatar frame is not the shared LiftPlate")
+    must_contain(MENU_UI, "MenuV6Stage.WhyNot", "main menu lost its v6 gate (portrait / kill switch / no art)")
+    must_contain(MENU_UI, "BuildVisualsLegacy", "main menu lost its legacy fallback (never a blank home)")
+    for cs in sorted(MENU_V6.glob("*.cs")):
+        src = cs.read_text(encoding="utf-8")
+        if "StreamingSprite" in src:
+            fail(f"{cs.relative_to(ROOT)} loads menu art through StreamingSprite (RGBA32, keyed corners)")
+        if re.search(r"\bSystem\.IO\b", src):
+            fail(f"{cs.relative_to(ROOT)} reads files directly (v6 art goes through Resources.Load)")
+    for folder in (ROOT / "Assets/Scripts", ROOT / "Assets/Editor"):
+        for cs in sorted(folder.rglob("*.cs")):
+            if cs == MENU_V6 / "MenuV6Art.cs":
+                continue
+            if "MenuV6Local/" in cs.read_text(encoding="utf-8", errors="replace"):
+                fail(f"{cs.relative_to(ROOT)} names MenuV6Local/ (local-only art goes through MenuV6Art.LocalOr)")
+    ignore = (ROOT / ".gitignore").read_text(encoding="utf-8").splitlines() if (ROOT / ".gitignore").is_file() else []
+    for line in ("Assets/Resources/WRLDZ/MenuV6Local/", "Assets/Resources/WRLDZ/MenuV6Local.meta"):
+        if line not in (l.strip() for l in ignore):
+            fail(f".gitignore does not ignore {line} (local-only art, D7 / F12)")
     must_contain(SETTINGS, "DualMenuPresenter.BuildFrame", "settings left the dual overlay chrome")
     must_contain(FORMATS, "HubChrome.FeaturedCard", "format cards are not hub featured plates")
     must_contain(SCAN, "HubChrome.Capsule", "scan CTAs are not hub capsules")
@@ -217,6 +245,7 @@ def main() -> int:
     print("  HubChrome header / well / BACK present")
     print("  DualMenuPresenter compact Solid Vision slates (map visible)")
     print("  BAG / ARTIFACTS / scan / lab / avatar use quiet wells")
+    print("  main menu: v6.3 Stone labels + legacy fallback; MenuV6Local only via MenuV6Art, gitignored")
     print("PASS")
     return 0
 

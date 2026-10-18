@@ -9,6 +9,7 @@ using WRLDZ.Data;
 using WRLDZ.Presentation;
 using WRLDZ.Presentation.ArInteraction;
 using WRLDZ.UI;
+using WRLDZ.UI.MenuV6;
 using WRLDZ.UI.Shell;
 
 namespace WRLDZ.EditorTools
@@ -110,6 +111,71 @@ namespace WRLDZ.EditorTools
             {
                 var go = new GameObject("HubSmoke");
                 go.AddComponent<DuelDiskMenuUI>().Build();
+            });
+
+            // The v6.3 Stone (BUILD_PLAN P1a §3 rows): the nine labels, the Tiles host, the old control names, a
+            // clone without the local-only art, a builder pass with no art at all, and the legacy fallback.
+            Check("Main menu v6 Stone: labels, Tiles, control names (1920x1080)", () =>
+            {
+                RequireMenuV6Art();
+                WithHub("HubSmokeV6", 1920, 1080, menu =>
+                {
+                    if (!menu.IsMenuV6)
+                        throw new Exception("v6 path not taken: " + MenuV6Stage.WhyNot(MenuLayoutKind.Landscape));
+                    RequireMainMenu(menu.MenuCanvas, MainMenuV6Labels);
+                    foreach (var n in MainMenuControls)
+                        if (FindNamed(menu.MenuCanvas, n) == null)
+                            throw new Exception("control " + n + " missing");
+                });
+            });
+            Check("Main menu v6 Stone with ForceNoLocal (a clone without the local-only art)", () =>
+            {
+                RequireMenuV6Art();
+                try
+                {
+                    MenuV6Art.ForceNoLocal = true;
+                    WithHub("HubSmokeV6Local", 1920, 1080, menu =>
+                    {
+                        if (!menu.IsMenuV6)
+                            throw new Exception("v6 path not taken: " + MenuV6Stage.WhyNot(MenuLayoutKind.Landscape));
+                        RequireMainMenu(menu.MenuCanvas, MainMenuV6Labels);
+                    });
+                }
+                finally
+                {
+                    MenuV6Art.ForceNoLocal = false;
+                    MenuV6Art.ClearCache();
+                }
+            });
+            Check("Main menu v6 builder with no art does not throw; the hub falls back", () =>
+            {
+                RectTransform canvas = null;
+                try
+                {
+                    MenuV6Art.ForceNoArt = true;
+                    canvas = WrldzTheme.Canvas("MenuV6NoArtCanvas", 50, aspect: true);
+                    MenuV6Stage.Build(canvas, new MenuV6Stage.Handlers(), MenuLayoutKind.Landscape);
+                    RequireMainMenu(canvas, MainMenuV6Labels);
+                    WithHub("HubSmokeV6NoArt", 1920, 1080, menu =>
+                    {
+                        if (menu.IsMenuV6) throw new Exception("v6 path taken with no art");
+                        RequireMainMenu(menu.MenuCanvas, MainMenuLegacyLabels);
+                    });
+                }
+                finally
+                {
+                    MenuV6Art.ForceNoArt = false;
+                    MenuV6Art.ClearCache();
+                    if (canvas != null) UnityEngine.Object.DestroyImmediate(canvas.gameObject);
+                }
+            });
+            Check("Main menu portrait (1080x2340) is today's legacy menu", () =>
+            {
+                WithHub("HubSmokeLegacy", 1080, 2340, menu =>
+                {
+                    if (menu.IsMenuV6) throw new Exception("portrait took the v6 path");
+                    RequireMainMenu(menu.MenuCanvas, MainMenuLegacyLabels);
+                });
             });
 
             Check("DesktopLabApp.Open", () =>
@@ -636,7 +702,9 @@ namespace WRLDZ.EditorTools
                              "MenuSmokeCanvas", "MenuShellCanvas", "MenuShellOverlay",
                              "HubSmoke", "DesktopLabApp", "DiskMenuCanvas",
                              "ZoneModePromptCanvas", "AvatarCustomizerUI",
-                             "OwSmoke", "OverworldHudCanvas", "OverworldMapCanvas"
+                             "OwSmoke", "OverworldHudCanvas", "OverworldMapCanvas",
+                             "HubSmokeV6", "HubSmokeV6Local", "HubSmokeV6NoArt", "HubSmokeLegacy",
+                             "MenuV6NoArtCanvas", "HubPropWorld"
                          })
                     DestroyNamed(n);
             }
@@ -713,6 +781,54 @@ namespace WRLDZ.EditorTools
                 Failures = fails,
                 Summary = sb.ToString()
             };
+        }
+
+        // BUILD_PLAN §3: the labels the v6.3 Stone must carry (MenuV6Stage.cs holds the literals) and today's
+        // labels for the legacy fallback (DuelDiskMenuUI.BuildVisualsLegacy: SET, not SETTINGS).
+        static readonly string[] MainMenuV6Labels =
+            { "DUEL", "DECK", "BAG", "STORY", "BAZAAR", "WORLD MAP", "QUIT", "SETTINGS", "VIEW" };
+
+        static readonly string[] MainMenuLegacyLabels =
+            { "DUEL", "DECK", "BAG", "STORY", "BAZAAR", "WORLD MAP", "QUIT", "SET", "VIEW" };
+
+        static readonly string[] MainMenuControls =
+            { "Hero", "Dest_DECK", "Dest_BAG", "Dest_STORY", "Dest_BAZAAR", "Tert_VIEW", "Tert_SET", "MapBack", "Quit" };
+
+        static void RequireMenuV6Art()
+        {
+            if (!MenuV6Stage.HasArt(MenuLayoutKind.Landscape))
+                throw new Exception("v6 art missing under Resources/" + MenuV6Art.Root +
+                                    " (the P1a art set is not installed)");
+        }
+
+        static void RequireMainMenu(Transform canvas, string[] labels)
+        {
+            if (canvas == null) throw new Exception("menu canvas missing");
+            foreach (var l in labels) RequireLabel(canvas, l);
+            if (FindNamed(canvas, "Tiles") == null) throw new Exception("Tiles host missing");
+        }
+
+        /// <summary>Build the main menu for a forced surface, run <paramref name="check"/>, and remove the host and its
+        /// canvas again (the owner's open scene keeps nothing, R20).</summary>
+        static void WithHub(string hostName, int w, int h, Action<DuelDiskMenuUI> check)
+        {
+            GameObject go = null;
+            DuelDiskMenuUI menu = null;
+            try
+            {
+                MenuAspect.Force(w, h);
+                go = new GameObject(hostName);
+                menu = go.AddComponent<DuelDiskMenuUI>();
+                menu.Build();
+                check(menu);
+            }
+            finally
+            {
+                MenuAspect.ClearForce();
+                if (menu != null && menu.MenuCanvas != null)
+                    UnityEngine.Object.DestroyImmediate(menu.MenuCanvas.gameObject);
+                if (go != null) UnityEngine.Object.DestroyImmediate(go);
+            }
         }
 
         static void RequireLabel(Transform root, string text)
@@ -914,8 +1030,13 @@ namespace WRLDZ.EditorTools
 
         static void DestroyNamed(string name)
         {
-            var go = GameObject.Find(name);
-            if (go != null) UnityEngine.Object.DestroyImmediate(go);
+            // every copy (each build makes its own DiskMenuCanvas)
+            for (var guard = 0; guard < 32; guard++)
+            {
+                var go = GameObject.Find(name);
+                if (go == null) return;
+                UnityEngine.Object.DestroyImmediate(go);
+            }
         }
 
         static string Truncate(string s, int n) =>

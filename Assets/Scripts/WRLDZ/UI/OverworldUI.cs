@@ -107,6 +107,19 @@ namespace WRLDZ.UI
             new() { id = "bazaar_2", title = "BAZAAR ZONE", kind = "bazaar", x = 0.30f, y = 0.60f },
         };
 
+        /// <summary>How many Tear pins the map carries (read-only; the main menu's NEWS and WORLD MAP lines).</summary>
+        public static int TearPinCount
+        {
+            get
+            {
+                var n = 0;
+                foreach (var p in Pins)
+                    if (p.kind == "tear")
+                        n++;
+                return n;
+            }
+        }
+
         public void Build()
         {
             WrldzTheme.ApplyPortrait();
