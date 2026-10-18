@@ -1506,10 +1506,11 @@ def process(body, piece, path, out, render=True, hides=True):
     rep['fbx'] = os.path.basename(fbx); rep['fbx_mb'] = round(os.path.getsize(fbx) / 1e6, 1)
     hm = None
     if hides and kind == 'shoes':
-        hm = hm_posed
+        hm = hm_posed                       # computed in the flat-foot pose above
     elif hides and kind not in ('glasses', 'neck'):
         mode = {'head': 'head', 'hair': 'hair', 'hat': 'hair', 'glove': 'glove'}.get(kind, 'clothes')
         hm = hide_map(body, ob, mode, piece, rep)
+    if hm is not None:
         if hm.any(): write_png_gray(f'{out}/hide_{piece["id"]}_{sex}.png', (hm * 255).astype(np.uint8)); rep['hide'] = f'hide_{piece["id"]}_{sex}.png'
         else: hm = None
     if render:
