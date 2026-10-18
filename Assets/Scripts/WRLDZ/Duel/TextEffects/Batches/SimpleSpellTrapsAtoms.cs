@@ -249,6 +249,16 @@ namespace WRLDZ.Duel.TextEffects
                     Amount = int.Parse(m.Groups[1].Value),
                     MakesChainLink = true
                 }),
+            // Chain Burst (c48276469): Each time a player activates a Trap Card, they take 1000 damage immediately after it resolves.
+            new AtomRegistration.Atom(
+                @".*activates a Trap Card.*take 1000 damage",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.InflictDamageToOpponent,
+                    Amount = 1000,
+                    MakesChainLink = false
+                }),
         };
 
         /// <summary>The whole text is one of this batch's atoms (an earlier phrase template must leave it alone).</summary>
