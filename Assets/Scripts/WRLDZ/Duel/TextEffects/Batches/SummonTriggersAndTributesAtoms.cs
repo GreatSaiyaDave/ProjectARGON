@@ -158,6 +158,17 @@ namespace WRLDZ.Duel.TextEffects
                     Amount = Pos(m, 1),
                     MakesChainLink = true
                 }),
+            // B.E.S. Big Core (c14148099): If this card is Normal Summoned: Place 3 counters on it.
+            new AtomRegistration.Atom(
+                @"If this card is Normal Summoned: Place (\d+) counters? on it\.?\s*$",
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.ThisCardSummoned,
+                    Action = EffectActionKind.PlaceCounterOnThisCard,
+                    Amount = Pos(m, 1),
+                    MakesChainLink = true
+                }),
+
         };
 
         static int Pos(Match m, int group) =>

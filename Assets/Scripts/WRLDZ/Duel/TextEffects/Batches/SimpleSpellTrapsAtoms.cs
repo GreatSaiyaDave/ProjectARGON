@@ -187,6 +187,44 @@ namespace WRLDZ.Duel.TextEffects
                     Amount = Pos(m, 1),
                     MakesChainLink = true
                 }),
+            // Fuh-Rin-Ka-Zan (c1781310): When there are face-up WIND, WATER, FIRE and EARTH monster(s) on the field:
+            // Apply 1 of these effects.
+            // ● Destroy all monsters your opponent controls.
+            new AtomRegistration.Atom(
+                @"Destroy all monsters your opponent controls\.?\s*$",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.Destroy,
+                    Side = EffectSide.Opponent,
+                    Zone = EffectZoneFilter.FieldMonsters,
+                    TargetCount = 0,
+                    MakesChainLink = true
+                }),
+            // ● Destroy all Spell and Trap Cards your opponent controls.
+            new AtomRegistration.Atom(
+                @"Destroy all Spell and Trap Cards your opponent controls\.?\s*$",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.Destroy,
+                    Side = EffectSide.Opponent,
+                    Zone = EffectZoneFilter.FieldSpellTraps,
+                    TargetCount = 0,
+                    MakesChainLink = true
+                }),
+            // ● Draw 2 cards.
+            new AtomRegistration.Atom(
+                @"Draw (\d+) cards\.?\s*$",
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.Draw,
+                    Side = EffectSide.Controller,
+                    Amount = Pos(m, 1),
+                    MakesChainLink = true
+                }),
+
         };
 
         /// <summary>The whole text is one of this batch's atoms (an earlier phrase template must leave it alone).</summary>

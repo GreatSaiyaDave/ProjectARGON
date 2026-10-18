@@ -165,6 +165,24 @@ namespace WRLDZ.Duel.TextEffects
                     TargetUpTo = false,
                     MakesChainLink = true
                 }),
+            // Silent Swordsman LV3 (c1995985): level-up to LV5
+            new AtomRegistration.Atom(
+                Start + @"During your Standby Phase: You can send this face-up card to the (?:GY|Graveyard); Special Summon 1 ""Silent Swordsman LV5"" from your hand or Deck\. You cannot activate this effect the turn this card is Summoned or flipped face-up" + End,
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.StandbyPhase,
+                    Action = EffectActionKind.SpecialSummonNamed,
+                    Side = EffectSide.Controller,
+                    NamedCard = "Silent Swordsman LV5",
+                    RequiresSendThisToGy = true,
+                    FromHand = true,
+                    FromDeck = true,
+                    IsOptional = true,
+                    OnlyDuringOwnStandby = true,
+                    ActivationCondition = LvChainRuntime.NotTurnSummoned,
+                    CheckedAt = ConditionCheckedAt.Activation,
+                    MakesChainLink = true
+                }),
         };
     }
 }
