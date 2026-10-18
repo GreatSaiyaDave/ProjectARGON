@@ -42,7 +42,7 @@ namespace WRLDZ.UI
         readonly List<Part> _slotParts = new();
 
         // Cycle indices shown as current option labels
-        enum Part { Look, Hat, Facial, Shirt, Hands, Bottoms, Shoes, Accent, Title, Skin, HairColor, OutfitTint, Disk, Aura, Body, Hair, Paint, Outfit }
+        enum Part { Look, Hat, Facial, Shirt, Hands, Bottoms, Shoes, Accent, Title, Skin, HairColor, OutfitTint, Disk, Aura, Body, Hair, Paint, Outfit, Neck, FaceShape, Accessories, Tattoos }
         Part _focus = Part.Body;
 
         // 3D customization (Customization v1): live 3D preview, body / hair / colour editors
@@ -446,16 +446,17 @@ namespace WRLDZ.UI
 
         static readonly Part[] ChipOrder =
         {
-            Part.Body, Part.Hair, Part.HairColor, Part.Skin, Part.Outfit, Part.Paint, Part.Look, Part.Title, Part.Accent,
-            Part.Hat, Part.Facial, Part.Shirt, Part.Hands, Part.Bottoms, Part.Shoes, Part.Disk, Part.Aura
+            Part.Body, Part.FaceShape, Part.Hair, Part.HairColor, Part.Skin, Part.Outfit, Part.Paint, Part.Look, Part.Title, Part.Accent,
+            Part.Hat, Part.Facial, Part.Neck, Part.Shirt, Part.Hands, Part.Bottoms, Part.Shoes, Part.Accessories, Part.Tattoos, Part.Disk, Part.Aura
         };
 
         static string ChipLabel(Part p) => p switch
         {
-            Part.Body => "BODY", Part.Hair => "HAIR", Part.HairColor => "HAIR DYE", Part.Skin => "SKIN",
+            Part.Body => "BODY", Part.FaceShape => "FACE SHAPE", Part.Hair => "HAIR", Part.HairColor => "HAIR DYE", Part.Skin => "SKIN",
             Part.Paint => "CLOTHES", Part.Outfit => "OUTFIT", Part.Look => "PORTRAIT", Part.Title => "TITLE", Part.Accent => "SPIRIT",
             Part.Hat => "HAT", Part.Facial => "FACE", Part.Shirt => "SHIRT", Part.Hands => "HANDS",
-            Part.Bottoms => "BOTTOMS", Part.Shoes => "SHOES", Part.Disk => "DISK", Part.Aura => "AURA", _ => ""
+            Part.Bottoms => "BOTTOMS", Part.Shoes => "SHOES", Part.Neck => "NECK", Part.Accessories => "ACCESSORIES", Part.Tattoos => "TATTOOS",
+            Part.Disk => "DISK", Part.Aura => "AURA", _ => ""
         };
 
         void BuildPartChips(Transform sheet)
@@ -662,6 +663,9 @@ namespace WRLDZ.UI
             Part.Hands => ImagineAssets.IconSlotHands(),
             Part.Bottoms => ImagineAssets.IconSlotBottoms(),
             Part.Shoes => ImagineAssets.IconSlotShoes(),
+            Part.Neck => ImagineAssets.IconSlotAccent(),
+            Part.Accessories => ImagineAssets.IconSlotHands(),
+            Part.Tattoos => ImagineAssets.IconSlotFacial(),
             Part.Accent => ImagineAssets.IconSlotAccent(),
             Part.Title => ImagineAssets.IconSlotTitle(),
             Part.Disk => ImagineAssets.IconDuel(),
@@ -670,6 +674,7 @@ namespace WRLDZ.UI
             Part.Hair => ImagineAssets.IconSlotHat(),
             Part.HairColor => ImagineAssets.IconSlotAccent(),
             Part.Skin => ImagineAssets.IconSlotFacial(),
+            Part.FaceShape => ImagineAssets.IconSlotFacial(),
             Part.Paint => ImagineAssets.IconSlotShirt(),
             Part.Outfit => ImagineAssets.IconSlotShirt(),
             _ => ImagineAssets.IconSlotLook()
@@ -693,7 +698,7 @@ namespace WRLDZ.UI
             FloatingPanel.DestroyChildrenNow(_optionHost);
             if (_controlsHost != null) FloatingPanel.DestroyChildrenNow(_controlsHost);
             // wardrobe tabs have no slider block under the strip: in the wide layout they use the two-row grid
-            var wardrobe = _focus is Part.Hat or Part.Facial or Part.Shirt or Part.Hands or Part.Bottoms or Part.Shoes;
+            var wardrobe = _focus is Part.Hat or Part.Facial or Part.Shirt or Part.Hands or Part.Bottoms or Part.Shoes or Part.Neck;
             var useGrid = wardrobe && _wide && _gridHost != null;
             if (_gridHost != null) FloatingPanel.DestroyChildrenNow(_gridHost);
             if (_stripHost != null) FloatingPanel.DestroyChildrenNow(_stripHost);
@@ -714,7 +719,7 @@ namespace WRLDZ.UI
             if (_stripRt != null) _stripRt.gameObject.SetActive(!useGrid);
             if (_stripHost != null) _optionHost = useGrid ? _gridHost : _stripHost;
 
-            if (_focus is Part.Body or Part.Hair or Part.HairColor or Part.Paint or Part.Skin or Part.Outfit)
+            if (_focus is Part.Body or Part.Hair or Part.HairColor or Part.Paint or Part.Skin or Part.Outfit or Part.FaceShape or Part.Accessories or Part.Tattoos)
             {
                 BuildEditor3d();
                 RefreshSlotRings();
@@ -736,7 +741,7 @@ namespace WRLDZ.UI
                     });
                 }
             }
-            else if (_focus is Part.Hat or Part.Facial or Part.Shirt or Part.Hands or Part.Bottoms or Part.Shoes)
+            else if (_focus is Part.Hat or Part.Facial or Part.Shirt or Part.Hands or Part.Bottoms or Part.Shoes or Part.Neck)
             {
                 var slot = _focus switch
                 {
@@ -745,6 +750,7 @@ namespace WRLDZ.UI
                     Part.Shirt => ClothingSlot.Shirt,
                     Part.Hands => ClothingSlot.Hands,
                     Part.Bottoms => ClothingSlot.Bottoms,
+                    Part.Neck => ClothingSlot.Neck,
                     _ => ClothingSlot.Shoes
                 };
                 var owned = ClothingCatalog.OwnedInSlot(_wardrobe, slot, _draft.IsFemale);
@@ -912,6 +918,9 @@ namespace WRLDZ.UI
                 case Part.Shoes:
                     CycleClothing(ClothingSlot.Shoes, dir);
                     break;
+                case Part.Neck:
+                    CycleClothing(ClothingSlot.Neck, dir);
+                    break;
                 case Part.Title:
                     var ti = Array.IndexOf(AvatarCatalog.PresetTitles, _draft.title);
                     if (ti < 0) ti = 0;
@@ -995,7 +1004,11 @@ namespace WRLDZ.UI
                 Part.Hands => ClothingLabel(ClothingSlot.Hands),
                 Part.Bottoms => ClothingLabel(ClothingSlot.Bottoms),
                 Part.Shoes => ClothingLabel(ClothingSlot.Shoes),
+                Part.Neck => ClothingLabel(ClothingSlot.Neck),
                 Part.Skin => "Skin: " + (string.IsNullOrEmpty(_draft.GetPaint("Body.0")) ? "original" : _draft.GetPaint("Body.0")),
+                Part.FaceShape => "Face shape: " + FaceShapeWord(),
+                Part.Accessories => "Accessories: " + ((_draft.accessoryIds?.Count ?? 0) == 0 ? "none" : _draft.accessoryIds.Count.ToString()),
+                Part.Tattoos => "Tattoos: " + ((_draft.tattooIds?.Count ?? 0) == 0 ? "none" : _draft.tattooIds.Count.ToString()),
                 Part.HairColor => "Hair color: " + AvatarCatalog.HairPatternNames[Mathf.Clamp(_draft.hairPattern, 0, AvatarCatalog.HairPatternNames.Length - 1)]
                                   + (_draft.hairPattern == 0 ? "" : "  ·  " + _hairZone.ToUpperInvariant()),
                 Part.Body => $"{(_draft.IsFemale ? "Female" : "Male")} base  ·  {_draft.EffectiveHeightCm:0} cm  ·  weight {Mathf.RoundToInt(_draft.weight * 100f)}",

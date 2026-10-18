@@ -71,6 +71,9 @@ namespace WRLDZ.UI
                 case Part.Hair: BuildHairEditor(); break;
                 case Part.HairColor: BuildHairColorEditor(); break;
                 case Part.Skin: BuildSkinEditor(); break;
+                case Part.FaceShape: BuildFaceShapeEditor(); break;
+                case Part.Accessories: BuildAdornmentEditor(false); break;
+                case Part.Tattoos: BuildAdornmentEditor(true); break;
                 case Part.Paint: BuildPaintEditor(); break;
                 case Part.Outfit: BuildOutfitEditor(); break;
             }
@@ -100,6 +103,75 @@ namespace WRLDZ.UI
             SliderRow(_controlsHost, 0.05f, 0.45f, "WEIGHT", 0f, 100f, _draft.weight * 100f, true,
                 v => $"{v:0}  ·  {WeightWord(v)}",
                 v => { _draft.weight = Mathf.Round(v) / 100f; Changed(false); });
+            // build shapes (Build_Gaunt / Build_Plump / Build_Big): tiles cycle 0 → 50 → 100 → 0 so the strip stays short
+            foreach (var (key, label, group) in AvatarCatalog.BodyMorphs)
+            {
+                if (group != "build") continue;
+                var k = key; var pct = Mathf.RoundToInt(_draft.GetMorph(k) * 100f);
+                OptionTile(_optionHost, baseIcon, pct > 0, pct > 0 ? new Color(1f, 0.85f, 0.55f) : Color.white, () =>
+                {
+                    var cur = Mathf.RoundToInt(_draft.GetMorph(k) * 100f);
+                    _draft.SetMorph(k, cur >= 100 ? 0f : cur >= 50 ? 1f : 0.5f);
+                    Changed(false);
+                }, $"{label.ToUpperInvariant()} {pct}%", 110f);
+            }
+        }
+
+        // ---------------------------------------------------------------- ACCESSORIES / TATTOOS (toggle any number)
+        void BuildAdornmentEditor(bool tattoos)
+        {
+            var fem = _draft.IsFemale;
+            var icon = tattoos ? ImagineAssets.IconSlotFacial() : ImagineAssets.IconSlotHands();
+            var shown = 0;
+            if (tattoos)
+            {
+                _draft.tattooIds ??= new System.Collections.Generic.List<string>();
+                foreach (var it in AdornmentCatalog.Tattoos)
+                {
+                    if (!it.FitsBody(fem)) continue;
+                    var id = it.Id; var on = _draft.tattooIds.Contains(id); shown++;
+                    OptionTile(_optionHost, icon, on, Color.white, () =>
+                    {
+                        if (_draft.tattooIds.Contains(id)) _draft.tattooIds.Remove(id); else _draft.tattooIds.Add(id);
+                        Changed(true);
+                    }, it.Name, 110f);
+                }
+            }
+            else
+            {
+                _draft.accessoryIds ??= new System.Collections.Generic.List<string>();
+                foreach (var it in AdornmentCatalog.Accessories)
+                {
+                    if (!it.FitsBody(fem)) continue;
+                    var id = it.Id; var on = _draft.accessoryIds.Contains(id); shown++;
+                    OptionTile(_optionHost, icon, on, Color.white, () =>
+                    {
+                        if (_draft.accessoryIds.Contains(id)) _draft.accessoryIds.Remove(id); else _draft.accessoryIds.Add(id);
+                        Changed(true);
+                    }, it.Name, 110f);
+                }
+            }
+            if (shown == 0)
+                Hint(_controlsHost, tattoos ? "No tattoo art is in the catalogue yet (AdornmentCatalog.Tattoos)."
+                                            : "No accessories are in the catalogue yet (AdornmentCatalog.Accessories).");
+        }
+
+        // ---------------------------------------------------------------- FACE SHAPE (nose, mouth, jaw, chin, cheeks, brow)
+        void BuildFaceShapeEditor()
+        {
+            var icon = ImagineAssets.IconSlotFacial();
+            foreach (var (key, label, group) in AvatarCatalog.BodyMorphs)
+            {
+                if (group != "face") continue;
+                var k = key; var pct = Mathf.RoundToInt(_draft.GetMorph(k) * 100f);
+                OptionTile(_optionHost, icon, pct > 0, pct > 0 ? new Color(0.75f, 0.9f, 1f) : Color.white, () =>
+                {
+                    var cur = Mathf.RoundToInt(_draft.GetMorph(k) * 100f);
+                    _draft.SetMorph(k, cur >= 100 ? 0f : cur >= 50 ? 1f : 0.5f);
+                    Changed(false);
+                }, $"{label.ToUpperInvariant()} {pct}%", 110f);
+            }
+            Hint(_controlsHost, "Tap a feature to step it: off, half, full. Shapes add up.");
         }
 
         static string Feet(float cm)
@@ -109,6 +181,14 @@ namespace WRLDZ.UI
         }
 
         static string WeightWord(float v) => v < 20 ? "Slim" : v < 40 ? "Lean" : v <= 60 ? "Average" : v <= 80 ? "Sturdy" : "Heavy";
+
+        string FaceShapeWord()
+        {
+            var on = new System.Collections.Generic.List<string>();
+            foreach (var (key, label, group) in AvatarCatalog.BodyMorphs)
+                if (group == "face" && _draft.GetMorph(key) > 0.01f) on.Add(label.ToLowerInvariant());
+            return on.Count == 0 ? "as built" : string.Join(", ", on);
+        }
 
         // ---------------------------------------------------------------- HAIR (style + palettes)
         void BuildHairEditor()
@@ -290,6 +370,7 @@ namespace WRLDZ.UI
             _draft.handsId = ClothingCatalog.DefaultHands;
             _draft.bottomsId = ClothingCatalog.DefaultBottoms;
             _draft.shoesId = ClothingCatalog.DefaultShoes;
+            _draft.neckId = ClothingCatalog.DefaultNeck;
             if (_paintKey.StartsWith("Outfit")) _paintKey = "Shirt.0";
         }
 
@@ -302,6 +383,7 @@ namespace WRLDZ.UI
             GrantPiece(look.HandsId);
             GrantPiece(look.BottomsId);
             GrantPiece(look.ShoesId);
+            GrantPiece(look.NeckId);
             if (_paintKey.StartsWith("Outfit")) _paintKey = "Shirt.0";
         }
 

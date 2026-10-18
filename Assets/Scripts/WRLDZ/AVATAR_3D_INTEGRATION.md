@@ -509,3 +509,83 @@ found these, now fixed:
   promised what nothing builds now describes the piece (Joey: "White short-sleeved tee.", Keith: "Wristbands").
 - **Customizer grid:** `WholeColumnGrid` keeps whole tile columns at the right edge (spacing absorbs the remainder) and shows a
   chevron while more tiles lie past it.
+
+## Addendum, 2026-10-18 — Meshy sculpt wardrobe (the `_3d` pieces), Neck slot, head presets
+
+**What arrived.** The owner generated 64 Meshy image-to-3D pieces into `Assets/Models/Characters/<Name>/*.blend`
+(plus four in `~/Downloads`): per-character tops, trousers / skirts, shoes, hair, headwear, Weevil's glasses, the Puzzle
+cord, the Millennium Ring and Key, Para's and Dox's heads, and generic player pieces (crimson tech jacket, techwear cargo
+pants and sneakers). Each is one unrigged 400k-triangle mesh with a 4K base colour, normalised to a ~1.9-unit box.
+
+**Pipeline** (`Tools/avatar/meshy_wardrobe.py`, Blender 5.2 headless; `meshy_wardrobe_install.py` installs). A piece
+becomes a skinned graft on the ArgonAvatarRig exactly like the shells: `Clothes/argon_<id>_<sex>.fbx` + `albedo_<id>.png`
+(hair: `Hair/argon_hair_<id>_<sex>.fbx` + `Hair_<id>.png` + `thumb_<id>.png` + a `hair_catalog.json` style with pattern
+`original`). Steps: decimate (tops 12k, hair 14k, shoes 5k, glasses 3k tris) → fit per kind → skin weights interpolated
+from the nearest body surface of the matching region (sleeves from the arms, legs from the legs) → restrict to the slot's
+bones → push every vertex ≥ 4-5 mm out of the skin (hair 2 mm) → review renders + JSON report.
+- Tops: the shoulder line is the sleeves' outer top (a collar or hood fooled any "x cm under the top" rule); sleeves are
+  the vertices near the garment's own sleeve axis; the body's arm is posed onto that axis, the weights bound there, and
+  the garment un-posed with inverse linear-blend skinning, so A-pose sleeves at 10-35° land on the hanging arms.
+- Bottoms: hip width + 1.2 cm ease, waistband at the waist, full-length trousers stretched to the ankle, legs posed the
+  same way. Shoes: per foot, scaled to the foot length + 3 cm, yawed to the foot axis, sole on the floor.
+- Hair / hats / heads: a joint ICP of OUR face (against every piece vertex) and skull cap (against the inward-facing
+  vertices) finds the Meshy mannequin's head; the piece is mapped onto ours, lifted out of the skull, and the mannequin's
+  face / neck / bust faces (within 4.5-7 mm of non-scalp skin) are deleted. Hats fit by cavity only (their faceless).
+  Head presets keep everything; the install step writes a hide map that covers the whole head and the Hat entry hides
+  the hair (`HatHidesHair`), the look sets no face decal.
+- Inside/outside near creases uses the "nearer to the bone axis than the skin point" rule (the body is not one closed
+  shell, so face normals and ray parity both lie there), tested against the WHOLE body (a hem beside the thigh measured
+  against torso skin only read 13 cm "inside" and exploded). The push itself is radial from that bone axis (from the
+  head centre on the head): pushing along the nearest face normal folds a garment through a limb instead of inflating
+  it round it. Decimation leaves slivers as long as a trouser leg, so edges over 3 cm are halved until none is left
+  before the push; faces with a corner deeper than 3.5 cm (collar linings, inner shirts inside the shoulder mass) are
+  dropped as invisible inner structure rather than torn outward.
+- Mannequin removal also uses colour: the neutral (white / grey / tan / black) faces in front of our face give the
+  mannequin's colour, the faces far from the body give the hair's; when they differ, everything in the mannequin's
+  colour within 8 cm of the body goes (Bonz's white head, Mako's white torso). A blond fringe is saturated, so it is
+  never taken for the mannequin; a black bust under black hair (Kaiba, Yugi) is only caught geometrically.
+- Not converted: the red duelist glove (Meshy sculpted a closed fist; it cannot wrap the animated open hand).
+
+**Data.** `ClothingSlot.Neck` (`AvatarAppearance.neckId`, default `neck_none`, customizer tab NECK) for the cord, Ring
+and Key; `CharacterLook.NeckId`. Catalogue rows `N("<slot>_<char>_3d", …)` — painted pieces, no mask, shown as
+painted. The DK rows (`yugi_dk`, `kaiba_dk`, `pegasus_dk`, `mako_dk`, `keith_dk`, `bonz_dk`, `panik_dk`, `bakura_dk`,
+`yami_bakura_dk`, `tristan_dk`, `tea_dk`, `para`, `dox`) wear the sculpts where one exists; new rows `joey_dk`, `mai_dk`,
+`weevil_dk`, `rex_dk`, `mokuba_dk` (ahead of their BC rows, so a plain name resolves to them), `tea_school` (the Domino
+uniform sculpts) and `shadi`. `*_3d` hair rows use `HairPattern.Original` and keep `hairHex` only for the scalp strip.
+The 2D sprite (`characterId`) still wins while set; clear it on a row to see the 3D body in these pieces.
+`AvatarImportPostprocessor` now also fixes texture import flags under Avatar3D (hide maps linear / readable / no mips /
+uncompressed / point; `Clothes/albedo_*` sRGB + readable, ≤ 2048).
+
+**Verify.** `python3 Tools/csc_check.py --editor` compiles both assemblies offline with the live Editor's own compiler
+arguments. In the Editor: `WRLDZ.EditorTools.AvatarLookPreview.Render("look:kaiba_dk")` (also `npc:<name>`,
+`player:male|female`, `json:<AvatarAppearance>`) writes `Temp/AvatarPreview/<label>_{front,q,side}.png` without Play mode.
+
+## Addendum, 2026-10-18 (later) — body range: stature, builds, faces, tattoos, accessories
+
+Owner brief: "models to cover characters like Bonz who is 3 ft tall and Yugi who is 5 ft tall all the way to 6 ft 5 and
+body types ranging from thin and gaunt like Bonz to plump like Chumley and big like Mr Huffington. Faces. Noses. Mouth.
+Tattoos. Accessories. The customization should fit without clipping or spacing issues on all model types."
+
+- **Stature** (`OverworldAvatar3d.ApplyStature`): heights 91-203 cm on the same two bodies (`AvatarCatalog.HeightMinCm`
+  is 91 now). Down to 85 % of the base height the body scales as one; below that the head keeps more of its size
+  (world head scale = height-ratio^0.45, the body closes the rest), set on the Head bone so hair, hats, glasses and face
+  decals follow. A 91-cm body has a 17-cm head on a 0.49-scale body: anime child proportions, not a shrunk adult.
+- **Builds and faces** are blend shapes on the bases (`Tools/avatar/body_morphs.py`, re-exports
+  `argon_base_<sex>.fbx` and writes `argon_avatar_<sex>_morphs.glb` for the bake): `Build_Gaunt`, `Build_Plump` (belly
+  bulge, double chin), `Build_Big` (broad shoulders, heavy limbs), and `Face_NoseLong / NoseWide / MouthWide / LipsFull
+  / JawWide / ChinLong / CheeksFull / BrowHeavy` — Gaussian bulges round landmarks found on the head. Radial inflates
+  are proportional to the local radius, so a plump body stays body-shaped. `AvatarAppearance.morphs` holds the sliders
+  (`AvatarCatalog.BodyMorphs` lists them for the customizer: BODY tab = builds, FACE SHAPE tab = faces); the weight
+  slider's `Weight_Thin / Weight_Heavy` stay.
+- **Nothing clips on any build**: every garment, hairstyle and outfit carries the same shape keys, transferred from the
+  body's displacement at each vertex's nearest skin point (`Tools/avatar/bake_body_morphs.py`, run after any wardrobe
+  change; a radial growth also pushes the garment's stand-off outward). `ApplyCustomization` sets every `Weight_*`,
+  `Build_*` and `Face_*` key on every skinned renderer that has it, so a plump body wears its coat plump.
+- **Tattoos** (`AdornmentCatalog.Tattoos`, `AvatarAppearance.tattooIds`, TATTOOS tab): a tattoo is an alpha PNG plus an
+  anchor in a bone's space. `OverworldAvatar3d.Adornments` copies the body triangles round the anchor into a skinned
+  patch 1.5 mm off the skin — same bones, same blend shapes — and projects the art onto it, so ink follows the limb
+  through animation, every build / face slider and the stature scale. The body UV atlas is a scatter of islands, which
+  is why ink is not painted into the albedo. Entries wait for sourced art (Odion's face marks, Marik's back carving).
+- **Accessories** (`AdornmentCatalog.Accessories`, `AvatarAppearance.accessoryIds`, ACCESSORIES tab): a prefab / FBX
+  under Resources parented to a bone with a local pose; flat colour for untextured print models. The Millennium Puzzle
+  print under Assets/Models/MillenniumPuzzle is a 3.5-cm-thick plate set, not a hanging pyramid, so it is not wired.
