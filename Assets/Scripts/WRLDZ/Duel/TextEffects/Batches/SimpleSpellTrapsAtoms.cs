@@ -225,6 +225,19 @@ namespace WRLDZ.Duel.TextEffects
                     MakesChainLink = true
                 }),
 
+            // Xing Zhen Hu (c76515293): Select 2 Set Spell or Trap Cards on the field; they cannot be activated.
+            new AtomRegistration.Atom(
+                @".*2 Set Spell.*Trap.*cannot be activated",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.TargetTwoFaceDownSpellTrapsLockActivation,
+                    Zone = EffectZoneFilter.FieldSpellTraps,
+                    RequiresTargetChoice = true,
+                    TargetCount = 2,
+                    IsPsctTarget = true,
+                    MakesChainLink = true
+                }),
         };
 
         /// <summary>The whole text is one of this batch's atoms (an earlier phrase template must leave it alone).</summary>
