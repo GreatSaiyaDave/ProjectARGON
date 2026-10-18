@@ -155,39 +155,42 @@ namespace WRLDZ.Data
             // note is retired.
             // 2026-10-18: the DK rows wear the Meshy sculpts (ids *_3d, Tools/avatar/meshy_wardrobe.py) where one exists;
             // *_3d hair is painted, so those rows use HairPattern.Original (0) and keep hairHex only for the scalp strip.
-            // The 2D sprite (characterId) still wins while it is set; clear it to see the 3D body in these pieces.
-            L("yugi_dk", "Duelist Kingdom Yugi", "yugi", 0, "yugi_muto_3d", "yugi_muto", 153f, 0.40f, "shirt_yugi_3d", "bottoms_yugi_3d", "shoes_yugi_3d", "hands_yugi_dk", characterId: "yugi_da", neck: "neck_yugi_3d"),
-            L("kaiba_dk", "Duelist Kingdom Kaiba", "kaiba", 0, "seto_kaiba_3d", "seto_kaiba", 186f, 0.35f, "shirt_kaiba_3d", "bottoms_kaiba_dk", "shoes_kaiba_3d", "hands_kaiba_dk", characterId: "kaiba_da"),
+            // 2026-10-18 (owner: "What about the yugi, kaiba, and joey assets I provided you?"): every DK row that wears
+            // his sculpts (hair or clothes) is the 3D BODY in duels and on the map — its characterId (the 10-15 DA sprite
+            // set) is gone, so his assets are what the player faces. Rex (no sculpt of his, borrowed hair) keeps the
+            // sprite; the BC rows (shells, no sculpts) keep theirs.
+            L("yugi_dk", "Duelist Kingdom Yugi", "yugi", 0, "yugi_muto_3d", "yugi_muto", 153f, 0.40f, "shirt_yugi_3d", "bottoms_yugi_3d", "shoes_yugi_3d", "hands_yugi_dk", neck: "neck_yugi_3d"),
+            L("kaiba_dk", "Duelist Kingdom Kaiba", "kaiba", 0, "seto_kaiba_3d", "seto_kaiba", 186f, 0.35f, "shirt_kaiba_3d", "bottoms_kaiba_dk", "shoes_kaiba_3d", "hands_kaiba_dk"),
             L("yugi_bc", "Battle City Yugi", "yugi", 0, "yugi_muto", "yugi_muto", 153f, 0.40f, "shirt_yugi_bc", "bottoms_yugi_bc", "shoes_yugi_bc", null, characterId: ""),
             L("kaiba_bc", "Battle City Kaiba", "kaiba", 0, "seto_kaiba", "seto_kaiba", 186f, 0.35f, "shirt_kaiba_bc", "bottoms_kaiba_bc", "shoes_kaiba_bc", null, characterId: "kaiba"),
-            L("joey_dk", "Duelist Kingdom Joey", "joey", 0, "joey_wheeler_3d", "joey_wheeler", 178f, 0.50f, "shirt_joey_3d", "bottoms_joey_bc", "shoes_joey_3d", "hands_joey_dk", characterId: "joey_da"),
+            L("joey_dk", "Duelist Kingdom Joey", "joey", 0, "joey_wheeler_3d", "joey_wheeler", 178f, 0.50f, "shirt_joey_3d", "bottoms_joey_bc", "shoes_joey_3d", "hands_joey_dk"),
             L("joey_bc", "Battle City Joey", "joey", 0, "joey_wheeler", "joey_wheeler", 178f, 0.50f, "shirt_joey_bc", "bottoms_joey_bc", "shoes_joey_bc", null, characterId: "joey_da"),
-            L("mai_dk", "Duelist Kingdom Mai", "mai", 1, "mai_valentine_3d", "mai_valentine", 170f, 0.45f, "shirt_mai_3d", "bottoms_mai_3d", "shoes_mai_3d", "hands_mai_dk", characterId: "mai_da"),
+            L("mai_dk", "Duelist Kingdom Mai", "mai", 1, "mai_valentine_3d", "mai_valentine", 170f, 0.45f, "shirt_mai_3d", "bottoms_mai_3d", "shoes_mai_3d", "hands_mai_dk"),
             L("mai_bc", "Battle City Mai", "mai", 1, "mai_valentine", "mai_valentine", 170f, 0.45f, "shirt_mai_bc", "bottoms_mai_bc", "shoes_mai_bc", "hands_mai_bc", characterId: "mai_da"),
             L("tea_bc", "Battle City Téa", "tea", 1, "tea_gardner", "tea", 164f, 0.40f, "shirt_tea_bc", "bottoms_tea_bc", "shoes_tea_bc", null, characterId: "tea_da"),
             L("bakura_bc", "Battle City Bakura", "bakura", 0, "ryou_bakura", "bakura", 176f, 0.35f, "shirt_bakura_bc", "bottoms_bakura_bc", "shoes_bakura_bc", null, characterId: "bakura_da"),
             L("marik_bc", "Battle City Marik", "marik", 0, "marik_ishtar", "marik", 177f, 0.40f, "shirt_marik_bc", "bottoms_marik_bc", "shoes_marik_bc", null, skin: "#A8704A", characterId: "marik"),
-            L("pegasus_dk", "Duelist Kingdom Pegasus", "pegasus", 0, "pegasus_mane_3d", "pegasus", 190f, 0.45f, "shirt_pegasus_3d", "bottoms_pegasus_3d", "shoes_pegasus_3d", "hands_pegasus_dk", hairHex: "#C4BDD0", characterId: "pegasus_da"),
+            L("pegasus_dk", "Duelist Kingdom Pegasus", "pegasus", 0, "pegasus_mane_3d", "pegasus", 190f, 0.45f, "shirt_pegasus_3d", "bottoms_pegasus_3d", "shoes_pegasus_3d", "hands_pegasus_dk", hairHex: "#C4BDD0"),
             // face is the 6th arg (the decal). facial is the 13th and belongs to the glasses slot:
             // a decal filename there is a Clothes/argon_<id>_<sex> lookup, so "face_weevil_bc" resolved
             // to nothing and silently fell back to face_none. Weevil gets no facial piece.
-            L("weevil_dk", "Duelist Kingdom Weevil", "weevil", 0, "weevil_bowl_3d", "weevil", 152f, 0.30f, "shirt_weevil_3d", "bottoms_weevil_3d", "shoes_weevil_bc", null, facial: "face_weevil_3d", hairHex: "#8ABAB7", characterId: "weevil_da"),
+            L("weevil_dk", "Duelist Kingdom Weevil", "weevil", 0, "weevil_bowl_3d", "weevil", 152f, 0.30f, "shirt_weevil_3d", "bottoms_weevil_3d", "shoes_weevil_bc", null, facial: "face_weevil_3d", hairHex: "#8ABAB7"),
             L("weevil_bc", "Battle City Weevil", "weevil", 0, "weevil_bowl", "weevil", 152f, 0.30f, "shirt_weevil_bc", "bottoms_weevil_bc", "shoes_weevil_bc", null, hairPattern: 1, hairHex: "#8ABAB7", characterId: "weevil_da"),
             L("rex_dk", "Duelist Kingdom Rex", "rex", 0, "jaden_yuki", "rex_raptor", 170f, 0.55f, "shirt_rex_bc", "bottoms_rex_bc", "shoes_rex_3d", null, hat: "hat_rex_bc", hairPattern: 2, hairHex: "#4D3020", hairTip: "#8D7DB3", characterId: "rex_da"),
             L("rex_bc", "Battle City Rex", "rex", 0, "jaden_yuki", "rex_raptor", 170f, 0.55f, "shirt_rex_bc", "bottoms_rex_bc", "shoes_rex_bc", null, hat: "hat_rex_bc", hairPattern: 2, hairHex: "#4D3020", hairTip: "#8D7DB3", characterId: "rex_da"),
-            L("mako_dk", "Duelist Kingdom Mako", "mako", 0, "mako_3d", "mako", 183f, 0.70f, "shirt_mako_bc", "bottoms_mako_3d", "shoes_mako_3d", "hands_mako_dk", hat: "hat_mako_bc", hairHex: "#3C394C", characterId: "mako_da"),
+            L("mako_dk", "Duelist Kingdom Mako", "mako", 0, "mako_3d", "mako", 183f, 0.70f, "shirt_mako_bc", "bottoms_mako_3d", "shoes_mako_3d", "hands_mako_dk", hat: "hat_mako_bc", hairHex: "#3C394C"),
             L("mako_bc", "Battle City Mako", "mako", 0, "jack_atlas", "mako", 183f, 0.70f, "shirt_mako_bc", "bottoms_mako_bc", "shoes_mako_bc", null, hat: "hat_mako_bc", hairPattern: 4, hairHex: "#3C394C", hairStreak: "#595E8F", characterId: "mako"),
-            L("keith_dk", "Duelist Kingdom Keith", "keith", 0, "jack_atlas", "bandit_keith", 185f, 0.60f, "shirt_keith_3d", "bottoms_keith_3d", "shoes_keith_3d", "hands_keith_dk", hat: "hat_keith_3d", hairPattern: 1, hairHex: "#B3AF56", characterId: "bandit_keith_da"),
+            L("keith_dk", "Duelist Kingdom Keith", "keith", 0, "jack_atlas", "bandit_keith", 185f, 0.60f, "shirt_keith_3d", "bottoms_keith_3d", "shoes_keith_3d", "hands_keith_dk", hat: "hat_keith_3d", hairPattern: 1, hairHex: "#B3AF56"),
             // Bonz: 3 ft and gaunt per the owner (2026-10-18); the stature rule keeps him big-headed at 91 cm
             L("bonz_dk", "Duelist Kingdom Bonz", "bonz", 0, "bonz_3d", "bonz", 91f, 0.2f, "shirt_bonz_3d", "bottoms_bonz_3d", "shoes_bonz_3d", "hands_bonz_dk", hairHex: "#505E80", morphs: "Build_Gaunt:1"),
             L("ishizu_bc", "Battle City Ishizu", "ishizu", 1, "mai_valentine", "ishizu", 172f, 0.40f, "shirt_ishizu_bc", "bottoms_ishizu_bc", "shoes_ishizu_bc", null, hat: "hat_ishizu_bc", hairPattern: 1, hairHex: "#1A1A1C", characterId: "ishizu"),
             L("odion_bc", "Battle City Odion", "odion", 0, "seto_kaiba", "odion", 188f, 0.70f, "shirt_odion_bc", "bottoms_odion_bc", "shoes_odion_bc", null, hat: "hat_odion_bc", hairPattern: 1, hairHex: "#1A1A1C", characterId: "odion"),
             L("duke_bc", "Battle City Duke", "duke", 0, "joey_wheeler", "duke", 180f, 0.45f, "shirt_duke_bc", "bottoms_duke_bc", "shoes_duke_bc", null, hairPattern: 1, hairHex: "#333333"),
             L("tristan_bc", "Battle City Tristan", "tristan", 0, "tristan_quiff", "tristan", 180f, 0.60f, "shirt_tristan_bc", "bottoms_tristan_bc", "shoes_tristan_bc", null, hairPattern: 1, hairHex: "#62442D", characterId: "tristan_da"),
-            L("mokuba_dk", "Duelist Kingdom Mokuba", "mokuba", 0, "mokuba_kaiba_3d", "mokuba_kaiba", 155f, 0.35f, "shirt_mokuba_3d", "bottoms_mokuba_3d", "shoes_mokuba_3d", null, hairHex: "#1E1E1E", characterId: "mokuba_da"),
+            L("mokuba_dk", "Duelist Kingdom Mokuba", "mokuba", 0, "mokuba_kaiba_3d", "mokuba_kaiba", 155f, 0.35f, "shirt_mokuba_3d", "bottoms_mokuba_3d", "shoes_mokuba_3d", null, hairHex: "#1E1E1E"),
             L("mokuba_bc", "Battle City Mokuba", "mokuba", 0, "mokuba_kaiba", "mokuba_kaiba", 155f, 0.35f, "shirt_mokuba_bc", "bottoms_mokuba_bc", "shoes_mokuba_bc", null, hairPattern: 4, hairHex: "#1E1E1E", hairStreak: "#4C557E", characterId: "mokuba_da"),
             L("yami_yugi_dk", "Duelist Kingdom Yami Yugi", "yami yugi", 0, "yugi_muto_3d", "yami_yugi",
-                158f, 0.38f, "shirt_yugi_3d", "bottoms_yugi_3d", "shoes_yugi_3d", "hands_yugi_dk", characterId: "yami_yugi_da", neck: "neck_yugi_3d"),
+                158f, 0.38f, "shirt_yugi_3d", "bottoms_yugi_3d", "shoes_yugi_3d", "hands_yugi_dk", neck: "neck_yugi_3d"),
             // The Domino cape albedo is the black tank and blue blazer. A shirt hex flattened it to navy.
             L("yami_yugi", "Yami Yugi", "yami yugi", 0, "yugi_muto", "yami_yugi", 158f, 0.38f, "shirt_yugi_bc", "bottoms_yugi_bc", "shoes_yugi_bc", null, characterId: "yami_yugi"),
             L("yami_bakura", "Yami Bakura", "yami bakura", 0, "yami_bakura", "yami_bakura", 176f, 0.35f, "shirt_bakura_bc", "bottoms_bakura_bc", "shoes_bakura_bc", null, skin: "#CFAC8D", characterId: "yami_bakura_da", neck: "neck_mring_3d"),
@@ -209,9 +212,9 @@ namespace WRLDZ.Data
             L("joey_unbuttoned", "Joey Wheeler — Unbuttoned", "joey_unbuttoned", 0, "joey_wheeler", "joey_wheeler", 178f, 0.50f, "shirt_plain", "bottoms_joey_bc", "shoes_joey_bc", null, shirtHex: "#FF8C1A", shirtTrimHex: "#8B0000"),
             L("yami_yugi_glowing", "Yami Yugi — Glowing Mark", "yami_yugi_glowing", 0, "yugi_muto", "yami_yugi", 158f, 0.38f, "shirt_yugi_bc", "bottoms_yugi_bc", "shoes_yugi_bc", null, characterId: "yami_yugi"),
             L("bakura_dk", "Duelist Kingdom Bakura", "bakura_dk", 0, "ryou_bakura_3d", "bakura", 176f, 0.35f, "shirt_bakura_3d", "bottoms_bakura_3d", "shoes_bakura_3d", null, hairHex: "#BAB4C6"),
-            L("yami_bakura_dk", "Duelist Kingdom Yami Bakura", "yami_bakura_dk", 0, "yami_bakura_3d", "yami_bakura", 176f, 0.35f, "shirt_bakura_3d", "bottoms_bakura_3d", "shoes_bakura_3d", null, hairHex: "#1A1A1C", skin: "#CFAC8D", characterId: "yami_bakura_da", neck: "neck_mring_3d"),
-            L("tristan_dk", "Duelist Kingdom Tristan", "tristan_dk", 0, "tristan_quiff_3d", "tristan", 180f, 0.60f, "shirt_plain", "bottoms_plain", "shoes_plain", null, hairHex: "#62442D", shirtHex: "#2F7A2F", shirtTrimHex: "#E8C880", characterId: "tristan_da"),
-            L("tea_dk", "Duelist Kingdom Téa", "tea_dk", 1, "tea_gardner_3d", "tea", 164f, 0.40f, "shirt_plain", "bottoms_plain", "shoes_plain", null, shirtHex: "#4A6FA0", shirtTrimHex: "#FFFFFF", characterId: "tea_da"),
+            L("yami_bakura_dk", "Duelist Kingdom Yami Bakura", "yami_bakura_dk", 0, "yami_bakura_3d", "yami_bakura", 176f, 0.35f, "shirt_bakura_3d", "bottoms_bakura_3d", "shoes_bakura_3d", null, hairHex: "#1A1A1C", skin: "#CFAC8D", neck: "neck_mring_3d"),
+            L("tristan_dk", "Duelist Kingdom Tristan", "tristan_dk", 0, "tristan_quiff_3d", "tristan", 180f, 0.60f, "shirt_plain", "bottoms_plain", "shoes_plain", null, hairHex: "#62442D", shirtHex: "#2F7A2F", shirtTrimHex: "#E8C880"),
+            L("tea_dk", "Duelist Kingdom Téa", "tea_dk", 1, "tea_gardner_3d", "tea", 164f, 0.40f, "shirt_plain", "bottoms_plain", "shoes_plain", null, shirtHex: "#4A6FA0", shirtTrimHex: "#FFFFFF"),
             // Domino High uniform (the Meshy "tea_uniform" sculpts): a variant, not her Duelist Kingdom outfit.
             L("tea_school", "School Uniform Téa", "tea_school", 1, "tea_gardner_3d", "tea", 164f, 0.40f, "shirt_tea_3d", "bottoms_tea_3d", "shoes_tea_3d", null, characterId: ""),
         };
