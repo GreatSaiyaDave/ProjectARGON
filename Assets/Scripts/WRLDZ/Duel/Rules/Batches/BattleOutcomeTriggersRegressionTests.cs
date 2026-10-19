@@ -502,8 +502,12 @@ namespace WRLDZ.Duel.Rules
                 PlaceMonster(e, opp, Bewd, 1, BattlePosition.Defense, true);
                 var trap = InteractionRegressionTests.PlaceSetTrap(e, p, 17814387, 0); // Reinforcements
                 trap.SetThisTurn = false;
+                // The AI's draw for the skipped turn is fixed: a shuffled deck could hand it Monster Reborn, which it
+                // legally activates in Main Phase 2 on the destroyed Celtic Guardian (seeds 4, 15, 25).
+                SetDeck(opp, Celtic, Celtic, Celtic, Celtic, Celtic);
                 e.NotifyPublic();
                 Attack(e, p, te, celtic);
+                var destroyed = opp.Graveyard.Contains(celtic);
                 e.TryEndTurnSafe(p);
                 var battleWindow = e.PendingResponse;
                 var openAtStart = e.TurnPlayer == opp && e.Phase == DuelPhase.Battle &&
@@ -535,9 +539,9 @@ namespace WRLDZ.Duel.Rules
                 }
 
                 Check("Timeater: the AI's skipped turn waits for the player's Battle-Phase-start window (no attacker) before Main Phase 2",
-                    reached && opp.Graveyard.Contains(celtic) && openAtStart && leftUnderWindow.Length == 0 && done &&
-                    e.TurnPlayer == p,
-                    $"openAtStart={openAtStart} left:{leftUnderWindow} done={done} turn={e.TurnPlayer?.Name} phase={e.Phase}");
+                    reached && destroyed && opp.Graveyard.Contains(celtic) && openAtStart && leftUnderWindow.Length == 0 &&
+                    done && e.TurnPlayer == p,
+                    $"reached={reached} destroyed={destroyed} celticGy={opp.Graveyard.Contains(celtic)} openAtStart={openAtStart} left:{leftUnderWindow} done={done} turn={e.TurnPlayer?.Name} phase={e.Phase}");
             }
         }
 
