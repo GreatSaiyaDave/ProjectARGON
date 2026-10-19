@@ -77,6 +77,14 @@ namespace WRLDZ.Data
         public string outfitId = "";
         /// <summary>Face decal id (Resources/WRLDZ/Avatar3D/Faces/&lt;id&gt;.png: eyes + brows drawn over the base face); empty = the base face.</summary>
         public string faceId = "";
+        /// <summary>The animated face (FaceCatalog, 2026-10-18): eye shape, iris colour, brows, nose, mouth; empty = the catalogue defaults.
+        /// A canon face decal (<see cref="faceId"/>) still wins while it is set.</summary>
+        public string eyeId = "";
+        public string irisHex = "";
+        public string browId = "";
+        public string browHex = "";
+        public string noseId = "";
+        public string mouthId = "";
         /// <summary>
         /// A complete character model (Resources/WRLDZ/Avatar3D/Characters/&lt;id&gt;, a Humanoid FBX with its own hair,
         /// clothes and face — a canon duelist sourced as a finished model). When set, the Meshy base body, hair grafts,
@@ -181,6 +189,7 @@ namespace WRLDZ.Data
                 // added 2026-10-04: these four were missing, and every account load / save passes through Clone(),
                 // so a saved look lost its face decal, sourced-character id and silhouette on the next session
                 faceId = faceId,
+                eyeId = eyeId, irisHex = irisHex, browId = browId, browHex = browHex, noseId = noseId, mouthId = mouthId,
                 characterId = characterId,
                 silhouette = silhouette,
                 silhouetteHex = silhouetteHex,
@@ -228,6 +237,11 @@ namespace WRLDZ.Data
             if (string.IsNullOrEmpty(hairSideHex)) hairSideHex = "#3ECFFF";
             paints ??= new List<PaintSlot>();
             paints.RemoveAll(p => p == null || string.IsNullOrEmpty(p.key) || string.IsNullOrEmpty(p.hex));
+            eyeId = FaceCatalog.HasEye(eyeId) ? eyeId : "";
+            mouthId = FaceCatalog.HasMouth(mouthId) ? mouthId : "";
+            noseId = FaceCatalog.HasNose(noseId) ? noseId : "";
+            browId = FaceCatalog.HasBrow(browId) ? browId : "";
+            irisHex ??= ""; browHex ??= "";
             accessoryIds ??= new List<string>();
             accessoryIds.RemoveAll(id => AdornmentCatalog.Accessory(id) == null);
             tattooIds ??= new List<string>();
@@ -307,6 +321,9 @@ namespace WRLDZ.Data
             ("Face_MouthWide", "Mouth width", "face"), ("Face_LipsFull", "Lips", "face"),
             ("Face_JawWide", "Jaw", "face"), ("Face_ChinLong", "Chin", "face"),
             ("Face_CheeksFull", "Cheeks", "face"), ("Face_BrowHeavy", "Brow", "face"),
+            // head types and ears (Tools/avatar/body_morphs.py HEADS / EARS, 2026-10-18)
+            ("Head_Round", "Round", "head"), ("Head_Long", "Long", "head"), ("Head_Square", "Square", "head"), ("Head_Child", "Child", "head"),
+            ("Ear_Large", "Large", "ears"), ("Ear_Small", "Small", "ears"), ("Ear_Pointed", "Pointed", "ears"),
         };
 
         public static readonly string[] HairPatternNames = { "Original", "Solid", "Ombré tips", "Tri-color", "Streaks", "Split" };

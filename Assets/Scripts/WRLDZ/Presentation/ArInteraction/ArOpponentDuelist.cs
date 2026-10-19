@@ -362,6 +362,8 @@ namespace WRLDZ.Presentation.ArInteraction
         /// <summary>Queue a duel beat by name (see <see cref="Beat"/>). Public so previews and tests can drive it.</summary>
         public void Play(string beat)
         {
+            // the living face wears the beat (AvatarFaceRig: anger on an attack, pain on a hit, a laugh for the win)
+            if (_body != null) _body.GetComponent<AvatarFaceRig>()?.PlayBeat(beat);
             var g = Beat(beat);
             if (g == null) return;
             // a beaten duelist's disk powers down: the blade folds (and stays out of the floor while the body lies there)

@@ -21,6 +21,10 @@ Shader "WRLDZ/AvatarRecolor"
         _ScalpMap ("Head region (R, body UV space)", 2D) = "black" {}
         _ScalpColor ("Painted hairline colour (a = on)", Color) = (0, 0, 0, 0)
         _HideOn ("Use the hide map", Float) = 0
+        // the animated face (AvatarAnimeFace, 2026-10-18): the painted eyes / brows / nose / mouth texels of the body
+        // albedo become plain skin where this mask is set, so the drawn features replace them instead of sitting on them
+        _FaceFlatMap ("Painted face features (R, body UV space)", 2D) = "black" {}
+        _FaceFlatColor ("Flat skin colour under them (a = on)", Color) = (0.98, 0.77, 0.58, 0)
         _ShadowAmt ("Anime shadow band depth", Range(0, 0.5)) = 0.08
         _RimAmt ("Rim light", Range(0, 1)) = 0.6
         _OutlineWidth ("Ink outline width (px)", Range(0, 4)) = 1.4
@@ -48,9 +52,10 @@ Shader "WRLDZ/AvatarRecolor"
         TEXTURE2D(_HideMap); SAMPLER(sampler_HideMap);
         TEXTURE2D(_ScalpMap); SAMPLER(sampler_ScalpMap);
         TEXTURE2D(_NormalMap); SAMPLER(sampler_NormalMap);
+        TEXTURE2D(_FaceFlatMap); SAMPLER(sampler_FaceFlatMap);
         CBUFFER_START(UnityPerMaterial)
             float4 _BaseMap_ST;
-            half4 _BaseColor, _ColorA, _ColorB, _ColorC, _ScalpColor;
+            half4 _BaseColor, _ColorA, _ColorB, _ColorC, _ScalpColor, _FaceFlatColor;
             float4 _RefLum;
             half _HideOn, _ShadowAmt, _RimAmt, _OutlineWidth, _OutlineDark, _UseTexAlpha;
             half4 _RimColor;
@@ -87,6 +92,14 @@ Shader "WRLDZ/AvatarRecolor"
             if (_HideOn > 0.5h && SAMPLE_TEXTURE2D(_HideMap, sampler_HideMap, uv).r > 0.5h) discard;
             half4 tex = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, uv);
             half3 m = SAMPLE_TEXTURE2D(_MaskMap, sampler_MaskMap, uv).rgb;
+            // the face's painted features give way to plain skin under the drawn, animated ones (AvatarAnimeFace): the
+            // texel becomes the mean skin colour at the skin region's reference luminance (so the skin paint lands flat,
+            // detail = 1), and the region mask becomes pure skin there (the base bodies carry their eye whites and
+            // lashes as undersuit / other regions, not as albedo)
+            half flat = SAMPLE_TEXTURE2D(_FaceFlatMap, sampler_FaceFlatMap, uv).r * _FaceFlatColor.a;
+            half flatLum = max(dot(_FaceFlatColor.rgb, half3(0.2126h, 0.7152h, 0.0722h)), 1e-4h);
+            tex.rgb = lerp(tex.rgb, _FaceFlatColor.rgb * (_RefLum.x / flatLum), flat);
+            m = lerp(m, half3(1.0h, 0.0h, 0.0h), flat);
             half lum = dot(tex.rgb, half3(0.2126h, 0.7152h, 0.0722h));
             half3 col = tex.rgb;
             // the body texture paints a short-hair cap inside the G (undersuit) region: on the head that part takes the

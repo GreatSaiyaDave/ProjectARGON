@@ -60,6 +60,12 @@ namespace WRLDZ.UI
                 case Part.Body: BuildBodyEditor(); break;
                 case Part.Skin: BuildSkinEditor(); break;
                 case Part.FaceShape: BuildFaceShapeEditor(); break;
+                case Part.Eyes: BuildEyesEditor(); break;
+                case Part.Brows: BuildBrowsEditor(); break;
+                case Part.Nose: BuildNoseEditor(); break;
+                case Part.Mouth: BuildMouthEditor(); break;
+                case Part.Head: BuildMorphGroupEditor("head", "Head type", "Round, long, square or child-proportioned. They add up."); break;
+                case Part.Ears: BuildMorphGroupEditor("ears", "Ears", "Large, small or pointed."); break;
                 case Part.Hair: BuildHairEditor(); break;
                 case Part.HairColor: BuildHairColorEditor(); break;
                 case Part.Outfit: BuildOutfitEditor(); break;
@@ -256,14 +262,176 @@ namespace WRLDZ.UI
             FineTune(() => _draft.GetPaint("Body.0"), hex => { _draft.SetPaint("Body.0", hex); _draft.skinHex = hex; });
         }
 
-        // ------------------------------------------------------------------ FACE
+        // ------------------------------------------------------------------ FACE: eyes, brows, nose, mouth (FaceCatalog, drawn live by the face shader)
+
+        static Shader s_faceShader;
+        static Shader FaceShader() => s_faceShader ??= Shader.Find("WRLDZ/AvatarAnimeFace");
+
+        /// <summary>A card whose picture is the feature itself, drawn by WRLDZ/AvatarAnimeFace at the card's size.</summary>
+        void FeatureCard(float x, float y, float w, float h, string label, bool on, Action click, Action<Material> setup)
+        {
+            var f = _flow;
+            var b = CzKit.Card(f.Content, "Card", x, y, w, h, null, label, on, () => { FreeUiKit.PlaySelect(); click?.Invoke(); }, null, null, f.S(16));
+            var well = b.transform.Find("Well");
+            var sh = FaceShader();
+            if (well != null && sh != null)
+            {
+                var go = new GameObject("Feature", typeof(RectTransform), typeof(RawImage));
+                go.transform.SetParent(well, false);
+                CzKit.Fill((RectTransform)go.transform, 2f);
+                var ri = go.GetComponent<RawImage>();
+                var mat = new Material(sh);
+                var skin = Hex(_draft.GetPaint("Body.0"), new Color(0.98f, 0.77f, 0.58f));
+                if (string.IsNullOrEmpty(_draft.GetPaint("Body.0"))) skin = _draft.IsFemale ? new Color(0.98f, 0.75f, 0.59f) : new Color(0.98f, 0.77f, 0.58f);
+                mat.SetColor("_Skin", skin);
+                setup(mat);
+                ri.material = mat;
+                ri.color = Color.white;
+                ri.raycastTarget = false;
+                _cardMats.Add(mat);
+                // a skin backing so the feature reads on the dark well
+                var bg = CzKit.Img(well, "SkinBacking", UiFoundation.WhiteSprite(), skin);
+                CzKit.Fill(bg.rectTransform, 2f);
+                bg.transform.SetAsFirstSibling();
+            }
+            f.Reveal(b);
+        }
+
+        readonly List<Material> _cardMats = new();
+
+        void ReleaseCardMats()
+        {
+            foreach (var m in _cardMats) if (m != null) Destroy(m);
+            _cardMats.Clear();
+        }
+
+        void SetIris(Material m, string hex)
+        {
+            var iris = Hex(string.IsNullOrEmpty(hex) ? FaceCatalog.DefaultIris : hex, new Color(0.36f, 0.24f, 0.62f));
+            Color.RGBToHSV(iris, out var hh, out var ss, out var vv);
+            m.SetColor("_IrisColor", iris);
+            m.SetColor("_IrisLight", Color.HSVToRGB(hh, Mathf.Clamp01(ss * 0.75f), Mathf.Clamp01(vv * 1.25f + 0.12f)));
+            m.SetColor("_IrisDark", Color.HSVToRGB(hh, Mathf.Clamp01(ss * 1.1f), vv * 0.45f));
+        }
+
+        void BuildEyesEditor()
+        {
+            var f = _flow;
+            var cur = string.IsNullOrEmpty(_draft.eyeId) ? FaceCatalog.DefaultEye : _draft.eyeId;
+            f.Header("Eye shape", FaceCatalog.Eyes.Length.ToString());
+            var cw = (f.Width - Gap * (_cols - 1)) / _cols;
+            f.Grid(FaceCatalog.Eyes.Length, _cols, Mathf.Round(cw * 0.95f), Gap, (i, x, y, w, h) =>
+            {
+                var e = FaceCatalog.Eyes[i];
+                FeatureCard(x, y, w, h, e.Name, e.Id == cur, () => { _draft.eyeId = e.Id; Changed(true); }, m =>
+                {
+                    m.SetFloat("_Part", 0); m.SetFloat("_Mirror", 1);
+                    m.SetFloat("_EyeW", e.W); m.SetFloat("_EyeH", e.H); m.SetFloat("_Tilt", e.Tilt); m.SetFloat("_Round", e.Round);
+                    m.SetFloat("_TopBulge", e.TopBulge); m.SetFloat("_BotBulge", e.BotBulge); m.SetFloat("_Lash", e.Lash); m.SetFloat("_LashOuter", e.LashOuter);
+                    m.SetFloat("_LowerLash", e.LowerLash); m.SetFloat("_Iris", e.Iris); m.SetFloat("_IrisScaleY", e.IrisScaleY); m.SetFloat("_Pupil", e.Pupil);
+                    m.SetFloat("_Lid", e.RestLid);
+                    SetIris(m, _draft.irisHex);
+                });
+            });
+            f.Header("Iris colour");
+            var hexes = new List<string>();
+            foreach (var (_, hex) in FaceCatalog.IrisColours) hexes.Add(hex);
+            Gems(hexes, () => string.IsNullOrEmpty(_draft.irisHex) ? FaceCatalog.DefaultIris : _draft.irisHex, hex => _draft.irisHex = hex, false);
+            FineTune(() => string.IsNullOrEmpty(_draft.irisHex) ? FaceCatalog.DefaultIris : _draft.irisHex, hex => _draft.irisHex = hex);
+        }
+
+        void BuildBrowsEditor()
+        {
+            var f = _flow;
+            var cur = string.IsNullOrEmpty(_draft.browId) ? FaceCatalog.DefaultBrow : _draft.browId;
+            f.Header("Brow shape", FaceCatalog.Brows.Length.ToString());
+            var cw = (f.Width - Gap * (_cols - 1)) / _cols;
+            var browCol = Hex(string.IsNullOrEmpty(_draft.browHex) ? _draft.hairHex : _draft.browHex, new Color(0.16f, 0.1f, 0.08f));
+            f.Grid(FaceCatalog.Brows.Length, _cols, Mathf.Round(cw * 0.8f), Gap, (i, x, y, w, h) =>
+            {
+                var e = FaceCatalog.Brows[i];
+                FeatureCard(x, y, w, h, e.Name, e.Id == cur, () => { _draft.browId = e.Id; Changed(true); }, m =>
+                {
+                    m.SetFloat("_Part", 3); m.SetFloat("_Mirror", 1);
+                    m.SetFloat("_BrowThick", e.Thick); m.SetFloat("_BrowArch", e.Arch); m.SetFloat("_BrowTilt", e.Tilt);
+                    m.SetColor("_BrowColor", browCol);
+                });
+            });
+            f.Header("Brow colour", string.IsNullOrEmpty(_draft.browHex) ? "follows the hair" : _draft.browHex.ToUpperInvariant());
+            Gems(AvatarCatalog.HairSwatches, () => _draft.browHex, hex => _draft.browHex = hex, true);
+        }
+
+        void BuildNoseEditor()
+        {
+            var f = _flow;
+            var cur = string.IsNullOrEmpty(_draft.noseId) ? FaceCatalog.DefaultNose : _draft.noseId;
+            f.Header("Nose", FaceCatalog.Noses.Length.ToString());
+            var cw = (f.Width - Gap * (_cols - 1)) / _cols;
+            f.Grid(FaceCatalog.Noses.Length, _cols, Mathf.Round(cw * 0.95f), Gap, (i, x, y, w, h) =>
+            {
+                var e = FaceCatalog.Noses[i];
+                FeatureCard(x, y, w, h, e.Name, e.Id == cur, () => { _draft.noseId = e.Id; Changed(true); }, m =>
+                {
+                    m.SetFloat("_Part", 2); m.SetFloat("_NoseStyle", e.Style); m.SetFloat("_NoseSize", e.Size * 1.6f); m.SetFloat("_NoseShade", Mathf.Max(e.Shade, 0.001f));
+                });
+            });
+            f.Header("Nose shape");
+            foreach (var (key, label, group) in AvatarCatalog.BodyMorphs)
+            {
+                if (group != "face" || !key.StartsWith("Face_Nose")) continue;
+                var k = key;
+                Row(label, 0f, 100f, _draft.GetMorph(k) * 100f, v => $"{v:0}%", v => { _draft.SetMorph(k, v / 100f); Changed(false); }, true);
+            }
+        }
+
+        void BuildMouthEditor()
+        {
+            var f = _flow;
+            var cur = string.IsNullOrEmpty(_draft.mouthId) ? FaceCatalog.DefaultMouth : _draft.mouthId;
+            f.Header("Mouth", FaceCatalog.Mouths.Length.ToString());
+            var cw = (f.Width - Gap * (_cols - 1)) / _cols;
+            f.Grid(FaceCatalog.Mouths.Length, _cols, Mathf.Round(cw * 0.8f), Gap, (i, x, y, w, h) =>
+            {
+                var e = FaceCatalog.Mouths[i];
+                FeatureCard(x, y, w, h, e.Name, e.Id == cur, () => { _draft.mouthId = e.Id; Changed(true); }, m =>
+                {
+                    m.SetFloat("_Part", 1); m.SetFloat("_MouthW", e.W * 1.2f); m.SetFloat("_LipLine", e.LipLine * 1.3f); m.SetFloat("_LowerLip", e.LowerLip);
+                    m.SetFloat("_Corner", e.RestCorner); m.SetFloat("_Open", 0f);
+                });
+            });
+            f.Header("Mouth shape");
+            foreach (var (key, label, group) in AvatarCatalog.BodyMorphs)
+            {
+                if (group != "face" || !(key.StartsWith("Face_Mouth") || key.StartsWith("Face_Lips"))) continue;
+                var k = key;
+                Row(label, 0f, 100f, _draft.GetMorph(k) * 100f, v => $"{v:0}%", v => { _draft.SetMorph(k, v / 100f); Changed(false); }, true);
+            }
+            f.Hint("The mouth speaks and smiles on its own: it opens for words, lifts for a win, sets for an attack.");
+        }
+
+        /// <summary>Sliders for one morph group (head types, ears).</summary>
+        void BuildMorphGroupEditor(string group, string title, string hint)
+        {
+            var f = _flow;
+            f.Header(title);
+            var any = false;
+            foreach (var (key, label, g) in AvatarCatalog.BodyMorphs)
+            {
+                if (g != group) continue;
+                any = true;
+                var k = key;
+                Row(label, 0f, 100f, _draft.GetMorph(k) * 100f, v => $"{v:0}%", v => { _draft.SetMorph(k, v / 100f); Changed(false); }, true);
+            }
+            if (!any) f.Hint("These shapes are not installed on the bodies yet.");
+            else f.Hint(hint);
+        }
 
         void BuildFaceShapeEditor()
         {
             _flow.Header("Features");
             foreach (var (key, label, group) in AvatarCatalog.BodyMorphs)
             {
-                if (group != "face") continue;
+                if (group != "face" || key.StartsWith("Face_Nose") || key.StartsWith("Face_Mouth") || key.StartsWith("Face_Lips")) continue;
                 var k = key;
                 Row(label, 0f, 100f, _draft.GetMorph(k) * 100f, v => $"{v:0}%", v => { _draft.SetMorph(k, v / 100f); Changed(false); }, true);
             }
@@ -712,6 +880,20 @@ namespace WRLDZ.UI
                     return ("Skin tone", string.IsNullOrEmpty(hex) ? "The body's own painted tone." : hex.ToUpperInvariant(), "");
                 }
                 case Part.FaceShape: return ("Face shape", FaceShapeWord(), "");
+                case Part.Eyes:
+                {
+                    var e = FaceCatalog.Eye(string.IsNullOrEmpty(_draft.eyeId) ? FaceCatalog.DefaultEye : _draft.eyeId);
+                    return (e.Name + " eyes", e.Blurb, "IRIS " + (string.IsNullOrEmpty(_draft.irisHex) ? FaceCatalog.DefaultIris : _draft.irisHex).ToUpperInvariant());
+                }
+                case Part.Brows: { var e = FaceCatalog.Brow(string.IsNullOrEmpty(_draft.browId) ? FaceCatalog.DefaultBrow : _draft.browId); return (e.Name + " brows", e.Blurb, ""); }
+                case Part.Nose: { var e = FaceCatalog.Nose(string.IsNullOrEmpty(_draft.noseId) ? FaceCatalog.DefaultNose : _draft.noseId); return (e.Name + " nose", e.Blurb, ""); }
+                case Part.Mouth: { var e = FaceCatalog.Mouth(string.IsNullOrEmpty(_draft.mouthId) ? FaceCatalog.DefaultMouth : _draft.mouthId); return (e.Name + " mouth", e.Blurb, ""); }
+                case Part.Head: case Part.Ears:
+                {
+                    var grp = p == Part.Head ? "head" : "ears"; var on = new List<string>();
+                    foreach (var (key, label, group) in AvatarCatalog.BodyMorphs) if (group == grp && _draft.GetMorph(key) > 0.01f) on.Add(label + " " + Mathf.RoundToInt(_draft.GetMorph(key) * 100f) + "%");
+                    return (p == Part.Head ? "Head type" : "Ears", on.Count == 0 ? "As built." : string.Join(", ", on), "");
+                }
                 case Part.Hair:
                 {
                     var h = AvatarCatalog.FindHair(string.IsNullOrEmpty(_draft.hairStyleId) ? OverworldAvatar3d.DefaultHairId(_draft.IsFemale) : _draft.hairStyleId);

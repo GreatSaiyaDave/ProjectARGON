@@ -44,8 +44,11 @@ namespace WRLDZ.Data
             else if (n == "dox" || n.StartsWith("dox ")) a = Look(0, "none", 170, 0.55f, 1, ("Shirt.0", "#576EAF"), ("Shirt.1", "#E3B64C"), ("Bottoms.0", "#0B0B10"));
             else if (n.Contains("paradox")) a = Look(0, "none", 170, 0.55f, 1, ("Shirt.0", "#96473E"), ("Shirt.1", "#E3B64C"), ("Bottoms.0", "#0B0B10"));
             var canon = a != null;
-            a ??= Seeded(opponentName);
             var slots = CharacterLooks.Match(opponentName);
+            // a canon duelist with a signature slot set starts from the default body: Seeded() would hand a street
+            // duelist's random skin tone, build and hair palette to a name without a Look row above (Kaiba's AR body
+            // came out in the darkest skin preset)
+            a ??= slots != null ? AvatarAppearance.Default() : Seeded(opponentName);
             if (slots != null)
             {
                 // Signature slot sets are on the shared body. ApplyTo clears the one-mesh outfit

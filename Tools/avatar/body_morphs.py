@@ -72,12 +72,28 @@ def radial(P, a, b):
     q = a + t * ab; d = P - q; r = np.linalg.norm(d, axis=1)
     return d / np.maximum(r, 1e-9)[:, None], r
 
+WELD = None   # groups of coincident vertices (UV-seam splits), set per body by main()
+
+def weld_groups(P):
+    """Index groups of vertices that share a position (the UV seams split the body into islands with duplicated
+    vertices): a displacement must be identical across a group or every seam opens as a crack."""
+    keys = {}
+    for i, p in enumerate(np.round(P, 6)):
+        keys.setdefault(tuple(p), []).append(i)
+    return [np.array(g) for g in keys.values() if len(g) > 1]
+
+def weld(D):
+    if WELD:
+        for g in WELD: D[g] = D[g].mean(0)
+    return D
+
 def smooth(D, nb, iters):
+    D = weld(D.copy())
     for _ in range(iters):
         D2 = D.copy()
         for i, ns in enumerate(nb):
             if ns: D2[i] = 0.5 * D[i] + 0.5 * D[ns].mean(0)
-        D = D2
+        D = weld(D2)
     return D
 
 def adjacency(me):
@@ -145,6 +161,52 @@ def build_shape(P, W, bi, arm, spec, nb):
         D[:, 2] -= 0.5 * spec['chin_fwd'] * wh * low
     return smooth(D, nb, 10)
 
+# head types (2026-10-18, owner: "several … head types, ears"): per-axis scaling of the skull about its centre, weighted by
+# the Head bone (so the neck blends), plus a jaw factor; x = width, y = depth, z = height. 1 = unchanged.
+HEADS = {
+    'Head_Round': dict(x=1.07, y=1.03, z=0.96, jaw=1.06, cranium=1.03),
+    'Head_Long': dict(x=0.95, y=0.99, z=1.07, jaw=0.97, cranium=1.0),
+    'Head_Square': dict(x=1.05, y=1.0, z=0.99, jaw=1.14, cranium=0.99),
+    'Head_Child': dict(x=1.06, y=1.02, z=1.02, jaw=0.88, cranium=1.10),
+}
+# ears: Gaussian moves about the ear landmarks (|x| ≈ 0.09 m, +3..+6 cm above the head bone, see AVATAR_3D_INTEGRATION.md)
+EARS = {
+    'Ear_Large': dict(at='ear', r=0.022, move=('out', 0.012), up=0.006),
+    'Ear_Small': dict(at='ear', r=0.020, move=('out', -0.007), up=-0.003),
+    'Ear_Pointed': dict(at='ear_top', r=0.014, move=('out', 0.004), up=0.016),
+}
+
+def head_shape(P, W, bi, arm, spec, lm, nb):
+    """Per-axis scaling about the skull centre: width / depth / height factors, a jaw band and a cranium band."""
+    wh = W[:, bi[B + 'Head']]
+    head, top = seg(arm, 'HeadTop_End')
+    base, _ = seg(arm, 'Head')
+    centre = np.array([0.0, lm['head_y'], base[2] + 0.075])   # mid-skull: above the eyes, below the crown
+    n = len(P); D = np.zeros((n, 3))
+    rel = P - centre
+    D[:, 0] += rel[:, 0] * (spec.get('x', 1.0) - 1.0) * wh
+    D[:, 1] += rel[:, 1] * (spec.get('y', 1.0) - 1.0) * wh
+    D[:, 2] += rel[:, 2] * (spec.get('z', 1.0) - 1.0) * wh
+    # the jaw band (below the mouth level) widens / narrows on its own; the cranium band (above the brow) likewise
+    jaw = np.clip((lm['mouth'][2] + 0.01 - P[:, 2]) / 0.03, 0, 1)
+    cran = np.clip((P[:, 2] - (lm['eye_z'] + 0.03)) / 0.03, 0, 1)
+    D[:, 0] += rel[:, 0] * (spec.get('jaw', 1.0) - 1.0) * wh * jaw
+    D[:, 0] += rel[:, 0] * (spec.get('cranium', 1.0) - 1.0) * wh * cran
+    D[:, 2] += np.clip(rel[:, 2], 0, None) * (spec.get('cranium', 1.0) - 1.0) * wh * cran
+    return smooth(D, nb, 4)
+
+def ear_shape(P, W, bi, arm, spec, lm, nb):
+    wh = W[:, bi[B + 'Head']]
+    base, _ = seg(arm, 'Head')
+    z = base[2] + (0.062 if spec['at'] == 'ear_top' else 0.045)
+    n = len(P); D = np.zeros((n, 3))
+    for sgn in (1, -1):
+        c = np.array([sgn * 0.09, lm['head_y'], z])
+        g = np.exp(-0.5 * (np.linalg.norm(P - c, axis=1) / spec['r']) ** 2) * wh * (np.abs(P[:, 0]) > 0.06)
+        D[:, 0] += spec['move'][1] * sgn * g
+        D[:, 2] += spec.get('up', 0.0) * g
+    return smooth(D, nb, 2)
+
 def landmarks(P, W, bi, arm):
     head, _ = seg(arm, 'Head'); wh = W[:, bi[B + 'Head']] > 0.5
     hy = P[wh, 1].mean()
@@ -203,11 +265,11 @@ def render_sheet(body, arm, out, sex, parts=(), eye_z=1.6):
     sc.render.resolution_x = 300; sc.render.resolution_y = 560
     cd = bpy.data.cameras.new('c'); cam = bpy.data.objects.new('c', cd); sc.collection.objects.link(cam); sc.camera = cam
     cd.type = 'ORTHO'; cd.ortho_scale = 1.9
-    names = ['Basis'] + list(BUILDS) + list(FACES)
+    names = ['Basis'] + list(BUILDS) + list(FACES) + list(HEADS) + list(EARS)
     for nm in names:
         for kb in body.data.shape_keys.key_blocks: kb.value = 1.0 if kb.name == nm else 0.0
         for tag, (px, py, rz, oz) in {'front': (0, -6, 0, 0.9), 'side': (6, 0, math.pi / 2, 0.9), 'face': (0, -6, 0, eye_z - 0.035)}.items():
-            if nm.startswith('Face') and tag != 'face': continue
+            if (nm.startswith('Face') or nm.startswith('Head') or nm.startswith('Ear')) and tag != 'face': continue
             cam.location = (px, py, oz); cam.rotation_euler = (math.pi / 2, 0, rz)
             cd.ortho_scale = 0.28 if tag == 'face' else 1.9
             sc.render.filepath = f'{out}/morph_{sex}_{nm}_{tag}.png'; bpy.ops.render.render(write_still=True)
@@ -224,6 +286,9 @@ def main():
         W, names, bi = weights(body, arm)
         P = np.array([body.matrix_world @ v.co for v in body.data.vertices])
         nb = adjacency(body.data)
+        global WELD
+        WELD = weld_groups(P)
+        log(sex, 'weld groups', len(WELD))
         lm = landmarks(P, W, bi, arm)
         log(sex, 'landmarks', {k: (np.round(v, 3).tolist() if isinstance(v, np.ndarray) else round(float(v), 3)) for k, v in lm.items()})
         stats = {}
@@ -232,6 +297,12 @@ def main():
             stats[name] = dict(max_mm=round(float(np.linalg.norm(D, axis=1).max()) * 1000, 1), mean_mm=round(float(np.linalg.norm(D, axis=1).mean()) * 1000, 1))
         for name, spec in FACES.items():
             D = face_shape(P, W, bi, arm, spec, lm, nb); add_shape(body, name, D)
+            stats[name] = dict(max_mm=round(float(np.linalg.norm(D, axis=1).max()) * 1000, 1))
+        for name, spec in HEADS.items():
+            D = head_shape(P, W, bi, arm, spec, lm, nb); add_shape(body, name, D)
+            stats[name] = dict(max_mm=round(float(np.linalg.norm(D, axis=1).max()) * 1000, 1))
+        for name, spec in EARS.items():
+            D = ear_shape(P, W, bi, arm, spec, lm, nb); add_shape(body, name, D)
             stats[name] = dict(max_mm=round(float(np.linalg.norm(D, axis=1).max()) * 1000, 1))
         log(sex, stats)
         report[sex] = dict(landmarks={k: (np.round(v, 4).tolist() if isinstance(v, np.ndarray) else float(v)) for k, v in lm.items()}, shapes=stats,

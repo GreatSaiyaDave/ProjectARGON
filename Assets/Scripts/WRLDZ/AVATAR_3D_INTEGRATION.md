@@ -700,3 +700,54 @@ This will be important during duels. This is not a simple phone game. It is a ph
 - **Still 2D in duels:** the DK rows' `characterId` (the 10-15 DA sprite sets) makes `ArOpponentDuelist` seat Yugi /
   Kaiba / Joey … as flat drawings; Bonz, PaniK, Para / Dox, Shadi are 3D bodies. Flipping the cast to 3D is the owner's
   call (it reverts the 10-15 decision).
+
+## 2026-10-18 addendum — the living face (eyes, brows, nose, mouth, head types, ears)
+
+Owner: "Create a complete character customization system with several eyes, noses, mouths, head types, ears, skin
+tone, and make all the eyes and mouths fully animated."
+
+- **What the bases have:** no eye, mouth or nose geometry, no jaw / eye bones, and no albedo in the project — the
+  skin is the region-mask paint (R skin, G undersuit, B other): the old "painted eyes" were the eye whites and lashes
+  painted as undersuit / other regions. So the face is drawn, not modelled.
+- **Shader `WRLDZ/AvatarAnimeFace`** (`Presentation/Avatar/AvatarAnimeFace.shader`): one quad per feature, signed-
+  distance anime shapes (crisp at any zoom, no sprite frames): `_Part` 0 eye (lid curves, lashes thick to the outer
+  corner, three-tone iris, pupil, two highlights, upper lid 0..1, happy ^ curve, squint), 1 mouth (corners, open 0..1,
+  wide ↔ 'o' shape, lip line, teeth band, tongue, lower-lip shade), 2 nose (tick / line / point / button), 3 brow
+  (stroke with arch, tilt, lift), 4 skin cover. `_Alpha` = presence.
+- **`AvatarFaceRig`** (`Presentation/Avatar/AvatarFaceRig.cs`): six quads under the Head bone (eyes ±3.1 cm at +3.3 cm,
+  yawed 11° to the cheek; brows +5.7 cm; nose +0.4 cm; mouth −1.6 cm; face depth 0.1235 m / 0.1085 f). Per frame:
+  blink schedule (2.2–6.5 s, double blinks), gaze (saccades to a wandering glance or `LookTarget` / `LookAt`),
+  expressions eased between `FaceCatalog.ExpressionFor` moods, `PlayBeat(beat)` from `ArOpponentDuelist.Play`
+  (attack → angry, hit → pain, good/taunt → smug, victory → laugh, defeat → sad …), `Say(seconds)` syllable rhythm with
+  vowel shapes or a live `SpeechLevel`. `Blink = false` for card renders. Edit-mode: `Tick(dt)` from `EvaluatePreview`.
+- **`FaceCatalog`** (`Data/FaceCatalog.cs`): 7 eye shapes, 10 iris colours (+ fine tune), 5 mouths, 5 noses, 5 brows,
+  the expression table and the beat → mood table. `AvatarAppearance`: `eyeId, irisHex, browId, browHex, noseId,
+  mouthId`. Head types `Head_Round / Long / Square / Child` and ears `Ear_Large / Small / Pointed` are blend shapes
+  (`Tools/avatar/body_morphs.py` HEADS / EARS, installed 10-18; `AvatarCatalog.BodyMorphs` groups `head`, `ears`;
+  the runtime also pushes `Head_*` / `Ear_*` onto garments; hair / hats / eyewear import readable so MorphFollow carries
+  the shapes onto them without a bake).
+- **Customizer FACE:** EYES (live-drawn cards: a RawImage with the face shader), BROWS, NOSE, MOUTH, HEAD, EARS,
+  FEATURES (jaw / chin / cheeks / brow), SKIN (moved here from BODY). BODY keeps base / stature / builds.
+- **Flattening the base's painted features** (`AvatarRecolor` `_FaceFlatMap` + `_FaceFlatColor`): where the mask is
+  set the texel becomes the mean skin at the skin region's reference luminance (paint lands flat) AND the region mask
+  becomes pure skin (so the undersuit / other eye regions vanish). `Tools/avatar/face_flat_mask.py` builds
+  `Textures/face_flat_<sex>_mask.png` from the MESH, not from islands: over the whole head band from the chin to the
+  hairline (no depth box - brow tails and lash tips sit at the temples), every triangle holding a non-skin region-map
+  texel strictly inside it is a feature whole; the short-hair cap counts as hair only as its solid blob (an opening of
+  ~5 mm), thin painted strands on the face are features. The weight is 1 within 14 mm of a feature vertex along the
+  surface, eased over 10 mm more, and rasterised through the UV triangles with a 1.5 px apron in true pixels - seam-free
+  however the atlas is cut. The tool logs "head non-skin texels still showing" as its own leak check (hundreds = the
+  painted strands at the back of the head, fine). `OverworldAvatar3d.ApplyFace(look)` turns it on for the rig and for
+  canon decals alike; decals (`faceId`) still win over the rig while set.
+- **Gotchas:** thin dark / white strokes on the flattened face were UV-seam slivers from the rasteriser (its apron was
+  measured in edge-function units, so long edges got none) - not features, cap paint, outline, hide map, shadow, normal
+  map, filtering, rig quads, skin weights or mesh slivers (each was filmed off before the apron was found); verify by
+  filming (`AvatarCustomizerUI.Ensure().OpenCustomizer()` works in any scene, hide the hair renderers, camera at the
+  Head bone), never by the mask image or the counters. A per-vertex sample misses strokes thinner than a triangle (test
+  triangles, not vertices, and never their bounding boxes); the dilation must be in 3D (UV dilation stops at island
+  borders); a `delayCall` does not fire in an idle Editor - use `EditorApplication.update` one-shots for imports;
+  `Material.GetTexture("_BaseMap")` is null on the bases (there is no albedo: do not look for one). `AiDuelistLooks.For`:
+  a canon name without a `Look(...)` row must start from `AvatarAppearance.Default()`, not `Seeded()` (Kaiba's AR body
+  wore the darkest skin preset).
+- **Open:** canon duelists keep their flat face decals (not animated yet) — the next step is one FaceCatalog preset per
+  canon character sourced from the series frames, so Kaiba's glare and Joey's grin animate like the player's.

@@ -194,6 +194,8 @@ namespace WRLDZ.EditorTools
                 if (blob != null) blob.gameObject.SetActive(false);
             }
             else _av.Apply(look);
+            var face = _av.GetComponent<AvatarFaceRig>();
+            if (face != null) face.Blink = false;   // never film a half-closed eye
         }
 
         static bool BoneY(Animator a, HumanBodyBones b, out Vector3 p)

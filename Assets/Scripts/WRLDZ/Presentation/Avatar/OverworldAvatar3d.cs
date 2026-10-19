@@ -368,14 +368,14 @@ namespace WRLDZ.Presentation
                 for (var i = 0; i < m.blendShapeCount; i++)
                 {
                     var name = m.GetBlendShapeName(i);
-                    if (!name.StartsWith("Build_") && !name.StartsWith("Face_")) continue;
+                    if (!name.StartsWith("Build_") && !name.StartsWith("Face_") && !name.StartsWith("Head_") && !name.StartsWith("Ear_")) continue;
                     r.SetBlendShapeWeight(i, Mathf.Clamp01(look.GetMorph(name)) * 100f);
                 }
             }
 
             ApplyHairColour(look);
             ApplyPaints(look);
-            ApplyFace(look.silhouette ? "" : look.faceId ?? "");
+            ApplyFace(look);
             ApplyAdornments(look);   // accessories on bones, tattoos as skinned skin patches (OverworldAvatar3d.Adornments.cs)
             FollowBodyShapes();      // sculpted pieces without shape keys follow the body's active shapes (OverworldAvatar3d.MorphFollow.cs)
             // terrain-aware standing (AvatarFootGrounding): the soles are measured from the meshes now worn, then every
@@ -463,7 +463,7 @@ namespace WRLDZ.Presentation
             if (_silhouetteMat.HasProperty("_RimColor")) _silhouetteMat.SetColor("_RimColor", new Color(edge.r, edge.g, edge.b, 0.85f));
             foreach (var r in GetComponentsInChildren<Renderer>(true))
             {
-                if (r.gameObject.name.StartsWith("FaceDecal") || r.gameObject.name == "ShadowBlob") continue;
+                if (r.gameObject.name.StartsWith("Face") || r.gameObject.name == "ShadowBlob") continue;
                 var mats = r.sharedMaterials;
                 for (var i = 0; i < mats.Length; i++) mats[i] = _silhouetteMat;
                 r.sharedMaterials = mats;
@@ -478,15 +478,37 @@ namespace WRLDZ.Presentation
         GameObject _faceDecal;
         const string FaceRes = "WRLDZ/Avatar3D/Faces/";
 
-        void ApplyFace(string id)
+        /// <summary>The living face is on (AvatarFaceRig draws the eyes / brows / nose / mouth): the legacy blink card stays off.</summary>
+        public bool FaceRigOn { get; private set; }
+
+        /// <summary>
+        /// A canon duelist's face decal when the look names one (<see cref="AvatarAppearance.faceId"/>), otherwise the
+        /// living face (<see cref="AvatarFaceRig"/>: the look's eye / brow / nose / mouth choices, blinking, gaze,
+        /// expressions, speech). Either way the skin texture's painted features are flattened under it.
+        /// </summary>
+        void ApplyFace(AvatarAppearance look)
         {
+            var id = look.silhouette ? "" : look.faceId ?? "";
+            var anim = GetComponent<Animator>();
+            var head = anim != null && anim.isHuman ? anim.GetBoneTransform(HumanBodyBones.Head) : null;
+            var rigWanted = string.IsNullOrEmpty(id) && !look.silhouette && !_fullCharacter && head != null;
+            var rig = GetComponent<AvatarFaceRig>();
+            if (rigWanted)
+            {
+                rig = AvatarFaceRig.Ensure(gameObject, head, _sex == "female");
+                var skin = ColorUtility.TryParseHtmlString(SkinHexFor(look), out var sc) ? sc : new Color(0.98f, 0.77f, 0.58f);
+                var hair = ColorUtility.TryParseHtmlString(look.hairHex, out var hc) ? hc : new Color(0.16f, 0.16f, 0.21f);
+                rig.Apply(look, skin, hair);
+                rig.SetPresence(1f);
+            }
+            else if (rig != null) rig.SetPresence(0f);
+            FaceRigOn = rigWanted;
+            SetFaceFlatten(rigWanted || !string.IsNullOrEmpty(id));
             if (id == _faceId) return;
             _faceId = id;
             if (_faceDecal != null) { foreach (var fr in _faceDecal.GetComponentsInChildren<Renderer>(true)) KillMaterials(fr); Kill(_faceDecal); _faceDecal = null; }
             if (string.IsNullOrEmpty(id)) return;
             var tex = Resources.Load<Texture2D>(FaceRes + id);
-            var anim = GetComponent<Animator>();
-            var head = anim != null && anim.isHuman ? anim.GetBoneTransform(HumanBodyBones.Head) : null;
             if (tex == null || head == null) return;
             _faceDecal = new GameObject("FaceDecal_" + id);
             _faceDecal.transform.SetParent(head, false);
@@ -496,6 +518,23 @@ namespace WRLDZ.Presentation
             FaceQuad(id, tex, head, 0.036f, fwd, new Vector2(0.132f, 0.070f));
             var mouth = Resources.Load<Texture2D>(FaceRes + id + "_mouth");
             if (mouth != null) FaceQuad(id + "_mouth", mouth, head, -0.014f, fwd - 0.003f, new Vector2(0.084f, 0.042f));
+        }
+
+        Color _faceFlatSkin = new(0.98f, 0.77f, 0.58f);
+
+        /// <summary>
+        /// The painted eyes / brows / nose / mouth of the skin texture become plain skin where Textures/face_flat_&lt;sex&gt;_mask
+        /// marks them (Tools/avatar/face_flat_mask.py), so a drawn face replaces them instead of sitting on top.
+        /// </summary>
+        void SetFaceFlatten(bool on)
+        {
+            if (_smr == null) return;
+            foreach (var m in _smr.sharedMaterials)
+            {
+                if (m == null || !m.HasProperty("_FaceFlatColor")) continue;
+                var c = _faceFlatSkin; c.a = on && m.GetTexture("_FaceFlatMap") != null ? 1f : 0f;
+                m.SetColor("_FaceFlatColor", c);
+            }
         }
 
         /// <summary>One decal quad on the head-bone frame; parented under <paramref name="parent"/> (default: the face decal holder).</summary>
@@ -1232,6 +1271,21 @@ namespace WRLDZ.Presentation
         /// <summary>Renderers whose manifest texture loaded: skin / hair tints skip these (see <see cref="Apply"/>).</summary>
         readonly HashSet<Renderer> _textured = new();
 
+        /// <summary>"skin": [r, g, b] (sRGB 0..1) from face_flat_&lt;sex&gt;.json; the fallback when the file or field is missing.</summary>
+        static Color ParseFaceFlatSkin(string json, Color fallback)
+        {
+            var i = json.IndexOf("\"skin\"", System.StringComparison.Ordinal);
+            if (i < 0) return fallback;
+            var a = json.IndexOf('[', i); var b = json.IndexOf(']', a + 1);
+            if (a < 0 || b < 0) return fallback;
+            var parts = json.Substring(a + 1, b - a - 1).Split(',');
+            if (parts.Length < 3) return fallback;
+            var ok = float.TryParse(parts[0].Trim(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var r)
+                   & float.TryParse(parts[1].Trim(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var g)
+                   & float.TryParse(parts[2].Trim(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var bl);
+            return ok ? new Color(r, g, bl, 1f) : fallback;
+        }
+
         static Shader UnlitShader() =>
             Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Texture") ?? Shader.Find("Sprites/Default");
 
@@ -1270,6 +1324,15 @@ namespace WRLDZ.Presentation
                         _paintKey[r] = paint.key;
                     }
                     var pm = mats != null && i < mats.Count ? mats[i] : null;
+                    if (r.name.StartsWith("ArgonBody") && m.HasProperty("_FaceFlatMap"))
+                    {
+                        // the face-flatten mask + the skin colour the tool measured for it (off until ApplyFace turns it on)
+                        var flat = Resources.Load<Texture2D>("WRLDZ/Avatar3D/Textures/face_flat_" + sex + "_mask");
+                        if (flat != null) m.SetTexture("_FaceFlatMap", flat);
+                        var fj = Resources.Load<TextAsset>("WRLDZ/Avatar3D/Textures/face_flat_" + sex);
+                        if (fj != null) _faceFlatSkin = ParseFaceFlatSkin(fj.text, _faceFlatSkin);
+                        var c = _faceFlatSkin; c.a = 0f; m.SetColor("_FaceFlatColor", c);
+                    }
                     var isEye = r.name.StartsWith("ArgonPart_Eye") && !r.name.Contains("brow") && !r.name.Contains("lash");
                     var albedo = false;
                     if (pm != null && !string.IsNullOrEmpty(pm.texture))
@@ -1483,9 +1546,11 @@ namespace WRLDZ.Presentation
         void ApplyAlpha(float alpha)
         {
             _appliedAlpha = alpha;
+            GetComponent<AvatarFaceRig>()?.SetAlpha(alpha);   // the living face fades through its own property
             foreach (var r in GetComponentsInChildren<Renderer>(true))
             {
                 if (_shadowBlob != null && r.transform == _shadowBlob) continue;   // handled below, stays blended
+                if (r.gameObject.name.StartsWith("Face") && !r.gameObject.name.StartsWith("FaceDecal")) continue;   // AvatarFaceRig's quads
                 // the avatar's own material instances are edited in place (r.materials cloned them, orphaning the tracked
                 // originals: a leak per presence change); anything else keeps the per-renderer clone
                 foreach (var m in AllOwned(r) ? r.sharedMaterials : r.materials)
@@ -1566,6 +1631,8 @@ namespace WRLDZ.Presentation
             // no Player loop here: plant the feet the way LateUpdate would (edit-mode renders, the wardrobe thumbnails)
             var grounding = GetComponent<AvatarFootGrounding>();
             if (grounding != null) grounding.Ground(dt);
+            var face = GetComponent<AvatarFaceRig>();
+            if (face != null) face.Tick(dt);
             ProceduralTick(dt);
         }
 
@@ -1657,7 +1724,7 @@ namespace WRLDZ.Presentation
 
         void TickBlink(float dt)
         {
-            var allowed = ProceduralBlink && !_fullCharacter && !_silhouette && _lastLook != null && _headBone != null && !_renderersOff;
+            var allowed = ProceduralBlink && !FaceRigOn && !_fullCharacter && !_silhouette && _lastLook != null && _headBone != null && !_renderersOff;
             if (!allowed)
             {
                 if (_blinkRenderer != null) _blinkRenderer.enabled = false;

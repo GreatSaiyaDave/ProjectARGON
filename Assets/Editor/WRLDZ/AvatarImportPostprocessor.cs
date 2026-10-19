@@ -58,7 +58,8 @@ namespace WRLDZ.EditorTools
             var stem = Path.GetFileNameWithoutExtension(assetPath);
             // shoes and one-piece outfits stay readable: AvatarFootGrounding measures each sole (heel / toe contacts) from
             // the mesh worn on the foot, so the body stands on the shoe's sole, not the bare foot's (2026-10-18)
-            if ((assetPath.Contains("/Clothes/") && stem.StartsWith("argon_shoes_")) || assetPath.Contains("/Outfits/"))
+            if ((assetPath.Contains("/Clothes/") && (stem.StartsWith("argon_shoes_") || stem.StartsWith("argon_hat_") || stem.StartsWith("argon_face_")))
+                || assetPath.Contains("/Outfits/") || assetPath.Contains("/Hair/"))
             {
                 var mi = (ModelImporter)assetImporter;
                 if (!mi.isReadable) mi.isReadable = true;
@@ -80,7 +81,7 @@ namespace WRLDZ.EditorTools
             if (!assetPath.StartsWith(AvatarRoot)) return;
             var imp = (TextureImporter)assetImporter;
             var name = Path.GetFileNameWithoutExtension(assetPath);
-            if (name.StartsWith("hide_") || name.EndsWith("_hide"))
+            if (name.StartsWith("hide_") || name.EndsWith("_hide") || name.StartsWith("face_flat_"))
             {
                 imp.sRGBTexture = false;
                 imp.isReadable = true;

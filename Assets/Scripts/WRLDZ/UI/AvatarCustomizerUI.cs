@@ -36,7 +36,7 @@ namespace WRLDZ.UI
         ClothingWardrobe _wardrobe;
         Action _onSaved;
 
-        enum Part { Look, Hat, Facial, Shirt, Hands, Bottoms, Shoes, Accent, Title, Skin, HairColor, OutfitTint, Disk, Aura, Body, Hair, Paint, Outfit, Neck, FaceShape, Accessories, Tattoos }
+        enum Part { Look, Hat, Facial, Shirt, Hands, Bottoms, Shoes, Accent, Title, Skin, HairColor, OutfitTint, Disk, Aura, Body, Hair, Paint, Outfit, Neck, FaceShape, Accessories, Tattoos, Eyes, Brows, Nose, Mouth, Head, Ears }
         enum Cat { Body, Face, Hair, Outfits, Wardrobe, Colours, Adorn, Duelist }
 
         Cat _cat = Cat.Body;
@@ -46,8 +46,8 @@ namespace WRLDZ.UI
 
         static readonly (Cat cat, string name, string caption, Part[] tabs)[] Cats =
         {
-            (Cat.Body, "Body", "Base · height · build · skin", new[] { Part.Body, Part.Skin }),
-            (Cat.Face, "Face", "Nose · mouth · jaw · brow", new[] { Part.FaceShape }),
+            (Cat.Body, "Body", "Base · height · build", new[] { Part.Body }),
+            (Cat.Face, "Face", "Eyes · brows · nose · mouth · head · skin", new[] { Part.Eyes, Part.Brows, Part.Nose, Part.Mouth, Part.Head, Part.Ears, Part.FaceShape, Part.Skin }),
             (Cat.Hair, "Hair", "Anime sculpts · styles · dye", new[] { Part.Hair, Part.HairColor }),
             (Cat.Outfits, "Outfits", "The cast's signature looks", new[] { Part.Outfit }),
             (Cat.Wardrobe, "Wardrobe", "Hats · tops · bottoms · shoes", new[] { Part.Hat, Part.Facial, Part.Neck, Part.Shirt, Part.Hands, Part.Bottoms, Part.Shoes }),
@@ -59,6 +59,7 @@ namespace WRLDZ.UI
         static string TabLabel(Part p) => p switch
         {
             Part.Body => "Build", Part.Skin => "Skin", Part.FaceShape => "Features", Part.Hair => "Style", Part.HairColor => "Dye",
+            Part.Eyes => "Eyes", Part.Brows => "Brows", Part.Nose => "Nose", Part.Mouth => "Mouth", Part.Head => "Head", Part.Ears => "Ears",
             Part.Outfit => "Signature looks", Part.Hat => "Hats", Part.Facial => "Eyewear", Part.Neck => "Neck", Part.Shirt => "Tops",
             Part.Hands => "Gloves", Part.Bottoms => "Bottoms", Part.Shoes => "Shoes", Part.Paint => "Clothes", Part.Accessories => "Accessories",
             Part.Tattoos => "Tattoos", Part.Title => "Title", Part.Accent => "Spirit", Part.Disk => "Duel Disk", Part.Aura => "Aura",
@@ -68,7 +69,7 @@ namespace WRLDZ.UI
         /// <summary>Where the camera looks while a tab is open.</summary>
         static AvatarPreview3d.Focus FocusFor(Part p) => p switch
         {
-            Part.FaceShape or Part.Hat or Part.Facial => AvatarPreview3d.Focus.Face,
+            Part.FaceShape or Part.Hat or Part.Facial or Part.Eyes or Part.Brows or Part.Nose or Part.Mouth or Part.Head or Part.Ears or Part.Skin => AvatarPreview3d.Focus.Face,
             Part.Hair or Part.HairColor or Part.Neck or Part.Tattoos or Part.Accessories => AvatarPreview3d.Focus.Bust,
             Part.Bottoms => AvatarPreview3d.Focus.Legs,
             Part.Shoes => AvatarPreview3d.Focus.Feet,
@@ -587,6 +588,7 @@ namespace WRLDZ.UI
         void RebuildRight()
         {
             if (_rightHost == null || _draft == null) return;
+            ReleaseCardMats();
             CzKit.Clear(_rightHost);
             var w = _rRight.width;
             var y = 0f;
@@ -634,6 +636,7 @@ namespace WRLDZ.UI
         {
             if (_optionHost == null) { RebuildRight(); return; }
             var keep = _optionScroll != null ? _optionScroll.verticalNormalizedPosition : 1f;
+            ReleaseCardMats();
             CzKit.Clear(_optionHost);
             _flow = new CzFlow(_optionHost, _rRight.width - 6f, _k) { NoReveal = true };
             BuildEditor();
