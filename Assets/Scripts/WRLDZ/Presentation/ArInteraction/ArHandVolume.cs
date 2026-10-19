@@ -153,6 +153,19 @@ namespace WRLDZ.Presentation.ArInteraction
             return hv;
         }
 
+#if UNITY_EDITOR
+        /// <summary>Editor trace of <see cref="PlaceVolume"/> at an <see cref="AnchorOverride"/>. Off by default: the line
+        /// ran twice per frame (Update + LateUpdate) and on 2026-10-19 grew Logs/Editor.log to 10 GB until the Editor
+        /// crashed. Even when on, a line is written only when the anchor moved more than a few mm / degrees since the
+        /// last one.</summary>
+        public static bool LogPlacement = false;
+        const float LogPlacementPosEpsilon = 0.005f;   // 5 mm
+        const float LogPlacementFwdEpsilonDeg = 2f;
+        bool _loggedPlacement;
+        Vector3 _loggedPlacementPos;
+        Vector3 _loggedPlacementFwd;
+#endif
+
         void Update() => PlaceVolume();
 
         /// <summary>Torso / anchor pose → this transform. True when a pose was available.</summary>
@@ -162,8 +175,20 @@ namespace WRLDZ.Presentation.ArInteraction
             {
                 transform.SetPositionAndRotation(AnchorOverride.position, AnchorOverride.rotation);
 #if UNITY_EDITOR
-                if (IsOpponent)
-                    Debug.Log($"[OppHandVolume] PlaceVolume at AnchorOverride: pos={AnchorOverride.position} fwd={AnchorOverride.forward}");
+                if (IsOpponent && LogPlacement)
+                {
+                    var anchorPos = AnchorOverride.position;
+                    var anchorFwd = AnchorOverride.forward;
+                    if (!_loggedPlacement
+                        || (anchorPos - _loggedPlacementPos).sqrMagnitude > LogPlacementPosEpsilon * LogPlacementPosEpsilon
+                        || Vector3.Angle(anchorFwd, _loggedPlacementFwd) > LogPlacementFwdEpsilonDeg)
+                    {
+                        _loggedPlacement = true;
+                        _loggedPlacementPos = anchorPos;
+                        _loggedPlacementFwd = anchorFwd;
+                        Debug.Log($"[OppHandVolume] PlaceVolume at AnchorOverride: pos={anchorPos} fwd={anchorFwd}");
+                    }
+                }
 #endif
                 return true;
             }
