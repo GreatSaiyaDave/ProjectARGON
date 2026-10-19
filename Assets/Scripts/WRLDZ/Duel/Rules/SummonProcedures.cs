@@ -84,6 +84,12 @@ namespace WRLDZ.Duel.Rules
                 r.Reason = "This card cannot be Normal Summoned/Set.";
                 return r;
             }
+            // RdsRedoBattle batch: "Cannot be Normal Summoned (but can be Normal Set)" — only the Set is legal.
+            if (!asSet && PsctGrammar.BlocksNormalSummonButNotSet(OfficialCardAuthority.OfficialText(card)))
+            {
+                r.Reason = "This card cannot be Normal Summoned (it can be Normal Set).";
+                return r;
+            }
             var summonGate = PsctGrammar.SummonGateNamed(OfficialCardAuthority.OfficialText(card));
             if (!string.IsNullOrEmpty(summonGate) && !FieldSpellEffects.ControlsFaceUpNamed(who, summonGate))
             {

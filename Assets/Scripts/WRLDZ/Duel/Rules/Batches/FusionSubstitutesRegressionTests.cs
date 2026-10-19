@@ -56,8 +56,9 @@ namespace WRLDZ.Duel.Rules
                     $"implemented={implemented} FC={prog?.FullyCompiled} n={prog?.ClauseList.Count}");
             }
 
-            // The three Hex-Sealed cards carry the substitute ability but their second sentence is not compiled yet, so
-            // they must stay fail-closed (not FullyCompiled) and must not be usable as substitutes.
+            // The three Hex-Sealed cards carry the substitute ability; their second sentence (Tribute the materials on the
+            // field, Special Summon the Attribute's Fusion Monster) compiles since the DeckSwarmsAndFusionMaterials batch, so
+            // they are Implemented with both clauses.
             foreach (var (id, label) in new[]
                      {
                          (HexSealedLight, "The Light - Hex-Sealed Fusion"), (HexSealedDark, "The Dark - Hex-Sealed Fusion"),
@@ -66,9 +67,12 @@ namespace WRLDZ.Duel.Rules
             {
                 var def = db.Get(id);
                 var prog = def != null ? CardTextEffectCompiler.Compile(def) : null;
-                Check($"{label} still fails closed (its tribute sentence is not compiled)",
-                    prog != null && !prog.FullyCompiled &&
-                    CardEffectStatus.Classify(def) != CardEffectStatusKind.Implemented,
+                Check($"{label}: the substitute clause and its Tribute-the-materials ignition both compile",
+                    prog != null && prog.FullyCompiled &&
+                    CardEffectStatus.Classify(def) == CardEffectStatusKind.Implemented &&
+                    prog.ClauseList.Exists(c => c != null && c.Action == EffectActionKind.FusionSubstitute) &&
+                    prog.ClauseList.Exists(c => c != null &&
+                        c.Action == EffectActionKind.TributeMaterialsSpecialSummonCorrespondingAttributeFusion),
                     $"FC={prog?.FullyCompiled} classify={CardEffectStatus.Classify(def)}");
             }
         }
@@ -150,7 +154,7 @@ namespace WRLDZ.Duel.Rules
                     !e.TryActivateSpellTrap(p, poly, fromHand: true));
             }
 
-            // 5. A substitute carrier whose own text is not fully compiled (Hex-Sealed) does not count.
+            // 5. A substitute carrier whose whole text is compiled (Hex-Sealed, since DeckSwarmsAndFusionMaterials) counts.
             {
                 var e = Fresh(db, pDeck, aDeck);
                 var p = e.Player;
@@ -162,8 +166,8 @@ namespace WRLDZ.Duel.Rules
                 PutInHand(e, p, FlameManipulator);
                 PutInHand(e, p, HexSealedLight);
                 var poly = PutInHand(e, p, Polymerization);
-                Check("an uncompiled substitute carrier (Hex-Sealed) cannot substitute",
-                    !e.CanActivateSpellTrap(p, poly, fromHand: true));
+                Check("a fully compiled substitute carrier (Hex-Sealed) substitutes in Polymerization",
+                    e.CanActivateSpellTrap(p, poly, fromHand: true));
             }
 
             // 6. Regression: the printed named materials still fuse with no substitute involved.

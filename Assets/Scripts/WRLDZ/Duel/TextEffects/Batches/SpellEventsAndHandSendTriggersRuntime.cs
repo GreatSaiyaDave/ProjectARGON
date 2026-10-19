@@ -74,20 +74,54 @@ namespace WRLDZ.Duel.TextEffects
         /// TextEffectRuntime.NotifySpellResolved: <paramref name="activator"/>'s activation of a Spell Card resolved. Each
         /// face-up Curse of Darkness that applied when it was activated deals its damage to that player.
         /// </summary>
-        public static void OnSpellResolved(DuelEngine engine, DuelistState activator, CardInstance spell)
+        public static void OnSpellResolved(DuelEngine engine, DuelistState activator, CardInstance spell) =>
+            OnCardActivationResolved(engine, activator, spell, trap: false);
+
+        /// <summary>
+        /// A Spell Card's (<paramref name="trap"/> false: TextEffectRuntime.NotifySpellResolved) or a Trap Card's
+        /// (<paramref name="trap"/> true: RdsRedoSpellTrapRuntime, as its Chain Link finishes resolving) activation by
+        /// <paramref name="activator"/> resolved — ygopro aux.chainreg on EVENT_CHAINING + a CONTINUOUS EVENT_CHAIN_SOLVED
+        /// effect, no Chain Link. Each face-up, applying card of either player that applied when <paramref name="card"/>
+        /// was activated (<see cref="WasApplyingWhenActivated"/>), other than <paramref name="card"/> itself, applies its
+        /// clause: Curse of Darkness (the Spell's activator takes the damage), Spell Absorption (RdsRedoSpellTrap batch:
+        /// its controller gains the LP), Chain Burst (RdsRedoSpellTrap batch: the Trap's activator takes the damage).
+        /// </summary>
+        public static void OnCardActivationResolved(DuelEngine engine, DuelistState activator, CardInstance card, bool trap)
         {
             if (engine == null || activator == null || engine.GameOver) return;
+            var actions = trap
+                ? new[] { EffectActionKind.InflictDamageToTrapActivatorAfterResolve }
+                : new[]
+                {
+                    EffectActionKind.InflictDamageToSpellActivatorAfterResolve,
+                    EffectActionKind.GainLpWhenSpellCardActivationResolves
+                };
             foreach (var side in new[] { engine.Player, engine.Opponent })
             {
                 if (side == null) continue;
                 foreach (var st in side.SpellTrapsOnField().ToList())
                 {
-                    var c = LiveClause(engine, side, st, EffectActionKind.InflictDamageToSpellActivatorAfterResolve);
-                    if (c == null || ReferenceEquals(st, spell) || !WasApplyingWhenActivated(engine, st)) continue;
-                    var dmg = c.Amount > 0 ? c.Amount : 1000;
-                    engine.Log($"{st.Name}: {activator.Name} activated {spell?.Name ?? "a Spell Card"} — {dmg} damage.");
-                    engine.ApplyEffectDamage(activator, dmg, st.Name, st);
-                    if (engine.GameOver) return;
+                    if (ReferenceEquals(st, card)) continue;
+                    foreach (var action in actions)
+                    {
+                        var c = LiveClause(engine, side, st, action);
+                        if (c == null || !WasApplyingWhenActivated(engine, st)) continue;
+                        var what = card?.Name ?? (trap ? "a Trap Card" : "a Spell Card");
+                        if (action == EffectActionKind.GainLpWhenSpellCardActivationResolves)
+                        {
+                            var gain = c.Amount > 0 ? c.Amount : 500;
+                            engine.Log($"{st.Name}: {activator.Name} activated {what} — {side.Name} gains {gain} LP.");
+                            TextEffectRuntime.ApplyLifePointGain(engine, side, gain, st.Name);
+                        }
+                        else
+                        {
+                            var dmg = c.Amount > 0 ? c.Amount : 1000;
+                            engine.Log($"{st.Name}: {activator.Name} activated {what} — {dmg} damage.");
+                            engine.ApplyEffectDamage(activator, dmg, st.Name, st);
+                        }
+
+                        if (engine.GameOver) return;
+                    }
                 }
             }
         }

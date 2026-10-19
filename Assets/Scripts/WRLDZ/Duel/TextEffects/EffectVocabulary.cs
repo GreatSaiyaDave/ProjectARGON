@@ -101,10 +101,9 @@ namespace WRLDZ.Duel.TextEffects
             action == EffectActionKind.BoostHarpieLadySistersAtkAndLockTraps ||
             action == EffectActionKind.NegateFlipMonsterEffectsThisDestroysByBattle ||
             action == EffectActionKind.EquippedLosesAtkAndCannotAttackChangePos ||
-            action == EffectActionKind.DrawOrDiscardRandomFromOpponentHand ||
             action == EffectActionKind.DestroyAllOppDefenseWhenOppAttackBecomesDefense ||
-            action == EffectActionKind.TargetGainsAtkEqualToAnotherTargetDuringDamageStep ||
-            action == EffectActionKind.CoinCallDestroyBattledMonsterOnCorrect ||
+            // RdsRedoBattle batch: TargetGainsAtkEqualToAnotherTargetDuringDamageStep (Covering Fire) and
+            // CoinCallDestroyBattledMonsterOnCorrect (Sasuke Samurai #4) have runtimes again (RdsRedoBattleRuntime).
             // LocksRedirectsAndActivity batch: reserved members of the 46269f39d draft with no (or only a partial) reader —
             // the player-wide activation lock is read only by the Spell/Trap hub, the ACTIVITY_CHAIN cost and the
             // return-to-hand redirect by nothing (Chaos Emperor Dragon - Envoy of the End stays fail-closed, ENGINE_MAP §4).
@@ -176,7 +175,9 @@ namespace WRLDZ.Duel.TextEffects
             if (c.BanishFromGyCount > 0)
                 return EffectCostKind.BanishFromGy;
             // SpellCounterSpenders batch: "Remove N Spell Counters on your side of the field".
-            if (c.RequiresRemoveSpellCounters > 0 || c.RequiresSpellCounters > 0 || c.RemoveSpellCountersOnYourSide > 0)
+            // DestroyWatchersAndSpellShields batch: Blast Magician removes ceil(target ATK / N) of its own Spell Counters.
+            if (c.RequiresRemoveSpellCounters > 0 || c.RequiresSpellCounters > 0 || c.RemoveSpellCountersOnYourSide > 0 ||
+                c.SpellCountersPerTargetAtk > 0)
                 return EffectCostKind.RemoveCounters;
             return EffectCostKind.None;
         }
@@ -949,6 +950,11 @@ namespace WRLDZ.Duel.TextEffects
                 // 2nd-Standby self-destruction.
                 EffectActionKind.OpponentCannotActivateSpellCardsUntilEndOfNextTurn or
                     EffectActionKind.NormalMonstersUnaffectedByOpponentSpells => EffectResolutionKind.Protection,
+                // ChoiceAmongEffects batch: Penalty Game!'s two locks; the "Apply 1 of these effects" chooser only selects a
+                // bullet (no resolution kind of its own: each bullet it applies maps by its own action).
+                EffectActionKind.OpponentCannotDrawDuringNextDrawPhase or
+                    EffectActionKind.OpponentCannotActivateSpellTrapCardsThisTurn => EffectResolutionKind.Protection,
+                EffectActionKind.ApplyOneOfTheseEffectsAtResolution => EffectResolutionKind.None,
                 EffectActionKind.DestroyThisOnYourNthStandbyAfterActivation => EffectResolutionKind.Destroy,
                 // LpLocksDelayedBurnAndGyNegation batch: Weapon Change (ATK/DEF switch), Dora of Fate (delayed burn).
                 EffectActionKind.SwitchTargetCurrentAtkDefUntilOpponentsNextEndPhase => EffectResolutionKind.ModifyStats,
@@ -965,6 +971,49 @@ namespace WRLDZ.Duel.TextEffects
                 EffectActionKind.BattleDestroyedMonstersShuffleIntoDeckInstead => EffectResolutionKind.ReturnToDeck,
                 EffectActionKind.BanishThisInsteadOfLeavingField => EffectResolutionKind.Banish,
                 EffectActionKind.AddGySpellToHandAtEndPhaseIfSummonedThisTurn => EffectResolutionKind.Search,
+                // RdsRedoBattle batch: Sasuke Samurai #4 / Mystic Swordsman LV6 destroy their battle partner; Covering Fire
+                // boosts; Cross Counter doubles the attacker's damage and destroys it; Rare Metalmorph negates once.
+                EffectActionKind.CoinCallDestroyBattledMonsterOnCorrect or
+                    EffectActionKind.DestroyAttackedFaceDownDefenseReturnToOwnerDeckTopOrGy or
+                    EffectActionKind.DoubleBattleDamageToAttackerThenDestroyAttacker => EffectResolutionKind.Destroy,
+                EffectActionKind.TargetGainsAtkEqualToAnotherTargetDuringDamageStep => EffectResolutionKind.ModifyStats,
+                // The Continuous Trap linked to its target like an Equip (Spellbinding Circle; Rare Metalmorph, whose link
+                // carries the +500 ATK through FieldSpellEffects.ApplyEquipStats).
+                EffectActionKind.LinkThisToTarget => EffectResolutionKind.Equip,
+                EffectActionKind.NegateOnceSpellEffectTargetingBoundMonster => EffectResolutionKind.NegateActivation,
+                // RdsRedoSpellTrap batch: Chain Burst, Spell Absorption (card-activation-resolved listeners), Forced Ceasefire /
+                // Triangle Ecstasy Spark (Trap Card activation lock for the turn).
+                EffectActionKind.InflictDamageToTrapActivatorAfterResolve => EffectResolutionKind.Damage,
+                EffectActionKind.GainLpWhenSpellCardActivationResolves => EffectResolutionKind.GainLp,
+                EffectActionKind.TrapCardActivationsLockedThisTurn => EffectResolutionKind.Protection,
+                // RdsRedoSpellTrap batch: Necklace of Command (revived from the v208 retirement) and Flint's GY triggers.
+                EffectActionKind.DrawOrDiscardRandomFromOpponentHand => EffectResolutionKind.Draw,
+                EffectActionKind.ReEquipThisFromGyWhenEquippedMonsterDestroyed => EffectResolutionKind.Equip,
+                // RdsRedoSpellTrap batch: Triangle Ecstasy Spark's "ATK becomes 2700 until the end of this turn".
+                EffectActionKind.NamedFaceUpMonstersAtkBecomesUntilEndOfTurn => EffectResolutionKind.ModifyStats,
+                // SimpleTriggersAndSpells batch: Abare Ushioni, Good Goblin Housekeeping, The Big March of Animals.
+                EffectActionKind.CallCoinRightBurnOpponentWrongBurnSelf => EffectResolutionKind.Randomize,
+                EffectActionKind.DrawNamedInGyPlusAmountThenHandCardToDeckBottom => EffectResolutionKind.Draw,
+                EffectActionKind.FaceUpRaceYouControlGainAtkPerFaceUpRaceUntilEndOfTurn => EffectResolutionKind.ModifyStats,
+                // BattleRiders batch: B.E.S. Big Core, Catnipped Kitty, Spiral Spear Strike (BattleRidersRuntime).
+                EffectActionKind.RemoveCounterFromThisOrDestroyAtEndOfDamageStep => EffectResolutionKind.Destroy,
+                EffectActionKind.TargetDefBecomesZeroUntilEndOfTurn => EffectResolutionKind.ModifyStats,
+                EffectActionKind.GrantPiercingToYourNamedMonsters => EffectResolutionKind.DirectAttack, // piercing
+                // DestroyWatchersAndSpellShields batch: Firebird / Maji-Gire Panda, Mokey Mokey Smackdown, Pole Position.
+                EffectActionKind.GainSelfAtkEachTimeRaceMonsterDestroyed or
+                    EffectActionKind.NamedMonstersAtkBecomeUntilEndOfTurnWhenRaceMonsterDestroyed => EffectResolutionKind.ModifyStats,
+                EffectActionKind.HighestAtkMonstersUnaffectedBySpells => EffectResolutionKind.Protection,
+                EffectActionKind.DestroyHighestAtkMonstersWhenThisLeavesField => EffectResolutionKind.Destroy,
+                // RevivalEquipsAndGearfried batch: Gearfried the Swordmaster's equip trigger, Brain Jacker's FLIP equip.
+                EffectActionKind.DestroyOppMonsterEachTimeThisIsEquipped => EffectResolutionKind.Destroy,
+                EffectActionKind.EquipThisFromFieldToTargetTakeControl => EffectResolutionKind.TakeControl,
+                // DeckSwarmsAndFusionMaterials batch: Hyena, Rescue Cat, Sacred Phoenix of Nephthys, Centrifugal Field,
+                // the Hex-Sealed Fusions.
+                EffectActionKind.SpecialSummonAnyNumberOfOwnNameFromDeck or
+                    EffectActionKind.SpecialSummonRaceFromDeckEffectsNegatedDestroyAtEndPhase or
+                    EffectActionKind.SpecialSummonThisFromGyNextStandbyAfterEffectDestroyThenDestroyAllSpellTraps or
+                    EffectActionKind.OwnerSpecialSummonsListedMaterialWhenFusionDestroyedByEffect or
+                    EffectActionKind.TributeMaterialsSpecialSummonCorrespondingAttributeFusion => EffectResolutionKind.SpecialSummon,
                 EffectActionKind.None => EffectResolutionKind.None,
                 _ => EffectResolutionKind.UniqueException
             };

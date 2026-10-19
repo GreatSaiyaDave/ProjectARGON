@@ -247,6 +247,10 @@ namespace WRLDZ.Duel.Rules
                    // Chosen One (NegationsAndGySummons v159): needs a monster and 2 other Spell/Traps in the hand
                    // (NegationsAndGySummonsRegressionTests drive it).
                    c.ActivationCondition == NegationsAndGySummonsRuntime.ChosenOneHand ||
+                   // ChoiceAmongEffects batch: Fuh-Rin-Ka-Zan (four Attributes face-up), Penalty Game! (exactly 4 cards in the
+                   // opponent's hand); ChoiceAmongEffectsRegressionTests drive them.
+                   c.ActivationCondition == ChoiceAmongEffectsRuntime.FaceUpAttributesOnField ||
+                   c.ActivationCondition == ChoiceAmongEffectsRuntime.OpponentHandExactly ||
                    // DcrSpellTrapUtility batch: Frozen Soul's LP gap, Dragged Down into the Grave's two hands, Spell
                    // Reproduction's 2 Spells in hand, Ray of Hope's 2 LIGHT monsters in your GY
                    // (DcrSpellTrapUtilityRegressionTests drive them). LvChain batch: The Graveyard in the Fourth
@@ -297,6 +301,9 @@ namespace WRLDZ.Duel.Rules
                    // SpellCounterSpenders batch: Spell Counters on your side (Mega Ton Magical Cannon, Miracle Restoring,
                    // Anti-Spell); SpellCounterSpendersRegressionTests drive them on a provisioned board.
                    c.RemoveSpellCountersOnYourSide > 0 ||
+                   // DestroyWatchersAndSpellShields batch: Blast Magician's per-ATK counter cost
+                   // (DestroyWatchersAndSpellShieldsRegressionTests drive it with counters placed).
+                   c.SpellCountersPerTargetAtk > 0 ||
                    c.RequiresLpCostMultiple > 0 ||
                    (c.RequiresDiscardCost &&
                     c.Action != EffectActionKind.AddFromGyToHand) ||
@@ -311,6 +318,10 @@ namespace WRLDZ.Duel.Rules
                    // Machine Duplication (DeckReturnsAndMassEffects batch, v204): needs the same-named card
                    // in the Deck, which the corpus cannot seed (TargetCount=1 is then the activation gate).
                    (c.Action == EffectActionKind.SpecialSummonFromDeck && c.SummonSameNameAsTarget) ||
+                   // DeckSwarmsAndFusionMaterials batch: the Hex-Sealed Fusions need a Fusion Monster of their Attribute in
+                   // the Extra Deck and its other named materials on the field (DeckSwarmsAndFusionMaterialsRegressionTests
+                   // drive them).
+                   c.ActivationCondition == DeckSwarmsAndFusionMaterialsRuntime.AttributeFusionMaterialsOnField ||
                    // TokensDeclarationsAndPicks batch: Stray Lambs / Scapegoat need a turn with no Summon by the activator (the
                    // shared corpus engine summons as it goes) and Wild Nature's Release a face-up Beast / Beast-Warrior with
                    // DEF; TokensDeclarationsAndPicksRegressionTests drive them.
@@ -573,6 +584,23 @@ namespace WRLDZ.Duel.Rules
                     }
                 }
 
+                // RdsRedoSpellTrap batch: Triangle Ecstasy Spark — a face-up "Harpie Lady Sisters" (its named condition) on the
+                // field.
+                if (c.ActivationCondition == ChaosBanishSummonsRuntime.NamedFaceUpOnEitherField &&
+                    c.Zone != EffectZoneFilter.ControllerBanishedCards && !string.IsNullOrEmpty(c.ConditionName))
+                {
+                    var names = c.ConditionName.Split('|');
+                    var present = p.MonstersOnField().Concat(opp.MonstersOnField())
+                        .Any(m => m != null && m.FaceUp && names.Any(m.IsNamed));
+                    var zone = Array.FindIndex(p.MonsterZones, z => z.IsEmpty);
+                    var namedDef = present || zone < 0
+                        ? null
+                        : engine.Database?.GetAllCards().FirstOrDefault(d =>
+                            d != null && string.Equals(d.name, names[0], StringComparison.Ordinal));
+                    if (namedDef != null)
+                        PlaceMonster(engine, p, namedDef.id, zone, BattlePosition.Attack, true);
+                }
+
                 // BattleAndPositionRecords batch: Curse of Anubis — a face-up Attack Position Effect Monster (Witch of the
                 // Black Forest).
                 if (c.ActivationCondition == BattleAndPositionRecordsRuntime.FaceUpAttackEffectMonsterOnField &&
@@ -824,6 +852,15 @@ namespace WRLDZ.Duel.Rules
 
                 if (c.Action == EffectActionKind.TakeControlOfOpponentUnionAndEquipToThis && opp.MonsterZones[3].IsEmpty)
                     PlaceMonster(engine, opp, 84814897, 3, BattlePosition.Attack, true);
+
+                // RdsRedoBattle batch: Rare Metalmorph links to a face-up monster of its Type on the field (a Machine).
+                if (c.Action == EffectActionKind.LinkThisToTarget && !string.IsNullOrEmpty(c.RaceFilter) &&
+                    p.MonsterZones[3].IsEmpty)
+                {
+                    var typed = FirstMonsterId(engine, d => d != null && d.IsMonster && !d.IsExtraDeck &&
+                                                            ClassicEraTemplates.RaceMatches(d.race, c.RaceFilter));
+                    if (typed > 0) PlaceMonster(engine, p, typed, 3, BattlePosition.Attack, true);
+                }
             }
         }
 
@@ -1194,6 +1231,18 @@ namespace WRLDZ.Duel.Rules
                         return false;
                     }
                     break;
+                }
+
+                // SimpleTriggersAndSpells batch: a coin call made as the effect resolves (Abare Ushioni) is answered.
+                if (pending != null && pending.AwaitingCoinCall)
+                {
+                    if (!engine.TrySelectCoinCall(true))
+                    {
+                        fail.Add((def.name ?? $"#{def.id}") + " " + tag + " coin call");
+                        return false;
+                    }
+
+                    continue;
                 }
 
                 var pick = pending?.LegalTargets?.FirstOrDefault();

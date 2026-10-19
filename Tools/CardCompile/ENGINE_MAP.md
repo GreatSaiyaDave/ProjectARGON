@@ -525,6 +525,39 @@ The notes of earlier groups are in `~/.cache/wrldz-card-compile/*/patches/<Group
 - Normal Monster spells (`NormalMonsterSpellsRuntime`): `TryActivationCondition`, `FilterTargets`, `EquipLimitAllows` (Level/Normal equip limit, also Fusion/Ritual Weapon), `OnEndPhase`, `Refresh`, `OnActivationSeated` (cost paid after the target is seated), `EquipAtkOf`.
 - Deck Summons (`DeckSummonsAndSarcophagiRuntime`): `TryActivationCondition`, `FilterTributeCostCandidates`, `NoteBattle` (must run BEFORE any queued battle banish in `ApplyBattleDestructions`).
 
+### RdsRedoBattle shared hooks (v210 group; `TextEffects/Batches/RdsRedoBattleRuntime.cs`)
+- Negate-only answer to a targeting Spell (EVENT_CHAIN_SOLVING + `Duel.NegateEffect`, the Spell is NOT destroyed):
+  `TryNegateSpellTargetingLink` in `DuelEngine.ResolveChainStack` right after Freed's `TryNegateTargetingLink`
+  (negate AND destroy). Markers: `NegateOpponentSpellEffectsThatTargetThis` (Silent Swordsman LV3, its opponent's
+  Spells, on itself) and `NegateOnceSpellEffectTargetingBoundMonster` (Rare Metalmorph: any Spell, its linked monster,
+  once per stay on the field).
+- Opponent-only immunity: `EffectClause.UnaffectedOnlyByOpponentEffects` on `UnaffectedByCardEffects`
+  (`ContinuousProtections.IsUnaffectedBy` → `SourceIsOpponents`; Silent Swordsman LV5, Silent Magician LV8).
+- Start of the Damage Step (EVENT_BATTLE_START) with a player choice: `TryBeginBattleStartCoinCalls` (Sasuke Samurai #4,
+  attacking or attacked, `AwaitingCoinCall`) resumes through `DuelEngine.ContinueStartOfDamageStep` (the face-down flip
+  onward); Mystic Swordsman LV6's "you can place it on top of the Deck" is an `AskOptionalCardPick` from
+  `TryStartOfDamageStepDestroy`, and `DuelEngine.DestroyMonster(returnToOwnerDeckTopInsteadOfGy)` now really puts the card
+  on top of its owner's Deck (no GY record; Banisher of the Light does not apply).
+- Set Normal Traps of the Damage Calculation window: `DamageStepClauseLegal` (in `DamageStepClausesLegal`) and
+  `TryResolveDamageStepClauses` (in `ResolveDamageStepClauses`, after the card is face-up; a target pick holds the
+  Damage Step through `AskCardPick` and its Finish calls `ContinueAfterResponseActivation`). Damage-calculation-only
+  ATK: `CardInstance.DamageStepAtkBonus`. Doubled battle damage for one battle: `DoublesBattleDamageTo` (inside
+  `BattleDamageEventsRuntime.DoubleBattleDamage`, a flag: never x4). End of the Damage Step: `OnEndOfDamageStep`
+  (also on the two "battler left before damage calculation" exits).
+- `PsctGrammar.BlocksNormalSummonButNotSet`: "Cannot be Normal Summoned (but can be Normal Set)" forbids only the
+  Summon (`SummonProcedures.CheckNormalOrTribute`); before, the Set was refused too (Mystic Swordsman LV4 / LV6).
+- `LinkThisToTarget` maps to `EffectResolutionKind.Equip`; a linked Continuous Trap's `EquipAtkBonus` reaches its
+  monster through `FieldSpellEffects.ApplyEquipStats`.
+
+### Other v210 group hooks (`TextEffects/Batches/<Group>Runtime.cs`)
+- RdsRedoSpellTrap: `NoteLinkResolving` / `FlushResolvedTrap` / `NotifyTrapFinished` (Chain Burst, Spell Absorption), `NoteActivationStart`, `NoteHostDestroyed` + `AfterHostDestroyed` (Necklace of Command, Flint), `SetNamedAtkUntilEndOfTurn` (Triangle Ecstasy Spark), `LockTrapCardActivationsThisTurn` (Forced Ceasefire; shared card-activation lock with Penalty Game!).
+- SimpleTriggersAndSpells: `ResolveCoinCallBurn` + `TryFinishCoinCall` / `TryCancelPick` (Abare Ushioni; keyed to its own pending), `ResolveGoblinHousekeeping`, `ResolveRaceMarch`, Tribute-cost hooks `NoteTributeCost` / `FilterTributeCostCandidates` / `BeginSeatTributeCost` (Granmarg).
+- BattleRiders: `RemoveCounterOrDestroy`, `DealerTriggerApplies`, `FilterTargets` / `FilterLegacyTargets`, `SetDefZeroUntilEndOfTurn`, `Refresh`, `ExtraAttacksPerEquip` (counts only `TextEffectRuntime.IsRealEquipCard`).
+- DestroyWatchersAndSpellShields: `NoteMonsterDestroyed` + `FlushDestroyedEvents` (Firebird, Maji-Gire Panda), `ApplyBoard` / `ShieldsFromSpell` / `AdjustShieldedGroup` (Pole Position Spell shield via `ContinuousProtections.IsUnaffectedBy`), `PayCountersForTarget` (Blast Magician).
+- RevivalEquipsAndGearfried: `FilterTargets`, `NoteEquipped` (every equip path ends here; Gearfried), `EquipThisFromFieldToTarget` (Brain Jacker), `SkipsPhaseClause`.
+- DeckSwarmsAndFusionMaterials: `StartDeckSwarm`, `RefreshNegatedSummons` (Rescue Cat; `CardInstance.SummonedWithEffectsNegated`), `ResolveNegatedPair`, `NoteEnteredGy`, `NoteHeldSend` / `TakeHeldTriggers` / `OnSentToGy` (held GY triggers), Hex-Sealed Fusion link.
+- ChoiceAmongEffects: `ResolveChoice` / `CanJudge` / `IsApplyingChosen` (Fuh-Rin-Ka-Zan), `RegisterNoDrawNextDrawPhase` / `CannotDrawNow`, `RegisterSpellTrapCardLock` / `ActivationLocked` (Penalty Game!).
+
 ### Zone caps, the End Phase jump and the opponent's Standby window (ZoneCapsAndPhaseWindows, v178 group ported in v209)
 All in `TextEffects/Batches/ZoneCapsAndPhaseWindowsRuntime.cs`.
 - **Usable-zone caps** (ygopro EFFECT_MAX_MZONE / EFFECT_MAX_SZONE): `ZoneCapsRuntime`. `DuelEngine.FirstEmpty(zones)` returns -1
@@ -652,9 +685,12 @@ All in `TextEffects/Batches/ZoneCapsAndPhaseWindowsRuntime.cs`.
 | Copy another card's effect | No path resolves another card's compiled program as the activator's own link | Double Spell |
 | Simultaneous hidden pick + reveal (UI) | extends "Revealed-hand state" | Ante |
 | Per-player activity record + player-wide activation lock | An attack activity record exists (v178, `LocksRedirectsAndActivityRuntime`), but no "activated a card or effect this turn" record (Lua ACTIVITY_CHAIN, checked in a cost): activations have no single choke point (Spell/Trap cards, monster ignitions, Quick Effects, hand traps and ~20 inline trigger sites that make no Chain Link), and the "cannot activate cards or effects" lock is read only by the Spell/Trap hub (`ContinuousNegationRuntime.ActivationLocked`), not by the trigger, FLIP and End Phase sites; also no Nomi "Must be Special Summoned … by banishing 1 LIGHT and 1 DARK" template | Chaos Emperor Dragon - Envoy of the End |
+| "Position changed" response window (EVENT_CHANGE_POS) | No window opens after a monster changes battle position (manual change, effect change, mid-Chain change answered once the Chain is over); `NotifyPositionChanged` only fires the changed monster's own triggers | Tragedy |
 | Negation of effects activated in the GY / targeting a GY card (EVENT_CHAIN_SOLVING) | One hook at every resolution site: chain links, `ApplyClause`, legacy S/T paths, and the inline GY triggers batch runtimes resolve themselves (Manticore of Darkness, Revival Jam, Twin-Headed Behemoth, Dark Necrofear, DiscardTriggers, GyHandAndSummonEventTriggers, SimpleTriggersAndSwarm, BattleDestroyedTriggers, AskCardPick Finish lambdas), none of which records the activation location | The End of Anubis |
 
 Open residuals (fail-soft, not fixed):
+- v210 audit residuals: Rescue Cat's `SummonedWithEffectsNegated` stays set until the next RefreshBoard after the card leaves the field (no GY trigger path reads `IsNegated` today; a later one would misfire); Spell Absorption vs a Spell link ended by effect negation (`TryNegateSpellTargetingLink`) is unverified against ocgcore (no source locally); Triangle Ecstasy Spark (until-EOT delta) and Mokey Mokey Smackdown (per-refresh `SelfSetAtk` aura) are two ATK-set primitives, kept apart on purpose; `DuelEngine.DestroyMonster` calls `ToonsRuntime.NotifyFaceUpCardDestroyed` twice in the deck-top branch (older code, harmless for face-down LV6).
+- Tribute-count choice gap (UI): Fusilier Dragon and Behemoth the King of All Animals need a 0/1-Tribute Normal Summon choice DuelUI lacks (`TcgRules.TributesRequired` only); opencode's card-id hack 4d0c17c4b (`TributesRequired` for 51632798 + `DuelEngine` ~1489 writing the shared CardDef) should go when that choice is built. Serial Spell needs "Copy another card's effect" (gap above).
 - v209 audit residuals: Neko Mane King misses a hand/Deck discard by an opponent effect (e.g. The Law of the Normal): `MonsterEffects.DiscardFromHandByInstance` / `SendFromHandToGraveByInstance` and excavation mills never call `GyEntryStamps.Entered` (stamping them would start every "sent to the GY from anywhere" trigger, so audit first). Human-Wave Tactics is recorded after a battle-flipped FLIP effect resolves (a FLIP that removes the battle-destroyed low Normal first is not counted). Weapon Change uses lasting deltas, not SET_ATTACK_FINAL. Wall of Revealing Light is placement-only, so it is not activatable in non-chain response windows. Dust Barrier: Gemini Normals are not shielded. Hand/Deck picks of Sarcophagus / Ninjitsu / Human-Wave show one instance per name. Cockadoodledoo and Fusion Parasite are Stubs (shared sentences) and stay out of decks.
 - v178 LocksRedirectsAndActivity residuals: Dark Magician of Chaos's End Phase GY Spell effect resolves inline (no Chain window, like every End Phase trigger but Life Absorbing Machine); its summon flag is lost when a face-down Special Summoned copy is flipped face-up the same turn (ocgcore keeps it); its queued battle banish resolves even if Dark Magician of Chaos was negated on the field in between; the Goblin of Greed lock does not touch maintenance discards (Spiritual Energy Settle Machine) or effect discards; Banisher of the Light and Grave Protector both applying: Banisher wins (ocgcore order is registration order); Burst Stream's BEWD attack oath is bound in `ApplyClause` like Soul Exchange's, so an activation negated before resolution does not bind it; Man-Eater Bug's registered FLIP cannot target itself.
 - v177 audit residuals: Exhausting Spell's `RemoveAllSpellCounters` arm also clears Balloon Lizard's counters (shared `CardInstance.Counters`; fix = skip non-`SpellCounterSpendersRuntime.IsSpellCounterHolder` cards and rewrite the Exhausting Spell test in `InteractionRegressionTests`); `DamageStepRulesRuntime.BattleAttacker` and `EndOfDamageStepRidersRuntime.NoteBattle` record the same battle state twice (cleanup only).

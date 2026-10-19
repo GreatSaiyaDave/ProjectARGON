@@ -31,6 +31,8 @@ namespace WRLDZ.Duel.TextEffects
             card.GyEntryStamp++;
             // SimpleTriggersAndSwarm batch: a "When this card is sent to the GY" (from anywhere) trigger is queued here.
             SimpleTriggersAndSwarmRuntime.NoteEnteredGy(engine, card);
+            // DeckSwarmsAndFusionMaterials batch: Sacred Phoenix of Nephthys records the phase of this trip into the GY.
+            DeckSwarmsAndFusionMaterialsRuntime.NoteEnteredGy(engine, card);
         }
 
         /// <summary>

@@ -187,6 +187,13 @@ namespace WRLDZ.Duel.TextEffects
             new ConditionalWeakTable<DuelEngine, HoldState>();
 
         /// <summary>
+        /// DestroyWatchersAndSpellShields batch: true while a <see cref="Simultaneously"/> event is still happening (its
+        /// destroyed-monster watchers wait for the whole event: one "monster(s) destroyed" event).
+        /// </summary>
+        public static bool Holding(DuelEngine engine) =>
+            engine != null && s_hold.TryGetValue(engine, out var hold) && hold.Depth > 0;
+
+        /// <summary>
         /// Called first by <see cref="MonsterEffects.OnSentFromFieldToGy"/>: while a simultaneous event is happening
         /// (<see cref="Simultaneously"/>: a mass destruction, both battling monsters destroyed, a Summon's Tributes
         /// or materials), the "sent to the GY" triggers of the cards it sends wait and activate after it. Returns

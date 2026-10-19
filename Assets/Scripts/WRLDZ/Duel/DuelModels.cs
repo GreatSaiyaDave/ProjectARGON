@@ -176,6 +176,13 @@ namespace WRLDZ.Duel
         /// </summary>
         public bool AtkZeroUntilEndOfBattlePhase;
 
+        /// <summary>
+        /// BattleRiders batch (Catnipped Kitty): DEF is 0 until the end of this turn (ygopro EFFECT_SET_DEFENSE_FINAL 0,
+        /// RESET_PHASE+PHASE_END and RESETS_STANDARD). Cleared at the end of the turn (DuelEngine.ClearUntilEndOfTurnStatMods),
+        /// when the monster is turned face-down and on a new field presence.
+        /// </summary>
+        public bool DefZeroUntilEndOfTurn;
+
         /// <summary>For continuous Spells with turn counters (only when official script sets this).</summary>
         public int ContinuousTurnsRemaining;
 
@@ -462,7 +469,15 @@ namespace WRLDZ.Duel
         /// included, are negated (the stored flag, <see cref="NegatedByTurnFamily"/>, <see cref="ActivationUnresolvedOnChain"/>).
         /// </summary>
         public bool IsEffectNegatedAsCard => _isNegated || NegatedByTurnFamily || ActivationUnresolvedOnChain ||
-                                            EffectsNegatedAfterBattle || GorgonEyeNegated;
+                                            EffectsNegatedAfterBattle || GorgonEyeNegated || SummonedWithEffectsNegated;
+
+        /// <summary>
+        /// DeckSwarmsAndFusionMaterials batch (Rescue Cat): Special Summoned "but their effects are negated" (Lua EFFECT_DISABLE
+        /// + EFFECT_DISABLE_EFFECT, RESETS_STANDARD) — <see cref="IsNegated"/> reads true for as long as this copy stays face-up
+        /// on the field in that same presence; <see cref="TextEffects.DeckSwarmsAndFusionMaterialsRuntime.RefreshNegatedSummons"/>
+        /// clears it on each board refresh once it left the field or was turned face-down.
+        /// </summary>
+        public bool SummonedWithEffectsNegated;
 
         bool _isNegated;
 
@@ -568,7 +583,9 @@ namespace WRLDZ.Duel
         /// </summary>
         int HalveFinal(int atk) => AtkHalvings > 0 ? atk >> System.Math.Min(AtkHalvings, 30) : atk;
         public int CurrentDef =>
-            ShownDef >= 0
+            DefZeroUntilEndOfTurn
+                ? 0
+                : ShownDef >= 0
                 ? System.Math.Max(0, ShownDef + DefModifier + UntilEndOfTurnDef + LingeringDefModifier)
                 : 0;
         public string Name => Def?.name ?? $"#{CardId}";

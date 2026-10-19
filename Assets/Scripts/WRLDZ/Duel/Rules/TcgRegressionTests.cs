@@ -2300,8 +2300,13 @@ namespace WRLDZ.Duel.Rules
 
                     var release = db.Get(75417459);
                     var relProg = release != null ? CardTextEffectCompiler.Compile(release) : null;
-                    Check("Corpus: Release Restraint leftover (no invented tribute-named spell)",
-                        relProg != null && !relProg.FullyCompiled);
+                    // RevivalEquipsAndGearfried batch: Release Restraint compiles to the named Tribute + named Special Summon
+                    // from the hand or Deck (Lua cost Release, SpecialSummon nocheck + CompleteProcedure) — no invented rider.
+                    Check("Corpus: Release Restraint compiles to its named Tribute + hand/Deck named Special Summon only",
+                        relProg != null && relProg.FullyCompiled && relProg.ClauseList.Count == 1 &&
+                        relProg.ClauseList.Exists(c => c != null && c.Action == EffectActionKind.SpecialSummonNamed &&
+                            c.NamedCard == "Gearfried the Swordmaster" && c.FromHand && c.FromDeck && !c.FromGrave &&
+                            c.RequiresTributeCount == 1 && c.TributeNamedCard == "Gearfried the Iron Knight"));
 
                     var ktitle = db.Get(87210505);
                     var ktProg = ktitle != null ? CardTextEffectCompiler.Compile(ktitle) : null;

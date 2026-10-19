@@ -155,6 +155,14 @@ namespace WRLDZ.Duel.Rules
             DeckSummonsAndSarcophagiRegressionTests.Run(db, pDeck, aDeck, check);
             ZoneCapsAndPhaseWindowsRegressionTests.Run(db, pDeck, aDeck, check);
             LocksRedirectsAndActivityRegressionTests.Run(db, pDeck, aDeck, check);
+            RdsRedoBattleRegressionTests.Run(db, pDeck, aDeck, check);
+            RdsRedoSpellTrapRegressionTests.Run(db, pDeck, aDeck, check);
+            SimpleTriggersAndSpellsRegressionTests.Run(db, pDeck, aDeck, check);
+            BattleRidersRegressionTests.Run(db, pDeck, aDeck, check);
+            DestroyWatchersAndSpellShieldsRegressionTests.Run(db, pDeck, aDeck, check);
+            RevivalEquipsAndGearfriedRegressionTests.Run(db, pDeck, aDeck, check);
+            DeckSwarmsAndFusionMaterialsRegressionTests.Run(db, pDeck, aDeck, check);
+            ChoiceAmongEffectsRegressionTests.Run(db, pDeck, aDeck, check);
         }
     }
 }

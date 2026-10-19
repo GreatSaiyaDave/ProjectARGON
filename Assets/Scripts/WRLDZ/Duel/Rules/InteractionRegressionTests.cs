@@ -6486,8 +6486,12 @@ namespace WRLDZ.Duel.Rules
                 const int hyenaId = 22873798;
                 var hyenaDef = db.Get(hyenaId);
                 var hyenaProg = hyenaDef != null ? CardTextEffectCompiler.Compile(hyenaDef) : null;
-                Check("Hyena any-number Deck SS stays leftover",
-                    hyenaProg != null && !hyenaProg.FullyCompiled &&
+                // DeckSwarmsAndFusionMaterials batch: Hyena's "any number" (1..free zones, the player's count) compiles to
+                // its own action, never to the "all copies" SpecialSummonNamed of Giant Germ / Nimble Momonga.
+                Check("Hyena any-number Deck SS compiles to the player's-count swarm (not SummonAllCopies)",
+                    hyenaProg != null && hyenaProg.FullyCompiled &&
+                    hyenaProg.ClauseList.Exists(c =>
+                        c != null && c.Action == EffectActionKind.SpecialSummonAnyNumberOfOwnNameFromDeck) &&
                     !hyenaProg.ClauseList.Exists(c =>
                         c != null && c.Action == EffectActionKind.SpecialSummonNamed),
                     hyenaProg == null
@@ -6795,8 +6799,12 @@ namespace WRLDZ.Duel.Rules
 
                 var release = db.Get(75417459);
                 var relProg = release != null ? CardTextEffectCompiler.Compile(release) : null;
-                Check("Release Restraint leftover (no invented tribute-named spell procedure)",
-                    relProg != null && !relProg.FullyCompiled);
+                // RevivalEquipsAndGearfried batch: compiled to its named Tribute + hand/Deck named Special Summon only.
+                Check("Release Restraint compiles to its named Tribute + hand/Deck named Special Summon only",
+                    relProg != null && relProg.FullyCompiled && relProg.ClauseList.Count == 1 &&
+                    relProg.ClauseList.Exists(c => c != null && c.Action == EffectActionKind.SpecialSummonNamed &&
+                        c.NamedCard == "Gearfried the Swordmaster" && c.FromHand && c.FromDeck && !c.FromGrave &&
+                        c.RequiresTributeCount == 1 && c.TributeNamedCard == "Gearfried the Iron Knight"));
 
                 var knightTitle = db.Get(87210505);
                 var ktProg = knightTitle != null ? CardTextEffectCompiler.Compile(knightTitle) : null;
@@ -16390,11 +16398,17 @@ namespace WRLDZ.Duel.Rules
                         : $"full={gmProg.FullyCompiled} unparsed={string.Join("|", gmProg.UnparsedFragments ?? System.Array.Empty<string>())}");
 
                 // LV6 adds "and if you do, place it on top of the Deck" — do not silently
-                // drop that rider by matching the plain shape.
+                // drop that rider by matching the plain shape. RdsRedoBattle batch (2026-10-18): the rider is compiled
+                // by its own clause (DestroyAttackedFaceDownDefenseReturnToOwnerDeckTopOrGy, the choice and the owner
+                // check in RdsRedoBattleRuntime), never by the plain Destroy shape.
                 var lv6Def = db.Get(mysticLv6);
                 var lv6Prog = lv6Def != null ? CardTextEffectCompiler.Compile(lv6Def) : null;
-                Check("Mystic Swordsman LV6 keeps its top-of-Deck rider as leftover",
-                    lv6Prog != null && !lv6Prog.FullyCompiled,
+                Check("Mystic Swordsman LV6 keeps its top-of-Deck rider (its own clause, not the plain destroy)",
+                    lv6Prog != null && lv6Prog.FullyCompiled &&
+                    lv6Prog.ClauseList.Exists(c => c != null &&
+                        c.Action == EffectActionKind.DestroyAttackedFaceDownDefenseReturnToOwnerDeckTopOrGy) &&
+                    !lv6Prog.ClauseList.Exists(c => c != null && c.Timing == EffectTiming.StartOfDamageStep &&
+                                                    c.Action == EffectActionKind.Destroy),
                     lv6Prog == null ? "null" : $"full={lv6Prog.FullyCompiled}");
 
                 {

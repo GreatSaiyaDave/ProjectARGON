@@ -127,8 +127,10 @@ namespace WRLDZ.Duel.Rules
                     c => c.Action == EffectActionKind.InflictDamageToOpponent && c.CostBanishRandomHandCards != 2, false),
                 (79571449, "Graceful Charity", "draw 3, then discard 2",
                     c => c.Action == EffectActionKind.Draw, false),
+                // SimpleTriggersAndSpells batch (v210): Implemented whole — the target is a Set card on either field
+                // (FieldSetCards); any other Destroy zone is the wrong clause; gate off.
                 (60229110, "Granmarg the Rock Monarch", "targets a Set card, not any monster",
-                    c => c.Action == EffectActionKind.Destroy && c.Zone == EffectZoneFilter.FieldAnyMonster, true),
+                    c => c.Action == EffectActionKind.Destroy && c.Zone != EffectZoneFilter.FieldSetCards, false),
                 // StandbyBurnsAndDice batch (v162): Implemented — the burn counts face-up banished monsters, never flat.
                 (33737664, "Graverobber's Retribution", "100 for each banished opponent's monster",
                     c => c.Action == EffectActionKind.InflictDamageToOpponent &&
@@ -156,8 +158,11 @@ namespace WRLDZ.Duel.Rules
                     c => c.Action == EffectActionKind.Destroy &&
                          (c.Zone != EffectZoneFilter.FieldFaceDownMonsters || !c.BanishIfDestroyed ||
                           !c.PurgeDecksIfFlipMonster), false),
+                // BattleRiders batch (v210): Implemented whole (the battle-damage trigger of a Beast); a bare burn that is not
+                // that trigger is still the wrong shape; gate off.
                 (76539047, "Poison Fangs", "burn each time a Beast-Type monster inflicts battle damage",
-                    c => c.Action == EffectActionKind.InflictDamageToOpponent, true),
+                    c => c.Action == EffectActionKind.InflictDamageToOpponent &&
+                         (!c.AnyControllerMonsterBattleDamage || c.RaceFilter != "Beast"), false),
                 // SimpleSpellTraps batch (v160 LOD): Implemented with the two-Type filter; an unfiltered clause is wrong.
                 (31785398, "Ready for Intercepting", "Warrior or Spellcaster only",
                     c => c.Action == EffectActionKind.SetTargetFaceDownDefense &&
@@ -232,11 +237,20 @@ namespace WRLDZ.Duel.Rules
             var stubs = new (int id, string label, Func<EffectClause, bool> wrong)[]
             {
                 (4149689, "Goblin Fan (destroy the Flip Summoned monster)", c => c.Action == EffectActionKind.Destroy),
-                (21051146, "Blast Magician (Spell Counter cost)", c => c.Action == EffectActionKind.Destroy),
                 (29267084, "Shadow Spell (cannot attack or change position)",
                     c => c.Action == EffectActionKind.ChangeBattlePosition),
-                (49328340, "Spiral Spear Strike (draw 2, then discard 1)", c => c.Action == EffectActionKind.Draw),
             };
+            // BattleRiders batch (v210): Spiral Spear Strike left this list — it compiles whole (the named piercing grant and
+            // Gaia the Dragon Champion's draw 2, then discard 1 trigger; BattleRidersRegressionTests drive it) and still
+            // carries no bare Draw fragment.
+            var spiral = db.Get(49328340);
+            var spiralProg = spiral != null ? CardTextEffectCompiler.Compile(spiral) : null;
+            Check("Spiral Spear Strike: compiled whole, with no partial \"draw 2\" clause",
+                spiralProg != null && spiralProg.FullyCompiled &&
+                !Has(spiralProg, c => c.Action == EffectActionKind.Draw) &&
+                Has(spiralProg, c => c.Action == EffectActionKind.DrawThenDiscard &&
+                                     c.Timing == EffectTiming.ThisCardInflictsBattleDamage && c.ThenDiscardCount == 1),
+                Describe(spiralProg));
             // Dramatic Rescue left this list in the ChainLinkAnswers batch: it compiles whole (return the targeted
             // "Amazoness" monster, then Special Summon from the hand; ChainLinkAnswersRegressionTests drive it) and still
             // carries no generic Special Summon fragment.
@@ -247,6 +261,17 @@ namespace WRLDZ.Duel.Rules
                 rescueProg.ClauseList[0].Action == EffectActionKind.ReturnTargetedSeriesMonsterThenSpecialSummonFromHand &&
                 !Has(rescueProg, c => c.Action == EffectActionKind.SpecialSummonFromHand),
                 Describe(rescueProg));
+            // DestroyWatchersAndSpellShields batch: Blast Magician left this list — its counter cost compiles whole now
+            // (remove ceil(target ATK / 700) Spell Counters, DestroyWatchersAndSpellShieldsRegressionTests drive it), and
+            // its Destroy clause carries that per-ATK cost, never a flat or missing one.
+            var blast = db.Get(21051146);
+            var blastProg = blast != null ? CardTextEffectCompiler.Compile(blast) : null;
+            Check("Blast Magician: compiled whole, its Destroy pays ceil(target ATK / 700) Spell Counters",
+                blastProg != null && blastProg.FullyCompiled &&
+                Has(blastProg, c => c.Action == EffectActionKind.Destroy && c.SpellCountersPerTargetAtk == 700 &&
+                                    c.RequiresRemoveSpellCounters == 0 && c.RequiresTargetChoice) &&
+                !Has(blastProg, c => c.Action == EffectActionKind.Destroy && c.SpellCountersPerTargetAtk == 0),
+                Describe(blastProg));
             foreach (var (id, label, wrong) in stubs)
             {
                 var def = db.Get(id);

@@ -328,6 +328,19 @@ namespace WRLDZ.Duel.TextEffects
                     Run = run
                 });
 
+            // DeckSwarmsAndFusionMaterials batch: Centrifugal Field's mandatory trigger for each Fusion Monster the held
+            // event destroyed (Lua raises one event per Fusion; its owner activates it) goes on this Chain too.
+            foreach (var (who, card, run) in DeckSwarmsAndFusionMaterialsRuntime.TakeHeldTriggers(engine))
+                entries.Add(new Entry
+                {
+                    Kind = EntryKind.Fused,
+                    Controller = who,
+                    Card = card,
+                    Turn = engine.TurnNumber,
+                    Optional = false,
+                    Run = run
+                });
+
             // TriggerChainResponses batch (v163): sent by a resolving Chain (Dark Hole) while play opens again after it,
             // and a player may respond — the held triggers wait for that Chain to finish and go on a new Chain then.
             if (ShouldDeferPastChain(engine, entries.Select(e => e.Controller)))
@@ -446,6 +459,8 @@ namespace WRLDZ.Duel.TextEffects
                 };
                 foreach (var p in e.Picks)
                     if (p?.Card != null) seat.Targets.Add(p.Card);
+                // DeckSwarmsAndFusionMaterials batch: the target a Centrifugal Field trigger chose as it activated.
+                seat.Targets.AddRange(DeckSwarmsAndFusionMaterialsRuntime.ActivationTargets(e.Run));
                 seats.Add(seat);
             }
 
@@ -610,8 +625,12 @@ namespace WRLDZ.Duel.TextEffects
                         if (e.Kind == EntryKind.Flip)
                             ActivateFlip(engine, chain, e);
                         else if (e.Kind == EntryKind.Fused)
+                        {
                             // FlipMassAndOpponentPicks batch: Pixie Knight's opponent targets its Spell as it activates.
                             FlipMassAndOpponentPicksRuntime.ActivateSentToGyTargets(engine, e.Controller, e.Card);
+                            // DeckSwarmsAndFusionMaterials batch: Centrifugal Field's owner targets the listed material.
+                            DeckSwarmsAndFusionMaterialsRuntime.ActivateQueuedTrigger(engine, e.Run);
+                        }
                         return false;
                     }
 

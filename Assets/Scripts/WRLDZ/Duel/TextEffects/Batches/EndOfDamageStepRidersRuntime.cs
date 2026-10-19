@@ -92,6 +92,22 @@ namespace WRLDZ.Duel.TextEffects
             return false;
         }
 
+        /// <summary>BattleRiders batch: ygopro IsRelateToBattle of <paramref name="card"/> (B.E.S. Big Core's removal trigger).</summary>
+        public static bool IsRelatedToBattle(DuelEngine engine, CardInstance card) => RelatesToBattle(engine, card);
+
+        /// <summary>
+        /// BattleRiders batch: ygopro GetBattleTarget — the monster <paramref name="card"/> battles in the Damage Step under
+        /// way (null for a direct attack, outside a Damage Step, or when <paramref name="card"/> is not a battler).
+        /// </summary>
+        public static CardInstance BattleTargetOf(DuelEngine engine, CardInstance card)
+        {
+            var b = Current(engine);
+            if (b == null || card == null || !InDamageStep(engine)) return null;
+            if (ReferenceEquals(card, b.Attacker)) return b.Target;
+            if (ReferenceEquals(card, b.Target)) return b.Attacker;
+            return null;
+        }
+
         /// <summary>
         /// TextEffectRuntime.FireEndOfDamageFor: <paramref name="self"/> left the field because <paramref name="other"/>
         /// destroyed it by battle in this Damage Step (ygopro STATUS_BATTLE_DESTROYED).

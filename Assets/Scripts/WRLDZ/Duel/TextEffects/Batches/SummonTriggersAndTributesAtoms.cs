@@ -173,6 +173,8 @@ namespace WRLDZ.Duel.TextEffects
                     Action = EffectActionKind.PlaceCounterOnThisCard,
                     Side = EffectSide.Controller,
                     Amount = Pos(m, 1),
+                    // BattleRiders batch: Lua EVENT_SUMMON_SUCCESS only — a Flip or Special Summon places no counters.
+                    RequiresThisNormalSummoned = true,
                     MakesChainLink = true
                 }),
 

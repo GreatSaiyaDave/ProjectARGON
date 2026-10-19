@@ -297,6 +297,8 @@ namespace WRLDZ.Duel.TextEffects
             // ygopro s.condition: a draw count above 0 (no first-turn skip, no Draw Phase skip) and a card in the Deck.
             if (engine.TurnNumber == 1 && who == engine.FirstPlayer) return false;
             if (who.SkipNextDrawPhaseCount > 0 || who.SkipNextDrawPhase || who.Deck.Count == 0) return false;
+            // ChoiceAmongEffects batch: Penalty Game! sets the draw count to 0 (EFFECT_DRAW_COUNT; GetDrawCount(tp) == 0).
+            if (ChoiceAmongEffectsRuntime.CannotDrawNow(engine, who)) return false;
 
             foreach (var source in who.MonstersOnField().ToList())
             {

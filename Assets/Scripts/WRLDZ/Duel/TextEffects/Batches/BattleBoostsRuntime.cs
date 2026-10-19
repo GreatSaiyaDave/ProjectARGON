@@ -138,6 +138,12 @@ namespace WRLDZ.Duel.TextEffects
                 if (prog == null || !prog.FullyCompiled) continue;
                 foreach (var c in prog.ClausesFor(EffectTiming.ContinuousWhileFaceUp))
                 {
+                    // BattleRiders batch: Spiral Spear Strike — the same grant to its controller's monsters of the printed names.
+                    if (c != null && c.Action == EffectActionKind.GrantPiercingToYourNamedMonsters)
+                    {
+                        if (BattleRidersRuntime.NamedGrantsPiercing(attacker, c)) return true;
+                        continue;
+                    }
                     if (c == null || c.Action != EffectActionKind.GrantPiercingToYourRaceMonsters) continue;
                     if (ClassicEraTemplates.RaceMatches(attacker.Race, c.RaceFilter)) return true;
                 }

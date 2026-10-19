@@ -3474,13 +3474,15 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         ChangeThisCardAttribute,
         /// <summary>Coin call at battle; if correct, destroy the opponent's monster that battled this card (Sasuke Samurai #4).</summary>
-        /// unused since v208 (hollow): no Damage Step site ever tossed its coin; Sasuke Samurai #4 is uncompiled again
-        /// (EffectVocabulary.HasNoRuntime fails a re-added clause closed).
+        /// Retired by v208 (no Damage Step site tossed its coin); revived by the RdsRedoBattle batch: StartOfDamageStep
+        /// (EVENT_BATTLE_START, attacking or attacked), RdsRedoBattleRuntime.TryBeginBattleStartCoinCalls.
         CoinCallDestroyBattledMonsterOnCorrect,
         /// <summary>
         /// BattleAndPositionRecords batch — Mystic Swordsman LV6 (c60482781): at StartOfDamageStep, if this card
         /// attacked a face-down Defense Position monster, destroy that monster and optionally (you can) place it
         /// on top of the owner's Deck instead of sending it to the Graveyard.
+        /// RdsRedoBattle batch: TextEffectRuntime.TryStartOfDamageStepDestroy →
+        /// RdsRedoBattleRuntime.DestroyAttackedFaceDownMayPlaceOnDeckTop (owner check, "you can" choice).
         /// </summary>
         DestroyAttackedFaceDownDefenseReturnToOwnerDeckTopOrGy,
         /// <summary>
@@ -3514,10 +3516,17 @@ namespace WRLDZ.Duel.TextEffects
         NegateFlipMonsterEffectsThisDestroysByBattle,
         /// <summary>
         /// Negate opponent's Spell effects that target this card (Silent Swordsman LV3).
+        /// RdsRedoBattle batch: ContinuousWhileFaceUp marker, negate only (RdsRedoBattleRuntime.TryNegateSpellTargetingLink).
         /// </summary>
         NegateOpponentSpellEffectsThatTargetThis,
-        /// <summary>Draw 1 or discard 1 random card from opponent's hand (Necklace of Command trigger).</summary>
-        /// unused since v208 (hollow): no runtime; Necklace of Command is a Stub again.
+        /// <summary>
+        /// Draw 1 or discard 1 random card from opponent's hand (Necklace of Command trigger).
+        /// Runtime since the RdsRedoSpellTrap batch (unused since v208, hollow): Necklace of Command (c48576971, SINGLE
+        /// TRIGGER_F on EVENT_TO_GRAVE, condition REASON_LOST_TARGET, ec:IsReason(REASON_BATTLE) and ec:IsPreviousControler(tp))
+        /// — a <see cref="EffectTiming.ContinuousWhileFaceUp"/> marker; DuelEngine.DestroyMonster →
+        /// <see cref="RdsRedoSpellTrapRuntime.AfterHostDestroyed"/> queues the trigger, which draws
+        /// <see cref="EffectClause.Amount"/> or discards that many random cards from the opponent's hand (its owner's choice).
+        /// </summary>
         DrawOrDiscardRandomFromOpponentHand,
         /// <summary>Ballista of Rampart Smashing: equipped monster gains 1500 ATK during damage calculation only when attacking face-down defense.
         /// Runtime since v208: QcHollowActionsRuntime.EquipFaceDownDefenseBonus.</summary>
@@ -3537,8 +3546,9 @@ namespace WRLDZ.Duel.TextEffects
         /// Covering Fire (c74458486): during Damage Step, target another face-up monster you control; your attacked
         /// monster gains ATK equal to that target's ATK during the Damage Step only.
         /// </summary>
-        /// unused since v208 (hollow): its arm gave the ATK until the end of the turn and no Damage Step window was compiled;
-        /// arm and atoms removed, Covering Fire is uncompiled again.
+        /// Retired by v208 (the gain lasted the turn, no Damage Step window); revived by the RdsRedoBattle batch: a Damage
+        /// Calculation window clause, the gain is CardInstance.DamageStepAtkBonus (cleared after damage calculation;
+        /// RdsRedoBattleRuntime.TryResolveDamageStepClauses).
         TargetGainsAtkEqualToAnotherTargetDuringDamageStep,
         /// <summary>
         /// LpLocksDelayedBurnAndGyNegation batch — Weapon Change (c10035717): at your Standby Phase, optionally pay
@@ -3637,6 +3647,210 @@ namespace WRLDZ.Duel.TextEffects
         /// (<see cref="LocksRedirectsAndActivityRuntime.TryFirePhaseClause"/>).
         /// </summary>
         AddGySpellToHandAtEndPhaseIfSummonedThisTurn,
+        /// <summary>
+        /// RdsRedoBattle batch — Cross Counter (c37083210, ACTIVATE on EVENT_PRE_DAMAGE_CALCULATE): your attacked face-up
+        /// Defense Position monster's DEF is higher than the opponent's attacker's ATK. The battle damage the opponent
+        /// takes from that battle is doubled (aux.ChangeBattleDamage(1,DOUBLE_DAMAGE) on the attacked monster, reset at the
+        /// end of the Damage Step) and the attacker is destroyed at the end of the Damage Step if it is still on the field
+        /// from that battle (EVENT_DAMAGE_STEP_END). Resolved in the Damage Calculation window
+        /// (<see cref="RdsRedoBattleRuntime.TryResolveDamageStepClauses"/>).
+        /// </summary>
+        DoubleBattleDamageToAttackerThenDestroyAttacker,
+        /// <summary>
+        /// RdsRedoBattle batch — Rare Metalmorph (c12503902): ContinuousWhileFaceUp marker — once while this card is on the
+        /// field, the effect of a Spell (either player's) that targets the monster this card is linked to is negated as it
+        /// resolves (EVENT_CHAIN_SOLVING + Duel.NegateEffect, then e:Reset()); the Spell is not destroyed
+        /// (<see cref="RdsRedoBattleRuntime.TryNegateSpellTargetingLink"/>).
+        /// </summary>
+        NegateOnceSpellEffectTargetingBoundMonster,
+        /// <summary>
+        /// RdsRedoSpellTrap batch — Chain Burst (c48276469, CONTINUOUS EVENT_CHAINING aux.chainreg + EVENT_CHAIN_SOLVED,
+        /// re:IsHasType(EFFECT_TYPE_ACTIVATE) and re:IsTrapEffect(); <see cref="EffectTiming.ContinuousWhileFaceUp"/>, no Chain
+        /// Link): each time a Trap Card's activation resolves, the player who activated it (rp) takes
+        /// <see cref="EffectClause.Amount"/> damage. Read by <see cref="SpellEventsAndHandSendTriggersRuntime.OnCardActivationResolved"/>
+        /// from <see cref="RdsRedoSpellTrapRuntime"/> (the Trap link's resolution).
+        /// </summary>
+        InflictDamageToTrapActivatorAfterResolve,
+        /// <summary>
+        /// RdsRedoSpellTrap batch — Spell Absorption (c51481927, the same listener: re:IsSpellEffect() and
+        /// EFFECT_TYPE_ACTIVATE, not its own activation): each time a Spell Card's activation resolves, this card's controller
+        /// gains <see cref="EffectClause.Amount"/> LP (<see cref="SpellEventsAndHandSendTriggersRuntime.OnCardActivationResolved"/>).
+        /// </summary>
+        GainLpWhenSpellCardActivationResolves,
+        /// <summary>
+        /// RdsRedoSpellTrap batch — Forced Ceasefire (c97806240, Side Both) / Triangle Ecstasy Spark (c12181376, Side
+        /// Opponent): Lua EFFECT_CANNOT_ACTIVATE with aclimit re:IsHasType(EFFECT_TYPE_ACTIVATE) and re:IsTrapEffect(),
+        /// RESET_PHASE|PHASE_END — the locked players cannot activate Trap Cards (from the hand or Set) for the rest of this
+        /// turn; effects of face-up Traps stay legal (<see cref="SpellTrapSealsAndImmunityRuntime.RegisterCardActivationLock"/>).
+        /// </summary>
+        TrapCardActivationsLockedThisTurn,
+        /// <summary>
+        /// RdsRedoSpellTrap batch — Flint (c75560629, SINGLE TRIGGER_F on EVENT_TO_GRAVE, CARD_TARGET, condition
+        /// REASON_LOST_TARGET and ec:IsReason(REASON_DESTROY)): when this Equip Spell is sent to the GY because the monster
+        /// it equipped was destroyed, its owner targets 1 face-up monster on the field and equips this card to it from the
+        /// GY. A <see cref="EffectTiming.ContinuousWhileFaceUp"/> marker: DuelEngine.DestroyMonster →
+        /// <see cref="RdsRedoSpellTrapRuntime.NoteHostDestroyed"/> / <see cref="RdsRedoSpellTrapRuntime.AfterHostDestroyed"/>
+        /// queue the trigger.
+        /// </summary>
+        ReEquipThisFromGyWhenEquippedMonsterDestroyed,
+        /// <summary>
+        /// RdsRedoSpellTrap batch — Triangle Ecstasy Spark (c12181376, SINGLE EFFECT_SET_ATTACK_FINAL, RESETS_STANDARD_PHASE_END,
+        /// on each face-up monster named <see cref="EffectClause.ConditionName"/> in either Monster Zone at resolution): its ATK
+        /// becomes <see cref="EffectClause.Amount"/> until the end of the turn. Modelled as an until-end-of-turn delta (the
+        /// engine's "halved this turn" model, as Riryoku): later modifiers still add to it; a modifier that applied before it and
+        /// ends later this turn lowers it (ocgcore keeps the final value). <see cref="RdsRedoSpellTrapRuntime.SetNamedAtkUntilEndOfTurn"/>.
+        /// </summary>
+        NamedFaceUpMonstersAtkBecomesUntilEndOfTurn,
+        /// <summary>
+        /// SimpleTriggersAndSpells batch — Abare Ushioni (c89718302, IGNITION, SetCountLimit(1), Duel.CallCoin(tp)): its
+        /// controller calls a coin as the effect resolves; a right call inflicts <see cref="EffectClause.Amount"/> damage
+        /// to the opponent, a wrong call inflicts it to the controller (<see cref="SimpleTriggersAndSpellsRuntime.ResolveCoinCallBurn"/>).
+        /// </summary>
+        CallCoinRightBurnOpponentWrongBurnSelf,
+        /// <summary>
+        /// SimpleTriggersAndSpells batch — Good Goblin Housekeeping (c9744376): draw (the copies of this card's name in
+        /// your GY, counted as it resolves) + <see cref="EffectClause.Amount"/> cards, then (BreakEffect) its controller
+        /// selects 1 card in the hand and places it on the bottom of the Deck (mandatory;
+        /// <see cref="SimpleTriggersAndSpellsRuntime.ResolveGoblinHousekeeping"/>).
+        /// </summary>
+        DrawNamedInGyPlusAmountThenHandCardToDeckBottom,
+        /// <summary>
+        /// SimpleTriggersAndSpells batch — The Big March of Animals (c1689516): as it resolves, count the face-up
+        /// <see cref="EffectClause.RaceFilter"/> monsters the controller controls; each of them gains count x
+        /// <see cref="EffectClause.Amount"/> ATK until the end of the turn (a fixed value, RESETS_STANDARD_PHASE_END;
+        /// <see cref="SimpleTriggersAndSpellsRuntime.ResolveRaceMarch"/>).
+        /// </summary>
+        FaceUpRaceYouControlGainAtkPerFaceUpRaceUntilEndOfTurn,
+        /// <summary>
+        /// BattleRiders batch — B.E.S. Big Core (c14148099, aux.EnableBESRemove: SINGLE TRIGGER_F EVENT_DAMAGE_STEP_END,
+        /// condition IsRelateToBattle; <see cref="EffectTiming.EndOfDamageStep"/>): at the end of a Damage Step this card
+        /// battled in, remove <see cref="EffectClause.Amount"/> counter(s) from it; with too few counters, destroy it
+        /// (<see cref="BattleRidersRuntime.RemoveCounterOrDestroy"/>).
+        /// </summary>
+        RemoveCounterFromThisOrDestroyAtEndOfDamageStep,
+        /// <summary>
+        /// BattleRiders batch — Catnipped Kitty (c96501677, IGNITION, CARD_TARGET, SetCountLimit(1), target
+        /// Card.HasNonZeroDefense: a face-up monster the opponent controls with DEF above 0): if the target is still a
+        /// face-up monster on the field, its DEF becomes 0 until the end of this turn (EFFECT_SET_DEFENSE_FINAL,
+        /// <see cref="BattleRidersRuntime.SetDefZeroUntilEndOfTurn"/>).
+        /// </summary>
+        TargetDefBecomesZeroUntilEndOfTurn,
+        /// <summary>
+        /// BattleRiders batch — Spiral Spear Strike (c49328340, FIELD EFFECT_PIERCE, range SZONE, target range (MZONE, 0),
+        /// c:IsCode(...); <see cref="EffectTiming.ContinuousWhileFaceUp"/>): its controller's monsters named in
+        /// <see cref="EffectClause.NamedCard"/> ('|'-separated) inflict piercing battle damage
+        /// (<see cref="BattleRidersRuntime.NamedGrantsPiercing"/>, read by BattleBoostsRuntime.FieldGrantsPiercing).
+        /// </summary>
+        GrantPiercingToYourNamedMonsters,
+        /// <summary>
+        /// DestroyWatchersAndSpellShields batch — Firebird (c87473172, <see cref="EffectClause.Side"/> Controller) and
+        /// Maji-Gire Panda (c60102563, Side Both): FIELD TRIGGER_F on EVENT_DESTROYED from the Monster Zone. Each event in
+        /// which 1+ monster that was face-up on the field with the Type <see cref="EffectClause.RaceFilter"/> (its Type on
+        /// the field) is destroyed — by battle or by an effect, to any destination; Controller: one its controller
+        /// controlled — this face-up card activates once (one Chain Link per event, not per monster) and gains
+        /// <see cref="EffectClause.Amount"/> ATK while it stays face-up on the field (EFFECT_UPDATE_ATTACK with
+        /// RESET_EVENT|RESETS_STANDARD; not applied while this card is negated). Destroyed at the same time: nothing
+        /// (<see cref="DestroyWatchersAndSpellShieldsRuntime.FlushDestroyedEvents"/>).
+        /// </summary>
+        GainSelfAtkEachTimeRaceMonsterDestroyed,
+        /// <summary>
+        /// DestroyWatchersAndSpellShields batch — Mokey Mokey Smackdown (c1965724, Continuous Spell; FIELD+CONTINUOUS on
+        /// EVENT_DESTROYED, no Chain Link): when a monster you controlled face-up with the Type
+        /// <see cref="EffectClause.RaceFilter"/> is destroyed while you control a face-up <see cref="EffectClause.NamedCard"/>,
+        /// this card is flagged until the End Phase (or until it leaves the field); while it is flagged, face-up and not
+        /// negated, the ATK of each face-up <see cref="EffectClause.NamedCard"/> you control becomes
+        /// <see cref="EffectClause.Amount"/> (EFFECT_SET_ATTACK: the base other modifiers add to;
+        /// <see cref="DestroyWatchersAndSpellShieldsRuntime.ApplyBoard"/>).
+        /// </summary>
+        NamedMonstersAtkBecomeUntilEndOfTurnWhenRaceMonsterDestroyed,
+        /// <summary>
+        /// DestroyWatchersAndSpellShields batch — Pole Position (c73578229, Continuous Trap; EVENT_ADJUST group +
+        /// EFFECT_IMMUNE_EFFECT vs te:IsSpellEffect()): while this card applies, the face-up monster(s) with the highest ATK
+        /// on the field (all of them when tied, recomputed after each board refresh) are unaffected by the effects of Spell
+        /// Cards (<see cref="DestroyWatchersAndSpellShieldsRuntime.ShieldsFromSpell"/>, read through
+        /// MonsterNegationAndControlLocksRuntime.ShieldsFromSpell).
+        /// </summary>
+        HighestAtkMonstersUnaffectedBySpells,
+        /// <summary>
+        /// DestroyWatchersAndSpellShields batch — Pole Position (c73578229, SINGLE+CONTINUOUS on EVENT_LEAVE_FIELD, no Chain
+        /// Link): when this card leaves the field, the face-up monster(s) with the highest ATK on the field then are
+        /// destroyed together — not when it was negated or its activation had not resolved when it left (Lua
+        /// EVENT_LEAVE_FIELD_P checkop) (<see cref="DestroyWatchersAndSpellShieldsRuntime.OnBoardSettled"/>).
+        /// </summary>
+        DestroyHighestAtkMonstersWhenThisLeavesField,
+        /// <summary>
+        /// RevivalEquipsAndGearfried batch — Gearfried the Swordmaster (c57046845 e1, SINGLE TRIGGER_F on EVENT_EQUIP,
+        /// CARD_TARGET): each time an Equip Card is equipped to this face-up card, its controller targets 1 monster the
+        /// opponent controls (face-up or face-down) and destroys it if it is still there and still the opponent's
+        /// (<see cref="RevivalEquipsAndGearfriedRuntime.NoteEquipped"/>, from the shared EVENT_EQUIP). A marker: the
+        /// trigger is queued by that hook, never resolved as a continuous clause.
+        /// </summary>
+        DestroyOppMonsterEachTimeThisIsEquipped,
+        /// <summary>
+        /// RevivalEquipsAndGearfried batch — Brain Jacker (c40267580 e1, FLIP, CARD_TARGET aux.CheckStealEquip): this monster
+        /// moves from its Monster Zone to its controller's Spell &amp; Trap Zone as an Equip Card equipped to the targeted
+        /// face-up monster the opponent controls (equip limit: that monster only), and its controller takes control of that
+        /// monster while it stays equipped (<see cref="EffectClause.TakeControlOfTarget"/>, EFFECT_SET_CONTROL on the equip).
+        /// Nothing happens when this card was destroyed by that battle (STATUS_BATTLE_DESTROYED), left its Monster Zone, the
+        /// target's control cannot change, or no Spell &amp; Trap Zone is free
+        /// (<see cref="RevivalEquipsAndGearfriedRuntime.EquipThisFromFieldToTarget"/>).
+        /// </summary>
+        EquipThisFromFieldToTargetTakeControl,
+        /// <summary>
+        /// DeckSwarmsAndFusionMaterials batch — Hyena (c22873798, SINGLE TRIGGER_O on EVENT_BATTLE_DESTROYED in the GY):
+        /// its controller may Special Summon 1 to (free Monster Zones) copies of this card's own name from the Deck, face-up,
+        /// together (<see cref="DeckSwarmsAndFusionMaterialsRuntime.StartDeckSwarm"/>). <see cref="EffectClause.NamedCard"/>
+        /// is the printed (plural) name.
+        /// </summary>
+        SpecialSummonAnyNumberOfOwnNameFromDeck,
+        /// <summary>
+        /// DeckSwarmsAndFusionMaterials batch — Rescue Cat (c14878871, IGNITION, cost Cost.SelfToGrave): exactly
+        /// <see cref="EffectClause.Amount"/> Level <see cref="EffectClause.SummonLevelMax"/> or lower
+        /// <see cref="EffectClause.RaceFilter"/> monsters from the Deck, face-up, their effects negated while they stay,
+        /// destroyed during this turn's End Phase (<see cref="DeckSwarmsAndFusionMaterialsRuntime.ResolveNegatedPair"/>).
+        /// </summary>
+        SpecialSummonRaceFromDeckEffectsNegatedDestroyAtEndPhase,
+        /// <summary>
+        /// DeckSwarmsAndFusionMaterials batch — Sacred Phoenix of Nephthys (c61441708): destroyed by a card effect and sent
+        /// to the GY, it Special Summons itself from the GY during its controller's next Standby Phase (mandatory), and that
+        /// Summon's own mandatory trigger destroys every Spell/Trap on the field
+        /// (<see cref="DeckSwarmsAndFusionMaterialsRuntime.TryFirePhaseClause"/>).
+        /// </summary>
+        SpecialSummonThisFromGyNextStandbyAfterEffectDestroyThenDestroyAllSpellTraps,
+        /// <summary>
+        /// DeckSwarmsAndFusionMaterials batch — Centrifugal Field (c1801154, Field Zone TRIGGER_F, EVENT_PLAYER): each Fusion
+        /// Monster destroyed by a card effect and sent to the GY lets its owner target 1 monster in their GY named as one of
+        /// its materials and Special Summon it (<see cref="DeckSwarmsAndFusionMaterialsRuntime.OnSentToGy"/>).
+        /// </summary>
+        OwnerSpecialSummonsListedMaterialWhenFusionDestroyedByEffect,
+        /// <summary>
+        /// DeckSwarmsAndFusionMaterials batch — The Light / Dark / Earth - Hex-Sealed Fusion (IGNITION): Tribute monsters you
+        /// control that, with this face-up card, are the named materials of 1 <see cref="EffectClause.AttributeFilter"/>
+        /// Fusion Monster in the Extra Deck (cost), then Special Summon that Fusion Monster — not a Fusion Summon
+        /// (<see cref="DeckSwarmsAndFusionMaterialsRuntime.ResolveHexSealed"/>).
+        /// </summary>
+        TributeMaterialsSpecialSummonCorrespondingAttributeFusion,
+        /// <summary>
+        /// ChoiceAmongEffects batch — "Apply 1 of these effects. ● … ● …" (Fuh-Rin-Ka-Zan c1781310, Duel.SelectOption in
+        /// s.activate): as the card resolves, its controller picks 1 of the bullets that can apply then (the clauses with
+        /// <see cref="EffectClause.EffectChoiceAppliedAtResolution"/>), and only that bullet applies
+        /// (<see cref="ChoiceAmongEffectsRuntime.ResolveChoice"/>). Carries the printed activation condition.
+        /// </summary>
+        ApplyOneOfTheseEffectsAtResolution,
+        /// <summary>
+        /// ChoiceAmongEffects batch — "Your opponent cannot draw during their next Draw Phase." (Penalty Game! c967928,
+        /// EFFECT_CANNOT_DRAW + EFFECT_DRAW_COUNT 0, reset at the end of that player's next Draw Phase; activated during
+        /// their own Draw Phase it covers the following one): no normal draw and no draw at all during Draw Phases until
+        /// then (<see cref="ChoiceAmongEffectsRuntime.CannotDrawNow"/>).
+        /// </summary>
+        OpponentCannotDrawDuringNextDrawPhase,
+        /// <summary>
+        /// ChoiceAmongEffects batch — "Your opponent cannot activate Spell/Trap Cards this turn." (Penalty Game! c967928,
+        /// EFFECT_CANNOT_ACTIVATE with aclimit re:IsHasType(EFFECT_TYPE_ACTIVATE), RESET_PHASE|PHASE_END): card
+        /// activations only — from the hand or a Set card; the effects of face-up cards stay legal
+        /// (<see cref="ChoiceAmongEffectsRuntime.ActivationLocked"/>).
+        /// </summary>
+        OpponentCannotActivateSpellTrapCardsThisTurn,
     }
 
 
@@ -3855,6 +4069,12 @@ namespace WRLDZ.Duel.TextEffects
         /// destroy only — no target, so the legacy MapCompiledTargetKind mirror leaves it None.
         /// </summary>
         ControllerFaceUpAttributeMonsters,
+        /// <summary>
+        /// SimpleTriggersAndSpells batch — Granmarg the Rock Monarch: a Set (face-down) card in either player's Monster
+        /// Zones, Spell &amp; Trap Zones or Field Zone (Lua Card.IsFacedown on LOCATION_ONFIELD, both sides). A target; the
+        /// Destroy arm re-checks that it is still face-down as it resolves.
+        /// </summary>
+        FieldSetCards,
     }
 
     /// <summary>One parsed clause from official card text.</summary>
@@ -5455,6 +5675,79 @@ namespace WRLDZ.Duel.TextEffects
         /// (<see cref="LocksRedirectsAndActivityRuntime.QueueBattledTrigger"/>), on that monster if it is still on the field.
         /// </summary>
         public bool RequiresBattledMonsterDestroyed;
+
+        // ── RdsRedoBattle batch ──
+
+        /// <summary>
+        /// On <see cref="EffectActionKind.UnaffectedByCardEffects"/>: only effects of the opponent of this card's controller
+        /// (Silent Swordsman LV5, "Unaffected by your opponent's Spell effects": Lua te:GetOwnerPlayer()~=handler player;
+        /// <see cref="RdsRedoBattleRuntime.SourceIsOpponents"/>).
+        /// </summary>
+        public bool UnaffectedOnlyByOpponentEffects;
+
+        /// <summary>
+        /// SimpleTriggersAndSpells batch — Elemental Burst: the <see cref="RequiresTributeCount"/> Tributes are one monster
+        /// of each listed Attribute ("WIND|WATER|FIRE|EARTH"; Lua CheckReleaseGroupCost with CheckDifferentPropertyBinary
+        /// on the live Attribute). <see cref="SimpleTriggersAndSpellsRuntime.FilterTributeCostCandidates"/> offers only
+        /// monsters of an Attribute still missing, and none when a full set cannot be made.
+        /// </summary>
+        public string TributeOneEachAttribute;
+
+        // ── BattleRiders batch ──
+
+        /// <summary>
+        /// <see cref="EffectActionKind.ExtraAttacks"/>: <see cref="Amount"/> additional attacks for each Equip Card equipped
+        /// to this card, counted live (Armed Samurai - Ben Kei, Lua EFFECT_EXTRA_ATTACK value c:GetEquipCount(); every
+        /// Equip Card counts, a monster equipped as an Equip Card or a Union included). Read by DuelEngine.ExtraAttacksAllowed
+        /// through <see cref="BattleRidersRuntime.ExtraAttacksPerEquip"/>.
+        /// </summary>
+        public bool ExtraAttacksPerEquippedCard;
+
+        /// <summary>
+        /// An <see cref="AnyControllerMonsterBattleDamage"/> trigger: only when the monster that inflicted the battle damage
+        /// battled a Defense Position monster (Spiral Spear Strike, Lua: eg:GetFirst():GetBattleTarget():IsDefensePos()).
+        /// On every <see cref="AnyControllerMonsterBattleDamage"/> clause a <see cref="RaceFilter"/> (Poison Fangs: its live
+        /// Type) and a <see cref="NamedCard"/> (Spiral Spear Strike) filter that monster too
+        /// (<see cref="BattleRidersRuntime.DealerTriggerApplies"/>).
+        /// </summary>
+        public bool RequiresDealerBattledDefensePosition;
+
+        // ── DestroyWatchersAndSpellShields batch ──
+
+        /// <summary>
+        /// Blast Magician (c21051146, Lua s.destg): the Spell Counters this ignition removes from this card as its cost are
+        /// ceil(target ATK / N), at least 1, where N is this value; only a target with that many counters or fewer is legal
+        /// (<see cref="DestroyWatchersAndSpellShieldsRuntime.FilterTargets"/>,
+        /// <see cref="DestroyWatchersAndSpellShieldsRuntime.PayCountersForTarget"/>). 0 = none.
+        /// </summary>
+        public int SpellCountersPerTargetAtk;
+
+        // ── RevivalEquipsAndGearfried batch ──
+
+        /// <summary>
+        /// With <see cref="BanishHostWhenThisLeaves"/>: banish the equipped monster only when this card is DESTROYED, not when
+        /// it is bounced or banished, and only while that monster is still in a Monster Zone (Fulfillment of the Contract /
+        /// Re-Fusion, Lua rmop: c:IsReason(REASON_DESTROY) and tc:IsLocation(LOCATION_MZONE); DuelEngine
+        /// UnlinkCardFromHostOnLeave). On a <see cref="EffectActionKind.SpecialSummonFromGy"/> clause the summoned monster is
+        /// equipped with this card, as Premature Burial's link.
+        /// </summary>
+        public bool BanishHostOnlyIfThisDestroyed;
+
+        /// <summary>
+        /// A Standby / End Phase clause of a monster Card that applies only while this card is an Equip Card in its
+        /// controller's Spell &amp; Trap Zone (Brain Jacker, Lua e2 SetRange(LOCATION_SZONE);
+        /// <see cref="RevivalEquipsAndGearfriedRuntime.SkipsPhaseClause"/>).
+        /// </summary>
+        public bool RequiresThisIsEquipCard;
+
+        // ── ChoiceAmongEffects batch ──
+
+        /// <summary>
+        /// This <see cref="EffectChoiceIndex"/> bullet belongs to an "Apply 1 of these effects" choice made as the card
+        /// resolves (<see cref="EffectActionKind.ApplyOneOfTheseEffectsAtResolution"/>): it is not offered when the card is
+        /// activated, and it applies only when that chooser picks it (<see cref="ChoiceAmongEffectsRuntime.IsApplyingChosen"/>).
+        /// </summary>
+        public bool EffectChoiceAppliedAtResolution;
     }
 
     /// <summary>When the activation condition is tested (PSCT "when" vs "if").</summary>

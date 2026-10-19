@@ -159,6 +159,7 @@ namespace WRLDZ.Duel.TextEffects
             // so an opponent's targeting Spell still resolved on it; and the shared answer is Freed's "negate AND destroy"
             // (plus the SweepPersistentTargets self-destroy), while LV3's Lua (c1995985 s.disop, EVENT_CHAIN_SOLVING) only
             // calls Duel.NegateEffect. Compiling it needs a negate-only arm first.
+            // RdsRedoBattle batch (v210 group): done — RdsRedoBattleAtoms + RdsRedoBattleRuntime.TryNegateSpellTargetingLink.
         };
     }
 }

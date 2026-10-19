@@ -15,7 +15,8 @@ namespace WRLDZ.Duel.Rules
     /// match only a whole standalone bullet text / the B.E.S. shape.
     /// <list type="bullet">
     /// <item>Each pinned card has exactly its own clause list (no bare Activate Draw / DiscardRandom).</item>
-    /// <item>Fuh-Rin-Ka-Zan ("Apply 1 of these effects. ● … ● … ● … ● …") is a choice: not FullyCompiled.</item>
+    /// <item>Fuh-Rin-Ka-Zan ("Apply 1 of these effects. ● … ● … ● … ● …") is a choice: no always-applied bullet clause
+    /// (ChoiceAmongEffects batch: one chooser + bullets applied only when chosen).</item>
     /// <item>Miracle Jurassic Egg is not compiled from a lone counter placement (it was FullyCompiled).</item>
     /// </list>
     /// </summary>
@@ -61,9 +62,14 @@ namespace WRLDZ.Duel.Rules
 
             {
                 var (p, st) = Of(FuhRinKaZan);
-                Check("Fuh-Rin-Ka-Zan: a choice (\"Apply 1 of these effects\") — not FullyCompiled, not Implemented",
-                    p != null && !p.FullyCompiled && st != CardEffectStatusKind.Implemented &&
-                    !p.ClauseList.Exists(c => c != null && c.Action == EffectActionKind.DiscardRandomFromOpponentHand),
+                // ChoiceAmongEffects batch: the choice now compiles as one chooser plus bullets that apply only when
+                // chosen as it resolves — still no always-applied bullet clause.
+                var cl = p?.ClauseList?.Where(c => c != null).ToList() ?? new List<EffectClause>();
+                Check("Fuh-Rin-Ka-Zan: a choice (\"Apply 1 of these effects\") — one chooser, 4 bullets applied only when chosen",
+                    p != null && p.FullyCompiled && st == CardEffectStatusKind.Implemented && cl.Count == 5 &&
+                    cl.Count(c => c.Action == EffectActionKind.ApplyOneOfTheseEffectsAtResolution) == 1 &&
+                    cl.Where(c => c.Action != EffectActionKind.ApplyOneOfTheseEffectsAtResolution)
+                        .All(c => c.EffectChoiceIndex > 0 && c.EffectChoiceAppliedAtResolution),
                     $"status={st} {Describe(p)}");
             }
             {

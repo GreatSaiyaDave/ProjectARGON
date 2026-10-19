@@ -131,6 +131,8 @@ namespace WRLDZ.Duel.TextEffects
             // Step site tossed its coin (TryStartOfDamageStepDestroy reads only Destroy clauses), and the coin-call branch it
             // pointed at read Activate clauses and fell back to destroying any face-up opponent's monster. The card is
             // uncompiled again, as in v206 (a Start of Damage Step coin call with a human call needs a battle pause).
+            // RdsRedoBattle batch (v210 group): compiled again by RdsRedoBattleAtoms with a real Damage Step pause
+            // (RdsRedoBattleRuntime.TryBeginBattleStartCoinCalls).
         };
 
         static int Parse(System.Text.RegularExpressions.Match m, int group, int fallback)

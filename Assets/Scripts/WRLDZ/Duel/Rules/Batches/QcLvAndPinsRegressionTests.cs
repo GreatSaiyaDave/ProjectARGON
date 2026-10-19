@@ -198,16 +198,19 @@ namespace WRLDZ.Duel.Rules
 
         static void MysticSwordsmanLv6Closed(CardDatabase db, DeckFile pDeck, DeckFile aDeck, Chk Check)
         {
+            // RdsRedoBattle batch (2026-10-18): the rider is compiled again, with the "you can" choice and the owner check
+            // (RdsRedoBattleRuntime.DestroyAttackedFaceDownMayPlaceOnDeckTop) and a DestroyMonster deck-top branch that
+            // keeps the card. These checks now pin the Cancel answer: the monster goes to the GY, the Deck is unchanged.
             var prog = Prog(db, MysticSwordsmanLv6);
-            Check("Mystic Swordsman LV6: the top-of-Deck rider stays leftover (no forced Deck placement compiled)",
-                prog != null && !prog.FullyCompiled && Status(db, MysticSwordsmanLv6) != CardEffectStatusKind.Implemented &&
-                !prog.ClauseList.Exists(c =>
-                    c.Action == EffectActionKind.DestroyAttackedFaceDownDefenseReturnToOwnerDeckTopOrGy),
+            Check("Mystic Swordsman LV6: the top-of-Deck rider is its own clause (never a forced Deck placement)",
+                prog != null && prog.FullyCompiled && Status(db, MysticSwordsmanLv6) == CardEffectStatusKind.Implemented &&
+                prog.ClauseList.Count == 1 &&
+                prog.ClauseList[0].Action == EffectActionKind.DestroyAttackedFaceDownDefenseReturnToOwnerDeckTopOrGy,
                 Describe(prog));
 
             {
-                // Uncompiled, it battles plainly: the face-down target is flipped, destroyed by battle (2300 > 2000) and
-                // sent to the GY — never destroyed at the start of the Damage Step and put on top of the Deck.
+                // The player declines the placement (Cancel): the face-down target, destroyed at the start of the Damage
+                // Step without being flipped, goes to the GY; the opponent's Deck is unchanged.
                 var e = PlayerMain(db, pDeck, aDeck, out var reached);
                 var p = e.Player;
                 var o = e.Opponent;
@@ -218,12 +221,15 @@ namespace WRLDZ.Duel.Rules
                 if (e.Phase != DuelPhase.Battle) e.TryEnterBattlePhase(p);
                 if (e.IsAwaitingResponse) e.PassResponse();
                 var attacked = reached && e.TryAttack(p, lv6, soldier);
+                for (var k = 0; k < 4 && e.IsAwaitingResponse; k++) e.PassResponse();
+                var asked = e.IsAwaitingEffectTarget;
+                if (asked) e.CancelEffectTargeting();
                 DrainCombat(e);
-                Check("Mystic Swordsman LV6 (rider uncompiled): its face-down target is destroyed by battle into the GY, " +
+                Check("Mystic Swordsman LV6 (Cancel): its face-down target is destroyed into the GY, " +
                       "not placed on top of the Deck",
-                    attacked && o.Graveyard.Contains(soldier) && soldier.FaceUp && o.Deck.Count == oppDeck,
-                    $"reached={reached} attacked={attacked} gy={o.Graveyard.Contains(soldier)} faceUp={soldier.FaceUp} " +
-                    $"oppDeck {oppDeck}->{o.Deck.Count}");
+                    attacked && asked && o.Graveyard.Contains(soldier) && o.Deck.Count == oppDeck,
+                    $"reached={reached} attacked={attacked} asked={asked} gy={o.Graveyard.Contains(soldier)} " +
+                    $"faceUp={soldier.FaceUp} oppDeck {oppDeck}->{o.Deck.Count}");
             }
         }
 
@@ -239,12 +245,12 @@ namespace WRLDZ.Duel.Rules
                 s0.NamedCard == "Silent Swordsman LV5" && s0.OnlyDuringOwnStandby && s0.RequiresSendThisToGy &&
                 s0.ActivationCondition == LvChainRuntime.NotTurnSummoned && s0.FromHand && s0.FromDeck && s0.IsOptional,
                 Describe(p));
-            Check("Silent Swordsman LV3: the opponent's-Spell negation stays leftover, so the card is not Implemented",
-                p != null && !p.FullyCompiled && Status(db, SilentSwordsmanLv3) != CardEffectStatusKind.Implemented &&
-                !p.ClauseList.Exists(c => c.Action == EffectActionKind.NegateOpponentSpellEffectsThatTargetThis ||
-                                          c.Action == EffectActionKind.NegateSpellTrapEffectsThatTargetAndDestroy) &&
-                (p.UnparsedFragments ?? Array.Empty<string>()).Any(f =>
-                    f.IndexOf("Spell effects that target this card", StringComparison.OrdinalIgnoreCase) >= 0),
+            // RdsRedoBattle batch (2026-10-18): the negation is compiled as a negate-only marker
+            // (RdsRedoBattleRuntime.TryNegateSpellTargetingLink), never Freed's negate-and-destroy.
+            Check("Silent Swordsman LV3: the opponent's-Spell negation is the negate-only marker (not Freed's destroy)",
+                p != null && p.FullyCompiled && Status(db, SilentSwordsmanLv3) == CardEffectStatusKind.Implemented &&
+                p.ClauseList.Count(c => c.Action == EffectActionKind.NegateOpponentSpellEffectsThatTargetThis) == 1 &&
+                !p.ClauseList.Exists(c => c.Action == EffectActionKind.NegateSpellTrapEffectsThatTargetAndDestroy),
                 Describe(p));
 
             // The Standby sentence alone (the atom's whole span): one clause, FullyCompiled — no generic duplicate.

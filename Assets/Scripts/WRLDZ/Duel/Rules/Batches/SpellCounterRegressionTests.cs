@@ -87,7 +87,8 @@ namespace WRLDZ.Duel.Rules
             // Anti-Spell shares the cost shape but its sentence carries a negate rider the anchors do
             // not cover, so it must STAY fail-closed: the whole-sentence anchors must not rescue a
             // partially understood card by matching its cost fragment. WholeResolutionRegressionTests
-            // already asserts the same for Anti-Spell, Miracle Restoring and Blast Magician; this
+            // already asserts the same for Anti-Spell and Miracle Restoring (Blast Magician compiles whole since the
+            // DestroyWatchersAndSpellShields batch: its per-ATK counter cost has its own atom); this
             // asserts it from the Spell Counter side so widening an anchor cannot silently flip them.
             // SpellCounterSpenders batch: Anti-Spell now compiles WHOLE through its own sentence atom (the side-wide cost
             // field plus the Spell negation). The "this card" anchors still do not touch it: no clause spends counters

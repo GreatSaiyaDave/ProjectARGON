@@ -106,6 +106,14 @@ namespace WRLDZ.Duel.TextEffects
             @"fulfilled the condition\.",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        /// <summary>
+        /// RevivalEquipsAndGearfried batch: the whole sentence "Must be Special Summoned with "X"." — the period right after
+        /// the name, so "…, and cannot be Special Summoned by other ways" (a hard Nomi, NamedSummonPairs) never matches.
+        /// </summary>
+        static readonly Regex RxMustWithNamedSentence = new(
+            @"(?:^|(?<=[.!?]\s))Must be Special Summoned with ""([^""]+)""\.(?=\s|$)",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         /// <summary>The card whose effect is this monster's proper Special Summon, or null.</summary>
         public static string ProcedureCardName(CardDef def)
         {
@@ -113,6 +121,10 @@ namespace WRLDZ.Duel.TextEffects
             var text = OfficialCardAuthority.OfficialText(def) ?? "";
             var m = RxMustFirstWithNamed.Match(text);
             if (!m.Success) m = RxOnlyByTributingNamed.Match(text);
+            // RevivalEquipsAndGearfried batch: Gearfried the Swordmaster's "Must be Special Summoned with "X"." with no
+            // "cannot be Special Summoned by other ways" (Lua EnableReviveLimit + AddMustBeSpecialSummoned; Release
+            // Restraint summons it nocheck + CompleteProcedure). Main Deck monsters only.
+            if (!m.Success && !def.IsExtraDeck) m = RxMustWithNamedSentence.Match(text);
             return m.Success ? m.Groups[1].Value : null;
         }
 

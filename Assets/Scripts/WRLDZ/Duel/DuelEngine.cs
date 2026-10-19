@@ -373,6 +373,15 @@ namespace WRLDZ.Duel
         DeferredBattleDestruction _deferredBattle;
 
         /// <summary>
+        /// RevivalEquipsAndGearfried batch: <paramref name="card"/> is destroyed by the battle whose destruction waits for a
+        /// FLIP effect's target (ygopro STATUS_BATTLE_DESTROYED while that FLIP resolves: Brain Jacker does not equip).
+        /// </summary>
+        public bool IsDeferredBattleDestroy(CardInstance card) =>
+            card != null && _deferredBattle != null &&
+            ((_deferredBattle.DestroyDefender && ReferenceEquals(_deferredBattle.Defender, card)) ||
+             (_deferredBattle.DestroyAttacker && ReferenceEquals(_deferredBattle.Attacker, card)));
+
+        /// <summary>
         /// Paused at Damage Calculation for hand Quick Effects (Kuriboh).
         /// Finish via Pass or Kuriboh activation.
         /// </summary>
@@ -794,6 +803,8 @@ namespace WRLDZ.Duel
                 Draw(who, 1, silent: false, byCardEffect: false);
 
             if (GameOver) return;
+            // ChoiceAmongEffects batch: Penalty Game!'s draw lock on this player ends with their Draw Phase.
+            TextEffects.ChoiceAmongEffectsRuntime.OnDrawPhaseEnd(this, who);
 
             // —— Standby Phase ——
             Phase = DuelPhase.Standby;
@@ -1119,6 +1130,14 @@ namespace WRLDZ.Duel
             {
                 if (!silent)
                     Log($"{who.Name} cannot draw — Protector of the Sanctuary (outside Draw Phase).");
+                return;
+            }
+
+            // ChoiceAmongEffects batch: Penalty Game! — no draw during the Draw Phase it covers (normal draw included).
+            if (who != null && TextEffects.ChoiceAmongEffectsRuntime.CannotDrawNow(this, who, out var noDrawSource))
+            {
+                if (!silent)
+                    Log($"{who.Name} cannot draw — {noDrawSource} (this Draw Phase).");
                 return;
             }
 
@@ -2639,6 +2658,8 @@ namespace WRLDZ.Duel
             card.FusionMaterialsUsed = null;
             card.UntilEndOfTurnAtk = 0;
             card.UntilEndOfTurnDef = 0;
+            // BattleRiders batch: Catnipped Kitty's "DEF becomes 0 until the end of this turn" belongs to the old presence.
+            card.DefZeroUntilEndOfTurn = false;
             card.FaceUpStampAtTurnStart = card.FaceUpStamp;
             card.AbsorbedBy = null;
             // NegationMonsters batch (v161): a Ha Des / Twin-Headed Wolf negation ends when the card leaves the GY.
@@ -2806,6 +2827,7 @@ namespace WRLDZ.Duel
                     if (m == null) continue;
                     m.UntilEndOfTurnAtk = 0;
                     m.UntilEndOfTurnDef = 0;
+                    m.DefZeroUntilEndOfTurn = false; // BattleRiders batch: Catnipped Kitty
                     m.SwapOriginalAtkDefThisTurn = false;
                     m.DamageStepAtkBonus = 0;
                 }
@@ -2925,7 +2947,9 @@ namespace WRLDZ.Duel
             // EquipLocksAndLeaveField batch: Big Bang Shot — "When this card leaves the field, banish the equipped
             // monster" (Lua e5 EVENT_LEAVE_FIELD: any reason; an Equip Card's leave-field effect applies once it is off
             // the field, negated or not, as Premature Burial's above).
-            else if (fromFieldSt && HasCompiledClause(card, c => c.BanishHostWhenThisLeaves))
+            // RevivalEquipsAndGearfried batch: Fulfillment of the Contract / Re-Fusion — "When this card is destroyed" only.
+            else if (fromFieldSt && HasCompiledClause(card, c =>
+                         c.BanishHostWhenThisLeaves && (destroyed || !c.BanishHostOnlyIfThisDestroyed)))
             {
                 var hostOwner = ControllerOf(host);
                 if (hostOwner != null && hostOwner.TryFindMonster(host, out _))
@@ -4410,6 +4434,12 @@ namespace WRLDZ.Duel
                     // NegationMonsters batch (v161): Tyrant Dragon — only while the opponent controls a monster.
                     if (!TextEffects.NegationMonstersRuntime.ExtraAttackConditionMet(this, attacker, clause))
                         continue;
+                    // BattleRiders batch: Armed Samurai - Ben Kei — Amount per Equip Card equipped to it, counted live.
+                    if (clause.ExtraAttacksPerEquippedCard)
+                    {
+                        extra = Math.Max(extra, TextEffects.BattleRidersRuntime.ExtraAttacksPerEquip(this, attacker, clause));
+                        continue;
+                    }
                     extra = Math.Max(extra, Math.Max(0, clause.Amount));
                 }
             }
@@ -4877,6 +4907,8 @@ namespace WRLDZ.Duel
             IsResolvingChain = true;
             while (Chain.Count > 0)
             {
+                // RdsRedoSpellTrap batch: the Trap Card activation the previous link resolved is over (Chain Burst).
+                TextEffects.RdsRedoSpellTrapRuntime.FlushResolvedTrap(this);
                 // SummonPromptsAndCosts batch (v163): the link Special Summons a card whose summon cost needs a human's
                 // Tribute pick (Tyrant Dragon) — it is picked as the link starts to resolve; the Chain waits for it.
                 if (TextEffects.SummonPromptsAndCostsRuntime.HoldBeforeLinkResolves(this, Chain.Last))
@@ -4891,6 +4923,8 @@ namespace WRLDZ.Duel
                 // SpellEventsAndHandSendTriggers batch: a Continuous / Field card whose own activation this is applies only
                 // from now on — the Spells of this Chain were activated before it applied (aux.chainreg).
                 TextEffects.SpellEventsAndHandSendTriggersRuntime.NoteLinkResolving(this, link);
+                // RdsRedoSpellTrap batch: a Trap Card activation (not negated) is reported once this link has resolved.
+                TextEffects.RdsRedoSpellTrapRuntime.NoteLinkResolving(this, link);
                 // EffectDamageEvents batch (v162): damage modifiers keyed to a Chain Link apply while it resolves.
                 TextEffects.EffectDamageEventsRuntime.NoteResolving(this, link);
                 // Skull Invitation: settle the cards the previous links sent to the GY before this one resolves; this
@@ -4993,6 +5027,15 @@ namespace WRLDZ.Duel
                     continue;
                 }
 
+                // RdsRedoBattle batch: Silent Swordsman LV3 / Rare Metalmorph (ygopro EVENT_CHAIN_SOLVING +
+                // Duel.NegateEffect only) — a Spell effect that targets the monster they cover resolves with no effect;
+                // its card is not destroyed.
+                if (TextEffects.RdsRedoBattleRuntime.TryNegateSpellTargetingLink(this, link))
+                {
+                    EnsureDeferredSpellTrapGrave(link);
+                    continue;
+                }
+
                 // Muko: the link it answered resolves by discarding instead of drawing (ChangeChainOperation).
                 if (TextEffects.MukoRuntime.TryResolveLink(this, link))
                 {
@@ -5079,6 +5122,11 @@ namespace WRLDZ.Duel
                     continue;
                 }
 
+                // DeckSwarmsAndFusionMaterials batch: a Hex-Sealed Fusion's ignition link (its materials Tributed as the
+                // cost when it activated) Special Summons the Fusion Monster chosen then.
+                if (TextEffects.DeckSwarmsAndFusionMaterialsRuntime.TryResolveHexLink(this, link))
+                    continue;
+
                 // PerCountBurns (v141): a face-up Spell's ignition link (Wave-Motion Cannon) deals the damage it
                 // fixed at activation; its card already left the field as the cost.
                 if (TextEffects.PerCountBurnsRuntime.TryResolveFaceUpFieldIgnitionLink(this, link))
@@ -5161,6 +5209,8 @@ namespace WRLDZ.Duel
                 }
             }
 
+            // RdsRedoSpellTrap batch: the last link's Trap Card activation is over (Chain Burst), while the Chain still counts.
+            TextEffects.RdsRedoSpellTrapRuntime.FlushResolvedTrap(this);
             IsResolvingChain = false;
             Chain.Clear();
             // EffectDamageEvents batch (v162): per-link damage modifiers end with the Chain (RESET_CHAIN).
@@ -5617,6 +5667,34 @@ namespace WRLDZ.Duel
                 return true;
             }
 
+            // RdsRedoBattle batch: Sasuke Samurai #4 (ygopro EVENT_BATTLE_START, TRIGGER_F) — its controller calls a coin
+            // toss before the face-down flip. The runtime goes on with the Damage Step itself (ContinueStartOfDamageStep),
+            // now or once the human made the call.
+            if (targetOrNull != null && opp.TryFindMonster(targetOrNull, out _) &&
+                TextEffects.RdsRedoBattleRuntime.TryBeginBattleStartCoinCalls(this, who, opp, attacker, targetOrNull))
+                return true;
+
+            return ContinueStartOfDamageStep(who, opp, attacker, targetOrNull);
+        }
+
+        /// <summary>
+        /// The Damage Step after its start-of-Damage-Step triggers (RdsRedoBattle batch: Sasuke Samurai #4's coin calls
+        /// resume here): a battler that left the field stops the battle; otherwise a face-down target is flipped and the
+        /// Damage Step goes on to damage calculation.
+        /// </summary>
+        internal bool ContinueStartOfDamageStep(DuelistState who, DuelistState opp, CardInstance attacker,
+            CardInstance targetOrNull)
+        {
+            if (GameOver || who == null || opp == null || attacker == null || !who.TryFindMonster(attacker, out _) ||
+                (targetOrNull != null && !opp.TryFindMonster(targetOrNull, out _)))
+            {
+                if (!GameOver) Log("A battling monster left the field at the start of the Damage Step — the attack stops.");
+                BattleStep = BattleStep.BattleStep;
+                DamageSubStep = DamageSubStep.None;
+                Notify();
+                return true;
+            }
+
             // Start of Damage Step: flip face-down targets face-up Defense (Rulebook).
             // Flip effects activate after damage calculation (not here) — track who was flipped.
             CardInstance flippedByBattle = null;
@@ -5821,6 +5899,7 @@ namespace WRLDZ.Duel
             if (!who.TryFindMonster(attacker, out _))
             {
                 Log("Attacker left the field before damage calculation finished.");
+                TextEffects.RdsRedoBattleRuntime.OnEndOfDamageStep(this, attacker); // RdsRedoBattle batch
                 BattleStep = BattleStep.BattleStep;
                 DamageSubStep = DamageSubStep.None;
                 ClearBattleDmgFlags();
@@ -5831,6 +5910,7 @@ namespace WRLDZ.Duel
             if (targetOrNull != null && !opp.TryFindMonster(targetOrNull, out _))
             {
                 Log("Attack target left the field before damage calculation finished.");
+                TextEffects.RdsRedoBattleRuntime.OnEndOfDamageStep(this, attacker); // RdsRedoBattle batch
                 BattleStep = BattleStep.BattleStep;
                 DamageSubStep = DamageSubStep.None;
                 ClearBattleDmgFlags();
@@ -6233,6 +6313,8 @@ namespace WRLDZ.Duel
             // End of Damage Step: Hyper Hammerhead bounce if battled monster survived.
             TextEffects.TextEffectRuntime.NotifyEndOfDamageStep(
                 this, who, opp, attacker, targetOrNull);
+            // RdsRedoBattle batch: Cross Counter's EVENT_DAMAGE_STEP_END destruction of the attacker; Covering Fire's gain ends.
+            TextEffects.RdsRedoBattleRuntime.OnEndOfDamageStep(this, attacker);
 
             // BattleWindows batch: the end-of-Damage-Step window (Destruction Punch; Michizure for a monster this
             // Damage Step sent to its owner's GY). The Damage Step ends once both duelists passed.
@@ -7756,6 +7838,8 @@ namespace WRLDZ.Duel
             if (owner.TryFindMonster(card, out var i))
             {
                 var wasFaceUp = card.FaceUp;
+                // DestroyWatchersAndSpellShields batch: its Type on the field (DNA Surgery), read before it leaves.
+                var raceOnField = wasFaceUp ? card.Race : null;
                 // NegationMonsters batch (v161): Lesser Fiend — a monster it destroys by battle is banished instead
                 // (ygopro EFFECT_BATTLE_DESTROY_REDIRECT, decided while both battlers were on the field).
                 if (destroyedByBattle && !banishIfDestroyed && !card.IsToken &&
@@ -7768,7 +7852,10 @@ namespace WRLDZ.Duel
                 // Banisher of the Light (RedirectAndReplace batch, v142): destroyed and banished instead of sent to
                 // the GY — read while the monster is still on the field (a destroyed Banisher banishes itself). A
                 // Token is banished instead too: it leaves play without reaching the GY.
-                if (!banishIfDestroyed && TextEffects.RedirectAndReplaceRuntime.SendsToBanishedInstead(this, card))
+                // RdsRedoBattle batch: a monster destroyed to the top of its owner's Deck (Mystic Swordsman LV6) is not sent
+                // to the GY, so Banisher of the Light (EFFECT_TO_GRAVE_REDIRECT) does not apply to it.
+                if (!banishIfDestroyed && !returnToOwnerDeckTopInsteadOfGy &&
+                    TextEffects.RedirectAndReplaceRuntime.SendsToBanishedInstead(this, card))
                 {
                     if (card.IsToken)
                         TextEffects.RedirectAndReplaceRuntime.NoteTokenBanishedInstead(this, card);
@@ -7782,9 +7869,12 @@ namespace WRLDZ.Duel
                 // Effect / non-battle destroy → default shatter (battle already queued)
                 CardShatterPresentation.QueueEffect(card.InstanceId, card.Name);
                 owner.MonsterZones[i].Occupant = null;
+                // RdsRedoSpellTrap batch: Necklace of Command / Flint watch their monster's destruction (REASON_LOST_TARGET).
+                var lostTargets = TextEffects.RdsRedoSpellTrapRuntime.NoteHostDestroyed(this, owner, card, destroyedByBattle);
                 // A destroyed monster's Equip cards (and destroy-linked Continuous
                 // Traps like Call of the Haunted / Battle-Scarred) are sent to the GY.
                 UnlinkEquips(card, hostDestroyed: true, fallbackOwner: owner);
+                TextEffects.RdsRedoSpellTrapRuntime.AfterHostDestroyed(this, lostTargets);
                 PendingTributes.Remove(card);
                 if (card.IsToken)
                 {
@@ -7811,14 +7901,18 @@ namespace WRLDZ.Duel
                 }
                 else if (returnToOwnerDeckTopInsteadOfGy)
                 {
-                    var deckOwner = owner; // owner of the monster
-                    // Return to top of owner's deck
-                    ReturnCardToDeck(card, onTop: true, intoDeckOf: deckOwner);
-                    Log($"{card.Name} destroyed and placed on top of {deckOwner.Name}'s Deck instead of GY.");
-                    // Some triggers still fire? But the destination is deck, not GY. Most "sent to GY" triggers don't apply.
-                    // Mark as destroyed but not sent to GY.
-                    MarkSentFromFieldToGy(card, byEffect, destroyedByBattle, battleDestroyer); // keep for compatibility?
+                    // RdsRedoBattle batch: Mystic Swordsman LV6 (ygopro Duel.Destroy(d, REASON_EFFECT, LOCATION_DECK)) —
+                    // destroyed and placed on top of its owner's Deck instead of going to the GY. The zone is already
+                    // empty here, so the card goes straight into the owner's Deck (ReturnCardToDeck needs it on the field
+                    // and lost the card, v208 QC). It never reaches the GY: no "sent to the GY" record; its own
+                    // "if this card is destroyed" triggers that do not need the GY still activate.
+                    var deckPile = PileOwner(owner, card);
+                    card.FaceUp = false;
+                    deckPile.Deck.Insert(0, card.CardId, null);
+                    Log($"Destroyed: {card.Name} — placed on top of {deckPile.Name}'s Deck instead of the GY.");
                     TextEffects.ToonsRuntime.NotifyFaceUpCardDestroyed(this, card, wasFaceUp);
+                    TextEffects.RedirectAndReplaceRuntime.ResolveDestroyedTriggersOutsideGy(this, owner, card,
+                        destroyedByBattle, battleDestroyer);
                 }
                 else if (shuffleIntoDeck)
                 {
@@ -7863,6 +7957,9 @@ namespace WRLDZ.Duel
 
                 // "If "X" on the field is destroyed, destroy this card." (Toons batch).
                 TextEffects.ToonsRuntime.NotifyFaceUpCardDestroyed(this, card, wasFaceUp);
+                // DestroyWatchersAndSpellShields batch: Firebird / Maji-Gire Panda / Mokey Mokey Smackdown's destroyed event.
+                TextEffects.DestroyWatchersAndSpellShieldsRuntime.NoteMonsterDestroyed(this, owner, card, wasFaceUp,
+                    raceOnField);
                 DuelPresentationPacer.HoldCombatResult();
             }
         }
@@ -8203,6 +8300,8 @@ namespace WRLDZ.Duel
                     return; // EndGame already notified.
                 // StandbyBurnsAndDice batch (v162): Mask of Dispel's leave-field destruction; per-presence amounts.
                 TextEffects.StandbyBurnsAndDiceRuntime.OnBoardSettled(this);
+                // DestroyWatchersAndSpellShields batch: Pole Position's leave-field destruction.
+                TextEffects.DestroyWatchersAndSpellShieldsRuntime.OnBoardSettled(this);
                 // Exodia family: a hand win condition is checked whenever the state changes.
                 if (!GameOver && TextEffects.TextEffectRuntime.CheckHandWinConditions(this))
                     return; // EndGame already notified.

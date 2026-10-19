@@ -901,6 +901,8 @@ namespace WRLDZ.Duel
             TextEffects.MonsterNegationAndControlLocksRuntime.FilterLegacyTargets(engine, exceptCard, list);
             // LpLocksDelayedBurnAndGyNegation batch: Dora of Fate's target is above Level 1 (mirror of CollectTargets).
             TextEffects.LpLocksDelayedBurnAndGyNegationRuntime.FilterLegacyTargets(exceptCard, list);
+            // BattleRiders batch: Catnipped Kitty's target has DEF above 0 (mirror of CollectTargets).
+            TextEffects.BattleRidersRuntime.FilterLegacyTargets(exceptCard, list);
             return list;
         }
 
@@ -1859,6 +1861,8 @@ namespace WRLDZ.Duel
                     c.Action == EffectActionKind.OpponentAttacksOnlySelectedMonsterThisTurn ||
                     // Acid Trap Hole: face-down monsters on either field (no legacy list has that filter).
                     c.Zone == EffectZoneFilter.FieldFaceDownMonsters ||
+                    // SimpleTriggersAndSpells batch: Set cards on either field (no legacy list has that filter).
+                    c.Zone == EffectZoneFilter.FieldSetCards ||
                     // PerCopyDeck batch (v163): Graverobber's Spell in the opponent's GY (no legacy list).
                     c.Zone == EffectZoneFilter.OppGySpells ||
                     // ChaosBanishSummons batch: Primal Seed's cards in your banished pile (no legacy list).
@@ -1908,6 +1912,9 @@ namespace WRLDZ.Duel
                     // NormalMonsterSpells batch: Order to Smash's face-up Level 2 or lower non-Token Normal Monster (no
                     // legacy list has the filter).
                     TextEffects.NormalMonsterSpellsRuntime.UsesCompiledActivationPending(c) ||
+                    // RevivalEquipsAndGearfried batch: Fulfillment of the Contract / Re-Fusion's Ritual / Fusion Monster in
+                    // your GY (the legacy MonsterInEitherGy list has no such filter and skips Extra Deck monsters).
+                    TextEffects.RevivalEquipsAndGearfriedRuntime.UsesCompiledActivationPending(c) ||
                     // EngineResiduals (v163): "Target 1 face-up monster on the field" (Offerings to the Doomed, Micro Ray,
                     // Collected Power). The legacy list includes Sets, and the untargeted seat picked the target only at
                     // resolution, for the player too; the compiled flow asks it as the card is activated.
@@ -1980,6 +1987,8 @@ namespace WRLDZ.Duel
             bool autoPickTarget)
         {
             var inResponse = engine.PendingResponse != null && engine.PendingResponse.Responder == who;
+            // RdsRedoSpellTrap batch: a Trap Card activation starts (Chain Burst reports it once it resolved).
+            TextEffects.RdsRedoSpellTrapRuntime.NoteActivationStart(engine, who, card, fromHand);
             // ArchfiendRiders batch: Desrook Archfiend's hand Quick Effect (right after a "Terrorking Archfiend" you
             // controlled was destroyed) seats its own Spell Speed 2 link.
             if (TextEffects.ArchfiendRidersRuntime.TryActivate(engine, who, card, fromHand, autoPickTarget,
@@ -2411,6 +2420,8 @@ namespace WRLDZ.Duel
             {
                 // Kuriboh: prevent battle damage when opponent attacks
                 pick = legal.FirstOrDefault(c => c.CardId == MonsterEffects.Kuriboh);
+                // RdsRedoBattle batch: Cross Counter whenever legal; Covering Fire when the gain wins the battle.
+                pick ??= legal.FirstOrDefault(c => TextEffects.RdsRedoBattleRuntime.AiWantsDamageCalculationAnswer(engine, who, c));
             }
             else if (engine.PendingResponse.Timing == ResponseTiming.EndOfDamageStep ||
                      engine.PendingResponse.Timing == ResponseTiming.MonsterSentFromFieldToYourGy)
@@ -2609,6 +2620,9 @@ namespace WRLDZ.Duel
             // SimpleSpellTraps batch: A Wingbeat of Giant Dragon's selection, Emergency Provisions' cost picks.
             if (TextEffects.SimpleSpellTrapsRuntime.TryResolvePick(engine, target, out var simplePickOk))
                 return simplePickOk;
+            // SimpleTriggersAndSpells batch: a seated Elemental Burst's Tribute picks.
+            if (TextEffects.SimpleTriggersAndSpellsRuntime.TryResolvePick(engine, target, out var oneEachPickOk))
+                return oneEachPickOk;
             // SpecialSummonEffects batch (v161): Twin-Headed Behemoth's Yes; The Puppet Magic of Dark Ruler's banish picks.
             if (TextEffects.SpecialSummonEffectsRuntime.TryResolvePick(engine, target, out var ssPickOk))
                 return ssPickOk;
@@ -2754,6 +2768,9 @@ namespace WRLDZ.Duel
             // StandbyBurnsAndDice batch (v162): Cancel = Inspection is not used.
             if (TextEffects.StandbyBurnsAndDiceRuntime.TryCancelPick(engine))
                 return true;
+            // RdsRedoBattle batch: Sasuke Samurai #4's call is mandatory (Cancel calls Heads).
+            if (TextEffects.RdsRedoBattleRuntime.TryCancelPick(engine))
+                return true;
             // LpLocksDelayedBurnAndGyNegation batch: CANCEL at Wall of Revealing Light's amount = not activated.
             if (TextEffects.LpLocksDelayedBurnAndGyNegationRuntime.TryCancelPick(engine))
                 return true;
@@ -2832,6 +2849,9 @@ namespace WRLDZ.Duel
             // BattleOutcomeTriggers batch (v162): Kryuel's call / selection and Burglars' Spell are made for you; Jackal's /
             // Falcos' return is declined.
             if (TextEffects.BattleOutcomeTriggersRuntime.TryCancelPick(engine))
+                return true;
+            // SimpleTriggersAndSpells batch: Abare Ushioni's call is mandatory (CANCEL calls Heads).
+            if (TextEffects.SimpleTriggersAndSpellsRuntime.TryCancelPick(engine))
                 return true;
             // "1 of these effects" with two untargeted bullets (Don Zaloog): CANCEL at the first offers the other one.
             if (TextEffects.EffectChoiceRuntime.TryCancelPick(engine))
@@ -3149,7 +3169,7 @@ case EffectTargetKind.DeclareMonsterType:
         /// Materials are matched by NAME (official rule) so any passcode/alias of that name
         /// qualifies. Returns false unless it names 2–3 materials.
         /// </summary>
-        static bool TryGetFusionRecipe(int fusionId, out string[] materialNames)
+        internal static bool TryGetFusionRecipe(int fusionId, out string[] materialNames)
         {
             _fusionRecipeCache ??= new Dictionary<int, string[]>();
             if (_fusionRecipeCache.TryGetValue(fusionId, out materialNames))
@@ -3593,6 +3613,8 @@ case EffectTargetKind.DeclareMonsterType:
 
             if (card?.Def != null && card.Def.IsSpell)
                 TextEffects.TextEffectRuntime.NotifySpellResolved(engine, who, card);
+            // RdsRedoSpellTrap batch: a Trap Card activation that resolved inline (Chain Burst).
+            TextEffects.RdsRedoSpellTrapRuntime.NotifyTrapFinished(engine, who, card);
         }
 
         static void DestroyAllMonsters(DuelEngine engine, DuelistState who, CardInstance source = null)

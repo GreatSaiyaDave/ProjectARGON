@@ -28,7 +28,9 @@ namespace WRLDZ.Duel.TextEffects
         {
             if (engine == null || who?.Deck == null) return false;
             return who.Deck.Count >= Math.Max(1, count) &&
-                   !ContinuousProtections.BlocksDrawOutsideDrawPhase(engine, who);
+                   !ContinuousProtections.BlocksDrawOutsideDrawPhase(engine, who) &&
+                   // ChoiceAmongEffects batch: Penalty Game!'s Draw Phase lock.
+                   !ChoiceAmongEffectsRuntime.CannotDrawNow(engine, who);
         }
 
         /// <summary>ApplyClause arm: draw, then start (or, for the AI, make) the discard.</summary>

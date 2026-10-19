@@ -159,7 +159,9 @@ namespace WRLDZ.Duel.TextEffects
         {
             if (activate == null) return false;
             foreach (var c in activate)
-                if (c != null && c.EffectChoiceIndex > 0 && c.Timing == EffectTiming.Activate)
+                if (c != null && c.EffectChoiceIndex > 0 && c.Timing == EffectTiming.Activate &&
+                    // ChoiceAmongEffects batch: an "Apply 1 of these effects" bullet is chosen as the card resolves.
+                    !c.EffectChoiceAppliedAtResolution)
                     return true;
             return false;
         }
@@ -415,7 +417,8 @@ namespace WRLDZ.Duel.TextEffects
             // PgdSpellTrapBasics batch (v162): Pyramid Energy's ATK / DEF options.
             if (c.Action == EffectActionKind.ModifyAllFaceUpMonstersAtkDefUntilEndPhase)
                 return PgdSpellTrapBasicsRuntime.DescribeStatBullet(c);
-            return "that effect";
+            // ChoiceAmongEffects batch: Penalty Game!'s locks (and the mass-destroy / draw bullets).
+            return ChoiceAmongEffectsRuntime.DescribeBullet(c) ?? "that effect";
         }
 
         static CardInstance Token(string kind, string name, int index = 0) => new CardInstance

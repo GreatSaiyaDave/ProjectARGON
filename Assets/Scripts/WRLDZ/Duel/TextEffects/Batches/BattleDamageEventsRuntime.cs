@@ -66,6 +66,10 @@ namespace WRLDZ.Duel.TextEffects
                      HasDoubler(targetOrNull, c => c.RequiresThisIsAttackTarget && !c.RequiresDirectAttack) &&
                      VictimIsOpponentOf(engine, targetOrNull, victim))
                 doubler = targetOrNull;
+            // RdsRedoBattle batch: Cross Counter's EFFECT_CHANGE_BATTLE_DAMAGE on the attacked monster (a doubling, not a
+            // second one: ygopro applies DOUBLE_DAMAGE once).
+            else if (targetOrNull != null && RdsRedoBattleRuntime.DoublesBattleDamageTo(engine, targetOrNull, victim))
+                doubler = targetOrNull;
             if (doubler == null) return damage;
             var doubled = damage > int.MaxValue / 2 ? int.MaxValue : damage * 2;
             engine.Log($"{doubler.Name}: the battle damage {victim.Name} takes is doubled ({damage} → {doubled}).");

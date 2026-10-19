@@ -61,19 +61,38 @@ namespace WRLDZ.Duel.Rules
             }
 
             // ── fail closed: back to their v206 state (not Implemented, not in decks) ──
-            foreach (var id in new[] { CursedFig, TriangleEcstasySpark, Flint, NecklaceOfCommand, Tragedy, CoveringFire,
-                                       ChainBurst, SasukeSamurai4, BesBigCore, BesBigCoreMk2, BesBigCoreMk3 })
+            // RdsRedoBattle batch (2026-10-18): Covering Fire and Sasuke Samurai #4 are Implemented again with real runtimes
+            // (RdsRedoBattleRegressionTests); the rest stay closed.
+            // RdsRedoSpellTrap batch: Triangle Ecstasy Spark, Flint, Necklace of Command and Chain Burst were redone with real
+            // runtimes (RdsRedoSpellTrapRegressionTests pins their shapes and mini-duels).
+            foreach (var id in new[] { CursedFig, Tragedy, BesBigCoreMk2, BesBigCoreMk3 })
             {
                 Check($"{db.Get(id)?.name ?? id.ToString()}: not Implemented (fail closed; no runtime does what it prints)",
                     Status(id) != CardEffectStatusKind.Implemented && !CardEffectStatus.MayIncludeInDeck(db.Get(id)),
                     Shape(id));
             }
 
+            // BattleRiders batch (v210): B.E.S. Big Core compiles whole — the Normal Summon counter sentence (gated to a
+            // Normal Summon), the shared battle indestructibility and the end-of-Damage-Step removal-or-destroy trigger
+            // (BattleRidersRegressionTests drive it). No clause from a partial match.
             {
+                var bc = CardTextEffectCompiler.Compile(db.Get(BesBigCore));
+                Check("B.E.S. Big Core: compiled whole (Normal Summon counters + end-of-Damage-Step removal or destroy)",
+                    bc != null && bc.FullyCompiled && bc.ClauseList.Count == 3 &&
+                    bc.ClauseList.Exists(c => c.Action == EffectActionKind.PlaceCounterOnThisCard &&
+                                              c.RequiresThisNormalSummoned) &&
+                    bc.ClauseList.Exists(c => c.Action == EffectActionKind.RemoveCounterFromThisOrDestroyAtEndOfDamageStep &&
+                                              c.Timing == EffectTiming.EndOfDamageStep) &&
+                    Status(BesBigCore) == CardEffectStatusKind.Implemented,
+                    Shape(BesBigCore));
+            }
+
+            {
+                // RdsRedoSpellTrap batch: the hollow atom is gone; the card compiles to real actions.
                 var p = CardTextEffectCompiler.Compile(db.Get(TriangleEcstasySpark));
-                Check("Triangle Ecstasy Spark: its hollow clause fails the program closed (EffectVocabulary.HasNoRuntime)",
-                    p != null && !p.FullyCompiled &&
-                    (p.UnparsedFragments ?? Array.Empty<string>()).Any(u => u.Contains("has no runtime")),
+                Check("Triangle Ecstasy Spark: no longer compiles to its retired hollow action",
+                    p != null && !p.ClauseList.Any(c => c != null &&
+                        c.Action == EffectActionKind.BoostHarpieLadySistersAtkAndLockTraps),
                     Shape(TriangleEcstasySpark));
             }
 
@@ -82,10 +101,9 @@ namespace WRLDZ.Duel.Rules
                          EffectActionKind.BoostHarpieLadySistersAtkAndLockTraps,
                          EffectActionKind.NegateFlipMonsterEffectsThisDestroysByBattle,
                          EffectActionKind.EquippedLosesAtkAndCannotAttackChangePos,
-                         EffectActionKind.DrawOrDiscardRandomFromOpponentHand,
-                         EffectActionKind.DestroyAllOppDefenseWhenOppAttackBecomesDefense,
-                         EffectActionKind.TargetGainsAtkEqualToAnotherTargetDuringDamageStep,
-                         EffectActionKind.CoinCallDestroyBattledMonsterOnCorrect
+                         EffectActionKind.DestroyAllOppDefenseWhenOppAttackBecomesDefense
+                         // RdsRedoBattle batch: TargetGainsAtkEqualToAnotherTargetDuringDamageStep and
+                         // CoinCallDestroyBattledMonsterOnCorrect have runtimes again (RdsRedoBattleRuntime).
                      })
                 Check($"{a}: listed as having no runtime", EffectVocabulary.HasNoRuntime(a));
 

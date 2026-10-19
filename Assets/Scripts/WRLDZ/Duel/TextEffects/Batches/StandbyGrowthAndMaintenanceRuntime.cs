@@ -668,6 +668,9 @@ namespace WRLDZ.Duel.TextEffects
             // GyHandAndSummonEventTriggers batch: Backfire / Blessings of the Nile — the sends recorded since the
             // last checkpoint were one event, so each watching copy queues one trigger.
             TextEffects.GyHandAndSummonEventTriggersRuntime.FlushEventTriggers(engine);
+            // DestroyWatchersAndSpellShields batch: Firebird / Maji-Gire Panda / Mokey Mokey Smackdown — the destructions
+            // recorded since the last checkpoint were one event.
+            DestroyWatchersAndSpellShieldsRuntime.FlushDestroyedEvents(engine);
             var state = State(engine);
             if (!engine.IsResolvingChain)
                 state.HeldUntilChainEnds.Clear();

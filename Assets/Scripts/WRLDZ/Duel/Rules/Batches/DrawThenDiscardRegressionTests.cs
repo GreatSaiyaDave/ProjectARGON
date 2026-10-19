@@ -66,13 +66,16 @@ namespace WRLDZ.Duel.Rules
                 EffectVocabulary.ResolutionOf(new EffectClause { Action = EffectActionKind.DrawThenDiscard }) ==
                 EffectResolutionKind.Draw);
 
+            // BattleRiders batch (v210): Spiral Spear Strike's Gaia-conditioned "Draw 2 cards, then discard 1 card." is its
+            // own whole-text atom (a battle-damage trigger), never Graceful Charity's activation atom or a bare Draw 2.
             var spiral = CardTextEffectCompiler.Compile(db.Get(SpiralSpearStrike));
-            Check("Spiral Spear Strike: its \"Draw 2 cards, then discard 1 card\" no longer compiles to a bare Draw 2",
-                spiral != null && !spiral.FullyCompiled &&
-                !spiral.ClauseList.Exists(x => x != null &&
-                                               (x.Action == EffectActionKind.Draw ||
-                                                x.Action == EffectActionKind.DrawThenDiscard)) &&
-                CardEffectStatus.Classify(db.Get(SpiralSpearStrike)) != CardEffectStatusKind.Implemented,
+            var spiralDraw = spiral?.ClauseList.Find(x => x != null && x.Action == EffectActionKind.DrawThenDiscard);
+            Check("Spiral Spear Strike: its \"Draw 2 cards, then discard 1 card\" is its battle-damage trigger, not a bare Draw 2",
+                spiral != null && spiral.FullyCompiled &&
+                !spiral.ClauseList.Exists(x => x != null && x.Action == EffectActionKind.Draw) &&
+                spiralDraw != null && spiralDraw.Timing == EffectTiming.ThisCardInflictsBattleDamage &&
+                spiralDraw.Amount == 2 && spiralDraw.ThenDiscardCount == 1 &&
+                spiralDraw.ActivationCondition != DrawThenDiscardRuntime.CanDrawAmount,
                 $"clauses=[{string.Join("; ", spiral?.ClauseList.Select(EffectVocabulary.Describe) ?? Array.Empty<string>())}] " +
                 $"status={CardEffectStatus.Classify(db.Get(SpiralSpearStrike))}");
 

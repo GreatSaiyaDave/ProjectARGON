@@ -116,6 +116,9 @@ namespace WRLDZ.Duel.TextEffects
             foreach (var c in ClausesOn(victim, EffectActionKind.UnaffectedByCardEffects))
             {
                 if (!ConditionMet(engine, c)) continue;
+                // RdsRedoBattle batch: Silent Swordsman LV5 — only the opponent's effects (te:GetOwnerPlayer()~=handler).
+                if (c.UnaffectedOnlyByOpponentEffects && !RdsRedoBattleRuntime.SourceIsOpponents(engine, victim, source))
+                    continue;
                 if (FilterMatches(c.UnaffectedByFilter, source.Def))
                     return true;
             }

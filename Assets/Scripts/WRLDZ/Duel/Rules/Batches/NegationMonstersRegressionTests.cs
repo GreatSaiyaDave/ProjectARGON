@@ -220,14 +220,16 @@ namespace WRLDZ.Duel.Rules
             var nearIds = new[]
             {
                 // QC LvAndPins (2026-10-18): stays a near miss — the cc5a4dd9d atom for it was removed (its marker never
-                // negated anything, and the shared answer destroys the Spell; LV3's Lua only negates).
+                // negated anything, and the shared answer destroys the Spell; LV3's Lua only negates). RdsRedoBattle batch
+                // (2026-10-18): LV3 is FullyCompiled again through its own negate-only marker, so for it only these
+                // templates' actions count as a leak.
                 1995985,  // Silent Swordsman LV3: "Negate your opponent's Spell effects that target this card."
                 39507162, // Blade Knight: "If you control no other monsters, the effects of Flip monsters … are negated."
             };
             var leaked = nearIds.Where(id =>
             {
                 var p = P(id);
-                return p != null && (p.FullyCompiled || p.ClauseList.Exists(c =>
+                return p != null && ((p.FullyCompiled && id != 1995985) || p.ClauseList.Exists(c =>
                     c.Action == EffectActionKind.NegateSpellTrapEffectsThatTargetAndDestroy ||
                     c.Action == EffectActionKind.NegateEffectsOfMonstersDestroyedByBattle));
             }).ToList();

@@ -434,6 +434,9 @@ namespace WRLDZ.Duel
             {
                 // ArchfiendRiders batch: Pandemonium counts the held destruction now (one search per player and event).
                 TextEffects.ArchfiendRidersRuntime.NoteHeldSend(engine, owner, card, destroyed, destroyedByBattle);
+                // DeckSwarmsAndFusionMaterials batch: Centrifugal Field's trigger for a Fusion Monster of the held event.
+                TextEffects.DeckSwarmsAndFusionMaterialsRuntime.NoteHeldSend(engine, owner, card, destroyed,
+                    destroyedByBattle);
                 return;
             }
 
@@ -441,6 +444,9 @@ namespace WRLDZ.Duel
             // owner search a lower-Level Archfiend from the Deck: an optional trigger queued for the next
             // simultaneous-trigger Chain, beside this card's own GY trigger (a held send's search is already on its Chain).
             TextEffects.ArchfiendRidersRuntime.OnSentToGy(engine, owner, card, destroyed, destroyedByBattle);
+            // DeckSwarmsAndFusionMaterials batch: Centrifugal Field — a Fusion Monster destroyed by a card effect queues the
+            // Field Spell's mandatory trigger for that Fusion's owner (EFFECT_FLAG_EVENT_PLAYER).
+            TextEffects.DeckSwarmsAndFusionMaterialsRuntime.OnSentToGy(engine, owner, card, destroyed, destroyedByBattle);
 
             // NegationMonsters batch (v161): negated by Dark Ruler Ha Des / Twin-Headed Wolf as it was destroyed by battle,
             // its "sent to the GY" / "destroyed by battle" effects do not apply while it stays in the GY.

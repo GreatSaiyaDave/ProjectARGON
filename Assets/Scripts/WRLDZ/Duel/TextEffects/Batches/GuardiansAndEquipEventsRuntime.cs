@@ -213,6 +213,9 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         public static void NoteEquipped(DuelEngine engine, CardInstance equip, CardInstance host)
         {
+            // RevivalEquipsAndGearfried batch: Gearfried the Swordmaster's "each time an Equip Card(s) is equipped to this
+            // card" (any Equip Card, not only Equip Spells).
+            RevivalEquipsAndGearfriedRuntime.NoteEquipped(engine, equip, host);
             if (engine == null || engine.GameOver || host == null || !IsEquipSpellCard(equip) || equip.EquippedTo != host)
                 return;
             var gainer = engine.ControllerOf(equip);

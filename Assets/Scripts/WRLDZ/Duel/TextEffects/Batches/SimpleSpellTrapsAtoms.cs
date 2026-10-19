@@ -164,18 +164,8 @@ namespace WRLDZ.Duel.TextEffects
                     StaysOnField = true,
                     MakesChainLink = false
                 }),
-            // Triangle Ecstasy Spark (c12181376): Until the end of this turn, the ATK of all "Harpie Lady Sisters"
-            // currently on the field becomes 2700, your opponent cannot activate any Trap Cards, also negate all your
-            // opponent's Trap effects on the field.
-            new AtomRegistration.Atom(
-                @"Until the end of this turn, the ATK of all ""Harpie Lady Sisters"" currently on the field becomes 2700, your opponent cannot activate any Trap Cards, also negate all your opponent's Trap effects on the field\.?\s*$",
-                _ => new EffectClause
-                {
-                    Timing = EffectTiming.Activate,
-                    Action = EffectActionKind.BoostHarpieLadySistersAtkAndLockTraps,
-                    Side = EffectSide.Controller,
-                    MakesChainLink = true
-                }),
+            // Triangle Ecstasy Spark (c12181376): compiled by the RdsRedoSpellTrap batch (RdsRedoSpellTrapAtoms) since its hollow
+            // BoostHarpieLadySistersAtkAndLockTraps atom (v208: no runtime) was retired.
             // Fuh-Rin-Ka-Zan (c1781310) prints "Apply 1 of these effects. ● … ● … ● … ● …": a CHOICE, so its bullets are
             // not always-applied clauses and the card stays a Stub. These four bullet atoms are anchored to the WHOLE
             // text (a standalone bullet fragment, optional "●"): unanchored they matched the tail of other cards'
@@ -247,21 +237,12 @@ namespace WRLDZ.Duel.TextEffects
                     IsPsctTarget = true,
                     MakesChainLink = true
                 }),
-            // B.E.S. Big Core (c14148099): If this card is Normal Summoned: Place 3 counters on it.
-            // v208 QC: fenced to the B.E.S. shape (the text also prints "cannot be destroyed by battle" and "remove 1
-            // counter from this card"). Unfenced it matched any "place N counters … this card" text and compiled the
-            // placement alone: Des Mosquito, Metal Shooter, Miracle Jurassic Egg (which became FullyCompiled with only
-            // a Summon counter clause). The match itself (and so the B.E.S. family's clause and span) is unchanged.
-            new AtomRegistration.Atom(
-                @"^(?=.*\bcannot be destroyed by battle\b)(?=.*\bremove 1 counter from this card\b).*Place (\d+) counters.*this card",
-                m => new EffectClause
-                {
-                    Timing = EffectTiming.ThisCardSummoned,
-                    Action = EffectActionKind.PlaceCounterOnThisCard,
-                    Side = EffectSide.Controller,
-                    Amount = int.Parse(m.Groups[1].Value),
-                    MakesChainLink = true
-                }),
+            // BattleRiders batch (v210): the v208-fenced B.E.S. atom ("^(?=…cannot be destroyed by battle…)(?=…remove 1
+            // counter from this card…).*Place (\d+) counters.*this card") was removed. Its greedy span covered the whole B.E.S.
+            // text, so the end-of-Damage-Step removal sentence could never compile, and its clause had no Normal Summon gate.
+            // B.E.S. Big Core's counter sentence is SummonTriggersAndTributesAtoms' whole sentence (Normal Summon only); the
+            // MK-2 / MK-3 wordings ("When this card is Special Summoned", "If this card is Normal or Special Summoned") have
+            // no atom and stay uncompiled.
             // v208 QC: Chain Burst's ".*activates a Trap Card.*take 1000 damage" (compiled as a one-shot Activate burn to the
             // opponent; it is a Continuous Trap that damages the player who activates each Trap) and Covering Fire's two
             // copies of ".*target 1 other face-up monster you control.*gains ATK equal to that target.*ATK" (no Damage Step

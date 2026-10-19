@@ -31,6 +31,9 @@ namespace WRLDZ.Duel.TextEffects
             public DuelistState Who;
             public int UntilTurn;
             public string Source;
+            /// <summary>RdsRedoSpellTrap batch: the card kinds the lock covers (Sonic Jammer: Spells only).</summary>
+            public bool Spells = true;
+            public bool Traps;
         }
 
         sealed class State
@@ -66,15 +69,36 @@ namespace WRLDZ.Duel.TextEffects
             if (engine == null || who == null) return;
             var opp = engine.OpponentOf(who);
             if (opp == null) return;
+            RegisterCardActivationLock(engine, opp, spells: true, traps: false, engine.TurnNumber + 1, source);
+            engine.Log($"{source?.Name ?? "Effect"}: {opp.Name} cannot activate Spell Cards until the end of the next turn.");
+        }
+
+        /// <summary>
+        /// A card activation lock (ygopro EFFECT_CANNOT_ACTIVATE, EFFECT_FLAG_PLAYER_TARGET, aclimit
+        /// re:IsHasType(EFFECT_TYPE_ACTIVATE) with re:IsSpellEffect() / re:IsTrapEffect()): <paramref name="locked"/> (null =
+        /// both players) cannot activate the Spell Cards (<paramref name="spells"/>) / Trap Cards (<paramref name="traps"/>) in
+        /// their hand or Set on their field through the end of turn <paramref name="untilTurn"/>; the effects of face-up cards
+        /// stay legal. Sonic Jammer (opponent, Spells, through the next turn); RdsRedoSpellTrap batch: Forced Ceasefire (both
+        /// players, Traps, this turn) and Triangle Ecstasy Spark (opponent, Traps, this turn).
+        /// </summary>
+        public static void RegisterCardActivationLock(DuelEngine engine, DuelistState locked, bool spells, bool traps,
+            int untilTurn, CardInstance source)
+        {
+            if (engine == null || (!spells && !traps)) return;
             var st = StateOf(engine);
             st.SpellCardLocks.RemoveAll(l => l.UntilTurn < engine.TurnNumber);
-            st.SpellCardLocks.Add(new SpellCardLock
+            foreach (var who in locked != null ? new[] { locked } : new[] { engine.Player, engine.Opponent })
             {
-                Who = opp,
-                UntilTurn = engine.TurnNumber + 1,
-                Source = source?.Name ?? "Effect"
-            });
-            engine.Log($"{source?.Name ?? "Effect"}: {opp.Name} cannot activate Spell Cards until the end of the next turn.");
+                if (who == null) continue;
+                st.SpellCardLocks.Add(new SpellCardLock
+                {
+                    Who = who,
+                    UntilTurn = untilTurn,
+                    Source = source?.Name ?? "Effect",
+                    Spells = spells,
+                    Traps = traps
+                });
+            }
         }
 
         /// <summary>
@@ -84,13 +108,19 @@ namespace WRLDZ.Duel.TextEffects
         public static bool ActivationLocked(DuelEngine engine, DuelistState who, CardInstance card, out string reason)
         {
             reason = null;
-            if (engine == null || who == null || card?.Def == null || card.Def.IsMonster || !card.Def.IsSpell) return false;
+            if (engine == null || who == null || card?.Def == null || card.Def.IsMonster) return false;
+            if (!card.Def.IsSpell && !card.Def.IsTrap) return false;
             if (!s_state.TryGetValue(engine, out var st) || st.SpellCardLocks.Count == 0) return false;
             if (!OwnSetOrHand(who, card)) return false;
             foreach (var l in st.SpellCardLocks)
             {
                 if (l.Who != who || engine.TurnNumber > l.UntilTurn) continue;
-                reason = $"{l.Source}: you cannot activate Spell Cards until the end of the next turn.";
+                if (card.Def.IsSpell ? !l.Spells : !l.Traps) continue;
+                reason = !card.Def.IsSpell
+                    ? $"{l.Source}: you cannot activate Trap Cards this turn."
+                    : l.UntilTurn > engine.TurnNumber
+                        ? $"{l.Source}: you cannot activate Spell Cards until the end of the next turn."
+                        : $"{l.Source}: you cannot activate Spell Cards this turn.";
                 return true;
             }
 

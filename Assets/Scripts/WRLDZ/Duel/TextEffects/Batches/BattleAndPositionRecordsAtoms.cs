@@ -207,6 +207,8 @@ namespace WRLDZ.Duel.TextEffects
             // printed "you can" choice, skipped Lua's d:GetOwner()~=tp check ("your opponent's Deck"; a monster you own goes
             // to the GY), and called MarkSentFromFieldToGy for a card that was not sent there. The pattern was not
             // whole-sentence (".*"). Fix that path before compiling the rider again.
+            // RdsRedoBattle batch (v210 group): the path is fixed (DestroyMonster's deck-top branch, the owner check and the
+            // choice in RdsRedoBattleRuntime.DestroyAttackedFaceDownMayPlaceOnDeckTop) and RdsRedoBattleAtoms compiles it.
             // Harpie Lady 3 (c54415063): An opponent's monster that battles this card cannot declare an attack during
             // your opponent's next 2 turns.
             new AtomRegistration.Atom(

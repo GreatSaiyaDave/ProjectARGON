@@ -38,6 +38,11 @@ namespace WRLDZ.Duel.TextEffects
             public bool SetsBase;
             /// <summary>RESET_DISABLE: the change ends for good once the monster's effects are negated.</summary>
             public bool EndsOnNegation;
+            /// <summary>
+            /// DestroyWatchersAndSpellShields batch: a change this monster gave itself with no RESET_DISABLE (Firebird's
+            /// RESET_EVENT|RESETS_STANDARD) does not apply while its effects are negated, and applies again afterwards.
+            /// </summary>
+            public bool SuppressedWhileNegated;
             public int FieldEntry;
             public int FaceDown;
         }
@@ -123,10 +128,11 @@ namespace WRLDZ.Duel.TextEffects
         /// (RESET_DISABLE). Applied by <see cref="ApplyBoard"/> on each board refresh.
         /// </summary>
         internal static void AddLastingStatChange(DuelEngine engine, CardInstance card, int atk, int def,
-            bool endsOnNegation)
+            bool endsOnNegation, bool suppressedWhileNegated = false)
         {
             if (engine == null || card == null) return;
-            AddGrant(engine, card, atk, def, setsBase: false, endsOnNegation: endsOnNegation);
+            var g = AddGrant(engine, card, atk, def, setsBase: false, endsOnNegation: endsOnNegation);
+            g.SuppressedWhileNegated = suppressedWhileNegated && !endsOnNegation;
         }
 
         static bool GrantAlive(DuelEngine engine, StatGrant g)
@@ -160,6 +166,7 @@ namespace WRLDZ.Duel.TextEffects
 
                 var c = g.Card;
                 if (c.FieldEntryStamp < g.FieldEntry) continue;
+                if (g.SuppressedWhileNegated && c.IsNegated) continue;
                 if (g.SetsBase)
                 {
                     c.AtkModifier += g.Atk - ShownBase(c, atk: true);

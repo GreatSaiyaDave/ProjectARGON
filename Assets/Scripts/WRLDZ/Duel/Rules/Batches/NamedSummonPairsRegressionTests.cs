@@ -281,8 +281,11 @@ namespace WRLDZ.Duel.Rules
 
             var noGy = CompileText(990004, true,
                 "Tribute 1 \"Dark Magician\"; Special Summon 1 \"Dark Magician of Chaos\" from your hand or Deck.");
+            // RevivalEquipsAndGearfried batch: this is now Release Restraint's sentence (hand or Deck only) — never the
+            // Dedication atom's GY origin.
             Check("Near miss: a named Tribute summon without the GY origin is not the Dedication atom",
-                !Has(noGy, c => !string.IsNullOrEmpty(c.TributeNamedCard)), Describe(noGy));
+                !Has(noGy, c => c.FromGrave) &&
+                Has(noGy, c => c.TributeNamedCard == "Dark Magician" && c.FromHand && c.FromDeck), Describe(noGy));
 
             var atkDef = CompileText(990005, false, "During each of your End Phases, this card loses 500 ATK and DEF.");
             Check("Near miss: an End Phase ATK and DEF loss is not the Berserk Dragon atom",

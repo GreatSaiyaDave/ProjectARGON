@@ -20,7 +20,8 @@ namespace WRLDZ.Duel.Rules
             (79853073, "Cipher Soldier: \"If this card battles a Warrior-Type monster, during damage calculation\""),
             // Coffin Seller (65830223) left this list in v162: the EffectDamageEvents atom compiles its whole sentence, condition
             // included (DroppedConditionsFailClosed checks that below).
-            (57046845, "Gearfried the Swordmaster: \"Each time an Equip Card(s) is equipped to this card\""),
+            // Gearfried the Swordmaster (57046845) left this list in the RevivalEquipsAndGearfried batch: its whole equip-trigger
+            // sentence, condition included, is compiled by that batch's atom (DroppedConditionsFailClosed checks that below).
             // Michizure (37580756) left this list in v159: the BattleWindows atom compiles its whole sentence, condition
             // included (DroppedConditionsFailClosed checks that below).
             // Rope of Life (93382620) left this list in v162: the BattleDestroyedGyRecovery atom compiles its whole
@@ -111,6 +112,18 @@ namespace WRLDZ.Duel.Rules
                 Check($"fails closed — {why}",
                     (prog == null || !prog.FullyCompiled) && status != CardEffectStatusKind.Implemented,
                     $"{status} {Describe(prog)}");
+            }
+
+            // Gearfried the Swordmaster: "Each time an Equip Card(s) is equipped to this card" is compiled whole by the
+            // RevivalEquipsAndGearfried atom (an equip-event trigger marker), never dropped into a bare destroy.
+            if (db.TryGet(57046845, out var swordmaster))
+            {
+                var prog = CardTextEffectCompiler.Compile(swordmaster);
+                Check("Gearfried the Swordmaster: its equip condition is compiled (RevivalEquipsAndGearfried), not dropped",
+                    prog != null && prog.FullyCompiled && prog.ClauseList.Count == 1 &&
+                    prog.ClauseList[0].Action == EffectActionKind.DestroyOppMonsterEachTimeThisIsEquipped &&
+                    !prog.ClauseList.Exists(c => c != null && c.Action == EffectActionKind.Destroy),
+                    Describe(prog));
             }
 
             // Coffin Seller: "Each time a monster(s) is sent to your opponent's GY" is compiled whole by the EffectDamageEvents atom

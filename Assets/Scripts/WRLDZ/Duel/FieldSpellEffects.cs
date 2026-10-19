@@ -68,6 +68,8 @@ namespace WRLDZ.Duel
             // First, before any modifier is cleared: a negated Snatch Steal hands its monster back, and that
             // control change may refresh the board again.
             ContinuousNegationRuntime.Refresh(engine);
+            // DeckSwarmsAndFusionMaterials batch: Rescue Cat's monsters stay negated only while face-up in that presence.
+            TextEffects.DeckSwarmsAndFusionMaterialsRuntime.RefreshNegatedSummons(engine);
             // Gorgon's Eye (ContinuousNegation batch): recompute the Defense Position negation after the family
             // negation above, so a monster negated both ways reads as negated either way.
             ContinuousNegationRuntime.RefreshGorgonEyes(engine);
@@ -110,6 +112,8 @@ namespace WRLDZ.Duel
             TextEffects.SpecialSummonEffectsRuntime.ApplyBoard(engine);
             // DerivedAtkMonsters batch (v176): Great Maju Garzett / Maju Garzett — the Tribute-derived "ATK becomes".
             TextEffects.DerivedAtkMonstersRuntime.ApplyBoard(engine);
+            // DestroyWatchersAndSpellShields batch: Mokey Mokey Smackdown's "ATK becomes 3000 until the end of this turn".
+            TextEffects.DestroyWatchersAndSpellShieldsRuntime.ApplyBoard(engine);
             // Spirit Ryu (BattleBoosts batch, v161): "+1000 ATK/DEF until the end of the Battle Phase".
             TextEffects.BattleBoostsRuntime.ApplyBoard(engine);
             // Cat's Ear Tribe (DamageStepRules batch): the battler's Damage Step original ATK ends with the Damage Step.
@@ -128,6 +132,8 @@ namespace WRLDZ.Duel
             // NormalMonsterSpells batch: Thousand Energy's original ATK/DEF end with the monster's stay face-up on the field;
             // a Level / Normal Monster equip limit (Sword of the Soul-Eater, Opti-Camouflage Armor) is re-checked.
             TextEffects.NormalMonsterSpellsRuntime.Refresh(engine);
+            // BattleRiders batch: Catnipped Kitty's DEF 0 ends with the monster's stay face-up on the field.
+            TextEffects.BattleRidersRuntime.Refresh(engine);
             TextEffects.TextEffectRuntime.SweepClassicStateChecks(engine);
             // Kotodama (RedirectAndReplace batch, v142): face-up monsters sharing a name are destroyed.
             TextEffects.RedirectAndReplaceRuntime.SweepSameNameDestruction(engine);
@@ -148,6 +154,19 @@ namespace WRLDZ.Duel
             TextEffects.AttackObligationsRuntime.SweepSelfDestroy(engine);
             // Skull Invitation: cards that reached a GY since the last checkpoint (StandbyGrowthAndMaintenance, v142).
             TextEffects.StandbyGrowthAndMaintenanceRuntime.GySendCheckpoint(engine);
+            // DestroyWatchersAndSpellShields batch: Pole Position's highest-ATK group (Lua EVENT_ADJUST); a changed group
+            // refreshes the board again so the shield applies at once.
+            if (TextEffects.DestroyWatchersAndSpellShieldsRuntime.AdjustShieldedGroup(engine))
+            {
+                try
+                {
+                    RefreshBoard(engine);
+                }
+                finally
+                {
+                    TextEffects.DestroyWatchersAndSpellShieldsRuntime.EndReadjust(engine);
+                }
+            }
             // ZoneCapsAndPhaseWindows batch: Spatial Collapse's adjust step (EVENT_ADJUST) runs from DuelEngine.Notify once
             // nothing resolves (TextEffects.ZoneCapsRuntime.Adjust), not on every refresh.
         }

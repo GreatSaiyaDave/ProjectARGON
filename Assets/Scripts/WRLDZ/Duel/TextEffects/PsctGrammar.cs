@@ -87,11 +87,23 @@ namespace WRLDZ.Duel.TextEffects
         /// Summoned unless …" is conditional too (ArchfiendRidersRuntime.NormalOrFlipSummonForbidden, Set stays legal).
         /// </summary>
         static readonly Regex RxBlocksNormalSummon = new(
-            @"cannot be normal summoned(?:/set)?(?!\s+while\b)(?!\s+or Flip Summoned unless\b)|must (?:first )?be special summoned",
+            @"cannot be normal summoned(?:/set)?(?!\s+while\b)(?!\s+or Flip Summoned unless\b)(?!\s*\(but can be Normal Set\))|" +
+            @"must (?:first )?be special summoned",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         public static bool BlocksNormalSummonOrSet(string officialText) =>
             !string.IsNullOrWhiteSpace(officialText) && RxBlocksNormalSummon.IsMatch(officialText);
+
+        /// <summary>
+        /// RdsRedoBattle batch: "Cannot be Normal Summoned (but can be Normal Set)." (Mystic Swordsman LV4 / LV6; ygopro
+        /// EFFECT_LIMIT_SUMMON_PROC with no procedure): the Normal (Tribute) Summon is forbidden, the Normal (Tribute) Set is
+        /// legal. Before, <see cref="BlocksNormalSummonOrSet"/> matched it and forbade the Set too.
+        /// </summary>
+        static readonly Regex RxNormalSetOnly = new(@"cannot be normal summoned\s*\(but can be Normal Set\)",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        public static bool BlocksNormalSummonButNotSet(string officialText) =>
+            !string.IsNullOrWhiteSpace(officialText) && RxNormalSetOnly.IsMatch(officialText);
 
         /// <summary>Returns the exact face-up card required by Guardian-style summon text.</summary>
         public static string SummonGateNamed(string officialText)

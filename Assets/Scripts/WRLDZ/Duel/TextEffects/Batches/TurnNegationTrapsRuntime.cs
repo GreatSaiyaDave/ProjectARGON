@@ -41,6 +41,12 @@ namespace WRLDZ.Duel.TextEffects
         /// a monster acting as an Equip Card), so <see cref="IsOfFamily"/> never matches it.
         /// </summary>
         public const string EquipCard = "EquipCard";
+        /// <summary>
+        /// RdsRedoSpellTrap batch — family name: the Trap Cards the registrant's OPPONENT controls (Triangle Ecstasy Spark: Lua
+        /// EFFECT_DISABLE target range (0, LOCATION_SZONE) on Traps + EFFECT_DISABLE_TRAPMONSTER (0, LOCATION_MZONE), until the
+        /// End Phase). One-sided, so <see cref="IsOfFamily"/> never matches it: <see cref="OpponentTrapsNegatedFor"/> decides.
+        /// </summary>
+        public const string OpponentTrap = "OpponentTrap";
 
         /// <summary>
         /// <see cref="EffectClause.ActivationCondition"/>: the Chain Link being answered is the
@@ -49,7 +55,7 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         public const string ChainLinkActivatesCardFamily = "ChainLinkActivatesCardFamily";
 
-        static readonly string[] Families = { FieldSpell, ContinuousSpell, ContinuousTrap, EquipCard };
+        static readonly string[] Families = { FieldSpell, ContinuousSpell, ContinuousTrap, EquipCard, OpponentTrap };
 
         /// <summary>True when <paramref name="def"/> is a card of <paramref name="family"/>.</summary>
         public static bool IsOfFamily(CardDef def, string family)
@@ -70,7 +76,8 @@ namespace WRLDZ.Duel.TextEffects
 
         /// <summary>A family name this runtime knows (compile-time guard for the atoms).</summary>
         public static bool IsKnownFamily(string family) =>
-            family == FieldSpell || family == ContinuousSpell || family == ContinuousTrap || family == EquipCard;
+            family == FieldSpell || family == ContinuousSpell || family == ContinuousTrap || family == EquipCard ||
+            family == OpponentTrap;
 
         /// <summary>
         /// Activation condition: <paramref name="who"/> is answering a Chain Link (a chain response
@@ -125,6 +132,7 @@ namespace WRLDZ.Duel.TextEffects
             ContinuousSpell => "Continuous Spell Cards",
             ContinuousTrap => "Continuous Trap Cards",
             EquipCard => "Equip Cards",
+            OpponentTrap => "the opponent's Trap effects",
             _ => family
         };
 
@@ -140,6 +148,16 @@ namespace WRLDZ.Duel.TextEffects
             who?.CardFamiliesNegatedThroughTurn != null &&
             who.CardFamiliesNegatedThroughTurn.TryGetValue(family, out var through) &&
             through >= turn && turn > 0;
+
+        /// <summary>
+        /// RdsRedoSpellTrap batch: the opponent of <paramref name="controller"/> registered <see cref="OpponentTrap"/> this turn,
+        /// so <paramref name="controller"/>'s Trap effects on the field are negated (Triangle Ecstasy Spark).
+        /// </summary>
+        public static bool OpponentTrapsNegatedFor(DuelEngine engine, DuelistState controller)
+        {
+            if (engine == null || controller == null) return false;
+            return NegatedBy(engine.OpponentOf(controller), OpponentTrap, engine.TurnNumber);
+        }
 
         static bool AnyFamilyNegated(DuelEngine engine)
         {
@@ -158,6 +176,9 @@ namespace WRLDZ.Duel.TextEffects
             if (!IsInSpellTrapOrFieldZone(engine, card)) return false;
             // EquipModel batch (Armored Glass): an Equip Card is one by its state on the field, not its card type.
             if (FamilyNegatedThisTurn(engine, EquipCard) && EquipModelRuntime.IsEquipCardShape(card))
+                return true;
+            // RdsRedoSpellTrap batch (Triangle Ecstasy Spark): a Trap Card whose controller's opponent negated theirs.
+            if (card.Def.IsTrap && OpponentTrapsNegatedFor(engine, engine.ControllerOf(card)))
                 return true;
             foreach (var f in Families)
                 if (IsOfFamily(card.Def, f) && FamilyNegatedThisTurn(engine, f))
@@ -199,8 +220,12 @@ namespace WRLDZ.Duel.TextEffects
                         st.ActivationUnresolvedOnChain = false;
                 }
 
+                // RdsRedoSpellTrap batch (Triangle Ecstasy Spark): a face-up Trap Monster of a player whose opponent negated
+                // their Trap effects this turn (EFFECT_DISABLE_TRAPMONSTER); every other monster is cleared.
+                var trapMonstersNegated = any && OpponentTrapsNegatedFor(engine, who);
                 foreach (var m in who.MonstersOnField())
-                    if (m != null) m.NegatedByTurnFamily = false;
+                    if (m != null)
+                        m.NegatedByTurnFamily = trapMonstersNegated && m.FaceUp && m.Def != null && m.Def.IsTrap;
                 ClearAll(who.Hand);
                 ClearAll(who.Graveyard);
                 ClearAll(who.Banished);

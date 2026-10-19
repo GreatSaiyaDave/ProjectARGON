@@ -76,23 +76,18 @@ namespace WRLDZ.Duel.Rules
 
         static void CorpusShapes(CardDatabase db, Action<string, bool, string> Check)
         {
-            // The four cards that classified Implemented with the trigger dropped. Each loses the fallback action.
-            foreach (var (id, label, dropped) in new[]
-                     {
-                         (PoisonFangs, "Poison Fangs", EffectActionKind.InflictDamageToOpponent),
-                     })
+            // The four cards that classified Implemented with the trigger dropped. Each lost the fallback action. BattleRiders
+            // batch (v210): Poison Fangs' whole sentence is the "each time a Beast inflicts battle damage to your opponent"
+            // trigger (a whole-text atom, BattleRidersRegressionTests drive it), never the bare activation burn.
             {
-                var def = db.Get(id);
+                var def = db.Get(PoisonFangs);
                 var prog = def != null ? CardTextEffectCompiler.Compile(def) : null;
-                Check($"{label}: not FullyCompiled and no bare {dropped} clause",
-                    def != null && prog != null && !prog.FullyCompiled && !Has(prog, dropped) &&
-                    !HasLeadTriggerClause(prog),
+                var c = prog != null && prog.ClauseList.Count == 1 ? prog.ClauseList[0] : null;
+                Check("Poison Fangs: compiled whole as its battle-damage trigger, no bare activation burn",
+                    prog != null && prog.FullyCompiled && c != null && c.Action == EffectActionKind.InflictDamageToOpponent &&
+                    c.Timing == EffectTiming.ThisCardInflictsBattleDamage && c.AnyControllerMonsterBattleDamage &&
+                    c.RaceFilter == "Beast" && !prog.ClauseList.Exists(x => x != null && x.Timing == EffectTiming.Activate),
                     Shape(prog));
-                var status = def != null ? CardEffectStatus.Classify(def) : CardEffectStatusKind.Unimplemented;
-                Check($"{label}: fails closed (not Implemented) and the deck gate keeps it out",
-                    def != null && status != CardEffectStatusKind.Implemented &&
-                    status != CardEffectStatusKind.Structural && !CardEffectStatus.MayIncludeInDeck(def),
-                    status.ToString());
             }
 
             // EffectDamageEvents batch (v162): Dark Room of Nightmare's whole sentence is the "each time your opponent takes
@@ -299,8 +294,9 @@ namespace WRLDZ.Duel.Rules
         static void ActivationRefused(CardDatabase db, DeckFile pDeck, DeckFile aDeck,
             Action<string, bool, string> Check)
         {
-            foreach (var (id, label) in new[] { (PoisonFangs, "Poison Fangs") })
             {
+                // BattleRiders batch (v210): Poison Fangs is Implemented — its activation only places it; the burn waits for a
+                // Beast to inflict battle damage to the opponent.
                 var engine = Fresh(db, pDeck, aDeck);
                 ClearBoard(engine);
                 var p = engine.Player;
@@ -308,14 +304,14 @@ namespace WRLDZ.Duel.Rules
                 p.Hand.Clear();
                 var oppLp = o.LifePoints;
                 var myLp = p.LifePoints;
-                var card = PutInHand(engine, p, id);
+                var card = PutInHand(engine, p, PoisonFangs);
                 var can = engine.CanActivateSpellTrap(p, card, fromHand: true);
                 var tried = engine.TryActivateSpellTrap(p, card, fromHand: true);
                 DrainCombat(engine);
-                Check($"{label}: activation from the hand is refused and inflicts no damage",
-                    !can && !tried && p.Hand.Contains(card) && !p.TryFindSpellTrap(card, out _) &&
-                    o.LifePoints == oppLp && p.LifePoints == myLp,
-                    $"can={can} tried={tried} hand={p.Hand.Count} oppLp={o.LifePoints} was {oppLp}");
+                Check("Poison Fangs: activation from the hand places it face-up and inflicts no damage",
+                    can && tried && p.TryFindSpellTrap(card, out _) && card.FaceUp && o.LifePoints == oppLp &&
+                    p.LifePoints == myLp,
+                    $"can={can} tried={tried} faceUp={card.FaceUp} oppLp={o.LifePoints} was {oppLp}");
             }
 
             {
