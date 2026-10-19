@@ -73,7 +73,10 @@ included random-choice AI edits that made the suite flaky, so it is no place to 
    `headless.sh . --status-dump > before.tsv` and `version_bump.py --show`.
 2. **Worklist.** Run `worklist.py before.tsv --sets <next sets> --md`. Curriculum order is LOB → MRD → SRL →
    PSV → LON → LOD → PGD → MFC → DCR → IOC → AST → SOD → RDS → FET → TLM
-   (`Assets/StreamingAssets/WRLDZ/eras/pre_link_sets.json`).
+   (`Assets/StreamingAssets/WRLDZ/eras/pre_link_sets.json`). Past TLM it continues by era through the core boosters
+   (GX: CRV → EEN → SOI → EOJ → POTD → CDIP → STON → FOTB → TAEV → GLAS → PTDN → LODT, then 5D's from TDGS …).
+   `card_era_index.json` (from `card_era_index.py`, built from the local YGOPRODeck dump) gives those cards a set, so
+   `worklist.py before.tsv --sets CRV,EEN` works the same way.
 3. **Group by shape** into 3–6 cards: same action family, same trigger window, same engine subsystem.
    Shared atoms light up whole families.
 3a. **Check the arena FX.** For each group, read the family table in `FX_MAP.md`. Summon procedures are
