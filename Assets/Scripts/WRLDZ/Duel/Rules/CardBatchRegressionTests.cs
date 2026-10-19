@@ -163,6 +163,7 @@ namespace WRLDZ.Duel.Rules
             RevivalEquipsAndGearfriedRegressionTests.Run(db, pDeck, aDeck, check);
             DeckSwarmsAndFusionMaterialsRegressionTests.Run(db, pDeck, aDeck, check);
             ChoiceAmongEffectsRegressionTests.Run(db, pDeck, aDeck, check);
+            PhantomChainLinkRegressionTests.Run(db, pDeck, aDeck, check);
         }
     }
 }

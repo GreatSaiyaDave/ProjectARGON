@@ -267,7 +267,8 @@ namespace WRLDZ.Duel.TextEffects
         static void ReplayHeld(DuelEngine engine, List<HeldTrigger> held)
         {
             if (held == null || held.Count == 0) return;
-            SimultaneousTriggersRuntime.RunHeld(engine, held.Select(h => (h.Owner, h.Card, (Action)(() =>
+            SimultaneousTriggersRuntime.RunHeld(engine, held.Select(h => (h.Owner, h.Card, h.Destroyed,
+                h.DestroyedByBattle, (Action)(() =>
                 MonsterEffects.OnSentFromFieldToGy(engine, h.Owner, h.Card, h.Destroyed, h.DestroyedByBattle,
                     h.BattleDestroyer)))).ToList());
         }

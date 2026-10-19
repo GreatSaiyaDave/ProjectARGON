@@ -171,6 +171,9 @@ namespace WRLDZ.Duel.TextEffects
                 return;
             }
 
+            // No FLIP effect (compiled or a registered script): nothing activates, so no Chain Link and no order pick for
+            // it (a vanilla flipped by Swords of Revealing Light; 2026-10-18 fix, the twin of RunHeld's check).
+            if (!MonsterEffects.IsRegisteredFlip(monster) && (flip == null || flip.Count == 0)) return;
             StateOf(engine).Collected.Add(new Entry
             {
                 Kind = EntryKind.Flip,
@@ -293,14 +296,20 @@ namespace WRLDZ.Duel.TextEffects
         /// <summary>
         /// FlipMassEffectsRuntime.Simultaneously: the "sent to the GY" triggers one event held, as one Chain, at once.
         /// </summary>
-        public static void RunHeld(DuelEngine engine, List<(DuelistState Owner, CardInstance Card, Action Run)> held)
+        public static void RunHeld(DuelEngine engine,
+            List<(DuelistState Owner, CardInstance Card, bool Destroyed, bool DestroyedByBattle, Action Run)> held)
         {
             if (engine == null || held == null || held.Count == 0) return;
             // Sent while more Chain Links are still to resolve: the send is not the last thing to happen.
             var misses = engine.IsResolvingChain && engine.Chain.Count > 0;
             var entries = new List<Entry>();
-            foreach (var (owner, card, run) in held)
+            foreach (var (owner, card, destroyed, destroyedByBattle, run) in held)
             {
+                // Only a card with a "sent from the field to the GY" effect that this send can activate has a trigger here.
+                // Every card the event sent is held, so without this check a vanilla Tribute (Blue-Eyes for Judge Man), a
+                // vanilla destroyed by Dark Hole, or a Tributed Mystic Tomato (only "destroyed by battle") became a Chain
+                // Link of an effect that does not activate, with the opponent's response window (2026-10-18 fix).
+                if (!MonsterEffects.HasSentFromFieldToGyEffect(engine, card, destroyed, destroyedByBattle)) continue;
                 var prog = card != null ? CompiledEffectCache.GetOrCompile(card) : null;
                 var gy = prog != null && prog.FullyCompiled ? prog.ClausesFor(EffectTiming.SentFromFieldToGy) : null;
                 entries.Add(new Entry
@@ -378,11 +387,14 @@ namespace WRLDZ.Duel.TextEffects
         /// before) and goes on the next simultaneous-trigger Chain. False: resolve it now, as before.
         /// </summary>
         public static bool TryDeferSentToGy(DuelEngine engine, DuelistState owner, CardInstance card,
-            CompiledCardProgram prog, Action run)
+            CompiledCardProgram prog, bool destroyed, bool destroyedByBattle, Action run)
         {
             if (engine == null || owner == null || card?.Def == null || !card.Def.IsMonster || run == null) return false;
             var gy = prog != null && prog.FullyCompiled ? prog.ClausesFor(EffectTiming.SentFromFieldToGy) : null;
             if (gy == null || gy.Count == 0) return false;
+            // This send does not meet the trigger's condition (sent but not destroyed, …): nothing activates, so nothing is
+            // queued for a later Chain (2026-10-18 fix, the twin of RunHeld's check).
+            if (!TextEffectRuntime.SentToGyCanActivate(engine, card, prog, destroyed, destroyedByBattle)) return false;
             // Only activated "If" triggers: a "When … you can" one can miss the timing; a non-chain clause is continuous.
             if (!gy.TrueForAll(c => c != null && c.MakesChainLink &&
                                     !(c.IsOptional && c.CheckedAt == ConditionCheckedAt.Activation)))

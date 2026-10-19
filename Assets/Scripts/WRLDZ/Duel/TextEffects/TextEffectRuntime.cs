@@ -3901,6 +3901,42 @@ namespace WRLDZ.Duel.TextEffects
             return true;
         }
 
+        /// <summary>
+        /// The send gates of a "sent from the field to the GY" clause (<see cref="TryResolveSentToGy"/> reads them first):
+        /// false when this send does not meet its condition — not destroyed for "destroyed and sent", not by battle for
+        /// "destroyed by battle" (Mystic Tomato, Shining Angel), by battle for "not by battle", or not destroyed face-down
+        /// on this trip (Statue of the Wicked, Dark Coffin; CallsDiceAndSetTriggers batch v163).
+        /// </summary>
+        public static bool SentToGySendMatches(DuelEngine engine, CardInstance card, EffectClause c, bool destroyed,
+            bool destroyedByBattle)
+        {
+            if (c == null) return false;
+            if (c.RequiresDestroyed && !destroyed) return false;
+            if (c.RequiresThisDestroyedByBattle && !destroyedByBattle) return false;
+            if (c.RequiresNotDestroyedByBattle && destroyedByBattle) return false;
+            if (c.RequiresDestroyedWhileFaceDown &&
+                !CallsDiceAndSetTriggersRuntime.WasDestroyedFaceDownThisTrip(engine, card))
+                return false;
+            return true;
+        }
+
+        /// <summary>
+        /// <paramref name="card"/>'s "sent from the field to the GY" effect can activate for this send (destroyed /
+        /// destroyed by battle as the event reported it): one clause of that timing meets its condition
+        /// (<see cref="SentToGySendMatches"/>), or, for a "destroyed by a card effect while equipped" card, that destruction
+        /// happened (EquipAndSpellProtection batch, which then handles all its clauses). False: the send triggers nothing,
+        /// so it gets no Chain Link (SimultaneousTriggersRuntime.RunHeld / TryDeferSentToGy; 2026-10-18 fix).
+        /// </summary>
+        public static bool SentToGyCanActivate(DuelEngine engine, CardInstance card, CompiledCardProgram prog,
+            bool destroyed, bool destroyedByBattle)
+        {
+            var clauses = prog?.ClausesFor(EffectTiming.SentFromFieldToGy);
+            if (clauses == null || clauses.Count == 0) return false;
+            if (clauses.Exists(c => c != null && c.RequiresDestroyedByEffectWhileEquipped))
+                return EquipAndSpellProtectionRuntime.WasDestroyedWhileEquipped(engine, card);
+            return clauses.Exists(c => SentToGySendMatches(engine, card, c, destroyed, destroyedByBattle));
+        }
+
         public static bool TryResolveSentToGy(DuelEngine engine, DuelistState who, CardInstance card,
             CompiledCardProgram prog, bool destroyed = false, bool destroyedByBattle = false,
             CardInstance battleDestroyer = null, Predicate<EffectClause> only = null)
@@ -3935,14 +3971,7 @@ namespace WRLDZ.Duel.TextEffects
                 // RedirectAndReplace (v142): a card destroyed but banished instead resolves only its triggers
                 // that do not need the GY.
                 if (only != null && !only(c)) continue;
-                if (c.RequiresDestroyed && !destroyed) continue;
-                if (c.RequiresThisDestroyedByBattle && !destroyedByBattle) continue;
-                if (c.RequiresNotDestroyedByBattle && destroyedByBattle) continue;
-                // CallsDiceAndSetTriggers batch (v163): Statue of the Wicked / Dark Coffin — destroyed while face-down on
-                // the field, on this trip to the GY.
-                if (c.RequiresDestroyedWhileFaceDown &&
-                    !CallsDiceAndSetTriggersRuntime.WasDestroyedFaceDownThisTrip(engine, card))
-                    continue;
+                if (!SentToGySendMatches(engine, card, c, destroyed, destroyedByBattle)) continue;
                 // Sent as a cost (SendToGraveAsCost): an optional "When … : You can" effect misses the timing.
                 if (c.IsOptional && c.CheckedAt == ConditionCheckedAt.Activation &&
                     card != null && ReferenceEquals(card, s_sentAsCost))

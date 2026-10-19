@@ -463,11 +463,28 @@ namespace WRLDZ.Duel
             // the Black Forest), it activates once that Chain is over, on a new Chain the opponent may respond to.
             if (prog != null && prog.FullyCompiled &&
                 prog.HasTiming(TextEffects.EffectTiming.SentFromFieldToGy) &&
-                TextEffects.SimultaneousTriggersRuntime.TryDeferSentToGy(engine, owner, card, prog,
-                    () => ResolveSentFromFieldToGy(engine, owner, card, prog, destroyed, destroyedByBattle,
+                TextEffects.SimultaneousTriggersRuntime.TryDeferSentToGy(engine, owner, card, prog, destroyed,
+                    destroyedByBattle, () => ResolveSentFromFieldToGy(engine, owner, card, prog, destroyed, destroyedByBattle,
                         battleDestroyer)))
                 return;
             ResolveSentFromFieldToGy(engine, owner, card, prog, destroyed, destroyedByBattle, battleDestroyer);
+        }
+
+        /// <summary>
+        /// <paramref name="card"/> has a "sent from the field to the GY" effect that <see cref="ResolveSentFromFieldToGy"/>
+        /// can run for this send: a compiled clause of that timing whose condition the send meets
+        /// (TextEffectRuntime.SentToGyCanActivate: Mystic Tomato only when destroyed by battle), or the legacy Sangan script.
+        /// False: its send triggers nothing, so a simultaneous event (SimultaneousTriggersRuntime.RunHeld) gives it no Chain
+        /// Link — a vanilla Tribute, or Mystic Tomato Tributed or destroyed by Dark Hole.
+        /// </summary>
+        public static bool HasSentFromFieldToGyEffect(DuelEngine engine, CardInstance card, bool destroyed,
+            bool destroyedByBattle)
+        {
+            if (card == null) return false;
+            if (card.CardId == Sangan) return true;
+            var prog = TextEffects.CompiledEffectCache.GetOrCompile(card);
+            return prog != null && prog.HasTiming(TextEffects.EffectTiming.SentFromFieldToGy) &&
+                   TextEffects.TextEffectRuntime.SentToGyCanActivate(engine, card, prog, destroyed, destroyedByBattle);
         }
 
         /// <summary>The "sent from the field to the GY" effects of <paramref name="card"/> resolve (compiled text first).</summary>

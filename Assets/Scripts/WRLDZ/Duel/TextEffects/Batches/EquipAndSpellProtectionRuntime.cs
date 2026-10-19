@@ -273,6 +273,16 @@ namespace WRLDZ.Duel.TextEffects
                 st.DestroyedWhileEquipped[card] = engine.TurnNumber;
         }
 
+        /// <summary>
+        /// <see cref="ConsumeDestroyedWhileEquipped"/> without consuming: <paramref name="card"/> was destroyed by a card
+        /// effect while equipped this turn (TextEffectRuntime.SentToGyCanActivate asks before a Chain Link is made).
+        /// </summary>
+        public static bool WasDestroyedWhileEquipped(DuelEngine engine, CardInstance card)
+        {
+            if (engine == null || card == null || !s_state.TryGetValue(engine, out var st)) return false;
+            return st.DestroyedWhileEquipped.TryGetValue(card, out var turn) && turn == engine.TurnNumber;
+        }
+
         static bool ConsumeDestroyedWhileEquipped(DuelEngine engine, CardInstance card)
         {
             if (engine == null || card == null || !s_state.TryGetValue(engine, out var st)) return false;
