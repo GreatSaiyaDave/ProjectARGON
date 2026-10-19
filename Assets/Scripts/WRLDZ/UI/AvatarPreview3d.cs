@@ -20,7 +20,7 @@ namespace WRLDZ.UI
         public const int Layer = 27;
         static readonly Vector3 StagePos = new(0f, -5000f, 0f);
 
-        public enum Focus { Full, Bust, Face, Legs, Feet }
+        public enum Focus { Full, Bust, Face, Legs, Feet, Disk }
 
         const float Fov = 21f;          // vertical, degrees: a long lens, little perspective distortion on the body
         const float Pitch = 5.5f;       // the camera looks slightly down, so the plinth reads as a disc
@@ -33,6 +33,7 @@ namespace WRLDZ.UI
         GameObject _stage;
         Transform _pivot;
         OverworldAvatar3d _av;
+        AvatarPreviewDirector _director;
         Animator _anim;
         bool _female;
         Focus _focus = Focus.Full;
@@ -102,12 +103,32 @@ namespace WRLDZ.UI
                 if (blob != null) blob.gameObject.SetActive(false);
                 _measured = false;
                 _snap = true;
+                _director = AvatarPreviewDirector.Ensure(_av, _cam != null ? _cam.transform : null);
+                if (_duelistWanted) _director.SetDuelist(true);
             }
             else _av.Apply(look);
+            _director?.Wear(look);
             _img.enabled = true;
             EnsureTexture();
             return true;
         }
+
+        /// <summary>The duelist tabs: the Duel Disk goes on the arm and deploys (off: it folds away).</summary>
+        public void SetDuelist(bool on)
+        {
+            _duelistWanted = on;
+            _director?.SetDuelist(on);
+        }
+
+        bool _duelistWanted;
+
+        /// <summary>An edit landed (<see cref="AvatarPreviewDirector.React"/>): the duelist reacts.</summary>
+        public void React(string kind)
+        {
+            if (!string.IsNullOrEmpty(kind)) _director?.React(kind);
+        }
+
+        public AvatarPreviewDirector Director => _director;
 
         public void SetFocus(Focus f, bool instant = false)
         {
@@ -346,6 +367,9 @@ namespace WRLDZ.UI
                     y0 = _headY - 0.10f * body; y1 = Mathf.Max(_topY, _headY + 0.14f * body) + 0.03f * body; w = 0.34f * body; break;
                 case Focus.Bust:
                     y0 = _chestY - 0.20f * body; y1 = _topY + 0.04f * body; w = 0.62f * body; break;
+                case Focus.Disk:
+                    // the duelist tabs: hips to the top of the head, wide enough for the disk held across the body
+                    y0 = _hipsY - 0.10f * body; y1 = _topY + 0.04f * body; w = Mathf.Max(_width, 0.75f * body); break;
                 case Focus.Legs:
                     y0 = _footY - 0.04f * body; y1 = _hipsY + 0.14f * body; w = 0.55f * body; break;
                 case Focus.Feet:

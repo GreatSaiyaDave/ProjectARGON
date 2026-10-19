@@ -129,25 +129,47 @@ namespace WRLDZ.Presentation.ArInteraction
         public void Tick(Transform lowerArm, Transform hand, Quaternion handCanon, float dt)
         {
             if (_rig == null || lowerArm == null || hand == null) return;
-            var along = hand.position - lowerArm.position;
-            var len = along.magnitude;
-            if (len < 1e-5f) return;
-            var fwd = along / len;                                                   // elbow → hand
-            var back = Vector3.ProjectOnPlane(handCanon * Vector3.forward, fwd);     // out of the back of the hand / forearm
-            if (back.sqrMagnitude < 1e-6f) back = Vector3.up;
-            back.Normalize();
-            var canon = Quaternion.LookRotation(back, fwd);                          // +Z plate up, +Y toward the hand
-            var rot = canon * RigToCanon;
-            // the kit's cradle centre sits 6.6 cm up the forearm from the wrist, on the bone axis
-            var s = _rig.transform.lossyScale.x;
-            var cradleWorld = hand.position - fwd * (0.066f * s);
-            var pos = cradleWorld - rot * (CradleCentre * s);
-            _rig.transform.SetPositionAndRotation(pos, rot);
+            if (!Strap(_rig.transform, lowerArm, hand, handCanon)) return;
 
             // a solid disk has no ghost, no aura; the phase buttons are the player's
             if (_ghostMesh != null && _ghostMesh.enabled) _ghostMesh.enabled = false;
             if (_aura != null && _aura.gameObject.activeSelf) _aura.gameObject.SetActive(false);
             if (_rig.PhaseButtons != null && _rig.PhaseButtons.IsShowing) _rig.PhaseButtons.SetDeployed(false);
+        }
+
+        /// <summary>
+        /// The canonical forearm frame at the wrist: +Y from the elbow toward the hand, +Z out of the back of the forearm,
+        /// from the hand's own canonical frame (<paramref name="handCanon"/>). False on a degenerate arm.
+        /// </summary>
+        public static bool ForearmFrame(Transform lowerArm, Transform hand, Quaternion handCanon, out Quaternion canon, out Vector3 fwd)
+        {
+            canon = Quaternion.identity; fwd = Vector3.up;
+            var along = hand.position - lowerArm.position;
+            var len = along.magnitude;
+            if (len < 1e-5f) return false;
+            fwd = along / len;                                                       // elbow → hand
+            var back = Vector3.ProjectOnPlane(handCanon * Vector3.forward, fwd);     // out of the back of the hand / forearm
+            if (back.sqrMagnitude < 1e-6f) back = Vector3.up;
+            canon = Quaternion.LookRotation(back.normalized, fwd);                   // +Z plate up, +Y toward the hand
+            return true;
+        }
+
+        /// <summary>
+        /// Strap a Battle City V2 kit rig (<see cref="ArDuelDiskRig"/>) to a forearm: the arm-mount cradle on the bone axis
+        /// 6.6 cm up from the wrist, plate out of the back of the forearm. The AI duelists and the customizer's preview body
+        /// (<see cref="WRLDZ.Presentation.AvatarSpiritDisk"/>) wear it the same way.
+        /// </summary>
+        public static bool Strap(Transform rig, Transform lowerArm, Transform hand, Quaternion handCanon)
+        {
+            if (rig == null || lowerArm == null || hand == null) return false;
+            if (!ForearmFrame(lowerArm, hand, handCanon, out var canon, out var fwd)) return false;
+            var rot = canon * RigToCanon;
+            // the kit's cradle centre sits 6.6 cm up the forearm from the wrist, on the bone axis
+            var s = rig.lossyScale.x;
+            var cradleWorld = hand.position - fwd * (0.066f * s);
+            var pos = cradleWorld - rot * (CradleCentre * s);
+            rig.SetPositionAndRotation(pos, rot);
+            return true;
         }
 
         void OnDestroy()

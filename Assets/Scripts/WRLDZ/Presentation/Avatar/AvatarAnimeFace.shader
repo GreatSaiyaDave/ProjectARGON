@@ -14,6 +14,8 @@ Shader "WRLDZ/AvatarAnimeFace"
     Properties
     {
         _Part ("Part (0 eye 1 mouth 2 nose 3 brow 4 cover)", Float) = 0
+        // unused: uGUI asks every material it draws for _MainTex (the customizer's eye / mouth cards draw this shader)
+        [HideInInspector] _MainTex ("UI texture slot", 2D) = "white" {}
         _Alpha ("Presence", Float) = 1
         // the card may be larger than the feature's reference frame (the frame every parameter is measured in): p is scaled
         // back to it, so a long flick, tall lashes or a steep brow never clip at the card's edge (AvatarFaceRig sets it)

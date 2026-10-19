@@ -835,7 +835,26 @@ namespace WRLDZ.UI
             var names = disk ? AvatarCatalog.DiskPaletteNames : AvatarCatalog.AuraPaletteNames;
             var cur = (disk ? _draft.diskHex : _draft.auraHex) ?? "";
             var spirit = Hex(_draft.accentHex, Color.cyan);
-            _flow.Header(disk ? "Duel Disk" : "Aura");
+            if (disk)
+            {
+                // which disk the Spirit Dueler wears: the two Battle City disks on the owner's system
+                _flow.Header("Spirit Dueler disk", AvatarCatalog.DiskModelIds.Length.ToString());
+                var model = _draft.diskModel ?? "";
+                ListRows(AvatarCatalog.DiskModelIds.Length, i =>
+                {
+                    var id = AvatarCatalog.DiskModelIds[i];
+                    return (AvatarCatalog.DiskModelNames[i], null, model == id, () =>
+                    {
+                        if ((_draft.diskModel ?? "") == id) { _preview3d?.React("disk_model"); return; }
+                        _draft.diskModel = id;
+                        Changed(true);
+                        _preview3d?.React("disk_model");
+                    });
+                });
+                var mi = Mathf.Max(0, System.Array.IndexOf(AvatarCatalog.DiskModelIds, model));
+                _flow.Hint(AvatarCatalog.DiskModelBlurbs[mi]);
+            }
+            _flow.Header(disk ? "Disk colour" : "Aura");
             ListRows(hexes.Length, i =>
             {
                 var hex = hexes[i];
@@ -929,7 +948,11 @@ namespace WRLDZ.UI
                 case Part.Tattoos: return ("Tattoos", (_draft.tattooIds?.Count ?? 0) == 0 ? "None." : _draft.tattooIds.Count + " applied.", "");
                 case Part.Title: return (string.IsNullOrEmpty(_draft.title) ? "Spirit Dueler" : _draft.title, "Shown under your name to other duelists.", "");
                 case Part.Accent: return ("Spirit magic", (_draft.accentHex ?? "").ToUpperInvariant(), "");
-                case Part.Disk: return ("Duel Disk", AvatarCatalog.PaletteName(AvatarCatalog.DiskPalettes, AvatarCatalog.DiskPaletteNames, _draft.diskHex), "");
+                case Part.Disk:
+                {
+                    var mi = Mathf.Max(0, System.Array.IndexOf(AvatarCatalog.DiskModelIds, _draft.diskModel ?? ""));
+                    return (AvatarCatalog.DiskModelNames[mi], AvatarCatalog.PaletteName(AvatarCatalog.DiskPalettes, AvatarCatalog.DiskPaletteNames, _draft.diskHex), "");
+                }
                 case Part.Aura: return ("Aura", AvatarCatalog.PaletteName(AvatarCatalog.AuraPalettes, AvatarCatalog.AuraPaletteNames, _draft.auraHex), "");
                 case Part.Look:
                     return ("Map portrait", AvatarCatalog.PortraitNames[Mathf.Clamp(_draft.portraitIndex, 0, AvatarCatalog.PortraitCount - 1)], "");

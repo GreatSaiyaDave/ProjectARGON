@@ -154,7 +154,10 @@ Shader "WRLDZ/SpiritSuperAura"
                 half3 col = _Color.rgb * (half)(flame * outside * 0.55)
                           + _CoreColor.rgb * (half)(hot * outside * 0.85 + innerEdge * 0.5)
                           + _Color.rgb * (half)(haze * outside * (0.1 + 0.4 * wisp) * _Haze);
-                return half4(col * _Intensity, 1.0h);
+                // alpha = the light it adds (was 1): with Blend One One a constant 1 made the whole quad opaque wherever the
+                // target keeps alpha - a black box round the disk in the customizer's transparent preview (2026-10-19)
+                col *= _Intensity;
+                return half4(col, saturate(max(col.r, max(col.g, col.b))));
             }
             ENDHLSL
         }

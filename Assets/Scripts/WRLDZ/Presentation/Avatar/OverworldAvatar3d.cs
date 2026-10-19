@@ -1748,6 +1748,7 @@ namespace WRLDZ.Presentation
         {
             if (!_idleBonesIndexed) IndexIdleBones();
             _idleT += dt;
+            SettleShoulders();
             if (ProceduralBreathing && !_renderersOff)
             {
                 var ph = (_idleT + _idleSeed) / _breathPeriod * (2f * Mathf.PI);
@@ -1935,10 +1936,10 @@ namespace WRLDZ.Presentation
 
             _graph = PlayableGraph.Create("OverworldAvatar3d");
             _graph.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
-            _mixer = AnimationMixerPlayable.Create(_graph, 2);
+            _mixer = AnimationMixerPlayable.Create(_graph, 3);   // idle, walk, a gesture over them (PlayGesture)
             if (idle != null) { var p = AnimationClipPlayable.Create(_graph, idle); _graph.Connect(p, 0, _mixer, 0); }
             if (walk != null) { var p = AnimationClipPlayable.Create(_graph, walk); _graph.Connect(p, 0, _mixer, 1); }
-            _mixer.SetInputWeight(0, 1f); _mixer.SetInputWeight(1, 0f);
+            _mixer.SetInputWeight(0, 1f); _mixer.SetInputWeight(1, 0f); _mixer.SetInputWeight(2, 0f);
             var output = AnimationPlayableOutput.Create(_graph, "anim", animator);
             output.SetSourcePlayable(_mixer);
             _graph.Play();
@@ -1969,8 +1970,76 @@ namespace WRLDZ.Presentation
             if (!_graph.IsValid()) return;
             var target = Mathf.Clamp01(Speed / WalkSpeed);
             _walkWeight = Mathf.MoveTowards(_walkWeight, target, Blend * Time.deltaTime);
-            _mixer.SetInputWeight(0, 1f - _walkWeight);
-            _mixer.SetInputWeight(1, _walkWeight);
+            TickGesture(Time.deltaTime);
+            _mixer.SetInputWeight(0, (1f - _walkWeight) * (1f - _gestureW));
+            _mixer.SetInputWeight(1, _walkWeight * (1f - _gestureW));
+            _mixer.SetInputWeight(2, _gestureW);
+        }
+
+        // ---------------------------------------------------------------- gestures (2026-10-19)
+        // One clip played over the idle (the customizer's reactions and idle flourishes): eased in over 0.3 s and out over
+        // the last 0.45 s, never while walking. The duelist set (ArgonClips_Duel, Meshy, retargeted) shrugs both collarbones
+        // ~47° (memory: duel clips' shoulder shrug), so while a gesture plays the collarbones are eased back to where the
+        // idle holds them, keeping a fifth of the clip's lift.
+        public const string GestureClipsRes = "WRLDZ/Avatar3D/ArgonClips_Duel";
+        static Dictionary<string, AnimationClip> _gestureClips;
+        AnimationClipPlayable _gesture;
+        float _gestureW, _gestureT = -1f, _gestureLen;
+        Quaternion _lShoulderIdle, _rShoulderIdle;
+        bool _shoulderIdleKnown;
+
+        /// <summary>The gesture now playing (null when none).</summary>
+        public string GestureNow { get; private set; }
+
+        /// <summary>
+        /// Play a gesture clip (a take of the duelist set, else of the UAL pack) over the idle, cut at
+        /// <paramref name="maxSeconds"/> (0 = the whole clip). False when the clip is missing or the body has no graph.
+        /// </summary>
+        public bool PlayGesture(string take, float maxSeconds = 0f)
+        {
+            if (!_graph.IsValid() || _walkWeight > 0.05f || string.IsNullOrEmpty(take)) return false;
+            if (_gestureClips == null)
+            {
+                _gestureClips = new Dictionary<string, AnimationClip>();
+                foreach (var res in new[] { ClipsFallbackRes, GestureClipsRes })
+                    foreach (var c in Resources.LoadAll<AnimationClip>(res))
+                        if (c != null && !c.empty) _gestureClips[c.name.Substring(c.name.LastIndexOf('|') + 1)] = c;
+            }
+            if (!_gestureClips.TryGetValue(take, out var clip)) return false;
+            if (_gesture.IsValid()) { _graph.Disconnect(_mixer, 2); _gesture.Destroy(); }
+            _gesture = AnimationClipPlayable.Create(_graph, clip);
+            _gesture.SetApplyFootIK(true);
+            _graph.Connect(_gesture, 0, _mixer, 2);
+            _gestureT = 0f;
+            _gestureLen = maxSeconds > 0f ? Mathf.Min(maxSeconds, clip.length) : clip.length;
+            GestureNow = take;
+            return true;
+        }
+
+        void TickGesture(float dt)
+        {
+            if (_gestureT < 0f) { _gestureW = Mathf.MoveTowards(_gestureW, 0f, dt / 0.3f); return; }
+            _gestureT += dt;
+            var fadeIn = Mathf.Clamp01(_gestureT / 0.3f);
+            var fadeOut = Mathf.Clamp01((_gestureLen - _gestureT) / 0.45f);
+            _gestureW = Mathf.SmoothStep(0f, 1f, Mathf.Min(fadeIn, fadeOut));
+            if (_gestureT >= _gestureLen) { _gestureT = -1f; _gestureW = 0f; GestureNow = null; }
+        }
+
+        /// <summary>The collarbones back toward the idle's while a gesture plays (keeping 20 % of the clip's shrug).</summary>
+        void SettleShoulders()
+        {
+            if (_lShoulderBone == null || _rShoulderBone == null) return;
+            if (_gestureW <= 0.001f)
+            {
+                _lShoulderIdle = _lShoulderBone.localRotation; _rShoulderIdle = _rShoulderBone.localRotation;
+                _shoulderIdleKnown = true;
+                return;
+            }
+            if (!_shoulderIdleKnown) return;
+            var k = _gestureW * 0.8f;
+            _lShoulderBone.localRotation = Quaternion.Slerp(_lShoulderBone.localRotation, _lShoulderIdle, k);
+            _rShoulderBone.localRotation = Quaternion.Slerp(_rShoulderBone.localRotation, _rShoulderIdle, k);
         }
 
         void OnDestroy()

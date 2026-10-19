@@ -71,9 +71,25 @@ namespace WRLDZ.UI
         {
             Part.FaceShape or Part.Hat or Part.Facial or Part.Eyes or Part.Brows or Part.Nose or Part.Mouth or Part.Head or Part.Ears or Part.Skin => AvatarPreview3d.Focus.Face,
             Part.Hair or Part.HairColor or Part.Neck or Part.Tattoos or Part.Accessories => AvatarPreview3d.Focus.Bust,
+            Part.Accent or Part.Disk or Part.Aura => AvatarPreview3d.Focus.Disk,   // the disk held across the body
             Part.Bottoms => AvatarPreview3d.Focus.Legs,
             Part.Shoes => AvatarPreview3d.Focus.Feet,
             _ => AvatarPreview3d.Focus.Full
+        };
+
+        /// <summary>The tabs where the Duel Disk is worn on the preview (it deploys as they open).</summary>
+        static bool DuelistTab(Part p) => p is Part.Title or Part.Accent or Part.Disk or Part.Aura;
+
+        /// <summary>How the preview duelist reacts to an edit on a tab (<see cref="AvatarPreviewDirector.React"/>).</summary>
+        static string ReactKind(Part p) => p switch
+        {
+            Part.Body => "body",
+            Part.Eyes or Part.Brows or Part.Nose or Part.Mouth or Part.Head or Part.Ears or Part.FaceShape or Part.Skin => "face",
+            Part.Hair or Part.HairColor => "hair",
+            Part.Outfit or Part.Hat or Part.Facial or Part.Neck or Part.Shirt or Part.Hands or Part.Bottoms or Part.Shoes or Part.Paint
+                or Part.Accessories or Part.Tattoos => "clothes",
+            Part.Title => "title", Part.Accent => "spirit", Part.Disk => "disk", Part.Aura => "aura",
+            _ => null
         };
 
         public static AvatarCustomizerUI Ensure(Transform parent = null)
@@ -163,6 +179,7 @@ namespace WRLDZ.UI
             RefreshProfile();
             AttachPreview(_profileStage);
             ApplyPreview();
+            _preview3d?.SetDuelist(false);
             _preview3d?.SetFocus(AvatarPreview3d.Focus.Full);
             _preview3d?.ResetView();
             SheetIn(_profileSheet, animate);
@@ -579,6 +596,7 @@ namespace WRLDZ.UI
             var cat = CatOf(part);
             if (cat != _cat) { _cat = cat; RebuildRail(); }
             _preview3d?.SetFocus(FocusFor(part), instant);
+            _preview3d?.SetDuelist(DuelistTab(part));
             RefreshViewChips();
             RebuildRight();
         }
@@ -688,6 +706,7 @@ namespace WRLDZ.UI
         {
             if (rebuild) { _applyPending = false; ApplyPreview(); }
             else _applyPending = true;
+            _preview3d?.React(ReactKind(_focus));
             UpdateLabels();
             if (rebuild) RebuildOptions();
         }

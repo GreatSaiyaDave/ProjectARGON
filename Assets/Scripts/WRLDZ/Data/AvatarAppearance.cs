@@ -29,6 +29,11 @@ namespace WRLDZ.Data
         public string diskHex = "";
         /// <summary>Spirit Dueler aura palette (<see cref="AvatarCatalog.AuraPalettes"/>). Empty = match Spirit magic.</summary>
         public string auraHex = "";
+        /// <summary>
+        /// Which Duel Disk the Spirit Dueler wears (<see cref="AvatarCatalog.DiskModelIds"/>): "" = the Battle City V2 kit
+        /// (the disk the AR duel is laid out on), "classic" = the Battle City assembly kit (red graveyard cover, 4000 LP).
+        /// </summary>
+        public string diskModel = "";
         public string title = "Spirit Dueler";
 
         /// <summary>Equipped clothing catalog ids (hat / facial / shirt / hands / bottoms / shoes).</summary>
@@ -168,6 +173,7 @@ namespace WRLDZ.Data
                 accentHex = accentHex,
                 diskHex = diskHex,
                 auraHex = auraHex,
+                diskModel = diskModel,
                 title = title,
                 vrmId = vrmId,
                 use3dPreview = use3dPreview,
@@ -216,6 +222,7 @@ namespace WRLDZ.Data
             if (string.IsNullOrEmpty(accentHex)) accentHex = "#3ECFFF";
             diskHex ??= "";
             auraHex ??= "";
+            if (System.Array.IndexOf(AvatarCatalog.DiskModelIds, diskModel ?? "") < 0) diskModel = "";
             if (string.IsNullOrEmpty(title)) title = "Spirit Dueler";
             morphs ??= new List<MorphWeight>();
             for (var i = morphs.Count - 1; i >= 0; i--)
@@ -555,6 +562,20 @@ namespace WRLDZ.Data
         {
             "Match Spirit magic", "Kaiba Corp White", "Battle City Silver", "Pharaoh Gold", "Spirit Cyan",
             "Slifer Crimson", "Dark Magician Violet", "Emerald", "Kuriboh Rose", "Obelisk Azure", "Shadow Obsidian"
+        };
+
+        /// <summary>
+        /// The two Duel Disks on the owner's system (2026-10-19, "There should be 2 duel disk assets on my system for that
+        /// menu"), both full-size 3D-print models of the Battle City disk in AssetLibrary/3d_print/duel_disk: the V2 kit the
+        /// game was built on (Models/WRLDZ/SpiritDueler/BattleCityDuelDisk.obj, "yugioh duel disk v37") and the nine-section
+        /// assembly kit (Resources/WRLDZ/Avatar3D/Disks/disk_classic.bytes, Tools/avatar/disk_kit_build.py).
+        /// </summary>
+        public static readonly string[] DiskModelIds = { "", "classic" };
+        public static readonly string[] DiskModelNames = { "Battle City V2", "Battle City Classic" };
+        public static readonly string[] DiskModelBlurbs =
+        {
+            "The full-size working kit: the blade halves fold into the hub and shoot out to lock. The AR duel is laid out on it.",
+            "The nine-section assembly kit: red graveyard cover, the 4000 LP display, blue card zones with pink arrows. AR duels keep the V2 kit's zone layout.",
         };
 
         /// <summary>Aura palettes (always light: the aura only adds light). Index 0 = "" = match Spirit magic.</summary>

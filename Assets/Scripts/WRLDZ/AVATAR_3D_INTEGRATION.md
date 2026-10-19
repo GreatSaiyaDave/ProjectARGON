@@ -854,3 +854,41 @@ three passes (forward, shadow, depth) through `HairPhysics(p)`:
 - **Open:** the coat is still rigid to the hair (the mane rests on it, the coat never yields). The hull comes from
   the pose a few frames after binding: an AR deploy pose at spawn would bake that pose (cached per worn set).
   Curls passing through a coat's shoulder still clip there.
+
+## Spirit Dueler disk panel + a living preview (2026-10-19)
+
+Owner: "provide a better animation in the character customization screen and include spirit dueler selection and color
+palette switching. There should be 2 duel disk assets on my system for that menu."
+
+- **The two disks** are the owner's full-size 3D-print Battle City disks in `AssetLibrary/3d_print/duel_disk`
+  (`AvatarCatalog.DiskModelIds`, saved as `AvatarAppearance.diskModel`):
+  - **Battle City V2** (`""`): the "yugioh duel disk v37" kit the game is built on (`Models/WRLDZ/SpiritDueler/
+    BattleCityDuelDisk.obj`), worn as a real `ArDuelDiskRig` with its own mechanism (the approved fold / deploy).
+  - **Battle City Classic** (`"classic"`): the nine-section assembly kit (49 STLs + Manual.pdf). Its STLs are stored
+    assembled in one millimetre frame. `Tools/avatar/disk_kit_build.py` (Blender) assembles sections 1-6 and 9 and
+    skips D1 (the pivot plate, stored at the origin), G/H (the short sleeve and the stand) and F2 (the cosplay grip).
+    It colours each part by its file name's print colour, sampled from the kit's cover render (the LP display's raised
+    digits are white above 182.8 mm). It writes `Resources/WRLDZ/Avatar3D/Disks/disk_classic.bytes` (WKIT) in the
+    canonical forearm frame: the wrist on the sleeve's fitted axis, +Y to the hand, +Z the plate's up. Blade B is its
+    own object on its pin (the hub centre). No reference shows its fold, so it arrives deployed with the spirit flare
+    and a lock jolt. Nothing is invented.
+  - The Jump Force rip was extracted first and dropped: rips are references, never shipped.
+- **`AvatarSpiritDisk`** (Presentation/Avatar, order 890) wears either disk on the left forearm, strapped like the AI
+  duelists' (`NpcDuelDisk.Strap` / `ForearmFrame`, now shared). Parts are solid cel; the disk palette paints the
+  plate parts (each part keeps its own shade); the aura palette drives the Spirit Dueler aura (`SpiritDuelerAura`,
+  for the classic kit its own instance over both pieces).
+- **`AvatarPreviewDirector`** (UI, order 880):
+  - On the Title / Spirit / Duel Disk / Aura tabs the arm runs the AI's Battle City sequence: folded standby at the
+    hip, shield snap (ease-out-back), held while the V2 deploys (2.4 s), then the level stance across the navel (Joey's
+    Falsebound Kingdom art) with the zones toward the camera. `Focus.Disk` frames it.
+  - Each edit gets a reaction: a smile (face), hand on hip + smug look (body, hair, clothes), fist pump (title, disk),
+    a cast + aura flare (spirit, aura). After quiet spells (not on the disk tabs) the duelist strikes a pose; the head
+    and eyes find the camera.
+- **Gestures**: `OverworldAvatar3d.PlayGesture(take, maxSeconds)` plays a duelist-set clip over the idle (third mixer
+  input). While one plays the collarbones settle back toward the idle's, keeping 20 % of the Duel clips' ~47° shrug.
+- **Fixes on the way:**
+  - `SpiritSuperAura` wrote alpha 1 under additive blending, which drew a black box round the disk in the transparent
+    preview (and would occlude MR passthrough). It now writes the light it adds as alpha.
+  - The face shader has an unused `_MainTex`: uGUI asked the eye / mouth cards for it and logged errors.
+- **Open:** AR duels keep the V2 kit's zone layout whichever disk is chosen (the classic kit is not laid out as a
+  playmat). The overworld map token does not wear the disk.
