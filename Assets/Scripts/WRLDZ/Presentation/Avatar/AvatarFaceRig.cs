@@ -27,7 +27,11 @@ namespace WRLDZ.Presentation
     {
         // ---- placement on the face, metres at body scale 1, in the body's own frame (up / forward) around the head bone:
         // the eye line and face depth are the blink card's measured values; the eye centres sit ±3.1 cm off the midline
-        const float EyeUp = 0.033f, EyeOut = 0.031f, EyeW = 0.060f, EyeH = 0.040f;
+        const float EyeUp = 0.033f, EyeOut = 0.031f, EyeW = 0.060f, EyeH = 0.040f;   // the reference frames the shader parameters are measured in
+        // the eye and brow cards are larger than their reference frames (the shader scales p back through _CardScale):
+        // an eye W > 0.42 put the outer flick past a 6 cm card, a tall eye's lashes past a 4 cm one, and a steep canon brow
+        // past its 3.4 cm one
+        const float EyeCardX = 1.2f, EyeCardY = 1.4f, BrowCardX = 1.17f, BrowCardY = 1.3f;
         const float BrowUp = 0.057f, BrowW = 0.060f, BrowH = 0.034f;
         const float NoseUp = 0.004f, NoseW = 0.040f, NoseH = 0.040f, NoseFwd = 0.004f;
         const float MouthUp = -0.016f, MouthW = 0.084f, MouthH = 0.044f, MouthFwd = -0.003f;
@@ -119,14 +123,15 @@ namespace WRLDZ.Presentation
             _meshes.Clear();
             foreach (var m in _owned) if (m != null) Kill(m);
             _owned.Clear();
-            _shader = Shader.Find("WRLDZ/AvatarAnimeFace");
+            // through the Resources material: a shader reached only by Shader.Find is stripped from player builds
+            _shader = Resources.Load<Material>("WRLDZ/Avatar3D/Materials/AvatarAnimeFace")?.shader ?? Shader.Find("WRLDZ/AvatarAnimeFace");
             if (_shader == null || _head == null) return;
             _scale = Mathf.Max(0.05f, _body.lossyScale.y);
             var fwd = _female ? FaceFwdFemale : FaceFwdMale;
-            _eyeL = Quad("FaceEyeL", 0, -EyeOut, EyeUp, fwd, EyeW, EyeH, -EyeYawDeg, 0);
-            _eyeR = Quad("FaceEyeR", 0, EyeOut, EyeUp, fwd, EyeW, EyeH, EyeYawDeg, 1);
-            _browL = Quad("FaceBrowL", 3, -EyeOut - 0.002f, BrowUp, fwd - 0.003f, BrowW, BrowH, -EyeYawDeg, 0);
-            _browR = Quad("FaceBrowR", 3, EyeOut + 0.002f, BrowUp, fwd - 0.003f, BrowW, BrowH, EyeYawDeg, 1);
+            _eyeL = Quad("FaceEyeL", 0, -EyeOut, EyeUp, fwd, EyeW, EyeH, -EyeYawDeg, 0, EyeCardX, EyeCardY);
+            _eyeR = Quad("FaceEyeR", 0, EyeOut, EyeUp, fwd, EyeW, EyeH, EyeYawDeg, 1, EyeCardX, EyeCardY);
+            _browL = Quad("FaceBrowL", 3, -EyeOut - 0.002f, BrowUp, fwd - 0.003f, BrowW, BrowH, -EyeYawDeg, 0, BrowCardX, BrowCardY);
+            _browR = Quad("FaceBrowR", 3, EyeOut + 0.002f, BrowUp, fwd - 0.003f, BrowW, BrowH, EyeYawDeg, 1, BrowCardX, BrowCardY);
             _nose = Quad("FaceNose", 2, 0f, NoseUp, fwd + NoseFwd, NoseW, NoseH, 0, 0);
             _mouth = Quad("FaceMouth", 1, 0f, MouthUp, fwd + MouthFwd, MouthW, MouthH, 0, 0);
             ApplyStatic();
@@ -162,8 +167,9 @@ namespace WRLDZ.Presentation
             return m;
         }
 
-        Material Quad(string name, int part, float outM, float upM, float fwdM, float wM, float hM, float yawDeg, int mirror)
+        Material Quad(string name, int part, float outM, float upM, float fwdM, float wM, float hM, float yawDeg, int mirror, float cardX = 1f, float cardY = 1f)
         {
+            wM *= cardX; hM *= cardY;
             var go = new GameObject(name, typeof(MeshFilter), typeof(MeshRenderer));
             go.GetComponent<MeshFilter>().sharedMesh = GridCard(name);
             var s = _scale;
@@ -177,6 +183,7 @@ namespace WRLDZ.Presentation
             var mat = new Material(_shader) { name = "AnimeFace_" + name };
             mat.SetFloat(PId, part);
             mat.SetFloat("_Mirror", mirror);
+            mat.SetVector("_CardScale", new Vector4(cardX, cardY, 0f, 0f));
             mat.renderQueue = 2470 + part;   // after the skin, the decals (2460) and the old blink card (2461)
             mr.sharedMaterial = mat;
             mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;

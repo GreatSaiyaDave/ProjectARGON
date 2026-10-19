@@ -265,7 +265,8 @@ namespace WRLDZ.UI
         // ------------------------------------------------------------------ FACE: eyes, brows, nose, mouth (FaceCatalog, drawn live by the face shader)
 
         static Shader s_faceShader;
-        static Shader FaceShader() => s_faceShader ??= Shader.Find("WRLDZ/AvatarAnimeFace");
+        // through the Resources material (Shader.Find alone is stripped from player builds)
+        static Shader FaceShader() => s_faceShader ??= Resources.Load<Material>("WRLDZ/Avatar3D/Materials/AvatarAnimeFace")?.shader ?? Shader.Find("WRLDZ/AvatarAnimeFace");
 
         /// <summary>A card whose picture is the feature itself, drawn by WRLDZ/AvatarAnimeFace at the card's size.</summary>
         void FeatureCard(float x, float y, float w, float h, string label, bool on, Action click, Action<Material> setup)

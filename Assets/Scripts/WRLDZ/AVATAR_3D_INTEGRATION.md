@@ -792,3 +792,31 @@ tone, and make all the eyes and mouths fully animated."
   row's face next to its band.
 - **Open:** Bandit Keith keeps his band (sunglasses) by design; per-character expression tuning (Kaiba's smirk, Joey's
   grin) still uses the shared `Expression` table.
+
+## Eyewear glass + face-card headroom (2026-10-19)
+
+Owner: "Please clear Weevil's lenses. There should be a visible asset showing the glasses lenses are there ... a floating
+asset on the lenses that moves that represents reflection/refraction."
+
+- **Clear lenses:** `Tools/avatar/lens_mask.py` (Blender + PIL; `--clothes` points at the checkout's sculpts) finds the
+  lens in an eyewear sculpt per TRIANGLE: seven paint samples per triangle (white = lens), 3D components keep the large
+  ones, rim/lens edge triangles are decided per texel, rasterised with the pixel apron. Output
+  `Clothes/lens_<id>_<sex>.png` (imported linear + readable: the `lens_` rule in `AvatarImportPostprocessor`). The
+  sculpt is untouched: `AvatarRecolor._LensMap/_LensOn` discards those texels in the colour, outline and depth passes.
+- **The glass:** `WRLDZ/AvatarLensGlass` is appended as an extra material on the sculpt's own renderer (Unity draws the
+  last submesh again, so no new renderer enters the avatar's renderer loops), queue 2480 after the face cards: a faint
+  cool tint, fresnel sheen, a refraction rim inside the frame, and two hard-edged diagonal anime glare bars that slide
+  across the lens as the view angle changes; `EyewearGlass` (order 910) feeds the lens frames each frame and runs a
+  glint sweep every 3.5-8.5 s. Lens frames are measured on the first frame (during the graft the renderer's bones still
+  name the source rig), through the Head bone's bind pose (exact for head-only sculpts), lens triangles picked by
+  their centroid texel (Meshy atlases pack temple islands against lens islands), accumulated head-relative (the
+  customizer's preview stage at y = -5000 made a float-summed centroid 40 cm off), radius from the median distance.
+- **Seated on the eyes:** the wardrobe fit left Weevil's lenses 1.3 cm under the eye line; `EyewearGlass.SeatOnEyes`
+  moves the renderer's head binding to an `EyewearMount` under the Head bone, shifted along the head's up so the lens
+  centres meet the face rig's eye cards (placing, never reshaping, per the owner's rule).
+- **Face-card headroom:** the eye and brow cards are 1.2 x 1.4 / 1.17 x 1.3 of their reference frames and
+  `AvatarAnimeFace._CardScale` maps the card back, so a long flick, tall lashes or a steep canon brow never clip at the
+  card edge while every parameter keeps its meaning.
+- **Builds:** `AvatarAnimeFace` and `AvatarLensGlass` load through `Resources/WRLDZ/Avatar3D/Materials/*.mat` (a shader
+  reached only by `Shader.Find` is stripped from player builds; the living face had no other reference).
+- **Open:** Weevil's bangs pass through the frame and lenses (the hair-physics pass treats eyewear as a collider).

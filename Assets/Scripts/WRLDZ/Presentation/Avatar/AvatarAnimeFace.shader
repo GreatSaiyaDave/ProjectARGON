@@ -15,6 +15,9 @@ Shader "WRLDZ/AvatarAnimeFace"
     {
         _Part ("Part (0 eye 1 mouth 2 nose 3 brow 4 cover)", Float) = 0
         _Alpha ("Presence", Float) = 1
+        // the card may be larger than the feature's reference frame (the frame every parameter is measured in): p is scaled
+        // back to it, so a long flick, tall lashes or a steep brow never clip at the card's edge (AvatarFaceRig sets it)
+        _CardScale ("Card size / reference frame (xy)", Vector) = (1, 1, 0, 0)
         _Skin ("Skin", Color) = (0.96, 0.80, 0.66, 1)
         _Ink ("Ink", Color) = (0.10, 0.06, 0.08, 1)
         // ---- eye
@@ -92,7 +95,7 @@ Shader "WRLDZ/AvatarAnimeFace"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
             CBUFFER_START(UnityPerMaterial)
-            float _Part, _Mirror, _Alpha;
+            float _Part, _Mirror, _Alpha; float4 _CardScale;
             half4 _Skin, _Ink;
             float _EyeW, _EyeH, _Tilt, _Round, _TopBulge, _BotBulge, _Lash, _LashOuter, _LowerLash, _Flick, _FlickLen, _Crease;
             float _Lid, _LidCurve, _LowerLid, _LidShade;
@@ -313,7 +316,7 @@ Shader "WRLDZ/AvatarAnimeFace"
 
             half4 frag(V i) : SV_Target
             {
-                float2 p = i.uv - 0.5;
+                float2 p = (i.uv - 0.5) * max(_CardScale.xy, float2(0.01, 0.01));
                 if (_Mirror > 0.5) p.x = -p.x;
                 half4 c;
                 if (_Part < 0.5) c = eye(p);

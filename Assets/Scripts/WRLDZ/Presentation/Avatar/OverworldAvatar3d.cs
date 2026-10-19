@@ -1069,8 +1069,28 @@ namespace WRLDZ.Presentation
             if (mat.HasProperty("_Cull")) mat.SetFloat("_Cull", (float)UnityEngine.Rendering.CullMode.Off);
             var mats = new Material[Mathf.Max(1, smr.sharedMesh != null ? smr.sharedMesh.subMeshCount : 1)];
             for (var i = 0; i < mats.Length; i++) mats[i] = i == 0 ? mat : Own(new Material(mat));
-            smr.sharedMaterials = mats;
             _clothMats.AddRange(mats);
+            // eyewear with a lens mask (Tools/avatar/lens_mask.py): the painted lens is not drawn, the glass is (EyewearGlass)
+            var lens = item.Slot == ClothingSlot.Facial ? (Resources.Load<Texture2D>(ClothRes + "lens_" + item.Id + "_" + _sex) ?? Resources.Load<Texture2D>(ClothRes + "lens_" + item.Id)) : null;
+            var glassTpl = lens != null ? Resources.Load<Material>("WRLDZ/Avatar3D/Materials/AvatarLensGlass") : null;
+            // the Animator's head bone NOW (the cached _headBone can still name the body this avatar wore before a rebuild)
+            var headNow = TryGetComponent<Animator>(out var anim) && anim.isHuman ? anim.GetBoneTransform(HumanBodyBones.Head) : null;
+            if (glassTpl != null && headNow != null)
+            {
+                var glass = Own(new Material(glassTpl) { name = "LensGlass_" + item.Id });
+                glass.SetTexture("_LensMap", lens);
+                glass.renderQueue = 2480;   // after the living face's cards (2470+): the glass and its glare sit over the eyes
+                var eg = smr.gameObject.AddComponent<EyewearGlass>();
+                // an extra material renders the (last) submesh again: the glass rides the same skinned mesh, no new renderer
+                var withGlass = new Material[mats.Length + 1];
+                System.Array.Copy(mats, withGlass, mats.Length);
+                withGlass[mats.Length] = glass;
+                smr.sharedMaterials = withGlass;
+                if (eg.Bind(smr, glass, lens, headNow, transform, mats))
+                    foreach (var fm in mats) { fm.SetTexture("_LensMap", lens); fm.SetFloat("_LensOn", 1f); }
+                else { smr.sharedMaterials = mats; Kill(eg); }
+            }
+            else smr.sharedMaterials = mats;
             _textured.Add(smr);
             if (mask != null) _paintKey[smr] = item.Slot switch
             {
@@ -1588,6 +1608,7 @@ namespace WRLDZ.Presentation
                 foreach (var m in AllOwned(r) ? r.sharedMaterials : r.materials)
                 {
                     if (m == null) continue;
+                    if (m.shader != null && m.shader.name == "WRLDZ/AvatarLensGlass") { m.SetFloat("_Alpha", alpha); continue; }
                     var translucent = alpha < 0.999f;
                     if (m.HasProperty("_Surface")) m.SetFloat("_Surface", translucent ? 1f : 0f);
                     if (m.HasProperty("_ZWrite")) m.SetFloat("_ZWrite", translucent ? 0f : 1f);

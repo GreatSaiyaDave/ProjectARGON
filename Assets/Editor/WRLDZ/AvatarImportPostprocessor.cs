@@ -81,7 +81,7 @@ namespace WRLDZ.EditorTools
             if (!assetPath.StartsWith(AvatarRoot)) return;
             var imp = (TextureImporter)assetImporter;
             var name = Path.GetFileNameWithoutExtension(assetPath);
-            if (name.StartsWith("hide_") || name.EndsWith("_hide") || name.StartsWith("face_flat_"))
+            if (name.StartsWith("hide_") || name.EndsWith("_hide") || name.StartsWith("face_flat_") || name.StartsWith("lens_"))   // lens_: eyewear lens masks (Tools/avatar/lens_mask.py), read by EyewearGlass
             {
                 imp.sRGBTexture = false;
                 imp.isReadable = true;

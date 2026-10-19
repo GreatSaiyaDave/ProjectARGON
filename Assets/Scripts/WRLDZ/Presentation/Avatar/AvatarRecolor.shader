@@ -25,6 +25,10 @@ Shader "WRLDZ/AvatarRecolor"
         // albedo become plain skin where this mask is set, so the drawn features replace them instead of sitting on them
         _FaceFlatMap ("Painted face features (R, body UV space)", 2D) = "black" {}
         _FaceFlatColor ("Flat skin colour under them (a = on)", Color) = (0.98, 0.77, 0.58, 0)
+        // eyewear (2026-10-19): the sculpt's painted lens texels (Tools/avatar/lens_mask.py) are not drawn, so the lens is
+        // clear; WRLDZ/AvatarLensGlass draws the glass, its rim and the glare over the hole
+        _LensMap ("Eyewear lens texels (R, the item's UV space)", 2D) = "black" {}
+        _LensOn ("Clear the lens texels", Float) = 0
         _ShadowAmt ("Anime shadow band depth", Range(0, 0.5)) = 0.08
         _RimAmt ("Rim light", Range(0, 1)) = 0.6
         _OutlineWidth ("Ink outline width (px)", Range(0, 4)) = 1.4
@@ -53,11 +57,12 @@ Shader "WRLDZ/AvatarRecolor"
         TEXTURE2D(_ScalpMap); SAMPLER(sampler_ScalpMap);
         TEXTURE2D(_NormalMap); SAMPLER(sampler_NormalMap);
         TEXTURE2D(_FaceFlatMap); SAMPLER(sampler_FaceFlatMap);
+        TEXTURE2D(_LensMap); SAMPLER(sampler_LensMap);
         CBUFFER_START(UnityPerMaterial)
             float4 _BaseMap_ST;
             half4 _BaseColor, _ColorA, _ColorB, _ColorC, _ScalpColor, _FaceFlatColor;
             float4 _RefLum;
-            half _HideOn, _ShadowAmt, _RimAmt, _OutlineWidth, _OutlineDark, _UseTexAlpha;
+            half _HideOn, _ShadowAmt, _RimAmt, _OutlineWidth, _OutlineDark, _UseTexAlpha, _LensOn;
             half4 _RimColor;
             half _NormalOn;
             half _Surface, _SrcBlend, _DstBlend, _ZWrite;
@@ -90,6 +95,7 @@ Shader "WRLDZ/AvatarRecolor"
         {
             // the body under a worn outfit is not drawn (tools/custom/outfit_build.py bakes which faces)
             if (_HideOn > 0.5h && SAMPLE_TEXTURE2D(_HideMap, sampler_HideMap, uv).r > 0.5h) discard;
+            if (_LensOn > 0.5h && SAMPLE_TEXTURE2D(_LensMap, sampler_LensMap, uv).r > 0.5h) discard;   // a clear lens
             half4 tex = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, uv);
             half3 m = SAMPLE_TEXTURE2D(_MaskMap, sampler_MaskMap, uv).rgb;
             // the face's painted features give way to plain skin under the drawn, animated ones (AvatarAnimeFace): the
@@ -117,6 +123,7 @@ Shader "WRLDZ/AvatarRecolor"
         {
             if (_HideOn > 0.5h && SAMPLE_TEXTURE2D(_HideMap, sampler_HideMap, uv).r > 0.5h) discard;
             if (_UseTexAlpha > 0.5h && SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, uv).a < 0.5h) discard;
+            if (_LensOn > 0.5h && SAMPLE_TEXTURE2D(_LensMap, sampler_LensMap, uv).r > 0.5h) discard;
         }
 
         struct AttributesD { float4 positionOS : POSITION; float3 normalOS : NORMAL; float2 uv : TEXCOORD0; UNITY_VERTEX_INPUT_INSTANCE_ID };
