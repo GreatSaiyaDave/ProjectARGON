@@ -28,6 +28,9 @@ internal static class Program
         // Reproducible runs: every engine a test builds without an explicit seed draws one from this sequence.
         // `--seed N` picks another sequence; sweeping a few values finds checks that depend on luck.
         int seedBase = ReadIntArg(args, "--seed", 20261018);
+        // An explicit --seed also moves the stress duels off their historical seeds (1000 + 17g).
+        if (Array.IndexOf(args, "--seed") >= 0)
+            WRLDZ.Duel.Rules.DuelEngineStressTests.DuelSeedBase = unchecked(1000 + seedBase * 7919);
         uint seedState = (uint)seedBase;
         WRLDZ.Duel.DuelRng.SeedSource = () =>
         {

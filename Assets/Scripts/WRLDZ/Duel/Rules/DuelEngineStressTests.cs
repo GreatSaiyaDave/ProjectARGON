@@ -17,6 +17,12 @@ namespace WRLDZ.Duel.Rules
     /// </summary>
     public static class DuelEngineStressTests
     {
+        /// <summary>
+        /// Seed of stress duel #0 (duel g uses DuelSeedBase + 17g). The headless harness moves it with an explicit
+        /// --seed N, so a seed sweep also plays different duels; the default run keeps the historical 1000.
+        /// </summary>
+        public static int DuelSeedBase = 1000;
+
         public const int DefaultDuelCount = 40;
         public const int MaxTurnsPerDuel = 80;
         public const int SoftLockStepsThreshold = 24;
@@ -220,10 +226,10 @@ namespace WRLDZ.Duel.Rules
                         for (var g = 0; g < duelCount; g++)
                         {
                             // Deterministic shuffle variety (DuelRng coins / dice use the same seed)
-                            UnityEngine.Random.InitState(1000 + g * 17);
+                            UnityEngine.Random.InitState(DuelSeedBase + g * 17);
                             try
                             {
-                                var one = PlayOneDuel(db, pDeck, aDeck, g, rngSeed: 1000 + g * 17);
+                                var one = PlayOneDuel(db, pDeck, aDeck, g, rngSeed: DuelSeedBase + g * 17);
                                 report.DuelsPlayed++;
                                 report.SoftLocksRecovered += one.SoftLocks;
                                 if (one.Exception)
