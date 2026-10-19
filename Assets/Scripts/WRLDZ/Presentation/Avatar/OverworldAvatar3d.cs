@@ -155,7 +155,7 @@ namespace WRLDZ.Presentation
             go.transform.localRotation = Quaternion.identity;
             go.transform.localScale = Vector3.one;
             SetLayerRecursive(go, layer);
-            var anim = go.GetComponent<Animator>() ?? go.AddComponent<Animator>();
+            if (!go.TryGetComponent<Animator>(out var anim)) anim = go.AddComponent<Animator>();
             if (!anim.isHuman)
             {
                 Debug.LogWarning($"[WRLDZ] character model '{look.characterId}' has no Humanoid avatar: the duel clips cannot retarget onto it");
@@ -390,6 +390,9 @@ namespace WRLDZ.Presentation
                 _standingDrop = grounding.StandingDrop;
                 ApplyStature(look);   // re-apply with the measured drop: the slider's height is the standing height
             }
+            // the face cards were draped in ApplyFace, before the stance and the stature settled: drape them on the final
+            // body (left as they were, a refitted stature left the nose card up to 1.3 mm under the skin)
+            if (FaceRigOn && TryGetComponent<AvatarFaceRig>(out var faceRig)) faceRig.Refit();
             ApplySilhouette(look);
             if (_appliedAlpha < 0.999f) ApplyAlpha(_appliedAlpha);
             if (_renderersOff) foreach (var r in GetComponentsInChildren<Renderer>(true)) r.enabled = false;
@@ -1575,7 +1578,7 @@ namespace WRLDZ.Presentation
         void ApplyAlpha(float alpha)
         {
             _appliedAlpha = alpha;
-            GetComponent<AvatarFaceRig>()?.SetAlpha(alpha);   // the living face fades through its own property
+            if (TryGetComponent<AvatarFaceRig>(out var faceRig)) faceRig.SetAlpha(alpha);   // the living face fades through its own property
             foreach (var r in GetComponentsInChildren<Renderer>(true))
             {
                 if (_shadowBlob != null && r.transform == _shadowBlob) continue;   // handled below, stays blended
@@ -1884,7 +1887,7 @@ namespace WRLDZ.Presentation
 
         void BuildGraph()
         {
-            var animator = GetComponent<Animator>() ?? gameObject.AddComponent<Animator>();
+            if (!TryGetComponent<Animator>(out var animator)) animator = gameObject.AddComponent<Animator>();
             animator.applyRootMotion = false;
             // Always animate: the procedural idle (ProceduralTick) adds rotations on top of the pose every frame and relies
             // on the Animator rewriting every bone first. With CullUpdateTransforms a body no camera sees (edit-mode

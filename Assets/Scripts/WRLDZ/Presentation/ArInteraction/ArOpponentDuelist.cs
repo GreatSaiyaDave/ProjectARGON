@@ -363,7 +363,7 @@ namespace WRLDZ.Presentation.ArInteraction
         public void Play(string beat)
         {
             // the living face wears the beat (AvatarFaceRig: anger on an attack, pain on a hit, a laugh for the win)
-            if (_body != null) _body.GetComponent<AvatarFaceRig>()?.PlayBeat(beat);
+            if (_body != null && _body.TryGetComponent<AvatarFaceRig>(out var face)) face.PlayBeat(beat);
             var g = Beat(beat);
             if (g == null) return;
             // a beaten duelist's disk powers down: the blade folds (and stays out of the floor while the body lies there)

@@ -20,6 +20,9 @@ namespace WRLDZ.Presentation
     /// The painted features of the skin texture under it are flattened by AvatarRecolor's _FaceFlatMap
     /// (OverworldAvatar3d sets it), so the drawn features replace them instead of sitting on top.
     /// </summary>
+    // after every pose writer: ArOpponentDuelist.Solve (650) turns the neck and head toward its look target, the highest
+    // order in the project is 820; the cards' skin follow must read the final neck / head pose of the frame
+    [DefaultExecutionOrder(900)]
     public sealed class AvatarFaceRig : MonoBehaviour
     {
         // ---- placement on the face, metres at body scale 1, in the body's own frame (up / forward) around the head bone:
@@ -45,6 +48,28 @@ namespace WRLDZ.Presentation
         float _scale = 1f;
         Material _eyeL, _eyeR, _browL, _browR, _nose, _mouth;
         Mesh _bake;   // the body's posed mesh, for FitToSurface
+
+        /// <summary>
+        /// A fitted card's skinning: the face skin is not rigid to the head (the front of the face carries 6-37 % Neck
+        /// weight), so a card that only rides the Head bone slides against the skin whenever the head pitches against
+        /// the neck (idle, duel beats). Each card vertex keeps the bone weights of the skin triangle under it, and
+        /// <see cref="Follow"/> moves the vertices with non-Head weight by those bones' motion since the fit
+        /// (linear-blend skinning in the card's own frame; the Head share is the card's parenting itself).
+        /// </summary>
+        sealed class CardFollow
+        {
+            public MeshFilter Filter;
+            public Vector3[] Rest;              // the fitted vertices (card-local)
+            public Vector3[] Work;
+            public int[] Index;                 // the vertices that carry a non-Head weight
+            public int[] Bone;                  // 3 per entry: slots in _followBones (-1 = none)
+            public float[] Weight;              // 3 per entry
+            public Matrix4x4 CardAtFit;         // the card's localToWorld at the fit
+            public Matrix4x4[] Last;            // per follow bone: the last applied motion
+        }
+        readonly List<CardFollow> _follow = new();
+        readonly List<Transform> _followBones = new();
+        readonly List<Matrix4x4> _followBind = new();   // each follow bone's worldToLocal at the fit
         readonly List<GameObject> _quads = new();
         readonly List<Material> _owned = new();
         Shader _shader;
@@ -108,7 +133,8 @@ namespace WRLDZ.Presentation
         }
 
         /// <summary>One feature quad: a child of the Head bone at (out, up, fwd) in the body's frame, facing forward, yawed to the cheek.</summary>
-        const int GridX = 14, GridY = 8;   // the feature card's grid: FitToSurface bends it onto the skin
+        const int GridX = 24, GridY = 16;  // the feature card's grid (2.5 mm cells on the eye): FitToSurface bends it onto the skin
+        const int FitSub = 2;              // the exact skin depth is sampled FitSub times finer than the card grid
         readonly List<Mesh> _meshes = new();
 
         /// <summary>A unit card (±0.5, z 0, uv 0..1) as a grid, so the fit can drape it over the face.</summary>
@@ -229,14 +255,20 @@ namespace WRLDZ.Presentation
         }
 
         /// <summary>
-        /// Each feature card drapes over the sculpt under it: the body mesh is baked in its current pose and every grid
-        /// vertex of the card slides along the card's normal to the skin depth under it (the most protruding body vertex
-        /// within a small window, else the nearest ones) plus a margin — a decal projection, so the eye follows the
-        /// socket and the cheek instead of standing off the temple as a flat plane when the head turns (AR duels show
-        /// every angle). The face planes (FaceFwdMale / Female) are only the first guess: the nose tip stands ~1.5 cm
-        /// proud of the eye line and the head / face morphs move every feature's depth. Measured in the card's frame,
-        /// so the pose does not matter.
+        /// Each feature card drapes over the sculpt under it: the body mesh is baked in its current pose, its triangles
+        /// are projected into the card's frame, and the exact skin depth (barycentric, frontmost surface) is sampled on
+        /// a grid <see cref="FitSub"/> times finer than the card's. Every card vertex then takes the deepest-forward
+        /// sample of all the cells it touches, plus a margin: a card is linear between its vertices, so this keeps it
+        /// above the skin everywhere, not only at the sampled points (the first cut took the nearest body VERTEX, and
+        /// the skin between sparse vertices - nose bridge, brow ridge, cheekbone - cut through the eyes in jagged
+        /// shapes). A decal projection: the eye follows the socket and the cheek instead of standing off the temple as
+        /// a flat plane when the head turns (AR duels show every angle). Only skin within <c>reach</c> of the card's
+        /// plane counts (a raised hand or the back of the head never lifts it). Measured in the card's frame, so the
+        /// pose does not matter; the depth is divided by the card's own world scale on z (the stature scales the head).
         /// </summary>
+        /// <summary>Drape the cards again on the body as it is now (OverworldAvatar3d.Apply calls it last, once the stature and the stance have settled).</summary>
+        public void Refit() => FitToSurface();
+
         void FitToSurface()
         {
             if (_body == null || _quads.Count == 0) return;
@@ -247,11 +279,19 @@ namespace WRLDZ.Presentation
             _bake ??= new Mesh();
             smr.BakeMesh(_bake, true);
             var vs = _bake.vertices;
+            var tris = _bake.triangles;
             var m = smr.transform.localToWorldMatrix;
             var world = new Vector3[vs.Length];
             for (var i = 0; i < vs.Length; i++) world[i] = m.MultiplyPoint3x4(vs[i]);
-            var px = new List<float>(); var py = new List<float>(); var pd = new List<float>();
-            var depth = new float[(GridX + 1) * (GridY + 1)];
+            const int FX = GridX * FitSub, FY = GridY * FitSub;
+            var fine = new float[(FX + 1) * (FY + 1)];
+            var next = new float[fine.Length];
+            var fTri = new int[fine.Length]; var fL0 = new float[fine.Length]; var fL1 = new float[fine.Length];
+            var nTri = new int[fine.Length]; var nL0 = new float[fine.Length]; var nL1 = new float[fine.Length];
+            var bw = smr.sharedMesh.boneWeights;
+            var bones = smr.bones;
+            _follow.Clear(); _followBones.Clear(); _followBind.Clear();
+            var px = new float[world.Length]; var py = new float[world.Length]; var pd = new float[world.Length];
             foreach (var q in _quads)
             {
                 if (q == null) continue;
@@ -260,70 +300,174 @@ namespace WRLDZ.Presentation
                 if (mf == null || mf.sharedMesh == null) continue;
                 // the margin ahead of the skin: the lips and the nose tip are rounded, so a little more there
                 var margin = (q.name == "FaceNose" ? 0.0025f : q.name == "FaceMouth" ? 0.002f : 0.0015f) * _scale;
+                var reach = 0.03f * _scale;
                 var n = -t.forward;                                  // the card looks down -forward: this is out of the face
                 var right = t.right; var up = t.up; var c = t.position;
-                var sx = t.lossyScale.x; var sy = t.lossyScale.y;
+                var sx = t.lossyScale.x; var sy = t.lossyScale.y; var sz = Mathf.Max(1e-6f, Mathf.Abs(t.lossyScale.z));
                 var hw = sx * 0.5f; var hh = sy * 0.5f;
-                var skirt = 0.008f * _scale;
-                px.Clear(); py.Clear(); pd.Clear();
-                var overall = float.NegativeInfinity;
                 for (var i = 0; i < world.Length; i++)
                 {
                     var w = world[i] - c;
-                    var x = Vector3.Dot(w, right); var y = Vector3.Dot(w, up);
-                    if (Mathf.Abs(x) > hw + skirt || Mathf.Abs(y) > hh + skirt) continue;
-                    var d = Vector3.Dot(w, n);
-                    px.Add(x); py.Add(y); pd.Add(d);
-                    if (d > overall) overall = d;
+                    px[i] = Vector3.Dot(w, right); py[i] = Vector3.Dot(w, up); pd[i] = Vector3.Dot(w, n);
                 }
-                if (px.Count == 0) continue;
-                var win = 0.006f * _scale;
-                for (var j = 0; j <= GridY; j++)
-                    for (var i = 0; i <= GridX; i++)
-                    {
-                        var gx = (i / (float)GridX - 0.5f) * sx; var gy = (j / (float)GridY - 0.5f) * sy;
-                        var best = float.NegativeInfinity;
-                        // the most protruding skin vertex within the window ...
-                        for (var k = 0; k < px.Count; k++)
-                            if (Mathf.Abs(px[k] - gx) <= win && Mathf.Abs(py[k] - gy) <= win && pd[k] > best) best = pd[k];
-                        if (float.IsNegativeInfinity(best))
-                        {
-                            // ... else the three nearest, past the skin's edge (the outer corner over the temple)
-                            float d0 = float.MaxValue, d1 = float.MaxValue, d2 = float.MaxValue; float v0 = 0, v1 = 0, v2 = 0;
-                            for (var k = 0; k < px.Count; k++)
-                            {
-                                var dd = (px[k] - gx) * (px[k] - gx) + (py[k] - gy) * (py[k] - gy);
-                                if (dd < d0) { d2 = d1; v2 = v1; d1 = d0; v1 = v0; d0 = dd; v0 = pd[k]; }
-                                else if (dd < d1) { d2 = d1; v2 = v1; d1 = dd; v1 = pd[k]; }
-                                else if (dd < d2) { d2 = dd; v2 = pd[k]; }
-                            }
-                            best = Mathf.Max(v0, Mathf.Max(v1, v2));
-                        }
-                        depth[j * (GridX + 1) + i] = best;
-                    }
-                // a light smoothing pass keeps the sparse mesh from printing steps into the card
-                var sm = (float[])depth.Clone();
-                for (var j = 0; j <= GridY; j++)
-                    for (var i = 0; i <= GridX; i++)
-                    {
-                        float acc = 0; var cnt = 0;
-                        for (var dj = -1; dj <= 1; dj++)
-                            for (var di = -1; di <= 1; di++)
-                            {
-                                var ii = i + di; var jj = j + dj;
-                                if (ii < 0 || jj < 0 || ii > GridX || jj > GridY) continue;
-                                acc += depth[jj * (GridX + 1) + ii]; cnt++;
-                            }
-                        sm[j * (GridX + 1) + i] = Mathf.Max(acc / cnt, depth[j * (GridX + 1) + i] - 0.002f * _scale);
-                    }
-                var verts = mf.sharedMesh.vertices;
-                for (var k = 0; k < verts.Length && k < sm.Length; k++)
+                for (var k = 0; k < fine.Length; k++) { fine[k] = float.NegativeInfinity; fTri[k] = -1; }
+                var minDet = 1e-9f * sx * sx;
+                for (var ti = 0; ti + 2 < tris.Length; ti += 3)
                 {
-                    var z = Mathf.Clamp(sm[k] + margin, -0.03f * _scale, 0.03f * _scale);
-                    verts[k].z = -z;                                  // local -z is out of the face (lossyScale.z = 1)
+                    int a = tris[ti], b = tris[ti + 1], e = tris[ti + 2];
+                    if (pd[a] > reach || pd[b] > reach || pd[e] > reach) continue;            // in front of the face: not skin under the card
+                    if (pd[a] < -reach && pd[b] < -reach && pd[e] < -reach) continue;         // far behind it
+                    float x0 = px[a], y0 = py[a], x1 = px[b], y1 = py[b], x2 = px[e], y2 = py[e];
+                    var minx = Mathf.Min(x0, Mathf.Min(x1, x2)); var maxx = Mathf.Max(x0, Mathf.Max(x1, x2));
+                    var miny = Mathf.Min(y0, Mathf.Min(y1, y2)); var maxy = Mathf.Max(y0, Mathf.Max(y1, y2));
+                    if (maxx < -hw || minx > hw || maxy < -hh || miny > hh) continue;
+                    var det = (y1 - y2) * (x0 - x2) + (x2 - x1) * (y0 - y2);
+                    if (Mathf.Abs(det) < minDet) continue;                                    // seen edge-on
+                    var i0 = Mathf.Max(0, Mathf.CeilToInt((minx / sx + 0.5f) * FX)); var i1 = Mathf.Min(FX, Mathf.FloorToInt((maxx / sx + 0.5f) * FX));
+                    var j0 = Mathf.Max(0, Mathf.CeilToInt((miny / sy + 0.5f) * FY)); var j1 = Mathf.Min(FY, Mathf.FloorToInt((maxy / sy + 0.5f) * FY));
+                    for (var j = j0; j <= j1; j++)
+                    {
+                        var gy = (j / (float)FY - 0.5f) * sy;
+                        for (var i = i0; i <= i1; i++)
+                        {
+                            var gx = (i / (float)FX - 0.5f) * sx;
+                            var l0 = ((y1 - y2) * (gx - x2) + (x2 - x1) * (gy - y2)) / det;
+                            var l1 = ((y2 - y0) * (gx - x2) + (x0 - x2) * (gy - y2)) / det;
+                            var l2 = 1f - l0 - l1;
+                            if (l0 < -1e-4f || l1 < -1e-4f || l2 < -1e-4f) continue;
+                            var d = l0 * pd[a] + l1 * pd[b] + l2 * pd[e];
+                            var k = j * (FX + 1) + i;
+                            if (d > fine[k]) { fine[k] = d; fTri[k] = ti; fL0[k] = l0; fL1[k] = l1; }
+                        }
+                    }
                 }
+                // samples past the skin's silhouette take their filled neighbours' depth
+                var filled = 0;
+                for (var k = 0; k < fine.Length; k++) if (!float.IsNegativeInfinity(fine[k])) filled++;
+                if (filled == 0) continue;
+                for (var pass = 0; pass < FX + FY && filled < fine.Length; pass++)
+                {
+                    System.Array.Copy(fine, next, fine.Length); System.Array.Copy(fTri, nTri, fine.Length);
+                    System.Array.Copy(fL0, nL0, fine.Length); System.Array.Copy(fL1, nL1, fine.Length);
+                    for (var j = 0; j <= FY; j++)
+                        for (var i = 0; i <= FX; i++)
+                        {
+                            var k = j * (FX + 1) + i;
+                            if (!float.IsNegativeInfinity(fine[k])) continue;
+                            var src = -1;
+                            if (i > 0 && (src < 0 || fine[k - 1] > fine[src])) src = k - 1;
+                            if (i < FX && (src < 0 || fine[k + 1] > fine[src])) src = k + 1;
+                            if (j > 0 && (src < 0 || fine[k - FX - 1] > fine[src])) src = k - FX - 1;
+                            if (j < FY && (src < 0 || fine[k + FX + 1] > fine[src])) src = k + FX + 1;
+                            if (src < 0 || float.IsNegativeInfinity(fine[src])) continue;
+                            next[k] = fine[src]; nTri[k] = fTri[src]; nL0[k] = fL0[src]; nL1[k] = fL1[src]; filled++;
+                        }
+                    System.Array.Copy(next, fine, fine.Length); System.Array.Copy(nTri, fTri, fine.Length);
+                    System.Array.Copy(nL0, fL0, fine.Length); System.Array.Copy(nL1, fL1, fine.Length);
+                }
+                // each card vertex: the most forward sample of every cell it touches (one card cell each way)
+                var verts = mf.sharedMesh.vertices;
+                for (var j = 0; j <= GridY; j++)
+                    for (var i = 0; i <= GridX; i++)
+                    {
+                        var best = float.NegativeInfinity;
+                        for (var fj = Mathf.Max(0, (j - 1) * FitSub); fj <= Mathf.Min(FY, (j + 1) * FitSub); fj++)
+                            for (var fi = Mathf.Max(0, (i - 1) * FitSub); fi <= Mathf.Min(FX, (i + 1) * FitSub); fi++)
+                                best = Mathf.Max(best, fine[fj * (FX + 1) + fi]);
+                        var k = j * (GridX + 1) + i;
+                        if (k >= verts.Length || float.IsNegativeInfinity(best)) continue;
+                        var z = Mathf.Clamp(best + margin, -reach, reach);
+                        verts[k].z = -z / sz;                         // local -z is out of the face
+                    }
                 mf.sharedMesh.vertices = verts;
                 mf.sharedMesh.RecalculateBounds();
+
+                // the skin's bone weights under every card vertex (barycentric over the frontmost triangle there)
+                var cf = new CardFollow { Filter = mf, Rest = verts, Work = (Vector3[])verts.Clone(), CardAtFit = t.localToWorldMatrix };
+                var idx = new List<int>(); var slot = new List<int>(); var wt = new List<float>();
+                var acc = new Dictionary<int, float>();
+                for (var j = 0; j <= GridY; j++)
+                    for (var i = 0; i <= GridX; i++)
+                    {
+                        var k = j * (GridX + 1) + i;
+                        var fk = (j * FitSub) * (FX + 1) + i * FitSub;
+                        var tri = fTri[fk];
+                        if (k >= verts.Length || tri < 0 || bw == null || bw.Length == 0) continue;
+                        acc.Clear();
+                        var l0 = fL0[fk]; var l1 = fL1[fk]; var l2 = 1f - l0 - l1;
+                        AddWeights(acc, bw[tris[tri]], l0); AddWeights(acc, bw[tris[tri + 1]], l1); AddWeights(acc, bw[tris[tri + 2]], l2);
+                        // the Head share rides the card's parenting; keep the three strongest other bones
+                        float total = 0f; foreach (var kv in acc) total += kv.Value;
+                        if (total <= 1e-6f) continue;
+                        int b0 = -1, b1 = -1, b2 = -1; float w0 = 0, w1 = 0, w2 = 0;
+                        foreach (var kv in acc)
+                        {
+                            if (kv.Key < 0 || kv.Key >= bones.Length || bones[kv.Key] == null || bones[kv.Key] == _head) continue;
+                            var w = kv.Value / total;
+                            if (w > w0) { b2 = b1; w2 = w1; b1 = b0; w1 = w0; b0 = kv.Key; w0 = w; }
+                            else if (w > w1) { b2 = b1; w2 = w1; b1 = kv.Key; w1 = w; }
+                            else if (w > w2) { b2 = kv.Key; w2 = w; }
+                        }
+                        if (w0 < 0.005f) continue;                    // rigid with the head
+                        idx.Add(k);
+                        foreach (var (bi, w) in new[] { (b0, w0), (b1, w1), (b2, w2) })
+                        {
+                            if (bi < 0 || w < 0.005f) { slot.Add(-1); wt.Add(0f); continue; }
+                            var sIdx = _followBones.IndexOf(bones[bi]);
+                            if (sIdx < 0) { sIdx = _followBones.Count; _followBones.Add(bones[bi]); _followBind.Add(bones[bi].worldToLocalMatrix); }
+                            slot.Add(sIdx); wt.Add(w);
+                        }
+                    }
+                cf.Index = idx.ToArray(); cf.Bone = slot.ToArray(); cf.Weight = wt.ToArray();
+                _follow.Add(cf);
+            }
+            foreach (var cf in _follow) { cf.Last = new Matrix4x4[_followBones.Count]; for (var b = 0; b < cf.Last.Length; b++) cf.Last[b] = Matrix4x4.identity; }
+        }
+
+        static void AddWeights(Dictionary<int, float> acc, BoneWeight w, float l)
+        {
+            if (l <= 0f) return;
+            void Add(int i, float v) { if (v <= 0f) return; acc[i] = (acc.TryGetValue(i, out var o) ? o : 0f) + v * l; }
+            Add(w.boneIndex0, w.weight0); Add(w.boneIndex1, w.weight1); Add(w.boneIndex2, w.weight2); Add(w.boneIndex3, w.weight3);
+        }
+
+        /// <summary>
+        /// Moves the card vertices that carry non-Head weight with their bones (see <see cref="CardFollow"/>). Per bone the
+        /// motion in the card's frame is M = card(now)^-1 * bone(now) * bone(fit)^-1 * card(fit); a vertex is the blend of
+        /// its rest position (the Head share) and M applied to it. Skipped while no bone moved against the head.
+        /// </summary>
+        void Follow()
+        {
+            if (_follow.Count == 0 || _followBones.Count == 0) return;
+            var moved = new Matrix4x4[_followBones.Count];
+            foreach (var cf in _follow)
+            {
+                if (cf.Filter == null || cf.Filter.sharedMesh == null || cf.Index == null || cf.Index.Length == 0) continue;
+                var cardInv = cf.Filter.transform.worldToLocalMatrix;
+                var changed = false;
+                for (var b = 0; b < _followBones.Count; b++)
+                {
+                    var bone = _followBones[b];
+                    moved[b] = bone != null ? cardInv * bone.localToWorldMatrix * _followBind[b] * cf.CardAtFit : Matrix4x4.identity;
+                    if (!changed)
+                        for (var e = 0; e < 16 && !changed; e++) changed = Mathf.Abs(moved[b][e] - cf.Last[b][e]) > 1e-5f;
+                }
+                if (!changed) continue;
+                for (var b = 0; b < _followBones.Count; b++) cf.Last[b] = moved[b];
+                for (var n = 0; n < cf.Index.Length; n++)
+                {
+                    var k = cf.Index[n]; var v0 = cf.Rest[k];
+                    var rigid = 1f; var v = Vector3.zero;
+                    for (var c = 0; c < 3; c++)
+                    {
+                        var sl = cf.Bone[n * 3 + c]; if (sl < 0) continue;
+                        var w = cf.Weight[n * 3 + c];
+                        v += w * moved[sl].MultiplyPoint3x4(v0); rigid -= w;
+                    }
+                    cf.Work[k] = v + rigid * v0;
+                }
+                cf.Filter.sharedMesh.vertices = cf.Work;
+                cf.Filter.sharedMesh.RecalculateBounds();
             }
         }
 
@@ -403,6 +547,7 @@ namespace WRLDZ.Presentation
             // a Play-mode recompile restores the Unity references but not the plain classes: hold still until Apply runs again
             if (_eye == null || _mouthShape == null) return;
             _rng ??= new System.Random(GetEntityId().GetHashCode());
+            Follow();
             var now = Time.unscaledTime;
             // mood relax
             if (_moodUntil > 0f && now > _moodUntil) { _moodUntil = -1f; _mood = "neutral"; _target = FaceCatalog.Expression.Neutral; }

@@ -761,10 +761,25 @@ tone, and make all the eyes and mouths fully animated."
   The face planes were only a guess: the nose tip stands ~1.5 cm proud of the eye line, so the nose quad drew its tick
   inside the nose; head / face morphs move every feature's depth. Runs in `Apply`, measured in the quad's frame, so the
   pose does not matter.
-- **Cards drape over the skin** (second pass): each feature is a 14x8 grid card, and `FitToSurface` pushes every grid
-  vertex along the card's normal to the skin depth under it (the most protruding body vertex in a 6 mm window, else the
-  three nearest, a light 3x3 smoothing, margins as above) — a decal projection. A flat quad stood off the temple as a
-  plane whenever the head turned (AR duels show every angle); the draped card follows the socket and the cheek.
+- **Cards drape over the skin** (`AvatarFaceRig.FitToSurface`, 10-19 rewrite): each feature is a 24x16 grid card. The
+  body is baked in its current pose, its triangles are projected into the card's frame, and the exact skin depth
+  (barycentric, frontmost surface) is sampled on a grid twice as fine; each card vertex takes the most forward sample of
+  every cell it touches plus a margin (eyes / brows 1.5 mm, mouth 2, nose 2.5), so the card is above the skin everywhere,
+  not only at its vertices. (The first cut took the nearest body VERTEX; the skin between sparse vertices - nose bridge,
+  brow ridge - cut through the eyes in jagged fingers.) Only skin within 3 cm of the card's plane counts; the depth is
+  divided by the card's own z scale (the stature scales the head). `OverworldAvatar3d.Apply` drapes again last
+  (`Refit`), once the stature and the stance have settled.
+- **Cards follow the skin, not just the head:** the front of the face carries 6-37 % Neck weight, so a card riding the
+  Head bone slid against the skin whenever the head pitched against the neck (idle) or the AR look-at turned it
+  (`ArOpponentDuelist.Solve`, order 650). At the fit every card vertex keeps the bone weights of the skin triangle under
+  it; `Follow` (run from `Tick`) moves the vertices with non-Head weight by those bones' motion since the fit -
+  linear-blend skinning in the card's frame, the Head share being the parenting itself, skipped while nothing moved.
+  The rig runs at `[DefaultExecutionOrder(900)]`, after every pose writer (the highest other order is 820). Verified
+  with a clearance probe (scratch `fitcheck.cs`: both surfaces from their own triangles, ~5000 samples per card): the
+  player bodies, Kaiba, Téa, Yugi and Joey, idle and through attack / hit / win beats - every card 1.2-2.7 mm above the
+  skin, nothing under it.
+- **Editor fake null:** `GetComponent<T>()` returns a non-null "missing" object in the Editor, so `GetComponent ?? Add`
+  never adds and `GetComponent()?.Call()` calls into it; the face, customizer and opponent code use `TryGetComponent`.
 - **Canon duelists animate too:** `FaceCatalog.Characters` (generated from `Tools/avatar/canon_faces.json` by
   `Tools/avatar/canon_faces_to_cs.py`) holds one `CharacterFace` per `CharacterLook.FaceId` — eye / brow / nose / mouth
   parameters MEASURED from the sourced art (the `Faces/<id>.png` bands built from official Duel Links art and series

@@ -613,7 +613,7 @@ namespace WRLDZ.UI
             _armed = true;
             _rt = (RectTransform)transform;
             _home = _rt.anchoredPosition;
-            _g = GetComponent<CanvasGroup>() ?? gameObject.AddComponent<CanvasGroup>();
+            if (!TryGetComponent(out _g)) _g = gameObject.AddComponent<CanvasGroup>();   // never `GetComponent ?? Add`: the Editor's fake null
             _g.alpha = 0f;
             _rt.anchoredPosition = _home - new Vector2(0f, Rise);
             _t = -Delay;
