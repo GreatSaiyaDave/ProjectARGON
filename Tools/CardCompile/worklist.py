@@ -8,7 +8,8 @@
 
 status.tsv comes from `Tools/CardCompile/headless.sh . --status-dump`. Set order is
 Assets/StreamingAssets/WRLDZ/eras/pre_link_sets.json (LOB → MRD → SRL → PSV → LON …); "-" (no curriculum set)
-sorts last. Each row carries the printed text, the reference ygopro script path
+sorts last, unless Tools/CardCompile/card_era_index.json (card_era_index.py) gives the card its first core booster
+(CRV, EEN, ... past TLM): then `--sets CRV,EEN` selects it and rows sort by era, set and release date. Each row carries the printed text, the reference ygopro script path
 (Assets/StreamingAssets/OcgCore/scripts/official~/c<id>.lua) when one exists, and GitHub-branch hints from
 Tools/CardCompile/branch_refs.json (cards some unmerged branch already compiled, with the commit to read).
 """
@@ -39,6 +40,9 @@ def main() -> int:
     sets = json.load(open(os.path.join(REPO, "Assets/StreamingAssets/WRLDZ/eras/pre_link_sets.json"),
                           encoding="utf-8"))["sets"]
     order = {s["code"]: s["order"] for s in sets}
+    era_path = os.path.join(REPO, "Tools/CardCompile/card_era_index.json")
+    era_index = json.load(open(era_path, encoding="utf-8")) if os.path.exists(era_path) else {}
+    era_rank = {"original": 0, "gx": 1, "5ds": 2, "zexal": 3, "arcv": 4, "vrains": 5, "modern": 6}
     refs_path = os.path.join(REPO, "Tools/CardCompile/branch_refs.json")
     refs = json.load(open(refs_path, encoding="utf-8")).get("cards", {}) if os.path.exists(refs_path) else {}
     lua_dir = os.path.join(REPO, "Assets/StreamingAssets/OcgCore/scripts/official~")
@@ -53,6 +57,9 @@ def main() -> int:
         if len(p) < 6 or not p[0].isdigit():
             continue
         cid, status, set_code, ctype, race, name = int(p[0]), p[1], p[2], p[3], p[4], p[5]
+        era_row = era_index.get(str(cid), {})
+        if set_code == "-" and era_row.get("set", "-") != "-":
+            set_code = era_row["set"]  # no curriculum set: its first core booster from the era index
         if want_cards:
             if str(cid) not in want_cards and name not in want_cards:
                 continue
@@ -69,8 +76,9 @@ def main() -> int:
             "desc": d.get("desc", ""),
             "lua": os.path.relpath(lua, REPO) if os.path.exists(lua) else None,
             "branch": refs.get(str(cid)),
+            "era": era_row.get("era", ""), "date": era_row.get("date", ""),
         })
-    rows.sort(key=lambda r: (order.get(r["set"], 999), r["name"]))
+    rows.sort(key=lambda r: (order.get(r["set"], 999), era_rank.get(r["era"], 9), r["date"] or "9999", r["name"]))
     if a.limit:
         rows = rows[: a.limit]
     missing = [c for c in want_cards if not any(c in (str(r["id"]), r["name"]) for r in rows)]
