@@ -90,6 +90,8 @@ namespace WRLDZ.Presentation
         {
             foreach (var q in _quads) if (q != null) Kill(q);
             _quads.Clear();
+            foreach (var m in _meshes) if (m != null) Kill(m);
+            _meshes.Clear();
             foreach (var m in _owned) if (m != null) Kill(m);
             _owned.Clear();
             _shader = Shader.Find("WRLDZ/AvatarAnimeFace");
@@ -106,12 +108,38 @@ namespace WRLDZ.Presentation
         }
 
         /// <summary>One feature quad: a child of the Head bone at (out, up, fwd) in the body's frame, facing forward, yawed to the cheek.</summary>
+        const int GridX = 14, GridY = 8;   // the feature card's grid: FitToSurface bends it onto the skin
+        readonly List<Mesh> _meshes = new();
+
+        /// <summary>A unit card (±0.5, z 0, uv 0..1) as a grid, so the fit can drape it over the face.</summary>
+        Mesh GridCard(string name)
+        {
+            var m = new Mesh { name = "FaceCard_" + name };
+            var v = new Vector3[(GridX + 1) * (GridY + 1)]; var uv = new Vector2[v.Length];
+            for (var j = 0; j <= GridY; j++)
+                for (var i = 0; i <= GridX; i++)
+                {
+                    var k = j * (GridX + 1) + i;
+                    v[k] = new Vector3(i / (float)GridX - 0.5f, j / (float)GridY - 0.5f, 0f);
+                    uv[k] = new Vector2(i / (float)GridX, j / (float)GridY);
+                }
+            var tri = new int[GridX * GridY * 6]; var t = 0;
+            for (var j = 0; j < GridY; j++)
+                for (var i = 0; i < GridX; i++)
+                {
+                    var a = j * (GridX + 1) + i; var b = a + 1; var c = a + GridX + 1; var d = c + 1;
+                    // wound to face -Z like Unity's Quad primitive (the shader culls nothing anyway)
+                    tri[t++] = a; tri[t++] = c; tri[t++] = b; tri[t++] = b; tri[t++] = c; tri[t++] = d;
+                }
+            m.vertices = v; m.uv = uv; m.triangles = tri; m.RecalculateBounds();
+            _meshes.Add(m);
+            return m;
+        }
+
         Material Quad(string name, int part, float outM, float upM, float fwdM, float wM, float hM, float yawDeg, int mirror)
         {
-            var go = GameObject.CreatePrimitive(PrimitiveType.Quad);
-            go.name = name;
-            var col = go.GetComponent<Collider>();
-            if (col != null) Kill(col);
+            var go = new GameObject(name, typeof(MeshFilter), typeof(MeshRenderer));
+            go.GetComponent<MeshFilter>().sharedMesh = GridCard(name);
             var s = _scale;
             var up = _body.up; var f = _body.forward; var r = _body.right;
             go.transform.position = _head.position + r * (outM * s) + up * (upM * s) + f * (fwdM * s);
@@ -150,18 +178,23 @@ namespace WRLDZ.Presentation
         public void Apply(AvatarAppearance look, Color skin, Color hairRoot)
         {
             if (look == null) return;
-            _eye = FaceCatalog.Eye(string.IsNullOrEmpty(look.eyeId) ? FaceCatalog.DefaultEye : look.eyeId);
-            _mouthShape = FaceCatalog.Mouth(string.IsNullOrEmpty(look.mouthId) ? FaceCatalog.DefaultMouth : look.mouthId);
-            var nose = FaceCatalog.Nose(string.IsNullOrEmpty(look.noseId) ? FaceCatalog.DefaultNose : look.noseId);
-            var brow = FaceCatalog.Brow(string.IsNullOrEmpty(look.browId) ? FaceCatalog.DefaultBrow : look.browId);
+            // a canon duelist's face (CharacterLook.FaceId) is measured from the sourced art and overrides the look's picks
+            var cf = FaceCatalog.ForCharacter(look.faceId);
+            _eye = cf?.Eye ?? FaceCatalog.Eye(string.IsNullOrEmpty(look.eyeId) ? FaceCatalog.DefaultEye : look.eyeId);
+            _mouthShape = cf?.Mouth ?? FaceCatalog.Mouth(string.IsNullOrEmpty(look.mouthId) ? FaceCatalog.DefaultMouth : look.mouthId);
+            var nose = cf?.Nose ?? FaceCatalog.Nose(string.IsNullOrEmpty(look.noseId) ? FaceCatalog.DefaultNose : look.noseId);
+            var brow = cf?.Brow ?? FaceCatalog.Brow(string.IsNullOrEmpty(look.browId) ? FaceCatalog.DefaultBrow : look.browId);
+            _hideEye = cf?.HideEye ?? 0;
             _skin = skin;
-            var iris = ColorUtility.TryParseHtmlString(string.IsNullOrEmpty(look.irisHex) ? FaceCatalog.DefaultIris : look.irisHex, out var ic) ? ic : new Color(0.36f, 0.24f, 0.62f);
+            var irisHex = cf != null && !string.IsNullOrEmpty(cf.IrisHex) ? cf.IrisHex : string.IsNullOrEmpty(look.irisHex) ? FaceCatalog.DefaultIris : look.irisHex;
+            var iris = ColorUtility.TryParseHtmlString(irisHex, out var ic) ? ic : new Color(0.36f, 0.24f, 0.62f);
             Color.RGBToHSV(iris, out var h, out var sa, out var v);
             var irisLight = Color.HSVToRGB(h, Mathf.Clamp01(sa * 0.75f), Mathf.Clamp01(v * 1.25f + 0.12f));
             var irisDark = Color.HSVToRGB(h, Mathf.Clamp01(sa * 1.1f), v * 0.45f);
             // brows take the hair's root colour unless the player chose one; a very light hair keeps a readable brow
-            var browCol = ColorUtility.TryParseHtmlString(look.browHex, out var bc) ? bc : hairRoot;
-            if (browCol.maxColorComponent > 0.75f && string.IsNullOrEmpty(look.browHex)) browCol *= 0.55f;
+            var browHex = cf != null && !string.IsNullOrEmpty(cf.BrowHex) ? cf.BrowHex : look.browHex;
+            var browCol = ColorUtility.TryParseHtmlString(browHex, out var bc) ? bc : hairRoot;
+            if (browCol.maxColorComponent > 0.75f && string.IsNullOrEmpty(browHex)) browCol *= 0.55f;
             browCol.a = 1f;
             foreach (var m in new[] { _eyeL, _eyeR })
             {
@@ -177,6 +210,7 @@ namespace WRLDZ.Presentation
             {
                 if (m == null) continue;
                 m.SetColor("_BrowColor", browCol); m.SetFloat("_BrowThick", brow.Thick); m.SetFloat("_BrowArch", brow.Arch);
+                m.SetFloat("_BrowPeak", cf?.BrowPeak ?? 0.25f);
             }
             _browRestTilt = brow.Tilt;
             if (_nose != null)
@@ -195,11 +229,13 @@ namespace WRLDZ.Presentation
         }
 
         /// <summary>
-        /// Each quad sits just in front of the sculpt under it: the body mesh is baked in its current pose and every
-        /// quad slides along its own normal to the most protruding vertex inside its footprint plus a small margin. The
-        /// face planes (FaceFwdMale / Female) are only a first guess: the nose tip stands ~1.5 cm proud of the eye line,
-        /// so a nose quad left on the eye plane drew its tick inside the nose (only a pale sliver of the quad showed), and
-        /// the head / face morphs move every feature's depth. Measured in the quad's frame, so the pose does not matter.
+        /// Each feature card drapes over the sculpt under it: the body mesh is baked in its current pose and every grid
+        /// vertex of the card slides along the card's normal to the skin depth under it (the most protruding body vertex
+        /// within a small window, else the nearest ones) plus a margin — a decal projection, so the eye follows the
+        /// socket and the cheek instead of standing off the temple as a flat plane when the head turns (AR duels show
+        /// every angle). The face planes (FaceFwdMale / Female) are only the first guess: the nose tip stands ~1.5 cm
+        /// proud of the eye line and the head / face morphs move every feature's depth. Measured in the card's frame,
+        /// so the pose does not matter.
         /// </summary>
         void FitToSurface()
         {
@@ -212,41 +248,104 @@ namespace WRLDZ.Presentation
             smr.BakeMesh(_bake, true);
             var vs = _bake.vertices;
             var m = smr.transform.localToWorldMatrix;
+            var world = new Vector3[vs.Length];
+            for (var i = 0; i < vs.Length; i++) world[i] = m.MultiplyPoint3x4(vs[i]);
+            var px = new List<float>(); var py = new List<float>(); var pd = new List<float>();
+            var depth = new float[(GridX + 1) * (GridY + 1)];
             foreach (var q in _quads)
             {
                 if (q == null) continue;
                 var t = q.transform;
+                var mf = q.GetComponent<MeshFilter>();
+                if (mf == null || mf.sharedMesh == null) continue;
                 // the margin ahead of the skin: the lips and the nose tip are rounded, so a little more there
-                var margin = q.name == "FaceNose" ? 0.0025f : q.name == "FaceMouth" ? 0.002f : 0.0015f;
-                var n = -t.forward;                                  // the quad looks down -forward: this is out of the face
+                var margin = (q.name == "FaceNose" ? 0.0025f : q.name == "FaceMouth" ? 0.002f : 0.0015f) * _scale;
+                var n = -t.forward;                                  // the card looks down -forward: this is out of the face
                 var right = t.right; var up = t.up; var c = t.position;
-                var hw = t.lossyScale.x * 0.5f; var hh = t.lossyScale.y * 0.5f;
-                var best = float.NegativeInfinity;
-                for (var i = 0; i < vs.Length; i++)
+                var sx = t.lossyScale.x; var sy = t.lossyScale.y;
+                var hw = sx * 0.5f; var hh = sy * 0.5f;
+                var skirt = 0.008f * _scale;
+                px.Clear(); py.Clear(); pd.Clear();
+                var overall = float.NegativeInfinity;
+                for (var i = 0; i < world.Length; i++)
                 {
-                    var w = m.MultiplyPoint3x4(vs[i]) - c;
-                    if (Mathf.Abs(Vector3.Dot(w, right)) > hw || Mathf.Abs(Vector3.Dot(w, up)) > hh) continue;
+                    var w = world[i] - c;
+                    var x = Vector3.Dot(w, right); var y = Vector3.Dot(w, up);
+                    if (Mathf.Abs(x) > hw + skirt || Mathf.Abs(y) > hh + skirt) continue;
                     var d = Vector3.Dot(w, n);
-                    if (d > best) best = d;
+                    px.Add(x); py.Add(y); pd.Add(d);
+                    if (d > overall) overall = d;
                 }
-                if (float.IsNegativeInfinity(best)) continue;
-                var move = Mathf.Clamp(best + margin * _scale, -0.03f * _scale, 0.03f * _scale);
-                t.position = c + n * move;
+                if (px.Count == 0) continue;
+                var win = 0.006f * _scale;
+                for (var j = 0; j <= GridY; j++)
+                    for (var i = 0; i <= GridX; i++)
+                    {
+                        var gx = (i / (float)GridX - 0.5f) * sx; var gy = (j / (float)GridY - 0.5f) * sy;
+                        var best = float.NegativeInfinity;
+                        // the most protruding skin vertex within the window ...
+                        for (var k = 0; k < px.Count; k++)
+                            if (Mathf.Abs(px[k] - gx) <= win && Mathf.Abs(py[k] - gy) <= win && pd[k] > best) best = pd[k];
+                        if (float.IsNegativeInfinity(best))
+                        {
+                            // ... else the three nearest, past the skin's edge (the outer corner over the temple)
+                            float d0 = float.MaxValue, d1 = float.MaxValue, d2 = float.MaxValue; float v0 = 0, v1 = 0, v2 = 0;
+                            for (var k = 0; k < px.Count; k++)
+                            {
+                                var dd = (px[k] - gx) * (px[k] - gx) + (py[k] - gy) * (py[k] - gy);
+                                if (dd < d0) { d2 = d1; v2 = v1; d1 = d0; v1 = v0; d0 = dd; v0 = pd[k]; }
+                                else if (dd < d1) { d2 = d1; v2 = v1; d1 = dd; v1 = pd[k]; }
+                                else if (dd < d2) { d2 = dd; v2 = pd[k]; }
+                            }
+                            best = Mathf.Max(v0, Mathf.Max(v1, v2));
+                        }
+                        depth[j * (GridX + 1) + i] = best;
+                    }
+                // a light smoothing pass keeps the sparse mesh from printing steps into the card
+                var sm = (float[])depth.Clone();
+                for (var j = 0; j <= GridY; j++)
+                    for (var i = 0; i <= GridX; i++)
+                    {
+                        float acc = 0; var cnt = 0;
+                        for (var dj = -1; dj <= 1; dj++)
+                            for (var di = -1; di <= 1; di++)
+                            {
+                                var ii = i + di; var jj = j + dj;
+                                if (ii < 0 || jj < 0 || ii > GridX || jj > GridY) continue;
+                                acc += depth[jj * (GridX + 1) + ii]; cnt++;
+                            }
+                        sm[j * (GridX + 1) + i] = Mathf.Max(acc / cnt, depth[j * (GridX + 1) + i] - 0.002f * _scale);
+                    }
+                var verts = mf.sharedMesh.vertices;
+                for (var k = 0; k < verts.Length && k < sm.Length; k++)
+                {
+                    var z = Mathf.Clamp(sm[k] + margin, -0.03f * _scale, 0.03f * _scale);
+                    verts[k].z = -z;                                  // local -z is out of the face (lossyScale.z = 1)
+                }
+                mf.sharedMesh.vertices = verts;
+                mf.sharedMesh.RecalculateBounds();
             }
         }
 
         float _browRestTilt;
+        int _hideEye;   // CharacterFace.HideEye: 1 = the character's left eye quad stays off, 2 = the right
 
         void ApplyStatic()
         {
             foreach (var q in _quads)
-                if (q != null && q.name == "FaceNose") q.SetActive(Presence > 0.01f);
+            {
+                if (q == null) continue;
+                var on = Presence > 0.01f;
+                if (q.name == "FaceEyeL" && _hideEye == 1) on = false;
+                if (q.name == "FaceEyeR" && _hideEye == 2) on = false;
+                q.SetActive(on);
+            }
         }
 
         public void SetPresence(float a)
         {
             Presence = Mathf.Clamp01(a);
-            foreach (var q in _quads) if (q != null) q.SetActive(Presence > 0.01f);
+            ApplyStatic();
         }
 
         /// <summary>The body's presence fade (OverworldAvatar3d.ApplyAlpha): the features fade with the skin.</summary>
@@ -284,12 +383,26 @@ namespace WRLDZ.Presentation
 
         // ------------------------------------------------------------------ per frame
 
-        void LateUpdate() => Tick(Mathf.Min(Time.unscaledDeltaTime, 0.05f));
+        int _faults;
+
+        void LateUpdate()
+        {
+            // a fault breaker: a per-frame exception here once wrote a 10 GB Editor log (the rig's random generator was
+            // never created on an instance Ensure() had skipped); whatever breaks next, the face goes still, not the Editor
+            try { Tick(Mathf.Min(Time.unscaledDeltaTime, 0.05f)); _faults = 0; }
+            catch (System.Exception e)
+            {
+                if (++_faults >= 3) { Debug.LogError("[AvatarFaceRig] disabled after repeated faults: " + e); enabled = false; }
+            }
+        }
 
         /// <summary>Edit-mode previews drive the face by hand (no Player loop).</summary>
         public void Tick(float dt)
         {
             if (_eyeL == null) return;
+            // a Play-mode recompile restores the Unity references but not the plain classes: hold still until Apply runs again
+            if (_eye == null || _mouthShape == null) return;
+            _rng ??= new System.Random(GetEntityId().GetHashCode());
             var now = Time.unscaledTime;
             // mood relax
             if (_moodUntil > 0f && now > _moodUntil) { _moodUntil = -1f; _mood = "neutral"; _target = FaceCatalog.Expression.Neutral; }

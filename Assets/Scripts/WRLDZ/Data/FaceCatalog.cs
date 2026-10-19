@@ -87,6 +87,119 @@ namespace WRLDZ.Data
             new() { Id = "brow_fierce", Name = "Fierce", Blurb = "Angled in at rest.", Thick = 0.10f, Arch = 0.05f, Tilt = 0.35f },
         };
 
+        /// <summary>
+        /// A canon duelist's living face: the same shape parameters, measured from the sourced art (the Faces/&lt;id&gt;.png
+        /// band built from official Duel Links art / series frames, checked against the owner's episode library), so the
+        /// animated face carries the character instead of the flat decal. Keyed by <c>CharacterLook.FaceId</c>.
+        /// <see cref="HideEye"/> hides one animated eye where the art shows something else there (Pegasus's Millennium
+        /// Eye, drawn from the band's own half); <see cref="KeepDecal"/> leaves the painted band over the animated face
+        /// (opaque sunglasses). Entries come from Tools/avatar/canon_faces.json (the measurement record).
+        /// </summary>
+        public sealed class CharacterFace
+        {
+            public string FaceId, Name, Source;
+            public EyeShape Eye;
+            public string IrisHex;
+            public BrowShape Brow;
+            public float BrowPeak = 0.25f;
+            public string BrowHex;
+            public NoseShape Nose;
+            public MouthShape Mouth;
+            /// <summary>0 none, 1 the character's own left eye, 2 the right.</summary>
+            public int HideEye;
+            public bool KeepDecal;
+        }
+
+        public static readonly List<CharacterFace> Characters = new()
+        {
+            // CANON_FACES_BEGIN (generated from Tools/avatar/canon_faces.json by Tools/avatar/canon_faces_to_cs.py)
+            new() { FaceId = "tea", Name = "Téa Gardner", Source = "Faces/tea.png + series frames; unverified; conf 0.72",
+                Eye = new EyeShape { Id = "canon_tea", W = 0.39f, H = 0.34f, Tilt = -0.02f, Round = 0.9f, TopBulge = 0.85f, BotBulge = 0.9f, Lash = 0.06f, LashOuter = 2f, LowerLash = 0.017f, Iris = 0.21f, IrisScaleY = 1.3f, Pupil = 0.065f, RestLid = 0.03f },
+                IrisHex = "#50799C",
+                Brow = new BrowShape { Id = "canon_tea", Thick = 0.045f, Arch = 0.13f, Tilt = 0f }, BrowPeak = 0.3f, BrowHex = "#24231E",
+                Nose = new NoseShape { Id = "canon_tea", Style = 2, Size = 0.6f, Shade = 0.4f },
+                Mouth = new MouthShape { Id = "canon_tea", W = 0.18f, LipLine = 0.03f, LowerLip = 0.15f, RestCorner = -0.1f, OpenShape = 0.65f },
+                HideEye = 0, KeepDecal = false },
+            new() { FaceId = "yugi_muto", Name = "Yugi Muto (little Yugi)", Source = "Faces/yugi_muto.png + series frames; unverified; conf 0.7",
+                Eye = new EyeShape { Id = "canon_yugi_muto", W = 0.38f, H = 0.34f, Tilt = 0.13f, Round = 0.8f, TopBulge = 1.2f, BotBulge = 0.8f, Lash = 0.05f, LashOuter = 1.2f, LowerLash = 0.022f, Iris = 0.227f, IrisScaleY = 1.3f, Pupil = 0.13f, RestLid = 0f },
+                IrisHex = "#4A3072",
+                Brow = new BrowShape { Id = "canon_yugi_muto", Thick = 0.035f, Arch = 0.07f, Tilt = 0.35f }, BrowPeak = 0.6f, BrowHex = "#3A2810",
+                Nose = new NoseShape { Id = "canon_yugi_muto", Style = 0, Size = 0.55f, Shade = 0.3f },
+                Mouth = new MouthShape { Id = "canon_yugi_muto", W = 0.18f, LipLine = 0.026f, LowerLip = 0.3f, RestCorner = -0.4f, OpenShape = 0.45f },
+                HideEye = 0, KeepDecal = false },
+            new() { FaceId = "seto_kaiba", Name = "Seto Kaiba", Source = "Faces/seto_kaiba.png + series frames; unverified; conf 0.6",
+                Eye = new EyeShape { Id = "canon_seto_kaiba", W = 0.42f, H = 0.2f, Tilt = 0.1f, Round = 0.7f, TopBulge = 1.3f, BotBulge = 0.86f, Lash = 0.05f, LashOuter = 1.3f, LowerLash = 0.011f, Iris = 0.27f, IrisScaleY = 1.09f, Pupil = 0.085f, RestLid = 0.2f },
+                IrisHex = "#3B5976",
+                Brow = new BrowShape { Id = "canon_seto_kaiba", Thick = 0.05f, Arch = 0.02f, Tilt = 0.45f }, BrowPeak = 0.5f, BrowHex = "#3F312B",
+                Nose = new NoseShape { Id = "canon_seto_kaiba", Style = 1, Size = 0.7f, Shade = 0.5f },
+                Mouth = new MouthShape { Id = "canon_seto_kaiba", W = 0.26f, LipLine = 0.033f, LowerLip = 0.6f, RestCorner = -0.09f, OpenShape = 0f },
+                HideEye = 0, KeepDecal = false },
+            new() { FaceId = "joey_wheeler", Name = "Joey Wheeler", Source = "Faces/joey_wheeler.png + series frames; unverified; conf 0.65",
+                Eye = new EyeShape { Id = "canon_joey_wheeler", W = 0.355f, H = 0.26f, Tilt = 0.03f, Round = 0.6f, TopBulge = 0.7f, BotBulge = 0.9f, Lash = 0.034f, LashOuter = 1.2f, LowerLash = 0.012f, Iris = 0.232f, IrisScaleY = 1f, Pupil = 0.071f, RestLid = 0.3f },
+                IrisHex = "#696137",
+                Brow = new BrowShape { Id = "canon_joey_wheeler", Thick = 0.07f, Arch = 0.02f, Tilt = 0.45f }, BrowPeak = 0.5f, BrowHex = "#514630",
+                Nose = new NoseShape { Id = "canon_joey_wheeler", Style = 1, Size = 0.7f, Shade = 0.5f },
+                Mouth = new MouthShape { Id = "canon_joey_wheeler", W = 0.2f, LipLine = 0.02f, LowerLip = 0.15f, RestCorner = 0.04f, OpenShape = 0.15f },
+                HideEye = 0, KeepDecal = false },
+            new() { FaceId = "yami_yugi", Name = "Yami Yugi (the Pharaoh)", Source = "Faces/yami_yugi.png + series frames; unverified; conf 0.55",
+                Eye = new EyeShape { Id = "canon_yami_yugi", W = 0.344f, H = 0.33f, Tilt = 0.09f, Round = 1f, TopBulge = 1.14f, BotBulge = 0.86f, Lash = 0.033f, LashOuter = 1f, LowerLash = 0.014f, Iris = 0.243f, IrisScaleY = 1.3f, Pupil = 0.13f, RestLid = 0.1f },
+                IrisHex = "#4a345f",
+                Brow = new BrowShape { Id = "canon_yami_yugi", Thick = 0.04f, Arch = 0.04f, Tilt = 0.45f }, BrowPeak = 0.5f, BrowHex = "#38362e",
+                Nose = new NoseShape { Id = "canon_yami_yugi", Style = 2, Size = 0.75f, Shade = 0.4f },
+                Mouth = new MouthShape { Id = "canon_yami_yugi", W = 0.18f, LipLine = 0.02f, LowerLip = 0.35f, RestCorner = 0f, OpenShape = 0.2f },
+                HideEye = 0, KeepDecal = false },
+            new() { FaceId = "mai_valentine", Name = "Mai Valentine", Source = "Faces/mai_valentine.png + series frames; unverified; conf 0.72",
+                Eye = new EyeShape { Id = "canon_mai_valentine", W = 0.3f, H = 0.19f, Tilt = 0.15f, Round = 0.55f, TopBulge = 0.6f, BotBulge = 0.9f, Lash = 0.03f, LashOuter = 2.2f, LowerLash = 0.014f, Iris = 0.145f, IrisScaleY = 1.3f, Pupil = 0.07f, RestLid = 0.3f },
+                IrisHex = "#784370",
+                Brow = new BrowShape { Id = "canon_mai_valentine", Thick = 0.04f, Arch = 0.08f, Tilt = 0.15f }, BrowPeak = 0.45f, BrowHex = "#573625",
+                Nose = new NoseShape { Id = "canon_mai_valentine", Style = 2, Size = 0.6f, Shade = 0.4f },
+                Mouth = new MouthShape { Id = "canon_mai_valentine", W = 0.18f, LipLine = 0.035f, LowerLip = 0.55f, RestCorner = -0.05f, OpenShape = 0.55f },
+                HideEye = 0, KeepDecal = false },
+            new() { FaceId = "pegasus", Name = "Maximillion Pegasus", Source = "Faces/pegasus.png + series frames; unverified; conf 0.7",
+                Eye = new EyeShape { Id = "canon_pegasus", W = 0.38f, H = 0.165f, Tilt = 0.07f, Round = 0.3f, TopBulge = 0.85f, BotBulge = 0.6f, Lash = 0.068f, LashOuter = 1f, LowerLash = 0.008f, Iris = 0.17f, IrisScaleY = 1f, Pupil = 0.063f, RestLid = 0.3f },
+                IrisHex = "#714d38",
+                Brow = new BrowShape { Id = "canon_pegasus", Thick = 0.05f, Arch = 0.12f, Tilt = 0.2f }, BrowPeak = 0.5f, BrowHex = "#454034",
+                Nose = new NoseShape { Id = "canon_pegasus", Style = 2, Size = 0.7f, Shade = 0.4f },
+                Mouth = new MouthShape { Id = "canon_pegasus", W = 0.3f, LipLine = 0.025f, LowerLip = 0.3f, RestCorner = 0.4f, OpenShape = 0.2f },
+                HideEye = 1, KeepDecal = false },
+            new() { FaceId = "yami_bakura", Name = "Yami Bakura (the Spirit of the Ring)", Source = "Faces/yami_bakura.png + series frames; unverified; conf 0.6",
+                Eye = new EyeShape { Id = "canon_yami_bakura", W = 0.35f, H = 0.15f, Tilt = 0.06f, Round = 0.2f, TopBulge = 1.3f, BotBulge = 0.5f, Lash = 0.065f, LashOuter = 1.5f, LowerLash = 0.015f, Iris = 0.21f, IrisScaleY = 1.3f, Pupil = 0.09f, RestLid = 0.28f },
+                IrisHex = "#856D57",
+                Brow = new BrowShape { Id = "canon_yami_bakura", Thick = 0.05f, Arch = 0.04f, Tilt = 0.4f }, BrowPeak = 0.7f, BrowHex = "#2D2927",
+                Nose = new NoseShape { Id = "canon_yami_bakura", Style = 1, Size = 0.65f, Shade = 0.4f },
+                Mouth = new MouthShape { Id = "canon_yami_bakura", W = 0.23f, LipLine = 0.025f, LowerLip = 0.3f, RestCorner = 0.2f, OpenShape = 0.2f },
+                HideEye = 0, KeepDecal = false },
+            new() { FaceId = "weevil", Name = "Weevil Underwood", Source = "Faces/weevil.png + series frames; unverified; conf 0.6",
+                Eye = new EyeShape { Id = "canon_weevil", W = 0.45f, H = 0.21f, Tilt = 0.09f, Round = 0.15f, TopBulge = 0.6f, BotBulge = 0.9f, Lash = 0.045f, LashOuter = 1.5f, LowerLash = 0.01f, Iris = 0.13f, IrisScaleY = 1.3f, Pupil = 0.08f, RestLid = 0.15f },
+                IrisHex = "#314078",
+                Brow = new BrowShape { Id = "canon_weevil", Thick = 0.05f, Arch = 0.02f, Tilt = 0.35f }, BrowPeak = 0.25f, BrowHex = "#814F29",
+                Nose = new NoseShape { Id = "canon_weevil", Style = 0, Size = 0.5f, Shade = 0.35f },
+                Mouth = new MouthShape { Id = "canon_weevil", W = 0.27f, LipLine = 0.025f, LowerLip = 0.1f, RestCorner = 0.35f, OpenShape = 0.45f },
+                HideEye = 0, KeepDecal = false },
+            new() { FaceId = "tristan", Name = "Tristan Taylor", Source = "Faces/tristan.png + series frames; unverified; conf 0.55",
+                Eye = new EyeShape { Id = "canon_tristan", W = 0.38f, H = 0.19f, Tilt = 0.18f, Round = 0.3f, TopBulge = 0.6f, BotBulge = 0.9f, Lash = 0.034f, LashOuter = 1f, LowerLash = 0.01f, Iris = 0.165f, IrisScaleY = 1.3f, Pupil = 0.055f, RestLid = 0.25f },
+                IrisHex = "#514F3B",
+                Brow = new BrowShape { Id = "canon_tristan", Thick = 0.12f, Arch = 0.2f, Tilt = 0.45f }, BrowPeak = 0.1f, BrowHex = "#34322C",
+                Nose = new NoseShape { Id = "canon_tristan", Style = 2, Size = 0.65f, Shade = 0.45f },
+                Mouth = new MouthShape { Id = "canon_tristan", W = 0.23f, LipLine = 0.025f, LowerLip = 0.25f, RestCorner = -0.15f, OpenShape = 0.2f },
+                HideEye = 0, KeepDecal = false },
+            new() { FaceId = "rex_raptor", Name = "Rex Raptor", Source = "Faces/rex_raptor.png + series frames; unverified; conf 0.6",
+                Eye = new EyeShape { Id = "canon_rex_raptor", W = 0.4f, H = 0.27f, Tilt = 0.18f, Round = 0.45f, TopBulge = 0.6f, BotBulge = 0.9f, Lash = 0.03f, LashOuter = 1.3f, LowerLash = 0.012f, Iris = 0.12f, IrisScaleY = 1.3f, Pupil = 0.06f, RestLid = 0f },
+                IrisHex = "#2F2F2F",
+                Brow = new BrowShape { Id = "canon_rex_raptor", Thick = 0.07f, Arch = 0.02f, Tilt = 0.45f }, BrowPeak = 0.25f, BrowHex = "#2C201B",
+                Nose = new NoseShape { Id = "canon_rex_raptor", Style = 1, Size = 0.6f, Shade = 0.45f },
+                Mouth = new MouthShape { Id = "canon_rex_raptor", W = 0.18f, LipLine = 0.02f, LowerLip = 0.1f, RestCorner = 0.2f, OpenShape = 0.2f },
+                HideEye = 0, KeepDecal = false },
+            // CANON_FACES_END
+        };
+
+        public static CharacterFace ForCharacter(string faceId)
+        {
+            if (string.IsNullOrEmpty(faceId)) return null;
+            foreach (var c in Characters) if (c.FaceId == faceId) return c;
+            return null;
+        }
+
         public const string DefaultEye = "eye_sharp", DefaultMouth = "mouth_thin", DefaultNose = "nose_tick", DefaultBrow = "brow_straight";
         public const string DefaultIris = "#5B3A92";
 

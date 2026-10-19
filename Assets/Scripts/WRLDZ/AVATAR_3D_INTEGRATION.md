@@ -761,5 +761,19 @@ tone, and make all the eyes and mouths fully animated."
   The face planes were only a guess: the nose tip stands ~1.5 cm proud of the eye line, so the nose quad drew its tick
   inside the nose; head / face morphs move every feature's depth. Runs in `Apply`, measured in the quad's frame, so the
   pose does not matter.
-- **Open:** canon duelists keep their flat face decals (not animated yet) — the next step is one FaceCatalog preset per
-  canon character sourced from the series frames, so Kaiba's glare and Joey's grin animate like the player's.
+- **Cards drape over the skin** (second pass): each feature is a 14x8 grid card, and `FitToSurface` pushes every grid
+  vertex along the card's normal to the skin depth under it (the most protruding body vertex in a 6 mm window, else the
+  three nearest, a light 3x3 smoothing, margins as above) — a decal projection. A flat quad stood off the temple as a
+  plane whenever the head turned (AR duels show every angle); the draped card follows the socket and the cheek.
+- **Canon duelists animate too:** `FaceCatalog.Characters` (generated from `Tools/avatar/canon_faces.json` by
+  `Tools/avatar/canon_faces_to_cs.py`) holds one `CharacterFace` per `CharacterLook.FaceId` — eye / brow / nose / mouth
+  parameters MEASURED from the sourced art (the `Faces/<id>.png` bands built from official Duel Links art and series
+  frames, checked against the owner's episode library) by the `canon-face-presets` workflow: one measuring agent and one
+  independent skeptic per duelist, guard-railed into the shader's range by the merge. `OverworldAvatar3d.ApplyFace`
+  gives a faceId with a measured face the living rig (the band and the mouth decal are not built); `HideEye` keeps one
+  eye off and shows that half of the band instead (Pegasus: the Millennium Eye, u 0.5..1, at -3.3 cm); `KeepDecal`
+  keeps the band over the rig (opaque sunglasses). The rig reads the preset in `Apply` (`FaceCatalog.ForCharacter`),
+  so FULL COSPLAY in the customizer wears the character's face as well. Review: `scratch canon_film.py` films every
+  row's face next to its band.
+- **Open:** Bandit Keith keeps his band (sunglasses) by design; per-character expression tuning (Kaiba's smirk, Joey's
+  grin) still uses the shared `Expression` table.

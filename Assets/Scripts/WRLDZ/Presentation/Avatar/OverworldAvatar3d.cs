@@ -475,6 +475,7 @@ namespace WRLDZ.Presentation
         // base face, parented to the head bone. Calibrated on the male base in Unity renders: the base face's eyes sit
         // ~3.6 cm above the head bone and the face surface ~12 cm ahead of it there; the female base is close enough.
         string _faceId;
+        bool _faceDecalUnderRig;   // the decal holder was built for the living face (overlay only) rather than the full band
         GameObject _faceDecal;
         const string FaceRes = "WRLDZ/Avatar3D/Faces/";
 
@@ -482,16 +483,19 @@ namespace WRLDZ.Presentation
         public bool FaceRigOn { get; private set; }
 
         /// <summary>
-        /// A canon duelist's face decal when the look names one (<see cref="AvatarAppearance.faceId"/>), otherwise the
-        /// living face (<see cref="AvatarFaceRig"/>: the look's eye / brow / nose / mouth choices, blinking, gaze,
-        /// expressions, speech). Either way the skin texture's painted features are flattened under it.
+        /// The living face (<see cref="AvatarFaceRig"/>: eye / brow / nose / mouth shapes, blinking, gaze, expressions,
+        /// speech) for the player's own picks AND for every canon duelist whose face is measured in
+        /// <see cref="FaceCatalog.Characters"/> (keyed by <see cref="AvatarAppearance.faceId"/>); a canon duelist without
+        /// a measured face, or one whose band must stay (sunglasses), keeps the painted decal. Either way the skin
+        /// texture's painted features are flattened under it.
         /// </summary>
         void ApplyFace(AvatarAppearance look)
         {
             var id = look.silhouette ? "" : look.faceId ?? "";
             var anim = GetComponent<Animator>();
             var head = anim != null && anim.isHuman ? anim.GetBoneTransform(HumanBodyBones.Head) : null;
-            var rigWanted = string.IsNullOrEmpty(id) && !look.silhouette && !_fullCharacter && head != null;
+            var cf = string.IsNullOrEmpty(id) ? null : FaceCatalog.ForCharacter(id);
+            var rigWanted = (string.IsNullOrEmpty(id) || (cf != null && !cf.KeepDecal)) && !look.silhouette && !_fullCharacter && head != null;
             var rig = GetComponent<AvatarFaceRig>();
             if (rigWanted)
             {
@@ -504,9 +508,14 @@ namespace WRLDZ.Presentation
             else if (rig != null) rig.SetPresence(0f);
             FaceRigOn = rigWanted;
             SetFaceFlatten(rigWanted || !string.IsNullOrEmpty(id));
-            if (id == _faceId) return;
-            _faceId = id;
-            if (_faceDecal != null) { foreach (var fr in _faceDecal.GetComponentsInChildren<Renderer>(true)) KillMaterials(fr); Kill(_faceDecal); _faceDecal = null; }
+            if (id == _faceId && rigWanted == _faceDecalUnderRig) return;
+            _faceId = id; _faceDecalUnderRig = rigWanted;
+            if (_faceDecal != null)
+            {
+                foreach (var fr in _faceDecal.GetComponentsInChildren<Renderer>(true)) KillMaterials(fr);
+                foreach (var mf in _faceDecal.GetComponentsInChildren<MeshFilter>(true)) if (mf.sharedMesh != null && mf.sharedMesh.name.EndsWith("(uv)")) Kill(mf.sharedMesh);
+                Kill(_faceDecal); _faceDecal = null;
+            }
             if (string.IsNullOrEmpty(id)) return;
             var tex = Resources.Load<Texture2D>(FaceRes + id);
             if (tex == null || head == null) return;
@@ -515,6 +524,17 @@ namespace WRLDZ.Presentation
             // eyes + brows over the base eyes; an optional stern / character mouth 5 cm below (Faces/<id>_mouth.png)
             // the female face surface is 1.5 cm nearer the head bone (eye line 0.100 m ahead vs 0.115 m on the male base)
             var fwd = _sex == "female" ? 0.106f : 0.121f;
+            if (rigWanted)
+            {
+                // the living face draws the eyes and the mouth; from the band only the hidden eye's overlay stays
+                // (Pegasus: the Millennium Eye is his left eye = the band's right half, u 0.5..1)
+                if (cf != null && cf.HideEye != 0)
+                {
+                    var left = cf.HideEye == 1;
+                    FaceQuad(id + "_eye", tex, head, 0.036f, fwd, new Vector2(0.066f, 0.070f), null, new Rect(left ? 0.5f : 0f, 0f, 0.5f, 1f), left ? -0.033f : 0.033f);
+                }
+                return;
+            }
             FaceQuad(id, tex, head, 0.036f, fwd, new Vector2(0.132f, 0.070f));
             var mouth = Resources.Load<Texture2D>(FaceRes + id + "_mouth");
             if (mouth != null) FaceQuad(id + "_mouth", mouth, head, -0.014f, fwd - 0.003f, new Vector2(0.084f, 0.042f));
@@ -538,11 +558,20 @@ namespace WRLDZ.Presentation
         }
 
         /// <summary>One decal quad on the head-bone frame; parented under <paramref name="parent"/> (default: the face decal holder).</summary>
-        void FaceQuad(string id, Texture2D tex, Transform head, float up01, float fwd01, Vector2 size, Transform parent = null)
+        void FaceQuad(string id, Texture2D tex, Transform head, float up01, float fwd01, Vector2 size, Transform parent = null, Rect? uv = null, float out01 = 0f)
         {
             var go = GameObject.CreatePrimitive(PrimitiveType.Quad);
             Kill(go.GetComponent<Collider>());
             go.name = "FaceDecal_" + id;
+            if (uv.HasValue)
+            {
+                // a window of the texture (the band's half for one eye): the quad's own UVs are remapped on a mesh copy
+                var mf = go.GetComponent<MeshFilter>();
+                var mesh = Instantiate(mf.sharedMesh); mesh.name = "FaceDecalQuad (uv)";
+                var r = uv.Value; var uvs = mesh.uv;
+                for (var i = 0; i < uvs.Length; i++) uvs[i] = new Vector2(r.x + uvs[i].x * r.width, r.y + uvs[i].y * r.height);
+                mesh.uv = uvs; mf.sharedMesh = mesh;
+            }
             go.layer = gameObject.layer;
             var mr = go.GetComponent<MeshRenderer>();
             var mat = Own(new Material(Shader.Find("WRLDZ/AvatarRecolor") ?? UnlitShader()) { name = "FaceDecal_" + id });
@@ -563,7 +592,7 @@ namespace WRLDZ.Presentation
             // placed in the body's rest frame (head upright, facing the body's forward), then parented to the head bone
             var fwd = transform.forward; var up = transform.up;
             var s = transform.lossyScale.y;
-            var centre = head.position + up * (up01 * s) + fwd * (fwd01 * s);
+            var centre = head.position + transform.right * (out01 * s) + up * (up01 * s) + fwd * (fwd01 * s);
             go.transform.position = centre;
             go.transform.rotation = Quaternion.LookRotation(-fwd, up);   // a Quad faces -Z: turn it to face forward
             go.transform.localScale = new Vector3(size.x * s, size.y * s, 1f);

@@ -1,0 +1,772 @@
+{
+ "_about": "Every canon duelist's living face, measured from the sourced art (Faces/<id>.png bands built from official Duel Links art / series frames) by the canon-face-presets workflow: one measuring agent and one independent skeptic per duelist; guard-railed into the shader's drawable range by merge_presets.py.",
+ "characters": [
+  {
+   "faceId": "tea",
+   "displayName": "T\u00e9a Gardner",
+   "sourceLine": "Faces/tea.png + series frames; unverified; conf 0.72",
+   "eye": {
+    "W": 0.39,
+    "H": 0.34,
+    "Tilt": -0.02,
+    "Round": 0.9,
+    "TopBulge": 0.85,
+    "BotBulge": 0.9,
+    "Lash": 0.06,
+    "LashOuter": 2.0,
+    "LowerLash": 0.017,
+    "Iris": 0.21,
+    "IrisScaleY": 1.3,
+    "Pupil": 0.065,
+    "RestLid": 0.03
+   },
+   "irisHex": "#50799C",
+   "brow": {
+    "Thick": 0.045,
+    "Arch": 0.13,
+    "Tilt": 0.0,
+    "Peak": 0.3,
+    "hex": "#24231E"
+   },
+   "mouth": {
+    "W": 0.18,
+    "LipLine": 0.03,
+    "LowerLip": 0.15,
+    "RestCorner": -0.1,
+    "OpenShape": 0.65
+   },
+   "nose": {
+    "Style": 2,
+    "Size": 0.6,
+    "Shade": 0.4
+   },
+   "special": {
+    "hideEye": "none",
+    "keepDecal": false,
+    "reason": ""
+   },
+   "measurements": "BAND Faces/tea.png 1024x540 (77.6 px/cm): zero white pixels \u2014 sclera and highlights are transparent, only ink + iris are painted; alpha>128 bbox x51-976 y50-392; strokes at y30-65 x290-700 are her bangs (hair), no brows in the band. Viewer-left eye (her right): iris ink+blue x118-315 = 198 px = 2.55 cm wide, y98 (lid) to 358 = 260 px = 3.35 cm visible (lid-cut at the top), blue median #3F4D74; the upper-lash arc is faded (alpha 40-128), apex y72 at x250, 4-20 px thick; lower-outer corner stroke x15-70 y263-351. Viewer-right eye: iris x707-895, blue x710-861 y104-364, solid ink x820-895 y100-325 = outer-upper lash merged with the iris shade. SOURCE FRAME: the band was cut from anime S2E19 t610.0 (pipeline memory; confirmed visually \u2014 same bangs, highlight upper-left, 'o' mouth). Band-to-frame fit by maximising ink/iris overlap: 3.142 band px per frame px (hit 0.949), pupils at frame (529,275.5)/(719,275.5), frame IPD 190 px = band 597 px = 7.69 cm; 1 frame px = 0.0405 cm. Fuller eye (viewer-left) opening x465-581 = 117 px = 4.74 cm wide, 91 px = 3.69 cm tall (lid y220, lower lid y311); far eye 93x89 px = 3.77x3.60 cm (head yawed ~15 deg, so W uses the fuller eye). Corners: outer (465,259.5), inner (581,256.5): inner 3 px = 0.12 cm higher; DK frontal frame agrees (inner higher by 0.16 and 0.08 cm) -> Tilt = -0.12 cm / 8 (shader tiltY = _Tilt*x) = -0.015; the brief's /6 gives -0.02. Corner line sits 38 px above / 53 px below the tallest column (top:bottom 0.72; DK frame 0.80 and 0.81) -> lower lid deeper than the upper, carried by TopBulge 0.85 / BotBulge 1.07. Height profile 75/95/98/96/78 % of max at 15/30/50/85/95 % of width: fuller than an ellipse -> Round 0.9. Upper lash ink: 6-7 px (0.24-0.28 cm) at the inner end, 10-12 px (0.40-0.49 cm) over the top and outer half, a 24-39 px (1.0-1.6 cm) knot in the last ~15 px at the outer corner -> Lash 0.06 (inner 4.4*Lash = 0.26 cm), LashOuter 2.0 (outer 8*Lash*LashOuter = 0.96 cm, a compromise between the 0.45 cm outer-middle and the 1.0-1.6 cm knot). Lower lid line 3-4 px (0.12-0.16 cm) across the middle, 9-17 px (0.36-0.69 cm) at the outer-lower corner -> LowerLash 0.017 (8.4*LowerLash = 0.14 cm). Iris: 58-60 px (2.43 cm) by colour classes, 70-72 px (2.9 cm) including the limbal ring in the 6x zoom; band 2.55 cm -> radius 1.27 cm -> Iris 0.21; visible height 82-90 px frame / 260 px band = 3.3-3.65 cm, h/w 1.31 -> IrisScaleY = 3.35 cm / (8*0.21) = 2.0 (shader p-space is not aspect-corrected: iris width = 12*Iris cm, height = 8*Iris*IrisScaleY cm). Iris main tone in the source frame #3F4E74 / #3E4D71 (= the band's #3F4D74) but that shot is underexposed (sclera reads 142/255, skin 153/138/127); lit frames S1E25 t575.1 (frontal, IPD 325 px), S1E25 t325.4 (neutral 3/4, IPD 152 px) and S1E1 t88.2 give #50799D #50799C #507B9A #557B90 #51789B #527A93 -> irisHex #50799C. Big highlight 27x43 px (1.1x1.75 cm) at the iris's upper-left touching the lid; small sliver highlight lower-right. Pupil: DK frontal pupils 20-26 px of a 92-102 px iris (0.24 -> radius 0.30 cm, 0.05), S2 source pupil+shade core 16-27 px of 60 (-> 0.063) -> Pupil 0.065. Lids sit on the iris top in every frame -> RestLid 0.03. BROW (neutral S1E25 t325.4, 0.0506 cm/px): thin stroke 5-10 px = 0.3-0.4 cm -> Thick = 0.35/7.14 = 0.045; peak 11-13 px = 0.55-0.66 cm above the ends at ~35 % from the outer end -> Arch = 0.6/4.42 = 0.13, Peak +0.3; level once the frame's 9 deg head roll (right pupil 24 px lower) is removed -> Tilt 0; brow ink #24231E lit / #211E1C in the dim source (both brows), darker than her hair. MOUTH: tea_mouth.png (512x256, 60.95 px/cm) is one dark arc x193-269 y98-138 = 76x40 px = 1.25x0.66 cm = the dark upper-lip arc of the source frame's open 'o' (frame dark part 31 px = 1.30 cm, identical), i.e. a speaking mouth, not a resting one; resting mouth from S1E25 t325.4 (closed): 39 px = 0.257 IPD = 1.97 cm -> W = 1.97/16.8 = 0.12; line 3-5 px = 0.15 cm -> LipLine = 0.15/4.84 = 0.03; ends 1.5-2 px (0.08-0.10 cm) below the middle -> RestCorner = -0.09/0.704 = -0.13 -> -0.1; the 'o' is 1.30 x 0.77 cm (w/h 1.7) -> OpenShape 0.65; no drawn lower-lip shade -> LowerLip 0.15. NOSE: source stroke x655-668 y305-359 = 0.57 x 2.23 cm, a sharp '>' with a soft shade on the lit side (DK frontal: ~1.4 cm) -> Style 2, Size 0.6, Shade 0.4.",
+   "sources": [
+    "Assets/Resources/WRLDZ/Avatar3D/Faces/tea.png",
+    "Assets/Resources/WRLDZ/Avatar3D/Faces/tea_mouth.png",
+    "~/Downloads/YouTube Downloader/Legendary Fisherman, Part 1 \uff5c Yu-Gi-Oh Season 2 Episode 19.mp4 @ 610.0 s (the band's source frame; ffmpeg extract 1280x704)",
+    "~/Downloads/YouTube Downloader/Shining Friendship \uff5c Yu-Gi-Oh Season 1 Episode 25.mp4 @ 575.1 s and 325.4 s",
+    "~/Downloads/YouTube Downloader/The Heart Of The Cards \uff5c Yu-Gi-Oh Season 1 Episode 1.mp4 @ 88.2 s",
+    "~/argon-avatar/research/series_refs/sheets/dm_s1e001_00.jpg",
+    "~/argon-avatar/research/series_refs/sheets/dm_s1e001_01.jpg",
+    "~/argon-avatar/research/series_refs/sheets/dm_s1e001_02.jpg",
+    "~/argon-avatar/research/series_refs/sheets/dm_s1e016_03.jpg",
+    "~/argon-avatar/research/series_refs/sheets/dm_s1e025_02.jpg",
+    "~/argon-avatar/research/series_refs/sheets/dm_s1e025_04.jpg",
+    "~/argon-avatar/research/series_refs/keyframes/dm_s2e019/index.tsv, dm_s1e025/index.tsv, dm_s1e001/index.tsv (time lookup; the keyframe jpgs are 256x144 thumbnails)",
+    "Assets/Scripts/WRLDZ/Presentation/Avatar/AvatarAnimeFace.shader (unit check: p = uv-0.5, tiltY = _Tilt*x, ir = length(ip), lash/brow/mouth thickness formulas)",
+    "Assets/Scripts/WRLDZ/Presentation/Avatar/AvatarFaceRig.cs (quad sizes 6x4, 6x3.4, 8.4x4.4 cm)",
+    "Assets/Scripts/WRLDZ/Presentation/Avatar/OverworldAvatar3d.cs (band 13.2x7.0 cm, mouth decal 8.4x4.2 cm)",
+    "Assets/Scripts/WRLDZ/Data/FaceCatalog.cs",
+    "Tools/avatar/canon_faces.json (provisional Kaiba/Pegasus entries, format reference)",
+    "~/.claude memory: anime-frame-face-pipeline.md (T\u00e9a = S2E19 t610), canon-face-decals-pipeline.md (pupils at band px 201,290 / 798,290)"
+   ],
+   "confidence": 0.72,
+   "notes": "1) The band paints no sclera and no highlights (transparent), so the eye opening cannot be read from the band alone; it was measured on the band's own source frame (S2E19 t610.0, identified from the pipeline memory and confirmed visually) after fitting the band onto the frame (3.142 band px per frame px, overlap 0.949). The band is Battle City era; the owner's DK-first frames show the same eye design, so the shape carries over. 2) Units follow the brief except where the shader contradicts it: Tilt is (outer-inner cm)/8 under tiltY = _Tilt*x (both conventions round to -0.02 here); IrisScaleY is NOT a 1.0-1.25 stretch \u2014 the shader's p-space is 6x4 cm un-corrected, so a circular iris needs 1.5 and T\u00e9a's tall oval (visible h/w 1.31, lid-cut at the top) needs 2.0; with 1.15 her iris would draw 0.77 as tall as wide. H keeps the brief's height/8 and the measured corner split (corners in the upper 42 % of the eye) goes into TopBulge 0.85 / BotBulge 1.07; H*BotBulge = 0.49 touches the 4 cm quad's bottom edge, so the lower line may clip by ~1 px \u2014 if visible, drop H to 0.44 or BotBulge to 1.0. The eye is large (4.7 x 3.7 cm): other bands differ in scale too (Kaiba ~2.5 cm of eye paint, Mai 4.0, Yugi 5.9), and the owner has seen this band on the model. 3) At DK proportions (S1E25 frontal: eye 0.47 x 0.33 IPD, iris 0.30 IPD, h/w 1.05) the same preset would be W 0.30, H 0.32, Iris 0.19, IrisScaleY 1.6 \u2014 listed in case the reviewer prefers DK over the band's BC frame. 4) irisHex is the lit-frame cerulean (#50799C, six samples within \u00b13 across three episodes); the band's #3F4D74 is the same hue underexposed (sclera 142/255 in that shot; scaling by the sclera ratio gives #5E74AC). Expect the animated eyes to look brighter than the painted band. 5) The band lost the fuller eye's heavy outer-corner lash knot (it sits on the band's x=0 edge and was faded/classed as hair) and its upper-lash arc is faded alpha; the preset restores a 0.26-0.96 cm lash from the frame. Lash profile is really ~0.4 cm uniform with a 1.0-1.6 cm knot only in the last 0.6 cm at the outer corner; LashOuter 2.0 is a fit (the shader ramps smoothly). 6) The bangs strokes across the top of the band (y30-65) are hair, not brows; brows were measured in the neutral DK frame (thin, 0.3-0.4 cm, gentle arch peaking toward the outer end, dark ink not hair colour). 7) tea_mouth.png is the dark lip arc of an open 'o' (startled line in the source frame), 1.25 cm wide \u2014 not a resting mouth; resting values come from the closed-mouth DK frame (1.97 cm wide, flat line with ends 0.1 cm below the middle, hence RestCorner -0.1 rather than a cheerful smile; mouth W 0.12 is far below the catalogue's 0.22-0.38 because her drawn mouth is 0.26 IPD wide). Lids sit on the iris top in every frame, so despite the 'o' mouth the eye height is her normal open height. 8) Nose: the art draws a 2.2 cm sharp '>' bracket with a soft shade; Style 2 (point) is the closest; the shader cannot draw the long bracket line at any Size in range. 9) No eye is hidden, no opaque glasses; keepDecal false. Nothing in the repository or the Editor was modified; scratch files are in the session scratchpad only.",
+   "review": {
+    "status": "unverified",
+    "disagreements": [],
+    "skepticNotes": "measure only"
+   }
+  },
+  {
+   "faceId": "yugi_muto",
+   "displayName": "Yugi Muto (little Yugi)",
+   "sourceLine": "Faces/yugi_muto.png + series frames; unverified; conf 0.7",
+   "eye": {
+    "W": 0.38,
+    "H": 0.34,
+    "Tilt": 0.13,
+    "Round": 0.8,
+    "TopBulge": 1.2,
+    "BotBulge": 0.8,
+    "Lash": 0.05,
+    "LashOuter": 1.2,
+    "LowerLash": 0.022,
+    "Iris": 0.227,
+    "IrisScaleY": 1.3,
+    "Pupil": 0.13,
+    "RestLid": 0
+   },
+   "irisHex": "#4A3072",
+   "brow": {
+    "Thick": 0.035,
+    "Arch": 0.07,
+    "Tilt": 0.35,
+    "Peak": 0.6,
+    "hex": "#3A2810"
+   },
+   "mouth": {
+    "W": 0.18,
+    "LipLine": 0.026,
+    "LowerLip": 0.3,
+    "RestCorner": -0.4,
+    "OpenShape": 0.45
+   },
+   "nose": {
+    "Style": 0,
+    "Size": 0.55,
+    "Shade": 0.3
+   },
+   "special": {
+    "hideEye": "none",
+    "keepDecal": false,
+    "reason": "Both eyes are normal and uncovered; no opaque eyewear. The band carries blond bang strands over the outer-upper part of each eye (plus the generator's feathered eye window), which cut the character's RIGHT eye (viewer's left) short at x=61; the eye is drawn by the shader, not the decal."
+   },
+   "measurements": "UNITS CHECKED IN CODE: AvatarAnimeFace.shader frag does p = uv - 0.5 with no aspect correction; AvatarFaceRig quads are EyeW 6.0 x EyeH 4.0 cm, BrowW 6.0 x BrowH 3.4 cm, MouthW 8.4 x MouthH 4.4 cm, NoseW 4 x 4 cm; GridCard uv is 0..1 both axes. So on the eye quad 1 p.x unit = 6 cm, 1 p.y unit = 4 cm; band(d,t) is a HALF-thickness t; tiltY = _Tilt*x so the outer corner sits 2*_Tilt p.y = 8*_Tilt cm above the inner one; iris/pupil are length(ip) with ip.y /= _IrisScaleY, so a circular iris in cm needs IrisScaleY = 6/4 = 1.5. Decal band yugi_muto.png: 1024x540 px = 13.2x7.0 cm -> 77.58 px/cm (465.5 px per p.x unit, 310.3 px per p.y unit). Mouth decal yugi_muto_mouth.png is 512x256 px (NOT 1024x512 as briefed) = 8.4x4.2 cm -> 60.95 px/cm. || EYE BAND (python/PIL/numpy/scipy/skimage): classes by colour: ink (V<150, median rgb 121,114,111), iris purple (B>R+8,B>G+16), sclera white (224,224,224) and grey-blue lid-shade band (176,176,192), skin/hair tan (224,208,176); openings = hole-filled sclera+iris region per half. Viewer-LEFT eye (character's RIGHT): opening bbox x 61-392 (332 px = 4.28 cm, cut at x=61 by the bang/window feather, alpha 154 at the edge), y 123-374, tallest column 245 px = 3.16 cm at x=179, 237 px = 3.06 cm at the iris-centre column; inner corner (392,355). Viewer-RIGHT eye (character's LEFT, complete): opening x 618-967, y 132-385; inner corner = leftmost pixel (618,360); outer corner = ink wedge fragment x 964-973 y 251-275 (confirmed against the source frame, where that eye's outer corner is visible at frame x~805 -> decal x~971); half-width 176 px = 2.27 cm -> W = 2.27/6 = 0.378; direct corner height difference 98 px = 1.26 cm; tallest column 236 px = 3.04 cm, 234 px = 3.02 cm at the iris-centre column. Iris: outer-edge circle fit (purple pixels bordering sclera, inner notch excluded) L: centre (215.1,267.3) r 105.4 px; R: centre (780.9,287.7) r 105.5 px = 1.359 cm -> Iris = 105.5/465.5 = 0.227; widest purple rows 209/212 px; axis-aligned ellipse fits ry/rx 1.049 (L) and 1.005 (R) -> round in cm -> IrisScaleY = 1.5*1.027 = 1.54. Iris top sits 44 px (0.57 cm, L) / 60 px (0.77 cm, R) below the opening top; iris bottom coincides with the lower lid (1-2 px clipped) -> RestLid 0. Pupil = dark ring (ink colour) with a big highlight inside: ring outer-edge radius median 61.6 px (L) / 72.3 px (R) = 0.58-0.68 of the iris radius; frame 3x crop reads ~0.62 -> 65 px = 0.84 cm -> Pupil = 65/465.5 = 0.14. Lid-model fit (shader form top = Tilt*x + H*Top*sq, bot = Tilt*x - H*Bot*sq, sq = Round*sqrt(1-x^2)+(1-Round)*(1-x^2), origin forced at the iris centre as the shader requires, Round grid-searched): viewer-R rms 10 px: Round 0.80, _Tilt 0.137 (corner diff 1.09 cm), H*Top 0.462 (1.85 cm above the iris centre), H*Bot 0.303 (1.21 cm below) -> with Top+Bot=2: H 0.383, Top 1.21, Bot 0.79; viewer-L (outer corner mirrored from R, visible columns only) rms 15 px: Round 0.60, _Tilt 0.109, H 0.383, Top 1.06, Bot 0.94. Chosen H 0.38, Top 1.2, Bot 0.8, Round 0.8, Tilt 0.13 (= corner diff 1.04 cm; the brief's cm/6 rule would read 0.21). Upper lash ink (skeleton thickness = 2*distance transform): decal viewer-L comp (x 185-399) median 12.6 px, thirds outer->inner 29.4/19.7/10.0 px (0.38/0.25/0.13 cm, the outer third includes the flick into the hair); viewer-R comp (x 614-856) thirds inner->outer 8.5/14.1/16.5 px (0.11/0.18/0.21 cm); the SOURCE FRAME's band measures thicker: R eye inner->outer 0.32/0.36/0.45 cm, L eye 0.48/0.58/0.30 cm (video blur widens, the cel quantiser thins). Taking the middle (~0.22 cm inner, 0.38 mid, 0.48 outer full thickness) with the shader weight 0.55 inner / 0.55+0.63*(LO-0.55) mid / LO outer: Lash 0.05 (half 0.0275 p.y = 0.11 cm inner, 0.048 = 0.19 cm mid, 0.06 = 0.24 cm outer), LashOuter 1.2. The inner corner carries a steep thin flick (10 px perpendicular, 40 px vertical run) toward the nose. Lower line: decal skeleton thirds inner->outer ~6/17/22 px = 0.08/0.23/0.28 cm full; frame 0.14-0.32 cm; shader half = LowerLash*lerp(0.6,1.5,u) -> 0.016/0.026/0.026 -> LowerLash 0.025. Iris colour: decal purple median rgb 128,119,160 = #8077A0 (p25=p75: flat fill); but the decal's source frame (S1E35 t=284.0 s) is white-flashed (its iris reads #7978A1, matching the decal); the unflashed copy of the same shot 0.5 s earlier (t=283.5) reads #433167 (L) / #443069 (R) with sclera #CCCCCC -> normalised to sclera 245: #503A7B; the neutral S1E02 t=376.0 frame reads #3C225C, normalised #45276A; mean of the two normalised = #4A3072 (hue 253 deg, same family as the decal and the sheets). || SOURCE FRAME (ffmpeg frame grabs of the owner's episode files, 1280x720): S1E35 t283.5/284.0 = the pipeline's recorded source (anime-frame-face-pipeline note: Yugi S1E35 t284). Scale from iris centres: frame IPD 203.8 px vs decal 565.8 px -> 2.777 decal px per frame px, 27.94 frame px/cm; frame iris width 75 px = 2.68 cm (decal 2.72). Brows there are thin dark strokes above the thick lash band: thickness 4 px = 0.14 cm, slope 26 deg inner end DOWN (determined pose), nearly straight, colour #474131 (washed). S1E02 t376.0 (neutral, 3/4 view, scale from iris width 22.2 px/cm): brows 4 px = 0.18 cm, length ~2 cm, arch 0.28-0.33 cm above the chord peaking in the outer fifth, inner end down 17-28 deg (perspective-distorted), colour #362408/#352102. Shader brow: half-thickness = Thick*lerp(1.05,0.42,u) on a 3.4 cm quad -> half 0.08 cm = 0.0235 -> Thick 0.035; peak rise = 1.3*Arch*3.4 cm -> 0.3 cm -> Arch 0.07; Peak +0.6 (outer); Tilt: the shader's slope is only 0.176*Tilt, so the measured 20-26 deg would need Tilt ~2; given here as the brief's 'angled in at rest' value +0.35 and flagged in notes. || MOUTH DECAL: lip line stroke x 183-292 = 110 px = 1.80 cm wide (frame: 50 px = 1.79 cm) -> W = 1.80/16.8 = 0.107; thickness median 7 px = 0.115 cm (max 10 px); shader centre full thickness = 2*0.55*LipLine*4.4 cm -> LipLine 0.024-0.034 -> 0.026; line centre y 140.8, ends y 145.4 / 151.3 -> corners 4.6-10.5 px (mean 0.123 cm) BELOW the centre (a shallow inverted-U); shader corner drop = 0.064*Corner*4.4 cm = 0.28 cm per unit -> RestCorner -0.44 -> -0.4; a light-tan lower-lip shade mark x 218-254 (37 px = 0.61 cm, 34% of the mouth) 0.44 cm under the line, colour #BFA88F -> LowerLip 0.3; nose mark at the decal top x 236-266 y 77-102 (0.51 x 0.43 cm J-hook, #C0A88F, ~18% darker than the decal skin) -> Style 0 tick, Size 0.55 (shader tick length = 1.0*Size cm), Shade 0.3; a stray white triangle x 22-75 y 141-190 (hair/collar fragment) ignored. Open-mouth shape from S1E02 t376.6 (small speaking mouth): 29 x 12 px, h/w 0.41, oval -> OpenShape 0.45.",
+   "sources": [
+    "Assets/Resources/WRLDZ/Avatar3D/Faces/yugi_muto.png (1024x540 eye band)",
+    "Assets/Resources/WRLDZ/Avatar3D/Faces/yugi_muto_mouth.png (512x256 mouth decal)",
+    "~/argon-avatar/research/series_refs/sheets/dm_s1e001_01.jpg",
+    "~/argon-avatar/research/series_refs/sheets/dm_s1e002_02.jpg",
+    "auto-scan of all dm_s1e001/e002/e003/e005/e006 sheets (violet+blond score; top-8 montage viewed, incl. e002 06:16 close-up)",
+    "~/argon-avatar/research/series_refs/keyframes/dm_s1e002/index.tsv (keyframes are 256x144 only)",
+    "~/Downloads/YouTube Downloader/Yugi Vs. Pegasus: Match Of The Millennium, Part 1 | Yu-Gi-Oh Season 1 Episode 35.mp4 -> ffmpeg frames t=283.5 s and t=284.0 s (the decal's recorded source shot)",
+    "~/Downloads/YouTube Downloader/The Gauntlet Is Thrown | Yu-Gi-Oh Season 1 Episode 2.mp4 -> ffmpeg frames t=376.0 s and t=376.6 s (neutral little Yugi)",
+    "Assets/Scripts/WRLDZ/Presentation/Avatar/AvatarAnimeFace.shader (parameter semantics: p = uv-0.5, band() half-thickness, tiltY, iris/pupil, lash weights, mouth corner, brow)",
+    "Assets/Scripts/WRLDZ/Presentation/Avatar/AvatarFaceRig.cs (quad sizes EyeW/EyeH/BrowH/MouthW/MouthH, GridCard uv)",
+    "Assets/Scripts/WRLDZ/Data/FaceCatalog.cs (existing presets, IrisColours)",
+    "memory notes canon-face-decals-pipeline.md and anime-frame-face-pipeline.md (decal provenance: Yugi S1E35 t284, pupils at decal (201,290)/(798,290))"
+   ],
+   "confidence": 0.7,
+   "notes": "1) Unit conversions follow the shader, not the brief's rules of thumb, where they differ: the eye quad's p space is 6 cm per x unit and 4 cm per y unit with no aspect correction, so (a) Tilt = corner height difference / 8 cm (brief said /6) and (b) a round iris needs IrisScaleY = 1.5 (brief range 1.0-1.25). IrisScaleY 1.54 here is the measured ry/rx 1.03 times 1.5; catalogue presets at 1.1-1.2 render irises ~30% wider than tall. 2) The band and the mouth decal are cut from S1E35 t284 (little Yugi facing Pegasus): a DETERMINED pose, white-flash washed. That is why the decal palette is lifted (iris #8077A0, ink 121,114,111); irisHex is the unflashed cel tone of the same shot and a neutral e002 frame, normalised to the sclera. If the reviewer prefers the band's literal colour, use #8077A0. 3) Expression bias: the steep upper lid toward the nose, the bold lower line and the inverted-U mouth (RestCorner -0.4 by the shader's 0.28 cm-per-unit corner drop; the brief's -0.15 'stern' would droop only 0.04 cm) are partly that frame's determination. The neutral e002 frames show the same eye construction with slightly less lid slope. 4) Brows are NOT in the band (the generator's brow band kept none; bangs cover them in the shot); they come from the frames: thin (0.14-0.18 cm), short (~2 cm), gently arched peaking outward, dark brown-black, sloping 17-28 deg inner-end-down in every frame read. The shader's brow tilt term is tiny (slope 0.176*Tilt), so +0.35 draws only ~3.5 deg; the measured angle would need Tilt ~2.1, and the shader comment and formula disagree on which sign lowers the inner end (y0 = ... + _BrowTilt*(-x)*0.14 raises x=-1, the inner end, for positive Tilt). Verify the sign in the Editor before raising it. 5) Lash/line weights: the cel quantiser thinned the ink (decal mid-lash 0.18-0.25 cm vs 0.36-0.45 cm in the source frame); values given sit between the two and are already below the catalogue's heavier defaults (Lash 0.055 default = 0.53 cm full at mid-lid). LowerLash 0.025 and Pupil 0.14 exceed the brief's typical ranges because Yugi's lower line is bold and his pupil ring is ~0.6 of the iris radius in the art. 6) Width: the character's right eye in the band is cut at x=61 by the bang strand and the window feather (visible 4.28 cm); W uses the complete left eye (4.54 cm). The source frame is slightly 3/4, so the true frontal width may be a few percent less. 7) Nose: the decal keeps only a small tan J-hook under the tip (Style 0); the source frame shows a long bridge-shadow wedge on the character's right side ending in a sharp tip (Style 1 would be the alternative). 8) The mouth decal is 512x256 and the rig's mouth quad is 4.4 cm tall (decal covers 4.2); mouth W assumes the 8.4 cm width. 9) No repository file was modified; frame grabs and crops live only in the session scratchpad.",
+   "review": {
+    "status": "unverified",
+    "disagreements": [],
+    "skepticNotes": "measure only"
+   }
+  },
+  {
+   "faceId": "seto_kaiba",
+   "displayName": "Seto Kaiba",
+   "sourceLine": "Faces/seto_kaiba.png + series frames; unverified; conf 0.6",
+   "eye": {
+    "W": 0.42,
+    "H": 0.2,
+    "Tilt": 0.1,
+    "Round": 0.7,
+    "TopBulge": 1.3,
+    "BotBulge": 0.86,
+    "Lash": 0.05,
+    "LashOuter": 1.3,
+    "LowerLash": 0.011,
+    "Iris": 0.27,
+    "IrisScaleY": 1.09,
+    "Pupil": 0.085,
+    "RestLid": 0.2
+   },
+   "irisHex": "#3B5976",
+   "brow": {
+    "Thick": 0.05,
+    "Arch": 0.02,
+    "Tilt": 0.45,
+    "Peak": 0.5,
+    "hex": "#3F312B"
+   },
+   "mouth": {
+    "W": 0.26,
+    "LipLine": 0.033,
+    "LowerLip": 0.6,
+    "RestCorner": -0.09,
+    "OpenShape": 0
+   },
+   "nose": {
+    "Style": 1,
+    "Size": 0.7,
+    "Shade": 0.5
+   },
+   "special": {
+    "hideEye": "none",
+    "keepDecal": false,
+    "reason": "Both eyes are ordinary blue eyes; no eyewear, no Millennium Item on the face. The band's transparent holes are removed hair strands (Tools/faces trim of 10-11), not a feature to keep."
+   },
+   "measurements": "SCALE: band Faces/seto_kaiba.png 1024x540 = 13.2x7.0 cm -> 77.58 px/cm (x), 77.14 (y). The band was cut from S2E44 t1135 (anime-frame-face-pipeline memory) with the pupils placed at band px (201,290)/(798,290) = 597 px = 7.70 cm apart; the same frame pulled at 1280x704 with ffmpeg has pupil centroids 191 px apart (dark-core centroids (558,272)/(749,265)), so 1 frame px = 597/191/77.58 = 0.0403 cm. Shader units read from AvatarAnimeFace.shader: p = uv-0.5 on a 6x4 cm eye quad, so x-units are 6 cm and y-units 4 cm; corners sit at y = +/-Tilt; opening height at centre = H*(TopBulge+BotBulge)*4 cm, the lash half-thickness = Lash*weight*4 cm, the iris horizontal radius = Iris*6 cm and vertical = Iris*IrisScaleY*4 cm; brow x = p.x/0.45 on a 6x3.4 cm quad, end-to-end drop = 0.28*Tilt*3.4 cm; mouth quad 8.4x4.4 cm, closed-line half-thickness = 0.55*LipLine*4.4 cm, corner lift = 0.16*Corner*4.4 cm.\nBAND (direct): painted rows 187-380 only (no brows in the band). Palette after k-means: lash/pupil ink #303020-#404030, iris #323a42 (dark ring/upper shade, 9641 px) + #3b5976 (main tone, 4573 px), sclera #d0d0d0 with #a0a0a0 shade. Visible openings (sclera+iris classes): viewer-left eye cols 48-367 = 4.12 cm, viewer-right 612-957 = 4.46 cm, max visible open height 123-125 px = 1.60 cm; outer corner higher than inner by 54.8 px = 0.71 cm (viewer-left) and 108.8 px = 1.41 cm (viewer-right, inflated by the window-clipped sclera sliver along the flick). Iris main tone median of blue pixels lum>=60 (both eyes, n=8556) = #3b5976; dark ring #323a42. The band's inner ends are truncated by the hair hole (viewer-left) and residual dark strands, and its upper lid line is unmeasurable because the dark upper iris merges with the lash ink, so eye geometry below comes from the source frame; the band numbers bracket them.\nSOURCE FRAME S2E44 t1135 (1280x704, read on 8x gridded zooms): opening viewer-left (character's RIGHT) x 491-630 = 139 px = 5.60 cm, blunt outer wall y 250-288 (corner taken at its centre y 270), inner corner (630,284); viewer-right (character's LEFT) x 689-799 = 110 px = 4.43 cm, pointed outer corner (799,258) with flick, inner corner (689,283). Mean width 5.02 cm -> W = 5.02/12 = 0.42 (asymmetry = slight head yaw). Opening height at the iris column 40-41 px = 1.63 cm (lash bottom y 250, lower lid y 290-291) -> H = 1.63/8 = 0.20. Outer corner higher than inner by 14 px (0.56 cm) / 25 px (1.01 cm), mean 0.79 cm -> Tilt = 0.79/8 = 0.10 (the brief's cm/6 would give 0.13). Rise of the upper lid above the corner line at centre 26/20 px (mean 0.93 cm), drop of the lower lid 14/21 px (mean 0.70 cm): with H = 0.204 and the chosen RestLid 0.2, TopBulge = 0.93/(0.816*0.8) = 1.42 and BotBulge = 0.70/0.816 = 0.86, so the shader draws the measured 0.93 cm rise and 0.70 cm drop at rest. Lid profile ratios vs the model: inner half elliptical (Round 1), outer third more tapered (Round ~0.4) -> Round 0.7. Upper lash band 240-250 (10 px = 0.40 cm) on the viewer-right eye, 243-251 (8 px) on the viewer-left, nearly uniform along the eye (outer third ~8-10 px) -> half 0.19 cm = 0.0475 y-units; with LashOuter 1.3 (model mid weight 1.02; measured outer/mid ratio ~1.1-1.2) and the Lid factor 0.93, Lash = 0.050. Lower lid line 2-3 px = 0.08-0.12 cm -> LowerLash 0.011. Iris: horizontal extent 508-588 / 703-782 = 80 px -> radius 1.61 cm -> Iris = 0.27; lower arc of the viewer-right iris gives b = 28-31 px (centre y ~261) -> b/a = 0.72 -> IrisScaleY = 1.5*0.72 = 1.09; the lid at y 250 hides ~18 px of the 58 px iris height (31%, heavy-lidded) and the iris bottom touches the lower lid. Pupil dark core 24-27 px wide -> radius 0.48-0.54 cm -> Pupil = 0.085. Iris colour in the frame: viewer-left median (lum 60-150) #3a5475, matching the band's #3b5976; S1E26 t969 (castle lighting) #354d62/#364c61.\nRESTING MOUTH, same frame: line x 624-667 = 44 px = 1.77 cm, 4 px soft stroke (#9e7f65) = 0.16 cm thick -> LipLine = 0.08/(0.55*4.4) = 0.033; corners 1.6 px = 0.065 cm below the centre -> RestCorner = -0.065/0.704 = -0.09.\nMOUTH DECAL seto_kaiba_mouth.png (512x256 = 8.4 cm -> 60.95 px/cm; it is the S2E19 t413 grin per the pipeline note): main dark band cols 91-354 = 4.33 cm (all ink 90-356 = 4.38 cm) -> W = 4.33/16.8 = 0.26; dark band 25 px = 0.41 cm (the open-mouth interior, not a lip line), thin upper-lip line 3 px = 0.05 cm, tan lower-lip band #cba47d 18 px = 0.30 cm; band centre line 6 px (0.10 cm) higher at the ends than at the centre (= +0.14 as a smile corner, not used at rest). S2E19 t413 frame (iris centroids 284.6 px apart -> 1 px = 0.027 cm): interior 137 px wide, 63 px tall at centre; half-height profile 0.73/0.94/0.89/0.64/0.37 at |x| 0.69/0.39/0.48/0.77/0.92 vs sqrt(1-x^2) 0.72/0.92/0.88/0.64/0.39 -> OpenShape = 0.0 (wide grin); lower-lip shade band 13 px = 0.35 cm under the opening -> LowerLip clamps to 0.6 (shader extent 0.308*LowerLip cm).\nNOSE, S2E44 frame: one dark wedge (#43372b on skin #e3c1a1) x 641-674, y 300-376; the stroke proper y 316-376 = 60 px = 2.4 cm long, 8-11 px = 0.36 cm wide, tapering to a point at the bottom; no nostril wing drawn. Style 1 (bridge line) is the only style that draws a line down the nose; at Size 0.7 it draws 1.23 cm (the brief's cap), half the art's length. Shade 0.5: ink lum 55 vs skin 198.\nBROWS: hidden under the fringe in S2E44 t1135, S1E01 t258 and S1E26 t969 (a column scan found no skin gap between lash and hair above either eye in any of the three); by eye on the S1E26 6x grid the brow strokes read as straight dark lines ~3-4 px thick (eye opening 52 px there -> 0.075 of the eye width -> ~0.38 cm full at the 5 cm eye) sloping down toward the nose by ~9-13 deg; the S1E24 t530 shocked close-up confirms a ~30 px brow on a ~400 px eye (0.075). Thick = 0.19/3.4/1.05 = 0.05; Arch 0.02 (no visible arch); Tilt 0.9 = tan(9 deg)*5.4 cm/0.952 cm, the low end of the by-eye range, sign per the brief (+ = inner ends down); Peak 0.5 (the stroke is highest at its outer end). hex #3F312B = between the dark-stroke blob medians #3c2f2a (S1E26) and #41322e (S1E01), both contaminated by lash ink; hair reads #694d31-#77583f.",
+   "sources": [
+    "Assets/Resources/WRLDZ/Avatar3D/Faces/seto_kaiba.png",
+    "Assets/Resources/WRLDZ/Avatar3D/Faces/seto_kaiba_mouth.png",
+    "~/argon-avatar/research/series_refs/sheets/dm_s1e001_01.jpg",
+    "~/argon-avatar/research/series_refs/sheets/dm_s1e024_03.jpg",
+    "~/argon-avatar/research/series_refs/sheets/dm_s1e025_02.jpg",
+    "~/argon-avatar/research/series_refs/sheets/dm_s2e044_07.jpg",
+    "~/argon-avatar/research/series_refs/keyframes/dm_s2e044/k_00315.jpg + k_00316.jpg (thumbnails)",
+    "~/argon-avatar/research/series_refs/keyframes/dm_s2e019/k_00142.jpg (thumbnail)",
+    "~/argon-avatar/research/anime_variants/by_character/kaiba.jpg",
+    "~/Downloads/YouTube Downloader/A Duel With Destiny: Kaiba Vs. Ishizu, Part 1 | Yu-Gi-Oh Season 2 Episode 44.mp4 @ t=1135 s (ffmpeg, 1280x704; the band's source frame)",
+    "~/Downloads/YouTube Downloader/Legendary Fisherman, Part 1 | Yu-Gi-Oh Season 2 Episode 19.mp4 @ t=413 s (the mouth decal's source frame)",
+    "~/Downloads/YouTube Downloader/Champion Vs. Creator, Part 1 | Yu-Gi-Oh Season 1 Episode 26.mp4 @ t=969.1 s",
+    "~/Downloads/YouTube Downloader/The Heart Of The Cards | Yu-Gi-Oh Season 1 Episode 1.mp4 @ t=258 s",
+    "~/Downloads/YouTube Downloader/Face Off, Part 3 | Yu-Gi-Oh Season 1 Episode 24.mp4 @ t=530 s",
+    "Assets/Scripts/WRLDZ/Presentation/Avatar/AvatarAnimeFace.shader (unit conventions)",
+    "Assets/Scripts/WRLDZ/Presentation/Avatar/AvatarFaceRig.cs (quad sizes, RestLid use)",
+    "Assets/Scripts/WRLDZ/Data/FaceCatalog.cs (existing provisional entry, for comparison only)",
+    "~/.claude memory notes anime-frame-face-pipeline.md and canon-face-decals-pipeline.md (which frame each decal came from)"
+   ],
+   "confidence": 0.6,
+   "notes": "1) The band is a posterized, hair-trimmed cut of S2E44 t1135: the transparent holes inside the dark regions and the dark wedges at the inner corners are removed/residual fringe strands, not features; no brows are painted (rows 187-380 only). Its visible openings (4.1/4.5 cm) under-read the eye because the hair hole truncates the viewer-left inner end and the window clips the outer corners, so the eye numbers were taken from the same frame at full resolution and bracketed by the band. 2) Unit caveats a reviewer must know: the shader's p-units are anisotropic (6 cm per x-unit, 4 cm per y-unit); the brief's Tilt = cm/6 would give 0.13 instead of the 0.10 derived from the shader's +/-Tilt corners; the brief's H = height/8 only reproduces the measured height when TopBulge+BotBulge = 2 at rest, which is why TopBulge 1.42 (open) x (1-RestLid 0.2) and BotBulge 0.86 are above the brief's 'typical' values - they are what makes the shader draw the measured 0.93 cm rise / 0.70 cm drop. If the reviewer prefers typical bulges (e.g. 0.88/0.67 with RestLid 0) set H = 0.26 instead; same drawn eye. 3) RestLid 0.2 is a convention choice (the lid hides 31% of the iris at rest; a single rest frame cannot separate 'open' from 'rest'); the rest state matches the art either way. 4) The iris sits high in the opening (centre ~0.36 cm above the opening's centreline, bottom touching the lower lid); the preset has no resting gaze offset, so the rig's _IrisPos.y of about +0.5 would reproduce it. 5) IPD caveat: the band's convention puts the pupils 7.7 cm apart while AvatarFaceRig places the eye quads at +/-3.1 cm (6.2 cm IPD); all cm values here follow the brief's 13.2 cm band. Kaiba's opening is 0.65 of his IPD in the art, so at the rig's 6.2 cm IPD the same proportion would be a 4.0 cm opening (W 0.34). 6) Mouth: the decal is the S2E19 smirk/grin (pipeline note), 4.33 cm wide; the true resting mouth in the neutral S2E44 frame is a 1.77 cm stern line (W would be 0.105) - the rig has one W, so W follows the decal as instructed and RestCorner/LipLine follow the resting frame. 7) Nose: Kaiba's nose is a single 2.4 cm shadow wedge ending in a point; style 1 is the closest drawable (line + nostril wing, max 1.23 cm at Size 0.7); style 2 draws an upward tip-shadow triangle, the wrong orientation. 8) Brows are the least certain values (fringe-covered in every frontal frame; by-eye slope on a 6x grid, lash-contaminated colour); brow Tilt 0.9 corresponds to a 9 deg inward-down slope via the shader's 0.14 factor, far above the brief's '+0.35 = anger' scale - if the brief's scale is preferred use 0.35-0.5. 9) Iris colour #3B5976 is the band's main tone (dusk-lit S2E44); the S1E26 castle frame reads #354D62; brighter scenes (e.g. S1E01 02:49 on the sheet) show a more saturated blue but were not measured to the pixel. 10) No repository file or the Unity Editor was touched; all frames and crops live in the session scratchpad.",
+   "review": {
+    "status": "unverified",
+    "disagreements": [],
+    "skepticNotes": "measure only"
+   }
+  },
+  {
+   "faceId": "joey_wheeler",
+   "displayName": "Joey Wheeler",
+   "sourceLine": "Faces/joey_wheeler.png + series frames; unverified; conf 0.65",
+   "eye": {
+    "W": 0.355,
+    "H": 0.26,
+    "Tilt": 0.03,
+    "Round": 0.6,
+    "TopBulge": 0.7,
+    "BotBulge": 0.9,
+    "Lash": 0.034,
+    "LashOuter": 1.2,
+    "LowerLash": 0.012,
+    "Iris": 0.232,
+    "IrisScaleY": 1.0,
+    "Pupil": 0.071,
+    "RestLid": 0.3
+   },
+   "irisHex": "#696137",
+   "brow": {
+    "Thick": 0.07,
+    "Arch": 0.02,
+    "Tilt": 0.45,
+    "Peak": 0.5,
+    "hex": "#514630"
+   },
+   "mouth": {
+    "W": 0.2,
+    "LipLine": 0.02,
+    "LowerLip": 0.15,
+    "RestCorner": 0.04,
+    "OpenShape": 0.15
+   },
+   "nose": {
+    "Style": 1,
+    "Size": 0.7,
+    "Shade": 0.5
+   },
+   "special": {
+    "hideEye": "none",
+    "keepDecal": false,
+    "reason": "Both eyes are normal brown eyes; the band's bangs (olive-khaki hair strands over both eyes) are not a reason to keep the decal. No glasses, no Millennium item."
+   },
+   "measurements": "Band joey_wheeler.png 1024x540 (77.6 px/cm), cut from the anime frame S2E19 t1093 (3/4 view, Joey's left eye nearer and fully visible, his right eye foreshortened with the inner corner under the bang). Pixel classes: sclera V>=0.72 S<=0.15, ink/iris-dark V<0.47, hair olive #9f9458. NEAR EYE (viewer-right = character's LEFT eye): opening corners by sclera extent inner (646,311) outer (976,297) -> width 330 px = 4.25 cm -> W 0.354; outer corner 15 px = 0.19 cm higher -> Tilt 0.032 (task cm/6; shader-exact 2*Tilt*4cm would be 0.024). Lower lid: deepest 399 px at x 694 (near the inner corner), flat 385-389 across x 706-810, 375 at x 900; upper lid: 285 at the inner sclera (x 686), hidden under hair over the iris (hair edge y 247, iris highlight top y 253 -> lid ~250 at x 814-840), 268-293 sloping to the outer corner. Max opening height 149 px = 1.92 cm (1.74 cm at the centre column). Least-squares fit of the shader lid model (top = Tilt*x + A*sq, bot = Tilt*x - B*sq) to 145 outline samples: Round 0.6 -> A_top 0.125, B_bot 0.30 y-units (1 y-unit = 4 cm), Tilt 0.019, rms 11.7 px; Round 1.0 fits best (8.9 px) but flattens the measured parabolic upper lid, so 0.6 is the shared compromise. Decomposition H 0.26 x TopBulge 0.7 x (1-RestLid 0.3) = 0.127 (meas 0.125) and H x BotBulge 1.15 = 0.299 (meas 0.30). Upper lash ink above the inner sclera columns (x 654-690): 18-21 px, median 21 px = 0.27 cm full thickness (half 0.135 cm = 0.034 y-units); thins to 1-5 px at the outer sclera (x 886-976); the iris columns merge with the ink. Lower lid ink in the band: 2-3 px (the pipeline left it tan); frontal S1E33 t660 frame: lower line 1-3 px inner half, 7-9 px outer, median 4.5 px of a 60 px opening = 7.5% -> 0.14 cm -> LowerLash 0.012. Iris: circle fit to the full lower arc (145 boundary px, residual 0.45 px): centre (790.5,240.5), r 108 px = 1.39 cm -> Iris 1.39/6 = 0.232; cross-check chord at the lid row 700..882 = 182 px (2.35 cm) = 2*sqrt(108^2-60^2) OK. Iris centre sits 63 px (0.82 cm) ABOVE the corner line, so the lid hides ~45% of the iris; 37 px (0.48 cm) of sclera under it. Pupil from the source frame S2E19 t1093 near eye: dark blob 28 px wide at its widest visible row vs iris radius ~45.6 px (frame) -> 0.31 of the iris -> 33 px in band px = 0.43 cm -> Pupil 0.071. Iris colour inside the fitted circle below the lid (12067 px): 63% #3a372e (pupil + under-lid band), 27% #696137 (iris body), 6% #a08f60 (bottom rim) -> irisHex #696137; the rig derives light #a19868 / dark #2f2b16 from it, matching the band's other two tones. FAR EYE (viewer-left): visible opening x 88..381 (3.78 cm, inner corner hidden by the bang), lower lid flat at 390-396, upper lid flat at 248-254 for x 88-176; iris lower-arc circle r 94 px (foreshortened). MOUTH decal joey_wheeler_mouth.png is 512x256 (not 1024x512; 60.95 px/cm) and shows the SAME frame's OPEN talking mouth: 182 px = 2.99 cm wide, 1.84 cm tall, upper teeth band y 78-102, lower band 174-188, interior wedge #6d5849 at the viewer-left, gap line 5 px = 0.08 cm. Resting mouth from closed-mouth frames: S1E33 t660 frontal 152 px vs eye 190 px (0.80), S2E19 t1100 66 px vs near eye 85 px (0.78) -> 0.79 x 4.25 cm = 3.4 cm -> W 0.20; corners: t660 right end 8-10 px higher than left (1 deg roll), t1100 level after the 19 deg roll, Duel Arena art level -> RestCorner 0.04; line thickness 1-3 px (t660), 2 px (t1100), 5 px band gap line -> LipLine 0.02 (0.017 from the band). BROWS are not in the band (under the bangs) and hidden in t1093; measured in S1E33 t660 (frontal): straight wedge strokes 12-16 px thick at the outer half (0.27-0.36 cm) -> Thick 0.07; top edges linear (R brow 233->207 over x 848-944, L brow 223->241 over x 356-458) -> slopes 0.18 and 0.27, mean 0.22 (12.5 deg, inner end down) -> shader slope 0.176*BrowTilt gives 1.25 in that stare; minus the rig's 'determined' +0.45 -> rest Tilt 0.8; arch deviation from the chord 3 px -> Arch 0.02, slight high point at the outer third -> Peak 0.5; stroke colour #25241e (S1 t660) / #514630 (S2 t1100, decal scene). NOSE: frontal t660 and the Duel Arena art show a vertical bridge-side sliver ~1.2-2 cm tall (DA: 10 px vs 36 px eye), 3/4 frames a short tick -> Style 1, Size 0.7 (shader line 1.76*s cm), solid dark -> Shade 0.5.",
+   "sources": [
+    "Assets/Resources/WRLDZ/Avatar3D/Faces/joey_wheeler.png",
+    "Assets/Resources/WRLDZ/Avatar3D/Faces/joey_wheeler_mouth.png",
+    "Assets/Resources/WRLDZ/Avatar3D/Faces/joey_wheeler.png.meta",
+    "Assets/Scripts/WRLDZ/Presentation/Avatar/AvatarAnimeFace.shader",
+    "Assets/Scripts/WRLDZ/Presentation/Avatar/AvatarFaceRig.cs",
+    "Assets/Scripts/WRLDZ/Data/FaceCatalog.cs",
+    "~/argon-avatar/research/series_refs/sheets/dm_s1e007_03.jpg",
+    "~/argon-avatar/research/series_refs/sheets/dm_s1e008_03.jpg",
+    "~/argon-avatar/research/series_refs/sheets/dm_s1e017_03.jpg",
+    "~/argon-avatar/research/series_refs/sheets/dm_s1e033_04.jpg",
+    "~/argon-avatar/research/series_refs/sheets/dm_s1e034_02.jpg",
+    "~/Downloads/YouTube Downloader/Legendary Fisherman, Part 1 | Yu-Gi-Oh Season 2 Episode 19.mp4 (frames t1093 = decal source, t1100, t1102)",
+    "~/Downloads/YouTube Downloader/Best Of Friends, Best Of Duelists, Part 1 | Yu-Gi-Oh Season 1 Episode 33.mp4 (frames t660, t647-t707 montage)",
+    "~/Downloads/YouTube Downloader/Best Of Friends, Best Of Duelists, Part 2 | Yu-Gi-Oh Season 1 Episode 34.mp4 (frames t437, t438, t424-t446 montage)",
+    "~/argon-avatar/research/anime_variants/da_gallery/duelist_kingdom/joey_wheeler.png",
+    "~/argon-avatar/research/anime_variants/normals/joey.jpg",
+    "~/.claude/.../memory/anime-frame-face-pipeline.md",
+    "~/.claude/.../memory/canon-face-decals-pipeline.md"
+   ],
+   "confidence": 0.65,
+   "notes": "1) Band content: both eyes plus heavy olive-khaki bangs (#9f9458) over both; the character's RIGHT eye (viewer-left) is the far eye of a 3/4 frame with its inner corner under the bang, so all eye numbers come from the near LEFT eye. No brows in the band. Art style: S2 Battle City TV cel, heavy-lidded 'D'-shaped irises. 2) Units: AvatarFaceRig builds the eye card 6 cm x 4 cm with square 0..1 uv and p.y up (GridCard), so x-values (W, Iris, Pupil) are cm/6 and y-values (H, Tilt, Lash, LowerLash) are cm/4, and a uv circle renders as a 3:2 ellipse. The iris in the art is round (circle residual 0.45 px); IrisScaleY 1.0 is chosen because with the shader centring the iris on the corner line it reproduces the measured lid chord (2.34 vs 2.35 cm) and keeps sclera under the iris; a geometrically round 1.5 would sink 0.19 cm below the lower lid. The shader cannot raise the iris to its true position 0.82 cm above the corner line, so Joey's 45% lid cover becomes ~23%. 3) Shape: the opening is boxy (steep inner wall from (646,311) down to (694,399), flat bottom, parabolic upper lid), corners sit in the upper third, hence BotBulge 1.15 > TopBulge 0.7 with RestLid 0.3; the shader's shared Round forces a compromise at 0.6. Equivalent decompositions exist (H 0.21/TopBulge 0.85/BotBulge 1.43); only the products matter. A deep lower lid leaves a larger slit at blink if the rig closes only _Lid. 4) Lash 0.034 and LipLine 0.02 are below the catalogue's 'thin' because the TV lines are genuinely thinner than the HD key-art register (lash 14% of the opening vs ~23% default); LashOuter 1.2 is the lowest sensible value because Joey's lid ink is heavy at the INNER half and a thin point at the outer corner, the reverse of the shader's model. 5) W 0.355 (4.25 cm) is a 3/4-view near eye; the frontal S1 frame has a wider aspect (190x60 px) so the eye may be a little wider frontally. 6) Brows: derived from S1E33 t660, a stare-down frame; the shader formula y0 += BrowTilt*(-x)*0.14 RAISES the inner end for positive tilt while its comment and the catalogue say + = inner end down (anger) \u2014 a sign discrepancy for the shader owner to check; Tilt 0.8 follows the task/catalogue semantics (angled in at rest) and the shader's slope scale (0.176 per unit); if the author's intended scale is the catalogue's (0.35 = fierce), use 0.4. Brow hex #514630 is the S2 decal-scene stroke; S1 strokes are #25241e. 7) Mouth decal is an open talking mouth (same frame), not a resting mouth, and is half the stated resolution; resting W/corner/line come from the closed-mouth frames and the Duel Arena art. OpenShape 0.15: the open mouth is a wide rectangle with both teeth rows. 8) Iris alternate: the S1 DK-era frame measures a darker brown #443825 for the iris body; #696137 is the band's own value and reproduces its three tones through the rig's HSV derivation. 9) No repository file was modified; all scratch files are in the session scratchpad.",
+   "review": {
+    "status": "unverified",
+    "disagreements": [],
+    "skepticNotes": "measure only"
+   }
+  },
+  {
+   "faceId": "yami_yugi",
+   "displayName": "Yami Yugi (the Pharaoh)",
+   "sourceLine": "Faces/yami_yugi.png + series frames; unverified; conf 0.55",
+   "eye": {
+    "W": 0.344,
+    "H": 0.33,
+    "Tilt": 0.09,
+    "Round": 1,
+    "TopBulge": 1.14,
+    "BotBulge": 0.86,
+    "Lash": 0.033,
+    "LashOuter": 1.0,
+    "LowerLash": 0.014,
+    "Iris": 0.243,
+    "IrisScaleY": 1.3,
+    "Pupil": 0.13,
+    "RestLid": 0.1
+   },
+   "irisHex": "#4a345f",
+   "brow": {
+    "Thick": 0.04,
+    "Arch": 0.04,
+    "Tilt": 0.45,
+    "Peak": 0.5,
+    "hex": "#38362e"
+   },
+   "mouth": {
+    "W": 0.18,
+    "LipLine": 0.02,
+    "LowerLip": 0.35,
+    "RestCorner": 0.0,
+    "OpenShape": 0.2
+   },
+   "nose": {
+    "Style": 2,
+    "Size": 0.75,
+    "Shade": 0.4
+   },
+   "special": {
+    "hideEye": "none",
+    "keepDecal": false,
+    "reason": "Both eyes are ordinary painted eyes; no eyewear, no Millennium item over an eye."
+   },
+   "measurements": "BAND Faces/yami_yugi.png 1024x540 RGBA, 13.2x7.0 cm -> 77.6 px/cm (alpha>128 = painted; the band is keyed: skin, the in-eye shadow crescents and the outer sclera feather are transparent, which cuts the outer corners). Viewer-left eye = character's RIGHT eye; viewer-right = character's LEFT. Eye openings (hole-filled sclera+iris, both eyes): x 48..362 / 650..976 -> 315 / 327 px = 4.06 / 4.22 cm wide (mean 4.14 cm -> W 0.344, task formula w/12 gives 0.338/0.352); bbox heights 240 / 234 px = 3.09 / 3.02 cm; tallest column 229 / 226 px = 2.95 / 2.91 cm at the outer end (x=110 / 917); height at the iris column 188 px = 2.42 cm; inner end only 44 px (0.57 cm) tall (a notch, not a point). Upper lash ink (character RIGHT eye): a straight wedge from the outer tip (114,167) to the inner tip (359,276): 109 px drop over 245 px = 24 deg descending to the nose; vertical ink run above the sclera: inner third median 10 px, middle 18 px (0.23 cm), outer third 16 px, max 39 px where the crease stroke merges; character LEFT eye lid stroke median 16.5 px (0.21 cm) perpendicular. Lower lash line: median 8-10 px = 0.10-0.13 cm thick, heavier toward the outer end (10/8/4 px outer->inner), spanning 222 / 252 px. Iris: flat fill, 11,819 of 13,612 px are the single tone (76,52,92); median #4a345f; disc width 220 / 233 px (widest rows y=307/312) -> radius 110 / 116.5 px = 1.42 / 1.50 cm (mean 1.46 cm -> Iris 0.243); the lid hides the iris top by 14-17 px (0.2 cm); pupil ring (black annulus) bbox 154x153 / 151x153 px, outer-circle fit r = 76.5 / 75.3 px = 0.98 cm -> Pupil 0.163 (pupil/iris 0.67), circular -> IrisScaleY = 6/4 = 1.5 because the shader measures the iris in uv on a 6x4 cm quad (p = uv-0.5; ir = length(ip), ip.y /= _IrisScaleY): 1.0 would draw a 3:2 wide ellipse; catchlight disc inside the ring r = 54 px = 0.70 cm; ring centres (205.7,314.9) / (809.2,320.0) = the eye centres used for the fit. SHAPE FIT: least squares of the shader's own lid model (top = Tilt*x + H*TopBulge*sq, bot = Tilt*x - H*BotBulge*sq, sq = lerp(1-x^2, sqrt(1-x^2), Round), x-unit 6 cm, y-unit 4 cm, quad centred on the pupil ring, outer 10% of the width ignored for the matte feather, lids kept inside the quad): character RIGHT eye Tilt 0.091, H*Top 0.382, H*Bot 0.297, Round 1.00, rms 0.21 cm; character LEFT eye Tilt 0.094, H*Top 0.376, H*Bot 0.272, Round 1.00, rms 0.26 cm; mean Tilt 0.092, H = (0.379+0.284)/2 = 0.332, TopBulge 1.14, BotBulge 0.86; drawn centre height 2.65 cm (art 2.42-2.95). Corner-line alternatives measured on the band: ends' mid-heights 290 vs 385-401 px -> 1.23-1.43 cm -> Tilt 0.15-0.18 (diff/8 per the shader; the task's diff/6 would read 0.21-0.24); lash outer tip to inner-low corner 2.8 cm -> 0.35. RestLid: art lid at the iris column sits 0.345/0.335 y-units above the pupil centre vs the model top 0.38 -> Lid = 1-0.34/0.38 = 0.10 (reproduces the 0.1 cm clip of the iris top). Lash: full 0.21-0.23 cm in the middle -> half 0.11 cm = 0.0275 y-units; shader weight at mid eye = 0.55+0.63*(LashOuter-0.55) = 0.83 for LashOuter 1.0 -> Lash 0.033; LashOuter 1.0 from outer/middle thickness 16/18 px (frames: the wedge is heaviest at the outer end, never thinner). LowerLash: half 0.06 cm = 0.015 y-units / the shader's mid factor 1.05 -> 0.014. MOUTH Faces/yami_yugi_mouth.png is 512x256 (not 1024x512), 8.4 cm wide -> 61.0 px/cm; rig MouthH = 0.044 m, so y-unit 4.4 cm. Line bbox x 177..285 = 109 px = 1.79 cm -> W 0.105 (centre at (231,154) i.e. 0.41 cm left and 0.43 cm below the decal centre); line 6 px = 0.098 cm thick in the middle -> half 0.0112 y-units / 0.55 -> LipLine 0.020; the centre line is flat (y 153.5) from xn -0.45 to +0.65, the last ~25% at each end hooks up 11.5 px (0.19 cm; 22 px thick blobs) = DL-style corner marks; whole-line parabola gives corner lift 15.5 px = 0.254 cm -> RestCorner +0.36 if counted as curvature, 0.0 for the flat line (used). Nose tick in the same decal: a vertical teardrop 17x29 px = 0.28x0.48 cm, 0.43 cm above the line, ink (126,104,77); shader 'point' triangle is 0.36*Size cm tall, 0.38*Size wide -> Size 1.33 by height, 0.74 by width -> 1.0. FRAMES (owner's library, ffmpeg stills from 'Yugi Vs. Pegasus Part 4 | Season 1 Episode 38.mp4', 1280x720): t=682 s extreme close-up, iris median #8b4c8c (12,269 px); t=723 s frontal, roll -2.9 deg: iris #864f82, eye openings 88 / 120 px wide, iris 42 / 41 px (0.35-0.48 of the width; the band's iris is 0.70 of its width), character LEFT eye outer corner 55-62 px (0.46-0.52 of the width) higher than the inner -> Tilt 0.24-0.27, lash 27 deg; brows: straight dark strokes, inner end low, 21.1 / 22.6 deg on screen -> 24 / 19.7 deg face-relative (mean 22 deg), ~1.05 eye widths long, 6-8 px thick (0.05-0.067 of the eye width -> 0.21-0.28 cm), ink #38372c / #393530 (hair root (50,51,46)); open mouth aspect 0.22 (682 s gritted) / 0.33 (723 s) -> OpenShape 0.2. Brow conversion: brow quad 6.0x3.4 cm (BrowW 0.060, BrowH 0.034), brow spans 0.9 quad = 5.4 cm; 22 deg -> 2.18 cm = 0.642 y-units rise; Arch 0.04 at Peak 0.5 gives 0.046; the rest via 0.28*Tilt -> Tilt 2.1; Thick: half 0.12-0.155 cm / 3.4 cm / 1.05 head factor -> 0.034-0.044 -> 0.04. Duel Links standing art sn0001/S_chara002.png (469x905): irises magenta #992266, narrow slit eyes, mouth 17 px with up-hooked corners and a lower-lip shadow crescent ~2 px (12% of the mouth width) -> LowerLip 0.35 via the shader's 0.07*LowerLip falloff; the band's eye style and colour match neither DL piece.",
+   "sources": [
+    "Assets/Resources/WRLDZ/Avatar3D/Faces/yami_yugi.png",
+    "Assets/Resources/WRLDZ/Avatar3D/Faces/yami_yugi_mouth.png",
+    "/home/greatsaiyadave/argon-avatar/research/series_refs/sheets/dm_s1e001_03.jpg",
+    "/home/greatsaiyadave/argon-avatar/research/series_refs/sheets/dm_s1e037_03.jpg",
+    "/home/greatsaiyadave/argon-avatar/research/series_refs/sheets/dm_s1e038_04.jpg",
+    "/home/greatsaiyadave/Downloads/YouTube Downloader/Yugi Vs. Pegasus\uff1a Match Of The Millennium, Part 4 \uff5c Yu-Gi-Oh Season 1 Episode 38.mp4 (stills at 682 s and 723 s)",
+    "/home/greatsaiyadave/argon-avatar/research/duel_links_standing/sn0001/S_chara002.png",
+    "/home/greatsaiyadave/argon-avatar/research/duel_links_standing/sn0001/S_chara050_1.png",
+    "Assets/Scripts/WRLDZ/Presentation/Avatar/AvatarAnimeFace.shader",
+    "Assets/Scripts/WRLDZ/Presentation/Avatar/AvatarFaceRig.cs",
+    "Assets/Scripts/WRLDZ/Data/FaceCatalog.cs",
+    "Tools/avatar/canon_faces.json"
+   ],
+   "confidence": 0.55,
+   "notes": "1) SOURCE MISMATCH: the band was built from an anime frame (open wedge eyes, double lid line, flat deep-violet #4a345f iris), not from the Duel Links standing art (slit eyes, magenta #992266). The series frames paint the iris a lighter magenta-violet (#8b4c8c in the e038 11:22 close-up, #864f82 at 12:03). irisHex follows the band as instructed (same method as the Kaiba entry); switch to #8b4c8c if the owner wants the episode colour. 2) SHAPE LIMIT: Yami's eye is a wedge (straight 24-27 deg upper lid falling to a low inner corner, flat lower lid, tall rounded outer end). The shader's symmetric lid parabola cannot draw that; the numbers given are the least-squares optimum of the shader's own model on both eyes (rms 0.21/0.26 cm, both eyes agree within 0.01) with the quad centred on the pupil as the rig does. It renders as a big, slightly up-tilted round eye with a heavy lash and the lid resting on the iris, not the sharp wedge. A wedge-flavoured alternative that keeps the lash straight is Tilt 0.27-0.35, Round 0.3, TopBulge 0.5, BotBulge 1.5 with the same H, but it misfits the inner end by about 1 cm and clips the quad bottom; I did not use it. Round hits 1.0 because both ends of the band's opening are blunt (outer: matte-feathered wall; inner: a 0.57 cm notch). 3) Several line weights come out below the catalogue's 'typical' floors (Lash 0.033 vs 0.04, LipLine 0.020 vs 0.025, brow Thick 0.04 vs 0.05): these are the band/decal strokes at 77.6 and 61 px/cm; the frames give slightly heavier lashes (0.28 cm -> Lash ~0.041). Pupil 0.163 is far above the typical 0.11 because the art's pupil ring is 67% of the iris. 4) IrisScaleY 1.5 is the quad aspect 6/4: the shader's ir = length(uv-space) makes IrisScaleY 1.0 a 3:2 wide ellipse; existing presets at 1.15-1.2 draw wide irises. 5) BROW: the band's brow is not usable: above the character's LEFT eye there is a thick near-horizontal black bar (x 647-876, y 112-144, 0.31 cm thick, sloping 7.8 deg DOWN toward the outer end, with a cream fringe above it) and above the RIGHT eye only a thin crease stroke merging into the lash; the bar is a brow or bang edge in the wrong orientation, so the brow comes from the 723 s frame (22 deg, straight, dark ink). Tilt 2.1 is large because the shader scales brow tilt by 0.14 (the documented +0.35 is only ~3.4 deg; the project's 'angry' expression +0.8 is ~6.4 deg); 22 deg needs 2.1. Sign follows the documented convention (+ = inner end down); note the shader line 'y0 = ... + _BrowTilt * (-x) * 0.14' with x=-1 at the inner end and y up actually raises the inner end for positive tilt, the opposite of its own comment and of the expression table ('angry' +0.8, 'sad' -0.7); worth a look in the Editor. The anime brow nearly touches the inner corner (furrowed); the preset has no BrowLift, so the rest brow sits at the rig's BrowUp height. 6) MOUTH decal is 512x256 (half the stated size); W 0.105 is a 1.8 cm mouth, true to the DL art it came from (the anime draws it smaller still, ~0.85-1.0 cm when closed). RestCorner 0.0 treats the DL corner hooks as corner marks; the whole-line parabola would be +0.36 (a smile), which contradicts the series' stern resting mouth. The decal also carries the nose tick 0.43 cm above the line. 7) The band's eye centres sit 7.84 cm apart (x 205/813 at 13.2 cm width) while the rig's eye quads sit 6.2 cm apart (EyeOut 0.031): if the band's true coverage is narrower than 13.2 cm, all cm figures scale down together (W, Iris, Pupil keep their ratios). 8) Hair: blond bang edges show as cream pixels along the top of the character's LEFT eye region; ignored for the eye shape. No eye hidden; no decal to keep.",
+   "review": {
+    "status": "unverified",
+    "disagreements": [],
+    "skepticNotes": "measure only"
+   }
+  },
+  {
+   "faceId": "mai_valentine",
+   "displayName": "Mai Valentine",
+   "sourceLine": "Faces/mai_valentine.png + series frames; unverified; conf 0.72",
+   "eye": {
+    "W": 0.3,
+    "H": 0.19,
+    "Tilt": 0.15,
+    "Round": 0.55,
+    "TopBulge": 0.6,
+    "BotBulge": 0.9,
+    "Lash": 0.03,
+    "LashOuter": 2.2,
+    "LowerLash": 0.014,
+    "Iris": 0.145,
+    "IrisScaleY": 1.3,
+    "Pupil": 0.07,
+    "RestLid": 0.3
+   },
+   "irisHex": "#784370",
+   "brow": {
+    "Thick": 0.04,
+    "Arch": 0.08,
+    "Tilt": 0.15,
+    "Peak": 0.45,
+    "hex": "#573625"
+   },
+   "mouth": {
+    "W": 0.18,
+    "LipLine": 0.035,
+    "LowerLip": 0.55,
+    "RestCorner": -0.05,
+    "OpenShape": 0.55
+   },
+   "nose": {
+    "Style": 2,
+    "Size": 0.6,
+    "Shade": 0.4
+   },
+   "special": {
+    "hideEye": "none",
+    "keepDecal": false,
+    "reason": "Both eyes are ordinary eyes. The hair locks painted in the band (over the inner half of her left eye and the outer top of her right eye) are 2D paint from the source frame, not a reason to keep the decal; the 3D hair handles them."
+   },
+   "measurements": "BAND Faces/mai_valentine.png 1024x540 (77.6 px/cm). Painted bbox x4-996 y133-446. Tone classes (python3/PIL/numpy): ink (84,80,70), sclera/highlight white (233,235,233), hair cream (235,229,191), warm rims (200,168,120)/(232,184,152), shadow-skin olive-tan (174,162,129). No violet anywhere: the iris BODY is transparent (its mauve tone was removed as skin); only the dark ring/pupil/upper shading and the white highlights remain. LEFT EYE in the band (= her RIGHT eye): sclera component x118-388 y224-427; outer corner (sclera tip) (118,236), inner corner (390,335) -> horizontal span 272 px = 3.51 cm (3.57 cm to the lid-meeting point) -> W = 3.5-3.6/12 = 0.29-0.30. Corner height difference 95-99 px = 1.22-1.28 cm, outer higher. Upper-lid (lash lower edge) per column: 206-226 at x155-230, 226 at x245-260, 231/236/245/252 at x275/290/305/320, 263-285 at x350-395 (peak 20-45% from the outer corner). Lower-lid bottom: 237@118, 357@168, 405@218, 425@268, 427@288 (lowest), 413@318, 382@358, 336@388. Opening height at the centre column 197 px = 2.54 cm (upper lid 226 -> lower 423); max rise above the corner chord 63 px = 0.81 cm, max drop below it 138 px = 1.78 cm. Lash ink directly above the opening: 7-14 px (0.09-0.18 cm) over the iris, 26-36 px (0.33-0.46 cm) at the outer third (K184-209 @x170, lash+iris K200-235 @x200), merged 60-70 px with the dark iris/lid shadow at the inner third; lower-lid line 2-7 px (0.03-0.09 cm) under the centre, outer lower-lash tufts 15-27 px (0.19-0.35 cm). Highlight disc x228-300 y234-293 (73x60 px, centre 266,263). Dark pupil/shading crescent x194-292 y259-368. Iris circle fits (boundary points, lid-cut top excluded): left r=60 px (0.77 cm), right eye r=69 px (0.89 cm); source frame gives 0.86-0.88 cm -> radius 0.86 cm -> Iris = 0.86/6 = 0.143; iris aspect in the art 1.04 (round). Pupil disc r ~32 band px = 0.42 cm -> 0.07. RIGHT EYE (her LEFT): sclera x709-976 y277-431, outer corner (976,283), bottom (845,431), inner corner hidden under the cream hair lock (x512-775 y144-322 with strand lines fanning across the eye's upper-inner quarter); highlight x799-869 y245-309 (71x65), dark crescent x713-871 y253-371; same tilt slope as the left eye (0.38 vs 0.36). Eye centres x254 and x842 = 7.58 cm apart (pupil anchors 201/798 = 7.69 cm) vs the rig's eye quads at +/-3.1 cm. SOURCE FRAME: the band is the label-upscaled anime frame S2E42 t316 (Tools/faces spec per the pipeline note; 'Mind Game: Mai vs Marik pt2', 1280x704, 960 px active, colour-graded pale scene). Verified by registration: the shot is a slow zoom, the band's eye (272 px wide, highlight 73x60) matches the frame at t~318-319 (sclera 256-258 px, highlight 72x57) x ~1.07, each eye translated to its anchor (translation only, no per-eye scaling), so the band's cm scale = that frame's zoom. In that frame her eyes are fear-WIDENED: opening H/W = 0.72 (band 197/272), the iris top barely cut by the lid, 0.8 cm of sclera under the iris, brows pinched up at the inner ends. RESTING EYE (normally lit frontal frame S1E06 t560.6, her right eye, 1280x720): corners (266,216)-(468,275): width 202 px, corner difference 59 px (slope 0.29 vs the band's 0.36); opening height 81 px at the centre, max 85 px at 27-38% from the outer corner -> H/W = 0.41 -> at the band's 3.55 cm width = 1.46-1.49 cm -> H = 0.19 (the band's widened eye would give 0.32); rise above the chord 18 px centre / 24 max (0.32-0.42 cm -> 0.079-0.105 quad-height units), drop below 63 centre / 74 max (1.11-1.30 cm -> 0.277-0.325 units); lower lid drops 72% of its maximum within 9% of the span from the outer corner (very round outer hook), inner half parabolic -> Round 0.55 (band lower lid: outer half circular, inner half parabolic). Iris there r=46 px = 0.23 W (0.81 cm at band scale), top 29 px (0.63 r) hidden under the lid, 18 px (0.32 cm) of sclera below it. Calm medium shot S1E29 t397.5 and S1E29 t412.7 confirm: narrow heavy-lidded eyes, outer corners swept up with a long flick, thin lashes mid-eye, bold outer lash wedge. IRIS COLOUR: full-res S1E29 t399.5 and t400.5 eye close-ups (normal lighting), median of 17,300 / 16,662 violet pixels = (120,67,112) #784370 and (121,66,113) #794271 (p25 (110,66,106), p75 (124,70,114)); S1E06 t560.6 gives #713466; Duel Links sn0004 T_chara002.png gives #AA5599 (4-bit quantised, brighter); the band's own source frame is graded to #7F5C68. Shader conversions applied (AvatarAnimeFace.shader: p = uv-0.5 on a 6x4 cm quad with no aspect correction, tiltY = _Tilt*x with x=-1..+1, band(d,t) = half-thickness t): Tilt = 1.22 cm / (2 corners x 4 cm) = 0.153 (the task's literal cm/6 would be 0.20, rendering 1.6 cm); a round iris needs IrisScaleY = 6/4 x 1.04 = 1.5; Lash half-thickness in 4-cm units: outer 0.066, mid 0.0175 -> Lash 0.025 with LashOuter 2.2 (outer 0.44 cm, mid 0.32 cm full); LowerLash 0.014 (centre 0.009, outer 0.023 measured); TopBulge 0.60 with RestLid 0.30 gives the measured resting rise 0.32 cm (fully open 0.46 cm; the band's fear-wide 0.81 cm would be TopBulge 1.07 at RestLid 0), BotBulge 1.55 gives the measured 1.18 cm drop (Top+Bot = 2.0 is what the H = height/8 convention requires). MOUTH Faces/mai_valentine_mouth.png is 512x256 (not 1024x512) -> 60.95 px/cm: lips x182-280 y100-136 = 99x37 px = 1.62 x 0.61 cm -> W = 1.62/16.8 = 0.096; corners (182,110)/(280,112), centre lip line y104-107: corners 5 px (0.08 cm) below the centre -> decal RestCorner -0.11, calm frame S1E29 t397.5 corners level (227/230 vs centre 229) -> -0.05 used; dark upper-lip band 10 px = 0.164 cm full -> LipLine = 0.082 cm / 4.4 cm / 0.55 = 0.034; lower lip 24 px = 0.39 cm, lipstick-coloured (decal (200,154,126), frame red (221,170,153)) -> LowerLip 0.55; lower-lip shadow arc x213-245 y151-162; nose tick dot x223-229 y59-65 (0.11 cm); stray hair/jaw stroke x60-80 y168-186. OpenShape 0.55 is chosen for her small mouth from the series frames, not measured. NOSE: source frame shows a long bridge-shadow wedge from the inner brow to a sharp tip (2.75 cm at band scale, 0.78 of the eye width), the mouth decal keeps only the 0.11 cm tick -> Style 2, Size 0.6, Shade 0.4 (mid-tone skin shadow). BROW: band brow (emotional frame) is a 20-31 px (0.26-0.40 cm) stroke rising toward the inner end, clipped at the band top y133; resting thin line 6-8 px on the 202-px ep6 eye and ~3.5 px on the 51-px calm-frame eye = 0.10-0.24 cm full -> Thick 0.04 (half, 3.4-cm units); calm frame: ends (538,100)/(600,125), peak (552,102-103) = arch 0.28 cm above the end chord -> Arch 0.28/3.4/1.3 = 0.06-0.08, peak 77% toward the outer end -> Peak 0.45; the inner end sits lower in every calm and glare frame (0.5-1.1 cm, beyond the shader's +/-0.33 cm range) -> Tilt +0.15 (moderate angled-in); brow-line colour S1E06 t560.6 darker subset (87,54,37) #573625, calm frame (72,58,55).",
+   "sources": [
+    "Assets/Resources/WRLDZ/Avatar3D/Faces/mai_valentine.png",
+    "Assets/Resources/WRLDZ/Avatar3D/Faces/mai_valentine_mouth.png",
+    "Assets/Resources/WRLDZ/Avatar3D/Faces/mai_valentine_body.png (2048x2048 FaceBake body skin cover, not a face reference)",
+    "~/argon-avatar/research/series_refs/sheets/dm_s1e007_02.jpg",
+    "~/argon-avatar/research/series_refs/sheets/dm_s1e021_02.jpg",
+    "~/argon-avatar/research/series_refs/sheets/dm_s1e028_03.jpg",
+    "~/argon-avatar/research/series_refs/sheets/dm_s1e028_05.jpg",
+    "~/argon-avatar/research/series_refs/sheets/dm_s1e029_02.jpg",
+    "~/argon-avatar/research/series_refs/sheets/dm_s1e006_03.jpg",
+    "~/Downloads/YouTube Downloader/Duel Identity, Part 1 | Yu-Gi-Oh Season 1 Episode 29.mp4 (ffmpeg frames t=346.1, 365.3, 397.5, 399.5, 400.5, 412.7)",
+    "~/Downloads/YouTube Downloader/First Duel | Yu-Gi-Oh Season 1 Episode 6.mp4 (frames t=475.9, 496.5, 543.7, 560.6)",
+    "~/Downloads/YouTube Downloader/Mind Game: Mai Vs. Marik, Part 2 | Yu-Gi-Oh Season 2 Episode 42.mp4 (frames t=314-319, the band's source shot)",
+    "~/argon-avatar/research/duel_links_standing/sn0004/T_chara002.png (Duel Links standing art, iris cross-check)",
+    "Assets/Scripts/WRLDZ/Presentation/Avatar/AvatarAnimeFace.shader (parameter semantics)",
+    "Assets/Scripts/WRLDZ/Presentation/Avatar/AvatarFaceRig.cs (quad sizes)",
+    "Assets/Scripts/WRLDZ/Data/FaceCatalog.cs",
+    "Tools/avatar/canon_faces.json (provisional entries only)",
+    "memory notes anime-frame-face-pipeline.md / canon-face-decals-pipeline.md (band provenance: S2E42 t316)"
+   ],
+   "confidence": 0.72,
+   "notes": "1) The band is NOT a neutral face: it is the label-upscaled anime frame S2E42 t316-319 (Mai vs Marik shadow duel), a pale colour-graded scene with her eyes widened in fear (H/W 0.72 vs 0.41 at rest in S1E06/S1E29). W, Tilt, lash, iris size, pupil and the hair layout come from the band; H, TopBulge, BotBulge, RestLid and Round were taken from the normally lit resting frame S1E06 t560.6 scaled by eye width (scale-free ratios), because a resting preset built on the band's H (0.32) and bulges (0.62/1.37) would ship a frightened face. If the reviewer wants the band literally: H 0.32, TopBulge 0.62, BotBulge 1.37, RestLid 0. 2) The band has no iris colour (the mauve iris body was stripped as skin; the scene is graded anyway); irisHex is the median of the S1E29 06:39-06:40 full-frame eye close-ups, #784370 (plum violet); Duel Links art is brighter (#AA5599). 3) Hair in the band: a cream lock with strand lines covers the inner half of her LEFT eye (viewer's right, x512-775 y144-322, its inner corner is hidden) and an olive shadowed lock sits over the outer top of her RIGHT eye (viewer's left); the dark wedge at x48-115 left of the right eye's sclera is that lock's edge ink, not the lash flick. 4) Unit conventions: the eye quad is 6x4 cm with uv 0..1 and no aspect correction, so vertical parameters are in 4-cm units; Tilt is +/-_Tilt at the two corners (0.15 = the measured 1.22 cm corner difference; the task's literal cm/6 reading would be 0.20), a round iris needs IrisScaleY 1.5 (the 1.0-1.25 guide range draws a wide iris), and Top+Bot = 2.0 is what H = height/8 implies. Mai's shape is a nearly straight slanted upper lid over a deep round lower lid, hence the unusual TopBulge 0.60 / BotBulge 1.55 split; her lash is thin over the iris (0.14 cm) and a heavy wedge at the outer corner (0.5 cm) with a long flick, which LashOuter 2.2 only approximates. 5) Scale caveat: the pipeline translated each eye to its anchor without rescaling, so the band's 3.55 cm eye is the source frame's zoom; her eye/IPD proportion in the anime (0.6) on the rig's 6.2 cm quad spacing gives the same 3.7 cm, so W 0.30 is consistent, but it is smaller than the catalogue's 0.38-0.44 style eyes. Band eye centres are 7.58 cm apart vs the rig's +/-3.1 cm quads. 6) Mouth decal is 512x256, not the 1024x512 the task states; measured at 8.4 cm per 512 px. Her mouth is genuinely tiny (1.62 cm, 0.45 of the eye width): W 0.10 is far below the catalogue's 0.22 minimum. OpenShape 0.55 and brow Tilt 0.15 are judgement calls documented in measurements (brow angles in the frames exceed the shader's range). 7) Nose Size/Shade are read from the frame's shadow wedge, not from a decal measurement. 8) mai_valentine_body.png is the FaceBake body-texture skin cover (a 2048 UV atlas), not standing art.",
+   "review": {
+    "status": "unverified",
+    "disagreements": [],
+    "skepticNotes": "measure only"
+   }
+  },
+  {
+   "faceId": "pegasus",
+   "displayName": "Maximillion Pegasus",
+   "sourceLine": "Faces/pegasus.png + series frames; unverified; conf 0.7",
+   "eye": {
+    "W": 0.38,
+    "H": 0.165,
+    "Tilt": 0.07,
+    "Round": 0.3,
+    "TopBulge": 0.85,
+    "BotBulge": 0.6,
+    "Lash": 0.068,
+    "LashOuter": 1.0,
+    "LowerLash": 0.008,
+    "Iris": 0.17,
+    "IrisScaleY": 1.0,
+    "Pupil": 0.063,
+    "RestLid": 0.3
+   },
+   "irisHex": "#714d38",
+   "brow": {
+    "Thick": 0.05,
+    "Arch": 0.12,
+    "Tilt": 0.2,
+    "Peak": 0.5,
+    "hex": "#454034"
+   },
+   "mouth": {
+    "W": 0.3,
+    "LipLine": 0.025,
+    "LowerLip": 0.3,
+    "RestCorner": 0.4,
+    "OpenShape": 0.2
+   },
+   "nose": {
+    "Style": 2,
+    "Size": 0.7,
+    "Shade": 0.4
+   },
+   "special": {
+    "hideEye": "left",
+    "keepDecal": false,
+    "reason": "His own left eye (viewer's RIGHT half of the band, bbox x653-938 y153-426, 3.69x3.53 cm disc centred at 796,290) is the gold Millennium Eye, not an eye; the animated left eye must stay off and the band's own right half shows the Eye. The right eye in the band is a clean painted eye, so the band need not stay over the animated face."
+   },
+   "measurements": "Eye band Faces/pegasus.png 1024x540 RGBA at 77.58 px/cm. Visible eye = the character's RIGHT eye (viewer-left), opening centre x~230 y~300 (3.6 cm left of band centre); the Millennium Eye disc centre is 3.66 cm right of centre (symmetric). Pixels classified by nearest palette colour: sclera (208,208,208)/(196,196,210), hooded-lid brown (64,48,32), lash ink (32,32,16), iris (113,77,56), skin/tan anti-alias fringes. OPENING (sclera+iris below the lid band): x50-365 = 316 px = 4.07 cm visible; the outer corner is occluded by a semi-transparent pale strip x1-65 (alpha ~85, rgb 202,188,189 = silver hair lock) where the lids are still 55 px apart, so the true opening is wider; the upper-lid ink runs on to x410 = 4.55 cm span -> W = 4.55/12 = 0.38 (visible-only lower bound 0.34). Aperture height: max 74 px = 0.95 cm at x63-140, ~0.55-0.7 cm over the middle, 13 px at the inner corner x365. LID BAND (brown hooded lid + black lash, one dark mass): median 62 px = 0.81 cm (outer third 40 px = 0.52 cm, middle 75 px = 0.97 cm, inner third 56 px = 0.72 cm); the black lash streak alone median 31 px = 0.40 cm; band top -> lower lid max 132 px = 1.70 cm (median 1.48 cm). Lash = 0.81/2/6 = 0.068; LashOuter measured outer/middle = 0.54 (no outer flare) -> 1.0. UPPER EDGE (band bottom) is nearly straight, sloping 0.24-0.26 px/px down toward the nose (joint lid fit: upper amplitude 0.06 cm vs lower-lid amplitude 0.44-0.75 cm, i.e. the hooded lid hangs straight and the lower lid carries the curve). Opening mid-line slope 0.188 px/px -> inner corner 0.76 cm lower than the outer visible end (0.86 cm over the 4.55 cm span). LOWER LID line 7 px = 0.090 cm (half 0.045 cm -> 0.0075), present only x101-303 (outer/middle). IRIS visible region x78-235 = 158 px = 2.04 cm wide, top hidden under the lid, lowest y346 = 0.84 cm below the lid edge at the iris centre column (lid edge line y = 0.260x + 230.8): half-width 1.02 cm -> Iris 0.17; the lower outline is a flat arc (circle fit r 1.89 cm, rms 0.5 px) with a near-vertical inner edge, so it is not a clean circle; median colour #714d38 (10-90 pct spread <= 3 levels per channel); iris centre sits 0.88 cm toward the outer corner from the opening centre (gaze/3-4 view in the source art). PUPIL: dark lobe under the lid x151-204 (0.70 cm wide, 0.40 cm visible), circle fit r 29.8 px = 0.38 cm (rms 2.8 px), centre 8 px above the lid edge -> Pupil 0.063 (pupil/iris 0.37). MOUTH decal Faces/pegasus_mouth.png is 512x256 (half the stated 1024x512; same 8.4x4.2 cm, 60.95 px/cm): closed line x135-442 = 308 px = 5.05 cm -> W 0.30; thickness median 3 px = 0.049 cm (max 5 px); lowest point y148.5 at x352; corners rise 25.6 px = 0.42 cm (viewer-left = his right) and 10.2 px = 0.17 cm (viewer-right, crossed by two vertical hair strands x400-425, 1.41 cm tall); mean rise 0.29 cm; the shader's lipY = 0.064*Corner*x^2 (corner rise 0.538*Corner cm) gives Corner 0.55 (0.32 right side .. 0.78 left side). Lower-lip shadow crescent x229-408, 2.95 cm wide, 0.20 cm thick, rgb (70,55,35), 0.85 cm below the line; peach cover patch 5.64x2.38 cm (249,196,148). No brow in either decal; the eye band's upper edge is the lid band itself (nothing painted above y212 on the eye side). FRAMES (contact sheets, confirmation only): dm_s1e038_03 08:26/08:56 close-ups: iris medians #856540 / #7d5d37 (warm amber-brown, JPEG), brow/lash ink medians #454034 / #393425 (dark warm grey-brown under silver hair), brows thin, peaked at the outer third, descending toward the nose ~13-20 deg at rest, the glare frame steeper; eye sharply upswept with a thick uniform black lash and a short flick; dm_s1e037_03 10:09/10:25/10:54/10:59: long straight nose with a sharp tip, strong side shadow; 10:19/10:59 talking with a wide flat mouth. Shader geometry used for the sanity check (AvatarAnimeFace.shader): tiltY = Tilt*x so the corner difference is 2*Tilt quad units; the lash band spans lidTop-0.75*lashT .. lidTop+1.25*lashT; lidTop = lerp(top, centre, Lid); with TopBulge 0.85, BotBulge 0.6, RestLid 0.3, Lash 0.068, LashOuter 1.0 the H that renders the measured 0.95 cm aperture is 0.164 and the band-top-to-lower-lid extent comes out 1.56 cm (art 1.70 max / 1.48 median).",
+   "sources": [
+    "Assets/Resources/WRLDZ/Avatar3D/Faces/pegasus.png",
+    "Assets/Resources/WRLDZ/Avatar3D/Faces/pegasus_mouth.png",
+    "/home/greatsaiyadave/argon-avatar/research/series_refs/sheets/dm_s1e037_03.jpg",
+    "/home/greatsaiyadave/argon-avatar/research/series_refs/sheets/dm_s1e038_03.jpg",
+    "/home/greatsaiyadave/argon-avatar/research/series_refs/sheets/dm_s1e002_00.jpg",
+    "Assets/Scripts/WRLDZ/Presentation/Avatar/AvatarAnimeFace.shader (parameter semantics only)",
+    "Assets/Scripts/WRLDZ/Data/FaceCatalog.cs (current canon_pegasus block, read only)"
+   ],
+   "confidence": 0.7,
+   "notes": "1) Only the character's RIGHT eye is measurable; his left is the Millennium Eye (hideEye = left, matches the catalog's HideEye = 1). 2) Band artefacts to ignore for shape: a semi-transparent silver hair lock over the outer corner (x1-65, alpha ~85) that hides the true outer corner; 5-6 thin tan/brown diagonal strokes above the inner end of the lid band (x250-410, y212-290) are the radiating brow-furrow lines seen between his brows in the frames, not lashes; the mouth decal has two vertical hair strands at x400-425 crossing the line's right end and a peach skin-cover patch. 3) Two fields deliberately depart from the literal conversion after the sanity check against the shader: H - the rule's 0.95/8 = 0.12 measures an aperture already narrowed by the hooded lid, and with RestLid 0.3 plus the 0.068 lash band the shader would render a 0.61 cm slit (extent 1.22 cm); H 0.165 renders the measured 0.95 cm aperture and a 1.56 cm band-top-to-lower-lid extent (art 1.70/1.48). Tilt - the rule gives 0.76/6 = 0.13 (0.14 over the ink span), but the shader puts +Tilt at the outer corner and -Tilt at the inner, so 0.13 would render a 1.56 cm corner difference; 0.07 renders 0.84 cm, matching the measured 0.76-0.86 cm. The reviewer can swap in the rule-literal values if cross-character consistency matters more. 4) RestLid 0.3 is the stated maximum; the art's upper aperture edge is almost straight (closed-lid curve), so heavier would be truer. TopBulge/BotBulge: the art's upper edge is flat and the lower lid curved (ratio ~0.1); shader presets cannot invert that sensibly, so hooded-leaning 0.85/0.6 were chosen. Round is not identifiable (corners hidden/tapered); 0.3 is by look (long almond, pointed inner corner), the lower-lid middle alone fits a round arc. 5) Lash 0.068 treats the whole brown+black band as lash mass because the shader has no dark hooded-lid shading; the black lash line alone is 0.40 cm (half 0.033). LashOuter 1.0: the DL band thins toward the outer end (0.54x the middle) and the frames show a uniform thick lash with a small flick; values below 1 would fight the shader's flick/taper. LowerLash and LipLine are at the floor of their ranges because the art's lines are thinner than the shader can draw (lower lid 0.09 cm; lip line 0.05 cm, about a third of the shader's thinnest). 6) IrisScaleY 1.0 because the decal shows no vertical stretch (visible depth 0.84 cm below the lid vs horizontal radius 1.02 cm, flat-bottomed outline); the anime frames draw the usual tall oval, so 1.15 is defensible if the frames are preferred. Iris radius 0.17 is below the catalogue's typical range by measurement (adult, small iris in a long eye); irisHex is the decal median; the frames read warmer amber-brown (#7d5d37..#856540, JPEG). 7) Brow: absent from the decals; numbers come from the frames at confirm level (thin, high angular arch peaked at the outer third, angled down toward the nose at rest). The hex is supplied on purpose: the rig would otherwise use the silver hair root colour, and the frames show dark brows under silver hair. 8) Mouth: RestCorner 0.55 is derived through the shader's own corner formula from the measured 0.29 cm mean corner rise of a visibly asymmetric smirk (his right corner 0.42 cm, left 0.17 cm); the task's '+0.25 cheerful' scale would call this a bigger smile than it renders. LowerLip only shades an OPEN mouth in this shader, so the resting lower-lip shadow crescent in the art (2.95 cm wide, 0.85 cm below the line) cannot be reproduced at rest; 0.3 is the default kept because the crescent shows a defined lower lip. OpenShape 0.2 and the nose (long sharp point, strong side shadow) are from the frames, not measured. 9) The current catalog entry (W 0.42, H 0.2, Tilt -0.02, Iris 0.2, Pupil 0.08, RestLid 0.15, Brow Arch 0.08/Tilt 0, Nose Size 0.6, irisHex #6E4D33) was marked provisional; the measured eye is narrower, more upswept and far more hooded than that entry.",
+   "review": {
+    "status": "unverified",
+    "disagreements": [],
+    "skepticNotes": "measure only"
+   }
+  },
+  {
+   "faceId": "yami_bakura",
+   "displayName": "Yami Bakura (the Spirit of the Ring)",
+   "sourceLine": "Faces/yami_bakura.png + series frames; unverified; conf 0.6",
+   "eye": {
+    "W": 0.35,
+    "H": 0.15,
+    "Tilt": 0.06,
+    "Round": 0.2,
+    "TopBulge": 1.3,
+    "BotBulge": 0.5,
+    "Lash": 0.065,
+    "LashOuter": 1.5,
+    "LowerLash": 0.015,
+    "Iris": 0.21,
+    "IrisScaleY": 1.3,
+    "Pupil": 0.09,
+    "RestLid": 0.28
+   },
+   "irisHex": "#856D57",
+   "brow": {
+    "Thick": 0.05,
+    "Arch": 0.04,
+    "Tilt": 0.4,
+    "Peak": 0.7,
+    "hex": "#2D2927"
+   },
+   "mouth": {
+    "W": 0.23,
+    "LipLine": 0.025,
+    "LowerLip": 0.3,
+    "RestCorner": 0.2,
+    "OpenShape": 0.2
+   },
+   "nose": {
+    "Style": 1,
+    "Size": 0.65,
+    "Shade": 0.4
+   },
+   "special": {
+    "hideEye": "none",
+    "keepDecal": false,
+    "reason": ""
+   },
+   "measurements": "BAND Faces/yami_bakura.png 1024x540 (77.6 px/cm x, 77.1 px/cm y), painted bbox x48-976 y218-379, two paint runs x48-381 (viewer-left = character's RIGHT eye) and x625-976 (viewer-right = character's LEFT eye, with white hair strands over x625-800). It is a 3/4-view pose: both irises sit toward the viewer's right; a mauve-grey (128,112,128) hair-strand shade covers the inner-upper quadrant of both eyes; the shadowed parts of the sclera were keyed to semi-transparent skin tone by the decal builder, so only the lit sclera is white (224,224,224). VIEWER-LEFT (near) eye: upper lash band (black core 32,32,32 + dark-grey top) rows 234-252 at x120-200 and 240-258 at x240-270, i.e. 18-25 px = 0.23-0.32 cm full thickness, ending in two spikes out to x=60 (y240); lower lid line 8-10 px = 0.10-0.13 cm, from a flick tip at (48,313) along the crescent bottom to (290,358). Lash lower edge rows 249 (x120) to 258 (x270); lower lid upper edge rows 339 (x120), 349-351 (x200-290), 334 (x340), 318 (x365): max opening 95 px = 1.23 cm -> H = 1.23/8 = 0.154. Lit sclera spans x108-378 (270 px = 3.48 cm, W 0.29); lash paint spans x48/60-381 (about 325 px = 4.19 cm) -> W = 0.35 (full lash extent incl. flicks). Inner corner (378,285); outer corner ambiguous: sclera end (104,300) gives outer higher by 0.08 cm, the lower-flick tip (50,313) gives outer LOWER by 0.36 cm. Iris: one flat tone (82,76,76) #524C4C over the whole disc (p25 = p75), darker (48,48,48) ring/upper shadow, no separable pupil; the disc's free lower arc through (220,311),(240,325),(260,333),(280,336),(300,337),(320,332),(340,322),(355,312),(365,301) fits a circle centre (288,236) R 101 px = 1.30 cm (resid 0.4 px); chord check rows 291/309/321 (spans 208-372/216-360/232-344) gives R 94-106 px. Iris R 1.25-1.37 cm -> Iris = 0.21; circular (not elliptical). Lash edge sits about 20 px BELOW the iris centre: 55-60% of the iris is under the lid (only 75-82 px of a 200 px diameter shows). VIEWER-RIGHT (far) eye: opening at x840-900 from lash edge 262-265 to lower lid 337-339 = 73-75 px = 0.95-0.97 cm (H 0.12, foreshortened); pointed outer corner (975,300), inner corner under hair about (665,333): width 310 px = 4.0 cm (W 0.33), outer corner higher by 33 px = 0.43 cm; iris arc fits centre (866,233) R 97 px = 1.25 cm; a 20x70 px white highlight oval sits on the iris upper-left; lower lid ink 10-14 px; a pale (240,240,208) lower-lid skin stroke under it. Upper-lid bulge vs lower-lid bulge about the corner line: far eye 50:26 px, straight-on anime frame 48:13 px. MOUTH decal Faces/yami_bakura_mouth.png is 512x256 (NOT 1024x512): 60.95 px/cm. A closed thin lens: outline ink x114-349 = 3.87 cm (painted lens x112-351 = 3.94 cm) -> W = 3.87/16.8 = 0.23; outline 2-3 px (0.03-0.05 cm) in the middle, 8-10 px dark wedges at the corners, the two lens lines 14 px apart; lens-centre rows: left end 128, right end 133-135, middle 145 -> corners 12-17 px = 0.2-0.28 cm above the centre (upper line only: 5-10 px), left (character's right) corner higher = asymmetric smirk; a 1.03 cm lower-lip stroke 1.1 cm below the lip line; lip ink is mid-brown (144,128,112)/(208,176,128), black only at the corners. SERIES frame e013 10:39 (639 s, 1280x720, straight on): eye opening width 245 px (sclera 230 + flick), height at the iris 60-62 px, eye-centre distance 360 px, outer corner higher than inner by 23 px; iris width 121 px (0.49 of the eye), visible height 46-56 px; iris median #856D57 (1128 px) / #856E5A; brows thin 4-6 px lines, slope 12-16 degrees with the inner end LOW, bend in the outer third, median #2D2927/#332A27; upper lid line 10-12 px above the iris, lower lid 3-4 px; closed mouth a 110 px smirk line, corners about 5 px up; nose a single bridge line about 125 px (0.51 of the eye width) ending in a point. Scaled to the avatar's eye spacing (EyeOut 3.1 cm -> 6.2 cm, 0.0172 cm/px): eye 4.22 cm (W 0.35), opening 1.05 cm (H 0.13), tilt 0.40 cm (0.066), iris diameter 2.08 cm (R 1.04 cm, 0.17), lash 0.19 cm full, brow drop about 0.6 cm over 3.5 cm.",
+   "sources": [
+    "Assets/Resources/WRLDZ/Avatar3D/Faces/yami_bakura.png",
+    "Assets/Resources/WRLDZ/Avatar3D/Faces/yami_bakura_mouth.png",
+    "/home/greatsaiyadave/argon-avatar/research/series_refs/sheets/dm_s1e013_03.jpg",
+    "/home/greatsaiyadave/Downloads/YouTube Downloader/Evil Spirit Of The Ring | Yu-Gi-Oh Season 1 Episode 13.mp4 (frames at 634.3 s and 639 s, 1280x720)",
+    "/home/greatsaiyadave/argon-avatar/research/series_refs/keyframes/dm_s1e013/index.tsv",
+    "/home/greatsaiyadave/argon-avatar/research/anime_variants/fullframes/yami_bakura.jpg (top-80 e013/e014 frame montage, part 1)",
+    "/home/greatsaiyadave/argon-avatar/.comfy-3dtest/assets/yami_bakura_face_head.png (Duel Links grin head)",
+    "/home/greatsaiyadave/argon-avatar/research/anime_variants/normals/yami_bakura_da.jpg (Duel Links standing-art strip)",
+    "/home/greatsaiyadave/argon-avatar/research/series_refs/sheets/dm_s1e030_*.jpg and dm_s1e031_*.jpg (scanned for white-haired tiles; no usable Yami Bakura close-up found)",
+    "Assets/Scripts/WRLDZ/Presentation/Avatar/AvatarAnimeFace.shader (unit conventions)",
+    "Assets/Scripts/WRLDZ/Presentation/Avatar/AvatarFaceRig.cs (quad sizes 6x4 cm, EyeOut 3.1 cm, brow/mouth quads)",
+    "Assets/Scripts/WRLDZ/Data/FaceCatalog.cs (existing preset scales)"
+   ],
+   "confidence": 0.6,
+   "notes": "1) The band is a 3/4-view Duel Links pose, not straight on: the far (viewer-right / character's left) eye is foreshortened and half under hair strands, the near eye's outer corner is open-ended (sclera unpainted where it was in shadow), and a hair-strand shade covers the inner-upper quadrant of both eyes. W/H/Iris come from the near eye, Tilt and the lid bulges from the far eye plus the straight-on e013 frame (both agree; the near eye's corner is ambiguous and reads flat to drooping). 2) No brows are painted in the band; brow numbers come from the e013 10:34-10:39 shot and the DL head: thin, near-straight, 12-16 degrees inner-end-low with the bend in the outer third, dark grey-brown (NOT the white hair colour, so hex is set). Brow Tilt 0.4 is on the catalogue's scale (brow_fierce = 0.35); by the shader's literal formula (drop = 0.28*Tilt of a 3.4 cm quad over a 5.4 cm brow) a 15-degree slope would need about 1.5, so the reviewer should check how Tilt is meant to map. 3) Lash, LowerLash and LipLine follow the task's stated scales (heavy / bold / thin) because the literal shader units (y unit = 4 cm for eyes, 4.4 cm for the mouth) would give values below the stated minimums (lash half-thickness 0.03, lip 0.01) even though the art is clearly heavy-lashed and thin-lipped; the cm values are in measurements. 4) IrisScaleY = 1.5 is deliberate: the band's iris fits a circle (0.4-1.0 px residual) and the eye quad is 6 x 4 cm with p = uv - 0.5, so a circle in cm needs y stretched by 6/4; if the host treats 1.0 as circular, use 1.0-1.2 instead. 5) Iris colour: the band's disc is a single flat desaturated tone #524C4C (82,76,76) with the whole eye region darkened (its sclera is 224 grey); the series frames measure a warm brown #856D57 / #856E5A. The series value is reported because the band's tone is a shading artefact of the cut-in and the character's eyes are brown in every anime frame checked; swap to #524C4C if the preset must match the painted band exactly. 6) RestLid 0.28 and the large iris reproduce the glare: the lash edge sits at or below the iris centre in both the band and the frames, hiding 55-60% of the iris; the shader's gaze offset (max 0.29 cm up) cannot place the iris that high, so the heavy lid is the closest rest state. 7) Mouth: the decal is 512x256 px, not 1024x512; it is a closed 3.9 cm lens with an asymmetric smirk (character's right corner higher) and a lower-lip stroke; the anime resting mouth is a much shorter smirk line (about 1.9 cm on the avatar scale), so W 0.23 follows the decal. OpenShape 0.2 because every open mouth in the sources (DL grin head, e013 frames) is a wide toothy grin. 8) Nose: the anime draws one long bridge line to a sharp point (Style 1, long so Size 0.65); the DL head instead draws a small dark triangle at the tip (Style 2) - pick 2 if the DL look is wanted. 9) hideEye none, keepDecal false: both eyes are ordinary; the hair strands in the band are hair, not eyewear. 10) e030/e031 sheets were scanned by hair colour but yielded no Yami Bakura close-up, so the e013 'Evil Spirit of the Ring' close-ups are the only series reference used; the fullframes montage (e013/e014) confirmed the same features across 20+ frames. Pupil 0.09 is the only value not measurable in the band (flat disc); it is 0.42 x Iris from the darker core visible in the 639 s frame.",
+   "review": {
+    "status": "unverified",
+    "disagreements": [],
+    "skepticNotes": "measure only"
+   }
+  },
+  {
+   "faceId": "weevil",
+   "displayName": "Weevil Underwood",
+   "sourceLine": "Faces/weevil.png + series frames; unverified; conf 0.6",
+   "eye": {
+    "W": 0.45,
+    "H": 0.21,
+    "Tilt": 0.09,
+    "Round": 0.15,
+    "TopBulge": 0.6,
+    "BotBulge": 0.9,
+    "Lash": 0.045,
+    "LashOuter": 1.5,
+    "LowerLash": 0.01,
+    "Iris": 0.13,
+    "IrisScaleY": 1.3,
+    "Pupil": 0.08,
+    "RestLid": 0.15
+   },
+   "irisHex": "#314078",
+   "brow": {
+    "Thick": 0.05,
+    "Arch": 0.02,
+    "Tilt": 0.35,
+    "Peak": 0.25,
+    "hex": "#814F29"
+   },
+   "mouth": {
+    "W": 0.27,
+    "LipLine": 0.025,
+    "LowerLip": 0.1,
+    "RestCorner": 0.35,
+    "OpenShape": 0.45
+   },
+   "nose": {
+    "Style": 0,
+    "Size": 0.5,
+    "Shade": 0.35
+   },
+   "special": {
+    "hideEye": "none",
+    "keepDecal": false,
+    "reason": "Both eyes show through his round yellow glasses; the rims are the wardrobe face-slot 3D item, not a reason to keep the band."
+   },
+   "measurements": "BAND Faces/weevil.png 1024x540 (77.58 px/cm). Painted area = two generator ellipse WINDOWS, not lenses: viewer-left x48-403 y218-362 (356x145 px = 4.59x1.87 cm), viewer-right x593-974 y273-417 (382x145 px). Viewer-left (character's RIGHT eye): black lash x48-306 (258 px), y284 at the window edge -> y302 inner (slope 0.070), median ink thickness 5 px (0.064 cm), max 8; light-blue lid-shadow band 302-336; white sclera y325-361 = runs into the window bottom (clipped); iris blob 42x24 px at (214.5,315.6), flat fill median #584C8C (p25=p75); white highlight 1 px left of it. Viewer-right (character's LEFT eye): lash x680-951, y332 inner -> y299 outer (slope 0.122), median 4.5 px; sclera y321-403 clipped by the window; iris 39x32 px at (857.4,330.0) #584C8C; dark-olive hair-strand / rim-shadow shapes x593-680 inside the window. Iris-to-iris 643.1 px = 8.29 cm (calibration points would be 597 px). Lash starts AT the viewer-left window edge and the sclera ends AT the window bottom on both sides, so the band holds roughly half the lash length and under half the opening height; the rest was measured in the band's source frame. SOURCE FRAME S2E14 'Playing With a Parasite, Part 1' t=1127 s (per the pipeline note; 1280x704, frames 1126.5/1127/1127.5 identical): irises at (531,272)/(705,293) = 175.3 px apart -> 3.669 band px per frame px = 0.0473 cm/frame px; the generator de-rolled the head 5.6 deg (frame iris line 6.9 deg, band 1.3 deg). Near eye (character's right): lash (445,258)->(586,283) = 141 px = 6.67 cm (W formula 0.556); max opening 35 px at x504-528 (lash bottom 263-267, sclera bottom 297-299) = 1.66 cm -> H formula 0.207; upper lid only 6.5 px above the corner line at the centre, lower lid 28.5 px below (split 0.19:0.81); outer-higher raw 25 px, minus roll (14-15 px over 141 px) ~10 px = 0.47 cm; lash 2-3 px black + 1 px brown AA = 0.10-0.14 cm (2.1% of the eye width); lower lid 1 px brown; iris visible cap 10x6 px (526-535 x 270-275), full disc ~12 px = 0.57 cm dia (Iris 0.047), AA-contaminated core #595676. Far eye: lash (652,288)->(748,286) 96 px (foreshortened), de-rolled outer-higher ~12 px = 0.57 cm. Open mouth ink bbox 117x64 px = 5.5x3.0 cm, flat upper lip, V-shaped lower edge, aspect 0.55. DK CONFIRMATION S1E5 'The Ultimate Great Moth' (sheet dm_s1e005_03 clock runs ~4 s ahead of the file): t=455 s daylight squint: IPD 211 px, iris line roll 4.3 deg; viewer-left opening 430->582 = 152 px wide (0.72 IPD), 52 px tall at the iris column (aspect 0.34), upper lid a straight line outer-high/inner-low (raw slope 0.26, ~10 deg de-rolled), lower lid an arc; lash 6-8 px (4% of the eye width); iris flat fill 48x30 px visible, round lower arc, median #314076 (darkest quartile #242F57), viewer-right 38x22 px #323F71; dark core 56% of the iris area (radius ratio 0.75 incl. the limbal ring); brow = thin 5 px brown stroke above the lens, slope +0.76 raw (37 deg, ~33 deg de-rolled) angled down toward the nose, median #814F29; clenched-teeth grin band 76x46 px (0.36 IPD). t=459 s (purple-lit close-up): irises 84x54 / 66x42 px #303F85 / #323D7B, brow-zone ink #57320F. MOUTH DECAL Faces/weevil_mouth.png is 512x256 (not 1024x512) -> 60.95 px/cm on the 8.4x4.2 cm quad: one olive closed-lip line x123-401 = 279 px = 4.58 cm (W 0.273), median thickness 6 px = 0.10 cm, centre y197.6, left end 8 px (0.13 cm) and right end 25 px (0.42 cm) above the centre (one-sided smirk rising to the viewer's right); line median #A49769; a pale yellow-green crescent (#DEE5A3, x36-179 y79-144) and specks are not mouth. RIG/SHADER units checked: eye quad 6x4 cm at EyeOut 3.1 cm (IPD 6.2 cm); AvatarAnimeFace uses p = uv - 0.5 with no aspect correction, so W/Iris are in 6 cm units but H/Tilt act in 4 cm units: drawn centre height = H*(TopBulge+BotBulge)*4 cm, outer-inner corner difference = 8*Tilt cm (the task formula assumes 6), a circular iris needs IrisScaleY 1.5.",
+   "sources": [
+    "Assets/Resources/WRLDZ/Avatar3D/Faces/weevil.png",
+    "Assets/Resources/WRLDZ/Avatar3D/Faces/weevil_mouth.png",
+    "Assets/Resources/WRLDZ/Avatar3D/Faces/face_weevil_bc.png (720x1280 chroma-green glasses mask, no face art; not used for numbers)",
+    "~/Downloads/YouTube Downloader/Playing With a Parasite, Part 1 | Yu-Gi-Oh Season 2 Episode 14.mp4 @ 1126.5-1127.5 s (the band's source frame per the canon-face-decals / anime-frame-face-pipeline memory notes)",
+    "~/Downloads/YouTube Downloader/The Ultimate Great Moth | Yu-Gi-Oh Season 1 Episode 5.mp4 @ 455 s and 459 s (DK daylight squint; purple-lit close-up)",
+    "~/argon-avatar/research/series_refs/sheets/dm_s1e004_02.jpg",
+    "~/argon-avatar/research/series_refs/sheets/dm_s1e005_03.jpg",
+    "~/argon-avatar/research/series_refs/sheets/dm_s1e006_02.jpg",
+    "Assets/Scripts/WRLDZ/Presentation/Avatar/AvatarAnimeFace.shader (units)",
+    "Assets/Scripts/WRLDZ/Presentation/Avatar/AvatarFaceRig.cs (quad sizes, IPD, lid wiring)",
+    "Assets/Scripts/WRLDZ/Data/FaceCatalog.cs (field defaults; no weevil entry yet)"
+   ],
+   "confidence": 0.6,
+   "notes": "ERA CONFLICT, decided per the owner's 'Duelist Kingdom first': the shipped band is Battle City (S2E14; the body file is even named face_weevil_bc) where Weevil has beady 0.57 cm indigo irises (#584C8C after quantising a 10x6 px blob); the DK episodes show the same narrow smug slit but with large royal-blue irises filling the slit height (#314078 from a 767 px flat fill in daylight, #303F85 purple-lit). Slit geometry (W, H, Tilt, bulges, lash) agrees across both eras and is taken from the S2E14 frame + band + DK ratios; iris size and colour follow DK. S2-faithful alternative if the reviewer prefers the band's era: Iris 0.05, Pupil 0.03, irisHex #584C8C. W: the band-scale eye is 6.67 cm (W 0.556), wider than the 6 cm quad because the band's irises sit 8.29 cm apart vs the rig's 6.2 cm IPD; IPD-normalised (0.72 IPD) it is 4.46 cm (W 0.37); 0.45 is the widest that keeps the lash flick (0.18 half-widths) inside the quad and keeps his eyes nearly meeting at the bridge as in the art. H 0.21 follows the task formula (1.66 cm/8; DK-ratio 1.52 cm gives 0.19); with TopBulge 0.55 + BotBulge 1.05 the shader draws a 1.34 cm slit (measured 1.66 band-scale, 1.24 IPD-normalised). Bulges: the art's opening is almost entirely BELOW the corner line (upper lid straight, lower lid arcs: split 0.19:0.81 S2, ~0.1:0.9 DK); the literal split would be 0.35/1.65 but _Lid only brings the upper lid down to the corner line unless _LidCurve > 0, so the lower share is kept at 1.05 to protect blinks; RestLid 0.15 flattens the top further. Tilt 0.09 = the de-rolled band slope (0.096) over the 5.4 cm eye; the DK 455 glare reads steeper (~0.17) but is an active expression. Lash: measured line weight is 2-4% of the eye width = 0.01-0.02 in quad units, below the catalogue's 0.04 floor, so 0.045 (thin end, DK a touch heavier than S2); LowerLash 1 px brown -> 0.01. IrisScaleY 1.5 because the DK iris is circular and this shader's uv-space squashes a circle 6:4 (1.25 would be a visibly wide ellipse); clamp if the catalogue limits it. Pupil 0.08 = (0.75 dark-core radius ratio minus the 0.13 limbal ring) x 0.13. BROW: thin straight brown stroke, 5 px (0.02-0.025 quad units, below the 0.05 floor -> 0.05), measured angle ~30 deg down toward the nose at rest (slope 0.6-0.8); on the documented scale that is the full 'angled in like anger' value 0.35, but note AvatarAnimeFace as written renders 0.35 as only ~3.5 deg (y0 = Tilt * -x * 0.14), so the measured V would need ~3 on that axis; hex #814F29 (daylight; #57320F purple-lit) \u2014 do NOT fall back to the hair-root colour, his hair is teal and the brows are brown. MOUTH: resting smirk from the 512x256 decal, W 0.27 by the task formula (IPD-normalised it would be 0.21); RestCorner: mean corner lift 0.275 cm -> 0.39 by the shader's 0.16*x^2 formula, set 0.35 because the lift is one-sided (0.19 left / 0.6 right); LipLine measured 0.02 (0.10 cm line through the shader's 0.55 factor) -> 0.025 catalogue thin end; single line, no lower-lip shade -> 0.1; OpenShape 0.45 from the S2E14 open mouth (flat upper lip, V lower edge, aspect 0.55). NOSE: frontal DK shows only a tiny tick under the glasses' nose pad (the bracket between the lenses is the glasses, not the nose); the 3/4 S2 frame shows a small sharp point with a tick shadow ~1.2 cm; Style 0 with the catalogue tick size/shade. Band contents: glasses rims excluded by the generator; dark-olive hair-strand / rim-shadow shapes sit in the inner part of the viewer-right window; the light-blue band under the lash is the anime lid shadow on the sclera, not lens tint (anime lenses have no glare here). Mouth decal's pale yellow-green crescent is stray non-mouth paint. The e005 sheet timecodes run ~4 s ahead of the owner's file. No repository file was modified and the Editor was not touched; all crops/frames live in the session scratchpad.",
+   "review": {
+    "status": "unverified",
+    "disagreements": [],
+    "skepticNotes": "measure only"
+   }
+  },
+  {
+   "faceId": "tristan",
+   "displayName": "Tristan Taylor",
+   "sourceLine": "Faces/tristan.png + series frames; unverified; conf 0.55",
+   "eye": {
+    "W": 0.38,
+    "H": 0.19,
+    "Tilt": 0.18,
+    "Round": 0.3,
+    "TopBulge": 0.6,
+    "BotBulge": 0.9,
+    "Lash": 0.034,
+    "LashOuter": 1.0,
+    "LowerLash": 0.01,
+    "Iris": 0.165,
+    "IrisScaleY": 1.3,
+    "Pupil": 0.055,
+    "RestLid": 0.25
+   },
+   "irisHex": "#514F3B",
+   "brow": {
+    "Thick": 0.12,
+    "Arch": 0.2,
+    "Tilt": 0.45,
+    "Peak": 0.1,
+    "hex": "#34322C"
+   },
+   "mouth": {
+    "W": 0.23,
+    "LipLine": 0.025,
+    "LowerLip": 0.25,
+    "RestCorner": -0.15,
+    "OpenShape": 0.2
+   },
+   "nose": {
+    "Style": 2,
+    "Size": 0.65,
+    "Shade": 0.45
+   },
+   "special": {
+    "hideEye": "none",
+    "keepDecal": false,
+    "reason": "Both eyes are normal; keepDecal must stay false because the painted band Faces/tristan.png is not Tristan (see notes)."
+   },
+   "measurements": "SCALE: S1E39 frame 1280x720 (series_refs keyframe 339 = 1105.33 s, extracted losslessly with ffmpeg; the JPEG keyframe dm_s1e039_f339.jpg is the same cel). Iris centres (602,147) near / (751,195) far -> IPD 155 px, mapped to the rig's pupil spacing 7.695 cm (decal px 201/798 of 13.2 cm) = 0.0496 cm/px. Head roll 6-10 deg (eye line 18 deg, mouth 7 deg), slight yaw (far eye 4% narrower). NEAR EYE (viewer-left, char right): outer corner (549,129.5), inner corner (641,173) -> width 92 px = 4.56 cm -> W 0.380; max opening height 31 px = 1.54 cm (centre column 27 px = 1.34 cm) -> H 0.19 (/8); iris horizontal diameter 40 px (x 582-622), bottom outline y 167, centre (602,147), r 20 px = 0.99 cm -> Iris 0.165; pupil darkest core 13 px wide, r 6.5 px = 0.32 cm -> Pupil 0.054; highlight oval 12x15 px at the iris upper-left (583-594,139-153). Upper lash ink 5 px (0.25 cm) along the outer two-thirds, swelling to a 20-25 px (1.0-1.2 cm) black wedge at the INNER corner; length-weighted mean 8.3 px = 0.41 cm -> half 0.21 cm /6 = 0.034 (thin part alone 0.021, wedge peak 0.10); outer-third/mid ratio 1.0 -> LashOuter 1.0; the lash runs ~20 px (1 cm) past the outer corner rising to (530,117) (a flick). Lower lid line 2-3 px = 0.12 cm -> LowerLash 0.010. Lid covers the iris to 5 px above its centre (37% of the diameter); the iris bottom is tangent to the lower lid -> RestLid 0.25. Bulges at the centre column vs the corner chord: upper lid 12 px (near) / 4.5 px (far) above, lower lid 15 / 15.5 px below -> mean 0.41 cm up, 0.76 cm down -> with H 0.19 (0.76 cm) TopBulge 0.55, BotBulge 1.0; outer end blunt/near-vertical (lower lid drops from (549,130) to (560,155)), inner end a sharp wedge -> Round 0.3. FAR EYE (char left): inner corner (715,196), outer (803,189), width 88 px = 4.37 cm (W 0.364), max height 26 px = 1.29 cm (H 0.16), iris r 17-19 px, pupil at (753,189), highlight at (736-742,184-191). SLANT: near chord 25.3 deg inner-down, far chord 4.5 deg outer-up; roll cancels in the mean -> 15 deg; 4.56 cm x tan 15 = 1.22 cm -> Tilt 0.20 by the task's cm/6 formula (shader-true 0.15, see notes). BROWS: near brow outer tip (516,96), kink/peak at x 584 (top edge y 82, 23 px thick), inner end (642,145); thickness 6 px at the outer tip, 23 px at the kink, 12-13 px on the 42-deg inner plunge, area/length 12.9 px; far brow inner end (719,182) -> outer tip (815,165): 5 px inner, 13-14 px at the peak (x 795-805), 10 px outer, area/length 11.4 px; mean full thickness 12.2 px = 0.60 cm (half 0.30 cm). Brow slant: near 21.3 deg, far -10.0 deg -> 15.7 deg intrinsic (inner end down) -> over the shader's 5.83 cm stroke 1.64 cm -> _BrowTilt 1.6 (factor 0.14 x 2 x 3.4 cm quad height). Arch above the corner chord: near 24-27 px (1.2-1.3 cm, the kink), far 11 px (0.55 cm); mean 0.9 cm / (1.3 x 3.4 cm) -> Arch 0.20 (near 0.27, far 0.125). Peak: near kink 57% from the outer end (-0.13), far 16% from the outer end (+0.69); arch-weighted +0.13 -> Peak 0.1. Brow core colour (52,50,44) = #34322C. MOUTH (closed, stern): line x 615-692 = 77 px = 3.82 cm -> W 0.227; 4-5 px thick = 0.22 cm full (half 0.11 cm): LipLine 0.025 on the task's scale (shader-true 0.045); the centre sits 6.5 px (0.32 cm) above the corner chord (a slight frown, roll-independent) -> RestCorner -0.15; line colour brown (150,122,85); a lower-lip shadow wedge 30x8 px under it -> LowerLip 0.25; speaking frames (S1E39 1109.5 s, S1E16 44 s, S1E2 88 s) show a wide rectangular mouth with teeth -> OpenShape 0.2. NOSE: long straight bridge continuing from the near brow, sharp tip with a large shadow triangle (x 680-730, y 215-300); brow-to-tip ~150 px = 7.4 cm vs IPD 7.7 -> Style 2, Size 0.65, Shade 0.45. IRIS COLOUR (lossless PNG, circle r 19 at the near iris, lum 40-165): k-means main tone #524F3C (240 px), dark limbal ring #383628 (234), light pool #9B8A73 (149); mid-tone median #514F3B; far iris #47422F main / #4E4D39 (JPEG); S1E35 f330 and the S1E16/S1E2 profiles show the same dark olive. BAND Faces/tristan.png (1024x540 = 77.6 px/cm): ink-only, sclera and highlights transparent, skin-tone fringe only; near iris blob x 150-319 y 277-398 (2.19 cm wide), far x 746-908; lash 13-20 px; hair-lock strokes over the near brow and between the eyes. Registered onto S3E10 t=610 s (Joey) by brute-force scale/translation: near-eye IoU 0.605 at scale 3.0, far 0.45 at 2.75, overlays coincide on iris outline, highlight, lower glint, lash and bang strands. Faces/tristan_mouth.png is 512x256 (not 1024x512 as briefed): a smooth 20 px (0.33 cm) V-chevron, ink width 217 px = 3.56 cm, corners 0.8-1.0 cm above the point, feathered ends -> drawn, not cut from a frame; not used.",
+   "sources": [
+    "Assets/Resources/WRLDZ/Avatar3D/Faces/tristan.png",
+    "Assets/Resources/WRLDZ/Avatar3D/Faces/tristan_mouth.png",
+    "~/argon-avatar/research/anime_variants/fullframes/tristan/dm_s1e039_f339.jpg (S1E39 keyframe 339 = 1105.33 s)",
+    "~/Downloads/YouTube Downloader/Yugi Vs. Pegasus\uff1a Match Of The Millennium, Part 5 \uff5c Yu-Gi-Oh Season 1 Episode 39.mp4 @ 1105.333 s and 1109.5 s (ffmpeg, lossless)",
+    "~/argon-avatar/research/anime_variants/fullframes/tristan/dm_s1e035_f330.jpg",
+    "~/Downloads/YouTube Downloader/Mechanical Mayhem, Part 2 \uff5c Yu-Gi-Oh Season 3 Episode 10.mp4 @ 607-611 s (the band's recorded source frame: Joey)",
+    "~/Downloads/YouTube Downloader/The Gauntlet Is Thrown \uff5c Yu-Gi-Oh Season 1 Episode 2.mp4 @ 88 s",
+    "~/Downloads/YouTube Downloader/The Scars Of Defeat \uff5c Yu-Gi-Oh Season 1 Episode 16.mp4 @ 44 s",
+    "~/argon-avatar/research/series_refs/sheets/dm_s1e001_00.jpg",
+    "~/argon-avatar/research/series_refs/sheets/dm_s1e002_00.jpg",
+    "~/argon-avatar/research/series_refs/sheets/dm_s1e016_00.jpg",
+    "~/argon-avatar/research/series_refs/sheets/dm_s1e039_07.jpg",
+    "~/argon-avatar/research/series_refs/sheets/dm_s3e010_04.jpg",
+    "~/argon-avatar/research/series_refs/keyframes/dm_s1e039/index.tsv",
+    "~/argon-avatar/research/anime_variants/normals/tristan.jpg (Duel Links sn0029 standing art strip, pose check only)",
+    "~/argon-avatar/research/anime_variants/by_character/tristan.jpg",
+    "Assets/Scripts/WRLDZ/Presentation/Avatar/AvatarAnimeFace.shader (unit semantics)",
+    "Assets/Scripts/WRLDZ/Presentation/Avatar/AvatarFaceRig.cs (quad sizes 6x4 cm eye, 6x3.4 cm brow, 8.4x4.4 cm mouth)",
+    "Assets/Scripts/WRLDZ/Data/FaceCatalog.cs (expression scale, provisional presets)",
+    "Tools/avatar/canon_faces.json",
+    "memory: anime-frame-face-pipeline.md, canon-face-decals-pipeline.md"
+   ],
+   "confidence": 0.55,
+   "notes": "1) THE CANON BAND IS NOT TRISTAN. Faces/tristan.png is Joey Wheeler's eyes cut from S3E10 at 10:10 (the pipeline memory lists 'Tristan S3E10 t610'; that frame is a Joey close-up, Tristan is a robot monkey in that arc). Proof: the band's ink registers onto that frame's eyes with IoU 0.61 (near) / 0.45 (far), the highlight, lower glint, lash and the bang strands crossing the near brow and falling between the eyes all coincide; Tristan's quiff never crosses his eyes. The band also carries no colour (sclera/highlights transparent, irises solid ink), so it could not give an iris colour anyway. Every number above is therefore measured from a genuine Duelist Kingdom-era Tristan frame (S1E39 1105.3 s: lit, near-frontal, stern rest face) scaled through the rig's 7.695 cm pupil spacing; the band should be rebuilt from that frame (or S1E39 1109.5 s) by whoever owns the decal tooling. keepDecal must stay false. 2) tristan_mouth.png (512x256, not 1024x512) is a smooth feathered V-chevron that looks drawn, not cut; it does not match the frame's resting mouth (a thin brown 3.8 cm arc, slightly downturned) and was not used. 3) Units: the task formulas were applied where given (W=/12, H=/8, Tilt=/6, Iris=/6, Pupil=/6, Lash half-thickness /6, mouth W=/16.8). The shader (p = uv-0.5 on anisotropic 6x4 cm quads) disagrees in places: it applies +-_Tilt in quad-HEIGHT units, so the measured 1.22 cm corner difference is reproduced by Tilt 0.15 rather than 0.20; the rendered centre height is H*(TopBulge+BotBulge)*4 cm, so with my bulges H 0.24-0.27 would reproduce the measured 1.34-1.54 cm; a circular iris needs IrisScaleY 1.5 on this quad (x unit 6 cm, y unit 4 cm), which is why 1.5 is given instead of the 1.0-1.25 hint; LipLine shader-true is 0.045 for the measured 0.22 cm line; Lash shader-true is 0.051 (mean) / 0.031 (thin part). The brow values were converted with the shader's actual factors because the task gives no formula: 15.7 deg slant -> _BrowTilt 1.6 (the rig's own 'angry' expression is 0.8 = 7.5 deg and 'determined' 0.45; Tristan's resting brows in the art are steeper than the rig's angry pose, his design has permanently knitted brows), mean 0.60 cm thickness -> 0.12 through the stroke taper, 0.9 cm arch -> 0.20. If the reviewer prefers the task's anchor scale, 0.35 renders only ~3.5 deg of brow slant. 4) Shape caveats the shader cannot express: the heavy lash is at the INNER corner (a 1-1.2 cm wedge) and thin outward (LashOuter 1.0 is as close as it gets; the stated 1.3-2.2 range does not fit); the upper lid is an almost straight 15-deg line and the eye hangs below the corner chord with a blunt outer end, hence BotBulge > TopBulge; the lash flicks ~1 cm past the outer corner (_Flick exists in the shader but not in this schema). 5) Iris: dark olive, not brown; main tone #514F3B, limbal ring ~#383628, light pool ~#9B8A73, small pupil (r 0.32 cm). Brows and lash ink #34322C (near-black cool brown), hair (130,109,77). 6) Confidence 0.55: geometry from one frame with 6-10 deg head roll (cancelled by averaging both eyes) and slight yaw; the far eye gives W 0.36 / H 0.16 vs the near 0.38 / 0.19; the sheets for e001/e002/e016 and the S1E35/S1E16/S1E2 frames confirm the narrow slanted eyes, dark olive irises, thick knitted brows and small stern mouth but were not measured to the pixel.",
+   "review": {
+    "status": "unverified",
+    "disagreements": [],
+    "skepticNotes": "measure only"
+   }
+  },
+  {
+   "faceId": "rex_raptor",
+   "displayName": "Rex Raptor",
+   "sourceLine": "Faces/rex_raptor.png + series frames; unverified; conf 0.6",
+   "eye": {
+    "W": 0.4,
+    "H": 0.27,
+    "Tilt": 0.18,
+    "Round": 0.45,
+    "TopBulge": 0.6,
+    "BotBulge": 0.9,
+    "Lash": 0.03,
+    "LashOuter": 1.3,
+    "LowerLash": 0.012,
+    "Iris": 0.12,
+    "IrisScaleY": 1.3,
+    "Pupil": 0.06,
+    "RestLid": 0
+   },
+   "irisHex": "#2F2F2F",
+   "brow": {
+    "Thick": 0.07,
+    "Arch": 0.02,
+    "Tilt": 0.45,
+    "Peak": 0.25,
+    "hex": "#2C201B"
+   },
+   "mouth": {
+    "W": 0.18,
+    "LipLine": 0.02,
+    "LowerLip": 0.1,
+    "RestCorner": 0.2,
+    "OpenShape": 0.2
+   },
+   "nose": {
+    "Style": 1,
+    "Size": 0.6,
+    "Shade": 0.45
+   },
+   "special": {
+    "hideEye": "none",
+    "keepDecal": false,
+    "reason": "Both eyes are normal eyes; nothing opaque covers them. The band only carries purple fringe strands over the character's LEFT eye (viewer right, x 547-1014) and a cap-brim stroke at the top (x 605-763, y 142-198); those are hair/headgear, not a reason to keep the decal."
+   },
+   "measurements": "BAND Faces/rex_raptor.png 1024x540 RGBA (77.58 px/cm). Painted bbox x4-1014 y141-500; two column groups 4-468 (character's RIGHT eye, viewer left) and 547-1014 (character's LEFT eye, behind fringe). Palette: ink (44,32,27), sclera (245,245,245), skin/lid brown (131,100,75); the frame's grey-blue lid shadow was NOT kept (transparent gap of 21-29 px between the lid line and the sclera at x=120/200/300), nor the lower lid line. Char-RIGHT eye: sclera comp x48-359 y294-469 (312x176 px = 4.02x2.27 cm, outer end cut by the window fade: alpha 52 at x=48); sclera+pupil union max column 165 px = 2.13 cm at x=204; pupil blob x201-263 y305-368 = 63x64 px -> r 0.41 cm, centre (227,336), dark median (44,32,27); outer-end mid y 306.8 (x48-55) -> inner-end mid y 418.1 (x352-359): 111 px over 304 px = 20.1 deg apparent; upper lid line (D class) 6/14/9 px thick at x=120/200/300 = 0.08-0.18 cm, median ~0.15 cm; brow stroke (near-black) 22/18/7 px at x=120/200/300 (0.28/0.23/0.09 cm), centres (120,206.5)(200,256.5)(300,320) -> 32 deg apparent. Char-LEFT eye: sclera x637-872 y339-495 (3.04x2.02 cm), max column 139 px = 1.79 cm, pupil blob 42x34 px (partly under the fringe), corner line 26.5 deg apparent. Band pupils (227,336)/(717,369): 491 px apart (not the pipeline's 597), so the eyes were re-centred; head roll in the source ~6.5 deg (right side lower). SOURCE FRAME S1E12 t=260 (1280x720, pulled with ffmpeg; mapping band = 1.985*frame + (-636.5,-277.4), verified on pupil, lid line and brow; 1 frame px = 0.0256 cm): char-RIGHT eye corners (318,265) outer / (505,338) inner -> width 187 px = 4.79 cm, drop 73 px = 1.87 cm, chord 21.3 deg apparent (14.8 deg after the 6.5 deg roll); upper lid runs along the chord (max 0.31-0.5 cm above it at mid); lower lid bottoms at y~380 under x~430: 1.82 cm below the chord at 57% from the outer corner; opening at mid column 87-93 px = 2.2-2.4 cm incl. the shadow band; upper lid line 4 px = 0.10 cm uniform (x=370/400/460/490), lower lid line 4 px = 0.10 cm; pupil 28x30 px = 0.72x0.77 cm (r 0.36/0.385), median rgb (47,47,47), darkest quartile (43,42,40), one white highlight dot upper-outer; shadow band under the lid 11-17 px (158,158,170); brow centres (400,256)(421,269)(472,301) -> 32 deg apparent / 25.5 deg de-rolled, thickness ~16-22 px outer, 14 px mid (0.36 cm), 9-13 px inner, dark brown (40,30,21); far brow (band x760/820) 34 deg apparent -> ~26 deg after roll+yaw, so brow ~25.5 deg is robust; far-eye chord after roll+yaw ~20 deg, near eye ~14 deg -> eye tilt taken as 17 deg. Mouth in the frame: left corner (463,454), right corner tip ~(545,440), crease stroke 548-579 x 425-447, pink interior 464-514 x 462-485. FRONTAL CHECK S1E12 t=175.5/176.5 (medium shot, pupils (567,316)/(710,315), IPD 143 px -> 0.0434 cm/px at the rig's 6.2 cm): char-LEFT eye sclera 78x44 px (bbox 55) = 3.4x1.9 cm (0.55 IPD), chords ~30 deg, brows ~18-19 deg, 12-14 px thick (0.55 cm), mouth line 44-56 px = 1.9-2.4 cm, 4 px thick, nearly flat with a slight right hook, nose side-shadow wedge 22x45 px = 0.95x1.95 cm. SHOCK S1E12 t=156: sclera comps 239x168 and 224x122 px, h/w 0.70 (vs 0.49-0.56 at rest). MOUTH DECAL Faces/rex_raptor_mouth.png is 512x256 (not 1024x512), 60.95 px/cm: main comp x230-336 y146-196 = the lower-lip line rising into the dark open right corner, left end to corner tip dx 1.74 cm, right corner 0.66 cm higher, line 5 px = 0.082 cm, ink (102,67,52); upper-right crease stroke x350-385 y91-111 (0.59x0.34 cm); dimple dot x186-203 y127-135; mark x203-211 y181-189; mouth centre 0.67 cm right / 0.65 cm below the quad centre. CONVERSIONS (from AvatarAnimeFace.shader + AvatarFaceRig.GridCard: uv 0..1 on a 6x4 cm eye quad, p = uv-0.5, so p.x unit = 6 cm, p.y unit = 4 cm; brow 6x3.4, mouth 8.4x4.4): W = 2.395/6; Tilt = (drop/2)/4 with drop = 4.79*tan17 = 1.46 cm; H*TopBulge = 0.35/4, H*BotBulge = 1.82/4 with H = 2.17/8; Lash = (0.15/2)/4 / weight 1.02; LowerLash = (0.10/2)/4 / 1.05; Iris = 0.41/6, IrisScaleY = (0.41/4)/0.068; Pupil = 0.36/6; BrowThick = (0.36/2)/3.4 / 0.735; BrowTilt = 5.4*tan25.5 / (0.28*3.4); mouth W = 2.2/16.8 (decal 1.74 cm de-yawed by cos35, frontal 1.9-2.4); LipLine = (0.082/2)/4.4 / 0.55.",
+   "sources": [
+    "Assets/Resources/WRLDZ/Avatar3D/Faces/rex_raptor.png",
+    "Assets/Resources/WRLDZ/Avatar3D/Faces/rex_raptor_mouth.png",
+    "Assets/Resources/WRLDZ/Avatar3D/Faces/rex_raptor_body.png (texture atlas, not usable as art)",
+    "~/Downloads/YouTube Downloader/Trial By Red-Eyes | Yu-Gi-Oh Season 1 Episode 12.mp4 frames t=258,260,262,264 (band source t=260), t=175.5,176.5,177.5 (frontal), t=267,272,274",
+    "~/argon-avatar/research/customization/evidence/dk_anime/rex_e12_156.png (shock close-up)",
+    "~/argon-avatar/research/series_refs/sheets/dm_s1e012_01.jpg (02:21-04:34 keyframes incl. the band's shot)",
+    "~/argon-avatar/research/series_refs/sheets/dm_s1e003_03.jpg",
+    "~/argon-avatar/research/series_refs/sheets/dm_s1e013_04.jpg (owner's e013 is the Bakura RPG episode, no Rex)",
+    "~/argon-avatar/research/anime_variants/da_gallery/duelist_kingdom/rex_raptor.png (DK standing art, eye colour/brow check)",
+    "~/argon-avatar/research/anime_variants/by_character/rex.jpg",
+    "Assets/Scripts/WRLDZ/Presentation/Avatar/AvatarAnimeFace.shader",
+    "Assets/Scripts/WRLDZ/Presentation/Avatar/AvatarFaceRig.cs",
+    "Assets/Scripts/WRLDZ/Presentation/Avatar/OverworldAvatar3d.cs (decal quad 0.132x0.070 m, mouth 0.084x0.042 m)",
+    "Assets/Scripts/WRLDZ/Data/FaceCatalog.cs",
+    "memory: anime-frame-face-pipeline.md (Rex band = S1E12 t260), canon-face-decals-pipeline.md"
+   ],
+   "confidence": 0.6,
+   "notes": "UNITS: I converted with the shader as written, not the task's rule-of-thumb. GridCard UVs are 0..1 and p = uv-0.5, so x is in quad WIDTHS and y in quad HEIGHTS (eye 6x4, brow 6x3.4, mouth 8.4x4.4 cm). Consequences: (a) eye Tilt is per corner (tiltY = _Tilt*x), so the outer-inner drop = 8*Tilt cm, not 6*Tilt; (b) length(ip) is anisotropic, so a round dot needs IrisScaleY = 1.5 (Iris*6 cm across, Iris*IrisScaleY*4 cm tall) - that is why IrisScaleY is above the 'typical' 1.25; (c) Lash/LowerLash are half-thicknesses in 4 cm units. EYE SHAPE: Rex's eye is not a normal almond - the upper lid is a straight slanted line from a sharp outer corner to the inner corner and the whole opening (sclera) hangs BELOW that chord (1.82 cm below vs 0.35 cm above at mid). Encoded faithfully as TopBulge 0.32 / BotBulge 1.68 at H 0.27 (opening 2.17 cm at mid, bottom at -0.45 units, just inside the quad). CAUTION - BLINK: the shader closes only lidTop toward the chord (lidBot moves only with _LidCurve, which the rig scales to <=0.4 during a blink), so with this BotBulge Rex's blink would close ~0.35 cm of a 2.17 cm eye, i.e. he will visibly not blink until the shader lets the lower lid rise (e.g. lidBot -> shutY with _Lid). Blink-safe fallback that keeps size and tilt but loses the straight lid: H 0.27, TopBulge 1.0, BotBulge 1.0. RestLid 0 because the straight lid is already the shape; the shock frame (eyes 1.4x taller) cannot be reached through RestLid anyway since all the opening lies below the chord. TILT SPREAD: band as painted 21.3 deg (0.23), de-rolled near eye 14.8 deg (0.16), far eye after roll+yaw ~20 deg, mean 17 deg -> 0.18 used; the frontal medium shot draws the eyes steeper (~30 deg -> 0.35) - a different drawing of the same model. SIZE: W 0.40 is the band's own 4.79 cm (4.96 de-yawed); the frontal medium shot has them smaller (3.4 cm, 0.55 IPD) - I kept the band because that is what sits on the face now. LASH: the lid line is genuinely thin (0.10 cm in the frame, 0.15 cm as quantised in the band) and uniform; Lash 0.018 is 2-3x thinner than the catalogue's 'thin' 0.04 and may render as a hairline at AR distances - if illegible, 0.03 is the smallest value that still reads, but it is not what the art shows. LashOuter 1.3 is the floor of the stated range; the measured line does not thicken outward, the outer corner only looks heavy because the brow converges into it. IRIS: no coloured iris exists - a black dot (frame median #2F2F2F, band ink #2C201B) with one white highlight; Pupil ~= Iris on purpose. BROW: thick dark-brown bar at ~25.5 deg (robust across both brows after roll/yaw), straight (Arch 0.02), THICKER at the outer end and tapering inward (0.5 -> 0.23 cm) - the shader's taper is the opposite (heavy inner head), so Thick 0.07 matches the mid (0.36 cm) and the ends will be reversed. BrowTilt 2.7 is far above the '+0.35 = angry' hint because the shader's tilt term is only 0.14*Tilt per end (0.95 cm of drop per unit over its 5.4 cm brow): 2.7 puts the inner end at -0.38 units; the band's uncorrected 32 deg (3.5) would push it past the quad edge, and 'angry' (+0.8) on top of 2.7 will clip slightly. SIGN WARNING: brow() computes y0 += _BrowTilt*(-x)*0.14 with x=-1 at the INNER end and +y up, which raises the inner end for positive Tilt - the opposite of the shader comment and of the Expression table (angry +0.8, sad -0.7). I followed the catalogue convention (+ = angry); verify in the Editor before trusting the sign, or Rex gets sorrowful brows. MOUTH: the decal is the t=260 one-sided smirk (right corner +0.66 cm, left flat) with the pink interior and teeth dropped; Rex's resting mouth is small (2.2 cm -> W 0.13, well under the catalogue's 0.22 minimum) with a thin line; RestCorner 0.2 is a judgment between the frontal flat line (+0.05) and the decal's one-sided lift (symmetric equivalent +0.47) - flagged as the least measured number here. Mouth decal is 512x256, not the 1024x512 the task states. BAND CONTENT: purple fringe strands over the character's left eye, a cap-brim stroke at the top, no lower lid line, lid shadow dropped to transparent, pupils re-centred by the pipeline (not at 201/798). Owner's episode numbering: Rex vs Joey is S1E11-12; the hinted e013-e014 is the Bakura RPG two-parter. No repository file was modified and the Editor was not touched; scratch files are under the session scratchpad /rex.",
+   "review": {
+    "status": "unverified",
+    "disagreements": [],
+    "skepticNotes": "measure only"
+   }
+  }
+ ]
+}
